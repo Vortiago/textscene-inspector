@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { injectProgram } from '../../../r3f/materialProgramInputs';
 import type { StandardMaterialBag } from './materialBag';
 
 /**
@@ -14,6 +15,12 @@ import type { StandardMaterialBag } from './materialBag';
  * `<StandardMaterialSlot>` maps the same classes onto JSX tags (ADR-0039).
  */
 export function materialFromBag(bag: StandardMaterialBag): THREE.Material {
+  const material = materialOfClass(bag);
+  if (bag.injection) injectProgram(material, bag.injection);
+  return material;
+}
+
+function materialOfClass(bag: StandardMaterialBag): THREE.Material {
   switch (bag.materialClass) {
     case 'basic':
       return new THREE.MeshBasicMaterial(bag.props);

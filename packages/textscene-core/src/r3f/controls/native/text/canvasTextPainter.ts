@@ -13,6 +13,7 @@ import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { Color } from '../../../../nodes/base/node2d/types';
 import { canvasItemFacing } from '../../../canvasItemFacing';
+import { injectProgram, type ProgramInjection } from '../../../materialProgramInputs';
 
 /** Fixed raster supersampling factor: canvas text has no distance field to stay crisp when magnified, so this trades memory and fill rate for sharpness at typical zoom. */
 export const CANVAS_TEXT_SUPERSAMPLE = 3;
@@ -187,14 +188,17 @@ export function paintSceneFontCanvas(
  * a 3D text surface's `alpha_cut` selects (`label_3d.cpp:386-393`). A 2D Control
  * always paints `TRANSPARENCY_ALPHA`, every field's default below.
  */
-export interface CanvasTextTransparency {
+export interface CanvasTextBlend {
   transparent: boolean;
   depthWrite: boolean;
   alphaTest: number;
   alphaHash: boolean;
+  /** What the surface's blend needs so three blends the alpha Godot writes (`surfaceAlphaPatch.ts`). */
+  blending?: THREE.Blending;
+  injection?: ProgramInjection;
 }
 
-export interface CanvasTextMaterialOptions extends Partial<CanvasTextTransparency> {
+export interface CanvasTextMaterialOptions extends Partial<CanvasTextBlend> {
   map: THREE.Texture;
   /** Multiplies the raster's anti-aliasing alpha. The raster is opaque, so this is the only place `tint.a` applies. */
   opacity: number;
@@ -235,6 +239,8 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     depthWrite = false,
     alphaTest = 0,
     alphaHash = false,
+    blending = THREE.NormalBlending,
+    injection,
   } = options;
   const material = new THREE.MeshBasicMaterial({
     map,
@@ -244,6 +250,7 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     depthTest,
     alphaTest,
     alphaHash,
+    blending,
     // Unlike `defines` below, `forceSinglePass` IS a property `THREE.Material`'s
     // constructor declares, so `setValues` assigns it from this object.
     ...canvasItemFacing(side),
@@ -252,5 +259,6 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...DECODE_VIDEO_TEXTURE_DEFINES };
   }
+  if (injection) injectProgram(material, injection);
   return material;
 }

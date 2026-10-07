@@ -22,10 +22,6 @@ describe('parseCSGCombiner3D', () => {
     expect(result.castShadow).toBe(3);
   });
 
-  it('leaves cast_shadow absent when the scene authors none', () => {
-    expect(parseCSGCombiner3D(heading('CSGCombiner3D', { name: 'C' }), {}).castShadow).toBeUndefined();
-  });
-
   it('parses operation, which says how its fold combines into ITS parent', () => {
     const result = parseCSGCombiner3D(heading('CSGCombiner3D', { name: 'C' }), { operation: '2' });
     expect(result.operation).toBe(2);

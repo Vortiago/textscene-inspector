@@ -8,8 +8,8 @@
 import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { shape, v } from '../../../linter/validators/index.js';
+import { SHADOW_CASTING_SETTING_NAMES } from '../../../godot/rendering.js';
 
-const CAST_SHADOW = { 0: 'OFF', 1: 'ON', 2: 'DOUBLE_SIDED', 3: 'SHADOWS_ONLY' };
 const GI_MODE = { 0: 'DISABLED', 1: 'STATIC', 2: 'DYNAMIC' };
 const VISIBILITY_RANGE_FADE_MODE = { 0: 'DISABLED', 1: 'SELF', 2: 'DEPENDENCIES' };
 
@@ -17,7 +17,7 @@ validatorRegistry.registerAll('GeometryInstance3D', {
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::INT, "cast_shadow",
   // PROPERTY_HINT_ENUM, "Off,On,Double-Sided,Shadows Only"), ...). set_cast_shadows_setting
   // (:366-370) is a bare assignment.
-  cast_shadow: v.enumInt('cast_shadow', 0, 3, CAST_SHADOW, {
+  cast_shadow: v.enumInt('cast_shadow', 0, 3, SHADOW_CASTING_SETTING_NAMES, {
     hinted: 'visual_instance_3d.cpp:601',
   }),
 

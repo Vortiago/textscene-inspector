@@ -8,9 +8,11 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CSGBox3DProperties } from './types';
 import { findMesh } from '../../testing/reactThreeTestInstance';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
 
 function makeNode(props: Partial<CSGBox3DProperties>, children: TscnNode[] = []): TscnNode {
   const properties: CSGBox3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'Box',
     size: { x: 3, y: 0.2, z: 12 },
     flipFaces: false,

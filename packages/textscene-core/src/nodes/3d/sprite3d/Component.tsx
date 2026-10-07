@@ -16,6 +16,7 @@ import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { alphaCutSurface } from '../../../r3f/godotAlphaCut';
+import { cutSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
@@ -102,18 +103,20 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // sRGB→linear step stays here, after the product (matching Sprite2D and WorldEnvironment).
   const accum = useSpriteBase3DColorAccum(properties.modulate);
   const color = useGodotLinearColor(accum);
-  // `transparency` is a per-instance GeometryInstance3D property outside the accumulation: only
-  // `modulate` accumulates. Opacity is a uniform, never a term of `transparent` (see
-  // `alphaCutSurface`).
-  const opacity = clamp01(accum.a * (1 - properties.transparency));
-
-  // `transparent`, `alphaTest`, `alphaHash` and `depthWrite` come from the alpha_cut arm alone.
   const cut = alphaCutSurface({
     mode: properties.alpha_cut,
     scissorThreshold: properties.alpha_scissor_threshold,
     // `sprite_3d.cpp:286`: FLAG_TRANSPARENT off disables the whole switch.
     transparentFlag: properties.transparent,
   });
+  // `transparency` is a per-instance GeometryInstance3D property outside the accumulation: only
+  // `modulate` accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
+  // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA (`material.cpp:1836`).
+  const surfaceAlpha = cutSurfaceAlpha(
+    cut,
+    properties.transparent ? clamp01(accum.a) : 1,
+    properties.transparency
+  );
 
   // Quad origin: centered (default) puts the plane center at the node origin;
   // centered=false puts the top-left there. `offset` shifts in sprite pixels
@@ -196,11 +199,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     props: {
       map: displayedTexture,
       color,
-      opacity,
-      transparent: cut.blended,
-      alphaTest: cut.alphaTest,
-      alphaHash: cut.alphaHash,
-      depthWrite: cut.depthWrite,
+      ...surfaceAlpha,
       // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
       depthTest: !properties.no_depth_test,
       // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.

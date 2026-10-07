@@ -15,6 +15,8 @@ import {
 import LabelGlyphs from './LabelGlyphs';
 import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 
 // happy-dom has neither `FontFace` nor `document.fonts`, so the real bundled
 // registration can only ever answer `undefined` here (`sceneFontLoader.ts`'s
@@ -32,6 +34,7 @@ beforeEach(() => {
 
 function props(overrides: Partial<Label3DProperties> = {}): Label3DProperties {
   return {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'L',
     text: 'Hi',
     pixel_size: 0.01,
@@ -288,7 +291,7 @@ describe('<LabelGlyphs>', () => {
     it('DISCARD scissors at the authored alpha_scissor_threshold and paints opaque', async () => {
       // `label_3d.cpp:388` -> TRANSPARENCY_ALPHA_SCISSOR, whose threshold is
       // the node's own (`label_3d.h:62`, `:378`); the cut forces `alpha = 1.0`
-      // (`scene_forward_clustered.glsl:1414-1416`) so the surface lands in the
+      // (`scene_forward_clustered.glsl:1413-1415`) so the surface lands in the
       // opaque list and writes depth.
       const renderer = await render(
         props({ outline_size: 12, alpha_cut: AlphaCutMode.DISCARD, alpha_scissor_threshold: 0.25 })
@@ -329,6 +332,27 @@ describe('<LabelGlyphs>', () => {
       expect(material!.depthWrite).toBe(false);
       expect(material!.alphaTest).toBe(0);
       expect(material!.alphaHash).toBe(false);
+    });
+  });
+
+  describe('transparency', () => {
+    // GeometryInstance3D's: one fade alpha for the fill and the outline alike.
+    const materials = (renderer: Awaited<ReturnType<typeof render>>) =>
+      renderer.scene
+        .findAllByType('Mesh')
+        .map((m) => (m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial);
+
+    it('multiplies the fade alpha into both surfaces', async () => {
+      const renderer = await render(
+        props({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 0.5 }, transparency: 0.5 })
+      );
+      expect(materials(renderer).map((m) => m.opacity)).toEqual([0.5 * HALF_FADE_ALPHA, HALF_FADE_ALPHA]);
+    });
+
+    it('writes a discard-cut label unblended in the alpha pass', async () => {
+      const renderer = await render(props({ alpha_cut: AlphaCutMode.DISCARD, transparency: 0.5 }));
+      const [material] = materials(renderer);
+      expect(material).toMatchObject({ transparent: true, depthWrite: false, blending: THREE.NoBlending });
     });
   });
 

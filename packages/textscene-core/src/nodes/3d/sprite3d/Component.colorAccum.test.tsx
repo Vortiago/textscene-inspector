@@ -15,6 +15,7 @@ import { parseSprite3D } from './parser';
 import { parseLabel3D } from '../label3d/parser';
 import { parseNode3D } from '../../base/node3d/parser';
 import '../../../r3f/nodes/index';
+import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 
 const TEXTURE_PATH = 'res://sprite.png';
 
@@ -145,7 +146,7 @@ describe('SpriteBase3D colour accumulation', () => {
       ]),
     ]);
 
-    expect(materialOf(renderer, 'Parent').opacity).toBeCloseTo(0.5, 5);
+    expect(materialOf(renderer, 'Parent').opacity).toBe(HALF_FADE_ALPHA);
     expect(materialOf(renderer, 'Child').opacity).toBeCloseTo(1, 5);
   });
 });

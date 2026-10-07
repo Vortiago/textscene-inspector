@@ -18,6 +18,7 @@ import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import { castsFrom, drawsColour } from '../../../r3f/testing/threePasses';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const ADDITIVE = { transparency: '1', blend_mode: '1', shading_mode: '0' };
 const ADDITIVE_TRES = 'res://glow.tres';
@@ -37,6 +38,7 @@ const INTERNALS: readonly TscnInternalResource[] = [
 
 function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
   const full: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'Glow',
     mesh: 'SubResource("Box_1")',
     surfaceMaterialOverrides: new Map(),

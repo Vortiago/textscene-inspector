@@ -3,14 +3,14 @@
 import { type ParsedHeading, unquoteString } from '../../../parser/utils';
 import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr } from '../../../parser/valueParsers';
 import { ruleInt } from '../../../godot/int.js';
 import { boolSlotValue } from '../../../godot/index.js';
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {
-  const baseProps = parseNode3D(heading, properties);
+  const baseProps = parseGeometryInstance3D(heading, properties);
 
   return {
     ...baseProps,

@@ -2,7 +2,7 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { CSGCylinder3DProperties } from './types';
-import { parseNode3D } from '../../../base/node3d/parser';
+import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import { finishCsgParse } from '../sharedParser';
 import { boolOr, floatOr, intOr } from '../../../../parser/valueParsers';
 import { boolSlotValue } from '../../../../godot/index.js';
@@ -23,10 +23,10 @@ export function parseCSGCylinder3D(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): CSGCylinder3DProperties {
-  const node3d = parseNode3D(heading, properties);
+  const geometry = parseGeometryInstance3D(heading, properties);
 
   const result: CSGCylinder3DProperties = {
-    ...node3d,
+    ...geometry,
     radius: floatOr(properties.radius, DEFAULTS.radius, 'CSGCylinder3D radius'),
     height: floatOr(properties.height, DEFAULTS.height, 'CSGCylinder3D height'),
     sides: intOr(properties.sides, DEFAULTS.sides, 'CSGCylinder3D sides'),

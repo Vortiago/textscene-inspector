@@ -19,6 +19,7 @@ import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import { YAWED } from './testing/yawedTransform';
 import { drawColourGroup, rotationAngle, TEST_CAMERA } from '../../../r3f/testing/threePasses';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const BILLBOARD_TRES = 'res://billboard.tres';
 const EXTERNALS: readonly TscnExternalResource[] = [
@@ -33,6 +34,7 @@ function sub(type: string, id: string, data: Record<string, string> = {}): TscnI
 
 function meshNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
   const props: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'GlowSprite',
     transform: YAWED,
     mesh: 'SubResource("Quad")',

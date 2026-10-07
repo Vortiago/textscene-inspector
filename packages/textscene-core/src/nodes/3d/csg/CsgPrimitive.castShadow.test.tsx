@@ -68,13 +68,6 @@ async function renderSubtraction(rootProperties: string): Promise<THREE.Mesh> {
 }
 
 describe('CSG cast_shadow', () => {
-  it('parses cast_shadow off every CSG primitive', () => {
-    expect(parseBox({ cast_shadow: '2' }).castShadow).toBe(2);
-    expect(parseBox({ cast_shadow: '0' }).castShadow).toBe(0);
-    // Absent leaves it undefined; the mapper supplies Godot's ON default.
-    expect(parseBox({}).castShadow).toBeUndefined();
-  });
-
   it('a lone root with cast_shadow = OFF casts nothing', async () => {
     expect((await renderLoneBox({ cast_shadow: '0' })).castShadow).toBe(false);
   });

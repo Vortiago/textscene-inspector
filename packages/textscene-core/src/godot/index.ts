@@ -102,6 +102,8 @@ export {
   directionalLightDrawsInSky,
   directionalLightLightsSurfaces,
 } from './directionalLightSkyMode.js';
+export { fadeAlpha, forcesAlphaPass } from './fadeAlpha.js';
+export { unitByte } from './unitByte.js';
 export {
   DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
   DIRECTIONAL_SHADOW_FADE_START_DEFAULT,

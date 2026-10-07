@@ -8,9 +8,11 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CSGCylinder3DProperties } from './types';
 import { findMesh } from '../../testing/reactThreeTestInstance';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
 
 function makeNode(props: Partial<CSGCylinder3DProperties>, children: TscnNode[] = []): TscnNode {
   const properties: CSGCylinder3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'Cyl',
     radius: 0.25,
     height: 0.8,

@@ -20,7 +20,6 @@ describe('parseSprite3D defaults', () => {
     expect(props.alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_DISABLED);
     expect(props.axis).toBe(AxisMode.AXIS_Y);
     expect(props.pixel_size).toBe(0.01);
-    expect(props.transparency).toBe(0);
     expect(props.hframes).toBe(1);
     expect(props.vframes).toBe(1);
     expect(props.frame).toBe(0);

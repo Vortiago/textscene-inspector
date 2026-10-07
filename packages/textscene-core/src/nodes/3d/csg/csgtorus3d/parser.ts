@@ -1,7 +1,7 @@
 /** CSGTorus3D parser - parses CSGTorus3D nodes from TSCN. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parseNode3D } from '../../../base/node3d/parser';
+import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import { finishCsgParse } from '../sharedParser';
 import { boolOr, floatOr, intOr } from '../../../../parser/valueParsers';
 import type { CSGTorus3DProperties } from './types';
@@ -22,10 +22,10 @@ export function parseCSGTorus3D(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): CSGTorus3DProperties {
-  const node3d = parseNode3D(heading, properties);
+  const geometry = parseGeometryInstance3D(heading, properties);
 
   const result: CSGTorus3DProperties = {
-    ...node3d,
+    ...geometry,
     innerRadius: floatOr(properties.inner_radius, DEFAULTS.innerRadius, 'CSGTorus3D inner_radius'),
     outerRadius: floatOr(properties.outer_radius, DEFAULTS.outerRadius, 'CSGTorus3D outer_radius'),
     sides: intOr(properties.sides, DEFAULTS.sides, 'CSGTorus3D sides'),

@@ -18,7 +18,7 @@ import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Vector2 } from '../../base/node2d/types';
 import type { Polygon2DProperties } from './types';
 import { polygonRings, type PolygonRings } from './polygonShapes';
-import { quantizeVertexColor, quantizeVertexColorChannel } from './vertexColorQuantize';
+import { quantizeVertexColor } from './vertexColorQuantize';
 import { canvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
 import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
 import {
@@ -250,15 +250,17 @@ function buildVertexColors(vertexCount: number, vertexColors: Float32Array): Flo
     // Each entry passes the same truncating 8-bit upload as the flat `color`
     // (`polygon_2d.cpp:310-314` fills the same `Vector<Color>`), so quantize
     // before the linear conversion.
-    const linear = godotColorToLinear({
-      r: quantizeVertexColorChannel(vertexColors[i * 4]!),
-      g: quantizeVertexColorChannel(vertexColors[i * 4 + 1]!),
-      b: quantizeVertexColorChannel(vertexColors[i * 4 + 2]!),
+    const stored = quantizeVertexColor({
+      r: vertexColors[i * 4]!,
+      g: vertexColors[i * 4 + 1]!,
+      b: vertexColors[i * 4 + 2]!,
+      a: vertexColors[i * 4 + 3]!,
     });
+    const linear = godotColorToLinear(stored);
     out[i * 4] = linear.r;
     out[i * 4 + 1] = linear.g;
     out[i * 4 + 2] = linear.b;
-    out[i * 4 + 3] = quantizeVertexColorChannel(vertexColors[i * 4 + 3]!);
+    out[i * 4 + 3] = stored.a;
   }
   return out;
 }

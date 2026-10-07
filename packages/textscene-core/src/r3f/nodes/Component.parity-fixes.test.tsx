@@ -25,6 +25,7 @@ import {
 } from '../../nodes/3d/label3d/types';
 import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
 import { depthSideOf, drawsColour } from '../testing/threePasses';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 
 function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
   return {
@@ -356,6 +357,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
 
   it('audit slot 93a — Label3D billboard=ENABLED → group.userData.billboardMode set + useFrame copies camera.quaternion', async () => {
     const props: Label3DProperties = {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name: 'L',
       text: 'Hello',
       pixel_size: 0.01,
@@ -407,6 +409,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
 
   it('audit slot 93a — Label3D billboard=DISABLED → useFrame leaves rotation untouched', async () => {
     const props: Label3DProperties = {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name: 'L',
       text: 'Hello',
       pixel_size: 0.01,

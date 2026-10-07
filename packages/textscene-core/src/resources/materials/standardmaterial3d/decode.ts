@@ -121,8 +121,8 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
         DEPTH_DRAW_MODES,
         `${CONTEXT}.depth_draw_mode`
       );
-  const { alphaPass, depthInAlphaPass } = alphaPassMembership(properties, {
-    transparency,
+  const alphaFlags = shaderAlphaFlags(properties, transparency, refractionEnabled);
+  const { alphaPass, depthInAlphaPass } = alphaPassMembership(alphaFlags, {
     blendMode,
     refractionEnabled,
     depthDrawMode,
@@ -142,12 +142,14 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
   // turns the highlight 90°.
   const anisotropyRaw = floatOr(properties['anisotropy'], 0, CONTEXT);
 
+  // FEATURE_REFRACTION replaces the `ALPHA *= albedo.a * albedo_tex.a` line with
+  // `ALPHA = 1.0` (`material.cpp:1832-1837`), so a refractive surface is fully opaque however
+  // low its authored alpha. A shader that writes no ALPHA never reads the albedo alpha either.
+  const readsAlbedoAlpha = alphaFlags.usesAlpha && !refractionEnabled;
+
   return {
     albedo: albedoLinear ?? [1, 1, 1],
-    // FEATURE_REFRACTION replaces the `ALPHA *= albedo.a * albedo_tex.a` line with
-    // `ALPHA = 1.0` ("Force transparency on the material (required for refraction)"),
-    // so a refractive surface is fully opaque however low its authored alpha.
-    alpha: refractionEnabled ? 1 : albedo ? clamp01(albedo.a) : 1,
+    alpha: readsAlbedoAlpha && albedo ? clamp01(albedo.a) : 1,
     metallic: clamp01(floatOr(properties['metallic'], 0, CONTEXT)),
     roughness: clamp01(floatOr(properties['roughness'], 1, CONTEXT)),
     emission,
@@ -160,13 +162,19 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     transparent,
     castsShadow,
     // `alpha_scissor_threshold` hint is "0,1,0.001". 0 means "no cutout" to three,
-    // which every non-scissor mode wants.
+    // which every non-scissor mode wants. A refractive surface's ALPHA is 1.0, which no
+    // threshold cuts, while three would cut on the texture alpha Godot never reads.
     alphaTest:
-      transparency === Transparency.ALPHA_SCISSOR
+      transparency === Transparency.ALPHA_SCISSOR && readsAlbedoAlpha
         ? clamp01(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT))
         : 0,
     depthDrawMode,
     depthWrite: godotDepthWrite(alphaPass, depthInAlphaPass, depthDrawMode, depthTest),
+    alphaPassDepthWrite: godotDepthWrite(true, false, depthDrawMode, depthTest),
+    readsAlbedoAlpha,
+    // `scene_forward_clustered.glsl:1413-1415`. ALPHA_HASH keeps its alpha here: this
+    // previewer blends it in place of the dither.
+    opaqueAfterCut: transparency === Transparency.ALPHA_SCISSOR && !alphaFlags.usesAlphaAntialiasing,
     depthTest,
     blendMode,
     cullMode: enumOr(properties['cull_mode'], CullMode.BACK, CULL_MODES, `${CONTEXT}.cull_mode`),
@@ -202,11 +210,19 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
 }
 
 interface PassInputs {
-  transparency: Transparency;
   blendMode: BlendMode;
   refractionEnabled: boolean;
   depthDrawMode: DepthDrawMode;
   depthTest: boolean;
+}
+
+/** The alpha usage flags of a surface's generated shader, in Godot's own variable names. */
+interface ShaderAlphaFlags {
+  usesAlpha: boolean;
+  usesAlphaClip: boolean;
+  usesAlphaAntialiasing: boolean;
+  usesDepthPrepassAlpha: boolean;
+  proximityFade: boolean;
 }
 
 /** Where Godot draws a surface: its alpha pass, and whether it draws depth there too. */
@@ -215,15 +231,12 @@ interface AlphaPassMembership {
   depthInAlphaPass: boolean;
 }
 
-/**
- * Godot's `ShaderData::uses_alpha_pass()` and `uses_depth_in_alpha_pass()`
- * (`scene_shader_forward_clustered.h:279-293`), in its own variable names so the two diff
- * line by line. The flags are what `BaseMaterial3D::_update_shader` emits, so
- * `transparency` alone never decides either.
- */
-function alphaPassMembership(properties: Record<string, string>, inputs: PassInputs): AlphaPassMembership {
-  const { transparency, blendMode, refractionEnabled, depthDrawMode, depthTest } = inputs;
-
+/** What `BaseMaterial3D::_update_shader` emits for alpha, which every alpha decision reads. */
+function shaderAlphaFlags(
+  properties: Record<string, string>,
+  transparency: Transparency,
+  refractionEnabled: boolean
+): ShaderAlphaFlags {
   const proximityFade = boolOr(properties['proximity_fade_enabled'], false, CONTEXT);
   const distanceFadeMode = intOr(properties['distance_fade_mode'], 0, CONTEXT);
   const shadowToOpacity = boolOr(properties['shadow_to_opacity'], false, CONTEXT);
@@ -245,6 +258,18 @@ function alphaPassMembership(properties: Record<string, string>, inputs: PassInp
     usesAlphaClip && intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT) !== 0;
   // `depth_prepass_alpha` is emitted for ALPHA_DEPTH_PRE_PASS alone (`material.cpp:898`).
   const usesDepthPrepassAlpha = transparency === Transparency.ALPHA_DEPTH_PRE_PASS;
+  return { usesAlpha, usesAlphaClip, usesAlphaAntialiasing, usesDepthPrepassAlpha, proximityFade };
+}
+
+/**
+ * Godot's `ShaderData::uses_alpha_pass()` and `uses_depth_in_alpha_pass()`
+ * (`scene_shader_forward_clustered.h:279-293`), in its own variable names so the two diff
+ * line by line. `transparency` alone never decides either.
+ */
+function alphaPassMembership(alphaFlags: ShaderAlphaFlags, inputs: PassInputs): AlphaPassMembership {
+  const { usesAlpha, usesAlphaClip, usesAlphaAntialiasing, usesDepthPrepassAlpha, proximityFade } =
+    alphaFlags;
+  const { blendMode, refractionEnabled, depthDrawMode, depthTest } = inputs;
 
   // Refraction samples `screen_texture`, and refraction or proximity fade samples
   // `depth_texture`.

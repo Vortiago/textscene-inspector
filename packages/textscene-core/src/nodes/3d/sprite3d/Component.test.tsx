@@ -15,6 +15,9 @@ import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { Sprite3DProperties } from './types';
 import { AlphaCutMode, AxisMode, BillboardMode, AlphaAntiAliasing, TextureFilterMode } from './types';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
+import { DROPS_ALBEDO_ALPHA, patchedFragment } from '../../../r3f/testing/patchedFragment';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 
 const TEXTURE_PATH = 'res://textures/sprite.png';
 
@@ -32,6 +35,7 @@ function makeTexture(imageWidth = 256, imageHeight = 256): THREE.Texture {
 
 function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
   const props: Sprite3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: overrides.name ?? 'Sprite',
     billboard: BillboardMode.BILLBOARD_DISABLED,
     shaded: false,
@@ -45,7 +49,6 @@ function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
     alpha_cut: AlphaCutMode.ALPHA_CUT_DISABLED,
     axis: AxisMode.AXIS_Y,
     pixel_size: 0.01,
-    transparency: 0,
     hframes: 1,
     vframes: 1,
     frame: 0,
@@ -177,9 +180,52 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
-    // opacity = clamp01(0.8 * (1 - 0.5)) = 0.4
-    expect(mat.opacity).toBeCloseTo(0.4, 5);
+    expect(mat.opacity).toBe(0.8 * HALF_FADE_ALPHA);
     expect(mat.transparent).toBe(true);
+  });
+
+  it('blends an opaque sprite at the fade alpha alone when transparency is set', async () => {
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        modulate: { r: 1, g: 1, b: 1, a: 0.8 },
+        transparent: false,
+        transparency: 0.5,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA.
+    expect(mat).toMatchObject({ transparent: true, depthWrite: false, opacity: HALF_FADE_ALPHA });
+  });
+
+  it('drops the texture alpha of an opaque sprite when transparency is set', async () => {
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({ texture: 'ExtResource("1_tex")', transparent: false, transparency: 0.5 }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    // TRANSPARENCY_DISABLED writes no ALPHA, so the texture alpha never reaches the blend.
+    expect(patchedFragment(mat)).toContain(DROPS_ALBEDO_ALPHA);
+  });
+
+  it('writes a discard-cut sprite unblended when transparency is set', async () => {
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD,
+        transparency: 0.5,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat).toMatchObject({ transparent: true, depthWrite: false, blending: THREE.NoBlending });
   });
 
   it('applies region_rect as a texture sub-rectangle when region_enabled', async () => {
@@ -316,7 +362,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
 
   it('alpha_cut=DISCARD paints opaque', async () => {
     // `sprite_3d.cpp:287` → TRANSPARENCY_ALPHA_SCISSOR, whose fragment tail
-    // forces `alpha = 1.0` (`scene_forward_clustered.glsl:1414-1416`), so the
+    // forces `alpha = 1.0` (`scene_forward_clustered.glsl:1413-1415`), so the
     // surface lands in the opaque list rather than the blended one.
     const tex = makeTexture(8, 8);
     const renderer = await render({
@@ -355,7 +401,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
 
   it('alpha_cut=HASH hashes rather than blends', async () => {
     // `sprite_3d.cpp:291-292` → TRANSPARENCY_ALPHA_HASH, whose fragment tail forces `alpha = 1.0`
-    // (`scene_forward_clustered.glsl:1414-1416`): a dithered discard into the opaque pass, never a
+    // (`scene_forward_clustered.glsl:1413-1415`): a dithered discard into the opaque pass, never a
     // blend.
     const tex = makeTexture(8, 8);
     const renderer = await render({

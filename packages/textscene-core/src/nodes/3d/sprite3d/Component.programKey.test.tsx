@@ -21,11 +21,13 @@ import {
   TextureFilterMode,
 } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const TEXTURE_PATH = 'res://textures/sprite.png';
 
 function makeNode(overrides: Partial<Sprite3DProperties>): TscnNode {
   const props: Sprite3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'Sprite',
     texture: 'ExtResource("1_tex")',
     billboard: BillboardMode.BILLBOARD_DISABLED,
@@ -40,7 +42,6 @@ function makeNode(overrides: Partial<Sprite3DProperties>): TscnNode {
     alpha_cut: AlphaCutMode.ALPHA_CUT_DISABLED,
     axis: AxisMode.AXIS_Y,
     pixel_size: 0.01,
-    transparency: 0,
     hframes: 1,
     vframes: 1,
     frame: 0,

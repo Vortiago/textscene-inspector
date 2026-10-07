@@ -42,3 +42,15 @@ export enum ShadowCastingSetting {
   DOUBLE_SIDED = 2,
   SHADOWS_ONLY = 3,
 }
+
+/**
+ * Each `ShadowCastingSetting` name by its integer, as a validator or an inspector names it. The
+ * numeric members only: a TS enum object also maps each name back to its integer.
+ */
+export const SHADOW_CASTING_SETTING_NAMES: Readonly<Record<number, string>> = Object.freeze(
+  Object.fromEntries(
+    Object.entries(ShadowCastingSetting)
+      .filter(([, value]) => typeof value === 'number')
+      .map(([name, value]) => [value, name])
+  )
+);

@@ -14,9 +14,14 @@ import type { TscnNode } from '../parser/types';
 import type { MeshInstance3DProperties } from '../nodes/3d/meshinstance3d/types';
 
 import './nodes/index';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../nodes/3d/geometryinstance3d/types';
 
 function makeMeshInstance(name: string): TscnNode {
-  const props: MeshInstance3DProperties = { name, surfaceMaterialOverrides: new Map() };
+  const props: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
+    name,
+    surfaceMaterialOverrides: new Map(),
+  };
   return { name, type: 'MeshInstance3D', children: [], properties: props };
 }
 

@@ -12,6 +12,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const INTERNALS: TscnInternalResource[] = [
   inlineTwoSurfaceMesh('Mesh_1', [null, null, null]),
@@ -22,6 +23,7 @@ const INTERNALS: TscnInternalResource[] = [
 /** Slots 0 and 2 populated, slot 1 deliberately absent. */
 function makeNode(): TscnNode {
   const properties: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'M',
     mesh: 'SubResource("Mesh_1")',
     surfaceMaterialOverrides: new Map([

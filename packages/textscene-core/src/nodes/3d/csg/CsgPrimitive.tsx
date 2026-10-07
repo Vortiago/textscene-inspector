@@ -7,7 +7,6 @@
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
-import type { Node3DProperties } from '../../base/node3d/types';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
@@ -19,6 +18,7 @@ import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
 import { shadowCastingEffects } from '../../../r3f/shadowCasting';
+import type { CSGShape3DProperties } from './types';
 
 const NO_PATHS: ReadonlySet<string> = new Set();
 
@@ -32,7 +32,7 @@ export const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
 interface CsgPrimitiveProps {
   node: TscnNode;
-  properties: Node3DProperties & { materialPath?: string; castShadow?: number };
+  properties: CSGShape3DProperties & { materialPath?: string };
   children?: ReactNode;
 }
 
@@ -120,6 +120,8 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const visible = properties.visible !== false;
   const combining = plan !== null && plan.geometryCount > 1;
   const shadow = shadowCastingEffects(properties.castShadow);
+  // A root's own: a contributor's solid, and its transparency with it, belong to the root's mesh.
+  const { transparency } = properties;
 
   const transform = { name: node.name, position, rotation, scale, visible } as const;
 
@@ -160,7 +162,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       receiveShadow
     >
       {geometry}
-      <SurfaceMaterialSlot source={materialSource} />
+      <SurfaceMaterialSlot source={materialSource} transparency={transparency} />
     </mesh>
   );
 
@@ -169,7 +171,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   if (combining) {
     return (
       <group {...transform}>
-        <CsgRootMesh plan={plan} shadow={shadow} fallback={ownSolid}>
+        <CsgRootMesh plan={plan} shadow={shadow} transparency={transparency} fallback={ownSolid}>
           {children}
         </CsgRootMesh>
       </group>
