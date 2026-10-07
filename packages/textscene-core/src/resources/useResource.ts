@@ -188,14 +188,12 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
       reportedMissingForPathRef.current = path;
       return () => clearMissing(path);
     }
-    if (result.status === 'loaded') {
-      if (reportedMissingForPathRef.current === path) {
-        // The row stays, so its Remove control stays reachable.
-        markUploaded(path);
-        reportedMissingForPathRef.current = null;
-      } else {
-        clearMissing(path);
-      }
+    // A `clear` withdraws only this hook's own report, which the cleanup above
+    // already withdrew, so a path that loads clears nothing here.
+    if (result.status === 'loaded' && reportedMissingForPathRef.current === path) {
+      // The row stays, so its Remove control stays reachable.
+      markUploaded(path);
+      reportedMissingForPathRef.current = null;
     }
     return undefined;
   }, [path, result.status, reportMissing, clearMissing, markUploaded]);
