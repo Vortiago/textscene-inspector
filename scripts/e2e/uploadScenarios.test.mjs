@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { INK_FLOOR_2D } from './canvasChecks.mjs';
 import { CLEAN_LOAD, fakeGate } from './gate.testkit.mjs';
-import {
-  checkUploadScenarios,
-  TEXTURE_PATH,
-  UPLOADED_PATHS,
-  UPLOADED_SCENE_NAME,
-} from './uploadScenarios.mjs';
+import { checkUploadScenarios } from './uploadScenarios.mjs';
+
+// The scene the gate uploads, as the app reports it: literals, so a test cannot pass by
+// reading back the module's own constants.
+const TEXTURE_PATH = 'res://e2e-upload/marker.png';
+const UPLOADED_SCENE_NAME = 'uploaded-sprites.tscn';
+const UPLOADED_PATHS = ['Uploaded', 'Uploaded/Left', 'Uploaded/Right'];
 
 const TEXTURED_FRAME = Buffer.from('textured');
 const PLACEHOLDER_FRAME = Buffer.from('placeholder');
@@ -64,7 +64,7 @@ describe('checkUploadScenarios', () => {
     const run = passingRun();
     run.fileInput = { ...run.fileInput, ink: { inkPixels: 12, width: 631, height: 756 } };
     expect(failuresOf(run)).toEqual([
-      `[upload] only 12 ink pixels on a 631x756 canvas, floor is ${INK_FLOOR_2D}, so nothing rendered`,
+      '[upload] only 12 ink pixels on a 631x756 canvas, floor is 4000, so nothing rendered',
     ]);
   });
 

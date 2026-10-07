@@ -24,8 +24,8 @@ import { openFixture } from './openFixture.mjs';
 
 // A path the fixtures mirror lacks, so the texture can only come from the upload. A path the
 // mirror holds draws from a fetch and proves nothing about the matching.
-export const TEXTURE_PATH = 'res://e2e-upload/marker.png';
-export const UPLOADED_SCENE_NAME = 'uploaded-sprites.tscn';
+const TEXTURE_PATH = 'res://e2e-upload/marker.png';
+const UPLOADED_SCENE_NAME = 'uploaded-sprites.tscn';
 
 const UPLOADED_SCENE = `[gd_scene load_steps=2 format=3]
 
@@ -43,7 +43,7 @@ texture = ExtResource("1_marker")
 position = Vector2(80, 0)
 `;
 
-export const UPLOADED_PATHS = ['Uploaded', 'Uploaded/Left', 'Uploaded/Right'];
+const UPLOADED_PATHS = ['Uploaded', 'Uploaded/Left', 'Uploaded/Right'];
 
 const SCENE_FILE = { name: UPLOADED_SCENE_NAME, mimeType: 'text/plain', buffer: Buffer.from(UPLOADED_SCENE) };
 const TEXTURE_FILE = {
@@ -147,14 +147,14 @@ async function readUploadedScene(page, canvas) {
   };
 }
 
-export function runFileInputUpload(browser, baseUrl, startFixture) {
+function runFileInputUpload(browser, baseUrl, startFixture) {
   return withStartFixture(browser, baseUrl, startFixture, 'upload', async (page, canvas) => {
     await page.getByTestId('upload-tscn-input').setInputFiles([SCENE_FILE, TEXTURE_FILE]);
     return readUploadedScene(page, canvas);
   });
 }
 
-export function runDropUpload(browser, baseUrl, startFixture) {
+function runDropUpload(browser, baseUrl, startFixture) {
   return withStartFixture(browser, baseUrl, startFixture, 'drop', async (page, canvas) => {
     const hintShown = await dropFiles(page, [SCENE_FILE, TEXTURE_FILE]);
     const hintAfterDrop = await page.getByTestId(DROP_HINT).isVisible();
@@ -162,7 +162,7 @@ export function runDropUpload(browser, baseUrl, startFixture) {
   });
 }
 
-export function runRepeatedDrop(browser, baseUrl, startFixture) {
+function runRepeatedDrop(browser, baseUrl, startFixture) {
   return withStartFixture(browser, baseUrl, startFixture, 'repeated drop', async (page, canvas) => {
     await dropFiles(page, [SCENE_FILE]);
     const sceneOnly = await readUploadedScene(page, canvas);
@@ -170,6 +170,15 @@ export function runRepeatedDrop(browser, baseUrl, startFixture) {
     await waitForUploadedRow(page, TEXTURE_PATH);
     return { sceneOnly, filled: await readUploadedScene(page, canvas) };
   });
+}
+
+/** Runs the three arms in turn, each in its own context: the file input, the drop and the repeated drop. */
+export async function runUploadScenarios(browser, baseUrl, startFixture) {
+  return {
+    fileInput: await runFileInputUpload(browser, baseUrl, startFixture),
+    drop: await runDropUpload(browser, baseUrl, startFixture),
+    repeatedDrop: await runRepeatedDrop(browser, baseUrl, startFixture),
+  };
 }
 
 function formatRows(rows) {

@@ -34,12 +34,7 @@ import {
 import { checkDiagnostics } from './diagnostics.mjs';
 import { checkInk, checkSizedCanvas, checkStage, INK_FLOOR_2D } from './canvasChecks.mjs';
 import { checkPhoneLayout, runPhoneScenario } from './phoneScenario.mjs';
-import {
-  checkUploadScenarios,
-  runDropUpload,
-  runFileInputUpload,
-  runRepeatedDrop,
-} from './uploadScenarios.mjs';
+import { checkUploadScenarios, runUploadScenarios } from './uploadScenarios.mjs';
 
 /* global window */
 // `window` exists only in the browser that runs the `page.evaluate` calls.
@@ -175,11 +170,7 @@ async function main() {
     const phone = await runPhoneScenario(browser, baseUrl, { fixture: FIXTURE_3D, selectPath: SELECT_A });
 
     console.log(`[gate] upload scenarios: file input, drop and repeated drop over ${FIXTURE_3D}`);
-    const uploads = {
-      fileInput: await runFileInputUpload(browser, baseUrl, FIXTURE_3D),
-      drop: await runDropUpload(browser, baseUrl, FIXTURE_3D),
-      repeatedDrop: await runRepeatedDrop(browser, baseUrl, FIXTURE_3D),
-    };
+    const uploads = await runUploadScenarios(browser, baseUrl, FIXTURE_3D);
 
     checkSizedCanvas(gate, '[3D]', threeD.dims);
     checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);

@@ -20,7 +20,7 @@ const EXPECTED_WARNINGS = [
  * The console warnings that neither `EXPECTED_WARNINGS` nor `scenarioWarnings` accepts. A
  * scenario passes the patterns for the warnings its own behaviour under test logs.
  */
-export function unexpectedWarnings(warnings, scenarioWarnings = []) {
+function unexpectedWarnings(warnings, scenarioWarnings = []) {
   const accepted = [...EXPECTED_WARNINGS, ...scenarioWarnings];
   return warnings.filter((text) => !accepted.some((pattern) => pattern.test(text)));
 }
