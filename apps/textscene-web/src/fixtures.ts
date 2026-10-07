@@ -233,6 +233,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Bone2d Rig",
+    "file": "unit-bone2d-rig.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Group",
     "file": "unit-canvas-group.tscn",
     "category": "Other"
@@ -1590,6 +1595,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Touch Screen Button",
     "file": "unit-touch-screen-button.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Transform Only 3d Hidden",
+    "file": "unit-transform-only-3d-hidden.tscn",
     "category": "Other"
   },
   {

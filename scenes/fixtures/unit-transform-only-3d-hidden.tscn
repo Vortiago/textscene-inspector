@@ -1,0 +1,34 @@
+[gd_scene format=3]
+
+; One variable: `visible = false` on a Node3D-derived type that draws nothing of its own. The
+; orange box sits under a hidden AudioListener3D, so Godot hides it (node_3d.cpp:1132-1143) and
+; only the grey reference draws. No other golden hides such a type, so a type that drops `visible`
+; shows only here.
+
+[sub_resource type="BoxMesh" id="BoxMesh_box"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Material_reference"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_hidden"]
+albedo_color = Color(0.9, 0.45, 0.1, 1)
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 4, 6)
+fov = 70.0
+
+[node name="Reference" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+mesh = SubResource("BoxMesh_box")
+surface_material_override/0 = SubResource("Material_reference")
+
+[node name="HiddenListener" type="AudioListener3D" parent="."]
+visible = false
+
+[node name="Hidden" type="MeshInstance3D" parent="HiddenListener"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+mesh = SubResource("BoxMesh_box")
+surface_material_override/0 = SubResource("Material_hidden")
