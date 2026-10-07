@@ -13,8 +13,6 @@ import { parseSubResourcePath } from '../../resources/subResourcePath';
 import { useResource } from '../../resources/useResource';
 import type { MaterialResource, MaterialSource } from './materialSource';
 
-const NO_FILE: { filePath: string; subResourceId?: string } = { filePath: '' };
-
 /** What a material source loads to. */
 export type LoadedMaterial =
   /** A StandardMaterial3D to draw. */
@@ -33,9 +31,11 @@ export function readyMaterial(loaded: LoadedMaterial): MaterialResource | null {
 
 /** What `source` loads to. A ShaderMaterial is declined with a warning (ADR-0041). */
 export function useMaterial(source: MaterialSource | undefined): LoadedMaterial {
-  const { filePath, subResourceId } = source?.kind === 'file' ? parseSubResourcePath(source.path) : NO_FILE;
-  // Called with '' for an inline source, to keep the hook count stable.
-  const file = useResource<ParsedResource>(filePath, 'resource').value;
+  const address = source?.kind === 'file' ? source.path : '';
+  const { filePath, subResourceId } = parseSubResourcePath(address);
+  // Called with '' for an inline source, to keep the hook count stable. The `resource` bus
+  // parses whole files, so the hook loads the file and reports a failure under the address.
+  const file = useResource<ParsedResource>(filePath, 'resource', address).value;
 
   // Keyed on what the source holds, not the source object: a caller may build a new
   // source each render, and a new material would rebind every texture.

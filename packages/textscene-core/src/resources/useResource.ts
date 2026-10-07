@@ -6,12 +6,10 @@
  */
 import { useContext, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import type { TscnScene } from '../parser/types';
 import type { ResourceEventBus } from './ResourceEventBus';
 import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
-import { resourceRef, simplifyResPath } from '../godot/index.js';
 import { resourceSliceRegistry, type ResourceBusType } from './sliceRegistration';
 
 /**
@@ -33,7 +31,11 @@ export function useResourceLoader() {
   return useContext(ResourceLoaderContext);
 }
 
-export function useResource<T>(path: string, type: ResourceBusType): ResourceResult<T> {
+/**
+ * `address` is the resource the consumer reads, when `path` is only the file that owns it: a
+ * **Sub-resource path** read out of a whole parsed `.tres`. A failure reports under `address`.
+ */
+export function useResource<T>(path: string, type: ResourceBusType, address = path): ResourceResult<T> {
   const loader = useResourceLoader();
   const missingResources = useMissingResources();
   const [result, setResult] = useState<ResourceResult<T>>(() => ({
@@ -179,24 +181,24 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
 
   // A path that loads after this hook reported it missing was uploaded, so its row stays, marked
   // uploaded. A path that loads on first request never shows a row.
-  const reportedMissingForPathRef = useRef<string | null>(null);
+  const reportedMissingAddressRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!path) return;
     if (result.status === 'unavailable') {
-      reportMissing(path);
-      reportedMissingForPathRef.current = path;
-      return () => clearMissing(path);
+      reportMissing(address);
+      reportedMissingAddressRef.current = address;
+      return () => clearMissing(address);
     }
     // A `clear` withdraws only this hook's own report, which the cleanup above
     // already withdrew, so a path that loads clears nothing here.
-    if (result.status === 'loaded' && reportedMissingForPathRef.current === path) {
+    if (result.status === 'loaded' && reportedMissingAddressRef.current === address) {
       // The row stays, so its Remove control stays reachable.
-      markUploaded(path);
-      reportedMissingForPathRef.current = null;
+      markUploaded(address);
+      reportedMissingAddressRef.current = null;
     }
     return undefined;
-  }, [path, result.status, reportMissing, clearMissing, markUploaded]);
+  }, [path, address, result.status, reportMissing, clearMissing, markUploaded]);
 
   // The loader counts pending consumers, so a caller knows when loading has finished without a
   // timer. Keyed on `path` too: a path swap re-enters `pending`.
@@ -206,20 +208,4 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
   }, [loader, path, result.status]);
 
   return result;
-}
-
-/**
- * The simplified `res://` path for a raw property string: a `res://` path, or the path of an
- * `ExtResource("id")`. Null for an unknown id or any other form.
- */
-export function resolveResourcePath(scene: TscnScene, idOrPath: string): string | null {
-  if (idOrPath.startsWith('res://')) {
-    return simplifyResPath(idOrPath);
-  }
-  const parsed = resourceRef(idOrPath);
-  if (parsed?.kind !== 'ExtResource') {
-    return null;
-  }
-  const metadata = scene.resourceLoader?.getMetadata(parsed.id);
-  return metadata?.path ?? null;
 }

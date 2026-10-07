@@ -111,7 +111,24 @@ describe('useResource → MissingResourcesContext aggregation', () => {
     expect(result.current.has('res://textures/missing.png')).toBe(true);
   });
 
-  it('promotes a previously-missing path to uploadedPaths when it transitions to loaded (WI-UX-6)', () => {
+  it('reports a failure under the address it is given, not the file it loads', () => {
+    const Wrapper = makeWrappers(loader);
+    const { result } = renderHook(
+      () => {
+        useResource<THREE.Texture>(
+          'res://textures/missing.png',
+          'texture',
+          'res://textures/missing.png::Atlas_a'
+        );
+        return useMissingResources().missingPaths;
+      },
+      { wrapper: Wrapper }
+    );
+
+    expect([...result.current]).toEqual(['res://textures/missing.png::Atlas_a']);
+  });
+
+  it('promotes a previously missing path to uploadedPaths when it turns loaded', () => {
     const Wrapper = makeWrappers(loader);
 
     const { result } = renderHook(
@@ -138,7 +155,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
     expect(result.current.uploadedPaths.has('res://textures/missing.png')).toBe(true);
   });
 
-  it('does NOT add to uploadedPaths when a path loads without ever being missing (WI-UX-6)', () => {
+  it('adds nothing to uploadedPaths when a path loads without ever being missing', () => {
     // Drop the seeded null; the cache lookup falls through to the
     // request path and the subscription waits for the loaded event.
     textures.cache.delete('res://textures/missing.png');

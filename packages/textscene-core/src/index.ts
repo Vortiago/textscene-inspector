@@ -72,7 +72,7 @@ export {
 } from './r3f/index';
 
 // Resource loading
-export { useResource, useResourceLoader, resolveResourcePath } from './resources/useResource';
+export { useResource, useResourceLoader } from './resources/useResource';
 export type { ResourceResult, ResourceStatus } from './resources/useResource';
 export type { ResourceBusType } from './resources/sliceRegistration';
 export { ResourceLoaderContext, ResourceLoaderProvider } from './resources/ResourceLoaderContext';

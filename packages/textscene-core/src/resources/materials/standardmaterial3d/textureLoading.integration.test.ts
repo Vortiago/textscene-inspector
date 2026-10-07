@@ -108,7 +108,7 @@ async function loadTextureWithEvents(
   registry: ResourceLoader,
   idOrPath: string
 ): Promise<THREE.Texture | null> {
-  const metadata = registry.getMetadata(idOrPath);
+  const metadata = registry.metadata.get(idOrPath);
   if (!metadata) {
     return null;
   }
