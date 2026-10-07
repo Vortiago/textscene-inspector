@@ -14,7 +14,6 @@ describe('theme slice registration', () => {
     expect(registration?.slice).toBe('theme');
     expect(registration?.kind).toBe('godot-text');
     expect(resourceSliceRegistry.byTypeName('Theme')?.busType ?? null).toBe('theme');
-    expect(registration?.failureLabel).toBe('Node using theme');
   });
 
   it('claims no extension and is never fetched as bytes', () => {
@@ -32,7 +31,6 @@ describe('theme slice registration', () => {
         kind: 'godot-text',
         typeNames: ['Theme'],
         busType: null,
-        failureLabel: 'Impostor',
       })
     ).toThrow(/already claimed by slice "theme"/);
   });

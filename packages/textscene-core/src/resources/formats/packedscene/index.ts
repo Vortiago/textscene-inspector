@@ -13,5 +13,4 @@ registerResourceSlice({
   typeNames: ['PackedScene'],
   extensions: ['.tscn'],
   busType: 'scene',
-  failureLabel: 'Node instance of scene',
 });

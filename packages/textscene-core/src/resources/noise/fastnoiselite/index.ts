@@ -12,7 +12,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['FastNoiseLite'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export * from './decode';

@@ -12,7 +12,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['FontFile', 'SystemFont', 'FontVariation'],
   busType: 'font',
-  failureLabel: 'Node using font',
 });
 
 export type {

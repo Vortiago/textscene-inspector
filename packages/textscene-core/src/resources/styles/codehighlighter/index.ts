@@ -12,7 +12,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['CodeHighlighter'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export { decodeCodeHighlighter } from './decode';

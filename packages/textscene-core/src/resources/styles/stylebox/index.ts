@@ -11,7 +11,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['StyleBoxFlat', 'StyleBoxEmpty'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export { decodeStyleBox } from './decode';

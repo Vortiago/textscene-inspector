@@ -25,10 +25,6 @@ describe('glb slice registration', () => {
     }
   });
 
-  it('labels a failed load the way the missing-resources panel reads it', () => {
-    expect(resourceSliceRegistry.byTypeName('GLB')?.failureLabel).toBe('Node using GLB mesh');
-  });
-
   it('claims extensions dot-prefixed, so a bare suffix is not a claim', () => {
     // The normalisation contract every extension consumer depends on.
     expect(resourceSliceRegistry.byExtension('glb')).toBeNull();
@@ -47,7 +43,6 @@ describe('glb slice registration', () => {
         kind: 'foreign-format',
         typeNames: ['GLB'],
         busType: null,
-        failureLabel: 'Impostor',
       })
     ).toThrow(/already claimed by slice "glb"/);
   });

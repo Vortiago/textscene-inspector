@@ -13,7 +13,6 @@ describe('tileset slice registration', () => {
     expect(registration?.slice).toBe('tileset');
     expect(registration?.kind).toBe('godot-text');
     expect(resourceSliceRegistry.byTypeName('TileSet')?.busType ?? null).toBe('resource');
-    expect(registration?.failureLabel).toBe('Resource');
   });
 
   it('claims no file extension — a .tres is the shared text container', () => {
@@ -39,7 +38,6 @@ describe('tileset slice registration', () => {
         kind: 'godot-text',
         typeNames: ['TileSet'],
         busType: null,
-        failureLabel: 'Impostor',
       })
     ).toThrow(/already claimed by slice "tileset"/);
   });

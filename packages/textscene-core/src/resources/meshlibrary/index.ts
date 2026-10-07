@@ -12,7 +12,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['MeshLibrary'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export type { MeshLibraryItem, MeshLibraryModel } from './types';

@@ -22,9 +22,8 @@ describe('sky slice registration', () => {
     }
   });
 
-  it('routes `Sky` to the resource slot with the Resource failure label', () => {
+  it('routes `Sky` to the resource slot', () => {
     expect(resourceSliceRegistry.byTypeName('Sky')?.busType ?? null).toBe('resource');
-    expect(resourceSliceRegistry.byTypeName('Sky')?.failureLabel).toBe('Resource');
   });
 
   it('claims no file extension — a sky arrives inside a .tscn or .tres (edge case)', () => {

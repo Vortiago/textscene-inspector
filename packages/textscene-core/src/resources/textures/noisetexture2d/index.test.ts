@@ -12,7 +12,6 @@ describe('noisetexture2d slice registration', () => {
       slice: 'noisetexture2d',
       kind: 'godot-text',
       busType: 'resource',
-      failureLabel: 'Resource',
     });
   });
 

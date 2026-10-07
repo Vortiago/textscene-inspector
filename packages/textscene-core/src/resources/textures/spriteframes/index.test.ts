@@ -13,7 +13,6 @@ describe('spriteframes slice registration', () => {
       slice: 'spriteframes',
       kind: 'godot-text',
       busType: 'resource',
-      failureLabel: 'Resource',
     });
   });
 

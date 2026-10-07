@@ -1,8 +1,8 @@
 /** ConvexPolygonShape3D resource slice: claims the type name, re-exports its decode. */
 
-import { registerShapeSlice } from '../registerShapeSlice';
+import { registerGenericResourceSlice } from '../../sliceRegistration';
 
-registerShapeSlice('convexpolygonshape3d', ['ConvexPolygonShape3D']);
+registerGenericResourceSlice('convexpolygonshape3d', ['ConvexPolygonShape3D']);
 
 export { decodeConvexPolygonShape3D } from './decode';
 export type { ConvexPolygonShape3DProperties } from './types';

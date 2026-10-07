@@ -14,7 +14,10 @@ import { FileEventBus } from '../../../resources/FileEventBus';
 import { ResourceLoader } from '../../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
-import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import {
+  createFakeResourceLoader,
+  recordSceneRequests,
+} from '../../../resources/testing/createFakeResourceLoader';
 import { countedTable } from '../../../resources/testing/countedTable';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
 import { SelectionProvider } from '../../contexts/SelectionContext';
@@ -1706,25 +1709,31 @@ anchors_preset = 15
   });
 });
 
-// Only the Control walk registers this scene. `createSceneProcessor` throws
-// "Scene metadata not found" for an unregistered address and caches the
-// failure, so the registration must precede the request.
+// Only the Control walk registers this scene, and the load checks the
+// registered type.
 describe('useBuildSolveTree — requesting an uncached sub-scene', () => {
   it('registers the ExtResource before it asks the loader for the scene', () => {
     const loader = createFakeResourceLoader();
-    const order: string[] = [];
-    loader.scenes.setRequestImpl((path) => order.push(`request:${path}`));
+    const metadataAtRequest = recordSceneRequests(loader);
 
     const ext = { id: '1_layer', path: LAYER_PATH, type: 'PackedScene' };
     renderHook(() => useBuildSolveTree([instanceOf('Hud', '1_layer')], [ext], []), {
       wrapper: wrapperFor(loader.loader),
     });
 
-    expect(loader.registerCalls).toContainEqual(ext);
-    expect(order).toContain(`request:${LAYER_PATH}`);
-    // `registerCalls` is in call order and the request impl only records after
-    // it runs, so a registration recorded at all means it ran first.
-    expect(loader.registerCalls.findIndex((r) => r.path === LAYER_PATH)).toBeGreaterThanOrEqual(0);
+    expect(metadataAtRequest.get(LAYER_PATH)).toBe(true);
+  });
+
+  it('registers a path with redundant slashes under the simplified path it requests', () => {
+    const loader = createFakeResourceLoader();
+    const metadataAtRequest = recordSceneRequests(loader);
+
+    const ext = { id: '1_layer', path: LAYER_PATH.replace('res://', 'res:///'), type: 'PackedScene' };
+    renderHook(() => useBuildSolveTree([instanceOf('Hud', '1_layer')], [ext], []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(metadataAtRequest.get(LAYER_PATH)).toBe(true);
   });
 
   it('requests a raw `res://` instance, which names no ExtResource to register', () => {

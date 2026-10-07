@@ -12,7 +12,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['Gradient', 'GradientTexture2D'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export {

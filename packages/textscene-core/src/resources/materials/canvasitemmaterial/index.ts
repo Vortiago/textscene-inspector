@@ -11,7 +11,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['CanvasItemMaterial'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export { decodeCanvasItemMaterial } from './decode';

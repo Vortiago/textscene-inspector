@@ -11,7 +11,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['SpriteFrames'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export * from './decode';
