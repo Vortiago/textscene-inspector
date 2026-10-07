@@ -141,6 +141,16 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(loader.metadata.getAll()).toHaveLength(0);
       expect(loader.scenes.isCached(SCENE_PATH)).toBe(false);
     });
+
+    it('drops every subscriber', () => {
+      const handler = vi.fn();
+      loader.eventBus.on('scene', 'loaded', handler);
+
+      loader.clear();
+      loader.eventBus.emit('scene', 'loaded', SCENE_PATH);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
   });
 
   // The signal CameraFit uses to know loading has finished. A timer can only guess,
