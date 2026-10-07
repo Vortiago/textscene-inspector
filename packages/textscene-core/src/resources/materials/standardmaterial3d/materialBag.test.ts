@@ -179,6 +179,10 @@ describe("standardMaterialBag — the geometry instance's transparency", () => {
     });
   });
 
+  it("patches nothing on Godot's default surface", () => {
+    expect(fadedBag(null).injection).toBeUndefined();
+  });
+
   it("multiplies the fade alpha into the material's own alpha", () => {
     const { props } = fadedBag({ transparency: '1', albedo_color: 'Color(1, 1, 1, 0.5)' });
     expect(props.opacity).toBe(63.5 / 255);

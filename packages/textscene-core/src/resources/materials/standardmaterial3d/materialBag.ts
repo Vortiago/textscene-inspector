@@ -59,7 +59,11 @@ const NO_MATERIAL: StandardMaterialBag = {
   },
 };
 
-/** Godot's default surface reads no texture or vertex alpha, and writes depth in the opaque pass only. */
+/**
+ * Godot's default surface writes no ALPHA, and its three bag binds no map and no vertex colours, so
+ * three's alpha is `opacity` alone too: no patch, as for a shader that reads the albedo alpha. It
+ * writes depth in the opaque pass only.
+ */
 const NO_MATERIAL_ALPHA = { readsAlbedoAlpha: true, opaqueAfterCut: false, alphaPassDepthWrite: false };
 
 /**

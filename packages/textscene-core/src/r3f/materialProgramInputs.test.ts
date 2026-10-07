@@ -379,4 +379,12 @@ describe('injectProgram', () => {
     injectProgram(second, { ...INJECTION, cacheKey: 'other' });
     expect(first.customProgramCacheKey()).not.toBe(second.customProgramCacheKey());
   });
+
+  it('shares one cache-key function between materials with the same injection', () => {
+    const first = new THREE.MeshBasicMaterial();
+    const second = new THREE.MeshBasicMaterial();
+    injectProgram(first, INJECTION);
+    injectProgram(second, INJECTION);
+    expect(first.customProgramCacheKey).toBe(second.customProgramCacheKey);
+  });
 });

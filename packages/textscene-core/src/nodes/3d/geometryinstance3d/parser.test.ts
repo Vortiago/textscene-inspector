@@ -25,7 +25,11 @@ describe('parseGeometryInstance3D', () => {
     expect(parseGeometryInstance3D(HEADING, {}).castShadow).toBe(1);
   });
 
-  it('takes the default for an unreadable value', () => {
+  it('takes the default for an unreadable transparency', () => {
     expect(parseGeometryInstance3D(HEADING, { transparency: 'abc' }).transparency).toBe(0);
+  });
+
+  it('takes the default for an unreadable cast_shadow', () => {
+    expect(parseGeometryInstance3D(HEADING, { cast_shadow: 'abc' }).castShadow).toBe(1);
   });
 });

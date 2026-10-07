@@ -13,6 +13,7 @@ const IGNORES_ALBEDO: SurfaceAlphaSource = { readsAlbedoAlpha: false, opaqueAfte
 const CUT: SurfaceAlphaSource = { readsAlbedoAlpha: true, opaqueAfterCut: true };
 
 const ADDITIVE = { transparent: false, blending: THREE.AdditiveBlending };
+
 describe('isBlended', () => {
   it('blends a transparent surface under the default blending', () => {
     expect(isBlended({ transparent: true })).toBe(true);
