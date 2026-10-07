@@ -8,6 +8,7 @@ import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { SceneScope, TscnNode } from '../parser/types.js';
+import type { LiveNode } from '../resources/liveNode.js';
 import { joinPath } from '../utils/nodePath.js';
 import {
   allocateNodePaintRange,
@@ -121,7 +122,7 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
 }
 
 interface DispatchedNodeProps {
-  node: TscnNode;
+  node: LiveNode;
   path: string;
 }
 
@@ -136,21 +137,16 @@ export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
     <PlainNode node={node} path={path} />
   );
 
-  return node.authoredScope ? (
-    <AuthoredResourceScope scope={node.authoredScope}>{dispatched}</AuthoredResourceScope>
-  ) : (
-    dispatched
-  );
+  return node.scope ? <OwnResourceScope scope={node.scope}>{dispatched}</OwnResourceScope> : dispatched;
 }
 
 /**
- * Restores both resource pools a grafted node was authored against. Under the
- * other scene's provider its `ExtResource("3")` and `SubResource("1")` name a
- * different resource or none. The provider prepends onto the ambient pool, so
- * the authoring scene wins an id both scenes hold. The scenes that enclose the
- * authoring scene come back too, so the node may instance the scene it sits in.
+ * Provides the scope a node carries (`LiveNode.scope`). Under another scene's provider a
+ * grafted node's `ExtResource("3")` and `SubResource("1")` name a different resource or
+ * none. The provider prepends onto the ambient pool, so the node's own scope wins an id
+ * both hold. Its enclosing scenes come too, so the node may instance the scene it sits in.
  */
-function AuthoredResourceScope({ scope, children }: { scope: SceneScope; children: ReactNode }): ReactNode {
+function OwnResourceScope({ scope, children }: { scope: SceneScope; children: ReactNode }): ReactNode {
   const resources = (
     <SceneResourcesProvider
       externalResources={scope.externalResources}
@@ -337,8 +333,8 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const result = useInstancedScene(instanceRef, externalResources, loadPath);
   const loadedScene = result.status === 'loaded' ? (result.value ?? null) : null;
 
-  // The scenes that enclose this instance's content. A stable identity, since it
-  // keys the merge memo and the provider below.
+  // The scenes that enclose a multi-root or GLB instance's content. A stable identity,
+  // since it keys the provider below.
   const contentScenePaths = useMemo(
     () => (loadPath ? [...enclosingScenePaths, loadPath] : enclosingScenePaths),
     [enclosingScenePaths, loadPath]
@@ -350,12 +346,9 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // this subtree every frame.
   const effective = useMemo(() => {
     if (!loadedScene) return node;
-    // The enclosing scenes ride on the scope the merge stamps onto the host
-    // children it grafts, which `AuthoredResourceScope` restores.
     const scope: SceneScope = { ...ambientScope, instancedScenePaths: enclosingScenePaths };
-    const merged = collapseLiveNode(node, scope, singleSceneCache(loadPath, loadedScene));
-    return merged === node ? node : withContentScenePaths(merged, contentScenePaths);
-  }, [node, ambientScope, enclosingScenePaths, loadPath, loadedScene, contentScenePaths]);
+    return collapseLiveNode(node, scope, singleSceneCache(loadPath, loadedScene));
+  }, [node, ambientScope, enclosingScenePaths, loadPath, loadedScene]);
 
   // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a
   // stripped node is a new object.
@@ -383,18 +376,8 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     return <PlainNode node={shallow} path={path} />;
   }
 
-  if (effective !== node) {
-    return (
-      <SceneResourcesProvider
-        internalResources={loadedScene.internalResources}
-        externalResources={loadedScene.externalResources}
-      >
-        <InstancedScenePathsProvider paths={contentScenePaths}>
-          <DispatchedNode node={effective} path={path} />
-        </InstancedScenePathsProvider>
-      </SceneResourcesProvider>
-    );
-  }
+  // The merged node carries the sub-scene's scope, which `DispatchedNode` provides.
+  if (effective !== node) return <DispatchedNode node={effective} path={path} />;
 
   // A `.glb` or multi-root scene: the loaded roots are injected as children.
   return (
@@ -415,14 +398,4 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
       </PlainNode>
     </GlbOverridesProvider>
   );
-}
-
-/**
- * A merged node keeps the instance node's `authoredScope`, whose enclosing scenes
- * stop above the scene it merged. Its sub-scene content sits inside that scene,
- * so `AuthoredResourceScope` must restore `contentScenePaths` for it.
- */
-function withContentScenePaths(merged: TscnNode, contentScenePaths: readonly string[]): TscnNode {
-  if (!merged.authoredScope) return merged;
-  return { ...merged, authoredScope: { ...merged.authoredScope, instancedScenePaths: contentScenePaths } };
 }

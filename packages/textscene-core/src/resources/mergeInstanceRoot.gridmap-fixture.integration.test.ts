@@ -15,6 +15,7 @@ import { resolveLiveNode } from '../r3f/liveSceneTree';
 import { decodeGridMapCells, type GridMapCell } from '../nodes/3d/gridmap/cellData';
 import type { GridMapProperties } from '../nodes/3d/gridmap/types';
 import type { TscnNode, TscnScene } from '../parser/types';
+import { NO_SCOPES } from './testing/noScopes';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const platformerDir = resolve(here, '../../../../scenes/demos/3d/platformer');
@@ -59,7 +60,7 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
     expect(instanceNode!.instance).toContain('1_t0f53');
     expect(instanceNode!.type).toBe('Node'); // no type= → base Node parser
 
-    const merged = mergeInstanceRoot(instanceNode!, { nodes: base.nodes });
+    const merged = mergeInstanceRoot(instanceNode!, { nodes: base.nodes }, NO_SCOPES);
     expect(merged).not.toBeNull();
     expect(merged!.type).toBe('GridMap');
 

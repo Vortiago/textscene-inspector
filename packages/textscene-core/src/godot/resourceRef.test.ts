@@ -13,8 +13,9 @@ import {
   isPathResourceLiteral,
   keyedResourceRefReader,
   openResourceRef,
+  renameResourceRefs,
   resourceRef,
-  resourceRefSpans,
+  resourceRefSpansByLine,
   subResourceRefAnywhere,
 } from './resourceRef.js';
 
@@ -237,11 +238,11 @@ describe('extResourceIdsIn', () => {
   });
 });
 
-describe('resourceRefSpans', () => {
+describe('resourceRefSpansByLine', () => {
   it('finds every reference in a text with its span, padded and integer forms included', () => {
     const text = 'a = [ExtResource("1_a"), SubResource ( "b" ), ExtResource(3)]';
 
-    expect(resourceRefSpans(text)).toEqual([
+    expect(resourceRefSpansByLine([text])[0]).toEqual([
       { kind: 'ExtResource', id: '1_a', start: 5, end: 23 },
       { kind: 'SubResource', id: 'b', start: 25, end: 44 },
       { kind: 'ExtResource', id: '3', start: 46, end: 60 },
@@ -249,7 +250,19 @@ describe('resourceRefSpans', () => {
   });
 
   it('finds nothing in a text with no reference', () => {
-    expect(resourceRefSpans('Vector3(1, 2, 3)')).toEqual([]);
+    expect(resourceRefSpansByLine(['Vector3(1, 2, 3)'])).toEqual([[]]);
+  });
+
+  it('skips a reference inside a string that spans lines, which the loader never resolves', () => {
+    const lines = ['text = "first', 'ExtResource(1) still text"', 'texture = ExtResource("2")'];
+
+    expect(resourceRefSpansByLine(lines).map((spans) => spans.map((s) => s.id))).toEqual([[], [], ['2']]);
+  });
+
+  it('skips a reference in a comment, and a quote there opens no string', () => {
+    const lines = ['; ExtResource("1") and a stray "', 'texture = ExtResource("2")'];
+
+    expect(resourceRefSpansByLine(lines).map((spans) => spans.map((s) => s.id))).toEqual([[], ['2']]);
   });
 });
 
@@ -264,5 +277,24 @@ describe('openResourceRef', () => {
 
   it('answers null once the quote is closed', () => {
     expect(openResourceRef('texture = ExtResource("1")')).toBeNull();
+  });
+});
+
+describe('renameResourceRefs', () => {
+  const tagged = (ref: { kind: string; id: string }) => `${ref.kind[0]}${ref.id}`;
+
+  it('renames the id of both kinds, padded and integer ids included', () => {
+    expect(renameResourceRefs('[ExtResource ( "a" ), SubResource(2)]', tagged)).toBe(
+      '[ExtResource("Ea"), SubResource("S2")]'
+    );
+  });
+
+  it('leaves a reference spelled inside a string, which the loader never resolves', () => {
+    const text = '["ExtResource(\\"a\\")", &"SubResource(\\"b\\")"]';
+    expect(renameResourceRefs(text, tagged)).toBe(text);
+  });
+
+  it('returns a value with no reference unchanged', () => {
+    expect(renameResourceRefs('Vector3(1, 2, 3)', tagged)).toBe('Vector3(1, 2, 3)');
   });
 });

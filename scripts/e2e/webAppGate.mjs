@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 /**
- * `pnpm test:e2e:web`: the gate for the web app's outliner, inspector, mode
- * switching, phone layout and load health, through `?fixture=` in the real running app. It
- * observes from outside (`cameraProbe.mjs`, DOM shape), so no production file
- * carries a test hook.
+ * `pnpm test:e2e:web`: the gate for the web app's outliner, inspector, mode switching, phone
+ * layout, file upload and drop, and load health, through `?fixture=` in the real running app. It
+ * observes from outside (`cameraProbe.mjs`, DOM shape), so no production file carries a test hook.
  */
 import { launchShowcaseBrowser } from '../showcase/browser.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
@@ -17,13 +16,7 @@ import {
   waitForServer,
 } from '../visual/previewServer.mjs';
 import { installViewMatrixProbe, matricesEqual, formatMatrix } from './cameraProbe.mjs';
-import {
-  arraysEqual,
-  describeNodePathMismatch,
-  expandAllTreeRows,
-  readOutlinerPaths,
-  selectOutlinerNode,
-} from './outliner.mjs';
+import { checkNodePaths, expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
 import { findRowValue, readInspectorPanel } from './inspector.mjs';
 import { openFixture } from './openFixture.mjs';
 import { longTasksAfterFirstReply, longTasksDuringTextureWork } from './textureWorkProbe.mjs';
@@ -39,7 +32,9 @@ import {
   runSettleControl,
 } from './textureWorkScenarios.mjs';
 import { checkDiagnostics } from './diagnostics.mjs';
+import { checkInk, checkSizedCanvas, checkStage, INK_FLOOR_2D } from './canvasChecks.mjs';
 import { checkPhoneLayout, runPhoneScenario } from './phoneScenario.mjs';
+import { checkUploadScenarios, runUploadScenarios } from './uploadScenarios.mjs';
 
 /* global window */
 // `window` exists only in the browser that runs the `page.evaluate` calls.
@@ -65,11 +60,10 @@ const FIXTURE_2D = 'unit-sprite2d.tscn';
 // suffices, as in `clickNode` in `scripts/showcase/record.mjs`.
 const SELECT_SETTLE_MS = 400;
 
-// Far below a passing run (3D ~195k ink px, 2D ~28k, on a 631x756 canvas), as
-// in `scripts/vscode/webview-csp-gate.mjs`: nothing drawn reads as 0 on any
+// Far below a passing run (3D ~195k ink px on a 631x756 canvas), as in
+// `scripts/vscode/webview-csp-gate.mjs`: nothing drawn reads as 0 on any
 // display, so the floor only clears noise.
 const INK_FLOOR_3D = 20000;
-const INK_FLOOR_2D = 4000;
 // The 4096x4096 noise field, drawn at 1/8 scale, fills a 512x512 square: most of it is ink.
 const INK_FLOOR_LARGE_TEXTURE = 20000;
 
@@ -147,36 +141,6 @@ class GateFailures {
   }
 }
 
-// three.js catches a failed WebGL context and never resizes the canvas from the
-// browser's 300x150, above the >50 floor `scripts/vscode/driveScene.mjs` uses.
-// This canvas fills most of a 1280x800 viewport (~631x756), so 400 splits them.
-const MIN_SIZED_CANVAS_DIMENSION = 400;
-
-/** Sized canvas, checked apart from ink: a dead GL context reads 0 ink too. */
-function checkSizedCanvas(gate, label, dims) {
-  gate.check(
-    dims.width > MIN_SIZED_CANVAS_DIMENSION && dims.height > MIN_SIZED_CANVAS_DIMENSION,
-    `${label} canvas never produced a properly sized surface (${dims.width}x${dims.height}) — WebGL ` +
-      'context creation likely failed (three.js leaves the canvas at its unsized 300x150 default), ' +
-      'so the ink check below says nothing'
-  );
-}
-
-function checkInk(gate, label, ink, floor) {
-  gate.check(!!ink, `${label} canvas never settled, so it was never screenshotted for an ink count`);
-  if (ink) {
-    gate.check(
-      ink.inkPixels >= floor,
-      `${label} only ${ink.inkPixels} ink pixels on a ${ink.width}x${ink.height} canvas, floor is ` +
-        `${floor} — nothing rendered`
-    );
-  }
-}
-
-function checkStage(gate, label, actual, expected) {
-  gate.check(actual === expected, `${label} opened in the "${actual}" workspace, expected "${expected}"`);
-}
-
 async function main() {
   ensureWebBuilt(console.log);
   await assertPortFree(PORT, 'E2E_WEB_PORT');
@@ -205,19 +169,15 @@ async function main() {
     console.log(`[gate] phone scenario: ${FIXTURE_3D}`);
     const phone = await runPhoneScenario(browser, baseUrl, { fixture: FIXTURE_3D, selectPath: SELECT_A });
 
+    console.log(`[gate] upload scenarios: file input, drop and repeated drop over ${FIXTURE_3D}`);
+    const uploads = await runUploadScenarios(browser, baseUrl, FIXTURE_3D);
+
     checkSizedCanvas(gate, '[3D]', threeD.dims);
     checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);
     checkStage(gate, '[3D]', threeD.stage, '3d');
     checkDiagnostics(gate, '[3D]', threeD.diagnostics);
 
-    if (!arraysEqual(EXPECTED_3D_PATHS, threeD.paths)) {
-      const { missing, extra } = describeNodePathMismatch(EXPECTED_3D_PATHS, threeD.paths);
-      gate.check(
-        false,
-        `[outliner] node paths do not match ${FIXTURE_3D}: got [${threeD.paths.join(', ')}], ` +
-          `expected [${EXPECTED_3D_PATHS.join(', ')}] (missing: [${missing.join(', ')}], extra: [${extra.join(', ')}])`
-      );
-    }
+    checkNodePaths(gate, `[outliner] the tree of ${FIXTURE_3D}`, EXPECTED_3D_PATHS, threeD.paths);
 
     gate.check(
       threeD.inspectorA?.name === 'Title',
@@ -272,6 +232,7 @@ async function main() {
     checkDiagnostics(gate, '[long tasks]', withWorker.diagnostics);
     checkDiagnostics(gate, '[long tasks, .tres material]', fromTres.diagnostics);
     checkPhoneLayout(gate, phone, { expectedPaths: EXPECTED_3D_PATHS, selectName: 'Title' });
+    checkUploadScenarios(gate, uploads);
 
     console.log('\n[gate] measurements');
     console.log(
@@ -299,6 +260,11 @@ async function main() {
       `  phone  canvas=${phone.canvasBox?.width}x${phone.canvasBox?.height} ` +
         `sheet=${phone.dockBox?.width}x${phone.dockBox?.height} ` +
         `collapsed-canvas=${phone.collapsedCanvasBox?.width}x${phone.collapsedCanvasBox?.height}`
+    );
+    console.log(
+      `  uploads  file-input ink=${uploads.fileInput.ink?.inkPixels} drop ink=${uploads.drop.ink?.inkPixels} ` +
+        `scene-only drop ink=${uploads.repeatedDrop.sceneOnly.ink?.inkPixels} ` +
+        `texture drop ink=${uploads.repeatedDrop.filled.ink?.inkPixels}`
     );
   } finally {
     if (browser) await browser.close().catch(() => {});

@@ -37,6 +37,7 @@ export function liveTreeContext(
     roots: root.nodes,
     ctx: {
       externalResources: root.externalResources,
+      internalResources: root.internalResources,
       sceneCache: loader?.scenes ?? { getCached: () => undefined },
       glbCache: loader?.glbMeshes,
     },
