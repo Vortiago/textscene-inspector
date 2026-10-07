@@ -19,12 +19,14 @@ jobs:
       directory: ${{ steps.tag.outputs.directory }}
       version: ${{ steps.tag.outputs.version }}
       previous_tag: ${{ steps.tag.outputs.previous_tag }}
+      notes: ${{ steps.notes.outputs.notes }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      # The release notes compare against the previous tag of the same package.
+      # The release notes compare against the previous tag of the same package, and start with
+      # the message of an annotated tag. The forced fetch brings each tag object as pushed.
       - name: Fetch the tags
         run: git fetch --no-tags --depth=1 origin '+refs/tags/*:refs/tags/*'
 
@@ -39,6 +41,17 @@ jobs:
       - name: Read the package and version from the tag
         id: tag
         run: node scripts/ci/releaseVersion.mjs "$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+
+      # A random delimiter, so no line of a tag message can end the multi-line output early.
+      - name: Write the release notes
+        id: notes
+        run: |
+          delimiter="notes_$(openssl rand -hex 16)"
+          notes=$(node scripts/ci/releaseNotes.mjs "$GITHUB_REF_NAME" "$PACKAGE" "$PREVIOUS_TAG")
+          printf 'notes<<%s\n%s\n%s\n' "$delimiter" "$notes" "$delimiter" >> "$GITHUB_OUTPUT"
+        env:
+          PACKAGE: ${{ steps.tag.outputs.package }}
+          PREVIOUS_TAG: ${{ steps.tag.outputs.previous_tag }}
 
       - uses: ./.github/actions/setup
 
@@ -85,10 +98,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
-          # Without an earlier tag, generated notes would list every merged pull request.
-          generate_release_notes: ${{ needs.validate.outputs.previous_tag != '' }}
-          body: ${{ needs.validate.outputs.previous_tag == '' && 'First public release.' || '' }}
-          previous_tag: ${{ needs.validate.outputs.previous_tag }}
+          body: ${{ needs.validate.outputs.notes }}
           make_latest: true
           files: |
             apps/textscene-vscode/*.vsix
@@ -132,10 +142,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
-          # Without an earlier tag, generated notes would list every merged pull request.
-          generate_release_notes: ${{ needs.validate.outputs.previous_tag != '' }}
-          body: ${{ needs.validate.outputs.previous_tag == '' && 'First public release.' || '' }}
-          previous_tag: ${{ needs.validate.outputs.previous_tag }}
+          body: ${{ needs.validate.outputs.notes }}
           make_latest: false
           files: ${{ needs.validate.outputs.directory }}/*.tgz
 
