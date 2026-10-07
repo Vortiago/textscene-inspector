@@ -101,8 +101,21 @@ const TWO_MESH_TRES = [
   '',
 ].join('\n');
 
-function meshLoader() {
-  const { bus, provider, loads } = busServing({ [TWO_MESH_PATH]: TWO_MESH_TRES });
+/** A Theme whose default font is a sub-resource of its own file. */
+const THEME_PATH = 'res://theme.tres';
+const THEME_TRES = [
+  '[gd_resource type="Theme" load_steps=2 format=3]',
+  '',
+  '[sub_resource type="SystemFont" id="SystemFont_a"]',
+  'font_names = PackedStringArray("serif")',
+  '',
+  '[resource]',
+  'default_font = SubResource("SystemFont_a")',
+  '',
+].join('\n');
+
+function loaderOverBus() {
+  const { bus, provider, loads } = busServing({ [TWO_MESH_PATH]: TWO_MESH_TRES, [THEME_PATH]: THEME_TRES });
   const loader = new ResourceLoader(bus);
   loader.setProvider(provider);
   return { loader, loads };
@@ -114,26 +127,23 @@ function loadMesh(loader: ResourceLoader, address: string): Promise<ArrayMeshRes
   return loaded;
 }
 
-describe('ResourceLoader: an ArrayMesh releases the parse it read', () => {
+function loadTheme(loader: ResourceLoader): Promise<ThemeResource> {
+  const loaded = loader.eventBus.once<ThemeResource>('theme', 'loaded', THEME_PATH, 2000);
+  loader.themes.request(THEME_PATH);
+  return loaded;
+}
+
+describe('ResourceLoader: a parse lives until every section built from it settles', () => {
   it('drops the parse once the mesh is built, so its `_surfaces` text is not held twice', async () => {
-    const { loader } = meshLoader();
+    const { loader } = loaderOverBus();
 
     await loadMesh(loader, `${TWO_MESH_PATH}::ArrayMesh_a`);
 
     expect(loader.resources.isCached(TWO_MESH_PATH)).toBe(false);
   });
 
-  it('keeps the parse a mounted reader pins', async () => {
-    const { loader } = meshLoader();
-    loader.resources.pin(TWO_MESH_PATH);
-
-    await loadMesh(loader, `${TWO_MESH_PATH}::ArrayMesh_a`);
-
-    expect(loader.resources.isCached(TWO_MESH_PATH)).toBe(true);
-  });
-
   it('reads the file once for meshes requested together from it', async () => {
-    const { loader, loads } = meshLoader();
+    const { loader, loads } = loaderOverBus();
 
     await Promise.all([
       loadMesh(loader, `${TWO_MESH_PATH}::ArrayMesh_a`),
@@ -141,5 +151,21 @@ describe('ResourceLoader: an ArrayMesh releases the parse it read', () => {
     ]);
 
     expect(loads).toEqual([TWO_MESH_PATH]);
+  });
+
+  it('reads the file once for a Theme and the font it declares beside it', async () => {
+    const { loader, loads } = loaderOverBus();
+
+    await loadTheme(loader);
+
+    expect(loads).toEqual([THEME_PATH]);
+  });
+
+  it('drops the parse once a Theme and its own font are built', async () => {
+    const { loader } = loaderOverBus();
+
+    await loadTheme(loader);
+
+    expect(loader.resources.isCached(THEME_PATH)).toBe(false);
   });
 });

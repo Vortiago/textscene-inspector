@@ -71,8 +71,9 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
 
   return {
     request(path: string): void {
-      if (cache.has(path)) {
-        const cached = cache.get(path) as CacheEntry<T>;
+      // A cache never holds `undefined`, so one read answers both "held" and "what".
+      const cached = cache.get(path);
+      if (cached !== undefined) {
         if (cached instanceof CachedFailure) {
           logger.info(`[${resourceType}Processor] Cache hit (failed) for: ${path}`);
           eventBus.emit<Error>(resourceType, 'failed', path, cached.error);
@@ -129,7 +130,7 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
     },
 
     failure(path: string): Error | undefined {
-      const cached = cache.get(path);
+      const cached = cache.peek(path);
       return cached instanceof CachedFailure ? cached.error : undefined;
     },
 
@@ -145,7 +146,7 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
 
     release(path: string): void {
       // A failure stays: it is small, and it is what stops a retry.
-      if (cache.isPinned(path) || cache.get(path) instanceof CachedFailure) return;
+      if (cache.isPinned(path) || cache.peek(path) instanceof CachedFailure) return;
       cache.delete(path);
     },
 

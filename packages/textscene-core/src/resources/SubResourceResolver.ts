@@ -56,7 +56,7 @@ function claimExternalIds(byId: Map<string, TscnExternalResource>, resource: Tsc
 }
 
 function claimInternalIds(byId: Map<string, TscnInternalResource>, resource: TscnInternalResource): void {
-  claimId(byId, String(resource.id), resource);
+  claimId(byId, resource.id, resource);
 }
 
 /** The `[ext_resource]` declaring `id`, the first one when a file repeats an id. */

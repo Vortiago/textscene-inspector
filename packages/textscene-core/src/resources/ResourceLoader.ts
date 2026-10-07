@@ -42,6 +42,8 @@ export class ResourceLoader {
   readonly metadata: MetadataStore;
   /** Which cached resources read which files, so a **Dependency hot-reload** reaches them. */
   private readonly dependencies = new DependencyGraph();
+  /** File path → the addresses still building from its parse. Written only by `holdParse` and `dropParseHold`. */
+  private readonly parseHolds = new Map<string, number>();
   /** Runs procedural texture builds, in the host's worker where it has one. */
   readonly jobRunner: WorkerJobRunner;
   readonly eventBus: ResourceEventBus;
@@ -113,10 +115,9 @@ export class ResourceLoader {
   ): Promise<T> {
     // First, so a change to `path` reloads `dependent` whether this read hits, fails or waits.
     this.dependencies.record(dependent, path);
-    const failure = processor.failure(path);
-    if (failure) throw failure;
     const cached = processor.getCached(path);
-    if (cached !== undefined && cached !== null) return cached;
+    if (cached === null) throw processor.failure(path);
+    if (cached !== undefined) return cached;
     processor.request(path);
     return this.eventBus.once<T>(busType, 'loaded', path, PEER_LOAD_TIMEOUT_MS);
   }
@@ -150,24 +151,36 @@ export class ResourceLoader {
 
   /** The section behind each address `busType` loads, from the `resource` slot's cached parse. */
   private sectionLoaderFor(busType: ResourceType): SectionLoaderFn {
-    return sectionLoader((path) =>
-      this.peerRequire({ busType, key: path }, this.resources, 'resource', resourceFilePath(path))
-    );
+    return sectionLoader((path) => {
+      this.holdParse(busType, path);
+      return this.peerRequire({ busType, key: path }, this.resources, 'resource', resourceFilePath(path));
+    });
   }
 
   /**
-   * A built ArrayMesh no longer needs its file's parse, whose `_surfaces` text would
-   * sit beside the geometry. The parse goes once no address into that file is still
-   * building, so meshes requested together share one parse, and a pinned parse stays.
+   * Hold the parse of `address`'s file until `address` settles, then release it with the
+   * last holder. A built resource then keeps no copy of its file's text beside it, and
+   * overlapping builds, such as a MeshLibrary's meshes or a Theme's fonts, share one parse.
    */
-  private releaseParseOnceBuilt(): void {
-    const release = (address: string): void => {
-      const filePath = resourceFilePath(address);
-      const building = this.arrayMeshes.inflightPaths().some((p) => resourceFilePath(p) === filePath);
-      if (!building) this.resources.release(filePath);
-    };
-    this.eventBus.on('arraymesh', 'loaded', release);
-    this.eventBus.on('arraymesh', 'failed', release);
+  private holdParse(busType: ResourceType, address: string): void {
+    const filePath = resourceFilePath(address);
+    this.parseHolds.set(filePath, (this.parseHolds.get(filePath) ?? 0) + 1);
+    // Synchronous, not `once`: a reader woken by the settle event already sees the parse gone.
+    const unsubscribe = this.eventBus.onChange([busType], ({ key }) => {
+      if (key !== address) return;
+      unsubscribe();
+      this.dropParseHold(filePath);
+    });
+  }
+
+  private dropParseHold(filePath: string): void {
+    const holds = (this.parseHolds.get(filePath) ?? 1) - 1;
+    if (holds > 0) {
+      this.parseHolds.set(filePath, holds);
+      return;
+    }
+    this.parseHolds.delete(filePath);
+    this.resources.release(filePath);
   }
 
   constructor(fileEventBus?: FileEventBus, options: ResourceLoaderOptions = {}) {
@@ -204,7 +217,6 @@ export class ResourceLoader {
 
     this.resources = createTresResourceProcessor(fileEventBus, this.eventBus);
     this.arrayMeshes = createArrayMeshProcessor(this.eventBus, this.sectionLoaderFor('arraymesh'));
-    this.releaseParseOnceBuilt();
     this.fonts = createFontProcessor(
       this.eventBus,
       this.sectionLoaderFor('font'),

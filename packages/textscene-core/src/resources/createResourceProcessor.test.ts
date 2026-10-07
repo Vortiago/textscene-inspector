@@ -127,7 +127,7 @@ describe('createResourceProcessor', () => {
       expect(fileEventBus.isCached('res://a.bin')).toBe(true);
     });
 
-    it('failure is cached as null and a repeat request re-emits the same reason WITHOUT re-hitting the provider', async () => {
+    it('a failure is cached and a repeat request re-emits its reason WITHOUT re-hitting the provider', async () => {
       // Provider has no file -> FileEventBus emits failed -> processor caches the failure.
       const failedHandler = vi.fn();
       eventBus.on<Error>('resource', 'failed', failedHandler);
@@ -207,7 +207,7 @@ describe('createResourceProcessor', () => {
       expect(processor.getCached('res://scene.tscn')).toBe('direct:res://scene.tscn');
     });
 
-    it('failure is cached as null and a repeat request re-emits the same reason WITHOUT re-invoking loadDirectly', async () => {
+    it('a failure is cached and a repeat request re-emits its reason WITHOUT re-invoking loadDirectly', async () => {
       const loadDirectly = vi.fn(async () => {
         throw new Error('disk on fire');
       });
@@ -772,7 +772,7 @@ describe('createResourceProcessor', () => {
       expect(loaded).toHaveBeenCalledWith('res://a', 'fresh');
     });
 
-    it('a stale failure after a full clear is dropped instead of caching a null sentinel', async () => {
+    it('a stale failure after a full clear is dropped instead of caching a failure', async () => {
       let reject!: (err: Error) => void;
       const gate = new Promise<string>((_r, rj) => (reject = rj));
       let calls = 0;
@@ -790,7 +790,7 @@ describe('createResourceProcessor', () => {
       await flush();
 
       expect(failed).not.toHaveBeenCalled();
-      expect(processor.isCached('res://a')).toBe(false); // no null sentinel
+      expect(processor.isCached('res://a')).toBe(false); // no cached failure
 
       processor.request('res://a');
       await flush();

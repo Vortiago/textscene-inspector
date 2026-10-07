@@ -54,7 +54,7 @@ export type CacheEntry<T> = T | CachedFailure;
 export interface ResourceProcessor<T> {
   /** Non-blocking. */
   request(path: string): void;
-  /** Null when the load failed. */
+  /** Null when the load failed: {@link failure} gives the reason. */
   getCached(path: string): T | null | undefined;
   /** The reason a cached load failed, or undefined when `path` holds no failure. */
   failure(path: string): Error | undefined;
