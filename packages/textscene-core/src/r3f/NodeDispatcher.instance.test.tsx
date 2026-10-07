@@ -547,9 +547,10 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     mergeSpy.mockRestore();
   });
 
-  it('PERF (WI-213): registers the instanced ExtResource from an effect, not the render body', async () => {
+  it('registers the instanced ExtResource before the scene load requests it', async () => {
     const fake = createFakeResourceLoader();
-    fake.scenes.seed('res://child_cube.tscn', makeBoxScene('TheBox'));
+    const metadataAtRequest = new Map<string, boolean>();
+    fake.scenes.setRequestImpl((path) => metadataAtRequest.set(path, fake.metadata.has(path)));
 
     const instancingNode: TscnNode = {
       name: 'LeftCube',
@@ -563,13 +564,6 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
     ]);
 
-    // Behavior is preserved (registration still happens, so the resource
-    // pipeline can resolve the instanced scene) even though the call now
-    // lives inside a useEffect instead of the render body.
-    expect(fake.registerCalls).toContainEqual({
-      id: '1_cube',
-      path: 'res://child_cube.tscn',
-      type: 'PackedScene',
-    });
+    expect(metadataAtRequest.get('res://child_cube.tscn')).toBe(true);
   });
 });

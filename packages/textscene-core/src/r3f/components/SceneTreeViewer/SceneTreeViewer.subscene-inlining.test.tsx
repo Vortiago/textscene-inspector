@@ -126,6 +126,21 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     expect(innerRow!.textContent).toContain('▶');
   });
 
+  it("registers the sub-scene's ExtResource before the scene load requests it", () => {
+    const fake = createFakeResourceLoader();
+    const metadataAtRequest = new Map<string, boolean>();
+    fake.scenes.setRequestImpl((path) => metadataAtRequest.set(path, fake.metadata.has(path)));
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('PhotoFrame1', 'Node3D', { instance: 'ExtResource("frame_1")' })],
+      externalResources: [makeExtResource('frame_1', 'res://photo_frame.tscn')],
+      internalResources: [],
+    });
+
+    render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
+
+    expect(metadataAtRequest.get('res://photo_frame.tscn')).toBe(true);
+  });
+
   it('offers an "open sub-scene standalone" action that reports the instance res:// path', () => {
     const fake = createFakeResourceLoader();
     const graph = createSceneGraphFromTscnScene({

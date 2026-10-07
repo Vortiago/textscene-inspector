@@ -7,7 +7,7 @@
 import { Fragment, useCallback, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type * as THREE from 'three';
-import type { SceneScope, TscnNode, TscnScene } from '../parser/types.js';
+import type { SceneScope, TscnNode } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
 import {
   allocateNodePaintRange,
@@ -36,13 +36,9 @@ import {
   InstancedScenePathsProvider,
   useInstancedScenePaths,
 } from './contexts/InstancedScenePathsContext.js';
-import { useResource, useResourceLoader } from '../resources/useResource.js';
 import { collapseLiveNode, singleSceneCache } from './liveSceneTree.js';
-import {
-  findExtResource,
-  parseResourceReference,
-  resolveInstancePath,
-} from '../resources/SubResourceResolver.js';
+import { resolveInstancePath } from '../resources/SubResourceResolver.js';
+import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
 import { useSelection } from './contexts/SelectionContext.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
@@ -342,27 +338,12 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const ambientScope = useSceneResources();
   const { externalResources } = ambientScope;
   const enclosingScenePaths = useInstancedScenePaths();
-  const loader = useResourceLoader();
   const paintRange = usePaintRange();
   const instanceRef = node.instance ?? '';
   const scenePath = resolveInstancePath(instanceRef, externalResources);
   const isCyclic = scenePath !== null && enclosingScenePaths.includes(scenePath);
   // Null for a scene this node never loads: an unresolvable ref or a cycle.
   const loadPath = isCyclic ? null : scenePath;
-
-  // Registered here, not in a parent: `loadSceneFromProvider` throws "Scene
-  // metadata not found" without it, and React runs a parent's effect after this
-  // component's `useResource` effect. An effect keeps the render pure. Idempotent.
-  useEffect(() => {
-    if (!loader || !loadPath) return;
-    const parsed = parseResourceReference(instanceRef);
-    if (parsed && parsed.type === 'ExtResource') {
-      const ext = findExtResource(externalResources, parsed.id);
-      if (ext) {
-        loader.register({ id: ext.id, path: ext.path, type: ext.type });
-      }
-    }
-  }, [loader, loadPath, instanceRef, externalResources]);
 
   useEffect(() => {
     if (!isCyclic) return;
@@ -371,7 +352,9 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     );
   }, [isCyclic, path, scenePath]);
 
-  const result = useResource<TscnScene>(loadPath ?? '', 'scene');
+  // Registered here, not in a parent: React runs a parent's effect after this
+  // component's load effect.
+  const result = useInstancedScene(instanceRef, externalResources, loadPath);
   const loadedScene = result.status === 'loaded' ? (result.value ?? null) : null;
 
   // The scenes that enclose this instance's content. A stable identity, since it
