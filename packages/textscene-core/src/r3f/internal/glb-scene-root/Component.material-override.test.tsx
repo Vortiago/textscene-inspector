@@ -17,6 +17,7 @@ import { initGlbModules } from '../../../resources/processing/glbProcessing';
 import { tagImportMaterial } from '../../../resources/formats/glb/glbProcessing';
 
 import '../../nodes/index';
+import { MAGENTA } from '../../../nodes/3d/meshinstance3d/testing/magenta';
 
 beforeAll(async () => {
   await initGlbModules();
@@ -167,7 +168,7 @@ describe('GLBSceneRoot — surface_material_override on a GLB-internal mesh', ()
     fake.textures.seed(MISSING_TEXTURE_PATH, null);
 
     const renderer = await render(fake.loader, 'SubResource("Mat_missing_texture")');
-    expect(roadMaterial(renderer).color.getHex()).toBe(0xff00ff);
+    expect(roadMaterial(renderer).color.getHex()).toBe(MAGENTA);
   });
 
   it("keeps one placeholder material while the override's other textures arrive", async () => {

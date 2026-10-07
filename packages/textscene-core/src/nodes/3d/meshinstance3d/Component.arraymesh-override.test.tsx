@@ -19,6 +19,7 @@ import {
   surfaceMaterials,
 } from './testing/renderMeshInstance';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { MAGENTA } from './testing/magenta';
 
 const MESH_PATH = 'res://stage/meshes/wheel.tres';
 const OVERRIDE_MATERIAL_PATH = 'res://stage/materials/paint.tres';
@@ -99,8 +100,6 @@ async function renderSettled(
   }
   return surfaceMaterials(renderer);
 }
-
-const MAGENTA = 0xff00ff;
 
 function hex(material: THREE.MeshStandardMaterial): number {
   return material.color.getHex();

@@ -9,6 +9,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import { meshInstanceNode, renderMeshInstance, surfaceMaterials } from './testing/renderMeshInstance';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
+import { MAGENTA } from './testing/magenta';
 
 const MISSING_PATH = 'res://textures/missing.png';
 
@@ -18,8 +19,6 @@ const MATERIALS: TscnInternalResource[] = [
   { id: 'Mat_red', type: 'StandardMaterial3D', data: { albedo_color: 'Color(1, 0, 0, 1)' } },
   { id: 'Mat_missing', type: 'StandardMaterial3D', data: { albedo_texture: 'ExtResource("1_tex")' } },
 ];
-
-const MAGENTA = 0xff00ff;
 
 describe('<MeshInstance3D> ArrayMesh surface with a missing texture', () => {
   it("draws the magenta placeholder on the surface whose own material's texture is missing", async () => {
