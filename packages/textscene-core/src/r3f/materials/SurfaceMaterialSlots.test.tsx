@@ -1,6 +1,7 @@
 /**
  * How `SurfaceMaterialSlots` attaches one slot per draw group: a material array for
  * many surfaces, one material for a single surface, and Godot's default surface for none.
+ * `surfaceSources` and `surfaceAttach` state those two rules for any per-surface slot.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -11,7 +12,7 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { GODOT_DEFAULT_ROUGHNESS } from './godotDefaultMaterial';
 import type { MaterialSource } from './materialSource';
-import { SurfaceMaterialSlots } from './SurfaceMaterialSlots';
+import { SurfaceMaterialSlots, surfaceAttach, surfaceSources } from './SurfaceMaterialSlots';
 
 const SCENE: TscnInternalResource[] = [
   { id: 'Mat_red', type: 'StandardMaterial3D', data: { albedo_color: 'Color(1, 0, 0, 1)' } },
@@ -62,5 +63,33 @@ describe('<SurfaceMaterialSlots>', () => {
     const material = await renderedMaterial([]);
     expect(Array.isArray(material)).toBe(false);
     expect((material as THREE.MeshStandardMaterial).roughness).toBeCloseTo(GODOT_DEFAULT_ROUGHNESS, 5);
+  });
+});
+
+describe('surfaceSources', () => {
+  it('keeps the declared sources in draw-group order', () => {
+    expect(surfaceSources([RED, BLUE])).toEqual([RED, BLUE]);
+  });
+
+  it("gives a mesh that declares no surface Godot's default one", () => {
+    expect(surfaceSources([])).toEqual([undefined]);
+  });
+
+  it('keeps a declared surface that names no material', () => {
+    expect(surfaceSources([undefined])).toEqual([undefined]);
+  });
+});
+
+describe('surfaceAttach', () => {
+  it('attaches into the material array for a mesh of many surfaces', () => {
+    expect(surfaceAttach(1, 2)).toBe('material-1');
+  });
+
+  it('keeps the singular key for a mesh of one surface', () => {
+    expect(surfaceAttach(0, 1)).toBe('material');
+  });
+
+  it('keeps the indexed key for the first surface of many', () => {
+    expect(surfaceAttach(0, 3)).toBe('material-0');
   });
 });

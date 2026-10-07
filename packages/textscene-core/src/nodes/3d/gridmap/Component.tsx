@@ -14,7 +14,7 @@ import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
 import { fileMaterialSources, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlot, useMaterialScalars } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
-import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/otherDrawsSurface';
+import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/useOneSurfaceStartingMaterial';
 import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
 import { surfaceBillboard } from '../../../resources/materials/standardmaterial3d/materialBag';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
@@ -213,12 +213,13 @@ function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.M
   const { geometry, shadow } = draw;
   const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  // Every arg is a dependency: a changed arg rebuilds the mesh with identity instance matrices.
   useLayoutEffect(() => {
     const mesh = meshRef.current;
     if (!mesh) return;
     matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
     mesh.instanceMatrix.needsUpdate = true;
-  }, [matrices, geometry]);
+  }, [matrices, geometry, startingMaterial]);
 
   return (
     <instancedMesh
@@ -232,7 +233,7 @@ function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.M
       onBeforeShadow={shadow.onBeforeShadow}
       onAfterShadow={shadow.onAfterShadow}
     >
-      <SurfaceMaterialSlot source={draw.source} attach={surfaceAttach(draw.surface, draw.surfaceCount)} />
+      <OwnedSurfaceSlot draw={draw} />
     </instancedMesh>
   );
 }
@@ -257,9 +258,14 @@ function CellTile({ draw, matrix }: { draw: SurfaceDraw; matrix: THREE.Matrix4 }
       onBeforeShadow={shadow.onBeforeShadow}
       onAfterShadow={shadow.onAfterShadow}
     >
-      <SurfaceMaterialSlot source={draw.source} attach={surfaceAttach(draw.surface, draw.surfaceCount)} />
+      <OwnedSurfaceSlot draw={draw} />
     </mesh>
   );
+}
+
+/** The material of the one draw group a surface draw owns. */
+function OwnedSurfaceSlot({ draw }: { draw: SurfaceDraw }) {
+  return <SurfaceMaterialSlot source={draw.source} attach={surfaceAttach(draw.surface, draw.surfaceCount)} />;
 }
 
 function PlaceholderCell({ matrix, cellSize }: { matrix: THREE.Matrix4; cellSize: Vector3 }) {
