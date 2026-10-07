@@ -5,7 +5,7 @@
  * the loader's caches, so the React consumers re-run it when a sub-scene loads.
  */
 import type * as THREE from 'three';
-import type { SceneScope, TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
+import type { SceneScope, TscnNode } from '../parser/types.js';
 import { scopeOf, type LiveNode } from '../resources/liveNode.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
@@ -31,11 +31,8 @@ export interface CachedGlbSource {
   getCached: (path: string) => THREE.Object3D | null | undefined;
 }
 
-export interface LiveTreeContext {
-  /** The root scene's ExtResources, which its top-level instance refs resolve against. */
-  externalResources: readonly TscnExternalResource[];
-  /** The root scene's SubResources, which an instance's own overrides name. */
-  internalResources: readonly TscnInternalResource[];
+/** The root scene's own pools, which the top-level nodes resolve against, and the caches. */
+export interface LiveTreeContext extends SceneScope {
   sceneCache: CachedSceneSource;
   glbCache?: CachedGlbSource;
 }
@@ -102,11 +99,6 @@ function contentScopeOf(cached: Partial<SceneScope>, instancedScenePaths: readon
     internalResources: cached.internalResources ?? [],
     instancedScenePaths,
   };
-}
-
-/** The root {@link SceneScope} for a path or tree walk: the root scene's own pools. */
-export function rootScope(ctx: LiveTreeContext): SceneScope {
-  return { externalResources: ctx.externalResources, internalResources: ctx.internalResources };
 }
 
 /**
@@ -215,13 +207,11 @@ function liveChainLinks(
   if (segments.length === 0) return null;
 
   const links: LiveChainLink[] = [];
-  let candidateGroups: readonly LiveChildGroup[] = [
-    { origin: 'inline', children: roots, scope: rootScope(ctx) },
-  ];
+  let candidateGroups: readonly LiveChildGroup[] = [{ origin: 'inline', children: roots, scope: ctx }];
 
   for (const segment of segments) {
     let match: LiveNode | undefined;
-    let matchScope: SceneScope = rootScope(ctx);
+    let matchScope: SceneScope = ctx;
     for (const group of candidateGroups) {
       const found = group.children.find((n) => n.name === segment);
       if (found) {
@@ -312,7 +302,7 @@ export function walkLiveTree(
       }
     }
   };
-  walk(roots, rootScope(ctx), '');
+  walk(roots, ctx, '');
 }
 
 /**

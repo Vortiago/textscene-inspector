@@ -11,7 +11,8 @@ import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js
 import { useLiveNode } from '../../useLiveSceneTree.js';
 import { PropertySection } from './PropertySection.js';
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
-import { authoredSpelling, type AuthoredIds } from '../../../resources/authoredIds.js';
+import { authoredSpelling } from '../../../resources/authoredSpelling.js';
+import type { SceneScope } from '../../../parser/types.js';
 import styles from './NodeDetailsPanel.module.css';
 
 export function NodeDetailsPanel() {
@@ -37,7 +38,7 @@ export function NodeDetailsPanel() {
   const isNotRendered = rendersOwnVisual(node.type) === 'not-implemented';
 
   const sections = registration?.propertyFormatter
-    ? authoredSections(registration.propertyFormatter(node.properties), node.authoredIds)
+    ? authoredSections(registration.propertyFormatter(node.properties), node.scope)
     : [];
 
   const showCameraActions = isCamera3DType(node.type) && cameraControl !== null;
@@ -117,11 +118,11 @@ export function NodeDetailsPanel() {
 /** Each value with its references spelled as their own files wrote them, as Godot shows them. */
 function authoredSections(
   sections: PropertySectionData[],
-  ids: AuthoredIds | undefined
+  scope: SceneScope | undefined
 ): PropertySectionData[] {
-  if (!ids) return sections;
+  if (!scope) return sections;
   return sections.map((section) => ({
     ...section,
-    items: section.items.map((item) => ({ ...item, value: authoredSpelling(item.value, ids) })),
+    items: section.items.map((item) => ({ ...item, value: authoredSpelling(item.value, scope) })),
   }));
 }

@@ -9,7 +9,6 @@ import type { SceneScope } from '../parser/types';
 import { scopeOf, type LiveNode } from './liveNode';
 import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
-import { composeAuthoredIds, unionAuthoredIds } from './authoredIds';
 import { warn } from '../logger';
 
 /** The two scopes a graft joins. */
@@ -152,16 +151,13 @@ function foldOverride(
   const existing = siblings[index]!;
   const existingScope = scopeOf(existing, siblingScope);
   const overrideScope = scopeOf(override, existingScope);
-  const { raw, scope, authoredIds } = override.rawProperties
+  const { raw, scope } = override.rawProperties
     ? rehomeOverride(override.rawProperties, overrideScope, existingScope)
-    : { raw: undefined, scope: existingScope, authoredIds: undefined };
+    : { raw: undefined, scope: existingScope };
   const layered = layerRawOverride(existing, raw);
   const children = attachAll(layered.children, override.children, overrideScope, scope);
-  // The node's own renames and the override's share one scope but trace to different files.
-  const ids = unionAuthoredIds(existing.authoredIds, composeAuthoredIds(override.authoredIds, authoredIds));
-  const folded: LiveNode = { ...layered, children, ...(ids ? { authoredIds: ids } : {}) };
   const copy = [...siblings];
-  copy[index] = scope === siblingScope ? folded : { ...folded, scope };
+  copy[index] = scope === siblingScope ? { ...layered, children } : { ...layered, children, scope };
   return copy;
 }
 

@@ -11,8 +11,7 @@ import type { GridMapProperties } from '../nodes/3d/gridmap/types';
 import type { Camera3DProperties } from '../nodes/3d/camera3d/types';
 import { NO_SCOPES } from './testing/noScopes';
 import { extResourcePathOf } from './testing/extResourcePathOf';
-import { authoredSpelling } from './authoredIds';
-import type { LiveNode } from './liveNode';
+import { authoredSpelling } from './authoredSpelling';
 
 function node(partial: Partial<TscnNode> & { name: string; type: string }): TscnNode {
   return { children: [], properties: {}, ...partial };
@@ -316,7 +315,7 @@ describe("re-homes the instance node's references into the sub-scene scope", () 
     expect(extResourcePathOf(merged.rawProperties!.texture, merged.scope!)).toBe('res://outer.png');
   });
 
-  it('records the id the outer file wrote for a renamed reference', () => {
+  it('spells a renamed reference with the id the outer file wrote', () => {
     const instanceNode = node({
       name: 'Coin1',
       type: 'Node',
@@ -326,33 +325,6 @@ describe("re-homes the instance node's references into the sub-scene scope", () 
 
     const merged = mergeInstanceRoot(instanceNode, { nodes: [root] }, scopes)!;
 
-    expect(authoredSpelling(merged.rawProperties!.texture!, merged.authoredIds)).toBe('ExtResource("1")');
-  });
-
-  it('traces a nested rename back to the outermost file', () => {
-    const instanceNode = node({
-      name: 'Coin1',
-      type: 'Node',
-      rawProperties: { texture: 'ExtResource("1 (outer)")' },
-    });
-    const middle = {
-      outer: {
-        ...scopes.content,
-        externalResources: [
-          ...scopes.content.externalResources,
-          { id: '1 (outer)', type: 'Texture2D', path: 'res://outer.png' },
-        ],
-      },
-      content: scopes.content,
-    };
-    const nested: LiveNode = {
-      ...instanceNode,
-      authoredIds: { ExtResource: new Map([['1 (outer)', '1']]), SubResource: new Map() },
-    };
-    const root = node({ name: 'Coin', type: 'UnregisteredCustomType3D', rawProperties: {} });
-
-    const merged = mergeInstanceRoot(nested, { nodes: [root] }, middle)!;
-
-    expect(authoredSpelling(merged.rawProperties!.texture!, merged.authoredIds)).toBe('ExtResource("1")');
+    expect(authoredSpelling(merged.rawProperties!.texture!, merged.scope!)).toBe('ExtResource("1")');
   });
 });

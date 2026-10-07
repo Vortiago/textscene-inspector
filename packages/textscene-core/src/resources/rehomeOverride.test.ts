@@ -17,6 +17,8 @@ const outer: SceneScope = {
   ],
 };
 
+const idOf = (ref: string): string => /Resource\("([^"]+)"\)/.exec(ref)![1]!;
+
 const inner: SceneScope = {
   externalResources: [{ id: '1', type: 'Texture2D', path: 'res://inner.png' }],
   internalResources: [],
@@ -74,18 +76,24 @@ describe('rehomeOverride', () => {
     expect(scope).toBe(inner);
   });
 
-  it('records the id the outer file wrote for each renamed reference', () => {
-    const { authoredIds } = rehomeOverride({ texture: 'ExtResource("1")' }, outer, inner);
+  it('marks a renamed copy with the id the outer file wrote', () => {
+    const { raw, scope } = rehomeOverride({ texture: 'ExtResource("1")' }, outer, inner);
 
-    expect(authoredIds?.ExtResource.get('1 (outer)')).toBe('1');
+    expect(findExtResource(scope.externalResources, idOf(raw.texture!))?.authoredId).toBe('1');
   });
 
-  it('records nothing when no id collides', () => {
-    const { authoredIds } = rehomeOverride({ texture: 'ExtResource("1")' }, outer, {
+  it('keeps the first file id through a second re-homing', () => {
+    const once = rehomeOverride({ texture: 'ExtResource("1")' }, outer, inner);
+    const deeper: SceneScope = {
       ...inner,
-      externalResources: [],
-    });
+      externalResources: [
+        ...inner.externalResources,
+        { id: '1 (outer)', type: 'Texture2D', path: 'res://deep.png' },
+      ],
+    };
 
-    expect(authoredIds).toBeUndefined();
+    const { raw, scope } = rehomeOverride(once.raw, once.scope, deeper);
+
+    expect(findExtResource(scope.externalResources, idOf(raw.texture!))?.authoredId).toBe('1');
   });
 });

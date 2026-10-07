@@ -116,11 +116,7 @@ describe('claimOwnerOf', () => {
   });
 
   it('falls back to the outer root while the sub-scene has not loaded', () => {
-    const unloaded: LiveTreeContext = {
-      ...ctx,
-      internalResources: [],
-      sceneCache: { getCached: () => undefined },
-    };
+    const unloaded: LiveTreeContext = { ...ctx, sceneCache: { getCached: () => undefined } };
     expect(claimOwnerOf('Root/HudInstance/Sprite', main.nodes, unloaded).parent).toBeUndefined();
   });
 });

@@ -25,6 +25,19 @@ function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): T
   return { name, type, children: [], properties: {}, ...extras };
 }
 
+function ctxOf(
+  externalResources: TscnExternalResource[] = [],
+  scenes: Record<string, TscnScene> = {},
+  glbCache?: CachedGlbSource
+): LiveTreeContext {
+  return {
+    externalResources,
+    internalResources: [],
+    sceneCache: cacheOf(scenes),
+    ...(glbCache ? { glbCache } : {}),
+  };
+}
+
 function cacheOf(entries: Record<string, TscnScene>): CachedSceneSource {
   return { getCached: (p) => entries[p] };
 }
@@ -62,11 +75,9 @@ describe('collectLiveNodes', () => {
         children: [makeNode('Player', 'Node3D', { instance: 'ExtResource("4_ray")' })],
       }),
     ];
-    const ctx: LiveTreeContext = {
-      externalResources: [ext('4_ray', 'res://player.tscn')],
-      internalResources: [],
-      sceneCache: cacheOf({ 'res://player.tscn': playerScene }),
-    };
+    const ctx: LiveTreeContext = ctxOf([ext('4_ray', 'res://player.tscn')], {
+      'res://player.tscn': playerScene,
+    });
 
     const cams = collectLiveNodes(roots, ctx, (n) => n.type === 'Camera3D');
     // Player (instance) collapses (ADR-0013: no wrapper segment) → its child
@@ -81,7 +92,7 @@ describe('collectLiveNodes', () => {
         children: [makeNode('Cam', 'Camera3D'), makeNode('Light', 'OmniLight3D')],
       }),
     ];
-    const ctx: LiveTreeContext = { externalResources: [], internalResources: [], sceneCache: cacheOf({}) };
+    const ctx: LiveTreeContext = ctxOf();
     const found = collectLiveNodes(roots, ctx, (n) => n.type === 'Camera3D' || n.type === 'OmniLight3D');
     expect(found.map((c) => c.path)).toEqual(['Root/Cam', 'Root/Light']);
   });
@@ -97,12 +108,7 @@ describe('collectLiveNodes', () => {
         properties: { glbPath: 'res://m.glb' } as Record<string, unknown>,
       }),
     ];
-    const ctx: LiveTreeContext = {
-      externalResources: [],
-      internalResources: [],
-      sceneCache: cacheOf({}),
-      glbCache,
-    };
+    const ctx: LiveTreeContext = ctxOf([], {}, glbCache);
     const meshes = collectLiveNodes(roots, ctx, (n) => n.type === 'GLBMesh');
     expect(meshes.map((c) => c.path)).toEqual(['m/body']);
   });
@@ -116,18 +122,10 @@ describe('collectLiveNodes', () => {
     const roots = [makeNode('A', 'Node3D', { instance: 'ExtResource("1")' })];
     const extRes = [ext('1', 'res://sub.tscn')];
 
-    const notCached: LiveTreeContext = {
-      externalResources: extRes,
-      internalResources: [],
-      sceneCache: cacheOf({}),
-    };
+    const notCached: LiveTreeContext = ctxOf(extRes);
     expect(collectLiveNodes(roots, notCached, (n) => n.type === 'Camera3D')).toEqual([]);
 
-    const cached: LiveTreeContext = {
-      externalResources: extRes,
-      internalResources: [],
-      sceneCache: cacheOf({ 'res://sub.tscn': sub }),
-    };
+    const cached: LiveTreeContext = ctxOf(extRes, { 'res://sub.tscn': sub });
     expect(collectLiveNodes(roots, cached, (n) => n.type === 'Camera3D').map((c) => c.path)).toEqual([
       'A/Cam',
     ]);
@@ -147,7 +145,7 @@ describe('collectLiveNodes', () => {
         ],
       }),
     ];
-    const ctx: LiveTreeContext = { externalResources: [], internalResources: [], sceneCache: cacheOf({}) };
+    const ctx: LiveTreeContext = ctxOf();
     const isRect = (n: TscnNode) => n.type === 'ColorRect';
 
     it('collects the whole tree when no descend predicate is given', () => {
@@ -250,11 +248,9 @@ describe('liveNodeChain — the root→target chain of EFFECTIVE nodes (for ance
         children: [makeNode('Player', 'Node2D', { instance: 'ExtResource("4_ray")' })],
       }),
     ];
-    const ctx: LiveTreeContext = {
-      externalResources: [ext('4_ray', 'res://player.tscn')],
-      internalResources: [],
-      sceneCache: cacheOf({ 'res://player.tscn': playerScene }),
-    };
+    const ctx: LiveTreeContext = ctxOf([ext('4_ray', 'res://player.tscn')], {
+      'res://player.tscn': playerScene,
+    });
 
     const chain = liveNodeChain('Game/Player/Target/Cam', roots, ctx);
     expect(chain?.map((n) => n.name)).toEqual(['Game', 'Player', 'Target', 'Cam']);
@@ -264,18 +260,18 @@ describe('liveNodeChain — the root→target chain of EFFECTIVE nodes (for ance
   });
 
   it('returns null for an unresolvable path', () => {
-    const ctx: LiveTreeContext = { externalResources: [], internalResources: [], sceneCache: cacheOf({}) };
+    const ctx: LiveTreeContext = ctxOf();
     expect(liveNodeChain('Nope/Missing', [makeNode('Root', 'Node2D')], ctx)).toBeNull();
   });
 
   it('returns null for an empty path', () => {
-    const ctx: LiveTreeContext = { externalResources: [], internalResources: [], sceneCache: cacheOf({}) };
+    const ctx: LiveTreeContext = ctxOf();
     expect(liveNodeChain('', [makeNode('Root', 'Node2D')], ctx)).toBeNull();
   });
 
   it('agrees with resolveLiveNode on the last element', () => {
     const roots = [makeNode('A', 'Node2D', { children: [makeNode('B', 'Node2D')] })];
-    const ctx: LiveTreeContext = { externalResources: [], internalResources: [], sceneCache: cacheOf({}) };
+    const ctx: LiveTreeContext = ctxOf();
     const chain = liveNodeChain('A/B', roots, ctx);
     expect(chain?.[chain.length - 1]).toBe(resolveLiveNode('A/B', roots, ctx));
   });
@@ -288,11 +284,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
 
   it('resolves an inline node by path', () => {
     const roots = [makeNode('Hallway', 'Node3D', { children: [makeNode('Table', 'Node3D')] })];
-    const node = resolveLiveNode('Hallway/Table', roots, {
-      externalResources: [],
-      internalResources: [],
-      sceneCache: cacheOf({}),
-    });
+    const node = resolveLiveNode('Hallway/Table', roots, ctxOf());
     expect(node?.name).toBe('Table');
   });
 
@@ -313,12 +305,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
       getCached: (p) => (p === 'res://player.glb' ? glbRoot : undefined),
     };
 
-    const node = resolveLiveNode('player/Armature/hand', roots, {
-      externalResources: [],
-      internalResources: [],
-      sceneCache: cacheOf({}),
-      glbCache,
-    });
+    const node = resolveLiveNode('player/Armature/hand', roots, ctxOf([], {}, glbCache));
     expect(node?.name).toBe('hand');
     expect(node?.type).toBe('GLBMesh');
   });
@@ -334,11 +321,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
         children: [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
       }),
     ];
-    const ctx: LiveTreeContext = {
-      externalResources: EXT,
-      internalResources: [],
-      sceneCache: cacheOf({ 'res://ceiling_lamp.tscn': subScene }),
-    };
+    const ctx: LiveTreeContext = ctxOf(EXT, { 'res://ceiling_lamp.tscn': subScene });
 
     const node = resolveLiveNode('RoomGeometry/ceiling_lamp/plafoniera', roots, ctx);
     expect(node?.name).toBe('plafoniera');
@@ -355,11 +338,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
       internalResources: [],
     };
     const roots = [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
-    const node = resolveLiveNode('Coin1', roots, {
-      externalResources: EXT,
-      internalResources: [],
-      sceneCache: cacheOf({ 'res://ceiling_lamp.tscn': subScene }),
-    });
+    const node = resolveLiveNode('Coin1', roots, ctxOf(EXT, { 'res://ceiling_lamp.tscn': subScene }));
     // The inspector sees the identity the tree row and viewport show:
     // the merged node keeps the instance name but adopts the root's type.
     expect(node?.name).toBe('Coin1');
@@ -389,45 +368,27 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
         children: [makeNode('A', 'Node3D', { instance: 'ExtResource("1_subA")' })],
       }),
     ];
-    const node = resolveLiveNode('Outer/A/Inner/Leaf', roots, {
-      externalResources: [ext('1_subA', 'res://subA.tscn')],
-      internalResources: [],
-      sceneCache: cacheOf({ 'res://subA.tscn': subA, 'res://subB.tscn': subB }),
-    });
+    const node = resolveLiveNode(
+      'Outer/A/Inner/Leaf',
+      roots,
+      ctxOf([ext('1_subA', 'res://subA.tscn')], { 'res://subA.tscn': subA, 'res://subB.tscn': subB })
+    );
     expect(node?.name).toBe('Leaf');
     expect(node?.type).toBe('MeshInstance3D');
   });
 
   it('returns null when the sub-scene is not yet cached', () => {
     const roots = [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
-    expect(
-      resolveLiveNode('ceiling_lamp/plafoniera', roots, {
-        externalResources: EXT,
-        internalResources: [],
-        sceneCache: cacheOf({}),
-      })
-    ).toBeNull();
+    expect(resolveLiveNode('ceiling_lamp/plafoniera', roots, ctxOf(EXT))).toBeNull();
   });
 
   it('returns null for an unknown segment', () => {
     const roots = [makeNode('Hallway', 'Node3D')];
-    expect(
-      resolveLiveNode('Hallway/Nope', roots, {
-        externalResources: [],
-        internalResources: [],
-        sceneCache: cacheOf({}),
-      })
-    ).toBeNull();
+    expect(resolveLiveNode('Hallway/Nope', roots, ctxOf())).toBeNull();
   });
 
   it('returns null for an empty path', () => {
-    expect(
-      resolveLiveNode('', [makeNode('A', 'Node3D')], {
-        externalResources: [],
-        internalResources: [],
-        sceneCache: cacheOf({}),
-      })
-    ).toBeNull();
+    expect(resolveLiveNode('', [makeNode('A', 'Node3D')], ctxOf())).toBeNull();
   });
 });
 
@@ -444,11 +405,7 @@ describe('resolveLiveEntry — effective node + ORIGINATING instance ref (for th
       internalResources: [],
     };
     const roots = [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
-    const entry = resolveLiveEntry('Coin1', roots, {
-      externalResources: EXT,
-      internalResources: [],
-      sceneCache: cacheOf({ 'res://ceiling_lamp.tscn': subScene }),
-    });
+    const entry = resolveLiveEntry('Coin1', roots, ctxOf(EXT, { 'res://ceiling_lamp.tscn': subScene }));
     expect(entry?.node.type).toBe('Area3D');
     // The merged node's own instance ref is gone (plain root)...
     expect(entry?.node.instance).toBeUndefined();
@@ -458,11 +415,7 @@ describe('resolveLiveEntry — effective node + ORIGINATING instance ref (for th
 
   it('returns instanceRef undefined for a plain (non-instance) node', () => {
     const roots = [makeNode('Hallway', 'Node3D', { children: [makeNode('Table', 'Node3D')] })];
-    const entry = resolveLiveEntry('Hallway/Table', roots, {
-      externalResources: [],
-      internalResources: [],
-      sceneCache: cacheOf({}),
-    });
+    const entry = resolveLiveEntry('Hallway/Table', roots, ctxOf());
     expect(entry?.node.name).toBe('Table');
     expect(entry?.instanceRef).toBeUndefined();
   });
@@ -478,18 +431,18 @@ describe('resolveLiveEntry — effective node + ORIGINATING instance ref (for th
         children: [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
       }),
     ];
-    const entry = resolveLiveEntry('RoomGeometry/ceiling_lamp/plafoniera', roots, {
-      externalResources: EXT,
-      internalResources: [],
-      sceneCache: cacheOf({ 'res://ceiling_lamp.tscn': subScene }),
-    });
+    const entry = resolveLiveEntry(
+      'RoomGeometry/ceiling_lamp/plafoniera',
+      roots,
+      ctxOf(EXT, { 'res://ceiling_lamp.tscn': subScene })
+    );
     expect(entry?.node.name).toBe('plafoniera');
     expect(entry?.instanceRef).toBeUndefined();
   });
 
   it('agrees with resolveLiveNode on the node, and returns null for an unresolvable path', () => {
     const roots = [makeNode('A', 'Node3D', { children: [makeNode('B', 'Node3D')] })];
-    const ctx: LiveTreeContext = { externalResources: [], internalResources: [], sceneCache: cacheOf({}) };
+    const ctx: LiveTreeContext = ctxOf();
     expect(resolveLiveEntry('A/B', roots, ctx)?.node).toBe(resolveLiveNode('A/B', roots, ctx));
     expect(resolveLiveEntry('A/Nope', roots, ctx)).toBeNull();
     expect(resolveLiveEntry('', roots, ctx)).toBeNull();
