@@ -116,12 +116,6 @@ export interface TscnNode {
    */
   overridesExistingNode?: boolean;
   /**
-   * The resource scope this subtree resolves against, set when the node is grafted
-   * into content loaded from another scene. It was authored in the outer scene, so its
-   * `ExtResource` and `SubResource` ids mean what the outer tables say.
-   */
-  authoredScope?: SceneScope;
-  /**
    * The heading's `owner=` NodePath as written, root-relative. The loader sets the owner
    * from it (resource_format_text.cpp:257-262), which decides the table a `%Name`
    * registers on. Godot's own writer never emits it (packed_scene.cpp:1036-1044).
