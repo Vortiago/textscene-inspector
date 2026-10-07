@@ -38,7 +38,7 @@ describe('resolveResourceSlot', () => {
       externalResources: [
         { id: 'tex_1', type: 'Texture2D', path: 'res://texture.png' },
       ] as TscnExternalResource[],
-      internalResources: [{ id: '1', type: 'ConcavePolygonShape3D', data: { id: 'shape_1' } }],
+      internalResources: [{ id: 'shape_1', type: 'ConcavePolygonShape3D', data: {} }],
     };
 
     expect(resolveResourceSlot(scene, 'SubResource("shape_1")')).toEqual({
@@ -157,9 +157,9 @@ describe('checkResourceExists', () => {
         ] as TscnExternalResource[],
         internalResources: [
           {
-            id: '1',
+            id: 'resource_1',
             type: 'ArrayMesh',
-            data: { id: 'resource_1' },
+            data: {},
           },
         ],
       };
@@ -191,9 +191,9 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: '1',
+            id: 'resource_1',
             type: 'ArrayMesh',
-            data: { id: 'resource_1' },
+            data: {},
           },
         ],
       };

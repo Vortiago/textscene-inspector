@@ -17,7 +17,7 @@ import './nodes/index';
 /** A PhotoFrame sub-scene: root Node3D with an identity Canvas MeshInstance3D. */
 function makePhotoFrameScene(canvasName: string): TscnScene {
   const internalResources: TscnInternalResource[] = [
-    { id: 'Plane_1', type: 'PlaneMesh', data: { id: 'Plane_1', size: 'Vector2(0.5, 0.5)' } },
+    { id: 'Plane_1', type: 'PlaneMesh', data: { size: 'Vector2(0.5, 0.5)' } },
   ];
   return {
     nodes: [

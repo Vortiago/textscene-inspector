@@ -17,7 +17,6 @@ const CURVE: TscnInternalResource = {
   id: 'Curve3D_1',
   type: 'Curve3D',
   data: {
-    id: 'Curve3D_1',
     _data:
       '{\n"points": PackedVector3Array(0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,10,0,0, 0,0,0,0,0,0,10,10,0),\n"tilts": PackedFloat32Array(0, 0, 0)\n}',
   },

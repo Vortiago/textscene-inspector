@@ -31,6 +31,6 @@ export function parseInternalResource(
   return {
     id: id || '',
     type: type || '',
-    data: { ...properties, id },
+    data: { ...properties },
   };
 }

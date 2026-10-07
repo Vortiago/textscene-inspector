@@ -130,8 +130,20 @@ describe('parseInternalResource', () => {
 
     expect(result).not.toBeNull();
     expect(result!.type).toBe('BoxMesh');
-    expect(result!.data).toEqual({ ...properties, id: 'BoxMesh_1' });
+    expect(result!.data).toEqual(properties);
     expect(result!.data.size).toBe('Vector3(1, 1, 1)');
+  });
+
+  it('keeps the heading id out of data, since Godot stores no id property', () => {
+    const heading: ParsedHeading = {
+      type: 'sub_resource',
+      attributes: { id: 'Mat_1', type: 'StandardMaterial3D' },
+    };
+
+    const result = parseInternalResource(heading, { roughness: '0.8' });
+
+    expect(result!.id).toBe('Mat_1');
+    expect(result!.data).toEqual({ roughness: '0.8' });
   });
 
   it('should return null for null heading', () => {
@@ -152,7 +164,7 @@ describe('parseInternalResource', () => {
 
     expect(result).not.toBeNull();
     expect(result!.type).toBe('StandardMaterial3D');
-    expect(result!.data).toEqual({ id: 'Material_1' });
+    expect(result!.data).toEqual({});
   });
 
   it('should handle missing type attribute', () => {
@@ -169,7 +181,7 @@ describe('parseInternalResource', () => {
 
     expect(result).not.toBeNull();
     expect(result!.type).toBe('');
-    expect(result!.data).toEqual({ ...properties, id: 'Resource_1' });
+    expect(result!.data).toEqual(properties);
   });
 
   it('should parse BoxMesh resource', () => {
@@ -235,8 +247,7 @@ describe('parseInternalResource', () => {
     const result = parseInternalResource(heading, properties);
 
     expect(result).not.toBeNull();
-    expect(result!.data).toEqual({ ...properties, id: 'ComplexResource_1' });
-    expect(Object.keys(result!.data)).toHaveLength(5);
+    expect(result!.data).toEqual(properties);
   });
 
   it('should handle special characters in properties', () => {

@@ -17,9 +17,9 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: '1',
+            id: 'mesh_1',
             type: 'ArrayMesh',
-            data: { id: 'mesh_1' },
+            data: {},
           },
         ],
       };
@@ -33,9 +33,9 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: '1',
+            id: 'mesh_1',
             type: 'ArrayMesh',
-            data: { id: 'mesh_1' },
+            data: {},
           },
         ],
       };
@@ -59,9 +59,9 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: '1',
+            id: 'material-red-glossy',
             type: 'StandardMaterial3D',
-            data: { id: 'material-red-glossy' },
+            data: {},
           },
         ],
       };
@@ -75,9 +75,9 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: '1',
+            id: 'material_red_glossy',
             type: 'StandardMaterial3D',
-            data: { id: 'material_red_glossy' },
+            data: {},
           },
         ],
       };
@@ -91,19 +91,19 @@ describe('checkResourceExists', () => {
         externalResources: [],
         internalResources: [
           {
-            id: '1',
+            id: 'mesh_1',
             type: 'ArrayMesh',
-            data: { id: 'mesh_1' },
+            data: {},
           },
           {
-            id: '2',
+            id: 'material_1',
             type: 'StandardMaterial3D',
-            data: { id: 'material_1' },
+            data: {},
           },
           {
-            id: '3',
+            id: 'shape_1',
             type: 'BoxShape3D',
-            data: { id: 'shape_1' },
+            data: {},
           },
         ],
       };

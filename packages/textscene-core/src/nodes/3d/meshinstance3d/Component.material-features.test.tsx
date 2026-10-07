@@ -60,12 +60,11 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     preloadResource(loader, 'texture', 'res://textures/checker.png', tex);
 
     const internalResources: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
         data: {
-          id: 'mat',
           albedo_texture: 'ExtResource("1")',
           uv1_scale: 'Vector3(2, 2, 1)',
         } as Record<string, string>,
@@ -108,12 +107,11 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     preloadResource(loader, 'texture', 'res://textures/normal.png', normal);
 
     const internalResources: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
         data: {
-          id: 'mat',
           albedo_texture: 'ExtResource("1")',
           // Godot emits the normal sampler only inside `if (features[…])`.
           normal_enabled: 'true',
@@ -150,12 +148,11 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   it('forces emissive to 0x000000 when emission_enabled is false', async () => {
     const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
         data: {
-          id: 'mat',
           // emission_enabled not set (defaults to false). Even with a
           // color set, the rendered material's emissive must be black.
           emission: 'Color(1, 0, 0, 1)',
@@ -175,12 +172,11 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   it('respects emission color + energy when emission_enabled is true', async () => {
     const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
         data: {
-          id: 'mat',
           emission_enabled: 'true',
           emission: 'Color(1, 0, 0, 1)',
           emission_energy_multiplier: '5',
@@ -206,12 +202,11 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
       { id: '1', path: 'res://textures/shared.png', type: 'Texture2D' },
     ];
     const internalResources: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'matA',
         type: 'StandardMaterial3D',
         data: {
-          id: 'matA',
           albedo_texture: 'ExtResource("1")',
           uv1_scale: 'Vector3(0.5, 0.5, 1)',
         } as Record<string, string>,
@@ -220,7 +215,6 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
         id: 'matB',
         type: 'StandardMaterial3D',
         data: {
-          id: 'matB',
           albedo_texture: 'ExtResource("1")',
           uv1_scale: 'Vector3(2, 2, 1)',
         } as Record<string, string>,
@@ -264,12 +258,11 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   it('renders a clearcoat material as MeshPhysicalMaterial carrying the coat scalars', async () => {
     const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
         data: {
-          id: 'mat',
           clearcoat_enabled: 'true',
           clearcoat: '0.7',
           clearcoat_roughness: '0.25',
@@ -294,11 +287,11 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     // asserts on. Only an enabled coat upgrades to MeshPhysicalMaterial.
     const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
-        data: { id: 'mat', roughness: '0.4' } as Record<string, string>,
+        data: { roughness: '0.4' } as Record<string, string>,
       },
     ];
 
@@ -312,12 +305,11 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   it('renders a rim material as MeshPhysicalMaterial with rim mapped to sheen', async () => {
     const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
         data: {
-          id: 'mat',
           rim_enabled: 'true',
           rim: '0.7',
           rim_tint: '0.25',
@@ -339,12 +331,11 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   it('applies heightmap_scale to the rendered material.displacementScale', async () => {
     const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
         data: {
-          id: 'mat',
           heightmap_enabled: 'true',
           heightmap_scale: '3',
         } as Record<string, string>,
@@ -362,11 +353,11 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   it('leaves displacementScale at 0 (no displacement) for a non-heightmap material', async () => {
     const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
-        data: { id: 'mat', roughness: '0.4' } as Record<string, string>,
+        data: { roughness: '0.4' } as Record<string, string>,
       },
     ];
 

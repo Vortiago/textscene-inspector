@@ -49,11 +49,11 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
   it('renders a positive anisotropy as MeshPhysicalMaterial with strength and no rotation', async () => {
     const loader = loaderServing();
     const internal: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
-        data: { id: 'mat', anisotropy_enabled: 'true', anisotropy: '0.8' } as Record<string, string>,
+        data: { anisotropy_enabled: 'true', anisotropy: '0.8' } as Record<string, string>,
       },
     ];
 
@@ -70,11 +70,11 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
   it('renders a negative anisotropy with a 90° perpendicular rotation', async () => {
     const loader = loaderServing();
     const internal: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
-        data: { id: 'mat', anisotropy_enabled: 'true', anisotropy: '-0.8' } as Record<string, string>,
+        data: { anisotropy_enabled: 'true', anisotropy: '-0.8' } as Record<string, string>,
       },
     ];
 
@@ -93,11 +93,11 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     // asserts on. Only an enabled anisotropy upgrades to physical.
     const loader = loaderServing();
     const internal: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
-        data: { id: 'mat', roughness: '0.4' } as Record<string, string>,
+        data: { roughness: '0.4' } as Record<string, string>,
       },
     ];
 
@@ -118,12 +118,11 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     preloadResource(loader, 'texture', path, texture);
 
     const internal: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
         data: {
-          id: 'mat',
           anisotropy_enabled: 'true',
           anisotropy: '0.8',
           anisotropy_flowmap: 'ExtResource("2")',
@@ -186,12 +185,11 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     preloadResource(loader, 'texture', path, flow);
 
     const internal: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
         data: {
-          id: 'mat',
           anisotropy_enabled: 'true',
           anisotropy: '0.8',
           anisotropy_flowmap: 'ExtResource("2")',

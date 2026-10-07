@@ -16,7 +16,7 @@ import { findMesh } from '../testing/reactThreeTestInstance';
 const PLANE_MESH: TscnInternalResource = {
   id: 'plane_1',
   type: 'PlaneMesh',
-  data: { id: 'plane_1' },
+  data: {},
 };
 
 async function renderWithMaterial(materialProps: Record<string, string>) {

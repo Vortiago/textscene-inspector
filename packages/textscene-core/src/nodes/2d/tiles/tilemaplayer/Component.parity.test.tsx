@@ -26,17 +26,17 @@ const internals: TscnInternalResource[] = [
   {
     id: 'atlas1',
     type: 'TileSetAtlasSource',
-    data: { id: 'atlas1', texture: 'ExtResource("2")', texture_region_size: 'Vector2i(16, 16)' },
+    data: { texture: 'ExtResource("2")', texture_region_size: 'Vector2i(16, 16)' },
   },
   {
     id: 'atlas2',
     type: 'TileSetAtlasSource',
-    data: { id: 'atlas2', texture: 'ExtResource("3")', texture_region_size: 'Vector2i(16, 16)' },
+    data: { texture: 'ExtResource("3")', texture_region_size: 'Vector2i(16, 16)' },
   },
   {
     id: 'ts',
     type: 'TileSet',
-    data: { id: 'ts', 'sources/0': 'SubResource("atlas1")', 'sources/1': 'SubResource("atlas2")' },
+    data: { 'sources/0': 'SubResource("atlas1")', 'sources/1': 'SubResource("atlas2")' },
   },
 ];
 
@@ -181,7 +181,6 @@ describe('TileMapLayer render parity', () => {
         id: 'ts',
         type: 'TileSet',
         data: {
-          id: 'ts',
           tile_shape: '1',
           tile_layout: '5',
           tile_size: 'Vector2i(128, 64)',
@@ -214,7 +213,6 @@ describe('TileMapLayer render parity', () => {
         id: 'ts',
         type: 'TileSet',
         data: {
-          id: 'ts',
           tile_shape: '3',
           tile_offset_axis: '1',
           tile_layout: '0',

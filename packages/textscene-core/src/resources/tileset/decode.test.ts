@@ -26,7 +26,6 @@ const internals: TscnInternalResource[] = [
     id: 'atlas1',
     type: 'TileSetAtlasSource',
     data: {
-      id: 'atlas1',
       texture: 'ExtResource("2")',
       texture_region_size: 'Vector2i(32, 24)',
     },
@@ -34,7 +33,7 @@ const internals: TscnInternalResource[] = [
   {
     id: 'ts',
     type: 'TileSet',
-    data: { id: 'ts', 'sources/0': 'SubResource("atlas1")' },
+    data: { 'sources/0': 'SubResource("atlas1")' },
   },
 ];
 
@@ -57,7 +56,6 @@ describe('tileSetFromScene', () => {
         id: 'atlas1',
         type: 'TileSetAtlasSource',
         data: {
-          id: 'atlas1',
           texture: 'ExtResource("2")',
           '0:0/next_alternative_id': '2',
           '0:0/0': '0',
@@ -70,7 +68,7 @@ describe('tileSetFromScene', () => {
           '1:3/0': '0',
         },
       },
-      { id: 'ts', type: 'TileSet', data: { id: 'ts', 'sources/0': 'SubResource("atlas1")' } },
+      { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("atlas1")' } },
     ];
     const model = tileSetFromScene('SubResource("ts")', richInternals, externals);
     const source = model!.sources.get(0)!;
@@ -95,7 +93,6 @@ describe('tileSetFromScene', () => {
         id: 'atlas1',
         type: 'TileSetAtlasSource',
         data: {
-          id: 'atlas1',
           texture: 'ExtResource("2")',
           '+0:+0/+1/flip_v': 'true',
           '-1:2/0/texture_origin': 'Vector2i(4, 4)',
@@ -103,7 +100,7 @@ describe('tileSetFromScene', () => {
           '+0:+0/-1/flip_h': 'true',
         },
       },
-      { id: 'ts', type: 'TileSet', data: { id: 'ts', 'sources/+3': 'SubResource("atlas1")' } },
+      { id: 'ts', type: 'TileSet', data: { 'sources/+3': 'SubResource("atlas1")' } },
     ];
     const model = tileSetFromScene('SubResource("ts")', signedInternals, externals);
     const source = model!.sources.get(3)!;
@@ -122,12 +119,11 @@ describe('tileSetFromScene', () => {
         id: 'atlas1',
         type: 'TileSetAtlasSource',
         data: {
-          id: 'atlas1',
           texture: 'ExtResource("2")',
           '4294967296:4294967298/4294967297/flip_h': 'true',
         },
       },
-      { id: 'ts', type: 'TileSet', data: { id: 'ts', 'sources/4294967299': 'SubResource("atlas1")' } },
+      { id: 'ts', type: 'TileSet', data: { 'sources/4294967299': 'SubResource("atlas1")' } },
     ];
     const model = tileSetFromScene('SubResource("ts")', wrappedInternals, externals);
 
@@ -142,7 +138,7 @@ describe('tileSetFromScene', () => {
   it('drops a negative source id rather than seating one', () => {
     const negativeInternals: TscnInternalResource[] = [
       internals[0]!,
-      { id: 'ts', type: 'TileSet', data: { id: 'ts', 'sources/-1': 'SubResource("atlas1")' } },
+      { id: 'ts', type: 'TileSet', data: { 'sources/-1': 'SubResource("atlas1")' } },
     ];
     const model = tileSetFromScene('SubResource("ts")', negativeInternals, externals);
 
@@ -163,18 +159,17 @@ describe('tileSetFromScene', () => {
       {
         id: 'atlas2',
         type: 'TileSetAtlasSource',
-        data: { id: 'atlas2', texture: 'ExtResource("2")', texture_region_size: 'Vector2i(8, 8)' },
+        data: { texture: 'ExtResource("2")', texture_region_size: 'Vector2i(8, 8)' },
       },
       {
         id: 'atlas3',
         type: 'TileSetAtlasSource',
-        data: { id: 'atlas3', texture: 'ExtResource("2")', texture_region_size: 'Vector2i(4, 4)' },
+        data: { texture: 'ExtResource("2")', texture_region_size: 'Vector2i(4, 4)' },
       },
       {
         id: 'ts',
         type: 'TileSet',
         data: {
-          id: 'ts',
           'sources/1': 'SubResource("atlas1")',
           'sources/01': 'SubResource("atlas2")',
           'sources/+1': 'SubResource("atlas3")',
@@ -194,13 +189,12 @@ describe('tileSetFromScene', () => {
       {
         id: 'atlas2',
         type: 'TileSetAtlasSource',
-        data: { id: 'atlas2', texture: 'ExtResource("2")', texture_region_size: 'Vector2i(8, 8)' },
+        data: { texture: 'ExtResource("2")', texture_region_size: 'Vector2i(8, 8)' },
       },
       {
         id: 'ts',
         type: 'TileSet',
         data: {
-          id: 'ts',
           'sources/7': 'SubResource("atlas1")',
           'sources/2': 'SubResource("atlas1")',
           'sources/07': 'SubResource("atlas2")',
@@ -220,7 +214,6 @@ describe('tileSetFromScene', () => {
         id: 'ts',
         type: 'TileSet',
         data: {
-          id: 'ts',
           'sources/5': 'SubResource("atlas1")',
           'sources/0': 'SubResource("atlas1")',
           'sources/3': 'SubResource("atlas1")',
@@ -244,7 +237,6 @@ describe('tileSetFromScene', () => {
         id: 'ts',
         type: 'TileSet',
         data: {
-          id: 'ts',
           tile_shape: '1',
           tile_layout: '5',
           tile_size: 'Vector2i(128, 64)',
@@ -267,7 +259,7 @@ describe('tileSetFromScene', () => {
         {
           id: 'ts',
           type: 'TileSet',
-          data: { id: 'ts', tile_shape: shape, 'sources/0': 'SubResource("atlas1")' },
+          data: { tile_shape: shape, 'sources/0': 'SubResource("atlas1")' },
         },
       ];
       const model = tileSetFromScene('SubResource("ts")', hexInternals, externals);
@@ -283,7 +275,7 @@ describe('tileSetFromScene', () => {
       {
         id: 'ts',
         type: 'TileSet',
-        data: { id: 'ts', tile_shape: '99', 'sources/0': 'SubResource("atlas1")' },
+        data: { tile_shape: '99', 'sources/0': 'SubResource("atlas1")' },
       },
     ];
     tileSetFromScene('SubResource("ts")', oddInternals, externals);
@@ -342,7 +334,7 @@ describe('a TileSet Vector2i slot follows the composite type, not the token', ()
       {
         id: 'ts',
         type: 'TileSet',
-        data: { id: 'ts', tile_size: 'Vector2(4294967295, 16)', 'sources/0': 'SubResource("atlas1")' },
+        data: { tile_size: 'Vector2(4294967295, 16)', 'sources/0': 'SubResource("atlas1")' },
       },
     ];
     const model = tileSetFromScene('SubResource("ts")', wide, externals);
@@ -363,7 +355,7 @@ describe('a TileSet Vector2i slot follows the composite type, not the token', ()
           {
             id: 'ts',
             type: 'TileSet',
-            data: { id: 'ts', tile_size: literal, 'sources/0': 'SubResource("atlas1")' },
+            data: { tile_size: literal, 'sources/0': 'SubResource("atlas1")' },
           },
         ],
         externals
@@ -405,7 +397,7 @@ describe('TileSet source lookups', () => {
   it('reads each entry of the scene table once, however many sources the TileSet names', () => {
     const { table, entryReads } = countedTable([
       ...atlasSources(),
-      { id: 'ts', type: 'TileSet', data: { id: 'ts', ...tileSetBody() } },
+      { id: 'ts', type: 'TileSet', data: { ...tileSetBody() } },
     ]);
     const model = tileSetFromScene('SubResource("ts")', table, externals);
 
@@ -428,7 +420,7 @@ describe('TileSet source lookups', () => {
 
   it('skips a source whose id names nothing, as before (error path)', () => {
     const { table } = countedTable([
-      { id: 'ts', type: 'TileSet', data: { id: 'ts', 'sources/0': 'SubResource("gone")' } },
+      { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("gone")' } },
     ]);
     expect(tileSetFromScene('SubResource("ts")', table, externals)!.sourceOrder).toEqual([]);
   });

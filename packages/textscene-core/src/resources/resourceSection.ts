@@ -5,7 +5,6 @@
  */
 
 import type { ParsedResource } from '../parser/parsedResource.js';
-import type { TscnInternalResource } from '../parser/types.js';
 import { findSubResource } from './SubResourceResolver.js';
 import { parseSubResourcePath } from './subResourcePath.js';
 
@@ -14,15 +13,6 @@ import { parseSubResourcePath } from './subResourcePath.js';
  * `resource` slot's cache. Rejects when the file fails to load or parse.
  */
 type ParsedFileLoaderFn = (path: string) => Promise<ParsedResource>;
-
-/**
- * A `[sub_resource]`'s own properties. The parser echoes the heading's `id` into `data`
- * for `findSubResource`, and Godot stores no such property.
- */
-export function subResourceProperties(sub: TscnInternalResource): Record<string, string> {
-  const { id: _id, ...properties } = sub.data as Record<string, string>;
-  return properties;
-}
 
 /** One resource inside a parsed file: its `[resource]` body or one `[sub_resource]`. */
 export interface ResourceSection {
@@ -36,7 +26,7 @@ export function findResourceSection(file: ParsedResource, path: string): Resourc
   const { subResourceId } = parseSubResourcePath(path);
   if (subResourceId === undefined) return { type: file.resourceType, properties: file.properties };
   const sub = findSubResource(file.subResources, subResourceId);
-  return sub && { type: sub.type, properties: subResourceProperties(sub) };
+  return sub && { type: sub.type, properties: sub.data as Record<string, string> };
 }
 
 /**

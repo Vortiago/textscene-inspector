@@ -43,11 +43,11 @@ describe('<MeshInstance3D> refraction material (WI-69)', () => {
   it('renders a refraction material as MeshPhysicalMaterial carrying transmission + thickness', async () => {
     const loader = loaderServing();
     const internal: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
-        data: { id: 'mat', refraction_enabled: 'true', refraction_scale: '0.2' } as Record<string, string>,
+        data: { refraction_enabled: 'true', refraction_scale: '0.2' } as Record<string, string>,
       },
     ];
 
@@ -68,11 +68,11 @@ describe('<MeshInstance3D> refraction material (WI-69)', () => {
     // MeshStandardMaterial every other test asserts on.
     const loader = loaderServing();
     const internal: TscnInternalResource[] = [
-      { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+      { id: 'box', type: 'BoxMesh', data: {} },
       {
         id: 'mat',
         type: 'StandardMaterial3D',
-        data: { id: 'mat', roughness: '0.4' } as Record<string, string>,
+        data: { roughness: '0.4' } as Record<string, string>,
       },
     ];
 

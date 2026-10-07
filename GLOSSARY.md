@@ -53,7 +53,6 @@ _Avoid_: "composite path", "synthetic path". A `fetch` of the whole address.
 
 **Resource section** (`resources/resourceSection.ts`):
 The part of a parsed `.tres` that a path addresses: the `[resource]` body for a plain path, or the named `[sub_resource]` for a **Sub-resource path**.
-Its properties exclude the `id` the heading carries.
 _Avoid_: "the resource" or "the body" for a `[sub_resource]`.
 
 **ParsedResource** (`parser/parsedResource.ts`):

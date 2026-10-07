@@ -192,8 +192,8 @@ const ORANGE_RAMP = {
 
 const RAMP_RESOURCE: TscnInternalResource = {
   type: 'Gradient',
-  id: '1',
-  data: { id: '3', ...ORANGE_RAMP },
+  id: '3',
+  data: { ...ORANGE_RAMP },
 };
 
 describe('resolveGradient', () => {
@@ -204,7 +204,7 @@ describe('resolveGradient', () => {
   });
 
   it('returns null when the reference names a different resource type (error path)', () => {
-    const curve: TscnInternalResource = { type: 'Curve', id: '2', data: { id: '3' } };
+    const curve: TscnInternalResource = { type: 'Curve', id: '3', data: {} };
     expect(resolveGradient('SubResource("3")', [curve])).toBeNull();
   });
 

@@ -138,10 +138,7 @@ cast_shadow = 1
 
       expect(mockCreator).toHaveBeenCalledTimes(1);
       expect(scene.internalResources).toHaveLength(1);
-      expect(scene.internalResources[0]).toMatchObject({
-        type: 'ArrayMesh',
-        data: { id: 'mesh_1' },
-      });
+      expect(scene.internalResources[0]).toMatchObject({ id: 'mesh_1', type: 'ArrayMesh' });
     });
 
     it("keeps a .tres file's [resource] body, typed by its header", () => {

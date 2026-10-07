@@ -46,16 +46,16 @@ function meshNode(): TscnNode {
 }
 
 const INTERNAL_RESOURCES: TscnInternalResource[] = [
-  { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
+  { id: 'box', type: 'BoxMesh', data: {} },
   {
     id: 'mat',
     type: 'StandardMaterial3D',
-    data: { id: 'mat', albedo_texture: 'SubResource("ViewportTexture_1")' } as Record<string, string>,
+    data: { albedo_texture: 'SubResource("ViewportTexture_1")' } as Record<string, string>,
   },
   {
     id: 'ViewportTexture_1',
     type: 'ViewportTexture',
-    data: { id: 'ViewportTexture_1', viewport_path: 'NodePath("SubViewport")' },
+    data: { viewport_path: 'NodePath("SubViewport")' },
   },
 ];
 

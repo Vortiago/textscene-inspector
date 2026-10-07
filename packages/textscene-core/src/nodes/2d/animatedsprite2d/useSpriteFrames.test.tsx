@@ -24,7 +24,7 @@ const SCENE_ANIMATIONS =
 const SPRITE_FRAMES_SUB: TscnInternalResource = {
   id: 'sf',
   type: 'SpriteFrames',
-  data: { id: 'sf', animations: SCENE_ANIMATIONS },
+  data: { animations: SCENE_ANIMATIONS },
 };
 
 const SCENE_EXT: TscnExternalResource[] = [
@@ -96,7 +96,7 @@ describe('useSpriteFrames — in-scene SubResource', () => {
     const empty: TscnInternalResource = {
       id: 'sf',
       type: 'SpriteFrames',
-      data: { id: 'sf', animations: '[]' },
+      data: { animations: '[]' },
     };
     const { result } = renderHook(() => useSpriteFrames('SubResource("sf")'), {
       wrapper: ({ children }: { children: ReactNode }) => (

@@ -55,7 +55,7 @@ describe('decodeLabelSettings', () => {
 
 describe('resolveLabelSettings', () => {
   const internal: TscnInternalResource[] = [
-    { id: '1', type: 'LabelSettings', data: { id: '1', font_size: '32' } } as unknown as TscnInternalResource,
+    { id: '1', type: 'LabelSettings', data: { font_size: '32' } } as unknown as TscnInternalResource,
   ];
 
   it('decodes the SubResource a ref names (happy path)', () => {

@@ -33,13 +33,13 @@ import { isViewportTextureRef, useViewportTextureSlot } from './useViewportTextu
 const viewportTexture: TscnInternalResource = {
   id: 'ViewportTexture_1',
   type: 'ViewportTexture',
-  data: { id: 'ViewportTexture_1', viewport_path: 'NodePath("SubViewport")' },
+  data: { viewport_path: 'NodePath("SubViewport")' },
 };
 
 const atlasTexture: TscnInternalResource = {
   id: 'Atlas_1',
   type: 'AtlasTexture',
-  data: { id: 'Atlas_1', atlas: 'ExtResource("1")' },
+  data: { atlas: 'ExtResource("1")' },
 };
 
 const RESOURCES = [viewportTexture, atlasTexture];
@@ -160,7 +160,7 @@ describe('useViewportTextureSlot', () => {
     const empty: TscnInternalResource = {
       id: 'Empty_1',
       type: 'ViewportTexture',
-      data: { id: 'Empty_1', viewport_path: 'NodePath("")' },
+      data: { viewport_path: 'NodePath("")' },
     };
     const seen: ReturnType<typeof useViewportTextureSlot>[] = [];
     render(

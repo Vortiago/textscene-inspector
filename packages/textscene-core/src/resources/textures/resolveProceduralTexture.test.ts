@@ -13,25 +13,24 @@ const RESOURCES: TscnInternalResource[] = [
   {
     id: 'Gradient_a',
     type: 'Gradient',
-    data: { id: 'Gradient_a', colors: 'PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)' },
+    data: { colors: 'PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)' },
   },
   {
     id: 'GradientTexture2D_a',
     type: 'GradientTexture2D',
-    data: { id: 'GradientTexture2D_a', gradient: 'SubResource("Gradient_a")', width: '8', height: '8' },
+    data: { gradient: 'SubResource("Gradient_a")', width: '8', height: '8' },
   },
-  { id: 'FastNoiseLite_a', type: 'FastNoiseLite', data: { id: 'FastNoiseLite_a', frequency: '0.05' } },
+  { id: 'FastNoiseLite_a', type: 'FastNoiseLite', data: { frequency: '0.05' } },
   {
     id: 'NoiseTexture2D_a',
     type: 'NoiseTexture2D',
     data: {
-      id: 'NoiseTexture2D_a',
       width: '8',
       height: '8',
       noise: 'SubResource("FastNoiseLite_a")',
     },
   },
-  { id: 'Other_a', type: 'PlaceholderTexture2D', data: { id: 'Other_a' } },
+  { id: 'Other_a', type: 'PlaceholderTexture2D', data: {} },
 ];
 
 afterEach(() => {

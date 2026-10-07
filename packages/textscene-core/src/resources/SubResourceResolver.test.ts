@@ -293,13 +293,12 @@ describe('findExtResource', () => {
 describe('findSubResource', () => {
   const internalResources: readonly TscnInternalResource[] = [
     { id: 'Box_1', type: 'BoxMesh', data: {} },
-    { id: '2', type: 'ArrayMesh', data: { id: 'mesh_2' } },
+    { id: 'mesh_2', type: 'ArrayMesh', data: {} },
   ];
 
-  it('finds a resource by its structural id and by its runtime `data.id` (happy path)', () => {
+  it('finds a resource by its id (happy path)', () => {
     expect(findSubResource(internalResources, 'Box_1')).toBe(internalResources[0]);
     expect(findSubResource(internalResources, 'mesh_2')).toBe(internalResources[1]);
-    expect(findSubResource(internalResources, '2')).toBe(internalResources[1]);
   });
 
   it('returns undefined for an undeclared id and for an empty table (error path)', () => {
@@ -307,17 +306,16 @@ describe('findSubResource', () => {
     expect(findSubResource([], 'Box_1')).toBeUndefined();
   });
 
-  it('gives an id to the first resource answering to it either way, in file order (edge case)', () => {
-    const byDataId = { id: 'a', type: 'BoxMesh', data: { id: 'shared' } };
-    const byStructuralId = { id: 'shared', type: 'SphereMesh', data: {} };
-    expect(findSubResource([byDataId, byStructuralId], 'shared')).toBe(byDataId);
-    expect(findSubResource([byStructuralId, byDataId], 'shared')).toBe(byStructuralId);
+  it('gives a repeated id to its first resource in file order (edge case)', () => {
+    const box = { id: 'shared', type: 'BoxMesh', data: {} };
+    const sphere = { id: 'shared', type: 'SphereMesh', data: {} };
+    expect(findSubResource([box, sphere], 'shared')).toBe(box);
+    expect(findSubResource([sphere, box], 'shared')).toBe(sphere);
   });
 
-  it('ignores a `data.id` that is not a string, which no reference text can equal (edge case)', () => {
-    const numeric = { id: 'Box_1', type: 'BoxMesh', data: { id: 7 } };
-    expect(findSubResource([numeric], '7')).toBeUndefined();
-    expect(findSubResource([numeric], 'Box_1')).toBe(numeric);
+  it('ignores an id property among the data, which Godot never stores (edge case)', () => {
+    const box = { id: 'Box_1', type: 'BoxMesh', data: { id: 'Other_1' } };
+    expect(findSubResource([box], 'Other_1')).toBeUndefined();
   });
 
   it('answers from its id map: a repeated lookup reads no entry of the table', () => {
