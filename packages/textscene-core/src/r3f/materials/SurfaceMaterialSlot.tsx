@@ -29,8 +29,7 @@ import {
 import type { MaterialTextureState } from '../../resources/textures/applyTextureState';
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
 import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
-import { StandardMaterialSlot } from './StandardMaterialSlot';
-import { materialProgramInputs } from '../materialProgramInputs';
+import { materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource, MaterialSource } from './materialSource';
 import { readyMaterial, useMaterial } from './useMaterial';
@@ -327,9 +326,8 @@ export function SurfaceMaterialSlot({ source, attach, triplanarMesh }: SurfaceMa
   const material = readyMaterial(useMaterial(source));
   const scalars = useMaterialScalars(material);
   const { maps, isUnresolved } = useMaterialTextures(scalars, material, triplanarMesh);
-  if (!isUnresolved) return <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />;
-  const placeholder = materialProgramInputs({ props: { attach, ...MISSING_TEXTURE_MATERIAL.props } });
-  return <meshStandardMaterial key={placeholder.key} {...placeholder.props} />;
+  if (isUnresolved) return materialBagElement(MISSING_TEXTURE_MATERIAL, attach);
+  return <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />;
 }
 
 /** The decoded scalars of `material`, or null for Godot's default surface. */
