@@ -22,10 +22,10 @@ Godot's 2D world (CanvasItems drawn by `Node2D` and its subclasses) and its 2D *
 
 The workspaces follow the Godot editor (the `handles()` rules of CanvasItemEditorPlugin and Node3DEditorPlugin, and the editor docs):
 
-- **The 3D workspace renders Node3D content only.** The workspace-aware `NodeDispatcher` (`CanvasWorkspaceContext`, default `'3d'`) drops CanvasItem subtrees. Classification comes from the `canvasItem`/`container` flags of the slice registrations plus `TWO_D_UI_TYPES`. The front-on framing stays for flat 3D scenes.
+- **The 3D workspace renders Node3D content only.** The workspace-aware `NodeDispatcher` (`CanvasWorkspaceContext`, default `'3d'`) drops CanvasItem subtrees. `drawsInWorkspace` classifies from the `canvasItem`/`container` flags of the slice registrations plus `is2DUIType`. The front-on framing stays for flat 3D scenes.
 - **The 2D workspace composites the whole CanvasItem world.** `Canvas2DStage` layers, in the order of Godot's 2D editor, the project-viewport frame and a transparent **orthographic** `World2DCanvas` (sprites, tilemaps and Node2D trees). The world camera follows the stage pan/zoom through `world2DCameraPose`. "Never composite" is retired.
 - **The workspace selects itself from the type of the scene root** (`WorkspaceAutoSelect` plus `workspaceForRoot`). A CanvasItem root selects 2D, a Node3D root selects 3D, and a plain `Node` root keeps the current workspace (in Godot no plugin claims it). A manual toggle holds until the next scene switch. This replaces the "no automatic switch" choice: a uniform 3D default surprised users on every 2D scene.
-- The hint predicate is the live-tree `useLiveSceneNodes(isCanvasItemNode)`: UI **or** 2D world nodes, instanced sub-scenes included. It shows the `Has 2D content — switch to 2D` hint only in the 3D workspace and only for mixed scenes. Godot has no such affordance. It is a previewer convenience.
+- The hint predicate is the live-tree `useLiveSceneNodes` over `isClaimedByCanvasItemEditor`: UI **or** 2D world nodes, instanced sub-scenes included. It shows the `Has 2D content — switch to 2D` hint only in the 3D workspace and only for mixed scenes. Godot has no such affordance. It is a previewer convenience.
 
 Out of scope: viewport picking inside the 2D world canvas. The drag-to-pan of the stage owns pointer input, with `pointer-events: none` on the world layer.
 

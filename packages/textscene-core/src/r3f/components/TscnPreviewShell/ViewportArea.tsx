@@ -6,7 +6,10 @@
  */
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
-import { isCanvasItemNode } from '../../workspaceForScene.js';
+// The claim reads the slice registrations, loaded here so the hint works
+// whichever canvas, if any, imported them first.
+import '../../nodes/index.js';
+import { isClaimedByCanvasItemEditor } from '../../nodeWorkspaceVisibility.js';
 import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary.js';
 import type { TscnNode } from '../../../parser/types.js';
@@ -15,8 +18,9 @@ import { Canvas2DStage } from '../Canvas2DStage/Canvas2DStage.js';
 import { ViewportControlsHelp } from '../ViewportControlsHelp/ViewportControlsHelp.js';
 import styles from './TscnPreviewShell.module.css';
 
-/** A stable prune, so the memo of `useLiveSceneNodes` does not recompute each render. */
+// Module-level, so the memo of `useLiveSceneNodes` does not recompute each render.
 const NOT_A_VIEWPORT = (node: TscnNode): boolean => !isViewportBoundary(node.type);
+const IS_2D_CONTENT = (node: TscnNode): boolean => isClaimedByCanvasItemEditor(node.type);
 
 export function ViewportArea({
   sceneGraph,
@@ -31,7 +35,7 @@ export function ViewportArea({
   // The live tree finds 2D content inside a sub-scene too. The walk stops at a
   // sub-viewport, whose Controls show only through a viewport surface. A
   // SubViewportContainer still counts, since it draws in 2D (ADR-0033).
-  const has2DContent = useLiveSceneNodes(isCanvasItemNode, NOT_A_VIEWPORT).length > 0;
+  const has2DContent = useLiveSceneNodes(IS_2D_CONTENT, NOT_A_VIEWPORT).length > 0;
 
   if (mode === '2D') {
     return (
