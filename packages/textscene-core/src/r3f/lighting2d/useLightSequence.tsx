@@ -8,9 +8,8 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { MAX_2D_DIRECTIONAL_LIGHTS } from '../../godot/rendering.js';
 import type { LiveTreeEntry } from '../liveSceneTree.js';
-import { useLiveSceneNodes } from '../useLiveSceneTree.js';
+import { useHasLiveTree, useLiveSceneNodes } from '../useLiveSceneTree.js';
 import { useNodePath } from '../contexts/NodePathContext.js';
-import { useOptionalHierarchy } from '../contexts/HierarchyContext.js';
 import { isListedDirectionalLight, isPositionalCanvasLight, isShownCanvasNode } from './lightSequence.js';
 
 interface CanvasLightLists {
@@ -18,7 +17,7 @@ interface CanvasLightLists {
   readonly positional: ReadonlyMap<string, number>;
   /**
    * `path → slot` over the directional lights Godot lists, at most `MAX_2D_DIRECTIONAL_LIGHTS`.
-   * Null with no scene hierarchy to walk.
+   * Null with no live tree to walk.
    */
   readonly directional: ReadonlyMap<string, number> | null;
 }
@@ -42,7 +41,7 @@ export function CanvasLightSequenceProvider({ children }: { children: ReactNode 
   // arrow would re-walk the tree every render.
   const positional = useLiveSceneNodes(isPositionalCanvasLight);
   const directional = useLiveSceneNodes(isListedDirectionalLight, isShownCanvasNode);
-  const hasTree = !!useOptionalHierarchy()?.sceneGraph;
+  const hasTree = useHasLiveTree();
 
   const lists = useMemo<CanvasLightLists>(
     () => ({
@@ -68,7 +67,7 @@ export function useLightSequence(ordinal: number): number {
 /**
  * This DirectionalLight2D's slot in the directional list, its draw order among the directional
  * lights, or null when Godot leaves it off the list: disabled, hidden, or past the eighth. With no
- * scene hierarchy to walk, a light takes slot 0.
+ * live tree to walk, a light takes slot 0.
  */
 export function useDirectionalLightSlot(): number | null {
   const { directional } = useContext(CanvasLightSequenceContext);

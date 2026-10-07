@@ -5,8 +5,8 @@
  * its shadow samples a parallel map (`directionalShadowMap.ts`) built over the view.
  */
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import * as THREE from 'three';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import type * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { DirectionalLight2DProperties } from './types';
@@ -22,11 +22,13 @@ import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { shadowColorContributes } from '../../../r3f/lighting2d/lightQuad';
 import { buildDirectionalShadowMap } from '../../../r3f/lighting2d/directionalShadowMap';
-import { useDirectionalShadowView } from '../../../r3f/lighting2d/directionalShadowView';
+import { useDirectionalShadowView, useNdcToShadow } from '../../../r3f/lighting2d/directionalShadowView';
+import { FullScreenQuad } from '../../../r3f/lighting2d/fullScreenQuad';
 import {
   createDirectionalLightMaterial,
   createDirectionalShadowColorMaterial,
-  updateDirectionalShadowTexture,
+  createDirectionalShadowTexture,
+  writeDirectionalShadowMap,
   type DirectionalShadowSampling,
 } from '../../../r3f/lighting2d/directionalLightQuad';
 
@@ -50,7 +52,7 @@ export function DirectionalLight2D({ node, children }: NodeComponentProps) {
       node={node}
       props={props}
       body={() =>
-        lit && slot !== null ? (
+        lit ? (
           <DirectionalLightQuads
             props={props}
             layer={layer}
@@ -63,29 +65,6 @@ export function DirectionalLight2D({ node, children }: NodeComponentProps) {
     >
       {children}
     </CanvasItem2D>
-  );
-}
-
-/** One full-screen quad on a light layer, drawn before the visible pass reads the accumulator. */
-function AccumulationQuad({
-  meshRef,
-  material,
-  renderOrder,
-}: {
-  meshRef: (mesh: THREE.Mesh | null) => void;
-  material: THREE.Material;
-  renderOrder: number;
-}) {
-  return (
-    <mesh
-      ref={meshRef}
-      material={material}
-      renderOrder={renderOrder}
-      // The quad ignores every matrix, so its bounds say nothing about where it lands.
-      frustumCulled={false}
-    >
-      <planeGeometry args={[1, 1]} />
-    </mesh>
   );
 }
 
@@ -108,7 +87,7 @@ function DirectionalLightQuads({
 }) {
   const { color, energy, blend_mode: blendMode, shadow_filter, shadow_filter_smooth, shadow_color } = props;
 
-  // A callback ref, so the view sampler starts once the quad is in the tree: the light's world
+  // Held in state, so the view sampler starts once the quad is in the tree: the light's world
   // matrix does not exist before that.
   const [quad, setQuad] = useState<THREE.Mesh | null>(null);
   const shadowed = casters.length > 0;
@@ -117,27 +96,20 @@ function DirectionalLightQuads({
     () => (shadowed && view ? buildDirectionalShadowMap(view, casters) : null),
     [shadowed, view, casters]
   );
+  const ndcToShadow = useNdcToShadow(map?.worldToShadow ?? null);
 
-  // The texture and the transform outlive each rebuild, since a pan or a turning light rebuilds
-  // the map every frame. Both are written at commit: a write from a render React discards would
-  // reach the materials already on screen.
-  const ndcToShadow = useRef(new THREE.Matrix3()).current;
-  const [shadowMap, setShadowMap] = useState<THREE.DataTexture | null>(null);
+  // One texture for the light's lifetime, filled at commit: a write from a render React discards
+  // would reach the materials already on screen.
+  const [shadowMap] = useState(createDirectionalShadowTexture);
+  useEffect(() => () => shadowMap.dispose(), [shadowMap]);
   useLayoutEffect(() => {
-    if (!map) {
-      setShadowMap(null);
-      return;
-    }
-    const [m00, m01, m02, m10, m11, m12] = map.ndcToShadow;
-    ndcToShadow.set(m00, m01, m02, m10, m11, m12, 0, 0, 1);
-    const next = updateDirectionalShadowTexture(shadowMap, map.bins);
-    if (next !== shadowMap) setShadowMap(next);
-  }, [map, shadowMap, ndcToShadow]);
-  useEffect(() => () => shadowMap?.dispose(), [shadowMap]);
+    if (map) writeDirectionalShadowMap(shadowMap, map.bins);
+  }, [map, shadowMap]);
 
+  const hasMap = map !== null;
   const sampling = useMemo<DirectionalShadowSampling | undefined>(
     () =>
-      shadowMap
+      hasMap
         ? {
             map: shadowMap,
             filter: shadow_filter,
@@ -146,7 +118,7 @@ function DirectionalLightQuads({
             shadowColor: shadow_color,
           }
         : undefined,
-    [shadowMap, shadow_filter, shadow_filter_smooth, ndcToShadow, shadow_color]
+    [hasMap, shadowMap, shadow_filter, shadow_filter_smooth, ndcToShadow, shadow_color]
   );
 
   const material = useMemo(
@@ -164,26 +136,11 @@ function DirectionalLightQuads({
   );
   useEffect(() => () => shadowMaterial?.dispose(), [shadowMaterial]);
 
-  // The light layer keeps the quad out of the visible pass and sorts it into its class.
-  const toLightQuad = useCallback(
-    (mesh: THREE.Mesh | null) => {
-      mesh?.layers.set(layer);
-      setQuad(mesh);
-    },
-    [layer]
-  );
-  const toShadowTintLayer = useCallback(
-    (mesh: THREE.Mesh | null) => {
-      if (shadowTintLayer !== undefined) mesh?.layers.set(shadowTintLayer);
-    },
-    [shadowTintLayer]
-  );
-
   return (
     <>
-      <AccumulationQuad meshRef={toLightQuad} material={material} renderOrder={renderOrder} />
-      {shadowMaterial && (
-        <AccumulationQuad meshRef={toShadowTintLayer} material={shadowMaterial} renderOrder={renderOrder} />
+      <FullScreenQuad layer={layer} material={material} renderOrder={renderOrder} onMesh={setQuad} />
+      {shadowMaterial && shadowTintLayer !== undefined && (
+        <FullScreenQuad layer={shadowTintLayer} material={shadowMaterial} renderOrder={renderOrder} />
       )}
     </>
   );

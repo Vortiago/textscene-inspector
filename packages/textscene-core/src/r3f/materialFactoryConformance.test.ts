@@ -122,8 +122,6 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'spreads the shared Node2D transform bag onto a `<group>`, which has no material slot',
   'packages/textscene-core/src/nodes/2d/pathfollow2d/Component.tsx':
     'spreads the sampled curve transform onto a `<group>`, which has no material slot',
-  'packages/textscene-core/src/nodes/2d/directionallight2d/Component.tsx':
-    'the light quad: one material per light per parameter set, memoised on every input and disposed on replacement, so a changed input arrives as a new material',
   'packages/textscene-core/src/nodes/2d/pointlight2d/Component.tsx':
     'the light quad: one material per light per parameter set, memoised on every input and disposed on replacement, so a changed input arrives as a new material',
   'packages/textscene-core/src/nodes/3d/camera3d/Component.tsx':
@@ -146,8 +144,8 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'mounts a postprocessing `Effect` — an EventDispatcher, neither material nor Object3D, collected by the composer',
   'packages/textscene-core/src/r3f/internal/glb-scene-root/Component.tsx':
     'mounts the per-consumer GLB Object3D clone; the surfaces inside it keep the materials the loader gave them',
-  'packages/textscene-core/src/r3f/lighting2d/lightSeedQuad.tsx':
-    'the accumulator seed quad: fixed shaders, one uniform, one material per accumulator',
+  'packages/textscene-core/src/r3f/lighting2d/fullScreenQuad.tsx':
+    'the light pass quad: its callers hand it the accumulator seed, with fixed shaders and one uniform, or a directional light material, memoised on every input and disposed on replacement',
   'packages/textscene-core/src/r3f/parentSpaceScope.tsx':
     'mounts the world root, a bare Object3D that R3F adds as a child and never routes to a material slot',
   'packages/textscene-core/src/r3f/preview/PreviewLighting.tsx':

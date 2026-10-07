@@ -6,7 +6,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
-import { buildDirectionalShadowMap, type DirectionalShadowView, type Quad2 } from './directionalShadowMap';
+import {
+  buildDirectionalShadowMap,
+  ndcToShadowTransform,
+  type DirectionalShadowView,
+  type Quad2,
+} from './directionalShadowMap';
 import {
   OCCLUDER_CULL_DISABLED,
   OCCLUDER_CULL_CLOCKWISE,
@@ -27,13 +32,8 @@ const SQUARE: Quad2 = [
   { x: 0, y: 1000 },
 ];
 
-/** The camera shows the viewport exactly, unless a test says otherwise. */
-function squareView(
-  maxDistance = 0,
-  direction = { x: 0, y: -1 },
-  screen: Quad2 = SQUARE
-): DirectionalShadowView {
-  return { clip: SQUARE, screen, direction, maxDistance };
+function squareView(maxDistance = 0, direction = { x: 0, y: -1 }): DirectionalShadowView {
+  return { clip: SQUARE, direction, maxDistance };
 }
 
 function segment(
@@ -92,38 +92,51 @@ describe('buildDirectionalShadowMap: the projection', () => {
     expect(bins[binAt(500)]).toBe(SHADOW_MAP_FAR);
   });
 
-  it('maps a quad position in NDC to (u, depth) through the returned transform', () => {
+  it('rotates with the light: a light travelling +X measures depth from the left edge', () => {
+    const { bins, worldToShadow } = buildDirectionalShadowMap(squareView(0, { x: 1, y: 0 }), [
+      segment(300, 400, 300, 600),
+    ]);
+    const [m00, m01, m02, m10, m11, m12] = worldToShadow;
+    const u = m00 * 300 + m01 * 500 + m02;
+    expect(m10 * 300 + m11 * 500 + m12).toBeCloseTo(0.3, 12);
+    expect(bins[Math.floor(u * SHADOW_MAP_BINS)]).toBeCloseTo(0.3, 6);
+  });
+});
+
+describe('ndcToShadowTransform', () => {
+  it('maps a quad position in NDC to (u, depth) when the camera shows the viewport', () => {
     // NDC (0, 0.2) is world (500, 600) in the square view: the centre column, 400 px deep.
-    const { ndcToShadow } = buildDirectionalShadowMap(squareView(), []);
-    const [m00, m01, m02, m10, m11, m12] = ndcToShadow;
+    const { worldToShadow } = buildDirectionalShadowMap(squareView(), []);
+    const [m00, m01, m02, m10, m11, m12] = ndcToShadowTransform(SQUARE, worldToShadow);
     expect(m00 * 0 + m01 * 0.2 + m02).toBeCloseTo(0.5, 12);
     expect(m10 * 0 + m11 * 0.2 + m12).toBeCloseTo(0.4, 12);
   });
 
-  it('spans the viewport, not what the camera shows, which only moves the NDC lookup', () => {
-    // A camera showing x -1000..2000: NDC 0 is still world x 500, the viewport's centre column.
+  it('follows a wider camera, whose NDC edge lies past the viewport', () => {
+    // A camera showing x -1000..2000: NDC x 1 is world x 2000, 1500 px right of the centre over
+    // the 1414.2 px diagonal.
     const wide: Quad2 = [
       { x: -1000, y: 0 },
       { x: 2000, y: 0 },
       { x: 2000, y: 1000 },
       { x: -1000, y: 1000 },
     ];
-    const { bins, ndcToShadow } = buildDirectionalShadowMap(squareView(0, { x: 0, y: -1 }, wide), [
-      segment(400, 600, 600, 600),
-    ]);
-    expect(bins[879]).toBeCloseTo(0.4, 6);
-    expect(bins[1168]).toBeCloseTo(0.4, 6);
-    // NDC x 1 is world x 2000, 1500 px right of the centre over the 1414.2 px diagonal.
+    const ndcToShadow = ndcToShadowTransform(wide, buildDirectionalShadowMap(squareView(), []).worldToShadow);
     expect(ndcToShadow[0] + ndcToShadow[2]).toBeCloseTo(0.5 + 1500 / (1000 * Math.SQRT2), 12);
   });
 
-  it('rotates with the light: a light travelling +X measures depth from the left edge', () => {
-    const view = squareView(0, { x: 1, y: 0 });
-    const { bins, ndcToShadow } = buildDirectionalShadowMap(view, [segment(300, 400, 300, 600)]);
-    // World (300, 500) is NDC (-0.4, 0).
-    const u = ndcToShadow[0] * -0.4 + ndcToShadow[2];
-    expect(ndcToShadow[3] * -0.4 + ndcToShadow[5]).toBeCloseTo(0.3, 12);
-    expect(bins[Math.floor(u * SHADOW_MAP_BINS)]).toBeCloseTo(0.3, 6);
+  it('degenerates to a constant for a zero-size screen rather than throwing', () => {
+    const point: Quad2 = [
+      { x: 500, y: 500 },
+      { x: 500, y: 500 },
+      { x: 500, y: 500 },
+      { x: 500, y: 500 },
+    ];
+    const [m00, m01, , m10, m11] = ndcToShadowTransform(
+      point,
+      buildDirectionalShadowMap(squareView(), []).worldToShadow
+    );
+    expect([m00, m01, m10, m11]).toEqual([0, 0, 0, 0]);
   });
 });
 

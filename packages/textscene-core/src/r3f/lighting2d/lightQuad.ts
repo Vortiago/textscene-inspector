@@ -46,10 +46,12 @@ export const SHADOW_FILTER_PCF13 = 2;
  * `light_blend_compute`'s modes are one fixed-function blend each: ADD is SrcAlpha/One with add,
  * SUB the same with reverse-subtract, and MIX SrcAlpha/OneMinusSrcAlpha with add. Alpha adds
  * One/One: Godot 4.6.3 sums `light_only_alpha`, so one, two and three 0.3 cookies mask to 0.3, 0.6
- * and 0.9, not a screen blend's 0.51 and 0.657.
+ * and 0.9, not a screen blend's 0.51 and 0.657. A light quad neither tests nor writes depth.
  */
-export function accumulationBlend(blendMode: number): Partial<THREE.ShaderMaterialParameters> {
+export function accumulationState(blendMode: number): Partial<THREE.ShaderMaterialParameters> {
   return {
+    depthWrite: false,
+    depthTest: false,
     // The transparent list sorts farthest-first, replaying canvas draw order. The opaque list
     // sorts nearest-first and would reverse MIX, whose result depends on light order.
     transparent: true,
@@ -124,10 +126,8 @@ export function createShadowColorQuadMaterial(options: ShadowColorQuadOptions): 
       },
       ...sampling?.uniforms,
     },
-    depthWrite: false,
-    depthTest: false,
     ...canvasItemFacing(),
-    ...accumulationBlend(blendMode),
+    ...accumulationState(blendMode),
     ...stencil,
   });
 }
@@ -185,12 +185,10 @@ export function createLightQuadMaterial({
         : {}),
       ...sampling?.uniforms,
     },
-    depthWrite: false,
-    depthTest: false,
-    // One pass, since `accumulationBlend` sums into the accumulator (`blendDst: OneFactor` for
+    // One pass, since `accumulationState` sums into the accumulator (`blendDst: OneFactor` for
     // ADD/SUB), so a fragment both facing passes covered would count this light twice.
     ...canvasItemFacing(),
-    ...accumulationBlend(blendMode),
+    ...accumulationState(blendMode),
     ...stencil,
   });
 }

@@ -38,7 +38,7 @@ const WorldShadowCasterContext = createContext<readonly WorldShadowCaster[]>(NO_
  * Every visible occluder in world space as of the last frame, unfiltered: a light narrows it with
  * its own `shadow_item_cull_mask`. Empty outside a stage, so a light there casts nothing.
  */
-export function useWorldShadowCasters(): readonly WorldShadowCaster[] {
+function useWorldShadowCasters(): readonly WorldShadowCaster[] {
   return useContext(WorldShadowCasterContext);
 }
 

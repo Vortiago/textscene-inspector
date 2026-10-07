@@ -34,8 +34,6 @@ export interface DirectionalShadowView {
    * spans and the occluder cull sweeps. It is the project viewport, not what the editor shows.
    */
   readonly clip: Quad2;
-  /** What the camera shows, the corners at NDC (-1, -1), (1, -1), (1, 1) and (-1, 1). */
-  readonly screen: Quad2;
   /** The unit direction the light travels: the light node's Godot +Y axis. */
   readonly direction: Point2;
   /** `DirectionalLight2D.max_distance` in world units: how far upstream an occluder still casts. */
@@ -46,15 +44,14 @@ export interface DirectionalShadowMap {
   /** `SHADOW_MAP_BINS` depths over `z_far`, `SHADOW_MAP_FAR` where nothing casts. */
   readonly bins: Float32Array;
   /**
-   * A full-screen quad's NDC position to `(u, depth)`, as a row-major 2×3 affine: `u` addresses
-   * `bins`, and `depth` is what a fragment compares against the bin. It is Godot's
-   * `shadow.directional_xform` (`:1209`) after the screen's NDC-to-world map.
+   * World to `(u, depth)`: `u` addresses `bins`, and `depth` is what a fragment compares against
+   * the bin. It is Godot's `shadow.directional_xform` (`:1209`).
    */
-  readonly ndcToShadow: Affine2;
+  readonly worldToShadow: Affine2;
 }
 
 /** A row-major 2×3 affine. */
-type Affine2 = readonly [number, number, number, number, number, number];
+export type Affine2 = readonly [number, number, number, number, number, number];
 
 function dot(a: Point2, b: Point2): number {
   return a.x * b.x + a.y * b.y;
@@ -91,9 +88,12 @@ function directionalShadowTransform(view: DirectionalShadowView): Affine2 {
   ];
 }
 
-/** `worldToShadow` after the affine that carries NDC onto the screen's corners. */
-function ndcToShadowTransform(corners: Quad2, worldToShadow: Affine2): Affine2 {
-  const [c0, c1, , c3] = corners;
+/**
+ * A full-screen quad's NDC position to `(u, depth)`: `worldToShadow` after the affine that carries
+ * NDC onto `screen`, the corners at NDC (-1, -1), (1, -1), (1, 1) and (-1, 1).
+ */
+export function ndcToShadowTransform(screen: Quad2, worldToShadow: Affine2): Affine2 {
+  const [c0, c1, , c3] = screen;
   const ex = { x: (c1.x - c0.x) / 2, y: (c1.y - c0.y) / 2 };
   const ey = { x: (c3.x - c0.x) / 2, y: (c3.y - c0.y) / 2 };
   const origin = { x: c0.x + ex.x + ey.x, y: c0.y + ex.y + ey.y };
@@ -142,15 +142,10 @@ function project(points: ArrayLike<number>, axis: Point2): [number, number] {
 /**
  * Godot's occluder cull (`renderer_viewport.cpp:567-640`): keep an occluder whose bounds meet the
  * viewport swept `max_distance` upstream, toward the light. Both shapes are convex, so a separating
- * axis among the viewport's edges, the sweep's sides and the bounds' own axes decides it.
+ * axis among the viewport's edges, the sweep's sides and the bounds' own axes decides it. The
+ * sweep's intervals depend on the light alone, so they are projected once per map.
  */
-function casterInSweptView(segments: ArrayLike<number>, view: DirectionalShadowView): boolean {
-  if (segments.length < 4) return false;
-  const [xMin, xMax] = project(segments, { x: 1, y: 0 });
-  const [yMin, yMax] = project(segments, { x: 0, y: 1 });
-  if (!Number.isFinite(xMin + xMax + yMin + yMax)) return false;
-  const bounds = [xMin, yMin, xMax, yMin, xMax, yMax, xMin, yMax];
-
+function sweptViewTest(view: DirectionalShadowView): (segments: ArrayLike<number>) => boolean {
   const { clip: corners, direction, maxDistance } = view;
   const swept: number[] = [];
   for (const corner of corners) {
@@ -161,7 +156,6 @@ function casterInSweptView(segments: ArrayLike<number>, view: DirectionalShadowV
       corner.y - direction.y * maxDistance
     );
   }
-
   const axes: Point2[] = [
     { x: 1, y: 0 },
     { x: 0, y: 1 },
@@ -169,11 +163,20 @@ function casterInSweptView(segments: ArrayLike<number>, view: DirectionalShadowV
     { x: corners[0].y - corners[1].y, y: corners[1].x - corners[0].x },
     { x: corners[1].y - corners[2].y, y: corners[2].x - corners[1].x },
   ];
-  return axes.every((axis) => {
-    const [boundsMin, boundsMax] = project(bounds, axis);
-    const [sweptMin, sweptMax] = project(swept, axis);
-    return boundsMin <= sweptMax && boundsMax >= sweptMin;
-  });
+  const sweptIntervals = axes.map((axis) => project(swept, axis));
+
+  return (segments) => {
+    if (segments.length < 4) return false;
+    const [xMin, xMax] = project(segments, axes[0]!);
+    const [yMin, yMax] = project(segments, axes[1]!);
+    if (!Number.isFinite(xMin + xMax + yMin + yMax)) return false;
+    const bounds = [xMin, yMin, xMax, yMin, xMax, yMax, xMin, yMax];
+    return axes.every((axis, index) => {
+      const [boundsMin, boundsMax] = project(bounds, axis);
+      const [sweptMin, sweptMax] = sweptIntervals[index]!;
+      return boundsMin <= sweptMax && boundsMax >= sweptMin;
+    });
+  };
 }
 
 /**
@@ -186,11 +189,12 @@ export function buildDirectionalShadowMap(
   casters: readonly ShadowCasterEdges[]
 ): DirectionalShadowMap {
   const worldToShadow = directionalShadowTransform(view);
+  const casterInSweptView = sweptViewTest(view);
   const bins = new Float32Array(SHADOW_MAP_BINS).fill(SHADOW_MAP_FAR);
   const [m00, m01, m02, m10, m11, m12] = worldToShadow;
 
   for (const { segments, cullMode } of casters) {
-    if (!casterInSweptView(segments, view)) continue;
+    if (!casterInSweptView(segments)) continue;
     for (let i = 0; i + 3 < segments.length; i += 4) {
       const ax = segments[i]!;
       const ay = segments[i + 1]!;
@@ -214,5 +218,5 @@ export function buildDirectionalShadowMap(
     }
   }
 
-  return { bins, ndcToShadow: ndcToShadowTransform(view.screen, worldToShadow) };
+  return { bins, worldToShadow };
 }

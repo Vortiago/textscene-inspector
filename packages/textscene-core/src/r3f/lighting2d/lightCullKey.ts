@@ -10,6 +10,7 @@
  */
 
 import { LIGHT_2D_RANGE_DEFAULTS } from '../../nodes/2d/lights/shared/types.js';
+import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering.js';
 
 /**
  * Everything a light contributes to the cull test, and so the identity of an accumulation class. A
@@ -47,10 +48,11 @@ export const DEFAULT_LIGHT_CULL_KEY: LightCullKey = LIGHT_2D_RANGE_DEFAULTS;
 /**
  * The key of a DirectionalLight2D: every item, at any z, on a canvas in its layer window. The
  * renderer_rd `canvas.glsl:727-760` loop runs each directional light over every lit item, and
- * `renderer_viewport.cpp:678-684` filters the list per canvas by layer alone.
+ * `renderer_viewport.cpp:678-684` filters the list per canvas by layer alone. An item's `z_final`
+ * is clamped to the canvas z range, so that range is every z.
  */
 export function directionalLightCullKey(layerMin: number, layerMax: number): LightCullKey {
-  return { itemCullMask: null, zMin: -Infinity, zMax: Infinity, layerMin, layerMax };
+  return { itemCullMask: null, zMin: CANVAS_ITEM_Z_MIN, zMax: CANVAS_ITEM_Z_MAX, layerMin, layerMax };
 }
 
 /**
@@ -98,14 +100,9 @@ export function sameLightCullKey(a: LightCullKey, b: LightCullKey): boolean {
  * are present. With no range window authored, the order is the mask order.
  */
 export function compareLightCullKeys(a: LightCullKey, b: LightCullKey): number {
-  if (a.itemCullMask === null || b.itemCullMask === null) {
-    if (a.itemCullMask !== b.itemCullMask) return a.itemCullMask === null ? -1 : 1;
-    // Two directional keys differ only in their layer window: their z pair is the same infinity,
-    // whose difference is NaN.
-    return a.layerMin - b.layerMin || a.layerMax - b.layerMax;
-  }
   return (
-    a.itemCullMask - b.itemCullMask ||
+    Number(b.itemCullMask === null) - Number(a.itemCullMask === null) ||
+    (a.itemCullMask ?? 0) - (b.itemCullMask ?? 0) ||
     a.zMin - b.zMin ||
     a.zMax - b.zMax ||
     a.layerMin - b.layerMin ||

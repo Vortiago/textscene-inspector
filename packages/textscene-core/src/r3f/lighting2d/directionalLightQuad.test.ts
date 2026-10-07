@@ -8,7 +8,8 @@ import * as THREE from 'three';
 import {
   createDirectionalLightMaterial,
   createDirectionalShadowColorMaterial,
-  updateDirectionalShadowTexture,
+  createDirectionalShadowTexture,
+  writeDirectionalShadowMap,
   type DirectionalShadowSampling,
 } from './directionalLightQuad';
 import { Light2DBlendMode, SHADOW_FILTER_NONE, SHADOW_FILTER_PCF13 } from './lightQuad';
@@ -18,7 +19,7 @@ const WARM = { r: 1, g: 0.75, b: 0.35, a: 0.5 };
 
 function sampling(overrides: Partial<DirectionalShadowSampling> = {}): DirectionalShadowSampling {
   return {
-    map: updateDirectionalShadowTexture(null, new Float32Array(SHADOW_MAP_BINS).fill(1)),
+    map: createDirectionalShadowTexture(),
     filter: SHADOW_FILTER_NONE,
     smooth: 0,
     ndcToShadow: new THREE.Matrix3(),
@@ -101,27 +102,31 @@ describe('createDirectionalShadowColorMaterial', () => {
   });
 });
 
-describe('updateDirectionalShadowTexture', () => {
-  it('holds full-precision depths, sampled texel by texel', () => {
+describe('createDirectionalShadowTexture', () => {
+  it('holds one full-precision depth per bin, sampled texel by texel', () => {
     // A half float rounds a depth near 1 by 1/2048 of z_far, 5 px at the default max_distance.
-    const bins = new Float32Array(SHADOW_MAP_BINS).fill(1);
-    bins[3] = 0.123456;
-    const texture = updateDirectionalShadowTexture(null, bins);
+    const texture = createDirectionalShadowTexture();
     expect(texture.type).toBe(THREE.FloatType);
     expect(texture.minFilter).toBe(THREE.NearestFilter);
     expect(texture.magFilter).toBe(THREE.NearestFilter);
+    expect(texture.image.width).toBe(SHADOW_MAP_BINS);
+  });
+});
+
+describe('writeDirectionalShadowMap', () => {
+  it('fills the texture in place and flags the upload', () => {
+    const texture = createDirectionalShadowTexture();
+    const bins = new Float32Array(SHADOW_MAP_BINS).fill(1);
+    bins[3] = 0.123456;
+    const versionBefore = texture.version;
+    writeDirectionalShadowMap(texture, bins);
     expect((texture.image.data as Float32Array)[3]).toBeCloseTo(0.123456, 6);
+    expect(texture.version).toBeGreaterThan(versionBefore);
   });
 
-  it('refills the texture it is handed rather than allocating a new one', () => {
-    const first = updateDirectionalShadowTexture(null, new Float32Array(SHADOW_MAP_BINS).fill(1));
-    const next = new Float32Array(SHADOW_MAP_BINS).fill(0.5);
-    expect(updateDirectionalShadowTexture(first, next)).toBe(first);
-    expect((first.image.data as Float32Array)[0]).toBe(0.5);
-  });
-
-  it('allocates afresh when the bin count changes', () => {
-    const first = updateDirectionalShadowTexture(null, new Float32Array(4));
-    expect(updateDirectionalShadowTexture(first, new Float32Array(SHADOW_MAP_BINS))).not.toBe(first);
+  it('refuses a map of the wrong length rather than leaving stale bins behind', () => {
+    expect(() =>
+      writeDirectionalShadowMap(createDirectionalShadowTexture(), new Float32Array(SHADOW_MAP_BINS + 1))
+    ).toThrow(RangeError);
   });
 });

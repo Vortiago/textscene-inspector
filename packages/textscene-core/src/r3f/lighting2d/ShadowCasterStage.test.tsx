@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { sameWorldCasters, ShadowCasterStage, useWorldShadowCasters } from './ShadowCasterStage';
+import { sameWorldCasters, ShadowCasterStage, useLightShadowCasters } from './ShadowCasterStage';
 import { useShadowCaster } from './shadowCasterRegistry';
 import { OCCLUDER_CULL_CLOCKWISE, OCCLUDER_CULL_DISABLED } from './shadowVolumes';
 import type { WorldShadowCaster } from './shadowCasterRegistry';
@@ -72,7 +72,7 @@ function Probe({
     occluderLightMask: 1,
     object,
   });
-  seen.push(useWorldShadowCasters());
+  seen.push(useLightShadowCasters(true, 1));
   return null;
 }
 

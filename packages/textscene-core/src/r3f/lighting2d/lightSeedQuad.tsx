@@ -4,17 +4,9 @@
  * and the renderer's global clear state stays untouched.
  */
 
-import { useCallback } from 'react';
 import * as THREE from 'three';
 import { LIGHT_SEED_LAYER, SEED_RENDER_ORDER } from './lightPassLayers.js';
-
-const SEED_VERTEX = /* glsl */ `
-void main() {
-  // A full-NDC quad from a unit plane: the accumulator is screen-space, so the
-  // seed has to cover the whole target wherever the canvas camera is panned.
-  gl_Position = vec4(position.xy * 2.0, 0.0, 1.0);
-}
-`;
+import { FULL_SCREEN_VERTEX, FullScreenQuad } from './fullScreenQuad.js';
 
 const SEED_FRAGMENT = /* glsl */ `
 uniform vec3 uSeed;
@@ -27,7 +19,7 @@ void main() {
 
 export function createSeedMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    vertexShader: SEED_VERTEX,
+    vertexShader: FULL_SCREEN_VERTEX,
     fragmentShader: SEED_FRAGMENT,
     uniforms: { uSeed: { value: new THREE.Vector3(1, 1, 1) } },
     // NoBlending, so the quad overwrites: it is the clear. `transparent` puts it in the light
@@ -41,20 +33,5 @@ export function createSeedMaterial(): THREE.ShaderMaterial {
 
 /** Writes `S`'s starting value over the whole accumulator, under every light. */
 export function LightAccumulatorSeed({ material }: { material: THREE.ShaderMaterial }) {
-  const toSeedLayer = useCallback((mesh: THREE.Mesh | null) => {
-    mesh?.layers.set(LIGHT_SEED_LAYER);
-  }, []);
-
-  return (
-    <mesh
-      ref={toSeedLayer}
-      material={material}
-      renderOrder={SEED_RENDER_ORDER}
-      // The quad ignores every matrix, so its bounds say nothing about where it
-      // lands; culling it against the panned camera would drop the seed.
-      frustumCulled={false}
-    >
-      <planeGeometry args={[1, 1]} />
-    </mesh>
-  );
+  return <FullScreenQuad layer={LIGHT_SEED_LAYER} material={material} renderOrder={SEED_RENDER_ORDER} />;
 }

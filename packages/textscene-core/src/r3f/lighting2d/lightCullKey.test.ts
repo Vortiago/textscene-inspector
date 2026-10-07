@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering';
 import {
   DEFAULT_LIGHT_CULL_KEY,
   compareLightCullKeys,
@@ -195,9 +196,10 @@ describe('directionalLightCullKey', () => {
     expect(lightReachesItem(directional, 0, 0, 0)).toBe(true);
   });
 
-  it('reaches an item at any z, even one past the z_index clamp', () => {
+  it('reaches an item at any z, both ends of the z_final clamp included', () => {
     expect(lightReachesItem(directional, 1, 2000, 0)).toBe(true);
-    expect(lightReachesItem(directional, 1, -10000, 0)).toBe(true);
+    expect(lightReachesItem(directional, 1, CANVAS_ITEM_Z_MIN, 0)).toBe(true);
+    expect(lightReachesItem(directional, 1, CANVAS_ITEM_Z_MAX, 0)).toBe(true);
   });
 
   it('still tests the canvas layer window', () => {

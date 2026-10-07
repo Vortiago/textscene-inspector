@@ -13,13 +13,14 @@
 import * as THREE from 'three';
 import type { Color } from '../../nodes/base/node2d/types.js';
 import type { Light2DShadowFilter } from '../../nodes/2d/lights/shared/types.js';
-import { accumulationBlend } from './lightQuad.js';
+import { accumulationState } from './lightQuad.js';
+import { FULL_SCREEN_VERTEX } from './fullScreenQuad.js';
 import { SHADOW_MAP_BINS } from './shadowPolarMap.js';
 import { shadowPixelSize } from './shadowSampling.js';
 
 /** Everything a directional light's quads need to evaluate its shadow per fragment. */
 export interface DirectionalShadowSampling {
-  /** The light's map, from `updateDirectionalShadowTexture`. */
+  /** The light's map, from `createDirectionalShadowTexture`. */
   readonly map: THREE.Texture;
   /** `Light2D.shadow_filter`. NONE takes one nearest texel, as renderer_rd does. */
   readonly filter: Light2DShadowFilter;
@@ -30,13 +31,6 @@ export interface DirectionalShadowSampling {
   /** `Light2D.shadow_color`, which replaces the light where the shadow falls. */
   readonly shadowColor: Color;
 }
-
-const VERTEX = /* glsl */ `
-void main() {
-  // A full-NDC quad from a unit plane: the light reaches every pixel wherever the camera is.
-  gl_Position = vec4(position.xy * 2.0, 0.0, 1.0);
-}
-`;
 
 const SHADOW_VERTEX = /* glsl */ `
 uniform mat3 uNdcToShadow;
@@ -120,7 +114,7 @@ void main() {
 }
 `;
 
-export interface DirectionalLightQuadOptions {
+interface DirectionalLightQuadOptions {
   /** `Light2D.color`, in Godot's sRGB canvas space. */
   readonly color: Color;
   /** `Light2D.energy`. */
@@ -148,16 +142,14 @@ function accumulationQuad(
   const { color, energy, blendMode, shadow } = options;
   return new THREE.ShaderMaterial({
     ...(shadow ? { defines: { SHADOW_FILTER: shadow.filter } } : {}),
-    vertexShader: shadow ? SHADOW_VERTEX : VERTEX,
+    vertexShader: shadow ? SHADOW_VERTEX : FULL_SCREEN_VERTEX,
     fragmentShader,
     uniforms: {
       uAlpha: { value: color.a * energy },
       ...(shadow ? shadowUniforms(shadow) : {}),
       ...uniforms,
     },
-    depthWrite: false,
-    depthTest: false,
-    ...accumulationBlend(blendMode),
+    ...accumulationState(blendMode),
   });
 }
 
@@ -179,21 +171,12 @@ export function createDirectionalShadowColorMaterial(
 /**
  * One light's map as a texture: float32 and nearest, since `texture_shadow` compares texel by
  * texel and a half float rounds a depth near 1 by 1/2048 of `z_far`, 5 px at the default
- * `max_distance`. `existing` is refilled where it can be, as `updateShadowPolarTexture` does.
+ * `max_distance`. `writeDirectionalShadowMap` fills it.
  */
-export function updateDirectionalShadowTexture(
-  existing: THREE.DataTexture | null,
-  bins: Float32Array
-): THREE.DataTexture {
-  const data = existing?.image.data as Float32Array | undefined;
-  if (existing && data?.length === bins.length) {
-    data.set(bins);
-    existing.needsUpdate = true;
-    return existing;
-  }
+export function createDirectionalShadowTexture(): THREE.DataTexture {
   const texture = new THREE.DataTexture(
-    Float32Array.from(bins),
-    bins.length,
+    new Float32Array(SHADOW_MAP_BINS),
+    SHADOW_MAP_BINS,
     1,
     THREE.RedFormat,
     THREE.FloatType
@@ -204,6 +187,11 @@ export function updateDirectionalShadowTexture(
   texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.colorSpace = THREE.NoColorSpace;
   texture.generateMipmaps = false;
-  texture.needsUpdate = true;
   return texture;
+}
+
+/** Uploads `bins`, `SHADOW_MAP_BINS` long, into a texture from `createDirectionalShadowTexture`. */
+export function writeDirectionalShadowMap(texture: THREE.DataTexture, bins: Float32Array): void {
+  (texture.image.data as Float32Array).set(bins);
+  texture.needsUpdate = true;
 }
