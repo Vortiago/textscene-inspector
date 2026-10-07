@@ -44,14 +44,22 @@ export const OPAQUE_AFTER_CUT: ProgramInjection = {
     rewriteFragment(shader, ALPHA_HASH_CHUNK, `${ALPHA_HASH_CHUNK}\n\tdiffuseColor.a = 1.0;`),
 };
 
+/**
+ * Whether three sends the surface through the blend equation. `WebGLState.setMaterial` turns
+ * blending off for NoBlending, and for NormalBlending without `transparent`.
+ */
+export function isBlended(blend: SurfaceBlend): boolean {
+  const blending = blend.blending ?? THREE.NormalBlending;
+  if (blending === THREE.NoBlending) return false;
+  return blending !== THREE.NormalBlending || blend.transparent === true;
+}
+
 /** The patch a surface needs so that three blends the alpha its Godot shader writes. */
 export function surfaceAlphaPatch(
   source: SurfaceAlphaSource,
   blend: SurfaceBlend
 ): ProgramInjection | undefined {
-  const isBlended =
-    blend.transparent === true || (blend.blending ?? THREE.NormalBlending) !== THREE.NormalBlending;
-  if (!isBlended) return undefined;
+  if (!isBlended(blend)) return undefined;
   if (source.opaqueAfterCut) return OPAQUE_AFTER_CUT;
   return source.readsAlbedoAlpha ? undefined : ALBEDO_ALPHA_UNREAD;
 }

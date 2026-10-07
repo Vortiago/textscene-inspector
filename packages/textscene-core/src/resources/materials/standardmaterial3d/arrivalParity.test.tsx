@@ -22,7 +22,7 @@ import { resolveExtResourcePath } from '../../SubResourceResolver';
 import type { TscnExternalResource } from '../../../parser/types';
 import { materialFromBag } from './build';
 import { buildMaterial } from './buildMaterial.testkit';
-import { standardMaterialBag, type StandardMaterialClass } from './materialBag';
+import { standardMaterialBag, surfaceAlphaInjection, type StandardMaterialClass } from './materialBag';
 import { bindSlotTexture, materialTextureState } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
@@ -626,9 +626,15 @@ describe('StandardMaterial3D arrival parity', () => {
         const bag = standardMaterialBag(props.scalars, textures);
         const element = StandardMaterialSlot(props) as ReactElement;
         expect(element.type).toBe(TAG_FOR[bag.materialClass]);
-        // `attach` is the mount's own, and the React key is the program factory's
-        // output. Neither is derived, so neither is compared.
-        expect(element.props).toEqual({ ...bag.props, attach: undefined });
+        // `attach` is the mount's own, and the React key and the injected hooks are the
+        // program factory's output. The hooks are compared as the patch they came from.
+        const {
+          onBeforeCompile,
+          customProgramCacheKey: _cacheKey,
+          ...mounted
+        } = element.props as Record<string, unknown>;
+        expect(mounted).toEqual({ ...bag.props, attach: undefined });
+        expect(onBeforeCompile).toBe(surfaceAlphaInjection(bag)?.onBeforeCompile);
       });
 
       it(`${testCase.name}: the imperative adapter constructs the derived bag`, () => {

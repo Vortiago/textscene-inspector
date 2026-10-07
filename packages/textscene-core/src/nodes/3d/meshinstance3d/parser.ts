@@ -3,7 +3,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import type { MeshInstance3DProperties } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
-import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
+import { assignIfDefined, parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
 import { indexedKeyRegex, stringToInt } from '../../../godot/index.js';
 
 /**
@@ -13,11 +13,6 @@ import { indexedKeyRegex, stringToInt } from '../../../godot/index.js';
  * (ustring.cpp:941-964), so `surface_material_override/0/extra` names surface 0.
  */
 const SURFACE_OVERRIDE_KEY_RE = indexedKeyRegex('^surface_material_override/(#)', 'to_int');
-
-/** Assigns only a present value: the optional readers already drop an absent or unreadable one. */
-function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {
-  if (value !== undefined) target[key] = value;
-}
 
 export function parseMeshInstance3D(
   heading: ParsedHeading,

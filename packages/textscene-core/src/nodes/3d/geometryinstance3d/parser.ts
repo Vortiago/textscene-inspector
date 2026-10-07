@@ -4,7 +4,7 @@
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
+import { assignIfDefined, parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
 import { parseNode3D } from '../../base/node3d/parser';
 import type { GeometryInstance3DProperties } from './types';
 
@@ -13,9 +13,7 @@ export function parseGeometryInstance3D(
   properties: Record<string, string>
 ): GeometryInstance3DProperties {
   const result: GeometryInstance3DProperties = parseNode3D(heading, properties);
-  const transparency = parseOptionalFloat(properties.transparency);
-  if (transparency !== undefined) result.transparency = transparency;
-  const castShadow = parseOptionalInt(properties.cast_shadow);
-  if (castShadow !== undefined) result.castShadow = castShadow;
+  assignIfDefined(result, 'transparency', parseOptionalFloat(properties.transparency));
+  assignIfDefined(result, 'castShadow', parseOptionalInt(properties.cast_shadow));
   return result;
 }

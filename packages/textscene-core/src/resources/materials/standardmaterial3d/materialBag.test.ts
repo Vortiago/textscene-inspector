@@ -5,7 +5,13 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { billboardOf, castsShadowOf, standardMaterialBag, surfaceBillboard } from './materialBag';
+import {
+  billboardOf,
+  castsShadowOf,
+  standardMaterialBag,
+  surfaceAlphaInjection,
+  surfaceBillboard,
+} from './materialBag';
 import { materialFromBag } from './build';
 import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/billboard';
@@ -146,15 +152,15 @@ describe('standardMaterialBag — texture slots', () => {
 
 describe('standardMaterialBag — fragment alpha', () => {
   it('patches nothing on an opaque surface', () => {
-    expect(bag({}).injection).toBeUndefined();
+    expect(surfaceAlphaInjection(bag({}))).toBeUndefined();
   });
 
   it('drops the texture alpha of an additive surface whose shader writes no ALPHA', () => {
-    expect(bag({ blend_mode: '1' }).injection).toBe(ALBEDO_ALPHA_UNREAD);
+    expect(surfaceAlphaInjection(bag({ blend_mode: '1' }))).toBe(ALBEDO_ALPHA_UNREAD);
   });
 
   it('writes alpha 1 past the scissor cut of an additive surface', () => {
-    expect(bag({ blend_mode: '1', transparency: '2' }).injection).toBe(OPAQUE_AFTER_CUT);
+    expect(surfaceAlphaInjection(bag({ blend_mode: '1', transparency: '2' }))).toBe(OPAQUE_AFTER_CUT);
   });
 
   it('patches the imperative material too', () => {

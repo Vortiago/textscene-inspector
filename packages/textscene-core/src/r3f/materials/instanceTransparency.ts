@@ -5,10 +5,7 @@
 
 import { forcesAlphaPass, instanceAlpha } from '../../godot/instanceTransparency';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
-import {
-  withSurfaceAlphaPatch,
-  type StandardMaterialBag,
-} from '../../resources/materials/standardmaterial3d/materialBag';
+import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 import type { ProgramInjection } from '../materialProgramInputs';
 import type { AlphaCutSurface } from '../godotAlphaCut';
 import { surfaceAlphaPatch } from './surfaceAlphaPatch';
@@ -58,8 +55,7 @@ export function cutSurfaceAlpha(cut: AlphaCutSurface, opacity: number, transpare
 
 /**
  * The bag of a surface drawn under its instance's `transparency`. Null `scalars` is Godot's
- * default surface: opaque, under DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth. Its
- * three material reads no texture or vertex alpha, so it needs no patch.
+ * default surface: opaque, under DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth.
  */
 export function withInstanceTransparency(
   bag: StandardMaterialBag,
@@ -77,6 +73,5 @@ export function withInstanceTransparency(
     },
     transparency
   );
-  const transparentBag = { ...bag, props: { ...bag.props, ...alpha } };
-  return scalars ? withSurfaceAlphaPatch(transparentBag, scalars) : transparentBag;
+  return { ...bag, props: { ...bag.props, ...alpha } };
 }

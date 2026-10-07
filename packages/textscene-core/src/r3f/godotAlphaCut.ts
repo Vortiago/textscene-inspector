@@ -47,60 +47,41 @@ export interface AlphaCutSurface extends SurfaceAlphaSource {
   blended: boolean;
 }
 
+type CutArm = Omit<AlphaCutSurface, 'readsAlbedoAlpha'>;
+
+/** The opaque pass with no cut, which every arm starts from. */
+const OPAQUE_ARM: CutArm = {
+  alphaTest: 0,
+  alphaHash: false,
+  depthWrite: true,
+  blended: false,
+  opaqueAfterCut: false,
+};
+
 /** Godot's `mat_transparency` switch in three's terms. */
 export function alphaCutSurface({ mode, scissorThreshold, transparentFlag }: AlphaCutInput): AlphaCutSurface {
   // TRANSPARENCY_DISABLED is the initialiser the switch never reaches (`sprite_3d.cpp:284-286`).
   // Its shader writes no ALPHA, so the texture alpha never reaches the blend.
   if (transparentFlag === false) {
-    return {
-      alphaTest: 0,
-      alphaHash: false,
-      depthWrite: true,
-      blended: false,
-      readsAlbedoAlpha: false,
-      opaqueAfterCut: false,
-    };
+    return { ...OPAQUE_ARM, readsAlbedoAlpha: false };
   }
+  return { ...cutArm(mode, scissorThreshold), readsAlbedoAlpha: true };
+}
+
+/** One arm of the switch, each of which multiplies the albedo alpha into ALPHA. */
+function cutArm(mode: number, scissorThreshold: number): CutArm {
   // SCISSOR and HASH force `alpha = 1.0` past the cut (`scene_forward_clustered.glsl:1413-1415`),
   // so they land in the opaque list (`scene_shader_forward_clustered.cpp:252`), which writes depth.
   switch (mode) {
     case ALPHA_CUT_DISCARD:
-      return {
-        alphaTest: scissorThreshold,
-        alphaHash: false,
-        depthWrite: true,
-        blended: false,
-        readsAlbedoAlpha: true,
-        opaqueAfterCut: true,
-      };
+      return { ...OPAQUE_ARM, alphaTest: scissorThreshold, opaqueAfterCut: true };
     case ALPHA_CUT_HASH:
-      return {
-        alphaTest: 0,
-        alphaHash: true,
-        depthWrite: true,
-        blended: false,
-        readsAlbedoAlpha: true,
-        opaqueAfterCut: true,
-      };
+      return { ...OPAQUE_ARM, alphaHash: true, opaqueAfterCut: true };
     case ALPHA_CUT_OPAQUE_PREPASS:
       // The depth prepass keeps blending and cuts in the depth pass only.
-      return {
-        alphaTest: PREPASS_ALPHA_TEST,
-        alphaHash: false,
-        depthWrite: true,
-        blended: true,
-        readsAlbedoAlpha: true,
-        opaqueAfterCut: false,
-      };
+      return { ...OPAQUE_ARM, alphaTest: PREPASS_ALPHA_TEST, blended: true };
     default:
       // `depth_draw_opaque` on a blended surface writes no depth (`material.cpp:800`).
-      return {
-        alphaTest: 0,
-        alphaHash: false,
-        depthWrite: false,
-        blended: true,
-        readsAlbedoAlpha: true,
-        opaqueAfterCut: false,
-      };
+      return { ...OPAQUE_ARM, depthWrite: false, blended: true };
   }
 }

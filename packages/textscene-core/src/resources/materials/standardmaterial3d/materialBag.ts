@@ -13,7 +13,7 @@ import {
 } from '../../../r3f/materials/godotDefaultMaterial';
 import { BillboardMode } from '../../../godot/billboard';
 import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
-import { surfaceAlphaPatch } from '../../../r3f/materials/surfaceAlphaPatch';
+import { surfaceAlphaPatch, type SurfaceAlphaSource } from '../../../r3f/materials/surfaceAlphaPatch';
 import { resolveEmission } from './emission';
 import type {
   MaterialBlendState,
@@ -37,13 +37,13 @@ export type StandardMaterialClass = 'basic' | 'standard' | 'physical';
  * The class and its props as one discriminated value, so an adapter cannot map a class
  * to parameters it did not derive. No `attach`, the reactive adapter's mount detail, and
  * no React `key`, which `materialProgramInputs` derives from the merged bag (ADR-0038).
- * `injection` is the shader patch each adapter applies, absent where none is needed.
+ * `alphaSource` is where the Godot shader takes ALPHA from, absent on a surface with no material.
  */
 export type StandardMaterialBag = (
   | { materialClass: 'basic'; props: THREE.MeshBasicMaterialParameters }
   | { materialClass: 'standard'; props: THREE.MeshStandardMaterialParameters }
   | { materialClass: 'physical'; props: THREE.MeshPhysicalMaterialParameters }
-) & { injection?: ProgramInjection };
+) & { alphaSource?: SurfaceAlphaSource };
 
 /**
  * Godot's default 3D material, which a surface with no material draws. A hardcoded
@@ -190,17 +190,16 @@ export function standardMaterialBag(
   textures: ResolvedTextureSlots = {}
 ): StandardMaterialBag {
   if (!scalars) return NO_MATERIAL;
-  return withSurfaceAlphaPatch(classBag(scalars, textures), scalars);
+  const alphaSource = { readsAlbedoAlpha: scalars.readsAlbedoAlpha, opaqueAfterCut: scalars.opaqueAfterCut };
+  return { ...classBag(scalars, textures), alphaSource };
 }
 
-/** The bag with the shader patch its blend state needs, recomputed by any caller that changes one. */
-export function withSurfaceAlphaPatch(
-  bag: StandardMaterialBag,
-  scalars: StandardMaterial3DScalars
-): StandardMaterialBag {
-  const injection = surfaceAlphaPatch(scalars, bag.props);
-  const { injection: _previous, ...unpatched } = bag;
-  return injection ? { ...unpatched, injection } : unpatched;
+/**
+ * The shader patch the bag's final blend state needs, which each adapter applies. A bag with no
+ * `alphaSource` reads no texture or vertex alpha, so it needs none.
+ */
+export function surfaceAlphaInjection(bag: StandardMaterialBag): ProgramInjection | undefined {
+  return bag.alphaSource && surfaceAlphaPatch(bag.alphaSource, bag.props);
 }
 
 /** The class `scalars` need, and its props. */
