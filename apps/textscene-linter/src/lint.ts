@@ -5,7 +5,7 @@ import { readFile } from 'fs/promises';
 import { join, resolve } from 'path';
 import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
-import { projectProviderFor } from '@textscene/core/resources/diskProject';
+import { resProviderForFile } from '@textscene/core/resources/diskProject';
 import { escapeControlCharacters, formatDiagnostics, formatError } from './format';
 
 /** Lint outcome for a single file, with output split by target stream. */
@@ -106,15 +106,17 @@ const linter = new Linter();
 
 /**
  * Reads and lints a single TSCN file, returning raw diagnostics with no
- * presentation applied. For a file inside a Godot project, it also reads the
- * files the scene uses from that project. Read failures (missing file,
- * permissions) are captured as `readError` rather than thrown.
+ * presentation applied. It also reads the files the scene uses from its
+ * `res://` root: its Godot project, or its own directory when no project holds
+ * it and it lies under the working directory, the CLI's workspace. Read
+ * failures (missing file, permissions) are captured as `readError` rather than
+ * thrown.
  */
 export async function lintFileDiagnostics(filePath: string): Promise<FileDiagnostics> {
   try {
     const absolutePath = resolve(filePath);
     const content = await readFile(absolutePath, 'utf-8');
-    const provider = await projectProviderFor(absolutePath);
+    const provider = await resProviderForFile(absolutePath, process.cwd());
     return { filePath, diagnostics: await linter.lintComplete(content, provider) };
   } catch (error) {
     return {

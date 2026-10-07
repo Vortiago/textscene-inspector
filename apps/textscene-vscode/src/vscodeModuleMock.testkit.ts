@@ -41,9 +41,6 @@ import {
   MockSymbolKind,
   MockTabInputText,
   MockTextEditorRevealType,
-  MockThemeIcon,
-  MockTreeItem,
-  MockTreeItemCollapsibleState,
   MockViewColumn,
   MockWorkspaceEdit,
 } from './vscodeMockClasses.testkit';
@@ -85,7 +82,4 @@ export const vscodeModuleMock = {
   FileType: MockFileType,
   TextEditorRevealType: MockTextEditorRevealType,
   SymbolKind: MockSymbolKind,
-  TreeItem: MockTreeItem,
-  ThemeIcon: MockThemeIcon,
-  TreeItemCollapsibleState: MockTreeItemCollapsibleState,
 };

@@ -90,7 +90,7 @@ export class LintSession {
    * Lints `content`, reading the files it uses through `provider`. With no provider, only the file's own rules run.
    *
    * @param content - Raw TSCN or TRES file content
-   * @param provider - Loads a `res://` path of the file's project, or null for a file in no project
+   * @param provider - Loads a `res://` path under the file's `res://` root, or null for a file with no root
    */
   lint(content: string, provider: ResourceProvider | null): SessionLint {
     const lint = this.lintProject(content, provider);

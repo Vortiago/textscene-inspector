@@ -22,6 +22,13 @@ function statWithProjectAt(projectFile: string | null, fileStat = { type: FILE, 
   };
 }
 
+/** The fsPath of every read, in order, with forward slashes. */
+function readPaths(): string[] {
+  return vscode.workspace.fs.readFile.mock.calls.map(([uri]: [ReturnType<typeof createMockUri>]) =>
+    uri.fsPath.replace(/\\/g, '/')
+  );
+}
+
 describe('VSCodeResourceProvider', () => {
   let provider: VSCodeResourceProvider;
   let workspaceRoot: ReturnType<typeof createMockUri>;
@@ -60,23 +67,40 @@ describe('VSCodeResourceProvider', () => {
       expect(vscode.workspace.fs.readFile).toHaveBeenCalled();
     });
 
-    it('resolves res:// from the workspace root for a subdir scene when no project.godot exists', async () => {
-      // res:// is always project-root-relative in Godot. With no project.godot, the
-      // provider falls back to the workspace root, not the scene's own folder,
-      // where res://assets/X.glb 404s.
+    it("resolves res:// under a loose scene's own directory, as the editor features do", async () => {
       vscode.workspace.fs.stat.mockImplementation(statWithProjectAt(null));
-      const subdirDoc = createMockUri('/workspace/Scenes/Level1/Level1.tscn');
-      const subdirProvider = new VSCodeResourceProvider(workspaceRoot, subdirDoc);
+      const looseProvider = new VSCodeResourceProvider(
+        workspaceRoot,
+        createMockUri('/workspace/Scenes/Level1/Level1.tscn')
+      );
+      vscode.workspace.fs.readFile.mockResolvedValue(createMockFileData('glb-bytes'));
 
-      let readUri: ReturnType<typeof createMockUri> | undefined;
-      vscode.workspace.fs.readFile.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
-        readUri = uri;
-        return Promise.resolve(createMockFileData('glb-bytes'));
-      });
+      await looseProvider.loadResource('res://props/chest.glb', 'PackedScene');
 
-      await subdirProvider.loadResource('res://props/chest.glb', 'PackedScene');
+      expect(readPaths()).toEqual(['/workspace/Scenes/Level1/props/chest.glb']);
+    });
 
-      expect(readUri?.fsPath.replace(/\\/g, '/')).toBe('/workspace/props/chest.glb');
+    it("never reads a loose scene's res:// path under the workspace root", async () => {
+      vscode.workspace.fs.stat.mockImplementation(statWithProjectAt(null));
+      const looseProvider = new VSCodeResourceProvider(
+        workspaceRoot,
+        createMockUri('/workspace/Scenes/Level1/Level1.tscn')
+      );
+      vscode.workspace.fs.readFile.mockRejectedValue(new Error('Not found'));
+
+      await expect(looseProvider.loadResource('res://props/chest.glb', 'PackedScene')).rejects.toThrow(
+        /Failed to load resource/
+      );
+      expect(readPaths()).toEqual(['/workspace/Scenes/Level1/props/chest.glb']);
+    });
+
+    it("never reads a res:// path of a scene inside a project under the scene's own directory", async () => {
+      vscode.workspace.fs.readFile.mockRejectedValue(new Error('Not found'));
+
+      await expect(provider.loadResource('res://icon.png', 'Texture2D')).rejects.toThrow(
+        /Failed to load resource/
+      );
+      expect(readPaths()).toEqual(['/workspace/icon.png']);
     });
 
     it('should prevent path traversal attacks', async () => {
@@ -95,9 +119,9 @@ describe('VSCodeResourceProvider', () => {
       ).rejects.toThrow(/Path traversal detected/);
     });
 
-    it('refuses a path that climbs out of the project root in the document-relative fallback too', async () => {
-      // project.godot at /workspace/game: `res://../other.png` escapes it, while the
-      // document-relative spelling lands at /workspace/game/other.png, inside the workspace.
+    it('refuses a res:// path that climbs out of the project root, though it stays inside the workspace', async () => {
+      // project.godot at /workspace/game: `res://../other.png` escapes it, while
+      // /workspace/other.png lies inside the workspace.
       vscode.workspace.fs.stat.mockImplementation(statWithProjectAt('/workspace/game/project.godot'));
       const gameProvider = new VSCodeResourceProvider(
         workspaceRoot,
@@ -105,7 +129,7 @@ describe('VSCodeResourceProvider', () => {
       );
 
       await expect(gameProvider.loadResource('res://../other.png', 'Texture2D')).rejects.toThrow(
-        /climbs out of the project root/
+        /climbs out of the res:\/\/ root/
       );
       expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
     });
@@ -192,7 +216,6 @@ describe('VSCodeResourceProvider', () => {
 
     it('should throw error when file does not exist', async () => {
       const notFoundError = new Error('File not found');
-      // Reject both primary and fallback attempts
       vscode.workspace.fs.readFile.mockRejectedValue(notFoundError);
 
       await expect(provider.loadResource('res://missing.tscn', 'PackedScene')).rejects.toThrow(
@@ -248,7 +271,6 @@ describe('VSCodeResourceProvider', () => {
 
     it('should handle file read permission errors', async () => {
       const permissionError = new Error('EACCES: permission denied');
-      // Reject both primary and fallback attempts
       vscode.workspace.fs.readFile.mockRejectedValue(permissionError);
 
       await expect(provider.loadResource('res://protected.tscn', 'PackedScene')).rejects.toThrow(
@@ -297,16 +319,9 @@ describe('VSCodeResourceProvider', () => {
       expect(resPath).toBe('res://Textures/Wood.png');
     });
 
-    it('records the fallback-resolved fsPath (document-dir relative) so it round-trips on later invalidation', async () => {
-      // Primary (project-root-relative) resolution fails; only the document-dir
-      // fallback succeeds. documentUri is /workspace/scenes/test.tscn, so the
-      // fallback path is /workspace/scenes/icon.png.
-      vscode.workspace.fs.readFile.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
-        if (uri.fsPath.replace(/\\/g, '/') === '/workspace/scenes/icon.png') {
-          return Promise.resolve(createMockFileData('icon-bytes'));
-        }
-        return Promise.reject(new Error('Not found'));
-      });
+    it("records the fsPath under a loose scene's own directory, so it round-trips on later invalidation", async () => {
+      vscode.workspace.fs.stat.mockImplementation(statWithProjectAt(null));
+      vscode.workspace.fs.readFile.mockResolvedValueOnce(createMockFileData('icon-bytes'));
 
       await provider.loadResource('res://icon.png', 'Texture2D');
 
@@ -337,16 +352,10 @@ describe('VSCodeResourceProvider', () => {
   });
 
   describe('getServedResPaths', () => {
-    it('lists each res:// path once, though two fsPaths served it', async () => {
+    it('lists each res:// path once, though it was served twice', async () => {
       vscode.workspace.fs.readFile.mockResolvedValue(createMockFileData('texture data'));
       await provider.loadResource('res://textures/wood.png', 'Texture2D');
       await provider.loadResource('res://icon.png', 'Texture2D');
-      // Read through the fallback too: `/workspace/scenes/icon.png` serves the same path.
-      vscode.workspace.fs.readFile.mockImplementation((uri: ReturnType<typeof createMockUri>) =>
-        uri.fsPath === '/workspace/icon.png'
-          ? Promise.reject(new Error('Not found'))
-          : Promise.resolve(createMockFileData('icon-bytes'))
-      );
       await provider.loadResource('res://icon.png', 'Texture2D');
 
       expect(provider.getServedResPaths().sort()).toEqual(['res://icon.png', 'res://textures/wood.png']);
@@ -365,7 +374,7 @@ describe('VSCodeResourceProvider', () => {
     });
   });
 
-  describe('hasProjectRootMoved', () => {
+  describe('hasResRootMoved', () => {
     /** Finds `project.godot` in exactly these directories. Every other file exists. */
     function projectFilesIn(...dirs: string[]): void {
       vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
@@ -385,7 +394,7 @@ describe('VSCodeResourceProvider', () => {
       await serveOneResource();
       projectFilesIn('/workspace', '/workspace/scenes');
 
-      expect(await provider.hasProjectRootMoved()).toBe(true);
+      expect(await provider.hasResRootMoved()).toBe(true);
     });
 
     it('is true once the cached root loses its project.godot', async () => {
@@ -395,20 +404,28 @@ describe('VSCodeResourceProvider', () => {
       await serveOneResource();
       projectFilesIn();
 
-      expect(await provider.hasProjectRootMoved()).toBe(true);
+      expect(await provider.hasResRootMoved()).toBe(true);
+    });
+
+    it('is true for a loose scene once a project.godot appears above it', async () => {
+      projectFilesIn();
+      await serveOneResource();
+      projectFilesIn('/workspace');
+
+      expect(await provider.hasResRootMoved()).toBe(true);
     });
 
     it('is false while the cached root still holds the nearest project.godot', async () => {
       await serveOneResource();
       projectFilesIn('/workspace', '/workspace/other');
 
-      expect(await provider.hasProjectRootMoved()).toBe(false);
+      expect(await provider.hasResRootMoved()).toBe(false);
     });
 
     it('is false before any load resolved a root, and walks nothing', async () => {
       vscode.workspace.fs.stat.mockClear();
 
-      expect(await provider.hasProjectRootMoved()).toBe(false);
+      expect(await provider.hasResRootMoved()).toBe(false);
       expect(vscode.workspace.fs.stat).not.toHaveBeenCalled();
     });
   });

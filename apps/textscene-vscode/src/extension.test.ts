@@ -6,7 +6,6 @@ import { createMockUri, vscode } from './test-setup';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import * as logger from './logger';
 import { TscnDiagnostics } from './TscnDiagnostics';
-import { SceneTreeView } from './sceneTree/SceneTreeView';
 import { TscnResPathListing } from './TscnResPathListing';
 import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN, SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 
@@ -19,17 +18,6 @@ vi.mock('./TscnPreviewPanel', () => ({
 // TscnDiagnostics has its own unit tests.
 vi.mock('./TscnDiagnostics', () => ({
   TscnDiagnostics: vi.fn(function (this: { dispose: ReturnType<typeof vi.fn> }) {
-    this.dispose = vi.fn();
-  }),
-}));
-
-// SceneTreeView has its own unit tests.
-vi.mock('./sceneTree/SceneTreeView', () => ({
-  SceneTreeView: vi.fn(function (this: {
-    refresh: ReturnType<typeof vi.fn>;
-    dispose: ReturnType<typeof vi.fn>;
-  }) {
-    this.refresh = vi.fn();
     this.dispose = vi.fn();
   }),
 }));
@@ -72,10 +60,6 @@ describe('Extension', () => {
       dispose: vi.fn(),
       onDidDispose: vi.fn((callback: () => void) => {
         mockPanel._disposeCallback = callback;
-        return { dispose: vi.fn() };
-      }),
-      onDidChangeViewState: vi.fn((callback: () => void) => {
-        mockPanel._viewStateCallback = callback;
         return { dispose: vi.fn() };
       }),
       handleDependencyChange: vi.fn().mockResolvedValue(undefined),
@@ -154,19 +138,11 @@ describe('Extension', () => {
     it('should add disposables to context subscriptions', () => {
       activate(mockContext);
 
-      // scene tree view, command, symbol, definition, document link, hover, completion, code action,
+      // Command, symbol, definition, document link, hover, completion, code action,
       // folding and highlight providers, five agent tools, diagnostics, save listener,
       // each of the two watchers itself plus its three handlers, and the stop-file
       // watcher itself plus its two handlers.
-      expect(mockContext.subscriptions.length).toBe(28);
-    });
-
-    it('hands the Scene Tree view the live map of previews', () => {
-      activate(mockContext);
-      openPanelFor('/workspace/test.tscn');
-
-      const [previews] = (SceneTreeView as unknown as Mock).mock.calls[0]! as [Map<string, unknown>];
-      expect([...previews.values()]).toEqual([mockPanel]);
+      expect(mockContext.subscriptions.length).toBe(27);
     });
 
     it('should register a document link provider for res:// references', () => {
@@ -343,28 +319,6 @@ describe('Extension', () => {
   });
 
   describe('Panel Lifecycle', () => {
-    it('refreshes the Scene Tree view when a preview gains or loses the active slot', () => {
-      activate(mockContext);
-      openPanelFor('/workspace/test.tscn');
-      const sceneTree = (SceneTreeView as unknown as Mock).mock.instances[0] as { refresh: Mock };
-
-      mockPanel._viewStateCallback();
-
-      expect(sceneTree.refresh).toHaveBeenCalledTimes(1);
-    });
-
-    it('refreshes the Scene Tree view after a closed preview leaves the map', () => {
-      activate(mockContext);
-      openPanelFor('/workspace/test.tscn');
-      const [previews] = (SceneTreeView as unknown as Mock).mock.calls[0]! as [Map<string, unknown>];
-      const sceneTree = (SceneTreeView as unknown as Mock).mock.instances[0] as { refresh: Mock };
-      sceneTree.refresh.mockImplementation(() => expect(previews.size).toBe(0));
-
-      mockPanel._disposeCallback();
-
-      expect(sceneTree.refresh).toHaveBeenCalledTimes(1);
-    });
-
     it('should remove panel from tracking when disposed', () => {
       const mockDocument = {
         uri: createMockUri('/workspace/scene.tscn'),
@@ -546,27 +500,6 @@ describe('Extension', () => {
       // refreshes it through update(), never as a dependency.
       expect(mockPanel.update).toHaveBeenCalledWith(mainUri);
       expect(mockPanel.handleDependencyChange).not.toHaveBeenCalled();
-    });
-
-    it("refreshes the Scene Tree view when a panel's own main scene changes on disk", async () => {
-      activate(mockContext);
-      openPanelFor('/workspace/scene.tscn');
-      const sceneTree = (SceneTreeView as unknown as Mock).mock.instances[0] as { refresh: Mock };
-
-      await fireChange(RESOURCE_FILES_PATTERN, createMockUri('/workspace/scene.tscn'));
-
-      // A closed document fires no edit, so only this refresh re-reads the scene.
-      expect(sceneTree.refresh).toHaveBeenCalled();
-    });
-
-    it('leaves the Scene Tree view alone when a dependency changes on disk', async () => {
-      activate(mockContext);
-      openPanelFor('/workspace/scene.tscn');
-      const sceneTree = (SceneTreeView as unknown as Mock).mock.instances[0] as { refresh: Mock };
-
-      await fireChange(RESOURCE_FILES_PATTERN, createMockUri('/workspace/textures/wood.png'));
-
-      expect(sceneTree.refresh).not.toHaveBeenCalled();
     });
 
     it('routes a deleted dependency through handleDependencyChange (missing placeholder path)', async () => {

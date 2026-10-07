@@ -5,7 +5,8 @@
  */
 
 import * as vscode from 'vscode';
-import { Linter, type ResourceProvider } from '@textscene/core/linter';
+import { Linter } from '@textscene/core/linter';
+import type { LintResourceProvider } from '../LintResourceProvider';
 import type { PreviewCapture } from '../previewCaptureQueue';
 import { formatLintResult } from './formatLintResult';
 import { formatMissingResources, missingResourcePaths } from './missingResources';
@@ -31,8 +32,8 @@ export interface TscnToolHost {
    * abort of `signal` ends the capture.
    */
   capturePreview(uri: vscode.Uri, signal: AbortSignal): Promise<PreviewCapture>;
-  /** The Problems panel's provider for the project `uri` belongs to, or null outside one. */
-  lintProviderFor(uri: vscode.Uri): Promise<ResourceProvider | null>;
+  /** The Problems panel's provider for the `res://` root of `uri`, or null outside every workspace folder. */
+  lintProviderFor(uri: vscode.Uri): Promise<LintResourceProvider | null>;
 }
 
 interface SceneFile {
@@ -93,8 +94,10 @@ function sceneTreeAnswer(uri: vscode.Uri, text: string): string {
   return formatSceneTree(uri.fsPath, text);
 }
 
-async function missingResourcesAnswer(uri: vscode.Uri, text: string): Promise<string> {
-  return formatMissingResources(uri.fsPath, await missingResourcePaths(uri, text));
+/** The missing-resource answer, over the Problems panel's provider, so an agent and the user see one verdict. */
+function missingResourcesAnswer(host: TscnToolHost): (uri: vscode.Uri, text: string) => Promise<string> {
+  return async (uri, text) =>
+    formatMissingResources(uri.fsPath, await missingResourcePaths(await host.lintProviderFor(uri), text));
 }
 
 class TscnOpenPreviewTool implements vscode.LanguageModelTool<ScenePathToolInput> {
@@ -182,7 +185,7 @@ export function registerTscnTools(context: vscode.ExtensionContext, host: TscnTo
     register(TOOL_IDS.lint, sceneTextTool(lintAnswer(host))),
     register(TOOL_IDS.sceneTree, sceneTextTool(sceneTreeAnswer)),
     register(TOOL_IDS.openPreview, new TscnOpenPreviewTool(host)),
-    register(TOOL_IDS.missingResources, sceneTextTool(missingResourcesAnswer)),
+    register(TOOL_IDS.missingResources, sceneTextTool(missingResourcesAnswer(host))),
   ];
   if (typeof vscode.LanguageModelDataPart?.image === 'function') {
     tools.push(register(TOOL_IDS.capture, new TscnCaptureTool(host)));

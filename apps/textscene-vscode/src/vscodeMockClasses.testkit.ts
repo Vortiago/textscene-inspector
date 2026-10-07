@@ -186,27 +186,6 @@ export enum MockSymbolKind {
   TypeParameter = 25,
 }
 
-export class MockTreeItem {
-  description?: string;
-  iconPath?: unknown;
-  command?: { command: string; title: string; arguments?: unknown[] };
-
-  constructor(
-    public label: string,
-    public collapsibleState: number
-  ) {}
-}
-
-export class MockThemeIcon {
-  constructor(public id: string) {}
-}
-
-export const MockTreeItemCollapsibleState = {
-  None: 0,
-  Collapsed: 1,
-  Expanded: 2,
-};
-
 /** `vscode.MarkdownString`: hover and documentation content. */
 export class MockMarkdownString {
   constructor(public value: string) {}

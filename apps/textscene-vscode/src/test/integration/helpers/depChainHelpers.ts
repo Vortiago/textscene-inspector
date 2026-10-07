@@ -126,7 +126,7 @@ export function setupDepChainWorkspace(): void {
   }
   fs.mkdirSync(dir, { recursive: true });
 
-  // project.godot stops findGodotProjectRoot here.
+  // project.godot makes this directory the scenes' res:// root.
   fs.writeFileSync(
     path.join(dir, 'project.godot'),
     '; Godot Project Configuration\nconfig_version=5\n[application]\nconfig/name="DepChainTest"\n',

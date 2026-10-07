@@ -1,6 +1,6 @@
 /**
- * The Outline view, the breadcrumbs and the Scene Tree view for `.tscn` files: the scene
- * tree from the language-feature engine, so each matches the `tscn-lsp` server's outline.
+ * The Outline view and the breadcrumbs for `.tscn` files: the scene tree from the
+ * language-feature engine, so both match the `tscn-lsp` server's outline.
  */
 
 import * as vscode from 'vscode';

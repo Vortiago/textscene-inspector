@@ -51,9 +51,9 @@ import {
   forgetDiskState,
   isFile,
   listProjectPaths,
-  projectRootForDir,
-  projectRootForFile,
   providerForRoot,
+  resRootForDir,
+  resRootForFile,
 } from '@textscene/core/resources/diskProject';
 import { resolveResPath } from '@textscene/core/resources/resPath';
 
@@ -74,7 +74,7 @@ let workspaceRoot: string | null = null;
 let canWatchFiles = false;
 
 /**
- * Each open document's project root, so a request does not walk the tree again. Written by
+ * Each open document's `res://` root, so a request does not walk the tree again. Written by
  * `rootForUri`, and cleared on close and by `forgetProjects`.
  */
 const rootByUri = new Map<string, Promise<string | null>>();
@@ -106,16 +106,19 @@ function workspaceRootOf(params: InitializeParams): string | null {
 function rootForUri(uri: string): Promise<string | null> {
   const cached = rootByUri.get(uri);
   if (cached !== undefined) return cached;
-  const root = findProjectRoot(uri);
+  const root = uncachedResRootOf(uri);
   rootByUri.set(uri, root);
   return root;
 }
 
-/** The project of the document's file, or of the workspace for a document with no file path. */
-function findProjectRoot(uri: string): Promise<string | null> {
+/**
+ * The `res://` root of the document's file: its project, or its own directory inside the workspace. A document
+ * with no file path has no directory, so it takes the workspace's project, or none.
+ */
+function uncachedResRootOf(uri: string): Promise<string | null> {
   const path = filePathOf(uri);
-  if (path !== null) return projectRootForFile(path);
-  if (workspaceRoot !== null) return projectRootForDir(workspaceRoot);
+  if (path !== null) return resRootForFile(path, workspaceRoot);
+  if (workspaceRoot !== null) return resRootForDir(workspaceRoot, null);
   return Promise.resolve(null);
 }
 

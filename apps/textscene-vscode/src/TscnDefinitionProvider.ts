@@ -1,19 +1,19 @@
 /**
  * Go to Definition for `.tscn` files: a resource id goes to the heading that declares it, and a
- * `res://` path to the project file it names. The engine finds both, so the answer matches the
+ * `res://` path to the file it names. The engine finds both, so the answer matches the
  * `tscn-lsp` server's.
  */
 
 import * as vscode from 'vscode';
 import { declarationRangeAt, resPathAt } from '@textscene/core/languageFeatures';
 import { existingResFile } from './existingResFile';
-import { enclosingProjectOf } from './findGodotProjectRoot';
+import { resRootOf } from './resRoot';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
 
-/** The project file a `res://` path names, or null outside every project or for no file. */
-async function projectFileOf(document: vscode.TextDocument, path: string): Promise<vscode.Uri | null> {
-  const root = await enclosingProjectOf(document.uri);
+/** The file a `res://` path names under the document's root, or null outside every workspace folder or for no file. */
+async function resFileOf(document: vscode.TextDocument, path: string): Promise<vscode.Uri | null> {
+  const root = await resRootOf(document.uri);
   return root ? existingResFile(root, path) : null;
 }
 
@@ -28,7 +28,7 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
     if (declaration) return new vscode.Location(document.uri, toVscodeRange(declaration));
 
     const occurrence = resPathAt(model, position);
-    const file = occurrence && (await projectFileOf(document, occurrence.path));
+    const file = occurrence && (await resFileOf(document, occurrence.path));
     return file ? new vscode.Location(file, new vscode.Position(0, 0)) : null;
   }
 }
