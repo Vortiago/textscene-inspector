@@ -92,6 +92,25 @@ describe('useResource → MissingResourcesContext aggregation', () => {
     expect(result.current.has('res://textures/missing.png')).toBe(false);
   });
 
+  it('keeps the path missing while another consumer of it stays mounted', () => {
+    const Wrapper = makeWrappers(loader);
+    const { result, rerender } = renderHook(
+      ({ secondPath }: { secondPath: string }) => {
+        useResource<THREE.Texture>('res://textures/missing.png', 'texture');
+        useResource<THREE.Texture>(secondPath, 'texture');
+        return useMissingResources().missingPaths;
+      },
+      {
+        wrapper: Wrapper,
+        initialProps: { secondPath: 'res://textures/missing.png' },
+      }
+    );
+
+    rerender({ secondPath: '' });
+
+    expect(result.current.has('res://textures/missing.png')).toBe(true);
+  });
+
   it('promotes a previously-missing path to uploadedPaths when it transitions to loaded (WI-UX-6)', () => {
     const Wrapper = makeWrappers(loader);
 

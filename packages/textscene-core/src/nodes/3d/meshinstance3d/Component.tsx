@@ -61,7 +61,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
   // A scene's own `[sub_resource type="ArrayMesh"]` has its surfaces inlined in the
   // `.tscn`, so it decodes synchronously, with no file to fetch.
-  const sceneArrayMesh = useSceneArrayMeshGeometry(meshResource, internalResources, externalResources);
+  const sceneArrayMesh = useSceneArrayMesh(meshResource, internalResources, externalResources);
 
   // Surface 0's material, the only one a primitive mesh has. Every multi-surface mesh
   // is an ArrayMesh, which returns from its own branch below.
@@ -360,7 +360,9 @@ function ArrayMeshSurfaces({
         const own: MaterialSource | undefined =
           sceneMaterials?.[i] ?? (materialPath ? { kind: 'file', path: materialPath } : undefined);
         const source = effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, own);
-        return <SurfaceMaterialSlot key={`surf-${i}`} source={source} attach={attach} />;
+        // Keyed on `attach`: fiber applies it only at mount (`RESERVED_PROPS`,
+        // `@react-three/fiber` 9.8.0), so slot 0 remounts when the mesh gains a surface.
+        return <SurfaceMaterialSlot key={attach} source={source} attach={attach} />;
       })}
     </>
   );
@@ -405,42 +407,61 @@ function effectiveMaterialSource(
 }
 
 /**
- * The geometry of an ArrayMesh the scene declares as its own `[sub_resource]`.
- * Null for any other mesh type or for unreadable surfaces, and the caller then
- * shows its placeholder. This hook disposes the geometry: r3f never disposes an
- * object handed to `<primitive>`.
+ * An ArrayMesh the scene declares as its own `[sub_resource]`, with each surface's
+ * material resolved against the scene's resources. Null for any other mesh type
+ * or for unreadable surfaces, and the caller then shows its placeholder.
  */
-function useSceneArrayMeshGeometry(
+function useSceneArrayMesh(
   resource: TscnInternalResource | undefined,
   internalResources: readonly TscnInternalResource[],
   externalResources: readonly TscnExternalResource[]
 ): SceneArrayMesh | null {
+  const decoded = useSceneArrayMeshGeometry(resource);
+  // Apart from the decode: an edit to a material's body or to an `ext_resource`
+  // path changes the resources and leaves the surface bytes alone.
+  return useMemo(
+    () =>
+      decoded && {
+        resource: decoded.resource,
+        sceneMaterials: decoded.materialRefs.map((ref) =>
+          resolveMaterialSource(ref, internalResources, externalResources)
+        ),
+      },
+    [decoded, internalResources, externalResources]
+  );
+}
+
+interface SceneArrayMesh {
+  resource: ArrayMeshResource;
+  /** Per surface, the material its own reference names, when it names one. */
+  sceneMaterials: readonly (MaterialSource | undefined)[];
+}
+
+/**
+ * The decoded geometry of a scene ArrayMesh and each surface's raw material
+ * reference. This hook disposes the geometry: r3f never disposes an object
+ * handed to `<primitive>`.
+ */
+function useSceneArrayMeshGeometry(resource: TscnInternalResource | undefined): DecodedSceneArrayMesh | null {
   // Keyed on the surface bytes, not identity: every keystroke re-parses the scene into
   // fresh objects, and no processor cache stands in front of an inline mesh, so identity
   // deps would re-decode and re-upload it per character.
   const surfacesRaw = resource?.type === 'ArrayMesh' ? resource.data['_surfaces'] : undefined;
   const key = typeof surfacesRaw === 'string' ? surfacesRaw : null;
 
-  const built = useMemo(() => {
+  const decoded = useMemo(() => {
     if (resource?.type !== 'ArrayMesh' || key === null) return null;
     try {
-      const mesh = decodeSceneArrayMesh(resource, externalResources);
+      const mesh = decodeSceneArrayMesh(resource);
       if (mesh.surfaces.length === 0) return null;
       return {
         resource: {
           geometry: buildArrayMeshGeometry(mesh),
-          materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
+          // No path addresses a scene's materials: `materialRefs` carries them.
+          materialPaths: mesh.surfaces.map(() => null),
           surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
         },
-        // Resolved here, not in the decoder: only the renderer holds the scene's
-        // resources, and no path reaches a scene's materials.
-        sceneMaterials: mesh.surfaces.map((s): MaterialSource | undefined => {
-          if (s.materialSubResourceId === undefined) return undefined;
-          const material = findSubResource(internalResources, s.materialSubResourceId);
-          return material
-            ? { kind: 'inline', material: { resource: material, internalResources, externalResources } }
-            : undefined;
-        }),
+        materialRefs: mesh.surfaces.map((s) => s.materialRef),
       };
     } catch (error) {
       warn(
@@ -449,18 +470,17 @@ function useSceneArrayMeshGeometry(
       );
       return null;
     }
-    // `key` stands in for `resource`/`externalResources`: same bytes, same mesh.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` IS the content of `resource`.
   }, [key]);
 
-  useEffect(() => () => built?.resource.geometry.dispose(), [built]);
-  return built;
+  useEffect(() => () => decoded?.resource.geometry.dispose(), [decoded]);
+  return decoded;
 }
 
-interface SceneArrayMesh {
+interface DecodedSceneArrayMesh {
   resource: ArrayMeshResource;
-  /** Per surface, the scene's own material sub-resource, when it names one. */
-  sceneMaterials: readonly (MaterialSource | undefined)[];
+  /** Per surface, its raw `"material"` reference, when it has one. */
+  materialRefs: readonly (string | undefined)[];
 }
 
 function resolveMeshSubResource(
