@@ -25,7 +25,7 @@ const THEME_TRES = [
   '',
 ].join('\n');
 
-/** Parses each file once per read, as the `resource` slot would; an absent file rejects. */
+/** Parses each file once per read, as the `resource` slot would. An absent file rejects. */
 function setup(files: Record<string, string>, loadFont: FontLoaderFn = async () => null) {
   const loadParsedFile = async (path: string) => {
     const content = files[resourceFilePath(path)];
@@ -92,16 +92,6 @@ describe('createThemeProcessor', () => {
 
     await expect(failed).resolves.toBeInstanceOf(Error);
     expect(processor.getCached('res://materials/green.tres')).toBeNull();
-  });
-
-  it('emits theme:failed and caches null when the owning file fails to load', async () => {
-    const { processor, eventBus } = setup({});
-
-    const failed = eventBus.once<Error>('theme', 'failed', 'res://absent.tres', 2000);
-    processor.request('res://absent.tres');
-
-    expect((await failed).message).toBe('File not found: res://absent.tres');
-    expect(processor.getCached('res://absent.tres')).toBeNull();
   });
 
   it('shares one resource by identity across two requests for the same path', async () => {

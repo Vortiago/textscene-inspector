@@ -207,7 +207,7 @@ describe('createFontProcessor', () => {
     expect(processor.getCached('res://materials/green.tres')).toBeNull();
   });
 
-  it('fails loudly (never hangs pending) for a sub-resource address into a .tscn — the owning file is not a .tres', async () => {
+  it('fails loudly (never hangs pending) for a sub-resource address into a .tscn, whose owning file is not a .tres', async () => {
     // A scene's own inline FontVariation/FontFile resolves in useSceneResources,
     // but a caller can still build this address. The `resource` slot's parse
     // refuses the `[gd_scene]` header, so the address fails rather than waits.
