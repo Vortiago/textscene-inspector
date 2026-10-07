@@ -1,14 +1,14 @@
 /**
  * GeometryInstance3D parser registration. It renders as a transform-only group
- * (ADR-0008) and reuses the Node3D transform parse.
+ * (ADR-0008) and parses as the base every GeometryInstance3D leaf starts from.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseGeometryInstance3D } from './parser';
 
 const geometryInstance3DRegistration: NodeTypeRegistration = {
   typeName: 'GeometryInstance3D',
-  parser: parseNode3D,
+  parser: parseGeometryInstance3D,
 };
 
 nodeRegistry.register(geometryInstance3DRegistration);

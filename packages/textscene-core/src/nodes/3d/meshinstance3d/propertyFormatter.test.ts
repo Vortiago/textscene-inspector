@@ -15,9 +15,9 @@ function section(sections: ReturnType<typeof formatMeshInstance3DProperties>, ti
 }
 
 describe('formatMeshInstance3DProperties', () => {
-  it('omits the Mesh section entirely when no mesh/shadow/skeleton/skin properties are set', () => {
-    const sections = formatMeshInstance3DProperties(props());
-    expect(section(sections, 'Mesh')).toBeUndefined();
+  it("shows Godot's default cast shadow when the scene sets none", () => {
+    const mesh = section(formatMeshInstance3DProperties(props()), 'Mesh')!;
+    expect(mesh.items).toEqual([{ label: 'Cast Shadow', value: 'ON' }]);
   });
 
   it('shows the mesh reference when set', () => {
@@ -25,7 +25,7 @@ describe('formatMeshInstance3DProperties', () => {
       formatMeshInstance3DProperties(props({ mesh: 'SubResource("BoxMesh_1")' })),
       'Mesh'
     )!;
-    expect(mesh.items).toEqual([{ label: 'Mesh', value: 'SubResource("BoxMesh_1")' }]);
+    expect(mesh.items).toContainEqual({ label: 'Mesh', value: 'SubResource("BoxMesh_1")' });
   });
 
   it('maps every cast_shadow value to its label, including an unknown value', () => {

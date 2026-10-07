@@ -2,9 +2,14 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import type { MeshInstance3DProperties } from './types';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
 import { indexedKeyRegex, stringToInt } from '../../../godot/index.js';
+
+/** Assigns only a present value: the optional readers already drop an absent or unreadable one. */
+function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {
+  if (value !== undefined) target[key] = value;
+}
 
 /**
  * `_set` reads the index with a bare `get_slicec('/', 1).to_int()` into an `int`
@@ -14,16 +19,11 @@ import { indexedKeyRegex, stringToInt } from '../../../godot/index.js';
  */
 const SURFACE_OVERRIDE_KEY_RE = indexedKeyRegex('^surface_material_override/(#)', 'to_int');
 
-/** Assigns only a present value: the optional readers already drop an absent or unreadable one. */
-function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {
-  if (value !== undefined) target[key] = value;
-}
-
 export function parseMeshInstance3D(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): MeshInstance3DProperties {
-  const node3dProps = parseNode3D(heading, properties);
+  const geometryProps = parseGeometryInstance3D(heading, properties);
 
   const surfaceMaterialOverrides = new Map<number, string>();
 
@@ -39,7 +39,7 @@ export function parseMeshInstance3D(
   }
 
   const meshInstance3DProps: MeshInstance3DProperties = {
-    ...node3dProps,
+    ...geometryProps,
     surfaceMaterialOverrides,
   };
 
@@ -55,7 +55,6 @@ export function parseMeshInstance3D(
     meshInstance3DProps.materialOverlay = properties.material_overlay;
   }
 
-  assignIfDefined(meshInstance3DProps, 'castShadow', parseOptionalInt(properties.cast_shadow));
   assignIfDefined(meshInstance3DProps, 'giMode', parseOptionalInt(properties.gi_mode));
   assignIfDefined(meshInstance3DProps, 'giLightmapScale', parseOptionalInt(properties.gi_lightmap_scale));
   assignIfDefined(

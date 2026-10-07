@@ -12,6 +12,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const PLANE_MESH: TscnInternalResource = {
   id: 'plane_1',
@@ -26,6 +27,7 @@ async function renderWithMaterial(materialProps: Record<string, string>) {
     data: materialProps,
   };
   const props: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'TestMesh',
     mesh: 'SubResource("plane_1")',
     surfaceMaterialOverrides: new Map([[0, 'SubResource("mat_1")']]),

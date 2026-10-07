@@ -18,7 +18,7 @@ import {
   buildCanvasTextQuadArrays,
   paintSceneFontCanvas,
   createCanvasTextMaterial,
-  type CanvasTextTransparency,
+  type CanvasTextBlend,
 } from './canvasTextPainter';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { TextLayoutResult } from './textLayout';
@@ -213,7 +213,7 @@ export interface TextRunProps {
    * `alpha_cut` (`label_3d.cpp:386-393`). Canvas runs only. Omitted, it paints
    * `TRANSPARENCY_ALPHA`, a Control's only mode.
    */
-  transparency?: CanvasTextTransparency;
+  blend?: CanvasTextBlend;
   /**
    * Tags the mesh `tscnFrameExcluded`, which `frameSceneBounds.ts` skips. Label3D
    * only (`LabelGlyphs.tsx`): its glyphs mount asynchronously and could grow the
@@ -245,7 +245,7 @@ function buildTextRun(
   side: THREE.Side | undefined,
   strokeWidthPx: number,
   textureFilter: 'nearest' | 'linear',
-  transparency: CanvasTextTransparency | undefined,
+  blend: CanvasTextBlend | undefined,
   outlineColor: Color | undefined,
   outlineWidthPx: number
 ): BuiltTextRun {
@@ -280,7 +280,7 @@ function buildTextRun(
       clippingPlanes,
       depthTest,
       side,
-      ...transparency,
+      ...blend,
     });
     return { geometry: geo, material, ownedTexture: texture };
   }
@@ -323,7 +323,7 @@ export function TextRun({
   side,
   strokeWidthPx = 0,
   textureFilter = 'linear',
-  transparency,
+  blend,
   frameExcluded,
   outlineColor,
   outlineWidthPx = 0,
@@ -341,11 +341,13 @@ export function TextRun({
         side,
         strokeWidthPx,
         textureFilter,
-        transparency,
+        blend,
         outlineColor,
         outlineWidthPx
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `tint`/`outlineColor` are compared by their own r/g/b/a fields, not object identity (a caller re-creating an equal-valued object every render, as several already do, must not rebuild the mesh) -- the SAME per-field contract the pre-dispatch code already had for the material-only memo, now covering geometry/texture too since the canvas branch rasterises `tint` into the texture itself, and `transparency` for the same reason.
+    // `tint`, `outlineColor` and `blend` are compared by their fields, not by identity: a caller
+    // that re-creates an equal object every render must not rebuild the mesh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- per-field comparison, as above.
     [
       layout,
       fontSizePx,
@@ -360,10 +362,12 @@ export function TextRun({
       side,
       strokeWidthPx,
       textureFilter,
-      transparency?.transparent,
-      transparency?.depthWrite,
-      transparency?.alphaTest,
-      transparency?.alphaHash,
+      blend?.transparent,
+      blend?.depthWrite,
+      blend?.alphaTest,
+      blend?.alphaHash,
+      blend?.blending,
+      blend?.injection,
       outlineColor?.r,
       outlineColor?.g,
       outlineColor?.b,

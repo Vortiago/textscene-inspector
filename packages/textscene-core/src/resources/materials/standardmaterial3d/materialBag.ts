@@ -12,6 +12,8 @@ import {
   GODOT_DEFAULT_ROUGHNESS,
 } from '../../../r3f/materials/godotDefaultMaterial';
 import { BillboardMode } from '../../../godot/billboard';
+import { fadedSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
+import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { resolveEmission } from './emission';
 import type {
   MaterialBlendState,
@@ -35,11 +37,13 @@ export type StandardMaterialClass = 'basic' | 'standard' | 'physical';
  * The class and its props as one discriminated value, so an adapter cannot map a class
  * to parameters it did not derive. No `attach`, the reactive adapter's mount detail, and
  * no React `key`, which `materialProgramInputs` derives from the merged bag (ADR-0038).
+ * `injection` is the fragment-alpha patch the surface needs, which each adapter installs.
  */
-export type StandardMaterialBag =
+export type StandardMaterialBag = (
   | { materialClass: 'basic'; props: THREE.MeshBasicMaterialParameters }
   | { materialClass: 'standard'; props: THREE.MeshStandardMaterialParameters }
-  | { materialClass: 'physical'; props: THREE.MeshPhysicalMaterialParameters };
+  | { materialClass: 'physical'; props: THREE.MeshPhysicalMaterialParameters }
+) & { injection?: ProgramInjection };
 
 /**
  * Godot's default 3D material, which a surface with no material draws. A hardcoded
@@ -54,6 +58,13 @@ const NO_MATERIAL: StandardMaterialBag = {
     side: THREE.FrontSide,
   },
 };
+
+/**
+ * Godot's default surface writes no ALPHA, and its three bag binds no map and no vertex colours, so
+ * three's alpha is `opacity` alone too: no patch, as for a shader that reads the albedo alpha. It
+ * writes depth in the opaque pass only.
+ */
+const NO_MATERIAL_ALPHA = { readsAlbedoAlpha: true, opaqueAfterCut: false, alphaPassDepthWrite: false };
 
 /**
  * The previewer's marker for a surface whose texture never draws: a file that cannot load,
@@ -174,19 +185,34 @@ export function castsShadowOf(material: THREE.Material): boolean {
 }
 
 /**
- * Derive the material this decoded StandardMaterial3D describes.
+ * Derive the material this decoded StandardMaterial3D describes, drawn by a geometry instance.
  *
  * @param scalars - the decoded material, or null for a surface with none
  * @param textures - already-bound textures by Godot slot; an absent slot lands
  *   as `null`, never `undefined`, so a late arrival cannot be mistaken for
  *   "leave whatever the material has" by either adapter
+ * @param transparency - the drawing GeometryInstance3D's `transparency`; 0 for any other drawer
  */
 export function standardMaterialBag(
   scalars: StandardMaterial3DScalars | null,
-  textures: ResolvedTextureSlots = {}
+  textures: ResolvedTextureSlots = {},
+  transparency = 0
 ): StandardMaterialBag {
-  if (!scalars) return NO_MATERIAL;
+  const bag = scalars ? classBag(scalars, textures) : NO_MATERIAL;
+  const source = scalars ?? NO_MATERIAL_ALPHA;
+  const surface = {
+    opacity: bag.props.opacity ?? 1,
+    transparent: bag.props.transparent ?? false,
+    depthWrite: bag.props.depthWrite ?? true,
+    alphaPassDepthWrite: source.alphaPassDepthWrite,
+    blending: bag.props.blending,
+  };
+  const { injection, ...alpha } = fadedSurfaceAlpha(source, surface, transparency);
+  return { ...bag, props: { ...bag.props, ...alpha }, injection };
+}
 
+/** The class `scalars` need, and its props. */
+function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureSlots): StandardMaterialBag {
   const slot = (name: TextureSlot): THREE.Texture | null => textures[name] ?? null;
   const blend = materialBlendProps(scalars);
   // `fromArray` keeps the values linear. A hex would go through

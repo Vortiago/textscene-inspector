@@ -330,6 +330,18 @@ _Avoid_: "override", "fallback".
 The illumination a sky background gives the scene, which in Godot is a radiance map that both lights and reflects, unlike the flat `AMBIENT_SOURCE_COLOR`.
 _Avoid_: "ambient light" alone for the sky case. "IBL" in user-facing text.
 
+**Geometry instance**:
+A drawn 3D Node (a GeometryInstance3D) whose own render state, such as `transparency` and `cast_shadow`, applies to every surface it draws.
+_Avoid_: bare "instance", which names **PackedScene instancing**.
+
+**Fade alpha**:
+The alpha a **geometry instance**'s `transparency` gives every surface it draws, as Godot stores it in a byte. The surface's own alpha multiplies it.
+_Avoid_: "instance alpha", "instance transparency".
+
+**Alpha pass**:
+Godot's sorted, blended draw of a surface after the opaque pass. A material's alpha mode, or a **fade alpha** below 0.999, sends a surface there.
+_Avoid_: "transparent pass".
+
 **Resource event bus** / `useResource`:
 The async resource pipeline: a component calls `useResource(path, type)`, the host `ResourceLoader` fetches, and a `loaded` or `missing` event resolves the hook.
 _Avoid_: "asset loader".
@@ -505,4 +517,5 @@ _Avoid_: this lifecycle for the **AnimationTree driver**.
 - "Viewport": bare "viewport" is the previewer's centre panel, and the Godot node is the hyphenated **sub-viewport** (ADR-0033).
 - "Offscreen": only the canvas half of a **sub-viewport** is hidden from the parent (ADR-0033).
 - "Key": React's remount key and three's `customProgramCacheKey` derive from one prop bag, and **Program input** names what they depend on (ADR-0038).
+- "Transparency": a **geometry instance**'s `transparency` is a 0–1 fade, and a material's `transparency` is its alpha mode. Qualify it every time.
 - "ControlDispatcher": the term is retired. The Control walker is **ControlCanvasWalker** (ADR-0037).

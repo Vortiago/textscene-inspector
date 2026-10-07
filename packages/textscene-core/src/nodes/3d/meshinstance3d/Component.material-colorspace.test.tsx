@@ -16,6 +16,7 @@ import { findMesh } from '../testing/reactThreeTestInstance';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { subResource } from '../../../testing/subResource';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 /** Godot slot → the `.tres` property, the ext id, the path and the three map. */
 const SLOTS = [
@@ -57,6 +58,7 @@ async function renderMaterial(): Promise<THREE.MeshStandardMaterial> {
   for (const [path, texture] of SHARED) fake.textures.seed(path, texture);
 
   const properties: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'M',
     mesh: 'SubResource("Box_1")',
     materialOverride: 'SubResource("Mat")',

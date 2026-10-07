@@ -190,6 +190,15 @@ export function materialProgramInputs<
 }
 
 /**
+ * `injection` on a material built outside JSX, which `materialProgramInputs` cannot reach. The
+ * cache key is the injection's own, so the patched program never serves an unpatched material.
+ */
+export function injectProgram(material: THREE.Material, injection: ProgramInjection): void {
+  material.onBeforeCompile = injection.onBeforeCompile;
+  material.customProgramCacheKey = cacheKeyThunk(injection.cacheKey);
+}
+
+/**
  * One thunk per composed contribution, a handful of module literals. A fresh
  * closure per render recompiles nothing, since `applyProps` never bumps
  * `needsUpdate`, but it would overwrite the stable function `useCanvasItemLighting`

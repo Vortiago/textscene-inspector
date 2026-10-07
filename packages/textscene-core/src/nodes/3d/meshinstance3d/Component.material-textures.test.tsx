@@ -16,9 +16,11 @@ import { pendingMapStandIn } from '../../../r3f/materials/pendingMapStandIn';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { subResource } from '../../../testing/subResource';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   const props: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: properties.name ?? 'M',
     surfaceMaterialOverrides: properties.surfaceMaterialOverrides ?? new Map(),
     mesh: properties.mesh ?? 'SubResource("Box_1")',

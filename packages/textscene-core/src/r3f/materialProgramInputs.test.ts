@@ -7,6 +7,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
+  injectProgram,
   materialProgramInputs,
   type MaterialProgramBag,
   type ProgramInjection,
@@ -353,5 +354,37 @@ describe('materialProgramInputs', () => {
         prototypeKey.mockRestore();
       }
     });
+  });
+});
+
+describe('injectProgram', () => {
+  const INJECTION: ProgramInjection = { cacheKey: 'patched', onBeforeCompile: () => {} };
+
+  it('sets the patch on the material', () => {
+    const material = new THREE.MeshBasicMaterial();
+    injectProgram(material, INJECTION);
+    expect(material.onBeforeCompile).toBe(INJECTION.onBeforeCompile);
+  });
+
+  it('keys the patched program apart from the unpatched one', () => {
+    const material = new THREE.MeshBasicMaterial();
+    injectProgram(material, INJECTION);
+    expect(material.customProgramCacheKey()).not.toBe(new THREE.MeshBasicMaterial().customProgramCacheKey());
+  });
+
+  it('keys two patches apart', () => {
+    const first = new THREE.MeshBasicMaterial();
+    const second = new THREE.MeshBasicMaterial();
+    injectProgram(first, INJECTION);
+    injectProgram(second, { ...INJECTION, cacheKey: 'other' });
+    expect(first.customProgramCacheKey()).not.toBe(second.customProgramCacheKey());
+  });
+
+  it('shares one cache-key function between materials with the same injection', () => {
+    const first = new THREE.MeshBasicMaterial();
+    const second = new THREE.MeshBasicMaterial();
+    injectProgram(first, INJECTION);
+    injectProgram(second, INJECTION);
+    expect(first.customProgramCacheKey).toBe(second.customProgramCacheKey);
   });
 });

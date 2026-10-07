@@ -1,6 +1,7 @@
 /** CSGPolygon3D type definitions. */
 
-import type { Node3DProperties, Transform3D } from '../../../base/node3d/types';
+import type { Transform3D } from '../../../base/node3d/types';
+import type { CSGShape3DProperties } from '../types';
 import type { Curve3DControlPoint } from '../../../../resources/curves/curve3d/index.js';
 
 /**
@@ -16,7 +17,7 @@ export interface CSGPolygon3DResolvedPath {
   baseTransform: Transform3D | null;
 }
 
-export interface CSGPolygon3DProperties extends Node3DProperties {
+export interface CSGPolygon3DProperties extends CSGShape3DProperties {
   /** Outline vertices, flat `[x0, y0, x1, y1, …]`. Godot default is a unit square. */
   polygon: Float32Array;
   /** 0 DEPTH, 1 SPIN, 2 PATH. Godot default 0. */
@@ -55,8 +56,4 @@ export interface CSGPolygon3DProperties extends Node3DProperties {
   resolvedPath?: CSGPolygon3DResolvedPath;
   /** `material` path (SubResource/ExtResource); StandardMaterial3D in practice. */
   materialPath?: string;
-  /** CSG boolean operation: 0 UNION, 1 INTERSECTION, 2 SUBTRACTION. */
-  operation?: number;
-  /** `cast_shadow`: GeometryInstance3D state (`modules/csg/csg_shape.h:47`). */
-  castShadow?: number;
 }

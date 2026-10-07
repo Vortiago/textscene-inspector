@@ -2,7 +2,7 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { CSGSphere3DProperties } from './types';
-import { parseNode3D } from '../../../base/node3d/parser';
+import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import { finishCsgParse } from '../sharedParser';
 import { boolOr, floatOr, intOr } from '../../../../parser/valueParsers';
 
@@ -19,10 +19,10 @@ export function parseCSGSphere3D(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): CSGSphere3DProperties {
-  const node3d = parseNode3D(heading, properties);
+  const geometry = parseGeometryInstance3D(heading, properties);
 
   const result: CSGSphere3DProperties = {
-    ...node3d,
+    ...geometry,
     radius: floatOr(properties.radius, DEFAULTS.radius, 'CSGSphere3D'),
     radialSegments: intOr(properties.radial_segments, DEFAULTS.radialSegments, 'CSGSphere3D'),
     rings: intOr(properties.rings, DEFAULTS.rings, 'CSGSphere3D'),

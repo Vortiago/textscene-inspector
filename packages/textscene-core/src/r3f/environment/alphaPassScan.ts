@@ -4,14 +4,8 @@
  * while three tonemaps per fragment and blends two curved operands.
  */
 
-import * as THREE from 'three';
-
-// `WebGLState.setMaterial`: blending is off only for NormalBlending WITH
-// `transparent === false`.
-function blends(material: THREE.Material): boolean {
-  if (material.blending === THREE.NoBlending) return false;
-  return material.blending !== THREE.NormalBlending || material.transparent;
-}
+import type * as THREE from 'three';
+import { isBlended } from '../materials/surfaceAlphaPatch';
 
 /** Explicit stack for `sceneHasBloomableEmissive`'s reasons: `traverse` cannot stop early. */
 export function sceneHasBlendedSurface(scene: THREE.Object3D): boolean {
@@ -22,9 +16,9 @@ export function sceneHasBlendedSurface(scene: THREE.Object3D): boolean {
     if (material) {
       if (Array.isArray(material)) {
         for (const entry of material) {
-          if (blends(entry)) return true;
+          if (isBlended(entry)) return true;
         }
-      } else if (blends(material)) {
+      } else if (isBlended(material)) {
         return true;
       }
     }

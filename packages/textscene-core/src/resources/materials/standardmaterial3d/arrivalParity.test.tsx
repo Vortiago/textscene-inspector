@@ -626,9 +626,15 @@ describe('StandardMaterial3D arrival parity', () => {
         const bag = standardMaterialBag(props.scalars, textures);
         const element = StandardMaterialSlot(props) as ReactElement;
         expect(element.type).toBe(TAG_FOR[bag.materialClass]);
-        // `attach` is the mount's own, and the React key is the program factory's
-        // output. Neither is derived, so neither is compared.
-        expect(element.props).toEqual({ ...bag.props, attach: undefined });
+        // `attach` is the mount's own, and the React key and the injected hooks are the
+        // program factory's output. The hooks are compared as the patch they came from.
+        const {
+          onBeforeCompile,
+          customProgramCacheKey: _cacheKey,
+          ...mounted
+        } = element.props as Record<string, unknown>;
+        expect(mounted).toEqual({ ...bag.props, attach: undefined });
+        expect(onBeforeCompile).toBe(bag.injection?.onBeforeCompile);
       });
 
       it(`${testCase.name}: the imperative adapter constructs the derived bag`, () => {

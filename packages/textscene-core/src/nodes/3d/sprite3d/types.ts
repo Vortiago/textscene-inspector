@@ -4,7 +4,7 @@
  * field.
  */
 
-import type { Node3DProperties } from '../../base/node3d/types';
+import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
 import type { Color } from '../../../utils/colorParser';
 import type { Vector2 } from '../../../parser/vectors';
 import { BillboardMode } from '../../../godot/billboard';
@@ -70,7 +70,7 @@ export interface Rect2 {
   height: number;
 }
 
-export interface Sprite3DProperties extends Node3DProperties {
+export interface Sprite3DProperties extends GeometryInstance3DProperties {
   /** Texture resource reference (ExtResource or SubResource). */
   texture?: string;
 
@@ -85,9 +85,6 @@ export interface Sprite3DProperties extends Node3DProperties {
 
   /** Size of one texture pixel in 3D world units (default: 0.01). */
   pixel_size: number;
-
-  /** Transparency override (0 = opaque, 1 = fully transparent). Default: 0. */
-  transparency: number;
 
   /** Number of horizontal frames in the sprite sheet (default: 1). */
   hframes: number;

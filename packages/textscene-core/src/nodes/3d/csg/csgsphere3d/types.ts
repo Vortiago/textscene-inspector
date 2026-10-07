@@ -1,8 +1,8 @@
 /** CSGSphere3D type definitions. */
 
-import type { Node3DProperties } from '../../../base/node3d/types';
+import type { CSGShape3DProperties } from '../types';
 
-export interface CSGSphere3DProperties extends Node3DProperties {
+export interface CSGSphere3DProperties extends CSGShape3DProperties {
   /** Sphere radius. Godot default is 0.5. */
   radius: number;
   /** Longitude divisions. Godot default 12. */
@@ -15,8 +15,4 @@ export interface CSGSphere3DProperties extends Node3DProperties {
   flipFaces: boolean;
   /** `material` path (SubResource/ExtResource); StandardMaterial3D in practice. */
   materialPath?: string;
-  /** CSG boolean operation: 0 UNION, 1 INTERSECTION, 2 SUBTRACTION. */
-  operation?: number;
-  /** `cast_shadow`: GeometryInstance3D state (`modules/csg/csg_shape.h:47`). */
-  castShadow?: number;
 }

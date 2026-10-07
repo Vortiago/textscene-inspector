@@ -247,12 +247,6 @@ describe('MeshInstance3D Parser', () => {
       expect(result.parent).toBe('.');
     });
 
-    it('should be undefined for invalid cast_shadow', () => {
-      const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
-      const result = parseMeshInstance3D(h, { cast_shadow: 'invalid' });
-      expect(result.castShadow).toBeUndefined();
-    });
-
     it('should be undefined for invalid gi_mode', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
       const result = parseMeshInstance3D(h, { gi_mode: 'invalid' });

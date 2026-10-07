@@ -16,6 +16,7 @@ import { HoverSeeder } from '../testing/HoverSeeder';
 import { SelectSeeder } from '../testing/SelectSeeder';
 
 import '../nodes/index';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 
 function makeNode(name: string, type: string, children: TscnNode[] = []): TscnNode {
   return { name, type, children, properties: {} };
@@ -23,6 +24,7 @@ function makeNode(name: string, type: string, children: TscnNode[] = []): TscnNo
 
 function makeMeshInstance(name: string): TscnNode {
   const props: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name,
     surfaceMaterialOverrides: new Map(),
   };

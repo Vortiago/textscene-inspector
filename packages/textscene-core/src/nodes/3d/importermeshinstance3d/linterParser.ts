@@ -8,9 +8,8 @@
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v, layerBitmask } from '../../../linter/validators/index.js';
+import { SHADOW_CASTING_SETTING_NAMES } from '../../../godot/rendering.js';
 
-/** `GeometryInstance3D::ShadowCastingSetting`, reused by name in this class's own hint string. */
-const CAST_SHADOW = { 0: 'OFF', 1: 'ON', 2: 'DOUBLE_SIDED', 3: 'SHADOWS_ONLY' };
 /** `GeometryInstance3D::VisibilityRangeFadeMode`, reused by name in this class's own hint string. */
 const VISIBILITY_RANGE_FADE_MODE = { 0: 'DISABLED', 1: 'SELF', 2: 'DEPENDENCIES' };
 
@@ -34,7 +33,7 @@ validatorRegistry.registerAll('ImporterMeshInstance3D', {
   }),
   // importer_mesh_instance_3d.cpp:169, PROPERTY_HINT_ENUM "Off,On,Double-Sided,
   // Shadows Only". set_cast_shadows_setting (:80-82) is a bare assignment.
-  cast_shadow: v.enumInt('cast_shadow', 0, 3, CAST_SHADOW, {
+  cast_shadow: v.enumInt('cast_shadow', 0, 3, SHADOW_CASTING_SETTING_NAMES, {
     hinted: 'importer_mesh_instance_3d.cpp:169',
   }),
   // importer_mesh_instance_3d.cpp:172, PROPERTY_HINT_RANGE

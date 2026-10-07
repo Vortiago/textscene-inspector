@@ -14,12 +14,14 @@ const HASH = 3;
 describe('alphaCutSurface', () => {
   it('DISCARD scissors at the node threshold and leaves the blended pass', () => {
     // TRANSPARENCY_ALPHA_SCISSOR (`sprite_3d.cpp:287`); the fragment tail forces
-    // `alpha = 1.0` (`scene_forward_clustered.glsl:1414-1416`) → opaque list.
+    // `alpha = 1.0` (`scene_forward_clustered.glsl:1413-1415`) → opaque list.
     expect(alphaCutSurface({ mode: DISCARD, scissorThreshold: 0.25, transparentFlag: true })).toEqual({
       alphaTest: 0.25,
       alphaHash: false,
       depthWrite: true,
       blended: false,
+      readsAlbedoAlpha: true,
+      opaqueAfterCut: true,
     });
   });
 
@@ -30,6 +32,8 @@ describe('alphaCutSurface', () => {
       alphaHash: true,
       depthWrite: true,
       blended: false,
+      readsAlbedoAlpha: true,
+      opaqueAfterCut: true,
     });
   });
 
@@ -41,6 +45,8 @@ describe('alphaCutSurface', () => {
       alphaHash: false,
       depthWrite: true,
       blended: true,
+      readsAlbedoAlpha: true,
+      opaqueAfterCut: false,
     });
   });
 
@@ -52,6 +58,8 @@ describe('alphaCutSurface', () => {
       alphaHash: false,
       depthWrite: false,
       blended: true,
+      readsAlbedoAlpha: true,
+      opaqueAfterCut: false,
     });
   });
 
@@ -71,6 +79,8 @@ describe('alphaCutSurface', () => {
         alphaHash: false,
         depthWrite: true,
         blended: false,
+        readsAlbedoAlpha: false,
+        opaqueAfterCut: false,
       });
     }
   });
