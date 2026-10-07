@@ -12,8 +12,11 @@ import {
   GODOT_DEFAULT_ROUGHNESS,
 } from '../../../r3f/materials/godotDefaultMaterial';
 import { BillboardMode } from '../../../godot/billboard';
-import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
-import { surfaceAlphaPatch, type SurfaceAlphaSource } from '../../../r3f/materials/surfaceAlphaPatch';
+import {
+  surfaceAlphaProps,
+  type SurfaceAlphaProps,
+  type SurfaceAlphaSource,
+} from '../../../r3f/materials/surfaceAlphaPatch';
 import { resolveEmission } from './emission';
 import type {
   MaterialBlendState,
@@ -195,11 +198,11 @@ export function standardMaterialBag(
 }
 
 /**
- * The shader patch the bag's final blend state needs, which each adapter applies. A bag with no
- * `alphaSource` reads no texture or vertex alpha, so it needs none.
+ * The alpha props the bag's final blend state needs, which each adapter applies over its props.
+ * A bag with no `alphaSource` reads no texture or vertex alpha, so it needs none.
  */
-export function surfaceAlphaInjection(bag: StandardMaterialBag): ProgramInjection | undefined {
-  return bag.alphaSource && surfaceAlphaPatch(bag.alphaSource, bag.props);
+export function bagAlphaProps(bag: StandardMaterialBag): SurfaceAlphaProps {
+  return bag.alphaSource ? surfaceAlphaProps(bag.alphaSource, bag.props) : {};
 }
 
 /** The class `scalars` need, and its props. */

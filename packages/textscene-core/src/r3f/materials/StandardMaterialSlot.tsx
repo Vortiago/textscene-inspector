@@ -7,7 +7,7 @@
 
 import {
   standardMaterialBag,
-  surfaceAlphaInjection,
+  bagAlphaProps,
   type StandardMaterialBag,
 } from '../../resources/materials/standardmaterial3d/materialBag';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
@@ -69,11 +69,7 @@ export function materialBagElement(bag: StandardMaterialBag, attach: string | un
   // `attach` first: it is the mount's own prop and must never shadow a derived
   // one. The key comes from the same merged bag it travels with (ADR-0038): a
   // program input arriving late, or a moved `attach`, reaches three only through a remount.
-  const injection = surfaceAlphaInjection(bag);
-  const program = materialProgramInputs({
-    props: { attach, ...bag.props },
-    merge: [injection && { injection }],
-  });
+  const program = materialProgramInputs({ props: { attach, ...bag.props }, merge: [bagAlphaProps(bag)] });
   switch (bag.materialClass) {
     case 'basic':
       return <meshBasicMaterial key={program.key} {...program.props} />;

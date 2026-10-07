@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as logger from '../logger';
 import {
+  assignIfDefined,
   floatOr,
   intOr,
   boolOr,
@@ -60,6 +61,26 @@ describe('scalar readers speak the tokenizer grammar', () => {
       expect(floatOr(spelling, -1)).toBe(-1);
       expect(intOr(spelling, -1)).toBe(-1);
     }
+  });
+});
+
+describe('assignIfDefined', () => {
+  it('assigns a present value', () => {
+    const target: { value?: number } = {};
+    assignIfDefined(target, 'value', 2);
+    expect(target).toEqual({ value: 2 });
+  });
+
+  it('leaves the key out for an undefined value', () => {
+    const target: { value?: number } = {};
+    assignIfDefined(target, 'value', undefined);
+    expect(target).not.toHaveProperty('value');
+  });
+
+  it('assigns zero, which is a present value', () => {
+    const target: { value?: number } = { value: 5 };
+    assignIfDefined(target, 'value', 0);
+    expect(target.value).toBe(0);
   });
 });
 

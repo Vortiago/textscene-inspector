@@ -4,7 +4,8 @@ import type { ProgramInjection } from '../materialProgramInputs';
 import {
   ALBEDO_ALPHA_UNREAD,
   OPAQUE_AFTER_CUT,
-  surfaceAlphaPatch,
+  isBlended,
+  surfaceAlphaProps,
   type SurfaceAlphaSource,
 } from './surfaceAlphaPatch';
 
@@ -25,27 +26,43 @@ function patched(injection: ProgramInjection, fragmentShader: string): string {
   return shader.fragmentShader;
 }
 
-describe('surfaceAlphaPatch', () => {
-  it('patches nothing on an unblended surface, which three writes at alpha 1', () => {
-    expect(surfaceAlphaPatch(CUT, { transparent: false })).toBeUndefined();
+describe('isBlended', () => {
+  it('blends a transparent surface under the default blending', () => {
+    expect(isBlended({ transparent: true })).toBe(true);
   });
 
-  it('writes alpha 1 past the cut on a blended surface', () => {
-    expect(surfaceAlphaPatch(CUT, { transparent: true })).toBe(OPAQUE_AFTER_CUT);
+  it('writes an opaque surface under NormalBlending unblended', () => {
+    expect(isBlended({ transparent: false, blending: THREE.NormalBlending })).toBe(false);
   });
 
-  it('counts a blend mode other than MIX as blended', () => {
-    expect(surfaceAlphaPatch(CUT, { transparent: false, blending: THREE.AdditiveBlending })).toBe(
-      OPAQUE_AFTER_CUT
-    );
+  it('writes NoBlending unblended even when transparent', () => {
+    expect(isBlended({ transparent: true, blending: THREE.NoBlending })).toBe(false);
+  });
+});
+
+describe('surfaceAlphaProps', () => {
+  it('adds nothing to an unblended surface, which three writes at alpha 1', () => {
+    expect(surfaceAlphaProps(CUT, { transparent: false })).toEqual({});
+  });
+
+  it('overwrites past the cut of a blended MIX surface', () => {
+    expect(surfaceAlphaProps(CUT, { transparent: true })).toEqual({ blending: THREE.NoBlending });
+  });
+
+  it('writes alpha 1 past the cut of a surface blended other than MIX', () => {
+    expect(surfaceAlphaProps(CUT, { transparent: false, blending: THREE.AdditiveBlending })).toEqual({
+      injection: OPAQUE_AFTER_CUT,
+    });
   });
 
   it('drops the albedo alpha of a blended surface whose shader never reads it', () => {
-    expect(surfaceAlphaPatch(IGNORES_ALBEDO, { transparent: true })).toBe(ALBEDO_ALPHA_UNREAD);
+    expect(surfaceAlphaProps(IGNORES_ALBEDO, { transparent: true })).toEqual({
+      injection: ALBEDO_ALPHA_UNREAD,
+    });
   });
 
-  it('patches nothing on a blended surface that reads its albedo alpha', () => {
-    expect(surfaceAlphaPatch(READS_ALBEDO, { transparent: true })).toBeUndefined();
+  it('adds nothing to a blended surface that reads its albedo alpha', () => {
+    expect(surfaceAlphaProps(READS_ALBEDO, { transparent: true })).toEqual({});
   });
 });
 

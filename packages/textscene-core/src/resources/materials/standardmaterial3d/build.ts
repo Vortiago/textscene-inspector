@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { injectProgram } from '../../../r3f/materialProgramInputs';
-import { surfaceAlphaInjection, type StandardMaterialBag } from './materialBag';
+import { bagAlphaProps, type StandardMaterialBag } from './materialBag';
 
 /**
  * A derived bag's material class as a constructed `THREE.Material`, for a caller that
@@ -15,8 +15,8 @@ import { surfaceAlphaInjection, type StandardMaterialBag } from './materialBag';
  * `<StandardMaterialSlot>` maps the same classes onto JSX tags (ADR-0039).
  */
 export function materialFromBag(bag: StandardMaterialBag): THREE.Material {
-  const material = materialOfClass(bag);
-  const injection = surfaceAlphaInjection(bag);
+  const { injection, ...alphaProps } = bagAlphaProps(bag);
+  const material = materialOfClass({ ...bag, props: { ...bag.props, ...alphaProps } });
   if (injection) injectProgram(material, injection);
   return material;
 }

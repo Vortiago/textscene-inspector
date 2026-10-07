@@ -6,9 +6,8 @@
 import { forcesAlphaPass, instanceAlpha } from '../../godot/instanceTransparency';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
-import type { ProgramInjection } from '../materialProgramInputs';
 import type { AlphaCutSurface } from '../godotAlphaCut';
-import { surfaceAlphaPatch } from './surfaceAlphaPatch';
+import { surfaceAlphaProps, type SurfaceAlphaProps } from './surfaceAlphaPatch';
 
 /** The material state an instance's `transparency` changes. */
 export interface SurfaceAlpha {
@@ -24,10 +23,8 @@ export interface AlphaPassSurface extends SurfaceAlpha {
   alphaPassDepthWrite: boolean;
 }
 
-/** A Sprite3D or Label3D surface's alpha state, with the shader patch its blend needs. */
-export interface CutSurfaceAlpha extends SurfaceAlpha {
-  injection: ProgramInjection | undefined;
-}
+/** A Sprite3D or Label3D surface's alpha state, with the props its blend needs. */
+export interface CutSurfaceAlpha extends SurfaceAlpha, SurfaceAlphaProps {}
 
 /**
  * The surface's alpha state under its instance's `transparency`. The instance alpha is the
@@ -43,14 +40,14 @@ export function instanceSurfaceAlpha(surface: AlphaPassSurface, transparency: nu
 /**
  * The alpha state of a Sprite3D or Label3D surface, whose `get_material_for_2d` material keeps
  * DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth. `opacity` is the alpha its shader
- * reads. Both draw MIX, so the patch sees three's default blending.
+ * reads. Both draw MIX, three's default blending.
  */
 export function cutSurfaceAlpha(cut: AlphaCutSurface, opacity: number, transparency = 0): CutSurfaceAlpha {
   const alpha = instanceSurfaceAlpha(
     { opacity, transparent: cut.blended, depthWrite: cut.depthWrite, alphaPassDepthWrite: false },
     transparency
   );
-  return { ...alpha, injection: surfaceAlphaPatch(cut, alpha) };
+  return { ...alpha, ...surfaceAlphaProps(cut, alpha) };
 }
 
 /**

@@ -54,12 +54,25 @@ export function isBlended(blend: SurfaceBlend): boolean {
   return blending !== THREE.NormalBlending || blend.transparent === true;
 }
 
-/** The patch a surface needs so that three blends the alpha its Godot shader writes. */
-export function surfaceAlphaPatch(
-  source: SurfaceAlphaSource,
-  blend: SurfaceBlend
-): ProgramInjection | undefined {
-  if (!isBlended(blend)) return undefined;
-  if (source.opaqueAfterCut) return OPAQUE_AFTER_CUT;
-  return source.readsAlbedoAlpha ? undefined : ALBEDO_ALPHA_UNREAD;
+/** What a blended surface adds to its material props so three blends the alpha Godot writes. */
+export interface SurfaceAlphaProps {
+  blending?: THREE.Blending;
+  injection?: ProgramInjection;
+}
+
+const NO_PROPS: SurfaceAlphaProps = Object.freeze({});
+const OVERWRITE: SurfaceAlphaProps = Object.freeze({ blending: THREE.NoBlending });
+const CUT_TO_OPAQUE: SurfaceAlphaProps = Object.freeze({ injection: OPAQUE_AFTER_CUT });
+const ALBEDO_IGNORED: SurfaceAlphaProps = Object.freeze({ injection: ALBEDO_ALPHA_UNREAD });
+
+/**
+ * The props a surface needs so that three blends the alpha its Godot shader writes. A MIX blend
+ * of alpha 1 overwrites, which three spells as NoBlending: no patched program, and no compositor.
+ */
+export function surfaceAlphaProps(source: SurfaceAlphaSource, blend: SurfaceBlend): SurfaceAlphaProps {
+  if (!isBlended(blend)) return NO_PROPS;
+  if (source.opaqueAfterCut) {
+    return (blend.blending ?? THREE.NormalBlending) === THREE.NormalBlending ? OVERWRITE : CUT_TO_OPAQUE;
+  }
+  return source.readsAlbedoAlpha ? NO_PROPS : ALBEDO_IGNORED;
 }

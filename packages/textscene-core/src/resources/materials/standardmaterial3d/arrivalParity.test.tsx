@@ -22,7 +22,7 @@ import { resolveExtResourcePath } from '../../SubResourceResolver';
 import type { TscnExternalResource } from '../../../parser/types';
 import { materialFromBag } from './build';
 import { buildMaterial } from './buildMaterial.testkit';
-import { standardMaterialBag, surfaceAlphaInjection, type StandardMaterialClass } from './materialBag';
+import { bagAlphaProps, standardMaterialBag, type StandardMaterialClass } from './materialBag';
 import { bindSlotTexture, materialTextureState } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
@@ -633,8 +633,9 @@ describe('StandardMaterial3D arrival parity', () => {
           customProgramCacheKey: _cacheKey,
           ...mounted
         } = element.props as Record<string, unknown>;
-        expect(mounted).toEqual({ ...bag.props, attach: undefined });
-        expect(onBeforeCompile).toBe(surfaceAlphaInjection(bag)?.onBeforeCompile);
+        const { injection, ...alphaProps } = bagAlphaProps(bag);
+        expect(mounted).toEqual({ ...bag.props, ...alphaProps, attach: undefined });
+        expect(onBeforeCompile).toBe(injection?.onBeforeCompile);
       });
 
       it(`${testCase.name}: the imperative adapter constructs the derived bag`, () => {
@@ -646,7 +647,8 @@ describe('StandardMaterial3D arrival parity', () => {
         const held = material as unknown as Record<string, unknown>;
         const applied: Record<string, unknown> = {};
         const derived: Record<string, unknown> = {};
-        for (const [prop, value] of Object.entries(bag.props)) {
+        const { injection: _injection, ...alphaProps } = bagAlphaProps(bag);
+        for (const [prop, value] of Object.entries({ ...bag.props, ...alphaProps })) {
           applied[prop] = comparable(held[prop]);
           derived[prop] = comparable(value);
         }

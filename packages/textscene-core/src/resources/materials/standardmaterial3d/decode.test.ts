@@ -331,6 +331,11 @@ describe('decodeStandardMaterial3D — refraction forces opacity', () => {
     expect(data.alpha).toBe(1);
   });
 
+  it('cuts nothing under a scissor, since ALPHA 1.0 passes every threshold', () => {
+    const data = decodeStandardMaterial3D({ transparency: '2', refraction_enabled: 'true' });
+    expect(data.alphaTest).toBe(0);
+  });
+
   it('still joins the alpha pass, because it samples the screen texture', () => {
     // No transparency is authored.
     const data = decodeStandardMaterial3D({

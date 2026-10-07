@@ -193,8 +193,9 @@ export interface CanvasTextTransparency {
   depthWrite: boolean;
   alphaTest: number;
   alphaHash: boolean;
-  /** The shader patch the surface's blend needs (`surfaceAlphaPatch.ts`). */
-  injection: ProgramInjection | undefined;
+  /** What the surface's blend needs so three blends the alpha Godot writes (`surfaceAlphaPatch.ts`). */
+  blending?: THREE.Blending;
+  injection?: ProgramInjection;
 }
 
 export interface CanvasTextMaterialOptions extends Partial<CanvasTextTransparency> {
@@ -238,6 +239,7 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     depthWrite = false,
     alphaTest = 0,
     alphaHash = false,
+    blending = THREE.NormalBlending,
     injection,
   } = options;
   const material = new THREE.MeshBasicMaterial({
@@ -248,6 +250,7 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     depthTest,
     alphaTest,
     alphaHash,
+    blending,
     // Unlike `defines` below, `forceSinglePass` IS a property `THREE.Material`'s
     // constructor declares, so `setValues` assigns it from this object.
     ...canvasItemFacing(side),

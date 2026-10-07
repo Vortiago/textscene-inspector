@@ -13,7 +13,6 @@ import {
   CANVAS_TEXT_VERTICAL_PAD_PX,
 } from '../../../r3f/controls/native/text/canvasTextPainter';
 import LabelGlyphs from './LabelGlyphs';
-import { OPAQUE_AFTER_CUT } from '../../../r3f/materials/surfaceAlphaPatch';
 import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 
@@ -348,16 +347,10 @@ describe('<LabelGlyphs>', () => {
       expect(materials(renderer).map((m) => m.opacity)).toEqual([0.5 * (127 / 255), 127 / 255]);
     });
 
-    it('blends a discard-cut label without a depth write in the alpha pass', async () => {
+    it('writes a discard-cut label unblended in the alpha pass', async () => {
       const renderer = await render(props({ alpha_cut: AlphaCutMode.DISCARD, transparency: 0.5 }));
       const [material] = materials(renderer);
-      expect(material).toMatchObject({ transparent: true, depthWrite: false });
-    });
-
-    it('writes alpha 1 past the cut of a discard-cut label in the alpha pass', async () => {
-      const renderer = await render(props({ alpha_cut: AlphaCutMode.DISCARD, transparency: 0.5 }));
-      const [material] = materials(renderer);
-      expect(material!.onBeforeCompile).toBe(OPAQUE_AFTER_CUT.onBeforeCompile);
+      expect(material).toMatchObject({ transparent: true, depthWrite: false, blending: THREE.NoBlending });
     });
   });
 

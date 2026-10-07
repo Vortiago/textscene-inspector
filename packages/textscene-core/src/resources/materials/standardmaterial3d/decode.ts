@@ -162,9 +162,10 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     transparent,
     castsShadow,
     // `alpha_scissor_threshold` hint is "0,1,0.001". 0 means "no cutout" to three,
-    // which every non-scissor mode wants.
+    // which every non-scissor mode wants. A refractive surface's ALPHA is 1.0, which no
+    // threshold cuts, while three would cut on the texture alpha Godot never reads.
     alphaTest:
-      transparency === Transparency.ALPHA_SCISSOR
+      transparency === Transparency.ALPHA_SCISSOR && readsAlbedoAlpha
         ? clamp01(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT))
         : 0,
     depthDrawMode,
