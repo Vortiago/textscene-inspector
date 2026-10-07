@@ -13,7 +13,6 @@ describe('meshlibrary slice registration', () => {
     expect(registration?.slice).toBe('meshlibrary');
     expect(registration?.kind).toBe('godot-text');
     expect(resourceSliceRegistry.byTypeName('MeshLibrary')?.busType ?? null).toBe('resource');
-    expect(registration?.failureLabel).toBe('Resource');
   });
 
   it('claims no file extension — a .tres is the shared text container', () => {
@@ -38,7 +37,6 @@ describe('meshlibrary slice registration', () => {
         kind: 'godot-text',
         typeNames: ['MeshLibrary'],
         busType: null,
-        failureLabel: 'Impostor',
       })
     ).toThrow(/already claimed by slice "meshlibrary"/);
   });

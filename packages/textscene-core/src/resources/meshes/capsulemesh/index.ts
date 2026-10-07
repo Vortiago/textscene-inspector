@@ -1,8 +1,8 @@
 /** CapsuleMesh resource slice: claims the type name, re-exports its decode. */
 
-import { registerMeshSlice } from '../registerMeshSlice.js';
+import { registerGenericResourceSlice } from '../../sliceRegistration.js';
 
-registerMeshSlice('capsulemesh', ['CapsuleMesh']);
+registerGenericResourceSlice('capsulemesh', ['CapsuleMesh']);
 
 export { decodeCapsuleMesh } from './decode.js';
 export type { CapsuleMeshProperties } from './types.js';

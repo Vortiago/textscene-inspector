@@ -11,7 +11,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['Environment'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export { decodeEnvironment } from './decode';

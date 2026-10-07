@@ -10,7 +10,7 @@ import type { TscnNode, TscnScene, TscnInternalResource } from '../parser/types'
 import { NodeDispatcher } from './NodeDispatcher';
 import * as mergeInstanceRootModule from '../resources/mergeInstanceRoot';
 import { SceneStack } from './testing/SceneStack';
-import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
+import { createFakeResourceLoader, recordSceneRequests } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
 // The barrel registers every node-type component.
@@ -547,9 +547,9 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     mergeSpy.mockRestore();
   });
 
-  it('PERF (WI-213): registers the instanced ExtResource from an effect, not the render body', async () => {
+  it('registers the instanced ExtResource before the scene load requests it', async () => {
     const fake = createFakeResourceLoader();
-    fake.scenes.seed('res://child_cube.tscn', makeBoxScene('TheBox'));
+    const metadataAtRequest = recordSceneRequests(fake);
 
     const instancingNode: TscnNode = {
       name: 'LeftCube',
@@ -563,13 +563,6 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
     ]);
 
-    // Behavior is preserved (registration still happens, so the resource
-    // pipeline can resolve the instanced scene) even though the call now
-    // lives inside a useEffect instead of the render body.
-    expect(fake.registerCalls).toContainEqual({
-      id: '1_cube',
-      path: 'res://child_cube.tscn',
-      type: 'PackedScene',
-    });
+    expect(metadataAtRequest.get('res://child_cube.tscn')).toBe(true);
   });
 });

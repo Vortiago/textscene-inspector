@@ -11,7 +11,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['Curve3D'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export { decodeCurve3D, resolveCurve3D, tessellateCurve3D } from './decode';

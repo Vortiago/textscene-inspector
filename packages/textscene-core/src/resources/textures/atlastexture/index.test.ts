@@ -13,7 +13,6 @@ describe('atlastexture slice registration', () => {
       slice: 'atlastexture',
       kind: 'godot-text',
       busType: 'resource',
-      failureLabel: 'Resource',
     });
   });
 

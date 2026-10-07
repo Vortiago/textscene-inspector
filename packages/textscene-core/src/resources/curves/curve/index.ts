@@ -11,7 +11,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['Curve'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export { curveFromResource, decodeCurve, resolveCurve } from './decode';

@@ -25,10 +25,6 @@ describe('image slice registration', () => {
     }
   });
 
-  it('labels a failed load the way the missing-resources panel reads it', () => {
-    expect(resourceSliceRegistry.byTypeName('Texture2D')?.failureLabel).toBe('Material using texture');
-  });
-
   it('does not claim an image format the decoder has no path for', () => {
     // .tga/.bmp are legal Godot imports. Nothing here decodes them, so a claim would
     // route them to a processor that then refuses them.
@@ -43,7 +39,6 @@ describe('image slice registration', () => {
         kind: 'godot-text',
         typeNames: ['Texture2D'],
         busType: null,
-        failureLabel: 'Impostor',
       })
     ).toThrow(/already claimed by slice "image"/);
   });

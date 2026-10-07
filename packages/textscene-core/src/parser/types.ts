@@ -179,23 +179,3 @@ export type BuiltSection = TscnNode | TscnInternalResource | TscnExternalResourc
 export type ExtResource = TscnExternalResource;
 /** Alias used by the immutable SceneGraph and dependency-tracking helpers. */
 export type SubResource = TscnInternalResource;
-
-/** An external resource that failed to load. */
-export interface MissingResource {
-  /** Godot resource path, for example res://scenes/Door.tscn. */
-  path: string;
-  /** Resource type, for example PackedScene or Texture2D. */
-  type: string;
-  /** Node path that references this resource. */
-  referencedBy: string;
-  /** Error message from the failed load. */
-  error?: string;
-}
-
-/**
- * Called when the renderer needs a resource that is not available.
- *
- * @param resource - Details about the missing resource
- * @returns Resource content (string for text, ArrayBuffer for binary), or null if unavailable
- */
-export type ResourceNeededCallback = (resource: MissingResource) => Promise<string | ArrayBuffer | null>;

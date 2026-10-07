@@ -11,9 +11,8 @@ describe('labelsettings slice registration', () => {
     expect(registration?.kind).toBe('godot-text');
   });
 
-  it('routes `LabelSettings` to the generic resource slot with the Resource failure label', () => {
+  it('routes `LabelSettings` to the generic resource slot', () => {
     expect(resourceSliceRegistry.byTypeName('LabelSettings')?.busType ?? null).toBe('resource');
-    expect(resourceSliceRegistry.byTypeName('LabelSettings')?.failureLabel).toBe('Resource');
   });
 
   it('claims no file extension — a LabelSettings arrives inside a .tscn or .tres (edge case)', () => {

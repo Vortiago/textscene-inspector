@@ -1,8 +1,8 @@
 /** RectangleShape2D resource slice: claims the type name, re-exports its decode. */
 
-import { registerShapeSlice } from '../registerShapeSlice';
+import { registerGenericResourceSlice } from '../../sliceRegistration';
 
-registerShapeSlice('rectangleshape2d', ['RectangleShape2D']);
+registerGenericResourceSlice('rectangleshape2d', ['RectangleShape2D']);
 
 export { decodeRectangleShape2D } from './decode';
 export type { RectangleShape2DProperties } from './types';

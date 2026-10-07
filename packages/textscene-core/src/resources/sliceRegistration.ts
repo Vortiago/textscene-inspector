@@ -1,6 +1,6 @@
 /**
  * The resource-slice routing claim table (ADR-0031): each slice's type names,
- * file extensions, processor slot and failure label. Routing derives from these
+ * file extensions and processor slot. Routing derives from these
  * claims, never from a type-name substring. THREE-free and React-free, so a
  * linter entry point can read it. Each slice's `index.ts` registers itself.
  */
@@ -37,8 +37,6 @@ export interface ResourceSliceRegistration {
    * loader never serves (ViewportTexture resolves by NodePath, not by file).
    */
   busType: ResourceBusType | null;
-  /** Missing-resources row label for a failed load of this slice's claims. */
-  failureLabel: string;
 }
 
 const byTypeName = new Map<string, ResourceSliceRegistration>();
@@ -67,6 +65,15 @@ export function registerResourceSlice(registration: ResourceSliceRegistration): 
     byExtension.set(extension, registration);
   }
   all.push(registration);
+}
+
+/**
+ * Claims a family slice (the shapes, the primitive meshes) served as plain data by
+ * the generic `resource` bus slot. No `extensions`: every Godot-text slice shares
+ * `.tres`, and a duplicate extension claim throws, so these route by `type=` name.
+ */
+export function registerGenericResourceSlice(slice: string, typeNames: readonly string[]): void {
+  registerResourceSlice({ slice, kind: 'godot-text', typeNames, busType: 'resource' });
 }
 
 export const resourceSliceRegistry = {

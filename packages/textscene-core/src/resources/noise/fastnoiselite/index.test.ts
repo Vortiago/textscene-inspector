@@ -12,7 +12,6 @@ describe('fastnoiselite slice registration', () => {
       slice: 'fastnoiselite',
       kind: 'godot-text',
       busType: 'resource',
-      failureLabel: 'Resource',
     });
   });
 

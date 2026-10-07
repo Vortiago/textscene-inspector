@@ -12,7 +12,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['NoiseTexture2D'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export * from './decode';

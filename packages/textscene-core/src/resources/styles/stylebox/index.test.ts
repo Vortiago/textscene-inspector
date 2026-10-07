@@ -15,7 +15,6 @@ describe('stylebox slice registration', () => {
         kind: 'godot-text',
         typeNames: ['StyleBoxFlat', 'StyleBoxEmpty'],
         busType: 'resource',
-        failureLabel: 'Resource',
       });
     }
   });

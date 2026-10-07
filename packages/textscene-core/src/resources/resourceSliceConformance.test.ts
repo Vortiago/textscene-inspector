@@ -4,28 +4,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { findRegisteringIndexes } from './testing/sourceTree';
 import './sliceRegistrations.js';
 import { resourceSliceRegistry } from './sliceRegistration';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/resources
 const barrelPath = resolve(here, 'sliceRegistrations.ts');
-
-const REGISTER_RE = /\bregister(ResourceSlice|ShapeSlice|MeshSlice)\s*\(/;
-
-function findRegisteringIndexes(dir: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...findRegisteringIndexes(full));
-    else if (entry.name === 'index.ts' && REGISTER_RE.test(readFileSync(full, 'utf8'))) {
-      out.push(full);
-    }
-  }
-  return out;
-}
 
 function barrelSpecifiers(): string[] {
   const source = readFileSync(barrelPath, 'utf8');
@@ -73,13 +60,9 @@ describe('resource-slice claim coverage', () => {
   });
 
   it('every registration has a slice folder, its kind-required entry points, and a registration test', () => {
-    // A slice registered through a family helper (the shapes, the primitive
-    // meshes) keeps its claims table in the helper's co-located test, one table
-    // over the family. The helper's test is the registration test.
-    const FAMILY_TESTS: Record<string, string> = {
-      registerShapeSlice: join(here, 'shapes/shapes.test.ts'),
-      registerMeshSlice: join(here, 'meshes/registerMeshSlice.test.ts'),
-    };
+    // A slice registered through `registerGenericResourceSlice` (the shapes, the
+    // primitive meshes) keeps its claims in its family's test, one table over the
+    // family: `shapes/shapes.test.ts`, `meshes/meshes.test.ts`.
     const failures: string[] = [];
     for (const reg of all) {
       const dir = dirByBasename.get(reg.slice);
@@ -97,11 +80,13 @@ describe('resource-slice claim coverage', () => {
         failures.push(`${reg.slice}: foreign-format slice with a decode.ts (the hollow-file smell)`);
       }
       const indexSource = readFileSync(join(dir, 'index.ts'), 'utf8');
-      const family = Object.entries(FAMILY_TESTS).find(([helper]) => indexSource.includes(helper));
-      const hasTest = family
-        ? existsSync(family[1])
-        : existsSync(join(dir, 'registration.test.ts')) || existsSync(join(dir, 'index.test.ts'));
-      if (!hasTest) failures.push(`${reg.slice}: no registration.test.ts / index.test.ts`);
+      const familyDir = dirname(dir);
+      const expectedTests = indexSource.includes('registerGenericResourceSlice')
+        ? [join(familyDir, `${basename(familyDir)}.test.ts`)]
+        : [join(dir, 'registration.test.ts'), join(dir, 'index.test.ts')];
+      if (!expectedTests.some((test) => existsSync(test))) {
+        failures.push(`${reg.slice}: no ${expectedTests.map((test) => basename(test)).join(' / ')}`);
+      }
     }
     expect(failures).toEqual([]);
   });
@@ -122,31 +107,5 @@ describe('resource-slice claim coverage', () => {
   it("never claims '.tres' as an extension — it is the shared Godot-text container", () => {
     const offenders = all.filter((r) => (r.extensions ?? []).includes('.tres'));
     expect(offenders.map((r) => r.slice)).toEqual([]);
-  });
-
-  it("each bus tag carries one failure label, and it is the loader's", () => {
-    // The loader's per-bus labels (ResourceLoader.setupFailureCallbacks), as
-    // literals so that map can move freely.
-    const LOADER_LABELS: Record<string, string> = {
-      texture: 'Material using texture',
-      scene: 'Node instance of scene',
-      glb: 'Node using GLB mesh',
-      resource: 'Resource',
-      arraymesh: 'Node using ArrayMesh',
-      font: 'Node using font',
-      theme: 'Node using theme',
-    };
-    const failures: string[] = [];
-    for (const reg of all) {
-      if (reg.busType === null) continue; // not loader-served (ViewportTexture)
-      // Every `.tres` shares this bus, so a slice on it names its own consumer, and
-      // the loader reads that label by type name.
-      if (reg.busType === 'resource') continue;
-      const expected = LOADER_LABELS[reg.busType];
-      if (reg.failureLabel !== expected) {
-        failures.push(`${reg.slice}: label "${reg.failureLabel}" != loader's "${expected}"`);
-      }
-    }
-    expect(failures).toEqual([]);
   });
 });

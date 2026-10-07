@@ -1,8 +1,8 @@
 /** TorusMesh resource slice: claims the type name, re-exports its decode. */
 
-import { registerMeshSlice } from '../registerMeshSlice.js';
+import { registerGenericResourceSlice } from '../../sliceRegistration.js';
 
-registerMeshSlice('torusmesh', ['TorusMesh']);
+registerGenericResourceSlice('torusmesh', ['TorusMesh']);
 
 export { decodeTorusMesh } from './decode.js';
 export type { TorusMeshProperties } from './types.js';

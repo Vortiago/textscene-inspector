@@ -19,9 +19,14 @@ function sceneWithLoader(loader?: ResourceLoader): TscnScene {
 }
 
 describe('resolveResourcePath', () => {
-  it('returns a res:// path unchanged without consulting the loader', () => {
+  it('returns a simplified res:// path without consulting the loader', () => {
     const scene = sceneWithLoader(undefined);
     expect(resolveResourcePath(scene, 'res://textures/wood.png')).toBe('res://textures/wood.png');
+  });
+
+  it('simplifies a res:// path with redundant slashes, as an ExtResource path is', () => {
+    const scene = sceneWithLoader(undefined);
+    expect(resolveResourcePath(scene, 'res:///textures//wood.png')).toBe('res://textures/wood.png');
   });
 
   it('resolves ExtResource("id") to the registered path via the scene loader metadata', () => {

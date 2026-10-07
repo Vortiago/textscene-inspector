@@ -16,7 +16,6 @@ describe('dynamicfont slice registration', () => {
       expect(registration?.kind).toBe('foreign-format');
       expect(registration?.binaryBytes).toBe(true);
       expect(registration?.busType).toBe('font');
-      expect(registration?.failureLabel).toBe('Node using font');
       expect(isBinaryResourceType('Unknown', `res://fonts/face${extension}`)).toBe(true);
     }
   });
