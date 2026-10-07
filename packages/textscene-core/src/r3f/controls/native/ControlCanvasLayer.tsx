@@ -7,10 +7,10 @@
 import { useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { useSceneResources } from '../../SceneResourcesContext';
+import { useGameViewportRect } from '../../gameViewportRect.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useBuildSolveTree } from './buildSolveTree';
 import { nativeTheme } from './nativeTheme';
-import type { Rect2 } from './rect';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import { canvasModulateColor, CanvasModulateContext } from '../../canvasModulate';
 import { declaredCanvasLayers, layerRanks } from '../../canvasPaintOrder';
@@ -39,14 +39,10 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
   const rootNodes = useMemo(() => showRoots(nodes), [nodes]);
   const { tree, generation } = useBuildSolveTree(rootNodes, externalResources, internalResources);
 
-  // The project's `display/window/size/viewport_*` and `gui/theme/default_theme_scale`,
-  // not a constant 1152x648 at scale 1.
-  const { viewportSize, themeScale } = useProjectSettings();
+  // The project's `gui/theme/default_theme_scale`, not a constant scale 1.
+  const { themeScale } = useProjectSettings();
   const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
-  const viewport: Rect2 = useMemo(
-    () => ({ x: 0, y: 0, w: viewportSize.width, h: viewportSize.height }),
-    [viewportSize.width, viewportSize.height]
-  );
+  const viewport = useGameViewportRect();
   // A Control outside any `CanvasLayer` shares Godot's default canvas with the
   // world, so this scans the root list `NodeDispatcher` scans. The raw roots: a
   // root forced visible would find a CanvasModulate the world skips, and one

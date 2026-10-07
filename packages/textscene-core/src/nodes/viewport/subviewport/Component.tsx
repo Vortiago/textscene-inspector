@@ -22,6 +22,7 @@ import {
 } from '../../../r3f/positionalShadow/viewportShadowAtlas';
 import { viewportPositionalShadowAtlas } from '../../../godot/positionalShadowAtlas';
 import { Node } from '../../node/Component';
+import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import {
   applyOrthoFrame,
   createOffscreenTarget,
@@ -64,13 +65,15 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // pass through on the `own_world_3d` rule, since a component renders what the
   // dispatcher hands it (subtreeConformance).
   const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : !ownWorld3D;
+  // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
+  const contents = <World2DLightingBoundary>{children}</World2DLightingBoundary>;
 
   return (
     <Node node={node}>
-      {rendersInline ? children : null}
+      {rendersInline ? contents : null}
       {rasterizes ? (
         <OffscreenViewport node={node} path={path} kind={kind} rendersInline={rendersInline}>
-          {rendersInline ? null : children}
+          {rendersInline ? null : contents}
         </OffscreenViewport>
       ) : null}
     </Node>

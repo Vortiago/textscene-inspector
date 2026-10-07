@@ -147,6 +147,18 @@ polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)
     expect(renderer.scene.findAll((node) => node.props.name === 'Child')).not.toHaveLength(0);
   });
 
+  it('opens no class on the main canvas from inside a SubViewport, whose World2D is its own', async () => {
+    const classes = await renderClasses(
+      scene(`
+[node name="View" type="SubViewport" parent="."]
+
+[node name="Pane" type="Polygon2D" parent="View"]
+polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)
+${sun('', 'Sun', 'View')}`)
+    );
+    expect(classes).toHaveLength(0);
+  });
+
   it('opens no class while disabled', async () => {
     expect(await renderClasses(scene(sun('enabled = false')))).toHaveLength(0);
   });

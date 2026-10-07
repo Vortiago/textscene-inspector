@@ -78,6 +78,11 @@ export function ShadowCasterProvider({
   return <ShadowCasterContext.Provider value={own}>{children}</ShadowCasterContext.Provider>;
 }
 
+/** Withholds the enclosing registry, so an occluder inside registers with no pass outside. */
+export function NoShadowCasterRegistry({ children }: { children: ReactNode }) {
+  return <ShadowCasterContext.Provider value={null}>{children}</ShadowCasterContext.Provider>;
+}
+
 /** The enclosing registry, or null when no pass is mounted above this subtree. */
 export function useShadowCasterRegistry(): ShadowCasterRegistry | null {
   return useContext(ShadowCasterContext);

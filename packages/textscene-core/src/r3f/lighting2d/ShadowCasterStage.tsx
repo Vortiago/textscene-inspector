@@ -18,6 +18,7 @@ import {
 import { useFrame } from '@react-three/fiber';
 import {
   createShadowCasterRegistry,
+  NoShadowCasterRegistry,
   ShadowCasterProvider,
   worldShadowCasters,
   type WorldShadowCaster,
@@ -109,5 +110,14 @@ export function ShadowCasterStage({ children }: { children: ReactNode }) {
     <ShadowCasterProvider registry={registry}>
       <WorldShadowCasterContext.Provider value={casters}>{children}</WorldShadowCasterContext.Provider>
     </ShadowCasterProvider>
+  );
+}
+
+/** Hides the enclosing stage: an occluder inside reaches no light, and a light inside sees none. */
+export function NoShadowCasters({ children }: { children: ReactNode }) {
+  return (
+    <NoShadowCasterRegistry>
+      <WorldShadowCasterContext.Provider value={NO_CASTERS}>{children}</WorldShadowCasterContext.Provider>
+    </NoShadowCasterRegistry>
   );
 }

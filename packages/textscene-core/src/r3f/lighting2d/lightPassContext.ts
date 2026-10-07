@@ -74,7 +74,8 @@ export interface CanvasLighting2D {
   registerShadowTint(key: LightCullKey): () => void;
 }
 
-const INERT: CanvasLighting2D = {
+/** The lighting outside a 2D light pass: no classes, and every declaration a no-op. */
+export const INERT_CANVAS_LIGHTING: CanvasLighting2D = {
   classes: [],
   resolution: new THREE.Vector2(1, 1),
   register: (_key: LightCullKey) => ({ ordinal: 0, release: () => {} }),
@@ -82,7 +83,7 @@ const INERT: CanvasLighting2D = {
   registerShadowTint: (_key: LightCullKey) => () => {},
 };
 
-export const CanvasLighting2DContext = createContext<CanvasLighting2D>(INERT);
+export const CanvasLighting2DContext = createContext<CanvasLighting2D>(INERT_CANVAS_LIGHTING);
 
 /** The lighting in force, or an inert value outside a 2D stage (3D, unit tests). */
 export function useCanvasLighting2D(): CanvasLighting2D {

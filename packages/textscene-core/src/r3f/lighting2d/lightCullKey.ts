@@ -21,7 +21,8 @@ export interface LightCullKey {
   /**
    * `Light2D.range_item_cull_mask`, ANDed against each CanvasItem's own `light_mask`. Not the
    * light node's `light_mask`, which is its CanvasItem mask and says nothing about what it lights.
-   * Null for a directional light, which reaches every item whatever its `light_mask`.
+   * Null for a directional light, which reaches every item, one with `light_mask = 0` included. No
+   * mask can say that, since `mask & 0` is 0 for every mask.
    */
   readonly itemCullMask: number | null;
   /** `Light2D.range_z_min`: the lowest accumulated `z_index` this light reaches. */

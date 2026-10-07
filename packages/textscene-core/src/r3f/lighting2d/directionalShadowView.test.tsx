@@ -64,7 +64,8 @@ describe('useDirectionalShadowView', () => {
 
   it("clips to Godot's default project viewport at the canvas origin", async () => {
     const { clip } = latest((await mountView()).published);
-    expect(clip.map(({ x, y }) => [x, y])).toEqual([
+    // `+ 0` folds the -0 that flipping the canvas origin's y gives.
+    expect(clip.map(({ x, y }) => [x, y + 0])).toEqual([
       [0, -648],
       [1152, -648],
       [1152, 0],

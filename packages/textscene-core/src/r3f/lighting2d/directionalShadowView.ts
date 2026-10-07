@@ -14,23 +14,20 @@ import {
   type Quad2,
 } from './directionalShadowMap';
 import { SHADOW_SNAPSHOT_PRIORITY } from './ShadowCasterStage';
-import { useProjectSettings } from '../contexts/ProjectSettingsContext';
+import { useGameViewportRect } from '../gameViewportRect';
 import type { Vector2 } from '../../nodes/base/node2d/types.js';
-import type { ProjectViewportSize } from '../../parser/projectSettingsParser';
+import type { Rect2 } from '../controls/native/rect';
 
 /** Reused by every sample, which reads it before the next one writes it. */
 const scratch = new THREE.Vector3();
 
-/**
- * Godot's `Rect2(0, 0, size)` (`renderer_viewport.cpp:390`) in the Y-up world, in NDC corner
- * order. The canvas transform is the identity: the stage applies no Camera2D.
- */
-function viewportClip({ width, height }: ProjectViewportSize): Quad2 {
+/** A Godot canvas rect in the Y-up world, in NDC corner order. */
+function worldQuad({ x, y, w, h }: Rect2): Quad2 {
   return [
-    { x: 0, y: -height },
-    { x: width, y: -height },
-    { x: width, y: 0 },
-    { x: 0, y: 0 },
+    { x, y: -(y + h) },
+    { x: x + w, y: -(y + h) },
+    { x: x + w, y: -y },
+    { x, y: -y },
   ];
 }
 
@@ -52,8 +49,9 @@ export function useDirectionalShadowView(
   enabled: boolean,
   maxDistance: number
 ): DirectionalShadowView | null {
-  const { viewportSize } = useProjectSettings();
-  const clip = useMemo(() => viewportClip(viewportSize), [viewportSize]);
+  // Godot's `clip_rect`.
+  const viewport = useGameViewportRect();
+  const clip = useMemo(() => worldQuad(viewport), [viewport]);
   const [view, setView] = useState<DirectionalShadowView | null>(null);
   const published = useRef(view);
 

@@ -10,7 +10,12 @@ import { MAX_2D_DIRECTIONAL_LIGHTS } from '../../godot/rendering.js';
 import type { LiveTreeEntry } from '../liveSceneTree.js';
 import { useHasLiveTree, useLiveSceneNodes } from '../useLiveSceneTree.js';
 import { useNodePath } from '../contexts/NodePathContext.js';
-import { isListedDirectionalLight, isPositionalCanvasLight, isShownCanvasNode } from './lightSequence.js';
+import {
+  holdsCanvasLights,
+  holdsListedDirectionalLights,
+  isListedDirectionalLight,
+  isPositionalCanvasLight,
+} from './lightSequence.js';
 
 interface CanvasLightLists {
   /** `path → sequence` over the positional lights. */
@@ -33,14 +38,14 @@ function numberByPath(entries: readonly LiveTreeEntry[]): Map<string, number> {
 }
 
 /**
- * Publishes both lists for the canvas, each from a single preorder walk of the live tree. The
- * directional walk skips hidden subtrees, since a light there is disabled in Godot.
+ * Publishes both lists for the canvas, each from a single preorder walk of the live tree. Neither
+ * walk enters a SubViewport, and the directional walk skips hidden subtrees.
  */
 export function CanvasLightSequenceProvider({ children }: { children: ReactNode }) {
   // Module-level predicates: `useLiveSceneNodes` memoises on them, so an inline
   // arrow would re-walk the tree every render.
-  const positional = useLiveSceneNodes(isPositionalCanvasLight);
-  const directional = useLiveSceneNodes(isListedDirectionalLight, isShownCanvasNode);
+  const positional = useLiveSceneNodes(isPositionalCanvasLight, holdsCanvasLights);
+  const directional = useLiveSceneNodes(isListedDirectionalLight, holdsListedDirectionalLights);
   const hasTree = useHasLiveTree();
 
   const lists = useMemo<CanvasLightLists>(
