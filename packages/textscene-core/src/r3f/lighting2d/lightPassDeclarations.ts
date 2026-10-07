@@ -6,25 +6,31 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { LIGHT_UNCLASSED_LAYER } from './lightPassLayers.js';
-import { sameLightCullKey, type LightCullKey } from './lightCullKey.js';
+import {
+  DEFAULT_LIGHT_CULL_KEY,
+  sameLightCullKey,
+  splitByShadowReceivers,
+  type LightCullKey,
+  type ShadowReceiverSplit,
+} from './lightCullKey.js';
 import { useCanvasLighting2D, type CanvasLightClass } from './lightPassContext.js';
 
 /**
- * Holds a declaration open while `enabled` holds, until a tuple number changes or unmount. It
- * depends on the five numbers, not the key object a light rebuilds each render, which would
- * reshuffle its class's ordinals. `declare` returns the unwind and must be stable too: a context
- * registrar or a `useCallback`. Every keyed declaration goes through here.
+ * Holds a declaration open while `enabled` holds, until a key value changes or unmount. It depends
+ * on the values, not the key object a light rebuilds each render, which would reshuffle its class's
+ * ordinals. `declare` returns the unwind and must be stable too: a context registrar or a
+ * `useCallback`. Every keyed declaration goes through here.
  */
 function useCullDeclaration(
   enabled: boolean,
   key: LightCullKey,
   declare: (key: LightCullKey) => () => void
 ): void {
-  const { itemCullMask, zMin, zMax, layerMin, layerMax } = key;
+  const { itemCullMask, zMin, zMax, layerMin, layerMax, shadowedItemMask, unshadowedItemMask } = key;
   useEffect(() => {
     if (!enabled) return undefined;
-    return declare({ itemCullMask, zMin, zMax, layerMin, layerMax });
-  }, [enabled, itemCullMask, zMin, zMax, layerMin, layerMax, declare]);
+    return declare({ itemCullMask, zMin, zMax, layerMin, layerMax, shadowedItemMask, unshadowedItemMask });
+  }, [enabled, itemCullMask, zMin, zMax, layerMin, layerMax, shadowedItemMask, unshadowedItemMask, declare]);
 }
 
 /**
@@ -63,6 +69,34 @@ export function useRegisterLightOnlyItem(enabled: boolean): void {
     if (!enabled) return undefined;
     return registerLightOnly();
   }, [enabled, registerLightOnly]);
+}
+
+/** Declares a lit item's `light_mask`, which decides whether a shadowed light splits. */
+export function useRegisterItemLightMask(lightMask: number): void {
+  const { registerItemLightMask } = useCanvasLighting2D();
+  useEffect(() => registerItemLightMask(lightMask), [lightMask, registerItemLightMask]);
+}
+
+/**
+ * The keys a positional light registers under, split by its `shadow_item_cull_mask` against the
+ * items on the canvas. `shadowItemCullMask` is null for a light that casts nothing.
+ */
+export function useShadowReceiverSplit(
+  key: LightCullKey,
+  shadowItemCullMask: number | null
+): ShadowReceiverSplit {
+  const { itemLightMasks } = useCanvasLighting2D();
+  return splitByShadowReceivers(key, shadowItemCullMask, itemLightMasks);
+}
+
+/**
+ * Declares the unshadowed half of a split light and returns the layer its shadowless quad draws on,
+ * or undefined while the light is whole.
+ */
+export function useUnshadowedHalfLayer(enabled: boolean, key: LightCullKey | null): number | undefined {
+  useRegisterCanvasLight2D(enabled && key !== null, key ?? DEFAULT_LIGHT_CULL_KEY);
+  const layer = useLightClassLayer(key ?? DEFAULT_LIGHT_CULL_KEY);
+  return key ? layer : undefined;
 }
 
 /** The class accumulating this cull tuple, or undefined while it has none. */

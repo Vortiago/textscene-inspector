@@ -62,6 +62,9 @@ export const CANVAS_2D_SCENES = [
   { name: 'pointlight2d-shadow-pcf13', file: 'unit-pointlight2d-shadow-pcf13.tscn', mode: '2d' },
   // The colour fixture pins the fractional tint the two accumulators split.
   { name: 'pointlight2d-shadow-pcf-color', file: 'unit-pointlight2d-shadow-pcf-color.tscn', mode: '2d' },
+  // Godot 4.6.3 at x=800: 63 on the receiving panel, 132 on the escaping one, which
+  // shadow_item_cull_mask leaves lit.
+  { name: 'pointlight2d-shadow-item-mask', file: 'unit-pointlight2d-shadow-item-mask.tscn', mode: '2d' },
   // DirectionalLight2D reaches every lit item whatever its light_mask or z, and its shadow is a
   // parallel map across the project viewport's diagonal, so its PCF taps keep one width.
   { name: 'directionallight2d', file: 'unit-directionallight2d.tscn', mode: '2d' },

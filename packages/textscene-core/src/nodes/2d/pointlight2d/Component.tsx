@@ -29,8 +29,10 @@ import { useLightSequence } from '../../../r3f/lighting2d/useLightSequence';
 import {
   useLightClassLayer,
   useRegisterShadowTint,
+  useShadowReceiverSplit,
   useShadowTintLayer,
   useRegisterCanvasLight2D,
+  useUnshadowedHalfLayer,
 } from '../../../r3f/lighting2d/CanvasLighting2D';
 import type { LightCullKey } from '../../../r3f/lighting2d/lightCullKey';
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
@@ -57,18 +59,26 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const showPlaceholder = missing || !props.texture;
 
   const lights = props.enabled && !!displayedTexture ? 1 : 0;
+  const casters = useLightShadowCasters(props.shadow_enabled, props.shadow_item_cull_mask);
   // The cull tuple, not the node's own `light_mask` (its CanvasItem mask), picks
   // the items this light reaches, so it keys the registration and the quad layer.
   // Not memoised: every consumer compares it by value, so a stable identity buys
   // nothing.
-  const cullKey: LightCullKey = {
+  const rangeKey: LightCullKey = {
     itemCullMask: props.range_item_cull_mask,
     zMin: props.range_z_min,
     zMax: props.range_z_max,
     layerMin: props.range_layer_min,
     layerMax: props.range_layer_max,
+    shadowedItemMask: null,
+    unshadowedItemMask: null,
   };
+  const { shadowed: cullKey, unshadowed: unshadowedKey } = useShadowReceiverSplit(
+    rangeKey,
+    casters.length > 0 ? props.shadow_item_cull_mask : null
+  );
   const ordinal = useRegisterCanvasLight2D(lights > 0, cullKey);
+  const unshadowedLayer = useUnshadowedHalfLayer(lights > 0, unshadowedKey);
   // Two different jobs, deliberately two different numbers: `ordinal` keeps the
   // shadow stencil stamps of one pass apart (dense, reused on unmount), while
   // `sequence` is this light's position in the canvas light list, which is what
@@ -80,8 +90,6 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const tintsShadow = props.shadow_enabled && shadowColorContributes(props.shadow_color);
   useRegisterShadowTint(lights > 0 && tintsShadow, cullKey);
   const shadowTintLayer = useShadowTintLayer(cullKey);
-
-  const casters = useLightShadowCasters(props.shadow_enabled, props.shadow_item_cull_mask);
 
   // A disabled light still draws its children: `enabled` switches the light alone.
   return (
@@ -103,6 +111,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
             shadowFilter={props.shadow_filter}
             shadowFilterSmooth={props.shadow_filter_smooth}
             layer={layer}
+            unshadowedLayer={unshadowedLayer}
             sequence={sequence}
             shadowTintLayer={tintsShadow ? shadowTintLayer : undefined}
             ordinal={ordinal}
@@ -162,6 +171,7 @@ function QuadMesh({
   shadowFilter,
   shadowFilterSmooth,
   layer,
+  unshadowedLayer,
   shadowTintLayer,
   ordinal,
   sequence,
@@ -183,6 +193,8 @@ function QuadMesh({
   shadowTintLayer: number | undefined;
   /** The camera layer of this light's cull-mask class. */
   layer: number;
+  /** The layer of the shadowless quad for the items the shadow misses, set only once some do. */
+  unshadowedLayer: number | undefined;
   /** This light's index within its class: its stencil ref, not its draw order. */
   ordinal: number;
   /** This light's place in the canvas light list, which is its draw order. */
@@ -277,6 +289,13 @@ function QuadMesh({
   );
   useEffect(() => () => material.dispose(), [material]);
 
+  const unshadowedMaterial = useMemo(
+    () =>
+      unshadowedLayer === undefined ? null : createLightQuadMaterial({ cookie, color, energy, blendMode }),
+    [unshadowedLayer, cookie, color, energy, blendMode]
+  );
+  useEffect(() => () => unshadowedMaterial?.dispose(), [unshadowedMaterial]);
+
   // The other half of `light_shadow_compute`: the light's contribution where the
   // volumes stamped. Null at Godot's transparent default. A defined
   // `shadowTintLayer` already means the light tints, so `shadowColorContributes`
@@ -314,6 +333,13 @@ function QuadMesh({
     [shadowTintLayer]
   );
 
+  const toUnshadowedLayer = useCallback(
+    (mesh: THREE.Mesh | null) => {
+      if (unshadowedLayer !== undefined) mesh?.layers.set(unshadowedLayer);
+    },
+    [unshadowedLayer]
+  );
+
   const toLightQuad = useCallback(
     (mesh: THREE.Mesh | null) => {
       toLightLayer(mesh);
@@ -342,6 +368,16 @@ function QuadMesh({
         height={height * scale}
         sequence={sequence}
       />
+      {unshadowedMaterial && (
+        <LightQuad
+          meshRef={toUnshadowedLayer}
+          material={unshadowedMaterial}
+          offset={offset}
+          width={width * scale}
+          height={height * scale}
+          sequence={sequence}
+        />
+      )}
       {shadowMaterial && (
         <LightQuad
           meshRef={toShadowTintLayer}

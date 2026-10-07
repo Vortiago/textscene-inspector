@@ -15,7 +15,7 @@ import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering.js';
 /**
  * Everything a light contributes to the cull test, and so the identity of an accumulation class. A
  * buffer sums its lights and nothing downstream subtracts one back out, so two lights share a
- * buffer only when no item can tell them apart: when all five values agree.
+ * buffer only when no item can tell them apart: when all seven values agree.
  */
 export interface LightCullKey {
   /**
@@ -37,6 +37,13 @@ export interface LightCullKey {
   readonly layerMin: number;
   /** `Light2D.range_layer_max`: the highest, inclusive. */
   readonly layerMax: number;
+  /**
+   * `Light2D.shadow_item_cull_mask` on the shadowed half of a split light (`splitByShadowReceivers`):
+   * the item's `light_mask` must meet it too. Null on a light that is not split.
+   */
+  readonly shadowedItemMask: number | null;
+  /** The same mask on the unshadowed half: the item's `light_mask` must miss it. */
+  readonly unshadowedItemMask: number | null;
 }
 
 /**
@@ -44,7 +51,11 @@ export interface LightCullKey {
  * still a window. The layer pair is narrow, which is why a default light never lights a default
  * CanvasLayer.
  */
-export const DEFAULT_LIGHT_CULL_KEY: LightCullKey = LIGHT_2D_RANGE_DEFAULTS;
+export const DEFAULT_LIGHT_CULL_KEY: LightCullKey = {
+  ...LIGHT_2D_RANGE_DEFAULTS,
+  shadowedItemMask: null,
+  unshadowedItemMask: null,
+};
 
 /**
  * The key of a DirectionalLight2D: every item, at any z, on a canvas in its layer window. The
@@ -53,7 +64,45 @@ export const DEFAULT_LIGHT_CULL_KEY: LightCullKey = LIGHT_2D_RANGE_DEFAULTS;
  * is clamped to the canvas z range, so that range is every z.
  */
 export function directionalLightCullKey(layerMin: number, layerMax: number): LightCullKey {
-  return { itemCullMask: null, zMin: CANVAS_ITEM_Z_MIN, zMax: CANVAS_ITEM_Z_MAX, layerMin, layerMax };
+  return {
+    itemCullMask: null,
+    zMin: CANVAS_ITEM_Z_MIN,
+    zMax: CANVAS_ITEM_Z_MAX,
+    layerMin,
+    layerMax,
+    shadowedItemMask: null,
+    unshadowedItemMask: null,
+  };
+}
+
+/** The keys a positional light registers: one, or two halves when its shadow misses some item. */
+export interface ShadowReceiverSplit {
+  /** The key the light's shadowed quad draws under. */
+  readonly shadowed: LightCullKey;
+  /** The key of its shadowless quad, or null while no item escapes the shadow. */
+  readonly unshadowed: LightCullKey | null;
+}
+
+/**
+ * `canvas.glsl:806` shadows an item only where its `light_mask` meets `shadow_item_cull_mask`
+ * (`renderer_canvas_render_rd.cpp:2374`). Once a reached item misses it, the light splits into a
+ * shadowed half and an unshadowed half. Unsplit, it shares a class with a shadowless light.
+ * `shadowItemCullMask` is null for a light that casts nothing.
+ */
+export function splitByShadowReceivers(
+  key: LightCullKey,
+  shadowItemCullMask: number | null,
+  itemLightMasks: Iterable<number>
+): ShadowReceiverSplit {
+  if (shadowItemCullMask === null) return { shadowed: key, unshadowed: null };
+  const escapes = (itemMask: number) =>
+    (key.itemCullMask === null || (key.itemCullMask & itemMask) !== 0) &&
+    (shadowItemCullMask & itemMask) === 0;
+  if (!Array.from(itemLightMasks).some(escapes)) return { shadowed: key, unshadowed: null };
+  return {
+    shadowed: { ...key, shadowedItemMask: shadowItemCullMask },
+    unshadowed: { ...key, unshadowedItemMask: shadowItemCullMask },
+  };
 }
 
 /**
@@ -73,7 +122,9 @@ export function lightReachesItem(
     itemZ >= key.zMin &&
     itemZ <= key.zMax &&
     itemLayer >= key.layerMin &&
-    itemLayer <= key.layerMax
+    itemLayer <= key.layerMax &&
+    (key.shadowedItemMask === null || (key.shadowedItemMask & itemLightMask) !== 0) &&
+    (key.unshadowedItemMask === null || (key.unshadowedItemMask & itemLightMask) === 0)
   );
 }
 
@@ -82,7 +133,10 @@ export function lightReachesItem(
  * concatenated, so `(1, 11, …)` and `(11, 1, …)` cannot collide.
  */
 export function lightCullKeyId(key: LightCullKey): string {
-  return `${key.itemCullMask}|${key.zMin}|${key.zMax}|${key.layerMin}|${key.layerMax}`;
+  return (
+    `${key.itemCullMask}|${key.zMin}|${key.zMax}|${key.layerMin}|${key.layerMax}` +
+    `|${key.shadowedItemMask}|${key.unshadowedItemMask}`
+  );
 }
 
 export function sameLightCullKey(a: LightCullKey, b: LightCullKey): boolean {
@@ -91,22 +145,30 @@ export function sameLightCullKey(a: LightCullKey, b: LightCullKey): boolean {
     a.zMin === b.zMin &&
     a.zMax === b.zMax &&
     a.layerMin === b.layerMin &&
-    a.layerMax === b.layerMax
+    a.layerMax === b.layerMax &&
+    a.shadowedItemMask === b.shadowedItemMask &&
+    a.unshadowedItemMask === b.unshadowedItemMask
   );
+}
+
+/** Null ahead of every mask, then ascending. */
+function compareOptionalMasks(a: number | null, b: number | null): number {
+  return Number(b === null) - Number(a === null) || (a ?? 0) - (b ?? 0);
 }
 
 /**
  * A total order over cull keys, cull mask first and directional keys ahead of every mask. Sorted,
  * not mount-ordered, so a class's index, camera layer and uniform slot depend only on which keys
- * are present. With no range window authored, the order is the mask order.
+ * are present. With no range window authored and no light split, the order is the mask order.
  */
 export function compareLightCullKeys(a: LightCullKey, b: LightCullKey): number {
   return (
-    Number(b.itemCullMask === null) - Number(a.itemCullMask === null) ||
-    (a.itemCullMask ?? 0) - (b.itemCullMask ?? 0) ||
+    compareOptionalMasks(a.itemCullMask, b.itemCullMask) ||
     a.zMin - b.zMin ||
     a.zMax - b.zMax ||
     a.layerMin - b.layerMin ||
-    a.layerMax - b.layerMax
+    a.layerMax - b.layerMax ||
+    compareOptionalMasks(a.unshadowedItemMask, b.unshadowedItemMask) ||
+    compareOptionalMasks(a.shadowedItemMask, b.shadowedItemMask)
   );
 }

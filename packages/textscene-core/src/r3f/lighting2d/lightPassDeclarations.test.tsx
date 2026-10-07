@@ -7,10 +7,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { render } from '@testing-library/react';
-import { CanvasLighting2DContext, type CanvasLighting2D, type CanvasLightSlot } from './lightPassContext';
+import {
+  CanvasLighting2DContext,
+  INERT_CANVAS_LIGHTING,
+  type CanvasLighting2D,
+  type CanvasLightSlot,
+} from './lightPassContext';
 import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from './lightCullKey';
 import { useRegisterCanvasLight2D, useRegisterShadowTint } from './lightPassDeclarations';
-import * as THREE from 'three';
 
 /** A lighting context whose two keyed registrars are spies. */
 function spyLighting() {
@@ -20,10 +24,8 @@ function spyLighting() {
   const register = vi.fn((_key: LightCullKey) => slot);
   const registerShadowTint = vi.fn((_key: LightCullKey) => releaseTint);
   const value: CanvasLighting2D = {
-    classes: [],
-    resolution: new THREE.Vector2(1, 1),
+    ...INERT_CANVAS_LIGHTING,
     register,
-    registerLightOnly: () => () => {},
     registerShadowTint,
   };
   const Wrap = ({ children }: { children: ReactNode }) => (
@@ -53,7 +55,7 @@ describe('a declaration keyed on a cull tuple', () => {
     expect(register).toHaveBeenCalledTimes(1);
     expect(registerShadowTint).toHaveBeenCalledTimes(1);
 
-    // A fresh key object carrying the very same five numbers.
+    // A fresh key object carrying the very same values.
     rerender(
       <Wrap>
         <Light cullKey={{ ...DEFAULT_LIGHT_CULL_KEY }} />

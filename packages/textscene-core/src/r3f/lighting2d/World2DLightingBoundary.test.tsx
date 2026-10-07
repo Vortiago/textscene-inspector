@@ -8,13 +8,14 @@ import { useState } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CanvasLighting2DProvider, useCanvasLighting2D, type CanvasLighting2D } from './CanvasLighting2D';
+import { directionalLightCullKey } from './lightCullKey';
 import { useRegisterCanvasLight2D } from './lightPassDeclarations';
 import { useLightShadowCasters } from './ShadowCasterStage';
 import { useShadowCaster, useShadowCasterRegistry } from './shadowCasterRegistry';
 import { OCCLUDER_CULL_DISABLED } from './shadowVolumes';
 import { World2DLightingBoundary } from './World2DLightingBoundary';
 
-const SUN_KEY = { itemCullMask: null, zMin: -4096, zMax: 4096, layerMin: 0, layerMax: 0 };
+const SUN_KEY = directionalLightCullKey(0, 0);
 
 interface Seen {
   outerLighting?: CanvasLighting2D;

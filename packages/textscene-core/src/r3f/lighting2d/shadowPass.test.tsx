@@ -451,3 +451,56 @@ describe('shadow_filter selects the shadow mechanism', () => {
     expect(tint!.uniforms.uShadowMap!.value).toBe(shadowMap(renderer));
   });
 });
+
+/**
+ * `canvas.glsl:806`: a positional light shadows only the items whose `light_mask` meets its
+ * `shadow_item_cull_mask` (`renderer_canvas_render_rd.cpp:2374`). The rest take it unshadowed, so
+ * the light draws a second, shadowless quad into the class those items read.
+ */
+describe('shadow_item_cull_mask picks the items that take the shadow', () => {
+  /** The Surface keeps light_mask 1; the light and the occluder agree on mask 2. */
+  const ESCAPING = scene(
+    `${lamp('Lamp', 400, 'range_item_cull_mask = 3\nshadow_item_cull_mask = 2\n')}` +
+      `${caster('Caster', 576, 'occluder_light_mask = 2\n')}`
+  );
+
+  it('splits the light into a shadowed and an unshadowed class', async () => {
+    const classes = await renderClasses(ESCAPING);
+    expect(classes.map((c) => [c.key.shadowedItemMask, c.key.unshadowedItemMask])).toEqual([
+      [2, null],
+      [null, 2],
+    ]);
+  });
+
+  it('draws the unshadowed half with no stencil test on its own class layer', async () => {
+    const renderer = await render(ESCAPING);
+    const quads = litQuads(renderer);
+    expect(quads).toHaveLength(2);
+    const plain = quads.find((quad) => !(quad.material as THREE.Material).stencilWrite)!;
+    const onClassOne = new THREE.Layers();
+    onClassOne.set(LIGHT_LAYER + 1);
+    expect(plain.layers.test(onClassOne)).toBe(true);
+  });
+
+  it('keeps one class while every item takes the shadow', async () => {
+    const classes = await renderClasses(
+      scene(
+        `[node name="Marked" type="Polygon2D" parent="."]
+light_mask = 3
+polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)
+` +
+          `${lamp('Lamp', 400, 'range_item_cull_mask = 2\nshadow_item_cull_mask = 2\n')}` +
+          `${caster('Caster', 576, 'occluder_light_mask = 2\n')}`
+      )
+    );
+    expect(classes).toHaveLength(1);
+    expect(classes[0]!.key.shadowedItemMask).toBeNull();
+  });
+
+  it('keeps one class while the light has no occluder to cast from', async () => {
+    const classes = await renderClasses(
+      scene(lamp('Lamp', 400, 'range_item_cull_mask = 3\nshadow_item_cull_mask = 2\n'))
+    );
+    expect(classes).toHaveLength(1);
+  });
+});

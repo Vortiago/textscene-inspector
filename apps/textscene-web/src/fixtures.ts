@@ -1198,6 +1198,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Shadow Item Mask",
+    "file": "unit-pointlight2d-shadow-item-mask.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d Shadow Pcf Color",
     "file": "unit-pointlight2d-shadow-pcf-color.tscn",
     "category": "Other"

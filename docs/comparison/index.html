@@ -4691,13 +4691,30 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p><code>shadow_filter = PCF5</code> or <code>PCF13</code> averages taps offset in angle across Godot's polar shadow map, so the boundary is a stepped ramp that widens with distance. The previewer builds the same map and taps it in the light's fragment shader (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0030-2d-shadow-penumbra-polar-map.md" target="_blank" rel="noopener">ADR-0030</a>).</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Shadow receivers: shadow_item_cull_mask</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-pointlight2d-shadow-item-mask-godot.png" alt="Godot render of Shadow receivers: shadow_item_cull_mask">
+          <img class="img-ours" src="images/unit-pointlight2d-shadow-item-mask-ours.png" alt="Our render of Shadow receivers: shadow_item_cull_mask">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p><code>shadow_item_cull_mask</code> picks the occluders that cast and the items that take the shadow. The light reaches both panels, but only the upper panel's <code>light_mask</code> meets the mask, so the lower panel stays lit behind the bar.</p></div>
       </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks these <code>PointLight2D</code> properties, plus 15 inherited from Light2D, 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>height</code></td><td>float &gt;= 0</td><td>warning below</td></tr><tr><td><code>offset</code></td><td>Vector2(x, y), or the Vector2i spelling Godot converts</td><td></td></tr><tr><td><code>texture</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>texture_scale</code></td><td>float 0.01-50, never exactly 0</td><td>warning</td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-canvasitem-clip-ancestry</code> (type-family match)</td><td><code>canvasitem-ancestor-clips-children</code></td><td>warning</td></tr><tr><td></td><td><code>canvasitem-ancestor-is-canvasgroup</code></td><td>warning</td></tr><tr><td><code>valid-pointlight2d-ranges</code></td><td><code>pointlight2d-requires-texture</code></td><td>warning</td></tr><tr><td></td><td><code>pointlight2d-inverted-z-range</code></td><td>info</td></tr><tr><td></td><td><code>pointlight2d-inverted-layer-range</code></td><td>info</td></tr></tbody></table></div>
 <p><code>enabled</code> falls back to <code>true</code>, <code>energy</code> and <code>texture_scale</code> to <code>1.0</code>, <code>offset</code> to <code>(0, 0)</code> and <code>blend_mode</code> to <code>0</code> (ADD), each with a warning. <code>color</code> falls back to opaque white silently. <code>texture</code> is stored with no reference check.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> <code>shadow_item_cull_mask</code> selects which occluders cast, but not which items receive the shadow, so an item Godot would leave unshadowed is shadowed here.</li><li><strong>Shader missing</strong> A <code>CanvasTexture.normal_texture</code> is not read, so every surface takes the light head-on with no specular response.</li><li><strong>Approximated</strong> A MIX light in one cull-mask class over a light in another class reaching the same item is summed rather than applied in Godot's order.</li><li><strong>Approximated</strong> Past four distinct cull tuples on one canvas the extra lights are dropped with a warning.</li><li><strong>Approximated</strong> A CanvasLayer takes the layer window but still follows the 2D camera, where Godot draws it through its own canvas transform.</li></ul></div>
+<ul><li><strong>Shader missing</strong> A <code>CanvasTexture.normal_texture</code> is not read, so every surface takes the light head-on with no specular response.</li><li><strong>Approximated</strong> A MIX light in one cull-mask class over a light in another class reaching the same item is summed rather than applied in Godot's order.</li><li><strong>Approximated</strong> Past four light classes on one canvas the extra lights are dropped with a warning. A light that <code>shadow_item_cull_mask</code> splits takes two classes.</li><li><strong>Approximated</strong> A CanvasLayer takes the layer window but still follows the 2D camera, where Godot draws it through its own canvas transform.</li></ul></div>
     </article>
     <article class="sheet" data-type="Polygon2D" hidden>
       <header class="sheet-head">

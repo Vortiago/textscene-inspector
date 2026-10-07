@@ -12,7 +12,12 @@ import {
   CanvasItemLightMode,
   type CanvasItemMaterialProperties,
 } from '../../resources/materials/canvasitemmaterial/types.js';
-import { MAX_LIGHT_CLASSES, useCanvasLighting2D, useRegisterLightOnlyItem } from './CanvasLighting2D.js';
+import {
+  MAX_LIGHT_CLASSES,
+  useCanvasLighting2D,
+  useRegisterItemLightMask,
+  useRegisterLightOnlyItem,
+} from './CanvasLighting2D.js';
 import {
   canvasItemLightingProps,
   type CanvasItemLightingProps,
@@ -74,6 +79,7 @@ export function useCanvasItemLighting(
   // The unmodulated accumulation costs a second pre-pass per class, so it is
   // allocated only once an item that reads it exists.
   useRegisterLightOnlyItem(lightOnly);
+  useRegisterItemLightMask(lightMask);
 
   const uniforms = useRef<CanvasItemLightingUniforms | null>(null);
   uniforms.current ??= createUniforms(resolution);

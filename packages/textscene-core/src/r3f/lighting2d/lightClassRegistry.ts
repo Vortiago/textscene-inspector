@@ -1,6 +1,7 @@
 /**
  * The bookkeeping behind the light pass's `register*` calls: the mounted cull tuples, the ordinals
- * taken in each, and the tuples that declared a shadow tint. React state only, no GPU.
+ * taken in each, the tuples that declared a shadow tint and the items' light masks. React state
+ * only, no GPU.
  */
 
 import { useCallback, useRef, useState } from 'react';
@@ -23,12 +24,15 @@ function sameKeys(a: readonly LightCullKey[], b: readonly LightCullKey[]): boole
   return a.length === b.length && a.every((key, i) => sameLightCullKey(key, b[i]!));
 }
 
-const EMPTY_IDS: ReadonlySet<string> = new Set();
-
-/** `useDeclarationCount` per cull tuple: it publishes which tuples have a declaration. */
-export function useKeyedDeclarationCount(): [ReadonlySet<string>, (key: LightCullKey) => () => void] {
-  const [ids, setIds] = useState<ReadonlySet<string>>(EMPTY_IDS);
-  const counts = useRef(new Map<string, number>()).current;
+/**
+ * `useDeclarationCount` per id: it publishes which ids have a declaration. `idOf` must be stable,
+ * a module-level function, since the registrar it returns depends on it.
+ */
+export function useKeyedDeclarationCount<Key, Id>(
+  idOf: (key: Key) => Id
+): [ReadonlySet<Id>, (key: Key) => () => void] {
+  const [ids, setIds] = useState<ReadonlySet<Id>>(() => new Set());
+  const counts = useRef(new Map<Id, number>()).current;
 
   const publish = useCallback(() => {
     setIds((previous) => {
@@ -40,8 +44,8 @@ export function useKeyedDeclarationCount(): [ReadonlySet<string>, (key: LightCul
   }, [counts]);
 
   const declare = useCallback(
-    (key: LightCullKey) => {
-      const id = lightCullKeyId(key);
+    (key: Key) => {
+      const id = idOf(key);
       counts.set(id, (counts.get(id) ?? 0) + 1);
       publish();
 
@@ -57,7 +61,7 @@ export function useKeyedDeclarationCount(): [ReadonlySet<string>, (key: LightCul
         publish();
       };
     },
-    [counts, publish]
+    [idOf, counts, publish]
   );
 
   return [ids, declare];

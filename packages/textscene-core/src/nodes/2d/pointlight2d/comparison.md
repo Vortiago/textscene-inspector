@@ -65,6 +65,13 @@ HUD panel.
 shadow map, so the boundary is a stepped ramp that widens with distance. The previewer
 builds the same map and taps it in the light's fragment shader (ADR-0030).
 
+## Shadow receivers: shadow_item_cull_mask
+<!-- compare: image=unit-pointlight2d-shadow-item-mask status=done fixture=unit-pointlight2d-shadow-item-mask.tscn -->
+
+`shadow_item_cull_mask` picks the occluders that cast and the items that take the shadow.
+The light reaches both panels, but only the upper panel's `light_mask` meets the mask, so
+the lower panel stays lit behind the bar.
+
 ## Linting
 
 <!-- lint:begin PointLight2D -->
@@ -93,13 +100,11 @@ white silently. `texture` is stored with no reference check.
 
 ## Known limitations
 
-- **Approximated** `shadow_item_cull_mask` selects which occluders cast, but not which
-  items receive the shadow, so an item Godot would leave unshadowed is shadowed here.
 - **Shader missing** A `CanvasTexture.normal_texture` is not read, so every surface
   takes the light head-on with no specular response.
 - **Approximated** A MIX light in one cull-mask class over a light in another class
   reaching the same item is summed rather than applied in Godot's order.
-- **Approximated** Past four distinct cull tuples on one canvas the extra lights are
-  dropped with a warning.
+- **Approximated** Past four light classes on one canvas the extra lights are dropped
+  with a warning. A light that `shadow_item_cull_mask` splits takes two classes.
 - **Approximated** A CanvasLayer takes the layer window but still follows the 2D camera,
   where Godot draws it through its own canvas transform.

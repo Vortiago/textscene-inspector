@@ -45,10 +45,18 @@ export {
 export {
   useLightClassLayer,
   useRegisterCanvasLight2D,
+  useRegisterItemLightMask,
   useRegisterLightOnlyItem,
   useRegisterShadowTint,
+  useShadowReceiverSplit,
   useShadowTintLayer,
+  useUnshadowedHalfLayer,
 } from './lightPassDeclarations.js';
+
+/** A light mask is its own id. Module-level, as `useKeyedDeclarationCount` asks. */
+function maskId(lightMask: number): number {
+  return lightMask;
+}
 
 export interface CanvasLighting2DProviderProps {
   /**
@@ -64,13 +72,14 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
   const scene = useThree((s) => s.scene);
   const camera = useThree((s) => s.camera);
 
-  // Two lights that agree on the five-value cull tuple (`lightCullKey`) are the same to every
-  // item, so one accumulation per tuple class covers every item. An item reads the classes it is
+  // Two lights that agree on the cull key (`lightCullKey`) are the same to every
+  // item, so one accumulation per class covers every item. An item reads the classes it is
   // not culled from, usually one. `register` gives each light an ordinal, so the stencil stamps of
   // lights sharing a pass stay apart.
   const [cullKeys, register] = useLightClassRegistry();
   const [lightOnlyCount, registerLightOnly] = useDeclarationCount();
-  const [shadowTintKeys, registerShadowTint] = useKeyedDeclarationCount();
+  const [shadowTintKeys, registerShadowTint] = useKeyedDeclarationCount(lightCullKeyId);
+  const [itemLightMasks, registerItemLightMask] = useKeyedDeclarationCount(maskId);
 
   const classCount = Math.min(cullKeys.length, MAX_LIGHT_CLASSES);
   const lit = classCount > 0;
@@ -94,7 +103,7 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
     if (overflow <= 0) return;
     warn(
       `[CanvasLighting2D] ${overflow + MAX_LIGHT_CLASSES} distinct light cull tuples ` +
-        `(range_item_cull_mask + range_z + range_layer) on one canvas; only ` +
+        `(range_item_cull_mask + range_z + range_layer, and a shadow split) on one canvas; only ` +
         `${MAX_LIGHT_CLASSES} can be accumulated, so lights culling ` +
         `${cullKeys.slice(MAX_LIGHT_CLASSES).map(lightCullKeyId).join(', ')} are not drawn`
     );
@@ -128,8 +137,10 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
         shadowTintLayer: shadowTintTargets[index] ? SHADOW_TINT_LAYER + index : undefined,
       })),
       resolution,
+      itemLightMasks,
       register,
       registerLightOnly,
+      registerItemLightMask,
       registerShadowTint,
     }),
     [
@@ -138,8 +149,10 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
       shadowTintTargets,
       cullKeys,
       resolution,
+      itemLightMasks,
       register,
       registerLightOnly,
+      registerItemLightMask,
       registerShadowTint,
     ]
   );
