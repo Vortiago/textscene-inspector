@@ -15,8 +15,11 @@ import type { Color } from '../../nodes/base/node2d/types.js';
 import type { Light2DShadowFilter } from '../../nodes/2d/lights/shared/types.js';
 import { accumulationState } from './lightQuad.js';
 import { FULL_SCREEN_VERTEX } from './fullScreenQuad.js';
-import { SHADOW_MAP_BINS } from './shadowPolarMap.js';
+import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap.js';
 import { shadowPixelSize } from './shadowSampling.js';
+
+/** The depth an empty bin compares as: past any fragment, so `step` leaves it lit. */
+const EMPTY_BIN_DEPTH = '1e30';
 
 /** Everything a directional light's quads need to evaluate its shadow per fragment. */
 export interface DirectionalShadowSampling {
@@ -52,8 +55,11 @@ uniform sampler2D uShadowMap;
 uniform float uShadowPixelSize;
 varying vec2 vShadow;
 
+// An empty bin never shadows. The camera can show past the viewport's far edge, where depth
+// exceeds SHADOW_MAP_FAR, and a bin left at SHADOW_MAP_FAR would shadow all of it.
 float shadowTexel(float texel) {
-  return texture2D(uShadowMap, vec2((clamp(texel, 0.0, ${SHADOW_MAP_BINS - 1}.0) + 0.5) / ${SHADOW_MAP_BINS}.0, 0.5)).r;
+  float binDepth = texture2D(uShadowMap, vec2((clamp(texel, 0.0, ${SHADOW_MAP_BINS - 1}.0) + 0.5) / ${SHADOW_MAP_BINS}.0, 0.5)).r;
+  return binDepth >= float(${SHADOW_MAP_FAR}) ? ${EMPTY_BIN_DEPTH} : binDepth;
 }
 
 float textureShadow(float u, float depth) {
@@ -192,6 +198,11 @@ export function createDirectionalShadowTexture(): THREE.DataTexture {
 
 /** Uploads `bins`, `SHADOW_MAP_BINS` long, into a texture from `createDirectionalShadowTexture`. */
 export function writeDirectionalShadowMap(texture: THREE.DataTexture, bins: Float32Array): void {
-  (texture.image.data as Float32Array).set(bins);
+  const data = texture.image.data as Float32Array;
+  // `set` accepts a shorter source and keeps the old bins past its end.
+  if (bins.length !== data.length) {
+    throw new RangeError(`expected a shadow map of ${data.length} bins, got ${bins.length}`);
+  }
+  data.set(bins);
   texture.needsUpdate = true;
 }

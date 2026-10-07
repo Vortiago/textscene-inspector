@@ -18,14 +18,10 @@ import {
   type OccluderCullMode,
   type ShadowCasterEdges,
 } from './shadowVolumes';
-
-export interface Point2 {
-  readonly x: number;
-  readonly y: number;
-}
+import type { Vector2 } from '../../nodes/base/node2d/types.js';
 
 /** Four corners in order around a parallelogram. */
-export type Quad2 = readonly [Point2, Point2, Point2, Point2];
+export type Quad2 = readonly [Vector2, Vector2, Vector2, Vector2];
 
 /** What the map is built from, all in the previewer's 2D world space (Y up). */
 export interface DirectionalShadowView {
@@ -35,7 +31,7 @@ export interface DirectionalShadowView {
    */
   readonly clip: Quad2;
   /** The unit direction the light travels: the light node's Godot +Y axis. */
-  readonly direction: Point2;
+  readonly direction: Vector2;
   /** `DirectionalLight2D.max_distance` in world units: how far upstream an occluder still casts. */
   readonly maxDistance: number;
 }
@@ -53,7 +49,7 @@ export interface DirectionalShadowMap {
 /** A row-major 2×3 affine. */
 export type Affine2 = readonly [number, number, number, number, number, number];
 
-function dot(a: Point2, b: Point2): number {
+function dot(a: Vector2, b: Vector2): number {
   return a.x * b.x + a.y * b.y;
 }
 
@@ -115,7 +111,7 @@ export function ndcToShadowTransform(screen: Quad2, worldToShadow: Affine2): Aff
  * since `to_light_xform` (`:1150-1154`) is a reflection.
  */
 function edgeCastsDirectionalShadow(
-  direction: Point2,
+  direction: Vector2,
   edgeX: number,
   edgeY: number,
   cullMode: OccluderCullMode
@@ -128,7 +124,7 @@ function edgeCastsDirectionalShadow(
 }
 
 /** The interval `points` cover along `axis`. */
-function project(points: ArrayLike<number>, axis: Point2): [number, number] {
+function project(points: ArrayLike<number>, axis: Vector2): [number, number] {
   let min = Infinity;
   let max = -Infinity;
   for (let i = 0; i + 1 < points.length; i += 2) {
@@ -156,7 +152,7 @@ function sweptViewTest(view: DirectionalShadowView): (segments: ArrayLike<number
       corner.y - direction.y * maxDistance
     );
   }
-  const axes: Point2[] = [
+  const axes: Vector2[] = [
     { x: 1, y: 0 },
     { x: 0, y: 1 },
     { x: -direction.y, y: direction.x },

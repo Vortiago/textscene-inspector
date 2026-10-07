@@ -14,7 +14,7 @@ import { NodeDispatcher } from '../NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { litQuadRenderOrder } from './ShadowVolumeMask';
-import { isPositionalCanvasLight } from './lightSequence';
+import { isListedDirectionalLight, isPositionalCanvasLight, isShownCanvasNode } from './lightSequence';
 import { CanvasLightSequenceProvider, useDirectionalLightSlot, useLightSequence } from './useLightSequence';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { NodePathProvider } from '../contexts/NodePathContext';
@@ -179,6 +179,35 @@ ${lamp('B')}`
 
   it('gives a lone light slot zero rather than an arbitrary offset', async () => {
     expect(quadOrders(await render(lamp('Only')))).toEqual([litQuadRenderOrder(0)]);
+  });
+});
+
+describe('isShownCanvasNode', () => {
+  it('reads a node with no parsed `visible` as shown', () => {
+    expect(isShownCanvasNode({ type: 'Node2D', properties: {} } as never)).toBe(true);
+  });
+
+  it('reads `visible = false` as hidden', () => {
+    expect(isShownCanvasNode({ type: 'Node2D', properties: { visible: false } } as never)).toBe(false);
+  });
+});
+
+describe('isListedDirectionalLight', () => {
+  const sun = (properties: Record<string, unknown>) => ({ type: 'DirectionalLight2D', properties }) as never;
+
+  it('lists an enabled, shown DirectionalLight2D', () => {
+    expect(isListedDirectionalLight(sun({ enabled: true }))).toBe(true);
+  });
+
+  it('leaves a disabled or hidden light off the list', () => {
+    expect(isListedDirectionalLight(sun({ enabled: false }))).toBe(false);
+    expect(isListedDirectionalLight(sun({ enabled: true, visible: false }))).toBe(false);
+  });
+
+  it('leaves a PointLight2D off the directional list', () => {
+    expect(isListedDirectionalLight({ type: 'PointLight2D', properties: { enabled: true } } as never)).toBe(
+      false
+    );
   });
 });
 

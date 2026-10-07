@@ -89,6 +89,12 @@ describe('createDirectionalLightMaterial', () => {
       'mix(step(shadowTexel(texel - 1.0), depth), step(shadowTexel(texel), depth)'
     );
   });
+
+  it('leaves an empty bin lit for a fragment past the far edge of the map', () => {
+    // An editor camera wider than the viewport shows depths above SHADOW_MAP_FAR downstream.
+    const mat = createDirectionalLightMaterial({ color: WARM, energy: 1, blendMode: 0, shadow: sampling() });
+    expect(mat.fragmentShader).toContain('binDepth >= float(1) ? 1e30 : binDepth');
+  });
 });
 
 describe('createDirectionalShadowColorMaterial', () => {
@@ -124,9 +130,18 @@ describe('writeDirectionalShadowMap', () => {
     expect(texture.version).toBeGreaterThan(versionBefore);
   });
 
-  it('refuses a map of the wrong length rather than leaving stale bins behind', () => {
+  it('refuses a longer map', () => {
     expect(() =>
       writeDirectionalShadowMap(createDirectionalShadowTexture(), new Float32Array(SHADOW_MAP_BINS + 1))
     ).toThrow(RangeError);
+  });
+
+  it('refuses a shorter map rather than leaving stale bins behind', () => {
+    const texture = createDirectionalShadowTexture();
+    writeDirectionalShadowMap(texture, new Float32Array(SHADOW_MAP_BINS).fill(0.5));
+    expect(() => writeDirectionalShadowMap(texture, new Float32Array(SHADOW_MAP_BINS - 1))).toThrow(
+      RangeError
+    );
+    expect((texture.image.data as Float32Array)[SHADOW_MAP_BINS - 1]).toBe(0.5);
   });
 });

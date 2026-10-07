@@ -11,11 +11,11 @@ import {
   ndcToShadowTransform,
   type Affine2,
   type DirectionalShadowView,
-  type Point2,
   type Quad2,
 } from './directionalShadowMap';
 import { SHADOW_SNAPSHOT_PRIORITY } from './ShadowCasterStage';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
+import type { Vector2 } from '../../nodes/base/node2d/types.js';
 import type { ProjectViewportSize } from '../../parser/projectSettingsParser';
 
 /** Reused by every sample, which reads it before the next one writes it. */
@@ -87,7 +87,7 @@ export function useDirectionalShadowView(
 }
 
 /** Reused by every frame's lookup, which reads it before the next one writes it. */
-const screen: [Point2, Point2, Point2, Point2] = [
+const screen: [Vector2, Vector2, Vector2, Vector2] = [
   { x: 0, y: 0 },
   { x: 0, y: 0 },
   { x: 0, y: 0 },
