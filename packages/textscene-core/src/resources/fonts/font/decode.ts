@@ -133,7 +133,7 @@ export function resolveInlineFontResource(
   const sub = findSubResource(internalResources, parsed.id);
   if (!sub) return null;
   const nowVisiting = new Set(visiting).add(parsed.id);
-  const properties = sub.data as Record<string, string>;
+  const properties = sub.data;
   const resolveNested = (nestedRef: string | undefined): FontResource | null =>
     resolveInlineFontResource(
       nestedRef,

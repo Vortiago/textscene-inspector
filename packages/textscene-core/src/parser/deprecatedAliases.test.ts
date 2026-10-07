@@ -18,7 +18,7 @@ describe('extents → size * 2 through the scan', () => {
     const scene = parse(
       '[sub_resource type="BoxShape3D" id="1"]\nextents = Vector3(3, 1, 3)\n\n[node name="R" type="Node"]'
     );
-    const data = scene.internalResources[0]!.data as Record<string, string>;
+    const data = scene.internalResources[0]!.data;
     expect(data.size).toBe('Vector3(6, 2, 6)');
     expect(data.extents).toBeUndefined();
     expect(decodeBoxShape3D(data).size).toEqual({ x: 6, y: 2, z: 6 });
@@ -29,7 +29,7 @@ describe('extents → size * 2 through the scan', () => {
     const scene = parse(
       '[sub_resource type="RectangleShape2D" id="1"]\nextents = Vector2(16, 8)\n\n[node name="R" type="Node"]'
     );
-    const data = scene.internalResources[0]!.data as Record<string, string>;
+    const data = scene.internalResources[0]!.data;
     expect(decodeRectangleShape2D(data).size).toEqual({ x: 32, y: 16 });
   });
 

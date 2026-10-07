@@ -48,7 +48,7 @@ function plan(
   // id is no part of the pixels, so a renamed id keeps the same content key.
   const input: NoiseTexture2DInput = {
     tex: { ...decoded, noise: null, colorRamp: null },
-    noise: decodeFastNoiseLite(noiseResource.data as Record<string, string>),
+    noise: decodeFastNoiseLite(noiseResource.data),
     colorRamp: decoded.colorRamp ? resolveGradient(decoded.colorRamp, resources) : null,
   };
   return {

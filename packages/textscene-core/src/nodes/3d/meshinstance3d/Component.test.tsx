@@ -7,6 +7,7 @@ import { visualLayersOf } from '../../../r3f/visualLayers';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { subResource } from '../../../testing/subResource';
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -19,18 +20,6 @@ function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode 
     type: 'MeshInstance3D',
     children: [],
     properties: props,
-  };
-}
-
-function meshSubResource(
-  type: string,
-  id: string,
-  data: Record<string, string | undefined> = {}
-): TscnInternalResource {
-  return {
-    id,
-    type,
-    data: Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined)),
   };
 }
 
@@ -77,7 +66,7 @@ describe('<MeshInstance3D>', () => {
   describe('primitive geometries', () => {
     it('renders BoxGeometry from BoxMesh SubResource', async () => {
       const node = makeNode({ mesh: 'SubResource("Box_1")' });
-      const resource = meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(2, 3, 4)' });
+      const resource = subResource('BoxMesh', 'Box_1', { size: 'Vector3(2, 3, 4)' });
       const renderer = await render(node, [resource]);
       const mesh = findMesh(renderer.scene);
       expect(mesh.geometry.type).toBe('BoxGeometry');
@@ -91,7 +80,7 @@ describe('<MeshInstance3D>', () => {
 
     it('renders SphereGeometry from SphereMesh SubResource', async () => {
       const node = makeNode({ mesh: 'SubResource("Sphere_1")' });
-      const resource = meshSubResource('SphereMesh', 'Sphere_1', { radius: '1.5' });
+      const resource = subResource('SphereMesh', 'Sphere_1', { radius: '1.5' });
       const renderer = await render(node, [resource]);
       const geometry = findMesh(renderer.scene).geometry as unknown as {
         type: string;
@@ -103,7 +92,7 @@ describe('<MeshInstance3D>', () => {
 
     it('renders PlaneGeometry from PlaneMesh SubResource', async () => {
       const node = makeNode({ mesh: 'SubResource("Plane_1")' });
-      const resource = meshSubResource('PlaneMesh', 'Plane_1', { size: 'Vector2(4, 6)' });
+      const resource = subResource('PlaneMesh', 'Plane_1', { size: 'Vector2(4, 6)' });
       const renderer = await render(node, [resource]);
       const geometry = findMesh(renderer.scene).geometry as unknown as {
         type: string;
@@ -116,7 +105,7 @@ describe('<MeshInstance3D>', () => {
 
     it('renders CylinderGeometry from CylinderMesh SubResource', async () => {
       const node = makeNode({ mesh: 'SubResource("Cyl_1")' });
-      const resource = meshSubResource('CylinderMesh', 'Cyl_1', {
+      const resource = subResource('CylinderMesh', 'Cyl_1', {
         top_radius: '0.5',
         bottom_radius: '1.0',
         height: '3.0',
@@ -134,7 +123,7 @@ describe('<MeshInstance3D>', () => {
 
     it('renders CapsuleGeometry from CapsuleMesh SubResource (height - 2*radius adjustment)', async () => {
       const node = makeNode({ mesh: 'SubResource("Cap_1")' });
-      const resource = meshSubResource('CapsuleMesh', 'Cap_1', {
+      const resource = subResource('CapsuleMesh', 'Cap_1', {
         radius: '0.5',
         height: '2.0',
       });
@@ -151,7 +140,7 @@ describe('<MeshInstance3D>', () => {
 
     it('renders TorusGeometry from TorusMesh SubResource', async () => {
       const node = makeNode({ mesh: 'SubResource("Tor_1")' });
-      const resource = meshSubResource('TorusMesh', 'Tor_1', {
+      const resource = subResource('TorusMesh', 'Tor_1', {
         inner_radius: '0.5',
         outer_radius: '1.5',
       });
@@ -168,7 +157,7 @@ describe('<MeshInstance3D>', () => {
 
     it("renders Godot's triangular prism for PrismMesh", async () => {
       const node = makeNode({ mesh: 'SubResource("Pri_1")' });
-      const resource = meshSubResource('PrismMesh', 'Pri_1', { size: 'Vector3(2, 2, 2)' });
+      const resource = subResource('PrismMesh', 'Pri_1', { size: 'Vector3(2, 2, 2)' });
       const renderer = await render(node, [resource]);
       const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
       // 8 triangles: two triangular caps, two slanted sides, one base.
@@ -184,8 +173,8 @@ describe('<MeshInstance3D>', () => {
         materialOverride: 'SubResource("Mat_1")',
       });
       const resources: TscnInternalResource[] = [
-        meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-        meshSubResource('StandardMaterial3D', 'Mat_1', {
+        subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+        subResource('StandardMaterial3D', 'Mat_1', {
           albedo_color: 'Color(1, 0, 0, 1)',
           metallic: '0.4',
           roughness: '0.2',
@@ -212,8 +201,8 @@ describe('<MeshInstance3D>', () => {
         materialOverride: 'SubResource("Mat_glass")',
       });
       const resources: TscnInternalResource[] = [
-        meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-        meshSubResource('StandardMaterial3D', 'Mat_glass', {
+        subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+        subResource('StandardMaterial3D', 'Mat_glass', {
           // Godot: alpha < 1 only renders transparent when transparency != DISABLED.
           transparency: '1',
           albedo_color: 'Color(0.2, 0.5, 0.9, 0.4)',
@@ -231,7 +220,7 @@ describe('<MeshInstance3D>', () => {
     it('falls back to Godot’s default material SHADER, not a default StandardMaterial3D', async () => {
       const node = makeNode({ mesh: 'SubResource("Box_1")' });
       const resources: TscnInternalResource[] = [
-        meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+        subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
       ];
       const renderer = await render(node, resources);
       const material = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
@@ -253,9 +242,9 @@ describe('<MeshInstance3D>', () => {
         surfaceMaterialOverrides: surfaceMap,
       });
       const resources: TscnInternalResource[] = [
-        meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-        meshSubResource('StandardMaterial3D', 'OverrideAll', { albedo_color: 'Color(1, 0, 0, 1)' }),
-        meshSubResource('StandardMaterial3D', 'Surf_0', { albedo_color: 'Color(0, 1, 0, 1)' }),
+        subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+        subResource('StandardMaterial3D', 'OverrideAll', { albedo_color: 'Color(1, 0, 0, 1)' }),
+        subResource('StandardMaterial3D', 'Surf_0', { albedo_color: 'Color(0, 1, 0, 1)' }),
       ];
       const renderer = await render(node, resources);
       const material = findMesh(renderer.scene).material as unknown as {
@@ -269,17 +258,13 @@ describe('<MeshInstance3D>', () => {
   describe('render layers', () => {
     it("carries the node's layers mask, which a Decal's cull_mask filters on", async () => {
       const node = makeNode({ mesh: 'SubResource("Box_1")', layers: 2 });
-      const renderer = await render(node, [
-        meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-      ]);
+      const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
       expect(visualLayersOf(renderer.scene.findByType('Mesh').instance)).toBe(2);
     });
 
     it("reads an absent layers property as Godot's default", async () => {
       const node = makeNode({ mesh: 'SubResource("Box_1")' });
-      const renderer = await render(node, [
-        meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-      ]);
+      const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
       expect(visualLayersOf(renderer.scene.findByType('Mesh').instance)).toBe(1);
     });
 
@@ -301,9 +286,7 @@ describe('<MeshInstance3D>', () => {
           origin: { x: 5, y: 0, z: -2 },
         },
       });
-      const renderer = await render(node, [
-        meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-      ]);
+      const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
       const mesh = findMesh(renderer.scene);
       expect(mesh.position.x).toBe(5);
       expect(mesh.position.z).toBe(-2);
@@ -311,25 +294,19 @@ describe('<MeshInstance3D>', () => {
 
     it('sets castShadow=true when castShadow=1 (ON)', async () => {
       const node = makeNode({ mesh: 'SubResource("Box_1")', castShadow: 1 });
-      const renderer = await render(node, [
-        meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-      ]);
+      const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
       expect(findMesh(renderer.scene).castShadow).toBe(true);
     });
 
     it('sets castShadow=false when castShadow=0 (OFF)', async () => {
       const node = makeNode({ mesh: 'SubResource("Box_1")', castShadow: 0 });
-      const renderer = await render(node, [
-        meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-      ]);
+      const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
       expect(findMesh(renderer.scene).castShadow).toBe(false);
     });
 
     it('defaults receiveShadow to true', async () => {
       const node = makeNode({ mesh: 'SubResource("Box_1")' });
-      const renderer = await render(node, [
-        meshSubResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-      ]);
+      const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
       expect(findMesh(renderer.scene).receiveShadow).toBe(true);
     });
   });

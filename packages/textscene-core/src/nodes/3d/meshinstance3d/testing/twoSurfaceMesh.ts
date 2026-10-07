@@ -30,6 +30,6 @@ export function inlineTwoSurfaceMesh(
  * than hand-built `TscnInternalResource` literals.
  */
 export function inlineTwoSurfaceMeshTscn(id: string): string {
-  const { _surfaces } = inlineTwoSurfaceMesh(id).data as { _surfaces: string };
+  const { _surfaces } = inlineTwoSurfaceMesh(id).data;
   return `[sub_resource type="ArrayMesh" id="${id}"]\n_surfaces = ${_surfaces}\n`;
 }

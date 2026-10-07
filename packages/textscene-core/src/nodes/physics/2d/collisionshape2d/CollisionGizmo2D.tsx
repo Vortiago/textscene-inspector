@@ -105,7 +105,7 @@ export function CollisionGizmo2D({
   /** The node's `debug_color`, already resolved to a three colour. */
   color: THREE.Color;
 }) {
-  const data = shape.data as Record<string, string>;
+  const data = shape.data;
 
   const points = useMemo((): Point2D[] => {
     switch (shape.type) {

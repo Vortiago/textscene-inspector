@@ -12,7 +12,7 @@ import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import type { TscnInternalResource, TscnNode } from '../../parser/types';
+import type { TscnNode } from '../../parser/types';
 import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';
 import type { Camera3DProperties } from '../../nodes/3d/camera3d/types';
 import { ProjectionMode, KeepAspectMode } from '../../nodes/3d/camera3d/types';
@@ -25,14 +25,7 @@ import {
 } from '../../nodes/3d/label3d/types';
 import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
 import { depthSideOf, drawsColour } from '../testing/threePasses';
-
-function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
-  return {
-    id,
-    type,
-    data: Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined)),
-  };
-}
+import { subResource } from '../../testing/subResource';
 
 function makeMeshNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   return {
@@ -55,7 +48,10 @@ async function renderMesh(
 ) {
   return ReactThreeTestRenderer.create(
     <SceneResourcesProvider
-      internalResources={[sub(meshType, 'Mesh_1', meshData), sub('StandardMaterial3D', 'Mat', matData)]}
+      internalResources={[
+        subResource(meshType, 'Mesh_1', meshData),
+        subResource('StandardMaterial3D', 'Mat', matData),
+      ]}
     >
       <MeshInstance3D
         node={makeMeshNode({ mesh: 'SubResource("Mesh_1")', materialOverride: 'SubResource("Mat")' })}
@@ -69,8 +65,8 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SceneResourcesProvider
         internalResources={[
-          sub('BoxMesh', 'Mesh_1', { size: 'Vector3(1, 1, 1)' }),
-          sub('StandardMaterial3D', 'Mat', { albedo_color: 'Color(1, 0, 0, 1)' }),
+          subResource('BoxMesh', 'Mesh_1', { size: 'Vector3(1, 1, 1)' }),
+          subResource('StandardMaterial3D', 'Mat', { albedo_color: 'Color(1, 0, 0, 1)' }),
         ]}
       >
         <MeshInstance3D
@@ -97,8 +93,8 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SceneResourcesProvider
         internalResources={[
-          sub('BoxMesh', 'Mesh_1', { size: 'Vector3(1, 1, 1)' }),
-          sub('StandardMaterial3D', 'Mat', { albedo_color: 'Color(1, 0, 0, 1)' }),
+          subResource('BoxMesh', 'Mesh_1', { size: 'Vector3(1, 1, 1)' }),
+          subResource('StandardMaterial3D', 'Mat', { albedo_color: 'Color(1, 0, 0, 1)' }),
         ]}
       >
         <MeshInstance3D
@@ -129,8 +125,8 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider
           internalResources={[
-            sub('BoxMesh', 'Mesh_1', { size: 'Vector3(1, 1, 1)' }),
-            sub('StandardMaterial3D', 'Mat', {
+            subResource('BoxMesh', 'Mesh_1', { size: 'Vector3(1, 1, 1)' }),
+            subResource('StandardMaterial3D', 'Mat', {
               // Godot samples ao_texture only when ao_enabled is set.
               ao_enabled: 'true',
               ao_texture: 'ExtResource("1_ao")',
@@ -329,8 +325,8 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
           // (`scene/3d/mesh_instance_3d.cpp:65-73`) drops any override past a
           // PrimitiveMesh's single surface.
           inlineTwoSurfaceMesh('Mesh_1'),
-          sub('StandardMaterial3D', 'MatA', { albedo_color: 'Color(1, 0, 0, 1)' }),
-          sub('StandardMaterial3D', 'MatB', { albedo_color: 'Color(0, 1, 0, 1)' }),
+          subResource('StandardMaterial3D', 'MatA', { albedo_color: 'Color(1, 0, 0, 1)' }),
+          subResource('StandardMaterial3D', 'MatB', { albedo_color: 'Color(0, 1, 0, 1)' }),
         ]}
       >
         <MeshInstance3D

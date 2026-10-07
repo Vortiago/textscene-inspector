@@ -70,7 +70,7 @@ export function parseStyleBoxLine(
   const resource = findSubResource(internalResources, parsed.id);
   if (!resource || resource.type !== 'StyleBoxLine') return null;
 
-  const data = resource.data as Record<string, string>;
+  const data = resource.data;
   const thickness = intOr(data.thickness, 1, CONTEXT);
   const vertical = boolOr(data.vertical, false, CONTEXT);
 

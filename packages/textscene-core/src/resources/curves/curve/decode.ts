@@ -53,7 +53,7 @@ export function resolveCurve(
 ): Curve | null {
   const resource = resolveSubResourceRef(ref, internalResources);
   if (resource?.type !== 'Curve') return null;
-  return decodeCurve(resource.data as Record<string, string>);
+  return decodeCurve(resource.data);
 }
 
 /** The `Curve` a standalone resource file carries, or null for another resource type. */

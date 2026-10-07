@@ -125,7 +125,7 @@ describe('evaluateTree — duplicate clip merging', () => {
 });
 
 describe('evaluateTree — platformer blend tree (real fixture)', () => {
-  function res(id: string, type: string, data: Record<string, unknown>): TscnInternalResource {
+  function res(id: string, type: string, data: Record<string, string>): TscnInternalResource {
     return { id, type, data };
   }
 

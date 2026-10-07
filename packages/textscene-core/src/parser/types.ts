@@ -158,7 +158,7 @@ export interface SceneScope {
 export interface TscnInternalResource {
   id: string;
   type: string;
-  data: Record<string, unknown>;
+  data: Record<string, string>;
 }
 
 /**

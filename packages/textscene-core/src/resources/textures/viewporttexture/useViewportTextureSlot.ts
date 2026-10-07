@@ -91,9 +91,7 @@ export function useViewportTextureSlot(
   const consumerPath = useNodePath();
   const resource = resolveSubResourceRef(ref, internalResources);
   const viewportPath =
-    resource?.type === VIEWPORT_TEXTURE_TYPE
-      ? resolveViewportTexturePath((resource.data as { viewport_path?: string }).viewport_path)
-      : null;
+    resource?.type === VIEWPORT_TEXTURE_TYPE ? resolveViewportTexturePath(resource.data.viewport_path) : null;
   // `viewport_path` counts from the local scene root: `_setup_local_to_scene` calls
   // `p_loc_scene->get_node_or_null(path)`, `PROPERTY_USAGE_NODE_PATH_FROM_SCENE_ROOT`.
   // The constructor calls `set_local_to_scene(true)`, so a `.tscn` need not write

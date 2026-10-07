@@ -13,8 +13,9 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { pendingMapStandIn } from '../../../r3f/materials/pendingMapStandIn';
-import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
+import { subResource } from '../../../testing/subResource';
 
 function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -25,14 +26,6 @@ function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode 
     ...properties,
   };
   return { name: props.name, type: 'MeshInstance3D', children: [], properties: props };
-}
-
-function sub(type: string, id: string, data: Record<string, string | undefined> = {}): TscnInternalResource {
-  return {
-    id,
-    type,
-    data: Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined)),
-  };
 }
 
 const TEXTURE_PATH = 'res://textures/albedo.png';
@@ -61,8 +54,8 @@ async function renderWithTexture(opts: {
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider
         internalResources={[
-          sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
-          sub('StandardMaterial3D', 'Mat', opts.matData),
+          subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' }),
+          subResource('StandardMaterial3D', 'Mat', opts.matData),
         ]}
         externalResources={opts.externals}
       >
@@ -250,8 +243,8 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider
           internalResources={[
-            sub('PlaneMesh', 'Plane_1', { size: 'Vector2(2, 2)' }),
-            sub('StandardMaterial3D', 'Mat', {
+            subResource('PlaneMesh', 'Plane_1', { size: 'Vector2(2, 2)' }),
+            subResource('StandardMaterial3D', 'Mat', {
               albedo_texture: 'ExtResource("1_tex")',
             }),
           ]}
@@ -288,8 +281,8 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider
           internalResources={[
-            sub('PlaneMesh', 'Plane_1', { size: 'Vector2(2, 2)' }),
-            sub('StandardMaterial3D', 'Mat', {
+            subResource('PlaneMesh', 'Plane_1', { size: 'Vector2(2, 2)' }),
+            subResource('StandardMaterial3D', 'Mat', {
               albedo_texture: 'ExtResource("1_tex")',
             }),
           ]}

@@ -43,7 +43,7 @@ function ext(id: string, path: string): TscnExternalResource {
   return { id, path, type: 'PackedScene' };
 }
 
-function intRes(id: string, type: string, data: Record<string, unknown> = {}): TscnInternalResource {
+function intRes(id: string, type: string, data: Record<string, string> = {}): TscnInternalResource {
   return { id, type, data };
 }
 

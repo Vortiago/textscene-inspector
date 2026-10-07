@@ -370,7 +370,7 @@ function buildForest(
 
     const sub = findSubResource(int, parsed.id);
     if (!sub || sub.type !== 'Theme') return null;
-    return resolveInlineThemeResource(sub.data as Record<string, string>, ext, int, fontCache, pendingFonts);
+    return resolveInlineThemeResource(sub.data, ext, int, fontCache, pendingFonts);
   }
 
   /**

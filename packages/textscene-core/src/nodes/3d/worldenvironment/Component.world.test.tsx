@@ -8,18 +8,11 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { WorldEnvironmentProperties } from './types';
 import { instanceAs } from '../testing/reactThreeTestInstance';
+import { subResource } from '../../../testing/subResource';
 
 function makeNode(envRef = 'SubResource("Env")'): TscnNode {
   const properties: WorldEnvironmentProperties = { name: 'WE', environment: envRef };
   return { name: 'WE', type: 'WorldEnvironment', children: [], properties };
-}
-
-function envSub(data: Record<string, string | undefined>): TscnInternalResource {
-  return {
-    id: 'Env',
-    type: 'Environment',
-    data: Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined)),
-  };
 }
 
 async function render(node: TscnNode, resources: TscnInternalResource[]) {
@@ -32,14 +25,14 @@ async function render(node: TscnNode, resources: TscnInternalResource[]) {
 
 describe('WorldEnvironment (assertions 81–89)', () => {
   it('#81 background_mode SKY → scene background is set (non-null)', async () => {
-    const renderer = await render(makeNode(), [envSub({ background_mode: '2' })]);
+    const renderer = await render(makeNode(), [subResource('Environment', 'Env', { background_mode: '2' })]);
     // SKY mode (2) sets some scene.background.
     expect(instanceAs<THREE.Scene>(renderer.scene).background).not.toBeNull();
   });
 
   it('#82 background_mode COLOR → scene.background is a THREE.Color', async () => {
     const renderer = await render(makeNode(), [
-      envSub({ background_mode: '1', background_color: 'Color(1, 0, 0, 1)' }),
+      subResource('Environment', 'Env', { background_mode: '1', background_color: 'Color(1, 0, 0, 1)' }),
     ]);
     const bg = instanceAs<THREE.Scene>(renderer.scene).background as { isColor?: boolean } | null;
     expect(bg).not.toBeNull();
@@ -50,7 +43,10 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     // Godot Color literals are sRGB and three.js converts to linear, so compare the sRGB hex
     // (getHexString), not the raw linear channels.
     const renderer = await render(makeNode(), [
-      envSub({ background_mode: '1', background_color: 'Color(0.25, 0.5, 0.75, 1)' }),
+      subResource('Environment', 'Env', {
+        background_mode: '1',
+        background_color: 'Color(0.25, 0.5, 0.75, 1)',
+      }),
     ]);
     const bg = instanceAs<THREE.Scene>(renderer.scene).background as { getHexString(): string };
     expect(bg.getHexString()).toBe('4080bf'); // (0.25,0.5,0.75) → 8-bit sRGB
@@ -58,7 +54,7 @@ describe('WorldEnvironment (assertions 81–89)', () => {
 
   it('#84 ambient_light_color (COLOR source) → ambient light color matches', async () => {
     const renderer = await render(makeNode(), [
-      envSub({
+      subResource('Environment', 'Env', {
         background_mode: '1',
         ambient_light_source: '2', // COLOR, required for a flat ambient
         ambient_light_color: 'Color(0.3, 0.6, 0.9, 1)',
@@ -76,7 +72,7 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     // and lights the scene from background_color. The full table is in
     // resources/environment/renderer.bg-ambient.test.ts.
     const renderer = await render(makeNode(), [
-      envSub({
+      subResource('Environment', 'Env', {
         background_mode: '1',
         background_color: 'Color(0.4, 0.4, 0.4, 1)',
         ambient_light_color: 'Color(0.3, 0.6, 0.9, 1)',
@@ -89,7 +85,7 @@ describe('WorldEnvironment (assertions 81–89)', () => {
 
   it('#85 ambient_light_energy → ambient light intensity matches', async () => {
     const renderer = await render(makeNode(), [
-      envSub({
+      subResource('Environment', 'Env', {
         background_mode: '1',
         ambient_light_source: '2',
         ambient_light_color: 'Color(1, 1, 1, 1)',
@@ -108,20 +104,22 @@ describe('WorldEnvironment (assertions 81–89)', () => {
   });
 
   it('#86 fog_enabled=false → scene.fog === null', async () => {
-    const renderer = await render(makeNode(), [envSub({ background_mode: '1', fog_enabled: 'false' })]);
+    const renderer = await render(makeNode(), [
+      subResource('Environment', 'Env', { background_mode: '1', fog_enabled: 'false' }),
+    ]);
     expect(instanceAs<THREE.Scene>(renderer.scene).fog).toBeNull();
   });
 
   it('#87 fog_enabled=true → scene.fog is non-null', async () => {
     const renderer = await render(makeNode(), [
-      envSub({ background_mode: '1', fog_enabled: 'true', fog_density: '0.1' }),
+      subResource('Environment', 'Env', { background_mode: '1', fog_enabled: 'true', fog_density: '0.1' }),
     ]);
     expect(instanceAs<THREE.Scene>(renderer.scene).fog).not.toBeNull();
   });
 
   it('#88 fog_light_color → scene.fog.color matches (sRGB)', async () => {
     const renderer = await render(makeNode(), [
-      envSub({
+      subResource('Environment', 'Env', {
         background_mode: '1',
         fog_enabled: 'true',
         fog_density: '0.05',
@@ -137,7 +135,7 @@ describe('WorldEnvironment (assertions 81–89)', () => {
 
   it('#89 fog_density → scene.fog.density matches', async () => {
     const renderer = await render(makeNode(), [
-      envSub({ background_mode: '1', fog_enabled: 'true', fog_density: '0.25' }),
+      subResource('Environment', 'Env', { background_mode: '1', fog_enabled: 'true', fog_density: '0.25' }),
     ]);
     const fog = instanceAs<THREE.Scene>(renderer.scene).fog as { density: number } | null;
     expect(fog).not.toBeNull();

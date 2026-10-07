@@ -26,7 +26,7 @@ export function findResourceSection(file: ParsedResource, path: string): Resourc
   const { subResourceId } = parseSubResourcePath(path);
   if (subResourceId === undefined) return { type: file.resourceType, properties: file.properties };
   const sub = findSubResource(file.subResources, subResourceId);
-  return sub && { type: sub.type, properties: sub.data as Record<string, string> };
+  return sub && { type: sub.type, properties: sub.data };
 }
 
 /**

@@ -9,7 +9,7 @@ import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveTreeRoot } from './treeResources';
 
-function res(id: string, type: string, data: Record<string, unknown>): TscnInternalResource {
+function res(id: string, type: string, data: Record<string, string>): TscnInternalResource {
   return { id, type, data };
 }
 

@@ -158,7 +158,7 @@ export function parseStyleBox(
   const resource = findSubResource(internalResources, parsed.id);
   if (!resource) return null;
 
-  const data = resource.data as Record<string, string>;
+  const data = resource.data;
 
   if (resource.type === 'StyleBoxEmpty') return emptyStyleBox(data);
   if (resource.type === 'StyleBoxLine') {

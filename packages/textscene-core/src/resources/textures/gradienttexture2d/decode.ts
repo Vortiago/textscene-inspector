@@ -98,7 +98,7 @@ export function resolveGradient(
 ): Gradient | null {
   const resource = resolveSubResourceRef(ref, internalResources);
   if (resource?.type !== 'Gradient') return null;
-  return decodeGradient(resource.data as Record<string, string>);
+  return decodeGradient(resource.data);
 }
 
 /**

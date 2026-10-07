@@ -155,8 +155,7 @@ export function unwrapCanvasTextureRef(
     const sub = resolveSubResourceRef(current, internalResources);
     if (sub?.type !== 'CanvasTexture') return current;
     (peeled ??= new Set()).add(current);
-    const diffuse = (sub.data as { diffuse_texture?: unknown }).diffuse_texture;
-    current = typeof diffuse === 'string' ? diffuse : undefined;
+    current = sub.data.diffuse_texture;
   }
   return undefined;
 }
