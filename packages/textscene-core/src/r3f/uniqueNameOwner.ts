@@ -16,6 +16,7 @@ import {
   type UniqueNameClaim,
 } from '../utils/uniqueNames.js';
 import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
+import { scopeOf, type LiveNode } from '../resources/liveNode.js';
 
 export interface ClaimOwner {
   /** Live path of the node this owner's root renders at. */
@@ -74,7 +75,7 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
   let owner = outer;
   let into = outer;
   let parentPath = '';
-  let match: TscnNode | undefined;
+  let match: LiveNode | undefined;
   for (const segment of path.split('/')) {
     let found: Candidate | undefined;
     match = undefined;
@@ -95,9 +96,7 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
         break;
       }
     }
-    // A grafted node resolves its refs against the table it was authored in,
-    // as `DispatchedNode` does, not the sub-scene's it now sits in.
-    const scope = match.authoredScope ?? found.group.scope;
+    const scope = scopeOf(match, found.group.scope);
     const subRoots = cachedSubRoots(match, scope, ctx);
     candidates = liveChildGroups(match, scope, ctx.sceneCache, ctx.glbCache).map((group) => ({
       group,

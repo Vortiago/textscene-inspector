@@ -41,22 +41,31 @@ export const EXT_RESOURCE_CALL_ANYWHERE_RE = new RegExp(`ExtResource${WS}\\(`);
 /** The token every `ExtResource(…)` call spells, so a value without it names no id. */
 const EXT_RESOURCE_TOKEN = 'ExtResource';
 
-/** One `ExtResource(…)` call, read in place by {@link extResourceIdsIn}. Sticky, so it matches only where it is set. */
-const EXT_RESOURCE_REF_AT_RE = new RegExp(`${EXT_RESOURCE_TOKEN}${WS}\\(${WS}${RESOURCE_ID}${WS}\\)`, 'y');
+/** The token both reference kinds spell, so a value without it names no resource. */
+const RESOURCE_TOKEN = 'Resource';
+
+/** One reference, read in place by {@link loadedRefSpans}. Sticky, so it matches only where it is set. */
+const RESOURCE_REF_AT_RE = new RegExp(RESOURCE_REF_BODY, 'y');
 
 /** A character that continues an identifier, so `MyExtResource(` is not the `ExtResource` token. */
 const IDENTIFIER_CHAR_RE = /[A-Za-z0-9_]/;
 
+/** A reference and the span it fills in the text it was read from, `end` exclusive. */
+export interface ResourceRefSpan extends ResourceRef {
+  start: number;
+  end: number;
+}
+
 /**
- * The id of every `ExtResource(…)` in a value, in order. The loader resolves each one as it tokenises
- * the value (`resource_format_text.cpp:125-151`), but never text inside a string or a `StringName`,
- * whose quotes `get_token` reads with `\` escapes (`variant_parser.cpp:265-289`).
+ * Every reference the loader resolves in `text`, in order, pushed onto `spans`. It resolves each
+ * one as it tokenises (`resource_format_text.cpp:125-151`), but never text inside a string or a
+ * `StringName`, whose quotes `get_token` reads with `\\` escapes and across lines
+ * (`variant_parser.cpp:265-300`), nor a `;` comment to the end of its line (`:214`).
+ *
+ * @param inString whether `text` starts inside a string an earlier line opened
+ * @returns whether `text` ends inside a string
  */
-export function extResourceIdsIn(text: string): string[] {
-  // Most values name no resource, and the walk below reads every character of a multi-megabyte array.
-  if (!text.includes(EXT_RESOURCE_TOKEN)) return [];
-  const ids: string[] = [];
-  let inString = false;
+function scanLoadedRefs(text: string, inString: boolean, spans: ResourceRefSpan[]): boolean {
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     if (inString) {
@@ -68,14 +77,65 @@ export function extResourceIdsIn(text: string): string[] {
       inString = true;
       continue;
     }
-    if (char !== 'E' || (i > 0 && IDENTIFIER_CHAR_RE.test(text[i - 1]!))) continue;
-    EXT_RESOURCE_REF_AT_RE.lastIndex = i;
-    const match = EXT_RESOURCE_REF_AT_RE.exec(text);
+    if (char === ';') {
+      const lineEnd = text.indexOf('\n', i);
+      if (lineEnd === -1) break;
+      i = lineEnd;
+      continue;
+    }
+    if ((char !== 'E' && char !== 'S') || (i > 0 && IDENTIFIER_CHAR_RE.test(text[i - 1]!))) continue;
+    RESOURCE_REF_AT_RE.lastIndex = i;
+    const match = RESOURCE_REF_AT_RE.exec(text);
     if (!match) continue;
-    ids.push(refId(match[1], match[2]));
-    i = EXT_RESOURCE_REF_AT_RE.lastIndex - 1;
+    const end = RESOURCE_REF_AT_RE.lastIndex;
+    spans.push({ kind: match[1] as ResourceRef['kind'], id: refId(match[2], match[3]), start: i, end });
+    i = end - 1;
   }
-  return ids;
+  return inString;
+}
+
+/** Every reference the loader resolves in one value, as {@link scanLoadedRefs} reads it. */
+function loadedRefSpans(text: string): ResourceRefSpan[] {
+  const spans: ResourceRefSpan[] = [];
+  scanLoadedRefs(text, false, spans);
+  return spans;
+}
+
+/**
+ * The references the loader resolves on each line of a file, as {@link scanLoadedRefs} reads them.
+ * A string carries over to the next line, so an editor reads the whole file, not one line.
+ */
+export function resourceRefSpansByLine(lines: readonly string[]): ResourceRefSpan[][] {
+  let inString = false;
+  return lines.map((line) => {
+    const spans: ResourceRefSpan[] = [];
+    inString = scanLoadedRefs(line, inString, spans);
+    return spans;
+  });
+}
+
+/** The id of every `ExtResource(…)` in a value, in order, as {@link loadedRefSpans} reads them. */
+export function extResourceIdsIn(text: string): string[] {
+  // Most values name no resource, and the walk reads every character of a multi-megabyte array.
+  if (!text.includes(EXT_RESOURCE_TOKEN)) return [];
+  return loadedRefSpans(text)
+    .filter((span) => span.kind === 'ExtResource')
+    .map((span) => span.id);
+}
+
+/**
+ * `text` with the id of every reference the loader resolves replaced by `newId`'s answer, each
+ * written in the tight form. Text inside a string stays as written, as {@link loadedRefSpans} reads it.
+ */
+export function renameResourceRefs(text: string, newId: (ref: ResourceRef) => string): string {
+  if (!text.includes(RESOURCE_TOKEN)) return text;
+  let renamed = '';
+  let copiedTo = 0;
+  for (const span of loadedRefSpans(text)) {
+    renamed += `${text.slice(copiedTo, span.start)}${span.kind}("${newId(span)}")`;
+    copiedTo = span.end;
+  }
+  return renamed + text.slice(copiedTo);
 }
 
 /** The kind and id of a resource reference. */
@@ -97,25 +157,6 @@ export function resourceRef(raw: string): ResourceRef | null {
   const match = RESOURCE_REF_RE.exec(raw);
   if (!match) return null;
   return { kind: match[1] as ResourceRef['kind'], id: refId(match[2], match[3]) };
-}
-
-/** Every reference in a text, for {@link resourceRefSpans}. Shared `g` instance: only `matchAll` reads it, which clones it. */
-const RESOURCE_REF_ANYWHERE_RE = new RegExp(RESOURCE_REF_BODY, 'g');
-
-/** A reference and the span it fills in the text it was read from, `end` exclusive. */
-export interface ResourceRefSpan extends ResourceRef {
-  start: number;
-  end: number;
-}
-
-/** Every reference in `text`, in order, with where each one sits. */
-export function resourceRefSpans(text: string): ResourceRefSpan[] {
-  return [...text.matchAll(RESOURCE_REF_ANYWHERE_RE)].map((match) => ({
-    kind: match[1] as ResourceRef['kind'],
-    id: refId(match[2], match[3]),
-    start: match.index,
-    end: match.index + match[0].length,
-  }));
 }
 
 /** An open reference at the end of a text, `[1]` its kind and `[2]` the id typed so far. */
