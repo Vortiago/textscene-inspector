@@ -41,7 +41,10 @@ export function makeNode(name: string, type: string, fields: Partial<TscnNode> =
   return { ...parsedNode({ name, type, ...(instance ? { instance } : {}) }, rawProperties), ...rest };
 }
 
-/** The `Transform3D(...)` text Godot writes for an identity basis at this origin. */
+/**
+ * The `Transform3D(...)` text Godot writes for an identity basis at this origin
+ * (`variant_parser.cpp:2110-2126`).
+ */
 export function translated(x: number, y: number, z: number): string {
   return `Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${x}, ${y}, ${z})`;
 }

@@ -1,7 +1,8 @@
 /**
  * A value spelled as its own file wrote it. Override re-homing renames an id the target scope
- * already holds, for example to `ExtResource("3 (outer)")`. Godot keeps one table per file
- * and shows no rename, so the inspector spells each reference with the copy's `authoredId`.
+ * already holds, for example to `ExtResource("3 (outer)")`. Godot resolves each id in its own
+ * file's table (`resource_format_text.h:73`, `resource_format_text.cpp:137-142`), so no rename
+ * exists there, and the inspector spells each reference with the copy's `authoredId`.
  */
 import { renameResourceRefs } from '../godot/resourceRef.js';
 import type { SceneScope } from '../parser/types.js';

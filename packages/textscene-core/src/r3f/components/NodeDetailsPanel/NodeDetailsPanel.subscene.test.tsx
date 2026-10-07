@@ -248,7 +248,7 @@ describe('<NodeDetailsPanel> BUG 2 — instance root shows the collapsed identit
 });
 
 describe('<NodeDetailsPanel> on an override whose id the sub-scene also holds', () => {
-  it('shows the id the host file wrote, as Godot does', async () => {
+  it('shows the id the host file wrote', async () => {
     const { loader, scenes } = createFakeResourceLoader();
     scenes.seed(
       'res://sprite.tscn',

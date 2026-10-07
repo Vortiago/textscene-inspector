@@ -115,7 +115,7 @@ export function NodeDetailsPanel() {
   );
 }
 
-/** Each value with its references spelled as their own files wrote them, as Godot shows them. */
+/** Each value with its references spelled as their own files wrote them. */
 function authoredSections(
   sections: PropertySectionData[],
   scope: SceneScope | undefined
