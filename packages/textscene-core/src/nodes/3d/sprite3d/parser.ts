@@ -5,7 +5,7 @@
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor } from '../../../utils/colorParser';
 import { boolOr, enumOr, floatOr, intOr, parseOptionalRect2, vec2Or } from '../../../parser/valueParsers';
 import {
@@ -23,7 +23,7 @@ export function parseSprite3D(
   properties: Record<string, string>
 ): Sprite3DProperties {
   const frames = replaySpriteFrames(properties);
-  const baseProps = parseNode3D(heading, properties);
+  const baseProps = parseGeometryInstance3D(heading, properties);
 
   const result: Sprite3DProperties = {
     ...baseProps,
@@ -41,7 +41,6 @@ export function parseSprite3D(
     ]),
     axis: enumOr(properties.axis, AxisMode.AXIS_Y, [AxisMode.AXIS_X, AxisMode.AXIS_Y, AxisMode.AXIS_Z]),
     pixel_size: floatOr(properties.pixel_size, 0.01),
-    transparency: floatOr(properties.transparency, 0),
     // The grid and frame Godot holds after replaying the body in file order:
     // a count below 1 is refused, a refused `frame` stays 0, a later `hframes`
     // re-maps one that landed (godot/spriteFrames.ts).

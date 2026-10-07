@@ -2,7 +2,7 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import type { MeshInstance3DProperties } from './types';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
 import { indexedKeyRegex, stringToInt } from '../../../godot/index.js';
 
@@ -23,7 +23,7 @@ export function parseMeshInstance3D(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): MeshInstance3DProperties {
-  const node3dProps = parseNode3D(heading, properties);
+  const geometryProps = parseGeometryInstance3D(heading, properties);
 
   const surfaceMaterialOverrides = new Map<number, string>();
 
@@ -39,7 +39,7 @@ export function parseMeshInstance3D(
   }
 
   const meshInstance3DProps: MeshInstance3DProperties = {
-    ...node3dProps,
+    ...geometryProps,
     surfaceMaterialOverrides,
   };
 
@@ -55,8 +55,6 @@ export function parseMeshInstance3D(
     meshInstance3DProps.materialOverlay = properties.material_overlay;
   }
 
-  assignIfDefined(meshInstance3DProps, 'transparency', parseOptionalFloat(properties.transparency));
-  assignIfDefined(meshInstance3DProps, 'castShadow', parseOptionalInt(properties.cast_shadow));
   assignIfDefined(meshInstance3DProps, 'giMode', parseOptionalInt(properties.gi_mode));
   assignIfDefined(meshInstance3DProps, 'giLightmapScale', parseOptionalInt(properties.gi_lightmap_scale));
   assignIfDefined(

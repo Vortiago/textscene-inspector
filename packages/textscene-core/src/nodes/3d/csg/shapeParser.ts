@@ -1,11 +1,11 @@
 /**
- * The `CSGShape3D` half of every CSG parse, `operation`, `cast_shadow` and `transparency`, shared
- * by CSGCombiner3D and the primitives, whose render scaffold is CsgPrimitive.tsx. A React-free
- * module of its own, not beside `finishCsgParse`: the parity guard scrapes property reads per
- * file, and would credit a combiner, not a CSGPrimitive3D (`csg_shape.h:194-202`), with `material`.
+ * The `CSGShape3D` half of every CSG parse, `operation`, shared by CSGCombiner3D and the
+ * primitives, whose render scaffold is CsgPrimitive.tsx. A React-free module of its own, not
+ * beside `finishCsgParse`: the parity guard scrapes property reads per file, and would credit a
+ * combiner, not a CSGPrimitive3D (`csg_shape.h:194-202`), with `material`.
  */
 
-import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
+import { parseOptionalInt } from '../../../parser/valueParsers';
 import type { CSGShapeFields } from './types';
 
 /**
@@ -17,16 +17,5 @@ export function finishCsgShapeParse(result: CSGShapeFields, properties: Record<s
   const operation = parseOptionalInt(properties.operation);
   if (operation !== undefined) {
     result.operation = operation;
-  }
-
-  // `CSGShape3D : GeometryInstance3D` (`modules/csg/csg_shape.h:47`).
-  const castShadow = parseOptionalInt(properties.cast_shadow);
-  if (castShadow !== undefined) {
-    result.castShadow = castShadow;
-  }
-
-  const transparency = parseOptionalFloat(properties.transparency);
-  if (transparency !== undefined) {
-    result.transparency = transparency;
   }
 }

@@ -1,7 +1,7 @@
 /** CSGPolygon3D parser - parses CSGPolygon3D nodes from TSCN. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
-import { parseNode3D } from '../../../base/node3d/parser';
+import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import { finishCsgParse } from '../sharedParser';
 import { boolOr, floatOr, intOr } from '../../../../parser/valueParsers';
 import { parsePackedVector2Array } from '../../../../resources/shapes/packedArray';
@@ -36,7 +36,7 @@ export function parseCSGPolygon3D(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): CSGPolygon3DProperties {
-  const node3d = parseNode3D(heading, properties);
+  const geometry = parseGeometryInstance3D(heading, properties);
 
   let polygon: Float32Array<ArrayBufferLike> = DEFAULT_POLYGON;
   if (properties.polygon) {
@@ -52,7 +52,7 @@ export function parseCSGPolygon3D(
   }
 
   const result: CSGPolygon3DProperties = {
-    ...node3d,
+    ...geometry,
     polygon,
     mode: intOr(properties.mode, DEFAULTS.mode, 'CSGPolygon3D mode'),
     depth: floatOr(properties.depth, DEFAULTS.depth, 'CSGPolygon3D depth'),

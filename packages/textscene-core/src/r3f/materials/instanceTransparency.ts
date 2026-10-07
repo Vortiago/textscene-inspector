@@ -48,11 +48,7 @@ export function instanceSurfaceAlpha(surface: AlphaPassSurface, transparency: nu
  * DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth. `opacity` is the alpha its shader
  * reads. Both draw MIX, so the patch sees three's default blending.
  */
-export function cutSurfaceAlpha(
-  cut: AlphaCutSurface,
-  opacity: number,
-  transparency: number
-): CutSurfaceAlpha {
+export function cutSurfaceAlpha(cut: AlphaCutSurface, opacity: number, transparency = 0): CutSurfaceAlpha {
   const alpha = instanceSurfaceAlpha(
     { opacity, transparent: cut.blended, depthWrite: cut.depthWrite, alphaPassDepthWrite: false },
     transparency

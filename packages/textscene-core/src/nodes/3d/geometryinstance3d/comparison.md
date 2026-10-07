@@ -47,4 +47,4 @@ Strict parsing format-checks these `GeometryInstance3D` properties, plus 1 inher
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. A malformed `visibility_range_end` or `cast_shadow` parses with no warning and no fallback, and only strict reports it.
+The lenient parser reads `transform` and `visible` through `parseNode3D`, then `transparency` and `cast_shadow`, which every drawn leaf parser starts from. A malformed `transparency`, `cast_shadow` or `visibility_range_end` parses with no warning and no fallback, and only strict reports it.

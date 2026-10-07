@@ -51,7 +51,7 @@ export function formatSprite3DProperties(properties: Sprite3DProperties): Proper
     title: 'Appearance',
     items: [
       { label: 'Modulate', value: formatColorRgba(properties.modulate) },
-      { label: 'Transparency', value: properties.transparency.toFixed(2) },
+      { label: 'Transparency', value: (properties.transparency ?? 0).toFixed(2) },
       { label: 'Alpha Cut', value: alphaCutName(properties.alpha_cut) },
       { label: 'Offset', value: `(${properties.offset.x}, ${properties.offset.y})` },
       { label: 'Render Priority', value: properties.render_priority.toString() },

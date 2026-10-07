@@ -1,13 +1,13 @@
 /** Label3D node data and its enums. */
 
-import type { Node3DProperties } from '../../base/node3d/types';
+import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
 import type { Color } from '../../../utils/colorParser';
 import { BillboardMode } from '../../../godot/billboard';
 
 /** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
 export { BillboardMode };
 
-export interface Label3DProperties extends Node3DProperties {
+export interface Label3DProperties extends GeometryInstance3DProperties {
   text: string;
 
   /** Size of one pixel's width in 3D world units (default 0.005). */
@@ -27,9 +27,6 @@ export interface Label3DProperties extends Node3DProperties {
 
   /** Outline colour (default black). */
   outline_modulate: Color;
-
-  /** `GeometryInstance3D.transparency` of both surfaces (default 0, opaque). */
-  transparency: number;
 
   /** Visible from behind (Godot default true → THREE.DoubleSide). */
   double_sided: boolean;

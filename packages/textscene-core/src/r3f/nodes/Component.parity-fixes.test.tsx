@@ -372,7 +372,6 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       outline_render_priority: -1,
       alpha_cut: AlphaCutMode.DISABLED,
       alpha_scissor_threshold: 0.5,
-      transparency: 0,
       fixed_size: false,
       texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     };
@@ -424,7 +423,6 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       outline_render_priority: -1,
       alpha_cut: AlphaCutMode.DISABLED,
       alpha_scissor_threshold: 0.5,
-      transparency: 0,
       fixed_size: false,
       texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
       transform: {
