@@ -7,12 +7,15 @@
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { loadCsgModule } from '../csgModule';
+import { instanceAs } from '../../../nodes/3d/testing/reactThreeTestInstance';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
-/** Ticks after which a root with nothing to prune counts as settled. */
-const TICKS_WITHOUT_CONTRIBUTORS = 4;
-const MAX_TICKS = 20;
+/**
+ * A root with nothing to prune never shows a bounds proxy, so the wait ends here
+ * for it. A proxy left by an earlier evaluation ends the wait after one tick.
+ */
+const MAX_TICKS = 4;
 
 export async function settleCsgEvaluation(renderer: Renderer): Promise<void> {
   // The same memoised promise the component awaits, so the module is resident first.
@@ -21,7 +24,7 @@ export async function settleCsgEvaluation(renderer: Renderer): Promise<void> {
     await ReactThreeTestRenderer.act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    if (hasBoundsProxy(renderer) || tick + 1 >= TICKS_WITHOUT_CONTRIBUTORS) return;
+    if (hasBoundsProxy(renderer)) return;
   }
 }
 
@@ -29,5 +32,5 @@ export async function settleCsgEvaluation(renderer: Renderer): Promise<void> {
 function hasBoundsProxy(renderer: Renderer): boolean {
   return renderer.scene
     .findAllByType('Mesh')
-    .some((m) => (m.instance as unknown as THREE.Mesh).userData?.tscnBoundsProxy === true);
+    .some((m) => instanceAs<THREE.Mesh>(m).userData?.tscnBoundsProxy === true);
 }

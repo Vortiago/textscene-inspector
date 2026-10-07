@@ -10,6 +10,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { TscnParser } from '../../parser/TscnParser';
 import { clearEvaluationCache } from './csgEvaluationCache';
+import { resetCsgModuleForTests } from './csgModule';
 import '../nodes/index';
 import { NodeTree } from '../testing/NodeTree';
 import { settleCsgEvaluation } from './testing/settleCsgEvaluation';
@@ -165,23 +166,19 @@ radius = 0.5
   it('degrades to base primitives when the CSG library cannot load', async () => {
     // The terminal rung of the degradation ladder: every contributor un-prunes and draws
     // itself, which is exactly the retired CSG-as-primitive behaviour.
-    vi.resetModules();
-    const { resetCsgModuleForTests } = await import('./csgModule');
+    // Reset the instance the mounted components import: a reset after `vi.resetModules`
+    // reaches a fresh copy, and the components keep the loaded library.
     resetCsgModuleForTests();
     vi.doMock('three-bvh-csg', () => {
       throw new Error('chunk failed to load');
     });
 
-    // One tick, not a settle: a failed load never prunes, so no bounds proxy ever appears.
-    const renderer = await mount(SUBTRACTION);
-    await ReactThreeTestRenderer.act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
+    const renderer = await render(SUBTRACTION);
     // Both solids drawn again rather than one merged result, or nothing at all.
-    expect(drawnMeshes(renderer).length).toBeGreaterThanOrEqual(1);
+    expect(drawnMeshes(renderer)).toHaveLength(2);
 
     vi.doUnmock('three-bvh-csg');
-    vi.resetModules();
+    resetCsgModuleForTests();
   });
 
   it("applies a nested combiner's own operation to its whole fold", async () => {

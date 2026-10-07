@@ -8,7 +8,9 @@ import { NodePathProvider } from '../contexts/NodePathContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 
 export function NodeTree({ node, path }: { node: TscnNode; path: string }) {
-  const Component = nodeComponentRegistry.get(node.type)!;
+  const Component = nodeComponentRegistry.get(node.type);
+  if (!Component)
+    throw new Error(`expected a registered component for ${path}, got none for type ${node.type}`);
   return (
     <NodePathProvider path={path}>
       <Component node={node}>
