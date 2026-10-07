@@ -133,7 +133,6 @@ export function resolveInlineFontResource(
   const sub = findSubResource(internalResources, parsed.id);
   if (!sub) return null;
   const nowVisiting = new Set(visiting).add(parsed.id);
-  const properties = sub.data;
   const resolveNested = (nestedRef: string | undefined): FontResource | null =>
     resolveInlineFontResource(
       nestedRef,
@@ -146,7 +145,7 @@ export function resolveInlineFontResource(
 
   switch (sub.type) {
     case 'SystemFont': {
-      const { font_names, ...rest } = properties;
+      const { font_names, ...rest } = sub.data;
       return {
         kind: 'system',
         fontNames: font_names !== undefined ? parsePackedStringArray(font_names) : [],
@@ -154,11 +153,11 @@ export function resolveInlineFontResource(
       };
     }
     case 'FontVariation': {
-      const { base_font, ...rest } = properties;
+      const { base_font, ...rest } = sub.data;
       return { kind: 'variation', baseFont: resolveNested(base_font), properties: rest };
     }
     case 'FontFile': {
-      const { fallbacks, ...rest } = properties;
+      const { fallbacks, ...rest } = sub.data;
       const refs = fallbacks !== undefined ? extractResourceRefs(fallbacks) : [];
       const resolved = refs.map(resolveNested).filter((f): f is FontResource => f !== null);
       return { kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: resolved, properties: rest };

@@ -18,11 +18,10 @@ const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
  */
 export function skyMaterialRef(
   type: string | undefined,
-  data: Record<string, unknown> | undefined
+  data: Record<string, string> | undefined
 ): string | undefined {
   if (type !== 'Sky') return undefined;
-  const ref = data?.sky_material;
-  return typeof ref === 'string' ? ref : undefined;
+  return data?.sky_material;
 }
 
 export function decodeSkyMaterial(type: string, data: Record<string, string>): SkyProperties | null {

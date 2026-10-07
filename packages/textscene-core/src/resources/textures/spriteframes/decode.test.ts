@@ -41,11 +41,6 @@ describe('decodeSpriteFrames', () => {
     expect(decodeSpriteFrames({})).toBeNull();
   });
 
-  it('returns null for a non-string animations value (a mis-typed property bag)', () => {
-    expect(decodeSpriteFrames({ animations: 42 })).toBeNull();
-    expect(decodeSpriteFrames({ animations: undefined })).toBeNull();
-  });
-
   it('returns null when the value parses to no animations at all', () => {
     // An empty array and unparseable text are the same answer: nothing to show.
     expect(decodeSpriteFrames({ animations: '[]' })).toBeNull();

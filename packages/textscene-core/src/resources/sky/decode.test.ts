@@ -123,8 +123,4 @@ describe('skyMaterialRef — the Sky indirection', () => {
     expect(skyMaterialRef('ProceduralSkyMaterial', { sky_material: 'SubResource("x")' })).toBeUndefined();
     expect(skyMaterialRef(undefined, undefined)).toBeUndefined();
   });
-
-  it('ignores a non-string sky_material rather than passing it on (error path)', () => {
-    expect(skyMaterialRef('Sky', { sky_material: 42 })).toBeUndefined();
-  });
 });

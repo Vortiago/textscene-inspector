@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { evaluateTree } from './evaluateTree';
 import { resolveTreeRoot, type AnimNode } from './treeResources';
 import type { TscnInternalResource } from '../../../parser/types';
+import { subResource } from '../../../testing/subResource';
 
 const leaf = (clip: string): AnimNode => ({ kind: 'animation', clip });
 
@@ -125,25 +126,21 @@ describe('evaluateTree — duplicate clip merging', () => {
 });
 
 describe('evaluateTree — platformer blend tree (real fixture)', () => {
-  function res(id: string, type: string, data: Record<string, string>): TscnInternalResource {
-    return { id, type, data };
-  }
-
   // SubResource 23 from scenes/demos/3d/platformer/player/player.tscn, verbatim.
   const resources: TscnInternalResource[] = [
-    res('13', 'AnimationNodeAnimation', { animation: '&"run"' }),
-    res('14', 'AnimationNodeAnimation', { animation: '&"jump"' }),
-    res('15', 'AnimationNodeAnimation', { animation: '&"falling"' }),
-    res('16', 'AnimationNodeAnimation', { animation: '&"shooting_standing"' }),
-    res('AnimationNodeAnimation_jij26', 'AnimationNodeAnimation', { animation: '&"walk"' }),
-    res('17', 'AnimationNodeAnimation', { animation: '&"idle"' }),
-    res('18', 'AnimationNodeBlend2', {}),
-    res('19', 'AnimationNodeBlend2', { filter_enabled: 'true' }),
-    res('22', 'AnimationNodeBlend2', {}),
-    res('20', 'AnimationNodeTimeScale', {}),
-    res('AnimationNodeBlend2_lxtyk', 'AnimationNodeBlend2', {}),
-    res('AnimationNodeBlend2_bivc5', 'AnimationNodeBlend2', {}),
-    res('23', 'AnimationNodeBlendTree', {
+    subResource('AnimationNodeAnimation', '13', { animation: '&"run"' }),
+    subResource('AnimationNodeAnimation', '14', { animation: '&"jump"' }),
+    subResource('AnimationNodeAnimation', '15', { animation: '&"falling"' }),
+    subResource('AnimationNodeAnimation', '16', { animation: '&"shooting_standing"' }),
+    subResource('AnimationNodeAnimation', 'AnimationNodeAnimation_jij26', { animation: '&"walk"' }),
+    subResource('AnimationNodeAnimation', '17', { animation: '&"idle"' }),
+    subResource('AnimationNodeBlend2', '18', {}),
+    subResource('AnimationNodeBlend2', '19', { filter_enabled: 'true' }),
+    subResource('AnimationNodeBlend2', '22', {}),
+    subResource('AnimationNodeTimeScale', '20', {}),
+    subResource('AnimationNodeBlend2', 'AnimationNodeBlend2_lxtyk', {}),
+    subResource('AnimationNodeBlend2', 'AnimationNodeBlend2_bivc5', {}),
+    subResource('AnimationNodeBlendTree', '23', {
       'nodes/Animation/node': 'SubResource("17")',
       'nodes/Animation 2/node': 'SubResource("13")',
       'nodes/Animation 3/node': 'SubResource("14")',

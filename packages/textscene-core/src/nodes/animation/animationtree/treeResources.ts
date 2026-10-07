@@ -130,14 +130,14 @@ function resolveInnerNode(
 ): AnimNode | null {
   switch (resource.type) {
     case 'AnimationNodeAnimation': {
-      const clip = unquoteLiteral((asString(resource.data['animation']) ?? '').trim());
+      const clip = unquoteLiteral((resource.data['animation'] ?? '').trim());
       return clip.length > 0 ? { kind: 'animation', clip } : null;
     }
     case 'AnimationNodeBlend2':
       return {
         kind: 'blend2',
         name,
-        filtered: boolSlotValue(asString(resource.data['filter_enabled'])) === true,
+        filtered: boolSlotValue(resource.data['filter_enabled']) === true,
         in0: inputs(0),
         in1: inputs(1),
       };
@@ -165,7 +165,7 @@ function resolveBlendTree(
   visiting: Set<string>
 ): AnimNode | null {
   const nodeIds = parseBlendTreeNodes(blendTree.data);
-  const connections = parseConnections(asString(blendTree.data['node_connections']) ?? '');
+  const connections = parseConnections(blendTree.data['node_connections'] ?? '');
 
   const resolveLocal = (localName: string, seen: Set<string>): AnimNode | null => {
     if (seen.has(localName)) return null; // cyclic connection guard
@@ -186,13 +186,13 @@ function resolveBlendTree(
  * `nodes/<name>/node = SubResource("id")` → `name → id`. A quoted key reads as the tokenizer reads
  * it, escapes decoded, so a name holding `"` matches the `&"…"` token that wires it.
  */
-function parseBlendTreeNodes(data: Record<string, unknown>): Map<string, string> {
+function parseBlendTreeNodes(data: Readonly<Record<string, string>>): Map<string, string> {
   const out = new Map<string, string>();
   for (const [rawKey, rawValue] of Object.entries(data)) {
     const key = unquoteLiteral(rawKey);
     const match = /^nodes\/(.+)\/node$/.exec(key);
     if (!match || match[1] === undefined) continue;
-    const id = extractSubResourceId(asString(rawValue) ?? '');
+    const id = extractSubResourceId(rawValue);
     if (id !== null) out.set(match[1], id);
   }
   return out;
@@ -240,7 +240,7 @@ function resolveStateMachine(
   for (const [rawKey, rawValue] of Object.entries(resource.data)) {
     const match = /^states\/(.+)\/node$/.exec(unquoteLiteral(rawKey));
     if (!match || match[1] === undefined) continue;
-    const subId = extractSubResourceId(asString(rawValue) ?? '');
+    const subId = extractSubResourceId(rawValue);
     const node = subId === null ? null : resolveNodeById(subId, resources, visiting);
     states.push({ name: match[1], node });
   }
@@ -249,7 +249,7 @@ function resolveStateMachine(
     kind: 'statemachine',
     name,
     states,
-    startState: pickStartState(asString(resource.data['transitions']) ?? '', states),
+    startState: pickStartState(resource.data['transitions'] ?? '', states),
   };
 }
 
@@ -267,8 +267,4 @@ function pickStartState(transitions: string, states: StateMachineNode['states'])
     if (from === 'Start') return unquoteLiteral(tokens[i + 1]!);
   }
   return states[0]?.name ?? null;
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
 }

@@ -19,6 +19,7 @@ import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import { YAWED } from './testing/yawedTransform';
 import { drawColourGroup, rotationAngle, TEST_CAMERA } from '../../../r3f/testing/threePasses';
+import { subResource } from '../../../testing/subResource';
 
 const BILLBOARD_TRES = 'res://billboard.tres';
 const EXTERNALS: readonly TscnExternalResource[] = [
@@ -26,10 +27,6 @@ const EXTERNALS: readonly TscnExternalResource[] = [
 ];
 
 const camera = TEST_CAMERA;
-
-function sub(type: string, id: string, data: Record<string, string> = {}): TscnInternalResource {
-  return { id, type, data };
-}
 
 function meshNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
   const props: MeshInstance3DProperties = {
@@ -51,7 +48,7 @@ async function renderMesh(
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider
-        internalResources={[sub('QuadMesh', 'Quad'), ...internals]}
+        internalResources={[subResource('QuadMesh', 'Quad'), ...internals]}
         externalResources={EXTERNALS}
       >
         <MeshInstance3D node={node}>
@@ -76,7 +73,7 @@ function facesCamera(drawn: THREE.Matrix4): boolean {
 }
 
 const withSceneMaterial = (data: Record<string, string>) => [
-  sub('StandardMaterial3D', 'Mat', { shading_mode: '0', ...data }),
+  subResource('StandardMaterial3D', 'Mat', { shading_mode: '0', ...data }),
 ];
 
 describe('<MeshInstance3D> material billboard_mode', () => {
@@ -120,8 +117,8 @@ describe('<MeshInstance3D> billboard_mode per ArrayMesh surface', () => {
       meshNode({ mesh: 'SubResource("Mesh_2")', surfaceMaterialOverrides: new Map() }),
       [
         inlineTwoSurfaceMesh('Mesh_2', ['Plain', 'Facing']),
-        sub('StandardMaterial3D', 'Plain'),
-        sub('StandardMaterial3D', 'Facing', { billboard_mode: '1' }),
+        subResource('StandardMaterial3D', 'Plain'),
+        subResource('StandardMaterial3D', 'Facing', { billboard_mode: '1' }),
       ]
     );
     return mesh;
@@ -143,7 +140,7 @@ describe('<MeshInstance3D> billboard_mode per ArrayMesh surface', () => {
         mesh: 'SubResource("Mesh_2")',
         surfaceMaterialOverrides: new Map([[0, 'ExtResource("1_ext")']]),
       }),
-      [inlineTwoSurfaceMesh('Mesh_2', ['Plain', 'Plain']), sub('StandardMaterial3D', 'Plain')]
+      [inlineTwoSurfaceMesh('Mesh_2', ['Plain', 'Plain']), subResource('StandardMaterial3D', 'Plain')]
     );
     expect(facesCamera(drawColourGroup(mesh, camera, 0, (s) => s.matrixWorld))).toBe(true);
     expect(drawColourGroup(mesh, camera, 1, (s) => s.matrixWorld).equals(mesh.matrixWorld)).toBe(true);
