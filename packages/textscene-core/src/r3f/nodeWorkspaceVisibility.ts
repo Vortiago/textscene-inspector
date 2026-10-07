@@ -31,8 +31,7 @@ export function isClaimedByNode3DEditor(type: string): boolean {
   return (
     !isClaimedByCanvasItemEditor(type) &&
     !isViewportBoundary(type) &&
-    nodeComponentRegistry.get(type) !== undefined &&
-    !nodeComponentRegistry.isContainer(type)
+    !nodeComponentRegistry.passesThrough(type)
   );
 }
 
