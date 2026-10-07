@@ -23,6 +23,7 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
     // the quad by the number the engine holds.
     outline_size: intOr(properties.outline_size, 12, 'outline_size'),
     outline_modulate: colorOr(properties.outline_modulate, { r: 0, g: 0, b: 0, a: 1 }),
+    transparency: floatOr(properties.transparency, 0, 'transparency'),
     double_sided: boolSlotValue(properties.double_sided) !== false, // Godot default true
     font_size: intOr(properties.font_size, 32, 'font_size'),
     line_spacing: floatOr(properties.line_spacing, 0, 'line_spacing'),

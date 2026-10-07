@@ -364,6 +364,7 @@ export function TextRun({
       transparency?.depthWrite,
       transparency?.alphaTest,
       transparency?.alphaHash,
+      transparency?.blending,
       outlineColor?.r,
       outlineColor?.g,
       outlineColor?.b,

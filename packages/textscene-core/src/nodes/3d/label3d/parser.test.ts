@@ -149,6 +149,13 @@ describe('Label3D Parser', () => {
       expect(absent.alpha_scissor_threshold).toBe(0.5);
     });
 
+    it('reads transparency, defaulting to opaque', () => {
+      const authored = parseLabel3D(heading('Label3D', { name: 'Label' }), { transparency: '0.4' });
+      const absent = parseLabel3D(heading('Label3D', { name: 'Label' }), {});
+      expect(authored.transparency).toBe(0.4);
+      expect(absent.transparency).toBe(0);
+    });
+
     it('falls back to the Godot default on garbage (never NaN) and warns', () => {
       const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         pixel_size: 'garbage',

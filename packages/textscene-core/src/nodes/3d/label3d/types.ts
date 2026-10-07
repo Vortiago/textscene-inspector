@@ -28,6 +28,9 @@ export interface Label3DProperties extends Node3DProperties {
   /** Outline colour (default black). */
   outline_modulate: Color;
 
+  /** `GeometryInstance3D.transparency` of both surfaces (default 0, opaque). */
+  transparency: number;
+
   /** Visible from behind (Godot default true → THREE.DoubleSide). */
   double_sided: boolean;
 

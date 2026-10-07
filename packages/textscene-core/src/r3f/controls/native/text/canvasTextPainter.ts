@@ -192,6 +192,7 @@ export interface CanvasTextTransparency {
   depthWrite: boolean;
   alphaTest: number;
   alphaHash: boolean;
+  blending: THREE.Blending;
 }
 
 export interface CanvasTextMaterialOptions extends Partial<CanvasTextTransparency> {
@@ -235,6 +236,7 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     depthWrite = false,
     alphaTest = 0,
     alphaHash = false,
+    blending = THREE.NormalBlending,
   } = options;
   const material = new THREE.MeshBasicMaterial({
     map,
@@ -244,6 +246,7 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     depthTest,
     alphaTest,
     alphaHash,
+    blending,
     // Unlike `defines` below, `forceSinglePass` IS a property `THREE.Material`'s
     // constructor declares, so `setValues` assigns it from this object.
     ...canvasItemFacing(side),

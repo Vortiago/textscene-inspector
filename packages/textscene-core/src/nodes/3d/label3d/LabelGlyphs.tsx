@@ -14,6 +14,8 @@ import {
 } from '../../../r3f/controls/native/text/sceneFontLoader';
 import type { CanvasTextTransparency } from '../../../r3f/controls/native/text/canvasTextPainter';
 import { alphaCutSurface, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
+import { instanceSurfaceAlpha } from '../../../r3f/materials/instanceTransparency';
+import type { Color } from '../../../utils/colorParser';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
 import { AlphaCutMode, TextureFilter, type Label3DProperties } from './types';
@@ -92,13 +94,27 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
     transparentFlag: NO_TRANSPARENT_FLAG,
   });
   // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the
-  // blended pass is transparent.
+  // blended pass is transparent. The instance's `transparency` can move both
+  // surfaces there, and scales each surface's alpha by one instance alpha.
+  const { opacity: instanceAlpha, ...surfaceAlpha } = instanceSurfaceAlpha(
+    {
+      opacity: 1,
+      transparent: cut.blended,
+      depthWrite: cut.depthWrite,
+      blending: THREE.NormalBlending,
+      // `get_material_for_2d` keeps DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth.
+      alphaPassDepthWrite: false,
+      opaqueAfterCut: cut.opaqueAfterCut,
+    },
+    properties.transparency
+  );
   const transparency: CanvasTextTransparency = {
-    transparent: cut.blended,
-    depthWrite: cut.depthWrite,
+    ...surfaceAlpha,
     alphaTest: cut.alphaTest,
     alphaHash: cut.alphaHash,
   };
+  const fillTint = withAlphaScaled(properties.modulate, instanceAlpha);
+  const outlineTint = withAlphaScaled(properties.outline_modulate, instanceAlpha);
 
   // `material.h:172-177`: the enum alternates NEAREST, LINEAR, so the even
   // members are the nearest ones whatever their mipmap/anisotropy suffix.
@@ -122,7 +138,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
                 <TextRun
                   layout={lineLayouts[index]!}
                   fontSizePx={properties.font_size}
-                  tint={properties.outline_modulate}
+                  tint={outlineTint}
                   strokeWidthPx={strokeWidthPx}
                   depthTest={depthTest}
                   side={side}
@@ -137,7 +153,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
               <TextRun
                 layout={lineLayouts[index]!}
                 fontSizePx={properties.font_size}
-                tint={properties.modulate}
+                tint={fillTint}
                 depthTest={depthTest}
                 side={side}
                 renderOrder={fillSurface.renderOrder}
@@ -151,4 +167,9 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
       })}
     </>
   );
+}
+
+/** `TextRun` reads a tint's alpha as the surface opacity, so the instance alpha scales it there. */
+function withAlphaScaled(tint: Color, alpha: number): Color {
+  return { ...tint, a: tint.a * alpha };
 }
