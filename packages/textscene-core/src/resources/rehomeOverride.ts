@@ -22,7 +22,7 @@ const COLLISION_SUFFIX = ' (outer)';
 /**
  * `raw`, authored against `from`, rewritten to resolve against the returned scope, which is
  * `into` plus the resources `raw` reaches in `from`, its SubResources' own references included.
- * An id `from` lacks resolves to nothing, as Godot's loader gives it nothing.
+ * An id `from` lacks resolves to nothing. Godot refuses such a file (`resource_format_text.cpp:112`, `:135-137`).
  */
 export function rehomeOverride(
   raw: Record<string, string>,

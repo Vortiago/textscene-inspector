@@ -9,7 +9,7 @@ An Instance root merge (ADR-0013) builds one node from two files. The instance n
 properties and a host override of a sub-scene node (`[node name="Body" parent="Pivot"]`)
 were written against the host's resource tables. The sub-scene node's own properties, and
 its children, were written against the sub-scene's. Godot's loader resolves each property
-in the file that holds it (`resource_format_text.cpp:125-151`), and each file numbers its
+in the file that holds it, against that file's own tables (`resource_format_text.cpp:103-151`), and each file numbers its
 ids from its own start, so the host's `ExtResource("3")` and the sub-scene's are unrelated.
 
 A component resolves all of a node's properties against one pool: the
@@ -40,5 +40,6 @@ the node alike. A node the host adds inside the sub-scene carries the host's sco
 - The scope tag is render-time state of the live scene tree. The parse tree (`TscnNode`),
   which the linter reads, never carries it.
 - A colliding id shows in the inspector with a suffix, for example `ExtResource("3 (outer)")`.
-- An id the override names but its file lacks resolves to nothing, as in Godot. It never
-  falls through to the sub-scene's resource of the same id.
+- An id the override names but its file lacks resolves to nothing. Godot refuses the file
+  (`resource_format_text.cpp:112`, `:135-137`). The id never falls through to the
+  sub-scene's resource of the same id.
