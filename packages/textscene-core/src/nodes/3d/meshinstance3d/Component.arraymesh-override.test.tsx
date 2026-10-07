@@ -83,7 +83,7 @@ const MESH_EXT: TscnExternalResource[] = [
 async function renderSettled(
   loader: ResourceLoader,
   node: TscnNode,
-  internalResources: TscnInternalResource[] = []
+  internalResources?: TscnInternalResource[]
 ): Promise<THREE.MeshStandardMaterial[]> {
   const tree = meshInstanceTree({ loader, node, internalResources, externalResources: MESH_EXT });
   const renderer = await ReactThreeTestRenderer.create(tree);

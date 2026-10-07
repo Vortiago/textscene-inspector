@@ -1,14 +1,12 @@
 /**
- * One MeshInstance3D inside the two providers it reads, for a component test, and
+ * One MeshInstance3D inside the scene providers, for a component test, and
  * the materials its draw groups end up with.
  */
 
 import type * as THREE from 'three';
-import type { ReactElement } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshInstance3D } from '../Component';
-import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { SceneStack } from '../../../../r3f/testing/SceneStack';
 import type { ResourceLoader } from '../../../../resources/ResourceLoader';
 import { findMesh } from '../../testing/reactThreeTestInstance';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
@@ -16,7 +14,7 @@ import type { MeshInstance3DProperties } from '../types';
 
 type TestRenderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
-export interface MeshInstanceScene {
+interface MeshInstanceScene {
   loader: ResourceLoader;
   node: TscnNode;
   internalResources?: readonly TscnInternalResource[];
@@ -24,7 +22,7 @@ export interface MeshInstanceScene {
 }
 
 /** The node's mesh and the two material overrides it carries. */
-export interface MeshInstanceSpec {
+interface MeshInstanceSpec {
   mesh: string;
   materialOverride?: string;
   surfaceOverrides?: ReadonlyMap<number, string>;
@@ -41,21 +39,11 @@ export function meshInstanceNode({ mesh, materialOverride, surfaceOverrides }: M
 }
 
 /** The element tree, for a test that re-renders it with `renderer.update`. */
-export function meshInstanceTree({
-  loader,
-  node,
-  internalResources = [],
-  externalResources = [],
-}: MeshInstanceScene): ReactElement {
+export function meshInstanceTree({ loader, node, internalResources, externalResources }: MeshInstanceScene) {
   return (
-    <ResourceLoaderProvider loader={loader}>
-      <SceneResourcesProvider
-        internalResources={[...internalResources]}
-        externalResources={[...externalResources]}
-      >
-        <MeshInstance3D node={node} />
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
+    <SceneStack loader={loader} scene={{ internalResources, externalResources }}>
+      <MeshInstance3D node={node} />
+    </SceneStack>
   );
 }
 

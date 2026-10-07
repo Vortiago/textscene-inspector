@@ -19,6 +19,8 @@ const MATERIALS: TscnInternalResource[] = [
   { id: 'Mat_missing', type: 'StandardMaterial3D', data: { albedo_texture: 'ExtResource("1_tex")' } },
 ];
 
+const MAGENTA = 0xff00ff;
+
 describe('<MeshInstance3D> ArrayMesh surface with a missing texture', () => {
   it("draws the magenta placeholder on the surface whose own material's texture is missing", async () => {
     const fake = createFakeResourceLoader();
@@ -31,6 +33,6 @@ describe('<MeshInstance3D> ArrayMesh surface with a missing texture', () => {
       externalResources: EXTERNALS,
     });
 
-    expect(surfaceMaterials(renderer).map((m) => m.color.getHex())).toEqual([0xff0000, 0xff00ff]);
+    expect(surfaceMaterials(renderer).map((m) => m.color.getHex())).toEqual([0xff0000, MAGENTA]);
   });
 });

@@ -46,9 +46,12 @@ export function GlbSurfaceMaterialOverride({
   // sub-resource whose size a triplanar material could tile against.
   const { maps, isUnresolved } = useMaterialTextures(scalars, ready);
   const isAbsent = loaded.status === 'absent';
-  const derivedBag = useMemo(() => standardMaterialBag(scalars, textureSlotsFromMaps(maps)), [scalars, maps]);
+  const derivedBag = useMemo(
+    () => (isUnresolved ? null : standardMaterialBag(scalars, textureSlotsFromMaps(maps))),
+    [isUnresolved, scalars, maps]
+  );
   // The constant bag while unresolved, so a late map leaves the placeholder material as it is.
-  const bag = isUnresolved ? MISSING_TEXTURE_MATERIAL : derivedBag;
+  const bag = derivedBag ?? MISSING_TEXTURE_MATERIAL;
   const material = useMemo(() => (isAbsent ? null : materialFromBag(bag)), [isAbsent, bag]);
   useEffect(() => () => material?.dispose(), [material]);
   useGlbMaterialSwap(target, material, replaces);
