@@ -11,7 +11,7 @@ import { Node3D } from '../../base/node3d/Component';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
-import type { MaterialSource } from '../../../r3f/materials/materialSource';
+import { fileMaterialSources, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { useMaterialScalars } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
@@ -133,7 +133,7 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const meshResult = useResource<ArrayMeshResource>(item?.meshPath ?? '', 'arraymesh');
   // The surface material addresses only become known once the ArrayMesh resolves.
   const materialPaths = meshResult.value?.materialPaths;
-  const materials = useMemo(() => surfaceMaterials(materialPaths ?? []), [materialPaths]);
+  const materials = useMemo(() => fileMaterialSources(materialPaths ?? []), [materialPaths]);
 
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged
@@ -165,20 +165,13 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
       matrices={matrices}
       shadow={shadow}
       surface={0}
-      isBatchable
     />
   );
 }
 
-/** One source per draw group, and one for Godot's default surface when the mesh declares none. */
-function surfaceMaterials(materialPaths: readonly (string | null)[]): (MaterialSource | undefined)[] {
-  if (materialPaths.length === 0) return [undefined];
-  return materialPaths.map((path) => (path ? { kind: 'file', path } : undefined));
-}
-
 interface TileProps {
   geometry: THREE.BufferGeometry;
-  /** One per draw group. Undefined while the ArrayMesh loads or when a surface declares none. */
+  /** One per draw group, empty when the mesh declares none. Undefined for a surface with no material. */
   materials: readonly (MaterialSource | undefined)[];
   shadow: ShadowCastingEffects;
 }
@@ -194,25 +187,20 @@ interface ItemTilesProps extends TileProps {
  */
 function SurfaceBatchScan({
   surface,
-  isBatchable,
+  isBatchable = true,
   ...props
-}: ItemTilesProps & { surface: number; isBatchable: boolean }) {
+}: ItemTilesProps & { surface: number; isBatchable?: boolean }) {
   const scalars = useMaterialScalars(readyMaterial(useMaterial(props.materials[surface])));
   const isBatchableSoFar = isBatchable && drawsAsOneBatch(surfaceBillboard(scalars));
   if (surface + 1 < props.materials.length) {
     return <SurfaceBatchScan {...props} surface={surface + 1} isBatchable={isBatchableSoFar} />;
   }
   if (isBatchableSoFar) return <BatchedTiles {...props} />;
+  const { matrices, ...tile } = props;
   return (
     <>
-      {props.matrices.map((m, i) => (
-        <CellTile
-          key={i}
-          geometry={props.geometry}
-          materials={props.materials}
-          matrix={m}
-          shadow={props.shadow}
-        />
+      {matrices.map((m, i) => (
+        <CellTile key={i} {...tile} matrix={m} />
       ))}
     </>
   );

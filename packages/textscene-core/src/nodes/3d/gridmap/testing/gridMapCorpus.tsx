@@ -41,20 +41,22 @@ function tileMesh(
   secondMaterialLines: string | null,
   subResources: string
 ): string {
-  const firstMaterial =
-    materialLines === null ? '' : surfaceMaterial('StandardMaterial3D_tile', materialLines);
-  const secondMaterial =
-    secondMaterialLines === null ? '' : surfaceMaterial('StandardMaterial3D_second', secondMaterialLines);
   const first = {
     material: materialLines === null ? null : 'SubResource("StandardMaterial3D_tile")',
     name: 'tile',
   };
-  const second = { material: 'SubResource("StandardMaterial3D_second")', name: 'second' };
-  const surfaces = wallQuadSurfaces(first, ...(secondMaterialLines === null ? [] : [second]));
+  const second =
+    secondMaterialLines === null
+      ? { text: '', surfaces: [] }
+      : {
+          text: surfaceMaterial('StandardMaterial3D_second', secondMaterialLines),
+          surfaces: [{ material: 'SubResource("StandardMaterial3D_second")', name: 'second' }],
+        };
+  const firstText = materialLines === null ? '' : surfaceMaterial('StandardMaterial3D_tile', materialLines);
   return `[gd_resource type="ArrayMesh" format=4]
 
-${subResources}${firstMaterial}${secondMaterial}[resource]
-_surfaces = ${surfaces}
+${subResources}${firstText}${second.text}[resource]
+_surfaces = ${wallQuadSurfaces(first, ...second.surfaces)}
 blend_shape_mode = 0
 `;
 }

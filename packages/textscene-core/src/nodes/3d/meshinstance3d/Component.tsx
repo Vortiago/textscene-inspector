@@ -21,7 +21,11 @@ import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
-import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
+import {
+  fileMaterialSources,
+  resolveMaterialSource,
+  type MaterialSource,
+} from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import {
   SurfaceMaterialSlot,
@@ -331,7 +335,7 @@ const UNRESOLVED_MESH = (
 );
 
 /**
- * An ArrayMesh's geometry plus one `<SurfaceMaterialSlot>` per draw group, so one
+ * An ArrayMesh's geometry plus a `<SurfaceMaterialSlots>` over its draw groups, so one
  * `useResource` per component serves any surface count. Godot sizes the override
  * array to the surface count (`scene/3d/mesh_instance_3d.cpp:68,407`), so the draw
  * groups set the slot count and an extra override is dropped.
@@ -363,7 +367,7 @@ function withFileMaterials(mesh: ArrayMeshResource): SurfacedMesh {
   return {
     geometry: mesh.geometry,
     surfaceIndices: mesh.surfaceIndices,
-    materials: mesh.materialPaths.map((path) => (path ? { kind: 'file', path } : undefined)),
+    materials: fileMaterialSources(mesh.materialPaths),
   };
 }
 
