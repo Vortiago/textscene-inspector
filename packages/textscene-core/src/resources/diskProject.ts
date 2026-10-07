@@ -13,7 +13,6 @@ import { resolve } from 'node:path';
 import type { ResourceProvider } from './ResourceProvider.js';
 import { listScannedFiles, type DirectoryEntry } from './projectListing.js';
 import {
-  findProjectRoot,
   findResRoot,
   isWithinRoot,
   parentDir,
@@ -145,21 +144,22 @@ export function providerForRoot(root: string): ResourceProvider {
   return memo(providerByRoot, root, fileProvider);
 }
 
-/** The nearest directory at or above `dir` that holds `project.godot`, or null. */
-export function projectRootForDir(dir: string): Promise<string | null> {
-  // No stop directory: a Node host has no workspace to bound the walk, so it climbs to the filesystem root.
-  return findProjectRoot(dir, parentDir, () => false, hasProjectFile);
+/**
+ * The `res://` root of a scene in `dir`, by core's `findResRoot`, with `workspace` bounding the fallback. A null
+ * workspace allows no fallback. The walk has no stop directory: a Node host's watchers see past the workspace.
+ */
+export function resRootForDir(dir: string, workspace: string | null): Promise<string | null> {
+  const isInWorkspace = (candidate: string) =>
+    workspace !== null && isWithinRoot(resolve(workspace), candidate, pathCaseOf(process.platform));
+  return findResRoot(dir, parentDir, () => false, hasProjectFile, isInWorkspace);
 }
 
-/** The `res://` root of the scene at `file`, by core's `findResRoot`, with `workspace` bounding the fallback. */
+/** The `res://` root of the scene at `file`, as `resRootForDir` finds it for the file's directory. */
 export function resRootForFile(file: string, workspace: string | null): Promise<string | null> {
   // `parentDir`, not `dirname`: every directory of the walk is then spelled with forward slashes, so a Windows root
   // found at the first step and at a later one is one key, and one provider.
   const dir = parentDir(resolve(file));
-  if (dir === null) return Promise.resolve(null);
-  const isInWorkspace = (candidate: string) =>
-    workspace !== null && isWithinRoot(resolve(workspace), candidate, pathCaseOf(process.platform));
-  return findResRoot(dir, parentDir, () => false, hasProjectFile, isInWorkspace);
+  return dir === null ? Promise.resolve(null) : resRootForDir(dir, workspace);
 }
 
 /** The provider for the `res://` root of the scene at `file`, as `resRootForFile` finds it, or null for no root. */

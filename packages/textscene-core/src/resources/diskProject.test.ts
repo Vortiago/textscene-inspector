@@ -9,9 +9,9 @@ import {
   forgetDiskState,
   isFile,
   listProjectPaths,
-  projectRootForDir,
   providerForRoot,
   resProviderForFile,
+  resRootForDir,
   resRootForFile,
 } from './diskProject';
 
@@ -68,13 +68,17 @@ describe('resRootForFile', () => {
   });
 });
 
-describe('projectRootForDir', () => {
+describe('resRootForDir', () => {
   it('stops at the directory itself when it holds project.godot', async () => {
     const own = join(tempDir, 'own', 'inner');
     mkdirSync(own, { recursive: true });
     writeFileSync(join(own, 'project.godot'), 'config_version=5\n');
 
-    expect(await projectRootForDir(own)).toBe(own.replace(/\\/g, '/'));
+    expect(await resRootForDir(own, null)).toBe(own.replace(/\\/g, '/'));
+  });
+
+  it('gives null for a directory outside every project with no workspace', async () => {
+    expect(await resRootForDir(join(tempDir, 'loose'), null)).toBeNull();
   });
 });
 
@@ -279,11 +283,11 @@ describe('forgetDiskState', () => {
     const dir = freshDir();
     mkdirSync(join(dir, 'scenes'));
     try {
-      await projectRootForDir(join(dir, 'scenes'));
+      await resRootForDir(join(dir, 'scenes'), null);
       writeFileSync(join(dir, 'project.godot'), 'config_version=5\n');
       forgetDiskState();
 
-      expect(await projectRootForDir(join(dir, 'scenes'))).toBe(dir.replace(/\\/g, '/'));
+      expect(await resRootForDir(join(dir, 'scenes'), null)).toBe(dir.replace(/\\/g, '/'));
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

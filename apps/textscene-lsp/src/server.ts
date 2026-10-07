@@ -51,8 +51,8 @@ import {
   forgetDiskState,
   isFile,
   listProjectPaths,
-  projectRootForDir,
   providerForRoot,
+  resRootForDir,
   resRootForFile,
 } from '@textscene/core/resources/diskProject';
 import { resolveResPath } from '@textscene/core/resources/resPath';
@@ -118,7 +118,7 @@ function rootForUri(uri: string): Promise<string | null> {
 function uncachedResRootOf(uri: string): Promise<string | null> {
   const path = filePathOf(uri);
   if (path !== null) return resRootForFile(path, workspaceRoot);
-  if (workspaceRoot !== null) return projectRootForDir(workspaceRoot);
+  if (workspaceRoot !== null) return resRootForDir(workspaceRoot, null);
   return Promise.resolve(null);
 }
 
