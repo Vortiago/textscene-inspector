@@ -16,11 +16,8 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
 import { createTextureFromBuffer } from '../../../resources/formats/image/textureProcessing';
-import {
-  CanvasLighting2DProvider,
-  LIGHT_LAYER,
-  LIGHT_SEED_LAYER,
-} from '../../../r3f/lighting2d/CanvasLighting2D';
+import { CanvasLighting2DProvider } from '../../../r3f/lighting2d/CanvasLighting2D';
+import { LIGHT_PASS_LAYER } from '../../../r3f/lighting2d/lightPassLayers';
 
 // happy-dom never settles a real image load, so the decode hands back a bare
 // texture. Everything after it is the real `createTextureFromBuffer`.
@@ -75,12 +72,10 @@ type Rendered = Awaited<ReturnType<typeof render>>;
 
 /** The cookie quad, skipping the accumulator's own seed quad. */
 function lightMesh(r: Rendered): THREE.Mesh | undefined {
-  const seedLayer = new THREE.Layers();
-  seedLayer.set(LIGHT_SEED_LAYER);
   return r.scene
     .findAllByType('Mesh')
     .map((o) => o.instance as THREE.Mesh)
-    .find((m) => !m.layers.test(seedLayer));
+    .find((m) => !(m.material as THREE.ShaderMaterial).uniforms?.uSeed);
 }
 
 function lightMaterial(r: Rendered): THREE.ShaderMaterial {
@@ -90,16 +85,10 @@ function lightMaterial(r: Rendered): THREE.ShaderMaterial {
 }
 
 describe('PointLight2D Component', () => {
-  it('emits the cookie quad on the light layer, so the visible pass never draws it', async () => {
-    const r = await render(node());
-    const mesh = lightMesh(r);
-    expect(mesh).toBeDefined();
-    // A camera whose mask is the default layer 0 cannot see it; only the
-    // accumulation pre-pass, which points the camera at this layer alone, can.
-    expect(mesh!.layers.test(new THREE.Layers())).toBe(false);
-    const lightOnly = new THREE.Layers();
-    lightOnly.set(LIGHT_LAYER);
-    expect(mesh!.layers.test(lightOnly)).toBe(true);
+  it('emits the cookie quad on the light pass layer alone, so the visible pass never draws it', async () => {
+    // A camera whose mask is the default layer 0 cannot see it. Only the accumulation pre-pass,
+    // which points the camera at this layer alone, can.
+    expect(lightMesh(await render(node()))!.layers.mask).toBe(1 << LIGHT_PASS_LAYER);
   });
 
   it('accumulates ADD as src×srcAlpha + dst, matching light_blend_compute', async () => {

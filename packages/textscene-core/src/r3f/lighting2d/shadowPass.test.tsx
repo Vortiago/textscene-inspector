@@ -11,15 +11,9 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../parser/TscnParser';
 import { NodeDispatcher } from '../NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import type { ReactNode } from 'react';
-import {
-  CanvasLighting2DProvider,
-  LIGHT_LAYER,
-  SHADOW_TINT_LAYER,
-  useCanvasLighting2D,
-  type CanvasLightClass,
-} from './CanvasLighting2D';
-import { lightCullKeyId } from './lightCullKey';
+import { CanvasLighting2DProvider } from './CanvasLighting2D';
+import { LIGHT_PASS_LAYER } from './lightPassLayers';
+import { itemUniforms, ownerName, recordLightPass, type RecordedDraw } from './testing/lightPassProbe';
 import { litQuadRenderOrder, shadowStencilRef, shadowVolumeRenderOrder } from './ShadowVolumeMask';
 import { SceneStack } from '../testing/SceneStack';
 import '../nodes'; // side-effect: registers every node's r3f component
@@ -53,6 +47,15 @@ shadow_enabled = true
 ${extra}`;
 }
 
+/** A second full-canvas surface, for the items a light_mask other than the default selects. */
+function surface(name: string, lightMask: number): string {
+  return `
+[node name="${name}" type="Polygon2D" parent="."]
+light_mask = ${lightMask}
+color = Color(0.25, 0.25, 0.25, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)`;
+}
+
 function caster(name: string, x: number, extra = ''): string {
   return `
 [node name="${name}" type="LightOccluder2D" parent="."]
@@ -61,7 +64,7 @@ ${extra}occluder = SubResource("bar")
 `;
 }
 
-async function render(tscn: string, probe?: ReactNode) {
+async function render(tscn: string) {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const cookie = new THREE.Texture();
@@ -77,27 +80,13 @@ async function render(tscn: string, probe?: ReactNode) {
     <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
       <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
         <NodeDispatcher nodes={parsed.nodes} />
-        {probe}
       </CanvasLighting2DProvider>
     </SceneStack>
   );
   // No frame is advanced: the world matrices are sampled in a layout effect
-  // as well, so a still tree settles inside React's own commit loop. Driving
-  // the loop here would also run the accumulation pre-pass, which needs a real
-  // GL context that happy-dom does not have.
+  // as well, so a still tree settles inside React's own commit loop.
   await new Promise<void>((resolve) => setTimeout(resolve, 10));
   return renderer;
-}
-
-/** The classes the provider settled on, which the lights read. */
-async function renderClasses(tscn: string): Promise<readonly CanvasLightClass[]> {
-  let latest: readonly CanvasLightClass[] = [];
-  function Probe() {
-    latest = useCanvasLighting2D().classes;
-    return null;
-  }
-  await render(tscn, <Probe />);
-  return latest;
 }
 
 type Rendered = Awaited<ReturnType<typeof render>>;
@@ -119,20 +108,26 @@ function lightQuads(renderer: Rendered): THREE.Mesh[] {
   return meshes(renderer).filter((mesh) => !!(mesh.material as THREE.ShaderMaterial).uniforms?.uCookie);
 }
 
+/** The meshes the pass draws into the buffer `uniform` of the item named `name` binds. */
+async function drawnFor(renderer: Rendered, name: string, uniform: string): Promise<THREE.Mesh[]> {
+  const texture = itemUniforms(renderer, name)[uniform]!.value as THREE.Texture;
+  const draws: RecordedDraw[] = await recordLightPass(renderer);
+  return (
+    draws.find((draw) => draw.texture === texture)?.drawn.filter((mesh) => ownerName(mesh) === 'Lamp') ?? []
+  );
+}
+
 /** The lit halves: the quads that carry the light's own colour. */
 function litQuads(renderer: Rendered): THREE.Mesh[] {
   return lightQuads(renderer).filter((mesh) => !!(mesh.material as THREE.ShaderMaterial).uniforms?.uColor);
 }
 
 describe('a shadow-enabled light with an occluder in range', () => {
-  it('stamps one stencil mask on the light class layer', async () => {
+  it('stamps one stencil mask on the light pass layer alone', async () => {
     const renderer = await render(scene(`${lamp('Lamp', 400)}${caster('Caster', 576)}`));
     const masks = maskMeshes(renderer);
     expect(masks).toHaveLength(1);
-
-    const probe = new THREE.Layers();
-    probe.set(LIGHT_LAYER);
-    expect(masks[0]!.layers.test(probe)).toBe(true);
+    expect(masks[0]!.layers.mask).toBe(1 << LIGHT_PASS_LAYER);
   });
 
   it('draws the mask immediately before the quad it belongs to', async () => {
@@ -256,7 +251,7 @@ describe('two shadowed lights in one pass', () => {
     }
   });
 
-  it('numbers the lights densely from zero within their class', async () => {
+  it('numbers the lights densely from zero on the canvas', async () => {
     const renderer = await render(TWO);
     const orders = litQuads(renderer)
       .map((quad) => quad.renderOrder)
@@ -297,54 +292,29 @@ describe('shadow_color', () => {
     expect(tint?.stencilRef).toBe(shadowStencilRef(0));
   });
 
-  it('gives the tint pass to the class that tints, and only that one', async () => {
-    // The albedo-free accumulation is allocated per class, so only the tinting
-    // light's class runs the extra pass. `compareLightCullKeys` sorts the two
-    // `range_item_cull_mask` classes by tuple: mask 1 is class 0, mask 2 class 1.
-    const renderer = await render(
-      scene(
-        `${lamp('Plain', 300, 'range_item_cull_mask = 1\n')}` +
-          `${lamp('Tinting', 700, `range_item_cull_mask = 2\nshadow_item_cull_mask = 2\n${TINT}`)}` +
-          `${caster('Caster', 500, 'occluder_light_mask = 3\n')}`
-      )
-    );
+  /** Surface (mask 1) takes Plain alone. Lit2 (mask 2) takes Tinting, which shadows it. */
+  const PLAIN_AND_TINTING = scene(
+    `${surface('Lit2', 2)}${lamp('Plain', 300, 'range_item_cull_mask = 1\n')}` +
+      `${lamp('Lamp', 700, `range_item_cull_mask = 2\nshadow_item_cull_mask = 2\n${TINT}`)}` +
+      `${caster('Caster', 500, 'occluder_light_mask = 3\n')}`
+  );
 
-    // A tint quad has `uShadowColor` but no `uColor`: it carries no light term.
-    const tintQuads = lightQuads(renderer).filter((mesh) => {
-      const uniforms = (mesh.material as THREE.ShaderMaterial).uniforms;
-      return !!uniforms?.uShadowColor && !uniforms?.uColor;
-    });
-    expect(tintQuads).toHaveLength(1);
-
-    // It lands on its own class's tint layer, class 1. Class 0's would draw
-    // into the wrong accumulator.
-    const onClassOne = new THREE.Layers();
-    onClassOne.set(SHADOW_TINT_LAYER + 1);
-    expect(tintQuads[0]!.layers.test(onClassOne)).toBe(true);
+  it('draws the volumes and the tint quad into the shadow_color buffer of the list it shadows', async () => {
+    const renderer = await render(PLAIN_AND_TINTING);
+    const drawn = await drawnFor(renderer, 'Lit2', 'uShadowTint');
+    expect(drawn.map((mesh) => (mesh.material as THREE.Material).stencilFunc)).toEqual([
+      THREE.AlwaysStencilFunc,
+      THREE.EqualStencilFunc,
+    ]);
   });
 
-  it('publishes a tint LAYER for exactly the classes that got a tint BUFFER', async () => {
-    // A `shadow_color` quad on a layer whose pass never runs paints an untinted
-    // shadow. Asserted on the classes, since the node already withholds the
-    // layer from a light that does not tint and the quads look the same.
-    const classes = await renderClasses(
-      scene(
-        `${lamp('Plain', 300, 'range_item_cull_mask = 1\n')}` +
-          `${lamp('Tinting', 700, `range_item_cull_mask = 2\nshadow_item_cull_mask = 2\n${TINT}`)}` +
-          `${caster('Caster', 500, 'occluder_light_mask = 3\n')}`
-      )
-    );
-
-    expect(classes).toHaveLength(2);
-    for (const lightClass of classes) {
-      expect(lightClass.shadowTintLayer !== undefined, `class ${lightCullKeyId(lightClass.key)}`).toBe(
-        lightClass.shadowTintBuffer !== null
-      );
-    }
-    // And it is the mask-2 class that tints, not merely one of the two.
-    const tinting = classes.filter((c) => c.shadowTintLayer !== undefined);
-    expect(tinting).toHaveLength(1);
-    expect(tinting[0]!.key.itemCullMask).toBe(2);
+  it('gives a list no tinting light shadows no shadow_color buffer', async () => {
+    // A `shadow_color` buffer no pass draws would read as black, the same as none, so the
+    // binding is checked against the draws.
+    const renderer = await render(PLAIN_AND_TINTING);
+    const tint = itemUniforms(renderer, 'Surface').uShadowTint!.value as THREE.Texture;
+    const draws = await recordLightPass(renderer);
+    expect(draws.some((draw) => draw.texture === tint)).toBe(false);
   });
 
   it('draws no tint quad at the transparent default', async () => {
@@ -457,42 +427,38 @@ describe('shadow_filter selects the shadow mechanism', () => {
 /**
  * `canvas.glsl:806`: a positional light shadows only the items whose `light_mask` meets its
  * `shadow_item_cull_mask` (`renderer_canvas_render_rd.cpp:2374`). The rest take it unshadowed, so
- * the light draws a second, shadowless quad into the class those items read.
+ * the pass draws the light's shadowless quad into the lists of those items.
  */
 describe('shadow_item_cull_mask picks the items that take the shadow', () => {
-  /** The Surface keeps light_mask 1. The light and the occluder agree on mask 2. */
+  /** Surface keeps light_mask 1 and misses the shadow. Lit2 meets it, as the occluder does. */
   const ESCAPING = scene(
-    `${lamp('Lamp', 400, 'range_item_cull_mask = 3\nshadow_item_cull_mask = 2\n')}` +
+    `${surface('Lit2', 2)}${lamp('Lamp', 400, 'range_item_cull_mask = 3\nshadow_item_cull_mask = 2\n')}` +
       `${caster('Caster', 576, 'occluder_light_mask = 2\n')}`
   );
 
-  it('splits the light into a shadowed and an unshadowed class', async () => {
-    const classes = await renderClasses(ESCAPING);
-    expect(classes.map((c) => c.key.shadowHalf)).toEqual([
-      { mask: 2, receives: true },
-      { mask: 2, receives: false },
+  it('draws the volumes and the stencilled quad for an item that meets the mask', async () => {
+    const renderer = await render(ESCAPING);
+    const drawn = await drawnFor(renderer, 'Lit2', 'uLightList');
+    expect(drawn.map((mesh) => (mesh.material as THREE.Material).stencilFunc)).toEqual([
+      THREE.AlwaysStencilFunc,
+      THREE.NotEqualStencilFunc,
     ]);
   });
 
-  it('draws the unshadowed half with no stencil test on its own class layer', async () => {
+  it('draws only the quad without a stencil test for an item that misses the mask', async () => {
     const renderer = await render(ESCAPING);
-    const quads = litQuads(renderer);
-    expect(quads).toHaveLength(2);
-    const plain = quads.find((quad) => !(quad.material as THREE.Material).stencilWrite)!;
-    const onClassOne = new THREE.Layers();
-    onClassOne.set(LIGHT_LAYER + 1);
-    expect(plain.layers.test(onClassOne)).toBe(true);
+    const drawn = await drawnFor(renderer, 'Surface', 'uLightList');
+    expect(drawn.map((mesh) => (mesh.material as THREE.Material).stencilWrite)).toEqual([false]);
   });
 
-  it('keeps one class while every item the light reaches takes the shadow', async () => {
-    const classes = await renderClasses(
+  it('builds no unshadowed quad while every item the light reaches takes the shadow', async () => {
+    const renderer = await render(
       scene(
         `${lamp('Lamp', 400, 'range_item_cull_mask = 2\nshadow_item_cull_mask = 2\n')}` +
           `${caster('Caster', 576, 'occluder_light_mask = 2\n')}`
       )
     );
-    expect(classes).toHaveLength(1);
-    expect(classes[0]!.key.shadowHalf).toBeNull();
+    expect(litQuads(renderer)).toHaveLength(1);
   });
 
   it('casts nothing while no item the light reaches meets the shadow mask', async () => {
@@ -506,10 +472,10 @@ describe('shadow_item_cull_mask picks the items that take the shadow', () => {
     expect(litQuads(renderer)).toHaveLength(1);
   });
 
-  it('keeps one class while the light has no occluder to cast from', async () => {
-    const classes = await renderClasses(
+  it('builds no unshadowed quad while the light has no occluder to cast from', async () => {
+    const renderer = await render(
       scene(lamp('Lamp', 400, 'range_item_cull_mask = 3\nshadow_item_cull_mask = 2\n'))
     );
-    expect(classes).toHaveLength(1);
+    expect(litQuads(renderer)).toHaveLength(1);
   });
 });

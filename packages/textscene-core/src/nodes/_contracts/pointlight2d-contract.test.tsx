@@ -19,7 +19,8 @@ import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry';
 import { NodeDispatcher } from '../../r3f/NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { godotColorToLinear } from '../../r3f/godotColor';
-import { CanvasLighting2DProvider, LIGHT_LAYER } from '../../r3f/lighting2d/CanvasLighting2D';
+import { CanvasLighting2DProvider } from '../../r3f/lighting2d/CanvasLighting2D';
+import { LIGHT_PASS_LAYER } from '../../r3f/lighting2d/lightPassLayers';
 import { SceneStack } from '../../r3f/testing/SceneStack';
 import { errorsOf } from '../../linter/testing/tierLists';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
@@ -67,17 +68,17 @@ async function renderScene(tscn: string) {
 type TestRenderer = Awaited<ReturnType<typeof renderScene>>;
 
 /**
- * Every mesh emitted as a LIGHT: one that sits on the light layer, so the
- * visible pass cannot draw it and the accumulation pre-pass sees nothing else.
- * That layer is the whole difference between a light and a sprite.
+ * Every mesh emitted as a LIGHT: one that sits on the light pass layer, so the visible pass
+ * cannot draw it, apart from the pass's own seed. That layer is the whole difference between a
+ * light and a sprite.
  */
 function lightMeshes(renderer: TestRenderer): THREE.Mesh[] {
   const lightLayer = new THREE.Layers();
-  lightLayer.set(LIGHT_LAYER);
+  lightLayer.set(LIGHT_PASS_LAYER);
   return renderer.scene
     .findAllByType('Mesh')
     .map((o) => o.instance as THREE.Mesh)
-    .filter((m) => m.layers.test(lightLayer));
+    .filter((m) => m.layers.test(lightLayer) && !(m.material as THREE.ShaderMaterial).uniforms?.uSeed);
 }
 
 /** The cookie-quad materials of those meshes. */

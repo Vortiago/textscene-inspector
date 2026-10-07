@@ -69,6 +69,12 @@ export const CANVAS_2D_SCENES = [
   // Godot 4.6.3 at x=800: 63 on the receiving panel, 132 on the escaping one, which
   // shadow_item_cull_mask leaves lit.
   { name: 'pointlight2d-shadow-item-mask', file: 'unit-pointlight2d-shadow-item-mask.tscn', mode: '2d' },
+  // A MIX light over an ADD light of another mask on one item mixes from what the ADD light left.
+  // Godot 4.6.3 at x=575, where both reach: rgb(52,68,126).
+  { name: 'pointlight2d-mix-order', file: 'unit-pointlight2d-mix-order.tscn', mode: '2d' },
+  // Six masks reach one item, and Godot draws every light. Godot 4.6.3 at x=136 and x=1016, the
+  // first and the sixth light: rgb(160,97,81) and rgb(88,157,168).
+  { name: 'pointlight2d-many-masks', file: 'unit-pointlight2d-many-masks.tscn', mode: '2d' },
   // DirectionalLight2D reaches every lit item whatever its light_mask or z, and its shadow is a
   // parallel map across the project viewport's diagonal, so its PCF taps keep one width.
   { name: 'directionallight2d', file: 'unit-directionallight2d.tscn', mode: '2d' },
@@ -287,6 +293,9 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-canvas-layer-modulate-scope.tscn',
     mode: '2d',
   },
+  // The one variable: a CanvasLayer's own offset, rotation and scale, which move both walks'
+  // children. Godot 4.6.3 `--mode 2d`: rgb(51,153,255) at (430,170) and (500,250).
+  { name: 'canvas-layer-transform', file: 'unit-canvas-layer-transform.tscn', mode: '2d' },
   // The one variable: a Control promoted past a non-Control ancestor, one facet
   // per scene. The walk resets the whole chain at a broken CanvasItem link, so
   // a fix to one facet can move another. Godot 4.6.3 `--mode 2d`: mean 0.001,

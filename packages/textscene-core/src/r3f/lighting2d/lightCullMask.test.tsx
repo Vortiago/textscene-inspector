@@ -1,8 +1,8 @@
 /**
- * Godot's 2D light culling through the real dispatcher: the class a light's quad lands in (its
- * camera layer) and the slots each item reads (its weights). `lightCullKey.test.ts` pins the rule.
- * Happy-dom has no GPU, so the weights are read through `onBeforeCompile`, and
- * `unit-pointlight2d-cull-mask` measures the pixels against the engine.
+ * Godot's 2D light culling through the real dispatcher: the list buffer each item reads, and the
+ * lights the pass draws into it. `itemLightList.test.ts` pins the rule. Happy-dom has no GPU, so
+ * `lightPassProbe` reads the bindings and records the draws, and `unit-pointlight2d-cull-mask`
+ * measures the pixels against the engine.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -12,15 +12,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../parser/TscnParser';
 import { NodeDispatcher } from '../NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import {
-  CanvasLighting2DProvider,
-  LIGHT_LAYER,
-  LIGHT_SEED_LAYER,
-  LIGHT_UNCLASSED_LAYER,
-  SHADOW_TINT_LAYER,
-  MAX_LIGHT_CLASSES,
-} from './CanvasLighting2D';
-import { lightClassSampler } from './canvasItemLighting';
+import { CanvasLighting2DProvider } from './CanvasLighting2D';
+import { itemUniforms, lightsIn, recordLightPass } from './testing/lightPassProbe';
 import { SceneStack } from '../testing/SceneStack';
 import '../nodes'; // side-effect: registers every node's r3f component
 
@@ -77,127 +70,64 @@ async function render(tscn: string) {
 
 type Rendered = Awaited<ReturnType<typeof render>>;
 
-function meshes(renderer: Rendered): THREE.Mesh[] {
-  return renderer.scene.findAllByType('Mesh').map((o) => o.instance as THREE.Mesh);
+/** The buffer the item named `name` reads. */
+function bufferOf(renderer: Rendered, name: string): THREE.Texture {
+  return itemUniforms(renderer, name).uLightList!.value as THREE.Texture;
 }
 
-function onLayer(mesh: THREE.Mesh, layer: number): boolean {
-  const probe = new THREE.Layers();
-  probe.set(layer);
-  return mesh.layers.test(probe);
+function isLit(renderer: Rendered, name: string): boolean {
+  return itemUniforms(renderer, name).uLit!.value === 1;
 }
 
-/** The cookie quads, in the scene's own order, with the layer each landed on. */
-function lightQuadLayers(renderer: Rendered): number[] {
-  return meshes(renderer)
-    .filter((mesh) => {
-      const material = mesh.material as THREE.ShaderMaterial;
-      return !!material.uniforms?.uCookie;
-    })
-    .map((mesh) => {
-      for (let layer = 0; layer < 32; layer += 1) if (onLayer(mesh, layer)) return layer;
-      return -1;
-    });
-}
-
-/**
- * The class-slot weights bound to the item named `name`: `1` where the item's
- * `light_mask` selects that class, `0` where the light is culled from it.
- */
-function classWeights(renderer: Rendered, name: string): number[] {
-  const group = renderer.scene.findAll((o) => o.props.name === name)[0];
-  expect(group, `scene should contain an item named ${name}`).toBeDefined();
-  const mesh = group!
-    .findAllByType('Mesh')
-    .map((o) => o.instance as THREE.Mesh)
-    .find((m) => !!(m.material as THREE.Material).onBeforeCompile);
-  expect(mesh, `${name} should render a lit mesh`).toBeDefined();
-
-  const shader = {
-    vertexShader: '',
-    fragmentShader: 'void main() {\n#include <colorspace_fragment>\n}',
-    uniforms: {} as Record<string, THREE.IUniform>,
-  };
-  (mesh!.material as THREE.Material).onBeforeCompile(
-    shader as unknown as THREE.WebGLProgramParametersWithUniforms,
-    null as unknown as THREE.WebGLRenderer
-  );
-  return [...(shader.uniforms.uLightClassWeight!.value as number[])];
-}
-
-/** The accumulator textures the item is actually pointed at, per slot. */
-function classBuffers(renderer: Rendered, name: string): (THREE.Texture | null)[] {
-  const group = renderer.scene.findAll((o) => o.props.name === name)[0]!;
-  const mesh = group
-    .findAllByType('Mesh')
-    .map((o) => o.instance as THREE.Mesh)
-    .find((m) => !!(m.material as THREE.Material).onBeforeCompile)!;
-  const shader = {
-    vertexShader: '',
-    fragmentShader: 'void main() {\n#include <colorspace_fragment>\n}',
-    uniforms: {} as Record<string, THREE.IUniform>,
-  };
-  (mesh.material as THREE.Material).onBeforeCompile(
-    shader as unknown as THREE.WebGLProgramParametersWithUniforms,
-    null as unknown as THREE.WebGLRenderer
-  );
-  return Array.from(
-    { length: MAX_LIGHT_CLASSES },
-    (_unused, slot) => (shader.uniforms[lightClassSampler(slot)]!.value as THREE.Texture) ?? null
-  );
+/** The lights the pass draws into the buffer the item named `name` reads, or none while unlit. */
+async function lightsOn(renderer: Rendered, name: string): Promise<string[]> {
+  if (!isLit(renderer, name)) return [];
+  return lightsIn(await recordLightPass(renderer), bufferOf(renderer, name));
 }
 
 describe('2D light cull masks, through the dispatcher', () => {
-  it('gives every light the SAME class when they share a cull mask', async () => {
+  it('draws every light of a shared cull mask into one buffer', async () => {
     const renderer = await render(
       scene(`${panel('P', null, 0)}${light('A', null, 40)}${light('B', null, 90)}`)
     );
-    expect(lightQuadLayers(renderer)).toEqual([LIGHT_LAYER, LIGHT_LAYER]);
-    // One class, and the item reads it.
-    expect(classWeights(renderer, 'P')).toEqual([1, 0, 0, 0]);
+    expect(await lightsOn(renderer, 'P')).toEqual(['A', 'B']);
   });
 
-  it('splits lights of different cull masks into separate class layers', async () => {
+  it('draws lights of different cull masks into one buffer for an item both reach', async () => {
+    // A MIX light mixes toward its colour from what the lights before it left, so the lights on
+    // one item cannot be summed from separate buffers (`canvas.glsl:768-830`).
     const renderer = await render(
-      scene(`${panel('P', null, 0)}${light('Warm', null, 40)}${light('Cool', '2', 90)}`)
+      scene(`${panel('Both', '3', 0)}${light('Warm', null, 40)}${light('Cool', '2', 90)}`)
     );
-    // Classes are ordered by mask ascending, 1 then 2, so the layers are
-    // stable however the lights are authored.
-    expect(lightQuadLayers(renderer)).toEqual([LIGHT_LAYER, LIGHT_LAYER + 1]);
+    expect(await lightsOn(renderer, 'Both')).toEqual(['Warm', 'Cool']);
   });
 
-  it('points an item at only the classes its light_mask selects', async () => {
+  it('gives an item only the lights its light_mask selects', async () => {
     const renderer = await render(
       scene(
-        `${panel('OnlyWarm', null, 0)}${panel('OnlyCool', '2', 200)}${panel('Both', '3', 400)}` +
-          `${panel('Neither', '512', 600)}${light('Warm', null, 40)}${light('Cool', '2', 240)}`
+        `${panel('OnlyWarm', null, 0)}${panel('OnlyCool', '2', 200)}` +
+          `${light('Warm', null, 40)}${light('Cool', '2', 240)}`
       )
     );
-    expect(classWeights(renderer, 'OnlyWarm')).toEqual([1, 0, 0, 0]);
-    expect(classWeights(renderer, 'OnlyCool')).toEqual([0, 1, 0, 0]);
-    expect(classWeights(renderer, 'Both')).toEqual([1, 1, 0, 0]);
-    // The dungeon's painted shadow polygons: lit by nothing, so the shader falls
-    // back to the seed and the item keeps its authored colour under the tint.
-    expect(classWeights(renderer, 'Neither')).toEqual([0, 0, 0, 0]);
+    expect(await lightsOn(renderer, 'OnlyWarm')).toEqual(['Warm']);
+    expect(await lightsOn(renderer, 'OnlyCool')).toEqual(['Cool']);
   });
 
-  it('binds a culled slot to a stand-in texture rather than another class buffer', async () => {
+  it('leaves an item no light reaches unlit', async () => {
+    // The dungeon's painted shadow polygons: lit by nothing, so the shader falls back to the seed
+    // and the item keeps its authored colour under the tint.
+    const renderer = await render(scene(`${panel('Neither', '512', 0)}${light('Warm', null, 40)}`));
+    expect(isLit(renderer, 'Neither')).toBe(false);
+  });
+
+  it('shares one buffer between two items with the same list', async () => {
     const renderer = await render(
-      scene(`${panel('OnlyCool', '2', 0)}${light('Warm', null, 40)}${light('Cool', '2', 90)}`)
+      scene(`${panel('Left', null, 0)}${panel('Right', null, 200)}${light('Warm', null, 40)}`)
     );
-    const buffers = classBuffers(renderer, 'OnlyCool');
-    const selected = classBuffers(renderer, 'OnlyCool')[1];
-    expect(selected).toBeInstanceOf(THREE.Texture);
-    // Slot 0 is the warm class this item is culled from; it must not be pointed
-    // at that accumulation, or a weight bug would light it anyway.
-    expect(buffers[0]).not.toBe(selected);
-    expect(buffers[2]).toBe(buffers[0]);
-    expect(buffers[3]).toBe(buffers[0]);
+    expect(bufferOf(renderer, 'Left')).toBe(bufferOf(renderer, 'Right'));
   });
 
-  it('gives a Light Only item the unmodulated buffer of the class it selects', async () => {
-    // Two accumulations per class once a Light Only item exists, and the item has to land on its
-    // own class's unmodulated one. A single-class scene cannot tell a per-class index from 0.
+  it('gives a Light Only item the unmodulated buffer of its list', async () => {
     const renderer = await render(
       scene(
         `${panel('Ordinary', '2', 0)}${panel('Masked', '2', 200, 'material = SubResource("lightonly")\n')}` +
@@ -205,49 +135,21 @@ describe('2D light cull masks, through the dispatcher', () => {
         LIGHT_ONLY_MATERIAL
       )
     );
-    expect(classWeights(renderer, 'Masked')).toEqual([0, 1, 0, 0]);
-    // Its buffer is the Light Only accumulation, a different texture from the one the ordinary
-    // item beside it reads from the same class.
-    const lightOnlyBuffer = classBuffers(renderer, 'Masked')[1];
-    const ordinaryBuffer = classBuffers(renderer, 'Ordinary')[1];
-    expect(lightOnlyBuffer).toBeInstanceOf(THREE.Texture);
-    expect(lightOnlyBuffer).not.toBe(ordinaryBuffer);
+    expect(bufferOf(renderer, 'Masked')).not.toBe(bufferOf(renderer, 'Ordinary'));
+    expect(await lightsOn(renderer, 'Masked')).toEqual(['Cool']);
   });
 
   it('keeps the item unlit while the canvas holds no light at all', async () => {
     const renderer = await render(scene(panel('P', null, 0)));
-    expect(classWeights(renderer, 'P')).toEqual([0, 0, 0, 0]);
-    expect(lightQuadLayers(renderer)).toEqual([]);
+    expect(isLit(renderer, 'P')).toBe(false);
+    expect(await recordLightPass(renderer)).toEqual([]);
   });
 
-  it('draws a light nowhere once its class does not fit', async () => {
-    const overflow = Array.from({ length: MAX_LIGHT_CLASSES + 1 }, (_unused, index) =>
-      light(`L${index}`, String(1 << index), index * 40)
-    ).join('');
-    const renderer = await render(scene(`${panel('P', null, 0)}${overflow}`));
-    const layers = lightQuadLayers(renderer);
-    expect(layers.slice(0, MAX_LIGHT_CLASSES)).toEqual(
-      Array.from({ length: MAX_LIGHT_CLASSES }, (_unused, index) => LIGHT_LAYER + index)
-    );
-    // No pass enables this layer, so the fifth class is dropped rather than
-    // folded into someone else's accumulation.
-    expect(layers[MAX_LIGHT_CLASSES]).toBe(LIGHT_UNCLASSED_LAYER);
-  });
-
-  it('gives every light layer a number of its own', async () => {
-    // The layers are derived from each other, so a new band inserted in the
-    // middle silently overlaps an existing one and that light starts drawing
-    // into someone else's pass. Enumerate them and assert the whole set is
-    // distinct rather than spot-checking one pair.
-    const assigned = [
-      ...Array.from({ length: MAX_LIGHT_CLASSES }, (_unused, index) => LIGHT_LAYER + index),
-      LIGHT_SEED_LAYER,
-      ...Array.from({ length: MAX_LIGHT_CLASSES }, (_unused, index) => SHADOW_TINT_LAYER + index),
-      LIGHT_UNCLASSED_LAYER,
-    ];
-    expect(new Set(assigned).size).toBe(assigned.length);
-    // three packs layers into a 32-bit mask, so the highest must still fit.
-    expect(Math.max(...assigned)).toBeLessThan(32);
+  it('draws every light, however many cull masks the canvas holds', async () => {
+    const names = Array.from({ length: 9 }, (_unused, index) => `L${index}`);
+    const lights = names.map((name, index) => light(name, String(1 << index), index * 40)).join('');
+    const renderer = await render(scene(`${panel('P', '511', 0)}${lights}`));
+    expect(await lightsOn(renderer, 'P')).toEqual(names);
   });
 });
 
@@ -280,8 +182,8 @@ describe('2D light range windows, through the dispatcher', () => {
           windowLight('Torch', 'range_z_max = 4\n')
       )
     );
-    expect(classWeights(renderer, 'Inside')).toEqual([1, 0, 0, 0]);
-    expect(classWeights(renderer, 'Above')).toEqual([0, 0, 0, 0]);
+    expect(isLit(renderer, 'Inside')).toBe(true);
+    expect(isLit(renderer, 'Above')).toBe(false);
   });
 
   it('holds the window at its bounds, which are inclusive', async () => {
@@ -292,9 +194,9 @@ describe('2D light range windows, through the dispatcher', () => {
           windowLight('Torch', 'range_z_min = -2\nrange_z_max = 4\n')
       )
     );
-    expect(classWeights(renderer, 'AtMax')).toEqual([1, 0, 0, 0]);
-    expect(classWeights(renderer, 'AtMin')).toEqual([1, 0, 0, 0]);
-    expect(classWeights(renderer, 'BelowMin')).toEqual([0, 0, 0, 0]);
+    expect(isLit(renderer, 'AtMax')).toBe(true);
+    expect(isLit(renderer, 'AtMin')).toBe(true);
+    expect(isLit(renderer, 'BelowMin')).toBe(false);
   });
 
   it('accumulates z down the tree, the way _cull_canvas_item does', async () => {
@@ -310,10 +212,10 @@ describe('2D light range windows, through the dispatcher', () => {
           windowLight('Torch', 'range_z_max = 4\n')
       )
     );
-    expect(classWeights(renderer, 'Rel1')).toEqual([1, 0, 0, 0]);
-    expect(classWeights(renderer, 'Rel3')).toEqual([0, 0, 0, 0]);
+    expect(isLit(renderer, 'Rel1')).toBe(true);
+    expect(isLit(renderer, 'Rel3')).toBe(false);
     // z_as_relative = false discards the parent's contribution entirely.
-    expect(classWeights(renderer, 'Abs3')).toEqual([1, 0, 0, 0]);
+    expect(isLit(renderer, 'Abs3')).toBe(true);
   });
 
   it('withholds a default light from a default CanvasLayer', async () => {
@@ -326,8 +228,8 @@ describe('2D light range windows, through the dispatcher', () => {
           windowLight('Torch')
       )
     );
-    expect(classWeights(renderer, 'WorldPanel')).toEqual([1, 0, 0, 0]);
-    expect(classWeights(renderer, 'HudPanel')).toEqual([0, 0, 0, 0]);
+    expect(isLit(renderer, 'WorldPanel')).toBe(true);
+    expect(isLit(renderer, 'HudPanel')).toBe(false);
   });
 
   it("reaches a CanvasLayer once the light's layer window includes it", async () => {
@@ -339,27 +241,30 @@ describe('2D light range windows, through the dispatcher', () => {
       )
     );
     // The window moved off the world canvas, so the two swap.
-    expect(classWeights(renderer, 'WorldPanel')).toEqual([0, 0, 0, 0]);
-    expect(classWeights(renderer, 'HudPanel')).toEqual([1, 0, 0, 0]);
+    expect(isLit(renderer, 'WorldPanel')).toBe(false);
+    expect(isLit(renderer, 'HudPanel')).toBe(true);
   });
 
-  it('splits two lights of one cull mask into classes when their windows differ', async () => {
-    // The accumulation is a screen-space sum, so a light that reaches fewer
-    // items than its pass-mate cannot be excluded per fragment afterwards.
+  it('lists a narrower light only for the items inside its window', async () => {
+    // The accumulation is a screen-space sum, so a light that reaches fewer items than its
+    // neighbour cannot be excluded per fragment afterwards: the items take different lists.
     const renderer = await render(
-      scene(`${windowPanel('P', '')}${windowLight('Wide')}${windowLight('Narrow', 'range_z_max = 4\n')}`)
+      scene(
+        `${windowPanel('Low', '')}${windowPanel('High', 'z_index = 5\n')}` +
+          `${windowLight('Wide')}${windowLight('Narrow', 'range_z_max = 4\n')}`
+      )
     );
-    // Ordered by the tuple: both masks are 1, so the narrower zMax sorts first.
-    expect(lightQuadLayers(renderer)).toEqual([LIGHT_LAYER + 1, LIGHT_LAYER]);
-    // The panel is at z 0, inside both windows, so it reads both classes.
-    expect(classWeights(renderer, 'P')).toEqual([1, 1, 0, 0]);
+    expect(await lightsOn(renderer, 'Low')).toEqual(['Wide', 'Narrow']);
+    expect(await lightsOn(renderer, 'High')).toEqual(['Wide']);
   });
 
-  it('keeps every default light in ONE class, so no existing scene gains one', async () => {
+  it('keeps every default light on ONE list, so no existing scene gains a buffer', async () => {
     const renderer = await render(
-      scene(`${windowPanel('P', '')}${windowLight('A')}${windowLight('B')}${windowLight('C')}`)
+      scene(
+        `${windowPanel('P', '')}${windowPanel('Q', 'z_index = 3\n')}${windowLight('A')}${windowLight('B')}${windowLight('C')}`
+      )
     );
-    expect(lightQuadLayers(renderer)).toEqual([LIGHT_LAYER, LIGHT_LAYER, LIGHT_LAYER]);
-    expect(classWeights(renderer, 'P')).toEqual([1, 0, 0, 0]);
+    expect(bufferOf(renderer, 'P')).toBe(bufferOf(renderer, 'Q'));
+    expect(await lightsOn(renderer, 'P')).toEqual(['A', 'B', 'C']);
   });
 });

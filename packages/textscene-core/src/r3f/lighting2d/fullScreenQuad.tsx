@@ -3,7 +3,6 @@
  * target, so it covers the accumulator wherever the canvas camera is panned.
  */
 
-import { useCallback } from 'react';
 import type * as THREE from 'three';
 
 /** Maps the unit plane onto NDC. A shader that needs the NDC position repeats `position.xy * 2.0`. */
@@ -14,29 +13,18 @@ void main() {
 `;
 
 export function FullScreenQuad({
-  layer,
+  meshRef,
   material,
   renderOrder,
-  onMesh,
 }: {
-  /** The one camera layer the quad draws on. */
-  layer: number;
+  /** Receives the mounted mesh, and null on unmount: the place to set its layer. */
+  meshRef: (mesh: THREE.Mesh | null) => void;
   material: THREE.Material;
   renderOrder: number;
-  /** Receives the mounted mesh, and null on unmount. */
-  onMesh?: (mesh: THREE.Mesh | null) => void;
 }) {
-  const toLayer = useCallback(
-    (mesh: THREE.Mesh | null) => {
-      mesh?.layers.set(layer);
-      onMesh?.(mesh);
-    },
-    [layer, onMesh]
-  );
-
   return (
     <mesh
-      ref={toLayer}
+      ref={meshRef}
       material={material}
       renderOrder={renderOrder}
       // The quad ignores every matrix, so its bounds say nothing about where it lands, and culling

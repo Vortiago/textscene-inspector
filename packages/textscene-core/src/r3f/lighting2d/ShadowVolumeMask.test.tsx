@@ -11,6 +11,7 @@ import {
 } from './ShadowVolumeMask';
 import { OCCLUDER_CULL_DISABLED, type ShadowCasterEdges, type ShadowLight } from './shadowVolumes';
 import { worldEdges } from './testing/worldEdges';
+import { LIGHT_PASS_LAYER } from './lightPassLayers';
 
 const LIGHT: ShadowLight = {
   x: 0,
@@ -22,7 +23,7 @@ const CASTER: ShadowCasterEdges = worldEdges(new Float32Array([100, -50, 100, 50
 
 async function renderMask(props: Partial<Parameters<typeof ShadowVolumeMask>[0]> = {}) {
   return ReactThreeTestRenderer.create(
-    <ShadowVolumeMask light={LIGHT} casters={[CASTER]} ordinal={0} sequence={0} layer={1} {...props} />
+    <ShadowVolumeMask light={LIGHT} casters={[CASTER]} ordinal={0} sequence={0} {...props} />
   );
 }
 
@@ -144,8 +145,8 @@ describe('<ShadowVolumeMask>', () => {
     expect((mesh.material as THREE.Material).stencilRef).toBe(shadowStencilRef(2));
   });
 
-  it('shares the layer of the light it shadows', async () => {
-    expect(maskMesh(await renderMask({ layer: 3 }))!.layers.mask).toBe(1 << 3);
+  it('draws on the light pass layer alone, which the main render skips', async () => {
+    expect(maskMesh(await renderMask())!.layers.mask).toBe(1 << LIGHT_PASS_LAYER);
   });
 
   it('skips frustum culling, since the volumes extend past the light', async () => {

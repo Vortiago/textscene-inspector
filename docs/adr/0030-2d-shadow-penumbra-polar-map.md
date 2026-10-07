@@ -124,9 +124,8 @@ per-light render target.
 - **The eight `unit-lightoccluder2d-*` goldens must not move by a pixel.** They are all
   filter-NONE, and the gate means they run no line of the filtered path. A diff there is
   a defect, not a re-baseline.
-- **Cost is per light × quad pixels × taps**, in the class pre-pass. Items are
-  untouched: there is no new sampler and no change to the injection, so
-  `MAX_LIGHT_CLASSES` and its sampler ceiling are unaffected.
+- **Cost is per light × quad pixels × taps**, in each item light list's pre-pass. Items
+  are untouched: there is no new sampler and no change to the injection.
 - **The light pose has two more fields** (`worldToLocal`, `radius`), because the map is
   stated in light-local space. That is also what makes a rotated or scaled light come out
   right, where the volumes needed only an origin and a rect.

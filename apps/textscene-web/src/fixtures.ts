@@ -1193,6 +1193,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Many Masks",
+    "file": "unit-pointlight2d-many-masks.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Mix Order",
+    "file": "unit-pointlight2d-mix-order.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d Range Layer",
     "file": "unit-pointlight2d-range-layer.tscn",
     "category": "Other"
@@ -2300,6 +2310,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Canvas Layer Modulate Scope",
     "file": "unit-canvas-layer-modulate-scope.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Canvas Layer Transform",
+    "file": "unit-canvas-layer-transform.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

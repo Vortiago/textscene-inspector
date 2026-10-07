@@ -9,13 +9,13 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CanvasLighting2DProvider, useCanvasLighting2D, type CanvasLighting2D } from './CanvasLighting2D';
 import { directionalLightCullKey } from './lightCullKey';
-import { useRegisterCanvasLight2D } from './lightPassDeclarations';
+import { useRegisterCanvasLight2D, useRegisterLitItem } from './lightPassDeclarations';
 import { useLightShadowCasters } from './ShadowCasterStage';
 import { useShadowCaster, useShadowCasterRegistry } from './shadowCasterRegistry';
 import { OCCLUDER_CULL_DISABLED } from './shadowVolumes';
 import { World2DLightingBoundary } from './World2DLightingBoundary';
 
-const SUN_KEY = directionalLightCullKey(0, 0);
+const SUN = { reach: directionalLightCullKey(0, 0), shadowItemCullMask: null, tintsShadow: false };
 
 interface Seen {
   outerLighting?: CanvasLighting2D;
@@ -23,9 +23,10 @@ interface Seen {
   casterCount?: number;
 }
 
-/** Reads the outer canvas's light pass, beside an occluder of the outer canvas. */
+/** Reads the outer canvas's light pass, beside an occluder and a lit item of the outer canvas. */
 function Outer({ seen }: { seen: Seen }) {
   const [object] = useState(() => new THREE.Group());
+  useRegisterLitItem({ lightMask: 1, z: 0, layer: 0 }, false);
   useShadowCaster({
     segments: new Float32Array([0, 0, 0, 10, 0, 0]),
     cullMode: OCCLUDER_CULL_DISABLED,
@@ -37,7 +38,7 @@ function Outer({ seen }: { seen: Seen }) {
 }
 
 function Read({ seen }: { seen: Seen }) {
-  useRegisterCanvasLight2D(true, SUN_KEY);
+  useRegisterCanvasLight2D(true, SUN);
   seen.hasRegistry = useShadowCasterRegistry() !== null;
   seen.casterCount = useLightShadowCasters(true, 1).length;
   return null;
@@ -58,8 +59,8 @@ async function readInside(): Promise<Seen> {
 }
 
 describe('World2DLightingBoundary', () => {
-  it('keeps a light inside from opening a class on the outer canvas', async () => {
-    expect((await readInside()).outerLighting!.classes).toHaveLength(0);
+  it('keeps a light inside from lighting an item on the outer canvas', async () => {
+    expect((await readInside()).outerLighting!.lists.size).toBe(0);
   });
 
   it('withholds the occluder registry, so an occluder inside shadows no outer light', async () => {

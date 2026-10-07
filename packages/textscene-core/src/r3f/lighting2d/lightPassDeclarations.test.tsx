@@ -1,94 +1,160 @@
 /**
- * A declaration keyed on a cull tuple survives a re-render. A light rebuilds its key object each
- * render, and re-declaring would reshuffle its class's ordinals and with them the stencil refs
- * that keep shadow stamps apart. Every keyed declaration in the module is pinned here.
+ * The declarations a light, an item and a light mesh make to the pass. A light rebuilds its
+ * declaration object each render, and re-declaring would hand it a new ordinal, its stencil ref
+ * with it, so each declaration holds while its values hold.
  */
 
 import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { render } from '@testing-library/react';
+import * as THREE from 'three';
+import { render, renderHook } from '@testing-library/react';
 import {
   CanvasLighting2DContext,
   INERT_CANVAS_LIGHTING,
   type CanvasLighting2D,
   type CanvasLightSlot,
 } from './lightPassContext';
-import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from './lightCullKey';
-import { useRegisterCanvasLight2D, useRegisterShadowTint } from './lightPassDeclarations';
+import { DEFAULT_LIGHT_CULL_KEY } from './lightCullKey';
+import type { CanvasLightDeclaration, ItemPlacement, PassMeshRole } from './itemLightList';
+import { usePassMeshRef, useRegisterCanvasLight2D, useRegisterLitItem } from './lightPassDeclarations';
+import { LIGHT_PASS_LAYER } from './lightPassLayers';
 
-/** A lighting context whose two keyed registrars are spies. */
+/** A lighting context whose registrars are spies. */
 function spyLighting() {
   const release = vi.fn();
-  const releaseTint = vi.fn();
-  const slot: CanvasLightSlot = { ordinal: 0, release };
-  const register = vi.fn((_key: LightCullKey) => slot);
-  const registerShadowTint = vi.fn((_key: LightCullKey) => releaseTint);
-  const value: CanvasLighting2D = {
-    ...INERT_CANVAS_LIGHTING,
-    register,
-    registerShadowTint,
-  };
+  const releaseItem = vi.fn();
+  const releaseMesh = vi.fn();
+  const slot: CanvasLightSlot = { ordinal: 3, release };
+  const registerLight = vi.fn((_declaration: CanvasLightDeclaration) => slot);
+  const registerItem = vi.fn((_placement: ItemPlacement, _lightOnly: boolean) => releaseItem);
+  const registerPassMesh = vi.fn(
+    (_mesh: THREE.Object3D, _ordinal: number, _role: PassMeshRole) => releaseMesh
+  );
+  const value: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, registerLight, registerItem, registerPassMesh };
   const Wrap = ({ children }: { children: ReactNode }) => (
     <CanvasLighting2DContext.Provider value={value}>{children}</CanvasLighting2DContext.Provider>
   );
-  return { Wrap, register, release, registerShadowTint, releaseTint };
+  return { Wrap, registerLight, release, registerItem, releaseItem, registerPassMesh, releaseMesh };
 }
 
-/** Both keyed declarations, under a component that rebuilds its key object each render, as a light does. */
-function Light({ cullKey }: { cullKey: LightCullKey }) {
-  useRegisterCanvasLight2D(true, { ...cullKey });
-  useRegisterShadowTint(true, { ...cullKey });
+const DECLARATION: CanvasLightDeclaration = {
+  reach: DEFAULT_LIGHT_CULL_KEY,
+  shadowItemCullMask: null,
+  tintsShadow: false,
+};
+
+/** A light that rebuilds its declaration object each render. */
+function Light({
+  declaration,
+  seen = [],
+}: {
+  declaration: CanvasLightDeclaration;
+  seen?: (number | null)[];
+}) {
+  seen.push(useRegisterCanvasLight2D(true, { ...declaration, reach: { ...declaration.reach } }));
   return null;
 }
 
-const OTHER_TUPLE: LightCullKey = { ...DEFAULT_LIGHT_CULL_KEY, itemCullMask: 2 };
-
-describe('a declaration keyed on a cull tuple', () => {
-  it('survives a re-render that leaves every number unchanged', () => {
-    const { Wrap, register, release, registerShadowTint, releaseTint } = spyLighting();
-
-    const { rerender } = render(
-      <Wrap>
-        <Light cullKey={DEFAULT_LIGHT_CULL_KEY} />
-      </Wrap>
-    );
-    expect(register).toHaveBeenCalledTimes(1);
-    expect(registerShadowTint).toHaveBeenCalledTimes(1);
-
-    // A fresh key object carrying the very same values.
-    rerender(
-      <Wrap>
-        <Light cullKey={{ ...DEFAULT_LIGHT_CULL_KEY }} />
-      </Wrap>
-    );
-
-    expect(register).toHaveBeenCalledTimes(1);
-    expect(registerShadowTint).toHaveBeenCalledTimes(1);
+describe('useRegisterCanvasLight2D', () => {
+  it('survives a re-render that leaves every value unchanged', () => {
+    const { Wrap, registerLight, release } = spyLighting();
+    const { rerender } = render(<Light declaration={DECLARATION} />, { wrapper: Wrap });
+    rerender(<Light declaration={{ ...DECLARATION }} />);
+    expect(registerLight).toHaveBeenCalledTimes(1);
     expect(release).not.toHaveBeenCalled();
-    expect(releaseTint).not.toHaveBeenCalled();
   });
 
-  it('is withdrawn and remade when a number in the tuple does change', () => {
-    // The other half of the contract: pinning only the survival above would be
-    // satisfied by a declaration that never re-declares at all.
-    const { Wrap, register, release, registerShadowTint, releaseTint } = spyLighting();
-
-    const { rerender } = render(
-      <Wrap>
-        <Light cullKey={DEFAULT_LIGHT_CULL_KEY} />
-      </Wrap>
-    );
-    rerender(
-      <Wrap>
-        <Light cullKey={OTHER_TUPLE} />
-      </Wrap>
-    );
-
-    expect(register).toHaveBeenCalledTimes(2);
-    expect(registerShadowTint).toHaveBeenCalledTimes(2);
+  it('is withdrawn and remade when a value changes', () => {
+    const { Wrap, registerLight, release } = spyLighting();
+    const { rerender } = render(<Light declaration={DECLARATION} />, { wrapper: Wrap });
+    const tinting = { ...DECLARATION, tintsShadow: true };
+    rerender(<Light declaration={tinting} />);
     expect(release).toHaveBeenCalledTimes(1);
-    expect(releaseTint).toHaveBeenCalledTimes(1);
-    expect(register.mock.calls[1]![0]).toEqual(OTHER_TUPLE);
-    expect(registerShadowTint.mock.calls[1]![0]).toEqual(OTHER_TUPLE);
+    expect(registerLight.mock.calls[1]![0]).toEqual(tinting);
+  });
+
+  it('gives the ordinal it was handed, and null before', () => {
+    const { Wrap } = spyLighting();
+    const seen: (number | null)[] = [];
+    render(<Light declaration={DECLARATION} seen={seen} />, { wrapper: Wrap });
+    expect([seen[0], seen.at(-1)]).toEqual([null, 3]);
+  });
+
+  it('declares nothing while disabled', () => {
+    const { Wrap, registerLight } = spyLighting();
+    const { result } = renderHook(() => useRegisterCanvasLight2D(false, DECLARATION), { wrapper: Wrap });
+    expect(registerLight).not.toHaveBeenCalled();
+    expect(result.current).toBeNull();
+  });
+});
+
+describe('useRegisterLitItem', () => {
+  const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0 };
+
+  it('survives a re-render at the same placement', () => {
+    const { Wrap, registerItem, releaseItem } = spyLighting();
+    const { rerender } = renderHook(({ placement }) => useRegisterLitItem(placement, false), {
+      wrapper: Wrap,
+      initialProps: { placement: PLACEMENT },
+    });
+    rerender({ placement: { ...PLACEMENT } });
+    expect(registerItem).toHaveBeenCalledTimes(1);
+    expect(releaseItem).not.toHaveBeenCalled();
+  });
+
+  it('moves when the placement changes', () => {
+    const { Wrap, registerItem, releaseItem } = spyLighting();
+    const { rerender } = renderHook(({ placement }) => useRegisterLitItem(placement, false), {
+      wrapper: Wrap,
+      initialProps: { placement: PLACEMENT },
+    });
+    rerender({ placement: { ...PLACEMENT, z: 2 } });
+    expect(releaseItem).toHaveBeenCalledTimes(1);
+    expect(registerItem.mock.calls[1]).toEqual([{ ...PLACEMENT, z: 2 }, false]);
+  });
+});
+
+describe('usePassMeshRef', () => {
+  it('moves the mesh onto the light pass layer alone, hidden until a pass shows it', () => {
+    const { Wrap } = spyLighting();
+    const { result } = renderHook(() => usePassMeshRef(0, 'lit'), { wrapper: Wrap });
+    const mesh = new THREE.Mesh();
+    result.current(mesh);
+    expect(mesh.layers.mask).toBe(1 << LIGHT_PASS_LAYER);
+    expect(mesh.visible).toBe(false);
+  });
+
+  it("hands the pass the mesh with its light's ordinal and its role", () => {
+    const { Wrap, registerPassMesh } = spyLighting();
+    const { result } = renderHook(() => usePassMeshRef(2, 'tint'), { wrapper: Wrap });
+    const mesh = new THREE.Mesh();
+    result.current(mesh);
+    expect(registerPassMesh).toHaveBeenCalledWith(mesh, 2, 'tint');
+  });
+
+  it('withdraws the mesh when it unmounts', () => {
+    const { Wrap, releaseMesh } = spyLighting();
+    const { result } = renderHook(() => usePassMeshRef(0, 'lit'), { wrapper: Wrap });
+    result.current(new THREE.Mesh());
+    result.current(null);
+    expect(releaseMesh).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands the pass nothing while the light has no ordinal', () => {
+    const { Wrap, registerPassMesh } = spyLighting();
+    const { result } = renderHook(() => usePassMeshRef(null, 'lit'), { wrapper: Wrap });
+    const mesh = new THREE.Mesh();
+    result.current(mesh);
+    expect(registerPassMesh).not.toHaveBeenCalled();
+    expect(mesh.visible).toBe(false);
+  });
+
+  it('passes the mesh on to its owner', () => {
+    const { Wrap } = spyLighting();
+    const onMesh = vi.fn();
+    const { result } = renderHook(() => usePassMeshRef(0, 'lit', onMesh), { wrapper: Wrap });
+    const mesh = new THREE.Mesh();
+    result.current(mesh);
+    expect(onMesh).toHaveBeenCalledWith(mesh);
   });
 });

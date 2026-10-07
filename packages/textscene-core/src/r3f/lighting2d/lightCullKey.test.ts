@@ -1,6 +1,5 @@
 /**
- * Godot's 2D light cull: `_record_item_commands` in `drivers/gles3/rasterizer_canvas_gles3.cpp`
- * (line 1347 on master) per item, and `_draw_viewport` in `servers/rendering/renderer_viewport.cpp`
+ * Godot's 2D light cull: `renderer_canvas_render_rd.cpp:2369` per item, and `_draw_viewport` in `servers/rendering/renderer_viewport.cpp`
  * (line 1220) per canvas. Godot has no unit test for either (`test_node_2d.cpp` never touches
  * `z_index`), so these are the source lines plus probes.
  */
@@ -9,13 +8,8 @@ import { describe, it, expect } from 'vitest';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering';
 import {
   DEFAULT_LIGHT_CULL_KEY,
-  compareLightCullKeys,
   directionalLightCullKey,
-  lightCullKeyId,
   lightReachesItem,
-  drawnClassCount,
-  sameLightCullKey,
-  splitByShadowReceivers,
   type LightCullKey,
 } from './lightCullKey';
 
@@ -35,7 +29,6 @@ describe('DEFAULT_LIGHT_CULL_KEY', () => {
       zMax: 1024,
       layerMin: 0,
       layerMax: 0,
-      shadowHalf: null,
     });
   });
 });
@@ -125,151 +118,6 @@ describe('lightReachesItem', () => {
   });
 });
 
-describe('lightCullKeyId', () => {
-  it('gives two lights with the same window the same id', () => {
-    expect(lightCullKeyId(key({ zMax: 4 }))).toBe(lightCullKeyId(key({ zMax: 4 })));
-  });
-
-  it('separates keys that differ in any single field', () => {
-    const base = lightCullKeyId(key());
-    for (const differing of [
-      key({ itemCullMask: 2 }),
-      key({ zMin: -1023 }),
-      key({ zMax: 1023 }),
-      key({ layerMin: 1 }),
-      key({ layerMax: 1 }),
-      key({ shadowHalf: { mask: 2, receives: true } }),
-      key({ shadowHalf: { mask: 2, receives: false } }),
-    ]) {
-      expect(lightCullKeyId(differing)).not.toBe(base);
-    }
-  });
-
-  it('cannot be spoofed by shifting a digit across the field boundary', () => {
-    // A concatenation with no separator would collide 1|11 with 11|1.
-    expect(lightCullKeyId(key({ itemCullMask: 1, zMin: 11 }))).not.toBe(
-      lightCullKeyId(key({ itemCullMask: 11, zMin: 1 }))
-    );
-  });
-});
-
-describe('sameLightCullKey', () => {
-  it('agrees with the id on identity and on difference', () => {
-    expect(sameLightCullKey(key(), key())).toBe(true);
-    expect(sameLightCullKey(key(), key({ layerMax: 1 }))).toBe(false);
-  });
-});
-
-describe('compareLightCullKeys', () => {
-  it("orders by cull mask first, so today's ascending-mask classes are unmoved", () => {
-    const sorted = [key({ itemCullMask: 2 }), key({ itemCullMask: 1 })].sort(compareLightCullKeys);
-    expect(sorted.map((k) => k.itemCullMask)).toEqual([1, 2]);
-  });
-
-  it('breaks a tie on the window, so the order depends only on WHICH keys are present', () => {
-    // A class's index picks its camera layer, so mount order must never reach it.
-    const keys = [key({ zMax: 4 }), key({ layerMax: 1 }), key(), key({ zMin: -4 })];
-    const first = [...keys].sort(compareLightCullKeys).map(lightCullKeyId);
-    const second = [...keys].reverse().sort(compareLightCullKeys).map(lightCullKeyId);
-    expect(second).toEqual(first);
-    // zMin ascends before zMax is consulted, and both before the layer window,
-    // so the three keys at the default zMin of -1024 come before the one that
-    // raised it to -4.
-    expect(first).toEqual([
-      lightCullKeyId(key({ zMax: 4 })),
-      lightCullKeyId(key()),
-      lightCullKeyId(key({ layerMax: 1 })),
-      lightCullKeyId(key({ zMin: -4 })),
-    ]);
-  });
-
-  it('reports 0 for equal keys', () => {
-    expect(compareLightCullKeys(key(), key())).toBe(0);
-  });
-
-  it('orders the unsplit key, then the shadowed half, then the unshadowed half', () => {
-    const halves = [
-      key({ shadowHalf: { mask: 2, receives: false } }),
-      key({ shadowHalf: { mask: 2, receives: true } }),
-      key(),
-    ];
-    expect(halves.sort(compareLightCullKeys).map(lightCullKeyId)).toEqual([
-      lightCullKeyId(key()),
-      lightCullKeyId(key({ shadowHalf: { mask: 2, receives: true } })),
-      lightCullKeyId(key({ shadowHalf: { mask: 2, receives: false } })),
-    ]);
-  });
-});
-
-/**
- * `canvas.glsl:806` applies a positional light's shadow only to an item flagged
- * `INSTANCE_FLAGS_SHADOW_MASKED`, which `renderer_canvas_render_rd.cpp:2374` sets where the item's
- * `light_mask` meets the light's `shadow_item_cull_mask`. Every other item it reaches takes it unshadowed.
- */
-describe('lightReachesItem: the shadow halves', () => {
-  it('reaches with the shadowed half only an item whose light_mask meets the mask', () => {
-    expect(lightReachesItem(key({ itemCullMask: 3, shadowHalf: { mask: 2, receives: true } }), 2, 0, 0)).toBe(
-      true
-    );
-    expect(lightReachesItem(key({ itemCullMask: 3, shadowHalf: { mask: 2, receives: true } }), 1, 0, 0)).toBe(
-      false
-    );
-  });
-
-  it('reaches with the unshadowed half only an item whose light_mask misses the mask', () => {
-    expect(
-      lightReachesItem(key({ itemCullMask: 3, shadowHalf: { mask: 2, receives: false } }), 1, 0, 0)
-    ).toBe(true);
-    expect(
-      lightReachesItem(key({ itemCullMask: 3, shadowHalf: { mask: 2, receives: false } }), 2, 0, 0)
-    ).toBe(false);
-  });
-
-  it('keeps the cull mask in both halves', () => {
-    expect(
-      lightReachesItem(key({ itemCullMask: 1, shadowHalf: { mask: 2, receives: false } }), 4, 0, 0)
-    ).toBe(false);
-  });
-});
-
-describe('splitByShadowReceivers', () => {
-  it('keeps one key, unchanged, for a light that casts no shadow', () => {
-    expect(splitByShadowReceivers(key({ itemCullMask: 3 }), null)).toEqual({
-      shadowed: key({ itemCullMask: 3 }),
-      unshadowed: null,
-    });
-  });
-
-  it('keeps one key, unchanged, while every cull-mask bit meets the shadow mask', () => {
-    // The default case, both masks at 1. Unchanged, the light shares its class with a shadowless
-    // light of the same window.
-    expect(splitByShadowReceivers(key(), 1)).toEqual({ shadowed: key(), unshadowed: null });
-    expect(splitByShadowReceivers(key({ itemCullMask: 2 }), 3)).toEqual({
-      shadowed: key({ itemCullMask: 2 }),
-      unshadowed: null,
-    });
-  });
-
-  it('splits in two once a cull-mask bit misses the shadow mask', () => {
-    const { shadowed, unshadowed } = splitByShadowReceivers(key({ itemCullMask: 3 }), 2);
-    expect(shadowed).toEqual(key({ itemCullMask: 3, shadowHalf: { mask: 2, receives: true } }));
-    expect(unshadowed).toEqual(key({ itemCullMask: 3, shadowHalf: { mask: 2, receives: false } }));
-  });
-
-  it('lights every item it reaches through exactly one half', () => {
-    const { shadowed, unshadowed } = splitByShadowReceivers(key({ itemCullMask: 7 }), 2);
-    for (const itemMask of [1, 2, 3, 4, 6]) {
-      const halves = [shadowed, unshadowed!].filter((half) => lightReachesItem(half, itemMask, 0, 0));
-      expect(halves, `light_mask ${itemMask}`).toHaveLength(1);
-    }
-  });
-});
-
-/**
- * `canvas.glsl:727-760` (renderer_rd) runs every directional light over every lit item, with no
- * per-item test, and `renderer_viewport.cpp:678-684` filters the list per canvas by layer alone.
- * Measured on Godot 4.6.3: items at `light_mask` 2 and 0, one at `z_index` 2000, all take the light.
- */
 describe('directionalLightCullKey', () => {
   const directional = directionalLightCullKey(0, 0);
 
@@ -287,49 +135,5 @@ describe('directionalLightCullKey', () => {
   it('still tests the canvas layer window', () => {
     expect(lightReachesItem(directional, 1, 0, 1)).toBe(false);
     expect(lightReachesItem(directionalLightCullKey(0, 1), 1, 0, 1)).toBe(true);
-  });
-
-  it('is a class apart from every positional key', () => {
-    expect(lightCullKeyId(directional)).not.toBe(lightCullKeyId(key()));
-    expect(sameLightCullKey(directional, key({ itemCullMask: 0xffffffff }))).toBe(false);
-  });
-
-  it('is one class for two directional lights on one layer window', () => {
-    expect(sameLightCullKey(directional, directionalLightCullKey(0, 0))).toBe(true);
-    expect(compareLightCullKeys(directional, directionalLightCullKey(0, 0))).toBe(0);
-  });
-
-  it('sorts ahead of the positional keys and by its layer window', () => {
-    const sorted = [key(), directionalLightCullKey(0, 1), directional].sort(compareLightCullKeys);
-    expect(sorted.map(lightCullKeyId)).toEqual([
-      lightCullKeyId(directional),
-      lightCullKeyId(directionalLightCullKey(0, 1)),
-      lightCullKeyId(key()),
-    ]);
-  });
-});
-
-describe('drawnClassCount', () => {
-  const receives = (itemCullMask: number) => key({ itemCullMask, shadowHalf: { mask: 1, receives: true } });
-  const escapes = (itemCullMask: number) => key({ itemCullMask, shadowHalf: { mask: 1, receives: false } });
-
-  it('draws every class up to the cap', () => {
-    expect(drawnClassCount([key(), key({ itemCullMask: 2 })], 4)).toBe(2);
-    expect(
-      drawnClassCount(
-        [1, 2, 3, 4, 5].map((itemCullMask) => key({ itemCullMask })),
-        4
-      )
-    ).toBe(4);
-  });
-
-  it('never draws one half of a split light without the other', () => {
-    // The halves of one light sort next to each other, so the cut can fall between them.
-    const keys = [key(), key({ itemCullMask: 2 }), key({ itemCullMask: 4 }), receives(3), escapes(3)];
-    expect(drawnClassCount(keys, 4)).toBe(3);
-  });
-
-  it('keeps a split light whose halves both fit', () => {
-    expect(drawnClassCount([key(), receives(3), escapes(3), key({ itemCullMask: 4 })], 3)).toBe(3);
   });
 });

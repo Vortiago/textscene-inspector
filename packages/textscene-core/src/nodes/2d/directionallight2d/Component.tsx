@@ -1,7 +1,7 @@
 /**
  * DirectionalLight2D draws nothing on the canvas, as in Godot: it adds one term over the whole
  * accumulation buffer every lit canvas item multiplies its albedo against
- * (`r3f/lighting2d/CanvasLighting2D`). Its class reaches every item on its canvas layers, and
+ * (`r3f/lighting2d/CanvasLighting2D`). It reaches every item on its canvas layers, and
  * its shadow samples a parallel map (`directionalShadowMap.ts`) built over the view.
  */
 
@@ -10,12 +10,8 @@ import type * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { DirectionalLight2DProperties } from './types';
-import {
-  useLightClassLayer,
-  useRegisterCanvasLight2D,
-  useRegisterShadowTint,
-  useShadowTintLayer,
-} from '../../../r3f/lighting2d/CanvasLighting2D';
+import { usePassMeshRef, useRegisterCanvasLight2D } from '../../../r3f/lighting2d/CanvasLighting2D';
+import { directionalRenderOrder } from '../../../r3f/lighting2d/lightPassLayers';
 import { directionalLightCullKey } from '../../../r3f/lighting2d/lightCullKey';
 import { useDirectionalLightSlot } from '../../../r3f/lighting2d/useLightSequence';
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
@@ -38,13 +34,14 @@ export function DirectionalLight2D({ node, children }: NodeComponentProps) {
   const slot = useDirectionalLightSlot();
   const lit = props.enabled && slot !== null;
 
-  const cullKey = directionalLightCullKey(props.range_layer_min, props.range_layer_max);
-  useRegisterCanvasLight2D(lit, cullKey);
-  const layer = useLightClassLayer(cullKey);
-  const tintsShadow = props.shadow_enabled && shadowColorContributes(props.shadow_color);
-  useRegisterShadowTint(lit && tintsShadow, cullKey);
-  const shadowTintLayer = useShadowTintLayer(cullKey);
   const casters = useLightShadowCasters(props.shadow_enabled, props.shadow_item_cull_mask);
+  // Its shadow reaches every item it lights, so it declares no `shadow_item_cull_mask`.
+  const tintsShadow = casters.length > 0 && shadowColorContributes(props.shadow_color);
+  const ordinal = useRegisterCanvasLight2D(lit, {
+    reach: directionalLightCullKey(props.range_layer_min, props.range_layer_max),
+    shadowItemCullMask: null,
+    tintsShadow,
+  });
 
   // A disabled light still draws its children: `enabled` switches the light alone.
   return (
@@ -55,9 +52,9 @@ export function DirectionalLight2D({ node, children }: NodeComponentProps) {
         lit ? (
           <DirectionalLightQuads
             props={props}
-            layer={layer}
-            shadowTintLayer={tintsShadow ? shadowTintLayer : undefined}
-            renderOrder={slot}
+            ordinal={ordinal}
+            tintsShadow={tintsShadow}
+            renderOrder={directionalRenderOrder(slot)}
             casters={casters}
           />
         ) : null
@@ -70,17 +67,17 @@ export function DirectionalLight2D({ node, children }: NodeComponentProps) {
 
 function DirectionalLightQuads({
   props,
-  layer,
-  shadowTintLayer,
+  ordinal,
+  tintsShadow,
   renderOrder,
   casters,
 }: {
   props: DirectionalLight2DProperties;
-  /** The camera layer of this light's class. */
-  layer: number;
-  /** The albedo-free pass's layer, set only when this light tints its shadow. */
-  shadowTintLayer: number | undefined;
-  /** This light's slot in the directional list, its draw order within its class. */
+  /** This light's ordinal on the canvas, or null while undeclared. */
+  ordinal: number | null;
+  /** Whether the light casts with a visible `shadow_color`. */
+  tintsShadow: boolean;
+  /** Its draw order, from its slot in the directional list. */
   renderOrder: number;
   /** The occluders this light is allowed to see, in world space. */
   casters: readonly WorldShadowCaster[];
@@ -129,18 +126,21 @@ function DirectionalLightQuads({
 
   const shadowMaterial = useMemo(
     () =>
-      sampling && shadowTintLayer !== undefined
+      sampling && tintsShadow
         ? createDirectionalShadowColorMaterial({ color, energy, blendMode, shadow: sampling })
         : null,
-    [sampling, shadowTintLayer, color, energy, blendMode]
+    [sampling, tintsShadow, color, energy, blendMode]
   );
   useEffect(() => () => shadowMaterial?.dispose(), [shadowMaterial]);
 
+  const litRef = usePassMeshRef<THREE.Mesh>(ordinal, 'lit', setQuad);
+  const tintRef = usePassMeshRef<THREE.Mesh>(ordinal, 'tint');
+
   return (
     <>
-      <FullScreenQuad layer={layer} material={material} renderOrder={renderOrder} onMesh={setQuad} />
-      {shadowMaterial && shadowTintLayer !== undefined && (
-        <FullScreenQuad layer={shadowTintLayer} material={shadowMaterial} renderOrder={renderOrder} />
+      <FullScreenQuad meshRef={litRef} material={material} renderOrder={renderOrder} />
+      {shadowMaterial && (
+        <FullScreenQuad meshRef={tintRef} material={shadowMaterial} renderOrder={renderOrder} />
       )}
     </>
   );

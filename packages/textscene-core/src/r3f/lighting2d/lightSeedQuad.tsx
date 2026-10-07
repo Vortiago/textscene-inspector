@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { LIGHT_SEED_LAYER, SEED_RENDER_ORDER } from './lightPassLayers.js';
+import { LIGHT_PASS_LAYER, SEED_RENDER_ORDER } from './lightPassLayers.js';
 import { FULL_SCREEN_VERTEX, FullScreenQuad } from './fullScreenQuad.js';
 
 const SEED_FRAGMENT = /* glsl */ `
@@ -31,7 +31,12 @@ export function createSeedMaterial(): THREE.ShaderMaterial {
   });
 }
 
+/** Every pass draws the seed, so it stays visible on the light pass layer, which the main render skips. */
+function toLightPassLayer(mesh: THREE.Mesh | null): void {
+  mesh?.layers.set(LIGHT_PASS_LAYER);
+}
+
 /** Writes `S`'s starting value over the whole accumulator, under every light. */
 export function LightAccumulatorSeed({ material }: { material: THREE.ShaderMaterial }) {
-  return <FullScreenQuad layer={LIGHT_SEED_LAYER} material={material} renderOrder={SEED_RENDER_ORDER} />;
+  return <FullScreenQuad meshRef={toLightPassLayer} material={material} renderOrder={SEED_RENDER_ORDER} />;
 }

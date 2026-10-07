@@ -1,0 +1,60 @@
+[gd_scene format=3]
+
+; Moves one variable: the number of distinct range_item_cull_mask values that reach one item. Six
+; lights, one mask bit each, light one surface whose light_mask holds all six. Godot draws every
+; light on the item's list (`renderer_canvas_render_rd.cpp:2366-2385`). Every other light scene
+; holds at most two masks.
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Surface" type="Polygon2D" parent="."]
+light_mask = 63
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(32, 120, 1120, 120, 1120, 530, 32, 530)
+
+[node name="Mask1" type="PointLight2D" parent="."]
+position = Vector2(136, 325)
+texture = ExtResource("1_light")
+color = Color(1, 0.4, 0.3, 1)
+range_item_cull_mask = 1
+texture_scale = 0.4
+
+[node name="Mask2" type="PointLight2D" parent="."]
+position = Vector2(312, 325)
+texture = ExtResource("1_light")
+color = Color(0.4, 1, 0.4, 1)
+range_item_cull_mask = 2
+texture_scale = 0.4
+
+[node name="Mask4" type="PointLight2D" parent="."]
+position = Vector2(488, 325)
+texture = ExtResource("1_light")
+color = Color(0.4, 0.5, 1, 1)
+range_item_cull_mask = 4
+texture_scale = 0.4
+
+[node name="Mask8" type="PointLight2D" parent="."]
+position = Vector2(664, 325)
+texture = ExtResource("1_light")
+color = Color(1, 1, 0.4, 1)
+range_item_cull_mask = 8
+texture_scale = 0.4
+
+[node name="Mask16" type="PointLight2D" parent="."]
+position = Vector2(840, 325)
+texture = ExtResource("1_light")
+color = Color(1, 0.4, 1, 1)
+range_item_cull_mask = 16
+texture_scale = 0.4
+
+[node name="Mask32" type="PointLight2D" parent="."]
+position = Vector2(1016, 325)
+texture = ExtResource("1_light")
+color = Color(0.4, 1, 1, 1)
+range_item_cull_mask = 32
+texture_scale = 0.4
+
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+color = Color(0.25, 0.25, 0.3, 1)

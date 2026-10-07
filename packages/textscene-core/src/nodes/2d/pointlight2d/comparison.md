@@ -80,6 +80,21 @@ builds the same map and taps it in the light's fragment shader (ADR-0030).
 The light reaches both panels, but only the upper panel's `light_mask` meets the mask, so
 the lower panel stays lit behind the bar.
 
+## Light order: a MIX light over a light of another mask
+
+<!-- compare: image=unit-pointlight2d-mix-order status=done fixture=unit-pointlight2d-mix-order.tscn -->
+
+Godot applies every light on an item's list in order, whatever each light's
+`range_item_cull_mask`. The MIX light reaches the surface through mask 2 and the ADD light
+through mask 1, so where both reach, the MIX light mixes from what the ADD light left.
+
+## Many cull masks on one item
+
+<!-- compare: image=unit-pointlight2d-many-masks status=done fixture=unit-pointlight2d-many-masks.tscn -->
+
+Six lights, one mask bit each, reach one surface whose `light_mask` holds all six. Godot
+draws every light on the item's list, however many masks the canvas holds.
+
 ## Linting
 
 <!-- lint:begin PointLight2D -->
@@ -110,9 +125,3 @@ white silently. `texture` is stored with no reference check.
 
 - **Shader missing** A `CanvasTexture.normal_texture` is not read, so every surface
   takes the light head-on with no specular response.
-- **Approximated** A MIX light in one light class over a light in another class
-  reaching the same item is summed rather than applied in Godot's order.
-- **Approximated** Past four light classes on one canvas, where a light split by
-  `shadow_item_cull_mask` takes two, the extra lights are dropped with a warning.
-- **Approximated** A CanvasLayer takes the layer window but still follows the 2D camera,
-  where Godot draws it through its own canvas transform.

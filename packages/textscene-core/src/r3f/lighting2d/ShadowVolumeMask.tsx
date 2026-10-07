@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { buildShadowVolumes, type ShadowCasterEdges, type ShadowLight } from './shadowVolumes';
 import { canvasItemFacing } from '../canvasItemFacing';
 import { materialProgramInputs } from '../materialProgramInputs';
+import { usePassMeshRef } from './lightPassDeclarations';
 
 /**
  * Distinct stencil values in one pass. The buffer is 8-bit and 0 is the cleared state, so refs run
@@ -76,30 +77,17 @@ export interface ShadowVolumeMaskProps {
   /** `worldShadowCasters` filtered by this light's `shadow_item_cull_mask`. */
   casters: readonly ShadowCasterEdges[];
   /**
-   * This light's index within the pass. Only distinctness matters, not order or
-   * density; two lights sharing an ordinal shadow each other.
+   * This light's ordinal on the canvas. Only distinctness matters, not order or density: two
+   * lights sharing an ordinal shadow each other. The pass draws the mask wherever it draws the
+   * light shadowed, the tint pass included, since the tint quad tests the stencil it writes.
    */
   ordinal: number;
   /** This light's place in the canvas light list: its render-order slot. */
   sequence: number;
-  /** The layer the light's cookie quad draws on, which the mask shares. */
-  layer: number;
-  /**
-   * The `shadow_color` layer, when this light tints its shadow. The stamp has to
-   * exist in that pass too: it renders the tint quad without the cookie quads,
-   * and the tint quad tests the very stencil this mesh writes.
-   */
-  tintLayer?: number | undefined;
 }
 
-export function ShadowVolumeMask({
-  light,
-  casters,
-  ordinal,
-  sequence,
-  layer,
-  tintLayer,
-}: ShadowVolumeMaskProps) {
+export function ShadowVolumeMask({ light, casters, ordinal, sequence }: ShadowVolumeMaskProps) {
+  const meshRef = usePassMeshRef<THREE.Mesh>(ordinal, 'volume');
   const positions = useMemo(() => buildShadowVolumes(light, casters), [light, casters]);
 
   const geometry = useMemo(() => {
@@ -137,8 +125,8 @@ export function ShadowVolumeMask({
 
   return (
     <mesh
+      ref={meshRef}
       renderOrder={shadowVolumeRenderOrder(sequence)}
-      layers-mask={(1 << layer) | (tintLayer === undefined ? 0 : 1 << tintLayer)}
       frustumCulled={false}
       // `light` and `casters` are world coordinates, so the mesh stays at the identity, or the
       // CanvasItem chain applies twice. three's `updateMatrixWorld` recurses only into a child
