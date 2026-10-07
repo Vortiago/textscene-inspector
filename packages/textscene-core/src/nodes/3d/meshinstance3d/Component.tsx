@@ -22,6 +22,7 @@ import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/buil
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
+import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import {
   SurfaceMaterialSlot,
   useMaterialScalars,
@@ -337,15 +338,13 @@ const UNRESOLVED_MESH = (
  */
 function ArrayMeshSurfaces({ mesh, overrides }: { mesh: SurfacedMesh; overrides: MeshOverrides }) {
   const groupCount = Math.max(mesh.surfaceIndices.length, 1);
-  const multiSurface = groupCount > 1;
+  const sources = Array.from({ length: groupCount }, (_unused, i) =>
+    effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, mesh.materials[i])
+  );
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
-      {Array.from({ length: groupCount }, (_unused, i) => {
-        const attach = multiSurface ? `material-${i}` : 'material';
-        const source = effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, mesh.materials[i]);
-        return <SurfaceMaterialSlot key={i} source={source} attach={attach} />;
-      })}
+      <SurfaceMaterialSlots sources={sources} />
     </>
   );
 }

@@ -1,6 +1,6 @@
 /**
  * A GridMap over an in-memory MeshLibrary corpus: one item whose mesh is a
- * one-surface quad `.tres`, rendered until the chained loads settle.
+ * quad `.tres` of one or two surfaces, rendered until the chained loads settle.
  */
 import type { ComponentType, ReactNode } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -9,8 +9,8 @@ import type { TscnExternalResource, TscnNode } from '../../../../parser/types';
 import { parseGridMap } from '../parser';
 import { GridMap } from '../Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider, ResourceLoader, FileEventBus } from '../../../../index';
-import type { ResourceProvider } from '../../../../resources/ResourceProvider';
+import { ResourceLoaderProvider } from '../../../../index';
+import { loaderServing } from '../../../../resources/testing/servingResourceLoader';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { wallQuadSurfaces } from '../../../../resources/testing/arrayMeshSurfaces';
 
@@ -31,26 +31,36 @@ ${itemLines}
 }
 
 /**
- * The wall quad as the tile mesh. Its surface declares a `[sub_resource]`
+ * The wall quad as the tile mesh. Its first surface declares a `[sub_resource]`
  * StandardMaterial3D with `materialLines` as its body, or no `"material"` key
- * when that is null.
- * `subResources` goes before it, for a material that names them.
+ * when that is null. A `secondMaterialLines` adds a second surface with its own material.
+ * `subResources` goes before them, for a material that names them.
  */
-function tileMesh(materialLines: string | null, subResources: string): string {
-  const material =
-    materialLines === null
-      ? ''
-      : `${subResources}[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tile"]\n${materialLines}\n\n`;
-  const surfaces = wallQuadSurfaces({
+function tileMesh(
+  materialLines: string | null,
+  secondMaterialLines: string | null,
+  subResources: string
+): string {
+  const firstMaterial =
+    materialLines === null ? '' : surfaceMaterial('StandardMaterial3D_tile', materialLines);
+  const secondMaterial =
+    secondMaterialLines === null ? '' : surfaceMaterial('StandardMaterial3D_second', secondMaterialLines);
+  const first = {
     material: materialLines === null ? null : 'SubResource("StandardMaterial3D_tile")',
     name: 'tile',
-  });
+  };
+  const second = { material: 'SubResource("StandardMaterial3D_second")', name: 'second' };
+  const surfaces = wallQuadSurfaces(first, ...(secondMaterialLines === null ? [] : [second]));
   return `[gd_resource type="ArrayMesh" format=4]
 
-${material}[resource]
+${subResources}${firstMaterial}${secondMaterial}[resource]
 _surfaces = ${surfaces}
 blend_shape_mode = 0
 `;
+}
+
+function surfaceMaterial(id: string, lines: string): string {
+  return `[sub_resource type="StandardMaterial3D" id="${id}"]\n${lines}\n\n`;
 }
 
 export interface GridMapCorpus {
@@ -58,6 +68,8 @@ export interface GridMapCorpus {
   itemLines?: string;
   /** The tile material's body, or null for a surface with no material. */
   materialLines?: string | null;
+  /** The body of a second surface's material, or null for a one-surface tile. */
+  secondMaterialLines?: string | null;
   /** The body of the `cells` PackedInt32Array: three ints per cell. */
   cells?: string;
   /** `[sub_resource]` blocks the material names, such as a texture, written before it. */
@@ -93,21 +105,15 @@ function gridMapNode(cells: string): TscnNode {
 export async function mountGridMap({
   itemLines = '',
   materialLines = null,
+  secondMaterialLines = null,
   cells = '0, 0, 0',
   subResources = '',
   wrapper: Wrapper,
 }: GridMapCorpus = {}): Promise<MountedGridMap> {
-  const files = new Map([
-    [LIBRARY_PATH, meshLibrary(itemLines)],
-    [TILE_MESH_PATH, tileMesh(materialLines, subResources)],
-  ]);
-  const provider: ResourceProvider = {
-    async loadResource(path: string) {
-      return files.get(path) ?? null;
-    },
-  };
-  const loader = new ResourceLoader(new FileEventBus(provider));
-  loader.setProvider(provider);
+  const loader = loaderServing({
+    [LIBRARY_PATH]: meshLibrary(itemLines),
+    [TILE_MESH_PATH]: tileMesh(materialLines, secondMaterialLines, subResources),
+  });
 
   const gridMap = <GridMap node={gridMapNode(cells)} />;
   const tree = (

@@ -1,8 +1,7 @@
 /**
  * <GridMap> instances each MeshLibrary item's ArrayMesh at its populated cells,
- * one THREE.InstancedMesh per item, or one mesh per cell when its material
- * billboards. An unresolved mesh draws a cell-sized wireframe box. The item's
- * primary surface material covers every cell, since most tiles are single-surface.
+ * one THREE.InstancedMesh per item, or one mesh per cell when a surface material
+ * billboards. An unresolved mesh draws a cell-sized wireframe box.
  */
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
@@ -13,7 +12,8 @@ import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
 import type { MaterialSource } from '../../../r3f/materials/materialSource';
-import { SurfaceMaterialSlot, useMaterialScalars } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { useMaterialScalars } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
 import { surfaceBillboard } from '../../../resources/materials/standardmaterial3d/materialBag';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
@@ -131,12 +131,9 @@ interface GridMapItemProps {
 /** All cells sharing one MeshLibrary item: one batch, or one tile per cell when it billboards. */
 function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const meshResult = useResource<ArrayMeshResource>(item?.meshPath ?? '', 'arraymesh');
-  // The surface material address only becomes known once the ArrayMesh resolves.
-  const materialPath = meshResult.value?.materialPaths[0] ?? null;
-  const material = useMemo(
-    (): MaterialSource | undefined => (materialPath ? { kind: 'file', path: materialPath } : undefined),
-    [materialPath]
-  );
+  // The surface material addresses only become known once the ArrayMesh resolves.
+  const materialPaths = meshResult.value?.materialPaths;
+  const materials = useMemo(() => surfaceMaterials(materialPaths ?? []), [materialPaths]);
 
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged
@@ -151,10 +148,6 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const shadow = shadowCastingEffects(item?.castShadow);
 
   const geometry = meshResult.value?.geometry;
-  // Decided from the decoded material, since the drawn one exists only inside a slot.
-  const scalars = useMaterialScalars(readyMaterial(useMaterial(material)));
-  const batched = drawsAsOneBatch(surfaceBillboard(scalars));
-
   if (!geometry) {
     // A pending or missing item draws cell-sized wireframe boxes.
     return (
@@ -165,22 +158,64 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
       </>
     );
   }
-  if (batched)
-    return <BatchedTiles geometry={geometry} material={material} matrices={matrices} shadow={shadow} />;
   return (
-    <>
-      {matrices.map((m, i) => (
-        <CellTile key={i} geometry={geometry} material={material} matrix={m} shadow={shadow} />
-      ))}
-    </>
+    <SurfaceBatchScan
+      geometry={geometry}
+      materials={materials}
+      matrices={matrices}
+      shadow={shadow}
+      surface={0}
+      isBatchable
+    />
   );
+}
+
+/** One source per draw group, and one for Godot's default surface when the mesh declares none. */
+function surfaceMaterials(materialPaths: readonly (string | null)[]): (MaterialSource | undefined)[] {
+  if (materialPaths.length === 0) return [undefined];
+  return materialPaths.map((path) => (path ? { kind: 'file', path } : undefined));
 }
 
 interface TileProps {
   geometry: THREE.BufferGeometry;
-  /** Absent while the ArrayMesh loads or when it declares none: Godot's default surface. */
-  material: MaterialSource | undefined;
+  /** One per draw group. Undefined while the ArrayMesh loads or when a surface declares none. */
+  materials: readonly (MaterialSource | undefined)[];
   shadow: ShadowCastingEffects;
+}
+
+interface ItemTilesProps extends TileProps {
+  matrices: THREE.Matrix4[];
+}
+
+/**
+ * The item's tiles, batched only when no surface billboards. Reads whether `surface` draws as
+ * one batch, hands on to the next surface, and draws the tiles after the last: a hook per
+ * surface cannot sit in a loop. The decoded material decides, as the drawn one exists only in a slot.
+ */
+function SurfaceBatchScan({
+  surface,
+  isBatchable,
+  ...props
+}: ItemTilesProps & { surface: number; isBatchable: boolean }) {
+  const scalars = useMaterialScalars(readyMaterial(useMaterial(props.materials[surface])));
+  const isBatchableSoFar = isBatchable && drawsAsOneBatch(surfaceBillboard(scalars));
+  if (surface + 1 < props.materials.length) {
+    return <SurfaceBatchScan {...props} surface={surface + 1} isBatchable={isBatchableSoFar} />;
+  }
+  if (isBatchableSoFar) return <BatchedTiles {...props} />;
+  return (
+    <>
+      {props.matrices.map((m, i) => (
+        <CellTile
+          key={i}
+          geometry={props.geometry}
+          materials={props.materials}
+          matrix={m}
+          shadow={props.shadow}
+        />
+      ))}
+    </>
+  );
 }
 
 /**
@@ -189,7 +224,7 @@ interface TileProps {
  * arrives through `args`. The shadow hooks carry DOUBLE_SIDED and SHADOWS_ONLY per draw
  * (`r3f/surfaceDrawHooks.ts`).
  */
-function BatchedTiles({ geometry, material, matrices, shadow }: TileProps & { matrices: THREE.Matrix4[] }) {
+function BatchedTiles({ geometry, materials, matrices, shadow }: ItemTilesProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   useLayoutEffect(() => {
     const mesh = meshRef.current;
@@ -210,17 +245,17 @@ function BatchedTiles({ geometry, material, matrices, shadow }: TileProps & { ma
       onBeforeShadow={shadow.onBeforeShadow}
       onAfterShadow={shadow.onAfterShadow}
     >
-      <SurfaceMaterialSlot source={material} />
+      <SurfaceMaterialSlots sources={materials} />
     </instancedMesh>
   );
 }
 
 /**
  * One cell of a billboarding item, so its tile turns about its own cell as in Godot
- * (`drawsAsOneBatch` says why a batch cannot). Each cell mounts its own slot, since a
+ * (`drawsAsOneBatch` says why a batch cannot). Each cell mounts its own slots, since a
  * material element attaches to one parent. Every such material shares one program.
  */
-function CellTile({ geometry, material, matrix, shadow }: TileProps & { matrix: THREE.Matrix4 }) {
+function CellTile({ geometry, materials, matrix, shadow }: TileProps & { matrix: THREE.Matrix4 }) {
   return (
     <mesh
       args={[geometry]}
@@ -233,7 +268,7 @@ function CellTile({ geometry, material, matrix, shadow }: TileProps & { matrix: 
       onBeforeShadow={shadow.onBeforeShadow}
       onAfterShadow={shadow.onAfterShadow}
     >
-      <SurfaceMaterialSlot source={material} />
+      <SurfaceMaterialSlots sources={materials} />
     </mesh>
   );
 }

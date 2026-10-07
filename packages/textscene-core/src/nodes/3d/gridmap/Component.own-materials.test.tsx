@@ -1,6 +1,6 @@
 /**
- * <GridMap> tiles whose ArrayMesh `.tres` carries its own surface material as a
- * `[sub_resource]`. GridMap feeds `ArrayMeshResource.materialPaths[0]` into
+ * <GridMap> tiles whose ArrayMesh `.tres` carries its own surface materials as
+ * `[sub_resource]`s. GridMap feeds each of `ArrayMeshResource.materialPaths` into a
  * `SurfaceMaterialSlot`, which loads it as any material, so the **Sub-resource path**
  * seam needs no per-consumer case.
  */
@@ -20,6 +20,17 @@ describe('<GridMap> tile with the ArrayMesh’s own surface material', () => {
     // Straight off the sub-resource body: Color(0, 1, 0, 1) and roughness 0.25.
     expect(material.color.getHex()).toBe(0x00ff00);
     expect(material.roughness).toBe(0.25);
+  });
+});
+
+describe('<GridMap> tile of two surfaces', () => {
+  it('binds each surface its own material in the batch', async () => {
+    const tile = await renderInstancedTile({
+      materialLines: 'albedo_color = Color(1, 0, 0, 1)',
+      secondMaterialLines: 'albedo_color = Color(0, 0, 1, 1)',
+    });
+    const materials = tile.material as THREE.MeshStandardMaterial[];
+    expect(materials.map((m) => m.color.getHex())).toEqual([0xff0000, 0x0000ff]);
   });
 });
 

@@ -79,6 +79,21 @@ describe('<GridMap> tile material billboard_mode', () => {
     ]);
   });
 
+  it('draws each cell on its own when only the second surface billboards', async () => {
+    const tiles = await renderGridMapTiles({
+      materialLines: 'roughness = 0.5',
+      secondMaterialLines: BILLBOARD,
+      cells: TWO_CELLS,
+    });
+    expect(tiles).toHaveLength(2);
+    for (const tile of tiles) {
+      expectSameRotation(
+        drawColourGroup(tile, TEST_CAMERA, 1, (s) => s.matrixWorld),
+        TEST_CAMERA.matrixWorld
+      );
+    }
+  });
+
   it('still batches a tile whose material does not billboard', async () => {
     const tiles = await renderGridMapTiles({ materialLines: 'roughness = 0.5', cells: TWO_CELLS });
     expect(tiles).toHaveLength(1);
