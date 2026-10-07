@@ -43,17 +43,20 @@ function subjectNode(type: string, children: TscnNode[] = []): TscnNode {
   };
 }
 
-function hiddenSubjectNode(type: string, children: TscnNode[]): TscnNode {
-  const subject = subjectNode(type, children);
+function hiddenSubjectNode(type: string): TscnNode {
+  const subject = subjectNode(type, [kidNode()]);
   return { ...subject, properties: { ...subject.properties, visible: false } };
 }
 
-const kid: TscnNode = {
-  name: 'Kid',
-  type: 'Node3D',
-  children: [],
-  properties: { name: 'Kid' }, // identity transform of its own
-};
+/** A fresh child per test, so no test shares a node object with another. */
+function kidNode(): TscnNode {
+  return {
+    name: 'Kid',
+    type: 'Node3D',
+    children: [],
+    properties: { name: 'Kid' }, // identity transform of its own
+  };
+}
 
 async function renderScene(nodes: TscnNode[]) {
   return ReactThreeTestRenderer.create(
@@ -94,28 +97,27 @@ describe('transform-only 3D types: rendered contract (ADR-0008)', () => {
   );
 
   it.each([...TRANSFORM_ONLY_3D_TYPES])('%s positions its children by the node transform', async (type) => {
-    const renderer = await renderScene([subjectNode(type, [kid])]);
-    const rendered = renderer.scene.findByProps({ name: 'Kid' });
+    const renderer = await renderScene([subjectNode(type, [kidNode()])]);
+    const renderedKid = renderer.scene.findByProps({ name: 'Kid' });
 
     // The child renders inside the subject's transform group. The dispatcher
     // inserts an unnamed pickable <group> per node, so walk the ancestors.
     const ancestorNames: string[] = [];
-    for (let p = rendered.instance.parent; p; p = p.parent) ancestorNames.push(p.name);
+    for (let p = renderedKid.instance.parent; p; p = p.parent) ancestorNames.push(p.name);
     expect(ancestorNames).toContain('Subject');
 
     // World position = the parent's Transform3D origin: the transform is
     // applied by the group and inherited, not re-applied per child.
-    const world = rendered.instance.getWorldPosition(new THREE.Vector3());
+    const world = renderedKid.instance.getWorldPosition(new THREE.Vector3());
     expect(world.toArray()).toEqual([2, 3, 4]);
   });
 
   // Godot hides a subtree under any hidden Node3D (node_3d.cpp:1132-1143).
   it.each([...TRANSFORM_ONLY_3D_TYPES])('%s hides its children when not visible', async (type) => {
-    const renderer = await renderScene([hiddenSubjectNode(type, [kid])]);
-    const rendered = renderer.scene.findByProps({ name: 'Kid' });
+    const renderer = await renderScene([hiddenSubjectNode(type)]);
+    const subject = renderer.scene.findByProps({ name: 'Subject' });
 
-    let isShown = rendered.instance.visible;
-    for (let p = rendered.instance.parent; p; p = p.parent) isShown &&= p.visible;
-    expect(isShown).toBe(false);
+    // three.js skips a hidden group's subtree, so the subject's own flag hides the child.
+    expect(subject.instance.visible).toBe(false);
   });
 });

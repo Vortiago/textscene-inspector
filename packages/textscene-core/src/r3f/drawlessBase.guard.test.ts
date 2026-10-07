@@ -11,7 +11,7 @@ import { Node2D } from '../nodes/base/node2d/Component';
 import { Node } from '../nodes/node/Component';
 
 /** Drivers of other nodes: each draws nothing, but its own component plays the animation. */
-const OWN_DRIVER_COMPONENTS = ['AnimationPlayer', 'AnimationTree'];
+const DRIVER_TYPES_WITH_OWN_COMPONENT = ['AnimationPlayer', 'AnimationTree'];
 
 function baseComponentOf(type: string): NodeComponent {
   if (descendsFrom(type, 'Node3D')) return Node3D;
@@ -22,7 +22,7 @@ function baseComponentOf(type: string): NodeComponent {
 const DRAWLESS_TYPES = nodeComponentRegistry
   .getAllTypeNames()
   .filter((type) => nodeComponentRegistry.renderIntentOf(type) !== 'draws')
-  .filter((type) => !OWN_DRIVER_COMPONENTS.includes(type))
+  .filter((type) => !DRIVER_TYPES_WITH_OWN_COMPONENT.includes(type))
   .sort();
 
 describe('drawless types render through their base component', () => {
