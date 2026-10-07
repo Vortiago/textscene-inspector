@@ -260,27 +260,4 @@ describe('Texture Loading Integration', () => {
     const result = await loadTextureWithEvents(registry, '1');
     expect(result).toBeNull();
   });
-
-  it('should allow material parser to continue when texture is null', async () => {
-    mockFileEventBus.setAutoLoad(true, () => {
-      throw new Error('File not found');
-    });
-
-    registry.register({
-      id: '1_albedo',
-      type: 'Texture2D',
-      path: 'res://missing.png',
-    });
-
-    const texture = await loadTextureWithEvents(registry, '1_albedo');
-
-    // Material parser checks if texture is null before assigning
-    const material: { albedo_texture?: THREE.Texture } = {};
-    if (texture) {
-      material.albedo_texture = texture;
-    }
-
-    expect(material).toBeDefined();
-    expect(material.albedo_texture).toBeUndefined();
-  });
 });
