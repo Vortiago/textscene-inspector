@@ -11,7 +11,7 @@ import type { ResourceEventBus } from './ResourceEventBus';
 import { cloneWithMaterials, disposeClonedMaterials } from './processing/glbProcessing';
 import { ResourceLoaderContext } from './ResourceLoaderContext';
 import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
-import { resourceRef } from '../godot/index.js';
+import { resourceRef, simplifyResPath } from '../godot/index.js';
 import { resourceSliceRegistry, type ResourceBusType } from './sliceRegistration';
 
 /**
@@ -211,12 +211,12 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
 }
 
 /**
- * The `res://` path for a raw property string: a `res://` path unchanged, or the path of an
+ * The simplified `res://` path for a raw property string: a `res://` path, or the path of an
  * `ExtResource("id")`. Null for an unknown id or any other form.
  */
 export function resolveResourcePath(scene: TscnScene, idOrPath: string): string | null {
   if (idOrPath.startsWith('res://')) {
-    return idOrPath;
+    return simplifyResPath(idOrPath);
   }
   const parsed = resourceRef(idOrPath);
   if (parsed?.kind !== 'ExtResource') {
