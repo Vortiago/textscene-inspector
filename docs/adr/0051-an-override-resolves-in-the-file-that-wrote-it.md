@@ -42,7 +42,10 @@ the node alike. A node the host adds inside the sub-scene carries the host's sco
   which the linter reads, never carries it.
 - A colliding id takes a suffix in the node's scope, for example `ExtResource("3 (outer)")`.
   The inspector spells each value through `authoredSpelling` (`resources/authoredSpelling.ts`),
-  so it shows `ExtResource("3")`, as Godot does.
+  so it shows `ExtResource("3")`, the id the override's file wrote. Godot keeps no renamed
+  id: each file's loader resolves its ids in its own table (`resource_format_text.h:73`,
+  `resource_format_text.cpp:137-142`), and the saver writes each file's own id
+  (`resource_format_text.cpp:1622`, `:1814`).
 - An id the override names but its file lacks resolves to nothing. Godot refuses the file
   (`resource_format_text.cpp:112`, `:135-137`). The id never falls through to the
   sub-scene's resource of the same id.
