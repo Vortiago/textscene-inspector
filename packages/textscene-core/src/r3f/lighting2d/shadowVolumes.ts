@@ -5,6 +5,8 @@
  * gate picks one. Everything is in the previewer's 2D world space, Y up.
  */
 
+import type { Vector2 } from '../../nodes/base/node2d/types.js';
+
 /** `OccluderPolygon2D.CullMode`. */
 export const OCCLUDER_CULL_DISABLED = 0;
 export const OCCLUDER_CULL_CLOCKWISE = 1;
@@ -40,6 +42,53 @@ export interface ShadowCasterEdges {
    */
   segments: ArrayLike<number>;
   cullMode: OccluderCullMode;
+  /**
+   * The occluder polygon's local AABB, Godot's `aabb_cache`, through the occluder's transform.
+   * Godot culls on these bounds, not on the edges.
+   */
+  bounds: Quad2;
+}
+
+/** Four corners in order around a parallelogram. */
+export type Quad2 = readonly [Vector2, Vector2, Vector2, Vector2];
+
+/** The interval `points` cover along `axis`. */
+export function project(points: ArrayLike<number>, axis: Vector2): [number, number] {
+  let min = Infinity;
+  let max = -Infinity;
+  for (let i = 0; i + 1 < points.length; i += 2) {
+    const along = axis.x * points[i]! + axis.y * points[i + 1]!;
+    if (along < min) min = along;
+    if (along > max) max = along;
+  }
+  return [min, max];
+}
+
+/** A quad's two edge normals, unnormalised: enough to separate it, as its opposite edges are parallel. */
+export function edgeNormals([a, b, c]: Quad2): Vector2[] {
+  return [
+    { x: a.y - b.y, y: b.x - a.x },
+    { x: b.y - c.y, y: c.x - b.x },
+  ];
+}
+
+/**
+ * Do `bounds` meet the convex `polygon` (`[x,y, …]`), whose edge normals are `polygonAxes`? Both
+ * are convex, so a separating axis among the two shapes' edge normals decides it, as Godot's
+ * `Rect2::intersects_transformed` does. Bounds that are not finite meet nothing.
+ */
+export function boundsMeetConvex(
+  bounds: Quad2,
+  polygon: ArrayLike<number>,
+  polygonAxes: readonly Vector2[]
+): boolean {
+  const corners = bounds.flatMap(({ x, y }) => [x, y]);
+  if (!corners.every(Number.isFinite)) return false;
+  return [...polygonAxes, ...edgeNormals(bounds)].every((axis) => {
+    const [boundsMin, boundsMax] = project(corners, axis);
+    const [polygonMin, polygonMax] = project(polygon, axis);
+    return boundsMin <= polygonMax && boundsMax >= polygonMin;
+  });
 }
 
 /**
@@ -152,27 +201,17 @@ export function lightReach(light: ShadowLight): number {
   return Math.hypot(dx, dy);
 }
 
+const RECT_AXES: readonly Vector2[] = [
+  { x: 1, y: 0 },
+  { x: 0, y: 1 },
+];
+
 /**
- * Godot's occluder cull: keep an occluder only while its bounds overlap the
- * light's rect (`RendererCanvasRenderRD::light_update_shadow`). Bounding the
- * transformed points is never looser than Godot's transformed-AABB test.
+ * Godot's occluder cull: keep an occluder only while its bounds overlap the light's rect
+ * (`renderer_canvas_render_rd.cpp:1056`, `p_light_rect.intersects_transformed`).
  */
-export function casterInLightRect(segments: ArrayLike<number>, rect: LightRect): boolean {
-  if (segments.length < 4) return false;
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (let i = 0; i + 1 < segments.length; i += 2) {
-    const x = segments[i]!;
-    const y = segments[i + 1]!;
-    if (x < minX) minX = x;
-    if (x > maxX) maxX = x;
-    if (y < minY) minY = y;
-    if (y > maxY) maxY = y;
-  }
-  if (!Number.isFinite(minX) || !Number.isFinite(minY)) return false;
-  return minX <= rect.maxX && maxX >= rect.minX && minY <= rect.maxY && maxY >= rect.minY;
+export function casterInLightRect(bounds: Quad2, { minX, minY, maxX, maxY }: LightRect): boolean {
+  return boundsMeetConvex(bounds, [minX, minY, maxX, minY, maxX, maxY, minX, maxY], RECT_AXES);
 }
 
 /**
@@ -189,8 +228,8 @@ export function buildShadowVolumes(
   const rings: Float32Array[] = [];
 
   for (const caster of casters) {
-    const { segments, cullMode } = caster;
-    if (!casterInLightRect(segments, light.rect)) continue;
+    const { segments, cullMode, bounds } = caster;
+    if (!casterInLightRect(bounds, light.rect)) continue;
     for (let i = 0; i + 3 < segments.length; i += 4) {
       const ax = segments[i]!;
       const ay = segments[i + 1]!;

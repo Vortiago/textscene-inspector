@@ -13,15 +13,15 @@
 
 import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
 import {
+  boundsMeetConvex,
+  edgeNormals,
   OCCLUDER_CULL_CLOCKWISE,
   OCCLUDER_CULL_COUNTER_CLOCKWISE,
   type OccluderCullMode,
+  type Quad2,
   type ShadowCasterEdges,
 } from './shadowVolumes';
 import type { Vector2 } from '../../nodes/base/node2d/types.js';
-
-/** Four corners in order around a parallelogram. */
-export type Quad2 = readonly [Vector2, Vector2, Vector2, Vector2];
 
 /** What the map is built from, all in the previewer's 2D world space (Y up). */
 export interface DirectionalShadowView {
@@ -34,12 +34,6 @@ export interface DirectionalShadowView {
   readonly direction: Vector2;
   /** `DirectionalLight2D.max_distance` in world units: how far upstream an occluder still casts. */
   readonly maxDistance: number;
-}
-
-/** An occluder's casting edges, with its local bounds carried into the world for the cull. */
-export interface DirectionalShadowCaster extends ShadowCasterEdges {
-  /** The occluder polygon's local AABB, Godot's `aabb_cache`, through the occluder's transform. */
-  readonly bounds: Quad2;
 }
 
 export interface DirectionalShadowMap {
@@ -129,35 +123,11 @@ function edgeCastsDirectionalShadow(
   return true;
 }
 
-/** The interval `points` cover along `axis`. */
-function project(points: ArrayLike<number>, axis: Vector2): [number, number] {
-  let min = Infinity;
-  let max = -Infinity;
-  for (let i = 0; i + 1 < points.length; i += 2) {
-    const along = axis.x * points[i]! + axis.y * points[i + 1]!;
-    if (along < min) min = along;
-    if (along > max) max = along;
-  }
-  return [min, max];
-}
-
-/** A quad's two edge normals, unnormalised: enough to separate it, as its opposite edges are parallel. */
-function edgeNormals([a, b, c]: Quad2): Vector2[] {
-  return [
-    { x: a.y - b.y, y: b.x - a.x },
-    { x: b.y - c.y, y: c.x - b.x },
-  ];
-}
-
-function quadPoints(quad: Quad2): number[] {
-  return quad.flatMap(({ x, y }) => [x, y]);
-}
-
 /**
  * Godot's occluder cull (`renderer_viewport.cpp:567-631`): keep an occluder whose local bounds meet
  * the viewport swept `max_distance` upstream, toward the light. Godot maps the sweep into the
  * occluder's local space, which an affine map leaves equivalent to testing the bounds' world
- * parallelogram. Both shapes are convex, so a separating axis among their edge normals decides it.
+ * parallelogram against the sweep.
  */
 function sweptViewTest(view: DirectionalShadowView): (bounds: Quad2) => boolean {
   const { clip: corners, direction, maxDistance } = view;
@@ -171,20 +141,7 @@ function sweptViewTest(view: DirectionalShadowView): (bounds: Quad2) => boolean 
     );
   }
   const sweptAxes: Vector2[] = [...edgeNormals(corners), { x: -direction.y, y: direction.x }];
-  const sweptIntervals = sweptAxes.map((axis) => project(swept, axis));
-
-  return (bounds) => {
-    const boundsPoints = quadPoints(bounds);
-    if (!boundsPoints.every(Number.isFinite)) return false;
-    const overlapsAlong = (axis: Vector2, sweptInterval = project(swept, axis)) => {
-      const [boundsMin, boundsMax] = project(boundsPoints, axis);
-      return boundsMin <= sweptInterval[1] && boundsMax >= sweptInterval[0];
-    };
-    return (
-      sweptAxes.every((axis, index) => overlapsAlong(axis, sweptIntervals[index])) &&
-      edgeNormals(bounds).every((axis) => overlapsAlong(axis))
-    );
-  };
+  return (bounds) => boundsMeetConvex(bounds, swept, sweptAxes);
 }
 
 /**
@@ -194,7 +151,7 @@ function sweptViewTest(view: DirectionalShadowView): (bounds: Quad2) => boolean 
  */
 export function buildDirectionalShadowMap(
   view: DirectionalShadowView,
-  casters: readonly DirectionalShadowCaster[]
+  casters: readonly ShadowCasterEdges[]
 ): DirectionalShadowMap {
   const worldToShadow = directionalShadowTransform(view);
   const casterInSweptView = sweptViewTest(view);

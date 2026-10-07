@@ -15,7 +15,6 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { litQuadRenderOrder } from './ShadowVolumeMask';
 import {
-  holdsCanvasLights,
   holdsListedDirectionalLights,
   isListedDirectionalLight,
   isPositionalCanvasLight,
@@ -119,7 +118,10 @@ describe('CanvasLightSequenceProvider', () => {
     return null;
   }
 
-  async function sequences(paths: readonly string[], ordinal = 99, scene = SCENE): Promise<number[]> {
+  async function sequences(
+    paths: readonly string[],
+    { ordinal = 99, scene = SCENE }: { ordinal?: number; scene?: string } = {}
+  ): Promise<number[]> {
     const seen: number[] = [];
     const sceneGraph = createSceneGraphFromTscnScene(new TscnParser().parse(scene));
     await ReactThreeTestRenderer.create(
@@ -152,11 +154,11 @@ describe('CanvasLightSequenceProvider', () => {
 [node name="Inner" type="PointLight2D" parent="View"]
 [node name="A" type="PointLight2D" parent="."]
 `;
-    expect(await sequences(['Root/View/Inner', 'Root/A'], 99, scene)).toEqual([99, 0]);
+    expect(await sequences(['Root/View/Inner', 'Root/A'], { scene })).toEqual([99, 0]);
   });
 
   it('falls back to the ordinal for a path the walk never saw', async () => {
-    expect(await sequences(['Root/Nowhere'], 7)).toEqual([7]);
+    expect(await sequences(['Root/Nowhere'], { ordinal: 7 })).toEqual([7]);
   });
 
   it('falls back to the ordinal with no canvas provider at all', async () => {
@@ -205,20 +207,6 @@ describe('isShownCanvasNode', () => {
 
   it('reads `visible = false` as hidden', () => {
     expect(isShownCanvasNode({ type: 'Node2D', properties: { visible: false } } as never)).toBe(false);
-  });
-});
-
-describe('holdsCanvasLights', () => {
-  it('enters an ordinary canvas node', () => {
-    expect(holdsCanvasLights({ type: 'Node2D', properties: {} } as never)).toBe(true);
-  });
-
-  it('stops at a SubViewport, whose lights belong to its own World2D', () => {
-    expect(holdsCanvasLights({ type: 'SubViewport', properties: {} } as never)).toBe(false);
-  });
-
-  it('enters a hidden node, which only the directional walk skips', () => {
-    expect(holdsCanvasLights({ type: 'Node2D', properties: { visible: false } } as never)).toBe(true);
   });
 });
 

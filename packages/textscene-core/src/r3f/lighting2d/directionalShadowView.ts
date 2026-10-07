@@ -7,12 +7,8 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
-import {
-  ndcToShadowTransform,
-  type Affine2,
-  type DirectionalShadowView,
-  type Quad2,
-} from './directionalShadowMap';
+import { ndcToShadowTransform, type Affine2, type DirectionalShadowView } from './directionalShadowMap';
+import type { Quad2 } from './shadowVolumes';
 import { SHADOW_SNAPSHOT_PRIORITY } from './ShadowCasterStage';
 import { useGameViewportRect } from '../gameViewportRect';
 import type { Vector2 } from '../../nodes/base/node2d/types.js';
@@ -21,13 +17,13 @@ import type { Rect2 } from '../controls/native/rect';
 /** Reused by every sample, which reads it before the next one writes it. */
 const scratch = new THREE.Vector3();
 
-/** A Godot canvas rect in the Y-up world, in NDC corner order. */
-function worldQuad({ x, y, w, h }: Rect2): Quad2 {
+/** The game viewport rect, at the canvas origin, in the Y-up world and NDC corner order. */
+function viewportQuad({ w, h }: Rect2): Quad2 {
   return [
-    { x, y: -(y + h) },
-    { x: x + w, y: -(y + h) },
-    { x: x + w, y: -y },
-    { x, y: -y },
+    { x: 0, y: -h },
+    { x: w, y: -h },
+    { x: w, y: 0 },
+    { x: 0, y: 0 },
   ];
 }
 
@@ -51,7 +47,7 @@ export function useDirectionalShadowView(
 ): DirectionalShadowView | null {
   // Godot's `clip_rect`.
   const viewport = useGameViewportRect();
-  const clip = useMemo(() => worldQuad(viewport), [viewport]);
+  const clip = useMemo(() => viewportQuad(viewport), [viewport]);
   const [view, setView] = useState<DirectionalShadowView | null>(null);
   const published = useRef(view);
 

@@ -6,7 +6,7 @@
  */
 
 import type { TscnNode } from '../../parser/types.js';
-import { isViewportBoundary } from '../../nodes/viewport/subviewport/viewportBoundary.js';
+import { keepsChildrenInViewport } from '../../nodes/viewport/subviewport/viewportBoundary.js';
 
 /**
  * Canvas lights that take a slot in the positional list. A `DirectionalLight2D` sits on a list of
@@ -25,16 +25,11 @@ export function isShownCanvasNode(node: TscnNode): boolean {
 }
 
 /**
- * Whether a walk of this canvas's light lists enters a node's children. A SubViewport's children
- * live in its own World2D (`viewport.cpp:5345`), so their lights sit on that viewport's lists.
+ * Whether the directional walk enters a node's children. A SubViewport's children live in its own
+ * World2D (`viewport.cpp:5345`), and a hidden node's lights are disabled.
  */
-export function holdsCanvasLights(node: TscnNode): boolean {
-  return !isViewportBoundary(node.type);
-}
-
-/** `holdsCanvasLights`, and a hidden node's lights are disabled too, so it hides no listed light. */
 export function holdsListedDirectionalLights(node: TscnNode): boolean {
-  return holdsCanvasLights(node) && isShownCanvasNode(node);
+  return keepsChildrenInViewport(node) && isShownCanvasNode(node);
 }
 
 /**

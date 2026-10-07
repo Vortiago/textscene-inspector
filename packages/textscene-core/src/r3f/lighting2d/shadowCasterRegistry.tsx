@@ -6,8 +6,7 @@
 
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import * as THREE from 'three';
-import type { OccluderCullMode } from './shadowVolumes';
-import type { DirectionalShadowCaster, Quad2 } from './directionalShadowMap';
+import type { OccluderCullMode, Quad2, ShadowCasterEdges } from './shadowVolumes';
 
 export interface ShadowCaster {
   /** Local-space `[ax,ay,0, bx,by,0, …]`: `polygonToSegments`' output verbatim. */
@@ -109,7 +108,7 @@ export function visibleInTree(object: THREE.Object3D): boolean {
   return true;
 }
 
-export interface WorldShadowCaster extends DirectionalShadowCaster {
+export interface WorldShadowCaster extends ShadowCasterEdges {
   /** Kept alongside the geometry so one flatten can serve every light. */
   occluderLightMask: number;
 }
@@ -139,10 +138,14 @@ export function worldShadowCasters(
     if (points < 2) continue;
 
     caster.object.updateWorldMatrix(true, false);
+    const { matrixWorld } = caster.object;
     const world = new Float32Array(points * 2);
+    const local = emptyBox();
     for (let i = 0; i < points; i++) {
-      point.set(segments[i * 3]!, segments[i * 3 + 1]!, segments[i * 3 + 2]!);
-      point.applyMatrix4(caster.object.matrixWorld);
+      const x = segments[i * 3]!;
+      const y = segments[i * 3 + 1]!;
+      expandBox(local, x, y);
+      point.set(x, y, segments[i * 3 + 2]!).applyMatrix4(matrixWorld);
       world[i * 2] = point.x;
       world[i * 2 + 1] = point.y;
     }
@@ -150,28 +153,40 @@ export function worldShadowCasters(
       segments: world,
       cullMode: caster.cullMode,
       occluderLightMask: caster.occluderLightMask,
-      bounds: worldBounds(segments, caster.object.matrixWorld),
+      bounds: boxThrough(local, matrixWorld, point),
     });
   }
 
   return out;
 }
 
-/** The local AABB of xyz `segments`, its corners carried through `matrixWorld`. */
-function worldBounds(segments: Float32Array, matrixWorld: THREE.Matrix4): Quad2 {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (let i = 0; i + 2 < segments.length; i += 3) {
-    minX = Math.min(minX, segments[i]!);
-    maxX = Math.max(maxX, segments[i]!);
-    minY = Math.min(minY, segments[i + 1]!);
-    maxY = Math.max(maxY, segments[i + 1]!);
-  }
+interface Box {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+function emptyBox(): Box {
+  return { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+}
+
+function expandBox(box: Box, x: number, y: number): void {
+  box.minX = Math.min(box.minX, x);
+  box.maxX = Math.max(box.maxX, x);
+  box.minY = Math.min(box.minY, y);
+  box.maxY = Math.max(box.maxY, y);
+}
+
+/** `box`'s corners through `matrixWorld`, in order around it. `scratch` carries each corner. */
+function boxThrough(
+  { minX, minY, maxX, maxY }: Box,
+  matrixWorld: THREE.Matrix4,
+  scratch: THREE.Vector3
+): Quad2 {
   const corner = (x: number, y: number) => {
-    const point = new THREE.Vector3(x, y, 0).applyMatrix4(matrixWorld);
-    return { x: point.x, y: point.y };
+    scratch.set(x, y, 0).applyMatrix4(matrixWorld);
+    return { x: scratch.x, y: scratch.y };
   };
   return [corner(minX, minY), corner(maxX, minY), corner(maxX, maxY), corner(minX, maxY)];
 }

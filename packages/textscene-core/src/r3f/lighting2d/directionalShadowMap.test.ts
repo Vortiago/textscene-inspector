@@ -9,15 +9,15 @@ import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
 import {
   buildDirectionalShadowMap,
   ndcToShadowTransform,
-  type DirectionalShadowCaster,
   type DirectionalShadowView,
-  type Quad2,
 } from './directionalShadowMap';
 import {
   OCCLUDER_CULL_DISABLED,
   OCCLUDER_CULL_CLOCKWISE,
   OCCLUDER_CULL_COUNTER_CLOCKWISE,
   type OccluderCullMode,
+  type Quad2,
+  type ShadowCasterEdges,
 } from './shadowVolumes';
 
 /**
@@ -42,7 +42,7 @@ function segment(
   bx: number,
   by: number,
   cullMode: OccluderCullMode = OCCLUDER_CULL_DISABLED
-): DirectionalShadowCaster {
+): ShadowCasterEdges {
   return { segments: [ax, ay, bx, by], cullMode, bounds: segmentBounds(ax, ay, bx, by) };
 }
 

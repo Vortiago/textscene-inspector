@@ -10,6 +10,7 @@ import {
   shadowVolumeRenderOrder,
 } from './ShadowVolumeMask';
 import { OCCLUDER_CULL_DISABLED, type ShadowCasterEdges, type ShadowLight } from './shadowVolumes';
+import { worldEdges } from './testing/worldEdges';
 
 const LIGHT: ShadowLight = {
   x: 0,
@@ -17,10 +18,7 @@ const LIGHT: ShadowLight = {
   rect: { minX: -512, minY: -512, maxX: 512, maxY: 512 },
 };
 
-const CASTER: ShadowCasterEdges = {
-  segments: new Float32Array([100, -50, 100, 50]),
-  cullMode: OCCLUDER_CULL_DISABLED,
-};
+const CASTER: ShadowCasterEdges = worldEdges(new Float32Array([100, -50, 100, 50]), OCCLUDER_CULL_DISABLED);
 
 async function renderMask(props: Partial<Parameters<typeof ShadowVolumeMask>[0]> = {}) {
   return ReactThreeTestRenderer.create(
@@ -103,10 +101,7 @@ describe('<ShadowVolumeMask>', () => {
   });
 
   it('renders nothing when the occluder is outside the light rect', async () => {
-    const far: ShadowCasterEdges = {
-      segments: new Float32Array([900, -50, 900, 50]),
-      cullMode: OCCLUDER_CULL_DISABLED,
-    };
+    const far: ShadowCasterEdges = worldEdges(new Float32Array([900, -50, 900, 50]), OCCLUDER_CULL_DISABLED);
     expect(maskMesh(await renderMask({ casters: [far] }))).toBeNull();
   });
 

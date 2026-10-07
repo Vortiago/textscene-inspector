@@ -152,8 +152,8 @@ export function buildShadowPolarMap(
 
   const ray = { x: 0, y: 0 };
 
-  for (const { segments, cullMode } of casters) {
-    if (!casterInLightRect(segments, light.rect)) continue;
+  for (const { segments, cullMode, bounds } of casters) {
+    if (!casterInLightRect(bounds, light.rect)) continue;
     for (let i = 0; i + 3 < segments.length; i += 4) {
       const wax = segments[i]!;
       const way = segments[i + 1]!;
