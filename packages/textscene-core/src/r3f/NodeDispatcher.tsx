@@ -29,8 +29,7 @@ import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
-import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
-import { isViewportBoundary, isViewportSurface } from '../nodes/viewport/subviewport/viewportBoundary.js';
+import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import {
   InstancedScenePathsProvider,
@@ -223,26 +222,7 @@ function PlainNode({ node, path, children: extraChildren }: PlainNodeProps): Rea
     [path, registerNodeObject, unregisterNodeObject]
   );
 
-  // Workspace split (ADR-0006): the 3D viewport draws no CanvasItem, and the 2D
-  // canvas draws no registered 3D content. An unregistered container passes
-  // through in both. A SubViewportContainer is kept: its sub-viewport's 3D content
-  // draws in Godot's 3D view, sharing World3D unless `own_world_3d` (ADR-0033).
-  const isCanvasItem =
-    !isViewportSurface(node.type) &&
-    (nodeComponentRegistry.isCanvasItem(node.type) || TWO_D_UI_TYPES.has(node.type));
-  if (workspace === '3d' && isCanvasItem) return null;
-  if (
-    workspace === '2d' &&
-    !isCanvasItem &&
-    // A sub-viewport renders offscreen, and a `ViewportTexture` consumer here
-    // needs its target, so it mounts. Its component portals the subtree into a
-    // detached scene, so nothing reaches this canvas (ADR-0033).
-    !isViewportBoundary(node.type) &&
-    nodeComponentRegistry.get(node.type) &&
-    !nodeComponentRegistry.isContainer(node.type)
-  ) {
-    return null;
-  }
+  if (!drawsInWorkspace(node.type, workspace)) return null;
 
   // Each child gets its own run of draw-sequence values in Godot's walk order:
   // `show_behind_parent` children before this node, the rest after it. A run
