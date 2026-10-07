@@ -85,9 +85,9 @@ function parseMerged(
 }
 
 /**
- * The parsed properties spread, instance winning per key, for a node with no merged raw map
- * to parse. The instance's string values are the references it can hold, re-homed from the
- * outer scope into `into`.
+ * The parsed properties spread, instance winning per key, for a hand-built node with no raw
+ * map. The instance's string values are the references it can hold, re-homed from the outer
+ * scope into `into`.
  */
 function spreadParsed(
   instanceNode: LiveNode,
@@ -108,6 +108,26 @@ function stringValues(props: Record<string, unknown>): Record<string, string> {
   return out;
 }
 
+/** The merged raw map when both nodes have one, the typed properties and their scope. */
+function mergeProperties(
+  instanceNode: LiveNode,
+  root: LiveNode,
+  scopes: InstanceScopes
+): { raw: Record<string, string> | undefined; properties: TscnNode['properties']; scope: SceneScope } {
+  if (!root.rawProperties || !instanceNode.rawProperties) {
+    return { raw: undefined, ...spreadParsed(instanceNode, root, scopes.outer, scopes.content) };
+  }
+  const { raw, scope } = mergeRaw(instanceNode.rawProperties, root, root.rawProperties, scopes);
+  return { raw, properties: parseMerged(instanceNode, root, raw, parserRegistrationOf(root.type)), scope };
+}
+
+/** A type the registry lacks parses as a Node, as `parseNodeWithRegistry` parses it. */
+function parserRegistrationOf(type: string): NodeTypeRegistration {
+  const registration = nodeRegistry.getRegistration(type) ?? nodeRegistry.getRegistration('Node');
+  if (!registration) throw new Error(`expected a registered parser for ${type} or Node, found neither`);
+  return registration;
+}
+
 /**
  * Fold a single-root `.tscn` sub-scene into its instance Node. Returns `null`
  * for a scene without exactly one top-level node, or a lone `GLBSceneRoot`, and
@@ -123,17 +143,7 @@ export function mergeInstanceRoot(
   const root = loadedScene.nodes[0]!;
   if (root.type === GLB_SCENE_ROOT_TYPE) return null;
 
-  const merged =
-    root.rawProperties && instanceNode.rawProperties
-      ? mergeRaw(instanceNode.rawProperties, root, root.rawProperties, scopes)
-      : undefined;
-  // A type the registry lacks parses as a Node, as `parseNodeWithRegistry` parses it.
-  const registration = nodeRegistry.getRegistration(root.type) ?? nodeRegistry.getRegistration('Node');
-  const { properties: mergedProperties, scope } =
-    merged && registration
-      ? { properties: parseMerged(instanceNode, root, merged.raw, registration), scope: merged.scope }
-      : spreadParsed(instanceNode, root, scopes.outer, merged?.scope ?? scopes.content);
-  const mergedRaw = merged?.raw;
+  const { raw: mergedRaw, properties: mergedProperties, scope } = mergeProperties(instanceNode, root, scopes);
 
   return {
     ...instanceNode,

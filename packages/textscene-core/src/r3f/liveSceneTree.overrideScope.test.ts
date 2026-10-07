@@ -22,6 +22,7 @@ const parse = (rel: string) => new TscnParser().parse(readFileSync(join(DEMO, re
 const opponent = parse('combat/combatants/opponent.tscn');
 const ctx: LiveTreeContext = {
   externalResources: opponent.externalResources,
+  internalResources: [],
   sceneCache: {
     getCached: (path) =>
       ({
