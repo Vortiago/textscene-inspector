@@ -17,6 +17,7 @@ import { initGlbModules } from '../../../resources/processing/glbProcessing';
 import { tagImportMaterial } from '../../../resources/formats/glb/glbProcessing';
 
 import '../../nodes/index';
+import { MAGENTA } from '../../../nodes/3d/meshinstance3d/testing/magenta';
 
 beforeAll(async () => {
   await initGlbModules();
@@ -24,6 +25,8 @@ beforeAll(async () => {
 
 const GLB_PATH = 'res://assets/town.glb';
 const TRES_PATH = 'res://assets/road.tres';
+const MISSING_TEXTURE_PATH = 'res://assets/missing.png';
+const NORMAL_PATH = 'res://assets/normal.png';
 /** The glTF's own material: what survives when an override is dropped. */
 const GLTF_COLOR = 0x123456;
 
@@ -88,10 +91,21 @@ async function render(loader: ResourceLoader, materialRef: string | undefined) {
             type: 'StandardMaterial3D',
             data: { albedo_color: 'Color(0, 1, 0, 1)', roughness: '0.25' },
           },
+          {
+            id: 'Mat_missing_texture',
+            type: 'StandardMaterial3D',
+            data: {
+              albedo_texture: 'ExtResource("tex_missing")',
+              normal_enabled: 'true',
+              normal_texture: 'ExtResource("tex_normal")',
+            },
+          },
         ],
         externalResources: [
           { id: 'glb_1', path: GLB_PATH, type: 'PackedScene' },
           { id: 'tres_1', path: TRES_PATH, type: 'Material' },
+          { id: 'tex_missing', path: MISSING_TEXTURE_PATH, type: 'Texture2D' },
+          { id: 'tex_normal', path: NORMAL_PATH, type: 'Texture2D' },
         ],
       }}
     >
@@ -147,6 +161,27 @@ describe('GLBSceneRoot — surface_material_override on a GLB-internal mesh', ()
   it('keeps the glTF material while a .tres override still loads', async () => {
     const renderer = await render(seeded().loader, 'ExtResource("tres_1")');
     expect(roadMaterial(renderer).color.getHex()).toBe(GLTF_COLOR);
+  });
+
+  it('draws the magenta placeholder when the override names a texture that cannot load', async () => {
+    const fake = seeded();
+    fake.textures.seed(MISSING_TEXTURE_PATH, null);
+
+    const renderer = await render(fake.loader, 'SubResource("Mat_missing_texture")');
+    expect(roadMaterial(renderer).color.getHex()).toBe(MAGENTA);
+  });
+
+  it("keeps one placeholder material while the override's other textures arrive", async () => {
+    const fake = seeded();
+    fake.textures.seed(MISSING_TEXTURE_PATH, null);
+    const renderer = await render(fake.loader, 'SubResource("Mat_missing_texture")');
+    const placeholder = roadMaterial(renderer);
+
+    await ReactThreeTestRenderer.act(async () =>
+      fake.textures._resolve(NORMAL_PATH, new THREE.DataTexture(new Uint8Array(4), 1, 1))
+    );
+
+    expect(roadMaterial(renderer)).toBe(placeholder);
   });
 
   it('leaves the glTF material alone when the reference names nothing', async () => {

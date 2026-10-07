@@ -7,16 +7,11 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { MeshInstance3D } from './Component';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
+import { meshInstanceNode, renderMeshInstance, surfaceMaterials } from './testing/renderMeshInstance';
 import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
-import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
-import type { MeshInstance3DProperties } from './types';
+import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 
 const ALBEDO_PATH = 'res://textures/albedo.png';
 const NORMAL_PATH = 'res://textures/normal.png';
@@ -25,15 +20,6 @@ const EXTERNALS: TscnExternalResource[] = [
   { id: '1_tex', type: 'Texture2D', path: ALBEDO_PATH },
   { id: '2_nrm', type: 'Texture2D', path: NORMAL_PATH },
 ];
-
-function node(overrides: Map<number, string>): TscnNode {
-  const properties: MeshInstance3DProperties = {
-    name: 'Panel',
-    mesh: 'SubResource("Mesh_1")',
-    surfaceMaterialOverrides: overrides,
-  };
-  return { name: 'Panel', type: 'MeshInstance3D', children: [], properties };
-}
 
 async function render(opts: {
   overrides: Map<number, string>;
@@ -54,13 +40,12 @@ async function render(opts: {
       data,
     })),
   ];
-  return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider internalResources={internalResources} externalResources={EXTERNALS}>
-        <MeshInstance3D node={node(opts.overrides)} />
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
-  );
+  return renderMeshInstance({
+    loader: fake.loader,
+    node: meshInstanceNode({ mesh: 'SubResource("Mesh_1")', surfaceOverrides: opts.overrides }),
+    internalResources,
+    externalResources: EXTERNALS,
+  });
 }
 
 describe('scene material texture slots past surface 0', () => {
@@ -76,7 +61,7 @@ describe('scene material texture slots past surface 0', () => {
         Gated: { albedo_texture: 'ExtResource("1_tex")', normal_texture: 'ExtResource("2_nrm")' },
       },
     });
-    const materials = findMesh(renderer.scene).material as THREE.MeshStandardMaterial[];
+    const materials = surfaceMaterials(renderer);
     expect(materials[0]!.map).toBeInstanceOf(THREE.Texture);
     expect(materials[0]!.normalMap).toBeNull();
     expect(materials[1]!.normalMap).toBeNull();
@@ -89,7 +74,7 @@ describe('scene material texture slots past surface 0', () => {
         Enabled: { normal_enabled: 'true', normal_texture: 'ExtResource("2_nrm")' },
       },
     });
-    const materials = findMesh(renderer.scene).material as THREE.MeshStandardMaterial[];
+    const materials = surfaceMaterials(renderer);
     expect(materials[1]!.normalMap).toBeInstanceOf(THREE.Texture);
   });
 
@@ -101,7 +86,7 @@ describe('scene material texture slots past surface 0', () => {
       ]),
       materials: { Mat: { albedo_texture: 'ExtResource("1_tex")' } },
     });
-    const materials = findMesh(renderer.scene).material as THREE.MeshStandardMaterial[];
+    const materials = surfaceMaterials(renderer);
     expect(materials[0]!.map).toBeInstanceOf(THREE.Texture);
     expect(materials[1]!.map).toBeInstanceOf(THREE.Texture);
   });
@@ -128,19 +113,13 @@ describe("inline ArrayMesh surfaces resolve their scene material's textures", ()
         data: { albedo_texture: 'ExtResource("1_tex")' },
       },
     ];
-    const properties: MeshInstance3DProperties = {
-      name: 'Baked',
-      mesh: 'SubResource("Mesh_1")',
-      surfaceMaterialOverrides: new Map(),
-    };
-    const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider internalResources={internalResources} externalResources={EXTERNALS}>
-          <MeshInstance3D node={{ name: 'Baked', type: 'MeshInstance3D', children: [], properties }} />
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    );
-    const material = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
-    expect(material.map).toBeInstanceOf(THREE.Texture);
+    const renderer = await renderMeshInstance({
+      loader: fake.loader,
+      node: meshInstanceNode({ mesh: 'SubResource("Mesh_1")' }),
+      internalResources,
+      externalResources: EXTERNALS,
+    });
+    const [material] = surfaceMaterials(renderer);
+    expect(material!.map).toBeInstanceOf(THREE.Texture);
   });
 });
