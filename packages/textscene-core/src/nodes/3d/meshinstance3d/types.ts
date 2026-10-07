@@ -16,6 +16,9 @@ export interface MeshInstance3DProperties extends Node3DProperties {
   /** The material drawn on top of the surface materials. */
   materialOverlay?: string;
 
+  /** `GeometryInstance3D.transparency`: 0 (the default) is opaque, 1 fully transparent. */
+  transparency?: number;
+
   /** Shadow casting (0=OFF, 1=ON, 2=DOUBLE_SIDED, 3=SHADOWS_ONLY). */
   castShadow?: number;
 

@@ -9,6 +9,7 @@ import { standardMaterialBag } from '../../resources/materials/standardmaterial3
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { textureSlotsFromMaps, type MaterialTextureMaps } from './materialTextureMaps';
+import { withInstanceTransparency } from './instanceTransparency';
 
 /**
  * The texture props are `MaterialTextureMaps`', already bound and paired to their
@@ -19,6 +20,8 @@ export interface StandardMaterialSlotProps extends MaterialTextureMaps {
   scalars: StandardMaterial3DScalars | null;
   /** R3F attach key: `material-0` for multi-surface meshes. */
   attach?: string;
+  /** The drawing GeometryInstance3D's `transparency`. Omitted is opaque. */
+  instanceTransparency?: number;
 }
 
 export function StandardMaterialSlot({
@@ -32,21 +35,26 @@ export function StandardMaterialSlot({
   displacementMap,
   anisotropyMap,
   attach,
+  instanceTransparency = 0,
 }: StandardMaterialSlotProps) {
   // A null `scalars` is the derivation's "no material" case: Godot's default 3D
   // surface, not a default-constructed StandardMaterial3D.
-  const bag = standardMaterialBag(
+  const bag = withInstanceTransparency(
+    standardMaterialBag(
+      scalars,
+      textureSlotsFromMaps({
+        albedoMap,
+        normalMap,
+        roughnessMap,
+        metalnessMap,
+        emissiveMap,
+        aoMap,
+        displacementMap,
+        anisotropyMap,
+      })
+    ),
     scalars,
-    textureSlotsFromMaps({
-      albedoMap,
-      normalMap,
-      roughnessMap,
-      metalnessMap,
-      emissiveMap,
-      aoMap,
-      displacementMap,
-      anisotropyMap,
-    })
+    instanceTransparency
   );
 
   // `attach` first: it is the mount's own prop and must never shadow a derived

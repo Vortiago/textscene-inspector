@@ -145,7 +145,8 @@ describe('SpriteBase3D colour accumulation', () => {
       ]),
     ]);
 
-    expect(materialOf(renderer, 'Parent').opacity).toBeCloseTo(0.5, 5);
+    // 1 - 0.5 in the 8-bit steps of the instance alpha.
+    expect(materialOf(renderer, 'Parent').opacity).toBe(127 / 255);
     expect(materialOf(renderer, 'Child').opacity).toBeCloseTo(1, 5);
   });
 });

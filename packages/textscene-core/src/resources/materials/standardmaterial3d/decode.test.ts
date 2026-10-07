@@ -41,7 +41,7 @@ describe('decodeStandardMaterial3D — defaults', () => {
 describe('decodeStandardMaterial3D — transparency', () => {
   it('keeps a low-alpha albedo opaque while transparency is DISABLED', () => {
     const data = decodeStandardMaterial3D({ albedo_color: 'Color(1, 1, 1, 0.25)' });
-    expect(data.alpha).toBe(0.25);
+    expect(data.alpha).toBe(1);
     expect(data.transparent).toBe(false);
     expect(data.depthWrite).toBe(true);
     expect(data.alphaTest).toBe(0);
@@ -256,6 +256,56 @@ describe('decodeStandardMaterial3D — depth state', () => {
     });
     expect(data.depthDrawMode).toBe(DepthDrawMode.ALWAYS);
     expect(data.depthWrite).toBe(true);
+  });
+});
+
+describe('decodeStandardMaterial3D — albedo alpha', () => {
+  it('keeps the albedo alpha of a surface whose shader reads it', () => {
+    expect(decodeStandardMaterial3D({ transparency: '1', albedo_color: 'Color(1, 1, 1, 0.25)' }).alpha).toBe(
+      0.25
+    );
+  });
+
+  it('drops the albedo alpha of a blended surface whose shader never reads it', () => {
+    const data = decodeStandardMaterial3D({ blend_mode: '1', albedo_color: 'Color(1, 1, 1, 0.25)' });
+    expect(data.alpha).toBe(1);
+  });
+});
+
+/** What an instance's `transparency` reads when it moves a surface to the alpha pass. */
+describe('decodeStandardMaterial3D — alpha pass forced by the instance', () => {
+  it('writes no depth there under the default depth-draw mode', () => {
+    expect(decodeStandardMaterial3D({}).alphaPassDepthWrite).toBe(false);
+  });
+
+  it('skips the depth prepass a depth-prepass surface relies on', () => {
+    expect(decodeStandardMaterial3D({ transparency: '4' }).alphaPassDepthWrite).toBe(false);
+  });
+
+  it('writes depth there under DEPTH_DRAW_ALWAYS', () => {
+    expect(decodeStandardMaterial3D({ depth_draw_mode: '1' }).alphaPassDepthWrite).toBe(true);
+  });
+
+  it('writes no depth there without a depth test', () => {
+    const data = decodeStandardMaterial3D({ depth_draw_mode: '1', no_depth_test: 'true' });
+    expect(data.alphaPassDepthWrite).toBe(false);
+  });
+
+  it('marks a scissor cut as opaque for the fragments it keeps', () => {
+    expect(decodeStandardMaterial3D({ transparency: '2' }).opaqueAfterCut).toBe(true);
+  });
+
+  it('keeps the alpha of a scissor cut under alpha antialiasing', () => {
+    const data = decodeStandardMaterial3D({ transparency: '2', alpha_antialiasing_mode: '1' });
+    expect(data.opaqueAfterCut).toBe(false);
+  });
+
+  it('keeps the alpha of a hash cut, which this previewer blends', () => {
+    expect(decodeStandardMaterial3D({ transparency: '3' }).opaqueAfterCut).toBe(false);
+  });
+
+  it('keeps the alpha of a surface with no cut', () => {
+    expect(decodeStandardMaterial3D({ transparency: '1' }).opaqueAfterCut).toBe(false);
   });
 });
 

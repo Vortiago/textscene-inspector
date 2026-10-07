@@ -33,10 +33,13 @@ Strict parsing format-checks these `MeshInstance3D` properties, plus 18 inherite
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The enum and range keys (`cast_shadow`, `gi_mode`, `layers`, the `visibility_range_*` floats) go through `parseOptionalInt` and `parseOptionalFloat`. An unparseable value is dropped silently, and an out-of-range `cast_shadow = 99` is kept as is. The component treats any `cast_shadow` other than `0`, `2` or `3` as `1`, Godot's default. `mesh`, `material_override`, `skeleton`, `skin` and each surface override are assigned from the raw string with no resolution check.
+The enum and range keys (`cast_shadow`, `gi_mode`, `layers`, `transparency`, the `visibility_range_*` floats) go through `parseOptionalInt` and `parseOptionalFloat`. An unparseable value is dropped silently, and an out-of-range `cast_shadow = 99` is kept as is. The component treats any `cast_shadow` other than `0`, `2` or `3` as `1`, Godot's default. `mesh`, `material_override`, `skeleton`, `skin` and each surface override are assigned from the raw string with no resolution check.
 
 ## Known limitations
 
 - **Approximated** A transparent material renders darker than Godot's on a brightly lit
   face, while an opaque one agrees.
+- **Approximated** Under `transparency`, an opaque material blends with the alpha of its albedo
+  texture and its vertex colours. Godot's opaque shader reads neither, so it blends at the
+  instance alpha alone.
 - **Approximated** three removes both cylinder caps or neither, so a `CylinderMesh` with exactly one of `cap_top` and `cap_bottom` disabled renders with both.

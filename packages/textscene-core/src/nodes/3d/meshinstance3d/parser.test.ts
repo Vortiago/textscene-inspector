@@ -247,6 +247,16 @@ describe('MeshInstance3D Parser', () => {
       expect(result.parent).toBe('.');
     });
 
+    it('parses transparency as a float', () => {
+      const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
+      expect(parseMeshInstance3D(h, { transparency: '0.4' }).transparency).toBe(0.4);
+    });
+
+    it('should be undefined for invalid transparency', () => {
+      const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
+      expect(parseMeshInstance3D(h, { transparency: 'invalid' }).transparency).toBeUndefined();
+    });
+
     it('should be undefined for invalid cast_shadow', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
       const result = parseMeshInstance3D(h, { cast_shadow: 'invalid' });

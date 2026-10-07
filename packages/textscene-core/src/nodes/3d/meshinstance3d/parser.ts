@@ -55,6 +55,7 @@ export function parseMeshInstance3D(
     meshInstance3DProps.materialOverlay = properties.material_overlay;
   }
 
+  assignIfDefined(meshInstance3DProps, 'transparency', parseOptionalFloat(properties.transparency));
   assignIfDefined(meshInstance3DProps, 'castShadow', parseOptionalInt(properties.cast_shadow));
   assignIfDefined(meshInstance3DProps, 'giMode', parseOptionalInt(properties.gi_mode));
   assignIfDefined(meshInstance3DProps, 'giLightmapScale', parseOptionalInt(properties.gi_lightmap_scale));

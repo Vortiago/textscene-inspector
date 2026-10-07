@@ -43,24 +43,40 @@ export interface AlphaCutSurface {
    * the surface at `render_forward_clustered.cpp:4079-4090`.
    */
   blended: boolean;
+  /** Whether Godot writes alpha 1 for each fragment the cut keeps, which only an alpha pass shows. */
+  opaqueAfterCut: boolean;
 }
 
 /** Godot's `mat_transparency` switch in three's terms. */
 export function alphaCutSurface({ mode, scissorThreshold, transparentFlag }: AlphaCutInput): AlphaCutSurface {
   // TRANSPARENCY_DISABLED is the initialiser the switch never reaches (`sprite_3d.cpp:284-286`).
-  if (transparentFlag === false) return { alphaTest: 0, alphaHash: false, depthWrite: true, blended: false };
-  // SCISSOR and HASH force `alpha = 1.0` past the cut (`scene_forward_clustered.glsl:1414-1416`),
+  if (transparentFlag === false) {
+    return { alphaTest: 0, alphaHash: false, depthWrite: true, blended: false, opaqueAfterCut: false };
+  }
+  // SCISSOR and HASH force `alpha = 1.0` past the cut (`scene_forward_clustered.glsl:1413-1415`),
   // so they land in the opaque list (`scene_shader_forward_clustered.cpp:252`), which writes depth.
   switch (mode) {
     case ALPHA_CUT_DISCARD:
-      return { alphaTest: scissorThreshold, alphaHash: false, depthWrite: true, blended: false };
+      return {
+        alphaTest: scissorThreshold,
+        alphaHash: false,
+        depthWrite: true,
+        blended: false,
+        opaqueAfterCut: true,
+      };
     case ALPHA_CUT_HASH:
-      return { alphaTest: 0, alphaHash: true, depthWrite: true, blended: false };
+      return { alphaTest: 0, alphaHash: true, depthWrite: true, blended: false, opaqueAfterCut: true };
     case ALPHA_CUT_OPAQUE_PREPASS:
       // The depth prepass keeps blending and cuts in the depth pass only.
-      return { alphaTest: PREPASS_ALPHA_TEST, alphaHash: false, depthWrite: true, blended: true };
+      return {
+        alphaTest: PREPASS_ALPHA_TEST,
+        alphaHash: false,
+        depthWrite: true,
+        blended: true,
+        opaqueAfterCut: false,
+      };
     default:
       // `depth_draw_opaque` on a blended surface writes no depth (`material.cpp:800`).
-      return { alphaTest: 0, alphaHash: false, depthWrite: false, blended: true };
+      return { alphaTest: 0, alphaHash: false, depthWrite: false, blended: true, opaqueAfterCut: false };
   }
 }

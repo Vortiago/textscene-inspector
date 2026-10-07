@@ -288,7 +288,7 @@ describe('<LabelGlyphs>', () => {
     it('DISCARD scissors at the authored alpha_scissor_threshold and paints opaque', async () => {
       // `label_3d.cpp:388` -> TRANSPARENCY_ALPHA_SCISSOR, whose threshold is
       // the node's own (`label_3d.h:62`, `:378`); the cut forces `alpha = 1.0`
-      // (`scene_forward_clustered.glsl:1414-1416`) so the surface lands in the
+      // (`scene_forward_clustered.glsl:1413-1415`) so the surface lands in the
       // opaque list and writes depth.
       const renderer = await render(
         props({ outline_size: 12, alpha_cut: AlphaCutMode.DISCARD, alpha_scissor_threshold: 0.25 })

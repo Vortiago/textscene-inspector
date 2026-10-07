@@ -38,6 +38,8 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     castsShadow: data.castsShadow,
     alphaTest: data.alphaTest,
     depthWrite: data.depthWrite,
+    alphaPassDepthWrite: data.alphaPassDepthWrite,
+    opaqueAfterCut: data.opaqueAfterCut,
     depthTest: data.depthTest,
     shadingMode: data.shadingMode,
     useVertexColors: data.useVertexColors,

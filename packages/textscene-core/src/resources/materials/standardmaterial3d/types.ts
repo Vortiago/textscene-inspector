@@ -104,7 +104,10 @@ export interface StandardMaterial3DData {
    * (material.cpp), so HDR channels above 1 are legal and reach the shader.
    */
   albedo: [number, number, number];
-  /** `albedo_color` alpha, clamped 0..1 (the shader's ALPHA is a coverage term). */
+  /**
+   * `albedo_color` alpha, clamped 0..1, where the shader multiplies it into ALPHA. 1 where
+   * the shader never reads it: transparency DISABLED with no fade, or refraction.
+   */
   alpha: number;
   /** `metallic`, clamped 0..1 per its `PROPERTY_HINT_RANGE "0,1,0.01"`. */
   metallic: number;
@@ -140,6 +143,13 @@ export interface StandardMaterial3DData {
   depthDrawMode: DepthDrawMode;
   /** Whether this surface's fragments reach the depth buffer. */
   depthWrite: boolean;
+  /**
+   * Whether the surface writes depth once its instance's `transparency` moves it to the
+   * alpha pass, which skips the depth prepass too: DEPTH_DRAW_ALWAYS with the depth test on.
+   */
+  alphaPassDepthWrite: boolean;
+  /** Whether Godot writes alpha 1 for each fragment the surface's cut keeps. */
+  opaqueAfterCut: boolean;
   /** Godot `no_depth_test` inverted: false means the surface draws through everything. */
   depthTest: boolean;
   blendMode: BlendMode;
@@ -233,6 +243,8 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   castsShadow: boolean;
   alphaTest: number;
   depthWrite: boolean;
+  alphaPassDepthWrite: boolean;
+  opaqueAfterCut: boolean;
   depthTest: boolean;
   shadingMode: 'unshaded' | 'per_pixel';
   useVertexColors: boolean;

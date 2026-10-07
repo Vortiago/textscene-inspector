@@ -56,9 +56,9 @@ describe('the imperative adapter — scalar base', () => {
     const material = build({ albedo_color: 'Color(1, 1, 1, 0.5)' });
     expect(material.transparent).toBe(false);
     expect(material.depthWrite).toBe(true);
-    // The alpha is still decoded and carried: it becomes observable the moment
-    // a transparency mode turns the blend on.
-    expect(material.opacity).toBe(0.5);
+    // An instance's `transparency` can still move this surface to the blended pass, where
+    // Godot's alpha holds no albedo term.
+    expect(material.opacity).toBe(1);
   });
 
   it('blends when transparency = 1 (ALPHA), and gives up depth writes', () => {
