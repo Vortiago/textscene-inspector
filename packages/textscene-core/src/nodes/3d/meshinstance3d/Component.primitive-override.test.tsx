@@ -12,7 +12,7 @@ import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
-import { findMesh } from '../testing/reactThreeTestInstance';
+import { surfaceMaterials } from './testing/renderMeshInstance';
 
 const INTERNALS: TscnInternalResource[] = [
   { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)', material: 'SubResource("Mat_mesh")' } },
@@ -38,8 +38,7 @@ async function materialsOf(node: TscnNode): Promise<THREE.MeshStandardMaterial[]
       <MeshInstance3D node={node} />
     </SceneResourcesProvider>
   );
-  const material = findMesh(renderer.scene).material;
-  return (Array.isArray(material) ? material : [material]) as THREE.MeshStandardMaterial[];
+  return surfaceMaterials(renderer);
 }
 
 /** Which of the three fixture materials a slot resolved to, by its unique albedo channel. */

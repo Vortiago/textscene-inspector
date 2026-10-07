@@ -12,7 +12,13 @@ import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import { wallQuadSurface } from '../../../resources/testing/arrayMeshSurfaces';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
-import { meshInstanceNode, meshInstanceTree, surfaceMaterials } from './testing/renderMeshInstance';
+import {
+  meshInstanceNode,
+  meshInstanceTree,
+  renderMeshInstance,
+  surfaceMaterials,
+} from './testing/renderMeshInstance';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 
 const MESH_PATH = 'res://stage/meshes/wheel.tres';
 const OVERRIDE_MATERIAL_PATH = 'res://stage/materials/paint.tres';
@@ -83,7 +89,7 @@ const MESH_EXT: TscnExternalResource[] = [
 async function renderSettled(
   loader: ResourceLoader,
   node: TscnNode,
-  internalResources?: TscnInternalResource[]
+  internalResources: TscnInternalResource[]
 ): Promise<THREE.MeshStandardMaterial[]> {
   const tree = meshInstanceTree({ loader, node, internalResources, externalResources: MESH_EXT });
   const renderer = await ReactThreeTestRenderer.create(tree);
@@ -213,15 +219,22 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
   });
 
   it('draws the magenta placeholder on every surface when material_override names a missing texture', async () => {
-    const materials = await renderSettled(
-      makeLoader({}),
-      meshInstanceNode({
+    // The fake loader reports the texture missing at once: no file pipeline to settle.
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(MISSING_TEXTURE_PATH, null);
+    const renderer = await renderMeshInstance({
+      loader: fake.loader,
+      node: meshInstanceNode({
         mesh: 'SubResource("ArrayMesh_inline")',
         materialOverride: 'SubResource("Mat_missing_texture")',
       }),
-      [...SCENE_MATERIALS, inlineTwoSurfaceMesh('ArrayMesh_inline', ['Mat_red', 'Mat_blue'])]
-    );
+      internalResources: [
+        ...SCENE_MATERIALS,
+        inlineTwoSurfaceMesh('ArrayMesh_inline', ['Mat_red', 'Mat_blue']),
+      ],
+      externalResources: MESH_EXT,
+    });
 
-    expect(materials.map(hex)).toEqual([MAGENTA, MAGENTA]);
+    expect(surfaceMaterials(renderer).map(hex)).toEqual([MAGENTA, MAGENTA]);
   });
 });
