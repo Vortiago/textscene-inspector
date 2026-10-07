@@ -32,6 +32,18 @@ describe('documentHighlights', () => {
     expect(highlights).toHaveLength(2);
   });
 
+  it('skips a reference spelled inside a string, which the loader never resolves', () => {
+    const text = [
+      '[node name="A" type="Label"]',
+      'text = "see',
+      'ExtResource(1)"',
+      'tooltip_text = ExtResource(1)',
+    ].join('\n');
+    const document = new LanguageDocument(text);
+    const highlights = documentHighlights(document, { line: 3, character: 20 });
+    expect(highlights.map((highlight) => highlight.range.start.line)).toEqual([3]);
+  });
+
   it('marks an old-style integer id and its declaration, as the loader resolves it', () => {
     const text = [
       '[ext_resource type="Texture2D" path="res://a.png" id=1]',
