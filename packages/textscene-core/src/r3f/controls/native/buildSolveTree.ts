@@ -577,9 +577,8 @@ function buildForest(
 
       const scenePath = node.instance ? resolveInstancePath(node.instance, ext) : null;
       if (scenePath && sceneCache.getCached(scenePath) === undefined) {
-        // The ExtResource too: the load checks its type, and the loader reports a
-        // failed load only for a registered path. A raw `res://` instance has none
-        // to register, and is still requested.
+        // The ExtResource too, since the load checks its type. A raw `res://`
+        // instance has none to register, and is still requested.
         const parsed = node.instance ? parseResourceReference(node.instance) : null;
         const entry = parsed?.type === 'ExtResource' ? findExtResource(ext, parsed.id) : undefined;
         // One path can be reached both ways in a single walk; an ExtResource already

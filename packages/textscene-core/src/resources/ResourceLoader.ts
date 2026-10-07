@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import type { ExtResource, TscnScene, ResourceNeededCallback } from '../parser/types';
+import type { ExtResource, TscnScene } from '../parser/types';
 import type { FileEventBus } from './FileEventBus';
 import type { ResourceProvider } from './ResourceProvider';
 import { ResourceEventBus, type ResourceType } from './ResourceEventBus';
@@ -22,7 +22,6 @@ import { runProvideFileSequence } from './provideFileSequence';
 import type { FontResource } from './fonts/font/types';
 import type { GltfExtensionRules } from './formats/glb/types';
 import type { ThemeResource } from './styles/theme/types';
-import { resourceSliceRegistry } from './sliceRegistration';
 import './sliceRegistrations.js';
 import type { ParsedResource } from '../parser/parsedResource';
 import { PEER_LOAD_TIMEOUT_MS, type ResourceProcessor } from './createResourceProcessor';
@@ -60,7 +59,6 @@ export class ResourceLoader {
   private readonly processors: Map<ResourceType, ResourceProcessor<unknown>>;
 
   private provider: ResourceProvider | null = null;
-  private onResourceNeeded: ResourceNeededCallback | null = null;
 
   private _fileEventBus: FileEventBus | null;
 
@@ -176,8 +174,6 @@ export class ResourceLoader {
       ['font', this.fonts as ResourceProcessor<unknown>],
       ['theme', this.themes as ResourceProcessor<unknown>],
     ]);
-
-    this.setupFailureCallbacks();
   }
 
   /**
@@ -187,40 +183,6 @@ export class ResourceLoader {
    */
   get fileEventBus(): FileEventBus | null {
     return this._fileEventBus;
-  }
-
-  private setupFailureCallbacks(): void {
-    const labels: Record<ResourceType, string> = {
-      texture: 'Material using texture',
-      scene: 'Node instance of scene',
-      glb: 'Node using GLB mesh',
-      resource: 'Resource',
-      arraymesh: 'Node using ArrayMesh',
-      font: 'Node using font',
-      theme: 'Node using theme',
-    };
-
-    for (const type of this.processors.keys()) {
-      this.eventBus.on<Error>(type, 'failed', (pathOrId, error) => {
-        if (!this.onResourceNeeded) return;
-        const resource = this.metadata.get(pathOrId);
-        if (!resource) return;
-        // A slice's own label names the consumer: a material `.tres` fails on the
-        // resource bus, which every other `.tres` shares.
-        const label = resourceSliceRegistry.byTypeName(resource.type)?.failureLabel ?? labels[type];
-        const result = this.onResourceNeeded({
-          path: resource.path,
-          type: resource.type,
-          referencedBy: `${label} ${resource.id}`,
-          error: error?.message || 'Unknown error',
-        });
-        if (result && typeof result.catch === 'function') {
-          result.catch((err) => {
-            logger.error(`[ResourceLoader] onResourceNeeded callback failed:`, err);
-          });
-        }
-      });
-    }
   }
 
   /** Register an external resource from parsed TSCN data. */
@@ -234,10 +196,6 @@ export class ResourceLoader {
 
   getProvider(): ResourceProvider | null {
     return this.provider;
-  }
-
-  setOnResourceNeeded(callback: ResourceNeededCallback): void {
-    this.onResourceNeeded = callback;
   }
 
   /** The processor serving `type`, for a consumer that reads, requests and pins by path. */
@@ -276,10 +234,8 @@ export class ResourceLoader {
   }
 
   /**
-   * Clear all caches, metadata and caller subscribers, and announce no `invalidated`,
-   * since no subscriber is left to hear it. `eventBus.clear()` also drops the loader's
-   * own failure callbacks, so they are re-subscribed: without them `onResourceNeeded`
-   * would go silent for the rest of the loader's life.
+   * Clear all caches, metadata and subscribers, and announce no `invalidated`,
+   * since no subscriber is left to hear it.
    */
   clear(): void {
     this.metadata.clear();
@@ -288,7 +244,6 @@ export class ResourceLoader {
       proc.clearCache();
     }
     this.eventBus.clear();
-    this.setupFailureCallbacks();
     logger.info('[ResourceLoader] Cleared all caches');
   }
 

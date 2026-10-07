@@ -37,7 +37,6 @@ describe('collision-shape slice registrations', () => {
       slice,
       kind: 'godot-text',
       busType: 'resource',
-      failureLabel: 'Resource',
     });
   });
 

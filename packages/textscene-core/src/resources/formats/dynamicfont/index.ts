@@ -18,5 +18,4 @@ registerResourceSlice({
   extensions: FONT_CONTAINER_EXTENSIONS,
   binaryBytes: true,
   busType: 'font',
-  failureLabel: 'Node using font',
 });

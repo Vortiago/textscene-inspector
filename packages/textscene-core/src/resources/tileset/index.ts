@@ -11,7 +11,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['TileSet'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export type {

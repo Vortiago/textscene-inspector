@@ -18,10 +18,9 @@ export function useInstancedScene(
 ): ResourceResult<TscnScene> {
   const loader = useResourceLoader();
 
-  // Ahead of `useResource`: a component runs its effects in order. The load checks
-  // the registered type, and the loader reports a failed load only for a
-  // registered path. It registers `loadPath`, the simplified path the load
-  // requests, not the raw ExtResource path.
+  // Ahead of `useResource`, since a component runs its effects in order and the
+  // load checks the registered type. It registers `loadPath`, the simplified path
+  // the load requests, not the raw ExtResource path.
   useEffect(() => {
     if (!loader || !loadPath) return;
     const parsed = parseResourceReference(instanceRef);

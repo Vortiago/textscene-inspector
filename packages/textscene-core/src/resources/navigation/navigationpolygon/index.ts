@@ -12,7 +12,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['NavigationPolygon'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export { decodeNavigationPolygon } from './decode';

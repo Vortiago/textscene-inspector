@@ -261,51 +261,6 @@ describe('Texture Loading Integration', () => {
     expect(result).toBeNull();
   });
 
-  it('should call onResourceNeeded callback when texture fails to load', async () => {
-    mockFileEventBus.setAutoLoad(true, () => {
-      throw new Error('File not found');
-    });
-
-    const onResourceNeeded = vi.fn();
-    registry.setOnResourceNeeded(onResourceNeeded);
-
-    registry.register({
-      id: '1_albedo',
-      type: 'Texture2D',
-      path: 'res://missing.png',
-    });
-
-    const result = await loadTextureWithEvents(registry, '1_albedo');
-
-    expect(result).toBeNull();
-    expect(onResourceNeeded).toHaveBeenCalledWith({
-      path: 'res://missing.png',
-      type: 'Texture2D',
-      referencedBy: 'Material using texture 1_albedo',
-      error: 'File not found',
-    });
-  });
-
-  it('should still return null even if onResourceNeeded callback throws', async () => {
-    mockFileEventBus.setAutoLoad(true, () => {
-      throw new Error('File not found');
-    });
-
-    const onResourceNeeded = vi.fn().mockImplementation(() => {
-      throw new Error('Callback error');
-    });
-    registry.setOnResourceNeeded(onResourceNeeded);
-
-    registry.register({
-      id: '1',
-      type: 'Texture2D',
-      path: 'res://missing.png',
-    });
-
-    const result = await loadTextureWithEvents(registry, '1');
-    expect(result).toBeNull();
-  });
-
   it('should allow material parser to continue when texture is null', async () => {
     mockFileEventBus.setAutoLoad(true, () => {
       throw new Error('File not found');

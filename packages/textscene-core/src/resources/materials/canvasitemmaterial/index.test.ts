@@ -14,7 +14,6 @@ describe('canvasitemmaterial slice registration', () => {
       kind: 'godot-text',
       typeNames: ['CanvasItemMaterial'],
       busType: 'resource',
-      failureLabel: 'Resource',
     });
   });
 

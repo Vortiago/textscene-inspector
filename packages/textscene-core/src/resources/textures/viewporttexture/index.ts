@@ -14,7 +14,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: [VIEWPORT_TEXTURE_TYPE],
   busType: null,
-  failureLabel: 'Viewport texture',
 });
 
 export * from './types';

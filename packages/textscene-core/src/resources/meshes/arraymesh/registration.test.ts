@@ -13,7 +13,6 @@ describe('arraymesh slice registration', () => {
       slice: 'arraymesh',
       kind: 'godot-text',
       busType: 'arraymesh',
-      failureLabel: 'Node using ArrayMesh',
     });
   });
 

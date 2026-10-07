@@ -14,7 +14,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['Sky', 'ProceduralSkyMaterial', 'PanoramaSkyMaterial', 'PhysicalSkyMaterial'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export { decodeSkyMaterial, skyMaterialRef } from './decode';

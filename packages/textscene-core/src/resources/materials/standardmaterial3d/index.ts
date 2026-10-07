@@ -14,7 +14,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['StandardMaterial3D', 'ShaderMaterial'],
   busType: 'resource',
-  failureLabel: 'Node using material',
 });
 
 export { decodeStandardMaterial3D } from './decode';

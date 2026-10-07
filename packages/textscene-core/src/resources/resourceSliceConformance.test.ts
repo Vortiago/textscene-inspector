@@ -123,30 +123,4 @@ describe('resource-slice claim coverage', () => {
     const offenders = all.filter((r) => (r.extensions ?? []).includes('.tres'));
     expect(offenders.map((r) => r.slice)).toEqual([]);
   });
-
-  it("each bus tag carries one failure label, and it is the loader's", () => {
-    // The loader's per-bus labels (ResourceLoader.setupFailureCallbacks), as
-    // literals so that map can move freely.
-    const LOADER_LABELS: Record<string, string> = {
-      texture: 'Material using texture',
-      scene: 'Node instance of scene',
-      glb: 'Node using GLB mesh',
-      resource: 'Resource',
-      arraymesh: 'Node using ArrayMesh',
-      font: 'Node using font',
-      theme: 'Node using theme',
-    };
-    const failures: string[] = [];
-    for (const reg of all) {
-      if (reg.busType === null) continue; // not loader-served (ViewportTexture)
-      // Every `.tres` shares this bus, so a slice on it names its own consumer, and
-      // the loader reads that label by type name.
-      if (reg.busType === 'resource') continue;
-      const expected = LOADER_LABELS[reg.busType];
-      if (reg.failureLabel !== expected) {
-        failures.push(`${reg.slice}: label "${reg.failureLabel}" != loader's "${expected}"`);
-      }
-    }
-    expect(failures).toEqual([]);
-  });
 });

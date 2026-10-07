@@ -34,7 +34,6 @@ describe('primitive-mesh slice registrations', () => {
       slice,
       kind: 'godot-text',
       busType: 'resource',
-      failureLabel: 'Resource',
     });
   });
 

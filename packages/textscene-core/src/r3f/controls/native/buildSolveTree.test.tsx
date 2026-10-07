@@ -1709,8 +1709,8 @@ anchors_preset = 15
   });
 });
 
-// Only the Control walk registers this scene. The load checks the registered
-// type, and the loader reports a failed load only for a registered path.
+// Only the Control walk registers this scene, and the load checks the
+// registered type.
 describe('useBuildSolveTree — requesting an uncached sub-scene', () => {
   it('registers the ExtResource before it asks the loader for the scene', () => {
     const loader = createFakeResourceLoader();

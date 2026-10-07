@@ -11,9 +11,8 @@ describe('curve slice registration', () => {
     expect(registration?.kind).toBe('godot-text');
   });
 
-  it('routes `Curve` to the generic resource slot with the Resource failure label', () => {
+  it('routes `Curve` to the generic resource slot', () => {
     expect(resourceSliceRegistry.byTypeName('Curve')?.busType ?? null).toBe('resource');
-    expect(resourceSliceRegistry.byTypeName('Curve')?.failureLabel).toBe('Resource');
   });
 
   it('claims no file extension — a Curve arrives inside a .tscn or .tres (edge case)', () => {

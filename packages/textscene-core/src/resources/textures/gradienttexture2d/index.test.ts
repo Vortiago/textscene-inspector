@@ -11,10 +11,9 @@ describe('gradient slice registration', () => {
     expect(resourceSliceRegistry.byTypeName('Gradient')?.kind).toBe('godot-text');
   });
 
-  it('routes both claims to the generic resource slot with the Resource label', () => {
+  it('routes both claims to the generic resource slot', () => {
     expect(resourceSliceRegistry.byTypeName('Gradient')?.busType ?? null).toBe('resource');
     expect(resourceSliceRegistry.byTypeName('GradientTexture2D')?.busType ?? null).toBe('resource');
-    expect(resourceSliceRegistry.byTypeName('GradientTexture2D')?.failureLabel).toBe('Resource');
   });
 
   it('claims no file extension — a gradient arrives inside a .tscn or .tres (edge case)', () => {

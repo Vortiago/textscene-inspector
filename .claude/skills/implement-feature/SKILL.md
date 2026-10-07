@@ -92,7 +92,7 @@ switch.
   `BUILDERS` entry in `nodes/3d/meshinstance3d/primitiveMeshGeometry.ts`, so MeshInstance3D and
   CSGMesh3D share one construction. QuadMesh builds through PlaneMesh's geometry.
 - **Resource type**: `resources/<category>/<type>/` with `index.ts` (`registerResourceSlice`:
-  type names, extensions, bus tag, failure label), `decode.ts`, `build.ts` where THREE
+  type names, extensions, bus tag), `decode.ts`, `build.ts` where THREE
   construction exists, `types.ts`, and a registration test. Import the `index.ts` from
   `resources/sliceRegistrations.ts`. Validators, where the type has them, live in a
   `linterValidators.ts` imported directly from `linter/index.ts`. A foreign format

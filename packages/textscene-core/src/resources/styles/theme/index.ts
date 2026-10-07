@@ -11,7 +11,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['Theme'],
   busType: 'theme',
-  failureLabel: 'Node using theme',
 });
 
 export type { ScannedTheme, ThemeAddresses, ThemeResource } from './types';

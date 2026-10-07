@@ -26,7 +26,6 @@ describe('font slice registration', () => {
       expect(registration?.slice).toBe('font');
       expect(registration?.kind).toBe('godot-text');
       expect(resourceSliceRegistry.byTypeName(typeName)?.busType ?? null).toBe('font');
-      expect(registration?.failureLabel).toBe('Node using font');
     }
   });
 
@@ -62,7 +61,6 @@ describe('font slice registration', () => {
         kind: 'godot-text',
         typeNames: ['FontFile'],
         busType: null,
-        failureLabel: 'Impostor',
       })
     ).toThrow(/already claimed by slice "font"/);
   });

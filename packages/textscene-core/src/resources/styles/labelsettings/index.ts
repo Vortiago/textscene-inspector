@@ -11,7 +11,6 @@ registerResourceSlice({
   kind: 'godot-text',
   typeNames: ['LabelSettings'],
   busType: 'resource',
-  failureLabel: 'Resource',
 });
 
 export { decodeLabelSettings, labelSettingsFromResource, resolveLabelSettings } from './decode';

@@ -13,6 +13,5 @@ export function registerMeshSlice(slice: string, typeNames: readonly string[]): 
     kind: 'godot-text',
     typeNames,
     busType: 'resource',
-    failureLabel: 'Resource',
   });
 }

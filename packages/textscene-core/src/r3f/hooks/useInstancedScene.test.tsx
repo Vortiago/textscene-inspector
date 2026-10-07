@@ -1,6 +1,6 @@
 /**
  * `useInstancedScene` registers an instance's PackedScene ExtResource and loads
- * the scene. The scene load reads the registered metadata, so the registration
+ * the scene. The scene load checks the registered type, so the registration
  * must land before the request.
  */
 import { describe, expect, it } from 'vitest';
