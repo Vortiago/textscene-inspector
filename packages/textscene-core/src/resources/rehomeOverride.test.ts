@@ -73,4 +73,19 @@ describe('rehomeOverride', () => {
     expect(raw).toEqual({ visible: 'false' });
     expect(scope).toBe(inner);
   });
+
+  it('records the id the outer file wrote for each renamed reference', () => {
+    const { authoredIds } = rehomeOverride({ texture: 'ExtResource("1")' }, outer, inner);
+
+    expect(authoredIds?.ExtResource.get('1 (outer)')).toBe('1');
+  });
+
+  it('records nothing when no id collides', () => {
+    const { authoredIds } = rehomeOverride({ texture: 'ExtResource("1")' }, outer, {
+      ...inner,
+      externalResources: [],
+    });
+
+    expect(authoredIds).toBeUndefined();
+  });
 });

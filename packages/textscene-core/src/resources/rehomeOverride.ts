@@ -8,12 +8,15 @@
 import { renameResourceRefs, type ResourceRef } from '../godot/resourceRef.js';
 import type { SceneScope, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { findExtResource, findSubResource } from './SubResourceResolver.js';
+import type { AuthoredIds } from './authoredIds.js';
 
 export interface RehomedOverride {
   /** The override's raw properties, each reference renamed to its id in `scope`. */
   raw: Record<string, string>;
   /** The node's scope with every resource the override reaches added. */
   scope: SceneScope;
+  /** The id the override's file wrote for each id `raw` renamed. Absent when none collided. */
+  authoredIds?: AuthoredIds;
 }
 
 /** Appended to an id the target scope already holds, until the id is free. */
@@ -57,12 +60,19 @@ export function rehomeOverride(
   if (addedExternal.length === 0 && addedInternal.length === 0) return { raw: rehomedRaw, scope: into };
   return {
     raw: rehomedRaw,
+    authoredIds: authoredIdsOf(external, internal),
     scope: {
       ...into,
       externalResources: [...into.externalResources, ...addedExternal],
       internalResources: [...into.internalResources, ...addedInternal],
     },
   };
+}
+
+function authoredIdsOf(external: IdPool, internal: IdPool): AuthoredIds | undefined {
+  const ExtResource = external.collisions();
+  const SubResource = internal.collisions();
+  return ExtResource.size === 0 && SubResource.size === 0 ? undefined : { ExtResource, SubResource };
 }
 
 /** The ids one kind of resource holds in the target scope, and the ones the override claimed. */
@@ -82,6 +92,13 @@ class IdPool {
     this.taken.add(free);
     this.renamed.set(id, free);
     return free;
+  }
+
+  /** Each claimed id that differs from the one the override named, mapped back to it. */
+  collisions(): Map<string, string> {
+    const out = new Map<string, string>();
+    for (const [id, free] of this.renamed) if (free !== id) out.set(free, id);
+    return out;
   }
 }
 

@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { graftInstanceChildren } from './graftInstanceChildren';
 import type { SceneScope, TscnNode } from '../parser/types';
 import { scopeOf, type LiveNode } from './liveNode';
+import { authoredSpelling } from './authoredIds';
 import { extResourcePathOf } from './testing/extResourcePathOf';
 import * as logger from '../logger';
 import { NO_SCOPES } from './testing/noScopes';
@@ -141,6 +142,15 @@ describe('graftInstanceChildren', () => {
       .children[0]!;
 
     expect(texturePath(pivot)).toBe('res://outer.png');
+  });
+
+  it('spells the override reference with the id the outer scene wrote', () => {
+    const override = pivotOverride({ texture: 'ExtResource("1")' });
+
+    const pivot = graftInstanceChildren(texturedSubScene(), [override], { outer, content: inner })[0]!
+      .children[0]!;
+
+    expect(authoredSpelling(pivot.rawProperties!.texture!, pivot.authoredIds)).toBe('ExtResource("1")');
   });
 
   it('keeps the sub-scene children of an overridden node in the sub-scene', () => {

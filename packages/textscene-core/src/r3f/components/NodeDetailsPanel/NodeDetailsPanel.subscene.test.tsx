@@ -14,6 +14,8 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import { nodeRegistry } from '../../../core/NodeRegistry';
+import { TscnParser } from '../../../parser/TscnParser';
+import '../../../nodes/2d/sprite2d/index';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
 
@@ -242,5 +244,44 @@ describe('<NodeDetailsPanel> BUG 2 — instance root shows the collapsed identit
     // reads the originating instance ref.
     expect(screen.getByText(/External/i)).toBeTruthy();
     expect(screen.getByText('ExtResource("7_coin")')).toBeTruthy();
+  });
+});
+
+describe('<NodeDetailsPanel> on an override whose id the sub-scene also holds', () => {
+  it('shows the id the host file wrote, as Godot does', async () => {
+    const { loader, scenes } = createFakeResourceLoader();
+    scenes.seed(
+      'res://sprite.tscn',
+      new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://inner.png" id="1"]
+
+[node name="Sprite" type="Sprite2D"]
+texture = ExtResource("1")
+`)
+    );
+    const graph = createSceneGraphFromTscnScene(
+      new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://outer.png" id="1"]
+[ext_resource type="PackedScene" path="res://sprite.tscn" id="2"]
+
+[node name="Hero" instance=ExtResource("2")]
+texture = ExtResource("1")
+`)
+    );
+
+    render(
+      <>
+        <NodeDetailsPanel />
+        <Selector path="Hero" />
+      </>,
+      { wrapper: wrap(loader, graph) }
+    );
+    await act(async () => {
+      screen.getByTestId('select-node').click();
+    });
+
+    expect(screen.getByText('ExtResource("1")')).toBeTruthy();
   });
 });

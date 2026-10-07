@@ -5,10 +5,11 @@
  * selection-driven Animation tab needs (ADR-0012).
  */
 import { canonicalisePropertyBag } from '../godot/deprecated.js';
-import type { SceneScope, TscnNode } from '../parser/types.js';
+import type { TscnNode } from '../parser/types.js';
 import type { LiveNode } from './liveNode.js';
 import { graftInstanceChildren, type InstanceScopes } from './graftInstanceChildren.js';
-import { rehomeOverride } from './rehomeOverride.js';
+import { rehomeOverride, type RehomedOverride } from './rehomeOverride.js';
+import { composeAuthoredIds } from './authoredIds.js';
 import { nodeRegistry, type NodeTypeRegistration } from '../core/NodeRegistry.js';
 import type { ParsedHeading } from '../parser/utils.js';
 
@@ -34,32 +35,50 @@ function definedProperties(props: Record<string, unknown>): Record<string, unkno
   return out;
 }
 
-/** The instance node's raw properties re-homed and laid over the root's, and the scope they resolve in. */
-interface MergedRaw {
-  raw: Record<string, string>;
-  scope: SceneScope;
+/** What a merge builds: the merged raw map when both nodes have one, and the typed properties. */
+interface MergedProperties extends Omit<RehomedOverride, 'raw'> {
+  raw: Record<string, string> | undefined;
+  properties: TscnNode['properties'];
+}
+
+/**
+ * The instance node's keys were written against the outer scope, the root's against the
+ * sub-scene's, so the instance's are re-homed into the sub-scene's before they merge. A
+ * hand-built node with no raw map holds its references in its parsed string values.
+ */
+function mergeProperties(instanceNode: LiveNode, root: LiveNode, scopes: InstanceScopes): MergedProperties {
+  if (!root.rawProperties || !instanceNode.rawProperties) {
+    const instanceProperties = definedProperties(instanceNode.properties as Record<string, unknown>);
+    const rehomed = rehomeOverride(stringValues(instanceProperties), scopes.outer, scopes.content);
+    return {
+      ...rehomed,
+      raw: undefined,
+      properties: { ...root.properties, ...instanceProperties, ...rehomed.raw },
+    };
+  }
+  const rehomed = rehomeOverride(instanceNode.rawProperties, scopes.outer, scopes.content);
+  const raw = layerRaw(root.type, root.rawProperties, rehomed.raw);
+  return {
+    ...rehomed,
+    raw,
+    properties: parseMerged(instanceNode, root, raw, parserRegistrationOf(root.type)),
+  };
 }
 
 /**
  * Instance keys win, so a type-specific override and its `transform` survive, and a
- * nested-root re-dispatch merges raw-first too. The instance node's keys were written
- * against the outer scope, the root's against the sub-scene's, so the instance's are
- * re-homed first. They are canonicalised here: an `instance=` heading has no `type=`, so
- * the scanner leaves a pre-4.0 alias that would lose to the root's canonical key.
+ * nested-root re-dispatch merges raw-first too. Both are canonicalised: an `instance=`
+ * heading has no `type=`, so the scanner leaves a pre-4.0 alias that would lose to the
+ * root's canonical key.
  */
-function mergeRaw(
-  instanceRaw: Record<string, string>,
-  root: LiveNode,
+function layerRaw(
+  rootType: string,
   rootRaw: Record<string, string>,
-  scopes: InstanceScopes
-): MergedRaw {
-  const { raw: rehomed, scope } = rehomeOverride(instanceRaw, scopes.outer, scopes.content);
+  instanceRaw: Record<string, string>
+): Record<string, string> {
   return {
-    raw: {
-      ...canonicalisePropertyBag(root.type, rootRaw),
-      ...canonicalisePropertyBag(root.type, rehomed),
-    },
-    scope,
+    ...canonicalisePropertyBag(rootType, rootRaw),
+    ...canonicalisePropertyBag(rootType, instanceRaw),
   };
 }
 
@@ -84,41 +103,12 @@ function parseMerged(
   return registration.parser(heading, raw);
 }
 
-/**
- * The parsed properties spread, instance winning per key, for a hand-built node with no raw
- * map. The instance's string values are the references it can hold, re-homed from the outer
- * scope into `into`.
- */
-function spreadParsed(
-  instanceNode: LiveNode,
-  root: LiveNode,
-  outer: SceneScope,
-  into: SceneScope
-): { properties: TscnNode['properties']; scope: SceneScope } {
-  const instanceProperties = definedProperties(instanceNode.properties as Record<string, unknown>);
-  const { raw: rehomed, scope } = rehomeOverride(stringValues(instanceProperties), outer, into);
-  return { properties: { ...root.properties, ...instanceProperties, ...rehomed }, scope };
-}
-
 function stringValues(props: Record<string, unknown>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(props)) {
     if (typeof value === 'string') out[key] = value;
   }
   return out;
-}
-
-/** The merged raw map when both nodes have one, the typed properties and their scope. */
-function mergeProperties(
-  instanceNode: LiveNode,
-  root: LiveNode,
-  scopes: InstanceScopes
-): { raw: Record<string, string> | undefined; properties: TscnNode['properties']; scope: SceneScope } {
-  if (!root.rawProperties || !instanceNode.rawProperties) {
-    return { raw: undefined, ...spreadParsed(instanceNode, root, scopes.outer, scopes.content) };
-  }
-  const { raw, scope } = mergeRaw(instanceNode.rawProperties, root, root.rawProperties, scopes);
-  return { raw, properties: parseMerged(instanceNode, root, raw, parserRegistrationOf(root.type)), scope };
 }
 
 /** A type the registry lacks parses as a Node, as `parseNodeWithRegistry` parses it. */
@@ -143,7 +133,13 @@ export function mergeInstanceRoot(
   const root = loadedScene.nodes[0]!;
   if (root.type === GLB_SCENE_ROOT_TYPE) return null;
 
-  const { raw: mergedRaw, properties: mergedProperties, scope } = mergeProperties(instanceNode, root, scopes);
+  const {
+    raw: mergedRaw,
+    properties: mergedProperties,
+    scope,
+    authoredIds,
+  } = mergeProperties(instanceNode, root, scopes);
+  const ids = composeAuthoredIds(instanceNode.authoredIds, authoredIds);
 
   return {
     ...instanceNode,
@@ -163,5 +159,6 @@ export function mergeInstanceRoot(
     children: graftInstanceChildren(root.children, instanceNode.children, scopes),
     // The sub-scene's scope replaces the instance node's own: the merged node sits inside it.
     scope,
+    authoredIds: ids,
   };
 }

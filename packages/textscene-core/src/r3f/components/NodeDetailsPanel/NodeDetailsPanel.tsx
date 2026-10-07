@@ -10,6 +10,8 @@ import { useSelection } from '../../contexts/SelectionContext.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
 import { PropertySection } from './PropertySection.js';
+import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
+import { authoredSpelling, type AuthoredIds } from '../../../resources/authoredIds.js';
 import styles from './NodeDetailsPanel.module.css';
 
 export function NodeDetailsPanel() {
@@ -34,7 +36,9 @@ export function NodeDetailsPanel() {
   // See TreeNode: a parser registration does not mean the node renders.
   const isNotRendered = rendersOwnVisual(node.type) === 'not-implemented';
 
-  const sections = registration?.propertyFormatter ? registration.propertyFormatter(node.properties) : [];
+  const sections = registration?.propertyFormatter
+    ? authoredSections(registration.propertyFormatter(node.properties), node.authoredIds)
+    : [];
 
   const showCameraActions = isCamera3DType(node.type) && cameraControl !== null;
   const isActiveCamera = cameraControl !== null && cameraControl.activeCameraPath === path;
@@ -108,4 +112,16 @@ export function NodeDetailsPanel() {
       ))}
     </div>
   );
+}
+
+/** Each value with its references spelled as their own files wrote them, as Godot shows them. */
+function authoredSections(
+  sections: PropertySectionData[],
+  ids: AuthoredIds | undefined
+): PropertySectionData[] {
+  if (!ids) return sections;
+  return sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => ({ ...item, value: authoredSpelling(item.value, ids) })),
+  }));
 }
