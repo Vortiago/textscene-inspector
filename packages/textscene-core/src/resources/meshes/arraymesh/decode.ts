@@ -9,10 +9,9 @@ import { warn } from '../../../logger.js';
 import { parseTresFile, type ParsedResource } from '../../../parser/parsedResource.js';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
 import { BUILDABLE_MATERIAL_TYPES } from '../../materials/buildableMaterialTypes.js';
-import { findSubResource, parseResourceReference } from '../../SubResourceResolver.js';
+import { findSubResource } from '../../SubResourceResolver.js';
 import {
   parseSubResourcePath,
-  REJECT_SUB_RESOURCES,
   resolveRefToResourcePath,
   subResourceTypeGate,
 } from '../../subResourcePath.js';
@@ -117,38 +116,24 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
 
 /**
  * Decode an ArrayMesh that is a `[sub_resource]` of a scene: its bytes are inline
- * in the `.tscn`, so no path addresses it. An `ExtResource` material resolves
- * against the scene's table. A `SubResource` one comes back as an id for the
- * renderer to resolve against the scene's own resources.
+ * in the `.tscn`, so no path addresses it. Each surface keeps its raw material
+ * reference for the renderer to resolve against the scene's resources, which can
+ * change while the bytes stay the same.
  */
-export function decodeSceneArrayMesh(
-  resource: TscnInternalResource,
-  externalResources: readonly TscnExternalResource[]
-): ArrayMeshData {
+export function decodeSceneArrayMesh(resource: TscnInternalResource): ArrayMeshData {
   const surfacesRaw = resource.data['_surfaces'];
   // An ArrayMesh with no surfaces is legitimately empty and draws nothing.
   if (typeof surfacesRaw !== 'string') return { surfaces: [] };
 
-  const extById = extResourcePathsById(externalResources);
-  // Both halves per block, inside the one walk. `decodeSurfaces` skips a
-  // non-triangle or undecodable surface, so surface `i` is not block `i`, and
-  // pairing them by position gives a material to the wrong surface.
-  return decodeSurfaces(surfacesRaw, `SubResource("${resource.id}")`, (block) => {
-    const raw = readMaterialRef(block);
-    const materialPath = resolveRefToResourcePath(raw, extById, '', REJECT_SUB_RESOURCES) ?? undefined;
-    if (materialPath !== undefined) return { materialPath };
-    // The scene-local id, since no path can express it.
-    const ref = parseResourceReference(raw ?? '');
-    return ref?.type === 'SubResource' ? { materialSubResourceId: ref.id } : {};
-  });
+  // Inside the one walk: `decodeSurfaces` skips a non-triangle or undecodable
+  // surface, so surface `i` is not block `i`, and pairing them by position gives
+  // a material to the wrong surface.
+  return decodeSurfaces(surfacesRaw, `SubResource("${resource.id}")`, (block) => ({
+    materialRef: readMaterialRef(block),
+  }));
 }
 
-/**
- * First-wins id → path, matching `Array.find` over the same list.
- * `SceneResourcesContext` orders its resources own-scene-first so a duplicate id
- * resolves to the nearer scene. A plain `new Map` is last-wins and would hand
- * back the parent's resource.
- */
+/** First-wins id → path, as `findExtResource` resolves a duplicate id. A plain `new Map` is last-wins. */
 function extResourcePathsById(resources: readonly TscnExternalResource[]): ReadonlyMap<string, string> {
   const byId = new Map<string, string>();
   for (const r of resources) if (!byId.has(r.id)) byId.set(r.id, r.path);
@@ -157,13 +142,13 @@ function extResourcePathsById(resources: readonly TscnExternalResource[]): Reado
 
 /**
  * The shared surface loop. `label` names the mesh in diagnostics and errors.
- * `resolveMaterial` is the one thing that differs between a mesh read out of a
+ * `readMaterial` is the one thing that differs between a mesh read out of a
  * `.tres` and one inlined in a scene.
  */
 function decodeSurfaces(
   surfacesRaw: string,
   label: string,
-  resolveMaterial: (block: string) => Pick<ArrayMeshSurface, 'materialPath' | 'materialSubResourceId'>
+  readMaterial: (block: string) => Pick<ArrayMeshSurface, 'materialPath' | 'materialRef'>
 ): ArrayMeshData {
   const surfaces: ArrayMeshSurface[] = [];
   let declared = 0;
@@ -234,7 +219,7 @@ function decodeSurfaces(
       uvs,
       normals,
       indices,
-      ...resolveMaterial(block),
+      ...readMaterial(block),
     });
   }
 

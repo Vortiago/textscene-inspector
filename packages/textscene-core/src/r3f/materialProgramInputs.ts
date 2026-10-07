@@ -1,7 +1,7 @@
 /**
  * `materialProgramInputs()`: a material's props and its React `key` from one
  * merged object. three bakes slot presence and `defines` into the program at
- * first compile, so the key remounts a material whose program inputs change.
+ * first compile, so the key remounts a material whose program inputs or `attach` change.
  * A bare `:NNN` cites three 0.185.1's `WebGLPrograms.js`, where identity is decided.
  */
 import * as THREE from 'three';
@@ -283,5 +283,8 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
   // The injections' part of `customProgramCacheKey()` (`:382`, pushed at `:432`). Its curve term
   // stays out: a curve swap marks the material dirty, which compiles it without a remount.
   if (cacheKey !== '') add(`inject:${cacheKey}`);
+  // Not a program input, but mount-only the same way: fiber applies `attach` only at
+  // mount (`RESERVED_PROPS` in `@react-three/fiber` 9.8.0), so a moved target remounts.
+  if (typeof props.attach === 'string') add(`attach:${props.attach}`);
   return key;
 }

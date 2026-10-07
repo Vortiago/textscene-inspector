@@ -26,12 +26,11 @@ export interface ArrayMeshSurface {
   /** Resolved `res://` path of the surface's material, if it has one. */
   materialPath?: string;
   /**
-   * For a mesh inlined in a scene: the id of the scene's `[sub_resource]`
-   * material, which no resource path addresses, so the renderer resolves it
-   * against the scene's resources. Never set for a mesh from a `.tres`, whose
-   * sub-resource materials are addressable.
+   * For a mesh inlined in a scene: the surface's raw `"material"` reference, which
+   * the renderer resolves against the scene's resources. Never set for a mesh from
+   * a `.tres`, whose materials resolve to `materialPath`.
    */
-  materialSubResourceId?: string;
+  materialRef?: string;
 }
 
 export interface ArrayMeshData {
