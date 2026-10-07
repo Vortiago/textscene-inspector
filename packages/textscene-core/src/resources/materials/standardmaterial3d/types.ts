@@ -148,6 +148,8 @@ export interface StandardMaterial3DData {
    * alpha pass, which skips the depth prepass too: DEPTH_DRAW_ALWAYS with the depth test on.
    */
   alphaPassDepthWrite: boolean;
+  /** Whether the shader multiplies the albedo colour, texture and vertex alpha into ALPHA. */
+  readsAlbedoAlpha: boolean;
   /** Whether Godot writes alpha 1 for each fragment the surface's cut keeps. */
   opaqueAfterCut: boolean;
   /** Godot `no_depth_test` inverted: false means the surface draws through everything. */
@@ -244,6 +246,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   alphaTest: number;
   depthWrite: boolean;
   alphaPassDepthWrite: boolean;
+  readsAlbedoAlpha: boolean;
   opaqueAfterCut: boolean;
   depthTest: boolean;
   shadingMode: 'unshaded' | 'per_pixel';

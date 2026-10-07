@@ -3,11 +3,15 @@
  * it per instance, to every surface the instance draws (`godot/instanceTransparency.ts`).
  */
 
-import * as THREE from 'three';
 import { forcesAlphaPass, instanceAlpha } from '../../godot/instanceTransparency';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
-import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
+import {
+  withSurfaceAlphaPatch,
+  type StandardMaterialBag,
+} from '../../resources/materials/standardmaterial3d/materialBag';
+import type { ProgramInjection } from '../materialProgramInputs';
 import type { AlphaCutSurface } from '../godotAlphaCut';
+import { surfaceAlphaPatch } from './surfaceAlphaPatch';
 
 /** The material state an instance's `transparency` changes. */
 export interface SurfaceAlpha {
@@ -15,15 +19,17 @@ export interface SurfaceAlpha {
   opacity: number;
   transparent: boolean;
   depthWrite: boolean;
-  blending: THREE.Blending;
 }
 
-/** A surface's alpha state, with what it does once its instance moves it to the alpha pass. */
+/** A surface's alpha state, with its depth write once its instance moves it to the alpha pass. */
 export interface AlphaPassSurface extends SurfaceAlpha {
   /** Its depth write in the alpha pass, which also skips the depth prepass. */
   alphaPassDepthWrite: boolean;
-  /** Godot writes alpha 1 for each fragment its cut keeps (`scene_forward_clustered.glsl:1413-1415`). */
-  opaqueAfterCut: boolean;
+}
+
+/** A Sprite3D or Label3D surface's alpha state, with the shader patch its blend needs. */
+export interface CutSurfaceAlpha extends SurfaceAlpha {
+  injection: ProgramInjection | undefined;
 }
 
 /**
@@ -32,39 +38,32 @@ export interface AlphaPassSurface extends SurfaceAlpha {
  */
 export function instanceSurfaceAlpha(surface: AlphaPassSurface, transparency: number): SurfaceAlpha {
   const opacity = surface.opacity * instanceAlpha(transparency);
-  const { transparent, depthWrite, blending } = surface;
-  if (!forcesAlphaPass(transparency)) return { opacity, transparent, depthWrite, blending };
-  // A MIX blend of alpha 1 overwrites, which three spells as no blending.
-  const cutOverwrites = surface.opaqueAfterCut && blending === THREE.NormalBlending;
-  return {
-    opacity,
-    transparent: true,
-    depthWrite: surface.alphaPassDepthWrite,
-    blending: cutOverwrites ? THREE.NoBlending : blending,
-  };
+  if (!forcesAlphaPass(transparency))
+    return { opacity, transparent: surface.transparent, depthWrite: surface.depthWrite };
+  return { opacity, transparent: true, depthWrite: surface.alphaPassDepthWrite };
 }
 
 /**
  * The alpha state of a Sprite3D or Label3D surface, whose `get_material_for_2d` material keeps
- * DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth. `opacity` is the alpha its shader reads.
+ * DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth. `opacity` is the alpha its shader
+ * reads. Both draw MIX, so the patch sees three's default blending.
  */
-export function cutSurfaceAlpha(cut: AlphaCutSurface, opacity: number, transparency: number): SurfaceAlpha {
-  return instanceSurfaceAlpha(
-    {
-      opacity,
-      transparent: cut.blended,
-      depthWrite: cut.depthWrite,
-      blending: THREE.NormalBlending,
-      alphaPassDepthWrite: false,
-      opaqueAfterCut: cut.opaqueAfterCut,
-    },
+export function cutSurfaceAlpha(
+  cut: AlphaCutSurface,
+  opacity: number,
+  transparency: number
+): CutSurfaceAlpha {
+  const alpha = instanceSurfaceAlpha(
+    { opacity, transparent: cut.blended, depthWrite: cut.depthWrite, alphaPassDepthWrite: false },
     transparency
   );
+  return { ...alpha, injection: surfaceAlphaPatch(cut, alpha) };
 }
 
 /**
  * The bag of a surface drawn under its instance's `transparency`. Null `scalars` is Godot's
- * default surface: opaque, under DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth.
+ * default surface: opaque, under DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth. Its
+ * three material reads no texture or vertex alpha, so it needs no patch.
  */
 export function withInstanceTransparency(
   bag: StandardMaterialBag,
@@ -78,11 +77,10 @@ export function withInstanceTransparency(
       opacity: bag.props.opacity ?? 1,
       transparent: bag.props.transparent ?? false,
       depthWrite: bag.props.depthWrite ?? true,
-      blending: bag.props.blending ?? THREE.NormalBlending,
       alphaPassDepthWrite: scalars?.alphaPassDepthWrite ?? false,
-      opaqueAfterCut: scalars?.opaqueAfterCut ?? false,
     },
     transparency
   );
-  return { ...bag, props: { ...bag.props, ...alpha } };
+  const transparentBag = { ...bag, props: { ...bag.props, ...alpha } };
+  return scalars ? withSurfaceAlphaPatch(transparentBag, scalars) : transparentBag;
 }

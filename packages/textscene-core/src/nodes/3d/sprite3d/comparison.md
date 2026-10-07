@@ -49,5 +49,3 @@ Most keys warn then fall back to their Godot defaults. `billboard`, `alpha_cut` 
 - **Approximated** `alpha_hash_scale`, `alpha_antialiasing_mode` and
   `alpha_antialiasing_edge` have no counterpart, so a hashed-alpha sprite's dither grain
   differs and its edges are not feathered.
-- **Approximated** Under `transparency`, a sprite with `transparent = false` blends with its
-  texture's alpha, which Godot's opaque shader never reads.

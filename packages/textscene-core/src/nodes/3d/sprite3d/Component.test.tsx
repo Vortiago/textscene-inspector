@@ -15,6 +15,7 @@ import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { Sprite3DProperties } from './types';
 import { AlphaCutMode, AxisMode, BillboardMode, AlphaAntiAliasing, TextureFilterMode } from './types';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
+import { ALBEDO_ALPHA_UNREAD, OPAQUE_AFTER_CUT } from '../../../r3f/materials/surfaceAlphaPatch';
 
 const TEXTURE_PATH = 'res://textures/sprite.png';
 
@@ -199,7 +200,19 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mat).toMatchObject({ transparent: true, depthWrite: false, opacity: 127 / 255 });
   });
 
-  it('writes a discard-cut sprite unblended when transparency is set', async () => {
+  it('drops the texture alpha of an opaque sprite when transparency is set', async () => {
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({ texture: 'ExtResource("1_tex")', transparent: false, transparency: 0.5 }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    // TRANSPARENCY_DISABLED writes no ALPHA, so the texture alpha never reaches the blend.
+    expect(mat.onBeforeCompile).toBe(ALBEDO_ALPHA_UNREAD.onBeforeCompile);
+  });
+
+  it('writes alpha 1 past the cut of a discard-cut sprite when transparency is set', async () => {
     const tex = makeTexture(8, 8);
     const renderer = await render({
       node: makeNode({
@@ -211,7 +224,8 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
-    expect(mat).toMatchObject({ transparent: true, depthWrite: false, blending: THREE.NoBlending });
+    expect(mat).toMatchObject({ transparent: true, depthWrite: false });
+    expect(mat.onBeforeCompile).toBe(OPAQUE_AFTER_CUT.onBeforeCompile);
   });
 
   it('applies region_rect as a texture sub-rectangle when region_enabled', async () => {

@@ -12,6 +12,8 @@ import {
   GODOT_DEFAULT_ROUGHNESS,
 } from '../../../r3f/materials/godotDefaultMaterial';
 import { BillboardMode } from '../../../godot/billboard';
+import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
+import { surfaceAlphaPatch } from '../../../r3f/materials/surfaceAlphaPatch';
 import { resolveEmission } from './emission';
 import type {
   MaterialBlendState,
@@ -35,11 +37,13 @@ export type StandardMaterialClass = 'basic' | 'standard' | 'physical';
  * The class and its props as one discriminated value, so an adapter cannot map a class
  * to parameters it did not derive. No `attach`, the reactive adapter's mount detail, and
  * no React `key`, which `materialProgramInputs` derives from the merged bag (ADR-0038).
+ * `injection` is the shader patch each adapter applies, absent where none is needed.
  */
-export type StandardMaterialBag =
+export type StandardMaterialBag = (
   | { materialClass: 'basic'; props: THREE.MeshBasicMaterialParameters }
   | { materialClass: 'standard'; props: THREE.MeshStandardMaterialParameters }
-  | { materialClass: 'physical'; props: THREE.MeshPhysicalMaterialParameters };
+  | { materialClass: 'physical'; props: THREE.MeshPhysicalMaterialParameters }
+) & { injection?: ProgramInjection };
 
 /**
  * Godot's default 3D material, which a surface with no material draws. A hardcoded
@@ -186,7 +190,21 @@ export function standardMaterialBag(
   textures: ResolvedTextureSlots = {}
 ): StandardMaterialBag {
   if (!scalars) return NO_MATERIAL;
+  return withSurfaceAlphaPatch(classBag(scalars, textures), scalars);
+}
 
+/** The bag with the shader patch its blend state needs, recomputed by any caller that changes one. */
+export function withSurfaceAlphaPatch(
+  bag: StandardMaterialBag,
+  scalars: StandardMaterial3DScalars
+): StandardMaterialBag {
+  const injection = surfaceAlphaPatch(scalars, bag.props);
+  const { injection: _previous, ...unpatched } = bag;
+  return injection ? { ...unpatched, injection } : unpatched;
+}
+
+/** The class `scalars` need, and its props. */
+function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureSlots): StandardMaterialBag {
   const slot = (name: TextureSlot): THREE.Texture | null => textures[name] ?? null;
   const blend = materialBlendProps(scalars);
   // `fromArray` keeps the values linear. A hex would go through

@@ -4,6 +4,8 @@
  * decision here.
  */
 
+import type { SurfaceAlphaSource } from './materials/surfaceAlphaPatch';
+
 /**
  * Divergence: Godot's prepass cut is 0.99 (`render_forward_clustered.cpp:1791`) and applies in the
  * depth pass only. three has one `alphaTest` for both passes, and 0.99 in the colour pass would
@@ -32,7 +34,7 @@ export interface AlphaCutInput {
   transparentFlag: boolean | typeof NO_TRANSPARENT_FLAG;
 }
 
-export interface AlphaCutSurface {
+export interface AlphaCutSurface extends SurfaceAlphaSource {
   alphaTest: number;
   alphaHash: boolean;
   depthWrite: boolean;
@@ -43,15 +45,21 @@ export interface AlphaCutSurface {
    * the surface at `render_forward_clustered.cpp:4079-4090`.
    */
   blended: boolean;
-  /** Whether Godot writes alpha 1 for each fragment the cut keeps, which only an alpha pass shows. */
-  opaqueAfterCut: boolean;
 }
 
 /** Godot's `mat_transparency` switch in three's terms. */
 export function alphaCutSurface({ mode, scissorThreshold, transparentFlag }: AlphaCutInput): AlphaCutSurface {
   // TRANSPARENCY_DISABLED is the initialiser the switch never reaches (`sprite_3d.cpp:284-286`).
+  // Its shader writes no ALPHA, so the texture alpha never reaches the blend.
   if (transparentFlag === false) {
-    return { alphaTest: 0, alphaHash: false, depthWrite: true, blended: false, opaqueAfterCut: false };
+    return {
+      alphaTest: 0,
+      alphaHash: false,
+      depthWrite: true,
+      blended: false,
+      readsAlbedoAlpha: false,
+      opaqueAfterCut: false,
+    };
   }
   // SCISSOR and HASH force `alpha = 1.0` past the cut (`scene_forward_clustered.glsl:1413-1415`),
   // so they land in the opaque list (`scene_shader_forward_clustered.cpp:252`), which writes depth.
@@ -62,10 +70,18 @@ export function alphaCutSurface({ mode, scissorThreshold, transparentFlag }: Alp
         alphaHash: false,
         depthWrite: true,
         blended: false,
+        readsAlbedoAlpha: true,
         opaqueAfterCut: true,
       };
     case ALPHA_CUT_HASH:
-      return { alphaTest: 0, alphaHash: true, depthWrite: true, blended: false, opaqueAfterCut: true };
+      return {
+        alphaTest: 0,
+        alphaHash: true,
+        depthWrite: true,
+        blended: false,
+        readsAlbedoAlpha: true,
+        opaqueAfterCut: true,
+      };
     case ALPHA_CUT_OPAQUE_PREPASS:
       // The depth prepass keeps blending and cuts in the depth pass only.
       return {
@@ -73,10 +89,18 @@ export function alphaCutSurface({ mode, scissorThreshold, transparentFlag }: Alp
         alphaHash: false,
         depthWrite: true,
         blended: true,
+        readsAlbedoAlpha: true,
         opaqueAfterCut: false,
       };
     default:
       // `depth_draw_opaque` on a blended surface writes no depth (`material.cpp:800`).
-      return { alphaTest: 0, alphaHash: false, depthWrite: false, blended: true, opaqueAfterCut: false };
+      return {
+        alphaTest: 0,
+        alphaHash: false,
+        depthWrite: false,
+        blended: true,
+        readsAlbedoAlpha: true,
+        opaqueAfterCut: false,
+      };
   }
 }

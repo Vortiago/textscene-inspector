@@ -11,6 +11,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
+import { ALBEDO_ALPHA_UNREAD } from '../../../r3f/materials/surfaceAlphaPatch';
 
 /** `instanceAlpha(0.5)`: 0.5 × 255 truncated to 127. */
 const HALF_TRANSPARENT_ALPHA = 127 / 255;
@@ -19,6 +20,7 @@ const INTERNALS: TscnInternalResource[] = [
   { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } },
   inlineTwoSurfaceMesh('Array_1'),
   { id: 'Mat_overlay', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 0, 1, 1)' } },
+  { id: 'Mat_opaque', type: 'StandardMaterial3D', data: {} },
 ];
 
 function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
@@ -49,6 +51,14 @@ describe('MeshInstance3D — transparency', () => {
   it('blends a primitive mesh surface at the instance alpha', async () => {
     const [material] = await drawnMaterials({ transparency: 0.5 });
     expect(material).toMatchObject({ transparent: true, depthWrite: false, opacity: HALF_TRANSPARENT_ALPHA });
+  });
+
+  it('drops the texture and vertex alpha of an opaque material', async () => {
+    const [material] = await drawnMaterials({
+      materialOverride: 'SubResource("Mat_opaque")',
+      transparency: 0.5,
+    });
+    expect(material!.onBeforeCompile).toBe(ALBEDO_ALPHA_UNREAD.onBeforeCompile);
   });
 
   it('blends every surface of an ArrayMesh', async () => {

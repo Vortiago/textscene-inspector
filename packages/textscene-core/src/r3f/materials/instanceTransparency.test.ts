@@ -1,21 +1,24 @@
-import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { standardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
+import { alphaCutSurface } from '../godotAlphaCut';
 import {
+  cutSurfaceAlpha,
   instanceSurfaceAlpha,
   withInstanceTransparency,
   type AlphaPassSurface,
 } from './instanceTransparency';
+import { ALBEDO_ALPHA_UNREAD, OPAQUE_AFTER_CUT } from './surfaceAlphaPatch';
 
 const OPAQUE_SURFACE: AlphaPassSurface = {
   opacity: 1,
   transparent: false,
   depthWrite: true,
-  blending: THREE.NormalBlending,
   alphaPassDepthWrite: false,
-  opaqueAfterCut: false,
 };
+
+/** `SpriteBase3D::AlphaCutMode::ALPHA_CUT_DISCARD`. */
+const ALPHA_CUT_DISCARD = 1;
 
 describe('instanceSurfaceAlpha', () => {
   it('leaves the surface as it is for an opaque instance', () => {
@@ -23,7 +26,6 @@ describe('instanceSurfaceAlpha', () => {
       opacity: 1,
       transparent: false,
       depthWrite: true,
-      blending: THREE.NormalBlending,
     });
   });
 
@@ -41,15 +43,22 @@ describe('instanceSurfaceAlpha', () => {
     expect(instanceSurfaceAlpha(OPAQUE_SURFACE, 0.3).depthWrite).toBe(false);
     expect(instanceSurfaceAlpha(surface, 0.3).depthWrite).toBe(true);
   });
+});
 
-  it('writes a cut surface unblended, since Godot sets alpha 1 for the fragments it keeps', () => {
-    const surface = { ...OPAQUE_SURFACE, opaqueAfterCut: true };
-    expect(instanceSurfaceAlpha(surface, 0.3).blending).toBe(THREE.NoBlending);
+describe('cutSurfaceAlpha', () => {
+  it('patches nothing on a cut surface in the opaque pass', () => {
+    const cut = alphaCutSurface({ mode: ALPHA_CUT_DISCARD, scissorThreshold: 0.5, transparentFlag: true });
+    expect(cutSurfaceAlpha(cut, 1, 0).injection).toBeUndefined();
   });
 
-  it('keeps a blend mode other than MIX on a cut surface', () => {
-    const surface = { ...OPAQUE_SURFACE, opaqueAfterCut: true, blending: THREE.AdditiveBlending };
-    expect(instanceSurfaceAlpha(surface, 0.3).blending).toBe(THREE.AdditiveBlending);
+  it('writes alpha 1 past the cut once the instance blends it, as Godot does', () => {
+    const cut = alphaCutSurface({ mode: ALPHA_CUT_DISCARD, scissorThreshold: 0.5, transparentFlag: true });
+    expect(cutSurfaceAlpha(cut, 1, 0.5).injection).toBe(OPAQUE_AFTER_CUT);
+  });
+
+  it('drops the texture alpha of a sprite without FLAG_TRANSPARENT once the instance blends it', () => {
+    const cut = alphaCutSurface({ mode: ALPHA_CUT_DISCARD, scissorThreshold: 0.5, transparentFlag: false });
+    expect(cutSurfaceAlpha(cut, 1, 0.5).injection).toBe(ALBEDO_ALPHA_UNREAD);
   });
 });
 
@@ -62,6 +71,24 @@ describe('withInstanceTransparency', () => {
   it("blends Godot's default surface without a depth write", () => {
     const { props } = withInstanceTransparency(standardMaterialBag(null), null, 0.5);
     expect(props).toMatchObject({ transparent: true, depthWrite: false, opacity: 127 / 255 });
+  });
+
+  it('drops the texture alpha of an opaque material once the instance blends it', () => {
+    const scalars = parseStandardMaterial3DScalars({});
+    expect(withInstanceTransparency(standardMaterialBag(scalars), scalars, 0.5).injection).toBe(
+      ALBEDO_ALPHA_UNREAD
+    );
+  });
+
+  it('writes alpha 1 past the scissor cut once the instance blends it', () => {
+    const scalars = parseStandardMaterial3DScalars({ transparency: '2' });
+    expect(withInstanceTransparency(standardMaterialBag(scalars), scalars, 0.5).injection).toBe(
+      OPAQUE_AFTER_CUT
+    );
+  });
+
+  it("patches nothing on Godot's default surface", () => {
+    expect(withInstanceTransparency(standardMaterialBag(null), null, 0.5).injection).toBeUndefined();
   });
 
   it("reads the material's own alpha-pass depth write", () => {

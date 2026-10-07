@@ -68,7 +68,7 @@ export function materialBagElement(bag: StandardMaterialBag, attach: string | un
   // `attach` first: it is the mount's own prop and must never shadow a derived
   // one. The key comes from the same merged bag it travels with (ADR-0038): a
   // program input arriving late, or a moved `attach`, reaches three only through a remount.
-  const program = materialProgramInputs({ props: { attach, ...bag.props } });
+  const program = materialProgramInputs({ props: { attach, ...bag.props, injection: bag.injection } });
   switch (bag.materialClass) {
     case 'basic':
       return <meshBasicMaterial key={program.key} {...program.props} />;

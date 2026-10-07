@@ -13,6 +13,7 @@ import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { Color } from '../../../../nodes/base/node2d/types';
 import { canvasItemFacing } from '../../../canvasItemFacing';
+import { injectProgram, type ProgramInjection } from '../../../materialProgramInputs';
 
 /** Fixed raster supersampling factor: canvas text has no distance field to stay crisp when magnified, so this trades memory and fill rate for sharpness at typical zoom. */
 export const CANVAS_TEXT_SUPERSAMPLE = 3;
@@ -192,7 +193,8 @@ export interface CanvasTextTransparency {
   depthWrite: boolean;
   alphaTest: number;
   alphaHash: boolean;
-  blending: THREE.Blending;
+  /** The shader patch the surface's blend needs (`surfaceAlphaPatch.ts`). */
+  injection: ProgramInjection | undefined;
 }
 
 export interface CanvasTextMaterialOptions extends Partial<CanvasTextTransparency> {
@@ -236,7 +238,7 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     depthWrite = false,
     alphaTest = 0,
     alphaHash = false,
-    blending = THREE.NormalBlending,
+    injection,
   } = options;
   const material = new THREE.MeshBasicMaterial({
     map,
@@ -246,7 +248,6 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     depthTest,
     alphaTest,
     alphaHash,
-    blending,
     // Unlike `defines` below, `forceSinglePass` IS a property `THREE.Material`'s
     // constructor declares, so `setValues` assigns it from this object.
     ...canvasItemFacing(side),
@@ -255,5 +256,6 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...DECODE_VIDEO_TEXTURE_DEFINES };
   }
+  if (injection) injectProgram(material, injection);
   return material;
 }

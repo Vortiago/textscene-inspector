@@ -307,6 +307,19 @@ describe('decodeStandardMaterial3D — alpha pass forced by the instance', () =>
   it('keeps the alpha of a surface with no cut', () => {
     expect(decodeStandardMaterial3D({ transparency: '1' }).opaqueAfterCut).toBe(false);
   });
+
+  it('reads the albedo alpha of a transparent surface', () => {
+    expect(decodeStandardMaterial3D({ transparency: '1' }).readsAlbedoAlpha).toBe(true);
+  });
+
+  it('reads no albedo alpha on an opaque surface', () => {
+    expect(decodeStandardMaterial3D({}).readsAlbedoAlpha).toBe(false);
+  });
+
+  it('reads no albedo alpha on a refractive surface', () => {
+    const data = decodeStandardMaterial3D({ transparency: '1', refraction_enabled: 'true' });
+    expect(data.readsAlbedoAlpha).toBe(false);
+  });
 });
 
 describe('decodeStandardMaterial3D — refraction forces opacity', () => {

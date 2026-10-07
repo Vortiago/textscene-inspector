@@ -11,6 +11,7 @@ import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/billboard';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
+import { ALBEDO_ALPHA_UNREAD, OPAQUE_AFTER_CUT } from '../../../r3f/materials/surfaceAlphaPatch';
 
 function bag(properties: Record<string, string>, textures?: ResolvedTextureSlots) {
   return standardMaterialBag(parseStandardMaterial3DScalars(properties), textures);
@@ -140,6 +141,25 @@ describe('standardMaterialBag — texture slots', () => {
     const derived = bag({ shading_mode: '0' }, { albedo_texture: texture, normal_texture: texture });
     expect(derived.props.map).toBe(texture);
     expect(derived.props).not.toHaveProperty('normalMap');
+  });
+});
+
+describe('standardMaterialBag — fragment alpha', () => {
+  it('patches nothing on an opaque surface', () => {
+    expect(bag({}).injection).toBeUndefined();
+  });
+
+  it('drops the texture alpha of an additive surface whose shader writes no ALPHA', () => {
+    expect(bag({ blend_mode: '1' }).injection).toBe(ALBEDO_ALPHA_UNREAD);
+  });
+
+  it('writes alpha 1 past the scissor cut of an additive surface', () => {
+    expect(bag({ blend_mode: '1', transparency: '2' }).injection).toBe(OPAQUE_AFTER_CUT);
+  });
+
+  it('patches the imperative material too', () => {
+    const material = materialFromBag(bag({ blend_mode: '1' }));
+    expect(material.onBeforeCompile).toBe(ALBEDO_ALPHA_UNREAD.onBeforeCompile);
   });
 });
 

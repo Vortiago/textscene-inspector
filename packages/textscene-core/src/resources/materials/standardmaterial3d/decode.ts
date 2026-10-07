@@ -170,6 +170,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     depthDrawMode,
     depthWrite: godotDepthWrite(alphaPass, depthInAlphaPass, depthDrawMode, depthTest),
     alphaPassDepthWrite: godotDepthWrite(true, false, depthDrawMode, depthTest),
+    readsAlbedoAlpha,
     // `scene_forward_clustered.glsl:1413-1415`. ALPHA_HASH keeps its alpha here: this
     // previewer blends it in place of the dither.
     opaqueAfterCut: transparency === Transparency.ALPHA_SCISSOR && !alphaFlags.usesAlphaAntialiasing,
