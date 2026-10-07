@@ -34,8 +34,7 @@ export function createArrayMeshProcessor(
     resourceType: 'arraymesh',
     addressesSubResources: true,
     loadDirectly: async (path) => {
-      const { file, properties } = await loadSection(path, ARRAY_MESH_TYPES);
-      const mesh = decodeArrayMesh(properties, file, path);
+      const mesh = decodeArrayMesh(await loadSection(path, ARRAY_MESH_TYPES), path);
       return {
         geometry: buildArrayMeshGeometry(mesh),
         materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),

@@ -1,16 +1,14 @@
 /**
  * The theme processor on the corpus shapes: a Theme .tres carrying a
  * `default_font`, and a font ref into a separate file resolved through the
- * injected `loadFont`. The owning file arrives parsed, through `sectionLoader`.
+ * injected `loadFont`. The owning file arrives parsed, through `sectionLoaderServing`.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { parseTresFile } from '../../parser/parsedResource';
 import { ResourceEventBus } from '../ResourceEventBus';
-import { sectionLoader } from '../resourceSection';
-import { resourceFilePath } from '../subResourcePath';
 import { createThemeProcessor } from './createThemeProcessor';
 import type { ThemeResource } from '../styles/theme/types';
 import type { FontLoaderFn, FontResource } from '../fonts/font/types';
+import { sectionLoaderServing } from '../testing/sectionLoaderServing';
 
 /** Shaped like scenes/demos/gui/ui_mirroring/ui_mirroring.tscn's inline Theme (here as a standalone file). */
 const THEME_TRES = [
@@ -25,15 +23,9 @@ const THEME_TRES = [
   '',
 ].join('\n');
 
-/** Parses each file once per read, as the `resource` slot would. An absent file rejects. */
 function setup(files: Record<string, string>, loadFont: FontLoaderFn = async () => null) {
-  const loadParsedFile = async (path: string) => {
-    const content = files[resourceFilePath(path)];
-    if (content === undefined) throw new Error(`File not found: ${resourceFilePath(path)}`);
-    return parseTresFile(content);
-  };
   const eventBus = new ResourceEventBus();
-  const processor = createThemeProcessor(eventBus, sectionLoader(loadParsedFile), () => loadFont);
+  const processor = createThemeProcessor(eventBus, sectionLoaderServing(files), () => loadFont);
   return { eventBus, processor };
 }
 

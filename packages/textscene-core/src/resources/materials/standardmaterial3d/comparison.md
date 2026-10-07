@@ -9,6 +9,7 @@ renders_as: a THREE.MeshStandardMaterial / MeshPhysicalMaterial
 Godot's default 3D surface. The scalar PBR base maps onto `MeshStandardMaterial`, and clearcoat, rim, anisotropy or refraction upgrade it to `MeshPhysicalMaterial`. Each section drives one feature from its own fixture.
 
 ## Metallic / roughness
+
 <!-- compare: image=unit-material-metallic status=done fixture=unit-material-metallic.tscn -->
 
 A `metallic = 1.0`, `roughness = 0.1` sphere reflects the preview sky. Both engines render the same blue-grey mirror with a matching highlight.
@@ -16,6 +17,7 @@ A `metallic = 1.0`, `roughness = 0.1` sphere reflects the preview sky. Both engi
 - **Approximated** Godot reads the map channel named by `metallic_texture_channel` and `roughness_texture_channel`. three reads fixed channels, so a map packed in RED is misread.
 
 ## Emission
+
 <!-- compare: image=unit-material-emissive status=done fixture=unit-material-emissive.tscn -->
 
 An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the preview environment blooms it. `emission_operator` is honoured, including MULTIPLY with no texture, which emits nothing.
@@ -25,11 +27,13 @@ An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the previe
 - **Approximated** `emission_intensity` is ignored. `emission_energy_multiplier` alone drives the strength.
 
 ## Clearcoat
+
 <!-- compare: image=unit-material-clearcoat status=done fixture=unit-material-clearcoat.tscn -->
 
 A red sphere with a glossy clear coat. `clearcoat` maps to `MeshPhysicalMaterial.clearcoat`, and both engines show the same tight highlight over the red body.
 
 ## Rim
+
 <!-- compare: image=unit-material-rim status=limitation fixture=unit-material-rim.tscn -->
 
 Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a low `sheenRoughness`, and the body matches Godot.
@@ -37,6 +41,7 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 - **Approximated** The sheen is a crescent where view meets light, not an even ring round the silhouette.
 
 ## Anisotropy
+
 <!-- compare: image=unit-material-anisotropy status=limitation fixture=unit-material-anisotropy.tscn -->
 
 `anisotropy` stretches the specular highlight along one direction. Both engines show a brushed-metal streak.
@@ -44,6 +49,7 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 - **Approximated** Ours reads sharper and more radial where Godot's lobe is soft.
 
 ## Anisotropy flowmap
+
 <!-- compare: image=unit-material-anisotropy-flowmap status=limitation fixture=unit-material-anisotropy-flowmap.tscn -->
 
 `anisotropy_flowmap` carries direction in R/G and strength in alpha. The image is repacked alpha to blue before it reaches `anisotropyMap`, and both engines band the mapped sphere.
@@ -53,6 +59,7 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 - **Approximated** A material loaded from a `.tres` gets its anisotropy scalars and no flowmap.
 
 ## Refraction
+
 <!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
 
 Godot's refraction distorts the background, so the sphere reads bright. `refraction_enabled` maps to `transmission` plus `thickness`, which reads dark here. The forced opacity and depth write match Godot.
@@ -60,6 +67,7 @@ Godot's refraction distorts the background, so the sphere reads bright. `refract
 - **Approximated** The screen-space distortion is not reproduced, and the surface is not dimmed by `1 - ref_amount`, so it reads brighter than Godot's.
 
 ## Height mapping
+
 <!-- compare: image=unit-material-heightmap status=limitation fixture=unit-material-heightmap.tscn -->
 
 Godot's `heightmap_*` is texture-space parallax, so the silhouette stays a smooth sphere. It maps to `displacementMap`, which moves real vertices.
@@ -67,6 +75,7 @@ Godot's `heightmap_*` is texture-space parallax, so the silhouette stays a smoot
 - **Approximated** The sphere deforms into a lumpy blob, and the depth scale is in world units.
 
 ## Texture filter
+
 <!-- compare: image=unit-material-texture-filter status=done fixture=unit-material-texture-filter.tscn -->
 
 `texture_filter` picks the sampler every texture slot reads through, and `texture_repeat` rides the same helper. Godot's repeat default is on while three's is clamp, so the applier states Repeat at bind time. An unauthored material tiles a clamped arrival on a source-shared clone.
@@ -78,11 +87,13 @@ Godot's `heightmap_*` is texture-space parallax, so the silhouette stays a smoot
 ## Linting
 
 <!-- lint:begin StandardMaterial3D -->
+
 Strict parsing format-checks the inherited set (131 inherited from BaseMaterial3D, 2 inherited from Material, 2 inherited from Resource); `StandardMaterial3D` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| Rule                                    | Reports                     | Severity |
+| --------------------------------------- | --------------------------- | -------- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info     |
+
 <!-- lint:end -->
 
 The lenient parser never rejects. Each field falls back to Godot's default through the shared value decoders, so a malformed `roughness` renders with default roughness. A texture reference it cannot resolve leaves the slot empty, and the mesh renders untextured.

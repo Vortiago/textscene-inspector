@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { parseTresFile } from '../../../parser/parsedResource';
+import { sectionLoaderServing } from '../../testing/sectionLoaderServing';
+import { THEME_TYPES } from './decode';
 import { buildThemeResource, resolveThemeResource } from './loadTheme';
 import type { ThemeAddresses } from './types';
 import type { FontLoaderFn, FontResource } from '../../fonts/font/types';
@@ -116,8 +117,10 @@ describe('resolveThemeResource', () => {
 describe('buildThemeResource', () => {
   it('decodes the addressed section and resolves its fonts', async () => {
     const loadFont: FontLoaderFn = async (address) => (address === 'res://fonts/base.ttf' ? FONT_A : null);
-    const file = parseTresFile(THEME_TRES);
-    const section = { file, type: file.resourceType, properties: file.properties };
+    const section = await sectionLoaderServing({ 'res://theme.tres': THEME_TRES })(
+      'res://theme.tres',
+      THEME_TYPES
+    );
     const resource = await buildThemeResource('res://theme.tres', section, loadFont);
     expect(resource.defaultFont).toBe(FONT_A);
     expect(resource.defaultFontSize).toBe(20);

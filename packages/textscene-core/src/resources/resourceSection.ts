@@ -13,7 +13,7 @@ import { parseSubResourcePath } from './subResourcePath.js';
  * The parsed file that owns `path`, a plain path or a **Sub-resource path**, from the
  * `resource` slot's cache. Rejects when the file fails to load or parse.
  */
-export type ParsedFileLoaderFn = (path: string) => Promise<ParsedResource>;
+type ParsedFileLoaderFn = (path: string) => Promise<ParsedResource>;
 
 /**
  * A `[sub_resource]`'s own properties. The parser echoes the heading's `id` into `data`

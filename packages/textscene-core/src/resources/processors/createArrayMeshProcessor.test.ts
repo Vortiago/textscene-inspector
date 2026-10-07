@@ -4,11 +4,10 @@
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { parseTresFile } from '../../parser/parsedResource';
 import { ResourceEventBus } from '../ResourceEventBus';
-import { sectionLoader } from '../resourceSection';
 import { createArrayMeshProcessor, type ArrayMeshResource } from './createArrayMeshProcessor';
 import { truncatedSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
+import { sectionLoaderServing } from '../testing/sectionLoaderServing';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -30,19 +29,15 @@ const UNREADABLE_THEN_GOOD_TRES = WALL_TRES.replace(
   `_surfaces = [${truncatedSurface({ name: 'truncated' })}, {`
 );
 
-/** A processor whose section loader parses `tres` for every path. */
-function processorServing(tres: string) {
+function processorServing(files: Record<string, string>) {
   const eventBus = new ResourceEventBus();
-  const processor = createArrayMeshProcessor(
-    eventBus,
-    sectionLoader(async () => parseTresFile(tres))
-  );
+  const processor = createArrayMeshProcessor(eventBus, sectionLoaderServing(files));
   return { eventBus, processor };
 }
 
 describe('createArrayMeshProcessor', () => {
   it('decodes a requested ArrayMesh .tres and emits arraymesh:loaded with geometry', async () => {
-    const { eventBus, processor } = processorServing(WALL_TRES);
+    const { eventBus, processor } = processorServing({ 'res://wall.tres': WALL_TRES });
 
     const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', 'res://wall.tres', 1000);
     processor.request('res://wall.tres');
@@ -58,7 +53,7 @@ describe('createArrayMeshProcessor', () => {
     // materialPaths comes from the decoded surfaces and each group's
     // materialIndex from the builder's loop, so they agree only while the
     // decoder's list is the source of both.
-    const { eventBus, processor } = processorServing(GOOD_THEN_UNREADABLE_TRES);
+    const { eventBus, processor } = processorServing({ 'res://mixed.tres': GOOD_THEN_UNREADABLE_TRES });
 
     const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', 'res://mixed.tres', 1000);
     processor.request('res://mixed.tres');
@@ -75,7 +70,7 @@ describe('createArrayMeshProcessor', () => {
   it("carries each draw group's ORIGINAL surface index", async () => {
     // `surface_material_override/N` names the index in `_surfaces`, not the draw
     // group, so a consumer keeps the two apart when a surface above is dropped.
-    const { eventBus, processor } = processorServing(UNREADABLE_THEN_GOOD_TRES);
+    const { eventBus, processor } = processorServing({ 'res://shifted.tres': UNREADABLE_THEN_GOOD_TRES });
 
     const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', 'res://shifted.tres', 1000);
     processor.request('res://shifted.tres');
@@ -86,7 +81,9 @@ describe('createArrayMeshProcessor', () => {
   });
 
   it('emits arraymesh:failed and caches null for an address that is not an ArrayMesh', async () => {
-    const { eventBus, processor } = processorServing('[gd_resource type="BoxMesh" format=3]\n\n[resource]\n');
+    const { eventBus, processor } = processorServing({
+      'res://box.tres': '[gd_resource type="BoxMesh" format=3]\n\n[resource]\n',
+    });
 
     const failed = eventBus.once<Error>('arraymesh', 'failed', 'res://box.tres', 1000);
     processor.request('res://box.tres');

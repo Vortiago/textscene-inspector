@@ -9,6 +9,7 @@ import { warn } from '../../../logger.js';
 import type { ParsedResource } from '../../../parser/parsedResource.js';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
 import { BUILDABLE_MATERIAL_TYPES } from '../../materials/buildableMaterialTypes.js';
+import type { LoadedSection } from '../../resourceSection.js';
 import { resolveRefToResourcePath, resourceFilePath, subResourceTypeGate } from '../../subResourcePath.js';
 import {
   iterateSurfaceBlocks,
@@ -48,19 +49,15 @@ function readMaterialPath(
 }
 
 /**
- * Decode the ArrayMesh section `selfPath` addresses inside `file`. Godot writes
+ * Decode the ArrayMesh **Resource section** `selfPath` addresses. Godot writes
  * `_surfaces` only for a mesh that has surfaces, so a section without it is
  * legitimately empty, as in Godot.
- * @param properties - the addressed section's own properties (`SectionLoaderFn`).
+ * @param section - the section, with the file whose tables resolve its materials.
  * @param selfPath - the resource path this mesh was requested under. A material
  *   declared as a `[sub_resource]` here can only be addressed relative to its
  *   own file, so this is an input, not a convenience.
  */
-export function decodeArrayMesh(
-  properties: Readonly<Record<string, string>>,
-  file: ParsedResource,
-  selfPath: string
-): ArrayMeshData {
+export function decodeArrayMesh({ file, properties }: LoadedSection, selfPath: string): ArrayMeshData {
   const surfacesRaw = properties['_surfaces'];
   if (!surfacesRaw) return { surfaces: [] };
 

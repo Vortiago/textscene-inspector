@@ -8,5 +8,5 @@ import type { ArrayMeshData } from '../meshes/arraymesh/types';
 
 export function decodeArrayMeshTres(tres: string, selfPath: string): ArrayMeshData {
   const file = parseTresFile(tres);
-  return decodeArrayMesh(file.properties, file, selfPath);
+  return decodeArrayMesh({ file, type: file.resourceType, properties: file.properties }, selfPath);
 }

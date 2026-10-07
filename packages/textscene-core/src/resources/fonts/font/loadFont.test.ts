@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseTresFile } from '../../../parser/parsedResource';
+import { sectionLoaderServing } from '../../testing/sectionLoaderServing';
+import { FONT_SUB_RESOURCE_TYPES } from './decode';
 import { buildFontResource, fontResourceFromContainer } from './loadFont';
 import type { FontLoaderFn, FontResource } from './types';
 
@@ -26,9 +27,9 @@ describe('buildFontResource', () => {
     const loadFont: FontLoaderFn = async (address) =>
       address === 'res://theme/fonts/montserrat_extra_bold.otf' ? base : null;
 
-    const file = parseTresFile(MONTSERRAT_TRES);
-    const section = { file, type: file.resourceType, properties: file.properties };
-    const resource = await buildFontResource('res://theme/fonts/montserrat_16.tres', section, loadFont);
+    const path = 'res://theme/fonts/montserrat_16.tres';
+    const section = await sectionLoaderServing({ [path]: MONTSERRAT_TRES })(path, FONT_SUB_RESOURCE_TYPES);
+    const resource = await buildFontResource(path, section, loadFont);
 
     expect(resource.kind).toBe('file');
     expect((resource as { fallbacks: FontResource[] }).fallbacks).toEqual([base]);

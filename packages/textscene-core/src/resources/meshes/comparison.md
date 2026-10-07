@@ -12,11 +12,13 @@ A baked mesh whose surfaces are base64 `PackedByteArray` blobs laid out by a `fo
 ## Linting
 
 <!-- lint:begin ArrayMesh -->
+
 Strict parsing format-checks the inherited set (1 inherited from Mesh, 2 inherited from Resource); `ArrayMesh` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| Rule                                    | Reports                     | Severity |
+| --------------------------------------- | --------------------------- | -------- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info     |
+
 <!-- lint:end -->
 
 The lenient parser never rejects a mesh property. An unreadable `subdivide_width` or `uv2_padding` falls back to Godot's default through the shared value decoders. A surface whose arrays are malformed is dropped with a warning, and the mesh's other surfaces still render.
