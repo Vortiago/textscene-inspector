@@ -113,9 +113,10 @@ export class ResourceLoader {
   ): Promise<T> {
     // First, so a change to `path` reloads `dependent` whether this read hits, fails or waits.
     this.dependencies.record(dependent, path);
+    const failure = processor.failure(path);
+    if (failure) throw failure;
     const cached = processor.getCached(path);
-    if (cached === null) throw new Error(`${busType} ${path} previously failed to load`);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined && cached !== null) return cached;
     processor.request(path);
     return this.eventBus.once<T>(busType, 'loaded', path, PEER_LOAD_TIMEOUT_MS);
   }

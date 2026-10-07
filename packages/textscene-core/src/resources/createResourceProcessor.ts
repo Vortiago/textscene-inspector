@@ -9,7 +9,7 @@ import { LRUCache } from './LRUCache';
 import { parseSubResourcePath, resourceFilePath } from './subResourcePath';
 import { createLoadLane } from './resourceProcessorLoad';
 import { createClearCache } from './resourceProcessorClear';
-import { DEFAULT_MAX_ENTRIES } from './resourceProcessorTypes';
+import { CachedFailure, DEFAULT_MAX_ENTRIES, type CacheEntry } from './resourceProcessorTypes';
 import type { ResourceProcessor, ResourceProcessorConfig } from './resourceProcessorTypes';
 import * as logger from '../logger';
 
@@ -42,9 +42,9 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
     dispose,
   } = config;
 
-  // Capacity eviction disposes like `clearCache()`, but skips a `null` failure sentinel.
-  const cache = new LRUCache<T | null>(config.maxEntries ?? DEFAULT_MAX_ENTRIES, (_path, value) => {
-    if (value && dispose) dispose(value);
+  // Capacity eviction disposes like `clearCache()`, but skips a cached failure.
+  const cache = new LRUCache<CacheEntry<T>>(config.maxEntries ?? DEFAULT_MAX_ENTRIES, (_path, value) => {
+    if (value && !(value instanceof CachedFailure) && dispose) dispose(value);
   });
   // A load owns its path's entry through a unique token. A clear removes the entry,
   // so a load that completes under the cleared provider state finds its token gone
@@ -72,18 +72,13 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
   return {
     request(path: string): void {
       if (cache.has(path)) {
-        const cached = cache.get(path);
-        if (cached !== null) {
+        const cached = cache.get(path) as CacheEntry<T>;
+        if (cached instanceof CachedFailure) {
+          logger.info(`[${resourceType}Processor] Cache hit (failed) for: ${path}`);
+          eventBus.emit<Error>(resourceType, 'failed', path, cached.error);
+        } else {
           logger.info(`[${resourceType}Processor] Cache hit for: ${path}`);
           eventBus.emit<T>(resourceType, 'loaded', path, cached);
-        } else {
-          logger.info(`[${resourceType}Processor] Cache hit (failed) for: ${path}`);
-          eventBus.emit<Error>(
-            resourceType,
-            'failed',
-            path,
-            new Error(`${resourceType} ${path} previously failed to load`)
-          );
         }
         return;
       }
@@ -129,7 +124,13 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
     },
 
     getCached(path: string): T | null | undefined {
-      return cache.get(path);
+      const cached = cache.get(path);
+      return cached instanceof CachedFailure ? null : cached;
+    },
+
+    failure(path: string): Error | undefined {
+      const cached = cache.get(path);
+      return cached instanceof CachedFailure ? cached.error : undefined;
     },
 
     isCached(path: string): boolean {

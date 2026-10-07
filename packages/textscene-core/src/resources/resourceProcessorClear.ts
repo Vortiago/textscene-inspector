@@ -28,7 +28,7 @@ export interface ClearContext {
 /**
  * Clear cache for a specific path, or all of it. The cache disposes: `delete`
  * and `clear` take the pin-aware eviction path, so a value a mounted consumer
- * holds waits for its last unpin. The factory's `onEvict` skips `null` sentinels.
+ * holds waits for its last unpin. The factory's `onEvict` skips a cached failure.
  */
 export function createClearCache(ctx: ClearContext): (path?: string) => void {
   const { cache, inflight, resourceType } = ctx;

@@ -127,8 +127,8 @@ describe('createResourceProcessor', () => {
       expect(fileEventBus.isCached('res://a.bin')).toBe(true);
     });
 
-    it('failure is cached as null and a repeat request re-emits failed WITHOUT re-hitting the provider', async () => {
-      // Provider has no file -> FileEventBus emits failed -> processor caches null.
+    it('failure is cached as null and a repeat request re-emits the same reason WITHOUT re-hitting the provider', async () => {
+      // Provider has no file -> FileEventBus emits failed -> processor caches the failure.
       const failedHandler = vi.fn();
       eventBus.on<Error>('resource', 'failed', failedHandler);
 
@@ -143,7 +143,7 @@ describe('createResourceProcessor', () => {
 
       // Re-emitted synchronously from cache; the provider was not consulted again.
       expect(failedHandler).toHaveBeenCalledTimes(2);
-      expect((failedHandler.mock.calls[1]![1] as Error).message).toContain('previously failed');
+      expect(failedHandler.mock.calls[1]![1]).toBe(failedHandler.mock.calls[0]![1]);
       expect(provider.loadResource).toHaveBeenCalledTimes(1);
     });
 
@@ -207,7 +207,7 @@ describe('createResourceProcessor', () => {
       expect(processor.getCached('res://scene.tscn')).toBe('direct:res://scene.tscn');
     });
 
-    it('failure is cached as null and a repeat request re-emits failed WITHOUT re-invoking loadDirectly', async () => {
+    it('failure is cached as null and a repeat request re-emits the same reason WITHOUT re-invoking loadDirectly', async () => {
       const loadDirectly = vi.fn(async () => {
         throw new Error('disk on fire');
       });
@@ -231,7 +231,7 @@ describe('createResourceProcessor', () => {
 
       expect(loadDirectly).toHaveBeenCalledTimes(1);
       expect(failedHandler).toHaveBeenCalledTimes(2);
-      expect((failedHandler.mock.calls[1]![1] as Error).message).toContain('previously failed');
+      expect((failedHandler.mock.calls[1]![1] as Error).message).toBe('disk on fire');
     });
   });
 

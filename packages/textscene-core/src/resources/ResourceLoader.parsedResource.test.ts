@@ -68,4 +68,18 @@ describe('ResourceLoader: processors read the cached ParsedResource', () => {
 
     expect((await loaded).geometry.getAttribute('position').count).toBe(4);
   });
+
+  it("fails with the cached parse's own reason when that parse failed earlier", async () => {
+    const loader = loaderServing({
+      'res://scene.tscn': '[gd_scene format=3]\n\n[node name="Root" type="Node"]\n',
+    });
+    const parseFailed = loader.eventBus.once<Error>('resource', 'failed', 'res://scene.tscn', 2000);
+    loader.resources.request('res://scene.tscn');
+    const reason = (await parseFailed).message;
+
+    const themeFailed = loader.eventBus.once<Error>('theme', 'failed', 'res://scene.tscn', 2000);
+    loader.themes.request('res://scene.tscn');
+
+    expect((await themeFailed).message).toBe(reason);
+  });
 });

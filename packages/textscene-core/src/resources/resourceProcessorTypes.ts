@@ -43,11 +43,21 @@ export interface ResourceProcessorConfig<T> {
   maxEntries?: number;
 }
 
+/** A failed load in a processor's cache. It keeps the reason, so a repeat request reports it. */
+export class CachedFailure {
+  constructor(readonly error: Error) {}
+}
+
+/** What a processor's cache holds for a path: the resource, or why it failed. */
+export type CacheEntry<T> = T | CachedFailure;
+
 export interface ResourceProcessor<T> {
   /** Non-blocking. */
   request(path: string): void;
   /** Null when the load failed. */
   getCached(path: string): T | null | undefined;
+  /** The reason a cached load failed, or undefined when `path` holds no failure. */
+  failure(path: string): Error | undefined;
   isCached(path: string): boolean;
   isLoading(path: string): boolean;
   /** One path, or all of them when none is given. */
