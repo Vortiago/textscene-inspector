@@ -13,6 +13,16 @@ CanvasLayer is not a Control and paints nothing of its own. It puts its children
 their own draw layer, above or below the 2D world, and gives them a viewport to anchor
 against.
 
+## The canvas transform
+
+<!-- compare: image=unit-canvas-layer-transform status=done fixture=unit-canvas-layer-transform.tscn -->
+
+`offset`, `rotation` and `scale`, or `transform` when written, place the layer's whole
+canvas. A Control and a Node2D inside it both draw through that transform, while the
+square outside stays put. `follow_viewport_enabled` and `follow_viewport_scale` change
+nothing in the editor view: the editor turns the follow scale off, and its world canvas
+has no Camera2D transform to follow.
+
 ## Linting
 
 <!-- lint:begin CanvasLayer -->

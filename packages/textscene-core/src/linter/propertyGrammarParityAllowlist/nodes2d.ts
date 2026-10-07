@@ -165,17 +165,14 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   CanvasLayer: {
     renderGap: [
-      // The layer's own canvas transform, and the parallax-style viewport
-      // follow. Godot composites the layer through both; `canvaslayer/parser.ts`
-      // reads `layer` and `visible` and nothing else.
-      'offset',
-      'rotation',
-      'scale',
+      // The viewport follow. The editor's world canvas carries no Camera2D
+      // transform and its follow scale is off, but a sub-viewport pass framed
+      // by a Camera2D would show it.
       'follow_viewport_enabled',
       'follow_viewport_scale',
     ],
     reason:
-      'The bare CanvasLayer parser reads layer and visible only, so the discrete offset/rotation/scale and the viewport-follow pair — each of which moves what the layer draws — go unread. ParallaxBackground, the one descendant carrying a parser of its own, reads and renders all of them but follow_viewport_scale.',
+      'The bare CanvasLayer parser reads layer, visible and the canvas transform, but not the viewport-follow pair, which moves the layer with a Camera2D in a sub-viewport pass. ParallaxBackground, the one descendant carrying a parser of its own, reads and renders follow_viewport_enabled but not follow_viewport_scale.',
   },
 
   SubViewportContainer: {

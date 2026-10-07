@@ -4,11 +4,13 @@
  * as `NodeDispatcher.tsx`'s `PlainNode` does. Structure only, never pixels.
  */
 import { describe, expect, it } from 'vitest';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CanvasLayer } from './Component';
 import { parseCanvasLayer } from './parser';
+import { threeMatrixFromTransform2D } from '../../../../r3f/node2dTransform';
 import {
   EffectiveZProvider,
   useCanvasLayerIndex,
@@ -142,4 +144,14 @@ describe('<CanvasLayer>', () => {
       expect(probe.name).toBe('mprobe:reset:r=1:a=1');
     }
   );
+
+  it('draws its children through its own canvas transform (`renderer_viewport.cpp:70-74`)', async () => {
+    const raw = { offset: 'Vector2(420, 160)', rotation: '0.5', scale: 'Vector2(1.5, 0.75)' };
+    const renderer = await renderLayer(raw, [], 'placed');
+    // As the renderer does each frame: the scene's own update forces every descendant.
+    renderer.scene.instance.updateMatrixWorld();
+    const probe = renderer.scene.findAllByType('Group')[0]!.instance as THREE.Object3D;
+    const layer = parseCanvasLayer({ type: 'node', attributes: { name: 'HUD' } }, raw);
+    expect(probe.matrixWorld.elements).toEqual(threeMatrixFromTransform2D(layer.canvasTransform).elements);
+  });
 });

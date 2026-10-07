@@ -9,7 +9,6 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { node2dGroupProps } from '../../../r3f/node2dTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { Camera2DAnchorMode } from '../camera2d/types';
@@ -57,24 +56,8 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
   );
   const registry = useMemo(() => ({ parentPath: path, register }), [path, register]);
 
-  // The CanvasLayer's own placement, in three space. Godot gives the layer's
-  // canvas `get_final_transform()`, its own offset, rotation and scale only.
-  const canvasMatrix = useMemo(() => {
-    const t = node2dGroupProps({
-      position: props.offset,
-      rotation: props.rotation,
-      scale: props.scale,
-    });
-    return new THREE.Matrix4().compose(
-      new THREE.Vector3(...t.position),
-      new THREE.Quaternion().setFromEuler(new THREE.Euler(...t.rotation)),
-      new THREE.Vector3(...t.scale)
-    );
-  }, [props.offset, props.rotation, props.scale]);
-
   useEffect(() => {
     const anchor = new THREE.Matrix4();
-    const world = new THREE.Matrix4();
 
     return observeSceneCamera(scene, (camera) => {
       const group = groupRef.current;
@@ -110,9 +93,9 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
       // subtree then lands at the scroll offset in world space.
       const anchorX = props.follow_viewport_enabled ? 0 : view.topLeft.x;
       const anchorY = props.follow_viewport_enabled ? 0 : view.topLeft.y;
+      // The layer's own transform applies inside, in `CanvasLayerScope`, which both walks share.
       anchor.makeTranslation(anchorX, 0 - anchorY, 0);
-      world.multiplyMatrices(anchor, canvasMatrix);
-      group.matrixWorld.copy(world);
+      group.matrixWorld.copy(anchor);
 
       // With no current Camera2D, `set_base_offset_and_scale` never runs and the
       // layers keep their authored pose: `_update_scroll` early-returns outside the
@@ -133,7 +116,7 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
       // cut chain take effect in this frame, not the next.
       group.updateMatrixWorld(true);
     });
-  }, [scene, storeCamera, props, canvasMatrix, layers]);
+  }, [scene, storeCamera, props, layers]);
 
   return (
     <ParallaxScrollProvider value={registry}>

@@ -101,7 +101,7 @@ describe('<ParallaxBackground>', () => {
       <>
         <StoreCamera into={storeCamera} />
         <group position={[300, -200, 0]}>
-          <ParallaxBackground node={backgroundNode({ offset: 'Vector2(0, 40)' })} />
+          <ParallaxBackground node={backgroundNode()} />
         </group>
       </>
     );
@@ -110,10 +110,10 @@ describe('<ParallaxBackground>', () => {
 
     const group = scene.getObjectByName('BG')!;
     const world = new THREE.Vector3().setFromMatrixPosition(group.matrixWorld);
-    // Its own `offset` applies (Godot y-down → three -40); the parent's
-    // (300, -200) does not.
+    // The parent's (300, -200) does not apply. The layer's own transform applies inside, in
+    // `CanvasLayerScope`.
     expect(world.x).toBe(0);
-    expect(world.y).toBe(-40);
+    expect(world.y).toBe(0);
   });
 
   it('anchors to the view corner when a sub-viewport pass renders through a Camera2D', async () => {
