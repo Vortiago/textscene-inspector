@@ -60,6 +60,9 @@ const MISSING_TEXTURE_WARNING = new RegExp(
 
 const APP_ROOT = '[data-testid="app-root"]';
 const DROP_HINT = 'drop-zone-hint';
+const RESOURCES_PANEL = '[data-testid="missing-resources-panel"]';
+// One small PNG from memory loads in milliseconds. The ceiling only bounds a texture that never loads.
+const UPLOADED_ROW_WAIT_MS = 20000;
 
 /**
  * Opens `startFixture` in a fresh context, runs `upload` on its page and closes the context,
@@ -110,9 +113,22 @@ async function dropFiles(page, files) {
 /** Every row of the Resources tab as `{ state, path }`, in display order. */
 async function readResourceRows(page) {
   await page.getByRole('tab', { name: 'Resources' }).click();
-  return page.$$eval('[data-testid="missing-resources-panel"] [data-state]', (rows) =>
+  return page.$$eval(`${RESOURCES_PANEL} [data-state]`, (rows) =>
     rows.map((row) => ({ state: row.getAttribute('data-state'), path: row.getAttribute('data-path') }))
   );
+}
+
+/**
+ * Waits until the Resources tab marks `path` uploaded, which it does once the texture has loaded.
+ * The placeholder frame is stable, so without this wait the settle can accept it. A row that never
+ * turns is the Resources check's failure to record, so a timeout returns.
+ */
+async function waitForUploadedRow(page, path) {
+  await page.getByRole('tab', { name: 'Resources' }).click();
+  const row = page.locator(`${RESOURCES_PANEL} [data-state="uploaded"][data-path="${path}"]`);
+  await row.waitFor({ timeout: UPLOADED_ROW_WAIT_MS }).catch((error) => {
+    if (error?.name !== 'TimeoutError') throw error;
+  });
 }
 
 /** The uploaded scene as the app shows it, once the canvas has settled on it. */
@@ -151,6 +167,7 @@ export function runRepeatedDrop(browser, baseUrl, startFixture) {
     await dropFiles(page, [SCENE_FILE]);
     const sceneOnly = await readUploadedScene(page, canvas);
     await dropFiles(page, [TEXTURE_FILE]);
+    await waitForUploadedRow(page, TEXTURE_PATH);
     return { sceneOnly, filled: await readUploadedScene(page, canvas) };
   });
 }

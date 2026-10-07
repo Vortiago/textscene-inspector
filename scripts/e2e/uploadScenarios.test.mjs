@@ -7,6 +7,7 @@ import {
   UPLOADED_PATHS,
   UPLOADED_SCENE_NAME,
 } from './uploadScenarios.mjs';
+
 const TEXTURED_FRAME = Buffer.from('textured');
 const PLACEHOLDER_FRAME = Buffer.from('placeholder');
 const MISSING_TEXTURE_WARNING = `[FileEventBus] ❌ Failed: ${TEXTURE_PATH} (47.30ms) - File not found: ${TEXTURE_PATH}`;
