@@ -16,6 +16,7 @@ import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../..
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
+import { surfaceMaterials } from './testing/renderMeshInstance';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { castsFrom, depthSideOf } from '../../../r3f/testing/threePasses';
 
@@ -60,8 +61,7 @@ async function materialsOf(
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
-  const material = findMesh(renderer.scene).material;
-  return (Array.isArray(material) ? material : [material]) as THREE.MeshStandardMaterial[];
+  return surfaceMaterials(renderer);
 }
 
 /** A `.tres` StandardMaterial3D with one albedo, so each file is identifiable by colour. */

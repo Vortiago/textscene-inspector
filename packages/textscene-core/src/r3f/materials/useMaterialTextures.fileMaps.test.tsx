@@ -40,7 +40,7 @@ describe('useMaterialTextures with file slots', () => {
     const { result } = renderMaterial();
 
     expect(result.current.maps.normalMap).toBe(pendingMapStandIn('normal_texture'));
-    expect(result.current.firstMissingPath).toBeNull();
+    expect(result.current.isUnresolved).toBe(false);
   });
 
   it('binds the file once it loads', () => {
@@ -67,11 +67,11 @@ describe('useMaterialTextures with file slots', () => {
     expect(loaded.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });
 
-  it('leaves the slot empty and names the file once it fails', () => {
+  it('leaves the slot empty and reports the surface unresolved once the file fails', () => {
     const { result, textures } = renderMaterial();
     act(() => textures._fail(NORMAL_PATH, 'not found'));
 
     expect(result.current.maps.normalMap).toBeUndefined();
-    expect(result.current.firstMissingPath).toBe(NORMAL_PATH);
+    expect(result.current.isUnresolved).toBe(true);
   });
 });

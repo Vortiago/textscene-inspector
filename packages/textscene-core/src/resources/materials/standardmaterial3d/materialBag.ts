@@ -56,6 +56,15 @@ const NO_MATERIAL: StandardMaterialBag = {
 };
 
 /**
+ * The previewer's marker for a surface whose texture never draws: a file that cannot load,
+ * or a ViewportTexture albedo whose pass is cyclic. Godot has no such material.
+ */
+export const MISSING_TEXTURE_MATERIAL: StandardMaterialBag = {
+  materialClass: 'standard',
+  props: { color: 'magenta' },
+};
+
+/**
  * `MeshPhysicalMaterial` is needed for clearcoat, rim → sheen, anisotropy or refraction →
  * transmission. A three capability mapping, as Godot has one spatial shader, so a new
  * physical-only feature extends this set.
