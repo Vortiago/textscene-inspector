@@ -26,7 +26,7 @@ import {
 import { useAnimationDriverMount } from '../../animation/useAnimationDriverMount';
 import { joinPath } from '../../../utils/nodePath';
 import type { ReactNode } from 'react';
-import type { TscnNode } from '../../../parser/types';
+import type { LiveNode } from '../../liveNode';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
@@ -226,7 +226,7 @@ function useGlbImportMaterials(object: THREE.Object3D | undefined): ReactNode {
 function useGlbMaterialOverrides(
   object: THREE.Object3D | undefined,
   entries: readonly GlbObjectEntry[],
-  overrides: readonly TscnNode[]
+  overrides: readonly LiveNode[]
 ): ReactNode {
   const { internalResources, externalResources } = useSceneResources();
 
@@ -239,12 +239,12 @@ function useGlbMaterialOverrides(
       if (!ref || !isApplicableGlbOverride(override)) continue;
 
       // A grafted override's ids belong to the outer scene that authored it, not the sub-scene it
-      // renders under. Both pools travel together (`AuthoredResourceScope`), so a SubResource
+      // renders under. Both pools travel together (`LiveNode.scope`), so a SubResource
       // override resolves there too.
       const source = resolveMaterialSource(
         ref,
-        override.authoredScope?.internalResources ?? internalResources,
-        override.authoredScope?.externalResources ?? externalResources
+        override.scope?.internalResources ?? internalResources,
+        override.scope?.externalResources ?? externalResources
       );
       if (!source) continue;
 

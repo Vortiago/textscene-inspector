@@ -4,17 +4,17 @@
  * cannot see them. The default is an empty list, which renders the GLB unchanged.
  */
 import { createContext, useContext, type ReactNode } from 'react';
-import type { TscnNode } from '../../../parser/types';
+import type { LiveNode } from '../../liveNode';
 
-const GlbOverridesContext = createContext<readonly TscnNode[]>([]);
+const GlbOverridesContext = createContext<readonly LiveNode[]>([]);
 GlbOverridesContext.displayName = 'GlbOverridesContext';
 
-export function useGlbOverrides(): readonly TscnNode[] {
+export function useGlbOverrides(): readonly LiveNode[] {
   return useContext(GlbOverridesContext);
 }
 
 export interface GlbOverridesProviderProps {
-  overrides: readonly TscnNode[];
+  overrides: readonly LiveNode[];
   children: ReactNode;
 }
 

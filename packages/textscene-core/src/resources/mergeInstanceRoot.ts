@@ -5,8 +5,10 @@
  * selection-driven Animation tab needs (ADR-0012).
  */
 import { canonicalisePropertyBag } from '../godot/deprecated.js';
-import type { SceneScope, TscnNode } from '../parser/types.js';
-import { graftInstanceChildren } from './graftInstanceChildren.js';
+import type { TscnNode } from '../parser/types.js';
+import type { LiveNode } from '../r3f/liveNode.js';
+import { graftInstanceChildren, type InstanceScopes } from './graftInstanceChildren.js';
+import { rehomeOverride } from './rehomeOverride.js';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import type { ParsedHeading } from '../parser/utils.js';
 
@@ -39,13 +41,21 @@ function definedProperties(props: Record<string, unknown>): Record<string, unkno
  * `type`, `children` and own `instance` ref, so a nested root collapses again.
  */
 export function mergeInstanceRoot(
-  instanceNode: TscnNode,
-  loadedScene: { nodes: readonly TscnNode[] },
-  outerScope?: SceneScope
-): TscnNode | null {
+  instanceNode: LiveNode,
+  loadedScene: { nodes: readonly LiveNode[] },
+  scopes?: InstanceScopes
+): LiveNode | null {
   if (loadedScene.nodes.length !== 1) return null;
   const root = loadedScene.nodes[0]!;
   if (root.type === GLB_SCENE_ROOT_TYPE) return null;
+
+  // The instance node's keys were written against the outer scope, the root's against
+  // the sub-scene's, and the merged node resolves them all in one.
+  const rehomed =
+    scopes && instanceNode.rawProperties
+      ? rehomeOverride(instanceNode.rawProperties, scopes.outer, scopes.content)
+      : undefined;
+  const instanceRaw = rehomed?.raw ?? instanceNode.rawProperties;
 
   const registration = nodeRegistry.getRegistration(root.type);
   // Instance keys win, so a type-specific override and its `transform` survive,
@@ -53,10 +63,10 @@ export function mergeInstanceRoot(
   // canonicalised here: an `instance=` heading has no `type=`, so the scanner
   // leaves a pre-4.0 alias that would lose to the root's canonical key.
   const mergedRaw =
-    root.rawProperties && instanceNode.rawProperties
+    root.rawProperties && instanceRaw
       ? {
           ...canonicalisePropertyBag(root.type, root.rawProperties),
-          ...canonicalisePropertyBag(root.type, instanceNode.rawProperties),
+          ...canonicalisePropertyBag(root.type, instanceRaw),
         }
       : undefined;
 
@@ -99,6 +109,8 @@ export function mergeInstanceRoot(
     rawPropertiesOrderReliable: false,
     // A host child whose parent path descends into this instance is grafted at
     // the sub-path it names (`graftInstanceChildren`). Direct children append.
-    children: graftInstanceChildren(root.children, instanceNode.children, outerScope),
+    children: graftInstanceChildren(root.children, instanceNode.children, scopes),
+    // The sub-scene's scope replaces the instance node's own: the merged node sits inside it.
+    ...(scopes ? { scope: rehomed?.scope ?? scopes.content } : {}),
   };
 }

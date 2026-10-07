@@ -7,6 +7,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { graftInstanceChildren } from './graftInstanceChildren';
 import type { SceneScope, TscnNode } from '../parser/types';
+import type { LiveNode } from '../r3f/liveNode';
+import { findExtResource } from './SubResourceResolver';
 import * as logger from '../logger';
 
 const node = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
@@ -17,9 +19,42 @@ const node = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
   ...extra,
 });
 
+const outer: SceneScope = {
+  externalResources: [{ id: '1', type: 'Texture2D', path: 'res://outer.png' }],
+  internalResources: [{ id: '1', type: 'StandardMaterial3D', data: {} }],
+};
+
+const inner: SceneScope = {
+  externalResources: [{ id: '1', type: 'Texture2D', path: 'res://inner.png' }],
+  internalResources: [],
+};
+
+/** The path a node's raw `texture` resolves to, in its own scope or else `groupScope`. */
+function texturePath(n: LiveNode, groupScope: SceneScope = inner): string | undefined {
+  const id = /ExtResource\("([^"]+)"\)/.exec(n.rawProperties?.texture ?? '')?.[1];
+  const scope = n.scope ?? groupScope;
+  return id === undefined ? undefined : findExtResource(scope.externalResources, id)?.path;
+}
+
 /** A loaded sub-scene: Root > Sprite2D > Pivot. */
 function subScene(): TscnNode[] {
   return [node('Sprite2D', { children: [node('Pivot')] })];
+}
+
+/** A loaded sub-scene: Root > Sprite2D > Pivot > Shadow, where Pivot and Shadow draw the sub-scene's `1`. */
+function texturedSubScene(): TscnNode[] {
+  const texture = { texture: 'ExtResource("1")' };
+  const shadow = node('Shadow', { type: 'Sprite2D', rawProperties: texture });
+  return [
+    node('Sprite2D', {
+      children: [node('Pivot', { type: 'Sprite2D', rawProperties: texture, children: [shadow] })],
+    }),
+  ];
+}
+
+/** The outer scene's override of `Sprite2D/Pivot`, carrying `raw`. */
+function pivotOverride(raw: Record<string, string>): TscnNode {
+  return node('Pivot', { instanceSubPath: 'Sprite2D', overridesExistingNode: true, rawProperties: raw });
 }
 
 describe('graftInstanceChildren', () => {
@@ -55,6 +90,17 @@ describe('graftInstanceChildren', () => {
     expect(pivot.rawProperties?.texture).toBe('ExtResource("3")');
   });
 
+  it('folds an override of a sub-scene root child onto it instead of adding a sibling', () => {
+    // `[node name="Health" parent="."]` under an instance root names the root's own child.
+    const override = node('Sprite2D', { overridesExistingNode: true, rawProperties: { visible: 'false' } });
+
+    const grafted = graftInstanceChildren(subScene(), [override]);
+
+    expect(grafted.map((c) => c.name)).toEqual(['Sprite2D']);
+    expect(grafted[0]!.rawProperties?.visible).toBe('false');
+    expect(grafted[0]!.children.map((c) => c.name)).toEqual(['Pivot']);
+  });
+
   it('does not mutate the loaded sub-scene', () => {
     // The cache entry is shared across every instance of that scene. Deep-freeze
     // proves the graft copies rather than writes.
@@ -72,15 +118,53 @@ describe('graftInstanceChildren', () => {
     // sub-scene's provider, where the same id means another resource. A node names
     // `ExtResource("3")` and `SubResource("1")` in one block, so `SceneScope` carries
     // both kinds of id.
-    const outer: SceneScope = {
-      externalResources: [{ id: '3', type: 'Texture2D', path: 'res://a.png' }],
-      internalResources: [{ id: '1', type: 'StandardMaterial3D', data: {} }],
-    };
     const child = node('Body', { instanceSubPath: 'Sprite2D/Pivot' });
 
-    const grafted = graftInstanceChildren(subScene(), [child], outer);
+    const grafted = graftInstanceChildren(subScene(), [child], { outer, content: inner });
 
-    expect(grafted[0]!.children[0]!.children[0]!.authoredScope).toBe(outer);
+    expect(grafted[0]!.children[0]!.children[0]!.scope).toBe(outer);
+  });
+
+  it('keeps an overridden node resolving its own references in the sub-scene', () => {
+    // The override carries only `modulate`: the node's `texture` is still the sub-scene's.
+    const override = pivotOverride({ modulate: 'Color(1, 0, 0, 1)' });
+
+    const pivot = graftInstanceChildren(texturedSubScene(), [override], { outer, content: inner })[0]!
+      .children[0]!;
+
+    expect(texturePath(pivot)).toBe('res://inner.png');
+  });
+
+  it('resolves the override reference in the outer scene', () => {
+    const override = pivotOverride({ texture: 'ExtResource("1")' });
+
+    const pivot = graftInstanceChildren(texturedSubScene(), [override], { outer, content: inner })[0]!
+      .children[0]!;
+
+    expect(texturePath(pivot)).toBe('res://outer.png');
+  });
+
+  it('keeps the sub-scene children of an overridden node in the sub-scene', () => {
+    const override = pivotOverride({ texture: 'ExtResource("1")' });
+
+    const pivot = graftInstanceChildren(texturedSubScene(), [override], { outer, content: inner })[0]!
+      .children[0]!;
+
+    expect(texturePath(pivot.children[0]!, pivot.scope)).toBe('res://inner.png');
+  });
+
+  it('keeps the outer scope of a re-anchored child through the nested graft', () => {
+    // The nested graft runs with the middle scene as its outer scope, but `Body` was
+    // authored in the outermost scene, which its ids index.
+    const loaded = [node('Sprite2D', { instance: 'ExtResource("3")' })];
+    const middle: SceneScope = { externalResources: [], internalResources: [] };
+    const child = node('Body', { instanceSubPath: 'Sprite2D/Pivot' });
+
+    const reanchored = graftInstanceChildren(loaded, [child], { outer, content: middle })[0]!.children[0]!;
+    // The nested sub-scene's root has `Pivot` as its child.
+    const grafted = graftInstanceChildren([node('Pivot')], [reanchored], { outer: middle, content: inner });
+
+    expect(grafted[0]!.children[0]!.scope).toBe(outer);
   });
 
   it('re-anchors at a nested instance rather than failing to descend into it', () => {

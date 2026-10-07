@@ -5,37 +5,49 @@
  * cache entry, so this copies along the changed spine and shares everything else.
  */
 
-import type { SceneScope, TscnNode } from '../parser/types';
+import type { SceneScope } from '../parser/types';
+import type { LiveNode } from '../r3f/liveNode';
 import { layerRawOverride } from './layerRawOverride';
+import { rehomeOverride } from './rehomeOverride';
 import { warn } from '../logger';
 
+/** The two scopes a graft joins. */
+export interface InstanceScopes {
+  /** The host scene's, which the host children were authored against. */
+  outer: SceneScope;
+  /** The sub-scene's, which its own nodes resolve against. */
+  content: SceneScope;
+}
+
 /**
- * The sub-scene root's children with the host's overrides folded in.
+ * The sub-scene root's children with the host's overrides folded in. With `scopes`, a
+ * grafted node carries the outer scope, and a node an override reached carries its own
+ * scope plus the resources the override names (`rehomeOverride`).
  *
  * @param rootChildren the loaded sub-scene root's children (never mutated)
  * @param hostChildren the instancing node's children, deep and direct alike
- * @param outerScope the host scene's resource tables, both pools (see `SceneScope`),
- *   stamped onto each grafted node so its references resolve against the scene
- *   they were authored in
  */
 export function graftInstanceChildren(
-  rootChildren: readonly TscnNode[],
-  hostChildren: readonly TscnNode[],
-  outerScope?: SceneScope
-): TscnNode[] {
+  rootChildren: readonly LiveNode[],
+  hostChildren: readonly LiveNode[],
+  scopes?: InstanceScopes
+): LiveNode[] {
   if (hostChildren.length === 0) return [...rootChildren];
 
   let grafted = [...rootChildren];
-  const appendedAtRoot: TscnNode[] = [];
+  const appendedAtRoot: LiveNode[] = [];
 
   for (const child of hostChildren) {
-    const stamped = outerScope ? { ...child, authoredScope: outerScope } : child;
+    // A child re-anchored at a nested instance keeps the scene it was authored in.
+    const stamped = scopes && !child.scope ? { ...child, scope: scopes.outer } : child;
     if (!child.instanceSubPath) {
-      appendedAtRoot.push(stamped);
+      const folded = child.overridesExistingNode ? foldOverride(grafted, stamped, scopes?.content) : null;
+      if (folded) grafted = folded;
+      else appendedAtRoot.push(stamped);
       continue;
     }
 
-    const next = graftAt(grafted, child.instanceSubPath.split('/'), stamped);
+    const next = graftAt(grafted, child.instanceSubPath.split('/'), stamped, scopes?.content);
     if (next) {
       grafted = next;
     } else {
@@ -53,19 +65,22 @@ export function graftInstanceChildren(
 
 /**
  * Copy `siblings` with `child` grafted at `segments`, or `null` when the path
- * names nothing. Only the nodes along the path are new objects.
+ * names nothing. Only the nodes along the path are new objects. `siblingScope` is
+ * the scope `siblings` resolve against unless a node carries its own.
  */
 function graftAt(
-  siblings: readonly TscnNode[],
+  siblings: readonly LiveNode[],
   segments: readonly string[],
-  child: TscnNode
-): TscnNode[] | null {
+  child: LiveNode,
+  siblingScope: SceneScope | undefined
+): LiveNode[] | null {
   const [head, ...rest] = segments;
   const index = siblings.findIndex((n) => n.name === head);
   if (index === -1) return null;
 
   const target = siblings[index]!;
-  let replacement: TscnNode | null;
+  const targetScope = target.scope ?? siblingScope;
+  let replacement: LiveNode | null;
 
   if (rest.length > 0) {
     if (target.instance) {
@@ -77,11 +92,11 @@ function graftAt(
         children: [...target.children, { ...child, instanceSubPath: rest.join('/') }],
       };
     } else {
-      const deeper = graftAt(target.children, rest, child);
+      const deeper = graftAt(target.children, rest, child, targetScope);
       replacement = deeper ? { ...target, children: deeper } : null;
     }
   } else {
-    replacement = attach(target, child);
+    replacement = { ...target, children: attach(target.children, child, targetScope) };
   }
   if (!replacement) return null;
 
@@ -91,30 +106,49 @@ function graftAt(
 }
 
 /**
- * Attach `child` under `parent` as a new node, or fold an override's raw properties
- * onto the node already there. Appending an override would leave two nodes of one
- * name where Godot has one, with the properties on a duplicate nothing references.
+ * `siblings` with `child` attached as a new node, or with an override folded onto
+ * the node already there. Appending an override would leave two nodes of one name
+ * where Godot has one, with the properties on a duplicate nothing references.
  */
-function attach(parent: TscnNode, child: TscnNode): TscnNode {
-  if (!child.overridesExistingNode) {
-    return { ...parent, children: [...parent.children, child] };
-  }
+function attach(
+  siblings: readonly LiveNode[],
+  child: LiveNode,
+  siblingScope: SceneScope | undefined
+): LiveNode[] {
+  if (!child.overridesExistingNode) return [...siblings, child];
 
-  const index = parent.children.findIndex((n) => n.name === child.name);
-  if (index === -1) {
-    // An override naming a node the sub-scene does not have. Keep it visible
-    // rather than dropping it silently.
-    warn(
-      `[graftInstanceChildren] override "${child.name}" matches no node inside the instanced scene — adding it instead`
-    );
-    return { ...parent, children: [...parent.children, child] };
-  }
+  const folded = foldOverride(siblings, child, siblingScope);
+  if (folded) return folded;
+  // An override naming a node the sub-scene does not have. Keep it visible
+  // rather than dropping it silently.
+  warn(
+    `[graftInstanceChildren] override "${child.name}" matches no node inside the instanced scene — adding it instead`
+  );
+  return [...siblings, child];
+}
 
-  const existing = parent.children[index]!;
-  const children = [...parent.children];
-  children[index] = {
-    ...layerRawOverride(existing, child.rawProperties),
-    ...(child.authoredScope ? { authoredScope: child.authoredScope } : {}),
-  };
-  return { ...parent, children };
+/**
+ * `siblings` with the override's raw properties layered onto the node of its name,
+ * or `null` when none has it. Each reference resolves in the scene that wrote it:
+ * the override's in its own scope, the node's own and its children's in theirs.
+ */
+function foldOverride(
+  siblings: readonly LiveNode[],
+  override: LiveNode,
+  siblingScope: SceneScope | undefined
+): LiveNode[] | null {
+  const index = siblings.findIndex((n) => n.name === override.name);
+  if (index === -1) return null;
+
+  const existing = siblings[index]!;
+  const existingScope = existing.scope ?? siblingScope;
+  const copy = [...siblings];
+  if (!override.rawProperties || !override.scope || !existingScope) {
+    copy[index] = layerRawOverride(existing, override.rawProperties);
+    return copy;
+  }
+  const { raw, scope } = rehomeOverride(override.rawProperties, override.scope, existingScope);
+  const layered = layerRawOverride(existing, raw);
+  copy[index] = scope === siblingScope ? layered : { ...layered, scope };
+  return copy;
 }

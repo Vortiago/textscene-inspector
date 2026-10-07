@@ -13,6 +13,7 @@ import {
   isPathResourceLiteral,
   keyedResourceRefReader,
   openResourceRef,
+  renameResourceRefs,
   resourceRef,
   resourceRefSpans,
   subResourceRefAnywhere,
@@ -264,5 +265,24 @@ describe('openResourceRef', () => {
 
   it('answers null once the quote is closed', () => {
     expect(openResourceRef('texture = ExtResource("1")')).toBeNull();
+  });
+});
+
+describe('renameResourceRefs', () => {
+  const tagged = (ref: { kind: string; id: string }) => `${ref.kind[0]}${ref.id}`;
+
+  it('renames the id of both kinds, padded and integer ids included', () => {
+    expect(renameResourceRefs('[ExtResource ( "a" ), SubResource(2)]', tagged)).toBe(
+      '[ExtResource("Ea"), SubResource("S2")]'
+    );
+  });
+
+  it('leaves a reference spelled inside a string, which the loader never resolves', () => {
+    const text = '["ExtResource(\\"a\\")", &"SubResource(\\"b\\")"]';
+    expect(renameResourceRefs(text, tagged)).toBe(text);
+  });
+
+  it('returns a value with no reference unchanged', () => {
+    expect(renameResourceRefs('Vector3(1, 2, 3)', tagged)).toBe('Vector3(1, 2, 3)');
   });
 });

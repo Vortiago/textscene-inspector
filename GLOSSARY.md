@@ -355,6 +355,10 @@ The collapse of a single-root `.tscn` instance, where the instance Node becomes 
 Every consumer calls `collapseLiveNode` so node paths agree, and a `.glb` or multi-root instance is not merged.
 _Avoid_: "wrapper node", "prefab flattening", "compose". A merge decision derived again in a consumer.
 
+**Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
+The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).
+_Avoid_: one scope stamped over a node two files wrote. A scope tag on `TscnNode`.
+
 **Cyclic instancing** (`SceneScope.instancedScenePaths`):
 An instance of a PackedScene that already encloses it, directly or through other instances.
 Godot's loader refuses it, so the **Live scene tree** keeps the instance as a leaf and the viewport draws the magenta placeholder of a failed load.

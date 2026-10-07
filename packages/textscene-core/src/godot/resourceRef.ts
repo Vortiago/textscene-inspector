@@ -41,21 +41,19 @@ export const EXT_RESOURCE_CALL_ANYWHERE_RE = new RegExp(`ExtResource${WS}\\(`);
 /** The token every `ExtResource(…)` call spells, so a value without it names no id. */
 const EXT_RESOURCE_TOKEN = 'ExtResource';
 
-/** One `ExtResource(…)` call, read in place by {@link extResourceIdsIn}. Sticky, so it matches only where it is set. */
-const EXT_RESOURCE_REF_AT_RE = new RegExp(`${EXT_RESOURCE_TOKEN}${WS}\\(${WS}${RESOURCE_ID}${WS}\\)`, 'y');
+/** One reference, read in place by {@link codeRefSpans}. Sticky, so it matches only where it is set. */
+const RESOURCE_REF_AT_RE = new RegExp(RESOURCE_REF_BODY, 'y');
 
 /** A character that continues an identifier, so `MyExtResource(` is not the `ExtResource` token. */
 const IDENTIFIER_CHAR_RE = /[A-Za-z0-9_]/;
 
 /**
- * The id of every `ExtResource(…)` in a value, in order. The loader resolves each one as it tokenises
+ * Every reference the loader resolves in a value, in order. It resolves each one as it tokenises
  * the value (`resource_format_text.cpp:125-151`), but never text inside a string or a `StringName`,
  * whose quotes `get_token` reads with `\` escapes (`variant_parser.cpp:265-289`).
  */
-export function extResourceIdsIn(text: string): string[] {
-  // Most values name no resource, and the walk below reads every character of a multi-megabyte array.
-  if (!text.includes(EXT_RESOURCE_TOKEN)) return [];
-  const ids: string[] = [];
+function codeRefSpans(text: string): ResourceRefSpan[] {
+  const spans: ResourceRefSpan[] = [];
   let inString = false;
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
@@ -68,14 +66,38 @@ export function extResourceIdsIn(text: string): string[] {
       inString = true;
       continue;
     }
-    if (char !== 'E' || (i > 0 && IDENTIFIER_CHAR_RE.test(text[i - 1]!))) continue;
-    EXT_RESOURCE_REF_AT_RE.lastIndex = i;
-    const match = EXT_RESOURCE_REF_AT_RE.exec(text);
+    if ((char !== 'E' && char !== 'S') || (i > 0 && IDENTIFIER_CHAR_RE.test(text[i - 1]!))) continue;
+    RESOURCE_REF_AT_RE.lastIndex = i;
+    const match = RESOURCE_REF_AT_RE.exec(text);
     if (!match) continue;
-    ids.push(refId(match[1], match[2]));
-    i = EXT_RESOURCE_REF_AT_RE.lastIndex - 1;
+    const end = RESOURCE_REF_AT_RE.lastIndex;
+    spans.push({ kind: match[1] as ResourceRef['kind'], id: refId(match[2], match[3]), start: i, end });
+    i = end - 1;
   }
-  return ids;
+  return spans;
+}
+
+/** The id of every `ExtResource(…)` in a value, in order, as {@link codeRefSpans} reads them. */
+export function extResourceIdsIn(text: string): string[] {
+  // Most values name no resource, and the walk reads every character of a multi-megabyte array.
+  if (!text.includes(EXT_RESOURCE_TOKEN)) return [];
+  return codeRefSpans(text)
+    .filter((span) => span.kind === 'ExtResource')
+    .map((span) => span.id);
+}
+
+/**
+ * `text` with the id of every reference the loader resolves replaced by `newId`'s answer, each
+ * written in the tight form. Text inside a string stays as written, as {@link codeRefSpans} reads it.
+ */
+export function renameResourceRefs(text: string, newId: (ref: ResourceRef) => string): string {
+  let renamed = '';
+  let copiedTo = 0;
+  for (const span of codeRefSpans(text)) {
+    renamed += `${text.slice(copiedTo, span.start)}${span.kind}("${newId(span)}")`;
+    copiedTo = span.end;
+  }
+  return renamed + text.slice(copiedTo);
 }
 
 /** The kind and id of a resource reference. */

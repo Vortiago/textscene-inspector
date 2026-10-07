@@ -9,12 +9,12 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { TscnParser } from '../parser/TscnParser';
 import { mergeInstanceRoot } from './mergeInstanceRoot';
-import type { TscnNode } from '../parser/types';
+import type { LiveNode } from '../r3f/liveNode';
 
 const SCENES = resolve(import.meta.dirname, '../../../../scenes');
 const parse = (rel: string) => new TscnParser().parse(readFileSync(join(SCENES, rel), 'utf8'));
 
-function find(nodes: readonly TscnNode[], name: string): TscnNode | undefined {
+function find(nodes: readonly LiveNode[], name: string): LiveNode | undefined {
   for (const n of nodes) {
     if (n.name === name) return n;
     const found = find(n.children, name);
@@ -71,15 +71,23 @@ describe('deep overrides through mergeInstanceRoot', () => {
     const host = parse('demos/2d/role_playing_game/combat/combatants/opponent.tscn');
     const sub = parse('demos/2d/role_playing_game/combat/combatants/combatant.tscn');
 
-    const scope = {
-      externalResources: host.externalResources,
-      internalResources: host.internalResources,
-    };
-    const merged = mergeInstanceRoot(host.nodes[0]!, sub, scope)!;
-    const body = find([merged], 'Body')!;
+    const outer = { externalResources: host.externalResources, internalResources: host.internalResources };
+    const content = { externalResources: sub.externalResources, internalResources: sub.internalResources };
+    const merged = mergeInstanceRoot(host.nodes[0]!, sub, { outer, content })!;
+    const timer = find([merged], 'Timer')!;
 
-    // Its `texture = ExtResource(...)` id belongs to the outer table, and so would
-    // a `SubResource(...)` beside it, so the whole scope rides along.
-    expect(body.authoredScope).toBe(scope);
+    // A node the host adds names ids of the outer table, of either kind, so the whole scope rides along.
+    expect(timer.scope).toBe(outer);
+  });
+
+  it('folds the host override of a root child onto it, not beside it', () => {
+    // `[node name="Health" parent="." index="0"]` overrides the combatant's own Health.
+    const host = parse('demos/2d/role_playing_game/combat/combatants/opponent.tscn');
+    const sub = parse('demos/2d/role_playing_game/combat/combatants/combatant.tscn');
+
+    const merged = mergeInstanceRoot(host.nodes[0]!, sub)!;
+
+    expect(merged.children.filter((c) => c.name === 'Health')).toHaveLength(1);
+    expect(merged.children.find((c) => c.name === 'Health')!.rawProperties?.life).toBe('7');
   });
 });

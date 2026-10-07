@@ -5,12 +5,11 @@
  * the loader's caches, so the React consumers re-run it when a sub-scene loads.
  */
 import type * as THREE from 'three';
-import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
+import type { SceneScope, TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
+import type { LiveNode } from './liveNode.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
-// Defined in `parser/types` because a grafted node carries one on itself; kept
-// exported here, where every walker already reaches for it.
-import type { SceneScope } from '../parser/types.js';
+// Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
 import { GLB_SCENE_ROOT_TYPE } from './internal/glb-scene-root/Component.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
@@ -41,7 +40,7 @@ export interface LiveTreeContext {
 
 /** A node in the live tree: its effective (collapsed) identity and its full path. */
 export interface LiveTreeEntry {
-  node: TscnNode;
+  node: LiveNode;
   path: string;
 }
 
@@ -65,13 +64,13 @@ export function singleSceneCache(
  * multi-root instance, a non-instance, a scene not yet cached and a scene already
  * in `scope.instancedScenePaths` (cyclic instancing) return unchanged.
  */
-export function collapseLiveNode(node: TscnNode, scope: SceneScope, sceneCache: CachedSceneSource): TscnNode {
+export function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
   return collapseToFixedPoint(node, scope, sceneCache).node;
 }
 
 /** What {@link collapseToFixedPoint} reached. */
 interface Collapse {
-  node: TscnNode;
+  node: LiveNode;
   /**
    * The scope the collapsed node's sub-scene content resolves against: the pools of
    * the last scene merged, and every merged scene appended to the enclosing ones.
@@ -87,26 +86,25 @@ interface Collapse {
  * loses it. The chain stops at a scene that already encloses the node or that it
  * merged already, so a scene that instances itself ends.
  */
-function collapseToFixedPoint(node: TscnNode, scope: SceneScope, sceneCache: CachedSceneSource): Collapse {
+function collapseToFixedPoint(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): Collapse {
   let current = node;
   // Advances with the chain: after a merge the `instance` ref is the sub-scene
   // root's own and names an id in that file's pool. The host's scope finds
   // nothing and stops the collapse one level early.
-  let currentScope = scope;
-  let instancedScenePaths = authoredScope(node, scope).instancedScenePaths ?? [];
+  let currentScope = scopeOf(node, scope);
+  let instancedScenePaths = currentScope.instancedScenePaths ?? [];
   while (current.instance) {
-    const authored = authoredScope(current, currentScope);
-    const scenePath = resolveInstancePath(current.instance, authored.externalResources);
+    const outer = scopeOf(current, currentScope);
+    const scenePath = resolveInstancePath(current.instance, outer.externalResources);
     if (!scenePath || instancedScenePaths.includes(scenePath)) break;
     const cached = sceneCache.getCached(scenePath);
     if (!cached) break;
-    // The whole scope: the merge stamps it onto the host children it grafts,
-    // and those name ids of both kinds.
-    const merged = mergeInstanceRoot(current, cached, authored);
+    const content = contentScopeOf(cached, [...instancedScenePaths, scenePath]);
+    const merged = mergeInstanceRoot(current, cached, { outer, content });
     if (!merged) break;
-    instancedScenePaths = [...instancedScenePaths, scenePath];
+    instancedScenePaths = content.instancedScenePaths!;
     current = merged;
-    currentScope = contentScopeOf(cached, instancedScenePaths);
+    currentScope = content;
   }
   return { node: current, contentScope: currentScope };
 }
@@ -124,17 +122,16 @@ function contentScopeOf(cached: Partial<SceneScope>, instancedScenePaths: readon
 }
 
 /**
- * The scope a node's refs resolve against: the one it was authored in when it
- * is grafted into another scene's content, else its group's scope. Both pools
- * travel, since a grafted node names ids of either kind from its own file.
+ * The scope a node's refs and its children's resolve against: its own where the merge
+ * set one (a grafted node, or a node an override reached), else its group's.
  */
-function authoredScope(node: TscnNode, groupScope: SceneScope): SceneScope {
-  return node.authoredScope ?? groupScope;
+export function scopeOf(node: LiveNode, groupScope: SceneScope): SceneScope {
+  return node.scope ?? groupScope;
 }
 
 /** A node's live children, paired with the scope those children resolve against. */
 interface ChildScope {
-  children: readonly TscnNode[];
+  children: readonly LiveNode[];
   scope: SceneScope;
 }
 
@@ -155,7 +152,7 @@ export function rootScope(ctx: LiveTreeContext): SceneScope {
  */
 export interface LiveChildGroup {
   origin: 'merged' | 'inline' | 'subscene' | 'glb';
-  children: readonly TscnNode[];
+  children: readonly LiveNode[];
   /** Both pools this group's children resolve their own refs against, as a {@link SceneScope}. */
   scope: SceneScope;
   /**
@@ -163,48 +160,49 @@ export interface LiveChildGroup {
    * skips a second `mergeInstanceRoot` pass. On every other origin the raw
    * node is the effective node.
    */
-  mergedNode?: TscnNode;
+  mergedNode?: LiveNode;
 }
 
 /**
  * What is below a node: one `inline` group for a non-instance, one `merged`
  * group for a single-root instance, `inline` plus `subscene` for a multi-root or
- * GLB instance, and one `glb` group for a GLBSceneRoot. `scope` is the caller's
- * own. A sub-scene's groups read the sub-scene's pools from the cache, and their
- * `instancedScenePaths` gain the sub-scene. An instance of a scene that already
- * encloses it (cyclic instancing) gets one `inline` group.
+ * GLB instance, and one `glb` group for a GLBSceneRoot. `scope` is the group's the
+ * node sits in, which the node's own `scope` replaces. A sub-scene's groups read the
+ * sub-scene's pools from the cache, and their `instancedScenePaths` gain the
+ * sub-scene. An instance of a scene that already encloses it (cyclic instancing)
+ * gets one `inline` group.
  */
 export function liveChildGroups(
-  node: TscnNode,
+  node: LiveNode,
   scope: SceneScope,
   sceneCache: CachedSceneSource,
   glbCache?: CachedGlbSource
 ): LiveChildGroup[] {
-  const inlineOnly = (): LiveChildGroup[] => [{ origin: 'inline', children: node.children, scope }];
+  const own = scopeOf(node, scope);
+  const inlineOnly = (): LiveChildGroup[] => [{ origin: 'inline', children: node.children, scope: own }];
 
   // GLB nodes carry no instance refs, so they stay in the outer scope.
   if (node.type === GLB_SCENE_ROOT_TYPE && glbCache) {
     const glbPath = (node.properties as Record<string, unknown>).glbPath as string | undefined;
     const object = glbPath ? glbCache.getCached(glbPath) : undefined;
     if (object) {
-      return [{ origin: 'glb', children: glbSceneRootChildren(object), scope }];
+      return [{ origin: 'glb', children: glbSceneRootChildren(object), scope: own }];
     }
   }
 
   if (!node.instance) return inlineOnly();
 
-  const authored = authoredScope(node, scope);
-  const scenePath = resolveInstancePath(node.instance, authored.externalResources);
+  const scenePath = resolveInstancePath(node.instance, own.externalResources);
   if (!scenePath) return inlineOnly();
 
   // Cyclic instancing: Godot never loads the scene here, so nothing of it is below.
-  const enclosingScenePaths = authored.instancedScenePaths ?? [];
+  const enclosingScenePaths = own.instancedScenePaths ?? [];
   if (enclosingScenePaths.includes(scenePath)) return inlineOnly();
 
   const cached = sceneCache.getCached(scenePath);
   if (!cached) return inlineOnly();
 
-  const collapse = collapseToFixedPoint(node, scope, sceneCache);
+  const collapse = collapseToFixedPoint(node, own, sceneCache);
   if (collapse.node !== node) {
     return [
       {
@@ -219,7 +217,7 @@ export function liveChildGroups(
   // Inline children are authored in the host scene, so they keep the outer scope.
   const groups: LiveChildGroup[] = [];
   if (node.children.length > 0) {
-    groups.push({ origin: 'inline', children: node.children, scope });
+    groups.push({ origin: 'inline', children: node.children, scope: own });
   }
   groups.push({
     origin: 'subscene',
@@ -236,8 +234,8 @@ export function liveChildGroups(
  * sub-scene root's own.
  */
 interface LiveChainLink {
-  raw: TscnNode;
-  collapsed: TscnNode;
+  raw: LiveNode;
+  collapsed: LiveNode;
 }
 
 /**
@@ -258,7 +256,7 @@ function liveChainLinks(
   let candidateGroups: ChildScope[] = [{ children: roots, scope: rootScope(ctx) }];
 
   for (const segment of segments) {
-    let match: TscnNode | undefined;
+    let match: LiveNode | undefined;
     let matchScope: SceneScope = rootScope(ctx);
     for (const group of candidateGroups) {
       const found = group.children.find((n) => n.name === segment);
@@ -339,7 +337,7 @@ export function walkLiveTree(
   visit: (entry: LiveTreeEntry) => void,
   descend?: (node: TscnNode) => boolean
 ): void {
-  const walk = (nodes: readonly TscnNode[], scope: SceneScope, parentPath: string): void => {
+  const walk = (nodes: readonly LiveNode[], scope: SceneScope, parentPath: string): void => {
     for (const node of nodes) {
       const path = joinPath(parentPath, node.name);
       const effective = collapseLiveNode(node, scope, ctx.sceneCache);
