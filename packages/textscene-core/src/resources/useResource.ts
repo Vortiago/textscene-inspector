@@ -1,8 +1,8 @@
 /**
- * useResource(path, type) loads an external resource for an R3F node component as a status machine:
- * pending, then loaded or unavailable, and a late arrival turns unavailable loaded. It never
- * suspends. A texture or material keeps its identity across calls, and an Object3D is cloned per
- * consumer, since THREE.Object3D allows one parent.
+ * useResource(path, type, address) loads an external resource for an R3F node component as a
+ * status machine: pending, then loaded or unavailable, and a late arrival turns unavailable loaded.
+ * It never suspends. A texture or material keeps its identity across calls, and an Object3D is
+ * cloned per consumer, since THREE.Object3D allows one parent.
  */
 import { useContext, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
@@ -38,10 +38,13 @@ export function useResourceLoader() {
 export function useResource<T>(path: string, type: ResourceBusType, address = path): ResourceResult<T> {
   const loader = useResourceLoader();
   const missingResources = useMissingResources();
-  const [result, setResult] = useState<ResourceResult<T>>(() => ({
-    value: undefined,
-    status: 'pending',
+  // The path a result belongs to: after a path swap, the render before the load effect still holds
+  // the old path's result, and reporting that status would charge it to the new path.
+  const [settled, setSettled] = useState<{ path: string; result: ResourceResult<T> }>(() => ({
+    path,
+    result: { value: undefined, status: 'pending' },
   }));
+  const result = settled.result;
 
   // A ref, not the effect's closure: a closure outlives its render, so a stale event for an
   // earlier (path, type) would overwrite the state.
@@ -53,6 +56,8 @@ export function useResource<T>(path: string, type: ResourceBusType, address = pa
   const clonedRef = useRef<THREE.Object3D | null>(null);
 
   useEffect(() => {
+    const setResult = (next: ResourceResult<T>) => setSettled({ path, result: next });
+
     // An empty path means no request: a caller keeps its hook count stable for an empty slot.
     // It stays `pending` with no subscription.
     if (path === '') {
@@ -183,8 +188,10 @@ export function useResource<T>(path: string, type: ResourceBusType, address = pa
   // uploaded. A path that loads on first request never shows a row.
   const reportedMissingAddressRef = useRef<string | null>(null);
 
+  const isSettledForPath = settled.path === path;
+
   useEffect(() => {
-    if (!path) return;
+    if (!path || !isSettledForPath) return;
     if (result.status === 'unavailable') {
       reportMissing(address);
       reportedMissingAddressRef.current = address;
@@ -198,7 +205,7 @@ export function useResource<T>(path: string, type: ResourceBusType, address = pa
       reportedMissingAddressRef.current = null;
     }
     return undefined;
-  }, [path, address, result.status, reportMissing, clearMissing, markUploaded]);
+  }, [path, address, isSettledForPath, result.status, reportMissing, clearMissing, markUploaded]);
 
   // The loader counts pending consumers, so a caller knows when loading has finished without a
   // timer. Keyed on `path` too: a path swap re-enters `pending`.

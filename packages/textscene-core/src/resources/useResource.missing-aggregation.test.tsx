@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { useResource } from './useResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
+import type { ParsedResource } from '../parser/parsedResource';
 import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
 import { MissingResourcesProvider, useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 
@@ -112,20 +113,22 @@ describe('useResource → MissingResourcesContext aggregation', () => {
   });
 
   it('reports a failure under the address it is given, not the file it loads', () => {
-    const Wrapper = makeWrappers(loader);
+    const fake = createFakeResourceLoader();
+    fake.resources.seed('res://materials/paint.tres', null);
+    const Wrapper = makeWrappers(fake.loader);
     const { result } = renderHook(
       () => {
-        useResource<THREE.Texture>(
-          'res://textures/missing.png',
-          'texture',
-          'res://textures/missing.png::Atlas_a'
+        useResource<ParsedResource>(
+          'res://materials/paint.tres',
+          'resource',
+          'res://materials/paint.tres::Inner_a'
         );
         return useMissingResources().missingPaths;
       },
       { wrapper: Wrapper }
     );
 
-    expect([...result.current]).toEqual(['res://textures/missing.png::Atlas_a']);
+    expect([...result.current]).toEqual(['res://materials/paint.tres::Inner_a']);
   });
 
   it('promotes a previously missing path to uploadedPaths when it turns loaded', () => {
@@ -153,6 +156,24 @@ describe('useResource → MissingResourcesContext aggregation', () => {
 
     expect(result.current.missingPaths.has('res://textures/missing.png')).toBe(false);
     expect(result.current.uploadedPaths.has('res://textures/missing.png')).toBe(true);
+  });
+
+  it('marks nothing uploaded when a missing path swaps to one that loads', () => {
+    textures.seed('res://textures/present.png', new THREE.Texture());
+    const Wrapper = makeWrappers(loader);
+    const { result, rerender } = renderHook(
+      ({ path }) => {
+        useResource<THREE.Texture>(path, 'texture');
+        const { missingPaths, uploadedPaths } = useMissingResources();
+        return { missingPaths, uploadedPaths };
+      },
+      { wrapper: Wrapper, initialProps: { path: 'res://textures/missing.png' } }
+    );
+
+    rerender({ path: 'res://textures/present.png' });
+
+    expect(result.current.missingPaths.size).toBe(0);
+    expect(result.current.uploadedPaths.size).toBe(0);
   });
 
   it('adds nothing to uploadedPaths when a path loads without ever being missing', () => {
