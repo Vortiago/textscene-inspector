@@ -23,7 +23,7 @@ import {
   BUTTON_THEME_FONT_KEY,
   buttonLabelShape,
 } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const minSize = buttonMinimumSize;
 
@@ -43,13 +43,7 @@ function node(
   return {
     ...solveNode(),
     path: 'B',
-    node: {
-      rawProperties: {},
-      name: 'B',
-      type: 'Button',
-      children: [],
-      properties: { name: 'B', ...props } as ButtonProperties,
-    },
+    node: controlNode('B', 'Button', { name: 'B', ...props }),
     styleBoxes,
     textureSize,
     // A local theme_override_colors/* reaches `resolveTextTheme` through

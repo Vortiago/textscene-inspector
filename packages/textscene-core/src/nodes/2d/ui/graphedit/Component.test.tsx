@@ -5,14 +5,13 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import type { ControlProperties } from '../control/types';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import type { GraphNodeProperties, GraphNodeSlot } from '../graphnode/types';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import type { GraphNodeSlot } from '../graphnode/types';
 import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
 import { GraphEdit } from './Component';
 import type { GraphEditConnection, GraphEditProperties } from './types';
@@ -62,13 +61,7 @@ function leafControl(name: string, minHeight: number): SolveNode {
   return {
     ...emptySolveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'Control',
-      children: [],
-      properties: { name, customMinimumSize: { x: 0, y: minHeight } } as ControlProperties,
-    },
+    node: controlNode(name, 'Control', { name, customMinimumSize: { x: 0, y: minHeight } }),
   };
 }
 
@@ -76,13 +69,7 @@ function graphNode(name: string, slots: Map<number, GraphNodeSlot>, children: So
   return {
     ...emptySolveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'GraphNode',
-      children: [],
-      properties: { name, title: '', positionOffset: { x: 0, y: 0 }, slots } as GraphNodeProperties,
-    },
+    node: controlNode(name, 'GraphNode', { name, title: '', positionOffset: { x: 0, y: 0 }, slots }),
     children,
   };
 }

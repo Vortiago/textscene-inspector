@@ -10,13 +10,13 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { ColorPicker } from './Component';
 
 const THEME = nativeTheme(1);
 
 function node(properties: Record<string, unknown>): SolveNode {
-  const tscnNode: TscnNode = { rawProperties: {}, name: 'P', type: 'ColorPicker', children: [], properties };
+  const tscnNode: TscnNode = controlNode('P', 'ColorPicker', properties);
   return { ...emptySolveNode(), path: 'P', node: tscnNode };
 }
 

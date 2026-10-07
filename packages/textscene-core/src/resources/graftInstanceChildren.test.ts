@@ -101,6 +101,14 @@ describe('graftInstanceChildren', () => {
     expect((grafted[0]!.children[0]!.properties as Node3DProperties).visible).toBe(false);
   });
 
+  it('keeps the existing node as parsed when the override writes no properties', () => {
+    const loaded = subScene();
+
+    const grafted = graftInstanceChildren(loaded, [pivotOverride({})], NO_SCOPES);
+
+    expect(grafted[0]!.children[0]!.properties).toBe(loaded[0]!.children[0]!.properties);
+  });
+
   it('folds an override of a sub-scene root child onto it instead of adding a sibling', () => {
     // `[node name="Health" parent="."]` under an instance root names the root's own child.
     const override = node('Sprite2D', { overridesExistingNode: true, rawProperties: { visible: 'false' } });

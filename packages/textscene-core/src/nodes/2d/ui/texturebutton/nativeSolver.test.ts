@@ -19,7 +19,7 @@ import {
   TEXTURE_PRESSED_KEY,
   TEXTURE_HOVER_KEY,
 } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function ctx(): SolveContext {
   return { theme: nativeTheme(1), measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
@@ -33,13 +33,7 @@ function node(
     ...solveNode(),
     path: 'TB',
     textureSlots,
-    node: {
-      rawProperties: {},
-      name: 'TB',
-      type: 'TextureButton',
-      children: [],
-      properties: { name: 'TB', ...props } as TextureButtonProperties,
-    },
+    node: controlNode('TB', 'TextureButton', { name: 'TB', ...props }),
   };
 }
 

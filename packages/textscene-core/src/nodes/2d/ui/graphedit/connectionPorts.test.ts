@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { ControlProperties } from '../control/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import type { GraphNodeProperties, GraphNodeSlot } from '../graphnode/types';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import type { GraphNodeSlot } from '../graphnode/types';
 import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
 import { graphNodePorts } from './connectionPorts';
 
@@ -27,13 +26,7 @@ function leaf(name: string, minHeight: number): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'Control',
-      children: [],
-      properties: { name, customMinimumSize: { x: 0, y: minHeight } } as ControlProperties,
-    },
+    node: controlNode(name, 'Control', { name, customMinimumSize: { x: 0, y: minHeight } }),
   };
 }
 
@@ -41,13 +34,7 @@ function graphNode(name: string, slots: Map<number, GraphNodeSlot>, children: So
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'GraphNode',
-      children: [],
-      properties: { name, title: '', slots } as GraphNodeProperties,
-    },
+    node: controlNode(name, 'GraphNode', { name, title: '', slots }),
     children,
   };
 }

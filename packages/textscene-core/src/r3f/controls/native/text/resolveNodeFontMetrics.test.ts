@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { SolveNode } from '../solveTree';
-import { solveNode } from '../testing/solveNode';
+import { controlNode, solveNode } from '../testing/solveNode';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { resolveNodeFontMetrics, resolveNodeFontSizePx } from './resolveNodeFontMetrics';
@@ -35,13 +35,7 @@ function labelNode(overrides: Partial<SolveNode> = {}): SolveNode {
   return {
     ...solveNode(),
     path: 'Root/MyLabel',
-    node: {
-      rawProperties: {},
-      name: 'MyLabel',
-      type: 'Label',
-      children: [],
-      properties: { name: 'MyLabel' },
-    },
+    node: controlNode('MyLabel', 'Label', { name: 'MyLabel' }),
     ...overrides,
   };
 }

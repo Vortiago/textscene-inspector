@@ -5,16 +5,10 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { Range } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function rangeSolveNode(properties: Record<string, unknown> = {}): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'Bounded',
-    type: 'Range',
-    children: [],
-    properties: { name: 'Bounded', ...properties },
-  };
+  const node: TscnNode = controlNode('Bounded', 'Range', { name: 'Bounded', ...properties });
   return { ...solveNode(), path: 'Bounded', node };
 }
 

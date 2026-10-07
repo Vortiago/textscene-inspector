@@ -13,7 +13,7 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import { TextEdit } from './Component';
 import type { TextEditProperties } from './types';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 100 };
 
@@ -23,13 +23,7 @@ function solveNode(
   properties: Partial<TextEditProperties> = {},
   internalResources: readonly TscnInternalResource[] = []
 ): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'MyTextEdit',
-    type: 'TextEdit',
-    children: [],
-    properties: { name: 'MyTextEdit', ...properties } as TextEditProperties,
-  };
+  const node: TscnNode = controlNode('MyTextEdit', 'TextEdit', { name: 'MyTextEdit', ...properties });
   return {
     ...emptySolveNode(),
     path: 'MyTextEdit',

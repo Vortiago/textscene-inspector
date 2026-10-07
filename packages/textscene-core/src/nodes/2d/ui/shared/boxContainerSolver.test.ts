@@ -23,7 +23,7 @@ import {
   resortBoxContainer,
   type BoxChildInput,
 } from './boxContainerSolver';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const HORIZONTAL = 3; // Control.SIZE_FILL | SIZE_EXPAND
@@ -257,13 +257,7 @@ function solveNode(
   children: SolveNode[] = []
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = {
-    rawProperties: {},
-    name,
-    type,
-    children: [],
-    properties: { name, ...properties },
-  };
+  const tscnNode: TscnNode = controlNode(name, type, { name, ...properties });
   // A local theme_override_constants/* reaches a solver through
   // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
   const constants =

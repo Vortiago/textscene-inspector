@@ -8,16 +8,10 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { GraphElement } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function graphElementSolveNode(): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'GE',
-    type: 'GraphElement',
-    children: [],
-    properties: { name: 'GE' },
-  };
+  const node: TscnNode = controlNode('GE', 'GraphElement', { name: 'GE' });
   return { ...solveNode(), path: 'GE', node };
 }
 

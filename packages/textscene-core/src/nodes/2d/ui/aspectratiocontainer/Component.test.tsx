@@ -8,16 +8,10 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { AspectRatioContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function aspectSolveNode(): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'Aspect',
-    type: 'AspectRatioContainer',
-    children: [],
-    properties: { name: 'Aspect' },
-  };
+  const node: TscnNode = controlNode('Aspect', 'AspectRatioContainer', { name: 'Aspect' });
   return { ...solveNode(), path: 'Aspect', node };
 }
 

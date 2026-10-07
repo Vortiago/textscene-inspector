@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
   textureProgressBarMinimumSize,
   textureProgressBarTextureSlots,
@@ -23,13 +23,7 @@ function node(
   return {
     ...base,
     path: 'T',
-    node: {
-      rawProperties: {},
-      name: 'T',
-      type: 'TextureProgressBar',
-      children: [],
-      properties: { name: 'T', ...props } as TextureProgressBarProperties,
-    },
+    node: controlNode('T', 'TextureProgressBar', { name: 'T', ...props }),
     textureSlots,
   };
 }

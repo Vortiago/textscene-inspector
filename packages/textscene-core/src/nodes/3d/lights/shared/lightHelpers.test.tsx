@@ -238,24 +238,14 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     // and `matrixAutoUpdate = false`. The helper is a <primitive> sibling of the
     // light in its transform group, so without `correctHelperForParentGroup` the
     // group's matrixWorld composes on top and doubles the translation.
-    const node: TscnNode = {
-      rawProperties: {},
-      name: 'Sun',
-      type: 'DirectionalLight3D',
-      children: [],
-      properties: {
-        name: 'Sun',
-        light_color: 'Color(1, 1, 1, 1)',
-        light_energy: 1,
-        shadow_enabled: false,
-        transform: {
-          basis_x: { x: 1, y: 0, z: 0 },
-          basis_y: { x: 0, y: 1, z: 0 },
-          basis_z: { x: 0, y: 0, z: 1 },
-          origin: { x: 0, y: 5, z: 0 },
-        },
-      } as DirectionalLight3DProperties,
-    };
+    const node = dirNode('Sun', {
+      transform: {
+        basis_x: { x: 1, y: 0, z: 0 },
+        basis_y: { x: 0, y: 1, z: 0 },
+        basis_z: { x: 0, y: 0, z: 1 },
+        origin: { x: 0, y: 5, z: 0 },
+      },
+    });
     const graph = createSceneGraphFromTscnScene({ nodes: [node] });
     const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
 
@@ -299,26 +289,15 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
   it("PointLightHelper sits at the light's own world position, not squared through its parent group", async () => {
     // THREE.PointLightHelper has DirectionalLightHelper's constructor aliasing,
     // and the same correction (see the previous test).
-    const node: TscnNode = {
-      rawProperties: {},
-      name: 'Lamp',
-      type: 'OmniLight3D',
-      children: [],
-      properties: {
-        name: 'Lamp',
-        light_color: 'Color(1, 1, 1, 1)',
-        light_energy: 1,
-        shadow_enabled: false,
-        omni_range: 5,
-        omni_attenuation: 1,
-        transform: {
-          basis_x: { x: 1, y: 0, z: 0 },
-          basis_y: { x: 0, y: 1, z: 0 },
-          basis_z: { x: 0, y: 0, z: 1 },
-          origin: { x: 0, y: 5, z: 0 },
-        },
-      } as OmniLight3DProperties,
-    };
+    const node = omniNode('Lamp', {
+      omni_attenuation: 1,
+      transform: {
+        basis_x: { x: 1, y: 0, z: 0 },
+        basis_y: { x: 0, y: 1, z: 0 },
+        basis_z: { x: 0, y: 0, z: 1 },
+        origin: { x: 0, y: 5, z: 0 },
+      },
+    });
     const graph = createSceneGraphFromTscnScene({ nodes: [node] });
     const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
 

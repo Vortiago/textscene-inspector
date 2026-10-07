@@ -10,19 +10,13 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { ProgressBar } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function solveNode(properties: Record<string, unknown>): SolveNode {
   return {
     ...emptySolveNode(),
     path: 'P',
-    node: {
-      rawProperties: {},
-      name: 'P',
-      type: 'ProgressBar',
-      children: [],
-      properties: { name: 'P', ...properties },
-    } as TscnNode,
+    node: controlNode('P', 'ProgressBar', { name: 'P', ...properties }) as TscnNode,
   };
 }
 

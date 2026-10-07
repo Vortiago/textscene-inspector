@@ -11,16 +11,10 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 import { Container } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function containerSolveNode(): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'Wrapper',
-    type: 'Container',
-    children: [],
-    properties: { name: 'Wrapper' },
-  };
+  const node: TscnNode = controlNode('Wrapper', 'Container', { name: 'Wrapper' });
   return { ...solveNode(), path: 'Wrapper', node };
 }
 
@@ -48,32 +42,20 @@ describe('Container registers no solver', () => {
 describe('a bare Container imposes no layout on its children', () => {
   it('leaves a child at its own free/anchored rect, unlike a registered container', () => {
     // Full-rect preset (anchors 0,0,1,1, offsets 0): the Container takes the whole 200x100 viewport.
-    const containerNode: TscnNode = {
-      rawProperties: {},
+    const containerNode: TscnNode = controlNode('Wrapper', 'Container', {
       name: 'Wrapper',
-      type: 'Container',
-      children: [],
-      properties: {
-        name: 'Wrapper',
-        anchorLeft: 0,
-        anchorTop: 0,
-        anchorRight: 1,
-        anchorBottom: 1,
-      },
-    };
-    const childNode: TscnNode = {
-      rawProperties: {},
+      anchorLeft: 0,
+      anchorTop: 0,
+      anchorRight: 1,
+      anchorBottom: 1,
+    });
+    const childNode: TscnNode = controlNode('Child', 'Control', {
       name: 'Child',
-      type: 'Control',
-      children: [],
-      properties: {
-        name: 'Child',
-        offsetLeft: 10,
-        offsetTop: 20,
-        offsetRight: 50,
-        offsetBottom: 60,
-      },
-    };
+      offsetLeft: 10,
+      offsetTop: 20,
+      offsetRight: 50,
+      offsetBottom: 60,
+    });
     const child: SolveNode = { ...solveNode(), path: 'Wrapper/Child', node: childNode };
     const container: SolveNode = { ...solveNode(), path: 'Wrapper', node: containerNode, children: [child] };
 

@@ -4,20 +4,14 @@ import type { ControlProperties } from '../control/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { separatorMinimumSize } from './nativeSolver';
 
 function node(name: string, type: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type,
-      children: [],
-      properties: { name, ...props } as ControlProperties,
-    },
+    node: controlNode(name, type, { name, ...props }),
     // A local theme_override_constants/* reaches a solver through `n.constants`
     // (the walker folds it in unconditionally), not `node.properties`.
     constants: props.themeOverrideConstants ?? {},

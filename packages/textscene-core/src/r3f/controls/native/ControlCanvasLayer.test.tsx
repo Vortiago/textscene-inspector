@@ -11,6 +11,7 @@ import { ControlCanvasLayer } from './ControlCanvasLayer';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
 import { controlSolverRegistry } from './solverRegistry';
 import { useCanvasModulate } from '../../canvasModulate';
+import { controlNode } from './testing/solveNode';
 
 // Names a group after the ambient CanvasModulate, observable without pixels.
 const ModulateProbeNative: NativeControlComponent = () => {
@@ -32,7 +33,7 @@ vi.mock('../../contexts/ProjectSettingsContext', () => ({
 }));
 
 function node(name: string, type: string, properties: Record<string, unknown> = {}): TscnNode {
-  return { rawProperties: {}, name, type, children: [], properties: { name, ...properties } };
+  return controlNode(name, type, { name, ...properties });
 }
 
 function namedGroup(

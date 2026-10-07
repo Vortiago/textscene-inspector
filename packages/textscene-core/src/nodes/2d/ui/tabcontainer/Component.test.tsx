@@ -15,7 +15,7 @@ import type { ControlProperties } from '../control/types';
 import type { TabContainerProperties } from './types';
 import { TabContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const THEME = nativeTheme(1);
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
@@ -23,13 +23,7 @@ const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function page(name: string, properties: Partial<ControlProperties> = {}): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name,
-    type: 'Control',
-    children: [],
-    properties: { name, ...properties } as ControlProperties,
-  };
+  const node: TscnNode = controlNode(name, 'Control', { name, ...properties });
   return { ...emptySolveNode(), path: name, node };
 }
 

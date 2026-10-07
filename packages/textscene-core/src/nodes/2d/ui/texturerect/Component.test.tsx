@@ -21,7 +21,7 @@ import { TextureRect } from './Component';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -29,13 +29,11 @@ const TEX = 'res://portrait.png';
 const heading = { type: 'node', attributes: { type: 'TextureRect', name: 'Portrait' } };
 
 function textureRectNode(raw: Record<string, string> = {}): TscnNode {
-  return {
-    rawProperties: {},
-    name: 'Portrait',
-    type: 'TextureRect',
-    children: [],
-    properties: parseTextureRect(heading, { texture: 'ExtResource("1")', ...raw }),
-  };
+  return controlNode(
+    'Portrait',
+    'TextureRect',
+    parseTextureRect(heading, { texture: 'ExtResource("1")', ...raw })
+  );
 }
 
 /** The scene scope a painter resolves its own refs in: id `1` is the sheet. */
@@ -322,13 +320,7 @@ describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end wal
       children: SolveNode[]
     ): SolveNode {
       const name = path.split('/').pop()!;
-      const tscnNode: TscnNode = {
-        rawProperties: {},
-        name,
-        type,
-        children: [],
-        properties: { name, ...properties },
-      };
+      const tscnNode: TscnNode = controlNode(name, type, { name, ...properties });
       return { ...emptySolveNode(), path, node: tscnNode, children };
     }
     function leafSolveNode(path: string): SolveNode {

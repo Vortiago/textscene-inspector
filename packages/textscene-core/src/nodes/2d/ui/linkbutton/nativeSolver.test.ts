@@ -22,19 +22,13 @@ import {
   LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR,
   LINKBUTTON_DEFAULT_DISABLED_FONT_COLOR,
 } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function node(props: Partial<LinkButtonProperties>): SolveNode {
   return {
     ...solveNode(),
     path: 'L',
-    node: {
-      rawProperties: {},
-      name: 'L',
-      type: 'LinkButton',
-      children: [],
-      properties: { name: 'L', ...props } as LinkButtonProperties,
-    },
+    node: controlNode('L', 'LinkButton', { name: 'L', ...props }),
     // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
     // fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},

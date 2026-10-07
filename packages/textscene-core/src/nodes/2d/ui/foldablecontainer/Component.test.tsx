@@ -12,20 +12,17 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import type { FoldableContainerProperties } from './types';
 import { FoldableContainer } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 const RECT: Rect2 = { x: 0, y: 0, w: 120, h: 80 };
 
 function solveNode(properties: Partial<FoldableContainerProperties> = {}): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
+  const node: TscnNode = controlNode('MyFoldableContainer', 'FoldableContainer', {
     name: 'MyFoldableContainer',
-    type: 'FoldableContainer',
-    children: [],
-    properties: { name: 'MyFoldableContainer', ...properties } as FoldableContainerProperties,
-  };
+    ...properties,
+  });
   return { ...emptySolveNode(), path: 'MyFoldableContainer', node };
 }
 

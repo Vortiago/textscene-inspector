@@ -23,7 +23,7 @@ import {
   OPTION_BUTTON_ARROW_NATURAL_SIZE,
   OPTION_BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const A_ADVANCE = 1354 * (16 / 2048); // 10.578125
 // 'B' is 1350 design units, not 'A''s 1354.
@@ -37,13 +37,7 @@ function node(props: Partial<OptionButtonProperties>): SolveNode {
   return {
     ...solveNode(),
     path: 'O',
-    node: {
-      rawProperties: {},
-      name: 'O',
-      type: 'OptionButton',
-      children: [],
-      properties: { name: 'O', ...props } as OptionButtonProperties,
-    },
+    node: controlNode('O', 'OptionButton', { name: 'O', ...props }),
     // A local theme_override_colors/* or constants/* reaches a solver through `n.colors` or `n.constants`,
     // which the walker fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},

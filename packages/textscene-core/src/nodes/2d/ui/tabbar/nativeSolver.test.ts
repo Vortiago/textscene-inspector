@@ -18,7 +18,7 @@ import {
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { TabBarProperties } from './types';
 
 describe('resolveTabDrawState', () => {
@@ -291,7 +291,7 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
     return {
       ...solveNode(),
       path: 'T',
-      node: { rawProperties: {}, name: 'T', type: 'TabBar', children: [], properties: props },
+      node: controlNode('T', 'TabBar', props),
       ...overrides,
     };
   }
@@ -318,13 +318,7 @@ describe('tabBarFontSizePx', () => {
   const bar = (): SolveNode => ({
     ...solveNode(),
     path: 'T',
-    node: {
-      rawProperties: {},
-      name: 'T',
-      type: 'TabBar',
-      children: [],
-      properties: { name: 'T' } as TabBarProperties,
-    },
+    node: controlNode('T', 'TabBar', { name: 'T' }),
   });
 
   it('answers the theme default when the node overrides nothing', () => {
@@ -366,7 +360,7 @@ describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_siz
     return {
       ...solveNode(),
       path: 'T',
-      node: { rawProperties: {}, name: 'T', type: 'TabBar', children: [], properties },
+      node: controlNode('T', 'TabBar', properties),
     };
   }
 

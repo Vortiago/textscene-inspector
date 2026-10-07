@@ -11,7 +11,7 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
@@ -30,13 +30,11 @@ const SCOPE = {
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<ItemListProperties>, rtl = false, iconSlots = {}): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
+  const node: TscnNode = controlNode('MyItemList', 'ItemList', {
     name: 'MyItemList',
-    type: 'ItemList',
-    children: [],
-    properties: { name: 'MyItemList', items: [], ...properties } as ItemListProperties,
-  };
+    items: [],
+    ...properties,
+  });
   return { ...emptySolveNode(), path: 'MyItemList', node, resources: SCOPE, rtl, textureSlots: iconSlots };
 }
 

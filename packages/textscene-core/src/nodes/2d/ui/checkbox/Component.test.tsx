@@ -15,20 +15,14 @@ import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { CheckBox } from './Component';
 import type { CheckBoxProperties } from './types';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<CheckBoxProperties> = {}): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'MyCheckBox',
-    type: 'CheckBox',
-    children: [],
-    properties: { name: 'MyCheckBox', ...properties } as CheckBoxProperties,
-  };
+  const node: TscnNode = controlNode('MyCheckBox', 'CheckBox', { name: 'MyCheckBox', ...properties });
   return { ...emptySolveNode(), path: 'MyCheckBox', node };
 }
 

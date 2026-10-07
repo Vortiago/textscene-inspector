@@ -10,7 +10,7 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { graphEditLayout } from './nativeSolver';
 import type { GraphEditProperties } from './types';
 
@@ -22,13 +22,7 @@ function graphNodeChild(name: string, props: Partial<GraphElementProperties> = {
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'GraphNode',
-      children: [],
-      properties: { name, ...props } as GraphElementProperties,
-    },
+    node: controlNode(name, 'GraphNode', { name, ...props }),
   };
 }
 
@@ -36,13 +30,7 @@ function controlChild(name: string, props: Partial<ControlProperties> = {}): Sol
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'Control',
-      children: [],
-      properties: { name, ...props } as ControlProperties,
-    },
+    node: controlNode(name, 'Control', { name, ...props }),
   };
 }
 
@@ -50,13 +38,7 @@ function graphEdit(name: string, props: Partial<GraphEditProperties>, children: 
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'GraphEdit',
-      children: [],
-      properties: { name, ...props } as GraphEditProperties,
-    },
+    node: controlNode(name, 'GraphEdit', { name, ...props }),
     children,
   };
 }

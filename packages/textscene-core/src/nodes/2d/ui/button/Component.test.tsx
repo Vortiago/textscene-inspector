@@ -23,7 +23,7 @@ import { buttonMinimumSize } from './nativeSolver';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -58,13 +58,7 @@ function solveNode(
   properties: Partial<ButtonProperties> = {},
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'MyButton',
-    type: 'Button',
-    children: [],
-    properties: { name: 'MyButton', ...properties } as ButtonProperties,
-  };
+  const node: TscnNode = controlNode('MyButton', 'Button', { name: 'MyButton', ...properties });
   return { ...emptySolveNode(), path: 'MyButton', node, styleBoxes, resources: SCOPE };
 }
 

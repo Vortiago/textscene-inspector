@@ -13,7 +13,7 @@ import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/contro
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { gridContainerMinimumSize, gridContainerLayout } from './nativeSolver';
 import { solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /** `gridContainerLayout`'s `rects` half only: see `ContainerLayoutResult`'s own doc for why the union is here at all. */
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
@@ -24,13 +24,7 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'Control',
-      children: [],
-      properties: { name, ...props } as ControlProperties,
-    },
+    node: controlNode(name, 'Control', { name, ...props }),
   };
 }
 
@@ -38,13 +32,7 @@ function grid(name: string, props: Partial<GridContainerProperties>, children: S
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'GridContainer',
-      children: [],
-      properties: { name, ...props } as GridContainerProperties,
-    },
+    node: controlNode(name, 'GridContainer', { name, ...props }),
     children,
     // A local theme_override_constants/* now reaches `separationOf` through
     // `n.constants` (the walker folds it in unconditionally), not props.

@@ -16,19 +16,17 @@ import { NinePatchRect } from './Component';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const TEX = 'res://panel.png';
 const heading = { type: 'node', attributes: { type: 'NinePatchRect', name: 'Panel' } };
 
 function ninePatchNode(raw: Record<string, string> = {}): TscnNode {
-  return {
-    rawProperties: {},
-    name: 'Panel',
-    type: 'NinePatchRect',
-    children: [],
-    properties: parseNinePatchRect(heading, { texture: 'ExtResource("1")', ...raw }),
-  };
+  return controlNode(
+    'Panel',
+    'NinePatchRect',
+    parseNinePatchRect(heading, { texture: 'ExtResource("1")', ...raw })
+  );
 }
 
 const SCOPE = {

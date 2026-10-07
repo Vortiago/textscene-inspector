@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { ControlProperties } from '../control/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import type { GraphNodeProperties, GraphNodeSlot } from '../graphnode/types';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import type { GraphNodeSlot } from '../graphnode/types';
 import '../graphnode/nativeSolver.js';
 import type { GraphEditConnection, GraphEditProperties } from './types';
 import { resolveGraphEditConnections } from './connectionEndpoints';
@@ -29,13 +28,7 @@ function leaf(name: string, minHeight: number): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'Control',
-      children: [],
-      properties: { name, customMinimumSize: { x: 0, y: minHeight } } as ControlProperties,
-    },
+    node: controlNode(name, 'Control', { name, customMinimumSize: { x: 0, y: minHeight } }),
   };
 }
 
@@ -48,13 +41,7 @@ function graphNode(
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'GraphNode',
-      children: [],
-      properties: { name, title: '', positionOffset, slots } as GraphNodeProperties,
-    },
+    node: controlNode(name, 'GraphNode', { name, title: '', positionOffset, slots }),
     children,
   };
 }
@@ -76,13 +63,7 @@ describe('resolveGraphEditConnections (graph_edit.cpp:1614-1660 _update_connecti
     const graphEdit: SolveNode = {
       ...solveNode(),
       path: 'G',
-      node: {
-        rawProperties: {},
-        name: 'G',
-        type: 'GraphEdit',
-        children: [],
-        properties: { name: 'G' } as ControlProperties,
-      },
+      node: controlNode('G', 'GraphEdit', { name: 'G' }),
       children: [source, sink],
     };
 
@@ -126,13 +107,7 @@ describe('resolveGraphEditConnections (graph_edit.cpp:1614-1660 _update_connecti
     const graphEdit: SolveNode = {
       ...solveNode(),
       path: 'G',
-      node: {
-        rawProperties: {},
-        name: 'G',
-        type: 'GraphEdit',
-        children: [],
-        properties: { name: 'G' } as ControlProperties,
-      },
+      node: controlNode('G', 'GraphEdit', { name: 'G' }),
       children: [source],
     };
     const childRects: ReadonlyMap<string, Rect2> = new Map([['Source', { x: 0, y: 0, w: 120, h: 80 }]]);
@@ -161,13 +136,7 @@ describe('resolveGraphEditConnections (graph_edit.cpp:1614-1660 _update_connecti
     const graphEdit: SolveNode = {
       ...solveNode(),
       path: 'G',
-      node: {
-        rawProperties: {},
-        name: 'G',
-        type: 'GraphEdit',
-        children: [],
-        properties: { name: 'G' } as ControlProperties,
-      },
+      node: controlNode('G', 'GraphEdit', { name: 'G' }),
       children: [source, sink],
     };
     const childRects: ReadonlyMap<string, Rect2> = new Map([

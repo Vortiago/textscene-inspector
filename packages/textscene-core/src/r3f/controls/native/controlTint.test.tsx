@@ -11,10 +11,10 @@ import type { TscnNode } from '../../../parser/types';
 import { Modulate2DContext } from '../../canvasItemModulate';
 import { useControlOwnTint, useInheritedModulate } from './controlTint';
 import type { SolveNode } from './solveTree';
-import { solveNode } from './testing/solveNode';
+import { controlNode, solveNode } from './testing/solveNode';
 
 function control(properties: Record<string, unknown>): SolveNode {
-  const node: TscnNode = { rawProperties: {}, name: 'C', type: 'Control', children: [], properties };
+  const node: TscnNode = controlNode('C', 'Control', properties);
   return { ...solveNode(), path: 'C', node };
 }
 

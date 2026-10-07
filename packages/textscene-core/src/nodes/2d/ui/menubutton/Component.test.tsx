@@ -13,20 +13,14 @@ import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { MenuButtonProperties } from './types';
 import { MenuButton } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 const RECT: Rect2 = { x: 0, y: 0, w: 120, h: 32 };
 
 function solveNode(properties: Partial<MenuButtonProperties> = {}): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'MyMenuButton',
-    type: 'MenuButton',
-    children: [],
-    properties: { name: 'MyMenuButton', ...properties } as MenuButtonProperties,
-  };
+  const node: TscnNode = controlNode('MyMenuButton', 'MenuButton', { name: 'MyMenuButton', ...properties });
   return { ...emptySolveNode(), path: 'MyMenuButton', node };
 }
 

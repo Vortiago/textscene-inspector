@@ -11,7 +11,7 @@ import type { TscnNode, TscnInternalResource } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ControlProperties } from '../control/types';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { resolveStyleBoxes } from '../../../../r3f/controls/native/buildSolveTree';
 import { SeparatorChrome } from './Component';
 
@@ -22,13 +22,7 @@ function sepNode(
   properties: Partial<ControlProperties> = {},
   internalResources: readonly TscnInternalResource[] = []
 ): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'Sep',
-    type,
-    children: [],
-    properties: { name: 'Sep', ...properties } as ControlProperties,
-  };
+  const node: TscnNode = controlNode('Sep', type, { name: 'Sep', ...properties });
   return {
     ...emptySolveNode(),
     path: 'Sep',

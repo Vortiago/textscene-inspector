@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from './solveTree';
-import { solveNode as emptySolveNode } from './testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from './testing/solveNode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import { resolveTextTheme, type TextThemeKeys } from './textTheme';
 
@@ -16,7 +16,7 @@ function node(overrides: Partial<SolveNode> = {}): SolveNode {
   return {
     ...emptySolveNode(),
     path: 'L',
-    node: { rawProperties: {}, name: 'L', type: 'Label', children: [], properties: { name: 'L' } },
+    node: controlNode('L', 'Label', { name: 'L' }),
     ...overrides,
   };
 }

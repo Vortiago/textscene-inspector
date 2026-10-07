@@ -5,7 +5,6 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { ControlProperties } from '../control/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
@@ -23,7 +22,7 @@ import {
   resolveTextureRectRepeat,
   applyFlip,
 } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const TEXTURE = { x: 320, y: 160 };
 
@@ -34,13 +33,7 @@ function node(
   return {
     ...solveNode(),
     path: 'Portrait',
-    node: {
-      rawProperties: {},
-      name: 'Portrait',
-      type: 'TextureRect',
-      children: [],
-      properties: { name: 'Portrait', ...props } as ControlProperties,
-    },
+    node: controlNode('Portrait', 'TextureRect', { name: 'Portrait', ...props }),
     textureSize,
   };
 }
@@ -187,13 +180,7 @@ describe('solveControlTree — the real two-pass solve closes the self-reference
     const plain: SolveNode = {
       ...solveNode(),
       path: 'Plain',
-      node: {
-        rawProperties: {},
-        name: 'Plain',
-        type: 'Control',
-        children: [],
-        properties: { name: 'Plain', anchorRight: 1, anchorBottom: 1 } as ControlProperties,
-      },
+      node: controlNode('Plain', 'Control', { name: 'Plain', anchorRight: 1, anchorBottom: 1 }),
     };
     const solved = solveControlTree([plain], VIEWPORT, createSolveContext(nativeTheme(1)));
     expect(solved.get('Plain')?.rect).toEqual(VIEWPORT);

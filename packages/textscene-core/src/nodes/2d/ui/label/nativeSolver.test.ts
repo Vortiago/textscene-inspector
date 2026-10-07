@@ -5,7 +5,6 @@
  * ceil(600*16/2048) = 5, line_spacing 3 (default_theme.cpp:392): pitch 26, font height 23.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import type { ControlProperties } from '../control/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry, type SolveContext } from '../../../../r3f/controls/native/solverRegistry';
@@ -45,7 +44,7 @@ import {
   VC_GLYPHS_LTR,
   VC_GLYPHS_RTL,
 } from './nativeSolver';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 
@@ -55,13 +54,7 @@ function node(props: Partial<LabelProperties>, overrides: Partial<SolveNode> = {
   return {
     ...emptySolveNode(),
     path: 'L',
-    node: {
-      rawProperties: {},
-      name: 'L',
-      type: 'Label',
-      children: [],
-      properties: { name: 'L', ...props } as ControlProperties,
-    },
+    node: controlNode('L', 'Label', { name: 'L', ...props }),
     ...overrides,
   };
 }
@@ -240,24 +233,15 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
     const label = (name: string, props: Partial<LabelProperties>): SolveNode => ({
       ...emptySolveNode(),
       path: `Card/Column/${name}`,
-      node: {
-        rawProperties: {},
-        name,
-        type: 'Label',
-        children: [],
-        properties: { name, ...props } as ControlProperties,
-      },
+      node: controlNode(name, 'Label', { name, ...props }),
     });
     const column: SolveNode = {
       ...emptySolveNode(),
       path: 'Card/Column',
-      node: {
-        rawProperties: {},
+      node: controlNode('Column', 'VBoxContainer', {
         name: 'Column',
-        type: 'VBoxContainer',
-        children: [],
-        properties: { name: 'Column', themeOverrideConstants: { separation } } as ControlProperties,
-      },
+        themeOverrideConstants: { separation },
+      }),
       children: [label('Heading', heading), label('Body', body)],
       // A local theme_override_constants/* reaches `separationOf` through `n.constants`, which the
       // walker fills unconditionally, not through props.
@@ -266,13 +250,7 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
     return {
       ...emptySolveNode(),
       path: 'Card',
-      node: {
-        rawProperties: {},
-        name: 'Card',
-        type: 'PanelContainer',
-        children: [],
-        properties: { name: 'Card', layoutMode: 3, anchorsPreset: 15 } as ControlProperties,
-      },
+      node: controlNode('Card', 'PanelContainer', { name: 'Card', layoutMode: 3, anchorsPreset: 15 }),
       children: [column],
       styleBoxes: {
         panel: {

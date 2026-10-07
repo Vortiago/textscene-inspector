@@ -10,7 +10,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { HSplitContainer } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function solveNode(
   name: string,
@@ -25,7 +25,7 @@ function solveNode(
   return {
     ...emptySolveNode(),
     path: name,
-    node: { rawProperties: {}, name, type, children: [], properties: { name, ...properties } } as TscnNode,
+    node: controlNode(name, type, { name, ...properties }) as TscnNode,
     children,
     constants,
   };

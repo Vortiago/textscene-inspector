@@ -5,16 +5,10 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { BoxContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function boxContainerSolveNode(): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'Row',
-    type: 'BoxContainer',
-    children: [],
-    properties: { name: 'Row' },
-  };
+  const node: TscnNode = controlNode('Row', 'BoxContainer', { name: 'Row' });
   return { ...solveNode(), path: 'Row', node };
 }
 

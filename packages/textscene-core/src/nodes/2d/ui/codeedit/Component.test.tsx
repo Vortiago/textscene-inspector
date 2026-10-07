@@ -11,20 +11,14 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CodeEdit } from './Component';
 import type { CodeEditProperties } from './types';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 100 };
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<CodeEditProperties> = {}): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'MyCodeEdit',
-    type: 'CodeEdit',
-    children: [],
-    properties: { name: 'MyCodeEdit', ...properties } as CodeEditProperties,
-  };
+  const node: TscnNode = controlNode('MyCodeEdit', 'CodeEdit', { name: 'MyCodeEdit', ...properties });
   return { ...emptySolveNode(), path: 'MyCodeEdit', node };
 }
 

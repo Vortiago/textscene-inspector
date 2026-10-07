@@ -9,7 +9,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SpinBoxProperties } from './types';
 import {
   spinBoxButtonsBlockWidth,
@@ -37,13 +37,7 @@ function node(props: Partial<SpinBoxProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: 'S',
-    node: {
-      rawProperties: {},
-      name: 'S',
-      type: 'SpinBox',
-      children: [],
-      properties: { name: 'S', ...props } as SpinBoxProperties,
-    },
+    node: controlNode('S', 'SpinBox', { name: 'S', ...props }),
   };
 }
 

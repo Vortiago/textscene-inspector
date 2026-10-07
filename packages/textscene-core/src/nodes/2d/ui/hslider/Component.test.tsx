@@ -12,19 +12,13 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { HSlider } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { SLIDER_GRABBER_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function solveNode(properties: Record<string, unknown>): SolveNode {
   return {
     ...emptySolveNode(),
     path: 'S',
-    node: {
-      rawProperties: {},
-      name: 'S',
-      type: 'HSlider',
-      children: [],
-      properties: { name: 'S', ...properties },
-    } as TscnNode,
+    node: controlNode('S', 'HSlider', { name: 'S', ...properties }) as TscnNode,
   };
 }
 

@@ -13,20 +13,14 @@ import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { LinkButton } from './Component';
 import type { LinkButtonProperties } from './types';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<LinkButtonProperties> = {}): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'MyLinkButton',
-    type: 'LinkButton',
-    children: [],
-    properties: { name: 'MyLinkButton', ...properties } as LinkButtonProperties,
-  };
+  const node: TscnNode = controlNode('MyLinkButton', 'LinkButton', { name: 'MyLinkButton', ...properties });
   return { ...emptySolveNode(), path: 'MyLinkButton', node };
 }
 

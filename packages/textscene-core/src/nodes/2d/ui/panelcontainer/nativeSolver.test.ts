@@ -17,7 +17,7 @@ import {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import { panelContainerLayout, panelContainerMinimumSize } from './nativeSolver';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /** The `rects` half of a `ContainerLayoutResult`. */
 function rects(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
@@ -54,13 +54,7 @@ function solveNode(
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const node: TscnNode = {
-    rawProperties: {},
-    name,
-    type: 'Control',
-    children: [],
-    properties: { name, ...properties } as ControlProperties,
-  };
+  const node: TscnNode = controlNode(name, 'Control', { name, ...properties });
   return { ...emptySolveNode(), path, node, children, styleBoxes };
 }
 
@@ -180,26 +174,15 @@ describe('panelContainerLayout wired through the registry + full solve', () => {
     const child: SolveNode = {
       ...emptySolveNode(),
       path: 'Panel/Child',
-      node: {
-        rawProperties: {},
-        name: 'Child',
-        type: 'Control',
-        children: [],
-        properties: { name: 'Child', customMinimumSize: { x: 10, y: 10 } } as ControlProperties,
-      },
+      node: controlNode('Child', 'Control', { name: 'Child', customMinimumSize: { x: 10, y: 10 } }),
     };
     const root: SolveNode = {
       ...emptySolveNode(),
       path: 'Panel',
-      node: {
-        rawProperties: {},
-        name: 'Panel',
-        type: TYPE,
-        children: [],
-        // scene/gui/control.cpp Control::_get_layout_mode: a parentless Control reports
-        // UNCONTROLLED, one of the two modes in which an anchors preset applies at all.
-        properties: { name: 'Panel', layoutMode: 3, anchorsPreset: 15 } as ControlProperties, // FULL_RECT
-      },
+      // scene/gui/control.cpp Control::_get_layout_mode: a parentless Control reports
+      // UNCONTROLLED, one of the two modes in which an anchors preset applies at all.
+      node: controlNode('Panel', TYPE, { name: 'Panel', layoutMode: 3, anchorsPreset: 15 }), // FULL_RECT
+
       children: [child],
       styleBoxes: { panel: styleBox({ left: 10, top: 6, right: 10, bottom: 6 }) },
     };

@@ -9,16 +9,10 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { VBoxContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function vboxSolveNode(): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'Column',
-    type: 'VBoxContainer',
-    children: [],
-    properties: { name: 'Column' },
-  };
+  const node: TscnNode = controlNode('Column', 'VBoxContainer', { name: 'Column' });
   return { ...solveNode(), path: 'Column', node };
 }
 

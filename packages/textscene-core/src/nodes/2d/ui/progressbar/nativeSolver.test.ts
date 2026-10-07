@@ -3,12 +3,11 @@
  * `scene/gui/progress_bar.cpp:37-48,149-166`.
  */
 import { describe, expect, it } from 'vitest';
-import type { ControlProperties } from '../control/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   progressBarMinimumSize,
@@ -25,13 +24,7 @@ function node(
   return {
     ...emptySolveNode(),
     path: 'P',
-    node: {
-      rawProperties: {},
-      name: 'P',
-      type: 'ProgressBar',
-      children: [],
-      properties: { name: 'P', ...props } as ControlProperties,
-    },
+    node: controlNode('P', 'ProgressBar', { name: 'P', ...props }),
     styleBoxes,
   };
 }

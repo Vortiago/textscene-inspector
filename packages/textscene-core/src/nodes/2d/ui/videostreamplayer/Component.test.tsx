@@ -8,17 +8,11 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { VideoStreamPlayer } from './Component';
 
 function node(properties: Record<string, unknown>): SolveNode {
-  const tscnNode: TscnNode = {
-    rawProperties: {},
-    name: 'V',
-    type: 'VideoStreamPlayer',
-    children: [],
-    properties,
-  };
+  const tscnNode: TscnNode = controlNode('V', 'VideoStreamPlayer', properties);
   return { ...emptySolveNode(), path: 'V', node: tscnNode };
 }
 

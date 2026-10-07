@@ -13,7 +13,7 @@ import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn, type SolveContext } from './solverRegistry';
 import { combinedMinimumSize, createSolveContext, solveControlTree } from './controlRectSolver';
 import { defineChannel } from './solveHandoff';
-import { solveNode } from './testing/solveNode';
+import { controlNode, solveNode } from './testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 
@@ -22,13 +22,7 @@ type Props = Record<string, unknown>;
 
 function node(path: string, type: string, properties: Props, children: SolveNode[] = []): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = {
-    rawProperties: {},
-    name,
-    type,
-    children: [],
-    properties: { name, ...properties },
-  };
+  const tscnNode: TscnNode = controlNode(name, type, { name, ...properties });
   return { ...solveNode(), path, node: tscnNode, children };
 }
 

@@ -8,7 +8,7 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { graphElementLayout, graphElementMinimumSize } from './nativeSolver';
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
@@ -19,13 +19,7 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'Control',
-      children: [],
-      properties: { name, ...props } as ControlProperties,
-    },
+    node: controlNode(name, 'Control', { name, ...props }),
   };
 }
 
@@ -45,13 +39,7 @@ describe('graphElementMinimumSize', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: {
-        name: 'G',
-        type: 'GraphElement',
-        children: [],
-        properties: {} as ControlProperties,
-        rawProperties: {},
-      },
+      node: controlNode('G', 'GraphElement'),
       children: [a, b],
     };
     expect(graphElementMinimumSize(n, ctx())).toEqual({ x: 40, y: 30 });
@@ -61,13 +49,7 @@ describe('graphElementMinimumSize', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: {
-        name: 'G',
-        type: 'GraphElement',
-        children: [],
-        properties: {} as ControlProperties,
-        rawProperties: {},
-      },
+      node: controlNode('G', 'GraphElement'),
     };
     expect(graphElementMinimumSize(n, ctx())).toEqual({ x: 0, y: 0 });
   });
@@ -77,13 +59,7 @@ describe('graphElementMinimumSize', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: {
-        name: 'G',
-        type: 'GraphElement',
-        children: [],
-        properties: {} as ControlProperties,
-        rawProperties: {},
-      },
+      node: controlNode('G', 'GraphElement'),
       children: [hiddenChild],
     };
     expect(graphElementMinimumSize(n, ctx())).toEqual({ x: 100, y: 5 });
@@ -98,13 +74,7 @@ describe('graphElementLayout', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: {
-        name: 'G',
-        type: 'GraphElement',
-        children: [],
-        properties: {} as ControlProperties,
-        rawProperties: {},
-      },
+      node: controlNode('G', 'GraphElement'),
       children: [a],
     };
     const rects = asMap(graphElementLayout(n, [{ node: a, minSize: { x: 10, y: 10 } }], contentRect, ctx()));
@@ -118,13 +88,7 @@ describe('graphElementLayout', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: {
-        name: 'G',
-        type: 'GraphElement',
-        children: [],
-        properties: {} as ControlProperties,
-        rawProperties: {},
-      },
+      node: controlNode('G', 'GraphElement'),
       children: [hiddenChild],
     };
     const rects = asMap(
@@ -143,13 +107,7 @@ describe('graphElementLayout', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: {
-        name: 'G',
-        type: 'GraphElement',
-        children: [],
-        properties: {} as ControlProperties,
-        rawProperties: {},
-      },
+      node: controlNode('G', 'GraphElement'),
       children: [a],
     };
     const rects = asMap(graphElementLayout(n, [{ node: a, minSize: { x: 10, y: 10 } }], contentRect, ctx()));
@@ -165,13 +123,7 @@ describe('graphElementLayout under RTL', () => {
     const n = {
       ...solveNode(),
       path: 'G',
-      node: {
-        name: 'G',
-        type: 'GraphElement',
-        children: [],
-        properties: {} as ControlProperties,
-        rawProperties: {},
-      },
+      node: controlNode('G', 'GraphElement'),
       children: [child],
       rtl: true,
     };

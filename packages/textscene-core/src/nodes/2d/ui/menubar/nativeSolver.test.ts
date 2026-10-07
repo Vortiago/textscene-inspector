@@ -17,7 +17,7 @@ import {
   menuBarTitleShapes,
   type MenuBarTitle,
 } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const MARGIN = 8; // content_margin 4, both sides.
 const FONT_HEIGHT = 23;
@@ -76,7 +76,7 @@ describe('menuBarMinimumSize', () => {
   });
 
   it('ignores a non-PopupMenu child entirely', () => {
-    const stray: TscnNode = { rawProperties: {}, name: 'X', type: 'Label', children: [], properties: {} };
+    const stray: TscnNode = controlNode('X', 'Label');
     expect(minSize(node([stray]), ctx())).toEqual({ x: 0, y: 0 });
   });
 

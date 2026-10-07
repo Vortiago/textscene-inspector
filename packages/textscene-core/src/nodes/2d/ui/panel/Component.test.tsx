@@ -17,7 +17,7 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import type { ControlProperties } from '../control/types';
 import { Panel } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -49,13 +49,7 @@ function solveNode(
   properties: Partial<ControlProperties> = {},
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
-  const node: TscnNode = {
-    rawProperties: {},
-    name: 'MyPanel',
-    type: 'Panel',
-    children: [],
-    properties: { name: 'MyPanel', ...properties } as ControlProperties,
-  };
+  const node: TscnNode = controlNode('MyPanel', 'Panel', { name: 'MyPanel', ...properties });
   return { ...emptySolveNode(), path: 'MyPanel', node, styleBoxes };
 }
 

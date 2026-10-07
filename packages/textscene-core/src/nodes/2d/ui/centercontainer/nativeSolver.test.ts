@@ -12,7 +12,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { centerContainerMinimumSize, centerContainerLayout } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /** The `rects` half of `centerContainerLayout`'s `ContainerLayoutResult`. */
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
@@ -23,13 +23,7 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'Control',
-      children: [],
-      properties: { name, ...props } as ControlProperties,
-    },
+    node: controlNode(name, 'Control', { name, ...props }),
   };
 }
 
@@ -41,13 +35,7 @@ function container(
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'CenterContainer',
-      children: [],
-      properties: { name, ...props } as CenterContainerProperties,
-    },
+    node: controlNode(name, 'CenterContainer', { name, ...props }),
     children,
   };
 }

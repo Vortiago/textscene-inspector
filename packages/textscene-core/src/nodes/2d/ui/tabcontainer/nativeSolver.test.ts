@@ -3,7 +3,7 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { TAB_ALIGNMENT_CENTER, TAB_ALIGNMENT_LEFT, TAB_ALIGNMENT_RIGHT } from '../tabbar/nativeSolver';
 import type { ControlProperties } from '../control/types';
 import type { TabContainerProperties } from './types';
@@ -36,13 +36,7 @@ function page(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'Control',
-      children: [],
-      properties: { name, ...props } as ControlProperties,
-    },
+    node: controlNode(name, 'Control', { name, ...props }),
   };
 }
 
@@ -61,13 +55,7 @@ function tabContainer(
     ...solveNode(),
     ...(styleBoxes ? { styleBoxes } : {}),
     path: name,
-    node: {
-      rawProperties: {},
-      name,
-      type: 'TabContainer',
-      children: [],
-      properties: { name, ...props } as TabContainerProperties,
-    },
+    node: controlNode(name, 'TabContainer', { name, ...props }),
     children,
   };
 }
@@ -478,13 +466,7 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
     return {
       ...solveNode(),
       path: 'Tabs',
-      node: {
-        rawProperties: {},
-        name: 'Tabs',
-        type: 'TabContainer',
-        children: [],
-        properties: { name: 'Tabs', ...props } as TabContainerProperties,
-      },
+      node: controlNode('Tabs', 'TabContainer', { name: 'Tabs', ...props }),
       projectTheme,
     };
   }
