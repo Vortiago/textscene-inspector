@@ -52,9 +52,6 @@ export type MaterialTables = Pick<MaterialResource, 'internalResources' | 'exter
 
 const NO_TABLES: MaterialTables = { internalResources: [], externalResources: [] };
 
-/** Literal-only, so its key is constant and the placeholder never remounts. */
-const MISSING_TEXTURE_MATERIAL = materialProgramInputs({ props: { color: 'magenta' } });
-
 /**
  * Resolve every texture slot of one StandardMaterial3D, from gated references through
  * loads, precedence and binding to the eight three maps. Each reference resolves in
@@ -337,16 +334,14 @@ export function SurfaceMaterialSlot({ source, attach, triplanarMesh }: SurfaceMa
   const material = readyMaterial(useMaterial(source));
   const scalars = useMaterialScalars(material);
   const { maps, firstMissingPath, viewportCyclic } = useMaterialTextures(scalars, material, triplanarMesh);
-  if (firstMissingPath !== null || viewportCyclic) {
-    return (
-      <meshStandardMaterial
-        key={MISSING_TEXTURE_MATERIAL.key}
-        attach={attach}
-        {...MISSING_TEXTURE_MATERIAL.props}
-      />
-    );
-  }
+  if (firstMissingPath !== null || viewportCyclic) return <MissingTextureMaterial attach={attach} />;
   return <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />;
+}
+
+/** The magenta placeholder for a surface whose texture never draws. */
+function MissingTextureMaterial({ attach }: { attach: string | undefined }) {
+  const placeholder = materialProgramInputs({ props: { attach, color: 'magenta' } });
+  return <meshStandardMaterial key={placeholder.key} {...placeholder.props} />;
 }
 
 /** The decoded scalars of `material`, or null for Godot's default surface. */
