@@ -13,7 +13,7 @@ import { resourceSliceRegistry } from './sliceRegistration';
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/resources
 const barrelPath = resolve(here, 'sliceRegistrations.ts');
 
-const REGISTER_RE = /\bregister(ResourceSlice|ShapeSlice|MeshSlice)\s*\(/;
+const REGISTER_RE = /\bregister(ResourceSlice|GenericResourceSlice)\s*\(/;
 
 function findRegisteringIndexes(dir: string): string[] {
   const out: string[] = [];
@@ -73,13 +73,9 @@ describe('resource-slice claim coverage', () => {
   });
 
   it('every registration has a slice folder, its kind-required entry points, and a registration test', () => {
-    // A slice registered through a family helper (the shapes, the primitive
-    // meshes) keeps its claims table in the helper's co-located test, one table
-    // over the family. The helper's test is the registration test.
-    const FAMILY_TESTS: Record<string, string> = {
-      registerShapeSlice: join(here, 'shapes/shapes.test.ts'),
-      registerMeshSlice: join(here, 'meshes/registerMeshSlice.test.ts'),
-    };
+    // A slice registered through `registerGenericResourceSlice` (the shapes, the
+    // primitive meshes) keeps its claims in its family's test, one table over the
+    // family: `shapes/shapes.test.ts`, `meshes/meshes.test.ts`.
     const failures: string[] = [];
     for (const reg of all) {
       const dir = dirByBasename.get(reg.slice);
@@ -97,9 +93,9 @@ describe('resource-slice claim coverage', () => {
         failures.push(`${reg.slice}: foreign-format slice with a decode.ts (the hollow-file smell)`);
       }
       const indexSource = readFileSync(join(dir, 'index.ts'), 'utf8');
-      const family = Object.entries(FAMILY_TESTS).find(([helper]) => indexSource.includes(helper));
-      const hasTest = family
-        ? existsSync(family[1])
+      const familyDir = dirname(dir);
+      const hasTest = indexSource.includes('registerGenericResourceSlice')
+        ? existsSync(join(familyDir, `${familyDir.split('/').pop()}.test.ts`))
         : existsSync(join(dir, 'registration.test.ts')) || existsSync(join(dir, 'index.test.ts'));
       if (!hasTest) failures.push(`${reg.slice}: no registration.test.ts / index.test.ts`);
     }

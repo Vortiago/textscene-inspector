@@ -67,6 +67,15 @@ export function registerResourceSlice(registration: ResourceSliceRegistration): 
   all.push(registration);
 }
 
+/**
+ * Claims a family slice (the shapes, the primitive meshes) served as plain data by
+ * the generic `resource` bus slot. No `extensions`: every Godot-text slice shares
+ * `.tres`, and a duplicate extension claim throws, so these route by `type=` name.
+ */
+export function registerGenericResourceSlice(slice: string, typeNames: readonly string[]): void {
+  registerResourceSlice({ slice, kind: 'godot-text', typeNames, busType: 'resource' });
+}
+
 export const resourceSliceRegistry = {
   byTypeName: (typeName: string): ResourceSliceRegistration | null => byTypeName.get(typeName) ?? null,
   byExtension: (extension: string): ResourceSliceRegistration | null => byExtension.get(extension) ?? null,

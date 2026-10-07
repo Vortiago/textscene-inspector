@@ -1,8 +1,8 @@
 /** PlaneMesh resource slice: claims the type name, re-exports its decode. */
 
-import { registerMeshSlice } from '../registerMeshSlice.js';
+import { registerGenericResourceSlice } from '../../sliceRegistration.js';
 
-registerMeshSlice('planemesh', ['PlaneMesh']);
+registerGenericResourceSlice('planemesh', ['PlaneMesh']);
 
 export { decodePlaneMesh } from './decode.js';
 export type { PlaneMeshProperties } from './types.js';

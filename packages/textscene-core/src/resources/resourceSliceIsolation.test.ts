@@ -12,7 +12,7 @@ import { bareSpecifiers, tsxFiles, walkImportClosure } from '@textscene/dev-kit'
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/resources
 const srcRoot = resolve(here, '..');
 
-const REGISTER_RE = /\bregister(ResourceSlice|ShapeSlice|MeshSlice)\s*\(/;
+const REGISTER_RE = /\bregister(ResourceSlice|GenericResourceSlice)\s*\(/;
 
 function findRegisteringIndexes(dir: string): string[] {
   const out: string[] = [];

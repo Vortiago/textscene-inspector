@@ -88,7 +88,7 @@ switch.
   `uv.ts`, `render.ts`, `stencil.ts`), written with the `v` combinators and the `material.cpp`
   line cited beside each bound. Scalars get hint-tier warnings, not only the `_enabled` booleans.
 - **Mesh primitive**: a slice under `resources/meshes/<type>/` with `decode.ts`, `build.ts` and an
-  `index.ts` calling `registerMeshSlice`, imported from `resources/sliceRegistrations.ts`. Add a
+  `index.ts` calling `registerGenericResourceSlice`, imported from `resources/sliceRegistrations.ts`. Add a
   `BUILDERS` entry in `nodes/3d/meshinstance3d/primitiveMeshGeometry.ts`, so MeshInstance3D and
   CSGMesh3D share one construction. QuadMesh builds through PlaneMesh's geometry.
 - **Resource type**: `resources/<category>/<type>/` with `index.ts` (`registerResourceSlice`:
