@@ -1,12 +1,16 @@
 /**
- * The 2D canvas: polygons and lines, y-sorting, the PointLight2D surface with
- * its cull masks and occluder shadows, CPUParticles2D, 2D navigation and
- * parallax.
+ * The 2D canvas: polygons and lines, a Bone2D rig, y-sorting, the PointLight2D
+ * surface with its cull masks and occluder shadows, CPUParticles2D, 2D
+ * navigation and parallax.
  */
 
 export const CANVAS_2D_SCENES = [
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', mode: '2d' },
   { name: 'line-2d', file: 'unit-line2d.tscn', mode: '2d' },
+  // Two chained Bone2Ds, each turned and moved, with a bar under each. Godot
+  // probes: (387,210) orange, mid upper arm, and (473,340) blue, mid forearm.
+  // A bone drawn as an untransformed group stacks both bars at the skeleton.
+  { name: 'bone2d-rig', file: 'unit-bone2d-rig.tscn', mode: '2d' },
   // A y-sorted node's own body, between the two children it merges into the
   // same sort. Godot probes: (200,330) yellow, the bar over the red block, and
   // (700,330) blue, the blue block over the bar. Without the body the first is

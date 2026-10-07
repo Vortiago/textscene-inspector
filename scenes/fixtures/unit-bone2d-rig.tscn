@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+; One variable: the composed Bone2D transform. A Skeleton2D holds two chained bones, each turned
+; and moved, with a bar under each. Godot draws a bone's children at the bone's own transform
+; composed with its parents' (canvas_item.cpp:184). No other golden puts drawn items under a
+; Bone2D, so a bone drawn as an untransformed group shows only here.
+
+[node name="Root" type="Node2D"]
+
+[node name="Skeleton" type="Skeleton2D" parent="."]
+position = Vector2(300, 160)
+
+[node name="UpperArm" type="Bone2D" parent="Skeleton"]
+rotation = 0.523599
+rest = Transform2D(0.866025, 0.5, -0.5, 0.866025, 0, 0)
+
+[node name="UpperArmBar" type="Polygon2D" parent="Skeleton/UpperArm"]
+color = Color(0.95, 0.55, 0.15, 1)
+polygon = PackedVector2Array(0, -12, 200, -12, 200, 12, 0, 12)
+
+[node name="Forearm" type="Bone2D" parent="Skeleton/UpperArm"]
+position = Vector2(200, 0)
+rotation = 1.047198
+rest = Transform2D(0.5, 0.866025, -0.866025, 0.5, 200, 0)
+
+[node name="ForearmBar" type="Polygon2D" parent="Skeleton/UpperArm/Forearm"]
+color = Color(0.2, 0.6, 0.95, 1)
+polygon = PackedVector2Array(0, -12, 160, -12, 160, 12, 0, 12)
