@@ -150,7 +150,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
     return (
       <MeshShell {...shellProps}>
-        <ArrayMeshSurfaces mesh={arrayMeshResult.value} overrides={meshOverrides} />
+        <ArrayMeshSurfaces mesh={withFileMaterials(arrayMeshResult.value)} overrides={meshOverrides} />
       </MeshShell>
     );
   }
@@ -161,11 +161,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     return (
       <MeshShell {...shellProps}>
         {sceneArrayMesh ? (
-          <ArrayMeshSurfaces
-            mesh={sceneArrayMesh.resource}
-            sceneMaterials={sceneArrayMesh.sceneMaterials}
-            overrides={meshOverrides}
-          />
+          <ArrayMeshSurfaces mesh={sceneArrayMesh} overrides={meshOverrides} />
         ) : (
           UNRESOLVED_MESH
         )}
@@ -339,31 +335,37 @@ const UNRESOLVED_MESH = (
  * array to the surface count (`scene/3d/mesh_instance_3d.cpp:68,407`), so the draw
  * groups set the slot count and an extra override is dropped.
  */
-function ArrayMeshSurfaces({
-  mesh,
-  sceneMaterials,
-  overrides,
-}: {
-  mesh: ArrayMeshResource;
-  /** A scene mesh's own `[sub_resource]` materials, already resolved: no path names them. */
-  sceneMaterials?: readonly (MaterialSource | undefined)[];
-  overrides: MeshOverrides;
-}) {
-  const groupCount = Math.max(mesh.materialPaths.length, 1);
+function ArrayMeshSurfaces({ mesh, overrides }: { mesh: SurfacedMesh; overrides: MeshOverrides }) {
+  const groupCount = Math.max(mesh.surfaceIndices.length, 1);
   const multiSurface = groupCount > 1;
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
       {Array.from({ length: groupCount }, (_unused, i) => {
         const attach = multiSurface ? `material-${i}` : 'material';
-        const materialPath = mesh.materialPaths[i];
-        const own: MaterialSource | undefined =
-          sceneMaterials?.[i] ?? (materialPath ? { kind: 'file', path: materialPath } : undefined);
-        const source = effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, own);
+        const source = effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, mesh.materials[i]);
         return <SurfaceMaterialSlot key={i} source={source} attach={attach} />;
       })}
     </>
   );
+}
+
+/** An ArrayMesh's draw groups and each one's own material, whichever file holds it. */
+interface SurfacedMesh {
+  geometry: THREE.BufferGeometry;
+  /** Per draw group, Godot's surface index, which `surface_material_override/N` names. */
+  surfaceIndices: readonly number[];
+  /** Per draw group, the material the surface names, when it names one. */
+  materials: readonly (MaterialSource | undefined)[];
+}
+
+/** An external ArrayMesh's surfaces, each material a file the loader fetches. */
+function withFileMaterials(mesh: ArrayMeshResource): SurfacedMesh {
+  return {
+    geometry: mesh.geometry,
+    surfaceIndices: mesh.surfaceIndices,
+    materials: mesh.materialPaths.map((path) => (path ? { kind: 'file', path } : undefined)),
+  };
 }
 
 /** A MeshInstance3D's two material-override properties, already resolved. */
@@ -413,26 +415,21 @@ function useSceneArrayMesh(
   resource: TscnInternalResource | undefined,
   internalResources: readonly TscnInternalResource[],
   externalResources: readonly TscnExternalResource[]
-): SceneArrayMesh | null {
+): SurfacedMesh | null {
   const decoded = useSceneArrayMeshGeometry(resource);
   // Apart from the decode: an edit to a material's body or to an `ext_resource`
   // path changes the resources and leaves the surface bytes alone.
   return useMemo(
     () =>
       decoded && {
-        resource: decoded.resource,
-        sceneMaterials: decoded.materialRefs.map((ref) =>
+        geometry: decoded.geometry,
+        surfaceIndices: decoded.surfaceIndices,
+        materials: decoded.materialRefs.map((ref) =>
           resolveMaterialSource(ref, internalResources, externalResources)
         ),
       },
     [decoded, internalResources, externalResources]
   );
-}
-
-interface SceneArrayMesh {
-  resource: ArrayMeshResource;
-  /** Per surface, the material its own reference names, when it names one. */
-  sceneMaterials: readonly (MaterialSource | undefined)[];
 }
 
 /**
@@ -453,12 +450,8 @@ function useSceneArrayMeshGeometry(resource: TscnInternalResource | undefined): 
       const mesh = decodeSceneArrayMesh(resource);
       if (mesh.surfaces.length === 0) return null;
       return {
-        resource: {
-          geometry: buildArrayMeshGeometry(mesh),
-          // No path addresses a scene's materials: `materialRefs` carries them.
-          materialPaths: mesh.surfaces.map(() => null),
-          surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
-        },
+        geometry: buildArrayMeshGeometry(mesh),
+        surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
         materialRefs: mesh.surfaces.map((s) => s.materialRef),
       };
     } catch (error) {
@@ -471,12 +464,13 @@ function useSceneArrayMeshGeometry(resource: TscnInternalResource | undefined): 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` IS the content of `resource`.
   }, [key]);
 
-  useEffect(() => () => decoded?.resource.geometry.dispose(), [decoded]);
+  useEffect(() => () => decoded?.geometry.dispose(), [decoded]);
   return decoded;
 }
 
 interface DecodedSceneArrayMesh {
-  resource: ArrayMeshResource;
+  geometry: THREE.BufferGeometry;
+  surfaceIndices: readonly number[];
   /** Per surface, its raw `"material"` reference, when it has one. */
   materialRefs: readonly (string | undefined)[];
 }
