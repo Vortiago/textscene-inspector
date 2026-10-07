@@ -12,6 +12,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { drawsColour } from '../../../r3f/testing/threePasses';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const BOX: TscnInternalResource = {
   id: 'Box_1',
@@ -21,6 +22,7 @@ const BOX: TscnInternalResource = {
 
 function node(overrides: Partial<MeshInstance3DProperties> = {}): TscnNode {
   const properties: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'Caster',
     mesh: 'SubResource("Box_1")',
     surfaceMaterialOverrides: new Map(),

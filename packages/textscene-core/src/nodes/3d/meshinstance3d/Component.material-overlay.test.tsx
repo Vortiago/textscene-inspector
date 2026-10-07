@@ -13,6 +13,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { drawColourGroup, expectSameRotation, TEST_CAMERA } from '../../../r3f/testing/threePasses';
 import { YAWED } from './testing/yawedTransform';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const INTERNALS: TscnInternalResource[] = [
   {
@@ -31,6 +32,7 @@ const INTERNALS: TscnInternalResource[] = [
 
 function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
   const full: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'M',
     mesh: 'SubResource("Box_1")',
     surfaceMaterialOverrides: new Map(),

@@ -19,6 +19,7 @@ import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import { surfaceMaterials } from './testing/renderMeshInstance';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { castsFrom, depthSideOf } from '../../../r3f/testing/threePasses';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const EXTERNAL_PATH = 'res://dielectric.tres';
 const SECOND_EXTERNAL_PATH = 'res://second.tres';
@@ -39,6 +40,7 @@ const INTERNALS: readonly TscnInternalResource[] = [
 
 function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
   const full: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'M',
     mesh: 'SubResource("Box_1")',
     surfaceMaterialOverrides: new Map(),

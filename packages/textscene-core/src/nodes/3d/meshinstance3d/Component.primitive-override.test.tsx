@@ -13,6 +13,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { surfaceMaterials } from './testing/renderMeshInstance';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const INTERNALS: TscnInternalResource[] = [
   { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)', material: 'SubResource("Mat_mesh")' } },
@@ -23,6 +24,7 @@ const INTERNALS: TscnInternalResource[] = [
 
 function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
   const full: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'M',
     mesh: 'SubResource("Box_1")',
     surfaceMaterialOverrides: new Map(),

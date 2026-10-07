@@ -34,9 +34,11 @@ import {
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 function meshNode(): TscnNode {
   const props: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'Mesh1',
     mesh: 'SubResource("box")',
     materialOverride: 'SubResource("mat")',

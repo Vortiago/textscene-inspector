@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseMeshInstance3D } from './parser';
 import { heading } from '../../../parser/testing/parserKit';
+import { ShadowCastingSetting } from '../../../godot/rendering';
 
 describe('MeshInstance3D Parser', () => {
   describe('parseMeshInstance3D', () => {
@@ -252,15 +253,15 @@ describe('MeshInstance3D Parser', () => {
       expect(parseMeshInstance3D(h, { transparency: '0.4' }).transparency).toBe(0.4);
     });
 
-    it('should be undefined for invalid transparency', () => {
+    it('should keep the default for invalid transparency', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
-      expect(parseMeshInstance3D(h, { transparency: 'invalid' }).transparency).toBeUndefined();
+      expect(parseMeshInstance3D(h, { transparency: 'invalid' }).transparency).toBe(0);
     });
 
-    it('should be undefined for invalid cast_shadow', () => {
+    it('should keep the default for invalid cast_shadow', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
       const result = parseMeshInstance3D(h, { cast_shadow: 'invalid' });
-      expect(result.castShadow).toBeUndefined();
+      expect(result.castShadow).toBe(ShadowCastingSetting.ON);
     });
 
     it('should be undefined for invalid gi_mode', () => {

@@ -17,13 +17,15 @@ describe('parseGeometryInstance3D', () => {
     expect(parseGeometryInstance3D(HEADING, { cast_shadow: '0' }).castShadow).toBe(0);
   });
 
-  it('leaves out an absent value, so a reader takes the Godot default', () => {
-    const result = parseGeometryInstance3D(HEADING, {});
-    expect(result).not.toHaveProperty('transparency');
-    expect(result).not.toHaveProperty('castShadow');
+  it('defaults transparency to opaque', () => {
+    expect(parseGeometryInstance3D(HEADING, {}).transparency).toBe(0);
   });
 
-  it('drops an unreadable value', () => {
-    expect(parseGeometryInstance3D(HEADING, { transparency: 'abc' })).not.toHaveProperty('transparency');
+  it('defaults cast_shadow to ON', () => {
+    expect(parseGeometryInstance3D(HEADING, {}).castShadow).toBe(1);
+  });
+
+  it('takes the default for an unreadable value', () => {
+    expect(parseGeometryInstance3D(HEADING, { transparency: 'abc' }).transparency).toBe(0);
   });
 });

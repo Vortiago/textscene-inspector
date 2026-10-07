@@ -8,9 +8,11 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CSGSphere3DProperties } from './types';
 import { findMesh } from '../../testing/reactThreeTestInstance';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
 
 function makeNode(props: Partial<CSGSphere3DProperties>, children: TscnNode[] = []): TscnNode {
   const properties: CSGSphere3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'Sphere',
     radius: 1.25,
     radialSegments: 48,

@@ -12,6 +12,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import { ALBEDO_ALPHA_UNREAD } from '../../../r3f/materials/surfaceAlphaPatch';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 /** `instanceAlpha(0.5)`: 0.5 × 255 truncated to 127. */
 const HALF_TRANSPARENT_ALPHA = 127 / 255;
@@ -25,6 +26,7 @@ const INTERNALS: TscnInternalResource[] = [
 
 function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
   const full: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'M',
     mesh: 'SubResource("Box_1")',
     surfaceMaterialOverrides: new Map(),

@@ -206,7 +206,7 @@ function MaterialOverlayMesh({
    * mounts: its own material decides its billboard, and SHADOWS_ONLY skips its draw too.
    */
   shadow: ShadowCastingEffects;
-  instanceTransparency: number | undefined;
+  instanceTransparency: number;
 }) {
   // Read back off the base mesh rather than built again, so all four geometry branches
   // share one component and the two meshes share one geometry.
@@ -331,7 +331,7 @@ function ArrayMeshSurfaces({
 }: {
   mesh: SurfacedMesh;
   overrides: MeshOverrides;
-  instanceTransparency: number | undefined;
+  instanceTransparency: number;
 }) {
   const groupCount = Math.max(mesh.surfaceIndices.length, 1);
   const sources = Array.from({ length: groupCount }, (_unused, i) =>

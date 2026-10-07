@@ -15,6 +15,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import type { TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 describe('material misc scalar parity', () => {
   it('vertex_color_use_as_albedo → useVertexColors (default false)', () => {
@@ -106,6 +107,7 @@ async function renderAo(matData: Record<string, string>): Promise<THREE.MeshStan
   const fake = createFakeResourceLoader();
   fake.textures.seed(AO_TEX, new THREE.Texture());
   const props: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'M',
     surfaceMaterialOverrides: new Map(),
     mesh: 'SubResource("Box")',

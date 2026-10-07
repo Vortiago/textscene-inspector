@@ -63,7 +63,7 @@ async function subtractionMaterial(rootProperties: string, holeProperties = ''):
 describe('CSG transparency', () => {
   it('parses transparency off every CSG shape', () => {
     expect(parseBox({ transparency: '0.5' }).transparency).toBe(0.5);
-    expect(parseBox({}).transparency).toBeUndefined();
+    expect(parseBox({}).transparency).toBe(0);
   });
 
   it('blends a lone root at the instance alpha', async () => {

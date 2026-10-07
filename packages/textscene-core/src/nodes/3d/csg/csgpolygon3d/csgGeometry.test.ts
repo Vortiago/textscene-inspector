@@ -12,6 +12,7 @@ import type { Transform3D } from '../../../base/node3d/types';
 import { csgPolygon3DGeometry, csgPolygon3DGeometryKey } from './csgGeometry';
 import { PathIntervalType, PathRotation, PolygonMode } from './polygonGeometry';
 import type { CSGPolygon3DProperties } from './types';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
 
 const EMPTY_CTX = { internalResources: [], externalResources: [] };
 
@@ -32,6 +33,7 @@ const translation = (x: number): Transform3D => ({
 
 function pathProperties(overrides: Partial<CSGPolygon3DProperties> = {}): CSGPolygon3DProperties {
   return {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'Poly',
     polygon: new Float32Array([0, 0, 0, 1, 1, 1, 1, 0]),
     mode: PolygonMode.PATH,

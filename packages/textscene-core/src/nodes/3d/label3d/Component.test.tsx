@@ -11,9 +11,11 @@ import type { TscnNode } from '../../../parser/types';
 import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
   const properties: Label3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'Label',
     text: 'Hello',
     pixel_size: 0.01,

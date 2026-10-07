@@ -11,6 +11,7 @@ import type { ResourceLoader } from '../../../../resources/ResourceLoader';
 import { findMesh } from '../../testing/reactThreeTestInstance';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { MeshInstance3DProperties } from '../types';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
 
 type TestRenderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -30,6 +31,7 @@ interface MeshInstanceSpec {
 
 export function meshInstanceNode({ mesh, materialOverride, surfaceOverrides }: MeshInstanceSpec): TscnNode {
   const properties: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'Mesh',
     mesh,
     surfaceMaterialOverrides: new Map(surfaceOverrides),

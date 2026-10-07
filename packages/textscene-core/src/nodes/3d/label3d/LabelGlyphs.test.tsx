@@ -15,6 +15,7 @@ import {
 import LabelGlyphs from './LabelGlyphs';
 import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 // happy-dom has neither `FontFace` nor `document.fonts`, so the real bundled
 // registration can only ever answer `undefined` here (`sceneFontLoader.ts`'s
@@ -32,6 +33,7 @@ beforeEach(() => {
 
 function props(overrides: Partial<Label3DProperties> = {}): Label3DProperties {
   return {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'L',
     text: 'Hi',
     pixel_size: 0.01,

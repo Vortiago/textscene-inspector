@@ -12,13 +12,11 @@ export function formatMeshInstance3DProperties(properties: MeshInstance3DPropert
     meshItems.push({ label: 'Mesh', value: properties.mesh });
   }
 
-  if (properties.castShadow !== undefined) {
-    const shadowLabels = ['OFF', 'ON', 'DOUBLE_SIDED', 'SHADOWS_ONLY'];
-    meshItems.push({
-      label: 'Cast Shadow',
-      value: shadowLabels[properties.castShadow] || `Unknown (${properties.castShadow})`,
-    });
-  }
+  const shadowLabels = ['OFF', 'ON', 'DOUBLE_SIDED', 'SHADOWS_ONLY'];
+  meshItems.push({
+    label: 'Cast Shadow',
+    value: shadowLabels[properties.castShadow] || `Unknown (${properties.castShadow})`,
+  });
 
   if (properties.skeleton) {
     meshItems.push({ label: 'Skeleton', value: properties.skeleton });

@@ -13,10 +13,12 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 /** Surface 1 of a two-surface mesh, the only slot this suite overrides. */
 function makeNode(): TscnNode {
   const props: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'Panel',
     mesh: 'SubResource("Mesh_1")',
     surfaceMaterialOverrides: new Map([[1, 'SubResource("Mat_1")']]),

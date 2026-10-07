@@ -13,9 +13,11 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 function makeNode(): TscnNode {
   const props: MeshInstance3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'M',
     surfaceMaterialOverrides: new Map(),
     mesh: 'SubResource("Box_1")',

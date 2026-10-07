@@ -16,6 +16,7 @@ import type { Sprite3DProperties } from './types';
 import { AlphaCutMode, AxisMode, BillboardMode, AlphaAntiAliasing, TextureFilterMode } from './types';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 import { ALBEDO_ALPHA_UNREAD } from '../../../r3f/materials/surfaceAlphaPatch';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const TEXTURE_PATH = 'res://textures/sprite.png';
 
@@ -33,6 +34,7 @@ function makeTexture(imageWidth = 256, imageHeight = 256): THREE.Texture {
 
 function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
   const props: Sprite3DProperties = {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: overrides.name ?? 'Sprite',
     billboard: BillboardMode.BILLBOARD_DISABLED,
     shaded: false,
@@ -46,7 +48,6 @@ function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
     alpha_cut: AlphaCutMode.ALPHA_CUT_DISABLED,
     axis: AxisMode.AXIS_Y,
     pixel_size: 0.01,
-    transparency: 0,
     hframes: 1,
     vframes: 1,
     frame: 0,
