@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findRegisteringIndexes } from './testing/sliceIndexes';
+import { findRegisteringIndexes } from './testing/sourceTree';
 import './sliceRegistrations.js';
 import { resourceSliceRegistry } from './sliceRegistration';
 

@@ -4,23 +4,18 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findRegisteringIndexes } from './testing/sliceIndexes';
+import { filesUnder, findRegisteringIndexes } from './testing/sourceTree';
 import { bareSpecifiers, tsxFiles, walkImportClosure } from '@textscene/dev-kit';
 
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/resources
 const srcRoot = resolve(here, '..');
 
+/** Every non-test `.ts` and `.tsx` file under `dir`. */
 function allSourceFiles(dir: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...allSourceFiles(full));
-    else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) out.push(full);
-  }
-  return out;
+  return filesUnder(dir).filter((file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file));
 }
 
 // Every slice `index.ts` is a THREE-free, React-free closure: a claim table a
