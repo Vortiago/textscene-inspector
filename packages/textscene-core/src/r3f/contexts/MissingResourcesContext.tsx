@@ -1,8 +1,9 @@
 /**
  * The missing and uploaded paths of a whole preview shell, for one panel. A
- * context, not an event subscription: each `useResource` knows its path is
- * needed and reports it. With no provider the actions do nothing and the sets
- * are empty, so a hook calls `report` without a null check.
+ * context, not an event subscription: each consumer knows its address is
+ * needed and reports it through `useMissingReport`. With no provider the
+ * actions do nothing and the sets are empty, so a hook calls `report` without
+ * a null check.
  */
 import {
   createContext,
@@ -15,13 +16,14 @@ import {
   type ReactNode,
 } from 'react';
 import { resourceFilePath } from '../../resources/subResourcePath.js';
+import type { ResourceStatus } from '../../resources/useResource.js';
 
 export interface MissingResourcesContextValue {
   /** Paths the dispatcher's resource hooks currently report as missing. */
   missingPaths: ReadonlySet<string>;
   /** Paths the user uploaded a file for through `addUploadedFile`. */
   uploadedPaths: ReadonlySet<string>;
-  /** `useResource` calls it when the status becomes `'missing'`. Each call needs its own `clear`. */
+  /** `useMissingReport` calls it when the status becomes `'unavailable'`. Each call needs its own `clear`. */
   report: (path: string) => void;
   /** Withdraws one `report`. The path leaves `missingPaths` when its last report is withdrawn. */
   clear: (path: string) => void;
@@ -145,4 +147,28 @@ function withoutPath(paths: ReadonlySet<string>, path: string): ReadonlySet<stri
 
 export function useMissingResources(): MissingResourcesContextValue {
   return useContext(MissingResourcesContext);
+}
+
+/**
+ * Keeps `address` in `missingPaths` while `status` is `unavailable`. An address that loads after
+ * this hook reported it was uploaded, so its row stays, marked uploaded, and keeps its Remove
+ * control. An address that loads on first request never shows a row.
+ */
+export function useMissingReport(address: string, status: ResourceStatus): void {
+  const { report, clear, markUploaded } = useMissingResources();
+  const reportedAddressRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (status === 'unavailable') {
+      report(address);
+      reportedAddressRef.current = address;
+      return () => clear(address);
+    }
+    // The cleanup above already withdrew this hook's report, so a load clears nothing here.
+    if (status === 'loaded' && reportedAddressRef.current === address) {
+      markUploaded(address);
+      reportedAddressRef.current = null;
+    }
+    return undefined;
+  }, [address, status, report, clear, markUploaded]);
 }

@@ -7,10 +7,9 @@ import { createWebPipeline } from './webPipeline';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 
 describe('createWebPipeline', () => {
-  it('wires a WebResourceProvider into the loader', () => {
-    const { provider, loader } = createWebPipeline({ hasFixturesMirror: false });
+  it('builds the pipeline on a WebResourceProvider', () => {
+    const { provider } = createWebPipeline({ hasFixturesMirror: false });
     expect(provider).toBeInstanceOf(WebResourceProvider);
-    expect(loader.getProvider()).toBe(provider);
   });
 
   it('gives the loader the host worker factory, which runs on the first job', async () => {

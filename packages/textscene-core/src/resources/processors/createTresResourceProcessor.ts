@@ -1,8 +1,8 @@
 /**
  * The generic `.tres` processor: a resource file's text through the FileEventBus
  * into a `ParsedResource` (header type, ext/sub resources, raw `[resource]` body)
- * on the 'resource' bus slot, for consumers such as the TileSet resolver. It shares
- * .tres paths with the material processor, since each handles only its own flights.
+ * on the 'resource' bus slot. It parses whole files only, so a consumer of a
+ * **Sub-resource path** loads the owning file and reads the sub-resource itself.
  */
 
 import type { FileEventBus } from '../FileEventBus';
