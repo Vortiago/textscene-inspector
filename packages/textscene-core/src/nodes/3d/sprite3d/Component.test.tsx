@@ -15,7 +15,7 @@ import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { Sprite3DProperties } from './types';
 import { AlphaCutMode, AxisMode, BillboardMode, AlphaAntiAliasing, TextureFilterMode } from './types';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
-import { ALBEDO_ALPHA_UNREAD } from '../../../r3f/materials/surfaceAlphaPatch';
+import { DROPS_ALBEDO_ALPHA, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const TEXTURE_PATH = 'res://textures/sprite.png';
@@ -179,12 +179,12 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
-    // The instance alpha is 1 - 0.5 in 8-bit steps: 127 / 255.
+    // The fade alpha is 1 - 0.5 in 8-bit steps: 127 / 255.
     expect(mat.opacity).toBe(0.8 * (127 / 255));
     expect(mat.transparent).toBe(true);
   });
 
-  it('blends an opaque sprite at the instance alpha alone when transparency is set', async () => {
+  it('blends an opaque sprite at the fade alpha alone when transparency is set', async () => {
     const tex = makeTexture(8, 8);
     const renderer = await render({
       node: makeNode({
@@ -210,7 +210,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
     // TRANSPARENCY_DISABLED writes no ALPHA, so the texture alpha never reaches the blend.
-    expect(mat.onBeforeCompile).toBe(ALBEDO_ALPHA_UNREAD.onBeforeCompile);
+    expect(patchedFragment(mat)).toContain(DROPS_ALBEDO_ALPHA);
   });
 
   it('writes a discard-cut sprite unblended when transparency is set', async () => {

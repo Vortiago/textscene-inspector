@@ -246,11 +246,6 @@ export function parseOptionalVector2i(value: string | undefined, context = 'valu
   return stored;
 }
 
-/** Assigns only a present value: the optional readers already drop an absent or unreadable one. */
-export function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {
-  if (value !== undefined) target[key] = value;
-}
-
 /**
  * `undefined` for an absent or unparseable int, with no warning, where "unset" means
  * something (Control layout props). `width` is as on {@link intOr}: read at int32, a

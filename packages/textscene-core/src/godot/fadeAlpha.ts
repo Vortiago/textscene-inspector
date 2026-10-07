@@ -8,25 +8,25 @@ import { clamp } from './math.js';
 import { unitByte } from './unitByte.js';
 
 /**
- * `FADE_ALPHA_PASS_THRESHOLD` (`render_forward_clustered.cpp:47`): an instance whose fade alpha
+ * `FADE_ALPHA_PASS_THRESHOLD` (`render_forward_clustered.cpp:47`): an instance whose `force_alpha`
  * is below it draws every surface in the alpha pass (`:1128`), never the opaque or depth pass.
  */
 const FADE_ALPHA_PASS_THRESHOLD = 0.999;
 
 /** `force_alpha = CLAMP(1.0 - p_transparency, 0, 1)` (`renderer_geometry_instance.cpp:110`), in float. */
-function fadeAlpha(transparency: number): number {
+function forceAlpha(transparency: number): number {
   return clamp(Math.fround(1 - Math.fround(transparency)), 0, 1);
 }
 
 /**
- * The alpha the scene shader starts from, before a material multiplies its own in
- * (`scene_forward_clustered.glsl:1251,1357`): the fade alpha as the 8-bit flags field holds it.
+ * The fade alpha the scene shader starts from, before a material multiplies its own in
+ * (`scene_forward_clustered.glsl:1251,1357`): `force_alpha` as the 8-bit flags field holds it.
  */
-export function instanceAlpha(transparency: number): number {
-  return unitByte(fadeAlpha(transparency));
+export function fadeAlpha(transparency: number): number {
+  return unitByte(forceAlpha(transparency));
 }
 
 /** Whether every surface of the instance draws in the alpha pass. */
 export function forcesAlphaPass(transparency: number): boolean {
-  return fadeAlpha(transparency) < FADE_ALPHA_PASS_THRESHOLD;
+  return forceAlpha(transparency) < FADE_ALPHA_PASS_THRESHOLD;
 }

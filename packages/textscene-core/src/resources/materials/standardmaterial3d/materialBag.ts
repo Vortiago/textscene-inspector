@@ -12,11 +12,10 @@ import {
   GODOT_DEFAULT_ROUGHNESS,
 } from '../../../r3f/materials/godotDefaultMaterial';
 import { BillboardMode } from '../../../godot/billboard';
-import {
-  surfaceAlphaProps,
-  type SurfaceAlphaProps,
-  type SurfaceAlphaSource,
-} from '../../../r3f/materials/surfaceAlphaPatch';
+import { fadeAlpha } from '../../../godot/fadeAlpha';
+import { surfaceAlphaProps } from '../../../r3f/materials/surfaceAlphaPatch';
+import { fadedSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
+import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { resolveEmission } from './emission';
 import type {
   MaterialBlendState,
@@ -40,13 +39,13 @@ export type StandardMaterialClass = 'basic' | 'standard' | 'physical';
  * The class and its props as one discriminated value, so an adapter cannot map a class
  * to parameters it did not derive. No `attach`, the reactive adapter's mount detail, and
  * no React `key`, which `materialProgramInputs` derives from the merged bag (ADR-0038).
- * `alphaSource` is where the Godot shader takes ALPHA from, absent on a surface with no material.
+ * `injection` is the fragment-alpha patch the surface needs, which each adapter installs.
  */
 export type StandardMaterialBag = (
   | { materialClass: 'basic'; props: THREE.MeshBasicMaterialParameters }
   | { materialClass: 'standard'; props: THREE.MeshStandardMaterialParameters }
   | { materialClass: 'physical'; props: THREE.MeshPhysicalMaterialParameters }
-) & { alphaSource?: SurfaceAlphaSource };
+) & { injection?: ProgramInjection };
 
 /**
  * Godot's default 3D material, which a surface with no material draws. A hardcoded
@@ -181,28 +180,48 @@ export function castsShadowOf(material: THREE.Material): boolean {
 }
 
 /**
- * Derive the material this decoded StandardMaterial3D describes.
+ * Derive the material this decoded StandardMaterial3D describes, drawn by a geometry instance.
  *
  * @param scalars - the decoded material, or null for a surface with none
  * @param textures - already-bound textures by Godot slot; an absent slot lands
  *   as `null`, never `undefined`, so a late arrival cannot be mistaken for
  *   "leave whatever the material has" by either adapter
+ * @param transparency - the drawing GeometryInstance3D's `transparency`; 0 for any other drawer
  */
 export function standardMaterialBag(
   scalars: StandardMaterial3DScalars | null,
-  textures: ResolvedTextureSlots = {}
+  textures: ResolvedTextureSlots = {},
+  transparency = 0
 ): StandardMaterialBag {
-  if (!scalars) return NO_MATERIAL;
-  const alphaSource = { readsAlbedoAlpha: scalars.readsAlbedoAlpha, opaqueAfterCut: scalars.opaqueAfterCut };
-  return { ...classBag(scalars, textures), alphaSource };
+  // Godot's default surface reads no texture or vertex alpha, so it needs no alpha patch.
+  if (!scalars) return fadedBag(NO_MATERIAL, false, transparency);
+  const bag = fadedBag(classBag(scalars, textures), scalars.alphaPassDepthWrite, transparency);
+  const { injection, ...alphaProps } = surfaceAlphaProps(scalars, bag.props);
+  const props = { ...bag.props, ...alphaProps };
+  return injection ? { ...bag, props, injection } : { ...bag, props };
 }
 
 /**
- * The alpha props the bag's final blend state needs, which each adapter applies over its props.
- * A bag with no `alphaSource` reads no texture or vertex alpha, so it needs none.
+ * The bag under its geometry instance's `transparency`, which moves the surface to the alpha pass.
+ * There it writes depth only as `alphaPassDepthWrite` says.
  */
-export function bagAlphaProps(bag: StandardMaterialBag): SurfaceAlphaProps {
-  return bag.alphaSource ? surfaceAlphaProps(bag.alphaSource, bag.props) : {};
+function fadedBag(
+  bag: StandardMaterialBag,
+  alphaPassDepthWrite: boolean,
+  transparency: number
+): StandardMaterialBag {
+  // A full fade alpha never forces the alpha pass either.
+  if (fadeAlpha(transparency) === 1) return bag;
+  const alpha = fadedSurfaceAlpha(
+    {
+      opacity: bag.props.opacity ?? 1,
+      transparent: bag.props.transparent ?? false,
+      depthWrite: bag.props.depthWrite ?? true,
+      alphaPassDepthWrite,
+    },
+    transparency
+  );
+  return { ...bag, props: { ...bag.props, ...alpha } };
 }
 
 /** The class `scalars` need, and its props. */

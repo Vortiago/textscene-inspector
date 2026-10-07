@@ -10,7 +10,7 @@ import type { ProgramInjection, ProgramShader } from '../materialProgramInputs';
 export interface SurfaceAlphaSource {
   /**
    * Whether the shader multiplies the albedo alpha in (`material.cpp:1832-1837`). One that does
-   * not keeps the instance alpha it starts from, whatever its texture or vertex colours hold.
+   * not keeps the fade alpha it starts from, whatever its texture or vertex colours hold.
    */
   readsAlbedoAlpha: boolean;
   /** Whether it writes alpha 1 for each fragment its cut keeps (`scene_forward_clustered.glsl:1413-1415`). */
@@ -18,7 +18,7 @@ export interface SurfaceAlphaSource {
 }
 
 /** The material state that decides whether the fragment alpha reaches the framebuffer. */
-export interface SurfaceBlend {
+interface SurfaceBlend {
   transparent?: boolean;
   blending?: THREE.Blending;
 }
@@ -31,14 +31,14 @@ function rewriteFragment(shader: ProgramShader, chunk: string, replacement: stri
 }
 
 /** three multiplies the map and vertex-colour alpha into `diffuseColor.a`. This resets it to `opacity`. */
-export const ALBEDO_ALPHA_UNREAD: ProgramInjection = {
+const ALBEDO_ALPHA_UNREAD: ProgramInjection = {
   cacheKey: 'albedo-alpha-unread',
   onBeforeCompile: (shader) =>
     rewriteFragment(shader, ALPHA_TEST_CHUNK, `diffuseColor.a = opacity;\n\t${ALPHA_TEST_CHUNK}`),
 };
 
 /** three keeps the cut alpha in the blend. This writes alpha 1 for each fragment both cuts keep. */
-export const OPAQUE_AFTER_CUT: ProgramInjection = {
+const OPAQUE_AFTER_CUT: ProgramInjection = {
   cacheKey: 'opaque-after-cut',
   onBeforeCompile: (shader) =>
     rewriteFragment(shader, ALPHA_HASH_CHUNK, `${ALPHA_HASH_CHUNK}\n\tdiffuseColor.a = 1.0;`),
@@ -61,9 +61,9 @@ export interface SurfaceAlphaProps {
 }
 
 const NO_PROPS: SurfaceAlphaProps = Object.freeze({});
-const OVERWRITE: SurfaceAlphaProps = Object.freeze({ blending: THREE.NoBlending });
-const CUT_TO_OPAQUE: SurfaceAlphaProps = Object.freeze({ injection: OPAQUE_AFTER_CUT });
-const ALBEDO_IGNORED: SurfaceAlphaProps = Object.freeze({ injection: ALBEDO_ALPHA_UNREAD });
+const OPAQUE_AFTER_CUT_MIX_PROPS: SurfaceAlphaProps = Object.freeze({ blending: THREE.NoBlending });
+const OPAQUE_AFTER_CUT_PROPS: SurfaceAlphaProps = Object.freeze({ injection: OPAQUE_AFTER_CUT });
+const ALBEDO_ALPHA_UNREAD_PROPS: SurfaceAlphaProps = Object.freeze({ injection: ALBEDO_ALPHA_UNREAD });
 
 /**
  * The props a surface needs so that three blends the alpha its Godot shader writes. A MIX blend
@@ -72,7 +72,9 @@ const ALBEDO_IGNORED: SurfaceAlphaProps = Object.freeze({ injection: ALBEDO_ALPH
 export function surfaceAlphaProps(source: SurfaceAlphaSource, blend: SurfaceBlend): SurfaceAlphaProps {
   if (!isBlended(blend)) return NO_PROPS;
   if (source.opaqueAfterCut) {
-    return (blend.blending ?? THREE.NormalBlending) === THREE.NormalBlending ? OVERWRITE : CUT_TO_OPAQUE;
+    return (blend.blending ?? THREE.NormalBlending) === THREE.NormalBlending
+      ? OPAQUE_AFTER_CUT_MIX_PROPS
+      : OPAQUE_AFTER_CUT_PROPS;
   }
-  return source.readsAlbedoAlpha ? NO_PROPS : ALBEDO_IGNORED;
+  return source.readsAlbedoAlpha ? NO_PROPS : ALBEDO_ALPHA_UNREAD_PROPS;
 }

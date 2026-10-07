@@ -1,13 +1,8 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import type { ProgramInjection } from '../materialProgramInputs';
-import {
-  ALBEDO_ALPHA_UNREAD,
-  OPAQUE_AFTER_CUT,
-  isBlended,
-  surfaceAlphaProps,
-  type SurfaceAlphaSource,
-} from './surfaceAlphaPatch';
+import { isBlended, surfaceAlphaProps, type SurfaceAlphaSource } from './surfaceAlphaPatch';
+import { DROPS_ALBEDO_ALPHA, OPAQUE_AFTER_CUT } from '../testing/patchedFragment';
 
 const READS_ALBEDO: SurfaceAlphaSource = { readsAlbedoAlpha: true, opaqueAfterCut: false };
 const IGNORES_ALBEDO: SurfaceAlphaSource = { readsAlbedoAlpha: false, opaqueAfterCut: false };
@@ -20,12 +15,13 @@ const FRAGMENT_SHADERS = [
   ['physical', THREE.ShaderLib.physical.fragmentShader],
 ] as const;
 
-function patched(injection: ProgramInjection, fragmentShader: string): string {
+function patched(injection: ProgramInjection | undefined, fragmentShader: string): string {
   const shader = { vertexShader: '', fragmentShader, uniforms: {} };
-  injection.onBeforeCompile(shader);
+  injection?.onBeforeCompile(shader);
   return shader.fragmentShader;
 }
 
+const ADDITIVE = { transparent: false, blending: THREE.AdditiveBlending };
 describe('isBlended', () => {
   it('blends a transparent surface under the default blending', () => {
     expect(isBlended({ transparent: true })).toBe(true);
@@ -49,16 +45,8 @@ describe('surfaceAlphaProps', () => {
     expect(surfaceAlphaProps(CUT, { transparent: true })).toEqual({ blending: THREE.NoBlending });
   });
 
-  it('writes alpha 1 past the cut of a surface blended other than MIX', () => {
-    expect(surfaceAlphaProps(CUT, { transparent: false, blending: THREE.AdditiveBlending })).toEqual({
-      injection: OPAQUE_AFTER_CUT,
-    });
-  });
-
-  it('drops the albedo alpha of a blended surface whose shader never reads it', () => {
-    expect(surfaceAlphaProps(IGNORES_ALBEDO, { transparent: true })).toEqual({
-      injection: ALBEDO_ALPHA_UNREAD,
-    });
+  it('keeps the blend of a cut surface blended other than MIX', () => {
+    expect(surfaceAlphaProps(CUT, ADDITIVE).blending).toBeUndefined();
   });
 
   it('adds nothing to a blended surface that reads its albedo alpha', () => {
@@ -67,15 +55,17 @@ describe('surfaceAlphaProps', () => {
 });
 
 describe.each(FRAGMENT_SHADERS)('the %s fragment shader', (_name, fragmentShader) => {
-  it('takes the alpha from the opacity before the cut', () => {
-    expect(patched(ALBEDO_ALPHA_UNREAD, fragmentShader)).toContain(
-      'diffuseColor.a = opacity;\n\t#include <alphatest_fragment>'
+  it('takes the alpha from the opacity before the cut, where the shader never reads the albedo alpha', () => {
+    const { injection } = surfaceAlphaProps(IGNORES_ALBEDO, { transparent: true });
+    expect(patched(injection, fragmentShader)).toContain(
+      `${DROPS_ALBEDO_ALPHA}\n\t#include <alphatest_fragment>`
     );
   });
 
-  it('writes alpha 1 after the cut', () => {
-    expect(patched(OPAQUE_AFTER_CUT, fragmentShader)).toContain(
-      '#include <alphahash_fragment>\n\tdiffuseColor.a = 1.0;'
+  it('writes alpha 1 after the cut of a surface blended other than MIX', () => {
+    const { injection } = surfaceAlphaProps(CUT, ADDITIVE);
+    expect(patched(injection, fragmentShader)).toContain(
+      `#include <alphahash_fragment>\n\t${OPAQUE_AFTER_CUT}`
     );
   });
 });

@@ -1,37 +1,32 @@
 /**
- * `GeometryInstance3D.transparency` applied to one surface's three material state. Godot applies
- * it per instance, to every surface the instance draws (`godot/instanceTransparency.ts`).
+ * A geometry instance's `transparency` applied to one surface's three material state. Godot applies
+ * its fade alpha to every surface the instance draws (`godot/fadeAlpha.ts`).
  */
 
-import { forcesAlphaPass, instanceAlpha } from '../../godot/instanceTransparency';
-import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
-import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
+import { fadeAlpha, forcesAlphaPass } from '../../godot/fadeAlpha';
 import type { AlphaCutSurface } from '../godotAlphaCut';
 import { surfaceAlphaProps, type SurfaceAlphaProps } from './surfaceAlphaPatch';
 
-/** The material state an instance's `transparency` changes. */
-export interface SurfaceAlpha {
+/** The material state a geometry instance's `transparency` changes. */
+interface SurfaceAlpha {
   /** The alpha the surface's shader multiplies in: 1 where it reads none. */
   opacity: number;
   transparent: boolean;
   depthWrite: boolean;
 }
 
-/** A surface's alpha state, with its depth write once its instance moves it to the alpha pass. */
+/** A surface's alpha state, with its depth write once its geometry instance moves it to the alpha pass. */
 export interface AlphaPassSurface extends SurfaceAlpha {
   /** Its depth write in the alpha pass, which also skips the depth prepass. */
   alphaPassDepthWrite: boolean;
 }
 
-/** A Sprite3D or Label3D surface's alpha state, with the props its blend needs. */
-export interface CutSurfaceAlpha extends SurfaceAlpha, SurfaceAlphaProps {}
-
 /**
- * The surface's alpha state under its instance's `transparency`. The instance alpha is the
+ * The surface's alpha state under its geometry instance's `transparency`. The fade alpha is the
  * shader's starting ALPHA, so it multiplies the material's own alpha and lowers what a cut keeps.
  */
-export function instanceSurfaceAlpha(surface: AlphaPassSurface, transparency: number): SurfaceAlpha {
-  const opacity = surface.opacity * instanceAlpha(transparency);
+export function fadedSurfaceAlpha(surface: AlphaPassSurface, transparency: number): SurfaceAlpha {
+  const opacity = surface.opacity * fadeAlpha(transparency);
   if (!forcesAlphaPass(transparency))
     return { opacity, transparent: surface.transparent, depthWrite: surface.depthWrite };
   return { opacity, transparent: true, depthWrite: surface.alphaPassDepthWrite };
@@ -46,33 +41,10 @@ export function cutSurfaceAlpha(
   cut: AlphaCutSurface,
   opacity: number,
   transparency: number
-): CutSurfaceAlpha {
-  const alpha = instanceSurfaceAlpha(
+): SurfaceAlpha & SurfaceAlphaProps {
+  const alpha = fadedSurfaceAlpha(
     { opacity, transparent: cut.blended, depthWrite: cut.depthWrite, alphaPassDepthWrite: false },
     transparency
   );
   return { ...alpha, ...surfaceAlphaProps(cut, alpha) };
-}
-
-/**
- * The bag of a surface drawn under its instance's `transparency`. Null `scalars` is Godot's
- * default surface: opaque, under DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth.
- */
-export function withInstanceTransparency(
-  bag: StandardMaterialBag,
-  scalars: StandardMaterial3DScalars | null,
-  transparency: number
-): StandardMaterialBag {
-  // A full instance alpha never forces the alpha pass either.
-  if (instanceAlpha(transparency) === 1) return bag;
-  const alpha = instanceSurfaceAlpha(
-    {
-      opacity: bag.props.opacity ?? 1,
-      transparent: bag.props.transparent ?? false,
-      depthWrite: bag.props.depthWrite ?? true,
-      alphaPassDepthWrite: scalars?.alphaPassDepthWrite ?? false,
-    },
-    transparency
-  );
-  return { ...bag, props: { ...bag.props, ...alpha } };
 }

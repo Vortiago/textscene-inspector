@@ -335,17 +335,17 @@ describe('<LabelGlyphs>', () => {
   });
 
   describe('transparency', () => {
-    // GeometryInstance3D's: one instance alpha for the fill and the outline alike.
+    // GeometryInstance3D's: one fade alpha for the fill and the outline alike.
     const materials = (renderer: Awaited<ReturnType<typeof render>>) =>
       renderer.scene
         .findAllByType('Mesh')
         .map((m) => (m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial);
 
-    it('multiplies the instance alpha into both surfaces', async () => {
+    it('multiplies the fade alpha into both surfaces', async () => {
       const renderer = await render(
         props({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 0.5 }, transparency: 0.5 })
       );
-      // 1 - 0.5 in the 8-bit steps of the instance alpha: 127 / 255.
+      // 1 - 0.5 in the 8-bit steps of the fade alpha: 127 / 255.
       expect(materials(renderer).map((m) => m.opacity)).toEqual([0.5 * (127 / 255), 127 / 255]);
     });
 

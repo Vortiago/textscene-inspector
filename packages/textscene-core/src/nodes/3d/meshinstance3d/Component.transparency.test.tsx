@@ -11,10 +11,10 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
-import { ALBEDO_ALPHA_UNREAD } from '../../../r3f/materials/surfaceAlphaPatch';
+import { DROPS_ALBEDO_ALPHA, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
-/** `instanceAlpha(0.5)`: 0.5 × 255 truncated to 127. */
+/** `fadeAlpha(0.5)`: 0.5 × 255 truncated to 127. */
 const HALF_TRANSPARENT_ALPHA = 127 / 255;
 
 const INTERNALS: TscnInternalResource[] = [
@@ -22,6 +22,7 @@ const INTERNALS: TscnInternalResource[] = [
   inlineTwoSurfaceMesh('Array_1'),
   { id: 'Mat_overlay', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 0, 1, 1)' } },
   { id: 'Mat_opaque', type: 'StandardMaterial3D', data: {} },
+  { id: 'Mat_scissor', type: 'StandardMaterial3D', data: { transparency: '2' } },
 ];
 
 function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
@@ -50,7 +51,7 @@ describe('MeshInstance3D — transparency', () => {
     expect(material).toMatchObject({ transparent: false, depthWrite: true, opacity: 1 });
   });
 
-  it('blends a primitive mesh surface at the instance alpha', async () => {
+  it('blends a primitive mesh surface at the fade alpha', async () => {
     const [material] = await drawnMaterials({ transparency: 0.5 });
     expect(material).toMatchObject({ transparent: true, depthWrite: false, opacity: HALF_TRANSPARENT_ALPHA });
   });
@@ -60,7 +61,15 @@ describe('MeshInstance3D — transparency', () => {
       materialOverride: 'SubResource("Mat_opaque")',
       transparency: 0.5,
     });
-    expect(material!.onBeforeCompile).toBe(ALBEDO_ALPHA_UNREAD.onBeforeCompile);
+    expect(patchedFragment(material!)).toContain(DROPS_ALBEDO_ALPHA);
+  });
+
+  it('overwrites past the scissor cut of a MIX material, as Godot writes alpha 1 there', async () => {
+    const [material] = await drawnMaterials({
+      materialOverride: 'SubResource("Mat_scissor")',
+      transparency: 0.5,
+    });
+    expect(material).toMatchObject({ transparent: true, depthWrite: false, blending: THREE.NoBlending });
   });
 
   it('blends every surface of an ArrayMesh', async () => {

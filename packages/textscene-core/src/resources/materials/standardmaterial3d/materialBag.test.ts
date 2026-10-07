@@ -5,23 +5,25 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  billboardOf,
-  castsShadowOf,
-  standardMaterialBag,
-  bagAlphaProps,
-  surfaceBillboard,
-} from './materialBag';
+import { billboardOf, castsShadowOf, standardMaterialBag, surfaceBillboard } from './materialBag';
 import { materialFromBag } from './build';
 import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/billboard';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
-import { ALBEDO_ALPHA_UNREAD, OPAQUE_AFTER_CUT } from '../../../r3f/materials/surfaceAlphaPatch';
+import { DROPS_ALBEDO_ALPHA, OPAQUE_AFTER_CUT, patchedFragment } from '../../../r3f/testing/patchedFragment';
 
 function bag(properties: Record<string, string>, textures?: ResolvedTextureSlots) {
   return standardMaterialBag(parseStandardMaterial3DScalars(properties), textures);
 }
+
+/** The bag a geometry instance with `transparency = 0.5` draws. */
+function fadedBag(properties: Record<string, string> | null) {
+  return standardMaterialBag(properties && parseStandardMaterial3DScalars(properties), {}, 0.5);
+}
+
+/** `fadeAlpha(0.5)`: 0.5 × 255 truncated to 127. */
+const HALF_FADE_ALPHA = 127 / 255;
 
 describe('standardMaterialBag — the material class', () => {
   it('derives a standard material for a plain PBR surface', () => {
@@ -152,20 +154,44 @@ describe('standardMaterialBag — texture slots', () => {
 
 describe('standardMaterialBag — fragment alpha', () => {
   it('patches nothing on an opaque surface', () => {
-    expect(bagAlphaProps(bag({})).injection).toBeUndefined();
+    expect(bag({}).injection).toBeUndefined();
   });
 
   it('drops the texture alpha of an additive surface whose shader writes no ALPHA', () => {
-    expect(bagAlphaProps(bag({ blend_mode: '1' })).injection).toBe(ALBEDO_ALPHA_UNREAD);
+    expect(patchedFragment(materialFromBag(bag({ blend_mode: '1' })))).toContain(DROPS_ALBEDO_ALPHA);
   });
 
   it('writes alpha 1 past the scissor cut of an additive surface', () => {
-    expect(bagAlphaProps(bag({ blend_mode: '1', transparency: '2' })).injection).toBe(OPAQUE_AFTER_CUT);
+    expect(patchedFragment(materialFromBag(bag({ blend_mode: '1', transparency: '2' })))).toContain(
+      OPAQUE_AFTER_CUT
+    );
+  });
+});
+
+describe("standardMaterialBag — the geometry instance's transparency", () => {
+  it("blends Godot's default surface at the fade alpha without a depth write", () => {
+    expect(fadedBag(null).props).toMatchObject({
+      transparent: true,
+      depthWrite: false,
+      opacity: HALF_FADE_ALPHA,
+    });
   });
 
-  it('patches the imperative material too', () => {
-    const material = materialFromBag(bag({ blend_mode: '1' }));
-    expect(material.onBeforeCompile).toBe(ALBEDO_ALPHA_UNREAD.onBeforeCompile);
+  it("multiplies the fade alpha into the material's own alpha", () => {
+    const { props } = fadedBag({ transparency: '1', albedo_color: 'Color(1, 1, 1, 0.5)' });
+    expect(props.opacity).toBe(63.5 / 255);
+  });
+
+  it("reads the material's own alpha-pass depth write", () => {
+    expect(fadedBag({ depth_draw_mode: '1' }).props.depthWrite).toBe(true);
+  });
+
+  it('drops the texture alpha of an opaque material', () => {
+    expect(patchedFragment(materialFromBag(fadedBag({})))).toContain(DROPS_ALBEDO_ALPHA);
+  });
+
+  it('overwrites past the scissor cut', () => {
+    expect(fadedBag({ transparency: '2' }).props.blending).toBe(THREE.NoBlending);
   });
 });
 

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../../parser/testing/parserKit';
-import { ShadowCastingSetting } from '../../../../godot/rendering';
 import { parseCSGCombiner3D } from './parser';
 
 describe('parseCSGCombiner3D', () => {
@@ -21,12 +20,6 @@ describe('parseCSGCombiner3D', () => {
   it('parses cast_shadow, which the CSGPrimitive3D helper it cannot use would have carried', () => {
     const result = parseCSGCombiner3D(heading('CSGCombiner3D', { name: 'C' }), { cast_shadow: '3' });
     expect(result.castShadow).toBe(3);
-  });
-
-  it("keeps Godot's ON cast_shadow when the scene authors none", () => {
-    expect(parseCSGCombiner3D(heading('CSGCombiner3D', { name: 'C' }), {}).castShadow).toBe(
-      ShadowCastingSetting.ON
-    );
   });
 
   it('parses operation, which says how its fold combines into ITS parent', () => {

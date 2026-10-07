@@ -2,14 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { unitByte } from './unitByte';
 
 describe('unitByte', () => {
-  it('keeps 0 and 1 exact', () => {
-    expect(unitByte(0)).toBe(0);
-    expect(unitByte(1)).toBe(1);
+  it.each([0, 1])('keeps %s exact', (value) => {
+    expect(unitByte(value)).toBe(value);
   });
 
-  it('truncates to the byte below', () => {
-    // 0.5 × 255 = 127.5, which the cast truncates to 127.
-    expect(unitByte(0.5)).toBe(127 / 255);
+  // `pnpm ref:godot --mode 2d` draws a Polygon2D Color(0.08, 0.08, 0.10) as rgb(20, 20, 25),
+  // Color(0.40, 0.90, 0.50) as rgb(102, 229, 127) and Color(0.85, 0.85, 0.80) as rgb(216, 216, 204).
+  it.each([
+    [0.1, 25],
+    [0.5, 127],
+    [0.85, 216],
+    [0.9, 229],
+  ])('truncates %s to byte %s, never rounds', (value, byte) => {
+    expect(unitByte(value)).toBe(byte / 255);
   });
 
   it('narrows to float32 before it scales', () => {
@@ -17,8 +22,10 @@ describe('unitByte', () => {
     expect(unitByte(0.7)).toBe(178 / 255);
   });
 
-  it('clamps a value outside 0..1 to the byte range', () => {
-    expect(unitByte(-0.5)).toBe(0);
-    expect(unitByte(1.5)).toBe(1);
+  it.each([
+    [-0.5, 0],
+    [1.5, 1],
+  ])('clamps %s outside 0..1 to %s', (value, clamped) => {
+    expect(unitByte(value)).toBe(clamped);
   });
 });

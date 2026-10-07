@@ -3,8 +3,13 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import type { MeshInstance3DProperties } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
-import { assignIfDefined, parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
+import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
 import { indexedKeyRegex, stringToInt } from '../../../godot/index.js';
+
+/** Assigns only a present value: the optional readers already drop an absent or unreadable one. */
+function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {
+  if (value !== undefined) target[key] = value;
+}
 
 /**
  * `_set` reads the index with a bare `get_slicec('/', 1).to_int()` into an `int`

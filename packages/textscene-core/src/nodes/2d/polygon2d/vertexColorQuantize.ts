@@ -14,22 +14,17 @@ export interface QuantizableColor {
   a: number;
 }
 
-/** Snaps one sRGB channel (0..1) to the byte Godot's upload stores, as a 0..1 float. */
-export function quantizeVertexColorChannel(value: number): number {
-  return unitByte(value);
-}
-
 /**
- * `quantizeVertexColorChannel` on all four channels. Never apply it to the inherited tint:
+ * `unitByte` on all four channels. Never apply it to the inherited tint:
  * Polygon2D passes `Color(1, 1, 1)` as its own draw modulate (`scene/2d/polygon_2d.cpp:401`), so
  * the tint is a separate float multiply. Only Polygon2D fills pass this cast
  * (`vertexColorQuantize.md`).
  */
 export function quantizeVertexColor(color: QuantizableColor): QuantizableColor {
   return {
-    r: quantizeVertexColorChannel(color.r),
-    g: quantizeVertexColorChannel(color.g),
-    b: quantizeVertexColorChannel(color.b),
-    a: quantizeVertexColorChannel(color.a),
+    r: unitByte(color.r),
+    g: unitByte(color.g),
+    b: unitByte(color.b),
+    a: unitByte(color.a),
   };
 }

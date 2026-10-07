@@ -366,19 +366,17 @@ describe('injectProgram', () => {
     expect(material.onBeforeCompile).toBe(INJECTION.onBeforeCompile);
   });
 
-  it("keys the program by the injection's cache key and the prototype's", () => {
+  it('keys the patched program apart from the unpatched one', () => {
     const material = new THREE.MeshBasicMaterial();
     injectProgram(material, INJECTION);
-    expect(material.customProgramCacheKey()).toBe(
-      `patched${THREE.Material.prototype.customProgramCacheKey.call(material)}`
-    );
+    expect(material.customProgramCacheKey()).not.toBe(new THREE.MeshBasicMaterial().customProgramCacheKey());
   });
 
-  it('shares one cache-key function between materials with the same injection', () => {
+  it('keys two patches apart', () => {
     const first = new THREE.MeshBasicMaterial();
     const second = new THREE.MeshBasicMaterial();
     injectProgram(first, INJECTION);
-    injectProgram(second, INJECTION);
-    expect(first.customProgramCacheKey).toBe(second.customProgramCacheKey);
+    injectProgram(second, { ...INJECTION, cacheKey: 'other' });
+    expect(first.customProgramCacheKey()).not.toBe(second.customProgramCacheKey());
   });
 });

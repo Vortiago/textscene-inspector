@@ -4,18 +4,18 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { parseGeometryInstance3D } from './parser';
+import { TscnParser } from '../../../parser/TscnParser';
 import { Node3D } from '../../base/node3d/Component';
 import './index';
 import './index.r3f';
 
 describe('GeometryInstance3D registration', () => {
-  it('registers the shared GeometryInstance3D parser', () => {
-    const registration = nodeRegistry.getRegistration('GeometryInstance3D');
-    expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseGeometryInstance3D);
+  it('parses its own transparency', () => {
+    const scene = new TscnParser().parse(
+      '[gd_scene format=3]\n\n[node name="G" type="GeometryInstance3D"]\ntransparency = 0.25\n'
+    );
+    expect(scene.nodes[0]!.properties).toMatchObject({ transparency: 0.25 });
   });
 
   it('reuses the Node3D component so children keep their transform space', () => {

@@ -16,7 +16,7 @@ import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { alphaCutSurface } from '../../../r3f/godotAlphaCut';
-import { cutSurfaceAlpha } from '../../../r3f/materials/instanceTransparency';
+import { cutSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {

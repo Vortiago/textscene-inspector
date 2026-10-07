@@ -40,7 +40,7 @@ Strict parsing format-checks these `Sprite3D` properties, plus 20 inherited from
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-Most keys warn then fall back to their Godot defaults. `billboard`, `alpha_cut` and `axis` fall back to `0`, `0` and `1`, and `pixel_size` to `0.01`. `hframes` and `vframes` fall back to `1`, `frame` to `0` and `offset` to `(0, 0)`. `frame_coords` and `region_rect` warn on a malformed literal and stay unset. `modulate` falls back to opaque white silently, since `parseColor` never logs, and `texture` is assigned verbatim whenever present. A malformed `transparency` is dropped silently, which draws the sprite opaque.
+Most keys warn then fall back to their Godot defaults. `billboard`, `alpha_cut` and `axis` fall back to `0`, `0` and `1`, and `pixel_size` to `0.01`. `hframes` and `vframes` fall back to `1`, `frame` to `0` and `offset` to `(0, 0)`. `frame_coords` and `region_rect` warn on a malformed literal and stay unset. `modulate` falls back to opaque white silently, since `parseColor` never logs, and `texture` is assigned verbatim whenever present. A malformed `transparency` keeps Godot's default (`0`) silently, which draws the sprite opaque.
 
 ## Known limitations
 

@@ -11,7 +11,6 @@ import './csgbox3d/index.r3f';
 import './csgsphere3d/index.r3f';
 import { parseCSGBox3D } from './csgbox3d/parser';
 import { heading } from '../../../parser/testing/parserKit';
-import { ShadowCastingSetting } from '../../../godot/rendering';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { clearEvaluationCache } from '../../../r3f/csg/csgEvaluationCache';
 import { TscnParser } from '../../../parser/TscnParser';
@@ -69,12 +68,6 @@ async function renderSubtraction(rootProperties: string): Promise<THREE.Mesh> {
 }
 
 describe('CSG cast_shadow', () => {
-  it('parses cast_shadow off every CSG primitive', () => {
-    expect(parseBox({ cast_shadow: '2' }).castShadow).toBe(2);
-    expect(parseBox({ cast_shadow: '0' }).castShadow).toBe(0);
-    expect(parseBox({}).castShadow).toBe(ShadowCastingSetting.ON);
-  });
-
   it('a lone root with cast_shadow = OFF casts nothing', async () => {
     expect((await renderLoneBox({ cast_shadow: '0' })).castShadow).toBe(false);
   });

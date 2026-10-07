@@ -188,7 +188,7 @@ export function paintSceneFontCanvas(
  * a 3D text surface's `alpha_cut` selects (`label_3d.cpp:386-393`). A 2D Control
  * always paints `TRANSPARENCY_ALPHA`, every field's default below.
  */
-export interface CanvasTextTransparency {
+export interface CanvasTextBlend {
   transparent: boolean;
   depthWrite: boolean;
   alphaTest: number;
@@ -198,7 +198,7 @@ export interface CanvasTextTransparency {
   injection?: ProgramInjection;
 }
 
-export interface CanvasTextMaterialOptions extends Partial<CanvasTextTransparency> {
+export interface CanvasTextMaterialOptions extends Partial<CanvasTextBlend> {
   map: THREE.Texture;
   /** Multiplies the raster's anti-aliasing alpha. The raster is opaque, so this is the only place `tint.a` applies. */
   opacity: number;

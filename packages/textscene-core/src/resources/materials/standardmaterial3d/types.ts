@@ -144,7 +144,7 @@ export interface StandardMaterial3DData {
   /** Whether this surface's fragments reach the depth buffer. */
   depthWrite: boolean;
   /**
-   * Whether the surface writes depth once its instance's `transparency` moves it to the
+   * Whether the surface writes depth once its geometry instance's `transparency` moves it to the
    * alpha pass, which skips the depth prepass too: DEPTH_DRAW_ALWAYS with the depth test on.
    */
   alphaPassDepthWrite: boolean;

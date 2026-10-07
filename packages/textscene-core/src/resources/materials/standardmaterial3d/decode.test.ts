@@ -272,7 +272,7 @@ describe('decodeStandardMaterial3D — albedo alpha', () => {
   });
 });
 
-/** What an instance's `transparency` reads when it moves a surface to the alpha pass. */
+/** What a geometry instance's `transparency` reads when it moves a surface to the alpha pass. */
 describe('decodeStandardMaterial3D — alpha pass forced by the instance', () => {
   it('writes no depth there under the default depth-draw mode', () => {
     expect(decodeStandardMaterial3D({}).alphaPassDepthWrite).toBe(false);

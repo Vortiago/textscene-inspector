@@ -47,4 +47,4 @@ Strict parsing format-checks these `GeometryInstance3D` properties, plus 1 inher
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The lenient parser reads `transform` and `visible` through `parseNode3D`, then `transparency` and `cast_shadow`, which every drawn leaf parser starts from. A malformed `transparency`, `cast_shadow` or `visibility_range_end` parses with no warning and no fallback, and only strict reports it.
+The lenient parser reads `transform` and `visible` through `parseNode3D`, then `transparency` and `cast_shadow`, which every drawn leaf parser starts from. A malformed `transparency` or `cast_shadow` keeps Godot's default (`0` and `1`) with no warning. A malformed `visibility_range_end` parses with no warning and no fallback. Only strict reports either.

@@ -1,24 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { forcesAlphaPass, instanceAlpha } from './instanceTransparency';
+import { fadeAlpha, forcesAlphaPass } from './fadeAlpha';
 
-describe('instanceAlpha', () => {
-  it('is 1 for an opaque instance', () => {
-    expect(instanceAlpha(0)).toBe(1);
+describe('fadeAlpha', () => {
+  it('is 1 for an opaque geometry instance', () => {
+    expect(fadeAlpha(0)).toBe(1);
   });
 
   it('truncates 1 - transparency to an 8-bit step', () => {
     // 0.7 × 255 = 178.5, which the uint32 cast truncates to 178.
-    expect(instanceAlpha(0.3)).toBe(178 / 255);
+    expect(fadeAlpha(0.3)).toBe(178 / 255);
   });
 
-  it('clamps a transparency outside 0..1', () => {
-    expect(instanceAlpha(1.5)).toBe(0);
-    expect(instanceAlpha(-0.5)).toBe(1);
+  it.each([
+    [1.5, 0],
+    [-0.5, 1],
+  ])('clamps a transparency of %s outside 0..1 to %s', (transparency, alpha) => {
+    expect(fadeAlpha(transparency)).toBe(alpha);
   });
 });
 
 describe('forcesAlphaPass', () => {
-  it('keeps an opaque instance out of the alpha pass', () => {
+  it('keeps an opaque geometry instance out of the alpha pass', () => {
     expect(forcesAlphaPass(0)).toBe(false);
   });
 

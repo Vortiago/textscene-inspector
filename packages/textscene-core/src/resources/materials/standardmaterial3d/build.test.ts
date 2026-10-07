@@ -56,7 +56,7 @@ describe('the imperative adapter — scalar base', () => {
     const material = build({ albedo_color: 'Color(1, 1, 1, 0.5)' });
     expect(material.transparent).toBe(false);
     expect(material.depthWrite).toBe(true);
-    // An instance's `transparency` can still move this surface to the blended pass, where
+    // A geometry instance's `transparency` can still move this surface to the blended pass, where
     // Godot's alpha holds no albedo term.
     expect(material.opacity).toBe(1);
   });
