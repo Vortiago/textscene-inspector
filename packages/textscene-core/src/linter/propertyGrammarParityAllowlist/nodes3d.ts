@@ -193,7 +193,6 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'ignore_occlusion_culling',
       'material_override',
       'material_overlay',
-      'transparency',
       'sorting_offset',
       'sorting_use_aabb_center',
       'visibility_range_begin',
