@@ -86,10 +86,9 @@ describe('<SubViewport> as a world boundary', () => {
   });
 
   it('3D content inside a CONTAINED sub-viewport still reaches the 3D view', async () => {
-    // SubViewportContainer is a Control in TWO_D_UI_TYPES, so `PlainNode` would
-    // drop its whole subtree in the 3D workspace, the sub-viewport's 3D content
-    // included. Godot draws that content (shared World3D), so the drop rule
-    // subtracts viewport surfaces (ADR-0033).
+    // SubViewportContainer is a Control, so the 3D workspace would drop its whole
+    // subtree, the sub-viewport's 3D content included. Godot draws that content
+    // (shared World3D), so `drawsInWorkspace` subtracts viewport surfaces (ADR-0033).
     const r = await render(`[gd_scene format=3]
 
 [sub_resource type="BoxMesh" id="1"]

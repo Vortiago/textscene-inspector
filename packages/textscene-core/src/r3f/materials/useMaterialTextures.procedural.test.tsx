@@ -84,7 +84,7 @@ describe('useMaterialTextures with procedural slots', () => {
 
     expect(result.current.maps.emissiveMap).toBeDefined();
     expect(result.current.maps.albedoMap).toBe(pendingMapStandIn('albedo_texture'));
-    expect(result.current.firstMissingPath).toBeNull();
+    expect(result.current.isUnresolved).toBe(false);
     expect(requested).toEqual([]);
   });
 

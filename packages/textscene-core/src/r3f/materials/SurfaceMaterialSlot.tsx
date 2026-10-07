@@ -1,7 +1,8 @@
 /**
- * One surface's material, textures and all. Godot binds a material per surface,
- * so texture resolution lives in a component rendered once per surface, which
- * keeps `useResource` one call per component for any surface count.
+ * One surface's material, textures and all, or the magenta placeholder when a texture
+ * never draws. Godot binds a material per surface, so texture resolution lives in a
+ * component rendered once per surface, which keeps `useResource` one call per component
+ * for any surface count.
  */
 
 import * as THREE from 'three';
@@ -19,6 +20,7 @@ import type {
   TextureSlotReferences,
 } from '../../resources/materials/standardmaterial3d/types';
 import { TEXTURE_SLOTS } from '../../resources/materials/standardmaterial3d/types';
+import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
 import {
   bindSlotTexture,
   materialTextureState,
@@ -27,7 +29,7 @@ import {
 import type { MaterialTextureState } from '../../resources/textures/applyTextureState';
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
 import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
-import { StandardMaterialSlot } from './StandardMaterialSlot';
+import { materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource, MaterialSource } from './materialSource';
 import { readyMaterial, useMaterial } from './useMaterial';
@@ -38,17 +40,10 @@ export type { MaterialTextureMaps };
 export interface ResolvedMaterialTextures {
   maps: MaterialTextureMaps;
   /**
-   * The first slot whose file could not load: more would bury the user in text.
-   * The node decides whether that diverts the mesh to a placeholder, then mounts
-   * `<StandardMaterialSlot>` with this hook's maps, since a second hook call
-   * would bind and dispose every slot twice.
+   * A slot's file could not load, or the albedo slot names a ViewportTexture whose pass is
+   * cyclic. Either texture never draws, so the surface takes `MISSING_TEXTURE_MATERIAL`.
    */
-  firstMissingPath: string | null;
-  /**
-   * The albedo slot names a ViewportTexture whose pass is cyclic: it never
-   * renders, the same visible fact as a missing file.
-   */
-  viewportCyclic: boolean;
+  isUnresolved: boolean;
 }
 
 /** The resource tables a material's references resolve in: its owning file's. */
@@ -284,14 +279,7 @@ export function useMaterialTextures(
       ? pendingMapStandIn('anisotropy_flowmap')
       : undefined);
 
-  const firstMissingPath = useMemo(() => {
-    for (const slot of TEXTURE_SLOTS) {
-      const result = textureSlots[slot];
-      const requested = textureRequests[slot];
-      if (result && result.status === 'unavailable' && requested) return requested;
-    }
-    return null;
-  }, [textureSlots, textureRequests]);
+  const isFileMissing = TEXTURE_SLOTS.some((slot) => textureSlots[slot]?.status === 'unavailable');
 
   const maps = useMemo(
     (): MaterialTextureMaps => ({
@@ -316,7 +304,7 @@ export function useMaterialTextures(
     ]
   );
 
-  return { maps, firstMissingPath, viewportCyclic };
+  return { maps, isUnresolved: isFileMissing || viewportCyclic };
 }
 
 export interface SurfaceMaterialSlotProps {
@@ -331,12 +319,14 @@ export interface SurfaceMaterialSlotProps {
 /**
  * One surface's material slot, textures and all, whichever file the material came from.
  * A surface with no usable material draws Godot's default one, which
- * `<StandardMaterialSlot>` builds from null scalars (ADR-0041).
+ * `<StandardMaterialSlot>` builds from null scalars (ADR-0041). A surface whose texture
+ * cannot load, or whose ViewportTexture albedo is cyclic, draws the magenta placeholder.
  */
 export function SurfaceMaterialSlot({ source, attach, triplanarMesh }: SurfaceMaterialSlotProps) {
   const material = readyMaterial(useMaterial(source));
   const scalars = useMaterialScalars(material);
-  const { maps } = useMaterialTextures(scalars, material, triplanarMesh);
+  const { maps, isUnresolved } = useMaterialTextures(scalars, material, triplanarMesh);
+  if (isUnresolved) return materialBagElement(MISSING_TEXTURE_MATERIAL, attach);
   return <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />;
 }
 

@@ -6,18 +6,24 @@
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import * as THREE from 'three';
-import { MeshInstance3D } from './Component';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
+import type * as THREE from 'three';
+import type { ResourceLoader } from '../../../index';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
-import type { MeshInstance3DProperties } from './types';
 import { wallQuadSurface } from '../../../resources/testing/arrayMeshSurfaces';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
+import {
+  meshInstanceNode,
+  meshInstanceTree,
+  renderMeshInstance,
+  surfaceMaterials,
+} from './testing/renderMeshInstance';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
+import { MAGENTA } from './testing/magenta';
 
 const MESH_PATH = 'res://stage/meshes/wheel.tres';
 const OVERRIDE_MATERIAL_PATH = 'res://stage/materials/paint.tres';
+const MISSING_TEXTURE_PATH = 'res://stage/textures/missing.png';
 
 const RED_SURFACE = wallQuadSurface({
   material: 'SubResource("StandardMaterial3D_red")',
@@ -56,25 +62,10 @@ const OVERRIDE_MATERIAL_TRES = `[gd_resource type="StandardMaterial3D" format=3]
 albedo_color = Color(0, 1, 0, 1)
 `;
 
-interface NodeSpec {
-  mesh: string;
-  materialOverride?: string;
-  overrides?: Record<number, string>;
-}
-
-function makeNode({ mesh, materialOverride, overrides }: NodeSpec): TscnNode {
-  const properties: MeshInstance3DProperties = {
-    name: 'Wheel',
-    mesh,
-    surfaceMaterialOverrides: new Map(Object.entries(overrides ?? {}).map(([k, v]) => [Number(k), v])),
-  } as MeshInstance3DProperties;
-  if (materialOverride) properties.materialOverride = materialOverride;
-  return { name: 'Wheel', type: 'MeshInstance3D', children: [], properties };
-}
-
 const MESH_EXT: TscnExternalResource[] = [
   { id: '1', path: MESH_PATH, type: 'ArrayMesh' },
   { id: '9', path: OVERRIDE_MATERIAL_PATH, type: 'Material' },
+  { id: '7', path: MISSING_TEXTURE_PATH, type: 'Texture2D' },
 ];
 
 /**
@@ -84,27 +75,19 @@ const MESH_EXT: TscnExternalResource[] = [
 async function renderSettled(
   loader: ResourceLoader,
   node: TscnNode,
-  internalResources: TscnInternalResource[] = []
-): Promise<THREE.Material[]> {
-  const tree = (
-    <ResourceLoaderProvider loader={loader}>
-      <SceneResourcesProvider internalResources={internalResources} externalResources={MESH_EXT}>
-        <MeshInstance3D node={node} />
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
-  );
+  internalResources: TscnInternalResource[]
+): Promise<THREE.MeshStandardMaterial[]> {
+  const tree = meshInstanceTree({ loader, node, internalResources, externalResources: MESH_EXT });
   const renderer = await ReactThreeTestRenderer.create(tree);
   for (let i = 0; i < 10; i++) {
     await new Promise<void>((r) => setTimeout(r, 20));
     await renderer.update(tree);
   }
-  const mesh = renderer.scene.findAllByType('Mesh')[0]?.instance as THREE.Mesh;
-  const material = mesh.material;
-  return Array.isArray(material) ? material : [material];
+  return surfaceMaterials(renderer);
 }
 
-function hex(material: THREE.Material): number {
-  return (material as THREE.MeshStandardMaterial).color.getHex();
+function hex(material: THREE.MeshStandardMaterial): number {
+  return material.color.getHex();
 }
 
 const SCENE_MATERIALS: TscnInternalResource[] = [
@@ -112,6 +95,7 @@ const SCENE_MATERIALS: TscnInternalResource[] = [
   { id: 'Mat_white', type: 'StandardMaterial3D', data: { albedo_color: 'Color(1, 1, 1, 1)' } },
   { id: 'Mat_red', type: 'StandardMaterial3D', data: { albedo_color: 'Color(1, 0, 0, 1)' } },
   { id: 'Mat_blue', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 0, 1, 1)' } },
+  { id: 'Mat_missing_texture', type: 'StandardMaterial3D', data: { albedo_texture: 'ExtResource("7")' } },
 ];
 
 describe('<MeshInstance3D> ArrayMesh material overrides', () => {
@@ -119,7 +103,10 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
     const loader = loaderServing({ [MESH_PATH]: twoSurfaceTres() });
     const materials = await renderSettled(
       loader,
-      makeNode({ mesh: 'ExtResource("1")', overrides: { 1: 'SubResource("Mat_green")' } }),
+      meshInstanceNode({
+        mesh: 'ExtResource("1")',
+        surfaceOverrides: new Map([[1, 'SubResource("Mat_green")']]),
+      }),
       SCENE_MATERIALS
     );
 
@@ -134,10 +121,10 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
     const loader = loaderServing({ [MESH_PATH]: twoSurfaceTres() });
     const materials = await renderSettled(
       loader,
-      makeNode({
+      meshInstanceNode({
         mesh: 'ExtResource("1")',
         materialOverride: 'SubResource("Mat_white")',
-        overrides: { 1: 'SubResource("Mat_green")' },
+        surfaceOverrides: new Map([[1, 'SubResource("Mat_green")']]),
       }),
       SCENE_MATERIALS
     );
@@ -154,7 +141,7 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
     });
     const materials = await renderSettled(
       loader,
-      makeNode({ mesh: 'ExtResource("1")', overrides: { 0: 'ExtResource("9")' } }),
+      meshInstanceNode({ mesh: 'ExtResource("1")', surfaceOverrides: new Map([[0, 'ExtResource("9")']]) }),
       SCENE_MATERIALS
     );
 
@@ -169,7 +156,10 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
     const loader = loaderServing({ [MESH_PATH]: twoSurfaceTres(BROKEN_RED_SURFACE) });
     const materials = await renderSettled(
       loader,
-      makeNode({ mesh: 'ExtResource("1")', overrides: { 1: 'SubResource("Mat_green")' } }),
+      meshInstanceNode({
+        mesh: 'ExtResource("1")',
+        surfaceOverrides: new Map([[1, 'SubResource("Mat_green")']]),
+      }),
       SCENE_MATERIALS
     );
 
@@ -184,7 +174,10 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
     const loader = loaderServing({ [MESH_PATH]: twoSurfaceTres() });
     const materials = await renderSettled(
       loader,
-      makeNode({ mesh: 'ExtResource("1")', overrides: { 5: 'SubResource("Mat_green")' } }),
+      meshInstanceNode({
+        mesh: 'ExtResource("1")',
+        surfaceOverrides: new Map([[5, 'SubResource("Mat_green")']]),
+      }),
       SCENE_MATERIALS
     );
 
@@ -197,9 +190,9 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
     const loader = loaderServing();
     const materials = await renderSettled(
       loader,
-      makeNode({
+      meshInstanceNode({
         mesh: 'SubResource("ArrayMesh_inline")',
-        overrides: { 1: 'SubResource("Mat_green")' },
+        surfaceOverrides: new Map([[1, 'SubResource("Mat_green")']]),
       }),
       [...SCENE_MATERIALS, inlineTwoSurfaceMesh('ArrayMesh_inline', ['Mat_red', 'Mat_blue'])]
     );
@@ -207,5 +200,25 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
     expect(materials).toHaveLength(2);
     expect(hex(materials[0]!)).toBe(0xff0000);
     expect(hex(materials[1]!)).toBe(0x00ff00);
+  });
+
+  it('draws the magenta placeholder on every surface when material_override names a missing texture', async () => {
+    // The fake loader reports the texture missing at once: no file pipeline to settle.
+    const fake = createFakeResourceLoader();
+    fake.textures.seed(MISSING_TEXTURE_PATH, null);
+    const renderer = await renderMeshInstance({
+      loader: fake.loader,
+      node: meshInstanceNode({
+        mesh: 'SubResource("ArrayMesh_inline")',
+        materialOverride: 'SubResource("Mat_missing_texture")',
+      }),
+      internalResources: [
+        ...SCENE_MATERIALS,
+        inlineTwoSurfaceMesh('ArrayMesh_inline', ['Mat_red', 'Mat_blue']),
+      ],
+      externalResources: MESH_EXT,
+    });
+
+    expect(surfaceMaterials(renderer).map(hex)).toEqual([MAGENTA, MAGENTA]);
   });
 });
