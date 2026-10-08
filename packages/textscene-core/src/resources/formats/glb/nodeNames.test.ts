@@ -46,6 +46,16 @@ describe('godotNodeName', () => {
     expect(godotNodeRole(mesh)).toBe('node');
   });
 
+  it('names the camera under a joint after the joint, as Godot names its Camera3D', async () => {
+    const glb = nodesGlb([{ name: 'Head', camera: 0 }], {
+      skins: [{ joints: [0] }],
+      cameras: [{ type: 'perspective', perspective: { yfov: 1, znear: 0.1 } }],
+    });
+    const camera = byName(await createGLBMesh(glb, NO_SIDECAR), 'Head').children[0]!;
+    expect(godotNodeName(camera)).toBe('Head');
+    expect(godotNodeRole(camera)).toBe('node');
+  });
+
   it('marks a skinned mesh, which Godot puts straight under its Skeleton3D', async () => {
     const glb = nodesGlb([{ name: 'Hip' }, { name: 'Body', mesh: 0, skin: 0 }], { skins: [{ joints: [0] }] });
     expect(godotNodeRole(byName(await createGLBMesh(glb, NO_SIDECAR), 'Body'))).toBe('skinnedMesh');

@@ -112,4 +112,4 @@ The lenient parser reads the GeometryInstance3D base, `visibility_aabb` and whet
 ## Known limitations
 
 - **Not drawn** Godot draws the live particle cloud, but here nothing appears.
-- **Needs runtime** An emitter with a `mesh` and no `visibility_aabb` stays hidden with its visibility dependants, where Godot culls it by its live particles (#633).
+- **Needs runtime** An emitter with a `mesh` and no `visibility_aabb` stays hidden with its visibility dependants, where Godot culls it by its live particles.

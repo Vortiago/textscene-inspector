@@ -38,7 +38,7 @@ export interface GltfNodeName {
 
 /** Godot's `unique_names`, filled by `_gen_unique_name_static` (`gltf_document.cpp:7223-7242`). */
 class UniqueNames {
-  /** Grows only: `take` adds node names, and `boneNames` adds bone names before 4.5. */
+  /** Grows only: `take` adds node and mesh names, and `boneNames` adds bone names before 4.5. */
   readonly used = new Set<string>();
   /** Each base's first number not yet tried. `used` only grows, so every number below it is taken. */
   private readonly nextIndex = new Map<string, number>();
@@ -143,7 +143,10 @@ function unnamedNodeName(node: GltfJsonObject, namingVersion: number): string {
   return 'Node';
 }
 
-/** Each node's name and role by glTF index. `json` is the parsed glTF document. A document with no `nodes` gives none. */
+/**
+ * Each node's name and role by glTF index. `json` is the parsed glTF document. A document with no
+ * `nodes` gives none.
+ */
 export function gltfNodeNames(json: unknown, options: GltfNamingOptions): GltfNodeName[] {
   if (!isGltfJsonObject(json)) return [];
   const { namingVersion, importAsSkeletonBones, fileName } = options;
@@ -151,7 +154,8 @@ export function gltfNodeNames(json: unknown, options: GltfNamingOptions): GltfNo
   // `_parse_scenes` reserves the name before it reads anything (`gltf_document.cpp:528`).
   names.take('Skeleton3D');
   const scene = loadedScene(json, fileName);
-  if (namingVersion === 0 && objects(json['scenes']).length > 0) names.take(scene.name);
+  const sceneName =
+    namingVersion === 0 && objects(json['scenes']).length > 0 ? names.take(scene.name) : scene.name;
 
   const nodeObjects = objects(json['nodes']);
   const nodes = importNodes(nodeObjects);
@@ -175,6 +179,8 @@ export function gltfNodeNames(json: unknown, options: GltfNamingOptions): GltfNo
     const unnamed = unnamedNodeName(node, namingVersion);
     return names.take(namingVersion === 0 ? names.take(unnamed) : unnamed);
   });
+  // `_parse_meshes` names each mesh before `_create_skeletons` names a bone (`gltf_document.cpp:1434`).
+  for (const mesh of objects(json['meshes'])) names.take(`${sceneName}_${text(mesh['name']) || 'mesh'}`);
   const bonesByNode = boneNames(nodeObjects, skeletons, names.used, namingVersion);
 
   return sceneNames.map((name, i): GltfNodeName => {

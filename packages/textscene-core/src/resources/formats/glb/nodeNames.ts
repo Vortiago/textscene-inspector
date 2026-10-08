@@ -15,8 +15,8 @@ const GODOT_ROLE_KEY = 'textsceneGodotRole';
 
 /**
  * Tags each node object under `root` with its name and role from `names`, by glTF node index. The
- * mesh GLTFLoader puts under a bone stands for the MeshInstance3D Godot names after the bone, so it
- * takes the bone's name. Requires `tagMeshInstances` first.
+ * mesh, camera or light GLTFLoader puts under a bone stands for the node Godot names after the bone,
+ * so it takes the bone's name. Requires `tagMeshInstances` first.
  */
 export function tagGodotNodeNames(
   root: THREE.Object3D,
@@ -25,18 +25,25 @@ export function tagGodotNodeNames(
 ): void {
   root.traverse((object) => {
     const node = associations.get(object)?.nodes;
-    const tag = node === undefined ? boneMeshName(object) : names[node];
+    const tag = node === undefined ? boneAttachmentName(object) : names[node];
     if (!tag) return;
     object.userData[GODOT_NAME_KEY] = tag.name;
     object.userData[GODOT_ROLE_KEY] = tag.role;
   });
 }
 
-/** The node a bone's mesh instance stands for, or undefined for any other object. */
-function boneMeshName(object: THREE.Object3D): GltfNodeName | undefined {
+/**
+ * The node a bone's mesh, camera or light stands for, or undefined for any other object. Godot puts
+ * it in the bone's BoneAttachment3D (`gltf_document.cpp:4625-4652`).
+ */
+function boneAttachmentName(object: THREE.Object3D): GltfNodeName | undefined {
   const parent = object.parent;
-  if (!parent || !isMeshInstance(object) || godotNodeRole(parent) !== 'bone') return undefined;
+  if (!parent || !isBoneContent(object) || godotNodeRole(parent) !== 'bone') return undefined;
   return { name: godotNodeName(parent)!, role: 'node' };
+}
+
+function isBoneContent(object: THREE.Object3D): boolean {
+  return isMeshInstance(object) || 'isCamera' in object || 'isLight' in object;
 }
 
 /** The name Godot gives the glTF node `object` stands for, or undefined for any other object. */

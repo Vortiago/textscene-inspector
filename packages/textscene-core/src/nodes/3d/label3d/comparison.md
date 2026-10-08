@@ -74,4 +74,4 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 - **Approximated** The glyph texture carries no mipmaps, so a label seen small sparkles
   where Godot's stays smooth.
 - **Shader missing** `alpha_antialiasing_mode` and `alpha_antialiasing_edge` have no
-  counterpart, so a cut label's edges are not feathered (#634).
+  counterpart, so a cut label's edges are not feathered.

@@ -233,7 +233,7 @@ function useGlbMaterialOverrides(
   entries: readonly GlbObjectEntry[],
   overrides: readonly LiveNode[]
 ): ReactNode {
-  const { internalResources, externalResources } = useSceneResources();
+  const pools = useSceneResources();
 
   return useMemo(() => {
     if (!object) return null;
@@ -245,8 +245,7 @@ function useGlbMaterialOverrides(
 
       // A grafted override's ids belong to the outer scene that authored it, not the sub-scene it
       // renders under, and its scope carries both pools.
-      const scope = override.scope ?? { internalResources, externalResources };
-      const source = resolveMaterialSource(ref, scope);
+      const source = resolveMaterialSource(ref, override.scope ?? pools);
       if (!source) continue;
 
       const target = resolveGlbOverrideTarget(object, entries, override);
@@ -261,5 +260,5 @@ function useGlbMaterialOverrides(
       );
     }
     return slots.length > 0 ? <>{slots}</> : null;
-  }, [object, entries, overrides, internalResources, externalResources]);
+  }, [object, entries, overrides, pools]);
 }

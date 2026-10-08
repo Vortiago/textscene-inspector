@@ -165,6 +165,16 @@ describe('gltfNodeNames: bones', () => {
     expect(names(json)).toEqual(['L', 'R', 'Head', 'Head']);
   });
 
+  it('numbers a bone past the name its mesh import takes, which no node holds', () => {
+    const json = {
+      scenes: [{ nodes: [0] }],
+      nodes: [{ name: 'robot_Blade', mesh: 0 }],
+      meshes: [{ name: 'Blade' }],
+      skins: [{ joints: [0] }],
+    };
+    expect(names(json)).toEqual(['robot_Blade_2']);
+  });
+
   it('numbers a repeated bone name in the order the skeleton adds its bones', () => {
     const json = {
       nodes: [
