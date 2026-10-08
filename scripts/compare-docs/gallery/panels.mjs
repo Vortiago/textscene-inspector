@@ -3,6 +3,7 @@
  * sectioned one, an injected "not implemented" card, or the shared notes.
  */
 
+import { fixtureUrl } from '../../visual/preview/fixtureUrl.mjs';
 import { escapeHtml, inline } from './markdown.mjs';
 import { DEFAULT_STATUS, PREVIEW_URL, STATUS_LABEL } from './vocabulary.mjs';
 
@@ -64,9 +65,7 @@ export function renderPanels(nodes) {
         ${n.source ? `<a class="reflink" href="${n.source}" target="_blank" rel="noopener" title="Godot engine source for ${escapeHtml(n.type)}">source ↗</a>` : ''}
         ${
           n.fixture
-            ? `<a class="fixture" href="${PREVIEW_URL}?fixture=${encodeURIComponent(n.fixture)}${
-                n.camera ? `&camera=${encodeURIComponent(n.camera)}` : ''
-              }" target="_blank" rel="noopener" title="Open ${escapeHtml(
+            ? `<a class="fixture" href="${fixtureUrl(PREVIEW_URL, n.fixture, { camera: n.camera || null })}" target="_blank" rel="noopener" title="Open ${escapeHtml(
                 n.fixture
               )} in the previewer"><code>${escapeHtml(n.fixture)}</code> ↗</a>`
             : ''
