@@ -44,22 +44,19 @@ function indexedIds<T>(
 }
 
 /**
- * The first entry in declaration order keeps an id, so a repeated id resolves to its first
- * declaration.
+ * The last `[ext_resource]` keeps an id: Godot's loader assigns `ext_resources[id]` per entry
+ * (`resource_format_text.cpp:517-519`), and every reference follows the whole table.
  */
-function claimId<T>(byId: Map<string, T>, id: string, entry: T): void {
-  if (!byId.has(id)) byId.set(id, entry);
-}
-
 function claimExternalIds(byId: Map<string, TscnExternalResource>, resource: TscnExternalResource): void {
-  claimId(byId, resource.id, resource);
+  byId.set(resource.id, resource);
 }
 
+/** The first entry in declaration order keeps an id, so a repeated id resolves to its first declaration. */
 function claimInternalIds(byId: Map<string, TscnInternalResource>, resource: TscnInternalResource): void {
-  claimId(byId, resource.id, resource);
+  if (!byId.has(resource.id)) byId.set(resource.id, resource);
 }
 
-/** The `[ext_resource]` declaring `id`, the first one when a file repeats an id. */
+/** The `[ext_resource]` declaring `id`, the last one when a file repeats an id. */
 export function findExtResource(
   externalResources: readonly TscnExternalResource[],
   id: string
@@ -94,6 +91,18 @@ export function resolveExtResourcePath(
   if (!parsed || parsed.type !== 'ExtResource') return null;
   const path = findExtResource(externalResources, parsed.id)?.path;
   return path === undefined ? null : simplifyResPath(path);
+}
+
+/**
+ * The `.tres` an external reference loads, or null for any other reference. Only a text resource
+ * parses: no processor reads a binary `.res`, so a request for one would wait forever.
+ */
+export function textResourcePath(
+  ref: string | null | undefined,
+  externalResources: readonly TscnExternalResource[]
+): string | null {
+  const path = resolveExtResourcePath(ref, externalResources);
+  return path?.endsWith('.tres') ? path : null;
 }
 
 /** Find a SubResource by id. The first resource in declaration order with that id wins. */

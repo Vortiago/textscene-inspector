@@ -7,7 +7,7 @@ import type { TscnExternalResource, TscnInternalResource } from '../../../parser
 import { unquoteString } from '../../../parser/utils';
 import { stringArrayBodies } from '../../../godot/index.js';
 import { findExtResource, findSubResource, parseResourceReference } from '../../SubResourceResolver';
-import { resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
+import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { FontCacheReader, FontLoaderFn, FontResource } from './types';
 
 /** The three type names this slice claims: the gate both decode paths apply to a `SubResource` ref. */
@@ -51,7 +51,7 @@ export async function decodeFont(
   subResources: readonly TscnInternalResource[],
   loadFont: FontLoaderFn
 ): Promise<FontResource> {
-  const extPathById = new Map(extResources.map((r) => [r.id, r.path]));
+  const extPathById = extResourcePathsById(extResources);
   const gate = subResourceTypeGate(subResources, FONT_SUB_RESOURCE_TYPES);
 
   const resolveRef = async (ref: string | undefined): Promise<FontResource | null> => {

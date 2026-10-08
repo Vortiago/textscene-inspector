@@ -11,7 +11,7 @@ import { parseOptionalFloat } from '../../../parser/valueParsers';
 import { parseColorOrUndefined, type Color } from '../../../utils/colorParser';
 import { FONT_SUB_RESOURCE_TYPES, resolveInlineFontResource } from '../../fonts/font/decode';
 import type { FontCacheReader } from '../../fonts/font/types';
-import { resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
+import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { ScannedTheme, ThemeAddresses, ThemeResource } from './types';
 import { indexedKeyRegex } from '../../../godot/index.js';
 
@@ -160,7 +160,7 @@ export function decodeThemeAddresses(
   extResources: readonly TscnExternalResource[],
   subResources: readonly TscnInternalResource[]
 ): ThemeAddresses {
-  const extPathById = new Map(extResources.map((r) => [r.id, r.path]));
+  const extPathById = extResourcePathsById(extResources);
   const gate = subResourceTypeGate(subResources, FONT_SUB_RESOURCE_TYPES);
   const scanned = scanTheme(properties, (ref) => resolveRefToResourcePath(ref, extPathById, selfPath, gate));
   return { ...scanned, resources: { externalResources: extResources, internalResources: subResources } };

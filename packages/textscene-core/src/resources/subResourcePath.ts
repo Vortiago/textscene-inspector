@@ -55,13 +55,11 @@ export function resourceFilePath(path: string): string {
   return parseSubResourcePath(path).filePath;
 }
 
-/** First-wins id → path, as `findExtResource` resolves a duplicate id. A plain `new Map` is last-wins. */
+/** Each `[ext_resource]` id to its path. A repeated id takes its last path, as `findExtResource` does. */
 export function extResourcePathsById(
   resources: readonly TscnExternalResource[]
 ): ReadonlyMap<string, string> {
-  const byId = new Map<string, string>();
-  for (const r of resources) if (!byId.has(r.id)) byId.set(r.id, r.path);
-  return byId;
+  return new Map(resources.map((r) => [r.id, r.path]));
 }
 
 /**

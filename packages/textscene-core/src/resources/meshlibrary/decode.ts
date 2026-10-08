@@ -9,7 +9,7 @@ import { warn } from '../../logger';
 import { indexedKeyRegex, parseGodotInt, stringToInt } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { ARRAY_MESH_TYPES } from '../meshes/arraymesh/decode';
-import { resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
+import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
 import { ShadowCastingSetting, type MeshLibraryModel, type MeshLibraryItem } from './types';
@@ -49,7 +49,7 @@ function decodeCastShadow(rawValue: string): ShadowCastingSetting {
 }
 
 export function meshLibraryFromTres(tres: ParsedResource, selfPath: string): MeshLibraryModel {
-  const extPathById = new Map(tres.extResources.map((r) => [r.id, r.path]));
+  const extPathById = extResourcePathsById(tres.extResources);
   const items: MeshLibraryModel = new Map();
 
   const ensure = (id: number): MeshLibraryItem => {
