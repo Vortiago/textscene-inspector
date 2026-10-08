@@ -20,7 +20,6 @@ describe('alphaCutSurface', () => {
       alphaHash: false,
       depthWrite: true,
       blended: false,
-      drawsDepth: true,
       readsAlbedoAlpha: true,
       opaqueAfterCut: true,
     });
@@ -33,7 +32,6 @@ describe('alphaCutSurface', () => {
       alphaHash: true,
       depthWrite: true,
       blended: false,
-      drawsDepth: true,
       readsAlbedoAlpha: true,
       opaqueAfterCut: true,
     });
@@ -47,7 +45,6 @@ describe('alphaCutSurface', () => {
       alphaHash: false,
       depthWrite: true,
       blended: true,
-      drawsDepth: true,
       readsAlbedoAlpha: true,
       opaqueAfterCut: false,
     });
@@ -61,7 +58,6 @@ describe('alphaCutSurface', () => {
       alphaHash: false,
       depthWrite: false,
       blended: true,
-      drawsDepth: false,
       readsAlbedoAlpha: true,
       opaqueAfterCut: false,
     });
@@ -83,7 +79,6 @@ describe('alphaCutSurface', () => {
         alphaHash: false,
         depthWrite: true,
         blended: false,
-        drawsDepth: true,
         readsAlbedoAlpha: false,
         opaqueAfterCut: false,
       });

@@ -1,11 +1,8 @@
-/**
- * The node path of each node's visibility parent, as `Node3D::_update_visibility_parent` settles
- * it (`node_3d.cpp:1304-1335`): a node's own `visibility_parent`, or else its Node3D parent's.
- */
+/** The node path of each node's visibility parent (`godot/visibilityParent.ts`), down the tree. */
 
 import { createContext, useContext, type ReactNode } from 'react';
-import { resolveRelativePath } from '../../godot/nodePath';
 import { spaceFamilyOf } from '../../godot/parentSpace';
+import { visibilityParentOf } from '../../godot/visibilityParent';
 import type { TscnNode } from '../../parser/types';
 import type { Node3DProperties } from '../../nodes/base/node3d/types';
 import { useUniqueNamePaths } from '../useUniqueNames';
@@ -43,24 +40,10 @@ function OwnVisibilityParent({
   relative: string;
   children: ReactNode;
 }) {
-  const visibilityParent = resolveVisibilityParent(path, relative, useUniqueNamePaths(path));
+  const visibilityParent = visibilityParentOf(path, relative, null, useUniqueNamePaths(path));
   return (
     <VisibilityParentContext.Provider value={visibilityParent}>{children}</VisibilityParentContext.Provider>
   );
-}
-
-/**
- * The visibility parent the node at `path` names with `relative`, or null for none. Godot refuses
- * the node itself (`node_3d.cpp:1313`). A path that names no GeometryInstance3D the scene cull
- * holds, it treats as none there.
- */
-export function resolveVisibilityParent(
-  path: string,
-  relative: string,
-  uniquePaths: ReadonlyMap<string, string> | undefined
-): string | null {
-  const resolved = resolveRelativePath(path, relative, uniquePaths);
-  return resolved === path ? null : resolved;
 }
 
 /** The node path of the enclosing node's visibility parent, or null for none. */

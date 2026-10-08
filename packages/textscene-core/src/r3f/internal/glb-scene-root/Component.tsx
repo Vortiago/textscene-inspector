@@ -9,8 +9,8 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
-import { useGlbInstance } from './GlbInstanceContext';
-import { useGlbGeometryInstances, type GlbRoot } from './glbGeometryInstances';
+import { useGlbRoot } from './GlbInstanceContext';
+import { useGlbGeometryInstances } from './glbGeometryInstances';
 import { applyGlbNodeOverrides, isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOverrides';
 import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME, type GlbObjectEntry } from './glbHierarchy';
 import { useAnimationTransport, type PlayState } from '../../contexts/AnimationTransportContext';
@@ -189,17 +189,6 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
       {materialOverrides}
       {children}
     </primitive>
-  );
-}
-
-const NO_OVERRIDES: readonly LiveNode[] = [];
-
-/** The node that instances this GLB, or, for a GLB opened as the scene, its own root. */
-function useGlbRoot(nodePath: string | null): GlbRoot {
-  const instance = useGlbInstance();
-  return useMemo(
-    () => instance ?? { overrides: NO_OVERRIDES, path: nodePath, visibilityParent: null },
-    [instance, nodePath]
   );
 }
 

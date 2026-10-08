@@ -16,6 +16,7 @@ import {
   type MeshSurface,
 } from '../../../resources/formats/glb/meshInstances';
 import { ShadowCastingSetting } from '../../../godot/rendering';
+import { visibilityParentOf } from '../../../godot/visibilityParent';
 import { joinPath } from '../../../utils/nodePath';
 import {
   applyShadowCasting,
@@ -26,19 +27,11 @@ import {
 import { FadedMeshMaterials } from '../../materials/fadedMeshMaterials';
 import { CulledInstance } from '../../visibilityRange/culledInstance';
 import { registerVisibilityInstance } from '../../visibilityRange/visibilityScene';
-import { resolveVisibilityParent } from '../../visibilityRange/VisibilityParentContext';
 import type { InstancePlacement } from '../../visibilityRange/placements';
 import { useUniqueNamePaths } from '../../useUniqueNames';
 import type { GlbObjectEntry } from './glbHierarchy';
+import type { GlbRoot } from './GlbInstanceContext';
 import { isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOverrides';
-
-/** The GLB root as Godot holds it: the node that instances the GLB, or the scene's root. */
-export interface GlbRoot {
-  overrides: readonly LiveNode[];
-  /** Null outside the dispatcher, where nothing can name a node as a parent. */
-  path: string | null;
-  visibilityParent: string | null;
-}
 
 /** A MeshInstance3D of a GLB, with its node data. */
 interface GlbMeshInstance {
@@ -64,15 +57,21 @@ function glbMeshInstances(
   for (const entry of entries) {
     const override = overrides.get(entry.object);
     const path =
-      root.path === null ? null : joinPath(root.path, override ? overridePath(override) : entry.relPath);
+      root.path === null
+        ? null
+        : joinPath(
+            root.path,
+            override ? joinPath(override.instanceSubPath ?? '', override.name) : entry.relPath
+          );
     const properties = parseGeometryInstance3D(
       { type: 'node', attributes: { name: entry.object.name } },
       override?.rawProperties ?? {}
     );
-    const own = properties.visibility_parent;
     const inherited = passedOn.get(entry.object.parent!) ?? root.visibilityParent;
     const parentPath =
-      own === undefined || path === null ? inherited : resolveVisibilityParent(path, own, uniquePaths);
+      path === null
+        ? inherited
+        : visibilityParentOf(path, properties.visibility_parent, inherited, uniquePaths);
     passedOn.set(entry.object, parentPath);
     if (isMeshInstance(entry.object)) instances.push({ object: entry.object, path, parentPath, properties });
   }
@@ -92,11 +91,6 @@ function overridesByTarget(
     if (target && !byTarget.has(target)) byTarget.set(target, override);
   }
   return byTarget;
-}
-
-/** An override node's path under the GLB root, as the instancing scene names it. */
-function overridePath(override: LiveNode): string {
-  return override.instanceSubPath ? joinPath(override.instanceSubPath, override.name) : override.name;
 }
 
 /** Registers each MeshInstance3D of the mounted GLB `object` with the scene cull. */
