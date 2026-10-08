@@ -16,7 +16,7 @@ import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubt
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
-import { resolveCsgMaterial } from '../../../r3f/csg/csgMaterials';
+import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
 import { useCsgGeometryContext } from '../../../r3f/csg/useCsgGeometryContext';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { livePlacement } from '../../../r3f/visibilityRange/placements';
@@ -43,9 +43,15 @@ interface CsgPrimitiveProps {
 // and `subtreeConformance.test.tsx` fails a root that swallows `children`. So contributors remove
 // their own mesh from the inside.
 export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) {
-  const { context: ctx, isLoading } = useCsgGeometryContext(node);
   const path = useNodePath();
   const subtree = useCsgSubtree();
+  // A node in an ancestor's plan builds against that root's context, so only a root loads files.
+  const inAncestorPlan =
+    subtree !== null &&
+    path !== null &&
+    (subtree.absorbedPaths.has(path) || subtree.invisiblePaths.has(path));
+  const ownSetup = useCsgGeometryContext(inAncestorPlan ? null : node);
+  const ctx = inAncestorPlan ? subtree.context : ownSetup.context;
   // Optional: a CSG node renders outside the shell in tests and in the
   // subtree-conformance probe, where nothing can be hidden anyway.
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_PATHS;
@@ -77,7 +83,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   // primitive keeps only a `Ref<Material>` (`modules/csg/csg_shape.h:276,290`), so both arrive at
   // the same slot, which renders either, textures included.
   const materialSources = useMemo(
-    () => ownSolid?.materials.map((address) => resolveCsgMaterial(address, ctx)) ?? [],
+    () => ownSolid?.materials.map((address) => resolveMaterialSource(address, ctx)) ?? [],
     [ownSolid, ctx]
   );
 
@@ -109,8 +115,13 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     () =>
       plan === null
         ? subtree
-        : { status: 'ready' as const, absorbedPaths: NO_PATHS, invisiblePaths: plan.invisiblePaths },
-    [plan, subtree]
+        : {
+            status: 'ready' as const,
+            absorbedPaths: NO_PATHS,
+            invisiblePaths: plan.invisiblePaths,
+            context: ctx,
+          },
+    [plan, subtree, ctx]
   );
   const scope = <CsgSubtreeProvider value={publishedSubtree}>{children}</CsgSubtreeProvider>;
 
@@ -172,14 +183,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   if (combining) {
     return (
       <group {...transform}>
-        <CsgRootMesh
-          plan={plan}
-          geometry={ctx}
-          isLoading={isLoading}
-          shadow={shadow}
-          meshRef={drawnRef}
-          fallback={ownMesh}
-        >
+        <CsgRootMesh plan={plan} setup={ownSetup} shadow={shadow} meshRef={drawnRef} fallback={ownMesh}>
           {children}
         </CsgRootMesh>
       </group>

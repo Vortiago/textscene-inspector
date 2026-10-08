@@ -36,9 +36,12 @@ function node(type: string, properties: Record<string, unknown>, children: TscnN
 /** A box root holding a CSGMesh3D whose mesh is `rock.tres`. */
 const ROOT = node('CSGBox3D', {}, [node('CSGMesh3D', { mesh: 'ExtResource("1")', flipFaces: false })]);
 
-function renderSetup(root: TscnNode, fake: FakeResourceLoader) {
+function renderSetup(root: TscnNode | null, fake: FakeResourceLoader) {
   return renderHook(
-    () => ({ setup: useCsgGeometryContext(root), missing: useMissingResources().missingPaths }),
+    () => {
+      const { missingPaths, uploadedPaths } = useMissingResources();
+      return { setup: useCsgGeometryContext(root), missing: missingPaths, uploaded: uploadedPaths };
+    },
     {
       wrapper: ({ children }: { children: ReactNode }) => (
         <MissingResourcesProvider>
@@ -76,6 +79,22 @@ describe('useCsgGeometryContext', () => {
     expect(result.current.setup.isLoading).toBe(false);
     expect(result.current.setup.context.file(ROCK)).toBeUndefined();
     expect(result.current.missing.has(ROCK)).toBe(true);
+  });
+
+  it('keeps the row of a failed file that loads later, marked uploaded', () => {
+    const fake = createFakeResourceLoader();
+    const result = renderSetup(ROOT, fake);
+    act(() => fake.resources._fail(ROCK, 'gone'));
+    act(() => fake.resources._resolve(ROCK, ROCK_FILE));
+    expect(result.current.missing.has(ROCK)).toBe(false);
+    expect(result.current.uploaded.has(ROCK)).toBe(true);
+  });
+
+  it('reads no file for a node in an ancestor’s plan, which passes no root (edge case)', () => {
+    const fake = createFakeResourceLoader();
+    const result = renderSetup(null, fake);
+    expect(result.current.setup.isLoading).toBe(false);
+    expect(fake.resources.pinCounts.size).toBe(0);
   });
 
   it('reads no file for a subtree of inline shapes', () => {

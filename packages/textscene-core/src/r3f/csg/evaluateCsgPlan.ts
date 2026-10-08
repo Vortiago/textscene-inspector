@@ -9,7 +9,7 @@ import { warn } from '../../logger';
 import { CsgOperation, type CsgContribution, type CsgPlan } from './csgPlan';
 import type { CsgModule } from './csgModule';
 import type { CsgSolid } from './csgRegistration';
-import type { CsgMaterialAddress } from './csgMaterials';
+import { internMaterial, type CsgMaterialAddress } from './csgMaterials';
 
 export interface CsgEvaluation {
   geometry: THREE.BufferGeometry;
@@ -49,12 +49,9 @@ class MaterialSentinels {
   private readonly sentinels: THREE.Material[] = [];
 
   sentinelFor(address: CsgMaterialAddress): THREE.Material {
-    const existing = this.addresses.indexOf(address);
-    if (existing !== -1) return this.sentinels[existing]!;
-    this.addresses.push(address);
-    const sentinel = new THREE.MeshBasicMaterial();
-    this.sentinels.push(sentinel);
-    return sentinel;
+    const slot = internMaterial(this.addresses, address);
+    if (slot === this.sentinels.length) this.sentinels.push(new THREE.MeshBasicMaterial());
+    return this.sentinels[slot]!;
   }
 
   /** A slot whose sentinel is not ours means the library synthesised a material: it takes the first. */

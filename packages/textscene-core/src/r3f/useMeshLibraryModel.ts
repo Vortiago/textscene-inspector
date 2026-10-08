@@ -6,7 +6,7 @@
 
 import { useMemo } from 'react';
 import type { ParsedResource } from '../parser/parsedResource';
-import { resolveExtResourcePath } from '../resources/SubResourceResolver';
+import { textResourcePath } from '../resources/SubResourceResolver';
 import { meshLibraryFromTres } from '../resources/meshlibrary/decode';
 import type { MeshLibraryModel } from '../resources/meshlibrary/types';
 import { useResource } from '../resources/useResource';
@@ -20,9 +20,7 @@ export interface MeshLibraryModelResult {
 export function useMeshLibraryModel(meshLibraryRef: string | undefined): MeshLibraryModelResult {
   const { externalResources } = useSceneResources();
 
-  const resolvedPath = meshLibraryRef ? resolveExtResourcePath(meshLibraryRef, externalResources) : null;
-  // Only a text resource parses. A binary `.res` MeshLibrary would park forever.
-  const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
+  const tresPath = textResourcePath(meshLibraryRef, externalResources);
   const tresResult = useResource<ParsedResource>(tresPath ?? '', 'resource');
 
   return useMemo((): MeshLibraryModelResult => {

@@ -32,6 +32,14 @@ describe('resolveMaterialSource', () => {
     });
   });
 
+  it('takes a res:// path, such as a material inside a mesh .tres, as the file it names', () => {
+    expect(resolveMaterialSource('res://rock.tres::Mat_1', POOLS)).toEqual({
+      kind: 'file',
+      path: 'res://rock.tres::Mat_1',
+    });
+    expect(resolveMaterialSource('res://paint.material', POOLS)).toBeUndefined();
+  });
+
   it('resolves an ExtResource to the .tres file the loader reads', () => {
     expect(resolveMaterialSource('ExtResource("4")', POOLS)).toEqual({
       kind: 'file',

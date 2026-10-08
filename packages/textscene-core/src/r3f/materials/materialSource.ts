@@ -12,6 +12,8 @@ import { BUILDABLE_MATERIAL_TYPES } from '../../resources/materials/buildableMat
 import { resourceFilePath } from '../../resources/subResourcePath';
 import { findSubResource, type SceneResources } from '../SceneResourcesContext';
 
+const RES_PATH = 'res://';
+
 /** A material body and the resource tables its references resolve in: its owning file's. */
 export interface MaterialResource {
   resource: TscnInternalResource;
@@ -26,7 +28,8 @@ export type MaterialSource =
   | { kind: 'file'; path: string };
 
 /**
- * The source `ref` names, or undefined when it names no material. Undefined leaves the
+ * The source `ref` names, or undefined when it names no material. `ref` is a reference in the
+ * scene's tables, or a `res://` path such as a material inside a mesh `.tres`. Undefined leaves the
  * slot empty, as Godot's invalid RID does, so an override that names nothing keeps what
  * the surface had. A material this previewer cannot build still fills the slot, and
  * `useMaterial` answers with Godot's default surface for it (ADR-0041).
@@ -36,6 +39,7 @@ export function resolveMaterialSource(
   { internalResources, externalResources }: SceneResources
 ): MaterialSource | undefined {
   if (!ref) return undefined;
+  if (ref.startsWith(RES_PATH)) return fileMaterialSource(ref);
   const parsed = parseResourceReference(ref);
   if (!parsed) return undefined;
 
@@ -60,6 +64,6 @@ export function fileMaterialSources(
  * The source for a material file, or undefined for one that is no `.tres` document.
  * Minting an address the loader must refuse buys a failed load and the same default surface.
  */
-export function fileMaterialSource(path: string): MaterialSource | undefined {
+function fileMaterialSource(path: string): MaterialSource | undefined {
   return resourceFilePath(path).endsWith('.tres') ? { kind: 'file', path } : undefined;
 }

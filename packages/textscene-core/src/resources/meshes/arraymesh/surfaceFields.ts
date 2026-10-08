@@ -10,6 +10,7 @@ import { warn } from '../../../logger.js';
 import { parseGodotFloat } from '../../../godot/number.js';
 import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variantParser.js';
 import { parseGodotInt } from '../../../godot/int.js';
+import { decodeBase64Bytes } from '../../../godot/packedBytes.js';
 import { unquoteString } from '../../../parser/utils.js';
 
 /** A surface's declared `AABB(px, py, pz, sx, sy, sz)`: a compressed surface's position scale. */
@@ -114,7 +115,7 @@ export function readPackedBytes(block: string, key: string): Uint8Array {
 
 function base64Bytes(quoted: string, key: string): Uint8Array {
   try {
-    return binaryStringBytes(atob(quoted.slice(1, -1)));
+    return decodeBase64Bytes(quoted.slice(1, -1));
   } catch {
     warn(`[ArrayMesh] ${key} is not valid base64 — ignoring the payload`);
     return new Uint8Array(0);
@@ -133,16 +134,5 @@ function listedBytes(body: string, key: string): Uint8Array {
     }
     bytes[i] = stored;
   }
-  return bytes;
-}
-
-/**
- * The bytes of an `atob` result, one char code (0 to 255) each. A plain loop into a preallocated
- * array, not `Uint8Array.from` with a mapper: that calls the mapper per character, over 20 times
- * slower on a 4 MB payload.
- */
-function binaryStringBytes(binary: string): Uint8Array {
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }

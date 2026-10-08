@@ -4,22 +4,17 @@
  * so two faces with equal addresses share a surface.
  */
 
-import { fileMaterialSource, resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
-import type { SceneResources } from '../SceneResourcesContext';
-
 /**
  * A reference in the scene's tables, or the `res://` path of a material a mesh `.tres` holds, as
- * `resolveRefToResourcePath` writes it. Undefined is a face with no material.
+ * `resolveRefToResourcePath` writes it, which `resolveMaterialSource` reads either way. Undefined is a
+ * face with no material.
  */
 export type CsgMaterialAddress = string | undefined;
 
-const RES_PATH = 'res://';
-
-/** The source an address names, resolving a reference against the scene's `pools`. */
-export function resolveCsgMaterial(
-  address: CsgMaterialAddress,
-  pools: SceneResources
-): MaterialSource | undefined {
-  if (address?.startsWith(RES_PATH)) return fileMaterialSource(address);
-  return resolveMaterialSource(address, pools);
+/** The index of `address` in `materials`, appending it when new: one slot per distinct material. */
+export function internMaterial(materials: CsgMaterialAddress[], address: CsgMaterialAddress): number {
+  const existing = materials.indexOf(address);
+  if (existing !== -1) return existing;
+  materials.push(address);
+  return materials.length - 1;
 }

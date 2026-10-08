@@ -8,6 +8,7 @@
 import { warn } from '../../../../logger';
 import { ARRAY_LITERAL_RE, packedArrayLiteral } from '../../../../godot/index.js';
 import { parseGodotInt } from '../../../../godot/int.js';
+import { decodeBase64Bytes } from '../../../../godot/packedBytes.js';
 
 export interface Vec2i {
   x: number;
@@ -181,7 +182,7 @@ function decodeBytes(body: string): Uint8Array | null {
   const base64 = /^"([^"]*)"$/.exec(body);
   if (base64) {
     try {
-      return Uint8Array.from(atob(base64[1]!), (c) => c.charCodeAt(0));
+      return decodeBase64Bytes(base64[1]!);
     } catch {
       warn(`[TileMapLayer] tile_map_data is not valid base64 — ignoring tile data`);
       return null;

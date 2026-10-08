@@ -1,12 +1,14 @@
 /**
- * The context a CSG subtree builds its solids against: the scene's pools, and each `.tres` a shape
- * in the subtree reads. It reads the loader's cache, as `useTileSetModels` does, because a subtree
- * reads any number of files and a hook cannot run once per file.
+ * The context a CSG root builds its plan's solids against: the scene's pools, and each `.tres` a
+ * shape in its plan reads. It reads the loader's cache, because a subtree reads any number of files
+ * and a hook cannot run once per file. A node inside an ancestor's plan passes null and takes the
+ * root's context from `CsgSubtreeContext`, so only the root loads.
  */
 
 import { useEffect, useMemo, useRef } from 'react';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnNode } from '../../parser/types';
+import type { ResourceLoader } from '../../resources/ResourceLoader';
 import type { ResourceType } from '../../resources/ResourceEventBus';
 import { useCacheVersion } from '../../resources/useCacheVersion';
 import { usePendingWhile } from '../../resources/usePendingWhile';
@@ -18,46 +20,34 @@ import type { CsgGeometryContext } from './csgRegistration';
 
 export interface CsgGeometrySetup {
   context: CsgGeometryContext;
-  /** True while a file the subtree reads has neither loaded nor failed. */
+  /** True while a file the plan reads has neither loaded nor failed. */
   isLoading: boolean;
 }
+
+/** A file's cache entry: undefined while it loads, null once it has failed. */
+type CachedFile = ParsedResource | null | undefined;
 
 /** A mesh `.tres` loads on the generic resource bus. */
 const RESOURCE_BUS: readonly ResourceType[] = ['resource'];
 const NO_PATHS: ReadonlySet<string> = new Set();
 
-export function useCsgGeometryContext(root: TscnNode): CsgGeometrySetup {
+export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
   const pools = useSceneResources();
   const loader = useResourceLoader();
-  const paths = useSubtreeFiles(root, pools);
+  const files = useCachedFiles(loader, useSubtreeFiles(root, pools));
 
-  const readPaths = useRef<ReadonlySet<string>>(NO_PATHS);
-  const version = useCacheVersion(loader, RESOURCE_BUS, readPaths);
-  useEffect(() => {
-    readPaths.current = new Set(paths);
-  }, [paths]);
-  useRequestedFiles(paths);
-
-  const files = useMemo(
-    () => new Map(paths.map((path) => [path, loader?.resources.getCached(path)] as const)),
-    // `version` is a cache-buster: the cache changes outside React.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loader, paths, version]
-  );
   const context = useMemo(
     (): CsgGeometryContext => ({ ...pools, file: (path) => files.get(path) ?? undefined }),
     [pools, files]
   );
   const isLoading = loader !== null && [...files.values()].some((file) => file === undefined);
   usePendingWhile(isLoading);
-  useMissingFiles(files);
-  return { context, isLoading };
+  return useMemo(() => ({ context, isLoading }), [context, isLoading]);
 }
 
 /** Each `.tres` a CSG shape under `root` reads, sorted, and stable while that list is. */
-function useSubtreeFiles(root: TscnNode, pools: SceneResources): readonly string[] {
-  const joined = useMemo(() => subtreeFiles(root, pools).join('\n'), [root, pools]);
-  return useMemo(() => (joined ? joined.split('\n') : []), [joined]);
+function useSubtreeFiles(root: TscnNode | null, pools: SceneResources): readonly string[] {
+  return useStableList(useMemo(() => (root ? subtreeFiles(root, pools) : []), [root, pools]));
 }
 
 /** Only CSG children, as only they join the root's boolean (`csgPlan.ts`). */
@@ -74,9 +64,30 @@ function subtreeFiles(root: TscnNode, pools: SceneResources): string[] {
   return [...paths].sort();
 }
 
+/** Each path's cache entry, re-read on the loader's events, with each file requested and pinned. */
+function useCachedFiles(
+  loader: ResourceLoader | null,
+  paths: readonly string[]
+): ReadonlyMap<string, CachedFile> {
+  const readPaths = useRef<ReadonlySet<string>>(NO_PATHS);
+  const version = useCacheVersion(loader, RESOURCE_BUS, readPaths);
+  useEffect(() => {
+    readPaths.current = new Set(paths);
+  }, [paths]);
+  useRequestedFiles(loader, paths);
+
+  const files = useMemo(
+    () => new Map(paths.map((path) => [path, loader?.resources.getCached(path)] as const)),
+    // `version` is a cache-buster: the cache changes outside React.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [loader, paths, version]
+  );
+  useMissingFiles(files);
+  return files;
+}
+
 /** Requests each file not yet cached, and pins each so LRU eviction spares it while mounted. */
-function useRequestedFiles(paths: readonly string[]): void {
-  const loader = useResourceLoader();
+function useRequestedFiles(loader: ResourceLoader | null, paths: readonly string[]): void {
   useEffect(() => {
     if (!loader) return undefined;
     for (const path of paths) {
@@ -87,14 +98,30 @@ function useRequestedFiles(paths: readonly string[]): void {
   }, [loader, paths]);
 }
 
-/** Reports each file that failed as a **Missing resource**, while it stays failed. */
-function useMissingFiles(files: ReadonlyMap<string, ParsedResource | null | undefined>): void {
-  const { report, clear } = useMissingResources();
-  const failed = [...files].filter(([, file]) => file === null).map(([path]) => path);
-  const failedKey = failed.join('\n');
+/**
+ * Reports each failed file as a **Missing resource** while it stays failed. A file this hook
+ * reported that loads later was uploaded, so its row stays, marked uploaded, as `useMissingReport`
+ * keeps it for one file.
+ */
+function useMissingFiles(files: ReadonlyMap<string, CachedFile>): void {
+  const { report, clear, markUploaded } = useMissingResources();
+  const failed = useStableList([...files].filter(([, file]) => file === null).map(([path]) => path));
+  const reported = useRef<ReadonlySet<string>>(NO_PATHS);
+
   useEffect(() => {
-    const paths = failedKey ? failedKey.split('\n') : [];
-    paths.forEach(report);
-    return () => paths.forEach(clear);
-  }, [failedKey, report, clear]);
+    failed.forEach(report);
+    return () => failed.forEach(clear);
+  }, [failed, report, clear]);
+
+  useEffect(() => {
+    const uploaded = [...reported.current].filter((path) => files.get(path));
+    uploaded.forEach(markUploaded);
+    reported.current = new Set([...reported.current, ...failed].filter((path) => !uploaded.includes(path)));
+  }, [files, failed, markUploaded]);
+}
+
+/** `list` under one identity while its entries stay the same. A path holds no newline. */
+function useStableList(list: readonly string[]): readonly string[] {
+  const joined = list.join('\n');
+  return useMemo(() => (joined ? joined.split('\n') : []), [joined]);
 }

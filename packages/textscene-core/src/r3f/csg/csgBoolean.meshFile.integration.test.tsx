@@ -13,7 +13,10 @@ import { TscnParser } from '../../parser/TscnParser';
 import { parseTresFile } from '../../parser/parsedResource';
 import { fixturesDir } from '../../parser/testing/parserKit';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
+import {
+  createFakeResourceLoader,
+  type FakeResourceLoader,
+} from '../../resources/testing/createFakeResourceLoader';
 import { instanceAs } from '../../nodes/3d/testing/reactThreeTestInstance';
 import { clearEvaluationCache } from './csgEvaluationCache';
 import '../nodes/index';
@@ -44,19 +47,23 @@ function drawnMesh(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.cr
     .find((mesh) => mesh.visible)!;
 }
 
+async function renderScene(fake: FakeResourceLoader) {
+  clearEvaluationCache();
+  const scene = new TscnParser().parse(SCENE);
+  const root = scene.nodes[0]!.children[0]!;
+  return ReactThreeTestRenderer.create(
+    <ResourceLoaderProvider loader={fake.loader}>
+      <SceneResourcesProvider externalResources={scene.externalResources}>
+        <NodeTree node={root} path={`Root/${root.name}`} />
+      </SceneResourcesProvider>
+    </ResourceLoaderProvider>
+  );
+}
+
 describe('CSG boolean over a mesh .tres', () => {
   it('draws the root’s own solid while the file loads, then the boolean with its surfaces', async () => {
-    clearEvaluationCache();
-    const scene = new TscnParser().parse(SCENE);
-    const root = scene.nodes[0]!.children[0]!;
     const fake = createFakeResourceLoader();
-    const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider externalResources={scene.externalResources}>
-          <NodeTree node={root} path={`Root/${root.name}`} />
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    );
+    const renderer = await renderScene(fake);
     await settleCsgEvaluation(renderer);
     expect(Array.isArray(drawnMesh(renderer).material)).toBe(false);
 
@@ -65,5 +72,11 @@ describe('CSG boolean over a mesh .tres', () => {
     await settleCsgEvaluation(renderer);
     // The slab's default surface and the file's red and green ones.
     expect((drawnMesh(renderer).material as THREE.Material[]).length).toBe(3);
+  });
+
+  it('loads the file once, through the root, not again through the contributor', async () => {
+    const fake = createFakeResourceLoader();
+    await settleCsgEvaluation(await renderScene(fake));
+    expect(fake.resources.pinCounts.get(MESH_PATH)).toBe(1);
   });
 });

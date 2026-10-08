@@ -8,24 +8,21 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
 import { SurfaceMaterialSlots } from '../materials/SurfaceMaterialSlots';
-import type { MaterialSource } from '../materials/materialSource';
+import { resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
 import { CsgSubtreeProvider, type CsgSubtreeStatus } from '../contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import type { CsgPlan } from './csgPlan';
 import { evaluateCsgPlan, type CsgEvaluation } from './evaluateCsgPlan';
 import { getCachedEvaluation, setCachedEvaluation } from './csgEvaluationCache';
 import { loadCsgModule, type CsgModule } from './csgModule';
-import type { CsgGeometryContext } from './csgRegistration';
-import { resolveCsgMaterial } from './csgMaterials';
+import type { CsgGeometrySetup } from './useCsgGeometryContext';
 import { usePendingWhile } from '../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../shadowCasting';
 
 export interface CsgRootMeshProps {
   plan: CsgPlan;
-  /** What the plan's solids build against. */
-  geometry: CsgGeometryContext;
-  /** True while a file a solid reads loads: the boolean waits for every solid. */
-  isLoading: boolean;
+  /** What the plan's solids build against. The boolean waits while a file a solid reads loads. */
+  setup: CsgGeometrySetup;
   /** The ROOT's `cast_shadow`; a contributor's own is absorbed with its solid. */
   shadow: ShadowCastingEffects;
   /** Set to the evaluated mesh while it draws, for the root's visibility range to measure. */
@@ -42,8 +39,7 @@ export interface CsgRootMeshProps {
 
 export function CsgRootMesh({
   plan,
-  geometry,
-  isLoading,
+  setup: { context, isLoading },
   shadow,
   meshRef,
   fallback,
@@ -78,11 +74,11 @@ export function CsgRootMesh({
     const result = evaluateCsgPlan(plan, csg, (contribution) => {
       const registration = nodeComponentRegistry.getCsgShape(contribution.type);
       if (!registration?.geometry) return null;
-      return registration.geometry(contribution.node.properties as Record<string, unknown>, geometry);
+      return registration.geometry(contribution.node.properties as Record<string, unknown>, context);
     });
     if (result) setCachedEvaluation(plan.cacheKey, result);
     return result;
-  }, [csg, isLoading, plan, geometry]);
+  }, [csg, isLoading, plan, context]);
 
   const status: CsgSubtreeStatus = loadFailed
     ? 'failed'
@@ -96,8 +92,8 @@ export function CsgRootMesh({
   usePendingWhile(status === 'pending');
 
   const subtree = useMemo(
-    () => ({ status, absorbedPaths: plan.absorbedPaths, invisiblePaths: plan.invisiblePaths }),
-    [status, plan.absorbedPaths, plan.invisiblePaths]
+    () => ({ status, absorbedPaths: plan.absorbedPaths, invisiblePaths: plan.invisiblePaths, context }),
+    [status, plan.absorbedPaths, plan.invisiblePaths, context]
   );
 
   // Resolve each output surface to a material slot. One component per slot keeps each
@@ -105,8 +101,8 @@ export function CsgRootMesh({
   // surface count.
   const surfaces = useMemo(
     (): Array<MaterialSource | undefined> =>
-      evaluation?.materials.map((address) => resolveCsgMaterial(address, geometry)) ?? [],
-    [evaluation, geometry]
+      evaluation?.materials.map((address) => resolveMaterialSource(address, context)) ?? [],
+    [evaluation, context]
   );
 
   const drawable = evaluation !== null && evaluation.geometry.getAttribute('position')?.count !== 0;

@@ -5,6 +5,7 @@
 
 import * as THREE from 'three';
 import type { ArrayMeshData } from './types.js';
+import { bottomUpV } from '../../../godot/uv.js';
 
 export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
@@ -25,9 +26,6 @@ export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometr
   let indexBase = 0;
   mesh.surfaces.forEach((surface, surfaceIndex) => {
     positions.set(surface.positions, vertexBase * 3);
-    // Godot's UV origin is the image's top-left. Textures load with THREE's
-    // default flipY=true (as `spriteFrame.ts` and `tileGeometry.ts` assume), which
-    // uploads the image bottom-up, so Godot's V unchanged samples it mirrored.
     if (uvs) {
       if (surface.uvs) uvs.set(surface.uvs, vertexBase * 2);
       // Flip the whole range, including a surface with no UVs of its own: `hasUV`
@@ -35,7 +33,7 @@ export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometr
       // image's top-left. Flipping only the written surfaces mixes two V spaces.
       for (let i = 0; i < surface.vertexCount; i++) {
         const v = (vertexBase + i) * 2 + 1;
-        uvs[v] = 1 - uvs[v]!;
+        uvs[v] = bottomUpV(uvs[v]!);
       }
     }
     if (normals && surface.normals) normals.set(surface.normals, vertexBase * 3);

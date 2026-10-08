@@ -6,16 +6,10 @@
  */
 
 import { warn } from '../../../logger.js';
-import type { ParsedResource } from '../../../parser/parsedResource.js';
 import type { TscnInternalResource } from '../../../parser/types.js';
-import { BUILDABLE_MATERIAL_TYPES } from '../../materials/buildableMaterialTypes.js';
+import { materialPathInFile } from '../../materials/materialPathInFile.js';
 import type { LoadedSection } from '../../resourceSection.js';
-import {
-  extResourcePathsById,
-  resolveRefToResourcePath,
-  resourceFilePath,
-  subResourceTypeGate,
-} from '../../subResourcePath.js';
+import { resourceFilePath } from '../../subResourcePath.js';
 import {
   iterateSurfaceBlocks,
   readAabb,
@@ -33,27 +27,6 @@ import { decodeIndices, decodeNormals, decodePositions, decodeUVs } from './vert
 export const ARRAY_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
 
 /**
- * Resolve a surface's `"material"` to one path string: an `ExtResource` to its
- * shared file, a `SubResource` to a **Sub-resource path** (`filePath::id`) in
- * this file.
- */
-function readMaterialPath(
-  block: string,
-  file: ParsedResource,
-  extById: ReadonlyMap<string, string>,
-  filePath: string
-): string | undefined {
-  return (
-    resolveRefToResourcePath(
-      readMaterialRef(block),
-      extById,
-      filePath,
-      subResourceTypeGate(file.subResources, BUILDABLE_MATERIAL_TYPES)
-    ) ?? undefined
-  );
-}
-
-/**
  * Decode the ArrayMesh **Resource section** `selfPath` addresses. Godot writes
  * `_surfaces` only for a mesh that has surfaces, so a section without it is
  * legitimately empty, as in Godot.
@@ -67,9 +40,8 @@ export function decodeArrayMesh({ file, properties }: LoadedSection, selfPath: s
   if (!surfacesRaw) return { surfaces: [] };
 
   const filePath = resourceFilePath(selfPath);
-  const extById = extResourcePathsById(file.extResources);
   return decodeSurfaces(surfacesRaw, selfPath, (block) => ({
-    materialPath: readMaterialPath(block, file, extById, filePath),
+    materialPath: materialPathInFile(readMaterialRef(block), file, filePath) ?? undefined,
   }));
 }
 
@@ -96,7 +68,7 @@ export function decodeSceneArrayMesh(resource: TscnInternalResource): ArrayMeshD
  * A surface Godot saved with no `index_data` draws its vertices in order, three to a triangle, as
  * `add_surface_from_arrays` with no ARRAY_INDEX does.
  */
-function drawOrderIndices(vertexCount: number): Uint16Array | Uint32Array {
+export function drawOrderIndices(vertexCount: number): Uint16Array | Uint32Array {
   const indices = vertexCount > 65535 ? new Uint32Array(vertexCount) : new Uint16Array(vertexCount);
   for (let i = 0; i < vertexCount; i++) indices[i] = i;
   return indices;

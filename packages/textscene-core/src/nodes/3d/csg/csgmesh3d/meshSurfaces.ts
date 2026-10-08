@@ -5,24 +5,21 @@
  */
 
 import type * as THREE from 'three';
+import { bottomUpV } from '../../../../godot/uv';
 import { warn } from '../../../../logger';
 import type { ParsedResource } from '../../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../../parser/types';
 import type { CsgGeometryContext } from '../../../../r3f/csg/csgRegistration';
 import type { CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
+import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
+import { resolveSubResourceRef, textResourcePath } from '../../../../resources/SubResourceResolver';
 import {
-  findSubResource,
-  parseResourceReference,
-  resolveExtResourcePath,
-} from '../../../../resources/SubResourceResolver';
-import { decodeArrayMesh, decodeSceneArrayMesh } from '../../../../resources/meshes/arraymesh/decode';
+  decodeArrayMesh,
+  decodeSceneArrayMesh,
+  drawOrderIndices,
+} from '../../../../resources/meshes/arraymesh/decode';
 import type { ArrayMeshData } from '../../../../resources/meshes/arraymesh/types';
-import { BUILDABLE_MATERIAL_TYPES } from '../../../../resources/materials/buildableMaterialTypes';
-import {
-  extResourcePathsById,
-  resolveRefToResourcePath,
-  subResourceTypeGate,
-} from '../../../../resources/subResourcePath';
+import { materialPathInFile } from '../../../../resources/materials/materialPathInFile';
 import { buildPrimitiveMeshGeometry } from '../../meshinstance3d/primitiveMeshGeometry';
 
 export interface CsgMeshSurface {
@@ -37,26 +34,26 @@ export interface CsgMeshSurface {
   material: CsgMaterialAddress;
 }
 
+/** A mesh in the scene's tables, or a loaded `.tres` and the path it loaded from. */
+export type CsgMesh = { resource: TscnInternalResource } | { path: string; file: ParsedResource };
+
 /** The `.tres` a mesh reference loads, or null for an inline mesh or a file no processor reads. */
-export function meshFilePath(
-  meshRef: string | undefined,
-  ctx: Pick<CsgGeometryContext, 'externalResources'>
-): string | null {
-  if (parseResourceReference(meshRef ?? '')?.type !== 'ExtResource') return null;
-  const path = resolveExtResourcePath(meshRef, ctx.externalResources);
-  return path?.endsWith('.tres') ? path : null;
+export function meshFilePath(meshRef: string | undefined, pools: SceneResources): string | null {
+  return textResourcePath(meshRef, pools.externalResources);
 }
 
-/** The surfaces `meshRef` names, or none while its file loads, or for a mesh with no slice here. */
-export function meshSurfaces(meshRef: string | undefined, ctx: CsgGeometryContext): CsgMeshSurface[] {
-  const ref = parseResourceReference(meshRef ?? '');
-  if (ref?.type === 'SubResource') {
-    const resource = findSubResource(ctx.internalResources, ref.id);
-    return resource ? sceneMeshSurfaces(resource) : [];
-  }
+/** The mesh `meshRef` names, or null for none, an unknown id, or a file not loaded yet. */
+export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext): CsgMesh | null {
+  const resource = resolveSubResourceRef(meshRef, ctx.internalResources);
+  if (resource) return { resource };
   const path = meshFilePath(meshRef, ctx);
   const file = path ? ctx.file(path) : undefined;
-  return path && file ? fileMeshSurfaces(file, path) : [];
+  return path && file ? { path, file } : null;
+}
+
+/** The mesh's triangle surfaces, or none for a mesh with no slice here. */
+export function meshSurfaces(mesh: CsgMesh): CsgMeshSurface[] {
+  return 'resource' in mesh ? sceneMeshSurfaces(mesh.resource) : fileMeshSurfaces(mesh.file, mesh.path);
 }
 
 /** A mesh in the scene: its materials are references in the scene's tables. */
@@ -81,15 +78,9 @@ function fileMeshSurfaces(file: ParsedResource, path: string): CsgMeshSurface[] 
       (s) => s.materialPath
     );
   }
-  const material = resolveRefToResourcePath(
-    file.properties['material'],
-    extResourcePathsById(file.extResources),
-    path,
-    subResourceTypeGate(file.subResources, BUILDABLE_MATERIAL_TYPES)
-  );
   return primitiveMeshSurfaces(
     { id: path, type: file.resourceType, data: file.properties },
-    material ?? undefined
+    materialPathInFile(file.properties['material'], file, path) ?? undefined
   );
 }
 
@@ -139,10 +130,9 @@ function godotSurface(geometry: THREE.BufferGeometry, material: CsgMaterialAddre
   const normal = geometry.getAttribute('normal');
   const uv = geometry.getAttribute('uv');
   const uvs = uv ? Float32Array.from(uv.array) : undefined;
-  if (uvs) for (let i = 1; i < uvs.length; i += 2) uvs[i] = 1 - uvs[i]!;
-  const vertexCount = positions.length / 3;
+  if (uvs) for (let i = 1; i < uvs.length; i += 2) uvs[i] = bottomUpV(uvs[i]!);
   const index = geometry.getIndex();
-  const indices = Uint32Array.from(index ? index.array : { length: vertexCount }, (v, i) => (index ? v : i));
+  const indices = index ? Uint32Array.from(index.array) : drawOrderIndices(positions.length / 3);
   for (let i = 0; i + 2 < indices.length; i += 3)
     [indices[i + 1], indices[i + 2]] = [indices[i + 2]!, indices[i + 1]!];
   return { positions, normals: normal ? Float32Array.from(normal.array) : undefined, uvs, indices, material };
