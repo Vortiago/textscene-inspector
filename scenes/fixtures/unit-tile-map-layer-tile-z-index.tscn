@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+; Moves one variable: a tile's own TileData z_index, which puts its cell in a canvas item of its
+; own at that z. The red tile overlaps the right half of the green cell before it and draws over it
+; in cell order; the green tile's z_index 1 lifts it back on top. No other tile scene authors a
+; TileData z_index.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_atlas"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_quadrants"]
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:0/1 = 1
+1:0/1/z_index = 1
+
+[sub_resource type="TileSet" id="TileSet_quadrants"]
+tile_size = Vector2i(32, 32)
+sources/0 = SubResource("TileSetAtlasSource_quadrants")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+position = Vector2(200, 200)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+tile_set = SubResource("TileSet_quadrants")

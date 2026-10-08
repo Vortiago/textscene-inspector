@@ -33,14 +33,18 @@ export interface CanvasItemTint {
   /** Ancestor modulate × this node's `modulate`, for the child context. */
   inherited: RGBA;
   /**
-   * The sRGB own-pixel product, `inherited` × `self_modulate`, for a body that
-   * composes a further tint, such as a TileMap layer's, before the one conversion
-   * to linear.
+   * `inherited` × `self_modulate` in sRGB, before the canvas tint, for a body whose child items
+   * each decide whether the canvas tint reaches them, as a tile layer's do.
+   */
+  self: RGBA;
+  /**
+   * The sRGB own-pixel product, `self` × the own multiplier, for a body that composes a further
+   * tint before the one conversion to linear.
    */
   own: RGBA;
-  /** Linear-space own-pixel tint (`inherited` × `self_modulate`). */
+  /** Linear-space own-pixel tint, `own` converted. */
   color: THREE.Color;
-  /** Own-pixel opacity (`inherited.a` × `self_modulate.a`). */
+  /** Own-pixel opacity, `own.a`. */
   opacity: number;
 }
 
@@ -61,5 +65,5 @@ export function useCanvasItemTint(
   );
   const own = useMemo(() => multiplyModulate(self, ownMultiplier), [self, ownMultiplier]);
   const color = useGodotLinearColor(own);
-  return { inherited, own, color, opacity: own.a };
+  return { inherited, self, own, color, opacity: own.a };
 }

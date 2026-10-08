@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+; Moves one variable: a tile's own TileData modulate, which Godot multiplies onto the tile's
+; pixels. Two red tiles sit side by side, the right one drawn from alternative 1, tinted and half
+; transparent. No other tile scene authors a TileData modulate.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_atlas"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_quadrants"]
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+0:0/1 = 1
+0:0/1/modulate = Color(1, 0.5, 0.25, 0.5)
+
+[sub_resource type="TileSet" id="TileSet_quadrants"]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("TileSetAtlasSource_quadrants")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+position = Vector2(200, 200)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0)
+tile_set = SubResource("TileSet_quadrants")

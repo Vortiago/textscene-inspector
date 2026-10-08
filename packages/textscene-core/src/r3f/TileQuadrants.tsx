@@ -1,25 +1,35 @@
 /**
- * Draws a tile layer's rendering quadrants, each a canvas item with its own light list
- * (`tile_map_layer.cpp:412-566`), as one batched mesh per run of cells that share an atlas source.
+ * Draws a tile layer's rendering quadrants (`tile_map_layer.cpp:412-566`). Each quadrant is one
+ * canvas item per run of tiles that share a material and `z_index` (`:313-376`), each with its own
+ * light list, as one batched mesh per run of cells that share an atlas source.
  */
 
 import { useMemo } from 'react';
-import type * as THREE from 'three';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import type { TileSetModel } from '../resources/tileset/types';
+import { quadrantCanvasItems, type TileCanvasItem } from '../resources/tileset/tileCanvasItems';
 import { canvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
 import {
   CanvasItemBlendMode,
   type CanvasItemMaterialProperties,
 } from '../resources/materials/canvasitemmaterial/types';
 import { LitCanvasItemPixels } from './components/LitCanvasItemPixels';
-import { sourceRuns, type SourceRun } from './sourceRuns';
+import { CanvasItemGroup, useCanvasItemKey } from './components/CanvasItemGroup';
+import { multiplyModulate, type RGBA } from './canvasItemModulate';
+import { useCanvasModulateFor } from './canvasModulate';
+import { useGodotLinearColor } from './godotColor';
+import { canvasKeyAtZ } from './canvasPaintOrder';
+import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement';
 import { TileSourceMesh } from './TileSourceMesh';
 
 interface TileLayerItem {
   model: TileSetModel;
-  /** The layer's own-pixel tint (linear space). */
-  tint: { color: THREE.Color; opacity: number };
+  /**
+   * The layer's own-pixel modulate in sRGB, before the canvas tint: each item's material decides
+   * whether the canvas tint reaches it.
+   */
+  selfTint: RGBA;
+  /** The layer's material, which a tile with no material of its own draws with. */
   material: CanvasItemMaterialProperties | null;
   lightMask: number | undefined;
   zFinal: number;
@@ -32,60 +42,58 @@ interface TileQuadrantsProps extends TileLayerItem {
   quadrants: readonly (readonly PlacedCell[])[];
 }
 
+/** Draws inside the layer's canvas key (`useCanvasItemKey`), from which a tile `z_index` moves an item. */
 export function TileQuadrants({ quadrants, ...layer }: TileQuadrantsProps) {
-  const batches = useMemo(() => quadrantBatches(layer.model, quadrants), [layer.model, quadrants]);
-  // Keyed by draw index: a quadrant has no identity across a re-parse that moves its cells.
-  return batches.map((quadrant, drawIndex) => <TileQuadrant key={drawIndex} {...quadrant} {...layer} />);
+  const items = useMemo(() => drawnItems(layer.model, quadrants), [layer.model, quadrants]);
+  // Keyed by draw index: an item has no identity across a re-parse that moves its cells.
+  return items.map((item, drawIndex) => <TileItem key={drawIndex} item={item} layer={layer} />);
 }
 
-/** A quadrant's runs, and the `renderOrder` of its first, which follows the previous quadrant's last. */
-interface QuadrantBatches {
-  runs: readonly SourceRun[];
+/** A canvas item, and the `renderOrder` of its first batch, which follows the previous item's last. */
+interface DrawnItem extends TileCanvasItem {
   firstOrder: number;
 }
 
-function quadrantBatches(
-  model: TileSetModel,
-  quadrants: readonly (readonly PlacedCell[])[]
-): QuadrantBatches[] {
+function drawnItems(model: TileSetModel, quadrants: readonly (readonly PlacedCell[])[]): DrawnItem[] {
   let firstOrder = 0;
-  return quadrants.map((cells) => {
-    const runs = sourceRuns(model, cells);
-    const quadrant = { runs, firstOrder };
-    firstOrder += runs.length;
-    return quadrant;
-  });
+  return quadrants
+    .flatMap((cells) => quadrantCanvasItems(model, cells))
+    .map((item) => {
+      const drawn = { ...item, firstOrder };
+      firstOrder += item.runs.length;
+      return drawn;
+    });
 }
 
-function TileQuadrant({
-  runs,
-  firstOrder,
-  model,
-  tint,
-  material,
-  lightMask,
-  zFinal,
-  name,
-}: TileLayerItem & QuadrantBatches) {
+function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
+  // A tile's own material replaces the layer's: the item stops `use_parent_material` (`:350`).
+  const material = item.material ? item.material.properties : layer.material;
+  // `z_as_relative` (`:356`), so the item's z accumulates onto the layer's.
+  const zFinal = accumulateCanvasItemZ(layer.zFinal, { z_index: item.zIndex });
+  const canvasKey = canvasKeyAtZ(useCanvasItemKey(), layer.zFinal, zFinal);
+  const own = multiplyModulate(layer.selfTint, useCanvasModulateFor(material));
+  const color = useGodotLinearColor(own);
   const blend = canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX);
   return (
-    <LitCanvasItemPixels material={material} lightMask={lightMask} zFinal={zFinal}>
-      {(lighting) =>
-        runs.map(({ source, cells }, runIndex) => (
-          <TileSourceMesh
-            key={runIndex}
-            source={source}
-            cells={cells}
-            grid={model}
-            renderOrder={firstOrder + runIndex}
-            color={tint.color}
-            opacity={tint.opacity}
-            name={name}
-            blend={blend}
-            lighting={lighting}
-          />
-        ))
-      }
-    </LitCanvasItemPixels>
+    <CanvasItemGroup renderOrder={canvasKey}>
+      <LitCanvasItemPixels material={material} lightMask={layer.lightMask} zFinal={zFinal}>
+        {(lighting) =>
+          item.runs.map(({ source, cells }, runIndex) => (
+            <TileSourceMesh
+              key={runIndex}
+              source={source}
+              cells={cells}
+              grid={layer.model}
+              renderOrder={item.firstOrder + runIndex}
+              color={color}
+              opacity={own.a}
+              name={layer.name}
+              blend={blend}
+              lighting={lighting}
+            />
+          ))
+        }
+      </LitCanvasItemPixels>
+    </CanvasItemGroup>
   );
 }

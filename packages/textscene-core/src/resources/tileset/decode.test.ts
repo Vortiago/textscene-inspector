@@ -73,7 +73,7 @@ describe('tileSetFromScene', () => {
     const model = tileSetFromScene('SubResource("ts")', richInternals, externals);
     const source = model!.sources.get(0)!;
 
-    expect(source.tiles.get('0:0')!.alternatives.get(1)).toEqual({
+    expect(source.tiles.get('0:0')!.alternatives.get(1)).toMatchObject({
       flipH: true,
       flipV: false,
       transpose: true,
@@ -435,5 +435,135 @@ describe('a Godot-3 texture_offset', () => {
       x: 3,
       y: 4,
     });
+  });
+});
+
+describe('per-tile TileData that changes a frame (tile_set.cpp:7174-7177)', () => {
+  function alternativeOf(atlas: Record<string, string>, extra: TscnInternalResource[] = []) {
+    const model = tileSetFromScene(
+      'SubResource("ts")',
+      [
+        { id: 'atlas', type: 'TileSetAtlasSource', data: { '0:0/0': '0', ...atlas } },
+        { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("atlas")' } },
+        ...extra,
+      ],
+      externals
+    );
+    return (altId = 0) => model!.sources.get(0)!.tiles.get('0:0')!.alternatives.get(altId)!;
+  }
+
+  it('reads an alternative with none of them at TileData defaults', () => {
+    const alternative = alternativeOf({})();
+    expect(alternative.modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(alternative.material).toBeNull();
+    expect(alternative.zIndex).toBe(0);
+    expect(alternative.ySortOrigin).toBe(0);
+  });
+
+  it('reads modulate as the authored colour', () => {
+    expect(alternativeOf({ '0:0/0/modulate': 'Color(1, 0.5, 0.25, 0.75)' })().modulate).toEqual({
+      r: 1,
+      g: 0.5,
+      b: 0.25,
+      a: 0.75,
+    });
+  });
+
+  it('reads z_index and y_sort_origin as ints', () => {
+    const alternative = alternativeOf({ '0:0/0/z_index': '-3', '0:0/0/y_sort_origin': '12' })();
+    expect(alternative.zIndex).toBe(-3);
+    expect(alternative.ySortOrigin).toBe(12);
+  });
+
+  it('keeps the TileData default for a malformed int', () => {
+    expect(alternativeOf({ '0:0/0/z_index': '"high"' })().zIndex).toBe(0);
+  });
+
+  it('resolves a CanvasItemMaterial SubResource to its properties', () => {
+    const alternative = alternativeOf({ '0:0/0/material': 'SubResource("mat")' }, [
+      { id: 'mat', type: 'CanvasItemMaterial', data: { blend_mode: '1', light_mode: '1' } },
+    ])();
+    expect(alternative.material?.properties?.blendMode).toBe(1);
+    expect(alternative.material?.properties?.lightMode).toBe(1);
+  });
+
+  it('gives tiles that name one material the same material, as one Ref', () => {
+    const at = alternativeOf(
+      { '0:0/1': '0', '0:0/0/material': 'SubResource("mat")', '0:0/1/material': 'SubResource("mat")' },
+      [{ id: 'mat', type: 'CanvasItemMaterial', data: {} }]
+    );
+    expect(at(0).material).toBe(at(1).material);
+  });
+
+  it('gives tiles that name two equal materials two materials', () => {
+    const at = alternativeOf(
+      { '0:0/1': '0', '0:0/0/material': 'SubResource("a")', '0:0/1/material': 'SubResource("b")' },
+      [
+        { id: 'a', type: 'CanvasItemMaterial', data: {} },
+        { id: 'b', type: 'CanvasItemMaterial', data: {} },
+      ]
+    );
+    expect(at(0).material).not.toBe(at(1).material);
+  });
+
+  it('keeps a ShaderMaterial as an own material with no CanvasItemMaterial properties', () => {
+    const alternative = alternativeOf({ '0:0/0/material': 'SubResource("shader")' }, [
+      { id: 'shader', type: 'ShaderMaterial', data: {} },
+    ])();
+    expect(alternative.material).toEqual({ properties: null });
+  });
+
+  it('reads a material reference that names nothing as no material', () => {
+    expect(alternativeOf({ '0:0/0/material': 'SubResource("gone")' })().material).toBeNull();
+  });
+});
+
+describe('a tile material outside the TileSet file', () => {
+  it('keeps an ExtResource material as an own material with no CanvasItemMaterial properties', () => {
+    const model = tileSetFromScene(
+      'SubResource("ts")',
+      [
+        {
+          id: 'atlas',
+          type: 'TileSetAtlasSource',
+          data: { '0:0/0': '0', '0:0/0/material': 'ExtResource("m")' },
+        },
+        { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("atlas")' } },
+      ],
+      [{ id: 'm', type: 'Material', path: 'res://tile.tres' }]
+    );
+    expect(model!.sources.get(0)!.tiles.get('0:0')!.alternatives.get(0)!.material).toEqual({
+      properties: null,
+    });
+  });
+});
+
+describe('the base tile of an atlas tile', () => {
+  const sourceOf = (atlas: Record<string, string>) =>
+    tileSetFromScene(
+      'SubResource("ts")',
+      [
+        { id: 'atlas', type: 'TileSetAtlasSource', data: atlas },
+        { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("atlas")' } },
+      ],
+      externals
+    )!.sources.get(0)!;
+
+  it('exists once any key names the tile, as create_tile makes it (tile_set.cpp:4991)', () => {
+    expect(sourceOf({ '1:0/size_in_atlas': 'Vector2i(1, 1)' }).tiles.get('1:0')!.alternatives.has(0)).toBe(
+      true
+    );
+  });
+
+  it('refuses a transform, which only an alternative tile allows (tile_set.cpp:6192, :4993)', () => {
+    const base = sourceOf({
+      '0:0/0': '0',
+      '0:0/0/flip_h': 'true',
+      '0:0/0/flip_v': 'true',
+      '0:0/0/transpose': 'true',
+    })
+      .tiles.get('0:0')!
+      .alternatives.get(0)!;
+    expect([base.flipH, base.flipV, base.transpose]).toEqual([false, false, false]);
   });
 });

@@ -6,7 +6,8 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useResource } from '../resources/useResource';
-import { buildTileGeometryArrays, type DrawableCell } from '../resources/tileset/tileGeometry';
+import { buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
+import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
 import { useCanvas2DMap } from './canvas2DTextureDecode';
@@ -55,6 +56,7 @@ export function TileSourceMesh({
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('position', new THREE.BufferAttribute(arrays.positions, 3));
     geom.setAttribute('uv', new THREE.BufferAttribute(arrays.uvs, 2));
+    geom.setAttribute('color', new THREE.BufferAttribute(arrays.colors, 4));
     geom.setIndex(new THREE.BufferAttribute(arrays.indices, 1));
     return geom;
   }, [cells, source, grid, texW, texH]);
@@ -79,6 +81,8 @@ export function TileSourceMesh({
       map: tex,
       color,
       opacity,
+      // Each tile's `modulate`, multiplied onto its pixels (`tile_map_layer.cpp:2690`).
+      vertexColors: true,
       transparent: true,
       depthWrite: false,
       defines: decodeDefines,

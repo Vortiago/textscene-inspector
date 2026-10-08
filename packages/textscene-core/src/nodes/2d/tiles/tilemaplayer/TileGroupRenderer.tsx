@@ -8,8 +8,8 @@ import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../../../../parser/types.js';
 import { useCanvasItemTint } from '../../../../r3f/canvasItemModulate.js';
 import { useCanvasItemMaterial } from '../../../../r3f/components/canvasItemMaterialContext.js';
-import { useCanvasModulateFor } from '../../../../r3f/canvasModulate.js';
 import { canvasRenderOrder } from '../../../../r3f/canvasPaintOrder.js';
+import { CanvasItemKeyProvider } from '../../../../r3f/components/CanvasItemGroup.js';
 import { accumulateCanvasItemZ, useEffectiveZ } from '../../../../r3f/lighting2d/canvasItemPlacement.js';
 import type { TileMapLayerProperties } from './types.js';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel.js';
@@ -38,11 +38,10 @@ export function TileGroupRenderer({
   const zFinal = accumulateCanvasItemZ(useEffectiveZ(), tileProps);
   const renderOrder = canvasRenderOrder({ layerRank, zFinal, sequence });
   const { model, status } = useTileSetModel(tileProps.tile_set);
-  // The same material and `useCanvasItemTint` the component body receives, so a
-  // CanvasModulate reaches y-sorted tiles too.
+  // The same material and tint the component body receives. Each tile item applies the canvas
+  // tint its own material admits.
   const material = useCanvasItemMaterial(tileProps);
-  const canvasModulate = useCanvasModulateFor(material);
-  const tint = useCanvasItemTint(tileProps, canvasModulate);
+  const tint = useCanvasItemTint(tileProps);
   // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
   const cells = item.tileData?.cells ?? tileProps.cells ?? null;
   // The ordinary path gates `visible` in <CanvasItem2D> and `enabled` in the body.
@@ -67,15 +66,17 @@ export function TileGroupRenderer({
       {drawable && model && cells && (
         // Lights cull against `zFinal`, not `item.effectiveZ`: `YSortContext` has no provider, so
         // `item.effectiveZ` always starts at 0 and drops every `z_index` at or above the y-sort root.
-        <TileQuadrants
-          quadrants={quadrants}
-          model={model}
-          tint={tint}
-          material={material}
-          lightMask={tileProps.light_mask}
-          zFinal={zFinal}
-          name={node.name}
-        />
+        <CanvasItemKeyProvider value={renderOrder}>
+          <TileQuadrants
+            quadrants={quadrants}
+            model={model}
+            selfTint={tint.self}
+            material={material}
+            lightMask={tileProps.light_mask}
+            zFinal={zFinal}
+            name={node.name}
+          />
+        </CanvasItemKeyProvider>
       )}
     </group>
   );

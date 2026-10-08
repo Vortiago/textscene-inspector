@@ -224,6 +224,18 @@ _Avoid_: "z order", "z offset".
 An item's position in Godot's single pre-order walk of the canvas, the third and weakest term of **canvas paint order**.
 _Avoid_: "paint index".
 
+**Rendering quadrant** (`resources/tileset/renderingQuadrants.ts`):
+The cells of a tile layer that Godot draws together: a `rendering_quadrant_size` square of cells, or one tile row on a y-sorted layer.
+_Avoid_: "chunk", "tile batch".
+
+**Tile canvas item** (`resources/tileset/tileCanvasItems.ts`):
+One canvas item of a **rendering quadrant**: a run of its cells that share a tile material and `z_index`, with its own light list and z.
+_Avoid_: "quadrant" for this, "sub-quadrant".
+
+**Drawable cell** (`resources/tileset/drawableCell.ts`):
+A placed tile cell whose atlas source, tile and alternative tile all exist, so Godot draws it.
+_Avoid_: "valid cell".
+
 **Viewport mode**:
 The single `'2D' | '3D'` display state of the centre viewport: `3D` mounts the R3F canvas, and `2D` mounts the pannable 2D stage.
 A heuristic on the scene root type picks the default, and the toolbar toggle overrides it.

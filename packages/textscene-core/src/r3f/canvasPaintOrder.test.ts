@@ -10,6 +10,7 @@ import {
   PAINT_SEQUENCE_STRIDE,
   allocateNodePaintRange,
   allocatePaintRange,
+  canvasKeyAtZ,
   canvasRenderOrder,
   canvasRootRanges,
   layerRankOf,
@@ -28,6 +29,25 @@ function tileMap(layerCount: number, children: TscnNode[] = []): TscnNode {
     layers: Array.from({ length: layerCount }, (_, index) => ({ index })),
   });
 }
+
+describe('canvasKeyAtZ', () => {
+  const placement = { layerRank: 2, sequence: 7 };
+
+  it('moves a key to another z bucket, keeping its layer and sequence', () => {
+    const key = canvasRenderOrder({ ...placement, zFinal: 3 });
+    expect(canvasKeyAtZ(key, 3, -4)).toBe(canvasRenderOrder({ ...placement, zFinal: -4 }));
+  });
+
+  it('keeps the key at its own z', () => {
+    const key = canvasRenderOrder({ ...placement, zFinal: 3 });
+    expect(canvasKeyAtZ(key, 3, 3)).toBe(key);
+  });
+
+  it('clamps both z values as the key does, so a key past the window stays on its layer', () => {
+    const key = canvasRenderOrder({ ...placement, zFinal: 5000 });
+    expect(canvasKeyAtZ(key, 5000, 9000)).toBe(canvasRenderOrder({ ...placement, zFinal: 4096 }));
+  });
+});
 
 describe('canvasRenderOrder', () => {
   it('orders by z_final before draw sequence', () => {

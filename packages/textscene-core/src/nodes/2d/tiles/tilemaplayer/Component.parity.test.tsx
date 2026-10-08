@@ -26,12 +26,12 @@ const internals: TscnInternalResource[] = [
   {
     id: 'atlas1',
     type: 'TileSetAtlasSource',
-    data: { texture: 'ExtResource("2")', texture_region_size: 'Vector2i(16, 16)' },
+    data: { texture: 'ExtResource("2")', texture_region_size: 'Vector2i(16, 16)', '0:0/0': '0' },
   },
   {
     id: 'atlas2',
     type: 'TileSetAtlasSource',
-    data: { texture: 'ExtResource("3")', texture_region_size: 'Vector2i(16, 16)' },
+    data: { texture: 'ExtResource("3")', texture_region_size: 'Vector2i(16, 16)', '0:0/0': '0' },
   },
   {
     id: 'ts',

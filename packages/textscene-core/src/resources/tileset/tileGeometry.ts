@@ -6,18 +6,16 @@
  */
 
 import { mapToLocalPx } from './tilePlacement';
-import { tileDrawInfo, type AtlasSourceModel, type TileGrid, type Vec2i } from './types';
-
-/** The slice of a placed cell the builder needs (structurally matches PlacedCell). */
-export interface DrawableCell {
-  coords: Vec2i;
-  atlasCoords: Vec2i;
-  alternativeId: number;
-}
+import type { Color } from '../../utils/colorParser';
+import { sRGBToLinearRGB } from '../../utils/colorSpace';
+import type { DrawableCell } from './drawableCell';
+import { tileDrawInfo, type AtlasSourceModel, type TileGrid } from './types';
 
 export interface TileGeometryArrays {
   positions: Float32Array;
   uvs: Float32Array;
+  /** RGBA per vertex: the tile's `modulate`, linear, which the draw multiplies onto its pixels. */
+  colors: Float32Array;
   indices: Uint32Array;
 }
 
@@ -51,11 +49,12 @@ export function buildTileGeometryArrays(
 ): TileGeometryArrays {
   const positions = new Float32Array(cells.length * 4 * 3);
   const uvs = new Float32Array(cells.length * 4 * 2);
+  const colors = new Float32Array(cells.length * 4 * 4);
   const indices = new Uint32Array(cells.length * 6);
 
   cells.forEach((cell, i) => {
     const center = mapToLocalPx(grid, cell.coords);
-    const info = tileDrawInfo(source, cell.atlasCoords, cell.alternativeId);
+    const info = tileDrawInfo(source, cell);
     const { flipH, flipV, transpose } = info.orientation;
     // Transposed tiles draw with swapped dimensions (Godot swaps the dest rect).
     const w = transpose ? info.regionPx.height : info.regionPx.width;
@@ -83,9 +82,8 @@ export function buildTileGeometryArrays(
     if (flipH) corners = corners.map((row) => [row[1]!, row[0]!]);
     if (flipV) corners = [corners[1]!, corners[0]!];
 
-    // Quad center = map_to_local − texture_origin (Godot's draw_tile anchor).
-    const cx = center.x - info.textureOrigin.x;
-    const cy = center.y - info.textureOrigin.y;
+    const cx = center.x + info.centreOffset.x;
+    const cy = center.y + info.centreOffset.y;
     // Corner order TL, TR, BL, BR, with Y negated as `0 - v` so a zero stays +0, never -0.
     const left = cx - w / 2;
     const right = cx + w / 2;
@@ -93,10 +91,17 @@ export function buildTileGeometryArrays(
     const bottom = 0 - (cy + h / 2);
     positions.set([left, top, 0, right, top, 0, left, bottom, 0, right, bottom, 0], i * 12);
     uvs.set([...corners[0]![0]!, ...corners[0]![1]!, ...corners[1]![0]!, ...corners[1]![1]!], i * 8);
+    const modulate = linearModulate(cell.tileData.modulate);
+    for (let corner = 0; corner < 4; corner++) colors.set(modulate, i * 16 + corner * 4);
 
     const v = i * 4;
     indices.set([v + 2, v + 3, v, v + 3, v + 1, v], i * 6);
   });
 
-  return { positions, uvs, indices };
+  return { positions, uvs, colors, indices };
+}
+
+/** The sRGB `modulate` as the linear RGBA a vertex colour multiplies, as the layer's tint is converted. */
+function linearModulate({ r, g, b, a }: Color): number[] {
+  return [...sRGBToLinearRGB(r, g, b), a];
 }

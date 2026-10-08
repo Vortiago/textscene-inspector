@@ -8,7 +8,7 @@ import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
 import { compareCells } from './cellOrder';
 import { mapToLocalPx } from './tilePlacement';
 import { groupBySortY } from './tileYSort';
-import type { TileGrid } from './types';
+import type { TileGrid, TileSetModel } from './types';
 
 interface Quadrant {
   /** `map_to_local` of the quadrant coords, not of its first cell, which Godot sorts by (`:418`). */
@@ -57,9 +57,9 @@ interface QuadrantLayout {
  */
 export function layerQuadrants(
   cells: readonly PlacedCell[],
-  grid: TileGrid,
+  model: TileSetModel,
   layout: QuadrantLayout
 ): readonly (readonly PlacedCell[])[] {
-  if (!layout.ySortEnabled) return renderingQuadrants(cells, grid, layout.quadrantSize);
-  return groupBySortY(cells, grid, layout.ySortOrigin, 0).map((row) => row.cells);
+  if (!layout.ySortEnabled) return renderingQuadrants(cells, model, layout.quadrantSize);
+  return groupBySortY(cells, model, layout.ySortOrigin, 0).map((row) => row.cells);
 }

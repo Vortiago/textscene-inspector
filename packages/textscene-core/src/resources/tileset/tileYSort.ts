@@ -3,9 +3,10 @@
  * (back) to high (front), for the y-sort collector's y-sorted TileMapLayer children.
  */
 
-import type { TileGrid } from './types';
+import type { TileSetModel } from './types';
 import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
 import { compareCells } from './cellOrder';
+import { drawableCell } from './drawableCell';
 import { mapToLocalPx } from './tilePlacement';
 
 export interface YSortGroup {
@@ -18,14 +19,15 @@ export interface YSortGroup {
 }
 
 /**
- * Group cells by their sort Y (layer world Y + local pixel Y + y_sort_origin).
+ * Group cells by their sort Y: layer world Y + local pixel Y + the layer's and the tile's own
+ * `y_sort_origin` (`tile_map_layer.cpp:547`).
  * Returns groups sorted by sortY ascending (low-Y drawn first = far back).
  * Cells with equal sortY are grouped together. Each row is one rendering quadrant
  * (`tile_map_layer.cpp:546-548`), so its cells sort as a quadrant's do.
  */
 export function groupBySortY(
   cells: readonly PlacedCell[],
-  grid: TileGrid,
+  model: TileSetModel,
   layerYSortOrigin: number,
   layerWorldY: number
 ): YSortGroup[] {
@@ -35,8 +37,9 @@ export function groupBySortY(
 
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i]!;
-    const localPx = mapToLocalPx(grid, cell.coords);
-    const sortY = layerWorldY + localPx.y + layerYSortOrigin;
+    const localPx = mapToLocalPx(model, cell.coords);
+    const tileYSortOrigin = drawableCell(model, cell)?.tileData.ySortOrigin ?? 0;
+    const sortY = layerWorldY + localPx.y + layerYSortOrigin + tileYSortOrigin;
     // Use exact float equality (Godot uses exact comparison).
     const existing = bucket.get(sortY);
     if (existing) {

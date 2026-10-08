@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { layerQuadrants, renderingQuadrants } from './renderingQuadrants';
-import type { TileGrid } from './types';
+import type { TileSetModel } from './types';
 import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
 
-const SQUARE: TileGrid = { shape: 0, layout: 0, offsetAxis: 0, tileSize: { x: 16, y: 16 } };
+const SQUARE: TileSetModel = {
+  shape: 0,
+  layout: 0,
+  offsetAxis: 0,
+  tileSize: { x: 16, y: 16 },
+  sources: new Map(),
+};
 
 function cell(x: number, y: number): PlacedCell {
   return { coords: { x, y }, sourceId: 0, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 };

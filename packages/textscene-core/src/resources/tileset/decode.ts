@@ -8,7 +8,9 @@
 import { warn } from '../../logger';
 import { indexedKeyRegex, ruleInt, boolSlotValue, stringToInt } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
-import { vec2iOr } from '../../parser/valueParsers';
+import { intOr, vec2iOr } from '../../parser/valueParsers';
+import { parseColorOrUndefined, type Color } from '../../utils/colorParser';
+import { decodeCanvasItemMaterial } from '../materials/canvasitemmaterial/decode';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 // Aliased: `TileSetSourceData` has a `findSubResource` key of its own, which the adapters fill.
 import {
@@ -16,8 +18,15 @@ import {
   parseResourceReference,
   resolveExtResourcePath,
 } from '../SubResourceResolver';
-import { TILE_SHAPE_HEXAGON, TILE_SHAPE_SQUARE } from './types';
-import type { AlternativeTileModel, AtlasSourceModel, AtlasTileModel, TileSetModel, Vec2i } from './types';
+import { defaultTileData, TILE_SHAPE_HEXAGON, TILE_SHAPE_SQUARE } from './types';
+import type {
+  AlternativeTileModel,
+  AtlasSourceModel,
+  AtlasTileModel,
+  TileMaterial,
+  TileSetModel,
+  Vec2i,
+} from './types';
 
 /** Context-independent view of a TileSet resource and its surroundings. */
 export interface TileSetSourceData {
@@ -25,7 +34,7 @@ export interface TileSetSourceData {
   properties: Record<string, string>;
   findSubResource(id: string): TscnInternalResource | undefined;
   /** `ExtResource("id")` or a raw res:// path to a res:// path, or null. */
-  resolveTexturePath(ref: string): string | null;
+  resolveResourcePath(ref: string): string | null;
 }
 
 /**
@@ -37,6 +46,7 @@ const SOURCE_KEY_RE = indexedKeyRegex('^sources/(#)$', 'is_valid_int');
 
 export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   const sources = new Map<number, AtlasSourceModel>();
+  const tileMaterial = tileMaterialResolver(data);
 
   // `sources/1`, `sources/01` and `sources/+1` are one source: `_set` drops the id
   // before re-adding (tile_set.cpp:3965-3968), so the last value wins, as `Map.set` does.
@@ -63,7 +73,7 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
       continue;
     }
 
-    sources.set(sourceId, resolveAtlasSource(sub.data, data));
+    sources.set(sourceId, resolveAtlasSource(sub.data, data, tileMaterial));
   }
 
   const shape = intEnumOr(data.properties.tile_shape, 0, 'tile_shape');
@@ -96,7 +106,7 @@ export function tileSetFromTres(parsed: ParsedResource): TileSetModel | null {
   return resolveTileSetModel({
     properties: parsed.properties,
     findSubResource: (id) => findSubResourceById(parsed.subResources, id),
-    resolveTexturePath: (texRef) => resolveExtResourcePath(texRef, parsed.extResources),
+    resolveResourcePath: (ref) => resolveExtResourcePath(ref, parsed.extResources),
   });
 }
 
@@ -117,18 +127,54 @@ export function tileSetFromScene(
   return resolveTileSetModel({
     properties: tileSet.data,
     findSubResource: (id) => findSubResourceById(internalResources, id),
-    resolveTexturePath: (texRef) => resolveExtResourcePath(texRef, externalResources),
+    resolveResourcePath: (ref) => resolveExtResourcePath(ref, externalResources),
   });
 }
 
-function resolveAtlasSource(props: Record<string, string>, data: TileSetSourceData): AtlasSourceModel {
+/** A tile's `material` reference to its material, or null for none. */
+type TileMaterialResolver = (ref: string) => TileMaterial | null;
+
+/**
+ * One `TileMaterial` per resource the TileSet names, so two tiles share a material exactly when
+ * Godot's loader hands both one `Ref`. A reference that names nothing loads as null.
+ */
+function tileMaterialResolver(data: TileSetSourceData): TileMaterialResolver {
+  const byResource = new Map<string, TileMaterial | null>();
+  return (ref) => {
+    const parsed = parseResourceReference(ref);
+    const key = parsed ? `${parsed.type}:${parsed.id}` : ref;
+    if (!byResource.has(key)) byResource.set(key, loadTileMaterial(ref, data));
+    return byResource.get(key)!;
+  };
+}
+
+/**
+ * A `CanvasItemMaterial` SubResource gives its properties. Any other material, or an external one,
+ * which nothing here loads, draws with plain canvas blending, as `useCanvasItemMaterial` does.
+ */
+function loadTileMaterial(ref: string, data: TileSetSourceData): TileMaterial | null {
+  const parsed = parseResourceReference(ref);
+  if (parsed?.type !== 'SubResource') return data.resolveResourcePath(ref) ? { properties: null } : null;
+  const sub = data.findSubResource(parsed.id);
+  if (!sub) {
+    warn(`[TileSet] material ${ref} names nothing — no material`);
+    return null;
+  }
+  return { properties: sub.type === 'CanvasItemMaterial' ? decodeCanvasItemMaterial(sub.data) : null };
+}
+
+function resolveAtlasSource(
+  props: Record<string, string>,
+  data: TileSetSourceData,
+  tileMaterial: TileMaterialResolver
+): AtlasSourceModel {
   const textureRef = props.texture ?? null;
   return {
-    texturePath: textureRef ? data.resolveTexturePath(textureRef) : null,
+    texturePath: textureRef ? data.resolveResourcePath(textureRef) : null,
     margins: tileSetVec2i(props.margins, { x: 0, y: 0 }, 'margins'),
     separation: tileSetVec2i(props.separation, { x: 0, y: 0 }, 'separation'),
     textureRegionSize: tileSetVec2i(props.texture_region_size, { x: 16, y: 16 }, 'texture_region_size'),
-    tiles: resolveTiles(props),
+    tiles: resolveTiles(props, tileMaterial),
   };
 }
 
@@ -147,36 +193,63 @@ const TILE_KEY_RE = indexedKeyRegex('^(#):(#)/(.+)$', 'is_valid_int');
  */
 const ALT_KEY_RE = indexedKeyRegex('^(#)(?:/(.+))?$', 'is_valid_int');
 
-function resolveTiles(props: Record<string, string>): Map<string, AtlasTileModel> {
-  const tiles = new Map<string, AtlasTileModel>();
+/** One property as written: its full key, which a warning names, and its value. */
+interface WrittenProperty {
+  key: string;
+  value: string;
+}
 
-  const tileAt = (x: string, y: string): AtlasTileModel => {
+/** A tile's keys, gathered before the decode. */
+interface WrittenTile {
+  sizeInAtlas?: WrittenProperty;
+  /** Each alternative's `TileData` keys by leaf name. A bare `x:y/<altId>` key adds no leaf. */
+  alternatives: Map<number, Map<string, WrittenProperty>>;
+}
+
+function resolveTiles(
+  props: Record<string, string>,
+  tileMaterial: TileMaterialResolver
+): Map<string, AtlasTileModel> {
+  const tiles = new Map<string, AtlasTileModel>();
+  for (const [coords, written] of writtenTiles(props)) {
+    const alternatives = new Map<number, AlternativeTileModel>();
+    for (const [altId, data] of written.alternatives) {
+      alternatives.set(altId, decodeTileData(data, altId, tileMaterial));
+    }
+    const sizeInAtlas = written.sizeInAtlas;
+    tiles.set(coords, {
+      sizeInAtlas: sizeInAtlas
+        ? tileSetVec2i(sizeInAtlas.value, { x: 1, y: 1 }, sizeInAtlas.key)
+        : { x: 1, y: 1 },
+      alternatives,
+    });
+  }
+  return tiles;
+}
+
+/** The per-tile keys of an atlas source, by tile, the last spelling of a key winning as in `_set`. */
+function writtenTiles(props: Record<string, string>): Map<string, WrittenTile> {
+  const tiles = new Map<string, WrittenTile>();
+  const tileAt = (x: string, y: string): WrittenTile => {
     // `Vector2i(coords_split[0].to_int(), coords_split[1].to_int())` (tile_set.cpp:4755) takes
     // each half into an `int32_t`.
-    const key = `${stringToInt(x)}:${stringToInt(y)}`;
-    let tile = tiles.get(key);
+    const coords = `${stringToInt(x)}:${stringToInt(y)}`;
+    let tile = tiles.get(coords);
     if (!tile) {
-      tile = { sizeInAtlas: { x: 1, y: 1 }, alternatives: new Map() };
-      tiles.set(key, tile);
+      // `create_tile` makes the base tile with the tile (tile_set.cpp:4991).
+      tile = { alternatives: new Map([[0, new Map()]]) };
+      tiles.set(coords, tile);
     }
     return tile;
-  };
-  const alternativeAt = (tile: AtlasTileModel, altId: number): AlternativeTileModel => {
-    let alt = tile.alternatives.get(altId);
-    if (!alt) {
-      alt = { flipH: false, flipV: false, transpose: false, textureOrigin: { x: 0, y: 0 } };
-      tile.alternatives.set(altId, alt);
-    }
-    return alt;
   };
 
   for (const [key, value] of Object.entries(props)) {
     const m = TILE_KEY_RE.exec(key);
     if (!m) continue;
+    const tile = tileAt(m[1]!, m[2]!);
     const rest = m[3]!;
-
     if (rest === 'size_in_atlas') {
-      tileAt(m[1]!, m[2]!).sizeInAtlas = tileSetVec2i(value, { x: 1, y: 1 }, key);
+      tile.sizeInAtlas = { key, value };
       continue;
     }
 
@@ -188,15 +261,51 @@ function resolveTiles(props: Record<string, string>): Map<string, AtlasTileModel
     // Below that, `create_alternative_tile` re-seats at `next_alternative_id`.
     // Neither names an alternative a cell can address.
     if (altId < 0) continue;
-    const prop = alt[2];
-    const alternative = alternativeAt(tileAt(m[1]!, m[2]!), altId);
-    if (prop === 'flip_h') alternative.flipH = boolSlotValue(value) === true;
-    else if (prop === 'flip_v') alternative.flipV = boolSlotValue(value) === true;
-    else if (prop === 'transpose') alternative.transpose = boolSlotValue(value) === true;
-    else if (prop === 'texture_origin') alternative.textureOrigin = tileSetVec2i(value, { x: 0, y: 0 }, key);
+    let data = tile.alternatives.get(altId);
+    if (!data) tile.alternatives.set(altId, (data = new Map()));
+    if (alt[2] !== undefined) data.set(alt[2], { key, value });
   }
-
   return tiles;
+}
+
+/** One alternative's `TileData` from its written leaves, at `TileData`'s defaults where none is written. */
+function decodeTileData(
+  data: ReadonlyMap<string, WrittenProperty>,
+  altId: number,
+  tileMaterial: TileMaterialResolver
+): AlternativeTileModel {
+  const defaults = defaultTileData();
+  const read = <T>(leaf: string, fallback: T, decode: (written: WrittenProperty) => T): T => {
+    const written = data.get(leaf);
+    return written ? decode(written) : fallback;
+  };
+  // Only an alternative tile allows a transform (tile_set.cpp:4807): the base tile's setters
+  // refuse one (:6192, :6201, :6211).
+  const transform = (leaf: string) =>
+    altId > 0 && read(leaf, false, ({ value }) => boolSlotValue(value) === true);
+  return {
+    flipH: transform('flip_h'),
+    flipV: transform('flip_v'),
+    transpose: transform('transpose'),
+    textureOrigin: read('texture_origin', defaults.textureOrigin, ({ key, value }) =>
+      tileSetVec2i(value, defaults.textureOrigin, key)
+    ),
+    modulate: read('modulate', defaults.modulate, ({ key, value }) => tileModulate(value, key)),
+    material: read('material', defaults.material, ({ value }) => tileMaterial(value)),
+    zIndex: read('z_index', defaults.zIndex, ({ key, value }) =>
+      intOr(value, defaults.zIndex, `[TileSet] ${key}`)
+    ),
+    ySortOrigin: read('y_sort_origin', defaults.ySortOrigin, ({ key, value }) =>
+      intOr(value, defaults.ySortOrigin, `[TileSet] ${key}`)
+    ),
+  };
+}
+
+function tileModulate(value: string, key: string): Color {
+  const color = parseColorOrUndefined(value);
+  if (color) return color;
+  warn(`[TileSet] ${key}: invalid Color "${value}" — using white`);
+  return { r: 1, g: 1, b: 1, a: 1 };
 }
 
 function tileSetVec2i(value: string | undefined, fallback: Vec2i, key: string): Vec2i {
