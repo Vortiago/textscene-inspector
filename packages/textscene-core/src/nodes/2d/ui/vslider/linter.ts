@@ -20,7 +20,7 @@ const arms = {
 
 function checkVSliderPropertyOrder(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
 
   const laterTriggers = rangeOrderHazard(props);
   if (!laterTriggers) return [];

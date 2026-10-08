@@ -5,8 +5,8 @@ import { projectorArm, projectorWithoutShadowDiagnostic } from './linterChecks.j
 
 const arm = projectorArm('omnilight3d');
 
-function light(properties: Record<string, string>): TscnNode {
-  return { rawProperties: {}, name: 'Lamp', type: 'OmniLight3D', properties, children: [] };
+function light(rawProperties: Record<string, string>): TscnNode {
+  return { rawProperties, name: 'Lamp', type: 'OmniLight3D', properties: {}, children: [] };
 }
 
 describe('projectorArm', () => {

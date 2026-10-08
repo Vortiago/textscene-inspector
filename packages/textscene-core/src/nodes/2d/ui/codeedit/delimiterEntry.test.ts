@@ -52,10 +52,10 @@ describe('the validator, the collision rule and the delimiter list agree on each
 
   function ruleSeesCollision(entry: string): boolean {
     const literal = `Array[String](["${entry}"])`;
-    const properties = { delimiter_strings: literal, delimiter_comments: literal };
-    const node = { rawProperties: {}, name: 'Edit', type: 'CodeEdit', children: [], properties } as TscnNode;
+    const rawProperties = { delimiter_strings: literal, delimiter_comments: literal };
+    const node: TscnNode = { rawProperties, name: 'Edit', type: 'CodeEdit', children: [], properties: {} };
     const scene: TscnScene = { nodes: [node], externalResources: [], internalResources: [] };
-    return codeEditDelimiterCollisionRule.check({ scene, node, properties }).length > 0;
+    return codeEditDelimiterCollisionRule.check({ scene, node }).length > 0;
   }
 
   // Each entry sits inside a quoted literal, so none holds a double quote.

@@ -109,14 +109,14 @@ describe('isDrivenByAnimationAudioTrack', () => {
   });
 });
 
-/** Counts reads of `target.properties` from now on. */
-function countPropertyReads(target: { properties: unknown }): () => number {
+/** Counts reads of `target.rawProperties` from now on. */
+function countPropertyReads(target: { rawProperties: unknown }): () => number {
   let reads = 0;
-  const properties = target.properties;
-  Object.defineProperty(target, 'properties', {
+  const rawProperties = target.rawProperties;
+  Object.defineProperty(target, 'rawProperties', {
     get: () => {
       reads += 1;
-      return properties;
+      return rawProperties;
     },
   });
   return () => reads;

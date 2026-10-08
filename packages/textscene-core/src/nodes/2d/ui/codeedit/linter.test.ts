@@ -9,16 +9,16 @@ import type { RuleContext } from '../../../../linter/types';
 import type { TscnNode, TscnScene } from '../../../../parser/types';
 import { codeEditDelimiterCollisionRule } from './linter';
 
-function makeContext(properties: Record<string, string>): RuleContext {
+function makeContext(rawProperties: Record<string, string>): RuleContext {
   const node: TscnNode = {
-    rawProperties: {},
+    rawProperties,
     name: 'MyCodeEdit',
     type: 'CodeEdit',
     children: [],
-    properties,
+    properties: {},
   };
   const scene: TscnScene = { nodes: [node], externalResources: [], internalResources: [] };
-  return { scene, node, properties };
+  return { scene, node };
 }
 
 describe('CodeEdit semantic rules', () => {

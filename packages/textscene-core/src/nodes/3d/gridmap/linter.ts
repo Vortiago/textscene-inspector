@@ -20,7 +20,7 @@ function checkGridMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  const rawProps = node.properties as unknown as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // An absent mesh_library is valid in Godot, but the GridMap renders nothing.
   if (heldResource(rawProps.mesh_library) === undefined) {

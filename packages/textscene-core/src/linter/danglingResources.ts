@@ -25,7 +25,7 @@ interface Owner {
   readonly built: BuiltSection;
   readonly name: string;
   readonly type: string;
-  readonly properties: Record<string, unknown>;
+  readonly rawProperties: Record<string, string>;
 }
 
 /**
@@ -47,8 +47,7 @@ function sweep(
   lines: SourceLines,
   into: Diagnostic[]
 ): void {
-  for (const [key, value] of Object.entries(owner.properties)) {
-    if (typeof value !== 'string') continue;
+  for (const [key, value] of Object.entries(owner.rawProperties)) {
     const ref = resourceRef(value.trim());
     // Not a well-formed reference: its format is the strict parser's diagnostic, and a second error naming a
     // missing resource would be wrong.
@@ -87,7 +86,7 @@ export function danglingResourceDiagnostics(scene: TscnScene, lines: SourceLines
       built: resource,
       name: resource.id,
       type: resource.type,
-      properties: resource.data,
+      rawProperties: resource.data,
     };
     sweep(owner, { ext, int }, all, lines, diagnostics);
   }
@@ -101,13 +100,13 @@ export function danglingResourceDiagnostics(scene: TscnScene, lines: SourceLines
       built: mainResource,
       name: '<unknown>',
       type: scene.resourceType ?? '',
-      properties: mainResource.data,
+      rawProperties: mainResource.data,
     };
     sweep(owner, declared, none, lines, diagnostics);
   }
   const visit = (node: TscnNode): void => {
-    const properties = node.properties as Record<string, unknown>;
-    sweep({ built: node, name: node.name, type: node.type, properties }, declared, none, lines, diagnostics);
+    const { name, type, rawProperties } = node;
+    sweep({ built: node, name, type, rawProperties }, declared, none, lines, diagnostics);
     for (const child of node.children) visit(child);
   };
   for (const node of scene.nodes) visit(node);

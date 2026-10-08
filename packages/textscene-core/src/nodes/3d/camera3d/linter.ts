@@ -6,7 +6,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties, nodesDescendingFrom } from '../../../linter/linterUtils.js';
+import { nodesDescendingFrom } from '../../../linter/linterUtils.js';
 import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
@@ -62,8 +62,7 @@ function projectionMode(raw: string | undefined): number {
  * documented usage. Unreadable properties state no claim.
  */
 function cameraClaimsCurrent(node: TscnNode): boolean {
-  if (!isValidProperties(node.properties)) return false;
-  return boolSlotValue(node.properties.current) === true;
+  return boolSlotValue(node.rawProperties.current) === true;
 }
 
 /**
@@ -80,11 +79,7 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  if (!isValidProperties(node.properties)) {
-    return diagnostics;
-  }
-
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // After the properties guard, unlike the Camera2D rule: here an unreadable body
   // states no claim, so it can neither contend for the slot nor join a tally.

@@ -7,7 +7,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../linter/validators/commonValidators.js';
 import { indicesPastCount, listWrittenIndices } from '../../../linter/reportedIndices.js';
@@ -31,8 +30,7 @@ const OPTION_PREFIX = 'option_';
 function checkFileDialog(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
-  if (!isValidProperties(node.properties)) return diagnostics;
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   const countRaw = rawProps.option_count;
   // An absent `option_count` is Godot's default 0 (the XML's `default="0"`, the

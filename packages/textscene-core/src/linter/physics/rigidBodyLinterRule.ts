@@ -69,7 +69,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const { node } = context;
-    const rawProps = node.properties as unknown as Record<string, string>;
+    const rawProps = node.rawProperties;
 
     // `linear_damp` / `angular_damp` get no advisory: both hints (rigid_body_2d.cpp:763/767
     // "-1,100,0.001,or_greater", rigid_body_3d.cpp:785/789 "0,100,0.001,or_greater") leave

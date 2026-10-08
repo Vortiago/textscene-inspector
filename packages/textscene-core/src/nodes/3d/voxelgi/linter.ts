@@ -15,7 +15,7 @@ const arms = {
 
 function checkVoxelGI(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = node.properties as unknown as Record<string, string>;
+  const properties = node.rawProperties;
 
   if (!resourceSlotIsEmpty(properties.data)) return [];
 

@@ -56,7 +56,7 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   function check(context: RuleContext): Diagnostic[] {
     const { node } = context;
 
-    const props = node.properties as Record<string, string>;
+    const props = node.rawProperties;
     const diagnostics: Diagnostic[] = [];
     const report = (arm: RuleArm | undefined, message: string) => reportArm(diagnostics, arm, node, message);
 

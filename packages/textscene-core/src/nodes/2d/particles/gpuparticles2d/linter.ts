@@ -8,7 +8,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 
 const arms = {
@@ -19,9 +18,8 @@ const arms = {
 
 function checkGPUParticles2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
 
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
   const diagnostics: Diagnostic[] = [];
 
   if (resourceSlotIsEmpty(props.process_material)) {

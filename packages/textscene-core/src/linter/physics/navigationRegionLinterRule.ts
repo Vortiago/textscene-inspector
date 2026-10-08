@@ -27,7 +27,7 @@ export function makeNavigationRegionLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
 
-    const rawProps = node.properties as unknown as Record<string, string>;
+    const rawProps = node.rawProperties;
 
     // navigation_region_2d.cpp:302-306 and navigation_region_3d.cpp:255-259,
     // the same check twice: gated on `is_visible_in_tree() &&

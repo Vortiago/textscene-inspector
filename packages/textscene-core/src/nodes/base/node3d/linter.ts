@@ -41,7 +41,7 @@ function checkNode3D(context: RuleContext): Diagnostic[] {
   // The rule's applicableNodeTypeMatcher limits it to Node3D descendants. Read off the bag:
   // `Node3DProperties` does not model this key, and its `name`/`parent` are heading attributes
   // the strict parser never puts in `properties`.
-  const raw = (node.properties as Record<string, unknown>).visibility_parent;
+  const raw = node.rawProperties.visibility_parent;
 
   if (typeof raw === 'string' && raw !== '') {
     const visibilityPath: string | null = parseNodePath(raw);

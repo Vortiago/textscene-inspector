@@ -33,7 +33,7 @@ function checkJoint(context: RuleContext): Diagnostic[] {
   const dim = jointDim(node.type);
   if (!dim) return [];
 
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
   const bodyType = `PhysicsBody${dim}`;
 
   // An empty NodePath, Godot's "not connected", is absent. `body_a` is

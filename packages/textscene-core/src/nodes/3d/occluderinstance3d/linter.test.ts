@@ -22,16 +22,16 @@ function findByType(nodes: TscnNode[], type: string): TscnNode | undefined {
   return undefined;
 }
 
-function makeContext(properties: Record<string, string>): RuleContext {
+function makeContext(rawProperties: Record<string, string>): RuleContext {
   const node: TscnNode = {
-    rawProperties: {},
+    rawProperties,
     name: 'MyOccluderInstance3D',
     type: 'OccluderInstance3D',
     children: [],
-    properties,
+    properties: {},
   };
   const scene: TscnScene = { nodes: [node], externalResources: [], internalResources: [] };
-  return { scene, node, properties: node.properties };
+  return { scene, node };
 }
 
 const RULE = occluderInstance3DConfigurationWarningsRule;
@@ -86,13 +86,7 @@ describe('OccluderInstance3D semantic rules', () => {
       occluderInstance,
       'unit-occluder-instance-3d.tscn no longer contains an OccluderInstance3D'
     ).toBeDefined();
-    expect(
-      RULE.check({
-        scene,
-        node: occluderInstance!,
-        properties: occluderInstance!.properties,
-      })
-    ).toEqual([]);
+    expect(RULE.check({ scene, node: occluderInstance! })).toEqual([]);
   });
 
   it('applies only to OccluderInstance3D', () => {

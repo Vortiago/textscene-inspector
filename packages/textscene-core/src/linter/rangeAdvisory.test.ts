@@ -15,23 +15,10 @@ const arm: WarningArm = {
 };
 
 function nodeWith(properties: Record<string, string>): TscnNode {
-  return { rawProperties: {}, name: 'Test', type: 'TestNode', children: [], properties };
+  return { rawProperties: properties, name: 'Test', type: 'TestNode', children: [], properties: {} };
 }
 
 describe('rangeAdvisories', () => {
-  it('returns [] when properties are not a record', () => {
-    const node = {
-      name: 'N',
-      type: 'T',
-      children: [],
-      properties: null as unknown as Record<string, string>,
-      rawProperties: {},
-    };
-    expect(
-      rangeAdvisories(node, { x: [{ over: 10, message: () => 'm', cite: 'light_3d.cpp:389' }] }, arm)
-    ).toEqual([]);
-  });
-
   it('skips a property that is absent from the node', () => {
     const node = nodeWith({ other: '999' });
     expect(

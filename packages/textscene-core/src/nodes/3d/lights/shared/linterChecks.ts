@@ -20,7 +20,7 @@ export function projectorArm(rulePrefix: string): RuleArm {
  * the serialised key (light_3d.cpp:393).
  */
 export function projectorWithoutShadowDiagnostic(node: TscnNode, arm: RuleArm): Diagnostic | null {
-  const properties = node.properties as unknown as Record<string, string>;
+  const properties = node.rawProperties;
   // A parseable reference, not merely a present key: Godot's reader rejects a
   // malformed value, so no projector is set, and the validator already reports it.
   if (!resourceRef(properties.light_projector ?? '')) return null;

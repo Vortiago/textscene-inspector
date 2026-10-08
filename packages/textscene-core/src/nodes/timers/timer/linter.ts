@@ -5,7 +5,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
 import { CMP_EPSILON } from '../../../godot/math.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
@@ -18,7 +17,7 @@ const LOW_WAIT_TIME_THRESHOLD = 0.05 - CMP_EPSILON;
 
 function checkTimerWaitTime(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const props = isValidProperties(node.properties) ? node.properties : {};
+  const props = node.rawProperties;
 
   const raw = props.wait_time;
   if (raw === undefined) return [];

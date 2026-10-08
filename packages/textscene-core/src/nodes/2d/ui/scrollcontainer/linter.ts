@@ -7,7 +7,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { boolSlotValue } from '../../../../godot/index.js';
@@ -24,7 +23,7 @@ const arms = {
  */
 function isSortableControl(child: TscnNode): boolean {
   if (!descendsFrom(child.type, 'Control')) return false;
-  const props = isValidProperties(child.properties) ? child.properties : {};
+  const props = child.rawProperties;
   if (boolSlotValue(props.top_level) === true) return false;
   if (boolSlotValue(props.visible) === false) return false;
   return true;

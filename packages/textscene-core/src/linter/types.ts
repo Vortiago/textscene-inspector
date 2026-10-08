@@ -130,12 +130,15 @@ export interface StrictParseResult {
   lines: SourceLines;
 }
 
-/** Context provided to lint rules during execution. */
+/**
+ * Context provided to lint rules during execution. A rule reads a node's values from
+ * `rawProperties`, the literals both parsers publish: the lenient tree's `properties`
+ * holds typed render values, so a helper the render path shares would read other values.
+ */
 export interface RuleContext {
   scene: TscnScene;
   /** The node being validated. */
   node: TscnNode;
-  properties: unknown;
 }
 
 /**

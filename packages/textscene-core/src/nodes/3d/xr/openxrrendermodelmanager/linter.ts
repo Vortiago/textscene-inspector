@@ -49,7 +49,7 @@ function ancestorHasXROrigin3D(scene: TscnScene, node: TscnNode): ParentVerdict 
 
 function checkOpenXRRenderModelManager(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  const properties = node.properties as unknown as Record<string, string>;
+  const properties = node.rawProperties;
   const diagnostics: Diagnostic[] = [];
 
   // ANY(0), the default, and NONE_SET(1) cast only the direct parent. A non-empty

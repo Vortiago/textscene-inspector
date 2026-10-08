@@ -8,7 +8,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parsePackedStringArray } from './arrayForms.js';
 import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry.js';
@@ -41,8 +40,7 @@ function startKeysOf(raw: string | undefined): Set<string> {
 function checkCodeEdit(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
-  if (!isValidProperties(node.properties)) return diagnostics;
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   const stringKeys = startKeysOf(rawProps.delimiter_strings);
   const commentKeys = startKeysOf(rawProps.delimiter_comments);

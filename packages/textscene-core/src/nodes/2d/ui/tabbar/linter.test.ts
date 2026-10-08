@@ -30,7 +30,7 @@ function lintContent(content: string): Diagnostic[] {
   expect(scene, 'the scanner must produce a tree for the rule to read').toBeDefined();
   const node = findTabBar(scene!.nodes);
   expect(node, 'the scene text must declare a TabBar').toBeDefined();
-  return tabBarValidationRule.check({ scene: scene!, node: node!, properties: node!.properties });
+  return tabBarValidationRule.check({ scene: scene!, node: node! });
 }
 
 /** A single TabBar root carrying `props`, verbatim. */

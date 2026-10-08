@@ -47,8 +47,8 @@ const arm: WarningArm = {
   grounding: { kind: 'engine', at: 'light_3d.cpp:389' },
 };
 
-function node(properties: Record<string, string>): TscnNode {
-  return { name: 'N', type: 'T', properties } as unknown as TscnNode;
+function node(rawProperties: Record<string, string>): TscnNode {
+  return { name: 'N', type: 'T', properties: {}, rawProperties, children: [] };
 }
 
 describe('range advisory grounding', () => {

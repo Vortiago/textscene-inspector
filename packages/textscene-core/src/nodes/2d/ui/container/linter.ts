@@ -6,7 +6,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 
 const arms = {
@@ -19,7 +18,7 @@ function checkContainer(context: RuleContext): Diagnostic[] {
   // `null` reads to `Variant()` (variant_parser.cpp:699), `Object::set_script` then leaves no
   // instance (object.cpp:1092-1107), and `get_script()` (object.cpp:1134-1136) is null, as for
   // an absent key. `resourceSlotIsEmpty` gives every spelling that one answer.
-  const props = isValidProperties(node.properties) ? node.properties : {};
+  const props = node.rawProperties;
   if (!resourceSlotIsEmpty(props.script)) return [];
 
   return [

@@ -6,7 +6,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { hasChildOfType } from '../../../../linter/childType.js';
 import { CURSOR_ARROW, CURSOR_MAX } from '../../../../godot/control.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
@@ -32,7 +31,7 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
     );
   }
 
-  const props = isValidProperties(node.properties) ? node.properties : {};
+  const props = node.rawProperties;
   // `mouse_default_cursor_shape` starts at `CURSOR_ARROW` (0) (control.h:245), so an absent key
   // never warns.
   const cursorRaw = props.mouse_default_cursor_shape;

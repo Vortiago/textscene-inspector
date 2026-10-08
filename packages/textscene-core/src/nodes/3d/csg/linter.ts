@@ -31,7 +31,7 @@ const arms = {
 // node's `linterParser.ts`, and reporting it here would double it.
 function checkCSGShape3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = node.properties as unknown as Record<string, string>;
+  const properties = node.rawProperties;
 
   // csg_shape.h:224: `Ref<Mesh> mesh` field-initialises to null (no default
   // assignment), so an empty slot is the trigger, however it is spelled.

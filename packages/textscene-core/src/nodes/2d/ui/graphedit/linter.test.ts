@@ -21,7 +21,7 @@ function diagnose(body: string): Diagnostic[] {
   if (!scene) throw new Error('fixture failed to parse');
   const node = scene.nodes[0]?.children[0] as TscnNode;
   expect(node.type).toBe('GraphEdit');
-  const context: RuleContext = { scene, node, properties: node.properties };
+  const context: RuleContext = { scene, node };
   return graphEditPropertiesRule.check(context);
 }
 

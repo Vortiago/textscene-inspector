@@ -70,7 +70,7 @@ function jointConstraintDiagnostics(node: TscnNode, rawProps: Record<string, str
 
 function checkPhysicalBone3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  return jointConstraintDiagnostics(node, node.properties as unknown as Record<string, string>);
+  return jointConstraintDiagnostics(node, node.rawProperties);
 }
 
 const physicalBone3DValidationRule: LintRule = {

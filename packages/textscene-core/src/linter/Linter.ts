@@ -221,11 +221,7 @@ export class Linter {
     const rules = ruleRegistry.getRulesForNodeType(node.type);
     const heading = headingLocation(lines, node);
 
-    const context: RuleContext = {
-      scene,
-      node,
-      properties: node.properties,
-    };
+    const context: RuleContext = { scene, node };
 
     for (const rule of rules) {
       // Appended one at a time: an indexed-family rule reports per index, and spreading 130,000 arguments

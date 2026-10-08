@@ -18,10 +18,10 @@ const arms = {
 
 function checkXROrigin3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = node.properties as unknown as Record<string, string>;
+  const properties = node.rawProperties;
 
   // An explicitly hidden origin never reaches Godot's own check either.
-  if (isExplicitlyHidden(properties)) return [];
+  if (isExplicitlyHidden(node)) return [];
 
   const diagnostics: Diagnostic[] = [];
 

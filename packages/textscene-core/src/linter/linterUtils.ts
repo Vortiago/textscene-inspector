@@ -6,14 +6,6 @@ import { descendsFrom } from '../godot/nodeBaseTypes.js';
 import { cachedUniqueNameClaims, type uniqueNameClaims } from '../utils/uniqueNames.js';
 
 /**
- * Narrow a node's `properties` to a string-keyed record before reading raw
- * values in a semantic rule.
- */
-export function isValidProperties(props: unknown): props is Record<string, string> {
-  return typeof props === 'object' && props !== null;
-}
-
-/**
  * Scene-tree facts built in one depth-first pass for the helpers below. A rule calls
  * them once per matching node, so a walk per call would cost O(N^2). The first lookup
  * against a tree pays one O(N) walk, and each later one is O(1) or O(matches).

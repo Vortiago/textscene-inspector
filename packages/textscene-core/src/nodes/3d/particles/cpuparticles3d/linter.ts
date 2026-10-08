@@ -7,7 +7,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../../linter/resourceChecker.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../../linter/particleParamRanges.js';
 
@@ -27,8 +26,7 @@ function checkMissingMesh(node: RuleContext['node'], rawProps: Record<string, st
 
 function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const rawProps = node.properties;
-  if (!isValidProperties(rawProps)) return [];
+  const rawProps = node.rawProperties;
   return [
     ...checkMissingMesh(node, rawProps),
     ...paramMinAboveMaxDiagnostics(node, rawProps, arms.paramMinAboveMax),

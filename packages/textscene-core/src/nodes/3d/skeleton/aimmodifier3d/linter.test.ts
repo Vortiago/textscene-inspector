@@ -30,7 +30,7 @@ function diagnosticsFor(content: string) {
   if (!scene) throw new Error('fixture failed to parse');
   const node = scene.nodes[0] && findByType(scene.nodes[0], 'AimModifier3D');
   expect(node?.type, 'the fixture text must contain an AimModifier3D child').toBe('AimModifier3D');
-  return aimModifier3DAxisRule.check({ scene, node: node!, properties: node!.properties });
+  return aimModifier3DAxisRule.check({ scene, node: node! });
 }
 
 /** A one-setting AimModifier3D carrying `body`, under a plain Node3D root. */

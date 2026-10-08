@@ -17,7 +17,7 @@ const arms = {
 
 function checkLight3DScale(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = node.properties as unknown as Record<string, string>;
+  const properties = node.rawProperties;
 
   // Only `transform` serialises the pose (node_3d.cpp:1526-1531). `Basis::get_scale()`
   // (core/math/basis.cpp:299-321) folds one det sign across all axes and

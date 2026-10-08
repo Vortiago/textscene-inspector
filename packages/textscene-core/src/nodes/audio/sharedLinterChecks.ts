@@ -5,7 +5,7 @@
  */
 
 import type { TscnInternalResource, TscnNode, TscnScene } from '../../parser/types.js';
-import { extractNodePath, isValidProperties, nodesDescendingFrom } from '../../linter/linterUtils.js';
+import { extractNodePath, nodesDescendingFrom } from '../../linter/linterUtils.js';
 import { resolveNodePath } from '../../linter/nodePathResolve.js';
 import { extractLibraries } from '../animation/animationplayer/parser.js';
 import { resolveAudioTrackPaths } from '../animation/animationplayer/animationResolver.js';
@@ -46,8 +46,7 @@ function audioTrackTargets(scene: TscnScene): ReadonlySet<TscnNode> {
 function resolveAudioTrackTargets(scene: TscnScene): Set<TscnNode> {
   const targets = new Set<TscnNode>();
   for (const mixer of nodesDescendingFrom(scene.nodes, 'AnimationMixer')) {
-    if (!isValidProperties(mixer.properties)) continue;
-    const props = mixer.properties as Record<string, string>;
+    const props = mixer.rawProperties;
     // `root_node` defaults to `NodePath("..")` (scene_string_names.h:129), the mixer's parent,
     // only when the key is absent. An authored `NodePath("")` fails `get_node_or_null`
     // (node.cpp:1894), so `_update_caches` bails on the null parent and the mixer drives nothing.

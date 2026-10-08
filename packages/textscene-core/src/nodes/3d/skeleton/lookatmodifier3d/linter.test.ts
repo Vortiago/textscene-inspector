@@ -30,7 +30,7 @@ function diagnosticsFor(content: string) {
   if (!scene) throw new Error('fixture failed to parse');
   const node = scene.nodes[0] && findByType(scene.nodes[0], 'LookAtModifier3D');
   expect(node, 'the fixture text must contain a LookAtModifier3D child').toBeDefined();
-  return lookAtModifier3DAxisRule.check({ scene, node: node!, properties: node!.properties });
+  return lookAtModifier3DAxisRule.check({ scene, node: node! });
 }
 
 /** A LookAtModifier3D carrying `body`, under a plain Node3D root. */

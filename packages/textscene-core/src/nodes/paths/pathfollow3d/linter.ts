@@ -6,9 +6,8 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnScene } from '../../../parser/types.js';
+import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 import { resolveSubResourceRef } from '../../../resources/SubResourceResolver.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
@@ -41,9 +40,8 @@ const ROTATION_ORIENTED = 4;
  * `up_vector_enabled = false`. False for a curve behind an `ExtResource`, and for an absent
  * key, since the default is `true` (curve.h:299).
  */
-function parentCurveDisablesUpVector(scene: TscnScene, parent: { properties: unknown }): boolean {
-  const curveRef = (parent.properties as Record<string, string>)?.curve;
-  const curve = resolveSubResourceRef(curveRef, scene.internalResources ?? []);
+function parentCurveDisablesUpVector(scene: TscnScene, parent: TscnNode): boolean {
+  const curve = resolveSubResourceRef(parent.rawProperties.curve, scene.internalResources ?? []);
   return boolSlotValue(curve?.data.up_vector_enabled) === false;
 }
 
@@ -51,11 +49,7 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  if (!isValidProperties(node.properties)) {
-    return diagnostics;
-  }
-
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // path_3d.cpp:357: both of this override's warnings sit inside
   // `is_visible_in_tree() && is_inside_tree()`. The progress and dual-key

@@ -189,8 +189,8 @@ export function placementPhrase(verdict: ParentVerdict): string {
  * The cascade reads each ancestor with it too: CanvasItem (`canvas_item.cpp:1471`), Node3D
  * (`node_3d.cpp:1541`), CanvasLayer (`canvas_layer.cpp:341`) and Window (`window.cpp:3436`) spell it `visible`.
  */
-export function isExplicitlyHidden(properties: Record<string, string>): boolean {
-  return boolSlotValue(properties.visible) === false;
+export function isExplicitlyHidden(node: TscnNode): boolean {
+  return boolSlotValue(node.rawProperties.visible) === false;
 }
 
 /**
@@ -206,11 +206,6 @@ export type VisibilityVerdict =
   /** An ancestor the chain consults is instanced or untyped, so its own `visible` is not in this file. */
   | 'unknowable';
 
-/** `isExplicitlyHidden` over a node, since `properties` is widened per node type. */
-function ownVisibleKeyIsFalse(node: TscnNode): boolean {
-  return isExplicitlyHidden(node.properties as unknown as Record<string, string>);
-}
-
 /**
  * `Node3D::is_visible_in_tree()` (`node_3d.cpp:1131-1143`) walks `s = s->data.parent`, and
  * `data.parent` is `cast_to<Node3D>(get_parent())` (`node_3d.cpp:150`), so the chain is the
@@ -225,7 +220,7 @@ function node3DCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict {
     // well be a Node3D. `parentTypeVerdict` guards the same case.
     if (!isCatalogedType(current.type)) return 'unknowable';
     if (!descendsFrom(current.type, 'Node3D')) return 'visible';
-    if (ownVisibleKeyIsFalse(current)) return 'hidden';
+    if (isExplicitlyHidden(current)) return 'hidden';
     current = findParentNode(scene.nodes, current);
   }
   return 'visible';
@@ -244,14 +239,14 @@ function canvasItemCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict 
     // See `node3DCascade`: an uncataloged ancestor may be a CanvasItem.
     if (!isCatalogedType(current.type)) return 'unknowable';
     if (!descendsFrom(current.type, 'CanvasItem')) break;
-    if (ownVisibleKeyIsFalse(current)) return 'hidden';
+    if (isExplicitlyHidden(current)) return 'hidden';
     current = findParentNode(scene.nodes, current);
   }
   if (!current) return 'visible';
 
   // The layer's own key only: the chain ends there.
   if (descendsFrom(current.type, 'CanvasLayer')) {
-    return ownVisibleKeyIsFalse(current) ? 'hidden' : 'visible';
+    return isExplicitlyHidden(current) ? 'hidden' : 'visible';
   }
 
   // The Viewport search starts at that same parent and skips whatever is not a Viewport,
@@ -264,7 +259,7 @@ function canvasItemCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict 
     // class in this position may well be a Window whose own `visible` decides.
     if (!isCatalogedType(current.type)) return 'unknowable';
     if (descendsFrom(current.type, 'Window')) {
-      return ownVisibleKeyIsFalse(current) ? 'hidden' : 'visible';
+      return isExplicitlyHidden(current) ? 'hidden' : 'visible';
     }
     if (descendsFrom(current.type, 'Viewport')) return 'visible';
     current = findParentNode(scene.nodes, current);
@@ -279,7 +274,7 @@ function canvasItemCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict 
  * resolving absence would silence every warning under one.
  */
 export function visibleInTreeVerdict(scene: TscnScene, node: TscnNode): VisibilityVerdict {
-  if (ownVisibleKeyIsFalse(node)) return 'hidden';
+  if (isExplicitlyHidden(node)) return 'hidden';
   if (descendsFrom(node.type, 'CanvasItem')) return canvasItemCascade(scene, node);
   if (descendsFrom(node.type, 'Node3D')) return node3DCascade(scene, node);
   // Neither family: no `is_visible_in_tree()` and no gated warning to suppress.

@@ -7,7 +7,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import type { TscnNode, TscnScene } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { parentTypeVerdict, searchAncestors } from '../../../../linter/parentType.js';
 import { hasChildOfType } from '../../../../linter/childType.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
@@ -46,9 +45,8 @@ function skeletonAncestry(scene: TscnScene, node: TscnNode): SkeletonAncestry {
 function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
-  if (!isValidProperties(node.properties)) return diagnostics;
 
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
   const ancestry = skeletonAncestry(scene, node);
 
   // `unknowable` answers neither warning: the first needs to know the ancestor
