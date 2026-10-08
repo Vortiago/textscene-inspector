@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { REPO_ROOT } from '../repoRoot.mjs';
+import { BASELINE_DIR, baselinePath } from '../visual/baselinePath.mjs';
 import { GOLDENS_COMMENT_MARKER, goldensComment } from './goldensComment.mjs';
 
 const SCENES = [{ name: 'glow-mix', file: 'unit-glow-mix.tscn' }];
@@ -11,7 +12,6 @@ const PULL_REQUEST = {
   number: 640,
   branch: 'claude/issue-351-visibility',
 };
-const BASELINE_DIR = 'scripts/visual/baselines';
 
 describe('goldensComment', () => {
   it('links a changed golden to its image diff, the preview of the branch and main', () => {
@@ -50,11 +50,11 @@ describe('goldensComment', () => {
   });
 
   it('cuts the preview host to the 28 characters Cloudflare Pages keeps of the branch', () => {
-    const pullRequest = { ...PULL_REQUEST, branch: 'claude/issue-625-tiledata-vo-modulate' };
+    const pullRequest = { ...PULL_REQUEST, branch: 'claude/pr-goldens-touched-fqk1vj' };
 
     const comment = goldensComment(nameStatus('M', 'glow-mix'), SCENES, pullRequest);
 
-    expect(comment).toContain('https://claude-issue-625-tiledata-vo.textscene-inspector.pages.dev/');
+    expect(comment).toContain('https://claude-pr-goldens-touched-fq.textscene-inspector.pages.dev/');
   });
 
   it('drops a hyphen the cut leaves at the end of the preview host', () => {
@@ -102,7 +102,7 @@ describe('goldensComment', () => {
 });
 
 function nameStatus(status, golden) {
-  return `${status}\t${BASELINE_DIR}/${golden}.png\n`;
+  return `${status}\t${baselinePath(golden)}\n`;
 }
 
 function changedGoldens(count) {

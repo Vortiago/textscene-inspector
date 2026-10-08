@@ -1,19 +1,22 @@
 /**
  * The committed baselines and the pixel arithmetic against them: read, diff, write, and the
- * failure artefacts a reviewer needs. Only this module locates the two directories, since a moved
- * consumer with its own offset would point at an empty directory and report every scene missing.
+ * failure artefacts a reviewer needs. `baselinePath.mjs` places a baseline and this module the
+ * output directory, since a moved consumer with its own offset would point at an empty directory.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
 import { compareImages, formatDelta } from '../imageDelta.mjs';
 import { isUniformImage } from '../previewServer.mjs';
+import { baselinePath } from '../baselinePath.mjs';
+import { REPO_ROOT } from '../../repoRoot.mjs';
 
-const VISUAL_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
-const BASELINE_DIR = join(VISUAL_DIR, 'baselines');
-const OUTPUT_DIR = join(VISUAL_DIR, 'output');
+const OUTPUT_DIR = join(REPO_ROOT, 'scripts/visual/output');
+
+function baselineFile(scene) {
+  return join(REPO_ROOT, baselinePath(scene.name));
+}
 
 /**
  * A scene passes when its capture decodes to the baseline's pixels exactly, with no perceptual
@@ -22,11 +25,11 @@ const OUTPUT_DIR = join(VISUAL_DIR, 'output');
  * since a broad faint shift and a few strong edge pixels can share one percentage.
  */
 export function compareToBaseline(scene, actualBuffer) {
-  const baselinePath = join(BASELINE_DIR, `${scene.name}.png`);
-  if (!existsSync(baselinePath)) {
+  const file = baselineFile(scene);
+  if (!existsSync(file)) {
     return { status: 'missing-baseline', detail: 'no baseline — run pnpm test:visual:update' };
   }
-  const result = compareImages(readFileSync(baselinePath), actualBuffer, { diff: true });
+  const result = compareImages(readFileSync(file), actualBuffer, { diff: true });
   if (result.sizeMismatch || result.changedPixels > 0) {
     return { status: 'fail', detail: formatDelta(result), diff: result.diff };
   }
@@ -64,13 +67,13 @@ export function writeBaseline(scene, buffer) {
         'baseline (a lost WebGL context or an unrendered scene, never a real golden)',
     };
   }
-  const baselinePath = join(BASELINE_DIR, `${scene.name}.png`);
-  const existing = existsSync(baselinePath) ? readFileSync(baselinePath) : null;
+  const file = baselineFile(scene);
+  const existing = existsSync(file) ? readFileSync(file) : null;
   if (pixelsMatchBaseline(existing, buffer)) {
     return { status: 'unchanged', detail: 'pixels identical — not rewritten' };
   }
-  mkdirSync(BASELINE_DIR, { recursive: true });
-  writeFileSync(baselinePath, buffer);
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, buffer);
   return { status: 'updated', detail: `${buffer.length} bytes` };
 }
 

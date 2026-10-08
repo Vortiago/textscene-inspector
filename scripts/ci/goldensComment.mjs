@@ -8,17 +8,19 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { PREVIEW_URL } from '../compare-docs/gallery/vocabulary.mjs';
+import { goldenNameOf } from '../visual/baselinePath.mjs';
+import { fixtureUrl } from '../visual/preview/fixtureUrl.mjs';
 import { GOLDEN_SCENES } from '../visual/scenes.mjs';
 
 /** The first line of the comment, which the workflow searches for to update it in place. */
 export const GOLDENS_COMMENT_MARKER = '<!-- goldens-touched -->';
 
-const BASELINE_PATH = /^scripts\/visual\/baselines\/(.+)\.png$/;
 const STATUS_WORDS = { A: 'added', M: 'changed', D: 'removed' };
 const MAIN_SITE = new URL(PREVIEW_URL);
 
-// Cloudflare Pages keeps 28 characters of the branch in a preview host:
-// `claude/issue-625-tiledata-vo-modulate` deploys to `claude-issue-625-tiledata-vo`.
+// The branch alias of a Cloudflare Pages preview deployment keeps 28 characters of the branch
+// (developers.cloudflare.com/pages/configuration/preview-deployments/): the branch
+// `claude/pr-goldens-touched-fqk1vj` deploys to `claude-pr-goldens-touched-fq`.
 const BRANCH_ALIAS_LENGTH = 28;
 
 // More rows than this push the rest of the pull request's conversation down too far.
@@ -46,8 +48,8 @@ export function goldensComment(nameStatus, scenes, pullRequest) {
 function parseGoldens(nameStatus) {
   return nameStatus.split('\n').flatMap((line) => {
     const [status, path = ''] = line.split('\t');
-    const baseline = BASELINE_PATH.exec(path);
-    return baseline ? [{ path, name: baseline[1], change: changeWord(status) }] : [];
+    const name = goldenNameOf(path);
+    return name ? [{ path, name, change: changeWord(status) }] : [];
   });
 }
 
@@ -67,9 +69,7 @@ function row({ path, name, change }, scenes, { repository, number }, preview) {
 }
 
 function sceneLink(label, site, fixture) {
-  const url = new URL(site);
-  url.searchParams.set('fixture', fixture);
-  return `[${label}](${url})`;
+  return `[${label}](${fixtureUrl(site.href, fixture)})`;
 }
 
 /** The branch's Cloudflare Pages preview. A DNS label ends in a letter or digit, never a hyphen. */
