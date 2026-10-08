@@ -185,6 +185,22 @@ describe('parseTileMap', () => {
     expect(result.rendering_quadrant_size).toBe(8);
   });
 
+  it('takes the later of rendering_quadrant_size and cell_quadrant_size, as `_set` applies them in file order', () => {
+    const result = parseTileMap(heading('TileMap', { name: 'Map' }), {
+      rendering_quadrant_size: '4',
+      cell_quadrant_size: '8',
+    });
+    expect(result.rendering_quadrant_size).toBe(8);
+  });
+
+  it('keeps the size before a refused one, as set_rendering_quadrant_size does (tile_map.cpp:224)', () => {
+    const result = parseTileMap(heading('TileMap', { name: 'Map' }), {
+      cell_quadrant_size: '8',
+      rendering_quadrant_size: '0',
+    });
+    expect(result.rendering_quadrant_size).toBe(8);
+  });
+
   it("defaults rendering_quadrant_size to Godot's 16", () => {
     expect(parseTileMap(heading('TileMap', { name: 'Map' }), {}).rendering_quadrant_size).toBe(16);
   });

@@ -10,7 +10,7 @@ import { boolOr, intOr } from '../../../../parser/valueParsers';
 import { tileMapLayerVector } from '../shared/layerVector';
 import { parseColor } from '../../../../utils/colorParser';
 import { decodeLegacyTileData } from '../shared/tileData';
-import { renderingQuadrantSizeOr } from '../shared/renderingQuadrantSize';
+import { DEFAULT_RENDERING_QUADRANT_SIZE, renderingQuadrantSizeOr } from '../shared/renderingQuadrantSize';
 import type { TileMapLayerData, TileMapProperties } from './types';
 
 export function parseTileMap(heading: ParsedHeading, properties: Record<string, string>): TileMapProperties {
@@ -23,14 +23,27 @@ export function parseTileMap(heading: ParsedHeading, properties: Record<string, 
 
   const result: TileMapProperties = {
     ...baseProperties,
-    // `cell_quadrant_size` is the deprecated name `_set` still routes to the setter (tile_map.cpp:695-697).
-    rendering_quadrant_size: renderingQuadrantSizeOr(
-      properties.rendering_quadrant_size ?? properties.cell_quadrant_size
-    ),
+    rendering_quadrant_size: tileMapRenderingQuadrantSize(properties),
     layers,
   };
   if (properties.tile_set) result.tile_set = properties.tile_set;
   return result;
+}
+
+/**
+ * `_set` routes the deprecated `cell_quadrant_size` to the same setter (`tile_map.cpp:695-697`), so
+ * the two keys apply in file order and the later one the setter accepts wins.
+ */
+function tileMapRenderingQuadrantSize(properties: Record<string, string>): number {
+  const keys = Object.keys(properties);
+  const isDeprecatedFirst = keys.indexOf('cell_quadrant_size') < keys.indexOf('rendering_quadrant_size');
+  const writes = isDeprecatedFirst
+    ? [properties.cell_quadrant_size, properties.rendering_quadrant_size]
+    : [properties.rendering_quadrant_size, properties.cell_quadrant_size];
+  return writes.reduce(
+    (size: number, value) => renderingQuadrantSizeOr(value, size),
+    DEFAULT_RENDERING_QUADRANT_SIZE
+  );
 }
 
 function parseLayer(index: number, props: ReadonlyMap<string, string>, format: number): TileMapLayerData {

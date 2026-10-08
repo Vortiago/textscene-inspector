@@ -1,7 +1,7 @@
 /**
- * Draws a TileMap, the deprecated multi-layer node: each layer's rendering quadrants,
- * each a lit canvas item of one batched mesh per atlas source. An unresolvable TileSet or undecodable layer data leaves the
- * transform-only group with its children (ADR-0008).
+ * Draws a TileMap, the deprecated multi-layer node: each layer's rendering quadrants, each a lit
+ * canvas item of one batched mesh per atlas source. An unresolvable TileSet or undecodable layer
+ * data leaves the transform-only group with its children (ADR-0008).
  */
 
 import { useMemo } from 'react';
@@ -46,29 +46,31 @@ export function TileMap({ node, children }: NodeComponentProps) {
   }, [paintRange, node, props.layers]);
 
   // Parsed layers never change identity, so the batched geometries survive unrelated re-renders.
-  const layerGroups = useMemo(() => {
+  // The quadrants depend on no paint-order input, so a move in the canvas keeps them too.
+  const layerQuadrantSets = useMemo(() => {
     if (!model) return null;
     return props.layers.flatMap((layer, layerIndex) => {
       if (!layer.enabled || !layer.cells?.length) return [];
-      // A layer is a child CanvasItem with `z_as_relative` at its default, so
-      // its `z_index` accumulates onto the TileMap's own `z_final`.
-      const zFinal = accumulateCanvasItemZ(ownZFinal, { z_index: layer.zIndex });
       const layout = {
         ySortEnabled: layer.ySortEnabled,
         ySortOrigin: layer.ySortOrigin,
         quadrantSize: props.rendering_quadrant_size,
       };
-      return [
-        {
-          layerIndex,
-          layer,
-          zFinal,
-          quadrants: layerQuadrants(layer.cells, model, layout),
-          renderOrder: canvasRenderOrder({ layerRank, zFinal, sequence: layerSequences[layerIndex]! }),
-        },
-      ];
+      return [{ layerIndex, layer, quadrants: layerQuadrants(layer.cells, model, layout) }];
     });
-  }, [model, props.layers, props.rendering_quadrant_size, layerRank, ownZFinal, layerSequences]);
+  }, [model, props.layers, props.rendering_quadrant_size]);
+
+  const layerGroups = useMemo(
+    () =>
+      layerQuadrantSets?.map((set) => {
+        // A layer is a child CanvasItem with `z_as_relative` at its default, so
+        // its `z_index` accumulates onto the TileMap's own `z_final`.
+        const zFinal = accumulateCanvasItemZ(ownZFinal, { z_index: set.layer.zIndex });
+        const sequence = layerSequences[set.layerIndex]!;
+        return { ...set, zFinal, renderOrder: canvasRenderOrder({ layerRank, zFinal, sequence }) };
+      }) ?? null,
+    [layerQuadrantSets, layerRank, ownZFinal, layerSequences]
+  );
 
   return (
     <CanvasItem2D

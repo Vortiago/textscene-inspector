@@ -5,26 +5,20 @@
  */
 
 import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
+import { compareCells } from './cellOrder';
 import { mapToLocalPx } from './tilePlacement';
 import { groupBySortY } from './tileYSort';
-import type { TileGrid, Vec2i } from './types';
+import type { TileGrid } from './types';
 
 interface Quadrant {
-  readonly coords: Vec2i;
+  /** `map_to_local` of the quadrant coords, not of the quadrant's first cell, which Godot sorts by. */
+  readonly local: { x: number; y: number };
   readonly cells: PlacedCell[];
 }
 
 /** `RenderingQuadrant::CoordsWorldComparator` (`tile_map_layer.h:210-219`): y up, then x down. */
-function compareQuadrants(grid: TileGrid, a: Quadrant, b: Quadrant): number {
-  // Godot sorts by `map_to_local` of the quadrant coords, not of the quadrant's first cell.
-  const localA = mapToLocalPx(grid, a.coords);
-  const localB = mapToLocalPx(grid, b.coords);
-  return localA.y === localB.y ? localB.x - localA.x : localA.y - localB.y;
-}
-
-/** `CellData::operator<` (`tile_map_layer.h:134-136`): `Vector2i` order, x then y. */
-function compareCells(a: PlacedCell, b: PlacedCell): number {
-  return a.coords.x - b.coords.x || a.coords.y - b.coords.y;
+function compareQuadrants(a: Quadrant, b: Quadrant): number {
+  return a.local.y === b.local.y ? b.local.x - a.local.x : a.local.y - b.local.y;
 }
 
 /** The cells of each rendering quadrant, in draw order, each sorted as Godot draws them. */
@@ -43,11 +37,9 @@ export function renderingQuadrants(
     const key = `${coords.x},${coords.y}`;
     const quadrant = byKey.get(key);
     if (quadrant) quadrant.cells.push(cell);
-    else byKey.set(key, { coords, cells: [cell] });
+    else byKey.set(key, { local: mapToLocalPx(grid, coords), cells: [cell] });
   }
-  return [...byKey.values()]
-    .sort((a, b) => compareQuadrants(grid, a, b))
-    .map((quadrant) => quadrant.cells.sort(compareCells));
+  return [...byKey.values()].sort(compareQuadrants).map((quadrant) => quadrant.cells.sort(compareCells));
 }
 
 /** How a layer splits into quadrants. */

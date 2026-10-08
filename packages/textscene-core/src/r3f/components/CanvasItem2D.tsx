@@ -39,9 +39,9 @@ export interface CanvasItem2DProps {
     lighting: CanvasItemLightingProps
   ) => ReactNode;
   /**
-   * Draws canvas items of this node's own in place of `body`, each with its own light list, as a
-   * TileMapLayer's rendering quadrants are. They take the own-pixel tint, the material in force and
-   * this node's `z_final`.
+   * Draws this node's own child canvas items, each with its own light list, as a TileMapLayer's
+   * rendering quadrants are. A node that draws them passes no `body`. They take the own-pixel tint,
+   * the material in force and this node's `z_final`.
    */
   ownItems?: (
     tint: CanvasItemTint,

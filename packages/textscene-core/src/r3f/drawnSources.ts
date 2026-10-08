@@ -1,7 +1,7 @@
 /**
- * Partitions a tile layer's cells into one batch mesh per atlas source. Godot interleaves sources
- * in scan order, so the batches take `sourceIndex` as their `renderOrder`, within the layer's one
- * place in the canvas that its group carries (`canvasPaintOrder.ts`).
+ * Partitions a rendering quadrant's cells into one batch mesh per atlas source. Godot interleaves
+ * sources in scan order, so `TileQuadrants` orders the batches by `sourceIndex` after the previous
+ * quadrant's, within the layer's one place in the canvas that its group carries (`canvasPaintOrder.ts`).
  */
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import type { AtlasSourceModel, TileSetModel } from '../resources/tileset/types';

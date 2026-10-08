@@ -68,4 +68,15 @@ describe('layerQuadrants', () => {
       [[0, 1]],
     ]);
   });
+  it("sorts a y-sorted row's cells by x, as every quadrant's", () => {
+    const row = [cell(2, 0), cell(0, 0), cell(1, 0)];
+    const quadrants = layerQuadrants(row, SQUARE, { ySortEnabled: true, ySortOrigin: 0, quadrantSize: 16 });
+    expect(coordsOf(quadrants)).toEqual([
+      [
+        [0, 0],
+        [1, 0],
+        [2, 0],
+      ],
+    ]);
+  });
 });
