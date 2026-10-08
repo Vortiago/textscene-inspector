@@ -5,7 +5,6 @@
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
@@ -34,8 +33,7 @@ const TAB_PREFIX = 'tab_';
 function checkTabBar(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
-  if (!isValidProperties(node.properties)) return diagnostics;
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
 
   // Absent means 0: `tabs` is default-constructed empty
   // (doc/classes/TabBar.xml:282 records the same default).

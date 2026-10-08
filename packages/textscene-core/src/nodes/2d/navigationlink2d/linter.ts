@@ -7,7 +7,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
 import { VECTOR2_REGEX, tupleComponent } from '../../../linter/validators/index.js';
 import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
 import { isEqualApprox } from '../../../godot/index.js';
@@ -64,7 +63,7 @@ function isEqualApproxVector2(left: Vec2, right: Vec2): boolean {
 
 function checkNavigationLink2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};
+  const properties = node.rawProperties;
 
   const start = readPosition(properties, 'start_position');
   const end = readPosition(properties, 'end_position');

@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
+import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { listIndices, listWrittenIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
@@ -47,8 +47,7 @@ const SECONDARY_DIRECTION_NONE = 0;
 function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
-  if (!isValidProperties(node.properties)) return diagnostics;
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // Absent means zero: `LocalVector<IKModifier3DSetting *> settings`
   // (ik_modifier_3d.h:69) starts empty, which is the XML's default="0".

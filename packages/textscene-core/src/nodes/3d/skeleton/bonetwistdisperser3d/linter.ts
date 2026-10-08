@@ -7,7 +7,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
@@ -72,8 +71,7 @@ function resolveJointCounts(properties: Record<string, string>): Map<number, num
 function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
-  if (!isValidProperties(node.properties)) return diagnostics;
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // Absent means zero: `LocalVector<BoneTwistDisperser3DSetting *> settings`
   // (bone_twist_disperser_3d.h:86) starts empty, which is the XML's default="0".

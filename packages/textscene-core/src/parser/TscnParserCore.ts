@@ -8,7 +8,7 @@
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/deprecated.js';
 import type {
   TscnScene,
-  TscnNode,
+  SceneNode,
   TscnExternalResource,
   TscnInternalResource,
   TscnMainResource,
@@ -28,26 +28,31 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
-import {
-  buildSceneTree,
-  emptyParentHeadings,
-  rootDeclaringParent,
-  strandedNodes,
-} from './sceneTreeBuilder.js';
+import { buildSceneTree } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
 
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
 
 /**
- * Builds a TscnNode from a parsed heading and its properties. The renderer uses
- * NodeRegistry. The linter builds a plain node with no three.js dependency.
+ * Builds a node from a parsed heading and its properties. The renderer builds a `TscnNode`
+ * through NodeRegistry. The linter builds a `RawNode` with no three.js dependency.
  */
-export type NodeCreator = (heading: ParsedHeading, properties: Record<string, string>) => TscnNode | null;
+export type NodeCreator<N extends SceneNode<N>> = (
+  heading: ParsedHeading,
+  properties: Record<string, string>
+) => N | null;
 
-/**
- * Hooks into the scanning loop for strict (linting) consumers. The observer is
- * purely additive: it never changes what the lenient loop parses or recovers.
- */
+/** What one scan returns: the tree, and the headings it was built from. */
+export interface CoreParseResult<N extends SceneNode<N>> {
+  scene: TscnScene<N>;
+  /**
+   * Each `[node]` heading's node beside its line, in scan order, for checks against the tree. A
+   * heading whose node creator returns null is absent, so index 0 is Godot's root only when the
+   * creator builds every node.
+   */
+  origins: readonly NodeOrigin<N>[];
+}
+
 /** One property value the scan completed, after any multiline accumulation. */
 export interface ParsedProperty {
   section: SectionType;
@@ -67,6 +72,10 @@ export interface ParsedProperty {
   stored: ResolvedProperty;
 }
 
+/**
+ * Hooks into the scanning loop for strict (linting) consumers. The observer is
+ * purely additive: it never changes what the lenient loop parses or recovers.
+ */
 export interface ParseObserver {
   /** Malformed line detected: INVALID_HEADING_FORMAT or INVALID_PROPERTY_FORMAT. */
   onError?(error: { message: string; line: number; column: number; code: string }): void;
@@ -92,28 +101,28 @@ export class TscnParserCore {
    * @param content - Raw TSCN file content
    * @param nodeCreator - Callback to create nodes (renderer-specific or linter-specific)
    * @param observer - Optional hooks for strict consumers (errors, sections, properties)
-   * @returns Parsed scene structure
+   * @returns The scene and its headings
    */
-  parse(content: string, nodeCreator: NodeCreator, observer?: ParseObserver): TscnScene {
+  parse<N extends SceneNode<N>>(
+    content: string,
+    nodeCreator: NodeCreator<N>,
+    observer?: ParseObserver
+  ): CoreParseResult<N> {
     // Debug, not info: an editor host parses on each keystroke.
     logger.debug('[Parser] Starting TSCN parsing');
     // Split on CRLF or LF: a trailing \r on each line of a Windows-authored file
     // would corrupt accumulated multi-line string values.
     const lines = content.split(/\r?\n/);
 
-    // Every node beside its heading's line, in scan order. The line stays off `TscnNode`:
+    // Every node beside its heading's line, in scan order. The line stays off the node:
     // the orphan report reads it here, and a strict observer gets it from `onSectionBuilt`.
     // One array, not a parallel `nodes` list, which two push sites would keep in step.
-    const origins: NodeOrigin[] = [];
+    const origins: NodeOrigin<N>[] = [];
     const externalResources: TscnExternalResource[] = [];
     const internalResources: TscnInternalResource[] = [];
     // One per file: the loader refuses any tag after the `[resource]` body
     // (`resource_format_text.cpp:837-841`), so a later one is a corrupt file, and the last one read stays.
     let mainResource: TscnMainResource | undefined;
-    const connectionBinds: string[] = [];
-    const instancesOutsideNodeBody: string[] = [];
-    // The type of the last heading read, since only a `[node]` body reads the heading after it leniently.
-    let previousHeadingType: string | null = null;
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
@@ -238,13 +247,6 @@ export class TscnParserCore {
           if (currentHeading.type === 'gd_resource') {
             headerResourceType = currentHeading.attributes.type;
           }
-          const binds = currentHeading.type === 'connection' ? currentHeading.attributes.binds : undefined;
-          if (binds !== undefined) connectionBinds.push(binds);
-          const { instance } = currentHeading.attributes;
-          if (currentHeading.type === 'node' && previousHeadingType !== 'node' && instance !== undefined) {
-            instancesOutsideNodeBody.push(instance);
-          }
-          previousHeadingType = currentHeading.type;
           observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
           observer?.onError?.({
@@ -315,30 +317,20 @@ export class TscnParserCore {
     finalizeSection();
 
     const sceneTree = buildSceneTree(origins.map((o) => o.node));
-    const orphanedNodes = strandedNodes(origins, sceneTree);
-    const rootWithParent = rootDeclaringParent(origins);
-    const emptyParents = emptyParentHeadings(origins);
-    for (const { node } of orphanedNodes) {
-      logger.warn(
-        `[Parser] Orphaned node dropped from the scene tree: "${node.name}" (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
-      );
-    }
 
     logger.debug(
       `[Parser] Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`
     );
 
     return {
-      nodes: sceneTree,
-      externalResources,
-      internalResources,
-      ...(orphanedNodes.length > 0 ? { orphanedNodes } : {}),
-      ...(rootWithParent ? { rootWithParent } : {}),
-      ...(emptyParents.length > 0 ? { emptyParentHeadings: emptyParents } : {}),
-      ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
-      ...(mainResource ? { mainResource } : {}),
-      ...(connectionBinds.length > 0 ? { connectionBinds } : {}),
-      ...(instancesOutsideNodeBody.length > 0 ? { instancesOutsideNodeBody } : {}),
+      scene: {
+        nodes: sceneTree,
+        externalResources,
+        internalResources,
+        ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
+        ...(mainResource ? { mainResource } : {}),
+      },
+      origins,
     };
   }
 

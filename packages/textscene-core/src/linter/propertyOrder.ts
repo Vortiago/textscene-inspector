@@ -11,9 +11,8 @@
  * `max_value` clamps against the stale default `max`, and the later `max_value`
  * only re-clamps that result.
  *
- * @param properties A node's raw bag (`TscnNode.properties` in the strict parser,
- *   `TscnNode.rawProperties` in the lenient one). Its string keys iterate in file
- *   order, because `TscnParserCore.ts` assigns each key once, in scan order.
+ * @param properties A node's `rawProperties`. Its string keys iterate in file order,
+ *   because `TscnParserCore.ts` assigns each key once, in scan order.
  */
 export function targetsBeforeLatestTrigger(
   properties: Record<string, string>,

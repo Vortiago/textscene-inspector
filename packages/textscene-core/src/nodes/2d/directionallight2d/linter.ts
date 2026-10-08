@@ -2,7 +2,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
 import { invertedRangeWindowMessage, LAYER_WINDOW } from '../lights/shared/invertedRangeWindow.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
@@ -16,12 +15,7 @@ const arms = {
 
 function checkDirectionalLight2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
-  const message = invertedRangeWindowMessage(
-    'DirectionalLight2D',
-    node.properties as Record<string, string>,
-    LAYER_WINDOW
-  );
+  const message = invertedRangeWindowMessage('DirectionalLight2D', node.rawProperties, LAYER_WINDOW);
   const diagnostics: Diagnostic[] = [];
   if (message) reportArm(diagnostics, arms.invertedLayerRange, node, message);
   return diagnostics;

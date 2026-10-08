@@ -23,7 +23,7 @@ function checkDecal(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  const rawProps = node.properties as unknown as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // A decal with no texture at all projects nothing: valid in Godot, but almost certainly a
   // mistake, so a warning.

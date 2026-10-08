@@ -31,7 +31,7 @@ function isUnsetPath(raw: string): boolean {
 
 function checkSplineIK3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = node.properties as unknown as Record<string, string>;
+  const properties = node.rawProperties;
 
   // `_set_setting_count` refuses a negative count and the validator reports it. A count that is
   // absent, unparseable or negative allocates nothing, and Godot's own loop over `sp_settings` runs

@@ -18,7 +18,7 @@ const arms = {
 
 function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  const properties = node.properties as unknown as Record<string, string>;
+  const properties = node.rawProperties;
 
   const path = properties.remote_path ? extractNodePath(properties.remote_path) : null;
 

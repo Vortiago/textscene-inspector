@@ -6,7 +6,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { isZeroApprox } from '../../../godot/index.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
@@ -48,11 +47,7 @@ function checkGeometryInstance3D(context: RuleContext): Diagnostic[] {
   // soft_body_3d.cpp:402, sprite_3d.cpp:1470).
   if (descendsFrom(node.type, 'CSGShape3D')) return diagnostics;
 
-  if (!isValidProperties(node.properties)) {
-    return diagnostics;
-  }
-
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
   // `ruleInt`, not a string compare: the slot is an INT, so `1.0` and `01` are
   // both the 1 Godot stores.
   const fadeMode = ruleInt(props.visibility_range_fade_mode, 0);

@@ -1,7 +1,7 @@
 /** Shared "does this body have a shape provider?" check for the physics linters. */
 
-import type { TscnNode } from '../../parser/types.js';
 import { hasChildOfType } from '../childType.js';
+import type { RawNode } from '../../parser/types.js';
 
 /**
  * The node types that give a `CollisionObject` its shapes: each calls
@@ -19,7 +19,7 @@ export function collisionShapeTypes(dim: '2D' | '3D'): readonly string[] {
  * (`collision_shape_2d.cpp:52-55`, `collision_shape_3d.cpp:82-83`, polygons alike),
  * which fills the `shapes` map `collision_object_2d.cpp:587` tests, one level only.
  */
-export function hasCollisionShapeChild(node: TscnNode, dim: '2D' | '3D'): boolean {
+export function hasCollisionShapeChild(node: RawNode, dim: '2D' | '3D'): boolean {
   // The set `collisionShapeTypesPhrase` names, so no warning offers a type this ignores.
   return hasChildOfType(node, collisionShapeTypes(dim));
 }

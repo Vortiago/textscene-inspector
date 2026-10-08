@@ -44,8 +44,8 @@ visible =
       // Empty value is allowed by parser (becomes empty string)
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
-      expect(result.scene!.nodes[0]!.properties).toHaveProperty('visible');
-      expect(result.scene!.nodes[0]!.properties['visible']).toBe('');
+      expect(result.scene!.nodes[0]!.rawProperties).toHaveProperty('visible');
+      expect(result.scene!.nodes[0]!.rawProperties['visible']).toBe('');
     });
   });
 
@@ -156,7 +156,7 @@ editor_description = "Test node"
 
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
-      expect(Object.keys(result.scene!.nodes[0]!.properties)).toHaveLength(5);
+      expect(Object.keys(result.scene!.nodes[0]!.rawProperties)).toHaveLength(5);
     });
 
     it('should finalize last section at end of file', () => {
@@ -169,7 +169,7 @@ visible = true`;
 
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
-      expect(result.scene!.nodes[0]!.properties).toHaveProperty('visible');
+      expect(result.scene!.nodes[0]!.rawProperties).toHaveProperty('visible');
     });
   });
 });

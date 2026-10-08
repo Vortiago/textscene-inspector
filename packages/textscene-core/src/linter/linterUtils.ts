@@ -1,17 +1,9 @@
 /** Small shared helpers for node-type semantic linters. */
 
-import type { TscnNode } from '../parser/types.js';
 import { nodePathLiteral } from '../godot/index.js';
 import { descendsFrom } from '../godot/nodeBaseTypes.js';
 import { cachedUniqueNameClaims, type uniqueNameClaims } from '../utils/uniqueNames.js';
-
-/**
- * Narrow a node's `properties` to a string-keyed record before reading raw
- * values in a semantic rule.
- */
-export function isValidProperties(props: unknown): props is Record<string, string> {
-  return typeof props === 'object' && props !== null;
-}
+import type { RawNode } from '../parser/types.js';
 
 /**
  * Scene-tree facts built in one depth-first pass for the helpers below. A rule calls
@@ -23,15 +15,15 @@ interface SceneIndex {
    * node -> its parent, or `null` for a root. Absent key = node not in this tree. Keys are in
    * the order the walk reached them: depth-first, Godot tree order.
    */
-  parentOf: Map<TscnNode, TscnNode | null>;
+  parentOf: Map<RawNode, RawNode | null>;
   /** Nodes that have an ancestor (not themselves) with `instance` set. */
-  underInstanceAncestor: Set<TscnNode>;
+  underInstanceAncestor: Set<RawNode>;
   /**
    * type -> every node of that type, in depth-first (Godot tree) order. A list, not a
    * count and a first node, because a conditional `add_to_group` lookup needs the first
    * entry that satisfies a predicate, at O(nodes of that type).
    */
-  nodesByType: Map<string, TscnNode[]>;
+  nodesByType: Map<string, RawNode[]>;
 }
 
 /**
@@ -40,14 +32,14 @@ interface SceneIndex {
  * entry never goes stale and is collected with its tree. A caller that mutated a tree
  * in place and re-queried the same array would read stale results.
  */
-const sceneIndexCache = new WeakMap<TscnNode[], SceneIndex>();
+const sceneIndexCache = new WeakMap<RawNode[], SceneIndex>();
 
-function buildSceneIndex(roots: TscnNode[]): SceneIndex {
-  const parentOf = new Map<TscnNode, TscnNode | null>();
-  const underInstanceAncestor = new Set<TscnNode>();
-  const nodesByType = new Map<string, TscnNode[]>();
+function buildSceneIndex(roots: RawNode[]): SceneIndex {
+  const parentOf = new Map<RawNode, RawNode | null>();
+  const underInstanceAncestor = new Set<RawNode>();
+  const nodesByType = new Map<string, RawNode[]>();
 
-  const walk = (nodes: TscnNode[], parent: TscnNode | null, ancestorIsInstance: boolean): void => {
+  const walk = (nodes: RawNode[], parent: RawNode | null, ancestorIsInstance: boolean): void => {
     for (const node of nodes) {
       parentOf.set(node, parent);
 
@@ -74,11 +66,11 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
  * path's consumers through the cache in `utils/uniqueNames.ts`. Lazy rather
  * than a `SceneIndex` field, because most scenes carry no `%Name` path at all.
  */
-export function sceneUniqueClaims(roots: TscnNode[]): ReturnType<typeof uniqueNameClaims> {
+export function sceneUniqueClaims(roots: RawNode[]): ReturnType<typeof uniqueNameClaims> {
   return cachedUniqueNameClaims(roots);
 }
 
-function getSceneIndex(roots: TscnNode[]): SceneIndex {
+function getSceneIndex(roots: RawNode[]): SceneIndex {
   let index = sceneIndexCache.get(roots);
   if (!index) {
     index = buildSceneIndex(roots);
@@ -88,7 +80,7 @@ function getSceneIndex(roots: TscnNode[]): SceneIndex {
 }
 
 /** Shared empty result for a type miss: one frozen instance, not an allocation per miss. */
-const NO_MATCHES: readonly TscnNode[] = Object.freeze([]);
+const NO_MATCHES: readonly RawNode[] = Object.freeze([]);
 
 /**
  * Every node of `type`, in depth-first (Godot tree) order, frozen, not copied. A rule
@@ -96,7 +88,7 @@ const NO_MATCHES: readonly TscnNode[] = Object.freeze([]);
  * O(matches x nodes); this, {@link countNodesOfType} and {@link firstNodeOfType} read the
  * cached index. Exact-name: Godot compares `get_class()` or scans a type-keyed group.
  */
-export function nodesOfType(roots: TscnNode[], type: string): readonly TscnNode[] {
+export function nodesOfType(roots: RawNode[], type: string): readonly RawNode[] {
   return getSceneIndex(roots).nodesByType.get(type) ?? NO_MATCHES;
 }
 
@@ -106,7 +98,7 @@ export function nodesOfType(roots: TscnNode[], type: string): readonly TscnNode[
  * what it is named. A class the catalog does not know inherits nothing. Each call walks the tree
  * once, so a rule that asks per node caches the answer per tree, as the audio checks do.
  */
-export function nodesDescendingFrom(roots: TscnNode[], base: string): readonly TscnNode[] {
+export function nodesDescendingFrom(roots: RawNode[], base: string): readonly RawNode[] {
   const index = getSceneIndex(roots);
   // One ancestry test per distinct class, not per node: a scene repeats its classes.
   const heirClasses = new Set<string>();
@@ -114,7 +106,7 @@ export function nodesDescendingFrom(roots: TscnNode[], base: string): readonly T
     if (descendsFrom(type, base)) heirClasses.add(type);
   }
   if (heirClasses.size === 0) return NO_MATCHES;
-  const heirs: TscnNode[] = [];
+  const heirs: RawNode[] = [];
   for (const node of index.parentOf.keys()) {
     if (heirClasses.has(node.type)) heirs.push(node);
   }
@@ -122,7 +114,7 @@ export function nodesDescendingFrom(roots: TscnNode[], base: string): readonly T
 }
 
 /** How many nodes of `type` the scene contains, off the same cached index. */
-export function countNodesOfType(roots: TscnNode[], type: string): number {
+export function countNodesOfType(roots: RawNode[], type: string): number {
   return nodesOfType(roots, type).length;
 }
 
@@ -133,10 +125,10 @@ export function countNodesOfType(roots: TscnNode[], type: string): number {
  * keyed by concrete class.
  */
 export function firstNodeOfType(
-  roots: TscnNode[],
+  roots: RawNode[],
   type: string,
-  joins?: (node: TscnNode) => boolean
-): TscnNode | null {
+  joins?: (node: RawNode) => boolean
+): RawNode | null {
   const ofType = getSceneIndex(roots).nodesByType.get(type);
   if (!ofType) return null;
   // `joins` keeps the nodes that enter the group: `WorldEnvironment` joins only
@@ -149,7 +141,7 @@ export function firstNodeOfType(
  * The parent of `target`, or null for a root or an absent node, in O(1) from the
  * cached index. Outside tests only `parentType.ts` calls it, and every rule asks `parentType.ts`.
  */
-export function findParentNode(nodes: TscnNode[], target: TscnNode): TscnNode | null {
+export function findParentNode(nodes: RawNode[], target: RawNode): RawNode | null {
   return getSceneIndex(nodes).parentOf.get(target) ?? null;
 }
 
@@ -171,6 +163,6 @@ export function extractNodePath(value: string): string | null {
  * static linter never sees, so not-found / wrong-type assertions are unsafe.
  * Answered from the cached scene index in O(1).
  */
-export function isUnderInstance(roots: TscnNode[], target: TscnNode): boolean {
+export function isUnderInstance(roots: RawNode[], target: RawNode): boolean {
   return getSceneIndex(roots).underInstanceAncestor.has(target);
 }

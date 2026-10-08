@@ -12,7 +12,7 @@ import {
   type RuleArm,
   type RuleMeta,
 } from './types.js';
-import type { TscnNode } from '../parser/types.js';
+import type { RawNode } from '../parser/types.js';
 
 export type { RuleArm } from './types.js';
 
@@ -46,7 +46,7 @@ export function armEmits<K extends string>(arms: RuleArms<K>): NonNullable<RuleM
  */
 export function armDiagnostic(
   arm: RuleArm,
-  node: Pick<TscnNode, 'name' | 'type'>,
+  node: Pick<RawNode, 'name' | 'type'>,
   message: string,
   location?: Diagnostic['location']
 ): Diagnostic {
@@ -69,7 +69,7 @@ export function armDiagnostic(
 export function reportArm(
   into: Diagnostic[],
   arm: RuleArm | undefined,
-  node: TscnNode,
+  node: RawNode,
   message: string
 ): void {
   if (!arm) return;

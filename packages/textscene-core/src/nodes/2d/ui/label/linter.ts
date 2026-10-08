@@ -7,7 +7,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { parentTypeVerdict } from '../../../../linter/parentType.js';
 import { VECTOR2_REGEX } from '../../../../linter/validators/index.js';
 import { ruleInt, tupleComponent } from '../../../../linter/validators/commonValidators.js';
@@ -37,7 +36,7 @@ function isZeroOrAbsentSize(raw: string | undefined): boolean {
 
 function checkLabelAutowrap(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  const props = isValidProperties(node.properties) ? node.properties : {};
+  const props = node.rawProperties;
 
   const autowrapRaw = props.autowrap_mode;
   if (autowrapRaw === undefined) return [];

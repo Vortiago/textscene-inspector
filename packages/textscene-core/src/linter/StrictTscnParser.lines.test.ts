@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { StrictTscnParser } from './StrictTscnParser.js';
-import type { TscnNode } from '../parser/types.js';
+import type { RawNode } from '../parser/types.js';
 // The barrel registers the validators, so a refused value is refused.
 import './index.js';
 
@@ -81,7 +81,7 @@ position = Vector2(nope)
 frames = SubResource("f")
 `);
 
-    expect(root.properties).toHaveProperty('sprite_frames');
+    expect(root.rawProperties).toHaveProperty('sprite_frames');
     expect([...lines.get(root)!.properties]).toEqual([['sprite_frames', 4]]);
   });
 
@@ -93,7 +93,7 @@ z_index = 1
 z_index = 2
 `);
 
-    expect((root.properties as Record<string, string>).z_index).toBe('2');
+    expect(root.rawProperties.z_index).toBe('2');
     expect(lines.get(root)?.properties.get('z_index')).toBe(5);
   });
 
@@ -124,7 +124,7 @@ visible = false
 z_index = 3
 `);
 
-    expect([...lines.get(root)!.properties.keys()]).toEqual(Object.keys(root.properties));
+    expect([...lines.get(root)!.properties.keys()]).toEqual(Object.keys(root.rawProperties));
     expect(lines.get(root)?.properties.get('z_index')).toBe(7);
   });
 
@@ -151,7 +151,7 @@ background_mode = 1
 
 [node name="B" type="Node3D" parent="A"]
 `);
-    const walk = (nodes: readonly TscnNode[]): TscnNode[] =>
+    const walk = (nodes: readonly RawNode[]): RawNode[] =>
       nodes.flatMap((node) => [node, ...walk(node.children)]);
 
     expect(walk(scene!.nodes).map((node) => lines.get(node)?.heading)).toEqual([3, 5, 7]);

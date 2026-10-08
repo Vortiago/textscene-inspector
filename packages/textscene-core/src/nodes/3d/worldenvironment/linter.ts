@@ -4,12 +4,12 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
-import { firstNodeOfType, isValidProperties } from '../../../linter/linterUtils.js';
+import { firstNodeOfType } from '../../../linter/linterUtils.js';
 import { parseResourceReference } from '../../../resources/SubResourceResolver.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import type { RawNode } from '../../../parser/types.js';
 
 const arms = {
   requiresEnvironment: groundedArm('worldenvironment-requires-environment', {
@@ -39,8 +39,8 @@ const GROUP_WARNING: Record<(typeof FIRST_WINS_SLOTS)[number], string> = {
 };
 
 /** `<slot>.is_valid()`, the gate on joining that slot's group (world_environment.cpp:39-52). */
-function declaresSlot(node: TscnNode, key: string): boolean {
-  return isValidProperties(node.properties) && heldResource(node.properties[key]) !== undefined;
+function declaresSlot(node: RawNode, key: string): boolean {
+  return heldResource(node.rawProperties[key]) !== undefined;
 }
 
 /**
@@ -57,7 +57,7 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  const rawProps = node.properties as unknown as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // Godot's guard is `environment.is_null() && camera_attributes.is_null()`
   // (world_environment.cpp:187), so a camera_attributes-only WorldEnvironment is valid. An absent
@@ -87,10 +87,7 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
     // group. That scoping is not modelled.
     const first = firstNodeOfType(scene.nodes, 'WorldEnvironment', (n) => declaresSlot(n, key));
     if (node === first) continue;
-    const winningId =
-      first && isValidProperties(first.properties)
-        ? resourceRefId(heldResource(first.properties[key]))
-        : undefined;
+    const winningId = first ? resourceRefId(heldResource(first.rawProperties[key])) : undefined;
     // `!=` on a `Ref` is instance identity: two nodes naming one `ExtResource` share an instance,
     // and `SubResource("e")` is `SubResource( "e" )`, so compare resource ids, not the raw text.
     if (resourceRefId(held) === winningId) continue;

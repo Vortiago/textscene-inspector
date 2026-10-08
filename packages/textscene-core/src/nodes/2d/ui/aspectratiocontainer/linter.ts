@@ -8,7 +8,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree } from '../../../../linter/parentType.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
@@ -32,15 +31,14 @@ function checkAspectRatioContainer(context: RuleContext): Diagnostic[] {
 
   for (const child of node.children) {
     if (child.type !== 'TextureRect') continue;
-    if (!isValidProperties(child.properties)) continue;
     // `as_sortable_control` runs with the default VISIBLE_IN_TREE mode (aspect_ratio_container.cpp:104,
     // container.h:50), so container.cpp:143-153 drops a top-level or hidden child before
     // `expand_mode` is read. `unknowable` counts as silent: an instanced ancestor's
     // `visible` is not in this file.
-    if (boolSlotValue(child.properties.top_level) === true) continue;
+    if (boolSlotValue(child.rawProperties.top_level) === true) continue;
     if (hiddenOrUnknowableInTree(context.scene, child)) continue;
 
-    const raw = child.properties.expand_mode;
+    const raw = child.rawProperties.expand_mode;
     if (raw === undefined) continue;
     const expandMode = ruleInt(raw);
     if (expandMode === null || !UNSUPPORTED_EXPAND_MODES.has(expandMode)) continue;

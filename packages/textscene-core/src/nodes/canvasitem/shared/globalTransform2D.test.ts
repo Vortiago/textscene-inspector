@@ -6,21 +6,21 @@
 import { describe, expect, it } from 'vitest';
 import { resolveGlobalTransform2D } from './globalTransform2D';
 import type { ParentLookup } from '../../../linter/parentType';
-import type { TscnNode } from '../../../parser/types';
+import type { RawNode } from '../../../parser/types';
 
-function node(type: string, rawProperties: Record<string, string> = {}): TscnNode {
-  return { name: type, type, children: [], properties: {}, rawProperties };
+function node(type: string, rawProperties: Record<string, string> = {}): RawNode {
+  return { name: type, type, children: [], rawProperties };
 }
 
 /** A parent lookup over a chain written root first. */
-function chainOf(...chain: TscnNode[]): (child: TscnNode) => ParentLookup {
+function chainOf(...chain: RawNode[]): (child: RawNode) => ParentLookup {
   return (child) => {
     const parent = chain[chain.indexOf(child) - 1];
     return parent ? { kind: 'known', parent } : { kind: 'root' };
   };
 }
 
-function originOf(target: TscnNode, parentOf: (child: TscnNode) => ParentLookup) {
+function originOf(target: RawNode, parentOf: (child: RawNode) => ParentLookup) {
   const verdict = resolveGlobalTransform2D(target, parentOf);
   return verdict.kind === 'known' ? { x: verdict.transform.tx, y: verdict.transform.ty } : verdict.kind;
 }

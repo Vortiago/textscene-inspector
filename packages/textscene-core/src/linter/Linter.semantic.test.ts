@@ -83,8 +83,7 @@ visible = true
       expect(capturedContext.node.name).toBe('Root');
       expect(capturedContext.node.type).toBe('Node3D');
       expect(capturedContext.scene).toBeDefined();
-      expect(capturedContext.properties).toBeDefined();
-      expect(capturedContext.properties).toHaveProperty('visible');
+      expect(capturedContext.node.rawProperties).toHaveProperty('visible');
     });
 
     it('should apply type-specific rules only to matching nodes', () => {

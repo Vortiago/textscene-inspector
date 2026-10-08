@@ -37,7 +37,7 @@ export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const { node } = context;
-    const rawProps = node.properties as unknown as Record<string, string>;
+    const rawProps = node.rawProperties;
 
     // No `get_configuration_warnings()` override checks the flags, both true by
     // default: `monitoring` drives whether the area scans for bodies and areas,

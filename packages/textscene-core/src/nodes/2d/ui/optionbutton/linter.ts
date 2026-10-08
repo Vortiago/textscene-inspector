@@ -6,7 +6,6 @@
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
@@ -21,8 +20,7 @@ const arms = {
 
 function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
 
   if (props.selected === undefined) return [];
   const selected = ruleInt(props.selected);
