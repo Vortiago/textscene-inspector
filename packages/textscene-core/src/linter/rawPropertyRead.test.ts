@@ -1,21 +1,17 @@
 /**
- * Every lint rule reads a node's values through `rawProperties`, the raw literals both parsers publish. On the
- * lenient tree `properties` holds typed render values, so a rule or helper that read it would see other values
- * whenever the render path calls it. The strict tree's `properties` is withheld here, and the rule phase must not
- * notice.
+ * The rule phase over every `.tscn` and `.tres` under `scenes/`, with each node's `properties` withheld. A rule sees
+ * the **Raw view**, which the compiler enforces. This catches what a cast hides, on the paths the corpus reaches.
  */
 
 import { describe, expect, it } from 'vitest';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { relative } from 'node:path';
 import { StrictTscnParser } from './StrictTscnParser.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { danglingResourceDiagnostics } from './danglingResources.js';
-import { isGodotTextResourcePath } from '../godot/index.js';
+import { godotTextFiles, SCENES_ROOT } from './testing/sceneCorpus.js';
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import './index.js';
-
-const scenesRoot = resolve(import.meta.dirname, '../../../../scenes');
 
 /** A `properties` bag whose every read throws, naming the key. */
 const WITHHELD: TscnNode['properties'] = new Proxy(
@@ -54,34 +50,29 @@ function propertiesReads(scene: TscnScene): string[] {
   return reads;
 }
 
-function parsedWithheld(file: string) {
+/** Parsed once for both tests: neither changes a tree. */
+const corpus = godotTextFiles(SCENES_ROOT).map((file) => {
   const { scene, lines } = new StrictTscnParser().parse(readFileSync(file, 'utf8'));
   if (!scene) throw new Error(`expected a scene from ${file}, got none`);
   withhold(scene.nodes);
-  return { scene, lines };
-}
-
-const corpus = readdirSync(scenesRoot, { recursive: true, encoding: 'utf8' })
-  .filter(isGodotTextResourcePath)
-  .map((file) => join(scenesRoot, file))
-  .sort();
+  return { name: relative(SCENES_ROOT, file), scene, lines };
+});
 
 describe('the rule phase with properties withheld', () => {
   it('runs every rule over the scene corpus without reading properties', () => {
-    const reads = corpus.flatMap((file) =>
-      propertiesReads(parsedWithheld(file).scene).map((read) => `${relative(scenesRoot, file)}: ${read}`)
+    const reads = corpus.flatMap(({ name, scene }) =>
+      propertiesReads(scene).map((read) => `${name}: ${read}`)
     );
     expect(reads).toEqual([]);
   });
 
   it('finds dangling resource references without reading properties', () => {
-    const failures = corpus.flatMap((file) => {
-      const { scene, lines } = parsedWithheld(file);
+    const failures = corpus.flatMap(({ name, scene, lines }) => {
       try {
         danglingResourceDiagnostics(scene, lines);
         return [];
       } catch (error) {
-        return [`${relative(scenesRoot, file)}: ${(error as Error).message}`];
+        return [`${name}: ${(error as Error).message}`];
       }
     });
     expect(failures).toEqual([]);

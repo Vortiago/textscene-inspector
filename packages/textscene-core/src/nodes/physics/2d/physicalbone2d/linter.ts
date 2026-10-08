@@ -5,13 +5,13 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
-import type { TscnNode, TscnScene } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { parentTypeVerdict, searchAncestors } from '../../../../linter/parentType.js';
 import { hasChildOfType } from '../../../../linter/childType.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import type { RawNode, RawScene } from '../../../../parser/types.js';
 
 const arms = {
   missingSkeletonParent: groundedArm('physicalbone2d-missing-skeleton-parent', {
@@ -29,7 +29,7 @@ type SkeletonAncestry = 'found' | 'absent' | 'unknowable';
  * ancestors to a Skeleton2D. Any other type stops the walk. The casts are `cast_to`, so
  * subclasses count (`descendsFrom`).
  */
-function skeletonAncestry(scene: TscnScene, node: TscnNode): SkeletonAncestry {
+function skeletonAncestry(scene: RawScene, node: RawNode): SkeletonAncestry {
   const search = searchAncestors<'found' | 'absent'>(scene, node, (ancestor) => {
     if (descendsFrom(ancestor.type, 'Skeleton2D')) return 'found';
     if (!descendsFrom(ancestor.type, 'PhysicalBone2D')) return 'absent';
@@ -46,7 +46,6 @@ function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  const rawProps = node.rawProperties;
   const ancestry = skeletonAncestry(scene, node);
 
   // `unknowable` answers neither warning: the first needs to know the ancestor
@@ -60,7 +59,7 @@ function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
     );
   } else if (ancestry === 'found') {
     // Absent, or present but unreadable, both mean no index is assigned.
-    const boneIndex = ruleInt(rawProps.bone2d_index ?? '') ?? -1;
+    const boneIndex = ruleInt(node.rawProperties.bone2d_index ?? '') ?? -1;
     if (!(boneIndex > -1)) {
       reportArm(
         diagnostics,

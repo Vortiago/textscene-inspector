@@ -18,7 +18,6 @@ const arms = {
 
 function checkXROrigin3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = node.rawProperties;
 
   // An explicitly hidden origin never reaches Godot's own check either.
   if (isExplicitlyHidden(node)) return [];
@@ -39,7 +38,7 @@ function checkXROrigin3D(context: RuleContext): Diagnostic[] {
   // `!get_scale().is_equal_approx(Vector3(1, 1, 1))` (xr_nodes.cpp:698), which signs all three axes by
   // the determinant (core/math/basis.cpp:297-321). It reads the `transform` Basis, since
   // `position`/`rotation`/`scale` are `PROPERTY_USAGE_EDITOR`-only (node_3d.cpp:1526-1531).
-  if (hasNonUnitScale3D(properties.transform)) {
+  if (hasNonUnitScale3D(node.rawProperties.transform)) {
     reportArm(
       diagnostics,
       arms.unsupportedScale,

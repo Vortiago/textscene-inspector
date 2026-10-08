@@ -10,12 +10,12 @@ import { makeRigidBodyLinterRule } from './rigidBodyLinterRule.js';
 import type { PhysicsDim } from './dim.js';
 import type { TscnNode, TscnScene } from '../../parser/types.js';
 
-function contactDiagnostics(dim: PhysicsDim, properties: Record<string, string>) {
+function contactDiagnostics(dim: PhysicsDim, rawProperties: Record<string, string>) {
   const node: TscnNode = {
     name: 'Body',
     type: `RigidBody${dim}`,
-    properties,
-    rawProperties: properties,
+    properties: {},
+    rawProperties,
     children: [],
   };
   const scene: TscnScene = { nodes: [node], externalResources: [], internalResources: [] };

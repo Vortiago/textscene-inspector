@@ -4,12 +4,12 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
 import { firstNodeOfType } from '../../../linter/linterUtils.js';
 import { parseResourceReference } from '../../../resources/SubResourceResolver.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import type { RawNode } from '../../../parser/types.js';
 
 const arms = {
   requiresEnvironment: groundedArm('worldenvironment-requires-environment', {
@@ -39,7 +39,7 @@ const GROUP_WARNING: Record<(typeof FIRST_WINS_SLOTS)[number], string> = {
 };
 
 /** `<slot>.is_valid()`, the gate on joining that slot's group (world_environment.cpp:39-52). */
-function declaresSlot(node: TscnNode, key: string): boolean {
+function declaresSlot(node: RawNode, key: string): boolean {
   return heldResource(node.rawProperties[key]) !== undefined;
 }
 

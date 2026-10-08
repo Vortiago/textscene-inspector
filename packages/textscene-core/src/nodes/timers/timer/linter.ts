@@ -17,9 +17,8 @@ const LOW_WAIT_TIME_THRESHOLD = 0.05 - CMP_EPSILON;
 
 function checkTimerWaitTime(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const props = node.rawProperties;
 
-  const raw = props.wait_time;
+  const raw = node.rawProperties.wait_time;
   if (raw === undefined) return [];
   const waitTime = parseGodotFloat(raw);
   if (waitTime === null || !Number.isFinite(waitTime)) return [];

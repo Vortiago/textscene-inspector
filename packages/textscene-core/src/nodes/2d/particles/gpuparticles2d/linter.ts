@@ -19,10 +19,9 @@ const arms = {
 function checkGPUParticles2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-  const props = node.rawProperties;
   const diagnostics: Diagnostic[] = [];
 
-  if (resourceSlotIsEmpty(props.process_material)) {
+  if (resourceSlotIsEmpty(node.rawProperties.process_material)) {
     reportArm(
       diagnostics,
       arms.missingProcessMaterial,

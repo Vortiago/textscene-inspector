@@ -4,7 +4,7 @@
  * report one value twice.
  */
 
-import type { TscnInternalResource, TscnNode, TscnScene } from '../../parser/types.js';
+import type { TscnInternalResource, RawNode, RawScene } from '../../parser/types.js';
 import { extractNodePath, nodesDescendingFrom } from '../../linter/linterUtils.js';
 import { resolveNodePath } from '../../linter/nodePathResolve.js';
 import { extractLibraries } from '../animation/animationplayer/parser.js';
@@ -16,7 +16,7 @@ import { resolveAudioTrackPaths } from '../animation/animationplayer/animationRe
  * never reads its `stream`, so `missing-stream` and `autoplay-without-stream` stay quiet. A target
  * that cannot be resolved confidently counts as not driven: a missed warning beats a wrong one.
  */
-export function isDrivenByAnimationAudioTrack(scene: TscnScene, node: TscnNode): boolean {
+export function isDrivenByAnimationAudioTrack(scene: RawScene, node: RawNode): boolean {
   return audioTrackTargets(scene).has(node);
 }
 
@@ -26,11 +26,11 @@ export function isDrivenByAnimationAudioTrack(scene: TscnScene, node: TscnNode):
  * once per player, and a resolution per call repeats every animation parse.
  */
 const audioTargetsByTree = new WeakMap<
-  TscnNode[],
-  { internalResources: readonly TscnInternalResource[]; targets: ReadonlySet<TscnNode> }
+  RawNode[],
+  { internalResources: readonly TscnInternalResource[]; targets: ReadonlySet<RawNode> }
 >();
 
-function audioTrackTargets(scene: TscnScene): ReadonlySet<TscnNode> {
+function audioTrackTargets(scene: RawScene): ReadonlySet<RawNode> {
   const cached = audioTargetsByTree.get(scene.nodes);
   if (cached && cached.internalResources === scene.internalResources) return cached.targets;
   const targets = resolveAudioTrackTargets(scene);
@@ -43,8 +43,8 @@ function audioTrackTargets(scene: TscnScene): ReadonlySet<TscnNode> {
  * AnimationPlayer by name: `_update_caches`, `libraries` and `root_node` are AnimationMixer's, so
  * an AnimationTree drives an audio track as a player does.
  */
-function resolveAudioTrackTargets(scene: TscnScene): Set<TscnNode> {
-  const targets = new Set<TscnNode>();
+function resolveAudioTrackTargets(scene: RawScene): Set<RawNode> {
+  const targets = new Set<RawNode>();
   for (const mixer of nodesDescendingFrom(scene.nodes, 'AnimationMixer')) {
     const props = mixer.rawProperties;
     // `root_node` defaults to `NodePath("..")` (scene_string_names.h:129), the mixer's parent,

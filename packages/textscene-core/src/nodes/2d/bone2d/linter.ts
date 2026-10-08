@@ -6,13 +6,13 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { knownParent, searchAncestors } from '../../../linter/parentType.js';
 import { tupleComponent } from '../../../linter/validators/commonValidators.js';
 import { makeFloatTupleRegex } from '../../../linter/validators/floatTupleValidator.js';
+import type { RawNode, RawScene } from '../../../parser/types.js';
 
 const arms = {
   chainDoesNotTerminate: groundedArm('bone2d-chain-does-not-terminate', { kind: 'configuration-warning' }),
@@ -36,7 +36,7 @@ type AncestryVerdict =
  * cast to Bone2D, and `skeleton` walks up through Bone2D links to the first Skeleton2D
  * or non-bone. `descendsFrom` stands in for `cast_to`, which accepts subclasses.
  */
-function ancestryVerdict(scene: TscnScene, node: TscnNode): AncestryVerdict {
+function ancestryVerdict(scene: RawScene, node: RawNode): AncestryVerdict {
   const parent = knownParent(scene, node);
   if (parent.kind === 'root') return 'invalid-parent'; // parent_bone and skeleton both stay null
   if (parent.kind === 'unknowable') return 'unknowable';

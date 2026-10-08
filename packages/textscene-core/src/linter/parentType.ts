@@ -4,11 +4,10 @@
  * type and properties from a scene this linter never opens.
  */
 
-import type { TscnNode } from '../parser/types.js';
 import { isTypeUnknowable } from '../parser/typeUnknowable.js';
 import { findParentNode } from './linterUtils.js';
 import { descendsFrom, isCatalogedType } from '../godot/nodeBaseTypes.js';
-import type { TscnScene } from '../parser/types.js';
+import type { RawNode, RawScene } from '../parser/types.js';
 import { boolSlotValue } from '../godot/index.js';
 
 // Re-exported, not re-spelled: `buildSceneTree` asks the same question at
@@ -27,7 +26,7 @@ export type ParentVerdict =
    * warnings then ask about the parent: `PathFollow3D`'s ROTATION_ORIENTED check reads the
    * parent Path3D's `curve` without a second walk.
    */
-  | { kind: 'satisfied'; parent: TscnNode }
+  | { kind: 'satisfied'; parent: RawNode }
   /** No parent: this node is the scene root. */
   | { kind: 'root' }
   /**
@@ -36,13 +35,13 @@ export type ParentVerdict =
    */
   | { kind: 'unknowable' }
   /** A real, typed parent that is not the wanted type. */
-  | { kind: 'mismatch'; parent: TscnNode };
+  | { kind: 'mismatch'; parent: RawNode };
 
 /**
  * Resolve `node`'s parent against `wantedType`, subclasses included, with the unknowable
  * exemption in one place, since a hand-written copy at a call site can drop it.
  */
-export function parentTypeVerdict(scene: TscnScene, node: TscnNode, wantedType: string): ParentVerdict {
+export function parentTypeVerdict(scene: RawScene, node: RawNode, wantedType: string): ParentVerdict {
   const step = knownParent(scene, node);
   if (step.kind !== 'known') return step;
   const { parent } = step;
@@ -53,7 +52,7 @@ export function parentTypeVerdict(scene: TscnScene, node: TscnNode, wantedType: 
 /** One step up the tree, with the knowability question already answered. */
 export type ParentLookup =
   /** A parent whose `type` this file really states. */
-  | { kind: 'known'; parent: TscnNode }
+  | { kind: 'known'; parent: RawNode }
   /** No parent: this node is the scene root. */
   | { kind: 'root' }
   /** There is a parent, but no type this linter may reason about: declared in a scene it never opens, or outside Godot's catalog. */
@@ -65,7 +64,7 @@ export type ParentLookup =
  * where a forgotten check is invisible. {@link parentIdentity} is the second door, for a
  * caller that reads no type.
  */
-export function knownParent(scene: TscnScene, node: TscnNode): ParentLookup {
+export function knownParent(scene: RawScene, node: RawNode): ParentLookup {
   return parentLookup(findParentNode(scene.nodes, node));
 }
 
@@ -74,7 +73,7 @@ export function knownParent(scene: TscnScene, node: TscnNode): ParentLookup {
  * A tree other than this file's, such as the previewer's live tree, finds its own parent
  * and asks the same knowability question here.
  */
-export function parentLookup(parent: TscnNode | null | undefined): ParentLookup {
+export function parentLookup(parent: RawNode | null | undefined): ParentLookup {
   if (!parent) return { kind: 'root' };
   // A type goes unread two ways: declared in another scene, or outside the catalog. Godot's
   // check is a runtime `cast_to` against a ClassDB with every extension registered
@@ -89,7 +88,7 @@ export function parentLookup(parent: TscnNode | null | undefined): ParentLookup 
  * {@link knownParent} declines, asked of any node. The child-side check,
  * `hasChildOfType` (`childType.ts`), needs it for a GDExtension shape provider.
  */
-export function isTypeOpaque(node: TscnNode): boolean {
+export function isTypeOpaque(node: RawNode): boolean {
   return isTypeUnknowable(node) || !isCatalogedType(node.type);
 }
 
@@ -99,7 +98,7 @@ export function isTypeOpaque(node: TscnNode): boolean {
  * Safe only because the caller reads no `.type` off it: `resolveNodePath` gates its result
  * through {@link isTypeUnknowable}.
  */
-export function parentIdentity(scene: TscnScene, node: TscnNode): TscnNode | null {
+export function parentIdentity(scene: RawScene, node: RawNode): RawNode | null {
   return findParentNode(scene.nodes, node);
 }
 
@@ -119,9 +118,9 @@ export type AncestorSearch<T> =
  * An instanced, override, typeless or GDExtension ancestor ends the walk at `unknowable`.
  */
 export function searchAncestors<T>(
-  scene: TscnScene,
-  node: TscnNode,
-  visit: (ancestor: TscnNode) => T | undefined
+  scene: RawScene,
+  node: RawNode,
+  visit: (ancestor: RawNode) => T | undefined
 ): AncestorSearch<T> {
   return climbAncestors(node, (child) => knownParent(scene, child), visit);
 }
@@ -131,9 +130,9 @@ export function searchAncestors<T>(
  * the previewer climbs the live tree with the same rules.
  */
 export function climbAncestors<T>(
-  node: TscnNode,
-  parentOf: (child: TscnNode) => ParentLookup,
-  visit: (ancestor: TscnNode) => T | undefined
+  node: RawNode,
+  parentOf: (child: RawNode) => ParentLookup,
+  visit: (ancestor: RawNode) => T | undefined
 ): AncestorSearch<T> {
   // `undefined` climbs on, anything else stops, and a caller that declines returns its
   // own sentinel. Godot's walks differ too much to fold in (`Bone2D` stops at the first
@@ -155,7 +154,7 @@ export function climbAncestors<T>(
  * `n = n->get_parent()` to the top with no type test, so an unclassifiable ancestor is
  * skipped. A chain-terminating walk declines instead, since the skipped one might end it.
  */
-export function sweepAncestors(scene: TscnScene, node: TscnNode, visit: (ancestor: TscnNode) => void): void {
+export function sweepAncestors(scene: RawScene, node: RawNode, visit: (ancestor: RawNode) => void): void {
   // A skipped ancestor can only add a hit, never withdraw one, so nothing is reported
   // about it. The engine's early exit once every warning fired (`canvas_item.cpp:1321-1325`)
   // is an optimisation with nothing observable riding on it.
@@ -171,7 +170,7 @@ export function sweepAncestors(scene: TscnScene, node: TscnNode, visit: (ancesto
  * question, as `CollisionPolygon2D` tests its parent for `CollisionObject2D`, then `Area2D`
  * (`collision_polygon_2d.cpp:235-254`). Safe only here, past `isTypeUnknowable`.
  */
-export function verdictParent(verdict: ParentVerdict): TscnNode | null {
+export function verdictParent(verdict: ParentVerdict): RawNode | null {
   return verdict.kind === 'satisfied' || verdict.kind === 'mismatch' ? verdict.parent : null;
 }
 
@@ -189,7 +188,7 @@ export function placementPhrase(verdict: ParentVerdict): string {
  * The cascade reads each ancestor with it too: CanvasItem (`canvas_item.cpp:1471`), Node3D
  * (`node_3d.cpp:1541`), CanvasLayer (`canvas_layer.cpp:341`) and Window (`window.cpp:3436`) spell it `visible`.
  */
-export function isExplicitlyHidden(node: TscnNode): boolean {
+export function isExplicitlyHidden(node: RawNode): boolean {
   return boolSlotValue(node.rawProperties.visible) === false;
 }
 
@@ -211,7 +210,7 @@ export type VisibilityVerdict =
  * `data.parent` is `cast_to<Node3D>(get_parent())` (`node_3d.cpp:150`), so the chain is the
  * contiguous Node3D run, and the first non-Node3D ancestor ends it.
  */
-function node3DCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict {
+function node3DCascade(scene: RawScene, node: RawNode): VisibilityVerdict {
   let current = findParentNode(scene.nodes, node);
   while (current) {
     if (isTypeUnknowable(current)) return 'unknowable';
@@ -232,7 +231,7 @@ function node3DCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict {
  * parent: a CanvasItem's own `is_visible_in_tree()`, so the run cascades, else a CanvasLayer's
  * `cl->is_visible()` (`canvas_layer.cpp:75`), else the first Viewport ancestor.
  */
-function canvasItemCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict {
+function canvasItemCascade(scene: RawScene, node: RawNode): VisibilityVerdict {
   let current = findParentNode(scene.nodes, node);
   while (current) {
     if (isTypeUnknowable(current)) return 'unknowable';
@@ -273,7 +272,7 @@ function canvasItemCascade(scene: TscnScene, node: TscnNode): VisibilityVerdict 
  * `AcceptDialog` (`dialogs.cpp:466`) `set_visible(false)` in their constructors, and
  * resolving absence would silence every warning under one.
  */
-export function visibleInTreeVerdict(scene: TscnScene, node: TscnNode): VisibilityVerdict {
+export function visibleInTreeVerdict(scene: RawScene, node: RawNode): VisibilityVerdict {
   if (isExplicitlyHidden(node)) return 'hidden';
   if (descendsFrom(node.type, 'CanvasItem')) return canvasItemCascade(scene, node);
   if (descendsFrom(node.type, 'Node3D')) return node3DCascade(scene, node);
@@ -285,6 +284,6 @@ export function visibleInTreeVerdict(scene: TscnScene, node: TscnNode): Visibili
  * True when a warning Godot gates on `is_visible_in_tree()` must stay silent, on
  * `unknowable` too: a guess would report a misconfiguration the author cannot see here.
  */
-export function hiddenOrUnknowableInTree(scene: TscnScene, node: TscnNode): boolean {
+export function hiddenOrUnknowableInTree(scene: RawScene, node: RawNode): boolean {
   return visibleInTreeVerdict(scene, node) !== 'visible';
 }

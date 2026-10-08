@@ -4,13 +4,13 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
-import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { unquoteString } from '../../../../parser/utils.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { targetsBeforeLatestTrigger } from '../../../../linter/propertyOrder.js';
+import type { RawNode } from '../../../../parser/types.js';
 
 const arms = {
   tooltipIgnored: groundedArm('control-tooltip-ignored-by-mouse-filter', { kind: 'configuration-warning' }),
@@ -132,7 +132,7 @@ const MOUSE_FILTER_IGNORE_BY_DEFAULT = new Set(['Label', 'NinePatchRect']);
 
 // Godot tests `data.mouse_filter == MOUSE_FILTER_IGNORE`, not `get_mouse_filter_with_override()`:
 // PASS warns no more than STOP, and no ancestor's filter counts.
-function resolvedMouseFilterIsIgnore(node: TscnNode): boolean {
+function resolvedMouseFilterIsIgnore(node: RawNode): boolean {
   const raw = node.rawProperties.mouse_filter;
   if (raw !== undefined) {
     return ruleInt(raw) === MOUSE_FILTER_IGNORE;

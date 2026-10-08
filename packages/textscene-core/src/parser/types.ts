@@ -76,6 +76,16 @@ export interface TscnScene {
   instancesOutsideNodeBody?: readonly string[];
 }
 
+/**
+ * The **Raw view** of a node: `rawProperties`, the literals both parsers publish, and no
+ * `properties`, which holds typed render values on the lenient tree and raw ones on the strict
+ * tree. A `TscnNode` is a `RawNode`, so a helper typed on it takes either tree.
+ */
+export type RawNode = Omit<TscnNode, 'properties' | 'children'> & { children: RawNode[] };
+
+/** The **Raw view** of a scene: every node a {@link RawNode}. */
+export type RawScene = Omit<TscnScene, 'nodes'> & { nodes: RawNode[] };
+
 export interface TscnNode {
   name: string;
   /** Godot class name, for example "Node3D". */
@@ -168,7 +178,7 @@ export interface TscnMainResource {
 }
 
 /** What the scan builds from one section: the object a strict consumer files the section's lines under. */
-export type BuiltSection = TscnNode | TscnInternalResource | TscnExternalResource | TscnMainResource;
+export type BuiltSection = RawNode | TscnInternalResource | TscnExternalResource | TscnMainResource;
 
 /** Alias used by the immutable SceneGraph and dependency-tracking helpers. */
 export type ExtResource = TscnExternalResource;

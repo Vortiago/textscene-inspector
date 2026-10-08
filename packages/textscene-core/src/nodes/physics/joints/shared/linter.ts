@@ -6,12 +6,12 @@
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
-import type { TscnNode } from '../../../../parser/types.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import type { RawNode } from '../../../../parser/types.js';
 
 // Dimension-free: `emits` is rule-level, so a per-dimension name would put
 // `joint3d-not-connected` in every PinJoint2D sheet. The dimension is
@@ -40,7 +40,7 @@ function checkJoint(context: RuleContext): Diagnostic[] {
   // `cast_to<PhysicsBody2D>(get_node_or_null(a))` (joint_2d.cpp:70-74, joint_3d.cpp:70-74),
   // so a `missing` target is unset too. An `unknowable` one may live in a sub-scene.
   // The resolved node is kept because the same-body arm compares pointers.
-  const connected = (raw: string | undefined): { path: string; node?: TscnNode } | null => {
+  const connected = (raw: string | undefined): { path: string; node?: RawNode } | null => {
     const path = raw ? extractNodePath(raw) : null;
     if (path === null) return null;
     const target = resolveNodePath(context.scene, node, path);

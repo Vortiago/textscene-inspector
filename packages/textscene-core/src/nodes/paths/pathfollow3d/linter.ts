@@ -6,13 +6,13 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 import { resolveSubResourceRef } from '../../../resources/SubResourceResolver.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import type { RawNode, RawScene } from '../../../parser/types.js';
 
 const arms = {
   noParent: groundedArm('pathfollow3d-no-parent', { kind: 'configuration-warning' }),
@@ -40,8 +40,8 @@ const ROTATION_ORIENTED = 4;
  * `up_vector_enabled = false`. False for a curve behind an `ExtResource`, and for an absent
  * key, since the default is `true` (curve.h:299).
  */
-function parentCurveDisablesUpVector(scene: TscnScene, parent: TscnNode): boolean {
-  const curve = resolveSubResourceRef(parent.rawProperties.curve, scene.internalResources ?? []);
+function parentCurveDisablesUpVector(scene: RawScene, parent: RawNode): boolean {
+  const curve = resolveSubResourceRef(parent.rawProperties.curve, scene.internalResources);
   return boolSlotValue(curve?.data.up_vector_enabled) === false;
 }
 

@@ -117,8 +117,8 @@ Resource types use the same pattern under `resources/<category>/<type>/` (ADR-00
 
 The observer only adds, so the render is the same with or without it. The lenient
 `NodeCreator` stores typed values in `properties`, and the strict one stores raw strings.
-Both store raw strings in `rawProperties`, so shared code reads that field. A **Lint rule** reads
-it too, and an ESLint guard refuses a read of `properties` in a rule file. The strict parser
+Both store raw strings in `rawProperties`, so shared code reads that field. A **Lint rule** sees
+the **Raw view**, `RawNode`, which has no `properties`, so the compiler refuses a read of it. The strict parser
 also returns `SourceLines`, which puts each diagnostic on its line.
 
 ## Rendering

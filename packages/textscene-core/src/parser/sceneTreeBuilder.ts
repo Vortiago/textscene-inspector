@@ -2,7 +2,7 @@
  * Builds hierarchical scene tree from flat TSCN node list.
  */
 
-import type { NodeOrigin, TscnNode } from './types';
+import type { NodeOrigin, RawNode, TscnNode } from './types';
 import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
 import { isUniqueNameInOwner } from '../utils/uniqueNames.js';
 import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
@@ -195,7 +195,7 @@ export function rootDeclaringParent(all: readonly NodeOrigin[]): NodeOrigin | un
  * fails at load (`resource_format_text.cpp:247-251`). It reads the heading's flag, not
  * `node.type`, which the node creators also synthesise from `instance=` and `index=`.
  */
-export function rootStatesNoIdentifier(root: TscnNode | undefined): boolean {
+export function rootStatesNoIdentifier(root: RawNode | undefined): boolean {
   return root?.overridesExistingNode === true || root?.type === INSTANCE_PLACEHOLDER_TYPE;
 }
 

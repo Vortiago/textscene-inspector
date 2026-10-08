@@ -5,11 +5,11 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
-import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { JOINT_DATA, jointConstraintOwners, type JointType } from './jointConstraints.js';
+import type { RawNode } from '../../../../parser/types.js';
 
 const arms = {
   constraintWithoutJoint: {
@@ -30,7 +30,7 @@ const arms = {
  * `set_joint_type` builds for a type in 1..5 (:1094-1113), never for NONE or a value outside the switch.
  * Each subclass refuses a leaf not its own (JOINT_DATA.refusedAt). Properties apply in file order.
  */
-function jointConstraintDiagnostics(node: TscnNode, rawProps: Record<string, string>): Diagnostic[] {
+function jointConstraintDiagnostics(node: RawNode, rawProps: Record<string, string>): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   // `undefined` once a `joint_type` no rule can read has applied: unknowable from there.
   let live: JointType | null | undefined = null;

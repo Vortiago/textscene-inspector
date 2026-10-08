@@ -103,6 +103,10 @@ _Avoid_: `formatOnly` on a refusal of a value the setter receives.
 A per-node-type check on the parsed scene for a condition no single property settles, matched to its exact node type with no base-type inheritance.
 _Avoid_: bare "rule" for a **Validator**.
 
+**Raw view** (`RawNode`, `RawScene` in `parser/types.ts`):
+A node or scene with `rawProperties` and no `properties`, which is what a **Lint rule** receives. Both parsers publish the same `rawProperties`, so a helper typed on the view reads the same values from either tree.
+_Avoid_: reading `properties` in a rule, or casting it to a string map.
+
 **Rule arm** (`linter/ruleArms.ts`):
 One diagnostic a **Lint rule** can report, declared with its rule name, its **Severity** and the `EmitGrounding` that fixes that severity.
 A rule reports only through its arms (`reportArm`, `armDiagnostic`), and `armEmits` derives its `emits` from them.

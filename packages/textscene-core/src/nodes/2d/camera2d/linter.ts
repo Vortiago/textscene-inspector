@@ -4,13 +4,13 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { nodesOfType } from '../../../linter/linterUtils.js';
 import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
+import type { RawNode } from '../../../parser/types.js';
 
 const arms = {
   multipleEnabled: groundedArm('camera2d-multiple-enabled', {
@@ -41,7 +41,7 @@ const arms = {
 } as const satisfies RuleArms<string>;
 
 /** Enabled unless the key says otherwise: `enabled` defaults true (camera_2d.h:67). */
-function cameraIsEnabled(node: TscnNode): boolean {
+function cameraIsEnabled(node: RawNode): boolean {
   return boolSlotValue(node.rawProperties.enabled) !== false;
 }
 
@@ -66,7 +66,6 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Before the properties guard: a camera with no properties is enabled.
   const rawProps = node.rawProperties;
   const scope = viewportScopeOf(scene, node);
   if (cameraIsEnabled(node) && scope !== undefined) {

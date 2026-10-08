@@ -27,13 +27,11 @@ export function makeNavigationRegionLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
 
-    const rawProps = node.rawProperties;
-
     // navigation_region_2d.cpp:302-306 and navigation_region_3d.cpp:255-259,
     // the same check twice: gated on `is_visible_in_tree() &&
     // is_inside_tree()`. `is_inside_tree()` is trivially true for any node
     // this linter sees; the visibility half walks each family's own chain.
-    if (resourceSlotIsEmpty(rawProps[property]) && !hiddenOrUnknowableInTree(scene, node)) {
+    if (resourceSlotIsEmpty(node.rawProperties[property]) && !hiddenOrUnknowableInTree(scene, node)) {
       reportArm(
         diagnostics,
         arms.missingResource,

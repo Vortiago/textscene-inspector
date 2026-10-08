@@ -18,8 +18,7 @@ function checkContainer(context: RuleContext): Diagnostic[] {
   // `null` reads to `Variant()` (variant_parser.cpp:699), `Object::set_script` then leaves no
   // instance (object.cpp:1092-1107), and `get_script()` (object.cpp:1134-1136) is null, as for
   // an absent key. `resourceSlotIsEmpty` gives every spelling that one answer.
-  const props = node.rawProperties;
-  if (!resourceSlotIsEmpty(props.script)) return [];
+  if (!resourceSlotIsEmpty(node.rawProperties.script)) return [];
 
   return [
     armDiagnostic(

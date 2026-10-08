@@ -19,9 +19,7 @@ function checkSoftBody3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  const rawProps = node.rawProperties;
-
-  if (resourceSlotIsEmpty(rawProps.mesh)) {
+  if (resourceSlotIsEmpty(node.rawProperties.mesh)) {
     reportArm(diagnostics, arms.missingMesh, node, 'This body will be ignored until you set a mesh.');
   }
 

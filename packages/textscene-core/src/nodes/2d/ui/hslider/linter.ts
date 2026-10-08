@@ -20,9 +20,8 @@ const arms = {
 
 function checkHSliderPropertyOrder(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const props = node.rawProperties;
 
-  const laterTriggers = rangeOrderHazard(props);
+  const laterTriggers = rangeOrderHazard(node.rawProperties);
   if (!laterTriggers) return [];
 
   return [

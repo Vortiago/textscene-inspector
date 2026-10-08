@@ -52,25 +52,6 @@ const REGISTER_ALL_SPREAD = {
     'Pass each part of a validator table to registerAll as its own argument. A spread keeps the last validator for a shared key and drops the earlier one without a report.',
 };
 
-/** A rule diagnostic with no `grounding` is a hand-written one that `armEmits` cannot see. */
-const UNGROUNDED_RULE_DIAGNOSTIC = {
-  selector:
-    "ObjectExpression:has(> Property[key.name='ruleName']):not(:has(> Property[key.name='grounding']))",
-  message:
-    'Report a rule diagnostic through a declared arm: reportArm or armDiagnostic with a RuleArms entry, and emits: armEmits(arms).',
-};
-
-/**
- * A lint rule reads a node's values from `rawProperties`, the literals both parsers publish. The lenient
- * tree's `properties` holds typed render values, so a helper the render path shares would read other values.
- * A call's result is exempt: `lines.get(owner)?.properties` is a section's property lines, not a node's bag.
- */
-const NODE_PROPERTIES_READ = {
-  selector: "MemberExpression[property.name='properties'][object.type!='CallExpression']",
-  message:
-    "Read a node's values from rawProperties in a lint rule. properties holds typed render values on the lenient tree.",
-};
-
 /**
  * A core test asserts a tier through `toBeAtTier`, `toBeAllAtTier` or a helper that records it.
  * `expect(d.severity)` records nothing, so the setup file's title check cannot see the test.
@@ -280,30 +261,15 @@ export default [
     ],
     rules: {
       // Repeats REGISTER_ALL_SPREAD: for these files, this block's options replace the block above's.
-      'no-restricted-syntax': ['error', REGISTER_ALL_SPREAD, UNGROUNDED_RULE_DIAGNOSTIC],
-    },
-  },
-
-  // The rule files and the helpers only they import, under the arm guard above too.
-  {
-    files: [
-      'packages/textscene-core/src/linter/**/*.ts',
-      'packages/textscene-core/src/nodes/**/*{linter,Linter}*.ts',
-      'packages/textscene-core/src/nodes/canvasitem/shared/clipAncestry.ts',
-    ],
-    ignores: [
-      '**/*.test.ts',
-      'packages/textscene-core/src/linter/testing/**',
-      'packages/textscene-core/src/linter/Linter.ts',
-      'packages/textscene-core/src/linter/ruleArms.ts',
-    ],
-    rules: {
-      // Repeats both selectors above: for these files, this block's options replace theirs.
       'no-restricted-syntax': [
         'error',
         REGISTER_ALL_SPREAD,
-        UNGROUNDED_RULE_DIAGNOSTIC,
-        NODE_PROPERTIES_READ,
+        {
+          selector:
+            "ObjectExpression:has(> Property[key.name='ruleName']):not(:has(> Property[key.name='grounding']))",
+          message:
+            'Report a rule diagnostic through a declared arm: reportArm or armDiagnostic with a RuleArms entry, and emits: armEmits(arms).',
+        },
       ],
     },
   },

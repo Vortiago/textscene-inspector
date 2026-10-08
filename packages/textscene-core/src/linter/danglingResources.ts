@@ -4,7 +4,7 @@
  * and the ext twin at `:138`). The registry says which keys are slots (`createResourceReferenceValidator` marks them).
  */
 
-import type { BuiltSection, TscnNode, TscnScene } from '../parser/types.js';
+import type { BuiltSection, RawNode, RawScene } from '../parser/types.js';
 import type { Diagnostic, SourceLines } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
@@ -72,7 +72,7 @@ function sweep(
 }
 
 /** Each dangling reference, on the line of the property that holds it. */
-export function danglingResourceDiagnostics(scene: TscnScene, lines: SourceLines): Diagnostic[] {
+export function danglingResourceDiagnostics(scene: RawScene, lines: SourceLines): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const ext = new Set((scene.externalResources ?? []).map((r) => r.id));
   const int = new Set<string>();
@@ -104,7 +104,7 @@ export function danglingResourceDiagnostics(scene: TscnScene, lines: SourceLines
     };
     sweep(owner, declared, none, lines, diagnostics);
   }
-  const visit = (node: TscnNode): void => {
+  const visit = (node: RawNode): void => {
     const { name, type, rawProperties } = node;
     sweep({ built: node, name, type, rawProperties }, declared, none, lines, diagnostics);
     for (const child of node.children) visit(child);
