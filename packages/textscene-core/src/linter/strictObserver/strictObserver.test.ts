@@ -32,6 +32,42 @@ describe('strictObserver', () => {
     expect(errors[0]).not.toHaveProperty('nodeName');
   });
 
+  it('stamps a malformed property line with its section owner, after the error fields', () => {
+    const [error] = observe(
+      '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\nnot a property\n'
+    ).errors;
+    expect(Object.keys(error!)).toEqual([
+      'severity',
+      'message',
+      'line',
+      'column',
+      'code',
+      'nodeName',
+      'nodeType',
+    ]);
+  });
+
+  it('orders the fields of a heading refusal as the error fields, then the owner', () => {
+    const [error] = observe('[gd_scene format=3]\n\n[node type="Node3D"]\n').errors;
+    expect(error!.code).toBe('MISSING_NODE_NAME');
+    expect(Object.keys(error!)).toEqual([
+      'severity',
+      'message',
+      'line',
+      'column',
+      'code',
+      'nodeName',
+      'nodeType',
+    ]);
+  });
+
+  it('puts the owner after the validator fields of a property refusal', () => {
+    const [error] = observe(
+      '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\nvisible = "yes"\n'
+    ).errors;
+    expect(Object.keys(error!).slice(-2)).toEqual(['nodeName', 'nodeType']);
+  });
+
   it('collects the heading reads', () => {
     const { headingReads } = observe(
       '[gd_scene format=3]\n\n[node name="Root" instance=ExtResource("1")]\n\n' +

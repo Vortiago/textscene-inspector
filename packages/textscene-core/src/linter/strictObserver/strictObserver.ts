@@ -9,7 +9,7 @@ import type { ParseError, SectionLines } from '../types.js';
 import { headingResourceReads, type HeadingResourceReads } from './headingResourceReads.js';
 import { instancedPaths } from './instancedPaths.js';
 import { nodeHeadingErrors } from './nodeHeadingChecks.js';
-import { propertyError } from './propertyCheck.js';
+import { propertyRefusal } from './propertyCheck.js';
 import { rootHeadingCounter } from './rootHeading.js';
 import { sectionLines } from './sectionLines.js';
 import { sectionOwnerOf, type SectionOwner } from './sectionOwner.js';
@@ -35,7 +35,10 @@ export function strictObserver(): StrictObserver {
     onError: (error) => {
       errors.push({
         severity: 'error',
-        ...error,
+        message: error.message,
+        line: error.line,
+        column: error.column,
+        code: error.code,
         // A malformed heading would have opened a section, so it belongs to none and must not borrow the
         // previous owner. A malformed property line belongs to its section.
         ...(error.code === 'INVALID_PROPERTY_FORMAT' ? owner : null),
@@ -56,7 +59,7 @@ export function strictObserver(): StrictObserver {
     onProperty: (property) => {
       // The key the scan stores the value under, so a reader of the bag finds the line.
       lines.record(property.stored.key, property.line);
-      const error = propertyError(property);
+      const error = propertyRefusal(property);
       if (error) errors.push({ ...error, ...owner });
     },
 

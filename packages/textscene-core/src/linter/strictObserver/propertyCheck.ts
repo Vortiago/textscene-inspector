@@ -10,7 +10,7 @@ import { ownsNilMessage } from '../propertyValidator.js';
 import { isNilLiteral } from '../../godot/index.js';
 
 /** The refusal for one property, or null where no validator claims it or the value passes. */
-export function propertyError({
+export function propertyRefusal({
   ownerType,
   key,
   value,
@@ -43,8 +43,8 @@ export function propertyError({
       ? found
       : {
           ...found,
-          // `propertyError` anchors the column on the key it was handed;
-          // rebased so it lands on the value after the key as written.
+          // The validator's `propertyError` anchors the column on the key it was handed. The rebase
+          // lands it on the value after the key as written.
           column: found.column - lookupKey.length + key.length,
           message: `Property '${key}' is applied as '${lookupKey} = ${lookupValue}': ${found.message}`,
         };
