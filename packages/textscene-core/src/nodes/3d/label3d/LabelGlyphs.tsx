@@ -12,8 +12,13 @@ import {
   onSceneFontMetricsSettled,
   peekBundledCanvasFontMetrics,
 } from '../../../r3f/controls/native/text/sceneFontLoader';
-import { alphaCutSurface, joinsShadowPass, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
-import { cutBlends, type FadeVariants } from '../../../r3f/materials/fadeVariants';
+import {
+  alphaCutSurface,
+  joinsShadowPass,
+  NO_TRANSPARENT_FLAG,
+  type AlphaCutSurface,
+} from '../../../r3f/godotAlphaCut';
+import { cutBlends, cutOpaquePrepasses, type FadeVariants } from '../../../r3f/materials/fadeVariants';
 import type { CanvasTextBlend } from '../../../r3f/controls/native/text/canvasTextPainter';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
@@ -113,7 +118,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the
   // blended pass is transparent. The geometry instance's fade can move both surfaces
   // there, and scales each surface's alpha by one fade alpha.
-  const blends = withHashScale(cutBlends(cut), properties.alpha_hash_scale);
+  const blends = labelBlends(cut, depthTest, properties.alpha_hash_scale);
   const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass(cut, depthTest) };
 
   // `material.h:172-177`: the enum alternates NEAREST, LINEAR, so the even
@@ -171,13 +176,19 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   );
 }
 
-/** Each pass's blend at the label's `alpha_hash_scale`, which `label_3d.cpp:379` hands every surface. */
-function withHashScale(
-  blends: FadeVariants<CanvasTextBlend>,
+/**
+ * Each pass's blend, with its opaque prepass, at the label's `alpha_hash_scale`, which
+ * `label_3d.cpp:379` hands every surface.
+ */
+function labelBlends(
+  cut: AlphaCutSurface,
+  depthTest: boolean,
   alphaHashScale: number
 ): FadeVariants<CanvasTextBlend> {
+  const blends = cutBlends(cut);
+  const prepasses = cutOpaquePrepasses(cut, depthTest);
   return {
-    unfaded: { ...blends.unfaded, alphaHashScale },
-    alphaPass: { ...blends.alphaPass, alphaHashScale },
+    unfaded: { ...blends.unfaded, alphaHashScale, opaquePrepass: prepasses.unfaded },
+    alphaPass: { ...blends.alphaPass, alphaHashScale, opaquePrepass: prepasses.alphaPass },
   };
 }

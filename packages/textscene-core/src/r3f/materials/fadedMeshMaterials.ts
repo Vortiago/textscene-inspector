@@ -11,10 +11,8 @@ import { fadeAlpha, forcesAlphaPass } from '../../godot/fadeAlpha';
 import { injectProgram } from '../materialProgramInputs';
 import type { MeshSurface } from '../../resources/formats/glb/meshInstances';
 import type { FadedSurface } from './swappedMaterials';
-import type { FadeVariants } from './fadeVariants';
+import type { FadePass, FadeVariants } from './fadeVariants';
 import { surfaceAlphaProps, type SurfaceAlphaSource } from './surfaceAlphaPatch';
-
-type FadePass = keyof FadeVariants<unknown>;
 
 /** Each unfaded material's copy builders. Written only by `registerFadedCopyBuilders`. */
 const copyBuilders = new WeakMap<THREE.Material, FadeVariants<() => THREE.Material>>();

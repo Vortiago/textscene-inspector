@@ -7,6 +7,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Sprite3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -385,9 +386,9 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mat.alphaHash).toBe(false);
   });
 
-  it('alpha_cut=OPAQUE_PREPASS keeps blending and still writes depth', async () => {
-    // `sprite_3d.cpp:289` → TRANSPARENCY_ALPHA_DEPTH_PRE_PASS: the colour pass still blends, and
-    // the depth pass cuts at the scene's `opaque_prepass_threshold`
+  it('alpha_cut=OPAQUE_PREPASS blends uncut and leaves its depth to the depth prepass', async () => {
+    // `sprite_3d.cpp:289` → TRANSPARENCY_ALPHA_DEPTH_PRE_PASS: the colour pass blends, and the
+    // depth prepass cuts at the scene's `opaque_prepass_threshold`
     // (`render_forward_clustered.cpp:1791`), never the node's own `alpha_scissor_threshold`.
     const tex = makeTexture(8, 8);
     const renderer = await render({
@@ -401,9 +402,10 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
     expect(mat.transparent).toBe(true);
-    expect(mat.depthWrite).toBe(true);
+    expect(mat.depthWrite).toBe(false);
     expect(mat.alphaHash).toBe(false);
-    expect(mat.alphaTest).not.toBe(0.25);
+    expect(mat.alphaTest).toBe(0);
+    expect(opaquePrepassOf(mat)).toBe(DRAWN_OPAQUE_PREPASS);
   });
 
   it('alpha_cut=HASH hashes rather than blends', async () => {
@@ -438,7 +440,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
-    expect(mat.userData).toEqual(alphaHashScaleUserData(0.3));
+    expect(mat.userData).toMatchObject(alphaHashScaleUserData(0.3));
   });
 
   it('transparent=false disables hashing, as it disables the whole alpha-cut switch', async () => {

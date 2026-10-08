@@ -60,10 +60,10 @@ describe('decodeStandardMaterial3D — transparency', () => {
     expect(data.alphaTest).toBe(0.5);
   });
 
-  it('drops depth writes for ALPHA only', () => {
+  it('drops the colour depth write of the blended modes and keeps the hash', () => {
     expect(decodeStandardMaterial3D({ transparency: '1' }).depthWrite).toBe(false);
     expect(decodeStandardMaterial3D({ transparency: '3' }).depthWrite).toBe(true);
-    expect(decodeStandardMaterial3D({ transparency: '4' }).depthWrite).toBe(true);
+    expect(decodeStandardMaterial3D({ transparency: '4' }).depthWrite).toBe(false);
   });
 
   it('clamps the scissor threshold to its 0..1 hint', () => {
@@ -222,12 +222,13 @@ describe('decodeStandardMaterial3D — shadow-pass membership', () => {
 });
 
 describe('decodeStandardMaterial3D — depth state', () => {
-  it('writes depth for an alpha-antialiased cutout, which Godot draws in its depth prepass', () => {
-    // `uses_depth_in_alpha_pass()` (`scene_shader_forward_clustered.h:289-293`) is true for
-    // it, as for ALPHA_DEPTH_PRE_PASS, so the colour pass sees the depth it wrote.
+  it('leaves the depth of an alpha-antialiased cutout to its depth prepass', () => {
+    // `uses_depth_in_alpha_pass()` (`scene_shader_forward_clustered.h:288-292`) is true for it,
+    // as for ALPHA_DEPTH_PRE_PASS. The prepass writes its depth, the colour pipeline does not.
     const data = decodeStandardMaterial3D({ transparency: '2', alpha_antialiasing_mode: '1' });
     expect(data.transparent).toBe(true);
-    expect(data.depthWrite).toBe(true);
+    expect(data.depthInAlphaPass).toBe(true);
+    expect(data.depthWrite).toBe(false);
   });
 
   it('defaults to OPAQUE_ONLY, which writes depth outside the alpha pass', () => {
@@ -257,10 +258,17 @@ describe('decodeStandardMaterial3D — depth state', () => {
     expect(data.transparent).toBe(true);
   });
 
-  it('keeps the depth write for DEPTH_PRE_PASS, which is the point of the mode', () => {
+  it('gives DEPTH_PRE_PASS a depth prepass and a colour pass that writes no depth', () => {
     const data = decodeStandardMaterial3D({ transparency: '4' });
     expect(data.transparent).toBe(true);
-    expect(data.depthWrite).toBe(true);
+    expect(data.depthInAlphaPass).toBe(true);
+    expect(data.depthWrite).toBe(false);
+  });
+
+  it('gives a surface with no depth test no depth prepass (edge case)', () => {
+    expect(decodeStandardMaterial3D({ transparency: '4', no_depth_test: 'true' }).depthInAlphaPass).toBe(
+      false
+    );
   });
 
   it('lets refraction override the authored depth mode', () => {
@@ -508,7 +516,7 @@ describe('decodeStandardMaterial3D — corpus materials', () => {
     });
     expect(data.transparency).toBe(Transparency.ALPHA_DEPTH_PRE_PASS);
     expect(data.transparent).toBe(true);
-    expect(data.depthWrite).toBe(true);
+    expect(data.depthInAlphaPass).toBe(true);
     expect(data.cullMode).toBe(CullMode.DISABLED);
     expect(data.textureFilter).toBe(5);
     expect(data.roughness).toBeCloseTo(0.95770514, 6);

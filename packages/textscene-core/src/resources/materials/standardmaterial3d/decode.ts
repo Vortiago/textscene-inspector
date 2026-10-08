@@ -169,8 +169,9 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     alphaHash: transparency === Transparency.ALPHA_HASH && readsAlbedoAlpha,
     alphaHashScale: floatOr(properties['alpha_hash_scale'], 1, CONTEXT),
     depthDrawMode,
-    depthWrite: godotDepthWrite(alphaPass, depthInAlphaPass, depthDrawMode, depthTest),
-    alphaPassDepthWrite: godotDepthWrite(true, false, depthDrawMode, depthTest),
+    depthWrite: godotDepthWrite(alphaPass, depthDrawMode, depthTest),
+    alphaPassDepthWrite: godotDepthWrite(true, depthDrawMode, depthTest),
+    depthInAlphaPass,
     readsAlbedoAlpha,
     // `scene_forward_clustered.glsl:1413-1415`.
     opaqueAfterCut: alphaFlags.usesAlphaClip && !alphaFlags.usesAlphaAntialiasing,
@@ -285,17 +286,10 @@ function alphaPassMembership(alphaFlags: ShaderAlphaFlags, inputs: PassInputs): 
  * `_create_pipeline`): the depth-draw mode decides it, and the transparent pipeline
  * overrides OPAQUE_ONLY to false. A disabled depth test writes nothing.
  */
-function godotDepthWrite(
-  alphaPass: boolean,
-  depthInAlphaPass: boolean,
-  depthDrawMode: DepthDrawMode,
-  depthTest: boolean
-): boolean {
+function godotDepthWrite(alphaPass: boolean, depthDrawMode: DepthDrawMode, depthTest: boolean): boolean {
   if (!depthTest || depthDrawMode === DepthDrawMode.DISABLED) return false;
   if (!alphaPass) return true;
-  // Its colour pipeline writes no depth, but the depth prepass does, which a single-pass
-  // renderer spells as writing depth.
-  if (depthInAlphaPass) return true;
+  // A depth prepass writes the depth of a `depth_prepass_alpha` surface, not its colour pipeline.
   return depthDrawMode !== DepthDrawMode.OPAQUE_ONLY;
 }
 

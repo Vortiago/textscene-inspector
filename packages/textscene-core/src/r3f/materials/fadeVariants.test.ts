@@ -1,6 +1,13 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { cutBlends, cutFadeVariants, surfaceFadeVariants, type AlphaPassSurface } from './fadeVariants';
+import {
+  cutBlends,
+  cutFadeVariants,
+  cutOpaquePrepasses,
+  surfaceFadeVariants,
+  type AlphaPassSurface,
+} from './fadeVariants';
+import { DRAWN_OPAQUE_PREPASS, FADED_OPAQUE_PREPASS, NO_OPAQUE_PREPASS } from './opaquePrepass';
 import type { SurfaceAlphaSource } from './surfaceAlphaPatch';
 import { alphaCutSurface } from '../godotAlphaCut';
 import { AlphaCutMode } from '../../nodes/3d/sprite3d/types';
@@ -98,5 +105,32 @@ describe('cutFadeVariants', () => {
 
   it('carries an opacity of 0, which a fully transparent modulate gives (edge case)', () => {
     expect(cutFadeVariants(discardCut(true), 0).unfaded.opacity).toBe(0);
+  });
+});
+
+describe('cutOpaquePrepasses', () => {
+  const prepassCut = alphaCutSurface({
+    mode: AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS,
+    scissorThreshold: 0.5,
+    transparentFlag: true,
+  });
+
+  it('has the depth prepass draw the unfaded pass and only cut the faded one', () => {
+    // A fade below 0.999 forces the alpha pass (`render_forward_clustered.cpp:1128-1134`).
+    expect(cutOpaquePrepasses(prepassCut, true)).toEqual({
+      unfaded: DRAWN_OPAQUE_PREPASS,
+      alphaPass: FADED_OPAQUE_PREPASS,
+    });
+  });
+
+  it('gives a cut with no depth prepass none in either pass', () => {
+    expect(cutOpaquePrepasses(discardCut(true), true)).toEqual({
+      unfaded: NO_OPAQUE_PREPASS,
+      alphaPass: NO_OPAQUE_PREPASS,
+    });
+  });
+
+  it('gives a surface with no depth test none (edge case)', () => {
+    expect(cutOpaquePrepasses(prepassCut, false).unfaded).toBe(NO_OPAQUE_PREPASS);
   });
 });

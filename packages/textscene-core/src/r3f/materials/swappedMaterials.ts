@@ -8,7 +8,7 @@
 import type * as THREE from 'three';
 import { createContext, useContext, useLayoutEffect, useMemo } from 'react';
 import { fadeAlpha, forcesAlphaPass } from '../../godot/fadeAlpha';
-import type { FadeVariants } from './fadeVariants';
+import type { FadePass, FadeVariants } from './fadeVariants';
 
 /** A surface whose draw state a geometry instance's fade sets. */
 export interface FadedSurface {
@@ -33,8 +33,6 @@ interface MaterialHost {
 
 /** R3F's function `attach`: it attaches `material` to `host` and returns the detach. */
 export type MaterialAttach = (host: MaterialHost, material: THREE.Material) => () => void;
-
-type FadePass = keyof FadeVariants<unknown>;
 
 const ATTACH_PATTERN = /^material(?:-(\d+))?$/;
 

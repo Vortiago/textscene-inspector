@@ -16,6 +16,7 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
+import { useSceneDepthPrepass } from '../../../r3f/depthPrepass/SceneDepthPrepass';
 import {
   renderWithShadowAtlas,
   ViewportShadowAtlas,
@@ -127,10 +128,12 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   const target = useMemo(() => createOffscreenTarget(width, height, node.name), [width, height, node.name]);
 
   useEffect(() => () => target.dispose(), [target]);
-  // A 3D portal renders its lights only through this pass, so it fits them itself. An inline pass
-  // renders the parent scene, which its own fitter fits, and a 2D portal holds no 3D light.
+  // A 3D portal renders its lights only through this pass, so it fits them itself and draws its
+  // own depth prepass. An inline pass renders the parent scene, which its own canvas serves, and a
+  // 2D portal holds no 3D surface.
   const portalLightScene = kind === '3d' && !rendersInline ? portalScene : null;
   useSceneShadowFit(portalLightScene);
+  useSceneDepthPrepass(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(properties);
 
   // A persistent camera for 2D-world content. Godot draws a viewport's canvas

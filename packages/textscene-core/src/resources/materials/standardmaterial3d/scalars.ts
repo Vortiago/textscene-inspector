@@ -41,6 +41,7 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     alphaHashScale: data.alphaHashScale,
     depthWrite: data.depthWrite,
     alphaPassDepthWrite: data.alphaPassDepthWrite,
+    depthInAlphaPass: data.depthInAlphaPass,
     readsAlbedoAlpha: data.readsAlbedoAlpha,
     opaqueAfterCut: data.opaqueAfterCut,
     depthTest: data.depthTest,

@@ -165,6 +165,8 @@ export function materialConstructorLines(source: string): number[] {
  * absent because its `new THREE.ShaderMaterial({…})` is inside a doc comment.
  */
 const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
+    'the depth prepass base, cloned per surface and never drawn itself, and the sentinel, which writes nothing; neither is ever mutated',
   'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
     'rebuilt by the effect that rebuilds the projection meshes; the only later write is `opacity`, which no program parameter reads',
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
@@ -261,6 +263,8 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
  * and separate from both lists above for the same reason.
  */
 const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
+    'the depth prepass sentinel: its material writes nothing and is never mutated, and the sentinel is removed with its scene',
   'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
     'the projection meshes and the material they carry are built by one effect and replaced together, so neither can outlive an input the other was built from',
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':

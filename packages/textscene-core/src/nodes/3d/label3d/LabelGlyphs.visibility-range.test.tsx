@@ -17,7 +17,13 @@ import { AlphaCutMode } from './types';
 import { labelProperties } from './testing/labelProperties';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
-import { castsFrom, castsSunShadowFrom, drawsColour } from '../../../r3f/testing/threePasses';
+import {
+  castMaterialsOf,
+  castsFrom,
+  castsSunShadowFrom,
+  drawsColour,
+} from '../../../r3f/testing/threePasses';
+import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../../../godot/opaquePrepass';
 import {
   NO_VISIBILITY_RANGE,
   VisibilityRangeFadeMode,
@@ -106,10 +112,13 @@ describe('<LabelGlyphs> shadow casting', () => {
 
   it('casts a hashed shadow from a HASH label, into every light', async () => {
     const mesh = textMesh(await renderFrames(props({}, { alpha_cut: AlphaCutMode.HASH })));
-    expect([mesh.customDepthMaterial, mesh.customDistanceMaterial]).toEqual([
-      expect.objectContaining({ alphaHash: true }),
-      expect.objectContaining({ alphaHash: true }),
-    ]);
+    const [sun, omni] = castMaterialsOf(mesh);
+    expect([sun.alphaHash, omni.alphaHash]).toEqual([true, true]);
+  });
+
+  it("cuts an OPAQUE_PREPASS label's shadow at the shadow pass's prepass threshold", async () => {
+    const mesh = textMesh(await renderFrames(props({}, { alpha_cut: AlphaCutMode.OPAQUE_PREPASS })));
+    expect(castMaterialsOf(mesh)[0].alphaTest).toBe(SHADOW_PASS_OPAQUE_THRESHOLD);
   });
 
   it('still casts into an omni or spot shadow past its end (edge case)', async () => {

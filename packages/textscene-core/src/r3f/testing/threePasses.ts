@@ -13,8 +13,10 @@ import { drawnMaterial } from '../surfaceDrawHooks';
 export interface DrawState {
   /** The group's own material: the colour pass draws it, the shadow pass reads it. */
   material: THREE.Material;
-  /** The depth material of a shadow draw; absent in the colour pass. */
-  depthMaterial?: THREE.MeshDepthMaterial;
+  /** The depth or distance material three hands a shadow draw; absent in the colour pass. */
+  depthMaterial?: THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
+  /** The depth material the shadow draw draws with: the hooks' own, or three's. */
+  castMaterial?: THREE.Material;
   /** `object.matrixWorld` as three uploads it as `modelMatrix`. */
   matrixWorld: THREE.Matrix4;
   /** `object.modelViewMatrix` as three uploads it. */
@@ -64,11 +66,64 @@ const SHADOW_SIDE: Record<number, THREE.Side> = {
   [THREE.DoubleSide]: THREE.DoubleSide,
 };
 
+/** A draw the hooks make themselves, through the renderer three hands them. */
+interface OwnDraw {
+  material: THREE.Material;
+  elements: number;
+}
+
+/** The renderer a shadow hook draws its own depth material through, recording each draw. */
+function recordingRenderer(draws: OwnDraw[]): THREE.WebGLRenderer {
+  const state = new WeakMap<object, Record<string, unknown>>();
+  return {
+    renderBufferDirect(
+      _camera: THREE.Camera,
+      _scene: THREE.Scene,
+      geometry: THREE.BufferGeometry,
+      material: THREE.Material
+    ) {
+      draws.push({ material, elements: geometry.drawRange.count });
+    },
+    properties: {
+      get(object: object) {
+        if (!state.has(object)) state.set(object, {});
+        return state.get(object);
+      },
+    },
+  } as unknown as THREE.WebGLRenderer;
+}
+
+/** What the shadow draw leaves, whether the hooks drew it or three does. */
+function shadowState(
+  mesh: THREE.Mesh,
+  material: THREE.Material,
+  depthMaterial: THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial,
+  ownDraws: readonly OwnDraw[]
+): DrawState {
+  const own = ownDraws[0];
+  if (!own) return { ...snapshot(mesh, material, depthMaterial), depthMaterial, castMaterial: depthMaterial };
+  const draws = own.elements > 0 && (own.material.colorWrite || own.material.depthWrite);
+  return { ...snapshot(mesh, material, own.material), depthMaterial, castMaterial: own.material, draws };
+}
+
 /**
  * One shadow-pass draw. three sets `modelViewMatrix` once per object before its group loop
- * (`WebGLShadowMap.js:528`), and hands each hook the object, the main camera and the light's.
+ * (`WebGLShadowMap.js:528`), and hands each hook the renderer, the object, the main camera and
+ * the light's.
  */
 export function drawShadowGroup<T>(
+  mesh: THREE.Mesh,
+  camera: THREE.Camera,
+  shadowCamera: THREE.Camera,
+  groupIndex: number,
+  probe: (state: DrawState) => T
+): T {
+  return drawShadowWith(new THREE.MeshDepthMaterial(), mesh, camera, shadowCamera, groupIndex, probe);
+}
+
+/** One shadow-pass draw, with the depth or distance material three hands a sun or an omni light. */
+function drawShadowWith<T>(
+  depthMaterial: THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial,
   mesh: THREE.Mesh,
   camera: THREE.Camera,
   shadowCamera: THREE.Camera,
@@ -78,10 +133,10 @@ export function drawShadowGroup<T>(
   const group = groupAt(mesh, groupIndex);
   const material = drawnMaterial(mesh, group)!;
   mesh.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, mesh.matrixWorld);
-  const depthMaterial = new THREE.MeshDepthMaterial();
   depthMaterial.side = material.shadowSide ?? SHADOW_SIDE[material.side as number]!;
+  const ownDraws: OwnDraw[] = [];
   const args = [
-    null,
+    recordingRenderer(ownDraws),
     mesh,
     camera,
     shadowCamera,
@@ -90,7 +145,7 @@ export function drawShadowGroup<T>(
     group,
   ] as unknown as Parameters<THREE.Object3D['onBeforeShadow']>;
   mesh.onBeforeShadow(...args);
-  const seen = probe({ ...snapshot(mesh, material, depthMaterial), depthMaterial });
+  const seen = probe(shadowState(mesh, material, depthMaterial, ownDraws));
   mesh.onAfterShadow(...args);
   return seen;
 }
@@ -133,6 +188,15 @@ export function castsFrom(mesh: THREE.Mesh, groupIndex = 0): boolean {
 export function castsSunShadowFrom(mesh: THREE.Mesh): boolean {
   if (!mesh.castShadow) return false;
   return drawShadowGroup(mesh, TEST_CAMERA, TEST_SUN_SHADOW_CAMERA, 0, (s) => s.draws);
+}
+
+/** The materials the mesh's first group casts with into a sun's shadow and into an omni light's. */
+export function castMaterialsOf(mesh: THREE.Mesh): [THREE.Material, THREE.Material] {
+  const castMaterial = (s: DrawState) => s.castMaterial!;
+  return [
+    drawShadowWith(new THREE.MeshDepthMaterial(), mesh, TEST_CAMERA, TEST_SUN_SHADOW_CAMERA, 0, castMaterial),
+    drawShadowWith(new THREE.MeshDistanceMaterial(), mesh, TEST_CAMERA, TEST_SHADOW_CAMERA, 0, castMaterial),
+  ];
 }
 
 /** Whether the mesh's group leaves a mark in the colour pass. */

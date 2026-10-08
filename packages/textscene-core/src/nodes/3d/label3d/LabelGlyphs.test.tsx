@@ -5,6 +5,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
@@ -294,10 +295,8 @@ describe('<LabelGlyphs>', () => {
       }
     });
 
-    it('HASH cuts stochastically and paints opaque; OPAQUE_PREPASS keeps blending but writes depth', async () => {
-      // `label_3d.cpp:390,392`. The prepass cut is the scene's
-      // `opaque_prepass_threshold` (`render_forward_clustered.cpp:1791`), not
-      // the node's `alpha_scissor_threshold`, so authoring one must not move it.
+    it('HASH cuts stochastically and paints opaque', async () => {
+      // `label_3d.cpp:392`.
       const hash = await render(
         labelProperties({ alpha_cut: AlphaCutMode.HASH, alpha_scissor_threshold: 0.25 })
       );
@@ -306,21 +305,26 @@ describe('<LabelGlyphs>', () => {
       expect(hashMaterial!.alphaTest).toBe(0);
       expect(hashMaterial!.transparent).toBe(false);
       expect(hashMaterial!.depthWrite).toBe(true);
+    });
 
+    it('OPAQUE_PREPASS blends uncut and leaves its depth to the depth prepass', async () => {
+      // `label_3d.cpp:390`. The prepass cut is the scene's `opaque_prepass_threshold`
+      // (`render_forward_clustered.cpp:1791`), not the node's `alpha_scissor_threshold`.
       const prepass = await render(
         labelProperties({ alpha_cut: AlphaCutMode.OPAQUE_PREPASS, alpha_scissor_threshold: 0.25 })
       );
       const [prepassMaterial] = materials(prepass);
       expect(prepassMaterial!.alphaHash).toBe(false);
-      expect(prepassMaterial!.alphaTest).toBe(0.5);
+      expect(prepassMaterial!.alphaTest).toBe(0);
       expect(prepassMaterial!.transparent).toBe(true);
-      expect(prepassMaterial!.depthWrite).toBe(true);
+      expect(prepassMaterial!.depthWrite).toBe(false);
+      expect(opaquePrepassOf(prepassMaterial!)).toBe(DRAWN_OPAQUE_PREPASS);
     });
 
     it('HASH hashes at the authored alpha_hash_scale', async () => {
       const renderer = await render(labelProperties({ alpha_cut: AlphaCutMode.HASH, alpha_hash_scale: 0.3 }));
       const [material] = materials(renderer);
-      expect(material!.userData).toEqual(alphaHashScaleUserData(0.3));
+      expect(material!.userData).toMatchObject(alphaHashScaleUserData(0.3));
     });
 
     it('DISABLED (default) paints TRANSPARENCY_ALPHA — blended, no cut, no depth write', async () => {

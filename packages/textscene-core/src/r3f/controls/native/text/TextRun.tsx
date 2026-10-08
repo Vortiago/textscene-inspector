@@ -30,7 +30,6 @@ import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
 import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
-import { HashedShadowMaterials } from '../../../materials/HashedShadowMaterials';
 
 // Geometry is in Godot pixels, +Y down, with Y negated once per vertex into three's
 // Y-up space. Each line's top is a multiple of `layout.linePitchPx`, and its baseline
@@ -427,9 +426,7 @@ export function TextRun({
         onAfterRender={shadow?.onAfterRender}
         onBeforeShadow={shadow?.onBeforeShadow}
         onAfterShadow={shadow?.onAfterShadow}
-      >
-        {shadow?.castShadow && blends?.unfaded.alphaHash && <HashedShadowMaterials />}
-      </mesh>
+      />
       {hexBoxRects.map((r, i) => (
         <CanvasItemGroup key={i} position={[r.x, -r.y, 0]}>
           <ControlQuad
@@ -476,6 +473,7 @@ function useOwnedMaterial<M extends THREE.Material | null>(
       blend?.alphaTest,
       blend?.alphaHash,
       blend?.alphaHashScale,
+      blend?.opaquePrepass,
       blend?.blending,
       blend?.injection,
     ]

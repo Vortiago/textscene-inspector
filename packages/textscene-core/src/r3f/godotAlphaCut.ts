@@ -7,13 +7,6 @@
 import { drawsInShadowPass } from '../godot/shadowPass';
 import type { SurfaceAlphaSource } from './materials/surfaceAlphaPatch';
 
-/**
- * Divergence: Godot's prepass cut is 0.99 (`render_forward_clustered.cpp:1791`) and applies in the
- * depth pass only. three has one `alphaTest` for both passes, and 0.99 in the colour pass would
- * erase every antialiased edge, so 0.5 stands in until the passes get separate cuts.
- */
-const PREPASS_ALPHA_TEST = 0.5;
-
 /** The members `SpriteBase3D::AlphaCutMode` and `Label3D::AlphaCutMode` share; DISABLED is the `else`. */
 const ALPHA_CUT_DISCARD = 1;
 const ALPHA_CUT_OPAQUE_PREPASS = 2;
@@ -40,6 +33,11 @@ export interface AlphaCutSurface extends SurfaceAlphaSource {
   alphaHash: boolean;
   depthWrite: boolean;
   /**
+   * OPAQUE_PREPASS's `depth_prepass_alpha` (`material.cpp:898`): the depth prepass draws the
+   * surface, and its depth draws cut at `opaque_prepass_threshold`.
+   */
+  depthPrepass: boolean;
+  /**
    * Whether the arm reaches the blended pass: a compile-time property of its shader, never of a
    * colour. `uses_alpha_pass()` (`scene_shader_forward_clustered.h:279-287`) reads the flag that
    * `ALPHA` sets (`material.cpp:1836`, `scene_shader_forward_clustered.cpp:123`), which classifies
@@ -54,6 +52,7 @@ type CutArm = Omit<AlphaCutSurface, 'readsAlbedoAlpha'>;
 const OPAQUE_ARM: CutArm = {
   alphaTest: 0,
   alphaHash: false,
+  depthPrepass: false,
   depthWrite: true,
   blended: false,
   opaqueAfterCut: false,
@@ -79,8 +78,9 @@ function cutArm(mode: number, scissorThreshold: number): CutArm {
     case ALPHA_CUT_HASH:
       return { ...OPAQUE_ARM, alphaHash: true, opaqueAfterCut: true };
     case ALPHA_CUT_OPAQUE_PREPASS:
-      // The depth prepass keeps blending and cuts in the depth pass only.
-      return { ...OPAQUE_ARM, alphaTest: PREPASS_ALPHA_TEST, blended: true };
+      // Blended and uncut in colour. `get_material_for_2d` keeps DEPTH_DRAW_OPAQUE_ONLY, so only
+      // the depth prepass writes depth.
+      return { ...OPAQUE_ARM, depthPrepass: true, depthWrite: false, blended: true };
     default:
       // `depth_draw_opaque` on a blended surface writes no depth (`material.cpp:800`).
       return { ...OPAQUE_ARM, depthWrite: false, blended: true };
@@ -89,10 +89,8 @@ function cutArm(mode: number, scissorThreshold: number): CutArm {
 
 /** Whether the surface joins the shadow pass. No depth test sends any surface to the alpha pass. */
 export function joinsShadowPass(cut: AlphaCutSurface, depthTest: boolean): boolean {
-  // Only OPAQUE_PREPASS blends and writes depth: its `depth_prepass_alpha` (`material.cpp:898`).
-  const usesDepthPrepassAlpha = cut.blended && cut.depthWrite;
   return drawsInShadowPass({
     alphaPass: cut.blended || !depthTest,
-    depthInAlphaPass: usesDepthPrepassAlpha && depthTest,
+    depthInAlphaPass: cut.depthPrepass && depthTest,
   });
 }

@@ -16,10 +16,10 @@ import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { alphaCutSurface, joinsShadowPass } from '../../../r3f/godotAlphaCut';
-import { cutFadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
+import { cutFadeVariants, cutOpaquePrepasses, type FadePass } from '../../../r3f/materials/fadeVariants';
+import { opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
 import type { MaterialAttach } from '../../../r3f/materials/swappedMaterials';
 import { FadedMaterials } from '../../../r3f/materials/FadedMaterials';
-import { HashedShadowMaterials } from '../../../r3f/materials/HashedShadowMaterials';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
@@ -133,6 +133,7 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
   const surfaceAlpha = cutFadeVariants(cut, properties.transparent ? clamp01(accum.a) : 1);
   const depthTest = !properties.no_depth_test;
   const castsShadow = shadow.castShadow && joinsShadowPass(cut, depthTest);
+  const prepasses = cutOpaquePrepasses(cut, depthTest);
 
   // Baked into the geometry, so it stays right under the node's rotation and billboard.
   const geometry = useMemo(() => spriteQuadGeometry(rect, properties.axis), [rect, properties.axis]);
@@ -195,19 +196,22 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
     );
   }
 
-  const material = (alpha: PassAlpha, attach: string | MaterialAttach | undefined) => {
+  const material = (pass: FadePass, attach: string | MaterialAttach | undefined) => {
     const program = materialProgramInputs({
       props: {
         attach,
         map: displayedTexture,
         color,
-        ...alpha,
+        ...surfaceAlpha[pass],
         // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
         depthTest,
         // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
         side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
         // `sprite_3d.cpp:282` hands the scale to every mode's material; only HASH reads it.
-        userData: alphaHashScaleUserData(properties.alpha_hash_scale),
+        userData: {
+          ...alphaHashScaleUserData(properties.alpha_hash_scale),
+          ...opaquePrepassUserData(prepasses[pass]),
+        },
       },
       merge: [properties.shaded ? SHADED_SCALARS : undefined],
     });
@@ -237,8 +241,7 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
         onAfterShadow={shadow.onAfterShadow}
       >
         <primitive object={geometry} attach="geometry" />
-        <FadedMaterials>{(pass, attach) => material(surfaceAlpha[pass], attach)}</FadedMaterials>
-        {castsShadow && cut.alphaHash && <HashedShadowMaterials />}
+        <FadedMaterials>{material}</FadedMaterials>
       </mesh>
       {subtree}
     </>

@@ -4,7 +4,8 @@
  * and the visibility range then gate it as they gate any GeometryInstance3D.
  */
 import { describe, expect, it } from 'vitest';
-import { castsFrom, castsSunShadowFrom } from '../../../r3f/testing/threePasses';
+import { castMaterialsOf, castsFrom, castsSunShadowFrom } from '../../../r3f/testing/threePasses';
+import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../../../godot/opaquePrepass';
 import { spriteMesh } from './testing/spriteMesh';
 
 const DISCARD = { alpha_cut: '1' };
@@ -35,16 +36,18 @@ describe('<Sprite3D> shadow casting', () => {
   });
 
   it('casts a hashed shadow from a HASH sprite, into every light', async () => {
-    const mesh = await spriteMesh({ alpha_cut: '3' });
-    expect([mesh.customDepthMaterial, mesh.customDistanceMaterial]).toEqual([
-      expect.objectContaining({ alphaHash: true }),
-      expect.objectContaining({ alphaHash: true }),
-    ]);
+    const [sun, omni] = castMaterialsOf(await spriteMesh({ alpha_cut: '3' }));
+    expect([sun.alphaHash, omni.alphaHash]).toEqual([true, true]);
   });
 
-  it('casts with the depth material three shares for any other cut (edge case)', async () => {
-    const mesh = await spriteMesh(DISCARD);
-    expect([mesh.customDepthMaterial, mesh.customDistanceMaterial]).toEqual([undefined, undefined]);
+  it("cuts an OPAQUE_PREPASS sprite's shadow at the shadow pass's prepass threshold", async () => {
+    const [sun] = castMaterialsOf(await spriteMesh({ alpha_cut: '2' }));
+    expect(sun.alphaTest).toBe(SHADOW_PASS_OPAQUE_THRESHOLD);
+  });
+
+  it("cuts a DISCARD sprite's shadow at its own scissor, opacity included (edge case)", async () => {
+    const [sun] = castMaterialsOf(await spriteMesh({ ...DISCARD, alpha_scissor_threshold: '0.25' }));
+    expect(sun).toMatchObject({ alphaTest: 0.25, alphaHash: false });
   });
 
   it('still casts into an omni or spot shadow past its end, as their cull reads no range', async () => {

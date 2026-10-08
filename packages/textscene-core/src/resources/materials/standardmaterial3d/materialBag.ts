@@ -15,6 +15,13 @@ import { BillboardMode } from '../../../godot/billboard';
 import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import {
+  DRAWN_OPAQUE_PREPASS,
+  FADED_OPAQUE_PREPASS,
+  NO_OPAQUE_PREPASS,
+  opaquePrepassUserData,
+  type OpaquePrepass,
+} from '../../../r3f/materials/opaquePrepass';
 import { resolveEmission } from './emission';
 import type {
   MaterialBlendState,
@@ -209,11 +216,21 @@ export function standardMaterialBags(
     blending: bag.props.blending,
   };
   const { unfaded, alphaPass } = surfaceFadeVariants(source, surface);
-  return { unfaded: withSurfaceAlpha(bag, unfaded), alphaPass: withSurfaceAlpha(bag, alphaPass) };
+  const prepass = scalars?.depthInAlphaPass === true;
+  return {
+    unfaded: withSurfaceAlpha(bag, unfaded, prepass ? DRAWN_OPAQUE_PREPASS : NO_OPAQUE_PREPASS),
+    alphaPass: withSurfaceAlpha(bag, alphaPass, prepass ? FADED_OPAQUE_PREPASS : NO_OPAQUE_PREPASS),
+  };
 }
 
-function withSurfaceAlpha(bag: StandardMaterialBag, { injection, ...alpha }: PassAlpha): StandardMaterialBag {
-  return { ...bag, props: { ...bag.props, ...alpha }, injection };
+function withSurfaceAlpha(
+  bag: StandardMaterialBag,
+  { injection, ...alpha }: PassAlpha,
+  prepass: OpaquePrepass
+): StandardMaterialBag {
+  const props = { ...bag.props, ...alpha };
+  if (prepass.cutsDepth) props.userData = { ...bag.props.userData, ...opaquePrepassUserData(prepass) };
+  return { ...bag, props, injection };
 }
 
 /** The class `scalars` need, and its props. */

@@ -7,6 +7,12 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { billboardOf, castsShadowOf, standardMaterialBags, surfaceBillboard } from './materialBag';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import {
+  DRAWN_OPAQUE_PREPASS,
+  FADED_OPAQUE_PREPASS,
+  NO_OPAQUE_PREPASS,
+  opaquePrepassOf,
+} from '../../../r3f/materials/opaquePrepass';
 import { materialFromBag } from './build';
 import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/billboard';
@@ -309,5 +315,20 @@ describe('standardMaterialBags — alpha hash', () => {
 
   it('hashes nothing on a material with no transparency (edge case)', () => {
     expect(standardMaterial({}).alphaHash).toBe(false);
+  });
+});
+
+describe('standardMaterialBags — opaque prepass', () => {
+  it('has the depth prepass draw an unfaded DEPTH_PRE_PASS surface', () => {
+    expect(opaquePrepassOf(materialFromBag(bag({ transparency: '4' })))).toBe(DRAWN_OPAQUE_PREPASS);
+  });
+
+  it('keeps a faded DEPTH_PRE_PASS surface out of the depth prepass but cuts its shadow', () => {
+    // A fade below 0.999 forces the alpha pass (`render_forward_clustered.cpp:1128-1134`).
+    expect(opaquePrepassOf(materialFromBag(alphaPassBag({ transparency: '4' })))).toBe(FADED_OPAQUE_PREPASS);
+  });
+
+  it('gives a blended surface no opaque prepass (edge case)', () => {
+    expect(opaquePrepassOf(materialFromBag(bag({ transparency: '1' })))).toBe(NO_OPAQUE_PREPASS);
   });
 });

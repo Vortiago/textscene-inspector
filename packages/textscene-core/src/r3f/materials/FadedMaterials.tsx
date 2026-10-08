@@ -4,10 +4,8 @@
  */
 
 import { Fragment, type ReactNode } from 'react';
-import type { FadeVariants } from './fadeVariants';
+import type { FadePass } from './fadeVariants';
 import { useSwappedMaterials, type MaterialAttach } from './swappedMaterials';
-
-type FadePass = keyof FadeVariants<unknown>;
 
 interface FadedMaterialsProps {
   /** The R3F `attach` key of the surface's slot, or none for the mesh's one material. */

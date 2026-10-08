@@ -6,6 +6,7 @@ import type { ProgramShader } from './materialProgramInputs';
 import { drawsAsOneBatch } from './surfaceDrawHooks';
 import { billboardOf } from '../resources/materials/standardmaterial3d/materialBag';
 import { ShadowCastingSetting } from '../godot/rendering';
+import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/opaquePrepass';
 import { standardMaterial as material } from '../resources/materials/standardmaterial3d/testing/standardMaterial';
 import {
   castsFrom,
@@ -179,6 +180,50 @@ describe('surfaceDrawHooks — shadow pass alpha-pass exclusion', () => {
     const count = mesh.geometry.drawRange.count;
     castsFrom(mesh, ADDITIVE);
     expect(mesh.geometry.drawRange.count).toBe(count);
+  });
+});
+
+/** A mesh of one surface, which casts. */
+function surfaceMesh(properties: Record<string, string>): THREE.Mesh {
+  const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material(properties));
+  applyShadowCasting(mesh, shadowCastingEffects(ShadowCastingSetting.ON));
+  return mesh;
+}
+
+/** The material the group at `group` casts with, whether it is the hooks' own, and whether three's draw still draws. */
+function shadowDraw(mesh: THREE.Mesh, group = 0) {
+  return drawShadowGroup(mesh, camera, shadowCamera, group, (s) => ({
+    cast: s.castMaterial!,
+    castsOwn: s.castMaterial !== s.depthMaterial,
+    threeDraws: mesh.geometry.drawRange.count > 0,
+  }));
+}
+
+describe('surfaceDrawHooks — shadow alpha cut', () => {
+  it("cuts a depth-prepass group's shadow at the shadow pass's prepass threshold", () => {
+    const { cast } = shadowDraw(surfacesMesh(), DEPTH_PRE_PASS);
+    expect(cast.alphaTest).toBe(SHADOW_PASS_OPAQUE_THRESHOLD);
+  });
+
+  it("cuts a scissor surface's shadow at its own threshold, with its opacity", () => {
+    const { cast } = shadowDraw(
+      surfaceMesh({ transparency: '2', alpha_scissor_threshold: '0.3', albedo_color: 'Color(1, 1, 1, 0.6)' })
+    );
+    expect(cast.alphaTest).toBeCloseTo(0.3, 6);
+    expect(cast.opacity).toBeCloseTo(0.6, 6);
+  });
+
+  it("casts a hashed surface's shadow through the hash", () => {
+    expect(shadowDraw(surfaceMesh({ transparency: '3' })).cast.alphaHash).toBe(true);
+  });
+
+  it("skips three's own draw of a surface the hooks cast themselves", () => {
+    expect(shadowDraw(surfaceMesh({ transparency: '2' })).threeDraws).toBe(false);
+  });
+
+  it("leaves an uncut surface to three's depth material (edge case)", () => {
+    const { castsOwn, threeDraws } = shadowDraw(surfacesMesh(), OPAQUE);
+    expect([castsOwn, threeDraws]).toEqual([false, true]);
   });
 });
 

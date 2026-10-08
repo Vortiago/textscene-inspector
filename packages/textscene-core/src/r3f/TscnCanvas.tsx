@@ -28,6 +28,7 @@ import { installGodotSplitShadow } from './directionalShadow/splitShadowChunk.js
 import { installDirectionalShadowAtlas } from './directionalShadow/shadowAtlasChunk.js';
 import { installGodotPositionalShadow } from './positionalShadow/positionalShadowChunk.js';
 import { SceneShadowFitter } from './SceneShadowFitter.js';
+import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
 import { TiledUploadDriver } from './tiledUpload/TiledUploadDriver.js';
 import styles from './TscnCanvas.module.css';
 
@@ -75,6 +76,7 @@ export function TscnSceneContents() {
       />
       <ViewportPassOrchestrator />
       <SceneShadowFitter />
+      <SceneDepthPrepass />
       <SelectionHighlight />
       <HoverHighlight />
     </TiledUploadDriver>

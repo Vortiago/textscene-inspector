@@ -7,12 +7,21 @@
 import type * as THREE from 'three';
 import type { AlphaCutSurface } from '../godotAlphaCut';
 import { surfaceAlphaProps, type SurfaceAlphaProps, type SurfaceAlphaSource } from './surfaceAlphaPatch';
+import {
+  DRAWN_OPAQUE_PREPASS,
+  FADED_OPAQUE_PREPASS,
+  NO_OPAQUE_PREPASS,
+  type OpaquePrepass,
+} from './opaquePrepass';
 
 /** One value for each pass a geometry instance's fade can draw a surface in. */
 export interface FadeVariants<T> {
   unfaded: T;
   alphaPass: T;
 }
+
+/** A pass a geometry instance's fade can draw a surface in. */
+export type FadePass = keyof FadeVariants<unknown>;
 
 /** The material state a geometry instance's fade changes. */
 interface SurfaceAlpha {
@@ -64,6 +73,23 @@ export function cutBlends(cut: AlphaCutSurface) {
     unfaded: { ...unfaded, ...surfaceAlphaProps(cut, unfaded), alphaTest, alphaHash },
     alphaPass: { ...alphaPass, ...surfaceAlphaProps(cut, alphaPass), alphaTest, alphaHash },
   };
+}
+
+const NO_OPAQUE_PREPASSES: FadeVariants<OpaquePrepass> = {
+  unfaded: NO_OPAQUE_PREPASS,
+  alphaPass: NO_OPAQUE_PREPASS,
+};
+const CUT_OPAQUE_PREPASSES: FadeVariants<OpaquePrepass> = {
+  unfaded: DRAWN_OPAQUE_PREPASS,
+  alphaPass: FADED_OPAQUE_PREPASS,
+};
+
+/**
+ * The opaque prepass of each pass of a Sprite3D or Label3D surface. A disabled depth test leaves
+ * the surface none (`scene_shader_forward_clustered.h:288-292`).
+ */
+export function cutOpaquePrepasses(cut: AlphaCutSurface, depthTest: boolean): FadeVariants<OpaquePrepass> {
+  return cut.depthPrepass && depthTest ? CUT_OPAQUE_PREPASSES : NO_OPAQUE_PREPASSES;
 }
 
 /** {@link cutBlends} with `opacity`, the alpha a Sprite3D's shader reads. */

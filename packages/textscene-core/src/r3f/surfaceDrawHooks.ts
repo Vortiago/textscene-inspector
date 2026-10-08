@@ -1,6 +1,7 @@
 /**
  * Godot surface state that three holds per object, applied per draw group: a billboard's
- * pose, the object space of an alpha hash, shadow-pass membership and SHADOWS_ONLY. three calls each before-hook and its
+ * pose, the object space of an alpha hash, shadow-pass membership, the shadow's alpha cut and
+ * SHADOWS_ONLY. three calls each before-hook and its
  * after-hook around one group's draw, with that group's material (`WebGLRenderer.js:2158-2183`,
  * `WebGLShadowMap.js:546-564`), so one mesh can mix surfaces the way Godot does.
  */
@@ -14,6 +15,9 @@ import {
 } from '../resources/materials/standardmaterial3d/materialBag';
 import { billboardWorldMatrix } from './surfaceBillboard';
 import { alignAlphaHash } from './materials/godotAlphaHash';
+import { opaquePrepassOf } from './materials/opaquePrepass';
+import { surfaceDepthMaterial, syncSurfaceDepth } from './materials/surfaceDepthMaterial';
+import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/opaquePrepass';
 
 /** The four `Object3D` hooks, one prop each: the material factory guard rejects a spread. */
 export interface SurfaceDrawHooks {
@@ -143,6 +147,52 @@ function alignHash(object: THREE.Object3D, material: THREE.Material, instance: D
   alignAlphaHash(material, nodeMatrix, object.matrixWorld);
 }
 
+/**
+ * The alpha below which a shadow draw of `material` writes nothing, or 0 for none: its scissor, and
+ * the shadow pass's opaque-prepass threshold.
+ */
+function shadowAlphaCut(material: THREE.Material): number {
+  const prepassCut = opaquePrepassOf(material).cutsDepth ? SHADOW_PASS_OPAQUE_THRESHOLD : 0;
+  return Math.max(material.alphaTest, prepassCut);
+}
+
+/**
+ * Draws a surface whose shadow cuts its alpha with its own depth material, and makes three's draw
+ * draw nothing. three's would cut the texture alpha alone, and at the scissor only.
+ */
+function castCutShadow(
+  renderer: THREE.WebGLRenderer,
+  object: THREE.Object3D,
+  shadowCamera: THREE.Camera,
+  geometry: THREE.BufferGeometry,
+  depthMaterial: THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial,
+  material: THREE.Material,
+  group: THREE.GeometryGroup,
+  instance: DrawnInstance
+): void {
+  const own = surfaceDepthMaterial(material, depthMaterial);
+  syncSurfaceDepth(own, material, shadowAlphaCut(material));
+  own.side = depthMaterial.side;
+  // three hands a distance material its light inside `getDepthMaterial` (`WebGLShadowMap.js:487-492`).
+  if ((depthMaterial as THREE.MeshDistanceMaterial).isMeshDistanceMaterial) {
+    lightState(renderer, own).light = lightState(renderer, depthMaterial).light;
+  }
+  alignHash(object, own, instance);
+  // The scene three's own shadow draw passes: none (`WebGLShadowMap.js:550`), typed as one.
+  renderer.renderBufferDirect(shadowCamera, null as unknown as THREE.Scene, geometry, own, object, group);
+  skip(geometry);
+}
+
+/** The renderer's state for a distance material, which three types as unknown. */
+function lightState(renderer: THREE.WebGLRenderer, material: THREE.Material): { light?: THREE.Light } {
+  return renderer.properties.get(material) as { light?: THREE.Light };
+}
+
+/** Whether a shadow draw of `material` cuts its alpha anywhere. */
+function cutsShadow(material: THREE.Material): boolean {
+  return material.alphaHash || shadowAlphaCut(material) > 0;
+}
+
 function closeDraw(): void {
   if (skipped) {
     skipped.drawRange.count = skippedCount;
@@ -188,7 +238,7 @@ export function surfaceDrawHooks(rule: CastRule, instance: DrawnInstance): Surfa
     // three sets `modelViewMatrix` once per object before its group loop
     // (`WebGLShadowMap.js:528`), so a moved pose recomputes it here. The main camera
     // stays the billboard's, as `MAIN_CAM_INV_VIEW_MATRIX` is on a shadow pass.
-    onBeforeShadow(_renderer, object, camera, shadowCamera, geometry, depthMaterial, group) {
+    onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group) {
       const material = drawnMaterial(object, group);
       if (!material) return;
       rule.shadowSide(depthMaterial, material);
@@ -209,7 +259,11 @@ export function surfaceDrawHooks(rule: CastRule, instance: DrawnInstance): Surfa
         viewedModelView.copy(drawn.modelViewMatrix);
         drawn.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, drawn.matrixWorld);
       }
-      alignHash(drawn, depthMaterial, instance);
+      if (!cutsShadow(material)) return;
+      const shadowDepth = depthMaterial as THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
+      // three passes the geometry group, or null for one material, typed as a `Group`.
+      const drawnGroup = group as unknown as THREE.GeometryGroup;
+      castCutShadow(renderer, drawn, shadowCamera, geometry, shadowDepth, material, drawnGroup, instance);
     },
     onAfterShadow: closeDraw,
   };
