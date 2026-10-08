@@ -11,6 +11,7 @@ import type { TscnNode } from '../../../parser/types';
 import { buildTestGlbGraph } from './testGraph';
 
 const override = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
+  rawProperties: {},
   type: '',
   name,
   properties: {},
@@ -63,6 +64,7 @@ describe('applyGlbNodeOverrides', () => {
 
     const applied = applyGlbNodeOverrides(root, [
       {
+        rawProperties: {},
         type: '',
         name: 'plafoniera',
         properties: {
@@ -109,6 +111,7 @@ describe('applyGlbNodeOverrides', () => {
 
     applyGlbNodeOverrides(root, [
       {
+        rawProperties: {},
         type: 'Label3D',
         name: 'CoinCount',
         instanceSubPath: 'Skeleton',

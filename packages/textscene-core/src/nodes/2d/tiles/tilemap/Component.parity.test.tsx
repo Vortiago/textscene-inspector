@@ -30,6 +30,7 @@ const internals: TscnInternalResource[] = [
 
 function makeNode(raw: Record<string, string>): TscnNode {
   return {
+    rawProperties: {},
     name: 'Map',
     type: 'TileMap',
     children: [],

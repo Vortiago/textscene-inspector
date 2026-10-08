@@ -16,19 +16,17 @@ import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { OptionButton } from './Component';
 import type { OptionButtonProperties } from './types';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 32 };
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<OptionButtonProperties> = {}): SolveNode {
-  const node: TscnNode = {
+  const node: TscnNode = controlNode('MyOptionButton', 'OptionButton', {
     name: 'MyOptionButton',
-    type: 'OptionButton',
-    children: [],
-    properties: { name: 'MyOptionButton', ...properties } as OptionButtonProperties,
-  };
+    ...properties,
+  });
   return { ...emptySolveNode(), path: 'MyOptionButton', node };
 }
 

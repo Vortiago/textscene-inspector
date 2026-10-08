@@ -255,9 +255,9 @@ order is absent or unreliable, they fall back to the fixed-order resolvers and
 `rangeRatio`, which assume editor-save order. `TscnNode` has one additive field,
 `rawPropertiesOrderReliable?: boolean`, that carries that fact.
 `core/NodeRegistry.ts`'s `parseNodeWithRegistry` sets it `true` for each node it builds
-(one `TscnParserCore` scan, real file order). `resources/mergeInstanceRoot.ts` sets it
-`false` on a merged instance root, whose raw merge is neither file's real order, so a
-merged node takes the fixed-order (editor-save) path. `native/solveTree.ts`'s
+(one `TscnParserCore` scan, real file order). `resources/layerRawOverride.ts` sets it
+`false` on a merged instance root or a folded override that writes keys, whose raw merge is
+neither file's real order, so such a node takes the fixed-order (editor-save) path. `native/solveTree.ts`'s
 `controlLayoutOrder(n)` is the one place a `SolveNode` consumer reads that fact. It is
 shared by `native/controlRectSolver.ts` (Control) and the `HSlider`/`VSlider`
 `Component.tsx`s (Range).

@@ -9,15 +9,10 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { VFlowContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function flowSolveNode(): SolveNode {
-  const node: TscnNode = {
-    name: 'VFlow',
-    type: 'VFlowContainer',
-    children: [],
-    properties: { name: 'VFlow' },
-  };
+  const node: TscnNode = controlNode('VFlow', 'VFlowContainer', { name: 'VFlow' });
   return { ...solveNode(), path: 'VFlow', node };
 }
 

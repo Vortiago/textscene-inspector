@@ -95,6 +95,7 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
 
     const resolved = resolveLiveNode('Stage/GridMap', stage.nodes, {
       externalResources: stage.externalResources,
+      internalResources: stage.internalResources,
       sceneCache,
     });
     expect(resolved).not.toBeNull();
@@ -119,6 +120,7 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
 
     const resolved = resolveLiveNode('Game/Stage/GridMap', game.nodes, {
       externalResources: game.externalResources,
+      internalResources: game.internalResources,
       sceneCache,
     });
     expect(resolved).not.toBeNull();

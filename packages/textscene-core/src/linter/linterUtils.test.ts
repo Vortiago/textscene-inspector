@@ -11,7 +11,7 @@ function node(
   children: TscnNode[] = [],
   properties: Record<string, string> = {}
 ): TscnNode {
-  return { name, type, children, properties };
+  return { rawProperties: {}, name, type, children, properties };
 }
 
 describe('firstNodeOfType', () => {

@@ -23,7 +23,7 @@ function parse() {
 }
 
 /** A node no scan built, so no table holds it. */
-const STRAY: TscnNode = { name: 'Stray', type: 'Node3D', children: [], properties: {} };
+const STRAY: TscnNode = { rawProperties: {}, name: 'Stray', type: 'Node3D', children: [], properties: {} };
 const STRAY_RESOURCE: TscnInternalResource = { id: 'Stray_1', type: 'BoxMesh', data: {} };
 
 describe('headingLocation', () => {

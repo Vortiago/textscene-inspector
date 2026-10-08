@@ -1,11 +1,12 @@
 /**
- * The `SolveNode` fields a test does not care about, so a required field is one
- * edit here and a literal that omits it fails to compile. Spread it first:
+ * The `SolveNode` and `TscnNode` fields a test does not care about, so a required
+ * field is one edit here and a literal that omits it fails to compile:
  *
- *     const n: SolveNode = { ...solveNode(), path: 'L', node: labelNode };
+ *     const n: SolveNode = { ...solveNode(), path: 'L', node: controlNode('L', 'Label') };
  */
 
 import type { TscnNode } from '../../../../parser/types';
+import type { ControlProperties } from '../../../../nodes/2d/ui/control/types';
 import type { SolveNode } from '../solveTree';
 import { allocatePaintRange, WHOLE_CANVAS_RANGE, type PaintRange } from '../../../canvasPaintOrder';
 
@@ -74,6 +75,21 @@ export function solveNode(): Pick<
     skippedAncestors: null,
     // `LAYOUT_DIRECTION_INHERITED` all the way to a left-to-right root.
     rtl: false,
+  };
+}
+
+/**
+ * A childless `TscnNode` with no raw properties. `properties` is the caller's
+ * object, not a copy, so a test can assert identity on it, and a test that wants
+ * `name` among them passes it.
+ */
+export function controlNode(name: string, type: string, properties: object = {}): TscnNode {
+  return {
+    name,
+    type,
+    children: [],
+    properties: properties as ControlProperties,
+    rawProperties: {},
   };
 }
 

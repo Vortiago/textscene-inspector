@@ -29,7 +29,7 @@ import {
   EXPAND_MODE_FIT_TO_TEXT,
   EXPAND_MODE_FIT_TO_LINE_EDIT,
 } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const W_ADVANCE = 1936 * (16 / 2048); // 15.125
 const FONT_HEIGHT = 23; // ceil(2189*16/2048) + ceil(600*16/2048)
@@ -41,12 +41,7 @@ function node(
   return {
     ...solveNode(),
     path: 'L',
-    node: {
-      name: 'L',
-      type: 'LineEdit',
-      children: [],
-      properties: { name: 'L', ...props } as LineEditProperties,
-    },
+    node: controlNode('L', 'LineEdit', { name: 'L', ...props }),
     styleBoxes,
     // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
     // fills unconditionally, not through props.
@@ -379,17 +374,14 @@ describe('lineEditCaretRect — the caret_force_displayed static-preview positio
 
 describe('lineEditTextureSlots — right_icon (own scope) + the themed "clear" icon', () => {
   it('requests right_icon under its own property key when authored', () => {
-    const requests = lineEditTextureSlots({
-      name: 'L',
-      type: 'LineEdit',
-      children: [],
-      properties: { name: 'L', rightIcon: 'ExtResource("1_icon")' },
-    });
+    const requests = lineEditTextureSlots(
+      controlNode('L', 'LineEdit', { name: 'L', rightIcon: 'ExtResource("1_icon")' })
+    );
     expect(requests).toContainEqual({ key: 'right_icon', ref: 'ExtResource("1_icon")' });
   });
 
   it('requests the "clear" theme icon only when the theme walk resolved one', () => {
-    const node = { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L' } };
+    const node = controlNode('L', 'LineEdit', { name: 'L' });
     expect(lineEditTextureSlots(node, {})).toEqual([]);
     const themed = {
       clear: { ref: 'ExtResource("1_clear")', resources: { externalResources: [], internalResources: [] } },
@@ -402,7 +394,7 @@ describe('lineEditTextureSlots — right_icon (own scope) + the themed "clear" i
   });
 
   it('requests neither when nothing is authored/themed', () => {
-    const node = { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L' } };
+    const node = controlNode('L', 'LineEdit', { name: 'L' });
     expect(lineEditTextureSlots(node)).toEqual([]);
   });
 });

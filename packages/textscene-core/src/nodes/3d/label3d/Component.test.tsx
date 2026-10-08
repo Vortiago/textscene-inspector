@@ -36,7 +36,7 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
     texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     ...overrides,
   };
-  return { name: properties.name ?? 'Label', type: 'Label3D', children: [], properties };
+  return { rawProperties: {}, name: properties.name ?? 'Label', type: 'Label3D', children: [], properties };
 }
 
 // `showLabels` gates Label3D text and defaults on (the ADR-0008 Label3D parity

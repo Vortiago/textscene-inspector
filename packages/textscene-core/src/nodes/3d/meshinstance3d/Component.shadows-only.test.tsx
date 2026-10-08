@@ -28,7 +28,7 @@ function node(overrides: Partial<MeshInstance3DProperties> = {}): TscnNode {
     surfaceMaterialOverrides: new Map(),
     ...overrides,
   };
-  return { name: 'Caster', type: 'MeshInstance3D', children: [], properties };
+  return { rawProperties: {}, name: 'Caster', type: 'MeshInstance3D', children: [], properties };
 }
 
 async function render(properties: Partial<MeshInstance3DProperties>) {

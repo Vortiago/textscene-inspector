@@ -6,6 +6,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { node2dWorldPosition } from './node2dWorldTransform';
+// The Instance root merge parses an unregistered root type, here Node2D, with the Node parser.
+import '../nodes/node/index';
 import type { LiveTreeContext, CachedSceneSource } from './liveSceneTree';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../parser/types';
 
@@ -22,6 +24,7 @@ const at = (x: number, y: number) => ({ position: `Vector2(${x}, ${y})` });
 
 const emptyCtx: LiveTreeContext = {
   externalResources: [],
+  internalResources: [],
   sceneCache: { getCached: () => undefined },
 };
 
@@ -81,6 +84,7 @@ describe('node2dWorldPosition', () => {
     const roots = [tnode('World', {}, [player])];
     const ctx: LiveTreeContext = {
       externalResources: [ext('p', 'res://player.tscn')],
+      internalResources: [],
       sceneCache: cacheOf({ 'res://player.tscn': playerScene }),
     };
 

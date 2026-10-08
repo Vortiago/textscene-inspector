@@ -13,13 +13,13 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { flowContainerMinimumSize, flowContainerLayout } from './nativeSolver';
 import { solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
+    node: controlNode(name, 'Control', { name, ...props }),
   };
 }
 
@@ -35,12 +35,7 @@ function flow(
   return {
     ...solveNode(),
     path: 'F',
-    node: {
-      name: 'F',
-      type,
-      children: [],
-      properties: { name: 'F', ...rest, themeOverrideConstants } as FlowContainerProperties,
-    },
+    node: controlNode('F', type, { name: 'F', ...rest, themeOverrideConstants }),
     children,
     // A local theme_override_constants/* reaches `separationOf` through `n.constants`, not props.
     constants: themeOverrideConstants,

@@ -16,6 +16,7 @@ import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
 
 function wheelNode(props: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'Wheel1',
     type: 'VehicleWheel3D',
     children: [],

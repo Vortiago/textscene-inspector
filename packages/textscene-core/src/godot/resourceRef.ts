@@ -125,14 +125,17 @@ export function extResourceIdsIn(text: string): string[] {
 
 /**
  * `text` with the id of every reference the loader resolves replaced by `newId`'s answer, each
- * written in the tight form. Text inside a string stays as written, as {@link loadedRefSpans} reads it.
+ * renamed one written in the tight form. A reference `newId` keeps, and text inside a string,
+ * stay as written, as {@link loadedRefSpans} reads them.
  */
 export function renameResourceRefs(text: string, newId: (ref: ResourceRef) => string): string {
   if (!text.includes(RESOURCE_TOKEN)) return text;
   let renamed = '';
   let copiedTo = 0;
   for (const span of loadedRefSpans(text)) {
-    renamed += `${text.slice(copiedTo, span.start)}${span.kind}("${newId(span)}")`;
+    const id = newId(span);
+    if (id === span.id) continue;
+    renamed += `${text.slice(copiedTo, span.start)}${span.kind}("${id}")`;
     copiedTo = span.end;
   }
   return renamed + text.slice(copiedTo);

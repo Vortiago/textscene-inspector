@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
@@ -161,7 +161,7 @@ describe('graphEditElements', () => {
     return {
       ...emptySolveNode(),
       path: name,
-      node: { name, type, children: [], properties: { name, ...props } as never },
+      node: controlNode(name, type, { name, ...props }),
     };
   }
 
@@ -169,12 +169,7 @@ describe('graphEditElements', () => {
     return {
       ...emptySolveNode(),
       path: 'G',
-      node: {
-        name: 'G',
-        type: 'GraphEdit',
-        children: [],
-        properties: { name: 'G', connections: [] } as never,
-      },
+      node: controlNode('G', 'GraphEdit', { name: 'G', connections: [] }),
       children,
     };
   }

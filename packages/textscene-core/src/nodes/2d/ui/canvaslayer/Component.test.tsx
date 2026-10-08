@@ -26,6 +26,7 @@ const ZERO_RECT = { x: 0, y: 0, w: 0, h: 0 };
 
 function canvasModulateChild(color: { r: number; g: number; b: number; a: number }): TscnNode {
   return {
+    rawProperties: {},
     name: 'CanvasModulate',
     type: 'CanvasModulate',
     children: [],
@@ -36,7 +37,13 @@ function canvasModulateChild(color: { r: number; g: number; b: number; a: number
 function layerSolveNode(raw: Record<string, string> = {}, rawChildren: TscnNode[] = []): SolveNode {
   const heading = { type: 'node', attributes: { type: 'CanvasLayer', name: 'HUD' } };
   const properties = parseCanvasLayer(heading, raw);
-  const node: TscnNode = { name: 'HUD', type: 'CanvasLayer', children: rawChildren, properties };
+  const node: TscnNode = {
+    rawProperties: {},
+    name: 'HUD',
+    type: 'CanvasLayer',
+    children: rawChildren,
+    properties,
+  };
   return { ...solveNode(), path: 'HUD', node };
 }
 

@@ -37,6 +37,7 @@ const TEX = 'res://light.png';
 
 function node(raw: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'Light',
     type: 'PointLight2D',
     children: [],

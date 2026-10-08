@@ -48,6 +48,7 @@ function glbGraph() {
   return createSceneGraphFromTscnScene({
     nodes: [
       {
+        rawProperties: {},
         name: 'player',
         type: 'GLBSceneRoot',
         children: [],

@@ -17,7 +17,7 @@ function makeNode(meshSubResId: string): TscnNode {
     surfaceMaterialOverrides: new Map(),
     mesh: `SubResource("${meshSubResId}")`,
   };
-  return { name: 'M', type: 'MeshInstance3D', children: [], properties: props };
+  return { rawProperties: {}, name: 'M', type: 'MeshInstance3D', children: [], properties: props };
 }
 
 async function renderGeometry(meshSubResource: TscnInternalResource): Promise<THREE.BufferGeometry> {

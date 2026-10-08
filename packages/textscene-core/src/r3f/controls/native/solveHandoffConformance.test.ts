@@ -123,7 +123,7 @@ function tscn(
   properties: Record<string, unknown>,
   children: TscnNode[] = []
 ): TscnNode {
-  return { name, type, properties, children };
+  return { rawProperties: {}, name, type, properties, children };
 }
 
 /**

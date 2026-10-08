@@ -13,9 +13,11 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import type { TscnNode, TscnScene } from '../../../parser/types';
+// The Instance root merge parses a sub-scene root with the Node parser when its type has none.
+import '../../../nodes/node/index';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
-  return { name, type, children: [], properties: {}, ...extras };
+  return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
 }
 
 /** `res://a.tscn`: a root with two children that each instance `res://a.tscn`. */

@@ -46,6 +46,7 @@ function makeSynthesisedGlbScene(): TscnScene {
   return {
     nodes: [
       {
+        rawProperties: {},
         name: 'town',
         type: GLB_SCENE_ROOT_TYPE,
         children: [],
@@ -60,6 +61,7 @@ function makeSynthesisedGlbScene(): TscnScene {
 /** The instancing node, with one override child carrying only a material, or none without a ref. */
 function makeTownNode(materialRef: string | undefined): TscnNode {
   return {
+    rawProperties: {},
     name: 'town',
     type: 'Node3D',
     instance: 'ExtResource("glb_1")',

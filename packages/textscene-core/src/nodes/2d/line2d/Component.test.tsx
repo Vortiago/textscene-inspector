@@ -14,7 +14,13 @@ import type { TscnNode } from '../../../parser/types';
 
 function node(rawProps: Record<string, string>, name = 'Line'): TscnNode {
   const heading: ParsedHeading = { type: 'node', attributes: { name, type: 'Line2D' } };
-  return { name, type: 'Line2D', children: [], properties: parseLine2D(heading, rawProps) };
+  return {
+    rawProperties: {},
+    name,
+    type: 'Line2D',
+    children: [],
+    properties: parseLine2D(heading, rawProps),
+  };
 }
 
 const render = (n: TscnNode) => ReactThreeTestRenderer.create(<Line2D node={n} />);

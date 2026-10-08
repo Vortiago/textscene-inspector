@@ -26,7 +26,7 @@ function makeNode(overrides: Record<string, string> = {}, children: TscnNode[] =
     { type: 'node', attributes: { type: 'CSGMesh3D', name: 'Mesh' } },
     overrides
   );
-  return { name: 'Mesh', type: 'CSGMesh3D', children, properties };
+  return { rawProperties: {}, name: 'Mesh', type: 'CSGMesh3D', children, properties };
 }
 
 async function render(node: TscnNode, internalResources: TscnInternalResource[] = []) {

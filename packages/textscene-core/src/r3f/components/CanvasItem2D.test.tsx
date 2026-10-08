@@ -23,6 +23,7 @@ function srgbToLinear(c: number): number {
 
 function makeNode(raw: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'CI',
     type: 'Node2D',
     children: [],

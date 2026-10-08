@@ -19,6 +19,7 @@ const EXTERNALS = [{ id: '1_tex', path: 'res://sprite.png', type: 'Texture2D' }]
 
 function node(raw: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'Sprite',
     type: 'Sprite3D',
     children: [],

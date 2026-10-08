@@ -4,6 +4,7 @@ import { GenericNodeFallback } from './Component';
 import type { TscnNode } from '../../../parser/types';
 
 const baseNode: TscnNode = {
+  rawProperties: {},
   name: 'MysteryNode',
   type: 'SomeUnrecognisedType',
   children: [],
@@ -43,13 +44,25 @@ describe('<GenericNodeFallback>', () => {
   });
 
   it('renders no box for a 2D-typed node (keeps 2D scenes flat)', async () => {
-    const node2d: TscnNode = { name: 'Trail', type: 'GPUParticles2D', children: [], properties: {} };
+    const node2d: TscnNode = {
+      rawProperties: {},
+      name: 'Trail',
+      type: 'GPUParticles2D',
+      children: [],
+      properties: {},
+    };
     const renderer = await ReactThreeTestRenderer.create(<GenericNodeFallback node={node2d} />);
     expect(renderer.scene.findAllByType('Mesh').length).toBe(0);
   });
 
   it('still passes children through for a 2D-typed node', async () => {
-    const node2d: TscnNode = { name: 'Particles', type: 'CPUParticles2D', children: [], properties: {} };
+    const node2d: TscnNode = {
+      rawProperties: {},
+      name: 'Particles',
+      type: 'CPUParticles2D',
+      children: [],
+      properties: {},
+    };
     const renderer = await ReactThreeTestRenderer.create(
       <GenericNodeFallback node={node2d}>
         <mesh name="child2d">
@@ -63,6 +76,7 @@ describe('<GenericNodeFallback>', () => {
 
   it('applies Node3D-style transform when present on properties', async () => {
     const node: TscnNode = {
+      rawProperties: {},
       name: 'PositionedMystery',
       type: 'Foo',
       children: [],

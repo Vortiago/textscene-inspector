@@ -36,6 +36,7 @@ const translated: Transform3D = {
 
 function subjectNode(type: string, children: TscnNode[] = []): TscnNode {
   return {
+    rawProperties: {},
     name: 'Subject',
     type,
     children,
@@ -51,6 +52,7 @@ function hiddenSubjectNode(type: string): TscnNode {
 /** A fresh child per test, so no test shares a node object with another. */
 function kidNode(): TscnNode {
   return {
+    rawProperties: {},
     name: 'Kid',
     type: 'Node3D',
     children: [],

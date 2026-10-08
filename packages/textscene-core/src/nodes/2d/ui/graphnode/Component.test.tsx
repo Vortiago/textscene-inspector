@@ -10,7 +10,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { GraphNode } from './Component';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
@@ -20,12 +20,7 @@ const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function graphNode(properties: Partial<GraphNodeProperties> = {}, children: SolveNode[] = []): SolveNode {
-  const node: TscnNode = {
-    name: 'N',
-    type: 'GraphNode',
-    children: [],
-    properties: { name: 'N', slots: new Map(), ...properties } as GraphNodeProperties,
-  };
+  const node: TscnNode = controlNode('N', 'GraphNode', { name: 'N', slots: new Map(), ...properties });
   return { ...emptySolveNode(), path: 'N', node, children };
 }
 
@@ -90,7 +85,7 @@ describe('<GraphNode> (isolated painter contract)', () => {
     const child: SolveNode = {
       ...emptySolveNode(),
       path: 'N/c',
-      node: { name: 'c', type: 'Control', children: [], properties: { name: 'c' } },
+      node: controlNode('c', 'Control', { name: 'c' }),
     };
     const slots = new Map([[0, { ...defaultGraphNodeSlot(), leftEnabled: true, rightEnabled: true }]]);
     const env = painterEnv();
@@ -110,7 +105,7 @@ describe('<GraphNode> (isolated painter contract)', () => {
     const child: SolveNode = {
       ...emptySolveNode(),
       path: 'N/c',
-      node: { name: 'c', type: 'Control', children: [], properties: { name: 'c' } },
+      node: controlNode('c', 'Control', { name: 'c' }),
     };
     const slots = new Map([[0, defaultGraphNodeSlot()]]);
     const renderer = await ReactThreeTestRenderer.create(
@@ -129,7 +124,7 @@ describe('<GraphNode> (isolated painter contract)', () => {
     const child: SolveNode = {
       ...emptySolveNode(),
       path: 'N/c',
-      node: { name: 'c', type: 'Control', children: [], properties: { name: 'c' } },
+      node: controlNode('c', 'Control', { name: 'c' }),
     };
     const slots = new Map([[0, { ...defaultGraphNodeSlot(), drawStylebox: true }]]);
     const renderer = await ReactThreeTestRenderer.create(

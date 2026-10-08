@@ -20,7 +20,7 @@ import {
   type SolvedControl,
 } from '../../../../r3f/controls/native/controlRectSolver';
 import { useBuildSolveTree } from '../../../../r3f/controls/native/buildSolveTree';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SubViewportContainerProperties } from './types';
 import { subViewportContainerMinimumSize } from './nativeSolver';
 
@@ -34,12 +34,7 @@ import '../../../../r3f/controls/index';
  * an unreachable branch.
  */
 function subViewport(name: string, size: { x: number; y: number } = { x: 512, y: 512 }): TscnNode {
-  return {
-    name,
-    type: 'SubViewport',
-    children: [],
-    properties: { name, size },
-  };
+  return { rawProperties: {}, name, type: 'SubViewport', children: [], properties: { name, size } };
 }
 
 // The sub-viewports go on the raw `node.children`, the only place they exist: `buildSolveTree`
@@ -47,6 +42,7 @@ function subViewport(name: string, size: { x: number; y: number } = { x: 512, y:
 // implementation that reads the wrong list pass.
 function container(properties: Partial<SubViewportContainerProperties>, children: TscnNode[]): SolveNode {
   const node: TscnNode = {
+    rawProperties: {},
     name: 'Booth',
     type: 'SubViewportContainer',
     children,
@@ -97,12 +93,7 @@ describe('subViewportContainerMinimumSize (scene/gui/subviewport_container.cpp::
   });
 
   it('skips children that are not SubViewports (`Object::cast_to<SubViewport>` returning null)', () => {
-    const decoy: TscnNode = {
-      name: 'Decoy',
-      type: 'ColorRect',
-      children: [],
-      properties: { name: 'Decoy', size: { x: 900, y: 900 } },
-    };
+    const decoy: TscnNode = controlNode('Decoy', 'ColorRect', { name: 'Decoy', size: { x: 900, y: 900 } });
     const size = subViewportContainerMinimumSize(
       container({}, [decoy, subViewport('SubViewport', { x: 300, y: 180 })]),
       ctx()

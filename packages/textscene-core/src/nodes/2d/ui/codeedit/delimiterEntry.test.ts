@@ -53,7 +53,7 @@ describe('the validator, the collision rule and the delimiter list agree on each
   function ruleSeesCollision(entry: string): boolean {
     const literal = `Array[String](["${entry}"])`;
     const properties = { delimiter_strings: literal, delimiter_comments: literal };
-    const node = { name: 'Edit', type: 'CodeEdit', children: [], properties } as TscnNode;
+    const node = { rawProperties: {}, name: 'Edit', type: 'CodeEdit', children: [], properties } as TscnNode;
     const scene: TscnScene = { nodes: [node], externalResources: [], internalResources: [] };
     return codeEditDelimiterCollisionRule.check({ scene, node, properties }).length > 0;
   }

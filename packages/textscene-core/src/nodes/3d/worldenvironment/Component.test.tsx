@@ -12,7 +12,13 @@ function makeNode(envRef?: string): TscnNode {
     name: 'WE',
     environment: envRef ?? '',
   };
-  return { name: properties.name ?? 'WE', type: 'WorldEnvironment', children: [], properties };
+  return {
+    rawProperties: {},
+    name: properties.name ?? 'WE',
+    type: 'WorldEnvironment',
+    children: [],
+    properties,
+  };
 }
 
 function environmentResource(id: string, data: Record<string, string>): TscnInternalResource {

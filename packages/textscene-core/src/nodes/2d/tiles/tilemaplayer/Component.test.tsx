@@ -8,6 +8,7 @@ const heading = { type: 'node', attributes: { type: 'TileMapLayer', name: 'MyTil
 
 function makeNode(raw: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'MyTileMapLayer',
     type: 'TileMapLayer',
     children: [],

@@ -12,7 +12,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { SpinBox } from './Component';
 import type { SpinBoxProperties } from './types';
 
@@ -42,12 +42,7 @@ function solveNode(
   properties: Partial<SpinBoxProperties> = {},
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
-  const node: TscnNode = {
-    name: 'MySpinBox',
-    type: 'SpinBox',
-    children: [],
-    properties: { name: 'MySpinBox', ...properties } as SpinBoxProperties,
-  };
+  const node: TscnNode = controlNode('MySpinBox', 'SpinBox', { name: 'MySpinBox', ...properties });
   return { ...emptySolveNode(), path: 'MySpinBox', node, styleBoxes };
 }
 

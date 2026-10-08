@@ -10,7 +10,7 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { styleBoxTextureBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { GraphFrame } from './Component';
 import type { GraphFrameProperties } from './types';
 
@@ -19,12 +19,7 @@ const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function graphFrame(properties: Partial<GraphFrameProperties> = {}): SolveNode {
-  const node: TscnNode = {
-    name: 'F',
-    type: 'GraphFrame',
-    children: [],
-    properties: { name: 'F', ...properties } as GraphFrameProperties,
-  };
+  const node: TscnNode = controlNode('F', 'GraphFrame', { name: 'F', ...properties });
   return { ...emptySolveNode(), path: 'F', node };
 }
 

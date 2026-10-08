@@ -10,18 +10,13 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { HScrollBar } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function solveNode(properties: Record<string, unknown>): SolveNode {
   return {
     ...emptySolveNode(),
     path: 'S',
-    node: {
-      name: 'S',
-      type: 'HScrollBar',
-      children: [],
-      properties: { name: 'S', ...properties },
-    } as TscnNode,
+    node: controlNode('S', 'HScrollBar', { name: 'S', ...properties }) as TscnNode,
   };
 }
 

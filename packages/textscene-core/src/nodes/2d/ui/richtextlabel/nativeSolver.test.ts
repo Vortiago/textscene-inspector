@@ -4,7 +4,6 @@
  * `descent=600`, bake 42) worked by hand, never from the implementation.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import type { ControlProperties } from '../control/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -47,18 +46,13 @@ import {
 } from './nativeSolver';
 import { getFontGlyphAdvancePx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { IMAGE_OBJECT_CHAR } from './bbcode';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function node(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
   return {
     ...solveNode(),
     path: 'RTL',
-    node: {
-      name: 'RTL',
-      type: 'RichTextLabel',
-      children: [],
-      properties: { name: 'RTL', ...props } as ControlProperties,
-    },
+    node: controlNode('RTL', 'RichTextLabel', { name: 'RTL', ...props }),
     ...overrides,
   };
 }

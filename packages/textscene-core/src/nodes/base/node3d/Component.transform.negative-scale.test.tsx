@@ -12,12 +12,7 @@ import type { TscnNode } from '../../../parser/types';
 import type { Node3DProperties, Transform3D } from './types';
 
 function makeNode(properties: Node3DProperties): TscnNode {
-  return {
-    name: properties.name ?? 'TestNode',
-    type: 'Node3D',
-    children: [],
-    properties,
-  };
+  return { rawProperties: {}, name: properties.name ?? 'TestNode', type: 'Node3D', children: [], properties };
 }
 
 async function renderAt(properties: Node3DProperties) {

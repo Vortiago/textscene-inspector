@@ -26,7 +26,7 @@ import {
   richTextLabelMinimumSize,
 } from './nativeSolver';
 import { RichTextLabel } from './Component';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -37,12 +37,7 @@ function solveNode(
   overrides: Partial<SolveNode> = {}
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = {
-    name,
-    type: 'RichTextLabel',
-    children: [],
-    properties: { name, ...properties },
-  };
+  const tscnNode: TscnNode = controlNode(name, 'RichTextLabel', { name, ...properties });
   return { ...emptySolveNode(), path, node: tscnNode, ...overrides };
 }
 

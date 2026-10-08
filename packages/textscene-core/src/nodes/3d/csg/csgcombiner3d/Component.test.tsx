@@ -13,7 +13,7 @@ function makeNode(overrides: Record<string, string> = {}, children: TscnNode[] =
     { type: 'node', attributes: { type: 'CSGCombiner3D', name: 'Combiner' } },
     overrides
   );
-  return { name: 'Combiner', type: 'CSGCombiner3D', children, properties };
+  return { rawProperties: {}, name: 'Combiner', type: 'CSGCombiner3D', children, properties };
 }
 
 describe('<CSGCombiner3D>', () => {

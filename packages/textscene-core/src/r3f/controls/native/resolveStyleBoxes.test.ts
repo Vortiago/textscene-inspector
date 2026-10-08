@@ -6,14 +6,10 @@
 import { describe, expect, it } from 'vitest';
 import { resolveStyleBoxes } from './buildSolveTree';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types';
+import { controlNode } from './testing/solveNode';
 
 function node(overrides: Record<string, string>): TscnNode {
-  return {
-    name: 'N',
-    type: 'Panel',
-    children: [],
-    properties: { themeOverrideStyles: overrides } as unknown as TscnNode['properties'],
-  };
+  return controlNode('N', 'Panel', { themeOverrideStyles: overrides });
 }
 
 const internalResources: TscnInternalResource[] = [
@@ -36,7 +32,7 @@ const externalResources: TscnExternalResource[] = [
 
 describe('resolveStyleBoxes', () => {
   it('returns an empty map when the node declares no theme_override_styles', () => {
-    const n: TscnNode = { name: 'N', type: 'Panel', children: [], properties: {} };
+    const n: TscnNode = controlNode('N', 'Panel');
     expect(resolveStyleBoxes(n, { externalResources: [], internalResources })).toEqual({});
   });
 

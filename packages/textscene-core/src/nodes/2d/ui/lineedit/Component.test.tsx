@@ -25,7 +25,7 @@ import { lineEditMinimumSize } from './nativeSolver';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -37,12 +37,7 @@ function solveNode(
   properties: Partial<LineEditProperties> = {},
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
-  const node: TscnNode = {
-    name: 'MyLineEdit',
-    type: 'LineEdit',
-    children: [],
-    properties: { name: 'MyLineEdit', ...properties } as LineEditProperties,
-  };
+  const node: TscnNode = controlNode('MyLineEdit', 'LineEdit', { name: 'MyLineEdit', ...properties });
   return { ...emptySolveNode(), path: 'MyLineEdit', node, styleBoxes };
 }
 
@@ -475,12 +470,11 @@ describe('<LineEdit> — right_icon', () => {
   async function renderWithIcon(raw: Partial<LineEditProperties>, rect: Rect2, iconSize = { x: 32, y: 16 }) {
     const fake = createFakeResourceLoader();
     fake.textures.seed(TEX, fakeIconTexture(iconSize.x, iconSize.y));
-    const node: TscnNode = {
+    const node: TscnNode = controlNode('MyLineEdit', 'LineEdit', {
       name: 'MyLineEdit',
-      type: 'LineEdit',
-      children: [],
-      properties: { name: 'MyLineEdit', rightIcon: 'ExtResource("1")', ...raw } as LineEditProperties,
-    };
+      rightIcon: 'ExtResource("1")',
+      ...raw,
+    });
     const n: SolveNode = {
       ...emptySolveNode(),
       path: 'MyLineEdit',

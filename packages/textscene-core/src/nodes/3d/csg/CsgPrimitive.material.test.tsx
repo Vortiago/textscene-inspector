@@ -40,7 +40,7 @@ function makeNode(material: string | undefined): TscnNode {
     { type: 'node', attributes: { type: 'CSGBox3D', name: 'Box' } },
     material ? { material } : {}
   );
-  return { name: 'Box', type: 'CSGBox3D', children: [], properties };
+  return { rawProperties: {}, name: 'Box', type: 'CSGBox3D', children: [], properties };
 }
 
 /** A `.tres` StandardMaterial3D whose albedo is pure blue. */

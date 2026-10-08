@@ -3,7 +3,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
   hsvToRgb,
   invertRgb,
@@ -33,7 +33,7 @@ const THEME = nativeTheme(1);
 const CTX: SolveContext = { theme: THEME, measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
 
 function node(properties: Record<string, unknown>): SolveNode {
-  const tscnNode: TscnNode = { name: 'P', type: 'ColorPicker', children: [], properties };
+  const tscnNode: TscnNode = controlNode('P', 'ColorPicker', properties);
   return { ...emptySolveNode(), path: 'P', node: tscnNode };
 }
 

@@ -22,6 +22,7 @@ function makeNode(
   raw: Record<string, string> = {}
 ): TscnNode & { properties: Node2DProperties } {
   return {
+    rawProperties: {},
     name,
     type: 'Node2D',
     children: [],

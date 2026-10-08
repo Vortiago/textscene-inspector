@@ -13,7 +13,7 @@ import { controlSolverRegistry, type ContainerLayoutFn } from './solverRegistry'
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../../canvasPaintOrder';
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
-import { withPaintRanges } from './testing/solveNode';
+import { controlNode, withPaintRanges } from './testing/solveNode';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
 import {
   CanvasLayerIndexProvider,
@@ -57,7 +57,7 @@ function solveNode(
   children: SolveNode[] = []
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
+  const tscnNode: TscnNode = controlNode(name, type, { name, ...properties });
   return { ...emptySolveNode(), path, node: tscnNode, children };
 }
 

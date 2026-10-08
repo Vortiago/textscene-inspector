@@ -112,12 +112,7 @@ function makeTreeNode(overrides: Partial<AnimationTreeProperties> = {}): TscnNod
     root_motion_local: false,
     ...overrides,
   };
-  return {
-    name: 'Tree',
-    type: 'AnimationTree',
-    children: [],
-    properties: props,
-  };
+  return { rawProperties: {}, name: 'Tree', type: 'AnimationTree', children: [], properties: props };
 }
 
 let transport: AnimationTransport;

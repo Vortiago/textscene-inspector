@@ -9,7 +9,7 @@ import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import type { TscnNode } from '../../../parser/types';
 
 function makeNode(name: string, type: string, children: TscnNode[] = []): TscnNode {
-  return { name, type, children, properties: {} };
+  return { rawProperties: {}, name, type, children, properties: {} };
 }
 
 function withPanel(graph = createSceneGraphFromTscnScene({ nodes: [] })) {

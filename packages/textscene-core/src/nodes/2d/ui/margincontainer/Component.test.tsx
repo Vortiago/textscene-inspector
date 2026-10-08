@@ -8,10 +8,10 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { MarginContainer } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function solveNode(): SolveNode {
-  const node: TscnNode = { name: 'M', type: 'MarginContainer', children: [], properties: { name: 'M' } };
+  const node: TscnNode = controlNode('M', 'MarginContainer', { name: 'M' });
   return { ...emptySolveNode(), path: 'M', node };
 }
 

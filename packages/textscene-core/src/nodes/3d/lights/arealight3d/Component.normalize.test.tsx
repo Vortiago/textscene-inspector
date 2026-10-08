@@ -14,7 +14,13 @@ import type { TscnNode } from '../../../../parser/types';
 const heading = { type: 'node', attributes: { name: 'Area', type: 'AreaLight3D' } };
 
 function node(raw: Record<string, string> = {}): TscnNode {
-  return { name: 'Area', type: 'AreaLight3D', children: [], properties: parseAreaLight3D(heading, raw) };
+  return {
+    rawProperties: {},
+    name: 'Area',
+    type: 'AreaLight3D',
+    children: [],
+    properties: parseAreaLight3D(heading, raw),
+  };
 }
 
 async function intensityOf(raw: Record<string, string>) {

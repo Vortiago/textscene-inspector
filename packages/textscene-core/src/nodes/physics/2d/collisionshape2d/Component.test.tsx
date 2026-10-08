@@ -26,7 +26,7 @@ const heading = { type: 'node' as const, attributes: { type: 'CollisionShape2D',
 
 function makeNode(shapeRef: string | undefined): TscnNode {
   const properties = parseCollisionShape2D(heading, shapeRef ? { shape: shapeRef } : {});
-  return { name: 'Col', type: 'CollisionShape2D', children: [], properties };
+  return { rawProperties: {}, name: 'Col', type: 'CollisionShape2D', children: [], properties };
 }
 
 async function render(

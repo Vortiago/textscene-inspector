@@ -18,7 +18,7 @@ import {
   scrollContainerScrollBars,
   scrollContainerLayoutChannel,
 } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /**
  * The child-rects half of `scrollContainerLayout`. `'rects' in result`, not
@@ -43,7 +43,7 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...solveNode(),
     path: name,
-    node: { name, type: 'Control', children: [], properties: { name, ...props } as ControlProperties },
+    node: controlNode(name, 'Control', { name, ...props }),
   };
 }
 
@@ -51,12 +51,7 @@ function scrollContainer(props: Partial<ScrollContainerProperties>, children: So
   return {
     ...solveNode(),
     path: 'Scroll',
-    node: {
-      name: 'Scroll',
-      type: 'ScrollContainer',
-      children: [],
-      properties: { name: 'Scroll', ...props } as ScrollContainerProperties,
-    },
+    node: controlNode('Scroll', 'ScrollContainer', { name: 'Scroll', ...props }),
     children,
   };
 }
@@ -312,47 +307,35 @@ describe('wired through the registry + full solve, against the real fixture numb
       const content: SolveNode = {
         ...solveNode(),
         path: 'Root/ScrollContainer/Content',
-        node: {
+        node: controlNode('Content', 'VBoxContainer', {
           name: 'Content',
-          type: 'VBoxContainer',
-          children: [],
-          properties: { name: 'Content', customMinimumSize: { x: 399, y: 800 } } as ControlProperties,
-        },
+          customMinimumSize: { x: 399, y: 800 },
+        }),
       };
       const scroll: SolveNode = {
         ...solveNode(),
         path: 'Root/ScrollContainer',
-        node: {
+        node: controlNode('ScrollContainer', TYPE, {
           name: 'ScrollContainer',
-          type: TYPE,
-          children: [],
-          properties: {
-            name: 'ScrollContainer',
-            anchorsPreset: 15,
-            anchorRight: 1,
-            anchorBottom: 1,
-            offsetLeft: 16,
-            offsetTop: 16,
-            offsetRight: -16,
-            offsetBottom: -16,
-          } as ScrollContainerProperties,
-        },
+          anchorsPreset: 15,
+          anchorRight: 1,
+          anchorBottom: 1,
+          offsetLeft: 16,
+          offsetTop: 16,
+          offsetRight: -16,
+          offsetBottom: -16,
+        }),
         children: [content],
       };
       const root: SolveNode = {
         ...solveNode(),
         path: 'Root',
-        node: {
+        node: controlNode('Root', 'Control', {
           name: 'Root',
-          type: 'Control',
-          children: [],
-          properties: {
-            name: 'Root',
-            anchorsPreset: 15,
-            anchorRight: 1,
-            anchorBottom: 1,
-          } as ControlProperties,
-        },
+          anchorsPreset: 15,
+          anchorRight: 1,
+          anchorBottom: 1,
+        }),
         children: [scroll],
       };
 

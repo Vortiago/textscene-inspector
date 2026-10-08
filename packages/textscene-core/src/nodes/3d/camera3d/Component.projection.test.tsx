@@ -28,7 +28,7 @@ function makeNode(overrides: Partial<Camera3DProperties> = {}): TscnNode {
     doppler_tracking: 0,
     ...overrides,
   };
-  return { name: base.name ?? 'Cam', type: 'Camera3D', children: [], properties: base };
+  return { rawProperties: {}, name: base.name ?? 'Cam', type: 'Camera3D', children: [], properties: base };
 }
 
 describe('Camera3D projection (assertions 60–66)', () => {

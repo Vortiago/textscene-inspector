@@ -12,7 +12,7 @@ import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { CheckButton } from './Component';
 import type { CheckButtonProperties } from './types';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
@@ -20,12 +20,10 @@ const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<CheckButtonProperties> = {}): SolveNode {
-  const node: TscnNode = {
+  const node: TscnNode = controlNode('MyCheckButton', 'CheckButton', {
     name: 'MyCheckButton',
-    type: 'CheckButton',
-    children: [],
-    properties: { name: 'MyCheckButton', ...properties } as CheckButtonProperties,
-  };
+    ...properties,
+  });
   return { ...emptySolveNode(), path: 'MyCheckButton', node };
 }
 

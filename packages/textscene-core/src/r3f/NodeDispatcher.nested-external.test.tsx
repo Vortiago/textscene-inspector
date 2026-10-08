@@ -8,23 +8,18 @@
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import type { TscnNode, TscnScene } from '../parser/types';
+import type { TscnScene } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
 import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
+import { makeNode, translated } from '../parser/testing/parserKit';
 
 import './nodes/index';
-
-function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {}): TscnNode {
-  return {
-    name,
-    type,
-    children: [],
-    properties: { name } as Record<string, unknown>,
-    ...overrides,
-  };
-}
+// The parsers `makeNode` and the Instance root merge build node properties with.
+import '../nodes/node/index';
+import '../nodes/base/node3d/index';
+import '../nodes/3d/meshinstance3d/index';
 
 // Level 3 (leaf): an orange sphere with no dependencies.
 function makeLeafScene(): TscnScene {
@@ -33,11 +28,7 @@ function makeLeafScene(): TscnScene {
       makeNode('NestedLeaf', 'Node3D', {
         children: [
           makeNode('LeafSphere', 'MeshInstance3D', {
-            properties: {
-              name: 'LeafSphere',
-              mesh: 'SubResource("SphereMesh_1")',
-              surfaceMaterialOverrides: new Map(),
-            } as Record<string, unknown>,
+            rawProperties: { mesh: 'SubResource("SphereMesh_1")' },
           }),
         ],
       }),
@@ -57,29 +48,11 @@ function makeMiddleScene(): TscnScene {
       makeNode('NestedMiddle', 'Node3D', {
         children: [
           makeNode('MiddleBox', 'MeshInstance3D', {
-            properties: {
-              name: 'MiddleBox',
-              transform: {
-                basis_x: { x: 1, y: 0, z: 0 },
-                basis_y: { x: 0, y: 1, z: 0 },
-                basis_z: { x: 0, y: 0, z: 1 },
-                origin: { x: -2, y: 0, z: 0 },
-              },
-              mesh: 'SubResource("BoxMesh_1")',
-              surfaceMaterialOverrides: new Map(),
-            } as Record<string, unknown>,
+            rawProperties: { transform: translated(-2, 0, 0), mesh: 'SubResource("BoxMesh_1")' },
           }),
           makeNode('LeafInstance', 'Node3D', {
             instance: 'ExtResource("1_leaf")',
-            properties: {
-              name: 'LeafInstance',
-              transform: {
-                basis_x: { x: 1, y: 0, z: 0 },
-                basis_y: { x: 0, y: 1, z: 0 },
-                basis_z: { x: 0, y: 0, z: 1 },
-                origin: { x: 2, y: 0, z: 0 },
-              },
-            } as Record<string, unknown>,
+            rawProperties: { transform: translated(2, 0, 0) },
           }),
         ],
       }),
@@ -96,29 +69,11 @@ function makeTopScene(): TscnScene {
       makeNode('NestedTop', 'Node3D', {
         children: [
           makeNode('TopCylinder', 'MeshInstance3D', {
-            properties: {
-              name: 'TopCylinder',
-              transform: {
-                basis_x: { x: 1, y: 0, z: 0 },
-                basis_y: { x: 0, y: 1, z: 0 },
-                basis_z: { x: 0, y: 0, z: 1 },
-                origin: { x: 0, y: 0, z: -3 },
-              },
-              mesh: 'SubResource("CylinderMesh_1")',
-              surfaceMaterialOverrides: new Map(),
-            } as Record<string, unknown>,
+            rawProperties: { transform: translated(0, 0, -3), mesh: 'SubResource("CylinderMesh_1")' },
           }),
           makeNode('MiddleInstance', 'Node3D', {
             instance: 'ExtResource("1_middle")',
-            properties: {
-              name: 'MiddleInstance',
-              transform: {
-                basis_x: { x: 1, y: 0, z: 0 },
-                basis_y: { x: 0, y: 1, z: 0 },
-                basis_z: { x: 0, y: 0, z: 1 },
-                origin: { x: 0, y: 0, z: 3 },
-              },
-            } as Record<string, unknown>,
+            rawProperties: { transform: translated(0, 0, 3) },
           }),
         ],
       }),

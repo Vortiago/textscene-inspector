@@ -23,7 +23,7 @@ import {
   CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR,
   CHECKBUTTON_DEFAULT_DISABLED_FONT_COLOR,
 } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
@@ -33,12 +33,7 @@ function node(props: Partial<CheckButtonProperties>): SolveNode {
   return {
     ...solveNode(),
     path: 'CB',
-    node: {
-      name: 'CB',
-      type: 'CheckButton',
-      children: [],
-      properties: { name: 'CB', ...props } as CheckButtonProperties,
-    },
+    node: controlNode('CB', 'CheckButton', { name: 'CB', ...props }),
     // A local theme_override_colors/* reaches `resolveTextTheme` through
     // `n.colors`, which the walker folds in, not through props.
     colors: props.themeOverrideColors ?? {},

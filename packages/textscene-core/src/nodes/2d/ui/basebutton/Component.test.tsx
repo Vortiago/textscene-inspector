@@ -5,15 +5,10 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { BaseButton } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function baseButtonSolveNode(properties: Record<string, unknown> = {}): SolveNode {
-  const node: TscnNode = {
-    name: 'Clicky',
-    type: 'BaseButton',
-    children: [],
-    properties: { name: 'Clicky', ...properties },
-  };
+  const node: TscnNode = controlNode('Clicky', 'BaseButton', { name: 'Clicky', ...properties });
   return { ...solveNode(), path: 'Clicky', node };
 }
 

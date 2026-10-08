@@ -108,6 +108,8 @@ export function synthesiseGLBScene(glbPath: string): TscnScene {
   // The file basename, so the scene tree shows a meaningful label.
   const basename = (glbPath.split('/').pop() ?? glbPath).replace(/\.(glb|gltf)$/i, '');
   const root: TscnNode = {
+    // No file wrote the synthetic root, so it has no raw properties.
+    rawProperties: {},
     name: basename || 'GLBRoot',
     type: 'GLBSceneRoot',
     children: [],

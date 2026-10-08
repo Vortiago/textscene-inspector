@@ -12,7 +12,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { TabBarProperties } from './types';
 import { TabBar } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const THEME = nativeTheme(1);
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 32 };
@@ -20,12 +20,7 @@ const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 32 };
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<TabBarProperties> = {}): SolveNode {
-  const node: TscnNode = {
-    name: 'Tabs',
-    type: 'TabBar',
-    children: [],
-    properties: { name: 'Tabs', ...properties } as TabBarProperties,
-  };
+  const node: TscnNode = controlNode('Tabs', 'TabBar', { name: 'Tabs', ...properties });
   return { ...emptySolveNode(), path: 'Tabs', node };
 }
 

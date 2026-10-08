@@ -34,7 +34,7 @@ import {
   type SplitChildInput,
 } from './splitContainerSolver';
 import type { SplitContainerProperties } from './splitContainer';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /**
  * The two-child case of `computeSplitDraggerPositions`: one boundary and the deprecated singular
@@ -391,7 +391,7 @@ function solveNode(
   children: SolveNode[] = []
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
+  const tscnNode: TscnNode = controlNode(name, type, { name, ...properties });
   // A local theme_override_constants/* reaches a solver through
   // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
   const constants =
@@ -431,7 +431,7 @@ describe('splitGrabberIconSize', () => {
 
 describe('splitContainerTextureSlots', () => {
   it('requests "grabber" for HSplitContainer/VSplitContainer when themed, ignoring any authored `vertical`', () => {
-    const node: TscnNode = { name: 'S', type: 'HSplitContainer', children: [], properties: {} };
+    const node: TscnNode = controlNode('S', 'HSplitContainer');
     const themed = {
       grabber: { ref: 'ExtResource("1")', resources: { externalResources: [], internalResources: [] } },
     };
@@ -441,12 +441,7 @@ describe('splitContainerTextureSlots', () => {
   });
 
   it('requests "v_grabber" for a base SplitContainer authored vertical=true', () => {
-    const node: TscnNode = {
-      name: 'S',
-      type: 'SplitContainer',
-      children: [],
-      properties: { vertical: true },
-    };
+    const node: TscnNode = controlNode('S', 'SplitContainer', { vertical: true });
     const themed = {
       v_grabber: { ref: 'ExtResource("1")', resources: { externalResources: [], internalResources: [] } },
     };
@@ -456,7 +451,7 @@ describe('splitContainerTextureSlots', () => {
   });
 
   it('requests nothing when the type-appropriate slot has no themed answer', () => {
-    const node: TscnNode = { name: 'S', type: 'HSplitContainer', children: [], properties: {} };
+    const node: TscnNode = controlNode('S', 'HSplitContainer');
     expect(splitContainerTextureSlots(node, {})).toEqual([]);
   });
 });

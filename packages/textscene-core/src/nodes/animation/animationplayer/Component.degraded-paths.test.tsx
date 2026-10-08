@@ -56,7 +56,13 @@ function makeAP(overrides: Partial<AnimationPlayerProperties> = {}): TscnNode {
     libraries: [],
     ...overrides,
   };
-  return { name: props.name ?? 'AnimationPlayer', type: 'AnimationPlayer', children: [], properties: props };
+  return {
+    rawProperties: {},
+    name: props.name ?? 'AnimationPlayer',
+    type: 'AnimationPlayer',
+    children: [],
+    properties: props,
+  };
 }
 
 const AP_PATH = 'Root/AnimationPlayer';

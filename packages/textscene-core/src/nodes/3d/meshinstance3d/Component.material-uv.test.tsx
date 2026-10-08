@@ -24,7 +24,7 @@ function makeNode(): TscnNode {
     mesh: 'SubResource("Box_1")',
     materialOverride: 'SubResource("Mat")',
   };
-  return { name: 'M', type: 'MeshInstance3D', children: [], properties: props };
+  return { rawProperties: {}, name: 'M', type: 'MeshInstance3D', children: [], properties: props };
 }
 
 function ext(id: string, path: string): TscnExternalResource {

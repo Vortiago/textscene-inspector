@@ -47,7 +47,7 @@ function makeNode(properties: Partial<MeshInstance3DProperties>): TscnNode {
     materialOverride: undefined,
     ...properties,
   };
-  return { name: 'M', type: 'MeshInstance3D', children: [], properties: full };
+  return { rawProperties: {}, name: 'M', type: 'MeshInstance3D', children: [], properties: full };
 }
 
 async function materialsOf(

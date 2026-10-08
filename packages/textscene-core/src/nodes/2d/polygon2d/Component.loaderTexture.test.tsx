@@ -37,6 +37,7 @@ const TEX = 'res://floor.png';
 function node(): TscnNode {
   const heading: ParsedHeading = { type: 'node', attributes: { name: 'Poly', type: 'Polygon2D' } };
   return {
+    rawProperties: {},
     name: 'Poly',
     type: 'Polygon2D',
     children: [],

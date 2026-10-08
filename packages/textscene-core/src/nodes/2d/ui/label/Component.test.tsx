@@ -14,14 +14,14 @@ import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanv
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Label } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
 
 function solveNode(path: string, properties: Record<string, unknown>): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = { name, type: 'Label', children: [], properties: { name, ...properties } };
+  const tscnNode: TscnNode = controlNode(name, 'Label', { name, ...properties });
   // A local theme_override_colors/theme_override_constants reaches the
   // painter through `n.colors`/`n.constants` (the walker folds both in
   // unconditionally), not properties.

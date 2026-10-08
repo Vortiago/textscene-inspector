@@ -25,7 +25,7 @@ import {
   CHECKBOX_ICON_NATURAL_SIZE,
   CHECKBOX_THEME_FONT_KEY,
 } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 // 'A' advances 1354 design units and 'B' 1350, so at 16px 'A' is 10.578125 and 'AB' 21.125.
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
@@ -39,12 +39,7 @@ function node(props: Partial<CheckBoxProperties>): SolveNode {
   return {
     ...solveNode(),
     path: 'C',
-    node: {
-      name: 'C',
-      type: 'CheckBox',
-      children: [],
-      properties: { name: 'C', ...props } as CheckBoxProperties,
-    },
+    node: controlNode('C', 'CheckBox', { name: 'C', ...props }),
     // A local theme_override_colors/* reaches `resolveTextTheme` through
     // `n.colors` (the walker folds it in unconditionally), not props.
     colors: props.themeOverrideColors ?? {},

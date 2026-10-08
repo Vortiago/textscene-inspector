@@ -8,11 +8,11 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { ColorPickerButton } from './Component';
 
 function node(properties: Record<string, unknown>): SolveNode {
-  const tscnNode: TscnNode = { name: 'C', type: 'ColorPickerButton', children: [], properties };
+  const tscnNode: TscnNode = controlNode('C', 'ColorPickerButton', properties);
   return { ...emptySolveNode(), path: 'C', node: tscnNode };
 }
 

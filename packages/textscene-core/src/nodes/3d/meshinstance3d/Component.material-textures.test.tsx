@@ -27,7 +27,7 @@ function makeNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode 
     materialOverride: properties.materialOverride ?? 'SubResource("Mat")',
     ...properties,
   };
-  return { name: props.name, type: 'MeshInstance3D', children: [], properties: props };
+  return { rawProperties: {}, name: props.name, type: 'MeshInstance3D', children: [], properties: props };
 }
 
 const TEXTURE_PATH = 'res://textures/albedo.png';
@@ -230,6 +230,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
 
     const surfaceMap = new Map<number, string>([[0, 'SubResource("Mat")']]);
     const node: TscnNode = {
+      rawProperties: {},
       name: 'SurfacePlane',
       type: 'MeshInstance3D',
       children: [],
@@ -269,6 +270,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
 
     const surfaceMap = new Map<number, string>([[0, 'SubResource("Mat")']]);
     const node: TscnNode = {
+      rawProperties: {},
       name: 'AsyncPlane',
       type: 'MeshInstance3D',
       children: [],

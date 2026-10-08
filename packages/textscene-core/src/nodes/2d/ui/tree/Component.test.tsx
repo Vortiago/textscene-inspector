@@ -12,17 +12,12 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { Tree } from './Component';
 import type { TreeProperties } from './types';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
 
 function solveNode(properties: Partial<TreeProperties> = {}, rtl = false): SolveNode {
-  const node: TscnNode = {
-    name: 'MyTree',
-    type: 'Tree',
-    children: [],
-    properties: { name: 'MyTree', ...properties } as TreeProperties,
-  };
+  const node: TscnNode = controlNode('MyTree', 'Tree', { name: 'MyTree', ...properties });
   return { ...emptySolveNode(), path: 'MyTree', node, rtl };
 }
 

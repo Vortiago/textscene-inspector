@@ -31,7 +31,8 @@ Two shapes were weighed:
 (B). `rehomeOverride` (`resources/rehomeOverride.ts`) rewrites an override's raw properties
 against the scope of the node it reaches. `graftInstanceChildren` applies it to a host
 override of a sub-scene node, and `mergeInstanceRoot` to the instance node's own properties.
-The merged node carries the result as `LiveNode.scope` (`resources/liveNode.ts`). The viewport's
+The merged node carries the result as `LiveNode.scope` (`resources/liveNode.ts`). Each copied
+resource keeps the id its own file wrote as `authoredId`, through every nesting level. The viewport's
 `DispatchedNode` provides it, and `scopeOf` reads it for the live scene tree, so both resolve
 the node alike. A node the host adds inside the sub-scene carries the host's scope.
 
@@ -39,7 +40,12 @@ the node alike. A node the host adds inside the sub-scene carries the host's sco
 
 - The scope tag is render-time state of the live scene tree. The parse tree (`TscnNode`),
   which the linter reads, never carries it.
-- A colliding id shows in the inspector with a suffix, for example `ExtResource("3 (outer)")`.
+- A colliding id takes a suffix in the node's scope, for example `ExtResource("3 (outer)")`.
+  The inspector spells each value through `authoredSpelling` (`resources/authoredSpelling.ts`),
+  so it shows `ExtResource("3")`, the id the override's file wrote. Godot keeps no renamed
+  id: each file's loader resolves its ids in its own table (`resource_format_text.h:73`,
+  `resource_format_text.cpp:137-142`), and the saver writes each file's own id
+  (`resource_format_text.cpp:1622`, `:1814`).
 - An id the override names but its file lacks resolves to nothing. Godot refuses the file
   (`resource_format_text.cpp:112`, `:135-137`). The id never falls through to the
   sub-scene's resource of the same id.

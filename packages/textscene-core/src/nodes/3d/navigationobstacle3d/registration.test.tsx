@@ -13,6 +13,7 @@ import { parseNavigationObstacle3D } from './parser';
 import type { TscnNode } from '../../../parser/types';
 
 const obstacleNode: TscnNode = {
+  rawProperties: {},
   name: 'Obstacle',
   type: 'NavigationObstacle3D',
   children: [],

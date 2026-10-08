@@ -6,6 +6,12 @@ import { describe, it, expect } from 'vitest';
 import { buildSceneTree, rootDeclaringParent, strandedNodes } from './sceneTreeBuilder';
 import type { TscnNode } from './types';
 
+/** A childless `Node3D`, a root when `parent` is absent. */
+function node(name: string, parent?: string): TscnNode {
+  const root: TscnNode = { rawProperties: {}, type: 'Node3D', name, properties: {}, children: [] };
+  return parent === undefined ? root : { ...root, parent };
+}
+
 describe('buildSceneTree', () => {
   describe('empty and basic cases', () => {
     it('should return empty array for empty input', () => {
@@ -14,14 +20,7 @@ describe('buildSceneTree', () => {
     });
 
     it('should handle single root node without children', () => {
-      const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-      ];
+      const nodes: TscnNode[] = [node('Root')];
 
       const result = buildSceneTree(nodes);
 
@@ -31,14 +30,7 @@ describe('buildSceneTree', () => {
     });
 
     it('should handle single root node without parent attribute', () => {
-      const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-      ];
+      const nodes: TscnNode[] = [node('Root')];
 
       const result = buildSceneTree(nodes);
 
@@ -49,21 +41,7 @@ describe('buildSceneTree', () => {
 
   describe('parent="." references', () => {
     it('should attach child with parent="." to root node', () => {
-      const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
-      ];
+      const nodes: TscnNode[] = [node('Root'), node('Child', '.')];
 
       const result = buildSceneTree(nodes);
 
@@ -74,28 +52,7 @@ describe('buildSceneTree', () => {
     });
 
     it('should attach multiple children with parent="." to root', () => {
-      const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child1',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child2',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
-      ];
+      const nodes: TscnNode[] = [node('Root'), node('Child1', '.'), node('Child2', '.')];
 
       const result = buildSceneTree(nodes);
 
@@ -108,28 +65,7 @@ describe('buildSceneTree', () => {
 
   describe('named parent references', () => {
     it('should attach child to named parent', () => {
-      const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'GrandChild',
-          parent: 'Child',
-          properties: {},
-          children: [],
-        },
-      ];
+      const nodes: TscnNode[] = [node('Root'), node('Child', '.'), node('GrandChild', 'Child')];
 
       const result = buildSceneTree(nodes);
 
@@ -143,40 +79,11 @@ describe('buildSceneTree', () => {
 
     it('should build complex multi-level hierarchy', () => {
       const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child1',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child2',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'GrandChild1',
-          parent: 'Child1',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'GrandChild2',
-          parent: 'Child2',
-          properties: {},
-          children: [],
-        },
+        node('Root'),
+        node('Child1', '.'),
+        node('Child2', '.'),
+        node('GrandChild1', 'Child1'),
+        node('GrandChild2', 'Child2'),
       ];
 
       const result = buildSceneTree(nodes);
@@ -199,14 +106,7 @@ describe('buildSceneTree', () => {
 
   describe('deep hierarchies', () => {
     it('should handle deep hierarchy (10 levels)', () => {
-      const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Level0',
-          properties: {},
-          children: [],
-        },
-      ];
+      const nodes: TscnNode[] = [node('Level0')];
 
       // Build 10 levels deep
       for (let i = 1; i <= 10; i++) {
@@ -219,13 +119,7 @@ describe('buildSceneTree', () => {
           }
           parentPath = pathParts.join('/');
         }
-        nodes.push({
-          type: 'Node3D',
-          name: `Level${i}`,
-          parent: parentPath,
-          properties: {},
-          children: [],
-        });
+        nodes.push(node(`Level${i}`, parentPath));
       }
 
       const result = buildSceneTree(nodes);
@@ -243,14 +137,8 @@ describe('buildSceneTree', () => {
   });
 
   describe('parents inside instanced content', () => {
-    /** A node, with only the fields these tests care about. */
-    const node = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
-      type: 'Node3D',
-      name,
-      properties: {},
-      children: [],
-      ...extra,
-    });
+    /** A `Node3D` with `fields` over it, for a test that sets more than its parent. */
+    const nodeWith = (name: string, fields: Partial<TscnNode>): TscnNode => ({ ...node(name), ...fields });
 
     it('attaches a node whose parent path descends into an instance to that instance', () => {
       // player.tscn's shape: `Robot` names a node INSIDE player.glb, so
@@ -259,8 +147,8 @@ describe('buildSceneTree', () => {
       // instance node is the anchor and the rest is its business.
       const nodes = [
         node('Main'),
-        node('Player', { parent: '.', instance: 'ExtResource("3")' }),
-        node('Robot', { parent: 'Player/Skeleton/Skeleton3D' }),
+        nodeWith('Player', { parent: '.', instance: 'ExtResource("3")' }),
+        node('Robot', 'Player/Skeleton/Skeleton3D'),
       ];
 
       const [root] = buildSceneTree(nodes);
@@ -278,9 +166,9 @@ describe('buildSceneTree', () => {
       // through it normally and needs no marker of its own.
       const nodes = [
         node('Main'),
-        node('Player', { parent: '.', instance: 'ExtResource("3")' }),
-        node('CoinCount', { parent: 'Player/Skeleton' }),
-        node('Parallax', { parent: 'Player/Skeleton/CoinCount' }),
+        nodeWith('Player', { parent: '.', instance: 'ExtResource("3")' }),
+        node('CoinCount', 'Player/Skeleton'),
+        node('Parallax', 'Player/Skeleton/CoinCount'),
       ];
 
       const [root] = buildSceneTree(nodes);
@@ -295,8 +183,8 @@ describe('buildSceneTree', () => {
       // The 2D pause menus: the scene root IS an instance of pause_menu.tscn,
       // and the override addresses a Control several levels inside it.
       const nodes = [
-        node('PauseMenu', { instance: 'ExtResource("1")' }),
-        node('SplitscreenButton', { parent: 'ColorRect/CenterContainer/VBoxContainer' }),
+        nodeWith('PauseMenu', { instance: 'ExtResource("1")' }),
+        node('SplitscreenButton', 'ColorRect/CenterContainer/VBoxContainer'),
       ];
 
       const [root] = buildSceneTree(nodes);
@@ -308,7 +196,7 @@ describe('buildSceneTree', () => {
     it('leaves a node orphaned when no ancestor on its path is an instance', () => {
       // A malformed authored path, not an instance override, which Godot drops too.
       // Re-rooting it would flatten a "deep" fixture's fifteen levels into siblings.
-      const nodes = [node('Level0'), node('Level1', { parent: '.' }), node('Level3', { parent: 'Level2' })];
+      const nodes = [node('Level0'), node('Level1', '.'), node('Level3', 'Level2')];
 
       const [root] = buildSceneTree(nodes);
 
@@ -318,11 +206,7 @@ describe('buildSceneTree', () => {
     it('does not anchor at a plain node that merely shares the path prefix', () => {
       // `Player` is an ordinary node, not an instance, so everything inside it is
       // visible here and an unresolvable path is a mistake, not an override.
-      const nodes = [
-        node('Main'),
-        node('Player', { parent: '.' }),
-        node('Robot', { parent: 'Player/Skeleton' }),
-      ];
+      const nodes = [node('Main'), node('Player', '.'), node('Robot', 'Player/Skeleton')];
 
       const [root] = buildSceneTree(nodes);
 
@@ -335,9 +219,9 @@ describe('buildSceneTree', () => {
       // ordinary node, it would strand `StaticBody2D`, which the engine places.
       const nodes = [
         node('Root'),
-        node('Building', { parent: '.', instance: 'ExtResource("1")' }),
-        node('Inside', { parent: 'Building', type: 'Node', overridesExistingNode: true }),
-        node('CollisionPolygon2D', { parent: 'Building/Inside/StaticBody2D' }),
+        nodeWith('Building', { parent: '.', instance: 'ExtResource("1")' }),
+        nodeWith('Inside', { parent: 'Building', type: 'Node', overridesExistingNode: true }),
+        node('CollisionPolygon2D', 'Building/Inside/StaticBody2D'),
       ];
 
       const [root] = buildSceneTree(nodes);
@@ -352,9 +236,9 @@ describe('buildSceneTree', () => {
       // override below it names base-scene content and the same opacity applies
       // from the scene root down.
       const nodes = [
-        node('Root', { instance: 'ExtResource("1")' }),
-        node('Mid', { parent: '.', type: 'Node', overridesExistingNode: true }),
-        node('Leaf', { parent: 'Mid/Ghost' }),
+        nodeWith('Root', { instance: 'ExtResource("1")' }),
+        nodeWith('Mid', { parent: '.', type: 'Node', overridesExistingNode: true }),
+        node('Leaf', 'Mid/Ghost'),
       ];
 
       const [root] = buildSceneTree(nodes);
@@ -369,11 +253,11 @@ describe('buildSceneTree', () => {
       // whatever it finds.
       const nodes = [
         node('Root'),
-        node('Player', {
+        nodeWith('Player', {
           parent: '.',
           rawProperties: { unique_name_in_owner: 'true' },
         }),
-        node('Hat', { parent: '%Player' }),
+        node('Hat', '%Player'),
       ];
 
       const [root] = buildSceneTree(nodes);
@@ -389,8 +273,8 @@ describe('buildSceneTree', () => {
       // './%Player' for node 'Hat' has vanished" and renames it `_Player#Hat`.
       const nodes = [
         node('Root'),
-        node('Hat', { parent: '%Player' }),
-        node('Player', {
+        node('Hat', '%Player'),
+        nodeWith('Player', {
           parent: '.',
           rawProperties: { unique_name_in_owner: 'true' },
         }),
@@ -405,7 +289,7 @@ describe('buildSceneTree', () => {
     it('strands a %Name no node in the file claims', () => {
       // Without the flag there is no claim, and Godot warns the parent path has
       // vanished rather than treating `%Player` as an ordinary child name.
-      const nodes = [node('Root'), node('Player', { parent: '.' }), node('Hat', { parent: '%Player' })];
+      const nodes = [node('Root'), node('Player', '.'), node('Hat', '%Player')];
 
       const [root] = buildSceneTree(nodes);
 
@@ -417,7 +301,7 @@ describe('buildSceneTree', () => {
       // `NODE_FROM_ID` resolves against the tree at heading `i`
       // (`packed_scene.cpp:157-165`), so only headings above are reachable. Probed on
       // 4.7.2: `Body` re-roots as `Later#Body` with a warning, and swapped it seats.
-      const nodes = [node('Root'), node('Body', { parent: 'Later' }), node('Later', { parent: '.' })];
+      const nodes = [node('Root'), node('Body', 'Later'), node('Later', '.')];
 
       const [root] = buildSceneTree(nodes);
 
@@ -430,9 +314,9 @@ describe('buildSceneTree', () => {
       // one, or the sub-path names a node the wrong scene has to resolve.
       const nodes = [
         node('Main'),
-        node('Outer', { parent: '.', instance: 'ExtResource("1")' }),
-        node('Inner', { parent: 'Outer', instance: 'ExtResource("2")' }),
-        node('Deep', { parent: 'Outer/Inner/Body/Mesh' }),
+        nodeWith('Outer', { parent: '.', instance: 'ExtResource("1")' }),
+        nodeWith('Inner', { parent: 'Outer', instance: 'ExtResource("2")' }),
+        node('Deep', 'Outer/Inner/Body/Mesh'),
       ];
 
       const [root] = buildSceneTree(nodes);
@@ -446,21 +330,7 @@ describe('buildSceneTree', () => {
 
   describe('error handling', () => {
     it('drops a node whose parent is not found, and reports it', () => {
-      const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Orphan',
-          parent: 'NonExistentParent',
-          properties: {},
-          children: [],
-        },
-      ];
+      const nodes: TscnNode[] = [node('Root'), node('Orphan', 'NonExistentParent')];
 
       const origins = nodes.map((node, i) => ({ node, line: i + 1, declaredParent: node.parent }));
       const result = buildSceneTree(nodes);
@@ -473,22 +343,7 @@ describe('buildSceneTree', () => {
     });
 
     it('roots at heading 0 when no heading declares itself parentless', () => {
-      const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Node1',
-          parent: 'NonExistent',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Node2',
-          parent: 'NonExistent',
-          properties: {},
-          children: [],
-        },
-      ];
+      const nodes: TscnNode[] = [node('Node1', 'NonExistent'), node('Node2', 'NonExistent')];
       const origins = nodes.map((node, i) => ({
         node,
         line: i + 1,
@@ -509,10 +364,7 @@ describe('buildSceneTree', () => {
       // The two derivations disagree by design: the builder prefers a parentless
       // heading wherever it sits, while Godot's root is `i == 0` and nothing
       // else. Only the positional one still names the heading that is refused.
-      const nodes: TscnNode[] = [
-        { type: 'Node3D', name: 'A', parent: '.', properties: {}, children: [] },
-        { type: 'Node3D', name: 'Root', properties: {}, children: [] },
-      ];
+      const nodes: TscnNode[] = [node('A', '.'), node('Root')];
       const origins = nodes.map((node, i) => ({
         node,
         line: i + 1,
@@ -529,28 +381,7 @@ describe('buildSceneTree', () => {
 
   describe('mixed scenarios', () => {
     it('should handle root with children having parent attribute', () => {
-      const nodes: TscnNode[] = [
-        {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child1',
-          parent: '.',
-          properties: {},
-          children: [],
-        },
-        {
-          type: 'Node3D',
-          name: 'Child2',
-          parent: 'Child1',
-          properties: {},
-          children: [],
-        },
-      ];
+      const nodes: TscnNode[] = [node('Root'), node('Child1', '.'), node('Child2', 'Child1')];
 
       const result = buildSceneTree(nodes);
 
@@ -565,12 +396,14 @@ describe('buildSceneTree', () => {
     it('should preserve node properties during tree building', () => {
       const nodes: TscnNode[] = [
         {
+          rawProperties: {},
           type: 'Node3D',
           name: 'Root',
           properties: { customProp: 'value' },
           children: [],
         },
         {
+          rawProperties: {},
           type: 'Node3D',
           name: 'Child',
           parent: '.',
@@ -587,13 +420,9 @@ describe('buildSceneTree', () => {
 
     it('should preserve node type during tree building', () => {
       const nodes: TscnNode[] = [
+        node('Root'),
         {
-          type: 'Node3D',
-          name: 'Root',
-          properties: {},
-          children: [],
-        },
-        {
+          rawProperties: {},
           type: 'MeshInstance3D',
           name: 'Mesh',
           parent: '.',

@@ -12,12 +12,7 @@ import { HiddenSeeder } from './testing/HiddenSeeder';
 import './nodes/index';
 
 function makeNode(name: string, type: string, children: TscnNode[] = []): TscnNode {
-  return {
-    name,
-    type,
-    children,
-    properties: {},
-  };
+  return { rawProperties: {}, name, type, children, properties: {} };
 }
 
 interface WrapperInstance {

@@ -8,7 +8,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { videoStreamPlayerMinimumSize } from './nativeSolver';
 
 const CTX: SolveContext = {
@@ -18,7 +18,7 @@ const CTX: SolveContext = {
 };
 
 function node(properties: Record<string, unknown>): SolveNode {
-  const tscnNode: TscnNode = { name: 'V', type: 'VideoStreamPlayer', children: [], properties };
+  const tscnNode: TscnNode = controlNode('V', 'VideoStreamPlayer', properties);
   return { ...emptySolveNode(), path: 'V', node: tscnNode };
 }
 

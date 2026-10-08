@@ -11,19 +11,14 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ReferenceRectProperties } from './types';
 import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { ReferenceRect } from './Component';
 import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
 
 const RECT = { x: 0, y: 0, w: 100, h: 50 };
 
 function refRectNode(properties: Partial<ReferenceRectProperties> = {}, path = 'MyRect'): SolveNode {
-  const node: TscnNode = {
-    name: 'MyRect',
-    type: 'ReferenceRect',
-    children: [],
-    properties: { name: 'MyRect', ...properties } as ReferenceRectProperties,
-  };
+  const node: TscnNode = controlNode('MyRect', 'ReferenceRect', { name: 'MyRect', ...properties });
   return { ...emptySolveNode(), path, node };
 }
 

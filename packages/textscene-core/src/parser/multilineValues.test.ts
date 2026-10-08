@@ -47,7 +47,7 @@ metadata/effect = Object(Area3D,"monitoring":true,"audio":Object(Timer,"wait_tim
 visible = false
 `);
     const fence = find(scene.nodes, 'Fence')!;
-    expect(fence.rawProperties?.['metadata/effect']).toBe(
+    expect(fence.rawProperties['metadata/effect']).toBe(
       'Object(Area3D,"monitoring":true,"audio":Object(Timer,"wait_time":0.5)\n' +
         ',"targets":{},"tick":Object(Timer,"one_shot":false)\n' +
         ',"metadata/_custom_type_script":"uid://c4a2vg4id0rom")'

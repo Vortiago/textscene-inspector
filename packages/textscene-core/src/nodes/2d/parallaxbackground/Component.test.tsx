@@ -21,6 +21,7 @@ import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
 
 function backgroundNode(properties: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'BG',
     type: 'ParallaxBackground',
     children: [],
@@ -33,6 +34,7 @@ function backgroundNode(properties: Record<string, string> = {}): TscnNode {
 
 function layerNode(name: string, properties: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name,
     type: 'ParallaxLayer',
     children: [],

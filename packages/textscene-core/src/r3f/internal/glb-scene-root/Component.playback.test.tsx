@@ -63,6 +63,7 @@ function makeLoader(glb: THREE.Object3D): ResourceLoader {
 
 function makeGlbNode(): TscnNode {
   return {
+    rawProperties: {},
     name: 'player',
     type: 'GLBSceneRoot',
     children: [],

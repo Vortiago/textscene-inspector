@@ -37,7 +37,7 @@ export function meshInstanceNode({ mesh, materialOverride, surfaceOverrides }: M
     surfaceMaterialOverrides: new Map(surfaceOverrides),
   };
   if (materialOverride) properties.materialOverride = materialOverride;
-  return { name: 'Mesh', type: 'MeshInstance3D', children: [], properties };
+  return { rawProperties: {}, name: 'Mesh', type: 'MeshInstance3D', children: [], properties };
 }
 
 /** The element tree, for a test that re-renders it with `renderer.update`. */

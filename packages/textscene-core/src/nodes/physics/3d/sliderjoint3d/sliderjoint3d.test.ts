@@ -38,7 +38,7 @@ describe('SliderJoint3D registration', () => {
     const node = scene.nodes[0]?.children[0];
     expect(node?.properties).not.toHaveProperty('linear_limit/upper_distance');
     expect(node?.properties).not.toHaveProperty('angular_limit/upper_angle');
-    expect(node?.rawProperties?.['linear_limit/upper_distance']).toBe('9999.0');
-    expect(node?.rawProperties?.['angular_limit/upper_angle']).toBe('"not-a-number"');
+    expect(node?.rawProperties['linear_limit/upper_distance']).toBe('9999.0');
+    expect(node?.rawProperties['angular_limit/upper_angle']).toBe('"not-a-number"');
   });
 });

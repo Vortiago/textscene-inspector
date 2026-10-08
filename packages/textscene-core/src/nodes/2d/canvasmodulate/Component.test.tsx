@@ -13,6 +13,7 @@ const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 
 function cmNode(name = 'CM', props: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name,
     type: 'CanvasModulate',
     children: [],

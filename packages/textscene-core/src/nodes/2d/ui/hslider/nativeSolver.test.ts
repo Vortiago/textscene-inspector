@@ -3,19 +3,18 @@
  * `shared/sliderSolver.test.ts` owns the geometry; this pins the registration and the axis.
  */
 import { describe, expect, it } from 'vitest';
-import type { ControlProperties } from '../control/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { hSliderMinimumSize } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function node(): SolveNode {
   return {
     ...solveNode(),
     path: 'S',
-    node: { name: 'S', type: 'HSlider', children: [], properties: { name: 'S' } as ControlProperties },
+    node: controlNode('S', 'HSlider', { name: 'S' }),
   };
 }
 

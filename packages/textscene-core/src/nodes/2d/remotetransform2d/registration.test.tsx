@@ -14,6 +14,7 @@ import type { TscnNode } from '../../../parser/types';
 
 function remoteTransformNode(raw: Record<string, string> = {}): TscnNode {
   return {
+    rawProperties: {},
     name: 'Follower',
     type: 'RemoteTransform2D',
     children: [],

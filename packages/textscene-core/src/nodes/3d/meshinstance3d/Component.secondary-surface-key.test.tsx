@@ -23,7 +23,7 @@ function makeNode(): TscnNode {
     mesh: 'SubResource("Mesh_1")',
     surfaceMaterialOverrides: new Map([[1, 'SubResource("Mat_1")']]),
   };
-  return { name: 'Panel', type: 'MeshInstance3D', children: [], properties: props };
+  return { rawProperties: {}, name: 'Panel', type: 'MeshInstance3D', children: [], properties: props };
 }
 
 /** Whether surface 1 got a different THREE.Material after the edit. */

@@ -9,6 +9,7 @@ import { GenericNodeFallback } from './Component';
 import type { TscnNode } from '../../../parser/types';
 
 const node: TscnNode = {
+  rawProperties: {},
   name: 'MysteryThing',
   type: 'SomeUnregisteredType',
   children: [],

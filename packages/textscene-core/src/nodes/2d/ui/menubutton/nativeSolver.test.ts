@@ -15,7 +15,7 @@ import {
   menuButtonTextTheme,
   MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR,
 } from './nativeSolver';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const FONT_HEIGHT = 23;
 const AB_WIDTH = (1354 + 1350) * (16 / 2048);
@@ -25,12 +25,7 @@ function node(props: Partial<MenuButtonProperties>): SolveNode {
   return {
     ...solveNode(),
     path: 'M',
-    node: {
-      name: 'M',
-      type: 'MenuButton',
-      children: [],
-      properties: { name: 'M', ...props } as MenuButtonProperties,
-    },
+    node: controlNode('M', 'MenuButton', { name: 'M', ...props }),
     // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
     // fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
