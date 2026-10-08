@@ -1,0 +1,24 @@
+name: Labeler
+
+# Puts the area labels from .github/labeler.yml on a pull request, from the paths it changes.
+# pull_request_target, not pull_request: a fork's or Dependabot's pull_request run gets a
+# read-only token and cannot label. This run reads the config from the base branch and never
+# checks out the pull request's code, so the write token never meets code from the head.
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    name: Area labels
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      # sync-labels removes an area label when the pull request no longer touches that area.
+      - uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
+        with:
+          sync-labels: true

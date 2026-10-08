@@ -17,6 +17,8 @@ describe('needsVisualRun', () => {
         'apps/textscene-linter/src/cli.ts',
         '.github/workflows/pages.yml',
         '.github/workflows/claude-review.yml',
+        '.github/workflows/labeler.yml',
+        '.github/labeler.yml',
         'scripts/compare-docs/build-gallery.mjs',
       ])
     ).toBe(false);

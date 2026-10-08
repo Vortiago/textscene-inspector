@@ -11,6 +11,13 @@ Use the `gh` CLI inside the clone.
 - **Add or remove a label**: `gh issue edit <number> --add-label "..."` or `--remove-label "..."`
 - **Close an issue**: `gh issue close <number> --comment "..."`
 
+## Area labels
+
+An area label names a part of the repository: `goldens`, `parser`, `renderer`, `linter`, `core`,
+`lsp`, `vscode`, `web`, `scenes`, `ci` and `documentation`. The labeler workflow puts them on each
+pull request from the paths it changes, as `.github/labeler.yml` maps them. An issue has no
+paths, so triage adds the area label of each part the fix is likely to change.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Read by `/triage`. `yes` treats an external PR as a feature request.)_
