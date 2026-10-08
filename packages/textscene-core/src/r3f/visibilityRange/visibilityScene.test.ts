@@ -204,6 +204,16 @@ describe('registerVisibilityInstance', () => {
     expect(detail.last?.isVisible).toBe(true);
   });
 
+  it('refuses the link registered last of a cycle, whatever order the parents come in (edge case)', () => {
+    const scene = new THREE.Scene();
+    const first = instanceAt({}, { path: 'Root/First', parentPath: 'Root/Proxy' });
+    const second = instanceAt({}, { path: 'Root/Second', parentPath: 'Root/Proxy' });
+    const proxy = instanceAt({ begin: 12 }, { path: 'Root/Proxy', parentPath: 'Root/Second' });
+    for (const instance of [first, second, proxy]) registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(11));
+    expect([first, second, proxy].map((instance) => instance.last?.isVisible)).toEqual([true, true, false]);
+  });
+
   it('restores the scene hook once the last instance leaves', () => {
     const scene = new THREE.Scene();
     const original = scene.onBeforeRender;

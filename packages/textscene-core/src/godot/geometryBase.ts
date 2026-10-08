@@ -1,8 +1,8 @@
 /**
  * Whether a GeometryInstance3D node gives its render instance a geometry base. Only an instance
  * with one enters the visibility-range list, and so tests a range for its visibility dependants
- * (`renderer_scene_cull.cpp:1457-1459`). A base-less instance with a range or a parent keeps the
- * NEEDS_CHECK flags for good (`:1496-1500`), so it hides each dependant.
+ * (`renderer_scene_cull.cpp:1457-1459`). A base-less instance holds no `array_index`, so the cull
+ * links none of its dependants to it, and each draws by its own range (`:1502-1503`).
  */
 
 import { descendsFrom } from './nodeBaseTypes.js';

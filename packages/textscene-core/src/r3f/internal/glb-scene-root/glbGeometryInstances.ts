@@ -67,7 +67,9 @@ function glbMeshInstances(
       { type: 'node', attributes: { name: entry.object.name } },
       override?.rawProperties ?? {}
     );
-    const inherited = passedOn.get(entry.object.parent!) ?? root.visibilityParent;
+    // `has`, not `??`: a parent whose own link resolves to none passes none on.
+    const parent = entry.object.parent!;
+    const inherited = passedOn.has(parent) ? (passedOn.get(parent) ?? null) : root.visibilityParent;
     const parentPath =
       path === null
         ? inherited
@@ -140,7 +142,7 @@ function fadeSurface(
   const remove = instance.add(materials);
   return () => {
     remove();
-    materials.restore();
+    materials.dispose();
     // What `cloneWithMaterials` gives every surface of the import.
     applyShadowCasting(surface, shadowCastingEffects(ShadowCastingSetting.ON));
   };

@@ -51,14 +51,17 @@ function hostScene(lines: string, proxyLines: string): { root: TscnNode; lamp: T
   return { root: { ...root, children: others }, lamp };
 }
 
+/** A GLB of one triangle mesh named Single. */
+const SINGLE_GLB_NODES: Parameters<typeof nodesGlb>[0] = [{ name: 'Single', mesh: 0 }];
+
 /**
  * The host and the GLB, rendered once from a camera 11 units from the triangle's centre, with
- * Lamp instancing a GLB of one triangle mesh named Single.
+ * Lamp instancing a GLB of `glbNodes`, which hold a triangle mesh named Single.
  */
-async function render(lines: string, proxyLines = '') {
+async function render(lines: string, proxyLines = '', glbNodes = SINGLE_GLB_NODES) {
   const { root, lamp } = hostScene(lines, proxyLines);
   const fake = createFakeResourceLoader();
-  fake.glbMeshes.seed(GLB_PATH, await createGLBMesh(nodesGlb([{ name: 'Single', mesh: 0 }])));
+  fake.glbMeshes.seed(GLB_PATH, await createGLBMesh(nodesGlb(glbNodes)));
   const camera = manualCameraAt({ x: 0.5, y: 0.5, z: 11 });
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack loader={fake.loader} scene={{ internalResources: RESOURCES }}>
@@ -171,5 +174,17 @@ describe('a GLB mesh as a visibility parent or a dependant', () => {
   it('takes the visibility parent of the node that instances the GLB', async () => {
     const { single } = await render('visibility_parent = NodePath("../Proxy")\n', PROXY_IN_RANGE);
     expect(drawsColour(single)).toBe(false);
+  });
+
+  it('passes on no visibility parent from a GLB node whose own names itself (edge case)', async () => {
+    const { single } = await render(
+      'visibility_parent = NodePath("../Proxy")\n\n[node name="Group" parent="Lamp"]\nvisibility_parent = NodePath(".")\n',
+      PROXY_IN_RANGE,
+      [
+        { name: 'Group', children: [1] },
+        { name: 'Single', mesh: 0 },
+      ]
+    );
+    expect(drawsColour(single)).toBe(true);
   });
 });

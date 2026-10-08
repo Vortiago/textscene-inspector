@@ -143,7 +143,9 @@ function buildTopology(instances: readonly VisibilityInstance[]): Topology {
       parentOf.set(instance, null);
     }
   }
-  const members = [...parentOf.keys()];
+  // In registration order, not `parentOf`'s, which takes a parent before its own turn: the cull
+  // refuses the later link that closes a cycle.
+  const members = instances.filter((instance) => parentOf.has(instance));
   const indexOf = new Map(members.map((instance, i) => [instance, i]));
   return {
     members,
