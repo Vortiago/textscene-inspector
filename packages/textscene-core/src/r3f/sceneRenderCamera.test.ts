@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import { createViewportCanvasCamera, isViewportPass, observeSceneCamera } from './sceneRenderCamera';
+import {
+  createViewportCanvasCamera,
+  isViewportPass,
+  observeSceneCamera,
+  observeSceneCull,
+} from './sceneRenderCamera';
 import { fireSceneRender } from './testing/fireSceneRender';
 
 describe('observeSceneCamera', () => {
@@ -43,6 +48,23 @@ describe('observeSceneCamera', () => {
     expect(original).toHaveBeenCalledTimes(1);
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs a cull after every other observer, whatever order they came in', () => {
+    const scene = new THREE.Scene();
+    const order: string[] = [];
+    observeSceneCull(scene, () => order.push('cull'));
+    observeSceneCamera(scene, () => order.push('fit'));
+    fireSceneRender(scene, new THREE.OrthographicCamera());
+    expect(order).toEqual(['fit', 'cull']);
+  });
+
+  it('keeps the hook while a cull still observes', () => {
+    const scene = new THREE.Scene();
+    const original = scene.onBeforeRender;
+    observeSceneCull(scene, vi.fn());
+    observeSceneCamera(scene, vi.fn())();
+    expect(scene.onBeforeRender).not.toBe(original);
   });
 
   it('restores the original hook once the last observer disposes', () => {

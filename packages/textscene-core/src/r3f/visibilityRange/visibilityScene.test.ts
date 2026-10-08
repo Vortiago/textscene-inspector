@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { registerVisibilityInstance, type VisibilityInstance } from './visibilityScene';
 import { fireSceneRender } from '../testing/fireSceneRender';
+import { observeSceneCamera } from '../sceneRenderCamera';
+import { directionalShadowUserData } from '../directionalShadow/declaration';
+import { fitSceneDirectionalShadows } from '../directionalShadow/fitSceneDirectionalShadows';
+import { sceneLights } from '../directionalShadow/lightLists';
 import {
   NO_VISIBILITY_RANGE,
   VisibilityRangeFadeMode,
@@ -15,6 +19,29 @@ function cameraAt(distance: number, isLookingAway = false): THREE.PerspectiveCam
   if (isLookingAway) camera.rotation.y = Math.PI;
   camera.updateMatrixWorld(true);
   return camera;
+}
+
+/** A declared directional light with one split, shining from above and to the side. */
+function splitCastingSun(): THREE.DirectionalLight {
+  const light = new THREE.DirectionalLight();
+  light.position.set(10, 20, 5);
+  light.castShadow = true;
+  light.userData = directionalShadowUserData({
+    maxDistance: 80,
+    pancakeSize: 20,
+    fadeStart: 0.8,
+    depthBias: 0,
+    normalBias: 0,
+    filterRadius: 1,
+    splitCount: 1,
+    splitOffsets: [0.1, 0.2, 0.5],
+    blendSplits: false,
+    sharesAtlas: true,
+  });
+  light.add(light.target);
+  light.target.position.set(-10, -20, -5);
+  light.updateMatrixWorld(true);
+  return light;
 }
 
 interface Applied {
@@ -121,6 +148,16 @@ describe('registerVisibilityInstance', () => {
     registerVisibilityInstance(scene, instance);
     fireSceneRender(scene, cameraAt(11, true));
     expect(instance.last?.isVisible).toBe(false);
+  });
+
+  it('checks an instance out of view that a directional split of this render holds', () => {
+    const scene = new THREE.Scene();
+    const instance = instanceAt({ end: 40 }, { centre: new THREE.Vector3(7.5, 15, -1.25) });
+    registerVisibilityInstance(scene, instance);
+    observeSceneCamera(scene, (camera) => fitSceneDirectionalShadows(scene, camera, sceneLights(scene)));
+    scene.add(splitCastingSun());
+    fireSceneRender(scene, cameraAt(11));
+    expect(instance.last?.isVisible).toBe(true);
   });
 
   it('hides the dependant of a visibility parent past its end', () => {

@@ -7,8 +7,8 @@
 import * as THREE from 'three';
 import { cullVisibility, type VisibilityCullInstance } from '../../godot/visibilityCull';
 import { hasVisibilityRange, type VisibilityRange } from '../../godot/visibilityRange';
-import { observeSceneCamera } from '../sceneRenderCamera';
-import { sunSplitsHold } from '../directionalShadow/splitSun';
+import { observeSceneCull } from '../sceneRenderCamera';
+import { sceneSplitsHold } from '../directionalShadow/fitSceneDirectionalShadows';
 
 /** A GeometryInstance3D as the scene cull sees it. */
 export interface VisibilityInstance {
@@ -43,7 +43,7 @@ export function registerVisibilityInstance(scene: THREE.Scene, instance: Visibil
       wasVisible: new WeakMap(),
       stopObserving: () => {},
     };
-    created.stopObserving = observeSceneCamera(scene, (camera, target) =>
+    created.stopObserving = observeSceneCull(scene, (camera, target) =>
       cullScene(scene, created, camera, target === null)
     );
     scenes.set(scene, created);
@@ -93,7 +93,7 @@ function cullScene(
       range: instance.range,
       parent: parent ? indexOf.get(parent)! : -1,
       distance: cameraPosition.distanceTo(box.getCenter(boxCentre)),
-      isInView: cameraFrustum.intersectsBox(box) || sunSplitsHold(scene, box),
+      isInView: cameraFrustum.intersectsBox(box) || sceneSplitsHold(scene, box),
       wasVisible: registry.wasVisible.get(instance)!.get(camera) ?? false,
     };
   });

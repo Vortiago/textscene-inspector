@@ -49,6 +49,25 @@ type CasterFades = Map<THREE.Light, DirectionalShadowFade>;
 const NO_FADES: ShadowFades = { directional: [], sun: [] };
 
 /**
+ * The split suns each scene's last fit placed. Written only by `fitSceneDirectionalShadows`, on
+ * every render of the scene, so it holds the suns of the render in progress.
+ */
+const fittedSuns = new WeakMap<THREE.Object3D, readonly SplitSunLight[]>();
+const NO_SUNS: readonly SplitSunLight[] = [];
+
+/**
+ * Whether a directional shadow split of this render of `scene` holds `box`: Godot culls a
+ * geometry instance for each directional split as well as for the camera
+ * (`renderer_scene_cull.cpp:3140`).
+ */
+export function sceneSplitsHold(scene: THREE.Object3D, box: THREE.Box3): boolean {
+  for (const sun of fittedSuns.get(scene) ?? NO_SUNS) {
+    if (sun.shadow.holdsBox(box)) return true;
+  }
+  return false;
+}
+
+/**
  * A camera without a depth range (a bare `THREE.Camera`) fits nothing and fades nothing. A light
  * without a declaration keeps its shadow camera untouched and casts unfaded. A declared light casts
  * only from Godot's list of shadowed lights, and a light past Godot's eighth leaves the render.
@@ -59,6 +78,7 @@ export function fitSceneDirectionalShadows(
   camera: THREE.Camera,
   lights: readonly SceneLight[]
 ): void {
+  fittedSuns.set(scene, NO_SUNS);
   if (!isViewingCamera(camera)) {
     writeDirectionalShadowFades(NO_FADES);
     return;
@@ -77,12 +97,22 @@ export function fitSceneDirectionalShadows(
     fitDeclaredLight(declaredLight, lists, camera, fades);
     if (renderedFor(declaredLight.light) !== before) renderedChanged = true;
   }
+  fittedSuns.set(scene, sunsOf(declared));
   // The walk lists what three renders for each light, so a change in that walks the scene again.
   const casters = directionalShadowCasters(renderedChanged ? sceneLights(scene) : lights, camera);
   writeDirectionalShadowFades({
     directional: casters.directional.map((light) => fades.get(light) ?? null),
     sun: casters.sun.map((light) => fades.get(light) ?? null),
   });
+}
+
+function sunsOf(declared: readonly DeclaredDirectionalLight[]): SplitSunLight[] {
+  const suns: SplitSunLight[] = [];
+  for (const { light } of declared) {
+    const sun = isDropped(light) ? null : splitSunOf(light);
+    if (sun) suns.push(sun);
+  }
+  return suns;
 }
 
 /** Hands every declared light back its own shading and layers, for a fitter that stops fitting. */
@@ -203,6 +233,7 @@ function applySplits(sun: SplitSunLight, placement: LightPlacement, splits: Dire
     splitCamera.updateMatrixWorld();
   });
   splits.slots.forEach((slot, index) => sun.shadow._cascadeData[index]!.fromArray(slot));
+  sun.shadow.placeSplitFrusta();
 }
 
 function applyShadowCameraBox(shadowCamera: THREE.OrthographicCamera, box: DirectionalShadowBox): void {

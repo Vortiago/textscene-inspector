@@ -366,27 +366,53 @@ describe('three’s shadow pass, as the shared atlas relies on it', () => {
   });
 });
 
-describe('DirectionalSplitShadow.holdsBox', () => {
-  /** A shadow of one split whose frustum is a 2-unit cube about the origin. */
-  function oneSplitAboutOrigin(): DirectionalSplitShadow {
-    const shadow = new DirectionalSplitShadow();
-    shadow.splitCount = 1;
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
-    camera.updateMatrixWorld();
-    shadow
-      .getFrustum(0)
-      .setFromProjectionMatrix(camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse));
-    return shadow;
-  }
+/** A shadow of one split whose camera sees a 2-unit cube about the origin. */
+function oneSplitAboutOrigin(): DirectionalSplitShadow {
+  const shadow = new DirectionalSplitShadow();
+  shadow.splitCount = 1;
+  const camera = shadow.getCamera(0);
+  Object.assign(camera, { left: -1, right: 1, top: 1, bottom: -1, near: -1, far: 1 });
+  camera.updateProjectionMatrix();
+  camera.updateMatrixWorld();
+  shadow.placeSplitFrusta();
+  return shadow;
+}
 
+function cubeAt(centre: number): THREE.Box3 {
+  return new THREE.Box3(
+    new THREE.Vector3(centre - 0.5, centre - 0.5, centre - 0.5),
+    new THREE.Vector3(centre + 0.5, centre + 0.5, centre + 0.5)
+  );
+}
+
+describe('DirectionalSplitShadow.placeSplitFrusta', () => {
+  it("places each drawn split's frustum from its camera", () => {
+    const shadow = oneSplitAboutOrigin();
+    expect(shadow.getFrustum(0).intersectsBox(cubeAt(0))).toBe(true);
+    expect(shadow.getFrustum(0).intersectsBox(cubeAt(5))).toBe(false);
+  });
+
+  it('follows a camera that moves before the next placement (edge case)', () => {
+    const shadow = oneSplitAboutOrigin();
+    shadow.getCamera(0).position.set(5, 5, 5);
+    shadow.getCamera(0).updateMatrixWorld();
+    shadow.placeSplitFrusta();
+    expect(shadow.getFrustum(0).intersectsBox(cubeAt(5))).toBe(true);
+  });
+
+  it('places no frustum for an undrawn slot (error case)', () => {
+    const shadow = oneSplitAboutOrigin();
+    expect(shadow.getFrustum(1).intersectsBox(cubeAt(0))).toBe(false);
+  });
+});
+
+describe('DirectionalSplitShadow.holdsBox', () => {
   it('holds a box inside a drawn split', () => {
-    const box = new THREE.Box3(new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(0.5, 0.5, 0.5));
-    expect(oneSplitAboutOrigin().holdsBox(box)).toBe(true);
+    expect(oneSplitAboutOrigin().holdsBox(cubeAt(0))).toBe(true);
   });
 
   it('does not hold a box outside every drawn split', () => {
-    const box = new THREE.Box3(new THREE.Vector3(5, 5, 5), new THREE.Vector3(6, 6, 6));
-    expect(oneSplitAboutOrigin().holdsBox(box)).toBe(false);
+    expect(oneSplitAboutOrigin().holdsBox(cubeAt(5.5))).toBe(false);
   });
 
   it('holds nothing when no split draws', () => {

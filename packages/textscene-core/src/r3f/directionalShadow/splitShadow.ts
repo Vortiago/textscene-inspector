@@ -48,6 +48,9 @@ const ThreeLightShadow = THREE.LightShadow as unknown as new (
   camera: THREE.OrthographicCamera
 ) => THREE.LightShadow<THREE.OrthographicCamera> & LightShadowInternals;
 
+/** Scratch for `placeSplitFrusta`, which places one frustum at a time. */
+const splitViewProjection = new THREE.Matrix4();
+
 export class DirectionalSplitShadow extends ThreeLightShadow {
   /** How many slots draw a split: 1, 2 or 4. */
   splitCount = SPLIT_SLOTS;
@@ -157,9 +160,23 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
   }
 
   /**
-   * Whether a drawn split's frustum holds `box`. The frusta are those the last shadow render
-   * placed, so a scene cull that runs before this render reads the previous one.
+   * Sets each drawn split's frustum from its camera, as the shadow pass will
+   * (`LightShadow.js:237-238`). The fitter calls this once it places the cameras, so a cull that
+   * runs before the shadow pass reads this render's splits.
    */
+  placeSplitFrusta(): void {
+    for (let slot = 0; slot < this.splitCount; slot++) {
+      const camera = this.splitCameras[slot]!;
+      splitViewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+      this.splitFrustums[slot]!.setFromProjectionMatrix(
+        splitViewProjection,
+        camera.coordinateSystem,
+        camera.reversedDepth
+      );
+    }
+  }
+
+  /** Whether a drawn split's frustum holds `box`. */
   holdsBox(box: THREE.Box3): boolean {
     for (let slot = 0; slot < this.splitCount; slot++) {
       if (this.splitFrustums[slot]!.intersectsBox(box)) return true;
