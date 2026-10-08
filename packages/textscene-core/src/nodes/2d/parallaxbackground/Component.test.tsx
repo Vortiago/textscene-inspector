@@ -16,6 +16,7 @@ import { ParallaxLayer } from '../parallaxlayer/Component';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { parseParallaxBackground } from './parser';
 import { ParallaxBackground } from './Component';
+import { CanvasLayerScope } from '../../../r3f/canvasLayerScope';
 
 function backgroundNode(properties: Record<string, string> = {}): TscnNode {
   return {
@@ -70,13 +71,17 @@ function StoreCamera({ into }: { into: { current: THREE.Camera | null } }) {
   return null;
 }
 
-/** What `WebGLRenderer.render` calls before it builds its render list. */
-function fireRender(scene: THREE.Object3D, camera: THREE.Camera) {
+/** What `WebGLRenderer.render` calls before it builds its render list. The fourth argument is the target. */
+function fireRender(
+  scene: THREE.Object3D,
+  camera: THREE.Camera,
+  target: THREE.WebGLRenderTarget | null = null
+) {
   scene.onBeforeRender(
     null as unknown as THREE.WebGLRenderer,
     scene as THREE.Scene,
     camera,
-    null as unknown as THREE.BufferGeometry,
+    target as unknown as THREE.BufferGeometry,
     null as unknown as THREE.Material,
     null as unknown as THREE.Group
   );
@@ -116,17 +121,24 @@ describe('<ParallaxBackground>', () => {
     expect(world.y).toBe(0);
   });
 
-  it('anchors to the view corner when a sub-viewport pass renders through a Camera2D', async () => {
+  it('anchors its canvas to the view corner when a sub-viewport pass renders through a Camera2D', async () => {
+    // The anchor is `CanvasLayerScope`'s, which every CanvasLayer's subtree draws in.
+    const node = backgroundNode();
     const renderer = await ReactThreeTestRenderer.create(
       <>
         <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
-        <ParallaxBackground node={backgroundNode()} />
+        <ParallaxBackground node={node}>
+          <CanvasLayerScope node={node}>
+            <group name="Probe" />
+          </CanvasLayerScope>
+        </ParallaxBackground>
       </>
     );
     const scene = renderer.scene.instance;
-    fireRender(scene, viewportPassCamera());
+    scene.updateMatrixWorld();
+    fireRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648));
 
-    const world = new THREE.Vector3().setFromMatrixPosition(scene.getObjectByName('BG')!.matrixWorld);
+    const world = new THREE.Vector3().setFromMatrixPosition(scene.getObjectByName('Probe')!.matrixWorld);
     expect(world.x).toBe(24);
     expect(world.y).toBe(-76);
   });

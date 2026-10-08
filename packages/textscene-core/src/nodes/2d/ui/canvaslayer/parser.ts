@@ -1,11 +1,17 @@
 /**
  * CanvasLayer parser. CanvasLayer is not a Control, so it parses only the heading's
- * hierarchy attributes, visibility, layer and its canvas transform. Without its `parent` a node
+ * hierarchy attributes, visibility, layer, its canvas transform and how it follows the viewport. Without its `parent` a node
  * attaches to nothing, and a scene has one root, so the layer and its subtree would be dropped.
  */
 
 import { type ParsedHeading } from '../../../../parser/utils';
-import { floatOr, parseOptionalInt, parseHeadingIndex, vec2Or } from '../../../../parser/valueParsers';
+import {
+  boolOr,
+  floatOr,
+  parseOptionalInt,
+  parseHeadingIndex,
+  vec2Or,
+} from '../../../../parser/valueParsers';
 import { decomposeTransform2D } from '../../../base/node2d/parser';
 import type { CanvasLayerProperties } from './types';
 import { boolSlotValue } from '../../../../godot/index.js';
@@ -36,9 +42,12 @@ export function parseCanvasLayer(
   properties: Record<string, string>
 ): CanvasLayerProperties {
   const name = heading.attributes.name || '';
+  const context = name || 'CanvasLayer';
   const result: CanvasLayerProperties = {
     name,
     canvasTransform: parseCanvasLayerTransform(properties, name),
+    follow_viewport_enabled: boolOr(properties.follow_viewport_enabled, false, context),
+    follow_viewport_scale: floatOr(properties.follow_viewport_scale, 1, context),
   };
   if (heading.attributes.parent !== undefined) result.parent = heading.attributes.parent;
   if (heading.attributes.instance !== undefined) result.instance = heading.attributes.instance;

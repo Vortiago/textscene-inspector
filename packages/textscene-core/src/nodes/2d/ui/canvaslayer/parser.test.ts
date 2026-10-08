@@ -70,3 +70,33 @@ describe('parseCanvasLayer transform', () => {
     });
   });
 });
+
+describe('parseCanvasLayer follow_viewport_enabled', () => {
+  it('defaults to false, so the layer ignores the viewport canvas transform', () => {
+    expect(parseCanvasLayer(h({ name: 'HUD' }), {}).follow_viewport_enabled).toBe(false);
+  });
+
+  it('reads an authored true', () => {
+    expect(
+      parseCanvasLayer(h({ name: 'HUD' }), { follow_viewport_enabled: 'true' }).follow_viewport_enabled
+    ).toBe(true);
+  });
+
+  it('falls back to false on a value Godot would not store', () => {
+    expect(
+      parseCanvasLayer(h({ name: 'HUD' }), { follow_viewport_enabled: 'sure' }).follow_viewport_enabled
+    ).toBe(false);
+  });
+});
+
+describe('parseCanvasLayer follow_viewport_scale', () => {
+  it('defaults to 1', () => {
+    expect(parseCanvasLayer(h({ name: 'HUD' }), {}).follow_viewport_scale).toBe(1);
+  });
+
+  it('reads an authored scale', () => {
+    expect(parseCanvasLayer(h({ name: 'HUD' }), { follow_viewport_scale: '2.5' }).follow_viewport_scale).toBe(
+      2.5
+    );
+  });
+});

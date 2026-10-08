@@ -163,18 +163,6 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'enabled and use_edge_connections gate the navmesh and edge-connection debug draw this previewer mirrors; the layer mask and the two costs only steer pathfinding.',
   },
 
-  CanvasLayer: {
-    renderGap: [
-      // The viewport follow. The editor's world canvas carries no Camera2D
-      // transform and its follow scale is off, but a sub-viewport pass framed
-      // by a Camera2D would show it.
-      'follow_viewport_enabled',
-      'follow_viewport_scale',
-    ],
-    reason:
-      'The bare CanvasLayer parser reads layer, visible and the canvas transform, but not the viewport-follow pair, which moves the layer with a Camera2D in a sub-viewport pass. ParallaxBackground, the one descendant carrying a parser of its own, reads and renders follow_viewport_enabled but not follow_viewport_scale.',
-  },
-
   SubViewportContainer: {
     linterOnly: [
       // Routes input to the child SubViewport instead of the container: event

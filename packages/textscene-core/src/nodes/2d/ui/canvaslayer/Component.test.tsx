@@ -4,7 +4,7 @@
  * as `NodeDispatcher.tsx`'s `PlainNode` does. Structure only, never pixels.
  */
 import { describe, expect, it } from 'vitest';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -153,5 +153,66 @@ describe('<CanvasLayer>', () => {
     const probe = renderer.scene.findAllByType('Group')[0]!.instance as THREE.Object3D;
     const layer = parseCanvasLayer({ type: 'node', attributes: { name: 'HUD' } }, raw);
     expect(probe.matrixWorld.elements).toEqual(threeMatrixFromTransform2D(layer.canvasTransform).elements);
+  });
+});
+
+/**
+ * A sub-viewport pass draws through a Camera2D's view (ADR-0006). Godot draws a layer's canvas
+ * through the layer's own transform, so a layer that does not follow the viewport stays put in
+ * viewport pixels, and one that follows draws through the view, scaled about its centre.
+ */
+describe('<CanvasLayer> in a sub-viewport pass', () => {
+  const SIZE = { x: 300, y: 200 };
+  /** A Camera2D at (500, 400) views world x 350..650, y 300..500. */
+  const VIEW = { left: -150, right: 150, top: 100, bottom: -100, position: [500, -400, 1000] as const };
+
+  /** Fires the scene's pre-render hook as a sub-viewport pass through the view does. */
+  async function renderInPass(raw: Record<string, string>) {
+    const renderer = await renderLayer(raw, [], 'pass');
+    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    const camera = new THREE.OrthographicCamera(VIEW.left, VIEW.right, VIEW.top, VIEW.bottom);
+    camera.position.set(...VIEW.position);
+    const target = new THREE.WebGLRenderTarget(SIZE.x, SIZE.y);
+    scene.updateMatrixWorld();
+    scene.onBeforeRender(
+      null as unknown as THREE.WebGLRenderer,
+      scene,
+      camera,
+      target as unknown as THREE.BufferGeometry,
+      null as unknown as THREE.Material,
+      null as unknown as THREE.Group
+    );
+    return renderer.scene.findAllByType('Group')[0]!.instance as THREE.Object3D;
+  }
+
+  /** Where a layer pixel lands in the world, in Godot's y-down pixels. */
+  function landing(probe: THREE.Object3D, pixel: { x: number; y: number }) {
+    const world = new THREE.Vector3(pixel.x, -pixel.y, 0).applyMatrix4(probe.matrixWorld);
+    return { x: Math.round(world.x), y: Math.round(-world.y) };
+  }
+
+  it("keeps a layer that does not follow at the view's top-left", async () => {
+    const probe = await renderInPass({});
+    expect(landing(probe, { x: 20, y: 20 })).toEqual({ x: 370, y: 320 });
+  });
+
+  it('draws a following layer through the view', async () => {
+    const probe = await renderInPass({ follow_viewport_enabled: 'true' });
+    expect(landing(probe, { x: 370, y: 420 })).toEqual({ x: 370, y: 420 });
+  });
+
+  it('scales a following layer about the view centre by follow_viewport_scale', async () => {
+    // `renderer_viewport.cpp:76-85`: the scale pivots on the viewport's centre, here world (500, 400).
+    const probe = await renderInPass({ follow_viewport_enabled: 'true', follow_viewport_scale: '2.0' });
+    expect(landing(probe, { x: 500, y: 400 })).toEqual({ x: 500, y: 400 });
+    expect(landing(probe, { x: 550, y: 420 })).toEqual({ x: 600, y: 440 });
+  });
+
+  it('stays unanchored on the canvas, which the store camera draws', async () => {
+    const renderer = await renderLayer({}, [], 'canvas');
+    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    scene.updateMatrixWorld();
+    const probe = renderer.scene.findAllByType('Group')[0]!.instance as THREE.Object3D;
+    expect(probe.matrixWorld.equals(new THREE.Matrix4())).toBe(true);
   });
 });

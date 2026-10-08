@@ -18,4 +18,8 @@ export interface CanvasLayerProperties {
    * through. Renamed, since a Node3D's `transform` is a 3D one.
    */
   canvasTransform: Transform2DColumns;
+  /** Whether the layer draws through the viewport's canvas transform, a Camera2D's, too. */
+  follow_viewport_enabled: boolean;
+  /** The scale a following layer takes about the viewport's centre. */
+  follow_viewport_scale: number;
 }

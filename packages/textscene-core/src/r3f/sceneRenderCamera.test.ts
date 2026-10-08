@@ -2,13 +2,13 @@ import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import { observeSceneCamera } from './sceneRenderCamera';
 
-/** What `WebGLRenderer.render` does to a scene, minus the rendering. */
-function fireRender(scene: THREE.Scene, camera: THREE.Camera) {
+/** What `WebGLRenderer.render` does to a scene, minus the rendering. Its fourth argument is the target. */
+function fireRender(scene: THREE.Scene, camera: THREE.Camera, target: THREE.WebGLRenderTarget | null = null) {
   scene.onBeforeRender(
     null as unknown as THREE.WebGLRenderer,
     scene,
     camera,
-    null as unknown as THREE.BufferGeometry,
+    target as unknown as THREE.BufferGeometry,
     null as unknown as THREE.Material,
     null as unknown as THREE.Group
   );
@@ -26,6 +26,18 @@ describe('observeSceneCamera', () => {
     fireRender(scene, b);
 
     expect(seen).toEqual([a, b]);
+  });
+
+  it('reports the render target each render draws into, null for the canvas', () => {
+    const scene = new THREE.Scene();
+    const seen: (THREE.WebGLRenderTarget | null)[] = [];
+    observeSceneCamera(scene, (_camera, target) => seen.push(target));
+
+    const target = new THREE.WebGLRenderTarget(4, 4);
+    fireRender(scene, new THREE.OrthographicCamera(), target);
+    fireRender(scene, new THREE.OrthographicCamera());
+
+    expect(seen).toEqual([target, null]);
   });
 
   it('chains rather than replaces, so several backgrounds share one scene', () => {

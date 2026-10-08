@@ -1,7 +1,6 @@
 ---
 type: CanvasLayer
 category: 2D
-status: done
 fixture: unit-canvas-layer.tscn
 image: unit-canvas-layer
 renders_as: a full-rect passthrough layer hosting Control children
@@ -19,9 +18,12 @@ against.
 
 `offset`, `rotation` and `scale`, or `transform` when written, place the layer's whole
 canvas. A Control and a Node2D inside it both draw through that transform, while the
-square outside stays put. `follow_viewport_enabled` and `follow_viewport_scale` change
-nothing in the editor view: the editor turns the follow scale off, and its world canvas
-has no Camera2D transform to follow.
+square outside stays put.
+
+In a sub-viewport that draws through a Camera2D (ADR-0006), the layer stays in viewport
+pixels. With `follow_viewport_enabled` it draws through the camera's view, scaled about
+the view's centre by `follow_viewport_scale`. The editor view has no Camera2D transform
+to follow, and the editor turns the follow scale off.
 
 ## Linting
 

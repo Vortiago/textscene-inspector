@@ -1,8 +1,8 @@
 /**
  * Draws a ParallaxBackground, a CanvasLayer, in viewport screen space: the subtree
- * ignores ancestor transforms and, under a Camera2D, anchors to the view's top-left
- * so it covers the screen. The cut is a hand-written `matrixWorld` with
- * `matrixWorldAutoUpdate` off: three keeps it and still recomputes the subtree.
+ * ignores ancestor transforms, and `CanvasLayerScope` anchors it to a Camera2D's view.
+ * The cut is an identity `matrixWorld` with `matrixWorldAutoUpdate` off: three keeps
+ * it and still recomputes the subtree.
  */
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -57,8 +57,6 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
   const registry = useMemo(() => ({ parentPath: path, register }), [path, register]);
 
   useEffect(() => {
-    const anchor = new THREE.Matrix4();
-
     return observeSceneCamera(scene, (camera) => {
       const group = groupRef.current;
       if (!group) return;
@@ -87,15 +85,6 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
               tag.anchor_mode !== Camera2DAnchorMode.FIXED_TOP_LEFT
             )
           : EDITOR_VIEW;
-
-      // `follow_viewport_enabled` re-parents the layer's canvas onto the world
-      // canvas (`canvas_set_parent`), which cancels the screen anchor: the
-      // subtree then lands at the scroll offset in world space.
-      const anchorX = props.follow_viewport_enabled ? 0 : view.topLeft.x;
-      const anchorY = props.follow_viewport_enabled ? 0 : view.topLeft.y;
-      // The layer's own transform applies inside, in `CanvasLayerScope`, which both walks share.
-      anchor.makeTranslation(anchorX, 0 - anchorY, 0);
-      group.matrixWorld.copy(anchor);
 
       // With no current Camera2D, `set_base_offset_and_scale` never runs and the
       // layers keep their authored pose: `_update_scroll` early-returns outside the
