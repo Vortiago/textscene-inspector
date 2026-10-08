@@ -149,15 +149,18 @@ function tileMaterialResolver(data: TileSetSourceData): TileMaterialResolver {
 }
 
 /**
- * A `CanvasItemMaterial` SubResource gives its properties. Any other material, or an external one,
- * which nothing here loads, draws with plain canvas blending, as a node's material does.
+ * A SubResource gives its properties, which are null for any material but a CanvasItemMaterial. An
+ * external material gives its path, which the draw loads as a node's material is loaded.
  */
 function loadTileMaterial(
   ref: string,
   parsed: ReturnType<typeof parseResourceReference>,
   data: TileSetSourceData
 ): TileMaterial | null {
-  if (parsed?.type !== 'SubResource') return data.resolveResourcePath(ref) ? { properties: null } : null;
+  if (parsed?.type !== 'SubResource') {
+    const path = data.resolveResourcePath(ref);
+    return path ? { path } : null;
+  }
   const sub = data.findSubResource(parsed.id);
   if (!sub) {
     warn(`[TileSet] material ${ref} names nothing — no material`);

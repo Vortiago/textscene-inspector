@@ -483,8 +483,7 @@ describe('per-tile TileData that changes a frame (tile_set.cpp:7174-7177)', () =
     const alternative = alternativeOf({ '0:0/0/material': 'SubResource("mat")' }, [
       { id: 'mat', type: 'CanvasItemMaterial', data: { blend_mode: '1', light_mode: '1' } },
     ])();
-    expect(alternative.material?.properties?.blendMode).toBe(1);
-    expect(alternative.material?.properties?.lightMode).toBe(1);
+    expect(alternative.material).toMatchObject({ properties: { blendMode: 1, lightMode: 1 } });
   });
 
   it('gives tiles that name one material the same material, as one Ref', () => {
@@ -519,7 +518,7 @@ describe('per-tile TileData that changes a frame (tile_set.cpp:7174-7177)', () =
 });
 
 describe('a tile material outside the TileSet file', () => {
-  it('keeps an ExtResource material as an own material with no CanvasItemMaterial properties', () => {
+  it('keeps an ExtResource material as the path the draw loads', () => {
     const model = tileSetFromScene(
       'SubResource("ts")',
       [
@@ -533,7 +532,7 @@ describe('a tile material outside the TileSet file', () => {
       [{ id: 'm', type: 'Material', path: 'res://tile.tres' }]
     );
     expect(model!.sources.get(0)!.tiles.get('0:0')!.alternatives.get(0)!.material).toEqual({
-      properties: null,
+      path: 'res://tile.tres',
     });
   });
 });

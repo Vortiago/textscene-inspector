@@ -61,13 +61,16 @@ export interface TileOrientation {
 }
 
 /**
- * A tile's own material (`TileData.material`). Tiles that name one resource share one object, so
- * identity compares as Godot's `Ref` does.
+ * A tile's own material (`TileData.material`): a SubResource's properties, or the path of the file
+ * the draw loads. Tiles that name one resource share one object, so identity compares as Godot's
+ * `Ref` does.
  */
-export interface TileMaterial {
-  /** Null for a material that is not a CanvasItemMaterial, which draws with plain canvas blending. */
-  properties: CanvasItemMaterialProperties | null;
-}
+export type TileMaterial =
+  | {
+      /** Null for a material that is not a CanvasItemMaterial, which draws with plain canvas blending. */
+      properties: CanvasItemMaterialProperties | null;
+    }
+  | { path: string };
 
 /** One alternative tile's `TileData`, the per-tile properties that change a frame. */
 export interface AlternativeTileModel extends TileOrientation {

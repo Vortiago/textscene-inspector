@@ -14,6 +14,7 @@ import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING } from './lighting2d/lig
 import type { CappedItem } from './lighting2d/itemLightCap';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import { drawableCells } from '../resources/tileset/drawableCell';
+import { parseTresFile } from '../parser/parsedResource';
 import { decodeCanvasItemMaterial } from '../resources/materials/canvasitemmaterial/decode';
 import {
   defaultTileData,
@@ -41,7 +42,8 @@ const UNSHADED = canvasItemMaterial({ lightMode: CanvasItemLightMode.UNSHADED })
 
 /**
  * The tile at atlas (0, 0): alternative 0 at TileData defaults, 1 at z_index 2, 2 with an additive
- * material, 3 with a ShaderMaterial, 4 with an unshaded material and 5 tinted red.
+ * material, 3 with a ShaderMaterial, 4 with an unshaded material, 5 tinted red and 6 with an additive
+ * material from a .tres file.
  */
 const ALTERNATIVES: Partial<AlternativeTileModel>[] = [
   {},
@@ -50,6 +52,7 @@ const ALTERNATIVES: Partial<AlternativeTileModel>[] = [
   { material: { properties: null } },
   { material: { properties: UNSHADED } },
   { modulate: { r: 1, g: 0, b: 0, a: 1 } },
+  { material: { path: 'res://add.tres' } },
 ];
 
 const BASE_TILE: AtlasTileModel = {
@@ -103,6 +106,10 @@ function render(
     (texture as unknown as { image: { width: number; height: number } }).image = { width: 16, height: 16 };
     fake.textures.seed(`res://source${id}.png`, texture);
   }
+  fake.resources.seed(
+    'res://add.tres',
+    parseTresFile('[gd_resource type="CanvasItemMaterial" format=3]\n\n[resource]\nblend_mode = 1\n')
+  );
   const registerCappedItem = vi.fn((_item: CappedItem) => () => {});
   const lighting = { ...INERT_CANVAS_LIGHTING, registerCappedItem };
   const wrap = (children: ReactNode) => (
@@ -200,6 +207,11 @@ describe('<TileQuadrants>', () => {
     const [base, additive] = materialsOf(await render([[cell(0, 0, 0), cell(0, 1, 0, 2)]]).tree);
     expect(base!.blending).toBe(THREE.NormalBlending);
     expect(additive!.blending).toBe(THREE.CustomBlending);
+  });
+
+  it("draws a tile whose material is a .tres file with that file's blend mode", async () => {
+    const [fromFile] = materialsOf(await render([[cell(0, 0, 0, 6)]]).tree);
+    expect(fromFile!.blending).toBe(THREE.CustomBlending);
   });
 
   it("draws a tile with a material it cannot read with plain blending, not the layer's", async () => {

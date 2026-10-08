@@ -6,7 +6,7 @@
 
 import { useMemo } from 'react';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
-import type { TileSetModel } from '../resources/tileset/types';
+import type { TileMaterial, TileSetModel } from '../resources/tileset/types';
 import { quadrantCanvasItems, type TileCanvasItem } from '../resources/tileset/tileCanvasItems';
 import { canvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
 import {
@@ -15,6 +15,7 @@ import {
 } from '../resources/materials/canvasitemmaterial/types';
 import { LitCanvasItemPixels } from './components/LitCanvasItemPixels';
 import { CanvasItemGroup, useCanvasItemKey } from './components/CanvasItemGroup';
+import { useCanvasItemMaterialFile } from './components/canvasItemMaterialContext';
 import { multiplyModulate, type RGBA } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
 import { useGodotLinearColor } from './godotColor';
@@ -64,8 +65,7 @@ function drawnItems(quadrants: readonly (readonly DrawableCell[])[]): DrawnItem[
 }
 
 function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
-  // A tile's own material replaces the layer's: the item stops `use_parent_material` (`:350`).
-  const material = item.material ? item.material.properties : layer.material;
+  const material = useTileItemMaterial(item.material, layer.material);
   // `z_as_relative` (`:356`), so the item's z accumulates onto the layer's.
   const zFinal = accumulateCanvasItemZ(layer.zFinal, { z_index: item.zIndex });
   const canvasKey = canvasKeyAtZ(useCanvasItemKey(), layer.zFinal, zFinal);
@@ -94,4 +94,14 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
       </LitCanvasItemPixels>
     </CanvasItemGroup>
   );
+}
+
+/** A tile's own material replaces the layer's: the item stops `use_parent_material` (`:350`). */
+function useTileItemMaterial(
+  own: TileMaterial | null,
+  layerMaterial: CanvasItemMaterialProperties | null
+): CanvasItemMaterialProperties | null {
+  const fromFile = useCanvasItemMaterialFile(own && 'path' in own ? own.path : null);
+  if (!own) return layerMaterial;
+  return 'path' in own ? fromFile : own.properties;
 }
