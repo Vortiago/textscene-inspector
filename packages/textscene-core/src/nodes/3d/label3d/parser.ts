@@ -35,6 +35,7 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
     outline_render_priority: intOr(properties.outline_render_priority, -1, 'outline_render_priority'),
     alpha_cut: parseAlphaCutMode(properties.alpha_cut),
     alpha_scissor_threshold: floatOr(properties.alpha_scissor_threshold, 0.5, 'alpha_scissor_threshold'),
+    alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, 'alpha_hash_scale'),
     fixed_size: boolSlotValue(properties.fixed_size) === true,
     texture_filter: parseTextureFilter(properties.texture_filter),
   };

@@ -3,7 +3,7 @@
 ; One variable: which Sprite3D surfaces join the shadow pass. Godot files a surface in the shadow
 ; pass from the opaque list, or from the alpha pass with a depth prepass
 ; (`render_forward_clustered.cpp:4079-4089`). No other scene shows it: none lights a Sprite3D
-; with a shadowed light. ALPHA_HASH is left out, as its noise differs from three's.
+; with a shadowed light.
 
 [ext_resource type="Texture2D" path="res://textures/dodge-walk1.png" id="1_walk"]
 
@@ -44,6 +44,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.54, 0)
 texture = ExtResource("1_walk")
 pixel_size = 0.008
 alpha_cut = 2
+
+; ALPHA_HASH: the opaque list, so the hashed silhouette casts.
+[node name="Hash" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.3, 0.54, 0)
+texture = ExtResource("1_walk")
+pixel_size = 0.008
+alpha_cut = 3
 
 ; TRANSPARENCY_DISABLED: the opaque list, and no ALPHA, so the whole quad casts.
 [node name="Opaque" type="Sprite3D" parent="."]

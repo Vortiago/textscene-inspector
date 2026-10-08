@@ -50,6 +50,5 @@ Most keys warn then fall back to their Godot defaults. `billboard`, `alpha_cut` 
 
 - **Approximated** `alpha_cut = OPAQUE_PREPASS` clips against a fixed threshold in the
   colour pass too, where Godot clips only depth, so the sprite's edge is harder.
-- **Approximated** `alpha_hash_scale`, `alpha_antialiasing_mode` and
-  `alpha_antialiasing_edge` have no counterpart, so a hashed-alpha sprite's dither grain
-  differs and its edges are not feathered.
+- **Shader missing** `alpha_antialiasing_mode` and `alpha_antialiasing_edge` have no
+  counterpart, so a cut sprite's edges are not feathered.

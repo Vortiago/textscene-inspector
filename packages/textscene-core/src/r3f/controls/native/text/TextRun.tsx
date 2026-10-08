@@ -475,6 +475,7 @@ function useOwnedMaterial<M extends THREE.Material | null>(
       blend?.depthWrite,
       blend?.alphaTest,
       blend?.alphaHash,
+      blend?.alphaHashScale,
       blend?.blending,
       blend?.injection,
     ]

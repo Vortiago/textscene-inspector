@@ -9,7 +9,7 @@ import { geometryFade } from '../../godot/fadeAlpha';
 import { hasSurface, type Aabb } from '../../godot/aabb';
 import { hasVisibilityRange, NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/visibilityRange';
 import type { GeometryInstance3DProperties } from '../../nodes/3d/geometryinstance3d/types';
-import type { RangeGate } from '../surfaceDrawHooks';
+import type { DrawnInstance } from '../surfaceDrawHooks';
 import type { FadedSurface, FadedSurfaces } from '../materials/swappedMaterials';
 import type { NodePlace, VisibilityInstance, VisibilityLinks } from './visibilityScene';
 import { compareTreeOrder } from '../contexts/TreeOrderContext';
@@ -30,10 +30,10 @@ const ownSize = new THREE.Vector3();
 
 /**
  * One instance's link to the scene cull. React writes its inputs after each commit. Before each
- * render the cull writes `isVisible`, which the draw hooks read through the `RangeGate`, and the
+ * render the cull writes `isVisible`, which the draw hooks read through `DrawnInstance`, and the
  * fade of each surface its drawer adds.
  */
-export class CulledInstance implements VisibilityInstance, RangeGate, FadedSurfaces {
+export class CulledInstance implements VisibilityInstance, DrawnInstance, FadedSurfaces {
   isVisible = true;
   links: VisibilityLinks = { path: null, parentPath: null, order: [], hasRange: false };
   range: VisibilityRange = NO_VISIBILITY_RANGE;
@@ -69,6 +69,10 @@ export class CulledInstance implements VisibilityInstance, RangeGate, FadedSurfa
     if (this.customAabb) copyAabb(target, this.customAabb);
     else if (!this.placement.ownAabb(target)) target.set(NODE_ORIGIN, NODE_ORIGIN);
     if (this.placement.nodeMatrixWorld(nodeMatrix)) target.applyMatrix4(nodeMatrix);
+  }
+
+  nodeMatrixWorld(target: THREE.Matrix4): boolean {
+    return this.placement.nodeMatrixWorld(target);
   }
 
   apply(isVisible: boolean, rangeFade: number): void {

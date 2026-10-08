@@ -14,6 +14,7 @@ import {
 import { BillboardMode } from '../../../godot/billboard';
 import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
+import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { resolveEmission } from './emission';
 import type {
   MaterialBlendState,
@@ -127,15 +128,16 @@ const BILLBOARD_KEY = 'godotBillboard';
 const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
- * `billboard_mode` and shadow-pass membership on `userData`, not as material props:
- * Godot decides both per surface, in the vertex shader and in the render list, and here
- * the draw hooks apply both per draw group (`r3f/surfaceDrawHooks.ts`). A fresh object
- * per bag, since the `.tres` loader writes its own keys into it.
+ * `billboard_mode`, shadow-pass membership and `alpha_hash_scale` on `userData`, not as material
+ * props: Godot decides them per surface, and here the draw hooks apply them per draw group
+ * (`r3f/surfaceDrawHooks.ts`). A fresh object per bag, since the `.tres` loader writes its own
+ * keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
     [BILLBOARD_KEY]: surfaceBillboard(scalars),
     [CASTS_SHADOW_KEY]: scalars.castsShadow,
+    ...alphaHashScaleUserData(scalars.alphaHashScale),
   };
 }
 
@@ -236,6 +238,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
         transparent: scalars.transparent,
         opacity: scalars.opacity,
         alphaTest: scalars.alphaTest,
+        alphaHash: scalars.alphaHash,
         depthWrite: scalars.depthWrite,
         depthTest: scalars.depthTest,
         side: scalars.side,
@@ -257,6 +260,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     transparent: scalars.transparent,
     opacity: scalars.opacity,
     alphaTest: scalars.alphaTest,
+    alphaHash: scalars.alphaHash,
     depthWrite: scalars.depthWrite,
     depthTest: scalars.depthTest,
     side: scalars.side,

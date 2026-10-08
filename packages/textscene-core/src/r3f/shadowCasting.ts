@@ -7,12 +7,12 @@
 import * as THREE from 'three';
 import { ShadowCastingSetting } from '../godot/rendering';
 import {
-  ALWAYS_VISIBLE,
+  UNRANGED_INSTANCE,
   poseColourDraw,
   skipColourDraw,
   surfaceDrawHooks,
   type CastRule,
-  type RangeGate,
+  type DrawnInstance,
   type SurfaceDrawHooks,
 } from './surfaceDrawHooks';
 
@@ -71,13 +71,13 @@ function castSettingOf(value: number | undefined): CastSetting {
   return CAST_SETTINGS[value as ShadowCastingSetting] ?? CAST_SETTINGS[ShadowCastingSetting.ON];
 }
 
-function castEffects({ castShadow, rule }: CastSetting, gate: RangeGate): ShadowCastingEffects {
-  return Object.freeze({ castShadow, ...surfaceDrawHooks(rule, gate) });
+function castEffects({ castShadow, rule }: CastSetting, instance: DrawnInstance): ShadowCastingEffects {
+  return Object.freeze({ castShadow, ...surfaceDrawHooks(rule, instance) });
 }
 
 // One frozen result per value: an unstable object would churn the mesh props.
 const UNRANGED_EFFECTS = new Map(
-  Object.values(CAST_SETTINGS).map((setting) => [setting, castEffects(setting, ALWAYS_VISIBLE)])
+  Object.values(CAST_SETTINGS).map((setting) => [setting, castEffects(setting, UNRANGED_INSTANCE)])
 );
 
 /** The effects of an instance with no visibility range. */
@@ -85,9 +85,12 @@ export function shadowCastingEffects(value: number | undefined): ShadowCastingEf
   return UNRANGED_EFFECTS.get(castSettingOf(value))!;
 }
 
-/** The effects of an instance whose visibility-range cull writes `gate`. A new object per call. */
-export function rangedShadowCastingEffects(value: number | undefined, gate: RangeGate): ShadowCastingEffects {
-  return castEffects(castSettingOf(value), gate);
+/** The effects of an instance the scene cull and its drawer place. A new object per call. */
+export function rangedShadowCastingEffects(
+  value: number | undefined,
+  instance: DrawnInstance
+): ShadowCastingEffects {
+  return castEffects(castSettingOf(value), instance);
 }
 
 /** The JSX props, applied to an object built outside JSX, such as a GLB's meshes. */

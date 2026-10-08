@@ -13,7 +13,8 @@ import {
   peekBundledCanvasFontMetrics,
 } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { alphaCutSurface, joinsShadowPass, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
-import { cutBlends } from '../../../r3f/materials/fadeVariants';
+import { cutBlends, type FadeVariants } from '../../../r3f/materials/fadeVariants';
+import type { CanvasTextBlend } from '../../../r3f/controls/native/text/canvasTextPainter';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
@@ -112,7 +113,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the
   // blended pass is transparent. The geometry instance's fade can move both surfaces
   // there, and scales each surface's alpha by one fade alpha.
-  const blends = cutBlends(cut);
+  const blends = withHashScale(cutBlends(cut), properties.alpha_hash_scale);
   const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass(cut, depthTest) };
 
   // `material.h:172-177`: the enum alternates NEAREST, LINEAR, so the even
@@ -168,4 +169,15 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
       })}
     </group>
   );
+}
+
+/** Each pass's blend at the label's `alpha_hash_scale`, which `label_3d.cpp:379` hands every surface. */
+function withHashScale(
+  blends: FadeVariants<CanvasTextBlend>,
+  alphaHashScale: number
+): FadeVariants<CanvasTextBlend> {
+  return {
+    unfaded: { ...blends.unfaded, alphaHashScale },
+    alphaPass: { ...blends.alphaPass, alphaHashScale },
+  };
 }

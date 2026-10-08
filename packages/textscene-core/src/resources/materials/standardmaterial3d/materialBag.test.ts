@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { billboardOf, castsShadowOf, standardMaterialBags, surfaceBillboard } from './materialBag';
+import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { materialFromBag } from './build';
 import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/billboard';
@@ -292,5 +293,21 @@ describe('standardMaterialBags — shadow-pass membership', () => {
   it('casts from Godot’s default surface and from a foreign material', () => {
     expect(castsShadowOf(materialFromBag(standardMaterialBags(null).unfaded))).toBe(true);
     expect(castsShadowOf(new THREE.MeshBasicMaterial())).toBe(true);
+  });
+});
+
+describe('standardMaterialBags — alpha hash', () => {
+  it('hashes an ALPHA_HASH material at its authored grain', () => {
+    const built = standardMaterial({ transparency: '3', alpha_hash_scale: '0.4' });
+    expect(built.alphaHash).toBe(true);
+    expect(built.userData).toMatchObject(alphaHashScaleUserData(0.4));
+  });
+
+  it('keeps an ALPHA_HASH material in the opaque pass', () => {
+    expect(standardMaterial({ transparency: '3' }).transparent).toBe(false);
+  });
+
+  it('hashes nothing on a material with no transparency (edge case)', () => {
+    expect(standardMaterial({}).alphaHash).toBe(false);
   });
 });

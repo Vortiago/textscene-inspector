@@ -6,6 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Sprite3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -423,6 +424,21 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mat.alphaTest).toBe(0);
     expect(mat.depthWrite).toBe(true);
     expect(mat.transparent).toBe(false);
+  });
+
+  it('hashes at the authored alpha_hash_scale', async () => {
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_HASH,
+        alpha_hash_scale: 0.3,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.userData).toEqual(alphaHashScaleUserData(0.3));
   });
 
   it('transparent=false disables hashing, as it disables the whole alpha-cut switch', async () => {

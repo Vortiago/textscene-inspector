@@ -27,6 +27,7 @@ import {
   godotTextureFilterState,
 } from '../../../resources/textures/godotTextureFilter';
 import type { Sprite3DProperties } from './types';
+import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
@@ -205,6 +206,8 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
         depthTest,
         // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
         side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
+        // `sprite_3d.cpp:282` hands the scale to every mode's material; only HASH reads it.
+        userData: alphaHashScaleUserData(properties.alpha_hash_scale),
       },
       merge: [properties.shaded ? SHADED_SCALARS : undefined],
     });

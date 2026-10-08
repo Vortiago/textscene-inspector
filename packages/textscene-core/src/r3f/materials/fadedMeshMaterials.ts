@@ -60,7 +60,7 @@ function alphaPassCopy(material: THREE.Material): THREE.Material {
     blending: material.blending,
   });
   if (blending !== undefined) copy.blending = blending;
-  if (injection) injectProgram(copy, injection);
+  injectProgram(copy, injection);
   return copy;
 }
 

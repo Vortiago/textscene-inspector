@@ -21,7 +21,9 @@ import { resolveExtResourcePath } from '../../SubResourceResolver';
 import type { TscnExternalResource } from '../../../parser/types';
 import { materialFromBag } from './build';
 import { buildMaterial } from './buildMaterial.testkit';
-import { standardMaterialBags, type StandardMaterialClass } from './materialBag';
+import { standardMaterialBags, type StandardMaterialBag, type StandardMaterialClass } from './materialBag';
+import { GODOT_ALPHA_HASH } from '../../../r3f/materials/godotAlphaHash';
+import type { ProgramInjection, ProgramShader } from '../../../r3f/materialProgramInputs';
 import { bindSlotTexture, materialTextureState } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
@@ -583,6 +585,32 @@ function comparable(value: unknown): unknown {
   return value instanceof THREE.Texture ? textureFingerprint(value) : value;
 }
 
+type CompileHook = ProgramInjection['onBeforeCompile'];
+
+/** Every patch the bag's material compiles with, in the order the program factory runs them. */
+function bagInjections(bag: StandardMaterialBag): CompileHook[] {
+  const hooks = bag.injection ? [bag.injection.onBeforeCompile] : [];
+  if (bag.props.alphaHash === true) hooks.push(GODOT_ALPHA_HASH.onBeforeCompile);
+  return hooks;
+}
+
+/** The stock standard program's text as `hooks` leave it, or null where no hook patches it. */
+function patchedProgram(...hooks: (CompileHook | undefined)[]): string[] | null {
+  const patches = hooks.filter((hook) => hook !== undefined);
+  if (patches.length === 0) return null;
+  const material = new THREE.MeshStandardMaterial();
+  const shader: ProgramShader = { ...THREE.ShaderLib.standard, uniforms: {} };
+  for (const patch of patches) patch.call(material, shader);
+  return [shader.vertexShader, shader.fragmentShader];
+}
+
+/** The patch a material built outside JSX compiles with, or none where it keeps three's. */
+function ownCompileHook(material: THREE.Material): CompileHook | undefined {
+  return Object.hasOwn(material, 'onBeforeCompile')
+    ? (material.onBeforeCompile as unknown as CompileHook)
+    : undefined;
+}
+
 describe('StandardMaterial3D arrival parity', () => {
   for (const testCase of CASES) {
     describe(testCase.name, () => {
@@ -623,7 +651,7 @@ describe('StandardMaterial3D arrival parity', () => {
         );
         const element = renderer.scene.findByType(TYPE_FOR[bag.materialClass]);
         // `attach` is the mount's own, and the React key and the injected hooks are the
-        // program factory's output. The hooks are compared as the patch they came from.
+        // program factory's output. The hooks are compared by the program they patch.
         const {
           onBeforeCompile,
           customProgramCacheKey: _cacheKey,
@@ -631,7 +659,9 @@ describe('StandardMaterial3D arrival parity', () => {
           ...mounted
         } = element.props as Record<string, unknown>;
         expect(mounted).toEqual(bag.props);
-        expect(onBeforeCompile).toBe(bag.injection?.onBeforeCompile);
+        expect(patchedProgram(onBeforeCompile as ProgramInjection['onBeforeCompile'] | undefined)).toEqual(
+          patchedProgram(...bagInjections(bag))
+        );
       });
 
       it(`${testCase.name}: the imperative adapter constructs the derived bag`, () => {
@@ -648,6 +678,7 @@ describe('StandardMaterial3D arrival parity', () => {
           derived[prop] = comparable(value);
         }
         expect(applied).toEqual(derived);
+        expect(patchedProgram(ownCompileHook(material))).toEqual(patchedProgram(...bagInjections(bag)));
       });
     }
 

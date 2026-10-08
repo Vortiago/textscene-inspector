@@ -133,12 +133,15 @@ export interface StandardMaterial3DData {
   transparent: boolean;
   /**
    * Whether the surface joins Godot's shadow pass: `!uses_alpha_pass() ||
-   * uses_depth_in_alpha_pass()`, the `FLAG_PASS_SHADOW` rule. Decoded from Godot's own
-   * alpha pass, not from `transparent`, which approximates ALPHA_HASH as blended.
+   * uses_depth_in_alpha_pass()`, the `FLAG_PASS_SHADOW` rule.
    */
   castsShadow: boolean;
   /** ALPHA_SCISSOR cutoff (`alpha_scissor_threshold`, 0..1). 0 means no cutout. */
   alphaTest: number;
+  /** Whether ALPHA_HASH cuts the alpha the shader writes. */
+  alphaHash: boolean;
+  /** `alpha_hash_scale`: the hash's grain, which `material.cpp:1840` hands the shader. */
+  alphaHashScale: number;
   /** The authored `depth_draw_mode`, with refraction's forced ALWAYS applied. */
   depthDrawMode: DepthDrawMode;
   /** Whether this surface's fragments reach the depth buffer. */
@@ -244,6 +247,8 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   transparent: boolean;
   castsShadow: boolean;
   alphaTest: number;
+  alphaHash: boolean;
+  alphaHashScale: number;
   depthWrite: boolean;
   alphaPassDepthWrite: boolean;
   readsAlbedoAlpha: boolean;

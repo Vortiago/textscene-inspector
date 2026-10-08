@@ -75,6 +75,5 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
   where Godot's stays smooth.
 - **Approximated** `alpha_cut = OPAQUE_PREPASS` clips against a fixed threshold in the
   colour pass too, where Godot clips only depth, so glyph edges are harder.
-- **Approximated** `alpha_hash_scale`, `alpha_antialiasing_mode` and
-  `alpha_antialiasing_edge` have no counterpart, so a hashed-alpha label's dither grain
-  differs and its edges are not feathered.
+- **Shader missing** `alpha_antialiasing_mode` and `alpha_antialiasing_edge` have no
+  counterpart, so a cut label's edges are not feathered.

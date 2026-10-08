@@ -28,6 +28,7 @@ export function labelProperties(overrides: Partial<Label3DProperties> = {}): Lab
     outline_render_priority: -1,
     alpha_cut: AlphaCutMode.DISABLED,
     alpha_scissor_threshold: 0.5,
+    alpha_hash_scale: 1,
     fixed_size: false,
     texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     ...overrides,

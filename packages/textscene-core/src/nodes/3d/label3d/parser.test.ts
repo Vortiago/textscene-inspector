@@ -30,6 +30,15 @@ describe('Label3D Parser', () => {
       expect(props.outline_modulate).toEqual({ r: 0, g: 0, b: 0, a: 1 }); // default black
     });
 
+    it('reads alpha_hash_scale', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), { alpha_hash_scale: '0.25' });
+      expect(props.alpha_hash_scale).toBe(0.25);
+    });
+
+    it("defaults alpha_hash_scale to Godot's 1.0 (edge case)", () => {
+      expect(parseLabel3D(heading('Label3D', { name: 'Label' }), {}).alpha_hash_scale).toBe(1);
+    });
+
     it('should parse text property with quotes removed', () => {
       const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Hello World"',

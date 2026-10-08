@@ -6,6 +6,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
 import {
   injectProgram,
   materialProgramInputs,
@@ -238,7 +239,7 @@ describe('materialProgramInputs', () => {
       expect(both.props.customProgramCacheKey?.()).toContain('light');
 
       const shader = { vertexShader: '', fragmentShader: '', uniforms: {} };
-      both.props.onBeforeCompile?.(shader);
+      both.props.onBeforeCompile?.call(new THREE.MeshBasicMaterial(), shader);
       expect(shader.fragmentShader).toBe('AB');
     });
 
@@ -386,5 +387,53 @@ describe('injectProgram', () => {
     injectProgram(first, INJECTION);
     injectProgram(second, INJECTION);
     expect(first.customProgramCacheKey).toBe(second.customProgramCacheKey);
+  });
+  it("adds Godot's hash to a hashed material", () => {
+    const material = new THREE.MeshBasicMaterial({ alphaHash: true });
+    injectProgram(material, INJECTION);
+    expect(material.customProgramCacheKey()).toContain(`patched+${GODOT_ALPHA_HASH.cacheKey}`);
+  });
+
+  it("patches a hashed material with Godot's hash alone (edge case)", () => {
+    const material = new THREE.MeshBasicMaterial({ alphaHash: true });
+    injectProgram(material, undefined);
+    expect(material.onBeforeCompile).toBe(GODOT_ALPHA_HASH.onBeforeCompile);
+  });
+
+  it('leaves an unhashed material with no injection unpatched (error case)', () => {
+    const material = new THREE.MeshBasicMaterial();
+    injectProgram(material, undefined);
+    expect(material.customProgramCacheKey()).toBe(new THREE.MeshBasicMaterial().customProgramCacheKey());
+  });
+});
+
+describe("materialProgramInputs with Godot's alpha hash", () => {
+  it("patches a hashed material with Godot's hash", () => {
+    const program = materialProgramInputs({ props: { alphaHash: true } });
+    expect(program.props.onBeforeCompile).toBe(GODOT_ALPHA_HASH.onBeforeCompile);
+    expect(program.key).toContain(`inject:${GODOT_ALPHA_HASH.cacheKey}`);
+  });
+
+  it('runs every injection on the material three compiles', () => {
+    const seen: THREE.Material[] = [];
+    const recorder: ProgramInjection = {
+      cacheKey: 'recorder',
+      onBeforeCompile() {
+        seen.push(this);
+      },
+    };
+    const program = materialProgramInputs({ props: { alphaHash: true, injection: recorder } });
+    const material = new THREE.MeshBasicMaterial();
+    const shader = { ...THREE.ShaderLib.basic, uniforms: {} };
+
+    program.props.onBeforeCompile?.call(material, shader);
+
+    expect(seen).toEqual([material]);
+    expect(shader.uniforms).toHaveProperty('godotObjectFromModel');
+  });
+
+  it('adds no hash to a material whose merge turns it off (edge case)', () => {
+    const program = materialProgramInputs({ props: { alphaHash: true }, merge: [{ alphaHash: false }] });
+    expect(program.props.onBeforeCompile).toBeUndefined();
   });
 });

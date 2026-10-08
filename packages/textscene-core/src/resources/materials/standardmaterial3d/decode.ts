@@ -130,10 +130,6 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     depthTest,
   });
   const { alphaPass, depthInAlphaPass } = membership;
-  // A deliberate parity deviation: Godot keeps ALPHA_HASH in the opaque pass with a
-  // dithered discard. three has no stochastic clip, and fully opaque is further
-  // from Godot's look than blending. The depth write keeps the exact opaque-pass one.
-  const transparent = alphaPass || transparency === Transparency.ALPHA_HASH;
   const castsShadow = drawsInShadowPass(membership);
 
   const normalScale = floatOr(properties['normal_scale'], 1, CONTEXT);
@@ -160,7 +156,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     uv1Scale: vec2FromVector3(properties['uv1_scale'], { x: 1, y: 1 }),
     uv1Offset: vec2FromVector3(properties['uv1_offset'], { x: 0, y: 0 }),
     transparency,
-    transparent,
+    transparent: alphaPass,
     castsShadow,
     // `alpha_scissor_threshold` hint is "0,1,0.001". 0 means "no cutout" to three,
     // which every non-scissor mode wants. A refractive surface's ALPHA is 1.0, which no
@@ -169,13 +165,15 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
       transparency === Transparency.ALPHA_SCISSOR && readsAlbedoAlpha
         ? clamp01(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT))
         : 0,
+    // `scene_forward_clustered.glsl:1398-1411`: the hash cuts the ALPHA the shader writes.
+    alphaHash: transparency === Transparency.ALPHA_HASH && readsAlbedoAlpha,
+    alphaHashScale: floatOr(properties['alpha_hash_scale'], 1, CONTEXT),
     depthDrawMode,
     depthWrite: godotDepthWrite(alphaPass, depthInAlphaPass, depthDrawMode, depthTest),
     alphaPassDepthWrite: godotDepthWrite(true, false, depthDrawMode, depthTest),
     readsAlbedoAlpha,
-    // `scene_forward_clustered.glsl:1413-1415`. ALPHA_HASH keeps its alpha here: this
-    // previewer blends it in place of the dither.
-    opaqueAfterCut: transparency === Transparency.ALPHA_SCISSOR && !alphaFlags.usesAlphaAntialiasing,
+    // `scene_forward_clustered.glsl:1413-1415`.
+    opaqueAfterCut: alphaFlags.usesAlphaClip && !alphaFlags.usesAlphaAntialiasing,
     depthTest,
     blendMode,
     cullMode: enumOr(properties['cull_mode'], CullMode.BACK, CULL_MODES, `${CONTEXT}.cull_mode`),

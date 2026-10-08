@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { applyShadowCasting, shadowCastingEffects } from './shadowCasting';
+import { applyShadowCasting, rangedShadowCastingEffects, shadowCastingEffects } from './shadowCasting';
+import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
+import type { ProgramShader } from './materialProgramInputs';
 import { drawsAsOneBatch } from './surfaceDrawHooks';
 import { billboardOf } from '../resources/materials/standardmaterial3d/materialBag';
 import { ShadowCastingSetting } from '../godot/rendering';
@@ -101,6 +103,53 @@ describe('surfaceDrawHooks — shadow pass billboard', () => {
     expect(mesh.matrixWorld.equals(pose)).toBe(true);
     const objectModelView = new THREE.Matrix4().multiplyMatrices(shadowCamera.matrixWorldInverse, pose);
     expect(mesh.modelViewMatrix.equals(objectModelView)).toBe(true);
+  });
+});
+
+/** The object-space uniform of `material` once it compiles Godot's hash. */
+function hashObjectSpace(material: THREE.Material): THREE.Matrix4 {
+  const shader: ProgramShader = { ...THREE.ShaderLib.standard, uniforms: {} };
+  GODOT_ALPHA_HASH.onBeforeCompile.call(material, shader);
+  return shader.uniforms.godotObjectFromModel!.value as THREE.Matrix4;
+}
+
+function groupMaterial(mesh: THREE.Mesh, group: number): THREE.Material {
+  return (mesh.material as THREE.Material[])[group]!;
+}
+
+function expectSameMatrix(actual: THREE.Matrix4, expected: THREE.Matrix4): void {
+  actual.elements.forEach((element, i) => expect(element).toBeCloseTo(expected.elements[i]!, 9));
+}
+
+describe('surfaceDrawHooks — alpha hash object space', () => {
+  it('hashes a billboarding group in the object space of its unposed node', () => {
+    const mesh = surfacesMesh();
+    const objectSpace = hashObjectSpace(groupMaterial(mesh, BILLBOARD));
+    const drawn = drawColourGroup(mesh, camera, BILLBOARD, (s) => s.matrixWorld);
+    expectSameMatrix(objectSpace, mesh.matrixWorld.clone().invert().multiply(drawn));
+  });
+
+  it("hashes in the node pose the instance gives, which a node's billboard never moves", () => {
+    const mesh = surfacesMesh();
+    const node = new THREE.Matrix4().makeTranslation(5, 6, 7);
+    applyShadowCasting(
+      mesh,
+      rangedShadowCastingEffects(ShadowCastingSetting.ON, {
+        isVisible: true,
+        nodeMatrixWorld: (target) => (target.copy(node), true),
+      })
+    );
+    const objectSpace = hashObjectSpace(groupMaterial(mesh, OPAQUE));
+    drawColourGroup(mesh, camera, OPAQUE, () => undefined);
+    expectSameMatrix(objectSpace, node.clone().invert().multiply(mesh.matrixWorld));
+  });
+
+  it('hashes a group three draws in the node pose in its own vertex space (edge case)', () => {
+    const mesh = surfacesMesh();
+    const objectSpace = hashObjectSpace(groupMaterial(mesh, OPAQUE));
+    objectSpace.makeScale(3, 3, 3);
+    drawColourGroup(mesh, camera, OPAQUE, () => undefined);
+    expectSameMatrix(objectSpace, new THREE.Matrix4());
   });
 });
 

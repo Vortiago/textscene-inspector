@@ -68,7 +68,7 @@ function boundUniforms({ props }: ReturnType<typeof useCanvasItemLighting>) {
     fragmentShader: 'void main() {\n#include <colorspace_fragment>\n}',
     uniforms: {} as Record<string, { value: unknown }>,
   };
-  props.injection.onBeforeCompile(shader as never);
+  props.injection.onBeforeCompile.call(new THREE.MeshBasicMaterial(), shader as never);
   return shader.uniforms;
 }
 

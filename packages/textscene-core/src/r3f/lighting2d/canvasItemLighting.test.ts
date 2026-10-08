@@ -42,7 +42,7 @@ function compile(lightMode: CanvasItemLightMode) {
     fragmentShader: STOCK_FRAGMENT,
     uniforms: {} as Record<string, THREE.IUniform>,
   };
-  props.injection.onBeforeCompile(shader);
+  props.injection.onBeforeCompile.call(new THREE.MeshBasicMaterial(), shader);
   return { props, shader, shared };
 }
 
@@ -145,7 +145,7 @@ describe('canvasItemLightingProps', () => {
       fragmentShader: 'void other() {}',
       uniforms: {} as Record<string, THREE.IUniform>,
     };
-    expect(() => props.injection.onBeforeCompile(shader)).not.toThrow();
+    expect(() => props.injection.onBeforeCompile.call(new THREE.MeshBasicMaterial(), shader)).not.toThrow();
     expect(shader.fragmentShader).toBe('void other() {}');
   });
 });

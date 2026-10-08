@@ -5,6 +5,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
@@ -314,6 +315,12 @@ describe('<LabelGlyphs>', () => {
       expect(prepassMaterial!.alphaTest).toBe(0.5);
       expect(prepassMaterial!.transparent).toBe(true);
       expect(prepassMaterial!.depthWrite).toBe(true);
+    });
+
+    it('HASH hashes at the authored alpha_hash_scale', async () => {
+      const renderer = await render(labelProperties({ alpha_cut: AlphaCutMode.HASH, alpha_hash_scale: 0.3 }));
+      const [material] = materials(renderer);
+      expect(material!.userData).toEqual(alphaHashScaleUserData(0.3));
     });
 
     it('DISABLED (default) paints TRANSPARENCY_ALPHA — blended, no cut, no depth write', async () => {

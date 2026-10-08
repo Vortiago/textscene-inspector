@@ -1,6 +1,6 @@
 /**
  * Godot surface state that three holds per object, applied per draw group: a billboard's
- * pose, shadow-pass membership and SHADOWS_ONLY. three calls each before-hook and its
+ * pose, the object space of an alpha hash, shadow-pass membership and SHADOWS_ONLY. three calls each before-hook and its
  * after-hook around one group's draw, with that group's material (`WebGLRenderer.js:2158-2183`,
  * `WebGLShadowMap.js:546-564`), so one mesh can mix surfaces the way Godot does.
  */
@@ -13,6 +13,7 @@ import {
   type SurfaceBillboard,
 } from '../resources/materials/standardmaterial3d/materialBag';
 import { billboardWorldMatrix } from './surfaceBillboard';
+import { alignAlphaHash } from './materials/godotAlphaHash';
 
 /** The four `Object3D` hooks, one prop each: the material factory guard rejects a spread. */
 export interface SurfaceDrawHooks {
@@ -35,16 +36,25 @@ export interface CastRule {
   shadowSide: (depthMaterial: THREE.Material, material: THREE.Material) => void;
 }
 
-/**
- * Whether a geometry instance passes its visibility-range cull for the render in progress. The
- * scene cull writes it before each render, so the draw hooks read it at draw time.
- */
-export interface RangeGate {
+/** What the draw hooks read of the geometry instance a surface belongs to, at draw time. */
+export interface DrawnInstance {
+  /**
+   * Whether the instance passes its visibility-range cull for the render in progress. The scene
+   * cull writes it before each render.
+   */
   readonly isVisible: boolean;
+  /**
+   * Writes the node's world transform as Godot holds it, which a billboard or `fixed_size` on the
+   * node never moves. False where the object's own pose is the node's.
+   */
+  nodeMatrixWorld(target: THREE.Matrix4): boolean;
 }
 
-/** The gate of an instance with no visibility range. */
-export const ALWAYS_VISIBLE: RangeGate = Object.freeze({ isVisible: true });
+/** An instance with no visibility range, posed by its object alone. */
+export const UNRANGED_INSTANCE: DrawnInstance = Object.freeze({
+  isVisible: true,
+  nodeMatrixWorld: () => false,
+});
 
 /**
  * three passes the object as the second `onBeforeShadow` argument
@@ -76,6 +86,8 @@ let skippedCount = Infinity;
 
 /** Scratch for the billboarded matrix, overwritten by every draw. */
 const billboarded = new THREE.Matrix4();
+/** Scratch for the node's matrix, overwritten by every draw. */
+const nodeMatrix = new THREE.Matrix4();
 
 /**
  * Make this draw draw nothing: an empty `drawRange` gives the GPU zero elements
@@ -123,6 +135,14 @@ export function drawsAsOneBatch(billboard: SurfaceBillboard): boolean {
   return billboard.mode === BillboardMode.BILLBOARD_DISABLED;
 }
 
+/** Hashes this draw of `material` in the node's object space, as Godot does. */
+function alignHash(object: THREE.Object3D, material: THREE.Material, instance: DrawnInstance): void {
+  if (!instance.nodeMatrixWorld(nodeMatrix)) {
+    nodeMatrix.copy(posed === object ? posedMatrixWorld : object.matrixWorld);
+  }
+  alignAlphaHash(material, nodeMatrix, object.matrixWorld);
+}
+
 function closeDraw(): void {
   if (skipped) {
     skipped.drawRange.count = skippedCount;
@@ -149,16 +169,20 @@ export const skipColourDraw: CastRule['colourDraw'] = (_object, geometry) => {
 };
 
 /**
- * The hooks for one `cast_shadow` rule behind one range gate. A culled instance draws no colour and
+ * The hooks for one `cast_shadow` rule of one instance. A culled instance draws no colour and
  * casts into no directional shadow (`renderer_scene_cull.cpp:2852,3140`). It still casts into an
  * omni or spot shadow, whose cull reads no range (`:2415`).
  */
-export function surfaceDrawHooks(rule: CastRule, gate: RangeGate): SurfaceDrawHooks {
+export function surfaceDrawHooks(rule: CastRule, instance: DrawnInstance): SurfaceDrawHooks {
   return {
     // three recomputes `modelViewMatrix` from `matrixWorld` after this hook (`:2160`).
     onBeforeRender(this: THREE.Object3D, _renderer, _scene, camera, geometry, material) {
-      if (gate.isVisible) rule.colourDraw(this, geometry, material, camera);
-      else skip(geometry);
+      if (!instance.isVisible) {
+        skip(geometry);
+        return;
+      }
+      rule.colourDraw(this, geometry, material, camera);
+      alignHash(this, material, instance);
     },
     onAfterRender: closeDraw,
     // three sets `modelViewMatrix` once per object before its group loop
@@ -169,7 +193,7 @@ export function surfaceDrawHooks(rule: CastRule, gate: RangeGate): SurfaceDrawHo
       if (!material) return;
       rule.shadowSide(depthMaterial, material);
       // three gives only a DirectionalLight's shadow an orthographic camera.
-      if (!gate.isVisible && (shadowCamera as THREE.OrthographicCamera).isOrthographicCamera) {
+      if (!instance.isVisible && (shadowCamera as THREE.OrthographicCamera).isOrthographicCamera) {
         skip(geometry);
         return;
       }
@@ -185,6 +209,7 @@ export function surfaceDrawHooks(rule: CastRule, gate: RangeGate): SurfaceDrawHo
         viewedModelView.copy(drawn.modelViewMatrix);
         drawn.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, drawn.matrixWorld);
       }
+      alignHash(drawn, depthMaterial, instance);
     },
     onAfterShadow: closeDraw,
   };

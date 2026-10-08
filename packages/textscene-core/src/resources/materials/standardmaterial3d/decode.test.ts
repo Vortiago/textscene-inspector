@@ -47,8 +47,8 @@ describe('decodeStandardMaterial3D — transparency', () => {
     expect(data.alphaTest).toBe(0);
   });
 
-  it('treats the three BLENDING modes as transparent', () => {
-    for (const mode of ['1', '3', '4']) {
+  it('treats the two blending modes as transparent', () => {
+    for (const mode of ['1', '4']) {
       expect(decodeStandardMaterial3D({ transparency: mode }).transparent).toBe(true);
     }
   });
@@ -140,12 +140,26 @@ describe('decodeStandardMaterial3D — alpha-pass classification', () => {
     expect(decodeStandardMaterial3D({ shadow_to_opacity: 'true' }).transparent).toBe(true);
   });
 
-  it('approximates ALPHA_HASH with blending, keeping the opaque-pass depth write', () => {
-    // A deliberate deviation: Godot dithers a discard and stays opaque. three has no
-    // stochastic clip, and fully opaque is further from Godot's look than blending.
+  it('keeps ALPHA_HASH in the opaque pass, hashing its alpha', () => {
     const data = decodeStandardMaterial3D({ transparency: '3' });
-    expect(data.transparent).toBe(true);
-    expect(data.depthWrite).toBe(true);
+    expect(data).toMatchObject({ transparent: false, depthWrite: true, alphaHash: true, alphaTest: 0 });
+  });
+
+  it('hashes nothing on a refractive ALPHA_HASH surface, whose ALPHA is 1 (edge case)', () => {
+    const data = decodeStandardMaterial3D({ transparency: '3', refraction_enabled: 'true' });
+    expect(data.alphaHash).toBe(false);
+  });
+
+  it('hashes nothing outside ALPHA_HASH', () => {
+    expect(decodeStandardMaterial3D({ transparency: '2' }).alphaHash).toBe(false);
+  });
+
+  it('reads the hash grain from alpha_hash_scale', () => {
+    expect(decodeStandardMaterial3D({ transparency: '3', alpha_hash_scale: '0.5' }).alphaHashScale).toBe(0.5);
+  });
+
+  it("takes Godot's default grain of 1 where none is authored (edge case)", () => {
+    expect(decodeStandardMaterial3D({ transparency: '3' }).alphaHashScale).toBe(1);
   });
 });
 
@@ -300,8 +314,13 @@ describe('decodeStandardMaterial3D — alpha pass forced by the instance', () =>
     expect(data.opaqueAfterCut).toBe(false);
   });
 
-  it('keeps the alpha of a hash cut, which this previewer blends', () => {
-    expect(decodeStandardMaterial3D({ transparency: '3' }).opaqueAfterCut).toBe(false);
+  it('writes alpha 1 after a hash cut', () => {
+    expect(decodeStandardMaterial3D({ transparency: '3' }).opaqueAfterCut).toBe(true);
+  });
+
+  it('keeps the alpha of a hash cut under alpha antialiasing', () => {
+    const data = decodeStandardMaterial3D({ transparency: '3', alpha_antialiasing_mode: '1' });
+    expect(data.opaqueAfterCut).toBe(false);
   });
 
   it('keeps the alpha of a surface with no cut', () => {

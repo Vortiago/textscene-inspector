@@ -14,6 +14,7 @@ import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { Color } from '../../../../nodes/base/node2d/types';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import { injectProgram, type ProgramInjection } from '../../../materialProgramInputs';
+import { alphaHashScaleUserData } from '../../../materials/godotAlphaHash';
 
 /** Fixed raster supersampling factor: canvas text has no distance field to stay crisp when magnified, so this trades memory and fill rate for sharpness at typical zoom. */
 export const CANVAS_TEXT_SUPERSAMPLE = 3;
@@ -193,6 +194,8 @@ export interface CanvasTextBlend {
   depthWrite: boolean;
   alphaTest: number;
   alphaHash: boolean;
+  /** `alpha_hash_scale`, the grain of the hash. Omitted, Godot's default of 1. */
+  alphaHashScale?: number;
   /** What the surface's blend needs so three blends the alpha Godot writes (`surfaceAlphaPatch.ts`). */
   blending?: THREE.Blending;
   injection?: ProgramInjection;
@@ -239,6 +242,7 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     depthWrite = false,
     alphaTest = 0,
     alphaHash = false,
+    alphaHashScale,
     blending = THREE.NormalBlending,
     injection,
   } = options;
@@ -256,9 +260,10 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     ...canvasItemFacing(side),
     clippingPlanes: [...clippingPlanes],
   });
+  if (alphaHashScale !== undefined) material.userData = alphaHashScaleUserData(alphaHashScale);
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...DECODE_VIDEO_TEXTURE_DEFINES };
   }
-  if (injection) injectProgram(material, injection);
+  injectProgram(material, injection);
   return material;
 }

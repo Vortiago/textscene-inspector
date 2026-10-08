@@ -89,7 +89,6 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 
 ## Known limitations
 
-- **Approximated** `ALPHA_HASH` is alpha-blended rather than dithered, so it joins the transparent pass while its depth write follows Godot's.
 - **Shader missing** `alpha_antialiasing_mode` is read for the pass decision, but the cutout edge reads hard rather than coverage-blended.
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
 - **Shader missing** `diffuse_mode` is always Lambert where Godot defaults to Burley, so a rough sphere is slightly darker at the silhouette.
