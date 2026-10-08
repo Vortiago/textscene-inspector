@@ -15,7 +15,7 @@ import {
   type ItemPlacement,
 } from './itemLightList.js';
 import type { PassMesh } from './lightAccumulationPass.js';
-import type { LightRect } from './shadowVolumes.js';
+import type { Rect2 } from '../../godot/rect2.js';
 
 /** A lit item as the cap sees it. */
 export interface CappedItem {
@@ -75,32 +75,28 @@ const REACH_ROLES = new Set<PassMesh['role']>(['lit', 'unshadowed']);
 
 const box = new THREE.Box3();
 
-/** The world rect of `object`'s geometry. An empty one is inverted, as an empty `Box3` is, and meets none. */
-function worldRect(object: THREE.Object3D | null): LightRect {
-  if (object) computeWorldBoundingBox(object, box);
-  else box.makeEmpty();
-  return { minX: box.min.x, minY: box.min.y, maxX: box.max.x, maxY: box.max.y };
+/** A `Box3` as a `Rect2`. An empty box gives an inverted rect, which meets none. */
+function boxRect({ min, max }: THREE.Box3): Rect2 {
+  return { x: min.x, y: min.y, w: max.x - min.x, h: max.y - min.y };
 }
 
-function union(a: LightRect, b: LightRect): LightRect {
-  return {
-    minX: Math.min(a.minX, b.minX),
-    minY: Math.min(a.minY, b.minY),
-    maxX: Math.max(a.maxX, b.maxX),
-    maxY: Math.max(a.maxY, b.maxY),
-  };
+/** The world rect of `object`'s geometry. */
+function worldRect(object: THREE.Object3D | null): Rect2 {
+  if (object) computeWorldBoundingBox(object, box);
+  else box.makeEmpty();
+  return boxRect(box);
 }
 
 /** Each light's rect, `Light2D`'s `rect_cache`: where its quads land. */
-function lightRects(passMeshes: ReadonlySet<PassMesh>): Map<number, LightRect> {
-  const rects = new Map<number, LightRect>();
+function lightRects(passMeshes: ReadonlySet<PassMesh>): Map<number, Rect2> {
+  const boxes = new Map<number, THREE.Box3>();
   for (const { mesh, ordinal, role } of passMeshes) {
     if (!REACH_ROLES.has(role)) continue;
-    const rect = worldRect(mesh);
-    const previous = rects.get(ordinal);
-    rects.set(ordinal, previous ? union(previous, rect) : rect);
+    const quad = computeWorldBoundingBox(mesh);
+    const previous = boxes.get(ordinal);
+    boxes.set(ordinal, previous ? previous.union(quad) : quad);
   }
-  return rects;
+  return new Map([...boxes].map(([ordinal, lightBox]) => [ordinal, boxRect(lightBox)]));
 }
 
 function sameLights(a: readonly number[] | null, b: readonly number[] | null): boolean {
@@ -111,7 +107,7 @@ function sameLights(a: readonly number[] | null, b: readonly number[] | null): b
 /** Hands each item the positional lights it takes this frame, where they changed. */
 export function capItemLights({ lights, items, passMeshes }: ItemLightCap): void {
   const crowding = crowdingOf(lights);
-  let rects: Map<number, LightRect> | null = null;
+  let rects: Map<number, Rect2> | null = null;
   for (const [item, handed] of items) {
     const candidates = crowding.canCrowd ? crowdedCandidates(lights, crowding, item.placement) : null;
     let taken: readonly number[] | null = null;

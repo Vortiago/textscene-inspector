@@ -11,7 +11,7 @@
 
 import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering.js';
 import { lightReachesItem, type LightCullKey } from './lightCullKey.js';
-import type { LightRect } from './shadowVolumes.js';
+import { rect2Intersects, type Rect2 } from '../../godot/rect2.js';
 
 /** What a light tells the pass about itself. */
 export interface CanvasLightDeclaration {
@@ -47,11 +47,6 @@ export interface ItemPlacement {
 /** The positional lights an item takes, `renderer_canvas_render_rd.cpp:2380`. */
 export const MAX_POSITIONAL_LIGHTS_PER_ITEM = MAX_LIGHTS_PER_ITEM - 1;
 
-/** `Rect2::intersects` without borders (`rect2.h:74-85`): rects that only touch miss. */
-function rectsIntersect(a: LightRect, b: LightRect): boolean {
-  return a.minX < b.maxX && b.minX < a.maxX && a.minY < b.maxY && b.minY < a.maxY;
-}
-
 /**
  * The positional lights that pass the cull test at `item`, in list order: sequence, then ordinal.
  * More than `MAX_POSITIONAL_LIGHTS_PER_ITEM` crowds the placement, so each item's rect picks.
@@ -77,13 +72,13 @@ export function positionalCandidates(
  */
 export function itemPositionalLights(
   candidates: readonly number[],
-  itemRect: LightRect,
-  lightRects: ReadonlyMap<number, LightRect>
+  itemRect: Rect2,
+  lightRects: ReadonlyMap<number, Rect2>
 ): number[] {
   const taken: number[] = [];
   for (const ordinal of candidates) {
     const lightRect = lightRects.get(ordinal);
-    if (!lightRect || !rectsIntersect(itemRect, lightRect)) continue;
+    if (!lightRect || !rect2Intersects(itemRect, lightRect)) continue;
     taken.push(ordinal);
     if (taken.length === MAX_POSITIONAL_LIGHTS_PER_ITEM) break;
   }

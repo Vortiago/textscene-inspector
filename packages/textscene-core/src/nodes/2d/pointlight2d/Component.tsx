@@ -24,6 +24,7 @@ import {
 } from '../../../r3f/lighting2d/lightQuad';
 import { buildShadowPolarMap, shadowMapZFarInv } from '../../../r3f/lighting2d/shadowPolarMap';
 import { useLightSequence } from '../../../r3f/lighting2d/useLightSequence';
+import { lightDrawSequence } from '../../../r3f/lighting2d/lightSequence';
 import { usePassMeshRef, useRegisterCanvasLight2D } from '../../../r3f/lighting2d/CanvasLighting2D';
 import type { PassMeshRole } from '../../../r3f/lighting2d/itemLightList';
 import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from '../../../r3f/lighting2d/lightCullKey';
@@ -81,12 +82,11 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const listed = useLightSequence();
   const ordinal = useRegisterCanvasLight2D(lights, {
     reach,
-    // A light the walk never saw ties at 0, and the cap breaks a tie by ordinal, as the draw does.
-    sequence: listed ?? 0,
+    sequence: lightDrawSequence(listed, null),
     shadowItemCullMask: casts ? props.shadow_item_cull_mask : null,
     tintsShadow,
   });
-  const sequence = listed ?? ordinal ?? 0;
+  const sequence = lightDrawSequence(listed, ordinal);
   // An item the light reaches through a bit outside `shadow_item_cull_mask` takes it unshadowed.
   const reachesUnshadowedItem = (props.range_item_cull_mask & ~props.shadow_item_cull_mask) !== 0;
 

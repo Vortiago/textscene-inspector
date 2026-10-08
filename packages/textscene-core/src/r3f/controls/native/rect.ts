@@ -10,9 +10,4 @@ export interface Vec2 {
 }
 
 /** A Control's rect in Godot pixels, +Y down. */
-export interface Rect2 {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
+export type { Rect2 } from '../../../godot/rect2';

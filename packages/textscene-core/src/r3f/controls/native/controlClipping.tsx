@@ -11,6 +11,7 @@
  */
 import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { round as godotRound } from '../../../godot/math';
+import { rect2Intersection } from '../../../godot/rect2';
 import * as THREE from 'three';
 import type { Rect2 } from './rect';
 
@@ -101,23 +102,6 @@ export function worldClipRect(rect: Rect2, matrixWorld: THREE.Matrix4): Rect2 | 
   };
 }
 
-/** What a missed intersection collapses to. */
-const EMPTY_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
-
-/**
- * `Rect2::intersection` (`core/math/rect2.h:148-163`): the overlap, or a zero
- * rect when there is none. Godot's `intersects()` is strict, so two rects that
- * merely touch do not intersect.
- */
-export function intersectClipRects(a: Rect2, b: Rect2): Rect2 {
-  const x = Math.max(a.x, b.x);
-  const y = Math.max(a.y, b.y);
-  const right = Math.min(a.x + a.w, b.x + b.w);
-  const bottom = Math.min(a.y + a.h, b.y + b.h);
-  if (right <= x || bottom <= y) return EMPTY_RECT;
-  return { x, y, w: right - x, h: bottom - y };
-}
-
 /**
  * Godot's whole-pixel clip rect (`renderer_canvas_cull.cpp:422-423`): position and
  * size round independently, so the far edge is `round(position) + round(size)`.
@@ -184,7 +168,7 @@ export function useWorldClipPlanes(localRect: Rect2): {
       const planes = localRectClipPlanes(localRect).map((p) => p.clone().applyMatrix4(anchor.matrixWorld));
       next = { planes, rect: null };
     } else {
-      const rect = quantizeClipRect(inherited.rect ? intersectClipRects(inherited.rect, world) : world);
+      const rect = quantizeClipRect(inherited.rect ? rect2Intersection(inherited.rect, world) : world);
       next = { planes: localRectClipPlanes(rect), rect };
     }
     const floats = new Float64Array(CLIP_FLOATS);

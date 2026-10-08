@@ -44,3 +44,12 @@ export function isListedDirectionalLight(node: TscnNode): boolean {
     isShownCanvasNode(node)
   );
 }
+
+/**
+ * The sequence a light draws at: its `listed` place in the list, else its stencil `ordinal`, else
+ * 0. A light the walk never saw declares before it has an ordinal, so it ties at 0 there, and the
+ * cap breaks that tie by ordinal, as the draw does.
+ */
+export function lightDrawSequence(listed: number | null, ordinal: number | null): number {
+  return listed ?? ordinal ?? 0;
+}

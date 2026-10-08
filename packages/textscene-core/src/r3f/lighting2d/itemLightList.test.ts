@@ -20,7 +20,7 @@ import {
   type ItemPlacement,
   type PlacementDeclarations,
 } from './itemLightList';
-import type { LightRect } from './shadowVolumes';
+import type { Rect2 } from '../../godot/rect2';
 
 function key(overrides: Partial<LightCullKey> = {}): LightCullKey {
   return { ...DEFAULT_LIGHT_CULL_KEY, ...overrides };
@@ -102,16 +102,16 @@ describe('itemLightList under the per-item cap', () => {
 /** Godot's per-item limit on positional lights: the loop breaks at `MAX_LIGHTS_PER_ITEM - 1`. */
 const CAP = MAX_LIGHTS_PER_ITEM - 1;
 
-const ITEM_RECT: LightRect = { minX: 0, minY: 0, maxX: 10, maxY: 10 };
-const OVER_ITEM: LightRect = { minX: -5, minY: -5, maxX: 5, maxY: 5 };
-const PAST_ITEM: LightRect = { minX: 20, minY: 20, maxX: 30, maxY: 30 };
+const ITEM_RECT: Rect2 = { x: 0, y: 0, w: 10, h: 10 };
+const OVER_ITEM: Rect2 = { x: -5, y: -5, w: 10, h: 10 };
+const PAST_ITEM: Rect2 = { x: 20, y: 20, w: 10, h: 10 };
 
 /** `count` positional lights in tree order, ordinal `n` at sequence `n`. */
 function positionalLights(count: number): ReadonlyMap<number, CanvasLightDeclaration> {
   return lights(...Array.from({ length: count }, (_, sequence) => light({ sequence })));
 }
 
-function rectsOver(ordinals: Iterable<number>, rect = OVER_ITEM): Map<number, LightRect> {
+function rectsOver(ordinals: Iterable<number>, rect = OVER_ITEM): Map<number, Rect2> {
   return new Map([...ordinals].map((ordinal) => [ordinal, rect]));
 }
 
@@ -161,7 +161,7 @@ describe('itemPositionalLights', () => {
   });
 
   it('counts a rect that only touches the item as a miss', () => {
-    const touching: LightRect = { minX: 10, minY: 0, maxX: 20, maxY: 10 };
+    const touching: Rect2 = { x: 10, y: 0, w: 10, h: 10 };
     expect(itemPositionalLights([0], ITEM_RECT, rectsOver([0], touching))).toEqual([]);
   });
 

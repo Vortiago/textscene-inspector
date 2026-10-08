@@ -19,6 +19,7 @@ import {
   isListedDirectionalLight,
   isPositionalCanvasLight,
   isShownCanvasNode,
+  lightDrawSequence,
 } from './lightSequence';
 import { CanvasLightSequenceProvider, useDirectionalLightSlot, useLightSequence } from './useLightSequence';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
@@ -315,5 +316,19 @@ ${sun('Inner', 'Group')}${sun('Shown')}`;
     const seen: (number | null)[] = [];
     await ReactThreeTestRenderer.create(<Read seen={seen} />);
     expect(seen).toEqual([0]);
+  });
+});
+
+describe('lightDrawSequence', () => {
+  it('draws a listed light at its place in the list', () => {
+    expect(lightDrawSequence(4, 9)).toBe(4);
+  });
+
+  it('draws a light the walk never saw at its ordinal', () => {
+    expect(lightDrawSequence(null, 9)).toBe(9);
+  });
+
+  it('ties a light that is neither listed nor declared at 0', () => {
+    expect(lightDrawSequence(null, null)).toBe(0);
   });
 });
