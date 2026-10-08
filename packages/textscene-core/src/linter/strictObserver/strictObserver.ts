@@ -12,7 +12,7 @@ import { nodeHeadingErrors } from './nodeHeadingChecks.js';
 import { propertyRefusal } from './propertyCheck.js';
 import { rootHeadingCounter } from './rootHeading.js';
 import { sectionLines } from './sectionLines.js';
-import { sectionOwnerOf, type SectionOwner } from './sectionOwner.js';
+import { nodeOwnerOf, sectionOwnerOf, type SectionOwner } from './sectionOwner.js';
 
 export interface StrictObserver {
   observer: ParseObserver;
@@ -48,11 +48,20 @@ export function strictObserver(): StrictObserver {
     onSectionStart: (heading, section, line) => {
       reads.read(heading);
       lines.start();
-      owner = sectionOwnerOf(heading, section);
-      if (section !== 'node' || !owner) return;
+      if (section !== 'node') {
+        owner = sectionOwnerOf(heading, section);
+        return;
+      }
+      const nodeOwner = nodeOwnerOf(heading);
+      owner = nodeOwner;
       const isRoot = isRootHeading();
       instanced.record(heading, isRoot);
-      const context = { line, isRoot, owner, hasInstancedAncestor: instanced.hasInstancedAncestor };
+      const context = {
+        line,
+        isRoot,
+        owner: nodeOwner,
+        hasInstancedAncestor: instanced.hasInstancedAncestor,
+      };
       errors.push(...nodeHeadingErrors(heading, context));
     },
 

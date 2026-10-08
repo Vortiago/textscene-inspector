@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sectionOwnerOf } from './sectionOwner.js';
+import { nodeOwnerOf, sectionOwnerOf } from './sectionOwner.js';
 import { parseHeading } from '../../parser/utils.js';
 
 const heading = (line: string) => parseHeading(line)!;
@@ -19,15 +19,24 @@ describe('sectionOwnerOf', () => {
     });
   });
 
-  it('marks a missing attribute as unknown', () => {
-    expect(sectionOwnerOf(heading('[node parent="."]'), 'node')).toEqual({
-      nodeName: '<unknown>',
-      nodeType: '<unknown>',
-    });
-  });
-
   it('gives no owner to a section that holds no validated properties', () => {
     expect(sectionOwnerOf(heading('[resource]'), 'resource')).toBeNull();
     expect(sectionOwnerOf(heading('[ext_resource type="Texture2D" id="1"]'), 'ext_resource')).toBeNull();
+  });
+});
+
+describe('nodeOwnerOf', () => {
+  it('names a node by its name and type', () => {
+    expect(nodeOwnerOf(heading('[node name="Body" type="Node3D"]'))).toEqual({
+      nodeName: 'Body',
+      nodeType: 'Node3D',
+    });
+  });
+
+  it('marks a missing attribute as unknown', () => {
+    expect(nodeOwnerOf(heading('[node parent="."]'))).toEqual({
+      nodeName: '<unknown>',
+      nodeType: '<unknown>',
+    });
   });
 });

@@ -19,8 +19,16 @@ export interface SectionOwner {
  * no id identifies.
  */
 export function sectionOwnerOf(heading: ParsedHeading, section: SectionType): SectionOwner | null {
-  const { name, id, type } = heading.attributes;
-  if (section === 'node') return { nodeName: name ?? '<unknown>', nodeType: type ?? '<unknown>' };
-  if (section === 'sub_resource') return { nodeName: id ?? '<unknown>', nodeType: type ?? '<unknown>' };
+  if (section === 'node') return nodeOwnerOf(heading);
+  if (section === 'sub_resource') return owner(heading.attributes.id, heading.attributes.type);
   return null;
+}
+
+/** The owner of a `[node]` section, which always has one. */
+export function nodeOwnerOf(heading: ParsedHeading): SectionOwner {
+  return owner(heading.attributes.name, heading.attributes.type);
+}
+
+function owner(name: string | undefined, type: string | undefined): SectionOwner {
+  return { nodeName: name ?? '<unknown>', nodeType: type ?? '<unknown>' };
 }
