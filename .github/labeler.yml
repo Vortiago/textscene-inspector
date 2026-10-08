@@ -1,0 +1,84 @@
+# The area labels the labeler workflow puts on a pull request, from the paths it changes.
+# A label applies when any option under it matches. `all-globs-to-any-file` with `!` globs
+# means "a file under this path that no other code area claims". `documentation` adds to an
+# area, so a Markdown file in one gets both. scripts/ci/labeler.test.mjs checks this map.
+
+goldens:
+  - changed-files:
+      - any-glob-to-any-file: scripts/visual/baselines/**
+
+parser:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/textscene-core/src/parser/**
+          - packages/textscene-core/src/**/parser.*
+          - packages/textscene-core/src/resources/**/decode.*
+
+renderer:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/textscene-core/src/r3f/**
+          - packages/textscene-core/src/**/Component.*
+          - packages/textscene-core/src/**/index.r3f.ts
+          - packages/textscene-core/src/resources/**/build.*
+
+linter:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/textscene-core/src/linter/**
+          - packages/textscene-core/src/**/linter.*
+          - packages/textscene-core/src/**/linterParser.*
+          - packages/textscene-core/src/**/index.linter.ts
+          - apps/textscene-linter/**
+
+core:
+  - changed-files:
+      - all-globs-to-any-file:
+          - packages/textscene-core/**
+          - '!packages/textscene-core/src/parser/**'
+          - '!packages/textscene-core/src/**/parser.*'
+          - '!packages/textscene-core/src/resources/**/decode.*'
+          - '!packages/textscene-core/src/r3f/**'
+          - '!packages/textscene-core/src/**/Component.*'
+          - '!packages/textscene-core/src/**/index.r3f.ts'
+          - '!packages/textscene-core/src/resources/**/build.*'
+          - '!packages/textscene-core/src/linter/**'
+          - '!packages/textscene-core/src/**/linter.*'
+          - '!packages/textscene-core/src/**/linterParser.*'
+          - '!packages/textscene-core/src/**/index.linter.ts'
+          - '!packages/textscene-core/src/languageFeatures/**'
+      - any-glob-to-any-file: packages/textscene-dev-kit/**
+
+lsp:
+  - changed-files:
+      - any-glob-to-any-file:
+          - apps/textscene-lsp/**
+          - packages/textscene-core/src/languageFeatures/**
+
+vscode:
+  - changed-files:
+      - any-glob-to-any-file: apps/textscene-vscode/**
+
+web:
+  - changed-files:
+      - any-glob-to-any-file: apps/textscene-web/**
+
+scenes:
+  - changed-files:
+      - any-glob-to-any-file: scenes/**
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+          - .claude/**
+          - githooks/**
+      - all-globs-to-any-file:
+          - scripts/**
+          - '!scripts/visual/baselines/**'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - docs/**
