@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { registerVisibilityInstance, type VisibilityInstance } from './visibilityScene';
 import { fireSceneRender } from '../testing/fireSceneRender';
+import { manualCameraAt } from '../testing/renderScene';
 import { observeSceneCamera } from '../sceneRenderCamera';
 import { directionalShadowUserData } from '../directionalShadow/declaration';
 import { fitSceneDirectionalShadows } from '../directionalShadow/fitSceneDirectionalShadows';
@@ -15,9 +16,9 @@ import {
 
 /** A camera on +Z at `distance` from the origin, looking at it, or away from it. */
 function cameraAt(distance: number, isLookingAway = false): THREE.PerspectiveCamera {
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1000);
-  camera.position.set(0, 0, distance);
-  if (isLookingAway) camera.rotation.y = Math.PI;
+  const camera = manualCameraAt({ x: 0, y: 0, z: distance });
+  if (!isLookingAway) return camera;
+  camera.rotation.y += Math.PI;
   camera.updateMatrixWorld(true);
   return camera;
 }

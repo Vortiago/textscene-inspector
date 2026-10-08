@@ -5,7 +5,8 @@
  * as `useShadowLightPose` does for a light.
  */
 
-import { visibleInTree, type ShadowCaster, type ShadowCasterRegistry } from './shadowCasterRegistry';
+import type { ShadowCaster, ShadowCasterRegistry } from './shadowCasterRegistry';
+import { visibleInTree } from '../visibleInTree';
 
 /** Per caster: the visibility flag, then the 16 world-matrix elements. */
 const INPUTS_PER_CASTER = 17;

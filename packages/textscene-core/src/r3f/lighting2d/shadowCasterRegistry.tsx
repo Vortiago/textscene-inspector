@@ -7,6 +7,7 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import * as THREE from 'three';
 import type { OccluderCullMode, Quad2, ShadowCasterEdges } from './shadowVolumes';
+import { visibleInTree } from '../visibleInTree';
 
 export interface ShadowCaster {
   /** Local-space `[ax,ay,0, bx,by,0, …]`: `polygonToSegments`' output verbatim. */
@@ -98,14 +99,6 @@ export function useShadowCaster(caster: ShadowCaster | null): void {
     if (!registry || !caster) return;
     return registry.add(caster);
   }, [registry, caster]);
-}
-
-/** Godot's `is_visible_in_tree()`: any hidden ancestor hides the occluder. */
-export function visibleInTree(object: THREE.Object3D): boolean {
-  for (let o: THREE.Object3D | null = object; o; o = o.parent) {
-    if (!o.visible) return false;
-  }
-  return true;
 }
 
 export interface WorldShadowCaster extends ShadowCasterEdges {

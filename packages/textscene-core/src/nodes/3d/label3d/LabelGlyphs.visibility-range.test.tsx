@@ -13,8 +13,9 @@ import LabelGlyphs from './LabelGlyphs';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { Label3DProperties } from './types';
-import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
-import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { AlphaCutMode } from './types';
+import { labelProperties } from './testing/labelProperties';
+import { findMesh } from '../testing/reactThreeTestInstance';
 import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
 import { castsFrom, castsSunShadowFrom, drawsColour } from '../../../r3f/testing/threePasses';
 import {
@@ -37,29 +38,7 @@ function props(
   range: Partial<VisibilityRange>,
   overrides: Partial<Label3DProperties> = {}
 ): Label3DProperties {
-  return {
-    ...GEOMETRY_INSTANCE_DEFAULTS,
-    name: 'L',
-    text: 'Hi',
-    pixel_size: 0.01,
-    billboard: BillboardMode.BILLBOARD_DISABLED,
-    modulate: { r: 1, g: 1, b: 1, a: 1 },
-    outline_size: 0,
-    outline_modulate: { r: 0, g: 0, b: 0, a: 1 },
-    double_sided: true,
-    font_size: 32,
-    line_spacing: 0,
-    horizontal_alignment: HorizontalAlignment.CENTER,
-    no_depth_test: false,
-    render_priority: 0,
-    outline_render_priority: -1,
-    alpha_cut: AlphaCutMode.DISABLED,
-    alpha_scissor_threshold: 0.5,
-    fixed_size: false,
-    texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
-    visibilityRange: { ...NO_VISIBILITY_RANGE, ...range },
-    ...overrides,
-  };
+  return labelProperties({ visibilityRange: { ...NO_VISIBILITY_RANGE, ...range }, ...overrides });
 }
 
 const NestedLabel = withGeometryInstance(function NestedLabel({ node }: NodeComponentProps) {
@@ -83,7 +62,7 @@ async function renderFrames(properties: Label3DProperties) {
 }
 
 function textMesh(renderer: Awaited<ReturnType<typeof renderFrames>>): THREE.Mesh {
-  return renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+  return findMesh(renderer.scene);
 }
 
 describe('<LabelGlyphs> visibility range', () => {

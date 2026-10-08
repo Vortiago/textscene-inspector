@@ -6,16 +6,13 @@
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { fireSceneRender } from './fireSceneRender';
+import { cameraLookingAt } from './threePasses';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 /** A camera at `position` looking at the origin, which R3F leaves as given (`manual`). */
 export function manualCameraAt(position: THREE.Vector3Like): THREE.PerspectiveCamera {
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1000);
-  camera.position.set(position.x, position.y, position.z);
-  camera.lookAt(0, 0, 0);
-  camera.updateMatrixWorld(true);
-  return Object.assign(camera, { manual: true });
+  return Object.assign(cameraLookingAt(position), { manual: true });
 }
 
 /** Renders the scene through `camera` once: the cull sets each instance's draw state and fade for it. */
@@ -24,12 +21,4 @@ export async function renderScene(renderer: Renderer, camera: THREE.Camera): Pro
   scene.updateMatrixWorld();
   fireSceneRender(scene, camera);
   await ReactThreeTestRenderer.act(async () => {});
-}
-
-/** Whether `object` and each of its ancestors are visible. */
-export function isRendered(object: THREE.Object3D): boolean {
-  for (let o: THREE.Object3D | null = object; o; o = o.parent) {
-    if (!o.visible) return false;
-  }
-  return true;
 }

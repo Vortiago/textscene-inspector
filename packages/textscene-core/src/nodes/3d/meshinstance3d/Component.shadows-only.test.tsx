@@ -9,10 +9,11 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnInternalResource } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { drawsColour } from '../../../r3f/testing/threePasses';
-import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { CHILD_NAME, childIsRendered, meshInstanceNode } from './testing/renderMeshInstance';
+import { findMesh } from '../testing/reactThreeTestInstance';
 
 const BOX: TscnInternalResource = {
   id: 'Box_1',
@@ -20,64 +21,32 @@ const BOX: TscnInternalResource = {
   data: { size: 'Vector3(1, 1, 1)' },
 };
 
-function node(overrides: Partial<MeshInstance3DProperties> = {}): TscnNode {
-  const properties: MeshInstance3DProperties = {
-    ...GEOMETRY_INSTANCE_DEFAULTS,
-    name: 'Caster',
-    mesh: 'SubResource("Box_1")',
-    surfaceMaterialOverrides: new Map(),
-    ...overrides,
-  };
-  return { rawProperties: {}, name: 'Caster', type: 'MeshInstance3D', children: [], properties };
-}
-
 async function render(properties: Partial<MeshInstance3DProperties>) {
   return ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={[BOX]} externalResources={[]}>
-      <MeshInstance3D node={node(properties)}>
-        <group name="__child__" />
+      <MeshInstance3D node={meshInstanceNode({ mesh: 'SubResource("Box_1")' }, properties)}>
+        <group name={CHILD_NAME} />
       </MeshInstance3D>
     </SceneResourcesProvider>
   );
 }
 
-function meshOf(renderer: Awaited<ReturnType<typeof render>>) {
-  // Object3D already declares `visible` / `castShadow`.
-  return renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-}
-
-/**
- * Whether the child would be rendered. three stops at the first
- * `visible === false`, so every ancestor has to be visible too.
- */
-function childIsRendered(renderer: Awaited<ReturnType<typeof render>>) {
-  const child = renderer.scene
-    .findAllByType('Group')
-    .map((g) => g.instance as THREE.Object3D)
-    .find((g) => g.name === '__child__');
-  if (!child) return false;
-  for (let o: THREE.Object3D | null = child; o; o = o.parent) {
-    if (o.visible === false) return false;
-  }
-  return true;
-}
-
 describe('<MeshInstance3D> cast_shadow = SHADOWS_ONLY', () => {
   it('keeps the object visible so three still walks it for the shadow pass', async () => {
-    expect(meshOf(await render({ castShadow: 3 })).visible).toBe(true);
+    expect(findMesh((await render({ castShadow: 3 })).scene).visible).toBe(true);
   });
 
   it('still casts', async () => {
-    expect(meshOf(await render({ castShadow: 3 })).castShadow).toBe(true);
+    expect(findMesh((await render({ castShadow: 3 })).scene).castShadow).toBe(true);
   });
 
   it('writes neither colour nor depth, so the mesh itself draws nothing', async () => {
-    const mesh = meshOf(await render({ castShadow: 3 }));
+    const mesh = findMesh((await render({ castShadow: 3 })).scene);
     expect(drawsColour(mesh)).toBe(false);
   });
 
   it('keeps the surface material attached, so the shadow pass reads its blend mode', async () => {
-    const mesh = meshOf(await render({ castShadow: 3 }));
+    const mesh = findMesh((await render({ castShadow: 3 })).scene);
     const material = mesh.material as THREE.Material;
     expect(material.colorWrite).toBe(true);
     expect(material.depthWrite).toBe(true);
@@ -88,7 +57,7 @@ describe('<MeshInstance3D> cast_shadow = SHADOWS_ONLY', () => {
   });
 
   it('leaves an ordinary mesh drawing normally', async () => {
-    const mesh = meshOf(await render({ castShadow: 1 }));
+    const mesh = findMesh((await render({ castShadow: 1 })).scene);
     expect(drawsColour(mesh)).toBe(true);
     expect(mesh.visible).toBe(true);
   });
@@ -96,7 +65,7 @@ describe('<MeshInstance3D> cast_shadow = SHADOWS_ONLY', () => {
   it('still hides a mesh whose `visible` is false — and its subtree with it', async () => {
     // Godot's visibility is hierarchical (class_node3d.html `is_visible_in_tree`).
     const renderer = await render({ visible: false });
-    expect(meshOf(renderer).visible).toBe(false);
+    expect(findMesh(renderer.scene).visible).toBe(false);
     expect(childIsRendered(renderer)).toBe(false);
   });
 });
