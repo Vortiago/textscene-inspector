@@ -10,6 +10,7 @@ import { boolOr, intOr } from '../../../../parser/valueParsers';
 import { tileMapLayerVector } from '../shared/layerVector';
 import { parseColor } from '../../../../utils/colorParser';
 import { decodeLegacyTileData } from '../shared/tileData';
+import { renderingQuadrantSizeOr } from '../shared/renderingQuadrantSize';
 import type { TileMapLayerData, TileMapProperties } from './types';
 
 export function parseTileMap(heading: ParsedHeading, properties: Record<string, string>): TileMapProperties {
@@ -20,7 +21,14 @@ export function parseTileMap(heading: ParsedHeading, properties: Record<string, 
 
   const layers = tileMapLayerVector(properties).map(([index, leaves]) => parseLayer(index, leaves, format));
 
-  const result: TileMapProperties = { ...baseProperties, layers };
+  const result: TileMapProperties = {
+    ...baseProperties,
+    // `cell_quadrant_size` is the deprecated name `_set` still routes to the setter (tile_map.cpp:695-697).
+    rendering_quadrant_size: renderingQuadrantSizeOr(
+      properties.rendering_quadrant_size ?? properties.cell_quadrant_size
+    ),
+    layers,
+  };
   if (properties.tile_set) result.tile_set = properties.tile_set;
   return result;
 }
@@ -38,6 +46,8 @@ function parseLayer(index: number, props: ReadonlyMap<string, string>, format: n
     name: rawName || `Layer${index}`,
     enabled: boolOr(props.get('enabled'), true),
     zIndex: intOr(props.get('z_index'), 0),
+    ySortEnabled: boolOr(props.get('y_sort_enabled'), false),
+    ySortOrigin: intOr(props.get('y_sort_origin'), 0),
     cells: tileData ? decodeLegacyTileData(tileData, format) : [],
   };
   if (modulate) layer.modulate = parseColor(modulate);

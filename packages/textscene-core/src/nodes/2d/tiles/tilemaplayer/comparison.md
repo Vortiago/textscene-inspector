@@ -10,7 +10,12 @@ renders_as: batched textured tile quads
 # TileMapLayer
 
 TileMapLayer paints a grid of tiles from a TileSet atlas. The previewer decodes
-`tile_map_data` at parse time and draws one batched quad mesh per atlas source.
+`tile_map_data` at parse time. It draws each rendering quadrant as a canvas item of its own,
+with one batched quad mesh per atlas source.
+
+A rendering quadrant is a `rendering_quadrant_size` square of cells, or one tile row of a
+y-sorted layer. Each quadrant takes its own lights, so a large layer is not held to 15
+positional lights in total.
 
 ## Linting
 
@@ -48,5 +53,5 @@ the raw reference string, so a dangling reference draws no tiles. Malformed
 
 ## Known limitations
 
-- **Approximated** Cells batch one mesh per atlas source and the sources draw in
-  appearance order, so cells from different sources do not interleave.
+- **Approximated** The cells of a quadrant batch one mesh per atlas source, and the sources
+  draw in appearance order. Cells from different sources in one quadrant do not interleave.

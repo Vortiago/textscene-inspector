@@ -142,7 +142,9 @@ describe('parseTileMap', () => {
   it('handles a TileMap without layers or tile_set (edge case)', () => {
     const result = parseTileMap({ type: 'node', attributes: {} }, {});
     expect(result.name).toBe('');
-    expect(result.layers).toEqual([{ name: 'Layer0', enabled: true, zIndex: 0, cells: [] }]);
+    expect(result.layers).toEqual([
+      { name: 'Layer0', enabled: true, zIndex: 0, ySortEnabled: false, ySortOrigin: 0, cells: [] },
+    ]);
     expect(result.tile_set).toBeUndefined();
   });
 
@@ -163,5 +165,27 @@ describe('parseTileMap', () => {
       'layer_2/name': '"Sky"',
     });
     expect(result.layers.map((l) => l.name)).toEqual(['Ground', 'Layer1', 'Sky']);
+  });
+
+  it('reads each layer y_sort_enabled and y_sort_origin', () => {
+    const result = parseTileMap(heading('TileMap', { name: 'Map', parent: '.' }), {
+      'layer_0/y_sort_enabled': 'true',
+      'layer_0/y_sort_origin': '-8',
+    });
+    expect(result.layers[0]).toMatchObject({ ySortEnabled: true, ySortOrigin: -8 });
+  });
+
+  it('reads rendering_quadrant_size', () => {
+    const result = parseTileMap(heading('TileMap', { name: 'Map' }), { rendering_quadrant_size: '4' });
+    expect(result.rendering_quadrant_size).toBe(4);
+  });
+
+  it('reads the deprecated cell_quadrant_size as rendering_quadrant_size (tile_map.cpp:695-697)', () => {
+    const result = parseTileMap(heading('TileMap', { name: 'Map' }), { cell_quadrant_size: '8' });
+    expect(result.rendering_quadrant_size).toBe(8);
+  });
+
+  it("defaults rendering_quadrant_size to Godot's 16", () => {
+    expect(parseTileMap(heading('TileMap', { name: 'Map' }), {}).rendering_quadrant_size).toBe(16);
   });
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
@@ -7,6 +7,8 @@ import { TileMap } from './Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
+import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING } from '../../../../r3f/lighting2d/lightPassContext';
+import type { CappedItem } from '../../../../r3f/lighting2d/itemLightCap';
 
 const baseNode: TscnNode = {
   rawProperties: {},
@@ -58,7 +60,7 @@ describe('TileMap degradation (ADR-0008)', () => {
     };
   }
 
-  async function render(node: TscnNode) {
+  async function render(node: TscnNode, lighting = INERT_CANVAS_LIGHTING) {
     const fake = createFakeResourceLoader();
     const tex = new THREE.Texture();
     (tex as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 32 };
@@ -66,12 +68,14 @@ describe('TileMap degradation (ADR-0008)', () => {
     return ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider internalResources={internals} externalResources={externals}>
-          <TileMap node={node}>
-            <mesh name="scene-child">
-              <planeGeometry />
-              <meshBasicMaterial />
-            </mesh>
-          </TileMap>
+          <CanvasLighting2DContext.Provider value={lighting}>
+            <TileMap node={node}>
+              <mesh name="scene-child">
+                <planeGeometry />
+                <meshBasicMaterial />
+              </mesh>
+            </TileMap>
+          </CanvasLighting2DContext.Provider>
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
@@ -104,5 +108,38 @@ describe('TileMap degradation (ADR-0008)', () => {
     // layer_0's one tile mesh + the always-rendered scene child.
     expect(r.scene.findAllByType('Mesh')).toHaveLength(2);
     expect(r.scene.findByProps({ name: 'scene-child' })).toBeDefined();
+  });
+
+  /** Renders `raw` with a lighting pass that spies on the capped items the layers declare. */
+  async function renderLit(raw: Record<string, string>) {
+    const registerCappedItem = vi.fn((_item: CappedItem) => () => {});
+    await render(makeMapNode({ tile_set: 'SubResource("ts")', ...raw }), {
+      ...INERT_CANVAS_LIGHTING,
+      registerCappedItem,
+    });
+    return registerCappedItem.mock.calls.map(([item]) => item.placement);
+  }
+
+  it('declares each rendering quadrant of a layer as a lit item (tile_map_layer.cpp:542-566)', async () => {
+    // Cells (0, 0) and (16, 0) fall in two 16-cell quadrants.
+    const placements = await renderLit({ 'layer_0/tile_data': 'PackedInt32Array(0, 0, 0, 16, 0, 0)' });
+    expect(placements).toHaveLength(2);
+  });
+
+  it('splits the quadrants by the rendering_quadrant_size the TileMap sets', async () => {
+    const placements = await renderLit({
+      rendering_quadrant_size: '32',
+      'layer_0/tile_data': 'PackedInt32Array(0, 0, 0, 16, 0, 0)',
+    });
+    expect(placements).toHaveLength(1);
+  });
+
+  it("declares a layer's quadrants at the layer's own z_final", async () => {
+    const placements = await renderLit({
+      z_index: '1',
+      'layer_0/tile_data': 'PackedInt32Array(0, 0, 0)',
+      'layer_0/z_index': '2',
+    });
+    expect(placements.map(({ z }) => z)).toEqual([3]);
   });
 });

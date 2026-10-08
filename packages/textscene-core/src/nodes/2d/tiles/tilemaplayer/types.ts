@@ -8,6 +8,8 @@ export interface TileMapLayerProperties extends Node2DProperties {
   tile_set?: string;
   /** Whether the layer renders (TileMapLayer.enabled, default true). */
   enabled: boolean;
+  /** The cells each rendering quadrant holds along an axis (`rendering_quadrant_size`, default 16). */
+  rendering_quadrant_size: number;
   /** Cells decoded from `tile_map_data` at parse time, or null when undecodable (degrade). */
   cells?: PlacedCell[] | null;
 }

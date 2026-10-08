@@ -114,8 +114,9 @@ replaces the blue `shadow_color` of the light on the left where both reach.
 <!-- compare: image=unit-pointlight2d-item-light-cap status=done fixture=unit-pointlight2d-item-light-cap.tscn -->
 
 An item takes at most 15 positional lights, in tree order. A light counts only where its rect
-meets the item's rect. The green light reaches only the left panel, so the left panel fills its
-15 lights before the red light. The right panel takes the red light.
+meets the item's rect, and only while its rect meets the viewport. The green light reaches only
+the left panel, so the left panel fills its 15 lights before the red light. The right panel
+takes the red light.
 
 ## Linting
 
