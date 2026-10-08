@@ -29,6 +29,8 @@ import type { Color } from '../../../../nodes/base/node2d/types';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
 import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
+import type { ShadowCastingEffects } from '../../../shadowCasting';
+import { HashedShadowMaterials } from '../../../materials/HashedShadowMaterials';
 
 // Geometry is in Godot pixels, +Y down, with Y negated once per vertex into three's
 // Y-up space. Each line's top is a multiple of `layout.linePitchPx`, and its baseline
@@ -218,6 +220,11 @@ export interface TextRunProps {
    */
   blends?: FadeVariants<CanvasTextBlend>;
   /**
+   * The draw hooks of the GeometryInstance3D the run draws for, with `castShadow` for this
+   * surface (Label3D only). Omitted, the run casts nothing and draws in every pass.
+   */
+  shadow?: ShadowCastingEffects;
+  /**
    * Tags the mesh `tscnFrameExcluded`, which `frameSceneBounds.ts` skips. Label3D
    * only (`LabelGlyphs.tsx`): its glyphs mount asynchronously and could grow the
    * auto-fit bounds past Godot's camera, which is placed before any text shapes.
@@ -332,6 +339,7 @@ export function TextRun({
   strokeWidthPx = 0,
   textureFilter = 'linear',
   blends,
+  shadow,
   frameExcluded,
   outlineColor,
   outlineWidthPx = 0,
@@ -415,7 +423,14 @@ export function TextRun({
         material={material}
         renderOrder={renderOrder}
         userData={frameExcluded ? { tscnFrameExcluded: true } : undefined}
-      />
+        castShadow={shadow?.castShadow}
+        onBeforeRender={shadow?.onBeforeRender}
+        onAfterRender={shadow?.onAfterRender}
+        onBeforeShadow={shadow?.onBeforeShadow}
+        onAfterShadow={shadow?.onAfterShadow}
+      >
+        {shadow?.castShadow && blends?.unfaded.alphaHash && <HashedShadowMaterials />}
+      </mesh>
       {hexBoxRects.map((r, i) => (
         <CanvasItemGroup key={i} position={[r.x, -r.y, 0]}>
           <ControlQuad
@@ -424,6 +439,7 @@ export function TextRun({
             color={hexBoxColor}
             opacity={tint.a}
             renderOrder={renderOrder}
+            drawHooks={shadow}
           />
         </CanvasItemGroup>
       ))}

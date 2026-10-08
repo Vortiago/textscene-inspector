@@ -5,6 +5,7 @@ import * as logger from '../../../logger';
 import { parseLabel3D } from './parser';
 import { BillboardMode } from './types';
 import { heading } from '../../../parser/testing/parserKit';
+import { ShadowCastingSetting } from '../../../godot/rendering';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -147,6 +148,21 @@ describe('Label3D Parser', () => {
       const absent = parseLabel3D(heading('Label3D', { name: 'Label' }), {});
       expect(authored.alpha_scissor_threshold).toBe(0.25);
       expect(absent.alpha_scissor_threshold).toBe(0.5);
+    });
+
+    it('defaults cast_shadow to OFF, as the Label3D constructor sets it (label_3d.cpp:1090)', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {});
+      expect(props.castShadow).toBe(ShadowCastingSetting.OFF);
+    });
+
+    it('reads an authored cast_shadow', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), { cast_shadow: '1' });
+      expect(props.castShadow).toBe(ShadowCastingSetting.ON);
+    });
+
+    it('keeps OFF for a cast_shadow it cannot read (edge case)', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), { cast_shadow: 'garbage' });
+      expect(props.castShadow).toBe(ShadowCastingSetting.OFF);
     });
 
     it('reads transparency through the GeometryInstance3D parse', () => {

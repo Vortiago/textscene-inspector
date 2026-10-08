@@ -41,7 +41,6 @@ export class CulledInstance implements VisibilityInstance, RangeGate, FadedSurfa
   transparency = 0;
   customAabb: Aabb | null = null;
   placement = UNPLACED;
-  hidden: THREE.Object3D | null = null;
   private readonly surfaces = new Set<FadedSurface>();
 
   /** Takes the node's data. A change of links hands the cull a new links object. */
@@ -76,7 +75,6 @@ export class CulledInstance implements VisibilityInstance, RangeGate, FadedSurfa
 
   apply(isVisible: boolean, rangeFade: number): void {
     this.isVisible = isVisible;
-    if (this.hidden) this.hidden.visible = isVisible;
     const fade = geometryFade(this.transparency, rangeFade);
     for (const surface of this.surfaces) surface.applyFade(fade);
   }

@@ -848,6 +848,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label3d Shadow",
+    "file": "unit-label3d-shadow.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d",
     "file": "unit-label3d.tscn",
     "category": "Other"
@@ -1520,6 +1525,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite3d Region Oversized",
     "file": "unit-sprite3d-region-oversized.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite3d Shadow",
+    "file": "unit-sprite3d-shadow.tscn",
     "category": "Other"
   },
   {

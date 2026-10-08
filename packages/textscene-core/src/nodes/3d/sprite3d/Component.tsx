@@ -5,7 +5,7 @@
  * `meshBasicMaterial` (`material.cpp:3045`: SHADING_MODE_PER_PIXEL versus SHADING_MODE_UNSHADED).
  */
 
-import { Fragment, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Fragment, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
@@ -15,9 +15,10 @@ import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
-import { alphaCutSurface } from '../../../r3f/godotAlphaCut';
+import { alphaCutSurface, joinsShadowPass } from '../../../r3f/godotAlphaCut';
 import { cutFadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import type { MaterialAttach } from '../../../r3f/materials/swappedMaterials';
+import { HashedShadowMaterials } from '../../../r3f/materials/HashedShadowMaterials';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
@@ -115,16 +116,8 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
       ),
     [rect, properties.transform, properties.axis, properties.billboard]
   );
-  const { hideWhenCulled } = useGeometryInstance(placement);
+  const shadow = useGeometryInstance(placement);
   const surface = useInstanceSurface();
-  // The quad's ref: the billboard and `fixed_size` hooks pose it, and the cull hides it.
-  const quadRef = useCallback(
-    (quad: THREE.Mesh | null) => {
-      spriteRef.current = quad;
-      hideWhenCulled(quad);
-    },
-    [hideWhenCulled]
-  );
 
   // `_get_color_accum()` (`sprite_3d.cpp:36-52`) folds the parent sprite's accumulation into this
   // node's modulate, r/g/b and a. Godot multiplies the stored colours and converts once, so the
@@ -141,6 +134,8 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
   // accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
   // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA (`material.cpp:1836`).
   const surfaceAlpha = cutFadeVariants(cut, properties.transparent ? clamp01(accum.a) : 1);
+  const depthTest = !properties.no_depth_test;
+  const castsShadow = shadow.castShadow && joinsShadowPass(cut, depthTest);
 
   // Baked into the geometry, so it stays right under the node's rotation and billboard.
   const geometry = useMemo(() => spriteQuadGeometry(rect, properties.axis), [rect, properties.axis]);
@@ -211,7 +206,7 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
         color,
         ...alpha,
         // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
-        depthTest: !properties.no_depth_test,
+        depthTest,
         // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
         side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
       },
@@ -227,17 +222,25 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
   return (
     <>
       <mesh
-        // The subtree is a sibling, so the cull hiding the quad hides nothing else.
-        ref={quadRef}
+        // The billboard and `fixed_size` hooks pose the quad. The subtree is a sibling, so the
+        // cull skipping the quad's draws skips nothing else.
+        ref={spriteRef}
         name={node.name}
         position={position}
         rotation={rotation}
         scale={scale}
         renderOrder={properties.render_priority}
+        castShadow={castsShadow}
+        receiveShadow
+        onBeforeRender={shadow.onBeforeRender}
+        onAfterRender={shadow.onAfterRender}
+        onBeforeShadow={shadow.onBeforeShadow}
+        onAfterShadow={shadow.onAfterShadow}
       >
         <primitive object={geometry} attach="geometry" />
         <Fragment key="unfaded">{material(surfaceAlpha.unfaded, surface.unfaded)}</Fragment>
         <Fragment key="alphaPass">{material(surfaceAlpha.alphaPass, surface.alphaPass)}</Fragment>
+        {castsShadow && cut.alphaHash && <HashedShadowMaterials />}
       </mesh>
       {subtree}
     </>

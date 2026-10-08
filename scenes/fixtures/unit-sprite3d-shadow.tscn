@@ -1,0 +1,61 @@
+[gd_scene load_steps=4 format=3]
+
+; One variable: which Sprite3D surfaces join the shadow pass. Godot files a surface in the shadow
+; pass from the opaque list, or from the alpha pass with a depth prepass
+; (`render_forward_clustered.cpp:4079-4089`). No other scene shows it: none lights a Sprite3D
+; with a shadowed light. ALPHA_HASH is left out, as its noise differs from three's.
+
+[ext_resource type="Texture2D" path="res://textures/dodge-walk1.png" id="1_walk"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(8, 4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 1.0
+
+[node name="Scene" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -0.642788, 0.766044, 0, -0.766044, -0.642788, 0, 4, 0)
+shadow_enabled = true
+
+; Alpha blended, the default: the alpha pass with no depth prepass, so no shadow.
+[node name="Blended" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 0.54, 0)
+texture = ExtResource("1_walk")
+pixel_size = 0.008
+
+; ALPHA_SCISSOR: the opaque list, so the silhouette casts.
+[node name="Discard" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.1, 0.54, 0)
+texture = ExtResource("1_walk")
+pixel_size = 0.008
+alpha_cut = 1
+
+; ALPHA_DEPTH_PRE_PASS: the alpha pass with a depth prepass, so it casts.
+[node name="OpaquePrepass" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.54, 0)
+texture = ExtResource("1_walk")
+pixel_size = 0.008
+alpha_cut = 2
+
+; TRANSPARENCY_DISABLED: the opaque list, and no ALPHA, so the whole quad casts.
+[node name="Opaque" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 0.54, 0)
+texture = ExtResource("1_walk")
+pixel_size = 0.008
+transparent = false
+
+; A disabled depth test moves even a cut surface to the alpha pass, with no depth prepass.
+[node name="NoDepthTest" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 0.54, 0)
+texture = ExtResource("1_walk")
+pixel_size = 0.008
+alpha_cut = 1
+no_depth_test = true

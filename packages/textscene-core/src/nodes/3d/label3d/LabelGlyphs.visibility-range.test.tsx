@@ -1,6 +1,6 @@
 /**
  * Label3D's `visibility_range_*`, measured to the centre of the box its lines span
- * (`label_3d.cpp:600-606`). The glyphs draw inside the label group as `Component.tsx` nests
+ * (`label_3d.cpp:600-606`), and the shadow pass its `alpha_cut` files it in. The glyphs draw inside the label group as `Component.tsx` nests
  * them, so the distance runs through the group's parent. Driven by one scene render from 11 units.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,7 +15,8 @@ import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInsta
 import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
-import { isRendered, manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
+import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
+import { castsFrom, castsSunShadowFrom, drawsColour } from '../../../r3f/testing/threePasses';
 import {
   NO_VISIBILITY_RANGE,
   VisibilityRangeFadeMode,
@@ -87,11 +88,11 @@ function textMesh(renderer: Awaited<ReturnType<typeof renderFrames>>): THREE.Mes
 
 describe('<LabelGlyphs> visibility range', () => {
   it('draws a label inside its range', async () => {
-    expect(isRendered(textMesh(await renderFrames(props({ begin: 5, end: 20 }))))).toBe(true);
+    expect(drawsColour(textMesh(await renderFrames(props({ begin: 5, end: 20 }))))).toBe(true);
   });
 
   it('draws nothing of a label past its end', async () => {
-    expect(isRendered(textMesh(await renderFrames(props({ end: 10 }))))).toBe(false);
+    expect(drawsColour(textMesh(await renderFrames(props({ end: 10 }))))).toBe(false);
   });
 
   it('blends a SELF label at the eased alpha across its end margin', async () => {
@@ -105,6 +106,35 @@ describe('<LabelGlyphs> visibility range', () => {
     // The box centre sits line_spacing / 2 = 300 px below the origin, 3 units at pixel_size 0.01:
     // √(11² + 3²) ≈ 11.40 is past an end of 11.2, which the origin at 11 is short of.
     const spaced = props({ end: 11.2 }, { line_spacing: 600 });
-    expect(isRendered(textMesh(await renderFrames(spaced)))).toBe(false);
+    expect(drawsColour(textMesh(await renderFrames(spaced)))).toBe(false);
+  });
+});
+
+describe('<LabelGlyphs> shadow casting', () => {
+  it('casts from a DISCARD label, which the opaque list draws', async () => {
+    const discard = props({}, { alpha_cut: AlphaCutMode.DISCARD });
+    expect(castsSunShadowFrom(textMesh(await renderFrames(discard)))).toBe(true);
+  });
+
+  it('casts nothing from a blended label, the default', async () => {
+    expect(castsSunShadowFrom(textMesh(await renderFrames(props({}))))).toBe(false);
+  });
+
+  it('casts nothing from a cut label with no depth test', async () => {
+    const noDepthTest = props({}, { alpha_cut: AlphaCutMode.DISCARD, no_depth_test: true });
+    expect(castsSunShadowFrom(textMesh(await renderFrames(noDepthTest)))).toBe(false);
+  });
+
+  it('casts a hashed shadow from a HASH label, into every light', async () => {
+    const mesh = textMesh(await renderFrames(props({}, { alpha_cut: AlphaCutMode.HASH })));
+    expect([mesh.customDepthMaterial, mesh.customDistanceMaterial]).toEqual([
+      expect.objectContaining({ alphaHash: true }),
+      expect.objectContaining({ alphaHash: true }),
+    ]);
+  });
+
+  it('still casts into an omni or spot shadow past its end (edge case)', async () => {
+    const culled = props({ end: 10 }, { alpha_cut: AlphaCutMode.DISCARD });
+    expect(castsFrom(textMesh(await renderFrames(culled)))).toBe(true);
   });
 });

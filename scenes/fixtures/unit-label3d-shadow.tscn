@@ -1,0 +1,69 @@
+[gd_scene load_steps=3 format=3]
+
+; One variable: which Label3D surfaces join the shadow pass. Godot files a surface in the shadow
+; pass from the opaque list, or from the alpha pass with a depth prepass
+; (`render_forward_clustered.cpp:4079-4089`). No other scene shows it: none lights a Label3D
+; with a shadowed light. ALPHA_HASH is left out, as its noise differs from three's. Each label
+; turns on `cast_shadow`, which the Label3D constructor turns off (`label_3d.cpp:1090`).
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(8, 4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 1.0
+
+[node name="Scene" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -0.642788, 0.766044, 0, -0.766044, -0.642788, 0, 4, 0)
+shadow_enabled = true
+
+; Alpha blended, the default: the alpha pass with no depth prepass, so no shadow.
+[node name="Blended" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 0.5, 0)
+text = "Hi"
+pixel_size = 0.01
+font_size = 96
+modulate = Color(0.2, 0.3, 0.9, 1)
+outline_size = 0
+cast_shadow = 1
+
+; ALPHA_SCISSOR: the opaque list, so the glyphs cast.
+[node name="Discard" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0.5, 0)
+text = "Hi"
+pixel_size = 0.01
+font_size = 96
+modulate = Color(0.2, 0.3, 0.9, 1)
+outline_size = 0
+cast_shadow = 1
+alpha_cut = 1
+
+; ALPHA_DEPTH_PRE_PASS: the alpha pass with a depth prepass, so the glyphs cast.
+[node name="OpaquePrepass" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0.5, 0)
+text = "Hi"
+pixel_size = 0.01
+font_size = 96
+modulate = Color(0.2, 0.3, 0.9, 1)
+outline_size = 0
+cast_shadow = 1
+alpha_cut = 2
+
+; A disabled depth test moves even a cut surface to the alpha pass, with no depth prepass.
+[node name="NoDepthTest" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0.5, 0)
+text = "Hi"
+pixel_size = 0.01
+font_size = 96
+modulate = Color(0.2, 0.3, 0.9, 1)
+outline_size = 0
+cast_shadow = 1
+alpha_cut = 1
+no_depth_test = true

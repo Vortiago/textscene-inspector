@@ -5,7 +5,8 @@ import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
-import { floatOr, intOr } from '../../../parser/valueParsers';
+import { floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
+import { ShadowCastingSetting } from '../../../godot/rendering';
 import { ruleInt } from '../../../godot/int.js';
 import { boolSlotValue } from '../../../godot/index.js';
 
@@ -14,6 +15,8 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
 
   return {
     ...baseProps,
+    // The constructor turns shadows off (`label_3d.cpp:1090`), so the file omits an OFF.
+    castShadow: parseOptionalInt(properties.cast_shadow) ?? ShadowCastingSetting.OFF,
     text: properties.text === undefined ? '' : unquoteString(properties.text),
     pixel_size: floatOr(properties.pixel_size, 0.005, 'pixel_size'),
     billboard: parseBillboardMode(properties.billboard),

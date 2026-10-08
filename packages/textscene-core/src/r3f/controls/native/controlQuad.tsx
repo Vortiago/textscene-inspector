@@ -6,6 +6,7 @@
  */
 import { Fragment } from 'react';
 import * as THREE from 'three';
+import type { SurfaceDrawHooks } from '../../surfaceDrawHooks';
 import { useControlClipPlanes } from './controlClipping';
 import { useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
 import { canvasItemFacing } from '../../canvasItemFacing';
@@ -24,9 +25,19 @@ export interface ControlQuadProps {
    * which. Without it, `z_index` and `CanvasLayer.layer` are ignored.
    */
   renderOrder: number;
+  /** The draw hooks of the GeometryInstance3D a Label3D's hex-code box draws for. It casts nothing. */
+  drawHooks?: SurfaceDrawHooks;
 }
 
-export function ControlQuad({ width, height, color, opacity, map = null, renderOrder }: ControlQuadProps) {
+export function ControlQuad({
+  width,
+  height,
+  color,
+  opacity,
+  map = null,
+  renderOrder,
+  drawHooks,
+}: ControlQuadProps) {
   const clippingPlanes = useControlClipPlanes();
   // A `NoColorSpace`-retagged canvas texture gets the post-filter decode, and a
   // SubViewport target, which keeps its own colour space, does not.
@@ -56,7 +67,14 @@ export function ControlQuad({ width, height, color, opacity, map = null, renderO
   };
 
   return (
-    <mesh position={[width / 2, -(height / 2), 0]} renderOrder={renderOrder}>
+    <mesh
+      position={[width / 2, -(height / 2), 0]}
+      renderOrder={renderOrder}
+      onBeforeRender={drawHooks?.onBeforeRender}
+      onAfterRender={drawHooks?.onAfterRender}
+      onBeforeShadow={drawHooks?.onBeforeShadow}
+      onAfterShadow={drawHooks?.onAfterShadow}
+    >
       <planeGeometry args={[width, height]} />
       {swapped ? (
         <>

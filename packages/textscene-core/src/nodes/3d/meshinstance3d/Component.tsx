@@ -91,7 +91,7 @@ function MeshInstance3DDrawer({ node, children }: NodeComponentProps) {
   // `cast_shadow`, the range cull and each surface's billboard and shadow-pass membership reach
   // three per draw group, through hooks that read that group's material.
   const placement = useMemo(() => livePlacement(meshRef, meshRef), []);
-  const { shadow } = useGeometryInstance(placement);
+  const shadow = useGeometryInstance(placement);
   const visible = properties.visible !== false;
 
   const shellProps = {

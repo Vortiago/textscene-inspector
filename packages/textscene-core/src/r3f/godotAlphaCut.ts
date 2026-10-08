@@ -45,6 +45,11 @@ export interface AlphaCutSurface extends SurfaceAlphaSource {
    * the surface at `render_forward_clustered.cpp:4079-4090`.
    */
   blended: boolean;
+  /**
+   * Whether the arm draws in the depth passes: from the opaque list, or from the alpha pass
+   * through a depth prepass (`scene_shader_forward_clustered.h:289-293`).
+   */
+  drawsDepth: boolean;
 }
 
 type CutArm = Omit<AlphaCutSurface, 'readsAlbedoAlpha'>;
@@ -55,6 +60,7 @@ const OPAQUE_ARM: CutArm = {
   alphaHash: false,
   depthWrite: true,
   blended: false,
+  drawsDepth: true,
   opaqueAfterCut: false,
 };
 
@@ -82,6 +88,15 @@ function cutArm(mode: number, scissorThreshold: number): CutArm {
       return { ...OPAQUE_ARM, alphaTest: PREPASS_ALPHA_TEST, blended: true };
     default:
       // `depth_draw_opaque` on a blended surface writes no depth (`material.cpp:800`).
-      return { ...OPAQUE_ARM, depthWrite: false, blended: true };
+      return { ...OPAQUE_ARM, depthWrite: false, blended: true, drawsDepth: false };
   }
+}
+
+/**
+ * Whether the surface joins the shadow pass, which takes a surface that draws depth
+ * (`render_forward_clustered.cpp:4079-4089`). A disabled depth test sends any surface to the alpha
+ * pass without a depth prepass (`scene_shader_forward_clustered.h:279-293`).
+ */
+export function joinsShadowPass(cut: AlphaCutSurface, depthTest: boolean): boolean {
+  return cut.drawsDepth && depthTest;
 }

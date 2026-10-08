@@ -126,7 +126,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const nodeRef = useRef<THREE.Group | null>(null);
   const drawnRef = useRef<THREE.Mesh | null>(null);
   const placement = useMemo(() => livePlacement(nodeRef, drawnRef), []);
-  const { shadow } = useGeometryInstance(placement);
+  const shadow = useGeometryInstance(placement);
 
   const transform = { ref: nodeRef, name: node.name, position, rotation, scale, visible } as const;
 

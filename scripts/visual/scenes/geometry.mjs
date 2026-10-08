@@ -122,4 +122,8 @@ export const GEOMETRY_SCENES = [
   // wall. An opaque-list sprite paints a black rectangle here and looks right in
   // every other sprite scene. Content: a flat quad and an antialiased edge band.
   { name: 'sprite3d-blended-pass', file: 'unit-sprite3d-blended-pass.tscn' },
+  // Which SpriteBase3D and Label3D surfaces a sun shadows from: a cut or opaque surface and a
+  // depth prepass cast, and a blended surface or one with no depth test casts nothing.
+  { name: 'sprite3d-shadow', file: 'unit-sprite3d-shadow.tscn' },
+  { name: 'label3d-shadow', file: 'unit-label3d-shadow.tscn' },
 ];

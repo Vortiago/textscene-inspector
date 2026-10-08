@@ -12,7 +12,7 @@ import {
   onSceneFontMetricsSettled,
   peekBundledCanvasFontMetrics,
 } from '../../../r3f/controls/native/text/sceneFontLoader';
-import { alphaCutSurface, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
+import { alphaCutSurface, joinsShadowPass, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
 import { cutFadeVariants } from '../../../r3f/materials/fadeVariants';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
@@ -77,7 +77,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     properties.transform,
     properties.billboard,
   ]);
-  const { hideWhenCulled } = useGeometryInstance(placement);
+  const shadow = useGeometryInstance(placement);
 
   const depthTest = !properties.no_depth_test;
   const side = properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide;
@@ -114,6 +114,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // there, and scales each surface's alpha by one fade alpha.
   const { unfaded, alphaPass } = cutFadeVariants(cut, 1);
   const blends = { unfaded: withoutOpacity(unfaded), alphaPass: withoutOpacity(alphaPass) };
+  const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass(cut, depthTest) };
 
   // `material.h:172-177`: the enum alternates NEAREST, LINEAR, so the even
   // members are the nearest ones whatever their mipmap/anisotropy suffix.
@@ -128,7 +129,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // Here the tint is baked as sRGB bytes that the texture's `SRGBColorSpace` decodes.
   // `frameExcluded`: Godot's framing camera never sees shaped text (`LABEL3D_BOUNDS_PROXY`).
   return (
-    <group ref={hideWhenCulled}>
+    <group>
       {placements.map((placement, index) => {
         return (
           <group key={index} position={[placement.x, -placement.y, 0]}>
@@ -144,6 +145,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   renderOrder={outlineSurface.renderOrder}
                   textureFilter={textureFilter}
                   blends={blends}
+                  shadow={surfaceShadow}
                   frameExcluded
                 />
               </group>
@@ -158,6 +160,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                 renderOrder={fillSurface.renderOrder}
                 textureFilter={textureFilter}
                 blends={blends}
+                shadow={surfaceShadow}
                 frameExcluded
               />
             </group>

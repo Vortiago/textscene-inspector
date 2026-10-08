@@ -4,7 +4,7 @@
  * `sprite_3d.cpp:285-297` / `label_3d.cpp:386-393` and the arms they select.
  */
 import { describe, expect, it } from 'vitest';
-import { alphaCutSurface, NO_TRANSPARENT_FLAG } from './godotAlphaCut';
+import { alphaCutSurface, joinsShadowPass, NO_TRANSPARENT_FLAG } from './godotAlphaCut';
 
 const DISABLED = 0;
 const DISCARD = 1;
@@ -20,6 +20,7 @@ describe('alphaCutSurface', () => {
       alphaHash: false,
       depthWrite: true,
       blended: false,
+      drawsDepth: true,
       readsAlbedoAlpha: true,
       opaqueAfterCut: true,
     });
@@ -32,6 +33,7 @@ describe('alphaCutSurface', () => {
       alphaHash: true,
       depthWrite: true,
       blended: false,
+      drawsDepth: true,
       readsAlbedoAlpha: true,
       opaqueAfterCut: true,
     });
@@ -45,6 +47,7 @@ describe('alphaCutSurface', () => {
       alphaHash: false,
       depthWrite: true,
       blended: true,
+      drawsDepth: true,
       readsAlbedoAlpha: true,
       opaqueAfterCut: false,
     });
@@ -58,6 +61,7 @@ describe('alphaCutSurface', () => {
       alphaHash: false,
       depthWrite: false,
       blended: true,
+      drawsDepth: false,
       readsAlbedoAlpha: true,
       opaqueAfterCut: false,
     });
@@ -79,6 +83,7 @@ describe('alphaCutSurface', () => {
         alphaHash: false,
         depthWrite: true,
         blended: false,
+        drawsDepth: true,
         readsAlbedoAlpha: false,
         opaqueAfterCut: false,
       });
@@ -93,5 +98,28 @@ describe('alphaCutSurface', () => {
         alphaCutSurface({ mode, scissorThreshold: 0.25, transparentFlag: true })
       );
     }
+  });
+});
+
+describe('joinsShadowPass', () => {
+  const cut = (mode: number) => alphaCutSurface({ mode, scissorThreshold: 0.5, transparentFlag: true });
+
+  it('takes a cut surface, which the opaque list draws', () => {
+    expect([DISCARD, HASH].map((mode) => joinsShadowPass(cut(mode), true))).toEqual([true, true]);
+  });
+
+  it('takes an OPAQUE_PREPASS surface, which the alpha pass draws through a depth prepass', () => {
+    expect(joinsShadowPass(cut(OPAQUE_PREPASS), true)).toBe(true);
+  });
+
+  it('leaves out a blended surface, which draws no depth', () => {
+    expect(joinsShadowPass(cut(DISABLED), true)).toBe(false);
+  });
+
+  it('leaves out any surface with no depth test, which moves it to the alpha pass (edge case)', () => {
+    expect([DISCARD, OPAQUE_PREPASS].map((mode) => joinsShadowPass(cut(mode), false))).toEqual([
+      false,
+      false,
+    ]);
   });
 });

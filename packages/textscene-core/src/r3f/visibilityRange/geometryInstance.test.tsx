@@ -4,28 +4,29 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useMemo, useRef } from 'react';
 import type { TscnNode } from '../../parser/types';
 import type { NodeComponentProps } from '../NodeComponentRegistry';
-import { isRendered, manualCameraAt, renderScene } from '../testing/renderScene';
+import { manualCameraAt, renderScene } from '../testing/renderScene';
+import { drawsColour } from '../testing/threePasses';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/visibilityRange';
 import { isGeometryInstanceComponent, useGeometryInstance, withGeometryInstance } from './geometryInstance';
 import { boxPlacement } from './placements';
 
-/** A drawer that places its instance at its group, a unit box 5 units along +Z, and hides the group when culled. */
+/** A drawer that places its instance at its mesh, a unit box 5 units along +Z, drawn through its hooks. */
 function BoxDrawer({ children }: NodeComponentProps) {
-  const groupRef = useRef<THREE.Group | null>(null);
-  const placement = useMemo(() => boxPlacement(groupRef, UNIT_BOX), []);
-  const { hideWhenCulled } = useGeometryInstance(placement);
+  const meshRef = useRef<THREE.Mesh | null>(null);
+  const placement = useMemo(() => boxPlacement(meshRef, UNIT_BOX), []);
+  const shadow = useGeometryInstance(placement);
   return (
-    <group
-      ref={(group) => {
-        groupRef.current = group;
-        hideWhenCulled(group);
-      }}
+    <mesh
+      ref={meshRef}
       name="drawn"
       position={[0, 0, 5]}
+      onBeforeRender={shadow.onBeforeRender}
+      onAfterRender={shadow.onAfterRender}
     >
+      <boxGeometry />
       {children}
-    </group>
+    </mesh>
   );
 }
 
@@ -42,16 +43,16 @@ function boxNode(range: Partial<VisibilityRange>): TscnNode {
   return { name: 'Box', type: 'Label3D', rawProperties: {}, children: [], properties };
 }
 
-async function drawnFrom(distance: number, range: Partial<VisibilityRange>): Promise<THREE.Object3D> {
+async function drawnFrom(distance: number, range: Partial<VisibilityRange>): Promise<THREE.Mesh> {
   const camera = manualCameraAt({ x: 0, y: 0, z: distance });
   const renderer = await ReactThreeTestRenderer.create(<Box node={boxNode(range)} />, { camera });
   await renderScene(renderer, camera);
-  return renderer.scene.findByProps({ name: 'drawn' }).instance as THREE.Object3D;
+  return renderer.scene.findByProps({ name: 'drawn' }).instance as THREE.Mesh;
 }
 
 describe('withGeometryInstance', () => {
   it('culls its drawer past the node’s range', async () => {
-    expect(isRendered(await drawnFrom(16, { end: 10 }))).toBe(false);
+    expect(drawsColour(await drawnFrom(16, { end: 10 }))).toBe(false);
   });
 
   it('leaves the scene cull once it unmounts (error case)', async () => {
@@ -80,7 +81,7 @@ describe('withGeometryInstance', () => {
 
 describe('useGeometryInstance', () => {
   it('measures the instance where its drawer places it, not at the origin', async () => {
-    expect(isRendered(await drawnFrom(11, { end: 10 }))).toBe(true);
+    expect(drawsColour(await drawnFrom(11, { end: 10 }))).toBe(true);
   });
 
   it('throws outside withGeometryInstance (error case)', async () => {
@@ -90,14 +91,14 @@ describe('useGeometryInstance', () => {
     onError.mockRestore();
   });
 
-  it('shows a hidden object again once the instance is back in range (edge case)', async () => {
+  it('draws the instance again once it is back in range (edge case)', async () => {
     const camera = manualCameraAt({ x: 0, y: 0, z: 16 });
     const renderer = await ReactThreeTestRenderer.create(<Box node={boxNode({ end: 10 })} />, { camera });
     await renderScene(renderer, camera);
     camera.position.set(0, 0, 14);
     camera.updateMatrixWorld(true);
     await renderScene(renderer, camera);
-    expect(isRendered(renderer.scene.findByProps({ name: 'drawn' }).instance as THREE.Object3D)).toBe(true);
+    expect(drawsColour(renderer.scene.findByProps({ name: 'drawn' }).instance as THREE.Mesh)).toBe(true);
   });
 });
 

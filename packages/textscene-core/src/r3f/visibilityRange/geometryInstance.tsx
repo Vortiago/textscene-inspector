@@ -6,8 +6,7 @@
  */
 
 import { useThree } from '@react-three/fiber';
-import * as THREE from 'three';
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import { hasGeometryBase } from '../../godot/geometryBase';
 import type { GeometryInstance3DProperties } from '../../nodes/3d/geometryinstance3d/types';
 import { useNodePath } from '../contexts/NodePathContext';
@@ -24,13 +23,6 @@ import { registerVisibilityInstance } from './visibilityScene';
 import { useVisibilityParent } from './VisibilityParentContext';
 import type { InstancePlacement } from './placements';
 import { CulledInstance, UNPLACED } from './culledInstance';
-
-export interface GeometryInstanceDraw {
-  /** `cast_shadow`, with draw hooks that skip a culled instance's colour and sun-shadow draws. */
-  shadow: ShadowCastingEffects;
-  /** A ref for an object with no draw hooks, which the cull hides outright when it culls it. */
-  hideWhenCulled: (object: THREE.Object3D | null) => void;
-}
 
 interface GeometryInstanceScope {
   instance: CulledInstance;
@@ -108,8 +100,11 @@ function useGeometryInstanceScope(): GeometryInstanceScope {
   return scope;
 }
 
-/** Places the enclosing node's instance, and returns what its drawer draws with. */
-export function useGeometryInstance(placement: InstancePlacement): GeometryInstanceDraw {
+/**
+ * Places the enclosing node's instance, and returns its `cast_shadow` with the draw hooks that
+ * skip its colour and sun-shadow draws while the cull culls it.
+ */
+export function useGeometryInstance(placement: InstancePlacement): ShadowCastingEffects {
   const { instance, shadow } = useGeometryInstanceScope();
   useLayoutEffect(() => {
     instance.placement = placement;
@@ -117,14 +112,7 @@ export function useGeometryInstance(placement: InstancePlacement): GeometryInsta
       instance.placement = UNPLACED;
     };
   }, [instance, placement]);
-  const hideWhenCulled = useCallback(
-    (object: THREE.Object3D | null) => {
-      instance.hidden = object;
-      if (object) object.visible = instance.isVisible;
-    },
-    [instance]
-  );
-  return { shadow, hideWhenCulled };
+  return shadow;
 }
 
 /**
