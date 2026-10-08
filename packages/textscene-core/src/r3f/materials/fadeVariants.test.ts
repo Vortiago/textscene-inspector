@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { cutFadeVariants, surfaceFadeVariants, type AlphaPassSurface } from './fadeVariants';
+import { cutBlends, cutFadeVariants, surfaceFadeVariants, type AlphaPassSurface } from './fadeVariants';
 import type { SurfaceAlphaSource } from './surfaceAlphaPatch';
 import { alphaCutSurface } from '../godotAlphaCut';
 import { AlphaCutMode } from '../../nodes/3d/sprite3d/types';
@@ -54,9 +54,9 @@ function discardCut(transparentFlag: boolean) {
   return alphaCutSurface({ mode: AlphaCutMode.ALPHA_CUT_DISCARD, scissorThreshold: 0.5, transparentFlag });
 }
 
-describe('cutFadeVariants', () => {
+describe('cutBlends', () => {
   it('keeps the cut of the surface in both passes', () => {
-    const { unfaded, alphaPass } = cutFadeVariants(discardCut(true), 1);
+    const { unfaded, alphaPass } = cutBlends(discardCut(true));
     expect([unfaded, alphaPass]).toMatchObject([
       { alphaTest: 0.5, alphaHash: false },
       { alphaTest: 0.5, alphaHash: false },
@@ -64,25 +64,39 @@ describe('cutFadeVariants', () => {
   });
 
   it('adds nothing to a cut surface in the opaque pass', () => {
-    expect(cutFadeVariants(discardCut(true), 1).unfaded).not.toHaveProperty('blending');
+    expect(cutBlends(discardCut(true)).unfaded).not.toHaveProperty('blending');
   });
 
   it('writes no depth in the alpha pass', () => {
-    expect(cutFadeVariants(discardCut(true), 1).alphaPass).toMatchObject({
+    expect(cutBlends(discardCut(true)).alphaPass).toMatchObject({
       transparent: true,
       depthWrite: false,
-      opacity: 1,
     });
   });
 
   it('writes alpha 1 past the cut in the alpha pass, as Godot does', () => {
-    expect(cutFadeVariants(discardCut(true), 1).alphaPass.blending).toBe(THREE.NoBlending);
+    expect(cutBlends(discardCut(true)).alphaPass.blending).toBe(THREE.NoBlending);
   });
 
   it('drops the texture alpha of a sprite without FLAG_TRANSPARENT in the alpha pass (edge case)', () => {
-    const { injection } = cutFadeVariants(discardCut(false), 1).alphaPass;
+    const { injection } = cutBlends(discardCut(false)).alphaPass;
     expect(patchedShader(injection!.onBeforeCompile, THREE.ShaderLib.basic.fragmentShader)).toContain(
       DROPS_ALBEDO_ALPHA
     );
+  });
+});
+
+describe('cutFadeVariants', () => {
+  it('gives both passes the opacity the sprite shader reads', () => {
+    const { unfaded, alphaPass } = cutFadeVariants(discardCut(true), 0.25);
+    expect([unfaded.opacity, alphaPass.opacity]).toEqual([0.25, 0.25]);
+  });
+
+  it('keeps the blends of the cut', () => {
+    expect(cutFadeVariants(discardCut(true), 1).alphaPass.blending).toBe(THREE.NoBlending);
+  });
+
+  it('carries an opacity of 0, which a fully transparent modulate gives (edge case)', () => {
+    expect(cutFadeVariants(discardCut(true), 0).unfaded.opacity).toBe(0);
   });
 });

@@ -1,6 +1,7 @@
 /** Billboard modes, and the AABB a billboarded Sprite3D or Label3D gives the scene cull. */
 
 import type { Aabb } from './aabb.js';
+import { AxisMode } from './vector3Axis.js';
 
 /**
  * `BaseMaterial3D::BillboardMode` (`scene/resources/material.h:300-306`), in Godot's own
@@ -13,9 +14,6 @@ export enum BillboardMode {
   BILLBOARD_FIXED_Y = 2,
   BILLBOARD_PARTICLES = 3,
 }
-
-/** `Vector3::AXIS_Y`, the one sprite axis whose FIXED_Y box reads the rect height (`sprite_3d.cpp:266`). */
-const AXIS_Y = 1;
 
 /**
  * A Label3D's AABB under its billboard mode (`label_3d.cpp:624-642`). ENABLED grows the line box
@@ -41,7 +39,8 @@ export function spriteBillboardAabb(box: Aabb, rect: Aabb, mode: number, axis: n
     case BillboardMode.BILLBOARD_ENABLED:
       return cube(Math.max(reachX(rect), reachY(rect)));
     case BillboardMode.BILLBOARD_FIXED_Y:
-      return prism(box, axis === AXIS_Y ? Math.max(reachX(rect), reachY(rect)) : reachX(rect));
+      // Only AXIS_Y reads the rect height (`sprite_3d.cpp:266`).
+      return prism(box, axis === AxisMode.AXIS_Y ? Math.max(reachX(rect), reachY(rect)) : reachX(rect));
     default:
       return box;
   }

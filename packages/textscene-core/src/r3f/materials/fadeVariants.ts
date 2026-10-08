@@ -52,21 +52,22 @@ export function surfaceFadeVariants(
 }
 
 /**
- * The fade variants of a Sprite3D or Label3D surface, whose `get_material_for_2d` material keeps
- * DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth. `opacity` is the alpha its shader
- * reads. Both draw MIX, three's default blending.
+ * The blend of each pass of a Sprite3D or Label3D surface, whose `get_material_for_2d` material
+ * keeps DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth. Both draw MIX, three's default
+ * blending. A Label3D run takes its opacity from its tint.
  */
-export function cutFadeVariants(cut: AlphaCutSurface, opacity: number) {
-  const surface = {
-    opacity,
-    transparent: cut.blended,
-    depthWrite: cut.depthWrite,
-    alphaPassDepthWrite: false,
-  };
-  const { unfaded, alphaPass } = surfaceFadeVariants(cut, surface);
+export function cutBlends(cut: AlphaCutSurface) {
   const { alphaTest, alphaHash } = cut;
+  const unfaded = { transparent: cut.blended, depthWrite: cut.depthWrite };
+  const alphaPass = { transparent: true, depthWrite: false };
   return {
-    unfaded: { ...unfaded, alphaTest, alphaHash },
-    alphaPass: { ...alphaPass, alphaTest, alphaHash },
+    unfaded: { ...unfaded, ...surfaceAlphaProps(cut, unfaded), alphaTest, alphaHash },
+    alphaPass: { ...alphaPass, ...surfaceAlphaProps(cut, alphaPass), alphaTest, alphaHash },
   };
+}
+
+/** {@link cutBlends} with `opacity`, the alpha a Sprite3D's shader reads. */
+export function cutFadeVariants(cut: AlphaCutSurface, opacity: number) {
+  const { unfaded, alphaPass } = cutBlends(cut);
+  return { unfaded: { ...unfaded, opacity }, alphaPass: { ...alphaPass, opacity } };
 }

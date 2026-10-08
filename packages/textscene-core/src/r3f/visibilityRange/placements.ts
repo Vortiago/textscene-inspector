@@ -14,10 +14,9 @@ export interface InstancePlacement {
 }
 
 /** Writes a Godot AABB into a three box. */
-export function copyAabb(target: THREE.Box3, { position, size }: Aabb): THREE.Box3 {
+export function copyAabb(target: THREE.Box3, { position, size }: Aabb): void {
   target.min.set(position.x, position.y, position.z);
   target.max.set(position.x + size.x, position.y + size.y, position.z + size.z);
-  return target;
 }
 
 /**

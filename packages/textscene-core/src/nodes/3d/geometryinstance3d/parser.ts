@@ -6,7 +6,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseOptionalAabb, parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
 import type { Aabb } from '../../../godot/aabb';
-import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../../godot/visibilityRange';
+import type { VisibilityRange } from '../../../godot/visibilityRange';
 import { parseNode3D } from '../../base/node3d/parser';
 import { GEOMETRY_INSTANCE_DEFAULTS, type GeometryInstance3DProperties } from './types';
 
@@ -24,13 +24,13 @@ export function parseGeometryInstance3D(
 }
 
 function parseVisibilityRange(properties: Record<string, string>): VisibilityRange {
+  const fallback = GEOMETRY_INSTANCE_DEFAULTS.visibilityRange;
   return {
-    begin: parseOptionalFloat(properties.visibility_range_begin) ?? NO_VISIBILITY_RANGE.begin,
-    beginMargin:
-      parseOptionalFloat(properties.visibility_range_begin_margin) ?? NO_VISIBILITY_RANGE.beginMargin,
-    end: parseOptionalFloat(properties.visibility_range_end) ?? NO_VISIBILITY_RANGE.end,
-    endMargin: parseOptionalFloat(properties.visibility_range_end_margin) ?? NO_VISIBILITY_RANGE.endMargin,
-    fadeMode: parseOptionalInt(properties.visibility_range_fade_mode) ?? NO_VISIBILITY_RANGE.fadeMode,
+    begin: parseOptionalFloat(properties.visibility_range_begin) ?? fallback.begin,
+    beginMargin: parseOptionalFloat(properties.visibility_range_begin_margin) ?? fallback.beginMargin,
+    end: parseOptionalFloat(properties.visibility_range_end) ?? fallback.end,
+    endMargin: parseOptionalFloat(properties.visibility_range_end_margin) ?? fallback.endMargin,
+    fadeMode: parseOptionalInt(properties.visibility_range_fade_mode) ?? fallback.fadeMode,
   };
 }
 

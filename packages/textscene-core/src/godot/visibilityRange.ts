@@ -50,7 +50,7 @@ export enum RangeCheck {
   IN_FADE_MARGIN = 2,
 }
 
-export interface RangeCheckResult {
+interface RangeCheckResult {
   check: RangeCheck;
   /**
    * The alpha the instance gives its visibility dependants inside a DEPENDENCIES margin, linear

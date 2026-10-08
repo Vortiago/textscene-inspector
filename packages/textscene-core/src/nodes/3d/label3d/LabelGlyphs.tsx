@@ -13,7 +13,7 @@ import {
   peekBundledCanvasFontMetrics,
 } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { alphaCutSurface, joinsShadowPass, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
-import { cutFadeVariants } from '../../../r3f/materials/fadeVariants';
+import { cutBlends } from '../../../r3f/materials/fadeVariants';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
@@ -112,8 +112,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the
   // blended pass is transparent. The geometry instance's fade can move both surfaces
   // there, and scales each surface's alpha by one fade alpha.
-  const { unfaded, alphaPass } = cutFadeVariants(cut, 1);
-  const blends = { unfaded: withoutOpacity(unfaded), alphaPass: withoutOpacity(alphaPass) };
+  const blends = cutBlends(cut);
   const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass(cut, depthTest) };
 
   // `material.h:172-177`: the enum alternates NEAREST, LINEAR, so the even
@@ -169,12 +168,4 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
       })}
     </group>
   );
-}
-
-/** `TextRun` reads the tint's alpha as the surface opacity, so a blend carries none. */
-function withoutOpacity<T extends { opacity: number }>({
-  opacity: _opacity,
-  ...blend
-}: T): Omit<T, 'opacity'> {
-  return blend;
 }
