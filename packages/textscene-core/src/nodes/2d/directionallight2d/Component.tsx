@@ -16,7 +16,7 @@ import { directionalLightCullKey } from '../../../r3f/lighting2d/lightCullKey';
 import { useDirectionalLightSlot } from '../../../r3f/lighting2d/useLightSequence';
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
-import { shadowColorContributes } from '../../../r3f/lighting2d/lightQuad';
+import { Light2DBlendMode, shadowColorContributes } from '../../../r3f/lighting2d/lightQuad';
 import { buildDirectionalShadowMap } from '../../../r3f/lighting2d/directionalShadowMap';
 import { useDirectionalShadowView, useNdcToShadow } from '../../../r3f/lighting2d/directionalShadowView';
 import { FullScreenQuad } from '../../../r3f/lighting2d/fullScreenQuad';
@@ -36,9 +36,10 @@ export function DirectionalLight2D({ node, children }: NodeComponentProps) {
 
   const casters = useLightShadowCasters(props.shadow_enabled, props.shadow_item_cull_mask);
   // Its shadow reaches every item it lights, so it declares no `shadow_item_cull_mask`.
-  const tintsShadow = casters.length > 0 && shadowColorContributes(props.shadow_color);
+  const tintsShadow = casters.length > 0 && shadowColorContributes(props.shadow_color, props.shadow_filter);
   const ordinal = useRegisterCanvasLight2D(lit, {
     reach: directionalLightCullKey(props.range_layer_min, props.range_layer_max),
+    sequence: null,
     shadowItemCullMask: null,
     tintsShadow,
   });
@@ -124,12 +125,12 @@ function DirectionalLightQuads({
   );
   useEffect(() => () => material.dispose(), [material]);
 
+  // A MIX light scales the tint buffer under it by its alpha, so it draws there untinted too.
+  const drawsTint = blendMode === Light2DBlendMode.MIX || (!!sampling && tintsShadow);
   const shadowMaterial = useMemo(
     () =>
-      sampling && tintsShadow
-        ? createDirectionalShadowColorMaterial({ color, energy, blendMode, shadow: sampling })
-        : null,
-    [sampling, tintsShadow, color, energy, blendMode]
+      drawsTint ? createDirectionalShadowColorMaterial({ color, energy, blendMode, shadow: sampling }) : null,
+    [drawsTint, sampling, color, energy, blendMode]
   );
   useEffect(() => () => shadowMaterial?.dispose(), [shadowMaterial]);
 

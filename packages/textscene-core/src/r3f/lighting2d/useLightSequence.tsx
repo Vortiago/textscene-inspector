@@ -60,14 +60,15 @@ export function CanvasLightSequenceProvider({ children }: { children: ReactNode 
   return <CanvasLightSequenceContext.Provider value={lists}>{children}</CanvasLightSequenceContext.Provider>;
 }
 
-export function useLightSequence(ordinal: number): number {
+/**
+ * This light's place in the positional list, or null for a light the walk never saw: one outside a
+ * scene hierarchy, or in a sub-scene not yet loaded.
+ */
+export function useLightSequence(): number | null {
   const { positional } = useContext(CanvasLightSequenceContext);
   const path = useNodePath();
-
-  // A light outside a scene hierarchy, or in a sub-scene not yet loaded, falls
-  // back to its ordinal.
-  if (!path) return ordinal;
-  return positional.get(path) ?? ordinal;
+  if (!path) return null;
+  return positional.get(path) ?? null;
 }
 
 /**

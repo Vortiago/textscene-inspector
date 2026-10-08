@@ -15,7 +15,12 @@ import { useShadowCaster, useShadowCasterRegistry } from './shadowCasterRegistry
 import { OCCLUDER_CULL_DISABLED } from './shadowVolumes';
 import { World2DLightingBoundary } from './World2DLightingBoundary';
 
-const SUN = { reach: directionalLightCullKey(0, 0), shadowItemCullMask: null, tintsShadow: false };
+const SUN = {
+  reach: directionalLightCullKey(0, 0),
+  sequence: null,
+  shadowItemCullMask: null,
+  tintsShadow: false,
+};
 
 interface Seen {
   outerLighting?: CanvasLighting2D;
@@ -26,7 +31,7 @@ interface Seen {
 /** Reads the outer canvas's light pass, beside an occluder and a lit item of the outer canvas. */
 function Outer({ seen }: { seen: Seen }) {
   const [object] = useState(() => new THREE.Group());
-  useRegisterLitItem({ lightMask: 1, z: 0, layer: 0 }, false);
+  useRegisterLitItem({ lightMask: 1, z: 0, layer: 0, positionalLights: null }, false);
   useShadowCaster({
     segments: new Float32Array([0, 0, 0, 10, 0, 0]),
     cullMode: OCCLUDER_CULL_DISABLED,

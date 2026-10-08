@@ -129,6 +129,7 @@ per-light render target.
 - **The light pose has two more fields** (`worldToLocal`, `radius`), because the map is
   stated in light-local space. That is also what makes a rotated or scaled light come out
   right, where the volumes needed only an origin and a rect.
-- **MIX plus an authored `shadow_color` stays an approximation.** The base term's
-  attenuation cannot be split across two buffers under an interpolating blend. The
-  PointLight2D sheet's known limitations record it.
+- **Each light writes both buffers with one alpha.** The light buffer takes the
+  albedo-scaled share and the `shadow_color` buffer the albedo-free share, each under the
+  light's whole alpha. A MIX light then scales the colour under it in both buffers, as
+  Godot scales one colour.

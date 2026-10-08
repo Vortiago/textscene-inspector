@@ -7,6 +7,7 @@
 import { createContext, useContext } from 'react';
 import * as THREE from 'three';
 import type { CanvasLightDeclaration, ItemPlacement, PassMeshRole } from './itemLightList.js';
+import type { CappedItem } from './itemLightCap.js';
 
 /** The accumulations of one item light list. */
 export interface CanvasLightList {
@@ -50,6 +51,8 @@ export interface CanvasLighting2D {
   registerLight(declaration: CanvasLightDeclaration): CanvasLightSlot;
   /** Declares a lit item at `placement`. A Light Only item also needs the unmodulated buffer. */
   registerItem(placement: ItemPlacement, lightOnly: boolean): () => void;
+  /** Hands an item to the per-item cap, which measures it while its placement is crowded. */
+  registerCappedItem(item: CappedItem): () => void;
   /** Hands the pass one of light `ordinal`'s meshes, which it shows only in the passes `role` draws in. */
   registerPassMesh(mesh: THREE.Object3D, ordinal: number, role: PassMeshRole): () => void;
 }
@@ -60,6 +63,7 @@ export const INERT_CANVAS_LIGHTING: CanvasLighting2D = {
   resolution: new THREE.Vector2(1, 1),
   registerLight: (_declaration: CanvasLightDeclaration) => ({ ordinal: 0, release: () => {} }),
   registerItem: (_placement: ItemPlacement, _lightOnly: boolean) => () => {},
+  registerCappedItem: (_item: CappedItem) => () => {},
   registerPassMesh: (_mesh: THREE.Object3D, _ordinal: number, _role: PassMeshRole) => () => {},
 };
 

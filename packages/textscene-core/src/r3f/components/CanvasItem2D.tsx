@@ -63,7 +63,7 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
   // bucket the draw-order key below sorts by.
   const parentEffectiveZ = useEffectiveZ();
   const effectiveZ = accumulateCanvasItemZ(parentEffectiveZ, props);
-  const lighting = useCanvasItemLighting(material, props.light_mask, effectiveZ);
+  const { props: lighting, geometryRef } = useCanvasItemLighting(material, props.light_mask, effectiveZ);
 
   // Godot's draw order on this group: three compares the nearest group's order
   // first, so the item's meshes keep their `renderOrder` for private layering,
@@ -72,7 +72,10 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
 
   return (
     <group name={node.name} {...transform} visible={props.visible !== false} renderOrder={renderOrder}>
-      <CanvasItemKeyProvider value={renderOrder}>{body?.(tint, material, lighting)}</CanvasItemKeyProvider>
+      {/* An `object3D`, not a group: three takes a group's `renderOrder` as the draw key. */}
+      <object3D ref={geometryRef}>
+        <CanvasItemKeyProvider value={renderOrder}>{body?.(tint, material, lighting)}</CanvasItemKeyProvider>
+      </object3D>
       <Modulate2DContext.Provider value={tint.inherited}>
         {/* Descendants inherit through `use_parent_material` what this node
             resolved, a null included, which stops an inherited material. */}

@@ -15,8 +15,6 @@ import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResou
 import type { PointLight2DProperties } from './types';
 import type { Color } from '../../base/node2d/types';
 import {
-  createLightQuadMaterial,
-  createShadowColorQuadMaterial,
   updateShadowPolarTexture,
   shadowColorContributes,
   SHADOW_FILTER_NONE,
@@ -31,13 +29,18 @@ import type { PassMeshRole } from '../../../r3f/lighting2d/itemLightList';
 import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from '../../../r3f/lighting2d/lightCullKey';
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
 import { useShadowLightPose } from '../../../r3f/lighting2d/shadowLightPose';
-import {
-  litQuadRenderOrder,
-  litQuadStencilProps,
-  shadowColorQuadStencilProps,
-  ShadowVolumeMask,
-} from '../../../r3f/lighting2d/ShadowVolumeMask';
+import { litQuadRenderOrder, ShadowVolumeMask } from '../../../r3f/lighting2d/ShadowVolumeMask';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
+import { useLightQuadMaterials, type LightQuadMaterials } from './useLightQuadMaterials';
+
+/** The quads a light draws besides its lit quad, each only when its material exists. */
+const OPTIONAL_ROLES = [
+  'shade',
+  'tint',
+  'fade',
+  'unshadowed',
+  'unshadowedFade',
+] as const satisfies readonly (keyof LightQuadMaterials & PassMeshRole)[];
 
 export function PointLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PointLight2DProperties;
@@ -71,16 +74,19 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   };
   // Godot's default shadow_color is transparent, so the extra albedo-free pass runs only for the
   // rare light that tints its shadow.
-  const tintsShadow = casts && shadowColorContributes(props.shadow_color);
-  const ordinal = useRegisterCanvasLight2D(lights, {
-    reach,
-    shadowItemCullMask: casts ? props.shadow_item_cull_mask : null,
-    tintsShadow,
-  });
+  const tintsShadow = casts && shadowColorContributes(props.shadow_color, props.shadow_filter);
   // Two jobs, two numbers: `ordinal` keeps the shadow stencil stamps of one pass apart (dense,
   // reused on unmount), while `sequence` is this light's position in the canvas light list, which
   // is what Godot applies lights in and what order-dependent MIX depends on.
-  const sequence = useLightSequence(ordinal ?? 0);
+  const listed = useLightSequence();
+  const ordinal = useRegisterCanvasLight2D(lights, {
+    reach,
+    // A light the walk never saw ties at 0, and the cap breaks a tie by ordinal, as the draw does.
+    sequence: listed ?? 0,
+    shadowItemCullMask: casts ? props.shadow_item_cull_mask : null,
+    tintsShadow,
+  });
+  const sequence = listed ?? ordinal ?? 0;
   // An item the light reaches through a bit outside `shadow_item_cull_mask` takes it unshadowed.
   const reachesUnshadowedItem = (props.range_item_cull_mask & ~props.shadow_item_cull_mask) !== 0;
 
@@ -272,46 +278,19 @@ function QuadMesh({
     };
   }, [shadowMap, light, shadowFilter, shadowFilterSmooth, shadowColor]);
 
-  const material = useMemo(
-    () =>
-      createLightQuadMaterial({
-        cookie,
-        color,
-        energy,
-        blendMode,
-        // A filtered light computes its own fraction per fragment, so it needs
-        // no stencil ref and stamps nothing.
-        stencil: shadowed && !filtered ? litQuadStencilProps(ordinal ?? 0) : undefined,
-        shadow: sampling,
-      }),
-    [cookie, color, energy, blendMode, shadowed, filtered, ordinal, sampling]
-  );
-  useEffect(() => () => material.dispose(), [material]);
-
-  const drawsUnshadowed = casters.length > 0 && reachesUnshadowedItem;
-  const unshadowedMaterial = useMemo(
-    () => (drawsUnshadowed ? createLightQuadMaterial({ cookie, color, energy, blendMode }) : null),
-    [drawsUnshadowed, cookie, color, energy, blendMode]
-  );
-  useEffect(() => () => unshadowedMaterial?.dispose(), [unshadowedMaterial]);
-
-  // The other half of `light_shadow_compute`: the light's contribution where the
-  // volumes stamped. Null at Godot's transparent default.
-  const drawsTint = shadowed && tintsShadow;
-  const shadowMaterial = useMemo(() => {
-    if (!drawsTint) return null;
-    // A sampling is the filtered branch, and it carries the colour, so the two
-    // quads of one light cannot be handed different `shadow_color`s.
-    return sampling
-      ? createShadowColorQuadMaterial({ cookie, blendMode, shadow: sampling })
-      : createShadowColorQuadMaterial({
-          cookie,
-          blendMode,
-          shadowColor,
-          stencil: shadowColorQuadStencilProps(ordinal ?? 0),
-        });
-  }, [drawsTint, cookie, shadowColor, blendMode, ordinal, sampling]);
-  useEffect(() => () => shadowMaterial?.dispose(), [shadowMaterial]);
+  const materials = useLightQuadMaterials({
+    cookie,
+    color,
+    energy,
+    blendMode,
+    shadowColor,
+    tintsShadow,
+    shadowed,
+    filtered,
+    sampling,
+    ordinal,
+    drawsUnshadowed: casters.length > 0 && reachesUnshadowedItem,
+  });
 
   const shape = { ordinal, offset, width: width * scale, height: height * scale, sequence };
 
@@ -320,9 +299,11 @@ function QuadMesh({
       {shadowed && !filtered && ordinal !== null && (
         <ShadowVolumeMask light={light} casters={casters} ordinal={ordinal} sequence={sequence} />
       )}
-      <LightQuad role="lit" onMesh={setQuad} material={material} {...shape} />
-      {unshadowedMaterial && <LightQuad role="unshadowed" material={unshadowedMaterial} {...shape} />}
-      {shadowMaterial && <LightQuad role="tint" material={shadowMaterial} {...shape} />}
+      <LightQuad role="lit" onMesh={setQuad} material={materials.lit} {...shape} />
+      {OPTIONAL_ROLES.map(
+        (role) =>
+          materials[role] && <LightQuad key={role} role={role} material={materials[role]} {...shape} />
+      )}
     </>
   );
 }

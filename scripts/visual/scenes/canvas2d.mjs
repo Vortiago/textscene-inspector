@@ -75,6 +75,14 @@ export const CANVAS_2D_SCENES = [
   // Six masks reach one item, and Godot draws every light. Godot 4.6.3 at x=136 and x=1016, the
   // first and the sixth light: rgb(160,97,81) and rgb(88,157,168).
   { name: 'pointlight2d-many-masks', file: 'unit-pointlight2d-many-masks.tscn', mode: '2d' },
+  // A MIX light's shadow_color mixes over the light under it. Godot 4.6.3 at x=610, in the MIX
+  // light's shadow and the ADD light's reach: rgb(208,126,115).
+  { name: 'pointlight2d-mix-shadow-color', file: 'unit-pointlight2d-mix-shadow-color.tscn', mode: '2d' },
+  // A MIX light over a tinted shadow mixes the tint too. Godot 4.6.3 at x=610: rgb(36,112,74).
+  { name: 'pointlight2d-mix-over-shadow-color', file: 'unit-pointlight2d-mix-over-shadow-color.tscn', mode: '2d' },
+  // An item takes at most 15 positional lights whose rect meets its own. Godot 4.6.3 at the
+  // panels' centres: Left rgb(185,234,191) without Red, Right rgb(227,180,177) with it.
+  { name: 'pointlight2d-item-light-cap', file: 'unit-pointlight2d-item-light-cap.tscn', mode: '2d' },
   // DirectionalLight2D reaches every lit item whatever its light_mask or z, and its shadow is a
   // parallel map across the project viewport's diagonal, so its PCF taps keep one width.
   { name: 'directionallight2d', file: 'unit-directionallight2d.tscn', mode: '2d' },
@@ -244,6 +252,14 @@ export const CANVAS_2D_SCENES = [
   {
     name: 'sub-viewport-container-2d-content',
     file: 'unit-sub-viewport-container-2d-content.tscn',
+    mode: '2d',
+  },
+  // A CanvasLayer under the sub-viewport's Camera2D (ADR-0006) stays in viewport pixels. The
+  // reference harness disables every Camera2D, as the editor does, so the probe is Godot 4.6.3 at
+  // runtime: rgb(0,204,76) at (180,130), where the layer's Badge sits.
+  {
+    name: 'sub-viewport-camera-2d-canvas-layer',
+    file: 'unit-sub-viewport-camera-2d-canvas-layer.tscn',
     mode: '2d',
   },
   // The container takes its rect from a size-consuming parent, so its minimum

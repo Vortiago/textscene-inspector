@@ -105,30 +105,27 @@ describe('CanvasLightSequenceProvider', () => {
 [node name="Prop" type="Sprite2D" parent="."]
 `;
 
-  function Probe({ path, ordinal, seen }: { path: string; ordinal: number; seen: number[] }) {
+  function Probe({ path, seen }: { path: string; seen: (number | null)[] }) {
     return (
       <NodePathProvider path={path}>
-        <Read ordinal={ordinal} seen={seen} />
+        <Read seen={seen} />
       </NodePathProvider>
     );
   }
 
-  function Read({ ordinal, seen }: { ordinal: number; seen: number[] }) {
-    seen.push(useLightSequence(ordinal));
+  function Read({ seen }: { seen: (number | null)[] }) {
+    seen.push(useLightSequence());
     return null;
   }
 
-  async function sequences(
-    paths: readonly string[],
-    { ordinal = 99, scene = SCENE }: { ordinal?: number; scene?: string } = {}
-  ): Promise<number[]> {
-    const seen: number[] = [];
+  async function sequences(paths: readonly string[], scene = SCENE): Promise<(number | null)[]> {
+    const seen: (number | null)[] = [];
     const sceneGraph = createSceneGraphFromTscnScene(new TscnParser().parse(scene));
     await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
         <CanvasLightSequenceProvider>
           {paths.map((path) => (
-            <Probe key={path} path={path} ordinal={ordinal} seen={seen} />
+            <Probe key={path} path={path} seen={seen} />
           ))}
         </CanvasLightSequenceProvider>
       </HierarchyProvider>
@@ -136,9 +133,8 @@ describe('CanvasLightSequenceProvider', () => {
     return seen;
   }
 
-  it('numbers the canvas light list in preorder, whatever ordinal a light was given', async () => {
-    // Every probe passes ordinal 99, so a returned 0/1/2 can only have come from
-    // the walk. `Mid/B` is deeper than `C` but earlier in preorder.
+  it('numbers the canvas light list in preorder', async () => {
+    // `Mid/B` is deeper than `C` but earlier in preorder.
     expect(await sequences(['Root/A', 'Root/Mid/B', 'Root/C'])).toEqual([0, 1, 2]);
   });
 
@@ -154,17 +150,17 @@ describe('CanvasLightSequenceProvider', () => {
 [node name="Inner" type="PointLight2D" parent="View"]
 [node name="A" type="PointLight2D" parent="."]
 `;
-    expect(await sequences(['Root/View/Inner', 'Root/A'], { scene })).toEqual([99, 0]);
+    expect(await sequences(['Root/View/Inner', 'Root/A'], scene)).toEqual([null, 0]);
   });
 
-  it('falls back to the ordinal for a path the walk never saw', async () => {
-    expect(await sequences(['Root/Nowhere'], { ordinal: 7 })).toEqual([7]);
+  it('is null for a path the walk never saw', async () => {
+    expect(await sequences(['Root/Nowhere'])).toEqual([null]);
   });
 
-  it('falls back to the ordinal with no canvas provider at all', async () => {
-    const seen: number[] = [];
-    await ReactThreeTestRenderer.create(<Probe path="Root/A" ordinal={4} seen={seen} />);
-    expect(seen).toEqual([4]);
+  it('is null with no canvas provider at all', async () => {
+    const seen: (number | null)[] = [];
+    await ReactThreeTestRenderer.create(<Probe path="Root/A" seen={seen} />);
+    expect(seen).toEqual([null]);
   });
 });
 

@@ -4,7 +4,7 @@
  * `setState` from a child's render is an update during render.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type * as THREE from 'three';
 import { LIGHT_PASS_LAYER } from './lightPassLayers.js';
 import type { CanvasLightDeclaration, ItemPlacement, PassMeshRole } from './itemLightList.js';
@@ -22,7 +22,7 @@ export function useRegisterCanvasLight2D(
   const { registerLight } = useCanvasLighting2D();
   const [ordinal, setOrdinal] = useState<number | null>(null);
   const { itemCullMask, zMin, zMax, layerMin, layerMax } = declaration.reach;
-  const { shadowItemCullMask, tintsShadow } = declaration;
+  const { sequence, shadowItemCullMask, tintsShadow } = declaration;
   useEffect(() => {
     if (!enabled) {
       setOrdinal(null);
@@ -30,22 +30,54 @@ export function useRegisterCanvasLight2D(
     }
     const slot = registerLight({
       reach: { itemCullMask, zMin, zMax, layerMin, layerMax },
+      sequence,
       shadowItemCullMask,
       tintsShadow,
     });
     setOrdinal(slot.ordinal);
     return slot.release;
-  }, [enabled, registerLight, itemCullMask, zMin, zMax, layerMin, layerMax, shadowItemCullMask, tintsShadow]);
+  }, [
+    enabled,
+    registerLight,
+    itemCullMask,
+    zMin,
+    zMax,
+    layerMin,
+    layerMax,
+    sequence,
+    shadowItemCullMask,
+    tintsShadow,
+  ]);
   return ordinal;
 }
 
-/** Declares a lit item at `placement`, by value. A Light Only item asks for the unmodulated buffer. */
+/**
+ * Declares a lit item at `placement`, by value. A Light Only item asks for the unmodulated buffer.
+ * The cap hands `positionalLights` as a new array only when they change, so its identity serves.
+ */
 export function useRegisterLitItem(placement: ItemPlacement, lightOnly: boolean): void {
   const { registerItem } = useCanvasLighting2D();
+  const { lightMask, z, layer, positionalLights } = placement;
+  useEffect(
+    () => registerItem({ lightMask, z, layer, positionalLights }, lightOnly),
+    [registerItem, lightMask, z, layer, positionalLights, lightOnly]
+  );
+}
+
+/**
+ * Hands the per-item cap an item at `placement`, uncapped, whose own geometry `geometry` holds.
+ * `take` receives the positional lights the item takes while its placement is crowded.
+ */
+export function useCapItemLights(
+  placement: ItemPlacement,
+  geometry: RefObject<THREE.Object3D | null>,
+  take: (positionalLights: readonly number[] | null) => void
+): void {
+  const { registerCappedItem } = useCanvasLighting2D();
   const { lightMask, z, layer } = placement;
   useEffect(
-    () => registerItem({ lightMask, z, layer }, lightOnly),
-    [registerItem, lightMask, z, layer, lightOnly]
+    () => registerCappedItem({ placement: { lightMask, z, layer, positionalLights: null }, geometry, take }),
+    [registerCappedItem, lightMask, z, layer, geometry, take]
   );
 }
 

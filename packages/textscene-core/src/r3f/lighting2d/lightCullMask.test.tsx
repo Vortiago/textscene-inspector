@@ -5,7 +5,7 @@
  * measures the pixels against the engine.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
@@ -150,6 +150,48 @@ describe('2D light cull masks, through the dispatcher', () => {
     const lights = names.map((name, index) => light(name, String(1 << index), index * 40)).join('');
     const renderer = await render(scene(`${panel('P', '511', 0)}${lights}`));
     expect(await lightsOn(renderer, 'P')).toEqual(names);
+  });
+});
+
+/**
+ * Godot's per-item cap (`renderer_canvas_render_rd.cpp:2366-2385`): an item takes the first 15
+ * positional lights in tree order whose rect meets its own.
+ */
+describe('the 15-light cap, through the dispatcher', () => {
+  /**
+   * Waits for the lights on `name` to settle at `expected`. The cap hands an item its lights in a
+   * frame, and the item's re-render and the pass's re-plan land on later tasks.
+   */
+  async function expectLightsOn(renderer: Rendered, name: string, expected: string[]): Promise<void> {
+    await vi.waitFor(async () => expect(await lightsOn(renderer, name)).toEqual(expected), { interval: 10 });
+  }
+
+  const names = (count: number) => Array.from({ length: count }, (_unused, index) => `L${index}`);
+
+  it('keeps the first 15 lights in tree order once more reach an item', async () => {
+    const lights = names(17)
+      .map((name) => light(name, null, 50))
+      .join('');
+    const renderer = await render(scene(`${panel('P', null, 0)}${lights}`));
+    await expectLightsOn(renderer, 'P', names(15));
+  });
+
+  it('gives the slot of a light whose rect misses the item to the next light', async () => {
+    const lights = names(16)
+      .map((name, index) => light(name, null, index === 0 ? 1000 : 50))
+      .join('');
+    const renderer = await render(scene(`${panel('P', null, 0)}${lights}`));
+    await expectLightsOn(renderer, 'P', names(16).slice(1));
+  });
+
+  it('caps each item by its own rect', async () => {
+    // Every light but L0 spans both panels. L0 sits over Left alone, so Right takes L15 in its place.
+    const lights = names(16)
+      .map((name, index) => light(name, null, index === 0 ? 20 : 100))
+      .join('');
+    const renderer = await render(scene(`${panel('Left', null, 0)}${panel('Right', null, 110)}${lights}`));
+    await expectLightsOn(renderer, 'Left', names(15));
+    await expectLightsOn(renderer, 'Right', names(16).slice(1));
   });
 });
 

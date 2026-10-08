@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import * as THREE from 'three';
-import { useThree } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import type { RGBA } from '../canvasItemModulate.js';
 import { ShadowCasterStage } from './ShadowCasterStage.js';
 import { CanvasLightSequenceProvider } from './useLightSequence.js';
@@ -23,9 +23,15 @@ import { useLightRegistry, usePlacementRegistry } from './lightRegistry.js';
 import { useAccumulationTargets } from './lightAccumulationTargets.js';
 import { createSeedMaterial, LightAccumulatorSeed } from './lightSeedQuad.js';
 import { useLightAccumulationPass, type AccumulationList, type PassMesh } from './lightAccumulationPass.js';
+import { capItemLights, type CappedItem } from './itemLightCap.js';
 
 export { useCanvasLighting2D, type CanvasLighting2D, type CanvasLightSlot } from './lightPassContext.js';
-export { usePassMeshRef, useRegisterCanvasLight2D, useRegisterLitItem } from './lightPassDeclarations.js';
+export {
+  useCapItemLights,
+  usePassMeshRef,
+  useRegisterCanvasLight2D,
+  useRegisterLitItem,
+} from './lightPassDeclarations.js';
 
 export interface CanvasLighting2DProviderProps {
   /**
@@ -74,6 +80,22 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
     [passMeshes]
   );
 
+  // Read by the cap each frame, like the pass meshes. `handed` lets an item re-render only when the
+  // lights it takes change.
+  const cappedItems = useRef(new Set<CappedItem>()).current;
+  const handed = useRef(new WeakMap<CappedItem, readonly number[] | null>()).current;
+  const registerCappedItem = useCallback(
+    (item: CappedItem) => {
+      cappedItems.add(item);
+      return () => {
+        cappedItems.delete(item);
+      };
+    },
+    [cappedItems]
+  );
+  // Ahead of the pass at -1, so a frame's lists follow the rects of the frame before.
+  useFrame(() => capItemLights({ lights, items: cappedItems, passMeshes, handed }), -2);
+
   const accumulationLists = useMemo<AccumulationList[]>(
     () =>
       plans.map((plan) => ({
@@ -112,8 +134,16 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
       };
       for (const id of plan.placementIds) lists.set(id, list);
     });
-    return { lists, resolution, registerLight, registerItem, registerPassMesh };
-  }, [plans, accumulationLists, resolution, registerLight, registerItem, registerPassMesh]);
+    return { lists, resolution, registerLight, registerItem, registerCappedItem, registerPassMesh };
+  }, [
+    plans,
+    accumulationLists,
+    resolution,
+    registerLight,
+    registerItem,
+    registerCappedItem,
+    registerPassMesh,
+  ]);
 
   return (
     <CanvasLighting2DContext.Provider value={value}>

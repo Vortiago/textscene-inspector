@@ -51,7 +51,7 @@ export function TileGroupRenderer({
   // Lights cull against `zFinal`, not `item.effectiveZ`: `YSortContext` has no
   // provider, so `item.effectiveZ` always starts at 0 and drops every `z_index` at or
   // above the y-sort root.
-  const lighting = useCanvasItemLighting(material, tileProps.light_mask, zFinal);
+  const { props: lighting, geometryRef } = useCanvasItemLighting(material, tileProps.light_mask, zFinal);
   const allCells = tileProps.cells ?? null;
   // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
   const cells = item.tileData?.cells ?? allCells;
@@ -85,6 +85,7 @@ export function TileGroupRenderer({
 
   return (
     <group
+      ref={geometryRef}
       name={`TileGroup_${node.name}_${ySortItemId(item)}`}
       position={[originX, originY, 0]}
       renderOrder={renderOrder}

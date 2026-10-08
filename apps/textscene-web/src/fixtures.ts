@@ -1188,6 +1188,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Item Light Cap",
+    "file": "unit-pointlight2d-item-light-cap.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d Lightonly",
     "file": "unit-pointlight2d-lightonly.tscn",
     "category": "Other"
@@ -1200,6 +1205,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Pointlight2d Mix Order",
     "file": "unit-pointlight2d-mix-order.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Mix Over Shadow Color",
+    "file": "unit-pointlight2d-mix-over-shadow-color.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Mix Shadow Color",
+    "file": "unit-pointlight2d-mix-shadow-color.tscn",
     "category": "Other"
   },
   {
@@ -2951,6 +2966,11 @@ export const fixtures: Fixture[] = [
     "name": "Navigation Region 3d",
     "file": "unit-navigation-region-3d.tscn",
     "category": "Unit - Navigation"
+  },
+  {
+    "name": "Sub Viewport Camera 2d Canvas Layer",
+    "file": "unit-sub-viewport-camera-2d-canvas-layer.tscn",
+    "category": "Unit - Viewports"
   },
   {
     "name": "Sub Viewport Container 2d Content",

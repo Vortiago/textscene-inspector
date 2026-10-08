@@ -86,7 +86,7 @@ the lower panel stays lit behind the bar.
 
 Godot applies every light on an item's list in order, whatever each light's
 `range_item_cull_mask`. The MIX light reaches the surface through mask 2 and the ADD light
-through mask 1, so where both reach, the MIX light mixes from what the ADD light left.
+through mask 1. Where both reach, the MIX light mixes from what the ADD light left.
 
 ## Many cull masks on one item
 
@@ -94,6 +94,28 @@ through mask 1, so where both reach, the MIX light mixes from what the ADD light
 
 Six lights, one mask bit each, reach one surface whose `light_mask` holds all six. Godot
 draws every light on the item's list, however many masks the canvas holds.
+
+## A MIX light with a shadow_color
+
+<!-- compare: image=unit-pointlight2d-mix-shadow-color status=done fixture=unit-pointlight2d-mix-shadow-color.tscn -->
+
+Where a MIX light is blocked, Godot mixes the colour under it toward `shadow_color` by
+`shadow_color.a`. The ADD light under it dims there too, behind the bar on the right.
+
+## A MIX light over a tinted shadow
+
+<!-- compare: image=unit-pointlight2d-mix-over-shadow-color status=done fixture=unit-pointlight2d-mix-over-shadow-color.tscn -->
+
+A MIX light mixes the tinted shadow under it like any other colour. The green MIX light
+replaces the blue `shadow_color` of the light on the left where both reach.
+
+## At most 15 lights on one item
+
+<!-- compare: image=unit-pointlight2d-item-light-cap status=done fixture=unit-pointlight2d-item-light-cap.tscn -->
+
+An item takes at most 15 positional lights, in tree order. A light counts only where its rect
+meets the item's rect. The green light reaches only the left panel, so the left panel fills its
+15 lights before the red light. The right panel takes the red light.
 
 ## Linting
 

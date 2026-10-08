@@ -7,13 +7,17 @@
 
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_LIGHT_CULL_KEY, directionalLightCullKey, type LightCullKey } from './lightCullKey';
+import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering';
 import {
+  crowdsItems,
   itemLightList,
+  itemPositionalLights,
   lightListId,
   drawsInPass,
   planLightLists,
   placementId,
   type CanvasLightDeclaration,
+  type CanvasRect,
   type ItemPlacement,
   type PlacementDeclarations,
 } from './itemLightList';
@@ -23,10 +27,10 @@ function key(overrides: Partial<LightCullKey> = {}): LightCullKey {
 }
 
 function light(overrides: Partial<CanvasLightDeclaration> = {}): CanvasLightDeclaration {
-  return { reach: key(), shadowItemCullMask: null, tintsShadow: false, ...overrides };
+  return { reach: key(), sequence: 0, shadowItemCullMask: null, tintsShadow: false, ...overrides };
 }
 
-const ITEM: ItemPlacement = { lightMask: 1, z: 0, layer: 0 };
+const ITEM: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
 
 function lights(...declarations: CanvasLightDeclaration[]): ReadonlyMap<number, CanvasLightDeclaration> {
   return new Map(declarations.map((declaration, ordinal) => [ordinal, declaration]));
@@ -82,6 +86,101 @@ describe('itemLightList', () => {
   });
 });
 
+describe('itemLightList under the per-item cap', () => {
+  it('leaves out a positional light the item does not take', () => {
+    const list = itemLightList(lights(light(), light()), { ...ITEM, positionalLights: [1] });
+    expect(list.map((entry) => entry.ordinal)).toEqual([1]);
+  });
+
+  it('keeps a directional light, which the cap does not count', () => {
+    const sun = light({ reach: directionalLightCullKey(0, 0), sequence: null });
+    const list = itemLightList(lights(sun, light()), { ...ITEM, positionalLights: [] });
+    expect(list.map((entry) => entry.ordinal)).toEqual([0]);
+  });
+});
+
+/** Godot's per-item limit on positional lights: the loop breaks at `MAX_LIGHTS_PER_ITEM - 1`. */
+const CAP = MAX_LIGHTS_PER_ITEM - 1;
+
+const ITEM_RECT: CanvasRect = { minX: 0, minY: 0, maxX: 10, maxY: 10 };
+const OVER_ITEM: CanvasRect = { minX: -5, minY: -5, maxX: 5, maxY: 5 };
+const PAST_ITEM: CanvasRect = { minX: 20, minY: 20, maxX: 30, maxY: 30 };
+
+/** `count` positional lights in tree order, ordinal `n` at sequence `n`. */
+function positionalLights(count: number): ReadonlyMap<number, CanvasLightDeclaration> {
+  return lights(...Array.from({ length: count }, (_, sequence) => light({ sequence })));
+}
+
+function rectsOver(ordinals: Iterable<number>, rect = OVER_ITEM): Map<number, CanvasRect> {
+  return new Map([...ordinals].map((ordinal) => [ordinal, rect]));
+}
+
+describe('crowdsItems', () => {
+  it('is false while every positional light that reaches the placement fits', () => {
+    expect(crowdsItems(positionalLights(CAP), ITEM)).toBe(false);
+  });
+
+  it('is true once more positional lights reach the placement than an item takes', () => {
+    expect(crowdsItems(positionalLights(CAP + 1), ITEM)).toBe(true);
+  });
+
+  it('does not count a light the cull test rejects', () => {
+    const all = lights(...positionalLights(CAP).values(), light({ sequence: CAP, reach: key({ zMax: -1 }) }));
+    expect(crowdsItems(all, ITEM)).toBe(false);
+  });
+
+  it('does not count a directional light', () => {
+    const sun = light({ reach: directionalLightCullKey(0, 0), sequence: null });
+    expect(crowdsItems(lights(...positionalLights(CAP).values(), sun), ITEM)).toBe(false);
+  });
+});
+
+describe('itemPositionalLights', () => {
+  it('keeps the first 15 positional lights by sequence', () => {
+    const all = positionalLights(CAP + 3);
+    const taken = itemPositionalLights(all, ITEM, ITEM_RECT, rectsOver(all.keys()));
+    expect(taken).toEqual([...Array(CAP).keys()]);
+  });
+
+  it('orders by sequence, not by ordinal', () => {
+    const all = lights(light({ sequence: 1 }), light({ sequence: 0 }));
+    expect(itemPositionalLights(all, ITEM, ITEM_RECT, rectsOver(all.keys()))).toEqual([1, 0]);
+  });
+
+  it('breaks a sequence tie by ordinal', () => {
+    const all = lights(light(), light());
+    expect(itemPositionalLights(all, ITEM, ITEM_RECT, rectsOver(all.keys()))).toEqual([0, 1]);
+  });
+
+  it('gives the slot of a light whose rect misses the item to the next light', () => {
+    const all = positionalLights(CAP + 1);
+    const rects = rectsOver(all.keys());
+    rects.set(0, PAST_ITEM);
+    expect(itemPositionalLights(all, ITEM, ITEM_RECT, rects)).toEqual(
+      [...Array(CAP).keys()].map((n) => n + 1)
+    );
+  });
+
+  it('counts a rect that only touches the item as a miss', () => {
+    const touching: CanvasRect = { minX: 10, minY: 0, maxX: 20, maxY: 10 };
+    expect(itemPositionalLights(lights(light()), ITEM, ITEM_RECT, rectsOver([0], touching))).toEqual([]);
+  });
+
+  it('leaves out a light with no rect, which draws nothing', () => {
+    expect(itemPositionalLights(lights(light()), ITEM, ITEM_RECT, new Map())).toEqual([]);
+  });
+
+  it('leaves out a light the cull test rejects', () => {
+    const all = lights(light({ reach: key({ itemCullMask: 2 }) }), light({ sequence: 1 }));
+    expect(itemPositionalLights(all, ITEM, ITEM_RECT, rectsOver(all.keys()))).toEqual([1]);
+  });
+
+  it('leaves out a directional light', () => {
+    const sun = light({ reach: directionalLightCullKey(0, 0), sequence: null });
+    expect(itemPositionalLights(lights(sun), ITEM, ITEM_RECT, rectsOver([0]))).toEqual([]);
+  });
+});
+
 describe('lightListId', () => {
   it('is the same for two lists of the same lights and shadow state', () => {
     const all = lights(light(), light());
@@ -110,6 +209,18 @@ function placements(...items: [ItemPlacement, boolean][]): ReadonlyMap<string, P
     items.map(([placement, hasLightOnly]) => [placementId(placement), { placement, hasLightOnly }])
   );
 }
+
+describe('placementId', () => {
+  it('separates two placements that take different positional lights', () => {
+    expect(placementId({ ...ITEM, positionalLights: [0, 1] })).not.toBe(
+      placementId({ ...ITEM, positionalLights: [0] })
+    );
+  });
+
+  it('separates a capped placement from an uncapped one', () => {
+    expect(placementId({ ...ITEM, positionalLights: [] })).not.toBe(placementId(ITEM));
+  });
+});
 
 describe('planLightLists', () => {
   it('gives placements with the same list one plan', () => {
@@ -155,7 +266,7 @@ describe('drawsInPass', () => {
   const escaping = { ordinal: 0, unshadowed: true };
 
   it('draws a light absent from the list in no pass', () => {
-    for (const role of ['volume', 'lit', 'tint', 'unshadowed'] as const) {
+    for (const role of ['volume', 'lit', 'shade', 'tint', 'fade', 'unshadowed', 'unshadowedFade'] as const) {
       expect(drawsInPass(undefined, role, 'light')).toBe(false);
       expect(drawsInPass(undefined, role, 'tint')).toBe(false);
     }
@@ -180,5 +291,23 @@ describe('drawsInPass', () => {
     expect(drawsInPass(shadowed, 'lit', 'tint')).toBe(false);
     expect(drawsInPass(escaping, 'tint', 'tint')).toBe(false);
     expect(drawsInPass(escaping, 'volume', 'tint')).toBe(false);
+  });
+
+  it("draws the shade quad, the shadow_color's alpha, in the light pass of a shadowed item", () => {
+    expect(drawsInPass(shadowed, 'shade', 'light')).toBe(true);
+    expect(drawsInPass(shadowed, 'shade', 'tint')).toBe(false);
+    expect(drawsInPass(escaping, 'shade', 'light')).toBe(false);
+  });
+
+  it('draws the fade quad, the lit alpha, in the tint pass of a shadowed item', () => {
+    expect(drawsInPass(shadowed, 'fade', 'tint')).toBe(true);
+    expect(drawsInPass(shadowed, 'fade', 'light')).toBe(false);
+    expect(drawsInPass(escaping, 'fade', 'tint')).toBe(false);
+  });
+
+  it('draws the unshadowed fade quad in the tint pass of an escaping item', () => {
+    expect(drawsInPass(escaping, 'unshadowedFade', 'tint')).toBe(true);
+    expect(drawsInPass(escaping, 'unshadowedFade', 'light')).toBe(false);
+    expect(drawsInPass(shadowed, 'unshadowedFade', 'tint')).toBe(false);
   });
 });

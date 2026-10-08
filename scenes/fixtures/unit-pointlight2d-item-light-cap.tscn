@@ -1,0 +1,99 @@
+[gd_scene format=3]
+
+; Moves one variable: the per-item cap of 15 positional lights, counted over the lights whose
+; rect meets the item. Green reaches Left alone, so Left fills its 15 before Red and Right takes
+; Red. No other scene puts more than 15 lights on one item.
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Left" type="Polygon2D" parent="."]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(200, 224, 400, 224, 400, 424, 200, 424)
+
+[node name="Right" type="Polygon2D" parent="."]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(752, 224, 952, 224, 952, 424, 752, 424)
+
+[node name="Green" type="PointLight2D" parent="."]
+position = Vector2(300, 324)
+texture = ExtResource("1_light")
+texture_scale = 0.25
+color = Color(0.2, 1, 0.3, 1)
+energy = 0.5
+
+[node name="White1" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White2" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White3" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White4" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White5" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White6" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White7" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White8" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White9" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White10" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White11" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White12" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White13" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="White14" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+energy = 0.05
+
+[node name="Red" type="PointLight2D" parent="."]
+position = Vector2(576, 324)
+texture = ExtResource("1_light")
+color = Color(1, 0.2, 0.15, 1)

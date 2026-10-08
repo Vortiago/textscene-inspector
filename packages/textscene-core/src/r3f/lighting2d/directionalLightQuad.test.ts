@@ -106,6 +106,26 @@ describe('createDirectionalShadowColorMaterial', () => {
     expect(mat.uniforms.uAlpha!.value).toBe(1);
     expect(mat.uniforms.uShadowMap!.value).toBe(shadow.map);
   });
+
+  it("carries the light's whole alpha and only the shadowed share of the colour", () => {
+    // A MIX blend scales the buffer by the alpha, which is the light's over its whole reach.
+    const mat = createDirectionalShadowColorMaterial({
+      color: WARM,
+      energy: 2,
+      blendMode: 2,
+      shadow: sampling(),
+    });
+    expect(mat.fragmentShader).toContain(
+      'vec4(uShadowColor.rgb * s, uAlpha * ((1.0 - s) + s * uShadowColor.a))'
+    );
+  });
+
+  it('carries only the alpha for a light that casts no shadow', () => {
+    const mat = createDirectionalShadowColorMaterial({ color: WARM, energy: 2, blendMode: 2 });
+    expect(mat.fragmentShader).toContain('gl_FragColor = vec4(0.0, 0.0, 0.0, uAlpha)');
+    expect(mat.uniforms.uAlpha!.value).toBe(1);
+    expect(mat.uniforms.uShadowMap).toBeUndefined();
+  });
 });
 
 describe('createDirectionalShadowTexture', () => {

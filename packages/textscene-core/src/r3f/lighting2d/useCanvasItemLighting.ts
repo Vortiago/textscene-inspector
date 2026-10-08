@@ -5,14 +5,14 @@
  * so a fresh uniform object never reaches the GPU.
  */
 
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState, type RefObject } from 'react';
 import * as THREE from 'three';
 import { useCanvasModulate } from '../canvasModulate.js';
 import {
   CanvasItemLightMode,
   type CanvasItemMaterialProperties,
 } from '../../resources/materials/canvasitemmaterial/types.js';
-import { useCanvasLighting2D, useRegisterLitItem } from './CanvasLighting2D.js';
+import { useCanvasLighting2D, useCapItemLights, useRegisterLitItem } from './CanvasLighting2D.js';
 import {
   canvasItemLightingProps,
   type CanvasItemLightingProps,
@@ -45,6 +45,17 @@ function createUniforms(resolution: THREE.Vector2): CanvasItemLightingUniforms {
   };
 }
 
+/** What an item binds to read its light list. */
+export interface CanvasItemLighting {
+  /** The material props, which never change once mounted. */
+  readonly props: CanvasItemLightingProps;
+  /**
+   * For the object that holds the item's own geometry, its child items left out. The per-item cap
+   * measures its rect (`itemLightCap.ts`).
+   */
+  readonly geometryRef: RefObject<THREE.Object3D | null>;
+}
+
 export function useCanvasItemLighting(
   material: CanvasItemMaterialProperties | null,
   /** The item's CanvasItem `light_mask`; Godot's default 1 for a node without one. */
@@ -55,7 +66,7 @@ export function useCanvasItemLighting(
    * outside their tree position and so passes the z it computed for them.
    */
   effectiveZ?: number
-): CanvasItemLightingProps {
+): CanvasItemLighting {
   const { lists, resolution } = useCanvasLighting2D();
   const inheritedZ = useEffectiveZ();
   const itemZ = effectiveZ ?? inheritedZ;
@@ -69,7 +80,11 @@ export function useCanvasItemLighting(
   // Godot's cull test (`light_mask`, `z_final` and the canvas layer) picks the item's light list,
   // so items at one placement share it. The unmodulated accumulation costs a second pre-pass, so a
   // list has one only while a Light Only item reads it.
-  const placement = { lightMask, z: itemZ, layer: canvasLayer };
+  // Past 15 positional lights at its placement, the item's rect picks which it takes.
+  const geometryRef = useRef<THREE.Object3D | null>(null);
+  const [positionalLights, setPositionalLights] = useState<readonly number[] | null>(null);
+  const placement = { lightMask, z: itemZ, layer: canvasLayer, positionalLights };
+  useCapItemLights(placement, geometryRef, setPositionalLights);
   useRegisterLitItem(placement, lightOnly);
   const list = lists.get(placementId(placement));
 
@@ -92,5 +107,6 @@ export function useCanvasItemLighting(
   bound.lightMode.value = lightMode;
 
   // Mode-independent by design: these props must never change once mounted.
-  return useMemo(() => canvasItemLightingProps(bound), [bound]);
+  const props = useMemo(() => canvasItemLightingProps(bound), [bound]);
+  return useMemo(() => ({ props, geometryRef }), [props]);
 }

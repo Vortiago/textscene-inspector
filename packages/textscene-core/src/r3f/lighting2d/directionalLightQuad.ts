@@ -109,14 +109,25 @@ void main() {
 }
 `;
 
-/** The other half: `shadow_color`, never albedo-scaled, so it draws in the tint pass. */
+/**
+ * The other half: `shadow_color`, never albedo-scaled, so it draws in the tint pass. It carries the
+ * light's whole alpha, so a MIX blend scales the tint buffer as it scales the light buffer.
+ */
 const SHADOWED_TINT_FRAGMENT = /* glsl */ `
 uniform float uAlpha;
 uniform vec4 uShadowColor;
 ${SHADOW_SAMPLE}
 void main() {
   float s = shadowFraction();
-  gl_FragColor = vec4(uShadowColor.rgb, uAlpha * s * ((1.0 - s) + s * uShadowColor.a));
+  gl_FragColor = vec4(uShadowColor.rgb * s, uAlpha * ((1.0 - s) + s * uShadowColor.a));
+}
+`;
+
+/** The tint-pass quad of a light that casts no shadow: its alpha alone. */
+const FADE_FRAGMENT = /* glsl */ `
+uniform float uAlpha;
+void main() {
+  gl_FragColor = vec4(0.0, 0.0, 0.0, uAlpha);
 }
 `;
 
@@ -167,11 +178,14 @@ export function createDirectionalLightMaterial(options: DirectionalLightQuadOpti
   });
 }
 
-/** The albedo-free `shadow_color` term, drawn only for a light whose `shadow_color` contributes. */
+/**
+ * The tint-pass quad: the albedo-free `shadow_color` term under the light's alpha. A light that
+ * casts no shadow has no term, and its quad carries only the alpha a MIX blend scales by.
+ */
 export function createDirectionalShadowColorMaterial(
-  options: DirectionalLightQuadOptions & { readonly shadow: DirectionalShadowSampling }
+  options: DirectionalLightQuadOptions
 ): THREE.ShaderMaterial {
-  return accumulationQuad(options, SHADOWED_TINT_FRAGMENT, {});
+  return accumulationQuad(options, options.shadow ? SHADOWED_TINT_FRAGMENT : FADE_FRAGMENT, {});
 }
 
 /**

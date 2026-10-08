@@ -335,6 +335,86 @@ describe('shadow_color', () => {
 });
 
 /**
+ * `light_blend_compute` applies a light's whole `light_color` with one alpha. The pass splits that
+ * term over the light and tint buffers, so each light writes both over its whole reach with that
+ * alpha: a MIX light then scales the colour under it in both, as Godot scales one colour.
+ */
+describe('one alpha over both buffers', () => {
+  const TINT = 'shadow_color = Color(0.15, 0.35, 1, 1)\n';
+  const MIX = 'blend_mode = 2\n';
+  /** Tint, a tinting light, gives Surface's list a shadow_color buffer. Lamp is the light under test. */
+  const withTint = (lampExtra: string, x = 700) =>
+    scene(`${lamp('Tint', 300, TINT)}${lamp('Lamp', x, lampExtra)}${caster('Caster', 576)}`);
+
+  function stencilFuncs(drawn: readonly THREE.Mesh[]): number[] {
+    return drawn.map((mesh) => (mesh.material as THREE.Material).stencilFunc);
+  }
+
+  function colourOf(mesh: THREE.Mesh): number[] {
+    const { uColor, uShadowColor } = (mesh.material as THREE.ShaderMaterial).uniforms;
+    const colour = (uColor ?? uShadowColor)!.value as THREE.Vector3;
+    return [colour.x, colour.y, colour.z];
+  }
+
+  it("adds a tinting light's shadow_color alpha to the light buffer, colourless, where it is blocked", async () => {
+    // Godot sums the alpha into `light_only_alpha` and MIX scales the colour under it by it.
+    const renderer = await render(scene(`${lamp('Lamp', 400, `${MIX}${TINT}`)}${caster('Caster', 576)}`));
+    const drawn = await drawnFor(renderer, 'Surface', 'uLightList');
+    expect(stencilFuncs(drawn)).toEqual([
+      THREE.AlwaysStencilFunc,
+      THREE.NotEqualStencilFunc,
+      THREE.EqualStencilFunc,
+    ]);
+    const shade = (drawn[2]!.material as THREE.ShaderMaterial).uniforms.uShadowColor!.value as THREE.Vector4;
+    expect([shade.x, shade.y, shade.z, shade.w]).toEqual([0, 0, 0, 1]);
+  });
+
+  it('scales the shadow_color under a MIX light by its alpha, colourless, where it is lit', async () => {
+    const renderer = await render(withTint(MIX));
+    const drawn = await drawnFor(renderer, 'Surface', 'uShadowTint');
+    expect(stencilFuncs(drawn)).toEqual([THREE.AlwaysStencilFunc, THREE.NotEqualStencilFunc]);
+    expect(colourOf(drawn[1]!)).toEqual([0, 0, 0]);
+  });
+
+  it('scales it over the whole rect for a MIX light that casts nothing', async () => {
+    const renderer = await render(withTint(`${MIX}shadow_enabled = false\n`, 900));
+    const drawn = await drawnFor(renderer, 'Surface', 'uShadowTint');
+    expect(drawn.map((mesh) => (mesh.material as THREE.Material).stencilWrite)).toEqual([false]);
+    expect(colourOf(drawn[0]!)).toEqual([0, 0, 0]);
+  });
+
+  it('scales it over the whole rect for a MIX light whose shadow misses the item', async () => {
+    const renderer = await render(withTint(`${MIX}range_item_cull_mask = 3\nshadow_item_cull_mask = 2\n`));
+    const drawn = await drawnFor(renderer, 'Surface', 'uShadowTint');
+    expect(drawn.map((mesh) => (mesh.material as THREE.Material).stencilWrite)).toEqual([false]);
+    expect(colourOf(drawn[0]!)).toEqual([0, 0, 0]);
+  });
+
+  it("carries a filtered MIX light's alpha through its tint quad, untinted as it is", async () => {
+    const renderer = await render(withTint(`${MIX}shadow_filter = 1\n`));
+    const drawn = await drawnFor(renderer, 'Surface', 'uShadowTint');
+    expect(drawn).toHaveLength(1);
+    expect((drawn[0]!.material as THREE.ShaderMaterial).uniforms.uShadowMap).toBeDefined();
+  });
+
+  it('draws no quad of an ADD light into the shadow_color buffer it adds nothing to', async () => {
+    const renderer = await render(withTint(''));
+    const drawn = await drawnFor(renderer, 'Surface', 'uShadowTint');
+    expect(drawn.filter((mesh) => (mesh.material as THREE.ShaderMaterial).uniforms?.uCookie)).toHaveLength(0);
+  });
+
+  it("tints a filtered light's penumbra with a transparent shadow_color's rgb", async () => {
+    const renderer = await render(
+      scene(
+        `${lamp('Lamp', 400, 'shadow_filter = 1\nshadow_color = Color(1, 0, 0, 0)\n')}${caster('Caster', 576)}`
+      )
+    );
+    const drawn = await drawnFor(renderer, 'Surface', 'uShadowTint');
+    expect(drawn).toHaveLength(1);
+  });
+});
+
+/**
  * `shadow_filter` picks the mechanism. In `drivers/gles3/shaders/canvas.glsl`,
  * `light_shadow_compute`, NONE takes one `SHADOW_TEST` (0 or 1), PCF5 five taps
  * over 5.0 and PCF13 thirteen over 13.0. Only NONE is binary, so only NONE keeps
@@ -404,8 +484,7 @@ describe('shadow_filter selects the shadow mechanism', () => {
 
   it('carries an authored shadow_color through the filter, without a stencil', async () => {
     // The `mix` has no cross term, so the tint keeps its own albedo-free quad and
-    // computes its own fraction instead of a stencilled umbra. The quad exists
-    // only because `shadowColorContributes` gates on `shadow_color.a > 0`.
+    // computes its own fraction instead of a stencilled umbra.
     const renderer = await render(
       scene(
         `${lamp('Lamp', 400, 'shadow_filter = 1\nshadow_color = Color(0.15, 0.35, 1, 1)\n')}${caster('Caster', 576)}`

@@ -16,7 +16,13 @@ import {
 } from './lightPassContext';
 import { DEFAULT_LIGHT_CULL_KEY } from './lightCullKey';
 import type { CanvasLightDeclaration, ItemPlacement, PassMeshRole } from './itemLightList';
-import { usePassMeshRef, useRegisterCanvasLight2D, useRegisterLitItem } from './lightPassDeclarations';
+import {
+  useCapItemLights,
+  usePassMeshRef,
+  useRegisterCanvasLight2D,
+  useRegisterLitItem,
+} from './lightPassDeclarations';
+import type { CappedItem } from './itemLightCap';
 import { LIGHT_PASS_LAYER } from './lightPassLayers';
 
 /** A lighting context whose registrars are spies. */
@@ -27,18 +33,37 @@ function spyLighting() {
   const slot: CanvasLightSlot = { ordinal: 3, release };
   const registerLight = vi.fn((_declaration: CanvasLightDeclaration) => slot);
   const registerItem = vi.fn((_placement: ItemPlacement, _lightOnly: boolean) => releaseItem);
+  const releaseCapped = vi.fn();
+  const registerCappedItem = vi.fn((_item: CappedItem) => releaseCapped);
   const registerPassMesh = vi.fn(
     (_mesh: THREE.Object3D, _ordinal: number, _role: PassMeshRole) => releaseMesh
   );
-  const value: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, registerLight, registerItem, registerPassMesh };
+  const value: CanvasLighting2D = {
+    ...INERT_CANVAS_LIGHTING,
+    registerLight,
+    registerItem,
+    registerCappedItem,
+    registerPassMesh,
+  };
   const Wrap = ({ children }: { children: ReactNode }) => (
     <CanvasLighting2DContext.Provider value={value}>{children}</CanvasLighting2DContext.Provider>
   );
-  return { Wrap, registerLight, release, registerItem, releaseItem, registerPassMesh, releaseMesh };
+  return {
+    Wrap,
+    registerLight,
+    release,
+    registerItem,
+    releaseItem,
+    registerCappedItem,
+    releaseCapped,
+    registerPassMesh,
+    releaseMesh,
+  };
 }
 
 const DECLARATION: CanvasLightDeclaration = {
   reach: DEFAULT_LIGHT_CULL_KEY,
+  sequence: 0,
   shadowItemCullMask: null,
   tintsShadow: false,
 };
@@ -62,6 +87,14 @@ describe('useRegisterCanvasLight2D', () => {
     rerender(<Light declaration={{ ...DECLARATION }} />);
     expect(registerLight).toHaveBeenCalledTimes(1);
     expect(release).not.toHaveBeenCalled();
+  });
+
+  it('is withdrawn and remade when its sequence changes', () => {
+    const { Wrap, registerLight, release } = spyLighting();
+    const { rerender } = render(<Light declaration={DECLARATION} />, { wrapper: Wrap });
+    rerender(<Light declaration={{ ...DECLARATION, sequence: 4 }} />);
+    expect(release).toHaveBeenCalledTimes(1);
+    expect(registerLight.mock.calls[1]![0].sequence).toBe(4);
   });
 
   it('is withdrawn and remade when a value changes', () => {
@@ -89,7 +122,7 @@ describe('useRegisterCanvasLight2D', () => {
 });
 
 describe('useRegisterLitItem', () => {
-  const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0 };
+  const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
 
   it('survives a re-render at the same placement', () => {
     const { Wrap, registerItem, releaseItem } = spyLighting();
@@ -111,6 +144,51 @@ describe('useRegisterLitItem', () => {
     rerender({ placement: { ...PLACEMENT, z: 2 } });
     expect(releaseItem).toHaveBeenCalledTimes(1);
     expect(registerItem.mock.calls[1]).toEqual([{ ...PLACEMENT, z: 2 }, false]);
+  });
+
+  it('moves when the cap hands it other positional lights', () => {
+    const { Wrap, registerItem, releaseItem } = spyLighting();
+    const { rerender } = renderHook(({ placement }) => useRegisterLitItem(placement, false), {
+      wrapper: Wrap,
+      initialProps: { placement: PLACEMENT },
+    });
+    rerender({ placement: { ...PLACEMENT, positionalLights: [0] } });
+    expect(releaseItem).toHaveBeenCalledTimes(1);
+    expect(registerItem.mock.calls[1]).toEqual([{ ...PLACEMENT, positionalLights: [0] }, false]);
+  });
+});
+
+describe('useCapItemLights', () => {
+  const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
+  const geometry = { current: null };
+  const take = () => {};
+
+  function mount() {
+    const spies = spyLighting();
+    const hook = renderHook(({ placement }) => useCapItemLights(placement, geometry, take), {
+      wrapper: spies.Wrap,
+      initialProps: { placement: PLACEMENT },
+    });
+    return { ...spies, ...hook };
+  }
+
+  it('hands the cap the uncapped placement, the geometry and the receiver', () => {
+    const { registerCappedItem } = mount();
+    expect(registerCappedItem).toHaveBeenCalledWith({ placement: PLACEMENT, geometry, take });
+  });
+
+  it('stays registered while the cap hands it positional lights', () => {
+    const { registerCappedItem, releaseCapped, rerender } = mount();
+    rerender({ placement: { ...PLACEMENT, positionalLights: [0] } });
+    expect(registerCappedItem).toHaveBeenCalledTimes(1);
+    expect(releaseCapped).not.toHaveBeenCalled();
+  });
+
+  it('moves when the cull placement changes', () => {
+    const { registerCappedItem, releaseCapped, rerender } = mount();
+    rerender({ placement: { ...PLACEMENT, z: 2 } });
+    expect(releaseCapped).toHaveBeenCalledTimes(1);
+    expect(registerCappedItem.mock.calls[1]![0].placement).toEqual({ ...PLACEMENT, z: 2 });
   });
 });
 

@@ -9,12 +9,18 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
+import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering.js';
 import { lightReachesItem, type LightCullKey } from './lightCullKey.js';
 
 /** What a light tells the pass about itself. */
 export interface CanvasLightDeclaration {
   /** Which items the light reaches (`lightCullKey`). */
   readonly reach: LightCullKey;
+  /**
+   * The light's place in the positional list, its tree order. Null for a directional light, which
+   * sits on a list of its own that the per-item cap does not count.
+   */
+  readonly sequence: number | null;
   /**
    * `Light2D.shadow_item_cull_mask` while a positional light casts a shadow, else null. A
    * directional light's shadow reaches every item, so it declares null.
@@ -29,6 +35,72 @@ export interface ItemPlacement {
   readonly lightMask: number;
   readonly z: number;
   readonly layer: number;
+  /**
+   * The ordinals of the positional lights the item takes (`itemPositionalLights`) while its
+   * placement `crowdsItems`. Null while every light fits: a light whose rect misses the item adds
+   * nothing to its pixels, so the item can take it.
+   */
+  readonly positionalLights: readonly number[] | null;
+}
+
+/** An axis-aligned rect on the canvas. */
+export interface CanvasRect {
+  readonly minX: number;
+  readonly minY: number;
+  readonly maxX: number;
+  readonly maxY: number;
+}
+
+/** The positional lights an item takes, `renderer_canvas_render_rd.cpp:2380`. */
+const MAX_POSITIONAL_LIGHTS_PER_ITEM = MAX_LIGHTS_PER_ITEM - 1;
+
+/** `Rect2::intersects` without borders (`rect2.h:74-85`): rects that only touch miss. */
+function rectsIntersect(a: CanvasRect, b: CanvasRect): boolean {
+  return a.minX < b.maxX && b.minX < a.maxX && a.minY < b.maxY && b.minY < a.maxY;
+}
+
+/** The positional lights that pass the cull test at `item`, in list order: sequence, then ordinal. */
+function positionalCandidates(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  item: ItemPlacement
+): number[] {
+  const candidates: { ordinal: number; sequence: number }[] = [];
+  for (const [ordinal, light] of lights) {
+    if (light.sequence === null) continue;
+    if (!lightReachesItem(light.reach, item.lightMask, item.z, item.layer)) continue;
+    candidates.push({ ordinal, sequence: light.sequence });
+  }
+  candidates.sort((a, b) => a.sequence - b.sequence || a.ordinal - b.ordinal);
+  return candidates.map((candidate) => candidate.ordinal);
+}
+
+/** Whether more positional lights reach `item` than an item takes, so its rect picks which. */
+export function crowdsItems(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  item: ItemPlacement
+): boolean {
+  return positionalCandidates(lights, item).length > MAX_POSITIONAL_LIGHTS_PER_ITEM;
+}
+
+/**
+ * Godot's per-item loop (`renderer_canvas_render_rd.cpp:2366-2385`): the first 15 positional lights
+ * in list order that pass the cull test and whose rect meets the item's. A light with no rect in
+ * `lightRects` draws nothing, so it meets no item.
+ */
+export function itemPositionalLights(
+  lights: ReadonlyMap<number, CanvasLightDeclaration>,
+  item: ItemPlacement,
+  itemRect: CanvasRect,
+  lightRects: ReadonlyMap<number, CanvasRect>
+): number[] {
+  const taken: number[] = [];
+  for (const ordinal of positionalCandidates(lights, item)) {
+    const lightRect = lightRects.get(ordinal);
+    if (!lightRect || !rectsIntersect(itemRect, lightRect)) continue;
+    taken.push(ordinal);
+    if (taken.length === MAX_POSITIONAL_LIGHTS_PER_ITEM) break;
+  }
+  return taken;
 }
 
 /** One light on an item's list. */
@@ -42,14 +114,20 @@ export interface LightListEntry {
   readonly unshadowed: boolean;
 }
 
-/** The lights that reach `item`, in ordinal order. */
+/** Whether `light` is on `item`'s list: it passes the cull test and, if capped, the item takes it. */
+function itemTakesLight(light: CanvasLightDeclaration, ordinal: number, item: ItemPlacement): boolean {
+  if (!lightReachesItem(light.reach, item.lightMask, item.z, item.layer)) return false;
+  return light.sequence === null || item.positionalLights === null || item.positionalLights.includes(ordinal);
+}
+
+/** The lights on `item`'s list, in ordinal order. */
 export function itemLightList(
   lights: ReadonlyMap<number, CanvasLightDeclaration>,
   item: ItemPlacement
 ): LightListEntry[] {
   const list: LightListEntry[] = [];
   for (const [ordinal, light] of lights) {
-    if (!lightReachesItem(light.reach, item.lightMask, item.z, item.layer)) continue;
+    if (!itemTakesLight(light, ordinal, item)) continue;
     const shadowMask = light.shadowItemCullMask;
     list.push({ ordinal, unshadowed: shadowMask !== null && (shadowMask & item.lightMask) === 0 });
   }
@@ -63,7 +141,8 @@ export function lightListId(list: readonly LightListEntry[]): string {
 
 /** A string for a placement, for use as a Map key. */
 export function placementId(item: ItemPlacement): string {
-  return `${item.lightMask}|${item.z}|${item.layer}`;
+  const positional = item.positionalLights?.join(',') ?? '*';
+  return `${item.lightMask}|${item.z}|${item.layer}|${positional}`;
 }
 
 /** One placement the canvas holds a lit item at, and whether a Light Only item sits there. */
@@ -109,17 +188,30 @@ export function planLightLists(
 
 /**
  * What a light mesh is to the pass. A light's `volume` stencil and `lit` quad draw its authored
- * shadow, `tint` adds its `shadow_color`, and `unshadowed` is its quad without the shadow.
+ * shadow, `tint` adds its `shadow_color`, and `unshadowed` is its quad without the shadow. Each
+ * light writes both buffers over its whole reach with one alpha, so a MIX light scales both: `shade`
+ * carries the tint's alpha into the light pass, and `fade` and `unshadowedFade` the lit alpha into
+ * the tint pass.
  */
-export type PassMeshRole = 'volume' | 'lit' | 'tint' | 'unshadowed';
+export type PassMeshRole = 'volume' | 'lit' | 'shade' | 'tint' | 'fade' | 'unshadowed' | 'unshadowedFade';
 
 /** `light` accumulates `S`, from either seed. `tint` accumulates the albedo-free `shadow_color`. */
 export type PassKind = 'light' | 'tint';
 
+/** The entry a role draws for, by its `unshadowed` flag, and the passes it draws in. */
+const ROLE_PASSES: Readonly<Record<PassMeshRole, { unshadowed: boolean; kinds: readonly PassKind[] }>> = {
+  volume: { unshadowed: false, kinds: ['light', 'tint'] },
+  lit: { unshadowed: false, kinds: ['light'] },
+  shade: { unshadowed: false, kinds: ['light'] },
+  tint: { unshadowed: false, kinds: ['tint'] },
+  fade: { unshadowed: false, kinds: ['tint'] },
+  unshadowed: { unshadowed: true, kinds: ['light'] },
+  unshadowedFade: { unshadowed: true, kinds: ['tint'] },
+};
+
 /** Whether a light's mesh of `role` draws in a `kind` pass over a list holding `entry`. */
 export function drawsInPass(entry: LightListEntry | undefined, role: PassMeshRole, kind: PassKind): boolean {
   if (entry === undefined) return false;
-  if (entry.unshadowed) return kind === 'light' && role === 'unshadowed';
-  if (kind === 'light') return role === 'volume' || role === 'lit';
-  return role === 'volume' || role === 'tint';
+  const passes = ROLE_PASSES[role];
+  return passes.unshadowed === entry.unshadowed && passes.kinds.includes(kind);
 }

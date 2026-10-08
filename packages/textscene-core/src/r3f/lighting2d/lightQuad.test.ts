@@ -276,10 +276,10 @@ describe('createShadowColorQuadMaterial with a shadow filter', () => {
       blendMode: 0,
       shadow: sampling({ shadowColor: TINT }),
     });
-    // s * ((1 - s) + s * a): at s = 1 this is `uShadowColor.a * cookie.a`, which
-    // is byte-for-byte what the unfiltered tint quad emits inside its umbra.
+    // The alpha is the light's whole `(1 - s) + s * a`, which a MIX blend scales the buffer by, and
+    // the rgb its shadowed share. At s = 1 this is the unfiltered tint quad's umbra.
     expect(mat.fragmentShader).toContain(
-      'vec4(uShadowColor.rgb, cookie.a * s * ((1.0 - s) + s * uShadowColor.a))'
+      'vec4(uShadowColor.rgb * s, cookie.a * ((1.0 - s) + s * uShadowColor.a))'
     );
     expect(mat.defines?.SHADOW_FILTER).toBe(1);
     expect(mat.uniforms.uShadowMap).toBeDefined();

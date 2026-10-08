@@ -14,7 +14,9 @@ const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
 /** Reports every ordinal this light has been given, newest last. */
 function Light({ reach = DEFAULT_LIGHT_CULL_KEY, seen }: { reach?: LightCullKey; seen: (number | null)[] }) {
-  seen.push(useRegisterCanvasLight2D(true, { reach, shadowItemCullMask: null, tintsShadow: false }));
+  seen.push(
+    useRegisterCanvasLight2D(true, { reach, sequence: 0, shadowItemCullMask: null, tintsShadow: false })
+  );
   return null;
 }
 

@@ -13,7 +13,7 @@ import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { CanvasLighting2DProvider } from '../../../r3f/lighting2d/CanvasLighting2D';
 import { LIGHT_PASS_LAYER, directionalRenderOrder } from '../../../r3f/lighting2d/lightPassLayers';
-import { itemUniforms, recordLightPass } from '../../../r3f/lighting2d/testing/lightPassProbe';
+import { itemUniforms, ownerName, recordLightPass } from '../../../r3f/lighting2d/testing/lightPassProbe';
 import { SHADOW_MAP_FAR } from '../../../r3f/lighting2d/shadowPolarMap';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
@@ -186,5 +186,42 @@ ${sun('', 'Sun', 'View')}`)
     expect(tint).toHaveLength(1);
     const color = uniformsOf(tint[0]!).uShadowColor!.value as THREE.Vector4;
     expect([color.x, color.y, color.z, color.w]).toEqual([0, 0, 1, 0.5]);
+  });
+
+  describe('a MIX light over a tinted shadow', () => {
+    // MIX scales the colour under it by its alpha, the `shadow_color` under it included.
+    const TINTING = sun('shadow_enabled = true\nshadow_color = Color(0, 0, 1, 0.5)', 'Tinting');
+
+    async function tintDrawsOf(renderer: Rendered, owner: string): Promise<THREE.Mesh[]> {
+      const tintBuffer = itemUniforms(renderer, 'P').uShadowTint!.value as THREE.Texture;
+      const draw = (await recordLightPass(renderer)).find((recorded) => recorded.texture === tintBuffer);
+      return draw!.drawn.filter((mesh) => ownerName(mesh) === owner);
+    }
+
+    it('scales it by the alpha alone when the MIX light casts nothing', async () => {
+      const renderer = await render(
+        scene(TINTING + sun('blend_mode = 2\nenergy = 0.5') + CASTER + panel('P'))
+      );
+      const [fade, ...rest] = await tintDrawsOf(renderer, 'Sun');
+      expect(rest).toHaveLength(0);
+      expect((fade!.material as THREE.ShaderMaterial).fragmentShader).toContain(
+        'vec4(0.0, 0.0, 0.0, uAlpha)'
+      );
+      expect(uniformsOf(fade!).uAlpha!.value).toBe(0.5);
+    });
+
+    it('scales it through its own tint quad when the MIX light casts, untinted', async () => {
+      const renderer = await render(
+        scene(TINTING + sun('blend_mode = 2\nshadow_enabled = true') + CASTER + panel('P'))
+      );
+      const drawn = await tintDrawsOf(renderer, 'Sun');
+      expect(drawn).toHaveLength(1);
+      expect(uniformsOf(drawn[0]!).uShadowMap).toBeDefined();
+    });
+
+    it('draws no quad of an ADD light into the tint buffer', async () => {
+      const renderer = await render(scene(TINTING + sun() + CASTER + panel('P')));
+      expect(await tintDrawsOf(renderer, 'Sun')).toHaveLength(0);
+    });
   });
 });
