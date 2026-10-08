@@ -49,9 +49,11 @@ function item(x = 0): SpiedItem {
   return { placement: PLACEMENT, geometry: { current: geometry }, take: vi.fn<CappedItem['take']>() };
 }
 
+/** Runs one frame, and returns a runner for the next, over the same lights or a new state. */
 function step(declared: Map<number, CanvasLightDeclaration>, items: CappedItem[], passMeshes: Set<PassMesh>) {
-  const handed = new WeakMap<CappedItem, readonly number[] | null>();
-  const run = () => capItemLights({ lights: declared, items: new Set(items), passMeshes, handed });
+  const registered = new Map<CappedItem, readonly number[] | null>(items.map((item) => [item, null]));
+  const run = (state: ReadonlyMap<number, CanvasLightDeclaration> = declared) =>
+    capItemLights({ lights: state, items: registered, passMeshes });
   run();
   return run;
 }
@@ -101,10 +103,8 @@ describe('capItemLights', () => {
 
   it('hands null back once the placement is no longer crowded', () => {
     const lit = item();
-    const declared = lights(CAP + 1);
-    const again = step(declared, [lit], litQuads(CAP + 1));
-    declared.delete(CAP);
-    again();
+    const again = step(lights(CAP + 1), [lit], litQuads(CAP + 1));
+    again(lights(CAP));
     expect(lit.take).toHaveBeenLastCalledWith(null);
   });
 

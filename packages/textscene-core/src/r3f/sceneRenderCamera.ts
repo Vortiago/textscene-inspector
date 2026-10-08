@@ -24,6 +24,17 @@ interface SceneHook {
 const hooks = new WeakMap<THREE.Scene, SceneHook>();
 
 /**
+ * Whether a render through `camera` is a sub-viewport's pass, the only surface with a Godot canvas
+ * transform. The 2D stage draws through the store's free camera, with none, as Godot's editor does.
+ */
+export function isViewportPass(
+  camera: THREE.Camera,
+  storeCamera: THREE.Camera
+): camera is THREE.OrthographicCamera {
+  return camera !== storeCamera && (camera as THREE.OrthographicCamera).isOrthographicCamera === true;
+}
+
+/**
  * Call `observer` with the camera and target each render of `scene` uses, until the
  * returned disposer runs. Removing the last observer restores the scene's
  * original `onBeforeRender` so nothing is left installed on a shared object.

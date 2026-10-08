@@ -7,21 +7,17 @@ import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'reac
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
-import type { Transform2DColumns } from '../godot/transform2d.js';
+import type { CanvasLayerProperties } from '../nodes/2d/ui/canvaslayer/types.js';
 import { threeMatrixFromTransform2D } from './node2dTransform.js';
 import { canvasLayerOf } from './canvasPaintOrder.js';
 import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
 import { Modulate2DContext, WHITE_MODULATE } from './canvasItemModulate.js';
 import { ROOT_TEXTURE_SAMPLER, TextureSampler2DContext } from './canvasItemTextureSampler.js';
 import { CanvasLayerIndexProvider, EffectiveZProvider } from './lighting2d/canvasItemPlacement.js';
-import { observeSceneCamera } from './sceneRenderCamera.js';
+import { isViewportPass, observeSceneCamera } from './sceneRenderCamera.js';
 import { viewportLayerMatrix, type ViewportLayerFollow } from './viewportLayerAnchor.js';
 
-/**
- * Places `layer` for each render of the scene. A render through a camera other than the store's is
- * a sub-viewport's pass, the only surface with a Godot canvas transform: the 2D stage draws through
- * a free camera with none, as Godot's editor does, and leaves the layer unanchored.
- */
+/** Places `layer` for each render of the scene, unanchored outside a sub-viewport's pass. */
 function useViewportLayerAnchor(layer: RefObject<THREE.Object3D | null>, follow: ViewportLayerFollow): void {
   const scene = useThree((state) => state.scene);
   const storeCamera = useThree((state) => state.camera);
@@ -32,9 +28,8 @@ function useViewportLayerAnchor(layer: RefObject<THREE.Object3D | null>, follow:
     return observeSceneCamera(scene, (camera, target) => {
       const object = layer.current;
       if (!object) return;
-      const ortho = camera as THREE.OrthographicCamera;
-      if (camera === storeCamera || !target || !ortho.isOrthographicCamera) next.identity();
-      else viewportLayerMatrix({ enabled, scale }, ortho, size.set(target.width, target.height), next);
+      if (!target || !isViewportPass(camera, storeCamera)) next.identity();
+      else viewportLayerMatrix({ enabled, scale }, camera, size.set(target.width, target.height), next);
       if (next.equals(object.matrix)) return;
       object.matrix.copy(next);
       // `onBeforeRender` runs after the scene's own matrix update, so the subtree is refreshed here.
@@ -57,11 +52,8 @@ export function CanvasLayerScope({ node, children }: { node: TscnNode; children:
   const modulate = useMemo(() => canvasModulateColor(node.children), [node.children]);
   // Godot draws a layer's canvas through the layer's transform (`renderer_viewport.cpp:70-74`),
   // under the anchor a sub-viewport pass through a Camera2D sets.
-  const { canvasTransform, follow_viewport_enabled, follow_viewport_scale } = node.properties as {
-    canvasTransform: Transform2DColumns;
-    follow_viewport_enabled: boolean;
-    follow_viewport_scale: number;
-  };
+  const { canvasTransform, follow_viewport_enabled, follow_viewport_scale } =
+    node.properties as CanvasLayerProperties;
   const matrix = useMemo(() => threeMatrixFromTransform2D(canvasTransform), [canvasTransform]);
   const anchor = useRef<THREE.Object3D>(null);
   useViewportLayerAnchor(anchor, { enabled: follow_viewport_enabled, scale: follow_viewport_scale });

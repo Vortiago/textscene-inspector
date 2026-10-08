@@ -1,18 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import { observeSceneCamera } from './sceneRenderCamera';
-
-/** What `WebGLRenderer.render` does to a scene, minus the rendering. Its fourth argument is the target. */
-function fireRender(scene: THREE.Scene, camera: THREE.Camera, target: THREE.WebGLRenderTarget | null = null) {
-  scene.onBeforeRender(
-    null as unknown as THREE.WebGLRenderer,
-    scene,
-    camera,
-    target as unknown as THREE.BufferGeometry,
-    null as unknown as THREE.Material,
-    null as unknown as THREE.Group
-  );
-}
+import { isViewportPass, observeSceneCamera } from './sceneRenderCamera';
+import { fireSceneRender } from './testing/fireSceneRender';
 
 describe('observeSceneCamera', () => {
   it('reports the camera each render uses', () => {
@@ -22,8 +11,8 @@ describe('observeSceneCamera', () => {
 
     const a = new THREE.OrthographicCamera();
     const b = new THREE.PerspectiveCamera();
-    fireRender(scene, a);
-    fireRender(scene, b);
+    fireSceneRender(scene, a);
+    fireSceneRender(scene, b);
 
     expect(seen).toEqual([a, b]);
   });
@@ -34,8 +23,8 @@ describe('observeSceneCamera', () => {
     observeSceneCamera(scene, (_camera, target) => seen.push(target));
 
     const target = new THREE.WebGLRenderTarget(4, 4);
-    fireRender(scene, new THREE.OrthographicCamera(), target);
-    fireRender(scene, new THREE.OrthographicCamera());
+    fireSceneRender(scene, new THREE.OrthographicCamera(), target);
+    fireSceneRender(scene, new THREE.OrthographicCamera());
 
     expect(seen).toEqual([target, null]);
   });
@@ -50,7 +39,7 @@ describe('observeSceneCamera', () => {
     observeSceneCamera(scene, first);
     observeSceneCamera(scene, second);
 
-    fireRender(scene, new THREE.OrthographicCamera());
+    fireSceneRender(scene, new THREE.OrthographicCamera());
     expect(original).toHaveBeenCalledTimes(1);
     expect(first).toHaveBeenCalledTimes(1);
     expect(second).toHaveBeenCalledTimes(1);
@@ -77,7 +66,23 @@ describe('observeSceneCamera', () => {
     dispose();
     expect(() => dispose()).not.toThrow();
 
-    fireRender(scene, new THREE.OrthographicCamera());
+    fireSceneRender(scene, new THREE.OrthographicCamera());
     expect(observer).not.toHaveBeenCalled();
+  });
+});
+
+describe('isViewportPass', () => {
+  const storeCamera = new THREE.OrthographicCamera();
+
+  it('is true for an orthographic camera other than the store camera', () => {
+    expect(isViewportPass(new THREE.OrthographicCamera(), storeCamera)).toBe(true);
+  });
+
+  it('is false for the store camera, which draws the 2D stage', () => {
+    expect(isViewportPass(storeCamera, storeCamera)).toBe(false);
+  });
+
+  it('is false for a perspective camera, which frames no canvas', () => {
+    expect(isViewportPass(new THREE.PerspectiveCamera(), storeCamera)).toBe(false);
   });
 });

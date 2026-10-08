@@ -9,18 +9,18 @@ import { describe, it, expect } from 'vitest';
 import { DEFAULT_LIGHT_CULL_KEY, directionalLightCullKey, type LightCullKey } from './lightCullKey';
 import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering';
 import {
-  crowdsItems,
   itemLightList,
   itemPositionalLights,
+  positionalCandidates,
   lightListId,
   drawsInPass,
   planLightLists,
   placementId,
   type CanvasLightDeclaration,
-  type CanvasRect,
   type ItemPlacement,
   type PlacementDeclarations,
 } from './itemLightList';
+import type { LightRect } from './shadowVolumes';
 
 function key(overrides: Partial<LightCullKey> = {}): LightCullKey {
   return { ...DEFAULT_LIGHT_CULL_KEY, ...overrides };
@@ -102,82 +102,71 @@ describe('itemLightList under the per-item cap', () => {
 /** Godot's per-item limit on positional lights: the loop breaks at `MAX_LIGHTS_PER_ITEM - 1`. */
 const CAP = MAX_LIGHTS_PER_ITEM - 1;
 
-const ITEM_RECT: CanvasRect = { minX: 0, minY: 0, maxX: 10, maxY: 10 };
-const OVER_ITEM: CanvasRect = { minX: -5, minY: -5, maxX: 5, maxY: 5 };
-const PAST_ITEM: CanvasRect = { minX: 20, minY: 20, maxX: 30, maxY: 30 };
+const ITEM_RECT: LightRect = { minX: 0, minY: 0, maxX: 10, maxY: 10 };
+const OVER_ITEM: LightRect = { minX: -5, minY: -5, maxX: 5, maxY: 5 };
+const PAST_ITEM: LightRect = { minX: 20, minY: 20, maxX: 30, maxY: 30 };
 
 /** `count` positional lights in tree order, ordinal `n` at sequence `n`. */
 function positionalLights(count: number): ReadonlyMap<number, CanvasLightDeclaration> {
   return lights(...Array.from({ length: count }, (_, sequence) => light({ sequence })));
 }
 
-function rectsOver(ordinals: Iterable<number>, rect = OVER_ITEM): Map<number, CanvasRect> {
+function rectsOver(ordinals: Iterable<number>, rect = OVER_ITEM): Map<number, LightRect> {
   return new Map([...ordinals].map((ordinal) => [ordinal, rect]));
 }
 
-describe('crowdsItems', () => {
-  it('is false while every positional light that reaches the placement fits', () => {
-    expect(crowdsItems(positionalLights(CAP), ITEM)).toBe(false);
-  });
-
-  it('is true once more positional lights reach the placement than an item takes', () => {
-    expect(crowdsItems(positionalLights(CAP + 1), ITEM)).toBe(true);
-  });
-
-  it('does not count a light the cull test rejects', () => {
-    const all = lights(...positionalLights(CAP).values(), light({ sequence: CAP, reach: key({ zMax: -1 }) }));
-    expect(crowdsItems(all, ITEM)).toBe(false);
-  });
-
-  it('does not count a directional light', () => {
-    const sun = light({ reach: directionalLightCullKey(0, 0), sequence: null });
-    expect(crowdsItems(lights(...positionalLights(CAP).values(), sun), ITEM)).toBe(false);
-  });
-});
-
-describe('itemPositionalLights', () => {
-  it('keeps the first 15 positional lights by sequence', () => {
-    const all = positionalLights(CAP + 3);
-    const taken = itemPositionalLights(all, ITEM, ITEM_RECT, rectsOver(all.keys()));
-    expect(taken).toEqual([...Array(CAP).keys()]);
+describe('positionalCandidates', () => {
+  it('lists every positional light that reaches the placement, past the cap too', () => {
+    expect(positionalCandidates(positionalLights(CAP + 1), ITEM)).toHaveLength(CAP + 1);
   });
 
   it('orders by sequence, not by ordinal', () => {
-    const all = lights(light({ sequence: 1 }), light({ sequence: 0 }));
-    expect(itemPositionalLights(all, ITEM, ITEM_RECT, rectsOver(all.keys()))).toEqual([1, 0]);
+    expect(positionalCandidates(lights(light({ sequence: 1 }), light({ sequence: 0 })), ITEM)).toEqual([
+      1, 0,
+    ]);
   });
 
   it('breaks a sequence tie by ordinal', () => {
-    const all = lights(light(), light());
-    expect(itemPositionalLights(all, ITEM, ITEM_RECT, rectsOver(all.keys()))).toEqual([0, 1]);
-  });
-
-  it('gives the slot of a light whose rect misses the item to the next light', () => {
-    const all = positionalLights(CAP + 1);
-    const rects = rectsOver(all.keys());
-    rects.set(0, PAST_ITEM);
-    expect(itemPositionalLights(all, ITEM, ITEM_RECT, rects)).toEqual(
-      [...Array(CAP).keys()].map((n) => n + 1)
-    );
-  });
-
-  it('counts a rect that only touches the item as a miss', () => {
-    const touching: CanvasRect = { minX: 10, minY: 0, maxX: 20, maxY: 10 };
-    expect(itemPositionalLights(lights(light()), ITEM, ITEM_RECT, rectsOver([0], touching))).toEqual([]);
-  });
-
-  it('leaves out a light with no rect, which draws nothing', () => {
-    expect(itemPositionalLights(lights(light()), ITEM, ITEM_RECT, new Map())).toEqual([]);
+    expect(positionalCandidates(lights(light(), light()), ITEM)).toEqual([0, 1]);
   });
 
   it('leaves out a light the cull test rejects', () => {
     const all = lights(light({ reach: key({ itemCullMask: 2 }) }), light({ sequence: 1 }));
-    expect(itemPositionalLights(all, ITEM, ITEM_RECT, rectsOver(all.keys()))).toEqual([1]);
+    expect(positionalCandidates(all, ITEM)).toEqual([1]);
   });
 
-  it('leaves out a directional light', () => {
+  it('leaves out a directional light, which the cap does not count', () => {
     const sun = light({ reach: directionalLightCullKey(0, 0), sequence: null });
-    expect(itemPositionalLights(lights(sun), ITEM, ITEM_RECT, rectsOver([0]))).toEqual([]);
+    expect(positionalCandidates(lights(sun), ITEM)).toEqual([]);
+  });
+});
+
+describe('itemPositionalLights', () => {
+  const ordinals = (count: number) => [...Array(count).keys()];
+
+  it('keeps the first 15 candidates', () => {
+    const candidates = ordinals(CAP + 3);
+    expect(itemPositionalLights(candidates, ITEM_RECT, rectsOver(candidates))).toEqual(ordinals(CAP));
+  });
+
+  it('keeps the candidates in their order', () => {
+    expect(itemPositionalLights([1, 0], ITEM_RECT, rectsOver([0, 1]))).toEqual([1, 0]);
+  });
+
+  it('gives the slot of a light whose rect misses the item to the next light', () => {
+    const candidates = ordinals(CAP + 1);
+    const rects = rectsOver(candidates);
+    rects.set(0, PAST_ITEM);
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toEqual(candidates.slice(1));
+  });
+
+  it('counts a rect that only touches the item as a miss', () => {
+    const touching: LightRect = { minX: 10, minY: 0, maxX: 20, maxY: 10 };
+    expect(itemPositionalLights([0], ITEM_RECT, rectsOver([0], touching))).toEqual([]);
+  });
+
+  it('leaves out a light with no rect, which draws nothing', () => {
+    expect(itemPositionalLights([0], ITEM_RECT, new Map())).toEqual([]);
   });
 });
 

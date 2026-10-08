@@ -21,7 +21,7 @@ import {
   parallaxViewFraming,
   type ParallaxViewFraming,
 } from './parallaxScroll';
-import { observeSceneCamera } from '../../../r3f/sceneRenderCamera';
+import { isViewportPass, observeSceneCamera } from '../../../r3f/sceneRenderCamera';
 import { ParallaxScrollProvider, type RegisteredParallaxLayer } from './scrollContext';
 import type { ParallaxBackgroundProperties } from './types';
 
@@ -37,9 +37,6 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
   const props = node.properties as ParallaxBackgroundProperties;
   const path = useNodePath() ?? node.name;
   const scene = useThree((state) => state.scene);
-  // A render through a camera other than the store's is a sub-viewport's
-  // offscreen pass, the only surface here with a Godot canvas transform. The 2D
-  // stage draws through a free camera with none, as Godot's editor does.
   const storeCamera = useThree((state) => state.camera);
 
   const groupRef = useRef<THREE.Group>(null);
@@ -61,8 +58,8 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
       const group = groupRef.current;
       if (!group) return;
 
+      const viewportPass = isViewportPass(camera, storeCamera);
       const ortho = camera as THREE.OrthographicCamera;
-      const viewportPass = camera !== storeCamera && ortho.isOrthographicCamera === true;
 
       // Godot's `__cameras_<viewport>` group scope: the current Camera2D of this
       // viewport, which for an offscreen pass is the scene being drawn.

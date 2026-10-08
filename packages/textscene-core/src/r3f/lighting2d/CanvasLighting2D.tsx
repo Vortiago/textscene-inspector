@@ -80,13 +80,11 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
     [passMeshes]
   );
 
-  // Read by the cap each frame, like the pass meshes. `handed` lets an item re-render only when the
-  // lights it takes change.
-  const cappedItems = useRef(new Set<CappedItem>()).current;
-  const handed = useRef(new WeakMap<CappedItem, readonly number[] | null>()).current;
+  // Read by the cap each frame, like the pass meshes, with what each item was last handed.
+  const cappedItems = useRef(new Map<CappedItem, readonly number[] | null>()).current;
   const registerCappedItem = useCallback(
     (item: CappedItem) => {
-      cappedItems.add(item);
+      cappedItems.set(item, null);
       return () => {
         cappedItems.delete(item);
       };
@@ -94,7 +92,7 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
     [cappedItems]
   );
   // Ahead of the pass at -1, so a frame's lists follow the rects of the frame before.
-  useFrame(() => capItemLights({ lights, items: cappedItems, passMeshes, handed }), -2);
+  useFrame(() => capItemLights({ lights, items: cappedItems, passMeshes }), -2);
 
   const accumulationLists = useMemo<AccumulationList[]>(
     () =>

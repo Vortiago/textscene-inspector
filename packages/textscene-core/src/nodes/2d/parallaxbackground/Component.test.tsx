@@ -17,6 +17,7 @@ import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { parseParallaxBackground } from './parser';
 import { ParallaxBackground } from './Component';
 import { CanvasLayerScope } from '../../../r3f/canvasLayerScope';
+import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
 
 function backgroundNode(properties: Record<string, string> = {}): TscnNode {
   return {
@@ -71,22 +72,6 @@ function StoreCamera({ into }: { into: { current: THREE.Camera | null } }) {
   return null;
 }
 
-/** What `WebGLRenderer.render` calls before it builds its render list. The fourth argument is the target. */
-function fireRender(
-  scene: THREE.Object3D,
-  camera: THREE.Camera,
-  target: THREE.WebGLRenderTarget | null = null
-) {
-  scene.onBeforeRender(
-    null as unknown as THREE.WebGLRenderer,
-    scene as THREE.Scene,
-    camera,
-    target as unknown as THREE.BufferGeometry,
-    null as unknown as THREE.Material,
-    null as unknown as THREE.Group
-  );
-}
-
 describe('<ParallaxBackground>', () => {
   it('renders children inside its group', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -111,7 +96,7 @@ describe('<ParallaxBackground>', () => {
       </>
     );
     const scene = renderer.scene.instance;
-    fireRender(scene, storeCamera.current!);
+    fireSceneRender(scene, storeCamera.current!);
 
     const group = scene.getObjectByName('BG')!;
     const world = new THREE.Vector3().setFromMatrixPosition(group.matrixWorld);
@@ -136,7 +121,7 @@ describe('<ParallaxBackground>', () => {
     );
     const scene = renderer.scene.instance;
     scene.updateMatrixWorld();
-    fireRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648));
+    fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648));
 
     const world = new THREE.Vector3().setFromMatrixPosition(scene.getObjectByName('Probe')!.matrixWorld);
     expect(world.x).toBe(24);
@@ -155,7 +140,7 @@ describe('<ParallaxBackground>', () => {
       </>
     );
     const scene = renderer.scene.instance;
-    fireRender(scene, storeCamera.current!);
+    fireSceneRender(scene, storeCamera.current!);
 
     const world = new THREE.Vector3().setFromMatrixPosition(scene.getObjectByName('BG')!.matrixWorld);
     expect(world.x).toBe(0);
@@ -183,7 +168,7 @@ describe('<ParallaxBackground>', () => {
       </>
     );
     const scene = renderer.scene.instance;
-    fireRender(scene, viewportPassCamera());
+    fireSceneRender(scene, viewportPassCamera());
 
     const wrappers = scene.getObjectByName('BG')!.children.filter((child) => child.type === 'Group');
     expect(wrappers[0]!.position.x).toBe(-24);
@@ -217,7 +202,7 @@ describe('<ParallaxBackground>', () => {
       </>
     );
     const scene = renderer.scene.instance;
-    fireRender(scene, storeCamera.current!);
+    fireSceneRender(scene, storeCamera.current!);
 
     const wrapper = scene.getObjectByName('BG')!.children.find((c) => c.type === 'Group')!;
     expect(wrapper.position.x).toBe(0);
@@ -239,7 +224,7 @@ describe('<ParallaxBackground>', () => {
       </NodePathProvider>
     );
     const scene = renderer.scene.instance;
-    fireRender(scene, viewportPassCamera());
+    fireSceneRender(scene, viewportPassCamera());
 
     const wrapper = scene.getObjectByName('BG')!.children.find((c) => c.type === 'Group')!;
     expect(wrapper.position.x).toBe(0);

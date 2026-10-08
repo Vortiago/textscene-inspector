@@ -7,7 +7,9 @@ import {
 } from '../nodes/viewport/subviewport/offscreenViewport';
 import type { Camera2DTag } from '../nodes/2d/camera2d/cameraView';
 import { Camera2DAnchorMode } from '../nodes/2d/camera2d/types';
-import { viewportLayerAnchor } from './viewportLayerAnchor';
+import { viewportLayerMatrix } from './viewportLayerAnchor';
+
+const NOT_FOLLOWING = { enabled: false, scale: 1 };
 
 const SIZE = { x: 300, y: 200 };
 
@@ -38,23 +40,28 @@ function tag(overrides: Partial<Camera2DTag> = {}): Camera2DTag {
   };
 }
 
-describe('viewportLayerAnchor', () => {
+describe('viewportLayerMatrix for a layer that does not follow', () => {
   it('is the identity over the whole-rect view a pass without a Camera2D draws', () => {
-    const anchor = viewportLayerAnchor(camera(orthoFrameForSize(SIZE)), SIZE, new THREE.Matrix4());
+    const anchor = viewportLayerMatrix(
+      NOT_FOLLOWING,
+      camera(orthoFrameForSize(SIZE)),
+      SIZE,
+      new THREE.Matrix4()
+    );
     expect(anchor.equals(new THREE.Matrix4())).toBe(true);
   });
 
   it("puts the layer's origin at the top-left of a Camera2D's view", () => {
     // The camera at (500, 400) views world x 350..650, y 300..500.
     const frame = orthoFrameForCamera2D(tag(), { x: 500, y: 400 }, SIZE);
-    const anchor = viewportLayerAnchor(camera(frame), SIZE, new THREE.Matrix4());
+    const anchor = viewportLayerMatrix(NOT_FOLLOWING, camera(frame), SIZE, new THREE.Matrix4());
     expect(landing(anchor, { x: 0, y: 0 })).toEqual({ x: 350, y: 300 });
     expect(landing(anchor, { x: 300, y: 200 })).toEqual({ x: 650, y: 500 });
   });
 
   it("keeps a layer pixel one viewport pixel under a zoomed Camera2D's view", () => {
     const frame = orthoFrameForCamera2D(tag({ zoom: { x: 2, y: 2 } }), { x: 500, y: 400 }, SIZE);
-    const anchor = viewportLayerAnchor(camera(frame), SIZE, new THREE.Matrix4());
+    const anchor = viewportLayerMatrix(NOT_FOLLOWING, camera(frame), SIZE, new THREE.Matrix4());
     expect(landing(anchor, { x: 0, y: 0 })).toEqual({ x: 425, y: 350 });
     expect(landing(anchor, { x: 300, y: 200 })).toEqual({ x: 575, y: 450 });
   });

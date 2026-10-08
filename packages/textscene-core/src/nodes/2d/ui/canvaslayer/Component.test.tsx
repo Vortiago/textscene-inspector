@@ -20,6 +20,7 @@ import { CanvasModulateContext, useCanvasModulate } from '../../../../r3f/canvas
 import { Modulate2DContext, useParentModulate } from '../../../../r3f/canvasItemModulate';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { fireSceneRender } from '../../../../r3f/testing/fireSceneRender';
 
 const ZERO_RECT = { x: 0, y: 0, w: 0, h: 0 };
 
@@ -174,14 +175,7 @@ describe('<CanvasLayer> in a sub-viewport pass', () => {
     camera.position.set(...VIEW.position);
     const target = new THREE.WebGLRenderTarget(SIZE.x, SIZE.y);
     scene.updateMatrixWorld();
-    scene.onBeforeRender(
-      null as unknown as THREE.WebGLRenderer,
-      scene,
-      camera,
-      target as unknown as THREE.BufferGeometry,
-      null as unknown as THREE.Material,
-      null as unknown as THREE.Group
-    );
+    fireSceneRender(scene, camera, target);
     return renderer.scene.findAllByType('Group')[0]!.instance as THREE.Object3D;
   }
 

@@ -15,39 +15,9 @@ export interface ViewportLayerFollow {
 }
 
 /**
- * Writes into `target` the matrix from layer pixels to the world `camera` frames over `size` pixels:
- * a layer that does not follow keeps its origin at the view's top-left and one viewport pixel per pixel.
- */
-export function viewportLayerAnchor(
-  camera: THREE.OrthographicCamera,
-  size: { x: number; y: number },
-  target: THREE.Matrix4
-): THREE.Matrix4 {
-  const scaleX = (camera.right - camera.left) / size.x;
-  const scaleY = (camera.top - camera.bottom) / size.y;
-  return target.set(
-    scaleX,
-    0,
-    0,
-    camera.position.x + camera.left,
-    0,
-    scaleY,
-    0,
-    camera.position.y + camera.top,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0,
-    1
-  );
-}
-
-/**
  * Writes into `target` the matrix a layer's canvas draws through in the pass, before its own
- * transform. A following layer takes the view as world content does, scaled about the view's centre.
+ * transform. A layer that does not follow keeps its origin at the view's top-left and one viewport
+ * pixel per pixel. A following layer takes the view as world content does, scaled about its centre.
  */
 export function viewportLayerMatrix(
   follow: ViewportLayerFollow,
@@ -55,10 +25,12 @@ export function viewportLayerMatrix(
   size: { x: number; y: number },
   target: THREE.Matrix4
 ): THREE.Matrix4 {
-  if (!follow.enabled) return viewportLayerAnchor(camera, size, target);
   const { x, y } = camera.position;
-  return target
-    .makeTranslation(x, y, 0)
-    .multiply(new THREE.Matrix4().makeScale(follow.scale, follow.scale, 1))
-    .multiply(new THREE.Matrix4().makeTranslation(-x, -y, 0));
+  if (follow.enabled) {
+    const s = follow.scale;
+    return target.makeScale(s, s, 1).setPosition(x * (1 - s), y * (1 - s), 0);
+  }
+  const scaleX = (camera.right - camera.left) / size.x;
+  const scaleY = (camera.top - camera.bottom) / size.y;
+  return target.makeScale(scaleX, scaleY, 1).setPosition(x + camera.left, y + camera.top, 0);
 }

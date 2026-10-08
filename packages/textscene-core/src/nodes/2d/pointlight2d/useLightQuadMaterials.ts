@@ -70,7 +70,22 @@ function tintQuadMaterial(options: LightQuadMaterialOptions): THREE.ShaderMateri
   });
 }
 
-function buildMaterials(options: LightQuadMaterialOptions): LightQuadMaterials {
+/**
+ * A material built from `deps` alone, disposed when it is replaced or unmounted. Each role keeps
+ * its own, so an input one role ignores rebuilds none of the others.
+ */
+function useOwnedMaterial<M extends THREE.ShaderMaterial | null>(
+  build: () => M,
+  deps: readonly unknown[]
+): M {
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- each caller lists what its `build` reads.
+  const material = useMemo(build, deps);
+  useEffect(() => () => material?.dispose(), [material]);
+  return material;
+}
+
+/** The materials one light's quads draw with, each rebuilt only when its own inputs change. */
+export function useLightQuadMaterials(options: LightQuadMaterialOptions): LightQuadMaterials {
   const {
     cookie,
     color,
@@ -88,83 +103,62 @@ function buildMaterials(options: LightQuadMaterialOptions): LightQuadMaterials {
   // A filtered light computes its own fraction per fragment over the whole rect, so it needs no
   // stencil ref, stamps nothing, and its tint quad carries the whole alpha into the tint pass.
   const stenciled = shadowed && !filtered;
-  const litStencil = stenciled ? litQuadStencilProps(ordinal ?? 0) : undefined;
-  const shadowStencil = shadowColorQuadStencilProps(ordinal ?? 0);
-  const base = { cookie, energy, blendMode };
-  return {
-    lit: createLightQuadMaterial({ ...base, color, stencil: litStencil, shadow: sampling }),
-    // Where the volumes stamped, the tint's alpha is the light buffer's share too: MIX scales the
-    // colour under it by that alpha, and Light Only sums it.
-    shade:
+  const stencilRef = ordinal ?? 0;
+
+  const lit = useOwnedMaterial(
+    () =>
+      createLightQuadMaterial({
+        cookie,
+        energy,
+        blendMode,
+        color,
+        stencil: stenciled ? litQuadStencilProps(stencilRef) : undefined,
+        shadow: sampling,
+      }),
+    [cookie, energy, blendMode, color, stenciled, stencilRef, sampling]
+  );
+  // Where the volumes stamped, the tint's alpha is the light buffer's share too: MIX scales the
+  // colour under it by that alpha, and Light Only sums it.
+  const shade = useOwnedMaterial(
+    () =>
       stenciled && tintsShadow
         ? createShadowColorQuadMaterial({
             cookie,
             blendMode,
             shadowColor: alphaOnly(shadowColor),
-            stencil: shadowStencil,
+            stencil: shadowColorQuadStencilProps(stencilRef),
           })
         : null,
-    tint: tintQuadMaterial(options),
-    // Where the light is lit, its alpha scales the tint buffer under a MIX blend.
-    fade:
-      isMix && !filtered
-        ? createLightQuadMaterial({ ...base, color: alphaOnly(color), stencil: litStencil })
-        : null,
-    unshadowed: drawsUnshadowed ? createLightQuadMaterial({ ...base, color }) : null,
-    unshadowedFade:
-      drawsUnshadowed && isMix ? createLightQuadMaterial({ ...base, color: alphaOnly(color) }) : null,
-  };
-}
-
-/** Builds the materials once per input change and disposes the set it replaces. */
-export function useLightQuadMaterials(options: LightQuadMaterialOptions): LightQuadMaterials {
-  const {
-    cookie,
-    color,
-    energy,
-    blendMode,
-    shadowColor,
-    tintsShadow,
-    shadowed,
-    filtered,
-    sampling,
-    ordinal,
-    drawsUnshadowed,
-  } = options;
-  const materials = useMemo(
+    [cookie, blendMode, shadowColor, stenciled, tintsShadow, stencilRef]
+  );
+  const tint = useOwnedMaterial(
+    () => tintQuadMaterial(options),
+    [cookie, blendMode, shadowColor, tintsShadow, shadowed, filtered, sampling, ordinal]
+  );
+  // Where the light is lit, its alpha scales the tint buffer under a MIX blend.
+  const fade = useOwnedMaterial(
     () =>
-      buildMaterials({
-        cookie,
-        color,
-        energy,
-        blendMode,
-        shadowColor,
-        tintsShadow,
-        shadowed,
-        filtered,
-        sampling,
-        ordinal,
-        drawsUnshadowed,
-      }),
-    [
-      cookie,
-      color,
-      energy,
-      blendMode,
-      shadowColor,
-      tintsShadow,
-      shadowed,
-      filtered,
-      sampling,
-      ordinal,
-      drawsUnshadowed,
-    ]
+      isMix && !filtered
+        ? createLightQuadMaterial({
+            cookie,
+            energy,
+            blendMode,
+            color: alphaOnly(color),
+            stencil: stenciled ? litQuadStencilProps(stencilRef) : undefined,
+          })
+        : null,
+    [cookie, energy, blendMode, color, isMix, filtered, stenciled, stencilRef]
   );
-  useEffect(
-    () => () => {
-      for (const material of Object.values(materials)) material?.dispose();
-    },
-    [materials]
+  const unshadowed = useOwnedMaterial(
+    () => (drawsUnshadowed ? createLightQuadMaterial({ cookie, energy, blendMode, color }) : null),
+    [cookie, energy, blendMode, color, drawsUnshadowed]
   );
-  return materials;
+  const unshadowedFade = useOwnedMaterial(
+    () =>
+      drawsUnshadowed && isMix
+        ? createLightQuadMaterial({ cookie, energy, blendMode, color: alphaOnly(color) })
+        : null,
+    [cookie, energy, blendMode, color, drawsUnshadowed, isMix]
+  );
+  return { lit, shade, tint, fade, unshadowed, unshadowedFade };
 }
