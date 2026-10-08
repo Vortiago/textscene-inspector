@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { ReactNode } from 'react';
-import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
@@ -29,6 +28,9 @@ import {
   VisibilityRangeFadeMode,
   type VisibilityRange,
 } from '../../../godot/visibilityRange';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 const BOX: TscnInternalResource = { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } };
 

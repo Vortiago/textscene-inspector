@@ -4,7 +4,6 @@
  */
 import { describe, it, expect } from 'vitest';
 import { nodeComponentRegistry } from './NodeComponentRegistry';
-import { withGeometryInstance } from './visibilityRange/geometryInstance';
 
 const Dummy = () => null;
 
@@ -40,19 +39,22 @@ describe('nodeComponentRegistry.passesThrough', () => {
 });
 
 describe('nodeComponentRegistry.register', () => {
-  it('takes a GeometryInstance3D type whose component comes from withGeometryInstance', () => {
-    const register = () =>
-      nodeComponentRegistry.register({ typeName: 'Label3D', Component: withGeometryInstance(Dummy) });
-    expect(register).not.toThrow();
+  function Dummy() {
+    return null;
+  }
+
+  it("mounts a GeometryInstance3D type's component in its place in the scene cull", () => {
+    nodeComponentRegistry.register({ typeName: 'Label3D', Component: Dummy });
+    expect(nodeComponentRegistry.get('Label3D')?.displayName).toBe('withGeometryInstance(Dummy)');
   });
 
-  it('refuses a GeometryInstance3D type whose component holds no place in the scene cull (error case)', () => {
-    const register = () => nodeComponentRegistry.register({ typeName: 'MeshInstance3D', Component: Dummy });
-    expect(register).toThrow('expected MeshInstance3D to register a component from withGeometryInstance');
+  it('keeps the component of a type outside GeometryInstance3D', () => {
+    nodeComponentRegistry.register({ typeName: 'MeshLibrary', Component: Dummy });
+    expect(nodeComponentRegistry.get('MeshLibrary')).toBe(Dummy);
   });
 
-  it('takes any component for a type outside GeometryInstance3D (edge case)', () => {
-    const register = () => nodeComponentRegistry.register({ typeName: 'MeshLibrary', Component: Dummy });
-    expect(register).not.toThrow();
+  it('keeps the component of a type ClassDB does not know (edge case)', () => {
+    nodeComponentRegistry.register({ typeName: '__TestUnknown', Component: Dummy });
+    expect(nodeComponentRegistry.get('__TestUnknown')).toBe(Dummy);
   });
 });

@@ -3,12 +3,15 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 // Imports the wired slice, not the bare component: CsgPrimitive builds the solid
 // from the registered builder, so the registration is part of what is under test.
-import { CSGSphere3D } from './index.r3f';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { CSGSphere3DProperties } from './types';
 import { findMesh } from '../../testing/reactThreeTestInstance';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
+import './index.r3f';
+import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
+
+const CSGSphere3D = registeredComponent('CSGSphere3D');
 
 function makeNode(props: Partial<CSGSphere3DProperties>, children: TscnNode[] = []): TscnNode {
   const properties: CSGSphere3DProperties = {

@@ -8,5 +8,3 @@ nodeComponentRegistry.register({
   // the boolean fold of its CSG children.
   csgShape: { geometry: null },
 });
-
-export { CSGCombiner3D };

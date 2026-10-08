@@ -8,14 +8,11 @@
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CsgPrimitive } from '../CsgPrimitive';
 import type { CSGMesh3DProperties } from './types';
-import { withGeometryInstance } from '../../../../r3f/visibilityRange/geometryInstance';
 
-function CSGMesh3DDrawer({ node, children }: NodeComponentProps) {
+export function CSGMesh3D({ node, children }: NodeComponentProps) {
   return (
     <CsgPrimitive node={node} properties={node.properties as CSGMesh3DProperties}>
       {children}
     </CsgPrimitive>
   );
 }
-
-export const CSGMesh3D = withGeometryInstance(CSGMesh3DDrawer);

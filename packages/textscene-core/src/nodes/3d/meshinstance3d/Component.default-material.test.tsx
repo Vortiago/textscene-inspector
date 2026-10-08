@@ -6,13 +6,16 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 const INTERNALS: TscnInternalResource[] = [
   inlineTwoSurfaceMesh('Mesh_1', [null, null, null]),

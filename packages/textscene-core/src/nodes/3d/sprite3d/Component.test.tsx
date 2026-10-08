@@ -9,7 +9,6 @@ import * as THREE from 'three';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { Sprite3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -21,6 +20,10 @@ import { DROPS_ALBEDO_ALPHA, patchedFragment } from '../../../r3f/testing/patche
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const Sprite3D = registeredComponent('Sprite3D');
 
 const TEXTURE_PATH = 'res://textures/sprite.png';
 

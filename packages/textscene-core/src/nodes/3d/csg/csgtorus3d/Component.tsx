@@ -8,14 +8,11 @@
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CsgPrimitive } from '../CsgPrimitive';
 import type { CSGTorus3DProperties } from './types';
-import { withGeometryInstance } from '../../../../r3f/visibilityRange/geometryInstance';
 
-function CSGTorus3DDrawer({ node, children }: NodeComponentProps) {
+export function CSGTorus3D({ node, children }: NodeComponentProps) {
   return (
     <CsgPrimitive node={node} properties={node.properties as CSGTorus3DProperties}>
       {children}
     </CsgPrimitive>
   );
 }
-
-export const CSGTorus3D = withGeometryInstance(CSGTorus3DDrawer);

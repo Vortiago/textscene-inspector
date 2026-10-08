@@ -5,7 +5,6 @@
 
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { MeshInstance3D } from '../Component';
 import { SceneStack } from '../../../../r3f/testing/SceneStack';
 import type { ResourceLoader } from '../../../../resources/ResourceLoader';
 import { findMesh } from '../../testing/reactThreeTestInstance';
@@ -13,6 +12,10 @@ import { visibleInTree } from '../../../../r3f/visibleInTree';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
 import type { MeshInstance3DProperties } from '../types';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
+import '../index.r3f';
+import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 type TestRenderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 

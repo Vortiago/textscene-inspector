@@ -5,7 +5,6 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
@@ -14,6 +13,10 @@ import { findMesh } from '../testing/reactThreeTestInstance';
 import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 const MESH_ID = 'ArrayMesh_inline';
 

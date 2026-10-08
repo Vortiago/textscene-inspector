@@ -3,13 +3,16 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseSprite3D } from './parser';
-import { Sprite3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { GODOT_ANISOTROPY_MAX } from '../../../resources/textures/godotTextureFilter';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const Sprite3D = registeredComponent('Sprite3D');
 
 const heading = { type: 'node', attributes: { type: 'Sprite3D', name: 'S' } };
 const TEX = 'res://sprite.png';

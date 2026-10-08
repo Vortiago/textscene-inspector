@@ -6,9 +6,12 @@ import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import { parseCSGTorus3D } from './parser';
 // Imports the wired slice, not the bare component: CsgPrimitive builds the solid
 // from the registered builder, so the registration is part of what is under test.
-import { CSGTorus3D } from './index.r3f';
 import type { CSGTorus3DProperties } from './types';
 import { findMesh } from '../../testing/reactThreeTestInstance';
+import './index.r3f';
+import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
+
+const CSGTorus3D = registeredComponent('CSGTorus3D');
 
 function makeNode(overrides: Record<string, string> = {}, children: TscnNode[] = []): TscnNode {
   const properties = parseCSGTorus3D(

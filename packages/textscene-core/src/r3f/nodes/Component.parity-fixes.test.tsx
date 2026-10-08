@@ -5,9 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { MeshInstance3D } from '../../nodes/3d/meshinstance3d/Component';
 import { Camera3D } from '../../nodes/3d/camera3d/Component';
-import { Label3D } from '../../nodes/3d/label3d/Component';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
@@ -27,6 +25,12 @@ import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoS
 import { depthSideOf, drawsColour } from '../testing/threePasses';
 import { subResource } from '../../testing/subResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
+import '../../nodes/3d/meshinstance3d/index.r3f';
+import '../../nodes/3d/label3d/index.r3f';
+import { registeredComponent } from '../testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
+const Label3D = registeredComponent('Label3D');
 
 function makeMeshNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   return {

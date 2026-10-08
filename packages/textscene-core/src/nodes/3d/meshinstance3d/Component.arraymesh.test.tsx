@@ -7,7 +7,6 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import { decodeArrayMeshTres } from '../../../resources/testing/decodeArrayMeshTres';
@@ -21,6 +20,10 @@ import { loaderServing } from '../../../resources/testing/servingResourceLoader'
 import { preloadResource } from '../../../resources/testing/preloadResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import { EMPTY_AABB } from '../../../godot/aabb';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 

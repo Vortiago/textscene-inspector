@@ -7,7 +7,6 @@ import { parseTresFile } from '../../../parser/parsedResource';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CSGBox3D } from './csgbox3d/Component';
 // CsgPrimitive builds the solid from the registered builder, so the node type under
 // test has to have its slice wired.
 import './csgbox3d/index.r3f';
@@ -17,6 +16,9 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const CSGBox3D = registeredComponent('CSGBox3D');
 
 const ALBEDO_PATH = 'res://textures/albedo.png';
 

@@ -6,8 +6,11 @@ import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import { parseCSGMesh3D } from './parser';
 // Imports the wired slice, not the bare component: CsgPrimitive builds the solid
 // from the registered builder, so the registration is part of what is under test.
-import { CSGMesh3D } from './index.r3f';
 import { findMesh } from '../../testing/reactThreeTestInstance';
+import './index.r3f';
+import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
+
+const CSGMesh3D = registeredComponent('CSGMesh3D');
 
 const BOX_MESH: TscnInternalResource = {
   id: 'BoxMesh_csg',

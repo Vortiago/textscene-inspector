@@ -6,11 +6,14 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { Label3D } from './Component';
 import { parseLabel3D } from './parser';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import { heading } from '../../../parser/testing/parserKit';
 import type { TscnNode } from '../../../parser/types';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const Label3D = registeredComponent('Label3D');
 
 function node(raw: Record<string, string>): TscnNode {
   return {

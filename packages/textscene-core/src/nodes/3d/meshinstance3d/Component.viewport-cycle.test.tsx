@@ -20,7 +20,6 @@ vi.mock('../../../logger.js', async (importOriginal) => {
   };
 });
 
-import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import {
@@ -35,6 +34,10 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 function meshNode(): TscnNode {
   const props: MeshInstance3DProperties = {

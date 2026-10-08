@@ -362,9 +362,10 @@ describe('new-node-slice intent shapes', () => {
     expect(emitted.has('index.r3f.ts')).toBe(false);
   });
 
-  it('wraps the drawer of a GeometryInstance3D descendant, which the registry demands', () => {
+  it('places the instance in the drawer of a GeometryInstance3D descendant, which the registry wraps', () => {
     const emitted = drawsFiles({
       typeName: 'SoftBody3D',
+      lower: 'softbody3d',
       camel: 'softBody3D',
       base: GEOMETRY_INSTANCE_BASE,
       toSrc: '../../../',
@@ -376,9 +377,9 @@ describe('new-node-slice intent shapes', () => {
         typesPath: '../meshinstance3d/types',
       },
     });
-    expect(emitted.get('Component.tsx')).toMatch(
-      /^export const SoftBody3D = withGeometryInstance\(SoftBody3DDrawer\);$/m
-    );
+    expect(emitted.get('Component.tsx')).toMatch(/^export function SoftBody3D\(/m);
+    expect(emitted.get('Component.tsx')).toContain('useGeometryInstance(placement);');
+    expect(emitted.get('softbody3d.test.ts')).toContain("toBe('withGeometryInstance(SoftBody3D)')");
   });
 
   it('mounts a reusing GeometryInstance3D descendant on the undrawn GeometryInstance3D', () => {
@@ -409,7 +410,7 @@ describe('new-node-slice intent shapes', () => {
         typesPath: '../../base/node3d/types',
       },
     });
-    expect(emitted.get('Component.tsx')).not.toContain('withGeometryInstance');
+    expect(emitted.get('Component.tsx')).not.toContain('useGeometryInstance');
   });
 
   it('writes nothing on a dry run', () => {

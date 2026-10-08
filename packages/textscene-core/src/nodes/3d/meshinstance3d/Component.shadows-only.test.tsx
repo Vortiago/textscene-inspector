@@ -7,13 +7,16 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { drawsColour } from '../../../r3f/testing/threePasses';
 import { CHILD_NAME, childIsRendered, meshInstanceNode } from './testing/renderMeshInstance';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 const BOX: TscnInternalResource = {
   id: 'Box_1',

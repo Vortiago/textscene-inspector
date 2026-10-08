@@ -1,8 +1,8 @@
 /**
- * Each GeometryInstance3D's link to the scene cull. `withGeometryInstance` gives every
- * GeometryInstance3D component one from the node's data, drawn or not, so a visibility parent the
- * previewer does not draw still decides its dependants. The drawer inside places it and reads the
- * shadow effects the cull gates, and the cull fades each surface the drawer adds.
+ * Each GeometryInstance3D's link to the scene cull. The registry mounts every GeometryInstance3D
+ * component in `withGeometryInstance`, which gives it one from the node's data, drawn or not, so a
+ * visibility parent the previewer does not draw still decides its dependants. The drawer inside
+ * places it and reads the shadow effects the cull gates, and the cull fades each surface it adds.
  */
 
 import { useThree } from '@react-three/fiber';
@@ -29,18 +29,10 @@ interface GeometryInstanceScope {
 const GeometryInstanceContext = createContext<GeometryInstanceScope | null>(null);
 GeometryInstanceContext.displayName = 'GeometryInstanceContext';
 
-/** Written only by `withGeometryInstance`, so the registry can tell its components apart. */
-const geometryInstanceComponents = new WeakSet<NodeComponent>();
-
-/** Whether `withGeometryInstance` made the component. */
-export function isGeometryInstanceComponent(Component: NodeComponent): boolean {
-  return geometryInstanceComponents.has(Component);
-}
-
 /**
- * The component a GeometryInstance3D type registers: `Drawer`, with the node's instance registered
- * with the scene cull for as long as it mounts. The cull runs before every render, so even the
- * first draw is culled.
+ * The component the registry mounts for a GeometryInstance3D type: `Drawer`, with the node's
+ * instance registered with the scene cull for as long as it mounts. The cull runs before every
+ * render, so even the first draw is culled.
  */
 export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
   function GeometryInstanceComponent({ node, children }: NodeComponentProps) {
@@ -75,7 +67,6 @@ export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
     );
   }
   GeometryInstanceComponent.displayName = `withGeometryInstance(${Drawer.displayName ?? Drawer.name})`;
-  geometryInstanceComponents.add(GeometryInstanceComponent);
   return GeometryInstanceComponent;
 }
 

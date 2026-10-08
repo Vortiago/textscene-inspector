@@ -30,13 +30,13 @@ import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot'
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import type { ShadowCastingEffects } from '../../../r3f/shadowCasting';
-import { useGeometryInstance, withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
+import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { livePlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 
 /** Literal-only, so its key is constant and it never remounts. */
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
 
-function MeshInstance3DDrawer({ node, children }: NodeComponentProps) {
+export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as MeshInstance3DProperties;
   const { internalResources, externalResources } = useSceneResources();
 
@@ -495,5 +495,3 @@ function findMeshOwnMaterial(
   const material = resolveSubResourceRef(meshRef, internalResources)?.data['material'];
   return typeof material === 'string' ? material : undefined;
 }
-
-export const MeshInstance3D = withGeometryInstance(MeshInstance3DDrawer);

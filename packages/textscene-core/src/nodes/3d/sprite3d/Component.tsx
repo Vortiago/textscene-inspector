@@ -31,7 +31,7 @@ import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
-import { useGeometryInstance, withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
+import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
 import { UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
@@ -39,7 +39,7 @@ import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
 const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
 
-function Sprite3DDrawer({ node, children }: NodeComponentProps) {
+export function Sprite3D({ node, children }: NodeComponentProps) {
   // Godot's billboard is a material-side effect on the sprite quad; the shared
   // hook applies the same modes Label3D uses.
   const spriteRef = useRef<THREE.Object3D | null>(null);
@@ -255,5 +255,3 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
-
-export const Sprite3D = withGeometryInstance(Sprite3DDrawer);

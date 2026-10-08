@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CSG_BOUNDS_PROXY } from './CsgPrimitive';
-import { CSGBox3D } from './csgbox3d/Component';
 import './csgbox3d/index.r3f';
 import './csgsphere3d/index.r3f';
 import { parseCSGBox3D } from './csgbox3d/parser';
@@ -25,6 +24,9 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { castsFrom, depthSideOf, drawsColour } from '../../../r3f/testing/threePasses';
 import { NodeTree } from '../../../r3f/testing/NodeTree';
 import { settleCsgEvaluation } from '../../../r3f/csg/testing/settleCsgEvaluation';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const CSGBox3D = registeredComponent('CSGBox3D');
 
 function parseBox(properties: Record<string, string>): CSGBox3DProperties {
   return parseCSGBox3D(heading('CSGBox3D', { name: 'Box' }), properties);

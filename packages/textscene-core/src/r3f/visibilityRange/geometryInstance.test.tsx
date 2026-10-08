@@ -8,7 +8,7 @@ import { manualCameraAt, renderScene } from '../testing/renderScene';
 import { drawsColour } from '../testing/threePasses';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/visibilityRange';
-import { isGeometryInstanceComponent, useGeometryInstance, withGeometryInstance } from './geometryInstance';
+import { useGeometryInstance, withGeometryInstance } from './geometryInstance';
 import { boxPlacement } from './placements';
 
 /** A drawer that places its instance at its mesh, a unit box 5 units along +Z, drawn through its hooks. */
@@ -99,19 +99,5 @@ describe('useGeometryInstance', () => {
     camera.updateMatrixWorld(true);
     await renderScene(renderer, camera);
     expect(drawsColour(renderer.scene.findByProps({ name: 'drawn' }).instance as THREE.Mesh)).toBe(true);
-  });
-});
-
-describe('isGeometryInstanceComponent', () => {
-  it('knows a component withGeometryInstance made', () => {
-    expect(isGeometryInstanceComponent(Box)).toBe(true);
-  });
-
-  it('refuses the drawer it wraps (error case)', () => {
-    expect(isGeometryInstanceComponent(BoxDrawer)).toBe(false);
-  });
-
-  it('tells two components of one drawer apart from the drawer (edge case)', () => {
-    expect(isGeometryInstanceComponent(withGeometryInstance(BoxDrawer))).toBe(true);
   });
 });

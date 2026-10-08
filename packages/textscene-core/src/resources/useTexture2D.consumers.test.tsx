@@ -16,7 +16,6 @@ import type { SolveNode } from '../r3f/controls/native/solveTree';
 import type { Rect2 } from '../r3f/controls/native/rect';
 import { Sprite2D } from '../nodes/2d/sprite2d/Component';
 import { parseSprite2D } from '../nodes/2d/sprite2d/parser';
-import { Sprite3D } from '../nodes/3d/sprite3d/Component';
 import { parseSprite3D } from '../nodes/3d/sprite3d/parser';
 import { Decal } from '../nodes/3d/decal/Component';
 import { parseDecal } from '../nodes/3d/decal/parser';
@@ -25,6 +24,10 @@ import { parseTextureRect } from '../nodes/2d/ui/texturerect/parser';
 import { Button } from '../nodes/2d/ui/button/Component';
 import { parseButton } from '../nodes/2d/ui/button/parser';
 import { SceneStack } from '../r3f/testing/SceneStack';
+import '../nodes/3d/sprite3d/index.r3f';
+import { registeredComponent } from '../r3f/testing/registeredComponent';
+
+const Sprite3D = registeredComponent('Sprite3D');
 
 /**
  * The radial cookie the 2D fixtures carry: opaque `Color(0.1, 0.6, 0.9)` at the
