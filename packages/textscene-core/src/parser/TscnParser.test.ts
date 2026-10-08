@@ -2,9 +2,10 @@
  * Tests for TscnParser
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { TscnParser } from './TscnParser';
 import { transformOf } from './testing/parserKit';
+import * as logger from '../logger.js';
 
 describe('TscnParser', () => {
   it('should create a parser instance', () => {
@@ -255,6 +256,33 @@ size = Vector3(1, 1, 1)
       expect(result.internalResources).toHaveLength(1);
       expect(result.internalResources[0]!.type).toBe('BoxMesh');
       expect(result.internalResources[0]!.data).toHaveProperty('size');
+    });
+  });
+
+  describe('stranded nodes', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('warns once for each heading the tree could not place', () => {
+      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+      const scene = new TscnParser().parse(
+        '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n\n[node name="Lost" type="Node3D" parent="Missing"]\n'
+      );
+
+      expect(scene.nodes.map((n) => n.name)).toEqual(['Root']);
+      const orphanWarnings = warn.mock.calls.filter(([message]) => String(message).includes('Orphaned node'));
+      expect(orphanWarnings).toHaveLength(1);
+      expect(String(orphanWarnings[0]![0])).toContain('"Lost"');
+    });
+
+    it('warns about no orphan for a well-formed scene', () => {
+      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+      new TscnParser().parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n');
+
+      expect(warn.mock.calls.filter(([message]) => String(message).includes('Orphaned node'))).toEqual([]);
     });
   });
 });

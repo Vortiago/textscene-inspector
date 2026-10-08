@@ -103,7 +103,10 @@ export type SceneNode<N> = RawNode & { children: N[] };
 
 /** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
 export interface HeadingFacts {
-  /** Headings whose `parent=` path resolved against nothing, so they are not in `nodes`. */
+  /**
+   * Headings the tree could not place, so they are not in `nodes`: a `parent=` path that resolves
+   * against nothing, or a later heading with no `parent=`.
+   */
   orphanedNodes: readonly NodeOrigin<RawNode>[];
   /**
    * The root heading, when it declares a `parent=`, which Godot refuses

@@ -1,8 +1,7 @@
 /**
  * Whether a heading says what its node is. In `parser/` because both trees ask
- * `isTypeUnknowable`: the linter about a rule's neighbour, `sceneTreeBuilder` at every
- * `parent=` descent. The parser cannot import the linter, since the webview bundles the
- * parser alone.
+ * `isTypeUnknowable`, and the webview bundles the parser without the linter. The one other
+ * reader of `overridesExistingNode` lives here too: `parentType.guard.test.ts` keeps it out of linter files.
  */
 
 import type { RawNode } from './types.js';

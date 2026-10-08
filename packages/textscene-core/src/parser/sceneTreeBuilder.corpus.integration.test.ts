@@ -1,7 +1,7 @@
 /**
  * The scene tree builder against every real `.tscn` in the repo. A node whose parent
  * path descends into an instanced sub-scene must not be dropped, so no corpus scene may
- * report an `orphanedNodes` entry, except the one fixture that exists to orphan one.
+ * strand a node, except the one fixture that exists to orphan one.
  */
 
 import { describe, expect, it } from 'vitest';
