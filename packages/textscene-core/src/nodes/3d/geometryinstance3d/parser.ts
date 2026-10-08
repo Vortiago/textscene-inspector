@@ -4,12 +4,8 @@
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import {
-  parseOptionalAabb,
-  parseOptionalFloat,
-  parseOptionalInt,
-  type AabbValue,
-} from '../../../parser/valueParsers';
+import { parseOptionalAabb, parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
+import type { Aabb } from '../../../godot/aabb';
 import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../../godot/visibilityRange';
 import { parseNode3D } from '../../base/node3d/parser';
 import { GEOMETRY_INSTANCE_DEFAULTS, type GeometryInstance3DProperties } from './types';
@@ -39,7 +35,7 @@ function parseVisibilityRange(properties: Record<string, string>): VisibilityRan
 }
 
 /** `instance_set_custom_aabb` clears the box on `AABB()` (`renderer_scene_cull.cpp:1093`). */
-function parseCustomAabb(value: string | undefined): AabbValue | null {
+function parseCustomAabb(value: string | undefined): Aabb | null {
   const box = parseOptionalAabb(value, 'custom_aabb');
   if (!box) return null;
   const { position, size } = box;

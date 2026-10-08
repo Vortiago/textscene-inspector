@@ -5,6 +5,7 @@
  */
 import type { TscnNode } from '../../parser/types';
 import { NodePathProvider } from '../contexts/NodePathContext';
+import { VisibilityParentScope } from '../visibilityRange/VisibilityParentContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 
 export function NodeTree({ node, path }: { node: TscnNode; path: string }) {
@@ -13,11 +14,13 @@ export function NodeTree({ node, path }: { node: TscnNode; path: string }) {
     throw new Error(`expected a registered component for ${path}, got none for type ${node.type}`);
   return (
     <NodePathProvider path={path}>
-      <Component node={node}>
-        {node.children.map((child) => (
-          <NodeTree key={child.name} node={child} path={`${path}/${child.name}`} />
-        ))}
-      </Component>
+      <VisibilityParentScope node={node} path={path}>
+        <Component node={node}>
+          {node.children.map((child) => (
+            <NodeTree key={child.name} node={child} path={`${path}/${child.name}`} />
+          ))}
+        </Component>
+      </VisibilityParentScope>
     </NodePathProvider>
   );
 }

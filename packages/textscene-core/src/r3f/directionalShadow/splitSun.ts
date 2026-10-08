@@ -42,6 +42,9 @@ export class SplitSunLight extends THREE.Light {
  */
 const splitSuns = new WeakMap<THREE.DirectionalLight, SplitSunLight>();
 
+/** Every attached split sun. Written only by `attachSplitSun` and `releaseSplitSun`. */
+const attachedSuns = new Set<SplitSunLight>();
+
 /** Nothing for a light that has no split sun, or whose sun something else took off it. */
 export function splitSunOf(light: THREE.DirectionalLight): SplitSunLight | null {
   const sun = splitSuns.get(light);
@@ -58,6 +61,7 @@ export function attachSplitSun(light: THREE.DirectionalLight): SplitSunLight {
   hideLight(light);
   light.add(sun);
   splitSuns.set(light, sun);
+  attachedSuns.add(sun);
   // A light leaves the scene before the fitter can see it go, so it lets go of its own sun's share.
   light.addEventListener('removed', releaseRemovedLight);
   return sun;
@@ -69,9 +73,27 @@ export function releaseSplitSun(light: THREE.DirectionalLight): void {
   if (!sun) return;
   light.removeEventListener('removed', releaseRemovedLight);
   splitSuns.delete(light);
+  attachedSuns.delete(sun);
   showLight(light);
   light.remove(sun);
   sun.dispose();
+}
+
+/**
+ * Whether a split of a sun in `scene` holds `box`: Godot culls a geometry instance for each
+ * directional cascade as well as for the camera (`renderer_scene_cull.cpp:3140`).
+ */
+export function sunSplitsHold(scene: THREE.Scene, box: THREE.Box3): boolean {
+  for (const sun of attachedSuns) {
+    if (rootOf(sun) === scene && sun.shadow.holdsBox(box)) return true;
+  }
+  return false;
+}
+
+function rootOf(object: THREE.Object3D): THREE.Object3D {
+  let root = object;
+  while (root.parent) root = root.parent;
+  return root;
 }
 
 function releaseRemovedLight(event: { target: THREE.Object3D }): void {

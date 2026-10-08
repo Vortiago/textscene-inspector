@@ -39,7 +39,7 @@ export function parseSprite3D(
       AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS,
       AlphaCutMode.ALPHA_CUT_HASH,
     ]),
-    axis: enumOr(properties.axis, AxisMode.AXIS_Y, [AxisMode.AXIS_X, AxisMode.AXIS_Y, AxisMode.AXIS_Z]),
+    axis: enumOr(properties.axis, AxisMode.AXIS_Z, [AxisMode.AXIS_X, AxisMode.AXIS_Y, AxisMode.AXIS_Z]),
     pixel_size: floatOr(properties.pixel_size, 0.01),
     // The grid and frame Godot holds after replaying the body in file order:
     // a count below 1 is refused, a refused `frame` stays 0, a later `hframes`

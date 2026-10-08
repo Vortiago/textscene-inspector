@@ -338,6 +338,10 @@ _Avoid_: bare "instance", which names **PackedScene instancing**.
 The camera distances between which a **geometry instance** draws, measured to the centre of its world AABB. Fade mode SELF blends it in across the margins.
 _Avoid_: "LOD", which names mesh level of detail.
 
+**Visibility parent**:
+The **geometry instance** whose **visibility range** decides whether another draws. A dependant draws only while the camera is short of its parent's begin, or inside a DEPENDENCIES margin, where it fades in. A Node3D without its own `visibility_parent` takes its Node3D parent's.
+_Avoid_: "LOD parent", "HLOD parent".
+
 **Fade alpha**:
 The alpha a **geometry instance**'s `transparency` and **visibility range** fade give every surface it draws, as Godot stores it in a byte. The surface's own alpha multiplies it.
 _Avoid_: "instance alpha", "instance transparency".

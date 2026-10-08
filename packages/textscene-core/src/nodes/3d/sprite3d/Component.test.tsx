@@ -47,7 +47,7 @@ function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
     alpha_antialiasing_edge: 0.0,
     texture_filter: TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
     alpha_cut: AlphaCutMode.ALPHA_CUT_DISABLED,
-    axis: AxisMode.AXIS_Y,
+    axis: AxisMode.AXIS_Z,
     pixel_size: 0.01,
     hframes: 1,
     vframes: 1,
@@ -124,21 +124,17 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(placeholder).toBeDefined();
   });
 
-  it('persists billboard mode + axis onto mesh.userData for runtime billboarding', async () => {
+  it('lays the quad on the plane its axis faces', async () => {
     const tex = makeTexture(32, 32);
     const renderer = await render({
-      node: makeNode({
-        texture: 'ExtResource("1_tex")',
-        billboard: BillboardMode.BILLBOARD_FIXED_Y,
-        axis: AxisMode.AXIS_Z,
-      }),
+      node: makeNode({ texture: 'ExtResource("1_tex")', axis: AxisMode.AXIS_Y }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mesh = findMesh(renderer.scene);
-    const userData = mesh.userData as { billboardMode: number; billboardAxis: number };
-    expect(userData.billboardMode).toBe(BillboardMode.BILLBOARD_FIXED_Y);
-    expect(userData.billboardAxis).toBe(AxisMode.AXIS_Z);
+    const geometry = findMesh(renderer.scene).geometry;
+    geometry.computeBoundingBox();
+    const size = geometry.boundingBox!.getSize(new THREE.Vector3());
+    expect(size.toArray().map((v) => Math.round(v * 1e5) / 1e5)).toEqual([0.32, 0, 0.32]);
   });
 
   it('scales the quad by pixel_size × image dimensions', async () => {

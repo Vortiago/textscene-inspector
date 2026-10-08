@@ -82,15 +82,14 @@ describe('Sprite3D render parity', () => {
     expect(map.repeat.y).toBeLessThan(0);
   });
 
-  it('offset displaces the quad (centered, pure offset) (#17)', async () => {
-    // image 100×50, pixel_size 0.01, offset (50, 20) → geometry center at
-    // +offset.x*pixel_size = 0.5, -offset.y*pixel_size = -0.2.
+  it('offset displaces the quad, a positive offset.y upwards', async () => {
+    // image 100×50, pixel_size 0.01, offset (50, 20): Godot draws the 2D rect with its Y
+    // unflipped (`sprite_3d.cpp:122-129`), so the centre moves to (0.5, 0.2).
     const r = await render({ offset: 'Vector2(50, 20)' });
     const geom = findMesh(r.scene).geometry;
     geom.computeBoundingBox();
     const c = geom.boundingBox!.getCenter(new THREE.Vector3());
-    expect(c.x).toBeCloseTo(0.5, 5);
-    expect(c.y).toBeCloseTo(-0.2, 5);
+    expect([c.x, c.y].map((v) => Math.round(v * 1e5) / 1e5)).toEqual([0.5, 0.2]);
   });
 
   it('modulate is converted sRGB→linear before the material (#6 parity with Sprite2D)', async () => {
@@ -138,16 +137,13 @@ describe('Sprite3D render parity', () => {
     expect((findMesh(r.scene).material as THREE.Material).depthWrite).toBe(false);
   });
 
-  it('centered=false shifts the quad by half its size (offset origin top-left)', async () => {
-    // image 100×50, pixel_size 0.01 → width 1, height 0.5; centered=false bakes a
-    // +width/2, -height/2 translate into the geometry so the node origin sits at
-    // the quad's top-left corner.
+  it('centered=false puts the bottom-left corner of the quad on the origin', async () => {
+    // image 100×50, pixel_size 0.01: width 1 and height 0.5, so the centre is (0.5, 0.25).
     const r = await render({ centered: 'false' });
     const geom = findMesh(r.scene).geometry;
     geom.computeBoundingBox();
     const center = geom.boundingBox!.getCenter(new THREE.Vector3());
-    expect(center.x).toBeCloseTo(0.5, 5);
-    expect(center.y).toBeCloseTo(-0.25, 5);
+    expect([center.x, center.y]).toEqual([0.5, 0.25]);
   });
 });
 

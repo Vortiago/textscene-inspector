@@ -11,6 +11,7 @@
  */
 import type { TextLayoutResult, TextLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment } from './types';
+import type { Aabb } from '../../../godot/aabb';
 
 export interface Label3DLinePlacement {
   /** This line's own left-edge x offset (`label_3d.cpp:588-599`), Godot px. */
@@ -63,20 +64,28 @@ export function layoutLabel3DLines(
 }
 
 /**
- * The centre of the box Godot's `_shape` expands over every line (`label_3d.cpp:600-606`), in
- * Godot px, y-up, on the label's z = 0 plane. Each line spans its width and one line pitch down
- * from its top. A label with no lines keeps the empty AABB at the origin.
+ * The box Godot's `_shape` expands over every line (`label_3d.cpp:600-606`), in node space, on the
+ * label's z = 0 plane. Each line spans its width and one line pitch down from its top. A label with
+ * no lines keeps the empty AABB at the origin.
  */
-export function label3DAabbCentre(
+export function label3DAabb(
   placements: readonly Label3DLinePlacement[],
-  linePitchPx: number
-): { x: number; y: number } {
-  if (placements.length === 0) return { x: 0, y: 0 };
-  const left = Math.min(...placements.map((placement) => placement.x));
-  const right = Math.max(...placements.map((placement) => placement.x + placement.line.widthPx));
+  linePitchPx: number,
+  pixelSize: number
+): Aabb {
+  if (placements.length === 0) return { position: { x: 0, y: 0, z: 0 }, size: { x: 0, y: 0, z: 0 } };
+  let left = Infinity;
+  let right = -Infinity;
+  for (const placement of placements) {
+    left = Math.min(left, placement.x);
+    right = Math.max(right, placement.x + placement.line.widthPx);
+  }
   const topDown = placements[0]!.y;
   const bottomDown = placements[placements.length - 1]!.y + linePitchPx;
-  return { x: (left + right) / 2, y: -(topDown + bottomDown) / 2 };
+  return {
+    position: { x: left * pixelSize, y: -bottomDown * pixelSize, z: 0 },
+    size: { x: (right - left) * pixelSize, y: (bottomDown - topDown) * pixelSize, z: 0 },
+  };
 }
 
 /**

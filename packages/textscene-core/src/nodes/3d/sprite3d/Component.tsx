@@ -5,7 +5,7 @@
  * `meshBasicMaterial` (`material.cpp:3045`: SHADING_MODE_PER_PIXEL versus SHADING_MODE_UNSHADED).
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
@@ -27,8 +27,9 @@ import type { Sprite3DProperties } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
-import { geometryCentre, useGeometryFade } from '../../../r3f/hooks/useGeometryFade';
-import { billboardAabbCentre } from '../../../godot/billboard';
+import { useGeometryInstance } from '../../../r3f/visibilityRange/useGeometryInstance';
+import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
+import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
 
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
 const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
@@ -49,11 +50,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // `sprite_3d.cpp:299` hands the flag to the same cached shader the billboard
   // mode does; both are per-frame effects on the sprite quad itself.
   useFixedSize(spriteRef, properties.fixed_size, scale);
-
-  const { visible: inRange, fade } = useGeometryFade(spriteRef, properties, () => {
-    const quadCentre = geometryCentre(spriteRef.current as THREE.Mesh | null);
-    return quadCentre && billboardAabbCentre(quadCentre, properties.billboard);
-  });
 
   // `texture` may be an image file, or a procedural texture described entirely
   // inside the scene; `useTexture2D` resolves either and reports a reference it
@@ -100,10 +96,29 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
   // before the image loads keeps the placeholder at expected scale).
-  const { width, height } = useMemo(() => {
+  const rect = useMemo(() => {
     const px = frameSizePx(sourceTexture ?? undefined, properties);
-    return { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
+    const size = { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
+    return spriteQuadRect(size, properties);
   }, [sourceTexture, properties]);
+  const placement = useMemo(
+    () =>
+      authoredPlacement(
+        spriteRef,
+        properties.transform,
+        spriteQuadAabb(rect, properties.axis, properties.billboard)
+      ),
+    [rect, properties.transform, properties.axis, properties.billboard]
+  );
+  const { fade, hideWhenCulled } = useGeometryInstance(properties, placement);
+  // The quad's ref: the billboard and `fixed_size` hooks pose it, and the cull hides it.
+  const quadRef = useCallback(
+    (quad: THREE.Mesh | null) => {
+      spriteRef.current = quad;
+      hideWhenCulled(quad);
+    },
+    [hideWhenCulled]
+  );
 
   // `_get_color_accum()` (`sprite_3d.cpp:36-52`) folds the parent sprite's accumulation into this
   // node's modulate, r/g/b and a. Godot multiplies the stored colours and converts once, so the
@@ -121,17 +136,8 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA (`material.cpp:1836`).
   const surfaceAlpha = cutSurfaceAlpha(cut, properties.transparent ? clamp01(accum.a) : 1, fade);
 
-  // Quad origin: centered (default) puts the plane center at the node origin;
-  // centered=false puts the top-left there. `offset` shifts in sprite pixels
-  // (× pixel_size; Godot screen-Y is down → negated). Baked into the geometry
-  // so it stays correct under the node's rotation/billboard.
-  const geometry = useMemo(() => {
-    const geom = new THREE.PlaneGeometry(width, height);
-    const ox = properties.offset.x * properties.pixel_size + (properties.centered ? 0 : width / 2);
-    const oy = -properties.offset.y * properties.pixel_size - (properties.centered ? 0 : height / 2);
-    if (ox !== 0 || oy !== 0) geom.translate(ox, oy, 0);
-    return geom;
-  }, [width, height, properties.offset.x, properties.offset.y, properties.centered, properties.pixel_size]);
+  // Baked into the geometry, so it stays right under the node's rotation and billboard.
+  const geometry = useMemo(() => spriteQuadGeometry(rect, properties.axis), [rect, properties.axis]);
   // `geometry` goes through `<primitive>`, which R3F does not auto-dispose, so this releases the
   // GPU buffers on replacement and unmount.
   useEffect(() => () => geometry.dispose(), [geometry]);
@@ -185,14 +191,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   if (!displayedTexture) {
     return (
       <>
-        <group
-          ref={spriteRef}
-          name={node.name}
-          position={position}
-          rotation={rotation}
-          scale={scale}
-          userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
-        />
+        <group ref={spriteRef} name={node.name} position={position} rotation={rotation} scale={scale} />
         {subtree}
       </>
     );
@@ -214,15 +213,13 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   return (
     <>
       <mesh
-        ref={spriteRef}
+        // The subtree is a sibling, so the cull hiding the quad hides nothing else.
+        ref={quadRef}
         name={node.name}
         position={position}
         rotation={rotation}
         scale={scale}
-        // The subtree is a sibling, so hiding the quad hides nothing else.
-        visible={inRange}
         renderOrder={properties.render_priority}
-        userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
       >
         <primitive object={geometry} attach="geometry" />
         {properties.shaded ? (

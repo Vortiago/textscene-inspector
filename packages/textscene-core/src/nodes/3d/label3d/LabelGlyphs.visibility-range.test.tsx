@@ -1,7 +1,7 @@
 /**
  * Label3D's `visibility_range_*`, measured to the centre of the box its lines span
  * (`label_3d.cpp:600-606`). The glyphs draw inside the label group as `Component.tsx` nests
- * them, so the distance runs through the group's parent. Driven against a camera 11 units away.
+ * them, so the distance runs through the group's parent. Driven by one scene render from 11 units.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -13,6 +13,7 @@ import LabelGlyphs from './LabelGlyphs';
 import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { isRendered, manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
 import {
   NO_VISIBILITY_RANGE,
   VisibilityRangeFadeMode,
@@ -28,14 +29,6 @@ vi.mock('../../../r3f/controls/native/text/sceneFontLoader', () => ({
 beforeEach(() => {
   loader.metrics = createOpenSansCanvasFontMetrics('label3d-range-test-family');
 });
-
-function cameraAt11(): THREE.PerspectiveCamera {
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1000);
-  camera.position.set(0, 0, 11);
-  camera.updateMatrixWorld(true);
-  Object.assign(camera, { manual: true });
-  return camera;
-}
 
 function props(
   range: Partial<VisibilityRange>,
@@ -78,24 +71,14 @@ function NestedLabel({ properties }: { properties: Label3DProperties }) {
 }
 
 async function renderFrames(properties: Label3DProperties) {
-  const renderer = await ReactThreeTestRenderer.create(<NestedLabel properties={properties} />, {
-    camera: cameraAt11(),
-  });
-  await renderer.advanceFrames(2, 16);
-  // The frame callback sets state, and this act commits the render it schedules.
-  await ReactThreeTestRenderer.act(async () => {});
+  const camera = manualCameraAt({ x: 0, y: 0, z: 11 });
+  const renderer = await ReactThreeTestRenderer.create(<NestedLabel properties={properties} />, { camera });
+  await renderScene(renderer, camera);
   return renderer;
 }
 
 function textMesh(renderer: Awaited<ReturnType<typeof renderFrames>>): THREE.Mesh {
   return renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-}
-
-function isRendered(object: THREE.Object3D): boolean {
-  for (let o: THREE.Object3D | null = object; o; o = o.parent) {
-    if (!o.visible) return false;
-  }
-  return true;
 }
 
 describe('<LabelGlyphs> visibility range', () => {

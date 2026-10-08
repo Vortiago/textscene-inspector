@@ -3,7 +3,7 @@
 ; Moves the camera distance against each box's `visibility_range`. At the framed camera, about 12.2
 ; from A and 9.5 from E, A is past its end and B short of its begin, so neither draws. A's child
 ; has no range and stays. C fades in its end margin and D in its begin margin (fade mode SELF).
-; E is inside its range. No other scene sets a visibility range.
+; E is inside its range. unit-visibility-parent sets ranges only on visibility parents.
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(9, 3)

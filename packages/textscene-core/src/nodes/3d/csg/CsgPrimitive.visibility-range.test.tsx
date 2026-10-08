@@ -1,7 +1,7 @@
 /**
  * `CSGShape3D : GeometryInstance3D` (`modules/csg/csg_shape.h:47`), so a CSG root honours its
  * `visibility_range_*` as a MeshInstance3D does, on the solid it draws alone and on the mesh a
- * boolean evaluates to. Driven against a camera 11 units from the root.
+ * boolean evaluates to. Driven by one scene render from 11 units.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -18,22 +18,11 @@ import type { TscnNode } from '../../../parser/types';
 import { NodeTree } from '../../../r3f/testing/NodeTree';
 import { settleCsgEvaluation } from '../../../r3f/csg/testing/settleCsgEvaluation';
 import { drawsColour } from '../../../r3f/testing/threePasses';
-
-function cameraAt11(): THREE.PerspectiveCamera {
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1000);
-  camera.position.set(0, 0, 11);
-  camera.updateMatrixWorld(true);
-  Object.assign(camera, { manual: true });
-  return camera;
-}
+import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
-async function settleFrames(renderer: Renderer): Promise<void> {
-  await renderer.advanceFrames(2, 16);
-  // The frame callback sets state, and this act commits the render it schedules.
-  await ReactThreeTestRenderer.act(async () => {});
-}
+const CAMERA_AT_11 = { x: 0, y: 0, z: 11 };
 
 function drawnMesh(renderer: Renderer): THREE.Mesh {
   return renderer.scene
@@ -51,13 +40,14 @@ async function loneBox(properties: Record<string, string>): Promise<THREE.Mesh> 
     children: [],
     properties: parsed,
   };
+  const camera = manualCameraAt(CAMERA_AT_11);
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={[]}>
       <CsgPrimitive node={node} properties={parsed} />
     </SceneResourcesProvider>,
-    { camera: cameraAt11() }
+    { camera }
   );
-  await settleFrames(renderer);
+  await renderScene(renderer, camera);
   return drawnMesh(renderer);
 }
 
@@ -70,14 +60,15 @@ async function subtraction(rootProperties: string): Promise<THREE.Mesh> {
       `transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1)\noperation = 2\nradius = 1.25\n`
   );
   const root = scene.nodes[0]!.children[0]!;
+  const camera = manualCameraAt(CAMERA_AT_11);
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={scene.internalResources}>
       <NodeTree node={root} path={`Root/${root.name}`} />
     </SceneResourcesProvider>,
-    { camera: cameraAt11() }
+    { camera }
   );
   await settleCsgEvaluation(renderer);
-  await settleFrames(renderer);
+  await renderScene(renderer, camera);
   return drawnMesh(renderer);
 }
 

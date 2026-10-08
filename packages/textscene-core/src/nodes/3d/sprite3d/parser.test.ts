@@ -18,7 +18,7 @@ describe('parseSprite3D defaults', () => {
     const props = parseSprite3D(HEADING, {});
     expect(props.billboard).toBe(BillboardMode.BILLBOARD_DISABLED);
     expect(props.alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_DISABLED);
-    expect(props.axis).toBe(AxisMode.AXIS_Y);
+    expect(props.axis).toBe(AxisMode.AXIS_Z);
     expect(props.pixel_size).toBe(0.01);
     expect(props.hframes).toBe(1);
     expect(props.vframes).toBe(1);

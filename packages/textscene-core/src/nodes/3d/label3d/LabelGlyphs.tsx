@@ -16,13 +16,14 @@ import { alphaCutSurface, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut
 import { cutSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
 import type { Color } from '../../../utils/colorParser';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
-import { useGeometryFade } from '../../../r3f/hooks/useGeometryFade';
-import { billboardAabbCentre } from '../../../godot/billboard';
-import { label3DAabbCentre, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
+import { useGeometryInstance } from '../../../r3f/visibilityRange/useGeometryInstance';
+import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
+import { labelBillboardAabb } from '../../../godot/billboard';
+import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
 import { AlphaCutMode, TextureFilter, type Label3DProperties } from './types';
 
 export interface LabelGlyphsProps {
-  /** The label's node group, whose parent places it for the visibility range distance. */
+  /** The label's node group, whose parent places it for the scene cull. */
   nodeRef: RefObject<THREE.Object3D | null>;
   properties: Label3DProperties;
 }
@@ -66,11 +67,18 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     [placements, layout]
   );
 
-  const { visible: inRange, fade } = useGeometryFade(nodeRef, properties, () => {
-    const { x, y } = label3DAabbCentre(placements, layout.linePitchPx);
-    const centre = { x: x * properties.pixel_size, y: y * properties.pixel_size, z: 0 };
-    return billboardAabbCentre(centre, properties.billboard);
-  });
+  const placement = useMemo(() => {
+    const aabb = label3DAabb(placements, layout.linePitchPx, properties.pixel_size);
+    return authoredPlacement(nodeRef, properties.transform, labelBillboardAabb(aabb, properties.billboard));
+  }, [
+    nodeRef,
+    placements,
+    layout.linePitchPx,
+    properties.pixel_size,
+    properties.transform,
+    properties.billboard,
+  ]);
+  const { fade, hideWhenCulled } = useGeometryInstance(properties, placement);
 
   const depthTest = !properties.no_depth_test;
   const side = properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide;
@@ -122,7 +130,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // Here the tint is baked as sRGB bytes that the texture's `SRGBColorSpace` decodes.
   // `frameExcluded`: Godot's framing camera never sees shaped text (`LABEL3D_BOUNDS_PROXY`).
   return (
-    <group visible={inRange}>
+    <group ref={hideWhenCulled}>
       {placements.map((placement, index) => {
         return (
           <group key={index} position={[placement.x, -placement.y, 0]}>

@@ -18,8 +18,8 @@ import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubt
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
-import { outOfRangeEffects, shadowCastingEffects } from '../../../r3f/shadowCasting';
-import { geometryCentre, useGeometryFade } from '../../../r3f/hooks/useGeometryFade';
+import { useGeometryInstance } from '../../../r3f/visibilityRange/useGeometryInstance';
+import { livePlacement } from '../../../r3f/visibilityRange/placements';
 import type { CSGShape3DProperties } from './types';
 
 const NO_PATHS: ReadonlySet<string> = new Set();
@@ -125,12 +125,8 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   // root's mesh. Whichever mesh the root draws, its own solid or the evaluated one, is `drawnRef`.
   const nodeRef = useRef<THREE.Group | null>(null);
   const drawnRef = useRef<THREE.Mesh | null>(null);
-  const { visible: inRange, fade } = useGeometryFade(nodeRef, properties, () =>
-    geometryCentre(drawnRef.current)
-  );
-  const shadow = inRange
-    ? shadowCastingEffects(properties.castShadow)
-    : outOfRangeEffects(properties.castShadow);
+  const placement = useMemo(() => livePlacement(nodeRef, drawnRef), []);
+  const { shadow, fade } = useGeometryInstance(properties, placement);
 
   const transform = { ref: nodeRef, name: node.name, position, rotation, scale, visible } as const;
 

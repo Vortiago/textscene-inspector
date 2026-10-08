@@ -24,6 +24,24 @@ describe('Node3D Parser', () => {
     });
   });
 
+  describe('visibility_parent', () => {
+    const heading = parseHeading('[node name="Detail" type="Node3D" parent="."]')!;
+
+    it('reads the path text of visibility_parent', () => {
+      expect(parseNode3D(heading, { visibility_parent: 'NodePath("../Proxy")' }).visibility_parent).toBe(
+        '../Proxy'
+      );
+    });
+
+    it("leaves an empty visibility_parent unset, so the node inherits its parent's", () => {
+      expect(parseNode3D(heading, { visibility_parent: 'NodePath("")' }).visibility_parent).toBeUndefined();
+    });
+
+    it('leaves visibility_parent unset when the file omits it', () => {
+      expect(parseNode3D(heading, {}).visibility_parent).toBeUndefined();
+    });
+  });
+
   describe('parseNode3D', () => {
     it('should parse basic Node3D with name and parent', () => {
       const heading = parseHeading('[node name="MyNode" type="Node3D" parent="."]');

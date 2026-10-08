@@ -28,12 +28,9 @@ import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlot
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
-import {
-  outOfRangeEffects,
-  shadowCastingEffects,
-  type ShadowCastingEffects,
-} from '../../../r3f/shadowCasting';
-import { geometryCentre, useGeometryFade } from '../../../r3f/hooks/useGeometryFade';
+import type { ShadowCastingEffects } from '../../../r3f/shadowCasting';
+import { useGeometryInstance } from '../../../r3f/visibilityRange/useGeometryInstance';
+import { livePlacement } from '../../../r3f/visibilityRange/placements';
 
 /** Literal-only, so its key is constant and it never remounts. */
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
@@ -91,14 +88,10 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const meshRef = useRef<THREE.Mesh | null>(null);
 
   // GeometryInstance3D's, so it reaches every surface this node draws, the overlay's too.
-  const { visible: inRange, fade } = useGeometryFade(meshRef, properties, () =>
-    geometryCentre(meshRef.current)
-  );
-  // `cast_shadow` and each surface's billboard and shadow-pass membership reach three per
-  // draw group, through hooks that read that group's material.
-  const shadow = inRange
-    ? shadowCastingEffects(properties.castShadow)
-    : outOfRangeEffects(properties.castShadow);
+  // `cast_shadow`, the range cull and each surface's billboard and shadow-pass membership reach
+  // three per draw group, through hooks that read that group's material.
+  const placement = useMemo(() => livePlacement(meshRef, meshRef), []);
+  const { shadow, fade } = useGeometryInstance(properties, placement);
   const visible = properties.visible !== false;
 
   const shellProps = {

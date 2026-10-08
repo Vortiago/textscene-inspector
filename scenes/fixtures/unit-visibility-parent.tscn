@@ -1,0 +1,75 @@
+[gd_scene load_steps=5 format=3 uid="uid://unitvisibilityparent"]
+
+; Moves the `visibility_parent` link. Each sphere names the box below it as its visibility parent,
+; and only the boxes set a range. At the framed camera, about 12.0 from the left box and 9.6 from
+; the right, the first box is past its begin, so its sphere hides. The second camera is short of
+; its begin, so the box hides and the sphere draws. The third sphere fades in across its box's
+; DEPENDENCIES begin margin. The fourth sphere takes its parent's link through a Node3D group and
+; hides. unit-visibility-range sets ranges on boxes without a visibility parent.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(9, 3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_proxy"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="SphereMesh" id="SphereMesh_detail"]
+radius = 0.3
+height = 0.6
+
+[node name="VisibilityParentRoot" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="ProxyPast" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.4, 0)
+mesh = SubResource("BoxMesh_proxy")
+visibility_range_begin = 6.0
+
+[node name="DetailPast" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.2, 0)
+mesh = SubResource("SphereMesh_detail")
+visibility_parent = NodePath("../ProxyPast")
+
+[node name="ProxyShort" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.4, 0)
+mesh = SubResource("BoxMesh_proxy")
+visibility_range_begin = 13.0
+
+[node name="DetailShort" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1.2, 0)
+mesh = SubResource("SphereMesh_detail")
+visibility_parent = NodePath("../ProxyShort")
+
+[node name="ProxyFading" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.4, 0)
+mesh = SubResource("BoxMesh_proxy")
+visibility_range_begin = 10.5
+visibility_range_begin_margin = 1.0
+visibility_range_fade_mode = 2
+
+[node name="DetailFading" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1.2, 0)
+mesh = SubResource("SphereMesh_detail")
+visibility_parent = NodePath("../ProxyFading")
+
+[node name="ProxyInherited" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.4, 0)
+mesh = SubResource("BoxMesh_proxy")
+visibility_range_begin = 5.0
+
+[node name="DetailGroup" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1.2, 0)
+visibility_parent = NodePath("../ProxyInherited")
+
+[node name="DetailInherited" type="MeshInstance3D" parent="DetailGroup"]
+mesh = SubResource("SphereMesh_detail")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 2, 4, 2)

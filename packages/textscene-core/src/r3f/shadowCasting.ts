@@ -7,10 +7,12 @@
 import * as THREE from 'three';
 import { ShadowCastingSetting } from '../godot/rendering';
 import {
+  ALWAYS_VISIBLE,
   poseColourDraw,
   skipColourDraw,
   surfaceDrawHooks,
   type CastRule,
+  type RangeGate,
   type SurfaceDrawHooks,
 } from './surfaceDrawHooks';
 
@@ -39,73 +41,53 @@ function bothFaces(depthMaterial: THREE.Material): void {
   depthMaterial.side = THREE.DoubleSide;
 }
 
-function castEffects(castShadow: boolean, rule: CastRule): ShadowCastingEffects {
-  return Object.freeze({ castShadow, ...surfaceDrawHooks(rule) });
+/** What each `cast_shadow` value sets: three's `castShadow`, and the rule its draw hooks follow. */
+interface CastSetting {
+  castShadow: boolean;
+  rule: CastRule;
+}
+
+const CAST_SETTINGS: Readonly<Record<ShadowCastingSetting, CastSetting>> = {
+  [ShadowCastingSetting.OFF]: {
+    castShadow: false,
+    rule: { colourDraw: poseColourDraw, shadowSide: materialCull },
+  },
+  [ShadowCastingSetting.ON]: {
+    castShadow: true,
+    rule: { colourDraw: poseColourDraw, shadowSide: materialCull },
+  },
+  [ShadowCastingSetting.DOUBLE_SIDED]: {
+    castShadow: true,
+    rule: { colourDraw: poseColourDraw, shadowSide: bothFaces },
+  },
+  [ShadowCastingSetting.SHADOWS_ONLY]: {
+    castShadow: true,
+    rule: { colourDraw: skipColourDraw, shadowSide: materialCull },
+  },
+};
+
+/** Absent or unrecognised `cast_shadow` is Godot's default, ON. */
+function castSettingOf(value: number | undefined): CastSetting {
+  return CAST_SETTINGS[value as ShadowCastingSetting] ?? CAST_SETTINGS[ShadowCastingSetting.ON];
+}
+
+function castEffects({ castShadow, rule }: CastSetting, gate: RangeGate): ShadowCastingEffects {
+  return Object.freeze({ castShadow, ...surfaceDrawHooks(rule, gate) });
 }
 
 // One frozen result per value: an unstable object would churn the mesh props.
-const OFF = castEffects(false, {
-  colourDraw: poseColourDraw,
-  shadowSide: materialCull,
-  castsSunShadow: true,
-});
-const ON = castEffects(true, { colourDraw: poseColourDraw, shadowSide: materialCull, castsSunShadow: true });
-const DOUBLE_SIDED = castEffects(true, {
-  colourDraw: poseColourDraw,
-  shadowSide: bothFaces,
-  castsSunShadow: true,
-});
-const SHADOWS_ONLY = castEffects(true, {
-  colourDraw: skipColourDraw,
-  shadowSide: materialCull,
-  castsSunShadow: true,
-});
+const UNRANGED_EFFECTS = new Map(
+  Object.values(CAST_SETTINGS).map((setting) => [setting, castEffects(setting, ALWAYS_VISIBLE)])
+);
 
-// Outside the visibility range the colour draw and a sun's cascades drop the instance
-// (`renderer_scene_cull.cpp:2852,3140`), but an omni or spot shadow reads no range (`:2415`).
-const OUT_OF_RANGE_OFF = castEffects(false, {
-  colourDraw: skipColourDraw,
-  shadowSide: materialCull,
-  castsSunShadow: false,
-});
-const OUT_OF_RANGE_ON = castEffects(true, {
-  colourDraw: skipColourDraw,
-  shadowSide: materialCull,
-  castsSunShadow: false,
-});
-const OUT_OF_RANGE_DOUBLE_SIDED = castEffects(true, {
-  colourDraw: skipColourDraw,
-  shadowSide: bothFaces,
-  castsSunShadow: false,
-});
-
-/** Absent or unrecognised `cast_shadow` is Godot's default, ON. */
+/** The effects of an instance with no visibility range. */
 export function shadowCastingEffects(value: number | undefined): ShadowCastingEffects {
-  switch (value) {
-    case ShadowCastingSetting.OFF:
-      return OFF;
-    case ShadowCastingSetting.DOUBLE_SIDED:
-      return DOUBLE_SIDED;
-    case ShadowCastingSetting.SHADOWS_ONLY:
-      return SHADOWS_ONLY;
-    default:
-      return ON;
-  }
+  return UNRANGED_EFFECTS.get(castSettingOf(value))!;
 }
 
-/**
- * `cast_shadow` for an instance outside its visibility range. Not `visible = false`, which would
- * hide the descendants that draw on their own, and the omni and spot shadows it still casts.
- */
-export function outOfRangeEffects(value: number | undefined): ShadowCastingEffects {
-  switch (value) {
-    case ShadowCastingSetting.OFF:
-      return OUT_OF_RANGE_OFF;
-    case ShadowCastingSetting.DOUBLE_SIDED:
-      return OUT_OF_RANGE_DOUBLE_SIDED;
-    default:
-      return OUT_OF_RANGE_ON;
-  }
+/** The effects of an instance whose visibility-range cull writes `gate`. A new object per call. */
+export function rangedShadowCastingEffects(value: number | undefined, gate: RangeGate): ShadowCastingEffects {
+  return castEffects(castSettingOf(value), gate);
 }
 
 /** The JSX props, applied to an object built outside JSX, such as a GLB's meshes. */

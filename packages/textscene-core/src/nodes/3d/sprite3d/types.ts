@@ -51,8 +51,8 @@ export enum TextureFilterMode {
 }
 
 /**
- * Axis enum used when `billboard === BILLBOARD_FIXED_Y` to declare which
- * axis the sprite locks to.
+ * `Vector3::Axis`: the axis the quad's normal points along (`sprite_3d.cpp:166-198`). Godot's
+ * default is AXIS_Z (`sprite_3d.h:77`).
  */
 export enum AxisMode {
   AXIS_X = 0,

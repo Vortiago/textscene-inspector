@@ -365,3 +365,33 @@ describe('three’s shadow pass, as the shared atlas relies on it', () => {
     expect(shadowPass).toContain('_shadowMapSize.multiply( shadowFrameExtents );');
   });
 });
+
+describe('DirectionalSplitShadow.holdsBox', () => {
+  /** A shadow of one split whose frustum is a 2-unit cube about the origin. */
+  function oneSplitAboutOrigin(): DirectionalSplitShadow {
+    const shadow = new DirectionalSplitShadow();
+    shadow.splitCount = 1;
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
+    camera.updateMatrixWorld();
+    shadow
+      .getFrustum(0)
+      .setFromProjectionMatrix(camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse));
+    return shadow;
+  }
+
+  it('holds a box inside a drawn split', () => {
+    const box = new THREE.Box3(new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(0.5, 0.5, 0.5));
+    expect(oneSplitAboutOrigin().holdsBox(box)).toBe(true);
+  });
+
+  it('does not hold a box outside every drawn split', () => {
+    const box = new THREE.Box3(new THREE.Vector3(5, 5, 5), new THREE.Vector3(6, 6, 6));
+    expect(oneSplitAboutOrigin().holdsBox(box)).toBe(false);
+  });
+
+  it('holds nothing when no split draws', () => {
+    const shadow = oneSplitAboutOrigin();
+    shadow.splitCount = 0;
+    expect(shadow.holdsBox(new THREE.Box3(new THREE.Vector3(), new THREE.Vector3()))).toBe(false);
+  });
+});

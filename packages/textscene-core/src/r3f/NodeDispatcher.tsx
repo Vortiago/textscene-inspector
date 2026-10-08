@@ -32,6 +32,7 @@ import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
+import { VisibilityParentScope } from './visibilityRange/VisibilityParentContext.js';
 import {
   InstancedScenePathsProvider,
   useInstancedScenePaths,
@@ -250,54 +251,56 @@ function PlainNode({ node, path, children: extraChildren }: PlainNodeProps): Rea
   return (
     <ParentSpaceScope node={node}>
       <NodePathProvider path={path}>
-        {/* paint-order-safe: the selection wrapper, outside the item's own group,
+        <VisibilityParentScope node={node} path={path}>
+          {/* paint-order-safe: the selection wrapper, outside the item's own group,
             which `<CanvasItem2D>` renders nearer to every mesh. A type that draws
             without that ritual takes its key from `useCanvasItemRenderOrder`. */}
-        <group ref={wrapperRef} visible={!isHidden}>
-          {/* Inside the eye-toggle group: a top_level canvas root drops its
+          <group ref={wrapperRef} visible={!isHidden}>
+            {/* Inside the eye-toggle group: a top_level canvas root drops its
               ancestors' transform and tint but not their visibility. A root whose
               parent is no CanvasItem left them all in `<ParentSpaceScope>`. */}
-          <TopLevelScope node={node}>
-            <CanvasRootScope node={node} parentIsCanvasItem={parentIsCanvasItem}>
-              <ErrorBoundary
-                resetKeys={[node]}
-                fallback={() => (
-                  <MissingResourcePlaceholder shape="box" name={node.name} {...fallbackTransform(node)} />
-                )}
-              >
-                {/* The cast each descendant the component renders runs against this node
+            <TopLevelScope node={node}>
+              <CanvasRootScope node={node} parentIsCanvasItem={parentIsCanvasItem}>
+                <ErrorBoundary
+                  resetKeys={[node]}
+                  fallback={() => (
+                    <MissingResourcePlaceholder shape="box" name={node.name} {...fallbackTransform(node)} />
+                  )}
+                >
+                  {/* The cast each descendant the component renders runs against this node
                     (`node_3d.cpp:150`, `canvas_item.cpp:565-571`), answered with its type: for a
                     merged instance, the sub-scene root's type. A y-sort reorder keeps it, since
                     every level it lifts past is a CanvasItem. */}
-                <ParentSpaceFamilyProvider value={spaceFamilyOf(node.type)}>
-                  <Component node={node}>
-                    {children.length > 0 ? (
-                      /* At every level, so a non-sprite parent overwrites with white:
+                  <ParentSpaceFamilyProvider value={spaceFamilyOf(node.type)}>
+                    <Component node={node}>
+                      {children.length > 0 ? (
+                        /* At every level, so a non-sprite parent overwrites with white:
                          `sprite_3d.cpp:75` accumulates from the immediate parent only. */
-                      <SpriteBase3DChildAccum node={node}>
-                        {startsCanvas ? (
-                          <CanvasLayerScope node={node}>
-                            {/* `<CanvasLayerScope>` is shared with the Control walk's
+                        <SpriteBase3DChildAccum node={node}>
+                          {startsCanvas ? (
+                            <CanvasLayerScope node={node}>
+                              {/* `<CanvasLayerScope>` is shared with the Control walk's
                                 `CanvasLayer` painter. A canvas root below draws on this
                                 layer's canvas (`canvas_item.cpp:246-252`), so a node that
                                 escapes inside it stays under the layer's own group. */}
-                            <WorldRoot>
-                              <CanvasRootRangesProvider value={canvasRoots}>
-                                {children}
-                              </CanvasRootRangesProvider>
-                            </WorldRoot>
-                          </CanvasLayerScope>
-                        ) : (
-                          <>{children}</>
-                        )}
-                      </SpriteBase3DChildAccum>
-                    ) : null}
-                  </Component>
-                </ParentSpaceFamilyProvider>
-              </ErrorBoundary>
-            </CanvasRootScope>
-          </TopLevelScope>
-        </group>
+                              <WorldRoot>
+                                <CanvasRootRangesProvider value={canvasRoots}>
+                                  {children}
+                                </CanvasRootRangesProvider>
+                              </WorldRoot>
+                            </CanvasLayerScope>
+                          ) : (
+                            <>{children}</>
+                          )}
+                        </SpriteBase3DChildAccum>
+                      ) : null}
+                    </Component>
+                  </ParentSpaceFamilyProvider>
+                </ErrorBoundary>
+              </CanvasRootScope>
+            </TopLevelScope>
+          </group>
+        </VisibilityParentScope>
       </NodePathProvider>
     </ParentSpaceScope>
   );

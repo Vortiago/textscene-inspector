@@ -1,7 +1,7 @@
 /**
  * `visibility_range_*` against the camera distance to the centre of the instance's world AABB
  * (`renderer_scene_cull.cpp:1851`). A culled mesh draws nothing, its descendants still draw, and a
- * SELF fade blends the mesh at the eased margin alpha. Driven against an explicit camera per frame.
+ * SELF fade blends the mesh at the eased margin alpha. Driven by one scene render from 11 units.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -12,7 +12,13 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { castsFrom, castsSunShadowFrom, drawsColour } from '../../../r3f/testing/threePasses';
+import { isRendered, manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { TscnParser } from '../../../parser/TscnParser';
+import { NodeTree } from '../../../r3f/testing/NodeTree';
+import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
+import './index.r3f';
+import '../../base/node3d/index.r3f';
 import {
   NO_VISIBILITY_RANGE,
   VisibilityRangeFadeMode,
@@ -20,15 +26,6 @@ import {
 } from '../../../godot/visibilityRange';
 
 const BOX: TscnInternalResource = { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } };
-
-/** A camera on +Z, 11 units from the world origin, where the box's centre sits. */
-function cameraAt11(): THREE.PerspectiveCamera {
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1000);
-  camera.position.set(0, 0, 11);
-  camera.updateMatrixWorld(true);
-  Object.assign(camera, { manual: true });
-  return camera;
-}
 
 function node(range: Partial<VisibilityRange>, overrides: Partial<MeshInstance3DProperties> = {}): TscnNode {
   const properties: MeshInstance3DProperties = {
@@ -43,6 +40,8 @@ function node(range: Partial<VisibilityRange>, overrides: Partial<MeshInstance3D
 }
 
 async function renderFrames(mesh: TscnNode, wrap: (child: ReactNode) => ReactNode = (child) => child) {
+  // On +Z, 11 units from the world origin, where the box's centre sits.
+  const camera = manualCameraAt({ x: 0, y: 0, z: 11 });
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={[BOX]} externalResources={[]}>
       {wrap(
@@ -51,11 +50,9 @@ async function renderFrames(mesh: TscnNode, wrap: (child: ReactNode) => ReactNod
         </MeshInstance3D>
       )}
     </SceneResourcesProvider>,
-    { camera: cameraAt11() }
+    { camera }
   );
-  await renderer.advanceFrames(2, 16);
-  // The frame callback sets state, and this act commits the render it schedules.
-  await ReactThreeTestRenderer.act(async () => {});
+  await renderScene(renderer, camera);
   return renderer;
 }
 
@@ -68,10 +65,7 @@ function childIsRendered(renderer: Awaited<ReturnType<typeof renderFrames>>) {
     .findAllByType('Group')
     .map((g) => g.instance as THREE.Object3D)
     .find((g) => g.name === '__child__');
-  for (let o: THREE.Object3D | null | undefined = child; o; o = o.parent) {
-    if (o.visible === false) return false;
-  }
-  return child !== undefined;
+  return child !== undefined && isRendered(child);
 }
 
 describe('<MeshInstance3D> visibility range', () => {
@@ -125,5 +119,62 @@ describe('<MeshInstance3D> visibility range', () => {
       <group position={[0, 0, -5]}>{child}</group>
     ));
     expect(drawsColour(meshOf(renderer))).toBe(false);
+  });
+
+  it('culls the first render, before React commits anything', async () => {
+    const camera = manualCameraAt({ x: 0, y: 0, z: 11 });
+    const renderer = await ReactThreeTestRenderer.create(
+      <SceneResourcesProvider internalResources={[BOX]} externalResources={[]}>
+        <MeshInstance3D node={node({ end: 10 })} />
+      </SceneResourcesProvider>,
+      { camera }
+    );
+    fireSceneRender(renderer.scene.instance, camera);
+    expect(drawsColour(meshOf(renderer))).toBe(false);
+  });
+});
+
+/** A proxy box with a DEPENDENCIES range, and a detail box that names it as its visibility parent. */
+async function proxyAndDetail(proxyRange: string) {
+  const scene = new TscnParser().parse(
+    `[gd_scene format=3]\n\n[sub_resource type="BoxMesh" id="Box_1"]\n\n` +
+      `[node name="Root" type="Node3D"]\n\n` +
+      `[node name="Proxy" type="MeshInstance3D" parent="."]\nmesh = SubResource("Box_1")\n` +
+      `${proxyRange}\nvisibility_range_fade_mode = 2\n\n` +
+      `[node name="Detail" type="MeshInstance3D" parent="."]\nmesh = SubResource("Box_1")\n` +
+      `visibility_parent = NodePath("../Proxy")\n`
+  );
+  const camera = manualCameraAt({ x: 0, y: 0, z: 11 });
+  const renderer = await ReactThreeTestRenderer.create(
+    <SceneResourcesProvider internalResources={scene.internalResources} externalResources={[]}>
+      <NodeTree node={scene.nodes[0]!} path="Root" />
+    </SceneResourcesProvider>,
+    { camera }
+  );
+  await renderScene(renderer, camera);
+  const meshNamed = (name: string) => renderer.scene.findByProps({ name }).instance as THREE.Mesh;
+  return { proxy: meshNamed('Proxy'), detail: meshNamed('Detail') };
+}
+
+describe('<MeshInstance3D> visibility parent', () => {
+  it('hides the dependant while its parent draws inside its range', async () => {
+    const { detail } = await proxyAndDetail('visibility_range_begin = 5.0');
+    expect(drawsColour(detail)).toBe(false);
+  });
+
+  it("shows the dependant once the camera is short of its parent's begin", async () => {
+    const { proxy, detail } = await proxyAndDetail('visibility_range_begin = 12.0');
+    expect([drawsColour(proxy), drawsColour(detail)]).toEqual([false, true]);
+  });
+
+  it("fades the dependant in across its parent's DEPENDENCIES margin", async () => {
+    // (11 - (10 - 2)) / (2 × 2) = 0.75, linear, and 0.75 × 255 = 191.25 truncates to 191.
+    const { proxy, detail } = await proxyAndDetail(
+      'visibility_range_end = 10.0\nvisibility_range_end_margin = 2.0'
+    );
+    expect([drawsColour(proxy), detail.material]).toEqual([
+      true,
+      expect.objectContaining({ opacity: 191 / 255 }),
+    ]);
   });
 });

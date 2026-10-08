@@ -156,6 +156,17 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
     return slot < this.splitCount ? this.splitFrustums[slot]! : this.undrawn;
   }
 
+  /**
+   * Whether a drawn split's frustum holds `box`. The frusta are those the last shadow render
+   * placed, so a scene cull that runs before this render reads the previous one.
+   */
+  holdsBox(box: THREE.Box3): boolean {
+    for (let slot = 0; slot < this.splitCount; slot++) {
+      if (this.splitFrustums[slot]!.intersectsBox(box)) return true;
+    }
+    return false;
+  }
+
   /** The world-to-atlas matrix of `slot`, read by `WebGLLights.js:314`. */
   getMatrix(slot = 0): THREE.Matrix4 {
     return this.splitMatrices[slot]!;

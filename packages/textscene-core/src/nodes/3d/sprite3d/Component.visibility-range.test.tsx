@@ -1,7 +1,7 @@
 /**
  * Sprite3D is a GeometryInstance3D, so its `visibility_range_*` culls and fades the quad. The
  * distance is to its AABB centre, which a billboard moves onto the origin
- * (`sprite_3d.cpp:252-273`). Driven against a camera 11 units from the sprite's origin.
+ * (`sprite_3d.cpp:252-273`). Driven by one scene render from 11 units in front of the sprite's origin.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -14,16 +14,9 @@ import { parseSprite3D } from './parser';
 import { heading } from '../../../parser/testing/parserKit';
 import type { TscnNode } from '../../../parser/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
 
 const TEXTURE_PATH = 'res://sprite.png';
-
-function cameraAt11(): THREE.PerspectiveCamera {
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1000);
-  camera.position.set(0, 0, 11);
-  camera.updateMatrixWorld(true);
-  Object.assign(camera, { manual: true });
-  return camera;
-}
 
 /** A 256 px texture at the default `pixel_size` of 0.01: a quad 2.56 wide. */
 function texture(): THREE.Texture {
@@ -45,17 +38,16 @@ async function spriteMesh(raw: Record<string, string>): Promise<THREE.Mesh> {
   };
   const fake = createFakeResourceLoader();
   fake.textures.seed(TEXTURE_PATH, texture());
+  const camera = manualCameraAt({ x: 0, y: 0, z: 11 });
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider externalResources={[{ id: '1', type: 'Texture2D', path: TEXTURE_PATH }]}>
         <Sprite3D node={node} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>,
-    { camera: cameraAt11() }
+    { camera }
   );
-  await renderer.advanceFrames(2, 16);
-  // The frame callback sets state, and this act commits the render it schedules.
-  await ReactThreeTestRenderer.act(async () => {});
+  await renderScene(renderer, camera);
   return findMesh(renderer.scene) as unknown as THREE.Mesh;
 }
 
@@ -79,12 +71,19 @@ describe('<Sprite3D> visibility range', () => {
   });
 
   it("measures an uncentred quad to its box's centre", async () => {
-    // The quad's centre is (1.28, -1.28, 0), √(2 × 1.28² + 11²) ≈ 11.148 away, past an end of 11.1.
+    // The quad's centre is (1.28, 1.28, 0), √(2 × 1.28² + 11²) ≈ 11.148 away, past an end of 11.1.
     expect((await spriteMesh({ centered: 'false', visibility_range_end: '11.1' })).visible).toBe(false);
   });
 
   it('measures a billboard to its origin, 11 away, inside an end of 11.1', async () => {
     const mesh = await spriteMesh({ centered: 'false', billboard: '1', visibility_range_end: '11.1' });
     expect(mesh.visible).toBe(true);
+  });
+
+  it('measures a quad on the XZ plane to its own box', async () => {
+    // AXIS_Y lays the quad flat, centre (1.28, 0, -1.28), √(1.28² + 12.28²) ≈ 12.35 away.
+    expect((await spriteMesh({ centered: 'false', axis: '1', visibility_range_end: '12.3' })).visible).toBe(
+      false
+    );
   });
 });

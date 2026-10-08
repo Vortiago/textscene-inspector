@@ -33,9 +33,18 @@ export interface CastRule {
   ) => void;
   /** Sets three's shared depth material's side for the surface `material` draws. */
   shadowSide: (depthMaterial: THREE.Material, material: THREE.Material) => void;
-  /** Whether a directional light's shadow pass draws the surface; omni and spot passes always do. */
-  castsSunShadow: boolean;
 }
+
+/**
+ * Whether a geometry instance passes its visibility-range cull for the render in progress. The
+ * scene cull writes it before each render, so the draw hooks read it at draw time.
+ */
+export interface RangeGate {
+  readonly isVisible: boolean;
+}
+
+/** The gate of an instance with no visibility range. */
+export const ALWAYS_VISIBLE: RangeGate = Object.freeze({ isVisible: true });
 
 /**
  * three passes the object as the second `onBeforeShadow` argument
@@ -139,11 +148,17 @@ export const skipColourDraw: CastRule['colourDraw'] = (_object, geometry) => {
   skip(geometry);
 };
 
-export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
+/**
+ * The hooks for one `cast_shadow` rule behind one range gate. A culled instance draws no colour and
+ * casts into no directional shadow (`renderer_scene_cull.cpp:2852,3140`). It still casts into an
+ * omni or spot shadow, whose cull reads no range (`:2415`).
+ */
+export function surfaceDrawHooks(rule: CastRule, gate: RangeGate): SurfaceDrawHooks {
   return {
     // three recomputes `modelViewMatrix` from `matrixWorld` after this hook (`:2160`).
     onBeforeRender(this: THREE.Object3D, _renderer, _scene, camera, geometry, material) {
-      rule.colourDraw(this, geometry, material, camera);
+      if (gate.isVisible) rule.colourDraw(this, geometry, material, camera);
+      else skip(geometry);
     },
     onAfterRender: closeDraw,
     // three sets `modelViewMatrix` once per object before its group loop
@@ -154,7 +169,7 @@ export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
       if (!material) return;
       rule.shadowSide(depthMaterial, material);
       // three gives only a DirectionalLight's shadow an orthographic camera.
-      if (!rule.castsSunShadow && (shadowCamera as THREE.OrthographicCamera).isOrthographicCamera) {
+      if (!gate.isVisible && (shadowCamera as THREE.OrthographicCamera).isOrthographicCamera) {
         skip(geometry);
         return;
       }

@@ -1,6 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import { SplitSunLight, attachSplitSun, followDeclaredLight, releaseSplitSun, splitSunOf } from './splitSun';
+import {
+  SplitSunLight,
+  attachSplitSun,
+  followDeclaredLight,
+  releaseSplitSun,
+  splitSunOf,
+  sunSplitsHold,
+} from './splitSun';
 
 describe('SplitSunLight', () => {
   it('stands on three’s sun path', () => {
@@ -127,5 +134,33 @@ describe('followDeclaredLight', () => {
     const point = new THREE.Vector3(2, 2, 2);
     followDeclaredLight(sun, new THREE.DirectionalLight(), point, point);
     expect(new THREE.Vector3().setFromMatrixPosition(sun.matrixWorld).toArray()).toEqual([0, 0, 0]);
+  });
+});
+
+describe('sunSplitsHold', () => {
+  function sceneWithSun(): { scene: THREE.Scene; sun: SplitSunLight } {
+    const scene = new THREE.Scene();
+    const light = new THREE.DirectionalLight();
+    scene.add(light);
+    return { scene, sun: attachSplitSun(light) };
+  }
+
+  it("answers from a split sun in the scene's own tree", () => {
+    const { scene, sun } = sceneWithSun();
+    vi.spyOn(sun.shadow, 'holdsBox').mockReturnValue(true);
+    expect(sunSplitsHold(scene, new THREE.Box3())).toBe(true);
+  });
+
+  it('ignores a split sun in another scene', () => {
+    const { sun } = sceneWithSun();
+    vi.spyOn(sun.shadow, 'holdsBox').mockReturnValue(true);
+    expect(sunSplitsHold(new THREE.Scene(), new THREE.Box3())).toBe(false);
+  });
+
+  it('forgets a released sun', () => {
+    const { scene, sun } = sceneWithSun();
+    vi.spyOn(sun.shadow, 'holdsBox').mockReturnValue(true);
+    releaseSplitSun(sun.parent as THREE.DirectionalLight);
+    expect(sunSplitsHold(scene, new THREE.Box3())).toBe(false);
   });
 });

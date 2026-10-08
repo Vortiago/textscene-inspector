@@ -46,4 +46,9 @@ export interface Node3DProperties {
    * Visibility still climbs the parent (`:1132-1143`). Unset when the file omits it.
    */
   top_level?: boolean;
+  /**
+   * The `visibility_parent` path text, relative to this node. Unset when the file omits it or
+   * leaves it empty, where the node takes its Node3D parent's visibility parent.
+   */
+  visibility_parent?: string;
 }

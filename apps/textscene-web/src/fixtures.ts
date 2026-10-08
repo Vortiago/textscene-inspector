@@ -1693,6 +1693,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Visibility Parent",
+    "file": "unit-visibility-parent.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Visibility Range",
     "file": "unit-visibility-range.tscn",
     "category": "Other"
