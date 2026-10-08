@@ -4,13 +4,8 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import { waitFor } from '@testing-library/react';
-import { FileEventBus } from '../../../resources/FileEventBus';
-import { ResourceLoader } from '../../../resources/ResourceLoader';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
-import { PROJECT_FILE_PATH } from '../../../godot/project.js';
-import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
 import { ProjectClearColor } from './ProjectClearColor';
+import { withProject } from '../../testing/ProjectFixture';
 
 /** Hands out the canvas's renderer, which the test renderer does not expose. */
 function CaptureRenderer({ captured }: { captured: { current: THREE.WebGLRenderer | null } }) {
@@ -20,22 +15,13 @@ function CaptureRenderer({ captured }: { captured: { current: THREE.WebGLRendere
 
 /** The renderer under a project whose `project.godot` is `project`, or no project for null. */
 async function rendererIn(project: string | null) {
-  const provider: ResourceProvider = {
-    async loadResource(path: string) {
-      if (path !== PROJECT_FILE_PATH || project === null) throw new Error(`Resource not found: ${path}`);
-      return project;
-    },
-  };
-  const loader = new ResourceLoader(new FileEventBus(provider));
-  loader.setProvider(provider);
+  const ProjectFixture = withProject(project);
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={loader}>
-      <ProjectSettingsProvider>
-        <ProjectClearColor />
-        <CaptureRenderer captured={captured} />
-      </ProjectSettingsProvider>
-    </ResourceLoaderProvider>
+    <ProjectFixture>
+      <ProjectClearColor />
+      <CaptureRenderer captured={captured} />
+    </ProjectFixture>
   );
   return { renderer, gl: captured.current! };
 }
