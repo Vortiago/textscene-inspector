@@ -41,9 +41,11 @@ ${body}`;
 
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
-        <NodeDispatcher nodes={parsed.nodes} />
-      </CanvasLighting2DProvider>
+      <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(parsed), panelId: 'p' }}>
+        <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+          <NodeDispatcher nodes={parsed.nodes} />
+        </CanvasLighting2DProvider>
+      </HierarchyProvider>
     </SceneStack>
   );
   await new Promise<void>((resolve) => setTimeout(resolve, 10));
@@ -324,11 +326,12 @@ describe('lightDrawSequence', () => {
     expect(lightDrawSequence(4, 9)).toBe(4);
   });
 
-  it('draws a light the walk never saw at its ordinal', () => {
-    expect(lightDrawSequence(null, 9)).toBe(9);
+  it('draws a light the walk never saw after every listed light, by ordinal', () => {
+    expect(lightDrawSequence(null, 0)).toBeGreaterThan(lightDrawSequence(100_000, 9));
+    expect(lightDrawSequence(null, 9)).toBeGreaterThan(lightDrawSequence(null, 0));
   });
 
-  it('ties a light that is neither listed nor declared at 0', () => {
-    expect(lightDrawSequence(null, null)).toBe(0);
+  it('ranks a light that is neither listed nor declared first among the unlisted', () => {
+    expect(lightDrawSequence(null, null)).toBe(lightDrawSequence(null, 0));
   });
 });

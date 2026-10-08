@@ -18,6 +18,7 @@ import { parseParallaxBackground } from './parser';
 import { ParallaxBackground } from './Component';
 import { CanvasLayerScope } from '../../../r3f/canvasLayerScope';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
+import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera';
 
 function backgroundNode(properties: Record<string, string> = {}): TscnNode {
   return {
@@ -59,16 +60,14 @@ const CAMERA_TAG: Camera2DTag = {
  * produces it and the Godot probe measured it: top-left (24, 76) in canvas pixels.
  */
 function viewportPassCamera(): THREE.OrthographicCamera {
-  const camera = new THREE.OrthographicCamera(-576, 576, 324, -324, 0.1, 4000);
+  const camera = createViewportCanvasCamera();
+  Object.assign(camera, { left: -576, right: 576, top: 324, bottom: -324, near: 0.1, far: 4000 });
   camera.position.set(600, -400, 1000);
+  camera.updateProjectionMatrix();
   return camera;
 }
 
-/**
- * The store's camera, which the test renderer does not expose. Rendering
- * through it is what tells the component it is on the free 2D stage rather than
- * in a sub-viewport's pass.
- */
+/** The store's camera, which the test renderer does not expose: the free 2D stage renders through it. */
 function StoreCamera({ into }: { into: { current: THREE.Camera | null } }) {
   into.current = useThree((state) => state.camera);
   return null;

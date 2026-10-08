@@ -4,7 +4,7 @@
  * `scene.onBeforeRender` runs before the render list, so content moves that frame.
  */
 
-import type * as THREE from 'three';
+import * as THREE from 'three';
 
 /** `target` is the render target the render draws into, null for the canvas. */
 type SceneCameraObserver = (camera: THREE.Camera, target: THREE.WebGLRenderTarget | null) => void;
@@ -23,15 +23,23 @@ interface SceneHook {
 
 const hooks = new WeakMap<THREE.Scene, SceneHook>();
 
+/** Written only by `createViewportCanvasCamera`. A camera leaves it once it is collected. */
+const viewportCanvasCameras = new WeakSet<THREE.Camera>();
+
+/** The camera a 2D sub-viewport draws its canvas through, through its Godot canvas transform. */
+export function createViewportCanvasCamera(): THREE.OrthographicCamera {
+  const camera = new THREE.OrthographicCamera();
+  viewportCanvasCameras.add(camera);
+  return camera;
+}
+
 /**
- * Whether a render through `camera` is a sub-viewport's pass, the only surface with a Godot canvas
- * transform. The 2D stage draws through the store's free camera, with none, as Godot's editor does.
+ * Whether a render through `camera` is a 2D sub-viewport's pass, the only surface with a Godot
+ * canvas transform. The 2D stage draws through the store's free camera, with none, as Godot's
+ * editor does, and a 3D sub-viewport's orthographic Camera3D frames no canvas.
  */
-export function isViewportPass(
-  camera: THREE.Camera,
-  storeCamera: THREE.Camera
-): camera is THREE.OrthographicCamera {
-  return camera !== storeCamera && (camera as THREE.OrthographicCamera).isOrthographicCamera === true;
+export function isViewportPass(camera: THREE.Camera): camera is THREE.OrthographicCamera {
+  return viewportCanvasCameras.has(camera);
 }
 
 /**

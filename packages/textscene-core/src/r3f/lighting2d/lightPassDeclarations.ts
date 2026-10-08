@@ -66,7 +66,9 @@ export function useRegisterLitItem(placement: ItemPlacement, lightOnly: boolean)
 
 /**
  * Hands the per-item cap an item at `placement`, uncapped, whose own geometry `geometry` holds.
- * `take` receives the positional lights the item takes while its placement is crowded.
+ * `take` receives the positional lights the item takes while its placement is crowded. The cap
+ * records a new entry as handed nothing, so each release hands the item null to match: else an
+ * item that moves to a placement that fits every light keeps the list of the old one.
  */
 export function useCapItemLights(
   placement: ItemPlacement,
@@ -75,10 +77,17 @@ export function useCapItemLights(
 ): void {
   const { registerCappedItem } = useCanvasLighting2D();
   const { lightMask, z, layer } = placement;
-  useEffect(
-    () => registerCappedItem({ placement: { lightMask, z, layer, positionalLights: null }, geometry, take }),
-    [registerCappedItem, lightMask, z, layer, geometry, take]
-  );
+  useEffect(() => {
+    const release = registerCappedItem({
+      placement: { lightMask, z, layer, positionalLights: null },
+      geometry,
+      take,
+    });
+    return () => {
+      release();
+      take(null);
+    };
+  }, [registerCappedItem, lightMask, z, layer, geometry, take]);
 }
 
 /**

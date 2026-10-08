@@ -21,6 +21,7 @@ import { Modulate2DContext, useParentModulate } from '../../../../r3f/canvasItem
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { fireSceneRender } from '../../../../r3f/testing/fireSceneRender';
+import { createViewportCanvasCamera } from '../../../../r3f/sceneRenderCamera';
 
 const ZERO_RECT = { x: 0, y: 0, w: 0, h: 0 };
 
@@ -178,7 +179,9 @@ describe('<CanvasLayer> in a sub-viewport pass', () => {
   async function renderInPass(raw: Record<string, string>) {
     const renderer = await renderLayer(raw, [], 'pass');
     const scene = renderer.scene.instance as unknown as THREE.Scene;
-    const camera = new THREE.OrthographicCamera(VIEW.left, VIEW.right, VIEW.top, VIEW.bottom);
+    const camera = createViewportCanvasCamera();
+    Object.assign(camera, { left: VIEW.left, right: VIEW.right, top: VIEW.top, bottom: VIEW.bottom });
+    camera.updateProjectionMatrix();
     camera.position.set(...VIEW.position);
     const target = new THREE.WebGLRenderTarget(SIZE.x, SIZE.y);
     scene.updateMatrixWorld();

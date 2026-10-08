@@ -46,10 +46,16 @@ export function isListedDirectionalLight(node: TscnNode): boolean {
 }
 
 /**
- * The sequence a light draws at: its `listed` place in the list, else its stencil `ordinal`, else
- * 0. A light the walk never saw declares before it has an ordinal, so it ties at 0 there, and the
- * cap breaks that tie by ordinal, as the draw does.
+ * Where an unlisted light ranks: after every listed light, so the cap and the draw agree when
+ * listed and unlisted lights mix. A canvas holds far fewer than 2^20 lights.
+ */
+const UNLISTED_LIGHT_SEQUENCE = 2 ** 20;
+
+/**
+ * The sequence a light draws at: its `listed` place, else after every listed light by `ordinal`. A
+ * light declares before it has an ordinal, so unlisted lights tie there, and the cap breaks the tie
+ * by ordinal, which is the order the draw uses.
  */
 export function lightDrawSequence(listed: number | null, ordinal: number | null): number {
-  return listed ?? ordinal ?? 0;
+  return listed ?? UNLISTED_LIGHT_SEQUENCE + (ordinal ?? 0);
 }

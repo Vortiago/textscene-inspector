@@ -172,6 +172,20 @@ describe('useCanvasItemLighting under the per-item cap', () => {
     expect(registerItem).toHaveBeenLastCalledWith({ ...PLACEMENT, positionalLights: [0, 2] }, false);
   });
 
+  it('drops the positional lights it was handed when its placement changes', () => {
+    const { wrapper, registerItem, registerCappedItem } = lighting(list());
+    const hook = renderHook(({ lightMask }) => useCanvasItemLighting(null, lightMask), {
+      wrapper,
+      initialProps: { lightMask: 1 },
+    });
+    act(() => registerCappedItem.mock.calls.at(-1)![0].take([0, 2]));
+    hook.rerender({ lightMask: 2 });
+    expect(registerItem).toHaveBeenLastCalledWith(
+      { ...PLACEMENT, lightMask: 2, positionalLights: null },
+      false
+    );
+  });
+
   it('binds the buffer of the list its capped placement reads', () => {
     const published = list();
     const { result, capped } = mountCapped(published, { ...PLACEMENT, positionalLights: [1] });

@@ -20,7 +20,6 @@ import { viewportLayerMatrix, type ViewportLayerFollow } from './viewportLayerAn
 /** Places `layer` for each render of the scene, unanchored outside a sub-viewport's pass. */
 function useViewportLayerAnchor(layer: RefObject<THREE.Object3D | null>, follow: ViewportLayerFollow): void {
   const scene = useThree((state) => state.scene);
-  const storeCamera = useThree((state) => state.camera);
   const { enabled, scale } = follow;
   useEffect(() => {
     const size = new THREE.Vector2();
@@ -28,14 +27,14 @@ function useViewportLayerAnchor(layer: RefObject<THREE.Object3D | null>, follow:
     return observeSceneCamera(scene, (camera, target) => {
       const object = layer.current;
       if (!object) return;
-      if (!target || !isViewportPass(camera, storeCamera)) next.identity();
+      if (!target || !isViewportPass(camera)) next.identity();
       else viewportLayerMatrix({ enabled, scale }, camera, size.set(target.width, target.height), next);
       if (next.equals(object.matrix)) return;
       object.matrix.copy(next);
       // `onBeforeRender` runs after the scene's own matrix update, so the subtree is refreshed here.
       object.updateMatrixWorld(true);
     });
-  }, [scene, storeCamera, layer, enabled, scale]);
+  }, [scene, layer, enabled, scale]);
 }
 
 /**

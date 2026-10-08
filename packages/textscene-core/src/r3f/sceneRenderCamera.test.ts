@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import { isViewportPass, observeSceneCamera } from './sceneRenderCamera';
+import { createViewportCanvasCamera, isViewportPass, observeSceneCamera } from './sceneRenderCamera';
 import { fireSceneRender } from './testing/fireSceneRender';
 
 describe('observeSceneCamera', () => {
@@ -72,17 +72,15 @@ describe('observeSceneCamera', () => {
 });
 
 describe('isViewportPass', () => {
-  const storeCamera = new THREE.OrthographicCamera();
-
-  it('is true for an orthographic camera other than the store camera', () => {
-    expect(isViewportPass(new THREE.OrthographicCamera(), storeCamera)).toBe(true);
+  it("is true for a sub-viewport's canvas camera", () => {
+    expect(isViewportPass(createViewportCanvasCamera())).toBe(true);
   });
 
-  it('is false for the store camera, which draws the 2D stage', () => {
-    expect(isViewportPass(storeCamera, storeCamera)).toBe(false);
+  it('is false for any other orthographic camera, such as a Camera3D in a 3D sub-viewport', () => {
+    expect(isViewportPass(new THREE.OrthographicCamera())).toBe(false);
   });
 
   it('is false for a perspective camera, which frames no canvas', () => {
-    expect(isViewportPass(new THREE.PerspectiveCamera(), storeCamera)).toBe(false);
+    expect(isViewportPass(new THREE.PerspectiveCamera())).toBe(false);
   });
 });

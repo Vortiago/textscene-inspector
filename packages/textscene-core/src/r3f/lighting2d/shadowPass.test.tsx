@@ -16,6 +16,8 @@ import { LIGHT_PASS_LAYER } from './lightPassLayers';
 import { itemUniforms, ownerName, recordLightPass, type RecordedDraw } from './testing/lightPassProbe';
 import { litQuadRenderOrder, shadowStencilRef, shadowVolumeRenderOrder } from './ShadowVolumeMask';
 import { SceneStack } from '../testing/SceneStack';
+import { HierarchyProvider } from '../contexts/HierarchyContext';
+import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
 import '../nodes'; // side-effect: registers every node's r3f component
 
 const COOKIE = 'res://light.png';
@@ -78,9 +80,11 @@ async function render(tscn: string) {
 
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
-        <NodeDispatcher nodes={parsed.nodes} />
-      </CanvasLighting2DProvider>
+      <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(parsed), panelId: 'p' }}>
+        <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+          <NodeDispatcher nodes={parsed.nodes} />
+        </CanvasLighting2DProvider>
+      </HierarchyProvider>
     </SceneStack>
   );
   // No frame is advanced: the world matrices are sampled in a layout effect

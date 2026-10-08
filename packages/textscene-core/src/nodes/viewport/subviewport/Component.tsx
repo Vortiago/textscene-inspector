@@ -39,6 +39,7 @@ import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
 import type { SubViewportProperties } from './types';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
+import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera.js';
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -136,7 +137,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   // through its canvas transform, the identity until a Camera2D in the subtree
   // makes itself current, so this starts at the whole target rect and the pass
   // narrows it to the current camera's view each frame.
-  const orthoCamera = useMemo(() => new THREE.OrthographicCamera(), []);
+  const orthoCamera = useMemo(() => createViewportCanvasCamera(), []);
   useEffect(() => {
     orthoCamera.near = 0.1;
     orthoCamera.far = 4000;

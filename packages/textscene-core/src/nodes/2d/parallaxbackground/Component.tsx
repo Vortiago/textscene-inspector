@@ -37,7 +37,6 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
   const props = node.properties as ParallaxBackgroundProperties;
   const path = useNodePath() ?? node.name;
   const scene = useThree((state) => state.scene);
-  const storeCamera = useThree((state) => state.camera);
 
   const groupRef = useRef<THREE.Group>(null);
   const layers = useRef(new Map<string, RegisteredParallaxLayer>()).current;
@@ -58,8 +57,7 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
       const group = groupRef.current;
       if (!group) return;
 
-      const viewportPass = isViewportPass(camera, storeCamera);
-      const ortho = camera as THREE.OrthographicCamera;
+      const viewportPass = isViewportPass(camera);
 
       // Godot's `__cameras_<viewport>` group scope: the current Camera2D of this
       // viewport, which for an offscreen pass is the scene being drawn.
@@ -70,13 +68,13 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
         viewportPass && tag
           ? parallaxViewFraming(
               {
-                left: ortho.left,
-                right: ortho.right,
-                top: ortho.top,
-                bottom: ortho.bottom,
-                x: ortho.position.x,
-                y: ortho.position.y,
-                zoom: ortho.zoom,
+                left: camera.left,
+                right: camera.right,
+                top: camera.top,
+                bottom: camera.bottom,
+                x: camera.position.x,
+                y: camera.position.y,
+                zoom: camera.zoom,
               },
               tag.zoom.x || 1,
               tag.anchor_mode !== Camera2DAnchorMode.FIXED_TOP_LEFT
@@ -102,7 +100,7 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
       // cut chain take effect in this frame, not the next.
       group.updateMatrixWorld(true);
     });
-  }, [scene, storeCamera, props, layers]);
+  }, [scene, props, layers]);
 
   return (
     <ParallaxScrollProvider value={registry}>

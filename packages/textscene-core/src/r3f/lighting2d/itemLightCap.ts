@@ -42,6 +42,7 @@ interface Crowding {
   readonly candidates: Map<string, readonly number[] | null>;
 }
 
+/** Written only by `crowdingOf`. An entry clears when its `lights` state is collected. */
 const crowdingByLights = new WeakMap<ReadonlyMap<number, CanvasLightDeclaration>, Crowding>();
 
 function crowdingOf(lights: ReadonlyMap<number, CanvasLightDeclaration>): Crowding {
@@ -73,6 +74,7 @@ function crowdedCandidates(
 /** The roles whose quad covers a light's whole reach. */
 const REACH_ROLES = new Set<PassMesh['role']>(['lit', 'unshadowed']);
 
+/** Scratch for `worldRect`, read back into a `Rect2` before the next item writes it. */
 const box = new THREE.Box3();
 
 /** A `Box3` as a `Rect2`. An empty box gives an inverted rect, which meets none. */
