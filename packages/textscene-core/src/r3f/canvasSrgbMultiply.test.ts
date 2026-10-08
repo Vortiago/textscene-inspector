@@ -31,6 +31,17 @@ describe('CANVAS_SRGB_MULTIPLY_EDITS', () => {
     );
   });
 
+  it('encodes once and decodes once for a map with vertex colours, carrying sRGB between the chunks', () => {
+    const patched = applyChunkEdits(threeChunks(), CANVAS_SRGB_MULTIPLY_EDITS)!;
+    const keepsSrgb = patched.map_fragment.split(
+      '#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )'
+    )[1]!;
+    expect(keepsSrgb.split('#else')[0]).not.toContain('sRGBTransferEOTF');
+    const fromSrgb = patched.color_fragment.split('#ifdef USE_MAP')[1]!;
+    expect(fromSrgb.split('#else')[0]).not.toContain('sRGBTransferOETF');
+    expect(fromSrgb.split('#else')[0]).toContain('sRGBTransferEOTF');
+  });
+
   it('refuses chunks that lack a multiply line', () => {
     expect(applyChunkEdits({ map_fragment: '', color_fragment: '' }, CANVAS_SRGB_MULTIPLY_EDITS)).toBeNull();
   });

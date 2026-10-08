@@ -19,21 +19,41 @@ export const CANVAS_SRGB_DEFINES: Readonly<Record<string, string>> = { [CANVAS_S
 
 type Chunk = 'map_fragment' | 'color_fragment';
 
-/** Three's linear `diffuseColor *= factor;` in `chunk`, with the sRGB multiply beside it under the define. */
-function srgbMultiplyEdit(chunk: Chunk, factor: string): ChunkEdit<Chunk> {
-  const product = `diffuseColor = vec4( sRGBTransferEOTF( vec4( sRGBTransferOETF( diffuseColor ).rgb * ${factor}.rgb, 1.0 ) ).rgb, diffuseColor.a * ${factor}.a );`;
+/** `diffuseColor` set to `rgb` and to its alpha times `factor`'s. */
+const assign = (rgb: string, factor: string) =>
+  `diffuseColor = vec4( ${rgb}, diffuseColor.a * ${factor}.a );`;
+const fromSrgb = (rgb: string) => `sRGBTransferEOTF( vec4( ${rgb}, 1.0 ) ).rgb`;
+const toSrgb = 'sRGBTransferOETF( diffuseColor ).rgb';
+
+/**
+ * Three's linear `diffuseColor *= factor;` in `chunk`, with the sRGB multiply beside it under the
+ * define. Where the other chunk multiplies too, the map chunk leaves the product in sRGB and the
+ * colour chunk decodes it, so a textured, vertex-coloured fragment encodes and decodes once.
+ */
+function srgbMultiplyEdit(chunk: Chunk, factor: string, otherChunkActive: string): ChunkEdit<Chunk> {
   const three = `\tdiffuseColor *= ${factor};`;
+  const whole = assign(fromSrgb(`${toSrgb} * ${factor}.rgb`), factor);
+  const shared =
+    chunk === 'map_fragment'
+      ? assign(`${toSrgb} * ${factor}.rgb`, factor)
+      : assign(fromSrgb(`diffuseColor.rgb * ${factor}.rgb`), factor);
   return {
     chunk,
     three,
-    godot: `\t#ifdef ${CANVAS_SRGB_MULTIPLY}\n\t\t${product}\n\t#else\n\t${three}\n\t#endif`,
+    godot:
+      `\t#ifdef ${CANVAS_SRGB_MULTIPLY}\n\t\t${otherChunkActive}\n\t\t\t${shared}\n\t\t#else\n` +
+      `\t\t\t${whole}\n\t\t#endif\n\t#else\n\t${three}\n\t#endif`,
   };
 }
 
 /** Each linear multiply in three's chunks: the texel, then the vertex colour. */
 export const CANVAS_SRGB_MULTIPLY_EDITS: readonly ChunkEdit<Chunk>[] = [
-  srgbMultiplyEdit('map_fragment', 'sampledDiffuseColor'),
-  srgbMultiplyEdit('color_fragment', 'vColor'),
+  srgbMultiplyEdit(
+    'map_fragment',
+    'sampledDiffuseColor',
+    '#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )'
+  ),
+  srgbMultiplyEdit('color_fragment', 'vColor', '#ifdef USE_MAP'),
 ];
 
 /**
