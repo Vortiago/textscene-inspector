@@ -179,6 +179,30 @@ describe('<ParallaxBackground>', () => {
     expect(wrappers[1]!.position.y).toBe(0);
   });
 
+  it('scrolls by the camera alone, as the camera overwrites an authored scroll_offset', async () => {
+    // `_camera_moved` sets `offset` from the camera transform before each `_update_scroll`
+    // (`parallax_background.cpp:48-52`), so the authored value never reaches a layer.
+    const worldFixed = layerNode('WorldFixed', { motion_scale: 'Vector2(1, 1)' });
+    const renderer = await ReactThreeTestRenderer.create(
+      <>
+        <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
+        <NodePathProvider path="BG">
+          <ParallaxBackground node={backgroundNode({ scroll_offset: 'Vector2(300, 200)' })}>
+            <NodePathProvider path="BG/WorldFixed">
+              <ParallaxLayer node={worldFixed} />
+            </NodePathProvider>
+          </ParallaxBackground>
+        </NodePathProvider>
+      </>
+    );
+    const scene = renderer.scene.instance;
+    fireSceneRender(scene, viewportPassCamera());
+
+    const wrapper = scene.getObjectByName('BG')!.children.find((child) => child.type === 'Group')!;
+    expect(wrapper.position.x).toBe(-24);
+    expect(wrapper.position.y).toBe(76);
+  });
+
   it('does not scroll on the free 2D stage even when the scene holds a Camera2D', async () => {
     // A ParallaxBackground and an enabled Camera2D in one root scene, drawn on
     // the stage. Godot's editor applies no canvas transform there, and `ref:godot`

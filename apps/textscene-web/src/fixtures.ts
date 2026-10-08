@@ -2088,6 +2088,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Parallax Ignore Camera Zoom",
+    "file": "unit-parallax-ignore-camera-zoom.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Parallax Layer",
     "file": "unit-parallax-layer.tscn",
     "category": "Unit - 2D Canvas"

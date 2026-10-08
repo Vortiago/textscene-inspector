@@ -1,0 +1,45 @@
+[gd_scene format=3]
+
+; One variable: `scroll_ignore_camera_zoom` under a Camera2D at zoom 2 in a sub-viewport. Godot
+; divides the zoom out of the scroll and draws the layer at scale 1 (`parallax_background.cpp:104`),
+; so Bar keeps its authored 80x30 size while Band doubles. No other scene zooms a parallax camera.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 400.0
+offset_bottom = 280.0
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(200, 150)
+render_target_update_mode = 4
+
+[node name="Camera" type="Camera2D" parent="Booth/SubViewport"]
+position = Vector2(500, 400)
+zoom = Vector2(2, 2)
+
+[node name="Band" type="Polygon2D" parent="Booth/SubViewport"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(430, 380, 570, 380, 570, 400, 430, 400)
+
+[node name="Parallax" type="ParallaxBackground" parent="Booth/SubViewport"]
+scroll_ignore_camera_zoom = true
+
+[node name="Layer" type="ParallaxLayer" parent="Booth/SubViewport/Parallax"]
+motion_scale = Vector2(0.5, 0.5)
+
+[node name="Bar" type="Polygon2D" parent="Booth/SubViewport/Parallax/Layer"]
+color = Color(0, 0.8, 0.3, 1)
+polygon = PackedVector2Array(200, 170, 280, 170, 280, 200, 200, 200)
