@@ -19,22 +19,21 @@ export const CANVAS_SRGB_DEFINES: Readonly<Record<string, string>> = { [CANVAS_S
 
 type Chunk = 'map_fragment' | 'color_fragment';
 
-/** `diffuseColor` times `factor`, with both read as sRGB and the product decoded back to linear. */
-const srgbProduct = (factor: string) =>
-  `diffuseColor = vec4( sRGBTransferEOTF( vec4( sRGBTransferOETF( diffuseColor ).rgb * ${factor}.rgb, 1.0 ) ).rgb, diffuseColor.a * ${factor}.a );`;
+/** Three's linear `diffuseColor *= factor;` in `chunk`, with the sRGB multiply beside it under the define. */
+function srgbMultiplyEdit(chunk: Chunk, factor: string): ChunkEdit<Chunk> {
+  const product = `diffuseColor = vec4( sRGBTransferEOTF( vec4( sRGBTransferOETF( diffuseColor ).rgb * ${factor}.rgb, 1.0 ) ).rgb, diffuseColor.a * ${factor}.a );`;
+  const three = `\tdiffuseColor *= ${factor};`;
+  return {
+    chunk,
+    three,
+    godot: `\t#ifdef ${CANVAS_SRGB_MULTIPLY}\n\t\t${product}\n\t#else\n\t${three}\n\t#endif`,
+  };
+}
 
-/** Each linear multiply in three's chunks, with the sRGB multiply beside it under the define. */
+/** Each linear multiply in three's chunks: the texel, then the vertex colour. */
 export const CANVAS_SRGB_MULTIPLY_EDITS: readonly ChunkEdit<Chunk>[] = [
-  {
-    chunk: 'map_fragment',
-    three: '\tdiffuseColor *= sampledDiffuseColor;',
-    godot: `\t#ifdef ${CANVAS_SRGB_MULTIPLY}\n\t\t${srgbProduct('sampledDiffuseColor')}\n\t#else\n\t\tdiffuseColor *= sampledDiffuseColor;\n\t#endif`,
-  },
-  {
-    chunk: 'color_fragment',
-    three: '\tdiffuseColor *= vColor;',
-    godot: `\t#ifdef ${CANVAS_SRGB_MULTIPLY}\n\t\t${srgbProduct('vColor')}\n\t#else\n\t\tdiffuseColor *= vColor;\n\t#endif`,
-  },
+  srgbMultiplyEdit('map_fragment', 'sampledDiffuseColor'),
+  srgbMultiplyEdit('color_fragment', 'vColor'),
 ];
 
 /**

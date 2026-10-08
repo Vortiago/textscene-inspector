@@ -6,6 +6,7 @@
  */
 
 import { mapToLocalPx } from './tilePlacement';
+import type { Color } from '../../utils/colorParser';
 import type { DrawableCell } from './drawableCell';
 import { tileDrawInfo, type AtlasSourceModel, type TileGrid } from './types';
 
@@ -89,12 +90,21 @@ export function buildTileGeometryArrays(
     const bottom = 0 - (cy + h / 2);
     positions.set([left, top, 0, right, top, 0, left, bottom, 0, right, bottom, 0], i * 12);
     uvs.set([...corners[0]![0]!, ...corners[0]![1]!, ...corners[1]![0]!, ...corners[1]![1]!], i * 8);
-    const { r, g, b, a } = cell.tileData.modulate;
-    for (let corner = 0; corner < 4; corner++) colors.set([r, g, b, a], i * 16 + corner * 4);
+    writeCornerColors(colors, i * 16, cell.tileData.modulate);
 
     const v = i * 4;
     indices.set([v + 2, v + 3, v, v + 3, v + 1, v], i * 6);
   });
 
   return { positions, uvs, colors, indices };
+}
+
+/** One colour on each of a quad's four corners, from `offset`, with no array per corner. */
+function writeCornerColors(colors: Float32Array, offset: number, { r, g, b, a }: Color): void {
+  for (let k = offset; k < offset + 16; k += 4) {
+    colors[k] = r;
+    colors[k + 1] = g;
+    colors[k + 2] = b;
+    colors[k + 3] = a;
+  }
 }

@@ -1,6 +1,6 @@
 /**
  * The 2D canvas's texture colour space: a `NoColorSpace` retag and the define
- * that decodes it, for the unlit 2D recipe (`meshBasicMaterial` + `map`) alone.
+ * that multiplies its texels in sRGB, for the unlit 2D recipe (`meshBasicMaterial` + `map`) alone.
  * A SubViewport target, a PointLight2D cookie and every 3D material slot keep
  * sampling the shared cache entry.
  */
@@ -44,30 +44,11 @@ export function useCanvas2DTexture(texture: THREE.Texture | null | undefined): T
  * `NoColorSpace` retag. A define reaches the GPU only on a newly mounted material,
  * which `materialProgramInputs` arranges, so the identity is memoised.
  */
-export function useCanvasDecodeDefines(
+export function useCanvasSrgbDefines(
   texture: THREE.Texture | null | undefined
 ): Record<string, string> | undefined {
   return useMemo(
     () => (texture?.colorSpace === THREE.NoColorSpace ? CANVAS_SRGB_DEFINES : undefined),
     [texture]
   );
-}
-
-/** A 2D-canvas `map` and the `defines` that decode it, as one value. */
-export interface Canvas2DMap {
-  /** The `NoColorSpace` clone, or `null` while there is nothing to show. */
-  texture: THREE.Texture | null;
-  /** Spread onto the sampling material's `defines`. */
-  defines: Record<string, string> | undefined;
-}
-
-/**
- * The retag and its decode together: half-applied, the material never decodes its
- * raw sRGB bytes. `spriteSamplerClone` and `useIconTexture`, whose icons have their
- * own loader, tag by another route and call `useCanvasDecodeDefines` alone.
- */
-export function useCanvas2DMap(texture: THREE.Texture | null | undefined): Canvas2DMap {
-  const canvasTexture = useCanvas2DTexture(texture);
-  const defines = useCanvasDecodeDefines(canvasTexture);
-  return useMemo(() => ({ texture: canvasTexture, defines }), [canvasTexture, defines]);
 }

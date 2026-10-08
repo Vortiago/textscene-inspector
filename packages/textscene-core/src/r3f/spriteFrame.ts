@@ -61,7 +61,7 @@ export function spriteSamplerClone(
   const cloned = texture.clone();
   // A plain assignment loses to R3F's auto sRGB-tagging once the clone reaches a
   // `map` prop, so NoColorSpace is pinned, and Sprite2D pairs it with
-  // `useCanvasDecodeDefines`. SRGBColorSpace is what that tagging forces anyway.
+  // `useCanvasSrgbDefines`. SRGBColorSpace is what that tagging forces anyway.
   if (colorSpace === THREE.NoColorSpace) {
     pinNoColorSpace(cloned);
   } else {

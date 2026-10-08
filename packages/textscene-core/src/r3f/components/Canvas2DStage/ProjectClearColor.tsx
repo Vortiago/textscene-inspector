@@ -6,9 +6,7 @@
  */
 
 import { useMemo } from 'react';
-import { projectClearColor } from '../../../parser/projectSettingsParser.js';
-import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
-import { useGodotLinearColor } from '../../godotColor.js';
+import { useProjectClearColor } from '../../useProjectClearColor.js';
 import { useGameViewportRect } from '../../gameViewportRect.js';
 import { materialProgramInputs } from '../../materialProgramInputs.js';
 
@@ -19,12 +17,12 @@ import { materialProgramInputs } from '../../materialProgramInputs.js';
 const CLEAR_RENDER_ORDER = -1;
 
 export function ProjectClearColor() {
-  const { settings } = useProjectSettings();
   const { x, y, w, h } = useGameViewportRect();
-  const color = useGodotLinearColor(useMemo(() => projectClearColor(settings), [settings]));
-  const program = materialProgramInputs({
-    props: { color, depthWrite: false, depthTest: false, toneMapped: false },
-  });
+  const color = useProjectClearColor();
+  const program = useMemo(
+    () => materialProgramInputs({ props: { color, depthWrite: false, depthTest: false, toneMapped: false } }),
+    [color]
+  );
   // Godot's +Y is down, hence the negated centre.
   return (
     <mesh name="ProjectClearColor" position={[x + w / 2, -(y + h / 2), 0]} renderOrder={CLEAR_RENDER_ORDER}>

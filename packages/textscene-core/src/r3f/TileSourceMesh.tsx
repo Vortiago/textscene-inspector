@@ -10,7 +10,7 @@ import { buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
-import { useCanvas2DMap } from './canvas2DTextureDecode';
+import { useCanvas2DTexture } from './canvas2DTextureDecode';
 import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
 import { canvasItemFacing } from './canvasItemFacing';
 import { materialProgramInputs } from './materialProgramInputs';
@@ -46,7 +46,7 @@ export function TileSourceMesh({
   lighting,
 }: TileSourceMeshProps) {
   const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'texture');
-  const { texture: tex } = useCanvas2DMap(texResult.value);
+  const tex = useCanvas2DTexture(texResult.value);
   const image = tex?.image as { width?: number; height?: number } | undefined;
   const texW = image?.width;
   const texH = image?.height;

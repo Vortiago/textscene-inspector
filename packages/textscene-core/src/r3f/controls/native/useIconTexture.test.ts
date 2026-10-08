@@ -6,7 +6,7 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
-import { useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
+import { useCanvasSrgbDefines } from '../../canvas2DTextureDecode';
 import { useIconTexture, useOptionalIconTexture, useNodeIcon } from './useIconTexture';
 import type { ThemedIconRef } from './solveTree';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -41,7 +41,7 @@ describe('useIconTexture', () => {
   });
 
   it('turns on the post-filter decode every painter draws it through', () => {
-    const { result } = renderHook(() => useCanvasDecodeDefines(useIconTexture(ICON)));
+    const { result } = renderHook(() => useCanvasSrgbDefines(useIconTexture(ICON)));
 
     expect(result.current).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });

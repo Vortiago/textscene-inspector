@@ -179,7 +179,7 @@ describe('createCanvasTextMaterial', () => {
   it(
     'leaves `defines` unset for a `map` NOT tagged NoColorSpace, so a caller that ever passes an ' +
       'already-linear map (a SubViewport render target, say) is not double-decoded -- the same ' +
-      'auto-detection `useCanvasDecodeDefines`/`ControlQuad` already apply to every other ' +
+      'auto-detection `useCanvasSrgbDefines`/`ControlQuad` already apply to every other ' +
       '2D-canvas-drawn `map`.',
     () => {
       const texture = new THREE.CanvasTexture(document.createElement('canvas'));

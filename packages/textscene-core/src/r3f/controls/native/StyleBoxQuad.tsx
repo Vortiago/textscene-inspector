@@ -25,7 +25,7 @@ import { multiplyModulate, WHITE_MODULATE, type RGBA } from '../../canvasItemMod
 import { canvasItemFacing } from '../../canvasItemFacing';
 import { materialProgramInputs } from '../../materialProgramInputs';
 import { CANVAS_SRGB_DEFINES } from '../../canvasSrgbMultiply';
-import { pinNoColorSpace, useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
+import { pinNoColorSpace, useCanvasSrgbDefines } from '../../canvas2DTextureDecode';
 import { useGodotLinearColor } from '../../godotColor';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useUploadedClone } from '../../tiledUpload/useTiledUpload';
@@ -272,7 +272,7 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
     [tint, texture.modulateColor]
   );
   const linearColor = useGodotLinearColor(combinedTint);
-  const decodeDefines = useCanvasDecodeDefines(drawnTexture);
+  const srgbDefines = useCanvasSrgbDefines(drawnTexture);
 
   if (!geometry || !drawnTexture) return null;
 
@@ -283,7 +283,7 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
       opacity: combinedTint.a,
       transparent: true,
       depthWrite: false,
-      defines: decodeDefines,
+      defines: srgbDefines,
       clippingPlanes,
     },
     merge: [canvasItemFacing()],

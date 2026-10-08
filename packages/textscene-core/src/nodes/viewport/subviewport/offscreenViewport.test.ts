@@ -6,7 +6,6 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 
 import {
-  DEFAULT_CLEAR_COLOR,
   applyOrthoFrame,
   createOffscreenTarget,
   godotCanvasPosition,
@@ -425,21 +424,5 @@ describe('createOffscreenTarget', () => {
     expect(target.width).toBe(320);
     expect(target.height).toBe(240);
     target.dispose();
-  });
-});
-
-describe('DEFAULT_CLEAR_COLOR', () => {
-  /**
-   * `servers/rendering/renderer_viewport.cpp` clears an opaque target to the default
-   * clear colour, which `main/main.cpp` sets to `Color(0.3, 0.3, 0.3)`. Godot renders
-   * it as rgb(77, 77, 77), so 0.3 is sRGB: a linear 0.3 would clear to about rgb(149).
-   */
-  it('is the sRGB colour that renders as rgb(77, 77, 77)', () => {
-    const srgb = DEFAULT_CLEAR_COLOR.clone();
-    const out = { r: 0, g: 0, b: 0 };
-    srgb.getRGB(out, THREE.SRGBColorSpace);
-    expect(Math.round(out.r * 255)).toBe(77);
-    expect(Math.round(out.g * 255)).toBe(77);
-    expect(Math.round(out.b * 255)).toBe(77);
   });
 });

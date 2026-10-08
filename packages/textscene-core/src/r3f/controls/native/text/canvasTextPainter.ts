@@ -213,7 +213,7 @@ export interface CanvasTextMaterialOptions extends Partial<CanvasTextBlend> {
 /**
  * A `MeshBasicMaterial` for canvas-rasterised text, with three's sRGB decode for
  * an `SRGBColorSpace` map. A `NoColorSpace` map gets the sRGB-multiply define
- * (`canvasSrgbMultiply.ts`) from its own tag, as `useCanvasDecodeDefines` does,
+ * (`canvasSrgbMultiply.ts`) from its own tag, as `useCanvasSrgbDefines` does,
  * so the tag and the define never apply apart. `TextRun.tsx` keeps its glyph
  * raster `SRGBColorSpace`: a glyph has no differing RGB pair to filter wrongly.
  */

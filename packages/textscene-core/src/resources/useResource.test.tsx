@@ -450,6 +450,18 @@ describe('useResource', () => {
       expect(requestSpy).not.toHaveBeenCalled();
       expect(loader.eventBus.getHandlerCount('texture', 'loaded')).toBe(before);
     });
+
+    it('path === "": renders its caller once on mount, as an empty slot settles nothing', () => {
+      let renders = 0;
+      renderHook(
+        () => {
+          renders++;
+          return useResource<THREE.Texture>('', 'texture');
+        },
+        { wrapper: withLoader(loader) }
+      );
+      expect(renders).toBe(1);
+    });
   });
 
   // The hook pins on mount and unpins on unmount, so the LRU cache never evicts an entry a

@@ -18,7 +18,7 @@ import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmate
 import { frameSizePx, frameUvWindow, spriteSamplerClone } from '../../../r3f/spriteFrame';
 import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useUvWindow } from '../../../r3f/useUvWindow';
-import { useCanvasDecodeDefines } from '../../../r3f/canvas2DTextureDecode';
+import { useCanvasSrgbDefines } from '../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -61,7 +61,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // 'clamp': the 2D canvas disables texture-repeat, so an overrunning
   // region_rect stretches its edge texels, where Sprite3D tiles. NoColorSpace:
   // the canvas filter blends undecoded sRGB bytes (`canvas2DTextureDecode.ts`),
-  // and QuadMesh decodes the filtered sample through `useCanvasDecodeDefines`.
+  // and QuadMesh multiplies the filtered sample in sRGB through `useCanvasSrgbDefines`.
   const samplerClone = useMemo(
     () => spriteSamplerClone(sourceTexture ?? undefined, 'clamp', THREE.NoColorSpace),
     [sourceTexture]
@@ -81,7 +81,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const displayedTexture = viewportTexture ?? drawnTexture;
   // A ViewportTexture keeps its publisher's colour space, not the NoColorSpace
   // retag, so this resolves to `undefined` for it.
-  const decodeDefines = useCanvasDecodeDefines(displayedTexture);
+  const srgbDefines = useCanvasSrgbDefines(displayedTexture);
   // Quad size in pixels (1 px = 1 world unit in the 2D canvas). A render
   // target reports its rect through the same `image` shape a loaded texture
   // uses, so the sizing path is shared.
@@ -112,7 +112,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
             props={props}
             blend={canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
             lighting={lighting}
-            decodeDefines={decodeDefines}
+            srgbDefines={srgbDefines}
           />
         ) : null
       }
@@ -131,7 +131,7 @@ function QuadMesh({
   props,
   blend,
   lighting,
-  decodeDefines,
+  srgbDefines,
 }: {
   texture: THREE.Texture;
   color: THREE.Color;
@@ -141,7 +141,7 @@ function QuadMesh({
   props: Sprite2DProperties;
   blend: CanvasItemBlendState;
   lighting: CanvasItemLightingProps;
-  decodeDefines: Record<string, string> | undefined;
+  srgbDefines: Record<string, string> | undefined;
 }) {
   // Quad centre in Godot 2D space (+Y down), then Y-negated. Centred, it sits at
   // `offset`. Otherwise the top-left does, so the centre is offset + (w/2, h/2).
@@ -159,7 +159,7 @@ function QuadMesh({
       opacity,
       transparent: true,
       depthWrite: false,
-      defines: decodeDefines,
+      defines: srgbDefines,
     },
     merge: [canvasItemFacing(), blend, lighting],
   });

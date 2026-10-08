@@ -10,7 +10,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
-import { useCanvas2DMap } from '../../../r3f/canvas2DTextureDecode';
+import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
@@ -34,7 +34,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   // Either an image file or an inline procedural texture; `useTexture2D` hides
   // which, and owns the lifetime of the procedural one it rasterises.
   const { texture: resolvedTexture } = useTexture2D(props.texture, externalResources, internalResources);
-  const { texture, defines: decodeDefines } = useCanvas2DMap(resolvedTexture);
+  const texture = useCanvas2DTexture(resolvedTexture);
 
   const rings = useMemo(
     () =>
@@ -73,7 +73,6 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
             vertexColors={geometry.hasAttribute('color')}
             material={material}
             lighting={lighting}
-            decodeDefines={decodeDefines}
           />
         ) : null
       }
@@ -91,7 +90,6 @@ function FilledPolygon({
   vertexColors,
   material,
   lighting,
-  decodeDefines,
 }: {
   geometry: THREE.BufferGeometry;
   tint: CanvasItemTint;
@@ -100,7 +98,6 @@ function FilledPolygon({
   vertexColors: boolean;
   material: CanvasItemMaterialProperties | null;
   lighting: CanvasItemLightingProps;
-  decodeDefines: Record<string, string> | undefined;
 }) {
   // Godot multiplies fill × modulate × self_modulate in sRGB, then converts once.
   // `color` is quantized first, as Godot's 8-bit mesh upload stores it
@@ -137,8 +134,8 @@ function FilledPolygon({
       opacity: vertexColors ? tintOnlyOpacity : opacity,
       transparent: true,
       depthWrite: false,
-      // sRGB vertex colours, which Godot interpolates and multiplies as stored.
-      defines: vertexColors ? CANVAS_SRGB_DEFINES : decodeDefines,
+      // The `NoColorSpace` map and the sRGB vertex colours, which Godot multiplies as stored.
+      defines: CANVAS_SRGB_DEFINES,
     },
     // The one canvas mesh where a facing split would be visible, since every
     // vertex carries its own colour and alpha. It is safe only because earcut
@@ -257,7 +254,10 @@ function buildVertexColors(vertexCount: number, vertexColors: Float32Array): Flo
       b: vertexColors[i * 4 + 2]!,
       a: vertexColors[i * 4 + 3]!,
     });
-    out.set([stored.r, stored.g, stored.b, stored.a], i * 4);
+    out[i * 4] = stored.r;
+    out[i * 4 + 1] = stored.g;
+    out[i * 4 + 2] = stored.b;
+    out[i * 4 + 3] = stored.a;
   }
   return out;
 }

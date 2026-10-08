@@ -7,14 +7,10 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { canvasItemMaterialOf } from '../../resources/materials/canvasitemmaterial/parser';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
-import {
-  parseResourceReference,
-  resolveExtResourcePath,
-  resolveSubResourceRef,
-} from '../../resources/SubResourceResolver';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { useResource } from '../../resources/useResource';
+import { useSubOrExtResource } from '../../resources/useSubOrExtResource';
 import { useSceneResources } from '../SceneResourcesContext';
 
 const CanvasItemMaterialContext = createContext<CanvasItemMaterialProperties | null>(null);
@@ -44,16 +40,10 @@ export function useInheritedCanvasItemMaterial(): CanvasItemMaterialProperties |
 export function useCanvasItemMaterial(props: Node2DProperties): CanvasItemMaterialProperties | null {
   const inherited = useInheritedCanvasItemMaterial();
   const { internalResources, externalResources } = useSceneResources();
-  const isExternal = parseResourceReference(props.materialPath ?? '')?.type === 'ExtResource';
-  const filePath = isExternal ? resolveExtResourcePath(props.materialPath, externalResources) : null;
-  const fromFile = useCanvasItemMaterialFile(props.use_parent_material ? null : filePath);
-
-  return useMemo(() => {
-    if (props.use_parent_material) return inherited;
-    if (isExternal) return fromFile;
-    const resource = resolveSubResourceRef(props.materialPath, internalResources);
-    return resource ? canvasItemMaterialOf(resource) : null;
-  }, [props.use_parent_material, props.materialPath, inherited, internalResources, isExternal, fromFile]);
+  const ownRef = props.use_parent_material ? undefined : props.materialPath;
+  const own = useSubOrExtResource(ownRef, internalResources, externalResources);
+  const ownMaterial = useMemo(() => (own ? canvasItemMaterialOf(own) : null), [own]);
+  return props.use_parent_material ? inherited : ownMaterial;
 }
 
 /**
