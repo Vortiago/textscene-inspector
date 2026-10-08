@@ -13,7 +13,7 @@ Draws a 2D texture on a quad in 3D space. The previewer renders it as an unlit t
 
 The quad lies on the plane its `axis` faces, the XY plane by default. A centred quad centres on the node. An uncentred one puts its bottom-left corner there, and a positive `offset.y` moves it up, as Godot draws the 2D rect with its Y unflipped. The quad's AABB, grown as a billboard can turn it, places it for the visibility range.
 
-The quad casts a shadow when Godot files its surface in the shadow pass: a cut or opaque surface, or an `OPAQUE_PREPASS` one, with its depth test on (`render_forward_clustered.cpp:4079-4089`). A blended sprite, the default, casts nothing. A hashed sprite hashes its shadow too. The quad receives shadows as every GeometryInstance3D does. The `sprite3d-shadow` golden pins this.
+The quad casts a shadow when Godot files its surface in the shadow pass (`render_forward_clustered.cpp:4079-4089`). That pass takes a cut or opaque surface, or an `OPAQUE_PREPASS` one, with its depth test on. A blended sprite, the default, casts nothing. A hashed sprite hashes its shadow too. The quad receives shadows as every GeometryInstance3D does. The `sprite3d-shadow` golden pins this.
 
 ## Linting
 
