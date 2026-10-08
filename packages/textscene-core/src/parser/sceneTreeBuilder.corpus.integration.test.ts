@@ -6,30 +6,18 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { readdir } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { join, relative } from 'node:path';
 import { TscnParser } from './TscnParser';
+import { sceneFiles, scenesDir } from './testing/parserKit.js';
 
-// `import.meta.dirname`, never `process.cwd()`: hooks and CI run from the repo root
-// while vitest resolves this file's own URL through its dev server.
-const SCENES = resolve(import.meta.dirname, '../../../../scenes');
+const SCENES = scenesDir();
 
 /** The one fixture whose whole purpose is an unresolvable parent path. */
 const INTENTIONAL_ORPHANS = new Set(['fixtures/edge-missing-parent.tscn']);
 
-async function everyScene(dir: string): Promise<string[]> {
-  const found: string[] = [];
-  for (const entry of await readdir(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) found.push(...(await everyScene(full)));
-    else if (entry.name.endsWith('.tscn')) found.push(full);
-  }
-  return found;
-}
-
 describe('buildSceneTree over the whole corpus', () => {
-  it('orphans nothing except the fixture that exists to be orphaned', async () => {
-    const scenes = await everyScene(SCENES);
+  it('orphans nothing except the fixture that exists to be orphaned', () => {
+    const scenes = sceneFiles(SCENES, (path) => path.endsWith('.tscn'));
     expect(scenes.length).toBeGreaterThan(200);
 
     const offenders: string[] = [];

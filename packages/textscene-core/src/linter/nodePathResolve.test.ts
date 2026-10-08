@@ -6,23 +6,17 @@
 
 import { describe, expect, it } from 'vitest';
 import { resolveNodePath } from './nodePathResolve.js';
-import type { TscnNode, TscnScene } from '../parser/types.js';
+import type { RawNode, RawScene } from '../parser/types.js';
 
-function node(name: string, children: TscnNode[] = [], extra: Partial<TscnNode> = {}): TscnNode {
-  const built = { name, type: 'Node3D', properties: {}, children, ...extra } as TscnNode;
-  // Mirror `properties` into `rawProperties` the way `createSimpleNode` does, so
-  // these literals model a node a parser could have produced. Anything reading the
-  // raw bag reads that field.
-  return {
-    ...built,
-    rawProperties: built.rawProperties ?? (built.properties as Record<string, string>),
-  };
+/** A strict-parser node: the **Raw view**, with `rawProperties` and no typed bag. */
+function node(name: string, children: RawNode[] = [], extra: Partial<RawNode> = {}): RawNode {
+  return { name, type: 'Node3D', rawProperties: {}, children, ...extra };
 }
 
-const sceneOf = (...roots: TscnNode[]): TscnScene => ({ nodes: roots }) as TscnScene;
+const sceneOf = (...roots: RawNode[]): RawScene => ({ nodes: roots }) as RawScene;
 
 /** Find a node by name for the test's own bookkeeping, not for resolution. */
-function pick(roots: TscnNode[], name: string): TscnNode {
+function pick(roots: RawNode[], name: string): RawNode {
   for (const n of roots) {
     if (n.name === name) return n;
     try {
@@ -144,7 +138,7 @@ describe('resolveNodePath', () => {
   describe('%unique names (node.cpp:1930-1938)', () => {
     const withUnique = () =>
       node('Root', [
-        node('Deep', [node('Marker', [], { properties: { unique_name_in_owner: 'true' } })]),
+        node('Deep', [node('Marker', [], { rawProperties: { unique_name_in_owner: 'true' } })]),
         node('Other'),
       ]);
 
@@ -174,7 +168,7 @@ describe('resolveNodePath', () => {
     it('declines a %name reached THROUGH an instance, whose own claims are elsewhere', () => {
       const tree = node('Root', [
         node('Weapon', [], { instance: 'ExtResource("1_gun")' }),
-        node('Sight', [], { properties: { unique_name_in_owner: 'true' } }),
+        node('Sight', [], { rawProperties: { unique_name_in_owner: 'true' } }),
       ]);
       const scene = sceneOf(tree);
       expect(resolveNodePath(scene, tree, 'Weapon/%Sight')).toEqual({ status: 'unknowable' });
@@ -182,7 +176,7 @@ describe('resolveNodePath', () => {
 
     it('continues walking below the unique node', () => {
       const tree = node('Root', [
-        node('Rig', [node('Hand')], { properties: { unique_name_in_owner: 'true' } }),
+        node('Rig', [node('Hand')], { rawProperties: { unique_name_in_owner: 'true' } }),
         node('Other'),
       ]);
       const scene = sceneOf(tree);

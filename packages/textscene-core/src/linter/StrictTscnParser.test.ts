@@ -95,8 +95,8 @@ visible = true
 
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
-      expect(result.scene!.nodes[0]!.properties).toHaveProperty('transform');
-      expect(result.scene!.nodes[0]!.properties).toHaveProperty('visible');
+      expect(result.scene!.nodes[0]!.rawProperties).toHaveProperty('transform');
+      expect(result.scene!.nodes[0]!.rawProperties).toHaveProperty('visible');
     });
 
     it('should skip empty lines and comments', () => {
@@ -114,6 +114,15 @@ visible = true
 
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
+    });
+  });
+
+  describe('the Raw view', () => {
+    it('builds each node with its raw literals and no typed properties', () => {
+      const node = parser.parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\nvisible = false\n')
+        .scene!.nodes[0]!;
+      expect(node.rawProperties).toEqual({ visible: 'false' });
+      expect('properties' in node).toBe(false);
     });
   });
 

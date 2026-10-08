@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { isPropertyOverrideHeading, parseHeading } from './utils';
-import type { TscnNode } from './types';
+import type { RawNode } from './types';
 import { parseNodeWithRegistry } from '../core/NodeRegistry';
 import { StrictTscnParser } from '../linter/StrictTscnParser';
 // Importing the parser is what registers every slice's node parser, so the
@@ -106,7 +106,7 @@ describe('the two node creators agree', () => {
   });
 });
 
-function findNode(nodes: readonly TscnNode[], name: string): TscnNode | undefined {
+function findNode(nodes: readonly RawNode[], name: string): RawNode | undefined {
   for (const node of nodes) {
     if (node.name === name) return node;
     const found = findNode(node.children, name);

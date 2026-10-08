@@ -6,10 +6,10 @@
 
 import { StrictTscnParser } from '../StrictTscnParser.js';
 import { visibleInTreeVerdict } from '../parentType.js';
-import type { TscnNode } from '../../parser/types.js';
+import type { RawNode } from '../../parser/types.js';
 
 /** Depth-first lookup by name, since these trees are tiny. */
-export function byName(nodes: readonly TscnNode[], name: string): TscnNode {
+export function byName(nodes: readonly RawNode[], name: string): RawNode {
   for (const n of nodes) {
     if (n.name === name) return n;
     const hit = n.children?.length ? byName(n.children, name) : undefined;

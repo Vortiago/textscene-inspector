@@ -64,9 +64,7 @@ metadata/test = "Single line string"
 
       expect(result.errors).toHaveLength(0);
       expect(result.scene).toBeDefined();
-      expect((result.scene!.nodes[0]!.properties as Record<string, unknown>)['metadata/test']).toBe(
-        '"Single line string"'
-      );
+      expect(result.scene!.nodes[0]!.rawProperties['metadata/test']).toBe('"Single line string"');
     });
 
     it('should handle multi-line quoted strings (implementation-specific behavior)', () => {

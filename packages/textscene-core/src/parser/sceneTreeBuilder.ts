@@ -2,7 +2,7 @@
  * Builds hierarchical scene tree from flat TSCN node list.
  */
 
-import type { NodeOrigin, RawNode, TscnNode } from './types';
+import type { NodeOrigin, RawNode } from './types';
 import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
 import { isUniqueNameInOwner } from '../utils/uniqueNames.js';
 import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
@@ -13,7 +13,7 @@ import { isTypeUnknowable } from './typeUnknowable.js';
  * The tree from the flat node list, by parent path. Paths are relative to the root:
  * "." is the root, "Foo/Bar" is root/Foo/Bar.
  */
-export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
+export function buildSceneTree<N extends RawNode>(nodes: N[]): N[] {
   if (nodes.length === 0) return [];
 
   // Heading 0 is the root when nothing is parentless: `packed_scene.cpp:218-219` makes
@@ -69,7 +69,7 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
  */
 interface BuildTables {
   /** Every seated node, keyed by the folded path its own children address it at. */
-  readonly byPath: Map<string, TscnNode>;
+  readonly byPath: Map<string, RawNode>;
   /** `%Name` to that path, for the nodes claiming one. */
   readonly uniquePaths: Map<string, string>;
   /** The same two tables as the walk consumes them. */
@@ -77,8 +77,8 @@ interface BuildTables {
 }
 
 /** Tables holding only the scene root, which sits at the empty path. */
-function newTables(rootNode: TscnNode): BuildTables {
-  const byPath = new Map<string, TscnNode>([[SCENE_ROOT_PATH, rootNode]]);
+function newTables(rootNode: RawNode): BuildTables {
+  const byPath = new Map<string, RawNode>([[SCENE_ROOT_PATH, rootNode]]);
   // The root claims no `%Name`: `set_unique_name_in_owner` registers in the
   // node's OWNER (node.cpp:2222-2233) and the scene root has none.
   const uniquePaths = new Map<string, string>();
@@ -95,7 +95,7 @@ function newTables(rootNode: TscnNode): BuildTables {
  * below a parent this file describes is one Godot fails to find. A parent missing from
  * the map passed one segment ago, so instanced content vouched for it.
  */
-function canNameNode(pathMap: Map<string, TscnNode>, path: string): boolean {
+function canNameNode(pathMap: Map<string, RawNode>, path: string): boolean {
   if (pathMap.has(path)) return true;
   const cut = path.lastIndexOf('/');
   const parent = pathMap.get(cut === -1 ? SCENE_ROOT_PATH : path.slice(0, cut));
@@ -110,7 +110,7 @@ function canNameNode(pathMap: Map<string, TscnNode>, path: string): boolean {
  * claims. First claim wins: a second claimant warns and clears its own flag
  * (`node.cpp:2225-2231`).
  */
-function registerPath(tables: BuildTables, parentPath: string, node: TscnNode): void {
+function registerPath(tables: BuildTables, parentPath: string, node: RawNode): void {
   // A nameless heading claims no key: an empty name joins to its parent's own key.
   // Godot seats it and places later siblings by path (`packed_scene.cpp:208-215`).
   if (!node.name) return;
@@ -123,7 +123,7 @@ function registerPath(tables: BuildTables, parentPath: string, node: TscnNode): 
 /** The instance a stranded node hangs off, and where that node lands. */
 interface InstanceAnchor {
   /** The enclosing `instance=` node. */
-  node: TscnNode;
+  node: RawNode;
   /** The remainder of the path below it, for the sub-scene to match. */
   subPath: string;
   /** The stranded node's own folded parent path, the key it is registered under. */
@@ -161,9 +161,12 @@ function findInstanceAnchor(parentPath: string, tables: BuildTables): InstanceAn
  * nothing, which Godot re-roots, or a non-root with no `parent=`, which
  * `packed_scene.cpp:207` refuses.
  */
-export function strandedNodes(all: readonly NodeOrigin[], roots: readonly TscnNode[]): NodeOrigin[] {
-  const placed = new Set<TscnNode>();
-  const walk = (nodes: readonly TscnNode[]): void => {
+export function strandedNodes<N extends RawNode>(
+  all: readonly NodeOrigin<N>[],
+  roots: readonly RawNode[]
+): NodeOrigin<N>[] {
+  const placed = new Set<RawNode>();
+  const walk = (nodes: readonly RawNode[]): void => {
     for (const node of nodes) {
       if (placed.has(node)) continue;
       placed.add(node);
@@ -181,7 +184,9 @@ export function strandedNodes(all: readonly NodeOrigin[], roots: readonly TscnNo
  * so no scene builds. Positional, unlike {@link strandedNodes}: the engine's root is
  * `i == 0`, while `buildSceneTree` prefers a parentless heading wherever it sits.
  */
-export function rootDeclaringParent(all: readonly NodeOrigin[]): NodeOrigin | undefined {
+export function rootDeclaringParent<N extends RawNode>(
+  all: readonly NodeOrigin<N>[]
+): NodeOrigin<N> | undefined {
   // The declared attribute, not `node.parent`, which is unset for `parent=""`:
   // `add_node_path` indexes any value (`packed_scene.cpp:2307-2311`), so an empty one
   // still reaches the refusal.
@@ -205,6 +210,6 @@ export function rootStatesNoIdentifier(root: RawNode | undefined): boolean {
  * `:394-397`), so the load faults. Positional like {@link rootDeclaringParent}: the
  * builder may root such a heading as readily as strand it.
  */
-export function emptyParentHeadings(all: readonly NodeOrigin[]): NodeOrigin[] {
+export function emptyParentHeadings<N extends RawNode>(all: readonly NodeOrigin<N>[]): NodeOrigin<N>[] {
   return all.filter(({ declaredParent }) => declaredParent === '');
 }

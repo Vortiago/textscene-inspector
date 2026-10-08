@@ -5,6 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { TscnParserCore } from './TscnParserCore.js';
 import type { NodeCreator, ParseObserver } from './TscnParserCore.js';
+import type { TscnNode } from './types.js';
 
 describe('TscnParserCore', () => {
   const parser = new TscnParserCore();
@@ -18,7 +19,7 @@ describe('TscnParserCore', () => {
 mesh = SubResource("mesh_1")
 `;
 
-      const mockCreator = vi.fn<NodeCreator>((heading, properties) => ({
+      const mockCreator = vi.fn<NodeCreator<TscnNode>>((heading, properties) => ({
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         parent: heading.attributes.parent,
@@ -62,7 +63,7 @@ mesh = SubResource("mesh_1")
     it('should handle null return from node creator', () => {
       const content = `[node name="Root" type="Node3D"]`;
 
-      const mockCreator = vi.fn<NodeCreator>(() => null);
+      const mockCreator = vi.fn<NodeCreator<TscnNode>>(() => null);
 
       const scene = parser.parse(content, mockCreator);
 
@@ -78,7 +79,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 cast_shadow = 1
 `;
 
-      const mockCreator = vi.fn<NodeCreator>((heading, properties) => ({
+      const mockCreator = vi.fn<NodeCreator<TscnNode>>((heading, properties) => ({
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         properties,
@@ -104,7 +105,7 @@ cast_shadow = 1
 [node name="Root" type="Node3D"]
 `;
 
-      const mockCreator = vi.fn<NodeCreator>((heading, properties) => ({
+      const mockCreator = vi.fn<NodeCreator<TscnNode>>((heading, properties) => ({
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         properties,
@@ -130,7 +131,7 @@ cast_shadow = 1
 [node name="Root" type="Node3D"]
 `;
 
-      const mockCreator = vi.fn<NodeCreator>((heading, properties) => ({
+      const mockCreator = vi.fn<NodeCreator<TscnNode>>((heading, properties) => ({
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         properties,
@@ -190,7 +191,7 @@ item/0/mesh = ExtResource("1_tree")
 [node name="GrandChild" type="Node3D" parent="Child1"]
 `;
 
-      const mockCreator: NodeCreator = (heading, properties) => ({
+      const mockCreator: NodeCreator<TscnNode> = (heading, properties) => ({
         rawProperties: {},
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
@@ -220,7 +221,7 @@ item/0/mesh = ExtResource("1_tree")
 
   describe('edge cases', () => {
     it('should handle empty content', () => {
-      const mockCreator = vi.fn<NodeCreator>();
+      const mockCreator = vi.fn<NodeCreator<TscnNode>>();
       const scene = parser.parse('', mockCreator);
 
       expect(mockCreator).not.toHaveBeenCalled();
@@ -238,7 +239,7 @@ item/0/mesh = ExtResource("1_tree")
 ; Another comment
 `;
 
-      const mockCreator = vi.fn<NodeCreator>((heading, properties) => ({
+      const mockCreator = vi.fn<NodeCreator<TscnNode>>((heading, properties) => ({
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         properties,
@@ -258,7 +259,7 @@ item/0/mesh = ExtResource("1_tree")
 [node name="Valid" type="Node3D"]
 `;
 
-      const mockCreator = vi.fn<NodeCreator>((heading, properties) => ({
+      const mockCreator = vi.fn<NodeCreator<TscnNode>>((heading, properties) => ({
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         properties,
@@ -275,7 +276,7 @@ item/0/mesh = ExtResource("1_tree")
   });
 
   describe('observer seam', () => {
-    const simpleCreator: NodeCreator = (heading, properties) => ({
+    const simpleCreator: NodeCreator<TscnNode> = (heading, properties) => ({
       rawProperties: {},
       name: heading.attributes.name || '',
       type: heading.attributes.type || '',

@@ -1,6 +1,6 @@
 /** The linter's diagnostic, rule and grounding types for `.tscn` validation. */
 
-import type { BuiltSection, RawNode, RawScene, TscnScene } from '../parser/types';
+import type { BuiltSection, RawNode, RawScene } from '../parser/types';
 
 /**
  * `error`: Godot refuses or alters the value or cannot load the file, or the linter failed. Fails CI.
@@ -125,7 +125,7 @@ export interface StrictParseResult {
    * `errors` is non-empty: a bad property value does not invalidate the tree,
    * and the rule phase needs it. Absent only if the scanner could not run.
    */
-  scene?: TscnScene;
+  scene?: RawScene;
   /** Where each `[ext_resource]`, `[sub_resource]`, `[node]` and `.tres` `[resource]` section of `scene` sits. */
   lines: SourceLines;
 }

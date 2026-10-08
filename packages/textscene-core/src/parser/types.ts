@@ -9,8 +9,8 @@ import type { Node3DProperties } from '../nodes/base/node3d/types';
  * `TscnNode` because only `strandedNodes` and `rootDeclaringParent` read it, both
  * against the returned tree.
  */
-export interface NodeOrigin {
-  readonly node: TscnNode;
+export interface NodeOrigin<N extends RawNode = TscnNode> {
+  readonly node: N;
   /** 1-based line of the node's own heading. */
   readonly line: number;
   /**
@@ -29,28 +29,29 @@ export interface NodeOrigin {
   readonly recoverableById?: boolean;
 }
 
-export interface TscnScene {
+/** A parsed scene. `N` is the node the parser built: a `TscnNode`, or the strict parser's `RawNode`. */
+export interface TscnScene<N extends RawNode = TscnNode> {
   /** Root nodes in the scene tree. */
-  nodes: TscnNode[];
+  nodes: N[];
   externalResources: TscnExternalResource[];
   internalResources: TscnInternalResource[];
   /**
    * Headings whose `parent=` path resolved against nothing, so they are not in
    * `nodes`. Absent rather than empty when nothing was stranded.
    */
-  orphanedNodes?: readonly NodeOrigin[];
+  orphanedNodes?: readonly NodeOrigin<N>[];
   /**
    * The root heading, when it declares a `parent=`, which Godot refuses
    * (`packed_scene.cpp:218-219`). Absent otherwise, since a present-but-empty key
    * would change the object shape the render path sees for every well-formed scene.
    */
-  rootWithParent?: NodeOrigin;
+  rootWithParent?: NodeOrigin<N>;
   /**
    * Headings spelling `parent=""`, which faults the text loader
    * (`resource_format_text.cpp:206-207`). Absent rather than empty. Not a subset of the
    * fields above: such a heading has no `node.parent`, so it is seated, not stranded.
    */
-  emptyParentHeadings?: readonly NodeOrigin[];
+  emptyParentHeadings?: readonly NodeOrigin<N>[];
   /**
    * A `.tres` file's `[gd_resource type=]`, the class the loader builds its `[resource]` body as
    * (`resource_format_text.cpp:1166`, `:741`). Absent in a `.tscn`, and where the header names no type.
@@ -78,13 +79,13 @@ export interface TscnScene {
 
 /**
  * The **Raw view** of a node: `rawProperties`, the literals both parsers publish, and no
- * `properties`, which holds typed render values on the lenient tree and raw ones on the strict
- * tree. A `TscnNode` is a `RawNode`, so a helper typed on it takes either tree.
+ * typed `properties`. The strict parser builds this. A `TscnNode` is a `RawNode`, so a helper
+ * typed on it takes either tree.
  */
 export type RawNode = Omit<TscnNode, 'properties' | 'children'> & { children: RawNode[] };
 
-/** The **Raw view** of a scene: every node a {@link RawNode}. */
-export type RawScene = Omit<TscnScene, 'nodes'> & { nodes: RawNode[] };
+/** The **Raw view** of a scene, which the strict parser returns. */
+export type RawScene = TscnScene<RawNode>;
 
 export interface TscnNode {
   name: string;
@@ -93,13 +94,13 @@ export interface TscnNode {
   /** Parent node path: "." for the root's children, "NodeName" for a named parent. */
   parent?: string;
   children: TscnNode[];
-  /** Type-specific properties, for example Node3DProperties for a Node3D. */
+  /** Type-specific properties from the lenient parser, for example Node3DProperties for a Node3D. */
   properties: Node3DProperties | Record<string, unknown>;
   /**
    * Raw body properties as written, published by both parsers
    * (`parser/rawPropertyParity.test.ts`), so read this from code the linter and the
-   * render path share. `properties` differs by parser. It also lets a type-less
-   * instance node's overrides be re-parsed against the instanced root's type.
+   * render path share. It also lets a type-less instance node's overrides be re-parsed
+   * against the instanced root's type.
    */
   rawProperties: Record<string, string>;
   /**

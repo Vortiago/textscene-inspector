@@ -9,12 +9,12 @@ import { StrictTscnParser } from '../../../../linter/StrictTscnParser';
 import { ruleRegistry } from '../../../../linter/RuleRegistry';
 import { readFixture } from '../../../../linter/testing/fixtureCheck';
 import type { Diagnostic } from '../../../../linter/types';
-import type { TscnNode } from '../../../../parser/types';
+import type { RawNode } from '../../../../parser/types';
 import './linterParser';
 import { tabBarValidationRule } from './linter';
 
 /** Depth-first search for the first TabBar in a parsed tree. */
-function findTabBar(nodes: readonly TscnNode[]): TscnNode | undefined {
+function findTabBar(nodes: readonly RawNode[]): RawNode | undefined {
   for (const node of nodes) {
     if (node.type === 'TabBar') return node;
     const inChildren = findTabBar(node.children);

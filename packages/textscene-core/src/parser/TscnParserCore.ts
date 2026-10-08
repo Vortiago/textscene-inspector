@@ -8,7 +8,7 @@
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/deprecated.js';
 import type {
   TscnScene,
-  TscnNode,
+  RawNode,
   TscnExternalResource,
   TscnInternalResource,
   TscnMainResource,
@@ -39,10 +39,13 @@ import * as logger from '../logger.js';
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
 
 /**
- * Builds a TscnNode from a parsed heading and its properties. The renderer uses
- * NodeRegistry. The linter builds a plain node with no three.js dependency.
+ * Builds a node from a parsed heading and its properties. The renderer builds a `TscnNode`
+ * through NodeRegistry. The linter builds a `RawNode` with no three.js dependency.
  */
-export type NodeCreator = (heading: ParsedHeading, properties: Record<string, string>) => TscnNode | null;
+export type NodeCreator<N extends RawNode> = (
+  heading: ParsedHeading,
+  properties: Record<string, string>
+) => N | null;
 
 /**
  * Hooks into the scanning loop for strict (linting) consumers. The observer is
@@ -94,7 +97,11 @@ export class TscnParserCore {
    * @param observer - Optional hooks for strict consumers (errors, sections, properties)
    * @returns Parsed scene structure
    */
-  parse(content: string, nodeCreator: NodeCreator, observer?: ParseObserver): TscnScene {
+  parse<N extends RawNode>(
+    content: string,
+    nodeCreator: NodeCreator<N>,
+    observer?: ParseObserver
+  ): TscnScene<N> {
     // Debug, not info: an editor host parses on each keystroke.
     logger.debug('[Parser] Starting TSCN parsing');
     // Split on CRLF or LF: a trailing \r on each line of a Windows-authored file
@@ -104,7 +111,7 @@ export class TscnParserCore {
     // Every node beside its heading's line, in scan order. The line stays off `TscnNode`:
     // the orphan report reads it here, and a strict observer gets it from `onSectionBuilt`.
     // One array, not a parallel `nodes` list, which two push sites would keep in step.
-    const origins: NodeOrigin[] = [];
+    const origins: NodeOrigin<N>[] = [];
     const externalResources: TscnExternalResource[] = [];
     const internalResources: TscnInternalResource[] = [];
     // One per file: the loader refuses any tag after the `[resource]` body

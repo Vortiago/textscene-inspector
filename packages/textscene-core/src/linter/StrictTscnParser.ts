@@ -4,7 +4,7 @@
  * renderer runs the same loop with no observer.
  */
 
-import type { BuiltSection, TscnNode } from '../parser/types.js';
+import type { BuiltSection, RawNode } from '../parser/types.js';
 import type { ParseError, SectionLines, StrictParseResult } from './types.js';
 import { TscnParserCore } from '../parser/TscnParserCore.js';
 import type { ParseObserver } from '../parser/TscnParserCore.js';
@@ -16,12 +16,12 @@ import { ownsNilMessage } from './propertyValidator.js';
 import { INSTANCE_PLACEHOLDER_TYPE, isNilLiteral } from '../godot/index.js';
 
 /**
- * A TscnNode built without NodeRegistry, so without three.js. `properties` and `rawProperties` are the same bag, as the
- * lenient tree's `rawProperties` holds the raw literals too, so a helper the linter and the renderer share reads one name
- * from either parser (`parser/rawPropertyParity.test.ts`). The shared object costs a reference.
+ * A **Raw view** node, built without NodeRegistry, so without three.js. It has no typed `properties`: a helper the
+ * linter and the renderer share reads `rawProperties`, which holds the same literals on either tree
+ * (`parser/rawPropertyParity.test.ts`).
  */
-function createSimpleNode(heading: ParsedHeading, properties: Record<string, string>): TscnNode {
-  const node: TscnNode = {
+function createRawNode(heading: ParsedHeading, rawProperties: Record<string, string>): RawNode {
+  const node: RawNode = {
     name: heading.attributes.name || '',
     // The heading's own `type=`, else the identifier it states instead. Not `index=`: that is the sibling position
     // Godot restores an override at. An override heading states no type, and every reader treats empty as unknowable.
@@ -30,8 +30,7 @@ function createSimpleNode(heading: ParsedHeading, properties: Record<string, str
       (heading.attributes.instance_placeholder ? INSTANCE_PLACEHOLDER_TYPE : '') ||
       heading.attributes.instance ||
       '',
-    properties,
-    rawProperties: properties,
+    rawProperties,
     children: [], // buildSceneTree fills it.
   };
 
@@ -262,7 +261,7 @@ export class StrictTscnParser {
       },
     };
 
-    const scene = this.core.parse(content, createSimpleNode, observer);
+    const scene = this.core.parse(content, createRawNode, observer);
 
     // The scene comes back even when a property failed: a bad value does not invalidate the tree. Withholding it
     // would skip the rule phase, so one out-of-range property would silence every semantic rule in the file, and a

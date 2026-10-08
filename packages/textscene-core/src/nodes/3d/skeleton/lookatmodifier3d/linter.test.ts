@@ -9,11 +9,11 @@ import { StrictTscnParser } from '../../../../linter/StrictTscnParser';
 import { readFixture } from '../../../../linter/testing/fixtureCheck';
 import { lookAtModifier3DAxisRule } from './linter';
 import './linterParser';
-import type { TscnNode } from '../../../../parser/types';
+import type { RawNode } from '../../../../parser/types';
 import { reportsOf } from '../../../../linter/testing/tierLists';
 
 /** Depth-first search for the first node of `type`, at any depth. */
-function findByType(node: TscnNode, type: string): TscnNode | undefined {
+function findByType(node: RawNode, type: string): RawNode | undefined {
   if (node.type === type) return node;
   for (const child of node.children) {
     const found = findByType(child, type);

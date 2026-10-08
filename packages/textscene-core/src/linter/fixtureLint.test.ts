@@ -16,7 +16,8 @@ import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
 import { errorsOf } from './testing/tierLists';
-import { godotTextFiles, SCENES_ROOT as scenesRoot } from './testing/sceneCorpus.js';
+import { fixturesDir as fixturesRoot, sceneFiles } from '../parser/testing/parserKit.js';
+import { isGodotTextResourcePath } from '../godot/index.js';
 
 /**
  * `unit-*` fixtures allowed an advisory (warning or info), keyed by the exact rules they may trip and asserted as set
@@ -92,7 +93,7 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
  */
 const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
   (
-    JSON.parse(readFileSync(join(scenesRoot, 'fixtures', 'negative-fixtures.json'), 'utf8')) as {
+    JSON.parse(readFileSync(join(fixturesRoot(), 'negative-fixtures.json'), 'utf8')) as {
       files: string[];
     }
   ).files
@@ -101,7 +102,7 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 /** How many fixtures that list is meant to hold; see the pin at the bottom. */
 const NEGATIVE_FIXTURE_COUNT = 5;
 
-const fixturesDir = join(scenesRoot, 'fixtures');
+const fixturesDir = fixturesRoot();
 
 /**
  * The project a fixture's `res://` paths resolve in: the nearest `project.godot` from its folder up to
@@ -158,7 +159,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
   let all: Fixture[] = [];
 
   beforeAll(async () => {
-    all = await Promise.all(godotTextFiles(fixturesDir).map(fixture));
+    all = await Promise.all(sceneFiles(fixturesDir, isGodotTextResourcePath).map(fixture));
     diagnosticsByName = new Map(
       await Promise.all(all.map(async (linted) => [linted.name, await lintFixture(linted)] as const))
     );

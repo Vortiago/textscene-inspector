@@ -7,13 +7,13 @@
 
 import { describe, expect, it } from 'vitest';
 import type { RuleContext } from '../../../linter/types';
-import type { TscnNode, TscnScene } from '../../../parser/types';
+import type { RawNode, TscnNode, TscnScene } from '../../../parser/types';
 import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
 import { occluderInstance3DConfigurationWarningsRule } from './linter';
 
 /** Depth-first search for the first node of a type, over a parsed scene tree. */
-function findByType(nodes: TscnNode[], type: string): TscnNode | undefined {
+function findByType(nodes: RawNode[], type: string): RawNode | undefined {
   for (const node of nodes) {
     if (node.type === type) return node;
     const found = findByType(node.children ?? [], type);
