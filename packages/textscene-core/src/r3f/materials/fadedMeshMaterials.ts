@@ -11,19 +11,19 @@ import type { MeshSurface } from '../../resources/formats/glb/meshInstances';
 import type { FadedSurface } from './swappedMaterials';
 import { surfaceAlphaProps, type SurfaceAlphaSource } from './surfaceAlphaPatch';
 
-/** Each unfaded material's alpha-pass one. Written only by `registerAlphaPassMaterial`. */
+/** Each unfaded material's alpha-pass builder. Written only by `registerAlphaPassBuilder`. */
+const alphaPassBuilders = new WeakMap<THREE.Material, () => THREE.Material>();
+/** Each unfaded material's alpha-pass one, built on its first fade. Written only by `alphaPassOf`. */
 const alphaPassMaterials = new WeakMap<THREE.Material, THREE.Material>();
 /** Each unfaded material by its alpha-pass material, the inverse of `alphaPassMaterials`. */
 const unfadedMaterials = new WeakMap<THREE.Material, THREE.Material>();
 
 /**
- * Gives `unfaded` the material it draws as in the alpha pass, which is disposed with it. A
- * material derived from Godot's own registers the variant its derivation built, in place of a copy.
+ * Gives `unfaded` what builds the material it draws as in the alpha pass, on its first fade. A
+ * material derived from Godot's own registers its derivation's variant, in place of a copy.
  */
-export function registerAlphaPassMaterial(unfaded: THREE.Material, alphaPass: THREE.Material): void {
-  alphaPassMaterials.set(unfaded, alphaPass);
-  unfadedMaterials.set(alphaPass, unfaded);
-  unfaded.addEventListener('dispose', () => alphaPass.dispose());
+export function registerAlphaPassBuilder(unfaded: THREE.Material, build: () => THREE.Material): void {
+  alphaPassBuilders.set(unfaded, build);
 }
 
 /** The material a slot holds unfaded: `material` itself, unless it is an alpha-pass material. */
@@ -41,13 +41,22 @@ function importedAlphaSource(material: THREE.Material): SurfaceAlphaSource {
   return { readsAlbedoAlpha: material.transparent || isMask, opaqueAfterCut: isMask };
 }
 
-/**
- * `material` in the alpha pass, built once: blended, with no depth write, as Godot's default
- * DEPTH_DRAW_OPAQUE_ONLY writes none there.
- */
+/** `material` in the alpha pass, built once and disposed with it. */
 function alphaPassOf(material: THREE.Material): THREE.Material {
   const known = alphaPassMaterials.get(material);
   if (known) return known;
+  const alphaPass = alphaPassBuilders.get(material)?.() ?? alphaPassCopy(material);
+  alphaPassMaterials.set(material, alphaPass);
+  unfadedMaterials.set(alphaPass, material);
+  material.addEventListener('dispose', () => alphaPass.dispose());
+  return alphaPass;
+}
+
+/**
+ * A copy of `material` for the alpha pass: blended, with no depth write, as Godot's default
+ * DEPTH_DRAW_OPAQUE_ONLY writes none there.
+ */
+function alphaPassCopy(material: THREE.Material): THREE.Material {
   const copy = material.clone();
   copy.transparent = true;
   copy.depthWrite = false;
@@ -57,7 +66,6 @@ function alphaPassOf(material: THREE.Material): THREE.Material {
   });
   if (blending !== undefined) copy.blending = blending;
   if (injection) injectProgram(copy, injection);
-  registerAlphaPassMaterial(material, copy);
   return copy;
 }
 
@@ -67,20 +75,25 @@ export class FadedMeshMaterials implements FadedSurface {
   applyFade(fade: number): void {
     const isAlphaPass = forcesAlphaPass(fade);
     const alpha = fadeAlpha(fade);
-    const place = (current: THREE.Material): THREE.Material => {
-      const unfaded = unfadedMaterial(current);
-      if (!isAlphaPass) return unfaded;
-      const alphaPass = alphaPassOf(unfaded);
-      alphaPass.opacity = unfaded.opacity * alpha;
-      return alphaPass;
-    };
     const { material } = this.mesh;
-    if (Array.isArray(material)) material.forEach((current, i) => (material[i] = place(current)));
-    else this.mesh.material = place(material);
+    if (!Array.isArray(material)) {
+      this.mesh.material = placed(material, isAlphaPass, alpha);
+      return;
+    }
+    for (let i = 0; i < material.length; i++) material[i] = placed(material[i]!, isAlphaPass, alpha);
   }
 
   /** Puts each slot's unfaded material back. */
   restore(): void {
     this.applyFade(1);
   }
+}
+
+/** The material a slot holding `current` draws at the fade: its unfaded one, or that one's alpha pass. */
+function placed(current: THREE.Material, isAlphaPass: boolean, alpha: number): THREE.Material {
+  const unfaded = unfadedMaterial(current);
+  if (!isAlphaPass) return unfaded;
+  const alphaPass = alphaPassOf(unfaded);
+  alphaPass.opacity = unfaded.opacity * alpha;
+  return alphaPass;
 }

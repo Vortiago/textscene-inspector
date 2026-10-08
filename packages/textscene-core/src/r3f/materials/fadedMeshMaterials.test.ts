@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { FadedMeshMaterials, registerAlphaPassMaterial, unfadedMaterial } from './fadedMeshMaterials';
+import { FadedMeshMaterials, registerAlphaPassBuilder, unfadedMaterial } from './fadedMeshMaterials';
 
 /** A fade whose alpha is 39/255: inside the alpha pass. */
 const MARGIN_FADE = 0.15625;
@@ -9,11 +9,11 @@ function meshOf(material: THREE.Material | THREE.Material[]): THREE.Mesh {
   return new THREE.Mesh(new THREE.BufferGeometry(), material);
 }
 
-describe('registerAlphaPassMaterial', () => {
-  it('draws the registered variant in the alpha pass', () => {
+describe('registerAlphaPassBuilder', () => {
+  it('draws the built variant in the alpha pass', () => {
     const unfaded = new THREE.MeshStandardMaterial();
     const alphaPass = new THREE.MeshStandardMaterial({ transparent: true });
-    registerAlphaPassMaterial(unfaded, alphaPass);
+    registerAlphaPassBuilder(unfaded, () => alphaPass);
     const mesh = meshOf(unfaded);
 
     new FadedMeshMaterials(mesh).applyFade(MARGIN_FADE);
@@ -21,12 +21,23 @@ describe('registerAlphaPassMaterial', () => {
     expect(mesh.material).toBe(alphaPass);
   });
 
-  it('disposes the variant with its unfaded material', () => {
+  it('builds nothing before the first fade (edge case)', () => {
+    const build = vi.fn(() => new THREE.MeshStandardMaterial());
+    const unfaded = new THREE.MeshStandardMaterial();
+    registerAlphaPassBuilder(unfaded, build);
+
+    new FadedMeshMaterials(meshOf(unfaded)).applyFade(1);
+
+    expect(build).not.toHaveBeenCalled();
+  });
+
+  it('disposes the built variant with its unfaded material', () => {
     const unfaded = new THREE.MeshStandardMaterial();
     const alphaPass = new THREE.MeshStandardMaterial();
     const disposed = vi.fn();
     alphaPass.addEventListener('dispose', disposed);
-    registerAlphaPassMaterial(unfaded, alphaPass);
+    registerAlphaPassBuilder(unfaded, () => alphaPass);
+    new FadedMeshMaterials(meshOf(unfaded)).applyFade(MARGIN_FADE);
 
     unfaded.dispose();
 
@@ -37,10 +48,10 @@ describe('registerAlphaPassMaterial', () => {
 describe('unfadedMaterial', () => {
   it('gives the unfaded material of an alpha-pass one', () => {
     const unfaded = new THREE.MeshStandardMaterial();
-    const alphaPass = new THREE.MeshStandardMaterial();
-    registerAlphaPassMaterial(unfaded, alphaPass);
+    const mesh = meshOf(unfaded);
+    new FadedMeshMaterials(mesh).applyFade(MARGIN_FADE);
 
-    expect(unfadedMaterial(alphaPass)).toBe(unfaded);
+    expect(unfadedMaterial(mesh.material as THREE.Material)).toBe(unfaded);
   });
 
   it('gives a material with no alpha-pass role as itself', () => {
