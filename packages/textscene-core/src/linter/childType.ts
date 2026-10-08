@@ -4,9 +4,9 @@
  * child-presence rule asks about direct children and never walks the subtree.
  */
 
-import type { TscnNode } from '../parser/types.js';
 import { isTypeOpaque } from './parentType.js';
 import { descendsFrom } from '../godot/nodeBaseTypes.js';
+import type { RawNode } from '../parser/types.js';
 
 /**
  * Whether a direct child is one of `types`, a subclass included, since a subclass inherits the
@@ -14,7 +14,7 @@ import { descendsFrom } from '../godot/nodeBaseTypes.js';
  * or override heading, or an uncatalogued GDExtension class, has its class elsewhere, and a missed
  * warning beats a false one, the call `resolveNodePath` makes.
  */
-export function hasChildOfType(node: TscnNode, types: readonly string[]): boolean {
+export function hasChildOfType(node: RawNode, types: readonly string[]): boolean {
   return node.children.some(
     (child) => isTypeOpaque(child) || types.some((type) => descendsFrom(child.type, type))
   );

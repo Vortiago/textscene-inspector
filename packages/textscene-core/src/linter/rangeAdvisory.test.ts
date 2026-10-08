@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { rangeAdvisories, type RangeAdvisoryTable, type WarningArm } from './rangeAdvisory.js';
-import type { TscnNode } from '../parser/types.js';
+import type { RawNode } from '../parser/types.js';
 
 const arm: WarningArm = {
   severity: 'warning',
@@ -14,24 +14,11 @@ const arm: WarningArm = {
   grounding: { kind: 'engine', at: 'light_3d.cpp:389' },
 };
 
-function nodeWith(properties: Record<string, string>): TscnNode {
-  return { rawProperties: {}, name: 'Test', type: 'TestNode', children: [], properties };
+function nodeWith(properties: Record<string, string>): RawNode {
+  return { rawProperties: properties, name: 'Test', type: 'TestNode', children: [] };
 }
 
 describe('rangeAdvisories', () => {
-  it('returns [] when properties are not a record', () => {
-    const node = {
-      name: 'N',
-      type: 'T',
-      children: [],
-      properties: null as unknown as Record<string, string>,
-      rawProperties: {},
-    };
-    expect(
-      rangeAdvisories(node, { x: [{ over: 10, message: () => 'm', cite: 'light_3d.cpp:389' }] }, arm)
-    ).toEqual([]);
-  });
-
   it('skips a property that is absent from the node', () => {
     const node = nodeWith({ other: '999' });
     expect(

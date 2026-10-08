@@ -5,7 +5,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties, extractNodePath } from '../../../linter/linterUtils.js';
+import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { boolSlotValue } from '../../../godot/index.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
@@ -42,11 +42,7 @@ function checkAnimationTree(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  if (!isValidProperties(node.properties)) {
-    return diagnostics;
-  }
-
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // An AnimationTree without a tree_root does nothing. A cleared slot
   // (`tree_root = null`) counts as absent.

@@ -4,7 +4,7 @@
  * 2D stage with it, without touching live THREE objects.
  */
 
-import type { TscnNode } from '../parser/types';
+import type { RawNode, TscnNode } from '../parser/types';
 import { liveNodeChain, type LiveTreeContext } from './liveSceneTree';
 import { parentLookup, type ParentLookup } from '../linter/parentType.js';
 import { resolveGlobalTransform2D } from '../nodes/canvasitem/shared/globalTransform2D.js';
@@ -13,8 +13,8 @@ import { resolveGlobalTransform2D } from '../nodes/canvasitem/shared/globalTrans
  * The parent lookup over a live chain, root first. A collapsed instance carries its
  * sub-scene root's type, so only an instance whose scene is not cached stays opaque.
  */
-function chainParentOf(chain: readonly TscnNode[]): (child: TscnNode) => ParentLookup {
-  const parents = new Map(chain.slice(1).map((child, i): [TscnNode, TscnNode] => [child, chain[i]!]));
+function chainParentOf(chain: readonly RawNode[]): (child: RawNode) => ParentLookup {
+  const parents = new Map(chain.slice(1).map((child, i): [RawNode, RawNode] => [child, chain[i]!]));
   return (child) => parentLookup(parents.get(child));
 }
 

@@ -4,7 +4,7 @@
  * and the ext twin at `:138`). The registry says which keys are slots (`createResourceReferenceValidator` marks them).
  */
 
-import type { BuiltSection, TscnNode, TscnScene } from '../parser/types.js';
+import type { BuiltSection, RawNode, RawScene } from '../parser/types.js';
 import type { Diagnostic, SourceLines } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
@@ -25,7 +25,7 @@ interface Owner {
   readonly built: BuiltSection;
   readonly name: string;
   readonly type: string;
-  readonly properties: Record<string, unknown>;
+  readonly rawProperties: Record<string, string>;
 }
 
 /**
@@ -47,8 +47,7 @@ function sweep(
   lines: SourceLines,
   into: Diagnostic[]
 ): void {
-  for (const [key, value] of Object.entries(owner.properties)) {
-    if (typeof value !== 'string') continue;
+  for (const [key, value] of Object.entries(owner.rawProperties)) {
     const ref = resourceRef(value.trim());
     // Not a well-formed reference: its format is the strict parser's diagnostic, and a second error naming a
     // missing resource would be wrong.
@@ -73,21 +72,21 @@ function sweep(
 }
 
 /** Each dangling reference, on the line of the property that holds it. */
-export function danglingResourceDiagnostics(scene: TscnScene, lines: SourceLines): Diagnostic[] {
+export function danglingResourceDiagnostics(scene: RawScene, lines: SourceLines): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const ext = new Set((scene.externalResources ?? []).map((r) => r.id));
+  const ext = new Set(scene.externalResources.map((r) => r.id));
   const int = new Set<string>();
-  const all = new Set((scene.internalResources ?? []).map((r) => r.id));
+  const all = new Set(scene.internalResources.map((r) => r.id));
 
   // File order: `int_resources[id] = res` lands as each heading is read (`:629`), ahead of its body, so a body sees
   // the ids above it and its own, and a forward reference dangles.
-  for (const resource of scene.internalResources ?? []) {
+  for (const resource of scene.internalResources) {
     int.add(resource.id);
     const owner: Owner = {
       built: resource,
       name: resource.id,
       type: resource.type,
-      properties: resource.data,
+      rawProperties: resource.data,
     };
     sweep(owner, { ext, int }, all, lines, diagnostics);
   }
@@ -101,13 +100,13 @@ export function danglingResourceDiagnostics(scene: TscnScene, lines: SourceLines
       built: mainResource,
       name: '<unknown>',
       type: scene.resourceType ?? '',
-      properties: mainResource.data,
+      rawProperties: mainResource.data,
     };
     sweep(owner, declared, none, lines, diagnostics);
   }
-  const visit = (node: TscnNode): void => {
-    const properties = node.properties as Record<string, unknown>;
-    sweep({ built: node, name: node.name, type: node.type, properties }, declared, none, lines, diagnostics);
+  const visit = (node: RawNode): void => {
+    const { name, type, rawProperties } = node;
+    sweep({ built: node, name, type, rawProperties }, declared, none, lines, diagnostics);
     for (const child of node.children) visit(child);
   };
   for (const node of scene.nodes) visit(node);

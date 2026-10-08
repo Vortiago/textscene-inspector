@@ -7,7 +7,6 @@
  * (`node_2d.cpp:501`).
  */
 
-import type { TscnNode } from '../../../parser/types.js';
 import { climbAncestors, type ParentLookup } from '../../../linter/parentType.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { VECTOR2_REGEX } from '../../../linter/validators/vectorValidators.js';
@@ -24,6 +23,7 @@ import {
   transform2DFromParts,
   type Transform2DColumns,
 } from '../../../godot/index.js';
+import type { RawNode } from '../../../parser/types.js';
 
 /** The vector as the slot holds it; `null` when the composition must not proceed. */
 function parseVector2(
@@ -56,10 +56,8 @@ function parseScalar(raw: string | undefined, fallback: number): number {
  * absent key takes Node2D's field default (`node_2d.h`): position `(0, 0)`, rotation `0`,
  * scale `(1, 1)` and skew `0`, together the identity.
  */
-function localTransform2D(node: TscnNode): Transform2DColumns | null {
+function localTransform2D(node: RawNode): Transform2DColumns | null {
   const props = node.rawProperties;
-  if (!props) return TRANSFORM2D_IDENTITY;
-
   const position = parseVector2(props.position, { x: 0, y: 0 });
   const rotation = parseScalar(props.rotation, 0);
   const scale = parseVector2(props.scale, { x: 1, y: 1 });
@@ -69,7 +67,7 @@ function localTransform2D(node: TscnNode): Transform2DColumns | null {
   return transform2DFromParts(rotation, scale, skew, position);
 }
 
-function isTopLevel(node: TscnNode): boolean {
+function isTopLevel(node: RawNode): boolean {
   return boolSlotValue(node.rawProperties.top_level) === true;
 }
 
@@ -84,8 +82,8 @@ export type GlobalTransform2DVerdict =
  * parent that is not a CanvasItem, so the climb stops at either. A `top_level` node
  * composes, then stops the climb above itself.
  */
-function canvasChain(node: TscnNode, parentOf: (child: TscnNode) => ParentLookup): TscnNode[] | null {
-  const chain: TscnNode[] = [node];
+function canvasChain(node: RawNode, parentOf: (child: RawNode) => ParentLookup): RawNode[] | null {
+  const chain: RawNode[] = [node];
   if (isTopLevel(node)) return chain;
 
   const search = climbAncestors<'terminus' | 'control'>(node, parentOf, (parent) => {
@@ -109,8 +107,8 @@ function canvasChain(node: TscnNode, parentOf: (child: TscnNode) => ParentLookup
  * and the cameras panel climbs the live tree.
  */
 export function resolveGlobalTransform2D(
-  node: TscnNode,
-  parentOf: (child: TscnNode) => ParentLookup
+  node: RawNode,
+  parentOf: (child: RawNode) => ParentLookup
 ): GlobalTransform2DVerdict {
   const chain = canvasChain(node, parentOf);
   if (chain === null) return { kind: 'unknowable' };

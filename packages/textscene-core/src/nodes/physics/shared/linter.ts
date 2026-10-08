@@ -18,7 +18,7 @@ const arms = {
 
 function checkCollisionObject3DScale(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const rawProps = node.properties as unknown as Record<string, string>;
+  const rawProps = node.rawProperties;
   if (rawProps.transform === undefined) return [];
 
   const scales = basisColumnScales(rawProps.transform);

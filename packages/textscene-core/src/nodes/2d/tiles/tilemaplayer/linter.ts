@@ -27,7 +27,7 @@ function checkTileMapLayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  const rawProps = node.properties as unknown as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   if (rawProps.tile_map_data && resourceSlotIsEmpty(rawProps.tile_set)) {
     reportArm(

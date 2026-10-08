@@ -7,7 +7,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
 import { resolveAimSettingLeaf } from './linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
@@ -57,8 +56,7 @@ function settingNumber(leaves: ReadonlyMap<string, string>, leaf: string, fallba
 
 function checkAimModifier3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
-  const properties = node.properties;
+  const properties = node.rawProperties;
 
   const diagnostics: Diagnostic[] = [];
   const settings = [...declaredSettings(properties)].sort(([a], [b]) => a - b);

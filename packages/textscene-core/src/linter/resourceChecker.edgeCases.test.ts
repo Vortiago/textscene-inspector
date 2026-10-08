@@ -6,10 +6,10 @@
 
 import { describe, it, expect } from 'vitest';
 import { checkResourceExists, resolveResourceSlot } from './resourceChecker.js';
-import type { TscnScene, TscnExternalResource } from '../parser/types.js';
+import type { RawScene, TscnExternalResource } from '../parser/types.js';
 
 /** An empty scene: every reference against it dangles or is no reference at all. */
-const emptyScene: TscnScene = { nodes: [], externalResources: [], internalResources: [] };
+const emptyScene: RawScene = { nodes: [], externalResources: [], internalResources: [] };
 
 describe('resolveResourceSlot', () => {
   it('reads every spelling of nothing as one empty slot', () => {
@@ -33,7 +33,7 @@ describe('resolveResourceSlot', () => {
   });
 
   it('carries the declared type of a reference that resolves', () => {
-    const scene: TscnScene = {
+    const scene: RawScene = {
       nodes: [],
       externalResources: [
         { id: 'tex_1', type: 'Texture2D', path: 'res://texture.png' },
@@ -67,7 +67,7 @@ describe('checkResourceExists', () => {
   // False puts a second, wrong "resource not found" beside it.
   describe('values that are not references at all', () => {
     it('is not dangling when the id is unquoted', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
@@ -77,7 +77,7 @@ describe('checkResourceExists', () => {
     });
 
     it('is not dangling when the parentheses are missing', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
@@ -87,7 +87,7 @@ describe('checkResourceExists', () => {
     });
 
     it('is not dangling when the constructor name is not a reference kind', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
@@ -97,7 +97,7 @@ describe('checkResourceExists', () => {
     });
 
     it('is not dangling for a plain string', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
@@ -107,7 +107,7 @@ describe('checkResourceExists', () => {
     });
 
     it('is not dangling for an empty string', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
@@ -120,7 +120,7 @@ describe('checkResourceExists', () => {
       // `variant_parser.cpp:699` reads a bare `null` as `Variant()` and every
       // `Ref<T>` setter takes it, so nothing is missing. Shared by every rule
       // that asks this question, so the arm is pinned here once.
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
@@ -130,7 +130,7 @@ describe('checkResourceExists', () => {
     });
 
     it('is not dangling for a malformed reference', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
@@ -146,7 +146,7 @@ describe('checkResourceExists', () => {
 
   describe('mixed SubResource and ExtResource', () => {
     it('should differentiate between SubResource and ExtResource with same ID', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [
           {
@@ -169,7 +169,7 @@ describe('checkResourceExists', () => {
     });
 
     it('should not find SubResource when only ExtResource exists', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [
           {
@@ -186,7 +186,7 @@ describe('checkResourceExists', () => {
     });
 
     it('should not find ExtResource when only SubResource exists', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [

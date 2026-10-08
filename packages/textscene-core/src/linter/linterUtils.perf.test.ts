@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { TscnNode, TscnScene } from '../parser/types.js';
+import type { RawNode, RawScene } from '../parser/types.js';
 import { findParentNode } from './linterUtils.js';
 import { resolveNodePath } from './nodePathResolve.js';
 
@@ -14,28 +14,28 @@ import { resolveNodePath } from './nodePathResolve.js';
  * A wide, shallow tree (root -> groups -> leaves), so the cost under test is
  * repeated full-tree walks per lookup, not stack depth.
  */
-function buildWideTree(leafCount: number): TscnNode[] {
+function buildWideTree(leafCount: number): RawNode[] {
   const groupSize = 50;
   const groupCount = Math.ceil(leafCount / groupSize);
-  const groups: TscnNode[] = [];
+  const groups: RawNode[] = [];
   let remaining = leafCount;
 
   for (let g = 0; g < groupCount; g++) {
     const countInGroup = Math.min(groupSize, remaining);
     remaining -= countInGroup;
-    const leaves: TscnNode[] = [];
+    const leaves: RawNode[] = [];
     for (let l = 0; l < countInGroup; l++) {
-      leaves.push({ rawProperties: {}, name: `Leaf${g}_${l}`, type: 'Node3D', children: [], properties: {} });
+      leaves.push({ rawProperties: {}, name: `Leaf${g}_${l}`, type: 'Node3D', children: [] });
     }
-    groups.push({ rawProperties: {}, name: `Group${g}`, type: 'Node3D', children: leaves, properties: {} });
+    groups.push({ rawProperties: {}, name: `Group${g}`, type: 'Node3D', children: leaves });
   }
 
-  return [{ rawProperties: {}, name: 'Root', type: 'Node3D', children: groups, properties: {} }];
+  return [{ rawProperties: {}, name: 'Root', type: 'Node3D', children: groups }];
 }
 
 /** Every leaf node in traversal order, for exercising one lookup per node. */
-function collectLeaves(roots: TscnNode[]): TscnNode[] {
-  const leaves: TscnNode[] = [];
+function collectLeaves(roots: RawNode[]): RawNode[] {
+  const leaves: RawNode[] = [];
   for (const root of roots) {
     for (const group of root.children) {
       for (const leaf of group.children) leaves.push(leaf);
@@ -45,8 +45,8 @@ function collectLeaves(roots: TscnNode[]): TscnNode[] {
 }
 
 /** Simulate what a semantic rule does per node: resolve its parent + a NodePath. */
-function runLookupsForEveryNode(roots: TscnNode[], leaves: TscnNode[]): void {
-  const scene = { nodes: roots } as TscnScene;
+function runLookupsForEveryNode(roots: RawNode[], leaves: RawNode[]): void {
+  const scene: RawScene = { nodes: roots, externalResources: [], internalResources: [] };
   for (const leaf of leaves) {
     findParentNode(roots, leaf);
     // "../Nonexistent" so resolution climbs (touching the parent index) and then
@@ -67,7 +67,7 @@ const REPEATS = 10;
  * Best-of-`trials` timing for repeated lookups against the same tree. The minimum
  * filters transient scheduler and GC stalls, like the RuleRegistry perf test.
  */
-function bestOf(roots: TscnNode[], leaves: TscnNode[], trials: number): number {
+function bestOf(roots: RawNode[], leaves: RawNode[], trials: number): number {
   let best = Infinity;
   for (let t = 0; t < trials; t++) {
     const start = performance.now();

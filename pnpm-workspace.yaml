@@ -60,6 +60,10 @@ catalog:
   pngjs: ^7.0.0
   '@types/pngjs': ^6.0.5
 
+  # The PR labeler test reads .github/labeler.yml and matches its globs as actions/labeler does.
+  minimatch: ^10.2.5
+  yaml: ^2.9.1
+
   # Real CSG boolean evaluation (ADR-0026). three-bvh-csg is used DIRECTLY rather
   # than via @react-three/csg, whose latest release hard-pins three-bvh-csg ^0.0.16
   # and three-mesh-bvh ^0.6.8, both below what 0.0.18 requires against three 0.185.

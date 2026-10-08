@@ -6,13 +6,13 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import type { TscnNode } from '../parser/types.js';
+import type { RawNode } from '../parser/types.js';
 import { hasChildOfType } from './childType.js';
 import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
 
 /** The smallest node shape the rules walk. */
-function node(type: string, children: TscnNode[] = []): TscnNode {
-  return { type, name: type, properties: {}, children } as unknown as TscnNode;
+function node(type: string, children: RawNode[] = []): RawNode {
+  return { type, name: type, rawProperties: {}, children };
 }
 
 describe('hasChildOfType', () => {
@@ -34,7 +34,7 @@ describe('hasChildOfType', () => {
   });
 
   it('counts a child whose class this file cannot state', () => {
-    const instanced = { ...node('ExtResource("1")'), instance: 'ExtResource("1")' } as TscnNode;
+    const instanced = { ...node('ExtResource("1")'), instance: 'ExtResource("1")' };
     expect(hasChildOfType(node('SubViewportContainer', [instanced]), ['SubViewport'])).toBe(true);
     // A GDExtension class the pinned catalog does not list may subclass the wanted type.
     expect(hasChildOfType(node('RetargetModifier3D', [node('MyExtensionSkeleton')]), ['Skeleton3D'])).toBe(

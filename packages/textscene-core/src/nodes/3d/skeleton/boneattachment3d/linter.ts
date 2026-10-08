@@ -28,7 +28,7 @@ const arms = {
 
 function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  const properties = node.properties as unknown as Record<string, string>;
+  const properties = node.rawProperties;
   if (boolSlotValue(properties.use_external_skeleton) === true) {
     // `extractNodePath` returns null for a non-literal and for NodePath(""),
     // which is exactly the "no path" case the engine's null cache covers.

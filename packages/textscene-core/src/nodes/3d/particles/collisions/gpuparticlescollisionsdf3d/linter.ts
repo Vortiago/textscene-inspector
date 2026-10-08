@@ -7,7 +7,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../../linter/types.js';
 import { ruleRegistry } from '../../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../../godot/nodeBaseTypes.js';
 import { ruleInt } from '../../../../../linter/validators/commonValidators.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../../linter/ruleArms.js';
@@ -18,9 +17,8 @@ const arms = {
 
 function checkGPUParticlesCollisionSDF3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
 
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
   // `bake_mask` defaults to 4294967295, all layers (gpu_particles_collision_3d.cpp:557), and
   // the serialiser omits a default, so only an explicit `bake_mask = 0` fires.
   if (rawProps.bake_mask === undefined) return [];

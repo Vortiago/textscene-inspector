@@ -5,13 +5,13 @@
  * missing to a rule.
  */
 
-import type { TscnScene } from '../parser/types.js';
 import {
   findExtResource,
   findSubResource,
   parseResourceReference,
 } from '../resources/SubResourceResolver.js';
 import { isNilLiteral } from '../godot/index.js';
+import type { RawScene } from '../parser/types.js';
 
 /**
  * An explicitly cleared resource slot, a bare `null` or `nil`: the author said
@@ -66,7 +66,7 @@ export type ResourceSlot =
  * @param scene - the parsed scene the reference is resolved against.
  * @param resourceRef - a raw property value, such as `SubResource("Box_1")`.
  */
-export function resolveResourceSlot(scene: TscnScene, resourceRef: string | undefined): ResourceSlot {
+export function resolveResourceSlot(scene: RawScene, resourceRef: string | undefined): ResourceSlot {
   const held = heldResource(resourceRef);
   if (held === undefined) return { kind: 'empty' };
   const parsed = parseResourceReference(held);
@@ -91,6 +91,6 @@ export function resolveResourceSlot(scene: TscnScene, resourceRef: string | unde
  * }
  * ```
  */
-export function checkResourceExists(scene: TscnScene, resourceRef: string): boolean {
+export function checkResourceExists(scene: RawScene, resourceRef: string): boolean {
   return resolveResourceSlot(scene, resourceRef).kind !== 'dangling';
 }

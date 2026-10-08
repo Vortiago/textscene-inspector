@@ -6,7 +6,7 @@
  * scene loadable (`:288-289`): always a warning.
  */
 
-import type { TscnExternalResource, TscnScene } from '../parser/types.js';
+import type { TscnExternalResource, StrictScene } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { gltfRefusalMessage, isGltfPath } from '../godot/index.js';
 import type { Diagnostic, SourceLines } from './types.js';
@@ -37,7 +37,7 @@ export interface UsedGltf {
  * replaces an earlier one (`resource_format_text.cpp:517-519`), and a use loads the one it names (`:142-144`). The
  * readable filter runs first, so a scene with no glTF walks no value.
  */
-export function usedGltfResources(scene: TscnScene): UsedGltf[] {
+export function usedGltfResources(scene: StrictScene): UsedGltf[] {
   const lastById = new Map(scene.externalResources.map((resource) => [resource.id, resource] as const));
   const readable = [...lastById.values()].filter(isReadableGltf);
   if (readable.length === 0) return [];

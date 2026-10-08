@@ -3,9 +3,9 @@
  * about competing cameras must compare scopes, never the whole scene.
  */
 
-import type { TscnNode, TscnScene } from '../parser/types.js';
 import { descendsFrom } from '../godot/nodeBaseTypes.js';
 import { searchAncestors } from './parentType.js';
+import type { RawNode, RawScene } from '../parser/types.js';
 
 /**
  * The nearest Viewport ancestor (`node.cpp:345-347`), or null for the scene's own
@@ -13,7 +13,7 @@ import { searchAncestors } from './parentType.js';
  * may be an instanced Viewport, and pooling its cameras into the outer scope is
  * the false positive this scoping prevents.
  */
-export function viewportScopeOf(scene: TscnScene, node: TscnNode): TscnNode | null | undefined {
+export function viewportScopeOf(scene: RawScene, node: RawNode): RawNode | null | undefined {
   // The slot is `get_viewport()`'s, for 2D (camera_2d.cpp:342) and 3D (camera_3d.cpp:186)
   // alike: the 2D group is `"__cameras_" + itos(vp.get_id())` (camera_2d.cpp:349) and
   // `make_current` gates on `!viewport->get_camera_2d()` (:354, viewport.h:764).
@@ -33,13 +33,13 @@ export function viewportScopeOf(scene: TscnScene, node: TscnNode): TscnNode | nu
  * but `nodes`. `claimants` returns the nodes that claim the slot.
  */
 export function viewportScopeCounter(
-  claimants: (roots: TscnNode[]) => Iterable<TscnNode>
-): (scene: TscnScene, scope: TscnNode | null) => number {
-  const tallies = new WeakMap<TscnNode[], Map<TscnNode | null, number>>();
+  claimants: (roots: RawNode[]) => Iterable<RawNode>
+): (scene: RawScene, scope: RawNode | null) => number {
+  const tallies = new WeakMap<RawNode[], Map<RawNode | null, number>>();
   return (scene, scope) => {
     let tally = tallies.get(scene.nodes);
     if (!tally) {
-      tally = new Map<TscnNode | null, number>();
+      tally = new Map<RawNode | null, number>();
       for (const claimant of claimants(scene.nodes)) {
         // A node whose viewport this file cannot determine is left out of the
         // contending set: `undefined` is never a scope a caller holds.

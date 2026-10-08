@@ -5,10 +5,10 @@
  * bare `"Body"` never reaches a sibling, an ancestor or an unrelated branch.
  */
 
-import type { TscnNode, TscnScene } from '../parser/types.js';
 import { isUnderInstance, sceneUniqueClaims } from './linterUtils.js';
 import { isTypeUnknowable, parentIdentity } from './parentType.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames } from '../godot/nodePath.js';
+import type { RawNode, RawScene } from '../parser/types.js';
 
 /**
  * What resolving a NodePath against the authored tree can say. `unknowable` is the
@@ -16,7 +16,7 @@ import { UNIQUE_NODE_PREFIX, nodePathWalkNames } from '../godot/nodePath.js';
  * that reports on a guess is worse than one that stays quiet.
  */
 export type NodePathResolution =
-  | { readonly status: 'found'; readonly node: TscnNode }
+  | { readonly status: 'found'; readonly node: RawNode }
   /** The walk ran off the authored tree exactly as the engine's would. */
   | { readonly status: 'missing' }
   /** The walk entered, started inside, or ended on content this file does not declare. */
@@ -26,7 +26,7 @@ const UNKNOWABLE: NodePathResolution = { status: 'unknowable' };
 const MISSING: NodePathResolution = { status: 'missing' };
 
 /** The direct child named `name`, mirroring `data.children.getptr(name)`. */
-function childNamed(node: TscnNode, name: string): TscnNode | undefined {
+function childNamed(node: RawNode, name: string): RawNode | undefined {
   return node.children.find((child) => child.name === name);
 }
 
@@ -37,11 +37,7 @@ function childNamed(node: TscnNode, name: string): TscnNode | undefined {
  * from the live SceneTree root (:1898 refuses them outside a tree), and the
  * autoloads and the main scene sit above a `.tscn`'s own root.
  */
-export function resolveNodePath(
-  scene: TscnScene,
-  referencingNode: TscnNode,
-  path: string
-): NodePathResolution {
+export function resolveNodePath(scene: RawScene, referencingNode: RawNode, path: string): NodePathResolution {
   if (path === '') return MISSING; // `p_path.is_empty()` (:1894)
   if (path.startsWith('/')) return UNKNOWABLE;
 
@@ -53,7 +49,7 @@ export function resolveNodePath(
   // file never lists.
   if (isUnderInstance(scene.nodes, referencingNode)) return UNKNOWABLE;
 
-  let current: TscnNode = referencingNode;
+  let current: RawNode = referencingNode;
 
   for (const name of segments) {
     if (name === '.') continue;

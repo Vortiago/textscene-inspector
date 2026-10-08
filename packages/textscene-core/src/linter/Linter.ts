@@ -1,6 +1,6 @@
 /** The linting engine for TSCN files: strict parsing, then the semantic rules. */
 
-import type { TscnScene, TscnNode } from '../parser/types.js';
+import type { RawNode, RawScene } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { orphanDiagnostics } from './orphanDiagnostics.js';
 import { danglingResourceDiagnostics } from './danglingResources.js';
@@ -203,7 +203,7 @@ export class Linter {
    * @param lines - Where each node of `scene` sits, for the heading each diagnostic is put on
    * @returns Array of diagnostics found
    */
-  private lintScene(scene: TscnScene, lines: SourceLines): Diagnostic[] {
+  private lintScene(scene: RawScene, lines: SourceLines): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
     for (const node of scene.nodes) {
@@ -217,15 +217,11 @@ export class Linter {
    * Lint a node and, recursively, its children. Every diagnostic it reports is about `node`
    * (`LintRule.check`), so one without a `location` goes on the node's heading.
    */
-  private lintNode(scene: TscnScene, node: TscnNode, lines: SourceLines, diagnostics: Diagnostic[]): void {
+  private lintNode(scene: RawScene, node: RawNode, lines: SourceLines, diagnostics: Diagnostic[]): void {
     const rules = ruleRegistry.getRulesForNodeType(node.type);
     const heading = headingLocation(lines, node);
 
-    const context: RuleContext = {
-      scene,
-      node,
-      properties: node.properties,
-    };
+    const context: RuleContext = { scene, node };
 
     for (const rule of rules) {
       // Appended one at a time: an indexed-family rule reports per index, and spreading 130,000 arguments

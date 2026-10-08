@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { StrictTscnParser } from '../../linter/StrictTscnParser.js';
 import { byName } from '../../linter/testing/sceneNodes.js';
 import { audioStream, node, scene } from '../../linter/testing/testkit.js';
-import type { TscnScene } from '../../parser/types.js';
+import type { RawScene } from '../../parser/types.js';
 import { isDrivenByAnimationAudioTrack } from './sharedLinterChecks.js';
 
 /** An Animation whose one audio track targets `path`, relative to the mixer's root. */
@@ -31,7 +31,7 @@ _data = {
 &"picked": SubResource("anim1")
 }`;
 
-function parse(text: string): TscnScene {
+function parse(text: string): RawScene {
   const parsed = new StrictTscnParser().parse(text).scene;
   if (!parsed) throw new Error('the scanner produced no scene');
   return parsed;
@@ -109,14 +109,14 @@ describe('isDrivenByAnimationAudioTrack', () => {
   });
 });
 
-/** Counts reads of `target.properties` from now on. */
-function countPropertyReads(target: { properties: unknown }): () => number {
+/** Counts reads of `target.rawProperties` from now on. */
+function countPropertyReads(target: { rawProperties: unknown }): () => number {
   let reads = 0;
-  const properties = target.properties;
-  Object.defineProperty(target, 'properties', {
+  const rawProperties = target.rawProperties;
+  Object.defineProperty(target, 'rawProperties', {
     get: () => {
       reads += 1;
-      return properties;
+      return rawProperties;
     },
   });
   return () => reads;

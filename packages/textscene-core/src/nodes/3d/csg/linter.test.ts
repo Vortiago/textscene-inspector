@@ -26,7 +26,7 @@ function reportsFor(content: string) {
   if (!scene) throw new Error('fixture failed to parse');
   const node = scene.nodes[0];
   if (!node) throw new Error('fixture must contain a node');
-  return csgShape3DDegenerateGeometryRule.check({ scene, node, properties: node.properties });
+  return csgShape3DDegenerateGeometryRule.check({ scene, node });
 }
 
 function csgScene(type: string, body: string): string {

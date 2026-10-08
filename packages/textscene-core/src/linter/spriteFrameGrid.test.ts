@@ -1,9 +1,9 @@
 /** The shared frame-key arms: each class gives the prefix and setter cites, and `spriteFrameGrid.ts` fixes the severities. */
 import { describe, it, expect } from 'vitest';
-import type { TscnNode } from '../parser/types.js';
+import type { RawNode } from '../parser/types.js';
 import { spriteFrameArms, spriteFrameDiagnostics } from './spriteFrameGrid.js';
 
-const node = { name: 'Hero', type: 'Sprite2D' } as TscnNode;
+const node: RawNode = { name: 'Hero', type: 'Sprite2D', rawProperties: {}, children: [] };
 const arms = spriteFrameArms('sprite2d', {
   frame: 'sprite_2d.cpp:296',
   frameCoords: 'sprite_2d.cpp:312',
