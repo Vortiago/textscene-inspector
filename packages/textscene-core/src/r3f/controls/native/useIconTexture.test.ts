@@ -40,7 +40,7 @@ describe('useIconTexture', () => {
     expect(result.current!.colorSpace).toBe(THREE.NoColorSpace);
   });
 
-  it('turns on the post-filter decode every painter draws it through', () => {
+  it('turns on the sRGB multiply every painter draws it through', () => {
     const { result } = renderHook(() => useCanvasSrgbDefines(useIconTexture(ICON)));
 
     expect(result.current).toEqual({ CANVAS_SRGB_MULTIPLY: '' });

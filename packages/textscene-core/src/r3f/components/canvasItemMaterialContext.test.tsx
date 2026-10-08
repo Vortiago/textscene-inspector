@@ -29,7 +29,10 @@ const SHADER_TRES = parseTresFile(`[gd_resource type="ShaderMaterial" format=3]
 [resource]
 `);
 
-const SCENE_EXT: TscnExternalResource[] = [{ id: 'm', type: 'Material', path: 'res://add.tres' }];
+const SCENE_EXT: TscnExternalResource[] = [
+  { id: 'm', type: 'Material', path: 'res://add.tres' },
+  { id: 'bin', type: 'Material', path: 'res://add.res' },
+];
 const SCENE_SUB: TscnInternalResource[] = [
   { id: 'sub', type: 'CanvasItemMaterial', data: { blend_mode: '2' } },
 ];
@@ -86,6 +89,10 @@ describe('useCanvasItemMaterial', () => {
 
   it("reads a node's SubResource material", () => {
     expect(nodeMaterial({ materialPath: 'SubResource("sub")' })?.blendMode).toBe(CanvasItemBlendMode.SUB);
+  });
+
+  it("gives null for a node's binary .res material, which no processor reads", () => {
+    expect(nodeMaterial({ materialPath: 'ExtResource("bin")' })).toBeNull();
   });
 
   it('gives null for an ExtResource id the scene does not declare', () => {

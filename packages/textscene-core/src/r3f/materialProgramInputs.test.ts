@@ -58,7 +58,7 @@ describe('materialProgramInputs', () => {
     expect(keyOf({ map: texture() })).not.toBe(keyOf({ map: null }));
   });
 
-  it('separates a decoding material from a plain one holding the same map', () => {
+  it('separates a material with defines from a plain one holding the same map', () => {
     const tex = texture(THREE.NoColorSpace);
     expect(keyOf({ map: tex, defines: DEFINES })).not.toBe(keyOf({ map: tex }));
   });

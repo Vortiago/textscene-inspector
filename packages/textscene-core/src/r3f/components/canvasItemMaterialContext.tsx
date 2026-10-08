@@ -9,8 +9,8 @@ import { canvasItemMaterialOf } from '../../resources/materials/canvasitemmateri
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import type { ParsedResource } from '../../parser/parsedResource';
+import { resolveExtResourcePath, resolveSubResourceRef } from '../../resources/SubResourceResolver';
 import { useResource } from '../../resources/useResource';
-import { useSubOrExtResource } from '../../resources/useSubOrExtResource';
 import { useSceneResources } from '../SceneResourcesContext';
 
 const CanvasItemMaterialContext = createContext<CanvasItemMaterialProperties | null>(null);
@@ -41,9 +41,15 @@ export function useCanvasItemMaterial(props: Node2DProperties): CanvasItemMateri
   const inherited = useInheritedCanvasItemMaterial();
   const { internalResources, externalResources } = useSceneResources();
   const ownRef = props.use_parent_material ? undefined : props.materialPath;
-  const own = useSubOrExtResource(ownRef, internalResources, externalResources);
-  const ownMaterial = useMemo(() => (own ? canvasItemMaterialOf(own) : null), [own]);
-  return props.use_parent_material ? inherited : ownMaterial;
+  const sub = useMemo(() => resolveSubResourceRef(ownRef, internalResources), [ownRef, internalResources]);
+  const filePath = useMemo(
+    () => (sub ? null : resolveExtResourcePath(ownRef, externalResources)),
+    [sub, ownRef, externalResources]
+  );
+  const fromSub = useMemo(() => (sub ? canvasItemMaterialOf(sub) : null), [sub]);
+  const fromFile = useCanvasItemMaterialFile(filePath);
+  if (props.use_parent_material) return inherited;
+  return sub ? fromSub : fromFile;
 }
 
 /**
