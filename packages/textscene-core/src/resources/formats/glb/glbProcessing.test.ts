@@ -12,7 +12,12 @@ import { cloneWithMaterials, createGLBMesh, disposeClonedMaterials, initGlbModul
 // this file: a dynamic import after a reset yields a fresh instance.
 import * as processingShim from '../../processing/glbProcessing';
 import { standardMaterial } from '../../materials/standardmaterial3d/testing/standardMaterial';
-import { glbOfChunks, jsonChunk } from './testing/triangleGlb';
+import { glbOfChunks, jsonChunk, triangleGlb } from './testing/triangleGlb';
+import {
+  DRAWN_OPAQUE_PREPASS,
+  NO_OPAQUE_PREPASS,
+  opaquePrepassOf,
+} from '../../../r3f/materials/opaquePrepass';
 import {
   castsFrom,
   drawColourGroup,
@@ -94,6 +99,27 @@ describe('createGLBMesh', () => {
     const names = object.animations.map((c) => c.name);
 
     expect(names).toEqual(expect.arrayContaining(['idle', 'run', 'jump', 'walk', 'falling']));
+  });
+});
+
+describe('createGLBMesh alpha modes', () => {
+  async function importedMaterial(alphaMode: string): Promise<THREE.Material> {
+    const object = await createGLBMesh(triangleGlb({ material: { alphaMode } }));
+    const mesh = object.getObjectByProperty('isMesh', true) as THREE.Mesh;
+    return mesh.material as THREE.Material;
+  }
+
+  it('imports BLEND as a depth-prepass surface, as Godot imports ALPHA_DEPTH_PRE_PASS', async () => {
+    // `gltf_document.cpp:3117-3118`.
+    expect(opaquePrepassOf(await importedMaterial('BLEND'))).toEqual(DRAWN_OPAQUE_PREPASS);
+  });
+
+  it('imports MASK as a scissor, with no depth prepass', async () => {
+    expect(opaquePrepassOf(await importedMaterial('MASK'))).toBe(NO_OPAQUE_PREPASS);
+  });
+
+  it('imports OPAQUE with no depth prepass (edge case)', async () => {
+    expect(opaquePrepassOf(await importedMaterial('OPAQUE'))).toBe(NO_OPAQUE_PREPASS);
   });
 });
 

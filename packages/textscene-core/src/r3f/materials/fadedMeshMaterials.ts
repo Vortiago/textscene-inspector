@@ -13,6 +13,7 @@ import type { MeshSurface } from '../../resources/formats/glb/meshInstances';
 import type { FadedSurface } from './swappedMaterials';
 import type { FadePass, FadeVariants } from './fadeVariants';
 import { surfaceAlphaProps, type SurfaceAlphaSource } from './surfaceAlphaPatch';
+import { FADED_OPAQUE_PREPASS, opaquePrepassOf, opaquePrepassUserData } from './opaquePrepass';
 
 /** Each unfaded material's copy builders. Written only by `registerFadedCopyBuilders`. */
 const copyBuilders = new WeakMap<THREE.Material, FadeVariants<() => THREE.Material>>();
@@ -47,12 +48,16 @@ function importedAlphaSource(material: THREE.Material): SurfaceAlphaSource {
 
 /**
  * A copy of `material` for the alpha pass: blended, with no depth write, as Godot's default
- * DEPTH_DRAW_OPAQUE_ONLY writes none there.
+ * DEPTH_DRAW_OPAQUE_ONLY writes none there. The fade keeps a depth-prepass surface out of the
+ * depth prepass (`render_forward_clustered.cpp:1128-1134`), but its shadow still cuts.
  */
 function alphaPassCopy(material: THREE.Material): THREE.Material {
   const copy = material.clone();
   copy.transparent = true;
   copy.depthWrite = false;
+  if (opaquePrepassOf(material).cutsDepth) {
+    Object.assign(copy.userData, opaquePrepassUserData(FADED_OPAQUE_PREPASS));
+  }
   const { blending, injection } = surfaceAlphaProps(importedAlphaSource(material), {
     transparent: true,
     blending: material.blending,

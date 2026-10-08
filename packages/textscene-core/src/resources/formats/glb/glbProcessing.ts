@@ -9,6 +9,7 @@ import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCas
 import { ShadowCastingSetting } from '../../../godot/rendering';
 import { withExtensionRules } from './extensionRules';
 import { tagMeshInstances } from './meshInstances';
+import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
 import type { GltfExtensionRules } from './types';
 import type { GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
 
@@ -166,7 +167,18 @@ export async function createGLBMesh(
   // is where GLBSceneRoot plays them from and where `cloneWithMaterials` copies them.
   gltf.scene.animations = gltf.animations;
   tagMeshInstances(gltf.scene, gltf.parser.associations);
+  importBlendAsDepthPrepass(gltf.scene);
   return gltf.scene;
+}
+
+/**
+ * Godot imports glTF `alphaMode` BLEND as ALPHA_DEPTH_PRE_PASS (`gltf_document.cpp:3117-3118`),
+ * so the depth prepass draws it. GLTFLoader marks only BLEND `transparent`.
+ */
+function importBlendAsDepthPrepass(object: THREE.Object3D): void {
+  forEachSurfaceMaterial(object, (material) => {
+    if (material.transparent) Object.assign(material.userData, opaquePrepassUserData(DRAWN_OPAQUE_PREPASS));
+  });
 }
 
 /**

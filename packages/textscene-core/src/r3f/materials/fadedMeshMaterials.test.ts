@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { FadedMeshMaterials, registerFadedCopyBuilders, unfadedMaterial } from './fadedMeshMaterials';
+import {
+  DRAWN_OPAQUE_PREPASS,
+  FADED_OPAQUE_PREPASS,
+  NO_OPAQUE_PREPASS,
+  opaquePrepassOf,
+  opaquePrepassUserData,
+} from './opaquePrepass';
 
 /** A fade whose alpha is 39/255: inside the alpha pass. */
 const MARGIN_FADE = 0.15625;
@@ -146,6 +153,33 @@ describe('FadedMeshMaterials.applyFade', () => {
 
     expect((mesh.material as THREE.Material[]).map(unfadedMaterial)).toEqual(slots);
     expect((mesh.material as THREE.Material[]).every((m) => m.transparent)).toBe(true);
+  });
+});
+
+describe('FadedMeshMaterials.applyFade on a depth-prepass surface', () => {
+  const prepassSurface = () =>
+    new THREE.MeshStandardMaterial({
+      transparent: true,
+      userData: opaquePrepassUserData(DRAWN_OPAQUE_PREPASS),
+    });
+
+  it('keeps an alpha-pass copy out of the depth prepass, as the fade forces the alpha pass', () => {
+    // `render_forward_clustered.cpp:1128-1134`.
+    const mesh = meshOf(prepassSurface());
+    new FadedMeshMaterials(mesh).applyFade(MARGIN_FADE);
+    expect(opaquePrepassOf(mesh.material as THREE.Material)).toEqual(FADED_OPAQUE_PREPASS);
+  });
+
+  it('keeps the depth prepass of a copy above the alpha-pass threshold (edge case)', () => {
+    const mesh = meshOf(prepassSurface());
+    new FadedMeshMaterials(mesh).applyFade(NEAR_FULL_FADE);
+    expect(opaquePrepassOf(mesh.material as THREE.Material)).toEqual(DRAWN_OPAQUE_PREPASS);
+  });
+
+  it('gives an alpha-pass copy of a surface with no prepass none', () => {
+    const mesh = meshOf(new THREE.MeshStandardMaterial());
+    new FadedMeshMaterials(mesh).applyFade(MARGIN_FADE);
+    expect(opaquePrepassOf(mesh.material as THREE.Material)).toBe(NO_OPAQUE_PREPASS);
   });
 });
 
