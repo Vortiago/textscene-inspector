@@ -34,6 +34,7 @@
  */
 
 import * as THREE from 'three';
+import { CSG_MERGE_TOLERANCE } from '../../../godot/csg';
 
 /**
  * A CSG shape's triangles before normals exist: Godot's `CSGBrush::faces` in the shape
@@ -54,9 +55,18 @@ export interface CsgFaceSoup {
   invert?: boolean;
 }
 
-/** Godot hashes the `Vector3` itself; the float32 triple is the faithful equivalent. */
+/**
+ * Godot hashes the `Vector3` after manifold welds the brush, so positions within
+ * `CSG_MERGE_TOLERANCE` share one key. The grid rounds each axis to that tolerance.
+ */
 function positionKey(positions: Float32Array, base: number): string {
-  return `${positions[base]},${positions[base + 1]},${positions[base + 2]}`;
+  const weld = (axis: number): number => Math.round(positions[base + axis]! / CSG_MERGE_TOLERANCE) || 0;
+  return `${weld(0)},${weld(1)},${weld(2)}`;
+}
+
+/** A triangle with two corners welded together, which manifold collapses out of the brush. */
+function isCollapsed(keys: readonly string[]): boolean {
+  return keys[0] === keys[1] || keys[1] === keys[2] || keys[0] === keys[2];
 }
 
 /**
@@ -97,7 +107,7 @@ export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
   const { positions, uvs, smooth, invert } = soup;
   const triangles = Math.floor(positions.length / 9);
 
-  // Pass 1: sum unit plane normals per vertex position, smooth faces only. Position, not index,
+  // Pass 1: sum unit plane normals per welded position, smooth faces only. Position, not index,
   // is the key: three gives a cone apex nine radial normals where Godot collapses them to one.
   // The sum is unweighted, so a small face pulls on a vertex as hard as a large one.
   const accumulated = new Map<string, THREE.Vector3>();
@@ -108,9 +118,10 @@ export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
   for (let t = 0; t < triangles; t++) {
     if (!smooth[t]) continue;
     const base = t * 9;
+    const keys = [0, 1, 2].map((j) => positionKey(positions, base + j * 3));
+    if (isCollapsed(keys)) continue;
     planeNormal(positions, base, plane, edgeA, edgeB);
-    for (let j = 0; j < 3; j++) {
-      const key = positionKey(positions, base + j * 3);
+    for (const key of keys) {
       const existing = accumulated.get(key);
       if (existing) existing.add(plane);
       else accumulated.set(key, plane.clone());
@@ -155,9 +166,11 @@ export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
       outNormals[dst + 1] = normal.y;
       outNormals[dst + 2] = normal.z;
 
+      // Godot's V runs down the image. three uploads a texture bottom-up (flipY), as the ArrayMesh
+      // build assumes too, so V turns over here or every CSG texture draws upside down.
       const uvDst = uvBase + order[j]! * 2;
       outUvs[uvDst] = uvs[uvBase + j * 2] ?? 0;
-      outUvs[uvDst + 1] = uvs[uvBase + j * 2 + 1] ?? 0;
+      outUvs[uvDst + 1] = 1 - (uvs[uvBase + j * 2 + 1] ?? 0);
     }
   }
 

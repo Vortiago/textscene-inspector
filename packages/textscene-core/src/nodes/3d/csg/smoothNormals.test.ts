@@ -149,6 +149,40 @@ describe('applyCsgNormals', () => {
     });
   });
 
+  describe('manifold weld (csg_shape.cpp:427, tolerance 2 * FLT_EPSILON)', () => {
+    /** The cone, with apex corner `i` moved `i * step` along X. */
+    function shiftedApexTriangles(step: number): Array<[THREE.Vector3, THREE.Vector3, THREE.Vector3]> {
+      return coneTriangles().map(([apex, a, b], i) => [apex.clone().setX(i * step), a, b]);
+    }
+
+    /** A residue far below the tolerance, as three's trig leaves at a capsule pole. */
+    const noisyConeTriangles = () => shiftedApexTriangles(1e-17);
+
+    it('shares one normal among apex corners within the tolerance, as three’s capsule pole needs', () => {
+      const geometry = applyCsgNormals(soupOf(noisyConeTriangles()));
+      for (let t = 1; t < 8; t++) {
+        expect(normalAt(geometry, t * 3).distanceTo(normalAt(geometry, 0))).toBeLessThan(1e-6);
+      }
+    });
+
+    it('keeps corners further apart than the tolerance separate', () => {
+      const geometry = applyCsgNormals(soupOf(shiftedApexTriangles(1e-3)));
+      expect(normalAt(geometry, 3).distanceTo(normalAt(geometry, 0))).toBeGreaterThan(1e-3);
+    });
+
+    it('lets a triangle with two welded corners add nothing to its neighbours', () => {
+      const sliver: [THREE.Vector3, THREE.Vector3, THREE.Vector3] = [
+        v(1e-17, 0.5, 0),
+        v(0, 0.5, 1e-17),
+        v(0.4, -0.5, 0),
+      ];
+      const withSliver = applyCsgNormals(soupOf([...noisyConeTriangles(), sliver]));
+      const without = applyCsgNormals(soupOf(noisyConeTriangles()));
+      expect(normalAt(withSliver, 0).distanceTo(normalAt(without, 0))).toBeLessThan(1e-6);
+      expect(withSliver.getAttribute('position').count).toBe(27);
+    });
+  });
+
   describe('winding: Godot fronts are CLOCKWISE, three fronts are COUNTER-CLOCKWISE', () => {
     it('reverses the winding on the way out, so faces are not back-face culled', () => {
       // Emitting Godot's vertex order verbatim culls every triangle and renders each solid as
@@ -194,6 +228,14 @@ describe('applyCsgNormals', () => {
       // three-bvh-csg's default `attributes` list is position/uv/normal; a brush missing
       // any of them has that channel trimmed from the boolean result.
       expect(geometry.getAttribute('uv').count).toBe(24);
+    });
+
+    it('turns V over, as three samples a texture bottom-up', () => {
+      const soup = soupOf([[v(0, 0, 0), v(1, 0, 0), v(0, 0, 1)]], { smooth: false });
+      soup.uvs.set([0.25, 0, 0.5, 0.25, 0.75, 1]);
+      const uv = applyCsgNormals(soup).getAttribute('uv');
+      // Vertices 1 and 2 swap into three's winding.
+      expect(Array.from(uv.array)).toEqual([0.25, 1, 0.75, 0, 0.5, 0.75]);
     });
 
     it('returns empty geometry for an empty soup rather than throwing', () => {
