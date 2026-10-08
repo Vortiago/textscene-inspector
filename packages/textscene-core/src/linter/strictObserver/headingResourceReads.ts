@@ -3,10 +3,10 @@
  * linter asks, so the strict parser collects them from `onSectionStart` and the shared scan never does.
  */
 
-import type { ParsedHeading } from '../parser/utils.js';
-import type { HeadingFacts } from '../parser/types.js';
+import type { ParsedHeading } from '../../parser/utils.js';
+import type { HeadingFacts } from '../../parser/types.js';
 
-type HeadingResourceReads = Pick<HeadingFacts, 'connectionBinds' | 'instancesOutsideNodeBody'>;
+export type HeadingResourceReads = Pick<HeadingFacts, 'connectionBinds' | 'instancesOutsideNodeBody'>;
 
 /** A collector to feed each parsed heading in scan order, and the reads it has gathered so far. */
 export function headingResourceReads(): { reads: HeadingResourceReads; read(heading: ParsedHeading): void } {

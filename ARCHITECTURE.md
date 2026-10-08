@@ -121,7 +121,7 @@ The observer only adds, so the render is the same with or without it. The lenien
 so shared code reads that field. A **Lint rule** sees only the Raw view, so the compiler refuses
 a `properties` read. The core returns each `[node]` heading beside the scene. The lenient parser
 logs the headings the tree could not place. The strict parser builds the **Heading facts** from the
-headings (`linter/placementFacts.ts`) and from its observer (`linter/headingResourceReads.ts`), and
+headings (`linter/placementFacts.ts`) and from its observer (`linter/strictObserver/`), and
 only its `StrictScene` carries them.
 The strict parser also returns `SourceLines`, which puts each diagnostic on its line.
 
