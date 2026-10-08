@@ -16,7 +16,7 @@ import { GOLDEN_SCENES } from '../visual/scenes.mjs';
 export const GOLDENS_COMMENT_MARKER = '<!-- goldens-touched -->';
 
 const STATUS_WORDS = { A: 'added', M: 'changed', D: 'removed' };
-const MAIN_SITE = new URL(PREVIEW_URL);
+const PAGES_HOST = new URL(PREVIEW_URL).host;
 
 // The branch alias of a Cloudflare Pages preview deployment keeps 28 characters of the branch
 // (developers.cloudflare.com/pages/configuration/preview-deployments/): the branch
@@ -64,12 +64,12 @@ function row({ path, name, change }, scenes, { repository, number }, preview) {
   const diffAnchor = createHash('sha256').update(path).digest('hex');
   const diff = `[diff](https://github.com/${repository}/pull/${number}/files#diff-${diffAnchor})`;
   const onBranch = fixture && change !== 'removed' ? sceneLink('preview', preview, fixture) : '';
-  const onMain = fixture && change === 'changed' ? sceneLink('main', MAIN_SITE, fixture) : '';
+  const onMain = fixture && change === 'changed' ? sceneLink('main', PREVIEW_URL, fixture) : '';
   return `| \`${name}\` | ${change} | ${diff} | ${onBranch} | ${onMain} |`;
 }
 
 function sceneLink(label, site, fixture) {
-  return `[${label}](${fixtureUrl(site.href, fixture)})`;
+  return `[${label}](${fixtureUrl(site, fixture)})`;
 }
 
 /** The branch's Cloudflare Pages preview. A DNS label ends in a letter or digit, never a hyphen. */
@@ -79,7 +79,7 @@ function branchSite(branch) {
     .replace(/[^a-z0-9]+/g, '-')
     .slice(0, BRANCH_ALIAS_LENGTH)
     .replace(/-+$/, '');
-  return new URL(`https://${alias}.${MAIN_SITE.host}/`);
+  return `https://${alias}.${PAGES_HOST}/`;
 }
 
 function fold(table, goldens) {

@@ -1,16 +1,16 @@
 /**
  * The committed baselines and the pixel arithmetic against them: read, diff, write, and the
- * failure artefacts a reviewer needs. `baselinePath.mjs` places a baseline and this module the
- * output directory, since a moved consumer with its own offset would point at an empty directory.
+ * failure artefacts a reviewer needs. `baselinePath.mjs` places a baseline, and this module places
+ * the output directory.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { PNG } from 'pngjs';
+import { REPO_ROOT } from '../../repoRoot.mjs';
+import { baselinePath } from '../baselinePath.mjs';
 import { compareImages, formatDelta } from '../imageDelta.mjs';
 import { isUniformImage } from '../previewServer.mjs';
-import { baselinePath } from '../baselinePath.mjs';
-import { REPO_ROOT } from '../../repoRoot.mjs';
 
 const OUTPUT_DIR = join(REPO_ROOT, 'scripts/visual/output');
 

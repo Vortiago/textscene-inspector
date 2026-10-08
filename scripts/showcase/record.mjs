@@ -8,6 +8,7 @@
 import { mkdirSync, renameSync, statSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { REPO_ROOT } from '../repoRoot.mjs';
+import { fixtureUrl } from '../visual/preview/fixtureUrl.mjs';
 import { launchShowcaseBrowser } from './browser.mjs';
 import {
   ACTION_TIMEOUT_MS,
@@ -57,7 +58,7 @@ export async function recordShowcase(name, file, scenario, opts = {}) {
 
   // The ?fixture= deep link opens the target fixture, so the clip does not spend its first half on
   // the white load and the default scene.
-  const url = file ? `${BASE_URL}/?fixture=${encodeURIComponent(file)}` : BASE_URL;
+  const url = file ? fixtureUrl(BASE_URL, file) : BASE_URL;
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForSelector('canvas', { timeout: 30000 });
   await page.waitForTimeout(1500); // Scene parse, load and CameraFit settle.

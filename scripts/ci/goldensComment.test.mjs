@@ -93,7 +93,7 @@ describe('goldensComment', () => {
 
   it('recognises every committed baseline, so a moved directory fails here and not silently', () => {
     const baselines = readdirSync(resolve(REPO_ROOT, BASELINE_DIR));
-    const changes = baselines.map((file) => `M\t${BASELINE_DIR}/${file}\n`).join('');
+    const changes = baselines.map((file) => nameStatus('M', file.replace(/\.png$/, ''))).join('');
 
     const comment = goldensComment(changes, SCENES, PULL_REQUEST);
 
