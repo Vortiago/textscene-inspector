@@ -1931,7 +1931,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A square occluder under a light turned 0.5 rad casts a band down and to the left. Godot measures depth along the light across the project viewport's diagonal. The previewer builds the same 1D map, so the band covers the occluder's inside too. It culls an occluder on its local bounds, as Godot does.</p>
+        <div class="prose"><p>A square occluder under a light turned 0.5 rad casts a band down and to the left. Godot measures depth along the light across the project viewport's diagonal (<code>renderer_canvas_render_rd.cpp:1140-1146</code>). The previewer builds the same 1D map, so the band covers the occluder's inside too. It culls an occluder on its local bounds, as Godot does (<code>renderer_viewport.cpp:635</code>).</p>
 <p>The map spans the project viewport at the canvas origin. In Godot's editor no Camera2D becomes current (<code>camera_2d.cpp:354</code>), and the previewer draws the canvas as the editor does. Every occluder casts on every lit item: the directional pass reads no <code>shadow_item_cull_mask</code> on the item (<code>canvas.glsl:747</code>).</p></div>
       </section>
       <section class="prop">
@@ -4741,7 +4741,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>Godot applies every light on an item's list in order, whatever each light's <code>range_item_cull_mask</code>. The MIX light reaches the surface through mask 2 and the ADD light through mask 1. Where both reach, the MIX light mixes from what the ADD light left.</p></div>
+        <div class="prose"><p>Godot applies every light on an item's list in order, whatever each light's <code>range_item_cull_mask</code> (<code>renderer_canvas_render_rd.cpp:2365-2384</code>). The MIX light reaches the surface through mask 2 and the ADD light through mask 1. Where both reach, the MIX light mixes from what the ADD light left.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Many cull masks on one item</h3><span class="status st-done">Done</span></div>
@@ -4758,7 +4758,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>Six lights, one mask bit each, reach one surface whose <code>light_mask</code> holds all six. Godot draws every light on the item's list, however many masks the canvas holds.</p></div>
+        <div class="prose"><p>Six lights, one mask bit each, reach one surface whose <code>light_mask</code> holds all six. Godot draws every light on the item's list, however many masks the canvas holds (<code>renderer_canvas_render_rd.cpp:2366</code>).</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>A MIX light with a shadow_color</h3><span class="status st-done">Done</span></div>
@@ -4775,7 +4775,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>Where a MIX light is blocked, Godot mixes the colour under it toward <code>shadow_color</code> by <code>shadow_color.a</code>. The ADD light under it dims there too, behind the bar on the right.</p></div>
+        <div class="prose"><p>Where a MIX light is blocked, Godot mixes the colour under it toward <code>shadow_color</code> by <code>shadow_color.a</code> (<code>canvas.glsl:544-546</code>, <code>:559-560</code>). The ADD light under it dims there too, behind the bar on the right.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>A MIX light over a tinted shadow</h3><span class="status st-done">Done</span></div>
@@ -6351,7 +6351,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>TileMap draws each layer's cells as batched textured quads from its TileSet atlas. The previewer decodes the legacy <code>layer_N/tile_data</code> groups. It draws each layer's rendering quadrants as canvas items of their own, in Godot's cell order, as on TileMapLayer. Each quadrant takes its own lights at its layer's <code>z_index</code>.</p>
+      <div class="prose"><p>TileMap draws each layer's cells as batched textured quads from its TileSet atlas. The previewer decodes the legacy <code>layer_N/tile_data</code> groups. It draws each layer's rendering quadrants as canvas items of their own, in Godot's cell order, as on TileMapLayer (<code>tile_map_layer.cpp:306-311</code>, <code>:412-566</code>). Each quadrant takes its own lights at its layer's <code>z_index</code>.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>TileMap</code> properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>collision_animatable</code></td><td>true or false</td><td></td></tr><tr><td><code>collision_visibility_mode</code></td><td>enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE)</td><td>warning</td></tr><tr><td><code>format</code></td><td>INT-typed literal (a FLOAT or BOOL spelling is a dropped write, tile_map.cpp:689)</td><td></td></tr><tr><td><code>layer_#/*</code></td><td>layer</td><td></td></tr><tr><td><code>navigation_visibility_mode</code></td><td>enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE)</td><td>warning</td></tr><tr><td><code>rendering_quadrant_size</code></td><td>integer 1-128</td><td>error below, warning above</td></tr><tr><td><code>tile_set</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr></tbody></table></div>
@@ -6384,7 +6384,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>TileMapLayer paints a grid of tiles from a TileSet atlas. The previewer decodes <code>tile_map_data</code> at parse time. It draws each rendering quadrant as a canvas item of its own. The quadrant's cells draw in Godot's order, x then y, with each run of cells from one atlas source batched into one quad mesh.</p>
+      <div class="prose"><p>TileMapLayer paints a grid of tiles from a TileSet atlas. The previewer decodes <code>tile_map_data</code> at parse time. It draws each rendering quadrant as a canvas item of its own. The quadrant's cells draw in Godot's order, x then y (<code>tile_map_layer.cpp:306-311</code>), with each run of cells from one atlas source batched into one quad mesh.</p>
 <p>A rendering quadrant is a <code>rendering_quadrant_size</code> square of cells, or one tile row of a y-sorted layer. Each quadrant takes its own lights, so a large layer is not held to 15 positional lights in total.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>TileMapLayer</code> properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
