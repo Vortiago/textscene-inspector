@@ -22,7 +22,7 @@ ${properties}`;
   const { scene } = new StrictTscnParser().parse(source);
   const node = scene?.nodes[0]?.children[0];
   expect(node?.type, 'the fixture text must yield a ReflectionProbe node').toBe('ReflectionProbe');
-  const context: RuleContext = { scene: scene!, node: node!, properties: node!.properties };
+  const context: RuleContext = { scene: scene!, node: node! };
   return reflectionProbeValidationRule.check(context);
 }
 

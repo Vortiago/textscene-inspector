@@ -7,7 +7,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
@@ -37,8 +36,7 @@ function axisNumber(properties: Record<string, string>, key: string, fallback: n
 
 function checkLookAtModifier3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
-  const properties = node.properties;
+  const properties = node.rawProperties;
 
   const forwardAxis = axisNumber(properties, 'forward_axis', DEFAULT_FORWARD_AXIS);
   const primaryAxis = axisNumber(properties, 'primary_rotation_axis', DEFAULT_PRIMARY_ROTATION_AXIS);

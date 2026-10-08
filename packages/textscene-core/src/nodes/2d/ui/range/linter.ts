@@ -2,7 +2,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
@@ -19,10 +18,9 @@ const arms = {
 
 function checkRangeBounds(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
 
   const diagnostics: Diagnostic[] = [];
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
   const minRaw = props.min_value;
   const maxRaw = props.max_value;
 

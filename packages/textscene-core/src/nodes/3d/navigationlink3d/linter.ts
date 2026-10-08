@@ -7,7 +7,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
 import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
 import { isEqualApprox } from '../../../godot/index.js';
 import type { Vector3 } from '../../../parser/vectors.js';
@@ -41,7 +40,7 @@ function vector3EqualApprox(a: Vector3, b: Vector3): boolean {
 
 function checkNavigationLink3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};
+  const properties = node.rawProperties;
 
   const start = readPosition(properties, 'start_position');
   const end = readPosition(properties, 'end_position');

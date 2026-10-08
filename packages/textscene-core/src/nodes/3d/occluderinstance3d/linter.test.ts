@@ -7,31 +7,30 @@
 
 import { describe, expect, it } from 'vitest';
 import type { RuleContext } from '../../../linter/types';
-import type { TscnNode, TscnScene } from '../../../parser/types';
+import type { RawNode, RawScene } from '../../../parser/types';
 import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
 import { occluderInstance3DConfigurationWarningsRule } from './linter';
 
 /** Depth-first search for the first node of a type, over a parsed scene tree. */
-function findByType(nodes: TscnNode[], type: string): TscnNode | undefined {
+function findByType(nodes: RawNode[], type: string): RawNode | undefined {
   for (const node of nodes) {
     if (node.type === type) return node;
-    const found = findByType(node.children ?? [], type);
+    const found = findByType(node.children, type);
     if (found) return found;
   }
   return undefined;
 }
 
-function makeContext(properties: Record<string, string>): RuleContext {
-  const node: TscnNode = {
-    rawProperties: {},
+function makeContext(rawProperties: Record<string, string>): RuleContext {
+  const node: RawNode = {
+    rawProperties,
     name: 'MyOccluderInstance3D',
     type: 'OccluderInstance3D',
     children: [],
-    properties,
   };
-  const scene: TscnScene = { nodes: [node], externalResources: [], internalResources: [] };
-  return { scene, node, properties: node.properties };
+  const scene: RawScene = { nodes: [node], externalResources: [], internalResources: [] };
+  return { scene, node };
 }
 
 const RULE = occluderInstance3DConfigurationWarningsRule;
@@ -86,13 +85,7 @@ describe('OccluderInstance3D semantic rules', () => {
       occluderInstance,
       'unit-occluder-instance-3d.tscn no longer contains an OccluderInstance3D'
     ).toBeDefined();
-    expect(
-      RULE.check({
-        scene,
-        node: occluderInstance!,
-        properties: occluderInstance!.properties,
-      })
-    ).toEqual([]);
+    expect(RULE.check({ scene, node: occluderInstance! })).toEqual([]);
   });
 
   it('applies only to OccluderInstance3D', () => {

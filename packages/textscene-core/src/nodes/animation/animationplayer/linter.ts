@@ -5,7 +5,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
 import { extractLibraries, isActive } from './parser.js';
 import { EXT_RESOURCE_CALL_ANYWHERE_RE, literalText } from '../../../godot/index.js';
 import { hasUnresolvableClips, resolveAnimations } from './animationResolver.js';
@@ -36,11 +35,7 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  if (!isValidProperties(node.properties)) {
-    return diagnostics;
-  }
-
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // `speed_scale` gets no diagnostic at all: animation_player.cpp:1048 hints
   // "-4,4,0.001,or_less,or_greater", so both ends are open, and set_speed_scale

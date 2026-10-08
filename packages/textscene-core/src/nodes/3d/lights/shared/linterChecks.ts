@@ -5,9 +5,9 @@
  */
 
 import type { Diagnostic } from '../../../../linter/types.js';
-import type { TscnNode } from '../../../../parser/types.js';
 import { armDiagnostic, groundedArm, type RuleArm } from '../../../../linter/ruleArms.js';
 import { resourceRef, boolSlotValue } from '../../../../godot/index.js';
+import type { RawNode } from '../../../../parser/types.js';
 
 /** The warning's arm under `rulePrefix`, the node-type slug, so each light keeps its own rule. */
 export function projectorArm(rulePrefix: string): RuleArm {
@@ -19,8 +19,8 @@ export function projectorArm(rulePrefix: string): RuleArm {
  * `has_shadow()` reads `shadow_enabled` (light_3d.cpp:402), and `light_projector` is
  * the serialised key (light_3d.cpp:393).
  */
-export function projectorWithoutShadowDiagnostic(node: TscnNode, arm: RuleArm): Diagnostic | null {
-  const properties = node.properties as unknown as Record<string, string>;
+export function projectorWithoutShadowDiagnostic(node: RawNode, arm: RuleArm): Diagnostic | null {
+  const properties = node.rawProperties;
   // A parseable reference, not merely a present key: Godot's reader rejects a
   // malformed value, so no projector is set, and the validator already reports it.
   if (!resourceRef(properties.light_projector ?? '')) return null;

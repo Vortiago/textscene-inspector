@@ -4,10 +4,10 @@
  */
 
 import type { Diagnostic } from './types.js';
-import type { TscnNode } from '../parser/types.js';
 import { armDiagnostic, type RuleArm } from './ruleArms.js';
 import { crossedParamRanges } from '../godot/cpuParticles.js';
 import { formatReal } from '../godot/real.js';
+import type { RawNode } from '../parser/types.js';
 
 /** The arm under `rulePrefix`, grounded at `setterAt`, the class's own setter that alters the value. */
 export function paramMinAboveMaxArm(rulePrefix: string, setterAt: string): RuleArm {
@@ -19,7 +19,7 @@ export function paramMinAboveMaxArm(rulePrefix: string, setterAt: string): RuleA
 }
 
 export function paramMinAboveMaxDiagnostics(
-  node: TscnNode,
+  node: RawNode,
   properties: Record<string, string>,
   arm: RuleArm
 ): Diagnostic[] {

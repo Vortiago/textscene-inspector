@@ -16,11 +16,10 @@ const arms = {
 
 function checkXRCamera3DParent(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  const properties = node.properties as unknown as Record<string, string>;
 
   // `is_visible()` reads only the node's own `visible` flag (node_3d.cpp:1127-1130), so an
   // explicitly hidden camera never reaches Godot's check either.
-  if (isExplicitlyHidden(properties)) return [];
+  if (isExplicitlyHidden(node)) return [];
 
   // `cast_to<XROrigin3D>` accepts a subclass, so the verdict resolves the parent's ancestry.
   const verdict = parentTypeVerdict(scene, node, 'XROrigin3D');

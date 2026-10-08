@@ -4,8 +4,8 @@
  * A node body skips that error (`:288-289`). Every other read returns it, and the load fails.
  */
 
-import type { TscnNode, TscnScene } from '../parser/types.js';
 import { extResourceIdsIn } from '../godot/index.js';
+import type { RawNode, StrictScene } from '../parser/types.js';
 
 /**
  * Where the uses of one `[ext_resource]` sit. `aborting`: a failed load of it fails the file's load. `node`: every use
@@ -23,7 +23,7 @@ function addIdsIn(values: Iterable<unknown>, use: ExtResourceUse, into: Map<stri
   }
 }
 
-function addNodeIds(node: TscnNode, into: Map<string, ExtResourceUse>): void {
+function addNodeIds(node: RawNode, into: Map<string, ExtResourceUse>): void {
   if (node.instance !== undefined) addIdsIn([node.instance], 'node', into);
   addIdsIn(Object.values(node.rawProperties), 'node', into);
   for (const child of node.children) addNodeIds(child, into);
@@ -32,18 +32,18 @@ function addNodeIds(node: TscnNode, into: Map<string, ExtResourceUse>): void {
 /**
  * Each `[ext_resource]` id the scene's values name, and where. Aborting: a sub-resource's value, a `.tres` file's
  * `[resource]` value, a `[connection]` heading's `binds=`, and the `instance=` of a node heading that follows no other
- * node (`TscnScene.instancesOutsideNodeBody`). A heading's fields parse through the same callback as a value
+ * node (`StrictScene.instancesOutsideNodeBody`). A heading's fields parse through the same callback as a value
  * (`variant_parser.cpp:1861-1866`). A binds failure inside a node body leaves the rest of the heading unread, and the
  * `parse_tag` after it fails (`resource_format_text.cpp:379-384`). Node: every other node heading's `instance=` and
  * every node's value. An orphaned node counts: Godot loads it, re-parented to the root (`packed_scene.cpp:208-215`).
  */
-export function extResourceUses(scene: TscnScene): Map<string, ExtResourceUse> {
+export function extResourceUses(scene: StrictScene): Map<string, ExtResourceUse> {
   const uses = new Map<string, ExtResourceUse>();
-  addIdsIn(scene.connectionBinds ?? [], 'aborting', uses);
-  addIdsIn(scene.instancesOutsideNodeBody ?? [], 'aborting', uses);
+  addIdsIn(scene.connectionBinds, 'aborting', uses);
+  addIdsIn(scene.instancesOutsideNodeBody, 'aborting', uses);
   for (const resource of scene.internalResources) addIdsIn(Object.values(resource.data), 'aborting', uses);
   if (scene.mainResource) addIdsIn(Object.values(scene.mainResource.data), 'aborting', uses);
   for (const node of scene.nodes) addNodeIds(node, uses);
-  for (const { node } of scene.orphanedNodes ?? []) addNodeIds(node, uses);
+  for (const { node } of scene.orphanedNodes) addNodeIds(node, uses);
   return uses;
 }

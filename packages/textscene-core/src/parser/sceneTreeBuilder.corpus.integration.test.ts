@@ -1,35 +1,26 @@
 /**
  * The scene tree builder against every real `.tscn` in the repo. A node whose parent
  * path descends into an instanced sub-scene must not be dropped, so no corpus scene may
- * report an `orphanedNodes` entry, except the one fixture that exists to orphan one.
+ * strand a node, except the one fixture that exists to orphan one.
  */
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { readdir } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { join, relative } from 'node:path';
 import { TscnParser } from './TscnParser';
+import { TscnParserCore } from './TscnParserCore';
+import { parseNodeWithRegistry } from '../core/NodeRegistry';
+import { strandedNodes } from './sceneTreeBuilder';
+import { sceneFiles, scenesDir } from './testing/parserKit.js';
 
-// `import.meta.dirname`, never `process.cwd()`: hooks and CI run from the repo root
-// while vitest resolves this file's own URL through its dev server.
-const SCENES = resolve(import.meta.dirname, '../../../../scenes');
+const SCENES = scenesDir();
 
 /** The one fixture whose whole purpose is an unresolvable parent path. */
 const INTENTIONAL_ORPHANS = new Set(['fixtures/edge-missing-parent.tscn']);
 
-async function everyScene(dir: string): Promise<string[]> {
-  const found: string[] = [];
-  for (const entry of await readdir(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) found.push(...(await everyScene(full)));
-    else if (entry.name.endsWith('.tscn')) found.push(full);
-  }
-  return found;
-}
-
 describe('buildSceneTree over the whole corpus', () => {
-  it('orphans nothing except the fixture that exists to be orphaned', async () => {
-    const scenes = await everyScene(SCENES);
+  it('orphans nothing except the fixture that exists to be orphaned', () => {
+    const scenes = sceneFiles(SCENES, (path) => path.endsWith('.tscn'));
     expect(scenes.length).toBeGreaterThan(200);
 
     const offenders: string[] = [];
@@ -37,15 +28,13 @@ describe('buildSceneTree over the whole corpus', () => {
 
     for (const file of scenes) {
       const rel = relative(SCENES, file);
-      let orphaned: boolean;
-      try {
-        orphaned = (new TscnParser().parse(readFileSync(file, 'utf8')).orphanedNodes ?? []).length > 0;
-      } catch {
-        // A scene this parser cannot read at all is a different concern; the
-        // orphan question only applies to one it can.
-        continue;
-      }
-      if (orphaned) (INTENTIONAL_ORPHANS.has(rel) ? intentional : offenders).push(rel);
+      // The renderer's node creator, so the tree under test is the one the previewer draws.
+      const { scene, origins } = new TscnParserCore().parse(
+        readFileSync(file, 'utf8'),
+        parseNodeWithRegistry
+      );
+      if (strandedNodes(origins, scene.nodes).length === 0) continue;
+      (INTENTIONAL_ORPHANS.has(rel) ? intentional : offenders).push(rel);
     }
 
     expect(offenders.sort()).toEqual([]);

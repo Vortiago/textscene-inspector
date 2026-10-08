@@ -17,13 +17,12 @@ const arms = {
 
 function checkLight3DScale(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const properties = node.properties as unknown as Record<string, string>;
 
   // Only `transform` serialises the pose (node_3d.cpp:1526-1531). `Basis::get_scale()`
   // (core/math/basis.cpp:299-321) folds one det sign across all axes and
   // `decomposeTransform3D` into one axis, but a reflection leaves an axis negative
   // under both, so they agree on `(1, 1, 1)`, as in `xrorigin3d/linter.ts`.
-  if (!hasNonUnitScale3D(properties.transform)) return [];
+  if (!hasNonUnitScale3D(node.rawProperties.transform)) return [];
 
   return [
     armDiagnostic(

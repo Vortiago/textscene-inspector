@@ -10,11 +10,11 @@ import {
   collisionShapeTypesPhrase,
   hasCollisionShapeChild,
 } from './hasCollisionShapeChild.js';
-import type { TscnNode } from '../../parser/types.js';
+import type { RawNode } from '../../parser/types.js';
 
 /** The smallest node shape these rules walk. */
-function node(type: string, children: TscnNode[] = []): TscnNode {
-  return { type, name: type, properties: {}, children } as unknown as TscnNode;
+function node(type: string, children: RawNode[] = []): RawNode {
+  return { type, name: type, rawProperties: {}, children };
 }
 
 describe('hasCollisionShapeChild', () => {

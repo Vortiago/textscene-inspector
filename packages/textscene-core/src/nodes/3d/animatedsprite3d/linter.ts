@@ -24,7 +24,7 @@ const arms = {
 function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
-  const rawProps = node.properties as unknown as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // An absent `sprite_frames` warns, since a script may assign one at runtime. A present but
   // unresolvable one is the ADR-0032 error arm.

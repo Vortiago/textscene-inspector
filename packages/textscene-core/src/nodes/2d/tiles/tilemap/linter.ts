@@ -63,7 +63,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  const rawProps = node.properties as unknown as Record<string, string>;
+  const rawProps = node.rawProperties;
   // The loaded vector, not the written keys: `get_configuration_warnings`
   // iterates the real `layers` (tile_map.cpp:848), seeded with "Layer0"
   // (:1014-1021) and grown to the highest index written (:701-710). A gap layer

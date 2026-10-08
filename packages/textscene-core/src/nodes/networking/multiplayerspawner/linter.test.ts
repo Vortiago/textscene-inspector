@@ -19,7 +19,7 @@ function diagnosticsFor(content: string) {
   if (!scene) throw new Error('fixture failed to parse');
   const node = scene.nodes[0]?.children.find((child) => child.type === 'MultiplayerSpawner');
   expect(node, 'the fixture text must contain a MultiplayerSpawner child').toBeDefined();
-  return multiplayerSpawnerSpawnPathRule.check({ scene, node: node!, properties: node!.properties });
+  return multiplayerSpawnerSpawnPathRule.check({ scene, node: node! });
 }
 
 /** A MultiplayerSpawner carrying `body`, with a child named SpawnRoot to point at. */

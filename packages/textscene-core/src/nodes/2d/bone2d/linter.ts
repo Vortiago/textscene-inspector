@@ -6,14 +6,13 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { knownParent, searchAncestors } from '../../../linter/parentType.js';
 import { tupleComponent } from '../../../linter/validators/commonValidators.js';
 import { makeFloatTupleRegex } from '../../../linter/validators/floatTupleValidator.js';
+import type { RawNode, RawScene } from '../../../parser/types.js';
 
 const arms = {
   chainDoesNotTerminate: groundedArm('bone2d-chain-does-not-terminate', { kind: 'configuration-warning' }),
@@ -37,7 +36,7 @@ type AncestryVerdict =
  * cast to Bone2D, and `skeleton` walks up through Bone2D links to the first Skeleton2D
  * or non-bone. `descendsFrom` stands in for `cast_to`, which accepts subclasses.
  */
-function ancestryVerdict(scene: TscnScene, node: TscnNode): AncestryVerdict {
+function ancestryVerdict(scene: RawScene, node: RawNode): AncestryVerdict {
   const parent = knownParent(scene, node);
   if (parent.kind === 'root') return 'invalid-parent'; // parent_bone and skeleton both stay null
   if (parent.kind === 'unknowable') return 'unknowable';
@@ -97,19 +96,17 @@ function checkBone2D(context: RuleContext): Diagnostic[] {
       break;
   }
 
-  if (isValidProperties(node.properties)) {
-    const rest = node.properties.rest;
-    // `rest` is declared `Transform2D rest;` (skeleton_2d.h:48), but `Bone2D::Bone2D()`
-    // zeroes all three columns (skeleton_2d.cpp:496-499). All-zero is the class default
-    // the serialiser omits, so an absent key is the state the warning exists for.
-    if (rest === undefined || isAllZeroTransform2D(rest)) {
-      reportArm(
-        diagnostics,
-        arms.missingRestPose,
-        node,
-        `Bone2D '${node.name}' has no rest pose: its rest is the all-zero Transform2D, which is what an unset one stores. Go to the Skeleton2D node and set one.`
-      );
-    }
+  const rest = node.rawProperties.rest;
+  // `rest` is declared `Transform2D rest;` (skeleton_2d.h:48), but `Bone2D::Bone2D()`
+  // zeroes all three columns (skeleton_2d.cpp:496-499). All-zero is the class default
+  // the serialiser omits, so an absent key is the state the warning exists for.
+  if (rest === undefined || isAllZeroTransform2D(rest)) {
+    reportArm(
+      diagnostics,
+      arms.missingRestPose,
+      node,
+      `Bone2D '${node.name}' has no rest pose: its rest is the all-zero Transform2D, which is what an unset one stores. Go to the Skeleton2D node and set one.`
+    );
   }
 
   return diagnostics;

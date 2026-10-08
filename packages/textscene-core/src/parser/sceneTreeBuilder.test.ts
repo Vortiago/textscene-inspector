@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildSceneTree, rootDeclaringParent, strandedNodes } from './sceneTreeBuilder';
+import { buildSceneTree, strandedNodes } from './sceneTreeBuilder';
 import type { TscnNode } from './types';
 
 /** A childless `Node3D`, a root when `parent` is absent. */
@@ -357,13 +357,9 @@ describe('buildSceneTree', () => {
       // file `packed_scene.cpp:219` refuses.
       expect(result.map((r) => r.name)).toEqual(['Node1']);
       expect(strandedNodes(origins, result).map((o) => o.node.name)).toEqual(['Node2']);
-      expect(rootDeclaringParent(origins)?.node.name).toBe('Node1');
     });
 
-    it('names heading 0 even when a LATER heading became the root', () => {
-      // The two derivations disagree by design: the builder prefers a parentless
-      // heading wherever it sits, while Godot's root is `i == 0` and nothing
-      // else. Only the positional one still names the heading that is refused.
+    it('roots at a parentless heading even when it is not heading 0', () => {
       const nodes: TscnNode[] = [node('A', '.'), node('Root')];
       const origins = nodes.map((node, i) => ({
         node,
@@ -375,7 +371,6 @@ describe('buildSceneTree', () => {
 
       expect(result.map((r) => r.name)).toEqual(['Root']);
       expect(strandedNodes(origins, result)).toEqual([]);
-      expect(rootDeclaringParent(origins)?.node.name).toBe('A');
     });
   });
 

@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
+import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { listIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
@@ -23,8 +23,7 @@ const arms = {
 
 function checkIterateIK3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // Absent means zero: the setting array starts empty (ik_modifier_3d.h:69),
   // which is the XML's default="0" for setting_count.

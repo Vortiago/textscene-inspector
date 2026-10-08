@@ -5,13 +5,13 @@
  * `fileDiagnostics.ts`, where `emitsGrounding` sweeps them.
  */
 
-import type { TscnScene } from '../parser/types.js';
 import type { Diagnostic } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
 import { nodePathNames } from '../godot/nodePath.js';
 import { validateNodeName } from '../godot/nodeName.js';
-import { rootStatesNoIdentifier } from '../parser/sceneTreeBuilder.js';
+import { rootStatesNoIdentifier } from '../parser/typeUnknowable.js';
+import type { StrictScene } from '../parser/types.js';
 
 /**
  * Godot's name for a re-parented orphan: the vanished path with `./` stripped, every
@@ -39,12 +39,12 @@ function reparentedName(parentPath: string, name: string): string {
  * parent, so one warns and the others error. Both `ERR_FAIL_COND_V_MSG`s (`:207`, `:219`)
  * exit the loop the re-root (`:208-215`) runs in, so any refusal voids every rename.
  */
-export function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
+export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
   // Positional, and ahead of every claim below: a heading spelling `parent=""`
   // faults the loader itself, so no node is built and none of the instantiate
   // refusals is ever reached. Such a heading carries no `node.parent`, which is
   // why it reaches neither `rootWithParent` alone nor `orphanedNodes` alone.
-  const emptyParents = scene.emptyParentHeadings ?? [];
+  const emptyParents = scene.emptyParentHeadings;
   const emptyNodes = new Set(emptyParents.map(({ node }) => node));
   const emptyRefusals = emptyParents.map(({ node, line }) =>
     armDiagnostic(
@@ -76,7 +76,7 @@ export function orphanDiagnostics(scene: TscnScene): Diagnostic[] {
   // the missing-parent refusal (`:207`) and the `nparent = ret_nodes[0]` re-root
   // (`:208-215`) both sit in the `i > 0` arm, and heading 0 is refused above. It
   // strands only when its path resolves nowhere and a later heading is parentless.
-  const stranded = (scene.orphanedNodes ?? []).filter(
+  const stranded = scene.orphanedNodes.filter(
     (origin) => origin !== rootOrigin && !emptyNodes.has(origin.node)
   );
   // The heading's own attribute, not `node.parent`: both parsers drop an
