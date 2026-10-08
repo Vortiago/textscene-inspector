@@ -58,8 +58,6 @@ function parseScalar(raw: string | undefined, fallback: number): number {
  */
 function localTransform2D(node: RawNode): Transform2DColumns | null {
   const props = node.rawProperties;
-  if (!props) return TRANSFORM2D_IDENTITY;
-
   const position = parseVector2(props.position, { x: 0, y: 0 });
   const rotation = parseScalar(props.rotation, 0);
   const scale = parseVector2(props.scale, { x: 1, y: 1 });

@@ -13,16 +13,21 @@ import { godotTextFiles, SCENES_ROOT } from './testing/sceneCorpus.js';
 import type { TscnNode, TscnScene } from '../parser/types.js';
 import './index.js';
 
-/** A `properties` bag whose every read throws, naming the key. */
+/** Thrown by a withheld `properties` bag, so a rule's own crash is not counted as a read. */
+class WithheldRead extends Error {}
+
+function refuse(access: string): never {
+  throw new WithheldRead(access);
+}
+
+/** A `properties` bag whose every read, key test or enumeration throws, naming the access. */
 const WITHHELD: TscnNode['properties'] = new Proxy(
   {},
   {
-    get: (_target, key) => {
-      throw new Error(`read properties.${String(key)}`);
-    },
-    ownKeys: () => {
-      throw new Error('enumerated properties');
-    },
+    get: (_target, key) => refuse(`read properties.${String(key)}`),
+    has: (_target, key) => refuse(`tested properties.${String(key)}`),
+    getOwnPropertyDescriptor: (_target, key) => refuse(`read properties.${String(key)}`),
+    ownKeys: () => refuse('enumerated properties'),
   }
 );
 
@@ -41,7 +46,8 @@ function propertiesReads(scene: TscnScene): string[] {
       try {
         rule.check({ scene, node });
       } catch (error) {
-        reads.push(`${rule.meta.name} on ${node.name}: ${(error as Error).message}`);
+        if (!(error instanceof WithheldRead)) throw error;
+        reads.push(`${rule.meta.name} on ${node.name}: ${error.message}`);
       }
     }
     for (const child of node.children) visit(child);
@@ -72,7 +78,8 @@ describe('the rule phase with properties withheld', () => {
         danglingResourceDiagnostics(scene, lines);
         return [];
       } catch (error) {
-        return [`${name}: ${(error as Error).message}`];
+        if (!(error instanceof WithheldRead)) throw error;
+        return [`${name}: ${error.message}`];
       }
     });
     expect(failures).toEqual([]);

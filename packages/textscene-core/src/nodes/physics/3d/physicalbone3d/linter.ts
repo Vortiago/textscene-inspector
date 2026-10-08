@@ -30,7 +30,8 @@ const arms = {
  * `set_joint_type` builds for a type in 1..5 (:1094-1113), never for NONE or a value outside the switch.
  * Each subclass refuses a leaf not its own (JOINT_DATA.refusedAt). Properties apply in file order.
  */
-function jointConstraintDiagnostics(node: RawNode, rawProps: Record<string, string>): Diagnostic[] {
+function jointConstraintDiagnostics(node: RawNode): Diagnostic[] {
+  const rawProps = node.rawProperties;
   const diagnostics: Diagnostic[] = [];
   // `undefined` once a `joint_type` no rule can read has applied: unknowable from there.
   let live: JointType | null | undefined = null;
@@ -70,7 +71,7 @@ function jointConstraintDiagnostics(node: RawNode, rawProps: Record<string, stri
 
 function checkPhysicalBone3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  return jointConstraintDiagnostics(node, node.rawProperties);
+  return jointConstraintDiagnostics(node);
 }
 
 const physicalBone3DValidationRule: LintRule = {
