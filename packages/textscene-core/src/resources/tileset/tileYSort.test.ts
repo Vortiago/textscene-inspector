@@ -38,7 +38,7 @@ describe('groupBySortY', () => {
     expect(groups[2]!.cells.length).toBe(1);
   });
 
-  it('groups cells at same Y into a single group, preserving parse order', () => {
+  it('groups cells at same Y into a single group', () => {
     const cells = [
       cell({ x: 0, y: 0 }, 0, 0, 0),
       cell({ x: 1, y: 0 }, 0, 1, 0),
@@ -47,6 +47,12 @@ describe('groupBySortY', () => {
     const groups = groupBySortY(cells, squareGrid, 0, 0);
     expect(groups.length).toBe(1);
     expect(groups[0]!.cells.length).toBe(3);
+  });
+
+  it("sorts a group's cells by x, then y, as Godot sorts a quadrant's (tile_map_layer.cpp:306-311)", () => {
+    const cells = [cell({ x: 2, y: 0 }), cell({ x: -1, y: 0 }), cell({ x: 0, y: 0 })];
+    const groups = groupBySortY(cells, squareGrid, 0, 0);
+    expect(groups[0]!.cells.map(({ coords }) => coords.x)).toEqual([-1, 0, 2]);
   });
 
   it('y_sort_origin shifts all groups uniformly', () => {

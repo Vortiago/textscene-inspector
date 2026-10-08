@@ -1,16 +1,14 @@
 /**
  * The canvas-item side of the 2D light pass, read from the produced GLSL, since happy-dom has no
  * GPU (`unit-pointlight2d*` captures check pixels): the light path is present, gated by data not
- * compilation, with unrolled slots and three distinct light modes.
+ * compilation, with one list buffer and three distinct light modes.
  */
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { CanvasItemLightMode } from '../../resources/materials/canvasitemmaterial/types';
-import { MAX_LIGHT_CLASSES } from './CanvasLighting2D';
 import {
   canvasItemLightingProps,
-  lightClassSampler,
   CANVAS_MODULATE_FLOOR,
   type CanvasItemLightingUniforms,
 } from './canvasItemLighting';
@@ -26,13 +24,9 @@ void main() {
 
 function uniforms(): CanvasItemLightingUniforms {
   return {
-    classBuffers: Array.from({ length: MAX_LIGHT_CLASSES }, () => ({
-      value: new THREE.Texture(),
-    })),
-    shadowTintBuffers: Array.from({ length: MAX_LIGHT_CLASSES }, () => ({
-      value: new THREE.Texture(),
-    })),
-    classWeights: { value: new Array<number>(MAX_LIGHT_CLASSES).fill(0) },
+    lightBuffer: { value: new THREE.Texture() },
+    shadowTintBuffer: { value: new THREE.Texture() },
+    isLit: { value: 0 },
     resolution: { value: new THREE.Vector2(2, 2) },
     canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
     lightMode: { value: CanvasItemLightMode.NORMAL },
@@ -56,22 +50,17 @@ describe('canvasItemLightingProps', () => {
   it('injects the light path for an ordinary item', () => {
     const { props, shader } = compile(CanvasItemLightMode.NORMAL);
     expect(props.injection.onBeforeCompile).toBeTypeOf('function');
-    expect(shader.fragmentShader).toContain('uniform sampler2D uLightClass0;');
-    expect(shader.fragmentShader).toContain('texture2D(uLightClass0,');
+    expect(shader.fragmentShader).toContain('uniform sampler2D uLightList;');
+    expect(shader.fragmentShader).toContain('texture2D(uLightList, lightUv)');
     // The lookup is screen-space: the accumulator is one buffer under the whole
     // canvas, not a per-item texture.
     expect(shader.fragmentShader).toContain('gl_FragCoord.xy / uLightResolution');
   });
 
-  it('unrolls one sampler per class slot, never a loop-indexed array', () => {
-    // GLSL ES 1.00, what three compiles an onBeforeCompile injection as,
-    // cannot index a sampler by a runtime value.
+  it('reads one list buffer, which already applies every light in order', () => {
+    // A sum of per-light-group buffers would add a MIX light to the light under it.
     const { shader } = compile(CanvasItemLightMode.NORMAL);
-    for (let slot = 0; slot < MAX_LIGHT_CLASSES; slot += 1) {
-      expect(shader.fragmentShader).toContain(`uniform sampler2D ${lightClassSampler(slot)};`);
-      expect(shader.fragmentShader).toContain(`uLightClassWeight[${slot}] > 0.5`);
-      expect(shader.fragmentShader).toContain(`texture2D(${lightClassSampler(slot)}, lightUv)`);
-    }
+    expect(shader.fragmentShader.match(/texture2D\(uLightList,/g)).toHaveLength(1);
     expect(shader.fragmentShader).not.toMatch(/for\s*\(/);
   });
 
@@ -79,29 +68,26 @@ describe('canvasItemLightingProps', () => {
     // three captures what onBeforeCompile assigns at first compile and R3F never sets
     // material.needsUpdate, so a rebuilt uniform object is stranded: the identity is the contract.
     const { shader, shared } = compile(CanvasItemLightMode.NORMAL);
-    for (let slot = 0; slot < MAX_LIGHT_CLASSES; slot += 1) {
-      expect(shader.uniforms[lightClassSampler(slot)]).toBe(shared.classBuffers[slot]);
-    }
-    expect(shader.uniforms.uLightClassWeight).toBe(shared.classWeights);
+    expect(shader.uniforms.uLightList).toBe(shared.lightBuffer);
+    expect(shader.uniforms.uShadowTint).toBe(shared.shadowTintBuffer);
+    expect(shader.uniforms.uLit).toBe(shared.isLit);
     expect(shader.uniforms.uLightResolution).toBe(shared.resolution);
     expect(shader.uniforms.uCanvasModulate).toBe(shared.canvasModulate);
   });
 
   it('gates "no lights" with a uniform rather than a different program', () => {
     // A light registers after the items compile, so a light path compiled only once a light
-    // exists leaves mounted items on a stock shader. Every slot is emitted, and the weights decide.
+    // exists leaves mounted items on a stock shader.
     const { shader } = compile(CanvasItemLightMode.NORMAL);
-    expect(shader.fragmentShader).toContain(`uniform float uLightClassWeight[${MAX_LIGHT_CLASSES}]`);
+    expect(shader.fragmentShader).toContain('uniform float uLit;');
+    expect(shader.fragmentShader).toContain(
+      'uLit > 0.5 ? texture2D(uLightList, lightUv) : vec4(lightSeed, 0.0)'
+    );
   });
 
-  it('starts every accumulation from the seed, so one matched class reads it exactly', () => {
-    // S = seed + Σ (S_class − seed): one class gives S_class, and several ADD/SUB classes give
-    // their independent terms over one seed.
+  it('starts an unlit item from the seed', () => {
     const { shader } = compile(CanvasItemLightMode.NORMAL);
     expect(shader.fragmentShader).toContain('lightOnly ? vec3(1.0) : uCanvasModulate');
-    expect(shader.fragmentShader).toContain('vec4 accum = vec4(lightSeed, 0.0);');
-    expect(shader.fragmentShader).toContain('accum.rgb += lightClass.rgb - lightSeed;');
-    expect(shader.fragmentShader).toContain('accum.a += lightClass.a;');
   });
 
   it('recovers the albedo through a FLOORED divisor, so a black canvas tint still lights', () => {

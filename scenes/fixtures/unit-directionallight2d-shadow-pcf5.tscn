@@ -1,0 +1,25 @@
+; Moves one variable: the PCF5 penumbra of a DirectionalLight2D's parallel shadow. The scene is
+; unit-directionallight2d-shadow with `shadow_filter = PCF5` and `shadow_filter_smooth = 8`, so
+; the edge steps across five taps of constant width. A point light's penumbra widens with distance,
+; so a wrong tap spacing on the parallel map shows only here.
+
+[gd_scene format=3]
+
+[sub_resource type="OccluderPolygon2D" id="1"]
+polygon = PackedVector2Array(-60, -60, 60, -60, 60, 60, -60, 60)
+
+[node name="Root" type="Node2D"]
+
+[node name="Surface" type="Polygon2D" parent="."]
+color = Color(0.25, 0.25, 0.25, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Sun" type="DirectionalLight2D" parent="."]
+rotation = 0.5
+shadow_enabled = true
+shadow_filter = 1
+shadow_filter_smooth = 8.0
+
+[node name="Caster" type="LightOccluder2D" parent="."]
+position = Vector2(576, 200)
+occluder = SubResource("1")

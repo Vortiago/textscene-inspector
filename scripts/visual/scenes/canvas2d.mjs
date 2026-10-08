@@ -66,6 +66,28 @@ export const CANVAS_2D_SCENES = [
   { name: 'pointlight2d-shadow-pcf13', file: 'unit-pointlight2d-shadow-pcf13.tscn', mode: '2d' },
   // The colour fixture pins the fractional tint the two accumulators split.
   { name: 'pointlight2d-shadow-pcf-color', file: 'unit-pointlight2d-shadow-pcf-color.tscn', mode: '2d' },
+  // Godot 4.6.3 at x=800: 63 on the receiving panel, 132 on the escaping one, which
+  // shadow_item_cull_mask leaves lit.
+  { name: 'pointlight2d-shadow-item-mask', file: 'unit-pointlight2d-shadow-item-mask.tscn', mode: '2d' },
+  // A MIX light over an ADD light of another mask on one item mixes from what the ADD light left.
+  // Godot 4.6.3 at x=575, where both reach: rgb(52,68,126).
+  { name: 'pointlight2d-mix-order', file: 'unit-pointlight2d-mix-order.tscn', mode: '2d' },
+  // Six masks reach one item, and Godot draws every light. Godot 4.6.3 at x=136 and x=1016, the
+  // first and the sixth light: rgb(160,97,81) and rgb(88,157,168).
+  { name: 'pointlight2d-many-masks', file: 'unit-pointlight2d-many-masks.tscn', mode: '2d' },
+  // A MIX light's shadow_color mixes over the light under it. Godot 4.6.3 at x=610, in the MIX
+  // light's shadow and the ADD light's reach: rgb(208,126,115).
+  { name: 'pointlight2d-mix-shadow-color', file: 'unit-pointlight2d-mix-shadow-color.tscn', mode: '2d' },
+  // A MIX light over a tinted shadow mixes the tint too. Godot 4.6.3 at x=610: rgb(36,112,74).
+  { name: 'pointlight2d-mix-over-shadow-color', file: 'unit-pointlight2d-mix-over-shadow-color.tscn', mode: '2d' },
+  // An item takes at most 15 positional lights whose rect meets its own. Godot 4.6.3 at the
+  // panels' centres: Left rgb(185,234,191) without Red, Right rgb(227,180,177) with it.
+  { name: 'pointlight2d-item-light-cap', file: 'unit-pointlight2d-item-light-cap.tscn', mode: '2d' },
+  // DirectionalLight2D reaches every lit item whatever its light_mask or z, and its shadow is a
+  // parallel map across the project viewport's diagonal, so its PCF taps keep one width.
+  { name: 'directionallight2d', file: 'unit-directionallight2d.tscn', mode: '2d' },
+  { name: 'directionallight2d-shadow', file: 'unit-directionallight2d-shadow.tscn', mode: '2d' },
+  { name: 'directionallight2d-shadow-pcf5', file: 'unit-directionallight2d-shadow-pcf5.tscn', mode: '2d' },
   // CPUParticles2D renders a frozen pose: a live emitter never gives two
   // identical frames, so the harness fails it as unstable, not as changed. Each
   // fixture pins `use_fixed_seed`/`seed`/`fixed_fps`/`preprocess` so the pose
@@ -92,6 +114,9 @@ export const CANVAS_2D_SCENES = [
   // repeated canvas subtree, and the only ParallaxLayer property a camera-less
   // still frame shows.
   { name: 'parallax-layer', file: 'unit-parallax-layer.tscn', mode: '2d' },
+  // `scroll_ignore_camera_zoom` under a zoom-2 Camera2D in a sub-viewport. Godot 4.6.3 draws Bar
+  // at screen 125..204 x 100..129, its authored size, and Band at 110..389 x 140..179.
+  { name: 'parallax-ignore-camera-zoom', file: 'unit-parallax-ignore-camera-zoom.tscn', mode: '2d' },
   // The one emitter with no `preprocess`, so the previewer substitutes its
   // instant. Its lifetime is not a multiple of the step, so the settle's
   // whole-frame overshoot is in the picture. Compare with Godot through
@@ -232,6 +257,14 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-container-2d-content.tscn',
     mode: '2d',
   },
+  // A CanvasLayer under the sub-viewport's Camera2D (ADR-0006) stays in viewport pixels. The
+  // reference harness disables every Camera2D, as the editor does, so the probe is Godot 4.6.3 at
+  // runtime: rgb(0,204,76) at (180,130), where the layer's Badge sits.
+  {
+    name: 'sub-viewport-camera-2d-canvas-layer',
+    file: 'unit-sub-viewport-camera-2d-canvas-layer.tscn',
+    mode: '2d',
+  },
   // The container takes its rect from a size-consuming parent, so its minimum
   // size is load-bearing. At the scene origin, a rect solved half its size off
   // looks the same as an authored one.
@@ -279,6 +312,9 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-canvas-layer-modulate-scope.tscn',
     mode: '2d',
   },
+  // The one variable: a CanvasLayer's own offset, rotation and scale, which move both walks'
+  // children. Godot 4.6.3 `--mode 2d`: rgb(51,153,255) at (430,170) and (500,250).
+  { name: 'canvas-layer-transform', file: 'unit-canvas-layer-transform.tscn', mode: '2d' },
   // The one variable: a Control promoted past a non-Control ancestor, one facet
   // per scene. The walk resets the whole chain at a broken CanvasItem link, so
   // a fix to one facet can move another. Godot 4.6.3 `--mode 2d`: mean 0.001,

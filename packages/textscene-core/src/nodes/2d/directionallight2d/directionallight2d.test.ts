@@ -1,26 +1,25 @@
-/**
- * DirectionalLight2D registration: parsed and validated, not yet rendered. The
- * slice registers a base component under `renderIntent: 'pending'`, so the badge
- * reads a gap while `visible` and the workspace split still work.
- */
+/** DirectionalLight2D registration: its own parser and formatter, and a component that draws. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { rendersOwnVisual } from '../../../r3f/nodeSupport';
-import { parseNode2D } from '../../base/node2d/parser';
+import { parseDirectionalLight2D } from './parser';
+import { formatDirectionalLight2DProperties } from './propertyFormatter';
+import { DirectionalLight2D } from './Component';
 import './index';
 import './index.r3f';
 
 describe('DirectionalLight2D registration', () => {
-  it('registers the parseNode2D parse it reuses', () => {
+  it('registers its own parser and property formatter', () => {
     const registration = nodeRegistry.getRegistration('DirectionalLight2D');
-    expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode2D);
+    expect(registration!.parser).toBe(parseDirectionalLight2D);
+    expect(registration!.propertyFormatter).toBe(formatDirectionalLight2DProperties);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('DirectionalLight2D')).toBe('pending');
-    expect(rendersOwnVisual('DirectionalLight2D')).toBe('not-implemented');
+  it('registers the component that draws its light', () => {
+    expect(nodeComponentRegistry.get('DirectionalLight2D')).toBe(DirectionalLight2D);
+    expect(nodeComponentRegistry.renderIntentOf('DirectionalLight2D')).toBe('draws');
+    expect(rendersOwnVisual('DirectionalLight2D')).not.toBe('not-implemented');
   });
 });

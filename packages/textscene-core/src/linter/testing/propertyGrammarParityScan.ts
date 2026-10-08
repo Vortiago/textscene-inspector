@@ -23,6 +23,7 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   Node3D: 'base/node3d/parser.ts',
   Node2D: 'base/node2d/parser.ts',
   Light3D: '3d/lights/shared/parser.ts',
+  Light2D: '2d/lights/shared/parser.ts',
   GeometryInstance3D: '3d/geometryinstance3d/parser.ts',
   // A Button subclass that chains through `parseButton` reads `text`, `flat`,
   // `alignment` and the icon trio. Without this hop each looks linter-only.

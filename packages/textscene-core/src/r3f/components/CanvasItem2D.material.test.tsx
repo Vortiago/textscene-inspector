@@ -10,6 +10,7 @@ import { TscnParser } from '../../parser/TscnParser';
 import { NodeDispatcher } from '../NodeDispatcher';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { SceneStack } from '../testing/SceneStack';
+import { ownerName } from '../lighting2d/testing/lightPassProbe';
 
 import '../nodes/index';
 
@@ -39,8 +40,9 @@ async function materialsByNodeName(tscn: string): Promise<Map<string, THREE.Mesh
   while (root?.parent) root = root.parent;
   root?.traverse((o) => {
     // The mesh is anonymous; its enclosing CanvasItem group carries the name.
-    if ((o as THREE.Mesh).isMesh && o.parent?.name) {
-      out.set(o.parent.name, (o as THREE.Mesh).material as THREE.MeshBasicMaterial);
+    const owner = ownerName(o);
+    if ((o as THREE.Mesh).isMesh && owner) {
+      out.set(owner, (o as THREE.Mesh).material as THREE.MeshBasicMaterial);
     }
   });
   return out;

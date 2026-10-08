@@ -77,6 +77,16 @@ export function useLiveSceneNodes(
 }
 
 /**
+ * Is there a live tree to walk? False exactly where `useLiveSceneNodes` returns `[]` for want of a
+ * root scene, which a reader that treats "no tree" apart from "no match" needs to tell apart.
+ */
+export function useHasLiveTree(): boolean {
+  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
+  const loader = useResourceLoader();
+  return liveTreeContext(sceneGraph, loader) !== null;
+}
+
+/**
  * The live-tree node at `path`: its effective (collapsed) identity (Instance root
  * merge, ADR-0013) and its `instanceRef`, descending into sub-scenes and GLBs.
  * A node inside a sub-scene resolves the moment that sub-scene lands. `null` for an

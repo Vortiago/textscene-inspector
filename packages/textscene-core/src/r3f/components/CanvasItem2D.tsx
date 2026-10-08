@@ -12,7 +12,8 @@ import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2
 import { CanvasSpaceProvider, useCanvasSpace } from '../canvasRootScope';
 import { Modulate2DContext, useCanvasItemTint, type CanvasItemTint } from '../canvasItemModulate';
 import { useCanvasModulateFor } from '../canvasModulate';
-import { useCanvasItemLighting, type CanvasItemLightingProps } from '../lighting2d/useCanvasItemLighting';
+import type { CanvasItemLightingProps } from '../lighting2d/useCanvasItemLighting';
+import { LitCanvasItemPixels } from './LitCanvasItemPixels';
 import { EffectiveZProvider, accumulateCanvasItemZ, useEffectiveZ } from '../lighting2d/canvasItemPlacement';
 import { useCanvasItemRenderOrder } from '../contexts/PaintOrderContext';
 import { CanvasItemKeyProvider } from './CanvasItemGroup';
@@ -37,10 +38,20 @@ export interface CanvasItem2DProps {
      */
     lighting: CanvasItemLightingProps
   ) => ReactNode;
+  /**
+   * Draws this node's own child canvas items, each with its own light list, as a TileMapLayer's
+   * rendering quadrants are. A node that draws them passes no `body`. They take the own-pixel tint,
+   * the material in force and this node's `z_final`.
+   */
+  ownItems?: (
+    tint: CanvasItemTint,
+    material: CanvasItemMaterialProperties | null,
+    zFinal: number
+  ) => ReactNode;
   children?: ReactNode;
 }
 
-export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps) {
+export function CanvasItem2D({ node, props, body, ownItems, children }: CanvasItem2DProps) {
   // Draw order is `renderOrder` below, which three compares before distance, so
   // every canvas item stays in the z=0 plane.
   const local = useMemo(() => node2dGroupProps(props), [props]);
@@ -63,7 +74,6 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
   // bucket the draw-order key below sorts by.
   const parentEffectiveZ = useEffectiveZ();
   const effectiveZ = accumulateCanvasItemZ(parentEffectiveZ, props);
-  const lighting = useCanvasItemLighting(material, props.light_mask, effectiveZ);
 
   // Godot's draw order on this group: three compares the nearest group's order
   // first, so the item's meshes keep their `renderOrder` for private layering,
@@ -72,7 +82,14 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
 
   return (
     <group name={node.name} {...transform} visible={props.visible !== false} renderOrder={renderOrder}>
-      <CanvasItemKeyProvider value={renderOrder}>{body?.(tint, material, lighting)}</CanvasItemKeyProvider>
+      <CanvasItemKeyProvider value={renderOrder}>
+        {body && (
+          <LitCanvasItemPixels material={material} lightMask={props.light_mask} zFinal={effectiveZ}>
+            {(lighting) => body(tint, material, lighting)}
+          </LitCanvasItemPixels>
+        )}
+        {ownItems?.(tint, material, effectiveZ)}
+      </CanvasItemKeyProvider>
       <Modulate2DContext.Provider value={tint.inherited}>
         {/* Descendants inherit through `use_parent_material` what this node
             resolved, a null included, which stops an inherited material. */}

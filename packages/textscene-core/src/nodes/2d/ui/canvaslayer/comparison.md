@@ -1,7 +1,6 @@
 ---
 type: CanvasLayer
 category: 2D
-status: done
 fixture: unit-canvas-layer.tscn
 image: unit-canvas-layer
 renders_as: a full-rect passthrough layer hosting Control children
@@ -12,6 +11,19 @@ renders_as: a full-rect passthrough layer hosting Control children
 CanvasLayer is not a Control and paints nothing of its own. It puts its children on
 their own draw layer, above or below the 2D world, and gives them a viewport to anchor
 against.
+
+## The canvas transform
+
+<!-- compare: image=unit-canvas-layer-transform status=done fixture=unit-canvas-layer-transform.tscn -->
+
+`offset`, `rotation` and `scale`, or `transform` when written, place the layer's whole
+canvas. A Control and a Node2D inside it both draw through that transform, while the
+square outside stays put.
+
+In a sub-viewport that draws through a Camera2D (ADR-0006), the layer stays in viewport
+pixels. With `follow_viewport_enabled` it draws through the camera's view, scaled about
+the view's centre by `follow_viewport_scale`. The editor view has no Camera2D transform
+to follow, and the editor turns the follow scale off.
 
 ## Linting
 

@@ -1,14 +1,10 @@
-/**
- * DirectionalLight2D draws nothing yet, and the badge reads "not implemented". The
- * Node2D base still mounts, for `visible` and the workspace split.
- */
-
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node2D } from '../../base/node2d/Component';
+import { DirectionalLight2D } from './Component';
 
 nodeComponentRegistry.register({
   typeName: 'DirectionalLight2D',
-  Component: Node2D,
+  Component: DirectionalLight2D,
   canvasItem: true,
-  renderIntent: 'pending',
 });
+
+export { DirectionalLight2D };

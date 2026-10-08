@@ -242,7 +242,7 @@ describe('property-grammar parity guard', () => {
   // equality: it moves only when a slice is added or a gap closes. A new
   // validator makes an unread key visible, so a rise usually means the list
   // became honest.
-  const EXPECTED_RENDER_GAP_KEYS = 125;
+  const EXPECTED_RENDER_GAP_KEYS = 120;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
@@ -263,8 +263,8 @@ describe('property-grammar parity guard', () => {
   // Both are ratchets, not derived, or the assertion compares a number to
   // itself. A transform-only type draws nothing, and a `pending` type is one
   // gap `renderIntent` already declares, so neither widens the population.
-  const SWEPT_SLICES = 105;
-  const PARSER_REUSING_SLICES = 146;
+  const SWEPT_SLICES = 107;
+  const PARSER_REUSING_SLICES = 144;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>

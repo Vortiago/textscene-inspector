@@ -3,7 +3,7 @@
  * z_index draw order, visibility and hierarchical modulate, read from rendered
  * three.js state.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseNode2D } from '../../nodes/base/node2d/parser';
@@ -11,6 +11,13 @@ import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { CanvasItem2D } from './CanvasItem2D';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../canvasPaintOrder';
+import type { CanvasItemTint } from '../canvasItemModulate';
+import type { ItemPlacement } from '../lighting2d/itemLightList';
+import {
+  CanvasLighting2DContext,
+  INERT_CANVAS_LIGHTING,
+  type CanvasLighting2D,
+} from '../lighting2d/lightPassContext';
 
 /** The world canvas's rank, derived rather than hardcoded: only a rank's order means anything. */
 const WORLD_RANK = layerRankOf(layerRanks([]), 0);
@@ -80,5 +87,47 @@ describe('CanvasItem2D', () => {
     const childColor = ((meshes[1]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color;
     expect(parentColor.r).toBeCloseTo(0, 5); // own pixels: modulate × self_modulate(0)
     expect(childColor.r).toBeCloseTo(srgbToLinear(0.5), 4); // inherits modulate, not self_modulate
+  });
+
+  describe('lighting', () => {
+    function spiedLighting() {
+      const registerItem = vi.fn((_placement: ItemPlacement, _lightOnly: boolean) => () => {});
+      const value: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, registerItem };
+      return { value, registerItem };
+    }
+
+    it('declares its own pixels as a lit item', async () => {
+      const { value, registerItem } = spiedLighting();
+      const node = makeNode({ z_index: '3' });
+      await ReactThreeTestRenderer.create(
+        <CanvasLighting2DContext.Provider value={value}>
+          <CanvasItem2D node={node} props={node2DProps(node)} body={() => <mesh />} />
+        </CanvasLighting2DContext.Provider>
+      );
+      expect(registerItem).toHaveBeenCalledWith(expect.objectContaining({ z: 3 }), false);
+    });
+
+    it('declares no lit item with no pixels of its own', async () => {
+      const { value, registerItem } = spiedLighting();
+      const node = makeNode();
+      await ReactThreeTestRenderer.create(
+        <CanvasLighting2DContext.Provider value={value}>
+          <CanvasItem2D node={node} props={node2DProps(node)} ownItems={() => <mesh />} />
+        </CanvasLighting2DContext.Provider>
+      );
+      expect(registerItem).not.toHaveBeenCalled();
+    });
+
+    it('hands ownItems the own-pixel tint, the material and its z_final', async () => {
+      const node = makeNode({ z_index: '2', self_modulate: 'Color(1, 0, 0, 1)' });
+      const ownItems = vi.fn((_tint: CanvasItemTint, _material: unknown, _zFinal: number) => null);
+      await ReactThreeTestRenderer.create(
+        <CanvasItem2D node={node} props={node2DProps(node)} ownItems={ownItems} />
+      );
+      const [tint, material, zFinal] = ownItems.mock.calls[0]!;
+      expect(tint.own).toMatchObject({ r: 1, g: 0, b: 0 });
+      expect(material).toBeNull();
+      expect(zFinal).toBe(2);
+    });
   });
 });

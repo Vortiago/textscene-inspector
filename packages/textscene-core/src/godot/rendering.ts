@@ -33,6 +33,19 @@ export const CANVAS_LAYER_MIN = -2147483648;
 export const CANVAS_LAYER_MAX = 2147483647;
 
 /**
+ * `RenderingServer::MAX_2D_DIRECTIONAL_LIGHTS` (`servers/rendering/rendering_server.h:109`): the
+ * DirectionalLight2Ds one viewport applies. `renderer_viewport.cpp:511` stops the list there.
+ */
+export const MAX_2D_DIRECTIONAL_LIGHTS = 8;
+
+/**
+ * `RendererCanvasRenderRD::MAX_LIGHTS_PER_ITEM` (`renderer_rd/renderer_canvas_render_rd.h:107`).
+ * The per-item loop (`renderer_canvas_render_rd.cpp:2380`) stops one short of it, so an item takes
+ * at most 15 positional lights.
+ */
+export const MAX_LIGHTS_PER_ITEM = 16;
+
+/**
  * `RS::ShadowCastingSetting` (`servers/rendering/rendering_server.h:1494-1499`), the integers a
  * `.tscn` stores for `GeometryInstance3D.cast_shadow` and a MeshLibrary item's `mesh_cast_shadow`.
  */

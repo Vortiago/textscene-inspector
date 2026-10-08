@@ -41,3 +41,4 @@ Strict and lenient parsing diverge only on out-of-range enums. The lenient parse
 - **Not drawn** A `TextureRect` draws nothing for a `ViewportTexture`, which only `albedo_texture` and `Sprite2D.texture` accept.
 - **Approximated** `use_hdr_2d` is not read, so an HDR canvas composites differently.
 - **Needs runtime** A viewport whose camera or world is assigned by script frames from the origin.
+- **Shader missing** A sub-viewport's 2D content draws unlit, so its own Light2D and LightOccluder2D nodes have no effect.

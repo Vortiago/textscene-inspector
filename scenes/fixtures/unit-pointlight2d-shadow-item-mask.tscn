@@ -1,0 +1,37 @@
+; Moves one variable: `shadow_item_cull_mask` on the receiving side. The light reaches both panels,
+; but only the upper panel's `light_mask` meets the shadow mask, so only it takes the bar's shadow.
+; Every other shadow scene leaves both masks at 1, where every item receives, so a light that
+; shadows an item its mask misses shows only here.
+
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[sub_resource type="OccluderPolygon2D" id="1"]
+closed = false
+polygon = PackedVector2Array(0, -250, 0, 250)
+
+[node name="Root" type="Node2D"]
+
+[node name="Receiving" type="Polygon2D" parent="."]
+light_mask = 2
+color = Color(0.25, 0.25, 0.25, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 324, 0, 324)
+
+[node name="Escaping" type="Polygon2D" parent="."]
+color = Color(0.25, 0.25, 0.25, 1)
+polygon = PackedVector2Array(0, 324, 1152, 324, 1152, 648, 0, 648)
+
+[node name="Lamp" type="PointLight2D" parent="."]
+position = Vector2(400, 324)
+texture = ExtResource("1_light")
+texture_scale = 2.0
+energy = 2.0
+range_item_cull_mask = 3
+shadow_enabled = true
+shadow_item_cull_mask = 2
+
+[node name="Caster" type="LightOccluder2D" parent="."]
+position = Vector2(576, 324)
+occluder_light_mask = 2
+occluder = SubResource("1")

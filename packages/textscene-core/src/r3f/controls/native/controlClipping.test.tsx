@@ -11,7 +11,6 @@ import * as THREE from 'three';
 import {
   ControlClipProvider,
   NO_CONTROL_CLIP,
-  intersectClipRects,
   localRectClipPlanes,
   quantizeClipRect,
   useControlClipPlanes,
@@ -141,35 +140,6 @@ describe('worldClipRect', () => {
     expect(resolved!.y).toBeCloseTo(-20);
     expect(resolved!.w).toBeCloseTo(40);
     expect(resolved!.h).toBeCloseTo(20);
-  });
-});
-
-describe('intersectClipRects', () => {
-  it('narrows to the overlap', () => {
-    expect(intersectClipRects({ x: 0, y: 0, w: 100, h: 100 }, { x: 40, y: 10, w: 100, h: 30 })).toEqual({
-      x: 40,
-      y: 10,
-      w: 60,
-      h: 30,
-    });
-  });
-
-  it('collapses to zero when the rects only touch (Rect2::intersects is strict)', () => {
-    expect(intersectClipRects({ x: 0, y: 0, w: 100, h: 100 }, { x: 100, y: 0, w: 50, h: 50 })).toEqual({
-      x: 0,
-      y: 0,
-      w: 0,
-      h: 0,
-    });
-  });
-
-  it('collapses to zero when they miss entirely', () => {
-    expect(intersectClipRects({ x: 0, y: 0, w: 10, h: 10 }, { x: 50, y: 50, w: 10, h: 10 })).toEqual({
-      x: 0,
-      y: 0,
-      w: 0,
-      h: 0,
-    });
   });
 });
 

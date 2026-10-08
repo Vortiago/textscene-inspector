@@ -5,28 +5,27 @@
  * so a fresh uniform object never reaches the GPU.
  */
 
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState, type RefObject } from 'react';
 import * as THREE from 'three';
 import { useCanvasModulate } from '../canvasModulate.js';
 import {
   CanvasItemLightMode,
   type CanvasItemMaterialProperties,
 } from '../../resources/materials/canvasitemmaterial/types.js';
-import { MAX_LIGHT_CLASSES, useCanvasLighting2D, useRegisterLightOnlyItem } from './CanvasLighting2D.js';
+import { useCanvasLighting2D, useCapItemLights, useRegisterLitItem } from './CanvasLighting2D.js';
 import {
   canvasItemLightingProps,
   type CanvasItemLightingProps,
   type CanvasItemLightingUniforms,
 } from './canvasItemLighting.js';
-import { lightReachesItem } from './lightCullKey.js';
+import { placementId } from './itemLightList.js';
 import { useCanvasLayerIndex, useEffectiveZ } from './canvasItemPlacement.js';
 
 export type { CanvasItemLightingProps };
 
 /**
- * Bound to a class slot this item is culled from. Never sampled, since the
- * slot's weight is 0, but a sampler uniform still has to point at a real
- * texture, and one shared 1x1 is cheaper than one per item per slot.
+ * Bound while no light reaches the item, and as the tint of a list no light tints. Transparent
+ * black, so the tint adds nothing, and a sampler uniform still has to point at a real texture.
  */
 const EMPTY_LIGHT_BUFFER: THREE.DataTexture = (() => {
   const texture = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
@@ -37,17 +36,24 @@ const EMPTY_LIGHT_BUFFER: THREE.DataTexture = (() => {
 
 function createUniforms(resolution: THREE.Vector2): CanvasItemLightingUniforms {
   return {
-    classBuffers: Array.from({ length: MAX_LIGHT_CLASSES }, () => ({
-      value: EMPTY_LIGHT_BUFFER as THREE.Texture,
-    })),
-    shadowTintBuffers: Array.from({ length: MAX_LIGHT_CLASSES }, () => ({
-      value: EMPTY_LIGHT_BUFFER as THREE.Texture,
-    })),
-    classWeights: { value: new Array<number>(MAX_LIGHT_CLASSES).fill(0) },
+    lightBuffer: { value: EMPTY_LIGHT_BUFFER as THREE.Texture },
+    shadowTintBuffer: { value: EMPTY_LIGHT_BUFFER as THREE.Texture },
+    isLit: { value: 0 },
     resolution: { value: resolution },
     canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
     lightMode: { value: CanvasItemLightMode.NORMAL },
   };
+}
+
+/** What an item binds to read its light list. */
+interface CanvasItemLighting {
+  /** The material props, which never change once mounted. */
+  readonly props: CanvasItemLightingProps;
+  /**
+   * For the object that holds the item's own geometry, its child items left out. The per-item cap
+   * measures its rect (`itemLightCap.ts`).
+   */
+  readonly geometryRef: RefObject<THREE.Object3D | null>;
 }
 
 export function useCanvasItemLighting(
@@ -60,8 +66,8 @@ export function useCanvasItemLighting(
    * outside their tree position and so passes the z it computed for them.
    */
   effectiveZ?: number
-): CanvasItemLightingProps {
-  const { classes, resolution } = useCanvasLighting2D();
+): CanvasItemLighting {
+  const { lists, resolution } = useCanvasLighting2D();
   const inheritedZ = useEffectiveZ();
   const itemZ = effectiveZ ?? inheritedZ;
   const canvasLayer = useCanvasLayerIndex();
@@ -71,9 +77,17 @@ export function useCanvasItemLighting(
   const lightMode = material?.lightMode ?? CanvasItemLightMode.NORMAL;
   const lightOnly = lightMode === CanvasItemLightMode.LIGHT_ONLY;
 
-  // The unmodulated accumulation costs a second pre-pass per class, so it is
-  // allocated only once an item that reads it exists.
-  useRegisterLightOnlyItem(lightOnly);
+  // Godot's cull test (`light_mask`, `z_final` and the canvas layer, at
+  // `renderer_canvas_render_rd.cpp:2366` and `renderer_viewport.cpp:672`) picks the item's light
+  // list, so items at one placement share it. The unmodulated accumulation costs a second pre-pass,
+  // so a list has one only while a Light Only item reads it. Past 15 positional lights on its rect,
+  // the item drops the later ones from its list.
+  const geometryRef = useRef<THREE.Object3D | null>(null);
+  const [positionalLights, setPositionalLights] = useState<readonly number[] | null>(null);
+  const placement = { lightMask, z: itemZ, layer: canvasLayer, positionalLights };
+  useCapItemLights(placement, geometryRef, setPositionalLights);
+  useRegisterLitItem(placement, lightOnly);
+  const list = lists.get(placementId(placement));
 
   const uniforms = useRef<CanvasItemLightingUniforms | null>(null);
   uniforms.current ??= createUniforms(resolution);
@@ -81,24 +95,10 @@ export function useCanvasItemLighting(
 
   // Mutating in render keeps the GPU in step without a recompile, and re-running
   // plain value writes is harmless.
-  const weights = bound.classWeights.value as number[];
-  for (let slot = 0; slot < MAX_LIGHT_CLASSES; slot += 1) {
-    const lightClass = classes[slot];
-    const accumulation = lightOnly ? lightClass?.lightOnlyBuffer : lightClass?.buffer;
-    // Godot's cull test (`light_mask`, `z_final` and the canvas layer against
-    // `lightCullKey`) runs here, once per item per frame, as a per-slot weight.
-    // `canvasItemLighting.ts` says why it cannot run per fragment.
-    const lights =
-      !!accumulation &&
-      lightClass !== undefined &&
-      lightReachesItem(lightClass.key, lightMask, itemZ, canvasLayer);
-    weights[slot] = lights ? 1 : 0;
-    bound.classBuffers[slot]!.value = lights ? accumulation : EMPTY_LIGHT_BUFFER;
-    // The stand-in is transparent black, so a class with no shadow-tinting light
-    // contributes nothing and needs no separate branch in the shader.
-    bound.shadowTintBuffers[slot]!.value =
-      (lights ? lightClass?.shadowTintBuffer : null) ?? EMPTY_LIGHT_BUFFER;
-  }
+  const accumulation = lightOnly ? list?.lightOnlyBuffer : list?.buffer;
+  bound.isLit.value = accumulation ? 1 : 0;
+  bound.lightBuffer.value = accumulation ?? EMPTY_LIGHT_BUFFER;
+  bound.shadowTintBuffer.value = (accumulation ? list?.shadowTintBuffer : null) ?? EMPTY_LIGHT_BUFFER;
   // The provider owns these textures and this vector, so a resize or a
   // reallocation reaches every item without a re-render.
   bound.resolution.value = resolution;
@@ -108,5 +108,6 @@ export function useCanvasItemLighting(
   bound.lightMode.value = lightMode;
 
   // Mode-independent by design: these props must never change once mounted.
-  return useMemo(() => canvasItemLightingProps(bound), [bound]);
+  const props = useMemo(() => canvasItemLightingProps(bound), [bound]);
+  return useMemo(() => ({ props, geometryRef }), [props]);
 }

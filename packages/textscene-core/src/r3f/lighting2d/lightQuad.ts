@@ -46,10 +46,12 @@ export const SHADOW_FILTER_PCF13 = 2;
  * `light_blend_compute`'s modes are one fixed-function blend each: ADD is SrcAlpha/One with add,
  * SUB the same with reverse-subtract, and MIX SrcAlpha/OneMinusSrcAlpha with add. Alpha adds
  * One/One: Godot 4.6.3 sums `light_only_alpha`, so one, two and three 0.3 cookies mask to 0.3, 0.6
- * and 0.9, not a screen blend's 0.51 and 0.657.
+ * and 0.9, not a screen blend's 0.51 and 0.657. A light quad neither tests nor writes depth.
  */
-function accumulationBlend(blendMode: number): Partial<THREE.ShaderMaterialParameters> {
+export function accumulationState(blendMode: number): Partial<THREE.ShaderMaterialParameters> {
   return {
+    depthWrite: false,
+    depthTest: false,
     // The transparent list sorts farthest-first, replaying canvas draw order. The opaque list
     // sorts nearest-first and would reverse MIX, whose result depends on light order.
     transparent: true,
@@ -70,13 +72,19 @@ function accumulationBlend(blendMode: number): Partial<THREE.ShaderMaterialParam
 export type LightQuadStencil = Partial<THREE.ShaderMaterialParameters>;
 
 /**
- * Whether a `shadow_color` puts anything into the accumulator. Alpha is the
- * whole test: it multiplies the term twice over (once as the blend factor, once
- * as `shadow_color.a`), so a transparent colour contributes nothing whatever its
- * rgb, and Godot's default is exactly that.
+ * Whether a `shadow_color` puts anything into the accumulator. Its term is `S.rgb · s` under the
+ * alpha `(1 − s) + S.a · s`. A binary shadow leaves only `S.a` in front, so a transparent colour
+ * adds nothing, and Godot's default (`light_2d.h:58`) is exactly that. A filtered penumbra keeps
+ * `S.rgb · s · (1 − s)`.
  */
-export function shadowColorContributes(shadowColor: Color): boolean {
-  return shadowColor.a > 0;
+export function shadowColorContributes(shadowColor: Color, filter: number): boolean {
+  if (shadowColor.a > 0) return true;
+  return filter !== SHADOW_FILTER_NONE && (shadowColor.r !== 0 || shadowColor.g !== 0 || shadowColor.b !== 0);
+}
+
+/** The colour with its rgb zeroed: a quad of it carries only its alpha, the factor MIX scales by. */
+export function alphaOnly(color: Color): Color {
+  return { r: 0, g: 0, b: 0, a: color.a };
 }
 
 /**
@@ -124,10 +132,8 @@ export function createShadowColorQuadMaterial(options: ShadowColorQuadOptions): 
       },
       ...sampling?.uniforms,
     },
-    depthWrite: false,
-    depthTest: false,
     ...canvasItemFacing(),
-    ...accumulationBlend(blendMode),
+    ...accumulationState(blendMode),
     ...stencil,
   });
 }
@@ -185,12 +191,10 @@ export function createLightQuadMaterial({
         : {}),
       ...sampling?.uniforms,
     },
-    depthWrite: false,
-    depthTest: false,
-    // One pass, since `accumulationBlend` sums into the accumulator (`blendDst: OneFactor` for
+    // One pass, since `accumulationState` sums into the accumulator (`blendDst: OneFactor` for
     // ADD/SUB), so a fragment both facing passes covered would count this light twice.
     ...canvasItemFacing(),
-    ...accumulationBlend(blendMode),
+    ...accumulationState(blendMode),
     ...stencil,
   });
 }

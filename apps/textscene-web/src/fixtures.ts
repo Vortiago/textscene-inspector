@@ -453,6 +453,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Directionallight2d Shadow Pcf5",
+    "file": "unit-directionallight2d-shadow-pcf5.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directionallight2d Shadow",
+    "file": "unit-directionallight2d-shadow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Directionallight2d",
+    "file": "unit-directionallight2d.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
     "category": "Other"
@@ -1173,8 +1188,33 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Item Light Cap",
+    "file": "unit-pointlight2d-item-light-cap.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d Lightonly",
     "file": "unit-pointlight2d-lightonly.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Many Masks",
+    "file": "unit-pointlight2d-many-masks.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Mix Order",
+    "file": "unit-pointlight2d-mix-order.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Mix Over Shadow Color",
+    "file": "unit-pointlight2d-mix-over-shadow-color.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Mix Shadow Color",
+    "file": "unit-pointlight2d-mix-shadow-color.tscn",
     "category": "Other"
   },
   {
@@ -1185,6 +1225,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Pointlight2d Range Z",
     "file": "unit-pointlight2d-range-z.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Pointlight2d Shadow Item Mask",
+    "file": "unit-pointlight2d-shadow-item-mask.tscn",
     "category": "Other"
   },
   {
@@ -2043,6 +2088,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Parallax Ignore Camera Zoom",
+    "file": "unit-parallax-ignore-camera-zoom.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Parallax Layer",
     "file": "unit-parallax-layer.tscn",
     "category": "Unit - 2D Canvas"
@@ -2100,6 +2150,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tile Map Layer Isometric",
     "file": "unit-tile-map-layer-isometric.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Mixed Sources",
+    "file": "unit-tile-map-layer-mixed-sources.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -2280,6 +2335,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Canvas Layer Modulate Scope",
     "file": "unit-canvas-layer-modulate-scope.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Canvas Layer Transform",
+    "file": "unit-canvas-layer-transform.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {
@@ -2916,6 +2976,11 @@ export const fixtures: Fixture[] = [
     "name": "Navigation Region 3d",
     "file": "unit-navigation-region-3d.tscn",
     "category": "Unit - Navigation"
+  },
+  {
+    "name": "Sub Viewport Camera 2d Canvas Layer",
+    "file": "unit-sub-viewport-camera-2d-canvas-layer.tscn",
+    "category": "Unit - Viewports"
   },
   {
     "name": "Sub Viewport Container 2d Content",

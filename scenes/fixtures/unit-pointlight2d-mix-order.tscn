@@ -1,0 +1,34 @@
+[gd_scene format=3]
+
+; Moves one variable: a MIX light over a light of another range_item_cull_mask on one item.
+; Godot mixes toward the MIX light after it adds the first light, in list order
+; (`renderer_canvas_render_rd.cpp:2365-2384`, `canvas.glsl:559-560`). Every other blend
+; scene lights each item through lights of one mask, so a MIX light summed with an earlier light
+; of another mask shows only here.
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Surface" type="Polygon2D" parent="."]
+light_mask = 3
+color = Color(0.45, 0.45, 0.5, 1)
+polygon = PackedVector2Array(32, 120, 1120, 120, 1120, 530, 32, 530)
+
+[node name="Add" type="PointLight2D" parent="."]
+position = Vector2(500, 325)
+texture = ExtResource("1_light")
+color = Color(1, 0.75, 0.35, 1)
+energy = 1.5
+texture_scale = 0.5
+
+[node name="Mix" type="PointLight2D" parent="."]
+position = Vector2(650, 325)
+texture = ExtResource("1_light")
+color = Color(0.3, 0.5, 1, 1)
+blend_mode = 2
+range_item_cull_mask = 2
+texture_scale = 0.5
+
+[node name="CanvasModulate" type="CanvasModulate" parent="."]
+color = Color(0.3, 0.34, 0.55, 1)

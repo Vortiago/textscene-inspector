@@ -1,17 +1,15 @@
 /**
- * Godot's 2D light cull: `_record_item_commands` in `drivers/gles3/rasterizer_canvas_gles3.cpp`
- * (line 1347 on master) per item, and `_draw_viewport` in `servers/rendering/renderer_viewport.cpp`
+ * Godot's 2D light cull: `renderer_canvas_render_rd.cpp:2369` per item, and `_draw_viewport` in `servers/rendering/renderer_viewport.cpp`
  * (line 1220) per canvas. Godot has no unit test for either (`test_node_2d.cpp` never touches
  * `z_index`), so these are the source lines plus probes.
  */
 
 import { describe, it, expect } from 'vitest';
+import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering';
 import {
   DEFAULT_LIGHT_CULL_KEY,
-  compareLightCullKeys,
-  lightCullKeyId,
+  directionalLightCullKey,
   lightReachesItem,
-  sameLightCullKey,
   type LightCullKey,
 } from './lightCullKey';
 
@@ -120,63 +118,22 @@ describe('lightReachesItem', () => {
   });
 });
 
-describe('lightCullKeyId', () => {
-  it('gives two lights with the same window the same id', () => {
-    expect(lightCullKeyId(key({ zMax: 4 }))).toBe(lightCullKeyId(key({ zMax: 4 })));
+describe('directionalLightCullKey', () => {
+  const directional = directionalLightCullKey(0, 0);
+
+  it('reaches an item whatever its light_mask, 0 included', () => {
+    expect(lightReachesItem(directional, 2, 0, 0)).toBe(true);
+    expect(lightReachesItem(directional, 0, 0, 0)).toBe(true);
   });
 
-  it('separates keys that differ in any single field', () => {
-    const base = lightCullKeyId(key());
-    for (const differing of [
-      key({ itemCullMask: 2 }),
-      key({ zMin: -1023 }),
-      key({ zMax: 1023 }),
-      key({ layerMin: 1 }),
-      key({ layerMax: 1 }),
-    ]) {
-      expect(lightCullKeyId(differing)).not.toBe(base);
-    }
+  it('reaches an item at any z, both ends of the z_final clamp included', () => {
+    expect(lightReachesItem(directional, 1, 2000, 0)).toBe(true);
+    expect(lightReachesItem(directional, 1, CANVAS_ITEM_Z_MIN, 0)).toBe(true);
+    expect(lightReachesItem(directional, 1, CANVAS_ITEM_Z_MAX, 0)).toBe(true);
   });
 
-  it('cannot be spoofed by shifting a digit across the field boundary', () => {
-    // A concatenation with no separator would collide 1|11 with 11|1.
-    expect(lightCullKeyId(key({ itemCullMask: 1, zMin: 11 }))).not.toBe(
-      lightCullKeyId(key({ itemCullMask: 11, zMin: 1 }))
-    );
-  });
-});
-
-describe('sameLightCullKey', () => {
-  it('agrees with the id on identity and on difference', () => {
-    expect(sameLightCullKey(key(), key())).toBe(true);
-    expect(sameLightCullKey(key(), key({ layerMax: 1 }))).toBe(false);
-  });
-});
-
-describe('compareLightCullKeys', () => {
-  it("orders by cull mask first, so today's ascending-mask classes are unmoved", () => {
-    const sorted = [key({ itemCullMask: 2 }), key({ itemCullMask: 1 })].sort(compareLightCullKeys);
-    expect(sorted.map((k) => k.itemCullMask)).toEqual([1, 2]);
-  });
-
-  it('breaks a tie on the window, so the order depends only on WHICH keys are present', () => {
-    // A class's index picks its camera layer, so mount order must never reach it.
-    const keys = [key({ zMax: 4 }), key({ layerMax: 1 }), key(), key({ zMin: -4 })];
-    const first = [...keys].sort(compareLightCullKeys).map(lightCullKeyId);
-    const second = [...keys].reverse().sort(compareLightCullKeys).map(lightCullKeyId);
-    expect(second).toEqual(first);
-    // zMin ascends before zMax is consulted, and both before the layer window,
-    // so the three keys at the default zMin of -1024 come before the one that
-    // raised it to -4.
-    expect(first).toEqual([
-      lightCullKeyId(key({ zMax: 4 })),
-      lightCullKeyId(key()),
-      lightCullKeyId(key({ layerMax: 1 })),
-      lightCullKeyId(key({ zMin: -4 })),
-    ]);
-  });
-
-  it('reports 0 for equal keys', () => {
-    expect(compareLightCullKeys(key(), key())).toBe(0);
+  it('still tests the canvas layer window', () => {
+    expect(lightReachesItem(directional, 1, 0, 1)).toBe(false);
+    expect(lightReachesItem(directionalLightCullKey(0, 1), 1, 0, 1)).toBe(true);
   });
 });

@@ -24,4 +24,22 @@ describe('parseTileMapLayer', () => {
       { coords: { x: 9, y: 11 }, sourceId: 2, atlasCoords: { x: 1, y: 0 }, alternativeId: 5 },
     ]);
   });
+
+  it('reads rendering_quadrant_size', () => {
+    const result = parseTileMapLayer(heading('TileMapLayer', { name: 'L' }), {
+      rendering_quadrant_size: '4',
+    });
+    expect(result.rendering_quadrant_size).toBe(4);
+  });
+
+  it("defaults rendering_quadrant_size to Godot's 16", () => {
+    expect(parseTileMapLayer(heading('TileMapLayer', { name: 'L' }), {}).rendering_quadrant_size).toBe(16);
+  });
+
+  it('keeps 16 for a rendering_quadrant_size below 1, which the setter refuses', () => {
+    const result = parseTileMapLayer(heading('TileMapLayer', { name: 'L' }), {
+      rendering_quadrant_size: '0',
+    });
+    expect(result.rendering_quadrant_size).toBe(16);
+  });
 });

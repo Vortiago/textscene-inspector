@@ -5,6 +5,7 @@
  */
 
 import type { Vector2 } from '../../base/node2d/types';
+import type { Transform2DColumns } from '../../../godot/transform2d.js';
 
 export interface ParallaxBackgroundProperties {
   name: string;
@@ -17,11 +18,8 @@ export interface ParallaxBackgroundProperties {
   /** CanvasLayer draw order. The CanvasLayer default is 0, but this class's is -100. */
   layer: number;
 
-  /** The CanvasLayer's own placement: from `transform` when written, else from the parts. */
-  offset: Vector2;
-  /** Radians. */
-  rotation: number;
-  scale: Vector2;
+  /** The CanvasLayer's canvas transform (`parseCanvasLayerTransform`). */
+  canvasTransform: Transform2DColumns;
 
   /** `canvas_set_parent`s the layer onto the world canvas so it tracks the camera. */
   follow_viewport_enabled: boolean;

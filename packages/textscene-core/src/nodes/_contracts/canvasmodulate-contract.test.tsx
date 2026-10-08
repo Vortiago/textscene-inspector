@@ -21,6 +21,7 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { godotColorToLinear } from '../../r3f/godotColor';
 import { SceneStack } from '../../r3f/testing/SceneStack';
 import { errorsOf } from '../../linter/testing/tierLists';
+import { ownerName } from '../../r3f/lighting2d/testing/lightPassProbe';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
 
@@ -179,8 +180,9 @@ color = Color(0.4, 0.6, 0.9, 1)
     ).children?.[0]?.instance;
     while (root?.parent) root = root.parent;
     root?.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh && o.parent?.name) {
-        byName.set(o.parent.name, (o as THREE.Mesh).material as THREE.MeshBasicMaterial);
+      const owner = ownerName(o);
+      if ((o as THREE.Mesh).isMesh && owner) {
+        byName.set(owner, (o as THREE.Mesh).material as THREE.MeshBasicMaterial);
       }
     });
 

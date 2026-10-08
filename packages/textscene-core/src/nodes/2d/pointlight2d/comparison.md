@@ -18,12 +18,14 @@ canvas item's default repeat to the viewport's disabled default (`viewport.h:419
 item sampler (`canvas.glsl:774-782`).
 
 ## Blend modes
+
 <!-- compare: image=unit-pointlight2d-blend status=done fixture=unit-pointlight2d-blend.tscn -->
 
 Three identical lights over one grey surface, one per `blend_mode`. ADD brightens, SUB
 darkens by the same cookie and MIX interpolates toward the light, each landing on Godot.
 
 ## An inline gradient cookie, a canvas tint, and an unshaded item
+
 <!-- compare: image=unit-pointlight2d-gradient status=done fixture=unit-pointlight2d-gradient.tscn -->
 
 Two torches share one inline `GradientTexture2D` cookie under a CanvasModulate. The
@@ -31,6 +33,7 @@ Two torches share one inline `GradientTexture2D` cookie under a CanvasModulate. 
 unshaded item does in Godot.
 
 ## Light Only items
+
 <!-- compare: image=unit-pointlight2d-lightonly status=done fixture=unit-pointlight2d-lightonly.tscn -->
 
 `light_mode = 2` draws an item only where a light reaches it. The two lit panels keep
@@ -38,6 +41,7 @@ their authored colour under the cookie, the unlit one draws nothing, and none of
 takes the canvas tint.
 
 ## Cull masks: which items a light reaches
+
 <!-- compare: image=unit-pointlight2d-cull-mask status=done fixture=unit-pointlight2d-cull-mask.tscn -->
 
 A light reaches an item only where `range_item_cull_mask` and the item's `light_mask`
@@ -45,6 +49,7 @@ share a bit. Four panels under a warm and a cool light take the warm one, the co
 both, or neither.
 
 ## The z window: which z planes a light reaches
+
 <!-- compare: image=unit-pointlight2d-range-z status=done fixture=unit-pointlight2d-range-z.tscn -->
 
 A light reaches an item only while its accumulated `z_index` lies inside `range_z_min`
@@ -52,6 +57,7 @@ to `range_z_max`, both ends inclusive. The panel at `z_index = 5` stays at the b
 canvas tint.
 
 ## The layer window: which canvases a light reaches
+
 <!-- compare: image=unit-pointlight2d-range-layer status=done fixture=unit-pointlight2d-range-layer.tscn -->
 
 `range_layer_min` and `range_layer_max` default to `0`, the world canvas, while a
@@ -59,11 +65,60 @@ CanvasLayer defaults to `1`. So an untouched light lights the world panel and ne
 HUD panel.
 
 ## Soft shadows: shadow_filter and shadow_filter_smooth
+
 <!-- compare: image=unit-pointlight2d-shadow-pcf5 status=done fixture=unit-pointlight2d-shadow-pcf5.tscn -->
 
 `shadow_filter = PCF5` or `PCF13` averages taps offset in angle across Godot's polar
 shadow map, so the boundary is a stepped ramp that widens with distance. The previewer
 builds the same map and taps it in the light's fragment shader (ADR-0030).
+
+## Shadow receivers: shadow_item_cull_mask
+
+<!-- compare: image=unit-pointlight2d-shadow-item-mask status=done fixture=unit-pointlight2d-shadow-item-mask.tscn -->
+
+`shadow_item_cull_mask` picks the occluders that cast and the items that take the shadow.
+The light reaches both panels, but only the upper panel's `light_mask` meets the mask, so
+the lower panel stays lit behind the bar.
+
+## Light order: a MIX light over a light of another mask
+
+<!-- compare: image=unit-pointlight2d-mix-order status=done fixture=unit-pointlight2d-mix-order.tscn -->
+
+Godot applies every light on an item's list in order, whatever each light's `range_item_cull_mask`
+(`renderer_canvas_render_rd.cpp:2365-2384`). The MIX light reaches the surface through mask 2 and
+the ADD light through mask 1. Where both reach, the MIX light mixes from what the ADD light left.
+
+## Many cull masks on one item
+
+<!-- compare: image=unit-pointlight2d-many-masks status=done fixture=unit-pointlight2d-many-masks.tscn -->
+
+Six lights, one mask bit each, reach one surface whose `light_mask` holds all six. Godot
+draws every light on the item's list, however many masks the canvas holds
+(`renderer_canvas_render_rd.cpp:2366`).
+
+## A MIX light with a shadow_color
+
+<!-- compare: image=unit-pointlight2d-mix-shadow-color status=done fixture=unit-pointlight2d-mix-shadow-color.tscn -->
+
+Where a MIX light is blocked, Godot mixes the colour under it toward `shadow_color` by
+`shadow_color.a` (`canvas.glsl:544-546`, `:559-560`). The ADD light under it dims there too, behind
+the bar on the right.
+
+## A MIX light over a tinted shadow
+
+<!-- compare: image=unit-pointlight2d-mix-over-shadow-color status=done fixture=unit-pointlight2d-mix-over-shadow-color.tscn -->
+
+A MIX light mixes the tinted shadow under it like any other colour. The green MIX light
+replaces the blue `shadow_color` of the light on the left where both reach.
+
+## At most 15 lights on one item
+
+<!-- compare: image=unit-pointlight2d-item-light-cap status=done fixture=unit-pointlight2d-item-light-cap.tscn -->
+
+An item takes at most 15 positional lights, in tree order. A light counts only where its rect
+meets the item's rect, and only while its rect meets the viewport. The green light reaches only
+the left panel, so the left panel fills its 15 lights before the red light. The right panel
+takes the red light.
 
 ## Linting
 
@@ -93,13 +148,5 @@ white silently. `texture` is stored with no reference check.
 
 ## Known limitations
 
-- **Approximated** `shadow_item_cull_mask` selects which occluders cast, but not which
-  items receive the shadow, so an item Godot would leave unshadowed is shadowed here.
 - **Shader missing** A `CanvasTexture.normal_texture` is not read, so every surface
   takes the light head-on with no specular response.
-- **Approximated** A MIX light in one cull-mask class over a light in another class
-  reaching the same item is summed rather than applied in Godot's order.
-- **Approximated** Past four distinct cull tuples on one canvas the extra lights are
-  dropped with a warning.
-- **Approximated** A CanvasLayer takes the layer window but still follows the 2D camera,
-  where Godot draws it through its own canvas transform.

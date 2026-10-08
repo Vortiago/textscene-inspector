@@ -10,6 +10,7 @@ import { boolOr, intOr } from '../../../../parser/valueParsers';
 import { tileMapLayerVector } from '../shared/layerVector';
 import { parseColor } from '../../../../utils/colorParser';
 import { decodeLegacyTileData } from '../shared/tileData';
+import { DEFAULT_RENDERING_QUADRANT_SIZE, renderingQuadrantSizeOr } from '../shared/renderingQuadrantSize';
 import type { TileMapLayerData, TileMapProperties } from './types';
 
 export function parseTileMap(heading: ParsedHeading, properties: Record<string, string>): TileMapProperties {
@@ -20,9 +21,29 @@ export function parseTileMap(heading: ParsedHeading, properties: Record<string, 
 
   const layers = tileMapLayerVector(properties).map(([index, leaves]) => parseLayer(index, leaves, format));
 
-  const result: TileMapProperties = { ...baseProperties, layers };
+  const result: TileMapProperties = {
+    ...baseProperties,
+    rendering_quadrant_size: tileMapRenderingQuadrantSize(properties),
+    layers,
+  };
   if (properties.tile_set) result.tile_set = properties.tile_set;
   return result;
+}
+
+/**
+ * `_set` routes the deprecated `cell_quadrant_size` to the same setter (`tile_map.cpp:695-697`), so
+ * the two keys apply in file order and the later one the setter accepts wins.
+ */
+function tileMapRenderingQuadrantSize(properties: Record<string, string>): number {
+  const keys = Object.keys(properties);
+  const isDeprecatedFirst = keys.indexOf('cell_quadrant_size') < keys.indexOf('rendering_quadrant_size');
+  const writes = isDeprecatedFirst
+    ? [properties.cell_quadrant_size, properties.rendering_quadrant_size]
+    : [properties.rendering_quadrant_size, properties.cell_quadrant_size];
+  return writes.reduce(
+    (size: number, value) => renderingQuadrantSizeOr(value, size),
+    DEFAULT_RENDERING_QUADRANT_SIZE
+  );
 }
 
 function parseLayer(index: number, props: ReadonlyMap<string, string>, format: number): TileMapLayerData {
@@ -38,6 +59,8 @@ function parseLayer(index: number, props: ReadonlyMap<string, string>, format: n
     name: rawName || `Layer${index}`,
     enabled: boolOr(props.get('enabled'), true),
     zIndex: intOr(props.get('z_index'), 0),
+    ySortEnabled: boolOr(props.get('y_sort_enabled'), false),
+    ySortOrigin: intOr(props.get('y_sort_origin'), 0),
     cells: tileData ? decodeLegacyTileData(tileData, format) : [],
   };
   if (modulate) layer.modulate = parseColor(modulate);

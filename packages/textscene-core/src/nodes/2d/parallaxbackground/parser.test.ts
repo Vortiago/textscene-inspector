@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { parseParallaxBackground } from './parser';
+import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/transform2d';
 
 describe('parseParallaxBackground', () => {
   it('parses the scroll surface and the CanvasLayer placement (happy path)', () => {
@@ -20,9 +21,7 @@ describe('parseParallaxBackground', () => {
     );
     expect(result.name).toBe('MyParallaxBackground');
     expect(result.parent).toBe('.');
-    expect(result.offset).toEqual({ x: 10, y: -20 });
-    expect(result.scale).toEqual({ x: 2, y: 2 });
-    expect(result.rotation).toBe(1.5);
+    expect(result.canvasTransform).toEqual(transform2DFromParts(1.5, { x: 2, y: 2 }, 0, { x: 10, y: -20 }));
     expect(result.scroll_base_offset).toEqual({ x: 5, y: 6 });
     expect(result.scroll_base_scale).toEqual({ x: 0.1, y: 0 });
     expect(result.scroll_limit_begin).toEqual({ x: -100, y: -50 });
@@ -45,18 +44,14 @@ describe('parseParallaxBackground', () => {
       scale: 'Vector2(0.5, 0.5)',
       transform: 'Transform2D(0.5, 0, 0, 0.5, 0, -427)',
     });
-    expect(result.offset).toEqual({ x: 0, y: -427 });
-    expect(result.scale.x).toBeCloseTo(0.5, 10);
-    expect(result.scale.y).toBeCloseTo(0.5, 10);
-    expect(result.rotation).toBeCloseTo(0, 10);
+    expect(result.canvasTransform).toEqual({ a: 0.5, b: 0, c: 0, d: 0.5, tx: 0, ty: -427 });
   });
 
   it('falls back to the identity placement on a malformed transform (error path)', () => {
     const result = parseParallaxBackground(heading('ParallaxBackground', { name: 'Bad' }), {
       transform: 'Transform2D(not, valid)',
     });
-    expect(result.offset).toEqual({ x: 0, y: 0 });
-    expect(result.scale).toEqual({ x: 1, y: 1 });
+    expect(result.canvasTransform).toEqual(TRANSFORM2D_IDENTITY);
   });
 
   it('handles missing optional attributes (edge case)', () => {

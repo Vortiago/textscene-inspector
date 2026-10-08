@@ -1,8 +1,7 @@
 /**
- * Slot allocation in a light class, one cull tuple of `drivers/gles3/rasterizer_canvas_gles3.cpp`
- * and `servers/rendering/renderer_viewport.cpp`. A class shares one pass and 8-bit stencil, so the
- * ordinal keeps its shadow stamps apart: distinct in a class, dense for 255 values, and free to
- * repeat across classes.
+ * Ordinal allocation on a canvas. Lights of any reach can share an item's list buffer and its
+ * 8-bit stencil, so the ordinal keeps their shadow stamps apart: distinct on the canvas and dense
+ * for 255 values.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -13,125 +12,85 @@ import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from './lightCullKey';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
-/** A cull key with Godot's defaults, overridden field by field. */
-function key(overrides: Partial<LightCullKey> = {}): LightCullKey {
-  return { ...DEFAULT_LIGHT_CULL_KEY, ...overrides };
-}
-
-const DEFAULT_KEY = key();
-const MASK_2_KEY = key({ itemCullMask: 2 });
-
 /** Reports every ordinal this light has been given, newest last. */
-function Light({ cullKey, seen }: { cullKey: LightCullKey; seen: number[] }) {
-  seen.push(useRegisterCanvasLight2D(true, cullKey));
+function Light({ reach = DEFAULT_LIGHT_CULL_KEY, seen }: { reach?: LightCullKey; seen: (number | null)[] }) {
+  seen.push(
+    useRegisterCanvasLight2D(true, { reach, sequence: 0, shadowItemCullMask: null, tintsShadow: false })
+  );
   return null;
 }
 
-async function mount(children: ReactNode) {
-  const renderer = await ReactThreeTestRenderer.create(
-    <CanvasLighting2DProvider canvasModulate={WHITE}>{children}</CanvasLighting2DProvider>
-  );
+function provider(children: ReactNode) {
+  return <CanvasLighting2DProvider canvasModulate={WHITE}>{children}</CanvasLighting2DProvider>;
+}
+
+async function settle(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, 10));
+}
+
+async function mount(children: ReactNode) {
+  const renderer = await ReactThreeTestRenderer.create(provider(children));
+  await settle();
   return renderer;
 }
 
 describe('useRegisterCanvasLight2D', () => {
-  it('numbers the lights of one class from zero, densely', async () => {
-    const a: number[] = [];
-    const b: number[] = [];
-    const c: number[] = [];
+  it('numbers the lights on a canvas from zero, densely', async () => {
+    const a: (number | null)[] = [];
+    const b: (number | null)[] = [];
+    const c: (number | null)[] = [];
     await mount(
       <>
-        <Light cullKey={DEFAULT_KEY} seen={a} />
-        <Light cullKey={DEFAULT_KEY} seen={b} />
-        <Light cullKey={DEFAULT_KEY} seen={c} />
+        <Light seen={a} />
+        <Light seen={b} />
+        <Light seen={c} />
       </>
     );
     expect([a.at(-1), b.at(-1), c.at(-1)]).toEqual([0, 1, 2]);
   });
 
-  it('keeps two lights in one class when only their key VALUES match', async () => {
-    // The registry is keyed by the tuple's value, never by object identity: a
-    // light rebuilds its key object whenever its component re-renders.
-    const a: number[] = [];
-    const b: number[] = [];
+  it('keeps one numbering across lights of different reach', async () => {
+    // An item both reach draws both into one buffer, so a repeated ordinal would make one light
+    // reject the other's shadow.
+    const first: (number | null)[] = [];
+    const second: (number | null)[] = [];
     await mount(
       <>
-        <Light cullKey={key({ zMax: 4 })} seen={a} />
-        <Light cullKey={key({ zMax: 4 })} seen={b} />
+        <Light seen={first} />
+        <Light reach={{ ...DEFAULT_LIGHT_CULL_KEY, itemCullMask: 2 }} seen={second} />
       </>
     );
-    expect([a.at(-1), b.at(-1)]).toEqual([0, 1]);
-  });
-
-  it('restarts the numbering in a second class', async () => {
-    // Nothing draws two classes into one stencil, so reusing 0 costs nothing, and not reusing it
-    // would burn the 255-value range on a scene with many classes.
-    const first: number[] = [];
-    const second: number[] = [];
-    await mount(
-      <>
-        <Light cullKey={DEFAULT_KEY} seen={first} />
-        <Light cullKey={MASK_2_KEY} seen={second} />
-      </>
-    );
-    expect([first.at(-1), second.at(-1)]).toEqual([0, 0]);
-  });
-
-  it('splits a class on a z window even when the cull masks agree', async () => {
-    // The accumulator is a screen-space sum, so a light that reaches fewer items
-    // than its pass-mate cannot be un-summed per fragment. It needs its own pass.
-    const first: number[] = [];
-    const second: number[] = [];
-    await mount(
-      <>
-        <Light cullKey={DEFAULT_KEY} seen={first} />
-        <Light cullKey={key({ zMax: 4 })} seen={second} />
-      </>
-    );
-    expect([first.at(-1), second.at(-1)]).toEqual([0, 0]);
-  });
-
-  it('splits a class on a layer window even when the cull masks agree', async () => {
-    const first: number[] = [];
-    const second: number[] = [];
-    await mount(
-      <>
-        <Light cullKey={DEFAULT_KEY} seen={first} />
-        <Light cullKey={key({ layerMax: 1 })} seen={second} />
-      </>
-    );
-    expect([first.at(-1), second.at(-1)]).toEqual([0, 0]);
+    expect([first.at(-1), second.at(-1)]).toEqual([0, 1]);
   });
 
   it('hands a withdrawn ordinal to the next light rather than growing', async () => {
-    const a: number[] = [];
-    const b: number[] = [];
-    const late: number[] = [];
+    const a: (number | null)[] = [];
+    const b: (number | null)[] = [];
+    const late: (number | null)[] = [];
     const renderer = await mount(
       <>
-        <Light cullKey={DEFAULT_KEY} seen={a} />
-        <Light cullKey={DEFAULT_KEY} seen={b} />
+        <Light key="a" seen={a} />
+        <Light key="b" seen={b} />
       </>
     );
     expect([a.at(-1), b.at(-1)]).toEqual([0, 1]);
 
     await renderer.update(
-      <CanvasLighting2DProvider canvasModulate={WHITE}>
-        <Light cullKey={DEFAULT_KEY} seen={a} />
-        <Light cullKey={DEFAULT_KEY} seen={late} />
-      </CanvasLighting2DProvider>
+      provider(
+        <>
+          <Light key="a" seen={a} />
+          <Light key="late" seen={late} />
+        </>
+      )
     );
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    await settle();
     expect(late.at(-1)).toBe(1);
   });
 
-  it('gives 0 while a light is registering, which is a real ordinal', async () => {
-    // Nothing has a slot on the mount pass, so the first render must not invent one: a light that
-    // reported -1 or NaN would derive a stencil ref from it.
-    const seen: number[] = [];
-    await mount(<Light cullKey={DEFAULT_KEY} seen={seen} />);
-    expect(seen[0]).toBe(0);
+  it('gives null until the light is declared, so no stencil ref derives from a guess', async () => {
+    const seen: (number | null)[] = [];
+    await mount(<Light seen={seen} />);
+    expect(seen[0]).toBeNull();
     expect(seen.at(-1)).toBe(0);
   });
 });

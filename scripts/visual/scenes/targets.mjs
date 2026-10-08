@@ -20,6 +20,9 @@ export const TILE_AND_TARGET_SCENES = [
   // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by half a
   // tile.
   { name: 'tile-map-layer-hexagon', file: 'unit-tile-map-layer-hexagon.tscn', mode: '2d' },
+  // Cells of two atlas sources alternate in one rendering quadrant, each overlapping the next.
+  // Godot draws them in cell order, not grouped by source. Verified against Godot 4.6.3.
+  { name: 'tile-map-layer-mixed-sources', file: 'unit-tile-map-layer-mixed-sources.tscn', mode: '2d' },
 
   // RemoteTransform3D and RemoteTransform2D copy their transform onto the node
   // remote_path names, resolved once at parse time (r3f/remoteTransforms.ts).

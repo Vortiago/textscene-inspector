@@ -38,10 +38,12 @@ A malformed `transform` falls back to the identity placement and an unreadable `
 to Godot's class default `-100`. `scroll_base_scale` falls back to `Vector2(1, 1)`, the
 other `scroll_*` vectors to `Vector2(0, 0)` and `follow_viewport_scale` to `1`.
 
-## Known limitations
+## Scrolling under a Camera2D
 
-- **Needs runtime** In Godot and here, the whole `scroll_*` surface acts only while a
-  Camera2D is current, inside a sub-viewport that frames through one.
-- **Approximated** `scroll_offset` and `follow_viewport_scale` are parsed but never
-  applied.
-- **Approximated** `scroll_ignore_camera_zoom` shows only at a camera zoom other than 1.
+In Godot and here, the `scroll_*` surface acts only while a Camera2D is current, inside a
+sub-viewport that frames through one. The camera sets `scroll_offset` before each scroll
+(`parallax_background.cpp:48-52`), so an authored `scroll_offset` never shows.
+
+`scroll_ignore_camera_zoom` divides the camera zoom out of the scroll and draws each layer
+at scale 1. The `parallax-ignore-camera-zoom` golden puts a layer under a zoom-2 camera.
+Godot 4.6.3 draws its bar at its authored 80 by 30 pixels, and the previewer matches it.

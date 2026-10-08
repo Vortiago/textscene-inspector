@@ -16,6 +16,9 @@ import { ParallaxLayer } from '../parallaxlayer/Component';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { parseParallaxBackground } from './parser';
 import { ParallaxBackground } from './Component';
+import { CanvasLayerScope } from '../../../r3f/canvasLayerScope';
+import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
+import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera';
 
 function backgroundNode(properties: Record<string, string> = {}): TscnNode {
   return {
@@ -57,31 +60,17 @@ const CAMERA_TAG: Camera2DTag = {
  * produces it and the Godot probe measured it: top-left (24, 76) in canvas pixels.
  */
 function viewportPassCamera(): THREE.OrthographicCamera {
-  const camera = new THREE.OrthographicCamera(-576, 576, 324, -324, 0.1, 4000);
+  const camera = createViewportCanvasCamera();
+  Object.assign(camera, { left: -576, right: 576, top: 324, bottom: -324, near: 0.1, far: 4000 });
   camera.position.set(600, -400, 1000);
+  camera.updateProjectionMatrix();
   return camera;
 }
 
-/**
- * The store's camera, which the test renderer does not expose. Rendering
- * through it is what tells the component it is on the free 2D stage rather than
- * in a sub-viewport's pass.
- */
+/** The store's camera, which the test renderer does not expose: the free 2D stage renders through it. */
 function StoreCamera({ into }: { into: { current: THREE.Camera | null } }) {
   into.current = useThree((state) => state.camera);
   return null;
-}
-
-/** What `WebGLRenderer.render` calls before it builds its render list. */
-function fireRender(scene: THREE.Object3D, camera: THREE.Camera) {
-  scene.onBeforeRender(
-    null as unknown as THREE.WebGLRenderer,
-    scene as THREE.Scene,
-    camera,
-    null as unknown as THREE.BufferGeometry,
-    null as unknown as THREE.Material,
-    null as unknown as THREE.Group
-  );
 }
 
 describe('<ParallaxBackground>', () => {
@@ -103,32 +92,39 @@ describe('<ParallaxBackground>', () => {
       <>
         <StoreCamera into={storeCamera} />
         <group position={[300, -200, 0]}>
-          <ParallaxBackground node={backgroundNode({ offset: 'Vector2(0, 40)' })} />
+          <ParallaxBackground node={backgroundNode()} />
         </group>
       </>
     );
     const scene = renderer.scene.instance;
-    fireRender(scene, storeCamera.current!);
+    fireSceneRender(scene, storeCamera.current!);
 
     const group = scene.getObjectByName('BG')!;
     const world = new THREE.Vector3().setFromMatrixPosition(group.matrixWorld);
-    // Its own `offset` applies (Godot y-down → three -40); the parent's
-    // (300, -200) does not.
+    // The parent's (300, -200) does not apply. The layer's own transform applies inside, in
+    // `CanvasLayerScope`.
     expect(world.x).toBe(0);
-    expect(world.y).toBe(-40);
+    expect(world.y).toBe(0);
   });
 
-  it('anchors to the view corner when a sub-viewport pass renders through a Camera2D', async () => {
+  it('anchors its canvas to the view corner when a sub-viewport pass renders through a Camera2D', async () => {
+    // The anchor is `CanvasLayerScope`'s, which every CanvasLayer's subtree draws in.
+    const node = backgroundNode();
     const renderer = await ReactThreeTestRenderer.create(
       <>
         <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
-        <ParallaxBackground node={backgroundNode()} />
+        <ParallaxBackground node={node}>
+          <CanvasLayerScope node={node}>
+            <group name="Probe" />
+          </CanvasLayerScope>
+        </ParallaxBackground>
       </>
     );
     const scene = renderer.scene.instance;
-    fireRender(scene, viewportPassCamera());
+    scene.updateMatrixWorld();
+    fireSceneRender(scene, viewportPassCamera(), new THREE.WebGLRenderTarget(1152, 648));
 
-    const world = new THREE.Vector3().setFromMatrixPosition(scene.getObjectByName('BG')!.matrixWorld);
+    const world = new THREE.Vector3().setFromMatrixPosition(scene.getObjectByName('Probe')!.matrixWorld);
     expect(world.x).toBe(24);
     expect(world.y).toBe(-76);
   });
@@ -145,7 +141,7 @@ describe('<ParallaxBackground>', () => {
       </>
     );
     const scene = renderer.scene.instance;
-    fireRender(scene, storeCamera.current!);
+    fireSceneRender(scene, storeCamera.current!);
 
     const world = new THREE.Vector3().setFromMatrixPosition(scene.getObjectByName('BG')!.matrixWorld);
     expect(world.x).toBe(0);
@@ -173,7 +169,7 @@ describe('<ParallaxBackground>', () => {
       </>
     );
     const scene = renderer.scene.instance;
-    fireRender(scene, viewportPassCamera());
+    fireSceneRender(scene, viewportPassCamera());
 
     const wrappers = scene.getObjectByName('BG')!.children.filter((child) => child.type === 'Group');
     expect(wrappers[0]!.position.x).toBe(-24);
@@ -182,6 +178,30 @@ describe('<ParallaxBackground>', () => {
     // background's own anchor and scrolls with the view.
     expect(wrappers[1]!.position.x).toBe(0);
     expect(wrappers[1]!.position.y).toBe(0);
+  });
+
+  it('scrolls by the camera alone, as the camera overwrites an authored scroll_offset', async () => {
+    // `_camera_moved` sets `offset` from the camera transform before each `_update_scroll`
+    // (`parallax_background.cpp:48-52`), so the authored value never reaches a layer.
+    const worldFixed = layerNode('WorldFixed', { motion_scale: 'Vector2(1, 1)' });
+    const renderer = await ReactThreeTestRenderer.create(
+      <>
+        <group userData={{ camera2d: CAMERA_TAG }} position={[600, -400, 0]} />
+        <NodePathProvider path="BG">
+          <ParallaxBackground node={backgroundNode({ scroll_offset: 'Vector2(300, 200)' })}>
+            <NodePathProvider path="BG/WorldFixed">
+              <ParallaxLayer node={worldFixed} />
+            </NodePathProvider>
+          </ParallaxBackground>
+        </NodePathProvider>
+      </>
+    );
+    const scene = renderer.scene.instance;
+    fireSceneRender(scene, viewportPassCamera());
+
+    const wrapper = scene.getObjectByName('BG')!.children.find((child) => child.type === 'Group')!;
+    expect(wrapper.position.x).toBe(-24);
+    expect(wrapper.position.y).toBe(76);
   });
 
   it('does not scroll on the free 2D stage even when the scene holds a Camera2D', async () => {
@@ -207,7 +227,7 @@ describe('<ParallaxBackground>', () => {
       </>
     );
     const scene = renderer.scene.instance;
-    fireRender(scene, storeCamera.current!);
+    fireSceneRender(scene, storeCamera.current!);
 
     const wrapper = scene.getObjectByName('BG')!.children.find((c) => c.type === 'Group')!;
     expect(wrapper.position.x).toBe(0);
@@ -229,7 +249,7 @@ describe('<ParallaxBackground>', () => {
       </NodePathProvider>
     );
     const scene = renderer.scene.instance;
-    fireRender(scene, viewportPassCamera());
+    fireSceneRender(scene, viewportPassCamera());
 
     const wrapper = scene.getObjectByName('BG')!.children.find((c) => c.type === 'Group')!;
     expect(wrapper.position.x).toBe(0);

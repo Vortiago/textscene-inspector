@@ -19,13 +19,14 @@ import {
   type OccluderCullMode,
   type ShadowCasterEdges,
 } from './shadowVolumes';
+import { worldEdges } from './testing/worldEdges';
 
-/** A rect no occluder can fall outside, so a test not about the cull measures only its own subject. */
+/** A rect no test occluder falls outside, so a test not about the cull measures only its own subject. */
 const UNBOUNDED: LightRect = {
-  minX: -Infinity,
-  minY: -Infinity,
-  maxX: Infinity,
-  maxY: Infinity,
+  minX: -1e9,
+  minY: -1e9,
+  maxX: 1e9,
+  maxY: 1e9,
 };
 
 /** A light at the world origin with no rotation or scale, reach `radius`. */
@@ -49,7 +50,7 @@ function segment(
   by: number,
   cullMode: OccluderCullMode = OCCLUDER_CULL_DISABLED
 ): ShadowCasterEdges {
-  return { segments: [ax, ay, bx, by], cullMode };
+  return worldEdges([ax, ay, bx, by], cullMode);
 }
 
 /**
@@ -184,10 +185,10 @@ describe('buildShadowPolarMap', () => {
   it('fills every bin when the light sits inside a closed polygon', () => {
     // A square wound as a closed occluder, the wrap edge already appended, as
     // `polygonToSegments` hands it over.
-    const square: ShadowCasterEdges = {
-      segments: [-80, -80, 80, -80, 80, -80, 80, 80, 80, 80, -80, 80, -80, 80, -80, -80],
-      cullMode: OCCLUDER_CULL_DISABLED,
-    };
+    const square: ShadowCasterEdges = worldEdges(
+      [-80, -80, 80, -80, 80, -80, 80, 80, 80, 80, -80, 80, -80, 80, -80, -80],
+      OCCLUDER_CULL_DISABLED
+    );
     const map = buildShadowPolarMap(lightAt(0, 0, RADIUS), [square]);
     expect([...map].every((v) => v < SHADOW_MAP_FAR)).toBe(true);
     // On the axes the nearest wall is 80 away along that axis.
@@ -306,7 +307,7 @@ describe('buildShadowPolarMap', () => {
   it('ignores a degenerate edge and a caster with no segments', () => {
     const degenerate = buildShadowPolarMap(lightAt(0, 0, RADIUS), [
       segment(100, 0, 100, 0),
-      { segments: [], cullMode: OCCLUDER_CULL_DISABLED },
+      worldEdges([], OCCLUDER_CULL_DISABLED),
       // Collinear with the light: no area, and `edgeCastsShadow` rejects it.
       segment(100, 0, 200, 0),
     ]);

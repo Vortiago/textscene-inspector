@@ -144,8 +144,8 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'mounts a postprocessing `Effect` — an EventDispatcher, neither material nor Object3D, collected by the composer',
   'packages/textscene-core/src/r3f/internal/glb-scene-root/Component.tsx':
     'mounts the per-consumer GLB Object3D clone; the surfaces inside it keep the materials the loader gave them',
-  'packages/textscene-core/src/r3f/lighting2d/lightSeedQuad.tsx':
-    'the accumulator seed quad: fixed shaders, one uniform, one material per accumulator',
+  'packages/textscene-core/src/r3f/lighting2d/fullScreenQuad.tsx':
+    'the light pass quad: its callers hand it the accumulator seed, with fixed shaders and one uniform, or a directional light material, memoised on every input and disposed on replacement',
   'packages/textscene-core/src/r3f/parentSpaceScope.tsx':
     'mounts the world root, a bare Object3D that R3F adds as a child and never routes to a material slot',
   'packages/textscene-core/src/r3f/preview/PreviewLighting.tsx':
@@ -183,6 +183,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the cube-to-paraboloid copy: shaders fixed at construction, only uniforms move, one instance per renderer',
   'packages/textscene-core/src/r3f/testing/threePasses.ts':
     "a test stand-in for three's shared `_depthMaterial`, read by a probe and never rendered, so never compiled",
+  'packages/textscene-core/src/r3f/lighting2d/directionalLightQuad.ts':
+    'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/r3f/lighting2d/lightQuad.ts':
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/resources/sky/build.ts':

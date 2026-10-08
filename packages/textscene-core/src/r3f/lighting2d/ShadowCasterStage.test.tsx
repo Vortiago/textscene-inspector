@@ -7,16 +7,24 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { sameWorldCasters, ShadowCasterStage, useWorldShadowCasters } from './ShadowCasterStage';
+import { sameWorldCasters, ShadowCasterStage, useLightShadowCasters } from './ShadowCasterStage';
 import { useShadowCaster } from './shadowCasterRegistry';
 import { OCCLUDER_CULL_CLOCKWISE, OCCLUDER_CULL_DISABLED } from './shadowVolumes';
 import type { WorldShadowCaster } from './shadowCasterRegistry';
+
+const UNIT_BOUNDS = [
+  { x: 0, y: 0 },
+  { x: 1, y: 0 },
+  { x: 1, y: 1 },
+  { x: 0, y: 1 },
+] as const;
 
 function world(segments: number[], overrides: Partial<WorldShadowCaster> = {}): WorldShadowCaster {
   return {
     segments: new Float32Array(segments),
     cullMode: OCCLUDER_CULL_DISABLED,
     occluderLightMask: 1,
+    bounds: UNIT_BOUNDS,
     ...overrides,
   };
 }
@@ -51,6 +59,16 @@ describe('sameWorldCasters', () => {
     );
   });
 
+  it('breaks on moved bounds under unchanged segments, which changes the cull', () => {
+    const turned = [
+      { x: 0, y: 0 },
+      { x: 1, y: 1 },
+      { x: 0, y: 2 },
+      { x: -1, y: 1 },
+    ] as const;
+    expect(sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 0], { bounds: turned })])).toBe(false);
+  });
+
   it('breaks when the polygon gains a point', () => {
     expect(sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 0, 10, 5])])).toBe(false);
   });
@@ -72,7 +90,7 @@ function Probe({
     occluderLightMask: 1,
     object,
   });
-  seen.push(useWorldShadowCasters());
+  seen.push(useLightShadowCasters(true, 1));
   return null;
 }
 

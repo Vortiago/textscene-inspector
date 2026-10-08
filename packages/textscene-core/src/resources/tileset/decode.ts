@@ -37,16 +37,9 @@ const SOURCE_KEY_RE = indexedKeyRegex('^sources/(#)$', 'is_valid_int');
 
 export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   const sources = new Map<number, AtlasSourceModel>();
-  const sourceOrder: number[] = [];
 
   // `sources/1`, `sources/01` and `sources/+1` are one source: `_set` drops the id
-  // before re-adding (tile_set.cpp:3965-3968), so the last value wins, as `Map.set`
-  // does. The first-seen place is the previewer's batching order (see `types.ts`).
-  const seat = (id: number, source: AtlasSourceModel): void => {
-    if (!sources.has(id)) sourceOrder.push(id);
-    sources.set(id, source);
-  };
-
+  // before re-adding (tile_set.cpp:3965-3968), so the last value wins, as `Map.set` does.
   for (const [key, value] of Object.entries(data.properties)) {
     const sourceMatch = SOURCE_KEY_RE.exec(key);
     if (!sourceMatch) continue;
@@ -70,7 +63,7 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
       continue;
     }
 
-    seat(sourceId, resolveAtlasSource(sub.data, data));
+    sources.set(sourceId, resolveAtlasSource(sub.data, data));
   }
 
   const shape = intEnumOr(data.properties.tile_shape, 0, 'tile_shape');
@@ -84,7 +77,6 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     offsetAxis: intEnumOr(data.properties.tile_offset_axis, 0, 'tile_offset_axis') as 0 | 1,
     tileSize: tileSetVec2i(data.properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
     sources,
-    sourceOrder,
   };
 }
 

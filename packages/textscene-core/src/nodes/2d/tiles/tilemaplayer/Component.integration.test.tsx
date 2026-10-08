@@ -2,12 +2,12 @@
  * End-to-end against the vendored isometric dungeon (scenes/isometric/):
  * dungeon.tscn parses, tileset.tres resolves (5 atlas sources, ISOMETRIC
  * DIAMOND_DOWN 128×64), known cells decode to hand-computed `map_to_local`
- * centres, and a layer renders batched meshes.
+ * centres, and a layer renders batched meshes, one lit item per rendering quadrant.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../../parser/TscnParser';
@@ -19,6 +19,10 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { findByType } from './findByType';
+import { sourceRuns } from '../../../../r3f/sourceRuns';
+import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
+import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING } from '../../../../r3f/lighting2d/lightPassContext';
+import type { CappedItem } from '../../../../r3f/lighting2d/itemLightCap';
 import type { TileMapLayerProperties } from './types';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -69,11 +73,8 @@ describe('isometric dungeon integration', () => {
     expect(mapToLocalPx(model, { x: 12, y: -14 })).toEqual({ x: 1728, y: -32 });
   });
 
-  it('renders a dungeon layer end-to-end: one batched mesh per atlas source used', async () => {
-    const floor = layers.find((l) => l.name === 'Layer0')!;
-    const cells = (floor.properties as TileMapLayerProperties).cells!;
-    const distinctSources = new Set(cells.map((c) => c.sourceId)).size;
-
+  /** Mounts `layer` against the real tileset, lit by a pass that spies on its capped items. */
+  async function renderLayer(layer: (typeof layers)[number]) {
     const fake = createFakeResourceLoader();
     fake.resources.seed('res://tileset/tileset.tres', parseTresFile(tilesetContent));
     const atlasTex = new THREE.Texture();
@@ -82,24 +83,57 @@ describe('isometric dungeon integration', () => {
       height: 1024,
     };
     fake.textures.seed('res://tileset/isotiles.png', atlasTex);
+    const registerCappedItem = vi.fn((_item: CappedItem) => () => {});
 
-    const r = await ReactThreeTestRenderer.create(
+    const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider
           internalResources={scene.internalResources}
           externalResources={scene.externalResources}
         >
-          <TileMapLayer node={floor} />
+          <CanvasLighting2DContext.Provider value={{ ...INERT_CANVAS_LIGHTING, registerCappedItem }}>
+            <TileMapLayer node={layer} />
+          </CanvasLighting2DContext.Provider>
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );
+    return { renderer, registerCappedItem };
+  }
 
-    const meshes = r.scene.findAllByType('Mesh');
-    expect(meshes.length).toBe(distinctSources);
+  /** Layer0's rendering quadrants: it is y-sorted, so one per tile row (`tile_map_layer.cpp:546-548`). */
+  function floorQuadrants() {
+    const floor = layers.find((l) => l.name === 'Layer0')!;
+    const props = floor.properties as TileMapLayerProperties;
+    const model = tileSetFromTres(parseTresFile(tilesetContent))!;
+    const quadrants = layerQuadrants(props.cells!, model, {
+      ySortEnabled: props.y_sort_enabled,
+      ySortOrigin: props.y_sort_origin,
+      quadrantSize: props.rendering_quadrant_size,
+    });
+    return { floor, props, model, quadrants };
+  }
+
+  it('renders a dungeon layer end-to-end: one batched mesh per source run of each quadrant', async () => {
+    const { floor, props, model, quadrants } = floorQuadrants();
+    const batches = quadrants.reduce((sum, cells) => sum + sourceRuns(model, cells).length, 0);
+
+    const { renderer } = await renderLayer(floor);
+
+    const meshes = renderer.scene.findAllByType('Mesh');
+    expect(meshes.length).toBe(batches);
     const totalVerts = meshes.reduce(
       (sum, m) => sum + (m.instance as THREE.Mesh).geometry.getAttribute('position').count,
       0
     );
-    expect(totalVerts).toBe(cells.length * 4);
+    expect(totalVerts).toBe(props.cells!.length * 4);
+  });
+
+  it('declares each rendering quadrant of the floor as a lit item of its own', async () => {
+    const { floor, quadrants } = floorQuadrants();
+    expect(quadrants.length).toBeGreaterThan(1);
+
+    const { registerCappedItem } = await renderLayer(floor);
+
+    expect(registerCappedItem).toHaveBeenCalledTimes(quadrants.length);
   });
 });

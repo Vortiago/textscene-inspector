@@ -16,10 +16,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
-; This is the only fixture with a Camera2D, so every other sub-viewport fixture pins the
-; whole-rect fallback. camera2DView and orthoFrameForCamera2D have unit tests that never render
-; through the view rect, and no golden covers it: this fixture has no entry in
-; `scripts/visual/scenes.mjs`.
+; This fixture and unit-sub-viewport-camera-2d-canvas-layer.tscn are the sub-viewport fixtures
+; with a Camera2D, so every other one pins the whole-rect fallback. The golden of the second
+; renders through the view rect. This one has no entry in `scripts/visual/scenes/`.
 [node name="Booth" type="SubViewportContainer" parent="."]
 offset_left = 100.0
 offset_top = 80.0

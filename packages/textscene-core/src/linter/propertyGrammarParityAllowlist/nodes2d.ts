@@ -110,8 +110,8 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   TileMapLayer: {
     linterOnly: [
-      // Physics and navigation bodies built from the tiles, plus the batching
-      // quadrant sizes. The two visibility modes gate DEBUG_ENABLED overlays
+      // Physics and navigation bodies built from the tiles, plus the physics
+      // quadrant size. The two visibility modes gate DEBUG_ENABLED overlays
       // that are additionally suppressed in the editor (tile_map_layer.cpp),
       // so they draw in neither reference nor ours.
       'collision_enabled',
@@ -120,7 +120,6 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'navigation_enabled',
       'navigation_visibility_mode',
       'physics_quadrant_size',
-      'rendering_quadrant_size',
     ],
     renderGap: [
       // Occlusion polygons feed 2D shadow casting, which this previewer has
@@ -131,25 +130,29 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'x_draw_order_reversed',
     ],
     reason:
-      'tile_map_data and y_sort_origin are parsed and validated; the physics/navigation bodies and quadrant batching never reach a frame, while occlusion and the draw-order flip do and are unimplemented.',
+      'tile_map_data, y_sort_origin and rendering_quadrant_size are parsed and validated. The physics and navigation bodies never reach a frame. Occlusion and the draw-order flip do, and are unimplemented.',
   },
 
   TileMap: {
     linterOnly: [
       // tile_map.cpp:1023-1043's PropertyListHelper family. parser.ts's
-      // LAYER_KEY_RE loop reads name, enabled, modulate, z_index and tile_data,
-      // which the scrape cannot see. y_sort_enabled and navigation_enabled
-      // change no tile placement in a static frame.
+      // LAYER_KEY_RE loop reads every leaf but navigation_enabled, which the
+      // scrape cannot see. navigation_enabled changes nothing in a static frame.
       'layer_#/*',
       // Forwarded to the child layers Godot builds from this deprecated node:
-      // batching and debug overlays, as on TileMapLayer.
+      // physics and debug overlays, as on TileMapLayer.
       'collision_animatable',
       'collision_visibility_mode',
       'navigation_visibility_mode',
-      'rendering_quadrant_size',
+    ],
+    parserOnly: [
+      // The deprecated name `_set` routes to set_rendering_quadrant_size
+      // (tile_map.cpp:695-697). The linter's alias table sends it to the
+      // rendering_quadrant_size validator (godot/deprecatedTable.ts).
+      'cell_quadrant_size',
     ],
     reason:
-      'layer_<i>/* is read through a loop the scrape cannot match; parser.ts genuinely reads five of its seven leaves (name/enabled/modulate/z_index/tile_data), and y_sort_enabled/navigation_enabled have no bearing on a static frame. instance_shader_parameters/* is covered by the inherited CanvasItem entry.',
+      'layer_<i>/* is read through a loop the scrape cannot match. parser.ts reads six of its seven leaves, and navigation_enabled has no bearing on a static frame. cell_quadrant_size is the deprecated spelling of rendering_quadrant_size. instance_shader_parameters/* is covered by the inherited CanvasItem entry.',
   },
 
   // Navigation regions draw a translucent navmesh overlay here, mirroring the
@@ -161,21 +164,6 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     renderGap: ['enabled', 'use_edge_connections'],
     reason:
       'enabled and use_edge_connections gate the navmesh and edge-connection debug draw this previewer mirrors; the layer mask and the two costs only steer pathfinding.',
-  },
-
-  CanvasLayer: {
-    renderGap: [
-      // The layer's own canvas transform, and the parallax-style viewport
-      // follow. Godot composites the layer through both; `canvaslayer/parser.ts`
-      // reads `layer` and `visible` and nothing else.
-      'offset',
-      'rotation',
-      'scale',
-      'follow_viewport_enabled',
-      'follow_viewport_scale',
-    ],
-    reason:
-      'The bare CanvasLayer parser reads layer and visible only, so the discrete offset/rotation/scale and the viewport-follow pair — each of which moves what the layer draws — go unread. ParallaxBackground, the one descendant carrying a parser of its own, reads and renders all of them but follow_viewport_scale.',
   },
 
   SubViewportContainer: {

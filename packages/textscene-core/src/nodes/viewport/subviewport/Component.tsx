@@ -22,6 +22,7 @@ import {
 } from '../../../r3f/positionalShadow/viewportShadowAtlas';
 import { viewportPositionalShadowAtlas } from '../../../godot/positionalShadowAtlas';
 import { Node } from '../../node/Component';
+import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import {
   applyOrthoFrame,
   createOffscreenTarget,
@@ -38,6 +39,7 @@ import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
 import type { SubViewportProperties } from './types';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
+import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera.js';
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -64,13 +66,15 @@ export function SubViewport({ node, children }: NodeComponentProps) {
   // pass through on the `own_world_3d` rule, since a component renders what the
   // dispatcher hands it (subtreeConformance).
   const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : !ownWorld3D;
+  // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
+  const contents = <World2DLightingBoundary>{children}</World2DLightingBoundary>;
 
   return (
     <Node node={node}>
-      {rendersInline ? children : null}
+      {rendersInline ? contents : null}
       {rasterizes ? (
         <OffscreenViewport node={node} path={path} kind={kind} rendersInline={rendersInline}>
-          {rendersInline ? null : children}
+          {rendersInline ? null : contents}
         </OffscreenViewport>
       ) : null}
     </Node>
@@ -133,7 +137,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   // through its canvas transform, the identity until a Camera2D in the subtree
   // makes itself current, so this starts at the whole target rect and the pass
   // narrows it to the current camera's view each frame.
-  const orthoCamera = useMemo(() => new THREE.OrthographicCamera(), []);
+  const orthoCamera = useMemo(() => createViewportCanvasCamera(), []);
   useEffect(() => {
     orthoCamera.near = 0.1;
     orthoCamera.far = 4000;

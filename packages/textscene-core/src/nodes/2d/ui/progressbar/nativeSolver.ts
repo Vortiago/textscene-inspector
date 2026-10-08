@@ -27,7 +27,7 @@ import {
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { AutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveRangeValue, type RangeProperties, type RangeValueOrder } from '../shared/range';
-import { isEqualApprox } from '../../../../godot/index.js';
+import { isEqualApprox, rect2Intersection } from '../../../../godot/index.js';
 import type { ControlColor } from '../control/types';
 import type { ProgressBarProperties } from './types';
 
@@ -215,25 +215,6 @@ function normalizeProgressBarFillMode(fillMode: number | undefined): number {
   return mode >= FILL_BEGIN_TO_END && mode <= FILL_BOTTOM_TO_TOP ? mode : FILL_BEGIN_TO_END;
 }
 
-/** `Rect2::intersects(p_rect, p_include_borders=false)`: touching edges do not count. */
-function rectIntersects(a: Rect2, b: Rect2): boolean {
-  if (a.x >= b.x + b.w) return false;
-  if (a.x + a.w <= b.x) return false;
-  if (a.y >= b.y + b.h) return false;
-  if (a.y + a.h <= b.y) return false;
-  return true;
-}
-
-/** `Rect2::intersection`: the all-zero `Rect2()` when the two do not overlap. */
-function rectIntersection(a: Rect2, b: Rect2): Rect2 {
-  if (!rectIntersects(a, b)) return { x: 0, y: 0, w: 0, h: 0 };
-  const x = Math.max(a.x, b.x);
-  const y = Math.max(a.y, b.y);
-  const right = Math.min(a.x + a.w, b.x + b.w);
-  const bottom = Math.min(a.y + a.h, b.y + b.h);
-  return { x, y, w: right - x, h: bottom - y };
-}
-
 /**
  * The static indeterminate bar (`progress_bar.cpp:69-110`). The animation
  * advances per process frame (`:52-57`), and its `0.0` start draws an empty
@@ -258,15 +239,15 @@ export function progressBarIndeterminateFillRect(
       const rightToLeft = mode === (rtl ? FILL_BEGIN_TO_END : FILL_END_TO_BEGIN);
       if (ifp > size.x + fillSize) ifp = rightToLeft ? -fillSize : 0;
       const x = rightToLeft ? size.x - ifp : ifp - fillSize;
-      return clampToZeroArea(rectIntersection({ x, y: 0, w: fillSize, h: size.y }, full));
+      return clampToZeroArea(rect2Intersection({ x, y: 0, w: fillSize, h: size.y }, full));
     }
     case FILL_TOP_TO_BOTTOM: {
       if (ifp > size.y + fillSize) ifp = 0;
-      return clampToZeroArea(rectIntersection({ x: 0, y: ifp - fillSize, w: size.x, h: fillSize }, full));
+      return clampToZeroArea(rect2Intersection({ x: 0, y: ifp - fillSize, w: size.x, h: fillSize }, full));
     }
     case FILL_BOTTOM_TO_TOP: {
       if (ifp > size.y + fillSize) ifp = -fillSize;
-      return clampToZeroArea(rectIntersection({ x: 0, y: size.y - ifp, w: size.x, h: fillSize }, full));
+      return clampToZeroArea(rect2Intersection({ x: 0, y: size.y - ifp, w: size.x, h: fillSize }, full));
     }
     default:
       return null;

@@ -10,8 +10,10 @@ renders_as: batched textured tile quads
 # TileMap
 
 TileMap draws each layer's cells as batched textured quads from its TileSet atlas. The
-previewer decodes the legacy `layer_N/tile_data` groups and draws one mesh per atlas
-source.
+previewer decodes the legacy `layer_N/tile_data` groups. It draws each layer's rendering
+quadrants as canvas items of their own, in Godot's cell order, as on TileMapLayer
+(`tile_map_layer.cpp:306-311`, `:412-566`).
+Each quadrant takes its own lights at its layer's `z_index`.
 
 ## Linting
 
@@ -48,8 +50,6 @@ passes through as the raw reference string, so a dangling reference draws no til
 
 ## Known limitations
 
-- **Approximated** Cells batch one mesh per atlas source and the sources draw in
-  appearance order, so cells from different sources in one layer do not interleave.
 - **Approximated** Y-sort is computed once for the static scene, so a Y change driven by
   an AnimationPlayer is not re-sorted.
 - **Resource gap** Scene-collection sources are skipped with a warning, animated tiles

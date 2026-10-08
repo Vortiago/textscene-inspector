@@ -1,88 +1,122 @@
 /**
- * The declaring side of the 2D light pass: what a light or an item says about itself, and the
- * layer it draws on in return. Each is an effect: a declaration unwinds on unmount, and a provider
+ * The declaring side of the 2D light pass: what a light, a lit item and a light mesh say about
+ * themselves. Each declaration is an effect or a ref: it unwinds on unmount, and a provider
  * `setState` from a child's render is an update during render.
  */
 
-import { useCallback, useEffect, useState } from 'react';
-import { LIGHT_UNCLASSED_LAYER } from './lightPassLayers.js';
-import { sameLightCullKey, type LightCullKey } from './lightCullKey.js';
-import { useCanvasLighting2D, type CanvasLightClass } from './lightPassContext.js';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import type * as THREE from 'three';
+import { LIGHT_PASS_LAYER } from './lightPassLayers.js';
+import type { CanvasLightDeclaration, ItemPlacement, PassMeshRole } from './itemLightList.js';
+import { useCanvasLighting2D } from './lightPassContext.js';
 
 /**
- * Holds a declaration open while `enabled` holds, until a tuple number changes or unmount. It
- * depends on the five numbers, not the key object a light rebuilds each render, which would
- * reshuffle its class's ordinals. `declare` returns the unwind and must be stable too: a context
- * registrar or a `useCallback`. Every keyed declaration goes through here.
+ * Declares a light while `enabled` holds, until a value changes or unmount. It depends on the
+ * values, not the object a light rebuilds each render, which would hand it a new ordinal. Returns
+ * the ordinal, or null while the light is undeclared.
  */
-function useCullDeclaration(
+export function useRegisterCanvasLight2D(
   enabled: boolean,
-  key: LightCullKey,
-  declare: (key: LightCullKey) => () => void
-): void {
-  const { itemCullMask, zMin, zMax, layerMin, layerMax } = key;
+  declaration: CanvasLightDeclaration
+): number | null {
+  const { registerLight } = useCanvasLighting2D();
+  const [ordinal, setOrdinal] = useState<number | null>(null);
+  const { itemCullMask, zMin, zMax, layerMin, layerMax } = declaration.reach;
+  const { sequence, shadowItemCullMask, tintsShadow } = declaration;
   useEffect(() => {
-    if (!enabled) return undefined;
-    return declare({ itemCullMask, zMin, zMax, layerMin, layerMax });
-  }, [enabled, itemCullMask, zMin, zMax, layerMin, layerMax, declare]);
-}
-
-/**
- * Declares a light of this cull tuple. With no lights, no accumulator exists and items read the
- * canvas modulate from their uniform. Returns the ordinal its stencil ref derives from, which is 0,
- * the first light's ordinal, for the one frame before the effect runs.
- */
-export function useRegisterCanvasLight2D(enabled: boolean, key: LightCullKey): number {
-  const { register } = useCanvasLighting2D();
-  const [ordinal, setOrdinal] = useState(0);
-  const declare = useCallback(
-    (cullKey: LightCullKey) => {
-      const slot = register(cullKey);
-      setOrdinal(slot.ordinal);
-      return slot.release;
-    },
-    [register]
-  );
-  useCullDeclaration(enabled, key, declare);
+    if (!enabled) {
+      setOrdinal(null);
+      return undefined;
+    }
+    const slot = registerLight({
+      reach: { itemCullMask, zMin, zMax, layerMin, layerMax },
+      sequence,
+      shadowItemCullMask,
+      tintsShadow,
+    });
+    setOrdinal(slot.ordinal);
+    return slot.release;
+  }, [
+    enabled,
+    registerLight,
+    itemCullMask,
+    zMin,
+    zMax,
+    layerMin,
+    layerMax,
+    sequence,
+    shadowItemCullMask,
+    tintsShadow,
+  ]);
   return ordinal;
 }
 
-/** Declares a light that tints its shadow, so its class allocates the extra pass. */
-export function useRegisterShadowTint(enabled: boolean, key: LightCullKey): void {
-  const { registerShadowTint } = useCanvasLighting2D();
-  useCullDeclaration(enabled, key, registerShadowTint);
+/**
+ * Declares a lit item at `placement`, by value. A Light Only item asks for the unmodulated buffer.
+ * The cap hands `positionalLights` as a new array only when they change, so its identity serves.
+ */
+export function useRegisterLitItem(placement: ItemPlacement, lightOnly: boolean): void {
+  const { registerItem } = useCanvasLighting2D();
+  const { lightMask, z, layer, positionalLights } = placement;
+  useEffect(
+    () => registerItem({ lightMask, z, layer, positionalLights }, lightOnly),
+    [registerItem, lightMask, z, layer, positionalLights, lightOnly]
+  );
 }
 
 /**
- * Declares an item whose light mode needs the unmodulated accumulation. An item reads every class
- * rather than belonging to one, so this carries no cull tuple.
+ * Hands the per-item cap an item at `placement`, uncapped, whose own geometry `geometry` holds.
+ * `take` receives the item's positional light list while more than 15 lights meet it. The cap
+ * records a new entry as handed nothing, so each release hands the item null to match: else an
+ * item that moves to a placement that fits every light keeps the list of the old one.
  */
-export function useRegisterLightOnlyItem(enabled: boolean): void {
-  const { registerLightOnly } = useCanvasLighting2D();
+export function useCapItemLights(
+  placement: ItemPlacement,
+  geometry: RefObject<THREE.Object3D | null>,
+  take: (positionalLights: readonly number[] | null) => void
+): void {
+  const { registerCappedItem } = useCanvasLighting2D();
+  const { lightMask, z, layer } = placement;
   useEffect(() => {
-    if (!enabled) return undefined;
-    return registerLightOnly();
-  }, [enabled, registerLightOnly]);
-}
-
-/** The class accumulating this cull tuple, or undefined while it has none. */
-function useLightClass(key: LightCullKey): CanvasLightClass | undefined {
-  const { classes } = useCanvasLighting2D();
-  return classes.find((lightClass) => sameLightCullKey(lightClass.key, key));
-}
-
-/**
- * The camera layer a light of this cull tuple must draw its quad on: the layer
- * of its class, or `LIGHT_UNCLASSED_LAYER` while it has none.
- */
-export function useLightClassLayer(key: LightCullKey): number {
-  return useLightClass(key)?.layer ?? LIGHT_UNCLASSED_LAYER;
+    const release = registerCappedItem({
+      placement: { lightMask, z, layer, positionalLights: null },
+      geometry,
+      take,
+    });
+    return () => {
+      release();
+      take(null);
+    };
+  }, [registerCappedItem, lightMask, z, layer, geometry, take]);
 }
 
 /**
- * The camera layer a light draws its `shadow_color` quad on, or undefined while its class has
- * none. Separate from `useLightClassLayer` because the tint pass must not see the cookie quads.
+ * A callback ref that hands one of light `ordinal`'s meshes to the pass as `role`. The mesh moves
+ * onto the light pass layer, which the main render never draws, and stays hidden until a pass
+ * shows it: a mesh the pass does not hold would otherwise draw into every list. `onMesh` receives
+ * the mesh, and null on unmount.
  */
-export function useShadowTintLayer(key: LightCullKey): number | undefined {
-  return useLightClass(key)?.shadowTintLayer;
+export function usePassMeshRef<T extends THREE.Object3D>(
+  ordinal: number | null,
+  role: PassMeshRole,
+  onMesh?: (mesh: T | null) => void
+): (mesh: T | null) => void {
+  const { registerPassMesh } = useCanvasLighting2D();
+  const held = useRef<{ mesh: T; release: () => void } | null>(null);
+  return useCallback(
+    (mesh: T | null) => {
+      if (held.current) {
+        held.current.release();
+        held.current.mesh.visible = false;
+        held.current = null;
+      }
+      if (mesh) {
+        mesh.layers.set(LIGHT_PASS_LAYER);
+        mesh.visible = false;
+        if (ordinal !== null) held.current = { mesh, release: registerPassMesh(mesh, ordinal, role) };
+      }
+      onMesh?.(mesh);
+    },
+    [registerPassMesh, ordinal, role, onMesh]
+  );
 }

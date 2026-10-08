@@ -14,6 +14,14 @@ export function isViewportBoundary(type: string): boolean {
 }
 
 /**
+ * A live-tree walk's descend predicate: true when a node's children share its viewport. A module
+ * function, so a memo keyed on the predicate holds.
+ */
+export function keepsChildrenInViewport(node: { type: string }): boolean {
+  return !isViewportBoundary(node.type);
+}
+
+/**
  * Controls that display a sub-viewport's target: the viewport surfaces. The 3D
  * workspace drops a 2D-UI subtree, but a surface's subtree can hold a sub-viewport's
  * 3D content, which Godot draws in the 3D view unless `own_world_3d`. So the drop

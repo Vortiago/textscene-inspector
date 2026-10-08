@@ -1,16 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildShadowVolumes,
-  casterInLightRect,
   edgeCastsShadow,
   edgeShadowRing,
   lightReach,
+  lightRectTest,
   OCCLUDER_CULL_CLOCKWISE,
   OCCLUDER_CULL_COUNTER_CLOCKWISE,
   OCCLUDER_CULL_DISABLED,
   type LightRect,
+  type Quad2,
   type ShadowLight,
 } from './shadowVolumes';
+import { axisAlignedBounds, worldEdges } from './testing/worldEdges';
 
 /** A light at the origin whose rect reaches 512 units in every direction. */
 function lightAt(x = 0, y = 0, reach = 512): ShadowLight {
@@ -162,24 +164,45 @@ describe('edgeShadowRing', () => {
   });
 });
 
-describe('casterInLightRect', () => {
+describe('lightRectTest', () => {
   const rect: LightRect = { minX: -10, minY: -10, maxX: 10, maxY: 10 };
+  const inRect = lightRectTest(rect);
 
-  it('keeps an occluder overlapping the rect', () => {
-    expect(casterInLightRect(new Float32Array([5, 5, 40, 40]), rect)).toBe(true);
+  /** The local bounds (0, 0)-(size, size) turned 45° about `origin`. */
+  function turnedSquare(origin: { x: number; y: number }, size: number): Quad2 {
+    const step = size / Math.SQRT2;
+    return [
+      origin,
+      { x: origin.x + step, y: origin.y + step },
+      { x: origin.x, y: origin.y + 2 * step },
+      { x: origin.x - step, y: origin.y + step },
+    ];
+  }
+
+  it('keeps an occluder whose bounds overlap the rect', () => {
+    expect(inRect(axisAlignedBounds([5, 5, 40, 40]))).toBe(true);
   });
 
-  it('keeps an occluder that merely touches the rect edge', () => {
-    expect(casterInLightRect(new Float32Array([10, 0, 40, 0]), rect)).toBe(true);
+  it('keeps an occluder whose bounds merely touch the rect edge', () => {
+    expect(inRect(axisAlignedBounds([10, 0, 40, 0]))).toBe(true);
   });
 
-  it('drops an occluder entirely outside the rect', () => {
-    expect(casterInLightRect(new Float32Array([20, 20, 40, 40]), rect)).toBe(false);
+  it('drops an occluder whose bounds lie outside the rect', () => {
+    expect(inRect(axisAlignedBounds([20, 20, 40, 40]))).toBe(false);
   });
 
-  it('drops an empty or half-specified segment list', () => {
-    expect(casterInLightRect(new Float32Array([]), rect)).toBe(false);
-    expect(casterInLightRect(new Float32Array([1, 2]), rect)).toBe(false);
+  it("tests the turned bounds, as Godot's `intersects_transformed` does, not their world box", () => {
+    // `renderer_canvas_render_rd.cpp:1056`: this diamond's world box overlaps the rect's corner
+    // (10, 10), but the diamond itself stays clear of it.
+    expect(inRect(turnedSquare({ x: 18, y: 2.5 }, 12))).toBe(false);
+  });
+
+  it('keeps an occluder whose turned bounds overlap the rect', () => {
+    expect(inRect(turnedSquare({ x: 12, y: 0 }, 12))).toBe(true);
+  });
+
+  it('drops an occluder with no points, whose bounds are not finite', () => {
+    expect(inRect(axisAlignedBounds([]))).toBe(false);
   });
 });
 
@@ -187,10 +210,7 @@ describe('buildShadowVolumes — a single segment east of the light', () => {
   const light = lightAt();
   // Wedge boundary rays run from (0,0) through (100, ∓50), so at x = 200 the
   // shadow spans y ∈ (−100, 100).
-  const caster = {
-    segments: new Float32Array([100, -50, 100, 50]),
-    cullMode: OCCLUDER_CULL_DISABLED,
-  } as const;
+  const caster = worldEdges(new Float32Array([100, -50, 100, 50]), OCCLUDER_CULL_DISABLED);
   const volumes = buildShadowVolumes(light, [caster]);
 
   it('emits one 5-gon fanned into three triangles', () => {
@@ -235,7 +255,7 @@ describe('buildShadowVolumes — a single segment east of the light', () => {
     // The light sits 1 unit off the middle of a long segment, so the wedge
     // subtends almost π: the case the bisector cap exists for.
     const wide = buildShadowVolumes(light, [
-      { segments: new Float32Array([1, -4000, 1, 4000]), cullMode: OCCLUDER_CULL_DISABLED },
+      worldEdges(new Float32Array([1, -4000, 1, 4000]), OCCLUDER_CULL_DISABLED),
     ]);
     expect(covered(wide, 512, 512)).toBe(true);
     expect(covered(wide, 512, -512)).toBe(true);
@@ -244,7 +264,7 @@ describe('buildShadowVolumes — a single segment east of the light', () => {
 
   it('returns null when the only occluder lies outside the light rect', () => {
     const outside = buildShadowVolumes(light, [
-      { segments: new Float32Array([900, -50, 900, 50]), cullMode: OCCLUDER_CULL_DISABLED },
+      worldEdges(new Float32Array([900, -50, 900, 50]), OCCLUDER_CULL_DISABLED),
     ]);
     expect(outside).toBeNull();
   });
@@ -252,15 +272,13 @@ describe('buildShadowVolumes — a single segment east of the light', () => {
   it('returns null for an empty caster list and for a caster with no casting edge', () => {
     expect(buildShadowVolumes(light, [])).toBeNull();
     expect(
-      buildShadowVolumes(light, [
-        { segments: new Float32Array([100, 0, 200, 0]), cullMode: OCCLUDER_CULL_DISABLED },
-      ])
+      buildShadowVolumes(light, [worldEdges(new Float32Array([100, 0, 200, 0]), OCCLUDER_CULL_DISABLED)])
     ).toBeNull();
   });
 
   it('ignores a dangling half-edge instead of reading past the end', () => {
     const ragged = buildShadowVolumes(light, [
-      { segments: new Float32Array([100, -50, 100, 50, 100, 60]), cullMode: OCCLUDER_CULL_DISABLED },
+      worldEdges(new Float32Array([100, -50, 100, 50, 100, 60]), OCCLUDER_CULL_DISABLED),
     ]);
     expect(ragged!.length).toBe(27);
     expect(Array.from(ragged!).every(Number.isFinite)).toBe(true);
@@ -278,22 +296,14 @@ describe('buildShadowVolumes — open versus closed polygons', () => {
   ] as const;
 
   it('a closed polygon emits one more edge than the open chain', () => {
-    const open = buildShadowVolumes(light, [
-      { segments: edges(points, false), cullMode: OCCLUDER_CULL_DISABLED },
-    ]);
-    const closed = buildShadowVolumes(light, [
-      { segments: edges(points, true), cullMode: OCCLUDER_CULL_DISABLED },
-    ]);
+    const open = buildShadowVolumes(light, [worldEdges(edges(points, false), OCCLUDER_CULL_DISABLED)]);
+    const closed = buildShadowVolumes(light, [worldEdges(edges(points, true), OCCLUDER_CULL_DISABLED)]);
     expect(closed!.length - open!.length).toBe(27);
   });
 
   it('shadows the polygon interior only once it is closed', () => {
-    const open = buildShadowVolumes(light, [
-      { segments: edges(points, false), cullMode: OCCLUDER_CULL_DISABLED },
-    ]);
-    const closed = buildShadowVolumes(light, [
-      { segments: edges(points, true), cullMode: OCCLUDER_CULL_DISABLED },
-    ]);
+    const open = buildShadowVolumes(light, [worldEdges(edges(points, false), OCCLUDER_CULL_DISABLED)]);
+    const closed = buildShadowVolumes(light, [worldEdges(edges(points, true), OCCLUDER_CULL_DISABLED)]);
     // Just inside the closing edge, on the light's side of the other two.
     expect(covered(open, 80, 30)).toBe(false);
     expect(covered(closed, 80, 30)).toBe(true);
@@ -322,7 +332,7 @@ describe('buildShadowVolumes — cull_mode against measured Godot', () => {
   // Godot reads 63 (shadowed) at the three interior probes under cull_mode 0 and
   // 1, and 111 / 106 / 97 (lit) under cull_mode 2: the modes drop opposite halves.
   function volumes(cullMode: 0 | 1 | 2) {
-    return buildShadowVolumes(light, [{ segments: edges(square, true), cullMode }]);
+    return buildShadowVolumes(light, [worldEdges(edges(square, true), cullMode)]);
   }
 
   it('CULL_DISABLED shadows the square interior', () => {
@@ -354,9 +364,7 @@ describe('buildShadowVolumes — cull_mode against measured Godot', () => {
   it('reverses which interior a winding mode shadows when the polygon is reversed', () => {
     // Reversing the winding swaps the modes: a winding test, not a near/far rule.
     const reversed = [...square].reverse();
-    const v = buildShadowVolumes(light, [
-      { segments: edges(reversed, true), cullMode: OCCLUDER_CULL_CLOCKWISE },
-    ]);
+    const v = buildShadowVolumes(light, [worldEdges(edges(reversed, true), OCCLUDER_CULL_CLOCKWISE)]);
     for (const [x, y] of inside) expect(covered(v, x, y)).toBe(false);
   });
 });
@@ -375,7 +383,7 @@ describe('buildShadowVolumes — boundary against measured Godot', () => {
   // shadowed at 700,324.
   const light = lightAt(400, -324, 512);
   const volumes = buildShadowVolumes(light, [
-    { segments: new Float32Array([576, -224, 576, -424]), cullMode: OCCLUDER_CULL_DISABLED },
+    worldEdges(new Float32Array([576, -224, 576, -424]), OCCLUDER_CULL_DISABLED),
   ]);
 
   // Further out Godot's boundary drifts up to a pixel inside the ray, since its map

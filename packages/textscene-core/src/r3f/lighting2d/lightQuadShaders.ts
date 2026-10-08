@@ -166,9 +166,9 @@ void main() {
 `;
 
 /**
- * The `shadow_color` quad's share, never albedo-scaled: `S.rgb·s·cookie.a·((1−s) + S.a·s)`. The sum
- * has no cross term, so the split is exact, and at `s = 1` this is `cookie.a · S.a`, byte-identical
- * to the stencil path.
+ * The `shadow_color` quad's share, never albedo-scaled: rgb `S.rgb·s` under the light's whole alpha
+ * `cookie.a·((1−s) + S.a·s)`, the same alpha the cookie quad carries. A MIX blend then scales both
+ * buffers alike, and at `s = 1` this is the stencil path's `(S.rgb, cookie.a · S.a)`.
  */
 export const SHADOWED_TINT_FRAGMENT = /* glsl */ `
 uniform sampler2D uCookie;
@@ -178,6 +178,6 @@ varying vec2 vLightUv;
 void main() {
   vec4 cookie = texture2D(uCookie, vLightUv);
   float s = shadowFraction();
-  gl_FragColor = vec4(uShadowColor.rgb, cookie.a * s * ((1.0 - s) + s * uShadowColor.a));
+  gl_FragColor = vec4(uShadowColor.rgb * s, cookie.a * ((1.0 - s) + s * uShadowColor.a));
 }
 `;

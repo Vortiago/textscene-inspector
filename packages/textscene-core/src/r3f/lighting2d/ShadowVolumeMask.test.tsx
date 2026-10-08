@@ -10,6 +10,8 @@ import {
   shadowVolumeRenderOrder,
 } from './ShadowVolumeMask';
 import { OCCLUDER_CULL_DISABLED, type ShadowCasterEdges, type ShadowLight } from './shadowVolumes';
+import { worldEdges } from './testing/worldEdges';
+import { LIGHT_PASS_LAYER } from './lightPassLayers';
 
 const LIGHT: ShadowLight = {
   x: 0,
@@ -17,14 +19,11 @@ const LIGHT: ShadowLight = {
   rect: { minX: -512, minY: -512, maxX: 512, maxY: 512 },
 };
 
-const CASTER: ShadowCasterEdges = {
-  segments: new Float32Array([100, -50, 100, 50]),
-  cullMode: OCCLUDER_CULL_DISABLED,
-};
+const CASTER: ShadowCasterEdges = worldEdges(new Float32Array([100, -50, 100, 50]), OCCLUDER_CULL_DISABLED);
 
 async function renderMask(props: Partial<Parameters<typeof ShadowVolumeMask>[0]> = {}) {
   return ReactThreeTestRenderer.create(
-    <ShadowVolumeMask light={LIGHT} casters={[CASTER]} ordinal={0} sequence={0} layer={1} {...props} />
+    <ShadowVolumeMask light={LIGHT} casters={[CASTER]} ordinal={0} sequence={0} {...props} />
   );
 }
 
@@ -103,10 +102,7 @@ describe('<ShadowVolumeMask>', () => {
   });
 
   it('renders nothing when the occluder is outside the light rect', async () => {
-    const far: ShadowCasterEdges = {
-      segments: new Float32Array([900, -50, 900, 50]),
-      cullMode: OCCLUDER_CULL_DISABLED,
-    };
+    const far: ShadowCasterEdges = worldEdges(new Float32Array([900, -50, 900, 50]), OCCLUDER_CULL_DISABLED);
     expect(maskMesh(await renderMask({ casters: [far] }))).toBeNull();
   });
 
@@ -149,8 +145,8 @@ describe('<ShadowVolumeMask>', () => {
     expect((mesh.material as THREE.Material).stencilRef).toBe(shadowStencilRef(2));
   });
 
-  it('shares the layer of the light it shadows', async () => {
-    expect(maskMesh(await renderMask({ layer: 3 }))!.layers.mask).toBe(1 << 3);
+  it('draws on the light pass layer alone, which the main render skips', async () => {
+    expect(maskMesh(await renderMask())!.layers.mask).toBe(1 << LIGHT_PASS_LAYER);
   });
 
   it('skips frustum culling, since the volumes extend past the light', async () => {

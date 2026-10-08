@@ -18,11 +18,13 @@ import {
 import { useFrame } from '@react-three/fiber';
 import {
   createShadowCasterRegistry,
+  NoShadowCasterRegistry,
   ShadowCasterProvider,
   worldShadowCasters,
   type WorldShadowCaster,
 } from './shadowCasterRegistry';
 import { createCasterMotionWatch } from './shadowCasterMotion';
+import type { Quad2 } from './shadowVolumes';
 
 /**
  * Runs ahead of the light accumulation pre-pass (-1), so a frame that both
@@ -38,11 +40,33 @@ const WorldShadowCasterContext = createContext<readonly WorldShadowCaster[]>(NO_
  * Every visible occluder in world space as of the last frame, unfiltered: a light narrows it with
  * its own `shadow_item_cull_mask`. Empty outside a stage, so a light there casts nothing.
  */
-export function useWorldShadowCasters(): readonly WorldShadowCaster[] {
+function useWorldShadowCasters(): readonly WorldShadowCaster[] {
   return useContext(WorldShadowCasterContext);
 }
 
-/** Exact equality, coordinate by coordinate. */
+/**
+ * The occluders a shadowed light sees: every caster whose `light_mask` meets the light's
+ * `shadow_item_cull_mask`, the one test both `light_update_shadow` and
+ * `light_update_directional_shadow` apply per occluder. Empty while the light casts no shadow.
+ */
+export function useLightShadowCasters(
+  shadowEnabled: boolean,
+  shadowItemCullMask: number
+): readonly WorldShadowCaster[] {
+  const allCasters = useWorldShadowCasters();
+  return useMemo(
+    () =>
+      shadowEnabled
+        ? allCasters.filter((caster) => (caster.occluderLightMask & shadowItemCullMask) !== 0)
+        : NO_CASTERS,
+    [shadowEnabled, allCasters, shadowItemCullMask]
+  );
+}
+
+/**
+ * Exact equality, coordinate by coordinate. The bounds count too: a turned local polygon under a
+ * counter-turned transform keeps its world segments but moves its bounds.
+ */
 export function sameWorldCasters(a: readonly WorldShadowCaster[], b: readonly WorldShadowCaster[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
@@ -50,6 +74,7 @@ export function sameWorldCasters(a: readonly WorldShadowCaster[], b: readonly Wo
     const other = b[i]!;
     if (one.cullMode !== other.cullMode) return false;
     if (one.occluderLightMask !== other.occluderLightMask) return false;
+    if (!sameQuad(one.bounds, other.bounds)) return false;
     const left = one.segments;
     const right = other.segments;
     if (left.length !== right.length) return false;
@@ -58,6 +83,10 @@ export function sameWorldCasters(a: readonly WorldShadowCaster[], b: readonly Wo
     }
   }
   return true;
+}
+
+function sameQuad(a: Quad2, b: Quad2): boolean {
+  return a.every((corner, i) => corner.x === b[i]!.x && corner.y === b[i]!.y);
 }
 
 export function ShadowCasterStage({ children }: { children: ReactNode }) {
@@ -90,5 +119,14 @@ export function ShadowCasterStage({ children }: { children: ReactNode }) {
     <ShadowCasterProvider registry={registry}>
       <WorldShadowCasterContext.Provider value={casters}>{children}</WorldShadowCasterContext.Provider>
     </ShadowCasterProvider>
+  );
+}
+
+/** Hides the enclosing stage: an occluder inside reaches no light, and a light inside sees none. */
+export function NoShadowCasters({ children }: { children: ReactNode }) {
+  return (
+    <NoShadowCasterRegistry>
+      <WorldShadowCasterContext.Provider value={NO_CASTERS}>{children}</WorldShadowCasterContext.Provider>
+    </NoShadowCasterRegistry>
   );
 }

@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+; Moves one variable: the draw order of cells from two atlas sources in one rendering quadrant.
+; Each 64 px tile overlaps its neighbours on a 32 px grid, red and green in turn, so each cell
+; covers the left half of the cell after it. No other tile scene mixes sources in one quadrant.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_atlas"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_red"]
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_green"]
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(64, 64)
+1:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_mixed"]
+tile_size = Vector2i(32, 32)
+sources/0 = SubResource("TileSetAtlasSource_red")
+sources/1 = SubResource("TileSetAtlasSource_green")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+position = Vector2(200, 200)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0)
+tile_set = SubResource("TileSet_mixed")

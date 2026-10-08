@@ -6,7 +6,14 @@
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { createShadowColorQuadMaterial, shadowColorContributes, Light2DBlendMode } from './lightQuad';
+import {
+  createShadowColorQuadMaterial,
+  shadowColorContributes,
+  Light2DBlendMode,
+  SHADOW_FILTER_NONE,
+  SHADOW_FILTER_PCF5,
+  SHADOW_FILTER_PCF13,
+} from './lightQuad';
 import { litQuadStencilProps, shadowColorQuadStencilProps, shadowStencilRef } from './ShadowVolumeMask';
 
 const BLUE = { r: 0.15, g: 0.35, b: 1, a: 1 };
@@ -15,15 +22,22 @@ describe('shadowColorContributes', () => {
   it('is false at the Light2D default, so no quad is drawn for an ordinary shadow', () => {
     // Godot's default shadow_color is Color(0, 0, 0, 0), which adds nothing, so withholding the
     // light is the whole shadow.
-    expect(shadowColorContributes({ r: 0, g: 0, b: 0, a: 0 })).toBe(false);
+    expect(shadowColorContributes({ r: 0, g: 0, b: 0, a: 0 }, SHADOW_FILTER_PCF13)).toBe(false);
   });
 
-  it('is false for any fully transparent colour, whatever its rgb', () => {
-    expect(shadowColorContributes({ r: 1, g: 0, b: 0, a: 0 })).toBe(false);
+  it('is false for a transparent colour on an unfiltered light, whatever its rgb', () => {
+    // A binary shadow puts `shadow_color.a` alone in front of the rgb.
+    expect(shadowColorContributes({ r: 1, g: 0, b: 0, a: 0 }, SHADOW_FILTER_NONE)).toBe(false);
+  });
+
+  it("is true for a transparent colour's rgb on a filtered light, which tints the penumbra", () => {
+    // `mix(light_color, shadow_color, s)` leaves `rgb · a` a `shadow_color.rgb · s · (1 − s)` term.
+    // Godot 4.6.3 under PCF13 adds 38/255 of red there for Color(1, 0, 0, 0).
+    expect(shadowColorContributes({ r: 1, g: 0, b: 0, a: 0 }, SHADOW_FILTER_PCF5)).toBe(true);
   });
 
   it('is true once the colour has alpha to contribute', () => {
-    expect(shadowColorContributes(BLUE)).toBe(true);
+    expect(shadowColorContributes(BLUE, SHADOW_FILTER_NONE)).toBe(true);
   });
 });
 
