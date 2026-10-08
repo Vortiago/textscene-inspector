@@ -11,8 +11,6 @@ import { createResourceProcessor, type ResourceProcessor } from '../createResour
 import { ARRAY_MESH_TYPES, decodeArrayMesh } from '../meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../meshes/arraymesh/build';
 import type { SectionLoaderFn } from '../resourceSection';
-import { arrayMeshAabb } from '../meshes/arraymesh/meshAabb';
-import type { Aabb } from '../../godot/aabb';
 
 /** Decoded ArrayMesh: merged geometry plus one material path per surface (group). */
 export interface ArrayMeshResource {
@@ -25,8 +23,6 @@ export interface ArrayMeshResource {
    * `surface_material_override/N` addresses.
    */
   surfaceIndices: number[];
-  /** The mesh's box as the rendering server holds it, which a multimesh box reads. */
-  aabb: Aabb;
 }
 
 export function createArrayMeshProcessor(
@@ -38,13 +34,11 @@ export function createArrayMeshProcessor(
     resourceType: 'arraymesh',
     addressesSubResources: true,
     loadDirectly: async (path) => {
-      const section = await loadSection(path, ARRAY_MESH_TYPES);
-      const mesh = decodeArrayMesh(section, path);
+      const mesh = decodeArrayMesh(await loadSection(path, ARRAY_MESH_TYPES), path);
       return {
         geometry: buildArrayMeshGeometry(mesh),
         materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
         surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
-        aabb: arrayMeshAabb(section.properties),
       };
     },
     dispose: (resource) => resource.geometry.dispose(),

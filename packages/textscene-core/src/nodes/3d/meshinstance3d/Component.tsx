@@ -1,6 +1,7 @@
 /**
  * Renders a Godot MeshInstance3D as an R3F <mesh>: a primitive or ArrayMesh
- * geometry, or a magenta wireframe placeholder for a GLB or unresolvable mesh.
+ * geometry, from the scene or a `.tres`, or a magenta wireframe placeholder for a
+ * GLB or unresolvable mesh.
  * Each surface draws through `<SurfaceMaterialSlot>`, which owns the magenta
  * missing-texture placeholder.
  */
@@ -8,15 +9,15 @@
 import * as THREE from 'three';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
-import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
+import type { TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { useResource, type ResourceResult } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
-import { resolveExtArrayMeshPath } from './meshResolution';
-import { resolveSubResourceRef } from '../../../resources/SubResourceResolver';
+import { useMeshResolution, type MeshResolution } from './meshResolution';
+import type { ScopedResource } from '../../../resources/useSubOrExtResource';
 import { warn } from '../../../logger';
 import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
@@ -38,51 +39,39 @@ const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
 
 export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as MeshInstance3DProperties;
-  const { internalResources, externalResources } = useSceneResources();
+  const pools = useSceneResources();
 
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
     [properties]
   );
 
-  const meshResource = useMemo(
-    () => resolveSubResourceRef(properties.mesh, internalResources),
-    [properties.mesh, internalResources]
-  );
-
-  // An ExtResource `.tres` mesh is an external ArrayMesh, decoded through the resource
-  // pipeline. A `.glb` falls through to the placeholder. The hook runs with `''` for any
-  // other mesh, since the rules of hooks forbid a conditional call.
-  const arrayMeshPath = useMemo(
-    () => resolveExtArrayMeshPath(properties.mesh, externalResources),
-    [properties.mesh, externalResources]
-  );
-  const arrayMeshResult = useResource<ArrayMeshResource>(arrayMeshPath ?? '', 'arraymesh');
+  // A `.glb` resolves to nothing and falls through to the placeholder.
+  const mesh = useMeshResolution(properties.mesh, pools);
+  // The hook runs with `''` for any other mesh, since the rules of hooks forbid a conditional call.
+  const arrayMeshResult = useResource<ArrayMeshResource>(mesh.arrayMeshPath ?? '', 'arraymesh');
 
   // A scene's own `[sub_resource type="ArrayMesh"]` has its surfaces inlined in the
   // `.tscn`, so it decodes synchronously, with no file to fetch.
-  const sceneArrayMesh = useSceneArrayMesh(meshResource, internalResources, externalResources);
+  const sceneArrayMesh = useSceneArrayMesh(mesh.arrayMeshPath ? null : mesh.scoped);
 
   // Surface 0's material, the only one a primitive mesh has. Every multi-surface mesh
   // is an ArrayMesh, which returns from its own branch below.
   const primarySource = useMemo(
-    () => resolvePrimitiveMaterialSource(properties, internalResources, externalResources),
-    [properties, internalResources, externalResources]
+    () => resolvePrimitiveMaterialSource(properties, pools, mesh.scoped),
+    [properties, pools, mesh.scoped]
   );
 
   // The same two overrides for an ArrayMesh. Its surfaces are draw groups indexed by the
   // mesh's own surface numbering, so they cannot use the per-slot collapse above, but
   // Godot applies the overrides to both kinds of mesh identically.
-  const meshOverrides = useMemo(
-    () => resolveMeshOverrides(properties, internalResources, externalResources),
-    [properties, internalResources, externalResources]
-  );
+  const meshOverrides = useMemo(() => resolveMeshOverrides(properties, pools), [properties, pools]);
 
   // `material_overlay` never competes for a surface slot, so it resolves apart from the
   // overrides: it is drawn on its own.
   const overlaySource = useMemo(
-    () => resolveMaterialSource(properties.materialOverlay, internalResources, externalResources),
-    [properties.materialOverlay, internalResources, externalResources]
+    () => resolveMaterialSource(properties.materialOverlay, pools.internalResources, pools.externalResources),
+    [properties.materialOverlay, pools]
   );
 
   // The ref lands on whichever `<mesh>` MeshShell renders, for the overlay to share.
@@ -92,7 +81,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // `cast_shadow`, the range cull and each surface's billboard and shadow-pass membership reach
   // three per draw group, through hooks that read that group's material.
   const placement = useMemo(() => livePlacement(meshRef, meshRef), []);
-  const content = meshContent(meshResource, arrayMeshPath, arrayMeshResult, sceneArrayMesh);
+  const content = meshContent(mesh, arrayMeshResult, sceneArrayMesh);
   // The placeholder box is not the mesh's, so the cull cannot measure the instance.
   const shadow = useGeometryInstance(content.kind === 'unresolved' ? UNPLACED : placement);
   const visible = properties.visible !== false;
@@ -159,24 +148,25 @@ const UNRESOLVED: MeshContent = { kind: 'unresolved' };
 const LOADING: MeshContent = { kind: 'loading' };
 
 /**
- * The placeholder stands for no mesh, an external GLB, a missing SubResource, an external
- * ArrayMesh that cannot load, and a scene ArrayMesh that cannot be read. `buildPrimitiveMeshGeometry`
- * has no ArrayMesh case, so an unreadable one would otherwise draw nothing.
+ * The placeholder stands for no mesh, an external GLB, a missing SubResource, a `.tres` that
+ * cannot load, and an ArrayMesh that cannot be read. `buildPrimitiveMeshGeometry` has no
+ * ArrayMesh case, so an unreadable one would otherwise draw nothing.
  */
 function meshContent(
-  meshResource: TscnInternalResource | undefined,
-  arrayMeshPath: string | null,
+  mesh: MeshResolution,
   arrayMeshResult: ResourceResult<ArrayMeshResource>,
   sceneArrayMesh: SurfacedMesh | null
 ): MeshContent {
-  if (arrayMeshPath) {
+  if (mesh.status === 'pending') return LOADING;
+  if (!mesh.scoped) return UNRESOLVED;
+  if (mesh.arrayMeshPath) {
     if (arrayMeshResult.status === 'unavailable') return UNRESOLVED;
     return arrayMeshResult.value
       ? { kind: 'arrayMesh', mesh: withFileMaterials(arrayMeshResult.value) }
       : LOADING;
   }
-  if (!meshResource) return UNRESOLVED;
-  if (meshResource.type !== 'ArrayMesh') return { kind: 'primitive', resource: meshResource };
+  const { resource } = mesh.scoped;
+  if (resource.type !== 'ArrayMesh') return { kind: 'primitive', resource };
   return sceneArrayMesh ? { kind: 'arrayMesh', mesh: sceneArrayMesh } : UNRESOLVED;
 }
 
@@ -352,7 +342,7 @@ function withFileMaterials(mesh: ArrayMeshResource): SurfacedMesh {
   };
 }
 
-/** A MeshInstance3D's two material-override properties, already resolved. */
+/** A MeshInstance3D's two material-override properties, already resolved against the scene. */
 interface MeshOverrides {
   /** `material_override`: in front of every surface's material. */
   node?: MaterialSource;
@@ -362,8 +352,7 @@ interface MeshOverrides {
 
 function resolveMeshOverrides(
   properties: MeshInstance3DProperties,
-  internalResources: readonly TscnInternalResource[],
-  externalResources: readonly TscnExternalResource[]
+  { internalResources, externalResources }: SceneResources
 ): MeshOverrides {
   const perSurface = new Map<number, MaterialSource>();
   for (const [index, ref] of properties.surfaceMaterialOverrides ?? []) {
@@ -392,28 +381,24 @@ function effectiveMaterialSource(
 
 /**
  * An ArrayMesh the scene declares as its own `[sub_resource]`, with each surface's
- * material resolved against the scene's resources. Null for any other mesh type
+ * material resolved against the pools that hold the mesh. Null for any other mesh type
  * or for unreadable surfaces, and the caller then shows its placeholder.
  */
-function useSceneArrayMesh(
-  resource: TscnInternalResource | undefined,
-  internalResources: readonly TscnInternalResource[],
-  externalResources: readonly TscnExternalResource[]
-): SurfacedMesh | null {
-  const decoded = useSceneArrayMeshGeometry(resource);
+function useSceneArrayMesh(mesh: ScopedResource | null): SurfacedMesh | null {
+  const decoded = useSceneArrayMeshGeometry(mesh?.resource);
+  const resources = mesh?.resources;
   // Apart from the decode: an edit to a material's body or to an `ext_resource`
   // path changes the resources and leaves the surface bytes alone.
-  return useMemo(
-    () =>
-      decoded && {
-        geometry: decoded.geometry,
-        surfaceIndices: decoded.surfaceIndices,
-        materials: decoded.materialRefs.map((ref) =>
-          resolveMaterialSource(ref, internalResources, externalResources)
-        ),
-      },
-    [decoded, internalResources, externalResources]
-  );
+  return useMemo(() => {
+    if (!decoded || !resources) return null;
+    return {
+      geometry: decoded.geometry,
+      surfaceIndices: decoded.surfaceIndices,
+      materials: decoded.materialRefs.map((ref) =>
+        resolveMaterialSource(ref, resources.internalResources, resources.externalResources)
+      ),
+    };
+  }, [decoded, resources]);
 }
 
 /**
@@ -461,28 +446,21 @@ interface DecodedSceneArrayMesh extends Omit<SurfacedMesh, 'materials'> {
  * The material of a primitive mesh's one surface, as a `MaterialSource`: the
  * engine hands the server only `->get_rid()`
  * (`scene/3d/mesh_instance_3d.cpp:366`), so a `.tres` and a `[sub_resource]`
- * are equal arrivals.
+ * are equal arrivals. An override resolves against the scene, the mesh's own
+ * material against the pools that hold the mesh.
  */
 function resolvePrimitiveMaterialSource(
   properties: MeshInstance3DProperties,
-  internalResources: readonly TscnInternalResource[],
-  externalResources: readonly TscnExternalResource[]
+  scene: SceneResources,
+  mesh: ScopedResource | null
 ): MaterialSource | undefined {
   // Surface 0 alone: `_set` (`scene/3d/mesh_instance_3d.cpp:65-73`) refuses an override
   // index past the array that `_mesh_changed` (`:407`) sizes to the surface count, 1 for
   // every PrimitiveMesh. `material_override` comes first, as `_geometry_instance_add_surface`
   // applies it per surface (`render_forward_clustered.cpp:4206` over `:4264`).
-  const ref =
-    properties.materialOverride ??
-    properties.surfaceMaterialOverrides?.get(0) ??
-    findMeshOwnMaterial(properties.mesh, internalResources);
-  return resolveMaterialSource(ref, internalResources, externalResources);
-}
-
-function findMeshOwnMaterial(
-  meshRef: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): string | undefined {
-  const material = resolveSubResourceRef(meshRef, internalResources)?.data['material'];
-  return typeof material === 'string' ? material : undefined;
+  const override = properties.materialOverride ?? properties.surfaceMaterialOverrides?.get(0);
+  if (override) return resolveMaterialSource(override, scene.internalResources, scene.externalResources);
+  const own = mesh?.resource.data['material'];
+  if (!mesh || typeof own !== 'string') return undefined;
+  return resolveMaterialSource(own, mesh.resources.internalResources, mesh.resources.externalResources);
 }

@@ -1,16 +1,20 @@
-/** Where an external `mesh` reference points, when it is an ArrayMesh `.tres`. */
+/** The mesh a MeshInstance3D's `mesh` reference names, in the scene or in a `.tres`. */
 
-import type { TscnExternalResource } from '../../../parser/types';
 import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
+import { useResourceResolution, type ResourceResolution } from '../../../resources/useSubOrExtResource';
+import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 
-/**
- * The `.tres` path of an external ArrayMesh. Null for a SubResource, a non-`.tres` file such as
- * `.glb`, or an unknown id.
- */
-export function resolveExtArrayMeshPath(
-  meshRef: string | undefined,
-  externalResources: readonly TscnExternalResource[]
-): string | null {
-  const path = resolveExtResourcePath(meshRef, externalResources);
-  return path?.endsWith('.tres') ? path : null;
+export interface MeshResolution extends ResourceResolution {
+  /**
+   * The `.tres` path of an external ArrayMesh, which the ArrayMesh processor decodes once for
+   * every consumer. Null for any other mesh, and while the file loads.
+   */
+  arrayMeshPath: string | null;
+}
+
+export function useMeshResolution(meshRef: string | undefined, pools: SceneResources): MeshResolution {
+  const resolution = useResourceResolution(meshRef, pools);
+  const path = resolveExtResourcePath(meshRef, pools.externalResources);
+  const arrayMeshPath = path && resolution.scoped?.resource.type === 'ArrayMesh' ? path : null;
+  return { ...resolution, arrayMeshPath };
 }
