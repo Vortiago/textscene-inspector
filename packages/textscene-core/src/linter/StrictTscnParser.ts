@@ -261,12 +261,12 @@ export class StrictTscnParser {
       },
     };
 
-    const scene = this.core.parse(content, createRawNode, observer);
+    const { scene, headingFacts } = this.core.parse(content, createRawNode, observer);
 
     // The scene comes back even when a property failed: a bad value does not invalidate the tree. Withholding it
     // would skip the rule phase, so one out-of-range property would silence every semantic rule in the file, and a
     // rule whose condition a validator rejects would never run.
 
-    return { errors, scene, lines };
+    return { errors, scene: { ...scene, ...headingFacts }, lines };
   }
 }

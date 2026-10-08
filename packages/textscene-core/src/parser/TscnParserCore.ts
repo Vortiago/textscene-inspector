@@ -8,6 +8,8 @@
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/deprecated.js';
 import type {
   TscnScene,
+  HeadingFacts,
+  RawNode,
   SceneNode,
   TscnExternalResource,
   TscnInternalResource,
@@ -46,6 +48,12 @@ export type NodeCreator<N extends SceneNode<N>> = (
   heading: ParsedHeading,
   properties: Record<string, string>
 ) => N | null;
+
+/** What one scan returns: the tree beside the facts only the linter reads. */
+export interface CoreParse<N extends RawNode> {
+  scene: TscnScene<N>;
+  headingFacts: HeadingFacts;
+}
 
 /**
  * Hooks into the scanning loop for strict (linting) consumers. The observer is
@@ -95,13 +103,13 @@ export class TscnParserCore {
    * @param content - Raw TSCN file content
    * @param nodeCreator - Callback to create nodes (renderer-specific or linter-specific)
    * @param observer - Optional hooks for strict consumers (errors, sections, properties)
-   * @returns Parsed scene structure
+   * @returns The scene, and the heading facts only the linter reads
    */
   parse<N extends SceneNode<N>>(
     content: string,
     nodeCreator: NodeCreator<N>,
     observer?: ParseObserver
-  ): TscnScene<N> {
+  ): CoreParse<N> {
     // Debug, not info: an editor host parses on each keystroke.
     logger.debug('[Parser] Starting TSCN parsing');
     // Split on CRLF or LF: a trailing \r on each line of a Windows-authored file
@@ -324,7 +332,6 @@ export class TscnParserCore {
     const sceneTree = buildSceneTree(origins.map((o) => o.node));
     const orphanedNodes = strandedNodes(origins, sceneTree);
     const rootWithParent = rootDeclaringParent(origins);
-    const emptyParents = emptyParentHeadings(origins);
     for (const { node } of orphanedNodes) {
       logger.warn(
         `[Parser] Orphaned node dropped from the scene tree: "${node.name}" (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
@@ -336,16 +343,20 @@ export class TscnParserCore {
     );
 
     return {
-      nodes: sceneTree,
-      externalResources,
-      internalResources,
-      ...(orphanedNodes.length > 0 ? { orphanedNodes } : {}),
-      ...(rootWithParent ? { rootWithParent } : {}),
-      ...(emptyParents.length > 0 ? { emptyParentHeadings: emptyParents } : {}),
-      ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
-      ...(mainResource ? { mainResource } : {}),
-      ...(connectionBinds.length > 0 ? { connectionBinds } : {}),
-      ...(instancesOutsideNodeBody.length > 0 ? { instancesOutsideNodeBody } : {}),
+      scene: {
+        nodes: sceneTree,
+        externalResources,
+        internalResources,
+        ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
+        ...(mainResource ? { mainResource } : {}),
+      },
+      headingFacts: {
+        orphanedNodes,
+        ...(rootWithParent ? { rootWithParent } : {}),
+        emptyParentHeadings: emptyParentHeadings(origins),
+        connectionBinds,
+        instancesOutsideNodeBody,
+      },
     };
   }
 

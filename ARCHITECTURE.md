@@ -119,7 +119,8 @@ The observer only adds, so the render is the same with or without it. The lenien
 `NodeCreator` builds a `TscnNode` with typed values in `properties`. The strict one builds a
 `RawNode`, the **Raw view**, with no `properties`. Both store the raw strings in `rawProperties`,
 so shared code reads that field. A **Lint rule** sees only the Raw view, so the compiler refuses
-a `properties` read.
+a `properties` read. The core returns the **Heading facts** beside the scene. The strict parser
+adds them to its `StrictScene`, and the lenient parser drops them.
 The strict parser also returns `SourceLines`, which puts each diagnostic on its line.
 
 ## Rendering

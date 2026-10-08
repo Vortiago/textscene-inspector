@@ -18,7 +18,7 @@ export interface ParsedResource {
 
 /** Throws when the content has no [gd_resource] header (not a .tres file). */
 export function parseTresFile(content: string): ParsedResource {
-  const scene = new TscnParserCore().parse(content, () => null);
+  const { scene } = new TscnParserCore().parse(content, () => null);
   const { resourceType } = scene;
 
   if (!resourceType) {

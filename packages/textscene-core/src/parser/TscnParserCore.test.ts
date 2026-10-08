@@ -64,7 +64,7 @@ mesh = SubResource("mesh_1")
 
       const mockCreator = vi.fn<NodeCreator<RawNode>>(() => null);
 
-      const scene = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, mockCreator);
 
       expect(mockCreator).toHaveBeenCalledTimes(1);
       expect(scene.nodes).toEqual([]);
@@ -110,7 +110,7 @@ cast_shadow = 1
         children: [],
       }));
 
-      const scene = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, mockCreator);
 
       // Node creator should only be called for nodes, not resources
       expect(mockCreator).toHaveBeenCalledTimes(1);
@@ -135,7 +135,7 @@ cast_shadow = 1
         children: [],
       }));
 
-      const scene = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, mockCreator);
 
       expect(mockCreator).toHaveBeenCalledTimes(1);
       expect(scene.internalResources).toHaveLength(1);
@@ -152,7 +152,7 @@ item/0/name = "Tree"
 item/0/mesh = ExtResource("1_tree")
 `;
 
-      const scene = parser.parse(content, () => null);
+      const { scene } = parser.parse(content, () => null);
 
       expect(scene.resourceType).toBe('MeshLibrary');
       expect(scene.mainResource).toEqual({
@@ -161,17 +161,48 @@ item/0/mesh = ExtResource("1_tree")
     });
 
     it('keeps the header type of a .tres that has no [resource] body', () => {
-      const scene = parser.parse('[gd_resource type="Environment" format=3]\n', () => null);
+      const { scene } = parser.parse('[gd_resource type="Environment" format=3]\n', () => null);
 
       expect(scene.resourceType).toBe('Environment');
       expect(scene).not.toHaveProperty('mainResource');
     });
 
     it('leaves the header type and the main resource absent for a scene', () => {
-      const scene = parser.parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n', () => null);
+      const { scene } = parser.parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n', () => null);
 
       expect(scene).not.toHaveProperty('resourceType');
       expect(scene).not.toHaveProperty('mainResource');
+    });
+  });
+
+  describe('heading facts', () => {
+    const content = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Lost" type="Node3D" parent="Missing"]
+
+[connection signal="ready" from="." to="." method="go" binds=[ExtResource("1")]]
+`;
+    const creator: NodeCreator<RawNode> = (heading, properties) => ({
+      rawProperties: properties,
+      name: heading.attributes.name ?? '',
+      type: heading.attributes.type ?? '',
+      parent: heading.attributes.parent,
+      children: [],
+    });
+
+    it('returns them beside the scene', () => {
+      const { headingFacts } = parser.parse(content, creator);
+
+      expect(headingFacts.orphanedNodes.map(({ node }) => node.name)).toEqual(['Lost']);
+      expect(headingFacts.connectionBinds).toEqual(['[ExtResource("1")]']);
+    });
+
+    it('keeps them off the scene', () => {
+      const { scene } = parser.parse(content, creator);
+
+      expect(Object.keys(scene).sort()).toEqual(['externalResources', 'internalResources', 'nodes']);
     });
   });
 
@@ -195,7 +226,7 @@ item/0/mesh = ExtResource("1_tree")
         children: [],
       });
 
-      const scene = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, mockCreator);
 
       expect(scene.nodes).toHaveLength(1); // Only root node
       expect(scene.nodes[0]?.name).toBe('Root');
@@ -217,7 +248,7 @@ item/0/mesh = ExtResource("1_tree")
   describe('edge cases', () => {
     it('should handle empty content', () => {
       const mockCreator = vi.fn<NodeCreator<RawNode>>();
-      const scene = parser.parse('', mockCreator);
+      const { scene } = parser.parse('', mockCreator);
 
       expect(mockCreator).not.toHaveBeenCalled();
       expect(scene.nodes).toEqual([]);
@@ -241,7 +272,7 @@ item/0/mesh = ExtResource("1_tree")
         children: [],
       }));
 
-      const scene = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, mockCreator);
 
       expect(mockCreator).toHaveBeenCalledTimes(1);
       expect(scene.nodes).toHaveLength(1);
@@ -261,7 +292,7 @@ item/0/mesh = ExtResource("1_tree")
       }));
 
       // Should not throw, just skip invalid headings
-      const scene = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, mockCreator);
 
       expect(mockCreator).toHaveBeenCalledTimes(1);
       expect(scene.nodes).toHaveLength(1);
@@ -601,7 +632,7 @@ size = Vector3(1, 2, 3)
 `;
         const onSectionBuilt = vi.fn<NonNullable<ParseObserver['onSectionBuilt']>>();
 
-        const scene = parser.parse(content, simpleCreator, { onSectionBuilt });
+        const { scene } = parser.parse(content, simpleCreator, { onSectionBuilt });
 
         const root = scene.nodes[0]!;
         expect(onSectionBuilt.mock.calls).toEqual([
@@ -624,7 +655,7 @@ background_mode = 1
 `;
         const onSectionBuilt = vi.fn<NonNullable<ParseObserver['onSectionBuilt']>>();
 
-        const scene = parser.parse(content, () => null, { onSectionBuilt });
+        const { scene } = parser.parse(content, () => null, { onSectionBuilt });
 
         expect(onSectionBuilt.mock.calls).toEqual([[scene.mainResource, 3]]);
         expect(onSectionBuilt.mock.calls[0]![0]).toBe(scene.mainResource);

@@ -74,13 +74,13 @@ function sweep(
 /** Each dangling reference, on the line of the property that holds it. */
 export function danglingResourceDiagnostics(scene: RawScene, lines: SourceLines): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-  const ext = new Set((scene.externalResources ?? []).map((r) => r.id));
+  const ext = new Set(scene.externalResources.map((r) => r.id));
   const int = new Set<string>();
-  const all = new Set((scene.internalResources ?? []).map((r) => r.id));
+  const all = new Set(scene.internalResources.map((r) => r.id));
 
   // File order: `int_resources[id] = res` lands as each heading is read (`:629`), ahead of its body, so a body sees
   // the ids above it and its own, and a forward reference dangles.
-  for (const resource of scene.internalResources ?? []) {
+  for (const resource of scene.internalResources) {
     int.add(resource.id);
     const owner: Owner = {
       built: resource,

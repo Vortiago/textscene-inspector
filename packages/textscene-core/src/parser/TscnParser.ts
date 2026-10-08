@@ -265,6 +265,6 @@ export class TscnParser {
    * shape declared by the relevant node-type module.
    */
   parse(content: string): TscnScene {
-    return this.core.parse(content, parseNodeWithRegistry);
+    return this.core.parse(content, parseNodeWithRegistry).scene;
   }
 }
