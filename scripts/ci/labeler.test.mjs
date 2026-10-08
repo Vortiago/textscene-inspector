@@ -1,8 +1,12 @@
 /** Which area labels .github/labeler.yml puts on a pull request, from the paths it changes. */
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { minimatch } from 'minimatch';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import { REPO_ROOT } from '../repoRoot.mjs';
+
+const config = parse(readFileSync(resolve(REPO_ROOT, '.github/labeler.yml'), 'utf8'));
 
 const MATCH_OPTIONS = {
   'any-glob-to-any-file': (globs, paths) => paths.some((path) => globs.some((glob) => matches(path, glob))),
@@ -14,29 +18,34 @@ function matches(path, glob) {
   return minimatch(path, glob, { dot: true });
 }
 
+/** Only the options the config uses are modelled, so another option fails instead of passing unread. */
+function optionMatches(option, paths) {
+  return Object.entries(option).some(([kind, globs]) => {
+    const match = MATCH_OPTIONS[kind];
+    if (!match) throw new Error(`expected one of ${Object.keys(MATCH_OPTIONS)}, got ${kind}`);
+    return match([globs].flat(), paths);
+  });
+}
+
 /**
  * Applies the config as actions/labeler v7 does without a top-level `any` or `all` key: a
- * label applies when any of its match options matches. Only the options the config uses are
- * modelled, so an option outside MATCH_OPTIONS fails the test instead of passing unread.
+ * label applies when any of its match options matches.
  */
-function labelsFor(config, paths) {
+function labelsFor(paths) {
   return Object.entries(config)
     .filter(([, entries]) =>
-      entries.some((entry) =>
-        entry['changed-files'].some((option) =>
-          Object.entries(option).some(([kind, globs]) => {
-            const match = MATCH_OPTIONS[kind];
-            if (!match) throw new Error(`expected one of ${Object.keys(MATCH_OPTIONS)}, got ${kind}`);
-            return match([globs].flat(), paths);
-          })
-        )
-      )
+      entries.some((entry) => entry['changed-files'].some((option) => optionMatches(option, paths)))
     )
     .map(([label]) => label)
     .sort();
 }
 
-const config = parse(readFileSync(new URL('../../.github/labeler.yml', import.meta.url), 'utf8'));
+function globsOf(label, kind) {
+  return config[label].flatMap((entry) =>
+    entry['changed-files'].flatMap((option) => [option[kind] ?? []].flat())
+  );
+}
+
 const core = 'packages/textscene-core/src';
 const slice = `${core}/nodes/3d/meshinstance3d`;
 const material = `${core}/resources/materials/standardmaterial3d`;
@@ -73,21 +82,31 @@ describe('labeler.yml', () => {
     ['scripts/visual/run.mjs', 'ci'],
     ['docs/adr/0001-record-architecture-decisions.md', 'documentation'],
   ])('labels %s as %s alone', (path, label) => {
-    expect(labelsFor(config, [path])).toEqual([label]);
+    expect(labelsFor([path])).toEqual([label]);
   });
 
   it('labels a markdown file inside an area with both the area and documentation', () => {
-    expect(labelsFor(config, ['apps/textscene-vscode/README.md'])).toEqual(['documentation', 'vscode']);
+    expect(labelsFor(['apps/textscene-vscode/README.md'])).toEqual(['documentation', 'vscode']);
   });
 
   it('gives a pull request one label per area it touches', () => {
-    expect(labelsFor(config, [`${slice}/Component.tsx`, `${core}/godot/nodeBaseTypes.ts`])).toEqual([
+    expect(labelsFor([`${slice}/Component.tsx`, `${core}/godot/nodeBaseTypes.ts`])).toEqual([
       'core',
       'renderer',
     ]);
   });
 
+  it('excludes from core exactly the core globs the other areas claim', () => {
+    const claimed = ['parser', 'renderer', 'linter', 'lsp']
+      .flatMap((label) => globsOf(label, 'any-glob-to-any-file'))
+      .filter((glob) => glob.startsWith('packages/textscene-core/'));
+    const excluded = globsOf('core', 'all-globs-to-any-file')
+      .filter((glob) => glob.startsWith('!'))
+      .map((glob) => glob.slice(1));
+    expect(excluded.sort()).toEqual(claimed.sort());
+  });
+
   it('leaves a root toolchain file unlabelled', () => {
-    expect(labelsFor(config, ['pnpm-lock.yaml'])).toEqual([]);
+    expect(labelsFor(['pnpm-lock.yaml'])).toEqual([]);
   });
 });
