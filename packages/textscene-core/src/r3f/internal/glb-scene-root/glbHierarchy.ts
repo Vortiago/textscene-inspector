@@ -1,14 +1,16 @@
 /**
- * A loaded GLB as a display hierarchy for the scene tree. The walk is deterministic: children in
- * order, duplicate sibling names suffixed `@<n>`. So the tree's clone and the viewport's clone get
- * the same relative paths, and a tree row lines up with the rendered object.
+ * A loaded GLB as a display hierarchy for the scene tree, under the names Godot gives its nodes.
+ * The walk is deterministic: children in order, duplicate sibling names suffixed `@<n>`. So the
+ * tree's clone and the viewport's clone get the same relative paths, and a tree row lines up with
+ * the rendered object.
  */
 
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
+import { godotNodeName } from '../../../resources/formats/glb/nodeNames.js';
 
 export interface GlbHierarchyNode {
-  /** Display name (THREE object's name, or its type when unnamed). */
+  /** Display name, from `glbObjectName`. */
   name: string;
   /** Relative to the GLB root, unique and stable across structurally equal clones. */
   relPath: string;
@@ -31,10 +33,18 @@ export function glbDisplayType(threeType: string): string {
   return threeType;
 }
 
+/**
+ * The name Godot's importer gives the glTF node `object` stands for. An object no node names, such
+ * as a primitive or a bone, takes three's name, or its type when unnamed.
+ */
+export function glbObjectName(object: THREE.Object3D): string {
+  return godotNodeName(object) ?? (object.name || object.type);
+}
+
 function segmentsForSiblings(children: readonly THREE.Object3D[]): string[] {
   const seen = new Map<string, number>();
   return children.map((child) => {
-    const base = child.name || child.type;
+    const base = glbObjectName(child);
     const n = seen.get(base) ?? 0;
     seen.set(base, n + 1);
     return n === 0 ? base : `${base}@${n}`;
@@ -45,7 +55,7 @@ function buildNode(object: THREE.Object3D, parentPath: string, segment: string):
   const relPath = parentPath ? `${parentPath}/${segment}` : segment;
   const childSegments = segmentsForSiblings(object.children);
   return {
-    name: object.name || object.type,
+    name: glbObjectName(object),
     relPath,
     threeType: object.type,
     displayType: glbDisplayType(object.type),

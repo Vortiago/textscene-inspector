@@ -5,17 +5,45 @@ import {
   buildGlbHierarchy,
   glbDisplayType,
   glbHierarchyToTscnNodes,
+  glbObjectName,
   glbSceneRootChildren,
   GLB_ANIMATION_PLAYER_NAME,
   GLB_ANIMATION_PLAYER_TYPE,
 } from './glbHierarchy';
+import { tagGodotNodeNames } from '../../../resources/formats/glb/nodeNames';
 
 function named<T extends THREE.Object3D>(obj: T, name: string): T {
   obj.name = name;
   return obj;
 }
 
+/** `object` as glTF node 0, which Godot names `godotName`. */
+function godotNamed<T extends THREE.Object3D>(object: T, godotName: string): T {
+  tagGodotNodeNames(object, new Map([[object, { nodes: 0 }]]), [godotName]);
+  return object;
+}
+
+describe('glbObjectName', () => {
+  it("takes Godot's name for a glTF node", () => {
+    expect(glbObjectName(godotNamed(named(new THREE.Mesh(), 'Cube001'), 'Cube_001'))).toBe('Cube_001');
+  });
+
+  it("takes three's name for an object no node names", () => {
+    expect(glbObjectName(named(new THREE.Bone(), 'Hip'))).toBe('Hip');
+  });
+
+  it('takes the type for an unnamed object', () => {
+    expect(glbObjectName(new THREE.Mesh())).toBe('Mesh');
+  });
+});
+
 describe('buildGlbHierarchy', () => {
+  it("paths each node by Godot's name", () => {
+    const root = new THREE.Group();
+    root.add(godotNamed(named(new THREE.Mesh(), 'Cube001'), 'Cube_001'));
+    expect(buildGlbHierarchy(root).map((n) => [n.name, n.relPath])).toEqual([['Cube_001', 'Cube_001']]);
+  });
+
   it('walks children in order with nested relative paths', () => {
     const root = new THREE.Group();
     const armature = named(new THREE.Group(), 'Armature');

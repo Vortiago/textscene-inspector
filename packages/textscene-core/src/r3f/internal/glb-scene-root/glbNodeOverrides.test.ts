@@ -9,6 +9,7 @@ import { applyGlbNodeOverrides } from './glbNodeOverrides';
 import { visualLayersOf } from '../../visualLayers';
 import type { TscnNode } from '../../../parser/types';
 import { buildTestGlbGraph } from './testGraph';
+import { tagGodotNodeNames } from '../../../resources/formats/glb/nodeNames';
 
 const override = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
   rawProperties: {},
@@ -42,6 +43,16 @@ describe('applyGlbNodeOverrides', () => {
     const body = root.children[0]!;
     expect(visualLayersOf(body)).toBe(4);
     expect(body.children.map(visualLayersOf)).toEqual([4, 4]);
+  });
+
+  it("resolves an override by Godot's name for a node three spells otherwise", () => {
+    const root = buildTestGlbGraph(['Cube001']);
+    const cube = root.children[0]!;
+    tagGodotNodeNames(root, new Map([[cube, { nodes: 0 }]]), ['Cube_001']);
+
+    applyGlbNodeOverrides(root, [override('Cube_001', { rawProperties: { layers: '2' } })]);
+
+    expect(visualLayersOf(cube)).toBe(2);
   });
 
   it('resolves a deep override by PATH, not by bare name', () => {

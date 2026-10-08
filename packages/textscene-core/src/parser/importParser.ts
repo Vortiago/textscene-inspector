@@ -14,6 +14,8 @@ import {
 } from './utils';
 import * as logger from '../logger';
 import { boolSlotValue } from '../godot/index.js';
+import { DEFAULT_GLTF_NAMING_VERSION, type GltfNamingOptions } from '../godot/gltfNodeNames.js';
+import { parseOptionalInt } from './valueParsers.js';
 
 /** A `key=value` line, tolerating surrounding whitespace and a trailing comment-free tail. */
 const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/]*)=(.*)$/;
@@ -29,8 +31,8 @@ export interface ParsedImportFile {
   /**
    * The `[params]` block: a string literal's decoded text, as `VariantParser` reads it back
    * (`resource_importer.cpp:76`), and any other value as written. The typed readers cover only
-   * `nodes/root_scale`, `nodes/apply_root_scale`, and the `_subresources` material remaps and
-   * mesh layers. The rest is GLTFLoader's work or a bake concern with no visual effect.
+   * `nodes/root_scale`, `nodes/apply_root_scale`, the glTF naming options, and the `_subresources`
+   * material remaps and mesh layers. The rest is GLTFLoader's work or a bake concern with no visual effect.
    */
   params: Record<string, string>;
 }
@@ -123,6 +125,18 @@ export function importRootScale(parsed: ParsedImportFile | null): { scale: numbe
   // `bool apply_root = p_options["nodes/apply_root_scale"]`
   // (`resource_importer_scene.cpp:3154-3157`) booleanizes the Variant, so `0` is false.
   return { scale, bake: boolSlotValue(parsed!.params['nodes/apply_root_scale']) !== false };
+}
+
+/**
+ * The options that change the node names of an imported glTF, each at its default when the
+ * sidecar is absent or omits it (`editor_scene_importer_gltf.cpp:47-58`).
+ */
+export function importGltfNaming(parsed: ParsedImportFile | null): Omit<GltfNamingOptions, 'fileName'> {
+  const params = parsed?.params ?? {};
+  return {
+    namingVersion: parseOptionalInt(params['gltf/naming_version']) ?? DEFAULT_GLTF_NAMING_VERSION,
+    importAsSkeletonBones: boolSlotValue(params['nodes/import_as_skeleton_bones']) === true,
+  };
 }
 
 /**

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  fileBaseName,
   RES_PATH_BODY_SOURCE,
   IS_VALID_INT_RE,
   literalText,
@@ -414,5 +415,19 @@ describe('RES_PATH_BODY_SOURCE', () => {
 
   it('matches nothing when the path opens with a refused character', () => {
     expect(body.exec('"a.png')).toBeNull();
+  });
+});
+
+describe('fileBaseName', () => {
+  it('drops the folders and the extension', () => {
+    expect(fileBaseName('res://models/robot.glb')).toBe('robot');
+  });
+
+  it('drops only the last extension', () => {
+    expect(fileBaseName('res://robot.v2.gltf')).toBe('robot.v2');
+  });
+
+  it('keeps a name with no extension, after a backslash too', () => {
+    expect(fileBaseName('C:\\models\\robot')).toBe('robot');
   });
 });

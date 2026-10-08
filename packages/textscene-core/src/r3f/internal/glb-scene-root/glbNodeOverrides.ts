@@ -12,7 +12,7 @@ import { decomposeForR3F } from '../../nodeTransform';
 import { parseOptionalInt } from '../../../parser/valueParsers';
 import { stampVisualLayers } from '../../visualLayers';
 import { joinPath } from '../../../utils/nodePath';
-import { flattenGlbObjects, type GlbObjectEntry } from './glbHierarchy.js';
+import { flattenGlbObjects, glbObjectName, type GlbObjectEntry } from './glbHierarchy.js';
 import { matchGlbTarget } from './matchGlbTarget.js';
 import { boolSlotValue } from '../../../godot/index.js';
 
@@ -30,7 +30,7 @@ export function resolveGlbOverrideTarget(
   if (override.instanceSubPath) {
     return matchGlbTarget(entries, joinPath(override.instanceSubPath, override.name))?.object;
   }
-  const byName = entries.find((e) => e.object.name === override.name)?.object;
+  const byName = entries.find((e) => glbObjectName(e.object) === override.name)?.object;
   return byName ?? (root.name === override.name ? root : undefined);
 }
 

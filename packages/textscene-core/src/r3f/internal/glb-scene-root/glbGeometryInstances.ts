@@ -31,7 +31,7 @@ import type { InstancePlacement } from '../../visibilityRange/placements';
 import type { NodePlace } from '../../visibilityRange/visibilityScene';
 import { childOrders, useTreeOrder, type TreeOrder } from '../../contexts/TreeOrderContext';
 import { useUniqueNamePaths } from '../../useUniqueNames';
-import type { GlbObjectEntry } from './glbHierarchy';
+import { glbObjectName, type GlbObjectEntry } from './glbHierarchy';
 import type { GlbRoot } from './GlbInstanceContext';
 import { isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOverrides';
 
@@ -68,7 +68,7 @@ function glbMeshInstances(
             override ? joinPath(override.instanceSubPath ?? '', override.name) : entry.relPath
           );
     const properties = parseGeometryInstance3D(
-      { type: 'node', attributes: { name: entry.object.name } },
+      { type: 'node', attributes: { name: glbObjectName(entry.object) } },
       override?.rawProperties ?? {}
     );
     // `has`, not `??`: a parent whose own link resolves to none passes none on.
