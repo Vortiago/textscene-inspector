@@ -29,11 +29,7 @@ export function livePlacement(
   meshRef: RefObject<THREE.Mesh | null>
 ): InstancePlacement {
   return {
-    nodeMatrixWorld(target) {
-      const node = nodeRef.current;
-      if (node) target.copy(node.matrixWorld);
-      return node !== null;
-    },
+    nodeMatrixWorld: livePose(nodeRef),
     ownAabb(target) {
       const geometry = meshRef.current?.geometry;
       if (!geometry) return false;
@@ -41,6 +37,28 @@ export function livePlacement(
       target.copy(geometry.boundingBox!);
       return true;
     },
+  };
+}
+
+/** An instance whose box its data gives, or none, under the node object's live pose. */
+export function boxPlacement(
+  nodeRef: RefObject<THREE.Object3D | null>,
+  ownAabb: Aabb | null
+): InstancePlacement {
+  return {
+    nodeMatrixWorld: livePose(nodeRef),
+    ownAabb(target) {
+      if (ownAabb) copyAabb(target, ownAabb);
+      return ownAabb !== null;
+    },
+  };
+}
+
+function livePose(nodeRef: RefObject<THREE.Object3D | null>): InstancePlacement['nodeMatrixWorld'] {
+  return (target) => {
+    const node = nodeRef.current;
+    if (node) target.copy(node.matrixWorld);
+    return node !== null;
   };
 }
 

@@ -29,13 +29,13 @@ import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot'
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import type { ShadowCastingEffects } from '../../../r3f/shadowCasting';
-import { useGeometryInstance } from '../../../r3f/visibilityRange/useGeometryInstance';
+import { useGeometryInstance, withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { livePlacement } from '../../../r3f/visibilityRange/placements';
 
 /** Literal-only, so its key is constant and it never remounts. */
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
 
-export function MeshInstance3D({ node, children }: NodeComponentProps) {
+function MeshInstance3DDrawer({ node, children }: NodeComponentProps) {
   const properties = node.properties as MeshInstance3DProperties;
   const { internalResources, externalResources } = useSceneResources();
 
@@ -91,7 +91,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // `cast_shadow`, the range cull and each surface's billboard and shadow-pass membership reach
   // three per draw group, through hooks that read that group's material.
   const placement = useMemo(() => livePlacement(meshRef, meshRef), []);
-  const { shadow, fade } = useGeometryInstance(properties, placement);
+  const { shadow, fade } = useGeometryInstance(placement);
   const visible = properties.visible !== false;
 
   const shellProps = {
@@ -517,3 +517,5 @@ function findMeshOwnMaterial(
   const material = meshResource?.data?.['material'];
   return typeof material === 'string' ? material : undefined;
 }
+
+export const MeshInstance3D = withGeometryInstance(MeshInstance3DDrawer);

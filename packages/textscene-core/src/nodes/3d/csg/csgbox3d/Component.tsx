@@ -8,11 +8,14 @@
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CsgPrimitive } from '../CsgPrimitive';
 import type { CSGBox3DProperties } from './types';
+import { withGeometryInstance } from '../../../../r3f/visibilityRange/geometryInstance';
 
-export function CSGBox3D({ node, children }: NodeComponentProps) {
+function CSGBox3DDrawer({ node, children }: NodeComponentProps) {
   return (
     <CsgPrimitive node={node} properties={node.properties as CSGBox3DProperties}>
       {children}
     </CsgPrimitive>
   );
 }
+
+export const CSGBox3D = withGeometryInstance(CSGBox3DDrawer);

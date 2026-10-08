@@ -8,11 +8,14 @@
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CsgPrimitive } from '../CsgPrimitive';
 import type { CSGCylinder3DProperties } from './types';
+import { withGeometryInstance } from '../../../../r3f/visibilityRange/geometryInstance';
 
-export function CSGCylinder3D({ node, children }: NodeComponentProps) {
+function CSGCylinder3DDrawer({ node, children }: NodeComponentProps) {
   return (
     <CsgPrimitive node={node} properties={node.properties as CSGCylinder3DProperties}>
       {children}
     </CsgPrimitive>
   );
 }
+
+export const CSGCylinder3D = withGeometryInstance(CSGCylinder3DDrawer);

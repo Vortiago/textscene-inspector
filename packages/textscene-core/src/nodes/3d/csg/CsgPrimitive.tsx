@@ -18,7 +18,7 @@ import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubt
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
-import { useGeometryInstance } from '../../../r3f/visibilityRange/useGeometryInstance';
+import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { livePlacement } from '../../../r3f/visibilityRange/placements';
 import type { CSGShape3DProperties } from './types';
 
@@ -126,7 +126,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const nodeRef = useRef<THREE.Group | null>(null);
   const drawnRef = useRef<THREE.Mesh | null>(null);
   const placement = useMemo(() => livePlacement(nodeRef, drawnRef), []);
-  const { shadow, fade } = useGeometryInstance(properties, placement);
+  const { shadow, fade } = useGeometryInstance(placement);
 
   const transform = { ref: nodeRef, name: node.name, position, rotation, scale, visible } as const;
 

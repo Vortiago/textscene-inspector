@@ -19,7 +19,7 @@ export function parseGeometryInstance3D(
     transparency: parseOptionalFloat(properties.transparency) ?? GEOMETRY_INSTANCE_DEFAULTS.transparency,
     castShadow: parseOptionalInt(properties.cast_shadow) ?? GEOMETRY_INSTANCE_DEFAULTS.castShadow,
     visibilityRange: parseVisibilityRange(properties),
-    customAabb: parseCustomAabb(properties.custom_aabb),
+    customAabb: parseBox(properties.custom_aabb, 'custom_aabb'),
   };
 }
 
@@ -34,9 +34,9 @@ function parseVisibilityRange(properties: Record<string, string>): VisibilityRan
   };
 }
 
-/** `instance_set_custom_aabb` clears the box on `AABB()` (`renderer_scene_cull.cpp:1093`). */
-function parseCustomAabb(value: string | undefined): Aabb | null {
-  const box = parseOptionalAabb(value, 'custom_aabb');
+/** An `AABB()` clears a custom box (`renderer_scene_cull.cpp:1093`, `mesh_storage.cpp:2236`). */
+export function parseBox(value: string | undefined, key: string): Aabb | null {
+  const box = parseOptionalAabb(value, key);
   if (!box) return null;
   const { position, size } = box;
   const isEmpty = [position.x, position.y, position.z, size.x, size.y, size.z].every((c) => c === 0);

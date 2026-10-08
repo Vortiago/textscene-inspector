@@ -1,13 +1,13 @@
 /**
  * MultiMeshInstance3D draws nothing, so the badge reads "not implemented". The
- * Node3D base still mounts, for `visible` and the workspace split.
+ * GeometryInstance3D base still mounts, for `visible`, the workspace split and the scene cull.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../base/node3d/Component';
+import { GeometryInstance3D } from '../geometryinstance3d/Component';
 
 nodeComponentRegistry.register({
   typeName: 'MultiMeshInstance3D',
-  Component: Node3D,
+  Component: GeometryInstance3D,
   renderIntent: 'pending',
 });

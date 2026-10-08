@@ -7,7 +7,7 @@ import { parseTresFile } from '../../../parser/parsedResource';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CsgPrimitive } from './CsgPrimitive';
+import { CSGBox3D } from './csgbox3d/Component';
 // CsgPrimitive builds the solid from the registered builder, so the node type under
 // test has to have its slice wired.
 import './csgbox3d/index.r3f';
@@ -16,7 +16,6 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
-import type { CSGBox3DProperties } from './csgbox3d/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 
 const ALBEDO_PATH = 'res://textures/albedo.png';
@@ -57,7 +56,7 @@ async function render(material: string | undefined, tresText?: string) {
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={INTERNALS} externalResources={EXTERNALS}>
-        <CsgPrimitive node={node} properties={node.properties as CSGBox3DProperties} />
+        <CSGBox3D node={node} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );

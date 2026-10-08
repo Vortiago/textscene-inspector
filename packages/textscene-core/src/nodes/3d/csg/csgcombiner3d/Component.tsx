@@ -8,15 +8,18 @@
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CsgPrimitive } from '../CsgPrimitive';
 import type { CSGCombiner3DProperties } from './types';
+import { withGeometryInstance } from '../../../../r3f/visibilityRange/geometryInstance';
 
 // Routed through `<CsgPrimitive>`, where a CSG root is detected and evaluated: a combiner under a
 // plain Node3D is the commonest root, and a bare `<Node3D>` would draw each child as a lone root.
 // The registration also applies `visible`, which GenericNodeFallback ignores, so a hidden combiner
 // (a real authoring pattern when siblings bake its geometry) hides its children.
-export function CSGCombiner3D({ node, children }: NodeComponentProps) {
+function CSGCombiner3DDrawer({ node, children }: NodeComponentProps) {
   return (
     <CsgPrimitive node={node} properties={node.properties as CSGCombiner3DProperties}>
       {children}
     </CsgPrimitive>
   );
 }
+
+export const CSGCombiner3D = withGeometryInstance(CSGCombiner3DDrawer);

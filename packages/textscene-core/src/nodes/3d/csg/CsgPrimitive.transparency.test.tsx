@@ -6,7 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CsgPrimitive, CSG_BOUNDS_PROXY } from './CsgPrimitive';
+import { CSG_BOUNDS_PROXY } from './CsgPrimitive';
+import { CSGBox3D } from './csgbox3d/Component';
 import './csgbox3d/index.r3f';
 import './csgsphere3d/index.r3f';
 import { parseCSGBox3D } from './csgbox3d/parser';
@@ -36,7 +37,7 @@ async function loneBoxMaterial(properties: Record<string, string>): Promise<THRE
   };
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={[]}>
-      <CsgPrimitive node={node} properties={parsed} />
+      <CSGBox3D node={node} />
     </SceneResourcesProvider>
   );
   return (findMesh(renderer.scene) as unknown as THREE.Mesh).material as THREE.Material;

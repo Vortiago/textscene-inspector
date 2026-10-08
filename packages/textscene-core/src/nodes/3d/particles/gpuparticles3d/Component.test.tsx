@@ -1,7 +1,7 @@
 /**
  * GPUParticles3D draws no particles, but it is still a Node3D: its transform,
  * its `visible` flag and its exclusion from the 2D canvas are lost to a bare
- * `GenericNodeFallback`. So the slice registers the base under
+ * `GenericNodeFallback`. So the slice registers the GeometryInstance3D base under
  * `renderIntent: 'pending'`, and no golden covers this type.
  */
 
@@ -10,6 +10,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Node3D } from '../../../base/node3d/Component';
 import type { Node3DProperties, Transform3D } from '../../../base/node3d/types';
 import type { TscnNode } from '../../../../parser/types';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
 import { rendersOwnVisual } from '../../../../r3f/nodeSupport';
 import { drawsInWorkspace } from '../../../../r3f/nodeWorkspaceVisibility';
 import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
@@ -22,7 +23,8 @@ function makeNode(properties: Node3DProperties): TscnNode {
     name: properties.name ?? 'GPUParticles3D',
     type: 'GPUParticles3D' as const,
     children: [],
-    properties,
+    // A dispatched emitter reads the instance state its GeometryInstance3D parse carries.
+    properties: { ...GEOMETRY_INSTANCE_DEFAULTS, ...properties },
   };
 }
 

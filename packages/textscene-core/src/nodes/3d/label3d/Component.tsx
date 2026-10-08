@@ -14,6 +14,7 @@ import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
+import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 
 // This file imports nothing from the shaping engine, so the engine stays out of the
 // static closure `r3f/nodes/index.ts` pulls eagerly.
@@ -32,7 +33,7 @@ function PendingGlyphs() {
   return null;
 }
 
-export function Label3D({ node, children }: NodeComponentProps) {
+function Label3DDrawer({ node, children }: NodeComponentProps) {
   const { showLabels } = useViewportMode();
   const properties = node.properties as Label3DProperties;
   const { position, rotation, scale } = useMemo(
@@ -93,3 +94,5 @@ export function Label3D({ node, children }: NodeComponentProps) {
     </>
   );
 }
+
+export const Label3D = withGeometryInstance(Label3DDrawer);

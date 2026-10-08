@@ -8,15 +8,15 @@ import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { rendersOwnVisual } from '../../../r3f/nodeSupport';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import './index';
 import './index.r3f';
 
 describe('AnimatedSprite3D registration', () => {
-  it('registers the parseNode3D parse it reuses', () => {
+  it('registers the GeometryInstance3D parse it reuses', () => {
     const registration = nodeRegistry.getRegistration('AnimatedSprite3D');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode3D);
+    expect(registration!.parser).toBe(parseGeometryInstance3D);
   });
 
   it('registers a base component as a declared gap, so it still reads as not implemented', () => {

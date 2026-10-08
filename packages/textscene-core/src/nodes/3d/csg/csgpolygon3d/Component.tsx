@@ -8,11 +8,14 @@
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CsgPrimitive } from '../CsgPrimitive';
 import type { CSGPolygon3DProperties } from './types';
+import { withGeometryInstance } from '../../../../r3f/visibilityRange/geometryInstance';
 
-export function CSGPolygon3D({ node, children }: NodeComponentProps) {
+function CSGPolygon3DDrawer({ node, children }: NodeComponentProps) {
   return (
     <CsgPrimitive node={node} properties={node.properties as CSGPolygon3DProperties}>
       {children}
     </CsgPrimitive>
   );
 }
+
+export const CSGPolygon3D = withGeometryInstance(CSGPolygon3DDrawer);

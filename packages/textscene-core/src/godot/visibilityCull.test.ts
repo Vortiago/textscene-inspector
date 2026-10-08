@@ -8,6 +8,7 @@ function instance(
   const { range, ...rest } = fields;
   return {
     parent: -1,
+    isIndexed: true,
     distance: 10,
     isInView: true,
     wasVisible: false,
@@ -121,5 +122,40 @@ describe('cullVisibility: a visibility parent', () => {
       instance({ parent: 0, range: { begin: 20 }, distance: 10 }),
     ]);
     expect(results.map((r) => r.isVisible)).toEqual([true, false]);
+  });
+});
+
+describe('cullVisibility: a parent the scene cull does not index', () => {
+  it('is no parent: its dependant draws whatever the parent range says', () => {
+    const results = cullVisibility([
+      instance({ range: { end: 5 }, isIndexed: false, distance: 10 }),
+      instance({ parent: 0, distance: 10 }),
+    ]);
+    expect(results[1]!.isVisible).toBe(true);
+  });
+
+  it('leaves a ranged dependant to its own range (error case)', () => {
+    const results = cullVisibility([
+      instance({ range: { begin: 20 }, isIndexed: false, distance: 10 }),
+      instance({ parent: 0, range: { end: 5 }, distance: 10 }),
+    ]);
+    expect(results[1]!.isVisible).toBe(false);
+  });
+
+  it('takes no fade from the parent (edge case)', () => {
+    const fadingParent = { end: 10, endMargin: 4, fadeMode: VisibilityRangeFadeMode.DEPENDENCIES };
+    const results = cullVisibility([
+      instance({ range: fadingParent, isIndexed: false, distance: 8 }),
+      instance({ parent: 0, distance: 8 }),
+    ]);
+    expect(results[1]!.fade).toBe(1);
+  });
+
+  it('shows the dependant of a parent with a base, short of its begin', () => {
+    const results = cullVisibility([
+      instance({ range: { begin: 20 }, distance: 10 }),
+      instance({ parent: 0, distance: 10 }),
+    ]);
+    expect(results[1]!.isVisible).toBe(true);
   });
 });

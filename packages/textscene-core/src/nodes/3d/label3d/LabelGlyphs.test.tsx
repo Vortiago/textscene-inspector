@@ -13,6 +13,8 @@ import {
   CANVAS_TEXT_VERTICAL_PAD_PX,
 } from '../../../r3f/controls/native/text/canvasTextPainter';
 import LabelGlyphs from './LabelGlyphs';
+import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
@@ -63,8 +65,14 @@ function boundingSize(mesh: THREE.Mesh): THREE.Vector3 {
   return box.getSize(new THREE.Vector3());
 }
 
+/** The glyphs inside their node's GeometryInstance3D scope, as `Component.tsx` mounts them. */
+const ScopedGlyphs = withGeometryInstance(({ node }: NodeComponentProps) => (
+  <LabelGlyphs nodeRef={{ current: null }} properties={node.properties as Label3DProperties} />
+));
+
 async function render(p: Label3DProperties) {
-  return ReactThreeTestRenderer.create(<LabelGlyphs nodeRef={{ current: null }} properties={p} />);
+  const node = { name: 'L', type: 'Label3D', rawProperties: {}, children: [], properties: p };
+  return ReactThreeTestRenderer.create(<ScopedGlyphs node={node} />);
 }
 
 /** One group per line, inside the group the visibility range shows or hides. */

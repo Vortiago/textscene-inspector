@@ -50,13 +50,12 @@ import { SpriteBase3DChildAccum } from './spriteBase3DColorAccum.js';
 import { CanvasLayerScope } from './canvasLayerScope.js';
 import { CanvasRootScope } from './canvasRootScope.js';
 import {
-  ParentSpaceFamilyProvider,
+  ParentTypeProvider,
   ParentSpaceScope,
   TopLevelScope,
   useParentSpaceFamily,
   WorldRoot,
 } from './parentSpaceScope.js';
-import { spaceFamilyOf } from '../godot/parentSpace.js';
 import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
@@ -271,7 +270,7 @@ function PlainNode({ node, path, children: extraChildren }: PlainNodeProps): Rea
                     (`node_3d.cpp:150`, `canvas_item.cpp:565-571`), answered with its type: for a
                     merged instance, the sub-scene root's type. A y-sort reorder keeps it, since
                     every level it lifts past is a CanvasItem. */}
-                  <ParentSpaceFamilyProvider value={spaceFamilyOf(node.type)}>
+                  <ParentTypeProvider value={node.type}>
                     <Component node={node}>
                       {children.length > 0 ? (
                         /* At every level, so a non-sprite parent overwrites with white:
@@ -295,7 +294,7 @@ function PlainNode({ node, path, children: extraChildren }: PlainNodeProps): Rea
                         </SpriteBase3DChildAccum>
                       ) : null}
                     </Component>
-                  </ParentSpaceFamilyProvider>
+                  </ParentTypeProvider>
                 </ErrorBoundary>
               </CanvasRootScope>
             </TopLevelScope>

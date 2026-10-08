@@ -27,14 +27,14 @@ import type { Sprite3DProperties } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
-import { useGeometryInstance } from '../../../r3f/visibilityRange/useGeometryInstance';
+import { useGeometryInstance, withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
 
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
 const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
 
-export function Sprite3D({ node, children }: NodeComponentProps) {
+function Sprite3DDrawer({ node, children }: NodeComponentProps) {
   // Godot's billboard is a material-side effect on the sprite quad; the shared
   // hook applies the same modes Label3D uses.
   const spriteRef = useRef<THREE.Object3D | null>(null);
@@ -110,7 +110,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       ),
     [rect, properties.transform, properties.axis, properties.billboard]
   );
-  const { fade, hideWhenCulled } = useGeometryInstance(properties, placement);
+  const { fade, hideWhenCulled } = useGeometryInstance(placement);
   // The quad's ref: the billboard and `fixed_size` hooks pose it, and the cull hides it.
   const quadRef = useCallback(
     (quad: THREE.Mesh | null) => {
@@ -236,3 +236,5 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
+
+export const Sprite3D = withGeometryInstance(Sprite3DDrawer);

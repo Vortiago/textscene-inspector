@@ -16,7 +16,7 @@ import { alphaCutSurface, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut
 import { cutSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
 import type { Color } from '../../../utils/colorParser';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
-import { useGeometryInstance } from '../../../r3f/visibilityRange/useGeometryInstance';
+import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
 import { labelBillboardAabb } from '../../../godot/billboard';
 import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
@@ -78,7 +78,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     properties.transform,
     properties.billboard,
   ]);
-  const { fade, hideWhenCulled } = useGeometryInstance(properties, placement);
+  const { fade, hideWhenCulled } = useGeometryInstance(placement);
 
   const depthTest = !properties.no_depth_test;
   const side = properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide;

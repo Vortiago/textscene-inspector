@@ -26,15 +26,13 @@ function texture(): THREE.Texture {
 }
 
 async function spriteMesh(raw: Record<string, string>): Promise<THREE.Mesh> {
+  const rawProperties = { texture: 'ExtResource("1")', ...raw };
   const node: TscnNode = {
-    rawProperties: {},
+    rawProperties,
     name: 'Sprite',
     type: 'Sprite3D',
     children: [],
-    properties: parseSprite3D(heading('Sprite3D', { name: 'Sprite' }), {
-      texture: 'ExtResource("1")',
-      ...raw,
-    }),
+    properties: parseSprite3D(heading('Sprite3D', { name: 'Sprite' }), rawProperties),
   };
   const fake = createFakeResourceLoader();
   fake.textures.seed(TEXTURE_PATH, texture());

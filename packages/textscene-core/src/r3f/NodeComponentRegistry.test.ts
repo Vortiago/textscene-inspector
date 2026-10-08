@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { nodeComponentRegistry } from './NodeComponentRegistry';
+import { withGeometryInstance } from './visibilityRange/geometryInstance';
 
 const Dummy = () => null;
 
@@ -35,5 +36,23 @@ describe('nodeComponentRegistry.passesThrough', () => {
   it('holds back a registered type that is no container', () => {
     nodeComponentRegistry.register({ typeName: '__TestLeaf', Component: Dummy });
     expect(nodeComponentRegistry.passesThrough('__TestLeaf')).toBe(false);
+  });
+});
+
+describe('nodeComponentRegistry.register', () => {
+  it('takes a GeometryInstance3D type whose component comes from withGeometryInstance', () => {
+    const register = () =>
+      nodeComponentRegistry.register({ typeName: 'Label3D', Component: withGeometryInstance(Dummy) });
+    expect(register).not.toThrow();
+  });
+
+  it('refuses a GeometryInstance3D type whose component holds no place in the scene cull (error case)', () => {
+    const register = () => nodeComponentRegistry.register({ typeName: 'MeshInstance3D', Component: Dummy });
+    expect(register).toThrow('expected MeshInstance3D to register a component from withGeometryInstance');
+  });
+
+  it('takes any component for a type outside GeometryInstance3D (edge case)', () => {
+    const register = () => nodeComponentRegistry.register({ typeName: 'MeshLibrary', Component: Dummy });
+    expect(register).not.toThrow();
   });
 });

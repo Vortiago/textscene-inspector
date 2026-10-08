@@ -10,6 +10,8 @@ import { useRef } from 'react';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
 import LabelGlyphs from './LabelGlyphs';
+import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
@@ -59,8 +61,9 @@ function props(
   };
 }
 
-function NestedLabel({ properties }: { properties: Label3DProperties }) {
+const NestedLabel = withGeometryInstance(function NestedLabel({ node }: NodeComponentProps) {
   const nodeRef = useRef<THREE.Group | null>(null);
+  const properties = node.properties as Label3DProperties;
   return (
     <group ref={nodeRef}>
       <group scale={properties.pixel_size}>
@@ -68,11 +71,12 @@ function NestedLabel({ properties }: { properties: Label3DProperties }) {
       </group>
     </group>
   );
-}
+});
 
 async function renderFrames(properties: Label3DProperties) {
   const camera = manualCameraAt({ x: 0, y: 0, z: 11 });
-  const renderer = await ReactThreeTestRenderer.create(<NestedLabel properties={properties} />, { camera });
+  const node = { name: 'L', type: 'Label3D', rawProperties: {}, children: [], properties };
+  const renderer = await ReactThreeTestRenderer.create(<NestedLabel node={node} />, { camera });
   await renderScene(renderer, camera);
   return renderer;
 }

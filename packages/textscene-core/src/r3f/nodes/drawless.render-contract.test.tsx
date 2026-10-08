@@ -13,6 +13,7 @@ import { CanvasWorkspaceProvider, type CanvasWorkspace } from '../contexts/Canva
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import { descendsFrom } from '../../godot/nodeBaseTypes.js';
 import { parseNode2D } from '../../nodes/base/node2d/parser';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 
 // Side-effect import: registers every node component (same barrel the apps use).
 import './index';
@@ -77,7 +78,8 @@ function hiddenMovedSubject(type: string, base: Base): TscnNode {
     name: 'Subject',
     type,
     children: [kid],
-    properties: { name: 'Subject', transform, visible: false },
+    // A GeometryInstance3D parse carries its instance state, which every other type ignores.
+    properties: { ...GEOMETRY_INSTANCE_DEFAULTS, name: 'Subject', transform, visible: false },
   };
 }
 

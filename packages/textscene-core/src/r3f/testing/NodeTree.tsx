@@ -7,6 +7,7 @@ import type { TscnNode } from '../../parser/types';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { VisibilityParentScope } from '../visibilityRange/VisibilityParentContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
+import { ParentTypeProvider } from '../parentSpaceScope';
 
 export function NodeTree({ node, path }: { node: TscnNode; path: string }) {
   const Component = nodeComponentRegistry.get(node.type);
@@ -16,9 +17,11 @@ export function NodeTree({ node, path }: { node: TscnNode; path: string }) {
     <NodePathProvider path={path}>
       <VisibilityParentScope node={node} path={path}>
         <Component node={node}>
-          {node.children.map((child) => (
-            <NodeTree key={child.name} node={child} path={`${path}/${child.name}`} />
-          ))}
+          <ParentTypeProvider value={node.type}>
+            {node.children.map((child) => (
+              <NodeTree key={child.name} node={child} path={`${path}/${child.name}`} />
+            ))}
+          </ParentTypeProvider>
         </Component>
       </VisibilityParentScope>
     </NodePathProvider>

@@ -9,6 +9,8 @@ import { createTypeRegistry } from '../core/createTypeRegistry';
 import type { CsgShapeRegistration } from './csg/csgRegistration';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import type { YSortItem } from './ySortItems';
+import { descendsFrom } from '../godot/nodeBaseTypes';
+import { isGeometryInstanceComponent } from './visibilityRange/geometryInstance';
 
 export interface NodeComponentProps {
   node: TscnNode;
@@ -103,8 +105,15 @@ class NodeComponentRegistryImpl {
   // plumbing in `register` or `clear`.
   private readonly registry = createTypeRegistry<NodeComponentRegistration>('NodeComponentRegistry');
 
+  /** A GeometryInstance3D type's component must hold the node's place in the scene cull, drawn or not. */
   register(registration: NodeComponentRegistration): void {
-    this.registry.register(registration.typeName, registration);
+    const { typeName, Component } = registration;
+    if (descendsFrom(typeName, 'GeometryInstance3D') && !isGeometryInstanceComponent(Component)) {
+      throw new Error(
+        `expected ${typeName} to register a component from withGeometryInstance, got ${Component.displayName ?? Component.name}`
+      );
+    }
+    this.registry.register(typeName, registration);
   }
 
   get(typeName: string): NodeComponent | undefined {

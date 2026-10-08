@@ -16,6 +16,11 @@ import type { VisibilityRange } from './visibilityRange.js';
 
 export interface VisibilityCullInstance {
   range: VisibilityRange;
+  /**
+   * Whether the scene cull indexes it: a geometry base (`geometryBase.ts`) whose AABB has a surface
+   * (`renderer_scene_cull.cpp:1675-1681`). A dependant of a parent it does not index has no parent.
+   */
+  isIndexed: boolean;
   /** The index of its visibility parent in the same list, or -1 for none. */
   parent: number;
   /** From the camera origin to the centre of its world AABB. */
@@ -46,16 +51,17 @@ const FADE_CHILDREN = 1 << 2;
 const NEEDS_CHECK = HIDDEN_CLOSE_RANGE | HIDDEN;
 
 export function cullVisibility(instances: readonly VisibilityCullInstance[]): VisibilityCullResult[] {
-  const parents = acyclicParents(instances);
+  const parents = indexedParents(instances, acyclicParents(instances));
   const depths = dependencyDepths(parents);
+  const isListed = instances.map(isInVisibilityList);
   const wasVisible = instances.map((instance) => instance.wasVisible);
   const childrenFade = instances.map(() => 1);
-  const flags = instances.map((instance, i) => initialFlags(instance, parents[i]!, depths[i]!));
+  const flags = instances.map((instance, i) => initialFlags(instance, isListed[i]!, parents[i]!, depths[i]!));
 
   // Deepest first, so a parent's flags are final before its dependants read them (`:3224`).
   const dependencyPass = instances
     .map((_, i) => i)
-    .filter((i) => hasVisibilityRange(instances[i]!.range) && depths[i]! > 0)
+    .filter((i) => isListed[i]! && depths[i]! > 0)
     .sort((a, b) => depths[b]! - depths[a]!);
   for (const i of dependencyPass) {
     const parent = parents[i]!;
@@ -85,7 +91,8 @@ export function cullVisibility(instances: readonly VisibilityCullInstance[]): Vi
     if (flag !== NEEDS_CHECK) return true;
     // Godot never reaches the check for an instance out of view, which leaves its state as it was.
     if (!instance.isInView) return false;
-    const isInRange = !hasVisibilityRange(instance.range) || rangeAllowsDraw(instance, i);
+    // VIS_RANGE_CHECK passes an instance outside the list (`renderer_scene_cull.cpp:2847`).
+    const isInRange = !isListed[i] || rangeAllowsDraw(instance, i);
     const parent = parents[i]!;
     return isInRange && (parent < 0 || parentShowsDependant(flags[parent]!));
   }
@@ -112,13 +119,31 @@ function fadesItself(range: VisibilityRange): boolean {
   return hasVisibilityRange(range) && range.fadeMode === VisibilityRangeFadeMode.SELF;
 }
 
+/** Whether it holds a `visibility_index`: a range, indexed (`renderer_scene_cull.cpp:1457-1459`). */
+function isInVisibilityList(instance: VisibilityCullInstance): boolean {
+  return instance.isIndexed && hasVisibilityRange(instance.range);
+}
+
 /**
- * `FLAG_VISIBILITY_DEPENDENCY_NEEDS_CHECK` for an instance the dependency pass does not visit, one
- * with a range or a parent but no ranged dependants (`renderer_scene_cull.cpp:1496-1500`).
+ * The parents the cull links: a parent it does not index has no `array_index`, so its dependant
+ * takes -1 (`renderer_scene_cull.cpp:1502-1503`).
  */
-function initialFlags(instance: VisibilityCullInstance, parent: number, depth: number): number {
+function indexedParents(instances: readonly VisibilityCullInstance[], parents: readonly number[]): number[] {
+  return parents.map((parent) => (parent >= 0 && instances[parent]!.isIndexed ? parent : -1));
+}
+
+/**
+ * `FLAG_VISIBILITY_DEPENDENCY_NEEDS_CHECK` for an instance the dependency pass does not visit: one
+ * with a range or a parent, and outside the list or with no dependants (`renderer_scene_cull.cpp:1496-1500`).
+ */
+function initialFlags(
+  instance: VisibilityCullInstance,
+  isListed: boolean,
+  parent: number,
+  depth: number
+): number {
   const hasRange = hasVisibilityRange(instance.range);
-  return (hasRange || parent >= 0) && (!hasRange || depth === 0) ? NEEDS_CHECK : 0;
+  return (hasRange || parent >= 0) && (!isListed || depth === 0) ? NEEDS_CHECK : 0;
 }
 
 /** The dependency pass's parent test (`renderer_scene_cull.cpp:2725-2733`). */

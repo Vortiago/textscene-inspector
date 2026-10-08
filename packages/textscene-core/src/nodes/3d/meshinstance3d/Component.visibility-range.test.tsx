@@ -19,6 +19,8 @@ import { NodeTree } from '../../../r3f/testing/NodeTree';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
 import './index.r3f';
 import '../../base/node3d/index.r3f';
+import '../particles/gpuparticles3d/index';
+import '../particles/gpuparticles3d/index.r3f';
 import {
   NO_VISIBILITY_RANGE,
   VisibilityRangeFadeMode,
@@ -36,7 +38,8 @@ function node(range: Partial<VisibilityRange>, overrides: Partial<MeshInstance3D
     visibilityRange: { ...NO_VISIBILITY_RANGE, ...range },
     ...overrides,
   };
-  return { rawProperties: {}, name: 'Ranged', type: 'MeshInstance3D', children: [], properties };
+  const rawProperties: Record<string, string> = properties.mesh ? { mesh: properties.mesh } : {};
+  return { rawProperties, name: 'Ranged', type: 'MeshInstance3D', children: [], properties };
 }
 
 async function renderFrames(mesh: TscnNode, wrap: (child: ReactNode) => ReactNode = (child) => child) {
@@ -136,11 +139,17 @@ describe('<MeshInstance3D> visibility range', () => {
 
 /** A proxy box with a DEPENDENCIES range, and a detail box that names it as its visibility parent. */
 async function proxyAndDetail(proxyRange: string) {
+  return parentAndDetail(
+    `[node name="Proxy" type="MeshInstance3D" parent="."]\nmesh = SubResource("Box_1")\n` +
+      `${proxyRange}\nvisibility_range_fade_mode = 2\n`
+  );
+}
+
+/** `proxy`, a node named Proxy, and a detail box that names it as its visibility parent. */
+async function parentAndDetail(proxy: string) {
   const scene = new TscnParser().parse(
     `[gd_scene format=3]\n\n[sub_resource type="BoxMesh" id="Box_1"]\n\n` +
-      `[node name="Root" type="Node3D"]\n\n` +
-      `[node name="Proxy" type="MeshInstance3D" parent="."]\nmesh = SubResource("Box_1")\n` +
-      `${proxyRange}\nvisibility_range_fade_mode = 2\n\n` +
+      `[node name="Root" type="Node3D"]\n\n${proxy}\n` +
       `[node name="Detail" type="MeshInstance3D" parent="."]\nmesh = SubResource("Box_1")\n` +
       `visibility_parent = NodePath("../Proxy")\n`
   );
@@ -152,8 +161,8 @@ async function proxyAndDetail(proxyRange: string) {
     { camera }
   );
   await renderScene(renderer, camera);
-  const meshNamed = (name: string) => renderer.scene.findByProps({ name }).instance as THREE.Mesh;
-  return { proxy: meshNamed('Proxy'), detail: meshNamed('Detail') };
+  const objectNamed = (name: string) => renderer.scene.findByProps({ name }).instance as THREE.Mesh;
+  return { proxy: objectNamed('Proxy'), detail: objectNamed('Detail') };
 }
 
 describe('<MeshInstance3D> visibility parent', () => {
@@ -176,5 +185,36 @@ describe('<MeshInstance3D> visibility parent', () => {
       true,
       expect.objectContaining({ opacity: 191 / 255 }),
     ]);
+  });
+});
+
+describe('<MeshInstance3D> visibility parent the previewer does not draw', () => {
+  it("shows the dependant short of an undrawn emitter's begin", async () => {
+    const { detail } = await parentAndDetail(
+      '[node name="Proxy" type="GPUParticles3D" parent="."]\nvisibility_range_begin = 12.0\n'
+    );
+    expect(drawsColour(detail)).toBe(true);
+  });
+
+  it('hides the dependant while an undrawn emitter is inside its range', async () => {
+    const { detail } = await parentAndDetail(
+      '[node name="Proxy" type="GPUParticles3D" parent="."]\nvisibility_range_begin = 5.0\n'
+    );
+    expect(drawsColour(detail)).toBe(false);
+  });
+
+  it('shows the dependant of a parent whose custom box has no surface', async () => {
+    const { detail } = await parentAndDetail(
+      '[node name="Proxy" type="MeshInstance3D" parent="."]\nmesh = SubResource("Box_1")\n' +
+        'custom_aabb = AABB(1, 1, 1, 0, 0, 0)\nvisibility_range_begin = 5.0\n'
+    );
+    expect(drawsColour(detail)).toBe(true);
+  });
+
+  it('shows the dependant of a parent with no mesh, which Godot links as no parent (edge case)', async () => {
+    const { detail } = await parentAndDetail(
+      '[node name="Proxy" type="MeshInstance3D" parent="."]\nvisibility_range_begin = 5.0\n'
+    );
+    expect(drawsColour(detail)).toBe(true);
   });
 });

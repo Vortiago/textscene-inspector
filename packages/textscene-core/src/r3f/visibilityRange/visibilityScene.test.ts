@@ -8,6 +8,7 @@ import { fitSceneDirectionalShadows } from '../directionalShadow/fitSceneDirecti
 import { sceneLights } from '../directionalShadow/lightLists';
 import {
   NO_VISIBILITY_RANGE,
+  hasVisibilityRange,
   VisibilityRangeFadeMode,
   type VisibilityRange,
 } from '../../godot/visibilityRange';
@@ -63,10 +64,11 @@ function instanceAt(
     centre: THREE.Vector3;
   }> = {}
 ): VisibilityInstance & { last: Applied | null } {
+  const fullRange = { ...NO_VISIBILITY_RANGE, ...range };
   return {
-    path,
-    parentPath,
-    range: { ...NO_VISIBILITY_RANGE, ...range },
+    links: { path, parentPath, hasRange: hasVisibilityRange(fullRange) },
+    range: fullRange,
+    isIndexed: true,
     last: null,
     worldBox(target) {
       target.setFromCenterAndSize(centre, new THREE.Vector3(1, 1, 1));

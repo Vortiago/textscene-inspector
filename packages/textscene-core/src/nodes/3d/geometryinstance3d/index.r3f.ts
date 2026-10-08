@@ -1,13 +1,13 @@
 /**
- * GeometryInstance3D draws nothing of its own (ADR-0008). It reuses the Node3D
- * component so its children land in the right transform space.
+ * GeometryInstance3D draws nothing of its own (ADR-0008). Its component mounts the Node3D
+ * transform, so its children land in the right space, and its place in the scene cull.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../base/node3d/Component';
+import { GeometryInstance3D } from './Component';
 
 nodeComponentRegistry.register({
   typeName: 'GeometryInstance3D',
-  Component: Node3D,
+  Component: GeometryInstance3D,
   renderIntent: 'transform-only',
 });
