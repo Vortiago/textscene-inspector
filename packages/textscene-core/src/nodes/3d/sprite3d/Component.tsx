@@ -27,6 +27,8 @@ import type { Sprite3DProperties } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
+import { geometryCentre, useGeometryFade } from '../../../r3f/hooks/useGeometryFade';
+import { billboardAabbCentre } from '../../../godot/billboard';
 
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
 const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
@@ -47,6 +49,11 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // `sprite_3d.cpp:299` hands the flag to the same cached shader the billboard
   // mode does; both are per-frame effects on the sprite quad itself.
   useFixedSize(spriteRef, properties.fixed_size, scale);
+
+  const { visible: inRange, fade } = useGeometryFade(spriteRef, properties, () => {
+    const quadCentre = geometryCentre(spriteRef.current as THREE.Mesh | null);
+    return quadCentre && billboardAabbCentre(quadCentre, properties.billboard);
+  });
 
   // `texture` may be an image file, or a procedural texture described entirely
   // inside the scene; `useTexture2D` resolves either and reports a reference it
@@ -109,14 +116,10 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     // `sprite_3d.cpp:286`: FLAG_TRANSPARENT off disables the whole switch.
     transparentFlag: properties.transparent,
   });
-  // `transparency` is a per-instance GeometryInstance3D property outside the accumulation: only
-  // `modulate` accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
+  // The instance fade is per GeometryInstance3D, outside the accumulation: only `modulate`
+  // accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
   // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA (`material.cpp:1836`).
-  const surfaceAlpha = cutSurfaceAlpha(
-    cut,
-    properties.transparent ? clamp01(accum.a) : 1,
-    properties.transparency
-  );
+  const surfaceAlpha = cutSurfaceAlpha(cut, properties.transparent ? clamp01(accum.a) : 1, fade);
 
   // Quad origin: centered (default) puts the plane center at the node origin;
   // centered=false puts the top-left there. `offset` shifts in sprite pixels
@@ -216,6 +219,8 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         position={position}
         rotation={rotation}
         scale={scale}
+        // The subtree is a sibling, so hiding the quad hides nothing else.
+        visible={inRange}
         renderOrder={properties.render_priority}
         userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
       >

@@ -7,7 +7,7 @@ import {
 } from '../../../r3f/controls/native/text/openSansAtlas';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { buildGlyphQuadArrays } from '../../../r3f/controls/native/text/TextRun';
-import { layoutLabel3DLines, outlineRadiusPx, outlineStrokeWidthPx } from './glyphLayout';
+import { label3DAabbCentre, layoutLabel3DLines, outlineRadiusPx, outlineStrokeWidthPx } from './glyphLayout';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment } from './types';
 
@@ -88,6 +88,33 @@ describe('layoutLabel3DLines', () => {
       0
     );
     expect(placements).toEqual([]);
+  });
+});
+
+describe('label3DAabbCentre (the line boxes label_3d.cpp:600-606 expands its AABB over)', () => {
+  function centreOf(text: string, alignment: HorizontalAlignment, lineSpacingPx = 0) {
+    const layout = shape(text, lineSpacingPx);
+    return label3DAabbCentre(layoutLabel3DLines(layout, alignment, lineSpacingPx), layout.linePitchPx);
+  }
+
+  it('centres a CENTER label on its origin', () => {
+    const centre = centreOf('A\nBB', HorizontalAlignment.CENTER);
+    expect(centre.x).toBeCloseTo(0, 6);
+    expect(centre.y).toBeCloseTo(0, 6);
+  });
+
+  it('lowers the centre by half the line spacing, which the last line box carries below the text', () => {
+    expect(centreOf('A\nB', HorizontalAlignment.CENTER, 6).y).toBeCloseTo(-3, 6);
+  });
+
+  it('centres a LEFT label at half its widest line', () => {
+    const layout = shape('A\nBB');
+    const widest = Math.max(...layout.lines.map((line) => line.widthPx));
+    expect(centreOf('A\nBB', HorizontalAlignment.LEFT).x).toBeCloseTo(widest / 2, 6);
+  });
+
+  it('leaves a label with no lines at the origin, as its AABB stays empty', () => {
+    expect(label3DAabbCentre([], getLinePitchPx(FONT_SIZE))).toEqual({ x: 0, y: 0 });
   });
 });
 

@@ -191,12 +191,12 @@ export function castsShadowOf(material: THREE.Material): boolean {
  * @param textures - already-bound textures by Godot slot; an absent slot lands
  *   as `null`, never `undefined`, so a late arrival cannot be mistaken for
  *   "leave whatever the material has" by either adapter
- * @param transparency - the drawing GeometryInstance3D's `transparency`; 0 for any other drawer
+ * @param fade - the drawing GeometryInstance3D's fade (`geometryFade`); 1 for any other drawer
  */
 export function standardMaterialBag(
   scalars: StandardMaterial3DScalars | null,
   textures: ResolvedTextureSlots = {},
-  transparency = 0
+  fade = 1
 ): StandardMaterialBag {
   const bag = scalars ? classBag(scalars, textures) : NO_MATERIAL;
   const source = scalars ?? NO_MATERIAL_ALPHA;
@@ -207,7 +207,7 @@ export function standardMaterialBag(
     alphaPassDepthWrite: source.alphaPassDepthWrite,
     blending: bag.props.blending,
   };
-  const { injection, ...alpha } = fadedSurfaceAlpha(source, surface, transparency);
+  const { injection, ...alpha } = fadedSurfaceAlpha(source, surface, fade);
   return { ...bag, props: { ...bag.props, ...alpha }, injection };
 }
 

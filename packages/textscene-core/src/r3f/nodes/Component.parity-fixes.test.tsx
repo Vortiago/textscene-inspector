@@ -35,6 +35,7 @@ function makeMeshNode(properties: Partial<MeshInstance3DProperties> = {}): TscnN
     type: 'MeshInstance3D',
     children: [],
     properties: {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name: properties.name ?? 'M',
       surfaceMaterialOverrides: properties.surfaceMaterialOverrides ?? new Map(),
       mesh: properties.mesh ?? 'SubResource("Box_1")',

@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
 import { SurfaceMaterialSlots } from '../materials/SurfaceMaterialSlots';
 import { resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
@@ -23,8 +23,10 @@ export interface CsgRootMeshProps {
   plan: CsgPlan;
   /** The ROOT's `cast_shadow`; a contributor's own is absorbed with its solid. */
   shadow: ShadowCastingEffects;
-  /** The ROOT's `transparency`; a contributor's own is absorbed with its solid. */
-  transparency: number;
+  /** The ROOT's fade (`geometryFade`); a contributor's own is absorbed with its solid. */
+  fade: number;
+  /** Set to the evaluated mesh while it draws, for the root's visibility range to measure. */
+  meshRef: RefObject<THREE.Mesh | null>;
   /**
    * The root's own solid, drawn while the library loads or after it failed. Passed in
    * because building it needs the slice's material resolution, which lives in
@@ -35,7 +37,7 @@ export interface CsgRootMeshProps {
   children?: ReactNode;
 }
 
-export function CsgRootMesh({ plan, shadow, transparency, fallback, children }: CsgRootMeshProps) {
+export function CsgRootMesh({ plan, shadow, fade, meshRef, fallback, children }: CsgRootMeshProps) {
   const { internalResources, externalResources } = useSceneResources();
   const [csg, setCsg] = useState<CsgModule | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -105,6 +107,7 @@ export function CsgRootMesh({ plan, shadow, transparency, fallback, children }: 
     <>
       {drawable && (
         <mesh
+          ref={meshRef}
           castShadow={shadow.castShadow}
           onBeforeRender={shadow.onBeforeRender}
           onAfterRender={shadow.onAfterRender}
@@ -113,7 +116,7 @@ export function CsgRootMesh({ plan, shadow, transparency, fallback, children }: 
           receiveShadow
           geometry={evaluation!.geometry as THREE.BufferGeometry}
         >
-          <SurfaceMaterialSlots sources={surfaces} transparency={transparency} />
+          <SurfaceMaterialSlots sources={surfaces} fade={fade} />
         </mesh>
       )}
       {/*

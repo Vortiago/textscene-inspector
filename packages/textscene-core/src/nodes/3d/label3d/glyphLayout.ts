@@ -63,6 +63,23 @@ export function layoutLabel3DLines(
 }
 
 /**
+ * The centre of the box Godot's `_shape` expands over every line (`label_3d.cpp:600-606`), in
+ * Godot px, y-up, on the label's z = 0 plane. Each line spans its width and one line pitch down
+ * from its top. A label with no lines keeps the empty AABB at the origin.
+ */
+export function label3DAabbCentre(
+  placements: readonly Label3DLinePlacement[],
+  linePitchPx: number
+): { x: number; y: number } {
+  if (placements.length === 0) return { x: 0, y: 0 };
+  const left = Math.min(...placements.map((placement) => placement.x));
+  const right = Math.max(...placements.map((placement) => placement.x + placement.line.widthPx));
+  const topDown = placements[0]!.y;
+  const bottomDown = placements[placements.length - 1]!.y + linePitchPx;
+  return { x: (left + right) / 2, y: -(topDown + bottomDown) / 2 };
+}
+
+/**
  * The one-sided reach of Godot's outline stroke, `outline_size * 16 / 64` px. FreeType's
  * stroker (`text_server_adv.cpp:1376-1403`, keyed at `label_3d.cpp:344-349`) gets
  * `outline_size` unscaled (`text_server_adv.h:406-414`), and `FT_Stroker_Set`

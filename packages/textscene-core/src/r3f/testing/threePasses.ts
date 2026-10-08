@@ -114,10 +114,25 @@ export function cameraLookingAt(
 export const TEST_CAMERA = cameraLookingAt({ x: 4, y: 3, z: 12 });
 export const TEST_SHADOW_CAMERA = cameraLookingAt({ x: -8, y: 20, z: 1 });
 
-/** Whether the mesh's group casts: `castShadow` on, and its shadow draw leaves a mark. */
+/** A sun's light camera: three gives a DirectionalLight's shadow an orthographic one. */
+export const TEST_SUN_SHADOW_CAMERA = (() => {
+  const camera = new THREE.OrthographicCamera();
+  camera.position.set(-8, 20, 1);
+  camera.lookAt(0, 0, 0);
+  camera.updateMatrixWorld(true);
+  return camera;
+})();
+
+/** Whether the mesh's group casts from an omni or spot light: `castShadow` on, and its shadow draw leaves a mark. */
 export function castsFrom(mesh: THREE.Mesh, groupIndex = 0): boolean {
   if (!mesh.castShadow) return false;
   return drawShadowGroup(mesh, TEST_CAMERA, TEST_SHADOW_CAMERA, groupIndex, (s) => s.draws);
+}
+
+/** Whether the mesh's first group casts from a directional light. */
+export function castsSunShadowFrom(mesh: THREE.Mesh): boolean {
+  if (!mesh.castShadow) return false;
+  return drawShadowGroup(mesh, TEST_CAMERA, TEST_SUN_SHADOW_CAMERA, 0, (s) => s.draws);
 }
 
 /** Whether the mesh's group leaves a mark in the colour pass. */

@@ -71,7 +71,7 @@ export function Label3D({ node, children }: NodeComponentProps) {
       >
         <group scale={properties.pixel_size}>
           <Suspense fallback={<PendingGlyphs />}>
-            <LabelGlyphs properties={properties} />
+            <LabelGlyphs nodeRef={groupRef} properties={properties} />
           </Suspense>
         </group>
         {/* A point, not a text-sized box: Godot's `_place_camera` runs before Label3D

@@ -19,6 +19,7 @@ import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 import { headlightsSurface, wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { preloadResource } from '../../../resources/testing/preloadResource';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -48,6 +49,7 @@ function inlineMeshNode(subResourceId: string): TscnNode {
     type: 'MeshInstance3D',
     children: [],
     properties: {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name: 'Trailer',
       mesh: `SubResource("${subResourceId}")`,
       surfaceMaterialOverrides: new Map(),
@@ -62,6 +64,7 @@ function makeNode(): TscnNode {
     type: 'MeshInstance3D',
     children: [],
     properties: {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name: 'Mesh',
       mesh: 'ExtResource("1")',
       surfaceMaterialOverrides: new Map(),

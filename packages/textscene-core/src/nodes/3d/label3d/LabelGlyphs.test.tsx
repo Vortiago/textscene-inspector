@@ -64,7 +64,12 @@ function boundingSize(mesh: THREE.Mesh): THREE.Vector3 {
 }
 
 async function render(p: Label3DProperties) {
-  return ReactThreeTestRenderer.create(<LabelGlyphs properties={p} />);
+  return ReactThreeTestRenderer.create(<LabelGlyphs nodeRef={{ current: null }} properties={p} />);
+}
+
+/** One group per line, inside the group the visibility range shows or hides. */
+function lineGroups(renderer: Awaited<ReturnType<typeof render>>): THREE.Group[] {
+  return renderer.scene.children[0]!.children.map((c) => c.instance as THREE.Group);
 }
 
 describe('<LabelGlyphs> — the canvas rasteriser gate', () => {
@@ -359,7 +364,7 @@ describe('<LabelGlyphs>', () => {
   describe('multi-line text', () => {
     it('renders one line-group per newline-separated line, each exactly one linePitchPx apart', async () => {
       const renderer = await render(props({ text: 'A\nB\nC', font_size: 32 }));
-      const groups = renderer.scene.children.map((c) => c.instance as THREE.Group);
+      const groups = lineGroups(renderer);
       expect(groups.length).toBe(3);
       // Each line is its own mesh in its own group, not one quad whose
       // PlaneGeometry.height grows, so each group's Y sits one line pitch lower.
@@ -386,8 +391,8 @@ describe('<LabelGlyphs>', () => {
     it('counts a trailing newline as an empty final line, like Godot', async () => {
       const plain = await render(props({ text: 'A' }));
       const trailing = await render(props({ text: 'A\n' }));
-      expect(plain.scene.children.length).toBe(1);
-      expect(trailing.scene.children.length).toBe(2);
+      expect(lineGroups(plain).length).toBe(1);
+      expect(lineGroups(trailing).length).toBe(2);
     });
   });
 
@@ -395,16 +400,16 @@ describe('<LabelGlyphs>', () => {
     it('FILL positions a line the same as CENTER (no per-line justification, width is unparsed)', async () => {
       const center = await render(props({ text: 'Hi', horizontal_alignment: HorizontalAlignment.CENTER }));
       const fill = await render(props({ text: 'Hi', horizontal_alignment: HorizontalAlignment.FILL }));
-      const centerGroup = center.scene.children[0]!.instance as THREE.Group;
-      const fillGroup = fill.scene.children[0]!.instance as THREE.Group;
+      const centerGroup = lineGroups(center)[0]!;
+      const fillGroup = lineGroups(fill)[0]!;
       expect(fillGroup.position.x).toBeCloseTo(centerGroup.position.x, 6);
     });
 
     it('LEFT starts a line at x=0; RIGHT ends a line at x=0', async () => {
       const left = await render(props({ text: 'Hi', horizontal_alignment: HorizontalAlignment.LEFT }));
       const right = await render(props({ text: 'Hi', horizontal_alignment: HorizontalAlignment.RIGHT }));
-      const leftGroup = left.scene.children[0]!.instance as THREE.Group;
-      const rightGroup = right.scene.children[0]!.instance as THREE.Group;
+      const leftGroup = lineGroups(left)[0]!;
+      const rightGroup = lineGroups(right)[0]!;
       expect(leftGroup.position.x).toBeCloseTo(0, 6);
       expect(rightGroup.position.x).toBeLessThan(0);
     });

@@ -44,10 +44,40 @@ function castEffects(castShadow: boolean, rule: CastRule): ShadowCastingEffects 
 }
 
 // One frozen result per value: an unstable object would churn the mesh props.
-const OFF = castEffects(false, { colourDraw: poseColourDraw, shadowSide: materialCull });
-const ON = castEffects(true, { colourDraw: poseColourDraw, shadowSide: materialCull });
-const DOUBLE_SIDED = castEffects(true, { colourDraw: poseColourDraw, shadowSide: bothFaces });
-const SHADOWS_ONLY = castEffects(true, { colourDraw: skipColourDraw, shadowSide: materialCull });
+const OFF = castEffects(false, {
+  colourDraw: poseColourDraw,
+  shadowSide: materialCull,
+  castsSunShadow: true,
+});
+const ON = castEffects(true, { colourDraw: poseColourDraw, shadowSide: materialCull, castsSunShadow: true });
+const DOUBLE_SIDED = castEffects(true, {
+  colourDraw: poseColourDraw,
+  shadowSide: bothFaces,
+  castsSunShadow: true,
+});
+const SHADOWS_ONLY = castEffects(true, {
+  colourDraw: skipColourDraw,
+  shadowSide: materialCull,
+  castsSunShadow: true,
+});
+
+// Outside the visibility range the colour draw and a sun's cascades drop the instance
+// (`renderer_scene_cull.cpp:2852,3140`), but an omni or spot shadow reads no range (`:2415`).
+const OUT_OF_RANGE_OFF = castEffects(false, {
+  colourDraw: skipColourDraw,
+  shadowSide: materialCull,
+  castsSunShadow: false,
+});
+const OUT_OF_RANGE_ON = castEffects(true, {
+  colourDraw: skipColourDraw,
+  shadowSide: materialCull,
+  castsSunShadow: false,
+});
+const OUT_OF_RANGE_DOUBLE_SIDED = castEffects(true, {
+  colourDraw: skipColourDraw,
+  shadowSide: bothFaces,
+  castsSunShadow: false,
+});
 
 /** Absent or unrecognised `cast_shadow` is Godot's default, ON. */
 export function shadowCastingEffects(value: number | undefined): ShadowCastingEffects {
@@ -60,6 +90,21 @@ export function shadowCastingEffects(value: number | undefined): ShadowCastingEf
       return SHADOWS_ONLY;
     default:
       return ON;
+  }
+}
+
+/**
+ * `cast_shadow` for an instance outside its visibility range. Not `visible = false`, which would
+ * hide the descendants that draw on their own, and the omni and spot shadows it still casts.
+ */
+export function outOfRangeEffects(value: number | undefined): ShadowCastingEffects {
+  switch (value) {
+    case ShadowCastingSetting.OFF:
+      return OUT_OF_RANGE_OFF;
+    case ShadowCastingSetting.DOUBLE_SIDED:
+      return OUT_OF_RANGE_DOUBLE_SIDED;
+    default:
+      return OUT_OF_RANGE_ON;
   }
 }
 

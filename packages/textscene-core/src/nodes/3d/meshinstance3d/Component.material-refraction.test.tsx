@@ -14,6 +14,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 function makeNode(materialId: string, name = 'Mesh'): TscnNode {
   return {
@@ -22,6 +23,7 @@ function makeNode(materialId: string, name = 'Mesh'): TscnNode {
     type: 'MeshInstance3D',
     children: [],
     properties: {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name,
       mesh: 'SubResource("box")',
       materialOverride: `SubResource("${materialId}")`,

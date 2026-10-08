@@ -47,4 +47,6 @@ Strict parsing format-checks these `GeometryInstance3D` properties, plus 1 inher
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The lenient parser reads `transform` and `visible` through `parseNode3D`, then `transparency` and `cast_shadow`, which every drawn leaf parser starts from. A malformed `transparency` or `cast_shadow` keeps Godot's default (`0` and `1`) with no warning. A malformed `visibility_range_end` parses with no warning and no fallback. Only strict reports either.
+The lenient parser reads `transform` and `visible` through `parseNode3D`, then `transparency`, `cast_shadow`, the `visibility_range_*` keys and `custom_aabb`, which every drawn leaf parser starts from. A malformed `transparency`, `cast_shadow` or `visibility_range_*` value keeps Godot's default with no warning. A malformed `custom_aabb` warns and keeps no box, and `AABB(0, 0, 0, 0, 0, 0)` keeps no box, as Godot clears it. Only strict reports a malformed value as an error.
+
+Every drawn leaf (MeshInstance3D, a CSG root, Sprite3D and Label3D) honours the visibility range against the camera distance to its AABB centre. A culled leaf draws nothing and casts no directional shadow. Its children still draw. It still casts into an omni or spot shadow, because Godot's shadow cull for those lights reads no range. The `visibility-range` golden pins this.

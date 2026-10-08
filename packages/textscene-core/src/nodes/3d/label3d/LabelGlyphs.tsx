@@ -4,7 +4,7 @@
  * not MSDF (`servers/text/text_server.cpp:2386`, read by `scene/theme/theme_db.cpp:59`),
  * and a distance field cannot reach as far as the FreeType outline.
  */
-import { useMemo, useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore, type RefObject } from 'react';
 import * as THREE from 'three';
 import { AutowrapMode, shapeText, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
@@ -16,14 +16,18 @@ import { alphaCutSurface, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut
 import { cutSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
 import type { Color } from '../../../utils/colorParser';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
-import { layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
+import { useGeometryFade } from '../../../r3f/hooks/useGeometryFade';
+import { billboardAabbCentre } from '../../../godot/billboard';
+import { label3DAabbCentre, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
 import { AlphaCutMode, TextureFilter, type Label3DProperties } from './types';
 
 export interface LabelGlyphsProps {
+  /** The label's node group, whose parent places it for the visibility range distance. */
+  nodeRef: RefObject<THREE.Object3D | null>;
   properties: Label3DProperties;
 }
 
-export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
+export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // `undefined` until `document.fonts` has the bundled family; the
   // subscription is what re-renders once it does.
   const fontMetrics = useSyncExternalStore(
@@ -62,6 +66,12 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
     [placements, layout]
   );
 
+  const { visible: inRange, fade } = useGeometryFade(nodeRef, properties, () => {
+    const { x, y } = label3DAabbCentre(placements, layout.linePitchPx);
+    const centre = { x: x * properties.pixel_size, y: y * properties.pixel_size, z: 0 };
+    return billboardAabbCentre(centre, properties.billboard);
+  });
+
   const depthTest = !properties.no_depth_test;
   const side = properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide;
 
@@ -93,9 +103,9 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
     transparentFlag: NO_TRANSPARENT_FLAG,
   });
   // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the
-  // blended pass is transparent. The geometry instance's `transparency` can move both
-  // surfaces there, and scales each surface's alpha by one fade alpha.
-  const { opacity: fadeAlpha, ...blend } = cutSurfaceAlpha(cut, 1, properties.transparency);
+  // blended pass is transparent. The geometry instance's fade can move both surfaces
+  // there, and scales each surface's alpha by one fade alpha.
+  const { opacity: fadeAlpha, ...blend } = cutSurfaceAlpha(cut, 1, fade);
   const fillTint = withAlphaScaled(properties.modulate, fadeAlpha);
   const outlineTint = withAlphaScaled(properties.outline_modulate, fadeAlpha);
 
@@ -112,7 +122,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
   // Here the tint is baked as sRGB bytes that the texture's `SRGBColorSpace` decodes.
   // `frameExcluded`: Godot's framing camera never sees shaped text (`LABEL3D_BOUNDS_PROXY`).
   return (
-    <>
+    <group visible={inRange}>
       {placements.map((placement, index) => {
         return (
           <group key={index} position={[placement.x, -placement.y, 0]}>
@@ -148,7 +158,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
           </group>
         );
       })}
-    </>
+    </group>
   );
 }
 

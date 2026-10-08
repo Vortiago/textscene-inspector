@@ -4,7 +4,8 @@
  * root (B), combining root (C) or skipped (D). Each branch below states its shape.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import type * as THREE from 'three';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
@@ -17,7 +18,8 @@ import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubt
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
-import { shadowCastingEffects } from '../../../r3f/shadowCasting';
+import { outOfRangeEffects, shadowCastingEffects } from '../../../r3f/shadowCasting';
+import { geometryCentre, useGeometryFade } from '../../../r3f/hooks/useGeometryFade';
 import type { CSGShape3DProperties } from './types';
 
 const NO_PATHS: ReadonlySet<string> = new Set();
@@ -119,11 +121,18 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
 
   const visible = properties.visible !== false;
   const combining = plan !== null && plan.geometryCount > 1;
-  const shadow = shadowCastingEffects(properties.castShadow);
-  // A root's own: a contributor's solid, and its transparency with it, belong to the root's mesh.
-  const { transparency } = properties;
+  // A root's own: a contributor's solid, and its range and transparency with it, belong to the
+  // root's mesh. Whichever mesh the root draws, its own solid or the evaluated one, is `drawnRef`.
+  const nodeRef = useRef<THREE.Group | null>(null);
+  const drawnRef = useRef<THREE.Mesh | null>(null);
+  const { visible: inRange, fade } = useGeometryFade(nodeRef, properties, () =>
+    geometryCentre(drawnRef.current)
+  );
+  const shadow = inRange
+    ? shadowCastingEffects(properties.castShadow)
+    : outOfRangeEffects(properties.castShadow);
 
-  const transform = { name: node.name, position, rotation, scale, visible } as const;
+  const transform = { ref: nodeRef, name: node.name, position, rotation, scale, visible } as const;
 
   // A. Contributor: its solid belongs to an ancestor's boolean. D. Skipped: invisible, so its CSG
   // parent's boolean never reached it. Neither draws a solid, and both stay mounted so
@@ -154,6 +163,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   // while the library loads or after it failed.
   const ownSolid = geometry && (
     <mesh
+      ref={drawnRef}
       castShadow={shadow.castShadow}
       onBeforeRender={shadow.onBeforeRender}
       onAfterRender={shadow.onAfterRender}
@@ -162,7 +172,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       receiveShadow
     >
       {geometry}
-      <SurfaceMaterialSlot source={materialSource} transparency={transparency} />
+      <SurfaceMaterialSlot source={materialSource} fade={fade} />
     </mesh>
   );
 
@@ -171,7 +181,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   if (combining) {
     return (
       <group {...transform}>
-        <CsgRootMesh plan={plan} shadow={shadow} transparency={transparency} fallback={ownSolid}>
+        <CsgRootMesh plan={plan} shadow={shadow} fade={fade} meshRef={drawnRef} fallback={ownSolid}>
           {children}
         </CsgRootMesh>
       </group>

@@ -334,8 +334,12 @@ _Avoid_: "ambient light" alone for the sky case. "IBL" in user-facing text.
 A drawn 3D Node (a GeometryInstance3D) whose own render state, such as `transparency` and `cast_shadow`, applies to every surface it draws.
 _Avoid_: bare "instance", which names **PackedScene instancing**.
 
+**Visibility range**:
+The camera distances between which a **geometry instance** draws, measured to the centre of its world AABB. Fade mode SELF blends it in across the margins.
+_Avoid_: "LOD", which names mesh level of detail.
+
 **Fade alpha**:
-The alpha a **geometry instance**'s `transparency` gives every surface it draws, as Godot stores it in a byte. The surface's own alpha multiplies it.
+The alpha a **geometry instance**'s `transparency` and **visibility range** fade give every surface it draws, as Godot stores it in a byte. The surface's own alpha multiplies it.
 _Avoid_: "instance alpha", "instance transparency".
 
 **Alpha pass**:

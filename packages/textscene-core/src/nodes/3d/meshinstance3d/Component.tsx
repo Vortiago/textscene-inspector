@@ -28,7 +28,12 @@ import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlot
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
-import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
+import {
+  outOfRangeEffects,
+  shadowCastingEffects,
+  type ShadowCastingEffects,
+} from '../../../r3f/shadowCasting';
+import { geometryCentre, useGeometryFade } from '../../../r3f/hooks/useGeometryFade';
 
 /** Literal-only, so its key is constant and it never remounts. */
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
@@ -85,12 +90,16 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // The ref lands on whichever `<mesh>` MeshShell renders, for the overlay to share.
   const meshRef = useRef<THREE.Mesh | null>(null);
 
+  // GeometryInstance3D's, so it reaches every surface this node draws, the overlay's too.
+  const { visible: inRange, fade } = useGeometryFade(meshRef, properties, () =>
+    geometryCentre(meshRef.current)
+  );
   // `cast_shadow` and each surface's billboard and shadow-pass membership reach three per
   // draw group, through hooks that read that group's material.
-  const shadow = shadowCastingEffects(properties.castShadow);
+  const shadow = inRange
+    ? shadowCastingEffects(properties.castShadow)
+    : outOfRangeEffects(properties.castShadow);
   const visible = properties.visible !== false;
-  // GeometryInstance3D's, so it reaches every surface this node draws, the overlay's too.
-  const { transparency } = properties;
 
   const shellProps = {
     name: node.name,
@@ -103,12 +112,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     godotLayers: properties.layers,
     subtree: children,
     overlay: overlaySource ? (
-      <MaterialOverlayMesh
-        meshRef={meshRef}
-        source={overlaySource}
-        shadow={shadow}
-        transparency={transparency}
-      />
+      <MaterialOverlayMesh meshRef={meshRef} source={overlaySource} shadow={shadow} fade={fade} />
     ) : null,
   };
 
@@ -139,7 +143,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
         <ArrayMeshSurfaces
           mesh={withFileMaterials(arrayMeshResult.value)}
           overrides={meshOverrides}
-          transparency={transparency}
+          fade={fade}
         />
       </MeshShell>
     );
@@ -151,7 +155,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     return (
       <MeshShell {...shellProps}>
         {sceneArrayMesh ? (
-          <ArrayMeshSurfaces mesh={sceneArrayMesh} overrides={meshOverrides} transparency={transparency} />
+          <ArrayMeshSurfaces mesh={sceneArrayMesh} overrides={meshOverrides} fade={fade} />
         ) : (
           UNRESOLVED_MESH
         )}
@@ -164,7 +168,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   return (
     <MeshShell {...shellProps}>
       <MeshGeometry resource={meshResource!} />
-      <SurfaceMaterialSlot source={primarySource} triplanarMesh={meshResource} transparency={transparency} />
+      <SurfaceMaterialSlot source={primarySource} triplanarMesh={meshResource} fade={fade} />
     </MeshShell>
   );
 }
@@ -189,7 +193,7 @@ function MaterialOverlayMesh({
   meshRef,
   source,
   shadow,
-  transparency,
+  fade,
 }: {
   meshRef: RefObject<THREE.Mesh | null>;
   source: MaterialSource;
@@ -198,7 +202,8 @@ function MaterialOverlayMesh({
    * mounts: its own material decides its billboard, and SHADOWS_ONLY skips its draw too.
    */
   shadow: ShadowCastingEffects;
-  transparency: number;
+  /** The base mesh's fade, which Godot applies to every surface of the instance. */
+  fade: number;
 }) {
   // Read back off the base mesh rather than built again, so all four geometry branches
   // share one component and the two meshes share one geometry.
@@ -226,7 +231,7 @@ function MaterialOverlayMesh({
       onBeforeRender={shadow.onBeforeRender}
       onAfterRender={shadow.onAfterRender}
     >
-      <SurfaceMaterialSlot source={source} transparency={transparency} />
+      <SurfaceMaterialSlot source={source} fade={fade} />
     </mesh>
   );
 }
@@ -319,11 +324,11 @@ const UNRESOLVED_MESH = (
 function ArrayMeshSurfaces({
   mesh,
   overrides,
-  transparency,
+  fade,
 }: {
   mesh: SurfacedMesh;
   overrides: MeshOverrides;
-  transparency: number;
+  fade: number;
 }) {
   const groupCount = Math.max(mesh.surfaceIndices.length, 1);
   const sources = Array.from({ length: groupCount }, (_unused, i) =>
@@ -332,7 +337,7 @@ function ArrayMeshSurfaces({
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} transparency={transparency} />
+      <SurfaceMaterialSlots sources={sources} fade={fade} />
     </>
   );
 }

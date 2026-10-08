@@ -18,8 +18,8 @@ const OPAQUE_SURFACE: AlphaPassSurface = {
 };
 
 describe('fadedSurfaceAlpha', () => {
-  it('leaves the surface as it is for an opaque geometry instance', () => {
-    expect(fadedSurfaceAlpha(READS_ALBEDO, OPAQUE_SURFACE, 0)).toEqual({
+  it('leaves the surface as it is at full fade', () => {
+    expect(fadedSurfaceAlpha(READS_ALBEDO, OPAQUE_SURFACE, 1)).toEqual({
       opacity: 1,
       transparent: false,
       depthWrite: true,
@@ -28,20 +28,20 @@ describe('fadedSurfaceAlpha', () => {
 
   it('multiplies the fade alpha into the surface opacity', () => {
     const surface = { ...OPAQUE_SURFACE, opacity: 0.5, transparent: true };
-    expect(fadedSurfaceAlpha(READS_ALBEDO, surface, 0.3).opacity).toBe((0.5 * 178) / 255);
+    expect(fadedSurfaceAlpha(READS_ALBEDO, surface, 0.7).opacity).toBe((0.5 * 178) / 255);
   });
 
   it('moves an opaque surface to the blended pass', () => {
-    expect(fadedSurfaceAlpha(READS_ALBEDO, OPAQUE_SURFACE, 0.3).transparent).toBe(true);
+    expect(fadedSurfaceAlpha(READS_ALBEDO, OPAQUE_SURFACE, 0.7).transparent).toBe(true);
   });
 
   it('writes no depth in the alpha pass by default', () => {
-    expect(fadedSurfaceAlpha(READS_ALBEDO, OPAQUE_SURFACE, 0.3).depthWrite).toBe(false);
+    expect(fadedSurfaceAlpha(READS_ALBEDO, OPAQUE_SURFACE, 0.7).depthWrite).toBe(false);
   });
 
   it("writes depth in the alpha pass where the surface's depth draw mode says so", () => {
     expect(
-      fadedSurfaceAlpha(READS_ALBEDO, { ...OPAQUE_SURFACE, alphaPassDepthWrite: true }, 0.3).depthWrite
+      fadedSurfaceAlpha(READS_ALBEDO, { ...OPAQUE_SURFACE, alphaPassDepthWrite: true }, 0.7).depthWrite
     ).toBe(true);
   });
 
@@ -57,11 +57,11 @@ function discardCut(transparentFlag: boolean) {
 
 describe('cutSurfaceAlpha', () => {
   it('keeps the cut of the surface', () => {
-    expect(cutSurfaceAlpha(discardCut(true), 1, 0)).toMatchObject({ alphaTest: 0.5, alphaHash: false });
+    expect(cutSurfaceAlpha(discardCut(true), 1, 1)).toMatchObject({ alphaTest: 0.5, alphaHash: false });
   });
 
   it('adds nothing to a cut surface in the opaque pass', () => {
-    expect(cutSurfaceAlpha(discardCut(true), 1, 0)).not.toHaveProperty('blending');
+    expect(cutSurfaceAlpha(discardCut(true), 1, 1)).not.toHaveProperty('blending');
   });
 
   it('writes no depth in the alpha pass', () => {

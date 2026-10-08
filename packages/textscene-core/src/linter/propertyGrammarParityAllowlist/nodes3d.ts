@@ -180,25 +180,20 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   // A transform-only slice whose parser reads only the instance state every
-  // drawn leaf shares, so one entry covers every leaf. Each leaf's parser reads
-  // the materials it draws. The rest tune baking, culling and draw order.
+  // drawn leaf shares, its visibility range and custom_aabb included, so one entry
+  // covers every leaf. Each leaf's parser reads the materials it draws. The rest
+  // tune baking, culling and draw order.
   GeometryInstance3D: {
     linterOnly: [
       'gi_mode',
       'gi_lightmap_texel_scale',
       'lod_bias',
-      'custom_aabb',
       'extra_cull_margin',
       'ignore_occlusion_culling',
       'material_override',
       'material_overlay',
       'sorting_offset',
       'sorting_use_aabb_center',
-      'visibility_range_begin',
-      'visibility_range_begin_margin',
-      'visibility_range_end',
-      'visibility_range_end_margin',
-      'visibility_range_fade_mode',
       // visual_instance_3d.cpp:301-364: CanvasItem's InstanceUniforms class on
       // the 3D RenderingServer. No ShaderMaterial slice exists to reflect a
       // uniform override onto.

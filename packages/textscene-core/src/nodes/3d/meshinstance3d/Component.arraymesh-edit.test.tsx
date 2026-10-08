@@ -13,6 +13,7 @@ import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 
 const MESH_ID = 'ArrayMesh_inline';
 
@@ -22,6 +23,7 @@ const NODE: TscnNode = {
   type: 'MeshInstance3D',
   children: [],
   properties: {
+    ...GEOMETRY_INSTANCE_DEFAULTS,
     name: 'Wall',
     mesh: `SubResource("${MESH_ID}")`,
     surfaceMaterialOverrides: new Map(),

@@ -1,6 +1,6 @@
 /**
- * A geometry instance's `transparency` applied to one surface's three material state. Godot applies
- * its fade alpha to every surface the instance draws (`godot/fadeAlpha.ts`).
+ * A geometry instance's fade applied to one surface's three material state. Godot applies the
+ * instance's fade alpha to every surface the instance draws (`godot/fadeAlpha.ts`).
  */
 
 import type * as THREE from 'three';
@@ -8,7 +8,7 @@ import { fadeAlpha, forcesAlphaPass } from '../../godot/fadeAlpha';
 import type { AlphaCutSurface } from '../godotAlphaCut';
 import { surfaceAlphaProps, type SurfaceAlphaProps, type SurfaceAlphaSource } from './surfaceAlphaPatch';
 
-/** The material state a geometry instance's `transparency` changes. */
+/** The material state a geometry instance's fade changes. */
 interface SurfaceAlpha {
   /** The alpha the surface's shader multiplies in: 1 where it reads none. */
   opacity: number;
@@ -25,17 +25,17 @@ export interface AlphaPassSurface extends SurfaceAlpha {
 }
 
 /**
- * The surface's alpha state under its geometry instance's `transparency`, and the props its blend
- * then needs. The fade alpha is the shader's starting ALPHA, so it multiplies the material's own
- * alpha and lowers what a cut keeps. The blend props read the faded state.
+ * The surface's alpha state under its geometry instance's `fade` (`geometryFade`), and the props
+ * its blend then needs. The fade alpha is the shader's starting ALPHA, so it multiplies the
+ * material's own alpha and lowers what a cut keeps. The blend props read the faded state.
  */
 export function fadedSurfaceAlpha(
   source: SurfaceAlphaSource,
   surface: AlphaPassSurface,
-  transparency: number
+  fade: number
 ): SurfaceAlpha & SurfaceAlphaProps {
-  const opacity = surface.opacity * fadeAlpha(transparency);
-  const alpha = forcesAlphaPass(transparency)
+  const opacity = surface.opacity * fadeAlpha(fade);
+  const alpha = forcesAlphaPass(fade)
     ? { opacity, transparent: true, depthWrite: surface.alphaPassDepthWrite }
     : { opacity, transparent: surface.transparent, depthWrite: surface.depthWrite };
   return { ...alpha, ...surfaceAlphaProps(source, { ...alpha, blending: surface.blending }) };
@@ -46,7 +46,7 @@ export function fadedSurfaceAlpha(
  * DEPTH_DRAW_OPAQUE_ONLY, so the alpha pass writes no depth. `opacity` is the alpha its shader
  * reads. Both draw MIX, three's default blending.
  */
-export function cutSurfaceAlpha(cut: AlphaCutSurface, opacity: number, transparency: number) {
+export function cutSurfaceAlpha(cut: AlphaCutSurface, opacity: number, fade: number) {
   const surface = {
     opacity,
     transparent: cut.blended,
@@ -54,7 +54,7 @@ export function cutSurfaceAlpha(cut: AlphaCutSurface, opacity: number, transpare
     alphaPassDepthWrite: false,
   };
   return {
-    ...fadedSurfaceAlpha(cut, surface, transparency),
+    ...fadedSurfaceAlpha(cut, surface, fade),
     alphaTest: cut.alphaTest,
     alphaHash: cut.alphaHash,
   };

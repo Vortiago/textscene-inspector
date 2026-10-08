@@ -235,6 +235,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       type: 'MeshInstance3D',
       children: [],
       properties: {
+        ...GEOMETRY_INSTANCE_DEFAULTS,
         name: 'SurfacePlane',
         mesh: 'SubResource("Plane_1")',
         // No `materialOverride`: only the surface slot.
@@ -275,6 +276,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       type: 'MeshInstance3D',
       children: [],
       properties: {
+        ...GEOMETRY_INSTANCE_DEFAULTS,
         name: 'AsyncPlane',
         mesh: 'SubResource("Plane_1")',
         surfaceMaterialOverrides: surfaceMap,

@@ -22,7 +22,7 @@ function bag(properties: Record<string, string>, textures?: ResolvedTextureSlots
   return standardMaterialBag(parseStandardMaterial3DScalars(properties), textures);
 }
 
-/** The bag a geometry instance with `transparency = 0.5` draws. */
+/** The bag a geometry instance at a fade of 0.5 draws. */
 function fadedBag(properties: Record<string, string> | null) {
   return standardMaterialBag(properties && parseStandardMaterial3DScalars(properties), {}, 0.5);
 }
@@ -170,7 +170,7 @@ describe('standardMaterialBag — fragment alpha', () => {
   });
 });
 
-describe("standardMaterialBag — the geometry instance's transparency", () => {
+describe("standardMaterialBag — the geometry instance's fade", () => {
   it("blends Godot's default surface at the fade alpha without a depth write", () => {
     expect(fadedBag(null).props).toMatchObject({
       transparent: true,

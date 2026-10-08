@@ -33,6 +33,8 @@ export interface CastRule {
   ) => void;
   /** Sets three's shared depth material's side for the surface `material` draws. */
   shadowSide: (depthMaterial: THREE.Material, material: THREE.Material) => void;
+  /** Whether a directional light's shadow pass draws the surface; omni and spot passes always do. */
+  castsSunShadow: boolean;
 }
 
 /**
@@ -151,6 +153,11 @@ export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
       const material = drawnMaterial(object, group);
       if (!material) return;
       rule.shadowSide(depthMaterial, material);
+      // three gives only a DirectionalLight's shadow an orthographic camera.
+      if (!rule.castsSunShadow && (shadowCamera as THREE.OrthographicCamera).isOrthographicCamera) {
+        skip(geometry);
+        return;
+      }
       // Godot's render list leaves such a surface out (`render_forward_clustered.cpp:4078-4088`).
       if (!castsShadowOf(material)) {
         skip(geometry);

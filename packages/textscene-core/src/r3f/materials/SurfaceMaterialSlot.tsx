@@ -314,8 +314,8 @@ export interface SurfaceMaterialSlotProps {
   attach?: string;
   /** The mesh sub-resource a triplanar material folds into its tiling, if any. */
   triplanarMesh?: TscnInternalResource;
-  /** The drawing GeometryInstance3D's `transparency`. Omitted for any other drawer. */
-  transparency?: number;
+  /** The drawing GeometryInstance3D's fade (`geometryFade`). Omitted for any other drawer. */
+  fade?: number;
 }
 
 /**
@@ -324,17 +324,12 @@ export interface SurfaceMaterialSlotProps {
  * `<StandardMaterialSlot>` builds from null scalars (ADR-0041). A surface whose texture
  * cannot load, or whose ViewportTexture albedo is cyclic, draws the magenta placeholder.
  */
-export function SurfaceMaterialSlot({
-  source,
-  attach,
-  triplanarMesh,
-  transparency,
-}: SurfaceMaterialSlotProps) {
+export function SurfaceMaterialSlot({ source, attach, triplanarMesh, fade }: SurfaceMaterialSlotProps) {
   const material = readyMaterial(useMaterial(source));
   const scalars = useMaterialScalars(material);
   const { maps, isUnresolved } = useMaterialTextures(scalars, material, triplanarMesh);
   if (isUnresolved) return materialBagElement(MISSING_TEXTURE_MATERIAL, attach);
-  return <StandardMaterialSlot scalars={scalars} attach={attach} transparency={transparency} {...maps} />;
+  return <StandardMaterialSlot scalars={scalars} attach={attach} fade={fade} {...maps} />;
 }
 
 /** The decoded scalars of `material`, or null for Godot's default surface. */

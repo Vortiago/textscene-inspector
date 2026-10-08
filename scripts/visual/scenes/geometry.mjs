@@ -25,6 +25,9 @@ export const GEOMETRY_SCENES = [
   // do it: three skips an invisible object in the shadow pass and its subtree.
   // Soft-shadow edges are GPU-sensitive.
   { name: 'shadows-only', file: 'unit-shadows-only.tscn' },
+  // Five boxes against `visibility_range`: the framed camera is past A's end and short of B's
+  // begin, so both vanish while A's child stays, and C and D blend at a SELF margin fade.
+  { name: 'visibility-range', file: 'unit-visibility-range.tscn' },
   // Bars under one texel of a single shadow map and about three of the first
   // of Godot's default four splits. Crisp stripes need the near split to draw.
   { name: 'directional-shadow-splits', file: 'unit-directional-shadow-splits.tscn' },

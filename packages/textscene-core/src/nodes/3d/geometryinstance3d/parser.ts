@@ -4,7 +4,13 @@
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
+import {
+  parseOptionalAabb,
+  parseOptionalFloat,
+  parseOptionalInt,
+  type AabbValue,
+} from '../../../parser/valueParsers';
+import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../../godot/visibilityRange';
 import { parseNode3D } from '../../base/node3d/parser';
 import { GEOMETRY_INSTANCE_DEFAULTS, type GeometryInstance3DProperties } from './types';
 
@@ -16,5 +22,27 @@ export function parseGeometryInstance3D(
     ...parseNode3D(heading, properties),
     transparency: parseOptionalFloat(properties.transparency) ?? GEOMETRY_INSTANCE_DEFAULTS.transparency,
     castShadow: parseOptionalInt(properties.cast_shadow) ?? GEOMETRY_INSTANCE_DEFAULTS.castShadow,
+    visibilityRange: parseVisibilityRange(properties),
+    customAabb: parseCustomAabb(properties.custom_aabb),
   };
+}
+
+function parseVisibilityRange(properties: Record<string, string>): VisibilityRange {
+  return {
+    begin: parseOptionalFloat(properties.visibility_range_begin) ?? NO_VISIBILITY_RANGE.begin,
+    beginMargin:
+      parseOptionalFloat(properties.visibility_range_begin_margin) ?? NO_VISIBILITY_RANGE.beginMargin,
+    end: parseOptionalFloat(properties.visibility_range_end) ?? NO_VISIBILITY_RANGE.end,
+    endMargin: parseOptionalFloat(properties.visibility_range_end_margin) ?? NO_VISIBILITY_RANGE.endMargin,
+    fadeMode: parseOptionalInt(properties.visibility_range_fade_mode) ?? NO_VISIBILITY_RANGE.fadeMode,
+  };
+}
+
+/** `instance_set_custom_aabb` clears the box on `AABB()` (`renderer_scene_cull.cpp:1093`). */
+function parseCustomAabb(value: string | undefined): AabbValue | null {
+  const box = parseOptionalAabb(value, 'custom_aabb');
+  if (!box) return null;
+  const { position, size } = box;
+  const isEmpty = [position.x, position.y, position.z, size.x, size.y, size.z].every((c) => c === 0);
+  return isEmpty ? null : box;
 }

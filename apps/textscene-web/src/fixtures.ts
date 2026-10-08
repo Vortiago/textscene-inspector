@@ -1693,6 +1693,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Visibility Range",
+    "file": "unit-visibility-range.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Visible On Screen Enabler 2d",
     "file": "unit-visible-on-screen-enabler-2d.tscn",
     "category": "Other"

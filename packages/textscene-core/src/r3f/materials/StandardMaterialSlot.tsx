@@ -22,8 +22,8 @@ export interface StandardMaterialSlotProps extends MaterialTextureMaps {
   scalars: StandardMaterial3DScalars | null;
   /** R3F attach key: `material-0` for multi-surface meshes. */
   attach?: string;
-  /** The drawing GeometryInstance3D's `transparency`. Omitted for any other drawer. */
-  transparency?: number;
+  /** The drawing GeometryInstance3D's fade (`geometryFade`). Omitted for any other drawer. */
+  fade?: number;
 }
 
 export function StandardMaterialSlot({
@@ -37,7 +37,7 @@ export function StandardMaterialSlot({
   displacementMap,
   anisotropyMap,
   attach,
-  transparency = 0,
+  fade = 1,
 }: StandardMaterialSlotProps) {
   // A null `scalars` is the derivation's "no material" case: Godot's default 3D
   // surface, not a default-constructed StandardMaterial3D.
@@ -53,7 +53,7 @@ export function StandardMaterialSlot({
       displacementMap,
       anisotropyMap,
     }),
-    transparency
+    fade
   );
 
   return materialBagElement(bag, attach);

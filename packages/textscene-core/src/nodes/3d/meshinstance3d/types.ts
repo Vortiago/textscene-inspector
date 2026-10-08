@@ -28,21 +28,6 @@ export interface MeshInstance3DProperties extends GeometryInstance3DProperties {
   /** Lightmap detail scale (0=1x, 1=2x, 2=4x, 3=8x). */
   giLightmapScale?: number;
 
-  /** Visibility range start distance, for LOD. */
-  visibilityRangeBegin?: number;
-
-  /** Fade margin at the visibility range start. */
-  visibilityRangeBeginMargin?: number;
-
-  /** Visibility range end distance, for LOD. */
-  visibilityRangeEnd?: number;
-
-  /** Fade margin at the visibility range end. */
-  visibilityRangeEndMargin?: number;
-
-  /** Visibility range fade mode (0=DISABLED, 1=SELF, 2=DEPENDENCIES). */
-  visibilityRangeFadeMode?: number;
-
   /** Render layer bitmask (32 bits; the editor exposes the first 20). */
   layers?: number;
 }

@@ -16,6 +16,7 @@ import type { ResourceLoader } from '../resources/ResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
 
 import './nodes/index';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../nodes/3d/geometryinstance3d/types';
 
 function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {}): TscnNode {
   return {
@@ -39,6 +40,7 @@ function makeChildCubeScene(): TscnScene {
         children: [
           makeNode('Cube', 'MeshInstance3D', {
             properties: {
+              ...GEOMETRY_INSTANCE_DEFAULTS,
               name: 'Cube',
               mesh: 'SubResource("BoxMesh_1")',
               surfaceMaterialOverrides: new Map([[0, 'SubResource("Material_1")']]),
