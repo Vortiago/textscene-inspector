@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { TscnParser } from './TscnParser';
-import { StrictTscnParser } from '../linter/StrictTscnParser';
+import { TscnParserCore } from './TscnParserCore';
+import { parseNodeWithRegistry } from '../core/NodeRegistry';
 import { sceneFiles, scenesDir } from './testing/parserKit.js';
 
 const SCENES = scenesDir();
@@ -26,11 +27,10 @@ describe('buildSceneTree over the whole corpus', () => {
 
     for (const file of scenes) {
       const rel = relative(SCENES, file);
-      const scene = new StrictTscnParser().parse(readFileSync(file, 'utf8')).scene;
-      // A scene the parser cannot build is a different concern: the orphan question
-      // applies only to one it can.
-      if (!scene) continue;
-      if (scene.orphanedNodes.length > 0) (INTENTIONAL_ORPHANS.has(rel) ? intentional : offenders).push(rel);
+      // The renderer's node creator, so the tree under test is the one the previewer draws.
+      const { placement } = new TscnParserCore().parse(readFileSync(file, 'utf8'), parseNodeWithRegistry);
+      if (placement.orphanedNodes.length === 0) continue;
+      (INTENTIONAL_ORPHANS.has(rel) ? intentional : offenders).push(rel);
     }
 
     expect(offenders.sort()).toEqual([]);

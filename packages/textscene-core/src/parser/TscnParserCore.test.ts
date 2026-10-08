@@ -200,6 +200,22 @@ item/0/mesh = ExtResource("1_tree")
 
       expect(Object.keys(scene).sort()).toEqual(['externalResources', 'internalResources', 'nodes']);
     });
+
+    it('returns a root that declares a parent, and each parent="" heading', () => {
+      const { placement } = parser.parse(
+        '[node name="Root" type="Node3D" parent="."]\n\n[node name="Empty" type="Node3D" parent=""]\n',
+        simpleCreator
+      );
+
+      expect(placement.rootWithParent?.node.name).toBe('Root');
+      expect(placement.emptyParentHeadings.map(({ node }) => node.name)).toEqual(['Empty']);
+    });
+
+    it('returns empty placement facts for a well-formed scene', () => {
+      const { placement } = parser.parse('[node name="Root" type="Node3D"]\n', simpleCreator);
+
+      expect(placement).toEqual({ orphanedNodes: [], rootWithParent: undefined, emptyParentHeadings: [] });
+    });
   });
 
   describe('scene tree building', () => {
