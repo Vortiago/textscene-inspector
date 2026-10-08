@@ -16,8 +16,7 @@ import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
 import { errorsOf } from './testing/tierLists';
-import { fixturesDir } from '../parser/testing/parserKit.js';
-import { walk } from './testing/ruleNameScrape.js';
+import { fixturesDir, sceneFiles } from '../parser/testing/parserKit.js';
 import { isGodotTextResourcePath } from '../godot/index.js';
 
 /**
@@ -160,7 +159,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
   let all: Fixture[] = [];
 
   beforeAll(async () => {
-    all = await Promise.all(walk(fixtures, isGodotTextResourcePath).sort().map(fixture));
+    all = await Promise.all(sceneFiles(fixtures, isGodotTextResourcePath).map(fixture));
     diagnosticsByName = new Map(
       await Promise.all(all.map(async (linted) => [linted.name, await lintFixture(linted)] as const))
     );

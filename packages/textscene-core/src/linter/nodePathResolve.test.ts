@@ -14,7 +14,11 @@ function node(name: string, children: RawNode[] = [], extra: Partial<RawNode> = 
   return { name, type: 'Node3D', rawProperties: {}, children, ...extra };
 }
 
-const sceneOf = (...roots: RawNode[]): RawScene => ({ nodes: roots }) as RawScene;
+const sceneOf = (...roots: RawNode[]): RawScene => ({
+  nodes: roots,
+  externalResources: [],
+  internalResources: [],
+});
 
 describe('resolveNodePath', () => {
   describe('a bare name means a DIRECT child (node.cpp:1941)', () => {

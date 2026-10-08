@@ -16,7 +16,7 @@ import { occluderInstance3DConfigurationWarningsRule } from './linter';
 function findByType(nodes: RawNode[], type: string): RawNode | undefined {
   for (const node of nodes) {
     if (node.type === type) return node;
-    const found = findByType(node.children ?? [], type);
+    const found = findByType(node.children, type);
     if (found) return found;
   }
   return undefined;
