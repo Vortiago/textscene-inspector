@@ -66,7 +66,7 @@ export function useRegisterLitItem(placement: ItemPlacement, lightOnly: boolean)
 
 /**
  * Hands the per-item cap an item at `placement`, uncapped, whose own geometry `geometry` holds.
- * `take` receives the positional lights the item takes while its placement is crowded. The cap
+ * `take` receives the item's positional light list while more than 15 lights meet it. The cap
  * records a new entry as handed nothing, so each release hands the item null to match: else an
  * item that moves to a placement that fits every light keeps the list of the old one.
  */

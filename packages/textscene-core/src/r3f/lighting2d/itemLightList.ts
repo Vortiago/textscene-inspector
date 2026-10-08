@@ -37,9 +37,8 @@ export interface ItemPlacement {
   readonly z: number;
   readonly layer: number;
   /**
-   * The ordinals of the positional lights the item takes (`itemPositionalLights`) while more than
-   * 15 reach its placement. Null while every light fits: a light whose rect misses the item adds
-   * nothing to its pixels, so the item can take it.
+   * The ordinals of the positional lights on the item's list (`itemPositionalLights`) while more
+   * than 15 meet its rect. Null while they fit: the item then reads its placement's list.
    */
   readonly positionalLights: readonly number[] | null;
 }
@@ -66,23 +65,24 @@ export function positionalCandidates(
 }
 
 /**
- * Godot's per-item loop (`renderer_canvas_render_rd.cpp:2366-2385`): the first 15 of an item's
- * `positionalCandidates` whose rect meets the item's. A light with no rect in `lightRects` draws
- * nothing, so it meets no item.
+ * Godot's per-item loop (`renderer_canvas_render_rd.cpp:2366-2385`) takes the first 15 of an item's
+ * `positionalCandidates` whose rect meets the item's. A light that misses adds nothing at the
+ * item's pixels, so the list keeps it and drops only the lights that meet the item past the 15th:
+ * items then share lists. Null while none drops, for the placement's own list. A light with no
+ * rect in `lightRects` draws nothing, so it meets no item.
  */
 export function itemPositionalLights(
   candidates: readonly number[],
   itemRect: Rect2,
   lightRects: ReadonlyMap<number, Rect2>
-): number[] {
-  const taken: number[] = [];
-  for (const ordinal of candidates) {
+): number[] | null {
+  const meeting = candidates.filter((ordinal) => {
     const lightRect = lightRects.get(ordinal);
-    if (!lightRect || !rect2Intersects(itemRect, lightRect)) continue;
-    taken.push(ordinal);
-    if (taken.length === MAX_POSITIONAL_LIGHTS_PER_ITEM) break;
-  }
-  return taken;
+    return lightRect !== undefined && rect2Intersects(itemRect, lightRect);
+  });
+  if (meeting.length <= MAX_POSITIONAL_LIGHTS_PER_ITEM) return null;
+  const dropped = new Set(meeting.slice(MAX_POSITIONAL_LIGHTS_PER_ITEM));
+  return candidates.filter((ordinal) => !dropped.has(ordinal));
 }
 
 /** One light on an item's list. */

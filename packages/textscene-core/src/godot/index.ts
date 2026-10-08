@@ -28,7 +28,7 @@ export {
   transform2DHasZeroSkew,
   transform2DIsConformal,
 } from './transform2d.js';
-export { type Rect2, rect2Intersection, rect2Intersects } from './rect2.js';
+export { type Rect2, rect2Intersection, rect2Intersects, rect2Merge } from './rect2.js';
 export {
   type BasisComponents,
   basisGetScale,

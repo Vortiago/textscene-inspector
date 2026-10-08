@@ -144,29 +144,45 @@ describe('positionalCandidates', () => {
 describe('itemPositionalLights', () => {
   const ordinals = (count: number) => [...Array(count).keys()];
 
-  it('keeps the first 15 candidates', () => {
+  it('drops the candidates that meet the item past the 15th', () => {
     const candidates = ordinals(CAP + 3);
     expect(itemPositionalLights(candidates, ITEM_RECT, rectsOver(candidates))).toEqual(ordinals(CAP));
   });
 
   it('keeps the candidates in their order', () => {
-    expect(itemPositionalLights([1, 0], ITEM_RECT, rectsOver([0, 1]))).toEqual([1, 0]);
+    const candidates = [...ordinals(CAP + 1)].reverse();
+    expect(itemPositionalLights(candidates, ITEM_RECT, rectsOver(candidates))).toEqual(
+      candidates.slice(0, CAP)
+    );
   });
 
-  it('gives the slot of a light whose rect misses the item to the next light', () => {
-    const candidates = ordinals(CAP + 1);
+  it('gives the slot of a light whose rect misses the item to the next light, and keeps the miss', () => {
+    // The missing light adds nothing at the item's pixels, so the list may hold it.
+    const candidates = ordinals(CAP + 2);
     const rects = rectsOver(candidates);
     rects.set(0, PAST_ITEM);
-    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toEqual(candidates.slice(1));
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toEqual(ordinals(CAP + 1));
+  });
+
+  it('is null while the lights that meet the item fit, so it shares the placement list', () => {
+    const candidates = ordinals(CAP + 5);
+    const rects = rectsOver(candidates.slice(0, CAP), OVER_ITEM);
+    for (const ordinal of candidates.slice(CAP)) rects.set(ordinal, PAST_ITEM);
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toBeNull();
   });
 
   it('counts a rect that only touches the item as a miss', () => {
-    const touching: Rect2 = { x: 10, y: 0, w: 10, h: 10 };
-    expect(itemPositionalLights([0], ITEM_RECT, rectsOver([0], touching))).toEqual([]);
+    const candidates = ordinals(CAP + 1);
+    const rects = rectsOver(candidates);
+    rects.set(0, { x: 10, y: 0, w: 10, h: 10 });
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toBeNull();
   });
 
-  it('leaves out a light with no rect, which draws nothing', () => {
-    expect(itemPositionalLights([0], ITEM_RECT, new Map())).toEqual([]);
+  it('counts a light with no rect as a miss, as it draws nothing', () => {
+    const candidates = ordinals(CAP + 1);
+    const rects = rectsOver(candidates);
+    rects.delete(0);
+    expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toBeNull();
   });
 });
 

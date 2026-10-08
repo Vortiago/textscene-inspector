@@ -9,12 +9,15 @@ import { renderLightLists, type AccumulationList, type PassMesh } from './lightA
 import { createSeedMaterial } from './lightSeedQuad';
 import { LIGHT_PASS_LAYER } from './lightPassLayers';
 import type { LightListEntry, PassMeshRole } from './itemLightList';
+import type { Rect2 } from '../../godot/rect2';
 
 interface Draw {
   readonly target: THREE.WebGLRenderTarget | null;
   readonly seed: [number, number, number];
   readonly visible: string[];
   readonly cameraMask: number;
+  /** The target's scissor while it clips, else null. */
+  readonly scissor: number[] | null;
 }
 
 function passMesh(name: string, ordinal: number, role: PassMeshRole): PassMesh {
@@ -25,17 +28,23 @@ function passMesh(name: string, ordinal: number, role: PassMeshRole): PassMesh {
 
 function list(
   entries: LightListEntry[],
-  options: { lightOnly?: boolean; tint?: boolean } = {}
+  options: { lightOnly?: boolean; tint?: boolean; placementIds?: string[] } = {}
 ): AccumulationList {
   return {
     entries: new Map(entries.map((entry) => [entry.ordinal, entry])),
+    placementIds: options.placementIds ?? ['uncapped'],
     target: new THREE.WebGLRenderTarget(1, 1),
     lightOnlyTarget: options.lightOnly ? new THREE.WebGLRenderTarget(1, 1) : null,
     shadowTintTarget: options.tint ? new THREE.WebGLRenderTarget(1, 1) : null,
   };
 }
 
-function run(lists: AccumulationList[], meshes: PassMesh[], onRender?: () => void) {
+function run(
+  lists: AccumulationList[],
+  meshes: PassMesh[],
+  onRender?: () => void,
+  windows: ReadonlyMap<string, Rect2> = new Map()
+) {
   const draws: Draw[] = [];
   const seedMaterial = createSeedMaterial();
   const camera = new THREE.OrthographicCamera();
@@ -55,6 +64,7 @@ function run(lists: AccumulationList[], meshes: PassMesh[], onRender?: () => voi
         seed: [seed.x, seed.y, seed.z],
         visible: meshes.filter(({ mesh }) => mesh.visible).map(({ mesh }) => mesh.name),
         cameraMask: camera.layers.mask,
+        scissor: target?.scissorTest ? target.scissor.toArray() : null,
       });
     },
   } as unknown as THREE.WebGLRenderer;
@@ -67,6 +77,7 @@ function run(lists: AccumulationList[], meshes: PassMesh[], onRender?: () => voi
     seedMaterial,
     canvasModulate: { r: 0.2, g: 0.3, b: 0.4 },
     resolution: new THREE.Vector2(),
+    windows,
   };
   return { draws, camera, run: () => renderLightLists(pass), getTarget: () => target };
 }
@@ -120,6 +131,26 @@ describe('renderLightLists', () => {
     const only = list([SHADOWED(0)]);
     run([only], [passMesh('a', 0, 'lit')]).run();
     expect([only.target.width, only.target.height]).toEqual([4, 2]);
+  });
+
+  it("clips every buffer of a capped list to its items' window", () => {
+    // The default camera views x and y in [-1, 1], drawn into the 4x2 buffer.
+    const capped = list([SHADOWED(0)], { lightOnly: true, placementIds: ['capped'] });
+    const windows = new Map([['capped', { x: 0.5, y: -1, w: 0.5, h: 2 }]]);
+    const pass = run([capped], [passMesh('a', 0, 'lit')], undefined, windows);
+    pass.run();
+    expect(pass.draws.map((draw) => draw.scissor)).toEqual([
+      [2, 0, 2, 2],
+      [2, 0, 2, 2],
+    ]);
+  });
+
+  it('draws a list whole while one of its placements has no window', () => {
+    const shared = list([SHADOWED(0)], { placementIds: ['capped', 'uncapped'] });
+    const windows = new Map([['capped', { x: 0.5, y: -1, w: 0.5, h: 2 }]]);
+    const pass = run([shared], [passMesh('a', 0, 'lit')], undefined, windows);
+    pass.run();
+    expect(pass.draws[0]!.scissor).toBeNull();
   });
 
   it('draws nothing while no list exists', () => {

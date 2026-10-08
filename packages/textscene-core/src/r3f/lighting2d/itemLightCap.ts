@@ -1,7 +1,7 @@
 /**
  * Godot's 15-light cap on each item, run once a frame ahead of the light pass. Only an item on a
- * placement more than 15 positional lights reach is measured, and it re-renders only when the
- * lights it takes change.
+ * placement more than 15 positional lights reach is measured, and it re-renders only when its
+ * list changes.
  */
 
 import * as THREE from 'three';
@@ -15,7 +15,7 @@ import {
   type ItemPlacement,
 } from './itemLightList.js';
 import type { PassMesh } from './lightAccumulationPass.js';
-import type { Rect2 } from '../../godot/rect2.js';
+import { rect2Intersects, rect2Merge, type Rect2 } from '../../godot/rect2.js';
 
 /** A lit item as the cap sees it. */
 export interface CappedItem {
@@ -23,7 +23,7 @@ export interface CappedItem {
   readonly placement: ItemPlacement;
   /** The item's own geometry, its child items left out, or null before it mounts. */
   readonly geometry: { readonly current: THREE.Object3D | null };
-  /** Hands the item the positional lights it takes, or null once its placement fits them all. */
+  /** Hands the item its positional light list (`itemPositionalLights`), or null for its placement's. */
   take(positionalLights: readonly number[] | null): void;
 }
 
@@ -32,6 +32,13 @@ export interface ItemLightCap {
   /** Each registered item, with the positional lights it was last handed, null until crowded. */
   readonly items: Map<CappedItem, readonly number[] | null>;
   readonly passMeshes: ReadonlySet<PassMesh>;
+  /** The game viewport in the world: Godot lists only the lights that meet it. */
+  readonly viewport: Rect2;
+  /**
+   * Rewritten each frame: the world rect the items of each capped placement cover, by
+   * `placementId`, so the pass clips that list's buffer to it (`lightListWindow.ts`).
+   */
+  readonly windows: Map<string, Rect2>;
 }
 
 /** What one `lights` state crowds. The state is immutable, so a new one builds a new entry. */
@@ -89,8 +96,11 @@ function worldRect(object: THREE.Object3D | null): Rect2 {
   return boxRect(box);
 }
 
-/** Each light's rect, `Light2D`'s `rect_cache`: where its quads land. */
-function lightRects(passMeshes: ReadonlySet<PassMesh>): Map<number, Rect2> {
+/**
+ * Each listed light's rect, `Light2D`'s `rect_cache`: where its quads land. A light whose rect
+ * misses `viewport` is off Godot's list (`renderer_viewport.cpp:390,470`), so it has none here.
+ */
+function lightRects(passMeshes: ReadonlySet<PassMesh>, viewport: Rect2): Map<number, Rect2> {
   const boxes = new Map<number, THREE.Box3>();
   for (const { mesh, ordinal, role } of passMeshes) {
     if (!REACH_ROLES.has(role)) continue;
@@ -98,7 +108,12 @@ function lightRects(passMeshes: ReadonlySet<PassMesh>): Map<number, Rect2> {
     const previous = boxes.get(ordinal);
     boxes.set(ordinal, previous ? previous.union(quad) : quad);
   }
-  return new Map([...boxes].map(([ordinal, lightBox]) => [ordinal, boxRect(lightBox)]));
+  const rects = new Map<number, Rect2>();
+  for (const [ordinal, lightBox] of boxes) {
+    const rect = boxRect(lightBox);
+    if (rect2Intersects(rect, viewport)) rects.set(ordinal, rect);
+  }
+  return rects;
 }
 
 function sameLights(a: readonly number[] | null, b: readonly number[] | null): boolean {
@@ -106,19 +121,27 @@ function sameLights(a: readonly number[] | null, b: readonly number[] | null): b
   return a.length === b.length && a.every((ordinal, index) => ordinal === b[index]);
 }
 
-/** Hands each item the positional lights it takes this frame, where they changed. */
-export function capItemLights({ lights, items, passMeshes }: ItemLightCap): void {
+/** Hands each item its positional light list this frame, where it changed, and records its window. */
+export function capItemLights({ lights, items, passMeshes, viewport, windows }: ItemLightCap): void {
   const crowding = crowdingOf(lights);
   let rects: Map<number, Rect2> | null = null;
+  windows.clear();
   for (const [item, handed] of items) {
     const candidates = crowding.canCrowd ? crowdedCandidates(lights, crowding, item.placement) : null;
-    let taken: readonly number[] | null = null;
+    let list: readonly number[] | null = null;
     if (candidates) {
-      rects ??= lightRects(passMeshes);
-      taken = itemPositionalLights(candidates, worldRect(item.geometry.current), rects);
+      rects ??= lightRects(passMeshes, viewport);
+      const itemRect = worldRect(item.geometry.current);
+      list = itemPositionalLights(candidates, itemRect, rects);
+      if (list) recordWindow(windows, placementId({ ...item.placement, positionalLights: list }), itemRect);
     }
-    if (sameLights(taken, handed)) continue;
-    items.set(item, taken);
-    item.take(taken);
+    if (sameLights(list, handed)) continue;
+    items.set(item, list);
+    item.take(list);
   }
+}
+
+function recordWindow(windows: Map<string, Rect2>, id: string, itemRect: Rect2): void {
+  const window = windows.get(id);
+  windows.set(id, window ? rect2Merge(window, itemRect) : itemRect);
 }

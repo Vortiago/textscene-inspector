@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rect2Intersection, rect2Intersects } from './rect2';
+import { rect2Intersection, rect2Intersects, rect2Merge } from './rect2';
 
 const SQUARE = { x: 0, y: 0, w: 10, h: 10 };
 
@@ -36,5 +36,15 @@ describe('rect2Intersection', () => {
   it('returns the inner rect when one holds the other', () => {
     const inner = { x: 2, y: 3, w: 4, h: 5 };
     expect(rect2Intersection(SQUARE, inner)).toEqual(inner);
+  });
+});
+
+describe('rect2Merge', () => {
+  it('returns the smallest rect that holds both', () => {
+    expect(rect2Merge(SQUARE, { x: 20, y: -5, w: 5, h: 5 })).toEqual({ x: 0, y: -5, w: 25, h: 15 });
+  });
+
+  it('returns the outer rect when one holds the other', () => {
+    expect(rect2Merge(SQUARE, { x: 2, y: 3, w: 4, h: 5 })).toEqual(SQUARE);
   });
 });

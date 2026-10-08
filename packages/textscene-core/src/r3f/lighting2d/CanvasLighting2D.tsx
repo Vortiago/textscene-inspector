@@ -24,6 +24,8 @@ import { useAccumulationTargets } from './lightAccumulationTargets.js';
 import { createSeedMaterial, LightAccumulatorSeed } from './lightSeedQuad.js';
 import { useLightAccumulationPass, type AccumulationList, type PassMesh } from './lightAccumulationPass.js';
 import { capItemLights, type CappedItem } from './itemLightCap.js';
+import type { Rect2 } from '../../godot/rect2.js';
+import { useGameViewportRect } from '../gameViewportRect.js';
 
 export { useCanvasLighting2D, type CanvasLighting2D, type CanvasLightSlot } from './lightPassContext.js';
 export {
@@ -45,6 +47,12 @@ export interface CanvasLighting2DProviderProps {
 /** The ids of the plans that `needs` a buffer. */
 function planIds(plans: readonly LightListPlan[], needs: (plan: LightListPlan) => boolean): string[] {
   return plans.filter(needs).map((plan) => plan.id);
+}
+
+/** The game viewport in the Y-up world: Godot's `clip_rect`, which the stage draws untransformed. */
+function useWorldViewportRect(): Rect2 {
+  const { w, h } = useGameViewportRect();
+  return useMemo(() => ({ x: 0, y: -h, w, h }), [w, h]);
 }
 
 export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLighting2DProviderProps) {
@@ -91,13 +99,17 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
     },
     [cappedItems]
   );
+  // Written by the cap each frame, read by the pass that follows it.
+  const windows = useRef(new Map<string, Rect2>()).current;
+  const viewport = useWorldViewportRect();
   // Ahead of the pass at -1, so a frame's lists follow the rects of the frame before.
-  useFrame(() => capItemLights({ lights, items: cappedItems, passMeshes }), -2);
+  useFrame(() => capItemLights({ lights, items: cappedItems, passMeshes, viewport, windows }), -2);
 
   const accumulationLists = useMemo<AccumulationList[]>(
     () =>
       plans.map((plan) => ({
         entries: new Map(plan.entries.map((entry) => [entry.ordinal, entry])),
+        placementIds: plan.placementIds,
         target: targets.get(plan.id)!,
         lightOnlyTarget: lightOnlyTargets.get(plan.id) ?? null,
         shadowTintTarget: shadowTintTargets.get(plan.id) ?? null,
@@ -119,6 +131,7 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
     seedMaterial,
     canvasModulate,
     resolution,
+    windows,
   });
 
   const value = useMemo<CanvasLighting2D>(() => {

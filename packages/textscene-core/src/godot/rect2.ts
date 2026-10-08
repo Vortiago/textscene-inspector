@@ -22,3 +22,10 @@ export function rect2Intersection(a: Rect2, b: Rect2): Rect2 {
   const y = Math.max(a.y, b.y);
   return { x, y, w: Math.min(a.x + a.w, b.x + b.w) - x, h: Math.min(a.y + a.h, b.y + b.h) - y };
 }
+
+/** `Rect2::merge` (`rect2.h:165-180`): the smallest rect that holds both. */
+export function rect2Merge(a: Rect2, b: Rect2): Rect2 {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+}

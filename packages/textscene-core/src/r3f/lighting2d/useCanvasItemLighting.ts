@@ -80,7 +80,7 @@ export function useCanvasItemLighting(
   // Godot's cull test (`light_mask`, `z_final` and the canvas layer) picks the item's light list,
   // so items at one placement share it. The unmodulated accumulation costs a second pre-pass, so a
   // list has one only while a Light Only item reads it.
-  // Past 15 positional lights at its placement, the item's rect picks which it takes.
+  // Past 15 positional lights on its rect, the item drops the later ones from its list.
   const geometryRef = useRef<THREE.Object3D | null>(null);
   const [positionalLights, setPositionalLights] = useState<readonly number[] | null>(null);
   const placement = { lightMask, z: itemZ, layer: canvasLayer, positionalLights };

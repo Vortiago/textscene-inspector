@@ -177,11 +177,12 @@ describe('the 15-light cap, through the dispatcher', () => {
   });
 
   it('gives the slot of a light whose rect misses the item to the next light', async () => {
+    // L0 misses the panel and adds nothing there, so the list keeps it beside the 16th light.
     const lights = names(16)
       .map((name, index) => light(name, null, index === 0 ? 1000 : 50))
       .join('');
     const renderer = await render(scene(`${panel('P', null, 0)}${lights}`));
-    await expectLightsOn(renderer, 'P', names(16).slice(1));
+    await expectLightsOn(renderer, 'P', names(16));
   });
 
   it('caps each item by its own rect', async () => {
@@ -191,7 +192,7 @@ describe('the 15-light cap, through the dispatcher', () => {
       .join('');
     const renderer = await render(scene(`${panel('Left', null, 0)}${panel('Right', null, 110)}${lights}`));
     await expectLightsOn(renderer, 'Left', names(15));
-    await expectLightsOn(renderer, 'Right', names(16).slice(1));
+    await expectLightsOn(renderer, 'Right', names(16));
   });
 });
 

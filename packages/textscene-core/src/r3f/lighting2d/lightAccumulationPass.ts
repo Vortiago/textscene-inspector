@@ -9,6 +9,8 @@ import type * as THREE from 'three';
 import type { Camera } from '@react-three/fiber';
 import { LIGHT_PASS_LAYER } from './lightPassLayers.js';
 import { drawsInPass, type LightListEntry, type PassKind, type PassMeshRole } from './itemLightList.js';
+import { listWindow, windowScissor } from './lightListWindow.js';
+import type { Rect2 } from '../../godot/rect2.js';
 
 /** One light mesh the pass shows or hides per list. */
 export interface PassMesh {
@@ -21,6 +23,8 @@ export interface PassMesh {
 export interface AccumulationList {
   /** The lights on the list, by ordinal. */
   readonly entries: ReadonlyMap<number, LightListEntry>;
+  /** The placements whose items read the list (`placementId`). */
+  readonly placementIds: readonly string[];
   /** The ordinary accumulator, always allocated. */
   readonly target: THREE.WebGLRenderTarget;
   /** The unmodulated-seed accumulator, or null when no Light Only item reads the list. */
@@ -42,6 +46,28 @@ export interface LightAccumulationPass {
   canvasModulate: { r: number; g: number; b: number };
   /** The published resolution vector, mutated in place each frame. */
   resolution: THREE.Vector2;
+  /** The world rect each capped placement's items cover (`ItemLightCap.windows`). */
+  windows: ReadonlyMap<string, Rect2>;
+}
+
+/**
+ * Sizes `list`'s buffers to the drawing buffer and clips them to its window, or lets them draw
+ * whole where it has none. Clipped after the resize, which resets a target's scissor.
+ */
+function fitListTargets(
+  list: AccumulationList,
+  windows: ReadonlyMap<string, Rect2>,
+  camera: Camera,
+  size: THREE.Vector2
+): void {
+  const window = listWindow(list.placementIds, windows);
+  const scissor = window ? windowScissor(window, camera, size) : null;
+  for (const target of [list.target, list.lightOnlyTarget, list.shadowTintTarget]) {
+    if (!target) continue;
+    if (target.width !== size.x || target.height !== size.y) target.setSize(size.x, size.y);
+    target.scissorTest = scissor !== null;
+    if (scissor) target.scissor.copy(scissor);
+  }
 }
 
 function showListMeshes(passMeshes: ReadonlySet<PassMesh>, list: AccumulationList, kind: PassKind): void {
@@ -60,6 +86,7 @@ export function renderLightLists({
   seedMaterial,
   canvasModulate,
   resolution,
+  windows,
 }: LightAccumulationPass): void {
   if (lists.length === 0) return;
   // The targets and the lookup are all in device pixels, because that is what `gl_FragCoord` is
@@ -71,9 +98,6 @@ export function renderLightLists({
   const seed = seedMaterial.uniforms.uSeed!.value as THREE.Vector3;
 
   const render = (target: THREE.WebGLRenderTarget, seedRgb: readonly [number, number, number]) => {
-    if (target.width !== resolution.x || target.height !== resolution.y) {
-      target.setSize(resolution.x, resolution.y);
-    }
     seed.set(seedRgb[0], seedRgb[1], seedRgb[2]);
     gl.setRenderTarget(target);
     // One clear per pass, not per light: each light stamps its own ref, so last frame's stamps
@@ -89,6 +113,7 @@ export function renderLightLists({
   try {
     camera.layers.set(LIGHT_PASS_LAYER);
     for (const list of lists) {
+      fitListTargets(list, windows, camera, resolution);
       showListMeshes(passMeshes, list, 'light');
       render(list.target, [canvasModulate.r, canvasModulate.g, canvasModulate.b]);
       // Light Only skips `color *= canvas_modulation`, so its accumulation is the same lights

@@ -10,8 +10,13 @@ import { DEFAULT_LIGHT_CULL_KEY } from './lightCullKey';
 import type { CanvasLightDeclaration, ItemPlacement } from './itemLightList';
 import type { PassMesh } from './lightAccumulationPass';
 import { capItemLights, type CappedItem } from './itemLightCap';
+import { placementId } from './itemLightList';
+import type { Rect2 } from '../../godot/rect2';
 
 const CAP = MAX_LIGHTS_PER_ITEM - 1;
+
+/** A viewport no light misses. */
+const EVERYWHERE: Rect2 = { x: -1e6, y: -1e6, w: 2e6, h: 2e6 };
 
 const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
 
@@ -49,13 +54,22 @@ function item(x = 0): SpiedItem {
   return { placement: PLACEMENT, geometry: { current: geometry }, take: vi.fn<CappedItem['take']>() };
 }
 
-/** Runs one frame, and returns a runner for the next, over the same lights or a new state. */
-function step(declared: Map<number, CanvasLightDeclaration>, items: CappedItem[], passMeshes: Set<PassMesh>) {
+/**
+ * Runs one frame, and returns a runner for the next, over the same lights or a new state, with the
+ * windows the cap writes.
+ */
+function step(
+  declared: Map<number, CanvasLightDeclaration>,
+  items: CappedItem[],
+  passMeshes: Set<PassMesh>,
+  viewport: Rect2 = EVERYWHERE
+) {
   const registered = new Map<CappedItem, readonly number[] | null>(items.map((item) => [item, null]));
+  const windows = new Map<string, Rect2>();
   const run = (state: ReadonlyMap<number, CanvasLightDeclaration> = declared) =>
-    capItemLights({ lights: state, items: registered, passMeshes });
+    capItemLights({ lights: state, items: registered, passMeshes, viewport, windows });
   run();
-  return run;
+  return Object.assign(run, { windows });
 }
 
 describe('capItemLights', () => {
@@ -65,23 +79,19 @@ describe('capItemLights', () => {
     expect(lit.take).not.toHaveBeenCalled();
   });
 
-  it('hands an item on a crowded placement the first 15 lights by sequence', () => {
+  it('drops the lights that meet an item past the first 15 by sequence', () => {
     const lit = item();
     step(lights(CAP + 2), [lit], litQuads(CAP + 2));
     expect(lit.take).toHaveBeenCalledWith([...Array(CAP).keys()]);
   });
 
-  it('measures each item, so items at one placement can take different lights', () => {
-    // Light 0 sits over the left item only, so the right item takes light 15 in its place.
-    const left = item(-20);
-    const right = item(0);
-    step(
-      lights(CAP + 1),
-      [left, right],
-      litQuads(CAP + 1, (ordinal) => (ordinal === 0 ? -20 : 0))
-    );
-    expect(left.take).toHaveBeenCalledWith([0]);
-    expect(right.take).toHaveBeenCalledWith([...Array(CAP).keys()].map((n) => n + 1));
+  it('measures each item, so items at one placement can hold different lists', () => {
+    // Every light sits over the left item, and none over the right one.
+    const left = item(0);
+    const right = item(100);
+    step(lights(CAP + 2), [left, right], litQuads(CAP + 2));
+    expect(left.take).toHaveBeenCalledWith([...Array(CAP).keys()]);
+    expect(right.take).not.toHaveBeenCalled();
   });
 
   it('measures a light by its unshadowed quad too', () => {
@@ -108,9 +118,30 @@ describe('capItemLights', () => {
     expect(lit.take).toHaveBeenLastCalledWith(null);
   });
 
-  it('gives an item with no mounted geometry no positional light', () => {
+  it('leaves an item with no mounted geometry on its placement list', () => {
     const lit: SpiedItem = { ...item(), geometry: { current: null } };
     step(lights(CAP + 1), [lit], litQuads(CAP + 1));
-    expect(lit.take).toHaveBeenCalledWith([]);
+    expect(lit.take).not.toHaveBeenCalled();
+  });
+
+  it('records the world rect the items of each capped list cover', () => {
+    const left = item(-4);
+    const right = item(4);
+    const { windows } = step(lights(CAP + 1), [left, right], litQuads(CAP + 1));
+    const capped = placementId({ ...PLACEMENT, positionalLights: [...Array(CAP).keys()] });
+    expect([...windows]).toEqual([[capped, { x: -9, y: -5, w: 18, h: 10 }]]);
+  });
+
+  it('records no window for an item that reads its placement list', () => {
+    const { windows } = step(lights(CAP), [item()], litQuads(CAP));
+    expect(windows.size).toBe(0);
+  });
+
+  it('counts no light whose rect misses the viewport, as Godot culls it from the list', () => {
+    // Light 0 meets the item at x 7..10 but lies past the viewport's right edge at 5.
+    const lit = item(5);
+    const quads = litQuads(CAP + 1, (ordinal) => (ordinal === 0 ? 12 : 0));
+    step(lights(CAP + 1), [lit], quads, { x: -5, y: -5, w: 10, h: 10 });
+    expect(lit.take).not.toHaveBeenCalled();
   });
 });
