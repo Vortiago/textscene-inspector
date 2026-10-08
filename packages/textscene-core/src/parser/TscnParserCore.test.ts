@@ -9,6 +9,13 @@ import type { RawNode } from './types.js';
 
 describe('TscnParserCore', () => {
   const parser = new TscnParserCore();
+  const simpleCreator: NodeCreator<RawNode> = (heading, properties) => ({
+    rawProperties: properties,
+    name: heading.attributes.name || '',
+    type: heading.attributes.type || '',
+    parent: heading.attributes.parent,
+    children: [],
+  });
 
   describe('callback pattern', () => {
     it('should call node creator for each node heading', () => {
@@ -175,32 +182,21 @@ item/0/mesh = ExtResource("1_tree")
     });
   });
 
-  describe('heading facts', () => {
+  describe('node placement', () => {
     const content = `[gd_scene format=3]
 
 [node name="Root" type="Node3D"]
 
 [node name="Lost" type="Node3D" parent="Missing"]
-
-[connection signal="ready" from="." to="." method="go" binds=[ExtResource("1")]]
 `;
-    const creator: NodeCreator<RawNode> = (heading, properties) => ({
-      rawProperties: properties,
-      name: heading.attributes.name ?? '',
-      type: heading.attributes.type ?? '',
-      parent: heading.attributes.parent,
-      children: [],
-    });
+    it('returns the placement facts beside the scene', () => {
+      const { placement } = parser.parse(content, simpleCreator);
 
-    it('returns them beside the scene', () => {
-      const { headingFacts } = parser.parse(content, creator);
-
-      expect(headingFacts.orphanedNodes.map(({ node }) => node.name)).toEqual(['Lost']);
-      expect(headingFacts.connectionBinds).toEqual(['[ExtResource("1")]']);
+      expect(placement.orphanedNodes.map(({ node }) => node.name)).toEqual(['Lost']);
     });
 
     it('keeps them off the scene', () => {
-      const { scene } = parser.parse(content, creator);
+      const { scene } = parser.parse(content, simpleCreator);
 
       expect(Object.keys(scene).sort()).toEqual(['externalResources', 'internalResources', 'nodes']);
     });
@@ -218,15 +214,7 @@ item/0/mesh = ExtResource("1_tree")
 [node name="GrandChild" type="Node3D" parent="Child1"]
 `;
 
-      const mockCreator: NodeCreator<RawNode> = (heading, properties) => ({
-        rawProperties: properties,
-        name: heading.attributes.name || '',
-        type: heading.attributes.type || '',
-        parent: heading.attributes.parent,
-        children: [],
-      });
-
-      const { scene } = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, simpleCreator);
 
       expect(scene.nodes).toHaveLength(1); // Only root node
       expect(scene.nodes[0]?.name).toBe('Root');
@@ -300,14 +288,6 @@ item/0/mesh = ExtResource("1_tree")
   });
 
   describe('observer seam', () => {
-    const simpleCreator: NodeCreator<RawNode> = (heading, properties) => ({
-      rawProperties: properties,
-      name: heading.attributes.name || '',
-      type: heading.attributes.type || '',
-      parent: heading.attributes.parent,
-      children: [],
-    });
-
     it('produces identical output with and without an observer', () => {
       const content = `[gd_scene load_steps=2 format=3]
 

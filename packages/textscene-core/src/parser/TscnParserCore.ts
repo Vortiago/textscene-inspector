@@ -8,8 +8,7 @@
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/deprecated.js';
 import type {
   TscnScene,
-  HeadingFacts,
-  RawNode,
+  NodePlacement,
   SceneNode,
   TscnExternalResource,
   TscnInternalResource,
@@ -49,16 +48,12 @@ export type NodeCreator<N extends SceneNode<N>> = (
   properties: Record<string, string>
 ) => N | null;
 
-/** What one scan returns: the tree beside the facts only the linter reads. */
-export interface CoreParse<N extends RawNode> {
+/** What one scan returns: the tree, and the placement facts beside it. */
+export interface CoreParseResult<N extends SceneNode<N>> {
   scene: TscnScene<N>;
-  headingFacts: HeadingFacts;
+  placement: NodePlacement;
 }
 
-/**
- * Hooks into the scanning loop for strict (linting) consumers. The observer is
- * purely additive: it never changes what the lenient loop parses or recovers.
- */
 /** One property value the scan completed, after any multiline accumulation. */
 export interface ParsedProperty {
   section: SectionType;
@@ -78,6 +73,10 @@ export interface ParsedProperty {
   stored: ResolvedProperty;
 }
 
+/**
+ * Hooks into the scanning loop for strict (linting) consumers. The observer is
+ * purely additive: it never changes what the lenient loop parses or recovers.
+ */
 export interface ParseObserver {
   /** Malformed line detected: INVALID_HEADING_FORMAT or INVALID_PROPERTY_FORMAT. */
   onError?(error: { message: string; line: number; column: number; code: string }): void;
@@ -103,13 +102,13 @@ export class TscnParserCore {
    * @param content - Raw TSCN file content
    * @param nodeCreator - Callback to create nodes (renderer-specific or linter-specific)
    * @param observer - Optional hooks for strict consumers (errors, sections, properties)
-   * @returns The scene, and the heading facts only the linter reads
+   * @returns The scene, and the placement facts only the linter reads
    */
   parse<N extends SceneNode<N>>(
     content: string,
     nodeCreator: NodeCreator<N>,
     observer?: ParseObserver
-  ): CoreParse<N> {
+  ): CoreParseResult<N> {
     // Debug, not info: an editor host parses on each keystroke.
     logger.debug('[Parser] Starting TSCN parsing');
     // Split on CRLF or LF: a trailing \r on each line of a Windows-authored file
@@ -125,10 +124,6 @@ export class TscnParserCore {
     // One per file: the loader refuses any tag after the `[resource]` body
     // (`resource_format_text.cpp:837-841`), so a later one is a corrupt file, and the last one read stays.
     let mainResource: TscnMainResource | undefined;
-    const connectionBinds: string[] = [];
-    const instancesOutsideNodeBody: string[] = [];
-    // The type of the last heading read, since only a `[node]` body reads the heading after it leniently.
-    let previousHeadingType: string | null = null;
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
@@ -253,13 +248,6 @@ export class TscnParserCore {
           if (currentHeading.type === 'gd_resource') {
             headerResourceType = currentHeading.attributes.type;
           }
-          const binds = currentHeading.type === 'connection' ? currentHeading.attributes.binds : undefined;
-          if (binds !== undefined) connectionBinds.push(binds);
-          const { instance } = currentHeading.attributes;
-          if (currentHeading.type === 'node' && previousHeadingType !== 'node' && instance !== undefined) {
-            instancesOutsideNodeBody.push(instance);
-          }
-          previousHeadingType = currentHeading.type;
           observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
           observer?.onError?.({
@@ -331,7 +319,6 @@ export class TscnParserCore {
 
     const sceneTree = buildSceneTree(origins.map((o) => o.node));
     const orphanedNodes = strandedNodes(origins, sceneTree);
-    const rootWithParent = rootDeclaringParent(origins);
     for (const { node } of orphanedNodes) {
       logger.warn(
         `[Parser] Orphaned node dropped from the scene tree: "${node.name}" (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
@@ -350,12 +337,10 @@ export class TscnParserCore {
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
         ...(mainResource ? { mainResource } : {}),
       },
-      headingFacts: {
+      placement: {
         orphanedNodes,
-        ...(rootWithParent ? { rootWithParent } : {}),
+        rootWithParent: rootDeclaringParent(origins),
         emptyParentHeadings: emptyParentHeadings(origins),
-        connectionBinds,
-        instancesOutsideNodeBody,
       },
     };
   }

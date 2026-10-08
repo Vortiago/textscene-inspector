@@ -101,24 +101,25 @@ export interface RawNode {
 /** A node whose children are its own kind: the shape the tree builder seats a child into. */
 export type SceneNode<N> = RawNode & { children: N[] };
 
-/**
- * What the `[node]` and `[connection]` headings state that the tree does not hold. Only the linter
- * reads these, so the core returns them beside the scene and only a `StrictScene` carries them.
- */
-export interface HeadingFacts {
+/** How the `parent=` of each `[node]` heading placed it, where the tree alone does not say. */
+export interface NodePlacement {
   /** Headings whose `parent=` path resolved against nothing, so they are not in `nodes`. */
   orphanedNodes: readonly NodeOrigin<RawNode>[];
   /**
    * The root heading, when it declares a `parent=`, which Godot refuses
-   * (`packed_scene.cpp:218-219`). Absent otherwise.
+   * (`packed_scene.cpp:218-219`), or undefined.
    */
-  rootWithParent?: NodeOrigin<RawNode>;
+  rootWithParent: NodeOrigin<RawNode> | undefined;
   /**
    * Headings spelling `parent=""`, which faults the text loader
    * (`resource_format_text.cpp:206-207`). Not a subset of the fields above: such a heading has
-   * no `node.parent`, so it is seated, not stranded.
+   * no `node.parent`, so it is seated, not orphaned.
    */
   emptyParentHeadings: readonly NodeOrigin<RawNode>[];
+}
+
+/** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
+export interface HeadingFacts extends NodePlacement {
   /**
    * The `binds=` value of each `[connection]` heading, as written. The loader parses a heading's fields with the
    * resource parser a property value goes through (`resource_format_text.cpp:286`, `:379`, `variant_parser.cpp:1862`),
