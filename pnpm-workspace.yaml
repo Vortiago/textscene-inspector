@@ -18,7 +18,7 @@ catalog:
   '@vscode/test-electron': ^3.1.0
   '@vscode/test-web': ^0.0.81
   '@vitest/ui': ^5.0.3
-  '@types/node': ^26.6.3
+  '@types/node': ^26.6.4
   vite: ^8.3.1
   esbuild: ^0.28.2
   happy-dom: ^20.14.5
