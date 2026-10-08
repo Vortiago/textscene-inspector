@@ -248,6 +248,8 @@ export function meshArgumentMounts(source: string): MeshArgumentMount[] {
 const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
+  'packages/textscene-core/src/r3f/materials/fadedMeshMaterials.ts':
+    'puts a GLB surface’s own material or its alpha-pass copy on the mesh, which is not React state, and the copy is built once from its source, so only its opacity moves',
   'packages/textscene-core/src/r3f/materials/swappedMaterials.ts':
     'puts one of a surface’s two mounted materials on its mesh, each keyed by its own mount, so a swap changes which material draws and never a program input of one',
   'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':

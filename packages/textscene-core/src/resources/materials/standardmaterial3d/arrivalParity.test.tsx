@@ -21,7 +21,7 @@ import { resolveExtResourcePath } from '../../SubResourceResolver';
 import type { TscnExternalResource } from '../../../parser/types';
 import { materialFromBag } from './build';
 import { buildMaterial } from './buildMaterial.testkit';
-import { standardMaterialBag, type StandardMaterialClass } from './materialBag';
+import { standardMaterialBags, type StandardMaterialClass } from './materialBag';
 import { bindSlotTexture, materialTextureState } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
@@ -615,7 +615,7 @@ describe('StandardMaterial3D arrival parity', () => {
       it(`${testCase.name}: the reactive adapter mounts the derived bag`, async () => {
         const textures = inlineTextures(testCase);
         const props = slotProps(testCase, textures);
-        const bag = standardMaterialBag(props.scalars, textures);
+        const bag = standardMaterialBags(props.scalars, textures).unfaded;
         const renderer = await ReactThreeTestRenderer.create(
           <mesh>
             <StandardMaterialSlot {...props} />
@@ -637,7 +637,7 @@ describe('StandardMaterial3D arrival parity', () => {
       it(`${testCase.name}: the imperative adapter constructs the derived bag`, () => {
         const textures = inlineTextures(testCase);
         const scalars = parseStandardMaterial3DScalars(testCase.properties);
-        const bag = standardMaterialBag(scalars, textures);
+        const bag = standardMaterialBags(scalars, textures).unfaded;
         const material = materialFromBag(bag);
         expect(material.type).toBe(TYPE_FOR[bag.materialClass]);
         const held = material as unknown as Record<string, unknown>;
@@ -654,9 +654,9 @@ describe('StandardMaterial3D arrival parity', () => {
     it('compares a bag with every prop on it — neither guard is vacuous', () => {
       // A derivation that silently returned `{}` would satisfy both loops above
       // for every case.
-      const physical = standardMaterialBag(
+      const physical = standardMaterialBags(
         parseStandardMaterial3DScalars({ clearcoat_enabled: 'true', clearcoat: '0.5' })
-      );
+      ).unfaded;
       expect(Object.keys(physical.props).length).toBeGreaterThan(20);
     });
   });
@@ -666,10 +666,10 @@ describe('StandardMaterial3D arrival parity', () => {
     // sRGB it reasserts on colour-map props, and the sampler state a clone carries.
     it('the reactive adapter lands on the state the imperative one builds', async () => {
       const imperative = materialFromBag(
-        standardMaterialBag(
+        standardMaterialBags(
           parseStandardMaterial3DScalars(EVERY_SLOT_TRANSFORMED.properties),
           inlineTextures(EVERY_SLOT_TRANSFORMED)
-        )
+        ).unfaded
       );
       expect(snapshot(await renderThroughSlot(EVERY_SLOT_TRANSFORMED))).toEqual(snapshot(imperative));
     });

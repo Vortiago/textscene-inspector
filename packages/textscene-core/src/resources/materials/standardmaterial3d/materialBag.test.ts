@@ -5,13 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  billboardOf,
-  castsShadowOf,
-  standardMaterialBag,
-  standardMaterialBags,
-  surfaceBillboard,
-} from './materialBag';
+import { billboardOf, castsShadowOf, standardMaterialBags, surfaceBillboard } from './materialBag';
 import { materialFromBag } from './build';
 import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/billboard';
@@ -24,7 +18,7 @@ import {
 } from '../../../r3f/testing/patchedFragment';
 
 function bag(properties: Record<string, string>, textures?: ResolvedTextureSlots) {
-  return standardMaterialBag(parseStandardMaterial3DScalars(properties), textures);
+  return standardMaterialBags(parseStandardMaterial3DScalars(properties), textures).unfaded;
 }
 
 /** The bag a geometry instance's fade below the threshold draws, in the alpha pass. */
@@ -32,7 +26,7 @@ function alphaPassBag(properties: Record<string, string> | null) {
   return standardMaterialBags(properties && parseStandardMaterial3DScalars(properties)).alphaPass;
 }
 
-describe('standardMaterialBag — the material class', () => {
+describe('standardMaterialBags — the material class', () => {
   it('derives a standard material for a plain PBR surface', () => {
     const derived = bag({ metallic: '0.7', roughness: '0.25' });
     expect(derived.materialClass).toBe('standard');
@@ -64,7 +58,7 @@ describe('standardMaterialBag — the material class', () => {
   });
 });
 
-describe('standardMaterialBag — scalar mapping', () => {
+describe('standardMaterialBags — scalar mapping', () => {
   it('keeps albedo LINEAR', () => {
     // Authored inside sRGB's linear segment (`c <= 0.04045 → c / 12.92`), so
     // the decoded channels are exact: 0.0025 / 0.0015 / 0.0005. A hex would take
@@ -113,7 +107,7 @@ describe('standardMaterialBag — scalar mapping', () => {
   });
 });
 
-describe('standardMaterialBag — texture slots', () => {
+describe('standardMaterialBags — texture slots', () => {
   const texture = new THREE.Texture();
 
   it('maps each Godot slot onto the three prop that samples it', () => {
@@ -159,7 +153,7 @@ describe('standardMaterialBag — texture slots', () => {
   });
 });
 
-describe('standardMaterialBag — fragment alpha', () => {
+describe('standardMaterialBags — fragment alpha', () => {
   it('patches nothing on an opaque surface', () => {
     expect(bag({}).injection).toBeUndefined();
   });
@@ -189,9 +183,9 @@ describe('standardMaterialBags — the alpha pass', () => {
     expect(props.opacity).toBe(0.5);
   });
 
-  it('leaves the unfaded bag as standardMaterialBag derives it (edge case)', () => {
+  it('leaves the unfaded bag as standardMaterialBags derives it (edge case)', () => {
     const scalars = parseStandardMaterial3DScalars({ albedo_color: 'Color(1, 1, 1, 0.5)' });
-    expect(standardMaterialBags(scalars).unfaded).toEqual(standardMaterialBag(scalars));
+    expect(standardMaterialBags(scalars).unfaded).toEqual(standardMaterialBags(scalars).unfaded);
   });
 
   it("reads the material's own alpha-pass depth write", () => {
@@ -207,11 +201,11 @@ describe('standardMaterialBags — the alpha pass', () => {
   });
 });
 
-describe('standardMaterialBag — no material at all', () => {
+describe('standardMaterialBags — no material at all', () => {
   it('falls back to the surface Godot itself draws', () => {
     // Not a default-constructed StandardMaterial3D: every backend binds a
     // hardcoded shader: `ALBEDO = vec3(0.6); ROUGHNESS = 0.8; METALLIC = 0.2`.
-    const derived = standardMaterialBag(null);
+    const derived = standardMaterialBags(null).unfaded;
     expect(derived.materialClass).toBe('standard');
     const props = derived.props as THREE.MeshStandardMaterialParameters;
     expect(props.color).toEqual(new THREE.Color().setRGB(0.6, 0.6, 0.6, THREE.LinearSRGBColorSpace));
@@ -221,7 +215,7 @@ describe('standardMaterialBag — no material at all', () => {
   });
 });
 
-describe('standardMaterialBag — billboard_mode', () => {
+describe('standardMaterialBags — billboard_mode', () => {
   it('carries the mode on the material, where each draw group reads it', () => {
     const built = standardMaterial({ billboard_mode: '2' });
     expect(billboardOf(built).mode).toBe(BillboardMode.BILLBOARD_FIXED_Y);
@@ -260,7 +254,7 @@ describe('standardMaterialBag — billboard_mode', () => {
   });
 
   it('reads DISABLED from Godot’s default surface and from a foreign material', () => {
-    expect(billboardOf(materialFromBag(standardMaterialBag(null))).mode).toBe(
+    expect(billboardOf(materialFromBag(standardMaterialBags(null).unfaded)).mode).toBe(
       BillboardMode.BILLBOARD_DISABLED
     );
     expect(billboardOf(new THREE.MeshBasicMaterial()).mode).toBe(BillboardMode.BILLBOARD_DISABLED);
@@ -268,7 +262,9 @@ describe('standardMaterialBag — billboard_mode', () => {
 
   it('reads the same billboard from the scalars as from the material built from them', () => {
     const scalars = parseStandardMaterial3DScalars({ billboard_mode: '2', billboard_keep_scale: 'true' });
-    expect(surfaceBillboard(scalars)).toEqual(billboardOf(materialFromBag(standardMaterialBag(scalars))));
+    expect(surfaceBillboard(scalars)).toEqual(
+      billboardOf(materialFromBag(standardMaterialBags(scalars).unfaded))
+    );
   });
 
   it('reads DISABLED from no scalars, which is Godot’s default surface', () => {
@@ -277,11 +273,13 @@ describe('standardMaterialBag — billboard_mode', () => {
 
   it('gives each bag its own userData, as the .tres loader writes into it', () => {
     const scalars = parseStandardMaterial3DScalars({ billboard_mode: '1' });
-    expect(standardMaterialBag(scalars).props.userData).not.toBe(standardMaterialBag(scalars).props.userData);
+    expect(standardMaterialBags(scalars).unfaded.props.userData).not.toBe(
+      standardMaterialBags(scalars).unfaded.props.userData
+    );
   });
 });
 
-describe('standardMaterialBag — shadow-pass membership', () => {
+describe('standardMaterialBags — shadow-pass membership', () => {
   it('carries the decoded membership on the material, where each draw group reads it', () => {
     const built = standardMaterial({ transparency: '1' });
     expect(castsShadowOf(built)).toBe(false);
@@ -292,7 +290,7 @@ describe('standardMaterialBag — shadow-pass membership', () => {
   });
 
   it('casts from Godot’s default surface and from a foreign material', () => {
-    expect(castsShadowOf(materialFromBag(standardMaterialBag(null)))).toBe(true);
+    expect(castsShadowOf(materialFromBag(standardMaterialBags(null).unfaded))).toBe(true);
     expect(castsShadowOf(new THREE.MeshBasicMaterial())).toBe(true);
   });
 });

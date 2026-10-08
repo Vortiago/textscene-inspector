@@ -9,7 +9,8 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
-import { useGlbOverrides } from './GlbOverridesContext';
+import { useGlbInstance } from './GlbInstanceContext';
+import { useGlbGeometryInstances, type GlbRoot } from './glbGeometryInstances';
 import { applyGlbNodeOverrides, isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOverrides';
 import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME, type GlbObjectEntry } from './glbHierarchy';
 import { useAnimationTransport, type PlayState } from '../../contexts/AnimationTransportContext';
@@ -48,7 +49,9 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
 
   // The instancing scene's inline override children target nodes inside this GLB, by name, so
   // a baked translation is overridden as in Godot.
-  const overrides = useGlbOverrides();
+  const nodePath = useNodePath();
+  const root = useGlbRoot(nodePath);
+  const { overrides } = root;
   const object = result.value;
 
   // One flattening of the clone, shared by selection, visibility, overrides and material slots.
@@ -63,11 +66,11 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // the synchronous mutation above cannot do, so each one mounts its own slot component.
   const importMaterials = useGlbImportMaterials(object);
   const materialOverrides = useGlbMaterialOverrides(object, entries, overrides);
+  useGlbGeometryInstances(object, entries, root);
 
   // Registers each GLB object under the tree's relPath scheme, so the SceneTreeViewer can select
   // and hide it.
   const selection = useOptionalSelection();
-  const nodePath = useNodePath();
 
   const registerNodeObject = selection?.registerNodeObject;
   const unregisterNodeObject = selection?.unregisterNodeObject;
@@ -186,6 +189,17 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
       {materialOverrides}
       {children}
     </primitive>
+  );
+}
+
+const NO_OVERRIDES: readonly LiveNode[] = [];
+
+/** The node that instances this GLB, or, for a GLB opened as the scene, its own root. */
+function useGlbRoot(nodePath: string | null): GlbRoot {
+  const instance = useGlbInstance();
+  return useMemo(
+    () => instance ?? { overrides: NO_OVERRIDES, path: nodePath, visibilityParent: null },
+    [instance, nodePath]
   );
 }
 

@@ -29,8 +29,9 @@ lighting chunks, which every other material in the previewer draws with.
 - `surfaceAlphaProps` turns that record and the final blend state into props. A MIX surface
   that writes alpha 1 overwrites, which three spells as `NoBlending`. Every other case is a
   `ProgramInjection` on `alphatest_fragment` or `alphahash_fragment`.
-- `standardMaterialBag` applies the fade alpha first and the alpha props last, so each adapter
-  only installs the result. The reactive adapter passes the injection through
+- `standardMaterialBags` gives the unfaded and the alpha-pass bags with the alpha props last,
+  so each adapter only installs the result. The scene cull writes the fade alpha into the
+  alpha-pass opacity before each render. The reactive adapter passes the injection through
   `materialProgramInputs`, and the imperative adapter through `injectProgram`.
 - Only Forward+ semantics apply, because Mobile and Compatibility ignore `transparency`
   (`visual_instance_3d.cpp:524`).

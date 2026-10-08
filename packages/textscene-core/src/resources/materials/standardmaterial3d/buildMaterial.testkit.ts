@@ -5,7 +5,7 @@
  */
 import type * as THREE from 'three';
 import { materialFromBag } from './build';
-import { standardMaterialBag } from './materialBag';
+import { standardMaterialBags } from './materialBag';
 import { bindSlotTexture, materialTextureState } from './textureBinding';
 import type { ResolvedTextureSlots, StandardMaterial3DScalars, TextureSlot } from './types';
 
@@ -28,5 +28,7 @@ export function buildMaterial(
   scalars: StandardMaterial3DScalars | null,
   textures: ResolvedTextureSlots = {}
 ): THREE.Material {
-  return materialFromBag(standardMaterialBag(scalars, scalars ? boundTextureSlots(scalars, textures) : {}));
+  return materialFromBag(
+    standardMaterialBags(scalars, scalars ? boundTextureSlots(scalars, textures) : {}).unfaded
+  );
 }

@@ -6,11 +6,11 @@
 
 import type * as THREE from 'three';
 import { materialFromBag } from '../build';
-import { standardMaterialBag } from '../materialBag';
+import { standardMaterialBags } from '../materialBag';
 import { parseStandardMaterial3DScalars } from '../scalars';
 
 export function standardMaterial(properties: Record<string, string> = {}): THREE.Material {
-  return materialFromBag(standardMaterialBag(parseStandardMaterial3DScalars(properties)));
+  return materialFromBag(standardMaterialBags(parseStandardMaterial3DScalars(properties)).unfaded);
 }
 
 /**

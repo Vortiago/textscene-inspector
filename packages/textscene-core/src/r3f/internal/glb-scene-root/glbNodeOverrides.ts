@@ -2,7 +2,8 @@
  * Applies an instancing scene's overrides, such as `[node name="plafoniera" parent="."]`, to
  * nodes inside the GLB it instances: transform, `layers` and `visible`. A GLB with no override
  * keeps its baked offsets. `surface_material_override/0` needs an async load, so
- * `GlbSurfaceMaterialOverride` applies it.
+ * `GlbSurfaceMaterialOverride` applies it. The scene cull applies the GeometryInstance3D state
+ * (`glbGeometryInstances.ts`).
  */
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';

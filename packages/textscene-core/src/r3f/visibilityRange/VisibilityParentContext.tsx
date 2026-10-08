@@ -43,14 +43,24 @@ function OwnVisibilityParent({
   relative: string;
   children: ReactNode;
 }) {
-  const uniquePaths = useUniqueNamePaths(path);
-  const resolved = resolveRelativePath(path, relative, uniquePaths);
-  // Godot refuses the node itself (`node_3d.cpp:1313`). A path that names no GeometryInstance3D
-  // the scene cull holds, it treats as none there.
-  const visibilityParent = resolved === path ? null : resolved;
+  const visibilityParent = resolveVisibilityParent(path, relative, useUniqueNamePaths(path));
   return (
     <VisibilityParentContext.Provider value={visibilityParent}>{children}</VisibilityParentContext.Provider>
   );
+}
+
+/**
+ * The visibility parent the node at `path` names with `relative`, or null for none. Godot refuses
+ * the node itself (`node_3d.cpp:1313`). A path that names no GeometryInstance3D the scene cull
+ * holds, it treats as none there.
+ */
+export function resolveVisibilityParent(
+  path: string,
+  relative: string,
+  uniquePaths: ReadonlyMap<string, string> | undefined
+): string | null {
+  const resolved = resolveRelativePath(path, relative, uniquePaths);
+  return resolved === path ? null : resolved;
 }
 
 /** The node path of the enclosing node's visibility parent, or null for none. */

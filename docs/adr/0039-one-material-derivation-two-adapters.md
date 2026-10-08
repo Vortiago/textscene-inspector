@@ -33,9 +33,9 @@ different shapes, and no test compares the paths.
 
 ## Decision
 
-`standardMaterialBag(scalars, textures)`
+`standardMaterialBags(scalars, textures)`
 (`resources/materials/standardmaterial3d/materialBag.ts`) derives the class and the prop
-bag once, and returns them as one discriminated value:
+bag once, for the unfaded pass and the alpha pass, each as one discriminated value:
 
 ```ts
 type StandardMaterialBag =
@@ -272,6 +272,6 @@ same derivation, not a second derivation.
 - The audit table is a checklist, not a promise. Each `unimplemented` row is a known gap,
   stated where the next reader of the derivation meets it, and a row that changes is a
   row this file must change with it.
-- `standardMaterialBag` value-imports `three`, so the slice's `index.ts`, which the
+- `standardMaterialBags` value-imports `three`, so the slice's `index.ts`, which the
   linter's import closure walks, never reaches it (ADR-0031). Both adapters sit on the
   renderer side of that line.

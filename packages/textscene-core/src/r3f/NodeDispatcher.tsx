@@ -56,7 +56,7 @@ import {
   useParentSpaceFamily,
   WorldRoot,
 } from './parentSpaceScope.js';
-import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
+import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
 
@@ -165,7 +165,7 @@ function OwnResourceScope({ scope, children }: { scope: SceneScope; children: Re
 /**
  * The node without its deep children, whose parent path descends into this
  * instance's content. Here they would take the instance's transform, so they render
- * nowhere. `GlbOverridesProvider` still gets them all. A typed deep child does not
+ * nowhere. `GlbInstanceProvider` still gets them all. A typed deep child does not
  * render: it needs portalling onto the matched GLB object.
  */
 function withoutDeepChildren(node: TscnNode): TscnNode {
@@ -383,7 +383,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
 
   // A `.glb` or multi-root scene: the loaded roots are injected as children.
   return (
-    <GlbOverridesProvider overrides={node.children}>
+    <GlbInstanceProvider node={node} path={path}>
       <PlainNode node={shallow} path={path}>
         <SceneResourcesProvider
           internalResources={loadedScene.internalResources}
@@ -398,6 +398,6 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
           </InstancedScenePathsProvider>
         </SceneResourcesProvider>
       </PlainNode>
-    </GlbOverridesProvider>
+    </GlbInstanceProvider>
   );
 }

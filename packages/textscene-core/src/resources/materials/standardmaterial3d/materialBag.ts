@@ -185,21 +185,14 @@ export function castsShadowOf(material: THREE.Material): boolean {
 }
 
 /**
- * Derive the material this decoded StandardMaterial3D describes, unfaded.
+ * Derive the material this decoded StandardMaterial3D describes, in each pass a geometry
+ * instance's fade can draw it in: unfaded, and the alpha pass.
  *
  * @param scalars - the decoded material, or null for a surface with none
  * @param textures - already-bound textures by Godot slot; an absent slot lands
  *   as `null`, never `undefined`, so a late arrival cannot be mistaken for
  *   "leave whatever the material has" by either adapter
  */
-export function standardMaterialBag(
-  scalars: StandardMaterial3DScalars | null,
-  textures: ResolvedTextureSlots = {}
-): StandardMaterialBag {
-  return standardMaterialBags(scalars, textures).unfaded;
-}
-
-/** {@link standardMaterialBag}, in each pass a geometry instance's fade can draw it in. */
 export function standardMaterialBags(
   scalars: StandardMaterial3DScalars | null,
   textures: ResolvedTextureSlots = {}

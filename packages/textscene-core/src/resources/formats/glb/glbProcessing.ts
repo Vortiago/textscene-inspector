@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCasting';
 import { ShadowCastingSetting } from '../../../godot/rendering';
 import { withExtensionRules } from './extensionRules';
+import { tagMeshInstances } from './meshInstances';
 import type { GltfExtensionRules } from './types';
 import type { GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
 
@@ -164,6 +165,7 @@ export async function createGLBMesh(
   // GLTFLoader returns embedded clips on `gltf.animations`. The scene's `.animations`
   // is where GLBSceneRoot plays them from and where `cloneWithMaterials` copies them.
   gltf.scene.animations = gltf.animations;
+  tagMeshInstances(gltf.scene, gltf.parser.associations);
   return gltf.scene;
 }
 

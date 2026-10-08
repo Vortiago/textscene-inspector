@@ -1,5 +1,5 @@
 /**
- * `<StandardMaterialSlot>`: the reactive adapter that mounts `standardMaterialBag`'s
+ * `<StandardMaterialSlot>`: the reactive adapter that mounts `standardMaterialBags`'s
  * class as the JSX tag R3F prop-diffs, for every StandardMaterial3D-bearing node.
  * It derives nothing: `materialBag.ts` holds the class choice and every mapping,
  * and the imperative `build.ts` reads it too. A scalar-only caller passes `scalars`. Inside a

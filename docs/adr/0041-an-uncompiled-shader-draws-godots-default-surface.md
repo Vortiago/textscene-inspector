@@ -41,7 +41,7 @@ therefore decline the resource, do not decode it, and render the derivation's `n
 input.
 
 `buildStandardMaterial` accepts that `null`. An adapter narrower than its own derivation
-(`standardMaterialBag`) forces callers to reinvent the case it drops, which is what an
+(`standardMaterialBags`) forces callers to reinvent the case it drops, which is what an
 invented surface is.
 
 ## Consequences
