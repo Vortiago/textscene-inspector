@@ -48,4 +48,4 @@ The lenient parser reuses MeshInstance3D's parse. The scene cull measures the no
 ## Known limitations
 
 - **Not drawn** Godot draws the soft mesh, but the previewer draws nothing for it.
-- **Needs runtime** Godot culls the body by its simulated points once physics moves them, but here the cull reads the mesh at rest.
+- **Needs runtime** Godot culls the body by its simulated points once physics moves them, but here the cull reads the mesh at rest (#633).
