@@ -4,7 +4,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
@@ -26,11 +25,7 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
 
   const diagnostics: Diagnostic[] = [];
 
-  if (!isValidProperties(node.properties)) {
-    return diagnostics;
-  }
-
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // Presence, not value: the rule asks which splits the file authors, and the
   // numbers themselves are never compared.

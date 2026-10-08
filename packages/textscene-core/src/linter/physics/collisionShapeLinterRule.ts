@@ -84,7 +84,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
     const report = (arm: RuleArm | undefined, message: string) => reportArm(diagnostics, arm, node, message);
-    const rawProps = node.properties as unknown as Record<string, string>;
+    const rawProps = node.rawProperties;
 
     // One scan of the scene's resource tables for every question below: the
     // slot's state and, where it resolves, the shape class it names.

@@ -246,9 +246,11 @@ import '../nodes/rendering/shaderglobalsoverride/index.js';
 import '../nodes/resources/resourcepreloader/index.js';
 import '../nodes/os/statusindicator/index.js';
 
-import type { TscnScene } from './types.js';
+import type { NodeOrigin, TscnNode, TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';
+import { strandedNodes } from './sceneTreeBuilder.js';
 import { parseNodeWithRegistry } from '../core/NodeRegistry.js';
+import * as logger from '../logger.js';
 
 /**
  * Lenient TSCN parser used for rendering.
@@ -265,6 +267,20 @@ export class TscnParser {
    * shape declared by the relevant node-type module.
    */
   parse(content: string): TscnScene {
-    return this.core.parse(content, parseNodeWithRegistry);
+    const { scene, origins } = this.core.parse(content, parseNodeWithRegistry);
+    warnStrandedNodes(origins, scene.nodes);
+    return scene;
+  }
+}
+
+/**
+ * Logs each heading the tree could not place. The renderer drops such a node silently, so
+ * the log is the only trace. The linter reports it as a diagnostic instead.
+ */
+function warnStrandedNodes(origins: readonly NodeOrigin<TscnNode>[], roots: readonly TscnNode[]): void {
+  for (const { node } of strandedNodes(origins, roots)) {
+    logger.warn(
+      `[Parser] Orphaned node dropped from the scene tree: "${node.name}" (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
+    );
   }
 }

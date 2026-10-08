@@ -8,10 +8,10 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { parentTypeVerdict, type ParentVerdict } from '../../../../linter/parentType.js';
-import type { TscnNode, TscnScene } from '../../../../parser/types.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { literalText } from '../../../../godot/index.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import type { RawNode, RawScene } from '../../../../parser/types.js';
 
 const arms = {
   trackerRequiredForLocalPose: groundedArm('openxrrendermodelmanager-tracker-required-for-local-pose', {
@@ -38,7 +38,7 @@ function readTracker(properties: Record<string, string>): number {
  * Walks every ancestor with `parentTypeVerdict`, so its instanced and untyped exemption holds: a
  * `mismatch` climbs one level, and `satisfied`, `unknowable` or `root` ends the walk.
  */
-function ancestorHasXROrigin3D(scene: TscnScene, node: TscnNode): ParentVerdict {
+function ancestorHasXROrigin3D(scene: RawScene, node: RawNode): ParentVerdict {
   let current = node;
   for (;;) {
     const verdict = parentTypeVerdict(scene, current, 'XROrigin3D');
@@ -49,7 +49,7 @@ function ancestorHasXROrigin3D(scene: TscnScene, node: TscnNode): ParentVerdict 
 
 function checkOpenXRRenderModelManager(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  const properties = node.properties as unknown as Record<string, string>;
+  const properties = node.rawProperties;
   const diagnostics: Diagnostic[] = [];
 
   // ANY(0), the default, and NONE_SET(1) cast only the direct parent. A non-empty

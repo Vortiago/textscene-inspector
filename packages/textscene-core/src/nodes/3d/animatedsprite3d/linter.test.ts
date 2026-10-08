@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { ruleRegistry } from '../../../linter/RuleRegistry';
 import type { RuleContext } from '../../../linter/types';
-import type { TscnNode, TscnScene } from '../../../parser/types';
+import type { RawNode, RawScene } from '../../../parser/types';
 import { danglingResourceDiagnostics } from '../../../linter/danglingResources';
 import './linterParser';
 import './linter';
@@ -19,20 +19,19 @@ const RULE_NAME = 'valid-animatedsprite3d-properties';
  * A minimal RuleContext for one AnimatedSprite3D node. `declared` lists the SubResource ids the
  * scene holds, which the generic dangling-resource pass resolves `sprite_frames` against.
  */
-function context(properties: Record<string, string>, declared: string[] = ['frames_1']): RuleContext {
-  const node: TscnNode = {
-    rawProperties: {},
+function context(rawProperties: Record<string, string>, declared: string[] = ['frames_1']): RuleContext {
+  const node: RawNode = {
+    rawProperties,
     name: 'MyAnimatedSprite3D',
     type: 'AnimatedSprite3D',
     children: [],
-    properties: properties as unknown as Record<string, unknown>,
   };
-  const scene: TscnScene = {
+  const scene: RawScene = {
     nodes: [node],
     externalResources: [],
     internalResources: declared.map((id) => ({ id, type: 'SpriteFrames', data: {} })),
   };
-  return { scene, node, properties: node.properties };
+  return { scene, node };
 }
 
 /** Run AnimatedSprite3D's registered rule against a raw property bag. */

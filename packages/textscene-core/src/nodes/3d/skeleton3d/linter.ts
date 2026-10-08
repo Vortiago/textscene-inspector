@@ -4,7 +4,6 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { Skeleton3DProperties } from './types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { indexedKeyRegex, boolSlotValue } from '../../../godot/index.js';
 import { boneNameFindings } from './boneNameOrder.js';
@@ -46,19 +45,11 @@ const arms = {
  */
 const DEPRECATED_POSE_KEY = indexedKeyRegex('^bones/#/(?:pose|bound_children)(?:/.*)?$', 'to_int');
 
-function isSkeleton3DProperties(props: unknown): props is Skeleton3DProperties {
-  return typeof props === 'object' && props !== null;
-}
-
 function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  if (!isSkeleton3DProperties(node.properties)) {
-    return diagnostics;
-  }
-
-  const rawProps = node.properties as unknown as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // linterParser.ts validates `motion_scale` and `modifier_callback_mode_process`, so neither gets
   // a rule here.

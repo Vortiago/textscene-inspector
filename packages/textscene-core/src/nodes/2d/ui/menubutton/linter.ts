@@ -7,7 +7,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
@@ -30,8 +29,7 @@ const ITEM_PREFIX = 'popup/item_';
 
 function checkMenuButton(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // `item_count` is the popup's (menu_button.cpp:123-131, menu_button.cpp:134-135). Absent means 0: the popup
   // starts with an empty `Vector<Item> items`, doc/classes/MenuButton.xml's default="0" the serialiser omits.

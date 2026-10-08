@@ -314,3 +314,13 @@ framework.
   default range gets the same warning as one that does not. This is deliberate: the rule
   names an authoring hazard and is not a render simulation, and it is cheaper than a
   copy of each setter's arithmetic in the linter.
+
+## Amendments
+
+- **The Raw view replaces direct `properties` reads.** The strict parser now builds a
+  `RawNode` with no `properties`, and a **Lint rule** reads `node.rawProperties`, the same
+  file-ordered bag. The claims above about `createSimpleNode` and
+  `RuleContext.node.properties` describe the code when this ADR was accepted. The
+  file-order argument holds unchanged for `rawProperties`. See
+  [ARCHITECTURE.md](../../ARCHITECTURE.md) and **Raw view** in
+  [GLOSSARY.md](../../GLOSSARY.md).

@@ -18,11 +18,10 @@ const arms = {
 
 function checkOpenXRVisibilityMask(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  const properties = node.properties as unknown as Record<string, string>;
 
   // `is_visible()` reads only the node's own `visible` flag (node_3d.cpp:1127-1130), so an explicitly
   // hidden mask never reaches Godot's check either.
-  if (isExplicitlyHidden(properties)) return [];
+  if (isExplicitlyHidden(node)) return [];
 
   const verdict = parentTypeVerdict(scene, node, 'XRCamera3D');
   // Unlike XRCamera3D, this one DOES warn at the root: its own check casts

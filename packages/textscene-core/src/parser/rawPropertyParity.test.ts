@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from './TscnParser.js';
 import { StrictTscnParser } from '../linter/StrictTscnParser.js';
-import type { TscnNode } from './types.js';
+import type { RawNode } from './types.js';
 
 const SRC = `[gd_scene format=3]
 
@@ -22,7 +22,7 @@ unique_name_in_owner = true
 editor_description = "note"
 `;
 
-function rawByName(nodes: TscnNode[], out = new Map<string, Record<string, string>>()) {
+function rawByName(nodes: RawNode[], out = new Map<string, Record<string, string>>()) {
   for (const node of nodes) {
     out.set(node.name, node.rawProperties);
     rawByName(node.children, out);

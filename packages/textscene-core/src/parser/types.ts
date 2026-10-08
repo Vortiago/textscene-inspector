@@ -6,11 +6,10 @@ import type { Node3DProperties } from '../nodes/base/node3d/types';
 
 /**
  * One `[node]` heading as the scan saw it, before `buildSceneTree` placed it. Kept off
- * `TscnNode` because only `strandedNodes` and `rootDeclaringParent` read it, both
- * against the returned tree.
+ * the node because only the `sceneTreeBuilder` checks read it, against the returned tree.
  */
-export interface NodeOrigin {
-  readonly node: TscnNode;
+export interface NodeOrigin<N extends RawNode> {
+  readonly node: N;
   /** 1-based line of the node's own heading. */
   readonly line: number;
   /**
@@ -29,28 +28,12 @@ export interface NodeOrigin {
   readonly recoverableById?: boolean;
 }
 
-export interface TscnScene {
+/** A parsed scene. `N` is the node the parser built: a `TscnNode`, or the strict parser's `RawNode`. */
+export interface TscnScene<N extends RawNode = TscnNode> {
   /** Root nodes in the scene tree. */
-  nodes: TscnNode[];
+  nodes: N[];
   externalResources: TscnExternalResource[];
   internalResources: TscnInternalResource[];
-  /**
-   * Headings whose `parent=` path resolved against nothing, so they are not in
-   * `nodes`. Absent rather than empty when nothing was stranded.
-   */
-  orphanedNodes?: readonly NodeOrigin[];
-  /**
-   * The root heading, when it declares a `parent=`, which Godot refuses
-   * (`packed_scene.cpp:218-219`). Absent otherwise, since a present-but-empty key
-   * would change the object shape the render path sees for every well-formed scene.
-   */
-  rootWithParent?: NodeOrigin;
-  /**
-   * Headings spelling `parent=""`, which faults the text loader
-   * (`resource_format_text.cpp:206-207`). Absent rather than empty. Not a subset of the
-   * fields above: such a heading has no `node.parent`, so it is seated, not stranded.
-   */
-  emptyParentHeadings?: readonly NodeOrigin[];
   /**
    * A `.tres` file's `[gd_resource type=]`, the class the loader builds its `[resource]` body as
    * (`resource_format_text.cpp:1166`, `:741`). Absent in a `.tscn`, and where the header names no type.
@@ -61,35 +44,25 @@ export interface TscnScene {
    * (`resource_format_text.cpp:723-728`).
    */
   mainResource?: TscnMainResource;
-  /**
-   * The `binds=` value of each `[connection]` heading, as written. The loader parses a heading's fields with the
-   * resource parser a property value goes through (`resource_format_text.cpp:286`, `:379`, `variant_parser.cpp:1862`),
-   * so an `ExtResource` in it is a use. Absent rather than empty when no heading binds anything.
-   */
-  connectionBinds?: readonly string[];
-  /**
-   * The `instance=` value of each `[node]` heading that follows no other `[node]`: the first, or one after a
-   * `[connection]` or `[editable]`. Only a node body's read of the next heading skips a failed `ExtResource`
-   * (`resource_format_text.cpp:288-289`). Every other read ends the load (`:533-536`, `:647-650`, `:381-384`,
-   * `:404-407`). Absent rather than empty when no such heading instances anything.
-   */
-  instancesOutsideNodeBody?: readonly string[];
 }
 
-export interface TscnNode {
+/**
+ * The **Raw view** of a node: `rawProperties`, the literals both parsers publish, and no
+ * typed `properties`. The strict parser builds this. A `TscnNode` is a `RawNode`, so a helper
+ * typed on it takes either tree.
+ */
+export interface RawNode {
   name: string;
   /** Godot class name, for example "Node3D". */
   type: string;
   /** Parent node path: "." for the root's children, "NodeName" for a named parent. */
   parent?: string;
-  children: TscnNode[];
-  /** Type-specific properties, for example Node3DProperties for a Node3D. */
-  properties: Node3DProperties | Record<string, unknown>;
+  children: RawNode[];
   /**
    * Raw body properties as written, published by both parsers
    * (`parser/rawPropertyParity.test.ts`), so read this from code the linter and the
-   * render path share. `properties` differs by parser. It also lets a type-less
-   * instance node's overrides be re-parsed against the instanced root's type.
+   * render path share. It also lets a type-less instance node's overrides be re-parsed
+   * against the instanced root's type.
    */
   rawProperties: Record<string, string>;
   /**
@@ -123,6 +96,55 @@ export interface TscnNode {
   owner?: string;
   /** External scene instance reference, for example ExtResource("1_abc"). */
   instance?: string;
+}
+
+/** A node whose children are its own kind: the shape the tree builder seats a child into. */
+export type SceneNode<N> = RawNode & { children: N[] };
+
+/** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
+export interface HeadingFacts {
+  /**
+   * Headings the tree could not place, so they are not in `nodes`: a `parent=` path that resolves
+   * against nothing, or a later heading with no `parent=`.
+   */
+  orphanedNodes: readonly NodeOrigin<RawNode>[];
+  /**
+   * The root heading, when it declares a `parent=`, which Godot refuses
+   * (`packed_scene.cpp:218-219`), or undefined.
+   */
+  rootWithParent: NodeOrigin<RawNode> | undefined;
+  /**
+   * Headings spelling `parent=""`, which faults the text loader
+   * (`resource_format_text.cpp:206-207`). Not a subset of the fields above: such a heading has
+   * no `node.parent`, so it is seated, not orphaned.
+   */
+  emptyParentHeadings: readonly NodeOrigin<RawNode>[];
+  /**
+   * The `binds=` value of each `[connection]` heading, as written. The loader parses a heading's fields with the
+   * resource parser a property value goes through (`resource_format_text.cpp:286`, `:379`, `variant_parser.cpp:1862`),
+   * so an `ExtResource` in it is a use.
+   */
+  connectionBinds: readonly string[];
+  /**
+   * The `instance=` value of each `[node]` heading that follows no other `[node]`: the first, or one after a
+   * `[connection]` or `[editable]`. Only a node body's read of the next heading skips a failed `ExtResource`
+   * (`resource_format_text.cpp:288-289`). Every other read ends the load (`:533-536`, `:647-650`, `:381-384`,
+   * `:404-407`).
+   */
+  instancesOutsideNodeBody: readonly string[];
+}
+
+/** The **Raw view** of a scene: the tree a **Lint rule** reads. */
+export type RawScene = TscnScene<RawNode>;
+
+/** What the strict parser returns: the **Raw view** and the heading facts. */
+export interface StrictScene extends RawScene, HeadingFacts {}
+
+/** A node from the lenient parser: the **Raw view** plus the typed values the renderer reads. */
+export interface TscnNode extends RawNode {
+  children: TscnNode[];
+  /** Type-specific properties, for example Node3DProperties for a Node3D. */
+  properties: Node3DProperties | Record<string, unknown>;
 }
 
 export interface TscnExternalResource {
@@ -168,7 +190,7 @@ export interface TscnMainResource {
 }
 
 /** What the scan builds from one section: the object a strict consumer files the section's lines under. */
-export type BuiltSection = TscnNode | TscnInternalResource | TscnExternalResource | TscnMainResource;
+export type BuiltSection = RawNode | TscnInternalResource | TscnExternalResource | TscnMainResource;
 
 /** Alias used by the immutable SceneGraph and dependency-tracking helpers. */
 export type ExtResource = TscnExternalResource;

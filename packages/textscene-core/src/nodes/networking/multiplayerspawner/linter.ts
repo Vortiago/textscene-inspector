@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { extractNodePath, isValidProperties } from '../../../linter/linterUtils.js';
+import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
@@ -17,9 +17,8 @@ const arms = {
 
 function checkMultiplayerSpawner(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  if (!isValidProperties(node.properties)) return [];
 
-  const raw = node.properties.spawn_path;
+  const raw = node.rawProperties.spawn_path;
   if (!raw) return [];
 
   const path = extractNodePath(raw);

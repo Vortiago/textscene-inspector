@@ -6,7 +6,6 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { isValidProperties } from '../linterUtils.js';
 import { knownParent } from '../parentType.js';
 import { resolveGlobalTransform2D } from '../../nodes/canvasitem/shared/globalTransform2D.js';
 import { parseGodotFloat } from '../validators/commonValidators.js';
@@ -59,8 +58,7 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
   function check(context: RuleContext): Diagnostic[] {
     const { node, scene } = context;
     const diagnostics: Diagnostic[] = [];
-    if (!isValidProperties(node.properties)) return diagnostics;
-    const props = node.properties;
+    const props = node.rawProperties;
     const report = (arm: RuleArm | undefined, message: string) => reportArm(diagnostics, arm, node, message);
 
     if (

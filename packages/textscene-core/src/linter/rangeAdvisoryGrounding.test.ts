@@ -10,7 +10,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
 import { join } from 'node:path';
 import { rangeAdvisories, type RangeAdvisoryTable, type WarningArm } from './rangeAdvisory.js';
-import type { TscnNode } from '../parser/types.js';
+import type { RawNode } from '../parser/types.js';
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
 /**
@@ -47,8 +47,8 @@ const arm: WarningArm = {
   grounding: { kind: 'engine', at: 'light_3d.cpp:389' },
 };
 
-function node(properties: Record<string, string>): TscnNode {
-  return { name: 'N', type: 'T', properties } as unknown as TscnNode;
+function node(rawProperties: Record<string, string>): RawNode {
+  return { name: 'N', type: 'T', rawProperties, children: [] };
 }
 
 describe('range advisory grounding', () => {

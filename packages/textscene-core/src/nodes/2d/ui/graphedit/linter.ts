@@ -6,7 +6,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import { parseOptionalVector2 } from '../../../../parser/valueParsers.js';
 import { resolveGraphEditLoadState } from './loadOrder.js';
@@ -33,9 +32,8 @@ function checkZoomLimits(context: RuleContext): Diagnostic[] {
   // The `CLAMP(p_zoom, zoom_min, zoom_max)` of `set_zoom` (graph_edit.cpp:2434) is left out: its
   // result depends on the file order of the keys.
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
 
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
   const minRaw = props.zoom_min;
   const maxRaw = props.zoom_max;
   if (minRaw === undefined || maxRaw === undefined) return [];
@@ -71,9 +69,8 @@ function vector2Literal(value: { x: number; y: number }): string {
  */
 function checkScrollOffset(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
 
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
   const raw = props.scroll_offset;
   if (raw === undefined) return [];
 

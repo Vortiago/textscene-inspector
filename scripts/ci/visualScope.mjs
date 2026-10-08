@@ -20,8 +20,8 @@ export const NON_RENDERING_PATHS = [
   // Agent and hook configuration.
   /^\.claude\//,
   /^githooks\//,
-  /^\.github\/(ISSUE_TEMPLATE\/|pull_request_template\.md$|dependabot\.yml$)/,
-  /^\.github\/workflows\/(claude-review|pages|pr-title|release)\.yml$/,
+  // Repository configuration, except ci.yml and the actions it runs, which define the run.
+  /^\.github\/(?!workflows\/ci\.yml$|actions\/)/,
   // The other apps: the harness builds and drives the web previewer alone.
   /^apps\/textscene-(linter|vscode)\//,
   // The linter's half of core. It feeds the Source pane's gutter, never the canvas.

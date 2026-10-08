@@ -22,10 +22,9 @@ const arms = {
 // physics-interpolation warning needs `SceneTree::is_fti_enabled_in_project()`, a project setting.
 function checkXRNode3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  const properties = node.properties as unknown as Record<string, string>;
 
   // An explicitly hidden node never reaches Godot's check either.
-  if (isExplicitlyHidden(properties)) return [];
+  if (isExplicitlyHidden(node)) return [];
 
   const diagnostics: Diagnostic[] = [];
 
@@ -44,7 +43,7 @@ function checkXRNode3D(context: RuleContext): Diagnostic[] {
   // `pose_name` defaults to `&"default"` (doc/classes/XRNode3D.xml agrees), so `pose = &""` is a real
   // state. `set_tracker` (xr_nodes.cpp:301-302) resets `pose_name`, so this assumes Godot's
   // `ADD_PROPERTY` order, `tracker` before `pose` (xr_nodes.cpp:249,253), which every saved file keeps.
-  const pose = properties.pose;
+  const pose = node.rawProperties.pose;
   // `literalText` rather than a hand-rolled regex: it takes every spelling
   // of an empty name, `&""` and `''` alike (xr_nodes.cpp:510-512).
   if (pose !== undefined && literalText(pose) === '') {

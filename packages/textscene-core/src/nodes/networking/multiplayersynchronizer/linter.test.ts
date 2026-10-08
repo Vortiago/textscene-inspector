@@ -19,7 +19,7 @@ function diagnosticsFor(content: string) {
   if (!scene) throw new Error('fixture failed to parse');
   const node = scene.nodes[0]?.children.find((child) => child.type === 'MultiplayerSynchronizer');
   expect(node, 'the fixture text must contain a MultiplayerSynchronizer child').toBeDefined();
-  return multiplayerSynchronizerRootPathRule.check({ scene, node: node!, properties: node!.properties });
+  return multiplayerSynchronizerRootPathRule.check({ scene, node: node! });
 }
 
 /** A MultiplayerSynchronizer carrying `body`, with a child named SyncTarget to point at. */

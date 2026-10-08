@@ -56,7 +56,7 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
     const { node } = context;
     const report = (arm: RuleArm | undefined, message: string) => reportArm(diagnostics, arm, node, message);
 
-    const rawProps = node.properties as unknown as Record<string, string>;
+    const rawProps = node.rawProperties;
 
     // `floor_snap_length` gets no advisory: its hint (character_body_2d.cpp:749,
     // character_body_3d.cpp:934) ends in `or_greater`, so the high end is open,

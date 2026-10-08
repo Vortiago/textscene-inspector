@@ -7,7 +7,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
@@ -20,10 +19,7 @@ function checkSoftBody3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  if (!isValidProperties(node.properties)) return [];
-  const rawProps = node.properties as Record<string, string>;
-
-  if (resourceSlotIsEmpty(rawProps.mesh)) {
+  if (resourceSlotIsEmpty(node.rawProperties.mesh)) {
     reportArm(diagnostics, arms.missingMesh, node, 'This body will be ignored until you set a mesh.');
   }
 

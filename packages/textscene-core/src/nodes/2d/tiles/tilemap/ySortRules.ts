@@ -6,11 +6,11 @@
  */
 
 import type { Diagnostic } from '../../../../linter/types.js';
-import type { TscnNode } from '../../../../parser/types.js';
 import { groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 import type { tileMapLayerVector } from '../shared/layerVector';
+import type { RawNode } from '../../../../parser/types.js';
 
 type Layer = ReturnType<typeof tileMapLayerVector>[number];
 
@@ -21,7 +21,7 @@ export const ySortArms = {
 } as const satisfies RuleArms<string>;
 
 export function ySortDiagnostics(
-  node: TscnNode,
+  node: RawNode,
   rawProps: Record<string, string>,
   layers: readonly Layer[]
 ): Diagnostic[] {

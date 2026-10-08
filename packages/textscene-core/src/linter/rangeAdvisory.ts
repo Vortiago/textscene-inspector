@@ -6,10 +6,9 @@
  */
 
 import type { Diagnostic } from './types.js';
-import type { TscnNode } from '../parser/types.js';
-import { isValidProperties } from './linterUtils.js';
 import { reportArm, type RuleArm } from './ruleArms.js';
 import { parseGodotFloat } from './validators/commonValidators.js';
+import type { RawNode } from '../parser/types.js';
 
 /** The rule arm a table reports through. ADR-0032 grounds a hint in the warning tier. */
 export type WarningArm = RuleArm & { readonly severity: 'warning' };
@@ -44,16 +43,12 @@ export type RangeAdvisoryTable = Record<string, RangeThreshold[]>;
 
 /**
  * Report a **Diagnostic** through `arm` for every threshold the node's
- * properties trip. Returns `[]` when the node carries no valid properties. Skips
- * absent or non-numeric properties silently.
+ * properties trip. Skips absent or non-numeric properties silently.
  */
-export function rangeAdvisories(node: TscnNode, table: RangeAdvisoryTable, arm: WarningArm): Diagnostic[] {
-  if (!isValidProperties(node.properties)) return [];
-  const props = node.properties as Record<string, string>;
-
+export function rangeAdvisories(node: RawNode, table: RangeAdvisoryTable, arm: WarningArm): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   for (const [property, thresholds] of Object.entries(table)) {
-    const raw = props[property];
+    const raw = node.rawProperties[property];
     if (raw === undefined) continue;
     // `parseGodotFloat`, not `parseFloat`: `inf` is a value above every bound,
     // not an unreadable property. `nan` reads as NaN and trips nothing, since

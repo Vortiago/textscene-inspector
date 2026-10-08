@@ -46,8 +46,7 @@ function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {
     const path = pathForRef(node.instance);
     if (path) flag('instance', path);
   }
-  for (const [key, value] of Object.entries(node.properties as Record<string, unknown>)) {
-    if (typeof value !== 'string') continue;
+  for (const [key, value] of Object.entries(node.rawProperties)) {
     const path = pathForRef(value);
     if (path) flag(key, path);
   }

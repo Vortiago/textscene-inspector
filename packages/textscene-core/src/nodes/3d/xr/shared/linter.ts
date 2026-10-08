@@ -35,13 +35,13 @@ function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   // matcher below, so re-asserting it states the same fact twice and the two
   // can drift.
   const { node, scene } = context;
-  const properties = node.properties as unknown as Record<string, string>;
+  const properties = node.rawProperties;
   const diagnostics: Diagnostic[] = [];
 
   // openxr_composition_layer.cpp:762-767 casts `get_parent()` with no `parent &&` guard, unlike
   // XRCamera3D, so this warns at the scene root too. An `unknowable` parent (instanced or untyped)
   // stays silent, since a guess would be a false positive on a legal scene.
-  if (!isExplicitlyHidden(properties)) {
+  if (!isExplicitlyHidden(node)) {
     const verdict = parentTypeVerdict(scene, node, 'XROrigin3D');
     if (verdict.kind === 'mismatch' || verdict.kind === 'root') {
       const where = placementPhrase(verdict);

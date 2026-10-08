@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { TscnNode, TscnScene } from '../../../../parser/types';
+import type { RawNode, RawScene } from '../../../../parser/types';
 import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry';
 import { delimiterArrayValidator } from './delimiterValidators';
 import { codeEditDelimiterCollisionRule } from './linter';
@@ -52,10 +52,10 @@ describe('the validator, the collision rule and the delimiter list agree on each
 
   function ruleSeesCollision(entry: string): boolean {
     const literal = `Array[String](["${entry}"])`;
-    const properties = { delimiter_strings: literal, delimiter_comments: literal };
-    const node = { rawProperties: {}, name: 'Edit', type: 'CodeEdit', children: [], properties } as TscnNode;
-    const scene: TscnScene = { nodes: [node], externalResources: [], internalResources: [] };
-    return codeEditDelimiterCollisionRule.check({ scene, node, properties }).length > 0;
+    const rawProperties = { delimiter_strings: literal, delimiter_comments: literal };
+    const node: RawNode = { rawProperties, name: 'Edit', type: 'CodeEdit', children: [] };
+    const scene: RawScene = { nodes: [node], externalResources: [], internalResources: [] };
+    return codeEditDelimiterCollisionRule.check({ scene, node }).length > 0;
   }
 
   // Each entry sits inside a quoted literal, so none holds a double quote.

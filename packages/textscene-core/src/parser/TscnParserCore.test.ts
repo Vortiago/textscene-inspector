@@ -5,9 +5,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { TscnParserCore } from './TscnParserCore.js';
 import type { NodeCreator, ParseObserver } from './TscnParserCore.js';
+import type { RawNode } from './types.js';
 
 describe('TscnParserCore', () => {
   const parser = new TscnParserCore();
+  const simpleCreator: NodeCreator<RawNode> = (heading, properties) => ({
+    rawProperties: properties,
+    name: heading.attributes.name || '',
+    type: heading.attributes.type || '',
+    parent: heading.attributes.parent,
+    children: [],
+  });
 
   describe('callback pattern', () => {
     it('should call node creator for each node heading', () => {
@@ -18,11 +26,10 @@ describe('TscnParserCore', () => {
 mesh = SubResource("mesh_1")
 `;
 
-      const mockCreator = vi.fn<NodeCreator>((heading, properties) => ({
+      const mockCreator = vi.fn<NodeCreator<RawNode>>((heading, properties) => ({
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
         parent: heading.attributes.parent,
-        properties,
         rawProperties: properties,
         children: [],
       }));
@@ -62,9 +69,9 @@ mesh = SubResource("mesh_1")
     it('should handle null return from node creator', () => {
       const content = `[node name="Root" type="Node3D"]`;
 
-      const mockCreator = vi.fn<NodeCreator>(() => null);
+      const mockCreator = vi.fn<NodeCreator<RawNode>>(() => null);
 
-      const scene = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, mockCreator);
 
       expect(mockCreator).toHaveBeenCalledTimes(1);
       expect(scene.nodes).toEqual([]);
@@ -78,10 +85,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 cast_shadow = 1
 `;
 
-      const mockCreator = vi.fn<NodeCreator>((heading, properties) => ({
+      const mockCreator = vi.fn<NodeCreator<RawNode>>((heading, properties) => ({
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
-        properties,
         rawProperties: properties,
         children: [],
       }));
@@ -104,15 +110,14 @@ cast_shadow = 1
 [node name="Root" type="Node3D"]
 `;
 
-      const mockCreator = vi.fn<NodeCreator>((heading, properties) => ({
+      const mockCreator = vi.fn<NodeCreator<RawNode>>((heading, properties) => ({
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
-        properties,
         rawProperties: properties,
         children: [],
       }));
 
-      const scene = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, mockCreator);
 
       // Node creator should only be called for nodes, not resources
       expect(mockCreator).toHaveBeenCalledTimes(1);
@@ -130,15 +135,14 @@ cast_shadow = 1
 [node name="Root" type="Node3D"]
 `;
 
-      const mockCreator = vi.fn<NodeCreator>((heading, properties) => ({
+      const mockCreator = vi.fn<NodeCreator<RawNode>>((heading, properties) => ({
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
-        properties,
         rawProperties: properties,
         children: [],
       }));
 
-      const scene = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, mockCreator);
 
       expect(mockCreator).toHaveBeenCalledTimes(1);
       expect(scene.internalResources).toHaveLength(1);
@@ -155,7 +159,7 @@ item/0/name = "Tree"
 item/0/mesh = ExtResource("1_tree")
 `;
 
-      const scene = parser.parse(content, () => null);
+      const { scene } = parser.parse(content, () => null);
 
       expect(scene.resourceType).toBe('MeshLibrary');
       expect(scene.mainResource).toEqual({
@@ -164,17 +168,44 @@ item/0/mesh = ExtResource("1_tree")
     });
 
     it('keeps the header type of a .tres that has no [resource] body', () => {
-      const scene = parser.parse('[gd_resource type="Environment" format=3]\n', () => null);
+      const { scene } = parser.parse('[gd_resource type="Environment" format=3]\n', () => null);
 
       expect(scene.resourceType).toBe('Environment');
       expect(scene).not.toHaveProperty('mainResource');
     });
 
     it('leaves the header type and the main resource absent for a scene', () => {
-      const scene = parser.parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n', () => null);
+      const { scene } = parser.parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n', () => null);
 
       expect(scene).not.toHaveProperty('resourceType');
       expect(scene).not.toHaveProperty('mainResource');
+    });
+  });
+
+  describe('headings beside the scene', () => {
+    const content = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Lost" type="Node3D" parent="Missing"]
+`;
+    it('returns every node heading with its line, in scan order', () => {
+      const { origins } = parser.parse(content, simpleCreator);
+
+      expect(origins.map(({ node, line }) => [node.name, line])).toEqual([
+        ['Root', 3],
+        ['Lost', 5],
+      ]);
+    });
+
+    it('keeps the linter-only facts off the scene', () => {
+      const { scene } = parser.parse(content, simpleCreator);
+
+      expect(Object.keys(scene).sort()).toEqual(['externalResources', 'internalResources', 'nodes']);
+    });
+
+    it('leaves out a heading whose node creator returns null', () => {
+      expect(parser.parse(content, () => null).origins).toEqual([]);
     });
   });
 
@@ -190,16 +221,7 @@ item/0/mesh = ExtResource("1_tree")
 [node name="GrandChild" type="Node3D" parent="Child1"]
 `;
 
-      const mockCreator: NodeCreator = (heading, properties) => ({
-        rawProperties: {},
-        name: heading.attributes.name || '',
-        type: heading.attributes.type || '',
-        parent: heading.attributes.parent,
-        properties,
-        children: [],
-      });
-
-      const scene = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, simpleCreator);
 
       expect(scene.nodes).toHaveLength(1); // Only root node
       expect(scene.nodes[0]?.name).toBe('Root');
@@ -220,8 +242,8 @@ item/0/mesh = ExtResource("1_tree")
 
   describe('edge cases', () => {
     it('should handle empty content', () => {
-      const mockCreator = vi.fn<NodeCreator>();
-      const scene = parser.parse('', mockCreator);
+      const mockCreator = vi.fn<NodeCreator<RawNode>>();
+      const { scene } = parser.parse('', mockCreator);
 
       expect(mockCreator).not.toHaveBeenCalled();
       expect(scene.nodes).toEqual([]);
@@ -238,15 +260,14 @@ item/0/mesh = ExtResource("1_tree")
 ; Another comment
 `;
 
-      const mockCreator = vi.fn<NodeCreator>((heading, properties) => ({
+      const mockCreator = vi.fn<NodeCreator<RawNode>>((heading, properties) => ({
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
-        properties,
         rawProperties: properties,
         children: [],
       }));
 
-      const scene = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, mockCreator);
 
       expect(mockCreator).toHaveBeenCalledTimes(1);
       expect(scene.nodes).toHaveLength(1);
@@ -258,16 +279,15 @@ item/0/mesh = ExtResource("1_tree")
 [node name="Valid" type="Node3D"]
 `;
 
-      const mockCreator = vi.fn<NodeCreator>((heading, properties) => ({
+      const mockCreator = vi.fn<NodeCreator<RawNode>>((heading, properties) => ({
         name: heading.attributes.name || '',
         type: heading.attributes.type || '',
-        properties,
         rawProperties: properties,
         children: [],
       }));
 
       // Should not throw, just skip invalid headings
-      const scene = parser.parse(content, mockCreator);
+      const { scene } = parser.parse(content, mockCreator);
 
       expect(mockCreator).toHaveBeenCalledTimes(1);
       expect(scene.nodes).toHaveLength(1);
@@ -275,15 +295,6 @@ item/0/mesh = ExtResource("1_tree")
   });
 
   describe('observer seam', () => {
-    const simpleCreator: NodeCreator = (heading, properties) => ({
-      rawProperties: {},
-      name: heading.attributes.name || '',
-      type: heading.attributes.type || '',
-      parent: heading.attributes.parent,
-      properties,
-      children: [],
-    });
-
     it('produces identical output with and without an observer', () => {
       const content = `[gd_scene load_steps=2 format=3]
 
@@ -608,7 +619,7 @@ size = Vector3(1, 2, 3)
 `;
         const onSectionBuilt = vi.fn<NonNullable<ParseObserver['onSectionBuilt']>>();
 
-        const scene = parser.parse(content, simpleCreator, { onSectionBuilt });
+        const { scene } = parser.parse(content, simpleCreator, { onSectionBuilt });
 
         const root = scene.nodes[0]!;
         expect(onSectionBuilt.mock.calls).toEqual([
@@ -631,7 +642,7 @@ background_mode = 1
 `;
         const onSectionBuilt = vi.fn<NonNullable<ParseObserver['onSectionBuilt']>>();
 
-        const scene = parser.parse(content, () => null, { onSectionBuilt });
+        const { scene } = parser.parse(content, () => null, { onSectionBuilt });
 
         expect(onSectionBuilt.mock.calls).toEqual([[scene.mainResource, 3]]);
         expect(onSectionBuilt.mock.calls[0]![0]).toBe(scene.mainResource);

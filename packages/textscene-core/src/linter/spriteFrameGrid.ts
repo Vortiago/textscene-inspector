@@ -6,9 +6,9 @@
  */
 
 import type { Diagnostic } from './types.js';
-import type { TscnNode } from '../parser/types.js';
 import { reportArm, type RuleArms } from './ruleArms.js';
 import { replaySpriteFrames, type FrameWrite } from '../godot/spriteFrames.js';
+import type { RawNode } from '../parser/types.js';
 
 export { replaySpriteFrames } from '../godot/spriteFrames.js';
 
@@ -50,7 +50,7 @@ type SpriteFrameArms = ReturnType<typeof spriteFrameArms>;
 
 /** Every diagnostic the frame keys earn, each through one of `arms`. */
 export function spriteFrameDiagnostics(
-  node: TscnNode,
+  node: RawNode,
   rawProps: Record<string, string>,
   arms: SpriteFrameArms
 ): Diagnostic[] {
