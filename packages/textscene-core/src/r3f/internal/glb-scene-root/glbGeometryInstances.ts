@@ -5,7 +5,7 @@
  */
 
 import { useThree } from '@react-three/fiber';
-import { useLayoutEffect, useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { LiveNode } from '../../../resources/liveNode';
 import { parseGeometryInstance3D } from '../../../nodes/3d/geometryinstance3d/parser';
@@ -18,16 +18,12 @@ import {
 import { ShadowCastingSetting } from '../../../godot/rendering';
 import { visibilityParentOf } from '../../../godot/visibilityParent';
 import { joinPath } from '../../../utils/nodePath';
-import {
-  applyShadowCasting,
-  rangedShadowCastingEffects,
-  shadowCastingEffects,
-  type ShadowCastingEffects,
-} from '../../shadowCasting';
+import { applyShadowCasting, rangedShadowCastingEffects, shadowCastingEffects } from '../../shadowCasting';
 import { FadedMeshMaterials } from '../../materials/fadedMeshMaterials';
 import { CulledInstance } from '../../visibilityRange/culledInstance';
 import { registerVisibilityInstance } from '../../visibilityRange/visibilityScene';
 import type { InstancePlacement } from '../../visibilityRange/placements';
+import { visibleInTree } from '../../visibleInTree';
 import type { NodePlace } from '../../visibilityRange/visibilityScene';
 import { childOrders, useTreeOrder, type TreeOrder } from '../../contexts/TreeOrderContext';
 import { useUniqueNamePaths } from '../../useUniqueNames';
@@ -100,7 +96,11 @@ function overridesByTarget(
   return byTarget;
 }
 
-/** Registers each MeshInstance3D of the mounted GLB `object` with the scene cull. */
+/**
+ * Registers each MeshInstance3D of the mounted GLB `object` with the scene cull. Each keeps one
+ * instance while its object is mounted, as an authored MeshInstance3D does, so a scene edit keeps
+ * the instance's previous visibility per camera and its faded materials.
+ */
 export function useGlbGeometryInstances(
   object: THREE.Object3D | undefined,
   entries: readonly GlbObjectEntry[],
@@ -113,34 +113,54 @@ export function useGlbGeometryInstances(
     () => (object ? glbMeshInstances(object, entries, root, rootOrder, uniquePaths) : []),
     [object, entries, root, rootOrder, uniquePaths]
   );
+  const culled = useRef(new Map<THREE.Object3D, CulledMeshInstance>());
   useLayoutEffect(() => {
-    const releases = instances.map((instance) => cullMeshInstance(scene, instance));
+    const meshes = entries.filter((entry) => isMeshInstance(entry.object));
+    const releases = meshes.map((entry) => cullMeshInstance(scene, entry.object, culled.current));
     return () => releases.forEach((release) => release());
-  }, [scene, instances]);
+  }, [scene, entries]);
+  // After the effect above on the same commit, so a remounted instance takes its node data at once.
+  useLayoutEffect(() => {
+    for (const { object: meshObject, place, properties } of instances) {
+      culled.current.get(meshObject)?.update(place, properties);
+    }
+  }, [scene, entries, instances]);
 }
 
-/** Puts one MeshInstance3D under the scene cull until the returned function runs. */
-function cullMeshInstance(scene: THREE.Scene, { object, place, properties }: GlbMeshInstance): () => void {
-  const instance = new CulledInstance();
-  instance.update(place, properties);
-  instance.hasBase = true;
+/** One MeshInstance3D's cull instance, kept while its object is mounted. */
+class CulledMeshInstance {
+  readonly instance = new CulledInstance();
+
+  constructor(private readonly surfaces: readonly MeshSurface[]) {}
+
+  update(place: NodePlace, properties: GeometryInstance3DProperties): void {
+    this.instance.update(place, properties);
+    const shadow = rangedShadowCastingEffects(properties.castShadow, this.instance);
+    for (const surface of this.surfaces) applyShadowCasting(surface, shadow);
+  }
+}
+
+/** Puts one MeshInstance3D under the scene cull, in `culled`, until the returned function runs. */
+function cullMeshInstance(
+  scene: THREE.Scene,
+  object: THREE.Object3D,
+  culled: Map<THREE.Object3D, CulledMeshInstance>
+): () => void {
   const surfaces = meshInstanceSurfaces(object);
-  instance.placement = glbPlacement(object, surfaces);
-  const shadow = rangedShadowCastingEffects(properties.castShadow, instance);
-  const releases = surfaces.map((surface) => fadeSurface(instance, surface, shadow));
-  const unregister = registerVisibilityInstance(scene, instance);
+  const mesh = new CulledMeshInstance(surfaces);
+  mesh.instance.hasBase = true;
+  mesh.instance.placement = glbPlacement(object, surfaces);
+  const releases = surfaces.map((surface) => fadeSurface(mesh.instance, surface));
+  const unregister = registerVisibilityInstance(scene, mesh.instance);
+  culled.set(object, mesh);
   return () => {
+    culled.delete(object);
     unregister();
     releases.forEach((release) => release());
   };
 }
 
-function fadeSurface(
-  instance: CulledInstance,
-  surface: MeshSurface,
-  shadow: ShadowCastingEffects
-): () => void {
-  applyShadowCasting(surface, shadow);
+function fadeSurface(instance: CulledInstance, surface: MeshSurface): () => void {
   const materials = new FadedMeshMaterials(surface);
   const remove = instance.add(materials);
   return () => {
@@ -163,6 +183,7 @@ function glbPlacement(object: THREE.Object3D, surfaces: readonly MeshSurface[]):
       target.copy(box);
       return !box.isEmpty();
     },
+    isVisibleInTree: () => visibleInTree(object),
   };
 }
 

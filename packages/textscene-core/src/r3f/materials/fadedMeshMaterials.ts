@@ -121,8 +121,11 @@ export class FadedMeshMaterials implements FadedSurface {
 
   /** `unfaded`'s faded copy in `pass`, built once for this mesh and disposed with it. */
   private copyOf(unfaded: THREE.Material, pass: FadePass): THREE.Material {
-    const passes = this.copies.get(unfaded) ?? {};
-    this.copies.set(unfaded, passes);
+    let passes = this.copies.get(unfaded);
+    if (!passes) {
+      passes = {};
+      this.copies.set(unfaded, passes);
+    }
     const known = passes[pass];
     if (known) return known.material;
     const material = copyBuilders.get(unfaded)?.[pass]() ?? plainCopy(unfaded, pass);

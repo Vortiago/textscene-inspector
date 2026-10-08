@@ -55,9 +55,9 @@ export class CulledInstance implements VisibilityInstance, DrawnInstance, FadedS
     return this.customAabb !== null || this.placement.ownAabb(ownBox);
   }
 
-  /** A base whose box has a surface (`renderer_scene_cull.cpp:1675-1681`). */
+  /** A base whose box has a surface (`renderer_scene_cull.cpp:1675-1681`), on a node visible in the tree. */
   get isIndexed(): boolean {
-    if (!this.hasBase) return false;
+    if (!this.hasBase || !this.placement.isVisibleInTree()) return false;
     if (this.customAabb) return hasSurface(this.customAabb.size);
     return this.placement.ownAabb(ownBox) && hasSurface(ownBox.getSize(ownSize));
   }
@@ -65,7 +65,8 @@ export class CulledInstance implements VisibilityInstance, DrawnInstance, FadedS
   worldBox(target: THREE.Box3): void {
     // `custom_aabb` replaces the instance's own (`renderer_scene_cull.cpp:1988-1992`).
     if (this.customAabb) copyAabb(target, this.customAabb);
-    else this.placement.ownAabb(target);
+    // An instance without a box is never indexed: an empty box leaves no stale scratch behind.
+    else if (!this.placement.ownAabb(target)) target.makeEmpty();
     this.placement.nodeMatrixWorld(nodeMatrix);
     target.applyMatrix4(nodeMatrix);
   }

@@ -173,7 +173,7 @@ function registeredComponentAssertion(typeName, base) {
 
 /** A transform group around the node's children, the base's own component. */
 function plainComponent(typeName, base, toSrc, toBase) {
-  return `/** ${typeName} render component — transform group wrapping children. */
+  return `/** ${typeName} render component: a transform group around its children. */
 
 import type { NodeComponentProps } from '${toSrc}r3f/NodeComponentRegistry';
 import { ${base.component} } from '${toBase}/Component';
@@ -190,7 +190,10 @@ export function ${typeName}({ node, children }: NodeComponentProps) {
  * instance and leaves it as it is.
  */
 function geometryInstanceComponent(typeName, toSrc) {
-  return `/** ${typeName} render component — transform group wrapping children. */
+  return `/**
+ * ${typeName} render component: a transform group around its children, which holds the node's
+ * place in the scene cull.
+ */
 
 import { useMemo, useRef } from 'react';
 import type * as THREE from 'three';

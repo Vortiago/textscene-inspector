@@ -24,6 +24,7 @@ function placedAt(offset: THREE.Vector3, box: Aabb | null): InstancePlacement {
         );
       return box !== null;
     },
+    isVisibleInTree: () => true,
   };
 }
 
@@ -72,6 +73,12 @@ describe('CulledInstance.worldBox', () => {
     expect(box.getCenter(new THREE.Vector3())).toEqual(new THREE.Vector3(4, 1, 1));
   });
 
+  it('writes an empty box while it has no box, whatever the target held (edge case)', () => {
+    const box = new THREE.Box3(new THREE.Vector3(1, 1, 1), new THREE.Vector3(2, 2, 2));
+    instanceWith(placedAt(new THREE.Vector3(), null)).worldBox(box);
+    expect(box.isEmpty()).toBe(true);
+  });
+
   it('keeps a box with no surface a point at the node (edge case)', () => {
     const box = new THREE.Box3();
     instanceWith(placedAt(new THREE.Vector3(0, 2, 0), EMPTY_AABB)).worldBox(box);
@@ -87,6 +94,14 @@ describe('CulledInstance.isIndexed', () => {
   it('does not index an instance with no geometry base (error case)', () => {
     const instance = instanceWith(placedAt(new THREE.Vector3(), UNIT_BOX));
     instance.hasBase = false;
+    expect(instance.isIndexed).toBe(false);
+  });
+
+  it('does not index an instance hidden in the tree, which Godot unpairs (error case)', () => {
+    const instance = instanceWith({
+      ...placedAt(new THREE.Vector3(), UNIT_BOX),
+      isVisibleInTree: () => false,
+    });
     expect(instance.isIndexed).toBe(false);
   });
 

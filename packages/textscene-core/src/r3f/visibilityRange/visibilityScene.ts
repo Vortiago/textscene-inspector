@@ -59,7 +59,8 @@ interface Topology {
   members: VisibilityInstance[];
   /** With each link that would close a cycle dropped, as the cull drops it. */
   parents: number[];
-  unmeasured: VisibilityInstance[];
+  /** With no range, parent or dependant: each draws unculled. */
+  unculled: VisibilityInstance[];
 }
 
 interface SceneInstances {
@@ -101,8 +102,8 @@ const box = new THREE.Box3();
 const boxCentre = new THREE.Vector3();
 
 function cullScene(scene: THREE.Scene, registry: SceneInstances, camera: THREE.Camera): void {
-  const { members, parents, unmeasured } = currentTopology(registry);
-  for (const instance of unmeasured) instance.apply(true, 1);
+  const { members, parents, unculled } = currentTopology(registry);
+  for (const instance of unculled) instance.apply(true, 1);
   if (members.length === 0) return;
 
   viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
@@ -208,6 +209,6 @@ function buildTopology(instances: readonly VisibilityInstance[]): Topology {
         return parent ? indexOf.get(parent)! : -1;
       })
     ),
-    unmeasured: instances.filter((instance) => !parentOf.has(instance)),
+    unculled: instances.filter((instance) => !parentOf.has(instance)),
   };
 }

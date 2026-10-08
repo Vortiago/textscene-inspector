@@ -60,11 +60,29 @@ const SINGLE_GLB_NODES: Parameters<typeof nodesGlb>[0] = [{ name: 'Single', mesh
  * Lamp instancing a GLB of `glbNodes`, which hold a triangle mesh named Single.
  */
 async function render(lines: string, proxyLines = '', glbNodes = SINGLE_GLB_NODES) {
-  const { root, lamp } = hostScene(lines, proxyLines);
   const fake = createFakeResourceLoader();
   fake.glbMeshes.seed(GLB_PATH, await createGLBMesh(nodesGlb(glbNodes), NO_SIDECAR));
   const camera = manualCameraAt({ x: 0.5, y: 0.5, z: 11 });
-  const renderer = await ReactThreeTestRenderer.create(
+  const renderer = await ReactThreeTestRenderer.create(hostTree(fake, lines, proxyLines), { camera });
+  await ReactThreeTestRenderer.act(async () => {
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+  });
+  await renderScene(renderer, camera);
+  const scene = renderer.scene.instance as THREE.Scene;
+  const objectNamed = (name: string) => scene.getObjectByName(name) as THREE.Mesh;
+  /** Renders the host again from a fresh parse of `nextLines`, as an edit to the scene does. */
+  const edit = async (nextLines: string) => {
+    await ReactThreeTestRenderer.act(async () => {
+      await renderer.update(hostTree(fake, nextLines, proxyLines));
+    });
+    await renderScene(renderer, camera);
+  };
+  return { renderer, edit, single: objectNamed('Single'), proxy: objectNamed('Proxy') };
+}
+
+function hostTree(fake: ReturnType<typeof createFakeResourceLoader>, lines: string, proxyLines: string) {
+  const { root, lamp } = hostScene(lines, proxyLines);
+  return (
     <SceneStack loader={fake.loader} scene={{ internalResources: RESOURCES }}>
       <NodeTree node={root} path="Root" />
       <GlbInstanceProvider node={lamp} path="Root/Lamp">
@@ -72,16 +90,8 @@ async function render(lines: string, proxyLines = '', glbNodes = SINGLE_GLB_NODE
           <GLBSceneRoot node={GLB_ROOT} />
         </NodePathProvider>
       </GlbInstanceProvider>
-    </SceneStack>,
-    { camera }
+    </SceneStack>
   );
-  await ReactThreeTestRenderer.act(async () => {
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-  });
-  await renderScene(renderer, camera);
-  const scene = renderer.scene.instance as THREE.Scene;
-  const objectNamed = (name: string) => scene.getObjectByName(name) as THREE.Mesh;
-  return { renderer, single: objectNamed('Single'), proxy: objectNamed('Proxy') };
 }
 
 beforeAll(async () => {
@@ -121,6 +131,22 @@ describe('a GLB mesh visibility range', () => {
     const drawn = single.material as THREE.MeshStandardMaterial;
     const unfaded = unfadedMaterial(drawn) as THREE.MeshStandardMaterial;
     expect([drawn.opacity, unfaded.color.getHex()]).toEqual([39 / 255, 0x00ff00]);
+  });
+
+  it('keeps a GLB mesh’s faded material across an edit to the scene', async () => {
+    const lines =
+      '\n[node name="Single" parent="Lamp"]\nvisibility_range_end = 10.0\n' +
+      'visibility_range_end_margin = 2.0\nvisibility_range_fade_mode = 1\n';
+    const { edit, single } = await render(lines);
+    const faded = single.material;
+    await edit(lines);
+    expect(single.material).toBe(faded);
+  });
+
+  it('applies an edited override to the GLB mesh it keeps', async () => {
+    const { edit, single } = await render('\n[node name="Single" parent="Lamp"]\ncast_shadow = 1\n');
+    await edit('\n[node name="Single" parent="Lamp"]\ncast_shadow = 0\n');
+    expect(single.castShadow).toBe(false);
   });
 
   it('casts no shadow from a GLB mesh whose override turns cast_shadow off', async () => {

@@ -5,18 +5,25 @@ import type { RefObject } from 'react';
 import type { Aabb } from '../../godot/aabb';
 import type { Transform3D } from '../../nodes/base/node3d/types';
 import { transform3DToMatrix } from '../nodeTreeTransforms';
+import { visibleInTree } from '../visibleInTree';
 
 export interface InstancePlacement {
   /** Writes the node's world transform as Godot holds it. False before the node mounts. */
   nodeMatrixWorld(target: THREE.Matrix4): boolean;
   /** Writes the instance's own AABB in node space. False before its geometry exists. */
   ownAabb(target: THREE.Box3): boolean;
+  /**
+   * Whether the node is visible in the tree. Godot unpairs a hidden instance from the scene cull
+   * (`renderer_scene_cull.cpp:1051-1052`), so it is no visibility parent.
+   */
+  isVisibleInTree(): boolean;
 }
 
 /** Where an instance sits until its drawer places it: nowhere, so the cull cannot measure it. */
 export const UNPLACED: InstancePlacement = Object.freeze({
   nodeMatrixWorld: () => false,
   ownAabb: () => false,
+  isVisibleInTree: () => false,
 });
 
 /** Writes a Godot AABB into a three box. */
@@ -36,6 +43,7 @@ export function livePlacement(
 ): InstancePlacement {
   return {
     nodeMatrixWorld: livePose(nodeRef),
+    isVisibleInTree: liveVisibility(nodeRef),
     ownAabb(target) {
       const geometry = meshRef.current?.geometry;
       if (!geometry?.getAttribute('position')) return false;
@@ -53,6 +61,7 @@ export function boxPlacement(
 ): InstancePlacement {
   return {
     nodeMatrixWorld: livePose(nodeRef),
+    isVisibleInTree: liveVisibility(nodeRef),
     ownAabb(target) {
       if (ownAabb) copyAabb(target, ownAabb);
       return ownAabb !== null;
@@ -66,6 +75,10 @@ function livePose(nodeRef: RefObject<THREE.Object3D | null>): InstancePlacement[
     if (node) target.copy(node.matrixWorld);
     return node !== null;
   };
+}
+
+function liveVisibility(objectRef: RefObject<THREE.Object3D | null>): InstancePlacement['isVisibleInTree'] {
+  return () => objectRef.current !== null && visibleInTree(objectRef.current);
 }
 
 /**
@@ -89,5 +102,6 @@ export function authoredPlacement(
       copyAabb(target, ownAabb);
       return true;
     },
+    isVisibleInTree: liveVisibility(objectRef),
   };
 }
