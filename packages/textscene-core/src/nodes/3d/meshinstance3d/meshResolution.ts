@@ -1,6 +1,5 @@
 /** The mesh a MeshInstance3D's `mesh` reference names, in the scene or in a `.tres`. */
 
-import { resolveExtResourcePath } from '../../../resources/SubResourceResolver';
 import { useResourceResolution, type ResourceResolution } from '../../../resources/useSubOrExtResource';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 
@@ -14,7 +13,7 @@ export interface MeshResolution extends ResourceResolution {
 
 export function useMeshResolution(meshRef: string | undefined, pools: SceneResources): MeshResolution {
   const resolution = useResourceResolution(meshRef, pools);
-  const path = resolveExtResourcePath(meshRef, pools.externalResources);
-  const arrayMeshPath = path && resolution.scoped?.resource.type === 'ArrayMesh' ? path : null;
+  const { tresPath, scoped } = resolution;
+  const arrayMeshPath = tresPath && scoped?.resource.type === 'ArrayMesh' ? tresPath : null;
   return { ...resolution, arrayMeshPath };
 }

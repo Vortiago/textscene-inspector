@@ -10,7 +10,7 @@ import type { TscnExternalResource, TscnInternalResource } from '../../parser/ty
 import { findExtResource, parseResourceReference } from '../../resources/SubResourceResolver';
 import { BUILDABLE_MATERIAL_TYPES } from '../../resources/materials/buildableMaterialTypes';
 import { resourceFilePath } from '../../resources/subResourcePath';
-import { findSubResource } from '../SceneResourcesContext';
+import { findSubResource, type SceneResources } from '../SceneResourcesContext';
 
 /** A material body and the resource tables its references resolve in: its owning file's. */
 export interface MaterialResource {
@@ -33,8 +33,7 @@ export type MaterialSource =
  */
 export function resolveMaterialSource(
   ref: string | undefined,
-  internalResources: readonly TscnInternalResource[],
-  externalResources: readonly TscnExternalResource[]
+  { internalResources, externalResources }: SceneResources
 ): MaterialSource | undefined {
   if (!ref) return undefined;
   const parsed = parseResourceReference(ref);

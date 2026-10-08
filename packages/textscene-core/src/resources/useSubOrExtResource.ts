@@ -23,10 +23,11 @@ export interface ResourceResolution {
   /** Null while the resource is none, still loading or unreadable. */
   scoped: ScopedResource | null;
   status: ResourceStatus;
+  /** The `.tres` the resource loads from, or null for a SubResource or none. */
+  tresPath: string | null;
 }
 
-const UNAVAILABLE: ResourceResolution = { scoped: null, status: 'unavailable' };
-const PENDING: ResourceResolution = { scoped: null, status: 'pending' };
+const UNAVAILABLE: ResourceResolution = { scoped: null, status: 'unavailable', tresPath: null };
 
 export function useResourceResolution(ref: string | undefined, pools: SceneResources): ResourceResolution {
   const inline = resolveSubResourceRef(ref, pools.internalResources);
@@ -35,11 +36,16 @@ export function useResourceResolution(ref: string | undefined, pools: SceneResou
   const tresPath = path?.endsWith('.tres') ? path : null;
   const file = useResource<ParsedResource>(tresPath ?? '', 'resource');
 
-  return useMemo(() => {
-    if (inline) return { scoped: { resource: inline, resources: pools }, status: 'loaded' };
+  const inlineResolution = useMemo(
+    (): ResourceResolution | null =>
+      inline ? { scoped: { resource: inline, resources: pools }, status: 'loaded', tresPath: null } : null,
+    [inline, pools]
+  );
+  // Apart from `pools`: a scene edit leaves the file's resource the same object while the file holds.
+  const fileResolution = useMemo((): ResourceResolution => {
     if (!tresPath) return UNAVAILABLE;
-    if (file.status === 'pending') return PENDING;
-    if (!file.value) return UNAVAILABLE;
+    if (!file.value)
+      return { scoped: null, status: file.status === 'pending' ? 'pending' : 'unavailable', tresPath };
     const { resourceType, properties, subResources, extResources } = file.value;
     return {
       scoped: {
@@ -47,8 +53,10 @@ export function useResourceResolution(ref: string | undefined, pools: SceneResou
         resources: { internalResources: subResources, externalResources: extResources },
       },
       status: 'loaded',
+      tresPath,
     };
-  }, [inline, pools, tresPath, file.status, file.value]);
+  }, [tresPath, file.status, file.value]);
+  return inlineResolution ?? fileResolution;
 }
 
 /** The resource `ref` names in `pools`, or null while it is none, still loading or unreadable. */

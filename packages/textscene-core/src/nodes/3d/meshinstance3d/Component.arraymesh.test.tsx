@@ -19,6 +19,7 @@ import { headlightsSurface, wallQuadSurfaces } from '../../../resources/testing/
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { preloadResource } from '../../../resources/testing/preloadResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { EMPTY_AABB } from '../../../godot/aabb';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
 
@@ -103,6 +104,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
       geometry: buildArrayMeshGeometry(mesh),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
       surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
+      aabb: EMPTY_AABB,
     };
     preloadResource(loader, 'arraymesh', WALL_PATH, resource);
 
@@ -129,6 +131,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
       geometry: buildArrayMeshGeometry(mesh),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
       surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
+      aabb: EMPTY_AABB,
     };
     preloadResource(loader, 'arraymesh', WALL_PATH, resource);
 

@@ -72,20 +72,21 @@ function bestSubsequenceMatch(
   segments: readonly string[]
 ): GlbObjectEntry | null {
   const last = segments[segments.length - 1];
-  const candidates = entries
-    .filter(
-      (e) =>
-        e.godotSegments[e.godotSegments.length - 1] === last &&
-        isOrderedSubsequence(e.godotSegments, segments)
-    )
-    .sort((a, b) => {
-      const shared = b.godotSegments.length - a.godotSegments.length;
-      if (shared !== 0) return shared;
-      const depth = b.relPath.split('/').length - a.relPath.split('/').length;
-      return depth !== 0 ? depth : a.relPath.localeCompare(b.relPath);
-    });
+  let best: GlbObjectEntry | null = null;
+  for (const entry of entries) {
+    const own = entry.godotSegments;
+    if (own[own.length - 1] !== last || !isOrderedSubsequence(own, segments)) continue;
+    if (!best || ranksAbove(entry, best)) best = entry;
+  }
+  return best;
+}
 
-  return candidates[0] ?? null;
+function ranksAbove(a: GlbObjectEntry, b: GlbObjectEntry): boolean {
+  if (a.godotSegments.length !== b.godotSegments.length)
+    return a.godotSegments.length > b.godotSegments.length;
+  const depthA = a.relPath.split('/').length;
+  const depthB = b.relPath.split('/').length;
+  return depthA !== depthB ? depthA > depthB : a.relPath.localeCompare(b.relPath) < 0;
 }
 
 /** Whether every segment of `inner` appears in `outer`, in order. */

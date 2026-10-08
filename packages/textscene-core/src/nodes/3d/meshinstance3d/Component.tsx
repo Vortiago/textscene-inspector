@@ -70,7 +70,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // `material_overlay` never competes for a surface slot, so it resolves apart from the
   // overrides: it is drawn on its own.
   const overlaySource = useMemo(
-    () => resolveMaterialSource(properties.materialOverlay, pools.internalResources, pools.externalResources),
+    () => resolveMaterialSource(properties.materialOverlay, pools),
     [properties.materialOverlay, pools]
   );
 
@@ -350,17 +350,14 @@ interface MeshOverrides {
   perSurface: ReadonlyMap<number, MaterialSource>;
 }
 
-function resolveMeshOverrides(
-  properties: MeshInstance3DProperties,
-  { internalResources, externalResources }: SceneResources
-): MeshOverrides {
+function resolveMeshOverrides(properties: MeshInstance3DProperties, scene: SceneResources): MeshOverrides {
   const perSurface = new Map<number, MaterialSource>();
   for (const [index, ref] of properties.surfaceMaterialOverrides ?? []) {
-    const source = resolveMaterialSource(ref, internalResources, externalResources);
+    const source = resolveMaterialSource(ref, scene);
     if (source) perSurface.set(index, source);
   }
   return {
-    node: resolveMaterialSource(properties.materialOverride, internalResources, externalResources),
+    node: resolveMaterialSource(properties.materialOverride, scene),
     perSurface,
   };
 }
@@ -394,9 +391,7 @@ function useSceneArrayMesh(mesh: ScopedResource | null): SurfacedMesh | null {
     return {
       geometry: decoded.geometry,
       surfaceIndices: decoded.surfaceIndices,
-      materials: decoded.materialRefs.map((ref) =>
-        resolveMaterialSource(ref, resources.internalResources, resources.externalResources)
-      ),
+      materials: decoded.materialRefs.map((ref) => resolveMaterialSource(ref, resources)),
     };
   }, [decoded, resources]);
 }
@@ -459,8 +454,8 @@ function resolvePrimitiveMaterialSource(
   // every PrimitiveMesh. `material_override` comes first, as `_geometry_instance_add_surface`
   // applies it per surface (`render_forward_clustered.cpp:4206` over `:4264`).
   const override = properties.materialOverride ?? properties.surfaceMaterialOverrides?.get(0);
-  if (override) return resolveMaterialSource(override, scene.internalResources, scene.externalResources);
+  if (override) return resolveMaterialSource(override, scene);
   const own = mesh?.resource.data['material'];
   if (!mesh || typeof own !== 'string') return undefined;
-  return resolveMaterialSource(own, mesh.resources.internalResources, mesh.resources.externalResources);
+  return resolveMaterialSource(own, mesh.resources);
 }

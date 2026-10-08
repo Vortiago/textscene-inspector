@@ -81,35 +81,31 @@ export interface GlbObjectEntry {
   godotSegments: string[];
 }
 
-interface Segment {
-  name: string;
-  role: GltfNodeRole;
-}
-
-/** `segments` less each bone that holds no node attached to it. The last segment always stays. */
-function godotSegments(segments: readonly Segment[]): string[] {
-  return segments
-    .filter(
-      (segment, i) => segment.role !== 'bone' || i === segments.length - 1 || segments[i + 1]!.role === 'node'
-    )
-    .map((segment) => segment.name);
+/**
+ * The Godot segments of a child named `name` with `role`, from its parent's. The parent's bone
+ * segment stays only before a node attached to it, and the child's own segment always stays.
+ */
+function childGodotSegments(parent: GlbObjectEntry | null, name: string, role: GltfNodeRole): string[] {
+  if (!parent) return [name];
+  const keepsParent = godotNodeRole(parent.object) !== 'bone' || role === 'node';
+  return [...(keepsParent ? parent.godotSegments : parent.godotSegments.slice(0, -1)), name];
 }
 
 /** `buildGlbHierarchy`'s path scheme, flat, so the viewport's objects line up with the tree rows. */
 export function flattenGlbObjects(root: THREE.Object3D): GlbObjectEntry[] {
   const out: GlbObjectEntry[] = [];
-  const walk = (object: THREE.Object3D, parentSegments: readonly Segment[], name: string): void => {
-    const segments = [...parentSegments, { name, role: godotNodeRole(object) }];
-    out.push({
-      relPath: segments.map((s) => s.name).join('/'),
+  const walk = (object: THREE.Object3D, parent: GlbObjectEntry | null, name: string): void => {
+    const entry = {
+      relPath: parent ? `${parent.relPath}/${name}` : name,
       object,
-      godotSegments: godotSegments(segments),
-    });
+      godotSegments: childGodotSegments(parent, name, godotNodeRole(object)),
+    };
+    out.push(entry);
     const childNames = segmentsForSiblings(object.children);
-    object.children.forEach((child, i) => walk(child, segments, childNames[i]!));
+    object.children.forEach((child, i) => walk(child, entry, childNames[i]!));
   };
   const names = segmentsForSiblings(root.children);
-  root.children.forEach((child, i) => walk(child, [], names[i]!));
+  root.children.forEach((child, i) => walk(child, null, names[i]!));
   return out;
 }
 

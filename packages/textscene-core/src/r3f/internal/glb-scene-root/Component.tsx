@@ -246,7 +246,7 @@ function useGlbMaterialOverrides(
       // A grafted override's ids belong to the outer scene that authored it, not the sub-scene it
       // renders under, and its scope carries both pools.
       const scope = override.scope ?? { internalResources, externalResources };
-      const source = resolveMaterialSource(ref, scope.internalResources, scope.externalResources);
+      const source = resolveMaterialSource(ref, scope);
       if (!source) continue;
 
       const target = resolveGlbOverrideTarget(object, entries, override);

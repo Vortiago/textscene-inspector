@@ -73,10 +73,33 @@ describe('useResourceResolution', () => {
   });
 
   it('is pending while the .tres loads', () => {
-    expect(renderResolution('ExtResource("1")').current).toEqual({ scoped: null, status: 'pending' });
+    expect(renderResolution('ExtResource("1")').current).toEqual({
+      scoped: null,
+      status: 'pending',
+      tresPath: 'res://grass.tres',
+    });
   });
 
   it('is unavailable for a binary .res, never pending', () => {
-    expect(renderResolution('ExtResource("2")').current).toEqual({ scoped: null, status: 'unavailable' });
+    expect(renderResolution('ExtResource("2")').current).toEqual({
+      scoped: null,
+      status: 'unavailable',
+      tresPath: null,
+    });
+  });
+
+  it('keeps the file’s resolution while the scene’s pools change', () => {
+    const fake = createFakeResourceLoader();
+    fake.resources.seed('res://grass.tres', TRES);
+    let pools = SCENE;
+    const { result, rerender } = renderHook(() => useResourceResolution('ExtResource("1")', pools), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+      ),
+    });
+    const first = result.current;
+    pools = { ...SCENE, externalResources: [...SCENE_EXT] };
+    rerender();
+    expect(result.current).toBe(first);
   });
 });

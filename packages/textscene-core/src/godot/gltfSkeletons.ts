@@ -80,6 +80,14 @@ function treesOf(nodes: readonly ImportNode[], members: Iterable<number>): Disjo
   return set;
 }
 
+/** The highest node of each tree `members` forms, in ascending order. */
+function treeRoots(nodes: readonly ImportNode[], members: Iterable<number>): number[] {
+  return treesOf(nodes, members)
+    .groups()
+    .map((group) => highestNode(nodes, group))
+    .sort((a, b) => a - b);
+}
+
 /** `_find_highest_node` (`skin_tool.cpp:33-48`): the least height, the first on a tie. */
 function highestNode(nodes: readonly ImportNode[], subset: readonly number[]): number {
   let best = -1;
@@ -139,9 +147,7 @@ function captureNodesForMultirootedSkin(nodes: readonly ImportNode[], skin: Impo
 /** `_expand_skin` (`skin_tool.cpp:154-197`). */
 function expandSkin(nodes: readonly ImportNode[], skin: ImportSkin): void {
   captureNodesForMultirootedSkin(nodes, skin);
-  const trees = treesOf(nodes, [...skin.joints, ...skin.nonJoints]);
-  const roots = trees.groups().map((group) => highestNode(nodes, group));
-  roots.sort((a, b) => a - b);
+  const roots = treeRoots(nodes, [...skin.joints, ...skin.nonJoints]);
   for (const root of roots) captureNodesInSkin(nodes, skin, root);
   skin.roots = roots;
 }
@@ -246,17 +252,13 @@ function importSkin(joints: readonly number[]): ImportSkin {
 function boneAdditionOrder(nodes: readonly ImportNode[], skeletonBones: readonly number[]): number[] {
   const members = [...skeletonBones].sort((a, b) => a - b);
   const memberSet = new Set(members);
-  const roots = treesOf(nodes, members)
-    .groups()
-    .map((group) => highestNode(nodes, group))
-    .sort((a, b) => a - b);
   const order: number[] = [];
   const visit = (node: number): void => {
     order.push(node);
     const children = nodes[node]!.children.filter((child) => memberSet.has(child));
     for (const child of children.sort((a, b) => a - b)) visit(child);
   };
-  roots.forEach(visit);
+  treeRoots(nodes, members).forEach(visit);
   return order;
 }
 

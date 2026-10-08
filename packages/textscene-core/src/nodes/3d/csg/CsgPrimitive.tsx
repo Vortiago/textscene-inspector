@@ -43,7 +43,7 @@ interface CsgPrimitiveProps {
 // and `subtreeConformance.test.tsx` fails a root that swallows `children`. So contributors remove
 // their own mesh from the inside.
 export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) {
-  const { internalResources, externalResources } = useSceneResources();
+  const ctx = useSceneResources();
   const path = useNodePath();
   const subtree = useCsgSubtree();
   // Optional: a CSG node renders outside the shell in tests and in the
@@ -58,11 +58,6 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
     [properties]
-  );
-
-  const ctx = useMemo(
-    () => ({ internalResources, externalResources }),
-    [internalResources, externalResources]
   );
 
   // The node's own solid comes from the registered builder the evaluator calls, so a slice
@@ -82,8 +77,8 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   // primitive keeps only a `Ref<Material>` (`modules/csg/csg_shape.h:276,290`), so both arrive at
   // the same slot, which renders either, textures included.
   const materialSource = useMemo(
-    () => resolveMaterialSource(properties.materialPath, internalResources, externalResources),
-    [properties.materialPath, internalResources, externalResources]
+    () => resolveMaterialSource(properties.materialPath, ctx),
+    [properties.materialPath, ctx]
   );
 
   // Absorbed while the ancestor's boolean is pending or ready. Not while it has failed, which

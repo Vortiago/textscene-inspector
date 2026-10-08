@@ -36,7 +36,7 @@ export interface CsgRootMeshProps {
 }
 
 export function CsgRootMesh({ plan, shadow, meshRef, fallback, children }: CsgRootMeshProps) {
-  const { internalResources, externalResources } = useSceneResources();
+  const pools = useSceneResources();
   const [csg, setCsg] = useState<CsgModule | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
@@ -63,15 +63,14 @@ export function CsgRootMesh({ plan, shadow, meshRef, fallback, children }: CsgRo
     const cached = getCachedEvaluation(plan.cacheKey);
     if (cached) return cached;
 
-    const ctx = { internalResources, externalResources };
     const result = evaluateCsgPlan(plan, csg, (contribution) => {
       const registration = nodeComponentRegistry.getCsgShape(contribution.type);
       if (!registration?.geometry) return null;
-      return registration.geometry(contribution.node.properties as Record<string, unknown>, ctx);
+      return registration.geometry(contribution.node.properties as Record<string, unknown>, pools);
     });
     if (result) setCachedEvaluation(plan.cacheKey, result);
     return result;
-  }, [csg, plan, internalResources, externalResources]);
+  }, [csg, plan, pools]);
 
   const status: CsgSubtreeStatus = loadFailed
     ? 'failed'
@@ -95,9 +94,9 @@ export function CsgRootMesh({ plan, shadow, meshRef, fallback, children }: CsgRo
   const surfaces = useMemo((): Array<MaterialSource | undefined> => {
     if (!evaluation) return [];
     return evaluation.surfaceSlots.map((planSurface) =>
-      resolveMaterialSource(plan.surfaces[planSurface], internalResources, externalResources)
+      resolveMaterialSource(plan.surfaces[planSurface], pools)
     );
-  }, [evaluation, plan.surfaces, internalResources, externalResources]);
+  }, [evaluation, plan.surfaces, pools]);
 
   const drawable = evaluation !== null && evaluation.geometry.getAttribute('position')?.count !== 0;
 

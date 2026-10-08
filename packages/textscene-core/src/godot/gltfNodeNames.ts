@@ -38,7 +38,7 @@ export interface GltfNodeName {
 
 /** Godot's `unique_names`, filled by `_gen_unique_name_static` (`gltf_document.cpp:7223-7242`). */
 class UniqueNames {
-  /** Grows only, through `take` and through the bone names before 4.5. */
+  /** Grows only: `take` adds node names, and `boneNames` adds bone names before 4.5. */
   readonly used = new Set<string>();
   /** Each base's first number not yet tried. `used` only grows, so every number below it is taken. */
   private readonly nextIndex = new Map<string, number>();
@@ -71,16 +71,14 @@ function uniqueBoneName(used: Set<string>, name: string): string {
  * bone. From 4.5 a bone is unique against the node names and its own skeleton's bones.
  */
 function boneNames(
-  json: GltfJsonObject,
+  nodes: readonly GltfJsonObject[],
   skeletons: readonly (readonly number[])[],
-  names: UniqueNames,
+  usedNames: Set<string>,
   namingVersion: number
 ): Map<number, string> {
-  const nodes = objects(json['nodes']);
-  const nodeNames = new Set(names.used);
   const byNode = new Map<number, string>();
   for (const bones of skeletons) {
-    const used = namingVersion < 2 ? names.used : new Set(nodeNames);
+    const used = namingVersion < 2 ? usedNames : new Set(usedNames);
     for (const bone of bones) byNode.set(bone, uniqueBoneName(used, text(nodes[bone]!['name'])));
   }
   return byNode;
@@ -103,8 +101,7 @@ function text(value: unknown): string {
 }
 
 /** `_parse_nodes` (`gltf_document.cpp:563-652`): the graph with parents and heights. */
-function importNodes(json: GltfJsonObject): ImportNode[] {
-  const nodes = objects(json['nodes']);
+function importNodes(nodes: readonly GltfJsonObject[]): ImportNode[] {
   const parents = nodes.map(() => -1);
   nodes.forEach((node, i) => {
     for (const child of indexes(node['children'])) {
@@ -156,7 +153,8 @@ export function gltfNodeNames(json: unknown, options: GltfNamingOptions): GltfNo
   const scene = loadedScene(json, fileName);
   if (namingVersion === 0 && objects(json['scenes']).length > 0) names.take(scene.name);
 
-  const nodes = importNodes(json);
+  const nodeObjects = objects(json['nodes']);
+  const nodes = importNodes(nodeObjects);
   // Before 4.5 the roots are every parentless node (`gltf_document.cpp:655-676`).
   const roots = namingVersion < 2 ? nodes.flatMap((node, i) => (node.parent < 0 ? [i] : [])) : scene.roots;
   const skinJoints = objects(json['skins']).map((skin) =>
@@ -170,14 +168,14 @@ export function gltfNodeNames(json: unknown, options: GltfNamingOptions): GltfNo
   );
   const bones = new Set(skeletons.flat());
 
-  const sceneNames = objects(json['nodes']).map((node, i) => {
+  const sceneNames = nodeObjects.map((node, i) => {
     if (bones.has(i)) return null;
     const name = text(node['name']);
     if (name !== '') return names.take(name);
     const unnamed = unnamedNodeName(node, namingVersion);
     return names.take(namingVersion === 0 ? names.take(unnamed) : unnamed);
   });
-  const bonesByNode = boneNames(json, skeletons, names, namingVersion);
+  const bonesByNode = boneNames(nodeObjects, skeletons, names.used, namingVersion);
 
   return sceneNames.map((name, i): GltfNodeName => {
     if (name === null) return { name: validateNodeName(bonesByNode.get(i)!), role: 'bone' };

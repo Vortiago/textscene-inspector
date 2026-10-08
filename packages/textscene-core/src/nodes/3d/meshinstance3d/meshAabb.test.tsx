@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
+import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
@@ -39,15 +40,22 @@ describe('useMeshAabb', () => {
     expect(renderMeshAabb('SubResource("array")').current?.size).toEqual({ x: 3, y: 4, z: 5 });
   });
 
-  it('takes an external ArrayMesh’s box once it loads', () => {
+  it('takes an external ArrayMesh’s box from the ArrayMesh processor once it loads', () => {
     const fake = createFakeResourceLoader();
     fake.resources.seed('res://rock.tres', {
       resourceType: 'ArrayMesh',
-      properties: { custom_aabb: 'AABB(-1, 0, -1, 2, 3, 2)' },
+      properties: {},
       extResources: [],
       subResources: [],
     });
-    expect(renderMeshAabb('ExtResource("1")', fake).current?.size).toEqual({ x: 2, y: 3, z: 2 });
+    const rockAabb = { position: { x: -1, y: 0, z: -1 }, size: { x: 2, y: 3, z: 2 } };
+    fake.arrayMeshes.seed('res://rock.tres', {
+      geometry: new THREE.BufferGeometry(),
+      materialPaths: [],
+      surfaceIndices: [],
+      aabb: rockAabb,
+    });
+    expect(renderMeshAabb('ExtResource("1")', fake).current).toBe(rockAabb);
   });
 
   it('bounds an external PrimitiveMesh once it loads', () => {
