@@ -8,7 +8,7 @@
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/deprecated.js';
 import type {
   TscnScene,
-  RawNode,
+  SceneNode,
   TscnExternalResource,
   TscnInternalResource,
   TscnMainResource,
@@ -42,7 +42,7 @@ export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'r
  * Builds a node from a parsed heading and its properties. The renderer builds a `TscnNode`
  * through NodeRegistry. The linter builds a `RawNode` with no three.js dependency.
  */
-export type NodeCreator<N extends RawNode> = (
+export type NodeCreator<N extends SceneNode<N>> = (
   heading: ParsedHeading,
   properties: Record<string, string>
 ) => N | null;
@@ -97,7 +97,7 @@ export class TscnParserCore {
    * @param observer - Optional hooks for strict consumers (errors, sections, properties)
    * @returns Parsed scene structure
    */
-  parse<N extends RawNode>(
+  parse<N extends SceneNode<N>>(
     content: string,
     nodeCreator: NodeCreator<N>,
     observer?: ParseObserver
@@ -108,7 +108,7 @@ export class TscnParserCore {
     // would corrupt accumulated multi-line string values.
     const lines = content.split(/\r?\n/);
 
-    // Every node beside its heading's line, in scan order. The line stays off `TscnNode`:
+    // Every node beside its heading's line, in scan order. The line stays off the node:
     // the orphan report reads it here, and a strict observer gets it from `onSectionBuilt`.
     // One array, not a parallel `nodes` list, which two push sites would keep in step.
     const origins: NodeOrigin<N>[] = [];

@@ -6,18 +6,17 @@
 
 import { describe, expect, it } from 'vitest';
 import type { RuleContext } from '../../../../linter/types';
-import type { TscnNode, TscnScene } from '../../../../parser/types';
+import type { RawNode, RawScene } from '../../../../parser/types';
 import { codeEditDelimiterCollisionRule } from './linter';
 
 function makeContext(rawProperties: Record<string, string>): RuleContext {
-  const node: TscnNode = {
+  const node: RawNode = {
     rawProperties,
     name: 'MyCodeEdit',
     type: 'CodeEdit',
     children: [],
-    properties: {},
   };
-  const scene: TscnScene = { nodes: [node], externalResources: [], internalResources: [] };
+  const scene: RawScene = { nodes: [node], externalResources: [], internalResources: [] };
   return { scene, node };
 }
 

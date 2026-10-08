@@ -93,7 +93,7 @@ z_index = 1
 z_index = 2
 `);
 
-    expect((root.rawProperties as Record<string, string>).z_index).toBe('2');
+    expect(root.rawProperties.z_index).toBe('2');
     expect(lines.get(root)?.properties.get('z_index')).toBe(5);
   });
 

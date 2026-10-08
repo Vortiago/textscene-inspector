@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { TscnNode, TscnScene } from '../../../../parser/types';
+import type { RawNode, RawScene } from '../../../../parser/types';
 import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry';
 import { delimiterArrayValidator } from './delimiterValidators';
 import { codeEditDelimiterCollisionRule } from './linter';
@@ -53,8 +53,8 @@ describe('the validator, the collision rule and the delimiter list agree on each
   function ruleSeesCollision(entry: string): boolean {
     const literal = `Array[String](["${entry}"])`;
     const rawProperties = { delimiter_strings: literal, delimiter_comments: literal };
-    const node: TscnNode = { rawProperties, name: 'Edit', type: 'CodeEdit', children: [], properties: {} };
-    const scene: TscnScene = { nodes: [node], externalResources: [], internalResources: [] };
+    const node: RawNode = { rawProperties, name: 'Edit', type: 'CodeEdit', children: [] };
+    const scene: RawScene = { nodes: [node], externalResources: [], internalResources: [] };
     return codeEditDelimiterCollisionRule.check({ scene, node }).length > 0;
   }
 

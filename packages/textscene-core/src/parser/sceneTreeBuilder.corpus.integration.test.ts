@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { TscnParser } from './TscnParser';
-import { sceneFiles, scenesDir } from './testing/parserKit.js';
+import { scenesDir } from './testing/parserKit.js';
+import { walk } from '../linter/testing/ruleNameScrape.js';
 
 const SCENES = scenesDir();
 
@@ -17,7 +18,7 @@ const INTENTIONAL_ORPHANS = new Set(['fixtures/edge-missing-parent.tscn']);
 
 describe('buildSceneTree over the whole corpus', () => {
   it('orphans nothing except the fixture that exists to be orphaned', () => {
-    const scenes = sceneFiles(SCENES, (path) => path.endsWith('.tscn'));
+    const scenes = walk(SCENES, (name) => name.endsWith('.tscn')).sort();
     expect(scenes.length).toBeGreaterThan(200);
 
     const offenders: string[] = [];

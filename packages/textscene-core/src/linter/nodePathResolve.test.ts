@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { resolveNodePath } from './nodePathResolve.js';
+import { byName } from './testing/sceneNodes.js';
 import type { RawNode, RawScene } from '../parser/types.js';
 
 /** A strict-parser node: the **Raw view**, with `rawProperties` and no typed bag. */
@@ -15,28 +16,15 @@ function node(name: string, children: RawNode[] = [], extra: Partial<RawNode> = 
 
 const sceneOf = (...roots: RawNode[]): RawScene => ({ nodes: roots }) as RawScene;
 
-/** Find a node by name for the test's own bookkeeping, not for resolution. */
-function pick(roots: RawNode[], name: string): RawNode {
-  for (const n of roots) {
-    if (n.name === name) return n;
-    try {
-      return pick(n.children, name);
-    } catch {
-      // keep looking
-    }
-  }
-  throw new Error(`no node named ${name}`);
-}
-
 describe('resolveNodePath', () => {
   describe('a bare name means a DIRECT child (node.cpp:1941)', () => {
     it('finds the referencing node’s own child', () => {
       const tree = node('Root', [node('Body', [node('Mesh')])]);
       const scene = sceneOf(tree);
-      const body = pick([tree], 'Body');
+      const body = byName([tree], 'Body');
       expect(resolveNodePath(scene, body, 'Mesh')).toEqual({
         status: 'found',
-        node: pick([tree], 'Mesh'),
+        node: byName([tree], 'Mesh'),
       });
     });
 
@@ -46,7 +34,7 @@ describe('resolveNodePath', () => {
     it('does NOT reach the referencing node’s own parent', () => {
       const tree = node('ParentNode', [node('ChildNode')]);
       const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'ChildNode'), 'ParentNode')).toEqual({
+      expect(resolveNodePath(scene, byName([tree], 'ChildNode'), 'ParentNode')).toEqual({
         status: 'missing',
       });
     });
@@ -54,13 +42,13 @@ describe('resolveNodePath', () => {
     it('does NOT reach a sibling', () => {
       const tree = node('Root', [node('A'), node('B')]);
       const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'A'), 'B')).toEqual({ status: 'missing' });
+      expect(resolveNodePath(scene, byName([tree], 'A'), 'B')).toEqual({ status: 'missing' });
     });
 
     it('does NOT reach an unrelated branch that shares the name', () => {
       const tree = node('Root', [node('Left', [node('Target')]), node('Right')]);
       const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'Right'), 'Target')).toEqual({
+      expect(resolveNodePath(scene, byName([tree], 'Right'), 'Target')).toEqual({
         status: 'missing',
       });
     });
@@ -70,7 +58,7 @@ describe('resolveNodePath', () => {
       const scene = sceneOf(tree);
       expect(resolveNodePath(scene, tree, 'A/B/C')).toEqual({
         status: 'found',
-        node: pick([tree], 'C'),
+        node: byName([tree], 'C'),
       });
     });
   });
@@ -79,16 +67,16 @@ describe('resolveNodePath', () => {
     it('resolves "." to the referencing node itself', () => {
       const tree = node('Root', [node('A')]);
       const scene = sceneOf(tree);
-      const a = pick([tree], 'A');
+      const a = byName([tree], 'A');
       expect(resolveNodePath(scene, a, '.')).toEqual({ status: 'found', node: a });
     });
 
     it('climbs with ".." and then descends', () => {
       const tree = node('Root', [node('A'), node('B')]);
       const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'A'), '../B')).toEqual({
+      expect(resolveNodePath(scene, byName([tree], 'A'), '../B')).toEqual({
         status: 'found',
-        node: pick([tree], 'B'),
+        node: byName([tree], 'B'),
       });
     });
 
@@ -110,7 +98,7 @@ describe('resolveNodePath', () => {
         node('Mid', [node('Leaf'), target], { type: '', overridesExistingNode: true }),
       ]);
       const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'Leaf'), '../Target')).toEqual({
+      expect(resolveNodePath(scene, byName([tree], 'Leaf'), '../Target')).toEqual({
         status: 'found',
         node: target,
       });
@@ -119,7 +107,7 @@ describe('resolveNodePath', () => {
     it('still reports a miss reached through such a ".."', () => {
       const tree = node('Root', [node('Mid', [node('Leaf')], { type: '', overridesExistingNode: true })]);
       const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'Leaf'), '../Nope')).toEqual({
+      expect(resolveNodePath(scene, byName([tree], 'Leaf'), '../Nope')).toEqual({
         status: 'unknowable',
       });
     });
@@ -127,7 +115,7 @@ describe('resolveNodePath', () => {
     it('declines a path that climbs past the root before descending', () => {
       const tree = node('Root', [node('A')]);
       const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'A'), '../../Elsewhere')).toEqual({
+      expect(resolveNodePath(scene, byName([tree], 'A'), '../../Elsewhere')).toEqual({
         status: 'unknowable',
       });
     });
@@ -145,9 +133,9 @@ describe('resolveNodePath', () => {
     it('resolves from anywhere, since the owner holds the map', () => {
       const tree = withUnique();
       const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'Other'), '%Marker')).toEqual({
+      expect(resolveNodePath(scene, byName([tree], 'Other'), '%Marker')).toEqual({
         status: 'found',
-        node: pick([tree], 'Marker'),
+        node: byName([tree], 'Marker'),
       });
     });
 
@@ -156,7 +144,7 @@ describe('resolveNodePath', () => {
     it('is missing when no node claims the unique name', () => {
       const tree = node('Root', [node('Marker'), node('Other')]);
       const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'Other'), '%Marker')).toEqual({
+      expect(resolveNodePath(scene, byName([tree], 'Other'), '%Marker')).toEqual({
         status: 'missing',
       });
     });
@@ -180,9 +168,9 @@ describe('resolveNodePath', () => {
         node('Other'),
       ]);
       const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'Other'), '%Rig/Hand')).toEqual({
+      expect(resolveNodePath(scene, byName([tree], 'Other'), '%Rig/Hand')).toEqual({
         status: 'found',
-        node: pick([tree], 'Hand'),
+        node: byName([tree], 'Hand'),
       });
     });
   });
@@ -208,7 +196,7 @@ describe('resolveNodePath', () => {
       const scene = sceneOf(tree);
       expect(resolveNodePath(scene, tree, 'Enemy/Extra')).toEqual({
         status: 'found',
-        node: pick([tree], 'Extra'),
+        node: byName([tree], 'Extra'),
       });
     });
 
@@ -227,7 +215,7 @@ describe('resolveNodePath', () => {
     it('declines when the referencing node itself sits under an instance', () => {
       const tree = node('Root', [node('Enemy', [node('Inner')], { instance: 'ExtResource("1_enemy")' })]);
       const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'Inner'), 'Nope')).toEqual({
+      expect(resolveNodePath(scene, byName([tree], 'Inner'), 'Nope')).toEqual({
         status: 'unknowable',
       });
     });
@@ -238,7 +226,7 @@ describe('resolveNodePath', () => {
     it('declines an absolute path', () => {
       const tree = node('Root', [node('A')]);
       const scene = sceneOf(tree);
-      expect(resolveNodePath(scene, pick([tree], 'A'), '/root/Main')).toEqual({
+      expect(resolveNodePath(scene, byName([tree], 'A'), '/root/Main')).toEqual({
         status: 'unknowable',
       });
     });
@@ -257,7 +245,7 @@ describe('resolveNodePath', () => {
       const scene = sceneOf(tree);
       expect(resolveNodePath(scene, tree, 'A:position')).toEqual({
         status: 'found',
-        node: pick([tree], 'A'),
+        node: byName([tree], 'A'),
       });
     });
 
@@ -266,7 +254,7 @@ describe('resolveNodePath', () => {
     it('resolves a subname-only path to the referencing node', () => {
       const tree = node('Root', [node('A')]);
       const scene = sceneOf(tree);
-      const a = pick([tree], 'A');
+      const a = byName([tree], 'A');
       expect(resolveNodePath(scene, a, ':position')).toEqual({ status: 'found', node: a });
     });
   });

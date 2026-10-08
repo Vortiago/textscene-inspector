@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { RuleContext } from '../../../linter/types';
-import type { RawNode, TscnNode, TscnScene } from '../../../parser/types';
+import type { RawNode, RawScene } from '../../../parser/types';
 import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
 import { occluderInstance3DConfigurationWarningsRule } from './linter';
@@ -23,14 +23,13 @@ function findByType(nodes: RawNode[], type: string): RawNode | undefined {
 }
 
 function makeContext(rawProperties: Record<string, string>): RuleContext {
-  const node: TscnNode = {
+  const node: RawNode = {
     rawProperties,
     name: 'MyOccluderInstance3D',
     type: 'OccluderInstance3D',
     children: [],
-    properties: {},
   };
-  const scene: TscnScene = { nodes: [node], externalResources: [], internalResources: [] };
+  const scene: RawScene = { nodes: [node], externalResources: [], internalResources: [] };
   return { scene, node };
 }
 

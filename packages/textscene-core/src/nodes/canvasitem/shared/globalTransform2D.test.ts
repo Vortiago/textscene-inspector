@@ -6,10 +6,10 @@
 import { describe, expect, it } from 'vitest';
 import { resolveGlobalTransform2D } from './globalTransform2D';
 import type { ParentLookup } from '../../../linter/parentType';
-import type { RawNode, TscnNode } from '../../../parser/types';
+import type { RawNode } from '../../../parser/types';
 
-function node(type: string, rawProperties: Record<string, string> = {}): TscnNode {
-  return { name: type, type, children: [], properties: {}, rawProperties };
+function node(type: string, rawProperties: Record<string, string> = {}): RawNode {
+  return { name: type, type, children: [], rawProperties };
 }
 
 /** A parent lookup over a chain written root first. */

@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { rangeAdvisories, type RangeAdvisoryTable, type WarningArm } from './rangeAdvisory.js';
-import type { TscnNode } from '../parser/types.js';
+import type { RawNode } from '../parser/types.js';
 
 const arm: WarningArm = {
   severity: 'warning',
@@ -14,8 +14,8 @@ const arm: WarningArm = {
   grounding: { kind: 'engine', at: 'light_3d.cpp:389' },
 };
 
-function nodeWith(properties: Record<string, string>): TscnNode {
-  return { rawProperties: properties, name: 'Test', type: 'TestNode', children: [], properties: {} };
+function nodeWith(properties: Record<string, string>): RawNode {
+  return { rawProperties: properties, name: 'Test', type: 'TestNode', children: [] };
 }
 
 describe('rangeAdvisories', () => {

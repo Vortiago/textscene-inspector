@@ -8,7 +8,6 @@ import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from '../../../../linter/StrictTscnParser';
 import { ruleRegistry } from '../../../../linter/RuleRegistry';
 import type { Diagnostic, RuleContext } from '../../../../linter/types';
-import type { TscnNode } from '../../../../parser/types';
 import { graphEditPropertiesRule } from './linter';
 import './linterParser';
 
@@ -19,7 +18,7 @@ function diagnose(body: string): Diagnostic[] {
     `[node name="MyGraphEdit" type="GraphEdit" parent="."]\n${body}`;
   const { scene } = new StrictTscnParser().parse(content);
   if (!scene) throw new Error('fixture failed to parse');
-  const node = scene.nodes[0]?.children[0] as TscnNode;
+  const node = scene.nodes[0]!.children[0]!;
   expect(node.type).toBe('GraphEdit');
   const context: RuleContext = { scene, node };
   return graphEditPropertiesRule.check(context);

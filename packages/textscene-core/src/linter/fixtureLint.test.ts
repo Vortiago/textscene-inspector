@@ -16,7 +16,8 @@ import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
 import { errorsOf } from './testing/tierLists';
-import { fixturesDir as fixturesRoot, sceneFiles } from '../parser/testing/parserKit.js';
+import { fixturesDir } from '../parser/testing/parserKit.js';
+import { walk } from './testing/ruleNameScrape.js';
 import { isGodotTextResourcePath } from '../godot/index.js';
 
 /**
@@ -85,6 +86,8 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
   },
 };
 
+const fixtures = fixturesDir();
+
 /**
  * Fixtures that must produce an error, from the one file that lists them: files Godot refuses to load, which the
  * app-shell and extension suites open as a user would (`docs/user-flows.md` WEB-10 walks through the parse-error banner).
@@ -93,7 +96,7 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
  */
 const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
   (
-    JSON.parse(readFileSync(join(fixturesRoot(), 'negative-fixtures.json'), 'utf8')) as {
+    JSON.parse(readFileSync(join(fixtures, 'negative-fixtures.json'), 'utf8')) as {
       files: string[];
     }
   ).files
@@ -102,14 +105,12 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 /** How many fixtures that list is meant to hold; see the pin at the bottom. */
 const NEGATIVE_FIXTURE_COUNT = 5;
 
-const fixturesDir = fixturesRoot();
-
 /**
  * The project a fixture's `res://` paths resolve in: the nearest `project.godot` from its folder up to
  * `scenes/fixtures`, or null for the flat corpus, which is no project.
  */
 function projectRootOf(path: string): Promise<string | null> {
-  const isFixturesDir = (dir: string) => resolve(dir) === fixturesDir;
+  const isFixturesDir = (dir: string) => resolve(dir) === fixtures;
   return findProjectRoot(dirname(path), parentDir, isFixturesDir, async (dir) =>
     existsSync(projectFileIn(dir))
   );
@@ -124,7 +125,7 @@ interface Fixture {
 
 async function fixture(path: string): Promise<Fixture> {
   const root = await projectRootOf(path);
-  return { path, name: relative(fixturesDir, path), provider: root === null ? null : providerForRoot(root) };
+  return { path, name: relative(fixtures, path), provider: root === null ? null : providerForRoot(root) };
 }
 
 function lintFixture({ path, provider }: Fixture): Promise<Diagnostic[]> {
@@ -159,7 +160,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
   let all: Fixture[] = [];
 
   beforeAll(async () => {
-    all = await Promise.all(sceneFiles(fixturesDir, isGodotTextResourcePath).map(fixture));
+    all = await Promise.all(walk(fixtures, isGodotTextResourcePath).sort().map(fixture));
     diagnosticsByName = new Map(
       await Promise.all(all.map(async (linted) => [linted.name, await lintFixture(linted)] as const))
     );

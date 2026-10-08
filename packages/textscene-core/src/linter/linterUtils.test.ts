@@ -2,16 +2,16 @@
  * NodePath resolution is tested in `nodePathResolve.test.ts`. */
 
 import { describe, it, expect } from 'vitest';
-import type { TscnNode } from '../parser/types.js';
+import type { RawNode } from '../parser/types.js';
 import { firstNodeOfType, nodesDescendingFrom } from './linterUtils.js';
 
 function node(
   name: string,
   type: string,
-  children: TscnNode[] = [],
+  children: RawNode[] = [],
   rawProperties: Record<string, string> = {}
-): TscnNode {
-  return { rawProperties, name, type, children, properties: {} };
+): RawNode {
+  return { rawProperties, name, type, children };
 }
 
 describe('firstNodeOfType', () => {

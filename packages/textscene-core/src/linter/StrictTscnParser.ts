@@ -43,7 +43,7 @@ function createRawNode(heading: ParsedHeading, rawProperties: Record<string, str
   }
   if (heading.attributes.owner) node.owner = heading.attributes.owner;
 
-  // The instance reference goes on the dedicated TscnNode field, not a `__instance` key in the property schema.
+  // The instance reference goes on the dedicated `instance` field, not a `__instance` key in the property schema.
   if (heading.attributes.instance) {
     node.instance = heading.attributes.instance;
   }

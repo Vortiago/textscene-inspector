@@ -10,12 +10,18 @@ import type { RawNode } from '../../parser/types.js';
 
 /** Depth-first lookup by name, since these trees are tiny. */
 export function byName(nodes: readonly RawNode[], name: string): RawNode {
+  const hit = findByName(nodes, name);
+  if (!hit) throw new Error(`no node named ${name}`);
+  return hit;
+}
+
+function findByName(nodes: readonly RawNode[], name: string): RawNode | undefined {
   for (const n of nodes) {
     if (n.name === name) return n;
-    const hit = n.children?.length ? byName(n.children, name) : undefined;
+    const hit = findByName(n.children, name);
     if (hit) return hit;
   }
-  throw new Error(`no node named ${name}`);
+  return undefined;
 }
 
 /**

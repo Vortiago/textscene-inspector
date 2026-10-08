@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from './StrictTscnParser.js';
 import { headingLocation, propertyLocation } from './sourceLocation.js';
-import type { TscnInternalResource, TscnNode } from '../parser/types.js';
+import type { RawNode, TscnInternalResource } from '../parser/types.js';
 
 const SCENE = `[gd_scene format=3]
 
@@ -23,7 +23,7 @@ function parse() {
 }
 
 /** A node no scan built, so no table holds it. */
-const STRAY: TscnNode = { rawProperties: {}, name: 'Stray', type: 'Node3D', children: [], properties: {} };
+const STRAY: RawNode = { rawProperties: {}, name: 'Stray', type: 'Node3D', children: [] };
 const STRAY_RESOURCE: TscnInternalResource = { id: 'Stray_1', type: 'BoxMesh', data: {} };
 
 describe('headingLocation', () => {

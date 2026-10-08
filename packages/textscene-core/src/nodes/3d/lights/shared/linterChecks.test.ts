@@ -1,12 +1,12 @@
 /** The projector-without-shadow warning OmniLight3D and SpotLight3D share, under each class's arm. */
 import { describe, it, expect } from 'vitest';
-import type { TscnNode } from '../../../../parser/types.js';
+import type { RawNode } from '../../../../parser/types.js';
 import { projectorArm, projectorWithoutShadowDiagnostic } from './linterChecks.js';
 
 const arm = projectorArm('omnilight3d');
 
-function light(rawProperties: Record<string, string>): TscnNode {
-  return { rawProperties, name: 'Lamp', type: 'OmniLight3D', properties: {}, children: [] };
+function light(rawProperties: Record<string, string>): RawNode {
+  return { rawProperties, name: 'Lamp', type: 'OmniLight3D', children: [] };
 }
 
 describe('projectorArm', () => {

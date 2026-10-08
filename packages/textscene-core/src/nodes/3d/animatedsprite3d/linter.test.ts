@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { ruleRegistry } from '../../../linter/RuleRegistry';
 import type { RuleContext } from '../../../linter/types';
-import type { TscnNode, TscnScene } from '../../../parser/types';
+import type { RawNode, RawScene } from '../../../parser/types';
 import { danglingResourceDiagnostics } from '../../../linter/danglingResources';
 import './linterParser';
 import './linter';
@@ -20,14 +20,13 @@ const RULE_NAME = 'valid-animatedsprite3d-properties';
  * scene holds, which the generic dangling-resource pass resolves `sprite_frames` against.
  */
 function context(rawProperties: Record<string, string>, declared: string[] = ['frames_1']): RuleContext {
-  const node: TscnNode = {
+  const node: RawNode = {
     rawProperties,
     name: 'MyAnimatedSprite3D',
     type: 'AnimatedSprite3D',
     children: [],
-    properties: {},
   };
-  const scene: TscnScene = {
+  const scene: RawScene = {
     nodes: [node],
     externalResources: [],
     internalResources: declared.map((id) => ({ id, type: 'SpriteFrames', data: {} })),

@@ -6,10 +6,9 @@ import type { Node3DProperties } from '../nodes/base/node3d/types';
 
 /**
  * One `[node]` heading as the scan saw it, before `buildSceneTree` placed it. Kept off
- * `TscnNode` because only `strandedNodes` and `rootDeclaringParent` read it, both
- * against the returned tree.
+ * the node because only the `sceneTreeBuilder` checks read it, against the returned tree.
  */
-export interface NodeOrigin<N extends RawNode = TscnNode> {
+export interface NodeOrigin<N extends RawNode> {
   readonly node: N;
   /** 1-based line of the node's own heading. */
   readonly line: number;
@@ -82,20 +81,13 @@ export interface TscnScene<N extends RawNode = TscnNode> {
  * typed `properties`. The strict parser builds this. A `TscnNode` is a `RawNode`, so a helper
  * typed on it takes either tree.
  */
-export type RawNode = Omit<TscnNode, 'properties' | 'children'> & { children: RawNode[] };
-
-/** The **Raw view** of a scene, which the strict parser returns. */
-export type RawScene = TscnScene<RawNode>;
-
-export interface TscnNode {
+export interface RawNode {
   name: string;
   /** Godot class name, for example "Node3D". */
   type: string;
   /** Parent node path: "." for the root's children, "NodeName" for a named parent. */
   parent?: string;
-  children: TscnNode[];
-  /** Type-specific properties from the lenient parser, for example Node3DProperties for a Node3D. */
-  properties: Node3DProperties | Record<string, unknown>;
+  children: RawNode[];
   /**
    * Raw body properties as written, published by both parsers
    * (`parser/rawPropertyParity.test.ts`), so read this from code the linter and the
@@ -134,6 +126,19 @@ export interface TscnNode {
   owner?: string;
   /** External scene instance reference, for example ExtResource("1_abc"). */
   instance?: string;
+}
+
+/** A node whose children are its own kind: the shape the tree builder seats a child into. */
+export type SceneNode<N> = RawNode & { children: N[] };
+
+/** The **Raw view** of a scene, which the strict parser returns. */
+export type RawScene = TscnScene<RawNode>;
+
+/** A node from the lenient parser: the **Raw view** plus the typed values the renderer reads. */
+export interface TscnNode extends RawNode {
+  children: TscnNode[];
+  /** Type-specific properties, for example Node3DProperties for a Node3D. */
+  properties: Node3DProperties | Record<string, unknown>;
 }
 
 export interface TscnExternalResource {

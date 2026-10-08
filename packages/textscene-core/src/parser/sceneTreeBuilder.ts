@@ -2,7 +2,7 @@
  * Builds hierarchical scene tree from flat TSCN node list.
  */
 
-import type { NodeOrigin, RawNode } from './types';
+import type { NodeOrigin, RawNode, SceneNode } from './types';
 import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
 import { isUniqueNameInOwner } from '../utils/uniqueNames.js';
 import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
@@ -13,7 +13,7 @@ import { isTypeUnknowable } from './typeUnknowable.js';
  * The tree from the flat node list, by parent path. Paths are relative to the root:
  * "." is the root, "Foo/Bar" is root/Foo/Bar.
  */
-export function buildSceneTree<N extends RawNode>(nodes: N[]): N[] {
+export function buildSceneTree<N extends SceneNode<N>>(nodes: N[]): N[] {
   if (nodes.length === 0) return [];
 
   // Heading 0 is the root when nothing is parentless: `packed_scene.cpp:218-219` makes
@@ -67,9 +67,9 @@ export function buildSceneTree<N extends RawNode>(nodes: N[]): N[] {
  * The tree so far, and the path walk's view of it. One object, since every caller
  * needs both halves, and its two lookups are the two `get_node_or_null` performs.
  */
-interface BuildTables {
+interface BuildTables<N> {
   /** Every seated node, keyed by the folded path its own children address it at. */
-  readonly byPath: Map<string, RawNode>;
+  readonly byPath: Map<string, N>;
   /** `%Name` to that path, for the nodes claiming one. */
   readonly uniquePaths: Map<string, string>;
   /** The same two tables as the walk consumes them. */
@@ -77,8 +77,8 @@ interface BuildTables {
 }
 
 /** Tables holding only the scene root, which sits at the empty path. */
-function newTables(rootNode: RawNode): BuildTables {
-  const byPath = new Map<string, RawNode>([[SCENE_ROOT_PATH, rootNode]]);
+function newTables<N extends RawNode>(rootNode: N): BuildTables<N> {
+  const byPath = new Map<string, N>([[SCENE_ROOT_PATH, rootNode]]);
   // The root claims no `%Name`: `set_unique_name_in_owner` registers in the
   // node's OWNER (node.cpp:2222-2233) and the scene root has none.
   const uniquePaths = new Map<string, string>();
@@ -95,7 +95,7 @@ function newTables(rootNode: RawNode): BuildTables {
  * below a parent this file describes is one Godot fails to find. A parent missing from
  * the map passed one segment ago, so instanced content vouched for it.
  */
-function canNameNode(pathMap: Map<string, RawNode>, path: string): boolean {
+function canNameNode(pathMap: ReadonlyMap<string, RawNode>, path: string): boolean {
   if (pathMap.has(path)) return true;
   const cut = path.lastIndexOf('/');
   const parent = pathMap.get(cut === -1 ? SCENE_ROOT_PATH : path.slice(0, cut));
@@ -110,7 +110,7 @@ function canNameNode(pathMap: Map<string, RawNode>, path: string): boolean {
  * claims. First claim wins: a second claimant warns and clears its own flag
  * (`node.cpp:2225-2231`).
  */
-function registerPath(tables: BuildTables, parentPath: string, node: RawNode): void {
+function registerPath<N extends RawNode>(tables: BuildTables<N>, parentPath: string, node: N): void {
   // A nameless heading claims no key: an empty name joins to its parent's own key.
   // Godot seats it and places later siblings by path (`packed_scene.cpp:208-215`).
   if (!node.name) return;
@@ -121,9 +121,9 @@ function registerPath(tables: BuildTables, parentPath: string, node: RawNode): v
 }
 
 /** The instance a stranded node hangs off, and where that node lands. */
-interface InstanceAnchor {
+interface InstanceAnchor<N> {
   /** The enclosing `instance=` node. */
-  node: RawNode;
+  node: N;
   /** The remainder of the path below it, for the sub-scene to match. */
   subPath: string;
   /** The stranded node's own folded parent path, the key it is registered under. */
@@ -135,7 +135,10 @@ interface InstanceAnchor {
  * or `null` for a malformed path. Longest prefix first, so nested instances anchor at
  * the innermost one: the scene that resolves the sub-path.
  */
-function findInstanceAnchor(parentPath: string, tables: BuildTables): InstanceAnchor | null {
+function findInstanceAnchor<N extends RawNode>(
+  parentPath: string,
+  tables: BuildTables<N>
+): InstanceAnchor<N> | null {
   // The root is seated from the start, so a node naming it never reaches here.
   if (!parentPath) return null;
 
