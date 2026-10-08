@@ -75,3 +75,17 @@ export const BASES = {
     invisibleBase: true,
   },
 };
+
+/**
+ * The node3d base of a GeometryInstance3D descendant, whose registered component must hold the
+ * node's place in the scene cull (`NodeComponentRegistry.register`). A reusing slice mounts the
+ * undrawn `GeometryInstance3D`, and a `draws` slice wraps its own drawer (`geometryInstanceDrawer`).
+ */
+export const GEOMETRY_INSTANCE_BASE = {
+  ...BASES.node3d,
+  dir: '3d/geometryinstance3d',
+  parser: 'parseGeometryInstance3D',
+  component: 'GeometryInstance3D',
+  propsType: 'GeometryInstance3DProperties',
+  geometryInstanceDrawer: true,
+};

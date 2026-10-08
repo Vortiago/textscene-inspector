@@ -10,7 +10,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { BASES } from './new-node-slice/bases.mjs';
+import { BASES, GEOMETRY_INSTANCE_BASE } from './new-node-slice/bases.mjs';
 import { reusedParserFiles } from './new-node-slice/templates/reusedParser.mjs';
 import { drawsFiles } from './new-node-slice/templates/drawsSlice.mjs';
 
@@ -360,6 +360,56 @@ describe('new-node-slice intent shapes', () => {
       reusedParser: { fn: 'parseControl', importPath: '../../../2d/ui/control/parser' },
     });
     expect(emitted.has('index.r3f.ts')).toBe(false);
+  });
+
+  it('wraps the drawer of a GeometryInstance3D descendant, which the registry demands', () => {
+    const emitted = drawsFiles({
+      typeName: 'SoftBody3D',
+      camel: 'softBody3D',
+      base: GEOMETRY_INSTANCE_BASE,
+      toSrc: '../../../',
+      toBase: '../geometryinstance3d',
+      reusedParser: {
+        fn: 'parseMeshInstance3D',
+        importPath: '../meshinstance3d/parser',
+        propsType: 'MeshInstance3DProperties',
+        typesPath: '../meshinstance3d/types',
+      },
+    });
+    expect(emitted.get('Component.tsx')).toMatch(
+      /^export const SoftBody3D = withGeometryInstance\(SoftBody3DDrawer\);$/m
+    );
+  });
+
+  it('mounts a reusing GeometryInstance3D descendant on the undrawn GeometryInstance3D', () => {
+    const emitted = reusedParserFiles({
+      typeName: 'SoftBody3D',
+      lower: 'softbody3d',
+      camel: 'softBody3D',
+      intent: 'pending',
+      base: GEOMETRY_INSTANCE_BASE,
+      toSrc: '../../../',
+      toBase: '../../3d/geometryinstance3d',
+      reusedParser: { fn: 'parseMeshInstance3D', importPath: '../meshinstance3d/parser' },
+    });
+    expect(emitted.get('index.r3f.ts')).toMatch(/^\s*Component: GeometryInstance3D,$/m);
+  });
+
+  it('keeps a plain transform group for a draws slice outside GeometryInstance3D (edge case)', () => {
+    const emitted = drawsFiles({
+      typeName: 'ShapeCast3D',
+      camel: 'shapeCast3D',
+      base: BASES.node3d,
+      toSrc: '../../../',
+      toBase: '../../base/node3d',
+      reusedParser: {
+        fn: 'parseNode3D',
+        importPath: '../../base/node3d/parser',
+        propsType: 'Node3DProperties',
+        typesPath: '../../base/node3d/types',
+      },
+    });
+    expect(emitted.get('Component.tsx')).not.toContain('withGeometryInstance');
   });
 
   it('writes nothing on a dry run', () => {

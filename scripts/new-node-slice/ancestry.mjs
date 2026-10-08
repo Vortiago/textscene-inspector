@@ -48,6 +48,11 @@ function catalogChain(typeName, fallback = []) {
   return catalogCache.nodes.find((n) => n.name === typeName)?.chain ?? fallback;
 }
 
+/** Whether Godot's ancestry for `typeName` passes through `ancestor`. */
+export function descendsFrom(typeName, ancestor) {
+  return catalogChain(typeName).includes(ancestor);
+}
+
 /**
  * Path from `sliceDir` to the linterParser of the nearest registering Godot ancestor, so a test that
  * imports only `./linterParser` sees inherited keys: `base/node3d` past a `RigidBody3D` would skip

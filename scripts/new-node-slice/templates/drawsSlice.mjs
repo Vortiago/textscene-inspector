@@ -53,15 +53,9 @@ ${base.parserTestCases(typeName)}
   );
   files.set(
     'Component.tsx',
-    `/** ${typeName} render component — transform group wrapping children. */
-
-import type { NodeComponentProps } from '${toSrc}r3f/NodeComponentRegistry';
-import { ${base.component} } from '${toBase}/Component';
-
-export function ${typeName}({ node, children }: NodeComponentProps) {
-  return <${base.component} node={node}>{children}</${base.component}>;
-}
-`
+    base.geometryInstanceDrawer
+      ? geometryInstanceComponent(typeName, toSrc)
+      : plainComponent(typeName, base, toSrc, toBase)
   );
   files.set(
     'Component.test.tsx',
@@ -75,6 +69,7 @@ const baseNode: TscnNode = {
   name: 'My${typeName}',
   type: '${typeName}',
   children: [],
+  rawProperties: {},
   properties: parse${typeName}(
     { type: 'node', attributes: { type: '${typeName}', name: 'My${typeName}' } },
     {}
@@ -163,4 +158,46 @@ describe('${typeName} registration', () => {
 `
   );
   return files;
+}
+
+/** A transform group around the node's children, the base's own component. */
+function plainComponent(typeName, base, toSrc, toBase) {
+  return `/** ${typeName} render component — transform group wrapping children. */
+
+import type { NodeComponentProps } from '${toSrc}r3f/NodeComponentRegistry';
+import { ${base.component} } from '${toBase}/Component';
+
+export function ${typeName}({ node, children }: NodeComponentProps) {
+  return <${base.component} node={node}>{children}</${base.component}>;
+}
+`;
+}
+
+/**
+ * A GeometryInstance3D's drawer, which `withGeometryInstance` wraps so the node holds its place in
+ * the scene cull. It places the instance at its origin until it draws a box of its own.
+ */
+function geometryInstanceComponent(typeName, toSrc) {
+  return `/** ${typeName} render component — transform group wrapping children. */
+
+import { useMemo, useRef } from 'react';
+import type * as THREE from 'three';
+import type { NodeComponentProps } from '${toSrc}r3f/NodeComponentRegistry';
+import { Node3D } from '${toSrc}nodes/base/node3d/Component';
+import { boxPlacement } from '${toSrc}r3f/visibilityRange/placements';
+import { useGeometryInstance, withGeometryInstance } from '${toSrc}r3f/visibilityRange/geometryInstance';
+
+function ${typeName}Drawer({ node, children }: NodeComponentProps) {
+  const nodeRef = useRef<THREE.Group | null>(null);
+  const placement = useMemo(() => boxPlacement(nodeRef, null), []);
+  useGeometryInstance(placement);
+  return (
+    <Node3D node={node} ref={nodeRef}>
+      {children}
+    </Node3D>
+  );
+}
+
+export const ${typeName} = withGeometryInstance(${typeName}Drawer);
+`;
 }
