@@ -248,6 +248,8 @@ export function meshArgumentMounts(source: string): MeshArgumentMount[] {
 const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
+  'packages/textscene-core/src/r3f/materials/swappedMaterials.ts':
+    'puts one of a surface’s two mounted materials on its mesh, each keyed by its own mount, so a swap changes which material draws and never a program input of one',
   'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':
     'the GLB slot writer: `cloneWithMaterials` gives each clone its own copy of the loader’s materials, and `forEachSurfaceMaterial` hands a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
 };

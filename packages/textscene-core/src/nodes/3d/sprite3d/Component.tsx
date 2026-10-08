@@ -5,7 +5,7 @@
  * `meshBasicMaterial` (`material.cpp:3045`: SHADING_MODE_PER_PIXEL versus SHADING_MODE_UNSHADED).
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
@@ -16,7 +16,8 @@ import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { alphaCutSurface } from '../../../r3f/godotAlphaCut';
-import { cutSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
+import { cutFadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
+import type { MaterialAttach } from '../../../r3f/materials/swappedMaterials';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
@@ -27,7 +28,11 @@ import type { Sprite3DProperties } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
-import { useGeometryInstance, withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
+import {
+  useGeometryInstance,
+  useInstanceSurface,
+  withGeometryInstance,
+} from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
 
@@ -110,7 +115,8 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
       ),
     [rect, properties.transform, properties.axis, properties.billboard]
   );
-  const { fade, hideWhenCulled } = useGeometryInstance(placement);
+  const { hideWhenCulled } = useGeometryInstance(placement);
+  const surface = useInstanceSurface();
   // The quad's ref: the billboard and `fixed_size` hooks pose it, and the cull hides it.
   const quadRef = useCallback(
     (quad: THREE.Mesh | null) => {
@@ -134,7 +140,7 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
   // The instance fade is per GeometryInstance3D, outside the accumulation: only `modulate`
   // accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
   // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA (`material.cpp:1836`).
-  const surfaceAlpha = cutSurfaceAlpha(cut, properties.transparent ? clamp01(accum.a) : 1, fade);
+  const surfaceAlpha = cutFadeVariants(cut, properties.transparent ? clamp01(accum.a) : 1);
 
   // Baked into the geometry, so it stays right under the node's rotation and billboard.
   const geometry = useMemo(() => spriteQuadGeometry(rect, properties.axis), [rect, properties.axis]);
@@ -197,18 +203,26 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
     );
   }
 
-  const program = materialProgramInputs({
-    props: {
-      map: displayedTexture,
-      color,
-      ...surfaceAlpha,
-      // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
-      depthTest: !properties.no_depth_test,
-      // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
-      side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
-    },
-    merge: [properties.shaded ? SHADED_SCALARS : undefined],
-  });
+  const material = (alpha: PassAlpha, attach: MaterialAttach) => {
+    const program = materialProgramInputs({
+      props: {
+        attach,
+        map: displayedTexture,
+        color,
+        ...alpha,
+        // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
+        depthTest: !properties.no_depth_test,
+        // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
+        side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
+      },
+      merge: [properties.shaded ? SHADED_SCALARS : undefined],
+    });
+    return properties.shaded ? (
+      <meshStandardMaterial key={program.key} {...program.props} />
+    ) : (
+      <meshBasicMaterial key={program.key} {...program.props} />
+    );
+  };
 
   return (
     <>
@@ -222,11 +236,8 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
         renderOrder={properties.render_priority}
       >
         <primitive object={geometry} attach="geometry" />
-        {properties.shaded ? (
-          <meshStandardMaterial key={program.key} {...program.props} />
-        ) : (
-          <meshBasicMaterial key={program.key} {...program.props} />
-        )}
+        <Fragment key="unfaded">{material(surfaceAlpha.unfaded, surface.unfaded)}</Fragment>
+        <Fragment key="alphaPass">{material(surfaceAlpha.alphaPass, surface.alphaPass)}</Fragment>
       </mesh>
       {subtree}
     </>

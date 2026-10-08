@@ -2,13 +2,13 @@
  * Each GeometryInstance3D's link to the scene cull. `withGeometryInstance` gives every
  * GeometryInstance3D component one from the node's data, drawn or not, so a visibility parent the
  * previewer does not draw still decides its dependants. The drawer inside places it and reads the
- * shadow effects and the fade the cull gates.
+ * shadow effects the cull gates, and the cull fades each surface the drawer adds.
  */
 
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from 'react';
-import { fadeAlpha, forcesAlphaPass, geometryFade } from '../../godot/fadeAlpha';
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, type ReactNode } from 'react';
+import { geometryFade } from '../../godot/fadeAlpha';
 import { hasSurface, type Aabb } from '../../godot/aabb';
 import { hasGeometryBase } from '../../godot/geometryBase';
 import { hasVisibilityRange, NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/visibilityRange';
@@ -18,6 +18,14 @@ import type { NodeComponent, NodeComponentProps } from '../NodeComponentRegistry
 import { useParentType } from '../parentSpaceScope';
 import { rangedShadowCastingEffects, type ShadowCastingEffects } from '../shadowCasting';
 import type { RangeGate } from '../surfaceDrawHooks';
+import {
+  FadedSurfacesContext,
+  useSwappedMaterials,
+  type FadedSurface,
+  type FadedSurfaces,
+  type MaterialAttach,
+} from '../materials/swappedMaterials';
+import type { FadeVariants } from '../materials/fadeVariants';
 import { registerVisibilityInstance, type VisibilityInstance, type VisibilityLinks } from './visibilityScene';
 import { useVisibilityParent } from './VisibilityParentContext';
 import { copyAabb, type InstancePlacement } from './placements';
@@ -25,8 +33,6 @@ import { copyAabb, type InstancePlacement } from './placements';
 export interface GeometryInstanceDraw {
   /** `cast_shadow`, with draw hooks that skip a culled instance's colour and sun-shadow draws. */
   shadow: ShadowCastingEffects;
-  /** The fade every surface blends at (`geometryFade`), for the material slots. */
-  fade: number;
   /** A ref for an object with no draw hooks, which the cull hides outright when it culls it. */
   hideWhenCulled: (object: THREE.Object3D | null) => void;
 }
@@ -45,10 +51,11 @@ const ownBox = new THREE.Box3();
 const ownSize = new THREE.Vector3();
 
 /**
- * One instance's link to the scene cull. React writes its inputs after each commit, and the cull
- * writes `isVisible` before each render, which the draw hooks read through the `RangeGate`.
+ * One instance's link to the scene cull. React writes its inputs after each commit. Before each
+ * render the cull writes `isVisible`, which the draw hooks read through the `RangeGate`, and the
+ * fade of each surface its drawer adds.
  */
-class CulledInstance implements VisibilityInstance, RangeGate {
+class CulledInstance implements VisibilityInstance, RangeGate, FadedSurfaces {
   isVisible = true;
   links: VisibilityLinks = { path: null, parentPath: null, hasRange: false };
   range: VisibilityRange = NO_VISIBILITY_RANGE;
@@ -58,10 +65,7 @@ class CulledInstance implements VisibilityInstance, RangeGate {
   customAabb: Aabb | null = null;
   placement = UNPLACED;
   hidden: THREE.Object3D | null = null;
-  /** The range fade React last received. */
-  private committedFade = 1;
-
-  constructor(private readonly commitFade: (fade: number) => void) {}
+  private readonly surfaces = new Set<FadedSurface>();
 
   /** Takes the node's data. A change of links hands the cull a new links object. */
   update(path: string | null, parentPath: string | null, properties: GeometryInstance3DProperties): void {
@@ -93,29 +97,22 @@ class CulledInstance implements VisibilityInstance, RangeGate {
     if (this.placement.nodeMatrixWorld(nodeMatrix)) target.applyMatrix4(nodeMatrix);
   }
 
-  apply(isVisible: boolean, fade: number, isCanvasRender: boolean): void {
+  apply(isVisible: boolean, rangeFade: number): void {
     this.isVisible = isVisible;
     if (this.hidden) this.hidden.visible = isVisible;
-    if (!isCanvasRender || drawsAlike(fade, this.committedFade, this.transparency)) return;
-    this.committedFade = fade;
-    this.commitFade(fade);
+    const fade = geometryFade(this.transparency, rangeFade);
+    for (const surface of this.surfaces) surface.applyFade(fade);
   }
-}
 
-/**
- * Whether two range fades draw the same pixels: Godot quantises the fade to a byte and switches
- * passes at one threshold, so a re-render waits for either to change.
- */
-function drawsAlike(a: number, b: number, transparency: number): boolean {
-  const fadeA = geometryFade(transparency, a);
-  const fadeB = geometryFade(transparency, b);
-  return fadeAlpha(fadeA) === fadeAlpha(fadeB) && forcesAlphaPass(fadeA) === forcesAlphaPass(fadeB);
+  add(surface: FadedSurface): () => void {
+    this.surfaces.add(surface);
+    return () => this.surfaces.delete(surface);
+  }
 }
 
 interface GeometryInstanceScope {
   instance: CulledInstance;
   shadow: ShadowCastingEffects;
-  fade: number;
 }
 
 /** Null outside a GeometryInstance3D component, and inside the nodes it renders as its children. */
@@ -142,8 +139,7 @@ export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
     const parentPath = useVisibilityParent();
     const parentType = useParentType();
     const properties = node.properties as GeometryInstance3DProperties;
-    const [rangeFade, setRangeFade] = useState(1);
-    const instance = useMemo(() => new CulledInstance(setRangeFade), []);
+    const instance = useMemo(() => new CulledInstance(), []);
 
     useLayoutEffect(() => {
       instance.update(path, parentPath, properties);
@@ -155,18 +151,15 @@ export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
       () => rangedShadowCastingEffects(properties.castShadow, instance),
       [properties.castShadow, instance]
     );
-    const fade = geometryFade(properties.transparency, rangeFade);
-    const scope = useMemo(() => ({ instance, shadow, fade }), [instance, shadow, fade]);
+    const scope = useMemo(() => ({ instance, shadow }), [instance, shadow]);
     // The nodes it renders as children take their own scope, or none.
     return (
       <GeometryInstanceContext.Provider value={scope}>
-        <Drawer node={node}>
-          {children == null ? (
-            children
-          ) : (
-            <GeometryInstanceContext.Provider value={null}>{children}</GeometryInstanceContext.Provider>
-          )}
-        </Drawer>
+        <FadedSurfacesContext.Provider value={instance}>
+          <Drawer node={node}>
+            {children == null ? children : <OutsideInstance>{children}</OutsideInstance>}
+          </Drawer>
+        </FadedSurfacesContext.Provider>
       </GeometryInstanceContext.Provider>
     );
   }
@@ -175,16 +168,27 @@ export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
   return GeometryInstanceComponent;
 }
 
+/** The nodes a drawer renders as its children, outside its instance's scope and fade. */
+function OutsideInstance({ children }: { children: ReactNode }) {
+  return (
+    <GeometryInstanceContext.Provider value={null}>
+      <FadedSurfacesContext.Provider value={null}>{children}</FadedSurfacesContext.Provider>
+    </GeometryInstanceContext.Provider>
+  );
+}
+
+const MISSING_SCOPE = 'expected a GeometryInstance3D drawer inside withGeometryInstance, got none';
+
 /** The enclosing GeometryInstance3D's scope. Its drawer's tree always has one. */
 function useGeometryInstanceScope(): GeometryInstanceScope {
   const scope = useContext(GeometryInstanceContext);
-  if (!scope) throw new Error('expected a GeometryInstance3D drawer inside withGeometryInstance, got none');
+  if (!scope) throw new Error(MISSING_SCOPE);
   return scope;
 }
 
 /** Places the enclosing node's instance, and returns what its drawer draws with. */
 export function useGeometryInstance(placement: InstancePlacement): GeometryInstanceDraw {
-  const { instance, shadow, fade } = useGeometryInstanceScope();
+  const { instance, shadow } = useGeometryInstanceScope();
   useLayoutEffect(() => {
     instance.placement = placement;
     return () => {
@@ -198,5 +202,15 @@ export function useGeometryInstance(placement: InstancePlacement): GeometryInsta
     },
     [instance]
   );
-  return { shadow, fade, hideWhenCulled };
+  return { shadow, hideWhenCulled };
+}
+
+/**
+ * The function attaches of one surface the enclosing instance's drawer builds itself, at `attach`:
+ * its unfaded and alpha-pass materials, which the cull swaps.
+ */
+export function useInstanceSurface(attach?: string): FadeVariants<MaterialAttach> {
+  const swapped = useSwappedMaterials(attach);
+  if (!swapped) throw new Error(MISSING_SCOPE);
+  return swapped;
 }

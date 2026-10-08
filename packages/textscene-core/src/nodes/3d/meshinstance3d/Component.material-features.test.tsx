@@ -12,7 +12,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
-import { materialInstanceAs } from '../testing/reactThreeTestInstance';
+import { drawnMaterials } from '../testing/reactThreeTestInstance';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { preloadResource } from '../../../resources/testing/preloadResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
@@ -36,9 +36,7 @@ function makeNode(materialId: string, name = 'Mesh'): TscnNode {
 function findMaterial(
   renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>
 ): THREE.MeshStandardMaterial | undefined {
-  const materials = renderer.scene.findAllByType('MeshStandardMaterial');
-  const first = materials[0];
-  return first ? materialInstanceAs<THREE.MeshStandardMaterial>(first) : undefined;
+  return drawnMaterials<THREE.MeshStandardMaterial>(renderer.scene, 'MeshStandardMaterial')[0];
 }
 
 async function renderWith(
@@ -242,9 +240,9 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
       </ResourceLoaderProvider>
     );
 
-    const materials = renderer.scene.findAllByType('MeshStandardMaterial');
+    const materials = drawnMaterials<THREE.MeshStandardMaterial>(renderer.scene, 'MeshStandardMaterial');
     expect(materials).toHaveLength(2);
-    const [matA, matB] = materials.map((m) => materialInstanceAs<THREE.MeshStandardMaterial>(m));
+    const [matA, matB] = materials;
 
     expect(matA!.map).toBeDefined();
     expect(matB!.map).toBeDefined();
@@ -278,9 +276,9 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
 
     // A coat upgrades the slot to three.js's MeshPhysicalMaterial (the only
     // material with native clearcoat), carrying the parsed strength + roughness.
-    const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
+    const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
+    const material = physical[0]!;
     expect(material.clearcoat).toBeCloseTo(0.7, 5);
     expect(material.clearcoatRoughness).toBeCloseTo(0.25, 5);
   });
@@ -301,8 +299,12 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     const renderer = await renderWith(makeNode('mat'), internalResources, [], loader);
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    expect(renderer.scene.findAllByType('MeshPhysicalMaterial')).toHaveLength(0);
-    expect(renderer.scene.findAllByType('MeshStandardMaterial')).toHaveLength(1);
+    expect(drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial')).toHaveLength(
+      0
+    );
+    expect(drawnMaterials<THREE.MeshStandardMaterial>(renderer.scene, 'MeshStandardMaterial')).toHaveLength(
+      1
+    );
   });
 
   it('renders a rim material as MeshPhysicalMaterial with rim mapped to sheen', async () => {
@@ -325,9 +327,9 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
 
     // Rim upgrades the slot to MeshPhysicalMaterial and maps the rim strength
     // onto three.js's Fresnel sheen term (the closest native analog).
-    const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
+    const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
+    const material = physical[0]!;
     expect(material.sheen).toBeCloseTo(0.7, 5);
   });
 

@@ -91,7 +91,7 @@ function MeshInstance3DDrawer({ node, children }: NodeComponentProps) {
   // `cast_shadow`, the range cull and each surface's billboard and shadow-pass membership reach
   // three per draw group, through hooks that read that group's material.
   const placement = useMemo(() => livePlacement(meshRef, meshRef), []);
-  const { shadow, fade } = useGeometryInstance(placement);
+  const { shadow } = useGeometryInstance(placement);
   const visible = properties.visible !== false;
 
   const shellProps = {
@@ -105,7 +105,7 @@ function MeshInstance3DDrawer({ node, children }: NodeComponentProps) {
     godotLayers: properties.layers,
     subtree: children,
     overlay: overlaySource ? (
-      <MaterialOverlayMesh meshRef={meshRef} source={overlaySource} shadow={shadow} fade={fade} />
+      <MaterialOverlayMesh meshRef={meshRef} source={overlaySource} shadow={shadow} />
     ) : null,
   };
 
@@ -133,11 +133,7 @@ function MeshInstance3DDrawer({ node, children }: NodeComponentProps) {
 
     return (
       <MeshShell {...shellProps}>
-        <ArrayMeshSurfaces
-          mesh={withFileMaterials(arrayMeshResult.value)}
-          overrides={meshOverrides}
-          fade={fade}
-        />
+        <ArrayMeshSurfaces mesh={withFileMaterials(arrayMeshResult.value)} overrides={meshOverrides} />
       </MeshShell>
     );
   }
@@ -148,7 +144,7 @@ function MeshInstance3DDrawer({ node, children }: NodeComponentProps) {
     return (
       <MeshShell {...shellProps}>
         {sceneArrayMesh ? (
-          <ArrayMeshSurfaces mesh={sceneArrayMesh} overrides={meshOverrides} fade={fade} />
+          <ArrayMeshSurfaces mesh={sceneArrayMesh} overrides={meshOverrides} />
         ) : (
           UNRESOLVED_MESH
         )}
@@ -161,7 +157,7 @@ function MeshInstance3DDrawer({ node, children }: NodeComponentProps) {
   return (
     <MeshShell {...shellProps}>
       <MeshGeometry resource={meshResource!} />
-      <SurfaceMaterialSlot source={primarySource} triplanarMesh={meshResource} fade={fade} />
+      <SurfaceMaterialSlot source={primarySource} triplanarMesh={meshResource} />
     </MeshShell>
   );
 }
@@ -186,7 +182,6 @@ function MaterialOverlayMesh({
   meshRef,
   source,
   shadow,
-  fade,
 }: {
   meshRef: RefObject<THREE.Mesh | null>;
   source: MaterialSource;
@@ -195,8 +190,6 @@ function MaterialOverlayMesh({
    * mounts: its own material decides its billboard, and SHADOWS_ONLY skips its draw too.
    */
   shadow: ShadowCastingEffects;
-  /** The base mesh's fade, which Godot applies to every surface of the instance. */
-  fade: number;
 }) {
   // Read back off the base mesh rather than built again, so all four geometry branches
   // share one component and the two meshes share one geometry.
@@ -224,7 +217,7 @@ function MaterialOverlayMesh({
       onBeforeRender={shadow.onBeforeRender}
       onAfterRender={shadow.onAfterRender}
     >
-      <SurfaceMaterialSlot source={source} fade={fade} />
+      <SurfaceMaterialSlot source={source} />
     </mesh>
   );
 }
@@ -314,15 +307,7 @@ const UNRESOLVED_MESH = (
  * array to the surface count (`scene/3d/mesh_instance_3d.cpp:68,407`), so the draw
  * groups set the slot count and an extra override is dropped.
  */
-function ArrayMeshSurfaces({
-  mesh,
-  overrides,
-  fade,
-}: {
-  mesh: SurfacedMesh;
-  overrides: MeshOverrides;
-  fade: number;
-}) {
+function ArrayMeshSurfaces({ mesh, overrides }: { mesh: SurfacedMesh; overrides: MeshOverrides }) {
   const groupCount = Math.max(mesh.surfaceIndices.length, 1);
   const sources = Array.from({ length: groupCount }, (_unused, i) =>
     effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, mesh.materials[i])
@@ -330,7 +315,7 @@ function ArrayMeshSurfaces({
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} fade={fade} />
+      <SurfaceMaterialSlots sources={sources} />
     </>
   );
 }

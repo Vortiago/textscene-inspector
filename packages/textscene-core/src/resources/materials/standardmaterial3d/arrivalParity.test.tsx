@@ -6,7 +6,6 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { ReactElement } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import {
@@ -569,7 +568,7 @@ async function renderThroughSlot(testCase: ParityCase): Promise<THREE.Material> 
   return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
 }
 
-/** The `THREE.Material` type the imperative adapter constructs per derived class. */
+/** The `THREE.Material` type each adapter constructs per derived class. */
 const TYPE_FOR: Readonly<Record<StandardMaterialClass, string>> = {
   basic: 'MeshBasicMaterial',
   standard: 'MeshStandardMaterial',
@@ -583,13 +582,6 @@ const TYPE_FOR: Readonly<Record<StandardMaterialClass, string>> = {
 function comparable(value: unknown): unknown {
   return value instanceof THREE.Texture ? textureFingerprint(value) : value;
 }
-
-/** The JSX tag the reactive adapter mounts for each derived class. */
-const TAG_FOR: Readonly<Record<StandardMaterialClass, string>> = {
-  basic: 'meshBasicMaterial',
-  standard: 'meshStandardMaterial',
-  physical: 'meshPhysicalMaterial',
-};
 
 describe('StandardMaterial3D arrival parity', () => {
   for (const testCase of CASES) {
@@ -620,20 +612,25 @@ describe('StandardMaterial3D arrival parity', () => {
     // the derived bag's, so no prop goes unasserted, and each adapter is pinned to
     // the same derivation rather than to the other's output.
     for (const testCase of CASES) {
-      it(`${testCase.name}: the reactive adapter mounts the derived bag`, () => {
+      it(`${testCase.name}: the reactive adapter mounts the derived bag`, async () => {
         const textures = inlineTextures(testCase);
         const props = slotProps(testCase, textures);
         const bag = standardMaterialBag(props.scalars, textures);
-        const element = StandardMaterialSlot(props) as ReactElement;
-        expect(element.type).toBe(TAG_FOR[bag.materialClass]);
+        const renderer = await ReactThreeTestRenderer.create(
+          <mesh>
+            <StandardMaterialSlot {...props} />
+          </mesh>
+        );
+        const element = renderer.scene.findByType(TYPE_FOR[bag.materialClass]);
         // `attach` is the mount's own, and the React key and the injected hooks are the
         // program factory's output. The hooks are compared as the patch they came from.
         const {
           onBeforeCompile,
           customProgramCacheKey: _cacheKey,
+          attach: _attach,
           ...mounted
         } = element.props as Record<string, unknown>;
-        expect(mounted).toEqual({ ...bag.props, attach: undefined });
+        expect(mounted).toEqual(bag.props);
         expect(onBeforeCompile).toBe(bag.injection?.onBeforeCompile);
       });
 

@@ -19,6 +19,7 @@ import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
+import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
 
 // happy-dom has neither `FontFace` nor `document.fonts`, so the real bundled
 // registration can only ever answer `undefined` here (`sceneFontLoader.ts`'s
@@ -349,6 +350,9 @@ describe('<LabelGlyphs>', () => {
   });
 
   describe('transparency', () => {
+    /** A camera the cull fades the label for. */
+    const VIEW = manualCameraAt({ x: 0, y: 0, z: 5 });
+
     // GeometryInstance3D's: one fade alpha for the fill and the outline alike.
     const materials = (renderer: Awaited<ReturnType<typeof render>>) =>
       renderer.scene
@@ -359,11 +363,13 @@ describe('<LabelGlyphs>', () => {
       const renderer = await render(
         props({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 0.5 }, transparency: 0.5 })
       );
+      await renderScene(renderer, VIEW);
       expect(materials(renderer).map((m) => m.opacity)).toEqual([0.5 * HALF_FADE_ALPHA, HALF_FADE_ALPHA]);
     });
 
     it('writes a discard-cut label unblended in the alpha pass', async () => {
       const renderer = await render(props({ alpha_cut: AlphaCutMode.DISCARD, transparency: 0.5 }));
+      await renderScene(renderer, VIEW);
       const [material] = materials(renderer);
       expect(material).toMatchObject({ transparent: true, depthWrite: false, blending: THREE.NoBlending });
     });

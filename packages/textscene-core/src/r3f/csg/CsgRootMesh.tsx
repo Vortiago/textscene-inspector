@@ -23,8 +23,6 @@ export interface CsgRootMeshProps {
   plan: CsgPlan;
   /** The ROOT's `cast_shadow`; a contributor's own is absorbed with its solid. */
   shadow: ShadowCastingEffects;
-  /** The ROOT's fade (`geometryFade`); a contributor's own is absorbed with its solid. */
-  fade: number;
   /** Set to the evaluated mesh while it draws, for the root's visibility range to measure. */
   meshRef: RefObject<THREE.Mesh | null>;
   /**
@@ -37,7 +35,7 @@ export interface CsgRootMeshProps {
   children?: ReactNode;
 }
 
-export function CsgRootMesh({ plan, shadow, fade, meshRef, fallback, children }: CsgRootMeshProps) {
+export function CsgRootMesh({ plan, shadow, meshRef, fallback, children }: CsgRootMeshProps) {
   const { internalResources, externalResources } = useSceneResources();
   const [csg, setCsg] = useState<CsgModule | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -116,7 +114,7 @@ export function CsgRootMesh({ plan, shadow, fade, meshRef, fallback, children }:
           receiveShadow
           geometry={evaluation!.geometry as THREE.BufferGeometry}
         >
-          <SurfaceMaterialSlots sources={surfaces} fade={fade} />
+          <SurfaceMaterialSlots sources={surfaces} />
         </mesh>
       )}
       {/*

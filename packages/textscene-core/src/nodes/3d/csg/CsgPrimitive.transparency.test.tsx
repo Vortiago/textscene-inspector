@@ -21,6 +21,10 @@ import { findMesh } from '../testing/reactThreeTestInstance';
 import { NodeTree } from '../../../r3f/testing/NodeTree';
 import { settleCsgEvaluation } from '../../../r3f/csg/testing/settleCsgEvaluation';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
+import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
+
+/** A camera the cull fades the scene for. */
+const VIEW = manualCameraAt({ x: 0, y: 0, z: 6 });
 
 function parseBox(properties: Record<string, string>): CSGBox3DProperties {
   return parseCSGBox3D(heading('CSGBox3D', { name: 'Box' }), properties);
@@ -40,6 +44,7 @@ async function loneBoxMaterial(properties: Record<string, string>): Promise<THRE
       <CSGBox3D node={node} />
     </SceneResourcesProvider>
   );
+  await renderScene(renderer, VIEW);
   return (findMesh(renderer.scene) as unknown as THREE.Mesh).material as THREE.Material;
 }
 
@@ -58,6 +63,7 @@ async function subtractionMaterial(rootProperties: string, holeProperties = ''):
     </SceneResourcesProvider>
   );
   await settleCsgEvaluation(renderer);
+  await renderScene(renderer, VIEW);
   const evaluated = renderer.scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)

@@ -126,7 +126,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const nodeRef = useRef<THREE.Group | null>(null);
   const drawnRef = useRef<THREE.Mesh | null>(null);
   const placement = useMemo(() => livePlacement(nodeRef, drawnRef), []);
-  const { shadow, fade } = useGeometryInstance(placement);
+  const { shadow } = useGeometryInstance(placement);
 
   const transform = { ref: nodeRef, name: node.name, position, rotation, scale, visible } as const;
 
@@ -168,7 +168,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       receiveShadow
     >
       {geometry}
-      <SurfaceMaterialSlot source={materialSource} fade={fade} />
+      <SurfaceMaterialSlot source={materialSource} />
     </mesh>
   );
 
@@ -177,7 +177,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   if (combining) {
     return (
       <group {...transform}>
-        <CsgRootMesh plan={plan} shadow={shadow} fade={fade} meshRef={drawnRef} fallback={ownSolid}>
+        <CsgRootMesh plan={plan} shadow={shadow} meshRef={drawnRef} fallback={ownSolid}>
           {children}
         </CsgRootMesh>
       </group>

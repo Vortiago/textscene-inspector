@@ -48,7 +48,6 @@ function splitCastingSun(): THREE.DirectionalLight {
 interface Applied {
   isVisible: boolean;
   fade: number;
-  isCanvasRender: boolean;
 }
 
 /** An instance whose world AABB is a unit cube about `centre`, recording the last result. */
@@ -73,8 +72,8 @@ function instanceAt(
     worldBox(target) {
       target.setFromCenterAndSize(centre, new THREE.Vector3(1, 1, 1));
     },
-    apply(isVisible, fade, isCanvasRender) {
-      this.last = { isVisible, fade, isCanvasRender };
+    apply(isVisible, fade) {
+      this.last = { isVisible, fade };
     },
   };
 }
@@ -85,7 +84,7 @@ describe('registerVisibilityInstance', () => {
     const instance = instanceAt({ end: 20 });
     registerVisibilityInstance(scene, instance);
     fireSceneRender(scene, cameraAt(11));
-    expect(instance.last).toEqual({ isVisible: true, fade: 1, isCanvasRender: true });
+    expect(instance.last).toEqual({ isVisible: true, fade: 1 });
   });
 
   it('hides an instance past its end', () => {
@@ -96,12 +95,13 @@ describe('registerVisibilityInstance', () => {
     expect(instance.last?.isVisible).toBe(false);
   });
 
-  it('reports a render into a target as no canvas render', () => {
+  it('fades a render into a target by its own camera (edge case)', () => {
     const scene = new THREE.Scene();
-    const instance = instanceAt({ end: 20 });
+    const instance = instanceAt({ end: 20, endMargin: 10, fadeMode: VisibilityRangeFadeMode.SELF });
     registerVisibilityInstance(scene, instance);
-    fireSceneRender(scene, cameraAt(11), new THREE.WebGLRenderTarget(1, 1));
-    expect(instance.last?.isCanvasRender).toBe(false);
+    fireSceneRender(scene, cameraAt(5));
+    fireSceneRender(scene, cameraAt(15), new THREE.WebGLRenderTarget(1, 1));
+    expect(instance.last?.fade).toBeLessThan(1);
   });
 
   it('shows an instance with no range and no parent without measuring it', () => {

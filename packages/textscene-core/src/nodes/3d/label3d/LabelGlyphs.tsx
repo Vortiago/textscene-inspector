@@ -13,8 +13,7 @@ import {
   peekBundledCanvasFontMetrics,
 } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { alphaCutSurface, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
-import { cutSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
-import type { Color } from '../../../utils/colorParser';
+import { cutFadeVariants } from '../../../r3f/materials/fadeVariants';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
@@ -78,7 +77,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     properties.transform,
     properties.billboard,
   ]);
-  const { fade, hideWhenCulled } = useGeometryInstance(placement);
+  const { hideWhenCulled } = useGeometryInstance(placement);
 
   const depthTest = !properties.no_depth_test;
   const side = properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide;
@@ -113,9 +112,8 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the
   // blended pass is transparent. The geometry instance's fade can move both surfaces
   // there, and scales each surface's alpha by one fade alpha.
-  const { opacity: fadeAlpha, ...blend } = cutSurfaceAlpha(cut, 1, fade);
-  const fillTint = withAlphaScaled(properties.modulate, fadeAlpha);
-  const outlineTint = withAlphaScaled(properties.outline_modulate, fadeAlpha);
+  const { unfaded, alphaPass } = cutFadeVariants(cut, 1);
+  const blends = { unfaded: withoutOpacity(unfaded), alphaPass: withoutOpacity(alphaPass) };
 
   // `material.h:172-177`: the enum alternates NEAREST, LINEAR, so the even
   // members are the nearest ones whatever their mipmap/anisotropy suffix.
@@ -139,13 +137,13 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                 <TextRun
                   layout={lineLayouts[index]!}
                   fontSizePx={properties.font_size}
-                  tint={outlineTint}
+                  tint={properties.outline_modulate}
                   strokeWidthPx={strokeWidthPx}
                   depthTest={depthTest}
                   side={side}
                   renderOrder={outlineSurface.renderOrder}
                   textureFilter={textureFilter}
-                  blend={blend}
+                  blends={blends}
                   frameExcluded
                 />
               </group>
@@ -154,12 +152,12 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
               <TextRun
                 layout={lineLayouts[index]!}
                 fontSizePx={properties.font_size}
-                tint={fillTint}
+                tint={properties.modulate}
                 depthTest={depthTest}
                 side={side}
                 renderOrder={fillSurface.renderOrder}
                 textureFilter={textureFilter}
-                blend={blend}
+                blends={blends}
                 frameExcluded
               />
             </group>
@@ -170,7 +168,10 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   );
 }
 
-/** `TextRun` reads a tint's alpha as the surface opacity, so the fade alpha scales it there. */
-function withAlphaScaled(tint: Color, alpha: number): Color {
-  return { ...tint, a: tint.a * alpha };
+/** `TextRun` reads the tint's alpha as the surface opacity, so a blend carries none. */
+function withoutOpacity<T extends { opacity: number }>({
+  opacity: _opacity,
+  ...blend
+}: T): Omit<T, 'opacity'> {
+  return blend;
 }

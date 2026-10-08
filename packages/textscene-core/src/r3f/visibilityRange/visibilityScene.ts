@@ -28,8 +28,8 @@ export interface VisibilityInstance {
   readonly isIndexed: boolean;
   /** Writes its world AABB. The scene's world matrices are current when the cull calls it. */
   worldBox(target: THREE.Box3): void;
-  /** Takes the cull's result for one render. Only a canvas render's `fade` reaches React. */
-  apply(isVisible: boolean, fade: number, isCanvasRender: boolean): void;
+  /** Takes the cull's result for the render about to draw: whether it draws, and its range fade. */
+  apply(isVisible: boolean, fade: number): void;
 }
 
 interface InstanceState {
@@ -73,9 +73,7 @@ export function registerVisibilityInstance(scene: THREE.Scene, instance: Visibil
 
 function createRegistry(scene: THREE.Scene): SceneInstances {
   const registry: SceneInstances = { instances: new Map(), topology: null, stopObserving: () => {} };
-  registry.stopObserving = observeSceneCull(scene, (camera, target) =>
-    cullScene(scene, registry, camera, target === null)
-  );
+  registry.stopObserving = observeSceneCull(scene, (camera) => cullScene(scene, registry, camera));
   scenes.set(scene, registry);
   return registry;
 }
@@ -87,14 +85,9 @@ const cameraPosition = new THREE.Vector3();
 const box = new THREE.Box3();
 const boxCentre = new THREE.Vector3();
 
-function cullScene(
-  scene: THREE.Scene,
-  registry: SceneInstances,
-  camera: THREE.Camera,
-  isCanvasRender: boolean
-): void {
+function cullScene(scene: THREE.Scene, registry: SceneInstances, camera: THREE.Camera): void {
   const { members, parents, unmeasured } = currentTopology(registry);
-  for (const instance of unmeasured) instance.apply(true, 1, isCanvasRender);
+  for (const instance of unmeasured) instance.apply(true, 1);
   if (members.length === 0) return;
 
   viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
@@ -115,7 +108,7 @@ function cullScene(
   });
   cullVisibility(inputs).forEach((result, i) => {
     states[i]!.wasVisible.set(camera, result.wasVisible);
-    members[i]!.apply(result.isVisible, result.fade, isCanvasRender);
+    members[i]!.apply(result.isVisible, result.fade);
   });
 }
 

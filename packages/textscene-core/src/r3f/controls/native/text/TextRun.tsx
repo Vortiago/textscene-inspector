@@ -9,7 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { useEffect, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { OPEN_SANS_ATLAS_INFO, OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlas';
 import { createMsdfMaterial } from './msdfMaterial';
@@ -27,6 +27,8 @@ import { CanvasItemGroup } from '../../../components/CanvasItemGroup';
 import { ControlQuad } from '../controlQuad';
 import type { Color } from '../../../../nodes/base/node2d/types';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
+import type { FadeVariants } from '../../../materials/fadeVariants';
+import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 
 // Geometry is in Godot pixels, +Y down, with Y negated once per vertex into three's
 // Y-up space. Each line's top is a multiple of `layout.linePitchPx`, and its baseline
@@ -210,10 +212,11 @@ export interface TextRunProps {
   textureFilter?: 'nearest' | 'linear';
   /**
    * The `BaseMaterial3D::Transparency` this surface paints in, from a 3D caller's
-   * `alpha_cut` (`label_3d.cpp:386-393`). Canvas runs only. Omitted, it paints
+   * `alpha_cut` (`label_3d.cpp:386-393`), in each pass its GeometryInstance3D's fade can draw it
+   * in. Canvas runs inside a GeometryInstance3D drawer only. Omitted, it paints
    * `TRANSPARENCY_ALPHA`, a Control's only mode.
    */
-  blend?: CanvasTextBlend;
+  blends?: FadeVariants<CanvasTextBlend>;
   /**
    * Tags the mesh `tscnFrameExcluded`, which `frameSceneBounds.ts` skips. Label3D
    * only (`LabelGlyphs.tsx`): its glyphs mount asynchronously and could grow the
@@ -222,11 +225,23 @@ export interface TextRunProps {
   frameExcluded?: boolean;
 }
 
-/** One built run: geometry and material, plus on the canvas path the per-instance texture this component disposes. The shared atlas texture is never disposed. */
+/**
+ * One built run: its geometry, and on the canvas path the per-instance texture this component
+ * disposes. The shared atlas texture is never disposed. `paint` builds a material for the run,
+ * one for each pass a GeometryInstance3D's fade can draw it in.
+ */
 interface BuiltTextRun {
   geometry: THREE.BufferGeometry;
-  material: THREE.Material;
+  paint: (blend: CanvasTextBlend | undefined) => THREE.Material;
   ownedTexture?: THREE.Texture;
+}
+
+/** What both painters' materials read, apart from the blend. */
+interface TextRunLook {
+  tint: Color;
+  clippingPlanes: readonly THREE.Plane[] | undefined;
+  depthTest: boolean | undefined;
+  side: THREE.Side | undefined;
 }
 
 /**
@@ -237,18 +252,15 @@ interface BuiltTextRun {
 function buildTextRun(
   layout: TextLayoutResult,
   fontSizePx: number,
-  tint: Color,
+  look: TextRunLook,
   skew: number,
   distanceBias: number,
-  clippingPlanes: readonly THREE.Plane[] | undefined,
-  depthTest: boolean | undefined,
-  side: THREE.Side | undefined,
   strokeWidthPx: number,
   textureFilter: 'nearest' | 'linear',
-  blend: CanvasTextBlend | undefined,
   outlineColor: Color | undefined,
   outlineWidthPx: number
 ): BuiltTextRun {
+  const { tint, clippingPlanes, depthTest, side } = look;
   if (isCanvasFontMetrics(layout.fontMetrics)) {
     const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx);
     const { positions, uvs, indices } = buildCanvasTextQuadArrays(canvasLayout);
@@ -274,15 +286,10 @@ function buildTextRun(
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
-    const material = createCanvasTextMaterial({
-      map: texture,
-      opacity: tint.a,
-      clippingPlanes,
-      depthTest,
-      side,
-      ...blend,
-    });
-    return { geometry: geo, material, ownedTexture: texture };
+    const opacity = tint.a;
+    const paint = (blend: CanvasTextBlend | undefined) =>
+      createCanvasTextMaterial({ map: texture, opacity, clippingPlanes, depthTest, side, ...blend });
+    return { geometry: geo, paint, ownedTexture: texture };
   }
 
   const { positions, uvs, indices } = buildGlyphQuadArrays(layout, fontSizePx, skew);
@@ -297,7 +304,7 @@ function buildTextRun(
     const [or, og, ob] = sRGBToLinearRGB(outlineColor.r, outlineColor.g, outlineColor.b);
     outline = { color: { r: or, g: og, b: ob }, opacity: outlineColor.a, widthPx: outlineWidthPx };
   }
-  const material = createMsdfMaterial({
+  const options = {
     map: getAtlasTexture(),
     color: { r, g, b },
     opacity: tint.a,
@@ -307,8 +314,9 @@ function buildTextRun(
     depthTest,
     side,
     outline,
-  });
-  return { geometry: geo, material };
+  };
+  // The atlas painter has no blend modes: only a canvas run takes `blends`.
+  return { geometry: geo, paint: () => createMsdfMaterial(options) };
 }
 
 export function TextRun({
@@ -323,29 +331,29 @@ export function TextRun({
   side,
   strokeWidthPx = 0,
   textureFilter = 'linear',
-  blend,
+  blends,
   frameExcluded,
   outlineColor,
   outlineWidthPx = 0,
 }: TextRunProps) {
-  const { geometry, material, ownedTexture } = useMemo(
+  const swapped = useSwappedMaterials(undefined);
+  if (blends && !swapped)
+    throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
+
+  const run = useMemo(
     () =>
       buildTextRun(
         layout,
         fontSizePx,
-        tint,
+        { tint, clippingPlanes, depthTest, side },
         skew,
         distanceBias,
-        clippingPlanes,
-        depthTest,
-        side,
         strokeWidthPx,
         textureFilter,
-        blend,
         outlineColor,
         outlineWidthPx
       ),
-    // `tint`, `outlineColor` and `blend` are compared by their fields, not by identity: a caller
+    // `tint` and `outlineColor` are compared by their fields, not by identity: a caller
     // that re-creates an equal object every render must not rebuild the mesh.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- per-field comparison, as above.
     [
@@ -362,12 +370,6 @@ export function TextRun({
       side,
       strokeWidthPx,
       textureFilter,
-      blend?.transparent,
-      blend?.depthWrite,
-      blend?.alphaTest,
-      blend?.alphaHash,
-      blend?.blending,
-      blend?.injection,
       outlineColor?.r,
       outlineColor?.g,
       outlineColor?.b,
@@ -375,13 +377,27 @@ export function TextRun({
       outlineWidthPx,
     ]
   );
+  const material = usePaintedMaterial(run, blends?.unfaded);
+  // Built for every run, as a hook runs whatever the props: a material never drawn never compiles.
+  const alphaPassMaterial = usePaintedMaterial(run, blends?.alphaPass);
+  const meshRef = useRef<THREE.Mesh | null>(null);
+  const isFaded = blends !== undefined;
+  useLayoutEffect(() => {
+    const mesh = meshRef.current;
+    if (!swapped || !isFaded || !mesh) return;
+    const detachUnfaded = swapped.unfaded(mesh, material);
+    const detachAlphaPass = swapped.alphaPass(mesh, alphaPassMaterial);
+    return () => {
+      detachAlphaPass();
+      detachUnfaded();
+    };
+  }, [swapped, isFaded, material, alphaPassMaterial]);
 
   // R3F does not dispose a geometry or material passed as a prop, so both leak
   // on every rebuild without this, and a Label re-shapes on every rect or font change.
-  useEffect(() => () => geometry.dispose(), [geometry]);
-  useEffect(() => () => material.dispose(), [material]);
+  useEffect(() => () => run.geometry.dispose(), [run]);
   // The canvas path's raster texture is fresh per rebuild, unlike the shared atlas.
-  useEffect(() => () => ownedTexture?.dispose(), [ownedTexture]);
+  useEffect(() => () => run.ownedTexture?.dispose(), [run]);
 
   // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour:
   // this run's `tint`, converted to linear once as for every `ControlQuad`.
@@ -394,7 +410,8 @@ export function TextRun({
   return (
     <>
       <mesh
-        geometry={geometry}
+        ref={meshRef}
+        geometry={run.geometry}
         material={material}
         renderOrder={renderOrder}
         userData={frameExcluded ? { tscnFrameExcluded: true } : undefined}
@@ -412,4 +429,27 @@ export function TextRun({
       ))}
     </>
   );
+}
+
+/**
+ * The run's material for `blend`, rebuilt only when a field of it changes, and disposed on
+ * replacement: R3F does not dispose a material passed as a prop.
+ */
+function usePaintedMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefined): THREE.Material {
+  const material = useMemo(
+    () => run.paint(blend),
+    // `blend` is compared by its fields, as `run` is above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- per-field comparison.
+    [
+      run,
+      blend?.transparent,
+      blend?.depthWrite,
+      blend?.alphaTest,
+      blend?.alphaHash,
+      blend?.blending,
+      blend?.injection,
+    ]
+  );
+  useEffect(() => () => material.dispose(), [material]);
+  return material;
 }

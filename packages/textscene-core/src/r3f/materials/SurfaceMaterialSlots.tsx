@@ -25,21 +25,14 @@ export function surfaceAttach(index: number, surfaceCount: number): string {
 export interface SurfaceMaterialSlotsProps {
   /** `sources[i]` is the material of draw group `i`. */
   sources: readonly (MaterialSource | undefined)[];
-  /** The drawing GeometryInstance3D's fade (`geometryFade`). */
-  fade: number;
 }
 
-export function SurfaceMaterialSlots({ sources, fade }: SurfaceMaterialSlotsProps) {
+export function SurfaceMaterialSlots({ sources }: SurfaceMaterialSlotsProps) {
   const slotSources = surfaceSources(sources);
   return (
     <>
       {slotSources.map((source, i) => (
-        <SurfaceMaterialSlot
-          key={i}
-          source={source}
-          attach={surfaceAttach(i, slotSources.length)}
-          fade={fade}
-        />
+        <SurfaceMaterialSlot key={i} source={source} attach={surfaceAttach(i, slotSources.length)} />
       ))}
     </>
   );

@@ -18,7 +18,7 @@ export function manualCameraAt(position: THREE.Vector3Like): THREE.PerspectiveCa
   return Object.assign(camera, { manual: true });
 }
 
-/** Renders the scene through `camera` once, and commits the fade the cull sets. */
+/** Renders the scene through `camera` once: the cull sets each instance's draw state and fade for it. */
 export async function renderScene(renderer: Renderer, camera: THREE.Camera): Promise<void> {
   const scene = renderer.scene.instance as THREE.Scene;
   scene.updateMatrixWorld();

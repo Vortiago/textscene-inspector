@@ -12,7 +12,7 @@ import {
   GODOT_DEFAULT_ROUGHNESS,
 } from '../../../r3f/materials/godotDefaultMaterial';
 import { BillboardMode } from '../../../godot/billboard';
-import { fadedSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
+import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { resolveEmission } from './emission';
 import type {
@@ -185,19 +185,25 @@ export function castsShadowOf(material: THREE.Material): boolean {
 }
 
 /**
- * Derive the material this decoded StandardMaterial3D describes, drawn by a geometry instance.
+ * Derive the material this decoded StandardMaterial3D describes, unfaded.
  *
  * @param scalars - the decoded material, or null for a surface with none
  * @param textures - already-bound textures by Godot slot; an absent slot lands
  *   as `null`, never `undefined`, so a late arrival cannot be mistaken for
  *   "leave whatever the material has" by either adapter
- * @param fade - the drawing GeometryInstance3D's fade (`geometryFade`); 1 for any other drawer
  */
 export function standardMaterialBag(
   scalars: StandardMaterial3DScalars | null,
-  textures: ResolvedTextureSlots = {},
-  fade = 1
+  textures: ResolvedTextureSlots = {}
 ): StandardMaterialBag {
+  return standardMaterialBags(scalars, textures).unfaded;
+}
+
+/** {@link standardMaterialBag}, in each pass a geometry instance's fade can draw it in. */
+export function standardMaterialBags(
+  scalars: StandardMaterial3DScalars | null,
+  textures: ResolvedTextureSlots = {}
+): FadeVariants<StandardMaterialBag> {
   const bag = scalars ? classBag(scalars, textures) : NO_MATERIAL;
   const source = scalars ?? NO_MATERIAL_ALPHA;
   const surface = {
@@ -207,7 +213,11 @@ export function standardMaterialBag(
     alphaPassDepthWrite: source.alphaPassDepthWrite,
     blending: bag.props.blending,
   };
-  const { injection, ...alpha } = fadedSurfaceAlpha(source, surface, fade);
+  const { unfaded, alphaPass } = surfaceFadeVariants(source, surface);
+  return { unfaded: withSurfaceAlpha(bag, unfaded), alphaPass: withSurfaceAlpha(bag, alphaPass) };
+}
+
+function withSurfaceAlpha(bag: StandardMaterialBag, { injection, ...alpha }: PassAlpha): StandardMaterialBag {
   return { ...bag, props: { ...bag.props, ...alpha }, injection };
 }
 

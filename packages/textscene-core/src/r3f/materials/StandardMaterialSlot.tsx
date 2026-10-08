@@ -2,16 +2,19 @@
  * `<StandardMaterialSlot>`: the reactive adapter that mounts `standardMaterialBag`'s
  * class as the JSX tag R3F prop-diffs, for every StandardMaterial3D-bearing node.
  * It derives nothing: `materialBag.ts` holds the class choice and every mapping,
- * and the imperative `build.ts` reads it too. A scalar-only caller passes `scalars`.
+ * and the imperative `build.ts` reads it too. A scalar-only caller passes `scalars`. Inside a
+ * GeometryInstance3D drawer it mounts the unfaded and the alpha-pass bag, which the cull swaps.
  */
 
+import { Fragment } from 'react';
 import {
-  standardMaterialBag,
+  standardMaterialBags,
   type StandardMaterialBag,
 } from '../../resources/materials/standardmaterial3d/materialBag';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { textureSlotsFromMaps, type MaterialTextureMaps } from './materialTextureMaps';
+import { useSwappedMaterials, type MaterialAttach } from './swappedMaterials';
 
 /**
  * The texture props are `MaterialTextureMaps`', already bound and paired to their
@@ -22,8 +25,6 @@ export interface StandardMaterialSlotProps extends MaterialTextureMaps {
   scalars: StandardMaterial3DScalars | null;
   /** R3F attach key: `material-0` for multi-surface meshes. */
   attach?: string;
-  /** The drawing GeometryInstance3D's fade (`geometryFade`). Omitted for any other drawer. */
-  fade?: number;
 }
 
 export function StandardMaterialSlot({
@@ -37,11 +38,11 @@ export function StandardMaterialSlot({
   displacementMap,
   anisotropyMap,
   attach,
-  fade = 1,
 }: StandardMaterialSlotProps) {
+  const swapped = useSwappedMaterials(attach);
   // A null `scalars` is the derivation's "no material" case: Godot's default 3D
   // surface, not a default-constructed StandardMaterial3D.
-  const bag = standardMaterialBag(
+  const bags = standardMaterialBags(
     scalars,
     textureSlotsFromMaps({
       albedoMap,
@@ -52,15 +53,21 @@ export function StandardMaterialSlot({
       aoMap,
       displacementMap,
       anisotropyMap,
-    }),
-    fade
+    })
   );
 
-  return materialBagElement(bag, attach);
+  if (!swapped) return materialBagElement(bags.unfaded, attach);
+  // Keyed on `attach` too: it names the draw group the function attaches swap.
+  return (
+    <>
+      <Fragment key={`unfaded:${attach}`}>{materialBagElement(bags.unfaded, swapped.unfaded)}</Fragment>
+      <Fragment key={`alphaPass:${attach}`}>{materialBagElement(bags.alphaPass, swapped.alphaPass)}</Fragment>
+    </>
+  );
 }
 
 /** A derived bag as its class's JSX tag. The missing-texture placeholder mounts through it too. */
-export function materialBagElement(bag: StandardMaterialBag, attach: string | undefined) {
+export function materialBagElement(bag: StandardMaterialBag, attach: string | MaterialAttach | undefined) {
   // `attach` first: it is the mount's own prop and must never shadow a derived
   // one. The key comes from the same merged bag it travels with (ADR-0038): a
   // program input arriving late, or a moved `attach`, reaches three only through a remount.

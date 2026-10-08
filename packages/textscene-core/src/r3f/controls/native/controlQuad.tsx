@@ -4,11 +4,13 @@
  * once, as in `rect.ts`). Unlit, transparent and depth-free like a CanvasItem2D
  * quad, and every leaf material carries the clip planes (`controlClipping.tsx`).
  */
+import { Fragment } from 'react';
 import * as THREE from 'three';
 import { useControlClipPlanes } from './controlClipping';
 import { useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
 import { canvasItemFacing } from '../../canvasItemFacing';
 import { materialProgramInputs } from '../../materialProgramInputs';
+import { useSwappedMaterials, type MaterialAttach } from '../../materials/swappedMaterials';
 
 export interface ControlQuadProps {
   width: number;
@@ -29,28 +31,41 @@ export function ControlQuad({ width, height, color, opacity, map = null, renderO
   // A `NoColorSpace`-retagged canvas texture gets the post-filter decode, and a
   // SubViewport target, which keeps its own colour space, does not.
   const decodeDefines = useCanvasDecodeDefines(map);
+  // Inside a GeometryInstance3D drawer, a Label3D's hex-code box, the quad fades with the label.
+  const swapped = useSwappedMaterials(undefined);
 
   // A `map` is often null on the first render and a texture later, while the quad
   // draws throughout, so the material is replaced, not mutated
   // (`materialProgramInputs.ts`).
-  const program = materialProgramInputs({
-    props: {
-      map,
-      color,
-      opacity,
-      transparent: true,
-      depthWrite: false,
-      defines: decodeDefines,
-      clippingPlanes: clippingPlanes as THREE.Plane[],
-    },
-    // The double-sided, single-pass pair every flat canvas painter shares.
-    merge: [canvasItemFacing()],
-  });
+  const material = (attach?: MaterialAttach) => {
+    const program = materialProgramInputs({
+      props: {
+        attach,
+        map,
+        color,
+        opacity,
+        transparent: true,
+        depthWrite: false,
+        defines: decodeDefines,
+        clippingPlanes: clippingPlanes as THREE.Plane[],
+      },
+      // The double-sided, single-pass pair every flat canvas painter shares.
+      merge: [canvasItemFacing()],
+    });
+    return <meshBasicMaterial key={program.key} {...program.props} />;
+  };
 
   return (
     <mesh position={[width / 2, -(height / 2), 0]} renderOrder={renderOrder}>
       <planeGeometry args={[width, height]} />
-      <meshBasicMaterial key={program.key} {...program.props} />
+      {swapped ? (
+        <>
+          <Fragment key="unfaded">{material(swapped.unfaded)}</Fragment>
+          <Fragment key="alphaPass">{material(swapped.alphaPass)}</Fragment>
+        </>
+      ) : (
+        material()
+      )}
     </mesh>
   );
 }

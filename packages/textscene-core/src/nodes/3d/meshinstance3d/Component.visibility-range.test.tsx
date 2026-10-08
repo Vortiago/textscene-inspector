@@ -109,6 +109,25 @@ describe('<MeshInstance3D> visibility range', () => {
     expect(mesh.material).toMatchObject({ transparent: true, depthWrite: false, opacity: 39 / 255 });
   });
 
+  it('fades the render in progress, before React commits anything', async () => {
+    const selfFade = { end: 10, endMargin: 2, fadeMode: VisibilityRangeFadeMode.SELF };
+    const renderer = await renderFrames(node(selfFade));
+    fireSceneRender(renderer.scene.instance, manualCameraAt({ x: 0, y: 0, z: 7 }));
+    expect(meshOf(renderer).material).toMatchObject({ transparent: false, opacity: 1 });
+  });
+
+  it('fades each render by its own camera, as each Godot viewport does (edge case)', async () => {
+    // 11 is inside the end margin and 5 short of it, so a SubViewport camera fades on its own.
+    const selfFade = { end: 10, endMargin: 2, fadeMode: VisibilityRangeFadeMode.SELF };
+    const renderer = await renderFrames(node(selfFade));
+    const target = new THREE.WebGLRenderTarget(1, 1);
+    fireSceneRender(renderer.scene.instance, manualCameraAt({ x: 0, y: 0, z: 5 }), target);
+    const nearOpacity = (meshOf(renderer).material as THREE.Material).opacity;
+    fireSceneRender(renderer.scene.instance, manualCameraAt({ x: 0, y: 0, z: 11 }));
+    const farOpacity = (meshOf(renderer).material as THREE.Material).opacity;
+    expect([nearOpacity, farOpacity]).toEqual([1, 39 / 255]);
+  });
+
   it('measures to the centre of custom_aabb, not to the origin', async () => {
     // The origin is 11 away, inside the end. The box centre at y = 5 is √146 ≈ 12.08 away.
     const offsetBox = { position: { x: -0.5, y: 4.5, z: -0.5 }, size: { x: 1, y: 1, z: 1 } };

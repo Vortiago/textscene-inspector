@@ -18,6 +18,7 @@ import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 import { DROPS_ALBEDO_ALPHA, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
+import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
 
 const TEXTURE_PATH = 'res://textures/sprite.png';
 
@@ -85,13 +86,16 @@ async function render(opts: {
   for (const { path, texture } of opts.cached ?? []) {
     fake.textures.seed(path, texture === 'missing' ? null : texture);
   }
-  return ReactThreeTestRenderer.create(
+  const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider externalResources={opts.externals ?? []}>
         <Sprite3D node={opts.node} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+  // One render, so the cull puts the material for the sprite's fade on its quad.
+  await renderScene(renderer, manualCameraAt({ x: 0, y: 0, z: 5 }));
+  return renderer;
 }
 
 describe('<Sprite3D> (WI-R3F-13)', () => {
