@@ -28,6 +28,8 @@ import { FadedMeshMaterials } from '../../materials/fadedMeshMaterials';
 import { CulledInstance } from '../../visibilityRange/culledInstance';
 import { registerVisibilityInstance } from '../../visibilityRange/visibilityScene';
 import type { InstancePlacement } from '../../visibilityRange/placements';
+import type { NodePlace } from '../../visibilityRange/visibilityScene';
+import { childOrders, useTreeOrder, type TreeOrder } from '../../contexts/TreeOrderContext';
 import { useUniqueNamePaths } from '../../useUniqueNames';
 import type { GlbObjectEntry } from './glbHierarchy';
 import type { GlbRoot } from './GlbInstanceContext';
@@ -36,25 +38,27 @@ import { isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOver
 /** A MeshInstance3D of a GLB, with its node data. */
 interface GlbMeshInstance {
   object: THREE.Object3D;
-  path: string | null;
-  parentPath: string | null;
+  place: NodePlace;
   properties: GeometryInstance3DProperties;
 }
 
 /**
- * Each MeshInstance3D under `object`, in `entries` order. A node without an override of its own is
- * at its `relPath` under the root, and takes its parent's visibility parent (`node_3d.cpp:1307-1318`).
+ * Each MeshInstance3D under `object`, in `entries` order, which is the GLB's tree order below
+ * `rootOrder`. A node without an override of its own is at its `relPath` under the root, and takes
+ * its parent's visibility parent (`node_3d.cpp:1307-1318`).
  */
 function glbMeshInstances(
   object: THREE.Object3D,
   entries: readonly GlbObjectEntry[],
   root: GlbRoot,
+  rootOrder: TreeOrder,
   uniquePaths: ReadonlyMap<string, string> | undefined
 ): GlbMeshInstance[] {
+  const orders = childOrders(rootOrder, entries.length);
   const overrides = overridesByTarget(object, entries, root.overrides);
   const passedOn = new Map<THREE.Object3D, string | null>();
   const instances: GlbMeshInstance[] = [];
-  for (const entry of entries) {
+  entries.forEach((entry, i) => {
     const override = overrides.get(entry.object);
     const path =
       root.path === null
@@ -75,8 +79,9 @@ function glbMeshInstances(
         ? inherited
         : visibilityParentOf(path, properties.visibility_parent, inherited, uniquePaths);
     passedOn.set(entry.object, parentPath);
-    if (isMeshInstance(entry.object)) instances.push({ object: entry.object, path, parentPath, properties });
-  }
+    if (!isMeshInstance(entry.object)) return;
+    instances.push({ object: entry.object, place: { path, parentPath, order: orders[i]! }, properties });
+  });
   return instances;
 }
 
@@ -103,9 +108,10 @@ export function useGlbGeometryInstances(
 ): void {
   const scene = useThree((state) => state.scene);
   const uniquePaths = useUniqueNamePaths(root.path);
+  const rootOrder = useTreeOrder();
   const instances = useMemo(
-    () => (object ? glbMeshInstances(object, entries, root, uniquePaths) : []),
-    [object, entries, root, uniquePaths]
+    () => (object ? glbMeshInstances(object, entries, root, rootOrder, uniquePaths) : []),
+    [object, entries, root, rootOrder, uniquePaths]
   );
   useLayoutEffect(() => {
     const releases = instances.map((instance) => cullMeshInstance(scene, instance));
@@ -114,12 +120,9 @@ export function useGlbGeometryInstances(
 }
 
 /** Puts one MeshInstance3D under the scene cull until the returned function runs. */
-function cullMeshInstance(
-  scene: THREE.Scene,
-  { object, path, parentPath, properties }: GlbMeshInstance
-): () => void {
+function cullMeshInstance(scene: THREE.Scene, { object, place, properties }: GlbMeshInstance): () => void {
   const instance = new CulledInstance();
-  instance.update(path, parentPath, properties);
+  instance.update(place, properties);
   instance.hasBase = true;
   const surfaces = meshInstanceSurfaces(object);
   instance.placement = glbPlacement(object, surfaces);

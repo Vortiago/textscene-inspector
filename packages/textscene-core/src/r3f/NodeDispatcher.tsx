@@ -32,6 +32,7 @@ import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
+import { childOrders, TreeOrderProvider, useTreeOrder, type TreeOrder } from './contexts/TreeOrderContext.js';
 import { VisibilityParentScope } from './visibilityRange/VisibilityParentContext.js';
 import {
   InstancedScenePathsProvider,
@@ -89,6 +90,7 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   // parent is not a CanvasItem is drawn in its pre-order rank among the
   // canvas's roots, not at the slot its nesting gives it (`canvasRootRanges`).
   const canvasRoots = useMemo(() => canvasRootRanges(nodes, rootRanges), [nodes, rootRanges]);
+  const rootOrders = useMemo(() => childOrders([], nodes.length), [nodes.length]);
 
   return (
     // paint-order-safe: the delegated pointer root, above every canvas item.
@@ -110,7 +112,9 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
             <WorldRoot>
               {nodes.map((node, i) => (
                 <PaintRangeProvider key={node.name} value={canvasRoots.get(node) ?? rootRanges[i]!}>
-                  <DispatchedNode node={node} path={node.name} />
+                  <TreeOrderProvider order={rootOrders[i]!}>
+                    <DispatchedNode node={node} path={node.name} />
+                  </TreeOrderProvider>
                 </PaintRangeProvider>
               ))}
             </WorldRoot>
@@ -178,6 +182,8 @@ function withoutDeepChildren(node: TscnNode): TscnNode {
 interface PlainNodeProps extends DispatchedNodeProps {
   /** Extra rendered subtree appended after the node's own inline children. */
   children?: ReactNode;
+  /** Where the inline children take their tree order from. The node's own order by default. */
+  inlineChildrenOrder?: TreeOrder;
 }
 
 /**
@@ -185,9 +191,15 @@ interface PlainNodeProps extends DispatchedNodeProps {
  * component, with its inline children and the `extraChildren` of the instance
  * fallback. A merged instance root renders here like an authored node.
  */
-function PlainNode({ node, path, children: extraChildren }: PlainNodeProps): ReactNode {
+function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }: PlainNodeProps): ReactNode {
   // An unregistered type renders the fallback, so it stays visible.
   const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
+  const ownOrder = useTreeOrder();
+  const inlineBase = inlineChildrenOrder ?? ownOrder;
+  const inlineOrders = useMemo(
+    () => childOrders(inlineBase, node.children.length),
+    [inlineBase, node.children.length]
+  );
   const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
   const workspace = useCanvasWorkspace();
   const paintRange = usePaintRange();
@@ -225,7 +237,9 @@ function PlainNode({ node, path, children: extraChildren }: PlainNodeProps): Rea
   // covers the child's whole subtree, so nothing reaches a sibling's sequence.
   const inlineChildren = node.children.map((child, i) => (
     <PaintRangeProvider key={child.name} value={canvasRoots.get(child) ?? allocated.children[i]!}>
-      <DispatchedNode node={child} path={joinPath(path, child.name)} />
+      <TreeOrderProvider order={inlineOrders[i]!}>
+        <DispatchedNode node={child} path={joinPath(path, child.name)} />
+      </TreeOrderProvider>
     </PaintRangeProvider>
   ));
 
@@ -306,6 +320,14 @@ function PlainNode({ node, path, children: extraChildren }: PlainNodeProps): Rea
 }
 
 /**
+ * The two groups of an injected instance's children in tree order. Godot adds the sub-scene's own
+ * nodes when it instantiates the sub-scene, before the instancing scene adds its children
+ * (`packed_scene.cpp:231-264`, `:535-541`).
+ */
+const SUB_SCENE_NODES = 0;
+const INSTANCING_SCENE_NODES = 1;
+
+/**
  * Loads the PackedScene a node's `instance` ref names and composes it into the
  * tree. A single-root `.tscn` merges into the instance node at the same path
  * (ADR-0013). A `.glb` or multi-root scene injects its roots as children. Either
@@ -355,6 +377,14 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a
   // stripped node is a new object.
   const shallow = useMemo(() => withoutDeepChildren(node), [node]);
+  const order = useTreeOrder();
+  const injectedOrders = useMemo(() => {
+    const groups = childOrders(order, 2);
+    return {
+      roots: childOrders(groups[SUB_SCENE_NODES]!, loadedScene?.nodes.length ?? 0),
+      authored: groups[INSTANCING_SCENE_NODES]!,
+    };
+  }, [order, loadedScene?.nodes.length]);
   // The injected roots draw from the tail of `shallow`'s range. Splitting it
   // gives each root a run of its own, as an authored child gets.
   const injectedRanges = useMemo(
@@ -384,7 +414,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // A `.glb` or multi-root scene: the loaded roots are injected as children.
   return (
     <GlbInstanceProvider node={node} path={path}>
-      <PlainNode node={shallow} path={path}>
+      <PlainNode node={shallow} path={path} inlineChildrenOrder={injectedOrders.authored}>
         <SceneResourcesProvider
           internalResources={loadedScene.internalResources}
           externalResources={loadedScene.externalResources}
@@ -392,7 +422,9 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
           <InstancedScenePathsProvider paths={contentScenePaths}>
             {loadedScene.nodes.map((child, i) => (
               <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
-                <DispatchedNode node={child} path={joinPath(path, child.name)} />
+                <TreeOrderProvider order={injectedOrders.roots[i]!}>
+                  <DispatchedNode node={child} path={joinPath(path, child.name)} />
+                </TreeOrderProvider>
               </PaintRangeProvider>
             ))}
           </InstancedScenePathsProvider>

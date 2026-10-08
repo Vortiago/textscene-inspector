@@ -10,6 +10,7 @@ import { createContext, useContext, useLayoutEffect, useMemo, type ReactNode } f
 import { hasGeometryBase } from '../../godot/geometryBase';
 import type { GeometryInstance3DProperties } from '../../nodes/3d/geometryinstance3d/types';
 import { useNodePath } from '../contexts/NodePathContext';
+import { useTreeOrder } from '../contexts/TreeOrderContext';
 import type { NodeComponent, NodeComponentProps } from '../NodeComponentRegistry';
 import { useParentType } from '../parentSpaceScope';
 import { rangedShadowCastingEffects, type ShadowCastingEffects } from '../shadowCasting';
@@ -46,12 +47,13 @@ export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
     const scene = useThree((state) => state.scene);
     const path = useNodePath();
     const parentPath = useVisibilityParent();
+    const order = useTreeOrder();
     const parentType = useParentType();
     const properties = node.properties as GeometryInstance3DProperties;
     const instance = useMemo(() => new CulledInstance(), []);
 
     useLayoutEffect(() => {
-      instance.update(path, parentPath, properties);
+      instance.update({ path, parentPath, order }, properties);
       instance.hasBase = hasGeometryBase(node.type, node.rawProperties, parentType);
     });
     useLayoutEffect(() => registerVisibilityInstance(scene, instance), [scene, instance]);

@@ -7,6 +7,7 @@ import { observeSceneCamera } from '../sceneRenderCamera';
 import { directionalShadowUserData } from '../directionalShadow/declaration';
 import { fitSceneDirectionalShadows } from '../directionalShadow/fitSceneDirectionalShadows';
 import { sceneLights } from '../directionalShadow/lightLists';
+import type { TreeOrder } from '../contexts/TreeOrderContext';
 import {
   NO_VISIBILITY_RANGE,
   hasVisibilityRange,
@@ -57,16 +58,18 @@ function instanceAt(
   {
     path = null,
     parentPath = null,
+    order = [],
     centre = new THREE.Vector3(),
   }: Partial<{
     path: string | null;
     parentPath: string | null;
+    order: TreeOrder;
     centre: THREE.Vector3;
   }> = {}
 ): VisibilityInstance & { last: Applied | null } {
   const fullRange = { ...NO_VISIBILITY_RANGE, ...range };
   return {
-    links: { path, parentPath, hasRange: hasVisibilityRange(fullRange) },
+    links: { path, parentPath, order, hasRange: hasVisibilityRange(fullRange) },
     range: fullRange,
     isIndexed: true,
     last: null,
@@ -204,12 +207,12 @@ describe('registerVisibilityInstance', () => {
     expect(detail.last?.isVisible).toBe(true);
   });
 
-  it('refuses the link registered last of a cycle, whatever order the parents come in (edge case)', () => {
+  it('refuses the link of a cycle that comes last in tree order, whatever order they register in (edge case)', () => {
     const scene = new THREE.Scene();
-    const first = instanceAt({}, { path: 'Root/First', parentPath: 'Root/Proxy' });
-    const second = instanceAt({}, { path: 'Root/Second', parentPath: 'Root/Proxy' });
-    const proxy = instanceAt({ begin: 12 }, { path: 'Root/Proxy', parentPath: 'Root/Second' });
-    for (const instance of [first, second, proxy]) registerVisibilityInstance(scene, instance);
+    const first = instanceAt({}, { path: 'Root/First', parentPath: 'Root/Proxy', order: [0, 0] });
+    const second = instanceAt({}, { path: 'Root/Second', parentPath: 'Root/Proxy', order: [0, 1] });
+    const proxy = instanceAt({ begin: 12 }, { path: 'Root/Proxy', parentPath: 'Root/Second', order: [0, 2] });
+    for (const instance of [proxy, second, first]) registerVisibilityInstance(scene, instance);
     fireSceneRender(scene, cameraAt(11));
     expect([first, second, proxy].map((instance) => instance.last?.isVisible)).toEqual([true, true, false]);
   });

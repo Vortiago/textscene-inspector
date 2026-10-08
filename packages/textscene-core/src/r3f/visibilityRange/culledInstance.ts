@@ -11,7 +11,8 @@ import { hasVisibilityRange, NO_VISIBILITY_RANGE, type VisibilityRange } from '.
 import type { GeometryInstance3DProperties } from '../../nodes/3d/geometryinstance3d/types';
 import type { RangeGate } from '../surfaceDrawHooks';
 import type { FadedSurface, FadedSurfaces } from '../materials/swappedMaterials';
-import type { VisibilityInstance, VisibilityLinks } from './visibilityScene';
+import type { NodePlace, VisibilityInstance, VisibilityLinks } from './visibilityScene';
+import { compareTreeOrder } from '../contexts/TreeOrderContext';
 import { copyAabb, type InstancePlacement } from './placements';
 
 const NODE_ORIGIN: Readonly<THREE.Vector3> = new THREE.Vector3();
@@ -34,7 +35,7 @@ const ownSize = new THREE.Vector3();
  */
 export class CulledInstance implements VisibilityInstance, RangeGate, FadedSurfaces {
   isVisible = true;
-  links: VisibilityLinks = { path: null, parentPath: null, hasRange: false };
+  links: VisibilityLinks = { path: null, parentPath: null, order: [], hasRange: false };
   range: VisibilityRange = NO_VISIBILITY_RANGE;
   /** Whether its render instance has a geometry base (`godot/geometryBase.ts`). */
   hasBase = false;
@@ -44,12 +45,9 @@ export class CulledInstance implements VisibilityInstance, RangeGate, FadedSurfa
   private readonly surfaces = new Set<FadedSurface>();
 
   /** Takes the node's data. A change of links hands the cull a new links object. */
-  update(path: string | null, parentPath: string | null, properties: GeometryInstance3DProperties): void {
+  update(place: NodePlace, properties: GeometryInstance3DProperties): void {
     const hasRange = hasVisibilityRange(properties.visibilityRange);
-    const { links } = this;
-    if (links.path !== path || links.parentPath !== parentPath || links.hasRange !== hasRange) {
-      this.links = { path, parentPath, hasRange };
-    }
+    if (!hasSameLinks(this.links, place, hasRange)) this.links = { ...place, hasRange };
     this.range = properties.visibilityRange;
     this.transparency = properties.transparency;
     this.customAabb = properties.customAabb;
@@ -83,4 +81,13 @@ export class CulledInstance implements VisibilityInstance, RangeGate, FadedSurfa
     this.surfaces.add(surface);
     return () => this.surfaces.delete(surface);
   }
+}
+
+function hasSameLinks(links: VisibilityLinks, place: NodePlace, hasRange: boolean): boolean {
+  return (
+    links.path === place.path &&
+    links.parentPath === place.parentPath &&
+    links.hasRange === hasRange &&
+    compareTreeOrder(links.order, place.order) === 0
+  );
 }

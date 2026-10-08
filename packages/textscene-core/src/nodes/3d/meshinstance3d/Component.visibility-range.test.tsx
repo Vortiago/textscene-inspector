@@ -18,6 +18,8 @@ import { findMesh } from '../testing/reactThreeTestInstance';
 import { TscnParser } from '../../../parser/TscnParser';
 import { NodeTree } from '../../../r3f/testing/NodeTree';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
+import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import './index.r3f';
 import '../../base/node3d/index.r3f';
 import '../particles/gpuparticles3d/index';
@@ -220,5 +222,34 @@ describe('<MeshInstance3D> visibility parent the previewer does not draw', () =>
       '[node name="Proxy" type="MeshInstance3D" parent="."]\nvisibility_range_begin = 5.0\n'
     );
     expect(drawsColour(detail)).toBe(true);
+  });
+});
+
+describe('<MeshInstance3D> visibility parent cycle', () => {
+  it('refuses the link that comes last in tree order, not the one React mounts last (edge case)', async () => {
+    // Tree order sets Proxy -> Second first, so Second -> Proxy closes the cycle. Proxy then hangs
+    // off Second, which has no range, and hides with First under it. React mounts the children
+    // first, which would refuse Proxy -> Second instead and show First.
+    const scene = new TscnParser().parse(
+      `[gd_scene format=3]\n\n[sub_resource type="BoxMesh" id="Box_1"]\n\n` +
+        `[node name="Proxy" type="MeshInstance3D"]\nmesh = SubResource("Box_1")\n` +
+        `visibility_range_begin = 12.0\nvisibility_parent = NodePath("Second")\n\n` +
+        `[node name="First" type="MeshInstance3D" parent="."]\nmesh = SubResource("Box_1")\n` +
+        `visibility_parent = NodePath("..")\n\n` +
+        `[node name="Second" type="MeshInstance3D" parent="."]\nmesh = SubResource("Box_1")\n` +
+        `visibility_parent = NodePath("..")\n`
+    );
+    const camera = manualCameraAt({ x: 0, y: 0, z: 11 });
+    const renderer = await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <SceneResourcesProvider internalResources={scene.internalResources} externalResources={[]}>
+          <NodeDispatcher nodes={scene.nodes} />
+        </SceneResourcesProvider>
+      </SelectionProvider>,
+      { camera }
+    );
+    await renderScene(renderer, camera);
+    const drawn = (name: string) => drawsColour(renderer.scene.findByProps({ name }).instance as THREE.Mesh);
+    expect(['Proxy', 'First', 'Second'].map(drawn)).toEqual([false, false, true]);
   });
 });

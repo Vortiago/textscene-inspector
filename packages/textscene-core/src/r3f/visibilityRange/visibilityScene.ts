@@ -9,13 +9,20 @@ import { cullVisibility, type VisibilityCullInstance } from '../../godot/visibil
 import type { VisibilityRange } from '../../godot/visibilityRange';
 import { observeSceneCull } from '../sceneRenderCamera';
 import { sceneSplitsHold } from '../directionalShadow/fitSceneDirectionalShadows';
+import { compareTreeOrder, type TreeOrder } from '../contexts/TreeOrderContext';
 
-/** What places an instance in the cull's topology: which instances it measures, and their links. */
-export interface VisibilityLinks {
+/** Where an instance's node sits in the scene tree, and which node it names as visibility parent. */
+export interface NodePlace {
   /** Its node path, or null outside the dispatcher, where nothing can name it as a parent. */
   readonly path: string | null;
   /** The node path of its visibility parent, or null for none. */
   readonly parentPath: string | null;
+  /** Godot sets the visibility links in tree order, as each node enters the tree (`node_3d.cpp:176`). */
+  readonly order: TreeOrder;
+}
+
+/** What places an instance in the cull's topology: which instances it measures, and their links. */
+export interface VisibilityLinks extends NodePlace {
   readonly hasRange: boolean;
 }
 
@@ -47,7 +54,6 @@ interface Topology {
 }
 
 interface SceneInstances {
-  /** In registration order, which stands for the order Godot sets the parent links. */
   instances: Map<VisibilityInstance, InstanceState>;
   /** Null once an instance joins, leaves or relinks, until the next cull rebuilds it. */
   topology: Topology | null;
@@ -119,13 +125,19 @@ function currentTopology(registry: SceneInstances): Topology {
     state.links = instance.links;
     registry.topology = null;
   }
-  registry.topology ??= buildTopology([...registry.instances.keys()]);
+  registry.topology ??= buildTopology(inTreeOrder(registry.instances.keys()));
   return registry.topology;
+}
+
+/** Stable, so instances outside the dispatcher, which tie at the root, keep registration order. */
+function inTreeOrder(instances: Iterable<VisibilityInstance>): VisibilityInstance[] {
+  return [...instances].sort((a, b) => compareTreeOrder(a.links.order, b.links.order));
 }
 
 /**
  * The instances the cull must measure, those with a range, a parent or a dependant, each with its
- * parent's index. A parent path that names no registered instance is no parent.
+ * parent's index, from `instances` in tree order. A parent path that names no registered instance
+ * is no parent.
  */
 function buildTopology(instances: readonly VisibilityInstance[]): Topology {
   const byPath = new Map<string, VisibilityInstance>();
@@ -143,8 +155,8 @@ function buildTopology(instances: readonly VisibilityInstance[]): Topology {
       parentOf.set(instance, null);
     }
   }
-  // In registration order, not `parentOf`'s, which takes a parent before its own turn: the cull
-  // refuses the later link that closes a cycle.
+  // In tree order, not `parentOf`'s, which takes a parent before its own turn: the cull refuses
+  // the later link that closes a cycle.
   const members = instances.filter((instance) => parentOf.has(instance));
   const indexOf = new Map(members.map((instance, i) => [instance, i]));
   return {
