@@ -1,7 +1,7 @@
 # The area labels the labeler workflow puts on a pull request, from the paths it changes.
 # A label applies when any option under it matches. `all-globs-to-any-file` with `!` globs
-# means "a file under this path that no other area claims". scripts/ci/labeler.test.mjs
-# checks this map.
+# means "a file under this path that no other code area claims". `documentation` adds to an
+# area, so a Markdown file in one gets both. scripts/ci/labeler.test.mjs checks this map.
 
 goldens:
   - changed-files:
@@ -71,6 +71,7 @@ ci:
   - changed-files:
       - any-glob-to-any-file:
           - .github/**
+          - .claude/**
           - githooks/**
       - all-globs-to-any-file:
           - scripts/**

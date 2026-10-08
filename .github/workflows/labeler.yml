@@ -8,6 +8,12 @@ on:
   pull_request_target:
     types: [opened, reopened, synchronize]
 
+# A newer push cancels the older run, so a run that read stale changed files cannot finish last
+# and leave a stale label.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: write

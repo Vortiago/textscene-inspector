@@ -28,14 +28,21 @@ function optionMatches(option, paths) {
 }
 
 /**
- * Applies the config as actions/labeler v7 does without a top-level `any` or `all` key: a
- * label applies when any of its match options matches.
+ * Only a `changed-files` entry is modelled, so a top-level `any`, `all` or branch key fails
+ * instead of passing unread.
  */
+function entryMatches(entry, paths) {
+  const keys = Object.keys(entry);
+  if (keys.length !== 1 || keys[0] !== 'changed-files') {
+    throw new Error(`expected an entry with only changed-files, got ${keys}`);
+  }
+  return entry['changed-files'].some((option) => optionMatches(option, paths));
+}
+
+/** Applies the config as actions/labeler v7 does: a label applies when any of its options matches. */
 function labelsFor(paths) {
   return Object.entries(config)
-    .filter(([, entries]) =>
-      entries.some((entry) => entry['changed-files'].some((option) => optionMatches(option, paths)))
-    )
+    .filter(([, entries]) => entries.some((entry) => entryMatches(entry, paths)))
     .map(([label]) => label)
     .sort();
 }
@@ -78,6 +85,7 @@ describe('labeler.yml', () => {
     ['scenes/fixtures/unit-plane-mesh.tscn', 'scenes'],
     ['.github/workflows/ci.yml', 'ci'],
     ['githooks/pre-push', 'ci'],
+    ['.claude/hooks/check-no-verify.mjs', 'ci'],
     ['scripts/ci/visualScope.mjs', 'ci'],
     ['scripts/visual/run.mjs', 'ci'],
     ['docs/adr/0001-record-architecture-decisions.md', 'documentation'],
@@ -97,7 +105,8 @@ describe('labeler.yml', () => {
   });
 
   it('excludes from core exactly the core globs the other areas claim', () => {
-    const claimed = ['parser', 'renderer', 'linter', 'lsp']
+    const claimed = Object.keys(config)
+      .filter((label) => label !== 'core')
       .flatMap((label) => globsOf(label, 'any-glob-to-any-file'))
       .filter((glob) => glob.startsWith('packages/textscene-core/'));
     const excluded = globsOf('core', 'all-globs-to-any-file')
