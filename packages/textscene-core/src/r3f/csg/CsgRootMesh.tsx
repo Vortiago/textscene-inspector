@@ -8,19 +8,24 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
 import { SurfaceMaterialSlots } from '../materials/SurfaceMaterialSlots';
-import { resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
-import { useSceneResources } from '../SceneResourcesContext';
+import type { MaterialSource } from '../materials/materialSource';
 import { CsgSubtreeProvider, type CsgSubtreeStatus } from '../contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import type { CsgPlan } from './csgPlan';
 import { evaluateCsgPlan, type CsgEvaluation } from './evaluateCsgPlan';
 import { getCachedEvaluation, setCachedEvaluation } from './csgEvaluationCache';
 import { loadCsgModule, type CsgModule } from './csgModule';
+import type { CsgGeometryContext } from './csgRegistration';
+import { resolveCsgMaterial } from './csgMaterials';
 import { usePendingWhile } from '../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../shadowCasting';
 
 export interface CsgRootMeshProps {
   plan: CsgPlan;
+  /** What the plan's solids build against. */
+  geometry: CsgGeometryContext;
+  /** True while a file a solid reads loads: the boolean waits for every solid. */
+  isLoading: boolean;
   /** The ROOT's `cast_shadow`; a contributor's own is absorbed with its solid. */
   shadow: ShadowCastingEffects;
   /** Set to the evaluated mesh while it draws, for the root's visibility range to measure. */
@@ -35,8 +40,15 @@ export interface CsgRootMeshProps {
   children?: ReactNode;
 }
 
-export function CsgRootMesh({ plan, shadow, meshRef, fallback, children }: CsgRootMeshProps) {
-  const pools = useSceneResources();
+export function CsgRootMesh({
+  plan,
+  geometry,
+  isLoading,
+  shadow,
+  meshRef,
+  fallback,
+  children,
+}: CsgRootMeshProps) {
   const [csg, setCsg] = useState<CsgModule | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
@@ -59,22 +71,22 @@ export function CsgRootMesh({ plan, shadow, meshRef, fallback, children }: CsgRo
   }, []);
 
   const evaluation = useMemo<CsgEvaluation | null>(() => {
-    if (!csg) return null;
+    if (!csg || isLoading) return null;
     const cached = getCachedEvaluation(plan.cacheKey);
     if (cached) return cached;
 
     const result = evaluateCsgPlan(plan, csg, (contribution) => {
       const registration = nodeComponentRegistry.getCsgShape(contribution.type);
       if (!registration?.geometry) return null;
-      return registration.geometry(contribution.node.properties as Record<string, unknown>, pools);
+      return registration.geometry(contribution.node.properties as Record<string, unknown>, geometry);
     });
     if (result) setCachedEvaluation(plan.cacheKey, result);
     return result;
-  }, [csg, plan, pools]);
+  }, [csg, isLoading, plan, geometry]);
 
   const status: CsgSubtreeStatus = loadFailed
     ? 'failed'
-    : !csg
+    : !csg || isLoading
       ? 'pending'
       : evaluation === null
         ? 'failed'
@@ -91,12 +103,11 @@ export function CsgRootMesh({ plan, shadow, meshRef, fallback, children }: CsgRo
   // Resolve each output surface to a material slot. One component per slot keeps each
   // slot's `useResource` calls one set per component, so rules of hooks holds for any
   // surface count.
-  const surfaces = useMemo((): Array<MaterialSource | undefined> => {
-    if (!evaluation) return [];
-    return evaluation.surfaceSlots.map((planSurface) =>
-      resolveMaterialSource(plan.surfaces[planSurface], pools)
-    );
-  }, [evaluation, plan.surfaces, pools]);
+  const surfaces = useMemo(
+    (): Array<MaterialSource | undefined> =>
+      evaluation?.materials.map((address) => resolveCsgMaterial(address, geometry)) ?? [],
+    [evaluation, geometry]
+  );
 
   const drawable = evaluation !== null && evaluation.geometry.getAttribute('position')?.count !== 0;
 

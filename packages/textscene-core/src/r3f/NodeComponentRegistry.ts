@@ -158,11 +158,11 @@ class NodeComponentRegistryImpl {
     return registration === undefined ? undefined : (registration.renderIntent ?? 'draws');
   }
 
-  /** The CSG registration for a type, or undefined when it is not a CSG shape. */
   getYSortGroup(typeName: string): YSortGroupRegistration | undefined {
     return this.registry.get(typeName)?.ySortGroup;
   }
 
+  /** The CSG registration for a type, or undefined when it is not a CSG shape. */
   getCsgShape(typeName: string): CsgShapeRegistration | undefined {
     return this.registry.get(typeName)?.csgShape;
   }

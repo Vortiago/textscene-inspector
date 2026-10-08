@@ -8,7 +8,7 @@ import type * as THREE from 'three';
 
 /** The slice of three-bvh-csg's surface this codebase uses. */
 export interface CsgModule {
-  Brush: new (geometry?: THREE.BufferGeometry, material?: THREE.Material) => THREE.Mesh;
+  Brush: new (geometry?: THREE.BufferGeometry, material?: THREE.Material | THREE.Material[]) => THREE.Mesh;
   Evaluator: new () => {
     useGroups: boolean;
     evaluate: (a: THREE.Mesh, b: THREE.Mesh, operation: number, target?: THREE.Mesh) => THREE.Mesh;

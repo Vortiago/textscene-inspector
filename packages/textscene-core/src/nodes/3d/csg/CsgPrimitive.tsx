@@ -9,15 +9,15 @@ import type * as THREE from 'three';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
-import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
+import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
+import { resolveCsgMaterial } from '../../../r3f/csg/csgMaterials';
+import { useCsgGeometryContext } from '../../../r3f/csg/useCsgGeometryContext';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { livePlacement } from '../../../r3f/visibilityRange/placements';
 import type { CSGShape3DProperties } from './types';
@@ -43,7 +43,7 @@ interface CsgPrimitiveProps {
 // and `subtreeConformance.test.tsx` fails a root that swallows `children`. So contributors remove
 // their own mesh from the inside.
 export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) {
-  const ctx = useSceneResources();
+  const { context: ctx, isLoading } = useCsgGeometryContext(node);
   const path = useNodePath();
   const subtree = useCsgSubtree();
   // Optional: a CSG node renders outside the shell in tests and in the
@@ -66,19 +66,19 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const registration = nodeComponentRegistry.getCsgShape(node.type);
   const builderProps = properties as unknown as Record<string, unknown>;
   const ownKey = registration?.geometryKey?.(builderProps, ctx) ?? node.type;
-  const ownGeometry = useMemo(
+  const ownSolid = useMemo(
     () => (skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null)),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` is the builder's inputs.
     [ownKey, skipped]
   );
-  const geometry = ownGeometry ? <primitive object={ownGeometry} attach="geometry" /> : null;
+  const geometry = ownSolid ? <primitive object={ownSolid.geometry} attach="geometry" /> : null;
 
   // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource, and a CSG
   // primitive keeps only a `Ref<Material>` (`modules/csg/csg_shape.h:276,290`), so both arrive at
   // the same slot, which renders either, textures included.
-  const materialSource = useMemo(
-    () => resolveMaterialSource(properties.materialPath, ctx),
-    [properties.materialPath, ctx]
+  const materialSources = useMemo(
+    () => ownSolid?.materials.map((address) => resolveCsgMaterial(address, ctx)) ?? [],
+    [ownSolid, ctx]
   );
 
   // Absorbed while the ancestor's boolean is pending or ready. Not while it has failed, which
@@ -152,7 +152,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
 
   // The node drawing its own solid: what a lone root is, and what a combining root falls back to
   // while the library loads or after it failed.
-  const ownSolid = geometry && (
+  const ownMesh = geometry && (
     <mesh
       ref={drawnRef}
       castShadow={shadow.castShadow}
@@ -163,7 +163,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       receiveShadow
     >
       {geometry}
-      <SurfaceMaterialSlot source={materialSource} />
+      <SurfaceMaterialSlots sources={materialSources} />
     </mesh>
   );
 
@@ -172,7 +172,14 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   if (combining) {
     return (
       <group {...transform}>
-        <CsgRootMesh plan={plan} shadow={shadow} meshRef={drawnRef} fallback={ownSolid}>
+        <CsgRootMesh
+          plan={plan}
+          geometry={ctx}
+          isLoading={isLoading}
+          shadow={shadow}
+          meshRef={drawnRef}
+          fallback={ownMesh}
+        >
           {children}
         </CsgRootMesh>
       </group>
@@ -183,7 +190,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   // It still publishes what it skipped: absorbing nothing is not skipping nothing.
   return (
     <group {...transform}>
-      {ownSolid}
+      {ownMesh}
       {scope}
     </group>
   );

@@ -5,22 +5,34 @@
  */
 
 import type * as THREE from 'three';
-import type { TscnInternalResource, TscnExternalResource } from '../../parser/types';
+import type { ParsedResource } from '../../parser/parsedResource';
+import type { SceneResources } from '../SceneResourcesContext';
+import type { CsgMaterialAddress } from './csgMaterials';
 
-export interface CsgGeometryContext {
-  internalResources: readonly TscnInternalResource[];
-  externalResources: readonly TscnExternalResource[];
+export interface CsgGeometryContext extends SceneResources {
+  /** A `.tres` the shape's `readsFiles` named, or undefined while it loads or after it failed. */
+  file: (path: string) => ParsedResource | undefined;
 }
 
 /**
- * A CSG node's own solid, in its local space. `null` contributes nothing (an unresolved mesh, a
- * degenerate polygon, equal torus radii). The plan drops it rather than treat it as an empty
- * solid, since intersecting with an empty solid differs from intersecting with nothing.
+ * A CSG node's own solid, in its local space. With one material every face draws it. With more,
+ * each draw group takes the material its `materialIndex` names, as a CSGMesh3D face takes its
+ * surface's material (`csg_shape.cpp:1168-1172`).
+ */
+export interface CsgSolid {
+  geometry: THREE.BufferGeometry;
+  materials: readonly CsgMaterialAddress[];
+}
+
+/**
+ * `null` contributes nothing (an unresolved mesh, a degenerate polygon, equal torus radii). The
+ * plan drops it rather than treat it as an empty solid, since intersecting with an empty solid
+ * differs from intersecting with nothing.
  */
 export type CsgGeometryBuilder = (
   properties: Record<string, unknown>,
   ctx: CsgGeometryContext
-) => THREE.BufferGeometry | null;
+) => CsgSolid | null;
 
 export interface CsgShapeRegistration {
   /**
@@ -34,4 +46,14 @@ export interface CsgShapeRegistration {
    * context of `geometry`, since a CSGMesh3D `mesh` reference stays the same while its sub-resource changes.
    */
   geometryKey?: (properties: Record<string, unknown>, ctx: CsgGeometryContext) => string;
+  /** The `.tres` paths `geometry` reads through `ctx.file`, which load before it can build. */
+  readsFiles?: (properties: Record<string, unknown>, pools: SceneResources) => readonly string[];
+}
+
+/** A `CSGPrimitive3D`'s solid: one geometry under its one `material`. */
+export function primitiveSolid(
+  geometry: THREE.BufferGeometry,
+  properties: { materialPath?: string }
+): CsgSolid {
+  return { geometry, materials: [properties.materialPath] };
 }

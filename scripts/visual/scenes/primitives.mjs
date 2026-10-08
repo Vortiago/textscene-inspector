@@ -25,6 +25,11 @@ export const PRIMITIVE_SCENES = [
   // The only end-to-end CSGMesh3D mesh resolution: no vendored scene has one.
   // The third node has no `mesh` and draws nothing rather than a placeholder.
   { name: 'csg-mesh-3d', file: 'unit-csg-mesh.tscn' },
+  // The mesh sources: a .tres ArrayMesh, a .tres PrimitiveMesh and an inline ArrayMesh,
+  // each drawn under its own surface materials, alone and inside a boolean.
+  { name: 'csg-mesh-sources', file: 'unit-csg-mesh-sources.tscn' },
+  // A texture on a brush: each shape's V must run the way Godot's does.
+  { name: 'csg-texture-uv', file: 'unit-csg-texture-uv.tscn' },
   // DEPTH extrudes to local -Z over [-depth, 0], not to +Z and not centred. The
   // Staircase is concave, so its caps need a real triangulator. The last node
   // writes nothing, so a wrong default polygon makes it vanish.

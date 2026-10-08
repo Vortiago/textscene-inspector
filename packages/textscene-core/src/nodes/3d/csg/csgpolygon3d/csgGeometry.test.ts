@@ -12,9 +12,10 @@ import type { Transform3D } from '../../../base/node3d/types';
 import { csgPolygon3DGeometry, csgPolygon3DGeometryKey } from './csgGeometry';
 import { PathIntervalType, PathRotation, PolygonMode } from './polygonGeometry';
 import type { CSGPolygon3DProperties } from './types';
+import { csgGeometryContext } from '../../../../r3f/csg/testing/csgGeometryContext';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
 
-const EMPTY_CTX = { internalResources: [], externalResources: [] };
+const EMPTY_CTX = csgGeometryContext();
 
 const ZERO = { x: 0, y: 0, z: 0 } as const;
 
@@ -61,9 +62,9 @@ const key = (p: CSGPolygon3DProperties): string =>
 
 /** Vertex positions as a comparable string; null geometry is its own value. */
 function shapeOf(p: CSGPolygon3DProperties): string {
-  const geometry = csgPolygon3DGeometry(p as unknown as Record<string, unknown>, EMPTY_CTX);
-  if (!geometry) return 'null';
-  const position = geometry.getAttribute('position');
+  const solid = csgPolygon3DGeometry(p as unknown as Record<string, unknown>, EMPTY_CTX);
+  if (!solid) return 'null';
+  const position = solid.geometry.getAttribute('position');
   return Array.from(position.array as Float32Array)
     .map((n) => n.toFixed(4))
     .join(',');

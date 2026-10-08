@@ -2823,6 +2823,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Mesh Sources",
+    "file": "unit-csg-mesh-sources.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Mesh",
     "file": "unit-csg-mesh.tscn",
     "category": "Unit - CSG Primitives"
@@ -2855,6 +2860,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Csg Sphere",
     "file": "unit-csg-sphere.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Texture Uv",
+    "file": "unit-csg-texture-uv.tscn",
     "category": "Unit - CSG Primitives"
   },
   {

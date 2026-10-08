@@ -9,7 +9,7 @@ renders_as: a solid built from an arbitrary Mesh resource
 
 # CSGMesh3D
 
-The CSG shape whose solid comes from a `Mesh` resource, so any mesh can take part in a boolean. The previewer builds the geometry through the same `buildPrimitiveMeshGeometry` MeshInstance3D uses, and its one `material` replaces the mesh's own, as in Godot.
+The CSG shape whose solid comes from a `Mesh` resource, so any mesh can take part in a boolean. The previewer builds the solid from the triangle surfaces of an inline or `.tres` PrimitiveMesh or ArrayMesh. Each face takes the node's `material`, else its own surface's material, as in Godot.
 
 ## Linting
 

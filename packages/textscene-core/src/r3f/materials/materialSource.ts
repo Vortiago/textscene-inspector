@@ -60,6 +60,6 @@ export function fileMaterialSources(
  * The source for a material file, or undefined for one that is no `.tres` document.
  * Minting an address the loader must refuse buys a failed load and the same default surface.
  */
-function fileMaterialSource(path: string): MaterialSource | undefined {
+export function fileMaterialSource(path: string): MaterialSource | undefined {
   return resourceFilePath(path).endsWith('.tres') ? { kind: 'file', path } : undefined;
 }

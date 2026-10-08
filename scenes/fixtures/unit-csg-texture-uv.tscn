@@ -1,0 +1,30 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitcsgtextureuv"]
+
+; The one variable: which way up a texture lies on a CSG brush. The gradient runs red at V = 0
+; to blue at V = 1. Godot draws the box's front red on top and the cylinder's side blue on top.
+; Every other CSG scene uses flat colours, where a V turned upside down is invisible.
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_from = Vector2(0, 0)
+fill_to = Vector2(0, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[node name="Root" type="Node3D"]
+
+[node name="Box" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 0)
+material = SubResource("StandardMaterial3D_uv")
+
+[node name="Cylinder" type="CSGCylinder3D" parent="."]
+material = SubResource("StandardMaterial3D_uv")
+
+[node name="Sphere" type="CSGSphere3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, 0)
+material = SubResource("StandardMaterial3D_uv")

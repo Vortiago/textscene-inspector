@@ -1,0 +1,70 @@
+; The one variable: where a CSGMesh3D's `mesh` comes from. A `.tres` ArrayMesh, a `.tres`
+; BoxMesh and an inline ArrayMesh each build the brush from the mesh's surfaces, and each
+; face takes the node's `material`, else its surface's own (csg_shape.cpp:1168-1172). So the
+; first, fourth and boolean pairs read red and green, the second blue, and the box yellow.
+; unit-csg-mesh holds only inline PrimitiveMeshes under a node `material`.
+[gd_scene load_steps=7 format=3 uid="uid://unitcsgmeshsources"]
+
+[ext_resource type="ArrayMesh" path="res://unit-csg-mesh-sources-two-boxes.tres" id="1_nxogm"]
+[ext_resource type="BoxMesh" path="res://unit-csg-mesh-sources-box.tres" id="2_3253y"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_u3cyc"]
+albedo_color = Color(0.25, 0.4, 0.85, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m7jmp"]
+albedo_color = Color(0.85, 0.25, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_y2354"]
+albedo_color = Color(0.2, 0.7, 0.3, 1)
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_ni31j"]
+_surfaces = [{
+"aabb": AABB(-0.65, -0.3, -0.3, 0.6, 0.6, 0.6),
+"attribute_data": PackedByteArray("AAAAAAAAAACrqio/AAAAAKuqqj4AAAAAAACAPwAAAAAAAAAAAAAAP6uqKj8AAAA/q6qqPgAAAD8AAIA/AAAAP6uqqj4AAAAAAAAAAAAAAD+rqio/AAAAAKuqqj4AAAA/q6qqPgAAAD8AAAAAAACAP6uqKj8AAAA/q6qqPgAAgD+rqqo+AAAAP6uqKj8AAAA/q6oqPwAAAD8AAIA/AAAAP6uqqj4AAIA/q6oqPwAAgD+rqio/AACAPwAAgD8AAIA/"),
+"format": 34359742487,
+"index_count": 36,
+"index_data": PackedByteArray("AAACAAQAAgAGAAQAAQADAAUAAwAHAAUACAAKAAwACgAOAAwACQALAA0ACwAPAA0AEAASABQAEgAWABQAEQATABUAEwAXABUA"),
+"material": SubResource("StandardMaterial3D_m7jmp"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 24,
+"vertex_data": PackedByteArray("ZmYmv5qZmT6amZk+yMxMvZqZmT6amZm+yMxMvZqZmT6amZk+ZmYmv5qZmT6amZm+ZmYmv5qZmb6amZk+yMxMvZqZmb6amZm+yMxMvZqZmb6amZk+ZmYmv5qZmb6amZm+yMxMvZqZmT6amZk+ZmYmv5qZmT6amZm+yMxMvZqZmT6amZm+ZmYmv5qZmT6amZk+yMxMvZqZmb6amZk+ZmYmv5qZmb6amZm+yMxMvZqZmb6amZm+ZmYmv5qZmb6amZk+yMxMvZqZmT6amZk+ZmYmv5qZmb6amZk+ZmYmv5qZmT6amZk+yMxMvZqZmb6amZk+yMxMvZqZmT6amZm+ZmYmv5qZmb6amZm+ZmYmv5qZmT6amZm+yMxMvZqZmb6amZm+/3//fwCAAID//////38AgP9//38AgACA//////9/AID/f/9/AIAAgP//////fwCA/3//fwCAAID//////38AgP//AIAAgP+/AAAAgP9//7///wCAAID/vwAAAID/f/+///8AgACA/78AAACA/3//v///AIAAgP+/AAAAgP9//78AgP//AAD/vwCAAAAAAP+/AID//wAA/78AgAAAAAD/vwCA//8AAP+/AIAAAAAA/78AgP//AAD/vwCAAAAAAP+/")
+}, {
+"aabb": AABB(0.049999982, -0.3, -0.3, 0.6, 0.6, 0.6),
+"attribute_data": PackedByteArray("AAAAAAAAAACrqio/AAAAAKuqqj4AAAAAAACAPwAAAAAAAAAAAAAAP6uqKj8AAAA/q6qqPgAAAD8AAIA/AAAAP6uqqj4AAAAAAAAAAAAAAD+rqio/AAAAAKuqqj4AAAA/q6qqPgAAAD8AAAAAAACAP6uqKj8AAAA/q6qqPgAAgD+rqqo+AAAAP6uqKj8AAAA/q6oqPwAAAD8AAIA/AAAAP6uqqj4AAIA/q6oqPwAAgD+rqio/AACAPwAAgD8AAIA/"),
+"format": 34359742487,
+"index_count": 36,
+"index_data": PackedByteArray("AAACAAQAAgAGAAQAAQADAAUAAwAHAAUACAAKAAwACgAOAAwACQALAA0ACwAPAA0AEAASABQAEgAWABQAEQATABUAEwAXABUA"),
+"material": SubResource("StandardMaterial3D_y2354"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 24,
+"vertex_data": PackedByteArray("yMxMPZqZmT6amZk+ZmYmP5qZmT6amZm+ZmYmP5qZmT6amZk+yMxMPZqZmT6amZm+yMxMPZqZmb6amZk+ZmYmP5qZmb6amZm+ZmYmP5qZmb6amZk+yMxMPZqZmb6amZm+ZmYmP5qZmT6amZk+yMxMPZqZmT6amZm+ZmYmP5qZmT6amZm+yMxMPZqZmT6amZk+ZmYmP5qZmb6amZk+yMxMPZqZmb6amZm+ZmYmP5qZmb6amZm+yMxMPZqZmb6amZk+ZmYmP5qZmT6amZk+yMxMPZqZmb6amZk+yMxMPZqZmT6amZk+ZmYmP5qZmb6amZk+ZmYmP5qZmT6amZm+yMxMPZqZmb6amZm+yMxMPZqZmT6amZm+ZmYmP5qZmb6amZm+/3//fwCAAID//////38AgP9//38AgACA//////9/AID/f/9/AIAAgP//////fwCA/3//fwCAAID//////38AgP//AIAAgP+/AAAAgP9//7///wCAAID/vwAAAID/f/+///8AgACA/78AAACA/3//v///AIAAgP+/AAAAgP9//78AgP//AAD/vwCAAAAAAP+/AID//wAA/78AgAAAAAD/vwCA//8AAP+/AIAAAAAA/78AgP//AAD/vwCAAAAAAP+/")
+}]
+
+[node name="CsgMeshSourcesRoot" type="Node3D"]
+
+[node name="TresArrayMesh" type="CSGMesh3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
+mesh = ExtResource("1_nxogm")
+
+[node name="TresArrayMeshMaterial" type="CSGMesh3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+mesh = ExtResource("1_nxogm")
+material = SubResource("StandardMaterial3D_u3cyc")
+
+[node name="TresPrimitiveMesh" type="CSGMesh3D" parent="."]
+mesh = ExtResource("2_3253y")
+
+[node name="InlineArrayMesh" type="CSGMesh3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+mesh = SubResource("ArrayMesh_ni31j")
+
+[node name="BooleanRoot" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
+size = Vector3(1.4, 0.3, 0.9)
+
+[node name="TresArrayMeshChild" type="CSGMesh3D" parent="BooleanRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+mesh = ExtResource("1_nxogm")
+

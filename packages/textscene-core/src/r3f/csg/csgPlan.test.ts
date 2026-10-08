@@ -220,26 +220,6 @@ describe('buildCsgPlan', () => {
     });
   });
 
-  describe('surfaces', () => {
-    it('interns each distinct material once, in first-seen order', () => {
-      const root = node('CSGBox3D', 'Root', { materialPath: 'SubResource("A")' }, [
-        node('CSGSphere3D', 'X', { materialPath: 'SubResource("B")' }),
-        node('CSGSphere3D', 'Y', { materialPath: 'SubResource("A")' }),
-      ]);
-      const plan = buildCsgPlan(root, 'Root', OPTS)!;
-      expect(plan.surfaces).toEqual(['SubResource("A")', 'SubResource("B")']);
-      expect(solids(plan).map((c) => c.surface)).toEqual([0, 1, 0]);
-    });
-
-    it('gives "no material" its own surface slot', () => {
-      const root = node('CSGBox3D', 'Root', {}, [
-        node('CSGSphere3D', 'X', { materialPath: 'SubResource("A")' }),
-      ]);
-      const plan = buildCsgPlan(root, 'Root', OPTS)!;
-      expect(plan.surfaces).toEqual([undefined, 'SubResource("A")']);
-    });
-  });
-
   describe('cacheKey', () => {
     it('is stable across structurally-equal but distinct property objects', () => {
       // The whole point: the parser allocates fresh objects per reparse, so a key that

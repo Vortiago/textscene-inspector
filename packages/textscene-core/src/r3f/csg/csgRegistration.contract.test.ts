@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import '../nodes/index';
+import { csgGeometryContext } from './testing/csgGeometryContext';
 
 /** Every CSG type the parser can produce. */
 const CSG_TYPES = [
@@ -19,7 +20,7 @@ const CSG_TYPES = [
   'CSGCombiner3D',
 ] as const;
 
-const EMPTY_CTX = { internalResources: [], externalResources: [] };
+const EMPTY_CTX = csgGeometryContext();
 
 describe('CSG shape registration', () => {
   it('registers a component for every CSG type', () => {
@@ -79,10 +80,10 @@ describe('CSG shape registration', () => {
     const { geometryKey } = nodeComponentRegistry.getCsgShape('CSGMesh3D')!;
     const properties = { name: 'M', mesh: 'SubResource("BoxMesh_1")', flipFaces: false };
     const withSize = (size: string) =>
-      geometryKey!(properties, {
-        internalResources: [{ id: 'BoxMesh_1', type: 'BoxMesh', data: { size } }],
-        externalResources: [],
-      });
+      geometryKey!(
+        properties,
+        csgGeometryContext({ internalResources: [{ id: 'BoxMesh_1', type: 'BoxMesh', data: { size } }] })
+      );
     expect(withSize('Vector3(1, 1, 1)')).not.toBe(withSize('Vector3(2, 2, 2)'));
   });
 });
