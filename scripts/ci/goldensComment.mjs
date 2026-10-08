@@ -13,7 +13,7 @@ import { fixtureUrl } from '../visual/preview/fixtureUrl.mjs';
 import { GOLDEN_SCENES } from '../visual/scenes.mjs';
 
 /** The first line of the comment, which the workflow searches for to update it in place. */
-export const GOLDENS_COMMENT_MARKER = '<!-- goldens-touched -->';
+const GOLDENS_COMMENT_MARKER = '<!-- goldens-touched -->';
 
 const STATUS_WORDS = { A: 'added', M: 'changed', D: 'removed' };
 const PAGES_HOST = new URL(PREVIEW_URL).host;

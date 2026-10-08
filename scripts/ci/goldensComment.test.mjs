@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { BASELINE_DIR, baselinePath } from '../visual/baselinePath.mjs';
-import { GOLDENS_COMMENT_MARKER, goldensComment } from './goldensComment.mjs';
+import { goldensComment } from './goldensComment.mjs';
 
 const SCENES = [{ name: 'glow-mix', file: 'unit-glow-mix.tscn' }];
 const PULL_REQUEST = {
@@ -65,16 +65,11 @@ describe('goldensComment', () => {
     expect(comment).toContain('https://claude-pr-goldens-touched-f.textscene-inspector.pages.dev/');
   });
 
-  it('opens with the marker that finds the comment again on the next push', () => {
+  it('opens with the marker the workflow searches for to update the comment', () => {
     const comment = goldensComment(nameStatus('M', 'glow-mix'), SCENES, PULL_REQUEST);
-
-    expect(comment.split('\n')[0]).toBe(GOLDENS_COMMENT_MARKER);
-  });
-
-  it('matches the marker the workflow searches for', () => {
     const workflow = readFileSync(resolve(REPO_ROOT, '.github/workflows/goldens-comment.yml'), 'utf8');
 
-    expect(workflow).toContain(`startswith("${GOLDENS_COMMENT_MARKER}")`);
+    expect(workflow).toContain(`startswith("${comment.split('\n')[0]}")`);
   });
 
   it('shows up to ten goldens open', () => {
