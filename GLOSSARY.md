@@ -234,7 +234,7 @@ An item's position in Godot's single pre-order walk of the canvas, the third and
 _Avoid_: "paint index".
 
 **Rendering quadrant** (`resources/tileset/renderingQuadrants.ts`):
-The cells of a tile layer that Godot draws together: a `rendering_quadrant_size` square of cells, or one tile row on a y-sorted layer.
+The cells of a tile layer that Godot draws together: a `rendering_quadrant_size` square of cells, or one tile row on a y-sorted layer (`tile_map_layer.cpp:546-554`).
 _Avoid_: "chunk", "tile batch".
 
 **Tile canvas item** (`resources/tileset/tileCanvasItems.ts`):
@@ -242,7 +242,7 @@ One canvas item of a **rendering quadrant**: a run of its cells that share a til
 _Avoid_: "quadrant" for this, "sub-quadrant".
 
 **Drawable cell** (`resources/tileset/drawableCell.ts`):
-A placed tile cell whose atlas source, tile and alternative tile all exist, so Godot draws it.
+A placed tile cell whose atlas source, tile and alternative tile all exist, so Godot draws it (`tile_map_layer.cpp:527-531`).
 _Avoid_: "valid cell".
 
 **Viewport mode**:

@@ -121,8 +121,8 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
       transparent: true,
       depthWrite: false,
       clippingPlanes: clippingPlanes as THREE.Plane[],
-      // Godot ramps a `border_blend` in sRGB, and linear endpoints put the midpoint 38
-      // counts high in Godot 4.6.3, so the vertex colours stay sRGB to the fragment.
+      // Godot ramps a `border_blend` between sRGB vertex colours (`style_box_flat.cpp:380,389`), and
+      // linear endpoints move the midpoint, so the vertex colours stay sRGB to the fragment.
       defines: CANVAS_SRGB_DEFINES,
     },
     // Single pass: `StyleBoxFlat::draw` emits rings in painter's order, and its

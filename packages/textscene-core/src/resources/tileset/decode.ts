@@ -136,7 +136,8 @@ type TileMaterialResolver = (ref: string) => TileMaterial | null;
 
 /**
  * One `TileMaterial` per resource the TileSet names, so two tiles share a material exactly when
- * Godot's loader hands both one `Ref`. A reference that names nothing loads as null.
+ * Godot's loader hands both one `Ref` (`resource_format_text.cpp:113-114` for a SubResource, `:142-144`
+ * through the resource cache for an ExtResource). A reference that names nothing loads as null.
  */
 function tileMaterialResolver(data: TileSetSourceData): TileMaterialResolver {
   const byResource = new Map<string, TileMaterial | null>();

@@ -134,7 +134,7 @@ function FilledPolygon({
       opacity: vertexColors ? tintOnlyOpacity : opacity,
       transparent: true,
       depthWrite: false,
-      // The `NoColorSpace` map and the sRGB vertex colours, which Godot multiplies as stored.
+      // The `NoColorSpace` map and the sRGB vertex colours, which Godot multiplies as stored (`canvas.glsl:631`).
       defines: CANVAS_SRGB_DEFINES,
     },
     // The one canvas mesh where a facing split would be visible, since every

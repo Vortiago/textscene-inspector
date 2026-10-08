@@ -65,7 +65,7 @@ export function renderToOffscreenTarget(
   gl: THREE.WebGLRenderer,
   options: {
     target: THREE.WebGLRenderTarget;
-    /** The project clear colour, linear, which an opaque target clears to. */
+    /** The project clear colour, linear, which an opaque target clears to (`renderer_viewport.cpp:371`). */
     clearColor: THREE.Color;
     transparentBg: boolean;
     toneMapping?: THREE.ToneMapping;

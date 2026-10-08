@@ -2,53 +2,71 @@
  * The sRGB multiply rides three's own map and colour chunks. A three release that rewrites either
  * multiply line fails here, not silently in a capture.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { applyChunkEdits } from './shaderPatch/chunkPatch';
-import { CANVAS_SRGB_MULTIPLY, CANVAS_SRGB_MULTIPLY_EDITS } from './canvasSrgbMultiply';
+import { CANVAS_SRGB_DEFINES, installCanvasSrgbMultiply } from './canvasSrgbMultiply';
+import { warningsOf } from './testing/logWarnings';
 
-const threeChunks = () => ({
-  map_fragment: THREE.ShaderChunk.map_fragment,
-  color_fragment: THREE.ShaderChunk.color_fragment,
+const threeMap = THREE.ShaderChunk.map_fragment;
+const threeColor = THREE.ShaderChunk.color_fragment;
+
+/** The define a material sets, as the patched chunks must test it. */
+const [DEFINE] = Object.keys(CANVAS_SRGB_DEFINES);
+
+afterEach(() => {
+  THREE.ShaderChunk.map_fragment = threeMap;
+  THREE.ShaderChunk.color_fragment = threeColor;
 });
 
-describe('CANVAS_SRGB_MULTIPLY_EDITS', () => {
-  it("finds each linear multiply in three's chunks", () => {
-    expect(applyChunkEdits(threeChunks(), CANVAS_SRGB_MULTIPLY_EDITS)).not.toBeNull();
+function patchedChunks() {
+  installCanvasSrgbMultiply();
+  return { map: THREE.ShaderChunk.map_fragment, color: THREE.ShaderChunk.color_fragment };
+}
+
+describe('installCanvasSrgbMultiply', () => {
+  it("guards each chunk's sRGB multiply with the define a canvas material sets", () => {
+    const { map, color } = patchedChunks();
+    expect(map).toContain(`#ifdef ${DEFINE}`);
+    expect(color).toContain(`#ifdef ${DEFINE}`);
   });
 
   it('keeps the linear multiply for a material without the define', () => {
-    const patched = applyChunkEdits(threeChunks(), CANVAS_SRGB_MULTIPLY_EDITS)!;
-    expect(patched.map_fragment).toContain(`#else\n\t\tdiffuseColor *= sampledDiffuseColor;`);
-    expect(patched.color_fragment).toContain(`#else\n\t\tdiffuseColor *= vColor;`);
+    const { map, color } = patchedChunks();
+    expect(map).toContain(`#else\n\t\tdiffuseColor *= sampledDiffuseColor;`);
+    expect(color).toContain(`#else\n\t\tdiffuseColor *= vColor;`);
   });
 
   it('multiplies the sRGB numbers and decodes the product once under the define', () => {
-    const patched = applyChunkEdits(threeChunks(), CANVAS_SRGB_MULTIPLY_EDITS)!;
-    expect(patched.map_fragment).toContain(`#ifdef ${CANVAS_SRGB_MULTIPLY}`);
-    expect(patched.map_fragment).toContain(
+    expect(patchedChunks().map).toContain(
       'sRGBTransferEOTF( vec4( sRGBTransferOETF( diffuseColor ).rgb * sampledDiffuseColor.rgb, 1.0 ) )'
     );
   });
 
   it('encodes once and decodes once for a map with vertex colours, carrying sRGB between the chunks', () => {
-    const patched = applyChunkEdits(threeChunks(), CANVAS_SRGB_MULTIPLY_EDITS)!;
-    const keepsSrgb = patched.map_fragment.split(
-      '#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )'
-    )[1]!;
+    const { map, color } = patchedChunks();
+    const keepsSrgb = map.split('#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )')[1]!;
     expect(keepsSrgb.split('#else')[0]).not.toContain('sRGBTransferEOTF');
-    const fromSrgb = patched.color_fragment.split('#ifdef USE_MAP')[1]!;
+    const fromSrgb = color.split('#ifdef USE_MAP')[1]!;
     expect(fromSrgb.split('#else')[0]).not.toContain('sRGBTransferOETF');
     expect(fromSrgb.split('#else')[0]).toContain('sRGBTransferEOTF');
   });
 
   it("guards the shared path with the condition under which three's other chunk multiplies", () => {
-    const patched = applyChunkEdits(threeChunks(), CANVAS_SRGB_MULTIPLY_EDITS)!;
-    expect(patched.map_fragment).toContain(THREE.ShaderChunk.color_fragment.trim().split('\n')[0]);
-    expect(patched.color_fragment).toContain(THREE.ShaderChunk.map_fragment.trim().split('\n')[0]);
+    const { map, color } = patchedChunks();
+    expect(map).toContain(threeColor.trim().split('\n')[0]);
+    expect(color).toContain(threeMap.trim().split('\n')[0]);
   });
 
-  it('refuses chunks that lack a multiply line', () => {
-    expect(applyChunkEdits({ map_fragment: '', color_fragment: '' }, CANVAS_SRGB_MULTIPLY_EDITS)).toBeNull();
+  it('changes nothing on a second call', () => {
+    const first = patchedChunks();
+    expect(patchedChunks()).toEqual(first);
+  });
+
+  it("keeps three's chunks and warns when they lack a multiply line", () => {
+    THREE.ShaderChunk.map_fragment = '';
+    THREE.ShaderChunk.color_fragment = '';
+    const warnings = warningsOf(installCanvasSrgbMultiply);
+    expect(THREE.ShaderChunk.map_fragment).toBe('');
+    expect(warnings).toEqual([expect.stringContaining('no linear multiply to replace')]);
   });
 });

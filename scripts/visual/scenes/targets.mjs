@@ -23,9 +23,7 @@ export const TILE_AND_TARGET_SCENES = [
   // Cells of two atlas sources alternate in one rendering quadrant, each overlapping the next.
   // Godot draws them in cell order, not grouped by source. Verified against Godot 4.6.3.
   { name: 'tile-map-layer-mixed-sources', file: 'unit-tile-map-layer-mixed-sources.tscn', mode: '2d' },
-  // A tile's own TileData. Each scene moves one property, and its header says why. z_index and
-  // y_sort_origin match Godot 4.6.3 exactly. The modulate and the additive material differ from Godot
-  // only where a Sprite2D with the same modulate or material differs too.
+  // A tile's own TileData. Each scene moves one property, and its header says why.
   { name: 'tile-map-layer-tile-modulate', file: 'unit-tile-map-layer-tile-modulate.tscn', mode: '2d' },
   { name: 'tile-map-layer-tile-material', file: 'unit-tile-map-layer-tile-material.tscn', mode: '2d' },
   { name: 'tile-map-layer-tile-z-index', file: 'unit-tile-map-layer-tile-z-index.tscn', mode: '2d' },

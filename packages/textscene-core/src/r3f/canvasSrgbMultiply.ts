@@ -12,7 +12,7 @@ import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatc
  * The define a 2D canvas material sets when its `map` is tagged `NoColorSpace` and its vertex
  * colours, if any, hold sRGB numbers. Its `color` stays linear, as three uploads it.
  */
-export const CANVAS_SRGB_MULTIPLY = 'CANVAS_SRGB_MULTIPLY';
+const CANVAS_SRGB_MULTIPLY = 'CANVAS_SRGB_MULTIPLY';
 
 /** `defines` for such a material. It needs no per-consumer state, so one object serves. */
 export const CANVAS_SRGB_DEFINES: Readonly<Record<string, string>> = { [CANVAS_SRGB_MULTIPLY]: '' };
@@ -64,7 +64,7 @@ function srgbMultiplyEdit(chunk: Chunk): ChunkEdit<Chunk> {
 }
 
 /** Each linear multiply in three's chunks: the texel, then the vertex colour. */
-export const CANVAS_SRGB_MULTIPLY_EDITS: readonly ChunkEdit<Chunk>[] = [
+const CANVAS_SRGB_MULTIPLY_EDITS: readonly ChunkEdit<Chunk>[] = [
   srgbMultiplyEdit('map_fragment'),
   srgbMultiplyEdit('color_fragment'),
 ];
