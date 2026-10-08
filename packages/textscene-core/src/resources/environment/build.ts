@@ -126,7 +126,10 @@ function ambientFor(
 
   // BG (0, the default source) over BG_CLEAR_COLOR or BG_COLOR: flat = that colour
   // × background_energy_multiplier.
-  if (source === AMBIENT_SOURCE_BG && (background === 0 || background === 1)) {
+  if (
+    source === AMBIENT_SOURCE_BG &&
+    (background === BackgroundMode.BG_CLEAR_COLOR || background === BackgroundMode.BG_COLOR)
+  ) {
     return {
       ambient: {
         color: backgroundColor,

@@ -642,7 +642,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
    * previewer's 2D stage draws, with no 3D camera. The 3D path would return it at the wrong size,
    * over a sky.
    */
-  it('renders a 2D scene as the project viewport, cleared to the 2D background', async () => {
+  it('renders a 2D scene as the project viewport, cleared to the clear colour', async () => {
     const out = join(await scratchDir(), 'canvas.png');
     const { mode } = await renderReference({
       scene: join(REPO_ROOT, 'scenes/fixtures/unit-line2d.tscn'),

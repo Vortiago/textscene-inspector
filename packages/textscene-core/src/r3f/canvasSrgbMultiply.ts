@@ -26,30 +26,34 @@ const fromSrgb = (rgb: string) => `sRGBTransferEOTF( vec4( ${rgb}, 1.0 ) ).rgb`;
 const toSrgb = 'sRGBTransferOETF( diffuseColor ).rgb';
 
 /**
- * Each chunk's factor, and the guard under which three's other chunk multiplies too. Each guard is
- * three's own, so `canvasSrgbMultiply.test.ts` fails on a release that changes one.
+ * Each chunk's factor, the guard under which three's other chunk multiplies too, and the rgb it
+ * writes there: the map chunk leaves the product in sRGB and the colour chunk decodes it. Each
+ * guard is three's own, so `canvasSrgbMultiply.test.ts` fails on a release that changes one.
  */
-const SRGB_MULTIPLY_CHUNKS: Readonly<Record<Chunk, { factor: string; otherChunkGuard: string }>> = {
+const SRGB_MULTIPLY_CHUNKS: Readonly<
+  Record<Chunk, { factor: string; otherChunkGuard: string; sharedRgb: string }>
+> = {
   map_fragment: {
     factor: 'sampledDiffuseColor',
     otherChunkGuard: '#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )',
+    sharedRgb: `${toSrgb} * sampledDiffuseColor.rgb`,
   },
-  color_fragment: { factor: 'vColor', otherChunkGuard: '#ifdef USE_MAP' },
+  color_fragment: {
+    factor: 'vColor',
+    otherChunkGuard: '#ifdef USE_MAP',
+    sharedRgb: fromSrgb('diffuseColor.rgb * vColor.rgb'),
+  },
 };
 
 /**
  * Three's linear `diffuseColor *= factor;` in `chunk`, with the sRGB multiply beside it under the
- * define. Where the other chunk multiplies too, the map chunk leaves the product in sRGB and the
- * colour chunk decodes it, so a textured, vertex-coloured fragment encodes and decodes once.
+ * define. A textured, vertex-coloured fragment encodes and decodes once.
  */
 function srgbMultiplyEdit(chunk: Chunk): ChunkEdit<Chunk> {
-  const { factor, otherChunkGuard } = SRGB_MULTIPLY_CHUNKS[chunk];
+  const { factor, otherChunkGuard, sharedRgb } = SRGB_MULTIPLY_CHUNKS[chunk];
   const three = `\tdiffuseColor *= ${factor};`;
   const whole = assign(fromSrgb(`${toSrgb} * ${factor}.rgb`), factor);
-  const shared =
-    chunk === 'map_fragment'
-      ? assign(`${toSrgb} * ${factor}.rgb`, factor)
-      : assign(fromSrgb(`diffuseColor.rgb * ${factor}.rgb`), factor);
+  const shared = assign(sharedRgb, factor);
   return {
     chunk,
     three,
