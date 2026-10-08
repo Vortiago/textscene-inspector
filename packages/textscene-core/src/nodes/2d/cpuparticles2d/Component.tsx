@@ -12,7 +12,8 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useCanvas2DMap } from '../../../r3f/canvas2DTextureDecode';
+import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
+import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -93,7 +94,7 @@ function ParticleField({
     externalResources,
     internalResources
   );
-  const { texture, defines: decodeDefines } = useCanvas2DMap(resolvedTexture);
+  const texture = useCanvas2DTexture(resolvedTexture);
 
   // A callback ref, not useRef: the emission-transform sample runs once the
   // container is in the tree, since its world matrix does not exist before.
@@ -143,7 +144,9 @@ function ParticleField({
         vertexColors: true,
         transparent: true,
         depthWrite: false,
-        defines: decodeDefines,
+        // The vertex colours hold each particle's sRGB colour, which multiplies in sRGB
+        // (`canvas.glsl:189`), with the texture or without it.
+        defines: CANVAS_SRGB_DEFINES,
       },
       // Each particle has its own vertex colour and alpha, and each quad is wound
       // by its own transform's determinant (`particleGeometry.ts`). A split by

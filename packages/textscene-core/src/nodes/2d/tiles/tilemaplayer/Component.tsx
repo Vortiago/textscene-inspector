@@ -42,7 +42,7 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
           <TileQuadrants
             quadrants={quadrants}
             model={model}
-            tint={tint}
+            selfTint={tint.self}
             material={material}
             lightMask={props.light_mask}
             zFinal={zFinal}

@@ -16,8 +16,10 @@ import {
   packedArrayBody,
   splitTopLevel,
   type LayoutDirectionEnv,
+  DEFAULT_CLEAR_COLOR,
 } from '../godot/index.js';
 import { unquoteLiteral } from './utils.js';
+import { colorOr, type Color } from '../utils/colorParser.js';
 import { parseOptionalInt } from './valueParsers.js';
 
 /**
@@ -128,6 +130,23 @@ export function projectViewportSize(settings: ProjectSettings | null): ProjectVi
     width: axis('display/window/size/viewport_width', DEFAULT_VIEWPORT_WIDTH),
     height: axis('display/window/size/viewport_height', DEFAULT_VIEWPORT_HEIGHT),
   };
+}
+
+/**
+ * `rendering/environment/defaults/default_clear_color`, sRGB, which every opaque viewport clears to
+ * (`renderer_viewport.cpp:371,751`), or Godot's default for an absent or malformed value.
+ */
+export function projectClearColor(settings: ProjectSettings | null): Color {
+  return colorOr(settings?.['rendering/environment/defaults/default_clear_color'], DEFAULT_CLEAR_COLOR);
+}
+
+/**
+ * `rendering/viewport/transparent_background`, which the root viewport takes
+ * (`scene/main/scene_tree.cpp:2085-2086`). A transparent root clears to `Color(0, 0, 0, 0)`, not
+ * the clear colour (`renderer_viewport.cpp:371`).
+ */
+export function projectTransparentBackground(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['rendering/viewport/transparent_background']) === true;
 }
 
 /**

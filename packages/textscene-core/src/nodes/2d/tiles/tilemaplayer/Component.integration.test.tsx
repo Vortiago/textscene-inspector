@@ -19,7 +19,7 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { findByType } from './findByType';
-import { sourceRuns } from '../../../../r3f/sourceRuns';
+import { quadrantCanvasItems } from '../../../../resources/tileset/tileCanvasItems';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING } from '../../../../r3f/lighting2d/lightPassContext';
 import type { CappedItem } from '../../../../r3f/lighting2d/itemLightCap';
@@ -110,12 +110,12 @@ describe('isometric dungeon integration', () => {
       ySortOrigin: props.y_sort_origin,
       quadrantSize: props.rendering_quadrant_size,
     });
-    return { floor, props, model, quadrants };
+    return { floor, props, quadrants };
   }
 
   it('renders a dungeon layer end-to-end: one batched mesh per source run of each quadrant', async () => {
-    const { floor, props, model, quadrants } = floorQuadrants();
-    const batches = quadrants.reduce((sum, cells) => sum + sourceRuns(model, cells).length, 0);
+    const { floor, props, quadrants } = floorQuadrants();
+    const batches = quadrants.flatMap(quadrantCanvasItems).reduce((sum, item) => sum + item.runs.length, 0);
 
     const { renderer } = await renderLayer(floor);
 

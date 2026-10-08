@@ -22,14 +22,31 @@ function whiteFor(properties: EnvironmentProperties): number {
     : properties.tonemap_white;
 }
 
-export function createEnvironmentSettings(properties: EnvironmentProperties): EnvironmentSettings {
+/**
+ * A background colour as Godot clears to it: each sRGB channel times the energy, alpha kept
+ * (`render_forward_clustered.cpp:1999-2001`).
+ */
+function scaledRgb({ r, g, b, a }: Color, energy: number): Color {
+  return { r: r * energy, g: g * energy, b: b * energy, a };
+}
+
+/**
+ * `clearColor` is the project's `default_clear_color`, sRGB, which BG_CLEAR_COLOR draws in place of
+ * `background_color` (`render_forward_clustered.cpp:1997-1998`).
+ */
+export function createEnvironmentSettings(
+  properties: EnvironmentProperties,
+  clearColor: Color
+): EnvironmentSettings {
+  const backgroundColor =
+    properties.background_mode === BackgroundMode.BG_CLEAR_COLOR ? clearColor : properties.background_color;
   return {
     background: {
       mode: properties.background_mode,
-      color: properties.background_color,
+      color: scaledRgb(backgroundColor, properties.background_energy_multiplier),
       energyMultiplier: properties.background_energy_multiplier,
     },
-    ...ambientFor(properties),
+    ...ambientFor(properties, backgroundColor),
     toneMapping: {
       mode: properties.tonemap_mode,
       exposure: properties.tonemap_exposure,
@@ -87,9 +104,6 @@ function glowLevelsFor(properties: EnvironmentProperties): number[] {
   return sum > 0 ? levels.map((weight) => weight / sum) : levels;
 }
 
-/** Godot's ProjectSettings `rendering/environment/defaults/default_clear_color`. */
-const DEFAULT_CLEAR_COLOR: Color = { r: 0.3, g: 0.3, b: 0.3, a: 1 };
-
 const AMBIENT_SOURCE_BG = 0;
 const AMBIENT_SOURCE_COLOR = 2;
 const AMBIENT_SOURCE_SKY = 3;
@@ -100,7 +114,10 @@ const AMBIENT_SOURCE_SKY = 3;
  * (`sky_bake_panorama` is the baking path, a different table). Colours stay in
  * Godot space: the consumer converts sRGB to linear.
  */
-function ambientFor(properties: EnvironmentProperties): {
+function ambientFor(
+  properties: EnvironmentProperties,
+  backgroundColor: Color
+): {
   ambient: EnvironmentSettings['ambient'];
   skyAmbient: EnvironmentSettings['skyAmbient'];
 } {
@@ -109,10 +126,13 @@ function ambientFor(properties: EnvironmentProperties): {
 
   // BG (0, the default source) over BG_CLEAR_COLOR or BG_COLOR: flat = that colour
   // × background_energy_multiplier.
-  if (source === AMBIENT_SOURCE_BG && (background === 0 || background === 1)) {
+  if (
+    source === AMBIENT_SOURCE_BG &&
+    (background === BackgroundMode.BG_CLEAR_COLOR || background === BackgroundMode.BG_COLOR)
+  ) {
     return {
       ambient: {
-        color: background === 0 ? DEFAULT_CLEAR_COLOR : properties.background_color,
+        color: backgroundColor,
         energy: properties.background_energy_multiplier,
       },
       skyAmbient: null,

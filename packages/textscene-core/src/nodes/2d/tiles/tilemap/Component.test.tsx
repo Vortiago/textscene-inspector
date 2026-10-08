@@ -45,7 +45,7 @@ describe('TileMap degradation (ADR-0008)', () => {
     {
       id: 'atlas1',
       type: 'TileSetAtlasSource',
-      data: { texture: 'ExtResource("2")', texture_region_size: 'Vector2i(16, 16)' },
+      data: { texture: 'ExtResource("2")', texture_region_size: 'Vector2i(16, 16)', '0:0/0': '0' },
     },
     { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("atlas1")' } },
   ];

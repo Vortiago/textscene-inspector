@@ -279,7 +279,7 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
   );
 
   it(
-    'leaves DECODE_VIDEO_TEXTURE UNSET, matching the kept SRGBColorSpace tag -- ' +
+    'leaves CANVAS_SRGB_MULTIPLY UNSET, matching the kept SRGBColorSpace tag -- ' +
       "`createCanvasTextMaterial`'s own auto-detection (`map.colorSpace === NoColorSpace`) means " +
       'this follows automatically from the tag above rather than needing its own separate pin, but ' +
       "asserted here anyway: a `SRGBColorSpace` texture ALREADY gets three's automatic hardware " +
@@ -290,7 +290,7 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
       );
       const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
         .material as THREE.MeshBasicMaterial;
-      expect(mat.defines?.DECODE_VIDEO_TEXTURE).toBeUndefined();
+      expect(mat.defines?.CANVAS_SRGB_MULTIPLY).toBeUndefined();
     }
   );
 

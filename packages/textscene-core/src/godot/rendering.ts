@@ -25,6 +25,17 @@ export const CANVAS_ITEM_Z_MIN = -4096;
 export const CANVAS_ITEM_Z_MAX = 4096;
 
 /**
+ * `rendering/environment/defaults/default_clear_color`'s default, sRGB. Every opaque viewport clears
+ * to it before it draws (`servers/rendering/renderer_viewport.cpp:371,751`).
+ */
+export const DEFAULT_CLEAR_COLOR: Readonly<{ r: number; g: number; b: number; a: number }> = {
+  r: 0.3,
+  g: 0.3,
+  b: 0.3,
+  a: 1,
+};
+
+/**
  * `RenderingServer::CANVAS_LAYER_MIN` / `_MAX` (`servers/rendering/rendering_server.h:105-106`), int32's own limits,
  * declared beside the Z pair and spelled into their hints the same way (`light_2d.cpp:311-312`, `canvas_layer.cpp:340`).
  */

@@ -12,7 +12,12 @@
 import type { TscnNode } from '../parser/types';
 import { descendsFrom } from '../godot/nodeBaseTypes';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
-import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPlacement';
+import {
+  CANVAS_ITEM_Z_MAX,
+  CANVAS_ITEM_Z_MIN,
+  clampCanvasItemZ,
+  WORLD_CANVAS_LAYER,
+} from './lighting2d/canvasItemPlacement';
 
 /** How many distinct `z_final` buckets one canvas has. */
 const Z_BUCKET_COUNT = CANVAS_ITEM_Z_MAX - CANVAS_ITEM_Z_MIN + 1;
@@ -57,13 +62,21 @@ export const WHOLE_CANVAS_RANGE: PaintRange = { base: 0, size: PAINT_SEQUENCE_ST
  * (`_cull_canvas_item` lines 432-434), or it indexes the next layer's buckets.
  */
 export function canvasRenderOrder({ layerRank, zFinal, sequence }: CanvasPlacement): number {
-  const clamped = Math.min(CANVAS_ITEM_Z_MAX, Math.max(CANVAS_ITEM_Z_MIN, zFinal));
-  const bucket = layerRank * Z_BUCKET_COUNT + (clamped - CANVAS_ITEM_Z_MIN);
+  const bucket = layerRank * Z_BUCKET_COUNT + (clampCanvasItemZ(zFinal) - CANVAS_ITEM_Z_MIN);
   // Saturated: a sequence past the stride carries into the next bucket, a wrong
   // z or layer. Inside its own bucket the worst case is a tie with a neighbour.
   // Only a scene with thousands of `reservesRoom` nodes reaches it.
   const bounded = Math.min(sequence, PAINT_SEQUENCE_STRIDE - 1);
   return bucket * PAINT_SEQUENCE_STRIDE + bounded;
+}
+
+/**
+ * `key` moved from the `zFinal` bucket to the `itemZFinal` one, its layer and sequence kept: the key
+ * of a child canvas item with a `z_index` of its own, which the walk reaches at its parent's place,
+ * such as a tile layer's quadrant item (`tile_map_layer.cpp:356-357`).
+ */
+export function canvasKeyAtZ(key: number, zFinal: number, itemZFinal: number): number {
+  return key + (clampCanvasItemZ(itemZFinal) - clampCanvasItemZ(zFinal)) * PAINT_SEQUENCE_STRIDE;
 }
 
 /**

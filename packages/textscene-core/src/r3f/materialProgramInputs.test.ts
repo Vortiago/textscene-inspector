@@ -29,7 +29,7 @@ describe('materialProgramInputs', () => {
     tex.colorSpace = colorSpace;
     return tex;
   };
-  const DECODE = { DECODE_VIDEO_TEXTURE: '' };
+  const DEFINES = { A_DEFINE: '' };
 
   it('keeps the React key out of props, where a spread would override it', () => {
     const program = materialProgramInputs({ props: { map: texture() } });
@@ -58,20 +58,20 @@ describe('materialProgramInputs', () => {
     expect(keyOf({ map: texture() })).not.toBe(keyOf({ map: null }));
   });
 
-  it('separates a decoding material from a plain one holding the same map', () => {
+  it('separates a material with defines from a plain one holding the same map', () => {
     const tex = texture(THREE.NoColorSpace);
-    expect(keyOf({ map: tex, defines: DECODE })).not.toBe(keyOf({ map: tex }));
+    expect(keyOf({ map: tex, defines: DEFINES })).not.toBe(keyOf({ map: tex }));
   });
 
   it('keeps one key across a texture swap — a new texture is not a new program', () => {
     // An AnimatedSprite2D advancing a frame, a Sprite2D re-regioned: the program
     // is identical, so a remount per frame would waste a compile per frame.
-    expect(keyOf({ map: texture(), defines: DECODE })).toBe(keyOf({ map: texture(), defines: DECODE }));
+    expect(keyOf({ map: texture(), defines: DEFINES })).toBe(keyOf({ map: texture(), defines: DEFINES }));
   });
 
   it('separates two different define sets, and treats a same-shaped set as one', () => {
-    expect(keyOf({ map: texture(), defines: DECODE })).not.toBe(
-      keyOf({ map: texture(), defines: { ...DECODE, SOMETHING_ELSE: '' } })
+    expect(keyOf({ map: texture(), defines: DEFINES })).not.toBe(
+      keyOf({ map: texture(), defines: { ...DEFINES, SOMETHING_ELSE: '' } })
     );
     expect(keyOf({ defines: { A: '', B: '' } })).toBe(keyOf({ defines: { B: '', A: '' } }));
   });

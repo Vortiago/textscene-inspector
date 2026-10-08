@@ -19,7 +19,8 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
-import { materialProgramInputs, type ProgramInjection } from '../../../../r3f/materialProgramInputs';
+import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
+import { CANVAS_SRGB_DEFINES } from '../../../../r3f/canvasSrgbMultiply';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { parseColor } from '../../../../utils/colorParser';
@@ -124,36 +125,15 @@ function buildGeometry(g: QuadGeometry): THREE.BufferGeometry {
   return geometry;
 }
 
-/**
- * `Color::srgb_to_linear` (`core/math/color.h:192-198`) as GLSL, applied to
- * the interpolated vertex colour, not the attribute: interpolating two sRGB
- * colours in linear space moves the ramp's midpoint. A copy of the private
- * `decodeVertexColorsFromSRGB` in `StyleBoxQuad.tsx`.
- */
-function decodeVertexColorsFromSRGB(shader: { fragmentShader: string }): void {
-  shader.fragmentShader = shader.fragmentShader.replace(
-    '#include <color_fragment>',
-    /* glsl */ `
-    vec3 godotSrgbToLinear = mix(
-      pow((vColor.rgb + 0.055) / 1.055, vec3(2.4)),
-      vColor.rgb / 12.92,
-      step(vColor.rgb, vec3(0.04045))
-    );
-    diffuseColor *= vec4(godotSrgbToLinear, vColor.a);
-    `
-  );
-}
-
-const SV_GRADIENT_INJECTION: ProgramInjection = {
-  cacheKey: 'godot-colorpicker-srgb-vertex-colors',
-  onBeforeCompile: decodeVertexColorsFromSRGB,
-};
-
 interface GradientMeshProps {
   geometry: THREE.BufferGeometry;
   renderOrder: number;
   clippingPlanes: THREE.Plane[];
-  /** The vertex colours are already linear (`linearizeStops`), so the sRGB decode is skipped and the GPU's linear lerp reproduces `GRADIENT_COLOR_SPACE_LINEAR_SRGB`. */
+  /**
+   * The vertex colours are already linear (`linearizeStops`), so the GPU's linear lerp reproduces
+   * `GRADIENT_COLOR_SPACE_LINEAR_SRGB`. Otherwise they are sRGB, interpolated as stored, since
+   * interpolating two sRGB colours in linear space moves the ramp's midpoint.
+   */
   linear?: boolean;
 }
 
@@ -166,7 +146,7 @@ function GradientMesh({ geometry, renderOrder, clippingPlanes, linear }: Gradien
       transparent: true,
       depthWrite: false,
       clippingPlanes,
-      injection: linear ? undefined : SV_GRADIENT_INJECTION,
+      defines: linear ? undefined : CANVAS_SRGB_DEFINES,
     },
     merge: [canvasItemFacing()],
   });

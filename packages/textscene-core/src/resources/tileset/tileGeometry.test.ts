@@ -5,7 +5,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildTileGeometryArrays } from './tileGeometry';
 import { TILE_SHAPE_SQUARE, type AtlasSourceModel, type TileGrid } from './types';
-import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
+import type { DrawableCell } from './drawableCell';
+import { drawableCellOf } from './testing/drawableCellOf';
 
 const grid: TileGrid = {
   shape: TILE_SHAPE_SQUARE,
@@ -22,12 +23,8 @@ const source: AtlasSourceModel = {
   tiles: new Map(),
 };
 
-const cell = (x: number, y: number, ax = 0, ay = 0): PlacedCell => ({
-  coords: { x, y },
-  sourceId: 0,
-  atlasCoords: { x: ax, y: ay },
-  alternativeId: 0,
-});
+const cell = (x: number, y: number, ax = 0, ay = 0): DrawableCell =>
+  drawableCellOf({ coords: { x, y }, atlasCoords: { x: ax, y: ay } });
 
 describe('buildTileGeometryArrays', () => {
   it('builds one quad centered on the cell with Y negated and UVs windowed to the atlas region', () => {
@@ -102,23 +99,18 @@ describe('buildTileGeometryArrays', () => {
   });
 
   it('shifts the quad by the tile texture_origin (Godot: dest = map_to_local − size/2 − origin)', () => {
-    const anchored: AtlasSourceModel = {
-      ...source,
-      tiles: new Map([
-        [
-          '0:0',
-          {
-            sizeInAtlas: { x: 1, y: 1 },
-            alternatives: new Map([
-              [0, { flipH: false, flipV: false, transpose: false, textureOrigin: { x: 0, y: -16 } }],
-            ]),
-          },
-        ],
-      ]),
-    };
+    const anchored = drawableCellOf({}, { textureOrigin: { x: 0, y: -16 } });
     // center (8,8) − origin (0,−16) = (8, 24) → three-local y −16..−32.
-    const { positions } = buildTileGeometryArrays([cell(0, 0)], anchored, grid, 32, 32);
+    const { positions } = buildTileGeometryArrays([anchored], source, grid, 32, 32);
     expect(Array.from(positions)).toEqual([0, -16, 0, 16, -16, 0, 0, -32, 0, 16, -32, 0]);
+  });
+
+  it("gives each vertex its tile's modulate as stored, sRGB, which the draw multiplies in sRGB", () => {
+    const tinted = drawableCellOf({}, { modulate: { r: 1, g: 0.5, b: 0, a: 0.25 } });
+    const { colors } = buildTileGeometryArrays([tinted], source, grid, 32, 32);
+    expect(Array.from(colors, (c) => Math.round(c * 1e6) / 1e6)).toEqual(
+      Array.from({ length: 4 }, () => [1, 0.5, 0, 0.25]).flat()
+    );
   });
 
   it('windows UVs through margins, separation, and atlas coordinates', () => {

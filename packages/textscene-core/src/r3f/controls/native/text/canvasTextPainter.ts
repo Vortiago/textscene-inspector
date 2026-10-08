@@ -14,6 +14,7 @@ import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { Color } from '../../../../nodes/base/node2d/types';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import { injectProgram, type ProgramInjection } from '../../../materialProgramInputs';
+import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
 
 /** Fixed raster supersampling factor: canvas text has no distance field to stay crisp when magnified, so this trades memory and fill rate for sharpness at typical zoom. */
 export const CANVAS_TEXT_SUPERSAMPLE = 3;
@@ -210,20 +211,11 @@ export interface CanvasTextMaterialOptions extends Partial<CanvasTextBlend> {
 }
 
 /**
- * `map_fragment.glsl.js`'s video-texture decode define, for a `map` tagged
- * `NoColorSpace` like other 2D-canvas textures (`canvas2DTextureDecode.ts`'s
- * `useCanvasDecodeDefines`). Copied, not imported: that module is a hook, and
- * this material is built outside render.
- */
-// This texture stays `SRGBColorSpace` (`TextRun.tsx`): Godot's glyphs have no
-// differing RGB pair for a filter to blend in the wrong order, as measured.
-const DECODE_VIDEO_TEXTURE_DEFINES: Readonly<Record<string, string>> = { DECODE_VIDEO_TEXTURE: '' };
-
-/**
  * A `MeshBasicMaterial` for canvas-rasterised text, with three's sRGB decode for
- * an `SRGBColorSpace` map. A `NoColorSpace` map gets the post-filter decode
- * define from its own tag, as `useCanvasDecodeDefines` does, so the tag and the
- * define never apply apart.
+ * an `SRGBColorSpace` map. A `NoColorSpace` map gets the sRGB-multiply define
+ * (`canvasSrgbMultiply.ts`) from its own tag, as `useCanvasSrgbDefines` does,
+ * so the tag and the define never apply apart. `TextRun.tsx` keeps its glyph
+ * raster `SRGBColorSpace`: a glyph has no differing RGB pair to filter wrongly.
  */
 // `defines` is assigned after construction: `Material#setValues` skips, with a
 // warning, a key not already on the instance, and `MeshBasicMaterial` declares no
@@ -257,7 +249,7 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     clippingPlanes: [...clippingPlanes],
   });
   if (map.colorSpace === THREE.NoColorSpace) {
-    material.defines = { ...DECODE_VIDEO_TEXTURE_DEFINES };
+    material.defines = { ...CANVAS_SRGB_DEFINES };
   }
   if (injection) injectProgram(material, injection);
   return material;

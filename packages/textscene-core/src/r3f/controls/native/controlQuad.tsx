@@ -6,7 +6,7 @@
  */
 import * as THREE from 'three';
 import { useControlClipPlanes } from './controlClipping';
-import { useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
+import { useCanvasSrgbDefines } from '../../canvas2DTextureDecode';
 import { canvasItemFacing } from '../../canvasItemFacing';
 import { materialProgramInputs } from '../../materialProgramInputs';
 
@@ -26,9 +26,9 @@ export interface ControlQuadProps {
 
 export function ControlQuad({ width, height, color, opacity, map = null, renderOrder }: ControlQuadProps) {
   const clippingPlanes = useControlClipPlanes();
-  // A `NoColorSpace`-retagged canvas texture gets the post-filter decode, and a
+  // A `NoColorSpace`-retagged canvas texture gets the sRGB multiply, and a
   // SubViewport target, which keeps its own colour space, does not.
-  const decodeDefines = useCanvasDecodeDefines(map);
+  const srgbDefines = useCanvasSrgbDefines(map);
 
   // A `map` is often null on the first render and a texture later, while the quad
   // draws throughout, so the material is replaced, not mutated
@@ -40,7 +40,7 @@ export function ControlQuad({ width, height, color, opacity, map = null, renderO
       opacity,
       transparent: true,
       depthWrite: false,
-      defines: decodeDefines,
+      defines: srgbDefines,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
     // The double-sided, single-pass pair every flat canvas painter shares.

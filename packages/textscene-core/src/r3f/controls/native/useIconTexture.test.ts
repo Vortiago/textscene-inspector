@@ -6,7 +6,7 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
-import { useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
+import { useCanvasSrgbDefines } from '../../canvas2DTextureDecode';
 import { useIconTexture, useOptionalIconTexture, useNodeIcon } from './useIconTexture';
 import type { ThemedIconRef } from './solveTree';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -40,10 +40,10 @@ describe('useIconTexture', () => {
     expect(result.current!.colorSpace).toBe(THREE.NoColorSpace);
   });
 
-  it('turns on the post-filter decode every painter draws it through', () => {
-    const { result } = renderHook(() => useCanvasDecodeDefines(useIconTexture(ICON)));
+  it('turns on the sRGB multiply every painter draws it through', () => {
+    const { result } = renderHook(() => useCanvasSrgbDefines(useIconTexture(ICON)));
 
-    expect(result.current).toEqual({ DECODE_VIDEO_TEXTURE: '' });
+    expect(result.current).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
 
   it('memoises on the url, so a re-render with the same icon does not reload', () => {

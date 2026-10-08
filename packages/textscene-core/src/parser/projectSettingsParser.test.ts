@@ -15,6 +15,8 @@ import {
   projectExtensionListPath,
   projectLayoutDirectionEnv,
   projectThemeScale,
+  projectClearColor,
+  projectTransparentBackground,
   projectViewportSize,
 } from './projectSettingsParser';
 
@@ -148,6 +150,37 @@ describe('projectThemeScale', () => {
     expect(projectThemeScale({ 'gui/theme/default_theme_scale': 'big' })).toBe(1);
     expect(projectThemeScale({ 'gui/theme/default_theme_scale': '' })).toBe(1);
     expect(projectThemeScale({ 'gui/theme/default_theme_scale': 'NaN' })).toBe(1);
+  });
+});
+
+describe('projectClearColor', () => {
+  it('reads the default_clear_color override', () => {
+    const settings = { 'rendering/environment/defaults/default_clear_color': 'Color(0.1, 0.2, 0.3, 1)' };
+    expect(projectClearColor(settings)).toEqual({ r: 0.1, g: 0.2, b: 0.3, a: 1 });
+  });
+
+  it("falls back to Godot's 0.3 grey for a malformed value", () => {
+    const settings = { 'rendering/environment/defaults/default_clear_color': 'grey' };
+    expect(projectClearColor(settings)).toEqual({ r: 0.3, g: 0.3, b: 0.3, a: 1 });
+  });
+
+  it("gives Godot's 0.3 grey with no project", () => {
+    expect(projectClearColor(null)).toEqual({ r: 0.3, g: 0.3, b: 0.3, a: 1 });
+  });
+});
+
+describe('projectTransparentBackground', () => {
+  it('reads a transparent root', () => {
+    expect(projectTransparentBackground({ 'rendering/viewport/transparent_background': 'true' })).toBe(true);
+  });
+
+  it('reads 1 as true, as the bool slot booleanizes it', () => {
+    expect(projectTransparentBackground({ 'rendering/viewport/transparent_background': '1' })).toBe(true);
+  });
+
+  it('is opaque with no project or a malformed value', () => {
+    expect(projectTransparentBackground(null)).toBe(false);
+    expect(projectTransparentBackground({ 'rendering/viewport/transparent_background': 'yes' })).toBe(false);
   });
 });
 

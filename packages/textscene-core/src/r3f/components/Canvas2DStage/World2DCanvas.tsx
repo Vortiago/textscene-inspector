@@ -18,6 +18,8 @@ import { canvasModulateColor } from '../../canvasModulate.js';
 import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
+import { installShaderPatches } from '../../shaderPatch/installShaderPatches.js';
+import { ProjectClearColor } from './ProjectClearColor.js';
 
 // Through the controls barrel, whose side-effect imports register every Control
 // type: the component file alone registers none. Lazy, so the registrations stay
@@ -61,6 +63,7 @@ export function World2DContents({
       <CanvasWorkspaceProvider workspace="2d">
         <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
           <CameraRig pan={pan} zoom={zoom} />
+          <ProjectClearColor />
           {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}
           <CanvasLighting2DProvider canvasModulate={canvasModulate}>
@@ -95,6 +98,7 @@ export function World2DCanvas(props: World2DCanvasProps) {
       // `antialias: false`: scene/main/viewport.h:309 `msaa_2d = MSAA_DISABLED`.
       // Soft edges are authored geometry (style_box_flat.cpp:555-629), and MSAA ramps them twice.
       gl={{ alpha: true, localClippingEnabled: true, antialias: false }}
+      onCreated={installShaderPatches}
       // Godot composites canvas items after `_render_buffers_post_process_and_tonemap`,
       // so 2D colour is never tone-mapped. `flat` is `NoToneMapping`, not R3F's ACES.
       // It also covers a container's 3D sub-viewport pass, whose parent viewport

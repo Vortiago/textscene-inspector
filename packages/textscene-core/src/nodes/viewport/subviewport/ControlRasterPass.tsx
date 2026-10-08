@@ -29,6 +29,7 @@ import {
 } from './offscreenViewport.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
+import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
 
 export interface ControlRasterPassesProps {
   /** The Control-only sub-viewports found in the scene, each with its own resource scope (ADR-0009). */
@@ -70,6 +71,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const height = Math.max(1, Math.round(forcedRect?.y ?? viewport.size.y));
 
   const gl = useThree((state) => state.gl);
+  const clearColor = useProjectClearColor();
   const { themeScale } = useProjectSettings();
 
   const portalScene = useMemo(() => {
@@ -103,12 +105,13 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const renderPass = useCallback(() => {
     renderToOffscreenTarget(gl, {
       target,
+      clearColor,
       transparentBg,
       // Controls are never tonemapped, on-screen or off.
       toneMapping: THREE.NoToneMapping,
       draw: () => gl.render(portalScene, camera),
     });
-  }, [gl, target, transparentBg, portalScene, camera]);
+  }, [gl, target, clearColor, transparentBg, portalScene, camera]);
 
   usePublishViewportPass({ path, node, texture: target.texture, width, height, render: renderPass });
 

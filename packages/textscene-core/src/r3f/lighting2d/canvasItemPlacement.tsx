@@ -11,6 +11,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../godot/rendering.js';
+import { clamp } from '../../godot/math.js';
 
 /**
  * Re-exported, not re-typed: `godot/rendering.ts` owns the numbers, and the clamp below and the
@@ -35,7 +36,12 @@ export function accumulateCanvasItemZ(
   props: { z_index: number; z_as_relative?: boolean }
 ): number {
   if (props.z_as_relative === false) return props.z_index;
-  return Math.min(CANVAS_ITEM_Z_MAX, Math.max(CANVAS_ITEM_Z_MIN, parentZ + props.z_index));
+  return clampCanvasItemZ(parentZ + props.z_index);
+}
+
+/** A z held inside the canvas z window, as `_cull_canvas_item` clamps a relative sum. */
+export function clampCanvasItemZ(z: number): number {
+  return clamp(z, CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX);
 }
 
 const EffectiveZContext = createContext<number>(0);

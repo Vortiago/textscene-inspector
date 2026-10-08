@@ -6,10 +6,12 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useResource } from '../resources/useResource';
-import { buildTileGeometryArrays, type DrawableCell } from '../resources/tileset/tileGeometry';
+import { buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
+import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
-import { useCanvas2DMap } from './canvas2DTextureDecode';
+import { useCanvas2DTexture } from './canvas2DTextureDecode';
+import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
 import { canvasItemFacing } from './canvasItemFacing';
 import { materialProgramInputs } from './materialProgramInputs';
 import type { CanvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
@@ -44,7 +46,7 @@ export function TileSourceMesh({
   lighting,
 }: TileSourceMeshProps) {
   const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'texture');
-  const { texture: tex, defines: decodeDefines } = useCanvas2DMap(texResult.value);
+  const tex = useCanvas2DTexture(texResult.value);
   const image = tex?.image as { width?: number; height?: number } | undefined;
   const texW = image?.width;
   const texH = image?.height;
@@ -55,6 +57,7 @@ export function TileSourceMesh({
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('position', new THREE.BufferAttribute(arrays.positions, 3));
     geom.setAttribute('uv', new THREE.BufferAttribute(arrays.uvs, 2));
+    geom.setAttribute('color', new THREE.BufferAttribute(arrays.colors, 4));
     geom.setIndex(new THREE.BufferAttribute(arrays.indices, 1));
     return geom;
   }, [cells, source, grid, texW, texH]);
@@ -79,9 +82,11 @@ export function TileSourceMesh({
       map: tex,
       color,
       opacity,
+      // Each tile's `modulate`, multiplied onto its pixels (`tile_map_layer.cpp:2690`) in sRGB.
+      vertexColors: true,
       transparent: true,
       depthWrite: false,
-      defines: decodeDefines,
+      defines: CANVAS_SRGB_DEFINES,
     },
     merge: [canvasItemFacing(), blend, lighting],
   });

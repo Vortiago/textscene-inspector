@@ -164,23 +164,22 @@ describe('createCanvasTextMaterial', () => {
   });
 
   it(
-    "sets the DECODE_VIDEO_TEXTURE define when `map` is tagged NoColorSpace -- Godot's 2D canvas " +
-      'blends the ENCODED bytes of every texture it samples (`rendering/viewport/hdr_2d` default ' +
-      'false, `rendering_server.cpp:3771`, `texture_storage.cpp:754`), and TextRun.tsx tags this ' +
-      'raster NoColorSpace so WebGL uploads it plain instead of hardware-decoding each texel BEFORE ' +
-      'the magnification filter runs -- this define moves that decode to AFTER the filter, matching.',
+    "sets the sRGB-multiply define when `map` is tagged NoColorSpace: Godot's 2D canvas filters " +
+      'and multiplies the encoded bytes of every texture it samples (`rendering/viewport/hdr_2d` ' +
+      'default false, `rendering_server.cpp:3771`, `texture_storage.cpp:754`), and the define ' +
+      'decodes the product after the filter and the multiply.',
     () => {
       const texture = new THREE.CanvasTexture(document.createElement('canvas'));
       texture.colorSpace = THREE.NoColorSpace;
       const mat = createCanvasTextMaterial({ map: texture, opacity: 1 });
-      expect(mat.defines?.DECODE_VIDEO_TEXTURE).toBe('');
+      expect(mat.defines?.CANVAS_SRGB_MULTIPLY).toBe('');
     }
   );
 
   it(
     'leaves `defines` unset for a `map` NOT tagged NoColorSpace, so a caller that ever passes an ' +
       'already-linear map (a SubViewport render target, say) is not double-decoded -- the same ' +
-      'auto-detection `useCanvasDecodeDefines`/`ControlQuad` already apply to every other ' +
+      'auto-detection `useCanvasSrgbDefines`/`ControlQuad` already apply to every other ' +
       '2D-canvas-drawn `map`.',
     () => {
       const texture = new THREE.CanvasTexture(document.createElement('canvas'));

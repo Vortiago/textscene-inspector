@@ -63,9 +63,10 @@ diverge where the rasteriser interpolates between two different ones, which is w
 linearised endpoints ramp through the wrong space: measured at 38 counts on red at the
 ramp's midpoint, with both endpoints exact. The alternative, to subdivide the ring so a
 linear ramp tracks the sRGB one, converges as the square of the step count: 16 radial
-bands still leave 1.3 counts, for 32x the vertices. The decode is injected into
-`MeshBasicMaterial`'s own `<color_fragment>`, not written as a `ShaderMaterial`, so
-clipping, the tone curve and the output encode stay inherited. A hand-written shader
+bands still leave 1.3 counts, for 32x the vertices. The `CANVAS_SRGB_MULTIPLY` define
+selects an sRGB multiply patched into three's own `<color_fragment>`
+(`canvasSrgbMultiply.ts`), not written as a `ShaderMaterial`, so clipping, the tone
+curve and the output encode stay inherited. A hand-written shader
 must re-declare those three stages, and it fails silently when it omits one
 (`msdfMaterial.ts`'s header records all three).
 

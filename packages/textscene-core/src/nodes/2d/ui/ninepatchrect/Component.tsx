@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { pinNoColorSpace, useCanvasDecodeDefines } from '../../../../r3f/canvas2DTextureDecode';
+import { pinNoColorSpace, useCanvasSrgbDefines } from '../../../../r3f/canvas2DTextureDecode';
 import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
@@ -119,7 +119,7 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
   const drawnTexture = useUploadedClone(preparedTexture);
 
   const clippingPlanes = useControlClipPlanes();
-  const decodeDefines = useCanvasDecodeDefines(drawnTexture);
+  const srgbDefines = useCanvasSrgbDefines(drawnTexture);
 
   if (!geometry || !drawnTexture) return null;
 
@@ -130,7 +130,7 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
       opacity: tint.opacity,
       transparent: true,
       depthWrite: false,
-      defines: decodeDefines,
+      defines: srgbDefines,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
     merge: [canvasItemFacing()],

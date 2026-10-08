@@ -33,6 +33,9 @@ async function main() {
       prepareWorkspace: setupTestWorkspace,
       launch: (options) => runTests({ ...options, version }),
     });
+    // An aborted VS Code download leaves its `tar` children alive, and they hold the event
+    // loop open after the suite passes until CI cancels the job.
+    process.exit(0);
   } catch (err) {
     console.error('Failed to run tests:', err);
     process.exit(1);

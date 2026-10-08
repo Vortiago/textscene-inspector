@@ -7,7 +7,6 @@
 
 import {
   canvas2DViewportFor,
-  CANVAS_2D_CAPTURE,
   CANVAS_2D_TESTIDS,
   FIT_ON_OPEN_2D_STORAGE_KEY,
   FRAME_ON_OPEN_STORAGE_KEY,
@@ -57,11 +56,10 @@ export async function createCaptureContext(browser, { frameOnOpen, canvas2D = fa
 /**
  * The style that paints the app's chrome out of a capture. Viewport chrome floats over the
  * canvas in both modes, and `canvas.screenshot()` composites any DOM over the canvas, so it
- * goes from every capture. `canvas2D` also paints out the 2D stage.
+ * goes from every capture. `canvas2D` also paints out the 2D stage's frame, zoom label and origin axes.
  */
 export function paintedOutChromeCss({ canvas2D }) {
   const hidden = ['viewport-toolbar-overlay', 'viewport-controls-help'];
-  let css = '';
   if (canvas2D) {
     hidden.push(
       CANVAS_2D_TESTIDS.frame,
@@ -69,11 +67,8 @@ export function paintedOutChromeCss({ canvas2D }) {
       CANVAS_2D_TESTIDS.originAxisX,
       CANVAS_2D_TESTIDS.originAxisY
     );
-    css +=
-      `[data-testid="${CANVAS_2D_TESTIDS.stage}"]{background-image:none !important;` +
-      `background-color:${CANVAS_2D_CAPTURE.background} !important}`;
   }
-  return css + `${hidden.map((id) => `[data-testid="${id}"]`).join(',')}{display:none !important}`;
+  return `${hidden.map((id) => `[data-testid="${id}"]`).join(',')}{display:none !important}`;
 }
 
 /**

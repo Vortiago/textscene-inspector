@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { fakeTiledUploads } from './tiledUpload/fakeTiledUploads.testkit';
 import * as THREE from 'three';
-import { pinNoColorSpace, useCanvas2DTexture, useCanvasDecodeDefines } from './canvas2DTextureDecode';
+import { pinNoColorSpace, useCanvas2DTexture, useCanvasSrgbDefines } from './canvas2DTextureDecode';
 
 function makeTexture(colorSpace: THREE.ColorSpace = THREE.SRGBColorSpace): THREE.Texture {
   const texture = new THREE.Texture();
@@ -95,21 +95,21 @@ describe('useCanvas2DTexture in a canvas', () => {
   });
 });
 
-describe('useCanvasDecodeDefines', () => {
-  it('returns the decode define for a NoColorSpace texture', () => {
+describe('useCanvasSrgbDefines', () => {
+  it('returns the sRGB-multiply define for a NoColorSpace texture', () => {
     const texture = makeTexture(THREE.NoColorSpace);
-    const { result } = renderHook(() => useCanvasDecodeDefines(texture));
-    expect(result.current).toEqual({ DECODE_VIDEO_TEXTURE: '' });
+    const { result } = renderHook(() => useCanvasSrgbDefines(texture));
+    expect(result.current).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
 
   it('returns undefined for an untouched (SRGBColorSpace) texture', () => {
     const texture = makeTexture(THREE.SRGBColorSpace);
-    const { result } = renderHook(() => useCanvasDecodeDefines(texture));
+    const { result } = renderHook(() => useCanvasSrgbDefines(texture));
     expect(result.current).toBeUndefined();
   });
 
   it('returns undefined for null/undefined (no map bound yet)', () => {
-    const { result } = renderHook(({ tex }) => useCanvasDecodeDefines(tex), {
+    const { result } = renderHook(({ tex }) => useCanvasSrgbDefines(tex), {
       initialProps: { tex: null as THREE.Texture | null },
     });
     expect(result.current).toBeUndefined();
@@ -117,7 +117,7 @@ describe('useCanvasDecodeDefines', () => {
 
   it('keeps a stable identity across rerenders with the same texture', () => {
     const texture = makeTexture(THREE.NoColorSpace);
-    const { result, rerender } = renderHook(({ tex }) => useCanvasDecodeDefines(tex), {
+    const { result, rerender } = renderHook(({ tex }) => useCanvasSrgbDefines(tex), {
       initialProps: { tex: texture as THREE.Texture | null },
     });
     const first = result.current;

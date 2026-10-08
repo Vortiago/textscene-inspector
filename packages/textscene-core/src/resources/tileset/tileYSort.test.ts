@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { groupBySortY } from './tileYSort';
 import type { TileGrid } from './types';
-import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
+import type { DrawableCell } from './drawableCell';
+import { drawableCellOf } from './testing/drawableCellOf';
 
 const squareGrid: TileGrid = {
   shape: 0, // square
@@ -17,8 +18,8 @@ const isoGrid: TileGrid = {
   tileSize: { x: 64, y: 32 },
 };
 
-function cell(coords: { x: number; y: number }, sourceId = 0, atlasX = 0, atlasY = 0): PlacedCell {
-  return { coords, sourceId, atlasCoords: { x: atlasX, y: atlasY }, alternativeId: 0 };
+function cell(coords: { x: number; y: number }, sourceId = 0, atlasX = 0, atlasY = 0): DrawableCell {
+  return drawableCellOf({ coords, sourceId, atlasCoords: { x: atlasX, y: atlasY } });
 }
 
 describe('groupBySortY', () => {
@@ -109,5 +110,28 @@ describe('groupBySortY', () => {
   it('empty cells returns empty groups', () => {
     const groups = groupBySortY([], squareGrid, 0, 0);
     expect(groups.length).toBe(0);
+  });
+});
+
+describe("a tile's own y_sort_origin", () => {
+  /** A cell whose tile sorts `ySortOrigin` px lower. */
+  const lowered = (coords: { x: number; y: number }, ySortOrigin: number) =>
+    drawableCellOf({ coords }, { ySortOrigin });
+  const rows = (groups: ReturnType<typeof groupBySortY>) =>
+    groups.map((group) => [group.sortY, group.cells.map((c) => c.coords.y)]);
+
+  it('moves its cell to the row its sort Y names (tile_map_layer.cpp:547)', () => {
+    // (0, 0) sorts at 16 + 40 = 56, below (0, 1) at 48.
+    const groups = groupBySortY([lowered({ x: 0, y: 0 }, 40), cell({ x: 0, y: 1 })], squareGrid, 0, 0);
+    expect(rows(groups)).toEqual([
+      [48, [1]],
+      [56, [0]],
+    ]);
+  });
+
+  it('joins the row of another cell whose sort Y it lands on', () => {
+    // (0, 0) sorts at 16 + 32 = 48, as (1, 1) does.
+    const groups = groupBySortY([lowered({ x: 0, y: 0 }, 32), cell({ x: 1, y: 1 })], squareGrid, 0, 0);
+    expect(rows(groups)).toEqual([[48, [0, 1]]]);
   });
 });
