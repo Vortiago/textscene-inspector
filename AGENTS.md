@@ -49,6 +49,8 @@ CI job fails, fix the cause.
 
 - A capture must match its baseline's pixels exactly. Never add a tolerance.
 - `pnpm test:visual:update` rewrites baselines. Inspect them, then commit.
+- The Goldens touched workflow comments on each pull request that changes a baseline. It links the
+  image diff and the scene on the branch's and main's Cloudflare Pages previews.
 - A new golden moves one variable. Its `.tscn` header names that variable and says why no
   other scene shows a regression in it.
 - A 2D-UI scene sets `mode: '2d'` in `scripts/visual/scenes.mjs`.

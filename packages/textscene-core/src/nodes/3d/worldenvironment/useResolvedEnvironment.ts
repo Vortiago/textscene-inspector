@@ -9,6 +9,7 @@ import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesCont
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { decodeEnvironment } from '../../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../../resources/environment/build';
+import { useProjectClearColorSrgb } from '../../../r3f/useProjectClearColor';
 import type { EnvironmentSettings } from '../../../resources/environment/types';
 import { decodeSkyMaterial, skyMaterialRef } from '../../../resources/sky/decode';
 import type { SkyProperties } from '../../../resources/sky/types';
@@ -42,8 +43,10 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Reso
 
   const sky = useMemo(() => (material ? decodeSkyMaterial(material.type, material.data) : null), [material]);
 
+  const clearColor = useProjectClearColorSrgb();
+
   return useMemo(
-    () => (envProps ? { settings: createEnvironmentSettings(envProps), sky } : null),
-    [envProps, sky]
+    () => (envProps ? { settings: createEnvironmentSettings(envProps, clearColor), sky } : null),
+    [envProps, clearColor, sky]
   );
 }

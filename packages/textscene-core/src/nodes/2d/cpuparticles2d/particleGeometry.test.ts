@@ -72,11 +72,10 @@ describe('buildParticleGeometry', () => {
     expect(color.getW(0)).toBeCloseTo(0.25, 6);
   });
 
-  it('converts the particle colour from sRGB to the linear working space', () => {
-    const geometry = buildParticleGeometry([particle({ color: { r: 0.5, g: 0.5, b: 0.5, a: 1 } })], 2, 2)!;
+  it('keeps the particle colour as stored, sRGB, which the draw multiplies in sRGB', () => {
+    const geometry = buildParticleGeometry([particle({ color: { r: 0.5, g: 0.25, b: 0, a: 0.75 } })], 2, 2)!;
     const color = geometry.getAttribute('color');
-    // sRGB 0.5 decodes to ~0.214 linear. An unconverted 0.5 would read washed out.
-    expect(color.getX(0)).toBeCloseTo(0.214, 3);
+    expect([color.getX(0), color.getY(0), color.getZ(0), color.getW(0)]).toEqual([0.5, 0.25, 0, 0.75]);
   });
 
   it('keeps pose order, which is what draw_order decides', () => {

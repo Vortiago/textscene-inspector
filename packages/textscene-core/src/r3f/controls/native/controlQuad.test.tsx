@@ -82,7 +82,7 @@ describe('<ControlQuad>', () => {
     );
     const material = (): THREE.MeshBasicMaterial =>
       (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
-    expect(material().defines).toEqual({ DECODE_VIDEO_TEXTURE: '' });
+    expect(material().defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
 
     const ownSpace = new THREE.Texture();
     ownSpace.colorSpace = THREE.SRGBColorSpace;
@@ -97,7 +97,7 @@ describe('<ControlQuad>', () => {
       />
     );
 
-    expect(material().defines?.DECODE_VIDEO_TEXTURE).toBeUndefined();
+    expect(material().defines?.CANVAS_SRGB_MULTIPLY).toBeUndefined();
   });
 
   it('maps a texture onto the quad when provided (edge: no texture leaves map null)', async () => {

@@ -2178,6 +2178,26 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Map Layer Tile Material",
+    "file": "unit-tile-map-layer-tile-material.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Tile Modulate",
+    "file": "unit-tile-map-layer-tile-modulate.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Tile Y Sort Origin",
+    "file": "unit-tile-map-layer-tile-y-sort-origin.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Tile Z Index",
+    "file": "unit-tile-map-layer-tile-z-index.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer",
     "file": "unit-tile-map-layer.tscn",
     "category": "Unit - 2D Canvas"

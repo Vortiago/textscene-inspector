@@ -22,7 +22,7 @@ import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { CONNECTION_SRGB_VERTEX_COLORS } from './ConnectionLine';
+import { CANVAS_SRGB_DEFINES } from '../../../../r3f/canvasSrgbMultiply';
 import { minimapConnectionLines } from './minimapConnections';
 import { polylineStrokeGeometry } from './polylineStroke';
 import {
@@ -112,7 +112,7 @@ function MinimapConnections({
       vertexColors: true,
       transparent: true,
       depthWrite: false,
-      injection: CONNECTION_SRGB_VERTEX_COLORS,
+      defines: CANVAS_SRGB_DEFINES,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
     merge: [canvasItemFacing()],

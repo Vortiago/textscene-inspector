@@ -7,8 +7,7 @@
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
-import { multiplyModulate, type CanvasItemTint } from '../../../../r3f/canvasItemModulate';
-import { godotColorToLinear } from '../../../../r3f/godotColor';
+import { multiplyModulate, type CanvasItemTint, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { allocateNodePaintRange, canvasRenderOrder, packPaintRanges } from '../../../../r3f/canvasPaintOrder';
@@ -85,7 +84,7 @@ export function TileMap({ node, children }: NodeComponentProps) {
                 <TileQuadrants
                   quadrants={group.quadrants}
                   model={model}
-                  tint={layerTint(tint, group.layer)}
+                  selfTint={layerTint(tint, group.layer)}
                   material={material}
                   lightMask={props.light_mask}
                   zFinal={group.zFinal}
@@ -101,9 +100,7 @@ export function TileMap({ node, children }: NodeComponentProps) {
   );
 }
 
-/** Fold `layer_N/modulate` into the node's own-pixel tint (sRGB-composed). */
-function layerTint(tint: CanvasItemTint, layer: TileMapLayerData) {
-  if (!layer.modulate) return { color: tint.color, opacity: tint.opacity };
-  const own = multiplyModulate(tint.own, layer.modulate);
-  return { color: godotColorToLinear(own), opacity: own.a };
+/** Fold `layer_N/modulate` into the node's own-pixel modulate (sRGB). */
+function layerTint(tint: CanvasItemTint, layer: TileMapLayerData): RGBA {
+  return layer.modulate ? multiplyModulate(tint.self, layer.modulate) : tint.self;
 }

@@ -187,8 +187,8 @@ this decision produces. Two other reasons reject it:
   change whatever the key says, so an in-place recompile would cover some transitions and
   not others, and the ones it missed would be the least visible.
 - **A prop that stops applying cannot be cleared.** R3F's `applyProps` skips an
-  `undefined` value outright, and `useCanvasDecodeDefines` returns `undefined` when
-  nothing needs decoding. So a material whose texture stops needing the decode keeps the
+  `undefined` value outright, and `useCanvasSrgbDefines` returns `undefined` when
+  no map is `NoColorSpace`. So a material whose texture stops needing the define keeps the
   old `defines` object. An in-place recompile would then recompile from a stale define,
   which is worse than no recompile: the program would be freshly built and still wrong.
 

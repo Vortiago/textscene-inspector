@@ -9,13 +9,6 @@ import type { Vector2 } from '../../base/node2d/types';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
 
 /**
- * Godot's `rendering/environment/defaults/default_clear_color`, `Color(0.3, 0.3, 0.3)`,
- * which a non-`transparent_bg` target clears to. The 0.3 is sRGB: Godot measures
- * rgb(77, 77, 77). `new THREE.Color(0.3, 0.3, 0.3)` sets linear 0.3, about rgb(149).
- */
-export const DEFAULT_CLEAR_COLOR = new THREE.Color().setRGB(0.3, 0.3, 0.3, THREE.SRGBColorSpace);
-
-/**
  * The offscreen pass's render target, carrying the storage and the tonemap
  * contracts. Godot tonemaps every viewport render into its own target
  * (`_render_buffers_post_process_and_tonemap`), so a target holds post-tonemap
@@ -72,6 +65,8 @@ export function renderToOffscreenTarget(
   gl: THREE.WebGLRenderer,
   options: {
     target: THREE.WebGLRenderTarget;
+    /** The project clear colour, linear, which an opaque target clears to (`renderer_viewport.cpp:371`). */
+    clearColor: THREE.Color;
     transparentBg: boolean;
     toneMapping?: THREE.ToneMapping;
     beforeBind?: () => void;
@@ -87,7 +82,7 @@ export function renderToOffscreenTarget(
     if (options.toneMapping !== undefined) gl.toneMapping = options.toneMapping;
     options.beforeBind?.();
     gl.setRenderTarget(options.target);
-    gl.setClearColor(DEFAULT_CLEAR_COLOR, options.transparentBg ? 0 : 1);
+    gl.setClearColor(options.clearColor, options.transparentBg ? 0 : 1);
     gl.clear(true, true, true);
     options.draw();
   } finally {

@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+; Moves one variable: a tile's own TileData y_sort_origin on a y-sorted layer. The red tile in row
+; 0 overlaps the top half of the green tile in row 1, and its y_sort_origin of 64 sorts it below
+; that row, so it draws on top. No other tile scene authors a TileData y_sort_origin.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_atlas"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_quadrants"]
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+0:0/1 = 1
+0:0/1/y_sort_origin = 64
+
+[sub_resource type="TileSet" id="TileSet_quadrants"]
+tile_size = Vector2i(32, 32)
+sources/0 = SubResource("TileSetAtlasSource_quadrants")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+position = Vector2(200, 200)
+y_sort_enabled = true
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0)
+tile_set = SubResource("TileSet_quadrants")

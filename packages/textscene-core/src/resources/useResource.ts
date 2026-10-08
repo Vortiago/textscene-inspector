@@ -65,9 +65,10 @@ export function useResourceLoad<T>(path: string, type: ResourceBusType): Resourc
     const setResult = (next: ResourceResult<T>) => setSettled({ path, type, result: next });
 
     // An empty path means no request: a caller keeps its hook count stable for an empty slot.
-    // It stays `pending` with no subscription.
+    // It stays `pending` with no subscription. Keeping an empty-path state avoids a second render
+    // of every caller on mount, and replacing an older one drops a result whose clone is disposed.
     if (path === '') {
-      setResult({ value: undefined, status: 'pending' });
+      setSettled((prev) => (prev.path === '' && prev.type === type ? prev : { path, type, result: PENDING }));
       return;
     }
 

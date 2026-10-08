@@ -1,0 +1,70 @@
+name: Goldens touched
+
+# Keeps one comment on a pull request that lists the golden baselines it adds, changes or
+# removes, with links to each image diff and to the scene on the Cloudflare Pages previews.
+# scripts/ci/goldensComment.mjs writes the comment. A push that drops every golden change
+# deletes the comment.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+# A newer push cancels the older run, so a run that read stale changed files cannot finish last.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  comment:
+    name: Goldens comment
+    # A fork's pull_request run gets a read-only token, and Cloudflare Pages builds no preview
+    # for a fork.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      REPOSITORY: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      BRANCH: ${{ github.head_ref }}
+    steps:
+      # A pull request checks out its merge commit, whose first parent is the base branch.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+          # The diff reads trees only, and the script imports from scripts/ alone.
+          filter: blob:none
+          sparse-checkout: scripts
+
+      # `shell: bash` adds pipefail: a failed diff would otherwise reach the script as an empty
+      # list and delete the comment.
+      - name: Write the comment
+        shell: bash
+        run: >-
+          git diff --name-status --no-renames HEAD^1 HEAD
+          | node scripts/ci/goldensComment.mjs "$RUNNER_TEMP/goldens.md"
+
+      # Only this step gets the token, so the branch's script never holds a write token.
+      - name: Post, update or delete the comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          body="$RUNNER_TEMP/goldens.md"
+          comments="repos/$REPOSITORY/issues/$PR_NUMBER/comments"
+          # No pipe: a failed lookup then fails the step, where an empty id would post a duplicate.
+          ids=$(gh api --paginate "$comments" \
+            --jq '.[] | select(.body | startswith("<!-- goldens-touched -->")) | .id')
+          existing=${ids%%$'\n'*}
+          comment="repos/$REPOSITORY/issues/comments/$existing"
+          if [ -s "$body" ]; then
+            if [ -n "$existing" ]; then
+              gh api -X PATCH "$comment" -F "body=@$body"
+            else
+              gh api -X POST "$comments" -F "body=@$body"
+            fi
+          elif [ -n "$existing" ]; then
+            gh api -X DELETE "$comment"
+          fi

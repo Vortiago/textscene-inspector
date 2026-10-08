@@ -11,9 +11,10 @@ import {
   glowNeedsEveryPixel,
   glowParamsFor,
 } from './godotGlow';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
 
 function settings(properties: Record<string, string>) {
-  return createEnvironmentSettings(decodeEnvironment(properties));
+  return createEnvironmentSettings(decodeEnvironment(properties), DEFAULT_CLEAR_COLOR);
 }
 
 function glowOn(extra: Record<string, string> = {}) {

@@ -205,13 +205,16 @@ function MaterialOverlayMesh({
   // Read back off the base mesh rather than built again, so all four geometry branches
   // share one component and the two meshes share one geometry.
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
-  // Dep-less, since a re-parse replaces the geometry and `[meshRef]` would keep the old
-  // one. It cannot loop: the updater returns the same value when nothing moved.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- every commit is the dependency.
-  useLayoutEffect(() => {
+  const readBack = () => {
     const attached = meshRef.current?.geometry ?? null;
     setGeometry((previous) => (previous === attached ? previous : attached));
-  });
+  };
+  // Dep-less, since a re-parse replaces the geometry and `[meshRef]` would keep the old
+  // one. They cannot loop: the updater returns the same value when nothing moved. The
+  // layout pass swaps a re-parsed geometry before paint. On mount it runs before React
+  // attaches the parent mesh's ref, so the passive pass reads the first geometry.
+  useLayoutEffect(readBack);
+  useEffect(readBack);
 
   if (!geometry) return null;
   return (

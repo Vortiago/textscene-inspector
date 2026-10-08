@@ -10,6 +10,7 @@ import type { TscnNode } from '../parser/types.js';
 import { useYSortContext } from './contexts/YSortContext.js';
 import type { TileSetModel } from '../resources/tileset/types.js';
 import { groupBySortY } from '../resources/tileset/tileYSort.js';
+import { drawableCells } from '../resources/tileset/drawableCell.js';
 import type { YSortGroup } from '../resources/tileset/tileYSort.js';
 import { collectYSortedItems, ySortItemId, type YSortItem } from './ySortItems.js';
 import { TileSetModels, tileSetRefsOf } from './ySortTileSetModels.js';
@@ -87,9 +88,9 @@ function SortedChildren({
   const items = useMemo<YSortItem[]>(() => {
     const expanded: YSortItem[] = [];
     for (const item of rawItems) {
-      const grid = item.tileData ? models.get(item.tileData.tileSetRef) : undefined;
+      const model = item.tileData ? models.get(item.tileData.tileSetRef) : undefined;
       const group = item.node ? nodeComponentRegistry.getYSortGroup(item.node.type) : undefined;
-      if (item.kind === 'tileGroup' && item.node && grid && group) {
+      if (item.kind === 'tileGroup' && item.node && model && group) {
         const layer = group.describe(item.node);
         const cells = layer.cells;
         if (cells?.length) {
@@ -98,7 +99,12 @@ function SortedChildren({
           // which carries the Y of every y_sort_enabled ancestor, so the rows sort
           // against the origin of the siblings they interleave with.
           const layerWorldY = item.tileData?.worldY ?? 0;
-          const groups: YSortGroup[] = groupBySortY(cells, grid, layerYSortOrigin, layerWorldY);
+          const groups: YSortGroup[] = groupBySortY(
+            drawableCells(model, cells),
+            model,
+            layerYSortOrigin,
+            layerWorldY
+          );
           for (let g = 0; g < groups.length; g++) {
             const group = groups[g]!;
             // Filter cells to this Y-group's cells only.

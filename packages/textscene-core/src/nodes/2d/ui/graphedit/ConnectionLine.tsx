@@ -11,7 +11,8 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { materialProgramInputs, type ProgramInjection } from '../../../../r3f/materialProgramInputs';
+import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
+import { CANVAS_SRGB_DEFINES } from '../../../../r3f/canvasSrgbMultiply';
 import { multiplyModulate, type RGBA } from '../../../../r3f/canvasItemModulate';
 import type { ControlColor } from '../control/types';
 import { connectionControlPoints, tessellateConnectionLine } from './connectionCurve';
@@ -65,7 +66,8 @@ export function ConnectionLine({
       vertexColors: true,
       transparent: true,
       depthWrite: false,
-      injection: CONNECTION_SRGB_VERTEX_COLORS,
+      // sRGB vertex colours, ramped as Godot ramps them (`canvasSrgbMultiply.ts`).
+      defines: CANVAS_SRGB_DEFINES,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
     merge: [canvasItemFacing()],
@@ -78,29 +80,5 @@ export function ConnectionLine({
       <primitive object={geometry} attach="geometry" />
       <meshBasicMaterial key={program.key} {...program.props} />
     </mesh>
-  );
-}
-
-/** Shared with the minimap polyline (`MinimapChrome.tsx`), which colours its vertices the same way. */
-export const CONNECTION_SRGB_VERTEX_COLORS: ProgramInjection = {
-  cacheKey: 'godot-graphedit-connection-srgb-vertex-colors',
-  onBeforeCompile: decodeVertexColorsFromSRGB,
-};
-
-/**
- * `Color::srgb_to_linear`, applied to the interpolated vertex colour, as `StyleBoxQuad.tsx`
- * does for `border_blend`: linearising the endpoint colours before the GPU lerp bends the ramp.
- */
-function decodeVertexColorsFromSRGB(shader: { fragmentShader: string }): void {
-  shader.fragmentShader = shader.fragmentShader.replace(
-    '#include <color_fragment>',
-    /* glsl */ `
-    vec3 godotSrgbToLinear = mix(
-      pow((vColor.rgb + 0.055) / 1.055, vec3(2.4)),
-      vColor.rgb / 12.92,
-      step(vColor.rgb, vec3(0.04045))
-    );
-    diffuseColor *= vec4(godotSrgbToLinear, vColor.a);
-    `
   );
 }

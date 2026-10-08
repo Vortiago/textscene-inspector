@@ -8,8 +8,9 @@ import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../../../../parser/types.js';
 import { useCanvasItemTint } from '../../../../r3f/canvasItemModulate.js';
 import { useCanvasItemMaterial } from '../../../../r3f/components/canvasItemMaterialContext.js';
-import { useCanvasModulateFor } from '../../../../r3f/canvasModulate.js';
 import { canvasRenderOrder } from '../../../../r3f/canvasPaintOrder.js';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup.js';
+import { drawableCells } from '../../../../resources/tileset/drawableCell.js';
 import { accumulateCanvasItemZ, useEffectiveZ } from '../../../../r3f/lighting2d/canvasItemPlacement.js';
 import type { TileMapLayerProperties } from './types.js';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel.js';
@@ -38,13 +39,17 @@ export function TileGroupRenderer({
   const zFinal = accumulateCanvasItemZ(useEffectiveZ(), tileProps);
   const renderOrder = canvasRenderOrder({ layerRank, zFinal, sequence });
   const { model, status } = useTileSetModel(tileProps.tile_set);
-  // The same material and `useCanvasItemTint` the component body receives, so a
-  // CanvasModulate reaches y-sorted tiles too.
+  // The same material and tint the component body receives. Each tile item applies the canvas
+  // tint its own material admits.
   const material = useCanvasItemMaterial(tileProps);
-  const canvasModulate = useCanvasModulateFor(material);
-  const tint = useCanvasItemTint(tileProps, canvasModulate);
-  // When expanded by the y-sort pass, tileData.cells holds the filtered Y-group cells.
-  const cells = item.tileData?.cells ?? tileProps.cells ?? null;
+  const tint = useCanvasItemTint(tileProps);
+  // When expanded by the y-sort pass, tileData.cells holds the row's drawable cells. An item the
+  // pass left whole, because its TileSet had not arrived there, draws every cell of the layer.
+  const layerCells = tileProps.cells;
+  const cells = useMemo(
+    () => item.tileData?.cells ?? (model && layerCells ? drawableCells(model, layerCells) : null),
+    [item.tileData?.cells, model, layerCells]
+  );
   // The ordinary path gates `visible` in <CanvasItem2D> and `enabled` in the body.
   // This path bypasses both, so it gates them here.
   const drawable = tileProps.visible !== false && tileProps.enabled && !!cells?.length && status === 'loaded';
@@ -59,7 +64,7 @@ export function TileGroupRenderer({
   const originY = -(tileProps.position?.y ?? 0);
 
   return (
-    <group
+    <CanvasItemGroup
       name={`TileGroup_${node.name}_${ySortItemId(item)}`}
       position={[originX, originY, 0]}
       renderOrder={renderOrder}
@@ -70,14 +75,14 @@ export function TileGroupRenderer({
         <TileQuadrants
           quadrants={quadrants}
           model={model}
-          tint={tint}
+          selfTint={tint.self}
           material={material}
           lightMask={tileProps.light_mask}
           zFinal={zFinal}
           name={node.name}
         />
       )}
-    </group>
+    </CanvasItemGroup>
   );
 }
 

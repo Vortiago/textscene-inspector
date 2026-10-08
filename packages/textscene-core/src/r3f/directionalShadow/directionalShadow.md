@@ -100,9 +100,9 @@ each directional and sun shadow towards unshadowed by the receiver's view depth,
   (`renderer_scene_cull.cpp:2175`). The fade mixes whichever split the fragment sampled, after
   the split lookup. So an orthogonal light and a light with splits fade over the same depths,
   and a small `fade_start` reaches into the nearer splits too.
-- `installDirectionalShadowFade` runs once, when `TscnCanvas` is imported. It declares one
-  `vec2` uniform array outside both of three's shadow blocks, with an entry per directional
-  shadow and per sun shadow. It gives every built-in lit material and `UniformsLib.lights` that
+- `installDirectionalShadowFade` runs through `installShaderPatches` when a canvas is created.
+  It declares one `vec2` uniform array outside both of three's shadow blocks, with an entry per
+  directional shadow and per sun shadow. It gives every built-in lit material and `UniformsLib.lights` that
   uniform.
 - The uniform's value is one shared `Float32Array`. `UniformsUtils.cloneUniforms` keeps a typed
   array by reference, so each material's clone reads the same buffer. The buffer has 32 entries.
@@ -182,8 +182,8 @@ shades through three parts, whatever its split count:
   the splits where Godot puts them in that share. A slot past the light's last split draws nothing
   and repeats the last split's matrix.
 - `splitShadowChunk.ts`, which replaces three's cascade walk in `shadowmap_pars_fragment` with
-  Godot's split lookup and PCF, and gives every sun four slots. It installs once at import of
-  `TscnCanvas.tsx`, before any program compiles.
+  Godot's split lookup and PCF, and gives every sun four slots. `installShaderPatches` installs it
+  when a canvas is created, before any program compiles.
 
 `fitDirectionalShadowSplits.ts` holds the maths. It fits one box per split through
 `directionalShadowBoxFitter`, which computes the light's axes and caster reach once. It returns
@@ -237,7 +237,7 @@ binding (`light_storage.cpp:2572-2621`, `scene_forward_clustered_inc.glsl:374`).
 
 WebGL 2 guarantees 16 texture units per program (`MAX_TEXTURE_IMAGE_UNITS`). Measured from the
 active samplers of programs three r186 linked in the visual harness's Chromium, with every chunk
-patch `TscnCanvas` installs, for a light with four splits:
+patch `installShaderPatches` installs, for a light with four splits:
 
 | Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with seven maps, an environment and transmission | The same, with an omni and a spot shadow |
 | --- | --- | --- | --- |

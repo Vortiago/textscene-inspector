@@ -382,9 +382,10 @@ async function main() {
 
   // One launch each. The label fixture must paint at least INK_FLOOR ink pixels,
   // and its text-free twin exactly zero. They differ only in whether a glyph is
-  // asked for, so an empty canvas fails the first and a canvas that paints
-  // chrome or a background fails the second. The noise run must draw a texture
-  // that one of the preview's own blob-URL workers built.
+  // asked for, so an empty canvas fails the first. Ink counts against the flat
+  // clear colour, so a canvas that paints anything else fails the second. The
+  // noise run must draw a texture that one of the preview's own blob-URL workers
+  // built.
   const runs = [
     { label: 'with-text', scene: withText, evalFile: BLOB_WORKER_PROBE },
     { label: 'without-text', scene: withoutText },

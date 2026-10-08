@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { createEnvironmentSettings } from './build';
 import { BackgroundMode, type EnvironmentProperties } from './types';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
 
 const base = (overrides: Partial<EnvironmentProperties> = {}): EnvironmentProperties => ({
   background_mode: BackgroundMode.BG_SKY,
@@ -52,20 +53,22 @@ const base = (overrides: Partial<EnvironmentProperties> = {}): EnvironmentProper
 describe('sky ambient', () => {
   it('takes ambient from the sky for the default source over a sky background', () => {
     // AMBIENT_SOURCE_BG (the default) over BG_SKY, the most common environment.
-    const settings = createEnvironmentSettings(base());
+    const settings = createEnvironmentSettings(base(), DEFAULT_CLEAR_COLOR);
     expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 1 });
   });
 
   it('takes ambient from the sky for AMBIENT_SOURCE_SKY whatever the background is', () => {
     const settings = createEnvironmentSettings(
-      base({ ambient_light_source: 3, background_mode: BackgroundMode.BG_COLOR })
+      base({ ambient_light_source: 3, background_mode: BackgroundMode.BG_COLOR }),
+      DEFAULT_CLEAR_COLOR
     );
     expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 1 });
   });
 
   it('scales the sky contribution by background_energy_multiplier, not ambient_light_energy', () => {
     const settings = createEnvironmentSettings(
-      base({ background_energy_multiplier: 3, ambient_light_energy: 7 })
+      base({ background_energy_multiplier: 3, ambient_light_energy: 7 }),
+      DEFAULT_CLEAR_COLOR
     );
     expect(settings.skyAmbient?.energy).toBe(3);
   });
@@ -78,7 +81,8 @@ describe('sky ambient', () => {
         ambient_light_source: 3,
         ambient_light_color: { r: 1, g: 0, b: 0, a: 1 },
         ambient_light_energy: 2,
-      })
+      }),
+      DEFAULT_CLEAR_COLOR
     );
     expect(settings.ambient?.energy).toBe(0);
   });
@@ -90,7 +94,8 @@ describe('sky ambient', () => {
         ambient_light_color: { r: 1, g: 0, b: 0, a: 1 },
         ambient_light_energy: 2,
         ambient_light_sky_contribution: 0.25,
-      })
+      }),
+      DEFAULT_CLEAR_COLOR
     );
     expect(settings.ambient).toEqual({ color: { r: 1, g: 0, b: 0, a: 1 }, energy: 1.5 });
     expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 0.25 });
@@ -105,7 +110,8 @@ describe('sky ambient', () => {
         ambient_light_source: 2,
         ambient_light_color: { r: 0.4, g: 0.4, b: 0.4, a: 1 },
         ambient_light_sky_contribution: 0.5,
-      })
+      }),
+      DEFAULT_CLEAR_COLOR
     );
     expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 0 });
     expect(settings.ambient).toEqual({ color: { r: 0.4, g: 0.4, b: 0.4, a: 1 }, energy: 1 });
@@ -114,7 +120,7 @@ describe('sky ambient', () => {
   it('reflects the sky for a disabled source but gives it no diffuse term', () => {
     // DISABLED ambient means no diffuse fill, but a sky background is still a
     // reflection source, so a metal keeps reflecting it.
-    const settings = createEnvironmentSettings(base({ ambient_light_source: 1 }));
+    const settings = createEnvironmentSettings(base({ ambient_light_source: 1 }), DEFAULT_CLEAR_COLOR);
     expect(settings.ambient).toBeNull();
     expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 0 });
   });
@@ -125,7 +131,8 @@ describe('sky ambient', () => {
         background_mode: BackgroundMode.BG_COLOR,
         background_color: { r: 0.6, g: 0.6, b: 0.6, a: 1 },
         background_energy_multiplier: 2,
-      })
+      }),
+      DEFAULT_CLEAR_COLOR
     );
     expect(settings.skyAmbient).toBeNull();
     expect(settings.ambient).toEqual({ color: { r: 0.6, g: 0.6, b: 0.6, a: 1 }, energy: 2 });

@@ -1,6 +1,7 @@
 /**
- * Each rendering quadrant of a tile layer is a canvas item of its own, so it declares its own
- * lit item to the per-item light cap and draws after the quadrant before it.
+ * Each rendering quadrant of a tile layer is one or more canvas items, each split off at a change
+ * of tile material or `z_index`. Each declares its own lit item to the per-item light cap and draws
+ * after the item before it, in its own z bucket and with its own material.
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
@@ -12,13 +13,51 @@ import { createFakeResourceLoader } from '../resources/testing/createFakeResourc
 import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING } from './lighting2d/lightPassContext';
 import type { CappedItem } from './lighting2d/itemLightCap';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
-import type { AtlasSourceModel, AtlasTileModel, TileSetModel } from '../resources/tileset/types';
+import { drawableCells } from '../resources/tileset/drawableCell';
+import { parseTresFile } from '../parser/parsedResource';
+import { decodeCanvasItemMaterial } from '../resources/materials/canvasitemmaterial/decode';
+import {
+  defaultTileData,
+  type AlternativeTileModel,
+  type AtlasSourceModel,
+  type AtlasTileModel,
+  type TileSetModel,
+} from '../resources/tileset/types';
+import { CanvasItemKeyProvider } from './components/CanvasItemGroup';
+import { canvasRenderOrder } from './canvasPaintOrder';
+import { CanvasModulateContext } from './canvasModulate';
+import { WHITE_MODULATE, type RGBA } from './canvasItemModulate';
+import {
+  CanvasItemBlendMode,
+  CanvasItemLightMode,
+  type CanvasItemMaterialProperties,
+} from '../resources/materials/canvasitemmaterial/types';
+
+function canvasItemMaterial(overrides: Partial<CanvasItemMaterialProperties>): CanvasItemMaterialProperties {
+  return { ...decodeCanvasItemMaterial({}), ...overrides };
+}
+
+const ADD = canvasItemMaterial({ blendMode: CanvasItemBlendMode.ADD });
+const UNSHADED = canvasItemMaterial({ lightMode: CanvasItemLightMode.UNSHADED });
+
+/**
+ * The tile at atlas (0, 0): alternative 0 at TileData defaults, 1 at z_index 2, 2 with an additive
+ * material, 3 with a ShaderMaterial, 4 with an unshaded material, 5 tinted red and 6 with an additive
+ * material from a .tres file.
+ */
+const ALTERNATIVES: Partial<AlternativeTileModel>[] = [
+  {},
+  { zIndex: 2 },
+  { material: { properties: ADD } },
+  { material: { properties: null } },
+  { material: { properties: UNSHADED } },
+  { modulate: { r: 1, g: 0, b: 0, a: 1 } },
+  { material: { path: 'res://add.tres' } },
+];
 
 const BASE_TILE: AtlasTileModel = {
   sizeInAtlas: { x: 1, y: 1 },
-  alternatives: new Map([
-    [0, { flipH: false, flipV: false, transpose: false, textureOrigin: { x: 0, y: 0 } }],
-  ]),
+  alternatives: new Map(ALTERNATIVES.map((data, altId) => [altId, { ...defaultTileData(), ...data }])),
 };
 
 function atlasSource(id: number): AtlasSourceModel {
@@ -31,7 +70,7 @@ function atlasSource(id: number): AtlasSourceModel {
   };
 }
 
-/** A square 16 px tileset with atlas sources 0 and 1. */
+/** A square 16 px tileset with atlas sources 0 and 1, and source 2, which names no texture. */
 const MODEL: TileSetModel = {
   shape: 0,
   layout: 0,
@@ -40,36 +79,55 @@ const MODEL: TileSetModel = {
   sources: new Map([
     [0, atlasSource(0)],
     [1, atlasSource(1)],
+    [2, { ...atlasSource(2), texturePath: '' }],
   ]),
 };
 
-function cell(sourceId: number, x: number, y: number): PlacedCell {
-  return { coords: { x, y }, sourceId, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 };
+function cell(sourceId: number, x: number, y: number, alternativeId = 0): PlacedCell {
+  return { coords: { x, y }, sourceId, atlasCoords: { x: 0, y: 0 }, alternativeId };
 }
 
-const TINT = { color: new THREE.Color(1, 1, 1), opacity: 1 };
+/** The layer's canvas key: the world canvas at its `z_final`, fifth in the draw walk. */
+const layerKey = (zFinal: number) => canvasRenderOrder({ layerRank: 0, zFinal, sequence: 5 });
 
-function render(quadrants: readonly (readonly PlacedCell[])[], zFinal = 0) {
+interface Layer {
+  zFinal?: number;
+  material?: CanvasItemMaterialProperties | null;
+  canvasModulate?: RGBA;
+}
+
+function render(
+  quadrants: readonly (readonly PlacedCell[])[],
+  { zFinal = 0, material = null, canvasModulate = WHITE_MODULATE }: Layer = {}
+) {
   const fake = createFakeResourceLoader();
   for (const id of MODEL.sources.keys()) {
     const texture = new THREE.Texture();
     (texture as unknown as { image: { width: number; height: number } }).image = { width: 16, height: 16 };
     fake.textures.seed(`res://source${id}.png`, texture);
   }
+  fake.resources.seed(
+    'res://add.tres',
+    parseTresFile('[gd_resource type="CanvasItemMaterial" format=3]\n\n[resource]\nblend_mode = 1\n')
+  );
   const registerCappedItem = vi.fn((_item: CappedItem) => () => {});
   const lighting = { ...INERT_CANVAS_LIGHTING, registerCappedItem };
   const wrap = (children: ReactNode) => (
     <ResourceLoaderProvider loader={fake.loader}>
-      <CanvasLighting2DContext.Provider value={lighting}>{children}</CanvasLighting2DContext.Provider>
+      <CanvasLighting2DContext.Provider value={lighting}>
+        <CanvasModulateContext.Provider value={canvasModulate}>
+          <CanvasItemKeyProvider value={layerKey(zFinal)}>{children}</CanvasItemKeyProvider>
+        </CanvasModulateContext.Provider>
+      </CanvasLighting2DContext.Provider>
     </ResourceLoaderProvider>
   );
   const tree = ReactThreeTestRenderer.create(
     wrap(
       <TileQuadrants
-        quadrants={quadrants}
+        quadrants={quadrants.map((cells) => drawableCells(MODEL, cells))}
         model={MODEL}
-        tint={TINT}
-        material={null}
+        selfTint={WHITE_MODULATE}
+        material={material}
         lightMask={1}
         zFinal={zFinal}
         name="Layer"
@@ -79,8 +137,23 @@ function render(quadrants: readonly (readonly PlacedCell[])[], zFinal = 0) {
   return { tree, registerCappedItem };
 }
 
-const meshOrders = (renderer: Awaited<ReturnType<typeof render>['tree']>) =>
-  renderer.scene.findAllByType('Mesh').map((mesh) => (mesh.instance as THREE.Mesh).renderOrder);
+type Rendered = Awaited<ReturnType<typeof render>['tree']>;
+
+const meshesOf = (renderer: Rendered) =>
+  renderer.scene.findAllByType('Mesh').map((mesh) => mesh.instance as THREE.Mesh);
+
+const meshOrders = (renderer: Rendered) => meshesOf(renderer).map((mesh) => mesh.renderOrder);
+
+const materialsOf = (renderer: Rendered) =>
+  meshesOf(renderer).map((mesh) => mesh.material as THREE.MeshBasicMaterial);
+
+/** The canvas key three sorts a mesh by: the `renderOrder` of its nearest enclosing group. */
+function canvasKeyOf(mesh: THREE.Object3D): number | undefined {
+  for (let node = mesh.parent; node; node = node.parent) {
+    if ((node as THREE.Group).isGroup) return node.renderOrder;
+  }
+  return undefined;
+}
 
 describe('<TileQuadrants>', () => {
   it('declares one lit item per quadrant', async () => {
@@ -90,7 +163,7 @@ describe('<TileQuadrants>', () => {
   });
 
   it("declares each quadrant at the layer's z_final", async () => {
-    const { tree, registerCappedItem } = render([[cell(0, 0, 0)]], 3);
+    const { tree, registerCappedItem } = render([[cell(0, 0, 0)]], { zFinal: 3 });
     await tree;
     expect(registerCappedItem.mock.calls[0]![0].placement.z).toBe(3);
   });
@@ -112,5 +185,57 @@ describe('<TileQuadrants>', () => {
     const { tree, registerCappedItem } = render([]);
     await tree;
     expect(registerCappedItem).not.toHaveBeenCalled();
+  });
+
+  it("declares a tile with its own z_index at the layer's z_final plus it", async () => {
+    const { tree, registerCappedItem } = render([[cell(0, 0, 0), cell(0, 1, 0, 1)]], { zFinal: 3 });
+    await tree;
+    expect(registerCappedItem.mock.calls.map((call) => call[0].placement.z)).toEqual([3, 5]);
+  });
+
+  it("draws a tile with its own z_index in that z's bucket, at the layer's place in the walk", async () => {
+    const meshes = meshesOf(await render([[cell(0, 0, 0), cell(0, 1, 0, 1)]], { zFinal: 3 }).tree);
+    expect(meshes.map(canvasKeyOf)).toEqual([layerKey(3), layerKey(5)]);
+  });
+
+  it("draws a missing-texture placeholder in its tile's z bucket, not the layer's", async () => {
+    const meshes = meshesOf(await render([[cell(0, 0, 0), cell(2, 1, 0, 1)]], { zFinal: 3 }).tree);
+    expect(meshes.map(canvasKeyOf)).toEqual([layerKey(3), layerKey(5)]);
+  });
+
+  it('draws a tile with its own CanvasItemMaterial with its blend mode', async () => {
+    const [base, additive] = materialsOf(await render([[cell(0, 0, 0), cell(0, 1, 0, 2)]]).tree);
+    expect(base!.blending).toBe(THREE.NormalBlending);
+    expect(additive!.blending).toBe(THREE.CustomBlending);
+  });
+
+  it("draws a tile whose material is a .tres file with that file's blend mode", async () => {
+    const [fromFile] = materialsOf(await render([[cell(0, 0, 0, 6)]]).tree);
+    expect(fromFile!.blending).toBe(THREE.CustomBlending);
+  });
+
+  it("draws a tile with a material it cannot read with plain blending, not the layer's", async () => {
+    const [shader] = materialsOf(await render([[cell(0, 0, 0, 3)]], { material: ADD }).tree);
+    expect(shader!.blending).toBe(THREE.NormalBlending);
+  });
+
+  it("draws a tile with no material of its own with the layer's", async () => {
+    const [base] = materialsOf(await render([[cell(0, 0, 0)]], { material: ADD }).tree);
+    expect(base!.blending).toBe(THREE.CustomBlending);
+  });
+
+  it("tints a tile by the canvas modulate only when its own material's light mode admits it", async () => {
+    const canvasModulate = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+    const [shaded, unshaded] = materialsOf(
+      await render([[cell(0, 0, 0), cell(0, 1, 0, 4)]], { canvasModulate }).tree
+    );
+    expect(shaded!.color.r).toBeCloseTo(0.214041, 5);
+    expect(unshaded!.color.r).toBe(1);
+  });
+
+  it("multiplies each tile's modulate onto its pixels through the vertex colours", async () => {
+    const [mesh] = meshesOf(await render([[cell(0, 0, 0, 5)]]).tree);
+    expect((mesh!.material as THREE.MeshBasicMaterial).vertexColors).toBe(true);
+    expect(Array.from(mesh!.geometry.getAttribute('color').array.slice(0, 4))).toEqual([1, 0, 0, 1]);
   });
 });

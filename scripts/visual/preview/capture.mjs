@@ -12,6 +12,7 @@ import {
   TEXTURE_WORK_STATUS_TESTID,
   TEXTURE_WORK_WAIT_MS,
 } from './appContract.mjs';
+import { fixtureUrl } from './fixtureUrl.mjs';
 import { findCanvas2DFrame } from './viewportProbes.mjs';
 import { writeFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
@@ -23,11 +24,7 @@ import { PNG } from 'pngjs';
  * frames of the untextured placeholder. A scene that never idles still falls through to the gate.
  */
 export async function gotoFixture(page, baseUrl, fixture, onSlow = () => {}, extraParams = {}) {
-  let url = `${baseUrl}/?fixture=${encodeURIComponent(fixture)}`;
-  for (const [key, value] of Object.entries(extraParams)) {
-    if (value != null) url += `&${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`;
-  }
-  await page.goto(url, { waitUntil: 'load' });
+  await page.goto(fixtureUrl(baseUrl, fixture, extraParams), { waitUntil: 'load' });
   await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch((err) => {
     // Anything but a timeout, such as a crashed target or a closed page, is a real failure.
     if (err?.name !== 'TimeoutError') throw err;

@@ -218,11 +218,20 @@ describe('<Polygon2D> vertex_colors', () => {
     const color = geom.attributes.color;
     expect(color).toBeDefined();
     expect(color!.count).toBe(4);
-    // Godot writes authored sRGB; the renderer converts once, as it does for
-    // the flat fill. Red stays fully red in either space.
     expect(color!.getX(0)).toBeCloseTo(1, 5);
     expect(color!.getY(0)).toBeCloseTo(0, 5);
     expect((mesh(renderer).material as THREE.MeshBasicMaterial).vertexColors).toBe(true);
+  });
+
+  it('keeps each vertex colour as stored, sRGB, for the draw to interpolate and multiply in sRGB', async () => {
+    const { renderer } = await render({
+      polygon: SQUARE,
+      vertex_colors: 'PackedColorArray(0.6, 0.6, 0.6, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1)',
+    });
+    expect(mesh(renderer).geometry.attributes.color!.getX(0)).toBeCloseTo(0.6, 5);
+    expect((mesh(renderer).material as THREE.MeshBasicMaterial).defines).toEqual({
+      CANVAS_SRGB_MULTIPLY: '',
+    });
   });
 
   it('ignores a vertex_colors array whose length does not match the vertices', async () => {

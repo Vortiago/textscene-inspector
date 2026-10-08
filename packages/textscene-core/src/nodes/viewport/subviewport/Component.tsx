@@ -41,6 +41,7 @@ import { usePublishViewportPass } from './usePublishViewportPass';
 import type { SubViewportProperties } from './types';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera.js';
+import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -116,6 +117,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   const height = allocatableExtent(forcedRect?.y ?? size?.y ?? 512);
 
   const gl = useThree((state) => state.gl);
+  const clearColor = useProjectClearColor();
   const mainScene = useThree((state) => state.scene);
   const portalScene = useMemo(() => {
     const scene = new THREE.Scene();
@@ -181,6 +183,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
     try {
       renderToOffscreenTarget(gl, {
         target,
+        clearColor,
         transparentBg,
         // Godot tonemaps through the environment `find_world_3d()` resolves. A
         // shared world's curve is the renderer's current one. An own world has no
@@ -215,6 +218,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
     gl,
     target,
     shadowAtlas,
+    clearColor,
     transparentBg,
     properties.own_world_3d,
     width,

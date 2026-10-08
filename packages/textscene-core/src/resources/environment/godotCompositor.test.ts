@@ -11,10 +11,11 @@ import { decodeEnvironment } from './decode';
 import { createEnvironmentSettings } from './build';
 import { GlowBlendMode, glowParamsFor, type GlowParams } from './godotGlow';
 import { GodotToneMapper } from './godotToneMapping';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
 
 function glowOn(extra: Record<string, string> = {}): GlowParams {
   const params = glowParamsFor(
-    createEnvironmentSettings(decodeEnvironment({ glow_enabled: 'true', ...extra }))
+    createEnvironmentSettings(decodeEnvironment({ glow_enabled: 'true', ...extra }), DEFAULT_CLEAR_COLOR)
   );
   if (!params) throw new Error('expected glow to be enabled');
   return params;

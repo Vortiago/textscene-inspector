@@ -24,6 +24,7 @@ import {
   waitForServer,
   warmUpGLContext,
 } from './previewServer.mjs';
+import { BASELINE_DIR } from './baselinePath.mjs';
 import { parseArgs, selectScenes, summarize } from './run/cli.mjs';
 import { attachConsoleGate, captureScene } from './run/sceneCapture.mjs';
 import { compareToBaseline, writeBaseline, writeFailureArtifacts } from './run/baselines.mjs';
@@ -102,7 +103,7 @@ async function main() {
     const written = results.filter((r) => r.status === 'updated').length;
     const unchanged = results.filter((r) => r.status === 'unchanged').length;
     console.log(
-      `\n[visual] ${written} baseline(s) written to scripts/visual/baselines/, ${unchanged} left ` +
+      `\n[visual] ${written} baseline(s) written to ${BASELINE_DIR}/, ${unchanged} left ` +
         'alone (pixels identical) — eyeball the written ones, then commit.'
     );
   }

@@ -96,26 +96,14 @@ describe('<StyleBoxQuad>', () => {
     expect(color.getY(0)).not.toBeCloseTo(sRGBChannelToLinear(0.5), 3);
   });
 
-  it('decodes those sRGB vertex colours in the fragment shader, before the multiply into diffuseColor', async () => {
-    // Asserted on the injected source: the test renderer's mock GL compiles no
-    // shader, so only the browser gates compile it.
+  it('decodes those sRGB vertex colours in the fragment shader, after the interpolation', async () => {
+    // The define selects the sRGB multiply in three's colour chunk (`canvasSrgbMultiply.ts`).
     const renderer = await ReactThreeTestRenderer.create(
       <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
     );
     const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
       .material as THREE.MeshBasicMaterial;
-    expect(mat.customProgramCacheKey!()).toContain('stylebox');
-
-    const shader = { fragmentShader: '#include <color_fragment>' };
-    mat.onBeforeCompile!(shader as never, null as never);
-    expect(shader.fragmentShader).not.toContain('#include <color_fragment>');
-    // `Color::srgb_to_linear` (`utils/colorSpace.ts`): knee at 0.04045, `/ 12.92`
-    // below it and `pow((c + 0.055) / 1.055, 2.4)` above.
-    expect(shader.fragmentShader).toContain('0.04045');
-    expect(shader.fragmentShader).toContain('12.92');
-    expect(shader.fragmentShader).toContain('2.4');
-    // Alpha carries no transfer function, and the AA feathers ramp in it.
-    expect(shader.fragmentShader).toContain('vColor.a');
+    expect(mat.defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
 
   it('renders nothing (no mesh) when the stylebox draws no geometry (draw_center false, no border)', async () => {

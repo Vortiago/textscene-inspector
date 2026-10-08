@@ -66,6 +66,7 @@ export {
   CANVAS_ITEM_Z_MAX,
   CANVAS_LAYER_MIN,
   CANVAS_LAYER_MAX,
+  DEFAULT_CLEAR_COLOR,
   ShadowCastingSetting,
 } from './rendering.js';
 export {

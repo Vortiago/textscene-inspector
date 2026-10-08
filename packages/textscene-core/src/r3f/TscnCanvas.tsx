@@ -21,24 +21,12 @@ import { PreviewLighting } from './preview/PreviewLighting.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
-import { installDirectionalShadowFade } from './directionalShadow/shadowFade.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
-import { installGodotDiffuse } from './godotDiffuse.js';
-import { installGodotSplitShadow } from './directionalShadow/splitShadowChunk.js';
-import { installDirectionalShadowAtlas } from './directionalShadow/shadowAtlasChunk.js';
-import { installGodotPositionalShadow } from './positionalShadow/positionalShadowChunk.js';
+import { installShaderPatches } from './shaderPatch/installShaderPatches.js';
 import { SceneShadowFitter } from './SceneShadowFitter.js';
 import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
 import { TiledUploadDriver } from './tiledUpload/TiledUploadDriver.js';
 import styles from './TscnCanvas.module.css';
-
-// At import, before any program compiles: a program reads three's chunks and `ShaderLib`
-// uniforms only when it compiles.
-installGodotDiffuse();
-installGodotSplitShadow();
-installDirectionalShadowAtlas();
-installDirectionalShadowFade();
-installGodotPositionalShadow();
 
 /**
  * The contents of the `<Canvas>`, exported so `@react-three/test-renderer`,
@@ -260,6 +248,7 @@ export function TscnCanvas() {
         camera={{ position: editorCameraPosition(), fov: EDITOR_CAMERA_FOV }}
         shadows="percentage"
         gl={{ localClippingEnabled: true }}
+        onCreated={installShaderPatches}
       >
         <TscnSceneContents />
         <ActiveCameraSwitcher />
