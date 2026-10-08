@@ -132,4 +132,4 @@ per-light render target.
 - **Each light writes both buffers with one alpha.** The light buffer takes the
   albedo-scaled share and the `shadow_color` buffer the albedo-free share, each under the
   light's whole alpha. A MIX light then scales the colour under it in both buffers, as
-  Godot scales one colour.
+  Godot scales one colour (`canvas.glsl:559-560`).

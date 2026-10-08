@@ -339,9 +339,10 @@ describe('shadow_color', () => {
 });
 
 /**
- * `light_blend_compute` applies a light's whole `light_color` with one alpha. The pass splits that
- * term over the light and tint buffers, so each light writes both over its whole reach with that
- * alpha: a MIX light then scales the colour under it in both, as Godot scales one colour.
+ * `light_blend_compute` (`canvas.glsl:549-562`) applies a light's whole `light_color` with one
+ * alpha. The pass splits that term over the light and tint buffers, so each light writes both over
+ * its whole reach with that alpha: a MIX light then scales the colour under it in both, as Godot
+ * scales one colour.
  */
 describe('one alpha over both buffers', () => {
   const TINT = 'shadow_color = Color(0.15, 0.35, 1, 1)\n';
@@ -361,7 +362,8 @@ describe('one alpha over both buffers', () => {
   }
 
   it("adds a tinting light's shadow_color alpha to the light buffer, colourless, where it is blocked", async () => {
-    // Godot sums the alpha into `light_only_alpha` and MIX scales the colour under it by it.
+    // Godot sums the alpha into `light_only_alpha` (`canvas.glsl:849`) and MIX scales the colour
+    // under it by it (`:559-560`).
     const renderer = await render(scene(`${lamp('Lamp', 400, `${MIX}${TINT}`)}${caster('Caster', 576)}`));
     const drawn = await drawnFor(renderer, 'Surface', 'uLightList');
     expect(stencilFuncs(drawn)).toEqual([

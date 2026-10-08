@@ -30,6 +30,12 @@ describe('renderingQuadrants', () => {
     expect(coordsOf(quadrants)).toEqual([[[1, 0]], [[0, 0]], [[0, 1]]]);
   });
 
+  it("orders the quadrants by map_to_local of their own coords, not of a cell's", () => {
+    // Quadrant (0, 0) holds (15, 0), above (16, 5) in quadrant (1, 0), yet draws after it.
+    const quadrants = renderingQuadrants([cell(15, 0), cell(16, 5)], SQUARE, 16);
+    expect(coordsOf(quadrants)).toEqual([[[16, 5]], [[15, 0]]]);
+  });
+
   it("sorts a quadrant's cells by x, then y", () => {
     const quadrants = renderingQuadrants([cell(1, 0), cell(0, 1), cell(0, 0)], SQUARE, 16);
     expect(coordsOf(quadrants)).toEqual([

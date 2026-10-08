@@ -18,9 +18,10 @@ take one warm light, and the clear colour below them takes none.
 <!-- compare: image=unit-directionallight2d-shadow status=done fixture=unit-directionallight2d-shadow.tscn -->
 
 A square occluder under a light turned 0.5 rad casts a band down and to the left. Godot
-measures depth along the light across the project viewport's diagonal. The previewer
+measures depth along the light across the project viewport's diagonal
+(`renderer_canvas_render_rd.cpp:1140-1146`). The previewer
 builds the same 1D map, so the band covers the occluder's inside too. It culls an occluder
-on its local bounds, as Godot does.
+on its local bounds, as Godot does (`renderer_viewport.cpp:635`).
 
 The map spans the project viewport at the canvas origin. In Godot's editor no Camera2D
 becomes current (`camera_2d.cpp:354`), and the previewer draws the canvas as the editor

@@ -32,7 +32,10 @@ export interface ItemLightCap {
   /** Each registered item, with the positional lights it was last handed, null until crowded. */
   readonly items: Map<CappedItem, readonly number[] | null>;
   readonly passMeshes: ReadonlySet<PassMesh>;
-  /** The game viewport in the world: Godot lists only the lights that meet it. */
+  /**
+   * The game viewport in the world: Godot lists only the lights that meet it
+   * (`renderer_viewport.cpp:470`).
+   */
   readonly viewport: Rect2;
   /**
    * Rewritten each frame: the world rect the items of each capped placement cover, by

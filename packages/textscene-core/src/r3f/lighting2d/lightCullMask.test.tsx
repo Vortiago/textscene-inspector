@@ -1,8 +1,8 @@
 /**
- * Godot's 2D light culling through the real dispatcher: the list buffer each item reads, and the
- * lights the pass draws into it. `itemLightList.test.ts` pins the rule. Happy-dom has no GPU, so
- * `lightPassProbe` reads the bindings and records the draws, and `unit-pointlight2d-cull-mask`
- * measures the pixels against the engine.
+ * Godot's 2D light culling (`renderer_canvas_render_rd.cpp:2366`) through the real dispatcher: the
+ * list buffer each item reads, and the lights the pass draws into it. `itemLightList.test.ts` pins
+ * the rule. Happy-dom has no GPU, so `lightPassProbe` reads the bindings and records the draws, and
+ * `unit-pointlight2d-cull-mask` measures the pixels against the engine.
  */
 
 import { describe, it, expect, vi } from 'vitest';

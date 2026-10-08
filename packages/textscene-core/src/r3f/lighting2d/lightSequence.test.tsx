@@ -18,7 +18,6 @@ import {
   holdsListedDirectionalLights,
   isListedDirectionalLight,
   isPositionalCanvasLight,
-  isShownCanvasNode,
   lightDrawSequence,
 } from './lightSequence';
 import { CanvasLightSequenceProvider, useDirectionalLightSlot, useLightSequence } from './useLightSequence';
@@ -196,16 +195,6 @@ ${lamp('B')}`
 
   it('gives a lone light slot zero rather than an arbitrary offset', async () => {
     expect(quadOrders(await render(lamp('Only')))).toEqual([litQuadRenderOrder(0)]);
-  });
-});
-
-describe('isShownCanvasNode', () => {
-  it('reads a node with no parsed `visible` as shown', () => {
-    expect(isShownCanvasNode({ type: 'Node2D', properties: {} } as never)).toBe(true);
-  });
-
-  it('reads `visible = false` as hidden', () => {
-    expect(isShownCanvasNode({ type: 'Node2D', properties: { visible: false } } as never)).toBe(false);
   });
 });
 

@@ -3,9 +3,15 @@
  * seed, so an item reading it gets Godot's per-item loop (`canvas.glsl:727-830`).
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import { renderLightLists, type AccumulationList, type PassMesh } from './lightAccumulationPass';
+import { renderHook } from '@testing-library/react';
+import {
+  useLightAccumulationPass,
+  type AccumulationList,
+  type LightAccumulationPass,
+  type PassMesh,
+} from './lightAccumulationPass';
 import { createSeedMaterial } from './lightSeedQuad';
 import { LIGHT_PASS_LAYER } from './lightPassLayers';
 import type { LightListEntry, PassMeshRole } from './itemLightList';
@@ -79,12 +85,27 @@ function run(
     resolution: new THREE.Vector2(),
     windows,
   };
-  return { draws, camera, run: () => renderLightLists(pass), getTarget: () => target };
+  return { draws, camera, run: () => renderOneFrame(pass), getTarget: () => target };
+}
+
+/** The frame callback the pass hands r3f, which a test calls in place of the render loop. */
+const frame = vi.hoisted(() => ({ callback: null as (() => void) | null }));
+vi.mock('@react-three/fiber', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@react-three/fiber')>()),
+  useFrame: (callback: () => void) => {
+    frame.callback = callback;
+  },
+}));
+
+/** Mounts the pass and runs one frame of it, as the 2D stage does ahead of its own render. */
+function renderOneFrame(pass: LightAccumulationPass) {
+  renderHook(() => useLightAccumulationPass(pass));
+  frame.callback!();
 }
 
 const SHADOWED = (ordinal: number): LightListEntry => ({ ordinal, unshadowed: false });
 
-describe('renderLightLists', () => {
+describe('useLightAccumulationPass', () => {
   it('draws each list with its own lights and no other', () => {
     const meshes = [passMesh('a', 0, 'lit'), passMesh('b', 1, 'lit')];
     const pass = run([list([SHADOWED(0)]), list([SHADOWED(0), SHADOWED(1)])], meshes);

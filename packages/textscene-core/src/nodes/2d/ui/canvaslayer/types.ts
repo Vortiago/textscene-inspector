@@ -15,7 +15,7 @@ export interface CanvasLayerProperties {
   layer?: number;
   /**
    * Godot's `transform`: the layer's canvas transform, which every item on its canvas draws
-   * through. Renamed, since a Node3D's `transform` is a 3D one.
+   * through (`canvas_layer.cpp:83`). Renamed, since a Node3D's `transform` is a 3D one.
    */
   canvasTransform: Transform2DColumns;
   /** Whether the layer draws through the viewport's canvas transform, a Camera2D's, too. */

@@ -7,9 +7,9 @@ import type { ReactNode } from 'react';
 import { useCanvasItemLighting, type CanvasItemLightingProps } from '../lighting2d/useCanvasItemLighting';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 
-export interface LitCanvasItemPixelsProps {
+interface LitCanvasItemPixelsProps {
   material: CanvasItemMaterialProperties | null;
-  /** The item's `light_mask`, Godot's default 1 when unset. */
+  /** The item's `light_mask`, Godot's default 1 (`canvas_item.h:98`) when unset. */
   lightMask: number | undefined;
   /** The item's `z_final`, which a light's z window tests. */
   zFinal: number;

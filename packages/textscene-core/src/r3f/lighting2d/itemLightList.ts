@@ -117,7 +117,7 @@ export function itemLightList(
 }
 
 /** A canonical string for a list, so two items with the same list share a buffer. */
-export function lightListId(list: readonly LightListEntry[]): string {
+function lightListId(list: readonly LightListEntry[]): string {
   return list.map((entry) => `${entry.ordinal}${entry.unshadowed ? 'u' : 's'}`).join(',');
 }
 

@@ -11,7 +11,8 @@ renders_as: batched textured tile quads
 
 TileMap draws each layer's cells as batched textured quads from its TileSet atlas. The
 previewer decodes the legacy `layer_N/tile_data` groups. It draws each layer's rendering
-quadrants as canvas items of their own, in Godot's cell order, as on TileMapLayer.
+quadrants as canvas items of their own, in Godot's cell order, as on TileMapLayer
+(`tile_map_layer.cpp:306-311`, `:412-566`).
 Each quadrant takes its own lights at its layer's `z_index`.
 
 ## Linting

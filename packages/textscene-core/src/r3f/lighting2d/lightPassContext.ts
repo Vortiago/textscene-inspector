@@ -20,7 +20,8 @@ export interface CanvasLightList {
   readonly lightOnlyBuffer: THREE.Texture | null;
   /**
    * The albedo-free `shadow_color` accumulation, added after an item multiplies by its albedo. Null
-   * unless a light on the list tints its shadow, as Godot's transparent default does not.
+   * unless a light on the list tints its shadow, as Godot's transparent default
+   * (`light_2d.h:58`) does not.
    */
   readonly shadowTintBuffer: THREE.Texture | null;
 }

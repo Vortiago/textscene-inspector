@@ -1,7 +1,8 @@
 [gd_scene format=3]
 
 ; Moves one variable: a MIX light over a light with an authored shadow_color.
-; Godot mixes the tinted shadow under it toward the MIX light like any other colour. Every other
+; Godot mixes the tinted shadow under it toward the MIX light like any other colour
+; (`canvas.glsl:559-560`). Every other
 ; shadow_color scene has no light over the tint.
 
 [ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]

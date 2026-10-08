@@ -36,7 +36,7 @@ export interface DirectionalShadowView {
   readonly maxDistance: number;
 }
 
-export interface DirectionalShadowMap {
+interface DirectionalShadowMap {
   /** `SHADOW_MAP_BINS` depths over `z_far`, `SHADOW_MAP_FAR` where nothing casts. */
   readonly bins: Float32Array;
   /**

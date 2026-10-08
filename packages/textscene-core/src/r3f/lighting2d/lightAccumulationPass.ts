@@ -76,8 +76,8 @@ function showListMeshes(passMeshes: ReadonlySet<PassMesh>, list: AccumulationLis
   }
 }
 
-/** Draws every list's buffers once. A frame's work, apart from the hook so it runs without a GPU. */
-export function renderLightLists({
+/** Draws every list's buffers once: a frame's work. */
+function renderLightLists({
   gl,
   scene,
   camera,

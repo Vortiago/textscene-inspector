@@ -73,12 +73,13 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
     layerMin: props.range_layer_min,
     layerMax: props.range_layer_max,
   };
-  // Godot's default shadow_color is transparent, so the extra albedo-free pass runs only for the
-  // rare light that tints its shadow.
+  // Godot's default shadow_color is transparent (`light_2d.h:58`), so the extra albedo-free pass
+  // runs only for the rare light that tints its shadow.
   const tintsShadow = casts && shadowColorContributes(props.shadow_color, props.shadow_filter);
   // Two jobs, two numbers: `ordinal` keeps the shadow stencil stamps of one pass apart (dense,
   // reused on unmount), while `sequence` is this light's position in the canvas light list, which
-  // is what Godot applies lights in and what order-dependent MIX depends on.
+  // is what Godot applies lights in (`renderer_canvas_render_rd.cpp:2365-2384`) and what
+  // order-dependent MIX depends on.
   const listed = useLightSequence();
   const ordinal = useRegisterCanvasLight2D(lights, {
     reach,

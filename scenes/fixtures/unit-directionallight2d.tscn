@@ -1,7 +1,8 @@
-; Moves one variable: a DirectionalLight2D's reach. Three grey panels at light_mask 1, 2 and 0,
-; the last at z_index 2000, all take the same warm light, since Godot runs every directional light
-; over every lit item. The clear colour below them takes none. No other scene has a light without a
-; cull mask, so a regression that culls a panel, or drops `color.a × energy`, shows only here.
+; Moves one variable: a DirectionalLight2D's reach. Three grey panels at light_mask 1, 2 and 0, the
+; last at z_index 2000, all take the same warm light, since Godot runs every directional light over
+; every lit item (`canvas.glsl:726`). The clear colour below them takes none. No other scene has a
+; light without a cull mask, so a regression that culls a panel, or drops `color.a × energy`, shows
+; only here.
 
 [gd_scene format=3]
 

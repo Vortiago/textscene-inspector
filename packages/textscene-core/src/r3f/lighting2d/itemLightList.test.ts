@@ -12,7 +12,6 @@ import {
   itemLightList,
   itemPositionalLights,
   positionalCandidates,
-  lightListId,
   drawsInPass,
   planLightLists,
   placementId,
@@ -99,7 +98,10 @@ describe('itemLightList under the per-item cap', () => {
   });
 });
 
-/** Godot's per-item limit on positional lights: the loop breaks at `MAX_LIGHTS_PER_ITEM - 1`. */
+/**
+ * Godot's per-item limit on positional lights: the loop breaks at `MAX_LIGHTS_PER_ITEM - 1`
+ * (`renderer_canvas_render_rd.cpp:2380`).
+ */
 const CAP = MAX_LIGHTS_PER_ITEM - 1;
 
 const ITEM_RECT: Rect2 = { x: 0, y: 0, w: 10, h: 10 };
@@ -186,29 +188,6 @@ describe('itemPositionalLights', () => {
   });
 });
 
-describe('lightListId', () => {
-  it('is the same for two lists of the same lights and shadow state', () => {
-    const all = lights(light(), light());
-    expect(lightListId(itemLightList(all, ITEM))).toBe(lightListId(itemLightList(all, { ...ITEM, z: 3 })));
-  });
-
-  it('separates two lists that differ only in one shadow state', () => {
-    const all = lights(light({ reach: key({ itemCullMask: 3 }), shadowItemCullMask: 2 }));
-    expect(lightListId(itemLightList(all, ITEM))).not.toBe(
-      lightListId(itemLightList(all, { ...ITEM, lightMask: 2 }))
-    );
-  });
-
-  it('cannot be spoofed by running two ordinals together', () => {
-    expect(lightListId([{ ordinal: 11, unshadowed: false }])).not.toBe(
-      lightListId([
-        { ordinal: 1, unshadowed: false },
-        { ordinal: 1, unshadowed: false },
-      ])
-    );
-  });
-});
-
 function placements(...items: [ItemPlacement, boolean][]): ReadonlyMap<string, PlacementDeclarations> {
   return new Map(
     items.map(([placement, hasLightOnly]) => [placementId(placement), { placement, hasLightOnly }])
@@ -240,6 +219,12 @@ describe('planLightLists', () => {
       placements([ITEM, false], [{ ...ITEM, lightMask: 3 }, false])
     );
     expect(plans.map((plan) => plan.entries.map((entry) => entry.ordinal))).toEqual([[0], [0, 1]]);
+  });
+
+  it('gives placements a plan each when their lists differ only in one shadow state', () => {
+    const all = lights(light({ reach: key({ itemCullMask: 3 }), shadowItemCullMask: 2 }));
+    const plans = planLightLists(all, placements([ITEM, false], [{ ...ITEM, lightMask: 2 }, false]));
+    expect(plans.map((plan) => plan.entries[0]!.unshadowed)).toEqual([true, false]);
   });
 
   it('leaves out a placement no light reaches', () => {

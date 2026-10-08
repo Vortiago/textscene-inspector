@@ -1,6 +1,7 @@
 /**
- * The frame step behind Godot's 15-light cap: it measures the rects of the items on a crowded
- * placement and the rects of the positional lights, and hands each item the lights it takes.
+ * The frame step behind Godot's 15-light cap (`renderer_canvas_render_rd.cpp:2380`): it measures
+ * the rects of the items on a crowded placement and the rects of the positional lights, and hands
+ * each item the lights it takes.
  */
 
 import { describe, expect, it, vi } from 'vitest';

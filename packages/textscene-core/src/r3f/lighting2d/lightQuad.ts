@@ -73,8 +73,9 @@ export type LightQuadStencil = Partial<THREE.ShaderMaterialParameters>;
 
 /**
  * Whether a `shadow_color` puts anything into the accumulator. Its term is `S.rgb · s` under the
- * alpha `(1 − s) + S.a · s`. A binary shadow leaves only `S.a` in front, so a transparent colour adds
- * nothing, and Godot's default is exactly that. A filtered penumbra keeps `S.rgb · s · (1 − s)`.
+ * alpha `(1 − s) + S.a · s`. A binary shadow leaves only `S.a` in front, so a transparent colour
+ * adds nothing, and Godot's default (`light_2d.h:58`) is exactly that. A filtered penumbra keeps
+ * `S.rgb · s · (1 − s)`.
  */
 export function shadowColorContributes(shadowColor: Color, filter: number): boolean {
   if (shadowColor.a > 0) return true;

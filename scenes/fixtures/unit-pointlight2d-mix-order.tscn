@@ -1,7 +1,8 @@
 [gd_scene format=3]
 
 ; Moves one variable: a MIX light over a light of another range_item_cull_mask on one item.
-; Godot mixes toward the MIX light after it adds the first light, in list order. Every other blend
+; Godot mixes toward the MIX light after it adds the first light, in list order
+; (`renderer_canvas_render_rd.cpp:2365-2384`, `canvas.glsl:559-560`). Every other blend
 ; scene lights each item through lights of one mask, so a MIX light summed with an earlier light
 ; of another mask shows only here.
 

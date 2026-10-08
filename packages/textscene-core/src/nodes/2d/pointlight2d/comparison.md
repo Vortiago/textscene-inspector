@@ -84,23 +84,25 @@ the lower panel stays lit behind the bar.
 
 <!-- compare: image=unit-pointlight2d-mix-order status=done fixture=unit-pointlight2d-mix-order.tscn -->
 
-Godot applies every light on an item's list in order, whatever each light's
-`range_item_cull_mask`. The MIX light reaches the surface through mask 2 and the ADD light
-through mask 1. Where both reach, the MIX light mixes from what the ADD light left.
+Godot applies every light on an item's list in order, whatever each light's `range_item_cull_mask`
+(`renderer_canvas_render_rd.cpp:2365-2384`). The MIX light reaches the surface through mask 2 and
+the ADD light through mask 1. Where both reach, the MIX light mixes from what the ADD light left.
 
 ## Many cull masks on one item
 
 <!-- compare: image=unit-pointlight2d-many-masks status=done fixture=unit-pointlight2d-many-masks.tscn -->
 
 Six lights, one mask bit each, reach one surface whose `light_mask` holds all six. Godot
-draws every light on the item's list, however many masks the canvas holds.
+draws every light on the item's list, however many masks the canvas holds
+(`renderer_canvas_render_rd.cpp:2366`).
 
 ## A MIX light with a shadow_color
 
 <!-- compare: image=unit-pointlight2d-mix-shadow-color status=done fixture=unit-pointlight2d-mix-shadow-color.tscn -->
 
 Where a MIX light is blocked, Godot mixes the colour under it toward `shadow_color` by
-`shadow_color.a`. The ADD light under it dims there too, behind the bar on the right.
+`shadow_color.a` (`canvas.glsl:544-546`, `:559-560`). The ADD light under it dims there too, behind
+the bar on the right.
 
 ## A MIX light over a tinted shadow
 

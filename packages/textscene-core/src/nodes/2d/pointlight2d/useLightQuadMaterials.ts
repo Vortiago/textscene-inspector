@@ -16,7 +16,7 @@ import {
 } from '../../../r3f/lighting2d/lightQuad';
 import { litQuadStencilProps, shadowColorQuadStencilProps } from '../../../r3f/lighting2d/ShadowVolumeMask';
 
-export interface LightQuadMaterialOptions {
+interface LightQuadMaterialOptions {
   readonly cookie: THREE.Texture;
   readonly color: Color;
   readonly energy: number;

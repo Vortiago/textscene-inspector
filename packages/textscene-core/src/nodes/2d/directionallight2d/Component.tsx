@@ -1,7 +1,8 @@
 /**
  * DirectionalLight2D draws nothing on the canvas, as in Godot: it adds one term over the whole
  * accumulation buffer every lit canvas item multiplies its albedo against
- * (`r3f/lighting2d/CanvasLighting2D`). It reaches every item on its canvas layers, and
+ * (`r3f/lighting2d/CanvasLighting2D`). It reaches every lit item on its canvas layers
+ * (`canvas.glsl:726`, `renderer_viewport.cpp:679-685`), and
  * its shadow samples a parallel map (`directionalShadowMap.ts`) built over the view.
  */
 
@@ -30,7 +31,8 @@ import {
 
 export function DirectionalLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as DirectionalLight2DProperties;
-  // Null while Godot leaves the light off its directional list: disabled, hidden, or past eight.
+  // Null while Godot leaves the light off its directional list: disabled, hidden, or past eight
+  // (`light_2d.cpp:59`, `renderer_viewport.cpp:492-513`).
   const slot = useDirectionalLightSlot();
   const lit = props.enabled && slot !== null;
 

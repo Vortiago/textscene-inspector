@@ -26,9 +26,10 @@ export interface Light2DProperties extends Node2DProperties {
    */
   shadow_item_cull_mask: number;
   /**
-   * `Light2D.range_z_min` / `range_z_max`: the window of accumulated `z_index`
-   * (Godot's `z_final`, clamped to +/-4096) this light reaches, tested per item,
-   * inclusive. `z_index`'s -4096..4096 is only a hint, so an item can sit outside.
+   * `Light2D.range_z_min` / `range_z_max`: the window of accumulated `z_index` (Godot's `z_final`,
+   * clamped to +/-4096 at `renderer_canvas_cull.cpp:432`) this light reaches, tested per item,
+   * inclusive (`renderer_canvas_render_rd.cpp:2366`). `z_index`'s -4096..4096 is only a hint, so an
+   * item can sit outside.
    */
   range_z_min: number;
   range_z_max: number;

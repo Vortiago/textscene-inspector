@@ -27,7 +27,7 @@ interface TileLayerItem {
   name: string;
 }
 
-export interface TileQuadrantsProps extends TileLayerItem {
+interface TileQuadrantsProps extends TileLayerItem {
   /** The cells of each quadrant, in draw order (`layerQuadrants`). */
   quadrants: readonly (readonly PlacedCell[])[];
 }

@@ -167,8 +167,9 @@ describe('<CanvasLayer>', () => {
 
 /**
  * A sub-viewport pass draws through a Camera2D's view (ADR-0006). Godot draws a layer's canvas
- * through the layer's own transform, so a layer that does not follow the viewport stays put in
- * viewport pixels, and one that follows draws through the view, scaled about its centre.
+ * through the layer's own transform (`canvas_layer.cpp:79-107`), so a layer that does not follow
+ * the viewport stays put in viewport pixels, and one that follows draws through the view, scaled
+ * about its centre.
  */
 describe('<CanvasLayer> in a sub-viewport pass', () => {
   const SIZE = { x: 300, y: 200 };

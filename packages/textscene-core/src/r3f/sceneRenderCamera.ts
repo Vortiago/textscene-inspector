@@ -36,7 +36,8 @@ export function createViewportCanvasCamera(): THREE.OrthographicCamera {
 /**
  * Whether a render through `camera` is a 2D sub-viewport's pass, the only surface with a Godot
  * canvas transform. The 2D stage draws through the store's free camera, with none, as Godot's
- * editor does, and a 3D sub-viewport's orthographic Camera3D frames no canvas.
+ * editor does (`camera_2d.cpp:41-44`), and a 3D sub-viewport's orthographic Camera3D frames no
+ * canvas.
  */
 export function isViewportPass(camera: THREE.Camera): camera is THREE.OrthographicCamera {
   return viewportCanvasCameras.has(camera);

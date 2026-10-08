@@ -11,7 +11,7 @@ import { groupBySortY } from './tileYSort';
 import type { TileGrid } from './types';
 
 interface Quadrant {
-  /** `map_to_local` of the quadrant coords, not of the quadrant's first cell, which Godot sorts by. */
+  /** `map_to_local` of the quadrant coords, not of its first cell, which Godot sorts by (`:418`). */
   readonly local: { x: number; y: number };
   readonly cells: PlacedCell[];
 }
@@ -43,7 +43,7 @@ export function renderingQuadrants(
 }
 
 /** How a layer splits into quadrants. */
-export interface QuadrantLayout {
+interface QuadrantLayout {
   readonly ySortEnabled: boolean;
   /** Added to each row's sort Y while y-sorted. */
   readonly ySortOrigin: number;

@@ -30,8 +30,8 @@ export function parseLight2D(heading: ParsedHeading, properties: Record<string, 
     range_layer_min: intOr(properties.range_layer_min, LIGHT_2D_RANGE_DEFAULTS.layerMin, context),
     range_layer_max: intOr(properties.range_layer_max, LIGHT_2D_RANGE_DEFAULTS.layerMax, context),
     shadow_enabled: boolOr(properties.shadow_enabled, false, context),
-    // Transparent black: Godot subtracts nothing extra where a shadow falls, it
-    // simply withholds the light, so the surface keeps its unlit colour.
+    // Transparent black (`light_2d.h:58`): where a shadow falls, Godot mixes the light toward
+    // nothing (`canvas.glsl:544-546`), so the surface keeps its unlit colour.
     shadow_color: colorOr(properties.shadow_color, { r: 0, g: 0, b: 0, a: 0 }),
     shadow_filter: enumOr(properties.shadow_filter, 0 as Light2DShadowFilter, [0, 1, 2] as const, context),
     shadow_filter_smooth: floatOr(properties.shadow_filter_smooth, 0.0, context),

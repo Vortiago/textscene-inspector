@@ -1,12 +1,13 @@
 /**
- * The inverted range window both Light2D rules report. Godot tests each window inclusively and
- * Light2D's setters only assign, so `min > max` reaches nothing but still costs its pass.
+ * The inverted range window both Light2D rules report. Godot tests each window inclusively
+ * (`renderer_canvas_render_rd.cpp:2366`, `renderer_viewport.cpp:672`) and Light2D's setters only
+ * assign, so `min > max` reaches nothing but still costs its pass.
  */
 
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { LIGHT_2D_RANGE_DEFAULTS } from './types.js';
 
-export interface RangeWindow {
+interface RangeWindow {
   readonly min: string;
   readonly max: string;
   readonly minDefault: number;
@@ -33,7 +34,8 @@ export const LAYER_WINDOW: RangeWindow = {
 
 /**
  * The message for `window` on a `typeName` node when it is inverted, or null when it is not or a
- * bound is malformed, which the validators already report. An absent half takes Godot's default:
+ * bound is malformed, which the validators already report. An absent half takes Godot's default
+ * (`light_2d.h:61-64`):
  * `range_z_max = -2000` alone is already empty against the default `range_z_min` of -1024.
  */
 export function invertedRangeWindowMessage(

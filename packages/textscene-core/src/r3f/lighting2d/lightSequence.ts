@@ -1,6 +1,7 @@
 /**
- * A light's place in its canvas light list, its draw order: Godot applies lights in attach order,
- * the preorder walk, and MIX depends on the order. The stencil ordinal cannot serve, as it follows
+ * A light's place in its canvas light list, its draw order: Godot applies lights in attach order
+ * (`renderer_canvas_cull.cpp:2102`, `renderer_viewport.cpp:450-473`), the preorder walk, and MIX
+ * depends on the order. The stencil ordinal cannot serve, as it follows
  * cookie load order and is reused on unmount. The walk reads the live tree, since
  * `YSortDispatcher` mounts in sort order and Godot ranks by tree position.
  */
@@ -20,7 +21,7 @@ export function isPositionalCanvasLight(node: TscnNode): boolean {
 }
 
 /** Whether a node is shown, reading the parsed `visible` a CanvasItem parser leaves unset by default. */
-export function isShownCanvasNode(node: TscnNode): boolean {
+function isShownCanvasNode(node: TscnNode): boolean {
   return (node.properties as { visible?: boolean }).visible !== false;
 }
 

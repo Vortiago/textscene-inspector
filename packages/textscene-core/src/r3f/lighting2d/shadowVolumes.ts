@@ -44,7 +44,7 @@ export interface ShadowCasterEdges {
   cullMode: OccluderCullMode;
   /**
    * The occluder polygon's local AABB, Godot's `aabb_cache`, through the occluder's transform.
-   * Godot culls on these bounds, not on the edges.
+   * Godot culls on these bounds, not on the edges (`renderer_viewport.cpp:544`).
    */
   bounds: Quad2;
 }
@@ -77,10 +77,11 @@ export function edgeNormals([a, b, c]: Quad2): Vector2[] {
 }
 
 /**
- * A test of whether bounds meet the convex `polygon` (`[x,y, …]`), whose edge normals are `polygonAxes`. Both
- * are convex, so a separating axis among the two shapes' edge normals decides it, as Godot's
- * `Rect2::intersects_transformed` does. The polygon's own intervals are projected once, for every
- * bounds the test meets. Bounds that are not finite meet nothing.
+ * A test of whether bounds meet the convex `polygon` (`[x,y, …]`), whose edge normals are
+ * `polygonAxes`. Both are convex, so a separating axis among the two shapes' edge normals decides
+ * it, as Godot's `Rect2::intersects_transformed` does (`renderer_viewport.cpp:544`). The polygon's
+ * own intervals are projected once, for every bounds the test meets. Bounds that are not finite
+ * meet nothing.
  */
 export function convexBoundsTest(
   polygon: ArrayLike<number>,

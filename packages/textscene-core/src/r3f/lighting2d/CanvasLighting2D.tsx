@@ -49,7 +49,10 @@ function planIds(plans: readonly LightListPlan[], needs: (plan: LightListPlan) =
   return plans.filter(needs).map((plan) => plan.id);
 }
 
-/** The game viewport in the Y-up world: Godot's `clip_rect`, which the stage draws untransformed. */
+/**
+ * The game viewport in the Y-up world: Godot's `clip_rect` (`renderer_viewport.cpp:390`), which
+ * the stage draws untransformed.
+ */
 function useWorldViewportRect(): Rect2 {
   const { w, h } = useGameViewportRect();
   return useMemo(() => ({ x: 0, y: -h, w, h }), [w, h]);
@@ -70,8 +73,8 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
   const targets = useAccumulationTargets(planIds(plans, () => true));
   // Light Only seeds from white, and MIX interpolates toward the light, so the seed must be there
   // while the lights apply: a second pass over the same quads with another seed, run only for a
-  // list a Light Only item reads. Godot's transparent default `shadow_color` adds nothing, so the
-  // tint pass runs only for a list a tinting light shadows.
+  // list a Light Only item reads. Godot's transparent default `shadow_color` (`light_2d.h:58`)
+  // adds nothing, so the tint pass runs only for a list a tinting light shadows.
   const lightOnlyTargets = useAccumulationTargets(planIds(plans, (plan) => plan.hasLightOnly));
   const shadowTintTargets = useAccumulationTargets(planIds(plans, (plan) => plan.tintsShadow));
 

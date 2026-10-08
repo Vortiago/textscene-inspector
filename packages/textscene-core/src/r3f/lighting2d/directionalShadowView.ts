@@ -1,6 +1,7 @@
 /**
  * What a DirectionalLight2D's shadow map is built over, and how the light quad reaches it. The map
- * depends on the light's direction, Godot's `clip_rect` from the project viewport and
+ * depends on the light's direction, Godot's `clip_rect` from the project viewport
+ * (`renderer_canvas_render_rd.cpp:1140-1146`) and
  * `max_distance`, so a pan or a zoom leaves it alone and only moves the quad's NDC lookup.
  */
 
@@ -45,7 +46,7 @@ export function useDirectionalShadowView(
   enabled: boolean,
   maxDistance: number
 ): DirectionalShadowView | null {
-  // Godot's `clip_rect`.
+  // Godot's `clip_rect` (`renderer_viewport.cpp:390`).
   const viewport = useGameViewportRect();
   const clip = useMemo(() => viewportQuad(viewport), [viewport]);
   const [view, setView] = useState<DirectionalShadowView | null>(null);

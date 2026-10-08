@@ -1,7 +1,8 @@
 /**
  * `useLightSequence` and `useDirectionalLightSlot`: a light's slot in its canvas light list, in
  * tree order (`lightSequence.ts` says why). The live tree is walked once per canvas, not per light,
- * since the numbering belongs to the list. Godot keeps one list per canvas, so a light inside a
+ * since the numbering belongs to the list. Godot keeps one list per canvas
+ * (`renderer_canvas_cull.h:153-154`), so a light inside a
  * CanvasLayer belongs to another list.
  */
 
@@ -21,7 +22,8 @@ interface CanvasLightLists {
   /** `path → sequence` over the positional lights. */
   readonly positional: ReadonlyMap<string, number>;
   /**
-   * `path → slot` over the directional lights Godot lists, at most `MAX_2D_DIRECTIONAL_LIGHTS`.
+   * `path → slot` over the directional lights Godot lists, at most `MAX_2D_DIRECTIONAL_LIGHTS`
+   * (`renderer_viewport.cpp:511`).
    * Null with no live tree to walk.
    */
   readonly directional: ReadonlyMap<string, number> | null;
@@ -73,7 +75,8 @@ export function useLightSequence(): number | null {
 
 /**
  * This DirectionalLight2D's slot in the directional list, its draw order among the directional
- * lights, or null when Godot leaves it off the list: disabled, hidden, or past the eighth. With no
+ * lights, or null when Godot leaves it off the list: disabled, hidden, or past the eighth
+ * (`light_2d.cpp:59`, `renderer_viewport.cpp:492-513`). With no
  * live tree to walk, a light takes slot 0.
  */
 export function useDirectionalLightSlot(): number | null {
