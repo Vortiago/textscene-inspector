@@ -37,7 +37,7 @@ Strict parsing format-checks these `AnimatedSprite3D` properties, plus 20 inheri
 |  | `animatedsprite3d-animation-no-spriteframes` | error |
 <!-- lint:end -->
 
-The lenient parser reads the GeometryInstance3D base and what places the quad: `pixel_size`, `axis`, `billboard`, `offset` and `centered`. The scene cull measures the node by the quad of the frame that `sprite_frames`, `animation` and `frame` select, so its visibility range still decides its visibility dependants. `autoplay`, `frame_progress` and `speed_scale` are never read.
+The lenient parser reads the GeometryInstance3D base. It also reads what places the quad: `pixel_size`, `axis`, `billboard`, `offset` and `centered`. The scene cull measures the node by the quad of the frame that `sprite_frames`, `animation` and `frame` select. So its visibility range still decides its visibility dependants. `autoplay`, `frame_progress` and `speed_scale` are never read.
 
 ## Known limitations
 
