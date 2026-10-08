@@ -41,7 +41,6 @@ const MODEL: TileSetModel = {
     [0, atlasSource(0)],
     [1, atlasSource(1)],
   ]),
-  sourceOrder: [0, 1],
 };
 
 function cell(sourceId: number, x: number, y: number): PlacedCell {
@@ -52,7 +51,7 @@ const TINT = { color: new THREE.Color(1, 1, 1), opacity: 1 };
 
 function render(quadrants: readonly (readonly PlacedCell[])[], zFinal = 0) {
   const fake = createFakeResourceLoader();
-  for (const id of MODEL.sourceOrder) {
+  for (const id of MODEL.sources.keys()) {
     const texture = new THREE.Texture();
     (texture as unknown as { image: { width: number; height: number } }).image = { width: 16, height: 16 };
     fake.textures.seed(`res://source${id}.png`, texture);
@@ -99,6 +98,14 @@ describe('<TileQuadrants>', () => {
   it('draws every batch of a quadrant after the batches of the quadrant before it', async () => {
     const { tree } = render([[cell(0, 0, 0), cell(1, 1, 0)], [cell(0, 16, 0)]]);
     expect(meshOrders(await tree)).toEqual([0, 1, 2]);
+  });
+
+  it("draws a quadrant's cells in order across sources, one batch per run of a source", async () => {
+    const { tree } = render([[cell(0, 0, 0), cell(1, 1, 0), cell(0, 2, 0)]]);
+    const meshes = (await tree).scene.findAllByType('Mesh').map((mesh) => mesh.instance as THREE.Mesh);
+    const quadCounts = meshes.map((mesh) => mesh.geometry.getAttribute('position').count / 4);
+    expect(meshes.map((mesh) => mesh.renderOrder)).toEqual([0, 1, 2]);
+    expect(quadCounts).toEqual([1, 1, 1]);
   });
 
   it('declares no lit item for a layer with no quadrant', async () => {

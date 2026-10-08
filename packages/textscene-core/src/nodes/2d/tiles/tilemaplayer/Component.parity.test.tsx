@@ -112,7 +112,7 @@ describe('TileMapLayer render parity', () => {
     expect(material.color.r).toBeCloseTo(srgbToLinear(0.5), 4);
   });
 
-  it('batches per atlas source: one mesh per source, later sources nudged forward in z', async () => {
+  it('batches each run of one atlas source in its own mesh, later runs drawing later', async () => {
     // header + cell (0,0) from source 0 + cell (1,0) from source 1.
     const twoSources =
       'PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0)';

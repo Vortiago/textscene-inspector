@@ -1,5 +1,5 @@
 /**
- * Batched tile geometry: one merged quad set per atlas source as plain typed arrays, 4 vertices and
+ * Batched tile geometry: one merged quad set per run of one atlas source as plain typed arrays, 4 vertices and
  * 6 indices per cell. Positions are Godot pixels with Y negated once (the node group is conjugated,
  * see node2dTransform). UVs follow r3f/spriteFrame.ts's flipY convention, v = 1 − y/texH, but
  * window through geometry, not texture.repeat, since every cell shares one cached texture.

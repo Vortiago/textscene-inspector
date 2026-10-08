@@ -1,6 +1,6 @@
 /**
  * Draws a TileMap, the deprecated multi-layer node: each layer's rendering quadrants, each a lit
- * canvas item of one batched mesh per atlas source. An unresolvable TileSet or undecodable layer
+ * canvas item of one batched mesh per source run. An unresolvable TileSet or undecodable layer
  * data leaves the transform-only group with its children (ADR-0008).
  */
 

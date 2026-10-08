@@ -4,7 +4,7 @@
  * their material resolution, canvas tint, light cull and visibility itself.
  */
 
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../../../../parser/types.js';
 import { useCanvasItemTint } from '../../../../r3f/canvasItemModulate.js';
 import { useCanvasItemMaterial } from '../../../../r3f/components/canvasItemMaterialContext.js';
@@ -29,8 +29,7 @@ export function TileGroupRenderer({
   /**
    * The Y-group's draw sequence, composed into the key here: `z_final` is correct
    * only inside `<LiftedAncestors>`, which provides `EffectiveZ`. The group holds
-   * the key. Each atlas batch's `renderOrder` orders it within that key, a batching
-   * artefact, since Godot interleaves a quadrant's cells in scan order.
+   * the key. Each source run's `renderOrder` orders it within that key.
    */
   sequence: number;
   node: TscnNode;
@@ -49,6 +48,9 @@ export function TileGroupRenderer({
   // The ordinary path gates `visible` in <CanvasItem2D> and `enabled` in the body.
   // This path bypasses both, so it gates them here.
   const drawable = tileProps.visible !== false && tileProps.enabled && !!cells?.length && status === 'loaded';
+  // The row is one rendering quadrant (`tile_map_layer.cpp:546-548`). Memoised, so the row's
+  // batches keep their geometry across a re-render of the sorted list.
+  const quadrants = useMemo(() => (cells ? [cells] : []), [cells]);
 
   // The layer's own Node2D offset, which <CanvasItem2D> applies on the ordinary path.
   // The rows' sort keys already include `position.y`, so the draw must too.
@@ -63,11 +65,10 @@ export function TileGroupRenderer({
       renderOrder={renderOrder}
     >
       {drawable && model && cells && (
-        // The row is one rendering quadrant (`tile_map_layer.cpp:546-548`). Lights cull against
-        // `zFinal`, not `item.effectiveZ`: `YSortContext` has no provider, so `item.effectiveZ`
-        // always starts at 0 and drops every `z_index` at or above the y-sort root.
+        // Lights cull against `zFinal`, not `item.effectiveZ`: `YSortContext` has no provider, so
+        // `item.effectiveZ` always starts at 0 and drops every `z_index` at or above the y-sort root.
         <TileQuadrants
-          quadrants={[cells]}
+          quadrants={quadrants}
           model={model}
           tint={tint}
           material={material}

@@ -1,6 +1,6 @@
 /**
- * One batched mesh for the cells of a tile layer that draw from one atlas
- * source, with the unlit 2D material of Sprite2D. It owns the source's texture load.
+ * One batched mesh for a run of tile cells that draw from one atlas source, with the
+ * unlit 2D material of Sprite2D. It owns the source's texture load.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -19,10 +19,7 @@ export interface TileSourceMeshProps {
   source: AtlasSourceModel;
   cells: readonly DrawableCell[];
   grid: TileGrid;
-  /**
-   * Draw order within the tile group: a TileMap's layer index or the source's
-   * place among the batches. three compares the group's order first.
-   */
+  /** The run's place among the layer's runs. three compares the group's order first. */
   renderOrder: number;
   /** Own-pixel tint from the node's CanvasItem ritual (linear space). */
   color: THREE.Color;

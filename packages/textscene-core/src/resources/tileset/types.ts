@@ -32,12 +32,6 @@ export interface TileGrid {
 export interface TileSetModel extends TileGrid {
   /** Atlas sources keyed by their `sources/N` id. */
   sources: Map<number, AtlasSourceModel>;
-  /**
-   * Source ids, each once, in file order: this previewer's batching order. Godot sorts
-   * `source_ids` (tile_set.cpp:483-484) and draws cells in scan order, not per source, so there
-   * is no engine order to match (see `tileSourceZ`). One entry per key, not per spelling of one.
-   */
-  sourceOrder: number[];
 }
 
 export interface AtlasSourceModel {

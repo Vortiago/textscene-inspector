@@ -10,8 +10,9 @@ renders_as: batched textured tile quads
 # TileMapLayer
 
 TileMapLayer paints a grid of tiles from a TileSet atlas. The previewer decodes
-`tile_map_data` at parse time. It draws each rendering quadrant as a canvas item of its own,
-with one batched quad mesh per atlas source.
+`tile_map_data` at parse time. It draws each rendering quadrant as a canvas item of its own.
+The quadrant's cells draw in Godot's order, x then y, with each run of cells from one atlas
+source batched into one quad mesh.
 
 A rendering quadrant is a `rendering_quadrant_size` square of cells, or one tile row of a
 y-sorted layer. Each quadrant takes its own lights, so a large layer is not held to 15
@@ -50,8 +51,3 @@ Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited 
 `enabled` falls back to `true` when absent or unparseable. `tile_set` passes through as
 the raw reference string, so a dangling reference draws no tiles. Malformed
 `tile_map_data` warns and drops every cell, leaving an empty layer.
-
-## Known limitations
-
-- **Approximated** The cells of a quadrant batch one mesh per atlas source, and the sources
-  draw in appearance order. Cells from different sources in one quadrant do not interleave.
