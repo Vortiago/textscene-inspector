@@ -125,6 +125,7 @@ export interface EnvironmentProperties {
 export interface EnvironmentSettings {
   background: {
     mode: number;
+    /** The sRGB colour BG_CLEAR_COLOR or BG_COLOR draws, scaled by the energy multiplier. */
     color: Color;
     energyMultiplier: number;
   };

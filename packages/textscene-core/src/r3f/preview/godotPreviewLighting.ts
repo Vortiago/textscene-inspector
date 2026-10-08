@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../parser/types';
 import type { Color } from '../../utils/colorParser';
 import { createEnvironmentSettings } from '../../resources/environment/build';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
 import type { EnvironmentSettings } from '../../resources/environment/types';
 import { decodeSkyMaterial } from '../../resources/sky/decode';
 import type { ProceduralSkyProperties, SkyProperties } from '../../resources/sky/types';
@@ -120,7 +121,9 @@ export function previewEnvironment(): { settings: EnvironmentSettings; sky: SkyP
       tonemap_mode: String(2),
       // The editor preview enables glow; emissive materials bloom because of it.
       glow_enabled: 'true',
-    })
+    }),
+    // BG_SKY draws no clear colour.
+    DEFAULT_CLEAR_COLOR
   );
 
   const horizon = previewHorizonColor();

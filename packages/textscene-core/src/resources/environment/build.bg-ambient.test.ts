@@ -7,9 +7,10 @@
 import { describe, expect, it } from 'vitest';
 import { decodeEnvironment } from './decode';
 import { createEnvironmentSettings } from './build';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
 
 function ambientFor(properties: Record<string, string>) {
-  return createEnvironmentSettings(decodeEnvironment(properties)).ambient;
+  return createEnvironmentSettings(decodeEnvironment(properties), DEFAULT_CLEAR_COLOR).ambient;
 }
 
 describe('ambient from the background source', () => {
@@ -33,6 +34,11 @@ describe('ambient from the background source', () => {
   it("uses Godot's default clear colour for BG_CLEAR_COLOR (0), the default mode", () => {
     // ProjectSettings rendering/environment/defaults/default_clear_color.
     expect(ambientFor({})).toEqual({ color: { r: 0.3, g: 0.3, b: 0.3, a: 1 }, energy: 1 });
+  });
+
+  it("uses the project's clear colour for BG_CLEAR_COLOR when the project sets one", () => {
+    const red = { r: 1, g: 0, b: 0, a: 1 };
+    expect(createEnvironmentSettings(decodeEnvironment({}), red).ambient?.color).toEqual(red);
   });
 
   it('emits no flat ambient for a sky background — that path is a cubemap', () => {
