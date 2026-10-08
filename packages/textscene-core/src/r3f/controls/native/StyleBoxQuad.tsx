@@ -23,7 +23,8 @@ import type { Rect2 } from './rect';
 import { useControlClipPlanes } from './controlClipping';
 import { multiplyModulate, WHITE_MODULATE, type RGBA } from '../../canvasItemModulate';
 import { canvasItemFacing } from '../../canvasItemFacing';
-import { materialProgramInputs, type ProgramInjection } from '../../materialProgramInputs';
+import { materialProgramInputs } from '../../materialProgramInputs';
+import { CANVAS_SRGB_DEFINES } from '../../canvasSrgbMultiply';
 import { pinNoColorSpace, useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
 import { useGodotLinearColor } from '../../godotColor';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -120,7 +121,9 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
       transparent: true,
       depthWrite: false,
       clippingPlanes: clippingPlanes as THREE.Plane[],
-      injection: STYLEBOX_SRGB_VERTEX_COLORS,
+      // Godot ramps a `border_blend` in sRGB, and linear endpoints put the midpoint 38
+      // counts high in Godot 4.6.3, so the vertex colours stay sRGB to the fragment.
+      defines: CANVAS_SRGB_DEFINES,
     },
     // Single pass: `StyleBoxFlat::draw` emits rings in painter's order, and its
     // `(i, i+2, i+1)` pattern (`style_box_flat.cpp:403-408`) gives each ring quad's
@@ -151,38 +154,6 @@ function buildGeometry(styleBox: StyleBoxFlatData, rect: Rect2): THREE.BufferGeo
   geometry.setIndex(indices);
   geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 4));
   return geometry;
-}
-
-/**
- * The sRGB decode paired with its own cache key (`materialProgramInputs.ts`).
- * Without the key, a StyleBox mesh and any other vertex-coloured basic material
- * share one compiled program.
- */
-const STYLEBOX_SRGB_VERTEX_COLORS: ProgramInjection = {
-  cacheKey: 'godot-stylebox-srgb-vertex-colors',
-  onBeforeCompile: decodeVertexColorsFromSRGB,
-};
-
-/**
- * `Color::srgb_to_linear` in GLSL on the interpolated colour, in `<color_fragment>`.
- * Godot ramps a `border_blend` in sRGB, and linear endpoints put the midpoint 38
- * counts high in Godot 4.6.3. Alpha stays: the AA feathers are alpha ramps, and
- * the curve would bend every edge.
- */
-function decodeVertexColorsFromSRGB(shader: { fragmentShader: string }): void {
-  // Exact at any ring width. Subdividing rings instead leaves 1.3 counts at 16
-  // bands, for 32x the vertices.
-  shader.fragmentShader = shader.fragmentShader.replace(
-    '#include <color_fragment>',
-    /* glsl */ `
-    vec3 godotSrgbToLinear = mix(
-      pow((vColor.rgb + 0.055) / 1.055, vec3(2.4)),
-      vColor.rgb / 12.92,
-      step(vColor.rgb, vec3(0.04045))
-    );
-    diffuseColor *= vec4(godotSrgbToLinear, vColor.a);
-    `
-  );
 }
 
 /**

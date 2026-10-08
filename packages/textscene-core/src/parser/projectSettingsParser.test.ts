@@ -15,6 +15,7 @@ import {
   projectExtensionListPath,
   projectLayoutDirectionEnv,
   projectThemeScale,
+  projectClearColor,
   projectViewportSize,
 } from './projectSettingsParser';
 
@@ -155,6 +156,22 @@ describe('projectThemeScale', () => {
  * `display/window/size/viewport_*`: the rect a 2D scene is composed against and a root
  * Control anchors to. `demos/2d/platformer` sets 800x480 and `demos/2d/pong` 640x400.
  */
+describe('projectClearColor', () => {
+  it('reads the default_clear_color override', () => {
+    const settings = { 'rendering/environment/defaults/default_clear_color': 'Color(0.1, 0.2, 0.3, 1)' };
+    expect(projectClearColor(settings)).toEqual({ r: 0.1, g: 0.2, b: 0.3, a: 1 });
+  });
+
+  it("falls back to Godot's 0.3 grey for a malformed value", () => {
+    const settings = { 'rendering/environment/defaults/default_clear_color': 'grey' };
+    expect(projectClearColor(settings)).toEqual({ r: 0.3, g: 0.3, b: 0.3, a: 1 });
+  });
+
+  it("gives Godot's 0.3 grey with no project", () => {
+    expect(projectClearColor(null)).toEqual({ r: 0.3, g: 0.3, b: 0.3, a: 1 });
+  });
+});
+
 describe('projectViewportSize', () => {
   it('reads both axes', () => {
     expect(

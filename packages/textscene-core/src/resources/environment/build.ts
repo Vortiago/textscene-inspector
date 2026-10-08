@@ -5,7 +5,7 @@
  */
 
 import { BackgroundMode, type EnvironmentProperties, type EnvironmentSettings } from './types';
-import type { Color } from '../../utils/colorParser';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
 import { GodotToneMapper } from './godotToneMapping';
 
 export type { EnvironmentSettings } from './types';
@@ -86,9 +86,6 @@ function glowLevelsFor(properties: EnvironmentProperties): number[] {
   const sum = levels.reduce((total, weight) => total + weight, 0);
   return sum > 0 ? levels.map((weight) => weight / sum) : levels;
 }
-
-/** Godot's ProjectSettings `rendering/environment/defaults/default_clear_color`. */
-const DEFAULT_CLEAR_COLOR: Color = { r: 0.3, g: 0.3, b: 0.3, a: 1 };
 
 const AMBIENT_SOURCE_BG = 0;
 const AMBIENT_SOURCE_COLOR = 2;

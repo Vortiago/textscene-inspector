@@ -105,12 +105,11 @@ describe('buildTileGeometryArrays', () => {
     expect(Array.from(positions)).toEqual([0, -16, 0, 16, -16, 0, 0, -32, 0, 16, -32, 0]);
   });
 
-  it("gives each vertex its tile's modulate, linear, with alpha as authored", () => {
-    // sRGB 0.5 decodes to 0.21404114 linear.
+  it("gives each vertex its tile's modulate as stored, sRGB, which the draw multiplies in sRGB", () => {
     const tinted = drawableCellOf({}, { modulate: { r: 1, g: 0.5, b: 0, a: 0.25 } });
     const { colors } = buildTileGeometryArrays([tinted], source, grid, 32, 32);
     expect(Array.from(colors, (c) => Math.round(c * 1e6) / 1e6)).toEqual(
-      Array.from({ length: 4 }, () => [1, 0.214041, 0, 0.25]).flat()
+      Array.from({ length: 4 }, () => [1, 0.5, 0, 0.25]).flat()
     );
   });
 

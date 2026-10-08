@@ -43,7 +43,7 @@ describe('useIconTexture', () => {
   it('turns on the post-filter decode every painter draws it through', () => {
     const { result } = renderHook(() => useCanvasDecodeDefines(useIconTexture(ICON)));
 
-    expect(result.current).toEqual({ DECODE_VIDEO_TEXTURE: '' });
+    expect(result.current).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
 
   it('memoises on the url, so a re-render with the same icon does not reload', () => {

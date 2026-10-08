@@ -18,6 +18,11 @@ import { canvasModulateColor } from '../../canvasModulate.js';
 import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
+import { installCanvasSrgbMultiply } from '../../canvasSrgbMultiply.js';
+import { ProjectClearColor } from './ProjectClearColor.js';
+
+// At import, before any program compiles: a program reads three's chunks only when it compiles.
+installCanvasSrgbMultiply();
 
 // Through the controls barrel, whose side-effect imports register every Control
 // type: the component file alone registers none. Lazy, so the registrations stay
@@ -61,6 +66,7 @@ export function World2DContents({
       <CanvasWorkspaceProvider workspace="2d">
         <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
           <CameraRig pan={pan} zoom={zoom} />
+          <ProjectClearColor />
           {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}
           <CanvasLighting2DProvider canvasModulate={canvasModulate}>

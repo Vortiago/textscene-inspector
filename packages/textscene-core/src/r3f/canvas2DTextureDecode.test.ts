@@ -96,10 +96,10 @@ describe('useCanvas2DTexture in a canvas', () => {
 });
 
 describe('useCanvasDecodeDefines', () => {
-  it('returns the decode define for a NoColorSpace texture', () => {
+  it('returns the sRGB-multiply define for a NoColorSpace texture', () => {
     const texture = makeTexture(THREE.NoColorSpace);
     const { result } = renderHook(() => useCanvasDecodeDefines(texture));
-    expect(result.current).toEqual({ DECODE_VIDEO_TEXTURE: '' });
+    expect(result.current).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
 
   it('returns undefined for an untouched (SRGBColorSpace) texture', () => {

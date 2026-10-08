@@ -11,6 +11,7 @@ import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
 import { useCanvas2DMap } from './canvas2DTextureDecode';
+import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
 import { canvasItemFacing } from './canvasItemFacing';
 import { materialProgramInputs } from './materialProgramInputs';
 import type { CanvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
@@ -45,7 +46,7 @@ export function TileSourceMesh({
   lighting,
 }: TileSourceMeshProps) {
   const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'texture');
-  const { texture: tex, defines: decodeDefines } = useCanvas2DMap(texResult.value);
+  const { texture: tex } = useCanvas2DMap(texResult.value);
   const image = tex?.image as { width?: number; height?: number } | undefined;
   const texW = image?.width;
   const texH = image?.height;
@@ -81,11 +82,11 @@ export function TileSourceMesh({
       map: tex,
       color,
       opacity,
-      // Each tile's `modulate`, multiplied onto its pixels (`tile_map_layer.cpp:2690`).
+      // Each tile's `modulate`, multiplied onto its pixels (`tile_map_layer.cpp:2690`) in sRGB.
       vertexColors: true,
       transparent: true,
       depthWrite: false,
-      defines: decodeDefines,
+      defines: CANVAS_SRGB_DEFINES,
     },
     merge: [canvasItemFacing(), blend, lighting],
   });

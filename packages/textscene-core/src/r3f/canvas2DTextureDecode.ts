@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useUploadedClone } from './tiledUpload/useTiledUpload';
 import { pinNoColorSpace, undecodedClone } from './undecodedTexture';
+import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
 
 // Re-exported for the 2D consumers. It lives in `undecodedTexture.ts`, since 3D
 // material data maps need it too.
@@ -39,12 +40,6 @@ export function useCanvas2DTexture(texture: THREE.Texture | null | undefined): T
 }
 
 /**
- * three's `DECODE_VIDEO_TEXTURE` (`map_fragment.glsl.js`) decodes the sample after
- * the filter, as Godot's canvas does. It needs no per-consumer state, so one object serves.
- */
-const DECODE_DEFINES: Readonly<Record<string, string>> = { DECODE_VIDEO_TEXTURE: '' };
-
-/**
  * `defines` for a `meshBasicMaterial` sampling `texture` as `map`, set only for a
  * `NoColorSpace` retag. A define reaches the GPU only on a newly mounted material,
  * which `materialProgramInputs` arranges, so the identity is memoised.
@@ -52,7 +47,10 @@ const DECODE_DEFINES: Readonly<Record<string, string>> = { DECODE_VIDEO_TEXTURE:
 export function useCanvasDecodeDefines(
   texture: THREE.Texture | null | undefined
 ): Record<string, string> | undefined {
-  return useMemo(() => (texture?.colorSpace === THREE.NoColorSpace ? DECODE_DEFINES : undefined), [texture]);
+  return useMemo(
+    () => (texture?.colorSpace === THREE.NoColorSpace ? CANVAS_SRGB_DEFINES : undefined),
+    [texture]
+  );
 }
 
 /** A 2D-canvas `map` and the `defines` that decode it, as one value. */

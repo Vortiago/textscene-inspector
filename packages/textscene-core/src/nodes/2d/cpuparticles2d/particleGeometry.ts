@@ -1,12 +1,11 @@
 /**
  * Turns a frozen particle pose into one `THREE.BufferGeometry`. Godot draws a
  * MultiMesh with per-instance RGBA, but three has no per-instance alpha, which
- * `color_ramp` animates. One merged geometry with RGBA vertex colours also blends
+ * `color_ramp` animates. One merged geometry with sRGB RGBA vertex colours also blends
  * in index order, which is what `draw_order` decides.
  */
 
 import * as THREE from 'three';
-import { godotColorToLinear } from '../../../r3f/godotColor';
 import type { RenderedParticle } from './simulate';
 
 /**
@@ -58,7 +57,6 @@ export function buildParticleGeometry(
 
   for (let i = 0; i < count; i++) {
     const { transform, color, anim } = pose[i]!;
-    const linear = godotColorToLinear(color);
     const frame = flipbookFrame(anim, totalFrames, flipbook?.loop ?? false);
     const uOffset = (frame % hFrames) / hFrames;
     const vOffset = Math.floor((frame + 0.5) / hFrames) / vFrames;
@@ -83,9 +81,9 @@ export function buildParticleGeometry(
       uvs[t + 1] = 1 - (corner.v / vFrames + vOffset);
 
       const k = (i * 4 + c) * 4;
-      colors[k] = linear.r;
-      colors[k + 1] = linear.g;
-      colors[k + 2] = linear.b;
+      colors[k] = color.r;
+      colors[k + 1] = color.g;
+      colors[k + 2] = color.b;
       colors[k + 3] = color.a;
     }
 

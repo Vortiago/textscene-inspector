@@ -11,6 +11,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useCanvas2DMap } from '../../../r3f/canvas2DTextureDecode';
+import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -136,7 +137,8 @@ function FilledPolygon({
       opacity: vertexColors ? tintOnlyOpacity : opacity,
       transparent: true,
       depthWrite: false,
-      defines: decodeDefines,
+      // sRGB vertex colours, which Godot interpolates and multiplies as stored.
+      defines: vertexColors ? CANVAS_SRGB_DEFINES : decodeDefines,
     },
     // The one canvas mesh where a facing split would be visible, since every
     // vertex carries its own colour and alpha. It is safe only because earcut
@@ -248,19 +250,14 @@ function buildVertexColors(vertexCount: number, vertexColors: Float32Array): Flo
   const out = new Float32Array(vertexCount * 4);
   for (let i = 0; i < vertexCount; i++) {
     // Each entry passes the same truncating 8-bit upload as the flat `color`
-    // (`polygon_2d.cpp:310-314` fills the same `Vector<Color>`), so quantize
-    // before the linear conversion.
+    // (`polygon_2d.cpp:310-314` fills the same `Vector<Color>`), and stays sRGB.
     const stored = quantizeVertexColor({
       r: vertexColors[i * 4]!,
       g: vertexColors[i * 4 + 1]!,
       b: vertexColors[i * 4 + 2]!,
       a: vertexColors[i * 4 + 3]!,
     });
-    const linear = godotColorToLinear(stored);
-    out[i * 4] = linear.r;
-    out[i * 4 + 1] = linear.g;
-    out[i * 4 + 2] = linear.b;
-    out[i * 4 + 3] = stored.a;
+    out.set([stored.r, stored.g, stored.b, stored.a], i * 4);
   }
   return out;
 }

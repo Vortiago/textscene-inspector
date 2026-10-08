@@ -24,6 +24,7 @@ import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext
 import { installDirectionalShadowFade } from './directionalShadow/shadowFade.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { installGodotDiffuse } from './godotDiffuse.js';
+import { installCanvasSrgbMultiply } from './canvasSrgbMultiply.js';
 import { installGodotSplitShadow } from './directionalShadow/splitShadowChunk.js';
 import { installDirectionalShadowAtlas } from './directionalShadow/shadowAtlasChunk.js';
 import { installGodotPositionalShadow } from './positionalShadow/positionalShadowChunk.js';
@@ -38,6 +39,8 @@ installGodotSplitShadow();
 installDirectionalShadowAtlas();
 installDirectionalShadowFade();
 installGodotPositionalShadow();
+// A SubViewport here can hold canvas items.
+installCanvasSrgbMultiply();
 
 /**
  * The contents of the `<Canvas>`, exported so `@react-three/test-renderer`,

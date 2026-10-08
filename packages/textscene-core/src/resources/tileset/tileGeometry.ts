@@ -6,15 +6,13 @@
  */
 
 import { mapToLocalPx } from './tilePlacement';
-import type { Color } from '../../utils/colorParser';
-import { sRGBToLinearRGB } from '../../utils/colorSpace';
 import type { DrawableCell } from './drawableCell';
 import { tileDrawInfo, type AtlasSourceModel, type TileGrid } from './types';
 
 export interface TileGeometryArrays {
   positions: Float32Array;
   uvs: Float32Array;
-  /** RGBA per vertex: the tile's `modulate`, linear, which the draw multiplies onto its pixels. */
+  /** RGBA per vertex: the tile's `modulate` as stored, sRGB, which the draw multiplies onto its pixels. */
   colors: Float32Array;
   indices: Uint32Array;
 }
@@ -51,8 +49,6 @@ export function buildTileGeometryArrays(
   const uvs = new Float32Array(cells.length * 4 * 2);
   const colors = new Float32Array(cells.length * 4 * 4);
   const indices = new Uint32Array(cells.length * 6);
-  // Cells of one alternative share its decoded `modulate`, so each converts once.
-  const linearModulates = new Map<Color, number[]>();
 
   cells.forEach((cell, i) => {
     const center = mapToLocalPx(grid, cell.coords);
@@ -93,22 +89,12 @@ export function buildTileGeometryArrays(
     const bottom = 0 - (cy + h / 2);
     positions.set([left, top, 0, right, top, 0, left, bottom, 0, right, bottom, 0], i * 12);
     uvs.set([...corners[0]![0]!, ...corners[0]![1]!, ...corners[1]![0]!, ...corners[1]![1]!], i * 8);
-    const { modulate: tileModulate } = cell.tileData;
-    let modulate = linearModulates.get(tileModulate);
-    if (!modulate) linearModulates.set(tileModulate, (modulate = linearModulate(tileModulate)));
-    for (let corner = 0; corner < 4; corner++) colors.set(modulate, i * 16 + corner * 4);
+    const { r, g, b, a } = cell.tileData.modulate;
+    for (let corner = 0; corner < 4; corner++) colors.set([r, g, b, a], i * 16 + corner * 4);
 
     const v = i * 4;
     indices.set([v + 2, v + 3, v, v + 3, v + 1, v], i * 6);
   });
 
   return { positions, uvs, colors, indices };
-}
-
-/**
- * The sRGB `modulate` as the linear RGBA a vertex colour multiplies. The draw multiplies it onto
- * the layer's tint in linear space, not in sRGB as Godot's canvas does.
- */
-function linearModulate({ r, g, b, a }: Color): number[] {
-  return [...sRGBToLinearRGB(r, g, b), a];
 }
