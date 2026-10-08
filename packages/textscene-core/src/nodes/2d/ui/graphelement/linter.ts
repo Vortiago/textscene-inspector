@@ -8,7 +8,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 
@@ -26,9 +25,8 @@ const arms = {
 // still reads true. The .tscn keeps showing `selected = true`.
 function checkSelectedRequiresSelectable(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
 
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
   const selectableRaw = props.selectable;
   const selectedRaw = props.selected;
   if (selectableRaw === undefined || selectedRaw === undefined) return [];

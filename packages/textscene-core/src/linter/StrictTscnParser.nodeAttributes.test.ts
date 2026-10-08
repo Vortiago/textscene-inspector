@@ -131,7 +131,7 @@ describe('StrictTscnParser', () => {
       const childNode = result.scene!.nodes[0]!.children[0]!;
       expect(childNode.name).toBe('@Child@123');
       // No `__`-prefixed metadata smuggled into the property schema.
-      expect((childNode.properties as Record<string, unknown>)['__instance_index']).toBeUndefined();
+      expect(childNode.rawProperties['__instance_index']).toBeUndefined();
     });
 
     it('exposes an instance reference on node.instance, not a __instance property', () => {
@@ -150,7 +150,7 @@ describe('StrictTscnParser', () => {
       expect(result.scene).toBeDefined();
       const childNode = result.scene!.nodes[0]!.children[0]!;
       expect(childNode.instance).toBe('ExtResource("1_abc")');
-      expect((childNode.properties as Record<string, unknown>)['__instance']).toBeUndefined();
+      expect(childNode.rawProperties['__instance']).toBeUndefined();
     });
   });
 

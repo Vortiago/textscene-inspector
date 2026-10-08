@@ -9,7 +9,6 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 import { rangeAdvisories, type RangeThreshold } from '../../../../linter/rangeAdvisory.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
@@ -89,8 +88,7 @@ function scaleThresholds(key: string): RangeThreshold[] {
 
 function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
 
   // Grouped by the setting `_set` resolves each key to, so `settings/00/…` and `settings/0/…` are
   // one setting and a range finds the mode written beside it under either spelling.

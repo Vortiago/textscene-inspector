@@ -8,7 +8,6 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 
@@ -30,9 +29,8 @@ const arms = {
 function checkPathFollow2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
-  if (!isValidProperties(node.properties)) return diagnostics;
 
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // path_2d.cpp:384-388, a get_configuration_warnings() entry behind
   // `is_visible_in_tree()`: advisory (ADR-0032), and the root warns too, as its

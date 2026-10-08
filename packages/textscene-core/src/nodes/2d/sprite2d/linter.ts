@@ -33,7 +33,7 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  const rawProps = node.properties as unknown as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   if (heldResource(rawProps.texture) === undefined) {
     reportArm(

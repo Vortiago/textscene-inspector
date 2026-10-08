@@ -6,7 +6,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { hasChildOfType } from '../../../../linter/childType.js';
 import { CURSOR_ARROW, CURSOR_MAX } from '../../../../godot/control.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
@@ -32,10 +31,9 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
     );
   }
 
-  const props = isValidProperties(node.properties) ? node.properties : {};
   // `mouse_default_cursor_shape` starts at `CURSOR_ARROW` (0) (control.h:245), so an absent key
   // never warns.
-  const cursorRaw = props.mouse_default_cursor_shape;
+  const cursorRaw = node.rawProperties.mouse_default_cursor_shape;
   if (cursorRaw !== undefined) {
     // In range, not merely non-null: a non-finite reads as NaN and `99` reads
     // as 99, and neither is a CursorShape. Out of range is Control's `enforced:`

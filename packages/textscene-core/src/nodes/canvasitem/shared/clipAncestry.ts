@@ -5,12 +5,11 @@
  * differ only in the gate and the wording, which the two rules keep.
  */
 
-import type { TscnNode, TscnScene } from '../../../parser/types.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { sweepAncestors } from '../../../linter/parentType.js';
 import { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX } from '../../../godot/index.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import type { RawNode, RawScene } from '../../../parser/types.js';
 
 /**
  * `clip_children` on `candidate`: a mode Godot stores and treats as clipping, per
@@ -18,9 +17,8 @@ import { ruleInt } from '../../../linter/validators/commonValidators.js';
  * `null` for a literal no int slot holds, since NaN passes an inequality. Below CLIP_CHILDREN_MAX,
  * because the ERR_FAIL_COND at canvas_item.cpp:1733 refuses that write and the field keeps DISABLED.
  */
-export function clipsChildren(candidate: TscnNode): boolean {
-  if (!isValidProperties(candidate.properties)) return false;
-  const raw = candidate.properties.clip_children;
+export function clipsChildren(candidate: RawNode): boolean {
+  const raw = candidate.rawProperties.clip_children;
   // Absent means DISABLED: Godot omits a property at its default (ADR-0032).
   if (raw === undefined) return false;
   // `ruleInt` already narrows: the setter sees int32, so `4294967295` is -1.
@@ -31,9 +29,9 @@ export function clipsChildren(candidate: TscnNode): boolean {
 
 export interface ClipAncestry {
   /** The nearest CanvasItem ancestor that clips its own children. */
-  clippingAncestor?: TscnNode;
+  clippingAncestor?: RawNode;
   /** The nearest CanvasGroup ancestor, which clips through backbuffer compositing. */
-  canvasGroupAncestor?: TscnNode;
+  canvasGroupAncestor?: RawNode;
 }
 
 /**
@@ -41,7 +39,7 @@ export interface ClipAncestry {
  * climbs to the root without letting a type end it, so an ancestor whose class lives in another
  * scene subtracts nothing from what the ones above it prove. Nearest wins: the climb starts at the parent.
  */
-export function clipAncestry(scene: TscnScene, node: TscnNode): ClipAncestry {
+export function clipAncestry(scene: RawScene, node: RawNode): ClipAncestry {
   const found: ClipAncestry = {};
   sweepAncestors(scene, node, (ancestor) => {
     if (

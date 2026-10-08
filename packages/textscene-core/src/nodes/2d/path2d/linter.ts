@@ -34,7 +34,7 @@ function checkPath2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  const rawProps = node.properties as unknown as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   const curve = heldResource(rawProps.curve);
   if (curve !== undefined) {

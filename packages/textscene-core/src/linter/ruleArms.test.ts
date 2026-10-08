@@ -9,9 +9,9 @@ import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '.
 import { allSourceFiles, atLeast, srcLabel } from './testing/ruleNameScrape.js';
 import { balancedGroup, topLevelParts } from './testing/bracketScan.js';
 import type { Diagnostic } from './types.js';
-import type { TscnNode } from '../parser/types.js';
+import type { RawNode } from '../parser/types.js';
 
-const node: TscnNode = { rawProperties: {}, name: 'Cast', type: 'ShapeCast2D', properties: {}, children: [] };
+const node: RawNode = { rawProperties: {}, name: 'Cast', type: 'ShapeCast2D', children: [] };
 
 const present: RuleArm = {
   severity: 'warning',

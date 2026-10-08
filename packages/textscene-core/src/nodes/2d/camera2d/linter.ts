@@ -4,13 +4,13 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { isValidProperties, nodesOfType } from '../../../linter/linterUtils.js';
+import { nodesOfType } from '../../../linter/linterUtils.js';
 import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
+import type { RawNode } from '../../../parser/types.js';
 
 const arms = {
   multipleEnabled: groundedArm('camera2d-multiple-enabled', {
@@ -41,9 +41,8 @@ const arms = {
 } as const satisfies RuleArms<string>;
 
 /** Enabled unless the key says otherwise: `enabled` defaults true (camera_2d.h:67). */
-function cameraIsEnabled(node: TscnNode): boolean {
-  if (!isValidProperties(node.properties)) return true;
-  return boolSlotValue((node.properties as Record<string, string>).enabled) !== false;
+function cameraIsEnabled(node: RawNode): boolean {
+  return boolSlotValue(node.rawProperties.enabled) !== false;
 }
 
 /** Enabled Camera2D nodes sharing `scope`'s viewport, the set that really contends. */
@@ -67,8 +66,7 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // Before the properties guard: a camera with no properties is enabled.
-  const rawProps = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};
+  const rawProps = node.rawProperties;
   const scope = viewportScopeOf(scene, node);
   if (cameraIsEnabled(node) && scope !== undefined) {
     const enabledCount = countEnabledCamerasInScope(scene, scope);
@@ -80,10 +78,6 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
         `Multiple enabled Camera2D nodes detected in scene (${enabledCount} total). Only one Camera2D should typically be enabled at a time to avoid viewport conflicts.`
       );
     }
-  }
-
-  if (!isValidProperties(node.properties)) {
-    return diagnostics;
   }
 
   if (rawProps.limit_left !== undefined && rawProps.limit_right !== undefined) {

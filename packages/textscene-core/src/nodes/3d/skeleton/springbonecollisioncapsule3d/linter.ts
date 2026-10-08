@@ -7,7 +7,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
@@ -21,8 +20,7 @@ const arms = {
 
 function checkSpringBoneCollisionCapsule3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
 
   const rawRadius = props.radius;
   const rawHeight = props.height;

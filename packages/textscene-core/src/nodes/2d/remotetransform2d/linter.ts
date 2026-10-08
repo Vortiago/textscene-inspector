@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { extractNodePath, isValidProperties } from '../../../linter/linterUtils.js';
+import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 
@@ -28,9 +28,8 @@ function warn(node: RuleContext['node'], detail: string): Diagnostic[] {
 
 function checkRemoteTransform2D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
-  if (!isValidProperties(node.properties)) return [];
 
-  const raw = node.properties.remote_path;
+  const raw = node.rawProperties.remote_path;
   const path = raw !== undefined ? extractNodePath(raw) : null;
   if (path === null) {
     return warn(node, 'has no remote_path set.');

@@ -4,14 +4,14 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties, nodesDescendingFrom } from '../../../linter/linterUtils.js';
+import { nodesDescendingFrom } from '../../../linter/linterUtils.js';
 import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import type { RawNode } from '../../../parser/types.js';
 
 const arms = {
   multipleCurrent: groundedArm('camera3d-multiple-current', {
@@ -59,11 +59,10 @@ function projectionMode(raw: string | undefined): number {
  * false (camera_3d.h:63) and Camera3D has no `enabled`, so an authored true is the
  * only claim: a plain camera entering an empty viewport takes the slot as
  * first_camera (camera_3d.cpp:189-192) and cycling one in with `make_current()` is
- * documented usage. Unreadable properties state no claim.
+ * documented usage.
  */
-function cameraClaimsCurrent(node: TscnNode): boolean {
-  if (!isValidProperties(node.properties)) return false;
-  return boolSlotValue(node.properties.current) === true;
+function cameraClaimsCurrent(node: RawNode): boolean {
+  return boolSlotValue(node.rawProperties.current) === true;
 }
 
 /**
@@ -80,14 +79,8 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  if (!isValidProperties(node.properties)) {
-    return diagnostics;
-  }
+  const rawProps = node.rawProperties;
 
-  const rawProps = node.properties as Record<string, string>;
-
-  // After the properties guard, unlike the Camera2D rule: here an unreadable body
-  // states no claim, so it can neither contend for the slot nor join a tally.
   if (cameraClaimsCurrent(node)) {
     const scope = viewportScopeOf(scene, node);
     const claiming = scope === undefined ? 0 : countCurrentCamerasInScope(scene, scope);

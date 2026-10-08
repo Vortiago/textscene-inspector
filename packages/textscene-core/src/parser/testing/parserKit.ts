@@ -1,12 +1,12 @@
 /**
  * Shared test kit for parser slice tests: the node `heading()`, `parsedNode()`, `makeNode()`
  * and `translated()` factories, the formatter `valueOf()` lookup, the repo-root and fixture
- * resolvers and the scene `flatten()`.
+ * resolvers, the `sceneFiles()` corpus walk and the scene `flatten()`.
  * Build-excluded through the `src/**\/testing/**` tsconfig rule, like the linter test kit.
  */
 
-import { existsSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ParsedHeading } from '../utils';
 import type { TscnNode, TscnScene } from '../types';
@@ -74,9 +74,22 @@ export function repoRoot(): string {
   throw new Error('repo root (pnpm-workspace.yaml) not found above parserKit');
 }
 
+/** Absolute path to the `scenes` corpus at the repo root. */
+export function scenesDir(): string {
+  return resolve(repoRoot(), 'scenes');
+}
+
 /** Absolute path to the shared `scenes/fixtures` corpus at the repo root. */
 export function fixturesDir(): string {
-  return resolve(repoRoot(), 'scenes/fixtures');
+  return resolve(scenesDir(), 'fixtures');
+}
+
+/** Every file under `dir` whose path `matches`, as absolute paths in sorted order. */
+export function sceneFiles(dir: string, matches: (path: string) => boolean): string[] {
+  return readdirSync(dir, { recursive: true, encoding: 'utf8' })
+    .filter(matches)
+    .map((file) => join(dir, file))
+    .sort();
 }
 
 /** Every node of a parsed scene, depth first, each parent before its children. */

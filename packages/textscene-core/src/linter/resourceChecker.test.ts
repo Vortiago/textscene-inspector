@@ -6,13 +6,13 @@
 
 import { describe, it, expect } from 'vitest';
 import { checkResourceExists, resolveResourceSlot } from './resourceChecker.js';
-import type { TscnScene, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
+import type { RawScene, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { countedTable } from '../resources/testing/countedTable.js';
 
 describe('checkResourceExists', () => {
   describe('SubResource validation', () => {
     it('should find existing SubResource', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [
@@ -28,7 +28,7 @@ describe('checkResourceExists', () => {
     });
 
     it('should not find non-existent SubResource', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [
@@ -44,7 +44,7 @@ describe('checkResourceExists', () => {
     });
 
     it('should handle scene with no internal resources', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
@@ -54,7 +54,7 @@ describe('checkResourceExists', () => {
     });
 
     it('should find SubResource with hyphenated ID', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [
@@ -70,7 +70,7 @@ describe('checkResourceExists', () => {
     });
 
     it('should find SubResource with underscore ID', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [
@@ -86,7 +86,7 @@ describe('checkResourceExists', () => {
     });
 
     it('should handle multiple SubResources', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [
@@ -117,7 +117,7 @@ describe('checkResourceExists', () => {
 
   describe('ExtResource validation', () => {
     it('should find existing ExtResource', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [
           {
@@ -133,7 +133,7 @@ describe('checkResourceExists', () => {
     });
 
     it('should not find non-existent ExtResource', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [
           {
@@ -149,7 +149,7 @@ describe('checkResourceExists', () => {
     });
 
     it('should handle scene with no external resources', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [],
         internalResources: [],
@@ -159,7 +159,7 @@ describe('checkResourceExists', () => {
     });
 
     it('should handle multiple ExtResources', () => {
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: [
           {
@@ -196,7 +196,7 @@ describe('checkResourceExists', () => {
         { id: 'texture_1', type: 'Texture2D', path: 'res://textures/texture.png' },
       ]);
       const internal = countedTable<TscnInternalResource>([{ id: 'Box_1', type: 'BoxMesh', data: {} }]);
-      const scene: TscnScene = {
+      const scene: RawScene = {
         nodes: [],
         externalResources: external.table,
         internalResources: internal.table,

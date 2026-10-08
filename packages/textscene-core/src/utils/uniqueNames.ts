@@ -5,13 +5,13 @@
  * with no claimant addresses nothing.
  */
 
-import type { TscnNode } from '../parser/types.js';
+import type { RawNode } from '../parser/types.js';
 import { boolSlotValue } from '../godot/index.js';
 import { UNIQUE_NODE_PREFIX } from '../godot/nodePath.js';
 
 /** The node a `%Name` addresses, with the two spellings of the path that reaches it. */
 export interface UniqueNameClaim {
-  readonly node: TscnNode;
+  readonly node: RawNode;
   /** Where the heading sits in the authored tree: what a `.tscn`-only walk sees. */
   readonly path: string;
   /**
@@ -26,7 +26,7 @@ export interface UniqueNameClaim {
  * and still serialises it). Read from `rawProperties` alone, which both parsers publish alike
  * (`parser/rawPropertyParity.test.ts`). No slice models the flag, so typed `properties` lacks it.
  */
-export function isUniqueNameInOwner(node: TscnNode): boolean {
+export function isUniqueNameInOwner(node: RawNode): boolean {
   return boolSlotValue(node.rawProperties.unique_name_in_owner) === true;
 }
 
@@ -51,7 +51,7 @@ export interface UniqueNameOwnership {
  * the same walk decides. `path` looks up in an authored tree's `nodeByPath` map, and `livePath`
  * in the composed render tree's.
  */
-export function uniqueNameOwnership(roots: readonly TscnNode[]): UniqueNameOwnership {
+export function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
   const claims = new Map<string, UniqueNameClaim>();
   const instanceClaims = new Map<string, UniqueNameClaim[]>();
   const ownedInsideInstances = new Set<string>();
@@ -59,7 +59,7 @@ export function uniqueNameOwnership(roots: readonly TscnNode[]): UniqueNameOwner
   // `instanceOwner`: the live path of the nearest ancestor below the root that is an `instance=`
   // heading in this file, or null.
   const walk = (
-    nodes: readonly TscnNode[],
+    nodes: readonly RawNode[],
     parentPath: string,
     parentLive: string,
     instanceOwner: string | null
@@ -110,7 +110,7 @@ export function uniqueNameOwnership(roots: readonly TscnNode[]): UniqueNameOwner
 }
 
 /** The claim table alone, from {@link uniqueNameOwnership}. */
-export function uniqueNameClaims(roots: readonly TscnNode[]): Map<string, UniqueNameClaim> {
+export function uniqueNameClaims(roots: readonly RawNode[]): Map<string, UniqueNameClaim> {
   return uniqueNameOwnership(roots).claims as Map<string, UniqueNameClaim>;
 }
 
@@ -119,9 +119,9 @@ export function uniqueNameClaims(roots: readonly TscnNode[]): Map<string, Unique
  * consumer. Written only by `cachedUniqueNameOwnership`. A re-parse misses, and an entry dies with
  * its tree.
  */
-const ownershipCache = new WeakMap<readonly TscnNode[], UniqueNameOwnership>();
+const ownershipCache = new WeakMap<readonly RawNode[], UniqueNameOwnership>();
 
-export function cachedUniqueNameOwnership(roots: readonly TscnNode[]): UniqueNameOwnership {
+export function cachedUniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
   let ownership = ownershipCache.get(roots);
   if (!ownership) {
     ownership = uniqueNameOwnership(roots);
@@ -130,7 +130,7 @@ export function cachedUniqueNameOwnership(roots: readonly TscnNode[]): UniqueNam
   return ownership;
 }
 
-export function cachedUniqueNameClaims(roots: readonly TscnNode[]): Map<string, UniqueNameClaim> {
+export function cachedUniqueNameClaims(roots: readonly RawNode[]): Map<string, UniqueNameClaim> {
   return cachedUniqueNameOwnership(roots).claims as Map<string, UniqueNameClaim>;
 }
 
@@ -138,7 +138,7 @@ export function cachedUniqueNameClaims(roots: readonly TscnNode[]): Map<string, 
  * {@link uniqueNameClaims} reduced to `%Name` -> path, for a caller finishing a NodePath walk over
  * a path-keyed node map.
  */
-export function uniqueNamePaths(roots: readonly TscnNode[]): Map<string, string> {
+export function uniqueNamePaths(roots: readonly RawNode[]): Map<string, string> {
   const paths = new Map<string, string>();
   for (const [key, claim] of uniqueNameClaims(roots)) paths.set(key, claim.path);
   return paths;

@@ -20,7 +20,7 @@ function diagnosticsFor(content: string) {
   if (!scene) throw new Error('fixture failed to parse');
   const node = scene.nodes[0]?.children.find((child) => child.type === 'RemoteTransform3D');
   expect(node, 'the fixture text must contain a RemoteTransform3D child').toBeDefined();
-  return remoteTransform3DValidationRule.check({ scene, node: node!, properties: node!.properties });
+  return remoteTransform3DValidationRule.check({ scene, node: node! });
 }
 
 /** A RemoteTransform3D carrying `body`, with a Node3D and a non-Node3D sibling to point at. */

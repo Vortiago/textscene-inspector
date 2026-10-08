@@ -6,7 +6,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
@@ -27,9 +26,8 @@ const FOG_VOLUME_SHAPE_WORLD = 4;
 // (servers/rendering/renderer_rd/environment/fog.cpp:702), so such a size is stored, never drawn.
 function checkFogVolumeSize(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
 
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
   const shapeRaw = props.shape;
   const sizeRaw = props.size;
   if (shapeRaw === undefined || sizeRaw === undefined) return [];

@@ -42,7 +42,7 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  const rawProps = node.properties as unknown as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   if (heldResource(rawProps.sprite_frames) === undefined) {
     reportArm(

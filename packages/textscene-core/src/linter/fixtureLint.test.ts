@@ -5,11 +5,9 @@
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Linter } from './Linter.js';
-import { isGodotTextResourcePath } from '../godot/index.js';
 import { parseHeading } from '../parser/utils.js';
 import { providerForRoot } from '../resources/diskProject.js';
 import { findProjectRoot, parentDir, projectFileIn } from '../resources/resPath.js';
@@ -18,9 +16,8 @@ import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
 import { errorsOf } from './testing/tierLists';
-
-const here = dirname(fileURLToPath(import.meta.url)); // .../packages/textscene-core/src/linter
-const scenesRoot = resolve(here, '../../../../scenes');
+import { fixturesDir, sceneFiles } from '../parser/testing/parserKit.js';
+import { isGodotTextResourcePath } from '../godot/index.js';
 
 /**
  * `unit-*` fixtures allowed an advisory (warning or info), keyed by the exact rules they may trip and asserted as set
@@ -88,6 +85,8 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
   },
 };
 
+const fixtures = fixturesDir();
+
 /**
  * Fixtures that must produce an error, from the one file that lists them: files Godot refuses to load, which the
  * app-shell and extension suites open as a user would (`docs/user-flows.md` WEB-10 walks through the parse-error banner).
@@ -96,7 +95,7 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
  */
 const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
   (
-    JSON.parse(readFileSync(join(scenesRoot, 'fixtures', 'negative-fixtures.json'), 'utf8')) as {
+    JSON.parse(readFileSync(join(fixtures, 'negative-fixtures.json'), 'utf8')) as {
       files: string[];
     }
   ).files
@@ -105,26 +104,12 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 /** How many fixtures that list is meant to hold; see the pin at the bottom. */
 const NEGATIVE_FIXTURE_COUNT = 5;
 
-const fixturesDir = join(scenesRoot, 'fixtures');
-
-/**
- * Both text formats Godot writes, through the predicate the CLI walk and the editor's document filter use: a `.tres`
- * validates against the same registry a `[sub_resource]` block does, so the resource slices' fixtures are gated too.
- * Every folder under `dir`, as the CLI expands a directory argument.
- */
-function tscnFiles(dir: string): string[] {
-  return readdirSync(dir, { recursive: true, encoding: 'utf8' })
-    .filter(isGodotTextResourcePath)
-    .map((file) => join(dir, file))
-    .sort();
-}
-
 /**
  * The project a fixture's `res://` paths resolve in: the nearest `project.godot` from its folder up to
  * `scenes/fixtures`, or null for the flat corpus, which is no project.
  */
 function projectRootOf(path: string): Promise<string | null> {
-  const isFixturesDir = (dir: string) => resolve(dir) === fixturesDir;
+  const isFixturesDir = (dir: string) => resolve(dir) === fixtures;
   return findProjectRoot(dirname(path), parentDir, isFixturesDir, async (dir) =>
     existsSync(projectFileIn(dir))
   );
@@ -139,7 +124,7 @@ interface Fixture {
 
 async function fixture(path: string): Promise<Fixture> {
   const root = await projectRootOf(path);
-  return { path, name: relative(fixturesDir, path), provider: root === null ? null : providerForRoot(root) };
+  return { path, name: relative(fixtures, path), provider: root === null ? null : providerForRoot(root) };
 }
 
 function lintFixture({ path, provider }: Fixture): Promise<Diagnostic[]> {
@@ -174,7 +159,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
   let all: Fixture[] = [];
 
   beforeAll(async () => {
-    all = await Promise.all(tscnFiles(fixturesDir).map(fixture));
+    all = await Promise.all(sceneFiles(fixtures, isGodotTextResourcePath).map(fixture));
     diagnosticsByName = new Map(
       await Promise.all(all.map(async (linted) => [linted.name, await lintFixture(linted)] as const))
     );

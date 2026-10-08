@@ -6,7 +6,6 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
-import { isValidProperties } from '../linterUtils.js';
 import { parentTypeVerdict, verdictParent } from '../parentType.js';
 import { descendsFrom } from '../../godot/nodeBaseTypes.js';
 import { isZeroApprox } from '../../godot/math.js';
@@ -52,8 +51,7 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
-    if (!isValidProperties(node.properties)) return diagnostics;
-    const rawProps = node.properties;
+    const rawProps = node.rawProperties;
     const report = (arm: RuleArm | undefined, message: string) => reportArm(diagnostics, arm, node, message);
 
     // collision_polygon_2d.cpp:235-237 / collision_polygon_3d.cpp:238-240:

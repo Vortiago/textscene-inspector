@@ -4,7 +4,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { projectorArm, projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
@@ -29,22 +28,20 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
 
   const diagnostics: Diagnostic[] = [];
 
-  if (isValidProperties(node.properties)) {
-    const properties = node.properties as Record<string, string>;
-    const spotAngle =
-      properties.spot_angle !== undefined ? parseGodotFloat(properties.spot_angle) : DEFAULT_SPOT_ANGLE;
+  const properties = node.rawProperties;
+  const spotAngle =
+    properties.spot_angle !== undefined ? parseGodotFloat(properties.spot_angle) : DEFAULT_SPOT_ANGLE;
 
-    // light_3d.cpp:655 guards `>=` though the message says "wider than". No
-    // finiteness guard: `spot_angle = inf` is a shadowless cone wider than 90
-    // degrees, and `nan >= 90` is false either way.
-    if (boolSlotValue(properties.shadow_enabled) === true && spotAngle !== null && spotAngle >= 90) {
-      reportArm(
-        diagnostics,
-        arms.shadowAngleTooWide,
-        node,
-        `SpotLight3D '${node.name}' has shadow_enabled with a spot_angle of ${spotAngle} degrees. An angle wider than 90 degrees cannot cast shadows.`
-      );
-    }
+  // light_3d.cpp:655 guards `>=` though the message says "wider than". No
+  // finiteness guard: `spot_angle = inf` is a shadowless cone wider than 90
+  // degrees, and `nan >= 90` is false either way.
+  if (boolSlotValue(properties.shadow_enabled) === true && spotAngle !== null && spotAngle >= 90) {
+    reportArm(
+      diagnostics,
+      arms.shadowAngleTooWide,
+      node,
+      `SpotLight3D '${node.name}' has shadow_enabled with a spot_angle of ${spotAngle} degrees. An angle wider than 90 degrees cannot cast shadows.`
+    );
   }
 
   // light_3d.cpp:659-661, the same shape as OmniLight3D's.

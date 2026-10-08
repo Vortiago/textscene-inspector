@@ -116,9 +116,14 @@ Resource types use the same pattern under `resources/<category>/<type>/` (ADR-00
 | `StrictTscnParser` | The linter, the VS Code language features | Adds an observer that records every error and runs the property validators |
 
 The observer only adds, so the render is the same with or without it. The lenient
-`NodeCreator` stores typed values in `properties`, and the strict one stores raw strings.
-Both store raw strings in `rawProperties`, so shared code reads that field. The strict parser
-also returns `SourceLines`, which puts each diagnostic on its line.
+`NodeCreator` builds a `TscnNode` with typed values in `properties`. The strict one builds a
+`RawNode`, the **Raw view**, with no `properties`. Both store the raw strings in `rawProperties`,
+so shared code reads that field. A **Lint rule** sees only the Raw view, so the compiler refuses
+a `properties` read. The core returns each `[node]` heading beside the scene. The lenient parser
+logs the headings the tree could not place. The strict parser builds the **Heading facts** from the
+headings (`linter/placementFacts.ts`) and from its observer (`linter/strictObserver/`), and
+only its `StrictScene` carries them.
+The strict parser also returns `SourceLines`, which puts each diagnostic on its line.
 
 ## Rendering
 

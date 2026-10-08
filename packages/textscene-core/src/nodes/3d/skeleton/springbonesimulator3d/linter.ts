@@ -7,7 +7,6 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
@@ -121,8 +120,7 @@ function readBool(raw: string | undefined, fallback: boolean): boolean {
 function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
-  if (!isValidProperties(node.properties)) return diagnostics;
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.rawProperties;
 
   // Absent means zero: `LocalVector<SpringBone3DSetting *> settings`
   // (spring_bone_simulator_3d.h:157) starts empty, which is the XML's default="0".

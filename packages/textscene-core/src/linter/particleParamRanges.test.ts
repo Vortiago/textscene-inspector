@@ -1,9 +1,9 @@
 /** The shared crossed-range warning: one diagnostic per crossed pair, under the caller's arm. */
 import { describe, it, expect } from 'vitest';
-import type { TscnNode } from '../parser/types.js';
+import type { RawNode } from '../parser/types.js';
 import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from './particleParamRanges.js';
 
-const node = { name: 'Fx', type: 'CPUParticles2D' } as TscnNode;
+const node: RawNode = { name: 'Fx', type: 'CPUParticles2D', rawProperties: {}, children: [] };
 const arm = paramMinAboveMaxArm('cpuparticles2d', 'cpu_particles_2d.cpp:352-376');
 
 describe('paramMinAboveMaxArm', () => {

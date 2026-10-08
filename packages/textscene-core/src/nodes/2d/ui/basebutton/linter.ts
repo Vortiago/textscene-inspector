@@ -35,7 +35,7 @@ function isButton(nodeType: string): boolean {
 function checkButtonGroup(context: RuleContext): Diagnostic[] {
   const { node } = context;
 
-  const props = node.properties as Record<string, string>;
+  const props = node.rawProperties;
 
   // An absent, empty or explicitly cleared reference is how Godot serialises
   // "no group", and `get_button_group().is_valid()` (base_button.cpp:525) is
