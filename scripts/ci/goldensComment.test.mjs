@@ -43,6 +43,12 @@ describe('goldensComment', () => {
     expect(comment).toMatch(/\| `sprite-old` \| removed \| \[diff\]\(.+\) \| {2}\| {2}\|/);
   });
 
+  it('counts a type change as a changed golden', () => {
+    const comment = goldensComment(nameStatus('T', 'glow-mix'), SCENES, PULL_REQUEST);
+
+    expect(comment).toContain('| `glow-mix` | changed | ');
+  });
+
   it('cuts the preview host to the 28 characters Cloudflare Pages keeps of the branch', () => {
     const pullRequest = { ...PULL_REQUEST, branch: 'claude/issue-625-tiledata-vo-modulate' };
 

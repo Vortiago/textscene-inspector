@@ -17,8 +17,8 @@ const BASELINE_PATH = /^scripts\/visual\/baselines\/(.+)\.png$/;
 const STATUS_WORDS = { A: 'added', M: 'changed', D: 'removed' };
 const MAIN_SITE = new URL(PREVIEW_URL);
 
-// Cloudflare Pages keeps 28 characters of the branch in a preview host: #629's
-// `claude/issue-625-tiledata-...` deploys to `claude-issue-625-tiledata-vo`.
+// Cloudflare Pages keeps 28 characters of the branch in a preview host:
+// `claude/issue-625-tiledata-vo-modulate` deploys to `claude-issue-625-tiledata-vo`.
 const BRANCH_ALIAS_LENGTH = 28;
 
 // More rows than this push the rest of the pull request's conversation down too far.
@@ -47,8 +47,13 @@ function parseGoldens(nameStatus) {
   return nameStatus.split('\n').flatMap((line) => {
     const [status, path = ''] = line.split('\t');
     const baseline = BASELINE_PATH.exec(path);
-    return baseline ? [{ path, name: baseline[1], change: STATUS_WORDS[status] }] : [];
+    return baseline ? [{ path, name: baseline[1], change: changeWord(status) }] : [];
   });
+}
+
+/** A type change (`T`) is the only other status `--no-renames` gives between two commits. */
+function changeWord(status) {
+  return STATUS_WORDS[status] ?? STATUS_WORDS.M;
 }
 
 /** An added golden has no scene on main, and a removed one has none on the branch. */

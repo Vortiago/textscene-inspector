@@ -26,7 +26,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      GH_TOKEN: ${{ github.token }}
       REPOSITORY: ${{ github.repository }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
       BRANCH: ${{ github.head_ref }}
@@ -40,12 +39,18 @@ jobs:
           filter: blob:none
           sparse-checkout: scripts
 
+      # `shell: bash` adds pipefail: a failed diff would otherwise reach the script as an empty
+      # list and delete the comment.
       - name: Write the comment
+        shell: bash
         run: >-
           git diff --name-status --no-renames HEAD^1 HEAD
           | node scripts/ci/goldensComment.mjs "$RUNNER_TEMP/goldens.md"
 
+      # Only this step gets the token, so the branch's script never holds a write token.
       - name: Post, update or delete the comment
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           body="$RUNNER_TEMP/goldens.md"
           comments="repos/$REPOSITORY/issues/$PR_NUMBER/comments"
