@@ -42,6 +42,12 @@ describe('CANVAS_SRGB_MULTIPLY_EDITS', () => {
     expect(fromSrgb.split('#else')[0]).toContain('sRGBTransferEOTF');
   });
 
+  it("guards the shared path with the condition under which three's other chunk multiplies", () => {
+    const patched = applyChunkEdits(threeChunks(), CANVAS_SRGB_MULTIPLY_EDITS)!;
+    expect(patched.map_fragment).toContain(THREE.ShaderChunk.color_fragment.trim().split('\n')[0]);
+    expect(patched.color_fragment).toContain(THREE.ShaderChunk.map_fragment.trim().split('\n')[0]);
+  });
+
   it('refuses chunks that lack a multiply line', () => {
     expect(applyChunkEdits({ map_fragment: '', color_fragment: '' }, CANVAS_SRGB_MULTIPLY_EDITS)).toBeNull();
   });

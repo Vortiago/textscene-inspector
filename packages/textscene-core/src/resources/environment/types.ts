@@ -127,6 +127,7 @@ export interface EnvironmentSettings {
     mode: number;
     /** The sRGB colour BG_CLEAR_COLOR or BG_COLOR draws, scaled by the energy multiplier. */
     color: Color;
+    /** The sky's intensity under BG_SKY. `color` already carries it. */
     energyMultiplier: number;
   };
   /**

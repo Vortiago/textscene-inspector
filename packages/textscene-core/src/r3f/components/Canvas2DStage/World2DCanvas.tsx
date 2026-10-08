@@ -18,7 +18,7 @@ import { canvasModulateColor } from '../../canvasModulate.js';
 import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
-import { installCanvasSrgbMultiply } from '../../canvasSrgbMultiply.js';
+import { installShaderPatches } from '../../shaderPatch/installShaderPatches.js';
 import { ProjectClearColor } from './ProjectClearColor.js';
 
 // Through the controls barrel, whose side-effect imports register every Control
@@ -98,8 +98,7 @@ export function World2DCanvas(props: World2DCanvasProps) {
       // `antialias: false`: scene/main/viewport.h:309 `msaa_2d = MSAA_DISABLED`.
       // Soft edges are authored geometry (style_box_flat.cpp:555-629), and MSAA ramps them twice.
       gl={{ alpha: true, localClippingEnabled: true, antialias: false }}
-      // Before the first frame compiles a program: a program reads three's chunks only then.
-      onCreated={installCanvasSrgbMultiply}
+      onCreated={installShaderPatches}
       // Godot composites canvas items after `_render_buffers_post_process_and_tonemap`,
       // so 2D colour is never tone-mapped. `flat` is `NoToneMapping`, not R3F's ACES.
       // It also covers a container's 3D sub-viewport pass, whose parent viewport
