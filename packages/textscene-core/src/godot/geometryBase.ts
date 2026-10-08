@@ -8,9 +8,9 @@
 import { descendsFrom } from './nodeBaseTypes.js';
 
 /** Whether a resource property holds a resource: Godot's `null` literal clears it, as absence does. */
-function holdsResource(raw: Readonly<Record<string, string>>, key: string): boolean {
-  const value = raw[key]?.trim();
-  return value !== undefined && value !== 'null';
+export function holdsResource(value: string | undefined): boolean {
+  const trimmed = value?.trim();
+  return trimmed !== undefined && trimmed !== 'null';
 }
 
 /**
@@ -26,11 +26,11 @@ export function hasGeometryBase(
   // (`modules/csg/csg_shape.cpp:852-858`). A root draws the combined mesh (`:729`).
   if (descendsFrom(type, 'CSGShape3D')) return parentType === null || !descendsFrom(parentType, 'CSGShape3D');
   // `mesh_instance_3d.cpp:126,132`. SoftBody3D is a MeshInstance3D.
-  if (descendsFrom(type, 'MeshInstance3D')) return holdsResource(raw, 'mesh');
+  if (descendsFrom(type, 'MeshInstance3D')) return holdsResource(raw['mesh']);
   // `multimesh_instance_3d.cpp:69,72`.
-  if (descendsFrom(type, 'MultiMeshInstance3D')) return holdsResource(raw, 'multimesh');
+  if (descendsFrom(type, 'MultiMeshInstance3D')) return holdsResource(raw['multimesh']);
   // `Sprite3D::_draw` drops the base without a texture (`sprite_3d.cpp:794-800`).
-  if (descendsFrom(type, 'Sprite3D')) return holdsResource(raw, 'texture');
+  if (descendsFrom(type, 'Sprite3D')) return holdsResource(raw['texture']);
   // The constructors set a base for good: SpriteBase3D's mesh (`sprite_3d.cpp:783`), Label3D's
   // mesh (`label_3d.cpp:1095`), and the particles' multimesh or particles (`cpu_particles_3d.cpp:1778`,
   // `gpu_particles_3d.cpp:881`). AnimatedSprite3D drops it only for a frame with no texture

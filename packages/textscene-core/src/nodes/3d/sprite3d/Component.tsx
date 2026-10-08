@@ -33,6 +33,7 @@ import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
 import { useGeometryInstance, withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
+import { UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
 
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
@@ -105,14 +106,17 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
     const size = { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
     return spriteQuadRect(size, properties);
   }, [sourceTexture, properties]);
+  // The frame decides the box, so a texture still loading leaves the sprite unplaced.
   const placement = useMemo(
     () =>
-      authoredPlacement(
-        spriteRef,
-        properties.transform,
-        spriteQuadAabb(rect, properties.axis, properties.billboard)
-      ),
-    [rect, properties.transform, properties.axis, properties.billboard]
+      sourceTexture
+        ? authoredPlacement(
+            spriteRef,
+            properties.transform,
+            spriteQuadAabb(rect, properties.axis, properties.billboard)
+          )
+        : UNPLACED,
+    [sourceTexture, rect, properties.transform, properties.axis, properties.billboard]
   );
   const shadow = useGeometryInstance(placement);
 

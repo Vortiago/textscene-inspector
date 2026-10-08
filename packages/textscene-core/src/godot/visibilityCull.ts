@@ -51,7 +51,7 @@ const FADE_CHILDREN = 1 << 2;
 const NEEDS_CHECK = HIDDEN_CLOSE_RANGE | HIDDEN;
 
 export function cullVisibility(instances: readonly VisibilityCullInstance[]): VisibilityCullResult[] {
-  const parents = indexedParents(instances, acyclicParents(instances));
+  const parents = indexedParents(instances, acyclicParents(instances.map((instance) => instance.parent)));
   const depths = dependencyDepths(parents);
   const isListed = instances.map(isInVisibilityList);
   const wasVisible = instances.map((instance) => instance.wasVisible);
@@ -157,17 +157,17 @@ function parentShowsDependant(parentFlags: number): boolean {
 }
 
 /**
- * Each instance's parent, with a link that would close a cycle dropped. Godot refuses the latest
+ * Each parent link, with a link that would close a cycle dropped. Godot refuses the latest
  * `instance_set_visibility_parent` that closes one (`renderer_scene_cull.cpp:1411-1416`), and the
  * list order stands for the order the links were set.
  */
-function acyclicParents(instances: readonly VisibilityCullInstance[]): number[] {
-  const parents = instances.map(() => -1);
-  instances.forEach((instance, i) => {
-    for (let ancestor = instance.parent; ancestor >= 0; ancestor = parents[ancestor]!) {
+export function acyclicParents(links: readonly number[]): number[] {
+  const parents = links.map(() => -1);
+  links.forEach((link, i) => {
+    for (let ancestor = link; ancestor >= 0; ancestor = parents[ancestor]!) {
       if (ancestor === i) return;
     }
-    parents[i] = instance.parent;
+    parents[i] = link;
   });
   return parents;
 }

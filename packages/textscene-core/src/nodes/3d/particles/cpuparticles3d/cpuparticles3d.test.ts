@@ -8,15 +8,15 @@ import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import { rendersOwnVisual } from '../../../../r3f/nodeSupport';
-import { parseParticles3D } from '../parser';
+import { parseCPUParticles3D } from './parser';
 import './index';
 import './index.r3f';
 
 describe('CPUParticles3D registration', () => {
-  it('registers the shared particle parser', () => {
+  it('registers its own parser', () => {
     const registration = nodeRegistry.getRegistration('CPUParticles3D');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseParticles3D);
+    expect(registration!.parser).toBe(parseCPUParticles3D);
   });
 
   it('registers a base component as a declared gap, so it still reads as not implemented', () => {

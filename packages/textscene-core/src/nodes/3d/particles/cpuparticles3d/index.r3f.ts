@@ -4,10 +4,11 @@
  */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { GeometryInstance3D } from '../../geometryinstance3d/Component';
+import { undrawnGeometryInstance } from '../../geometryinstance3d/Component';
+import { useCPUParticles3DAabb } from './ownAabb';
 
 nodeComponentRegistry.register({
   typeName: 'CPUParticles3D',
-  Component: GeometryInstance3D,
+  Component: undrawnGeometryInstance(useCPUParticles3DAabb),
   renderIntent: 'pending',
 });

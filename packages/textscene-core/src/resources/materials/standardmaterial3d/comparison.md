@@ -89,7 +89,7 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 
 ## Known limitations
 
-- **Shader missing** `alpha_antialiasing_mode` is read for the pass decision, but the cutout edge reads hard rather than coverage-blended.
+- **Shader missing** `alpha_antialiasing_mode` is read for the pass decision, but the cutout edge reads hard rather than coverage-blended (#634).
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
 - **Shader missing** `diffuse_mode` is always Lambert where Godot defaults to Burley, so a rough sphere is slightly darker at the silhouette.
 - **Shader missing** `metallic_specular` has no effect, since three fixes dielectric F0 at 0.04.

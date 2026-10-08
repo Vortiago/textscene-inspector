@@ -23,6 +23,7 @@ import type { CanvasTextBlend } from '../../../r3f/controls/native/text/canvasTe
 import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
+import { UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { labelBillboardAabb } from '../../../godot/billboard';
 import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
 import { AlphaCutMode, TextureFilter, type Label3DProperties } from './types';
@@ -72,10 +73,13 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     [placements, layout]
   );
 
+  // The shaped text decides the box, so a font still loading leaves the label unplaced.
   const placement = useMemo(() => {
+    if (!fontMetrics) return UNPLACED;
     const aabb = label3DAabb(placements, layout.linePitchPx, properties.pixel_size);
     return authoredPlacement(nodeRef, properties.transform, labelBillboardAabb(aabb, properties.billboard));
   }, [
+    fontMetrics,
     nodeRef,
     placements,
     layout.linePitchPx,

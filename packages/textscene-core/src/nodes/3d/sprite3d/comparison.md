@@ -49,4 +49,4 @@ Most keys warn then fall back to their Godot defaults. `billboard`, `alpha_cut` 
 ## Known limitations
 
 - **Shader missing** `alpha_antialiasing_mode` and `alpha_antialiasing_edge` have no
-  counterpart, so a cut sprite's edges are not feathered.
+  counterpart, so a cut sprite's edges are not feathered (#634).

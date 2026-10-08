@@ -29,6 +29,8 @@ Strict parsing format-checks these `MultiMeshInstance3D` properties, plus 18 inh
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
+The scene cull measures the node by its MultiMesh's box: the `custom_aabb`, or the mesh's box under each instance transform. So its visibility range still decides its visibility dependants.
+
 The lenient parser never runs `multimesh`'s validator. Given `multimesh = "res://grass.tres"`, a bare string instead of a resource reference, it stores the string on the node's property bag with no substitution and no warning.
 
 ## Known limitations

@@ -66,11 +66,12 @@ function instanceAt(
     order: TreeOrder;
     centre: THREE.Vector3;
   }> = {}
-): VisibilityInstance & { last: Applied | null } {
+): VisibilityInstance & { last: Applied | null; isPlaced: boolean } {
   const fullRange = { ...NO_VISIBILITY_RANGE, ...range };
   return {
     links: { path, parentPath, order, hasRange: hasVisibilityRange(fullRange) },
     range: fullRange,
+    isPlaced: true,
     isIndexed: true,
     last: null,
     worldBox(target) {
@@ -215,6 +216,51 @@ describe('registerVisibilityInstance', () => {
     for (const instance of [proxy, second, first]) registerVisibilityInstance(scene, instance);
     fireSceneRender(scene, cameraAt(11));
     expect([first, second, proxy].map((instance) => instance.last?.isVisible)).toEqual([true, true, false]);
+  });
+
+  it('keeps the last result of an instance it cannot place', () => {
+    const scene = new THREE.Scene();
+    const instance = instanceAt({ end: 20 });
+    registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(11));
+    instance.isPlaced = false;
+
+    fireSceneRender(scene, cameraAt(30));
+
+    expect(instance.last).toEqual({ isVisible: true, fade: 1 });
+  });
+
+  it('hides an instance it has never placed, and measures nothing of it', () => {
+    const scene = new THREE.Scene();
+    const instance = { ...instanceAt({ end: 20 }), isPlaced: false, worldBox: vi.fn() };
+    registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(11));
+    expect([instance.last, instance.worldBox.mock.calls.length]).toEqual([{ isVisible: false, fade: 1 }, 0]);
+  });
+
+  it('keeps the last result of the dependant of a parent it cannot place', () => {
+    const scene = new THREE.Scene();
+    const parent = instanceAt({ begin: 12 }, { path: 'Root/Parent', order: [0] });
+    const detail = instanceAt({}, { path: 'Root/Parent/Detail', parentPath: 'Root/Parent', order: [0, 0] });
+    for (const instance of [parent, detail]) registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(11));
+    parent.isPlaced = false;
+
+    fireSceneRender(scene, cameraAt(30));
+
+    expect(detail.last?.isVisible).toBe(true);
+  });
+
+  it('still measures the parent of a dependant it cannot place (edge case)', () => {
+    const scene = new THREE.Scene();
+    const parent = instanceAt({ end: 10 }, { path: 'Root/Parent', order: [0] });
+    const detail = instanceAt({}, { path: 'Root/Parent/Detail', parentPath: 'Root/Parent', order: [0, 0] });
+    detail.isPlaced = false;
+    for (const instance of [parent, detail]) registerVisibilityInstance(scene, instance);
+
+    fireSceneRender(scene, cameraAt(11));
+
+    expect([parent.last?.isVisible, detail.last?.isVisible]).toEqual([false, false]);
   });
 
   it('restores the scene hook once the last instance leaves', () => {

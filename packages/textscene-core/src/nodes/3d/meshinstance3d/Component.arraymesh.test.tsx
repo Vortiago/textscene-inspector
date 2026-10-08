@@ -20,6 +20,7 @@ import { headlightsSurface, wallQuadSurfaces } from '../../../resources/testing/
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { preloadResource } from '../../../resources/testing/preloadResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { EMPTY_AABB } from '../../../godot/aabb';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -99,6 +100,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
       geometry: buildArrayMeshGeometry(mesh),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
       surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
+      aabb: EMPTY_AABB,
     };
     preloadResource(loader, 'arraymesh', 'res://stage/meshes/wall.tres', resource);
 
@@ -125,6 +127,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
       geometry: buildArrayMeshGeometry(mesh),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
       surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
+      aabb: EMPTY_AABB,
     };
     preloadResource(loader, 'arraymesh', 'res://stage/meshes/wall.tres', resource);
 

@@ -13,17 +13,9 @@ import type { DrawnInstance } from '../surfaceDrawHooks';
 import type { FadedSurface, FadedSurfaces } from '../materials/swappedMaterials';
 import type { NodePlace, VisibilityInstance, VisibilityLinks } from './visibilityScene';
 import { compareTreeOrder } from '../contexts/TreeOrderContext';
-import { copyAabb, type InstancePlacement } from './placements';
+import { copyAabb, UNPLACED } from './placements';
 
-const NODE_ORIGIN: Readonly<THREE.Vector3> = new THREE.Vector3();
-
-/** Where an instance sits until its drawer places it: nowhere the cull can measure but the origin. */
-export const UNPLACED: InstancePlacement = Object.freeze({
-  nodeMatrixWorld: () => false,
-  ownAabb: () => false,
-});
-
-/** Scratch for one `worldBox` or `isIndexed` call: the cull measures one instance at a time. */
+/** Scratch for one `isPlaced`, `worldBox` or `isIndexed` call: the cull measures one instance at a time. */
 const nodeMatrix = new THREE.Matrix4();
 const ownBox = new THREE.Box3();
 const ownSize = new THREE.Vector3();
@@ -54,21 +46,28 @@ export class CulledInstance implements VisibilityInstance, DrawnInstance, FadedS
   }
 
   /**
-   * A base whose own box has a surface (`renderer_scene_cull.cpp:1675-1681`). A box not yet
-   * measured counts as one, so a drawer that has not placed it keeps its links.
+   * Whether its pose and its box are known: `custom_aabb`, or the box its drawer measures. The cull
+   * indexes no instance without a base, so its box is never read.
    */
+  get isPlaced(): boolean {
+    if (!this.hasBase) return true;
+    if (!this.placement.nodeMatrixWorld(nodeMatrix)) return false;
+    return this.customAabb !== null || this.placement.ownAabb(ownBox);
+  }
+
+  /** A base whose box has a surface (`renderer_scene_cull.cpp:1675-1681`). */
   get isIndexed(): boolean {
     if (!this.hasBase) return false;
     if (this.customAabb) return hasSurface(this.customAabb.size);
-    return !this.placement.ownAabb(ownBox) || hasSurface(ownBox.getSize(ownSize));
+    return this.placement.ownAabb(ownBox) && hasSurface(ownBox.getSize(ownSize));
   }
 
   worldBox(target: THREE.Box3): void {
-    // `custom_aabb` replaces the instance's own (`renderer_scene_cull.cpp:1988-1992`). Before
-    // its geometry exists, the instance is a point at its origin.
+    // `custom_aabb` replaces the instance's own (`renderer_scene_cull.cpp:1988-1992`).
     if (this.customAabb) copyAabb(target, this.customAabb);
-    else if (!this.placement.ownAabb(target)) target.set(NODE_ORIGIN, NODE_ORIGIN);
-    if (this.placement.nodeMatrixWorld(nodeMatrix)) target.applyMatrix4(nodeMatrix);
+    else this.placement.ownAabb(target);
+    this.placement.nodeMatrixWorld(nodeMatrix);
+    target.applyMatrix4(nodeMatrix);
   }
 
   nodeMatrixWorld(target: THREE.Matrix4): boolean {

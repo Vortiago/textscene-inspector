@@ -11,11 +11,12 @@ import type { MeshInstance3DProperties } from './types';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { findSubResource, useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { findExtResource, parseResourceReference } from '../../../resources/SubResourceResolver';
+import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
+import { resolveExtArrayMeshPath } from './meshResolution';
+import { resolveSubResourceRef } from '../../../resources/SubResourceResolver';
 import { warn } from '../../../logger';
 import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
@@ -30,7 +31,7 @@ import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import type { ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { useGeometryInstance, withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
-import { livePlacement } from '../../../r3f/visibilityRange/placements';
+import { livePlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 
 /** Literal-only, so its key is constant and it never remounts. */
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
@@ -45,7 +46,7 @@ function MeshInstance3DDrawer({ node, children }: NodeComponentProps) {
   );
 
   const meshResource = useMemo(
-    () => resolveMeshSubResource(properties.mesh, internalResources),
+    () => resolveSubResourceRef(properties.mesh, internalResources),
     [properties.mesh, internalResources]
   );
 
@@ -91,7 +92,14 @@ function MeshInstance3DDrawer({ node, children }: NodeComponentProps) {
   // `cast_shadow`, the range cull and each surface's billboard and shadow-pass membership reach
   // three per draw group, through hooks that read that group's material.
   const placement = useMemo(() => livePlacement(meshRef, meshRef), []);
-  const shadow = useGeometryInstance(placement);
+  const drawsPlaceholder = isPlaceholderMesh(
+    meshResource,
+    arrayMeshPath,
+    arrayMeshResult.status,
+    sceneArrayMesh
+  );
+  // The placeholder box is not the mesh's, so the cull cannot measure the instance.
+  const shadow = useGeometryInstance(drawsPlaceholder ? UNPLACED : placement);
   const visible = properties.visible !== false;
 
   const shellProps = {
@@ -168,6 +176,21 @@ function MeshInstance3DDrawer({ node, children }: NodeComponentProps) {
  * every step also steps it past unrelated content at the same depth.
  */
 const MATERIAL_OVERLAY_RENDER_ORDER = 1;
+
+/**
+ * Whether the drawer shows the placeholder in place of the mesh: no mesh it can resolve, an
+ * external mesh it cannot load, or a scene ArrayMesh it cannot read. The branches below agree.
+ */
+function isPlaceholderMesh(
+  meshResource: TscnInternalResource | undefined,
+  arrayMeshPath: string | null | undefined,
+  arrayMeshStatus: string,
+  sceneArrayMesh: unknown
+): boolean {
+  if (arrayMeshPath) return arrayMeshStatus === 'unavailable';
+  if (!meshResource) return true;
+  return meshResource.type === 'ArrayMesh' && !sceneArrayMesh;
+}
 
 /** Opts a mesh out of picking: three calls `raycast` and collects nothing. */
 const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
@@ -443,32 +466,6 @@ interface DecodedSceneArrayMesh extends Omit<SurfacedMesh, 'materials'> {
   materialRefs: readonly (string | undefined)[];
 }
 
-function resolveMeshSubResource(
-  meshRef: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): TscnInternalResource | undefined {
-  if (!meshRef) return undefined;
-  const parsed = parseResourceReference(meshRef);
-  if (!parsed || parsed.type !== 'SubResource') return undefined;
-  return findSubResource(internalResources, parsed.id);
-}
-
-/**
- * The `.tres` path of an `ExtResource("id")` ArrayMesh. Null for a SubResource,
- * a non-`.tres` ExtResource such as `.glb`, or an unknown id.
- */
-function resolveExtArrayMeshPath(
-  meshRef: string | undefined,
-  externalResources: readonly TscnExternalResource[]
-): string | null {
-  if (!meshRef) return null;
-  const parsed = parseResourceReference(meshRef);
-  if (!parsed || parsed.type !== 'ExtResource') return null;
-  const ext = findExtResource(externalResources, parsed.id);
-  if (!ext?.path || !ext.path.endsWith('.tres')) return null;
-  return ext.path;
-}
-
 /**
  * The material of a primitive mesh's one surface, as a `MaterialSource`: the
  * engine hands the server only `->get_rid()`
@@ -495,11 +492,7 @@ function findMeshOwnMaterial(
   meshRef: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): string | undefined {
-  if (!meshRef) return undefined;
-  const parsed = parseResourceReference(meshRef);
-  if (!parsed || parsed.type !== 'SubResource') return undefined;
-  const meshResource = findSubResource(internalResources, parsed.id);
-  const material = meshResource?.data?.['material'];
+  const material = resolveSubResourceRef(meshRef, internalResources)?.data['material'];
   return typeof material === 'string' ? material : undefined;
 }
 

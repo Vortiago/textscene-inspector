@@ -4,10 +4,11 @@
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { GeometryInstance3D } from '../geometryinstance3d/Component';
+import { undrawnGeometryInstance } from '../geometryinstance3d/Component';
+import { useMultiMeshInstance3DAabb } from './ownAabb';
 
 nodeComponentRegistry.register({
   typeName: 'MultiMeshInstance3D',
-  Component: GeometryInstance3D,
+  Component: undrawnGeometryInstance(useMultiMeshInstance3DAabb),
   renderIntent: 'pending',
 });

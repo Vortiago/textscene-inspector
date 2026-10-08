@@ -13,6 +13,12 @@ export interface InstancePlacement {
   ownAabb(target: THREE.Box3): boolean;
 }
 
+/** Where an instance sits until its drawer places it: nowhere, so the cull cannot measure it. */
+export const UNPLACED: InstancePlacement = Object.freeze({
+  nodeMatrixWorld: () => false,
+  ownAabb: () => false,
+});
+
 /** Writes a Godot AABB into a three box. */
 export function copyAabb(target: THREE.Box3, { position, size }: Aabb): void {
   target.min.set(position.x, position.y, position.z);
@@ -21,7 +27,8 @@ export function copyAabb(target: THREE.Box3, { position, size }: Aabb): void {
 
 /**
  * An instance whose mesh draws in the node's own space, under the node object's live pose: a
- * MeshInstance3D, or a CSG root, whose mesh is a child of its node group.
+ * MeshInstance3D, or a CSG root, whose mesh is a child of its node group. A mesh with no vertices
+ * yet, which is still loading or evaluating, has no box.
  */
 export function livePlacement(
   nodeRef: RefObject<THREE.Object3D | null>,
@@ -31,7 +38,7 @@ export function livePlacement(
     nodeMatrixWorld: livePose(nodeRef),
     ownAabb(target) {
       const geometry = meshRef.current?.geometry;
-      if (!geometry) return false;
+      if (!geometry?.getAttribute('position')) return false;
       if (!geometry.boundingBox) geometry.computeBoundingBox();
       target.copy(geometry.boundingBox!);
       return true;

@@ -1,5 +1,5 @@
 /**
- * useSpriteFrames resolves an AnimatedSprite2D's `sprite_frames` reference into
+ * useSpriteFrames resolves an AnimatedSprite2D's or AnimatedSprite3D's `sprite_frames` reference into
  * its animations map and the resource pools its frame textures resolve against.
  * Both homes hand the same property bag to `decodeSpriteFrames`, so the decode
  * never learns which one it came from.
@@ -9,14 +9,10 @@ import { useMemo } from 'react';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import {
-  findSubResource,
-  parseResourceReference,
-  resolveExtResourcePath,
-} from '../../../resources/SubResourceResolver';
-import { useResource } from '../../../resources/useResource';
-import { decodeSpriteFrames } from '../../../resources/textures/spriteframes/decode';
-import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
+import { findSubResource, parseResourceReference, resolveExtResourcePath } from '../../SubResourceResolver';
+import { useResource } from '../../useResource';
+import { decodeSpriteFrames } from './decode';
+import type { SpriteFramesAnimation } from './types';
 
 export interface ResolvedSpriteFrames {
   /** animation name → its parsed frames + timing. */

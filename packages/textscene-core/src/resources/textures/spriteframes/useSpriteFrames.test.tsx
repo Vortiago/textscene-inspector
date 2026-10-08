@@ -11,11 +11,8 @@ import { act, renderHook } from '@testing-library/react';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import {
-  createFakeResourceLoader,
-  type FakeResourceLoader,
-} from '../../../resources/testing/createFakeResourceLoader';
+import { ResourceLoaderProvider } from '../../ResourceLoaderContext';
+import { createFakeResourceLoader, type FakeResourceLoader } from '../../testing/createFakeResourceLoader';
 import { useSpriteFrames } from './useSpriteFrames';
 
 const SCENE_ANIMATIONS =

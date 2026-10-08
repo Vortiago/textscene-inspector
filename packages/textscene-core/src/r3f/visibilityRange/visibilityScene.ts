@@ -5,8 +5,8 @@
  */
 
 import * as THREE from 'three';
-import { cullVisibility, type VisibilityCullInstance } from '../../godot/visibilityCull';
-import type { VisibilityRange } from '../../godot/visibilityRange';
+import { acyclicParents, cullVisibility, type VisibilityCullInstance } from '../../godot/visibilityCull';
+import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/visibilityRange';
 import { observeSceneCull } from '../sceneRenderCamera';
 import { sceneSplitsHold } from '../directionalShadow/fitSceneDirectionalShadows';
 import { compareTreeOrder, type TreeOrder } from '../contexts/TreeOrderContext';
@@ -31,9 +31,15 @@ export interface VisibilityInstance {
   /** A new object whenever a field changes, so the cull rebuilds its topology only then. */
   readonly links: VisibilityLinks;
   readonly range: VisibilityRange;
-  /** Whether the scene cull indexes it (`godot/visibilityCull.ts`). */
+  /**
+   * Whether its pose and its box are known. The cull keeps the last result of an instance it cannot
+   * place, and of each of its dependants, and hides one it has never measured. Godot never holds
+   * an instance it cannot measure.
+   */
+  readonly isPlaced: boolean;
+  /** Whether the scene cull indexes it (`godot/visibilityCull.ts`). Read only while it is placed. */
   readonly isIndexed: boolean;
-  /** Writes its world AABB. The scene's world matrices are current when the cull calls it. */
+  /** Writes its world AABB, while it is placed. The scene's world matrices are current when the cull calls it. */
   worldBox(target: THREE.Box3): void;
   /** Takes the cull's result for the render about to draw: whether it draws, and its range fade. */
   apply(isVisible: boolean, fade: number): void;
@@ -42,6 +48,8 @@ export interface VisibilityInstance {
 interface InstanceState {
   /** The links the topology was built from. */
   links: VisibilityLinks;
+  /** Whether the cull has measured it once, so a later render it cannot measure keeps that result. */
+  hasResult: boolean;
   /** Its `viewport_state` bit per render camera. */
   wasVisible: WeakMap<THREE.Camera, boolean>;
 }
@@ -66,7 +74,7 @@ const scenes = new WeakMap<THREE.Scene, SceneInstances>();
 /** Adds `instance` to the cull of `scene` until the returned function runs. */
 export function registerVisibilityInstance(scene: THREE.Scene, instance: VisibilityInstance): () => void {
   const registry = scenes.get(scene) ?? createRegistry(scene);
-  registry.instances.set(instance, { links: instance.links, wasVisible: new WeakMap() });
+  registry.instances.set(instance, { links: instance.links, hasResult: false, wasVisible: new WeakMap() });
   registry.topology = null;
   return () => {
     registry.instances.delete(instance);
@@ -101,7 +109,9 @@ function cullScene(scene: THREE.Scene, registry: SceneInstances, camera: THREE.C
   cameraPosition.setFromMatrixPosition(camera.matrixWorld);
 
   const states = members.map((instance) => registry.instances.get(instance)!);
+  const isMeasured = measuredMembers(members, parents);
   const inputs = members.map((instance, i): VisibilityCullInstance => {
+    if (!isMeasured[i]) return unmeasuredInput(parents[i]!);
     instance.worldBox(box);
     return {
       range: instance.range,
@@ -113,9 +123,40 @@ function cullScene(scene: THREE.Scene, registry: SceneInstances, camera: THREE.C
     };
   });
   cullVisibility(inputs).forEach((result, i) => {
-    states[i]!.wasVisible.set(camera, result.wasVisible);
+    const state = states[i]!;
+    if (!isMeasured[i]) {
+      if (!state.hasResult) members[i]!.apply(false, 1);
+      return;
+    }
+    state.hasResult = true;
+    state.wasVisible.set(camera, result.wasVisible);
     members[i]!.apply(result.isVisible, result.fade);
   });
+}
+
+/**
+ * Whether the cull can measure each member: it is placed, and so is each visibility parent above
+ * it along the links Godot keeps. A dependant's result reads its parent's.
+ */
+function measuredMembers(members: readonly VisibilityInstance[], parents: readonly number[]): boolean[] {
+  const isPlaced = members.map((instance) => instance.isPlaced);
+  const links = acyclicParents(parents);
+  return members.map((_, i) => {
+    for (let at = i; at >= 0; at = links[at]!) if (!isPlaced[at]) return false;
+    return true;
+  });
+}
+
+/** A stand-in for a member the cull cannot measure: it keeps its links, and its result is dropped. */
+function unmeasuredInput(parent: number): VisibilityCullInstance {
+  return {
+    range: NO_VISIBILITY_RANGE,
+    isIndexed: false,
+    parent,
+    distance: 0,
+    isInView: false,
+    wasVisible: false,
+  };
 }
 
 /** The registry's topology, rebuilt when an instance joined, left or relinked since the last cull. */

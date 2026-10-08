@@ -17,8 +17,8 @@ import { rangedShadowCastingEffects, type ShadowCastingEffects } from '../shadow
 import { FadedSurfacesContext } from '../materials/swappedMaterials';
 import { registerVisibilityInstance } from './visibilityScene';
 import { useVisibilityParent } from './VisibilityParentContext';
-import type { InstancePlacement } from './placements';
-import { CulledInstance, UNPLACED } from './culledInstance';
+import { UNPLACED, type InstancePlacement } from './placements';
+import { CulledInstance } from './culledInstance';
 
 interface GeometryInstanceScope {
   instance: CulledInstance;

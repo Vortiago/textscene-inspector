@@ -4,10 +4,11 @@
  */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { GeometryInstance3D } from '../../../3d/geometryinstance3d/Component';
+import { undrawnGeometryInstance } from '../../../3d/geometryinstance3d/Component';
+import { useSoftBody3DAabb } from './ownAabb';
 
 nodeComponentRegistry.register({
   typeName: 'SoftBody3D',
-  Component: GeometryInstance3D,
+  Component: undrawnGeometryInstance(useSoftBody3DAabb),
   renderIntent: 'pending',
 });

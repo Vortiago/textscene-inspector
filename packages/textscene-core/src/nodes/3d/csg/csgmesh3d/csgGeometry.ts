@@ -3,11 +3,9 @@
 import type * as THREE from 'three';
 import type { CsgGeometryBuilder, CsgGeometryContext } from '../../../../r3f/csg/csgRegistration';
 import { findSubResource, parseResourceReference } from '../../../../resources/SubResourceResolver';
-import {
-  buildPrimitiveMeshGeometry,
-  primitiveMeshGeometryKey,
-} from '../../meshinstance3d/primitiveMeshGeometry';
+import { buildPrimitiveMeshGeometry } from '../../meshinstance3d/primitiveMeshGeometry';
 import type { CSGMesh3DProperties } from './types';
+import { resourceContentKey } from '../../../../resources/resourceContentKey';
 
 /**
  * Unlike the other CSG builders this one needs scene resources, which is why the builder
@@ -31,5 +29,5 @@ export function csgMesh3DGeometryKey(properties: Record<string, unknown>, ctx: C
   if (!ref || ref.type !== 'SubResource') return `mesh:${p.mesh}`;
   const resource = findSubResource(ctx.internalResources, ref.id);
   // Keyed on the sub-resource's content, since the parser allocates a fresh one per reparse.
-  return resource ? `mesh:${primitiveMeshGeometryKey(resource)}` : `mesh:missing:${ref.id}`;
+  return resource ? `mesh:${resourceContentKey(resource)}` : `mesh:missing:${ref.id}`;
 }
