@@ -7,6 +7,7 @@
 
 import type * as THREE from 'three';
 import type { GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
+import { setVisualLayers } from '../../../r3f/visualLayers';
 
 /** A surface of a MeshInstance3D: a Mesh, or a Points or Line for a non-triangle primitive. */
 export type MeshSurface = THREE.Object3D & {
@@ -47,6 +48,15 @@ export function meshInstanceSurfaces(object: THREE.Object3D): MeshSurface[] {
   if (!isMeshInstance(object)) return [];
   if (isSurface(object)) return [object];
   return object.children.filter((child): child is MeshSurface => !isMeshInstance(child) && isSurface(child));
+}
+
+/**
+ * Sets the render-layer mask of the MeshInstance3D `object` on it and on each surface it draws. A
+ * node under it keeps its own mask, as `layers` is per instance.
+ */
+export function stampMeshInstanceLayers(object: THREE.Object3D, layers: number): void {
+  setVisualLayers(object, layers);
+  for (const surface of meshInstanceSurfaces(object)) setVisualLayers(surface, layers);
 }
 
 function isSurface(object: THREE.Object3D): object is MeshSurface {

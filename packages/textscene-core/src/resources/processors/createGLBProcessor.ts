@@ -12,8 +12,8 @@ import { createGLBMesh, forEachSurfaceMaterial, tagImportMaterial } from '../for
 import { isGltfPath } from '../../godot/gltf';
 import { gltfResourcePath, selfContainedGlb } from '../formats/glb/gltfResources';
 import { applyRootScale } from '../formats/glb/rootScale';
+import { stampMeshInstanceLayers } from '../formats/glb/meshInstances';
 import type { GltfExtensionRules } from '../formats/glb/types';
-import { stampVisualLayers } from '../../r3f/visualLayers';
 import { flattenGlbObjects } from '../../r3f/internal/glb-scene-root/glbHierarchy';
 import { matchGlbTarget } from '../../r3f/internal/glb-scene-root/matchGlbTarget';
 import {
@@ -128,7 +128,7 @@ function applySidecarNodeLayers(object: THREE.Object3D, path: string, parsed: Pa
       continue;
     }
     logger.info(`[GLBProcessor] ${path}: import sidecar layers ${mask} on '${nodePath}'`);
-    stampVisualLayers(target.object, mask);
+    stampMeshInstanceLayers(target.object, mask);
   }
 }
 

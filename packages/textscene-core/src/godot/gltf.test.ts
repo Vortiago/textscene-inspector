@@ -6,6 +6,7 @@ import {
   gltfRefusalMessage,
   isGltfJsonObject,
   isGltfPath,
+  usesGodotSingleRoot,
   readGltfRequiredExtensions,
   requiredGltfExtensions,
   unsupportedRequiredGltfExtensions,
@@ -203,5 +204,23 @@ describe('isGltfJsonObject', () => {
 
   it('accepts an empty object', () => {
     expect(isGltfJsonObject({})).toBe(true);
+  });
+});
+
+describe('usesGodotSingleRoot', () => {
+  it('is true for a document that lists the extension as used', () => {
+    expect(usesGodotSingleRoot({ extensionsUsed: ['KHR_lights_punctual', 'GODOT_single_root'] })).toBe(true);
+  });
+
+  it('is false for a document without it, or that is not an object', () => {
+    expect([{ extensionsUsed: ['KHR_lights_punctual'] }, [], null].map(usesGodotSingleRoot)).toEqual([
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it('is false when `extensionsUsed` is not an array', () => {
+    expect(usesGodotSingleRoot({ extensionsUsed: 'GODOT_single_root' })).toBe(false);
   });
 });

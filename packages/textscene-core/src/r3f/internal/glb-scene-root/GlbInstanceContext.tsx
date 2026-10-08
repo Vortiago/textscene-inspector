@@ -13,6 +13,8 @@ import { useVisibilityParent } from '../../visibilityRange/VisibilityParentConte
 
 /** The GLB root as Godot holds it: the node that instances the GLB, or the scene's root. */
 export interface GlbRoot {
+  /** Its own properties, which a `GODOT_single_root` GLB's node 0 takes as the root. */
+  rawProperties: Readonly<Record<string, string>>;
   /** Its inline override children, which target nodes inside the GLB. */
   overrides: readonly LiveNode[];
   /** Null outside the dispatcher, where nothing can name a node as a parent. */
@@ -26,12 +28,19 @@ const GlbInstanceContext = createContext<GlbRoot | null>(null);
 GlbInstanceContext.displayName = 'GlbInstanceContext';
 
 const NO_OVERRIDES: readonly LiveNode[] = [];
+const NO_PROPERTIES: Readonly<Record<string, string>> = Object.freeze({});
 
 /** The node that instances this GLB, or, for a GLB opened as the scene, its own root at `nodePath`. */
 export function useGlbRoot(nodePath: string | null): GlbRoot {
   const instance = useContext(GlbInstanceContext);
   return useMemo(
-    () => instance ?? { overrides: NO_OVERRIDES, path: nodePath, visibilityParent: null },
+    () =>
+      instance ?? {
+        rawProperties: NO_PROPERTIES,
+        overrides: NO_OVERRIDES,
+        path: nodePath,
+        visibilityParent: null,
+      },
     [instance, nodePath]
   );
 }
@@ -53,8 +62,8 @@ export function GlbInstanceProvider({ node, path, children }: GlbInstanceProvide
   ).visibility_parent;
   const visibilityParent = visibilityParentOf(path, own, inherited, uniquePaths);
   const instance = useMemo(
-    () => ({ overrides: node.children, path, visibilityParent }),
-    [node.children, path, visibilityParent]
+    () => ({ rawProperties: node.rawProperties, overrides: node.children, path, visibilityParent }),
+    [node.rawProperties, node.children, path, visibilityParent]
   );
   return <GlbInstanceContext.Provider value={instance}>{children}</GlbInstanceContext.Provider>;
 }

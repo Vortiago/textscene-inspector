@@ -59,9 +59,9 @@ const SINGLE_GLB_NODES: Parameters<typeof nodesGlb>[0] = [{ name: 'Single', mesh
  * The host and the GLB, rendered once from a camera 11 units from the triangle's centre, with
  * Lamp instancing a GLB of `glbNodes`, which hold a triangle mesh named Single.
  */
-async function render(lines: string, proxyLines = '', glbNodes = SINGLE_GLB_NODES) {
+async function render(lines: string, proxyLines = '', glbNodes = SINGLE_GLB_NODES, glbExtra = {}) {
   const fake = createFakeResourceLoader();
-  fake.glbMeshes.seed(GLB_PATH, await createGLBMesh(nodesGlb(glbNodes), NO_SIDECAR));
+  fake.glbMeshes.seed(GLB_PATH, await createGLBMesh(nodesGlb(glbNodes, glbExtra), NO_SIDECAR));
   const camera = manualCameraAt({ x: 0.5, y: 0.5, z: 11 });
   const renderer = await ReactThreeTestRenderer.create(hostTree(fake, lines, proxyLines), { camera });
   await ReactThreeTestRenderer.act(async () => {
@@ -77,7 +77,7 @@ async function render(lines: string, proxyLines = '', glbNodes = SINGLE_GLB_NODE
     });
     await renderScene(renderer, camera);
   };
-  return { renderer, edit, single: objectNamed('Single'), proxy: objectNamed('Proxy') };
+  return { renderer, edit, objectNamed, single: objectNamed('Single'), proxy: objectNamed('Proxy') };
 }
 
 function hostTree(fake: ReturnType<typeof createFakeResourceLoader>, lines: string, proxyLines: string) {
@@ -213,5 +213,55 @@ describe('a GLB mesh as a visibility parent or a dependant', () => {
       ]
     );
     expect(drawsColour(single)).toBe(true);
+  });
+});
+
+describe('a GODOT_single_root GLB, whose glTF node 0 is the instancing node', () => {
+  const SINGLE_ROOT = { extensionsUsed: ['GODOT_single_root'] };
+  const NODES: Parameters<typeof nodesGlb>[0] = [
+    { name: 'RootNode', mesh: 0, translation: [0, 0, -1], children: [1] },
+    { name: 'Child', children: [2] },
+    { name: 'Grand', mesh: 0 },
+  ];
+
+  it('culls node 0 by the visibility range the instancing node writes', async () => {
+    const { objectNamed } = await render('visibility_range_end = 10.0\n', '', NODES, SINGLE_ROOT);
+    expect([drawsColour(objectNamed('RootNode')), drawsColour(objectNamed('Grand'))]).toEqual([false, true]);
+  });
+
+  it('resolves a deep override by the path below the instancing node', async () => {
+    const { objectNamed } = await render(
+      '\n[node name="Grand" parent="Lamp/Child"]\nvisibility_range_end = 10.0\n',
+      '',
+      NODES,
+      SINGLE_ROOT
+    );
+    expect(drawsColour(objectNamed('Grand'))).toBe(false);
+  });
+
+  it('keeps node 0 at its own transform while the instancing node writes none', async () => {
+    const { objectNamed } = await render('', '', NODES, SINGLE_ROOT);
+    expect(objectNamed('RootNode').position.toArray()).toEqual([0, 0, -1]);
+  });
+
+  it('puts node 0 at the origin once the instancing node writes a transform (edge case)', async () => {
+    const { objectNamed } = await render(
+      'transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)\n',
+      '',
+      NODES,
+      SINGLE_ROOT
+    );
+    expect(objectNamed('RootNode').position.toArray()).toEqual([0, 0, 0]);
+  });
+
+  it('gives node 0 its own transform back once the instancing node stops writing one', async () => {
+    const { edit, objectNamed } = await render(
+      'transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)\n',
+      '',
+      NODES,
+      SINGLE_ROOT
+    );
+    await edit('');
+    expect(objectNamed('RootNode').position.toArray()).toEqual([0, 0, -1]);
   });
 });

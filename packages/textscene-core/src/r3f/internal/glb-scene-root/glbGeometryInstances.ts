@@ -39,8 +39,9 @@ interface GlbMeshInstance {
 }
 
 /**
- * Each MeshInstance3D under `object`, in `entries` order, which is the GLB's tree order below
- * `rootOrder`. A node without an override of its own is at its `relPath` under the root, and takes
+ * Each MeshInstance3D of `object`, the GLB root, then each under it in `entries` order, which is
+ * the GLB's tree order below `rootOrder`. The root is the node that instances the GLB, with its
+ * properties. A node without an override of its own is at its `relPath` under the root, and takes
  * its parent's visibility parent (`node_3d.cpp:1307-1318`).
  */
 function glbMeshInstances(
@@ -54,6 +55,16 @@ function glbMeshInstances(
   const overrides = overridesByTarget(object, entries, root.overrides);
   const passedOn = new Map<THREE.Object3D, string | null>();
   const instances: GlbMeshInstance[] = [];
+  if (isMeshInstance(object)) {
+    instances.push({
+      object,
+      place: { path: root.path, parentPath: root.visibilityParent, order: rootOrder },
+      properties: parseGeometryInstance3D(
+        { type: 'node', attributes: { name: glbObjectName(object) } },
+        root.rawProperties
+      ),
+    });
+  }
   entries.forEach((entry, i) => {
     const override = overrides.get(entry.object);
     const path =
@@ -115,16 +126,17 @@ export function useGlbGeometryInstances(
   );
   const culled = useRef(new Map<THREE.Object3D, CulledMeshInstance>());
   useLayoutEffect(() => {
-    const meshes = entries.filter((entry) => isMeshInstance(entry.object));
-    const releases = meshes.map((entry) => cullMeshInstance(scene, entry.object, culled.current));
+    if (!object) return;
+    const meshes = [object, ...entries.map((entry) => entry.object)].filter(isMeshInstance);
+    const releases = meshes.map((mesh) => cullMeshInstance(scene, mesh, culled.current));
     return () => releases.forEach((release) => release());
-  }, [scene, entries]);
+  }, [scene, object, entries]);
   // After the effect above on the same commit, so a remounted instance takes its node data at once.
   useLayoutEffect(() => {
     for (const { object: meshObject, place, properties } of instances) {
       culled.current.get(meshObject)?.update(place, properties);
     }
-  }, [scene, entries, instances]);
+  }, [scene, object, entries, instances]);
 }
 
 /** One MeshInstance3D's cull instance, kept while its object is mounted. */

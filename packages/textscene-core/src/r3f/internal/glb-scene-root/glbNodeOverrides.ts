@@ -10,7 +10,7 @@ import type { TscnNode } from '../../../parser/types';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types';
 import { decomposeForR3F } from '../../nodeTransform';
 import { parseOptionalInt } from '../../../parser/valueParsers';
-import { stampVisualLayers } from '../../visualLayers';
+import { stampMeshInstanceLayers } from '../../../resources/formats/glb/meshInstances';
 import { joinPath } from '../../../utils/nodePath';
 import { flattenGlbObjects, glbObjectName, type GlbObjectEntry } from './glbHierarchy.js';
 import { matchGlbTarget } from './matchGlbTarget.js';
@@ -68,10 +68,8 @@ export function applyGlbNodeOverrides(
     const target = resolveGlbOverrideTarget(root, entries, override);
     if (!target) continue;
 
-    // An override node has no type, so `layers` lands in `rawProperties`. It is stamped over the
-    // whole subtree: a glTF node with several primitives is a Group of Meshes, and three reads the
-    // mask per mesh with no inheritance.
-    if (layers !== undefined) stampVisualLayers(target, layers);
+    // An override node has no type, so `layers` lands in `rawProperties`.
+    if (layers !== undefined) stampMeshInstanceLayers(target, layers);
     if (visible !== undefined) target.visible = boolSlotValue(visible) !== false;
     if (!transform) continue;
 

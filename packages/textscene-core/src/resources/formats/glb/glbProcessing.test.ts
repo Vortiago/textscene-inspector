@@ -14,6 +14,7 @@ import * as processingShim from '../../processing/glbProcessing';
 import { standardMaterial } from '../../materials/standardmaterial3d/testing/standardMaterial';
 import { glbOfChunks, jsonChunk, triangleGlb } from './testing/triangleGlb';
 import { NO_SIDECAR } from './testing/noSidecar';
+import { nodesGlb } from './testing/nodesGlb';
 import {
   DRAWN_OPAQUE_PREPASS,
   NO_OPAQUE_PREPASS,
@@ -100,6 +101,32 @@ describe('createGLBMesh', () => {
     const names = object.animations.map((c) => c.name);
 
     expect(names).toEqual(expect.arrayContaining(['idle', 'run', 'jump', 'walk', 'falling']));
+  });
+});
+
+describe('createGLBMesh with GODOT_single_root', () => {
+  const SINGLE_ROOT = { extensionsUsed: ['GODOT_single_root'] };
+
+  it('makes glTF node 0 the root, at its own transform', async () => {
+    const glb = nodesGlb(
+      [
+        { name: 'RootNode', translation: [1, 0, 0], children: [1] },
+        { name: 'Child', mesh: 0 },
+      ],
+      SINGLE_ROOT
+    );
+    const root = await createGLBMesh(glb, NO_SIDECAR);
+    expect([root.name, root.parent, root.position.x]).toEqual(['RootNode', null, 1]);
+    expect(root.children.map((child) => child.name)).toEqual(['Child']);
+  });
+
+  it('refuses a file with no nodes, as Godot does', async () => {
+    await expect(createGLBMesh(nodesGlb([], SINGLE_ROOT), NO_SIDECAR)).rejects.toThrow('has no nodes');
+  });
+
+  it('keeps every root under the scene without the extension', async () => {
+    const root = await createGLBMesh(nodesGlb([{ name: 'A' }, { name: 'B' }]), NO_SIDECAR);
+    expect(root.children.map((child) => child.name)).toEqual(['A', 'B']);
   });
 });
 

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   GODOT_DEFAULT_VISUAL_LAYERS,
-  stampVisualLayers,
+  setVisualLayers,
   visualLayersOf,
   visualLayersUserData,
 } from './visualLayers';
@@ -56,28 +56,29 @@ describe('visualLayersOf', () => {
   });
 });
 
-describe('stampVisualLayers', () => {
-  it('stamps the subtree root and every descendant', () => {
-    // One glTF node with several primitives arrives as a Group of Meshes, and
-    // readers look at a single object, so the meshes must carry it themselves.
-    const root = new THREE.Group();
-    const group = new THREE.Group();
+describe('setVisualLayers', () => {
+  it('sets the mask of the object alone, not of its children', () => {
     const mesh = new THREE.Mesh();
-    group.add(mesh);
-    root.add(group);
+    const child = new THREE.Mesh();
+    mesh.add(child);
 
-    stampVisualLayers(root, 2);
+    setVisualLayers(mesh, 2);
 
-    expect(visualLayersOf(root)).toBe(2);
-    expect(visualLayersOf(group)).toBe(2);
-    expect(visualLayersOf(mesh)).toBe(2);
+    expect([visualLayersOf(mesh), visualLayersOf(child)]).toEqual([2, GODOT_DEFAULT_VISUAL_LAYERS]);
   });
 
-  it('overwrites an earlier stamp', () => {
+  it('overwrites an earlier mask', () => {
     const mesh = new THREE.Mesh();
-    stampVisualLayers(mesh, 2);
-    stampVisualLayers(mesh, 8);
+    setVisualLayers(mesh, 2);
+    setVisualLayers(mesh, 8);
 
     expect(visualLayersOf(mesh)).toBe(8);
+  });
+
+  it('sets a mask of zero, which no decal or camera matches', () => {
+    const mesh = new THREE.Mesh();
+    setVisualLayers(mesh, 0);
+
+    expect(visualLayersOf(mesh)).toBe(0);
   });
 });

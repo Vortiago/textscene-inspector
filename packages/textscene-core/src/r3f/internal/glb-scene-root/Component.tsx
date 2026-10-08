@@ -11,6 +11,7 @@ import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
 import { useGlbRoot } from './GlbInstanceContext';
 import { useGlbGeometryInstances } from './glbGeometryInstances';
+import { useInstancingNodeTransform } from './instancingNodeTransform';
 import { applyGlbNodeOverrides, isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOverrides';
 import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME, type GlbObjectEntry } from './glbHierarchy';
 import { useAnimationTransport, type PlayState } from '../../contexts/AnimationTransportContext';
@@ -66,6 +67,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // the synchronous mutation above cannot do, so each one mounts its own slot component.
   const importMaterials = useGlbImportMaterials(object);
   const materialOverrides = useGlbMaterialOverrides(object, entries, overrides);
+  useInstancingNodeTransform(object, root.rawProperties);
   useGlbGeometryInstances(object, entries, root);
 
   // Registers each GLB object under the tree's relPath scheme, so the SceneTreeViewer can select

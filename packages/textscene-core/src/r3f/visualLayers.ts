@@ -35,14 +35,7 @@ export function visualLayersOf(object: THREE.Object3D): number {
   return typeof layers === 'number' ? layers : GODOT_DEFAULT_VISUAL_LAYERS;
 }
 
-/**
- * Stamp the mask onto `object` and everything beneath it, for the GLB path: one glTF
- * node with several primitives becomes a Group of Meshes in three, and readers do not
- * inherit.
- */
-export function stampVisualLayers(object: THREE.Object3D, layers: number): void {
-  // `traverse` visits `object` itself first, so the subtree root is covered too.
-  object.traverse((child) => {
-    child.userData[VISUAL_LAYERS_KEY] = layers;
-  });
+/** Sets the mask of one object built outside JSX, such as a GLB's mesh. */
+export function setVisualLayers(object: THREE.Object3D, layers: number): void {
+  object.userData[VISUAL_LAYERS_KEY] = layers;
 }

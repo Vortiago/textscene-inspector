@@ -13,7 +13,8 @@ import { tagGodotNodeNames } from './nodeNames';
 import { gltfNodeNames, type GltfNamingOptions } from '../../../godot/gltfNodeNames';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
 import type { GltfExtensionRules } from './types';
-import type { GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
+import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
+import { usesGodotSingleRoot } from '../../../godot/gltf';
 
 interface GlbModules {
   GLTFLoader: (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
@@ -167,13 +168,31 @@ export async function createGLBMesh(
     decodeImagesInImageElements
   );
   const gltf = await loader.parseAsync(data, '');
-  // GLTFLoader returns embedded clips on `gltf.animations`. The scene's `.animations`
+  const root = await godotSceneRoot(gltf);
+  // GLTFLoader returns embedded clips on `gltf.animations`. The root's `.animations`
   // is where GLBSceneRoot plays them from and where `cloneWithMaterials` copies them.
-  gltf.scene.animations = gltf.animations;
-  tagMeshInstances(gltf.scene, gltf.parser.associations);
-  tagGodotNodeNames(gltf.scene, gltf.parser.associations, gltfNodeNames(gltf.parser.json, naming));
-  importBlendAsDepthPrepass(gltf.scene);
-  return gltf.scene;
+  root.animations = gltf.animations;
+  tagMeshInstances(root, gltf.parser.associations);
+  tagGodotNodeNames(root, gltf.parser.associations, gltfNodeNames(gltf.parser.json, naming));
+  importBlendAsDepthPrepass(root);
+  return root;
+}
+
+/**
+ * The object Godot's importer makes the scene root: glTF node 0 for a `GODOT_single_root` file, else
+ * a root over the scene's nodes. A file with no node 0 fails, as Godot's import does.
+ */
+async function godotSceneRoot(gltf: GLTF): Promise<THREE.Object3D> {
+  if (!usesGodotSingleRoot(gltf.parser.json)) return gltf.scene;
+  if (!gltf.parser.json.nodes?.length)
+    throw new Error('glTF: Single root file has no nodes. This glTF file is invalid.');
+  let root: THREE.Object3D | undefined;
+  gltf.scene.traverse((object) => {
+    if (gltf.parser.associations.get(object)?.nodes === 0) root ??= object;
+  });
+  root ??= (await gltf.parser.getDependency('node', 0)) as THREE.Object3D;
+  root.removeFromParent();
+  return root;
 }
 
 /**

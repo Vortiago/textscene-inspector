@@ -34,6 +34,16 @@ export function isGltfJsonObject(value: unknown): value is GltfJsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Whether a parsed glTF document uses `GODOT_single_root`. Its glTF node 0 is then the scene root,
+ * and the importer generates no other root (`gltf_document.cpp:6873-6883`).
+ */
+export function usesGodotSingleRoot(json: unknown): boolean {
+  if (!isGltfJsonObject(json)) return false;
+  const used = json['extensionsUsed'];
+  return Array.isArray(used) && used.includes('GODOT_single_root');
+}
+
 /** The `extensionsRequired` entries Godot cannot import. Any entry refuses the whole file. */
 export function unsupportedRequiredGltfExtensions(required: readonly string[]): string[] {
   return required.filter((name) => !GODOT_GLTF_EXTENSIONS.has(name));
