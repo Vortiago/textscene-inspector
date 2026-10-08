@@ -1,5 +1,5 @@
 /** The "Goldens touched" comment a pull request gets for the baselines it changes. */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { REPO_ROOT } from '../repoRoot.mjs';
@@ -11,10 +11,11 @@ const PULL_REQUEST = {
   number: 640,
   branch: 'claude/issue-351-visibility',
 };
+const BASELINE_DIR = 'scripts/visual/baselines';
 
 describe('goldensComment', () => {
   it('links a changed golden to its image diff, the preview of the branch and main', () => {
-    const comment = goldensComment('M\tscripts/visual/baselines/glow-mix.png\n', SCENES, PULL_REQUEST);
+    const comment = goldensComment(nameStatus('M', 'glow-mix'), SCENES, PULL_REQUEST);
 
     expect(comment).toContain(
       '| `glow-mix` | changed | ' +
@@ -25,19 +26,19 @@ describe('goldensComment', () => {
   });
 
   it('writes nothing when no baseline changed', () => {
-    const nameStatus = 'M\tpackages/textscene-core/src/r3f/TscnCanvas.tsx\nM\tscripts/visual/scenes.mjs\n';
+    const changes = 'M\tpackages/textscene-core/src/r3f/TscnCanvas.tsx\nM\tscripts/visual/scenes.mjs\n';
 
-    expect(goldensComment(nameStatus, SCENES, PULL_REQUEST)).toBeNull();
+    expect(goldensComment(changes, SCENES, PULL_REQUEST)).toBeNull();
   });
 
   it('links an added golden to the preview of the branch only, since main has no such scene', () => {
-    const comment = goldensComment('A\tscripts/visual/baselines/glow-mix.png\n', SCENES, PULL_REQUEST);
+    const comment = goldensComment(nameStatus('A', 'glow-mix'), SCENES, PULL_REQUEST);
 
     expect(comment).toMatch(/\| `glow-mix` \| added \| \[diff\]\(.+\) \| \[preview\]\(.+\) \| {2}\|/);
   });
 
   it('links a removed golden to its image diff only, since the branch drops its scene', () => {
-    const comment = goldensComment('D\tscripts/visual/baselines/sprite-old.png\n', SCENES, PULL_REQUEST);
+    const comment = goldensComment(nameStatus('D', 'sprite-old'), SCENES, PULL_REQUEST);
 
     expect(comment).toMatch(/\| `sprite-old` \| removed \| \[diff\]\(.+\) \| {2}\| {2}\|/);
   });
@@ -45,7 +46,7 @@ describe('goldensComment', () => {
   it('cuts the preview host to the 28 characters Cloudflare Pages keeps of the branch', () => {
     const pullRequest = { ...PULL_REQUEST, branch: 'claude/issue-625-tiledata-vo-modulate' };
 
-    const comment = goldensComment('M\tscripts/visual/baselines/glow-mix.png\n', SCENES, pullRequest);
+    const comment = goldensComment(nameStatus('M', 'glow-mix'), SCENES, pullRequest);
 
     expect(comment).toContain('https://claude-issue-625-tiledata-vo.textscene-inspector.pages.dev/');
   });
@@ -53,13 +54,13 @@ describe('goldensComment', () => {
   it('drops a hyphen the cut leaves at the end of the preview host', () => {
     const pullRequest = { ...PULL_REQUEST, branch: 'claude/pr-goldens-touched-f/x' };
 
-    const comment = goldensComment('M\tscripts/visual/baselines/glow-mix.png\n', SCENES, pullRequest);
+    const comment = goldensComment(nameStatus('M', 'glow-mix'), SCENES, pullRequest);
 
     expect(comment).toContain('https://claude-pr-goldens-touched-f.textscene-inspector.pages.dev/');
   });
 
   it('opens with the marker that finds the comment again on the next push', () => {
-    const comment = goldensComment('M\tscripts/visual/baselines/glow-mix.png\n', SCENES, PULL_REQUEST);
+    const comment = goldensComment(nameStatus('M', 'glow-mix'), SCENES, PULL_REQUEST);
 
     expect(comment.split('\n')[0]).toBe(GOLDENS_COMMENT_MARKER);
   });
@@ -77,14 +78,27 @@ describe('goldensComment', () => {
   });
 
   it('folds more than ten goldens under a count of each kind of change', () => {
-    const nameStatus = changedGoldens(10) + 'A\tscripts/visual/baselines/glow-new.png\n';
+    const changes = changedGoldens(10) + nameStatus('A', 'glow-new');
 
-    const comment = goldensComment(nameStatus, SCENES, PULL_REQUEST);
+    const comment = goldensComment(changes, SCENES, PULL_REQUEST);
 
     expect(comment).toContain('<details><summary>11 goldens: 1 added, 10 changed</summary>');
   });
+
+  it('recognises every committed baseline, so a moved directory fails here and not silently', () => {
+    const baselines = readdirSync(resolve(REPO_ROOT, BASELINE_DIR));
+    const changes = baselines.map((file) => `M\t${BASELINE_DIR}/${file}\n`).join('');
+
+    const comment = goldensComment(changes, SCENES, PULL_REQUEST);
+
+    expect(comment).toContain(`<summary>${baselines.length} goldens: ${baselines.length} changed</summary>`);
+  });
 });
 
+function nameStatus(status, golden) {
+  return `${status}\t${BASELINE_DIR}/${golden}.png\n`;
+}
+
 function changedGoldens(count) {
-  return Array.from({ length: count }, (_, i) => `M\tscripts/visual/baselines/golden-${i}.png\n`).join('');
+  return Array.from({ length: count }, (_, i) => nameStatus('M', `golden-${i}`)).join('');
 }

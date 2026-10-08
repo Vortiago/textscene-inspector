@@ -36,6 +36,9 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
+          # The diff reads trees only, and the script imports from scripts/ alone.
+          filter: blob:none
+          sparse-checkout: scripts
 
       - name: Write the comment
         run: >-
@@ -44,13 +47,17 @@ jobs:
 
       - name: Post, update or delete the comment
         run: |
+          body="$RUNNER_TEMP/goldens.md"
           comments="repos/$REPOSITORY/issues/$PR_NUMBER/comments"
           existing=$(gh api --paginate "$comments" \
             --jq '.[] | select(.body | startswith("<!-- goldens-touched -->")) | .id' | head -n 1)
-          if [ -s "$RUNNER_TEMP/goldens.md" ] && [ -n "$existing" ]; then
-            gh api -X PATCH "repos/$REPOSITORY/issues/comments/$existing" -F "body=@$RUNNER_TEMP/goldens.md"
-          elif [ -s "$RUNNER_TEMP/goldens.md" ]; then
-            gh api -X POST "$comments" -F "body=@$RUNNER_TEMP/goldens.md"
+          comment="repos/$REPOSITORY/issues/comments/$existing"
+          if [ -s "$body" ]; then
+            if [ -n "$existing" ]; then
+              gh api -X PATCH "$comment" -F "body=@$body"
+            else
+              gh api -X POST "$comments" -F "body=@$body"
+            fi
           elif [ -n "$existing" ]; then
-            gh api -X DELETE "repos/$REPOSITORY/issues/comments/$existing"
+            gh api -X DELETE "$comment"
           fi

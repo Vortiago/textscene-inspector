@@ -7,6 +7,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { PREVIEW_URL } from '../compare-docs/gallery/vocabulary.mjs';
 import { GOLDEN_SCENES } from '../visual/scenes.mjs';
 
 /** The first line of the comment, which the workflow searches for to update it in place. */
@@ -14,7 +15,7 @@ export const GOLDENS_COMMENT_MARKER = '<!-- goldens-touched -->';
 
 const BASELINE_PATH = /^scripts\/visual\/baselines\/(.+)\.png$/;
 const STATUS_WORDS = { A: 'added', M: 'changed', D: 'removed' };
-const MAIN_SITE = 'https://textscene-inspector.pages.dev';
+const MAIN_SITE = new URL(PREVIEW_URL);
 
 // Cloudflare Pages keeps 28 characters of the branch in a preview host: #629's
 // `claude/issue-625-tiledata-...` deploys to `claude-issue-625-tiledata-vo`.
@@ -32,45 +33,48 @@ const OPEN_ROW_LIMIT = 10;
 export function goldensComment(nameStatus, scenes, pullRequest) {
   const goldens = parseGoldens(nameStatus);
   if (goldens.length === 0) return null;
+  const preview = branchSite(pullRequest.branch);
   const table = [
     '| Golden | Change | Image diff | This branch | Main |',
     '| --- | --- | --- | --- | --- |',
-    ...goldens.map((golden) => row(golden, scenes, pullRequest)),
+    ...goldens.map((golden) => row(golden, scenes, pullRequest, preview)),
   ].join('\n');
   return [GOLDENS_COMMENT_MARKER, '## Goldens touched', '', fold(table, goldens), ''].join('\n');
 }
 
 /** The changed baselines, by name, in the order git lists them. */
 function parseGoldens(nameStatus) {
-  return nameStatus
-    .split('\n')
-    .map((line) => line.split('\t'))
-    .filter(([, path]) => BASELINE_PATH.test(path ?? ''))
-    .map(([status, path]) => ({ path, name: BASELINE_PATH.exec(path)[1], change: STATUS_WORDS[status] }));
+  return nameStatus.split('\n').flatMap((line) => {
+    const [status, path = ''] = line.split('\t');
+    const baseline = BASELINE_PATH.exec(path);
+    return baseline ? [{ path, name: baseline[1], change: STATUS_WORDS[status] }] : [];
+  });
 }
 
 /** An added golden has no scene on main, and a removed one has none on the branch. */
-function row({ path, name, change }, scenes, { repository, number, branch }) {
+function row({ path, name, change }, scenes, { repository, number }, preview) {
   const fixture = scenes.find((scene) => scene.name === name)?.file;
   const diffAnchor = createHash('sha256').update(path).digest('hex');
   const diff = `[diff](https://github.com/${repository}/pull/${number}/files#diff-${diffAnchor})`;
-  const preview = `https://${branchAlias(branch)}.textscene-inspector.pages.dev`;
   const onBranch = fixture && change !== 'removed' ? sceneLink('preview', preview, fixture) : '';
   const onMain = fixture && change === 'changed' ? sceneLink('main', MAIN_SITE, fixture) : '';
   return `| \`${name}\` | ${change} | ${diff} | ${onBranch} | ${onMain} |`;
 }
 
 function sceneLink(label, site, fixture) {
-  return `[${label}](${site}/?fixture=${encodeURIComponent(fixture)})`;
+  const url = new URL(site);
+  url.searchParams.set('fixture', fixture);
+  return `[${label}](${url})`;
 }
 
-/** The branch's preview host label: a DNS label ends in a letter or digit, never a hyphen. */
-function branchAlias(branch) {
-  return branch
+/** The branch's Cloudflare Pages preview. A DNS label ends in a letter or digit, never a hyphen. */
+function branchSite(branch) {
+  const alias = branch
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .slice(0, BRANCH_ALIAS_LENGTH)
     .replace(/-+$/, '');
+  return new URL(`https://${alias}.${MAIN_SITE.host}/`);
 }
 
 function fold(table, goldens) {
