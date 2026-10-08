@@ -1,19 +1,29 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { FadedMeshMaterials, registerAlphaPassBuilder, unfadedMaterial } from './fadedMeshMaterials';
+import { FadedMeshMaterials, registerFadedCopyBuilders, unfadedMaterial } from './fadedMeshMaterials';
 
 /** A fade whose alpha is 39/255: inside the alpha pass. */
 const MARGIN_FADE = 0.15625;
+/** A fade above the alpha-pass threshold whose byte is 254, short of a full one. */
+const NEAR_FULL_FADE = 0.9995;
 
 function meshOf(material: THREE.Material | THREE.Material[]): THREE.Mesh {
   return new THREE.Mesh(new THREE.BufferGeometry(), material);
 }
 
-describe('registerAlphaPassBuilder', () => {
-  it('draws the built variant in the alpha pass', () => {
+/** Builders that hand out `built` for each pass. */
+function buildersOf(built: { unfaded?: THREE.Material; alphaPass?: THREE.Material }) {
+  return {
+    unfaded: () => built.unfaded ?? new THREE.MeshStandardMaterial(),
+    alphaPass: () => built.alphaPass ?? new THREE.MeshStandardMaterial(),
+  };
+}
+
+describe('registerFadedCopyBuilders', () => {
+  it('draws the built alpha-pass copy in the alpha pass', () => {
     const unfaded = new THREE.MeshStandardMaterial();
     const alphaPass = new THREE.MeshStandardMaterial({ transparent: true });
-    registerAlphaPassBuilder(unfaded, () => alphaPass);
+    registerFadedCopyBuilders(unfaded, buildersOf({ alphaPass }));
     const mesh = meshOf(unfaded);
 
     new FadedMeshMaterials(mesh).applyFade(MARGIN_FADE);
@@ -21,22 +31,33 @@ describe('registerAlphaPassBuilder', () => {
     expect(mesh.material).toBe(alphaPass);
   });
 
+  it('draws the built own-pass copy at a fade byte short of a full one', () => {
+    const unfaded = new THREE.MeshStandardMaterial();
+    const ownPass = new THREE.MeshStandardMaterial();
+    registerFadedCopyBuilders(unfaded, buildersOf({ unfaded: ownPass }));
+    const mesh = meshOf(unfaded);
+
+    new FadedMeshMaterials(mesh).applyFade(NEAR_FULL_FADE);
+
+    expect(mesh.material).toBe(ownPass);
+  });
+
   it('builds nothing before the first fade (edge case)', () => {
     const build = vi.fn(() => new THREE.MeshStandardMaterial());
     const unfaded = new THREE.MeshStandardMaterial();
-    registerAlphaPassBuilder(unfaded, build);
+    registerFadedCopyBuilders(unfaded, { unfaded: build, alphaPass: build });
 
     new FadedMeshMaterials(meshOf(unfaded)).applyFade(1);
 
     expect(build).not.toHaveBeenCalled();
   });
 
-  it('disposes the built variant with its unfaded material', () => {
+  it('disposes the built copy with its unfaded material', () => {
     const unfaded = new THREE.MeshStandardMaterial();
     const alphaPass = new THREE.MeshStandardMaterial();
     const disposed = vi.fn();
     alphaPass.addEventListener('dispose', disposed);
-    registerAlphaPassBuilder(unfaded, () => alphaPass);
+    registerFadedCopyBuilders(unfaded, buildersOf({ alphaPass }));
     new FadedMeshMaterials(meshOf(unfaded)).applyFade(MARGIN_FADE);
 
     unfaded.dispose();
@@ -46,7 +67,7 @@ describe('registerAlphaPassBuilder', () => {
 });
 
 describe('unfadedMaterial', () => {
-  it('gives the unfaded material of an alpha-pass one', () => {
+  it('gives the unfaded material of a faded copy', () => {
     const unfaded = new THREE.MeshStandardMaterial();
     const mesh = meshOf(unfaded);
     new FadedMeshMaterials(mesh).applyFade(MARGIN_FADE);
@@ -54,7 +75,7 @@ describe('unfadedMaterial', () => {
     expect(unfadedMaterial(mesh.material as THREE.Material)).toBe(unfaded);
   });
 
-  it('gives a material with no alpha-pass role as itself', () => {
+  it('gives a material that is no faded copy as itself', () => {
     const material = new THREE.MeshStandardMaterial();
 
     expect(unfadedMaterial(material)).toBe(material);
@@ -96,11 +117,23 @@ describe('FadedMeshMaterials.applyFade', () => {
     expect((far.material as THREE.Material).opacity).toBe(127 / 255);
   });
 
-  it('keeps the unfaded material at a fade above the alpha-pass threshold (edge case)', () => {
-    const unfaded = new THREE.MeshStandardMaterial();
+  it('draws an unblended copy at the fade byte above the alpha-pass threshold (edge case)', () => {
+    const unfaded = new THREE.MeshStandardMaterial({ opacity: 0.8, alphaTest: 0.5 });
     const mesh = meshOf(unfaded);
 
-    new FadedMeshMaterials(mesh).applyFade(0.9995);
+    new FadedMeshMaterials(mesh).applyFade(NEAR_FULL_FADE);
+
+    expect(mesh.material).toMatchObject({ transparent: false, alphaTest: 0.5, opacity: 0.8 * (254 / 255) });
+    expect(unfaded.opacity).toBe(0.8);
+  });
+
+  it('draws the unfaded material itself at a full fade', () => {
+    const unfaded = new THREE.MeshStandardMaterial();
+    const mesh = meshOf(unfaded);
+    const faded = new FadedMeshMaterials(mesh);
+
+    faded.applyFade(NEAR_FULL_FADE);
+    faded.applyFade(1);
 
     expect(mesh.material).toBe(unfaded);
   });
@@ -117,7 +150,7 @@ describe('FadedMeshMaterials.applyFade', () => {
 });
 
 describe('FadedMeshMaterials.dispose', () => {
-  it('puts the unfaded material back and disposes the alpha-pass copy', () => {
+  it('puts the unfaded material back and disposes the faded copy', () => {
     const unfaded = new THREE.MeshStandardMaterial();
     const mesh = meshOf(unfaded);
     const faded = new FadedMeshMaterials(mesh);

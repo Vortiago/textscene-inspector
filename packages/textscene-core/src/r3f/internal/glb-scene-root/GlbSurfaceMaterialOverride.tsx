@@ -16,7 +16,7 @@ import { forEachSurfaceMaterial } from '../../../resources/formats/glb/glbProces
 import { useMaterialScalars, useMaterialTextures } from '../../materials/SurfaceMaterialSlot.js';
 import { readyMaterial, useMaterial } from '../../materials/useMaterial.js';
 import type { MaterialSource } from '../../materials/materialSource.js';
-import { registerAlphaPassBuilder, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
+import { registerFadedCopyBuilders, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
 
 export interface GlbSurfaceMaterialOverrideProps {
   /** The GLB-internal object whose surface materials are being replaced. */
@@ -56,7 +56,10 @@ export function GlbSurfaceMaterialOverride({
     if (isAbsent) return null;
     if (!bags) return materialFromBag(MISSING_TEXTURE_MATERIAL);
     const unfaded = materialFromBag(bags.unfaded);
-    registerAlphaPassBuilder(unfaded, () => materialFromBag(bags.alphaPass));
+    registerFadedCopyBuilders(unfaded, {
+      unfaded: () => materialFromBag(bags.unfaded),
+      alphaPass: () => materialFromBag(bags.alphaPass),
+    });
     return unfaded;
   }, [isAbsent, bags]);
   useEffect(() => () => material?.dispose(), [material]);

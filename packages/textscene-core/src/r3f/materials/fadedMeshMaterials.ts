@@ -1,9 +1,9 @@
 /**
  * The fade of a mesh built outside React, such as a GLB's: before each render, each surface slot
- * holds its unfaded material, or that material's alpha-pass copy with the fade alpha in its
- * opacity. Any other writer of the slot reads the unfaded material through `unfadedMaterial`.
- * Each mesh builds its own copy: an import remap puts one material on many meshes, each at its
- * own fade.
+ * holds its unfaded material, or a copy of it with the fade alpha in its opacity, in its own pass
+ * or in the alpha pass. Any other writer of the slot reads the unfaded material through
+ * `unfadedMaterial`. Each mesh builds its own copies: an import remap puts one material on many
+ * meshes, each at its own fade.
  */
 
 import * as THREE from 'three';
@@ -11,22 +11,28 @@ import { fadeAlpha, forcesAlphaPass } from '../../godot/fadeAlpha';
 import { injectProgram } from '../materialProgramInputs';
 import type { MeshSurface } from '../../resources/formats/glb/meshInstances';
 import type { FadedSurface } from './swappedMaterials';
+import type { FadeVariants } from './fadeVariants';
 import { surfaceAlphaProps, type SurfaceAlphaSource } from './surfaceAlphaPatch';
 
-/** Each unfaded material's alpha-pass builder. Written only by `registerAlphaPassBuilder`. */
-const alphaPassBuilders = new WeakMap<THREE.Material, () => THREE.Material>();
-/** Each alpha-pass material by its unfaded one. Written only by `FadedMeshMaterials`, as it builds one. */
+type FadePass = keyof FadeVariants<unknown>;
+
+/** Each unfaded material's copy builders. Written only by `registerFadedCopyBuilders`. */
+const copyBuilders = new WeakMap<THREE.Material, FadeVariants<() => THREE.Material>>();
+/** Each faded copy's unfaded material. Written only by `FadedMeshMaterials`, as it builds one. */
 const unfadedMaterials = new WeakMap<THREE.Material, THREE.Material>();
 
 /**
- * Gives `unfaded` what builds the material it draws as in the alpha pass, on its first fade. A
- * material derived from Godot's own registers its derivation's variant, in place of a copy.
+ * Gives `unfaded` what builds its faded copy in each pass, on its first fade there. A material
+ * derived from Godot's own registers its derivation's variants, in place of a plain copy.
  */
-export function registerAlphaPassBuilder(unfaded: THREE.Material, build: () => THREE.Material): void {
-  alphaPassBuilders.set(unfaded, build);
+export function registerFadedCopyBuilders(
+  unfaded: THREE.Material,
+  builders: FadeVariants<() => THREE.Material>
+): void {
+  copyBuilders.set(unfaded, builders);
 }
 
-/** The material a slot holds unfaded: `material` itself, unless it is an alpha-pass material. */
+/** The material a slot holds unfaded: `material` itself, unless it is a faded copy. */
 export function unfadedMaterial(material: THREE.Material): THREE.Material {
   return unfadedMaterials.get(material) ?? material;
 }
@@ -58,57 +64,69 @@ function alphaPassCopy(material: THREE.Material): THREE.Material {
   return copy;
 }
 
-/** An alpha-pass material, and the listener that disposes it with its unfaded material. */
-interface BuiltAlphaPass {
+/** The plain copy of an imported `material` that draws in `pass`. An import carries no program injection. */
+function plainCopy(material: THREE.Material, pass: FadePass): THREE.Material {
+  return pass === 'alphaPass' ? alphaPassCopy(material) : material.clone();
+}
+
+/** A faded copy, and the listener that disposes it with its unfaded material. */
+interface BuiltCopy {
   material: THREE.Material;
   disposeWithUnfaded: () => void;
 }
 
 export class FadedMeshMaterials implements FadedSurface {
-  /** Each unfaded material's alpha-pass one for this mesh, built on its first fade. */
-  private readonly alphaPasses = new Map<THREE.Material, BuiltAlphaPass>();
+  /** Each unfaded material's faded copy in each pass for this mesh, built on its first fade there. */
+  private readonly copies = new Map<THREE.Material, Partial<FadeVariants<BuiltCopy>>>();
 
   constructor(private readonly mesh: MeshSurface) {}
 
   applyFade(fade: number): void {
-    const isAlphaPass = forcesAlphaPass(fade);
-    const alpha = fadeAlpha(fade);
     const { material } = this.mesh;
     if (!Array.isArray(material)) {
-      this.mesh.material = this.placed(material, isAlphaPass, alpha);
+      this.mesh.material = this.placed(material, fade);
       return;
     }
-    for (let i = 0; i < material.length; i++) material[i] = this.placed(material[i]!, isAlphaPass, alpha);
+    for (let i = 0; i < material.length; i++) material[i] = this.placed(material[i]!, fade);
   }
 
-  /** Puts each slot's unfaded material back, and disposes every alpha-pass material this mesh built. */
+  /** Puts each slot's unfaded material back, and disposes every faded copy this mesh built. */
   dispose(): void {
     this.applyFade(1);
-    for (const [unfaded, { material, disposeWithUnfaded }] of this.alphaPasses) {
-      unfaded.removeEventListener('dispose', disposeWithUnfaded);
-      material.dispose();
+    for (const [unfaded, passes] of this.copies) {
+      for (const { material, disposeWithUnfaded } of Object.values(passes)) {
+        unfaded.removeEventListener('dispose', disposeWithUnfaded);
+        material.dispose();
+      }
     }
-    this.alphaPasses.clear();
+    this.copies.clear();
   }
 
-  /** The material a slot holding `current` draws at the fade: its unfaded one, or that one's alpha pass. */
-  private placed(current: THREE.Material, isAlphaPass: boolean, alpha: number): THREE.Material {
+  /**
+   * The material a slot holding `current` draws at `fade`. Godot starts ALPHA from the fade byte
+   * in every pass (`scene_forward_clustered.glsl:1251`), so a fade short of a full byte draws a
+   * copy even in the surface's own pass, where it lowers what a cut keeps.
+   */
+  private placed(current: THREE.Material, fade: number): THREE.Material {
     const unfaded = unfadedMaterial(current);
-    if (!isAlphaPass) return unfaded;
-    const alphaPass = this.alphaPassOf(unfaded);
-    alphaPass.opacity = unfaded.opacity * alpha;
-    return alphaPass;
+    const alpha = fadeAlpha(fade);
+    if (alpha === 1) return unfaded;
+    const copy = this.copyOf(unfaded, forcesAlphaPass(fade) ? 'alphaPass' : 'unfaded');
+    copy.opacity = unfaded.opacity * alpha;
+    return copy;
   }
 
-  /** `unfaded` in the alpha pass, built once for this mesh and disposed with it. */
-  private alphaPassOf(unfaded: THREE.Material): THREE.Material {
-    const known = this.alphaPasses.get(unfaded);
+  /** `unfaded`'s faded copy in `pass`, built once for this mesh and disposed with it. */
+  private copyOf(unfaded: THREE.Material, pass: FadePass): THREE.Material {
+    const passes = this.copies.get(unfaded) ?? {};
+    this.copies.set(unfaded, passes);
+    const known = passes[pass];
     if (known) return known.material;
-    const material = alphaPassBuilders.get(unfaded)?.() ?? alphaPassCopy(unfaded);
+    const material = copyBuilders.get(unfaded)?.[pass]() ?? plainCopy(unfaded, pass);
     const disposeWithUnfaded = () => material.dispose();
     unfaded.addEventListener('dispose', disposeWithUnfaded);
     unfadedMaterials.set(material, unfaded);
-    this.alphaPasses.set(unfaded, { material, disposeWithUnfaded });
+    passes[pass] = { material, disposeWithUnfaded };
     return material;
   }
 }

@@ -10,6 +10,9 @@ import {
   type MaterialAttach,
 } from './swappedMaterials';
 
+/** A fade above the alpha-pass threshold whose byte is 254, short of a full one. */
+const NEAR_FULL_FADE = 0.9995;
+
 function Probe({ attach, onAttaches }: { attach?: string; onAttaches: (found: unknown) => void }) {
   onAttaches(useSwappedMaterials(attach));
   return null;
@@ -53,6 +56,41 @@ describe('the swapped materials of a surface', () => {
     surface.applyFade(0.5);
     surface.applyFade(1);
     expect(mesh.material).toBe(unfaded);
+  });
+
+  it('draws the unfaded material at the fade byte, short of a full one', async () => {
+    const { mesh, unfaded, surface } = await swappedOn(undefined, 0.8);
+    surface.applyFade(NEAR_FULL_FADE);
+    expect([mesh.material, unfaded.opacity]).toEqual([unfaded, 0.8 * (254 / 255)]);
+  });
+
+  it("restores the owner's opacity at a full fade", async () => {
+    const { unfaded, surface } = await swappedOn(undefined, 0.8);
+    surface.applyFade(NEAR_FULL_FADE);
+    surface.applyFade(1);
+    expect(unfaded.opacity).toBe(0.8);
+  });
+
+  it('scales an opacity its owner sets while faded (edge case)', async () => {
+    const { unfaded, surface } = await swappedOn(undefined, 0.8);
+    surface.applyFade(NEAR_FULL_FADE);
+    unfaded.opacity = 0.5;
+    surface.applyFade(NEAR_FULL_FADE);
+    expect(unfaded.opacity).toBe(0.5 * (254 / 255));
+  });
+
+  it("fades the alpha-pass material from the owner's opacity, not the scaled one", async () => {
+    const { alphaPass, surface } = await swappedOn(undefined, 0.8);
+    surface.applyFade(NEAR_FULL_FADE);
+    surface.applyFade(0.5);
+    expect(alphaPass.opacity).toBe(0.8 * HALF_FADE_ALPHA);
+  });
+
+  it("restores the owner's opacity once the unfaded material detaches", async () => {
+    const { unfaded, surface, detach } = await swappedOn(undefined, 0.8);
+    surface.applyFade(NEAR_FULL_FADE);
+    detach.unfaded();
+    expect(unfaded.opacity).toBe(0.8);
   });
 
   it('swaps only its own draw group (edge case)', async () => {

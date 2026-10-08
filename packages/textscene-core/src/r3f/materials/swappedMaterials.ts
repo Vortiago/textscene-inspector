@@ -45,9 +45,35 @@ function drawGroupOf(attach: string | undefined): number | null {
   return match[1] === undefined ? null : Number(match[1]);
 }
 
+/**
+ * A material's opacity as its owner, React, sets it, with the fade alpha multiplied in place. A
+ * value other than the one last written is the owner's.
+ */
+class FadedOpacity {
+  private owned: number;
+  private written = Number.NaN;
+
+  constructor(private readonly material: THREE.Material) {
+    this.owned = material.opacity;
+  }
+
+  /** The opacity the owner last set. */
+  get ownerValue(): number {
+    if (this.material.opacity !== this.written) this.owned = this.material.opacity;
+    return this.owned;
+  }
+
+  /** Draws the material at its owner's opacity times `alpha`. */
+  scaleBy(alpha: number): void {
+    this.written = this.ownerValue * alpha;
+    this.material.opacity = this.written;
+  }
+}
+
 class SwappedMaterials implements FadedSurface {
   private host: MaterialHost | null = null;
   private readonly variants: Partial<FadeVariants<THREE.Material>> = {};
+  private unfadedOpacity: FadedOpacity | null = null;
   private fade = 1;
 
   constructor(private readonly drawGroup: number | null) {}
@@ -55,10 +81,13 @@ class SwappedMaterials implements FadedSurface {
   attach(pass: FadePass, host: MaterialHost, material: THREE.Material): () => void {
     this.host = host;
     this.variants[pass] = material;
+    if (pass === 'unfaded') this.unfadedOpacity = new FadedOpacity(material);
     this.place();
     return () => {
       if (this.variants[pass] !== material) return;
       delete this.variants[pass];
+      // The next holder of the material reads its owner's opacity.
+      if (pass === 'unfaded') this.releaseUnfaded();
       this.place();
     };
   }
@@ -68,16 +97,24 @@ class SwappedMaterials implements FadedSurface {
     this.place();
   }
 
+  private releaseUnfaded(): void {
+    this.unfadedOpacity?.scaleBy(1);
+    this.unfadedOpacity = null;
+  }
+
   /**
-   * Puts the variant for the current fade on the host. The unfaded variant keeps the opacity
-   * React gave it, so it holds the opacity the alpha-pass one scales.
+   * Puts the variant for the current fade on the host, at its owner's opacity times the fade
+   * alpha. Godot starts ALPHA from the fade byte in every pass (`scene_forward_clustered.glsl:1251`),
+   * so a fade short of a full byte lowers what a cut keeps in the surface's own pass too.
    */
   private place(): void {
-    const { host, variants } = this;
+    const { host, variants, unfadedOpacity } = this;
     const { unfaded, alphaPass } = variants;
-    if (!host || !unfaded) return;
+    if (!host || !unfaded || !unfadedOpacity) return;
+    const alpha = fadeAlpha(this.fade);
     const drawn = forcesAlphaPass(this.fade) && alphaPass ? alphaPass : unfaded;
-    if (drawn === alphaPass) alphaPass.opacity = unfaded.opacity * fadeAlpha(this.fade);
+    if (drawn === alphaPass) alphaPass.opacity = unfadedOpacity.ownerValue * alpha;
+    else unfadedOpacity.scaleBy(alpha);
     if (this.drawGroup === null) {
       host.material = drawn;
       return;
