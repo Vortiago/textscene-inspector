@@ -9,7 +9,7 @@ import type { YSortContextValue } from './contexts/YSortContext.js';
 import { isTopLevelItem } from './canvasPaintOrder.js';
 import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
-import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData.js';
+import type { DrawableCell } from '../resources/tileset/drawableCell.js';
 
 /** A renderable item collected by the y-sort pass. */
 export interface YSortItem {
@@ -22,7 +22,7 @@ export interface YSortItem {
    * world Y, every lifted-past ancestor plus its own `position.y`. The per-row
    * expansion sees only the sort root's context, so it cannot recompute it.
    */
-  tileData?: { tileSetRef: string; worldY: number; cells?: readonly PlacedCell[] };
+  tileData?: { tileSetRef: string; worldY: number; cells?: readonly DrawableCell[] };
   /**
    * The TscnNode to re-dispatch. For a y_sort_enabled node this is its body only
    * (`ownBodyOf`): its children are items of their own in this list, so the whole

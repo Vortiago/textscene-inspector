@@ -17,11 +17,19 @@ import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
 
-/** A square TileSet of the given pitch. No sources: the sort only reads the grid. */
+/** A square TileSet of the given pitch, with the one tile every cell draws. */
 const squareTileSet = (size: number) => `[gd_resource type="TileSet" format=3]
+
+[ext_resource type="Texture2D" path="res://tiles.png" id="1"]
+
+[sub_resource type="TileSetAtlasSource" id="atlas"]
+texture = ExtResource("1")
+texture_region_size = Vector2i(${size}, ${size})
+0:0/0 = 0
 
 [resource]
 tile_size = Vector2i(${size}, ${size})
+sources/0 = SubResource("atlas")
 `;
 
 const cellsAt = (rows: number[]): PlacedCell[] =>

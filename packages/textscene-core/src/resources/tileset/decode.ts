@@ -10,7 +10,7 @@ import { indexedKeyRegex, ruleInt, boolSlotValue, stringToInt } from '../../godo
 import type { ParsedResource } from '../../parser/parsedResource';
 import { intOr, vec2iOr } from '../../parser/valueParsers';
 import { parseColorOrUndefined, type Color } from '../../utils/colorParser';
-import { decodeCanvasItemMaterial } from '../materials/canvasitemmaterial/decode';
+import { canvasItemMaterialOf } from '../materials/canvasitemmaterial/decode';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 // Aliased: `TileSetSourceData` has a `findSubResource` key of its own, which the adapters fill.
 import {
@@ -143,24 +143,27 @@ function tileMaterialResolver(data: TileSetSourceData): TileMaterialResolver {
   return (ref) => {
     const parsed = parseResourceReference(ref);
     const key = parsed ? `${parsed.type}:${parsed.id}` : ref;
-    if (!byResource.has(key)) byResource.set(key, loadTileMaterial(ref, data));
+    if (!byResource.has(key)) byResource.set(key, loadTileMaterial(ref, parsed, data));
     return byResource.get(key)!;
   };
 }
 
 /**
  * A `CanvasItemMaterial` SubResource gives its properties. Any other material, or an external one,
- * which nothing here loads, draws with plain canvas blending, as `useCanvasItemMaterial` does.
+ * which nothing here loads, draws with plain canvas blending, as a node's material does.
  */
-function loadTileMaterial(ref: string, data: TileSetSourceData): TileMaterial | null {
-  const parsed = parseResourceReference(ref);
+function loadTileMaterial(
+  ref: string,
+  parsed: ReturnType<typeof parseResourceReference>,
+  data: TileSetSourceData
+): TileMaterial | null {
   if (parsed?.type !== 'SubResource') return data.resolveResourcePath(ref) ? { properties: null } : null;
   const sub = data.findSubResource(parsed.id);
   if (!sub) {
     warn(`[TileSet] material ${ref} names nothing — no material`);
     return null;
   }
-  return { properties: sub.type === 'CanvasItemMaterial' ? decodeCanvasItemMaterial(sub.data) : null };
+  return { properties: canvasItemMaterialOf(sub) };
 }
 
 function resolveAtlasSource(
@@ -290,7 +293,9 @@ function decodeTileData(
     textureOrigin: read('texture_origin', defaults.textureOrigin, ({ key, value }) =>
       tileSetVec2i(value, defaults.textureOrigin, key)
     ),
-    modulate: read('modulate', defaults.modulate, ({ key, value }) => tileModulate(value, key)),
+    modulate: read('modulate', defaults.modulate, ({ key, value }) =>
+      tileModulate(value, defaults.modulate, key)
+    ),
     material: read('material', defaults.material, ({ value }) => tileMaterial(value)),
     zIndex: read('z_index', defaults.zIndex, ({ key, value }) =>
       intOr(value, defaults.zIndex, `[TileSet] ${key}`)
@@ -301,11 +306,11 @@ function decodeTileData(
   };
 }
 
-function tileModulate(value: string, key: string): Color {
+function tileModulate(value: string, fallback: Color, key: string): Color {
   const color = parseColorOrUndefined(value);
   if (color) return color;
   warn(`[TileSet] ${key}: invalid Color "${value}" — using white`);
-  return { r: 1, g: 1, b: 1, a: 1 };
+  return fallback;
 }
 
 function tileSetVec2i(value: string | undefined, fallback: Vec2i, key: string): Vec2i {

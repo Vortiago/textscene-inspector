@@ -1,26 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { groupBySortY } from './tileYSort';
-import { defaultTileData, type TileSetModel } from './types';
-import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
+import type { TileGrid } from './types';
+import type { DrawableCell } from './drawableCell';
+import { drawableCellOf } from './testing/drawableCellOf';
 
-const squareGrid: TileSetModel = {
+const squareGrid: TileGrid = {
   shape: 0, // square
   layout: 0,
   offsetAxis: 0,
   tileSize: { x: 32, y: 32 },
-  sources: new Map(),
 };
 
-const isoGrid: TileSetModel = {
+const isoGrid: TileGrid = {
   shape: 1, // isometric
   layout: 0,
   offsetAxis: 0,
   tileSize: { x: 64, y: 32 },
-  sources: new Map(),
 };
 
-function cell(coords: { x: number; y: number }, sourceId = 0, atlasX = 0, atlasY = 0): PlacedCell {
-  return { coords, sourceId, atlasCoords: { x: atlasX, y: atlasY }, alternativeId: 0 };
+function cell(coords: { x: number; y: number }, sourceId = 0, atlasX = 0, atlasY = 0): DrawableCell {
+  return drawableCellOf({ coords, sourceId, atlasCoords: { x: atlasX, y: atlasY } });
 }
 
 describe('groupBySortY', () => {
@@ -115,42 +114,15 @@ describe('groupBySortY', () => {
 });
 
 describe("a tile's own y_sort_origin", () => {
-  /** A square 32 px tileset whose atlas tile (1, 0) sorts `ySortOrigin` px lower. */
-  const modelWithOrigin = (ySortOrigin: number): TileSetModel => ({
-    ...squareGrid,
-    sources: new Map([
-      [
-        0,
-        {
-          texturePath: 'res://t.png',
-          margins: { x: 0, y: 0 },
-          separation: { x: 0, y: 0 },
-          textureRegionSize: { x: 32, y: 32 },
-          tiles: new Map([
-            ['0:0', { sizeInAtlas: { x: 1, y: 1 }, alternatives: new Map([[0, defaultTileData()]]) }],
-            [
-              '1:0',
-              {
-                sizeInAtlas: { x: 1, y: 1 },
-                alternatives: new Map([[0, { ...defaultTileData(), ySortOrigin }]]),
-              },
-            ],
-          ]),
-        },
-      ],
-    ]),
-  });
+  /** A cell whose tile sorts `ySortOrigin` px lower. */
+  const lowered = (coords: { x: number; y: number }, ySortOrigin: number) =>
+    drawableCellOf({ coords }, { ySortOrigin });
   const rows = (groups: ReturnType<typeof groupBySortY>) =>
     groups.map((group) => [group.sortY, group.cells.map((c) => c.coords.y)]);
 
   it('moves its cell to the row its sort Y names (tile_map_layer.cpp:547)', () => {
     // (0, 0) sorts at 16 + 40 = 56, below (0, 1) at 48.
-    const groups = groupBySortY(
-      [cell({ x: 0, y: 0 }, 0, 1, 0), cell({ x: 0, y: 1 })],
-      modelWithOrigin(40),
-      0,
-      0
-    );
+    const groups = groupBySortY([lowered({ x: 0, y: 0 }, 40), cell({ x: 0, y: 1 })], squareGrid, 0, 0);
     expect(rows(groups)).toEqual([
       [48, [1]],
       [56, [0]],
@@ -159,12 +131,7 @@ describe("a tile's own y_sort_origin", () => {
 
   it('joins the row of another cell whose sort Y it lands on', () => {
     // (0, 0) sorts at 16 + 32 = 48, as (1, 1) does.
-    const groups = groupBySortY(
-      [cell({ x: 0, y: 0 }, 0, 1, 0), cell({ x: 1, y: 1 })],
-      modelWithOrigin(32),
-      0,
-      0
-    );
+    const groups = groupBySortY([lowered({ x: 0, y: 0 }, 32), cell({ x: 1, y: 1 })], squareGrid, 0, 0);
     expect(rows(groups)).toEqual([[48, [0, 1]]]);
   });
 });

@@ -28,12 +28,18 @@ export function CanvasItemKeyProvider({ value, children }: { value: number; chil
 /**
  * A `<group>` carrying the canvas key. Pass `renderOrder` only for a group at
  * another canvas position, such as `ScrollContainer`'s bars, which draw after the
- * node's whole subtree (`subtreeChromeRenderOrder`).
+ * node's whole subtree (`subtreeChromeRenderOrder`). That key is then the key of
+ * every group inside it.
  */
 export const CanvasItemGroup = forwardRef<THREE.Group, GroupProps>(function CanvasItemGroup(
-  { renderOrder, ...props },
+  { renderOrder, children, ...props },
   ref
 ) {
-  const canvasKey = useCanvasItemKey();
-  return <group ref={ref} renderOrder={renderOrder ?? canvasKey} {...props} />;
+  const inherited = useCanvasItemKey();
+  const canvasKey = renderOrder ?? inherited;
+  return (
+    <group ref={ref} renderOrder={canvasKey} {...props}>
+      <CanvasKeyContext.Provider value={canvasKey}>{children}</CanvasKeyContext.Provider>
+    </group>
+  );
 });

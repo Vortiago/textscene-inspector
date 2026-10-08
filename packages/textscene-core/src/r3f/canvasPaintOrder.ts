@@ -11,6 +11,7 @@
 
 import type { TscnNode } from '../parser/types';
 import { descendsFrom } from '../godot/nodeBaseTypes';
+import { clamp } from '../godot/math';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPlacement';
 
@@ -75,7 +76,7 @@ export function canvasKeyAtZ(key: number, zFinal: number, itemZFinal: number): n
 }
 
 function clampZ(zFinal: number): number {
-  return Math.min(CANVAS_ITEM_Z_MAX, Math.max(CANVAS_ITEM_Z_MIN, zFinal));
+  return clamp(zFinal, CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX);
 }
 
 /**

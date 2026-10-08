@@ -5,7 +5,7 @@
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { parseCanvasItemMaterial } from '../../resources/materials/canvasitemmaterial/parser';
+import { canvasItemMaterialOf } from '../../resources/materials/canvasitemmaterial/parser';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import { resolveSubResourceRef } from '../../resources/SubResourceResolver';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
@@ -42,7 +42,6 @@ export function useCanvasItemMaterial(props: Node2DProperties): CanvasItemMateri
   return useMemo(() => {
     if (props.use_parent_material) return inherited;
     const resource = resolveSubResourceRef(props.materialPath, internalResources);
-    if (resource?.type !== 'CanvasItemMaterial') return null;
-    return parseCanvasItemMaterial(resource.data);
+    return resource ? canvasItemMaterialOf(resource) : null;
   }, [props.use_parent_material, props.materialPath, inherited, internalResources]);
 }

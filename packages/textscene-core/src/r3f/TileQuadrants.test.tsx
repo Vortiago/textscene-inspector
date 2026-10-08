@@ -13,6 +13,8 @@ import { createFakeResourceLoader } from '../resources/testing/createFakeResourc
 import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING } from './lighting2d/lightPassContext';
 import type { CappedItem } from './lighting2d/itemLightCap';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
+import { drawableCells } from '../resources/tileset/drawableCell';
+import { decodeCanvasItemMaterial } from '../resources/materials/canvasitemmaterial/decode';
 import {
   defaultTileData,
   type AlternativeTileModel,
@@ -31,15 +33,7 @@ import {
 } from '../resources/materials/canvasitemmaterial/types';
 
 function canvasItemMaterial(overrides: Partial<CanvasItemMaterialProperties>): CanvasItemMaterialProperties {
-  return {
-    blendMode: CanvasItemBlendMode.MIX,
-    lightMode: CanvasItemLightMode.NORMAL,
-    particlesAnimation: false,
-    particlesAnimHFrames: 1,
-    particlesAnimVFrames: 1,
-    particlesAnimLoop: false,
-    ...overrides,
-  };
+  return { ...decodeCanvasItemMaterial({}), ...overrides };
 }
 
 const ADD = canvasItemMaterial({ blendMode: CanvasItemBlendMode.ADD });
@@ -73,7 +67,7 @@ function atlasSource(id: number): AtlasSourceModel {
   };
 }
 
-/** A square 16 px tileset with atlas sources 0 and 1. */
+/** A square 16 px tileset with atlas sources 0 and 1, and source 2, which names no texture. */
 const MODEL: TileSetModel = {
   shape: 0,
   layout: 0,
@@ -82,6 +76,7 @@ const MODEL: TileSetModel = {
   sources: new Map([
     [0, atlasSource(0)],
     [1, atlasSource(1)],
+    [2, { ...atlasSource(2), texturePath: '' }],
   ]),
 };
 
@@ -122,7 +117,7 @@ function render(
   const tree = ReactThreeTestRenderer.create(
     wrap(
       <TileQuadrants
-        quadrants={quadrants}
+        quadrants={quadrants.map((cells) => drawableCells(MODEL, cells))}
         model={MODEL}
         selfTint={WHITE_MODULATE}
         material={material}
@@ -193,6 +188,11 @@ describe('<TileQuadrants>', () => {
 
   it("draws a tile with its own z_index in that z's bucket, at the layer's place in the walk", async () => {
     const meshes = meshesOf(await render([[cell(0, 0, 0), cell(0, 1, 0, 1)]], { zFinal: 3 }).tree);
+    expect(meshes.map(canvasKeyOf)).toEqual([layerKey(3), layerKey(5)]);
+  });
+
+  it("draws a missing-texture placeholder in its tile's z bucket, not the layer's", async () => {
+    const meshes = meshesOf(await render([[cell(0, 0, 0), cell(2, 1, 0, 1)]], { zFinal: 3 }).tree);
     expect(meshes.map(canvasKeyOf)).toEqual([layerKey(3), layerKey(5)]);
   });
 

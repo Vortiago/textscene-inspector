@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
+import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { TileSetModel } from '../resources/tileset/types';
 import { quadrantCanvasItems, type TileCanvasItem } from '../resources/tileset/tileCanvasItems';
 import { canvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
@@ -38,13 +38,13 @@ interface TileLayerItem {
 }
 
 interface TileQuadrantsProps extends TileLayerItem {
-  /** The cells of each quadrant, in draw order (`layerQuadrants`). */
-  quadrants: readonly (readonly PlacedCell[])[];
+  /** The drawable cells of each quadrant, in draw order (`layerQuadrants`). */
+  quadrants: readonly (readonly DrawableCell[])[];
 }
 
 /** Draws inside the layer's canvas key (`useCanvasItemKey`), from which a tile `z_index` moves an item. */
 export function TileQuadrants({ quadrants, ...layer }: TileQuadrantsProps) {
-  const items = useMemo(() => drawnItems(layer.model, quadrants), [layer.model, quadrants]);
+  const items = useMemo(() => drawnItems(quadrants), [quadrants]);
   // Keyed by draw index: an item has no identity across a re-parse that moves its cells.
   return items.map((item, drawIndex) => <TileItem key={drawIndex} item={item} layer={layer} />);
 }
@@ -54,15 +54,13 @@ interface DrawnItem extends TileCanvasItem {
   firstOrder: number;
 }
 
-function drawnItems(model: TileSetModel, quadrants: readonly (readonly PlacedCell[])[]): DrawnItem[] {
+function drawnItems(quadrants: readonly (readonly DrawableCell[])[]): DrawnItem[] {
   let firstOrder = 0;
-  return quadrants
-    .flatMap((cells) => quadrantCanvasItems(model, cells))
-    .map((item) => {
-      const drawn = { ...item, firstOrder };
-      firstOrder += item.runs.length;
-      return drawn;
-    });
+  return quadrants.flatMap(quadrantCanvasItems).map((item) => {
+    const drawn = { ...item, firstOrder };
+    firstOrder += item.runs.length;
+    return drawn;
+  });
 }
 
 function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {

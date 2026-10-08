@@ -46,3 +46,14 @@ export function decodeCanvasItemMaterial(properties: Record<string, string>): Ca
     particlesAnimLoop: boolOr(properties.particles_anim_loop, false, 'CanvasItemMaterial'),
   };
 }
+
+/**
+ * A material resource as a canvas item draws it: a CanvasItemMaterial's properties, or null for any
+ * other type, since invented blend state is worse than Godot's plain default.
+ */
+export function canvasItemMaterialOf(resource: {
+  type: string;
+  data: Record<string, string>;
+}): CanvasItemMaterialProperties | null {
+  return resource.type === 'CanvasItemMaterial' ? decodeCanvasItemMaterial(resource.data) : null;
+}

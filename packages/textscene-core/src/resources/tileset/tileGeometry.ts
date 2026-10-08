@@ -51,6 +51,8 @@ export function buildTileGeometryArrays(
   const uvs = new Float32Array(cells.length * 4 * 2);
   const colors = new Float32Array(cells.length * 4 * 4);
   const indices = new Uint32Array(cells.length * 6);
+  // Cells of one alternative share its decoded `modulate`, so each converts once.
+  const linearModulates = new Map<Color, number[]>();
 
   cells.forEach((cell, i) => {
     const center = mapToLocalPx(grid, cell.coords);
@@ -91,7 +93,9 @@ export function buildTileGeometryArrays(
     const bottom = 0 - (cy + h / 2);
     positions.set([left, top, 0, right, top, 0, left, bottom, 0, right, bottom, 0], i * 12);
     uvs.set([...corners[0]![0]!, ...corners[0]![1]!, ...corners[1]![0]!, ...corners[1]![1]!], i * 8);
-    const modulate = linearModulate(cell.tileData.modulate);
+    const { modulate: tileModulate } = cell.tileData;
+    let modulate = linearModulates.get(tileModulate);
+    if (!modulate) linearModulates.set(tileModulate, (modulate = linearModulate(tileModulate)));
     for (let corner = 0; corner < 4; corner++) colors.set(modulate, i * 16 + corner * 4);
 
     const v = i * 4;

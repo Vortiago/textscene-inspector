@@ -9,7 +9,7 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint, type RGBA } from '../../../../r3f/canvasItemModulate';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
-import { CanvasItemGroup, CanvasItemKeyProvider } from '../../../../r3f/components/CanvasItemGroup';
+import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { allocateNodePaintRange, canvasRenderOrder, packPaintRanges } from '../../../../r3f/canvasPaintOrder';
 import { useLayerRank, usePaintRange } from '../../../../r3f/contexts/PaintOrderContext';
 import {
@@ -81,17 +81,15 @@ export function TileMap({ node, children }: NodeComponentProps) {
               // Each layer draws at its own place in the canvas, so its key rides
               // its group: three reads the nearest enclosing group first.
               <CanvasItemGroup key={group.layerIndex} renderOrder={group.renderOrder}>
-                <CanvasItemKeyProvider value={group.renderOrder}>
-                  <TileQuadrants
-                    quadrants={group.quadrants}
-                    model={model}
-                    selfTint={layerTint(tint, group.layer)}
-                    material={material}
-                    lightMask={props.light_mask}
-                    zFinal={group.zFinal}
-                    name={node.name}
-                  />
-                </CanvasItemKeyProvider>
+                <TileQuadrants
+                  quadrants={group.quadrants}
+                  model={model}
+                  selfTint={layerTint(tint, group.layer)}
+                  material={material}
+                  lightMask={props.light_mask}
+                  zFinal={group.zFinal}
+                  name={node.name}
+                />
               </CanvasItemGroup>
             ))
           : null

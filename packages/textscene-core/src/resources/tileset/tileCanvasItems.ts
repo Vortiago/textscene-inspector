@@ -4,10 +4,9 @@
  * into runs of consecutive cells that share an atlas source.
  */
 
-import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering';
-import { drawableCell, type DrawableCell } from './drawableCell';
-import type { AtlasSourceModel, TileMaterial, TileSetModel } from './types';
+import type { DrawableCell } from './drawableCell';
+import type { AtlasSourceModel, TileMaterial } from './types';
 
 /** One batch: consecutive cells of a canvas item that draw from one atlas source. */
 export interface TileSourceRun {
@@ -26,11 +25,9 @@ export interface TileCanvasItem {
 }
 
 /** The canvas items of one quadrant's cells, given in the order Godot draws them. */
-export function quadrantCanvasItems(model: TileSetModel, cells: readonly PlacedCell[]): TileCanvasItem[] {
+export function quadrantCanvasItems(cells: readonly DrawableCell[]): TileCanvasItem[] {
   const items: { material: TileMaterial | null; tileZIndex: number; runs: OpenRun[] }[] = [];
-  for (const placed of cells) {
-    const cell = drawableCell(model, placed);
-    if (!cell) continue;
+  for (const cell of cells) {
     const { material, zIndex: tileZIndex } = cell.tileData;
     let item = items.at(-1);
     // The material compares by identity, as Godot's `Ref` does (`:340`).
@@ -38,7 +35,7 @@ export function quadrantCanvasItems(model: TileSetModel, cells: readonly PlacedC
       item = { material, tileZIndex, runs: [] };
       items.push(item);
     }
-    appendToRun(item.runs, cell, model.sources.get(cell.sourceId)!);
+    appendToRun(item.runs, cell);
   }
   return items.map(({ material, tileZIndex, runs }) => ({ material, zIndex: heldZIndex(tileZIndex), runs }));
 }
@@ -46,10 +43,10 @@ export function quadrantCanvasItems(model: TileSetModel, cells: readonly PlacedC
 /** A run still taking cells. */
 type OpenRun = TileSourceRun & { cells: DrawableCell[] };
 
-function appendToRun(runs: OpenRun[], cell: DrawableCell, source: AtlasSourceModel): void {
+function appendToRun(runs: OpenRun[], cell: DrawableCell): void {
   const last = runs.at(-1);
   if (last?.sourceId === cell.sourceId) last.cells.push(cell);
-  else runs.push({ sourceId: cell.sourceId, source, cells: [cell] });
+  else runs.push({ sourceId: cell.sourceId, source: cell.source, cells: [cell] });
 }
 
 /**

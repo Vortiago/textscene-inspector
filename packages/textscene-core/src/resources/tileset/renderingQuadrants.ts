@@ -5,6 +5,7 @@
  */
 
 import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
+import { drawableCells, type DrawableCell } from './drawableCell';
 import { compareCells } from './cellOrder';
 import { mapToLocalPx } from './tilePlacement';
 import { groupBySortY } from './tileYSort';
@@ -13,7 +14,7 @@ import type { TileGrid, TileSetModel } from './types';
 interface Quadrant {
   /** `map_to_local` of the quadrant coords, not of its first cell, which Godot sorts by (`:418`). */
   readonly local: { x: number; y: number };
-  readonly cells: PlacedCell[];
+  readonly cells: DrawableCell[];
 }
 
 /** `RenderingQuadrant::CoordsWorldComparator` (`tile_map_layer.h:210-219`): y up, then x down. */
@@ -23,10 +24,10 @@ function compareQuadrants(a: Quadrant, b: Quadrant): number {
 
 /** The cells of each rendering quadrant, in draw order, each sorted as Godot draws them. */
 export function renderingQuadrants(
-  cells: readonly PlacedCell[],
+  cells: readonly DrawableCell[],
   grid: TileGrid,
   quadrantSize: number
-): readonly (readonly PlacedCell[])[] {
+): readonly (readonly DrawableCell[])[] {
   const byKey = new Map<string, Quadrant>();
   for (const cell of cells) {
     // `_coords_to_quadrant_coords` (`:53-57`) rounds down, not towards zero.
@@ -52,14 +53,15 @@ interface QuadrantLayout {
 }
 
 /**
- * A layer's rendering quadrants in draw order. A y-sorted layer makes each tile row a quadrant
- * (`tile_map_layer.cpp:546-548`), which its own y-sort draws from the top row down.
+ * A layer's rendering quadrants of drawable cells, in draw order. A y-sorted layer makes each tile
+ * row a quadrant (`tile_map_layer.cpp:546-548`), which its own y-sort draws from the top row down.
  */
 export function layerQuadrants(
   cells: readonly PlacedCell[],
   model: TileSetModel,
   layout: QuadrantLayout
-): readonly (readonly PlacedCell[])[] {
-  if (!layout.ySortEnabled) return renderingQuadrants(cells, model, layout.quadrantSize);
-  return groupBySortY(cells, model, layout.ySortOrigin, 0).map((row) => row.cells);
+): readonly (readonly DrawableCell[])[] {
+  const drawable = drawableCells(model, cells);
+  if (!layout.ySortEnabled) return renderingQuadrants(drawable, model, layout.quadrantSize);
+  return groupBySortY(drawable, model, layout.ySortOrigin, 0).map((row) => row.cells);
 }
