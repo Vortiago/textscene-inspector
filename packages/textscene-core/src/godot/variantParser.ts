@@ -134,17 +134,6 @@ export function dictCallField(key: string, typeName: string): (text: string) => 
 }
 
 /**
- * A Dictionary field whose value is a `PackedByteArray(…)` call, `[1]` the base64 text the writer
- * quotes for a non-empty array (variant_parser.cpp:2410-2413). The quoted body is optional, so the
- * key's first call decides: `[1]` is undefined for an empty call and for the compat list of bytes.
- * Base64 holds no `"` or `)`, so the body ends where that one does, and the optional body keeps the
- * search linear: the first call matches whether or not its body does.
- */
-export function dictBase64Field(key: string): RegExp {
-  return new RegExp(`"${key}"${WS}:${WS}PackedByteArray${WS}\\((?:${WS}"([^")]*)"${WS}\\))?`);
-}
-
-/**
  * A field of a serialised Dictionary whose value is a number, `[1]` the literal. Pass `global` for a repeated scan: a
  * `g`-flagged RegExp carries `lastIndex`, so each caller needs its own instance.
  * The value runs to its `,`/`}`, so `1.2.3` matches nothing instead of reading `1.2`. The grammar is the writer's, `inf` included:

@@ -7,10 +7,15 @@
 
 import { warn } from '../../../logger.js';
 import type { ParsedResource } from '../../../parser/parsedResource.js';
-import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
+import type { TscnInternalResource } from '../../../parser/types.js';
 import { BUILDABLE_MATERIAL_TYPES } from '../../materials/buildableMaterialTypes.js';
 import type { LoadedSection } from '../../resourceSection.js';
-import { resolveRefToResourcePath, resourceFilePath, subResourceTypeGate } from '../../subResourcePath.js';
+import {
+  extResourcePathsById,
+  resolveRefToResourcePath,
+  resourceFilePath,
+  subResourceTypeGate,
+} from '../../subResourcePath.js';
 import {
   iterateSurfaceBlocks,
   readAabb,
@@ -87,11 +92,14 @@ export function decodeSceneArrayMesh(resource: TscnInternalResource): ArrayMeshD
   }));
 }
 
-/** First-wins id → path, as `findExtResource` resolves a duplicate id. A plain `new Map` is last-wins. */
-function extResourcePathsById(resources: readonly TscnExternalResource[]): ReadonlyMap<string, string> {
-  const byId = new Map<string, string>();
-  for (const r of resources) if (!byId.has(r.id)) byId.set(r.id, r.path);
-  return byId;
+/**
+ * A surface Godot saved with no `index_data` draws its vertices in order, three to a triangle, as
+ * `add_surface_from_arrays` with no ARRAY_INDEX does.
+ */
+function drawOrderIndices(vertexCount: number): Uint16Array | Uint32Array {
+  const indices = vertexCount > 65535 ? new Uint32Array(vertexCount) : new Uint16Array(vertexCount);
+  for (let i = 0; i < vertexCount; i++) indices[i] = i;
+  return indices;
 }
 
 /**
@@ -155,7 +163,7 @@ function decodeSurfaces(
         )
     );
     const indexData = readPackedBytes(block, 'index_data');
-    const indices = decodeIndices(indexData, indexCount);
+    const indices = indexCount === 0 ? drawOrderIndices(vertexCount) : decodeIndices(indexData, indexCount);
     if (!indices) {
       warn(
         `[ArrayMesh] surface ${surfaceIndex}'s index_data is ${indexData.byteLength} B for ` +
@@ -168,7 +176,7 @@ function decodeSurfaces(
       surfaceIndex,
       format,
       vertexCount,
-      indexCount,
+      indexCount: indices.length,
       positions,
       uvs,
       normals,

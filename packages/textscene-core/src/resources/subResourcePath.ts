@@ -6,7 +6,7 @@
  */
 
 import { warn } from '../logger.js';
-import type { TscnInternalResource } from '../parser/types.js';
+import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { findSubResource, parseResourceReference } from './SubResourceResolver.js';
 
 /**
@@ -53,6 +53,15 @@ export function subResourcePath(filePath: string, subResourceId: string): string
 /** The fetchable file behind either form of path: what the byte layer is asked for. */
 export function resourceFilePath(path: string): string {
   return parseSubResourcePath(path).filePath;
+}
+
+/** First-wins id → path, as `findExtResource` resolves a duplicate id. A plain `new Map` is last-wins. */
+export function extResourcePathsById(
+  resources: readonly TscnExternalResource[]
+): ReadonlyMap<string, string> {
+  const byId = new Map<string, string>();
+  for (const r of resources) if (!byId.has(r.id)) byId.set(r.id, r.path);
+  return byId;
 }
 
 /**

@@ -31,7 +31,28 @@ _surfaces = ${wallQuadSurfaces({ material: 'ExtResource("1_a5mma")', name: 'tile
 blend_shape_mode = 0
 `;
 
+/** Godot 4.6.3's save of one triangle added with no ARRAY_INDEX: no `index_count`, no `index_data`. */
+const UNINDEXED_TRES = `[gd_resource type="ArrayMesh" format=3]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(0, 0, 0, 1, 1, 1e-05),
+"format": 34359738369,
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 3,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0)
+}]
+`;
+
 describe('decodeArrayMesh', () => {
+  it('draws a surface saved with no indices in vertex order', () => {
+    const surface = decodeArrayMeshTres(UNINDEXED_TRES, 'res://mesh.tres').surfaces[0]!;
+
+    expect([...surface.indices]).toEqual([0, 1, 2]);
+    expect(surface.indexCount).toBe(3);
+  });
+
   it('parses surface metadata (count, format, vertex/index counts)', () => {
     const mesh = decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres');
 
