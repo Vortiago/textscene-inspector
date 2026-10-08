@@ -126,6 +126,27 @@ visible = true
     });
   });
 
+  describe('the heading facts', () => {
+    it('reports a root that declares a parent, and each parent="" heading', () => {
+      const scene = parser.parse(
+        '[gd_scene format=3]\n\n[node name="Root" type="Node3D" parent="."]\n\n[node name="Empty" type="Node3D" parent=""]\n'
+      ).scene!;
+      expect(scene.rootWithParent?.node.name).toBe('Root');
+      expect(scene.emptyParentHeadings.map(({ node }) => node.name)).toEqual(['Empty']);
+    });
+
+    it('reports nothing for a well-formed scene', () => {
+      const scene = parser.parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n').scene!;
+      expect(scene).toMatchObject({
+        orphanedNodes: [],
+        rootWithParent: undefined,
+        emptyParentHeadings: [],
+        connectionBinds: [],
+        instancesOutsideNodeBody: [],
+      });
+    });
+  });
+
   describe('Section Type Identification', () => {
     it('should identify gd_scene heading', () => {
       const content = `[gd_scene load_steps=1 format=3]

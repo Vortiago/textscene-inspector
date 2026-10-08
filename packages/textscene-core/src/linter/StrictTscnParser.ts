@@ -7,6 +7,7 @@
 import type { BuiltSection, RawNode } from '../parser/types.js';
 import type { ParseError, SectionLines, StrictParseResult } from './types.js';
 import { headingResourceReads } from './headingResourceReads.js';
+import { emptyParentHeadings, rootDeclaringParent } from '../parser/sceneTreeBuilder.js';
 import { TscnParserCore } from '../parser/TscnParserCore.js';
 import type { ParseObserver } from '../parser/TscnParserCore.js';
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils.js';
@@ -265,12 +266,22 @@ export class StrictTscnParser {
       },
     };
 
-    const { scene, placement } = this.core.parse(content, createRawNode, observer);
+    const { scene, origins, orphanedNodes } = this.core.parse(content, createRawNode, observer);
 
     // The scene comes back even when a property failed: a bad value does not invalidate the tree. Withholding it
     // would skip the rule phase, so one out-of-range property would silence every semantic rule in the file, and a
     // rule whose condition a validator rejects would never run.
 
-    return { errors, scene: { ...scene, ...placement, ...headingReads.reads }, lines };
+    return {
+      errors,
+      scene: {
+        ...scene,
+        orphanedNodes,
+        rootWithParent: rootDeclaringParent(origins),
+        emptyParentHeadings: emptyParentHeadings(origins),
+        ...headingReads.reads,
+      },
+      lines,
+    };
   }
 }

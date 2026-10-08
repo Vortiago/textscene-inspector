@@ -101,8 +101,8 @@ export interface RawNode {
 /** A node whose children are its own kind: the shape the tree builder seats a child into. */
 export type SceneNode<N> = RawNode & { children: N[] };
 
-/** How the `parent=` of each `[node]` heading placed it, where the tree alone does not say. */
-export interface NodePlacement {
+/** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
+export interface HeadingFacts {
   /** Headings whose `parent=` path resolved against nothing, so they are not in `nodes`. */
   orphanedNodes: readonly NodeOrigin<RawNode>[];
   /**
@@ -116,10 +116,6 @@ export interface NodePlacement {
    * no `node.parent`, so it is seated, not orphaned.
    */
   emptyParentHeadings: readonly NodeOrigin<RawNode>[];
-}
-
-/** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
-export interface HeadingFacts extends NodePlacement {
   /**
    * The `binds=` value of each `[connection]` heading, as written. The loader parses a heading's fields with the
    * resource parser a property value goes through (`resource_format_text.cpp:286`, `:379`, `variant_parser.cpp:1862`),

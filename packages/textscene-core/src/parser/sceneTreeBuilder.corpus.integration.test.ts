@@ -28,8 +28,8 @@ describe('buildSceneTree over the whole corpus', () => {
     for (const file of scenes) {
       const rel = relative(SCENES, file);
       // The renderer's node creator, so the tree under test is the one the previewer draws.
-      const { placement } = new TscnParserCore().parse(readFileSync(file, 'utf8'), parseNodeWithRegistry);
-      if (placement.orphanedNodes.length === 0) continue;
+      const { orphanedNodes } = new TscnParserCore().parse(readFileSync(file, 'utf8'), parseNodeWithRegistry);
+      if (orphanedNodes.length === 0) continue;
       (INTENTIONAL_ORPHANS.has(rel) ? intentional : offenders).push(rel);
     }
 

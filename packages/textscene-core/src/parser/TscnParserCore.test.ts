@@ -182,39 +182,36 @@ item/0/mesh = ExtResource("1_tree")
     });
   });
 
-  describe('node placement', () => {
+  describe('headings beside the scene', () => {
     const content = `[gd_scene format=3]
 
 [node name="Root" type="Node3D"]
 
 [node name="Lost" type="Node3D" parent="Missing"]
 `;
-    it('returns the placement facts beside the scene', () => {
-      const { placement } = parser.parse(content, simpleCreator);
+    it('returns the orphaned headings', () => {
+      const { orphanedNodes } = parser.parse(content, simpleCreator);
 
-      expect(placement.orphanedNodes.map(({ node }) => node.name)).toEqual(['Lost']);
+      expect(orphanedNodes.map(({ node }) => node.name)).toEqual(['Lost']);
     });
 
-    it('keeps them off the scene', () => {
+    it('returns every node heading with its line, in scan order', () => {
+      const { origins } = parser.parse(content, simpleCreator);
+
+      expect(origins.map(({ node, line }) => [node.name, line])).toEqual([
+        ['Root', 3],
+        ['Lost', 5],
+      ]);
+    });
+
+    it('keeps the linter-only facts off the scene', () => {
       const { scene } = parser.parse(content, simpleCreator);
 
       expect(Object.keys(scene).sort()).toEqual(['externalResources', 'internalResources', 'nodes']);
     });
 
-    it('returns a root that declares a parent, and each parent="" heading', () => {
-      const { placement } = parser.parse(
-        '[node name="Root" type="Node3D" parent="."]\n\n[node name="Empty" type="Node3D" parent=""]\n',
-        simpleCreator
-      );
-
-      expect(placement.rootWithParent?.node.name).toBe('Root');
-      expect(placement.emptyParentHeadings.map(({ node }) => node.name)).toEqual(['Empty']);
-    });
-
-    it('returns empty placement facts for a well-formed scene', () => {
-      const { placement } = parser.parse('[node name="Root" type="Node3D"]\n', simpleCreator);
-
-      expect(placement).toEqual({ orphanedNodes: [], rootWithParent: undefined, emptyParentHeadings: [] });
+    it('returns no orphans for a well-formed scene', () => {
+      expect(parser.parse('[node name="Root" type="Node3D"]\n', simpleCreator).orphanedNodes).toEqual([]);
     });
   });
 

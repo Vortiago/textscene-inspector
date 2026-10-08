@@ -8,7 +8,6 @@
 import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/deprecated.js';
 import type {
   TscnScene,
-  NodePlacement,
   SceneNode,
   TscnExternalResource,
   TscnInternalResource,
@@ -29,12 +28,7 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
-import {
-  buildSceneTree,
-  emptyParentHeadings,
-  rootDeclaringParent,
-  strandedNodes,
-} from './sceneTreeBuilder.js';
+import { buildSceneTree, strandedNodes } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
 
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
@@ -48,10 +42,13 @@ export type NodeCreator<N extends SceneNode<N>> = (
   properties: Record<string, string>
 ) => N | null;
 
-/** What one scan returns: the tree, and the placement facts beside it. */
+/** What one scan returns: the tree, and the headings it was built from. */
 export interface CoreParseResult<N extends SceneNode<N>> {
   scene: TscnScene<N>;
-  placement: NodePlacement;
+  /** Every `[node]` heading's node beside its line, in scan order, for checks against the tree. */
+  origins: readonly NodeOrigin<N>[];
+  /** The headings the tree could not place, which the scan also logs. */
+  orphanedNodes: readonly NodeOrigin<N>[];
 }
 
 /** One property value the scan completed, after any multiline accumulation. */
@@ -102,7 +99,7 @@ export class TscnParserCore {
    * @param content - Raw TSCN file content
    * @param nodeCreator - Callback to create nodes (renderer-specific or linter-specific)
    * @param observer - Optional hooks for strict consumers (errors, sections, properties)
-   * @returns The scene, and the placement facts only the linter reads
+   * @returns The scene, its headings and the ones it could not place
    */
   parse<N extends SceneNode<N>>(
     content: string,
@@ -337,11 +334,8 @@ export class TscnParserCore {
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
         ...(mainResource ? { mainResource } : {}),
       },
-      placement: {
-        orphanedNodes,
-        rootWithParent: rootDeclaringParent(origins),
-        emptyParentHeadings: emptyParentHeadings(origins),
-      },
+      origins,
+      orphanedNodes,
     };
   }
 
