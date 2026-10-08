@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { gltfBoneNodes, type ImportNode } from './gltfSkeletons';
+import { gltfSkeletonBones, type ImportNode } from './gltfSkeletons';
 
 /** Nodes from each node's parent index, -1 for a root. */
 function graph(parents: readonly number[], skinned: readonly number[] = []): ImportNode[] {
@@ -14,11 +14,13 @@ function graph(parents: readonly number[], skinned: readonly number[] = []): Imp
   }));
 }
 
-function bones(...args: Parameters<typeof gltfBoneNodes>): number[] {
-  return [...gltfBoneNodes(...args)].sort((a, b) => a - b);
+function bones(...args: Parameters<typeof gltfSkeletonBones>): number[] {
+  return gltfSkeletonBones(...args)
+    .flat()
+    .sort((a, b) => a - b);
 }
 
-describe('gltfBoneNodes', () => {
+describe('gltfSkeletonBones', () => {
   it('makes each skin joint a bone and marks it a joint', () => {
     const nodes = graph([-1, 0, 1]);
     expect(bones(nodes, [[1, 2]], [], false)).toEqual([1, 2]);
@@ -40,5 +42,16 @@ describe('gltfBoneNodes', () => {
 
   it('makes no bones without skins or skeleton roots', () => {
     expect(bones(graph([-1, 0]), [], [], false)).toEqual([]);
+  });
+
+  it('orders a skeleton’s bones depth first from its lowest root, each node’s children ascending', () => {
+    // Root 0 holds 3 and 1, and 1 holds 2. All four are joints of one skin.
+    const nodes = graph([-1, 0, 1, 0]);
+    nodes[0] = { ...nodes[0]!, children: [3, 1] };
+    expect(gltfSkeletonBones(nodes, [[3, 2, 1, 0]], [], false)).toEqual([[0, 1, 2, 3]]);
+  });
+
+  it('gives each skeleton its own list, in the order the importer creates them', () => {
+    expect(gltfSkeletonBones(graph([-1, -1, 1]), [[2], [0]], [], false)).toEqual([[2], [0]]);
   });
 });

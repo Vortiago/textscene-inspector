@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { gltfNodeNames, type GltfNamingOptions } from './gltfNodeNames';
+import { gltfNodeNames, type GltfNamingOptions, type GltfNodeRole } from './gltfNodeNames';
 
 const CURRENT: GltfNamingOptions = { namingVersion: 2, importAsSkeletonBones: false, fileName: 'robot' };
 const GODOT_4_0: GltfNamingOptions = { ...CURRENT, namingVersion: 0 };
 
-function names(json: unknown, options: GltfNamingOptions = CURRENT): (string | null)[] {
-  return gltfNodeNames(json, options);
+function names(json: unknown, options: GltfNamingOptions = CURRENT): string[] {
+  return gltfNodeNames(json, options).map(({ name }) => name);
+}
+
+function roles(json: unknown, options: GltfNamingOptions = CURRENT): GltfNodeRole[] {
+  return gltfNodeNames(json, options).map(({ role }) => role);
 }
 
 describe('gltfNodeNames: named nodes', () => {
@@ -87,10 +91,22 @@ describe('gltfNodeNames: bones', () => {
     ],
     skins: [{ joints: [1, 2] }],
   };
+  /** The joint Hand (0) holds the mesh Sword (1). */
+  const sword = {
+    nodes: [
+      { name: 'Hand', children: [1] },
+      { name: 'Sword', mesh: 0 },
+    ],
+    skins: [{ joints: [0] }],
+  };
 
-  it('gives a joint no node name, and leaves the name free', () => {
+  it('gives a joint the bone role, and marks a skinned mesh', () => {
+    expect(roles(rig)).toEqual(['node', 'bone', 'bone', 'skinnedMesh']);
+  });
+
+  it('names the nodes before the bones, so a bone takes a name a node holds with _2', () => {
     const json = { ...rig, nodes: [...rig.nodes, { name: 'Upper' }] };
-    expect(names(json)).toEqual(['Arm', null, null, 'Body', 'Upper']);
+    expect(names(json)).toEqual(['Arm', 'Upper_2', 'Lower', 'Body', 'Upper']);
   });
 
   it('makes a node between two joints a bone', () => {
@@ -98,23 +114,69 @@ describe('gltfNodeNames: bones', () => {
       nodes: [{ name: 'Hip', children: [1] }, { name: 'Gap', children: [2] }, { name: 'Knee' }],
       skins: [{ joints: [0, 2] }],
     };
-    expect(names(json)).toEqual([null, null, null]);
+    expect(roles(json)).toEqual(['bone', 'bone', 'bone']);
   });
 
   it('keeps a node under a joint a node from 4.5, and makes it a bone before', () => {
-    const json = {
-      nodes: [
-        { name: 'Hand', children: [1] },
-        { name: 'Sword', mesh: 0 },
-      ],
-      skins: [{ joints: [0] }],
-    };
-    expect(names(json)).toEqual([null, 'Sword']);
-    expect(names(json, { ...CURRENT, namingVersion: 1 })).toEqual([null, null]);
+    expect(roles(sword)).toEqual(['bone', 'node']);
+    expect(roles(sword, { ...CURRENT, namingVersion: 1 })).toEqual(['bone', 'bone']);
   });
 
   it('makes every scene node but a leaf skinned mesh a bone under import_as_skeleton_bones', () => {
-    expect(names(rig, { ...CURRENT, importAsSkeletonBones: true })).toEqual([null, null, null, 'Body']);
+    expect(roles(rig, { ...CURRENT, importAsSkeletonBones: true })).toEqual([
+      'bone',
+      'bone',
+      'bone',
+      'skinnedMesh',
+    ]);
+  });
+
+  it('names an unnamed bone bone, numbered from 2 past a node of that name', () => {
+    const json = {
+      nodes: [{ children: [1] }, { mesh: 0 }, { name: 'bone' }],
+      skins: [{ joints: [0] }],
+    };
+    expect(names(json, { ...CURRENT, namingVersion: 1 })).toEqual(['bone_2', 'bone_3', 'bone']);
+  });
+
+  it('gives a bone the validated node name of its BoneAttachment3D', () => {
+    const json = {
+      ...sword,
+      nodes: [
+        { name: 'Cube.001', children: [1] },
+        { name: 'Blade.001', mesh: 0 },
+      ],
+    };
+    expect(names(json, { ...CURRENT, namingVersion: 1 })).toEqual(['Cube_001', 'Blade_001']);
+  });
+
+  it('numbers a repeated bone name across skeletons before 4.5, and within its own from 4.5', () => {
+    // L (0) and R (1) each hold a joint Head of its own skin.
+    const json = {
+      nodes: [
+        { name: 'L', children: [2] },
+        { name: 'R', children: [3] },
+        { name: 'Head', mesh: 0 },
+        { name: 'Head', mesh: 1 },
+      ],
+      skins: [{ joints: [2] }, { joints: [3] }],
+    };
+    expect(names(json, { ...CURRENT, namingVersion: 1 })).toEqual(['L', 'R', 'Head', 'Head_2']);
+    expect(names(json)).toEqual(['L', 'R', 'Head', 'Head']);
+  });
+
+  it('numbers a repeated bone name in the order the skeleton adds its bones', () => {
+    const json = {
+      nodes: [
+        { name: 'Hand', children: [1] },
+        { name: 'Hand', mesh: 0 },
+        { name: 'Other', mesh: 1 },
+      ],
+      skins: [{ joints: [0] }],
+    };
+    expect(names(json, { ...CURRENT, namingVersion: 1 })).toEqual(['Hand', 'Hand_2', 'Other']);
+    expect(names(json, { ...CURRENT, importAsSkeletonBones: true })).toEqual(['Hand', 'Hand_2', 'Other']);
+    expect(names(json)).toEqual(['Hand_2', 'Hand', 'Other']);
   });
 });
 

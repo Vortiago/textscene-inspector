@@ -60,7 +60,7 @@ describe('trackTargetFinder', () => {
     const cube = new THREE.Object3D();
     cube.name = 'Cube001';
     model.group.add(cube);
-    tagGodotNodeNames(model.group, new Map([[cube, { nodes: 0 }]]), ['Cube_001']);
+    tagGodotNodeNames(model.group, new Map([[cube, { nodes: 0 }]]), [{ name: 'Cube_001', role: 'node' }]);
     const objects = new Map([['Root/Model', model.wrapper]]);
     expect(trackTargetFinder(objects)('Root/Model/Cube_001')).toBe(cube);
   });

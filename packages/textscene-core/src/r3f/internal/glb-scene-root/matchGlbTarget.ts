@@ -1,8 +1,9 @@
 /**
  * Resolves a Godot node path on a loaded GLB's THREE graph, in `glbHierarchy`'s `relPath` scheme.
- * Godot's importer synthesises a `Skeleton3D` that three's does not, so the three path must be an
- * ordered subsequence of the Godot path that ends at the same name. That admits the levels Godot
- * invented and never a same-named node on an unrelated branch.
+ * Godot's importer synthesises a `Skeleton3D` and BoneAttachment3Ds that three's does not, and
+ * keeps most bones out of its tree, so an object's `godotSegments` must be an ordered subsequence
+ * of the Godot path that ends at the same name. That admits the levels Godot invented and never a
+ * same-named node on an unrelated branch.
  */
 
 import type { GlbObjectEntry } from './glbHierarchy.js';
@@ -62,9 +63,9 @@ export function matchGlbTarget(
 }
 
 /**
- * The deepest entry whose path is an ordered subsequence of `segments` and ends
- * at the same name. Deepest wins because it shares the most with the authored
- * path; ties resolve by `relPath` so the answer is deterministic.
+ * The entry whose Godot segments are an ordered subsequence of `segments` and end at the same
+ * name, sharing the most with the authored path. A tie goes to the deepest, then by `relPath`, so
+ * the answer is deterministic.
  */
 function bestSubsequenceMatch(
   entries: readonly GlbObjectEntry[],
@@ -72,11 +73,14 @@ function bestSubsequenceMatch(
 ): GlbObjectEntry | null {
   const last = segments[segments.length - 1];
   const candidates = entries
-    .filter((e) => {
-      const own = e.relPath.split('/');
-      return own[own.length - 1] === last && isOrderedSubsequence(own, segments);
-    })
+    .filter(
+      (e) =>
+        e.godotSegments[e.godotSegments.length - 1] === last &&
+        isOrderedSubsequence(e.godotSegments, segments)
+    )
     .sort((a, b) => {
+      const shared = b.godotSegments.length - a.godotSegments.length;
+      if (shared !== 0) return shared;
       const depth = b.relPath.split('/').length - a.relPath.split('/').length;
       return depth !== 0 ? depth : a.relPath.localeCompare(b.relPath);
     });

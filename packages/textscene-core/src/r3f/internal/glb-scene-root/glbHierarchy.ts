@@ -7,7 +7,8 @@
 
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
-import { godotNodeName } from '../../../resources/formats/glb/nodeNames.js';
+import { godotNodeName, godotNodeRole } from '../../../resources/formats/glb/nodeNames.js';
+import type { GltfNodeRole } from '../../../godot/gltfNodeNames.js';
 
 export interface GlbHierarchyNode {
   /** Display name, from `glbObjectName`. */
@@ -73,19 +74,42 @@ export function buildGlbHierarchy(root: THREE.Object3D): GlbHierarchyNode[] {
 export interface GlbObjectEntry {
   relPath: string;
   object: THREE.Object3D;
+  /**
+   * The relPath segments a Godot path to the object holds, in order. A bone is a node of Godot's
+   * only as the BoneAttachment3D of a node it holds, so a bone segment stays only before such a node.
+   */
+  godotSegments: string[];
+}
+
+interface Segment {
+  name: string;
+  role: GltfNodeRole;
+}
+
+/** `segments` less each bone that holds no node attached to it. The last segment always stays. */
+function godotSegments(segments: readonly Segment[]): string[] {
+  return segments
+    .filter(
+      (segment, i) => segment.role !== 'bone' || i === segments.length - 1 || segments[i + 1]!.role === 'node'
+    )
+    .map((segment) => segment.name);
 }
 
 /** `buildGlbHierarchy`'s path scheme, flat, so the viewport's objects line up with the tree rows. */
 export function flattenGlbObjects(root: THREE.Object3D): GlbObjectEntry[] {
   const out: GlbObjectEntry[] = [];
-  const walk = (object: THREE.Object3D, parentPath: string, segment: string): void => {
-    const relPath = parentPath ? `${parentPath}/${segment}` : segment;
-    out.push({ relPath, object });
-    const childSegments = segmentsForSiblings(object.children);
-    object.children.forEach((child, i) => walk(child, relPath, childSegments[i]!));
+  const walk = (object: THREE.Object3D, parentSegments: readonly Segment[], name: string): void => {
+    const segments = [...parentSegments, { name, role: godotNodeRole(object) }];
+    out.push({
+      relPath: segments.map((s) => s.name).join('/'),
+      object,
+      godotSegments: godotSegments(segments),
+    });
+    const childNames = segmentsForSiblings(object.children);
+    object.children.forEach((child, i) => walk(child, segments, childNames[i]!));
   };
-  const segments = segmentsForSiblings(root.children);
-  root.children.forEach((child, i) => walk(child, '', segments[i]!));
+  const names = segmentsForSiblings(root.children);
+  root.children.forEach((child, i) => walk(child, [], names[i]!));
   return out;
 }
 

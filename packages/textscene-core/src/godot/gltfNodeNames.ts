@@ -1,11 +1,12 @@
 /**
  * The node names Godot 4.6.3's glTF importer gives a file's nodes: `_assign_node_names`
- * (`gltf_document.cpp:3968-3996`) with the parse steps it depends on. A scene's node path into an
- * instanced glTF names these, not the names three's loader gives.
+ * (`gltf_document.cpp:3968-3996`), the bone names of `_create_skeletons` (`skin_tool.cpp:560-628`)
+ * and the parse steps they depend on. A scene's node path into an instanced glTF names these, not
+ * the names three's loader gives.
  */
 
 import { isGltfJsonObject, type GltfJsonObject } from './gltf.js';
-import { gltfBoneNodes, type ImportNode } from './gltfSkeletons.js';
+import { gltfSkeletonBones, type ImportNode } from './gltfSkeletons.js';
 import { validateNodeName } from './nodeName.js';
 
 /** The `.import` options that change the names. */
@@ -21,9 +22,24 @@ export interface GltfNamingOptions {
 /** `gltf/naming_version`'s default (`editor_scene_importer_gltf.cpp:87`). */
 export const DEFAULT_GLTF_NAMING_VERSION = 2;
 
+/**
+ * Where the importer puts a node under a skeleton. A `bone` is a bone of its Skeleton3D, and a node
+ * only when it holds a mesh, a camera or a light, which goes in a BoneAttachment3D of the bone's
+ * name. A `skinnedMesh` goes straight under the Skeleton3D. A `node` under a bone goes in that
+ * bone's BoneAttachment3D (`gltf_document.cpp:4612-4658,4777-4860`).
+ */
+export type GltfNodeRole = 'node' | 'bone' | 'skinnedMesh';
+
+export interface GltfNodeName {
+  /** The node name, or for a bone the name of the nodes its BoneAttachment3D holds. */
+  name: string;
+  role: GltfNodeRole;
+}
+
 /** Godot's `unique_names`, filled by `_gen_unique_name_static` (`gltf_document.cpp:7223-7242`). */
 class UniqueNames {
-  private readonly used = new Set<string>();
+  /** Grows only, through `take` and through the bone names before 4.5. */
+  readonly used = new Set<string>();
   /** Each base's first number not yet tried. `used` only grows, so every number below it is taken. */
   private readonly nextIndex = new Map<string, number>();
 
@@ -39,6 +55,35 @@ class UniqueNames {
     this.used.add(unique);
     return unique;
   }
+}
+
+/** `_gen_unique_bone_name` (`skin_tool.cpp:792-812`): `_2` onwards, unlike a node name. */
+function uniqueBoneName(used: Set<string>, name: string): string {
+  const base = name.replace(/[:/]/g, '_') || 'bone';
+  let unique = base;
+  for (let index = 2; used.has(unique); index++) unique = `${base}_${index}`;
+  used.add(unique);
+  return unique;
+}
+
+/**
+ * The bone names by node. Before 4.5 every bone is unique against the node names and every other
+ * bone. From 4.5 a bone is unique against the node names and its own skeleton's bones.
+ */
+function boneNames(
+  json: GltfJsonObject,
+  skeletons: readonly (readonly number[])[],
+  names: UniqueNames,
+  namingVersion: number
+): Map<number, string> {
+  const nodes = objects(json['nodes']);
+  const nodeNames = new Set(names.used);
+  const byNode = new Map<number, string>();
+  for (const bones of skeletons) {
+    const used = namingVersion < 2 ? names.used : new Set(nodeNames);
+    for (const bone of bones) byNode.set(bone, uniqueBoneName(used, text(nodes[bone]!['name'])));
+  }
+  return byNode;
 }
 
 function objects(value: unknown): GltfJsonObject[] {
@@ -101,11 +146,8 @@ function unnamedNodeName(node: GltfJsonObject, namingVersion: number): string {
   return 'Node';
 }
 
-/**
- * Each node's name by glTF index, or null for a node the importer makes a bone. `json` is the
- * parsed glTF document. A document with no `nodes` gives none.
- */
-export function gltfNodeNames(json: unknown, options: GltfNamingOptions): (string | null)[] {
+/** Each node's name and role by glTF index. `json` is the parsed glTF document. A document with no `nodes` gives none. */
+export function gltfNodeNames(json: unknown, options: GltfNamingOptions): GltfNodeName[] {
   if (!isGltfJsonObject(json)) return [];
   const { namingVersion, importAsSkeletonBones, fileName } = options;
   const names = new UniqueNames();
@@ -120,18 +162,26 @@ export function gltfNodeNames(json: unknown, options: GltfNamingOptions): (strin
   const skinJoints = objects(json['skins']).map((skin) =>
     indexes(skin['joints']).filter((j) => j < nodes.length)
   );
-  const bones = gltfBoneNodes(
+  const skeletons = gltfSkeletonBones(
     nodes,
     skinJoints,
     importAsSkeletonBones ? roots : [],
     importAsSkeletonBones || namingVersion < 2
   );
+  const bones = new Set(skeletons.flat());
 
-  return objects(json['nodes']).map((node, i) => {
+  const sceneNames = objects(json['nodes']).map((node, i) => {
     if (bones.has(i)) return null;
     const name = text(node['name']);
     if (name !== '') return names.take(name);
     const unnamed = unnamedNodeName(node, namingVersion);
     return names.take(namingVersion === 0 ? names.take(unnamed) : unnamed);
+  });
+  const bonesByNode = boneNames(json, skeletons, names, namingVersion);
+
+  return sceneNames.map((name, i): GltfNodeName => {
+    if (name === null) return { name: validateNodeName(bonesByNode.get(i)!), role: 'bone' };
+    const { mesh, skin } = nodes[i]!;
+    return { name, role: mesh >= 0 && skin >= 0 ? 'skinnedMesh' : 'node' };
   });
 }

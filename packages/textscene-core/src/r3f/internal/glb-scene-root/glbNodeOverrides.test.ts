@@ -63,7 +63,7 @@ describe('applyGlbNodeOverrides', () => {
   it("resolves an override by Godot's name for a node three spells otherwise", () => {
     const root = buildTestGlbGraph(['Cube001']);
     const cube = root.children[0]!;
-    tagGodotNodeNames(root, new Map([[cube, { nodes: 0 }]]), ['Cube_001']);
+    tagGodotNodeNames(root, new Map([[cube, { nodes: 0 }]]), [{ name: 'Cube_001', role: 'node' }]);
 
     applyGlbNodeOverrides(root, [override('Cube_001', { rawProperties: { layers: '2' } })]);
 
@@ -73,7 +73,7 @@ describe('applyGlbNodeOverrides', () => {
   it("resolves a shallow override to the root by Godot's name for it", () => {
     const root = buildTestGlbGraph([]);
     root.name = 'Cube001';
-    tagGodotNodeNames(root, new Map([[root, { nodes: 0 }]]), ['Cube_001']);
+    tagGodotNodeNames(root, new Map([[root, { nodes: 0 }]]), [{ name: 'Cube_001', role: 'node' }]);
 
     applyGlbNodeOverrides(root, [override('Cube_001', { rawProperties: { visible: 'false' } })]);
 

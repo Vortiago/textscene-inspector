@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import { cloneWithMaterials, createGLBMesh, initGlbModules } from './glbProcessing';
 import { nodesGlb } from './testing/nodesGlb';
-import { godotNodeName } from './nodeNames';
+import { godotNodeName, godotNodeRole } from './nodeNames';
 import { NO_SIDECAR } from './testing/noSidecar';
 
 function byName(root: THREE.Object3D, name: string): THREE.Object3D {
@@ -32,8 +32,28 @@ describe('godotNodeName', () => {
     expect(byName(root, 'Multi').children.map(godotNodeName)).toEqual([undefined, undefined]);
   });
 
-  it('gives none for a skin joint, which Godot makes a bone', async () => {
-    const root = await createGLBMesh(nodesGlb([{ name: 'Hip' }], { skins: [{ joints: [0] }] }), NO_SIDECAR);
-    expect(godotNodeName(byName(root, 'Hip'))).toBeUndefined();
+  it('gives a skin joint its bone name, which keeps a dot, as a validated node name', async () => {
+    const root = await createGLBMesh(nodesGlb([{ name: 'Hip.L' }], { skins: [{ joints: [0] }] }), NO_SIDECAR);
+    const hip = byName(root, 'HipL');
+    expect(godotNodeName(hip)).toBe('Hip_L');
+    expect(godotNodeRole(hip)).toBe('bone');
+  });
+
+  it('names the mesh under a joint after the joint, as Godot names its MeshInstance3D', async () => {
+    const glb = nodesGlb([{ name: 'Hand', mesh: 0 }], { skins: [{ joints: [0] }] });
+    const mesh = byName(await createGLBMesh(glb, NO_SIDECAR), 'Hand').children[0]!;
+    expect(godotNodeName(mesh)).toBe('Hand');
+    expect(godotNodeRole(mesh)).toBe('node');
+  });
+
+  it('marks a skinned mesh, which Godot puts straight under its Skeleton3D', async () => {
+    const glb = nodesGlb([{ name: 'Hip' }, { name: 'Body', mesh: 0, skin: 0 }], { skins: [{ joints: [0] }] });
+    expect(godotNodeRole(byName(await createGLBMesh(glb, NO_SIDECAR), 'Body'))).toBe('skinnedMesh');
+  });
+
+  it('gives any other object no name and the node role', async () => {
+    const root = await createGLBMesh(nodesGlb([{ name: 'Multi', mesh: 1 }]), NO_SIDECAR);
+    const primitive = byName(root, 'Multi').children[0]!;
+    expect(godotNodeRole(primitive)).toBe('node');
   });
 });

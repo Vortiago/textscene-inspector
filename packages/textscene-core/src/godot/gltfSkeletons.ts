@@ -239,27 +239,45 @@ function importSkin(joints: readonly number[]): ImportSkin {
 }
 
 /**
- * The nodes the importer makes bones, from `_parse_skins` (`gltf_document.cpp:3249-3309`) and
- * `_determine_skeletons`. `singleSkeletonRoots` is `nodes/import_as_skeleton_bones`'s skin of the
- * scene roots, empty without it. Marks `joint` on `nodes` as Godot does.
+ * The order `_create_skeletons` adds a skeleton's bones in (`skin_tool.cpp:583-612`): from each
+ * root in ascending order, depth first, each node's children in ascending order. The roots are the
+ * highest node of each tree the bones form (`skin_tool.cpp:504-535`).
  */
-export function gltfBoneNodes(
+function boneAdditionOrder(nodes: readonly ImportNode[], skeletonBones: readonly number[]): number[] {
+  const members = [...skeletonBones].sort((a, b) => a - b);
+  const memberSet = new Set(members);
+  const roots = treesOf(nodes, members)
+    .groups()
+    .map((group) => highestNode(nodes, group))
+    .sort((a, b) => a - b);
+  const order: number[] = [];
+  const visit = (node: number): void => {
+    order.push(node);
+    const children = nodes[node]!.children.filter((child) => memberSet.has(child));
+    for (const child of children.sort((a, b) => a - b)) visit(child);
+  };
+  roots.forEach(visit);
+  return order;
+}
+
+/**
+ * Each skeleton's bones in the order the importer adds them, from `_parse_skins`
+ * (`gltf_document.cpp:3249-3309`) and `_determine_skeletons`. `singleSkeletonRoots` is
+ * `nodes/import_as_skeleton_bones`'s skin of the scene roots, empty without it. Marks `joint` on
+ * `nodes` as Godot does.
+ */
+export function gltfSkeletonBones(
   nodes: readonly ImportNode[],
   skinJoints: readonly (readonly number[])[],
   singleSkeletonRoots: readonly number[],
   turnNonJointDescendantsIntoBones: boolean
-): Set<number> {
+): number[][] {
   const skins = skinJoints.map(importSkin);
   for (const joints of skinJoints) for (const joint of joints) nodes[joint]!.joint = true;
   for (const skin of skins) expandSkin(nodes, skin);
   if (singleSkeletonRoots.length > 0) skins.push(importSkin(singleSkeletonRoots));
 
-  const sets = skeletonSets(nodes, skins);
-  const bones = new Set<number>();
-  for (const group of sets.groups()) {
-    for (const bone of skeletonJoints(nodes, group, turnNonJointDescendantsIntoBones)) {
-      bones.add(bone);
-    }
-  }
-  return bones;
+  return skeletonSets(nodes, skins)
+    .groups()
+    .map((group) => boneAdditionOrder(nodes, skeletonJoints(nodes, group, turnNonJointDescendantsIntoBones)));
 }

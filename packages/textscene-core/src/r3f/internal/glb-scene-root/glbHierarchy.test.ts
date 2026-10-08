@@ -19,7 +19,7 @@ function named<T extends THREE.Object3D>(obj: T, name: string): T {
 
 /** `object` as glTF node 0, which Godot names `godotName`. */
 function godotNamed<T extends THREE.Object3D>(object: T, godotName: string): T {
-  tagGodotNodeNames(object, new Map([[object, { nodes: 0 }]]), [godotName]);
+  tagGodotNodeNames(object, new Map([[object, { nodes: 0 }]]), [{ name: godotName, role: 'node' }]);
   return object;
 }
 
