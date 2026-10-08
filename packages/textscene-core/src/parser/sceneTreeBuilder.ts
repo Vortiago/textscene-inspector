@@ -5,7 +5,6 @@
 import type { NodeOrigin, RawNode, SceneNode } from './types';
 import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
 import { isUniqueNameInOwner } from '../utils/uniqueNames.js';
-import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
 import { UNIQUE_NODE_PREFIX, resolveParentPath, type ParentPathTree } from '../godot/nodePath.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
 
@@ -180,39 +179,4 @@ export function strandedNodes<N extends RawNode>(
   // Each node arrives with its line: a lookup would need a fallback, and line 0 reads
   // as a real location in an editor gutter.
   return all.filter(({ node }) => !placed.has(node));
-}
-
-/**
- * The first heading, when it declares a `parent=`: `packed_scene.cpp:219` refuses it,
- * so no scene builds. Positional, unlike {@link strandedNodes}: the engine's root is
- * `i == 0`, while `buildSceneTree` prefers a parentless heading wherever it sits.
- */
-export function rootDeclaringParent<N extends RawNode>(
-  all: readonly NodeOrigin<N>[]
-): NodeOrigin<N> | undefined {
-  // The declared attribute, not `node.parent`, which is unset for `parent=""`:
-  // `add_node_path` indexes any value (`packed_scene.cpp:2307-2311`), so an empty one
-  // still reaches the refusal.
-  const first = all[0];
-  return first?.declaredParent === undefined ? undefined : first;
-}
-
-/**
- * Whether the root heading states nothing Godot can build from. `:220` refuses a root
- * with none of `type=`, `instance=` and `instance_placeholder=`, and a placeholder root
- * fails at load (`resource_format_text.cpp:247-251`). It reads the heading's flag, not
- * `node.type`, which the node creators also synthesise from `instance=` and `index=`.
- */
-export function rootStatesNoIdentifier(root: RawNode | undefined): boolean {
-  return root?.overridesExistingNode === true || root?.type === INSTANCE_PLACEHOLDER_TYPE;
-}
-
-/**
- * Every heading spelling `parent=""`. `prepend_period()` (resource_format_text.cpp:206-207)
- * dereferences the `data` an empty NodePath never allocates (`node_path.cpp:43-44`,
- * `:394-397`), so the load faults. Positional like {@link rootDeclaringParent}: the
- * builder may root such a heading as readily as strand it.
- */
-export function emptyParentHeadings<N extends RawNode>(all: readonly NodeOrigin<N>[]): NodeOrigin<N>[] {
-  return all.filter(({ declaredParent }) => declaredParent === '');
 }

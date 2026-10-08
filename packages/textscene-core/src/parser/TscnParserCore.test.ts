@@ -189,12 +189,6 @@ item/0/mesh = ExtResource("1_tree")
 
 [node name="Lost" type="Node3D" parent="Missing"]
 `;
-    it('returns the orphaned headings', () => {
-      const { orphanedNodes } = parser.parse(content, simpleCreator);
-
-      expect(orphanedNodes.map(({ node }) => node.name)).toEqual(['Lost']);
-    });
-
     it('returns every node heading with its line, in scan order', () => {
       const { origins } = parser.parse(content, simpleCreator);
 
@@ -210,8 +204,8 @@ item/0/mesh = ExtResource("1_tree")
       expect(Object.keys(scene).sort()).toEqual(['externalResources', 'internalResources', 'nodes']);
     });
 
-    it('returns no orphans for a well-formed scene', () => {
-      expect(parser.parse('[node name="Root" type="Node3D"]\n', simpleCreator).orphanedNodes).toEqual([]);
+    it('leaves out a heading whose node creator returns null', () => {
+      expect(parser.parse(content, () => null).origins).toEqual([]);
     });
   });
 

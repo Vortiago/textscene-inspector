@@ -28,7 +28,7 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
-import { buildSceneTree, strandedNodes } from './sceneTreeBuilder.js';
+import { buildSceneTree } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
 
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
@@ -45,10 +45,12 @@ export type NodeCreator<N extends SceneNode<N>> = (
 /** What one scan returns: the tree, and the headings it was built from. */
 export interface CoreParseResult<N extends SceneNode<N>> {
   scene: TscnScene<N>;
-  /** Every `[node]` heading's node beside its line, in scan order, for checks against the tree. */
+  /**
+   * Each `[node]` heading's node beside its line, in scan order, for checks against the tree. A
+   * heading whose node creator returns null is absent, so index 0 is Godot's root only when the
+   * creator builds every node.
+   */
   origins: readonly NodeOrigin<N>[];
-  /** The headings the tree could not place, which the scan also logs. */
-  orphanedNodes: readonly NodeOrigin<N>[];
 }
 
 /** One property value the scan completed, after any multiline accumulation. */
@@ -99,7 +101,7 @@ export class TscnParserCore {
    * @param content - Raw TSCN file content
    * @param nodeCreator - Callback to create nodes (renderer-specific or linter-specific)
    * @param observer - Optional hooks for strict consumers (errors, sections, properties)
-   * @returns The scene, its headings and the ones it could not place
+   * @returns The scene and its headings
    */
   parse<N extends SceneNode<N>>(
     content: string,
@@ -315,12 +317,6 @@ export class TscnParserCore {
     finalizeSection();
 
     const sceneTree = buildSceneTree(origins.map((o) => o.node));
-    const orphanedNodes = strandedNodes(origins, sceneTree);
-    for (const { node } of orphanedNodes) {
-      logger.warn(
-        `[Parser] Orphaned node dropped from the scene tree: "${node.name}" (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
-      );
-    }
 
     logger.debug(
       `[Parser] Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`
@@ -335,7 +331,6 @@ export class TscnParserCore {
         ...(mainResource ? { mainResource } : {}),
       },
       origins,
-      orphanedNodes,
     };
   }
 

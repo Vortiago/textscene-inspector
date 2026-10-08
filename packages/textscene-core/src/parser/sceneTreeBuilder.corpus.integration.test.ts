@@ -10,6 +10,7 @@ import { join, relative } from 'node:path';
 import { TscnParser } from './TscnParser';
 import { TscnParserCore } from './TscnParserCore';
 import { parseNodeWithRegistry } from '../core/NodeRegistry';
+import { strandedNodes } from './sceneTreeBuilder';
 import { sceneFiles, scenesDir } from './testing/parserKit.js';
 
 const SCENES = scenesDir();
@@ -28,8 +29,11 @@ describe('buildSceneTree over the whole corpus', () => {
     for (const file of scenes) {
       const rel = relative(SCENES, file);
       // The renderer's node creator, so the tree under test is the one the previewer draws.
-      const { orphanedNodes } = new TscnParserCore().parse(readFileSync(file, 'utf8'), parseNodeWithRegistry);
-      if (orphanedNodes.length === 0) continue;
+      const { scene, origins } = new TscnParserCore().parse(
+        readFileSync(file, 'utf8'),
+        parseNodeWithRegistry
+      );
+      if (strandedNodes(origins, scene.nodes).length === 0) continue;
       (INTENTIONAL_ORPHANS.has(rel) ? intentional : offenders).push(rel);
     }
 

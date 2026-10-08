@@ -119,9 +119,10 @@ The observer only adds, so the render is the same with or without it. The lenien
 `NodeCreator` builds a `TscnNode` with typed values in `properties`. The strict one builds a
 `RawNode`, the **Raw view**, with no `properties`. Both store the raw strings in `rawProperties`,
 so shared code reads that field. A **Lint rule** sees only the Raw view, so the compiler refuses
-a `properties` read. The core returns each `[node]` heading beside the scene, and logs the ones
-the tree could not place. The strict parser derives the **Heading facts** from those headings and
-from its observer, and only its `StrictScene` carries them.
+a `properties` read. The core returns each `[node]` heading beside the scene. The lenient parser
+logs the headings the tree could not place. The strict parser builds the **Heading facts** from the
+headings (`linter/placementFacts.ts`) and from its observer (`linter/headingResourceReads.ts`), and
+only its `StrictScene` carries them.
 The strict parser also returns `SourceLines`, which puts each diagnostic on its line.
 
 ## Rendering

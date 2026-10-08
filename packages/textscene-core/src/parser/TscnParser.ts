@@ -248,7 +248,9 @@ import '../nodes/os/statusindicator/index.js';
 
 import type { TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';
+import { strandedNodes } from './sceneTreeBuilder.js';
 import { parseNodeWithRegistry } from '../core/NodeRegistry.js';
+import * as logger from '../logger.js';
 
 /**
  * Lenient TSCN parser used for rendering.
@@ -265,6 +267,13 @@ export class TscnParser {
    * shape declared by the relevant node-type module.
    */
   parse(content: string): TscnScene {
-    return this.core.parse(content, parseNodeWithRegistry).scene;
+    const { scene, origins } = this.core.parse(content, parseNodeWithRegistry);
+    // The renderer drops these silently, so the log is the only trace. The linter reports them instead.
+    for (const { node } of strandedNodes(origins, scene.nodes)) {
+      logger.warn(
+        `[Parser] Orphaned node dropped from the scene tree: "${node.name}" (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
+      );
+    }
+    return scene;
   }
 }

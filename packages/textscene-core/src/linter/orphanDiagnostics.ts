@@ -10,7 +10,7 @@ import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
 import { nodePathNames } from '../godot/nodePath.js';
 import { validateNodeName } from '../godot/nodeName.js';
-import { rootStatesNoIdentifier } from '../parser/sceneTreeBuilder.js';
+import { rootStatesNoIdentifier } from '../parser/typeUnknowable.js';
 import type { StrictScene } from '../parser/types.js';
 
 /**
