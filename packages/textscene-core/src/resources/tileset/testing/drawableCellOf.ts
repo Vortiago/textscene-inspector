@@ -12,13 +12,16 @@ interface CellOverrides {
   sizeInAtlas?: Vec2i;
 }
 
-const SOURCE: AtlasSourceModel = {
-  texturePath: 'res://tiles.png',
-  margins: { x: 0, y: 0 },
-  separation: { x: 0, y: 0 },
-  textureRegionSize: { x: 16, y: 16 },
-  tiles: new Map(),
-};
+/** A fresh source per cell, so no test shares a mutable `tiles` map with another. */
+function defaultSource(): AtlasSourceModel {
+  return {
+    texturePath: 'res://tiles.png',
+    margins: { x: 0, y: 0 },
+    separation: { x: 0, y: 0 },
+    textureRegionSize: { x: 16, y: 16 },
+    tiles: new Map(),
+  };
+}
 
 export function drawableCellOf(
   cell: CellOverrides = {},
@@ -27,7 +30,7 @@ export function drawableCellOf(
   return {
     coords: cell.coords ?? { x: 0, y: 0 },
     sourceId: cell.sourceId ?? 0,
-    source: cell.source ?? SOURCE,
+    source: cell.source ?? defaultSource(),
     atlasCoords: cell.atlasCoords ?? { x: 0, y: 0 },
     alternativeId: cell.alternativeId ?? 0,
     tile: { sizeInAtlas: cell.sizeInAtlas ?? { x: 1, y: 1 }, alternatives: new Map() },

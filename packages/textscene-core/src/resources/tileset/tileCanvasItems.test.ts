@@ -9,8 +9,9 @@ import { drawableCellOf } from './testing/drawableCellOf';
 import type { AlternativeTileModel, TileMaterial } from './types';
 import type { DrawableCell } from './drawableCell';
 
-const ADD: TileMaterial = { properties: null };
-const SUB: TileMaterial = { properties: null };
+/** Two distinct materials: the split compares identity, not properties. */
+const MATERIAL_A: TileMaterial = { properties: null };
+const MATERIAL_B: TileMaterial = { properties: null };
 
 function cell(x: number, tileData: Partial<AlternativeTileModel> = {}, sourceId = 0): DrawableCell {
   return drawableCellOf({ coords: { x, y: 0 }, sourceId }, tileData);
@@ -34,11 +35,11 @@ describe('quadrantCanvasItems', () => {
   it('starts a canvas item at each change of material, and keeps one item for one shared material', () => {
     const items = quadrantCanvasItems([
       cell(0),
-      cell(1, { material: ADD }),
-      cell(2, { material: ADD }),
-      cell(3, { material: SUB }),
+      cell(1, { material: MATERIAL_A }),
+      cell(2, { material: MATERIAL_A }),
+      cell(3, { material: MATERIAL_B }),
     ]);
-    expect(items.map((item) => item.material)).toEqual([null, ADD, SUB]);
+    expect(items.map((item) => item.material)).toEqual([null, MATERIAL_A, MATERIAL_B]);
     expect(runsOf(items)).toEqual([[[0, [0]]], [[0, [1, 2]]], [[0, [3]]]]);
   });
 

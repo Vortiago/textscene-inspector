@@ -105,7 +105,10 @@ export function buildTileGeometryArrays(
   return { positions, uvs, colors, indices };
 }
 
-/** The sRGB `modulate` as the linear RGBA a vertex colour multiplies, as the layer's tint is converted. */
+/**
+ * The sRGB `modulate` as the linear RGBA a vertex colour multiplies. The draw multiplies it onto
+ * the layer's tint in linear space, not in sRGB as Godot's canvas does.
+ */
 function linearModulate({ r, g, b, a }: Color): number[] {
   return [...sRGBToLinearRGB(r, g, b), a];
 }

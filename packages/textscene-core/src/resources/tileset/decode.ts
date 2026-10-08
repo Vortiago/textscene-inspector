@@ -293,9 +293,7 @@ function decodeTileData(
     textureOrigin: read('texture_origin', defaults.textureOrigin, ({ key, value }) =>
       tileSetVec2i(value, defaults.textureOrigin, key)
     ),
-    modulate: read('modulate', defaults.modulate, ({ key, value }) =>
-      tileModulate(value, defaults.modulate, key)
-    ),
+    modulate: read('modulate', defaults.modulate, ({ key, value }) => tileModulate(value, key)),
     material: read('material', defaults.material, ({ value }) => tileMaterial(value)),
     zIndex: read('z_index', defaults.zIndex, ({ key, value }) =>
       intOr(value, defaults.zIndex, `[TileSet] ${key}`)
@@ -306,11 +304,11 @@ function decodeTileData(
   };
 }
 
-function tileModulate(value: string, fallback: Color, key: string): Color {
+function tileModulate(value: string, key: string): Color {
   const color = parseColorOrUndefined(value);
   if (color) return color;
   warn(`[TileSet] ${key}: invalid Color "${value}" — using white`);
-  return fallback;
+  return defaultTileData().modulate;
 }
 
 function tileSetVec2i(value: string | undefined, fallback: Vec2i, key: string): Vec2i {
