@@ -13,12 +13,7 @@ import { useNodePath } from '../contexts/NodePathContext';
 import type { NodeComponent, NodeComponentProps } from '../NodeComponentRegistry';
 import { useParentType } from '../parentSpaceScope';
 import { rangedShadowCastingEffects, type ShadowCastingEffects } from '../shadowCasting';
-import {
-  FadedSurfacesContext,
-  useSwappedMaterials,
-  type MaterialAttach,
-} from '../materials/swappedMaterials';
-import type { FadeVariants } from '../materials/fadeVariants';
+import { FadedSurfacesContext } from '../materials/swappedMaterials';
 import { registerVisibilityInstance } from './visibilityScene';
 import { useVisibilityParent } from './VisibilityParentContext';
 import type { InstancePlacement } from './placements';
@@ -113,14 +108,4 @@ export function useGeometryInstance(placement: InstancePlacement): ShadowCasting
     };
   }, [instance, placement]);
   return shadow;
-}
-
-/**
- * The function attaches of one surface the enclosing instance's drawer builds itself, at `attach`:
- * its unfaded and alpha-pass materials, which the cull swaps.
- */
-export function useInstanceSurface(attach?: string): FadeVariants<MaterialAttach> {
-  const swapped = useSwappedMaterials(attach);
-  if (!swapped) throw new Error(MISSING_SCOPE);
-  return swapped;
 }

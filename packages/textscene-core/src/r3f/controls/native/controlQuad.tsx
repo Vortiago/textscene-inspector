@@ -4,14 +4,14 @@
  * once, as in `rect.ts`). Unlit, transparent and depth-free like a CanvasItem2D
  * quad, and every leaf material carries the clip planes (`controlClipping.tsx`).
  */
-import { Fragment } from 'react';
 import * as THREE from 'three';
 import type { SurfaceDrawHooks } from '../../surfaceDrawHooks';
 import { useControlClipPlanes } from './controlClipping';
 import { useCanvasDecodeDefines } from '../../canvas2DTextureDecode';
 import { canvasItemFacing } from '../../canvasItemFacing';
 import { materialProgramInputs } from '../../materialProgramInputs';
-import { useSwappedMaterials, type MaterialAttach } from '../../materials/swappedMaterials';
+import type { MaterialAttach } from '../../materials/swappedMaterials';
+import { FadedMaterials } from '../../materials/FadedMaterials';
 
 export interface ControlQuadProps {
   width: number;
@@ -42,13 +42,11 @@ export function ControlQuad({
   // A `NoColorSpace`-retagged canvas texture gets the post-filter decode, and a
   // SubViewport target, which keeps its own colour space, does not.
   const decodeDefines = useCanvasDecodeDefines(map);
-  // Inside a GeometryInstance3D drawer, a Label3D's hex-code box, the quad fades with the label.
-  const swapped = useSwappedMaterials(undefined);
 
   // A `map` is often null on the first render and a texture later, while the quad
   // draws throughout, so the material is replaced, not mutated
   // (`materialProgramInputs.ts`).
-  const material = (attach?: MaterialAttach) => {
+  const material = (attach: string | MaterialAttach | undefined) => {
     const program = materialProgramInputs({
       props: {
         attach,
@@ -76,14 +74,8 @@ export function ControlQuad({
       onAfterShadow={drawHooks?.onAfterShadow}
     >
       <planeGeometry args={[width, height]} />
-      {swapped ? (
-        <>
-          <Fragment key="unfaded">{material(swapped.unfaded)}</Fragment>
-          <Fragment key="alphaPass">{material(swapped.alphaPass)}</Fragment>
-        </>
-      ) : (
-        material()
-      )}
+      {/* Inside a GeometryInstance3D drawer, a Label3D's hex-code box, the quad fades with the label. */}
+      <FadedMaterials>{(_pass, attach) => material(attach)}</FadedMaterials>
     </mesh>
   );
 }

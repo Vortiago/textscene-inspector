@@ -6,7 +6,6 @@
  * GeometryInstance3D drawer it mounts the unfaded and the alpha-pass bag, which the cull swaps.
  */
 
-import { Fragment } from 'react';
 import {
   standardMaterialBags,
   type StandardMaterialBag,
@@ -14,7 +13,8 @@ import {
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { textureSlotsFromMaps, type MaterialTextureMaps } from './materialTextureMaps';
-import { useSwappedMaterials, type MaterialAttach } from './swappedMaterials';
+import type { MaterialAttach } from './swappedMaterials';
+import { FadedMaterials } from './FadedMaterials';
 
 /**
  * The texture props are `MaterialTextureMaps`', already bound and paired to their
@@ -39,7 +39,6 @@ export function StandardMaterialSlot({
   anisotropyMap,
   attach,
 }: StandardMaterialSlotProps) {
-  const swapped = useSwappedMaterials(attach);
   // A null `scalars` is the derivation's "no material" case: Godot's default 3D
   // surface, not a default-constructed StandardMaterial3D.
   const bags = standardMaterialBags(
@@ -56,13 +55,8 @@ export function StandardMaterialSlot({
     })
   );
 
-  if (!swapped) return materialBagElement(bags.unfaded, attach);
-  // Keyed on `attach` too: it names the draw group the function attaches swap.
   return (
-    <>
-      <Fragment key={`unfaded:${attach}`}>{materialBagElement(bags.unfaded, swapped.unfaded)}</Fragment>
-      <Fragment key={`alphaPass:${attach}`}>{materialBagElement(bags.alphaPass, swapped.alphaPass)}</Fragment>
-    </>
+    <FadedMaterials attach={attach}>{(pass, mount) => materialBagElement(bags[pass], mount)}</FadedMaterials>
   );
 }
 

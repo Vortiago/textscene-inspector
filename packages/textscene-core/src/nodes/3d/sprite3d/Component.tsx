@@ -5,7 +5,7 @@
  * `meshBasicMaterial` (`material.cpp:3045`: SHADING_MODE_PER_PIXEL versus SHADING_MODE_UNSHADED).
  */
 
-import { Fragment, useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
@@ -18,6 +18,7 @@ import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { alphaCutSurface, joinsShadowPass } from '../../../r3f/godotAlphaCut';
 import { cutFadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import type { MaterialAttach } from '../../../r3f/materials/swappedMaterials';
+import { FadedMaterials } from '../../../r3f/materials/FadedMaterials';
 import { HashedShadowMaterials } from '../../../r3f/materials/HashedShadowMaterials';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -29,11 +30,7 @@ import type { Sprite3DProperties } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
-import {
-  useGeometryInstance,
-  useInstanceSurface,
-  withGeometryInstance,
-} from '../../../r3f/visibilityRange/geometryInstance';
+import { useGeometryInstance, withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
 
@@ -117,7 +114,6 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
     [rect, properties.transform, properties.axis, properties.billboard]
   );
   const shadow = useGeometryInstance(placement);
-  const surface = useInstanceSurface();
 
   // `_get_color_accum()` (`sprite_3d.cpp:36-52`) folds the parent sprite's accumulation into this
   // node's modulate, r/g/b and a. Godot multiplies the stored colours and converts once, so the
@@ -198,7 +194,7 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
     );
   }
 
-  const material = (alpha: PassAlpha, attach: MaterialAttach) => {
+  const material = (alpha: PassAlpha, attach: string | MaterialAttach | undefined) => {
     const program = materialProgramInputs({
       props: {
         attach,
@@ -238,8 +234,7 @@ function Sprite3DDrawer({ node, children }: NodeComponentProps) {
         onAfterShadow={shadow.onAfterShadow}
       >
         <primitive object={geometry} attach="geometry" />
-        <Fragment key="unfaded">{material(surfaceAlpha.unfaded, surface.unfaded)}</Fragment>
-        <Fragment key="alphaPass">{material(surfaceAlpha.alphaPass, surface.alphaPass)}</Fragment>
+        <FadedMaterials>{(pass, attach) => material(surfaceAlpha[pass], attach)}</FadedMaterials>
         {castsShadow && cut.alphaHash && <HashedShadowMaterials />}
       </mesh>
       {subtree}

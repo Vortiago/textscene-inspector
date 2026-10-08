@@ -386,20 +386,18 @@ export function TextRun({
     ]
   );
   const material = usePaintedMaterial(run, blends?.unfaded);
-  // Built for every run, as a hook runs whatever the props: a material never drawn never compiles.
-  const alphaPassMaterial = usePaintedMaterial(run, blends?.alphaPass);
+  const alphaPassMaterial = useAlphaPassMaterial(run, blends?.alphaPass);
   const meshRef = useRef<THREE.Mesh | null>(null);
-  const isFaded = blends !== undefined;
   useLayoutEffect(() => {
     const mesh = meshRef.current;
-    if (!swapped || !isFaded || !mesh) return;
+    if (!swapped || !alphaPassMaterial || !mesh) return;
     const detachUnfaded = swapped.unfaded(mesh, material);
     const detachAlphaPass = swapped.alphaPass(mesh, alphaPassMaterial);
     return () => {
       detachAlphaPass();
       detachUnfaded();
     };
-  }, [swapped, isFaded, material, alphaPassMaterial]);
+  }, [swapped, material, alphaPassMaterial]);
 
   // R3F does not dispose a geometry or material passed as a prop, so both leak
   // on every rebuild without this, and a Label re-shapes on every rect or font change.
@@ -420,7 +418,8 @@ export function TextRun({
       <mesh
         ref={meshRef}
         geometry={run.geometry}
-        material={material}
+        // A faded run's materials go on through the swap alone, which the fade owns.
+        material={alphaPassMaterial ? undefined : material}
         renderOrder={renderOrder}
         userData={frameExcluded ? { tscnFrameExcluded: true } : undefined}
         castShadow={shadow?.castShadow}
@@ -447,13 +446,27 @@ export function TextRun({
   );
 }
 
-/**
- * The run's material for `blend`, rebuilt only when a field of it changes, and disposed on
- * replacement: R3F does not dispose a material passed as a prop.
- */
+/** The run's material for `blend`. */
 function usePaintedMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefined): THREE.Material {
+  return useOwnedMaterial(run, blend, () => run.paint(blend));
+}
+
+/** The run's alpha-pass material, or null for a run that never fades. */
+function useAlphaPassMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefined): THREE.Material | null {
+  return useOwnedMaterial(run, blend, () => (blend ? run.paint(blend) : null));
+}
+
+/**
+ * The material `paint` builds, rebuilt only when `run` or a field of `blend` changes, and disposed
+ * on replacement: R3F does not dispose a material passed as a prop.
+ */
+function useOwnedMaterial<M extends THREE.Material | null>(
+  run: BuiltTextRun,
+  blend: CanvasTextBlend | undefined,
+  paint: () => M
+): M {
   const material = useMemo(
-    () => run.paint(blend),
+    () => paint(),
     // `blend` is compared by its fields, as `run` is above.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- per-field comparison.
     [
@@ -466,6 +479,6 @@ function usePaintedMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefine
       blend?.injection,
     ]
   );
-  useEffect(() => () => material.dispose(), [material]);
+  useEffect(() => () => material?.dispose(), [material]);
   return material;
 }

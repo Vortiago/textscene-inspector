@@ -45,7 +45,7 @@ function drawGroupOf(attach: string | undefined): number | null {
   return match[1] === undefined ? null : Number(match[1]);
 }
 
-export class SwappedMaterials implements FadedSurface {
+class SwappedMaterials implements FadedSurface {
   private host: MaterialHost | null = null;
   private readonly variants: Partial<FadeVariants<THREE.Material>> = {};
   private fade = 1;
