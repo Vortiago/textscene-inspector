@@ -7,10 +7,9 @@ import {
   type GeometryInstance3DProperties,
 } from '../../nodes/3d/geometryinstance3d/types';
 import { NO_VISIBILITY_RANGE } from '../../godot/visibilityRange';
-import type { Aabb } from '../../godot/aabb';
+import { EMPTY_AABB, type Aabb } from '../../godot/aabb';
 
 const UNIT_BOX: Aabb = { position: { x: -0.5, y: -0.5, z: -0.5 }, size: { x: 1, y: 1, z: 1 } };
-const FLAT_BOX: Aabb = { position: { x: 0, y: 0, z: 0 }, size: { x: 0, y: 0, z: 0 } };
 const PLACE = { path: 'Root/Box', parentPath: null, order: [0] };
 
 /** A placement at `offset` whose own box is `box`, or one with no box yet for null. */
@@ -75,7 +74,7 @@ describe('CulledInstance.worldBox', () => {
 
   it('keeps a box with no surface a point at the node (edge case)', () => {
     const box = new THREE.Box3();
-    instanceWith(placedAt(new THREE.Vector3(0, 2, 0), FLAT_BOX)).worldBox(box);
+    instanceWith(placedAt(new THREE.Vector3(0, 2, 0), EMPTY_AABB)).worldBox(box);
     expect([box.min, box.max]).toEqual([new THREE.Vector3(0, 2, 0), new THREE.Vector3(0, 2, 0)]);
   });
 });
@@ -93,7 +92,7 @@ describe('CulledInstance.isIndexed', () => {
 
   it('does not index a base whose box has no surface (edge case)', () => {
     // `renderer_scene_cull.cpp:1675-1681`.
-    expect(instanceWith(placedAt(new THREE.Vector3(), FLAT_BOX)).isIndexed).toBe(false);
+    expect(instanceWith(placedAt(new THREE.Vector3(), EMPTY_AABB)).isIndexed).toBe(false);
   });
 });
 

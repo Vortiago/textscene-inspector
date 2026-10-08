@@ -16,10 +16,10 @@ import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
 
 export function CollisionShape2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as CollisionShape2DProperties;
-  const { internalResources, externalResources } = useSceneResources();
+  const sceneResources = useSceneResources();
   const { showCollisions } = useViewportMode();
 
-  const shapeResource = useSubOrExtResource(properties.shape, internalResources, externalResources);
+  const shapeResource = useSubOrExtResource(properties.shape, sceneResources)?.resource;
   // Godot draws the shape in the node's own `debug_color`. The literal is sRGB.
   const debugColor = useGodotLinearColor(properties.debugColor ?? DEFAULT_COLLISION_DEBUG_COLOR);
 

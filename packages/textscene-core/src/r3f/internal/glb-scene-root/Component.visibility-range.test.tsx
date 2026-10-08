@@ -21,6 +21,7 @@ import { GLBSceneRoot, GLB_SCENE_ROOT_TYPE } from './Component';
 import { GlbInstanceProvider } from './GlbInstanceContext';
 import '../../../nodes/3d/meshinstance3d/index.r3f';
 import '../../../nodes/base/node3d/index.r3f';
+import { NO_SIDECAR } from '../../../resources/formats/glb/testing/noSidecar';
 
 const GLB_PATH = 'res://lamp.glb';
 
@@ -61,7 +62,7 @@ const SINGLE_GLB_NODES: Parameters<typeof nodesGlb>[0] = [{ name: 'Single', mesh
 async function render(lines: string, proxyLines = '', glbNodes = SINGLE_GLB_NODES) {
   const { root, lamp } = hostScene(lines, proxyLines);
   const fake = createFakeResourceLoader();
-  fake.glbMeshes.seed(GLB_PATH, await createGLBMesh(nodesGlb(glbNodes)));
+  fake.glbMeshes.seed(GLB_PATH, await createGLBMesh(nodesGlb(glbNodes), NO_SIDECAR));
   const camera = manualCameraAt({ x: 0.5, y: 0.5, z: 11 });
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack loader={fake.loader} scene={{ internalResources: RESOURCES }}>

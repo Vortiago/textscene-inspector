@@ -4,6 +4,7 @@
  * instanced glTF names these, not the names three's loader gives.
  */
 
+import { isGltfJsonObject, type GltfJsonObject } from './gltf.js';
 import { gltfBoneNodes, type ImportNode } from './gltfSkeletons.js';
 import { validateNodeName } from './nodeName.js';
 
@@ -23,25 +24,25 @@ export const DEFAULT_GLTF_NAMING_VERSION = 2;
 /** Godot's `unique_names`, filled by `_gen_unique_name_static` (`gltf_document.cpp:7223-7242`). */
 class UniqueNames {
   private readonly used = new Set<string>();
+  /** Each base's first number not yet tried. `used` only grows, so every number below it is taken. */
+  private readonly nextIndex = new Map<string, number>();
 
   /** The validated name, numbered from 2 until it is unused. */
   take(name: string): string {
     const base = validateNodeName(name);
     let unique = base;
-    for (let index = 2; this.used.has(unique); index++) unique = `${base}${index}`;
+    let index = this.nextIndex.get(base) ?? 2;
+    if (this.used.has(unique)) {
+      for (unique = `${base}${index}`; this.used.has(unique); unique = `${base}${index}`) index++;
+      this.nextIndex.set(base, index + 1);
+    }
     this.used.add(unique);
     return unique;
   }
 }
 
-type JsonObject = Readonly<Record<string, unknown>>;
-
-function isObject(value: unknown): value is JsonObject {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function objects(value: unknown): JsonObject[] {
-  return Array.isArray(value) ? value.map((entry) => (isObject(entry) ? entry : {})) : [];
+function objects(value: unknown): GltfJsonObject[] {
+  return Array.isArray(value) ? value.map((entry) => (isGltfJsonObject(entry) ? entry : {})) : [];
 }
 
 function indexes(value: unknown): number[] {
@@ -57,7 +58,7 @@ function text(value: unknown): string {
 }
 
 /** `_parse_nodes` (`gltf_document.cpp:563-652`): the graph with parents and heights. */
-function importNodes(json: JsonObject): ImportNode[] {
+function importNodes(json: GltfJsonObject): ImportNode[] {
   const nodes = objects(json['nodes']);
   const parents = nodes.map(() => -1);
   nodes.forEach((node, i) => {
@@ -66,7 +67,14 @@ function importNodes(json: JsonObject): ImportNode[] {
       if (child < nodes.length && parents[child] === -1) parents[child] = i;
     }
   });
-  const heightOf = (node: number): number => (parents[node]! < 0 ? 0 : 1 + heightOf(parents[node]!));
+  const heights = new Map<number, number>();
+  const heightOf = (node: number): number => {
+    const parent = parents[node]!;
+    if (parent < 0) return 0;
+    const height = heights.get(node) ?? 1 + heightOf(parent);
+    heights.set(node, height);
+    return height;
+  };
   return nodes.map((node, i) => ({
     children: indexes(node['children']).filter((child) => child < nodes.length),
     parent: parents[i]!,
@@ -78,7 +86,7 @@ function importNodes(json: JsonObject): ImportNode[] {
 }
 
 /** `_parse_scenes` (`gltf_document.cpp:527-561`): the loaded scene's root nodes and its name. */
-function loadedScene(json: JsonObject, fileName: string): { roots: number[]; name: string } {
+function loadedScene(json: GltfJsonObject, fileName: string): { roots: number[]; name: string } {
   const scenes = objects(json['scenes']);
   const scene = scenes[Number.isInteger(json['scene']) ? (json['scene'] as number) : 0];
   if (!scene) return { roots: [], name: '' };
@@ -87,7 +95,7 @@ function loadedScene(json: JsonObject, fileName: string): { roots: number[]; nam
 }
 
 /** The name `_assign_node_names` gives an unnamed node, by what it holds. */
-function unnamedNodeName(node: JsonObject, namingVersion: number): string {
+function unnamedNodeName(node: GltfJsonObject, namingVersion: number): string {
   if (index(node['mesh']) >= 0) return 'Mesh';
   if (index(node['camera']) >= 0) return namingVersion === 0 ? 'Camera3D' : 'Camera';
   return 'Node';
@@ -98,7 +106,7 @@ function unnamedNodeName(node: JsonObject, namingVersion: number): string {
  * parsed glTF document. A document with no `nodes` gives none.
  */
 export function gltfNodeNames(json: unknown, options: GltfNamingOptions): (string | null)[] {
-  if (!isObject(json)) return [];
+  if (!isGltfJsonObject(json)) return [];
   const { namingVersion, importAsSkeletonBones, fileName } = options;
   const names = new UniqueNames();
   // `_parse_scenes` reserves the name before it reads anything (`gltf_document.cpp:528`).

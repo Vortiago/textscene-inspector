@@ -32,8 +32,7 @@ import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResou
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
-import { authoredPlacement } from '../../../r3f/visibilityRange/placements';
-import { UNPLACED } from '../../../r3f/visibilityRange/placements';
+import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
 
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */

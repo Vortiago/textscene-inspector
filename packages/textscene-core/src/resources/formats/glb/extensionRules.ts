@@ -8,15 +8,11 @@ import type { GLTFLoader, GLTFLoaderPlugin, GLTFParser } from 'three/addons/load
 import {
   GODOT_GLTF_EXTENSIONS,
   gltfRefusalMessage,
+  isGltfJsonObject,
   requiredGltfExtensions,
   unsupportedRequiredGltfExtensions,
 } from '../../../godot/gltf';
 import type { GltfExtensionRules } from './types';
-
-type JsonRecord = Record<string, unknown>;
-
-const isRecord = (value: unknown): value is JsonRecord =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /**
  * Removes, from every `extensions` object in a glTF's JSON, each entry Godot does not import.
@@ -28,10 +24,10 @@ function dropUnimportedExtensions(value: unknown): void {
     for (const item of value) dropUnimportedExtensions(item);
     return;
   }
-  if (!isRecord(value)) return;
+  if (!isGltfJsonObject(value)) return;
   for (const [key, child] of Object.entries(value)) {
     if (key === 'extras') continue;
-    if (key === 'extensions' && isRecord(child)) {
+    if (key === 'extensions' && isGltfJsonObject(child)) {
       for (const name of Object.keys(child)) {
         if (!GODOT_GLTF_EXTENSIONS.has(name)) delete child[name];
       }

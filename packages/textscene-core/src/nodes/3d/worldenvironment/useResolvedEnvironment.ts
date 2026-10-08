@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { decodeEnvironment } from '../../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../../resources/environment/build';
@@ -22,23 +22,23 @@ export interface ResolvedEnvironment {
 /**
  * A hook, not a pure function, because the external form loads through the resource pipeline.
  * `useSubOrExtResource` returns the inline case on the first render, so an all-inline scene resolves
- * in one pass. Each level applies as it resolves (**Progressive fill-in**).
+ * in one pass. Each level applies as it resolves (**Progressive fill-in**). Each level's references
+ * resolve in the pools of the level that holds them, so a `.tres` reads its own sub-resources.
  */
 export function useResolvedEnvironment(environmentRef: string | undefined): ResolvedEnvironment | null {
-  const { internalResources, externalResources } = useSceneResources();
-
-  const environment = useSubOrExtResource(environmentRef, internalResources, externalResources);
+  const environment = useSubOrExtResource(environmentRef, useSceneResources());
   const envProps = useMemo(
-    () => (environment?.type === 'Environment' ? decodeEnvironment(environment.data) : null),
+    () =>
+      environment?.resource.type === 'Environment' ? decodeEnvironment(environment.resource.data) : null,
     [environment]
   );
 
   // Hooks run unconditionally with `undefined` when the level above did not resolve;
   // `useSubOrExtResource` short-circuits that to "nothing", so rules of hooks holds
   // whatever shape the chain takes.
-  const skyResource = useSubOrExtResource(envProps?.sky, internalResources, externalResources);
-  const materialRef = skyMaterialRef(skyResource?.type, skyResource?.data);
-  const material = useSubOrExtResource(materialRef, internalResources, externalResources);
+  const skyResource = useSubOrExtResource(envProps?.sky, environment?.resources ?? NO_RESOURCES);
+  const materialRef = skyMaterialRef(skyResource?.resource.type, skyResource?.resource.data);
+  const material = useSubOrExtResource(materialRef, skyResource?.resources ?? NO_RESOURCES)?.resource;
 
   const sky = useMemo(() => (material ? decodeSkyMaterial(material.type, material.data) : null), [material]);
 

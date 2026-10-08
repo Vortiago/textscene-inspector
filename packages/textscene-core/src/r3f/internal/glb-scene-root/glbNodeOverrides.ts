@@ -31,7 +31,7 @@ export function resolveGlbOverrideTarget(
     return matchGlbTarget(entries, joinPath(override.instanceSubPath, override.name))?.object;
   }
   const byName = entries.find((e) => glbObjectName(e.object) === override.name)?.object;
-  return byName ?? (root.name === override.name ? root : undefined);
+  return byName ?? (glbObjectName(root) === override.name ? root : undefined);
 }
 
 /**

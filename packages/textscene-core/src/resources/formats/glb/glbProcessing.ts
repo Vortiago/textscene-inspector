@@ -10,11 +10,7 @@ import { ShadowCastingSetting } from '../../../godot/rendering';
 import { withExtensionRules } from './extensionRules';
 import { tagMeshInstances } from './meshInstances';
 import { tagGodotNodeNames } from './nodeNames';
-import {
-  DEFAULT_GLTF_NAMING_VERSION,
-  gltfNodeNames,
-  type GltfNamingOptions,
-} from '../../../godot/gltfNodeNames';
+import { gltfNodeNames, type GltfNamingOptions } from '../../../godot/gltfNodeNames';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
 import type { GltfExtensionRules } from './types';
 import type { GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
@@ -154,16 +150,9 @@ function inMemoryOnlyManager(): THREE.LoadingManager {
 export interface GlbLoadOptions {
   /** Defaults to `godot-importer`. */
   extensionRules?: GltfExtensionRules;
-  /** The **Import sidecar**'s naming options. Defaults to Godot's import defaults. */
-  naming?: GltfNamingOptions;
+  /** The **Import sidecar**'s naming options. */
+  naming: GltfNamingOptions;
 }
-
-/** Godot's import defaults, for a file whose name names nothing: only version 0 reads it. */
-const DEFAULT_NAMING: GltfNamingOptions = {
-  namingVersion: DEFAULT_GLTF_NAMING_VERSION,
-  importAsSkeletonBones: false,
-  fileName: '',
-};
 
 /**
  * Create a THREE.Object3D from a GLB that carries its buffers and images, as `glbBytes` in
@@ -171,7 +160,7 @@ const DEFAULT_NAMING: GltfNamingOptions = {
  */
 export async function createGLBMesh(
   data: ArrayBuffer,
-  { extensionRules = 'godot-importer', naming = DEFAULT_NAMING }: GlbLoadOptions = {}
+  { extensionRules = 'godot-importer', naming }: GlbLoadOptions
 ): Promise<THREE.Object3D> {
   const { GLTFLoader } = await initGlbModules();
   const loader = withExtensionRules(new GLTFLoader(inMemoryOnlyManager()), extensionRules).register(

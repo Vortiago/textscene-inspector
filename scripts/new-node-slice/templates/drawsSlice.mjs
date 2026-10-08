@@ -186,8 +186,8 @@ export function ${typeName}({ node, children }: NodeComponentProps) {
 
 /**
  * A GeometryInstance3D's drawer, which the registry mounts in `withGeometryInstance` so the node
- * holds its place in the scene cull. It places the instance at its origin until it draws a box of
- * its own.
+ * holds its place in the scene cull. Until it draws a box of its own, the cull cannot measure the
+ * instance and leaves it as it is.
  */
 function geometryInstanceComponent(typeName, toSrc) {
   return `/** ${typeName} render component — transform group wrapping children. */

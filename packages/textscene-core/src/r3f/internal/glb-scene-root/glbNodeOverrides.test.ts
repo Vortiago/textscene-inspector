@@ -55,6 +55,16 @@ describe('applyGlbNodeOverrides', () => {
     expect(visualLayersOf(cube)).toBe(2);
   });
 
+  it("resolves a shallow override to the root by Godot's name for it", () => {
+    const root = buildTestGlbGraph([]);
+    root.name = 'Cube001';
+    tagGodotNodeNames(root, new Map([[root, { nodes: 0 }]]), ['Cube_001']);
+
+    applyGlbNodeOverrides(root, [override('Cube_001', { rawProperties: { visible: 'false' } })]);
+
+    expect(root.visible).toBe(false);
+  });
+
   it('resolves a deep override by PATH, not by bare name', () => {
     // Two objects share a name; only the one whose path agrees may be touched.
     const root = buildTestGlbGraph(['Weapons/Body', 'Character/Torso/Body']);

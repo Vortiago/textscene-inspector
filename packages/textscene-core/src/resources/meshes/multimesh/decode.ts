@@ -15,19 +15,13 @@ import {
   parsePackedVector2Array,
   parsePackedVector3Array,
 } from '../../shapes/packedArray.js';
-import type { MultiMeshData } from './types.js';
+import { TRANSFORM_FLOATS, type MultiMeshData } from './types.js';
 
 /** `MultiMesh::TRANSFORM_3D` (`multimesh.h:43`). Any other value takes the 2D read. */
 const TRANSFORM_3D = 1;
 
-/** Floats in one bounded transform: three basis rows, each with its origin component. */
-const TRANSFORM_FLOATS = 12;
-
-/**
- * The 2D read of `_multimesh_re_create_aabb` (`mesh_storage.cpp:1856-1865`): rows 0 and 1 from the
- * buffer, and the rest of an identity `Transform3D`.
- */
-const TRANSFORM_2D_ROWS = [0, 1, -1, 3, 4, 5, -1, 7] as const;
+/** Floats in one 2D buffer transform: the x and y rows, each with its origin component. */
+const TRANSFORM_2D_FLOATS = 8;
 
 /** The server's MultiMesh state that its box depends on. */
 class MultiMeshState {
@@ -47,7 +41,7 @@ class MultiMeshState {
   boundedTransforms = new Float32Array(0);
 
   get stride(): number {
-    const transform = this.format === TRANSFORM_3D ? 12 : 8;
+    const transform = this.format === TRANSFORM_3D ? TRANSFORM_FLOATS : TRANSFORM_2D_FLOATS;
     return transform + (this.usesColors ? 4 : 0) + (this.usesCustomData ? 4 : 0);
   }
 
@@ -87,11 +81,18 @@ class MultiMeshState {
   }
 }
 
+/**
+ * The 2D read of `_multimesh_re_create_aabb` (`mesh_storage.cpp:1856-1865`): rows 0 and 1 from the
+ * buffer without their z columns, and row 2 of an identity `Transform3D`. `row` starts zeroed.
+ */
 function boundTransform2D(row: Float32Array, data: Float32Array, at: number): void {
-  row.set([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0]);
-  TRANSFORM_2D_ROWS.forEach((source, i) => {
-    if (source >= 0) row[i] = data[at + source]!;
-  });
+  row[0] = data[at]!;
+  row[1] = data[at + 1]!;
+  row[3] = data[at + 3]!;
+  row[4] = data[at + 4]!;
+  row[5] = data[at + 5]!;
+  row[7] = data[at + 7]!;
+  row[10] = 1;
 }
 
 type Setter = (state: MultiMeshState, value: string) => void;
@@ -170,10 +171,13 @@ function setTransforms3D(state: MultiMeshState, value: string): void {
   const cache = state.makeLocal();
   for (let i = 0; i < count; i++) {
     // Four vectors per instance: the basis rows, then the origin.
-    const component = (vector: number, axis: number) => vectors[i * 12 + vector * 3 + axis]!;
+    const from = i * 12;
     for (let row = 0; row < 3; row++) {
-      const rowValues = [component(row, 0), component(row, 1), component(row, 2), component(3, row)];
-      cache.set(rowValues, i * state.stride + row * 4);
+      const to = i * state.stride + row * 4;
+      cache[to] = vectors[from + row * 3]!;
+      cache[to + 1] = vectors[from + row * 3 + 1]!;
+      cache[to + 2] = vectors[from + row * 3 + 2]!;
+      cache[to + 3] = vectors[from + 9 + row]!;
     }
   }
   state.isBoxDirty = true;
@@ -188,8 +192,16 @@ function setTransforms2D(state: MultiMeshState, value: string): void {
   const cache = state.makeLocal();
   for (let i = 0; i < count; i++) {
     // Three vectors per instance: the x and y columns, then the origin.
-    const [xx, xy, yx, yy, ox, oy] = vectors.subarray(i * 6, i * 6 + 6);
-    cache.set([xx!, yx!, 0, ox!, xy!, yy!, 0, oy!], i * state.stride);
+    const from = i * 6;
+    const to = i * state.stride;
+    cache[to] = vectors[from]!;
+    cache[to + 1] = vectors[from + 2]!;
+    cache[to + 2] = 0;
+    cache[to + 3] = vectors[from + 4]!;
+    cache[to + 4] = vectors[from + 1]!;
+    cache[to + 5] = vectors[from + 3]!;
+    cache[to + 6] = 0;
+    cache[to + 7] = vectors[from + 5]!;
   }
   state.isBoxDirty = true;
 }

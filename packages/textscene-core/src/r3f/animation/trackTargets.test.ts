@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { AnimationClip, NumberKeyframeTrack, VectorKeyframeTrack } from 'three';
 import * as logger from '../../logger';
 import { bindClip, splitTrackName, trackTargetFinder, trackTargetPaths } from './trackTargets';
+import { tagGodotNodeNames } from '../../resources/formats/glb/nodeNames';
 
 /** The dispatcher's shape: an unnamed wrapper registered by path, around the node's named group. */
 function mountNode(parent: THREE.Object3D, name: string): { wrapper: THREE.Object3D; group: THREE.Object3D } {
@@ -51,6 +52,17 @@ describe('trackTargetFinder', () => {
     robot.group.add(armature);
     const objects = new Map([['Root/Robot', robot.wrapper]]);
     expect(trackTargetFinder(objects)('Root/Robot/Armature/Hip')).toBe(hip);
+  });
+
+  it('walks into a glTF scene by the names Godot’s importer gives its nodes', () => {
+    const scene = new THREE.Scene();
+    const model = mountNode(scene, 'Model');
+    const cube = new THREE.Object3D();
+    cube.name = 'Cube001';
+    model.group.add(cube);
+    tagGodotNodeNames(model.group, new Map([[cube, { nodes: 0 }]]), ['Cube_001']);
+    const objects = new Map([['Root/Model', model.wrapper]]);
+    expect(trackTargetFinder(objects)('Root/Model/Cube_001')).toBe(cube);
   });
 
   it('finds nothing for a path whose ancestor does not exist', () => {

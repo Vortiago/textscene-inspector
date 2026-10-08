@@ -12,7 +12,7 @@ import type { TscnExternalResource, TscnInternalResource } from '../../../parser
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useResource } from '../../../resources/useResource';
+import { useResource, type ResourceResult } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
 import { resolveExtArrayMeshPath } from './meshResolution';
@@ -92,14 +92,9 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // `cast_shadow`, the range cull and each surface's billboard and shadow-pass membership reach
   // three per draw group, through hooks that read that group's material.
   const placement = useMemo(() => livePlacement(meshRef, meshRef), []);
-  const drawsPlaceholder = isPlaceholderMesh(
-    meshResource,
-    arrayMeshPath,
-    arrayMeshResult.status,
-    sceneArrayMesh
-  );
+  const content = meshContent(meshResource, arrayMeshPath, arrayMeshResult, sceneArrayMesh);
   // The placeholder box is not the mesh's, so the cull cannot measure the instance.
-  const shadow = useGeometryInstance(drawsPlaceholder ? UNPLACED : placement);
+  const shadow = useGeometryInstance(content.kind === 'unresolved' ? UNPLACED : placement);
   const visible = properties.visible !== false;
 
   const shellProps = {
@@ -117,57 +112,33 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     ) : null,
   };
 
-  // No mesh, an external GLB or a missing SubResource. An external ArrayMesh is not
-  // unresolved: it loads asynchronously below.
-  if (!meshResource && !arrayMeshPath) {
-    return (
-      <MeshShell {...shellProps} overlay={null}>
-        {UNRESOLVED_MESH}
-      </MeshShell>
-    );
-  }
-
-  if (arrayMeshPath) {
-    if (arrayMeshResult.status === 'unavailable') {
+  switch (content.kind) {
+    case 'unresolved':
       return (
         <MeshShell {...shellProps} overlay={null}>
           {UNRESOLVED_MESH}
         </MeshShell>
       );
-    }
-    // While it loads, the shell keeps the node's descendants mounted: they do not depend
-    // on the `.tres`.
-    if (!arrayMeshResult.value) return <MeshShell {...shellProps}>{null}</MeshShell>;
-
-    return (
-      <MeshShell {...shellProps}>
-        <ArrayMeshSurfaces mesh={withFileMaterials(arrayMeshResult.value)} overrides={meshOverrides} />
-      </MeshShell>
-    );
+    // While it loads, the shell keeps the node's descendants mounted: they do not depend on
+    // the `.tres`.
+    case 'loading':
+      return <MeshShell {...shellProps}>{null}</MeshShell>;
+    case 'arrayMesh':
+      return (
+        <MeshShell {...shellProps}>
+          <ArrayMeshSurfaces mesh={content.mesh} overrides={meshOverrides} />
+        </MeshShell>
+      );
+    // No `attach`: `mesh.material` stays one Material for one surface. An array would make
+    // three skip every draw group past the last entry, and a BoxGeometry declares six.
+    case 'primitive':
+      return (
+        <MeshShell {...shellProps}>
+          <MeshGeometry resource={content.resource} />
+          <SurfaceMaterialSlot source={primarySource} triplanarMesh={content.resource} />
+        </MeshShell>
+      );
   }
-
-  // An unreadable scene ArrayMesh gets the placeholder: `buildPrimitiveMeshGeometry` has
-  // no ArrayMesh case, so falling through would draw nothing.
-  if (meshResource?.type === 'ArrayMesh') {
-    return (
-      <MeshShell {...shellProps}>
-        {sceneArrayMesh ? (
-          <ArrayMeshSurfaces mesh={sceneArrayMesh} overrides={meshOverrides} />
-        ) : (
-          UNRESOLVED_MESH
-        )}
-      </MeshShell>
-    );
-  }
-
-  // No `attach`: `mesh.material` stays one Material for one surface. An array would make
-  // three skip every draw group past the last entry, and a BoxGeometry declares six.
-  return (
-    <MeshShell {...shellProps}>
-      <MeshGeometry resource={meshResource!} />
-      <SurfaceMaterialSlot source={primarySource} triplanarMesh={meshResource} />
-    </MeshShell>
-  );
 }
 
 /**
@@ -177,19 +148,36 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
  */
 const MATERIAL_OVERLAY_RENDER_ORDER = 1;
 
+/** What a MeshInstance3D draws. */
+type MeshContent =
+  | { kind: 'unresolved' }
+  | { kind: 'loading' }
+  | { kind: 'arrayMesh'; mesh: SurfacedMesh }
+  | { kind: 'primitive'; resource: TscnInternalResource };
+
+const UNRESOLVED: MeshContent = { kind: 'unresolved' };
+const LOADING: MeshContent = { kind: 'loading' };
+
 /**
- * Whether the drawer shows the placeholder in place of the mesh: no mesh it can resolve, an
- * external mesh it cannot load, or a scene ArrayMesh it cannot read. The branches below agree.
+ * The placeholder stands for no mesh, an external GLB, a missing SubResource, an external
+ * ArrayMesh that cannot load, and a scene ArrayMesh that cannot be read. `buildPrimitiveMeshGeometry`
+ * has no ArrayMesh case, so an unreadable one would otherwise draw nothing.
  */
-function isPlaceholderMesh(
+function meshContent(
   meshResource: TscnInternalResource | undefined,
-  arrayMeshPath: string | null | undefined,
-  arrayMeshStatus: string,
-  sceneArrayMesh: unknown
-): boolean {
-  if (arrayMeshPath) return arrayMeshStatus === 'unavailable';
-  if (!meshResource) return true;
-  return meshResource.type === 'ArrayMesh' && !sceneArrayMesh;
+  arrayMeshPath: string | null,
+  arrayMeshResult: ResourceResult<ArrayMeshResource>,
+  sceneArrayMesh: SurfacedMesh | null
+): MeshContent {
+  if (arrayMeshPath) {
+    if (arrayMeshResult.status === 'unavailable') return UNRESOLVED;
+    return arrayMeshResult.value
+      ? { kind: 'arrayMesh', mesh: withFileMaterials(arrayMeshResult.value) }
+      : LOADING;
+  }
+  if (!meshResource) return UNRESOLVED;
+  if (meshResource.type !== 'ArrayMesh') return { kind: 'primitive', resource: meshResource };
+  return sceneArrayMesh ? { kind: 'arrayMesh', mesh: sceneArrayMesh } : UNRESOLVED;
 }
 
 /** Opts a mesh out of picking: three calls `raycast` and collects nothing. */

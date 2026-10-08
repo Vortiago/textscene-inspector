@@ -6,11 +6,9 @@
  */
 
 import { useMemo } from 'react';
-import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { findSubResource, parseResourceReference, resolveExtResourcePath } from '../../SubResourceResolver';
-import { useResource } from '../../useResource';
+import { useResourceResolution } from '../../useSubOrExtResource';
 import { decodeSpriteFrames } from './decode';
 import type { SpriteFramesAnimation } from './types';
 
@@ -29,69 +27,22 @@ export interface SpriteFramesResult {
 }
 
 const EMPTY: SpriteFramesResult = { spriteFrames: null, status: 'unavailable' };
+const PENDING: SpriteFramesResult = { spriteFrames: null, status: 'pending' };
 
 export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFramesResult {
-  const { internalResources, externalResources } = useSceneResources();
-
-  const ref = spriteFramesRef ? parseResourceReference(spriteFramesRef) : null;
-  const isExternal =
-    !!spriteFramesRef && (ref?.type === 'ExtResource' || spriteFramesRef.startsWith('res://'));
-  const resolvedPath = isExternal ? resolveExtResourcePath(spriteFramesRef, externalResources) : null;
-  // Only a text resource parses. No processor handles a binary `.res`, so its
-  // load would stay in flight forever.
-  const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
-  // `''` is the no-request idiom: the hook-call count stays constant on the
-  // synchronous branch, as in useTileSetModel.
-  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'resource');
+  const { scoped, status } = useResourceResolution(spriteFramesRef, useSceneResources());
 
   return useMemo((): SpriteFramesResult => {
-    if (!spriteFramesRef) return EMPTY;
-
-    // An in-scene SubResource resolves synchronously against the scene's pools, so
-    // it is never `pending`.
-    if (ref?.type === 'SubResource') {
-      const sub = findSubResource(internalResources, ref.id);
-      const decoded = sub ? decodeSpriteFrames(sub.data) : null;
-      return decoded
-        ? {
-            spriteFrames: {
-              animations: decoded.animations,
-              subResources: internalResources,
-              externalResources,
-            },
-            status: 'loaded',
-          }
-        : EMPTY;
-    }
-
-    // An external `.tres` loads through useResource, which also supplies the
-    // missing-file rows and the late-upload recovery. Its frames resolve against
-    // the file's own sections, since its frame ids are scoped to the .tres. A
-    // binary `.res` leaves tresPath null, so it is unresolvable.
-    if (!tresPath) return EMPTY;
-    if (tresResult.status === 'pending') return { spriteFrames: null, status: 'pending' };
-    if (tresResult.status === 'unavailable' || !tresResult.value) return EMPTY;
-
-    const file = tresResult.value;
-    const decoded = decodeSpriteFrames(file.properties);
-    return decoded
-      ? {
-          spriteFrames: {
-            animations: decoded.animations,
-            subResources: file.subResources,
-            externalResources: file.extResources,
-          },
-          status: 'loaded',
-        }
-      : EMPTY;
-  }, [
-    spriteFramesRef,
-    ref?.type,
-    ref?.id,
-    internalResources,
-    externalResources,
-    tresPath,
-    tresResult.status,
-    tresResult.value,
-  ]);
+    if (status === 'pending') return PENDING;
+    const decoded = scoped ? decodeSpriteFrames(scoped.resource.data) : null;
+    if (!scoped || !decoded) return EMPTY;
+    return {
+      spriteFrames: {
+        animations: decoded.animations,
+        subResources: scoped.resources.internalResources,
+        externalResources: scoped.resources.externalResources,
+      },
+      status: 'loaded',
+    };
+  }, [scoped, status]);
 }

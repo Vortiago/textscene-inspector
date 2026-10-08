@@ -35,11 +35,11 @@ const NAV_FACES_MATERIAL = materialProgramInputs({
 
 export function NavigationRegion3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as NavigationRegion3DProperties;
-  const { externalResources, internalResources } = useSceneResources();
+  const sceneResources = useSceneResources();
   const { showNavigation } = useViewportMode();
 
   // A NavigationMesh is as often an inline `[sub_resource]` as a `.tres`.
-  const resource = useSubOrExtResource(properties.navigationMesh, internalResources, externalResources);
+  const resource = useSubOrExtResource(properties.navigationMesh, sceneResources)?.resource;
 
   const overlay = useMemo(() => {
     const navmesh = resource ? decodeNavigationMesh(resource.data) : null;

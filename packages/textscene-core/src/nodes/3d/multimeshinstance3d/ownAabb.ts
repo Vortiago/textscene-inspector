@@ -4,34 +4,28 @@
  */
 
 import { useMemo } from 'react';
-import type { TscnNode } from '../../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { Aabb } from '../../../godot/aabb';
 import { warn } from '../../../logger';
-import { useScopedResource } from '../../../resources/useScopedResource';
+import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
+import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { decodeMultiMesh, multiMeshAabb, type MultiMeshData } from '../../../resources/meshes/multimesh';
 import { useMeshAabb } from '../meshinstance3d/meshAabb';
-import { resourceContentKey } from '../../../resources/resourceContentKey';
+import { useContentMemo } from '../../../resources/useContentMemo';
 
 /** The box in node space, or null while the MultiMesh or the mesh box it needs is unknown. */
 export function useMultiMeshInstance3DAabb(node: TscnNode): Aabb | null {
-  const scoped = useScopedResource(node.rawProperties['multimesh']);
-  const key = scoped ? resourceContentKey(scoped.resource) : null;
-  const multiMesh = useMemo(
-    () => (scoped ? readMultiMesh(scoped.resource.type, scoped.resource.data) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` IS the content of the resource.
-    [key]
-  );
+  const scoped = useSubOrExtResource(node.rawProperties['multimesh'], useSceneResources());
+  const multiMesh = useContentMemo(scoped?.resource, readMultiMesh);
   const meshAabb = useMeshAabb(multiMesh?.mesh, scoped?.resources ?? NO_RESOURCES);
   return useMemo(() => multiMesh && multiMeshAabb(multiMesh, meshAabb), [multiMesh, meshAabb]);
 }
 
-const NO_RESOURCES = Object.freeze({ internalResources: [], externalResources: [] });
-
 /** The MultiMesh a bag holds, or null for another type or a packed array this cannot read. */
-function readMultiMesh(type: string, properties: Record<string, string>): MultiMeshData | null {
+function readMultiMesh({ type, data }: TscnInternalResource): MultiMeshData | null {
   if (type !== 'MultiMesh') return null;
   try {
-    return decodeMultiMesh(properties);
+    return decodeMultiMesh(data);
   } catch (error) {
     warn(
       `[MultiMeshInstance3D] MultiMesh unreadable: ${error instanceof Error ? error.message : String(error)}`

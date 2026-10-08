@@ -11,6 +11,7 @@ import type { ResourceProvider } from '../ResourceProvider';
 import { TscnParser } from '../../parser/TscnParser';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { isGltfPath } from '../../godot/gltf';
+import { fileBaseName } from '../../godot/string';
 
 /**
  * The `[gd_scene]` tag after any leading `;` comment and blank lines, which Godot
@@ -105,8 +106,8 @@ export function createSceneProcessor({
  * the GLB the same late-arrival, dispose and missing-resource paths as the rest.
  */
 export function synthesiseGLBScene(glbPath: string): TscnScene {
-  // The file basename, so the scene tree shows a meaningful label.
-  const basename = (glbPath.split('/').pop() ?? glbPath).replace(/\.(glb|gltf)$/i, '');
+  // The file's base name, so the scene tree shows a meaningful label.
+  const basename = fileBaseName(glbPath);
   const root: TscnNode = {
     // No file wrote the synthetic root, so it has no raw properties.
     rawProperties: {},

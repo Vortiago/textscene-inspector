@@ -4,6 +4,7 @@ import {
   GLB_JSON_CHUNK,
   GLB_MAGIC,
   gltfRefusalMessage,
+  isGltfJsonObject,
   isGltfPath,
   readGltfRequiredExtensions,
   requiredGltfExtensions,
@@ -182,5 +183,25 @@ describe('isGltfPath', () => {
   it('rejects a name with no extension, even one spelled glb', () => {
     expect(isGltfPath('glb')).toBe(false);
     expect(isGltfPath('some/dir/glb')).toBe(false);
+  });
+});
+
+describe('isGltfJsonObject', () => {
+  it('accepts an object', () => {
+    expect(isGltfJsonObject({ asset: { version: '2.0' } })).toBe(true);
+  });
+
+  it('refuses an array, a primitive and null', () => {
+    expect([[], 'scene', 0, null, undefined].map(isGltfJsonObject)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it('accepts an empty object', () => {
+    expect(isGltfJsonObject({})).toBe(true);
   });
 });

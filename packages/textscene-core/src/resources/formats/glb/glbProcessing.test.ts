@@ -13,6 +13,7 @@ import { cloneWithMaterials, createGLBMesh, disposeClonedMaterials, initGlbModul
 import * as processingShim from '../../processing/glbProcessing';
 import { standardMaterial } from '../../materials/standardmaterial3d/testing/standardMaterial';
 import { glbOfChunks, jsonChunk, triangleGlb } from './testing/triangleGlb';
+import { NO_SIDECAR } from './testing/noSidecar';
 import {
   DRAWN_OPAQUE_PREPASS,
   NO_OPAQUE_PREPASS,
@@ -95,7 +96,7 @@ describe('createGLBMesh', () => {
     // `instanceof ArrayBuffer` under the vmThreads pool.
     const arrayBuffer = new Uint8Array(readFileSync(glbPath)).buffer;
 
-    const object = await createGLBMesh(arrayBuffer);
+    const object = await createGLBMesh(arrayBuffer, NO_SIDECAR);
     const names = object.animations.map((c) => c.name);
 
     expect(names).toEqual(expect.arrayContaining(['idle', 'run', 'jump', 'walk', 'falling']));
@@ -104,7 +105,7 @@ describe('createGLBMesh', () => {
 
 describe('createGLBMesh alpha modes', () => {
   async function importedMaterial(alphaMode: string): Promise<THREE.Material> {
-    const object = await createGLBMesh(triangleGlb({ material: { alphaMode } }));
+    const object = await createGLBMesh(triangleGlb({ material: { alphaMode } }), NO_SIDECAR);
     const mesh = object.getObjectByProperty('isMesh', true) as THREE.Mesh;
     return mesh.material as THREE.Material;
   }
@@ -148,7 +149,7 @@ describe('createGLBMesh with a URI the GLB names', () => {
   });
 
   it('reads a data URI', async () => {
-    const object = await createGLBMesh(triangleNaming(positionsDataUri()));
+    const object = await createGLBMesh(triangleNaming(positionsDataUri()), NO_SIDECAR);
 
     const mesh = object.getObjectByProperty('isMesh', true) as THREE.Mesh;
     expect(mesh.geometry.getAttribute('position').count).toBe(3);
@@ -157,16 +158,16 @@ describe('createGLBMesh with a URI the GLB names', () => {
   it('refuses a remote URI without a fetch', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
-    await expect(createGLBMesh(triangleNaming('https://attacker.example/beacon.bin'))).rejects.toThrow(
-      'refuses https://attacker.example/beacon.bin'
-    );
+    await expect(
+      createGLBMesh(triangleNaming('https://attacker.example/beacon.bin'), NO_SIDECAR)
+    ).rejects.toThrow('refuses https://attacker.example/beacon.bin');
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('refuses a relative URI, which would resolve against the page', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
-    await expect(createGLBMesh(triangleNaming('tri.bin'))).rejects.toThrow('refuses tri.bin');
+    await expect(createGLBMesh(triangleNaming('tri.bin'), NO_SIDECAR)).rejects.toThrow('refuses tri.bin');
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

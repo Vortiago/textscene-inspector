@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { createGLBMesh } from './glbProcessing';
 import { triangleGlb } from './testing/triangleGlb';
 import { isMesh } from '../../../r3f/testing/threeNarrow';
+import { NO_SIDECAR } from './testing/noSidecar';
 
 function meshesOf(root: THREE.Object3D): THREE.Mesh[] {
   const meshes: THREE.Mesh[] = [];
@@ -46,59 +47,62 @@ const materialOf = (root: THREE.Object3D) => meshesOf(root)[0]!.material as THRE
 
 describe('createGLBMesh under Godot’s importer rules (the default)', () => {
   it('draws an EXT_mesh_gpu_instancing node once, as a plain mesh', async () => {
-    const meshes = meshesOf(await createGLBMesh(instancedGlb()));
+    const meshes = meshesOf(await createGLBMesh(instancedGlb(), NO_SIDECAR));
     expect(meshes).toHaveLength(1);
     expect((meshes[0] as THREE.InstancedMesh).isInstancedMesh).toBeUndefined();
   });
 
   it('draws that node at its own transform', async () => {
-    const root = await createGLBMesh(triangleGlb({ instanced: true, translation: [2, 3, 4] }));
+    const root = await createGLBMesh(triangleGlb({ instanced: true, translation: [2, 3, 4] }), NO_SIDECAR);
     root.updateMatrixWorld(true);
     const position = new THREE.Vector3().setFromMatrixPosition(meshesOf(root)[0]!.matrixWorld);
     expect(position.toArray()).toEqual([2, 3, 4]);
   });
 
   it('skips an optional material extension Godot does not import', async () => {
-    const material = materialOf(await createGLBMesh(clearcoatGlb()));
+    const material = materialOf(await createGLBMesh(clearcoatGlb(), NO_SIDECAR));
     expect(material.clearcoat ?? 0).toBe(0);
   });
 
   it('keeps an extension Godot imports', async () => {
-    const material = materialOf(await createGLBMesh(emissiveStrengthGlb()));
+    const material = materialOf(await createGLBMesh(emissiveStrengthGlb(), NO_SIDECAR));
     expect(material.emissiveIntensity).toBe(4);
   });
 
   it('leaves a node’s extras as authored, even a key named extensions', async () => {
     const extras = { extensions: { KHR_materials_clearcoat: { note: 'user data' } } };
-    const root = await createGLBMesh(triangleGlb({ extras }));
+    const root = await createGLBMesh(triangleGlb({ extras }), NO_SIDECAR);
     expect(meshesOf(root)[0]!.userData.extensions).toEqual(extras.extensions);
   });
 
   it('loads a file that requires an extension Godot imports', async () => {
-    expect(meshesOf(await createGLBMesh(requiringGlb('KHR_texture_transform')))).toHaveLength(1);
+    expect(meshesOf(await createGLBMesh(requiringGlb('KHR_texture_transform'), NO_SIDECAR))).toHaveLength(1);
   });
 
   it('refuses a file that requires EXT_mesh_gpu_instancing, naming it', async () => {
     await expect(
-      createGLBMesh(triangleGlb({ extensionsRequired: ['EXT_mesh_gpu_instancing'], instanced: true }))
+      createGLBMesh(
+        triangleGlb({ extensionsRequired: ['EXT_mesh_gpu_instancing'], instanced: true }),
+        NO_SIDECAR
+      )
     ).rejects.toThrow(/required extension 'EXT_mesh_gpu_instancing' is not supported/);
   });
 
   it('refuses a file that requires one three reads and Godot does not', async () => {
     // three decodes KHR_mesh_quantization natively (GLTFLoader.js `GLTFMeshQuantizationExtension`).
-    await expect(createGLBMesh(requiringGlb('KHR_mesh_quantization'))).rejects.toThrow(
+    await expect(createGLBMesh(requiringGlb('KHR_mesh_quantization'), NO_SIDECAR)).rejects.toThrow(
       /required extension 'KHR_mesh_quantization' is not supported/
     );
   });
 
   it('loads a file whose unsupported extension is optional', async () => {
-    const root = await createGLBMesh(triangleGlb({ extensionsUsed: ['KHR_mesh_quantization'] }));
+    const root = await createGLBMesh(triangleGlb({ extensionsUsed: ['KHR_mesh_quantization'] }), NO_SIDECAR);
     expect(meshesOf(root)).toHaveLength(1);
   });
 });
 
 describe('createGLBMesh under three’s loader rules', () => {
-  const threeLoader = { extensionRules: 'three-loader' } as const;
+  const threeLoader = { ...NO_SIDECAR, extensionRules: 'three-loader' } as const;
 
   it('instances an EXT_mesh_gpu_instancing node', async () => {
     const meshes = meshesOf(await createGLBMesh(instancedGlb(), threeLoader));

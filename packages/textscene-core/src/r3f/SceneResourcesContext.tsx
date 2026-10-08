@@ -16,12 +16,13 @@ export interface SceneResources {
   externalResources: readonly TscnExternalResource[];
 }
 
-const EMPTY: SceneResources = {
+/** No resources: the pools of a scene with none, or of a level that has not resolved. */
+export const NO_RESOURCES: SceneResources = {
   internalResources: [],
   externalResources: [],
 };
 
-const SceneResourcesContext = createContext<SceneResources>(EMPTY);
+const SceneResourcesContext = createContext<SceneResources>(NO_RESOURCES);
 SceneResourcesContext.displayName = 'SceneResourcesContext';
 
 export function useSceneResources(): SceneResources {

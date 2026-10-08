@@ -30,12 +30,12 @@ const NAV_FACES_MATERIAL = materialProgramInputs({
 
 export function NavigationRegion2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as NavigationRegion2DProperties;
-  const { externalResources, internalResources } = useSceneResources();
+  const sceneResources = useSceneResources();
   const { showNavigation } = useViewportMode();
 
   // A NavigationPolygon is as often an inline `[sub_resource]` as a `.tres`, so
   // both forms resolve.
-  const resource = useSubOrExtResource(properties.navigationPolygon, internalResources, externalResources);
+  const resource = useSubOrExtResource(properties.navigationPolygon, sceneResources)?.resource;
 
   const overlay = useMemo(() => {
     const polygon = resource ? decodeNavigationPolygon(resource.data) : null;

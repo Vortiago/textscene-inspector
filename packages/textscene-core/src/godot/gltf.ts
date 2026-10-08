@@ -27,6 +27,13 @@ export const GODOT_GLTF_EXTENSIONS: ReadonlySet<string> = new Set([
   'EXT_texture_webp',
 ]);
 
+/** A JSON object of a parsed glTF document, as against an array, a primitive or null. */
+export type GltfJsonObject = Record<string, unknown>;
+
+export function isGltfJsonObject(value: unknown): value is GltfJsonObject {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 /** The `extensionsRequired` entries Godot cannot import. Any entry refuses the whole file. */
 export function unsupportedRequiredGltfExtensions(required: readonly string[]): string[] {
   return required.filter((name) => !GODOT_GLTF_EXTENSIONS.has(name));
@@ -39,8 +46,8 @@ export function unsupportedRequiredGltfExtensions(required: readonly string[]): 
  * Empty for a document that is not an object, or whose `extensionsRequired` is not an array.
  */
 export function requiredGltfExtensions(json: unknown): string[] {
-  if (typeof json !== 'object' || json === null || Array.isArray(json)) return [];
-  const required: unknown = (json as { extensionsRequired?: unknown }).extensionsRequired;
+  if (!isGltfJsonObject(json)) return [];
+  const required = json['extensionsRequired'];
   if (!Array.isArray(required)) return [];
   return required.map((name) => (typeof name === 'string' ? name : JSON.stringify(name)));
 }

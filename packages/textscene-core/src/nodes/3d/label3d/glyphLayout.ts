@@ -11,7 +11,7 @@
  */
 import type { TextLayoutResult, TextLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment } from './types';
-import type { Aabb } from '../../../godot/aabb';
+import { EMPTY_AABB, type Aabb } from '../../../godot/aabb';
 
 export interface Label3DLinePlacement {
   /** This line's own left-edge x offset (`label_3d.cpp:588-599`), Godot px. */
@@ -73,7 +73,7 @@ export function label3DAabb(
   linePitchPx: number,
   pixelSize: number
 ): Aabb {
-  if (placements.length === 0) return { position: { x: 0, y: 0, z: 0 }, size: { x: 0, y: 0, z: 0 } };
+  if (placements.length === 0) return EMPTY_AABB;
   let left = Infinity;
   let right = -Infinity;
   for (const placement of placements) {

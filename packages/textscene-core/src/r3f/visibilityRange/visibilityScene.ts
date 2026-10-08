@@ -57,6 +57,7 @@ interface InstanceState {
 /** The instances the cull measures, each with its parent's index among them, and the rest. */
 interface Topology {
   members: VisibilityInstance[];
+  /** With each link that would close a cycle dropped, as the cull drops it. */
   parents: number[];
   unmeasured: VisibilityInstance[];
 }
@@ -140,9 +141,8 @@ function cullScene(scene: THREE.Scene, registry: SceneInstances, camera: THREE.C
  */
 function measuredMembers(members: readonly VisibilityInstance[], parents: readonly number[]): boolean[] {
   const isPlaced = members.map((instance) => instance.isPlaced);
-  const links = acyclicParents(parents);
   return members.map((_, i) => {
-    for (let at = i; at >= 0; at = links[at]!) if (!isPlaced[at]) return false;
+    for (let at = i; at >= 0; at = parents[at]!) if (!isPlaced[at]) return false;
     return true;
   });
 }
@@ -202,10 +202,12 @@ function buildTopology(instances: readonly VisibilityInstance[]): Topology {
   const indexOf = new Map(members.map((instance, i) => [instance, i]));
   return {
     members,
-    parents: members.map((instance) => {
-      const parent = parentOf.get(instance);
-      return parent ? indexOf.get(parent)! : -1;
-    }),
+    parents: acyclicParents(
+      members.map((instance) => {
+        const parent = parentOf.get(instance);
+        return parent ? indexOf.get(parent)! : -1;
+      })
+    ),
     unmeasured: instances.filter((instance) => !parentOf.has(instance)),
   };
 }

@@ -17,6 +17,11 @@ describe('gltfNodeNames: named nodes', () => {
     ]);
   });
 
+  it('skips a number a node took by name', () => {
+    const nodes = [{ name: 'Cube' }, { name: 'Cube3' }, { name: 'Cube' }, { name: 'Cube' }, { name: 'Cube' }];
+    expect(names({ nodes })).toEqual(['Cube', 'Cube3', 'Cube2', 'Cube4', 'Cube5']);
+  });
+
   it('replaces each character a node name may not hold', () => {
     expect(names({ nodes: [{ name: 'Cube.001' }, { name: 'a:b@c/d"e%f' }] })).toEqual([
       'Cube_001',

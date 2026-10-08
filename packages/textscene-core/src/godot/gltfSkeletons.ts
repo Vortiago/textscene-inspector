@@ -16,10 +16,10 @@ export interface ImportNode {
   joint: boolean;
 }
 
-/** A skin's joints in file order, and the nodes its expansion captured. */
+/** A skin's joints in file order, and the nodes its expansion captured, each in the order added. */
 interface ImportSkin {
-  readonly joints: number[];
-  readonly nonJoints: number[];
+  readonly joints: Set<number>;
+  readonly nonJoints: Set<number>;
   roots: number[];
 }
 
@@ -52,8 +52,11 @@ class DisjointSet {
     return [...this.parents].filter(([node, parent]) => node === parent).map(([node]) => node);
   }
 
-  members(representative: number): number[] {
-    return [...this.parents.keys()].filter((node) => this.root(node) === representative);
+  /** Each set's members in insertion order, the sets in their representatives' order. */
+  groups(): number[][] {
+    const byRoot = new Map(this.representatives().map((node): [number, number[]] => [node, []]));
+    for (const node of this.parents.keys()) byRoot.get(this.root(node))!.push(node);
+    return [...byRoot.values()];
   }
 
   private root(node: number): number {
@@ -66,12 +69,13 @@ class DisjointSet {
 }
 
 /** The disjoint set of `nodes` joined along parent links inside it. */
-function treesOf(nodes: readonly ImportNode[], members: readonly number[]): DisjointSet {
+function treesOf(nodes: readonly ImportNode[], members: Iterable<number>): DisjointSet {
   const set = new DisjointSet();
-  for (const node of members) {
+  const memberSet = new Set(members);
+  for (const node of memberSet) {
     set.insert(node);
     const parent = nodes[node]!.parent;
-    if (members.includes(parent)) set.union(parent, node);
+    if (memberSet.has(parent)) set.union(parent, node);
   }
   return set;
 }
@@ -87,8 +91,8 @@ function highestNode(nodes: readonly ImportNode[], subset: readonly number[]): n
 
 /** Adds `node` to the skin's joints when it is a joint not yet there, else to its non-joints. */
 function captureAncestor(nodes: readonly ImportNode[], skin: ImportSkin, node: number): void {
-  if (nodes[node]!.joint && !skin.joints.includes(node)) skin.joints.push(node);
-  else if (!skin.nonJoints.includes(node)) skin.nonJoints.push(node);
+  if (nodes[node]!.joint && !skin.joints.has(node)) skin.joints.add(node);
+  else skin.nonJoints.add(node);
 }
 
 /**
@@ -101,7 +105,7 @@ function captureNodesInSkin(nodes: readonly ImportNode[], skin: ImportSkin, node
     hasJointBelow = captureNodesInSkin(nodes, skin, child) || hasJointBelow;
   }
   if (hasJointBelow) captureAncestor(nodes, skin, node);
-  return skin.joints.indexOf(node) > 0;
+  return skin.joints.has(node) && node !== skin.joints.values().next().value;
 }
 
 /** `_capture_nodes_for_multirooted_skin` (`skin_tool.cpp:74-152`). */
@@ -136,7 +140,7 @@ function captureNodesForMultirootedSkin(nodes: readonly ImportNode[], skin: Impo
 function expandSkin(nodes: readonly ImportNode[], skin: ImportSkin): void {
   captureNodesForMultirootedSkin(nodes, skin);
   const trees = treesOf(nodes, [...skin.joints, ...skin.nonJoints]);
-  const roots = trees.representatives().map((owner) => highestNode(nodes, trees.members(owner)));
+  const roots = trees.groups().map((group) => highestNode(nodes, group));
   roots.sort((a, b) => a - b);
   for (const root of roots) captureNodesInSkin(nodes, skin, root);
   skin.roots = roots;
@@ -159,15 +163,15 @@ function addSubtree(
 /** `_check_if_parent_needs_to_become_joint` (`skin_tool.cpp:285-294`). */
 function captureNonJointAncestors(
   nodes: readonly ImportNode[],
-  skeletonNodes: readonly number[],
+  skeletonNodes: ReadonlySet<number>,
   node: number,
-  nonJoints: number[]
+  nonJoints: Set<number>
 ): void {
   const parent = nodes[node]!.parent;
   if (parent < 0) return;
-  if (nodes[parent]!.joint || !skeletonNodes.includes(parent) || nonJoints.includes(parent)) return;
+  if (nodes[parent]!.joint || !skeletonNodes.has(parent) || nonJoints.has(parent)) return;
   captureNonJointAncestors(nodes, skeletonNodes, parent, nonJoints);
-  nonJoints.push(parent);
+  nonJoints.add(parent);
 }
 
 /** The skin groups of `_determine_skeletons` (`skin_tool.cpp:296-404`), merged into skeletons. */
@@ -189,8 +193,9 @@ function skeletonSets(nodes: readonly ImportNode[], skins: readonly ImportSkin[]
     for (const root of skin.roots.slice(1)) sets.union(skin.roots[0]!, root);
   }
 
-  const groups = sets.representatives().map((owner) => sets.members(owner));
+  const groups = sets.groups();
   const highest = groups.map((group) => highestNode(nodes, group));
+  const groupOf = new Map(groups.flatMap((group, i) => group.map((node): [number, number] => [node, i])));
   for (let i = 0; i < highest.length; i++) {
     const node = highest[i]!;
     for (let j = i + 1; j < highest.length; j++) {
@@ -199,9 +204,8 @@ function skeletonSets(nodes: readonly ImportNode[], skins: readonly ImportSkin[]
     const parent = nodes[node]!.parent;
     if (parent < 0) continue;
     // Godot's loop condition stops at `j === i`, so only the groups before this one join it.
-    for (let j = 0; j < groups.length && j !== i; j++) {
-      if (groups[j]!.includes(parent)) sets.union(node, highest[j]!);
-    }
+    const j = groupOf.get(parent);
+    if (j !== undefined && j < i) sets.union(node, highest[j]!);
   }
   return sets;
 }
@@ -215,18 +219,23 @@ function skeletonJoints(
   skeletonNodes: readonly number[],
   turnNonJointDescendantsIntoBones: boolean
 ): number[] {
+  const members = new Set(skeletonNodes);
   const joints: number[] = [];
-  const nonJoints: number[] = [];
+  const nonJoints = new Set<number>();
   for (const node of skeletonNodes) {
     if (nodes[node]!.joint) {
-      if (!turnNonJointDescendantsIntoBones) captureNonJointAncestors(nodes, skeletonNodes, node, nonJoints);
+      if (!turnNonJointDescendantsIntoBones) captureNonJointAncestors(nodes, members, node, nonJoints);
       joints.push(node);
     } else if (turnNonJointDescendantsIntoBones) {
-      nonJoints.push(node);
+      nonJoints.add(node);
     }
   }
   for (const node of nonJoints) nodes[node]!.joint = true;
   return [...joints, ...nonJoints];
+}
+
+function importSkin(joints: readonly number[]): ImportSkin {
+  return { joints: new Set(joints), nonJoints: new Set(), roots: [] };
 }
 
 /**
@@ -240,16 +249,15 @@ export function gltfBoneNodes(
   singleSkeletonRoots: readonly number[],
   turnNonJointDescendantsIntoBones: boolean
 ): Set<number> {
-  const skins: ImportSkin[] = skinJoints.map((joints) => ({ joints: [...joints], nonJoints: [], roots: [] }));
+  const skins = skinJoints.map(importSkin);
   for (const joints of skinJoints) for (const joint of joints) nodes[joint]!.joint = true;
   for (const skin of skins) expandSkin(nodes, skin);
-  if (singleSkeletonRoots.length > 0)
-    skins.push({ joints: [...singleSkeletonRoots], nonJoints: [], roots: [] });
+  if (singleSkeletonRoots.length > 0) skins.push(importSkin(singleSkeletonRoots));
 
   const sets = skeletonSets(nodes, skins);
   const bones = new Set<number>();
-  for (const owner of sets.representatives()) {
-    for (const bone of skeletonJoints(nodes, sets.members(owner), turnNonJointDescendantsIntoBones)) {
+  for (const group of sets.groups()) {
+    for (const bone of skeletonJoints(nodes, group, turnNonJointDescendantsIntoBones)) {
       bones.add(bone);
     }
   }
