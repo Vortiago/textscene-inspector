@@ -17,6 +17,8 @@ describe('needsVisualRun', () => {
         'apps/textscene-linter/src/cli.ts',
         '.github/workflows/pages.yml',
         '.github/workflows/claude-review.yml',
+        '.github/workflows/labeler.yml',
+        '.github/labeler.yml',
         'scripts/compare-docs/build-gallery.mjs',
       ])
     ).toBe(false);
@@ -40,6 +42,10 @@ describe('needsVisualRun', () => {
 
   it('runs for a change to ci.yml, which defines the run itself', () => {
     expect(needsVisualRun(['.github/workflows/ci.yml'])).toBe(true);
+  });
+
+  it('runs for a change to an action that ci.yml runs', () => {
+    expect(needsVisualRun(['.github/actions/setup/action.yml'])).toBe(true);
   });
 
   it('runs when one file of many renders', () => {
