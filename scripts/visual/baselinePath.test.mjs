@@ -20,4 +20,12 @@ describe('goldenNameOf', () => {
   it('gives null for a non-PNG file in the baselines', () => {
     expect(goldenNameOf('scripts/visual/baselines/README.md')).toBeNull();
   });
+
+  it('gives null for a PNG in a directory under the baselines', () => {
+    expect(goldenNameOf('scripts/visual/baselines/old/glow-mix.png')).toBeNull();
+  });
+
+  it('names the golden back from the path baselinePath gives it', () => {
+    expect(goldenNameOf(baselinePath('sprite2d-region.flip'))).toBe('sprite2d-region.flip');
+  });
 });

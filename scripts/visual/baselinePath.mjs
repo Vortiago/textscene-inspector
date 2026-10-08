@@ -13,5 +13,7 @@ export function baselinePath(goldenName) {
 export function goldenNameOf(path) {
   const prefix = `${BASELINE_DIR}/`;
   if (!path.startsWith(prefix) || !path.endsWith('.png')) return null;
-  return path.slice(prefix.length, -'.png'.length);
+  const name = path.slice(prefix.length, -'.png'.length);
+  // The baselines sit flat in one directory, so a nested PNG is no golden's.
+  return name.includes('/') ? null : name;
 }
