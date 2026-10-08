@@ -39,8 +39,6 @@ installGodotSplitShadow();
 installDirectionalShadowAtlas();
 installDirectionalShadowFade();
 installGodotPositionalShadow();
-// A SubViewport here can hold canvas items.
-installCanvasSrgbMultiply();
 
 /**
  * The contents of the `<Canvas>`, exported so `@react-three/test-renderer`,
@@ -261,6 +259,8 @@ export function TscnCanvas() {
         camera={{ position: editorCameraPosition(), fov: EDITOR_CAMERA_FOV }}
         shadows="percentage"
         gl={{ localClippingEnabled: true }}
+        // Before the first frame compiles a program. A SubViewport here can hold canvas items.
+        onCreated={installCanvasSrgbMultiply}
       >
         <TscnSceneContents />
         <ActiveCameraSwitcher />

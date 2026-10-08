@@ -27,10 +27,10 @@ import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
 const FIXTURE = 'scenes/fixtures/unit-label-2d.tscn';
 
 /**
- * Ink floor for the label scene, far below a passing run: the count scales with
- * the virtual display. A 640x480 Xvfb screen, shared with the source editor,
- * gives a 235x357 canvas and 252 ink pixels. A blocked glyph atlas takes the
- * count to zero on any display.
+ * Floor for the pixels the label scene paints beyond its text-free twin, far below a
+ * passing run: the count scales with the virtual display. A 640x480 Xvfb screen,
+ * shared with the source editor, gives a 235x357 canvas and 252 text pixels. A
+ * blocked glyph atlas takes the count to zero on any display.
  */
 const INK_FLOOR = 100;
 
@@ -47,8 +47,9 @@ const BLOB_WORKER_PROBE = path.join(REPO_ROOT, 'scripts/vscode/probes/blobWorker
 const NOISE_FIXTURE = 'scenes/fixtures/unit-noisetexture2d.tscn';
 
 /**
- * Ink floor for the noise scene. Before its texture lands the scene draws nothing, as
- * the text-free label scene reads zero, so any floor above zero shows the texture drew.
+ * Floor for the pixels the noise scene paints beyond the text-free label scene. Both
+ * draw the project's clear colour over the same frame, so before its texture lands the
+ * noise scene matches that twin, and any floor above zero shows the texture drew.
  * This one stays far below the sprite's share of even the smallest canvas.
  */
 const NOISE_INK_FLOOR = 1000;
@@ -296,6 +297,29 @@ function checkHotReload(gate, hotReload, fresh) {
 }
 
 /**
+ * The pixels `subject` paints that `twin` does not, or null when either canvas is missing or
+ * they differ in size. Both must cover the same opaque area, the project frame under the
+ * same camera, so a shifted frame cannot pass for drawn content.
+ */
+function pixelsBeyondTwin(gate, label, subject, twin) {
+  if (!subject.canvasPath || !twin.canvasPath) {
+    gate.check(false, `[${label}] no canvas from it or its twin to compare`);
+    return null;
+  }
+  gate.check(
+    subject.canvasReadback.nonTransparentPixels === twin.canvasReadback.nonTransparentPixels,
+    `[${label}] it covers ${subject.canvasReadback.nonTransparentPixels} opaque pixels and its twin ` +
+      `${twin.canvasReadback.nonTransparentPixels}: the two framed the project differently`
+  );
+  try {
+    return diffMask(readFileSync(subject.canvasPath), readFileSync(twin.canvasPath)).diffPixels;
+  } catch (error) {
+    gate.check(false, `[${label}] ${error.message}`);
+    return null;
+  }
+}
+
+/**
  * The box drew, in its material's colour: the pixels its box-free twin does not
  * share are many enough to be the box, and their mean is orange, not grey.
  */
@@ -380,11 +404,10 @@ async function main() {
   console.log(`[gate] workspace: ${workspace}`);
   console.log(`[gate] control:   blanked ${replacements} text assignment(s)`);
 
-  // One launch each. The label fixture must paint at least INK_FLOOR ink pixels,
-  // and its text-free twin exactly zero. They differ only in whether a glyph is
-  // asked for, so an empty canvas fails the first and a canvas that paints
-  // chrome or a background fails the second. The noise run must draw a texture
-  // that one of the preview's own blob-URL workers built.
+  // One launch each. The label fixture must paint at least INK_FLOOR pixels its
+  // text-free twin does not. They differ only in whether a glyph is asked for, so
+  // the difference is the text. The noise run must draw a texture that one of the
+  // preview's own blob-URL workers built.
   const runs = [
     { label: 'with-text', scene: withText, evalFile: BLOB_WORKER_PROBE },
     { label: 'without-text', scene: withoutText },
@@ -459,16 +482,11 @@ async function main() {
 
   const withInk = reports['with-text'].canvasReadback;
   const withoutInk = reports['without-text'].canvasReadback;
-
+  const textPixels = pixelsBeyondTwin(gate, 'with-text', reports['with-text'], reports['without-text']);
   gate.check(
-    withInk.inkPixels >= INK_FLOOR,
-    `[with-text] only ${withInk.inkPixels} ink pixels on a ${withInk.width}x${withInk.height} ` +
-      `canvas, floor is ${INK_FLOOR} — the glyph atlas did not paint`
-  );
-  gate.check(
-    withoutInk.inkPixels === 0,
-    `[without-text] ${withoutInk.inkPixels} ink pixels with every label emptied — the ink ` +
-      'counted for the text scene is not attributable to text'
+    textPixels !== null && textPixels >= INK_FLOOR,
+    `[with-text] only ${textPixels} pixels differ from the text-free twin on a ` +
+      `${withInk.width}x${withInk.height} canvas, floor is ${INK_FLOOR}: the glyph atlas did not paint`
   );
 
   // The in-thread fallback draws the same pixels, so only the reply shows the worker ran.
@@ -481,10 +499,11 @@ async function main() {
   );
   gate.check(noiseReport.textureWorkCleared === true, '[noise] the texture work status never cleared');
   const noiseInk = noiseReport.canvasReadback;
+  const noisePixels = pixelsBeyondTwin(gate, 'noise', noiseReport, reports['without-text']);
   gate.check(
-    noiseInk.inkPixels >= NOISE_INK_FLOOR,
-    `[noise] only ${noiseInk.inkPixels} ink pixels on a ${noiseInk.width}x${noiseInk.height} ` +
-      `canvas, floor is ${NOISE_INK_FLOOR}: the noise texture did not draw`
+    noisePixels !== null && noisePixels >= NOISE_INK_FLOOR,
+    `[noise] only ${noisePixels} pixels differ from the text-free label scene on a ` +
+      `${noiseInk.width}x${noiseInk.height} canvas, floor is ${NOISE_INK_FLOOR}: the noise texture did not draw`
   );
 
   checkHotReload(gate, reports['hot-reload'], reports['hot-reload-fresh']);
@@ -493,7 +512,7 @@ async function main() {
 
   console.log('\n[gate] canvas readback');
   console.log(
-    `  with-text     ${withInk.width}x${withInk.height}  ink=${withInk.inkPixels}` +
+    `  with-text     ${withInk.width}x${withInk.height}  beyond-twin=${textPixels}` +
       `  opaque=${withInk.nonTransparentPixels}`
   );
   console.log(
@@ -501,7 +520,7 @@ async function main() {
       `  opaque=${withoutInk.nonTransparentPixels}`
   );
   console.log(
-    `  noise         ${noiseInk.width}x${noiseInk.height}  ink=${noiseInk.inkPixels}` +
+    `  noise         ${noiseInk.width}x${noiseInk.height}  beyond-twin=${noisePixels}` +
       `  workers=${textureWork?.workers}  replies=${textureWork?.replies}`
   );
   const editedInk = reports['hot-reload'].edit?.canvasReadback;

@@ -653,11 +653,10 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     const png = PNG.sync.read(buffer);
     expect([png.width, png.height]).toEqual([CANVAS_2D_CAPTURE.width, CANVAS_2D_CAPTURE.height]);
 
-    // Bottom-right corner: empty canvas, so the clear colour our side flattens
-    // its stage background to.
+    // Bottom-right corner: empty canvas, so the clear colour. Vulkan lands sRGB 0.3 on byte 76,
+    // where 0.3 x 255 is 76.5 and opengl3 gives 77.
     const [corner] = probePixels(buffer, [[png.width - 8, png.height - 8]], { patch: 5 });
-    const background = CANVAS_2D_CAPTURE.background;
-    expect(corner.rgb).toEqual([1, 3, 5].map((i) => parseInt(background.slice(i, i + 2), 16)));
+    expect(corner.rgb).toEqual([76, 76, 76]);
     // The fixture's white line runs through the upper left, far brighter than the background.
     const [line] = probePixels(buffer, [[150, 150]], { patch: 21 });
     expect(Math.min(...line.rgb)).toBeGreaterThan(150);

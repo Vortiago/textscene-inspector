@@ -1,33 +1,30 @@
 /**
- * The project's clear colour over the project frame, under every canvas item. Godot clears each
- * opaque viewport to it before it draws (`servers/rendering/renderer_viewport.cpp:371`), so an
- * additive, subtractive or multiplying item blends with it. A CSS background behind the
- * transparent canvas would only show through, and such an item would blend with black.
+ * Clears the 2D canvas to the project's clear colour, opaque, under every canvas item. Godot's
+ * editor sets the default clear colour from the project (`servers/rendering/renderer_viewport.cpp:751`)
+ * and clears each opaque viewport to it (`:371`), so the whole 2D editor view shows it and an
+ * additive, subtractive or multiplying item blends with it. A transparent root clears to
+ * `Color(0, 0, 0, 0)` (`:371`), so the stage behind the canvas shows through.
  */
 
-import { useMemo } from 'react';
+import { useLayoutEffect } from 'react';
+import * as THREE from 'three';
+import { useThree } from '@react-three/fiber';
+import { projectTransparentBackground } from '../../../parser/projectSettingsParser.js';
+import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { useProjectClearColor } from '../../useProjectClearColor.js';
-import { useGameViewportRect } from '../../gameViewportRect.js';
-import { materialProgramInputs } from '../../materialProgramInputs.js';
-
-/**
- * Below every canvas key, which starts at 0 (`canvasPaintOrder.ts`). The quad is also opaque,
- * and three draws its opaque list before the transparent list that holds every canvas item.
- */
-const CLEAR_RENDER_ORDER = -1;
 
 export function ProjectClearColor() {
-  const { x, y, w, h } = useGameViewportRect();
+  const gl = useThree((state) => state.gl);
   const color = useProjectClearColor();
-  const program = useMemo(
-    () => materialProgramInputs({ props: { color, depthWrite: false, depthTest: false, toneMapped: false } }),
-    [color]
-  );
-  // Godot's +Y is down, hence the negated centre.
-  return (
-    <mesh name="ProjectClearColor" position={[x + w / 2, -(y + h / 2), 0]} renderOrder={CLEAR_RENDER_ORDER}>
-      <planeGeometry args={[w, h]} />
-      <meshBasicMaterial key={program.key} {...program.props} />
-    </mesh>
-  );
+  const { settings } = useProjectSettings();
+  const isTransparent = projectTransparentBackground(settings);
+
+  useLayoutEffect(() => {
+    const previousColor = gl.getClearColor(new THREE.Color());
+    const previousAlpha = gl.getClearAlpha();
+    gl.setClearColor(color, isTransparent ? 0 : 1);
+    return () => gl.setClearColor(previousColor, previousAlpha);
+  }, [gl, color, isTransparent]);
+
+  return null;
 }

@@ -16,6 +16,7 @@ import {
   projectLayoutDirectionEnv,
   projectThemeScale,
   projectClearColor,
+  projectTransparentBackground,
   projectViewportSize,
 } from './projectSettingsParser';
 
@@ -152,10 +153,6 @@ describe('projectThemeScale', () => {
   });
 });
 
-/**
- * `display/window/size/viewport_*`: the rect a 2D scene is composed against and a root
- * Control anchors to. `demos/2d/platformer` sets 800x480 and `demos/2d/pong` 640x400.
- */
 describe('projectClearColor', () => {
   it('reads the default_clear_color override', () => {
     const settings = { 'rendering/environment/defaults/default_clear_color': 'Color(0.1, 0.2, 0.3, 1)' };
@@ -172,6 +169,25 @@ describe('projectClearColor', () => {
   });
 });
 
+describe('projectTransparentBackground', () => {
+  it('reads a transparent root', () => {
+    expect(projectTransparentBackground({ 'rendering/viewport/transparent_background': 'true' })).toBe(true);
+  });
+
+  it('reads 1 as true, as the bool slot booleanizes it', () => {
+    expect(projectTransparentBackground({ 'rendering/viewport/transparent_background': '1' })).toBe(true);
+  });
+
+  it('is opaque with no project or a malformed value', () => {
+    expect(projectTransparentBackground(null)).toBe(false);
+    expect(projectTransparentBackground({ 'rendering/viewport/transparent_background': 'yes' })).toBe(false);
+  });
+});
+
+/**
+ * `display/window/size/viewport_*`: the rect a 2D scene is composed against and a root
+ * Control anchors to. `demos/2d/platformer` sets 800x480 and `demos/2d/pong` 640x400.
+ */
 describe('projectViewportSize', () => {
   it('reads both axes', () => {
     expect(

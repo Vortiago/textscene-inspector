@@ -141,6 +141,15 @@ export function projectClearColor(settings: ProjectSettings | null): Color {
 }
 
 /**
+ * `rendering/viewport/transparent_background`, which the root viewport takes
+ * (`scene/main/scene_tree.cpp:2085-2086`). A transparent root clears to `Color(0, 0, 0, 0)`, not
+ * the clear colour (`renderer_viewport.cpp:371`).
+ */
+export function projectTransparentBackground(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['rendering/viewport/transparent_background']) === true;
+}
+
+/**
  * The `internationalization/*` settings `Control::is_layout_rtl()` reads, as the four
  * booleans its branches produce ({@link LayoutDirectionEnv}). Two inputs are plain
  * settings (`core/config/project_settings.cpp:1797-1798`), and the RTL locale table is
