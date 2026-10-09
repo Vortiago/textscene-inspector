@@ -42,7 +42,7 @@ canonical design record of the "Split Dock" (J) layout that replaced it.
   strip (Inspector / Resources / Cameras) whose lower section follows the selection. The
   Inspector updates the instant a node is selected, with no tab switch for the core loop.
   The Resources tab hosts `MissingResourcesPanel` plus the resource list. The Cameras tab
-  lists Camera nodes (through CameraControl) with "use".
+  lists Camera nodes (through ViewportActions) with "use".
 - The **top bar** carries only global chrome: file name plus scene stats, camera
   selector, the 2D/3D switch (`ViewportToolbar`) and the collisions toggle.
 - `SceneTreeViewer`, `NodeDetailsPanel` and `SceneInfoCard` use the denser J style with

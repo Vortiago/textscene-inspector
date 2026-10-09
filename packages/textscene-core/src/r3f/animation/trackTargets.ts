@@ -7,6 +7,7 @@
 
 import { AnimationClip, type KeyframeTrack, type Object3D } from 'three';
 import { warn } from '../../logger';
+import { godotNodeName } from '../../resources/formats/glb/nodeNames';
 
 /** A node name never holds a `.` (`godot/nodeName.ts`), so the first one ends the path. */
 export function splitTrackName(name: string): { path: string; property: string } {
@@ -22,8 +23,9 @@ export function trackTargetPaths(clips: readonly AnimationClip[]): string[] {
 }
 
 /**
- * The nearest object named `name` below `object`, breadth first. It never enters a registered
- * wrapper: that is another node, which answers to its own path.
+ * The nearest object named `name` below `object`, breadth first. A glTF object answers to the name
+ * Godot's importer gives it. It never enters a registered wrapper: that is another node, which
+ * answers to its own path.
  */
 function namedBelow(object: Object3D, name: string, wrappers: ReadonlySet<Object3D>): Object3D | null {
   // Indexed, not `shift`: shifting re-copies the queue on every visit.
@@ -31,7 +33,7 @@ function namedBelow(object: Object3D, name: string, wrappers: ReadonlySet<Object
   for (let i = 0; i < queue.length; i++) {
     const next = queue[i]!;
     if (wrappers.has(next)) continue;
-    if (next.name === name) return next;
+    if ((godotNodeName(next) ?? next.name) === name) return next;
     queue.push(...next.children);
   }
   return null;

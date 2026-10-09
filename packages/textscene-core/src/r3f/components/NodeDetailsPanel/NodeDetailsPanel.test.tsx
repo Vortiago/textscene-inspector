@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { NodeDetailsPanel } from './NodeDetailsPanel';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
-import { CameraControlProvider } from '../../contexts/CameraControlContext';
+import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
@@ -166,7 +166,7 @@ describe('<NodeDetailsPanel> camera actions', () => {
       return (
         <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
           <SelectionProvider>
-            <CameraControlProvider>{children}</CameraControlProvider>
+            <ViewportActionsProvider>{children}</ViewportActionsProvider>
           </SelectionProvider>
         </HierarchyProvider>
       );

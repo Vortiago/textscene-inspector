@@ -162,6 +162,7 @@ import '../resources/tileset/index.linter.js';
 import '../resources/meshes/planemesh/linterValidators.js';
 import '../resources/meshes/mesh/linterValidators.js';
 import '../resources/meshes/primitivemesh/linterValidators.js';
+import '../resources/meshes/multimesh/linterValidators.js';
 import '../resources/materials/material/linterValidators.js';
 import '../resources/resource/linterValidators.js';
 import '../resources/styles/stylebox/linterValidators.js';

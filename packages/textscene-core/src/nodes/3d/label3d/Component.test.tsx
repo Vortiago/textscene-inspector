@@ -6,12 +6,15 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { Label3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const Label3D = registeredComponent('Label3D');
 
 function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
   const properties: Label3DProperties = {
@@ -32,6 +35,7 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
     outline_render_priority: -1,
     alpha_cut: AlphaCutMode.DISABLED,
     alpha_scissor_threshold: 0.5,
+    alpha_hash_scale: 1,
     fixed_size: false,
     texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     ...overrides,

@@ -9,7 +9,7 @@ import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ActiveCameraSwitcher } from './TscnCanvas';
 import { HierarchyProvider } from './contexts/HierarchyContext';
-import { CameraControlProvider } from './contexts/CameraControlContext';
+import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
 import { TscnParser } from '../parser/TscnParser';
 
@@ -22,10 +22,10 @@ function graph() {
 async function mount(initialActiveCameraPath?: string) {
   return ReactThreeTestRenderer.create(
     <HierarchyProvider value={{ sceneGraph: graph(), panelId: 'p' }}>
-      <CameraControlProvider initialActiveCameraPath={initialActiveCameraPath}>
+      <ViewportActionsProvider initialActiveCameraPath={initialActiveCameraPath}>
         <perspectiveCamera userData={{ tscnPath: 'Root/Camera3D' }} aspect={16 / 9} />
         <ActiveCameraSwitcher />
-      </CameraControlProvider>
+      </ViewportActionsProvider>
     </HierarchyProvider>
   );
 }
@@ -46,10 +46,10 @@ describe('ActiveCameraSwitcher', () => {
   it('ignores a deep-linked path that matches no camera in the scene', async () => {
     const r = await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph: graph(), panelId: 'p' }}>
-        <CameraControlProvider initialActiveCameraPath="Root/Missing">
+        <ViewportActionsProvider initialActiveCameraPath="Root/Missing">
           <perspectiveCamera userData={{ tscnPath: 'Root/Camera3D' }} aspect={16 / 9} />
           <ActiveCameraSwitcher />
-        </CameraControlProvider>
+        </ViewportActionsProvider>
       </HierarchyProvider>
     );
     const cam = r.scene.findByType('PerspectiveCamera').instance as THREE.PerspectiveCamera;

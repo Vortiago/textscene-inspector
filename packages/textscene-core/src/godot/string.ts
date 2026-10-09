@@ -219,3 +219,13 @@ export function stringToFloat(text: string): number {
   const parsed = Number.parseFloat(trimmed);
   return Number.isFinite(parsed) ? parsed : 0;
 }
+
+/**
+ * `path.get_file().get_basename()` (`ustring.cpp:5028-5035`, `:5136-5143`): the name after the last
+ * `/` or `\`, less its last extension.
+ */
+export function fileBaseName(path: string): string {
+  const file = path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
+  const dot = file.lastIndexOf('.');
+  return dot < 0 ? file : file.slice(0, dot);
+}

@@ -6,6 +6,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnSceneContents } from './TscnCanvas';
 import { frameSceneBounds } from './frameSceneBounds';
 import { TiledUploadQueue } from './tiledUpload/TiledUploadQueue';
+import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
+import { viewportActionsProbe } from './testing/ViewportActionsProbe';
 
 describe('the canvas container CSS', () => {
   it('claims every touch gesture, so touch navigation gets pointermove at all', () => {
@@ -81,5 +83,19 @@ describe('<TscnSceneContents> tiled uploads', () => {
 
     expect(tick).toHaveBeenCalledTimes(2);
     tick.mockRestore();
+  });
+});
+
+describe('<TscnSceneContents> screenshot', () => {
+  it('registers the 3D view for the toolbar Screenshot and the host capture', async () => {
+    const { Probe, actions } = viewportActionsProbe();
+    await ReactThreeTestRenderer.create(
+      <ViewportActionsProvider>
+        <Probe />
+        <TscnSceneContents />
+      </ViewportActionsProvider>
+    );
+
+    expect(actions().hasScreenshotHandler()).toBe(true);
   });
 });

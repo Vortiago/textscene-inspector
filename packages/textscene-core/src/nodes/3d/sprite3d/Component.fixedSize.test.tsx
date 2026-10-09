@@ -7,12 +7,15 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { Sprite3D } from './Component';
 import { parseSprite3D } from './parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const Sprite3D = registeredComponent('Sprite3D');
 
 const heading = { type: 'node', attributes: { name: 'Sprite', type: 'Sprite3D' } };
 const EXTERNALS = [{ id: '1_tex', path: 'res://sprite.png', type: 'Texture2D' }] as const;

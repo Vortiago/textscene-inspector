@@ -7,15 +7,17 @@ import { useEffect, useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useCameraControl } from '../../contexts/CameraControlContext';
+import { useViewportActions } from '../../contexts/ViewportActionsContext';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext';
 import { useResourceLoader } from '../../../resources/useResource';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { beginTextureWork } from '../../../resources/textures/textureWork';
 import type { PreviewCaptureState } from './previewCaptureState';
+import type { SceneGraph } from '../../../core/SceneGraph';
 
 const DATA_URL = 'data:image/png;base64,AAA';
+const DATA_URL_2D = 'data:image/png;base64,BBB';
 
 interface CanvasStub {
   /** Whether the stub registers a screenshot handler, as a canvas with a renderer does. */
@@ -47,10 +49,18 @@ function arrangeCanvas(overrides: Partial<Omit<CanvasStub, 'releaseResource'>>):
   );
 }
 
+/** Registers `dataUrl` as the screenshot of `shownScene` while `registers` holds, as a canvas's bridge does. */
+function useStubScreenshotHandler(dataUrl: string, shownScene: SceneGraph | null, registers = true): void {
+  const { registerScreenshotHandler } = useViewportActions();
+  useEffect(
+    () => (registers ? registerScreenshotHandler(() => dataUrl, shownScene) : undefined),
+    [registerScreenshotHandler, dataUrl, shownScene, registers]
+  );
+}
+
 // happy-dom has no WebGL, so the R3F canvas is a stub that registers or throws on demand.
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: function StubCanvas() {
-    const { registerScreenshotHandler } = useCameraControl();
     const loader = useResourceLoader();
     const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
     const firstScene = useRef(sceneGraph);
@@ -60,17 +70,18 @@ vi.mock('../../TscnCanvas', () => ({
       canvasStub.releaseResource = loader.beginPending();
       return canvasStub.releaseResource;
     }, [loader]);
-    useEffect(() => {
-      if (!canvasStub.registersHandler) return undefined;
-      return registerScreenshotHandler(() => DATA_URL, shownScene);
-    }, [registerScreenshotHandler, shownScene]);
+    useStubScreenshotHandler(DATA_URL, shownScene, canvasStub.registersHandler);
     if (canvasStub.error) throw canvasStub.error;
     return <div data-testid="canvas-stub" />;
   },
   TscnSceneContents: () => null,
 }));
+// The 2D stage registers its own handler, as its world canvas's `ScreenshotBridge` does.
 vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
-  Canvas2DStage: () => <div data-testid="stage-2d-stub" />,
+  Canvas2DStage: function StubStage() {
+    useStubScreenshotHandler(DATA_URL_2D, useOptionalHierarchy()?.sceneGraph ?? null);
+    return <div data-testid="stage-2d-stub" />;
+  },
 }));
 
 import { TscnPreviewShell } from './TscnPreviewShell';
@@ -149,16 +160,15 @@ describe('<TscnPreviewShell> capture state', () => {
     });
   });
 
-  it('reports unavailable in the 2D view, which registers no screenshot handler', async () => {
+  it('captures the 2D view once the 2D canvas registers its handler', async () => {
     arrangeCanvas({});
     const { states } = renderShell();
 
     await userEvent.click(screen.getByRole('button', { name: '2D' }));
+    const state = latest(states);
 
-    expect(latest(states)).toEqual({
-      status: 'unavailable',
-      reason: 'The preview shows the 2D view, and only the 3D view can capture.',
-    });
+    expect(state?.status).toBe('ready');
+    expect(state?.status === 'ready' && state.capture()).toBe(DATA_URL_2D);
   });
 
   it('reports pending as the shell unmounts', () => {

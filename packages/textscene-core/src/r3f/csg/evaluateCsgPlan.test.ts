@@ -10,6 +10,7 @@ import * as csgLibrary from 'three-bvh-csg';
 import { evaluateCsgPlan } from './evaluateCsgPlan';
 import { CsgOperation, type CsgContribution, type CsgPlan } from './csgPlan';
 import type { CsgModule } from './csgModule';
+import type { CsgSolid } from './csgRegistration';
 import type { TscnNode } from '../../parser/types';
 
 const csg = csgLibrary as unknown as CsgModule;
@@ -22,25 +23,19 @@ const dummyNode: TscnNode = {
   properties: {} as never,
 };
 
-function contribution(
-  path: string,
-  operation: number,
-  surface: number,
-  matrix = new THREE.Matrix4()
-): CsgContribution {
+function contribution(path: string, operation: number, matrix = new THREE.Matrix4()): CsgContribution {
   return {
     path,
     type: 'CSGBox3D',
     operation,
     matrix,
-    surface,
     node: dummyNode,
     hasGeometry: true,
     children: [],
   };
 }
 
-function plan(contributions: CsgContribution[], surfaces: (string | undefined)[] = [undefined]): CsgPlan {
+function plan(contributions: CsgContribution[]): CsgPlan {
   // The flat list these cases were written against is the root plus its children, which
   // is what a subtree of same-level contributions folds to.
   const [first, ...rest] = contributions;
@@ -48,7 +43,6 @@ function plan(contributions: CsgContribution[], surfaces: (string | undefined)[]
     rootPath: 'Root',
     root: first ? { ...first, children: rest } : null,
     geometryCount: contributions.length,
-    surfaces,
     absorbedPaths: new Set(),
     invisiblePaths: new Set(),
     cacheKey: 'test',
@@ -76,15 +70,26 @@ const unitBox = () => new THREE.BoxGeometry(1, 1, 1).toNonIndexed();
 /** A box offset so exactly half of it overlaps the unit box. */
 const halfOverlapBox = () => new THREE.BoxGeometry(1, 1, 1).translate(0.5, 0, 0).toNonIndexed();
 
+/** The first `count` faces of a non-indexed `geometry` as draw group 0, the rest as group 1. */
+function splitInTwoGroups(geometry: THREE.BufferGeometry, count: number): THREE.BufferGeometry {
+  const vertices = geometry.getAttribute('position').count;
+  geometry.addGroup(0, count * 3);
+  geometry.addGroup(count * 3, vertices - count * 3, 1);
+  return geometry;
+}
+
 describe('evaluateCsgPlan', () => {
-  const resolveBoxes = (geometries: THREE.BufferGeometry[]) => {
+  /** Each contribution in turn takes the next solid, a geometry under no material. */
+  const resolveBoxes = (geometries: THREE.BufferGeometry[]) => resolveSolids(geometries.map(unlit));
+  const resolveSolids = (solids: CsgSolid[]) => {
     let i = 0;
-    return () => geometries[i++] ?? null;
+    return () => solids[i++] ?? null;
   };
+  const unlit = (geometry: THREE.BufferGeometry): CsgSolid => ({ geometry, materials: [undefined] });
 
   it('unions two half-overlapping boxes into 1.5x the volume', () => {
     const result = evaluateCsgPlan(
-      plan([contribution('a', CsgOperation.UNION, 0), contribution('b', CsgOperation.UNION, 0)]),
+      plan([contribution('a', CsgOperation.UNION), contribution('b', CsgOperation.UNION)]),
       csg,
       resolveBoxes([unitBox(), halfOverlapBox()])
     )!;
@@ -93,7 +98,7 @@ describe('evaluateCsgPlan', () => {
 
   it('subtracts, leaving half the volume', () => {
     const result = evaluateCsgPlan(
-      plan([contribution('a', CsgOperation.UNION, 0), contribution('b', CsgOperation.SUBTRACTION, 0)]),
+      plan([contribution('a', CsgOperation.UNION), contribution('b', CsgOperation.SUBTRACTION)]),
       csg,
       resolveBoxes([unitBox(), halfOverlapBox()])
     )!;
@@ -102,7 +107,7 @@ describe('evaluateCsgPlan', () => {
 
   it('intersects, leaving the overlap only', () => {
     const result = evaluateCsgPlan(
-      plan([contribution('a', CsgOperation.UNION, 0), contribution('b', CsgOperation.INTERSECTION, 0)]),
+      plan([contribution('a', CsgOperation.UNION), contribution('b', CsgOperation.INTERSECTION)]),
       csg,
       resolveBoxes([unitBox(), halfOverlapBox()])
     )!;
@@ -116,7 +121,7 @@ describe('evaluateCsgPlan', () => {
   it('applies each contribution’s root-local matrix', () => {
     const offset = new THREE.Matrix4().makeTranslation(10, 0, 0);
     const result = evaluateCsgPlan(
-      plan([contribution('a', CsgOperation.UNION, 0, offset)]),
+      plan([contribution('a', CsgOperation.UNION, offset)]),
       csg,
       resolveBoxes([unitBox()])
     )!;
@@ -128,9 +133,9 @@ describe('evaluateCsgPlan', () => {
     // Union then subtract: order matters, and doing it in reverse would leave 1.0.
     const result = evaluateCsgPlan(
       plan([
-        contribution('a', CsgOperation.UNION, 0),
-        contribution('b', CsgOperation.UNION, 0),
-        contribution('c', CsgOperation.SUBTRACTION, 0),
+        contribution('a', CsgOperation.UNION),
+        contribution('b', CsgOperation.UNION),
+        contribution('c', CsgOperation.SUBTRACTION),
       ]),
       csg,
       resolveBoxes([unitBox(), halfOverlapBox(), new THREE.BoxGeometry(1, 1, 1).translate(1, 0, 0)])
@@ -139,38 +144,60 @@ describe('evaluateCsgPlan', () => {
     expect(volumeOf(result.geometry)).toBeCloseTo(1.0, 2);
   });
 
-  describe('surfaces', () => {
-    it('maps each result material slot back to a plan surface', () => {
+  describe('materials', () => {
+    const union = () => plan([contribution('a', CsgOperation.UNION), contribution('b', CsgOperation.UNION)]);
+
+    it('maps each result slot back to the material of the faces in it', () => {
       const result = evaluateCsgPlan(
-        plan(
-          [contribution('a', CsgOperation.UNION, 0), contribution('b', CsgOperation.UNION, 1)],
-          ['SubResource("A")', 'SubResource("B")']
-        ),
+        union(),
         csg,
-        resolveBoxes([unitBox(), halfOverlapBox()])
+        resolveSolids([
+          { geometry: unitBox(), materials: ['SubResource("A")'] },
+          { geometry: halfOverlapBox(), materials: ['SubResource("B")'] },
+        ])
       )!;
-      expect(result.surfaceSlots.length).toBeGreaterThan(0);
-      for (const slot of result.surfaceSlots) {
-        expect(slot).toBeGreaterThanOrEqual(0);
-        expect(slot).toBeLessThan(2);
-      }
       // Both materials survive a union where each contributes visible faces.
-      expect(new Set(result.surfaceSlots).size).toBe(2);
+      expect([...result.materials].sort()).toEqual(['SubResource("A")', 'SubResource("B")']);
+      expect(result.geometry.groups.map((g) => g.materialIndex).sort()).toEqual([0, 1]);
     });
 
-    it('reports a single slot when every contribution shares one material', () => {
+    it('interns a material two solids share into one slot', () => {
       const result = evaluateCsgPlan(
-        plan([contribution('a', CsgOperation.UNION, 0), contribution('b', CsgOperation.UNION, 0)]),
+        union(),
         csg,
-        resolveBoxes([unitBox(), halfOverlapBox()])
+        resolveSolids([
+          { geometry: unitBox(), materials: ['SubResource("A")'] },
+          { geometry: halfOverlapBox(), materials: ['SubResource("A")'] },
+        ])
       )!;
-      expect(result.surfaceSlots).toEqual([0]);
+      expect(result.materials).toEqual(['SubResource("A")']);
+    });
+
+    it('gives each draw group of a solid its own material', () => {
+      // A box's first six faces are its +X and -X sides.
+      const twoMaterials = splitInTwoGroups(unitBox(), 4);
+      const result = evaluateCsgPlan(
+        plan([contribution('a', CsgOperation.UNION)]),
+        csg,
+        resolveSolids([{ geometry: twoMaterials, materials: ['res://x.tres', 'res://y.tres'] }])
+      )!;
+      expect(result.materials).toEqual(['res://x.tres', 'res://y.tres']);
+    });
+
+    it('keeps a face with no material as its own slot', () => {
+      const result = evaluateCsgPlan(
+        union(),
+        csg,
+        resolveSolids([unlit(unitBox()), { geometry: halfOverlapBox(), materials: ['SubResource("A")'] }])
+      )!;
+      expect(result.materials).toContain(undefined);
+      expect(result.materials).toContain('SubResource("A")');
     });
   });
 
   describe('degenerate plans', () => {
     it('returns empty geometry, not null, when nothing contributes', () => {
-      const result = evaluateCsgPlan(plan([contribution('a', CsgOperation.UNION, 0)]), csg, () => null)!;
+      const result = evaluateCsgPlan(plan([contribution('a', CsgOperation.UNION)]), csg, () => null)!;
       expect(result).not.toBeNull();
       expect(result.geometry.getAttribute('position').count).toBe(0);
     });
@@ -179,7 +206,7 @@ describe('evaluateCsgPlan', () => {
       const empty = new THREE.BufferGeometry();
       empty.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
       const result = evaluateCsgPlan(
-        plan([contribution('a', CsgOperation.UNION, 0), contribution('b', CsgOperation.UNION, 0)]),
+        plan([contribution('a', CsgOperation.UNION), contribution('b', CsgOperation.UNION)]),
         csg,
         resolveBoxes([unitBox(), empty])
       )!;
@@ -188,7 +215,7 @@ describe('evaluateCsgPlan', () => {
 
     it('passes a lone contribution through unchanged', () => {
       const result = evaluateCsgPlan(
-        plan([contribution('a', CsgOperation.UNION, 0)]),
+        plan([contribution('a', CsgOperation.UNION)]),
         csg,
         resolveBoxes([unitBox()])
       )!;
@@ -201,7 +228,7 @@ describe('evaluateCsgPlan', () => {
       // from the second onward; a plan whose ONLY contribution subtracts still yields
       // that solid, exactly as Godot's root does.
       const result = evaluateCsgPlan(
-        plan([contribution('a', CsgOperation.SUBTRACTION, 0)]),
+        plan([contribution('a', CsgOperation.SUBTRACTION)]),
         csg,
         resolveBoxes([unitBox()])
       )!;
@@ -224,7 +251,7 @@ describe('evaluateCsgPlan', () => {
     } as unknown as CsgModule;
 
     const result = evaluateCsgPlan(
-      plan([contribution('a', CsgOperation.UNION, 0), contribution('b', CsgOperation.UNION, 0)]),
+      plan([contribution('a', CsgOperation.UNION), contribution('b', CsgOperation.UNION)]),
       exploding,
       resolveBoxes([unitBox(), halfOverlapBox()])
     );

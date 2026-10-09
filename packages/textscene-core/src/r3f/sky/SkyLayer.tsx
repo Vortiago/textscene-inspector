@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { SkyProperties } from '../../resources/sky/types';
 import { useTexture2D } from '../../resources/useTexture2D';
@@ -138,7 +139,7 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
     if (!(object as THREE.DirectionalLight).isDirectionalLight) return;
     // `traverse` descends into hidden subtrees, which three skips when lighting.
     // Godot's sky sees only the render list, so a hidden light draws no disc.
-    if (!isRendered(object)) return;
+    if (!visibleInTree(object)) return;
     const light = object as THREE.DirectionalLight;
     const declaration = readSkyLightDeclaration(light);
     if (declaration && !declaration.drawsInSky) return;
@@ -163,12 +164,4 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
   });
 
   return lights;
-}
-
-/** Visible, and not buried under a hidden ancestor. */
-function isRendered(object: THREE.Object3D): boolean {
-  for (let node: THREE.Object3D | null = object; node; node = node.parent) {
-    if (!node.visible) return false;
-  }
-  return true;
 }

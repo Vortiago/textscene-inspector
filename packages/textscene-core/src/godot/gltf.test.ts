@@ -4,7 +4,9 @@ import {
   GLB_JSON_CHUNK,
   GLB_MAGIC,
   gltfRefusalMessage,
+  isGltfJsonObject,
   isGltfPath,
+  usesGodotSingleRoot,
   readGltfRequiredExtensions,
   requiredGltfExtensions,
   unsupportedRequiredGltfExtensions,
@@ -182,5 +184,43 @@ describe('isGltfPath', () => {
   it('rejects a name with no extension, even one spelled glb', () => {
     expect(isGltfPath('glb')).toBe(false);
     expect(isGltfPath('some/dir/glb')).toBe(false);
+  });
+});
+
+describe('isGltfJsonObject', () => {
+  it('accepts an object', () => {
+    expect(isGltfJsonObject({ asset: { version: '2.0' } })).toBe(true);
+  });
+
+  it('refuses an array, a primitive and null', () => {
+    expect([[], 'scene', 0, null, undefined].map(isGltfJsonObject)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it('accepts an empty object', () => {
+    expect(isGltfJsonObject({})).toBe(true);
+  });
+});
+
+describe('usesGodotSingleRoot', () => {
+  it('is true for a document that lists the extension as used', () => {
+    expect(usesGodotSingleRoot({ extensionsUsed: ['KHR_lights_punctual', 'GODOT_single_root'] })).toBe(true);
+  });
+
+  it('is false for a document without it, or that is not an object', () => {
+    expect([{ extensionsUsed: ['KHR_lights_punctual'] }, [], null].map(usesGodotSingleRoot)).toEqual([
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it('is false when `extensionsUsed` is not an array', () => {
+    expect(usesGodotSingleRoot({ extensionsUsed: 'GODOT_single_root' })).toBe(false);
   });
 });

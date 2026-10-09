@@ -24,9 +24,13 @@ import { chromium } from 'playwright';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { inkStats } from './pixels.mjs';
 import { THROWAWAY_USER_SETTINGS } from './userSettings.mjs';
-import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
-import { textureWorkCleared } from '../visual/preview/capture.mjs';
 import { isSizedCanvas } from './canvasSize.mjs';
+import {
+  CAPTURE_STATE_OF_MESSAGE,
+  forgetCaptureState,
+  installCaptureStateProbe,
+  waitForCaptureSettled,
+} from './captureState.mjs';
 import { isRefusedAttachCall, startCdpRelay } from './cdpRelay.mjs';
 import {
   VSCODE_VERSION_ENV,
@@ -424,7 +428,8 @@ async function waitForSizedCanvas(frame, timeoutMs) {
  * @property {boolean} verbose         stream VS Code stdout/stderr
  * @property {{ file: string, contents: string }} [edit] a file to overwrite once the
  *   canvas settles, for a **Dependency hot-reload**. The run then waits for the canvas
- *   to change and settle again, and writes that frame to `canvas-edited.png`.
+ *   to change, the capture to report ready and the canvas to settle again, and writes
+ *   that frame to `canvas-edited.png`.
  * @property {Record<string, unknown>} [settings] extra user settings to seed
  *   the throwaway profile with, for callers that need a layout the palette
  *   commands would otherwise have to click their way to
@@ -529,6 +534,7 @@ export async function driveScene(options) {
     // CDP injection is exempt from the page's CSP, so it instruments a webview
     // whose CSP is `default-src 'none'` with no test-only branch in the app.
     if (preserveBuffer) await page.addInitScript(preserveWebglDrawingBuffer);
+    await page.addInitScript(installCaptureStateProbe, CAPTURE_STATE_OF_MESSAGE);
     await page.addInitScript(() => {
       // A blocked resource does not always reach the console channel CDP exposes.
       globalThis.__textsceneCspViolations = [];
@@ -588,9 +594,10 @@ export async function driveScene(options) {
       await palette(page, 'Notifications: Clear All Notifications');
     }
 
-    // A texture still building or uploading would settle as a stable, wrong frame.
-    report.textureWorkCleared = await textureWorkCleared(frame.getByTestId(TEXTURE_WORK_STATUS_TESTID));
-    emit(`texture work ${report.textureWorkCleared ? 'cleared' : 'NEVER cleared'}`);
+    // Ready waits for every resource and texture the scene uses, so the settle cannot match two
+    // frames drawn before they landed.
+    report.captureState = await waitForCaptureSettled(frame, SETTLE_POLL);
+    emit(`capture state ${report.captureState ?? 'never posted'}`);
 
     if (preserveBuffer) {
       const settled = await stabilizeCanvas(frame, SETTLE_POLL);
@@ -674,18 +681,28 @@ export async function driveScene(options) {
 
 /**
  * Overwrites `edit.file` and waits for the preview to redraw from it: first a frame
- * that differs from `baseline`, then two identical readbacks. Writes the settled
- * frame to `canvas-edited.png`.
+ * that differs from `baseline`, then a capture-ready report posted after the edit,
+ * then two identical readbacks. The ready report keeps the settle from matching two
+ * frames drawn while the reloaded resource is on its way. Writes the settled frame
+ * to `canvas-edited.png`.
  */
 async function applyEdit(frame, edit, baseline, outDir, emit) {
+  await forgetCaptureState(frame);
   writeFileSync(edit.file, edit.contents);
   emit(`edited ${path.basename(edit.file)}`);
   const changed = await waitForCanvasChange(frame, baseline, EDIT_POLL);
   emit(`canvas ${changed ? 'changed' : 'NEVER changed'} after the edit`);
+  const captureState = await waitForCaptureSettled(frame, SETTLE_POLL);
+  emit(`capture state ${captureState ?? 'never posted'} after the edit`);
   const settled = await stabilizeCanvas(frame, SETTLE_POLL);
   const canvasPath = path.join(outDir, 'canvas-edited.png');
   const canvasReadback = writeCanvasPng(settled.dataUrl, canvasPath);
-  return { changed, stable: settled.stable, ...(canvasReadback && { canvasPath, canvasReadback }) };
+  return {
+    changed,
+    captureState,
+    stable: settled.stable,
+    ...(canvasReadback && { canvasPath, canvasReadback }),
+  };
 }
 
 /**

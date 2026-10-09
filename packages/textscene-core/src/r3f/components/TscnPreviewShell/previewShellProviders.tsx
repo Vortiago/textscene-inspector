@@ -6,7 +6,7 @@
 import type { ReactNode } from 'react';
 import { HierarchyProvider, type HierarchyContextValue } from '../../contexts/HierarchyContext.js';
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
-import { CameraControlProvider } from '../../contexts/CameraControlContext.js';
+import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import { ViewportModeProvider, type ViewportMode } from '../../contexts/ViewportModeContext.js';
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
@@ -47,9 +47,9 @@ export function previewShellProviders({
     (children) => <HierarchyProvider value={hierarchyValue}>{children}</HierarchyProvider>,
     (children) => <SelectionProvider>{children}</SelectionProvider>,
     (children) => (
-      <CameraControlProvider initialActiveCameraPath={initialActiveCameraPath}>
+      <ViewportActionsProvider initialActiveCameraPath={initialActiveCameraPath}>
         {children}
-      </CameraControlProvider>
+      </ViewportActionsProvider>
     ),
     (children) => (
       <MissingResourcesProvider onMissingPathsChange={onMissingPathsChange}>

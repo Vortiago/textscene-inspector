@@ -6,7 +6,6 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { ReactElement } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import {
@@ -22,7 +21,9 @@ import { resolveExtResourcePath } from '../../SubResourceResolver';
 import type { TscnExternalResource } from '../../../parser/types';
 import { materialFromBag } from './build';
 import { buildMaterial } from './buildMaterial.testkit';
-import { standardMaterialBag, type StandardMaterialClass } from './materialBag';
+import { standardMaterialBags, type StandardMaterialBag, type StandardMaterialClass } from './materialBag';
+import { GODOT_ALPHA_HASH } from '../../../r3f/materials/godotAlphaHash';
+import type { ProgramInjection, ProgramShader } from '../../../r3f/materialProgramInputs';
 import { bindSlotTexture, materialTextureState } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
@@ -569,7 +570,7 @@ async function renderThroughSlot(testCase: ParityCase): Promise<THREE.Material> 
   return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
 }
 
-/** The `THREE.Material` type the imperative adapter constructs per derived class. */
+/** The `THREE.Material` type each adapter constructs per derived class. */
 const TYPE_FOR: Readonly<Record<StandardMaterialClass, string>> = {
   basic: 'MeshBasicMaterial',
   standard: 'MeshStandardMaterial',
@@ -584,12 +585,31 @@ function comparable(value: unknown): unknown {
   return value instanceof THREE.Texture ? textureFingerprint(value) : value;
 }
 
-/** The JSX tag the reactive adapter mounts for each derived class. */
-const TAG_FOR: Readonly<Record<StandardMaterialClass, string>> = {
-  basic: 'meshBasicMaterial',
-  standard: 'meshStandardMaterial',
-  physical: 'meshPhysicalMaterial',
-};
+type CompileHook = ProgramInjection['onBeforeCompile'];
+
+/** Every patch the bag's material compiles with, in the order the program factory runs them. */
+function bagInjections(bag: StandardMaterialBag): CompileHook[] {
+  const hooks = bag.injection ? [bag.injection.onBeforeCompile] : [];
+  if (bag.props.alphaHash === true) hooks.push(GODOT_ALPHA_HASH.onBeforeCompile);
+  return hooks;
+}
+
+/** The stock standard program's text as `hooks` leave it, or null where no hook patches it. */
+function patchedProgram(...hooks: (CompileHook | undefined)[]): string[] | null {
+  const patches = hooks.filter((hook) => hook !== undefined);
+  if (patches.length === 0) return null;
+  const material = new THREE.MeshStandardMaterial();
+  const shader: ProgramShader = { ...THREE.ShaderLib.standard, uniforms: {} };
+  for (const patch of patches) patch.call(material, shader);
+  return [shader.vertexShader, shader.fragmentShader];
+}
+
+/** The patch a material built outside JSX compiles with, or none where it keeps three's. */
+function ownCompileHook(material: THREE.Material): CompileHook | undefined {
+  return Object.hasOwn(material, 'onBeforeCompile')
+    ? (material.onBeforeCompile as unknown as CompileHook)
+    : undefined;
+}
 
 describe('StandardMaterial3D arrival parity', () => {
   for (const testCase of CASES) {
@@ -620,27 +640,34 @@ describe('StandardMaterial3D arrival parity', () => {
     // the derived bag's, so no prop goes unasserted, and each adapter is pinned to
     // the same derivation rather than to the other's output.
     for (const testCase of CASES) {
-      it(`${testCase.name}: the reactive adapter mounts the derived bag`, () => {
+      it(`${testCase.name}: the reactive adapter mounts the derived bag`, async () => {
         const textures = inlineTextures(testCase);
         const props = slotProps(testCase, textures);
-        const bag = standardMaterialBag(props.scalars, textures);
-        const element = StandardMaterialSlot(props) as ReactElement;
-        expect(element.type).toBe(TAG_FOR[bag.materialClass]);
+        const bag = standardMaterialBags(props.scalars, textures).unfaded;
+        const renderer = await ReactThreeTestRenderer.create(
+          <mesh>
+            <StandardMaterialSlot {...props} />
+          </mesh>
+        );
+        const element = renderer.scene.findByType(TYPE_FOR[bag.materialClass]);
         // `attach` is the mount's own, and the React key and the injected hooks are the
-        // program factory's output. The hooks are compared as the patch they came from.
+        // program factory's output. The hooks are compared by the program they patch.
         const {
           onBeforeCompile,
           customProgramCacheKey: _cacheKey,
+          attach: _attach,
           ...mounted
         } = element.props as Record<string, unknown>;
-        expect(mounted).toEqual({ ...bag.props, attach: undefined });
-        expect(onBeforeCompile).toBe(bag.injection?.onBeforeCompile);
+        expect(mounted).toEqual(bag.props);
+        expect(patchedProgram(onBeforeCompile as ProgramInjection['onBeforeCompile'] | undefined)).toEqual(
+          patchedProgram(...bagInjections(bag))
+        );
       });
 
       it(`${testCase.name}: the imperative adapter constructs the derived bag`, () => {
         const textures = inlineTextures(testCase);
         const scalars = parseStandardMaterial3DScalars(testCase.properties);
-        const bag = standardMaterialBag(scalars, textures);
+        const bag = standardMaterialBags(scalars, textures).unfaded;
         const material = materialFromBag(bag);
         expect(material.type).toBe(TYPE_FOR[bag.materialClass]);
         const held = material as unknown as Record<string, unknown>;
@@ -651,15 +678,16 @@ describe('StandardMaterial3D arrival parity', () => {
           derived[prop] = comparable(value);
         }
         expect(applied).toEqual(derived);
+        expect(patchedProgram(ownCompileHook(material))).toEqual(patchedProgram(...bagInjections(bag)));
       });
     }
 
     it('compares a bag with every prop on it — neither guard is vacuous', () => {
       // A derivation that silently returned `{}` would satisfy both loops above
       // for every case.
-      const physical = standardMaterialBag(
+      const physical = standardMaterialBags(
         parseStandardMaterial3DScalars({ clearcoat_enabled: 'true', clearcoat: '0.5' })
-      );
+      ).unfaded;
       expect(Object.keys(physical.props).length).toBeGreaterThan(20);
     });
   });
@@ -669,10 +697,10 @@ describe('StandardMaterial3D arrival parity', () => {
     // sRGB it reasserts on colour-map props, and the sampler state a clone carries.
     it('the reactive adapter lands on the state the imperative one builds', async () => {
       const imperative = materialFromBag(
-        standardMaterialBag(
+        standardMaterialBags(
           parseStandardMaterial3DScalars(EVERY_SLOT_TRANSFORMED.properties),
           inlineTextures(EVERY_SLOT_TRANSFORMED)
-        )
+        ).unfaded
       );
       expect(snapshot(await renderThroughSlot(EVERY_SLOT_TRANSFORMED))).toEqual(snapshot(imperative));
     });

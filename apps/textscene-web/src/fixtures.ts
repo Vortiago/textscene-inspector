@@ -848,6 +848,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label3d Shadow",
+    "file": "unit-label3d-shadow.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label3d",
     "file": "unit-label3d.tscn",
     "category": "Other"
@@ -1523,6 +1528,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite3d Shadow",
+    "file": "unit-sprite3d-shadow.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite3d",
     "file": "unit-sprite3d.tscn",
     "category": "Other"
@@ -1690,6 +1700,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Video Stream Player",
     "file": "unit-video-stream-player.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visibility Parent",
+    "file": "unit-visibility-parent.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visibility Range",
+    "file": "unit-visibility-range.tscn",
     "category": "Other"
   },
   {
@@ -2803,6 +2823,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Mesh Sources",
+    "file": "unit-csg-mesh-sources.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Mesh",
     "file": "unit-csg-mesh.tscn",
     "category": "Unit - CSG Primitives"
@@ -2835,6 +2860,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Csg Sphere",
     "file": "unit-csg-sphere.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
+    "name": "Csg Texture Uv",
+    "file": "unit-csg-texture-uv.tscn",
     "category": "Unit - CSG Primitives"
   },
   {

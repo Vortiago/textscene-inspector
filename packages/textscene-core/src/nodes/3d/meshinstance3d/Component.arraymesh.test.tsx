@@ -7,7 +7,6 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import { decodeArrayMeshTres } from '../../../resources/testing/decodeArrayMeshTres';
@@ -19,6 +18,12 @@ import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 import { headlightsSurface, wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { preloadResource } from '../../../resources/testing/preloadResource';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { EMPTY_AABB } from '../../../godot/aabb';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -48,6 +53,7 @@ function inlineMeshNode(subResourceId: string): TscnNode {
     type: 'MeshInstance3D',
     children: [],
     properties: {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name: 'Trailer',
       mesh: `SubResource("${subResourceId}")`,
       surfaceMaterialOverrides: new Map(),
@@ -62,6 +68,7 @@ function makeNode(): TscnNode {
     type: 'MeshInstance3D',
     children: [],
     properties: {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name: 'Mesh',
       mesh: 'ExtResource("1")',
       surfaceMaterialOverrides: new Map(),
@@ -69,7 +76,8 @@ function makeNode(): TscnNode {
   };
 }
 
-const EXT: TscnExternalResource[] = [{ id: '1', path: 'res://stage/meshes/wall.tres', type: 'ArrayMesh' }];
+const WALL_PATH = 'res://stage/meshes/wall.tres';
+const EXT: TscnExternalResource[] = [{ id: '1', path: WALL_PATH, type: 'ArrayMesh' }];
 
 function render(loader: ResourceLoader) {
   return ReactThreeTestRenderer.create(
@@ -90,14 +98,15 @@ function firstMeshGeometry(
 
 describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
   it('renders the decoded ArrayMesh geometry (4 verts), not the placeholder box', async () => {
-    const loader = loaderServing();
-    const mesh = decodeArrayMeshTres(WALL_TRES, 'res://stage/meshes/wall.tres');
+    const loader = loaderServing({ [WALL_PATH]: WALL_TRES });
+    const mesh = decodeArrayMeshTres(WALL_TRES, WALL_PATH);
     const resource: ArrayMeshResource = {
       geometry: buildArrayMeshGeometry(mesh),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
       surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
+      aabb: EMPTY_AABB,
     };
-    preloadResource(loader, 'arraymesh', 'res://stage/meshes/wall.tres', resource);
+    preloadResource(loader, 'arraymesh', WALL_PATH, resource);
 
     const renderer = await render(loader);
     await new Promise<void>((r) => setTimeout(r, 10));
@@ -116,14 +125,15 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
   });
 
   it('renders a compressed-attribute ArrayMesh with finite bounds, not the placeholder', async () => {
-    const loader = loaderServing();
-    const mesh = decodeArrayMeshTres(COMPRESSED_TRES, 'res://stage/meshes/wall.tres');
+    const loader = loaderServing({ [WALL_PATH]: COMPRESSED_TRES });
+    const mesh = decodeArrayMeshTres(COMPRESSED_TRES, WALL_PATH);
     const resource: ArrayMeshResource = {
       geometry: buildArrayMeshGeometry(mesh),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
       surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
+      aabb: EMPTY_AABB,
     };
-    preloadResource(loader, 'arraymesh', 'res://stage/meshes/wall.tres', resource);
+    preloadResource(loader, 'arraymesh', WALL_PATH, resource);
 
     const renderer = await render(loader);
     await new Promise<void>((r) => setTimeout(r, 10));
@@ -290,10 +300,8 @@ blend_shape_mode = 0
 `;
 
 describe('<MeshInstance3D> ArrayMesh with its own surface materials', () => {
-  const MESH_PATH = 'res://stage/meshes/wall.tres';
-
   it('builds each surface material out of the mesh’s own .tres', async () => {
-    const loader = loaderServing({ [MESH_PATH]: OWN_MATERIALS_TRES });
+    const loader = loaderServing({ [WALL_PATH]: OWN_MATERIALS_TRES });
 
     const renderer = await render(loader);
     // Two chained loads (mesh bytes → decode → material bytes → build), each
@@ -318,5 +326,52 @@ describe('<MeshInstance3D> ArrayMesh with its own surface materials', () => {
     expect(materials[0]!.roughness).toBe(0.8);
     expect(materials[1]!.color.getHex()).toBe(0x0000ff);
     expect(materials[1]!.metalness).toBe(1);
+  });
+});
+
+/** A PrimitiveMesh saved as its own `.tres`, with its material a sub-resource of that file. */
+const CRATE_TRES = `[gd_resource type="BoxMesh" format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_red"]
+albedo_color = Color(1, 0, 0, 1)
+
+[resource]
+material = SubResource("StandardMaterial3D_red")
+size = Vector3(2, 3, 4)
+`;
+
+describe('<MeshInstance3D> external PrimitiveMesh', () => {
+  async function renderCrate(files: Record<string, string>) {
+    const loader = loaderServing(files);
+    const renderer = await render(loader);
+    for (let i = 0; i < 10; i++) {
+      await new Promise<void>((r) => setTimeout(r, 20));
+      await renderer.update(
+        <ResourceLoaderProvider loader={loader}>
+          <SceneResourcesProvider internalResources={[]} externalResources={EXT}>
+            <MeshInstance3D node={makeNode()} />
+          </SceneResourcesProvider>
+        </ResourceLoaderProvider>
+      );
+    }
+    return renderer.scene.findAllByType('Mesh')[0]?.instance as THREE.Mesh;
+  }
+
+  it('draws the box its .tres declares', async () => {
+    const mesh = await renderCrate({ [WALL_PATH]: CRATE_TRES });
+    mesh.geometry.computeBoundingBox();
+    expect(mesh.geometry.boundingBox!.getSize(new THREE.Vector3()).toArray()).toEqual([2, 3, 4]);
+  });
+
+  it('resolves its material against the .tres’s own sub-resources', async () => {
+    const mesh = await renderCrate({ [WALL_PATH]: CRATE_TRES });
+    expect((mesh.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0xff0000);
+  });
+
+  it('draws nothing for a mesh type with no slice here', async () => {
+    const mesh = await renderCrate({
+      [WALL_PATH]: '[gd_resource type="PlaceholderMesh" format=3]\n\n[resource]\n',
+    });
+    expect(mesh.geometry.getAttribute('position')).toBeUndefined();
   });
 });

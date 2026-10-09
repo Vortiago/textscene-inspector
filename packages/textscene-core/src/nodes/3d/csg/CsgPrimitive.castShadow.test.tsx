@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CsgPrimitive, CSG_BOUNDS_PROXY } from './CsgPrimitive';
+import { CSG_BOUNDS_PROXY } from './CsgPrimitive';
 import './csgbox3d/index.r3f';
 import './csgsphere3d/index.r3f';
 import { parseCSGBox3D } from './csgbox3d/parser';
@@ -24,6 +24,9 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { castsFrom, depthSideOf, drawsColour } from '../../../r3f/testing/threePasses';
 import { NodeTree } from '../../../r3f/testing/NodeTree';
 import { settleCsgEvaluation } from '../../../r3f/csg/testing/settleCsgEvaluation';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const CSGBox3D = registeredComponent('CSGBox3D');
 
 function parseBox(properties: Record<string, string>): CSGBox3DProperties {
   return parseCSGBox3D(heading('CSGBox3D', { name: 'Box' }), properties);
@@ -44,7 +47,7 @@ async function renderLoneBox(
   };
   const renderer = await ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={internalResources}>
-      <CsgPrimitive node={node} properties={parsed} />
+      <CSGBox3D node={node} />
     </SceneResourcesProvider>
   );
   return findMesh(renderer.scene) as unknown as THREE.Mesh;
@@ -143,7 +146,7 @@ describe('CSG cast_shadow', () => {
           internalResources={[]}
           externalResources={[{ id: '1_mat', path: 'res://paint.tres', type: 'StandardMaterial3D' }]}
         >
-          <CsgPrimitive node={node} properties={parsed} />
+          <CSGBox3D node={node} />
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     );

@@ -11,6 +11,7 @@
  */
 import type { TextLayoutResult, TextLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment } from './types';
+import { EMPTY_AABB, type Aabb } from '../../../godot/aabb';
 
 export interface Label3DLinePlacement {
   /** This line's own left-edge x offset (`label_3d.cpp:588-599`), Godot px. */
@@ -60,6 +61,31 @@ export function layoutLabel3DLines(
     y: vbeginPx + lineIndex * layout.linePitchPx,
     line,
   }));
+}
+
+/**
+ * The box Godot's `_shape` expands over every line (`label_3d.cpp:600-606`), in node space, on the
+ * label's z = 0 plane. Each line spans its width and one line pitch down from its top. A label with
+ * no lines keeps the empty AABB at the origin.
+ */
+export function label3DAabb(
+  placements: readonly Label3DLinePlacement[],
+  linePitchPx: number,
+  pixelSize: number
+): Aabb {
+  if (placements.length === 0) return EMPTY_AABB;
+  let left = Infinity;
+  let right = -Infinity;
+  for (const placement of placements) {
+    left = Math.min(left, placement.x);
+    right = Math.max(right, placement.x + placement.line.widthPx);
+  }
+  const topDown = placements[0]!.y;
+  const bottomDown = placements[placements.length - 1]!.y + linePitchPx;
+  return {
+    position: { x: left * pixelSize, y: -bottomDown * pixelSize, z: 0 },
+    size: { x: (right - left) * pixelSize, y: (bottomDown - topDown) * pixelSize, z: 0 },
+  };
 }
 
 /**

@@ -5,7 +5,8 @@ import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
-import { floatOr, intOr } from '../../../parser/valueParsers';
+import { floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
+import { ShadowCastingSetting } from '../../../godot/rendering';
 import { ruleInt } from '../../../godot/int.js';
 import { boolSlotValue } from '../../../godot/index.js';
 
@@ -14,6 +15,8 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
 
   return {
     ...baseProps,
+    // The constructor turns shadows off (`label_3d.cpp:1090`), so the file omits an OFF.
+    castShadow: parseOptionalInt(properties.cast_shadow) ?? ShadowCastingSetting.OFF,
     text: properties.text === undefined ? '' : unquoteString(properties.text),
     pixel_size: floatOr(properties.pixel_size, 0.005, 'pixel_size'),
     billboard: parseBillboardMode(properties.billboard),
@@ -32,6 +35,7 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
     outline_render_priority: intOr(properties.outline_render_priority, -1, 'outline_render_priority'),
     alpha_cut: parseAlphaCutMode(properties.alpha_cut),
     alpha_scissor_threshold: floatOr(properties.alpha_scissor_threshold, 0.5, 'alpha_scissor_threshold'),
+    alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, 'alpha_hash_scale'),
     fixed_size: boolSlotValue(properties.fixed_size) === true,
     texture_filter: parseTextureFilter(properties.texture_filter),
   };

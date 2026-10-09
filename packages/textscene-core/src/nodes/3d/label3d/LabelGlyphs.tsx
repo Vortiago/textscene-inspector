@@ -4,7 +4,7 @@
  * not MSDF (`servers/text/text_server.cpp:2386`, read by `scene/theme/theme_db.cpp:59`),
  * and a distance field cannot reach as far as the FreeType outline.
  */
-import { useMemo, useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore, type RefObject } from 'react';
 import * as THREE from 'three';
 import { AutowrapMode, shapeText, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
@@ -12,18 +12,28 @@ import {
   onSceneFontMetricsSettled,
   peekBundledCanvasFontMetrics,
 } from '../../../r3f/controls/native/text/sceneFontLoader';
-import { alphaCutSurface, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
-import { cutSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
-import type { Color } from '../../../utils/colorParser';
+import {
+  alphaCutSurface,
+  joinsShadowPass,
+  NO_TRANSPARENT_FLAG,
+  type AlphaCutSurface,
+} from '../../../r3f/godotAlphaCut';
+import { cutBlends, cutOpaquePrepasses, type FadeVariants } from '../../../r3f/materials/fadeVariants';
+import type { CanvasTextBlend } from '../../../r3f/controls/native/text/canvasTextPainter';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
-import { layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
+import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
+import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
+import { labelBillboardAabb } from '../../../godot/billboard';
+import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
 import { AlphaCutMode, TextureFilter, type Label3DProperties } from './types';
 
 export interface LabelGlyphsProps {
+  /** The label's node group, whose parent places it for the scene cull. */
+  nodeRef: RefObject<THREE.Object3D | null>;
   properties: Label3DProperties;
 }
 
-export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
+export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // `undefined` until `document.fonts` has the bundled family; the
   // subscription is what re-renders once it does.
   const fontMetrics = useSyncExternalStore(
@@ -62,6 +72,22 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
     [placements, layout]
   );
 
+  // The shaped text decides the box, so a font still loading leaves the label unplaced.
+  const placement = useMemo(() => {
+    if (!fontMetrics) return UNPLACED;
+    const aabb = label3DAabb(placements, layout.linePitchPx, properties.pixel_size);
+    return authoredPlacement(nodeRef, properties.transform, labelBillboardAabb(aabb, properties.billboard));
+  }, [
+    fontMetrics,
+    nodeRef,
+    placements,
+    layout.linePitchPx,
+    properties.pixel_size,
+    properties.transform,
+    properties.billboard,
+  ]);
+  const shadow = useGeometryInstance(placement);
+
   const depthTest = !properties.no_depth_test;
   const side = properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide;
 
@@ -93,11 +119,10 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
     transparentFlag: NO_TRANSPARENT_FLAG,
   });
   // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the
-  // blended pass is transparent. The geometry instance's `transparency` can move both
-  // surfaces there, and scales each surface's alpha by one fade alpha.
-  const { opacity: fadeAlpha, ...blend } = cutSurfaceAlpha(cut, 1, properties.transparency);
-  const fillTint = withAlphaScaled(properties.modulate, fadeAlpha);
-  const outlineTint = withAlphaScaled(properties.outline_modulate, fadeAlpha);
+  // blended pass is transparent. The geometry instance's fade can move both surfaces
+  // there, and scales each surface's alpha by one fade alpha.
+  const blends = labelBlends(cut, depthTest, properties.alpha_hash_scale);
+  const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass(cut, depthTest) };
 
   // `material.h:172-177`: the enum alternates NEAREST, LINEAR, so the even
   // members are the nearest ones whatever their mipmap/anisotropy suffix.
@@ -112,7 +137,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
   // Here the tint is baked as sRGB bytes that the texture's `SRGBColorSpace` decodes.
   // `frameExcluded`: Godot's framing camera never sees shaped text (`LABEL3D_BOUNDS_PROXY`).
   return (
-    <>
+    <group>
       {placements.map((placement, index) => {
         return (
           <group key={index} position={[placement.x, -placement.y, 0]}>
@@ -121,13 +146,14 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
                 <TextRun
                   layout={lineLayouts[index]!}
                   fontSizePx={properties.font_size}
-                  tint={outlineTint}
+                  tint={properties.outline_modulate}
                   strokeWidthPx={strokeWidthPx}
                   depthTest={depthTest}
                   side={side}
                   renderOrder={outlineSurface.renderOrder}
                   textureFilter={textureFilter}
-                  blend={blend}
+                  blends={blends}
+                  shadow={surfaceShadow}
                   frameExcluded
                 />
               </group>
@@ -136,23 +162,36 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
               <TextRun
                 layout={lineLayouts[index]!}
                 fontSizePx={properties.font_size}
-                tint={fillTint}
+                tint={properties.modulate}
                 depthTest={depthTest}
                 side={side}
                 renderOrder={fillSurface.renderOrder}
                 textureFilter={textureFilter}
-                blend={blend}
+                blends={blends}
+                shadow={surfaceShadow}
                 frameExcluded
               />
             </group>
           </group>
         );
       })}
-    </>
+    </group>
   );
 }
 
-/** `TextRun` reads a tint's alpha as the surface opacity, so the fade alpha scales it there. */
-function withAlphaScaled(tint: Color, alpha: number): Color {
-  return { ...tint, a: tint.a * alpha };
+/**
+ * Each pass's blend, with its opaque prepass, at the label's `alpha_hash_scale`, which
+ * `label_3d.cpp:379` hands every surface.
+ */
+function labelBlends(
+  cut: AlphaCutSurface,
+  depthTest: boolean,
+  alphaHashScale: number
+): FadeVariants<CanvasTextBlend> {
+  const blends = cutBlends(cut);
+  const prepasses = cutOpaquePrepasses(cut, depthTest);
+  return {
+    unfaded: { ...blends.unfaded, alphaHashScale, opaquePrepass: prepasses.unfaded },
+    alphaPass: { ...blends.alphaPass, alphaHashScale, opaquePrepass: prepasses.alphaPass },
+  };
 }

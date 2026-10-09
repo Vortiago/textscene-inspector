@@ -10,11 +10,11 @@ The pattern is `-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`, from `get_token`
 (`variant_parser.cpp:420-481`). It is anchored, so `1.2.3` or a lone `-` fails,
 and the caller throws or warns and falls back.
 
-| Clause | Source | Measured |
-| --- | --- | --- |
-| `-?` | `-` is consumed at :420. `+` is not, because a digit must follow (:424). | `+3` fails the load with `Unexpected character` (:506). |
-| `\d+` | Required: `.` starts neither a digit nor an identifier. | `.5` fails the load. `5.` loads as 5. |
-| `(?:\.\d*)?` | `READING_INT` takes one `.` into `READING_DEC` (:442), with zero or more digits. | |
+| Clause              | Source                                                                                            | Measured                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `-?`                | `-` is consumed at :420. `+` is not, because a digit must follow (:424).                          | `+3` fails the load with `Unexpected character` (:506).                  |
+| `\d+`               | Required: `.` starts neither a digit nor an identifier.                                           | `.5` fails the load. `5.` loads as 5.                                    |
+| `(?:\.\d*)?`        | `READING_INT` takes one `.` into `READING_DEC` (:442), with zero or more digits.                  |                                                                          |
 | `(?:[eE][-+]?\d*)?` | `READING_EXP` (:466-472) takes one sign and zero or more digits, and `as_double` reads the token. | `1e`, `1e-` and `5.e2` load as 1, 1 and 500, as `parseFloat` reads them. |
 
 The mantissa is `\d+(?:\.\d*)?`, not `\d+\.?\d*`. The second form splits a digit
@@ -33,20 +33,20 @@ The pattern is the finite grammar plus the four non-finite spellings of
 number or a `stor_fix` identifier. The writer puts every real component through
 `rtos_fix`:
 
-| Type | Line |
-| --- | --- |
-| `Vector2` | :2040 |
-| `Rect2` | :2048 |
-| `Vector3` | :2056 |
-| `Vector4` | :2064 |
-| `Plane` | :2072 |
-| `AABB` | :2076 |
-| `Quaternion` | :2080 |
-| `Transform2D` | :2090 |
-| `Basis` | :2104 |
-| `Transform3D` | :2119 |
-| `Projection` | :2135 |
-| `Color` | :2145 |
+| Type          | Line       |
+| ------------- | ---------- |
+| `Vector2`     | :2040      |
+| `Rect2`       | :2048      |
+| `Vector3`     | :2056      |
+| `Vector4`     | :2064      |
+| `Plane`       | :2072      |
+| `AABB`        | :2076      |
+| `Quaternion`  | :2080      |
+| `Transform2D` | :2090      |
+| `Basis`       | :2104      |
+| `Transform3D` | :2119      |
+| `Projection`  | :2135      |
+| `Color`       | :2145      |
 | Packed arrays | :2459-2549 |
 
 An `i` composite uses `itos` and has no non-finite spelling.

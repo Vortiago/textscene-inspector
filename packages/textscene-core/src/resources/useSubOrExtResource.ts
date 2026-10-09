@@ -1,33 +1,64 @@
 /**
- * A resource-valued property as `{ type, data }`, from either form: `SubResource("id")` resolves
- * synchronously, and `ExtResource("id")` loads its `.tres` through the resource pipeline. A
- * CollisionShape's `shape` and a NavigationRegion's polygon each come in both forms.
+ * A resource-valued property as its property bag with the pools its own references resolve
+ * against. A `SubResource("id")` resolves synchronously against `pools`. An `ExtResource("id")`
+ * loads its `.tres` through the resource pipeline and resolves against the file's own pools, whose
+ * ids are scoped to that file.
  */
 
 import { useMemo } from 'react';
-import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import type { ParsedResource } from '../parser/parsedResource';
-import { resolveExtResourcePath, resolveSubResourceRef } from './SubResourceResolver';
-import { useResource } from './useResource';
+import type { TscnInternalResource } from '../parser/types';
+import type { SceneResources } from '../r3f/SceneResourcesContext';
+import { resolveSubResourceRef, textResourcePath } from './SubResourceResolver';
+import { useResource, type ResourceStatus } from './useResource';
 
-export function useSubOrExtResource(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[],
-  externalResources: readonly TscnExternalResource[]
-): TscnInternalResource | undefined {
-  const inline = useMemo(() => resolveSubResourceRef(ref, internalResources), [ref, internalResources]);
+export interface ScopedResource {
+  resource: TscnInternalResource;
+  /** The pools the resource's own references resolve against. */
+  resources: SceneResources;
+}
 
-  // Called with '' when the shape is inline or absent, to keep the hook count stable.
-  const externalPath = useMemo(
-    () => (inline ? null : resolveExtResourcePath(ref, externalResources)),
-    [inline, ref, externalResources]
+/** The resource `ref` names in `pools`, with whether it has loaded. */
+export interface ResourceResolution {
+  /** Null while the resource is none, still loading or unreadable. */
+  scoped: ScopedResource | null;
+  status: ResourceStatus;
+  /** The `.tres` the resource loads from, or null for a SubResource or none. */
+  tresPath: string | null;
+}
+
+const UNAVAILABLE: ResourceResolution = { scoped: null, status: 'unavailable', tresPath: null };
+
+export function useResourceResolution(ref: string | undefined, pools: SceneResources): ResourceResolution {
+  const inline = resolveSubResourceRef(ref, pools.internalResources);
+  const tresPath = inline ? null : textResourcePath(ref, pools.externalResources);
+  // `''` requests nothing.
+  const file = useResource<ParsedResource>(tresPath ?? '', 'resource');
+
+  const inlineResolution = useMemo(
+    (): ResourceResolution | null =>
+      inline ? { scoped: { resource: inline, resources: pools }, status: 'loaded', tresPath: null } : null,
+    [inline, pools]
   );
-  const external = useResource<ParsedResource>(externalPath ?? '', 'resource');
+  // Apart from `pools`: a scene edit leaves the file's resource the same object while the file holds.
+  const fileResolution = useMemo((): ResourceResolution => {
+    if (!tresPath) return UNAVAILABLE;
+    if (!file.value)
+      return { scoped: null, status: file.status === 'pending' ? 'pending' : 'unavailable', tresPath };
+    const { resourceType, properties, subResources, extResources } = file.value;
+    return {
+      scoped: {
+        resource: { id: tresPath, type: resourceType, data: properties },
+        resources: { internalResources: subResources, externalResources: extResources },
+      },
+      status: 'loaded',
+      tresPath,
+    };
+  }, [tresPath, file.status, file.value]);
+  return inlineResolution ?? fileResolution;
+}
 
-  return useMemo(() => {
-    if (inline) return inline;
-    const tres = external.value;
-    if (!externalPath || !tres) return undefined;
-    return { id: externalPath, type: tres.resourceType, data: tres.properties };
-  }, [inline, external.value, externalPath]);
+/** The resource `ref` names in `pools`, or null while it is none, still loading or unreadable. */
+export function useSubOrExtResource(ref: string | undefined, pools: SceneResources): ScopedResource | null {
+  return useResourceResolution(ref, pools).scoped;
 }

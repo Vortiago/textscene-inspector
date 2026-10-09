@@ -77,13 +77,20 @@ describe('readPackedBytes', () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('vertex_data is not valid base64'));
   });
 
-  it('gives an empty buffer for an absent key, an empty array or the compat byte list', () => {
-    // The writer emits `PackedByteArray()` for an empty array and a comma list only in compat
-    // mode (variant_parser.cpp:2398-2415), neither of which carries a quoted payload.
+  it('gives an empty buffer for an absent key or an empty array', () => {
     expect(readPackedBytes('{ "format": 1 }', 'vertex_data')).toHaveLength(0);
     expect(readPackedBytes('{ "vertex_data": PackedByteArray() }', 'vertex_data')).toHaveLength(0);
-    expect(readPackedBytes('{ "vertex_data": PackedByteArray(1, 2, 3) }', 'vertex_data')).toHaveLength(0);
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('reads the list of bytes a file of short byte arrays holds', () => {
+    const block = '{ "vertex_data": PackedByteArray(0, 128, 63, 255) }';
+    expect(Array.from(readPackedBytes(block, 'vertex_data'))).toEqual([0, 128, 63, 255]);
+  });
+
+  it('gives an empty buffer and a warning for a list element that is no number', () => {
+    expect(readPackedBytes('{ "vertex_data": PackedByteArray(1, x) }', 'vertex_data')).toHaveLength(0);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('vertex_data holds "x"'));
   });
 
   it('decodes every byte value exactly', () => {
@@ -95,7 +102,7 @@ describe('readPackedBytes', () => {
 
   it('reads the first field of a key, as a duplicate never stands in for it', () => {
     const block = '{ "vertex_data": PackedByteArray(1, 2), "vertex_data": PackedByteArray("AQID") }';
-    expect(readPackedBytes(block, 'vertex_data')).toHaveLength(0);
+    expect(Array.from(readPackedBytes(block, 'vertex_data'))).toEqual([1, 2]);
   });
 });
 

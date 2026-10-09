@@ -7,7 +7,6 @@ import { parseTresFile } from '../../../parser/parsedResource';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CsgPrimitive } from './CsgPrimitive';
 // CsgPrimitive builds the solid from the registered builder, so the node type under
 // test has to have its slice wired.
 import './csgbox3d/index.r3f';
@@ -16,8 +15,10 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
-import type { CSGBox3DProperties } from './csgbox3d/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const CSGBox3D = registeredComponent('CSGBox3D');
 
 const ALBEDO_PATH = 'res://textures/albedo.png';
 
@@ -47,20 +48,27 @@ function makeNode(material: string | undefined): TscnNode {
 const BLUE_TRES =
   '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(0, 0, 1, 1)\n';
 
-async function render(material: string | undefined, tresText?: string) {
+function fakeLoader(tresText?: string) {
   const fake = createFakeResourceLoader();
   if (tresText) fake.resources.seed('res://blue_material.tres', parseTresFile(tresText));
   const albedo = new THREE.Texture();
   albedo.needsUpdate = false;
   fake.textures.seed(ALBEDO_PATH, albedo);
-  const node = makeNode(material);
-  return ReactThreeTestRenderer.create(
+  return fake;
+}
+
+function scene(fake: ReturnType<typeof createFakeResourceLoader>, material: string | undefined) {
+  return (
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={INTERNALS} externalResources={EXTERNALS}>
-        <CsgPrimitive node={node} properties={node.properties as CSGBox3DProperties} />
+        <CSGBox3D node={makeNode(material)} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+}
+
+async function render(material: string | undefined, tresText?: string) {
+  return ReactThreeTestRenderer.create(scene(fakeLoader(tresText), material));
 }
 
 function materialOf(renderer: Awaited<ReturnType<typeof render>>) {
@@ -70,6 +78,13 @@ function materialOf(renderer: Awaited<ReturnType<typeof render>>) {
 describe('<CsgPrimitive> material resolution', () => {
   it('loads a StandardMaterial3D from an ExtResource .tres', async () => {
     const renderer = await render('ExtResource("1_blue")', BLUE_TRES);
+    expect(materialOf(renderer).color.getHex()).toBe(0x0000ff);
+  });
+
+  it('draws the new material when the node’s material changes and its shape does not', async () => {
+    const fake = fakeLoader(BLUE_TRES);
+    const renderer = await ReactThreeTestRenderer.create(scene(fake, 'SubResource("Mat_inline")'));
+    await renderer.update(scene(fake, 'ExtResource("1_blue")'));
     expect(materialOf(renderer).color.getHex()).toBe(0x0000ff);
   });
 

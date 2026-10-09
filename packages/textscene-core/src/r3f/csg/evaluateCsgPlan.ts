@@ -1,26 +1,27 @@
 /**
- * Folds a `CsgPlan` into one geometry by running the booleans. The library and each geometry arrive
+ * Folds a `CsgPlan` into one geometry by running the booleans. The library and each solid arrive
  * as arguments, and contributions arrive ordered with root-local matrices, so the work is baking,
- * folding and mapping material slots back onto the plan's surfaces.
+ * folding and mapping the result's material slots back onto the solids' materials.
  */
 
 import * as THREE from 'three';
 import { warn } from '../../logger';
 import { CsgOperation, type CsgContribution, type CsgPlan } from './csgPlan';
 import type { CsgModule } from './csgModule';
+import type { CsgSolid } from './csgRegistration';
+import { internMaterial, type CsgMaterialAddress } from './csgMaterials';
 
 export interface CsgEvaluation {
   geometry: THREE.BufferGeometry;
   /**
-   * Plan surface index per material slot of `geometry`, in slot order. The geometry's
-   * groups already index into THIS array, so the renderer maps slot `i` to
-   * `plan.surfaces[surfaceSlots[i]]` and needs no group rewriting.
+   * The material of each slot of `geometry`, in slot order. The geometry's groups already index
+   * into this array, so the renderer needs no group rewriting.
    */
-  surfaceSlots: number[];
+  materials: CsgMaterialAddress[];
 }
 
 /** Resolve a contribution's own solid, in its own local space. */
-export type ResolveGeometry = (contribution: CsgContribution) => THREE.BufferGeometry | null;
+export type ResolveSolid = (contribution: CsgContribution) => CsgSolid | null;
 
 function godotToLibraryOperation(operation: number, csg: CsgModule): number {
   switch (operation) {
@@ -33,10 +34,37 @@ function godotToLibraryOperation(operation: number, csg: CsgModule): number {
   }
 }
 
-function emptyGeometry(): THREE.BufferGeometry {
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
-  return g;
+function emptyEvaluation(): CsgEvaluation {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
+  return { geometry, materials: [] };
+}
+
+/**
+ * One sentinel material per distinct address, in first-seen order. They are never rendered: they
+ * exist so the library can group faces by material and so the result's slots map back.
+ */
+class MaterialSentinels {
+  readonly addresses: CsgMaterialAddress[] = [];
+  private readonly sentinels: THREE.Material[] = [];
+
+  sentinelFor(address: CsgMaterialAddress): THREE.Material {
+    const slot = internMaterial(this.addresses, address);
+    if (slot === this.sentinels.length) this.sentinels.push(new THREE.MeshBasicMaterial());
+    return this.sentinels[slot]!;
+  }
+
+  /** A slot whose sentinel is not ours means the library synthesised a material: it takes the first. */
+  addressOf(material: THREE.Material): CsgMaterialAddress {
+    const index = this.sentinels.indexOf(material);
+    return this.addresses[index === -1 ? 0 : index];
+  }
+
+  /** The solid's one material, or the list its draw groups index. */
+  brushMaterial(solid: CsgSolid): THREE.Material | THREE.Material[] {
+    const materials = solid.materials.map((address) => this.sentinelFor(address));
+    return materials.length > 1 ? materials : materials[0]!;
+  }
 }
 
 /**
@@ -49,17 +77,11 @@ function emptyGeometry(): THREE.BufferGeometry {
 export function evaluateCsgPlan(
   plan: CsgPlan,
   csg: CsgModule,
-  resolveGeometry: ResolveGeometry
+  resolveSolid: ResolveSolid
 ): CsgEvaluation | null {
-  if (!plan.root) return { geometry: emptyGeometry(), surfaceSlots: [] };
+  if (!plan.root) return emptyEvaluation();
 
-  // One sentinel per plan surface. They are never rendered; they exist so the library can
-  // group faces by material and so the result's material array can be mapped back.
-  const sentinels = plan.surfaces.map(() => new THREE.MeshBasicMaterial());
-  const slotOf = (material: THREE.Material | THREE.Material[]): number[] =>
-    (Array.isArray(material) ? material : [material]).map((m) =>
-      sentinels.indexOf(m as THREE.MeshBasicMaterial)
-    );
+  const sentinels = new MaterialSentinels();
 
   try {
     const evaluator = new csg.Evaluator();
@@ -73,14 +95,14 @@ export function evaluateCsgPlan(
     const brushOf = (contribution: CsgContribution): THREE.Mesh | null => {
       let accumulator: THREE.Mesh | null = null;
       if (contribution.hasGeometry) {
-        const own = resolveGeometry(contribution);
-        if (own && (own.getAttribute('position')?.count ?? 0) > 0) {
+        const own = resolveSolid(contribution);
+        if (own && (own.geometry.getAttribute('position')?.count ?? 0) > 0) {
           // Bake the root-local matrix in so every brush sits at identity: the library
           // copies brush A's world transform onto the result, so mixing baked and
           // transformed brushes would leave the output in whichever space A was in.
           accumulator = new csg.Brush(
-            own.clone().applyMatrix4(contribution.matrix),
-            sentinels[contribution.surface]
+            own.geometry.clone().applyMatrix4(contribution.matrix),
+            sentinels.brushMaterial(own)
           );
           accumulator.updateMatrixWorld(true);
         }
@@ -104,14 +126,10 @@ export function evaluateCsgPlan(
     };
 
     const accumulator = brushOf(plan.root);
-    if (!accumulator) return { geometry: emptyGeometry(), surfaceSlots: [] };
+    if (!accumulator) return emptyEvaluation();
 
-    const surfaceSlots = slotOf(accumulator.material);
-    // A slot whose sentinel is not ours means the library synthesised a material we did
-    // not supply; fall back to surface 0 rather than indexing with -1.
-    const safeSlots = surfaceSlots.map((s) => (s === -1 ? 0 : s));
-
-    return { geometry: accumulator.geometry, surfaceSlots: safeSlots };
+    const slots = Array.isArray(accumulator.material) ? accumulator.material : [accumulator.material];
+    return { geometry: accumulator.geometry, materials: slots.map((m) => sentinels.addressOf(m)) };
   } catch (error) {
     warn(
       `[CSG] Boolean evaluation failed for '${plan.rootPath}' ` +

@@ -4,19 +4,16 @@
  * unresolvable mesh, and the caller decides on a placeholder.
  */
 
-import { useMemo } from 'react';
 import type { TscnInternalResource } from '../../../parser/types';
-import { buildPrimitiveMeshGeometry, primitiveMeshGeometryKey } from './primitiveMeshGeometry';
+import { buildPrimitiveMeshGeometry } from './primitiveMeshGeometry';
+import { useContentMemo } from '../../../resources/useContentMemo';
 
 export interface MeshGeometryProps {
   resource: TscnInternalResource;
 }
 
 export function MeshGeometry({ resource }: MeshGeometryProps) {
-  // Keyed on the resource's content, not its identity: see primitiveMeshGeometryKey.
-  const key = primitiveMeshGeometryKey(resource);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` IS the content of `resource`.
-  const geometry = useMemo(() => buildPrimitiveMeshGeometry(resource), [key]);
+  const geometry = useContentMemo(resource, buildPrimitiveMeshGeometry);
 
   return geometry ? <primitive object={geometry} attach="geometry" /> : null;
 }

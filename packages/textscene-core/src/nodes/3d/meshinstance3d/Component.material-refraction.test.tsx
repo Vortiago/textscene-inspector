@@ -7,13 +7,17 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
-import { materialInstanceAs } from '../testing/reactThreeTestInstance';
+import { drawnMaterials } from '../testing/reactThreeTestInstance';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 function makeNode(materialId: string, name = 'Mesh'): TscnNode {
   return {
@@ -22,6 +26,7 @@ function makeNode(materialId: string, name = 'Mesh'): TscnNode {
     type: 'MeshInstance3D',
     children: [],
     properties: {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name,
       mesh: 'SubResource("box")',
       materialOverride: `SubResource("${materialId}")`,
@@ -55,9 +60,9 @@ describe('<MeshInstance3D> refraction material (WI-69)', () => {
     const renderer = await renderWith(makeNode('mat'), internal, loader);
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
+    const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
+    const material = physical[0]!;
     expect(material.transmission).toBeCloseTo(1, 5);
     expect(material.thickness).toBeCloseTo(0.2, 5);
     // Godot exposes no ior, so it stays at three's glass default of 1.5.
@@ -80,7 +85,11 @@ describe('<MeshInstance3D> refraction material (WI-69)', () => {
     const renderer = await renderWith(makeNode('mat'), internal, loader);
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    expect(renderer.scene.findAllByType('MeshPhysicalMaterial')).toHaveLength(0);
-    expect(renderer.scene.findAllByType('MeshStandardMaterial')).toHaveLength(1);
+    expect(drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial')).toHaveLength(
+      0
+    );
+    expect(drawnMaterials<THREE.MeshStandardMaterial>(renderer.scene, 'MeshStandardMaterial')).toHaveLength(
+      1
+    );
   });
 });

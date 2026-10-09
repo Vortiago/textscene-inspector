@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { applyShadowCasting, shadowCastingEffects } from './shadowCasting';
+import { applyShadowCasting, rangedShadowCastingEffects, shadowCastingEffects } from './shadowCasting';
+import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
+import type { ProgramShader } from './materialProgramInputs';
 import { drawsAsOneBatch } from './surfaceDrawHooks';
 import { billboardOf } from '../resources/materials/standardmaterial3d/materialBag';
 import { ShadowCastingSetting } from '../godot/rendering';
+import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/opaquePrepass';
 import { standardMaterial as material } from '../resources/materials/standardmaterial3d/testing/standardMaterial';
 import {
   castsFrom,
@@ -104,6 +107,53 @@ describe('surfaceDrawHooks — shadow pass billboard', () => {
   });
 });
 
+/** The object-space uniform of `material` once it compiles Godot's hash. */
+function hashObjectSpace(material: THREE.Material): THREE.Matrix4 {
+  const shader: ProgramShader = { ...THREE.ShaderLib.standard, uniforms: {} };
+  GODOT_ALPHA_HASH.onBeforeCompile.call(material, shader);
+  return shader.uniforms.godotObjectFromModel!.value as THREE.Matrix4;
+}
+
+function groupMaterial(mesh: THREE.Mesh, group: number): THREE.Material {
+  return (mesh.material as THREE.Material[])[group]!;
+}
+
+function expectSameMatrix(actual: THREE.Matrix4, expected: THREE.Matrix4): void {
+  actual.elements.forEach((element, i) => expect(element).toBeCloseTo(expected.elements[i]!, 9));
+}
+
+describe('surfaceDrawHooks — alpha hash object space', () => {
+  it('hashes a billboarding group in the object space of its unposed node', () => {
+    const mesh = surfacesMesh();
+    const objectSpace = hashObjectSpace(groupMaterial(mesh, BILLBOARD));
+    const drawn = drawColourGroup(mesh, camera, BILLBOARD, (s) => s.matrixWorld);
+    expectSameMatrix(objectSpace, mesh.matrixWorld.clone().invert().multiply(drawn));
+  });
+
+  it("hashes in the node pose the instance gives, which a node's billboard never moves", () => {
+    const mesh = surfacesMesh();
+    const node = new THREE.Matrix4().makeTranslation(5, 6, 7);
+    applyShadowCasting(
+      mesh,
+      rangedShadowCastingEffects(ShadowCastingSetting.ON, {
+        isVisible: true,
+        nodeMatrixWorld: (target) => (target.copy(node), true),
+      })
+    );
+    const objectSpace = hashObjectSpace(groupMaterial(mesh, OPAQUE));
+    drawColourGroup(mesh, camera, OPAQUE, () => undefined);
+    expectSameMatrix(objectSpace, node.clone().invert().multiply(mesh.matrixWorld));
+  });
+
+  it('hashes a group three draws in the node pose in its own vertex space (edge case)', () => {
+    const mesh = surfacesMesh();
+    const objectSpace = hashObjectSpace(groupMaterial(mesh, OPAQUE));
+    objectSpace.makeScale(3, 3, 3);
+    drawColourGroup(mesh, camera, OPAQUE, () => undefined);
+    expectSameMatrix(objectSpace, new THREE.Matrix4());
+  });
+});
+
 describe('surfaceDrawHooks — shadow pass alpha-pass exclusion', () => {
   it('draws nothing into the shadow map for a non-MIX blend mode', () => {
     const mesh = surfacesMesh();
@@ -130,6 +180,50 @@ describe('surfaceDrawHooks — shadow pass alpha-pass exclusion', () => {
     const count = mesh.geometry.drawRange.count;
     castsFrom(mesh, ADDITIVE);
     expect(mesh.geometry.drawRange.count).toBe(count);
+  });
+});
+
+/** A mesh of one surface, which casts. */
+function surfaceMesh(properties: Record<string, string>): THREE.Mesh {
+  const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material(properties));
+  applyShadowCasting(mesh, shadowCastingEffects(ShadowCastingSetting.ON));
+  return mesh;
+}
+
+/** The material the group at `group` casts with, whether it is the hooks' own, and whether three's draw still draws. */
+function shadowDraw(mesh: THREE.Mesh, group = 0) {
+  return drawShadowGroup(mesh, camera, shadowCamera, group, (s) => ({
+    cast: s.castMaterial!,
+    castsOwn: s.castMaterial !== s.depthMaterial,
+    threeDraws: mesh.geometry.drawRange.count > 0,
+  }));
+}
+
+describe('surfaceDrawHooks — shadow alpha cut', () => {
+  it("cuts a depth-prepass group's shadow at the shadow pass's prepass threshold", () => {
+    const { cast } = shadowDraw(surfacesMesh(), DEPTH_PRE_PASS);
+    expect(cast.alphaTest).toBe(SHADOW_PASS_OPAQUE_THRESHOLD);
+  });
+
+  it("cuts a scissor surface's shadow at its own threshold, with its opacity", () => {
+    const { cast } = shadowDraw(
+      surfaceMesh({ transparency: '2', alpha_scissor_threshold: '0.3', albedo_color: 'Color(1, 1, 1, 0.6)' })
+    );
+    expect(cast.alphaTest).toBeCloseTo(0.3, 6);
+    expect(cast.opacity).toBeCloseTo(0.6, 6);
+  });
+
+  it("casts a hashed surface's shadow through the hash", () => {
+    expect(shadowDraw(surfaceMesh({ transparency: '3' })).cast.alphaHash).toBe(true);
+  });
+
+  it("skips three's own draw of a surface the hooks cast themselves", () => {
+    expect(shadowDraw(surfaceMesh({ transparency: '2' })).threeDraws).toBe(false);
+  });
+
+  it("leaves an uncut surface to three's depth material (edge case)", () => {
+    const { castsOwn, threeDraws } = shadowDraw(surfacesMesh(), OPAQUE);
+    expect([castsOwn, threeDraws]).toEqual([false, true]);
   });
 });
 

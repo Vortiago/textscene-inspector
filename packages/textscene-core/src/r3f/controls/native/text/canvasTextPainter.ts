@@ -14,6 +14,12 @@ import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { Color } from '../../../../nodes/base/node2d/types';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import { injectProgram, type ProgramInjection } from '../../../materialProgramInputs';
+import { alphaHashScaleUserData } from '../../../materials/godotAlphaHash';
+import {
+  NO_OPAQUE_PREPASS,
+  opaquePrepassUserData,
+  type OpaquePrepass,
+} from '../../../materials/opaquePrepass';
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
 
 /** Fixed raster supersampling factor: canvas text has no distance field to stay crisp when magnified, so this trades memory and fill rate for sharpness at typical zoom. */
@@ -194,6 +200,10 @@ export interface CanvasTextBlend {
   depthWrite: boolean;
   alphaTest: number;
   alphaHash: boolean;
+  /** `alpha_hash_scale`, the grain of the hash. Omitted, Godot's default of 1. */
+  alphaHashScale?: number;
+  /** How Godot's depth passes treat the surface. Omitted, it has no opaque prepass. */
+  opaquePrepass?: OpaquePrepass;
   /** What the surface's blend needs so three blends the alpha Godot writes (`surfaceAlphaPatch.ts`). */
   blending?: THREE.Blending;
   injection?: ProgramInjection;
@@ -231,6 +241,8 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     depthWrite = false,
     alphaTest = 0,
     alphaHash = false,
+    alphaHashScale = 1,
+    opaquePrepass = NO_OPAQUE_PREPASS,
     blending = THREE.NormalBlending,
     injection,
   } = options;
@@ -248,9 +260,10 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     ...canvasItemFacing(side),
     clippingPlanes: [...clippingPlanes],
   });
+  material.userData = { ...alphaHashScaleUserData(alphaHashScale), ...opaquePrepassUserData(opaquePrepass) };
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...CANVAS_SRGB_DEFINES };
   }
-  if (injection) injectProgram(material, injection);
+  injectProgram(material, injection);
   return material;
 }

@@ -12,18 +12,20 @@ import { createGLBMesh, forEachSurfaceMaterial, tagImportMaterial } from '../for
 import { isGltfPath } from '../../godot/gltf';
 import { gltfResourcePath, selfContainedGlb } from '../formats/glb/gltfResources';
 import { applyRootScale } from '../formats/glb/rootScale';
+import { stampMeshInstanceLayers } from '../formats/glb/meshInstances';
 import type { GltfExtensionRules } from '../formats/glb/types';
-import { stampVisualLayers } from '../../r3f/visualLayers';
 import { flattenGlbObjects } from '../../r3f/internal/glb-scene-root/glbHierarchy';
 import { matchGlbTarget } from '../../r3f/internal/glb-scene-root/matchGlbTarget';
 import {
   importExternalMaterials,
+  importGltfNaming,
   importNodeLayers,
   importRootScale,
   parseImportFile,
   type ParsedImportFile,
 } from '../../parser/importParser';
 import { importSidecarPath } from '../../godot/index.js';
+import { fileBaseName } from '../../godot/string.js';
 import type { DependencyGraph } from '../dependencyGraph';
 import * as logger from '../../logger';
 
@@ -68,33 +70,37 @@ function glbBytes(
 }
 
 /**
- * Correct a loaded asset by its **Import sidecar** (ADR-0028), once per path on the
- * cached template, so render, bounds, selection and the tree see one object. Godot's
- * importer too writes both corrections into the asset. A sidecar is found by convention
- * (`scene.gltf.import`), so `tryLoad`: absent means import defaults, not a **Missing resource**.
+ * The asset's **Import sidecar** (ADR-0028), or null when it has none. A sidecar is found by
+ * convention (`scene.gltf.import`), so `tryLoad`: absent means import defaults, not a
+ * **Missing resource**.
  */
-async function applyImportSidecar(
-  object: THREE.Object3D,
+async function readImportSidecar(
   path: string,
   fileEventBus: FileEventBus | undefined,
   dependencies: DependencyGraph
-): Promise<void> {
-  if (!fileEventBus) return;
+): Promise<ParsedImportFile | null> {
+  if (!fileEventBus) return null;
 
   const sidecar = importSidecarPath(path);
   // Recorded before the read, so a sidecar created, edited or deleted later reloads the asset.
   dependencies.record({ busType: 'glb', key: path }, sidecar);
   const raw = await fileEventBus.tryLoad(sidecar, 'ImportSidecar');
-  if (typeof raw !== 'string') return;
+  return typeof raw === 'string' ? parseImportFile(raw) : null;
+}
 
-  const parsed = parseImportFile(raw);
+/**
+ * Correct a loaded asset by its sidecar, once per path on the cached template, so render, bounds,
+ * selection and the tree see one object. Godot's importer too writes each correction into the asset.
+ */
+function applyImportSidecar(object: THREE.Object3D, path: string, parsed: ParsedImportFile | null): void {
+  if (!parsed) return;
   applySidecarRootScale(object, path, parsed);
   applySidecarNodeLayers(object, path, parsed);
   tagSidecarMaterials(object, path, parsed);
 }
 
 /** `nodes/root_scale`, applied to the asset the way `nodes/apply_root_scale` asks. */
-function applySidecarRootScale(object: THREE.Object3D, path: string, parsed: ParsedImportFile | null): void {
+function applySidecarRootScale(object: THREE.Object3D, path: string, parsed: ParsedImportFile): void {
   const rootScale = importRootScale(parsed);
   if (!rootScale) return;
 
@@ -107,24 +113,22 @@ function applySidecarRootScale(object: THREE.Object3D, path: string, parsed: Par
 
 /**
  * `_subresources`' per-node `mesh_instance/layers`, matched by node path
- * (`resource_importer_scene.cpp:1836`) through `matchGlbTarget`, each raw glTF segment
- * sanitized into three's spelling first. No nearest-ancestor fallback: a mask belongs
- * to one mesh instance, and an ancestor would stamp every sibling under it.
+ * (`resource_importer_scene.cpp:1836`) through `matchGlbTarget`. No nearest-ancestor fallback:
+ * a mask belongs to one mesh instance, and an ancestor would stamp every sibling under it.
  */
-function applySidecarNodeLayers(object: THREE.Object3D, path: string, parsed: ParsedImportFile | null): void {
+function applySidecarNodeLayers(object: THREE.Object3D, path: string, parsed: ParsedImportFile): void {
   const masks = importNodeLayers(parsed);
   if (masks.size === 0) return;
 
   const entries = flattenGlbObjects(object);
   for (const [nodePath, mask] of masks) {
-    const segments = nodePath.split('/').map((s) => THREE.PropertyBinding.sanitizeNodeName(s));
-    const target = matchGlbTarget(entries, segments.join('/'), { allowAncestor: false });
+    const target = matchGlbTarget(entries, nodePath, { allowAncestor: false });
     if (!target) {
       logger.warn(`[GLBProcessor] ${path}: import sidecar layers path '${nodePath}' names no mesh`);
       continue;
     }
     logger.info(`[GLBProcessor] ${path}: import sidecar layers ${mask} on '${nodePath}'`);
-    stampVisualLayers(target.object, mask);
+    stampMeshInstanceLayers(target.object, mask);
   }
 }
 
@@ -135,7 +139,7 @@ function applySidecarNodeLayers(object: THREE.Object3D, path: string, parsed: Pa
  * with its `.tres` address and keeps the glTF's own material, which an unresolvable
  * `.tres` leaves in place, as Godot's null `external_mat` branch does (`:1622-1636`).
  */
-function tagSidecarMaterials(object: THREE.Object3D, path: string, parsed: ParsedImportFile | null): void {
+function tagSidecarMaterials(object: THREE.Object3D, path: string, parsed: ParsedImportFile): void {
   const remaps = importExternalMaterials(parsed);
   if (remaps.size === 0) return;
 
@@ -169,13 +173,13 @@ export function createGLBProcessor(
     resourceType: 'glb',
     shouldProcess: (path, data) => isGltfPath(path) && data instanceof ArrayBuffer,
     process: async (path, data) => {
-      const object = await createGLBMesh(
-        await glbBytes(path, data as ArrayBuffer, fileEventBus, dependencies),
-        {
-          extensionRules,
-        }
-      );
-      await applyImportSidecar(object, path, fileEventBus, dependencies);
+      const bytes = await glbBytes(path, data as ArrayBuffer, fileEventBus, dependencies);
+      const sidecar = await readImportSidecar(path, fileEventBus, dependencies);
+      const object = await createGLBMesh(bytes, {
+        extensionRules,
+        naming: { ...importGltfNaming(sidecar), fileName: fileBaseName(path) },
+      });
+      applyImportSidecar(object, path, sidecar);
       return object;
     },
     dispose: disposeGLBMesh,

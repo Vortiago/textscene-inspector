@@ -22,33 +22,42 @@ const EXTERNAL: TscnExternalResource[] = [
   { id: '4', path: 'res://materials/paint.tres', type: 'Material' },
   { id: '5', path: 'res://models/truck.glb', type: 'PackedScene' },
 ];
+const POOLS = { internalResources: INTERNAL, externalResources: EXTERNAL };
 
 describe('resolveMaterialSource', () => {
   it('resolves a SubResource to the material it names, with the tables it resolves in', () => {
-    expect(resolveMaterialSource('SubResource("Mat_body")', INTERNAL, EXTERNAL)).toEqual({
+    expect(resolveMaterialSource('SubResource("Mat_body")', POOLS)).toEqual({
       kind: 'inline',
       material: { resource: INTERNAL[0], internalResources: INTERNAL, externalResources: EXTERNAL },
     });
   });
 
+  it('takes a res:// path, such as a material inside a mesh .tres, as the file it names', () => {
+    expect(resolveMaterialSource('res://rock.tres::Mat_1', POOLS)).toEqual({
+      kind: 'file',
+      path: 'res://rock.tres::Mat_1',
+    });
+    expect(resolveMaterialSource('res://paint.material', POOLS)).toBeUndefined();
+  });
+
   it('resolves an ExtResource to the .tres file the loader reads', () => {
-    expect(resolveMaterialSource('ExtResource("4")', INTERNAL, EXTERNAL)).toEqual({
+    expect(resolveMaterialSource('ExtResource("4")', POOLS)).toEqual({
       kind: 'file',
       path: 'res://materials/paint.tres',
     });
   });
 
   it('returns undefined for an absent reference', () => {
-    expect(resolveMaterialSource(undefined, INTERNAL, EXTERNAL)).toBeUndefined();
-    expect(resolveMaterialSource('', INTERNAL, EXTERNAL)).toBeUndefined();
+    expect(resolveMaterialSource(undefined, POOLS)).toBeUndefined();
+    expect(resolveMaterialSource('', POOLS)).toBeUndefined();
   });
 
   it('returns undefined for a reference naming nothing the scene declares', () => {
     // Godot's fall-through when the RID is invalid: the surface keeps whatever it
     // had rather than going blank, so an unresolvable override must resolve to
     // "no source" and not to an empty one.
-    expect(resolveMaterialSource('SubResource("Mat_missing")', INTERNAL, EXTERNAL)).toBeUndefined();
-    expect(resolveMaterialSource('ExtResource("99")', INTERNAL, EXTERNAL)).toBeUndefined();
+    expect(resolveMaterialSource('SubResource("Mat_missing")', POOLS)).toBeUndefined();
+    expect(resolveMaterialSource('ExtResource("99")', POOLS)).toBeUndefined();
   });
 
   it('fills the slot for a Material it cannot build, and leaves it empty for a non-material', () => {
@@ -56,36 +65,40 @@ describe('resolveMaterialSource', () => {
     // surface is Godot's default one rather than whatever the mesh already wore
     // (ADR-0041). `useMaterial` answers with that default. A sub-resource that is
     // no material at all leaves the slot empty instead.
-    expect(resolveMaterialSource('SubResource("Shader_fx")', INTERNAL, EXTERNAL)).toEqual({
+    expect(resolveMaterialSource('SubResource("Shader_fx")', POOLS)).toEqual({
       kind: 'inline',
       material: { resource: INTERNAL[2], internalResources: INTERNAL, externalResources: EXTERNAL },
     });
-    expect(resolveMaterialSource('SubResource("Mesh_box")', INTERNAL, EXTERNAL)).toBeUndefined();
+    expect(resolveMaterialSource('SubResource("Mesh_box")', POOLS)).toBeUndefined();
   });
 
   it('returns undefined for an ExtResource that is not a .tres document', () => {
-    expect(resolveMaterialSource('ExtResource("5")', INTERNAL, EXTERNAL)).toBeUndefined();
+    expect(resolveMaterialSource('ExtResource("5")', POOLS)).toBeUndefined();
   });
 
   it('returns undefined for a value that is not a resource reference at all', () => {
-    expect(resolveMaterialSource('Color(1, 0, 0, 1)', INTERNAL, EXTERNAL)).toBeUndefined();
+    expect(resolveMaterialSource('Color(1, 0, 0, 1)', POOLS)).toBeUndefined();
   });
 
   it('returns undefined for a reference whose grammar is malformed', () => {
     // Unterminated: the id inside reads as a plausible one, so a resolver
     // matching loosely would resolve it.
-    expect(resolveMaterialSource('SubResource("Mat_body"', INTERNAL, EXTERNAL)).toBeUndefined();
+    expect(resolveMaterialSource('SubResource("Mat_body"', POOLS)).toBeUndefined();
   });
 
   it('returns undefined when the scene declares no resources at all', () => {
-    expect(resolveMaterialSource('SubResource("Mat_body")', [], [])).toBeUndefined();
-    expect(resolveMaterialSource('ExtResource("4")', [], [])).toBeUndefined();
+    expect(
+      resolveMaterialSource('SubResource("Mat_body")', { internalResources: [], externalResources: [] })
+    ).toBeUndefined();
+    expect(
+      resolveMaterialSource('ExtResource("4")', { internalResources: [], externalResources: [] })
+    ).toBeUndefined();
   });
 
   it('hands back the sub-resource by identity, unknown and garbage values intact', () => {
     // A lookup, not a validator: every property survives to the decode, which is
     // the one place that decides what a value means.
-    const resolved = resolveMaterialSource('SubResource("Mat_odd")', INTERNAL, EXTERNAL);
+    const resolved = resolveMaterialSource('SubResource("Mat_odd")', POOLS);
     expect(resolved?.kind === 'inline' && resolved.material.resource).toBe(INTERNAL[1]);
     expect(INTERNAL[1]?.data).toEqual({
       metallic: '0.75',

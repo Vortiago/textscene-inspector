@@ -58,6 +58,9 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
   /** Scissor cut used by `alpha_cut` DISCARD (`label_3d.h:62`, default 0.5). */
   alpha_scissor_threshold: number;
 
+  /** Grain of the `alpha_cut` HASH dither (`label_3d.h:63`, default 1.0). */
+  alpha_hash_scale: number;
+
   /** Keep a constant on-screen size regardless of distance (`label_3d.h:46`, default false). */
   fixed_size: boolean;
 

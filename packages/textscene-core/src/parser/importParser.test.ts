@@ -3,7 +3,13 @@
  * the one sidecar in the corpus whose parameters change what is drawn.
  */
 import { describe, expect, it } from 'vitest';
-import { importNodeLayers, parseImportFile, importRootScale, importExternalMaterials } from './importParser';
+import {
+  importExternalMaterials,
+  importGltfNaming,
+  importNodeLayers,
+  importRootScale,
+  parseImportFile,
+} from './importParser';
 
 const TREE_IMPORT = `[remap]
 
@@ -280,5 +286,23 @@ describe('importNodeLayers', () => {
   it('is empty without a sidecar or a nodes block', () => {
     expect(importNodeLayers(null).size).toBe(0);
     expect(importNodeLayers(parseImportFile('[params]\n\nnodes/root_scale=1.0\n')).size).toBe(0);
+  });
+});
+
+describe('importGltfNaming', () => {
+  it('reads the naming version and import_as_skeleton_bones', () => {
+    const parsed = parseImportFile(
+      '[params]\n\ngltf/naming_version=1\nnodes/import_as_skeleton_bones=true\n'
+    );
+    expect(importGltfNaming(parsed)).toEqual({ namingVersion: 1, importAsSkeletonBones: true });
+  });
+
+  it("takes Godot's defaults without a sidecar", () => {
+    expect(importGltfNaming(null)).toEqual({ namingVersion: 2, importAsSkeletonBones: false });
+  });
+
+  it('takes the default version for one that is not an integer', () => {
+    const parsed = parseImportFile('[params]\n\ngltf/naming_version="two"\n');
+    expect(importGltfNaming(parsed).namingVersion).toBe(2);
   });
 });

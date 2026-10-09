@@ -11,6 +11,10 @@ renders_as: a textured THREE.Mesh quad
 
 Draws a 2D texture on a quad in 3D space. The previewer renders it as an unlit textured plane sized by `pixel_size` times the texture. `modulate` drives colour and opacity, and `billboard` applies as a per-frame look-at.
 
+The quad lies on the plane its `axis` faces, the XY plane by default. A centred quad centres on the node. An uncentred one puts its bottom-left corner there, and a positive `offset.y` moves it up, as Godot draws the 2D rect with its Y unflipped. The quad's AABB, grown as a billboard can turn it, places it for the visibility range.
+
+The quad casts a shadow when Godot files its surface in the shadow pass (`render_forward_clustered.cpp:4079-4089`). That pass takes a cut or opaque surface, or an `OPAQUE_PREPASS` one, with its depth test on. An `OPAQUE_PREPASS` surface blends uncut, writes its depth in a depth prepass cut at 0.99, and cuts its shadow at 0.1 (`render_forward_clustered.cpp:1791,2770`). A blended sprite, the default, casts nothing. A hashed sprite hashes its shadow too. The quad receives shadows as every GeometryInstance3D does. The `sprite3d-shadow` golden pins this.
+
 ## Linting
 
 <!-- lint:begin Sprite3D -->
@@ -40,12 +44,9 @@ Strict parsing format-checks these `Sprite3D` properties, plus 20 inherited from
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-Most keys warn then fall back to their Godot defaults. `billboard`, `alpha_cut` and `axis` fall back to `0`, `0` and `1`, and `pixel_size` to `0.01`. `hframes` and `vframes` fall back to `1`, `frame` to `0` and `offset` to `(0, 0)`. `frame_coords` and `region_rect` warn on a malformed literal and stay unset. `modulate` falls back to opaque white silently, since `parseColor` never logs, and `texture` is assigned verbatim whenever present. A malformed `transparency` keeps Godot's default (`0`) silently, which draws the sprite opaque.
+Most keys warn then fall back to their Godot defaults. `billboard`, `alpha_cut` and `axis` fall back to `0`, `0` and `2`, and `pixel_size` to `0.01`. `hframes` and `vframes` fall back to `1`, `frame` to `0` and `offset` to `(0, 0)`. `frame_coords` and `region_rect` warn on a malformed literal and stay unset. `modulate` falls back to opaque white silently, since `parseColor` never logs, and `texture` is assigned verbatim whenever present. A malformed `transparency` keeps Godot's default (`0`) silently, which draws the sprite opaque.
 
 ## Known limitations
 
-- **Approximated** `alpha_cut = OPAQUE_PREPASS` clips against a fixed threshold in the
-  colour pass too, where Godot clips only depth, so the sprite's edge is harder.
-- **Approximated** `alpha_hash_scale`, `alpha_antialiasing_mode` and
-  `alpha_antialiasing_edge` have no counterpart, so a hashed-alpha sprite's dither grain
-  differs and its edges are not feathered.
+- **Shader missing** `alpha_antialiasing_mode` and `alpha_antialiasing_edge` have no
+  counterpart, so a cut sprite's edges are not feathered.

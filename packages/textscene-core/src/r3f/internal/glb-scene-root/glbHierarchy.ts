@@ -1,14 +1,17 @@
 /**
- * A loaded GLB as a display hierarchy for the scene tree. The walk is deterministic: children in
- * order, duplicate sibling names suffixed `@<n>`. So the tree's clone and the viewport's clone get
- * the same relative paths, and a tree row lines up with the rendered object.
+ * A loaded GLB as a display hierarchy for the scene tree, under the names Godot gives its nodes.
+ * The walk is deterministic: children in order, duplicate sibling names suffixed `@<n>`. So the
+ * tree's clone and the viewport's clone get the same relative paths, and a tree row lines up with
+ * the rendered object.
  */
 
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
+import { godotNodeName, godotNodeRole } from '../../../resources/formats/glb/nodeNames.js';
+import type { GltfNodeRole } from '../../../godot/gltfNodeNames.js';
 
 export interface GlbHierarchyNode {
-  /** Display name (THREE object's name, or its type when unnamed). */
+  /** Display name, from `glbObjectName`. */
   name: string;
   /** Relative to the GLB root, unique and stable across structurally equal clones. */
   relPath: string;
@@ -31,10 +34,18 @@ export function glbDisplayType(threeType: string): string {
   return threeType;
 }
 
+/**
+ * The name Godot's importer gives the glTF node `object` stands for. An object no node names, such
+ * as a primitive or a bone, takes three's name, or its type when unnamed.
+ */
+export function glbObjectName(object: THREE.Object3D): string {
+  return godotNodeName(object) ?? (object.name || object.type);
+}
+
 function segmentsForSiblings(children: readonly THREE.Object3D[]): string[] {
   const seen = new Map<string, number>();
   return children.map((child) => {
-    const base = child.name || child.type;
+    const base = glbObjectName(child);
     const n = seen.get(base) ?? 0;
     seen.set(base, n + 1);
     return n === 0 ? base : `${base}@${n}`;
@@ -45,7 +56,7 @@ function buildNode(object: THREE.Object3D, parentPath: string, segment: string):
   const relPath = parentPath ? `${parentPath}/${segment}` : segment;
   const childSegments = segmentsForSiblings(object.children);
   return {
-    name: object.name || object.type,
+    name: glbObjectName(object),
     relPath,
     threeType: object.type,
     displayType: glbDisplayType(object.type),
@@ -63,19 +74,38 @@ export function buildGlbHierarchy(root: THREE.Object3D): GlbHierarchyNode[] {
 export interface GlbObjectEntry {
   relPath: string;
   object: THREE.Object3D;
+  /**
+   * The relPath segments a Godot path to the object holds, in order. A bone is a node of Godot's
+   * only as the BoneAttachment3D of a node it holds, so a bone segment stays only before such a node.
+   */
+  godotSegments: string[];
+}
+
+/**
+ * The Godot segments of a child named `name` with `role`, from its parent's. The parent's bone
+ * segment stays only before a node attached to it, and the child's own segment always stays.
+ */
+function childGodotSegments(parent: GlbObjectEntry | null, name: string, role: GltfNodeRole): string[] {
+  if (!parent) return [name];
+  const keepsParent = godotNodeRole(parent.object) !== 'bone' || role === 'node';
+  return [...(keepsParent ? parent.godotSegments : parent.godotSegments.slice(0, -1)), name];
 }
 
 /** `buildGlbHierarchy`'s path scheme, flat, so the viewport's objects line up with the tree rows. */
 export function flattenGlbObjects(root: THREE.Object3D): GlbObjectEntry[] {
   const out: GlbObjectEntry[] = [];
-  const walk = (object: THREE.Object3D, parentPath: string, segment: string): void => {
-    const relPath = parentPath ? `${parentPath}/${segment}` : segment;
-    out.push({ relPath, object });
-    const childSegments = segmentsForSiblings(object.children);
-    object.children.forEach((child, i) => walk(child, relPath, childSegments[i]!));
+  const walk = (object: THREE.Object3D, parent: GlbObjectEntry | null, name: string): void => {
+    const entry = {
+      relPath: parent ? `${parent.relPath}/${name}` : name,
+      object,
+      godotSegments: childGodotSegments(parent, name, godotNodeRole(object)),
+    };
+    out.push(entry);
+    const childNames = segmentsForSiblings(object.children);
+    object.children.forEach((child, i) => walk(child, entry, childNames[i]!));
   };
-  const segments = segmentsForSiblings(root.children);
-  root.children.forEach((child, i) => walk(child, '', segments[i]!));
+  const names = segmentsForSiblings(root.children);
+  root.children.forEach((child, i) => walk(child, null, names[i]!));
   return out;
 }
 

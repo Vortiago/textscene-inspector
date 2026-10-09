@@ -32,6 +32,8 @@ import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
+import { childOrders, TreeOrderProvider, useTreeOrder, type TreeOrder } from './contexts/TreeOrderContext.js';
+import { VisibilityParentScope } from './visibilityRange/VisibilityParentContext.js';
 import {
   InstancedScenePathsProvider,
   useInstancedScenePaths,
@@ -49,14 +51,13 @@ import { SpriteBase3DChildAccum } from './spriteBase3DColorAccum.js';
 import { CanvasLayerScope } from './canvasLayerScope.js';
 import { CanvasRootScope } from './canvasRootScope.js';
 import {
-  ParentSpaceFamilyProvider,
+  ParentTypeProvider,
   ParentSpaceScope,
   TopLevelScope,
   useParentSpaceFamily,
   WorldRoot,
 } from './parentSpaceScope.js';
-import { spaceFamilyOf } from '../godot/parentSpace.js';
-import { GlbOverridesProvider } from './internal/glb-scene-root/GlbOverridesContext.js';
+import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
 
@@ -89,6 +90,7 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
   // parent is not a CanvasItem is drawn in its pre-order rank among the
   // canvas's roots, not at the slot its nesting gives it (`canvasRootRanges`).
   const canvasRoots = useMemo(() => canvasRootRanges(nodes, rootRanges), [nodes, rootRanges]);
+  const rootOrders = useMemo(() => childOrders([], nodes.length), [nodes.length]);
 
   return (
     // paint-order-safe: the delegated pointer root, above every canvas item.
@@ -110,7 +112,9 @@ export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
             <WorldRoot>
               {nodes.map((node, i) => (
                 <PaintRangeProvider key={node.name} value={canvasRoots.get(node) ?? rootRanges[i]!}>
-                  <DispatchedNode node={node} path={node.name} />
+                  <TreeOrderProvider order={rootOrders[i]!}>
+                    <DispatchedNode node={node} path={node.name} />
+                  </TreeOrderProvider>
                 </PaintRangeProvider>
               ))}
             </WorldRoot>
@@ -165,7 +169,7 @@ function OwnResourceScope({ scope, children }: { scope: SceneScope; children: Re
 /**
  * The node without its deep children, whose parent path descends into this
  * instance's content. Here they would take the instance's transform, so they render
- * nowhere. `GlbOverridesProvider` still gets them all. A typed deep child does not
+ * nowhere. `GlbInstanceProvider` still gets them all. A typed deep child does not
  * render: it needs portalling onto the matched GLB object.
  */
 function withoutDeepChildren(node: TscnNode): TscnNode {
@@ -178,6 +182,8 @@ function withoutDeepChildren(node: TscnNode): TscnNode {
 interface PlainNodeProps extends DispatchedNodeProps {
   /** Extra rendered subtree appended after the node's own inline children. */
   children?: ReactNode;
+  /** Where the inline children take their tree order from. The node's own order by default. */
+  inlineChildrenOrder?: TreeOrder;
 }
 
 /**
@@ -185,9 +191,15 @@ interface PlainNodeProps extends DispatchedNodeProps {
  * component, with its inline children and the `extraChildren` of the instance
  * fallback. A merged instance root renders here like an authored node.
  */
-function PlainNode({ node, path, children: extraChildren }: PlainNodeProps): ReactNode {
+function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }: PlainNodeProps): ReactNode {
   // An unregistered type renders the fallback, so it stays visible.
   const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
+  const ownOrder = useTreeOrder();
+  const inlineBase = inlineChildrenOrder ?? ownOrder;
+  const inlineOrders = useMemo(
+    () => childOrders(inlineBase, node.children.length),
+    [inlineBase, node.children.length]
+  );
   const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
   const workspace = useCanvasWorkspace();
   const paintRange = usePaintRange();
@@ -225,7 +237,9 @@ function PlainNode({ node, path, children: extraChildren }: PlainNodeProps): Rea
   // covers the child's whole subtree, so nothing reaches a sibling's sequence.
   const inlineChildren = node.children.map((child, i) => (
     <PaintRangeProvider key={child.name} value={canvasRoots.get(child) ?? allocated.children[i]!}>
-      <DispatchedNode node={child} path={joinPath(path, child.name)} />
+      <TreeOrderProvider order={inlineOrders[i]!}>
+        <DispatchedNode node={child} path={joinPath(path, child.name)} />
+      </TreeOrderProvider>
     </PaintRangeProvider>
   ));
 
@@ -250,58 +264,68 @@ function PlainNode({ node, path, children: extraChildren }: PlainNodeProps): Rea
   return (
     <ParentSpaceScope node={node}>
       <NodePathProvider path={path}>
-        {/* paint-order-safe: the selection wrapper, outside the item's own group,
+        <VisibilityParentScope node={node} path={path}>
+          {/* paint-order-safe: the selection wrapper, outside the item's own group,
             which `<CanvasItem2D>` renders nearer to every mesh. A type that draws
             without that ritual takes its key from `useCanvasItemRenderOrder`. */}
-        <group ref={wrapperRef} visible={!isHidden}>
-          {/* Inside the eye-toggle group: a top_level canvas root drops its
+          <group ref={wrapperRef} visible={!isHidden}>
+            {/* Inside the eye-toggle group: a top_level canvas root drops its
               ancestors' transform and tint but not their visibility. A root whose
               parent is no CanvasItem left them all in `<ParentSpaceScope>`. */}
-          <TopLevelScope node={node}>
-            <CanvasRootScope node={node} parentIsCanvasItem={parentIsCanvasItem}>
-              <ErrorBoundary
-                resetKeys={[node]}
-                fallback={() => (
-                  <MissingResourcePlaceholder shape="box" name={node.name} {...fallbackTransform(node)} />
-                )}
-              >
-                {/* The cast each descendant the component renders runs against this node
+            <TopLevelScope node={node}>
+              <CanvasRootScope node={node} parentIsCanvasItem={parentIsCanvasItem}>
+                <ErrorBoundary
+                  resetKeys={[node]}
+                  fallback={() => (
+                    <MissingResourcePlaceholder shape="box" name={node.name} {...fallbackTransform(node)} />
+                  )}
+                >
+                  {/* The cast each descendant the component renders runs against this node
                     (`node_3d.cpp:150`, `canvas_item.cpp:565-571`), answered with its type: for a
                     merged instance, the sub-scene root's type. A y-sort reorder keeps it, since
                     every level it lifts past is a CanvasItem. */}
-                <ParentSpaceFamilyProvider value={spaceFamilyOf(node.type)}>
-                  <Component node={node}>
-                    {children.length > 0 ? (
-                      /* At every level, so a non-sprite parent overwrites with white:
+                  <ParentTypeProvider value={node.type}>
+                    <Component node={node}>
+                      {children.length > 0 ? (
+                        /* At every level, so a non-sprite parent overwrites with white:
                          `sprite_3d.cpp:75` accumulates from the immediate parent only. */
-                      <SpriteBase3DChildAccum node={node}>
-                        {startsCanvas ? (
-                          <CanvasLayerScope node={node}>
-                            {/* `<CanvasLayerScope>` is shared with the Control walk's
+                        <SpriteBase3DChildAccum node={node}>
+                          {startsCanvas ? (
+                            <CanvasLayerScope node={node}>
+                              {/* `<CanvasLayerScope>` is shared with the Control walk's
                                 `CanvasLayer` painter. A canvas root below draws on this
                                 layer's canvas (`canvas_item.cpp:246-252`), so a node that
                                 escapes inside it stays under the layer's own group. */}
-                            <WorldRoot>
-                              <CanvasRootRangesProvider value={canvasRoots}>
-                                {children}
-                              </CanvasRootRangesProvider>
-                            </WorldRoot>
-                          </CanvasLayerScope>
-                        ) : (
-                          <>{children}</>
-                        )}
-                      </SpriteBase3DChildAccum>
-                    ) : null}
-                  </Component>
-                </ParentSpaceFamilyProvider>
-              </ErrorBoundary>
-            </CanvasRootScope>
-          </TopLevelScope>
-        </group>
+                              <WorldRoot>
+                                <CanvasRootRangesProvider value={canvasRoots}>
+                                  {children}
+                                </CanvasRootRangesProvider>
+                              </WorldRoot>
+                            </CanvasLayerScope>
+                          ) : (
+                            <>{children}</>
+                          )}
+                        </SpriteBase3DChildAccum>
+                      ) : null}
+                    </Component>
+                  </ParentTypeProvider>
+                </ErrorBoundary>
+              </CanvasRootScope>
+            </TopLevelScope>
+          </group>
+        </VisibilityParentScope>
       </NodePathProvider>
     </ParentSpaceScope>
   );
 }
+
+/**
+ * The two groups of an injected instance's children in tree order. Godot adds the sub-scene's own
+ * nodes when it instantiates the sub-scene, before the instancing scene adds its children
+ * (`packed_scene.cpp:231-264`, `:535-541`).
+ */
+const SUB_SCENE_NODES = 0;
+const INSTANCING_SCENE_NODES = 1;
 
 /**
  * Loads the PackedScene a node's `instance` ref names and composes it into the
@@ -353,6 +377,14 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a
   // stripped node is a new object.
   const shallow = useMemo(() => withoutDeepChildren(node), [node]);
+  const order = useTreeOrder();
+  const injectedOrders = useMemo(() => {
+    const groups = childOrders(order, 2);
+    return {
+      roots: childOrders(groups[SUB_SCENE_NODES]!, loadedScene?.nodes.length ?? 0),
+      authored: groups[INSTANCING_SCENE_NODES]!,
+    };
+  }, [order, loadedScene?.nodes.length]);
   // The injected roots draw from the tail of `shallow`'s range. Splitting it
   // gives each root a run of its own, as an authored child gets.
   const injectedRanges = useMemo(
@@ -381,8 +413,8 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
 
   // A `.glb` or multi-root scene: the loaded roots are injected as children.
   return (
-    <GlbOverridesProvider overrides={node.children}>
-      <PlainNode node={shallow} path={path}>
+    <GlbInstanceProvider node={node} path={path}>
+      <PlainNode node={shallow} path={path} inlineChildrenOrder={injectedOrders.authored}>
         <SceneResourcesProvider
           internalResources={loadedScene.internalResources}
           externalResources={loadedScene.externalResources}
@@ -390,12 +422,14 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
           <InstancedScenePathsProvider paths={contentScenePaths}>
             {loadedScene.nodes.map((child, i) => (
               <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
-                <DispatchedNode node={child} path={joinPath(path, child.name)} />
+                <TreeOrderProvider order={injectedOrders.roots[i]!}>
+                  <DispatchedNode node={child} path={joinPath(path, child.name)} />
+                </TreeOrderProvider>
               </PaintRangeProvider>
             ))}
           </InstancedScenePathsProvider>
         </SceneResourcesProvider>
       </PlainNode>
-    </GlbOverridesProvider>
+    </GlbInstanceProvider>
   );
 }

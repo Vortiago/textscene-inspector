@@ -15,6 +15,7 @@ import { setLogAdapter, type LogAdapter } from '../logger';
 import './nodes/index';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../nodes/node/index';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../nodes/3d/geometryinstance3d/types';
 
 function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {}): TscnNode {
   return {
@@ -75,6 +76,7 @@ const LEAF_SCENE: TscnScene = {
       children: [
         makeNode('Body', 'MeshInstance3D', {
           properties: {
+            ...GEOMETRY_INSTANCE_DEFAULTS,
             name: 'Body',
             mesh: 'SubResource("Box_1")',
             surfaceMaterialOverrides: new Map(),

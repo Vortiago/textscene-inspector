@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   createResourcePipeline,
+  PENDING_CAPTURE,
   ResourceLoaderProvider,
   TscnPreviewShell,
   setLogAdapter,
@@ -54,8 +55,6 @@ class WebviewLogAdapter implements LogAdapter {
     this.vscode.postMessage({ type: 'log', level: 'error', message, args } satisfies WebviewToHostMessage);
   }
 }
-
-const PENDING_CAPTURE: PreviewCaptureState = { status: 'pending' };
 
 function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   const [content, setContent] = useState<string>('');

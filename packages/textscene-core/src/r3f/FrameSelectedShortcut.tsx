@@ -5,14 +5,14 @@
  */
 import { useThree } from '@react-three/fiber';
 import { useOptionalSelection } from './contexts/SelectionContext.js';
-import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
+import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { useGlobalShortcut } from './hooks/useGlobalShortcut.js';
 import { resolveFrameTarget } from './resolveFrameTarget.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 
 export function FrameSelectedShortcut() {
   const selection = useOptionalSelection();
-  const control = useOptionalCameraControl();
+  const control = useOptionalViewportActions();
   const selectedNodePath = selection?.selectedNodePath ?? null;
   const nodeObjectMap = selection?.nodeObjectMap ?? null;
   const get = useThree((s) => s.get);

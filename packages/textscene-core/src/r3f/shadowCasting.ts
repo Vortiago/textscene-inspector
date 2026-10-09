@@ -7,10 +7,12 @@
 import * as THREE from 'three';
 import { ShadowCastingSetting } from '../godot/rendering';
 import {
+  UNRANGED_INSTANCE,
   poseColourDraw,
   skipColourDraw,
   surfaceDrawHooks,
   type CastRule,
+  type DrawnInstance,
   type SurfaceDrawHooks,
 } from './surfaceDrawHooks';
 
@@ -39,28 +41,56 @@ function bothFaces(depthMaterial: THREE.Material): void {
   depthMaterial.side = THREE.DoubleSide;
 }
 
-function castEffects(castShadow: boolean, rule: CastRule): ShadowCastingEffects {
-  return Object.freeze({ castShadow, ...surfaceDrawHooks(rule) });
+/** What each `cast_shadow` value sets: three's `castShadow`, and the rule its draw hooks follow. */
+interface CastSetting {
+  castShadow: boolean;
+  rule: CastRule;
+}
+
+const CAST_SETTINGS: Readonly<Record<ShadowCastingSetting, CastSetting>> = {
+  [ShadowCastingSetting.OFF]: {
+    castShadow: false,
+    rule: { colourDraw: poseColourDraw, shadowSide: materialCull },
+  },
+  [ShadowCastingSetting.ON]: {
+    castShadow: true,
+    rule: { colourDraw: poseColourDraw, shadowSide: materialCull },
+  },
+  [ShadowCastingSetting.DOUBLE_SIDED]: {
+    castShadow: true,
+    rule: { colourDraw: poseColourDraw, shadowSide: bothFaces },
+  },
+  [ShadowCastingSetting.SHADOWS_ONLY]: {
+    castShadow: true,
+    rule: { colourDraw: skipColourDraw, shadowSide: materialCull },
+  },
+};
+
+/** Absent or unrecognised `cast_shadow` is Godot's default, ON. */
+function castSettingOf(value: number | undefined): CastSetting {
+  return CAST_SETTINGS[value as ShadowCastingSetting] ?? CAST_SETTINGS[ShadowCastingSetting.ON];
+}
+
+function castEffects({ castShadow, rule }: CastSetting, instance: DrawnInstance): ShadowCastingEffects {
+  return Object.freeze({ castShadow, ...surfaceDrawHooks(rule, instance) });
 }
 
 // One frozen result per value: an unstable object would churn the mesh props.
-const OFF = castEffects(false, { colourDraw: poseColourDraw, shadowSide: materialCull });
-const ON = castEffects(true, { colourDraw: poseColourDraw, shadowSide: materialCull });
-const DOUBLE_SIDED = castEffects(true, { colourDraw: poseColourDraw, shadowSide: bothFaces });
-const SHADOWS_ONLY = castEffects(true, { colourDraw: skipColourDraw, shadowSide: materialCull });
+const UNRANGED_EFFECTS = new Map(
+  Object.values(CAST_SETTINGS).map((setting) => [setting, castEffects(setting, UNRANGED_INSTANCE)])
+);
 
-/** Absent or unrecognised `cast_shadow` is Godot's default, ON. */
+/** The effects of an instance with no visibility range. */
 export function shadowCastingEffects(value: number | undefined): ShadowCastingEffects {
-  switch (value) {
-    case ShadowCastingSetting.OFF:
-      return OFF;
-    case ShadowCastingSetting.DOUBLE_SIDED:
-      return DOUBLE_SIDED;
-    case ShadowCastingSetting.SHADOWS_ONLY:
-      return SHADOWS_ONLY;
-    default:
-      return ON;
-  }
+  return UNRANGED_EFFECTS.get(castSettingOf(value))!;
+}
+
+/** The effects of an instance the scene cull and its drawer place. A new object per call. */
+export function rangedShadowCastingEffects(
+  value: number | undefined,
+  instance: DrawnInstance
+): ShadowCastingEffects {
+  return castEffects(castSettingOf(value), instance);
 }
 
 /** The JSX props, applied to an object built outside JSX, such as a GLB's meshes. */

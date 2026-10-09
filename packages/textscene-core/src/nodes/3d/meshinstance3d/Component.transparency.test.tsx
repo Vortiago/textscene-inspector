@@ -6,7 +6,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
@@ -14,6 +13,11 @@ import { inlineTwoSurfaceMesh } from './testing/twoSurfaceMesh';
 import { DROPS_ALBEDO_ALPHA, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
+import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 const INTERNALS: TscnInternalResource[] = [
   { id: 'Box_1', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } },
@@ -40,6 +44,7 @@ async function drawnMaterials(properties: Partial<MeshInstance3DProperties>): Pr
       <MeshInstance3D node={makeNode(properties)} />
     </SceneResourcesProvider>
   );
+  await renderScene(renderer, manualCameraAt({ x: 0, y: 0, z: 5 }));
   return renderer.scene.findAllByType('Mesh').flatMap((m) => (m.instance as THREE.Mesh).material);
 }
 

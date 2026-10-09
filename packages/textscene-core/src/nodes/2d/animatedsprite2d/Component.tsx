@@ -12,7 +12,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { canvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
 import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
-import { frameSizePx, spriteSamplerClone, type SpriteFrameProps } from '../../../r3f/spriteFrame';
+import { frameSizePx, spriteSamplerClone, WHOLE_FRAME } from '../../../r3f/spriteFrame';
 import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useCanvasSrgbDefines } from '../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
@@ -24,23 +24,12 @@ import { stepPlayback } from '../../../r3f/animation/stepPlayback';
 import { loopsUnderOverride } from '../../../r3f/animation/loopOverride';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
-import { useSpriteFrames } from './useSpriteFrames';
+import { useSpriteFrames } from '../../../resources/textures/spriteframes/useSpriteFrames';
 import { frameAtTime, clipDuration } from '../../../resources/textures/spriteframes/playback';
 import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
 import type { AnimatedSprite2DProperties } from './types';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 
-/**
- * A frame is the whole of the texture it names: `useTexture2D` crops a sheet cell
- * (AtlasTexture) to its own texture, so nothing is windowed here. Module scope
- * gives the memos below one stable identity.
- */
-const WHOLE_FRAME: SpriteFrameProps = {
-  region_enabled: false,
-  hframes: 1,
-  vframes: 1,
-  frame: 0,
-};
 const NO_EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [];
 const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
 

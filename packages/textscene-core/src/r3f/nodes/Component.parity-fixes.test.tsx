@@ -5,9 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { MeshInstance3D } from '../../nodes/3d/meshinstance3d/Component';
 import { Camera3D } from '../../nodes/3d/camera3d/Component';
-import { Label3D } from '../../nodes/3d/label3d/Component';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
@@ -27,6 +25,12 @@ import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoS
 import { depthSideOf, drawsColour } from '../testing/threePasses';
 import { subResource } from '../../testing/subResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
+import '../../nodes/3d/meshinstance3d/index.r3f';
+import '../../nodes/3d/label3d/index.r3f';
+import { registeredComponent } from '../testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
+const Label3D = registeredComponent('Label3D');
 
 function makeMeshNode(properties: Partial<MeshInstance3DProperties> = {}): TscnNode {
   return {
@@ -35,6 +39,7 @@ function makeMeshNode(properties: Partial<MeshInstance3DProperties> = {}): TscnN
     type: 'MeshInstance3D',
     children: [],
     properties: {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name: properties.name ?? 'M',
       surfaceMaterialOverrides: properties.surfaceMaterialOverrides ?? new Map(),
       mesh: properties.mesh ?? 'SubResource("Box_1")',
@@ -374,6 +379,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       outline_render_priority: -1,
       alpha_cut: AlphaCutMode.DISABLED,
       alpha_scissor_threshold: 0.5,
+      alpha_hash_scale: 1,
       fixed_size: false,
       texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     };
@@ -426,6 +432,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       outline_render_priority: -1,
       alpha_cut: AlphaCutMode.DISABLED,
       alpha_scissor_threshold: 0.5,
+      alpha_hash_scale: 1,
       fixed_size: false,
       texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
       transform: {

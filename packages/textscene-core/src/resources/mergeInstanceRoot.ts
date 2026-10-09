@@ -12,7 +12,7 @@ import { layerRawOverride } from './layerRawOverride.js';
 /**
  * The render-only type `processors/createSceneProcessor.ts` emits for a
  * `.glb`/`.gltf` instance. The merge skips it: its instance children are GLB
- * overrides matched by name through `GlbOverridesProvider`, which a collapse
+ * overrides matched by name through `GlbInstanceProvider`, which a collapse
  * would discard. Keep in step with the literal at the synthesis site.
  */
 const GLB_SCENE_ROOT_TYPE = 'GLBSceneRoot';

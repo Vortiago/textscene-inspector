@@ -50,15 +50,13 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Placement relative to the node origin.
       'offset',
       'vertical_alignment',
-      // Material behaviour: lighting response, the alpha-hash scale and the
-      // alpha antialiasing pair.
+      // Material behaviour: lighting response and the alpha antialiasing pair.
       'shaded',
-      'alpha_hash_scale',
       'alpha_antialiasing_mode',
       'alpha_antialiasing_edge',
     ],
     reason:
-      'double_sided is the one own property both parsed and validated; everything else Label3D declares is a real render input the previewer does not read, so the whole set is a render gap rather than deliberate scope.',
+      'double_sided and alpha_hash_scale are the own properties both parsed and validated; everything else Label3D declares is a real render input the previewer does not read, so the whole set is a render gap rather than deliberate scope.',
   },
 
   // Navigation regions draw a translucent navmesh overlay here, mirroring the
@@ -180,25 +178,20 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   // A transform-only slice whose parser reads only the instance state every
-  // drawn leaf shares, so one entry covers every leaf. Each leaf's parser reads
-  // the materials it draws. The rest tune baking, culling and draw order.
+  // drawn leaf shares, its visibility range and custom_aabb included, so one entry
+  // covers every leaf. Each leaf's parser reads the materials it draws. The rest
+  // tune baking, culling and draw order.
   GeometryInstance3D: {
     linterOnly: [
       'gi_mode',
       'gi_lightmap_texel_scale',
       'lod_bias',
-      'custom_aabb',
       'extra_cull_margin',
       'ignore_occlusion_culling',
       'material_override',
       'material_overlay',
       'sorting_offset',
       'sorting_use_aabb_center',
-      'visibility_range_begin',
-      'visibility_range_begin_margin',
-      'visibility_range_end',
-      'visibility_range_end_margin',
-      'visibility_range_fade_mode',
       // visual_instance_3d.cpp:301-364: CanvasItem's InstanceUniforms class on
       // the 3D RenderingServer. No ShaderMaterial slice exists to reflect a
       // uniform override onto.

@@ -12,5 +12,3 @@ nodeComponentRegistry.register({
   // whole tree once the transform passes have placed it.
   scenePass: { stage: 'paths', run: resolveCsgPolygonPaths },
 });
-
-export { CSGPolygon3D };

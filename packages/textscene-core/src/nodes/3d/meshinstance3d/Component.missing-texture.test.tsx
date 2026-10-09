@@ -6,13 +6,17 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 function makeFixture(): {
   node: TscnNode;
@@ -25,6 +29,7 @@ function makeFixture(): {
     type: 'MeshInstance3D',
     children: [],
     properties: {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name: 'Mesh1',
       mesh: 'SubResource("box")',
       materialOverride: 'SubResource("3")',

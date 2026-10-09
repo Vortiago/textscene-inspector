@@ -16,6 +16,7 @@ import { parseLabel3D } from '../label3d/parser';
 import { parseNode3D } from '../../base/node3d/parser';
 import '../../../r3f/nodes/index';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
+import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
 
 const TEXTURE_PATH = 'res://sprite.png';
 
@@ -62,7 +63,7 @@ async function render(nodes: TscnNode[]) {
   const tex = new THREE.Texture();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 8, height: 8 };
   fake.textures.seed(TEXTURE_PATH, tex);
-  return ReactThreeTestRenderer.create(
+  const renderer = await ReactThreeTestRenderer.create(
     <SceneStack
       loader={fake.loader}
       scene={{
@@ -73,6 +74,9 @@ async function render(nodes: TscnNode[]) {
       <NodeDispatcher nodes={nodes} />
     </SceneStack>
   );
+  // One render, so the cull puts the material for each sprite's fade on its quad.
+  await renderScene(renderer, manualCameraAt({ x: 0, y: 0, z: 5 }));
+  return renderer;
 }
 
 function materialOf(renderer: Awaited<ReturnType<typeof render>>, name: string): THREE.MeshBasicMaterial {

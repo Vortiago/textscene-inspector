@@ -9,6 +9,8 @@ import { createTypeRegistry } from '../core/createTypeRegistry';
 import type { CsgShapeRegistration } from './csg/csgRegistration';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import type { YSortItem } from './ySortItems';
+import { descendsFrom } from '../godot/nodeBaseTypes';
+import { withGeometryInstance } from './visibilityRange/geometryInstance';
 
 export interface NodeComponentProps {
   node: TscnNode;
@@ -103,8 +105,16 @@ class NodeComponentRegistryImpl {
   // plumbing in `register` or `clear`.
   private readonly registry = createTypeRegistry<NodeComponentRegistration>('NodeComponentRegistry');
 
+  /**
+   * A GeometryInstance3D type's component is mounted inside the node's place in the scene cull,
+   * drawn or not, so every such type takes part in the visibility range.
+   */
   register(registration: NodeComponentRegistration): void {
-    this.registry.register(registration.typeName, registration);
+    const { typeName, Component } = registration;
+    const mounted = descendsFrom(typeName, 'GeometryInstance3D')
+      ? withGeometryInstance(Component)
+      : Component;
+    this.registry.register(typeName, { ...registration, Component: mounted });
   }
 
   get(typeName: string): NodeComponent | undefined {
@@ -148,11 +158,11 @@ class NodeComponentRegistryImpl {
     return registration === undefined ? undefined : (registration.renderIntent ?? 'draws');
   }
 
-  /** The CSG registration for a type, or undefined when it is not a CSG shape. */
   getYSortGroup(typeName: string): YSortGroupRegistration | undefined {
     return this.registry.get(typeName)?.ySortGroup;
   }
 
+  /** The CSG registration for a type, or undefined when it is not a CSG shape. */
   getCsgShape(typeName: string): CsgShapeRegistration | undefined {
     return this.registry.get(typeName)?.csgShape;
   }

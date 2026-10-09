@@ -15,8 +15,11 @@ import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
-import { alphaCutSurface } from '../../../r3f/godotAlphaCut';
-import { cutSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
+import { alphaCutSurface, joinsShadowPass } from '../../../r3f/godotAlphaCut';
+import { cutFadeVariants, cutOpaquePrepasses, type FadePass } from '../../../r3f/materials/fadeVariants';
+import { opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
+import type { MaterialAttach } from '../../../r3f/materials/swappedMaterials';
+import { FadedMaterials } from '../../../r3f/materials/FadedMaterials';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import {
@@ -24,9 +27,13 @@ import {
   godotTextureFilterState,
 } from '../../../resources/textures/godotTextureFilter';
 import type { Sprite3DProperties } from './types';
+import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
+import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
+import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
+import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
 
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
 const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
@@ -93,10 +100,24 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
   // before the image loads keeps the placeholder at expected scale).
-  const { width, height } = useMemo(() => {
+  const rect = useMemo(() => {
     const px = frameSizePx(sourceTexture ?? undefined, properties);
-    return { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
+    const size = { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
+    return spriteQuadRect(size, properties);
   }, [sourceTexture, properties]);
+  // The frame decides the box, so a texture still loading leaves the sprite unplaced.
+  const placement = useMemo(
+    () =>
+      sourceTexture
+        ? authoredPlacement(
+            spriteRef,
+            properties.transform,
+            spriteQuadAabb(rect, properties.axis, properties.billboard)
+          )
+        : UNPLACED,
+    [sourceTexture, rect, properties.transform, properties.axis, properties.billboard]
+  );
+  const shadow = useGeometryInstance(placement);
 
   // `_get_color_accum()` (`sprite_3d.cpp:36-52`) folds the parent sprite's accumulation into this
   // node's modulate, r/g/b and a. Godot multiplies the stored colours and converts once, so the
@@ -109,26 +130,16 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     // `sprite_3d.cpp:286`: FLAG_TRANSPARENT off disables the whole switch.
     transparentFlag: properties.transparent,
   });
-  // `transparency` is a per-instance GeometryInstance3D property outside the accumulation: only
-  // `modulate` accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
+  // The instance fade is per GeometryInstance3D, outside the accumulation: only `modulate`
+  // accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
   // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA (`material.cpp:1836`).
-  const surfaceAlpha = cutSurfaceAlpha(
-    cut,
-    properties.transparent ? clamp01(accum.a) : 1,
-    properties.transparency
-  );
+  const surfaceAlpha = cutFadeVariants(cut, properties.transparent ? clamp01(accum.a) : 1);
+  const depthTest = !properties.no_depth_test;
+  const castsShadow = shadow.castShadow && joinsShadowPass(cut, depthTest);
+  const prepasses = cutOpaquePrepasses(cut, depthTest);
 
-  // Quad origin: centered (default) puts the plane center at the node origin;
-  // centered=false puts the top-left there. `offset` shifts in sprite pixels
-  // (× pixel_size; Godot screen-Y is down → negated). Baked into the geometry
-  // so it stays correct under the node's rotation/billboard.
-  const geometry = useMemo(() => {
-    const geom = new THREE.PlaneGeometry(width, height);
-    const ox = properties.offset.x * properties.pixel_size + (properties.centered ? 0 : width / 2);
-    const oy = -properties.offset.y * properties.pixel_size - (properties.centered ? 0 : height / 2);
-    if (ox !== 0 || oy !== 0) geom.translate(ox, oy, 0);
-    return geom;
-  }, [width, height, properties.offset.x, properties.offset.y, properties.centered, properties.pixel_size]);
+  // Baked into the geometry, so it stays right under the node's rotation and billboard.
+  const geometry = useMemo(() => spriteQuadGeometry(rect, properties.axis), [rect, properties.axis]);
   // `geometry` goes through `<primitive>`, which R3F does not auto-dispose, so this releases the
   // GPU buffers on replacement and unmount.
   useEffect(() => () => geometry.dispose(), [geometry]);
@@ -182,49 +193,58 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   if (!displayedTexture) {
     return (
       <>
-        <group
-          ref={spriteRef}
-          name={node.name}
-          position={position}
-          rotation={rotation}
-          scale={scale}
-          userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
-        />
+        <group ref={spriteRef} name={node.name} position={position} rotation={rotation} scale={scale} />
         {subtree}
       </>
     );
   }
 
-  const program = materialProgramInputs({
-    props: {
-      map: displayedTexture,
-      color,
-      ...surfaceAlpha,
-      // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
-      depthTest: !properties.no_depth_test,
-      // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
-      side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
-    },
-    merge: [properties.shaded ? SHADED_SCALARS : undefined],
-  });
+  const material = (pass: FadePass, attach: string | MaterialAttach | undefined) => {
+    const program = materialProgramInputs({
+      props: {
+        attach,
+        map: displayedTexture,
+        color,
+        ...surfaceAlpha[pass],
+        // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
+        depthTest,
+        // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
+        side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
+        // `sprite_3d.cpp:282` hands the scale to every mode's material; only HASH reads it.
+        userData: {
+          ...alphaHashScaleUserData(properties.alpha_hash_scale),
+          ...opaquePrepassUserData(prepasses[pass]),
+        },
+      },
+      merge: [properties.shaded ? SHADED_SCALARS : undefined],
+    });
+    return properties.shaded ? (
+      <meshStandardMaterial key={program.key} {...program.props} />
+    ) : (
+      <meshBasicMaterial key={program.key} {...program.props} />
+    );
+  };
 
   return (
     <>
       <mesh
+        // The billboard and `fixed_size` hooks pose the quad. The subtree is a sibling, so the
+        // cull skipping the quad's draws skips nothing else.
         ref={spriteRef}
         name={node.name}
         position={position}
         rotation={rotation}
         scale={scale}
         renderOrder={properties.render_priority}
-        userData={{ billboardMode: properties.billboard, billboardAxis: properties.axis }}
+        castShadow={castsShadow}
+        receiveShadow
+        onBeforeRender={shadow.onBeforeRender}
+        onAfterRender={shadow.onAfterRender}
+        onBeforeShadow={shadow.onBeforeShadow}
+        onAfterShadow={shadow.onAfterShadow}
       >
         <primitive object={geometry} attach="geometry" />
-        {properties.shaded ? (
-          <meshStandardMaterial key={program.key} {...program.props} />
-        ) : (
-          <meshBasicMaterial key={program.key} {...program.props} />
-        )}
+        <FadedMaterials>{material}</FadedMaterials>
       </mesh>
       {subtree}
     </>

@@ -6,7 +6,6 @@
 import { describe, expect, it } from 'vitest';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { TscnParser } from '../../../parser/TscnParser';
-import { Node3D } from '../../base/node3d/Component';
 import './index';
 import './index.r3f';
 
@@ -18,8 +17,10 @@ describe('GeometryInstance3D registration', () => {
     expect(scene.nodes[0]!.properties).toMatchObject({ transparency: 0.25 });
   });
 
-  it('reuses the Node3D component so children keep their transform space', () => {
-    expect(nodeComponentRegistry.get('GeometryInstance3D')).toBe(Node3D);
+  it('registers the undrawn component, which holds its place in the scene cull', () => {
+    expect(nodeComponentRegistry.get('GeometryInstance3D')?.displayName).toBe(
+      'withGeometryInstance(UndrawnGeometryInstance)'
+    );
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {

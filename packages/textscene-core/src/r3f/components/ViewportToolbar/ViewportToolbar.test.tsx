@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { CameraControlProvider, useCameraControl } from '../../contexts/CameraControlContext';
+import { ViewportActionsProvider, useViewportActions } from '../../contexts/ViewportActionsContext';
 import { ViewportToolbar } from './ViewportToolbar';
 import { openDisplayMenu } from './displayMenuTesting';
 
@@ -84,11 +84,11 @@ describe('ViewportToolbar', () => {
 function renderWithChrome({ mode = '3D' as '2D' | '3D', sceneGraph = {} as unknown } = {}) {
   return render(
     <HierarchyProvider value={{ sceneGraph: sceneGraph as never, panelId: 'p' }}>
-      <CameraControlProvider>
+      <ViewportActionsProvider>
         <ViewportModeProvider initialMode={mode}>
           <ViewportToolbar />
         </ViewportModeProvider>
-      </CameraControlProvider>
+      </ViewportActionsProvider>
     </HierarchyProvider>
   );
 }
@@ -112,27 +112,25 @@ describe('ViewportToolbar — Reset Camera', () => {
 });
 
 describe('ViewportToolbar — Screenshot (#224)', () => {
-  it('shows an enabled Screenshot button in 3D when a scene is loaded', () => {
-    renderWithChrome({ mode: '3D', sceneGraph: {} });
-    const btn = screen.getByTestId('screenshot-button') as HTMLButtonElement;
-    expect(btn.disabled).toBe(false);
-  });
+  it.each(['3D', '2D'] as const)(
+    'shows an enabled Screenshot button in %s when a scene is loaded',
+    (mode) => {
+      renderWithChrome({ mode, sceneGraph: {} });
+      const btn = screen.getByTestId('screenshot-button') as HTMLButtonElement;
+      expect(btn.disabled).toBe(false);
+    }
+  );
 
   it('disables Screenshot when no scene is loaded', () => {
     renderWithChrome({ mode: '3D', sceneGraph: null });
     expect((screen.getByTestId('screenshot-button') as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('hides Screenshot entirely in 2D overlay mode', () => {
-    renderWithChrome({ mode: '2D', sceneGraph: {} });
-    expect(screen.queryByTestId('screenshot-button')).toBeNull();
-  });
-
   it('clicking Screenshot pulls a frame from the registered handler and triggers a download', () => {
     const DATA_URL = 'data:image/png;base64,AAAA';
 
     function ScreenshotHandlerRegistrar() {
-      const { registerScreenshotHandler } = useCameraControl();
+      const { registerScreenshotHandler } = useViewportActions();
       useEffect(() => registerScreenshotHandler(() => DATA_URL), [registerScreenshotHandler]);
       return null;
     }
@@ -143,12 +141,12 @@ describe('ViewportToolbar — Screenshot (#224)', () => {
     // wrap afterwards still calls through to the original.
     render(
       <HierarchyProvider value={{ sceneGraph: {} as never, panelId: 'p' }}>
-        <CameraControlProvider>
+        <ViewportActionsProvider>
           <ScreenshotHandlerRegistrar />
           <ViewportModeProvider initialMode="3D">
             <ViewportToolbar />
           </ViewportModeProvider>
-        </CameraControlProvider>
+        </ViewportActionsProvider>
       </HierarchyProvider>
     );
 

@@ -16,7 +16,7 @@ import type { StandardMaterialBag } from './materialBag';
  */
 export function materialFromBag(bag: StandardMaterialBag): THREE.Material {
   const material = materialOfClass(bag);
-  if (bag.injection) injectProgram(material, bag.injection);
+  injectProgram(material, bag.injection);
   return material;
 }
 

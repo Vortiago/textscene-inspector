@@ -161,11 +161,7 @@ export function TextEditBody({
 
   // `syntax_highlighter` resolves in this node's scope, never `useSceneResources()`. Only a
   // `CodeHighlighter` decodes: anything else leaves `highlighter` null, and lines paint at `font_color`.
-  const highlighterResource = useSubOrExtResource(
-    props.syntaxHighlighter,
-    solveNode.resources.internalResources,
-    solveNode.resources.externalResources
-  );
+  const highlighterResource = useSubOrExtResource(props.syntaxHighlighter, solveNode.resources)?.resource;
   const highlighter = useMemo(
     () =>
       highlighterResource?.type === 'CodeHighlighter'

@@ -7,14 +7,18 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
-import { materialInstanceAs } from '../testing/reactThreeTestInstance';
+import { drawnMaterials } from '../testing/reactThreeTestInstance';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { preloadResource } from '../../../resources/testing/preloadResource';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 function makeNode(materialId: string, name = 'Mesh'): TscnNode {
   return {
@@ -23,6 +27,7 @@ function makeNode(materialId: string, name = 'Mesh'): TscnNode {
     type: 'MeshInstance3D',
     children: [],
     properties: {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name,
       mesh: 'SubResource("box")',
       materialOverride: `SubResource("${materialId}")`,
@@ -61,9 +66,9 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, [], loader));
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
+    const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
+    const material = physical[0]!;
     expect(material.anisotropy).toBeCloseTo(0.8, 5);
     expect(material.anisotropyRotation).toBeCloseTo(0, 5);
   });
@@ -82,9 +87,9 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, [], loader));
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
+    const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
+    const material = physical[0]!;
     expect(material.anisotropy).toBeCloseTo(0.8, 5); // magnitude preserved
     expect(material.anisotropyRotation).toBeCloseTo(Math.PI / 2, 5); // direction flipped perpendicular
   });
@@ -105,8 +110,12 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     const renderer = await ReactThreeTestRenderer.create(tree(makeNode('mat'), internal, [], loader));
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    expect(renderer.scene.findAllByType('MeshPhysicalMaterial')).toHaveLength(0);
-    expect(renderer.scene.findAllByType('MeshStandardMaterial')).toHaveLength(1);
+    expect(drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial')).toHaveLength(
+      0
+    );
+    expect(drawnMaterials<THREE.MeshStandardMaterial>(renderer.scene, 'MeshStandardMaterial')).toHaveLength(
+      1
+    );
   });
 
   /**
@@ -136,9 +145,9 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     await new Promise<void>((r) => setTimeout(r, 10));
     await renderer.update(tree(makeNode('mat'), internal, external, loader));
 
-    const physical = renderer.scene.findAllByType('MeshPhysicalMaterial');
+    const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
-    return materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
+    return physical[0]!;
   }
 
   it('wires anisotropy_flowmap onto material.anisotropyMap, repacking Godot alpha-strength into three.js blue', async () => {
@@ -204,9 +213,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     await new Promise<void>((r) => setTimeout(r, 10));
     await renderer.update(tree(makeNode('mat'), internal, external, loader));
 
-    const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(
-      renderer.scene.findAllByType('MeshPhysicalMaterial')[0]!
-    );
+    const material = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial')[0]!;
     const sampled = material.anisotropyMap!;
     // The clone, not the repack: only the UV transform sets `repeat`.
     expect(sampled.repeat.x).toBeCloseTo(3, 5);

@@ -4,55 +4,12 @@ import {
   decodeGradient,
   decodeGradientTexture2D,
   parseColorStops,
-  parsePackedFloat32Array,
   resolveGradient,
 } from './decode';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
 import { GRADIENT_TEXTURE_MAX_SIZE } from '../../../godot/index.js';
-
-describe('parsePackedFloat32Array', () => {
-  it('parses a comma-separated float run', () => {
-    expect(parsePackedFloat32Array('PackedFloat32Array(0, 0.642276, 1)')).toEqual([0, 0.642276, 1]);
-  });
-
-  it('reads the typed and bare spellings the slot converts', () => {
-    // Gradient.offsets is PACKED_FLOAT32_ARRAY (gradient.cpp:80); a scalar
-    // slot's bare and typed bodies are the same comma-separated numbers the
-    // constructor's flat argument list holds.
-    expect(parsePackedFloat32Array('Array[float]([0, 0.5, 1])')).toEqual([0, 0.5, 1]);
-    expect(parsePackedFloat32Array('[0, 0.5, 1]')).toEqual([0, 0.5, 1]);
-    expect(parsePackedFloat32Array('[]')).toEqual([]);
-  });
-
-  it('returns an empty array for an empty literal', () => {
-    expect(parsePackedFloat32Array('PackedFloat32Array()')).toEqual([]);
-  });
-
-  it('throws on a non-matching wrapper', () => {
-    expect(() => parsePackedFloat32Array('PackedInt32Array(1, 2)')).toThrow();
-  });
-
-  it('throws when a component is not a number', () => {
-    expect(() => parsePackedFloat32Array('PackedFloat32Array(1, x, 3)')).toThrow();
-  });
-
-  it('refuses the spellings Godot cannot read, instead of taking a prefix', () => {
-    // Godot's tokenizer refuses each of these, which `parseFloat` would accept.
-    for (const bad of ['1.2.3', '+1', '.5', '0x10']) {
-      expect(() => parsePackedFloat32Array(`PackedFloat32Array(0, ${bad}, 1)`)).toThrow(
-        'Invalid number in PackedFloat32Array'
-      );
-    }
-  });
-
-  it('refuses a non-finite offset, matching its packed siblings', () => {
-    expect(() => parsePackedFloat32Array('PackedFloat32Array(0, inf, 1)')).toThrow(
-      'Invalid number in PackedFloat32Array'
-    );
-  });
-});
 
 describe('parseColorStops', () => {
   it('groups the flat run into RGBA quadruples', () => {

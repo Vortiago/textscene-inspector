@@ -1,13 +1,12 @@
 /** CSGBox3D's solid, exposed to the boolean evaluator. */
 
-import type * as THREE from 'three';
-import type { CsgGeometryBuilder } from '../../../../r3f/csg/csgRegistration';
+import { primitiveSolid, type CsgGeometryBuilder } from '../../../../r3f/csg/csgRegistration';
 import { buildCsgBoxGeometry } from './boxGeometry';
 import type { CSGBox3DProperties } from './types';
 
-export const csgBox3DGeometry: CsgGeometryBuilder = (properties): THREE.BufferGeometry => {
+export const csgBox3DGeometry: CsgGeometryBuilder = (properties) => {
   const p = properties as unknown as CSGBox3DProperties;
-  return buildCsgBoxGeometry({ size: p.size, flipFaces: p.flipFaces ?? false });
+  return primitiveSolid(buildCsgBoxGeometry({ size: p.size, flipFaces: p.flipFaces ?? false }), p);
 };
 
 export function csgBox3DGeometryKey(properties: Record<string, unknown>): string {

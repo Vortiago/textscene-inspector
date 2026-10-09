@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { CamerasPanel } from './CamerasPanel';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { CameraControlProvider, useCameraControl } from '../../contexts/CameraControlContext';
+import { ViewportActionsProvider, useViewportActions } from '../../contexts/ViewportActionsContext';
 import { ViewportModeProvider, useViewportMode } from '../../contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
 import { TscnParser } from '../../../parser/TscnParser';
@@ -31,7 +31,7 @@ zoom = Vector2(2, 2)
 `;
 
 function Probe() {
-  const cam = useCameraControl();
+  const cam = useViewportActions();
   const { mode } = useViewportMode();
   return (
     <div
@@ -47,12 +47,12 @@ function renderPanel(scene = SCENE) {
   const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://test.tscn');
   return render(
     <HierarchyProvider value={{ sceneGraph, panelId: 'cams-test' }}>
-      <CameraControlProvider>
+      <ViewportActionsProvider>
         <ViewportModeProvider>
           <Probe />
           <CamerasPanel />
         </ViewportModeProvider>
-      </CameraControlProvider>
+      </ViewportActionsProvider>
     </HierarchyProvider>
   );
 }
@@ -151,11 +151,11 @@ describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
     render(
       <ResourceLoaderProvider loader={loader}>
         <HierarchyProvider value={{ sceneGraph, panelId: 'cams-nested' }}>
-          <CameraControlProvider>
+          <ViewportActionsProvider>
             <ViewportModeProvider>
               <CamerasPanel />
             </ViewportModeProvider>
-          </CameraControlProvider>
+          </ViewportActionsProvider>
         </HierarchyProvider>
       </ResourceLoaderProvider>
     );
@@ -190,12 +190,12 @@ zoom = Vector2(2, 2)
     render(
       <ResourceLoaderProvider loader={loader}>
         <HierarchyProvider value={{ sceneGraph, panelId: 'cams-2d-nested' }}>
-          <CameraControlProvider>
+          <ViewportActionsProvider>
             <ViewportModeProvider>
               <Probe />
               <CamerasPanel />
             </ViewportModeProvider>
-          </CameraControlProvider>
+          </ViewportActionsProvider>
         </HierarchyProvider>
       </ResourceLoaderProvider>
     );
@@ -222,12 +222,12 @@ describe('<CamerasPanel> with a Camera3D subclass', () => {
     const sceneGraph = createSceneGraphFromTscnScene(parsed, 'res://xr.tscn');
     render(
       <HierarchyProvider value={{ sceneGraph, panelId: 'cams-xr' }}>
-        <CameraControlProvider>
+        <ViewportActionsProvider>
           <ViewportModeProvider>
             <Probe />
             <CamerasPanel />
           </ViewportModeProvider>
-        </CameraControlProvider>
+        </ViewportActionsProvider>
       </HierarchyProvider>
     );
 

@@ -1,0 +1,273 @@
+import { describe, expect, it, vi } from 'vitest';
+import * as THREE from 'three';
+import { registerVisibilityInstance, type VisibilityInstance } from './visibilityScene';
+import { fireSceneRender } from '../testing/fireSceneRender';
+import { manualCameraAt } from '../testing/renderScene';
+import { observeSceneCamera } from '../sceneRenderCamera';
+import { directionalShadowUserData } from '../directionalShadow/declaration';
+import { fitSceneDirectionalShadows } from '../directionalShadow/fitSceneDirectionalShadows';
+import { sceneLights } from '../directionalShadow/lightLists';
+import type { TreeOrder } from '../contexts/TreeOrderContext';
+import {
+  NO_VISIBILITY_RANGE,
+  hasVisibilityRange,
+  VisibilityRangeFadeMode,
+  type VisibilityRange,
+} from '../../godot/visibilityRange';
+
+/** A camera on +Z at `distance` from the origin, looking at it, or away from it. */
+function cameraAt(distance: number, isLookingAway = false): THREE.PerspectiveCamera {
+  const camera = manualCameraAt({ x: 0, y: 0, z: distance });
+  if (!isLookingAway) return camera;
+  camera.rotation.y += Math.PI;
+  camera.updateMatrixWorld(true);
+  return camera;
+}
+
+/** A declared directional light with one split, shining from above and to the side. */
+function splitCastingSun(): THREE.DirectionalLight {
+  const light = new THREE.DirectionalLight();
+  light.position.set(10, 20, 5);
+  light.castShadow = true;
+  light.userData = directionalShadowUserData({
+    maxDistance: 80,
+    pancakeSize: 20,
+    fadeStart: 0.8,
+    depthBias: 0,
+    normalBias: 0,
+    filterRadius: 1,
+    splitCount: 1,
+    splitOffsets: [0.1, 0.2, 0.5],
+    blendSplits: false,
+    sharesAtlas: true,
+  });
+  light.add(light.target);
+  light.target.position.set(-10, -20, -5);
+  light.updateMatrixWorld(true);
+  return light;
+}
+
+interface Applied {
+  isVisible: boolean;
+  fade: number;
+}
+
+/** An instance whose world AABB is a unit cube about `centre`, recording the last result. */
+function instanceAt(
+  range: Partial<VisibilityRange>,
+  {
+    path = null,
+    parentPath = null,
+    order = [],
+    centre = new THREE.Vector3(),
+  }: Partial<{
+    path: string | null;
+    parentPath: string | null;
+    order: TreeOrder;
+    centre: THREE.Vector3;
+  }> = {}
+): VisibilityInstance & { last: Applied | null; isPlaced: boolean } {
+  const fullRange = { ...NO_VISIBILITY_RANGE, ...range };
+  return {
+    links: { path, parentPath, order, hasRange: hasVisibilityRange(fullRange) },
+    range: fullRange,
+    isPlaced: true,
+    isIndexed: true,
+    last: null,
+    worldBox(target) {
+      target.setFromCenterAndSize(centre, new THREE.Vector3(1, 1, 1));
+    },
+    apply(isVisible, fade) {
+      this.last = { isVisible, fade };
+    },
+  };
+}
+
+describe('registerVisibilityInstance', () => {
+  it('shows an instance inside its range', () => {
+    const scene = new THREE.Scene();
+    const instance = instanceAt({ end: 20 });
+    registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(11));
+    expect(instance.last).toEqual({ isVisible: true, fade: 1 });
+  });
+
+  it('hides an instance past its end', () => {
+    const scene = new THREE.Scene();
+    const instance = instanceAt({ end: 10 });
+    registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(11));
+    expect(instance.last?.isVisible).toBe(false);
+  });
+
+  it('fades a render into a target by its own camera (edge case)', () => {
+    const scene = new THREE.Scene();
+    const instance = instanceAt({ end: 20, endMargin: 10, fadeMode: VisibilityRangeFadeMode.SELF });
+    registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(5));
+    fireSceneRender(scene, cameraAt(15), new THREE.WebGLRenderTarget(1, 1));
+    expect(instance.last?.fade).toBeLessThan(1);
+  });
+
+  it('shows an instance with no range and no parent without measuring it', () => {
+    const scene = new THREE.Scene();
+    const instance = instanceAt({});
+    const worldBox = vi.spyOn(instance, 'worldBox');
+    registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(11));
+    expect([instance.last?.isVisible, worldBox.mock.calls.length]).toEqual([true, 0]);
+  });
+
+  it('keeps the hysteresis state of each camera apart', () => {
+    // DISABLED, end 10 and margin 2: a hidden instance shows inside 8 and a shown one holds to 12.
+    const scene = new THREE.Scene();
+    const instance = instanceAt({ end: 10, endMargin: 2 });
+    registerVisibilityInstance(scene, instance);
+    const near = cameraAt(7);
+    const far = cameraAt(11);
+    fireSceneRender(scene, near);
+    fireSceneRender(scene, far);
+    expect(instance.last?.isVisible).toBe(false);
+  });
+
+  it('keeps the state of an instance out of view, as Godot checks only an instance in view', () => {
+    const scene = new THREE.Scene();
+    const instance = instanceAt({ end: 10, endMargin: 2 });
+    registerVisibilityInstance(scene, instance);
+    const camera = cameraAt(7);
+    fireSceneRender(scene, camera);
+    // Past the outer edge, but turned away: the shown state stands.
+    camera.position.z = 13;
+    camera.rotation.y = Math.PI;
+    camera.updateMatrixWorld(true);
+    fireSceneRender(scene, camera);
+    // Turned back at 11, inside the outer edge, so the instance still shows.
+    camera.position.z = 11;
+    camera.rotation.y = 0;
+    camera.updateMatrixWorld(true);
+    fireSceneRender(scene, camera);
+    expect(instance.last?.isVisible).toBe(true);
+  });
+
+  it('hides an instance out of view', () => {
+    const scene = new THREE.Scene();
+    const instance = instanceAt({ end: 20 });
+    registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(11, true));
+    expect(instance.last?.isVisible).toBe(false);
+  });
+
+  it('checks an instance out of view that a directional split of this render holds', () => {
+    const scene = new THREE.Scene();
+    const instance = instanceAt({ end: 40 }, { centre: new THREE.Vector3(7.5, 15, -1.25) });
+    registerVisibilityInstance(scene, instance);
+    observeSceneCamera(scene, (camera) => fitSceneDirectionalShadows(scene, camera, sceneLights(scene)));
+    scene.add(splitCastingSun());
+    fireSceneRender(scene, cameraAt(11));
+    expect(instance.last?.isVisible).toBe(true);
+  });
+
+  it('hides the dependant of a visibility parent past its end', () => {
+    const scene = new THREE.Scene();
+    const proxy = instanceAt(
+      { end: 10, fadeMode: VisibilityRangeFadeMode.DEPENDENCIES },
+      { path: 'Root/Proxy' }
+    );
+    const detail = instanceAt({}, { path: 'Root/Proxy/Detail', parentPath: 'Root/Proxy' });
+    registerVisibilityInstance(scene, proxy);
+    registerVisibilityInstance(scene, detail);
+    fireSceneRender(scene, cameraAt(11));
+    expect([proxy.last?.isVisible, detail.last?.isVisible]).toEqual([false, false]);
+  });
+
+  it('hides the dependant of a visibility parent inside its range', () => {
+    const scene = new THREE.Scene();
+    const proxy = instanceAt({ begin: 5 }, { path: 'Root/Proxy' });
+    const detail = instanceAt({}, { path: 'Root/Detail', parentPath: 'Root/Proxy' });
+    registerVisibilityInstance(scene, proxy);
+    registerVisibilityInstance(scene, detail);
+    fireSceneRender(scene, cameraAt(11));
+    expect([proxy.last?.isVisible, detail.last?.isVisible]).toEqual([true, false]);
+  });
+
+  it('shows the dependant of a visibility parent short of its begin', () => {
+    const scene = new THREE.Scene();
+    const proxy = instanceAt({ begin: 12 }, { path: 'Root/Proxy' });
+    const detail = instanceAt({}, { path: 'Root/Detail', parentPath: 'Root/Proxy' });
+    registerVisibilityInstance(scene, proxy);
+    registerVisibilityInstance(scene, detail);
+    fireSceneRender(scene, cameraAt(11));
+    expect([proxy.last?.isVisible, detail.last?.isVisible]).toEqual([false, true]);
+  });
+
+  it('treats a visibility parent path that names no instance as none', () => {
+    const scene = new THREE.Scene();
+    const detail = instanceAt({}, { path: 'Root/Detail', parentPath: 'Root/Missing' });
+    registerVisibilityInstance(scene, detail);
+    fireSceneRender(scene, cameraAt(11));
+    expect(detail.last?.isVisible).toBe(true);
+  });
+
+  it('refuses the link of a cycle that comes last in tree order, whatever order they register in (edge case)', () => {
+    const scene = new THREE.Scene();
+    const first = instanceAt({}, { path: 'Root/First', parentPath: 'Root/Proxy', order: [0, 0] });
+    const second = instanceAt({}, { path: 'Root/Second', parentPath: 'Root/Proxy', order: [0, 1] });
+    const proxy = instanceAt({ begin: 12 }, { path: 'Root/Proxy', parentPath: 'Root/Second', order: [0, 2] });
+    for (const instance of [proxy, second, first]) registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(11));
+    expect([first, second, proxy].map((instance) => instance.last?.isVisible)).toEqual([true, true, false]);
+  });
+
+  it('keeps the last result of an instance it cannot place', () => {
+    const scene = new THREE.Scene();
+    const instance = instanceAt({ end: 20 });
+    registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(11));
+    instance.isPlaced = false;
+
+    fireSceneRender(scene, cameraAt(30));
+
+    expect(instance.last).toEqual({ isVisible: true, fade: 1 });
+  });
+
+  it('hides an instance it has never placed, and measures nothing of it', () => {
+    const scene = new THREE.Scene();
+    const instance = { ...instanceAt({ end: 20 }), isPlaced: false, worldBox: vi.fn() };
+    registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(11));
+    expect([instance.last, instance.worldBox.mock.calls.length]).toEqual([{ isVisible: false, fade: 1 }, 0]);
+  });
+
+  it('keeps the last result of the dependant of a parent it cannot place', () => {
+    const scene = new THREE.Scene();
+    const parent = instanceAt({ begin: 12 }, { path: 'Root/Parent', order: [0] });
+    const detail = instanceAt({}, { path: 'Root/Parent/Detail', parentPath: 'Root/Parent', order: [0, 0] });
+    for (const instance of [parent, detail]) registerVisibilityInstance(scene, instance);
+    fireSceneRender(scene, cameraAt(11));
+    parent.isPlaced = false;
+
+    fireSceneRender(scene, cameraAt(30));
+
+    expect(detail.last?.isVisible).toBe(true);
+  });
+
+  it('still measures the parent of a dependant it cannot place (edge case)', () => {
+    const scene = new THREE.Scene();
+    const parent = instanceAt({ end: 10 }, { path: 'Root/Parent', order: [0] });
+    const detail = instanceAt({}, { path: 'Root/Parent/Detail', parentPath: 'Root/Parent', order: [0, 0] });
+    detail.isPlaced = false;
+    for (const instance of [parent, detail]) registerVisibilityInstance(scene, instance);
+
+    fireSceneRender(scene, cameraAt(11));
+
+    expect([parent.last?.isVisible, detail.last?.isVisible]).toEqual([false, false]);
+  });
+
+  it('restores the scene hook once the last instance leaves', () => {
+    const scene = new THREE.Scene();
+    const original = scene.onBeforeRender;
+    const unregister = registerVisibilityInstance(scene, instanceAt({ end: 10 }));
+    unregister();
+    expect(scene.onBeforeRender).toBe(original);
+  });
+});

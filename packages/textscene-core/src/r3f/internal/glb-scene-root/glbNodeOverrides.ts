@@ -2,16 +2,17 @@
  * Applies an instancing scene's overrides, such as `[node name="plafoniera" parent="."]`, to
  * nodes inside the GLB it instances: transform, `layers` and `visible`. A GLB with no override
  * keeps its baked offsets. `surface_material_override/0` needs an async load, so
- * `GlbSurfaceMaterialOverride` applies it.
+ * `GlbSurfaceMaterialOverride` applies it. The scene cull applies the GeometryInstance3D state
+ * (`glbGeometryInstances.ts`).
  */
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types';
 import { decomposeForR3F } from '../../nodeTransform';
 import { parseOptionalInt } from '../../../parser/valueParsers';
-import { stampVisualLayers } from '../../visualLayers';
+import { stampMeshInstanceLayers } from '../../../resources/formats/glb/meshInstances';
 import { joinPath } from '../../../utils/nodePath';
-import { flattenGlbObjects, type GlbObjectEntry } from './glbHierarchy.js';
+import { flattenGlbObjects, glbObjectName, type GlbObjectEntry } from './glbHierarchy.js';
 import { matchGlbTarget } from './matchGlbTarget.js';
 import { boolSlotValue } from '../../../godot/index.js';
 
@@ -29,8 +30,8 @@ export function resolveGlbOverrideTarget(
   if (override.instanceSubPath) {
     return matchGlbTarget(entries, joinPath(override.instanceSubPath, override.name))?.object;
   }
-  const byName = entries.find((e) => e.object.name === override.name)?.object;
-  return byName ?? (root.name === override.name ? root : undefined);
+  const byName = entries.find((e) => glbObjectName(e.object) === override.name)?.object;
+  return byName ?? (glbObjectName(root) === override.name ? root : undefined);
 }
 
 /**
@@ -67,10 +68,8 @@ export function applyGlbNodeOverrides(
     const target = resolveGlbOverrideTarget(root, entries, override);
     if (!target) continue;
 
-    // An override node has no type, so `layers` lands in `rawProperties`. It is stamped over the
-    // whole subtree: a glTF node with several primitives is a Group of Meshes, and three reads the
-    // mask per mesh with no inheritance.
-    if (layers !== undefined) stampVisualLayers(target, layers);
+    // An override node has no type, so `layers` lands in `rawProperties`.
+    if (layers !== undefined) stampMeshInstanceLayers(target, layers);
     if (visible !== undefined) target.visible = boolSlotValue(visible) !== false;
     if (!transform) continue;
 

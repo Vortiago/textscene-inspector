@@ -6,8 +6,8 @@
 import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parentLinterParser, parentParser } from './ancestry.mjs';
-import { BASES } from './bases.mjs';
+import { descendsFrom, parentLinterParser, parentParser } from './ancestry.mjs';
+import { BASES, GEOMETRY_INSTANCE_BASE } from './bases.mjs';
 import { checkChain } from './catalogChecks.mjs';
 import { CORE_SRC, REPO_ROOT, fail } from './paths.mjs';
 import { drawsFiles } from './templates/drawsSlice.mjs';
@@ -22,7 +22,10 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
   // Only `draws` gets its own types, parser and Component: property knowledge lives in
   // linterParser.ts. True for both `transform-only` and `pending`, so it names the reuse.
   const reusesBaseParser = intent !== 'draws';
-  const base = BASES[baseKey];
+  const base =
+    baseKey === 'node3d' && descendsFrom(typeName, 'GeometryInstance3D')
+      ? GEOMETRY_INSTANCE_BASE
+      : BASES[baseKey];
   const lower = typeName.toLowerCase();
   const camel = typeName[0].toLowerCase() + typeName.slice(1);
   const kebabName = kebab(typeName);

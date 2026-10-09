@@ -59,10 +59,10 @@ export function writeCanvasPng(dataUrl, file) {
 }
 
 /**
- * Waits until two consecutive readbacks are byte-identical, as the golden
- * harness does. Resources arrive over the host channel and the atlas decodes
- * asynchronously, so an early read sees a sized, unpainted canvas with zero
- * ink. Returns the last data URL and whether it stabilised in time.
+ * Waits until two consecutive readbacks are byte-identical, as the golden harness
+ * does. Two blank readbacks also match, so a caller first waits for the preview to
+ * report its capture ready (`captureState.mjs`). Returns the last data URL and
+ * whether it stabilised in time.
  */
 export async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
   const deadline = Date.now() + timeoutMs;
@@ -71,7 +71,7 @@ export async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
     await sleep(intervalMs);
     const previous = current;
     current = await readCanvasDataUrl(frame).catch(() => null);
-    if (current && current === previous && isPng(current)) {
+    if (isPng(current) && current === previous) {
       return { dataUrl: current, stable: true };
     }
   }

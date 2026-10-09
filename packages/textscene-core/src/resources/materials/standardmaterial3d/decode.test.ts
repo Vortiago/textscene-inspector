@@ -47,8 +47,8 @@ describe('decodeStandardMaterial3D — transparency', () => {
     expect(data.alphaTest).toBe(0);
   });
 
-  it('treats the three BLENDING modes as transparent', () => {
-    for (const mode of ['1', '3', '4']) {
+  it('treats the two blending modes as transparent', () => {
+    for (const mode of ['1', '4']) {
       expect(decodeStandardMaterial3D({ transparency: mode }).transparent).toBe(true);
     }
   });
@@ -60,10 +60,10 @@ describe('decodeStandardMaterial3D — transparency', () => {
     expect(data.alphaTest).toBe(0.5);
   });
 
-  it('drops depth writes for ALPHA only', () => {
+  it('drops the colour depth write of the blended modes and keeps the hash', () => {
     expect(decodeStandardMaterial3D({ transparency: '1' }).depthWrite).toBe(false);
     expect(decodeStandardMaterial3D({ transparency: '3' }).depthWrite).toBe(true);
-    expect(decodeStandardMaterial3D({ transparency: '4' }).depthWrite).toBe(true);
+    expect(decodeStandardMaterial3D({ transparency: '4' }).depthWrite).toBe(false);
   });
 
   it('clamps the scissor threshold to its 0..1 hint', () => {
@@ -140,12 +140,26 @@ describe('decodeStandardMaterial3D — alpha-pass classification', () => {
     expect(decodeStandardMaterial3D({ shadow_to_opacity: 'true' }).transparent).toBe(true);
   });
 
-  it('approximates ALPHA_HASH with blending, keeping the opaque-pass depth write', () => {
-    // A deliberate deviation: Godot dithers a discard and stays opaque. three has no
-    // stochastic clip, and fully opaque is further from Godot's look than blending.
+  it('keeps ALPHA_HASH in the opaque pass, hashing its alpha', () => {
     const data = decodeStandardMaterial3D({ transparency: '3' });
-    expect(data.transparent).toBe(true);
-    expect(data.depthWrite).toBe(true);
+    expect(data).toMatchObject({ transparent: false, depthWrite: true, alphaHash: true, alphaTest: 0 });
+  });
+
+  it('hashes nothing on a refractive ALPHA_HASH surface, whose ALPHA is 1 (edge case)', () => {
+    const data = decodeStandardMaterial3D({ transparency: '3', refraction_enabled: 'true' });
+    expect(data.alphaHash).toBe(false);
+  });
+
+  it('hashes nothing outside ALPHA_HASH', () => {
+    expect(decodeStandardMaterial3D({ transparency: '2' }).alphaHash).toBe(false);
+  });
+
+  it('reads the hash grain from alpha_hash_scale', () => {
+    expect(decodeStandardMaterial3D({ transparency: '3', alpha_hash_scale: '0.5' }).alphaHashScale).toBe(0.5);
+  });
+
+  it("takes Godot's default grain of 1 where none is authored (edge case)", () => {
+    expect(decodeStandardMaterial3D({ transparency: '3' }).alphaHashScale).toBe(1);
   });
 });
 
@@ -208,12 +222,13 @@ describe('decodeStandardMaterial3D — shadow-pass membership', () => {
 });
 
 describe('decodeStandardMaterial3D — depth state', () => {
-  it('writes depth for an alpha-antialiased cutout, which Godot draws in its depth prepass', () => {
-    // `uses_depth_in_alpha_pass()` (`scene_shader_forward_clustered.h:289-293`) is true for
-    // it, as for ALPHA_DEPTH_PRE_PASS, so the colour pass sees the depth it wrote.
+  it('leaves the depth of an alpha-antialiased cutout to its depth prepass', () => {
+    // `uses_depth_in_alpha_pass()` (`scene_shader_forward_clustered.h:288-292`) is true for it,
+    // as for ALPHA_DEPTH_PRE_PASS. The prepass writes its depth, the colour pipeline does not.
     const data = decodeStandardMaterial3D({ transparency: '2', alpha_antialiasing_mode: '1' });
     expect(data.transparent).toBe(true);
-    expect(data.depthWrite).toBe(true);
+    expect(data.depthInAlphaPass).toBe(true);
+    expect(data.depthWrite).toBe(false);
   });
 
   it('defaults to OPAQUE_ONLY, which writes depth outside the alpha pass', () => {
@@ -243,10 +258,17 @@ describe('decodeStandardMaterial3D — depth state', () => {
     expect(data.transparent).toBe(true);
   });
 
-  it('keeps the depth write for DEPTH_PRE_PASS, which is the point of the mode', () => {
+  it('gives DEPTH_PRE_PASS a depth prepass and a colour pass that writes no depth', () => {
     const data = decodeStandardMaterial3D({ transparency: '4' });
     expect(data.transparent).toBe(true);
-    expect(data.depthWrite).toBe(true);
+    expect(data.depthInAlphaPass).toBe(true);
+    expect(data.depthWrite).toBe(false);
+  });
+
+  it('gives a surface with no depth test no depth prepass (edge case)', () => {
+    expect(decodeStandardMaterial3D({ transparency: '4', no_depth_test: 'true' }).depthInAlphaPass).toBe(
+      false
+    );
   });
 
   it('lets refraction override the authored depth mode', () => {
@@ -300,8 +322,13 @@ describe('decodeStandardMaterial3D — alpha pass forced by the instance', () =>
     expect(data.opaqueAfterCut).toBe(false);
   });
 
-  it('keeps the alpha of a hash cut, which this previewer blends', () => {
-    expect(decodeStandardMaterial3D({ transparency: '3' }).opaqueAfterCut).toBe(false);
+  it('writes alpha 1 after a hash cut', () => {
+    expect(decodeStandardMaterial3D({ transparency: '3' }).opaqueAfterCut).toBe(true);
+  });
+
+  it('keeps the alpha of a hash cut under alpha antialiasing', () => {
+    const data = decodeStandardMaterial3D({ transparency: '3', alpha_antialiasing_mode: '1' });
+    expect(data.opaqueAfterCut).toBe(false);
   });
 
   it('keeps the alpha of a surface with no cut', () => {
@@ -489,7 +516,7 @@ describe('decodeStandardMaterial3D — corpus materials', () => {
     });
     expect(data.transparency).toBe(Transparency.ALPHA_DEPTH_PRE_PASS);
     expect(data.transparent).toBe(true);
-    expect(data.depthWrite).toBe(true);
+    expect(data.depthInAlphaPass).toBe(true);
     expect(data.cullMode).toBe(CullMode.DISABLED);
     expect(data.textureFilter).toBe(5);
     expect(data.roughness).toBeCloseTo(0.95770514, 6);

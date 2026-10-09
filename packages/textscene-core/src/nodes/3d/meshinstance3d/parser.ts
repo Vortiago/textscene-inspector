@@ -3,7 +3,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import type { MeshInstance3DProperties } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
-import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
+import { parseOptionalInt } from '../../../parser/valueParsers';
 import { indexedKeyRegex, stringToInt } from '../../../godot/index.js';
 
 /** Assigns only a present value: the optional readers already drop an absent or unreadable one. */
@@ -57,31 +57,6 @@ export function parseMeshInstance3D(
 
   assignIfDefined(meshInstance3DProps, 'giMode', parseOptionalInt(properties.gi_mode));
   assignIfDefined(meshInstance3DProps, 'giLightmapScale', parseOptionalInt(properties.gi_lightmap_scale));
-  assignIfDefined(
-    meshInstance3DProps,
-    'visibilityRangeBegin',
-    parseOptionalFloat(properties.visibility_range_begin)
-  );
-  assignIfDefined(
-    meshInstance3DProps,
-    'visibilityRangeBeginMargin',
-    parseOptionalFloat(properties.visibility_range_begin_margin)
-  );
-  assignIfDefined(
-    meshInstance3DProps,
-    'visibilityRangeEnd',
-    parseOptionalFloat(properties.visibility_range_end)
-  );
-  assignIfDefined(
-    meshInstance3DProps,
-    'visibilityRangeEndMargin',
-    parseOptionalFloat(properties.visibility_range_end_margin)
-  );
-  assignIfDefined(
-    meshInstance3DProps,
-    'visibilityRangeFadeMode',
-    parseOptionalInt(properties.visibility_range_fade_mode)
-  );
   assignIfDefined(meshInstance3DProps, 'layers', parseOptionalInt(properties.layers, 'uint32'));
 
   if (properties.skeleton) {

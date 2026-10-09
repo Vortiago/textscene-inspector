@@ -33,7 +33,7 @@ async function renderedMaterial(sources: readonly (MaterialSource | undefined)[]
       <SceneResourcesProvider internalResources={SCENE} externalResources={[]}>
         <mesh>
           <boxGeometry />
-          <SurfaceMaterialSlots sources={sources} transparency={0} />
+          <SurfaceMaterialSlots sources={sources} />
         </mesh>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>

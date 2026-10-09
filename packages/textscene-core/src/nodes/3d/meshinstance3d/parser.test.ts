@@ -132,26 +132,6 @@ describe('MeshInstance3D Parser', () => {
       expect(result.giLightmapScale).toBe(2);
     });
 
-    it('should parse visibility range properties', () => {
-      const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
-
-      const properties = {
-        visibility_range_begin: '10.0',
-        visibility_range_begin_margin: '1.0',
-        visibility_range_end: '100.0',
-        visibility_range_end_margin: '5.0',
-        visibility_range_fade_mode: '1',
-      };
-
-      const result = parseMeshInstance3D(h, properties);
-
-      expect(result.visibilityRangeBegin).toBe(10.0);
-      expect(result.visibilityRangeBeginMargin).toBe(1.0);
-      expect(result.visibilityRangeEnd).toBe(100.0);
-      expect(result.visibilityRangeEndMargin).toBe(5.0);
-      expect(result.visibilityRangeFadeMode).toBe(1);
-    });
-
     it('should parse layers property', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
 
@@ -222,8 +202,7 @@ describe('MeshInstance3D Parser', () => {
       expect(result.castShadow).toBe(1);
       expect(result.giMode).toBe(1);
       expect(result.giLightmapScale).toBe(1);
-      expect(result.visibilityRangeBegin).toBe(5.0);
-      expect(result.visibilityRangeEnd).toBe(50.0);
+      expect(result.visibilityRange).toMatchObject({ begin: 5, end: 50 });
       expect(result.layers).toBe(7);
       expect(result.skeleton).toBeDefined();
       expect(result.skin).toBeDefined();
@@ -251,16 +230,6 @@ describe('MeshInstance3D Parser', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
       const result = parseMeshInstance3D(h, { gi_mode: 'invalid' });
       expect(result.giMode).toBeUndefined();
-    });
-
-    it('should be undefined for invalid visibility range values', () => {
-      const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
-      const result = parseMeshInstance3D(h, {
-        visibility_range_begin: 'invalid',
-        visibility_range_end: 'bad',
-      });
-      expect(result.visibilityRangeBegin).toBeUndefined();
-      expect(result.visibilityRangeEnd).toBeUndefined();
     });
 
     it('should handle empty surface material override map', () => {

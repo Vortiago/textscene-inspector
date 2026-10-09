@@ -9,6 +9,7 @@ import {
   resolveInstancePath,
   resolveSubResourceRef,
   resolveTexture2DPath,
+  textResourcePath,
   unwrapCanvasTextureRef,
 } from './SubResourceResolver';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
@@ -247,6 +248,27 @@ describe('resolveTexture2DPath', () => {
   });
 });
 
+describe('textResourcePath', () => {
+  const resources = [
+    { id: '1', type: 'ArrayMesh', path: 'res://rock.tres' },
+    { id: '2', type: 'ArrayMesh', path: 'res://rock.res' },
+  ];
+
+  it('names the .tres an ExtResource loads', () => {
+    expect(textResourcePath('ExtResource("1")', resources)).toBe('res://rock.tres');
+  });
+
+  it('names nothing for a binary .res, an undeclared id or no reference (error path)', () => {
+    expect(textResourcePath('ExtResource("2")', resources)).toBeNull();
+    expect(textResourcePath('ExtResource("9")', resources)).toBeNull();
+    expect(textResourcePath(undefined, resources)).toBeNull();
+  });
+
+  it('names nothing for a SubResource, which loads no file (edge case)', () => {
+    expect(textResourcePath('SubResource("1")', resources)).toBeNull();
+  });
+});
+
 describe('findExtResource', () => {
   it('finds the [ext_resource] declaring an id (happy path)', () => {
     expect(findExtResource(externalResources, '2_frame')).toBe(externalResources[1]);
@@ -257,10 +279,10 @@ describe('findExtResource', () => {
     expect(findExtResource([], '1_cube')).toBeUndefined();
   });
 
-  it('keeps the first declaration of a repeated id, as a scan in file order would (edge case)', () => {
+  it('keeps the last declaration of a repeated id, as Godot’s loader does (edge case)', () => {
     const first = { id: '1', path: 'res://first.png', type: 'Texture2D' };
     const repeated = { id: '1', path: 'res://second.png', type: 'Texture2D' };
-    expect(findExtResource([first, repeated], '1')).toBe(first);
+    expect(findExtResource([first, repeated], '1')).toBe(repeated);
   });
 
   it('answers from its id map: a repeated lookup reads no entry of the table', () => {

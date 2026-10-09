@@ -107,8 +107,9 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 |  | `cpuparticles3d-param-min-above-max` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`, so none of the keys strict validates is ever read. A `spread = 400.0` or a dangling `mesh` reference is dropped silently, and `linter.ts` ports the "no mesh assigned" configuration warning.
+The lenient parser reads the GeometryInstance3D base, `visibility_aabb` and whether a `mesh` is set. Together these give the box that the scene cull measures the emitter by. It reads no other CPUParticles3D key, so a `spread = 400.0` is dropped silently, and `linter.ts` ports the "no mesh assigned" configuration warning.
 
 ## Known limitations
 
 - **Not drawn** Godot draws the live particle cloud, but here nothing appears.
+- **Needs runtime** An emitter with a `mesh` and no `visibility_aabb` stays hidden with its visibility dependants, where Godot culls it by its live particles.

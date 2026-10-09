@@ -9,7 +9,7 @@ renders_as: nothing yet, Godot draws a deformable mesh, the previewer does not
 
 # SoftBody3D
 
-A deformable physics mesh that Godot draws as a simulated version of its own `mesh`. The previewer parses and validates it but does not draw it yet, so the Node3D base mounts under `renderIntent: 'pending'` and its children still show.
+A deformable physics mesh that Godot draws as a simulated version of its own `mesh`. The previewer parses and validates it but does not draw it yet, so the GeometryInstance3D base mounts under `renderIntent: 'pending'` and its children still show.
 
 ## Linting
 
@@ -43,8 +43,9 @@ Strict parsing format-checks these `SoftBody3D` properties, plus 5 inherited fro
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. An out-of-range `simulation_precision`, a non-boolean `ray_pickable` or a missing `mesh` parses without complaint and has no effect, since nothing renders from it.
+The lenient parser reuses MeshInstance3D's parse. The scene cull measures the node by its mesh's box at rest, so its visibility range still decides its visibility dependants. An out-of-range `simulation_precision` or a non-boolean `ray_pickable` parses without complaint and has no effect, since nothing simulates it.
 
 ## Known limitations
 
 - **Not drawn** Godot draws the soft mesh, but the previewer draws nothing for it.
+- **Needs runtime** Godot culls the body by its simulated points once physics moves them, but here the cull reads the mesh at rest.

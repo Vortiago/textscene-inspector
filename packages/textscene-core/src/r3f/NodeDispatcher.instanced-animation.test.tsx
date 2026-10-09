@@ -16,6 +16,7 @@ import {
 import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { AnimationProcessMode, MethodCallMode } from '../nodes/animation/animationplayer/types';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../nodes/3d/geometryinstance3d/types';
 
 import './nodes/index';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
@@ -77,6 +78,7 @@ function makeCoinScene(): TscnScene {
             type: 'MeshInstance3D',
             children: [],
             properties: {
+              ...GEOMETRY_INSTANCE_DEFAULTS,
               name: 'Target',
               mesh: 'SubResource("BoxMesh_1")',
               surfaceMaterialOverrides: new Map(),

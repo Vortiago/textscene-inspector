@@ -8,13 +8,9 @@
 
 import { warn } from '../../../logger.js';
 import { parseGodotFloat } from '../../../godot/number.js';
-import {
-  dictBase64Field,
-  dictCallField,
-  dictNumberField,
-  dictStringField,
-} from '../../../godot/variantParser.js';
+import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variantParser.js';
 import { parseGodotInt } from '../../../godot/int.js';
+import { decodeBase64Bytes } from '../../../godot/packedBytes.js';
 import { unquoteString } from '../../../parser/utils.js';
 
 /** A surface's declared `AABB(px, py, pz, sx, sy, sz)`: a compressed surface's position scale. */
@@ -92,42 +88,51 @@ export function readMaterialRef(block: string): string | undefined {
   return /"material"\s*:\s*([^,\n}]+)/.exec(block)?.[1]?.trim();
 }
 
-/** Written only by `base64Field`. Never cleared: a mesh reads a fixed handful of keys. */
-const BASE64_FIELDS = new Map<string, RegExp>();
+/** Written only by `byteArrayField`. Never cleared: a mesh reads a fixed handful of keys. */
+const BYTE_ARRAY_FIELDS = new Map<string, (text: string) => string | null>();
 
-/** The `key` field's pattern, built once per key rather than once per surface. */
-function base64Field(key: string): RegExp {
-  let field = BASE64_FIELDS.get(key);
+/** The `key` field's reader, built once per key rather than once per surface. */
+function byteArrayField(key: string): (text: string) => string | null {
+  let field = BYTE_ARRAY_FIELDS.get(key);
   if (!field) {
-    field = dictBase64Field(key);
-    BASE64_FIELDS.set(key, field);
+    field = dictCallField(key, 'PackedByteArray');
+    BYTE_ARRAY_FIELDS.set(key, field);
   }
   return field;
 }
 
 /**
- * Extract the base64 payload of a `"<key>": PackedByteArray("…")` field. Its compat form, a
- * comma list of bytes, is not read. A corrupt payload makes `atob` throw, which would fail the
- * whole mesh. An empty buffer instead lets the caller drop just this surface.
+ * The bytes of a `"<key>": PackedByteArray(…)` field: the quoted base64 the writer emits, or the
+ * list of bytes it emits for a file whose every byte array holds 64 bytes or fewer
+ * (`resource_format_text.cpp:1724-1732`). A corrupt payload gives an empty buffer and a warning,
+ * so the caller drops just this surface rather than the whole mesh.
  */
 export function readPackedBytes(block: string, key: string): Uint8Array {
-  const base64 = base64Field(key).exec(block)?.[1];
-  if (base64 === undefined) return new Uint8Array(0);
+  const body = byteArrayField(key)(block)?.trim();
+  if (!body) return new Uint8Array(0);
+  return body.startsWith('"') ? base64Bytes(body, key) : listedBytes(body, key);
+}
+
+function base64Bytes(quoted: string, key: string): Uint8Array {
   try {
-    return binaryStringBytes(atob(base64));
+    return decodeBase64Bytes(quoted.slice(1, -1));
   } catch {
     warn(`[ArrayMesh] ${key} is not valid base64 — ignoring the payload`);
     return new Uint8Array(0);
   }
 }
 
-/**
- * The bytes of an `atob` result, one char code (0 to 255) each. A plain loop into a preallocated
- * array, not `Uint8Array.from` with a mapper: that calls the mapper per character, over 20 times
- * slower on a 4 MB payload.
- */
-function binaryStringBytes(binary: string): Uint8Array {
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+/** Each element as the `uint8_t` Godot stores (`variant_parser.cpp:650`). */
+function listedBytes(body: string, key: string): Uint8Array {
+  const elements = body.split(',');
+  const bytes = new Uint8Array(elements.length);
+  for (const [i, element] of elements.entries()) {
+    const stored = parseGodotInt(element, 'uint8');
+    if (stored === null || Number.isNaN(stored)) {
+      warn(`[ArrayMesh] ${key} holds "${element.trim()}", which is no byte — ignoring the payload`);
+      return new Uint8Array(0);
+    }
+    bytes[i] = stored;
+  }
   return bytes;
 }

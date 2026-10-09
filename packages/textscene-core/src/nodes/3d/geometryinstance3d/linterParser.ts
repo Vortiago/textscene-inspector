@@ -9,9 +9,9 @@ import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { shape, v } from '../../../linter/validators/index.js';
 import { SHADOW_CASTING_SETTING_NAMES } from '../../../godot/rendering.js';
+import { VISIBILITY_RANGE_FADE_MODE_NAMES } from '../../../godot/visibilityRange.js';
 
 const GI_MODE = { 0: 'DISABLED', 1: 'STATIC', 2: 'DYNAMIC' };
-const VISIBILITY_RANGE_FADE_MODE = { 0: 'DISABLED', 1: 'SELF', 2: 'DEPENDENCIES' };
 
 validatorRegistry.registerAll('GeometryInstance3D', {
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::INT, "cast_shadow",
@@ -112,9 +112,15 @@ validatorRegistry.registerAll('GeometryInstance3D', {
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "visibility_range_fade_mode",
   // PROPERTY_HINT_ENUM, "Disabled,Self,Dependencies"). set_visibility_range_fade_mode:285-289
   // is a bare assignment.
-  visibility_range_fade_mode: v.enumInt('visibility_range_fade_mode', 0, 2, VISIBILITY_RANGE_FADE_MODE, {
-    hinted: 'visual_instance_3d.cpp:619',
-  }),
+  visibility_range_fade_mode: v.enumInt(
+    'visibility_range_fade_mode',
+    0,
+    2,
+    VISIBILITY_RANGE_FADE_MODE_NAMES,
+    {
+      hinted: 'visual_instance_3d.cpp:619',
+    }
+  ),
 
   // VisualInstance3D declares both sorting keys `PROPERTY_USAGE_NONE`, and
   // `GeometryInstance3D::_validate_property` restores `PROPERTY_USAGE_DEFAULT`, so

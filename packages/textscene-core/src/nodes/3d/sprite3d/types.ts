@@ -8,6 +8,7 @@ import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
 import type { Color } from '../../../utils/colorParser';
 import type { Vector2 } from '../../../parser/vectors';
 import { BillboardMode } from '../../../godot/billboard';
+import { AxisMode } from '../../../godot/vector3Axis';
 
 /** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
 export { BillboardMode };
@@ -50,15 +51,8 @@ export enum TextureFilterMode {
   TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC = 5,
 }
 
-/**
- * Axis enum used when `billboard === BILLBOARD_FIXED_Y` to declare which
- * axis the sprite locks to.
- */
-export enum AxisMode {
-  AXIS_X = 0,
-  AXIS_Y = 1,
-  AXIS_Z = 2,
-}
+/** `Vector3::Axis`, the axis the quad's normal points along. */
+export { AxisMode };
 
 /**
  * Rect2 (Godot rect resource): a rectangle in 2D space with float coords.

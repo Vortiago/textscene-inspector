@@ -47,6 +47,7 @@ vi.mock('@textscene/core', () => ({
     captured.provideFile = vi.fn();
     return { loader: { provideFile: captured.provideFile } };
   }),
+  PENDING_CAPTURE: { status: 'pending' },
   ResourceLoaderProvider: ({ children }: { children: ReactNode }) => children,
   TscnPreviewShell: function FakeShell(props: CapturedShellProps) {
     captured.shellProps = props;

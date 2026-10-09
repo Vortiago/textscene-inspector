@@ -53,15 +53,9 @@ ${base.parserTestCases(typeName)}
   );
   files.set(
     'Component.tsx',
-    `/** ${typeName} render component — transform group wrapping children. */
-
-import type { NodeComponentProps } from '${toSrc}r3f/NodeComponentRegistry';
-import { ${base.component} } from '${toBase}/Component';
-
-export function ${typeName}({ node, children }: NodeComponentProps) {
-  return <${base.component} node={node}>{children}</${base.component}>;
-}
-`
+    base.geometryInstanceDrawer
+      ? geometryInstanceComponent(typeName, toSrc)
+      : plainComponent(typeName, base, toSrc, toBase)
   );
   files.set(
     'Component.test.tsx',
@@ -69,12 +63,16 @@ export function ${typeName}({ node, children }: NodeComponentProps) {
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '${toSrc}parser/types';
 import { parse${typeName} } from './parser';
-import { ${typeName} } from './Component';
+import './index.r3f';
+import { registeredComponent } from '${toSrc}r3f/testing/registeredComponent';
+
+const ${typeName} = registeredComponent('${typeName}');
 
 const baseNode: TscnNode = {
   name: 'My${typeName}',
   type: '${typeName}',
   children: [],
+  rawProperties: {},
   properties: parse${typeName}(
     { type: 'node', attributes: { type: '${typeName}', name: 'My${typeName}' } },
     {}
@@ -129,9 +127,7 @@ nodeComponentRegistry.register({
   typeName: '${typeName}',
   Component: ${typeName},
 ${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}});
-
-export { ${typeName} };
-`
+${base.geometryInstanceDrawer ? '' : `\nexport { ${typeName} };\n`}`
   );
   // It imports `./index` itself, so it proves the slice's own self-registration and nothing
   // about the aggregation barrels, which `parserBarrelCompleteness` checks.
@@ -157,10 +153,64 @@ describe('${typeName} registration', () => {
   });
 
   it('registers its own component, so it reads as drawing', () => {
-    expect(nodeComponentRegistry.get('${typeName}')).toBe(${typeName});
+    ${registeredComponentAssertion(typeName, base)}
   });
 });
 `
   );
   return files;
+}
+
+/**
+ * The registration test's check that the registry mounts the slice's component. The registry
+ * mounts a GeometryInstance3D drawer in `withGeometryInstance`, so it checks the wrapper's name.
+ */
+function registeredComponentAssertion(typeName, base) {
+  return base.geometryInstanceDrawer
+    ? `expect(nodeComponentRegistry.get('${typeName}')?.displayName).toBe('withGeometryInstance(${typeName})');`
+    : `expect(nodeComponentRegistry.get('${typeName}')).toBe(${typeName});`;
+}
+
+/** A transform group around the node's children, the base's own component. */
+function plainComponent(typeName, base, toSrc, toBase) {
+  return `/** ${typeName} render component: a transform group around its children. */
+
+import type { NodeComponentProps } from '${toSrc}r3f/NodeComponentRegistry';
+import { ${base.component} } from '${toBase}/Component';
+
+export function ${typeName}({ node, children }: NodeComponentProps) {
+  return <${base.component} node={node}>{children}</${base.component}>;
+}
+`;
+}
+
+/**
+ * A GeometryInstance3D's drawer, which the registry mounts in `withGeometryInstance` so the node
+ * holds its place in the scene cull. Until it draws a box of its own, the cull cannot measure the
+ * instance and leaves it as it is.
+ */
+function geometryInstanceComponent(typeName, toSrc) {
+  return `/**
+ * ${typeName} render component: a transform group around its children, which holds the node's
+ * place in the scene cull.
+ */
+
+import { useMemo, useRef } from 'react';
+import type * as THREE from 'three';
+import type { NodeComponentProps } from '${toSrc}r3f/NodeComponentRegistry';
+import { Node3D } from '${toSrc}nodes/base/node3d/Component';
+import { boxPlacement } from '${toSrc}r3f/visibilityRange/placements';
+import { useGeometryInstance } from '${toSrc}r3f/visibilityRange/geometryInstance';
+
+export function ${typeName}({ node, children }: NodeComponentProps) {
+  const nodeRef = useRef<THREE.Group | null>(null);
+  const placement = useMemo(() => boxPlacement(nodeRef, null), []);
+  useGeometryInstance(placement);
+  return (
+    <Node3D node={node} ref={nodeRef}>
+      {children}
+    </Node3D>
+  );
+}
+`;
 }

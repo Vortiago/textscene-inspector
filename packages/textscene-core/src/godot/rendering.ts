@@ -4,6 +4,8 @@
  * diverge. Each constant carries the numbers, not the grounding: cite the setter's `file:line`.
  */
 
+import { enumNamesByValue } from './enumNames.js';
+
 /**
  * `RenderingServer::MATERIAL_RENDER_PRIORITY_MIN` / `_MAX` (`servers/rendering/rendering_server.h:258-259`),
  * enforced: each setter opens with `ERR_FAIL_COND(p_priority < MIN || p_priority > MAX)` and refuses, not clamps.
@@ -67,14 +69,5 @@ export enum ShadowCastingSetting {
   SHADOWS_ONLY = 3,
 }
 
-/**
- * Each `ShadowCastingSetting` name by its integer, as a validator or an inspector names it. The
- * numeric members only: a TS enum object also maps each name back to its integer.
- */
-export const SHADOW_CASTING_SETTING_NAMES: Readonly<Record<number, string>> = Object.freeze(
-  Object.fromEntries(
-    Object.entries(ShadowCastingSetting)
-      .filter(([, value]) => typeof value === 'number')
-      .map(([name, value]) => [value, name])
-  )
-);
+/** Each `ShadowCastingSetting` name by its integer, as a validator or an inspector names it. */
+export const SHADOW_CASTING_SETTING_NAMES = enumNamesByValue(ShadowCastingSetting);

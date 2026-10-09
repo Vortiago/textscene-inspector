@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
+import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
 
 function build(
   properties: Record<string, string>,
@@ -68,10 +69,11 @@ describe('the imperative adapter — scalar base', () => {
     expect(material.depthWrite).toBe(false);
   });
 
-  it('keeps depth writes for DEPTH_PRE_PASS (mode 4), which exists to have them', () => {
+  it('hands the depth of DEPTH_PRE_PASS (mode 4) to the depth prepass', () => {
     const material = build({ transparency: '4' });
     expect(material.transparent).toBe(true);
-    expect(material.depthWrite).toBe(true);
+    expect(material.depthWrite).toBe(false);
+    expect(opaquePrepassOf(material)).toBe(DRAWN_OPAQUE_PREPASS);
   });
 
   it('turns ALPHA_SCISSOR (mode 2) into an opaque alphaTest cutout', () => {

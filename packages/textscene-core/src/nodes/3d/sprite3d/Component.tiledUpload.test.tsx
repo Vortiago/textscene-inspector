@@ -5,13 +5,16 @@
  */
 import { describe, expect, it } from 'vitest';
 import { parseSprite3D } from './parser';
-import { Sprite3D } from './Component';
 import {
   mountSheetSprite,
   SHEET_BANDS,
   SHEET_HEIGHT,
   SHEET_REF,
 } from '../../../r3f/tiledUpload/tiledSheet.testkit';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const Sprite3D = registeredComponent('Sprite3D');
 
 const HFRAMES = 4;
 

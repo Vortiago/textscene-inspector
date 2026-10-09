@@ -10,6 +10,7 @@ import { warn } from '../logger';
 import { parseVector2, type Vector2 } from './vectors';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../godot/number.js';
 import { slotComponents, storedFromFloat, storedVector2i, type IntWidth } from '../godot/int.js';
+import type { Aabb } from '../godot/aabb.js';
 
 import { nodePathLiteral, stringToInt, boolSlotValue } from '../godot/index.js';
 
@@ -67,6 +68,24 @@ export function parseOptionalRect2(value: string | undefined, context = 'value')
     return undefined;
   }
   return { x: c[0]!, y: c[1]!, width: c[2]!, height: c[3]! };
+}
+
+const AABB_PATTERN = slotTupleRegex('AABB', 6);
+
+/** `AABB(x, y, z, w, h, d)` as a box, or undefined when absent (silently) or malformed (with a warning). */
+export function parseOptionalAabb(value: string | undefined, context = 'value'): Aabb | undefined {
+  if (value === undefined) return undefined;
+  const m = AABB_PATTERN.exec(value);
+  if (!m) {
+    warn(`${context}: invalid AABB "${value}", treating as unset`);
+    return undefined;
+  }
+  const c = slotComponents(value, 'AABB', m.slice(1, 7));
+  if (!allFinite(c)) {
+    warn(`${context}: non-finite AABB "${value}"`);
+    return undefined;
+  }
+  return { position: { x: c[0]!, y: c[1]!, z: c[2]! }, size: { x: c[3]!, y: c[4]!, z: c[5]! } };
 }
 
 export function floatOr(value: string | undefined, fallback: number, context = 'value'): number {

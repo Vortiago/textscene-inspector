@@ -16,6 +16,7 @@ import { createFakeResourceLoader } from '../resources/testing/createFakeResourc
 import { initGlbModules } from '../resources/processing/glbProcessing';
 
 import './nodes/index';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../nodes/3d/geometryinstance3d/types';
 
 beforeAll(async () => {
   await initGlbModules();
@@ -54,6 +55,7 @@ function hostGraftedMesh(): TscnNode {
     children: [],
     instanceSubPath: 'Anchor',
     properties: {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name: 'Painted',
       mesh: 'SubResource("Box")',
       // Authored in the HOST, so this `1` is the host's RED one.

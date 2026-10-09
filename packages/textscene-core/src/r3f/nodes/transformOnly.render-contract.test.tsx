@@ -1,7 +1,7 @@
 /**
  * ADR-0008's rendered contract for every non-visual 3D type: a plain Group with no
  * mesh of its own, whose children inherit its Transform3D and its `visible`.
- * Registry identity is pinned in r3f/drawlessBase.guard.test.ts.
+ * Each slice's registration test pins its component.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -12,6 +12,7 @@ import { NodeDispatcher } from '../NodeDispatcher';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import { descendsFrom } from '../../godot/nodeBaseTypes.js';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 
 // Side-effect import: registers every node component (same barrel the apps use).
 import './index';
@@ -40,7 +41,8 @@ function subjectNode(type: string, children: TscnNode[] = []): TscnNode {
     name: 'Subject',
     type,
     children,
-    properties: { name: 'Subject', transform: translated },
+    // A GeometryInstance3D parse carries its instance state, which every other type ignores.
+    properties: { ...GEOMETRY_INSTANCE_DEFAULTS, name: 'Subject', transform: translated },
   };
 }
 

@@ -57,6 +57,12 @@ const ENVIRONMENT_WITH_SKY: TscnInternalResource = {
   data: { background_mode: '2', sky: 'SubResource("Sky_1")' },
 };
 
+const PROCEDURAL_MATERIAL: TscnInternalResource = {
+  id: 'Mat_1',
+  type: 'ProceduralSkyMaterial',
+  data: { sky_top_color: 'Color(0, 1, 1, 1)' },
+};
+
 describe('useResolvedEnvironment — references held in an external .tres', () => {
   it('follows a sky_material held in an ExtResource (the truck town witness)', async () => {
     const resolved = await resolve(
@@ -69,7 +75,7 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
     expect(resolved?.sky?.kind).toBe('procedural');
   });
 
-  it('follows a Sky held in an ExtResource', async () => {
+  it('follows a Sky held in an ExtResource, and its material in that file', async () => {
     const resolved = await resolve(
       'SubResource("Environment_1")',
       [
@@ -78,12 +84,31 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
           type: 'Environment',
           data: { background_mode: '2', sky: 'ExtResource("1_skyres")' },
         },
-        { id: 'Mat_1', type: 'ProceduralSkyMaterial', data: { sky_top_color: 'Color(0, 1, 1, 1)' } },
       ],
       [{ id: '1_skyres', path: 'res://sky.tres', type: 'Sky' }],
-      { 'res://sky.tres': tres('Sky', { sky_material: 'SubResource("Mat_1")' }) }
+      {
+        'res://sky.tres': {
+          ...tres('Sky', { sky_material: 'SubResource("Mat_1")' }),
+          subResources: [PROCEDURAL_MATERIAL],
+        },
+      }
     );
     expect(resolved?.sky?.kind).toBe('procedural');
+  });
+
+  it('reads a .tres SubResource from that file, never the scene id it shares', async () => {
+    const resolved = await resolve(
+      'ExtResource("1_env")',
+      [{ id: 'Sky_1', type: 'Sky', data: { sky_material: 'SubResource("Mat_1")' } }, PROCEDURAL_MATERIAL],
+      [{ id: '1_env', path: 'res://env.tres', type: 'Environment' }],
+      {
+        'res://env.tres': {
+          ...tres('Environment', { background_mode: '2', sky: 'SubResource("Sky_1")' }),
+          subResources: [{ id: 'Sky_1', type: 'Sky', data: {} }],
+        },
+      }
+    );
+    expect(resolved?.sky).toBeNull();
   });
 
   it('follows the whole Environment held in an ExtResource', async () => {

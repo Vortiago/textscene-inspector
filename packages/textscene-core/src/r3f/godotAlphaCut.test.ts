@@ -4,7 +4,7 @@
  * `sprite_3d.cpp:285-297` / `label_3d.cpp:386-393` and the arms they select.
  */
 import { describe, expect, it } from 'vitest';
-import { alphaCutSurface, NO_TRANSPARENT_FLAG } from './godotAlphaCut';
+import { alphaCutSurface, joinsShadowPass, NO_TRANSPARENT_FLAG } from './godotAlphaCut';
 
 const DISABLED = 0;
 const DISCARD = 1;
@@ -18,6 +18,7 @@ describe('alphaCutSurface', () => {
     expect(alphaCutSurface({ mode: DISCARD, scissorThreshold: 0.25, transparentFlag: true })).toEqual({
       alphaTest: 0.25,
       alphaHash: false,
+      depthPrepass: false,
       depthWrite: true,
       blended: false,
       readsAlbedoAlpha: true,
@@ -30,6 +31,7 @@ describe('alphaCutSurface', () => {
     expect(alphaCutSurface({ mode: HASH, scissorThreshold: 0.25, transparentFlag: true })).toEqual({
       alphaTest: 0,
       alphaHash: true,
+      depthPrepass: false,
       depthWrite: true,
       blended: false,
       readsAlbedoAlpha: true,
@@ -37,13 +39,14 @@ describe('alphaCutSurface', () => {
     });
   });
 
-  it('OPAQUE_PREPASS keeps blending, writes depth, and ignores the node threshold', () => {
-    // TRANSPARENCY_ALPHA_DEPTH_PRE_PASS (`sprite_3d.cpp:289`) cuts against the
-    // SCENE's threshold, so the authored 0.25 must not reach it.
+  it('OPAQUE_PREPASS blends uncut, leaves depth to its prepass, and ignores the node threshold', () => {
+    // TRANSPARENCY_ALPHA_DEPTH_PRE_PASS (`sprite_3d.cpp:289`) cuts its depth draws at each pass's
+    // `opaque_prepass_threshold`, so the authored 0.25 must not reach it.
     expect(alphaCutSurface({ mode: OPAQUE_PREPASS, scissorThreshold: 0.25, transparentFlag: true })).toEqual({
-      alphaTest: 0.5,
+      alphaTest: 0,
       alphaHash: false,
-      depthWrite: true,
+      depthPrepass: true,
+      depthWrite: false,
       blended: true,
       readsAlbedoAlpha: true,
       opaqueAfterCut: false,
@@ -56,6 +59,7 @@ describe('alphaCutSurface', () => {
     expect(alphaCutSurface({ mode: DISABLED, scissorThreshold: 0.25, transparentFlag: true })).toEqual({
       alphaTest: 0,
       alphaHash: false,
+      depthPrepass: false,
       depthWrite: false,
       blended: true,
       readsAlbedoAlpha: true,
@@ -77,6 +81,7 @@ describe('alphaCutSurface', () => {
       expect(alphaCutSurface({ mode, scissorThreshold: 0.25, transparentFlag: false })).toEqual({
         alphaTest: 0,
         alphaHash: false,
+        depthPrepass: false,
         depthWrite: true,
         blended: false,
         readsAlbedoAlpha: false,
@@ -93,5 +98,28 @@ describe('alphaCutSurface', () => {
         alphaCutSurface({ mode, scissorThreshold: 0.25, transparentFlag: true })
       );
     }
+  });
+});
+
+describe('joinsShadowPass', () => {
+  const cut = (mode: number) => alphaCutSurface({ mode, scissorThreshold: 0.5, transparentFlag: true });
+
+  it('takes a cut surface, which the opaque list draws', () => {
+    expect([DISCARD, HASH].map((mode) => joinsShadowPass(cut(mode), true))).toEqual([true, true]);
+  });
+
+  it('takes an OPAQUE_PREPASS surface, which the alpha pass draws through a depth prepass', () => {
+    expect(joinsShadowPass(cut(OPAQUE_PREPASS), true)).toBe(true);
+  });
+
+  it('leaves out a blended surface, which draws no depth', () => {
+    expect(joinsShadowPass(cut(DISABLED), true)).toBe(false);
+  });
+
+  it('leaves out any surface with no depth test, which moves it to the alpha pass (edge case)', () => {
+    expect([DISCARD, OPAQUE_PREPASS].map((mode) => joinsShadowPass(cut(mode), false))).toEqual([
+      false,
+      false,
+    ]);
   });
 });

@@ -9,9 +9,7 @@ import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v, layerBitmask } from '../../../linter/validators/index.js';
 import { SHADOW_CASTING_SETTING_NAMES } from '../../../godot/rendering.js';
-
-/** `GeometryInstance3D::VisibilityRangeFadeMode`, reused by name in this class's own hint string. */
-const VISIBILITY_RANGE_FADE_MODE = { 0: 'DISABLED', 1: 'SELF', 2: 'DEPENDENCIES' };
+import { VISIBILITY_RANGE_FADE_MODE_NAMES } from '../../../godot/visibilityRange.js';
 
 validatorRegistry.registerAll('ImporterMeshInstance3D', {
   // importer_mesh_instance_3d.cpp:164, PROPERTY_HINT_RESOURCE_TYPE "ImporterMesh".
@@ -59,7 +57,13 @@ validatorRegistry.registerAll('ImporterMeshInstance3D', {
   }),
   // importer_mesh_instance_3d.cpp:176, PROPERTY_HINT_ENUM "Disabled,Self,
   // Dependencies". set_visibility_range_fade_mode (:124-127) is a bare assignment.
-  visibility_range_fade_mode: v.enumInt('visibility_range_fade_mode', 0, 2, VISIBILITY_RANGE_FADE_MODE, {
-    hinted: 'importer_mesh_instance_3d.cpp:176',
-  }),
+  visibility_range_fade_mode: v.enumInt(
+    'visibility_range_fade_mode',
+    0,
+    2,
+    VISIBILITY_RANGE_FADE_MODE_NAMES,
+    {
+      hinted: 'importer_mesh_instance_3d.cpp:176',
+    }
+  ),
 });

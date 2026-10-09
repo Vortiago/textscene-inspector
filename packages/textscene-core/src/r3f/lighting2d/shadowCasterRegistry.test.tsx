@@ -6,7 +6,6 @@ import {
   ShadowCasterProvider,
   useShadowCaster,
   useShadowCasterRegistry,
-  visibleInTree,
   worldShadowCasters,
   type ShadowCaster,
   type ShadowCasterRegistry,
@@ -94,24 +93,6 @@ describe('createShadowCasterRegistry', () => {
     unsubscribe();
     registry.add(caster(new THREE.Group()));
     expect(listener).toHaveBeenCalledTimes(2);
-  });
-});
-
-describe('visibleInTree', () => {
-  it('is true for a visible object under a visible parent', () => {
-    expect(visibleInTree(parented())).toBe(true);
-  });
-
-  it('is false when the object itself is hidden', () => {
-    const child = parented();
-    child.visible = false;
-    expect(visibleInTree(child)).toBe(false);
-  });
-
-  it('is false when an ancestor is hidden', () => {
-    const child = parented();
-    child.parent!.visible = false;
-    expect(visibleInTree(child)).toBe(false);
   });
 });
 

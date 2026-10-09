@@ -74,6 +74,22 @@ export function packedTupleNumbers(value: string, type: PackedTupleType): number
   return out;
 }
 
+// All three spellings each slot loads: `can_convert_strict` lists ARRAY as a source
+// for every PACKED_* type (variant.cpp:467-473).
+const PACKED_FLOAT32_FORMS = packedArrayForms('PackedFloat32Array');
+
+/** Parse a `PackedFloat32Array` slot, in any of its three spellings, into a `number[]`. */
+export function parsePackedFloat32Array(value: string): number[] {
+  const matched = packedArrayBody(PACKED_FLOAT32_FORMS, value);
+  if (!matched) {
+    throw new Error(`Invalid PackedFloat32Array format: ${value}`);
+  }
+  // A scalar slot's bare and typed bodies are the same comma-separated numbers
+  // the constructor's flat argument list holds, so one reader covers all three.
+  if (matched.body === '') return [];
+  return floatElements(matched.body, 'PackedFloat32Array', value);
+}
+
 /** The float32 reader of one packed tuple type, the precision geometry callers take. */
 function float32Reader(type: PackedTupleType): (value: string) => Float32Array {
   return (value) => new Float32Array(packedTupleNumbers(value, type));

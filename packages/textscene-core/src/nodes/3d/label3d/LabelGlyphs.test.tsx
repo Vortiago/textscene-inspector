@@ -5,6 +5,8 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
+import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
@@ -13,10 +15,13 @@ import {
   CANVAS_TEXT_VERTICAL_PAD_PX,
 } from '../../../r3f/controls/native/text/canvasTextPainter';
 import LabelGlyphs from './LabelGlyphs';
+import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { Label3DProperties } from './types';
-import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
-import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import { AlphaCutMode, HorizontalAlignment, TextureFilter } from './types';
+import { labelProperties } from './testing/labelProperties';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
+import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
 
 // happy-dom has neither `FontFace` nor `document.fonts`, so the real bundled
 // registration can only ever answer `undefined` here (`sceneFontLoader.ts`'s
@@ -32,44 +37,30 @@ beforeEach(() => {
   loader.metrics = createOpenSansCanvasFontMetrics('label3d-test-family');
 });
 
-function props(overrides: Partial<Label3DProperties> = {}): Label3DProperties {
-  return {
-    ...GEOMETRY_INSTANCE_DEFAULTS,
-    name: 'L',
-    text: 'Hi',
-    pixel_size: 0.01,
-    billboard: BillboardMode.BILLBOARD_DISABLED,
-    modulate: { r: 1, g: 1, b: 1, a: 1 },
-    outline_size: 0,
-    outline_modulate: { r: 0, g: 0, b: 0, a: 1 },
-    double_sided: true,
-    font_size: 32,
-    line_spacing: 0,
-    horizontal_alignment: HorizontalAlignment.CENTER,
-    no_depth_test: false,
-    render_priority: 0,
-    outline_render_priority: -1,
-    alpha_cut: AlphaCutMode.DISABLED,
-    alpha_scissor_threshold: 0.5,
-    fixed_size: false,
-    texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
-    ...overrides,
-  };
-}
-
 function boundingSize(mesh: THREE.Mesh): THREE.Vector3 {
   mesh.geometry.computeBoundingBox();
   const box = mesh.geometry.boundingBox!;
   return box.getSize(new THREE.Vector3());
 }
 
+/** The glyphs inside their node's GeometryInstance3D scope, as `Component.tsx` mounts them. */
+const ScopedGlyphs = withGeometryInstance(({ node }: NodeComponentProps) => (
+  <LabelGlyphs nodeRef={{ current: null }} properties={node.properties as Label3DProperties} />
+));
+
 async function render(p: Label3DProperties) {
-  return ReactThreeTestRenderer.create(<LabelGlyphs properties={p} />);
+  const node = { name: 'L', type: 'Label3D', rawProperties: {}, children: [], properties: p };
+  return ReactThreeTestRenderer.create(<ScopedGlyphs node={node} />);
+}
+
+/** One group per line, inside the group the visibility range shows or hides. */
+function lineGroups(renderer: Awaited<ReturnType<typeof render>>): THREE.Group[] {
+  return renderer.scene.children[0]!.children.map((c) => c.instance as THREE.Group);
 }
 
 describe('<LabelGlyphs> — the canvas rasteriser gate', () => {
   it('paints through the canvas rasteriser, not the MSDF atlas (Godot default project font is not MSDF: text_server.cpp:2386)', async () => {
-    const renderer = await render(props({ text: 'Hi' }));
+    const renderer = await render(labelProperties({ text: 'Hi' }));
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const material = mesh.material as THREE.MeshBasicMaterial;
     expect(material.type).toBe('MeshBasicMaterial');
@@ -78,21 +69,21 @@ describe('<LabelGlyphs> — the canvas rasteriser gate', () => {
 
   it('paints nothing at all until the bundled font registration resolves (an unregistered family rasterises a SYSTEM font silently)', async () => {
     loader.metrics = undefined;
-    const renderer = await render(props({ text: 'Hi' }));
+    const renderer = await render(labelProperties({ text: 'Hi' }));
     expect(renderer.scene.findAllByType('Mesh').length).toBe(0);
   });
 });
 
 describe('<LabelGlyphs>', () => {
   it('renders a Mesh with a non-empty BufferGeometry for non-empty text', async () => {
-    const renderer = await render(props({ text: 'Hi' }));
+    const renderer = await render(labelProperties({ text: 'Hi' }));
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     expect(mesh.geometry.type).toBe('BufferGeometry');
     expect(mesh.geometry.getAttribute('position').count).toBeGreaterThan(0);
   });
 
   it('renders no glyph ink for empty text — a zero-width content box, no throw', async () => {
-    const renderer = await render(props({ text: '' }));
+    const renderer = await render(labelProperties({ text: '' }));
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     // The raster painter always emits its one quad. "No ink" is the quad at
     // the one device pixel a canvas must have, since with no outline stroke
@@ -101,8 +92,8 @@ describe('<LabelGlyphs>', () => {
   });
 
   it('scales glyph geometry with font_size — to within the whole-pixel advance round, which is not proportional', async () => {
-    const small = await render(props({ text: 'Hello', font_size: 32 }));
-    const large = await render(props({ text: 'Hello', font_size: 64 }));
+    const small = await render(labelProperties({ text: 'Hello', font_size: 32 }));
+    const large = await render(labelProperties({ text: 'Hello', font_size: 64 }));
     const smallMesh = small.scene.findByType('Mesh').instance as THREE.Mesh;
     const largeMesh = large.scene.findByType('Mesh').instance as THREE.Mesh;
     const smallSize = boundingSize(smallMesh);
@@ -120,7 +111,7 @@ describe('<LabelGlyphs>', () => {
   });
 
   it("applies modulate's alpha as the material opacity (its rgb is baked into the raster, sRGB, and decoded by the texture's own tag)", async () => {
-    const renderer = await render(props({ modulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 } }));
+    const renderer = await render(labelProperties({ modulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 } }));
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const material = mesh.material as THREE.MeshBasicMaterial;
     expect(material.opacity).toBeCloseTo(0.5, 6);
@@ -128,14 +119,14 @@ describe('<LabelGlyphs>', () => {
   });
 
   it('uses a transparent material, so a translucent modulate blends over what is behind it', async () => {
-    const renderer = await render(props());
+    const renderer = await render(labelProperties());
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     expect((mesh.material as THREE.Material).transparent).toBe(true);
   });
 
   it('no_depth_test=true → material.depthTest === false; default false → true', async () => {
-    const on = await render(props({ no_depth_test: true }));
-    const off = await render(props({ no_depth_test: false }));
+    const on = await render(labelProperties({ no_depth_test: true }));
+    const off = await render(labelProperties({ no_depth_test: false }));
     expect(((on.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).depthTest).toBe(
       false
     );
@@ -145,8 +136,8 @@ describe('<LabelGlyphs>', () => {
   });
 
   it('double_sided=false → FrontSide material; default true → DoubleSide', async () => {
-    const front = await render(props({ double_sided: false }));
-    const double = await render(props({ double_sided: true }));
+    const front = await render(labelProperties({ double_sided: false }));
+    const double = await render(labelProperties({ double_sided: true }));
     expect(((front.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).side).toBe(
       THREE.FrontSide
     );
@@ -163,7 +154,7 @@ describe('<LabelGlyphs>', () => {
 
     it('draws the outline as its own surface BEFORE the fill, at outline_render_priority then render_priority', async () => {
       const renderer = await render(
-        props({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 1 } })
+        labelProperties({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 1 } })
       );
       const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
       expect(meshes.length).toBe(2);
@@ -172,7 +163,7 @@ describe('<LabelGlyphs>', () => {
 
     it('carries outline_modulate alpha on the outline surface and modulate alpha on the fill', async () => {
       const renderer = await render(
-        props({
+        labelProperties({
           outline_size: 12,
           outline_modulate: { r: 1, g: 0, b: 0, a: 0.25 },
           modulate: { r: 1, g: 1, b: 1, a: 0.75 },
@@ -186,7 +177,7 @@ describe('<LabelGlyphs>', () => {
     });
 
     it('draws the fill alone when outline_size is 0', async () => {
-      const renderer = await render(props({ outline_size: 0 }));
+      const renderer = await render(labelProperties({ outline_size: 0 }));
       const meshes = renderer.scene.findAllByType('Mesh');
       expect(meshes.length).toBe(1);
       expect((meshes[0]!.instance as THREE.Mesh).renderOrder).toBe(0);
@@ -194,14 +185,14 @@ describe('<LabelGlyphs>', () => {
 
     it('draws the fill alone when outline_modulate.a is 0, even with outline_size > 0', async () => {
       const renderer = await render(
-        props({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 0 } })
+        labelProperties({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 0 } })
       );
       expect(renderer.scene.findAllByType('Mesh').length).toBe(1);
     });
 
     it("takes both surfaces' paint order from the authored priorities, not a hardcoded pair", async () => {
       const renderer = await render(
-        props({ outline_size: 12, render_priority: 5, outline_render_priority: 3 })
+        labelProperties({ outline_size: 12, render_priority: 5, outline_render_priority: 3 })
       );
       const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
       expect(meshes.map((m) => m.renderOrder)).toEqual([3, 5]);
@@ -218,14 +209,14 @@ describe('<LabelGlyphs>', () => {
     };
 
     it('defaults to linear filtering', async () => {
-      expect(mapFilters(await render(props()))).toEqual({
+      expect(mapFilters(await render(labelProperties()))).toEqual({
         mag: THREE.LinearFilter,
         min: THREE.LinearFilter,
       });
     });
 
     it('NEAREST magnifies the raster without smoothing', async () => {
-      expect(mapFilters(await render(props({ texture_filter: TextureFilter.NEAREST })))).toEqual({
+      expect(mapFilters(await render(labelProperties({ texture_filter: TextureFilter.NEAREST })))).toEqual({
         mag: THREE.NearestFilter,
         min: THREE.NearestFilter,
       });
@@ -233,10 +224,10 @@ describe('<LabelGlyphs>', () => {
 
     it('reads the nearest/linear bit of every mipmap variant, not just the two plain ones', async () => {
       const nearestMip = await render(
-        props({ texture_filter: TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC })
+        labelProperties({ texture_filter: TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC })
       );
       const linearMip = await render(
-        props({ texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC })
+        labelProperties({ texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC })
       );
       expect(mapFilters(nearestMip).mag).toBe(THREE.NearestFilter);
       expect(mapFilters(linearMip).mag).toBe(THREE.LinearFilter);
@@ -254,7 +245,7 @@ describe('<LabelGlyphs>', () => {
         .map((m) => (m.instance as THREE.Mesh).getWorldPosition(new THREE.Vector3()).z);
 
     it('DISABLED (default) orders by priority and leaves every surface at z=0', async () => {
-      const renderer = await render(props({ outline_size: 12 }));
+      const renderer = await render(labelProperties({ outline_size: 12 }));
       expect(surfaceZ(renderer)).toEqual([0, 0]);
       expect(renderer.scene.findAllByType('Mesh').map((m) => (m.instance as THREE.Mesh).renderOrder)).toEqual(
         [-1, 0]
@@ -262,7 +253,7 @@ describe('<LabelGlyphs>', () => {
     });
 
     it('DISCARD shifts each surface in Z by its own priority and stops ordering by it', async () => {
-      const renderer = await render(props({ outline_size: 12, alpha_cut: AlphaCutMode.DISCARD }));
+      const renderer = await render(labelProperties({ outline_size: 12, alpha_cut: AlphaCutMode.DISCARD }));
       expect(surfaceZ(renderer)).toEqual([-1, 0]);
       expect(renderer.scene.findAllByType('Mesh').map((m) => (m.instance as THREE.Mesh).renderOrder)).toEqual(
         [0, 0]
@@ -271,7 +262,7 @@ describe('<LabelGlyphs>', () => {
 
     it('shifts by the AUTHORED priorities, not the defaults', async () => {
       const renderer = await render(
-        props({
+        labelProperties({
           outline_size: 12,
           alpha_cut: AlphaCutMode.HASH,
           render_priority: 4,
@@ -294,7 +285,7 @@ describe('<LabelGlyphs>', () => {
       // (`scene_forward_clustered.glsl:1413-1415`) so the surface lands in the
       // opaque list and writes depth.
       const renderer = await render(
-        props({ outline_size: 12, alpha_cut: AlphaCutMode.DISCARD, alpha_scissor_threshold: 0.25 })
+        labelProperties({ outline_size: 12, alpha_cut: AlphaCutMode.DISCARD, alpha_scissor_threshold: 0.25 })
       );
       for (const material of materials(renderer)) {
         expect(material.alphaTest).toBe(0.25);
@@ -304,29 +295,40 @@ describe('<LabelGlyphs>', () => {
       }
     });
 
-    it('HASH cuts stochastically and paints opaque; OPAQUE_PREPASS keeps blending but writes depth', async () => {
-      // `label_3d.cpp:390,392`. The prepass cut is the scene's
-      // `opaque_prepass_threshold` (`render_forward_clustered.cpp:1791`), not
-      // the node's `alpha_scissor_threshold`, so authoring one must not move it.
-      const hash = await render(props({ alpha_cut: AlphaCutMode.HASH, alpha_scissor_threshold: 0.25 }));
+    it('HASH cuts stochastically and paints opaque', async () => {
+      // `label_3d.cpp:392`.
+      const hash = await render(
+        labelProperties({ alpha_cut: AlphaCutMode.HASH, alpha_scissor_threshold: 0.25 })
+      );
       const [hashMaterial] = materials(hash);
       expect(hashMaterial!.alphaHash).toBe(true);
       expect(hashMaterial!.alphaTest).toBe(0);
       expect(hashMaterial!.transparent).toBe(false);
       expect(hashMaterial!.depthWrite).toBe(true);
+    });
 
+    it('OPAQUE_PREPASS blends uncut and leaves its depth to the depth prepass', async () => {
+      // `label_3d.cpp:390`. The prepass cut is the scene's `opaque_prepass_threshold`
+      // (`render_forward_clustered.cpp:1791`), not the node's `alpha_scissor_threshold`.
       const prepass = await render(
-        props({ alpha_cut: AlphaCutMode.OPAQUE_PREPASS, alpha_scissor_threshold: 0.25 })
+        labelProperties({ alpha_cut: AlphaCutMode.OPAQUE_PREPASS, alpha_scissor_threshold: 0.25 })
       );
       const [prepassMaterial] = materials(prepass);
       expect(prepassMaterial!.alphaHash).toBe(false);
-      expect(prepassMaterial!.alphaTest).toBe(0.5);
+      expect(prepassMaterial!.alphaTest).toBe(0);
       expect(prepassMaterial!.transparent).toBe(true);
-      expect(prepassMaterial!.depthWrite).toBe(true);
+      expect(prepassMaterial!.depthWrite).toBe(false);
+      expect(opaquePrepassOf(prepassMaterial!)).toBe(DRAWN_OPAQUE_PREPASS);
+    });
+
+    it('HASH hashes at the authored alpha_hash_scale', async () => {
+      const renderer = await render(labelProperties({ alpha_cut: AlphaCutMode.HASH, alpha_hash_scale: 0.3 }));
+      const [material] = materials(renderer);
+      expect(material!.userData).toMatchObject(alphaHashScaleUserData(0.3));
     });
 
     it('DISABLED (default) paints TRANSPARENCY_ALPHA — blended, no cut, no depth write', async () => {
-      const renderer = await render(props({ alpha_scissor_threshold: 0.25 }));
+      const renderer = await render(labelProperties({ alpha_scissor_threshold: 0.25 }));
       const [material] = materials(renderer);
       expect(material!.transparent).toBe(true);
       expect(material!.depthWrite).toBe(false);
@@ -336,6 +338,9 @@ describe('<LabelGlyphs>', () => {
   });
 
   describe('transparency', () => {
+    /** A camera the cull fades the label for. */
+    const VIEW = manualCameraAt({ x: 0, y: 0, z: 5 });
+
     // GeometryInstance3D's: one fade alpha for the fill and the outline alike.
     const materials = (renderer: Awaited<ReturnType<typeof render>>) =>
       renderer.scene
@@ -344,13 +349,19 @@ describe('<LabelGlyphs>', () => {
 
     it('multiplies the fade alpha into both surfaces', async () => {
       const renderer = await render(
-        props({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 0.5 }, transparency: 0.5 })
+        labelProperties({
+          outline_size: 12,
+          outline_modulate: { r: 0, g: 0, b: 0, a: 0.5 },
+          transparency: 0.5,
+        })
       );
+      await renderScene(renderer, VIEW);
       expect(materials(renderer).map((m) => m.opacity)).toEqual([0.5 * HALF_FADE_ALPHA, HALF_FADE_ALPHA]);
     });
 
     it('writes a discard-cut label unblended in the alpha pass', async () => {
-      const renderer = await render(props({ alpha_cut: AlphaCutMode.DISCARD, transparency: 0.5 }));
+      const renderer = await render(labelProperties({ alpha_cut: AlphaCutMode.DISCARD, transparency: 0.5 }));
+      await renderScene(renderer, VIEW);
       const [material] = materials(renderer);
       expect(material).toMatchObject({ transparent: true, depthWrite: false, blending: THREE.NoBlending });
     });
@@ -358,8 +369,8 @@ describe('<LabelGlyphs>', () => {
 
   describe('multi-line text', () => {
     it('renders one line-group per newline-separated line, each exactly one linePitchPx apart', async () => {
-      const renderer = await render(props({ text: 'A\nB\nC', font_size: 32 }));
-      const groups = renderer.scene.children.map((c) => c.instance as THREE.Group);
+      const renderer = await render(labelProperties({ text: 'A\nB\nC', font_size: 32 }));
+      const groups = lineGroups(renderer);
       expect(groups.length).toBe(3);
       // Each line is its own mesh in its own group, not one quad whose
       // PlaneGeometry.height grows, so each group's Y sits one line pitch lower.
@@ -370,8 +381,8 @@ describe('<LabelGlyphs>', () => {
     });
 
     it('sizes each line-group from ITS OWN width, not the concatenated string — the widest line bounds the whole label', async () => {
-      const oneLine = await render(props({ text: 'ABCDEFG' }));
-      const twoLines = await render(props({ text: 'AB\nCDEFG' }));
+      const oneLine = await render(labelProperties({ text: 'ABCDEFG' }));
+      const twoLines = await render(labelProperties({ text: 'AB\nCDEFG' }));
       const oneMesh = oneLine.scene.findByType('Mesh').instance as THREE.Mesh;
       const twoMeshes = twoLines.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
       // "AB\nCDEFG" has the same 7 glyphs as "ABCDEFG", so one merged geometry
@@ -384,27 +395,35 @@ describe('<LabelGlyphs>', () => {
     });
 
     it('counts a trailing newline as an empty final line, like Godot', async () => {
-      const plain = await render(props({ text: 'A' }));
-      const trailing = await render(props({ text: 'A\n' }));
-      expect(plain.scene.children.length).toBe(1);
-      expect(trailing.scene.children.length).toBe(2);
+      const plain = await render(labelProperties({ text: 'A' }));
+      const trailing = await render(labelProperties({ text: 'A\n' }));
+      expect(lineGroups(plain).length).toBe(1);
+      expect(lineGroups(trailing).length).toBe(2);
     });
   });
 
   describe('horizontal_alignment', () => {
     it('FILL positions a line the same as CENTER (no per-line justification, width is unparsed)', async () => {
-      const center = await render(props({ text: 'Hi', horizontal_alignment: HorizontalAlignment.CENTER }));
-      const fill = await render(props({ text: 'Hi', horizontal_alignment: HorizontalAlignment.FILL }));
-      const centerGroup = center.scene.children[0]!.instance as THREE.Group;
-      const fillGroup = fill.scene.children[0]!.instance as THREE.Group;
+      const center = await render(
+        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.CENTER })
+      );
+      const fill = await render(
+        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.FILL })
+      );
+      const centerGroup = lineGroups(center)[0]!;
+      const fillGroup = lineGroups(fill)[0]!;
       expect(fillGroup.position.x).toBeCloseTo(centerGroup.position.x, 6);
     });
 
     it('LEFT starts a line at x=0; RIGHT ends a line at x=0', async () => {
-      const left = await render(props({ text: 'Hi', horizontal_alignment: HorizontalAlignment.LEFT }));
-      const right = await render(props({ text: 'Hi', horizontal_alignment: HorizontalAlignment.RIGHT }));
-      const leftGroup = left.scene.children[0]!.instance as THREE.Group;
-      const rightGroup = right.scene.children[0]!.instance as THREE.Group;
+      const left = await render(
+        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.LEFT })
+      );
+      const right = await render(
+        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.RIGHT })
+      );
+      const leftGroup = lineGroups(left)[0]!;
+      const rightGroup = lineGroups(right)[0]!;
       expect(leftGroup.position.x).toBeCloseTo(0, 6);
       expect(rightGroup.position.x).toBeLessThan(0);
     });

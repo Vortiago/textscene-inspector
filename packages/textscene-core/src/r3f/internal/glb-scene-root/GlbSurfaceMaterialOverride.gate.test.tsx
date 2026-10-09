@@ -10,7 +10,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { initGlbModules } from '../../../resources/processing/glbProcessing';
 import { GLBSceneRoot, GLB_SCENE_ROOT_TYPE } from './Component';
-import { GlbOverridesProvider } from './GlbOverridesContext';
+import { GlbInstanceProvider } from './GlbInstanceContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { SceneStack } from '../../testing/SceneStack';
 import { NodePathProvider } from '../../contexts/NodePathContext';
@@ -41,6 +41,11 @@ const INTERNAL: TscnInternalResource[] = [
   { id: 'Green_1', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 1, 0, 1)' } },
 ];
 
+/** The node that instances the GLB, holding one override of its `body`. */
+function instancing(ref: string): TscnNode {
+  return { name: 'Host', type: 'Node', children: [override(ref)], properties: {}, rawProperties: {} };
+}
+
 function override(ref: string): TscnNode {
   return {
     name: 'body',
@@ -56,11 +61,11 @@ async function bodyMaterial(ref: string): Promise<THREE.MeshStandardMaterial> {
   fake.glbMeshes.seed(GLB_PATH, makeFakeGlb());
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack loader={fake.loader} scene={{ internalResources: INTERNAL, externalResources: EXT }}>
-      <GlbOverridesProvider overrides={[override(ref)]}>
+      <GlbInstanceProvider node={instancing(ref)} path="Host">
         <NodePathProvider path="Glb">
           <GLBSceneRoot node={NODE} />
         </NodePathProvider>
-      </GlbOverridesProvider>
+      </GlbInstanceProvider>
     </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));

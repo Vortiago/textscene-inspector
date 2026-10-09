@@ -9,7 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SelectionProvider, useSelection } from './contexts/SelectionContext';
-import { CameraControlProvider, useCameraControl } from './contexts/CameraControlContext';
+import { ViewportActionsProvider, useViewportActions } from './contexts/ViewportActionsContext';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut';
 import { SelectSeeder } from './testing/SelectSeeder';
 
@@ -109,7 +109,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
     // The CameraFit guard: under "Use This Camera", state.camera is the authored
     // Camera3D, and framing would overwrite its position, near and far.
     function ActivateAuthoredCamera() {
-      const { switchToCamera } = useCameraControl();
+      const { switchToCamera } = useViewportActions();
       useEffect(() => {
         switchToCamera('Root/Camera3D');
       }, [switchToCamera]);
@@ -117,13 +117,13 @@ describe('<FrameSelectedShortcut> (#224)', () => {
     }
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
-        <CameraControlProvider>
+        <ViewportActionsProvider>
           <CameraCapture />
           <RegisteredMesh path="Far" position={[80, 0, 0]} />
           <SelectSeeder path="Far" />
           <ActivateAuthoredCamera />
           <FrameSelectedShortcut />
-        </CameraControlProvider>
+        </ViewportActionsProvider>
       </SelectionProvider>
     );
     await renderer.advanceFrames(1, 0);

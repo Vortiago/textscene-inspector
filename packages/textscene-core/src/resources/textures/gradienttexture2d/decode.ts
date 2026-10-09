@@ -10,13 +10,8 @@ import { enumOr, settableIntOr, vec2Or, type SetterRange } from '../../../parser
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
-import {
-  GRADIENT_TEXTURE_MAX_SIZE,
-  packedArrayBody,
-  packedArrayForms,
-  boolSlotValue,
-} from '../../../godot/index.js';
-import { floatElements, packedTupleNumbers, PACKED_COLOR_ARRAY } from '../../shapes/packedArray';
+import { GRADIENT_TEXTURE_MAX_SIZE, boolSlotValue } from '../../../godot/index.js';
+import { packedTupleNumbers, parsePackedFloat32Array, PACKED_COLOR_ARRAY } from '../../shapes/packedArray';
 import {
   GradientFill,
   GradientInterpolationMode,
@@ -25,23 +20,6 @@ import {
   type GradientColorStop,
   type GradientTexture2D,
 } from './types';
-
-// All three spellings each slot loads: `can_convert_strict` lists ARRAY as a source
-// for every PACKED_* type (variant.cpp:467-473), and `Gradient::set_offsets`/`set_colors`
-// take the packed arrays (gradient.cpp:80-81), so `colors = [Color(1, 0, 0, 1), …]` loads.
-const OFFSETS_FORMS = packedArrayForms('PackedFloat32Array');
-
-/** Parse a `PackedFloat32Array` slot, in any of its three spellings, into a `number[]`. */
-export function parsePackedFloat32Array(value: string): number[] {
-  const matched = packedArrayBody(OFFSETS_FORMS, value);
-  if (!matched) {
-    throw new Error(`Invalid PackedFloat32Array format: ${value}`);
-  }
-  // A scalar slot's bare and typed bodies are the same comma-separated numbers
-  // the constructor's flat argument list holds, so one reader covers all three.
-  if (matched.body === '') return [];
-  return floatElements(matched.body, 'PackedFloat32Array', value);
-}
 
 /**
  * Parses a `PackedColorArray` slot into a `Color[]`, dropping a trailing partial

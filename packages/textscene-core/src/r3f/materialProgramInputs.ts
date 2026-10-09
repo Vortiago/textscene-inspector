@@ -5,6 +5,7 @@
  * A bare `:NNN` cites three 0.185.1's `WebGLPrograms.js`, where identity is decided.
  */
 import * as THREE from 'three';
+import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
 
 /** The subset of three's `onBeforeCompile` argument an injection may touch. */
 export interface ProgramShader {
@@ -21,7 +22,8 @@ export interface ProgramShader {
 export interface ProgramInjection {
   /** Distinguishes this patched program from an unpatched one. */
   readonly cacheKey: string;
-  readonly onBeforeCompile: (shader: ProgramShader) => void;
+  /** three calls it as a method of the material it compiles (`WebGLRenderer.js:2248`). */
+  readonly onBeforeCompile: (this: THREE.Material, shader: ProgramShader) => void;
 }
 
 /**
@@ -42,7 +44,7 @@ export interface MaterialProgramBag {
  * Exported so a module can write down the type of an exported `MaterialProgram`.
  */
 export interface InjectedProps {
-  onBeforeCompile?: (shader: ProgramShader) => void;
+  onBeforeCompile?: ProgramInjection['onBeforeCompile'];
   customProgramCacheKey?: () => string;
 }
 
@@ -160,23 +162,17 @@ export function materialProgramInputs<
     if (injection) injections.push(injection);
     Object.assign(merged, bag);
   }
+  if (merged.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
 
   let cacheKey = '';
   if (injections.length > 0) {
-    for (const one of injections) cacheKey += cacheKey === '' ? one.cacheKey : `+${one.cacheKey}`;
+    cacheKey = composedCacheKey(injections);
     // `undefined` rather than `delete`: fiber 9.6.1's `applyProps` skips an
     // undefined value (`:24-27`, "Ignore setting undefined props"), and deleting
     // deoptimises the object it is handed.
     merged.injection = undefined;
     merged.customProgramCacheKey = cacheKeyThunk(cacheKey);
-    // One injection passes straight through, so `useCanvasItemLighting`'s memo
-    // still reaches the material; composing two cannot avoid a fresh closure.
-    merged.onBeforeCompile =
-      injections.length === 1
-        ? injections[0]!.onBeforeCompile
-        : (shader: ProgramShader) => {
-            for (const one of injections) one.onBeforeCompile(shader);
-          };
+    merged.onBeforeCompile = composedOnBeforeCompile(injections);
   }
 
   // A key rather than `needsUpdate`: `applyProps` never bumps it, and `setProgram`
@@ -190,12 +186,33 @@ export function materialProgramInputs<
 }
 
 /**
- * `injection` on a material built outside JSX, which `materialProgramInputs` cannot reach. The
- * cache key is the injection's own, so the patched program never serves an unpatched material.
+ * `injection` on a material built outside JSX, which `materialProgramInputs` cannot reach, with
+ * Godot's hash on a hashed one. The cache key is the injections' own, so the patched program never
+ * serves an unpatched material.
  */
-export function injectProgram(material: THREE.Material, injection: ProgramInjection): void {
-  material.onBeforeCompile = injection.onBeforeCompile;
-  material.customProgramCacheKey = cacheKeyThunk(injection.cacheKey);
+export function injectProgram(material: THREE.Material, injection: ProgramInjection | undefined): void {
+  const injections = injection ? [injection] : [];
+  if (material.alphaHash) injections.push(GODOT_ALPHA_HASH);
+  if (injections.length === 0) return;
+  material.onBeforeCompile = composedOnBeforeCompile(injections);
+  material.customProgramCacheKey = cacheKeyThunk(composedCacheKey(injections));
+}
+
+function composedCacheKey(injections: readonly ProgramInjection[]): string {
+  return injections.map((one) => one.cacheKey).join('+');
+}
+
+/**
+ * One injection passes straight through, so `useCanvasItemLighting`'s memo still reaches the
+ * material. Composing two cannot avoid a fresh closure, a method so each part reads its material.
+ */
+function composedOnBeforeCompile(
+  injections: readonly ProgramInjection[]
+): ProgramInjection['onBeforeCompile'] {
+  if (injections.length === 1) return injections[0]!.onBeforeCompile;
+  return function (this: THREE.Material, shader: ProgramShader): void {
+    for (const one of injections) one.onBeforeCompile.call(this, shader);
+  };
 }
 
 /**

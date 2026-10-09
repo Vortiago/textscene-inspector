@@ -1,7 +1,6 @@
 /** CSGPolygon3D's solid, exposed to the boolean evaluator. */
 
-import * as THREE from 'three';
-import type { CsgGeometryBuilder } from '../../../../r3f/csg/csgRegistration';
+import { primitiveSolid, type CsgGeometryBuilder } from '../../../../r3f/csg/csgRegistration';
 import { transform3DToMatrix } from '../../../../r3f/nodeTreeTransforms';
 import { tessellateCurve3D, type Vec3 } from '../../../../resources/curves/curve3d/index.js';
 import type { Transform3D } from '../../../base/node3d/types';
@@ -20,26 +19,29 @@ function pathPlan(p: CSGPolygon3DProperties): CsgPolygonPathPlan | null {
   };
 }
 
-export const csgPolygon3DGeometry: CsgGeometryBuilder = (properties): THREE.BufferGeometry => {
+export const csgPolygon3DGeometry: CsgGeometryBuilder = (properties) => {
   const p = properties as unknown as CSGPolygon3DProperties;
-  return buildCsgPolygonGeometry({
-    polygon: p.polygon,
-    mode: p.mode,
-    depth: p.depth,
-    spinDegrees: p.spinDegrees,
-    spinSides: p.spinSides,
-    smoothFaces: p.smoothFaces,
-    flipFaces: p.flipFaces,
-    pathIntervalType: p.pathIntervalType,
-    pathInterval: p.pathInterval,
-    pathSimplifyAngle: p.pathSimplifyAngle,
-    pathRotation: p.pathRotation,
-    pathRotationAccurate: p.pathRotationAccurate,
-    pathContinuousU: p.pathContinuousU,
-    pathUDistance: p.pathUDistance,
-    pathJoined: p.pathJoined,
-    path: pathPlan(p),
-  });
+  return primitiveSolid(
+    buildCsgPolygonGeometry({
+      polygon: p.polygon,
+      mode: p.mode,
+      depth: p.depth,
+      spinDegrees: p.spinDegrees,
+      spinSides: p.spinSides,
+      smoothFaces: p.smoothFaces,
+      flipFaces: p.flipFaces,
+      pathIntervalType: p.pathIntervalType,
+      pathInterval: p.pathInterval,
+      pathSimplifyAngle: p.pathSimplifyAngle,
+      pathRotation: p.pathRotation,
+      pathRotationAccurate: p.pathRotationAccurate,
+      pathContinuousU: p.pathContinuousU,
+      pathUDistance: p.pathUDistance,
+      pathJoined: p.pathJoined,
+      path: pathPlan(p),
+    }),
+    p
+  );
 };
 
 /**

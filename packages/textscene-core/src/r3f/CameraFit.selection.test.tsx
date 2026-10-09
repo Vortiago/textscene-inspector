@@ -9,7 +9,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { HierarchyProvider } from './contexts/HierarchyContext';
-import { CameraControlProvider, useCameraControl } from './contexts/CameraControlContext';
+import { ViewportActionsProvider, useViewportActions } from './contexts/ViewportActionsContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
 
 vi.mock('./frameSceneBounds.js', () => ({
@@ -95,7 +95,7 @@ describe('CameraFit ignores selection changes', () => {
     const graph = makeGraph();
 
     function ActivateAuthoredCamera() {
-      const { switchToCamera } = useCameraControl();
+      const { switchToCamera } = useViewportActions();
       useEffect(() => {
         switchToCamera('Root/Camera3D');
       }, [switchToCamera]);
@@ -106,11 +106,11 @@ describe('CameraFit ignores selection changes', () => {
       return (
         <HierarchyProvider value={{ sceneGraph: graph, panelId: 'test' }}>
           <SelectionProvider>
-            <CameraControlProvider>
+            <ViewportActionsProvider>
               <ActivateAuthoredCamera />
               <SelectSeeder path={path} />
               <CameraFit />
-            </CameraControlProvider>
+            </ViewportActionsProvider>
           </SelectionProvider>
         </HierarchyProvider>
       );

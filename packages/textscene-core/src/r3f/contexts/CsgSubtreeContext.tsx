@@ -6,6 +6,7 @@
  */
 
 import { createContext, useContext, type ReactNode } from 'react';
+import type { CsgGeometryContext } from '../csg/csgRegistration';
 
 /**
  * `pending` while the CSG library loads, `failed` when it could not load or the
@@ -22,6 +23,8 @@ export interface CsgSubtreeValue {
    * instead of their solid. `CsgPlan.invisiblePaths` has the Godot rule.
    */
   invisiblePaths: ReadonlySet<string>;
+  /** What the root built its plan against, which a node in that plan builds its own solid against. */
+  context: CsgGeometryContext;
 }
 
 const CsgSubtreeContext = createContext<CsgSubtreeValue | null>(null);

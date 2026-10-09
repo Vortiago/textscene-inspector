@@ -5,7 +5,7 @@
  * `World2DContents` is exported for @react-three/test-renderer.
  */
 
-import { lazy, Suspense, useLayoutEffect, useMemo } from 'react';
+import { lazy, useLayoutEffect, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import type { OrthographicCamera } from 'three';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
@@ -20,6 +20,8 @@ import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlR
 import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
 import { installShaderPatches } from '../../shaderPatch/installShaderPatches.js';
 import { ProjectClearColor } from './ProjectClearColor.js';
+import { PendingSuspense } from '../../../resources/PendingSuspense.js';
+import { ScreenshotBridge } from '../../ScreenshotBridge.js';
 
 // Through the controls barrel, whose side-effect imports register every Control
 // type: the component file alone registers none. Lazy, so the registrations stay
@@ -68,11 +70,10 @@ export function World2DContents({
               function of `nodes` the dispatcher publishes to the items. */}
           <CanvasLighting2DProvider canvasModulate={canvasModulate}>
             <NodeDispatcher nodes={nodes} />
-            {/* `null`: the R3F reconciler's tree has no host for a `<div>` fallback.
-                Inside the lighting provider, so a 2D light reaches a Control. */}
-            <Suspense fallback={null}>
+            {/* Inside the lighting provider, so a 2D light reaches a Control. */}
+            <PendingSuspense>
               <ControlCanvasLayer nodes={nodes} />
-            </Suspense>
+            </PendingSuspense>
             {/* A `ViewportTexture` consumer may sample its target whoever draws
                 the on-screen Controls. */}
             <ControlRasterLayer
@@ -83,6 +84,7 @@ export function World2DContents({
           </CanvasLighting2DProvider>
         </SceneResourcesProvider>
         <ViewportPassOrchestrator />
+        <ScreenshotBridge />
       </CanvasWorkspaceProvider>
     </TiledUploadDriver>
   );

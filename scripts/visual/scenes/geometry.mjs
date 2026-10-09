@@ -25,6 +25,12 @@ export const GEOMETRY_SCENES = [
   // do it: three skips an invisible object in the shadow pass and its subtree.
   // Soft-shadow edges are GPU-sensitive.
   { name: 'shadows-only', file: 'unit-shadows-only.tscn' },
+  // Five boxes against `visibility_range`: the framed camera is past A's end and short of B's
+  // begin, so both vanish while A's child stays, and C and D blend at a SELF margin fade.
+  { name: 'visibility-range', file: 'unit-visibility-range.tscn' },
+  // Spheres that name the box below as their visibility parent: a box past its begin hides its
+  // sphere, one short of it hides itself, and a DEPENDENCIES margin fades the sphere in.
+  { name: 'visibility-parent', file: 'unit-visibility-parent.tscn' },
   // Bars under one texel of a single shadow map and about three of the first
   // of Godot's default four splits. Crisp stripes need the near split to draw.
   { name: 'directional-shadow-splits', file: 'unit-directional-shadow-splits.tscn' },
@@ -116,4 +122,8 @@ export const GEOMETRY_SCENES = [
   // wall. An opaque-list sprite paints a black rectangle here and looks right in
   // every other sprite scene. Content: a flat quad and an antialiased edge band.
   { name: 'sprite3d-blended-pass', file: 'unit-sprite3d-blended-pass.tscn' },
+  // Which SpriteBase3D and Label3D surfaces a sun shadows from: a cut or opaque surface and a
+  // depth prepass cast, and a blended surface or one with no depth test casts nothing.
+  { name: 'sprite3d-shadow', file: 'unit-sprite3d-shadow.tscn' },
+  { name: 'label3d-shadow', file: 'unit-label3d-shadow.tscn' },
 ];

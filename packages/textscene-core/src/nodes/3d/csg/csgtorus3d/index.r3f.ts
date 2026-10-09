@@ -8,5 +8,3 @@ nodeComponentRegistry.register({
   // Exposes the solid as data so the boolean evaluator can consume triangles.
   csgShape: { geometry: csgTorus3DGeometry, geometryKey: csgTorus3DGeometryKey },
 });
-
-export { CSGTorus3D };

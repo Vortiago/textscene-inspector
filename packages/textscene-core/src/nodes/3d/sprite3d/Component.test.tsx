@@ -6,8 +6,9 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { Sprite3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -18,6 +19,11 @@ import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 import { DROPS_ALBEDO_ALPHA, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
+import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const Sprite3D = registeredComponent('Sprite3D');
 
 const TEXTURE_PATH = 'res://textures/sprite.png';
 
@@ -47,7 +53,7 @@ function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
     alpha_antialiasing_edge: 0.0,
     texture_filter: TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
     alpha_cut: AlphaCutMode.ALPHA_CUT_DISABLED,
-    axis: AxisMode.AXIS_Y,
+    axis: AxisMode.AXIS_Z,
     pixel_size: 0.01,
     hframes: 1,
     vframes: 1,
@@ -85,13 +91,16 @@ async function render(opts: {
   for (const { path, texture } of opts.cached ?? []) {
     fake.textures.seed(path, texture === 'missing' ? null : texture);
   }
-  return ReactThreeTestRenderer.create(
+  const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider externalResources={opts.externals ?? []}>
         <Sprite3D node={opts.node} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+  // One render, so the cull puts the material for the sprite's fade on its quad.
+  await renderScene(renderer, manualCameraAt({ x: 0, y: 0, z: 5 }));
+  return renderer;
 }
 
 describe('<Sprite3D> (WI-R3F-13)', () => {
@@ -124,21 +133,17 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(placeholder).toBeDefined();
   });
 
-  it('persists billboard mode + axis onto mesh.userData for runtime billboarding', async () => {
+  it('lays the quad on the plane its axis faces', async () => {
     const tex = makeTexture(32, 32);
     const renderer = await render({
-      node: makeNode({
-        texture: 'ExtResource("1_tex")',
-        billboard: BillboardMode.BILLBOARD_FIXED_Y,
-        axis: AxisMode.AXIS_Z,
-      }),
+      node: makeNode({ texture: 'ExtResource("1_tex")', axis: AxisMode.AXIS_Y }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mesh = findMesh(renderer.scene);
-    const userData = mesh.userData as { billboardMode: number; billboardAxis: number };
-    expect(userData.billboardMode).toBe(BillboardMode.BILLBOARD_FIXED_Y);
-    expect(userData.billboardAxis).toBe(AxisMode.AXIS_Z);
+    const geometry = findMesh(renderer.scene).geometry;
+    geometry.computeBoundingBox();
+    const size = geometry.boundingBox!.getSize(new THREE.Vector3());
+    expect(size.toArray().map((v) => Math.round(v * 1e5) / 1e5)).toEqual([0.32, 0, 0.32]);
   });
 
   it('scales the quad by pixel_size × image dimensions', async () => {
@@ -384,9 +389,9 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mat.alphaHash).toBe(false);
   });
 
-  it('alpha_cut=OPAQUE_PREPASS keeps blending and still writes depth', async () => {
-    // `sprite_3d.cpp:289` → TRANSPARENCY_ALPHA_DEPTH_PRE_PASS: the colour pass still blends, and
-    // the depth pass cuts at the scene's `opaque_prepass_threshold`
+  it('alpha_cut=OPAQUE_PREPASS blends uncut and leaves its depth to the depth prepass', async () => {
+    // `sprite_3d.cpp:289` → TRANSPARENCY_ALPHA_DEPTH_PRE_PASS: the colour pass blends, and the
+    // depth prepass cuts at the scene's `opaque_prepass_threshold`
     // (`render_forward_clustered.cpp:1791`), never the node's own `alpha_scissor_threshold`.
     const tex = makeTexture(8, 8);
     const renderer = await render({
@@ -400,9 +405,10 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
     expect(mat.transparent).toBe(true);
-    expect(mat.depthWrite).toBe(true);
+    expect(mat.depthWrite).toBe(false);
     expect(mat.alphaHash).toBe(false);
-    expect(mat.alphaTest).not.toBe(0.25);
+    expect(mat.alphaTest).toBe(0);
+    expect(opaquePrepassOf(mat)).toBe(DRAWN_OPAQUE_PREPASS);
   });
 
   it('alpha_cut=HASH hashes rather than blends', async () => {
@@ -423,6 +429,21 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mat.alphaTest).toBe(0);
     expect(mat.depthWrite).toBe(true);
     expect(mat.transparent).toBe(false);
+  });
+
+  it('hashes at the authored alpha_hash_scale', async () => {
+    const tex = makeTexture(8, 8);
+    const renderer = await render({
+      node: makeNode({
+        texture: 'ExtResource("1_tex")',
+        alpha_cut: AlphaCutMode.ALPHA_CUT_HASH,
+        alpha_hash_scale: 0.3,
+      }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: tex }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.userData).toMatchObject(alphaHashScaleUserData(0.3));
   });
 
   it('transparent=false disables hashing, as it disables the whole alpha-cut switch', async () => {

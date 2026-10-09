@@ -1,0 +1,128 @@
+/**
+ * Label3D's `visibility_range_*`, measured to the centre of the box its lines span
+ * (`label_3d.cpp:600-606`), and the shadow pass its `alpha_cut` files it in. The glyphs draw inside the label group as `Component.tsx` nests
+ * them, so the distance runs through the group's parent. Driven by one scene render from 11 units.
+ */
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as THREE from 'three';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { useRef } from 'react';
+import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
+import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
+import LabelGlyphs from './LabelGlyphs';
+import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
+import type { Label3DProperties } from './types';
+import { AlphaCutMode } from './types';
+import { labelProperties } from './testing/labelProperties';
+import { findMesh } from '../testing/reactThreeTestInstance';
+import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
+import {
+  castMaterialsOf,
+  castsFrom,
+  castsSunShadowFrom,
+  drawsColour,
+} from '../../../r3f/testing/threePasses';
+import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../../../godot/opaquePrepass';
+import {
+  NO_VISIBILITY_RANGE,
+  VisibilityRangeFadeMode,
+  type VisibilityRange,
+} from '../../../godot/visibilityRange';
+
+const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
+vi.mock('../../../r3f/controls/native/text/sceneFontLoader', () => ({
+  peekBundledCanvasFontMetrics: () => loader.metrics,
+  onSceneFontMetricsSettled: () => () => {},
+}));
+
+beforeEach(() => {
+  loader.metrics = createOpenSansCanvasFontMetrics('label3d-range-test-family');
+});
+
+function props(
+  range: Partial<VisibilityRange>,
+  overrides: Partial<Label3DProperties> = {}
+): Label3DProperties {
+  return labelProperties({ visibilityRange: { ...NO_VISIBILITY_RANGE, ...range }, ...overrides });
+}
+
+const NestedLabel = withGeometryInstance(function NestedLabel({ node }: NodeComponentProps) {
+  const nodeRef = useRef<THREE.Group | null>(null);
+  const properties = node.properties as Label3DProperties;
+  return (
+    <group ref={nodeRef}>
+      <group scale={properties.pixel_size}>
+        <LabelGlyphs nodeRef={nodeRef} properties={properties} />
+      </group>
+    </group>
+  );
+});
+
+async function renderFrames(properties: Label3DProperties) {
+  const camera = manualCameraAt({ x: 0, y: 0, z: 11 });
+  const node = { name: 'L', type: 'Label3D', rawProperties: {}, children: [], properties };
+  const renderer = await ReactThreeTestRenderer.create(<NestedLabel node={node} />, { camera });
+  await renderScene(renderer, camera);
+  return renderer;
+}
+
+function textMesh(renderer: Awaited<ReturnType<typeof renderFrames>>): THREE.Mesh {
+  return findMesh(renderer.scene);
+}
+
+describe('<LabelGlyphs> visibility range', () => {
+  it('draws a label inside its range', async () => {
+    expect(drawsColour(textMesh(await renderFrames(props({ begin: 5, end: 20 }))))).toBe(true);
+  });
+
+  it('draws nothing of a label past its end', async () => {
+    expect(drawsColour(textMesh(await renderFrames(props({ end: 10 }))))).toBe(false);
+  });
+
+  it('blends a SELF label at the eased alpha across its end margin', async () => {
+    // smoothstep(1 - (11 - 8) / 4) = 0.15625, and 0.15625 × 255 = 39.84 truncates to 39.
+    const selfFade = { end: 10, endMargin: 2, fadeMode: VisibilityRangeFadeMode.SELF };
+    const material = textMesh(await renderFrames(props(selfFade))).material as THREE.MeshBasicMaterial;
+    expect(material.opacity).toBeCloseTo(39 / 255, 6);
+  });
+
+  it('measures to the line box centre, which a large line spacing moves off the origin', async () => {
+    // The box centre sits line_spacing / 2 = 300 px below the origin, 3 units at pixel_size 0.01:
+    // √(11² + 3²) ≈ 11.40 is past an end of 11.2, which the origin at 11 is short of.
+    const spaced = props({ end: 11.2 }, { line_spacing: 600 });
+    expect(drawsColour(textMesh(await renderFrames(spaced)))).toBe(false);
+  });
+});
+
+describe('<LabelGlyphs> shadow casting', () => {
+  it('casts from a DISCARD label, which the opaque list draws', async () => {
+    const discard = props({}, { alpha_cut: AlphaCutMode.DISCARD });
+    expect(castsSunShadowFrom(textMesh(await renderFrames(discard)))).toBe(true);
+  });
+
+  it('casts nothing from a blended label, the default', async () => {
+    expect(castsSunShadowFrom(textMesh(await renderFrames(props({}))))).toBe(false);
+  });
+
+  it('casts nothing from a cut label with no depth test', async () => {
+    const noDepthTest = props({}, { alpha_cut: AlphaCutMode.DISCARD, no_depth_test: true });
+    expect(castsSunShadowFrom(textMesh(await renderFrames(noDepthTest)))).toBe(false);
+  });
+
+  it('casts a hashed shadow from a HASH label, into every light', async () => {
+    const mesh = textMesh(await renderFrames(props({}, { alpha_cut: AlphaCutMode.HASH })));
+    const [sun, omni] = castMaterialsOf(mesh);
+    expect([sun.alphaHash, omni.alphaHash]).toEqual([true, true]);
+  });
+
+  it("cuts an OPAQUE_PREPASS label's shadow at the shadow pass's prepass threshold", async () => {
+    const mesh = textMesh(await renderFrames(props({}, { alpha_cut: AlphaCutMode.OPAQUE_PREPASS })));
+    expect(castMaterialsOf(mesh)[0].alphaTest).toBe(SHADOW_PASS_OPAQUE_THRESHOLD);
+  });
+
+  it('still casts into an omni or spot shadow past its end (edge case)', async () => {
+    const culled = props({ end: 10 }, { alpha_cut: AlphaCutMode.DISCARD });
+    expect(castsFrom(textMesh(await renderFrames(culled)))).toBe(true);
+  });
+});

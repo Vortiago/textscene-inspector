@@ -165,6 +165,8 @@ export function materialConstructorLines(source: string): number[] {
  * absent because its `new THREE.ShaderMaterial({…})` is inside a doc comment.
  */
 const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
+    'the depth prepass base, cloned per surface and never drawn itself, and the sentinel, which writes nothing; neither is ever mutated',
   'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
     'rebuilt by the effect that rebuilds the projection meshes; the only later write is `opacity`, which no program parameter reads',
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
@@ -248,6 +250,10 @@ export function meshArgumentMounts(source: string): MeshArgumentMount[] {
 const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
+  'packages/textscene-core/src/r3f/materials/fadedMeshMaterials.ts':
+    'puts a GLB surface’s own material or its alpha-pass copy on the mesh, which is not React state, and the copy is built once from its source, so only its opacity moves',
+  'packages/textscene-core/src/r3f/materials/swappedMaterials.ts':
+    'puts one of a surface’s two mounted materials on its mesh, each keyed by its own mount, so a swap changes which material draws and never a program input of one',
   'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':
     'the GLB slot writer: `cloneWithMaterials` gives each clone its own copy of the loader’s materials, and `forEachSurfaceMaterial` hands a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
 };
@@ -257,6 +263,8 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
  * and separate from both lists above for the same reason.
  */
 const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
+    'the depth prepass sentinel: its material writes nothing and is never mutated, and the sentinel is removed with its scene',
   'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
     'the projection meshes and the material they carry are built by one effect and replaced together, so neither can outlive an input the other was built from',
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':

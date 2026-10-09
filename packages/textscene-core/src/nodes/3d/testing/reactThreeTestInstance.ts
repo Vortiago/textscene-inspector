@@ -32,3 +32,14 @@ export function findMesh(scene: ReactThreeTestInstance, type = 'Mesh'): THREE.Me
 export function materialInstanceAs<T extends THREE.Material>(node: ReactThreeTestInstance): T {
   return node.instance as unknown as T;
 }
+
+/**
+ * The materials the scene's meshes draw, of three class `type` (`'MeshPhysicalMaterial'`). A
+ * GeometryInstance3D surface mounts two materials and draws one, so a fiber search finds both.
+ */
+export function drawnMaterials<T extends THREE.Material>(scene: ReactThreeTestInstance, type: string): T[] {
+  return scene
+    .findAllByType('Mesh')
+    .flatMap((node) => instanceAs<THREE.Mesh>(node).material)
+    .filter((material): material is T => material.type === type);
+}

@@ -1,7 +1,8 @@
 /**
  * Reports the camera and the target each render of a scene uses. A sub-viewport's pass camera
  * never enters the R3F store, so only the render sees it, and
- * `scene.onBeforeRender` runs before the render list, so content moves that frame.
+ * `scene.onBeforeRender` runs before the render list, so content moves that frame. A cull runs
+ * after every other observer, so it reads the content and the shadow fit that render places.
  */
 
 import * as THREE from 'three';
@@ -17,6 +18,8 @@ type BeforeRender = THREE.Object3D['onBeforeRender'];
 
 interface SceneHook {
   observers: Set<SceneCameraObserver>;
+  /** Run after every observer. */
+  cullers: Set<SceneCameraObserver>;
   /** Whatever `onBeforeRender` was before we chained onto it. */
   previous: BeforeRender;
 }
@@ -49,29 +52,43 @@ export function isViewportPass(camera: THREE.Camera): camera is THREE.Orthograph
  * original `onBeforeRender` so nothing is left installed on a shared object.
  */
 export function observeSceneCamera(scene: THREE.Scene, observer: SceneCameraObserver): () => void {
-  let hook = hooks.get(scene);
-  if (!hook) {
-    hook = { observers: new Set(), previous: scene.onBeforeRender };
-    hooks.set(scene, hook);
-    const installed = hook;
-    const chained: BeforeRender = function chainedOnBeforeRender(this: THREE.Object3D, ...args) {
-      installed.previous.apply(this, args);
-      // `WebGLRenderer.render` passes the target where `Object3D`'s signature names a geometry.
-      const camera = args[2];
-      const target = (args[3] as unknown as THREE.WebGLRenderTarget | null) ?? null;
-      for (const fn of installed.observers) fn(camera, target);
-    };
-    // Chained, not replaced: several ParallaxBackgrounds and the shadow fitter share one scene.
-    scene.onBeforeRender = chained;
-  }
+  return observeIn(scene, observer, (hook) => hook.observers);
+}
 
-  hook.observers.add(observer);
+/** {@link observeSceneCamera}, for an observer that runs after every other one. */
+export function observeSceneCull(scene: THREE.Scene, culler: SceneCameraObserver): () => void {
+  return observeIn(scene, culler, (hook) => hook.cullers);
+}
+
+function observeIn(
+  scene: THREE.Scene,
+  observer: SceneCameraObserver,
+  listOf: (hook: SceneHook) => Set<SceneCameraObserver>
+): () => void {
+  const hook = hooks.get(scene) ?? installHook(scene);
+  listOf(hook).add(observer);
   return () => {
     const current = hooks.get(scene);
     if (!current) return;
-    current.observers.delete(observer);
-    if (current.observers.size > 0) return;
+    listOf(current).delete(observer);
+    if (current.observers.size > 0 || current.cullers.size > 0) return;
     scene.onBeforeRender = current.previous;
     hooks.delete(scene);
   };
+}
+
+function installHook(scene: THREE.Scene): SceneHook {
+  const hook: SceneHook = { observers: new Set(), cullers: new Set(), previous: scene.onBeforeRender };
+  hooks.set(scene, hook);
+  const chained: BeforeRender = function chainedOnBeforeRender(this: THREE.Object3D, ...args) {
+    hook.previous.apply(this, args);
+    // `WebGLRenderer.render` passes the target where `Object3D`'s signature names a geometry.
+    const camera = args[2];
+    const target = (args[3] as unknown as THREE.WebGLRenderTarget | null) ?? null;
+    for (const fn of hook.observers) fn(camera, target);
+    for (const fn of hook.cullers) fn(camera, target);
+  };
+  // Chained, not replaced: several ParallaxBackgrounds and the shadow fitter share one scene.
+  scene.onBeforeRender = chained;
+  return hook;
 }

@@ -9,7 +9,9 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
 import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
-import { useGlbOverrides } from './GlbOverridesContext';
+import { useGlbRoot } from './GlbInstanceContext';
+import { useGlbGeometryInstances } from './glbGeometryInstances';
+import { useInstancingNodeTransform } from './instancingNodeTransform';
 import { applyGlbNodeOverrides, isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOverrides';
 import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME, type GlbObjectEntry } from './glbHierarchy';
 import { useAnimationTransport, type PlayState } from '../../contexts/AnimationTransportContext';
@@ -48,7 +50,9 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
 
   // The instancing scene's inline override children target nodes inside this GLB, by name, so
   // a baked translation is overridden as in Godot.
-  const overrides = useGlbOverrides();
+  const nodePath = useNodePath();
+  const root = useGlbRoot(nodePath);
+  const { overrides } = root;
   const object = result.value;
 
   // One flattening of the clone, shared by selection, visibility, overrides and material slots.
@@ -63,11 +67,12 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // the synchronous mutation above cannot do, so each one mounts its own slot component.
   const importMaterials = useGlbImportMaterials(object);
   const materialOverrides = useGlbMaterialOverrides(object, entries, overrides);
+  useInstancingNodeTransform(object, root.rawProperties);
+  useGlbGeometryInstances(object, entries, root);
 
   // Registers each GLB object under the tree's relPath scheme, so the SceneTreeViewer can select
   // and hide it.
   const selection = useOptionalSelection();
-  const nodePath = useNodePath();
 
   const registerNodeObject = selection?.registerNodeObject;
   const unregisterNodeObject = selection?.unregisterNodeObject;
@@ -228,7 +233,7 @@ function useGlbMaterialOverrides(
   entries: readonly GlbObjectEntry[],
   overrides: readonly LiveNode[]
 ): ReactNode {
-  const { internalResources, externalResources } = useSceneResources();
+  const pools = useSceneResources();
 
   return useMemo(() => {
     if (!object) return null;
@@ -240,8 +245,7 @@ function useGlbMaterialOverrides(
 
       // A grafted override's ids belong to the outer scene that authored it, not the sub-scene it
       // renders under, and its scope carries both pools.
-      const scope = override.scope ?? { internalResources, externalResources };
-      const source = resolveMaterialSource(ref, scope.internalResources, scope.externalResources);
+      const source = resolveMaterialSource(ref, override.scope ?? pools);
       if (!source) continue;
 
       const target = resolveGlbOverrideTarget(object, entries, override);
@@ -256,5 +260,5 @@ function useGlbMaterialOverrides(
       );
     }
     return slots.length > 0 ? <>{slots}</> : null;
-  }, [object, entries, overrides, internalResources, externalResources]);
+  }, [object, entries, overrides, pools]);
 }

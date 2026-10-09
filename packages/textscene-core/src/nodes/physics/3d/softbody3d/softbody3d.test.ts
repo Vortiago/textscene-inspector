@@ -1,5 +1,5 @@
 /**
- * SoftBody3D registration: parsed and validated, not yet rendered. The Node3D
+ * SoftBody3D registration: parsed and validated, not yet rendered. The GeometryInstance3D
  * base under `renderIntent: 'pending'` makes `rendersOwnVisual` report
  * 'not-implemented', while `visible` and the 3D-only workspace placement still
  * work. An absent registration keeps neither.

@@ -7,16 +7,10 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor } from '../../../utils/colorParser';
-import { boolOr, enumOr, floatOr, intOr, parseOptionalRect2, vec2Or } from '../../../parser/valueParsers';
-import {
-  AlphaAntiAliasing,
-  AlphaCutMode,
-  AxisMode,
-  BillboardMode,
-  TextureFilterMode,
-  type Sprite3DProperties,
-} from './types';
+import { boolOr, enumOr, floatOr, intOr, parseOptionalRect2 } from '../../../parser/valueParsers';
+import { AlphaAntiAliasing, AlphaCutMode, TextureFilterMode, type Sprite3DProperties } from './types';
 import { frameCoords, replaySpriteFrames } from '../../../godot/spriteFrames.js';
+import { parseSpriteQuad } from './quadParser';
 
 export function parseSprite3D(
   heading: ParsedHeading,
@@ -27,28 +21,19 @@ export function parseSprite3D(
 
   const result: Sprite3DProperties = {
     ...baseProps,
-    billboard: enumOr(properties.billboard, BillboardMode.BILLBOARD_DISABLED, [
-      BillboardMode.BILLBOARD_DISABLED,
-      BillboardMode.BILLBOARD_ENABLED,
-      BillboardMode.BILLBOARD_FIXED_Y,
-      BillboardMode.BILLBOARD_PARTICLES,
-    ]),
+    ...parseSpriteQuad(properties, 'Sprite3D'),
     alpha_cut: enumOr(properties.alpha_cut, AlphaCutMode.ALPHA_CUT_DISABLED, [
       AlphaCutMode.ALPHA_CUT_DISABLED,
       AlphaCutMode.ALPHA_CUT_DISCARD,
       AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS,
       AlphaCutMode.ALPHA_CUT_HASH,
     ]),
-    axis: enumOr(properties.axis, AxisMode.AXIS_Y, [AxisMode.AXIS_X, AxisMode.AXIS_Y, AxisMode.AXIS_Z]),
-    pixel_size: floatOr(properties.pixel_size, 0.01),
     // The grid and frame Godot holds after replaying the body in file order:
     // a count below 1 is refused, a refused `frame` stays 0, a later `hframes`
     // re-maps one that landed (godot/spriteFrames.ts).
     hframes: frames.hframes,
     vframes: frames.vframes,
     frame: frames.frame,
-    offset: vec2Or(properties.offset, { x: 0, y: 0 }, 'Sprite3D'),
-    centered: boolOr(properties.centered, true),
     flip_h: boolOr(properties.flip_h, false),
     flip_v: boolOr(properties.flip_v, false),
     double_sided: boolOr(properties.double_sided, true),

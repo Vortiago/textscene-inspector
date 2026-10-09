@@ -7,12 +7,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { MeshInstance3D } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../index';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
+import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
+import './index.r3f';
+import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 /** Pin traffic is invisible from outside the cache, so both entry points are
  *  wrapped, still calling through to the real implementation. */
@@ -80,6 +84,7 @@ function coinNode(): TscnNode {
     type: 'MeshInstance3D',
     children: [],
     properties: {
+      ...GEOMETRY_INSTANCE_DEFAULTS,
       name: 'GlowSprite',
       mesh: 'SubResource("QuadMesh_kqa4x")',
       materialOverride: 'SubResource("StandardMaterial3D_7q0mq")',
@@ -141,6 +146,7 @@ describe('<MeshInstance3D> procedural texture pins', () => {
       type: 'MeshInstance3D',
       children: [],
       properties: {
+        ...GEOMETRY_INSTANCE_DEFAULTS,
         name: 'Mixed',
         mesh: 'SubResource("QuadMesh_kqa4x")',
         materialOverride: 'SubResource("StandardMaterial3D_mixed")',

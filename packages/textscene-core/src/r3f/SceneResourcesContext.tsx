@@ -16,12 +16,13 @@ export interface SceneResources {
   externalResources: readonly TscnExternalResource[];
 }
 
-const EMPTY: SceneResources = {
+/** No resources: the pools of a scene with none, or of a level that has not resolved. */
+export const NO_RESOURCES: SceneResources = {
   internalResources: [],
   externalResources: [],
 };
 
-const SceneResourcesContext = createContext<SceneResources>(EMPTY);
+const SceneResourcesContext = createContext<SceneResources>(NO_RESOURCES);
 SceneResourcesContext.displayName = 'SceneResourcesContext';
 
 export function useSceneResources(): SceneResources {
@@ -46,14 +47,15 @@ export function SceneResourcesProvider({
   externalResources = NO_EXTERNAL,
   children,
 }: SceneResourcesProviderProps) {
-  // Prepended to the parent pool, so this scene's own id wins on first match.
-  // A merged sub-scene (ADR-0013) re-dispatches under this provider, and the
-  // children the host added under its instance node carry host `ExtResource` ids.
+  // This scene's own id shadows the parent's. A merged sub-scene (ADR-0013) re-dispatches under
+  // this provider, and the children the host added under its instance node carry host ids. An
+  // external id resolves to its last holder and an internal id to its first, so the own table
+  // goes after the parent's external table and before its internal one.
   const parent = useContext(SceneResourcesContext);
   const value = useMemo<SceneResources>(
     () => ({
       internalResources: [...internalResources, ...parent.internalResources],
-      externalResources: [...externalResources, ...parent.externalResources],
+      externalResources: [...parent.externalResources, ...externalResources],
     }),
     [internalResources, externalResources, parent]
   );

@@ -1,31 +1,34 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../../parser/testing/parserKit';
-import { parseNode3D } from '../../../base/node3d/parser';
+import { GPU_PARTICLES_DEFAULT_VISIBILITY_AABB } from '../../../../godot/gpuParticles';
+import { parseGPUParticles3D } from './parser';
 
-describe('parseNode3D (gpuparticles3d)', () => {
-  it('parses name, parent, and transform (happy path)', () => {
-    const result = parseNode3D(heading('GPUParticles3D', { name: 'MyGPUParticles', parent: '.' }), {
-      transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 4, 5)',
+const parse = (properties: Record<string, string>) =>
+  parseGPUParticles3D(heading('GPUParticles3D', { name: 'Sparks' }), properties);
+
+describe('parseGPUParticles3D', () => {
+  it('reads visibility_aabb as the emitter box', () => {
+    expect(parse({ visibility_aabb: 'AABB(-1, -2, -3, 2, 4, 6)' }).visibilityAabb).toEqual({
+      position: { x: -1, y: -2, z: -3 },
+      size: { x: 2, y: 4, z: 6 },
     });
-    expect(result.name).toBe('MyGPUParticles');
-    expect(result.parent).toBe('.');
-    expect(result.transform?.origin).toEqual({ x: 3, y: 4, z: 5 });
   });
 
-  it('falls back to identity on malformed transform', () => {
-    const result = parseNode3D(heading('GPUParticles3D', { name: 'BadParticle' }), {
-      transform: 'Transform3D(bad)',
-    });
-    expect(result.transform?.basis_x).toEqual({ x: 1, y: 0, z: 0 });
-    expect(result.transform?.origin).toEqual({ x: 0, y: 0, z: 0 });
+  it("keeps the constructor's box for an emitter that authors none", () => {
+    expect(parse({}).visibilityAabb).toBe(GPU_PARTICLES_DEFAULT_VISIBILITY_AABB);
   });
 
-  it('ignores particle-specific properties not parsed by parseNode3D', () => {
-    const result = parseNode3D(heading('GPUParticles3D', { name: 'PartialParticle' }), {
-      amount: '100',
-      process_material: 'SubResource("mat")',
+  it("keeps the constructor's box for a malformed visibility_aabb (error case)", () => {
+    expect(parse({ visibility_aabb: 'AABB(bad)' }).visibilityAabb).toBe(
+      GPU_PARTICLES_DEFAULT_VISIBILITY_AABB
+    );
+  });
+
+  it('keeps an authored AABB() empty, as the particles hold it (edge case)', () => {
+    expect(parse({ visibility_aabb: 'AABB(0, 0, 0, 0, 0, 0)' }).visibilityAabb.size).toEqual({
+      x: 0,
+      y: 0,
+      z: 0,
     });
-    expect(result.name).toBe('PartialParticle');
-    expect(result.transform).toBeUndefined();
   });
 });

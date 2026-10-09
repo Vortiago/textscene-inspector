@@ -8,8 +8,13 @@ import * as THREE from 'three';
 import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCasting';
 import { ShadowCastingSetting } from '../../../godot/rendering';
 import { withExtensionRules } from './extensionRules';
+import { tagMeshInstances } from './meshInstances';
+import { tagGodotNodeNames } from './nodeNames';
+import { gltfNodeNames, type GltfNamingOptions } from '../../../godot/gltfNodeNames';
+import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
 import type { GltfExtensionRules } from './types';
-import type { GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
+import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
+import { usesGodotSingleRoot } from '../../../godot/gltf';
 
 interface GlbModules {
   GLTFLoader: (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
@@ -146,6 +151,8 @@ function inMemoryOnlyManager(): THREE.LoadingManager {
 export interface GlbLoadOptions {
   /** Defaults to `godot-importer`. */
   extensionRules?: GltfExtensionRules;
+  /** The **Import sidecar**'s naming options. */
+  naming: GltfNamingOptions;
 }
 
 /**
@@ -154,17 +161,48 @@ export interface GlbLoadOptions {
  */
 export async function createGLBMesh(
   data: ArrayBuffer,
-  { extensionRules = 'godot-importer' }: GlbLoadOptions = {}
+  { extensionRules = 'godot-importer', naming }: GlbLoadOptions
 ): Promise<THREE.Object3D> {
   const { GLTFLoader } = await initGlbModules();
   const loader = withExtensionRules(new GLTFLoader(inMemoryOnlyManager()), extensionRules).register(
     decodeImagesInImageElements
   );
   const gltf = await loader.parseAsync(data, '');
-  // GLTFLoader returns embedded clips on `gltf.animations`. The scene's `.animations`
+  const root = await godotSceneRoot(gltf);
+  // GLTFLoader returns embedded clips on `gltf.animations`. The root's `.animations`
   // is where GLBSceneRoot plays them from and where `cloneWithMaterials` copies them.
-  gltf.scene.animations = gltf.animations;
-  return gltf.scene;
+  root.animations = gltf.animations;
+  tagMeshInstances(root, gltf.parser.associations);
+  tagGodotNodeNames(root, gltf.parser.associations, gltfNodeNames(gltf.parser.json, naming));
+  importBlendAsDepthPrepass(root);
+  return root;
+}
+
+/**
+ * The object Godot's importer makes the scene root: glTF node 0 for a `GODOT_single_root` file, else
+ * a root over the scene's nodes. A file with no node 0 fails, as Godot's import does.
+ */
+async function godotSceneRoot(gltf: GLTF): Promise<THREE.Object3D> {
+  if (!usesGodotSingleRoot(gltf.parser.json)) return gltf.scene;
+  if (!gltf.parser.json.nodes?.length)
+    throw new Error('glTF: Single root file has no nodes. This glTF file is invalid.');
+  let root: THREE.Object3D | undefined;
+  gltf.scene.traverse((object) => {
+    if (gltf.parser.associations.get(object)?.nodes === 0) root ??= object;
+  });
+  root ??= (await gltf.parser.getDependency('node', 0)) as THREE.Object3D;
+  root.removeFromParent();
+  return root;
+}
+
+/**
+ * Godot imports glTF `alphaMode` BLEND as ALPHA_DEPTH_PRE_PASS (`gltf_document.cpp:3117-3118`),
+ * so the depth prepass draws it. GLTFLoader marks only BLEND `transparent`.
+ */
+function importBlendAsDepthPrepass(object: THREE.Object3D): void {
+  forEachSurfaceMaterial(object, (material) => {
+    if (material.transparent) Object.assign(material.userData, opaquePrepassUserData(DRAWN_OPAQUE_PREPASS));
+  });
 }
 
 /**

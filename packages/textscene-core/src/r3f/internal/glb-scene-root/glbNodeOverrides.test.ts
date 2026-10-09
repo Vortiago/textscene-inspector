@@ -5,10 +5,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import { applyGlbNodeOverrides } from './glbNodeOverrides';
 import { visualLayersOf } from '../../visualLayers';
 import type { TscnNode } from '../../../parser/types';
 import { buildTestGlbGraph } from './testGraph';
+import { tagGodotNodeNames } from '../../../resources/formats/glb/nodeNames';
+import { tagMeshInstances } from '../../../resources/formats/glb/meshInstances';
+import type { GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
 
 const override = (name: string, extra: Partial<TscnNode> = {}): TscnNode => ({
   rawProperties: {},
@@ -33,15 +37,47 @@ describe('applyGlbNodeOverrides', () => {
     expect(visualLayersOf(robot)).toBe(2);
   });
 
-  it('stamps layers over the matched object’s whole subtree', () => {
-    // One glTF node with several primitives becomes a Group of Meshes.
-    const root = buildTestGlbGraph(['Body/Part1', 'Body/Part2']);
+  it('stamps layers on a mesh’s surfaces, but not on the node under it', () => {
+    // One glTF node with two primitives is a Group of two Meshes, here with a child node too.
+    const root = buildTestGlbGraph(['Hand']);
+    const [hand] = root.children;
+    const body = Object.assign(new THREE.Group(), { name: 'Body' });
+    const [part1, part2] = [new THREE.Mesh(), new THREE.Mesh()];
+    body.add(part1, part2, hand!);
+    root.add(body);
+    tagMeshInstances(
+      root,
+      new Map<unknown, GLTFReference>([
+        [body, { nodes: 0, meshes: 0 }],
+        [part1, { meshes: 0, primitives: 0 }],
+        [part2, { meshes: 0, primitives: 1 }],
+        [hand, { nodes: 1, meshes: 1 }],
+      ])
+    );
 
     applyGlbNodeOverrides(root, [override('Body', { rawProperties: { layers: '4' } })]);
 
-    const body = root.children[0]!;
-    expect(visualLayersOf(body)).toBe(4);
-    expect(body.children.map(visualLayersOf)).toEqual([4, 4]);
+    expect([body, part1, part2, hand].map((object) => visualLayersOf(object!))).toEqual([4, 4, 4, 1]);
+  });
+
+  it("resolves an override by Godot's name for a node three spells otherwise", () => {
+    const root = buildTestGlbGraph(['Cube001']);
+    const cube = root.children[0]!;
+    tagGodotNodeNames(root, new Map([[cube, { nodes: 0 }]]), [{ name: 'Cube_001', role: 'node' }]);
+
+    applyGlbNodeOverrides(root, [override('Cube_001', { rawProperties: { layers: '2' } })]);
+
+    expect(visualLayersOf(cube)).toBe(2);
+  });
+
+  it("resolves a shallow override to the root by Godot's name for it", () => {
+    const root = buildTestGlbGraph([]);
+    root.name = 'Cube001';
+    tagGodotNodeNames(root, new Map([[root, { nodes: 0 }]]), [{ name: 'Cube_001', role: 'node' }]);
+
+    applyGlbNodeOverrides(root, [override('Cube_001', { rawProperties: { visible: 'false' } })]);
+
+    expect(root.visible).toBe(false);
   });
 
   it('resolves a deep override by PATH, not by bare name', () => {

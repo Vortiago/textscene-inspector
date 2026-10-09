@@ -21,8 +21,6 @@ export interface CsgContribution {
   operation: number;
   /** Baked into CSG-ROOT-LOCAL space. */
   matrix: THREE.Matrix4;
-  /** Index into `CsgPlan.surfaces`. */
-  surface: number;
   /** The node, so the evaluator can call its registered geometry builder. */
   node: TscnNode;
   /** False for a node with no solid of its own (CSGCombiner3D): it folds children only. */
@@ -37,11 +35,6 @@ export interface CsgPlan {
   root: CsgContribution | null;
   /** How many nodes in the tree carry a solid: one is a lone root, more is a boolean. */
   geometryCount: number;
-  /**
-   * Distinct material paths in first-seen order, with `undefined` for "no material".
-   * Godot interns materials per root the same way and emits one surface each.
-   */
-  surfaces: (string | undefined)[];
   /** Node paths the root absorbs, so those components render no mesh of their own. */
   absorbedPaths: Set<string>;
   /**
@@ -106,7 +99,6 @@ export function buildCsgPlan(root: TscnNode, rootPath: string, options: BuildOpt
   const { lookup, hiddenPaths } = options;
   if (lookup(root.type) === null) return null;
 
-  const surfaces: (string | undefined)[] = [];
   const absorbedPaths = new Set<string>();
   const invisiblePaths = new Set<string>();
 
@@ -116,13 +108,6 @@ export function buildCsgPlan(root: TscnNode, rootPath: string, options: BuildOpt
     for (const [child, childPath] of csgChildren(node, path, lookup)) markInvisible(child, childPath);
   };
   const keyParts: string[] = [`root:${root.type}`];
-
-  const surfaceIndex = (materialPath: string | undefined): number => {
-    const existing = surfaces.indexOf(materialPath);
-    if (existing !== -1) return existing;
-    surfaces.push(materialPath);
-    return surfaces.length - 1;
-  };
 
   let geometryCount = 0;
 
@@ -155,13 +140,11 @@ export function buildCsgPlan(root: TscnNode, rootPath: string, options: BuildOpt
 
     const shape = lookup(node.type);
     let hasGeometry = shape?.hasGeometry === true;
-    let surface = 0;
     if (hasGeometry && !isFinite4(matrix)) {
       keyParts.push(`${path}:nonfinite`);
       hasGeometry = false;
     } else if (hasGeometry) {
       const materialPath = typeof props.materialPath === 'string' ? props.materialPath : undefined;
-      surface = surfaceIndex(materialPath);
       geometryCount++;
       keyParts.push(
         `${path}|${node.type}|${operation}|${shape!.key(node)}|${materialPath ?? ''}|` +
@@ -179,7 +162,7 @@ export function buildCsgPlan(root: TscnNode, rootPath: string, options: BuildOpt
     }
 
     if (!hasGeometry && children.length === 0) return null;
-    return { path, type: node.type, operation, matrix, surface, node, hasGeometry, children };
+    return { path, type: node.type, operation, matrix, node, hasGeometry, children };
   };
 
   const tree = visit(root, rootPath, new THREE.Matrix4(), true);
@@ -188,7 +171,6 @@ export function buildCsgPlan(root: TscnNode, rootPath: string, options: BuildOpt
     rootPath,
     root: tree,
     geometryCount,
-    surfaces,
     absorbedPaths,
     invisiblePaths,
     cacheKey: keyParts.join('\n'),

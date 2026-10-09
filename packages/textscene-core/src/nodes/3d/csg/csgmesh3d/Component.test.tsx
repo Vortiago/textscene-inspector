@@ -1,13 +1,22 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
+import { parseTresFile } from '../../../../parser/parsedResource';
+import { fixturesDir } from '../../../../parser/testing/parserKit';
+import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { parseCSGMesh3D } from './parser';
 // Imports the wired slice, not the bare component: CsgPrimitive builds the solid
 // from the registered builder, so the registration is part of what is under test.
-import { CSGMesh3D } from './index.r3f';
 import { findMesh } from '../../testing/reactThreeTestInstance';
+import './index.r3f';
+import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
+
+const CSGMesh3D = registeredComponent('CSGMesh3D');
 
 const BOX_MESH: TscnInternalResource = {
   id: 'BoxMesh_csg',
@@ -112,5 +121,26 @@ describe('<CSGMesh3D>', () => {
       </SceneResourcesProvider>
     );
     expect(renderer.scene.find((n) => (n.instance as THREE.Object3D).name === 'injected-child')).toBeTruthy();
+  });
+
+  it('draws a .tres ArrayMesh once it loads, one material slot per surface', async () => {
+    const path = 'res://two-boxes.tres';
+    const externalResources: TscnExternalResource[] = [{ id: '1', type: 'ArrayMesh', path }];
+    const fake = createFakeResourceLoader();
+    const tres = readFileSync(join(fixturesDir(), 'unit-csg-mesh-sources-two-boxes.tres'), 'utf8');
+    const element = (
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider externalResources={externalResources}>
+          <CSGMesh3D node={makeNode({ mesh: 'ExtResource("1")' })} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+    const renderer = await ReactThreeTestRenderer.create(element);
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+
+    await ReactThreeTestRenderer.act(async () => fake.resources._resolve(path, parseTresFile(tres)));
+    const mesh = findMesh(renderer.scene);
+    expect(mesh.geometry.groups).toHaveLength(2);
+    expect(Array.isArray(mesh.material) && mesh.material.length).toBe(2);
   });
 });

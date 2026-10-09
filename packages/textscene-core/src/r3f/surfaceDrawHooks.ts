@@ -1,6 +1,7 @@
 /**
  * Godot surface state that three holds per object, applied per draw group: a billboard's
- * pose, shadow-pass membership and SHADOWS_ONLY. three calls each before-hook and its
+ * pose, the object space of an alpha hash, shadow-pass membership, the shadow's alpha cut and
+ * SHADOWS_ONLY. three calls each before-hook and its
  * after-hook around one group's draw, with that group's material (`WebGLRenderer.js:2158-2183`,
  * `WebGLShadowMap.js:546-564`), so one mesh can mix surfaces the way Godot does.
  */
@@ -13,6 +14,10 @@ import {
   type SurfaceBillboard,
 } from '../resources/materials/standardmaterial3d/materialBag';
 import { billboardWorldMatrix } from './surfaceBillboard';
+import { alignAlphaHash } from './materials/godotAlphaHash';
+import { opaquePrepassOf } from './materials/opaquePrepass';
+import { surfaceDepthMaterial, syncSurfaceDepth } from './materials/surfaceDepthMaterial';
+import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/opaquePrepass';
 
 /** The four `Object3D` hooks, one prop each: the material factory guard rejects a spread. */
 export interface SurfaceDrawHooks {
@@ -34,6 +39,26 @@ export interface CastRule {
   /** Sets three's shared depth material's side for the surface `material` draws. */
   shadowSide: (depthMaterial: THREE.Material, material: THREE.Material) => void;
 }
+
+/** What the draw hooks read of the geometry instance a surface belongs to, at draw time. */
+export interface DrawnInstance {
+  /**
+   * Whether the instance passes its visibility-range cull for the render in progress. The scene
+   * cull writes it before each render.
+   */
+  readonly isVisible: boolean;
+  /**
+   * Writes the node's world transform as Godot holds it, which a billboard or `fixed_size` on the
+   * node never moves. False where the object's own pose is the node's.
+   */
+  nodeMatrixWorld(target: THREE.Matrix4): boolean;
+}
+
+/** An instance with no visibility range, posed by its object alone. */
+export const UNRANGED_INSTANCE: DrawnInstance = Object.freeze({
+  isVisible: true,
+  nodeMatrixWorld: () => false,
+});
 
 /**
  * three passes the object as the second `onBeforeShadow` argument
@@ -65,6 +90,8 @@ let skippedCount = Infinity;
 
 /** Scratch for the billboarded matrix, overwritten by every draw. */
 const billboarded = new THREE.Matrix4();
+/** Scratch for the node's matrix, overwritten by every draw. */
+const nodeMatrix = new THREE.Matrix4();
 
 /**
  * Make this draw draw nothing: an empty `drawRange` gives the GPU zero elements
@@ -112,6 +139,60 @@ export function drawsAsOneBatch(billboard: SurfaceBillboard): boolean {
   return billboard.mode === BillboardMode.BILLBOARD_DISABLED;
 }
 
+/** Hashes this draw of `material` in the node's object space, as Godot does. */
+function alignHash(object: THREE.Object3D, material: THREE.Material, instance: DrawnInstance): void {
+  if (!instance.nodeMatrixWorld(nodeMatrix)) {
+    nodeMatrix.copy(posed === object ? posedMatrixWorld : object.matrixWorld);
+  }
+  alignAlphaHash(material, nodeMatrix, object.matrixWorld);
+}
+
+/**
+ * The alpha below which a shadow draw of `material` writes nothing, or 0 for none: its scissor, and
+ * the shadow pass's opaque-prepass threshold.
+ */
+function shadowAlphaCut(material: THREE.Material): number {
+  const prepassCut = opaquePrepassOf(material).cutsDepth ? SHADOW_PASS_OPAQUE_THRESHOLD : 0;
+  return Math.max(material.alphaTest, prepassCut);
+}
+
+/**
+ * Draws a surface whose shadow cuts its alpha with its own depth material, and makes three's draw
+ * draw nothing. three's would cut the texture alpha alone, and at the scissor only.
+ */
+function castCutShadow(
+  renderer: THREE.WebGLRenderer,
+  object: THREE.Object3D,
+  shadowCamera: THREE.Camera,
+  geometry: THREE.BufferGeometry,
+  depthMaterial: THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial,
+  material: THREE.Material,
+  group: THREE.GeometryGroup,
+  instance: DrawnInstance
+): void {
+  const own = surfaceDepthMaterial(material, depthMaterial);
+  syncSurfaceDepth(own, material, shadowAlphaCut(material));
+  own.side = depthMaterial.side;
+  // three hands a distance material its light inside `getDepthMaterial` (`WebGLShadowMap.js:487-492`).
+  if ((depthMaterial as THREE.MeshDistanceMaterial).isMeshDistanceMaterial) {
+    lightState(renderer, own).light = lightState(renderer, depthMaterial).light;
+  }
+  alignHash(object, own, instance);
+  // The scene three's own shadow draw passes: none (`WebGLShadowMap.js:550`), typed as one.
+  renderer.renderBufferDirect(shadowCamera, null as unknown as THREE.Scene, geometry, own, object, group);
+  skip(geometry);
+}
+
+/** The renderer's state for a distance material, which three types as unknown. */
+function lightState(renderer: THREE.WebGLRenderer, material: THREE.Material): { light?: THREE.Light } {
+  return renderer.properties.get(material) as { light?: THREE.Light };
+}
+
+/** Whether a shadow draw of `material` cuts its alpha anywhere. */
+function cutsShadow(material: THREE.Material): boolean {
+  return material.alphaHash || shadowAlphaCut(material) > 0;
+}
+
 function closeDraw(): void {
   if (skipped) {
     skipped.drawRange.count = skippedCount;
@@ -137,20 +218,35 @@ export const skipColourDraw: CastRule['colourDraw'] = (_object, geometry) => {
   skip(geometry);
 };
 
-export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
+/**
+ * The hooks for one `cast_shadow` rule of one instance. A culled instance draws no colour and
+ * casts into no directional shadow (`renderer_scene_cull.cpp:2852,3140`). It still casts into an
+ * omni or spot shadow, whose cull reads no range (`:2415`).
+ */
+export function surfaceDrawHooks(rule: CastRule, instance: DrawnInstance): SurfaceDrawHooks {
   return {
     // three recomputes `modelViewMatrix` from `matrixWorld` after this hook (`:2160`).
     onBeforeRender(this: THREE.Object3D, _renderer, _scene, camera, geometry, material) {
+      if (!instance.isVisible) {
+        skip(geometry);
+        return;
+      }
       rule.colourDraw(this, geometry, material, camera);
+      alignHash(this, material, instance);
     },
     onAfterRender: closeDraw,
     // three sets `modelViewMatrix` once per object before its group loop
     // (`WebGLShadowMap.js:528`), so a moved pose recomputes it here. The main camera
     // stays the billboard's, as `MAIN_CAM_INV_VIEW_MATRIX` is on a shadow pass.
-    onBeforeShadow(_renderer, object, camera, shadowCamera, geometry, depthMaterial, group) {
+    onBeforeShadow(renderer, object, camera, shadowCamera, geometry, depthMaterial, group) {
       const material = drawnMaterial(object, group);
       if (!material) return;
       rule.shadowSide(depthMaterial, material);
+      // three gives only a DirectionalLight's shadow an orthographic camera.
+      if (!instance.isVisible && (shadowCamera as THREE.OrthographicCamera).isOrthographicCamera) {
+        skip(geometry);
+        return;
+      }
       // Godot's render list leaves such a surface out (`render_forward_clustered.cpp:4078-4088`).
       if (!castsShadowOf(material)) {
         skip(geometry);
@@ -163,6 +259,11 @@ export function surfaceDrawHooks(rule: CastRule): SurfaceDrawHooks {
         viewedModelView.copy(drawn.modelViewMatrix);
         drawn.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, drawn.matrixWorld);
       }
+      if (!cutsShadow(material)) return;
+      const shadowDepth = depthMaterial as THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
+      // three passes the geometry group, or null for one material, typed as a `Group`.
+      const drawnGroup = group as unknown as THREE.GeometryGroup;
+      castCutShadow(renderer, drawn, shadowCamera, geometry, shadowDepth, material, drawnGroup, instance);
     },
     onAfterShadow: closeDraw,
   };

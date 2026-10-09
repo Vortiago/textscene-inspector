@@ -43,22 +43,22 @@ export function WorldRoot({ children }: { children: ReactNode }) {
   );
 }
 
-const ParentSpaceFamilyContext = createContext<SpaceFamily | null>(null);
-ParentSpaceFamilyContext.displayName = 'ParentSpaceFamilyContext';
+const ParentTypeContext = createContext<string | null>(null);
+ParentTypeContext.displayName = 'ParentTypeContext';
 
-/** The family of the node rendering this subtree, which only that node knows. */
-export function useParentSpaceFamily(): SpaceFamily | null {
-  return useContext(ParentSpaceFamilyContext);
+/** The type of the node rendering this subtree, which only that node knows. Null outside a dispatcher. */
+export function useParentType(): string | null {
+  return useContext(ParentTypeContext);
 }
 
-export function ParentSpaceFamilyProvider({
-  value,
-  children,
-}: {
-  value: SpaceFamily | null;
-  children: ReactNode;
-}) {
-  return <ParentSpaceFamilyContext.Provider value={value}>{children}</ParentSpaceFamilyContext.Provider>;
+/** The space family of the node rendering this subtree. */
+export function useParentSpaceFamily(): SpaceFamily | null {
+  const parentType = useParentType();
+  return parentType === null ? null : spaceFamilyOf(parentType);
+}
+
+export function ParentTypeProvider({ value, children }: { value: string; children: ReactNode }) {
+  return <ParentTypeContext.Provider value={value}>{children}</ParentTypeContext.Provider>;
 }
 
 /**

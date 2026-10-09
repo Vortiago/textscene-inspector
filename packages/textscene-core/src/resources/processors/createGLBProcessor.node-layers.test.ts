@@ -16,8 +16,8 @@ import { visualLayersOf } from '../../r3f/visualLayers';
 
 const GLTF_PATH = 'res://town/lamp/scene.gltf';
 /**
- * The witness path, verbatim from the vendored sidecar: a SPACE that three sanitizes to
- * `_`, and the full chain the Sketchfab export really carries.
+ * The witness path, verbatim from the vendored sidecar: a space, which Godot keeps and three
+ * replaces, and the full chain the Sketchfab export really carries.
  */
 const NODE_PATH = 'Sketchfab_model/root/GLTF_SceneRootNode/Lowpoly lamp_105/Object_4';
 
@@ -41,7 +41,7 @@ _subresources={
  * The vendored lamp's node chain, leaf-mesh included, under a named scene: the scene
  * name is what a first-segment lookup that admitted the root could latch onto.
  */
-function nestedGltf(): ArrayBuffer {
+function nestedGltf(leafName: string): ArrayBuffer {
   const gltf = {
     asset: { version: '2.0' },
     scene: 0,
@@ -51,7 +51,7 @@ function nestedGltf(): ArrayBuffer {
       { name: 'root', children: [2] },
       { name: 'GLTF_SceneRootNode', children: [3] },
       { name: 'Lowpoly lamp_105', children: [4] },
-      { name: 'Object_4', mesh: 0 },
+      { name: leafName, mesh: 0 },
     ],
     meshes: [{ name: 'lamp', primitives: [{ attributes: { POSITION: 0 } }] }],
     accessors: [
@@ -68,8 +68,8 @@ function nestedGltf(): ArrayBuffer {
   return new TextEncoder().encode(JSON.stringify(gltf)).buffer as ArrayBuffer;
 }
 
-async function loadWith(files: Record<string, string>): Promise<THREE.Object3D> {
-  const asset = nestedGltf();
+async function loadWith(files: Record<string, string>, leafName = 'Object_4'): Promise<THREE.Object3D> {
+  const asset = nestedGltf(leafName);
   const fileEventBus = new FileEventBus({
     loadResource: vi.fn(async (path: string) => (path === GLTF_PATH ? asset : (files[path] ?? null))),
   });
@@ -93,8 +93,24 @@ describe('createGLBProcessor — import sidecar node layers', () => {
     await initGlbModules();
   });
 
-  it('stamps the sidecar mask, matching a path three has sanitized', async () => {
+  it('stamps the sidecar mask on the node its path names', async () => {
     const root = await loadWith({ [`${GLTF_PATH}.import`]: SIDECAR });
+    expect(visualLayersOf(theMesh(root))).toBe(2);
+  });
+
+  it('matches the name Godot gives a node, not the one three gives it', async () => {
+    // Godot imports `Object.4` as `Object_4`, and three loads it as `Object4`.
+    const root = await loadWith({ [`${GLTF_PATH}.import`]: SIDECAR }, 'Object.4');
+    expect(visualLayersOf(theMesh(root))).toBe(2);
+  });
+
+  it("names the nodes by the sidecar's naming version", async () => {
+    // Before 4.2 the importer takes an unnamed mesh's fallback twice, so it is `Mesh2`.
+    const sidecar = SIDECAR.replace('Object_4"', 'Mesh2"').replace(
+      '[params]\n',
+      '[params]\n\ngltf/naming_version=0'
+    );
+    const root = await loadWith({ [`${GLTF_PATH}.import`]: sidecar }, '');
     expect(visualLayersOf(theMesh(root))).toBe(2);
   });
 

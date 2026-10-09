@@ -217,6 +217,10 @@ function checkRun(gate, label, report) {
       'so the readback below says nothing about text'
   );
   gate.check(
+    report.captureState === 'ready',
+    `${where} the preview never reported its capture ready, last state: ${report.captureState}`
+  );
+  gate.check(
     report.canvasStable === true,
     `${where} the canvas never settled: two consecutive readbacks were still different`
   );
@@ -258,14 +262,19 @@ function checkRun(gate, label, report) {
 }
 
 /**
- * The edited mesh redrew in place: the canvas changed after the edit, settled, and
- * equals, pixel for pixel, a cold render of the edited scene.
+ * The edited mesh redrew in place: the canvas changed after the edit, the capture
+ * reported ready, the canvas settled, and it equals, pixel for pixel, a cold render
+ * of the edited scene.
  */
 function checkHotReload(gate, hotReload, fresh) {
   const edit = hotReload.edit;
   gate.check(
     edit?.changed === true,
     '[hot-reload] the canvas never changed after the mesh was edited on disk'
+  );
+  gate.check(
+    edit?.captureState === 'ready',
+    `[hot-reload] the preview never reported its capture ready after the edit, last state: ${edit?.captureState}`
   );
   gate.check(edit?.stable === true, '[hot-reload] the canvas never settled after the edit');
   if (!edit?.canvasPath || !hotReload.canvasPath || !fresh.canvasPath) {
@@ -480,7 +489,6 @@ async function main() {
     `[noise] no job worker answered inside the preview, so the texture built on the main ` +
       `thread: ${brief(textureWork)}`
   );
-  gate.check(noiseReport.textureWorkCleared === true, '[noise] the texture work status never cleared');
   const noiseInk = noiseReport.canvasReadback;
   gate.check(
     noiseInk.inkPixels >= NOISE_INK_FLOOR,

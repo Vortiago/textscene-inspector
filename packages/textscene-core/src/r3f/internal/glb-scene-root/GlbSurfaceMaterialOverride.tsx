@@ -8,7 +8,7 @@ import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
 import {
   MISSING_TEXTURE_MATERIAL,
-  standardMaterialBag,
+  standardMaterialBags,
 } from '../../../resources/materials/standardmaterial3d/materialBag.js';
 import { materialFromBag } from '../../../resources/materials/standardmaterial3d/build.js';
 import { textureSlotsFromMaps } from '../../materials/materialTextureMaps.js';
@@ -16,6 +16,7 @@ import { forEachSurfaceMaterial } from '../../../resources/formats/glb/glbProces
 import { useMaterialScalars, useMaterialTextures } from '../../materials/SurfaceMaterialSlot.js';
 import { readyMaterial, useMaterial } from '../../materials/useMaterial.js';
 import type { MaterialSource } from '../../materials/materialSource.js';
+import { registerFadedCopyBuilders, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
 
 export interface GlbSurfaceMaterialOverrideProps {
   /** The GLB-internal object whose surface materials are being replaced. */
@@ -46,13 +47,21 @@ export function GlbSurfaceMaterialOverride({
   // sub-resource whose size a triplanar material could tile against.
   const { maps, isUnresolved } = useMaterialTextures(scalars, ready);
   const isAbsent = loaded.status === 'absent';
-  // The constant bag while unresolved, so a late map leaves the placeholder material as it is.
-  const bag = useMemo(
-    () =>
-      isUnresolved ? MISSING_TEXTURE_MATERIAL : standardMaterialBag(scalars, textureSlotsFromMaps(maps)),
+  // No bags while unresolved, so a late map leaves the placeholder material as it is.
+  const bags = useMemo(
+    () => (isUnresolved ? null : standardMaterialBags(scalars, textureSlotsFromMaps(maps))),
     [isUnresolved, scalars, maps]
   );
-  const material = useMemo(() => (isAbsent ? null : materialFromBag(bag)), [isAbsent, bag]);
+  const material = useMemo(() => {
+    if (isAbsent) return null;
+    if (!bags) return materialFromBag(MISSING_TEXTURE_MATERIAL);
+    const unfaded = materialFromBag(bags.unfaded);
+    registerFadedCopyBuilders(unfaded, {
+      unfaded: () => materialFromBag(bags.unfaded),
+      alphaPass: () => materialFromBag(bags.alphaPass),
+    });
+    return unfaded;
+  }, [isAbsent, bags]);
   useEffect(() => () => material?.dispose(), [material]);
   useGlbMaterialSwap(target, material, replaces);
   return null;
@@ -62,7 +71,8 @@ export function GlbSurfaceMaterialOverride({
  * Puts `material` into every surface slot under `target` that `replaces` accepts: a glTF node
  * with several primitives arrives as a Group of Meshes. Restores each slot on unmount, since the
  * GLB clone is long-lived and a reload that dropped the override would leave the swap behind. A
- * slot another override has since taken keeps that override's material.
+ * slot another override has since taken keeps that override's material. A slot the range fade
+ * holds in the alpha pass counts as its unfaded material, which the next fade draws again.
  */
 function useGlbMaterialSwap(
   target: THREE.Object3D,
@@ -73,11 +83,13 @@ function useGlbMaterialSwap(
     if (!material) return undefined;
 
     const restore: Array<() => void> = [];
-    forEachSurfaceMaterial(target, (current, assign, read) => {
+    forEachSurfaceMaterial(target, (held, assign, read) => {
+      const current = unfadedMaterial(held);
       if (!replaces(current)) return;
       assign(material);
       restore.push(() => {
-        if (read() === material) assign(current);
+        const now = read();
+        if (now && unfadedMaterial(now) === material) assign(current);
       });
     });
 

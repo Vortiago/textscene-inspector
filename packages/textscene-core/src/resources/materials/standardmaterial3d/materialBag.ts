@@ -12,8 +12,16 @@ import {
   GODOT_DEFAULT_ROUGHNESS,
 } from '../../../r3f/materials/godotDefaultMaterial';
 import { BillboardMode } from '../../../godot/billboard';
-import { fadedSurfaceAlpha } from '../../../r3f/materials/fadedSurfaceAlpha';
+import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
+import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import {
+  DRAWN_OPAQUE_PREPASS,
+  FADED_OPAQUE_PREPASS,
+  NO_OPAQUE_PREPASS,
+  opaquePrepassUserData,
+  type OpaquePrepass,
+} from '../../../r3f/materials/opaquePrepass';
 import { resolveEmission } from './emission';
 import type {
   MaterialBlendState,
@@ -127,15 +135,16 @@ const BILLBOARD_KEY = 'godotBillboard';
 const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
- * `billboard_mode` and shadow-pass membership on `userData`, not as material props:
- * Godot decides both per surface, in the vertex shader and in the render list, and here
- * the draw hooks apply both per draw group (`r3f/surfaceDrawHooks.ts`). A fresh object
- * per bag, since the `.tres` loader writes its own keys into it.
+ * `billboard_mode`, shadow-pass membership and `alpha_hash_scale` on `userData`, not as material
+ * props: Godot decides them per surface, and here the draw hooks apply them per draw group
+ * (`r3f/surfaceDrawHooks.ts`). A fresh object per bag, since the `.tres` loader writes its own
+ * keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
     [BILLBOARD_KEY]: surfaceBillboard(scalars),
     [CASTS_SHADOW_KEY]: scalars.castsShadow,
+    ...alphaHashScaleUserData(scalars.alphaHashScale),
   };
 }
 
@@ -185,19 +194,18 @@ export function castsShadowOf(material: THREE.Material): boolean {
 }
 
 /**
- * Derive the material this decoded StandardMaterial3D describes, drawn by a geometry instance.
+ * Derive the material this decoded StandardMaterial3D describes, in each pass a geometry
+ * instance's fade can draw it in: unfaded, and the alpha pass.
  *
  * @param scalars - the decoded material, or null for a surface with none
  * @param textures - already-bound textures by Godot slot; an absent slot lands
  *   as `null`, never `undefined`, so a late arrival cannot be mistaken for
  *   "leave whatever the material has" by either adapter
- * @param transparency - the drawing GeometryInstance3D's `transparency`; 0 for any other drawer
  */
-export function standardMaterialBag(
+export function standardMaterialBags(
   scalars: StandardMaterial3DScalars | null,
-  textures: ResolvedTextureSlots = {},
-  transparency = 0
-): StandardMaterialBag {
+  textures: ResolvedTextureSlots = {}
+): FadeVariants<StandardMaterialBag> {
   const bag = scalars ? classBag(scalars, textures) : NO_MATERIAL;
   const source = scalars ?? NO_MATERIAL_ALPHA;
   const surface = {
@@ -207,8 +215,22 @@ export function standardMaterialBag(
     alphaPassDepthWrite: source.alphaPassDepthWrite,
     blending: bag.props.blending,
   };
-  const { injection, ...alpha } = fadedSurfaceAlpha(source, surface, transparency);
-  return { ...bag, props: { ...bag.props, ...alpha }, injection };
+  const { unfaded, alphaPass } = surfaceFadeVariants(source, surface);
+  const prepass = scalars?.depthInAlphaPass === true;
+  return {
+    unfaded: withSurfaceAlpha(bag, unfaded, prepass ? DRAWN_OPAQUE_PREPASS : NO_OPAQUE_PREPASS),
+    alphaPass: withSurfaceAlpha(bag, alphaPass, prepass ? FADED_OPAQUE_PREPASS : NO_OPAQUE_PREPASS),
+  };
+}
+
+function withSurfaceAlpha(
+  bag: StandardMaterialBag,
+  { injection, ...alpha }: PassAlpha,
+  prepass: OpaquePrepass
+): StandardMaterialBag {
+  const props = { ...bag.props, ...alpha };
+  if (prepass.cutsDepth) props.userData = { ...bag.props.userData, ...opaquePrepassUserData(prepass) };
+  return { ...bag, props, injection };
 }
 
 /** The class `scalars` need, and its props. */
@@ -233,6 +255,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
         transparent: scalars.transparent,
         opacity: scalars.opacity,
         alphaTest: scalars.alphaTest,
+        alphaHash: scalars.alphaHash,
         depthWrite: scalars.depthWrite,
         depthTest: scalars.depthTest,
         side: scalars.side,
@@ -254,6 +277,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     transparent: scalars.transparent,
     opacity: scalars.opacity,
     alphaTest: scalars.alphaTest,
+    alphaHash: scalars.alphaHash,
     depthWrite: scalars.depthWrite,
     depthTest: scalars.depthTest,
     side: scalars.side,

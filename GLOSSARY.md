@@ -355,8 +355,20 @@ _Avoid_: "ambient light" alone for the sky case. "IBL" in user-facing text.
 A drawn 3D Node (a GeometryInstance3D) whose own render state, such as `transparency` and `cast_shadow`, applies to every surface it draws.
 _Avoid_: bare "instance", which names **PackedScene instancing**.
 
+**Geometry base**:
+The mesh, multimesh or particles a **geometry instance** hands Godot's renderer to draw. A MeshInstance3D has one only with a mesh, and a CSG shape only as a root. Godot's scene cull indexes an instance only when it has one and its AABB has a surface.
+_Avoid_: "drawn", which says what the previewer draws, not what Godot holds.
+
+**Visibility range**:
+The camera distances between which a **geometry instance** draws, measured to the centre of its world AABB. Fade mode SELF blends it in across the margins.
+_Avoid_: "LOD", which names mesh level of detail.
+
+**Visibility parent**:
+The **geometry instance** whose **visibility range** decides whether another draws. A dependant draws only while the camera is short of its parent's begin, or inside a DEPENDENCIES margin, where it fades in. A Node3D without its own `visibility_parent` takes its Node3D parent's. A parent the scene cull does not index, with no **geometry base** or a flat AABB, is no parent.
+_Avoid_: "LOD parent", "HLOD parent".
+
 **Fade alpha**:
-The alpha a **geometry instance**'s `transparency` gives every surface it draws, as Godot stores it in a byte. The surface's own alpha multiplies it.
+The alpha a **geometry instance**'s `transparency` and **visibility range** fade give every surface it draws, as Godot stores it in a byte. The surface's own alpha multiplies it.
 _Avoid_: "instance alpha", "instance transparency".
 
 **Alpha pass**:

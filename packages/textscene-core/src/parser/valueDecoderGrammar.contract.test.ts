@@ -169,28 +169,12 @@ describe('#175 optional scalars — fall to undefined on garbage, never NaN', ()
     expect(parseDirectionalLight3D(h, { shadow_normal_bias: 'abc' }).shadow_normal_bias).toBeUndefined();
   });
 
-  it('meshinstance visibility_range_begin: garbage stays undefined, never NaN', () => {
-    const h = heading('MeshInstance3D', { name: 'Mesh', parent: '.' });
-    const result = parseMeshInstance3D(h, { visibility_range_begin: 'garbage' });
-    expect(result.visibilityRangeBegin).toBeUndefined();
-  });
-
   it('meshinstance converted int/float fields: garbage stays undefined, never NaN', () => {
-    // The other optional reads (giLightmapScale/layers/fade_mode through parseOptionalInt,
-    // the range margins through parseOptionalFloat) drop truthy garbage to undefined, as
-    // visibility_range_begin does above.
+    // giLightmapScale and layers read through parseOptionalInt, which drops truthy garbage
+    // to undefined.
     const h = heading('MeshInstance3D', { name: 'Mesh', parent: '.' });
-    const result = parseMeshInstance3D(h, {
-      gi_lightmap_scale: 'garbage',
-      visibility_range_begin_margin: 'garbage',
-      visibility_range_end_margin: 'garbage',
-      visibility_range_fade_mode: 'garbage',
-      layers: 'garbage',
-    });
+    const result = parseMeshInstance3D(h, { gi_lightmap_scale: 'garbage', layers: 'garbage' });
     expect(result.giLightmapScale).toBeUndefined();
-    expect(result.visibilityRangeBeginMargin).toBeUndefined();
-    expect(result.visibilityRangeEndMargin).toBeUndefined();
-    expect(result.visibilityRangeFadeMode).toBeUndefined();
     expect(result.layers).toBeUndefined();
   });
 

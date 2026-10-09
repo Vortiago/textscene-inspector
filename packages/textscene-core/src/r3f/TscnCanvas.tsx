@@ -8,7 +8,7 @@ import { useContext, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { ResourceLoaderContext } from '../resources/ResourceLoaderContext.js';
-import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
+import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { NodeDispatcher } from './NodeDispatcher.js';
@@ -24,6 +24,8 @@ import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { installShaderPatches } from './shaderPatch/installShaderPatches.js';
 import { SceneShadowFitter } from './SceneShadowFitter.js';
+import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
+import { ScreenshotBridge } from './ScreenshotBridge.js';
 import { TiledUploadDriver } from './tiledUpload/TiledUploadDriver.js';
 import styles from './TscnCanvas.module.css';
 
@@ -63,8 +65,10 @@ export function TscnSceneContents() {
       />
       <ViewportPassOrchestrator />
       <SceneShadowFitter />
+      <SceneDepthPrepass />
       <SelectionHighlight />
       <HoverHighlight />
+      <ScreenshotBridge />
     </TiledUploadDriver>
   );
 }
@@ -120,7 +124,7 @@ type CameraLike = THREE.Camera & {
  * camera. "Reset" returns to the default orbit camera.
  */
 export function ActiveCameraSwitcher() {
-  const control = useOptionalCameraControl();
+  const control = useOptionalViewportActions();
   const activeCameraPath = control?.activeCameraPath ?? null;
   const hierarchy = useOptionalHierarchy();
   // Re-run when the scene loads: a deep-linked (`?camera=`) path is set before
@@ -186,7 +190,7 @@ export function ActiveCameraSwitcher() {
  */
 export function CameraFit() {
   const hierarchy = useOptionalHierarchy();
-  const control = useOptionalCameraControl();
+  const control = useOptionalViewportActions();
   const { frameOnOpen } = useViewportMode();
   const get = useThree((s) => s.get);
   const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
@@ -254,19 +258,18 @@ export function TscnCanvas() {
         <FrameSelectedShortcut />
         <GodotEditorControls />
         <EditorControlsResetBridge />
-        <ScreenshotBridge />
       </Canvas>
     </div>
   );
 }
 
 /**
- * Hands the navigation handle to `CameraControlContext`, so the toolbar can call
+ * Hands the navigation handle to `ViewportActionsContext`, so the toolbar can call
  * `reset()` from outside the `<Canvas>`. `<GodotEditorControls>` publishes it
  * as R3F's `state.controls`.
  */
 function EditorControlsResetBridge() {
-  const control = useOptionalCameraControl();
+  const control = useOptionalViewportActions();
   const registerResetHandler = control?.registerResetHandler;
   const published = useThree((s) => s.controls);
   const controls = published instanceof EditorControlsHandle ? published : null;
@@ -275,32 +278,6 @@ function EditorControlsResetBridge() {
     if (!registerResetHandler || !controls) return undefined;
     return registerResetHandler(() => controls.reset());
   }, [registerResetHandler, controls]);
-
-  return null;
-}
-
-/**
- * Hands the renderer to `CameraControlContext` for the toolbar's screenshot.
- * It renders and reads back in the same task: WebGL clears the buffer only when
- * the browser composites. `preserveDrawingBuffer` would copy the buffer every frame.
- * It mounts after `<TscnSceneContents>`, so its effect runs after the scene's own
- * effects have asked for their resources, and names the scene graph it has rendered.
- */
-function ScreenshotBridge() {
-  const control = useOptionalCameraControl();
-  const registerScreenshotHandler = control?.registerScreenshotHandler;
-  const renderedScene = useOptionalHierarchy()?.sceneGraph ?? null;
-  const gl = useThree((s) => s.gl);
-  const scene = useThree((s) => s.scene);
-  const camera = useThree((s) => s.camera);
-
-  useEffect(() => {
-    if (!registerScreenshotHandler) return undefined;
-    return registerScreenshotHandler(() => {
-      gl.render(scene, camera);
-      return gl.domElement.toDataURL('image/png');
-    }, renderedScene);
-  }, [registerScreenshotHandler, gl, scene, camera, renderedScene]);
 
   return null;
 }

@@ -7,7 +7,7 @@ import {
 } from '../../../r3f/controls/native/text/openSansAtlas';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { buildGlyphQuadArrays } from '../../../r3f/controls/native/text/TextRun';
-import { layoutLabel3DLines, outlineRadiusPx, outlineStrokeWidthPx } from './glyphLayout';
+import { label3DAabb, layoutLabel3DLines, outlineRadiusPx, outlineStrokeWidthPx } from './glyphLayout';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment } from './types';
 
@@ -88,6 +88,52 @@ describe('layoutLabel3DLines', () => {
       0
     );
     expect(placements).toEqual([]);
+  });
+});
+
+describe('label3DAabb (the line boxes label_3d.cpp:600-606 expands its AABB over)', () => {
+  const PIXEL_SIZE = 0.01;
+
+  function aabbOf(text: string, alignment: HorizontalAlignment, lineSpacingPx = 0) {
+    const layout = shape(text, lineSpacingPx);
+    return label3DAabb(layoutLabel3DLines(layout, alignment, lineSpacingPx), layout.linePitchPx, PIXEL_SIZE);
+  }
+
+  function centreOf(text: string, alignment: HorizontalAlignment, lineSpacingPx = 0) {
+    const { position, size } = aabbOf(text, alignment, lineSpacingPx);
+    return { x: position.x + size.x / 2, y: position.y + size.y / 2 };
+  }
+
+  it('centres a CENTER label on its origin', () => {
+    const centre = centreOf('A\nBB', HorizontalAlignment.CENTER);
+    expect(centre.x).toBeCloseTo(0, 6);
+    expect(centre.y).toBeCloseTo(0, 6);
+  });
+
+  it('lowers the centre by half the line spacing, which the last line box carries below the text', () => {
+    expect(centreOf('A\nB', HorizontalAlignment.CENTER, 6).y).toBeCloseTo(-3 * PIXEL_SIZE, 6);
+  });
+
+  it('spans a LEFT label from its origin to its widest line', () => {
+    const layout = shape('A\nBB');
+    const widest = Math.max(...layout.lines.map((line) => line.widthPx));
+    const { position, size } = aabbOf('A\nBB', HorizontalAlignment.LEFT);
+    expect([position.x, size.x]).toEqual([0, widest * PIXEL_SIZE]);
+  });
+
+  it('spans two line pitches for two lines', () => {
+    const layout = shape('A\nB');
+    expect(aabbOf('A\nB', HorizontalAlignment.CENTER).size.y).toBeCloseTo(
+      2 * layout.linePitchPx * PIXEL_SIZE,
+      6
+    );
+  });
+
+  it('leaves a label with no lines an empty AABB at the origin', () => {
+    expect(label3DAabb([], getLinePitchPx(FONT_SIZE), PIXEL_SIZE)).toEqual({
+      position: { x: 0, y: 0, z: 0 },
+      size: { x: 0, y: 0, z: 0 },
+    });
   });
 });
 

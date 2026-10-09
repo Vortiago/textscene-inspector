@@ -45,6 +45,17 @@ export interface SpriteFrameProps {
 }
 
 /**
+ * A frame that is the whole of the texture it names, as an AnimatedSprite's frame is:
+ * `useTexture2D` crops a sheet cell (AtlasTexture) to its own texture, so nothing is windowed.
+ */
+export const WHOLE_FRAME: SpriteFrameProps = Object.freeze({
+  region_enabled: false,
+  hframes: 1,
+  vframes: 1,
+  frame: 0,
+});
+
+/**
  * Clone the loaded texture with the sprite's sampler state, or undefined before it
  * loads. `useResource` shares one texture per path, so an in-place edit clobbers
  * other sprites. `colorSpace` is required like `wrap`: Sprite2D passes NoColorSpace

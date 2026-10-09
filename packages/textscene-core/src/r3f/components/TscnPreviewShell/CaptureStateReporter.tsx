@@ -8,9 +8,8 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useResourceLoader } from '../../../resources/useResource.js';
 import { usePendingTextureWork } from '../../../resources/usePendingTextureWork.js';
-import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
+import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
-import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { PENDING_CAPTURE, previewCaptureStateOf, type PreviewCaptureState } from './previewCaptureState.js';
 
 const NO_SUBSCRIPTION = () => () => {};
@@ -32,7 +31,7 @@ function usePendingResourceCount(): number {
  * rendered it, and no resource or texture it uses is still on its way.
  */
 function useIsSceneComplete(): boolean {
-  const control = useOptionalCameraControl();
+  const control = useOptionalViewportActions();
   const currentScene = useOptionalHierarchy()?.sceneGraph ?? null;
   const renderedScene = useSyncExternalStore(
     control?.subscribeScreenshotHandler ?? NO_SUBSCRIPTION,
@@ -53,8 +52,7 @@ export function CaptureStateReporter({
   onCaptureStateChange?: (state: PreviewCaptureState) => void;
   viewportError: Error | null;
 }) {
-  const control = useOptionalCameraControl();
-  const { mode } = useViewportMode();
+  const control = useOptionalViewportActions();
   const hasHandler = useSyncExternalStore(
     control?.subscribeScreenshotHandler ?? NO_SUBSCRIPTION,
     control?.hasScreenshotHandler ?? NO_HANDLER
@@ -68,9 +66,8 @@ export function CaptureStateReporter({
         capture: hasHandler && takeScreenshot ? takeScreenshot : null,
         isSceneComplete,
         viewportError,
-        mode,
       }),
-    [hasHandler, takeScreenshot, isSceneComplete, viewportError, mode]
+    [hasHandler, takeScreenshot, isSceneComplete, viewportError]
   );
 
   useEffect(() => {

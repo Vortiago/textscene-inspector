@@ -21,6 +21,7 @@ import {
   nonNegativeSizeOr,
   settableIntOr,
   settableFloatOr,
+  parseOptionalAabb,
   parseOptionalRect2,
   parseHeadingIndex,
 } from './valueParsers';
@@ -313,6 +314,25 @@ describe('nonNegativeSizeOr', () => {
     expect(nonNegativeSizeOr({ x: 4, y: -1 }, FALLBACK_2D, 'Rect')).toEqual(FALLBACK_2D);
     expect(nonNegativeSizeOr({ x: 1, y: 2, z: -3 }, FALLBACK_3D, 'Box')).toEqual(FALLBACK_3D);
     expect(warnSpy).toHaveBeenCalled();
+  });
+});
+
+describe('parseOptionalAabb', () => {
+  it('is silent and unset when the property is absent', () => {
+    expect(parseOptionalAabb(undefined, 'Box')).toBeUndefined();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('parses the position and the size', () => {
+    expect(parseOptionalAabb('AABB(-1, 0.5, -2, 2, 1e1, 4)', 'Box')).toEqual({
+      position: { x: -1, y: 0.5, z: -2 },
+      size: { x: 2, y: 10, z: 4 },
+    });
+  });
+
+  it('warns and reports unset for a box of five components', () => {
+    expect(parseOptionalAabb('AABB(0, 0, 0, 1, 1)', 'Box')).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledOnce();
   });
 });
 

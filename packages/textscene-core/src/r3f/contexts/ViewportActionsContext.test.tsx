@@ -1,0 +1,385 @@
+/**
+ * `resetCamera` drives the registered handler, the `reset()` of the canvas's
+ * `<GodotEditorControls>`. The camera switch (`switchToCamera`,
+ * `returnToFreeView`, `activeCameraPath`) and the 2D framing claim are pinned too.
+ */
+import { useEffect, type ReactNode } from 'react';
+import { describe, expect, it, vi } from 'vitest';
+import { act, render, renderHook } from '@testing-library/react';
+import { buildSceneGraph, type SceneGraph } from '../../core/SceneGraph';
+import {
+  ViewportActionsProvider,
+  useViewportActions,
+  useOptionalViewportActions,
+} from './ViewportActionsContext';
+
+/** A scene graph with no nodes. The context compares graphs by identity only. */
+function emptySceneGraph(): SceneGraph {
+  return buildSceneGraph({
+    path: 'res://main.tscn',
+    nodes: [],
+    externalScenes: [],
+    internalResources: [],
+    externalResources: [],
+  });
+}
+
+function wrapper({ children }: { children: ReactNode }) {
+  return <ViewportActionsProvider>{children}</ViewportActionsProvider>;
+}
+
+describe('ViewportActionsContext', () => {
+  it('exposes activeCameraPath/switchToCamera/returnToFreeView from main', () => {
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
+    expect(result.current.activeCameraPath).toBeNull();
+
+    act(() => {
+      result.current.switchToCamera('Root/Camera3D');
+    });
+    expect(result.current.activeCameraPath).toBe('Root/Camera3D');
+
+    act(() => {
+      result.current.returnToFreeView();
+    });
+    expect(result.current.activeCameraPath).toBeNull();
+  });
+
+  it('seeds activeCameraPath from initialActiveCameraPath (?camera= deep-link)', () => {
+    const { result } = renderHook(() => useViewportActions(), {
+      wrapper: ({ children }) => (
+        <ViewportActionsProvider initialActiveCameraPath="Root/Camera3D">{children}</ViewportActionsProvider>
+      ),
+    });
+    // The canvas looks through this camera on open without any user action.
+    expect(result.current.activeCameraPath).toBe('Root/Camera3D');
+
+    // Free view still clears it, since the seed is only the initial value.
+    act(() => {
+      result.current.returnToFreeView();
+    });
+    expect(result.current.activeCameraPath).toBeNull();
+  });
+
+  it('defaults activeCameraPath to null when no initial path is given', () => {
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
+    expect(result.current.activeCameraPath).toBeNull();
+  });
+
+  it('exposes resetCamera() that calls the registered handler (WI-UX-7)', () => {
+    const handler = vi.fn();
+
+    function ResetHandlerRegistrar() {
+      const { registerResetHandler } = useViewportActions();
+      useEffect(() => registerResetHandler(handler), [registerResetHandler]);
+      return null;
+    }
+
+    const { result } = renderHook(() => useViewportActions(), {
+      wrapper: ({ children }) => (
+        <ViewportActionsProvider>
+          <ResetHandlerRegistrar />
+          {children}
+        </ViewportActionsProvider>
+      ),
+    });
+
+    expect(handler).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.resetCamera();
+    });
+
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('resetCamera() is a no-op when no handler is registered', () => {
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
+    // No throw with no canvas mounted yet.
+    expect(() =>
+      act(() => {
+        result.current.resetCamera();
+      })
+    ).not.toThrow();
+  });
+
+  it('drops the registered handler when the registrar unmounts', () => {
+    const handler = vi.fn();
+
+    function ResetHandlerRegistrar() {
+      const { registerResetHandler } = useViewportActions();
+      useEffect(() => registerResetHandler(handler), [registerResetHandler]);
+      return null;
+    }
+
+    function TriggerReset() {
+      const { resetCamera } = useViewportActions();
+      return (
+        <button data-testid="trigger" onClick={resetCamera}>
+          reset
+        </button>
+      );
+    }
+
+    function App({ showRegistrar }: { showRegistrar: boolean }) {
+      return (
+        <ViewportActionsProvider>
+          {showRegistrar && <ResetHandlerRegistrar />}
+          <TriggerReset />
+        </ViewportActionsProvider>
+      );
+    }
+
+    const { rerender, getByTestId } = render(<App showRegistrar={true} />);
+
+    act(() => {
+      getByTestId('trigger').click();
+    });
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    // The registrar's unmount drops the handler.
+    rerender(<App showRegistrar={false} />);
+
+    act(() => {
+      getByTestId('trigger').click();
+    });
+    // Still 1, since the handler is unregistered.
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('latest registration wins when two registrars overlap', () => {
+    const firstHandler = vi.fn();
+    const secondHandler = vi.fn();
+
+    function Registrar({ handler }: { handler: () => void }) {
+      const { registerResetHandler } = useViewportActions();
+      useEffect(() => registerResetHandler(handler), [registerResetHandler, handler]);
+      return null;
+    }
+
+    function TriggerReset() {
+      const { resetCamera } = useViewportActions();
+      return (
+        <button data-testid="trigger" onClick={resetCamera}>
+          reset
+        </button>
+      );
+    }
+
+    const { getByTestId } = render(
+      <ViewportActionsProvider>
+        <Registrar handler={firstHandler} />
+        <Registrar handler={secondHandler} />
+        <TriggerReset />
+      </ViewportActionsProvider>
+    );
+
+    act(() => {
+      getByTestId('trigger').click();
+    });
+
+    // The second registrar's effect runs after the first, so its
+    // handler is the active one when reset fires.
+    expect(secondHandler).toHaveBeenCalledTimes(1);
+    expect(firstHandler).not.toHaveBeenCalled();
+  });
+
+  it('lets a 2D framing request be claimed once, however many stages ask', () => {
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
+    act(() => {
+      result.current.requestFrame2D({ center: { x: 1, y: 2 }, zoom: 1 });
+    });
+    const { requestId } = result.current.frame2D!;
+
+    expect(result.current.claimFrame2D(requestId)).toBe(true);
+    expect(result.current.claimFrame2D(requestId)).toBe(false);
+  });
+
+  it('lets a newer 2D framing request be claimed after an older one', () => {
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
+    act(() => {
+      result.current.requestFrame2D({ center: { x: 1, y: 2 }, zoom: 1 });
+    });
+    result.current.claimFrame2D(result.current.frame2D!.requestId);
+
+    act(() => {
+      result.current.requestFrame2D({ center: { x: 1, y: 2 }, zoom: 1 });
+    });
+
+    expect(result.current.claimFrame2D(result.current.frame2D!.requestId)).toBe(true);
+  });
+
+  it('refuses to claim a request id no request carries', () => {
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
+    expect(result.current.claimFrame2D(0)).toBe(false);
+  });
+
+  it('useOptionalViewportActions returns null without a provider', () => {
+    const { result } = renderHook(() => useOptionalViewportActions());
+    expect(result.current).toBeNull();
+  });
+
+  it('useViewportActions throws without a provider', () => {
+    // The throw is expected, so React's error log is silenced.
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() => renderHook(() => useViewportActions())).toThrow(/ViewportActionsProvider/);
+    consoleErrorSpy.mockRestore();
+  });
+});
+
+describe('ViewportActionsContext screenshot', () => {
+  it("takeScreenshot() returns the registered handler's result", () => {
+    const handler = vi.fn(() => 'data:image/png;base64,AAA');
+
+    function ScreenshotHandlerRegistrar() {
+      const { registerScreenshotHandler } = useViewportActions();
+      useEffect(() => registerScreenshotHandler(handler), [registerScreenshotHandler]);
+      return null;
+    }
+
+    const { result } = renderHook(() => useViewportActions(), {
+      wrapper: ({ children }) => (
+        <ViewportActionsProvider>
+          <ScreenshotHandlerRegistrar />
+          {children}
+        </ViewportActionsProvider>
+      ),
+    });
+
+    let captured: string | null = null;
+    act(() => {
+      captured = result.current.takeScreenshot();
+    });
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(captured).toBe('data:image/png;base64,AAA');
+  });
+
+  it('takeScreenshot() returns null when no handler is registered (no canvas mounted yet)', () => {
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
+    let captured: string | null = 'not-null';
+    expect(() => {
+      act(() => {
+        captured = result.current.takeScreenshot();
+      });
+    }).not.toThrow();
+    expect(captured).toBeNull();
+  });
+
+  it('drops the registered screenshot handler when the registrar unmounts', () => {
+    const handler = vi.fn(() => 'data:image/png;base64,AAA');
+
+    function ScreenshotHandlerRegistrar() {
+      const { registerScreenshotHandler } = useViewportActions();
+      useEffect(() => registerScreenshotHandler(handler), [registerScreenshotHandler]);
+      return null;
+    }
+
+    function App({ showRegistrar }: { showRegistrar: boolean }) {
+      return (
+        <ViewportActionsProvider>
+          {showRegistrar && <ScreenshotHandlerRegistrar />}
+          <TriggerScreenshot />
+        </ViewportActionsProvider>
+      );
+    }
+    function TriggerScreenshot() {
+      const { takeScreenshot } = useViewportActions();
+      return (
+        <button data-testid="trigger" onClick={() => takeScreenshot()}>
+          screenshot
+        </button>
+      );
+    }
+
+    const { rerender, getByTestId } = render(<App showRegistrar={true} />);
+    act(() => {
+      getByTestId('trigger').click();
+    });
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    rerender(<App showRegistrar={false} />);
+    act(() => {
+      getByTestId('trigger').click();
+    });
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('tells a subscriber when a handler registers and when it leaves', () => {
+    function ScreenshotHandlerRegistrar() {
+      const { registerScreenshotHandler } = useViewportActions();
+      useEffect(
+        () => registerScreenshotHandler(() => 'data:image/png;base64,AAA'),
+        [registerScreenshotHandler]
+      );
+      return null;
+    }
+    let control: ReturnType<typeof useViewportActions> | null = null;
+    function Probe() {
+      control = useViewportActions();
+      return null;
+    }
+    function App({ showRegistrar }: { showRegistrar: boolean }) {
+      return (
+        <ViewportActionsProvider>
+          <Probe />
+          {showRegistrar && <ScreenshotHandlerRegistrar />}
+        </ViewportActionsProvider>
+      );
+    }
+    const { rerender } = render(<App showRegistrar={false} />);
+    const seen: boolean[] = [];
+    control!.subscribeScreenshotHandler(() => seen.push(control!.hasScreenshotHandler()));
+    expect(control!.hasScreenshotHandler()).toBe(false);
+
+    rerender(<App showRegistrar={true} />);
+    rerender(<App showRegistrar={false} />);
+
+    expect(seen).toEqual([true, false]);
+  });
+
+  it('stops telling a subscriber once it unsubscribes', () => {
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
+    const listener = vi.fn();
+    const unsubscribe = result.current.subscribeScreenshotHandler(listener);
+
+    unsubscribe();
+    act(() => {
+      result.current.registerScreenshotHandler(() => null);
+    });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('names the scene graph the registered handler has rendered', () => {
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
+    const renderedScene = emptySceneGraph();
+
+    act(() => {
+      result.current.registerScreenshotHandler(() => null, renderedScene);
+    });
+
+    expect(result.current.screenshotScene()).toBe(renderedScene);
+  });
+
+  it('names no scene once the handler leaves', () => {
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
+    let unregister = () => {};
+    act(() => {
+      unregister = result.current.registerScreenshotHandler(() => null, emptySceneGraph());
+    });
+
+    act(() => unregister());
+
+    expect(result.current.screenshotScene()).toBeNull();
+  });
+
+  it('names no scene for a handler registered without one', () => {
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
+
+    act(() => {
+      result.current.registerScreenshotHandler(() => null);
+    });
+
+    expect(result.current.screenshotScene()).toBeNull();
+  });
+});

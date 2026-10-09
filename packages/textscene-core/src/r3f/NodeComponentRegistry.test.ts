@@ -37,3 +37,24 @@ describe('nodeComponentRegistry.passesThrough', () => {
     expect(nodeComponentRegistry.passesThrough('__TestLeaf')).toBe(false);
   });
 });
+
+describe('nodeComponentRegistry.register', () => {
+  function Dummy() {
+    return null;
+  }
+
+  it("mounts a GeometryInstance3D type's component in its place in the scene cull", () => {
+    nodeComponentRegistry.register({ typeName: 'Label3D', Component: Dummy });
+    expect(nodeComponentRegistry.get('Label3D')?.displayName).toBe('withGeometryInstance(Dummy)');
+  });
+
+  it('keeps the component of a type outside GeometryInstance3D', () => {
+    nodeComponentRegistry.register({ typeName: 'MeshLibrary', Component: Dummy });
+    expect(nodeComponentRegistry.get('MeshLibrary')).toBe(Dummy);
+  });
+
+  it('keeps the component of a type ClassDB does not know (edge case)', () => {
+    nodeComponentRegistry.register({ typeName: '__TestUnknown', Component: Dummy });
+    expect(nodeComponentRegistry.get('__TestUnknown')).toBe(Dummy);
+  });
+});

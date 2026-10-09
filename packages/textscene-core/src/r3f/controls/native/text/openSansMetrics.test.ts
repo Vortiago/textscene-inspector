@@ -28,7 +28,7 @@ describe('OPEN_SANS_METRICS', () => {
     expect(getLinePitchPx(16)).toBe(26);
   });
 
-  it('spot-checks glyph advances against values hand-computed from the vendored font\'s own hmtx table', () => {
+  it("spot-checks glyph advances against values hand-computed from the vendored font's own hmtx table", () => {
     // Atlas xadvance is `advanceWidth * (42 / unitsPerEm)`, unrounded (msdf-bmfont-xml `index.js:400`,
     // with `roundDecimal: null` passing `index.js:298`). Each figure is hand-computed as
     // `hmtx units * 42/2048` from fontkit 2.0.4 readings of the woff2:

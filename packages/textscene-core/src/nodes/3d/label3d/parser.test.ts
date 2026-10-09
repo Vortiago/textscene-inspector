@@ -5,6 +5,7 @@ import * as logger from '../../../logger';
 import { parseLabel3D } from './parser';
 import { BillboardMode } from './types';
 import { heading } from '../../../parser/testing/parserKit';
+import { ShadowCastingSetting } from '../../../godot/rendering';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -27,6 +28,15 @@ describe('Label3D Parser', () => {
       expect(props.modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 }); // default white
       expect(props.outline_size).toBe(12); // Godot default
       expect(props.outline_modulate).toEqual({ r: 0, g: 0, b: 0, a: 1 }); // default black
+    });
+
+    it('reads alpha_hash_scale', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), { alpha_hash_scale: '0.25' });
+      expect(props.alpha_hash_scale).toBe(0.25);
+    });
+
+    it("defaults alpha_hash_scale to Godot's 1.0 (edge case)", () => {
+      expect(parseLabel3D(heading('Label3D', { name: 'Label' }), {}).alpha_hash_scale).toBe(1);
     });
 
     it('should parse text property with quotes removed', () => {
@@ -147,6 +157,21 @@ describe('Label3D Parser', () => {
       const absent = parseLabel3D(heading('Label3D', { name: 'Label' }), {});
       expect(authored.alpha_scissor_threshold).toBe(0.25);
       expect(absent.alpha_scissor_threshold).toBe(0.5);
+    });
+
+    it('defaults cast_shadow to OFF, as the Label3D constructor sets it (label_3d.cpp:1090)', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {});
+      expect(props.castShadow).toBe(ShadowCastingSetting.OFF);
+    });
+
+    it('reads an authored cast_shadow', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), { cast_shadow: '1' });
+      expect(props.castShadow).toBe(ShadowCastingSetting.ON);
+    });
+
+    it('keeps OFF for a cast_shadow it cannot read (edge case)', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), { cast_shadow: 'garbage' });
+      expect(props.castShadow).toBe(ShadowCastingSetting.OFF);
     });
 
     it('reads transparency through the GeometryInstance3D parse', () => {

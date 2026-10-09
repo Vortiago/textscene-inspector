@@ -9,6 +9,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SelectionProvider } from '../../contexts/SelectionContext';
+import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
+import { viewportActionsProbe } from '../../testing/ViewportActionsProbe';
 
 // The real ControlCanvasLayer renders null here, so a visible stand-in makes
 // its mount observable.
@@ -49,15 +51,15 @@ describe('World2DCanvas multisampling', () => {
   });
 });
 
-describe('World2DContents native-controls mount seam', () => {
-  const baseProps = {
-    nodes: [],
-    internalResources: [],
-    externalResources: [],
-    pan: { x: 0, y: 0 },
-    zoom: 1,
-  };
+const baseProps = {
+  nodes: [],
+  internalResources: [],
+  externalResources: [],
+  pan: { x: 0, y: 0 },
+  zoom: 1,
+};
 
+describe('World2DContents native-controls mount seam', () => {
   it('lazily mounts ControlCanvasLayer (from the controls barrel) as a sibling after NodeDispatcher', async () => {
     const rendered = await ReactThreeTestRenderer.create(
       <SelectionProvider>
@@ -73,13 +75,7 @@ describe('World2DContents tiled uploads', () => {
     const tick = vi.spyOn(TiledUploadQueue.prototype, 'tick');
     const rendered = await ReactThreeTestRenderer.create(
       <SelectionProvider>
-        <World2DContents
-          nodes={[]}
-          internalResources={[]}
-          externalResources={[]}
-          pan={{ x: 0, y: 0 }}
-          zoom={1}
-        />
+        <World2DContents {...baseProps} />
       </SelectionProvider>
     );
     tick.mockClear();
@@ -87,5 +83,21 @@ describe('World2DContents tiled uploads', () => {
 
     expect(tick).toHaveBeenCalledTimes(2);
     tick.mockRestore();
+  });
+});
+
+describe('World2DContents screenshot', () => {
+  it('registers the 2D view for the toolbar Screenshot and the host capture', async () => {
+    const { Probe, actions } = viewportActionsProbe();
+    await ReactThreeTestRenderer.create(
+      <ViewportActionsProvider>
+        <SelectionProvider>
+          <Probe />
+          <World2DContents {...baseProps} />
+        </SelectionProvider>
+      </ViewportActionsProvider>
+    );
+
+    expect(actions().hasScreenshotHandler()).toBe(true);
   });
 });

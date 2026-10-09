@@ -12,7 +12,14 @@ import { cloneWithMaterials, createGLBMesh, disposeClonedMaterials, initGlbModul
 // this file: a dynamic import after a reset yields a fresh instance.
 import * as processingShim from '../../processing/glbProcessing';
 import { standardMaterial } from '../../materials/standardmaterial3d/testing/standardMaterial';
-import { glbOfChunks, jsonChunk } from './testing/triangleGlb';
+import { glbOfChunks, jsonChunk, triangleGlb } from './testing/triangleGlb';
+import { NO_SIDECAR } from './testing/noSidecar';
+import { nodesGlb } from './testing/nodesGlb';
+import {
+  DRAWN_OPAQUE_PREPASS,
+  NO_OPAQUE_PREPASS,
+  opaquePrepassOf,
+} from '../../../r3f/materials/opaquePrepass';
 import {
   castsFrom,
   drawColourGroup,
@@ -90,10 +97,57 @@ describe('createGLBMesh', () => {
     // `instanceof ArrayBuffer` under the vmThreads pool.
     const arrayBuffer = new Uint8Array(readFileSync(glbPath)).buffer;
 
-    const object = await createGLBMesh(arrayBuffer);
+    const object = await createGLBMesh(arrayBuffer, NO_SIDECAR);
     const names = object.animations.map((c) => c.name);
 
     expect(names).toEqual(expect.arrayContaining(['idle', 'run', 'jump', 'walk', 'falling']));
+  });
+});
+
+describe('createGLBMesh with GODOT_single_root', () => {
+  const SINGLE_ROOT = { extensionsUsed: ['GODOT_single_root'] };
+
+  it('makes glTF node 0 the root, at its own transform', async () => {
+    const glb = nodesGlb(
+      [
+        { name: 'RootNode', translation: [1, 0, 0], children: [1] },
+        { name: 'Child', mesh: 0 },
+      ],
+      SINGLE_ROOT
+    );
+    const root = await createGLBMesh(glb, NO_SIDECAR);
+    expect([root.name, root.parent, root.position.x]).toEqual(['RootNode', null, 1]);
+    expect(root.children.map((child) => child.name)).toEqual(['Child']);
+  });
+
+  it('refuses a file with no nodes, as Godot does', async () => {
+    await expect(createGLBMesh(nodesGlb([], SINGLE_ROOT), NO_SIDECAR)).rejects.toThrow('has no nodes');
+  });
+
+  it('keeps every root under the scene without the extension', async () => {
+    const root = await createGLBMesh(nodesGlb([{ name: 'A' }, { name: 'B' }]), NO_SIDECAR);
+    expect(root.children.map((child) => child.name)).toEqual(['A', 'B']);
+  });
+});
+
+describe('createGLBMesh alpha modes', () => {
+  async function importedMaterial(alphaMode: string): Promise<THREE.Material> {
+    const object = await createGLBMesh(triangleGlb({ material: { alphaMode } }), NO_SIDECAR);
+    const mesh = object.getObjectByProperty('isMesh', true) as THREE.Mesh;
+    return mesh.material as THREE.Material;
+  }
+
+  it('imports BLEND as a depth-prepass surface, as Godot imports ALPHA_DEPTH_PRE_PASS', async () => {
+    // `gltf_document.cpp:3117-3118`.
+    expect(opaquePrepassOf(await importedMaterial('BLEND'))).toEqual(DRAWN_OPAQUE_PREPASS);
+  });
+
+  it('imports MASK as a scissor, with no depth prepass', async () => {
+    expect(opaquePrepassOf(await importedMaterial('MASK'))).toBe(NO_OPAQUE_PREPASS);
+  });
+
+  it('imports OPAQUE with no depth prepass (edge case)', async () => {
+    expect(opaquePrepassOf(await importedMaterial('OPAQUE'))).toBe(NO_OPAQUE_PREPASS);
   });
 });
 
@@ -122,7 +176,7 @@ describe('createGLBMesh with a URI the GLB names', () => {
   });
 
   it('reads a data URI', async () => {
-    const object = await createGLBMesh(triangleNaming(positionsDataUri()));
+    const object = await createGLBMesh(triangleNaming(positionsDataUri()), NO_SIDECAR);
 
     const mesh = object.getObjectByProperty('isMesh', true) as THREE.Mesh;
     expect(mesh.geometry.getAttribute('position').count).toBe(3);
@@ -131,16 +185,16 @@ describe('createGLBMesh with a URI the GLB names', () => {
   it('refuses a remote URI without a fetch', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
-    await expect(createGLBMesh(triangleNaming('https://attacker.example/beacon.bin'))).rejects.toThrow(
-      'refuses https://attacker.example/beacon.bin'
-    );
+    await expect(
+      createGLBMesh(triangleNaming('https://attacker.example/beacon.bin'), NO_SIDECAR)
+    ).rejects.toThrow('refuses https://attacker.example/beacon.bin');
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('refuses a relative URI, which would resolve against the page', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
-    await expect(createGLBMesh(triangleNaming('tri.bin'))).rejects.toThrow('refuses tri.bin');
+    await expect(createGLBMesh(triangleNaming('tri.bin'), NO_SIDECAR)).rejects.toThrow('refuses tri.bin');
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

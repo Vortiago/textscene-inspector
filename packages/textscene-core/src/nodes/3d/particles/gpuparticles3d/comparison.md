@@ -63,7 +63,7 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-GPUParticles3D registers `parseNode3D` directly, so `amount`, `lifetime`, `process_material`, `draw_pass_1` and `visibility_aabb` are never read by the lenient parser. An invalid or missing value has no lenient-side effect, and only strict reports it.
+The lenient parser reads the GeometryInstance3D base and `visibility_aabb`, the box the scene cull measures the emitter by. It never reads `amount`, `lifetime`, `process_material` or `draw_pass_1`, so an invalid or missing value has no lenient-side effect, and only strict reports it.
 
 ## Known limitations
 

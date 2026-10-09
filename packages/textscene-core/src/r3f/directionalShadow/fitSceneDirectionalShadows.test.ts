@@ -5,6 +5,7 @@ import {
   directionalShadowCasters,
   fitSceneDirectionalShadows,
   releaseSceneLights,
+  sceneSplitsHold,
 } from './fitSceneDirectionalShadows';
 import { isDropped } from './droppedLight';
 import { sceneLights } from './lightLists';
@@ -228,6 +229,30 @@ describe('fitSceneDirectionalShadows with splits', () => {
     light.castShadow = false;
     fitRender(scene, viewingCamera());
     expect(splitSunOf(light)).toBeNull();
+  });
+});
+
+describe('sceneSplitsHold', () => {
+  const AT_ORIGIN = new THREE.Box3(new THREE.Vector3(-0.5, -0.5, -0.5), new THREE.Vector3(0.5, 0.5, 0.5));
+
+  it("holds a box inside a split this render's fit placed", () => {
+    const { scene } = sceneWithSun({ declared: true, casts: true });
+    fitRender(scene, viewingCamera());
+    expect(sceneSplitsHold(scene, AT_ORIGIN)).toBe(true);
+  });
+
+  it('holds nothing in a scene the fit has not reached (error case)', () => {
+    const { scene } = sceneWithSun({ declared: true, casts: true });
+    fitRender(scene, viewingCamera());
+    expect(sceneSplitsHold(new THREE.Scene(), AT_ORIGIN)).toBe(false);
+  });
+
+  it('holds nothing once the light stops casting (edge case)', () => {
+    const { scene, light } = sceneWithSun({ declared: true, casts: true });
+    fitRender(scene, viewingCamera());
+    light.castShadow = false;
+    fitRender(scene, viewingCamera());
+    expect(sceneSplitsHold(scene, AT_ORIGIN)).toBe(false);
   });
 });
 

@@ -5,7 +5,7 @@
  * nested group scale, since the glyph geometry is in Godot px.
  */
 
-import { Suspense, lazy, useMemo, useRef } from 'react';
+import { lazy, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { Label3DProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -13,7 +13,7 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
-import { usePendingWhile } from '../../../resources/usePendingWhile';
+import { PendingSuspense } from '../../../resources/PendingSuspense';
 
 // This file imports nothing from the shaping engine, so the engine stays out of the
 // static closure `r3f/nodes/index.ts` pulls eagerly.
@@ -25,12 +25,6 @@ const LabelGlyphs = lazy(() => import('./LabelGlyphs'));
  * `CameraFit`'s last retry, so without a synchronous stand-in the fit ignores the label.
  */
 export const LABEL3D_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
-
-/** A pending load while the glyph chunk downloads. `LabelGlyphs` holds its own until the font registers. */
-function PendingGlyphs() {
-  usePendingWhile(true);
-  return null;
-}
 
 export function Label3D({ node, children }: NodeComponentProps) {
   const { showLabels } = useViewportMode();
@@ -70,9 +64,10 @@ export function Label3D({ node, children }: NodeComponentProps) {
         userData={{ billboardMode: properties.billboard, isLabel3D: true }}
       >
         <group scale={properties.pixel_size}>
-          <Suspense fallback={<PendingGlyphs />}>
-            <LabelGlyphs properties={properties} />
-          </Suspense>
+          {/* `LabelGlyphs` holds its own pending load until the font registers. */}
+          <PendingSuspense>
+            <LabelGlyphs nodeRef={groupRef} properties={properties} />
+          </PendingSuspense>
         </group>
         {/* A point, not a text-sized box: Godot's `_place_camera` runs before Label3D
             shapes text. Its `_scene_bounds()` measured size [3.0, 4.0, 3.0] then and

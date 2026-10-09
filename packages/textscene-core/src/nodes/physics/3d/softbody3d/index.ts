@@ -1,7 +1,7 @@
 /**
  * SoftBody3D registration: the parser. It reuses MeshInstance3D's parse, not Node3D's, since
  * SoftBody3D derives from it and the inspector shows `mesh`, `skin` and the material overrides.
- * It is not drawn yet: `index.r3f.ts` registers the Node3D base under `renderIntent: 'pending'`,
+ * It is not drawn yet: `index.r3f.ts` registers the GeometryInstance3D base under `renderIntent: 'pending'`,
  * so the badge reports the gap while `visible` and the 3D-workspace placement still behave.
  */
 

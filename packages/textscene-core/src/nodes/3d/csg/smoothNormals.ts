@@ -34,6 +34,8 @@
  */
 
 import * as THREE from 'three';
+import { CSG_MERGE_TOLERANCE } from '../../../godot/csg';
+import { bottomUpV } from '../../../godot/uv';
 
 /**
  * A CSG shape's triangles before normals exist: Godot's `CSGBrush::faces` in the shape
@@ -54,9 +56,65 @@ export interface CsgFaceSoup {
   invert?: boolean;
 }
 
-/** Godot hashes the `Vector3` itself; the float32 triple is the faithful equivalent. */
-function positionKey(positions: Float32Array, base: number): string {
-  return `${positions[base]},${positions[base + 1]},${positions[base + 2]}`;
+/** A hash of a weld-grid cell. Two cells can share one, which only adds a candidate to check. */
+function cellHash(x: number, y: number, z: number): number {
+  return Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791);
+}
+
+/**
+ * Each smooth face's corners, as the first corner each one welds to. Godot hashes the `Vector3`
+ * after manifold welds every point within `CSG_MERGE_TOLERANCE` of another. The grid's cells are
+ * that wide, so a partner lies in the corner's own cell or a neighbour. A flat face reads no weld.
+ */
+function smoothCornerWelds(positions: Float32Array, smooth: readonly boolean[]): Int32Array {
+  const welds = new Int32Array(smooth.length * 3).fill(-1);
+  const cells = new Map<number, number[]>();
+  const toleranceSq = CSG_MERGE_TOLERANCE ** 2;
+  const partnerIn = (hash: number, x: number, y: number, z: number): number => {
+    const members = cells.get(hash);
+    if (!members) return -1;
+    for (const r of members) {
+      const dx = positions[r * 3]! - x;
+      const dy = positions[r * 3 + 1]! - y;
+      const dz = positions[r * 3 + 2]! - z;
+      if (dx * dx + dy * dy + dz * dz <= toleranceSq) return r;
+    }
+    return -1;
+  };
+  for (let corner = 0; corner < welds.length; corner++) {
+    if (!smooth[(corner / 3) | 0]) continue;
+    const x = positions[corner * 3]!;
+    const y = positions[corner * 3 + 1]!;
+    const z = positions[corner * 3 + 2]!;
+    const cx = Math.round(x / CSG_MERGE_TOLERANCE);
+    const cy = Math.round(y / CSG_MERGE_TOLERANCE);
+    const cz = Math.round(z / CSG_MERGE_TOLERANCE);
+    const own = cellHash(cx, cy, cz);
+    let weld = partnerIn(own, x, y, z);
+    for (let n = 0; weld === -1 && n < 27; n++) {
+      if (n === 13) continue;
+      weld = partnerIn(
+        cellHash(cx + ((n / 9) | 0) - 1, cy + (((n / 3) | 0) % 3) - 1, cz + (n % 3) - 1),
+        x,
+        y,
+        z
+      );
+    }
+    if (weld === -1) {
+      weld = corner;
+      const members = cells.get(own);
+      if (members) members.push(corner);
+      else cells.set(own, [corner]);
+    }
+    welds[corner] = weld;
+  }
+  return welds;
+}
+
+/** Face `t` with two corners welded together, which manifold collapses out of the brush. */
+function isCollapsed(keys: Int32Array, t: number): boolean {
+  const [a, b, c] = [keys[t * 3], keys[t * 3 + 1], keys[t * 3 + 2]];
+  return a === b || b === c || a === c;
 }
 
 /**
@@ -97,20 +155,21 @@ export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
   const { positions, uvs, smooth, invert } = soup;
   const triangles = Math.floor(positions.length / 9);
 
-  // Pass 1: sum unit plane normals per vertex position, smooth faces only. Position, not index,
+  // Pass 1: sum unit plane normals per welded position, smooth faces only. Position, not index,
   // is the key: three gives a cone apex nine radial normals where Godot collapses them to one.
   // The sum is unweighted, so a small face pulls on a vertex as hard as a large one.
-  const accumulated = new Map<string, THREE.Vector3>();
+  const keys = smoothCornerWelds(positions, smooth);
+  const accumulated = new Map<number, THREE.Vector3>();
   const plane = new THREE.Vector3();
   const edgeA = new THREE.Vector3();
   const edgeB = new THREE.Vector3();
 
   for (let t = 0; t < triangles; t++) {
     if (!smooth[t]) continue;
-    const base = t * 9;
-    planeNormal(positions, base, plane, edgeA, edgeB);
+    if (isCollapsed(keys, t)) continue;
+    planeNormal(positions, t * 9, plane, edgeA, edgeB);
     for (let j = 0; j < 3; j++) {
-      const key = positionKey(positions, base + j * 3);
+      const key = keys[t * 3 + j]!;
       const existing = accumulated.get(key);
       if (existing) existing.add(plane);
       else accumulated.set(key, plane.clone());
@@ -138,7 +197,7 @@ export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
     for (let j = 0; j < 3; j++) {
       normal.copy(plane);
       if (smooth[t]) {
-        const sum = accumulated.get(positionKey(positions, base + j * 3));
+        const sum = accumulated.get(keys[t * 3 + j]!);
         // Godot normalizes the accumulated sum in place. A sum of exactly zero (two
         // faces cancelling on a zero-thickness sheet) would leave a black (0,0,0)
         // normal there; we keep the face's own plane normal instead, which is the
@@ -157,7 +216,7 @@ export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
 
       const uvDst = uvBase + order[j]! * 2;
       outUvs[uvDst] = uvs[uvBase + j * 2] ?? 0;
-      outUvs[uvDst + 1] = uvs[uvBase + j * 2 + 1] ?? 0;
+      outUvs[uvDst + 1] = bottomUpV(uvs[uvBase + j * 2 + 1] ?? 0);
     }
   }
 

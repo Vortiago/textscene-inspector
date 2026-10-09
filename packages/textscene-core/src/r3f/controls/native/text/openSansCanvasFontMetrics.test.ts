@@ -36,7 +36,7 @@ describe('createOpenSansCanvasFontMetrics', () => {
     expect(metrics.cssFontFamily).toBe('tscn-bundled-font-test');
   });
 
-  it('reports the font\'s own integer hmtx advances, read independently of the bake', () => {
+  it("reports the font's own integer hmtx advances, read independently of the bake", () => {
     for (const [ch, units] of Object.entries(INDEPENDENT_HMTX_UNITS)) {
       expect(metrics.getGlyphAdvanceUnits(ch)).toBe(units);
     }
@@ -52,7 +52,9 @@ describe('createOpenSansCanvasFontMetrics', () => {
     for (const ch of BAKED_CHARSET) {
       expect(metrics.getGlyphAdvanceUnits(ch)).toBe(OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits(ch));
       for (const size of [14, 16, 28]) {
-        expect(getFontGlyphAdvancePx(metrics, ch, size)).toBe(getFontGlyphAdvancePx(OPEN_SANS_FONT_METRICS, ch, size));
+        expect(getFontGlyphAdvancePx(metrics, ch, size)).toBe(
+          getFontGlyphAdvancePx(OPEN_SANS_FONT_METRICS, ch, size)
+        );
       }
     }
   });
@@ -62,7 +64,9 @@ describe('createOpenSansCanvasFontMetrics', () => {
     expect(metrics.ascent).toBe(2189);
     expect(metrics.descent).toBe(600);
     expect(metrics.averageAdvanceUnits).toBe(1214);
-    expect(metrics.getKerningAdjustmentUnits('A', 'V')).toBe(OPEN_SANS_FONT_METRICS.getKerningAdjustmentUnits('A', 'V'));
+    expect(metrics.getKerningAdjustmentUnits('A', 'V')).toBe(
+      OPEN_SANS_FONT_METRICS.getKerningAdjustmentUnits('A', 'V')
+    );
   });
 
   it('returns null for a character the font has no glyph for, so a shaper falls back to averageAdvanceUnits', () => {

@@ -6,9 +6,12 @@ import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
 import { parseCSGPolygon3D } from './parser';
 // Imports the wired slice, not the bare component: CsgPrimitive builds the solid
 // from the registered builder, so the registration is part of what is under test.
-import { CSGPolygon3D } from './index.r3f';
 import type { CSGPolygon3DProperties, CSGPolygon3DResolvedPath } from './types';
 import { findMesh } from '../../testing/reactThreeTestInstance';
+import './index.r3f';
+import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
+
+const CSGPolygon3D = registeredComponent('CSGPolygon3D');
 
 function makeNode(overrides: Record<string, string> = {}, resolvedPath?: CSGPolygon3DResolvedPath): TscnNode {
   const properties = parseCSGPolygon3D(

@@ -19,7 +19,6 @@ export {
   decodeGradientTexture2D,
   gradientFromResource,
   parseColorStops,
-  parsePackedFloat32Array,
   resolveGradient,
 } from './decode';
 export {

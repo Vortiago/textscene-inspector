@@ -23,13 +23,13 @@ import { boolSlotValue } from '../../../godot/index.js';
 
 export function LightOccluder2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as LightOccluder2DProperties;
-  const { internalResources, externalResources } = useSceneResources();
+  const sceneResources = useSceneResources();
   const visible = useGizmoVisible();
   // A callback ref, not useRef, so the caster re-registers once the anchor exists:
   // an effect reading a ref would see null on the mount pass.
   const [anchor, setAnchor] = useState<THREE.Group | null>(null);
 
-  const occluderResource = useSubOrExtResource(properties.occluder, internalResources, externalResources);
+  const occluderResource = useSubOrExtResource(properties.occluder, sceneResources)?.resource;
 
   const positions = useMemo(() => {
     if (!occluderResource) return null;
