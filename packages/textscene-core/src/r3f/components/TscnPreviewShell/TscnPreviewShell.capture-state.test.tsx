@@ -16,6 +16,7 @@ import { beginTextureWork } from '../../../resources/textures/textureWork';
 import type { PreviewCaptureState } from './previewCaptureState';
 
 const DATA_URL = 'data:image/png;base64,AAA';
+const DATA_URL_2D = 'data:image/png;base64,BBB';
 
 interface CanvasStub {
   /** Whether the stub registers a screenshot handler, as a canvas with a renderer does. */
@@ -69,8 +70,17 @@ vi.mock('../../TscnCanvas', () => ({
   },
   TscnSceneContents: () => null,
 }));
+// The 2D stage registers its own handler, as its world canvas's `ScreenshotBridge` does.
 vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
-  Canvas2DStage: () => <div data-testid="stage-2d-stub" />,
+  Canvas2DStage: function StubStage() {
+    const { registerScreenshotHandler } = useCameraControl();
+    const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
+    useEffect(
+      () => registerScreenshotHandler(() => DATA_URL_2D, sceneGraph),
+      [registerScreenshotHandler, sceneGraph]
+    );
+    return <div data-testid="stage-2d-stub" />;
+  },
 }));
 
 import { TscnPreviewShell } from './TscnPreviewShell';
@@ -149,16 +159,15 @@ describe('<TscnPreviewShell> capture state', () => {
     });
   });
 
-  it('reports unavailable in the 2D view, which registers no screenshot handler', async () => {
+  it('captures the 2D view once the 2D canvas registers its handler', async () => {
     arrangeCanvas({});
     const { states } = renderShell();
 
     await userEvent.click(screen.getByRole('button', { name: '2D' }));
+    const state = latest(states);
 
-    expect(latest(states)).toEqual({
-      status: 'unavailable',
-      reason: 'The preview shows the 2D view, and only the 3D view can capture.',
-    });
+    expect(state?.status).toBe('ready');
+    expect(state?.status === 'ready' && state.capture()).toBe(DATA_URL_2D);
   });
 
   it('reports pending as the shell unmounts', () => {

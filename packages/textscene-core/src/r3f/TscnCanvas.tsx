@@ -25,6 +25,7 @@ import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterL
 import { installShaderPatches } from './shaderPatch/installShaderPatches.js';
 import { SceneShadowFitter } from './SceneShadowFitter.js';
 import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
+import { ScreenshotBridge } from './ScreenshotBridge.js';
 import { TiledUploadDriver } from './tiledUpload/TiledUploadDriver.js';
 import styles from './TscnCanvas.module.css';
 
@@ -277,32 +278,6 @@ function EditorControlsResetBridge() {
     if (!registerResetHandler || !controls) return undefined;
     return registerResetHandler(() => controls.reset());
   }, [registerResetHandler, controls]);
-
-  return null;
-}
-
-/**
- * Hands the renderer to `CameraControlContext` for the toolbar's screenshot.
- * It renders and reads back in the same task: WebGL clears the buffer only when
- * the browser composites. `preserveDrawingBuffer` would copy the buffer every frame.
- * It mounts after `<TscnSceneContents>`, so its effect runs after the scene's own
- * effects have asked for their resources, and names the scene graph it has rendered.
- */
-function ScreenshotBridge() {
-  const control = useOptionalCameraControl();
-  const registerScreenshotHandler = control?.registerScreenshotHandler;
-  const renderedScene = useOptionalHierarchy()?.sceneGraph ?? null;
-  const gl = useThree((s) => s.gl);
-  const scene = useThree((s) => s.scene);
-  const camera = useThree((s) => s.camera);
-
-  useEffect(() => {
-    if (!registerScreenshotHandler) return undefined;
-    return registerScreenshotHandler(() => {
-      gl.render(scene, camera);
-      return gl.domElement.toDataURL('image/png');
-    }, renderedScene);
-  }, [registerScreenshotHandler, gl, scene, camera, renderedScene]);
 
   return null;
 }

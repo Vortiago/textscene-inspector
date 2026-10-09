@@ -10,7 +10,6 @@ import { useResourceLoader } from '../../../resources/useResource.js';
 import { usePendingTextureWork } from '../../../resources/usePendingTextureWork.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
-import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { PENDING_CAPTURE, previewCaptureStateOf, type PreviewCaptureState } from './previewCaptureState.js';
 
 const NO_SUBSCRIPTION = () => () => {};
@@ -54,7 +53,6 @@ export function CaptureStateReporter({
   viewportError: Error | null;
 }) {
   const control = useOptionalCameraControl();
-  const { mode } = useViewportMode();
   const hasHandler = useSyncExternalStore(
     control?.subscribeScreenshotHandler ?? NO_SUBSCRIPTION,
     control?.hasScreenshotHandler ?? NO_HANDLER
@@ -68,9 +66,8 @@ export function CaptureStateReporter({
         capture: hasHandler && takeScreenshot ? takeScreenshot : null,
         isSceneComplete,
         viewportError,
-        mode,
       }),
-    [hasHandler, takeScreenshot, isSceneComplete, viewportError, mode]
+    [hasHandler, takeScreenshot, isSceneComplete, viewportError]
   );
 
   useEffect(() => {

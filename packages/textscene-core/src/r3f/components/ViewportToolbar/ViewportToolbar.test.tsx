@@ -123,9 +123,9 @@ describe('ViewportToolbar — Screenshot (#224)', () => {
     expect((screen.getByTestId('screenshot-button') as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('hides Screenshot entirely in 2D overlay mode', () => {
+  it('shows Screenshot in the 2D view too, as the 2D canvas registers its own handler', () => {
     renderWithChrome({ mode: '2D', sceneGraph: {} });
-    expect(screen.queryByTestId('screenshot-button')).toBeNull();
+    expect((screen.getByTestId('screenshot-button') as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('clicking Screenshot pulls a frame from the registered handler and triggers a download', () => {

@@ -199,9 +199,7 @@ describe('registerTscnTools', () => {
     registerTscnTools(
       context(),
       host({
-        capturePreview: vi
-          .fn()
-          .mockResolvedValue({ error: 'The preview shows the 2D view, and only the 3D view can capture.' }),
+        capturePreview: vi.fn().mockResolvedValue({ error: 'The viewport crashed: no WebGL context.' }),
       })
     );
     const result = await registeredTool(TOOL_IDS.capture).invoke(
@@ -209,7 +207,7 @@ describe('registerTscnTools', () => {
       TOKEN
     );
     expect(result.content[0]!.value).toContain(
-      'did not return an image: The preview shows the 2D view, and only the 3D view can capture.'
+      'did not return an image: The viewport crashed: no WebGL context.'
     );
   });
 

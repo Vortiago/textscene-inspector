@@ -21,6 +21,7 @@ import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
 import { installShaderPatches } from '../../shaderPatch/installShaderPatches.js';
 import { ProjectClearColor } from './ProjectClearColor.js';
 import { PendingSuspense } from '../../../resources/PendingSuspense.js';
+import { ScreenshotBridge } from '../../ScreenshotBridge.js';
 
 // Through the controls barrel, whose side-effect imports register every Control
 // type: the component file alone registers none. Lazy, so the registrations stay
@@ -83,6 +84,7 @@ export function World2DContents({
           </CanvasLighting2DProvider>
         </SceneResourcesProvider>
         <ViewportPassOrchestrator />
+        <ScreenshotBridge />
       </CanvasWorkspaceProvider>
     </TiledUploadDriver>
   );

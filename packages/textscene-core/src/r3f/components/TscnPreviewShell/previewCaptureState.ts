@@ -4,8 +4,6 @@
  * reason, so it never polls the canvas or guesses how long the canvas takes to mount.
  */
 
-import type { ViewportMode } from '../../contexts/ViewportModeContext.js';
-
 export type PreviewCaptureState =
   /** The canvas has no renderer yet, has yet to render the current scene, or the scene still loads. */
   | { readonly status: 'pending' }
@@ -15,9 +13,6 @@ export type PreviewCaptureState =
   | { readonly status: 'unavailable'; readonly reason: string };
 
 export const PENDING_CAPTURE: PreviewCaptureState = { status: 'pending' };
-
-/** Only the 3D canvas registers a screenshot handler, as the toolbar's Screenshot button shows. */
-const TWO_D_VIEW_REASON = 'The preview shows the 2D view, and only the 3D view can capture.';
 
 /** The reason for a viewport whose render threw, such as a renderer with no WebGL context. */
 function viewportCrashReason(error: Error): string {
@@ -31,22 +26,18 @@ interface CaptureInputs {
   readonly isSceneComplete: boolean;
   /** The error the viewport's boundary caught, or null while the viewport renders. */
   readonly viewportError: Error | null;
-  readonly mode: ViewportMode;
 }
 
 /**
- * The state the shell reports. A registered handler wins, since it exists only once a renderer does, but it waits until
- * the scene is complete. A crash comes before the 2D reason, since the crash also stops a later switch to 3D from
- * capturing.
+ * The state the shell reports. A registered handler wins, since it exists only once the active view's renderer does,
+ * but it waits until the scene is complete.
  */
 export function previewCaptureStateOf({
   capture,
   isSceneComplete,
   viewportError,
-  mode,
 }: CaptureInputs): PreviewCaptureState {
   if (capture) return isSceneComplete ? { status: 'ready', capture } : PENDING_CAPTURE;
   if (viewportError) return { status: 'unavailable', reason: viewportCrashReason(viewportError) };
-  if (mode === '2D') return { status: 'unavailable', reason: TWO_D_VIEW_REASON };
   return PENDING_CAPTURE;
 }

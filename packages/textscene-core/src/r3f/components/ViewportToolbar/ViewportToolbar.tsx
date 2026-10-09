@@ -1,8 +1,8 @@
 /**
- * The controls over the viewport: Reset Camera and Screenshot in 3D, the 3D/2D
+ * The controls over the viewport: Reset Camera in 3D, Screenshot, the 3D/2D
  * switch, and the display toggles in `<DisplayMenu>`. It writes through
- * `useViewportMode()`. Screenshot downloads a PNG through the handler that
- * `<TscnCanvas>`'s `ScreenshotBridge` registers.
+ * `useViewportMode()`. Screenshot downloads a PNG through the handler that the
+ * active canvas's `ScreenshotBridge` registers.
  */
 
 import {
@@ -206,14 +206,14 @@ export function ViewportToolbar() {
           Reset Camera
         </button>
       )}
-      {mode === '3D' && camera && (
+      {camera && (
         <button
           type="button"
           className={styles.resetButton}
           onClick={handleScreenshot}
           disabled={!sceneLoaded}
           data-testid="screenshot-button"
-          title="Save the current 3D view as a PNG"
+          title="Save the current view as a PNG"
         >
           Screenshot
         </button>
