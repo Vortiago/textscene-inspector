@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PNG } from 'pngjs';
-import { PNG_DATA_URL_PREFIX, waitForInk } from './canvasReadback.mjs';
+import { PNG_DATA_URL_PREFIX, stabilizeCanvas } from './canvasReadback.mjs';
 
 /** A 4x4 PNG data URL, flat grey, with one white pixel when `inked`. */
 function readback(inked) {
@@ -18,22 +18,30 @@ function frameReading(reads) {
 
 const QUICK = { timeoutMs: 200, intervalMs: 1 };
 
-describe('waitForInk', () => {
-  it('waits through blank readbacks until one has ink', async () => {
-    const frame = frameReading([readback(false), readback(false), readback(true)]);
+const INKED = { ...QUICK, expectsInk: true };
 
-    expect(await waitForInk(frame, QUICK)).toBe(true);
-  });
-
-  it('answers false when the canvas stays blank past the timeout (error path)', async () => {
+describe('stabilizeCanvas', () => {
+  it('settles on two identical readbacks', async () => {
     const frame = frameReading([readback(false)]);
 
-    expect(await waitForInk(frame, QUICK)).toBe(false);
+    expect(await stabilizeCanvas(frame, QUICK)).toEqual({ dataUrl: readback(false), stable: true });
+  });
+
+  it('waits through blank readbacks until two with ink match, for a scene that must draw', async () => {
+    const frame = frameReading([readback(false), readback(false), readback(true)]);
+
+    expect(await stabilizeCanvas(frame, INKED)).toEqual({ dataUrl: readback(true), stable: true });
+  });
+
+  it('never settles while a scene that must draw stays blank (error path)', async () => {
+    const frame = frameReading([readback(false)]);
+
+    expect((await stabilizeCanvas(frame, INKED)).stable).toBe(false);
   });
 
   it('keeps polling through a readback that is no PNG (edge case)', async () => {
     const frame = frameReading([null, 'error:SecurityError', readback(true)]);
 
-    expect(await waitForInk(frame, QUICK)).toBe(true);
+    expect(await stabilizeCanvas(frame, INKED)).toEqual({ dataUrl: readback(true), stable: true });
   });
 });

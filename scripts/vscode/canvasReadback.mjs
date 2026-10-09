@@ -1,6 +1,6 @@
 /**
- * Reads the preview's viewport canvas back over CDP, and waits for it to settle, to
- * change or to show ink. `driveScene.mjs` uses these on the webview frame.
+ * Reads the preview's viewport canvas back over CDP, and waits for it to settle or
+ * to change. `driveScene.mjs` uses these on the webview frame.
  */
 /* global document, HTMLCanvasElement */
 // Those globals appear only inside `evaluate` callbacks and init scripts, which are
@@ -61,39 +61,37 @@ export function writeCanvasPng(dataUrl, file) {
 }
 
 /**
- * Waits until two consecutive readbacks are byte-identical, as the golden
- * harness does. Two early readbacks of a sized, unpainted canvas also match, so
- * a scene that must draw waits for ink first (`waitForInk`). Returns the last data
- * URL and whether it stabilised in time.
+ * Waits until two consecutive readbacks are byte-identical, as the golden harness
+ * does. Two blank readbacks also match while a lazy chunk or the glyph atlas is on
+ * its way, so a scene that `expectsInk` settles only on a readback with ink.
+ * Returns the last data URL and whether it stabilised in time.
  */
-export async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
+export async function stabilizeCanvas(frame, { timeoutMs, intervalMs, expectsInk = false }) {
   const deadline = Date.now() + timeoutMs;
+  const isSettled = expectsInk ? memoisedHasInk() : () => true;
   let current = await readCanvasDataUrl(frame).catch(() => null);
   while (Date.now() < deadline) {
     await sleep(intervalMs);
     const previous = current;
     current = await readCanvasDataUrl(frame).catch(() => null);
-    if (current && current === previous && isPng(current)) {
+    if (isPng(current) && current === previous && isSettled(current)) {
       return { dataUrl: current, stable: true };
     }
   }
   return { dataUrl: current, stable: false };
 }
 
-/**
- * Waits until a readback has ink, for a scene that must draw something. Two blank
- * readbacks in a row also pass as settled, while a lazy chunk or the glyph atlas is
- * still on its way, so a settle alone cannot tell "drew nothing" from "not yet".
- * Returns whether ink appeared in time.
- */
-export async function waitForInk(frame, { timeoutMs, intervalMs }) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const current = await readCanvasDataUrl(frame).catch(() => null);
-    if (isPng(current) && inkStats(pngBytes(current)).inkPixels > 0) return true;
-    await sleep(intervalMs);
-  }
-  return false;
+/** Whether a readback has ink, decoding each distinct readback once. */
+function memoisedHasInk() {
+  let lastUrl = null;
+  let lastInked = false;
+  return (dataUrl) => {
+    if (dataUrl !== lastUrl) {
+      lastUrl = dataUrl;
+      lastInked = inkStats(pngBytes(dataUrl)).inkPixels > 0;
+    }
+    return lastInked;
+  };
 }
 
 /**

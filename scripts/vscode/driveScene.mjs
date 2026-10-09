@@ -37,7 +37,6 @@ import {
   readCanvasDataUrl,
   sleep,
   stabilizeCanvas,
-  waitForInk,
   waitForCanvasChange,
   writeCanvasPng,
 } from './canvasReadback.mjs';
@@ -410,8 +409,7 @@ async function waitForSizedCanvas(frame, timeoutMs) {
  * @property {number} port             CDP port
  * @property {number} settle           extra wait after the canvas stabilizes
  * @property {boolean} preserveBuffer  patch `preserveDrawingBuffer` for readback
- * @property {boolean} [expectsInk]    the scene must draw: wait for ink before the
- *   canvas settles, so a lazy chunk still on its way cannot settle as a blank frame
+ * @property {boolean} [expectsInk]    the scene must draw, so its canvas settles only with ink
  * @property {boolean} prepareLayout   run the layout/notification palette
  *   commands that widen the editor area for a screenshot. The gate leaves this
  *   off: every `palette()` call is a fuzzy match plus Enter, so each one is a
@@ -596,12 +594,8 @@ export async function driveScene(options) {
     report.textureWorkCleared = await textureWorkCleared(frame.getByTestId(TEXTURE_WORK_STATUS_TESTID));
     emit(`texture work ${report.textureWorkCleared ? 'cleared' : 'NEVER cleared'}`);
 
-    if (preserveBuffer && expectsInk) {
-      report.inkAppeared = await waitForInk(frame, SETTLE_POLL);
-      emit(`ink ${report.inkAppeared ? 'appeared' : 'NEVER appeared'}`);
-    }
     if (preserveBuffer) {
-      const settled = await stabilizeCanvas(frame, SETTLE_POLL);
+      const settled = await stabilizeCanvas(frame, { ...SETTLE_POLL, expectsInk });
       report.canvasStable = settled.stable;
       emit(`canvas ${settled.stable ? 'stabilized' : 'NEVER stabilized'}`);
     } else {

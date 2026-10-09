@@ -218,7 +218,8 @@ function checkRun(gate, label, report) {
   );
   gate.check(
     report.canvasStable === true,
-    `${where} the canvas never settled: two consecutive readbacks were still different`
+    `${where} the canvas never settled: two consecutive readbacks were still different, ` +
+      'or still blank on a scene that must draw'
   );
   gate.check(
     !report.canvasReadback?.error,
@@ -385,7 +386,7 @@ async function main() {
   // asked for, so an empty canvas fails the first. Ink counts against the flat
   // clear colour, so a canvas that paints anything else fails the second. The
   // noise run must draw a texture that one of the preview's own blob-URL workers
-  // built. A run that must draw waits for ink before its canvas settles.
+  // built.
   const runs = [
     { label: 'with-text', scene: withText, evalFile: BLOB_WORKER_PROBE, expectsInk: true },
     { label: 'without-text', scene: withoutText },
