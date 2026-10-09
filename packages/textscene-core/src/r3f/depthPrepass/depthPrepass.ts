@@ -40,11 +40,7 @@ export function createDepthPrepassSentinel(): THREE.Mesh {
 }
 
 /** Draws the depth prepass of every surface of `scene` that `camera` sees. */
-export function drawDepthPrepass(
-  renderer: THREE.WebGLRenderer,
-  scene: THREE.Scene,
-  camera: THREE.Camera
-): void {
+function drawDepthPrepass(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
   viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
   frustum.setFromProjectionMatrix(viewProjection);
   scene.traverseVisible((object) => {

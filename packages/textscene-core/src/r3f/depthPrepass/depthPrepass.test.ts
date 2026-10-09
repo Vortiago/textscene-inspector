@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { createDepthPrepassSentinel, drawDepthPrepass } from './depthPrepass';
+import { createDepthPrepassSentinel } from './depthPrepass';
 import {
   DRAWN_OPAQUE_PREPASS,
   FADED_OPAQUE_PREPASS,
@@ -47,16 +47,21 @@ function meshOf(material: THREE.Material | THREE.Material[]): THREE.Mesh {
 const CAMERA = cameraLookingAt({ x: 0, y: 0, z: 5 });
 CAMERA.updateProjectionMatrix();
 
+/** The prepass draws a sentinel makes when three draws it in a scene of `objects`. */
 function prepassDraws(...objects: THREE.Object3D[]): PrepassDraw[] {
+  const sentinel = createDepthPrepassSentinel();
   const scene = new THREE.Scene();
-  scene.add(...objects);
+  scene.add(...objects, sentinel);
   scene.updateMatrixWorld(true);
   const draws: PrepassDraw[] = [];
-  drawDepthPrepass(recordingRenderer(draws), scene, CAMERA);
+  const args = [recordingRenderer(draws), scene, CAMERA] as unknown as Parameters<
+    THREE.Object3D['onBeforeRender']
+  >;
+  sentinel.onBeforeRender(...args);
   return draws;
 }
 
-describe('drawDepthPrepass', () => {
+describe('the depth prepass a sentinel draws', () => {
   it("draws a prepass surface's depth alone, cut at the depth prepass threshold", () => {
     const mesh = meshOf(surface(DRAWN_OPAQUE_PREPASS));
     const [draw] = prepassDraws(mesh);
@@ -117,20 +122,6 @@ describe('drawDepthPrepass', () => {
 });
 
 describe('createDepthPrepassSentinel', () => {
-  it("draws its scene's depth prepass when three draws it", () => {
-    const sentinel = createDepthPrepassSentinel();
-    const scene = new THREE.Scene();
-    scene.add(meshOf(surface(DRAWN_OPAQUE_PREPASS)), sentinel);
-    const draws: PrepassDraw[] = [];
-    const args = [recordingRenderer(draws), scene, CAMERA] as unknown as Parameters<
-      THREE.Object3D['onBeforeRender']
-    >;
-
-    sentinel.onBeforeRender(...args);
-
-    expect(draws).toHaveLength(1);
-  });
-
   it('sorts before every opaque draw and is never culled, so the prepass precedes the opaque pass', () => {
     const sentinel = createDepthPrepassSentinel();
     expect(sentinel.renderOrder).toBe(Number.MIN_SAFE_INTEGER);
