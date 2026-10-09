@@ -27,6 +27,7 @@ import { THROWAWAY_USER_SETTINGS } from './userSettings.mjs';
 import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
 import { textureWorkCleared } from '../visual/preview/capture.mjs';
 import { isSizedCanvas } from './canvasSize.mjs';
+import { installCaptureStateProbe, waitForCaptureReady } from './captureState.mjs';
 import { isRefusedAttachCall, startCdpRelay } from './cdpRelay.mjs';
 import {
   VSCODE_VERSION_ENV,
@@ -409,7 +410,6 @@ async function waitForSizedCanvas(frame, timeoutMs) {
  * @property {number} port             CDP port
  * @property {number} settle           extra wait after the canvas stabilizes
  * @property {boolean} preserveBuffer  patch `preserveDrawingBuffer` for readback
- * @property {boolean} [expectsInk]    the scene must draw, so its canvas settles only with ink
  * @property {boolean} prepareLayout   run the layout/notification palette
  *   commands that widen the editor area for a screenshot. The gate leaves this
  *   off: every `palette()` call is a fuzzy match plus Enter, so each one is a
@@ -447,7 +447,6 @@ export async function driveScene(options) {
     port,
     settle,
     preserveBuffer,
-    expectsInk = false,
     prepareLayout,
     split,
     screenshots,
@@ -531,6 +530,7 @@ export async function driveScene(options) {
     // CDP injection is exempt from the page's CSP, so it instruments a webview
     // whose CSP is `default-src 'none'` with no test-only branch in the app.
     if (preserveBuffer) await page.addInitScript(preserveWebglDrawingBuffer);
+    await page.addInitScript(installCaptureStateProbe);
     await page.addInitScript(() => {
       // A blocked resource does not always reach the console channel CDP exposes.
       globalThis.__textsceneCspViolations = [];
@@ -593,9 +593,11 @@ export async function driveScene(options) {
     // A texture still building or uploading would settle as a stable, wrong frame.
     report.textureWorkCleared = await textureWorkCleared(frame.getByTestId(TEXTURE_WORK_STATUS_TESTID));
     emit(`texture work ${report.textureWorkCleared ? 'cleared' : 'NEVER cleared'}`);
+    report.captureState = await waitForCaptureReady(frame, SETTLE_POLL);
+    emit(`capture state ${report.captureState ?? 'never posted'}`);
 
     if (preserveBuffer) {
-      const settled = await stabilizeCanvas(frame, { ...SETTLE_POLL, expectsInk });
+      const settled = await stabilizeCanvas(frame, SETTLE_POLL);
       report.canvasStable = settled.stable;
       emit(`canvas ${settled.stable ? 'stabilized' : 'NEVER stabilized'}`);
     } else {

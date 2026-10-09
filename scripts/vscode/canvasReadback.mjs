@@ -47,51 +47,35 @@ export function preserveWebglDrawingBuffer() {
 
 const isPng = (dataUrl) => typeof dataUrl === 'string' && dataUrl.startsWith(PNG_DATA_URL_PREFIX);
 
-const pngBytes = (dataUrl) => Buffer.from(dataUrl.slice(PNG_DATA_URL_PREFIX.length), 'base64');
-
 /**
  * Writes a readback to `file` and returns its ink, or null for a readback that is
  * not a PNG (an `error:` marker or no canvas).
  */
 export function writeCanvasPng(dataUrl, file) {
   if (!isPng(dataUrl)) return null;
-  const buffer = pngBytes(dataUrl);
+  const buffer = Buffer.from(dataUrl.slice(PNG_DATA_URL_PREFIX.length), 'base64');
   writeFileSync(file, buffer);
   return inkStats(buffer);
 }
 
 /**
  * Waits until two consecutive readbacks are byte-identical, as the golden harness
- * does. Two blank readbacks also match while a lazy chunk or the glyph atlas is on
- * its way, so a scene that `expectsInk` settles only on a readback with ink.
- * Returns the last data URL and whether it stabilised in time.
+ * does. Two blank readbacks also match, so a caller first waits for the preview to
+ * report its capture ready (`captureState.mjs`). Returns the last data URL and
+ * whether it stabilised in time.
  */
-export async function stabilizeCanvas(frame, { timeoutMs, intervalMs, expectsInk = false }) {
+export async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
   const deadline = Date.now() + timeoutMs;
-  const isSettled = expectsInk ? memoisedHasInk() : () => true;
   let current = await readCanvasDataUrl(frame).catch(() => null);
   while (Date.now() < deadline) {
     await sleep(intervalMs);
     const previous = current;
     current = await readCanvasDataUrl(frame).catch(() => null);
-    if (isPng(current) && current === previous && isSettled(current)) {
+    if (current && current === previous && isPng(current)) {
       return { dataUrl: current, stable: true };
     }
   }
   return { dataUrl: current, stable: false };
-}
-
-/** Whether a readback has ink, decoding each distinct readback once. */
-function memoisedHasInk() {
-  let lastUrl = null;
-  let lastInked = false;
-  return (dataUrl) => {
-    if (dataUrl !== lastUrl) {
-      lastUrl = dataUrl;
-      lastInked = inkStats(pngBytes(dataUrl)).inkPixels > 0;
-    }
-    return lastInked;
-  };
 }
 
 /**

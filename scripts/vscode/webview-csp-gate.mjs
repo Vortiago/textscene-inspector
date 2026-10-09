@@ -217,9 +217,12 @@ function checkRun(gate, label, report) {
       'so the readback below says nothing about text'
   );
   gate.check(
+    report.captureState === 'ready',
+    `${where} the preview never reported its capture ready, last state: ${report.captureState}`
+  );
+  gate.check(
     report.canvasStable === true,
-    `${where} the canvas never settled: two consecutive readbacks were still different, ` +
-      'or still blank on a scene that must draw'
+    `${where} the canvas never settled: two consecutive readbacks were still different`
   );
   gate.check(
     !report.canvasReadback?.error,
@@ -388,23 +391,22 @@ async function main() {
   // noise run must draw a texture that one of the preview's own blob-URL workers
   // built.
   const runs = [
-    { label: 'with-text', scene: withText, evalFile: BLOB_WORKER_PROBE, expectsInk: true },
+    { label: 'with-text', scene: withText, evalFile: BLOB_WORKER_PROBE },
     { label: 'without-text', scene: withoutText },
     {
       label: 'noise',
       scene: noise,
-      expectsInk: true,
       evalFile: TEXTURE_WORK_READOUT,
       initScripts: [[installTextureWorkProbe, TEXTURE_WORK_STATUS_TESTID]],
     },
     // The edit run recolours the mesh on disk mid-run. The fresh run, after it, opens
     // the edited scene cold. The two canvases must match exactly: the edit changes no
     // bounds, so the camera fit agrees, and a reload that drew anything else differs.
-    { label: 'hot-reload', scene: hotReload, edit: meshEdit, expectsInk: true },
-    { label: 'hot-reload-fresh', scene: hotReload, expectsInk: true },
-    { label: 'box', scene: box, expectsInk: true },
+    { label: 'hot-reload', scene: hotReload, edit: meshEdit },
+    { label: 'hot-reload-fresh', scene: hotReload },
+    { label: 'box', scene: box },
     { label: 'box-hidden', scene: boxHidden },
-    { label: 'gltf-external', scene: gltfExternal, expectsInk: true },
+    { label: 'gltf-external', scene: gltfExternal },
   ];
 
   const reports = {};
@@ -422,7 +424,6 @@ async function main() {
       // on the editor width.
       settle: 0,
       preserveBuffer: true,
-      expectsInk: run.expectsInk,
       prepareLayout: false,
       split: true,
       // Widening the editor area by settings rather than by palette commands:
