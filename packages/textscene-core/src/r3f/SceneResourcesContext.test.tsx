@@ -1,6 +1,6 @@
 /**
  * SceneResourcesContext, the synchronous resource seam. A nested provider is an
- * instanced sub-scene (ADR-0009): its own resources come first, and the host pool
+ * instanced sub-scene (ADR-0009): its own ids shadow the host's, and the host pool
  * stays as a fallback for host-added children (ADR-0013).
  */
 import { describe, expect, it } from 'vitest';
@@ -12,10 +12,14 @@ import {
   findSubResource,
   type SceneResources,
 } from './SceneResourcesContext';
+import { findExtResource } from '../resources/SubResourceResolver';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
 const hostInternal: TscnInternalResource[] = [{ id: 'BoxMesh_host', type: 'BoxMesh', data: {} }];
-const hostExternal: TscnExternalResource[] = [{ id: '1_tex', type: 'Texture2D', path: 'res://host.png' }];
+const hostExternal: TscnExternalResource[] = [
+  { id: '1_tex', type: 'Texture2D', path: 'res://host.png' },
+  { id: '2_host', type: 'Texture2D', path: 'res://host-only.png' },
+];
 const subInternal: TscnInternalResource[] = [{ id: 'SphereMesh_sub', type: 'SphereMesh', data: {} }];
 const subExternal: TscnExternalResource[] = [{ id: '1_tex', type: 'Texture2D', path: 'res://sub.png' }];
 
@@ -50,41 +54,62 @@ describe('SceneResourcesContext', () => {
     expect(result.current.externalResources).toEqual([]);
   });
 
-  it('nested provider (instanced sub-scene) resolves own resources first, then inherits host', () => {
-    let hostSeen: SceneResources | null = null;
-    let subSeen: SceneResources | null = null;
+  it('nested provider (instanced sub-scene) resolves a shared external id to its own', () => {
+    const seen = nestedPools(subExternal);
+    expect(findExtResource(seen.sub.externalResources, '1_tex')?.path).toBe('res://sub.png');
+  });
 
-    function HostProbe() {
-      hostSeen = useSceneResources();
-      return null;
-    }
-    function SubProbe() {
-      subSeen = useSceneResources();
-      return null;
-    }
+  it('nested provider resolves an id its own file repeats to the last declaration (edge case)', () => {
+    const repeated: TscnExternalResource[] = [
+      { id: '1_tex', type: 'Texture2D', path: 'res://first.png' },
+      { id: '1_tex', type: 'Texture2D', path: 'res://last.png' },
+    ];
+    const seen = nestedPools(repeated);
+    expect(findExtResource(seen.sub.externalResources, '1_tex')?.path).toBe('res://last.png');
+  });
 
-    render(
-      <SceneResourcesProvider internalResources={hostInternal} externalResources={hostExternal}>
-        <HostProbe />
-        <SceneResourcesProvider internalResources={subInternal} externalResources={subExternal}>
-          <SubProbe />
-        </SceneResourcesProvider>
-      </SceneResourcesProvider>
-    );
+  it('nested provider resolves a shared internal id to its own', () => {
+    const shared: TscnInternalResource[] = [{ id: 'BoxMesh_host', type: 'SphereMesh', data: {} }];
+    const seen = nestedPools(subExternal, shared);
+    expect(findSubResource(seen.sub.internalResources, 'BoxMesh_host')?.type).toBe('SphereMesh');
+  });
 
-    // Inner subtree sees its own resources first, then the inherited host pool.
-    expect(subSeen!.internalResources).toEqual([...subInternal, ...hostInternal]);
-    expect(subSeen!.externalResources).toEqual([...subExternal, ...hostExternal]);
-    // On a duplicate id ("1_tex"), the sub-scene's own wins on first match.
-    expect(subSeen!.externalResources.find((r) => r.id === '1_tex')?.path).toBe('res://sub.png');
-    // A host-added child in the sub-scene subtree still reaches a host-only id.
-    expect(subSeen!.internalResources).toContainEqual(hostInternal[0]);
+  it('nested provider still reaches a host-only id, for a child the host added', () => {
+    const seen = nestedPools(subExternal);
+    expect(findSubResource(seen.sub.internalResources, 'BoxMesh_host')).toBe(hostInternal[0]);
+    expect(findExtResource(seen.sub.externalResources, '2_host')?.path).toBe('res://host-only.png');
+  });
 
-    // The sibling outside the inner provider still sees only the host's.
-    expect(hostSeen!.internalResources).toEqual(hostInternal);
-    expect(hostSeen!.externalResources).toEqual(hostExternal);
+  it('a sibling outside the nested provider sees only the host pool', () => {
+    const seen = nestedPools(subExternal);
+    expect(seen.host.internalResources).toEqual(hostInternal);
+    expect(seen.host.externalResources).toEqual(hostExternal);
   });
 });
+
+/** The pools a host probe and an instanced sub-scene's probe each see. */
+function nestedPools(
+  subExternalResources: readonly TscnExternalResource[],
+  subInternalResources: readonly TscnInternalResource[] = subInternal
+): { host: SceneResources; sub: SceneResources } {
+  const seen: Partial<Record<'host' | 'sub', SceneResources>> = {};
+  function Probe({ name }: { name: 'host' | 'sub' }) {
+    seen[name] = useSceneResources();
+    return null;
+  }
+  render(
+    <SceneResourcesProvider internalResources={hostInternal} externalResources={hostExternal}>
+      <Probe name="host" />
+      <SceneResourcesProvider
+        internalResources={subInternalResources}
+        externalResources={subExternalResources}
+      >
+        <Probe name="sub" />
+      </SceneResourcesProvider>
+    </SceneResourcesProvider>
+  );
+  return { host: seen.host!, sub: seen.sub! };
+}
 
 describe('findSubResource', () => {
   it('matches the structural id field', () => {
