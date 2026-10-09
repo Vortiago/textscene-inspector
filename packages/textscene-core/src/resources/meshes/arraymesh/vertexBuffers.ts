@@ -191,7 +191,6 @@ export function decodeNormals(
  * RangeError that would take the whole mesh down.
  */
 export function decodeIndices(bytes: Uint8Array, indexCount: number): Uint16Array | Uint32Array | undefined {
-  if (indexCount === 0) return new Uint16Array(0);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const width = bytes.byteLength >= indexCount * 4 ? 4 : 2;
   if (bytes.byteLength < indexCount * width) return undefined;

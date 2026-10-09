@@ -48,20 +48,27 @@ function makeNode(material: string | undefined): TscnNode {
 const BLUE_TRES =
   '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nalbedo_color = Color(0, 0, 1, 1)\n';
 
-async function render(material: string | undefined, tresText?: string) {
+function fakeLoader(tresText?: string) {
   const fake = createFakeResourceLoader();
   if (tresText) fake.resources.seed('res://blue_material.tres', parseTresFile(tresText));
   const albedo = new THREE.Texture();
   albedo.needsUpdate = false;
   fake.textures.seed(ALBEDO_PATH, albedo);
-  const node = makeNode(material);
-  return ReactThreeTestRenderer.create(
+  return fake;
+}
+
+function scene(fake: ReturnType<typeof createFakeResourceLoader>, material: string | undefined) {
+  return (
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={INTERNALS} externalResources={EXTERNALS}>
-        <CSGBox3D node={node} />
+        <CSGBox3D node={makeNode(material)} />
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+}
+
+async function render(material: string | undefined, tresText?: string) {
+  return ReactThreeTestRenderer.create(scene(fakeLoader(tresText), material));
 }
 
 function materialOf(renderer: Awaited<ReturnType<typeof render>>) {
@@ -71,6 +78,13 @@ function materialOf(renderer: Awaited<ReturnType<typeof render>>) {
 describe('<CsgPrimitive> material resolution', () => {
   it('loads a StandardMaterial3D from an ExtResource .tres', async () => {
     const renderer = await render('ExtResource("1_blue")', BLUE_TRES);
+    expect(materialOf(renderer).color.getHex()).toBe(0x0000ff);
+  });
+
+  it('draws the new material when the node’s material changes and its shape does not', async () => {
+    const fake = fakeLoader(BLUE_TRES);
+    const renderer = await ReactThreeTestRenderer.create(scene(fake, 'SubResource("Mat_inline")'));
+    await renderer.update(scene(fake, 'ExtResource("1_blue")'));
     expect(materialOf(renderer).color.getHex()).toBe(0x0000ff);
   });
 

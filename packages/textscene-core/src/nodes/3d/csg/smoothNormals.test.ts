@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { CSG_MERGE_TOLERANCE } from '../../../godot/csg';
 import { applyCsgNormals, type CsgFaceSoup } from './smoothNormals';
 
 /** Build a soup from triangles given as flat vertex triples. */
@@ -150,10 +151,15 @@ describe('applyCsgNormals', () => {
   });
 
   describe('manifold weld (csg_shape.cpp:427, tolerance 2 * FLT_EPSILON)', () => {
-    /** The cone, with apex corner `i` moved `i * step` along X. */
-    function shiftedApexTriangles(step: number): Array<[THREE.Vector3, THREE.Vector3, THREE.Vector3]> {
-      return coneTriangles().map(([apex, a, b], i) => [apex.clone().setX(i * step), a, b]);
+    /** The cone, with apex corner `i` moved to `x(i)` along X. */
+    function apexShiftedTriangles(
+      x: (i: number) => number
+    ): Array<[THREE.Vector3, THREE.Vector3, THREE.Vector3]> {
+      return coneTriangles().map(([apex, a, b], i) => [apex.clone().setX(x(i)), a, b]);
     }
+
+    /** The cone, with apex corner `i` moved `i * step` along X. */
+    const shiftedApexTriangles = (step: number) => apexShiftedTriangles((i) => i * step);
 
     /** A residue far below the tolerance, as three's trig leaves at a capsule pole. */
     const noisyConeTriangles = () => shiftedApexTriangles(1e-17);
@@ -163,6 +169,13 @@ describe('applyCsgNormals', () => {
       for (let t = 1; t < 8; t++) {
         expect(normalAt(geometry, t * 3).distanceTo(normalAt(geometry, 0))).toBeLessThan(1e-6);
       }
+    });
+
+    it('welds corners within the tolerance that straddle a weld-grid cell boundary', () => {
+      const boundary = 0.5 * CSG_MERGE_TOLERANCE;
+      const tris = apexShiftedTriangles((i) => boundary + (i < 4 ? -1e-8 : 1e-8));
+      const geometry = applyCsgNormals(soupOf(tris));
+      expect(normalAt(geometry, 12).distanceTo(normalAt(geometry, 0))).toBeLessThan(1e-6);
     });
 
     it('keeps corners further apart than the tolerance separate', () => {

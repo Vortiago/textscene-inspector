@@ -36,13 +36,14 @@ function node(type: string, properties: Record<string, unknown>, children: TscnN
 /** A box root holding a CSGMesh3D whose mesh is `rock.tres`. */
 const ROOT = node('CSGBox3D', {}, [node('CSGMesh3D', { mesh: 'ExtResource("1")', flipFaces: false })]);
 
-function renderSetup(root: TscnNode | null, fake: FakeResourceLoader) {
+function renderSetupWith(root: TscnNode | null, fake: FakeResourceLoader) {
   return renderHook(
-    () => {
+    ({ root: current }: { root: TscnNode | null }) => {
       const { missingPaths, uploadedPaths } = useMissingResources();
-      return { setup: useCsgGeometryContext(root), missing: missingPaths, uploaded: uploadedPaths };
+      return { setup: useCsgGeometryContext(current), missing: missingPaths, uploaded: uploadedPaths };
     },
     {
+      initialProps: { root },
       wrapper: ({ children }: { children: ReactNode }) => (
         <MissingResourcesProvider>
           <ResourceLoaderProvider loader={fake.loader}>
@@ -51,7 +52,11 @@ function renderSetup(root: TscnNode | null, fake: FakeResourceLoader) {
         </MissingResourcesProvider>
       ),
     }
-  ).result;
+  );
+}
+
+function renderSetup(root: TscnNode | null, fake: FakeResourceLoader) {
+  return renderSetupWith(root, fake).result;
 }
 
 describe('useCsgGeometryContext', () => {
@@ -64,6 +69,15 @@ describe('useCsgGeometryContext', () => {
     act(() => fake.resources._resolve(ROCK, ROCK_FILE));
     expect(result.current.setup.isLoading).toBe(false);
     expect(result.current.setup.context.file(ROCK)).toBe(ROCK_FILE);
+  });
+
+  it('keeps the context when an unrelated file loads', () => {
+    const fake = createFakeResourceLoader();
+    const result = renderSetup(ROOT, fake);
+    act(() => fake.resources._resolve(ROCK, ROCK_FILE));
+    const context = result.current.setup.context;
+    act(() => fake.resources._resolve('res://other.tres', ROCK_FILE));
+    expect(result.current.setup.context).toBe(context);
   });
 
   it('pins the file while mounted', () => {
@@ -88,6 +102,16 @@ describe('useCsgGeometryContext', () => {
     act(() => fake.resources._resolve(ROCK, ROCK_FILE));
     expect(result.current.missing.has(ROCK)).toBe(false);
     expect(result.current.uploaded.has(ROCK)).toBe(true);
+  });
+
+  it('shows no uploaded row for a failed file that leaves the subtree and loads on its return', () => {
+    const fake = createFakeResourceLoader();
+    const { result, rerender } = renderSetupWith(ROOT, fake);
+    act(() => fake.resources._fail(ROCK, 'gone'));
+    rerender({ root: node('CSGBox3D', {}) });
+    act(() => fake.resources._resolve(ROCK, ROCK_FILE));
+    rerender({ root: ROOT });
+    expect(result.current.uploaded.has(ROCK)).toBe(false);
   });
 
   it('reads no file for a node in an ancestor’s plan, which passes no root (edge case)', () => {

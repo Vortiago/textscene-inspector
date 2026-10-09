@@ -76,14 +76,36 @@ function useCachedFiles(
   }, [paths]);
   useRequestedFiles(loader, paths);
 
-  const files = useMemo(
+  const read = useMemo(
     () => new Map(paths.map((path) => [path, loader?.resources.getCached(path)] as const)),
     // `version` is a cache-buster: the cache changes outside React.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [loader, paths, version]
   );
+  const files = useStableEntries(read);
   useMissingFiles(files);
   return files;
+}
+
+/**
+ * `files` under the identity of the last map with the same entries. `version` moves on every
+ * resource load in the project, and a new map would rebuild the root's plan and its subtree.
+ */
+function useStableEntries(files: ReadonlyMap<string, CachedFile>): ReadonlyMap<string, CachedFile> {
+  const last = useRef(files);
+  const stable = sameEntries(last.current, files) ? last.current : files;
+  useEffect(() => {
+    last.current = stable;
+  }, [stable]);
+  return stable;
+}
+
+function sameEntries(a: ReadonlyMap<string, CachedFile>, b: ReadonlyMap<string, CachedFile>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [path, file] of b) {
+    if (!a.has(path) || a.get(path) !== file) return false;
+  }
+  return true;
 }
 
 /** Requests each file not yet cached, and pins each so LRU eviction spares it while mounted. */
@@ -116,7 +138,10 @@ function useMissingFiles(files: ReadonlyMap<string, CachedFile>): void {
   useEffect(() => {
     const uploaded = [...reported.current].filter((path) => files.get(path));
     uploaded.forEach(markUploaded);
-    reported.current = new Set([...reported.current, ...failed].filter((path) => !uploaded.includes(path)));
+    // A path that left the list is forgotten, so its next load counts as a first load.
+    reported.current = new Set(
+      [...reported.current, ...failed].filter((path) => files.has(path) && !uploaded.includes(path))
+    );
   }, [files, failed, markUploaded]);
 }
 

@@ -51,7 +51,9 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     path !== null &&
     (subtree.absorbedPaths.has(path) || subtree.invisiblePaths.has(path));
   const ownSetup = useCsgGeometryContext(inAncestorPlan ? null : node);
-  const ctx = inAncestorPlan ? subtree.context : ownSetup.context;
+  // A failed ancestor makes this node a root again, whose boolean reads the files that root loaded.
+  const setup = inAncestorPlan ? { context: subtree.context, isLoading: false } : ownSetup;
+  const ctx = setup.context;
   // Optional: a CSG node renders outside the shell in tests and in the
   // subtree-conformance probe, where nothing can be hidden anyway.
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_PATHS;
@@ -68,14 +70,15 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
 
   // The node's own solid comes from the registered builder the evaluator calls, so a slice
   // defines its geometry once. Memoized on the registered `geometryKey`, not on the properties
-  // object, which the parser reallocates every reparse.
+  // object, which the parser reallocates every reparse. The key covers the shape alone, and the
+  // plan's key adds `material` beside it, so the solid's materials need it here too.
   const registration = nodeComponentRegistry.getCsgShape(node.type);
   const builderProps = properties as unknown as Record<string, unknown>;
   const ownKey = registration?.geometryKey?.(builderProps, ctx) ?? node.type;
   const ownSolid = useMemo(
     () => (skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` is the builder's inputs.
-    [ownKey, skipped]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` and `materialPath` are the builder's inputs.
+    [ownKey, properties.materialPath, skipped]
   );
   const geometry = ownSolid ? <primitive object={ownSolid.geometry} attach="geometry" /> : null;
 
@@ -183,7 +186,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   if (combining) {
     return (
       <group {...transform}>
-        <CsgRootMesh plan={plan} setup={ownSetup} shadow={shadow} meshRef={drawnRef} fallback={ownMesh}>
+        <CsgRootMesh plan={plan} setup={setup} shadow={shadow} meshRef={drawnRef} fallback={ownMesh}>
           {children}
         </CsgRootMesh>
       </group>
