@@ -1,5 +1,5 @@
 /**
- * Hands the active canvas's renderer to `CameraControlContext`, so the toolbar's Screenshot and
+ * Hands the active canvas's renderer to `ViewportActionsContext`, so the toolbar's Screenshot and
  * the host's capture read the scene that view renders, 3D or 2D. The 2D stage's DOM chrome is no
  * part of it. It renders and reads back in one task: WebGL clears the buffer only when the browser
  * composites, and `preserveDrawingBuffer` would copy the buffer every frame.
@@ -7,7 +7,7 @@
 
 import { useThree } from '@react-three/fiber';
 import { useEffect } from 'react';
-import { useOptionalCameraControl } from './contexts/CameraControlContext.js';
+import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 
 /**
@@ -15,7 +15,7 @@ import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
  * resources. It names the scene graph it has rendered.
  */
 export function ScreenshotBridge() {
-  const registerScreenshotHandler = useOptionalCameraControl()?.registerScreenshotHandler;
+  const registerScreenshotHandler = useOptionalViewportActions()?.registerScreenshotHandler;
   const renderedScene = useOptionalHierarchy()?.sceneGraph ?? null;
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);

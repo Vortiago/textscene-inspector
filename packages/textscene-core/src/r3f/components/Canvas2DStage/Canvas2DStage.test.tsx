@@ -56,7 +56,7 @@ vi.mock('../../contexts/ProjectSettingsContext', async (importOriginal) => {
 });
 
 import { Canvas2DStage } from './Canvas2DStage';
-import { CameraControlProvider, useCameraControl } from '../../contexts/CameraControlContext';
+import { ViewportActionsProvider, useViewportActions } from '../../contexts/ViewportActionsContext';
 import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d';
 import type { TscnNode } from '../../../parser/types';
 
@@ -134,7 +134,7 @@ function touch(
 
 /** A button that drives the context the Cameras panel uses: frame (300, 200) at zoom 2. */
 function FrameProbe() {
-  const cam = useCameraControl();
+  const cam = useViewportActions();
   return (
     <button type="button" onClick={() => cam.requestFrame2D({ center: { x: 300, y: 200 }, zoom: 2 })}>
       frame camera
@@ -387,10 +387,10 @@ describe('<Canvas2DStage>', () => {
 
   it('frames a 2D camera view on request: centers the view point at the requested zoom', () => {
     render(
-      <CameraControlProvider>
+      <ViewportActionsProvider>
         <FrameProbe />
         <Canvas2DStage nodes={[]} internalResources={[]} externalResources={[]} scenePath={SCENE_PATH} />
-      </CameraControlProvider>
+      </ViewportActionsProvider>
     );
     const stage = screen.getByLabelText('2D canvas');
     // happy-dom rects are 0×0, so the stage gets a real size for the centring.
@@ -482,19 +482,19 @@ describe('<Canvas2DStage> fit on open: load time', () => {
   /** The stage as the viewport area mounts it, with the props a rerender changes. */
   function stageAt(scenePath: string, nodes: TscnNode[] = []) {
     return (
-      <CameraControlProvider>
+      <ViewportActionsProvider>
         <FrameProbe />
         <Canvas2DStage nodes={nodes} internalResources={[]} externalResources={[]} scenePath={scenePath} />
-      </CameraControlProvider>
+      </ViewportActionsProvider>
     );
   }
 
   /** The same tree in the 3D workspace: the stage unmounts and the provider stays. */
   function withoutStage() {
     return (
-      <CameraControlProvider>
+      <ViewportActionsProvider>
         <FrameProbe />
-      </CameraControlProvider>
+      </ViewportActionsProvider>
     );
   }
 
@@ -503,7 +503,7 @@ describe('<Canvas2DStage> fit on open: load time', () => {
    * so the stage mounts in the render that carries the new request.
    */
   function LookThrough2DHost() {
-    const cam = useCameraControl();
+    const cam = useViewportActions();
     const [is2D, setIs2D] = useState(false);
     function lookThrough() {
       cam.requestFrame2D({ center: { x: 300, y: 200 }, zoom: 2 });
@@ -675,9 +675,9 @@ describe('<Canvas2DStage> fit on open: load time', () => {
   it('applies a Camera2D framing requested in the click that mounts the stage', () => {
     sizeEveryElement(800, 600);
     render(
-      <CameraControlProvider>
+      <ViewportActionsProvider>
         <LookThrough2DHost />
-      </CameraControlProvider>
+      </ViewportActionsProvider>
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'look through' }));

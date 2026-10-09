@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useCameraControl } from '../../contexts/CameraControlContext';
+import { useViewportActions } from '../../contexts/ViewportActionsContext';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext';
 import { useResourceLoader } from '../../../resources/useResource';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
@@ -51,7 +51,7 @@ function arrangeCanvas(overrides: Partial<Omit<CanvasStub, 'releaseResource'>>):
 
 /** Registers `dataUrl` as the screenshot of `shownScene` while `registers` holds, as a canvas's bridge does. */
 function useStubScreenshotHandler(dataUrl: string, shownScene: SceneGraph | null, registers = true): void {
-  const { registerScreenshotHandler } = useCameraControl();
+  const { registerScreenshotHandler } = useViewportActions();
   useEffect(
     () => (registers ? registerScreenshotHandler(() => dataUrl, shownScene) : undefined),
     [registerScreenshotHandler, dataUrl, shownScene, registers]

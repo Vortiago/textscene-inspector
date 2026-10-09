@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
-import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
+import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { readPersisted } from '../../hooks/usePersistedState.js';
 import {
   clampWheelNotches,
@@ -140,9 +140,9 @@ export function Canvas2DStage({
   // "View through" a Camera2D: a one-shot request that centres the camera's view
   // point at its magnification. Pan and zoom stay free afterwards. The claim keeps a
   // remount from replaying an old request, and still applies one made with the mount.
-  const cameraControl = useOptionalCameraControl();
-  const frame2D = cameraControl?.frame2D ?? null;
-  const claimFrame2D = cameraControl?.claimFrame2D;
+  const viewportActions = useOptionalViewportActions();
+  const frame2D = viewportActions?.frame2D ?? null;
+  const claimFrame2D = viewportActions?.claimFrame2D;
   useEffect(() => {
     if (!frame2D || !claimFrame2D) return;
     const el = stageRef.current;

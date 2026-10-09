@@ -7,11 +7,11 @@
 import { useEffect, useRef } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
+import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 
 export function SceneChangeResetter({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   const { clearAll } = useSelection();
-  const returnToFreeView = useOptionalCameraControl()?.returnToFreeView;
+  const returnToFreeView = useOptionalViewportActions()?.returnToFreeView;
   const prevSceneGraphRef = useRef<SceneGraph | null>(sceneGraph);
 
   useEffect(() => {

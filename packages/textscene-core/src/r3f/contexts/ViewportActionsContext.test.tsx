@@ -7,7 +7,11 @@ import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, renderHook } from '@testing-library/react';
 import { buildSceneGraph, type SceneGraph } from '../../core/SceneGraph';
-import { CameraControlProvider, useCameraControl, useOptionalCameraControl } from './CameraControlContext';
+import {
+  ViewportActionsProvider,
+  useViewportActions,
+  useOptionalViewportActions,
+} from './ViewportActionsContext';
 
 /** A scene graph with no nodes. The context compares graphs by identity only. */
 function emptySceneGraph(): SceneGraph {
@@ -21,12 +25,12 @@ function emptySceneGraph(): SceneGraph {
 }
 
 function wrapper({ children }: { children: ReactNode }) {
-  return <CameraControlProvider>{children}</CameraControlProvider>;
+  return <ViewportActionsProvider>{children}</ViewportActionsProvider>;
 }
 
-describe('CameraControlContext', () => {
+describe('ViewportActionsContext', () => {
   it('exposes activeCameraPath/switchToCamera/returnToFreeView from main', () => {
-    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
     expect(result.current.activeCameraPath).toBeNull();
 
     act(() => {
@@ -41,9 +45,9 @@ describe('CameraControlContext', () => {
   });
 
   it('seeds activeCameraPath from initialActiveCameraPath (?camera= deep-link)', () => {
-    const { result } = renderHook(() => useCameraControl(), {
+    const { result } = renderHook(() => useViewportActions(), {
       wrapper: ({ children }) => (
-        <CameraControlProvider initialActiveCameraPath="Root/Camera3D">{children}</CameraControlProvider>
+        <ViewportActionsProvider initialActiveCameraPath="Root/Camera3D">{children}</ViewportActionsProvider>
       ),
     });
     // The canvas looks through this camera on open without any user action.
@@ -57,7 +61,7 @@ describe('CameraControlContext', () => {
   });
 
   it('defaults activeCameraPath to null when no initial path is given', () => {
-    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
     expect(result.current.activeCameraPath).toBeNull();
   });
 
@@ -65,17 +69,17 @@ describe('CameraControlContext', () => {
     const handler = vi.fn();
 
     function ResetHandlerRegistrar() {
-      const { registerResetHandler } = useCameraControl();
+      const { registerResetHandler } = useViewportActions();
       useEffect(() => registerResetHandler(handler), [registerResetHandler]);
       return null;
     }
 
-    const { result } = renderHook(() => useCameraControl(), {
+    const { result } = renderHook(() => useViewportActions(), {
       wrapper: ({ children }) => (
-        <CameraControlProvider>
+        <ViewportActionsProvider>
           <ResetHandlerRegistrar />
           {children}
-        </CameraControlProvider>
+        </ViewportActionsProvider>
       ),
     });
 
@@ -89,7 +93,7 @@ describe('CameraControlContext', () => {
   });
 
   it('resetCamera() is a no-op when no handler is registered', () => {
-    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
     // No throw with no canvas mounted yet.
     expect(() =>
       act(() => {
@@ -102,13 +106,13 @@ describe('CameraControlContext', () => {
     const handler = vi.fn();
 
     function ResetHandlerRegistrar() {
-      const { registerResetHandler } = useCameraControl();
+      const { registerResetHandler } = useViewportActions();
       useEffect(() => registerResetHandler(handler), [registerResetHandler]);
       return null;
     }
 
     function TriggerReset() {
-      const { resetCamera } = useCameraControl();
+      const { resetCamera } = useViewportActions();
       return (
         <button data-testid="trigger" onClick={resetCamera}>
           reset
@@ -118,10 +122,10 @@ describe('CameraControlContext', () => {
 
     function App({ showRegistrar }: { showRegistrar: boolean }) {
       return (
-        <CameraControlProvider>
+        <ViewportActionsProvider>
           {showRegistrar && <ResetHandlerRegistrar />}
           <TriggerReset />
-        </CameraControlProvider>
+        </ViewportActionsProvider>
       );
     }
 
@@ -147,13 +151,13 @@ describe('CameraControlContext', () => {
     const secondHandler = vi.fn();
 
     function Registrar({ handler }: { handler: () => void }) {
-      const { registerResetHandler } = useCameraControl();
+      const { registerResetHandler } = useViewportActions();
       useEffect(() => registerResetHandler(handler), [registerResetHandler, handler]);
       return null;
     }
 
     function TriggerReset() {
-      const { resetCamera } = useCameraControl();
+      const { resetCamera } = useViewportActions();
       return (
         <button data-testid="trigger" onClick={resetCamera}>
           reset
@@ -162,11 +166,11 @@ describe('CameraControlContext', () => {
     }
 
     const { getByTestId } = render(
-      <CameraControlProvider>
+      <ViewportActionsProvider>
         <Registrar handler={firstHandler} />
         <Registrar handler={secondHandler} />
         <TriggerReset />
-      </CameraControlProvider>
+      </ViewportActionsProvider>
     );
 
     act(() => {
@@ -180,7 +184,7 @@ describe('CameraControlContext', () => {
   });
 
   it('lets a 2D framing request be claimed once, however many stages ask', () => {
-    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
     act(() => {
       result.current.requestFrame2D({ center: { x: 1, y: 2 }, zoom: 1 });
     });
@@ -191,7 +195,7 @@ describe('CameraControlContext', () => {
   });
 
   it('lets a newer 2D framing request be claimed after an older one', () => {
-    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
     act(() => {
       result.current.requestFrame2D({ center: { x: 1, y: 2 }, zoom: 1 });
     });
@@ -205,39 +209,39 @@ describe('CameraControlContext', () => {
   });
 
   it('refuses to claim a request id no request carries', () => {
-    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
     expect(result.current.claimFrame2D(0)).toBe(false);
   });
 
-  it('useOptionalCameraControl returns null without a provider', () => {
-    const { result } = renderHook(() => useOptionalCameraControl());
+  it('useOptionalViewportActions returns null without a provider', () => {
+    const { result } = renderHook(() => useOptionalViewportActions());
     expect(result.current).toBeNull();
   });
 
-  it('useCameraControl throws without a provider', () => {
+  it('useViewportActions throws without a provider', () => {
     // The throw is expected, so React's error log is silenced.
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(() => renderHook(() => useCameraControl())).toThrow(/CameraControlProvider/);
+    expect(() => renderHook(() => useViewportActions())).toThrow(/ViewportActionsProvider/);
     consoleErrorSpy.mockRestore();
   });
 });
 
-describe('CameraControlContext screenshot', () => {
+describe('ViewportActionsContext screenshot', () => {
   it("takeScreenshot() returns the registered handler's result", () => {
     const handler = vi.fn(() => 'data:image/png;base64,AAA');
 
     function ScreenshotHandlerRegistrar() {
-      const { registerScreenshotHandler } = useCameraControl();
+      const { registerScreenshotHandler } = useViewportActions();
       useEffect(() => registerScreenshotHandler(handler), [registerScreenshotHandler]);
       return null;
     }
 
-    const { result } = renderHook(() => useCameraControl(), {
+    const { result } = renderHook(() => useViewportActions(), {
       wrapper: ({ children }) => (
-        <CameraControlProvider>
+        <ViewportActionsProvider>
           <ScreenshotHandlerRegistrar />
           {children}
-        </CameraControlProvider>
+        </ViewportActionsProvider>
       ),
     });
 
@@ -251,7 +255,7 @@ describe('CameraControlContext screenshot', () => {
   });
 
   it('takeScreenshot() returns null when no handler is registered (no canvas mounted yet)', () => {
-    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
     let captured: string | null = 'not-null';
     expect(() => {
       act(() => {
@@ -265,21 +269,21 @@ describe('CameraControlContext screenshot', () => {
     const handler = vi.fn(() => 'data:image/png;base64,AAA');
 
     function ScreenshotHandlerRegistrar() {
-      const { registerScreenshotHandler } = useCameraControl();
+      const { registerScreenshotHandler } = useViewportActions();
       useEffect(() => registerScreenshotHandler(handler), [registerScreenshotHandler]);
       return null;
     }
 
     function App({ showRegistrar }: { showRegistrar: boolean }) {
       return (
-        <CameraControlProvider>
+        <ViewportActionsProvider>
           {showRegistrar && <ScreenshotHandlerRegistrar />}
           <TriggerScreenshot />
-        </CameraControlProvider>
+        </ViewportActionsProvider>
       );
     }
     function TriggerScreenshot() {
-      const { takeScreenshot } = useCameraControl();
+      const { takeScreenshot } = useViewportActions();
       return (
         <button data-testid="trigger" onClick={() => takeScreenshot()}>
           screenshot
@@ -302,24 +306,24 @@ describe('CameraControlContext screenshot', () => {
 
   it('tells a subscriber when a handler registers and when it leaves', () => {
     function ScreenshotHandlerRegistrar() {
-      const { registerScreenshotHandler } = useCameraControl();
+      const { registerScreenshotHandler } = useViewportActions();
       useEffect(
         () => registerScreenshotHandler(() => 'data:image/png;base64,AAA'),
         [registerScreenshotHandler]
       );
       return null;
     }
-    let control: ReturnType<typeof useCameraControl> | null = null;
+    let control: ReturnType<typeof useViewportActions> | null = null;
     function Probe() {
-      control = useCameraControl();
+      control = useViewportActions();
       return null;
     }
     function App({ showRegistrar }: { showRegistrar: boolean }) {
       return (
-        <CameraControlProvider>
+        <ViewportActionsProvider>
           <Probe />
           {showRegistrar && <ScreenshotHandlerRegistrar />}
-        </CameraControlProvider>
+        </ViewportActionsProvider>
       );
     }
     const { rerender } = render(<App showRegistrar={false} />);
@@ -334,7 +338,7 @@ describe('CameraControlContext screenshot', () => {
   });
 
   it('stops telling a subscriber once it unsubscribes', () => {
-    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
     const listener = vi.fn();
     const unsubscribe = result.current.subscribeScreenshotHandler(listener);
 
@@ -347,7 +351,7 @@ describe('CameraControlContext screenshot', () => {
   });
 
   it('names the scene graph the registered handler has rendered', () => {
-    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
     const renderedScene = emptySceneGraph();
 
     act(() => {
@@ -358,7 +362,7 @@ describe('CameraControlContext screenshot', () => {
   });
 
   it('names no scene once the handler leaves', () => {
-    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
     let unregister = () => {};
     act(() => {
       unregister = result.current.registerScreenshotHandler(() => null, emptySceneGraph());
@@ -370,7 +374,7 @@ describe('CameraControlContext screenshot', () => {
   });
 
   it('names no scene for a handler registered without one', () => {
-    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    const { result } = renderHook(() => useViewportActions(), { wrapper });
 
     act(() => {
       result.current.registerScreenshotHandler(() => null);

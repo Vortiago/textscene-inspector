@@ -1,7 +1,8 @@
 /**
- * The panel's active camera. `activeCameraPath === null` means free orbit
- * with the canvas's own camera. A node path makes the canvas look through the
- * Camera3D there. It also carries the handlers the toolbar's buttons call.
+ * What a panel's toolbar and panels do to its viewport: look through a camera,
+ * frame the 2D stage, reset the view and take a screenshot. `activeCameraPath ===
+ * null` means free orbit with the canvas's own camera. A node path makes the canvas
+ * look through the Camera3D there.
  */
 
 import type { SceneGraph } from '../../core/SceneGraph.js';
@@ -26,7 +27,7 @@ export interface Frame2DRequest {
   requestId: number;
 }
 
-export interface CameraControlContextValue {
+export interface ViewportActionsContextValue {
   activeCameraPath: string | null;
   switchToCamera: (path: string) => void;
   returnToFreeView: () => void;
@@ -69,8 +70,8 @@ interface ScreenshotSource {
   readonly renderedScene: SceneGraph | null;
 }
 
-const CameraControlContext = createContext<CameraControlContextValue | null>(null);
-CameraControlContext.displayName = 'CameraControlContext';
+const ViewportActionsContext = createContext<ViewportActionsContextValue | null>(null);
+ViewportActionsContext.displayName = 'ViewportActionsContext';
 
 /**
  * A handler slot in a ref, so a registration re-renders no consumer. The
@@ -110,7 +111,7 @@ function useHandlerSlot<T>(): {
   return { ref, register, subscribe };
 }
 
-export interface CameraControlProviderProps {
+export interface ViewportActionsProviderProps {
   children: ReactNode;
   /**
    * A Camera3D node path to activate on mount, from a deep link. A scene
@@ -119,10 +120,10 @@ export interface CameraControlProviderProps {
   initialActiveCameraPath?: string | null;
 }
 
-export function CameraControlProvider({
+export function ViewportActionsProvider({
   children,
   initialActiveCameraPath = null,
-}: CameraControlProviderProps) {
+}: ViewportActionsProviderProps) {
   const [activeCameraPath, setActiveCameraPath] = useState<string | null>(initialActiveCameraPath);
   const [frame2D, setFrame2D] = useState<Frame2DRequest | null>(null);
   const frame2DIdRef = useRef(0);
@@ -172,7 +173,7 @@ export function CameraControlProvider({
     [screenshotSourceRef]
   );
 
-  const value = useMemo<CameraControlContextValue>(
+  const value = useMemo<ViewportActionsContextValue>(
     () => ({
       activeCameraPath,
       switchToCamera,
@@ -205,18 +206,18 @@ export function CameraControlProvider({
     ]
   );
 
-  return <CameraControlContext.Provider value={value}>{children}</CameraControlContext.Provider>;
+  return <ViewportActionsContext.Provider value={value}>{children}</ViewportActionsContext.Provider>;
 }
 
-export function useCameraControl(): CameraControlContextValue {
-  const value = useContext(CameraControlContext);
+export function useViewportActions(): ViewportActionsContextValue {
+  const value = useContext(ViewportActionsContext);
   if (value === null) {
-    throw new Error('useCameraControl must be used inside a <TscnPreviewShell> (CameraControlProvider).');
+    throw new Error('useViewportActions must be used inside a <TscnPreviewShell> (ViewportActionsProvider).');
   }
   return value;
 }
 
 /** Returns null instead of throwing when no provider is mounted. */
-export function useOptionalCameraControl(): CameraControlContextValue | null {
-  return useContext(CameraControlContext);
+export function useOptionalViewportActions(): ViewportActionsContextValue | null {
+  return useContext(ViewportActionsContext);
 }

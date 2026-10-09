@@ -5,7 +5,7 @@
  * the 2D workspace.
  */
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
-import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
+import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
 import { useLiveSceneNodes, liveTreeContext } from '../../useLiveSceneTree.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
@@ -22,7 +22,7 @@ const isCameraNode = (n: TscnNode): boolean => isCamera3DType(n.type) || isCamer
 
 export function CamerasPanel() {
   const { sceneGraph } = useHierarchy();
-  const cam = useOptionalCameraControl();
+  const cam = useOptionalViewportActions();
   const { setMode } = useViewportMode();
   const loader = useResourceLoader();
   const { viewportSize } = useProjectSettings();

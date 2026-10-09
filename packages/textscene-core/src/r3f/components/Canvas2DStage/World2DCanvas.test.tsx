@@ -9,8 +9,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SelectionProvider } from '../../contexts/SelectionContext';
-import { CameraControlProvider } from '../../contexts/CameraControlContext';
-import { cameraControlProbe } from '../../testing/CameraControlProbe';
+import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
+import { viewportActionsProbe } from '../../testing/ViewportActionsProbe';
 
 // The real ControlCanvasLayer renders null here, so a visible stand-in makes
 // its mount observable.
@@ -88,16 +88,16 @@ describe('World2DContents tiled uploads', () => {
 
 describe('World2DContents screenshot', () => {
   it('registers the 2D view for the toolbar Screenshot and the host capture', async () => {
-    const { Probe, control } = cameraControlProbe();
+    const { Probe, actions } = viewportActionsProbe();
     await ReactThreeTestRenderer.create(
-      <CameraControlProvider>
+      <ViewportActionsProvider>
         <SelectionProvider>
           <Probe />
           <World2DContents {...baseProps} />
         </SelectionProvider>
-      </CameraControlProvider>
+      </ViewportActionsProvider>
     );
 
-    expect(control().hasScreenshotHandler()).toBe(true);
+    expect(actions().hasScreenshotHandler()).toBe(true);
   });
 });

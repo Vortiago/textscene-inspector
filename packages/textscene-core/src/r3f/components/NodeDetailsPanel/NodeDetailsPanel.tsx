@@ -7,7 +7,7 @@ import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { isCamera3DType } from '../../cameraNodeTypes.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
+import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
 import { PropertySection } from './PropertySection.js';
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
@@ -17,7 +17,7 @@ import styles from './NodeDetailsPanel.module.css';
 
 export function NodeDetailsPanel() {
   const { selectedNodePath } = useSelection();
-  const cameraControl = useOptionalCameraControl();
+  const viewportActions = useOptionalViewportActions();
 
   // The merged node and its originating instance ref. It re-derives when a
   // lazily loaded sub-scene lands.
@@ -41,8 +41,8 @@ export function NodeDetailsPanel() {
     ? authoredSections(registration.propertyFormatter(node.properties), node.scope)
     : [];
 
-  const showCameraActions = isCamera3DType(node.type) && cameraControl !== null;
-  const isActiveCamera = cameraControl !== null && cameraControl.activeCameraPath === path;
+  const showCameraActions = isCamera3DType(node.type) && viewportActions !== null;
+  const isActiveCamera = viewportActions !== null && viewportActions.activeCameraPath === path;
 
   return (
     <div className={styles.root}>
@@ -85,14 +85,14 @@ export function NodeDetailsPanel() {
         )}
       </div>
 
-      {showCameraActions && cameraControl !== null && (
+      {showCameraActions && viewportActions !== null && (
         <div className={styles.section}>
           <h4 className={styles.sectionTitle}>Camera</h4>
           {isActiveCamera ? (
             <button
               type="button"
               className={styles.actionButton}
-              onClick={() => cameraControl.returnToFreeView()}
+              onClick={() => viewportActions.returnToFreeView()}
             >
               Reset Camera
             </button>
@@ -100,7 +100,7 @@ export function NodeDetailsPanel() {
             <button
               type="button"
               className={styles.actionButton}
-              onClick={() => cameraControl.switchToCamera(path)}
+              onClick={() => viewportActions.switchToCamera(path)}
             >
               Use This Camera
             </button>

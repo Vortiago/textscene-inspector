@@ -12,7 +12,7 @@ import {
   VIEWPORT_MODE_STORAGE_KEY,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
-import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
+import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { writePersisted } from '../../hooks/usePersistedState.js';
 import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
@@ -140,7 +140,7 @@ export function ViewportToolbar() {
     frameOnOpen,
     setFrameOnOpen,
   } = useViewportMode();
-  const camera = useOptionalCameraControl();
+  const camera = useOptionalViewportActions();
   const hierarchy = useOptionalHierarchy();
   const sceneLoaded = Boolean(hierarchy?.sceneGraph);
 

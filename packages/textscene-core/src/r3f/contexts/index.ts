@@ -12,12 +12,12 @@ export {
   type HierarchyProviderProps,
 } from './HierarchyContext.js';
 export {
-  CameraControlProvider,
-  useCameraControl,
-  useOptionalCameraControl,
-  type CameraControlContextValue,
-  type CameraControlProviderProps,
-} from './CameraControlContext.js';
+  ViewportActionsProvider,
+  useViewportActions,
+  useOptionalViewportActions,
+  type ViewportActionsContextValue,
+  type ViewportActionsProviderProps,
+} from './ViewportActionsContext.js';
 export { NodePathProvider, useNodePath, type NodePathProviderProps } from './NodePathContext.js';
 export {
   MissingResourcesProvider,
