@@ -3,20 +3,14 @@
  * glyph quad drawn before the decode samples an empty texture, so a run counts as pending until then.
  */
 
-import { useSyncExternalStore } from 'react';
 import * as THREE from 'three';
+import { createExternalStore, useExternalStoreValue } from '../../../hooks/createExternalStore';
 import { OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlas';
 
 /** Written only by `getAtlasTexture`. Never cleared: the atlas is never disposed. */
 let cachedAtlasTexture: THREE.Texture | null = null;
 /** Set only by the atlas image's load callback, and never cleared. */
-let isAtlasDecoded = false;
-const decodeListeners = new Set<() => void>();
-
-function markDecoded(): void {
-  isAtlasDecoded = true;
-  decodeListeners.forEach((listener) => listener());
-}
+const atlasDecoded = createExternalStore(false);
 
 /**
  * The atlas PNG as a texture, created once and shared by identity across every run, never
@@ -25,7 +19,9 @@ function markDecoded(): void {
  */
 export function getAtlasTexture(): THREE.Texture {
   if (!cachedAtlasTexture) {
-    const texture = new THREE.TextureLoader().load(OPEN_SANS_ATLAS_PNG_DATA_URL, markDecoded);
+    const texture = new THREE.TextureLoader().load(OPEN_SANS_ATLAS_PNG_DATA_URL, () =>
+      atlasDecoded.set(true)
+    );
     texture.colorSpace = THREE.NoColorSpace;
     texture.generateMipmaps = false;
     texture.minFilter = THREE.LinearFilter;
@@ -37,12 +33,7 @@ export function getAtlasTexture(): THREE.Texture {
   return cachedAtlasTexture;
 }
 
-function subscribeDecode(listener: () => void): () => void {
-  decodeListeners.add(listener);
-  return () => decodeListeners.delete(listener);
-}
-
 /** Whether the atlas image has decoded, re-rendering the caller when it does. */
 export function useIsAtlasDecoded(): boolean {
-  return useSyncExternalStore(subscribeDecode, () => isAtlasDecoded);
+  return useExternalStoreValue(atlasDecoded);
 }

@@ -55,7 +55,7 @@ describe('SceneResourcesContext', () => {
   });
 
   it('nested provider (instanced sub-scene) resolves a shared external id to its own', () => {
-    const seen = nestedPools(subExternal);
+    const seen = nestedPools();
     expect(findExtResource(seen.sub.externalResources, '1_tex')?.path).toBe('res://sub.png');
   });
 
@@ -64,34 +64,37 @@ describe('SceneResourcesContext', () => {
       { id: '1_tex', type: 'Texture2D', path: 'res://first.png' },
       { id: '1_tex', type: 'Texture2D', path: 'res://last.png' },
     ];
-    const seen = nestedPools(repeated);
+    const seen = nestedPools({ external: repeated });
     expect(findExtResource(seen.sub.externalResources, '1_tex')?.path).toBe('res://last.png');
   });
 
   it('nested provider resolves a shared internal id to its own', () => {
     const shared: TscnInternalResource[] = [{ id: 'BoxMesh_host', type: 'SphereMesh', data: {} }];
-    const seen = nestedPools(subExternal, shared);
+    const seen = nestedPools({ internal: shared });
     expect(findSubResource(seen.sub.internalResources, 'BoxMesh_host')?.type).toBe('SphereMesh');
   });
 
   it('nested provider still reaches a host-only id, for a child the host added', () => {
-    const seen = nestedPools(subExternal);
+    const seen = nestedPools();
     expect(findSubResource(seen.sub.internalResources, 'BoxMesh_host')).toBe(hostInternal[0]);
     expect(findExtResource(seen.sub.externalResources, '2_host')?.path).toBe('res://host-only.png');
   });
 
   it('a sibling outside the nested provider sees only the host pool', () => {
-    const seen = nestedPools(subExternal);
+    const seen = nestedPools();
     expect(seen.host.internalResources).toEqual(hostInternal);
     expect(seen.host.externalResources).toEqual(hostExternal);
   });
 });
 
 /** The pools a host probe and an instanced sub-scene's probe each see. */
-function nestedPools(
-  subExternalResources: readonly TscnExternalResource[],
-  subInternalResources: readonly TscnInternalResource[] = subInternal
-): { host: SceneResources; sub: SceneResources } {
+function nestedPools({
+  external = subExternal,
+  internal = subInternal,
+}: {
+  external?: readonly TscnExternalResource[];
+  internal?: readonly TscnInternalResource[];
+} = {}): { host: SceneResources; sub: SceneResources } {
   const seen: Partial<Record<'host' | 'sub', SceneResources>> = {};
   function Probe({ name }: { name: 'host' | 'sub' }) {
     seen[name] = useSceneResources();
@@ -100,10 +103,7 @@ function nestedPools(
   render(
     <SceneResourcesProvider internalResources={hostInternal} externalResources={hostExternal}>
       <Probe name="host" />
-      <SceneResourcesProvider
-        internalResources={subInternalResources}
-        externalResources={subExternalResources}
-      >
+      <SceneResourcesProvider internalResources={internal} externalResources={external}>
         <Probe name="sub" />
       </SceneResourcesProvider>
     </SceneResourcesProvider>

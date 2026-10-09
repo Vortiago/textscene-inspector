@@ -3,20 +3,18 @@
  * capture waits for the glyphs. Each test imports fresh modules: the atlas loads once per module.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { deferTextureDecodes } from './atlasTexture.testkit';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
-/** Fresh modules whose atlas image decodes only when the returned `decode` runs. */
+/**
+ * Fresh modules whose atlas image decodes only when the returned `decode` runs. `mountAtlasRun`
+ * shapes with the atlas, and `mountCanvasRun` with a scene font, which paints its own texture.
+ */
 async function freshTextModules() {
   vi.resetModules();
-  const onLoads: Array<() => void> = [];
-  vi.spyOn(THREE.TextureLoader.prototype, 'load').mockImplementation((_url, onLoad) => {
-    const texture = new THREE.Texture<HTMLImageElement>();
-    onLoads.push(() => onLoad?.(texture));
-    return texture;
-  });
+  const decode = deferTextureDecodes();
   const [{ TextRun }, { shapeText, AutowrapMode }, { ResourceLoader }, { ResourceLoaderContext }, runtime] =
     await Promise.all([
       import('./TextRun'),
@@ -26,35 +24,37 @@ async function freshTextModules() {
       import('./runtimeFontMetrics'),
     ]);
   const loader = new ResourceLoader();
-  const layout = (fontMetrics?: ReturnType<typeof runtime.createRuntimeFontMetrics>) =>
-    shapeText('AB', {
+  const mount = (fontMetrics?: ReturnType<typeof runtime.createRuntimeFontMetrics>) => {
+    const layout = shapeText('AB', {
       fontSizePx: 16,
       boxWidthPx: 0,
       autowrapMode: AutowrapMode.OFF,
       lineSpacingPx: 3,
       fontMetrics,
     });
-  const mount = (fontMetrics?: ReturnType<typeof runtime.createRuntimeFontMetrics>) =>
-    ReactThreeTestRenderer.create(
+    return ReactThreeTestRenderer.create(
       <ResourceLoaderContext.Provider value={loader}>
-        <TextRun layout={layout(fontMetrics)} fontSizePx={16} tint={WHITE} />
+        <TextRun layout={layout} fontSizePx={16} tint={WHITE} />
       </ResourceLoaderContext.Provider>
     );
-  const canvasMetrics = () =>
-    runtime.createRuntimeFontMetrics({
-      scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
-      measureWidthUnits: (text) => text.length * 500,
-      cssFontFamily: 'scene-font-pending-test',
-    });
-  return { loader, mount, canvasMetrics, decode: () => onLoads.forEach((load) => load()) };
+  };
+  const mountCanvasRun = () =>
+    mount(
+      runtime.createRuntimeFontMetrics({
+        scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
+        measureWidthUnits: (text) => text.length * 500,
+        cssFontFamily: 'scene-font-pending-test',
+      })
+    );
+  return { loader, mountAtlasRun: () => mount(), mountCanvasRun, decode };
 }
 
 afterEach(() => vi.restoreAllMocks());
 
 describe('<TextRun> pending load', () => {
   it('counts an atlas run as pending until the atlas decodes', async () => {
-    const { loader, mount, decode } = await freshTextModules();
-    await mount();
+    const { loader, mountAtlasRun, decode } = await freshTextModules();
+    await mountAtlasRun();
     expect(loader.pendingResourceCount).toBe(1);
 
     await ReactThreeTestRenderer.act(async () => decode());
@@ -63,15 +63,15 @@ describe('<TextRun> pending load', () => {
   });
 
   it('counts a canvas run as nothing, since it owns its texture (edge case)', async () => {
-    const { loader, mount, canvasMetrics } = await freshTextModules();
-    await mount(canvasMetrics());
+    const { loader, mountCanvasRun } = await freshTextModules();
+    await mountCanvasRun();
 
     expect(loader.pendingResourceCount).toBe(0);
   });
 
   it('releases the load when the run unmounts before the decode (error path)', async () => {
-    const { loader, mount } = await freshTextModules();
-    const renderer = await mount();
+    const { loader, mountAtlasRun } = await freshTextModules();
+    const renderer = await mountAtlasRun();
 
     await renderer.unmount();
 

@@ -365,9 +365,6 @@ export function TextRun({
       outlineWidthPx,
     ]
   );
-  // An atlas run draws nothing until the atlas decodes. A canvas run owns its texture.
-  const isAtlasDecoded = useIsAtlasDecoded();
-  usePendingWhile(!run.ownedTexture && !isAtlasDecoded);
   const material = usePaintedMaterial(run, blends?.unfaded);
   const alphaPassMaterial = useAlphaPassMaterial(run, blends?.alphaPass);
   const meshRef = useRef<THREE.Mesh | null>(null);
@@ -398,6 +395,8 @@ export function TextRun({
 
   return (
     <>
+      {/* A canvas run owns its texture. Only an atlas run waits for the atlas. */}
+      {!run.ownedTexture && <AtlasPending />}
       <mesh
         ref={meshRef}
         geometry={run.geometry}
@@ -425,6 +424,15 @@ export function TextRun({
       ))}
     </>
   );
+}
+
+/**
+ * A pending load while the atlas has not decoded, as an atlas run draws nothing until then. A child,
+ * so the decode re-renders it and not the run.
+ */
+function AtlasPending(): null {
+  usePendingWhile(!useIsAtlasDecoded());
+  return null;
 }
 
 /** The run's material for `blend`. */

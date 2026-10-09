@@ -5,18 +5,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import * as THREE from 'three';
+import { deferTextureDecodes } from './atlasTexture.testkit';
 
 /** A fresh atlas module whose image decodes only when the returned `decode` runs. */
 async function freshAtlasModule() {
   vi.resetModules();
-  const loads: Array<() => void> = [];
-  vi.spyOn(THREE.TextureLoader.prototype, 'load').mockImplementation((_url, onLoad) => {
-    const texture = new THREE.Texture<HTMLImageElement>();
-    loads.push(() => onLoad?.(texture));
-    return texture;
-  });
-  const module = await import('./atlasTexture');
-  return { module, decode: () => loads.forEach((load) => load()) };
+  const decode = deferTextureDecodes();
+  return { module: await import('./atlasTexture'), decode };
 }
 
 afterEach(() => vi.restoreAllMocks());
