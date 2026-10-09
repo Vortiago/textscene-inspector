@@ -262,14 +262,19 @@ function checkRun(gate, label, report) {
 }
 
 /**
- * The edited mesh redrew in place: the canvas changed after the edit, settled, and
- * equals, pixel for pixel, a cold render of the edited scene.
+ * The edited mesh redrew in place: the canvas changed after the edit, the capture
+ * reported ready, the canvas settled, and it equals, pixel for pixel, a cold render
+ * of the edited scene.
  */
 function checkHotReload(gate, hotReload, fresh) {
   const edit = hotReload.edit;
   gate.check(
     edit?.changed === true,
     '[hot-reload] the canvas never changed after the mesh was edited on disk'
+  );
+  gate.check(
+    edit?.captureState === 'ready',
+    `[hot-reload] the preview never reported its capture ready after the edit, last state: ${edit?.captureState}`
   );
   gate.check(edit?.stable === true, '[hot-reload] the canvas never settled after the edit');
   if (!edit?.canvasPath || !hotReload.canvasPath || !fresh.canvasPath) {

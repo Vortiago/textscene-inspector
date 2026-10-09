@@ -63,10 +63,11 @@ runs the gate on both.
 Each run must show:
 - The preview opened through the contributed command.
 - A **sized** canvas. A failed WebGL context also reads back zero ink, so the gate asserts size separately.
+- A capture-ready report from the preview: the active view has rendered the scene, and every resource and texture it uses has landed.
 - A settled canvas: two byte-identical readbacks in a row, in place of a fixed sleep.
 - Zero CSP violations, failed requests and console errors **in the webview frame**.
 
-In the noise run, a job worker started and replied inside the webview, the texture work status cleared, and ink is ≥ 1000 (ADR-0042). The in-thread fallback draws the same pixels, so only the reply shows the worker ran.
+In the noise run, a job worker started and replied inside the webview, and ink is ≥ 1000 (ADR-0042). The in-thread fallback draws the same pixels, so only the reply shows the worker ran.
 
 Across the box pair, at least 2000 pixels differ, and their mean blue over mean red is at most 0.5. The albedo's own ratio is 0.25, and a material that lost its colour draws grey or white near 1. The default environment draws a sky, so ink alone cannot show that a 3D mesh drew: only the twin can. On VS Code 1.140.0, Linux and Xvfb, the gate measures 23,258 box pixels on a 565x430 canvas, with a ratio of 0.30.
 

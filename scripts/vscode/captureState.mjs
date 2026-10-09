@@ -19,9 +19,10 @@ export const CAPTURE_STATE_OF_MESSAGE = {
 };
 
 /**
- * Installed before the webview's scripts run, with `CAPTURE_STATE_OF_MESSAGE` as its argument. VS Code assigns `globalThis.acquireVsCodeApi` in the
- * content frame before the bundle runs (`webview/browser/pre/index.html`), so a setter wraps the
- * API it hands out. Self-contained, since `Function.prototype.toString` serialises it.
+ * Installed before the webview's scripts run, with `CAPTURE_STATE_OF_MESSAGE` as its argument.
+ * VS Code assigns `globalThis.acquireVsCodeApi` in the content frame before the bundle runs
+ * (`webview/browser/pre/index.html`), so a setter wraps the API it hands out. Self-contained,
+ * since `Function.prototype.toString` serialises it.
  */
 export function installCaptureStateProbe(stateOfMessage) {
   window.__previewCaptureState = null;
@@ -35,8 +36,10 @@ export function installCaptureStateProbe(stateOfMessage) {
         return Object.freeze({
           ...api,
           postMessage(message, transfer) {
-            const state = stateOfMessage[message?.type];
-            if (state) window.__previewCaptureState = state;
+            // `hasOwn`, not a bare lookup: a type such as `constructor` names an inherited member.
+            if (Object.hasOwn(stateOfMessage, message?.type ?? '')) {
+              window.__previewCaptureState = stateOfMessage[message.type];
+            }
             return api.postMessage(message, transfer);
           },
         });
@@ -45,13 +48,23 @@ export function installCaptureStateProbe(stateOfMessage) {
   });
 }
 
-/** Waits until the preview reports `ready`, and returns the last state it posted. */
-export async function waitForCaptureReady(frame, { timeoutMs, intervalMs }) {
+/** Clears the recorded state, so a later wait reads only what the preview posts after this. */
+export async function forgetCaptureState(frame) {
+  await frame.evaluate(() => {
+    window.__previewCaptureState = null;
+  });
+}
+
+/** `unavailable` means the viewport crashed, so waiting longer for `ready` only spends the timeout. */
+const SETTLED_STATES = new Set(['ready', 'unavailable']);
+
+/** Waits until the preview reports `ready` or `unavailable`, and returns the last state it posted. */
+export async function waitForCaptureSettled(frame, { timeoutMs, intervalMs }) {
   const deadline = Date.now() + timeoutMs;
   let state = null;
   while (Date.now() < deadline) {
     state = await frame.evaluate(() => window.__previewCaptureState ?? null).catch(() => state);
-    if (state === 'ready') return state;
+    if (SETTLED_STATES.has(state)) return state;
     await sleep(intervalMs);
   }
   return state;

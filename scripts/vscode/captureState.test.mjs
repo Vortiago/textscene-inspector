@@ -3,7 +3,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { CAPTURE_STATE_OF_MESSAGE, installCaptureStateProbe, waitForCaptureReady } from './captureState.mjs';
+import {
+  CAPTURE_STATE_OF_MESSAGE,
+  forgetCaptureState,
+  installCaptureStateProbe,
+  waitForCaptureSettled,
+} from './captureState.mjs';
 import { frameReading } from './frameReading.testkit.mjs';
 
 const PROTOCOL = readFileSync(
@@ -45,19 +50,74 @@ describe('installCaptureStateProbe', () => {
 
     expect(window.__previewCaptureState).toBeNull();
   });
+
+  it('records nothing for a type that names an inherited member (edge case)', () => {
+    vi.stubGlobal('window', {});
+    installCaptureStateProbe(CAPTURE_STATE_OF_MESSAGE);
+    window.acquireVsCodeApi = () => ({ postMessage: () => {} });
+
+    window.acquireVsCodeApi().postMessage({ type: 'constructor' });
+
+    expect(window.__previewCaptureState).toBeNull();
+  });
+
+  it('passes on the error of an API that refuses a second acquisition (error path)', () => {
+    vi.stubGlobal('window', {});
+    installCaptureStateProbe(CAPTURE_STATE_OF_MESSAGE);
+    window.acquireVsCodeApi = () => {
+      throw new Error('An instance of the VS Code API has already been acquired');
+    };
+
+    expect(() => window.acquireVsCodeApi()).toThrow('already been acquired');
+  });
 });
 
-describe('waitForCaptureReady', () => {
+/** A frame that runs what it evaluates against the stubbed `window`. */
+const frameRunning = { evaluate: async (fn) => fn() };
+
+describe('forgetCaptureState', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('clears the recorded state, so a wait reads only what the preview posts next', async () => {
+    vi.stubGlobal('window', { __previewCaptureState: 'ready' });
+
+    await forgetCaptureState(frameRunning);
+
+    expect(window.__previewCaptureState).toBeNull();
+  });
+
+  it('leaves a state that was never recorded cleared (edge case)', async () => {
+    vi.stubGlobal('window', {});
+
+    await forgetCaptureState(frameRunning);
+
+    expect(window.__previewCaptureState).toBeNull();
+  });
+
+  it('passes on the error of a frame that cannot be reached (error path)', async () => {
+    const detached = { evaluate: async () => Promise.reject(new Error('frame detached')) };
+
+    await expect(forgetCaptureState(detached)).rejects.toThrow('frame detached');
+  });
+});
+
+describe('waitForCaptureSettled', () => {
   it('waits through pending until the preview reports ready', async () => {
     const frame = frameReading(['pending', 'pending', 'ready']);
 
-    expect(await waitForCaptureReady(frame, QUICK)).toBe('ready');
+    expect(await waitForCaptureSettled(frame, QUICK)).toBe('ready');
   });
 
-  it('answers the last state when ready never arrives (error path)', async () => {
-    const frame = frameReading(['unavailable']);
+  it('stops at unavailable, which ready never follows (error path)', async () => {
+    const frame = frameReading(['pending', 'unavailable', 'ready']);
 
-    expect(await waitForCaptureReady(frame, QUICK)).toBe('unavailable');
+    expect(await waitForCaptureSettled(frame, QUICK)).toBe('unavailable');
+  });
+
+  it('answers the last state when the timeout ends first (edge case)', async () => {
+    const frame = frameReading(['pending']);
+
+    expect(await waitForCaptureSettled(frame, QUICK)).toBe('pending');
   });
 
   it('keeps polling through a frame that cannot be read (edge case)', async () => {
@@ -70,6 +130,6 @@ describe('waitForCaptureReady', () => {
       },
     };
 
-    expect(await waitForCaptureReady(frame, QUICK)).toBe('ready');
+    expect(await waitForCaptureSettled(frame, QUICK)).toBe('ready');
   });
 });
