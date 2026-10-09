@@ -9,11 +9,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SelectionProvider } from '../../contexts/SelectionContext';
-import {
-  CameraControlProvider,
-  useCameraControl,
-  type CameraControlContextValue,
-} from '../../contexts/CameraControlContext';
+import { CameraControlProvider } from '../../contexts/CameraControlContext';
+import { cameraControlProbe } from '../../testing/CameraControlProbe';
 
 // The real ControlCanvasLayer renders null here, so a visible stand-in makes
 // its mount observable.
@@ -54,15 +51,15 @@ describe('World2DCanvas multisampling', () => {
   });
 });
 
-describe('World2DContents native-controls mount seam', () => {
-  const baseProps = {
-    nodes: [],
-    internalResources: [],
-    externalResources: [],
-    pan: { x: 0, y: 0 },
-    zoom: 1,
-  };
+const baseProps = {
+  nodes: [],
+  internalResources: [],
+  externalResources: [],
+  pan: { x: 0, y: 0 },
+  zoom: 1,
+};
 
+describe('World2DContents native-controls mount seam', () => {
   it('lazily mounts ControlCanvasLayer (from the controls barrel) as a sibling after NodeDispatcher', async () => {
     const rendered = await ReactThreeTestRenderer.create(
       <SelectionProvider>
@@ -78,13 +75,7 @@ describe('World2DContents tiled uploads', () => {
     const tick = vi.spyOn(TiledUploadQueue.prototype, 'tick');
     const rendered = await ReactThreeTestRenderer.create(
       <SelectionProvider>
-        <World2DContents
-          nodes={[]}
-          internalResources={[]}
-          externalResources={[]}
-          pan={{ x: 0, y: 0 }}
-          zoom={1}
-        />
+        <World2DContents {...baseProps} />
       </SelectionProvider>
     );
     tick.mockClear();
@@ -97,26 +88,16 @@ describe('World2DContents tiled uploads', () => {
 
 describe('World2DContents screenshot', () => {
   it('registers the 2D view for the toolbar Screenshot and the host capture', async () => {
-    const seen: { control: CameraControlContextValue | null } = { control: null };
-    function ControlProbe() {
-      seen.control = useCameraControl();
-      return null;
-    }
+    const { Probe, control } = cameraControlProbe();
     await ReactThreeTestRenderer.create(
       <CameraControlProvider>
         <SelectionProvider>
-          <ControlProbe />
-          <World2DContents
-            nodes={[]}
-            internalResources={[]}
-            externalResources={[]}
-            pan={{ x: 0, y: 0 }}
-            zoom={1}
-          />
+          <Probe />
+          <World2DContents {...baseProps} />
         </SelectionProvider>
       </CameraControlProvider>
     );
 
-    expect(seen.control?.hasScreenshotHandler()).toBe(true);
+    expect(control().hasScreenshotHandler()).toBe(true);
   });
 });

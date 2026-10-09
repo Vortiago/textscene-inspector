@@ -14,11 +14,6 @@ export type PreviewCaptureState =
 
 export const PENDING_CAPTURE: PreviewCaptureState = { status: 'pending' };
 
-/** The reason for a viewport whose render threw, such as a renderer with no WebGL context. */
-function viewportCrashReason(error: Error): string {
-  return `The viewport crashed: ${error.message}`;
-}
-
 interface CaptureInputs {
   /** The registered screenshot handler, or null before the canvas registers one. */
   readonly capture: (() => string | null) | null;
@@ -38,6 +33,7 @@ export function previewCaptureStateOf({
   viewportError,
 }: CaptureInputs): PreviewCaptureState {
   if (capture) return isSceneComplete ? { status: 'ready', capture } : PENDING_CAPTURE;
-  if (viewportError) return { status: 'unavailable', reason: viewportCrashReason(viewportError) };
+  if (viewportError)
+    return { status: 'unavailable', reason: `The viewport crashed: ${viewportError.message}` };
   return PENDING_CAPTURE;
 }

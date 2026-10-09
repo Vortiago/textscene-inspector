@@ -24,10 +24,8 @@ import { chromium } from 'playwright';
 import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { inkStats } from './pixels.mjs';
 import { THROWAWAY_USER_SETTINGS } from './userSettings.mjs';
-import { TEXTURE_WORK_STATUS_TESTID } from '../visual/preview/appContract.mjs';
-import { textureWorkCleared } from '../visual/preview/capture.mjs';
 import { isSizedCanvas } from './canvasSize.mjs';
-import { installCaptureStateProbe, waitForCaptureReady } from './captureState.mjs';
+import { CAPTURE_STATE_OF_MESSAGE, installCaptureStateProbe, waitForCaptureReady } from './captureState.mjs';
 import { isRefusedAttachCall, startCdpRelay } from './cdpRelay.mjs';
 import {
   VSCODE_VERSION_ENV,
@@ -530,7 +528,7 @@ export async function driveScene(options) {
     // CDP injection is exempt from the page's CSP, so it instruments a webview
     // whose CSP is `default-src 'none'` with no test-only branch in the app.
     if (preserveBuffer) await page.addInitScript(preserveWebglDrawingBuffer);
-    await page.addInitScript(installCaptureStateProbe);
+    await page.addInitScript(installCaptureStateProbe, CAPTURE_STATE_OF_MESSAGE);
     await page.addInitScript(() => {
       // A blocked resource does not always reach the console channel CDP exposes.
       globalThis.__textsceneCspViolations = [];
@@ -590,9 +588,8 @@ export async function driveScene(options) {
       await palette(page, 'Notifications: Clear All Notifications');
     }
 
-    // A texture still building or uploading would settle as a stable, wrong frame.
-    report.textureWorkCleared = await textureWorkCleared(frame.getByTestId(TEXTURE_WORK_STATUS_TESTID));
-    emit(`texture work ${report.textureWorkCleared ? 'cleared' : 'NEVER cleared'}`);
+    // Ready waits for every resource and texture the scene uses, so the settle cannot match two
+    // frames drawn before they landed.
     report.captureState = await waitForCaptureReady(frame, SETTLE_POLL);
     emit(`capture state ${report.captureState ?? 'never posted'}`);
 

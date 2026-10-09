@@ -78,4 +78,4 @@ The page fits a phone screen. The layout also applies to a narrow VS Code previe
 
 - **Timeline:** select an AnimationPlayer, AnimationTree or AnimatedSprite2D to play, pause and scrub it.
 - **Display:** show or hide the viewport overlays.
-- **Screenshot:** save the current view, 3D or 2D, as a PNG.
+- **Screenshot:** save the rendered scene in the current view, 3D or 2D, as a PNG. The 2D frame, axes and size label are not part of it.

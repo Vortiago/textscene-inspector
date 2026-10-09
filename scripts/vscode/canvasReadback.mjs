@@ -71,7 +71,7 @@ export async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
     await sleep(intervalMs);
     const previous = current;
     current = await readCanvasDataUrl(frame).catch(() => null);
-    if (current && current === previous && isPng(current)) {
+    if (isPng(current) && current === previous) {
       return { dataUrl: current, stable: true };
     }
   }

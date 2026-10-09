@@ -112,20 +112,18 @@ describe('ViewportToolbar — Reset Camera', () => {
 });
 
 describe('ViewportToolbar — Screenshot (#224)', () => {
-  it('shows an enabled Screenshot button in 3D when a scene is loaded', () => {
-    renderWithChrome({ mode: '3D', sceneGraph: {} });
-    const btn = screen.getByTestId('screenshot-button') as HTMLButtonElement;
-    expect(btn.disabled).toBe(false);
-  });
+  it.each(['3D', '2D'] as const)(
+    'shows an enabled Screenshot button in %s when a scene is loaded',
+    (mode) => {
+      renderWithChrome({ mode, sceneGraph: {} });
+      const btn = screen.getByTestId('screenshot-button') as HTMLButtonElement;
+      expect(btn.disabled).toBe(false);
+    }
+  );
 
   it('disables Screenshot when no scene is loaded', () => {
     renderWithChrome({ mode: '3D', sceneGraph: null });
     expect((screen.getByTestId('screenshot-button') as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('shows Screenshot in the 2D view too, as the 2D canvas registers its own handler', () => {
-    renderWithChrome({ mode: '2D', sceneGraph: {} });
-    expect((screen.getByTestId('screenshot-button') as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('clicking Screenshot pulls a frame from the registered handler and triggers a download', () => {

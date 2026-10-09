@@ -48,14 +48,11 @@ export interface CameraControlContextValue {
   resetCamera: () => void;
   /** `<TscnCanvas>` registers its `<GodotEditorControls>` reset here, and gets the cleanup. */
   registerResetHandler: (handler: () => void) => () => void;
-  /**
-   * The 3D viewport as a PNG data URL, or `null` before a canvas registers a
-   * handler, as in 2D mode.
-   */
+  /** The active view, 3D or 2D, as a PNG data URL, or `null` before a canvas registers a handler. */
   takeScreenshot: () => string | null;
   /**
-   * `<TscnCanvas>` registers the frame capture of its WebGLRenderer here, with the scene graph it has rendered, so a
-   * host can tell a frame of the current scene from one of the scene before.
+   * The active canvas's `ScreenshotBridge` registers its capture here, with the scene graph it has
+   * rendered, so a host can tell a frame of the current scene from one of the scene before.
    */
   registerScreenshotHandler: (handler: () => string | null, renderedScene?: SceneGraph | null) => () => void;
   /** Whether a canvas has registered a screenshot handler now. */

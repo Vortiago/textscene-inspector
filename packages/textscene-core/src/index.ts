@@ -57,6 +57,7 @@ export {
   type ViewportSelectorOption,
   TscnPreviewShell,
   type TscnPreviewShellProps,
+  PENDING_CAPTURE,
   type PreviewCaptureState,
   COMPACT_LAYOUT_QUERY,
   isCompactLayout,

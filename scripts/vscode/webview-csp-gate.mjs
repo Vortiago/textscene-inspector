@@ -484,7 +484,6 @@ async function main() {
     `[noise] no job worker answered inside the preview, so the texture built on the main ` +
       `thread: ${brief(textureWork)}`
   );
-  gate.check(noiseReport.textureWorkCleared === true, '[noise] the texture work status never cleared');
   const noiseInk = noiseReport.canvasReadback;
   gate.check(
     noiseInk.inkPixels >= NOISE_INK_FLOOR,

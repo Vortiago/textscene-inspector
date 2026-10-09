@@ -1,14 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { PNG_DATA_URL_PREFIX, stabilizeCanvas } from './canvasReadback.mjs';
+import { frameReading } from './frameReading.testkit.mjs';
 
 const FIRST = `${PNG_DATA_URL_PREFIX}AAAA`;
 const SECOND = `${PNG_DATA_URL_PREFIX}BBBB`;
-
-/** A frame whose successive readbacks are `reads`, the last one repeating. */
-function frameReading(reads) {
-  let index = 0;
-  return { evaluate: async () => reads[Math.min(index++, reads.length - 1)] };
-}
 
 /** A frame whose readbacks never repeat. */
 function frameChanging() {

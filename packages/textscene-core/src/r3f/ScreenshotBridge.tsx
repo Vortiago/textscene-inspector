@@ -1,8 +1,8 @@
 /**
  * Hands the active canvas's renderer to `CameraControlContext`, so the toolbar's Screenshot and
- * the host's capture read whichever view, 3D or 2D, is on screen. It renders and reads back in the
- * same task: WebGL clears the buffer only when the browser composites, and `preserveDrawingBuffer`
- * would copy the buffer every frame.
+ * the host's capture read the scene that view renders, 3D or 2D. The 2D stage's DOM chrome is no
+ * part of it. It renders and reads back in one task: WebGL clears the buffer only when the browser
+ * composites, and `preserveDrawingBuffer` would copy the buffer every frame.
  */
 
 import { useThree } from '@react-three/fiber';

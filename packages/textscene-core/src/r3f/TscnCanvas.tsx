@@ -68,6 +68,7 @@ export function TscnSceneContents() {
       <SceneDepthPrepass />
       <SelectionHighlight />
       <HoverHighlight />
+      <ScreenshotBridge />
     </TiledUploadDriver>
   );
 }
@@ -257,7 +258,6 @@ export function TscnCanvas() {
         <FrameSelectedShortcut />
         <GodotEditorControls />
         <EditorControlsResetBridge />
-        <ScreenshotBridge />
       </Canvas>
     </div>
   );

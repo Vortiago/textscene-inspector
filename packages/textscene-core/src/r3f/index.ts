@@ -47,7 +47,10 @@ export {
   TscnPreviewShell,
   type TscnPreviewShellProps,
 } from './components/TscnPreviewShell/TscnPreviewShell.js';
-export type { PreviewCaptureState } from './components/TscnPreviewShell/previewCaptureState.js';
+export {
+  PENDING_CAPTURE,
+  type PreviewCaptureState,
+} from './components/TscnPreviewShell/previewCaptureState.js';
 // The shell's narrow-layout queries, so a host's own chrome switches at the same width.
 export { COMPACT_LAYOUT_QUERY, isCompactLayout } from './components/TscnPreviewShell/narrowLayout.js';
 
