@@ -385,24 +385,25 @@ async function main() {
   // asked for, so an empty canvas fails the first. Ink counts against the flat
   // clear colour, so a canvas that paints anything else fails the second. The
   // noise run must draw a texture that one of the preview's own blob-URL workers
-  // built.
+  // built. A run that must draw waits for ink before its canvas settles.
   const runs = [
-    { label: 'with-text', scene: withText, evalFile: BLOB_WORKER_PROBE },
+    { label: 'with-text', scene: withText, evalFile: BLOB_WORKER_PROBE, expectsInk: true },
     { label: 'without-text', scene: withoutText },
     {
       label: 'noise',
       scene: noise,
+      expectsInk: true,
       evalFile: TEXTURE_WORK_READOUT,
       initScripts: [[installTextureWorkProbe, TEXTURE_WORK_STATUS_TESTID]],
     },
     // The edit run recolours the mesh on disk mid-run. The fresh run, after it, opens
     // the edited scene cold. The two canvases must match exactly: the edit changes no
     // bounds, so the camera fit agrees, and a reload that drew anything else differs.
-    { label: 'hot-reload', scene: hotReload, edit: meshEdit },
-    { label: 'hot-reload-fresh', scene: hotReload },
-    { label: 'box', scene: box },
+    { label: 'hot-reload', scene: hotReload, edit: meshEdit, expectsInk: true },
+    { label: 'hot-reload-fresh', scene: hotReload, expectsInk: true },
+    { label: 'box', scene: box, expectsInk: true },
     { label: 'box-hidden', scene: boxHidden },
-    { label: 'gltf-external', scene: gltfExternal },
+    { label: 'gltf-external', scene: gltfExternal, expectsInk: true },
   ];
 
   const reports = {};
@@ -420,6 +421,7 @@ async function main() {
       // on the editor width.
       settle: 0,
       preserveBuffer: true,
+      expectsInk: run.expectsInk,
       prepareLayout: false,
       split: true,
       // Widening the editor area by settings rather than by palette commands:

@@ -1,6 +1,6 @@
 /**
- * Reads the preview's viewport canvas back over CDP, and waits for it to settle or
- * to change. `driveScene.mjs` uses these on the webview frame.
+ * Reads the preview's viewport canvas back over CDP, and waits for it to settle, to
+ * change or to show ink. `driveScene.mjs` uses these on the webview frame.
  */
 /* global document, HTMLCanvasElement */
 // Those globals appear only inside `evaluate` callbacks and init scripts, which are
@@ -47,22 +47,24 @@ export function preserveWebglDrawingBuffer() {
 
 const isPng = (dataUrl) => typeof dataUrl === 'string' && dataUrl.startsWith(PNG_DATA_URL_PREFIX);
 
+const pngBytes = (dataUrl) => Buffer.from(dataUrl.slice(PNG_DATA_URL_PREFIX.length), 'base64');
+
 /**
  * Writes a readback to `file` and returns its ink, or null for a readback that is
  * not a PNG (an `error:` marker or no canvas).
  */
 export function writeCanvasPng(dataUrl, file) {
   if (!isPng(dataUrl)) return null;
-  const buffer = Buffer.from(dataUrl.slice(PNG_DATA_URL_PREFIX.length), 'base64');
+  const buffer = pngBytes(dataUrl);
   writeFileSync(file, buffer);
   return inkStats(buffer);
 }
 
 /**
  * Waits until two consecutive readbacks are byte-identical, as the golden
- * harness does. Resources arrive over the host channel and the atlas decodes
- * asynchronously, so an early read sees a sized, unpainted canvas with zero
- * ink. Returns the last data URL and whether it stabilised in time.
+ * harness does. Two early readbacks of a sized, unpainted canvas also match, so
+ * a scene that must draw waits for ink first (`waitForInk`). Returns the last data
+ * URL and whether it stabilised in time.
  */
 export async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
   const deadline = Date.now() + timeoutMs;
@@ -76,6 +78,22 @@ export async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
     }
   }
   return { dataUrl: current, stable: false };
+}
+
+/**
+ * Waits until a readback has ink, for a scene that must draw something. Two blank
+ * readbacks in a row also pass as settled, while a lazy chunk or the glyph atlas is
+ * still on its way, so a settle alone cannot tell "drew nothing" from "not yet".
+ * Returns whether ink appeared in time.
+ */
+export async function waitForInk(frame, { timeoutMs, intervalMs }) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const current = await readCanvasDataUrl(frame).catch(() => null);
+    if (isPng(current) && inkStats(pngBytes(current)).inkPixels > 0) return true;
+    await sleep(intervalMs);
+  }
+  return false;
 }
 
 /**
