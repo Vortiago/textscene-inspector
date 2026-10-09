@@ -11,7 +11,8 @@
  */
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { OPEN_SANS_ATLAS_INFO, OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlas';
+import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
+import { getAtlasTexture, useIsAtlasDecoded } from './atlasTexture';
 import { createMsdfMaterial } from './msdfMaterial';
 import {
   computeCanvasTextCanvasLayout,
@@ -29,6 +30,7 @@ import type { Color } from '../../../../nodes/base/node2d/types';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
 import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
+import { usePendingWhile } from '../../../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
 
 // Geometry is in Godot pixels, +Y down, with Y negated once per vertex into three's
@@ -146,27 +148,6 @@ function collectHexCodeBoxRects(layout: TextLayoutResult, fontSizePx: number): H
     }
   });
   return rects;
-}
-
-let cachedAtlasTexture: THREE.Texture | null = null;
-
-/**
- * The atlas PNG as a texture, created once and shared by identity across every
- * `<TextRun>`, never disposed. MSDF channels are distance data, not colour, so
- * `NoColorSpace` keeps them from being gamma-decoded.
- */
-function getAtlasTexture(): THREE.Texture {
-  if (!cachedAtlasTexture) {
-    const texture = new THREE.TextureLoader().load(OPEN_SANS_ATLAS_PNG_DATA_URL);
-    texture.colorSpace = THREE.NoColorSpace;
-    texture.generateMipmaps = false;
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    texture.wrapS = THREE.ClampToEdgeWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-    cachedAtlasTexture = texture;
-  }
-  return cachedAtlasTexture;
 }
 
 export interface TextRunProps {
@@ -384,6 +365,9 @@ export function TextRun({
       outlineWidthPx,
     ]
   );
+  // An atlas run draws nothing until the atlas decodes. A canvas run owns its texture.
+  const isAtlasDecoded = useIsAtlasDecoded();
+  usePendingWhile(!run.ownedTexture && !isAtlasDecoded);
   const material = usePaintedMaterial(run, blends?.unfaded);
   const alphaPassMaterial = useAlphaPassMaterial(run, blends?.alphaPass);
   const meshRef = useRef<THREE.Mesh | null>(null);

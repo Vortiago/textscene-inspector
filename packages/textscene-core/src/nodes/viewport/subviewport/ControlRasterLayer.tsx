@@ -3,8 +3,9 @@
  * (ADR-0033), for both canvases, since a consumer in either may sample one. The
  * Control renderer loads lazily, and only for a scene that has such a viewport.
  */
-import { Suspense, lazy } from 'react';
+import { lazy } from 'react';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
+import { PendingSuspense } from '../../../resources/PendingSuspense.js';
 import { useControlRasterViewports } from './useControlRasterViewports.js';
 
 const ControlRasterPasses = lazy(() =>
@@ -21,8 +22,8 @@ export function ControlRasterLayer({ nodes, internalResources, externalResources
   const viewports = useControlRasterViewports(nodes, internalResources, externalResources);
   if (viewports.length === 0) return null;
   return (
-    <Suspense fallback={null}>
+    <PendingSuspense>
       <ControlRasterPasses viewports={viewports} />
-    </Suspense>
+    </PendingSuspense>
   );
 }
