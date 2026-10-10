@@ -4,7 +4,7 @@
  * `scene_forward_clustered.glsl:2165`). three r186 weights both by what the specular layer
  * reflects (glTF `fresnel_mix`), which darkens every dielectric by about 4 %. A light's diffuse
  * also follows the material's `diffuse_mode`: Burley, BaseMaterial3D's default, unless a define in
- * its program picks another.
+ * its program picks another, and reads the roughness after Godot's screen-space limiter.
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
@@ -13,6 +13,7 @@ import type { Material } from 'three';
 import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../godot/diffuseMode.js';
 import { recordedOn } from './materials/recordedOnMaterial.js';
 import { ROUGHNESS_LIMITER_AMOUNT, ROUGHNESS_LIMITER_LIMIT } from '../godot/roughnessLimiter.js';
+import { glslFloat } from '../resources/environment/glslLiterals.js';
 
 const CHUNK = 'lights_physical_pars_fragment';
 const SETUP_CHUNK = 'lights_physical_fragment';
@@ -26,8 +27,8 @@ const ROUGHNESS_SETUP = 'material.roughness = min( material.roughness, 1.0 );';
 const GODOT_ROUGHNESS = /* glsl */ `${ROUGHNESS_SETUP}
 vec3 godotDndu = dFdx( normal );
 vec3 godotDndv = dFdy( normal );
-float godotVariance = ${ROUGHNESS_LIMITER_AMOUNT.toFixed(2)} * ( dot( godotDndu, godotDndu ) + dot( godotDndv, godotDndv ) );
-float godotKernelRoughness2 = min( 2.0 * godotVariance, ${ROUGHNESS_LIMITER_LIMIT.toFixed(2)} );
+float godotVariance = ${glslFloat(ROUGHNESS_LIMITER_AMOUNT)} * ( dot( godotDndu, godotDndu ) + dot( godotDndv, godotDndv ) );
+float godotKernelRoughness2 = min( 2.0 * godotVariance, ${glslFloat(ROUGHNESS_LIMITER_LIMIT)} );
 material.godotRoughness = sqrt( min( 1.0, roughnessFactor * roughnessFactor + godotKernelRoughness2 ) );`;
 
 const MATERIAL_STRUCT = 'struct PhysicalMaterial {';
@@ -111,7 +112,7 @@ export function installGodotDiffuse(): void {
     names: [CHUNK, SETUP_CHUNK],
     isApplied: (chunks) => GODOT_DIFFUSE_EDITS.every(({ chunk, godot }) => chunks[chunk].includes(godot)),
     apply: (chunks) => applyChunkEdits(chunks, GODOT_DIFFUSE_EDITS),
-    missing: `${CHUNK} or ${SETUP_CHUNK} has no material, light function or diffuse line to replace`,
+    missing: `${CHUNK} or ${SETUP_CHUNK} has no material struct, roughness clamp, light function or diffuse line to replace`,
   });
 }
 

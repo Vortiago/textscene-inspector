@@ -28,6 +28,11 @@ function godotChunks(): Record<typeof CHUNK | typeof SETUP_CHUNK, string> {
   return applyChunkEdits(threeChunks, GODOT_DIFFUSE_EDITS)!;
 }
 
+/** The two chunks as `THREE.ShaderChunk` holds them now. */
+function installedChunks(): Record<typeof CHUNK | typeof SETUP_CHUNK, string> {
+  return { [CHUNK]: THREE.ShaderChunk[CHUNK], [SETUP_CHUNK]: THREE.ShaderChunk[SETUP_CHUNK] };
+}
+
 /** three's lighting chunk with every edit applied. */
 function godotDiffuseChunk(): string {
   return godotChunks()[CHUNK];
@@ -74,9 +79,7 @@ describe('installGodotDiffuse', () => {
   it('replaces three’s chunks with the patched ones', () => {
     installGodotDiffuse();
 
-    expect({ [CHUNK]: THREE.ShaderChunk[CHUNK], [SETUP_CHUNK]: THREE.ShaderChunk[SETUP_CHUNK] }).toEqual(
-      godotChunks()
-    );
+    expect(installedChunks()).toEqual(godotChunks());
   });
 
   it('leaves a chunk it cannot patch alone, and warns (error case)', () => {
@@ -85,6 +88,18 @@ describe('installGodotDiffuse', () => {
     expect(warningsOf(installGodotDiffuse)).toHaveLength(1);
 
     expect(THREE.ShaderChunk[CHUNK]).toBe('void main() {}');
+    expect(THREE.ShaderChunk[SETUP_CHUNK]).toBe(threeChunks[SETUP_CHUNK]);
+  });
+
+  it('leaves both chunks alone when the setup chunk lacks its roughness clamp (error case)', () => {
+    THREE.ShaderChunk[SETUP_CHUNK] = 'void main() {}';
+
+    expect(warningsOf(installGodotDiffuse)).toHaveLength(1);
+
+    expect(installedChunks()).toEqual({
+      [CHUNK]: threeChunks[CHUNK],
+      [SETUP_CHUNK]: 'void main() {}',
+    });
   });
 
   it('changes nothing and warns nothing on a second call (edge case)', () => {
@@ -94,7 +109,7 @@ describe('installGodotDiffuse', () => {
     });
 
     expect(warnings).toEqual([]);
-    expect(THREE.ShaderChunk[CHUNK]).toBe(godotDiffuseChunk());
+    expect(installedChunks()).toEqual(godotChunks());
   });
 });
 

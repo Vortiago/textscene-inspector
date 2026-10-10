@@ -236,7 +236,9 @@ describe('BaseMaterial3D Linter Validators', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'specular_mode');
       const result = validator!('specular_mode', '3', 1);
       expect(result).toBeAtTier('warning');
-      expect(result!.message).toContain('SPECULAR_SCHLICK_GGX');
+      for (const name of ['SPECULAR_SCHLICK_GGX', 'SPECULAR_TOON', 'SPECULAR_DISABLED']) {
+        expect(result!.message).toContain(name);
+      }
     });
   });
 
