@@ -1,5 +1,7 @@
 /** The texture channel a BaseMaterial3D map reads, and the mask its shader samples through. */
 
+import { enumNamesByValue } from './enumNames.js';
+
 /**
  * `BaseMaterial3D::TextureChannel` (`scene/resources/material.h:309-314`), as the integers a
  * `.tscn` stores for each `*_texture_channel` property.
@@ -20,6 +22,9 @@ export const TEXTURE_CHANNELS: readonly TextureChannel[] = [
   TextureChannel.TEXTURE_CHANNEL_ALPHA,
   TextureChannel.TEXTURE_CHANNEL_GRAYSCALE,
 ];
+
+/** Each channel's name by the integer a `.tscn` stores, as a validator names it. */
+export const TEXTURE_CHANNEL_NAMES = enumNamesByValue(TextureChannel);
 
 /** The `vec4` a shader dots a map's sample with to read one channel. */
 export type TextureChannelMask = readonly [number, number, number, number];

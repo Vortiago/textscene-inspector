@@ -201,16 +201,39 @@ export function injectProgram(material: THREE.Material, injection: ProgramInject
 /**
  * One injection that applies each of `injections` in order, or none for an empty list. One
  * injection passes straight through, so `useCanvasItemLighting`'s memo still reaches the material.
- * Composing two cannot avoid a fresh closure, a method so each part reads its material.
  */
 export function composeInjections(injections: readonly ProgramInjection[]): ProgramInjection | undefined {
-  if (injections.length <= 1) return injections[0];
-  return {
-    cacheKey: injections.map((one) => one.cacheKey).join('+'),
-    onBeforeCompile(shader) {
-      for (const one of injections) one.onBeforeCompile.call(this, shader);
-    },
-  };
+  if (injections.length === 0) return undefined;
+  return injections.reduce(composedPair);
+}
+
+/**
+ * Each pair composed so far, keyed by its parts' identity rather than their cache keys, since
+ * `useCanvasItemLighting` gives each instance its own patch under one key. Stable parts then
+ * compose to a stable injection on every render. Written only by `composedPair`, and collected
+ * with the first part.
+ */
+const composedPairs = new WeakMap<ProgramInjection, WeakMap<ProgramInjection, ProgramInjection>>();
+
+function composedPair(first: ProgramInjection, second: ProgramInjection): ProgramInjection {
+  let pairs = composedPairs.get(first);
+  if (!pairs) {
+    pairs = new WeakMap();
+    composedPairs.set(first, pairs);
+  }
+  let composed = pairs.get(second);
+  if (!composed) {
+    // A method, so each part reads the material three compiles.
+    composed = {
+      cacheKey: `${first.cacheKey}+${second.cacheKey}`,
+      onBeforeCompile(shader) {
+        first.onBeforeCompile.call(this, shader);
+        second.onBeforeCompile.call(this, shader);
+      },
+    };
+    pairs.set(second, composed);
+  }
+  return composed;
 }
 
 /**

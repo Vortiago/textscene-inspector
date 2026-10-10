@@ -7,9 +7,7 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-
-/** The five channels every `*_texture_channel` enum offers (material.h TextureChannel). */
-export const TEXTURE_CHANNELS = { 0: 'RED', 1: 'GREEN', 2: 'BLUE', 3: 'ALPHA', 4: 'GRAYSCALE' };
+import { TEXTURE_CHANNEL_NAMES } from '../../../godot/textureChannel.js';
 
 export const pbrKeys: Record<string, PropertyValidator> = {
   // material.cpp:3612-3618
@@ -28,14 +26,14 @@ export const pbrKeys: Record<string, PropertyValidator> = {
     hinted: 'material.cpp:3622',
   }),
   metallic_texture: v.resourceReference('metallic_texture'),
-  metallic_texture_channel: v.enumInt('metallic_texture_channel', 0, 4, TEXTURE_CHANNELS, {
+  metallic_texture_channel: v.enumInt('metallic_texture_channel', 0, 4, TEXTURE_CHANNEL_NAMES, {
     enforced: 'material.cpp:2964',
   }),
 
   // material.cpp:3627 ("0,1,0.01"), set_roughness (:2169) bare assigns.
   roughness: v.float('roughness', { min: 0, max: 1, hinted: 'material.cpp:3627' }),
   roughness_texture: v.resourceReference('roughness_texture'),
-  roughness_texture_channel: v.enumInt('roughness_texture_channel', 0, 4, TEXTURE_CHANNELS, {
+  roughness_texture_channel: v.enumInt('roughness_texture_channel', 0, 4, TEXTURE_CHANNEL_NAMES, {
     enforced: 'material.cpp:2974',
   }),
 

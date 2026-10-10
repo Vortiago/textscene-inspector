@@ -46,17 +46,12 @@ describe.each([
     );
   });
 
-  it('scales the direct diffuse term once the indirect one is occluded', () => {
-    expect(
-      scalesBeforeTotals(patched(fragmentShader, 1).fragmentShader, 'reflectedLight.directDiffuse *=')
-    ).toBe(true);
-  });
-
-  it('scales the direct specular term once the indirect one is occluded', () => {
-    expect(
-      scalesBeforeTotals(patched(fragmentShader, 1).fragmentShader, 'reflectedLight.directSpecular *=')
-    ).toBe(true);
-  });
+  it.each(['reflectedLight.directDiffuse *=', 'reflectedLight.directSpecular *='])(
+    'scales the direct term `%s` once the indirect one is occluded',
+    (statement) => {
+      expect(scalesBeforeTotals(patched(fragmentShader, 1).fragmentShader, statement)).toBe(true);
+    }
+  );
 
   it("mixes from 1 toward the map's occlusion by the light affect", () => {
     // `scene_forward_clustered.glsl:2213`.
