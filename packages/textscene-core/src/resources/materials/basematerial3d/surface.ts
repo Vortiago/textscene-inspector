@@ -7,6 +7,7 @@
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../../../godot/diffuseMode.js';
+import { SPECULAR_MODE_NAMES, SpecularMode } from '../../../godot/specularMode.js';
 
 export const surfaceKeys: Record<string, PropertyValidator> = {
   transparency: v.enumInt(
@@ -88,9 +89,9 @@ export const surfaceKeys: Record<string, PropertyValidator> = {
   ),
   specular_mode: v.enumInt(
     'specular_mode',
-    0,
-    2,
-    { 0: 'SCHLICK_GGX', 1: 'TOON', 2: 'DISABLED' },
+    SpecularMode.SPECULAR_SCHLICK_GGX,
+    SpecularMode.SPECULAR_DISABLED,
+    SPECULAR_MODE_NAMES,
     { hinted: 'material.cpp:3602' }
   ),
   // material.cpp:3603-3605 and :3608-3609, all FLAG_* booleans.
