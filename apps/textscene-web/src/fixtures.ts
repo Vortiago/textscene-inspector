@@ -3058,6 +3058,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Container Stretch Shrink Odd",
+    "file": "unit-sub-viewport-container-stretch-shrink-odd.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Container Stretch",
     "file": "unit-sub-viewport-container-stretch.tscn",
     "category": "Unit - Viewports"

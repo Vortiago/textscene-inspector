@@ -75,9 +75,9 @@ export function previewShellProviders({
     // Inside the texture registry: a pass registers its ordering edge and
     // publishes the target it rendered, so the two are read together.
     (children) => <ViewportPassProvider>{children}</ViewportPassProvider>,
-    // A stretching SubViewportContainer measures its DOM box and the publisher
-    // sizes the target from it, since Godot's `recalc_force_viewport_sizes`
-    // makes the container's rect the viewport's size. It wraps both sides too.
+    // A stretching SubViewportContainer publishes its solved rect and the
+    // publisher sizes the target from it, since Godot's `recalc_force_viewport_sizes`
+    // makes the container's rect the viewport's size. It wraps both canvases too.
     (children) => <ViewportRectProvider>{children}</ViewportRectProvider>,
     (children) => <AnimatedValueProvider>{children}</AnimatedValueProvider>,
     // Outermost of the Control-facing providers, since both theme-scale consumers,

@@ -72,16 +72,19 @@ consequence, not an operation. The container issues no clip, but the target is o
 container's box, since Godot Controls clip only with `clip_contents`.
 
 **The seam runs both ways.** A second registry, `ViewportRectContext`
-(`r3f/contexts/ViewportRectContext.tsx`), carries a measurement back. With `stretch` on,
+(`r3f/contexts/ViewportRectContext.tsx`), carries a rect back. With `stretch` on,
 `recalc_force_viewport_sizes` makes the container's rect the viewport's size, so the
-number the target is allocated from lives in the DOM overlay, while the target lives in
-the R3F root. The surface measures its own box and publishes it under the same node path.
-`<SubViewport>` prefers it over the authored `size`, and falls back when none is
-published. That fallback is Godot's early return for a non-stretching container, and the
-only behaviour for a sub-viewport with no container. It is separate from the texture
-registry, not a wider `ViewportTextureEntry`: the two travel in opposite directions and
-have different lifetimes, and a consumer of one must not re-render because the other
-changed.
+number the target is allocated from comes from the Control layout solve, while the target
+lives in the sub-viewport's own pass. The container's native painter publishes its solved
+rect, divided by `stretch_shrink` and truncated, under the sub-viewport's node path. One
+function, `viewportTargetSize`, turns that rect or the authored `size` into the target
+size for every pass and for the surface. The authored `size` stands when no rect is
+published. That is Godot's early return for a non-stretching container, and the only
+behaviour for a sub-viewport with no container. The surface draws the target over the
+container's whole rect, so each axis scales by its own ratio. The registry is separate
+from the texture registry, not a wider `ViewportTextureEntry`: the two travel in opposite
+directions and have different lifetimes, and a consumer of one must not re-render because
+the other changed.
 
 **One registry serves both consumer kinds.** `ViewportTextureRegistry`
 (`nodePath → entry`) mirrors the **AnimationDriverRegistry**: a stable register function,

@@ -268,10 +268,9 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
       readFileSync(resolve(repoRoot(), 'scenes/demos/viewport/gui_in_3d/gui_panel_3d.tscn'), 'utf8')
     );
     const found = collect(scene);
-    expect(found.map((v) => v.path)).toEqual(['GUIPanel3D/SubViewport']);
     // `viewportTextureRegistryKey('GUIPanel3D/Quad', 'SubViewport')`: what the
     // quad's ViewportTexture asks the registry for.
-    expect(found[0]!.size).toEqual({ x: 560, y: 360 });
+    expect(found.map((v) => v.path)).toEqual(['GUIPanel3D/SubViewport']);
   });
 });
 

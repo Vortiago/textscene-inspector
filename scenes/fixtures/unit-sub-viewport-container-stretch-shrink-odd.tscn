@@ -1,0 +1,42 @@
+; One variable against unit-sub-viewport-container-stretch-2d-content.tscn: an odd-sized
+; container, 301x201 at `stretch_shrink = 2`. The target truncates to 150x100, and Godot still
+; draws it over the whole 301x201 rect (`subviewport_container.cpp:142`), so the last column and
+; the last row show the target, not the backdrop.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+; 301x201 at shrink 2 truncates to a 150x100 target. Every other container fixture divides
+; evenly, so its target covers the rect at a whole-number scale and no strip is left over.
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 401.0
+offset_bottom = 281.0
+stretch = true
+stretch_shrink = 2
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(200, 150)
+render_target_update_mode = 4
+
+; Keeps the sibling's Color(0.5, 0.5, 0.5), so the colour pipeline stays pinned. The bottom-left
+; corner stays uncovered for the clear colour.
+[node name="Band" type="Polygon2D" parent="Booth/SubViewport"]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 300, 0, 300, 40, 0, 40)
+
+; Spans x 220..280, y 160..190, past the 150x100 target, so it draws nothing here.
+[node name="Outside" type="Polygon2D" parent="Booth/SubViewport"]
+color = Color(1, 0.4, 0, 1)
+polygon = PackedVector2Array(220, 160, 280, 160, 280, 190, 220, 190)

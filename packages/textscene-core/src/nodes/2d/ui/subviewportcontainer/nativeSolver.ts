@@ -13,12 +13,13 @@
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import { isViewportBoundary } from '../../../viewport/subviewport/viewportBoundary';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types';
+import { viewportSize } from '../../../viewport/subviewport/targetSize';
 import type { SubViewportContainerProperties } from './types';
 
 export const subViewportContainerMinimumSize: MinimumSizeFn = (n) => {
   const props = n.node.properties as SubViewportContainerProperties;
-  // `stretch_shrink` divides the solved rect downstream (`recalc_force_viewport_sizes`), so a
-  // shrinking container still floors at the sub-viewport's full size.
+  // `stretch_shrink` never enters here: it divides the rect `recalc_force_viewport_sizes` forces,
+  // and a stretching container has no minimum size at all.
   if (props.stretch === true) return { x: 0, y: 0 };
 
   let width = 0;
@@ -28,9 +29,8 @@ export const subViewportContainerMinimumSize: MinimumSizeFn = (n) => {
   for (const child of n.node.children) {
     // `Object::cast_to<SubViewport>`: every other child kind is skipped.
     if (!isViewportBoundary(child.type)) continue;
-    // Never undefined: `subviewport/parser.ts` applies Godot's own 512x512
-    // default (`scene/main/viewport.h`) to every parsed SubViewport.
-    const size = (child.properties as SubViewportProperties).size;
+    // `c->get_size()`: no container forces a size here, so it is the authored one, floored.
+    const size = viewportSize((child.properties as SubViewportProperties).size, null);
     if (size.x > width) width = size.x;
     if (size.y > height) height = size.y;
   }

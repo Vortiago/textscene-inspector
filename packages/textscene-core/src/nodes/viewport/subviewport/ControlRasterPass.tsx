@@ -29,6 +29,8 @@ import {
 } from './offscreenViewport.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
+import { viewportTargetSize } from './targetSize.js';
+import type { SubViewportProperties } from './types.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
 
 export interface ControlRasterPassesProps {
@@ -61,14 +63,10 @@ function createRasterTarget(width: number, height: number, name: string): THREE.
 }
 
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
-  const { path, node, transparentBg, inheritedRtl, internalResources, externalResources } = viewport;
+  const { path, node, inheritedRtl, internalResources, externalResources } = viewport;
 
-  // Mirrors `<SubViewport>`'s own forced-rect handling: a stretching
-  // `SubViewportContainer` resizes its sub-viewport to its own rect divided
-  // by `stretch_shrink`, whatever content kind that sub-viewport holds.
-  const forcedRect = useViewportRect(path);
-  const width = Math.max(1, Math.round(forcedRect?.x ?? viewport.size.x));
-  const height = Math.max(1, Math.round(forcedRect?.y ?? viewport.size.y));
+  const { size, transparent_bg: transparentBg } = node.properties as SubViewportProperties;
+  const { x: width, y: height } = viewportTargetSize(size, useViewportRect(path));
 
   const gl = useThree((state) => state.gl);
   const clearColor = useProjectClearColor();

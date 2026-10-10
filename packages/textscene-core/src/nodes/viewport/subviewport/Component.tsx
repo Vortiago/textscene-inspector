@@ -39,7 +39,7 @@ import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
 import type { SubViewportProperties } from './types';
-import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
+import { viewportTargetSize } from './targetSize';
 import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
 
@@ -90,17 +90,6 @@ interface OffscreenViewportProps extends NodeComponentProps {
 }
 
 /**
- * The render target's axis. Godot floors a viewport at 2 (`viewport.cpp:1120`,
- * `p_size.maxi(2)`) and leaves the ceiling to the GPU driver, but a file Godot
- * opens can hand `THREE.WebGLRenderTarget` a 2000000000-pixel axis.
- */
-export function allocatableExtent(raw: number): number {
-  const rounded = Math.round(raw);
-  if (!Number.isFinite(rounded)) return 2;
-  return Math.min(MAX_TEXTURE_EXTENT, Math.max(2, rounded));
-}
-
-/**
  * Owns the render target, drives the offscreen pass and publishes the result.
  * A separate component, so a Control-only sub-viewport mounts none of its hooks
  * and leaves the key to `ControlRasterPass.tsx`.
@@ -108,13 +97,7 @@ export function allocatableExtent(raw: number): number {
 function OffscreenViewport({ node, path, kind, rendersInline, children }: OffscreenViewportProps) {
   const properties = node.properties as SubViewportProperties;
   const { size, transparent_bg: transparentBg } = properties;
-  // A stretching `SubViewportContainer` overwrites the size with its own rect
-  // (`recalc_force_viewport_sizes`: `set_size_force(get_size() / stretch_shrink)`),
-  // measured in the DOM overlay and published here. No rect means no stretching
-  // container, so the authored size stands, as in Godot's early return.
-  const forcedRect = useViewportRect(path);
-  const width = allocatableExtent(forcedRect?.x ?? size?.x ?? 512);
-  const height = allocatableExtent(forcedRect?.y ?? size?.y ?? 512);
+  const { x: width, y: height } = viewportTargetSize(size, useViewportRect(path));
 
   const gl = useThree((state) => state.gl);
   const clearColor = useProjectClearColor();

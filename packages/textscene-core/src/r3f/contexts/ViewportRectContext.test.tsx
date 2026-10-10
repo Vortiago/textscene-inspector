@@ -1,6 +1,6 @@
 /**
- * The forced-rect registry, whose publisher is a `ResizeObserver`. An unchanged
- * measurement keeps the map, "no rect" differs from a zero rect, and a
+ * The forced-rect registry, whose publisher is a stretching container's native
+ * painter. An unchanged rect keeps the map, "no rect" differs from a zero rect, and a
  * departing mount's cleanup leaves a remount's registration alone.
  */
 
@@ -70,10 +70,10 @@ describe('ViewportRectContext', () => {
   });
 
   /**
-   * The ResizeObserver fires on every layout pass, and a fresh Map would
-   * re-render the sub-viewport and re-create its render target each time.
+   * A successor that registers before its predecessor's cleanup republishes
+   * the same rect, and a fresh Map would re-render every consumer.
    */
-  it('does not re-render a consumer when the measurement is unchanged', () => {
+  it('does not re-render a consumer when the rect is unchanged', () => {
     let register!: ReturnType<typeof useRegisterViewportRect>;
     const seen: (ViewportRect | null)[] = [];
     mount(
@@ -93,7 +93,7 @@ describe('ViewportRectContext', () => {
     expect(seen.length).toBe(afterFirst);
   });
 
-  it('does re-render when the measurement actually changes', () => {
+  it('does re-render when the rect actually changes', () => {
     let register!: ReturnType<typeof useRegisterViewportRect>;
     const { getByTestId } = mount(
       <>
@@ -160,7 +160,7 @@ describe('ViewportRectContext', () => {
   });
 
   /**
-   * The same race with an unchanged measurement: the map keeps the departing
+   * The same race with an unchanged rect: the map keeps the departing
    * mount's object, so only ownership tells the two registrations apart.
    */
   it('a stale cleanup does not delete a successor’s equal rect', () => {
@@ -269,36 +269,5 @@ describe('ViewportRectContext', () => {
       register('Booth/View', { x: 0, y: 0 });
     });
     expect(getByTestId('rect').textContent).toBe('0x0');
-  });
-});
-
-describe('a sub-viewport sized by a forced rect', () => {
-  /**
-   * The forced rect wins when there is one, else the authored `size` stands, as
-   * in Godot's early return for a non-stretching container.
-   */
-  function Sized({ path, authored }: { path: string; authored: ViewportRect }) {
-    const forced = useViewportRect(path);
-    const [x, y] = [forced?.x ?? authored.x, forced?.y ?? authored.y];
-    return <span data-testid="size">{`${x}x${y}`}</span>;
-  }
-
-  it('falls back to the authored size when no container forced one', () => {
-    const { getByTestId } = mount(<Sized path="Booth/View" authored={{ x: 399, y: 480 }} />);
-    expect(getByTestId('size').textContent).toBe('399x480');
-  });
-
-  it('prefers the forced rect once the container publishes it', () => {
-    let register!: ReturnType<typeof useRegisterViewportRect>;
-    const { getByTestId } = mount(
-      <>
-        <Publisher onReady={(fn) => (register = fn)} />
-        <Sized path="Booth/View" authored={{ x: 399, y: 480 }} />
-      </>
-    );
-    act(() => {
-      register('Booth/View', { x: 572, y: 648 });
-    });
-    expect(getByTestId('size').textContent).toBe('572x648');
   });
 });

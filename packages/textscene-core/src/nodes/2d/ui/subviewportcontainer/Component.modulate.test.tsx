@@ -23,6 +23,7 @@ import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanv
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { quadsSampling } from '../../../../r3f/controls/native/testing/quadsSampling';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 function node(name: string, type: string, properties: object, children: TscnNode[] = []): TscnNode {
@@ -62,10 +63,7 @@ async function mountContainer(tint = painterTint()) {
       />
     </ViewportTextureProvider>
   );
-  const quad = renderer.scene
-    .findAll(() => true)
-    .map((n) => n.instance as THREE.Mesh)
-    .find((m) => (m.material as THREE.MeshBasicMaterial | undefined)?.map === entry.texture);
+  const quad = quadsSampling(renderer.scene, entry.texture)[0];
   return quad!.material as THREE.MeshBasicMaterial;
 }
 
@@ -105,11 +103,7 @@ describe('<SubViewportContainer> modulate / self_modulate', () => {
       </ViewportTextureProvider>
     );
 
-    const material = renderer.scene
-      .findAll(() => true)
-      .map((n) => n.instance as THREE.Mesh)
-      .find((m) => (m.material as THREE.MeshBasicMaterial | undefined)?.map === entry.texture)!
-      .material as THREE.MeshBasicMaterial;
+    const material = quadsSampling(renderer.scene, entry.texture)[0]!.material as THREE.MeshBasicMaterial;
     expect(material.color.r).toBeCloseTo(srgbToLinear(0.25), 4);
 
     controlComponentRegistry.clear();

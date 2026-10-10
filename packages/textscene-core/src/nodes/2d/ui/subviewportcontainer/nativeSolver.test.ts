@@ -92,6 +92,14 @@ describe('subViewportContainerMinimumSize (scene/gui/subviewport_container.cpp::
     expect(size).toEqual({ x: 512, y: 512 });
   });
 
+  it("reads the sub-viewport's floored size, since `get_size()` returns it after `p_size.maxi(2)`", () => {
+    const size = subViewportContainerMinimumSize(
+      container({}, [subViewport('SubViewport', { x: 1, y: 0 })]),
+      ctx()
+    );
+    expect(size).toEqual({ x: 2, y: 2 });
+  });
+
   it('skips children that are not SubViewports (`Object::cast_to<SubViewport>` returning null)', () => {
     const decoy: TscnNode = controlNode('Decoy', 'ColorRect', { name: 'Decoy', size: { x: 900, y: 900 } });
     const size = subViewportContainerMinimumSize(
