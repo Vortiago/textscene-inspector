@@ -66,9 +66,16 @@ jobs:
     permissions:
       contents: write
     steps:
+      # The full history, since the changelog lists the commits between every pair of tags.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
+
+      # The checkout can store the pushed tag as a lightweight tag. The forced fetch brings each
+      # tag object as pushed, with the message that heads its release.
+      - name: Fetch the tags
+        run: git fetch --no-tags origin '+refs/tags/*:refs/tags/*'
 
       - uses: ./.github/actions/setup
 
@@ -77,6 +84,10 @@ jobs:
         env:
           VERSION: ${{ needs.validate.outputs.version }}
           DIRECTORY: ${{ needs.validate.outputs.directory }}
+
+      # Both marketplaces show the CHANGELOG.md in the .vsix. The repository holds a stub.
+      - name: Write the changelog
+        run: node scripts/ci/releaseNotes.mjs --changelog "$GITHUB_REF_NAME" > apps/textscene-vscode/CHANGELOG.md
 
       - name: Package VS Code Extension
         run: pnpm vsc:package

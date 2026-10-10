@@ -19,6 +19,16 @@ To put highlights above that list, push an annotated tag. Its message goes first
 git tag -a vscode-v1.2.3 -m "Scene Tree view" -m "The tree follows the active preview." origin/main
 ```
 
+The VS Code Marketplace and Open VSX show the extension's `CHANGELOG.md` as its changelog. The
+`release-vscode` job writes it before it packages the `.vsix`, with the notes of every `vscode-v`
+tag up to the released one:
+
+```bash
+node scripts/ci/releaseNotes.mjs --changelog vscode-v1.2.3
+```
+
+The `CHANGELOG.md` in the repository is a stub. Do not commit a generated one.
+
 npm takes `@textscene/linter` and `@textscene/lsp` from the `npm` job in
 `.github/workflows/release.yml`, with no token. Each package's trusted publisher on npmjs.com
 names the repository `Vortiago/textscene-inspector`, the workflow `release.yml` and the

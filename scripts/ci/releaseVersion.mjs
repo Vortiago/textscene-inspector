@@ -34,7 +34,7 @@ const RELEASE_TAG_RE = /^([a-z]+)-v(\d+)\.(\d+)\.(\d+)$/;
  * @returns {{ package: string, version: string, parts: number[] } | null} null for a tag
  *   that is not a release tag.
  */
-function parseReleaseTag(tag) {
+export function parseReleaseTag(tag) {
   const match = RELEASE_TAG_RE.exec(tag);
   if (!match) return null;
   const parts = match.slice(2).map(Number);
@@ -84,7 +84,30 @@ export function checkReleaseTag(tag, tags) {
   return { package: release.package, directory, version: release.version, previousTag: newest?.name ?? '' };
 }
 
-function listTags() {
+/**
+ * @param {string} tag - a release tag, which `tags` need not hold.
+ * @param {string[]} tags - every tag in the repository.
+ * @returns {{ tag: string, version: string, previousTag: string }[]} `tag` and each lower tag
+ *   of its package, highest version first. `previousTag` is the next lower tag, or '' for the
+ *   first release.
+ */
+export function releaseHistory(tag, tags) {
+  const release = parseReleaseTag(tag);
+  if (!RELEASE_PACKAGES[release?.package]) {
+    throw new Error(`expected a release tag like vscode-v1.2.3, got ${JSON.stringify(tag)}`);
+  }
+  const lower = sameSeries(release, tags).filter(
+    (other) => compareParts(other.release.parts, release.parts) < 0
+  );
+  const history = [{ name: tag, release }, ...lower];
+  return history.map(({ name, release: { version } }, i) => ({
+    tag: name,
+    version,
+    previousTag: history[i + 1]?.name ?? '',
+  }));
+}
+
+export function listTags() {
   return execFileSync('git', ['tag', '--list'], { cwd: REPO_ROOT, encoding: 'utf8' })
     .split('\n')
     .filter(Boolean);

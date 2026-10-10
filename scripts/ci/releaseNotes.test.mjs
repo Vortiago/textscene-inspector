@@ -1,6 +1,13 @@
 /** Which commits a release's notes list, and how the notes read. */
 import { describe, expect, it } from 'vitest';
-import { parseCommitLog, parseTagMessage, releaseSources, renderReleaseNotes } from './releaseNotes.mjs';
+import {
+  demoteHeadings,
+  parseCommitLog,
+  parseTagMessage,
+  releaseSources,
+  renderChangelog,
+  renderReleaseNotes,
+} from './releaseNotes.mjs';
 
 /** One record as `git log --format=%s%x1f%b%x1e` prints it. */
 const logRecord = (subject, body = '') => `${subject}\x1f${body}\x1e\n`;
@@ -102,5 +109,44 @@ describe('renderReleaseNotes', () => {
 
   it('says so when no commit is user-facing', () => {
     expect(renderReleaseNotes({ ...release, commits: [] })).toBe('No user-facing changes.');
+  });
+});
+
+describe('demoteHeadings', () => {
+  it('moves each heading one level down', () => {
+    expect(demoteHeadings('## Features\n\n- a\n\n## Fixes\n\n- b')).toBe(
+      '### Features\n\n- a\n\n### Fixes\n\n- b'
+    );
+  });
+
+  it('leaves a line that only starts with a hash, with no space after it, alone', () => {
+    expect(demoteHeadings('#591 is a pull request')).toBe('#591 is a pull request');
+  });
+
+  it('leaves notes without a heading as they are', () => {
+    expect(demoteHeadings('First public release.')).toBe('First public release.');
+  });
+});
+
+describe('renderChangelog', () => {
+  it('puts each release under a heading with its version and date, in the given order', () => {
+    const changelog = renderChangelog([
+      { version: '1.1.0', date: '2026-10-02', notes: 'Second.' },
+      { version: '1.0.0', date: '2026-09-27', notes: 'First public release.' },
+    ]);
+
+    expect(changelog).toBe(
+      '# Changelog\n\n## 1.1.0 (2026-10-02)\n\nSecond.\n\n## 1.0.0 (2026-09-27)\n\nFirst public release.'
+    );
+  });
+
+  it('nests the sections of a release under its heading', () => {
+    const changelog = renderChangelog([{ version: '1.1.0', date: '2026-10-02', notes: '## Fixes\n\n- b' }]);
+
+    expect(changelog).toMatch(/## 1\.1\.0 \(2026-10-02\)\n\n### Fixes\n\n- b$/);
+  });
+
+  it('renders no releases as the title alone', () => {
+    expect(renderChangelog([])).toBe('# Changelog');
   });
 });

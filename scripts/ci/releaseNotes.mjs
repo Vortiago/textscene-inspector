@@ -4,11 +4,20 @@
  * since the package's previous tag that touch the package or a package it ships, grouped by
  * Conventional Commit type. An annotated tag's message goes first, as the highlights.
  * Prints the Markdown on stdout.
+ *
+ * `--changelog <tag>` prints the notes of `<tag>` and of every lower tag of its package
+ * instead, as the CHANGELOG.md that the extension ships.
  */
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
-import { RELEASE_INPUTS, RELEASE_PACKAGES } from './releaseVersion.mjs';
+import {
+  RELEASE_INPUTS,
+  RELEASE_PACKAGES,
+  listTags,
+  parseReleaseTag,
+  releaseHistory,
+} from './releaseVersion.mjs';
 
 /** The sections of the notes, in order. A commit of any other type is not user-facing. */
 const SECTIONS = [
@@ -87,6 +96,26 @@ export function renderReleaseNotes({ highlights, commits, compareUrl }) {
   return [highlights, renderSections(commits), changelog].filter(Boolean).join('\n\n');
 }
 
+/**
+ * @param {string} notes - the Markdown of one release's notes.
+ * @returns {string} the notes with each heading one level lower, to sit under a release heading.
+ */
+export function demoteHeadings(notes) {
+  return notes.replace(/^#{1,5} /gm, '#$&');
+}
+
+/**
+ * @param {{ version: string, date: string, notes: string }[]} releases - newest first. `date`
+ *   is `YYYY-MM-DD`.
+ * @returns {string} the Markdown changelog, one section per release.
+ */
+export function renderChangelog(releases) {
+  const sections = releases.map(
+    ({ version, date, notes }) => `## ${version} (${date})\n\n${demoteHeadings(notes)}`
+  );
+  return ['# Changelog', ...sections].join('\n\n');
+}
+
 function git(args) {
   return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8' });
 }
@@ -101,6 +130,13 @@ function readCommits(previousTag, tag, releasePackage) {
 function readHighlights(tag) {
   const format = `--format=%(objecttype)${FIELD_SEPARATOR}%(contents:subject)%0a%0a%(contents:body)`;
   return git(['for-each-ref', format, `refs/tags/${tag}`]);
+}
+
+/** The tagger date of an annotated tag, the commit date of a lightweight one. */
+function readTagDate(tag) {
+  const date = git(['for-each-ref', '--format=%(creatordate:short)', `refs/tags/${tag}`]).trim();
+  if (!date) throw new Error(`expected the tag ${tag} in the repository, found none`);
+  return date;
 }
 
 function compareUrl(previousTag, tag) {
@@ -120,10 +156,25 @@ function writeNotes(tag, releasePackage, previousTag) {
   });
 }
 
+function writeChangelog(tag) {
+  const releasePackage = parseReleaseTag(tag)?.package;
+  const releases = releaseHistory(tag, listTags()).map((release) => ({
+    version: release.version,
+    date: readTagDate(release.tag),
+    notes: writeNotes(release.tag, releasePackage, release.previousTag),
+  }));
+  return renderChangelog(releases);
+}
+
+function write(args) {
+  if (args[0] === '--changelog') return writeChangelog(args[1] ?? '');
+  const [tag = '', releasePackage = '', previousTag = ''] = args;
+  return writeNotes(tag, releasePackage, previousTag);
+}
+
 function main() {
-  const [tag = '', releasePackage = '', previousTag = ''] = process.argv.slice(2);
   try {
-    console.log(writeNotes(tag, releasePackage, previousTag));
+    console.log(write(process.argv.slice(2)));
   } catch (error) {
     console.error(`[releaseNotes] ${error.message}`);
     process.exit(1);
