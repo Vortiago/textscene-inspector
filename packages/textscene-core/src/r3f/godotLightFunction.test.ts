@@ -1,7 +1,7 @@
 /**
  * The Fresnel weight comes off three's diffuse term, a light's diffuse follows the mode a program
- * defines, and a light's specular is Godot's GGX on Godot's roughness. The first test reads the installed three, so a release that rewrites the
- * lines fails here, not in a golden.
+ * defines, and a light's specular is Godot's GGX on Godot's roughness. The first test reads the
+ * installed three, so a release that rewrites the lines fails here, not in a golden.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -83,8 +83,10 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
 
   it('draws no specular at roughness 0, as Godot does (edge case)', () => {
     // `scene_forward_lights_inc.glsl:222`.
-    const specular = godotLightChunk().split('vec3 godotSpecularBRDF(')[1]!;
-    expect(specular).toContain('if ( material.godotRoughness <= 0.0 || cNdotL <= 0.0 ) return vec3( 0.0 );');
+    const direct = godotLightChunk().split('void RE_Direct_Physical(')[1]!;
+    expect(direct).toMatch(
+      /#endif\s*if \( material\.godotRoughness <= 0\.0 \) specularBRDF = vec3\( 0\.0 \);/
+    );
   });
 
   it("feeds the anisotropic lobe Godot's roughness", () => {
