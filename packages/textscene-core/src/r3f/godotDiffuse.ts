@@ -1,5 +1,5 @@
 /**
- * Godot's diffuse term in three's physical lighting chunk. Godot adds a light's diffuse and the
+ * Godot's diffuse term in three's physical lighting chunks. Godot adds a light's diffuse and the
  * ambient diffuse with no Fresnel weight (Godot 4.6.3 `scene_forward_lights_inc.glsl:215` and
  * `scene_forward_clustered.glsl:2165`). three r186 weights both by what the specular layer
  * reflects (glTF `fresnel_mix`), which darkens every dielectric by about 4 %. A light's diffuse
@@ -14,6 +14,26 @@ import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../godot/diffuseMode.js';
 import { recordedOn } from './materials/recordedOnMaterial.js';
 
 const CHUNK = 'lights_physical_pars_fragment';
+const SETUP_CHUNK = 'lights_physical_fragment';
+
+/**
+ * Godot's screen-space roughness limiter at its project defaults (`rendering_server.cpp:3776-3778`),
+ * which widens roughness where the normal bends fast (`scene_forward_clustered.glsl:1658-1665`).
+ * three's own `material.roughness` floors at 0.0525 for its cubemap mips, which Godot's lacks.
+ */
+const ROUGHNESS_LIMITER_AMOUNT = 0.25;
+const ROUGHNESS_LIMITER_LIMIT = 0.18;
+
+const ROUGHNESS_SETUP = 'material.roughness = min( material.roughness, 1.0 );';
+
+const GODOT_ROUGHNESS = /* glsl */ `${ROUGHNESS_SETUP}
+vec3 godotDndu = dFdx( normal );
+vec3 godotDndv = dFdy( normal );
+float godotVariance = ${ROUGHNESS_LIMITER_AMOUNT.toFixed(2)} * ( dot( godotDndu, godotDndu ) + dot( godotDndv, godotDndv ) );
+float godotKernelRoughness2 = min( 2.0 * godotVariance, ${ROUGHNESS_LIMITER_LIMIT.toFixed(2)} );
+material.godotRoughness = sqrt( min( 1.0, roughnessFactor * roughnessFactor + godotKernelRoughness2 ) );`;
+
+const MATERIAL_STRUCT = 'struct PhysicalMaterial {';
 
 /**
  * `diffuse_brdf_NL` times pi in each mode (`scene_forward_lights_inc.glsl:133-134,194-213`), as
@@ -54,14 +74,21 @@ const RE_DIRECT = 'void RE_Direct_Physical( const in IncidentLight directLight';
  * three's `dotVH` is Godot's L.H, as H bisects L and V. three's sheen energy compensation stays on
  * the diffuse, as it does on `irradiance`, so Lambert keeps three's exact term.
  */
-const DIRECT_DIFFUSE = /* glsl */ `vec3 godotDiffuseIrradiance = godotDiffuseNL( dot( geometryNormal, directLight.direction ), dot( geometryNormal, geometryViewDir ), dotVH, material.roughness ) * directLight.color;
+const DIRECT_DIFFUSE = /* glsl */ `vec3 godotDiffuseIrradiance = godotDiffuseNL( dot( geometryNormal, directLight.direction ), dot( geometryNormal, geometryViewDir ), dotVH, material.godotRoughness ) * directLight.color;
 	#ifdef USE_SHEEN
 		godotDiffuseIrradiance *= sheenEnergyComp;
 	#endif
 	reflectedLight.directDiffuse += godotDiffuseIrradiance * BRDF_Lambert( material.diffuseContribution );`;
 
-/** Each edit to three's chunk: the mode-aware light term, and each diffuse line without its Fresnel weight. */
-export const GODOT_DIFFUSE_EDITS: readonly ChunkEdit<typeof CHUNK>[] = [
+type DiffuseChunk = typeof CHUNK | typeof SETUP_CHUNK;
+
+/**
+ * Each edit to three's chunks: Godot's roughness beside three's, the mode-aware light term, and each
+ * diffuse line without its Fresnel weight.
+ */
+export const GODOT_DIFFUSE_EDITS: readonly ChunkEdit<DiffuseChunk>[] = [
+  { chunk: CHUNK, three: MATERIAL_STRUCT, godot: `${MATERIAL_STRUCT}\n\tfloat godotRoughness;` },
+  { chunk: SETUP_CHUNK, three: ROUGHNESS_SETUP, godot: GODOT_ROUGHNESS },
   { chunk: CHUNK, three: RE_DIRECT, godot: `${DIFFUSE_NL}${RE_DIRECT}` },
   {
     chunk: CHUNK,
@@ -78,16 +105,16 @@ export const GODOT_DIFFUSE_EDITS: readonly ChunkEdit<typeof CHUNK>[] = [
 ];
 
 /**
- * Replaces three's chunk for every program compiled after the call. A three release that
+ * Replaces three's chunks for every program compiled after the call. A three release that
  * rewrites the lines keeps its own chunk, and `godotDiffuse.test.ts` fails on that release. A
  * second call changes nothing.
  */
 export function installGodotDiffuse(): void {
   installChunkPatch({
-    names: [CHUNK],
-    isApplied: (chunks) => GODOT_DIFFUSE_EDITS.every(({ godot }) => chunks[CHUNK].includes(godot)),
+    names: [CHUNK, SETUP_CHUNK],
+    isApplied: (chunks) => GODOT_DIFFUSE_EDITS.every(({ chunk, godot }) => chunks[chunk].includes(godot)),
     apply: (chunks) => applyChunkEdits(chunks, GODOT_DIFFUSE_EDITS),
-    missing: `${CHUNK} has no direct light function or Fresnel-weighted diffuse line to replace`,
+    missing: `${CHUNK} or ${SETUP_CHUNK} has no material, light function or diffuse line to replace`,
   });
 }
 

@@ -18,32 +18,46 @@ import { warningsOf } from './testing/logWarnings';
 import { patchedShader } from './testing/patchedFragment';
 
 const CHUNK = 'lights_physical_pars_fragment';
-const threeChunk = THREE.ShaderChunk[CHUNK];
+const SETUP_CHUNK = 'lights_physical_fragment';
+const threeChunks = { [CHUNK]: THREE.ShaderChunk[CHUNK], [SETUP_CHUNK]: THREE.ShaderChunk[SETUP_CHUNK] };
 
 const occurrences = (text: string, part: string) => text.split(part).length - 1;
 
-/** three's chunk with every edit applied. */
+/** three's chunks with every edit applied. */
+function godotChunks(): Record<typeof CHUNK | typeof SETUP_CHUNK, string> {
+  return applyChunkEdits(threeChunks, GODOT_DIFFUSE_EDITS)!;
+}
+
+/** three's lighting chunk with every edit applied. */
 function godotDiffuseChunk(): string {
-  return applyChunkEdits({ [CHUNK]: threeChunk }, GODOT_DIFFUSE_EDITS)![CHUNK];
+  return godotChunks()[CHUNK];
 }
 
 afterEach(() => {
-  THREE.ShaderChunk[CHUNK] = threeChunk;
+  Object.assign(THREE.ShaderChunk, threeChunks);
 });
 
 describe('GODOT_DIFFUSE_EDITS', () => {
   it('finds each replaced line exactly once in the installed three', () => {
-    for (const { three } of GODOT_DIFFUSE_EDITS) {
-      expect(occurrences(threeChunk, three)).toBe(1);
+    for (const { chunk, three } of GODOT_DIFFUSE_EDITS) {
+      expect(occurrences(threeChunks[chunk], three)).toBe(1);
     }
   });
 
-  it('writes each edit into the chunk', () => {
-    const patched = godotDiffuseChunk();
+  it('writes each edit into its chunk', () => {
+    const patched = godotChunks();
 
-    for (const { godot } of GODOT_DIFFUSE_EDITS) {
-      expect(patched).toContain(godot);
+    for (const { chunk, godot } of GODOT_DIFFUSE_EDITS) {
+      expect(patched[chunk]).toContain(godot);
     }
+  });
+
+  it("feeds the light function Godot's limited roughness, not three's floored one", () => {
+    // `scene_forward_clustered.glsl:1658-1665`, at the defaults of `rendering_server.cpp:3777-3778`.
+    expect(godotChunks()[SETUP_CHUNK]).toContain(
+      'material.godotRoughness = sqrt( min( 1.0, roughnessFactor * roughnessFactor + godotKernelRoughness2 ) );'
+    );
+    expect(godotDiffuseChunk()).toContain('dotVH, material.godotRoughness )');
   });
 
   it('drops the Fresnel weight from both diffuse lines', () => {
@@ -65,10 +79,13 @@ describe('GODOT_DIFFUSE_EDITS', () => {
 });
 
 describe('installGodotDiffuse', () => {
-  it('replaces three’s chunk with the unweighted one', () => {
+  it('replaces three’s chunks with the patched ones', () => {
     installGodotDiffuse();
 
-    expect(THREE.ShaderChunk[CHUNK]).toBe(godotDiffuseChunk());
+    expect([THREE.ShaderChunk[CHUNK], THREE.ShaderChunk[SETUP_CHUNK]]).toEqual([
+      godotDiffuseChunk(),
+      godotChunks()[SETUP_CHUNK],
+    ]);
   });
 
   it('leaves a chunk it cannot patch alone, and warns (error case)', () => {
