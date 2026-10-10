@@ -5,7 +5,13 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { billboardOf, castsShadowOf, standardMaterialBags, surfaceBillboard } from './materialBag';
+import {
+  billboardOf,
+  castsShadowOf,
+  isAnisotropic,
+  standardMaterialBags,
+  surfaceBillboard,
+} from './materialBag';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
 import { diffuseModeUserData } from '../../../r3f/godotLightFunction';
@@ -420,5 +426,22 @@ describe('standardMaterialBags — opaque prepass', () => {
 
   it('gives a blended surface no opaque prepass (edge case)', () => {
     expect(opaquePrepassOf(materialFromBag(bag({ transparency: '1' })))).toBe(NO_OPAQUE_PREPASS);
+  });
+});
+
+describe('isAnisotropic', () => {
+  const anisotropic = (properties: Record<string, string>) =>
+    isAnisotropic(parseStandardMaterial3DScalars(properties));
+
+  it('draws a positive anisotropy anisotropic', () => {
+    expect(anisotropic({ anisotropy_enabled: 'true', anisotropy: '0.5' })).toBe(true);
+  });
+
+  it('draws a negative anisotropy anisotropic, as either sign scales the flowmap (edge case)', () => {
+    expect(anisotropic({ anisotropy_enabled: 'true', anisotropy: '-0.5' })).toBe(true);
+  });
+
+  it('draws a strength without anisotropy_enabled isotropic (error case)', () => {
+    expect(anisotropic({ anisotropy: '0.5' })).toBe(false);
   });
 });

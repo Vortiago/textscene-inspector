@@ -1,11 +1,8 @@
 /**
- * Godot's light function in three's physical lighting chunks, for every punctual light. Godot adds a
- * light's diffuse and the ambient diffuse with no Fresnel weight (Godot 4.6.3
- * `scene_forward_lights_inc.glsl:215` and `scene_forward_clustered.glsl:2165`), where three r186
- * weights both by what the specular layer reflects (glTF `fresnel_mix`). A light's diffuse follows
- * the material's `diffuse_mode`, Burley unless a define in its program picks another. Its diffuse
- * and specular read the roughness after Godot's screen-space limiter. Environment reflections keep
- * three's floored roughness, which its cubemap mips need.
+ * Godot's light function in three's physical lighting chunks: Godot's diffuse in the material's
+ * `diffuse_mode` and Godot's GGX specular, both on Godot's limited roughness. Godot adds a diffuse
+ * with no Fresnel weight (Godot 4.6.3 `scene_forward_lights_inc.glsl:215` and
+ * `scene_forward_clustered.glsl:2165`), where three r186 weights it by what the specular reflects.
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
@@ -24,14 +21,17 @@ const ROUGHNESS_SETUP = 'material.roughness = min( material.roughness, 1.0 );';
 
 /**
  * The roughness Godot's light functions read: the limiter at its project defaults, with no floor.
- * three's own `material.roughness` floors at 0.0525 for its cubemap mips.
+ * three's own `material.roughness` floors at 0.0525 for its cubemap mips, which environment
+ * reflections keep. Godot snaps a roughness below 1e-8 to 0, where GGX would divide by a collapsed
+ * alpha (`scene_forward_clustered.glsl:1667-1671`).
  */
 const GODOT_ROUGHNESS = /* glsl */ `${ROUGHNESS_SETUP}
 vec3 godotDndu = dFdx( normal );
 vec3 godotDndv = dFdy( normal );
 float godotVariance = ${glslFloat(ROUGHNESS_LIMITER_AMOUNT)} * ( dot( godotDndu, godotDndu ) + dot( godotDndv, godotDndv ) );
 float godotKernelRoughness2 = min( 2.0 * godotVariance, ${glslFloat(ROUGHNESS_LIMITER_LIMIT)} );
-material.godotRoughness = sqrt( min( 1.0, roughnessFactor * roughnessFactor + godotKernelRoughness2 ) );`;
+material.godotRoughness = sqrt( min( 1.0, roughnessFactor * roughnessFactor + godotKernelRoughness2 ) );
+if ( material.godotRoughness < 1e-8 ) material.godotRoughness = 0.0;`;
 
 const MATERIAL_STRUCT = 'struct PhysicalMaterial {';
 
@@ -71,7 +71,7 @@ float godotDiffuseNL( const in float dotNLRaw, const in float dotNVRaw, const in
 /**
  * Godot's GGX specular (\`scene_forward_lights_inc.glsl:16-47,239-262\`), divided by N.L as three's
  * \`irradiance\` carries it. three's anisotropic D and V have Godot's form, so they take Godot's
- * stretched alphas. Godot's Fresnel is exact Schlick with f90 from F0 (\`:258-260\`).
+ * stretched alphas. Godot's Fresnel is exact Schlick with f90 from F0 (\`:256-261\`).
  */
 const SPECULAR_BRDF = /* glsl */ `
 // Godot's float order (:16-21), not three's algebraically equal D_GGX, which rounds differently.

@@ -328,5 +328,5 @@ function vec2FromVector3(raw: string | undefined, fallback: MaterialVec2): Mater
 }
 
 function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
+  return clamp(value, 0, 1);
 }

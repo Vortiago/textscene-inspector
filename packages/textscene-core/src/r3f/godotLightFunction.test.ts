@@ -88,6 +88,13 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
     );
   });
 
+  it('snaps a roughness below 1e-8 to 0, as Godot does (edge case)', () => {
+    // `scene_forward_clustered.glsl:1667-1671`.
+    expect(godotChunks()[SETUP_CHUNK]).toMatch(
+      /material\.godotRoughness = sqrt\([^\n]*\);\nif \( material\.godotRoughness < 1e-8 \) material\.godotRoughness = 0\.0;/
+    );
+  });
+
   it("stretches the anisotropic lobe by Godot's aspect ratio of its roughness", () => {
     // `scene_forward_lights_inc.glsl:241-245`.
     const setup = godotChunks()[SETUP_CHUNK];
