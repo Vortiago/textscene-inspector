@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import {
   GODOT_DEFAULT_ALBEDO,
+  GODOT_DEFAULT_DIFFUSE_MODE,
   GODOT_DEFAULT_METALLIC,
   GODOT_DEFAULT_ROUGHNESS,
 } from '../../../r3f/materials/godotDefaultMaterial';
@@ -16,6 +17,7 @@ import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../..
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
+import { diffuseModeInjection, diffuseModeUserData } from '../../../r3f/godotDiffuse';
 import {
   GODOT_AMBIENT_OCCLUSION,
   ambientOcclusionUserData,
@@ -69,7 +71,9 @@ const NO_MATERIAL: StandardMaterialBag = {
     metalness: GODOT_DEFAULT_METALLIC,
     roughness: GODOT_DEFAULT_ROUGHNESS,
     side: THREE.FrontSide,
+    userData: diffuseModeUserData(GODOT_DEFAULT_DIFFUSE_MODE),
   },
+  injection: diffuseModeInjection(GODOT_DEFAULT_DIFFUSE_MODE),
 };
 
 /**
@@ -140,10 +144,10 @@ const BILLBOARD_KEY = 'godotBillboard';
 const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
- * `billboard_mode`, shadow-pass membership, `alpha_hash_scale` and the AO values on `userData`,
- * not as material props: Godot decides the first three per surface, and here the draw hooks apply
- * them per draw group (`r3f/surfaceDrawHooks.ts`). The AO uniforms read theirs there at each
- * upload. A fresh object per bag, since the `.tres` loader writes its own keys into it.
+ * `billboard_mode`, shadow-pass membership, `alpha_hash_scale`, the AO values and `diffuse_mode`
+ * on `userData`, not as material props: Godot decides the first three per surface, and here the
+ * draw hooks apply them per draw group (`r3f/surfaceDrawHooks.ts`). The AO uniforms read theirs
+ * there at each upload, and a decal shades its projection in the receiver's diffuse mode. A fresh object per bag, since the `.tres` loader writes its own keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
@@ -151,6 +155,7 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
     [CASTS_SHADOW_KEY]: scalars.castsShadow,
     ...alphaHashScaleUserData(scalars.alphaHashScale),
     ...ambientOcclusionUserData(scalars.aoLightAffect, scalars.aoTextureChannelMask),
+    ...diffuseModeUserData(scalars.diffuseMode),
   };
 }
 
@@ -235,8 +240,7 @@ function withSurfaceAlpha(
 ): StandardMaterialBag {
   const props = { ...bag.props, ...alpha };
   if (prepass.cutsDepth) props.userData = { ...bag.props.userData, ...opaquePrepassUserData(prepass) };
-  const injections = [bag.injection, injection].filter((one) => one !== undefined);
-  return { ...bag, props, injection: composeInjections(injections) };
+  return { ...bag, props, injection: composeInjections([bag.injection, injection]) };
 }
 
 /** The class `scalars` need, and its props. */
@@ -310,7 +314,10 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
 
   // Godot's AO sampler is `hint_default_white` (`material.cpp:1128`), so a surface with no map
   // occludes nothing.
-  const injection = aoMap ? GODOT_AMBIENT_OCCLUSION : undefined;
+  const injection = composeInjections([
+    diffuseModeInjection(scalars.diffuseMode),
+    aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
+  ]);
   if (!needsPhysicalMaterial(scalars)) return { materialClass: 'standard', props: pbr, injection };
   return {
     materialClass: 'physical',

@@ -11,6 +11,7 @@ import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { parseVector3 } from '../../../parser/vectors';
 import { drawsInShadowPass, type PassMembership } from '../../../godot/shadowPass';
 import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/textureChannel';
+import { DiffuseMode } from '../../../godot/diffuseMode';
 import { emissionScalars } from './emission';
 import {
   BlendMode,
@@ -181,6 +182,8 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     cullMode: enumOr(properties['cull_mode'], CullMode.BACK, CULL_MODES, `${CONTEXT}.cull_mode`),
     cullModeExplicit: properties['cull_mode'] !== undefined,
     shadingMode: properties['shading_mode'] === '0' ? 'unshaded' : 'per_pixel',
+    // `material.cpp:2462-2468`: the setter checks no range.
+    diffuseMode: intOr(properties['diffuse_mode'], DiffuseMode.DIFFUSE_BURLEY, CONTEXT),
     useVertexColors: boolOr(properties['vertex_color_use_as_albedo'], false, CONTEXT),
     aoLightAffect: floatOr(properties['ao_light_affect'], 0, CONTEXT),
     aoTextureChannel: enumOr(

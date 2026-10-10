@@ -172,6 +172,8 @@ export interface StandardMaterial3DData {
   cullModeExplicit: boolean;
   /** `shading_mode`: 'unshaded' (mode 0, unlit) or 'per_pixel' (default). */
   shadingMode: 'unshaded' | 'per_pixel';
+  /** `diffuse_mode`, a `DiffuseMode`. The setter stores it unchecked, so it can lie past the enum. */
+  diffuseMode: number;
   /** `vertex_color_use_as_albedo` (default false). */
   useVertexColors: boolean;
   /** `ao_light_affect`: how far the AO map also occludes direct light. Unclamped, as the setter is. */
@@ -262,6 +264,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   opaqueAfterCut: boolean;
   depthTest: boolean;
   shadingMode: 'unshaded' | 'per_pixel';
+  diffuseMode: number;
   useVertexColors: boolean;
   aoLightAffect: number;
   aoTextureChannelMask: TextureChannelMask;

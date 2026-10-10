@@ -145,7 +145,7 @@ export function materialProgramInputs<
   /** Mapped rather than intersected whole, so the tuple and its order survive. */
   merge?: { [Part in keyof M]: (M[Part] & MaterialProgramBag) | undefined };
 }): MaterialProgram<Omit<P & Merged<M>, 'injection'> & InjectedProps> {
-  const injections: ProgramInjection[] = [];
+  const injections: (ProgramInjection | undefined)[] = [];
   // Merged here, not at the call site: the last writer wins, and
   // `canvasItemLighting.ts` forces `transparent: true`, so a key from the site's
   // own value would describe a material that does not exist.
@@ -155,11 +155,10 @@ export function materialProgramInputs<
   // bag: a rest spread rebuilds every key of every part to remove one that most
   // parts do not carry.
   Object.assign(merged, input.props);
-  if (input.props.injection) injections.push(input.props.injection);
+  injections.push(input.props.injection);
   for (const bag of input.merge ?? []) {
     if (!bag) continue;
-    const { injection } = bag as MaterialProgramBag;
-    if (injection) injections.push(injection);
+    injections.push((bag as MaterialProgramBag).injection);
     Object.assign(merged, bag);
   }
   if (merged.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
@@ -190,21 +189,24 @@ export function materialProgramInputs<
  * serves an unpatched material.
  */
 export function injectProgram(material: THREE.Material, injection: ProgramInjection | undefined): void {
-  const injections = injection ? [injection] : [];
-  if (material.alphaHash) injections.push(GODOT_ALPHA_HASH);
-  const composed = composeInjections(injections);
+  const composed = composeInjections([injection, material.alphaHash ? GODOT_ALPHA_HASH : undefined]);
   if (!composed) return;
   material.onBeforeCompile = composed.onBeforeCompile;
   material.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
 }
 
 /**
- * One injection that applies each of `injections` in order, or none for an empty list. One
- * injection passes straight through, so `useCanvasItemLighting`'s memo still reaches the material.
+ * One injection that applies each present part in order, or none when no part is present. One
+ * part passes straight through, so `useCanvasItemLighting`'s memo still reaches the material.
  */
-export function composeInjections(injections: readonly ProgramInjection[]): ProgramInjection | undefined {
-  if (injections.length === 0) return undefined;
-  return injections.reduce(composedPair);
+export function composeInjections(
+  parts: readonly (ProgramInjection | undefined)[]
+): ProgramInjection | undefined {
+  let composed: ProgramInjection | undefined;
+  for (const part of parts) {
+    if (part) composed = composed ? composedPair(composed, part) : part;
+  }
+  return composed;
 }
 
 /**

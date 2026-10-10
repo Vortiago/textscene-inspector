@@ -6,6 +6,7 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../../../godot/diffuseMode.js';
 
 export const surfaceKeys: Record<string, PropertyValidator> = {
   transparency: v.enumInt(
@@ -80,9 +81,9 @@ export const surfaceKeys: Record<string, PropertyValidator> = {
   ),
   diffuse_mode: v.enumInt(
     'diffuse_mode',
-    0,
-    3,
-    { 0: 'BURLEY', 1: 'LAMBERT', 2: 'LAMBERT_WRAP', 3: 'TOON' },
+    DiffuseMode.DIFFUSE_BURLEY,
+    DiffuseMode.DIFFUSE_TOON,
+    DIFFUSE_MODE_NAMES,
     { hinted: 'material.cpp:3601' }
   ),
   specular_mode: v.enumInt(

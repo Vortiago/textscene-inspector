@@ -8,6 +8,8 @@ import * as THREE from 'three';
 import { billboardOf, castsShadowOf, standardMaterialBags, surfaceBillboard } from './materialBag';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
+import { diffuseModeUserData } from '../../../r3f/godotDiffuse';
+import { DiffuseMode } from '../../../godot/diffuseMode';
 import {
   DRAWN_OPAQUE_PREPASS,
   FADED_OPAQUE_PREPASS,
@@ -20,6 +22,7 @@ import { BillboardMode } from '../../../godot/billboard';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 import {
+  DRAWS_LAMBERT_DIFFUSE,
   DROPS_ALBEDO_ALPHA,
   OCCLUDES_DIRECT_LIGHT,
   WRITES_OPAQUE_AFTER_CUT,
@@ -213,13 +216,63 @@ describe('standardMaterialBags — AO on direct light', () => {
   });
 });
 
+describe('standardMaterialBags — diffuse mode', () => {
+  it('records the mode, for a decal to shade its projection with', () => {
+    expect(materialFromBag(bag({ diffuse_mode: '2' })).userData).toMatchObject(
+      diffuseModeUserData(DiffuseMode.DIFFUSE_LAMBERT_WRAP)
+    );
+  });
+
+  it("records Lambert on Godot's default surface", () => {
+    expect(materialFromBag(standardMaterialBags(null).unfaded).userData).toMatchObject(
+      diffuseModeUserData(DiffuseMode.DIFFUSE_LAMBERT)
+    );
+  });
+
+  it('patches nothing for Burley, the term the lighting chunk writes by default', () => {
+    // `material.h:608`.
+    expect(bag({}).injection).toBeUndefined();
+  });
+
+  it("writes a lit surface's diffuse in its authored mode", () => {
+    expect(patchedFragment(materialFromBag(bag({ diffuse_mode: '1' })))).toContain(DRAWS_LAMBERT_DIFFUSE);
+  });
+
+  it("writes a physical surface's diffuse in its authored mode too", () => {
+    const physical = bag({ diffuse_mode: '1', clearcoat_enabled: 'true' });
+    expect(physical.materialClass).toBe('physical');
+    expect(patchedFragment(materialFromBag(physical))).toContain(DRAWS_LAMBERT_DIFFUSE);
+  });
+
+  it('patches nothing on an unshaded surface, which has no lighting', () => {
+    expect(bag({ diffuse_mode: '1', shading_mode: '0' }).injection).toBeUndefined();
+  });
+
+  it("writes Godot's default surface in Lambert, as its shader names no diffuse mode (edge case)", () => {
+    // `scene_shader_forward_clustered.cpp:910-925` names no diffuse mode, and `shader_types.cpp:241`
+    // makes Lambert a spatial shader's default.
+    expect(patchedFragment(materialFromBag(standardMaterialBags(null).unfaded))).toContain(
+      DRAWS_LAMBERT_DIFFUSE
+    );
+  });
+
+  it('keeps the AO patch beside the diffuse patch', () => {
+    const textures = { ao_texture: new THREE.Texture() };
+    const fragment = patchedFragment(
+      materialFromBag(bag({ ao_enabled: 'true', diffuse_mode: '1' }, textures))
+    );
+    expect(fragment).toContain(DRAWS_LAMBERT_DIFFUSE);
+    expect(fragment).toContain(OCCLUDES_DIRECT_LIGHT);
+  });
+});
+
 describe('standardMaterialBags — the alpha pass', () => {
   it("blends Godot's default surface without a depth write", () => {
     expect(alphaPassBag(null).props).toMatchObject({ transparent: true, depthWrite: false, opacity: 1 });
   });
 
-  it("patches nothing on Godot's default surface", () => {
-    expect(alphaPassBag(null).injection).toBeUndefined();
+  it("leaves the alpha of Godot's default surface alone", () => {
+    expect(patchedFragment(materialFromBag(alphaPassBag(null)))).not.toContain(DROPS_ALBEDO_ALPHA);
   });
 
   it("keeps the material's own alpha, for the cull to scale", () => {

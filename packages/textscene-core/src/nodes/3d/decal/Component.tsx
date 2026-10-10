@@ -23,6 +23,7 @@ import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
 import { decalDistanceFade, type DecalGeometricFade } from './decalFade';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+import { DecalProjectionMaterials, type DecalProjectionLook } from './decalProjectionMaterials';
 import {
   buildDecalProjectionGeometry,
   collectDecalReceivers,
@@ -56,9 +57,9 @@ export function Decal({ node, children }: NodeComponentProps) {
   const invalidate = useThree((s) => s.invalidate);
   const resourceVersion = useLiveTreeVersion(useResourceLoader());
   const projectionRef = useRef<THREE.Group>(null);
-  // The projection material, for the per-frame distance-fade write below. It is
-  // built imperatively inside the effect, so a ref is the only handle on it.
-  const materialRef = useRef<THREE.MeshStandardMaterial | null>(null);
+  // The projection materials, for the per-frame distance-fade write below. They are
+  // built imperatively inside the effect, so a ref is the only handle on them.
+  const materialsRef = useRef<DecalProjectionMaterials | null>(null);
 
   // Unit-cube projection-volume wireframe. `size` scales the gizmo group, so animating `size`
   // (ADR-0017) stays a cheap scale write. R3F's `primitive` does not auto-dispose, so this
@@ -131,28 +132,9 @@ export function Decal({ node, children }: NodeComponentProps) {
       colorSpace: THREE.SRGBColorSpace,
     });
 
-    // Unlit albedo over a lit surface: the same lights shade the projection as the surface
-    // beneath it, as in Godot.
-    const material = new THREE.MeshStandardMaterial({
-      map: projectionMap,
-      color,
-      metalness: 0,
-      roughness: 1,
-      transparent: true,
-      opacity,
-      // Godot's depth/normal fades ride the baked RGBA `color` attribute, whose RGB is 1, so only
-      // alpha scales. three enables vertex alpha only at itemSize 4, and
-      // `buildDecalProjectionGeometry` always writes the attribute, so no geometry lacks one,
-      // which would sample the material default instead of skipping the fade.
-      vertexColors: true,
-      depthWrite: false,
-      // Sit the projection on the surface without z-fighting the coincident
-      // receiver face.
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
-    });
-    materialRef.current = material;
+    const projection: DecalProjectionLook = { map: projectionMap, color, opacity };
+    const materials = new DecalProjectionMaterials(projection);
+    materialsRef.current = materials;
 
     // The upper, lower and normal fades bake per vertex into the `color` attribute (`decalFade.ts`).
     const fade: DecalGeometricFade = {
@@ -164,7 +146,7 @@ export function Decal({ node, children }: NodeComponentProps) {
     for (const receiver of receivers) {
       const geometry = buildDecalProjectionGeometry(receiver, decalWorldInverse, size, fade);
       if (!geometry) continue;
-      const mesh = new THREE.Mesh(geometry, material);
+      const mesh = new THREE.Mesh(geometry, materials.shading(receiver));
       mesh.userData.isDecalProjection = true;
       mesh.receiveShadow = true;
       mesh.renderOrder = 3;
@@ -181,8 +163,8 @@ export function Decal({ node, children }: NodeComponentProps) {
         group.remove(child);
         (child as THREE.Mesh).geometry?.dispose();
       }
-      materialRef.current = null;
-      material.dispose();
+      materialsRef.current = null;
+      materials.dispose();
       // Only a bind-time clone is this projection's to free; a shared cache entry is not.
       if (isMaterialOwnedTexture(projectionMap)) projectionMap.dispose();
     };
@@ -208,8 +190,8 @@ export function Decal({ node, children }: NodeComponentProps) {
   // the rest into modulate alpha. An opacity write mirrors it with no shader and no rebuild.
   useFrame((state) => {
     const group = projectionRef.current;
-    const material = materialRef.current;
-    if (!group || !material) return;
+    const materials = materialsRef.current;
+    if (!group || !materials) return;
 
     // Hooks cannot be conditional, so the enabled test sits inside. The disabled case settles at
     // fade = 1: the effect above ignores `distance_fade_enabled`, so a decal faded or hidden by an
@@ -227,11 +209,7 @@ export function Decal({ node, children }: NodeComponentProps) {
       );
     }
 
-    const next = opacity * fade;
-    if (material.opacity !== next) {
-      material.opacity = next;
-      invalidate();
-    }
+    if (materials.setOpacity(opacity * fade)) invalidate();
     // A fully faded decal is dropped from Godot's buffer outright; hiding the
     // group is the same picture and skips the draw.
     const visible = fade > 0;

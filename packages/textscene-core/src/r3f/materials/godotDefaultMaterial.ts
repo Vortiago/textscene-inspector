@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { DiffuseMode } from '../../godot/diffuseMode';
 
 // Per surface: `RenderForwardClustered::_geometry_instance_update` sends every
 // surface index through the fallback, as its INSTANCE_MULTIMESH branch does for a
@@ -21,3 +22,5 @@ export const GODOT_DEFAULT_ALBEDO = new THREE.Color().setRGB(0.6, 0.6, 0.6, THRE
 export const GODOT_DEFAULT_ROUGHNESS = 0.8;
 /** `METALLIC = 0.2` in `fragment()`. */
 export const GODOT_DEFAULT_METALLIC = 0.2;
+/** The shader names no diffuse render mode, and a spatial shader without one is Lambert (`shader_types.cpp:241`). */
+export const GODOT_DEFAULT_DIFFUSE_MODE = DiffuseMode.DIFFUSE_LAMBERT;

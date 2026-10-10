@@ -47,6 +47,7 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     opaqueAfterCut: data.opaqueAfterCut,
     depthTest: data.depthTest,
     shadingMode: data.shadingMode,
+    diffuseMode: data.diffuseMode,
     useVertexColors: data.useVertexColors,
     aoLightAffect: data.aoLightAffect,
     aoTextureChannelMask: textureChannelMask(data.aoTextureChannel),

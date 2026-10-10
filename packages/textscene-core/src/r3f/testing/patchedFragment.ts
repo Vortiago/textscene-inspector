@@ -22,6 +22,9 @@ export const WRITES_OPAQUE_AFTER_CUT = 'diffuseColor.a = 1.0;';
 /** The shader scales the direct light by the AO map's occlusion. */
 export const OCCLUDES_DIRECT_LIGHT = 'reflectedLight.directDiffuse *= godotDirectOcclusion;';
 
+/** The shader writes a light's diffuse in Lambert mode, not BaseMaterial3D's default Burley. */
+export const DRAWS_LAMBERT_DIFFUSE = '#define GODOT_DIFFUSE_LAMBERT\n';
+
 /** `fragmentShader` after `onBeforeCompile`, which reads only the shader, so no renderer is needed. */
 export function patchedShader(
   onBeforeCompile: (shader: ProgramShader) => void,

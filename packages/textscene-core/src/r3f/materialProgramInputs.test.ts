@@ -438,6 +438,11 @@ describe('composeInjections', () => {
     expect(composeInjections([shared, ownA])).not.toBe(composeInjections([shared, ownB]));
   });
 
+  it('passes the one present part straight through, skipping an absent one', () => {
+    const only = recordingInjection('a', []);
+    expect(composeInjections([undefined, only, undefined])).toBe(only);
+  });
+
   it('returns nothing for no parts (error case)', () => {
     expect(composeInjections([])).toBeUndefined();
   });
