@@ -115,8 +115,8 @@ uniform, geometry or object state that a mounted material may change freely.
 | `depth_draw_mode` | uniform | `depthWrite`, per-draw state. `godotDepthWrite` (`decode.ts`) resolves the mode against the pass. |
 | `depth_test` | uniform | `depthTest`. `WebGLPrograms` never reads it. |
 | `cull_mode` | program input | `side`, which reaches the program as the `doubleSided`/`flipSided` pair (`WebGLPrograms.js:369-370`). Godot's enum names the faces discarded, and three's names those kept, mapped once in `scalars.ts`. |
-| `diffuse_mode` | unimplemented | three has one diffuse BRDF. Nothing in the repo reads the property. |
-| `specular_mode` | unimplemented | As above. |
+| `diffuse_mode` | program input | A define from a `ProgramInjection` picks Godot's term in the patched lighting chunk (`godotDiffuse.ts`). Burley, the default, takes no define. |
+| `specular_mode` | unimplemented | three has one specular BRDF. Nothing in the repo reads the property. |
 | `billboard_mode` | neither | A vertex-shader term in Godot. Here it is no program input: the derivation records it on the material's `userData`, and `r3f/surfaceDrawHooks.ts` swaps the world matrix around each draw group whose material billboards, per surface as Godot's shader does. |
 | `detail_blend_mode` | unimplemented | With the detail layer. |
 | `roughness_channel` | unimplemented | A stated parity limitation: Godot reads the channel named by `roughness_texture_channel`/`metallic_texture_channel` (default RED). three's `roughnessMap`/`metalnessMap` read fixed G/B (`SurfaceMaterialSlot.tsx`). |

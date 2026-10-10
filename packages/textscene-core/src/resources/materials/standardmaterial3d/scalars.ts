@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { godotBlendState } from './blendState';
 import { decodeStandardMaterial3D } from './decode';
+import { textureChannelMask } from '../../../godot/textureChannel';
 import { CullMode, type StandardMaterial3DData, type StandardMaterial3DScalars } from './types';
 
 /**
@@ -46,9 +47,10 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     opaqueAfterCut: data.opaqueAfterCut,
     depthTest: data.depthTest,
     shadingMode: data.shadingMode,
+    diffuseMode: data.diffuseMode,
     useVertexColors: data.useVertexColors,
-    aoEnabled: data.aoEnabled,
-    normalEnabled: data.normalEnabled,
+    aoLightAffect: data.aoLightAffect,
+    aoTextureChannelMask: textureChannelMask(data.aoTextureChannel),
     side: SIDE[data.cullMode],
     cullModeExplicit: data.cullModeExplicit,
     normalScale: data.normalScale,

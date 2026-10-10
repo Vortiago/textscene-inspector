@@ -52,6 +52,18 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 - **Approximated** A minified flowmap with zero-alpha texels turns its direction 90 degrees from the first mip level that mixes them.
 - **Approximated** A material loaded from a `.tres` gets its anisotropy scalars and no flowmap.
 
+## Ambient occlusion
+<!-- compare: image=unit-material-ao status=done fixture=unit-material-ao.tscn -->
+
+The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. `ao_texture_channel` picks the map channel.
+
+- **Approximated** `ao_on_uv2` samples through UV1, since no mesh here carries a second UV set.
+
+## Diffuse mode
+<!-- compare: image=unit-material-diffuse-mode status=done fixture=unit-material-diffuse-mode.tscn -->
+
+`diffuse_mode` picks the light's diffuse term: Burley, Lambert, Lambert wrap and toon, left to right, lit from the right. Both engines brighten Burley's rim, wrap the light past Lambert's terminator and band the toon sphere. Godot's default material draws Lambert.
+
 ## Refraction
 <!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
 
@@ -91,7 +103,6 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 
 - **Shader missing** `alpha_antialiasing_mode` is read for the pass decision, but the cutout edge reads hard rather than coverage-blended.
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
-- **Shader missing** `diffuse_mode` is always Lambert where Godot defaults to Burley, so a rough sphere is slightly darker at the silhouette.
 - **Shader missing** `metallic_specular` has no effect, since three fixes dielectric F0 at 0.04.
 - **Approximated** Godot measures V from the image top and three from the bottom, so a non-integer `uv1_scale.y` or a non-zero `uv1_offset.y` shifts V differently.
 - **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.

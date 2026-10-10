@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
 import {
+  composeInjections,
   injectProgram,
   materialProgramInputs,
   type MaterialProgramBag,
@@ -404,6 +405,46 @@ describe('injectProgram', () => {
     const material = new THREE.MeshBasicMaterial();
     injectProgram(material, undefined);
     expect(material.customProgramCacheKey()).toBe(new THREE.MeshBasicMaterial().customProgramCacheKey());
+  });
+});
+
+describe('composeInjections', () => {
+  const recordingInjection = (cacheKey: string, calls: string[]): ProgramInjection => ({
+    cacheKey,
+    onBeforeCompile: () => calls.push(cacheKey),
+  });
+
+  it('applies each part in order under the joined key', () => {
+    const calls: string[] = [];
+    const composed = composeInjections([recordingInjection('a', calls), recordingInjection('b', calls)])!;
+    composed.onBeforeCompile.call(new THREE.MeshBasicMaterial(), {
+      vertexShader: '',
+      fragmentShader: '',
+      uniforms: {},
+    });
+    expect([composed.cacheKey, calls]).toEqual(['a+b', ['a', 'b']]);
+  });
+
+  it('returns the same injection for the same parts, so a re-render keeps the patch', () => {
+    const first = recordingInjection('a', []);
+    const second = recordingInjection('b', []);
+    expect(composeInjections([first, second])).toBe(composeInjections([first, second]));
+  });
+
+  it('composes parts that share a key apart, as each instance may patch its own way (edge case)', () => {
+    const shared = recordingInjection('shared', []);
+    const ownA = recordingInjection('own', []);
+    const ownB = recordingInjection('own', []);
+    expect(composeInjections([shared, ownA])).not.toBe(composeInjections([shared, ownB]));
+  });
+
+  it('passes the one present part straight through, skipping an absent one', () => {
+    const only = recordingInjection('a', []);
+    expect(composeInjections([undefined, only, undefined])).toBe(only);
+  });
+
+  it('returns nothing for no parts (error case)', () => {
+    expect(composeInjections([])).toBeUndefined();
   });
 });
 

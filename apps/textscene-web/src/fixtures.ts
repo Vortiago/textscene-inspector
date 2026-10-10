@@ -2933,6 +2933,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Diffuse Mode",
+    "file": "unit-material-diffuse-mode.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Emission Hdr",
     "file": "unit-material-emission-hdr.tscn",
     "category": "Unit - Materials"

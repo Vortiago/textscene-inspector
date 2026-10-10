@@ -145,7 +145,7 @@ export function materialProgramInputs<
   /** Mapped rather than intersected whole, so the tuple and its order survive. */
   merge?: { [Part in keyof M]: (M[Part] & MaterialProgramBag) | undefined };
 }): MaterialProgram<Omit<P & Merged<M>, 'injection'> & InjectedProps> {
-  const injections: ProgramInjection[] = [];
+  const injections: (ProgramInjection | undefined)[] = [];
   // Merged here, not at the call site: the last writer wins, and
   // `canvasItemLighting.ts` forces `transparent: true`, so a key from the site's
   // own value would describe a material that does not exist.
@@ -155,24 +155,22 @@ export function materialProgramInputs<
   // bag: a rest spread rebuilds every key of every part to remove one that most
   // parts do not carry.
   Object.assign(merged, input.props);
-  if (input.props.injection) injections.push(input.props.injection);
+  injections.push(input.props.injection);
   for (const bag of input.merge ?? []) {
     if (!bag) continue;
-    const { injection } = bag as MaterialProgramBag;
-    if (injection) injections.push(injection);
+    injections.push((bag as MaterialProgramBag).injection);
     Object.assign(merged, bag);
   }
   if (merged.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
 
-  let cacheKey = '';
-  if (injections.length > 0) {
-    cacheKey = composedCacheKey(injections);
+  const composed = composeInjections(injections);
+  if (composed) {
     // `undefined` rather than `delete`: fiber 9.6.1's `applyProps` skips an
     // undefined value (`:24-27`, "Ignore setting undefined props"), and deleting
     // deoptimises the object it is handed.
     merged.injection = undefined;
-    merged.customProgramCacheKey = cacheKeyThunk(cacheKey);
-    merged.onBeforeCompile = composedOnBeforeCompile(injections);
+    merged.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
+    merged.onBeforeCompile = composed.onBeforeCompile;
   }
 
   // A key rather than `needsUpdate`: `applyProps` never bumps it, and `setProgram`
@@ -180,7 +178,7 @@ export function materialProgramInputs<
   // or define is not on. A define that stops applying cannot even be cleared,
   // since `applyProps` skips `undefined`. The remount compiles the finished set.
   return {
-    key: programKey(merged, cacheKey),
+    key: programKey(merged, composed?.cacheKey ?? ''),
     props: merged as Omit<P & Merged<M>, 'injection'> & InjectedProps,
   };
 }
@@ -191,28 +189,53 @@ export function materialProgramInputs<
  * serves an unpatched material.
  */
 export function injectProgram(material: THREE.Material, injection: ProgramInjection | undefined): void {
-  const injections = injection ? [injection] : [];
-  if (material.alphaHash) injections.push(GODOT_ALPHA_HASH);
-  if (injections.length === 0) return;
-  material.onBeforeCompile = composedOnBeforeCompile(injections);
-  material.customProgramCacheKey = cacheKeyThunk(composedCacheKey(injections));
-}
-
-function composedCacheKey(injections: readonly ProgramInjection[]): string {
-  return injections.map((one) => one.cacheKey).join('+');
+  const composed = composeInjections([injection, material.alphaHash ? GODOT_ALPHA_HASH : undefined]);
+  if (!composed) return;
+  material.onBeforeCompile = composed.onBeforeCompile;
+  material.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
 }
 
 /**
- * One injection passes straight through, so `useCanvasItemLighting`'s memo still reaches the
- * material. Composing two cannot avoid a fresh closure, a method so each part reads its material.
+ * One injection that applies each present part in order, or none when no part is present. One
+ * part passes straight through, so `useCanvasItemLighting`'s memo still reaches the material.
  */
-function composedOnBeforeCompile(
-  injections: readonly ProgramInjection[]
-): ProgramInjection['onBeforeCompile'] {
-  if (injections.length === 1) return injections[0]!.onBeforeCompile;
-  return function (this: THREE.Material, shader: ProgramShader): void {
-    for (const one of injections) one.onBeforeCompile.call(this, shader);
-  };
+export function composeInjections(
+  parts: readonly (ProgramInjection | undefined)[]
+): ProgramInjection | undefined {
+  let composed: ProgramInjection | undefined;
+  for (const part of parts) {
+    if (part) composed = composed ? composedPair(composed, part) : part;
+  }
+  return composed;
+}
+
+/**
+ * Each pair composed so far, keyed by its parts' identity rather than their cache keys, since
+ * `useCanvasItemLighting` gives each instance its own patch under one key. Stable parts then
+ * compose to a stable injection on every render. Written only by `composedPair`, and collected
+ * with the first part.
+ */
+const composedPairs = new WeakMap<ProgramInjection, WeakMap<ProgramInjection, ProgramInjection>>();
+
+function composedPair(first: ProgramInjection, second: ProgramInjection): ProgramInjection {
+  let pairs = composedPairs.get(first);
+  if (!pairs) {
+    pairs = new WeakMap();
+    composedPairs.set(first, pairs);
+  }
+  let composed = pairs.get(second);
+  if (!composed) {
+    // A method, so each part reads the material three compiles.
+    composed = {
+      cacheKey: `${first.cacheKey}+${second.cacheKey}`,
+      onBeforeCompile(shader) {
+        first.onBeforeCompile.call(this, shader);
+        second.onBeforeCompile.call(this, shader);
+      },
+    };
+    pairs.set(second, composed);
+  }
+  return composed;
 }
 
 /**
