@@ -7,6 +7,7 @@
 
 import { ShaderChunk, type IUniform, type Material } from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
+import { recordedOn } from './recordedOnMaterial';
 import { TextureChannel, textureChannelMask, type TextureChannelMask } from '../../godot/textureChannel';
 
 const AO_PARS_CHUNK = '#include <aomap_pars_fragment>';
@@ -62,21 +63,17 @@ export function ambientOcclusionUserData(
   return { [LIGHT_AFFECT_KEY]: lightAffect, [CHANNEL_MASK_KEY]: channelMask };
 }
 
-function recorded<T>(material: Material, key: string, fallback: T): T {
-  return (material.userData[key] as T | undefined) ?? fallback;
-}
-
 /** Uniforms that read `material` at each upload, so a re-parse that changes only a value needs no remount. */
 function ambientOcclusionUniforms(material: Material): Record<string, IUniform> {
   return {
     godotAoLightAffect: {
       get value() {
-        return recorded(material, LIGHT_AFFECT_KEY, DEFAULT_LIGHT_AFFECT);
+        return recordedOn(material, LIGHT_AFFECT_KEY, DEFAULT_LIGHT_AFFECT);
       },
     },
     godotAoTextureChannel: {
       get value() {
-        return recorded(material, CHANNEL_MASK_KEY, DEFAULT_CHANNEL_MASK);
+        return recordedOn(material, CHANNEL_MASK_KEY, DEFAULT_CHANNEL_MASK);
       },
     },
   };

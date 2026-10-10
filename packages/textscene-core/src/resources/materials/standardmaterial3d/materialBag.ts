@@ -15,6 +15,7 @@ import { BillboardMode } from '../../../godot/billboard';
 import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
 import {
   GODOT_AMBIENT_OCCLUSION,
   ambientOcclusionUserData,
@@ -186,8 +187,7 @@ export function surfaceBillboard(scalars: StandardMaterial3DScalars | null): Sur
 
 /** The billboard a material was derived with. */
 export function billboardOf(material: THREE.Material): SurfaceBillboard {
-  const billboard = material.userData[BILLBOARD_KEY] as SurfaceBillboard | undefined;
-  return billboard ?? NO_BILLBOARD;
+  return recordedOn(material, BILLBOARD_KEY, NO_BILLBOARD);
 }
 
 /**
@@ -195,7 +195,7 @@ export function billboardOf(material: THREE.Material): SurfaceBillboard {
  * surface, which is opaque, and for any material this derivation did not build.
  */
 export function castsShadowOf(material: THREE.Material): boolean {
-  return material.userData[CASTS_SHADOW_KEY] !== false;
+  return recordedOn(material, CASTS_SHADOW_KEY, true);
 }
 
 /**

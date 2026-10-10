@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
+import { recordedOn } from './recordedOnMaterial';
 
 const HASH_PARS_CHUNK = '#include <alphahash_pars_fragment>';
 const PROJECT_VERTEX_CHUNK = '#include <project_vertex>';
@@ -68,8 +69,7 @@ export function alphaHashScaleUserData(scale: number): Record<string, number> {
 }
 
 function alphaHashScaleOf(material: THREE.Material): number {
-  const scale = material.userData[ALPHA_HASH_SCALE_KEY] as number | undefined;
-  return scale ?? DEFAULT_ALPHA_HASH_SCALE;
+  return recordedOn(material, ALPHA_HASH_SCALE_KEY, DEFAULT_ALPHA_HASH_SCALE);
 }
 
 /** The uniforms of one hashed material's program. */
