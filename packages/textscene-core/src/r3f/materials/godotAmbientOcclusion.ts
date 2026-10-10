@@ -44,12 +44,14 @@ const GODOT_AO_PARS = `${AO_PARS_CHUNK}
 uniform float godotAoLightAffect;
 uniform vec4 godotAoTextureChannel;`;
 
-/** Where a material records its `ao_light_affect` and its `ao_texture_channel` mask. */
+/** Where a material records its `ao_light_affect`. */
 const LIGHT_AFFECT_KEY = 'godotAoLightAffect';
+/** Where a material records its `ao_texture_channel` mask. */
 const CHANNEL_MASK_KEY = 'godotAoTextureChannel';
 
-/** The defaults `material.cpp:3983,3987` sets. */
+/** `ao_light_affect`'s default (`material.cpp:3983`). */
 const DEFAULT_LIGHT_AFFECT = 0;
+/** `ao_texture_channel`'s default, red (`material.cpp:3987`). */
 const DEFAULT_CHANNEL_MASK = textureChannelMask(TextureChannel.TEXTURE_CHANNEL_RED);
 
 /** The `userData` that gives a material its `ao_light_affect` and `ao_texture_channel`. */

@@ -7,7 +7,7 @@
 
 import type * as THREE from 'three';
 import type { EmissionScalars } from './emission';
-import type { TextureChannelMask } from '../../../godot/textureChannel';
+import type { TextureChannel, TextureChannelMask } from '../../../godot/textureChannel';
 
 // One Color declaration repo-wide, re-exported here because this slice's
 // consumers (sky, environment, preview lighting) import it from this module.
@@ -174,10 +174,10 @@ export interface StandardMaterial3DData {
   shadingMode: 'unshaded' | 'per_pixel';
   /** `vertex_color_use_as_albedo` (default false). */
   useVertexColors: boolean;
-  /** `ao_light_affect`: how far the AO map also occludes direct light. Not clamped, as the setter is not. */
+  /** `ao_light_affect`: how far the AO map also occludes direct light. Unclamped, as the setter is. */
   aoLightAffect: number;
-  /** `ao_texture_channel` as the mask the AO map's sample is dotted with. */
-  aoTextureChannelMask: TextureChannelMask;
+  /** `ao_texture_channel`: the AO map channel the shader reads. */
+  aoTextureChannel: TextureChannel;
   /** `normal_scale`, as the uniform XY pair three's `normalScale` wants. */
   normalScale: MaterialVec2;
   /** `uv1_triplanar` OR `uv1_world_triplanar`. */
