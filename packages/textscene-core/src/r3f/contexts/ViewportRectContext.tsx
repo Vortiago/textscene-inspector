@@ -61,8 +61,8 @@ export function ViewportRectProvider({ children }: { children: ReactNode }) {
       const token = {};
       owners.set(path, token);
       setRects((prev) => {
-        // Stable on an unchanged rect: a remounting container republishes the
-        // same rect, and a new Map would re-allocate every render target.
+        // Stable on an unchanged rect: a successor that registers before its
+        // predecessor's cleanup republishes it, and a new Map re-renders every consumer.
         const current = prev.get(path);
         if (current && current.x === rect.x && current.y === rect.y) return prev;
         const next = new Map(prev);

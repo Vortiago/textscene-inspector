@@ -375,6 +375,13 @@ describe('<SubViewportContainer> — the drawn rect', () => {
     expect(drawnSize(renderer, entry.texture)).toEqual({ x: 20000, y: 150 });
   });
 
+  it('lays the surface out at the viewport size, not the capped target, past the cap', async () => {
+    const entry = fakeEntry();
+    const renderer = await mountContainer({ stretch: true }, { x: 0, y: 0, w: 20000, h: 150 }, entry);
+    const quad = quadsSampling(renderer.scene, entry.texture)[0]!;
+    expect((quad.geometry as THREE.PlaneGeometry).parameters.width).toBe(20000);
+  });
+
   it('draws at the authored size when the container does not stretch', async () => {
     const entry = fakeEntry();
     const renderer = await mountContainer({}, { x: 0, y: 0, w: 640, h: 480 }, entry);

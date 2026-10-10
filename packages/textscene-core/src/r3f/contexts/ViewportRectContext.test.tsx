@@ -14,7 +14,6 @@ import {
   useViewportRect,
   type ViewportRect,
 } from './ViewportRectContext';
-import { viewportTargetSize } from '../../nodes/viewport/subviewport/targetSize';
 
 /** Renders the rect at `path`, and counts how often it re-rendered. */
 function Reader({ path, onRender }: { path: string; onRender?: (r: ViewportRect | null) => void }) {
@@ -71,8 +70,8 @@ describe('ViewportRectContext', () => {
   });
 
   /**
-   * A remounting container republishes the same rect, and a fresh Map would
-   * re-render the sub-viewport and re-create its render target each time.
+   * A successor that registers before its predecessor's cleanup republishes
+   * the same rect, and a fresh Map would re-render every consumer.
    */
   it('does not re-render a consumer when the rect is unchanged', () => {
     let register!: ReturnType<typeof useRegisterViewportRect>;
@@ -270,35 +269,5 @@ describe('ViewportRectContext', () => {
       register('Booth/View', { x: 0, y: 0 });
     });
     expect(getByTestId('rect').textContent).toBe('0x0');
-  });
-});
-
-describe('a sub-viewport sized by a forced rect', () => {
-  /**
-   * The forced rect wins when there is one, else the authored `size` stands, as
-   * in Godot's early return for a non-stretching container.
-   */
-  function Sized({ path, authored }: { path: string; authored: ViewportRect }) {
-    const { x, y } = viewportTargetSize(authored, useViewportRect(path));
-    return <span data-testid="size">{`${x}x${y}`}</span>;
-  }
-
-  it('falls back to the authored size when no container forced one', () => {
-    const { getByTestId } = mount(<Sized path="Booth/View" authored={{ x: 399, y: 480 }} />);
-    expect(getByTestId('size').textContent).toBe('399x480');
-  });
-
-  it('prefers the forced rect once the container publishes it', () => {
-    let register!: ReturnType<typeof useRegisterViewportRect>;
-    const { getByTestId } = mount(
-      <>
-        <Publisher onReady={(fn) => (register = fn)} />
-        <Sized path="Booth/View" authored={{ x: 399, y: 480 }} />
-      </>
-    );
-    act(() => {
-      register('Booth/View', { x: 572, y: 648 });
-    });
-    expect(getByTestId('size').textContent).toBe('572x648');
   });
 });

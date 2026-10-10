@@ -20,7 +20,7 @@ import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../..
 import { isViewportBoundary } from '../../../viewport/subviewport/viewportBoundary.js';
 import { useViewportContentKind } from '../../../viewport/subviewport/useViewportContentKind.js';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
-import { viewportSize, viewportTargetSize } from '../../../viewport/subviewport/targetSize.js';
+import { viewportSize } from '../../../viewport/subviewport/targetSize.js';
 import type { SubViewportContainerProperties } from './types.js';
 import { WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
 
@@ -97,8 +97,9 @@ function ViewportSurfaceNative({
   // the same "content unavailable" fact. `warnAs` is `null`: the pass driver logs the cycle once.
   const { texture, cyclic } = useViewportTargetSlot(path, null);
 
-  // Controls anchor against the target, which the sub-viewport's own pass sizes the same way.
-  const { x: targetWidth, y: targetHeight } = viewportTargetSize(authoredSize, forcedSize);
+  // Controls anchor against Godot's viewport size, not the capped render target: the Controls arm
+  // draws live, and the quad stretches whatever pixels the target holds over the same rect.
+  const { x: viewportWidth, y: viewportHeight } = viewportSize(authoredSize, forcedSize);
 
   const contentKind = useViewportContentKind(viewport);
   const { tree, generation } = useBuildSolveTree(
@@ -107,9 +108,9 @@ function ViewportSurfaceNative({
     internalResources,
     rtl
   );
-  const targetRect: Rect2 = useMemo(
-    () => ({ x: 0, y: 0, w: targetWidth, h: targetHeight }),
-    [targetWidth, targetHeight]
+  const viewportRect: Rect2 = useMemo(
+    () => ({ x: 0, y: 0, w: viewportWidth, h: viewportHeight }),
+    [viewportWidth, viewportHeight]
   );
 
   const fallbackSolveNode = useMemo<SolveNode>(
@@ -150,16 +151,15 @@ function ViewportSurfaceNative({
     [path, viewport, rtl, externalResources, internalResources]
   );
 
-  // With `stretch` on, the target draws over the container's whole rect (`:142`). With it off, it
-  // draws at the viewport's own size (`:144`), which differs from the target only past the cap.
-  const drawnSize = stretch ? { x: containerRect.w, y: containerRect.h } : viewportSize(authoredSize, null);
-  const scaleX = drawnSize.x / targetWidth;
-  const scaleY = drawnSize.y / targetHeight;
+  // With `stretch` on, the viewport draws over the container's whole rect (`:142`). With it off, it
+  // draws at its own size (`:144`).
+  const scaleX = stretch ? containerRect.w / viewportWidth : 1;
+  const scaleY = stretch ? containerRect.h / viewportHeight : 1;
 
-  // The render target has only `targetWidth`x`targetHeight` pixels, so Godot clips by never
+  // Godot's viewport has only `viewportWidth`x`viewportHeight` pixels, so it clips by never
   // rendering past its edge. The Controls arm draws three.js objects with no such edge and needs
   // an explicit clip (`ScrollContainer`'s mechanism). The pixel arm's quad is already this size.
-  const { anchorRef, clip } = useWorldClipPlanes(targetRect);
+  const { anchorRef, clip } = useWorldClipPlanes(viewportRect);
 
   return (
     <CanvasItemGroup ref={anchorRef} scale={[scaleX, scaleY, 1]}>
@@ -167,7 +167,7 @@ function ViewportSurfaceNative({
         {cyclic ? (
           <ControlFallback
             solveNode={fallbackSolveNode}
-            rect={targetRect}
+            rect={viewportRect}
             renderOrder={renderOrder}
             effectiveZ={effectiveZ}
             // The cycle branch renders no subtree, so the fallback's slot is its subtree's last.
@@ -186,8 +186,8 @@ function ViewportSurfaceNative({
           />
         ) : texture ? (
           <ControlQuad
-            width={targetWidth}
-            height={targetHeight}
+            width={viewportWidth}
+            height={viewportHeight}
             // Measured in Godot 4.6.3 (`comparison.md`, Item 2): 0.8 grey reads 204, 102 under
             // `self_modulate` 0.5 and 51 with an ancestor `modulate` 0.5 on top, a plain multiply.
             color={tint.color}
@@ -203,7 +203,7 @@ function ViewportSurfaceNative({
           <ControlCanvasWalker
             tree={tree}
             generation={generation}
-            viewport={targetRect}
+            viewport={viewportRect}
             theme={theme}
             measurer={measureText}
             // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on every Viewport, and
