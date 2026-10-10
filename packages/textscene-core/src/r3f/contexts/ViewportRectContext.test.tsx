@@ -1,6 +1,6 @@
 /**
- * The forced-rect registry, whose publisher is a `ResizeObserver`. An unchanged
- * measurement keeps the map, "no rect" differs from a zero rect, and a
+ * The forced-rect registry, whose publisher is a stretching container's native
+ * painter. An unchanged rect keeps the map, "no rect" differs from a zero rect, and a
  * departing mount's cleanup leaves a remount's registration alone.
  */
 
@@ -14,6 +14,7 @@ import {
   useViewportRect,
   type ViewportRect,
 } from './ViewportRectContext';
+import { viewportTargetSize } from '../../nodes/viewport/subviewport/targetSize';
 
 /** Renders the rect at `path`, and counts how often it re-rendered. */
 function Reader({ path, onRender }: { path: string; onRender?: (r: ViewportRect | null) => void }) {
@@ -70,7 +71,7 @@ describe('ViewportRectContext', () => {
   });
 
   /**
-   * The ResizeObserver fires on every layout pass, and a fresh Map would
+   * A remounting container republishes the same rect, and a fresh Map would
    * re-render the sub-viewport and re-create its render target each time.
    */
   it('does not re-render a consumer when the measurement is unchanged', () => {
@@ -278,8 +279,7 @@ describe('a sub-viewport sized by a forced rect', () => {
    * in Godot's early return for a non-stretching container.
    */
   function Sized({ path, authored }: { path: string; authored: ViewportRect }) {
-    const forced = useViewportRect(path);
-    const [x, y] = [forced?.x ?? authored.x, forced?.y ?? authored.y];
+    const { x, y } = viewportTargetSize(authored, useViewportRect(path));
     return <span data-testid="size">{`${x}x${y}`}</span>;
   }
 

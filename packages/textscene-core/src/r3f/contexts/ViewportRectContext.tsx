@@ -2,7 +2,7 @@
  * The rects a `SubViewportContainer` forces onto its sub-viewports, by node
  * path: the return leg of ADR-0033's seam. With `stretch` on, Godot's
  * `recalc_force_viewport_sizes` sizes the viewport at `get_size() / stretch_shrink`,
- * and only the container, a DOM box in another reconciler root, knows that rect.
+ * and only the container's native painter, which solves the Control layout, knows that rect.
  */
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
@@ -61,8 +61,8 @@ export function ViewportRectProvider({ children }: { children: ReactNode }) {
       const token = {};
       owners.set(path, token);
       setRects((prev) => {
-        // Stable on an unchanged measurement: a ResizeObserver fires every layout
-        // pass, and a new Map would re-allocate every render target.
+        // Stable on an unchanged rect: a remounting container republishes the
+        // same rect, and a new Map would re-allocate every render target.
         const current = prev.get(path);
         if (current && current.x === rect.x && current.y === rect.y) return prev;
         const next = new Map(prev);

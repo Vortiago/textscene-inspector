@@ -257,6 +257,20 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-container-2d-content.tscn',
     mode: '2d',
   },
+  // `stretch` on: the target takes the container's 300x200, not the authored 200x150. Godot
+  // 4.6.3 `--mode 2d`: (350,255) rgb(255,102,0) in both, within 1/255 on the clear colour.
+  {
+    name: 'sub-viewport-container-stretch-2d-content',
+    file: 'unit-sub-viewport-container-stretch-2d-content.tscn',
+    mode: '2d',
+  },
+  // A 301x201 container at shrink 2: a 150x100 target drawn over the whole rect. Godot 4.6.3
+  // `--mode 2d`: (400,150) rgb(127,127,127) and (200,280) rgb(76,76,76), the last column and row.
+  {
+    name: 'sub-viewport-container-stretch-shrink-odd',
+    file: 'unit-sub-viewport-container-stretch-shrink-odd.tscn',
+    mode: '2d',
+  },
   // A CanvasLayer under the sub-viewport's Camera2D (ADR-0006) stays in viewport pixels. The
   // reference harness disables every Camera2D, as the editor does, so the probe is Godot 4.6.3 at
   // runtime: rgb(0,204,76) at (180,130), where the layer's Badge sits.

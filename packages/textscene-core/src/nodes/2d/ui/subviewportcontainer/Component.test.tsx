@@ -324,3 +324,68 @@ describe('<SubViewportContainer> — the forced sub-viewport size truncates', ()
     expect(seen).toEqual({ x: 66, y: 50 });
   });
 });
+
+/**
+ * With `stretch` on, Godot draws the texture over the container's own rect (`:142`,
+ * `draw_texture_rect(..., Rect2(Vector2(), get_size()))`), whatever size the target truncated to.
+ * With it off, the texture draws at the viewport's own size (`:144`).
+ */
+describe('<SubViewportContainer> — the drawn rect', () => {
+  /** The world-space extent of the quad that samples `texture`. */
+  function drawnSize(renderer: Awaited<ReturnType<typeof mount>>, texture: THREE.Texture) {
+    const quad = renderer.scene
+      .findAll(() => true)
+      .map((n) => n.instance as THREE.Mesh)
+      .find((m) => (m.material as THREE.MeshBasicMaterial | undefined)?.map === texture);
+    quad!.updateWorldMatrix(true, false);
+    const size = new THREE.Box3().setFromObject(quad!).getSize(new THREE.Vector3());
+    return { x: Math.round(size.x * 1000) / 1000, y: Math.round(size.y * 1000) / 1000 };
+  }
+
+  async function mountContainer(
+    containerProps: object,
+    rect: Rect2,
+    entry: ViewportTextureEntry,
+    viewportProps: object = {}
+  ) {
+    return mount(
+      <ViewportRectProvider>
+        <Publisher path="Booth/View" entry={entry} />
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode(containerProps, viewportProps)}
+          rect={rect}
+          renderOrder={0}
+        />
+      </ViewportRectProvider>
+    );
+  }
+
+  it('fills an odd-sized container whose shrink truncates the target', async () => {
+    const entry = fakeEntry();
+    const renderer = await mountContainer(
+      { stretch: true, stretch_shrink: 2 },
+      { x: 0, y: 0, w: 301, h: 201 },
+      entry
+    );
+    expect(drawnSize(renderer, entry.texture)).toEqual({ x: 301, y: 201 });
+  });
+
+  it('fills a container narrower than the 2-pixel viewport floor', async () => {
+    const entry = fakeEntry();
+    const renderer = await mountContainer({ stretch: true }, { x: 0, y: 0, w: 1, h: 40 }, entry);
+    expect(drawnSize(renderer, entry.texture)).toEqual({ x: 1, y: 40 });
+  });
+
+  it('draws past the texture cap at the size Godot gives the viewport', async () => {
+    const entry = fakeEntry();
+    const renderer = await mountContainer({}, RECT, entry, { size: { x: 20000, y: 150 } });
+    expect(drawnSize(renderer, entry.texture)).toEqual({ x: 20000, y: 150 });
+  });
+
+  it('draws at the authored size when the container does not stretch', async () => {
+    const entry = fakeEntry();
+    const renderer = await mountContainer({}, { x: 0, y: 0, w: 640, h: 480 }, entry);
+    expect(drawnSize(renderer, entry.texture)).toEqual({ x: 200, y: 150 });
+  });
+});

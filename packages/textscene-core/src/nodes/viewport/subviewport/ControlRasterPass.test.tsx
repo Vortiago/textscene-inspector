@@ -33,6 +33,7 @@ import {
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { collectControlRasterViewports } from './controlRasterViewports';
 import { ControlRasterPasses } from './ControlRasterPass';
+import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 
 const GUI_SCENE = `[gd_scene format=3]
 
@@ -120,6 +121,12 @@ describe('<ControlRasterPasses>', () => {
     expect(entry).not.toBeNull();
     expect(entry!.size).toEqual({ x: 320, y: 240 });
     expect(entry!.texture.isTexture).toBe(true);
+  });
+
+  it('caps a size Godot opens but WebGL cannot allocate', async () => {
+    const seen: (ViewportTextureEntry | null)[] = [];
+    await mount(parse(GUI_SCENE.replace('Vector2i(320, 240)', 'Vector2i(2000000000, 1)')), seen);
+    expect(seen.at(-1)!.size).toEqual({ x: MAX_TEXTURE_EXTENT, y: 2 });
   });
 
   /**

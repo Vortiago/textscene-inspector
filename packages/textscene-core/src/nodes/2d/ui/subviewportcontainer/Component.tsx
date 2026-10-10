@@ -20,6 +20,7 @@ import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../..
 import { isViewportBoundary } from '../../../viewport/subviewport/viewportBoundary.js';
 import { useViewportContentKind } from '../../../viewport/subviewport/useViewportContentKind.js';
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
+import { viewportSize, viewportTargetSize } from '../../../viewport/subviewport/targetSize.js';
 import type { SubViewportContainerProperties } from './types.js';
 import { WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
 
@@ -72,46 +73,32 @@ function ViewportSurfaceNative({
   tint,
   rtl,
 }: ViewportSurfaceNativeProps) {
-  const props = viewport.properties as SubViewportProperties;
-  const authoredSize = props.size ?? { x: 512, y: 512 };
+  const { size: authoredSize } = viewport.properties as SubViewportProperties;
 
   // `SubViewportContainer::recalc_force_viewport_sizes` (`:94`) is `set_size_force(get_size() /
   // shrink)` into a `Size2i`, and `Vector2::operator Vector2i` (`vector2.cpp:213`) truncates. The raw
   // rect is divided, not a pre-rounded width, or the truncation happens one step too late.
   const forcedSize = useMemo(
-    () => ({
-      // A zero-pixel render target is not allocatable, so the floor is ours;
-      // Godot has no such content to draw either way.
-      x: Math.max(1, Math.trunc(containerRect.w / shrink)),
-      y: Math.max(1, Math.trunc(containerRect.h / shrink)),
-    }),
-    [containerRect.w, containerRect.h, shrink]
+    () =>
+      stretch ? { x: Math.trunc(containerRect.w / shrink), y: Math.trunc(containerRect.h / shrink) } : null,
+    [stretch, containerRect.w, containerRect.h, shrink]
   );
 
-  // With `stretch` off each viewport draws at its own size at the container's top-left, and Godot
-  // never offsets successive children. With it on, the forced size is the target.
-  const width = stretch ? forcedSize.x * shrink : Math.max(1, Math.round(authoredSize.x));
-  const height = stretch ? forcedSize.y * shrink : Math.max(1, Math.round(authoredSize.y));
-
-  // The return leg of ADR-0033's seam: with `stretch` on, Godot resizes the sub-viewport to
-  // `get_size() / stretch_shrink`, and the solved `rect` is already that container rect.
+  // The return leg of ADR-0033's seam. With `stretch` off Godot returns early (`:83-85`), so nothing
+  // is published and the sub-viewport keeps its authored size.
   const registerViewportRect = useRegisterViewportRect();
   useEffect(() => {
-    if (!stretch) return undefined;
+    if (!forcedSize) return undefined;
     return registerViewportRect(path, forcedSize);
-  }, [registerViewportRect, path, stretch, forcedSize]);
+  }, [registerViewportRect, path, forcedSize]);
 
   // By path, since a nested `<SubViewport>` names no ref. A dependency cycle
   // (`ViewportPassRegistryContext.tsx`) reports `cyclic: true` and draws `<ControlFallback>`'s outline,
   // the same "content unavailable" fact. `warnAs` is `null`: the pass driver logs the cycle once.
   const { texture, cyclic } = useViewportTargetSlot(path, null);
 
-  // Controls anchor against the rendered rect (post-shrink when stretching), and the whole target
-  // is then scaled up to fill the container. One predicate decides the rendered size and the
-  // scale, so the two always agree.
-  const shrinking = stretch && shrink > 1;
-  const renderedWidth = shrinking ? forcedSize.x : width;
-  const renderedHeight = shrinking ? forcedSize.y : height;
+  // Controls anchor against the target, which the sub-viewport's own pass sizes the same way.
+  const { x: targetWidth, y: targetHeight } = viewportTargetSize(authoredSize, forcedSize);
 
   const contentKind = useViewportContentKind(viewport);
   const { tree, generation } = useBuildSolveTree(
@@ -121,8 +108,8 @@ function ViewportSurfaceNative({
     rtl
   );
   const controlsViewport: Rect2 = useMemo(
-    () => ({ x: 0, y: 0, w: renderedWidth, h: renderedHeight }),
-    [renderedWidth, renderedHeight]
+    () => ({ x: 0, y: 0, w: targetWidth, h: targetHeight }),
+    [targetWidth, targetHeight]
   );
 
   const fallbackSolveNode = useMemo<SolveNode>(
@@ -163,19 +150,23 @@ function ViewportSurfaceNative({
     [path, viewport, rtl, externalResources, internalResources]
   );
 
-  const scale = shrinking ? shrink : 1;
+  // With `stretch` on, the target draws over the container's whole rect (`:142`). With it off, it
+  // draws at the viewport's own size (`:144`), which differs from the target only past the cap.
+  const drawnSize = stretch ? { x: containerRect.w, y: containerRect.h } : viewportSize(authoredSize, null);
+  const scaleX = drawnSize.x / targetWidth;
+  const scaleY = drawnSize.y / targetHeight;
 
-  // The render target has only `renderedWidth`x`renderedHeight` pixels, so Godot clips by never
+  // The render target has only `targetWidth`x`targetHeight` pixels, so Godot clips by never
   // rendering past its edge. The Controls arm draws three.js objects with no such edge and needs
   // an explicit clip (`ScrollContainer`'s mechanism). The pixel arm's quad is already this size.
   const clipRect = useMemo(
-    () => ({ x: 0, y: 0, w: renderedWidth, h: renderedHeight }),
-    [renderedWidth, renderedHeight]
+    () => ({ x: 0, y: 0, w: targetWidth, h: targetHeight }),
+    [targetWidth, targetHeight]
   );
   const { anchorRef, clip } = useWorldClipPlanes(clipRect);
 
   return (
-    <CanvasItemGroup ref={anchorRef} scale={[scale, scale, 1]}>
+    <CanvasItemGroup ref={anchorRef} scale={[scaleX, scaleY, 1]}>
       <ControlClipProvider value={clip}>
         {cyclic ? (
           <ControlFallback
@@ -199,8 +190,8 @@ function ViewportSurfaceNative({
           />
         ) : texture ? (
           <ControlQuad
-            width={renderedWidth}
-            height={renderedHeight}
+            width={targetWidth}
+            height={targetHeight}
             // Measured in Godot 4.6.3 (`comparison.md`, Item 2): 0.8 grey reads 204, 102 under
             // `self_modulate` 0.5 and 51 with an ancestor `modulate` 0.5 on top, a plain multiply.
             color={tint.color}

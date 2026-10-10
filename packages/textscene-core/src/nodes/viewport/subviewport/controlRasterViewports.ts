@@ -31,8 +31,6 @@ export interface ControlRasterViewport extends SceneScope {
   path: string;
   /** The sub-viewport node, collapsed if it is itself an instance root. */
   node: TscnNode;
-  /** Target size in pixels: the rect its Controls are laid out against. */
-  size: { x: number; y: number };
   /** `transparent_bg`: false means the target clears to Godot's default clear colour. */
   transparentBg: boolean;
   /**
@@ -43,9 +41,6 @@ export interface ControlRasterViewport extends SceneScope {
    */
   inheritedRtl: boolean | null;
 }
-
-/** Godot's `SubViewport.size` default, `Vector2i(512, 512)`. */
-const DEFAULT_SIZE = 512;
 
 /**
  * Every Control-only sub-viewport in `roots`, depth-first, with its path and the
@@ -95,10 +90,6 @@ export function collectControlRasterViewports(
         found.push({
           path,
           node: effective,
-          size: {
-            x: Math.max(1, Math.round(properties.size?.x ?? DEFAULT_SIZE)),
-            y: Math.max(1, Math.round(properties.size?.y ?? DEFAULT_SIZE)),
-          },
           transparentBg: properties.transparent_bg === true,
           inheritedRtl,
           ...effectiveScope,
