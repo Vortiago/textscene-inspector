@@ -75,7 +75,7 @@ float godotDiffuseNL( const in float dotNLRaw, const in float dotNVRaw, const in
  * stretched alphas. Godot's Fresnel is exact Schlick with f90 from F0 (`:256-261`).
  */
 const SPECULAR_BRDF = /* glsl */ `
-// Godot's float order (:16-21), not three's algebraically equal D_GGX, which rounds differently.
+// Godot's D_GGX (:16-26) operation for operation, not three's algebraically equal D_GGX.
 float godotGGXDistribution( const in float cNdotH, const in float alpha ) {
 	float a = cNdotH * alpha;
 	float k = alpha / ( 1.0 - cNdotH * cNdotH + a * a );
