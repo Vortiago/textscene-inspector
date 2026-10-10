@@ -9,6 +9,7 @@ import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
+import { patchedFragment } from '../../../r3f/testing/patchedFragment';
 
 function build(
   properties: Record<string, string>,
@@ -280,12 +281,12 @@ describe('the imperative adapter — physical-only features', () => {
     expect(material.thickness).toBeCloseTo(0.2, 5);
   });
 
-  it('maps a negative anisotropy to full strength turned 90°', () => {
+  it('maps a negative anisotropy to its magnitude, unturned, with the sign in its program', () => {
     const material = buildMaterial(
       parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '-0.75' })
     ) as THREE.MeshPhysicalMaterial;
-    expect(material.anisotropy).toBeCloseTo(0.75, 5);
-    expect(material.anisotropyRotation).toBeCloseTo(Math.PI / 2, 5);
+    expect([material.anisotropy, material.anisotropyRotation]).toEqual([0.75, 0]);
+    expect(patchedFragment(material)).toContain('#define GODOT_ANISOTROPY_NEGATIVE\n');
   });
 
   it('stays a MeshStandardMaterial when every physical flag is off', () => {

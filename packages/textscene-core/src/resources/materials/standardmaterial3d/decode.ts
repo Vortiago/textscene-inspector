@@ -136,9 +136,6 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
 
   const normalScale = floatOr(properties['normal_scale'], 1, CONTEXT);
 
-  // `anisotropy` is −1..1, where the sign is the tangent direction. three splits it
-  // into a 0..1 magnitude and a rotation, so a negative value keeps its strength and
-  // turns the highlight 90°.
   const anisotropyRaw = floatOr(properties['anisotropy'], 0, CONTEXT);
 
   // FEATURE_REFRACTION replaces the `ALPHA *= albedo.a * albedo_tex.a` line with
@@ -205,8 +202,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     heightmapScale: heightmapEnabled ? floatOr(properties['heightmap_scale'], 5, CONTEXT) : 0,
     billboardMode: intOr(properties['billboard_mode'], 0, CONTEXT),
     billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
-    anisotropy: anisotropyEnabled ? clamp01(Math.abs(anisotropyRaw)) : 0,
-    anisotropyRotation: anisotropyEnabled && anisotropyRaw < 0 ? Math.PI / 2 : 0,
+    anisotropy: anisotropyEnabled ? Math.min(1, Math.max(-1, anisotropyRaw)) : 0,
     // Godot refraction is a screen-space distortion; three models the same
     // "see the background through this surface" effect volumetrically, so
     // `refraction_scale` drives `thickness` and cannot go negative there.

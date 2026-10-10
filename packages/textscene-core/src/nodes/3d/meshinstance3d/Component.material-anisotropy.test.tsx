@@ -1,7 +1,7 @@
 /**
  * StandardMaterial3D anisotropy upgrades the slot to `<meshPhysicalMaterial>`, the
- * only three.js material with it: `anisotropy` is the strength, `anisotropyRotation`
- * π/2 for a negative value, and `anisotropyMap` the repacked `anisotropy_flowmap`.
+ * only three.js material with it: `anisotropy` is the strength, a negative value defines its
+ * sign in the program, and `anisotropyMap` is the repacked `anisotropy_flowmap`.
  * Every other material stays `MeshStandardMaterial`.
  */
 import { describe, expect, it } from 'vitest';
@@ -17,6 +17,9 @@ import { preloadResource } from '../../../resources/testing/preloadResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { patchedFragment } from '../../../r3f/testing/patchedFragment';
+
+const DRAWS_NEGATIVE_ANISOTROPY = '#define GODOT_ANISOTROPY_NEGATIVE\n';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 
@@ -52,7 +55,7 @@ function tree(
 }
 
 describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
-  it('renders a positive anisotropy as MeshPhysicalMaterial with strength and no rotation', async () => {
+  it('renders a positive anisotropy as MeshPhysicalMaterial with its strength and no sign define', async () => {
     const loader = loaderServing();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: {} },
@@ -70,10 +73,10 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     expect(physical).toHaveLength(1);
     const material = physical[0]!;
     expect(material.anisotropy).toBeCloseTo(0.8, 5);
-    expect(material.anisotropyRotation).toBeCloseTo(0, 5);
+    expect(patchedFragment(material)).not.toContain(DRAWS_NEGATIVE_ANISOTROPY);
   });
 
-  it('renders a negative anisotropy with a 90° perpendicular rotation', async () => {
+  it('renders a negative anisotropy with its magnitude and a sign define', async () => {
     const loader = loaderServing();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: {} },
@@ -90,8 +93,9 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
     const material = physical[0]!;
-    expect(material.anisotropy).toBeCloseTo(0.8, 5); // magnitude preserved
-    expect(material.anisotropyRotation).toBeCloseTo(Math.PI / 2, 5); // direction flipped perpendicular
+    // `scene_forward_lights_inc.glsl:242-245`: the sign picks the stretched axis.
+    expect(material.anisotropy).toBeCloseTo(0.8, 5);
+    expect(patchedFragment(material)).toContain(DRAWS_NEGATIVE_ANISOTROPY);
   });
 
   it('keeps a material with no anisotropy on the standard (non-physical) material', async () => {

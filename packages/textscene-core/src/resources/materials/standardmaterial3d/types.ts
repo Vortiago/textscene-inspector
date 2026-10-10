@@ -207,10 +207,11 @@ export interface StandardMaterial3DData {
    * billboarding (`material.cpp:1274-1281`). It rides the built material's `userData`.
    */
   billboardKeepScale: boolean;
-  /** `anisotropy` magnitude (0..1), gated on `anisotropy_enabled`. */
+  /**
+   * `anisotropy` (−1..1), gated on `anisotropy_enabled`. The sign picks the axis the highlight
+   * stretches along: the tangent when positive, the bitangent when negative.
+   */
   anisotropy: number;
-  /** `anisotropy` direction: 0 when positive, π/2 when negative. */
-  anisotropyRotation: number;
   /** three's `transmission`: 1 when `refraction_enabled`, 0 otherwise. */
   transmission: number;
   /** three's `thickness`, from `refraction_scale`, clamped ≥ 0. */
@@ -280,7 +281,6 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   billboardMode: number;
   billboardKeepScale: boolean;
   anisotropy: number;
-  anisotropyRotation: number;
   transmission: number;
   refractionThickness: number;
   /** Slot → raw reference string, carried through for the loader's resolution. */

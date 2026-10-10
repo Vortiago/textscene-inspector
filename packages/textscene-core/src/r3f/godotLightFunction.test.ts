@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   GODOT_LIGHT_FUNCTION_EDITS,
+  anisotropyInjection,
   diffuseModeInjection,
   diffuseModeOf,
   diffuseModeUserData,
@@ -74,10 +75,10 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
     expect(godotLightChunk()).toContain('irradiance * specularBRDF * material.multiScatteringCompensation');
   });
 
-  it("draws an isotropic light's specular with Godot's GGX", () => {
+  it("draws a light's specular with Godot's GGX", () => {
     // `scene_forward_lights_inc.glsl:239-262`.
-    expect(godotLightChunk()).toMatch(
-      /#else\s*vec3 specularBRDF = godotSpecularBRDF\( directLight\.direction, geometryViewDir, geometryNormal, material \);/
+    expect(godotLightChunk().split('void RE_Direct_Physical(')[1]).toContain(
+      'vec3 specularBRDF = godotSpecularBRDF( directLight.direction, geometryViewDir, geometryNormal, material );'
     );
   });
 
@@ -89,11 +90,24 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
     );
   });
 
-  it("feeds the anisotropic lobe Godot's roughness", () => {
-    const ggx = godotLightChunk().split('vec3 BRDF_GGX(')[1]!.split('float alpha')[0];
-    expect(ggx).toContain('float roughness = material.godotRoughness;');
+  it("stretches the anisotropic lobe by Godot's aspect ratio of its roughness", () => {
+    // `scene_forward_lights_inc.glsl:241-245`.
+    const setup = godotChunks()[SETUP_CHUNK];
+    expect(setup).toContain('float godotAspect = sqrt( 1.0 - godotAnisotropy * 0.9 );');
+    expect(setup).toContain('material.alphaT = pow2( material.godotRoughness ) / godotAspect;');
+    expect(setup).toContain('material.godotAlphaB = pow2( material.godotRoughness ) * godotAspect;');
+  });
+
+  it('turns the frame by the flowmap only above 0.01, as Godot does (edge case)', () => {
+    // `scene_forward_clustered.glsl:1456-1461`.
     expect(godotChunks()[SETUP_CHUNK]).toContain(
-      'material.alphaT = mix( pow2( material.godotRoughness ), 1.0, pow2( material.anisotropy ) );'
+      'if ( godotAnisotropy <= 0.01 ) anisotropyV = vec2( 1.0, 0.0 );'
+    );
+  });
+
+  it('reads a negative anisotropy from its define (edge case)', () => {
+    expect(godotChunks()[SETUP_CHUNK]).toMatch(
+      /#ifdef GODOT_ANISOTROPY_NEGATIVE\s*float godotAnisotropy = - material\.anisotropy;/
     );
   });
 });
@@ -133,6 +147,24 @@ describe('installGodotLightFunction', () => {
 
     expect(warnings).toEqual([]);
     expect(installedChunks()).toEqual(godotChunks());
+  });
+});
+
+describe('anisotropyInjection', () => {
+  it('defines the sign of a negative anisotropy', () => {
+    const fragment = patchedShader(
+      anisotropyInjection(-0.5)!.onBeforeCompile,
+      THREE.ShaderLib.physical.fragmentShader
+    );
+    expect(fragment).toMatch(/^#define GODOT_ANISOTROPY_NEGATIVE\n/);
+  });
+
+  it('patches nothing for a positive anisotropy', () => {
+    expect(anisotropyInjection(0.5)).toBeUndefined();
+  });
+
+  it('patches nothing for 0, which three draws isotropic (edge case)', () => {
+    expect(anisotropyInjection(0)).toBeUndefined();
   });
 });
 

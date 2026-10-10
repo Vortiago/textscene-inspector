@@ -68,9 +68,9 @@ float godotDiffuseNL( const in float dotNLRaw, const in float dotNVRaw, const in
 `;
 
 /**
- * Godot's isotropic GGX specular (\`scene_forward_lights_inc.glsl:16-32,239-262\`), divided by N.L as
- * three's \`irradiance\` carries it. Godot draws no specular at roughness 0 (\`:222\`), and its
- * Fresnel is exact Schlick with f90 from F0 (\`:258-260\`).
+ * Godot's GGX specular (\`scene_forward_lights_inc.glsl:16-47,239-262\`), divided by N.L as three's
+ * \`irradiance\` carries it. three's anisotropic D and V have Godot's form, so they take Godot's
+ * stretched alphas. Godot's Fresnel is exact Schlick with f90 from F0 (\`:258-260\`).
  */
 const SPECULAR_BRDF = /* glsl */ `
 float godotGGXDistribution( const in float cNdotH, const in float alpha ) {
@@ -86,7 +86,6 @@ float godotGGXVisibility( const in float cNdotL, const in float cNdotV, const in
 vec3 godotSpecularBRDF( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in PhysicalMaterial material ) {
 	float cNdotL = saturate( dot( normal, lightDir ) );
 	if ( cNdotL <= 0.0 ) return vec3( 0.0 );
-	float alpha = pow2( material.godotRoughness );
 	vec3 halfDir = normalize( lightDir + viewDir );
 	float cNdotV = max( dot( normal, viewDir ), 1e-4 );
 	float cNdotH = saturate( dot( normal, halfDir ) );
@@ -94,7 +93,17 @@ vec3 godotSpecularBRDF( const in vec3 lightDir, const in vec3 viewDir, const in 
 	vec3 f0 = material.specularColorBlended;
 	float f90 = clamp( dot( f0, vec3( 50.0 * 0.33 ) ), material.metalness, 1.0 );
 	vec3 F = f0 + ( f90 - f0 ) * godotSchlickFresnel( cLdotH );
-	return F * godotGGXDistribution( cNdotH, alpha ) * godotGGXVisibility( cNdotL, cNdotV, alpha );
+	#ifdef USE_ANISOTROPY
+		vec3 T = material.anisotropyT;
+		vec3 B = material.anisotropyB;
+		float D = D_GGX_Anisotropic( material.alphaT, material.godotAlphaB, cNdotH, dot( T, halfDir ), dot( B, halfDir ) );
+		float V = V_GGX_SmithCorrelated_Anisotropic( material.alphaT, material.godotAlphaB, dot( T, viewDir ), dot( B, viewDir ), dot( T, lightDir ), dot( B, lightDir ), cNdotV, cNdotL );
+	#else
+		float alpha = pow2( material.godotRoughness );
+		float D = godotGGXDistribution( cNdotH, alpha );
+		float V = godotGGXVisibility( cNdotL, cNdotV, alpha );
+	#endif
+	return F * D * V;
 }
 
 `;
@@ -114,50 +123,55 @@ const DIRECT_DIFFUSE = /* glsl */ `vec3 godotDiffuseIrradiance = godotDiffuseNL(
 const THREE_DIRECT_SPECULAR =
   'vec3 specularBRDF = BRDF_GGX( directLight.direction, geometryViewDir, geometryNormal, material );';
 
-/**
- * three's anisotropic D and V have the form of Godot's (\`scene_forward_lights_inc.glsl:34-47\`), so
- * they stay, fed Godot's roughness. Godot spreads the lobe by an aspect ratio, not three's \`alphaT\`,
- * so the anisotropic highlight keeps three's shape.
- */
-const DIRECT_SPECULAR = /* glsl */ `#ifdef USE_ANISOTROPY
-		${THREE_DIRECT_SPECULAR}
-	#else
-		vec3 specularBRDF = godotSpecularBRDF( directLight.direction, geometryViewDir, geometryNormal, material );
-	#endif`;
+const DIRECT_SPECULAR =
+  'vec3 specularBRDF = godotSpecularBRDF( directLight.direction, geometryViewDir, geometryNormal, material );';
 
 const THREE_SPECULAR_SUM =
   'reflectedLight.directSpecular += irradiance * specularBRDF * material.multiScatteringCompensation;';
 
 /**
  * Godot draws no specular at roughness 0 (\`scene_forward_lights_inc.glsl:222\`). The rule sits on the
- * sum, after every branch that sets \`specularBRDF\`, as three's GGX is NaN at alpha 0.
+ * sum, after every branch that sets \`specularBRDF\`, as GGX is NaN at alpha 0.
  */
 const SPECULAR_SUM = /* glsl */ `if ( material.godotRoughness <= 0.0 ) specularBRDF = vec3( 0.0 );
 	${THREE_SPECULAR_SUM}`;
 
-/** The line on three's roughness, read from Godot's instead. */
-const onGodotRoughness = (line: string) => line.replace('material.roughness', 'material.godotRoughness');
-
-/** \`BRDF_GGX\`'s roughness, the two lines that tell it from \`BRDF_GGX_Clearcoat\` and the area light. */
-const THREE_GGX_ROUGHNESS = 'float f90 = material.specularF90;\n\tfloat roughness = material.roughness;';
 const THREE_ALPHA_T =
   'material.alphaT = mix( pow2( material.roughness ), 1.0, pow2( material.anisotropy ) );';
+
+/**
+ * Godot stretches the lobe by an aspect ratio of the signed \`anisotropy\` (\`scene_forward_lights_inc.glsl:242-245\`).
+ * three carries the magnitude, and a negative value defines its sign. Godot turns the frame by the
+ * flowmap only above 0.01 (\`scene_forward_clustered.glsl:1456-1461\`).
+ */
+const GODOT_ALPHAS = /* glsl */ `#ifdef GODOT_ANISOTROPY_NEGATIVE
+		float godotAnisotropy = - material.anisotropy;
+	#else
+		float godotAnisotropy = material.anisotropy;
+	#endif
+	if ( godotAnisotropy <= 0.01 ) anisotropyV = vec2( 1.0, 0.0 );
+	float godotAspect = sqrt( 1.0 - godotAnisotropy * 0.9 );
+	material.alphaT = pow2( material.godotRoughness ) / godotAspect;
+	material.godotAlphaB = pow2( material.godotRoughness ) * godotAspect;`;
 
 type LightChunk = typeof CHUNK | typeof SETUP_CHUNK;
 
 /**
- * Each edit to three's chunks: Godot's roughness beside three's, Godot's light terms, the direct
- * specular and anisotropic lobe on Godot's roughness, no specular at roughness 0, and each diffuse
- * line without its Fresnel weight.
+ * Each edit to three's chunks: Godot's roughness and anisotropic alphas beside three's, Godot's
+ * light terms, Godot's direct specular with none at roughness 0, and each diffuse line without its
+ * Fresnel weight.
  */
 export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
-  { chunk: CHUNK, three: MATERIAL_STRUCT, godot: `${MATERIAL_STRUCT}\n\tfloat godotRoughness;` },
+  {
+    chunk: CHUNK,
+    three: MATERIAL_STRUCT,
+    godot: `${MATERIAL_STRUCT}\n\tfloat godotRoughness;\n\tfloat godotAlphaB;`,
+  },
   { chunk: SETUP_CHUNK, three: ROUGHNESS_SETUP, godot: GODOT_ROUGHNESS },
   { chunk: CHUNK, three: RE_DIRECT, godot: `${DIFFUSE_NL}${SPECULAR_BRDF}${RE_DIRECT}` },
   { chunk: CHUNK, three: THREE_DIRECT_SPECULAR, godot: DIRECT_SPECULAR },
   { chunk: CHUNK, three: THREE_SPECULAR_SUM, godot: SPECULAR_SUM },
-  { chunk: CHUNK, three: THREE_GGX_ROUGHNESS, godot: onGodotRoughness(THREE_GGX_ROUGHNESS) },
-  { chunk: SETUP_CHUNK, three: THREE_ALPHA_T, godot: onGodotRoughness(THREE_ALPHA_T) },
+  { chunk: SETUP_CHUNK, three: THREE_ALPHA_T, godot: GODOT_ALPHAS },
   {
     chunk: CHUNK,
     three:
@@ -216,6 +230,14 @@ const MODE_INJECTIONS: ReadonlyMap<number, ProgramInjection> = new Map(
 export function diffuseModeInjection(mode: number): ProgramInjection | undefined {
   if (mode === DiffuseMode.DIFFUSE_BURLEY) return undefined;
   return MODE_INJECTIONS.get(mode) ?? MODE_INJECTIONS.get(DiffuseMode.DIFFUSE_LAMBERT);
+}
+
+/** Godot's \`anisotropy\` is signed, and three's is a magnitude, so a negative one brings its sign. */
+const NEGATIVE_ANISOTROPY = defining('GODOT_ANISOTROPY_NEGATIVE');
+
+/** What a material with this \`anisotropy\` compiles with: nothing unless it is negative. */
+export function anisotropyInjection(anisotropy: number): ProgramInjection | undefined {
+  return anisotropy < 0 ? NEGATIVE_ANISOTROPY : undefined;
 }
 
 /** Where a material records the `diffuse_mode` of the surface it draws. */

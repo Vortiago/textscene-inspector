@@ -63,7 +63,6 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     billboardMode: data.billboardMode,
     billboardKeepScale: data.billboardKeepScale,
     anisotropy: data.anisotropy,
-    anisotropyRotation: data.anisotropyRotation,
     transmission: data.transmission,
     refractionThickness: data.refractionThickness,
     textureSlots: data.textureSlots,
