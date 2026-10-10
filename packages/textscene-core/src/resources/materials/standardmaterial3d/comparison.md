@@ -65,6 +65,13 @@ The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the r
 
 `diffuse_mode` picks the light's diffuse term: Burley, Lambert, Lambert wrap and toon, left to right, lit from the right. Both engines brighten Burley's rim, wrap the light past Lambert's terminator and band the toon sphere. Godot's default material draws Lambert.
 
+## Specular mode
+<!-- compare: image=unit-material-specular-mode status=done fixture=unit-material-specular-mode.tscn -->
+
+`specular_mode` picks the light's specular term: SchlickGGX, toon and disabled, left to right. Both engines draw a soft highlight, a hard-edged toon disc and no highlight. Toon writes to the diffuse, so the albedo tints it.
+
+- **Approximated** The preview glow spreads the toon disc's halo less than Godot's.
+
 ## Refraction
 <!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
 

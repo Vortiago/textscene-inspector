@@ -14,8 +14,9 @@ import {
 } from './materialBag';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
-import { diffuseModeUserData } from '../../../r3f/godotLightFunction';
+import { lightModesUserData } from '../../../r3f/godotLightFunction';
 import { DiffuseMode } from '../../../godot/diffuseMode';
+import { SpecularMode } from '../../../godot/specularMode';
 import {
   DRAWN_OPAQUE_PREPASS,
   FADED_OPAQUE_PREPASS,
@@ -29,6 +30,7 @@ import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 import {
   DRAWS_LAMBERT_DIFFUSE,
+  DRAWS_TOON_SPECULAR,
   DROPS_ALBEDO_ALPHA,
   OCCLUDES_DIRECT_LIGHT,
   WRITES_OPAQUE_AFTER_CUT,
@@ -222,26 +224,36 @@ describe('standardMaterialBags — AO on direct light', () => {
   });
 });
 
-describe('standardMaterialBags — diffuse mode', () => {
-  it('records the mode, for a decal to shade its projection with', () => {
-    expect(materialFromBag(bag({ diffuse_mode: '2' })).userData).toMatchObject(
-      diffuseModeUserData(DiffuseMode.DIFFUSE_LAMBERT_WRAP)
+describe('standardMaterialBags — light modes', () => {
+  it('records the modes, for a decal to shade its projection with', () => {
+    expect(materialFromBag(bag({ diffuse_mode: '2', specular_mode: '1' })).userData).toMatchObject(
+      lightModesUserData({
+        diffuseMode: DiffuseMode.DIFFUSE_LAMBERT_WRAP,
+        specularMode: SpecularMode.SPECULAR_TOON,
+      })
     );
   });
 
-  it("records Lambert on Godot's default surface", () => {
+  it("records Lambert and GGX on Godot's default surface", () => {
     expect(materialFromBag(standardMaterialBags(null).unfaded).userData).toMatchObject(
-      diffuseModeUserData(DiffuseMode.DIFFUSE_LAMBERT)
+      lightModesUserData({
+        diffuseMode: DiffuseMode.DIFFUSE_LAMBERT,
+        specularMode: SpecularMode.SPECULAR_SCHLICK_GGX,
+      })
     );
   });
 
-  it('patches nothing for Burley, the term the lighting chunk writes by default', () => {
-    // `material.h:608`.
+  it('patches nothing for Burley and GGX, the terms the lighting chunk writes by default', () => {
+    // `material.h:608-609`.
     expect(bag({}).injection).toBeUndefined();
   });
 
   it("writes a lit surface's diffuse in its authored mode", () => {
     expect(patchedFragment(materialFromBag(bag({ diffuse_mode: '1' })))).toContain(DRAWS_LAMBERT_DIFFUSE);
+  });
+
+  it("writes a lit surface's specular in its authored mode", () => {
+    expect(patchedFragment(materialFromBag(bag({ specular_mode: '1' })))).toContain(DRAWS_TOON_SPECULAR);
   });
 
   it("writes a physical surface's diffuse in its authored mode too", () => {

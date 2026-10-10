@@ -1,14 +1,19 @@
 /**
  * The materials a decal draws its projections with. Godot's decal replaces only the receiver's
  * albedo (`scene_forward_clustered.glsl:1610`) unless an ORM texture is set (`:1627-1636`), so
- * the receiver's roughness, metallic and `diffuse_mode` still shade it. Receivers that agree on
- * those share one material.
+ * the receiver's roughness, metallic, `diffuse_mode` and `specular_mode` still shade it. Receivers
+ * that agree on those share one material.
  */
 
 import * as THREE from 'three';
 import { injectProgram } from '../../../r3f/materialProgramInputs';
-import { diffuseModeInjection, diffuseModeOf, diffuseModeUserData } from '../../../r3f/godotLightFunction';
-import { DiffuseMode } from '../../../godot/diffuseMode';
+import {
+  drawsLightModesOf,
+  lightModesInjection,
+  lightModesOf,
+  lightModesUserData,
+  type LightModes,
+} from '../../../r3f/godotLightFunction';
 
 /** What every projection of one decal shares: its texture, tint and opacity. */
 export interface DecalProjectionLook {
@@ -21,15 +26,11 @@ export interface DecalProjectionLook {
 interface ReceiverShading {
   roughness: number;
   metalness: number;
-  diffuseMode: number;
+  lightModes: LightModes;
 }
 
 /** A receiver drawn without PBR terms, such as an unshaded one, shades as BaseMaterial3D's defaults. */
-const DEFAULT_SHADING: ReceiverShading = {
-  roughness: 1,
-  metalness: 0,
-  diffuseMode: DiffuseMode.DIFFUSE_BURLEY,
-};
+const DEFAULT_PBR = { roughness: 1, metalness: 0 };
 
 /** The material whose terms shade every projection onto `receiver`. */
 function firstSurface(receiver: THREE.Mesh): THREE.Material | undefined {
@@ -39,20 +40,18 @@ function firstSurface(receiver: THREE.Mesh): THREE.Material | undefined {
 /** The first surface's terms, as a projection spans a receiver's surfaces with one material. */
 function receiverShading(receiver: THREE.Mesh): ReceiverShading {
   const material = firstSurface(receiver);
-  if (!material) return DEFAULT_SHADING;
-  const pbr = material instanceof THREE.MeshStandardMaterial ? material : DEFAULT_SHADING;
-  return { roughness: pbr.roughness, metalness: pbr.metalness, diffuseMode: diffuseModeOf(material) };
+  const pbr = material instanceof THREE.MeshStandardMaterial ? material : DEFAULT_PBR;
+  return { roughness: pbr.roughness, metalness: pbr.metalness, lightModes: lightModesOf(material) };
 }
 
 /** Whether `projection` still shades as `receiver` does. It allocates nothing, as it runs each frame. */
 function shadesAlike(projection: THREE.MeshStandardMaterial, receiver: THREE.Mesh): boolean {
   const material = firstSurface(receiver);
-  const pbr = material instanceof THREE.MeshStandardMaterial ? material : DEFAULT_SHADING;
-  const diffuseMode = material ? diffuseModeOf(material) : DEFAULT_SHADING.diffuseMode;
+  const pbr = material instanceof THREE.MeshStandardMaterial ? material : DEFAULT_PBR;
   return (
     projection.roughness === pbr.roughness &&
     projection.metalness === pbr.metalness &&
-    diffuseModeOf(projection) === diffuseMode
+    drawsLightModesOf(projection, material)
   );
 }
 
@@ -74,9 +73,9 @@ function projectionMaterial(look: DecalProjectionLook, shading: ReceiverShading)
     polygonOffset: true,
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1,
-    userData: diffuseModeUserData(shading.diffuseMode),
+    userData: lightModesUserData(shading.lightModes),
   });
-  injectProgram(material, diffuseModeInjection(shading.diffuseMode));
+  injectProgram(material, lightModesInjection(shading.lightModes));
   return material;
 }
 
@@ -134,7 +133,8 @@ export class DecalProjectionMaterials {
 
   private materialFor(receiver: THREE.Mesh): THREE.MeshStandardMaterial {
     const shading = receiverShading(receiver);
-    const key = `${shading.roughness}|${shading.metalness}|${shading.diffuseMode}`;
+    const { diffuseMode, specularMode } = shading.lightModes;
+    const key = `${shading.roughness}|${shading.metalness}|${diffuseMode}|${specularMode}`;
     let material = this.byShading.get(key);
     if (!material) {
       material = projectionMaterial(this.look, shading);

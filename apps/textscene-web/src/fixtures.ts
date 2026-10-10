@@ -2983,6 +2983,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Specular Mode",
+    "file": "unit-material-specular-mode.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Texture Filter",
     "file": "unit-material-texture-filter.tscn",
     "category": "Unit - Materials"

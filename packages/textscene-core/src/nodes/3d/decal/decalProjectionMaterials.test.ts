@@ -1,9 +1,14 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { DecalProjectionMaterials } from './decalProjectionMaterials';
-import { diffuseModeUserData } from '../../../r3f/godotLightFunction';
+import { lightModesUserData } from '../../../r3f/godotLightFunction';
 import { DiffuseMode } from '../../../godot/diffuseMode';
-import { DRAWS_LAMBERT_DIFFUSE, patchedFragment } from '../../../r3f/testing/patchedFragment';
+import { SpecularMode } from '../../../godot/specularMode';
+import {
+  DRAWS_LAMBERT_DIFFUSE,
+  DRAWS_TOON_SPECULAR,
+  patchedFragment,
+} from '../../../r3f/testing/patchedFragment';
 
 function materials(): DecalProjectionMaterials {
   return new DecalProjectionMaterials({
@@ -19,7 +24,12 @@ function receiver(material: THREE.Material): THREE.Mesh {
 
 function lambertReceiver(): THREE.Mesh {
   return receiver(
-    new THREE.MeshStandardMaterial({ userData: diffuseModeUserData(DiffuseMode.DIFFUSE_LAMBERT) })
+    new THREE.MeshStandardMaterial({
+      userData: lightModesUserData({
+        diffuseMode: DiffuseMode.DIFFUSE_LAMBERT,
+        specularMode: SpecularMode.SPECULAR_SCHLICK_GGX,
+      }),
+    })
   );
 }
 
@@ -33,6 +43,18 @@ describe('DecalProjectionMaterials', () => {
     expect(patchedFragment(projectionMaterial(materials(), lambertReceiver()))).toContain(
       DRAWS_LAMBERT_DIFFUSE
     );
+  });
+
+  it("shades the projection in the receiver's specular mode", () => {
+    const toonReceiver = receiver(
+      new THREE.MeshStandardMaterial({
+        userData: lightModesUserData({
+          diffuseMode: DiffuseMode.DIFFUSE_BURLEY,
+          specularMode: SpecularMode.SPECULAR_TOON,
+        }),
+      })
+    );
+    expect(patchedFragment(projectionMaterial(materials(), toonReceiver))).toContain(DRAWS_TOON_SPECULAR);
   });
 
   it('shades the projection of a receiver with no recorded mode in Burley, as a glTF import is', () => {

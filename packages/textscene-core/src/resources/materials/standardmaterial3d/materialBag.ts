@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import {
   GODOT_DEFAULT_ALBEDO,
-  GODOT_DEFAULT_DIFFUSE_MODE,
+  GODOT_DEFAULT_LIGHT_MODES,
   GODOT_DEFAULT_METALLIC,
   GODOT_DEFAULT_ROUGHNESS,
 } from '../../../r3f/materials/godotDefaultMaterial';
@@ -17,7 +17,7 @@ import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../..
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
-import { diffuseModeInjection, diffuseModeUserData, threeAnisotropy } from '../../../r3f/godotLightFunction';
+import { lightModesInjection, lightModesUserData, threeAnisotropy } from '../../../r3f/godotLightFunction';
 import {
   GODOT_AMBIENT_OCCLUSION,
   ambientOcclusionUserData,
@@ -74,9 +74,9 @@ function noMaterialBag(): StandardMaterialBag {
       metalness: GODOT_DEFAULT_METALLIC,
       roughness: GODOT_DEFAULT_ROUGHNESS,
       side: THREE.FrontSide,
-      userData: diffuseModeUserData(GODOT_DEFAULT_DIFFUSE_MODE),
+      userData: lightModesUserData(GODOT_DEFAULT_LIGHT_MODES),
     },
-    injection: diffuseModeInjection(GODOT_DEFAULT_DIFFUSE_MODE),
+    injection: lightModesInjection(GODOT_DEFAULT_LIGHT_MODES),
   };
 }
 
@@ -158,7 +158,7 @@ const CASTS_SHADOW_KEY = 'godotCastsShadow';
 /**
  * Surface state on `userData`, not as material props: the draw hooks apply billboard, shadow and
  * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO uniforms read theirs at upload, and
- * a decal reads `diffuse_mode`. A fresh object per bag, as the `.tres` loader writes keys into it.
+ * a decal reads the light modes. A fresh object per bag, as the `.tres` loader writes keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
@@ -166,7 +166,7 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
     [CASTS_SHADOW_KEY]: scalars.castsShadow,
     ...alphaHashScaleUserData(scalars.alphaHashScale),
     ...ambientOcclusionUserData(scalars.aoLightAffect, scalars.aoTextureChannelMask),
-    ...diffuseModeUserData(scalars.diffuseMode),
+    ...lightModesUserData(scalars),
   };
 }
 
@@ -326,7 +326,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
   // Godot's AO sampler is `hint_default_white` (`material.cpp:1128`), so a surface with no map
   // occludes nothing.
   const injection = composeInjections([
-    diffuseModeInjection(scalars.diffuseMode),
+    lightModesInjection(scalars),
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
   ]);
   if (!needsPhysicalMaterial(scalars)) return { materialClass: 'standard', props: pbr, injection };

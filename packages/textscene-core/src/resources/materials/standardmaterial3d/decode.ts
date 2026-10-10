@@ -12,6 +12,7 @@ import { parseVector3 } from '../../../parser/vectors';
 import { drawsInShadowPass, type PassMembership } from '../../../godot/shadowPass';
 import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/textureChannel';
 import { DiffuseMode } from '../../../godot/diffuseMode';
+import { SpecularMode } from '../../../godot/specularMode';
 import { clamp } from '../../../godot/math';
 import { emissionScalars } from './emission';
 import {
@@ -180,6 +181,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     shadingMode: properties['shading_mode'] === '0' ? 'unshaded' : 'per_pixel',
     // `material.cpp:2462-2468`: the setter checks no range.
     diffuseMode: intOr(properties['diffuse_mode'], DiffuseMode.DIFFUSE_BURLEY, CONTEXT),
+    specularMode: intOr(properties['specular_mode'], SpecularMode.SPECULAR_SCHLICK_GGX, CONTEXT),
     useVertexColors: boolOr(properties['vertex_color_use_as_albedo'], false, CONTEXT),
     aoLightAffect: floatOr(properties['ao_light_affect'], 0, CONTEXT),
     aoTextureChannel: enumOr(

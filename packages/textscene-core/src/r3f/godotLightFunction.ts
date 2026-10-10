@@ -6,9 +6,10 @@
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
-import type { ProgramInjection } from './materialProgramInputs.js';
+import { composeInjections, type ProgramInjection } from './materialProgramInputs.js';
 import type { Material } from 'three';
 import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../godot/diffuseMode.js';
+import { SPECULAR_MODE_NAMES, SpecularMode } from '../godot/specularMode.js';
 import { recordedOn } from './materials/recordedOnMaterial.js';
 import { ROUGHNESS_LIMITER_AMOUNT, ROUGHNESS_LIMITER_LIMIT } from '../godot/roughnessLimiter.js';
 import { glslFloat } from '../resources/environment/glslLiterals.js';
@@ -69,9 +70,9 @@ float godotDiffuseNL( const in float dotNLRaw, const in float dotNVRaw, const in
 `;
 
 /**
- * Godot's GGX specular (\`scene_forward_lights_inc.glsl:16-47,239-262\`), divided by N.L as three's
- * \`irradiance\` carries it. three's anisotropic D and V have Godot's form, so they take Godot's
- * stretched alphas. Godot's Fresnel is exact Schlick with f90 from F0 (\`:256-261\`).
+ * Godot's GGX specular (`scene_forward_lights_inc.glsl:16-47,239-262`), divided by N.L as three's
+ * `irradiance` carries it. three's anisotropic D and V have Godot's form, so they take Godot's
+ * stretched alphas. Godot's Fresnel is exact Schlick with f90 from F0 (`:256-261`).
  */
 const SPECULAR_BRDF = /* glsl */ `
 // Godot's float order (:16-21), not three's algebraically equal D_GGX, which rounds differently.
@@ -108,6 +109,14 @@ vec3 godotSpecularBRDF( const in vec3 lightDir, const in vec3 viewDir, const in 
 	return F * D * V;
 }
 
+float godotToonSpecular( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in float roughness ) {
+	vec3 R = normalize( - reflect( lightDir, normal ) );
+	float RdotV = dot( R, viewDir );
+	float mid = 1.0 - roughness;
+	mid *= mid;
+	return smoothstep( mid - roughness * 0.5, mid + roughness * 0.5, RdotV ) * mid;
+}
+
 `;
 
 const RE_DIRECT = 'void RE_Direct_Physical( const in IncidentLight directLight';
@@ -132,18 +141,36 @@ const THREE_SPECULAR_SUM =
   'reflectedLight.directSpecular += irradiance * specularBRDF * material.multiScatteringCompensation;';
 
 /**
- * Godot draws no specular at roughness 0 (\`scene_forward_lights_inc.glsl:222\`). The rule sits on the
- * sum, after every branch that sets \`specularBRDF\`, as GGX is NaN at alpha 0.
+ * Godot draws a light's specular only above roughness 0 (`scene_forward_lights_inc.glsl:222-264`),
+ * in the material's `specular_mode`: GGX unless a define picks another. Toon writes to the diffuse,
+ * which Godot then scales by albedo and `1 - metallic` (`scene_forward_clustered.glsl:2941-2948`).
+ * The rule sits on the sum, after every branch that sets `specularBRDF`, as GGX is NaN at alpha 0.
  */
-const SPECULAR_SUM = /* glsl */ `if ( material.godotRoughness <= 0.0 ) specularBRDF = vec3( 0.0 );
+const SPECULAR_SUM = /* glsl */ `if ( material.godotRoughness <= 0.0 ) {
+		specularBRDF = vec3( 0.0 );
+	} else {
+		#if defined( GODOT_SPECULAR_TOON )
+			specularBRDF = vec3( 0.0 );
+			reflectedLight.directDiffuse += godotToonSpecular( directLight.direction, geometryViewDir, geometryNormal, material.godotRoughness ) * directLight.color * material.diffuseContribution;
+		#elif defined( GODOT_SPECULAR_DISABLED )
+			specularBRDF = vec3( 0.0 );
+		#endif
+	}
 	${THREE_SPECULAR_SUM}`;
+
+const THREE_RETRO_SPECULAR =
+  'vec3 retroSpecularBRDF = BRDF_GGX( directLight.direction, retroViewDir, geometryNormal, material );';
+
+/** Godot has no retroreflection, so a retroreflective lobe takes Godot's GGX and its stretched alphas. */
+const RETRO_SPECULAR =
+  'vec3 retroSpecularBRDF = godotSpecularBRDF( directLight.direction, retroViewDir, geometryNormal, material );';
 
 const THREE_ALPHA_T =
   'material.alphaT = mix( pow2( material.roughness ), 1.0, pow2( material.anisotropy ) );';
 
 /**
- * Godot stretches the lobe by an aspect ratio of the signed \`anisotropy\` (\`scene_forward_lights_inc.glsl:242-245\`).
- * Godot turns the frame by the flowmap only above 0.01 (\`scene_forward_clustered.glsl:1456-1461\`).
+ * Godot stretches the lobe by an aspect ratio of the signed `anisotropy` (`scene_forward_lights_inc.glsl:242-245`).
+ * Godot turns the frame by the flowmap only above 0.01 (`scene_forward_clustered.glsl:1456-1461`).
  */
 const GODOT_ALPHAS = /* glsl */ `float godotAnisotropy = GODOT_ANISOTROPY_IS_NEGATIVE ? - material.anisotropy : material.anisotropy;
 	if ( godotAnisotropy <= 0.01 ) anisotropyV = vec2( 1.0, 0.0 );
@@ -152,8 +179,8 @@ const GODOT_ALPHAS = /* glsl */ `float godotAnisotropy = GODOT_ANISOTROPY_IS_NEG
 	material.godotAlphaB = pow2( material.godotRoughness ) * godotAspect;`;
 
 /**
- * The sign \`threeAnisotropy\` turns into the frame. Godot bends an anisotropic reflection about the
- * bitangent, or the tangent when \`anisotropy\` is negative (\`scene_forward_clustered.glsl:1698\`).
+ * The sign `threeAnisotropy` turns into the frame. Godot bends an anisotropic reflection about the
+ * bitangent, or the tangent when `anisotropy` is negative (`scene_forward_clustered.glsl:1698`).
  */
 const ANISOTROPY_SIGN = /* glsl */ `#define GODOT_ANISOTROPY_IS_NEGATIVE ( anisotropyVector.x < 0.0 )
 #define GODOT_IBL_ANISOTROPIC_DIRECTION ( GODOT_ANISOTROPY_IS_NEGATIVE ? material.anisotropyT : material.anisotropyB )
@@ -172,8 +199,8 @@ type LightChunk = typeof CHUNK | typeof SETUP_CHUNK | typeof MAPS_CHUNK;
 
 /**
  * Each edit to three's chunks: Godot's roughness and anisotropic alphas beside three's, Godot's
- * light terms, Godot's direct specular with none at roughness 0, each diffuse line without its
- * Fresnel weight, and the anisotropic reflection bent about Godot's direction.
+ * light terms, Godot's direct specular in its mode, each diffuse line without its Fresnel weight,
+ * and the anisotropic reflection bent about Godot's direction.
  */
 export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
   {
@@ -184,6 +211,7 @@ export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
   { chunk: SETUP_CHUNK, three: ROUGHNESS_SETUP, godot: GODOT_ROUGHNESS },
   { chunk: CHUNK, three: RE_DIRECT, godot: `${ANISOTROPY_SIGN}${DIFFUSE_NL}${SPECULAR_BRDF}${RE_DIRECT}` },
   { chunk: CHUNK, three: THREE_DIRECT_SPECULAR, godot: DIRECT_SPECULAR },
+  { chunk: CHUNK, three: THREE_RETRO_SPECULAR, godot: RETRO_SPECULAR },
   { chunk: CHUNK, three: THREE_SPECULAR_SUM, godot: SPECULAR_SUM },
   { chunk: SETUP_CHUNK, three: THREE_ALPHA_T, godot: GODOT_ALPHAS },
   { chunk: MAPS_CHUNK, three: THREE_IBL_RADIANCE, godot: onGodotIBLDirection(THREE_IBL_RADIANCE) },
@@ -230,47 +258,94 @@ function defining(define: string): ProgramInjection {
   };
 }
 
+/** The render modes of Godot's light function that a surface draws with. */
+export interface LightModes {
+  /** `diffuse_mode`, a `DiffuseMode`, or past the enum, as the setter stores it unchecked. */
+  readonly diffuseMode: number;
+  /** `specular_mode`, a `SpecularMode`, or past the enum likewise. */
+  readonly specularMode: number;
+}
+
+/** Godot's modes for a surface with no material: three draws a lit material with no define this way. */
+const UNDEFINED_MODES: LightModes = {
+  diffuseMode: DiffuseMode.DIFFUSE_BURLEY,
+  specularMode: SpecularMode.SPECULAR_SCHLICK_GGX,
+};
+
 /**
  * Each mode's define, one injection per mode so a program's injection keeps its identity across
- * materials. Burley takes none, so a lit standard or physical material with no injection draws
- * Burley: a material that stands for a Godot surface in another mode must bring its define.
+ * materials. Burley and GGX take none, so a lit material that stands for a Godot surface in another
+ * mode must bring its define.
  */
-const MODE_INJECTIONS: ReadonlyMap<number, ProgramInjection> = new Map(
+const DIFFUSE_MODE_INJECTIONS: ReadonlyMap<number, ProgramInjection> = new Map(
   [DiffuseMode.DIFFUSE_LAMBERT, DiffuseMode.DIFFUSE_LAMBERT_WRAP, DiffuseMode.DIFFUSE_TOON].map((mode) => [
     mode,
     defining(`GODOT_${DIFFUSE_MODE_NAMES[mode]}`),
   ])
 );
 
+const SPECULAR_MODE_INJECTIONS: ReadonlyMap<number, ProgramInjection> = new Map(
+  [SpecularMode.SPECULAR_TOON, SpecularMode.SPECULAR_DISABLED].map((mode) => [
+    mode,
+    defining(`GODOT_${SPECULAR_MODE_NAMES[mode]}`),
+  ])
+);
+
 /**
- * What a lit material with this `diffuse_mode` compiles with: nothing for Burley. A mode past the
- * enum gets no render mode (`material.cpp:828-841`), and a spatial shader without one draws Lambert
- * (`shader_types.cpp:241`).
+ * A mode past the enum gets no render mode (`material.cpp:828-855`). A spatial shader without one
+ * draws Lambert diffuse (`shader_types.cpp:241`) and GGX specular (`scene_forward_clustered.glsl:1078-1080`).
  */
-export function diffuseModeInjection(mode: number): ProgramInjection | undefined {
+function diffuseModeInjection(mode: number): ProgramInjection | undefined {
   if (mode === DiffuseMode.DIFFUSE_BURLEY) return undefined;
-  return MODE_INJECTIONS.get(mode) ?? MODE_INJECTIONS.get(DiffuseMode.DIFFUSE_LAMBERT);
+  return DIFFUSE_MODE_INJECTIONS.get(mode) ?? DIFFUSE_MODE_INJECTIONS.get(DiffuseMode.DIFFUSE_LAMBERT);
+}
+
+/** What a lit material in these modes compiles with: nothing for Burley and GGX. */
+export function lightModesInjection(modes: LightModes): ProgramInjection | undefined {
+  return composeInjections([
+    diffuseModeInjection(modes.diffuseMode),
+    SPECULAR_MODE_INJECTIONS.get(modes.specularMode),
+  ]);
+}
+
+/** Where a material records each mode of the surface it draws. */
+const DIFFUSE_MODE_KEY = 'godotDiffuseMode';
+const SPECULAR_MODE_KEY = 'godotSpecularMode';
+
+/** The `userData` that records a surface's modes, for a draw that shades it again. */
+export function lightModesUserData(modes: LightModes): Record<string, unknown> {
+  return { [DIFFUSE_MODE_KEY]: modes.diffuseMode, [SPECULAR_MODE_KEY]: modes.specularMode };
+}
+
+/** The modes `material` records, or Burley and GGX for a material this derivation did not build. */
+export function lightModesOf(material: Material | undefined): LightModes {
+  if (!material) return UNDEFINED_MODES;
+  return { diffuseMode: diffuseModeOf(material), specularMode: specularModeOf(material) };
+}
+
+/** Whether `a` records the modes `b` does. It allocates nothing, as a decal asks each frame. */
+export function drawsLightModesOf(a: Material, b: Material | undefined): boolean {
+  if (!b)
+    return (
+      diffuseModeOf(a) === UNDEFINED_MODES.diffuseMode && specularModeOf(a) === UNDEFINED_MODES.specularMode
+    );
+  return diffuseModeOf(a) === diffuseModeOf(b) && specularModeOf(a) === specularModeOf(b);
+}
+
+function diffuseModeOf(material: Material): number {
+  return recordedOn(material, DIFFUSE_MODE_KEY, UNDEFINED_MODES.diffuseMode);
+}
+
+function specularModeOf(material: Material): number {
+  return recordedOn(material, SPECULAR_MODE_KEY, UNDEFINED_MODES.specularMode);
 }
 
 /**
- * three's anisotropy props for Godot's signed \`anisotropy\`. three takes a magnitude, so a negative
+ * three's anisotropy props for Godot's signed `anisotropy`. three takes a magnitude, so a negative
  * one turns the frame by π, which three's D, V and reflection never see: they read T and B squared
- * or crossed twice. The patched chunks read the sign off \`anisotropyVector\`, so both signs share one
+ * or crossed twice. The patched chunks read the sign off `anisotropyVector`, so both signs share one
  * program.
  */
 export function threeAnisotropy(anisotropy: number): { anisotropy: number; anisotropyRotation: number } {
   return { anisotropy: Math.abs(anisotropy), anisotropyRotation: anisotropy < 0 ? Math.PI : 0 };
-}
-
-/** Where a material records the `diffuse_mode` of the surface it draws. */
-const DIFFUSE_MODE_KEY = 'godotDiffuseMode';
-
-/** The `userData` that records a surface's `diffuse_mode`, for a draw that shades it again. */
-export function diffuseModeUserData(mode: number): Record<string, unknown> {
-  return { [DIFFUSE_MODE_KEY]: mode };
-}
-
-/** The `diffuse_mode` `material` records, or Burley for a material this derivation did not build. */
-export function diffuseModeOf(material: Material): number {
-  return recordedOn(material, DIFFUSE_MODE_KEY, DiffuseMode.DIFFUSE_BURLEY);
 }

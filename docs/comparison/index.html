@@ -5984,6 +5984,24 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p><code>diffuse_mode</code> picks the light's diffuse term: Burley, Lambert, Lambert wrap and toon, left to right, lit from the right. Both engines brighten Burley's rim, wrap the light past Lambert's terminator and band the toon sphere. Godot's default material draws Lambert.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Specular mode</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-material-specular-mode-godot.png" alt="Godot render of Specular mode">
+          <img class="img-ours" src="images/unit-material-specular-mode-ours.png" alt="Our render of Specular mode">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p><code>specular_mode</code> picks the light's specular term: SchlickGGX, toon and disabled, left to right. Both engines draw a soft highlight, a hard-edged toon disc and no highlight. Toon writes to the diffuse, so the albedo tints it.</p>
+<ul><li><strong>Approximated</strong> The preview glow spreads the toon disc's halo less than Godot's.</li></ul></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Refraction</h3><span class="status st-limitation">Limitation</span></div>
         <div class="compare">
         <div class="stage">

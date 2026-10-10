@@ -174,6 +174,8 @@ export interface StandardMaterial3DData {
   shadingMode: 'unshaded' | 'per_pixel';
   /** `diffuse_mode`, a `DiffuseMode`. The setter stores it unchecked, so it can lie past the enum. */
   diffuseMode: number;
+  /** `specular_mode`, a `SpecularMode`, unchecked likewise. */
+  specularMode: number;
   /** `vertex_color_use_as_albedo` (default false). */
   useVertexColors: boolean;
   /** `ao_light_affect`: how far the AO map also occludes direct light. Unclamped, as the setter is. */
@@ -266,6 +268,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   depthTest: boolean;
   shadingMode: 'unshaded' | 'per_pixel';
   diffuseMode: number;
+  specularMode: number;
   useVertexColors: boolean;
   aoLightAffect: number;
   aoTextureChannelMask: TextureChannelMask;

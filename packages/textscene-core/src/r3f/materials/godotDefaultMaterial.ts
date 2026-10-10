@@ -7,6 +7,8 @@
 
 import * as THREE from 'three';
 import { DiffuseMode } from '../../godot/diffuseMode';
+import { SpecularMode } from '../../godot/specularMode';
+import type { LightModes } from '../godotLightFunction';
 
 // Per surface: `RenderForwardClustered::_geometry_instance_update` sends every
 // surface index through the fallback, as its INSTANCE_MULTIMESH branch does for a
@@ -22,5 +24,11 @@ export const GODOT_DEFAULT_ALBEDO = new THREE.Color().setRGB(0.6, 0.6, 0.6, THRE
 export const GODOT_DEFAULT_ROUGHNESS = 0.8;
 /** `METALLIC = 0.2` in `fragment()`. */
 export const GODOT_DEFAULT_METALLIC = 0.2;
-/** The shader names no diffuse render mode, and a spatial shader without one is Lambert (`shader_types.cpp:241`). */
-export const GODOT_DEFAULT_DIFFUSE_MODE = DiffuseMode.DIFFUSE_LAMBERT;
+/**
+ * The shader names no render mode, and a spatial shader without one draws Lambert diffuse
+ * (`shader_types.cpp:241`) and GGX specular (`scene_forward_clustered.glsl:1078-1080`).
+ */
+export const GODOT_DEFAULT_LIGHT_MODES: LightModes = {
+  diffuseMode: DiffuseMode.DIFFUSE_LAMBERT,
+  specularMode: SpecularMode.SPECULAR_SCHLICK_GGX,
+};
