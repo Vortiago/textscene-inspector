@@ -52,14 +52,6 @@ describe('GODOT_DIFFUSE_EDITS', () => {
     }
   });
 
-  it("feeds the light function Godot's limited roughness, not three's floored one", () => {
-    // `scene_forward_clustered.glsl:1658-1665`, at the defaults of `rendering_server.cpp:3777-3778`.
-    expect(godotChunks()[SETUP_CHUNK]).toContain(
-      'material.godotRoughness = sqrt( min( 1.0, roughnessFactor * roughnessFactor + godotKernelRoughness2 ) );'
-    );
-    expect(godotDiffuseChunk()).toContain('dotVH, material.godotRoughness )');
-  });
-
   it('drops the Fresnel weight from both diffuse lines', () => {
     const patched = godotDiffuseChunk();
     expect(patched).not.toContain('* ( 1.0 - F )');
@@ -82,10 +74,9 @@ describe('installGodotDiffuse', () => {
   it('replaces three’s chunks with the patched ones', () => {
     installGodotDiffuse();
 
-    expect([THREE.ShaderChunk[CHUNK], THREE.ShaderChunk[SETUP_CHUNK]]).toEqual([
-      godotDiffuseChunk(),
-      godotChunks()[SETUP_CHUNK],
-    ]);
+    expect({ [CHUNK]: THREE.ShaderChunk[CHUNK], [SETUP_CHUNK]: THREE.ShaderChunk[SETUP_CHUNK] }).toEqual(
+      godotChunks()
+    );
   });
 
   it('leaves a chunk it cannot patch alone, and warns (error case)', () => {

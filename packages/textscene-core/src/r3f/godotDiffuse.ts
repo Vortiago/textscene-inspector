@@ -12,20 +12,17 @@ import type { ProgramInjection } from './materialProgramInputs.js';
 import type { Material } from 'three';
 import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../godot/diffuseMode.js';
 import { recordedOn } from './materials/recordedOnMaterial.js';
+import { ROUGHNESS_LIMITER_AMOUNT, ROUGHNESS_LIMITER_LIMIT } from '../godot/roughnessLimiter.js';
 
 const CHUNK = 'lights_physical_pars_fragment';
 const SETUP_CHUNK = 'lights_physical_fragment';
 
-/**
- * Godot's screen-space roughness limiter at its project defaults (`rendering_server.cpp:3776-3778`),
- * which widens roughness where the normal bends fast (`scene_forward_clustered.glsl:1658-1665`).
- * three's own `material.roughness` floors at 0.0525 for its cubemap mips, which Godot's lacks.
- */
-const ROUGHNESS_LIMITER_AMOUNT = 0.25;
-const ROUGHNESS_LIMITER_LIMIT = 0.18;
-
 const ROUGHNESS_SETUP = 'material.roughness = min( material.roughness, 1.0 );';
 
+/**
+ * The roughness Godot's light functions read: the limiter at its project defaults, with no floor.
+ * three's own `material.roughness` floors at 0.0525 for its cubemap mips.
+ */
 const GODOT_ROUGHNESS = /* glsl */ `${ROUGHNESS_SETUP}
 vec3 godotDndu = dFdx( normal );
 vec3 godotDndv = dFdy( normal );
