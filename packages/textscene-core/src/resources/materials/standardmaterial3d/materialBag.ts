@@ -13,8 +13,12 @@ import {
 } from '../../../r3f/materials/godotDefaultMaterial';
 import { BillboardMode } from '../../../godot/billboard';
 import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
-import type { ProgramInjection } from '../../../r3f/materialProgramInputs';
+import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import {
+  GODOT_AMBIENT_OCCLUSION,
+  ambientOcclusionUserData,
+} from '../../../r3f/materials/godotAmbientOcclusion';
 import {
   DRAWN_OPAQUE_PREPASS,
   FADED_OPAQUE_PREPASS,
@@ -45,7 +49,7 @@ export type StandardMaterialClass = 'basic' | 'standard' | 'physical';
  * The class and its props as one discriminated value, so an adapter cannot map a class
  * to parameters it did not derive. No `attach`, the reactive adapter's mount detail, and
  * no React `key`, which `materialProgramInputs` derives from the merged bag (ADR-0038).
- * `injection` is the fragment-alpha patch the surface needs, which each adapter installs.
+ * `injection` composes the program patches the surface needs, which each adapter installs.
  */
 export type StandardMaterialBag = (
   | { materialClass: 'basic'; props: THREE.MeshBasicMaterialParameters }
@@ -135,16 +139,17 @@ const BILLBOARD_KEY = 'godotBillboard';
 const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
- * `billboard_mode`, shadow-pass membership and `alpha_hash_scale` on `userData`, not as material
- * props: Godot decides them per surface, and here the draw hooks apply them per draw group
- * (`r3f/surfaceDrawHooks.ts`). A fresh object per bag, since the `.tres` loader writes its own
- * keys into it.
+ * `billboard_mode`, shadow-pass membership, `alpha_hash_scale` and the AO values on `userData`,
+ * not as material props: Godot decides the first three per surface, and here the draw hooks apply
+ * them per draw group (`r3f/surfaceDrawHooks.ts`). The AO uniforms read theirs there at each
+ * upload. A fresh object per bag, since the `.tres` loader writes its own keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
     [BILLBOARD_KEY]: surfaceBillboard(scalars),
     [CASTS_SHADOW_KEY]: scalars.castsShadow,
     ...alphaHashScaleUserData(scalars.alphaHashScale),
+    ...ambientOcclusionUserData(scalars.aoLightAffect, scalars.aoTextureChannelMask),
   };
 }
 
@@ -230,7 +235,8 @@ function withSurfaceAlpha(
 ): StandardMaterialBag {
   const props = { ...bag.props, ...alpha };
   if (prepass.cutsDepth) props.userData = { ...bag.props.userData, ...opaquePrepassUserData(prepass) };
-  return { ...bag, props, injection };
+  const injections = [bag.injection, injection].filter((one) => one !== undefined);
+  return { ...bag, props, injection: composeInjections(injections) };
 }
 
 /** The class `scalars` need, and its props. */
@@ -266,6 +272,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
   }
 
   const emissiveMap = slot('emission_texture');
+  const aoMap = slot('ao_texture');
   // Godot's `emission_operator` only becomes observable once a texture is in
   // play, and whether one resolved is knowable here and not at decode time.
   const emission = resolveEmission(scalars, scalars.emissionOperator, !!emissiveMap);
@@ -287,7 +294,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     roughnessMap: slot('roughness_texture'),
     metalnessMap: slot('metallic_texture'),
     emissiveMap,
-    aoMap: slot('ao_texture'),
+    aoMap,
     // Field by field, not spread: `scalars` is far wider than `EmissionScalars`, and a
     // pass-through in `resolveEmission` would splat every scalar onto the material.
     emissive: new THREE.Color().fromArray(emission.emissive),
@@ -301,9 +308,13 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     ...blend,
   };
 
-  if (!needsPhysicalMaterial(scalars)) return { materialClass: 'standard', props: pbr };
+  // Godot's AO sampler is `hint_default_white` (`material.cpp:1128`), so a surface with no map
+  // occludes nothing.
+  const injection = aoMap ? GODOT_AMBIENT_OCCLUSION : undefined;
+  if (!needsPhysicalMaterial(scalars)) return { materialClass: 'standard', props: pbr, injection };
   return {
     materialClass: 'physical',
+    injection,
     props: {
       ...pbr,
       clearcoat: scalars.clearcoat,

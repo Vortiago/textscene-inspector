@@ -1,7 +1,8 @@
 /**
  * StandardMaterial3D parity: vertex_color_use_as_albedo as three's
  * vertexColors, HDR emission folded into emissiveIntensity since three's
- * emissive is [0,1], and aoMap only while ao_enabled, as Godot samples it.
+ * emissive is [0,1], and aoMap and its direct-light occlusion only while ao_enabled, as Godot
+ * samples it.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -14,6 +15,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import type { TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { OCCLUDES_DIRECT_LIGHT, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
@@ -24,11 +26,6 @@ describe('material misc scalar parity', () => {
   it('vertex_color_use_as_albedo → useVertexColors (default false)', () => {
     expect(parseStandardMaterial3DScalars({}).useVertexColors).toBe(false);
     expect(parseStandardMaterial3DScalars({ vertex_color_use_as_albedo: 'true' }).useVertexColors).toBe(true);
-  });
-
-  it('ao_enabled → aoEnabled (default false)', () => {
-    expect(parseStandardMaterial3DScalars({}).aoEnabled).toBe(false);
-    expect(parseStandardMaterial3DScalars({ ao_enabled: 'true' }).aoEnabled).toBe(true);
   });
 
   it('HDR emission folds the LINEAR peak into emissiveIntensity, preserving hue', () => {
@@ -148,5 +145,20 @@ describe('ao_enabled gate', () => {
   it('drops aoMap when ao_enabled is absent (Godot default false)', async () => {
     const disabled = await renderAo({ ao_texture: 'ExtResource("1")' });
     expect(disabled.aoMap).toBeNull();
+  });
+
+  it('occludes direct light when ao_enabled is true', async () => {
+    const enabled = await renderAo({
+      ao_enabled: 'true',
+      ao_light_affect: '1',
+      ao_texture: 'ExtResource("1")',
+    });
+    expect(patchedFragment(enabled)).toContain(OCCLUDES_DIRECT_LIGHT);
+  });
+
+  it('occludes no direct light when ao_enabled is absent, whatever the light affect', async () => {
+    // `material.cpp:1126-1131,1937-1960`: no AO code without FEATURE_AMBIENT_OCCLUSION.
+    const disabled = await renderAo({ ao_light_affect: '1', ao_texture: 'ExtResource("1")' });
+    expect(patchedFragment(disabled)).not.toContain(OCCLUDES_DIRECT_LIGHT);
   });
 });

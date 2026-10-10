@@ -52,6 +52,13 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 - **Approximated** A minified flowmap with zero-alpha texels turns its direction 90 degrees from the first mip level that mixes them.
 - **Approximated** A material loaded from a `.tres` gets its anisotropy scalars and no flowmap.
 
+## Ambient occlusion
+<!-- compare: image=unit-material-ao status=done fixture=unit-material-ao.tscn -->
+
+The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. `ao_texture_channel` picks the map channel.
+
+- **Approximated** `ao_on_uv2` samples through UV1, since no mesh here carries a second UV set.
+
 ## Refraction
 <!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
 

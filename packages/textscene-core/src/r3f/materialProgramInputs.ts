@@ -164,15 +164,14 @@ export function materialProgramInputs<
   }
   if (merged.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
 
-  let cacheKey = '';
-  if (injections.length > 0) {
-    cacheKey = composedCacheKey(injections);
+  const composed = composeInjections(injections);
+  if (composed) {
     // `undefined` rather than `delete`: fiber 9.6.1's `applyProps` skips an
     // undefined value (`:24-27`, "Ignore setting undefined props"), and deleting
     // deoptimises the object it is handed.
     merged.injection = undefined;
-    merged.customProgramCacheKey = cacheKeyThunk(cacheKey);
-    merged.onBeforeCompile = composedOnBeforeCompile(injections);
+    merged.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
+    merged.onBeforeCompile = composed.onBeforeCompile;
   }
 
   // A key rather than `needsUpdate`: `applyProps` never bumps it, and `setProgram`
@@ -180,7 +179,7 @@ export function materialProgramInputs<
   // or define is not on. A define that stops applying cannot even be cleared,
   // since `applyProps` skips `undefined`. The remount compiles the finished set.
   return {
-    key: programKey(merged, cacheKey),
+    key: programKey(merged, composed?.cacheKey ?? ''),
     props: merged as Omit<P & Merged<M>, 'injection'> & InjectedProps,
   };
 }
@@ -193,25 +192,24 @@ export function materialProgramInputs<
 export function injectProgram(material: THREE.Material, injection: ProgramInjection | undefined): void {
   const injections = injection ? [injection] : [];
   if (material.alphaHash) injections.push(GODOT_ALPHA_HASH);
-  if (injections.length === 0) return;
-  material.onBeforeCompile = composedOnBeforeCompile(injections);
-  material.customProgramCacheKey = cacheKeyThunk(composedCacheKey(injections));
-}
-
-function composedCacheKey(injections: readonly ProgramInjection[]): string {
-  return injections.map((one) => one.cacheKey).join('+');
+  const composed = composeInjections(injections);
+  if (!composed) return;
+  material.onBeforeCompile = composed.onBeforeCompile;
+  material.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
 }
 
 /**
- * One injection passes straight through, so `useCanvasItemLighting`'s memo still reaches the
- * material. Composing two cannot avoid a fresh closure, a method so each part reads its material.
+ * One injection that applies each of `injections` in order, or none for an empty list. One
+ * injection passes straight through, so `useCanvasItemLighting`'s memo still reaches the material.
+ * Composing two cannot avoid a fresh closure, a method so each part reads its material.
  */
-function composedOnBeforeCompile(
-  injections: readonly ProgramInjection[]
-): ProgramInjection['onBeforeCompile'] {
-  if (injections.length === 1) return injections[0]!.onBeforeCompile;
-  return function (this: THREE.Material, shader: ProgramShader): void {
-    for (const one of injections) one.onBeforeCompile.call(this, shader);
+export function composeInjections(injections: readonly ProgramInjection[]): ProgramInjection | undefined {
+  if (injections.length <= 1) return injections[0];
+  return {
+    cacheKey: injections.map((one) => one.cacheKey).join('+'),
+    onBeforeCompile(shader) {
+      for (const one of injections) one.onBeforeCompile.call(this, shader);
+    },
   };
 }
 

@@ -7,6 +7,7 @@
 
 import type * as THREE from 'three';
 import type { EmissionScalars } from './emission';
+import type { TextureChannelMask } from '../../../godot/textureChannel';
 
 // One Color declaration repo-wide, re-exported here because this slice's
 // consumers (sky, environment, preview lighting) import it from this module.
@@ -173,10 +174,10 @@ export interface StandardMaterial3DData {
   shadingMode: 'unshaded' | 'per_pixel';
   /** `vertex_color_use_as_albedo` (default false). */
   useVertexColors: boolean;
-  /** `ao_enabled`: the AO slot applies only when true. */
-  aoEnabled: boolean;
-  /** `normal_enabled`: the normal slot applies only when true. */
-  normalEnabled: boolean;
+  /** `ao_light_affect`: how far the AO map also occludes direct light. Not clamped, as the setter is not. */
+  aoLightAffect: number;
+  /** `ao_texture_channel` as the mask the AO map's sample is dotted with. */
+  aoTextureChannelMask: TextureChannelMask;
   /** `normal_scale`, as the uniform XY pair three's `normalScale` wants. */
   normalScale: MaterialVec2;
   /** `uv1_triplanar` OR `uv1_world_triplanar`. */
@@ -262,8 +263,8 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   depthTest: boolean;
   shadingMode: 'unshaded' | 'per_pixel';
   useVertexColors: boolean;
-  aoEnabled: boolean;
-  normalEnabled: boolean;
+  aoLightAffect: number;
+  aoTextureChannelMask: TextureChannelMask;
   side: THREE.Side;
   cullModeExplicit: boolean;
   normalScale: MaterialVec2;

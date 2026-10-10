@@ -10,6 +10,7 @@ import { sRGBToLinearRGB } from '../../../utils/colorSpace';
 import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { parseVector3 } from '../../../parser/vectors';
 import { drawsInShadowPass, type PassMembership } from '../../../godot/shadowPass';
+import { TEXTURE_CHANNELS, TextureChannel, textureChannelMask } from '../../../godot/textureChannel';
 import { emissionScalars } from './emission';
 import {
   BlendMode,
@@ -181,8 +182,15 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     cullModeExplicit: properties['cull_mode'] !== undefined,
     shadingMode: properties['shading_mode'] === '0' ? 'unshaded' : 'per_pixel',
     useVertexColors: boolOr(properties['vertex_color_use_as_albedo'], false, CONTEXT),
-    aoEnabled: boolOr(properties['ao_enabled'], false, CONTEXT),
-    normalEnabled: boolOr(properties['normal_enabled'], false, CONTEXT),
+    aoLightAffect: floatOr(properties['ao_light_affect'], 0, CONTEXT),
+    aoTextureChannelMask: textureChannelMask(
+      enumOr(
+        properties['ao_texture_channel'],
+        TextureChannel.TEXTURE_CHANNEL_RED,
+        TEXTURE_CHANNELS,
+        `${CONTEXT}.ao_texture_channel`
+      )
+    ),
     normalScale: { x: normalScale, y: normalScale },
     triplanar:
       boolOr(properties['uv1_triplanar'], false, CONTEXT) ||

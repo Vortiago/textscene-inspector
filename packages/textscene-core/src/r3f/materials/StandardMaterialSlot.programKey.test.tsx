@@ -137,6 +137,25 @@ describe('<StandardMaterialSlot> keeps the compiled material for a plain uniform
   });
 });
 
+describe('<StandardMaterialSlot> keeps ao_light_affect a uniform', () => {
+  const aoMap = new THREE.Texture();
+  const lightAffect = (value: string) => ({ ao_enabled: 'true', ao_light_affect: value });
+
+  it('keeps the material when only the light affect moves', async () => {
+    expect(await rebuilds(lightAffect('0'), lightAffect('1'), { aoMap })).toBe(false);
+  });
+
+  it('feeds the moved light affect to the compiled uniform', async () => {
+    const renderer = await ReactThreeTestRenderer.create(slot(lightAffect('0'), { aoMap }));
+    const material = (renderer.scene.findByType('Mesh').instance as unknown as THREE.Mesh)
+      .material as THREE.Material;
+    const shader = { vertexShader: '', fragmentShader: '', uniforms: {} as Record<string, THREE.IUniform> };
+    material.onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, undefined as never);
+    await renderer.update(slot(lightAffect('1'), { aoMap }));
+    expect(shader.uniforms.godotAoLightAffect!.value).toBe(1);
+  });
+});
+
 describe('<StandardMaterialSlot> rebinds when its attach target moves', () => {
   it('binds a new material at the new target when `attach` changes, which fiber reads only at mount', async () => {
     const renderer = await ReactThreeTestRenderer.create(slot({}, { attach: 'material' }));

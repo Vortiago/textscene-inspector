@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { billboardOf, castsShadowOf, standardMaterialBags, surfaceBillboard } from './materialBag';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
 import {
   DRAWN_OPAQUE_PREPASS,
   FADED_OPAQUE_PREPASS,
@@ -20,6 +21,7 @@ import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 import {
   DROPS_ALBEDO_ALPHA,
+  OCCLUDES_DIRECT_LIGHT,
   WRITES_OPAQUE_AFTER_CUT,
   patchedFragment,
 } from '../../../r3f/testing/patchedFragment';
@@ -173,6 +175,41 @@ describe('standardMaterialBags — fragment alpha', () => {
     expect(patchedFragment(materialFromBag(bag({ blend_mode: '1', transparency: '2' })))).toContain(
       WRITES_OPAQUE_AFTER_CUT
     );
+  });
+});
+
+describe('standardMaterialBags — AO on direct light', () => {
+  const aoMap = new THREE.Texture();
+  const AO = { ao_enabled: 'true', ao_light_affect: '0.5' };
+
+  it('occludes the direct light of a lit surface with an AO map', () => {
+    expect(patchedFragment(materialFromBag(bag(AO, { ao_texture: aoMap })))).toContain(OCCLUDES_DIRECT_LIGHT);
+  });
+
+  it('records the light affect and the channel for the uniforms to read', () => {
+    const built = materialFromBag(bag({ ...AO, ao_texture_channel: '1' }, { ao_texture: aoMap }));
+    expect(built.userData).toMatchObject(ambientOcclusionUserData(0.5, [0, 1, 0, 0]));
+  });
+
+  it('occludes the direct light of a physical surface with an AO map', () => {
+    const physical = bag({ ...AO, clearcoat_enabled: 'true' }, { ao_texture: aoMap });
+    expect(physical.materialClass).toBe('physical');
+    expect(patchedFragment(materialFromBag(physical))).toContain(OCCLUDES_DIRECT_LIGHT);
+  });
+
+  it('patches nothing on a surface with no AO map, whose sampler reads white', () => {
+    // `material.cpp:1128`: `hint_default_white`, so AO is 1.
+    expect(bag(AO).injection).toBeUndefined();
+  });
+
+  it('patches nothing on an unshaded surface, which has no lighting', () => {
+    expect(bag({ ...AO, shading_mode: '0' }, { ao_texture: aoMap }).injection).toBeUndefined();
+  });
+
+  it('keeps the fragment-alpha patch beside the AO patch', () => {
+    const fragment = patchedFragment(materialFromBag(bag({ ...AO, blend_mode: '1' }, { ao_texture: aoMap })));
+    expect(fragment).toContain(OCCLUDES_DIRECT_LIGHT);
+    expect(fragment).toContain(DROPS_ALBEDO_ALPHA);
   });
 });
 
