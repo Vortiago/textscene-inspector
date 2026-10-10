@@ -5,6 +5,7 @@
 
 export const MATERIAL_SCENES = [
   { name: 'material-ao', file: 'unit-material-ao.tscn' },
+  { name: 'material-diffuse-mode', file: 'unit-material-diffuse-mode.tscn' },
   { name: 'material-normal-map', file: 'unit-material-normal-map.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },

@@ -23,44 +23,66 @@ function lambertReceiver(): THREE.Mesh {
   );
 }
 
+/** The material a projection onto `onto` draws with. */
+function projectionMaterial(decal: DecalProjectionMaterials, onto: THREE.Mesh): THREE.MeshStandardMaterial {
+  return decal.project(new THREE.BufferGeometry(), onto).material as THREE.MeshStandardMaterial;
+}
+
 describe('DecalProjectionMaterials', () => {
   it("shades the projection in the receiver's diffuse mode", () => {
-    expect(patchedFragment(materials().shading(lambertReceiver()))).toContain(DRAWS_LAMBERT_DIFFUSE);
+    expect(patchedFragment(projectionMaterial(materials(), lambertReceiver()))).toContain(
+      DRAWS_LAMBERT_DIFFUSE
+    );
   });
 
   it('shades the projection of a receiver with no recorded mode in Burley, as a glTF import is', () => {
-    const projection = materials().shading(receiver(new THREE.MeshStandardMaterial()));
+    const projection = projectionMaterial(materials(), receiver(new THREE.MeshStandardMaterial()));
     expect(patchedFragment(projection)).not.toContain(DRAWS_LAMBERT_DIFFUSE);
   });
 
   it("takes the receiver's roughness and metallic, which the decal's albedo leaves alone", () => {
-    const projection = materials().shading(
-      receiver(new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0.6 }))
-    );
+    const shiny = receiver(new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0.6 }));
+    const projection = projectionMaterial(materials(), shiny);
     expect([projection.roughness, projection.metalness]).toEqual([0.3, 0.6]);
   });
 
   it("shades an unshaded receiver's projection as BaseMaterial3D's defaults (edge case)", () => {
-    const projection = materials().shading(receiver(new THREE.MeshBasicMaterial()));
+    const projection = projectionMaterial(materials(), receiver(new THREE.MeshBasicMaterial()));
     expect([projection.roughness, projection.metalness]).toEqual([1, 0]);
   });
 
   it('shares one material between receivers that shade alike', () => {
     const decal = materials();
-    expect(decal.shading(lambertReceiver())).toBe(decal.shading(lambertReceiver()));
+    expect(projectionMaterial(decal, lambertReceiver())).toBe(projectionMaterial(decal, lambertReceiver()));
   });
 
   it('builds a material apart for a receiver that shades differently', () => {
     const decal = materials();
-    expect(decal.shading(lambertReceiver())).not.toBe(
-      decal.shading(receiver(new THREE.MeshStandardMaterial()))
-    );
+    const burley = receiver(new THREE.MeshStandardMaterial());
+    expect(projectionMaterial(decal, lambertReceiver())).not.toBe(projectionMaterial(decal, burley));
+  });
+
+  it("re-shades a projection once its receiver's terms move", () => {
+    const decal = materials();
+    const onto = receiver(new THREE.MeshStandardMaterial());
+    const mesh = decal.project(new THREE.BufferGeometry(), onto);
+    onto.material = new THREE.MeshStandardMaterial({ roughness: 0.2 });
+    expect([decal.followReceivers(), (mesh.material as THREE.MeshStandardMaterial).roughness]).toEqual([
+      true,
+      0.2,
+    ]);
+  });
+
+  it('leaves a projection whose receiver is unchanged, and reports nothing', () => {
+    const decal = materials();
+    decal.project(new THREE.BufferGeometry(), lambertReceiver());
+    expect(decal.followReceivers()).toBe(false);
   });
 
   it('writes the opacity to every material, and reports the change once', () => {
     const decal = materials();
-    const lambert = decal.shading(lambertReceiver());
-    const burley = decal.shading(receiver(new THREE.MeshStandardMaterial()));
+    const lambert = projectionMaterial(decal, lambertReceiver());
+    const burley = projectionMaterial(decal, receiver(new THREE.MeshStandardMaterial()));
     expect([decal.setOpacity(0.5), decal.setOpacity(0.5), lambert.opacity, burley.opacity]).toEqual([
       true,
       false,
@@ -71,8 +93,8 @@ describe('DecalProjectionMaterials', () => {
 
   it('builds the next material afresh after a dispose', () => {
     const decal = materials();
-    const first = decal.shading(lambertReceiver());
+    const first = projectionMaterial(decal, lambertReceiver());
     decal.dispose();
-    expect(decal.shading(lambertReceiver())).not.toBe(first);
+    expect(projectionMaterial(decal, lambertReceiver())).not.toBe(first);
   });
 });

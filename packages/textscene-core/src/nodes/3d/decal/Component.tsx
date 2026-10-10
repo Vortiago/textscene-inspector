@@ -146,7 +146,7 @@ export function Decal({ node, children }: NodeComponentProps) {
     for (const receiver of receivers) {
       const geometry = buildDecalProjectionGeometry(receiver, decalWorldInverse, size, fade);
       if (!geometry) continue;
-      const mesh = new THREE.Mesh(geometry, materials.shading(receiver));
+      const mesh = materials.project(geometry, receiver);
       mesh.userData.isDecalProjection = true;
       mesh.receiveShadow = true;
       mesh.renderOrder = 3;
@@ -209,7 +209,8 @@ export function Decal({ node, children }: NodeComponentProps) {
       );
     }
 
-    if (materials.setOpacity(opacity * fade)) invalidate();
+    const faded = materials.setOpacity(opacity * fade);
+    if (materials.followReceivers() || faded) invalidate();
     // A fully faded decal is dropped from Godot's buffer outright; hiding the
     // group is the same picture and skips the draw.
     const visible = fade > 0;

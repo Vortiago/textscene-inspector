@@ -63,18 +63,22 @@ export type StandardMaterialBag = (
 /**
  * Godot's default 3D material, which a surface with no material draws. A hardcoded
  * shader, not a default StandardMaterial3D, so it has no scalars (`godotDefaultMaterial.ts`).
+ * A fresh bag per call: three and R3F assign `userData` by reference, so one module-level
+ * object would carry a key one surface's material writes onto every default surface.
  */
-const NO_MATERIAL: StandardMaterialBag = {
-  materialClass: 'standard',
-  props: {
-    color: GODOT_DEFAULT_ALBEDO,
-    metalness: GODOT_DEFAULT_METALLIC,
-    roughness: GODOT_DEFAULT_ROUGHNESS,
-    side: THREE.FrontSide,
-    userData: diffuseModeUserData(GODOT_DEFAULT_DIFFUSE_MODE),
-  },
-  injection: diffuseModeInjection(GODOT_DEFAULT_DIFFUSE_MODE),
-};
+function noMaterialBag(): StandardMaterialBag {
+  return {
+    materialClass: 'standard',
+    props: {
+      color: GODOT_DEFAULT_ALBEDO,
+      metalness: GODOT_DEFAULT_METALLIC,
+      roughness: GODOT_DEFAULT_ROUGHNESS,
+      side: THREE.FrontSide,
+      userData: diffuseModeUserData(GODOT_DEFAULT_DIFFUSE_MODE),
+    },
+    injection: diffuseModeInjection(GODOT_DEFAULT_DIFFUSE_MODE),
+  };
+}
 
 /**
  * Godot's default surface writes no ALPHA, and its three bag binds no map and no vertex colours, so
@@ -144,10 +148,9 @@ const BILLBOARD_KEY = 'godotBillboard';
 const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
- * `billboard_mode`, shadow-pass membership, `alpha_hash_scale`, the AO values and `diffuse_mode`
- * on `userData`, not as material props: Godot decides the first three per surface, and here the
- * draw hooks apply them per draw group (`r3f/surfaceDrawHooks.ts`). The AO uniforms read theirs
- * there at each upload, and a decal shades its projection in the receiver's diffuse mode. A fresh object per bag, since the `.tres` loader writes its own keys into it.
+ * Surface state on `userData`, not as material props: the draw hooks apply billboard, shadow and
+ * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO uniforms read theirs at upload, and
+ * a decal reads `diffuse_mode`. A fresh object per bag, as the `.tres` loader writes keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
@@ -216,7 +219,7 @@ export function standardMaterialBags(
   scalars: StandardMaterial3DScalars | null,
   textures: ResolvedTextureSlots = {}
 ): FadeVariants<StandardMaterialBag> {
-  const bag = scalars ? classBag(scalars, textures) : NO_MATERIAL;
+  const bag = scalars ? classBag(scalars, textures) : noMaterialBag();
   const source = scalars ?? NO_MATERIAL_ALPHA;
   const surface = {
     opacity: bag.props.opacity ?? 1,

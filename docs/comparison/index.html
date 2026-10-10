@@ -1890,7 +1890,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-decal-resources</code></td><td><code>decal-requires-texture</code></td><td>warning</td></tr><tr><td></td><td><code>decal-normal-orm-without-albedo</code></td><td>warning</td></tr><tr><td></td><td><code>decal-empty-cull-mask</code></td><td>warning</td></tr></tbody></table></div>
 <p><code>size</code> falls back to Godot's default <code>Vector3(2, 2, 2)</code> with a warning when malformed. <code>albedo_mix</code>, <code>emission_energy</code>, <code>normal_fade</code>, <code>upper_fade</code>, <code>lower_fade</code> and <code>cull_mask</code> fall back the same way to <code>1</code>, <code>1</code>, <code>0</code>, <code>0.3</code>, <code>0.3</code> and <code>1048575</code>. The two fade exponents are also clamped at zero, as Godot's setters clamp them. <code>modulate</code> falls back silently to opaque white, and the four <code>texture_*</code> references are copied through unvalidated.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> The projection reads bolder than Godot's at a partial <code>albedo_mix</code>, since exact blending needs a custom projector shader.</li><li><strong>Approximated</strong> The depth and normal fades are baked per vertex, so a large decal on a low-poly tilted or curved receiver bands where Godot's is smooth.</li><li><strong>Approximated</strong> <code>texture_normal</code>, <code>texture_orm</code>, <code>texture_emission</code> and <code>emission_energy</code> are parsed but not applied, so the projection carries albedo alone.</li><li><strong>Approximated</strong> At the projection rim Godot fades the outer half-texel toward the transparent padding of its atlas, where the clamped sample here stays crisp.</li></ul></div>
+<ul><li><strong>Approximated</strong> The projection reads bolder than Godot's at a partial <code>albedo_mix</code>, since exact blending needs a custom projector shader.</li><li><strong>Approximated</strong> The depth and normal fades are baked per vertex, so a large decal on a low-poly tilted or curved receiver bands where Godot's is smooth.</li><li><strong>Approximated</strong> <code>texture_normal</code>, <code>texture_orm</code>, <code>texture_emission</code> and <code>emission_energy</code> are parsed but not applied, so the projection carries albedo alone.</li><li><strong>Approximated</strong> The projection shades with its receiver's scalar roughness, metallic and <code>diffuse_mode</code>, taken from the first surface, so a receiver's roughness or metallic map does not reach it.</li><li><strong>Approximated</strong> At the projection rim Godot fades the outer half-texel toward the transparent padding of its atlas, where the clamped sample here stays crisp.</li></ul></div>
     </article>
     <article class="sheet" data-type="DirectionalLight2D" hidden>
       <header class="sheet-head">
@@ -5967,6 +5967,23 @@ tr:last-child td{border-bottom:0}
 <ul><li><strong>Approximated</strong> <code>ao_on_uv2</code> samples through UV1, since no mesh here carries a second UV set.</li></ul></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Diffuse mode</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-material-diffuse-mode-godot.png" alt="Godot render of Diffuse mode">
+          <img class="img-ours" src="images/unit-material-diffuse-mode-ours.png" alt="Our render of Diffuse mode">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p><code>diffuse_mode</code> picks the light's diffuse term: Burley, Lambert, Lambert wrap and toon, left to right, lit from the right. Both engines brighten Burley's rim, wrap the light past Lambert's terminator and band the toon sphere. Godot's default material draws Lambert.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Refraction</h3><span class="status st-limitation">Limitation</span></div>
         <div class="compare">
         <div class="stage">
@@ -6024,7 +6041,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects. Each field falls back to Godot's default through the shared value decoders, so a malformed <code>roughness</code> renders with default roughness. A texture reference it cannot resolve leaves the slot empty, and the mesh renders untextured.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Shader missing</strong> <code>alpha_antialiasing_mode</code> is read for the pass decision, but the cutout edge reads hard rather than coverage-blended.</li><li><strong>Shader missing</strong> <code>proximity_fade_*</code> and <code>distance_fade_*</code> decide the pass but are not rendered, so the surface stays at full opacity.</li><li><strong>Shader missing</strong> <code>diffuse_mode</code> is always Lambert where Godot defaults to Burley, so a rough sphere is slightly darker at the silhouette.</li><li><strong>Shader missing</strong> <code>metallic_specular</code> has no effect, since three fixes dielectric F0 at 0.04.</li><li><strong>Approximated</strong> Godot measures V from the image top and three from the bottom, so a non-integer <code>uv1_scale.y</code> or a non-zero <code>uv1_offset.y</code> shifts V differently.</li><li><strong>Approximated</strong> Under <code>uv1_world_triplanar</code>, <code>uv1_offset</code> is in world units and is not converted.</li><li><strong>Approximated</strong> Triplanar tiling density is exact on planar meshes only, since curved and GLB geometry and a <code>.tres</code> material tile by their own UVs.</li><li><strong>Approximated</strong> A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.</li></ul></div>
+<ul><li><strong>Shader missing</strong> <code>alpha_antialiasing_mode</code> is read for the pass decision, but the cutout edge reads hard rather than coverage-blended.</li><li><strong>Shader missing</strong> <code>proximity_fade_*</code> and <code>distance_fade_*</code> decide the pass but are not rendered, so the surface stays at full opacity.</li><li><strong>Shader missing</strong> <code>metallic_specular</code> has no effect, since three fixes dielectric F0 at 0.04.</li><li><strong>Approximated</strong> Godot measures V from the image top and three from the bottom, so a non-integer <code>uv1_scale.y</code> or a non-zero <code>uv1_offset.y</code> shifts V differently.</li><li><strong>Approximated</strong> Under <code>uv1_world_triplanar</code>, <code>uv1_offset</code> is in world units and is not converted.</li><li><strong>Approximated</strong> Triplanar tiling density is exact on planar meshes only, since curved and GLB geometry and a <code>.tres</code> material tile by their own UVs.</li><li><strong>Approximated</strong> A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.</li></ul></div>
     </article>
     <article class="sheet" data-type="StaticBody2D" hidden>
       <header class="sheet-head">

@@ -59,6 +59,11 @@ The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the r
 
 - **Approximated** `ao_on_uv2` samples through UV1, since no mesh here carries a second UV set.
 
+## Diffuse mode
+<!-- compare: image=unit-material-diffuse-mode status=done fixture=unit-material-diffuse-mode.tscn -->
+
+`diffuse_mode` picks the light's diffuse term: Burley, Lambert, Lambert wrap and toon, left to right, lit from the right. Both engines brighten Burley's rim, wrap the light past Lambert's terminator and band the toon sphere. Godot's default material draws Lambert.
+
 ## Refraction
 <!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
 

@@ -51,4 +51,5 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 - **Approximated** The projection reads bolder than Godot's at a partial `albedo_mix`, since exact blending needs a custom projector shader.
 - **Approximated** The depth and normal fades are baked per vertex, so a large decal on a low-poly tilted or curved receiver bands where Godot's is smooth.
 - **Approximated** `texture_normal`, `texture_orm`, `texture_emission` and `emission_energy` are parsed but not applied, so the projection carries albedo alone.
+- **Approximated** The projection shades with its receiver's scalar roughness, metallic and `diffuse_mode`, taken from the first surface, so a receiver's roughness or metallic map does not reach it.
 - **Approximated** At the projection rim Godot fades the outer half-texel toward the transparent padding of its atlas, where the clamped sample here stays crisp.
