@@ -5949,6 +5949,24 @@ tr:last-child td{border-bottom:0}
 <ul><li><strong>Approximated</strong> The bright lobe lands on the other side of centre, and band edges step hard where Godot's blur.</li><li><strong>Approximated</strong> A minified flowmap with zero-alpha texels turns its direction 90 degrees from the first mip level that mixes them.</li><li><strong>Approximated</strong> A material loaded from a <code>.tres</code> gets its anisotropy scalars and no flowmap.</li></ul></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Ambient occlusion</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-material-ao-godot.png" alt="Godot render of Ambient occlusion">
+          <img class="img-ours" src="images/unit-material-ao-ours.png" alt="Our render of Ambient occlusion">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>The left plate reads a checkerboard AO map at <code>ao_light_affect = 1.0</code>, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. <code>ao_texture_channel</code> picks the map channel.</p>
+<ul><li><strong>Approximated</strong> <code>ao_on_uv2</code> samples through UV1, since no mesh here carries a second UV set.</li></ul></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Refraction</h3><span class="status st-limitation">Limitation</span></div>
         <div class="compare">
         <div class="stage">
