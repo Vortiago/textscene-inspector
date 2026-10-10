@@ -126,7 +126,10 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
    * Render one anisotropic material whose `anisotropy_flowmap` resolves to
    * `texture`, and hand back the physical material it produced.
    */
-  async function renderWithFlowmap(texture: THREE.Texture): Promise<THREE.MeshPhysicalMaterial> {
+  async function renderWithFlowmap(
+    texture: THREE.Texture,
+    anisotropy = '0.8'
+  ): Promise<THREE.MeshPhysicalMaterial> {
     const loader = loaderServing();
     const path = 'res://textures/aniso_flow.png';
     preloadResource(loader, 'texture', path, texture);
@@ -138,7 +141,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
         type: 'StandardMaterial3D',
         data: {
           anisotropy_enabled: 'true',
-          anisotropy: '0.8',
+          anisotropy,
           anisotropy_flowmap: 'ExtResource("2")',
         } as Record<string, string>,
       },
@@ -173,6 +176,16 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     // The cached source texture is not mutated, since other consumers of that
     // flowmap share it: its blue stays 0.
     expect((flow.image as { data: Uint8Array }).data[2]).toBe(0);
+  });
+
+  it('wires the flowmap of a negative anisotropy, whose strength it scales too (edge case)', async () => {
+    // `material.cpp:1932`: ANISOTROPY = anisotropy_ratio * flowmap strength, for either sign.
+    const flow = new THREE.DataTexture(new Uint8Array([128, 128, 0, 200]), 1, 1, THREE.RGBAFormat);
+    flow.needsUpdate = true;
+
+    const material = await renderWithFlowmap(flow, '-0.8');
+
+    expect((material.anisotropyMap!.image as { data: Uint8Array }).data[2]).toBe(200);
   });
 
   it('keeps scalar anisotropy when the flowmap pixels cannot be read', async () => {

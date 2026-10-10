@@ -20,18 +20,28 @@ import { patchedShader } from './testing/patchedFragment';
 
 const CHUNK = 'lights_physical_pars_fragment';
 const SETUP_CHUNK = 'lights_physical_fragment';
-const threeChunks = { [CHUNK]: THREE.ShaderChunk[CHUNK], [SETUP_CHUNK]: THREE.ShaderChunk[SETUP_CHUNK] };
+const MAPS_CHUNK = 'lights_fragment_maps';
+type LightChunk = typeof CHUNK | typeof SETUP_CHUNK | typeof MAPS_CHUNK;
+const threeChunks = {
+  [CHUNK]: THREE.ShaderChunk[CHUNK],
+  [SETUP_CHUNK]: THREE.ShaderChunk[SETUP_CHUNK],
+  [MAPS_CHUNK]: THREE.ShaderChunk[MAPS_CHUNK],
+};
 
 const occurrences = (text: string, part: string) => text.split(part).length - 1;
 
 /** three's chunks with every edit applied. */
-function godotChunks(): Record<typeof CHUNK | typeof SETUP_CHUNK, string> {
+function godotChunks(): Record<LightChunk, string> {
   return applyChunkEdits(threeChunks, GODOT_LIGHT_FUNCTION_EDITS)!;
 }
 
 /** The two chunks as `THREE.ShaderChunk` holds them now. */
-function installedChunks(): Record<typeof CHUNK | typeof SETUP_CHUNK, string> {
-  return { [CHUNK]: THREE.ShaderChunk[CHUNK], [SETUP_CHUNK]: THREE.ShaderChunk[SETUP_CHUNK] };
+function installedChunks(): Record<LightChunk, string> {
+  return {
+    [CHUNK]: THREE.ShaderChunk[CHUNK],
+    [SETUP_CHUNK]: THREE.ShaderChunk[SETUP_CHUNK],
+    [MAPS_CHUNK]: THREE.ShaderChunk[MAPS_CHUNK],
+  };
 }
 
 /** three's lighting chunk with every edit applied. */
@@ -105,6 +115,14 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
     );
   });
 
+  it("bends a negative anisotropy's reflection about the tangent, as Godot does (edge case)", () => {
+    // `scene_forward_clustered.glsl:1698`.
+    expect(godotLightChunk()).toMatch(
+      /#ifdef GODOT_ANISOTROPY_NEGATIVE\s*#define GODOT_IBL_ANISOTROPIC_DIRECTION material\.anisotropyT/
+    );
+    expect(godotChunks()[MAPS_CHUNK]).not.toContain('material.anisotropyB');
+  });
+
   it('reads a negative anisotropy from its define (edge case)', () => {
     expect(godotChunks()[SETUP_CHUNK]).toMatch(
       /#ifdef GODOT_ANISOTROPY_NEGATIVE\s*float godotAnisotropy = - material\.anisotropy;/
@@ -124,19 +142,15 @@ describe('installGodotLightFunction', () => {
 
     expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
 
-    expect(THREE.ShaderChunk[CHUNK]).toBe('void main() {}');
-    expect(THREE.ShaderChunk[SETUP_CHUNK]).toBe(threeChunks[SETUP_CHUNK]);
+    expect(installedChunks()).toEqual({ ...threeChunks, [CHUNK]: 'void main() {}' });
   });
 
-  it('leaves both chunks alone when the setup chunk lacks its roughness clamp (error case)', () => {
+  it('leaves every chunk alone when the setup chunk lacks its roughness clamp (error case)', () => {
     THREE.ShaderChunk[SETUP_CHUNK] = 'void main() {}';
 
     expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
 
-    expect(installedChunks()).toEqual({
-      [CHUNK]: threeChunks[CHUNK],
-      [SETUP_CHUNK]: 'void main() {}',
-    });
+    expect(installedChunks()).toEqual({ ...threeChunks, [SETUP_CHUNK]: 'void main() {}' });
   });
 
   it('changes nothing and warns nothing on a second call (edge case)', () => {

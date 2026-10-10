@@ -202,7 +202,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     heightmapScale: heightmapEnabled ? floatOr(properties['heightmap_scale'], 5, CONTEXT) : 0,
     billboardMode: intOr(properties['billboard_mode'], 0, CONTEXT),
     billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
-    anisotropy: anisotropyEnabled ? Math.min(1, Math.max(-1, anisotropyRaw)) : 0,
+    anisotropy: anisotropyEnabled ? Math.max(-1, Math.min(1, anisotropyRaw)) : 0,
     // Godot refraction is a screen-space distortion; three models the same
     // "see the background through this surface" effect volumetrically, so
     // `refraction_scale` drives `thickness` and cannot go negative there.

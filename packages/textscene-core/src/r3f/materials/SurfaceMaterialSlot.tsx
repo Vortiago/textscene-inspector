@@ -220,14 +220,15 @@ export function useMaterialTextures(
 
   // Depend on the two values the repack reads, not their wrappers: a repack is a
   // canvas readback plus a full-buffer copy plus a GPU re-upload.
-  const anisotropyStrength = scalars?.anisotropy ?? 0;
+  // `anisotropy` is signed, and either sign scales by the flowmap's strength (`material.cpp:1932`).
+  const isAnisotropic = (scalars?.anisotropy ?? 0) !== 0;
   const anisotropyFlowmap = textureSlots.anisotropy_flowmap?.value;
   const repackedFlowmap = useMemo(() => {
     // Only an anisotropy-enabled material renders as MeshPhysicalMaterial and
     // samples anisotropyMap.
-    if (anisotropyStrength <= 0 || !anisotropyFlowmap) return undefined;
+    if (!isAnisotropic || !anisotropyFlowmap) return undefined;
     return repackAnisotropyFlowmap(anisotropyFlowmap);
-  }, [anisotropyStrength, anisotropyFlowmap]);
+  }, [isAnisotropic, anisotropyFlowmap]);
 
   const anisotropyBound = useMemo(
     () => transformedTexture({ value: repackedFlowmap }, textureState, 'anisotropy_flowmap'),
@@ -275,9 +276,7 @@ export function useMaterialTextures(
   // Only an anisotropy-enabled material samples the flowmap, so only it waits for one.
   const anisotropyMap =
     anisotropyBound ??
-    (anisotropyStrength > 0 && isArriving('anisotropy_flowmap')
-      ? pendingMapStandIn('anisotropy_flowmap')
-      : undefined);
+    (isAnisotropic && isArriving('anisotropy_flowmap') ? pendingMapStandIn('anisotropy_flowmap') : undefined);
 
   const isFileMissing = TEXTURE_SLOTS.some((slot) => textureSlots[slot]?.status === 'unavailable');
 

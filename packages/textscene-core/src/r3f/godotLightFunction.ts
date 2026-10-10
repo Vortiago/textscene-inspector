@@ -18,6 +18,7 @@ import { glslFloat } from '../resources/environment/glslLiterals.js';
 
 const CHUNK = 'lights_physical_pars_fragment';
 const SETUP_CHUNK = 'lights_physical_fragment';
+const MAPS_CHUNK = 'lights_fragment_maps';
 
 const ROUGHNESS_SETUP = 'material.roughness = min( material.roughness, 1.0 );';
 
@@ -154,12 +155,32 @@ const GODOT_ALPHAS = /* glsl */ `#ifdef GODOT_ANISOTROPY_NEGATIVE
 	material.alphaT = pow2( material.godotRoughness ) / godotAspect;
 	material.godotAlphaB = pow2( material.godotRoughness ) * godotAspect;`;
 
-type LightChunk = typeof CHUNK | typeof SETUP_CHUNK;
+/**
+ * Godot bends an anisotropic reflection about the bitangent, or the tangent when \`anisotropy\` is
+ * negative (\`scene_forward_clustered.glsl:1698\`).
+ */
+const IBL_DIRECTION = /* glsl */ `#ifdef GODOT_ANISOTROPY_NEGATIVE
+	#define GODOT_IBL_ANISOTROPIC_DIRECTION material.anisotropyT
+#else
+	#define GODOT_IBL_ANISOTROPIC_DIRECTION material.anisotropyB
+#endif
+`;
+
+const THREE_IBL_RADIANCE =
+  'vec3 iblRadiance = getIBLAnisotropyRadiance( geometryViewDir, geometryNormal, material.roughness, material.anisotropyB, material.anisotropy );';
+const THREE_IBL_RETRO_RADIANCE =
+  'vec3 retroIBLRadiance = getIBLAnisotropyRetroRadiance( geometryViewDir, geometryNormal, material.roughness, material.anisotropyB, material.anisotropy );';
+
+/** The reflection line bent about Godot's direction. */
+const onGodotIBLDirection = (line: string) =>
+  line.replace('material.anisotropyB', 'GODOT_IBL_ANISOTROPIC_DIRECTION');
+
+type LightChunk = typeof CHUNK | typeof SETUP_CHUNK | typeof MAPS_CHUNK;
 
 /**
  * Each edit to three's chunks: Godot's roughness and anisotropic alphas beside three's, Godot's
- * light terms, Godot's direct specular with none at roughness 0, and each diffuse line without its
- * Fresnel weight.
+ * light terms, Godot's direct specular with none at roughness 0, each diffuse line without its
+ * Fresnel weight, and the anisotropic reflection bent about Godot's direction.
  */
 export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
   {
@@ -168,10 +189,16 @@ export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
     godot: `${MATERIAL_STRUCT}\n\tfloat godotRoughness;\n\tfloat godotAlphaB;`,
   },
   { chunk: SETUP_CHUNK, three: ROUGHNESS_SETUP, godot: GODOT_ROUGHNESS },
-  { chunk: CHUNK, three: RE_DIRECT, godot: `${DIFFUSE_NL}${SPECULAR_BRDF}${RE_DIRECT}` },
+  { chunk: CHUNK, three: RE_DIRECT, godot: `${IBL_DIRECTION}${DIFFUSE_NL}${SPECULAR_BRDF}${RE_DIRECT}` },
   { chunk: CHUNK, three: THREE_DIRECT_SPECULAR, godot: DIRECT_SPECULAR },
   { chunk: CHUNK, three: THREE_SPECULAR_SUM, godot: SPECULAR_SUM },
   { chunk: SETUP_CHUNK, three: THREE_ALPHA_T, godot: GODOT_ALPHAS },
+  { chunk: MAPS_CHUNK, three: THREE_IBL_RADIANCE, godot: onGodotIBLDirection(THREE_IBL_RADIANCE) },
+  {
+    chunk: MAPS_CHUNK,
+    three: THREE_IBL_RETRO_RADIANCE,
+    godot: onGodotIBLDirection(THREE_IBL_RETRO_RADIANCE),
+  },
   {
     chunk: CHUNK,
     three:
@@ -193,11 +220,11 @@ export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
  */
 export function installGodotLightFunction(): void {
   installChunkPatch({
-    names: [CHUNK, SETUP_CHUNK],
+    names: [CHUNK, SETUP_CHUNK, MAPS_CHUNK],
     isApplied: (chunks) =>
       GODOT_LIGHT_FUNCTION_EDITS.every(({ chunk, godot }) => chunks[chunk].includes(godot)),
     apply: (chunks) => applyChunkEdits(chunks, GODOT_LIGHT_FUNCTION_EDITS),
-    missing: `${CHUNK} or ${SETUP_CHUNK} lacks a line the light function patch replaces`,
+    missing: `${CHUNK}, ${SETUP_CHUNK} or ${MAPS_CHUNK} lacks a line the light function patch replaces`,
   });
 }
 
