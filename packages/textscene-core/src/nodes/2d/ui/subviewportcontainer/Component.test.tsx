@@ -51,6 +51,7 @@ import {
   type ViewportRect,
 } from '../../../../r3f/contexts/ViewportRectContext';
 import { SubViewportContainer } from './Component';
+import { quadsSampling } from '../../../../r3f/controls/native/testing/quadsSampling';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 // Side-effect: the Control painters and the node registrations
 // `viewportContentKind` classifies against.
@@ -115,10 +116,7 @@ describe('<SubViewportContainer>', () => {
         />
       </>
     );
-    const mesh = renderer.scene
-      .findAll(() => true)
-      .map((n) => n.instance as THREE.Mesh)
-      .find((m) => (m.material as THREE.MeshBasicMaterial | undefined)?.map === entry.texture);
+    const mesh = quadsSampling(renderer.scene, entry.texture)[0];
     expect(mesh).toBeDefined();
   });
 
@@ -211,10 +209,7 @@ describe('<SubViewportContainer>', () => {
           </ViewportPassProvider>
         </ViewportTextureProvider>
       );
-      const textured = renderer.scene
-        .findAll(() => true)
-        .map((n) => n.instance as THREE.Mesh)
-        .filter((m) => (m.material as THREE.MeshBasicMaterial | undefined)?.map === entry.texture);
+      const textured = quadsSampling(renderer.scene, entry.texture);
       expect(textured).toHaveLength(0);
       const outlines = renderer.scene.findAllByType('LineSegments');
       expect(outlines.length).toBeGreaterThan(0);
@@ -333,10 +328,7 @@ describe('<SubViewportContainer> — the forced sub-viewport size truncates', ()
 describe('<SubViewportContainer> — the drawn rect', () => {
   /** The world-space extent of the quad that samples `texture`. */
   function drawnSize(renderer: Awaited<ReturnType<typeof mount>>, texture: THREE.Texture) {
-    const quad = renderer.scene
-      .findAll(() => true)
-      .map((n) => n.instance as THREE.Mesh)
-      .find((m) => (m.material as THREE.MeshBasicMaterial | undefined)?.map === texture);
+    const quad = quadsSampling(renderer.scene, texture)[0];
     quad!.updateWorldMatrix(true, false);
     const size = new THREE.Box3().setFromObject(quad!).getSize(new THREE.Vector3());
     return { x: Math.round(size.x * 1000) / 1000, y: Math.round(size.y * 1000) / 1000 };

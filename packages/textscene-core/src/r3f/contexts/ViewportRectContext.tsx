@@ -49,7 +49,7 @@ export function ViewportRectProvider({ children }: { children: ReactNode }) {
   const [rects, setRects] = useState<ReadonlyMap<string, ViewportRect>>(() => new Map());
   /**
    * The registration that owns each path. The entry cannot say, since the fast
-   * path below keeps an equal measurement's original object. A ref, so a
+   * path below keeps an equal rect's original object. A ref, so a
    * transfer of ownership never renders.
    */
   const owners = useRef(new Map<string, object>()).current;

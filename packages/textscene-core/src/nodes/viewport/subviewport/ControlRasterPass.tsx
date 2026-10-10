@@ -63,9 +63,9 @@ function createRasterTarget(width: number, height: number, name: string): THREE.
 }
 
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
-  const { path, node, transparentBg, inheritedRtl, internalResources, externalResources } = viewport;
+  const { path, node, inheritedRtl, internalResources, externalResources } = viewport;
 
-  const { size } = node.properties as SubViewportProperties;
+  const { size, transparent_bg: transparentBg } = node.properties as SubViewportProperties;
   const { x: width, y: height } = viewportTargetSize(size, useViewportRect(path));
 
   const gl = useThree((state) => state.gl);

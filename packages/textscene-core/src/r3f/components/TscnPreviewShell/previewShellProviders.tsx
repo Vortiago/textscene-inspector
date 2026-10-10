@@ -77,7 +77,7 @@ export function previewShellProviders({
     (children) => <ViewportPassProvider>{children}</ViewportPassProvider>,
     // A stretching SubViewportContainer publishes its solved rect and the
     // publisher sizes the target from it, since Godot's `recalc_force_viewport_sizes`
-    // makes the container's rect the viewport's size. It wraps both sides too.
+    // makes the container's rect the viewport's size. It wraps both canvases too.
     (children) => <ViewportRectProvider>{children}</ViewportRectProvider>,
     (children) => <AnimatedValueProvider>{children}</AnimatedValueProvider>,
     // Outermost of the Control-facing providers, since both theme-scale consumers,

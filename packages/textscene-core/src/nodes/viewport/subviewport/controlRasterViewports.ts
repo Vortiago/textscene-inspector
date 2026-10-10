@@ -13,7 +13,6 @@ import { liveChildGroups, type SceneScope } from '../../../r3f/liveSceneTree.js'
 import { joinPath } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
 import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
-import type { SubViewportProperties } from './types.js';
 
 /**
  * Read surface for the loader's PackedScene cache. Structural rather than the
@@ -31,8 +30,6 @@ export interface ControlRasterViewport extends SceneScope {
   path: string;
   /** The sub-viewport node, collapsed if it is itself an instance root. */
   node: TscnNode;
-  /** `transparent_bg`: false means the target clears to Godot's default clear colour. */
-  transparentBg: boolean;
   /**
    * `Control::is_layout_rtl()` for the nearest ancestor Control, or `null` where
    * there is none. The climb (`control.cpp:3584-3598`) steps over a `SubViewport`,
@@ -86,11 +83,9 @@ export function collectControlRasterViewports(
           resolveViewportSubtree(effective, effectiveScope.externalResources, sceneCache)
         ) === 'dom'
       ) {
-        const properties = effective.properties as SubViewportProperties;
         found.push({
           path,
           node: effective,
-          transparentBg: properties.transparent_bg === true,
           inheritedRtl,
           ...effectiveScope,
         });

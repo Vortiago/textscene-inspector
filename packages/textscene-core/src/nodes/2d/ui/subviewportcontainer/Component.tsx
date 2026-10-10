@@ -107,7 +107,7 @@ function ViewportSurfaceNative({
     internalResources,
     rtl
   );
-  const controlsViewport: Rect2 = useMemo(
+  const targetRect: Rect2 = useMemo(
     () => ({ x: 0, y: 0, w: targetWidth, h: targetHeight }),
     [targetWidth, targetHeight]
   );
@@ -159,11 +159,7 @@ function ViewportSurfaceNative({
   // The render target has only `targetWidth`x`targetHeight` pixels, so Godot clips by never
   // rendering past its edge. The Controls arm draws three.js objects with no such edge and needs
   // an explicit clip (`ScrollContainer`'s mechanism). The pixel arm's quad is already this size.
-  const clipRect = useMemo(
-    () => ({ x: 0, y: 0, w: targetWidth, h: targetHeight }),
-    [targetWidth, targetHeight]
-  );
-  const { anchorRef, clip } = useWorldClipPlanes(clipRect);
+  const { anchorRef, clip } = useWorldClipPlanes(targetRect);
 
   return (
     <CanvasItemGroup ref={anchorRef} scale={[scaleX, scaleY, 1]}>
@@ -171,7 +167,7 @@ function ViewportSurfaceNative({
         {cyclic ? (
           <ControlFallback
             solveNode={fallbackSolveNode}
-            rect={clipRect}
+            rect={targetRect}
             renderOrder={renderOrder}
             effectiveZ={effectiveZ}
             // The cycle branch renders no subtree, so the fallback's slot is its subtree's last.
@@ -207,7 +203,7 @@ function ViewportSurfaceNative({
           <ControlCanvasWalker
             tree={tree}
             generation={generation}
-            viewport={controlsViewport}
+            viewport={targetRect}
             theme={theme}
             measurer={measureText}
             // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on every Viewport, and

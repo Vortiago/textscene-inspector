@@ -74,7 +74,7 @@ describe('ViewportRectContext', () => {
    * A remounting container republishes the same rect, and a fresh Map would
    * re-render the sub-viewport and re-create its render target each time.
    */
-  it('does not re-render a consumer when the measurement is unchanged', () => {
+  it('does not re-render a consumer when the rect is unchanged', () => {
     let register!: ReturnType<typeof useRegisterViewportRect>;
     const seen: (ViewportRect | null)[] = [];
     mount(
@@ -94,7 +94,7 @@ describe('ViewportRectContext', () => {
     expect(seen.length).toBe(afterFirst);
   });
 
-  it('does re-render when the measurement actually changes', () => {
+  it('does re-render when the rect actually changes', () => {
     let register!: ReturnType<typeof useRegisterViewportRect>;
     const { getByTestId } = mount(
       <>
@@ -161,7 +161,7 @@ describe('ViewportRectContext', () => {
   });
 
   /**
-   * The same race with an unchanged measurement: the map keeps the departing
+   * The same race with an unchanged rect: the map keeps the departing
    * mount's object, so only ownership tells the two registrations apart.
    */
   it('a stale cleanup does not delete a successor’s equal rect', () => {
