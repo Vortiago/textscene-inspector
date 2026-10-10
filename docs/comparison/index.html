@@ -5856,8 +5856,8 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A <code>metallic = 1.0</code>, <code>roughness = 0.1</code> sphere reflects the preview sky. Both engines render the same blue-grey mirror with a matching highlight.</p>
-<ul><li><strong>Approximated</strong> Godot reads the map channel named by <code>metallic_texture_channel</code> and <code>roughness_texture_channel</code>. three reads fixed channels, so a map packed in RED is misread.</li></ul></div>
+        <div class="prose"><p>A <code>metallic = 1.0</code>, <code>roughness = 0.1</code> sphere reflects the preview sky. Both engines render the same blue-grey mirror.</p>
+<ul><li><strong>Approximated</strong> The preview glow spreads the sun's highlight less than Godot's, so the highlight reads smaller. Without glow the highlights match.</li><li><strong>Approximated</strong> Godot reads the map channel named by <code>metallic_texture_channel</code> and <code>roughness_texture_channel</code>. three reads fixed channels, so a map packed in RED is misread.</li></ul></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Emission</h3><span class="status st-done">Done</span></div>
@@ -5928,7 +5928,7 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p><code>anisotropy</code> stretches the specular highlight along one direction. Both engines show a brushed-metal streak.</p>
-<ul><li><strong>Approximated</strong> Ours reads sharper and more radial where Godot's lobe is soft.</li></ul></div>
+<ul><li><strong>Approximated</strong> three derives the tangent frame per pixel from the UVs, not from the mesh's tangents, so the streak reads faceted and turned from Godot's ring.</li></ul></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Anisotropy flowmap</h3><span class="status st-limitation">Limitation</span></div>
