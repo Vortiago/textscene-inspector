@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { billboardOf, castsShadowOf, standardMaterialBags, surfaceBillboard } from './materialBag';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
-import { diffuseModeUserData } from '../../../r3f/godotDiffuse';
+import { diffuseModeUserData } from '../../../r3f/godotLightFunction';
 import { DiffuseMode } from '../../../godot/diffuseMode';
 import {
   DRAWN_OPAQUE_PREPASS,

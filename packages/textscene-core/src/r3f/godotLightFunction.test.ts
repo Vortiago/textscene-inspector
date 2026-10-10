@@ -1,17 +1,17 @@
 /**
- * The Fresnel weight comes off three's diffuse term, and a light's diffuse follows the mode a
- * program defines. The first test reads the installed three, so a release that rewrites the
+ * The Fresnel weight comes off three's diffuse term, a light's diffuse follows the mode a program
+ * defines, and a light's specular is Godot's GGX on Godot's roughness. The first test reads the installed three, so a release that rewrites the
  * lines fails here, not in a golden.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  GODOT_DIFFUSE_EDITS,
+  GODOT_LIGHT_FUNCTION_EDITS,
   diffuseModeInjection,
   diffuseModeOf,
   diffuseModeUserData,
-  installGodotDiffuse,
-} from './godotDiffuse';
+  installGodotLightFunction,
+} from './godotLightFunction';
 import { DiffuseMode } from '../godot/diffuseMode';
 import { applyChunkEdits } from './shaderPatch/chunkPatch';
 import { warningsOf } from './testing/logWarnings';
@@ -25,7 +25,7 @@ const occurrences = (text: string, part: string) => text.split(part).length - 1;
 
 /** three's chunks with every edit applied. */
 function godotChunks(): Record<typeof CHUNK | typeof SETUP_CHUNK, string> {
-  return applyChunkEdits(threeChunks, GODOT_DIFFUSE_EDITS)!;
+  return applyChunkEdits(threeChunks, GODOT_LIGHT_FUNCTION_EDITS)!;
 }
 
 /** The two chunks as `THREE.ShaderChunk` holds them now. */
@@ -34,7 +34,7 @@ function installedChunks(): Record<typeof CHUNK | typeof SETUP_CHUNK, string> {
 }
 
 /** three's lighting chunk with every edit applied. */
-function godotDiffuseChunk(): string {
+function godotLightChunk(): string {
   return godotChunks()[CHUNK];
 }
 
@@ -42,9 +42,9 @@ afterEach(() => {
   Object.assign(THREE.ShaderChunk, threeChunks);
 });
 
-describe('GODOT_DIFFUSE_EDITS', () => {
+describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
   it('finds each replaced line exactly once in the installed three', () => {
-    for (const { chunk, three } of GODOT_DIFFUSE_EDITS) {
+    for (const { chunk, three } of GODOT_LIGHT_FUNCTION_EDITS) {
       expect(occurrences(threeChunks[chunk], three)).toBe(1);
     }
   });
@@ -52,32 +52,52 @@ describe('GODOT_DIFFUSE_EDITS', () => {
   it('writes each edit into its chunk', () => {
     const patched = godotChunks();
 
-    for (const { chunk, godot } of GODOT_DIFFUSE_EDITS) {
+    for (const { chunk, godot } of GODOT_LIGHT_FUNCTION_EDITS) {
       expect(patched[chunk]).toContain(godot);
     }
   });
 
   it('drops the Fresnel weight from both diffuse lines', () => {
-    const patched = godotDiffuseChunk();
+    const patched = godotLightChunk();
     expect(patched).not.toContain('* ( 1.0 - F )');
     expect(patched).not.toContain('* ( 1.0 - singleScattering - multiScattering )');
   });
 
   it("defines Godot's light function before the direct light function calls it", () => {
-    const patched = godotDiffuseChunk();
+    const patched = godotLightChunk();
     expect(patched.indexOf('float godotDiffuseNL(')).toBeLessThan(
       patched.indexOf('void RE_Direct_Physical(')
     );
   });
 
   it('keeps the specular term', () => {
-    expect(godotDiffuseChunk()).toContain('irradiance * specularBRDF * material.multiScatteringCompensation');
+    expect(godotLightChunk()).toContain('irradiance * specularBRDF * material.multiScatteringCompensation');
+  });
+
+  it("draws an isotropic light's specular with Godot's GGX", () => {
+    // `scene_forward_lights_inc.glsl:239-262`.
+    expect(godotLightChunk()).toMatch(
+      /#else\s*vec3 specularBRDF = godotSpecularBRDF\( directLight\.direction, geometryViewDir, geometryNormal, material \);/
+    );
+  });
+
+  it('draws no specular at roughness 0, as Godot does (edge case)', () => {
+    // `scene_forward_lights_inc.glsl:222`.
+    const specular = godotLightChunk().split('vec3 godotSpecularBRDF(')[1]!;
+    expect(specular).toContain('if ( material.godotRoughness <= 0.0 || cNdotL <= 0.0 ) return vec3( 0.0 );');
+  });
+
+  it("feeds the anisotropic lobe Godot's roughness", () => {
+    const ggx = godotLightChunk().split('vec3 BRDF_GGX(')[1]!.split('float alpha')[0];
+    expect([ggx, godotChunks()[SETUP_CHUNK]].join('\n')).not.toMatch(
+      /pow2\( material\.roughness \)|= material\.roughness;/
+    );
   });
 });
 
-describe('installGodotDiffuse', () => {
+describe('installGodotLightFunction', () => {
   it('replaces three’s chunks with the patched ones', () => {
-    installGodotDiffuse();
+    installGodotLightFunction();
 
     expect(installedChunks()).toEqual(godotChunks());
   });
@@ -85,7 +105,7 @@ describe('installGodotDiffuse', () => {
   it('leaves a chunk it cannot patch alone, and warns (error case)', () => {
     THREE.ShaderChunk[CHUNK] = 'void main() {}';
 
-    expect(warningsOf(installGodotDiffuse)).toHaveLength(1);
+    expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
 
     expect(THREE.ShaderChunk[CHUNK]).toBe('void main() {}');
     expect(THREE.ShaderChunk[SETUP_CHUNK]).toBe(threeChunks[SETUP_CHUNK]);
@@ -94,7 +114,7 @@ describe('installGodotDiffuse', () => {
   it('leaves both chunks alone when the setup chunk lacks its roughness clamp (error case)', () => {
     THREE.ShaderChunk[SETUP_CHUNK] = 'void main() {}';
 
-    expect(warningsOf(installGodotDiffuse)).toHaveLength(1);
+    expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
 
     expect(installedChunks()).toEqual({
       [CHUNK]: threeChunks[CHUNK],
@@ -104,8 +124,8 @@ describe('installGodotDiffuse', () => {
 
   it('changes nothing and warns nothing on a second call (edge case)', () => {
     const warnings = warningsOf(() => {
-      installGodotDiffuse();
-      installGodotDiffuse();
+      installGodotLightFunction();
+      installGodotLightFunction();
     });
 
     expect(warnings).toEqual([]);
@@ -133,7 +153,7 @@ describe('diffuseModeInjection', () => {
   });
 
   it('writes Burley in the branch the chunk takes with no define', () => {
-    const lightFunction = godotDiffuseChunk().split('#elif defined( GODOT_DIFFUSE_TOON )')[1]!;
+    const lightFunction = godotLightChunk().split('#elif defined( GODOT_DIFFUSE_TOON )')[1]!;
     expect(lightFunction.split('#endif')[0]).toMatch(/#else[\s\S]*fd90Minus1/);
   });
 

@@ -1,10 +1,11 @@
 /**
- * Godot's diffuse term in three's physical lighting chunks. Godot adds a light's diffuse and the
- * ambient diffuse with no Fresnel weight (Godot 4.6.3 `scene_forward_lights_inc.glsl:215` and
- * `scene_forward_clustered.glsl:2165`). three r186 weights both by what the specular layer
- * reflects (glTF `fresnel_mix`), which darkens every dielectric by about 4 %. A light's diffuse
- * also follows the material's `diffuse_mode`: Burley, BaseMaterial3D's default, unless a define in
- * its program picks another, and reads the roughness after Godot's screen-space limiter.
+ * Godot's light function in three's physical lighting chunks, for every punctual light. Godot adds a
+ * light's diffuse and the ambient diffuse with no Fresnel weight (Godot 4.6.3
+ * `scene_forward_lights_inc.glsl:215` and `scene_forward_clustered.glsl:2165`), where three r186
+ * weights both by what the specular layer reflects (glTF `fresnel_mix`). A light's diffuse follows
+ * the material's `diffuse_mode`, Burley unless a define in its program picks another. Its diffuse
+ * and specular read the roughness after Godot's screen-space limiter. Environment reflections keep
+ * three's floored roughness, which its cubemap mips need.
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
@@ -66,6 +67,38 @@ float godotDiffuseNL( const in float dotNLRaw, const in float dotNVRaw, const in
 
 `;
 
+/**
+ * Godot's isotropic GGX specular (\`scene_forward_lights_inc.glsl:16-32,239-262\`), divided by N.L as
+ * three's \`irradiance\` carries it. Godot draws no specular at roughness 0 (\`:222\`), and its
+ * Fresnel is exact Schlick with f90 from F0 (\`:258-260\`).
+ */
+const SPECULAR_BRDF = /* glsl */ `
+float godotGGXDistribution( const in float cNdotH, const in float alpha ) {
+	float a = cNdotH * alpha;
+	float k = alpha / ( 1.0 - cNdotH * cNdotH + a * a );
+	return k * k * RECIPROCAL_PI;
+}
+
+float godotGGXVisibility( const in float cNdotL, const in float cNdotV, const in float alpha ) {
+	return 0.5 / mix( 2.0 * cNdotL * cNdotV, cNdotL + cNdotV, alpha );
+}
+
+vec3 godotSpecularBRDF( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in PhysicalMaterial material ) {
+	float cNdotL = max( dot( normal, lightDir ), 0.0 );
+	if ( material.godotRoughness <= 0.0 || cNdotL <= 0.0 ) return vec3( 0.0 );
+	float alpha = material.godotRoughness * material.godotRoughness;
+	vec3 halfDir = normalize( lightDir + viewDir );
+	float cNdotV = max( dot( normal, viewDir ), 1e-4 );
+	float cNdotH = saturate( dot( normal, halfDir ) );
+	float cLdotH = saturate( dot( lightDir, halfDir ) );
+	vec3 f0 = material.specularColorBlended;
+	float f90 = clamp( dot( f0, vec3( 50.0 * 0.33 ) ), material.metalness, 1.0 );
+	vec3 F = f0 + ( f90 - f0 ) * godotSchlickFresnel( cLdotH );
+	return F * godotGGXDistribution( cNdotH, alpha ) * godotGGXVisibility( cNdotL, cNdotV, alpha );
+}
+
+`;
+
 const RE_DIRECT = 'void RE_Direct_Physical( const in IncidentLight directLight';
 
 /**
@@ -78,16 +111,42 @@ const DIRECT_DIFFUSE = /* glsl */ `vec3 godotDiffuseIrradiance = godotDiffuseNL(
 	#endif
 	reflectedLight.directDiffuse += godotDiffuseIrradiance * BRDF_Lambert( material.diffuseContribution );`;
 
-type DiffuseChunk = typeof CHUNK | typeof SETUP_CHUNK;
+const THREE_DIRECT_SPECULAR =
+  'vec3 specularBRDF = BRDF_GGX( directLight.direction, geometryViewDir, geometryNormal, material );';
 
 /**
- * Each edit to three's chunks: Godot's roughness beside three's, the mode-aware light term, and each
- * diffuse line without its Fresnel weight.
+ * three's anisotropic GGX matches Godot's (\`scene_forward_lights_inc.glsl:34-47\`), so it stays, fed
+ * Godot's roughness. Godot spreads the lobe by an aspect ratio, not three's \`alphaT\`.
  */
-export const GODOT_DIFFUSE_EDITS: readonly ChunkEdit<DiffuseChunk>[] = [
+const DIRECT_SPECULAR = /* glsl */ `#ifdef USE_ANISOTROPY
+		${THREE_DIRECT_SPECULAR}
+		if ( material.godotRoughness <= 0.0 ) specularBRDF = vec3( 0.0 );
+	#else
+		vec3 specularBRDF = godotSpecularBRDF( directLight.direction, geometryViewDir, geometryNormal, material );
+	#endif`;
+
+/** \`BRDF_GGX\`'s roughness, the one line that tells it from \`BRDF_GGX_Clearcoat\` and the area light. */
+const THREE_GGX_ROUGHNESS = 'float f90 = material.specularF90;\n\tfloat roughness = material.roughness;';
+const GODOT_GGX_ROUGHNESS = 'float f90 = material.specularF90;\n\tfloat roughness = material.godotRoughness;';
+
+const THREE_ALPHA_T =
+  'material.alphaT = mix( pow2( material.roughness ), 1.0, pow2( material.anisotropy ) );';
+const GODOT_ALPHA_T =
+  'material.alphaT = mix( pow2( material.godotRoughness ), 1.0, pow2( material.anisotropy ) );';
+
+type LightChunk = typeof CHUNK | typeof SETUP_CHUNK;
+
+/**
+ * Each edit to three's chunks: Godot's roughness beside three's, Godot's light terms, the direct
+ * specular and anisotropic lobe on Godot's roughness, and each diffuse line without its Fresnel weight.
+ */
+export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
   { chunk: CHUNK, three: MATERIAL_STRUCT, godot: `${MATERIAL_STRUCT}\n\tfloat godotRoughness;` },
   { chunk: SETUP_CHUNK, three: ROUGHNESS_SETUP, godot: GODOT_ROUGHNESS },
-  { chunk: CHUNK, three: RE_DIRECT, godot: `${DIFFUSE_NL}${RE_DIRECT}` },
+  { chunk: CHUNK, three: RE_DIRECT, godot: `${DIFFUSE_NL}${SPECULAR_BRDF}${RE_DIRECT}` },
+  { chunk: CHUNK, three: THREE_DIRECT_SPECULAR, godot: DIRECT_SPECULAR },
+  { chunk: CHUNK, three: THREE_GGX_ROUGHNESS, godot: GODOT_GGX_ROUGHNESS },
+  { chunk: SETUP_CHUNK, three: THREE_ALPHA_T, godot: GODOT_ALPHA_T },
   {
     chunk: CHUNK,
     three:
@@ -104,14 +163,15 @@ export const GODOT_DIFFUSE_EDITS: readonly ChunkEdit<DiffuseChunk>[] = [
 
 /**
  * Replaces three's chunks for every program compiled after the call. A three release that
- * rewrites the lines keeps its own chunk, and `godotDiffuse.test.ts` fails on that release. A
+ * rewrites the lines keeps its own chunk, and `godotLightFunction.test.ts` fails on that release. A
  * second call changes nothing.
  */
-export function installGodotDiffuse(): void {
+export function installGodotLightFunction(): void {
   installChunkPatch({
     names: [CHUNK, SETUP_CHUNK],
-    isApplied: (chunks) => GODOT_DIFFUSE_EDITS.every(({ chunk, godot }) => chunks[chunk].includes(godot)),
-    apply: (chunks) => applyChunkEdits(chunks, GODOT_DIFFUSE_EDITS),
+    isApplied: (chunks) =>
+      GODOT_LIGHT_FUNCTION_EDITS.every(({ chunk, godot }) => chunks[chunk].includes(godot)),
+    apply: (chunks) => applyChunkEdits(chunks, GODOT_LIGHT_FUNCTION_EDITS),
     missing: `${CHUNK} or ${SETUP_CHUNK} has no material struct, roughness clamp, light function or diffuse line to replace`,
   });
 }

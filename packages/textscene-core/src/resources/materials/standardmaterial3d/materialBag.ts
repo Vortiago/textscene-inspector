@@ -17,7 +17,7 @@ import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../..
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
-import { diffuseModeInjection, diffuseModeUserData } from '../../../r3f/godotDiffuse';
+import { diffuseModeInjection, diffuseModeUserData } from '../../../r3f/godotLightFunction';
 import {
   GODOT_AMBIENT_OCCLUSION,
   ambientOcclusionUserData,

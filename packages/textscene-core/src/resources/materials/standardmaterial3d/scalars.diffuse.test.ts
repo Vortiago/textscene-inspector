@@ -1,6 +1,6 @@
 /**
  * StandardMaterial3D `diffuse_mode`: the direct diffuse term Godot's light function writes. The
- * render side applies it (`godotDiffuse.ts`).
+ * render side applies it (`godotLightFunction.ts`).
  */
 
 import { describe, expect, it } from 'vitest';

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { DecalProjectionMaterials } from './decalProjectionMaterials';
-import { diffuseModeUserData } from '../../../r3f/godotDiffuse';
+import { diffuseModeUserData } from '../../../r3f/godotLightFunction';
 import { DiffuseMode } from '../../../godot/diffuseMode';
 import { DRAWS_LAMBERT_DIFFUSE, patchedFragment } from '../../../r3f/testing/patchedFragment';
 

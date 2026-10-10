@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { injectProgram } from '../../../r3f/materialProgramInputs';
-import { diffuseModeInjection, diffuseModeOf, diffuseModeUserData } from '../../../r3f/godotDiffuse';
+import { diffuseModeInjection, diffuseModeOf, diffuseModeUserData } from '../../../r3f/godotLightFunction';
 import { DiffuseMode } from '../../../godot/diffuseMode';
 
 /** What every projection of one decal shares: its texture, tint and opacity. */
