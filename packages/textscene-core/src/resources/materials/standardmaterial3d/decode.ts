@@ -12,6 +12,7 @@ import { parseVector3 } from '../../../parser/vectors';
 import { drawsInShadowPass, type PassMembership } from '../../../godot/shadowPass';
 import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/textureChannel';
 import { DiffuseMode } from '../../../godot/diffuseMode';
+import { clamp } from '../../../godot/math';
 import { emissionScalars } from './emission';
 import {
   BlendMode,
@@ -136,8 +137,6 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
 
   const normalScale = floatOr(properties['normal_scale'], 1, CONTEXT);
 
-  const anisotropyRaw = floatOr(properties['anisotropy'], 0, CONTEXT);
-
   // FEATURE_REFRACTION replaces the `ALPHA *= albedo.a * albedo_tex.a` line with
   // `ALPHA = 1.0` (`material.cpp:1832-1837`), so a refractive surface is fully opaque however
   // low its authored alpha. A shader that writes no ALPHA never reads the albedo alpha either.
@@ -202,7 +201,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     heightmapScale: heightmapEnabled ? floatOr(properties['heightmap_scale'], 5, CONTEXT) : 0,
     billboardMode: intOr(properties['billboard_mode'], 0, CONTEXT),
     billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
-    anisotropy: anisotropyEnabled ? Math.max(-1, Math.min(1, anisotropyRaw)) : 0,
+    anisotropy: anisotropyEnabled ? clamp(floatOr(properties['anisotropy'], 0, CONTEXT), -1, 1) : 0,
     // Godot refraction is a screen-space distortion; three models the same
     // "see the background through this surface" effect volumetrically, so
     // `refraction_scale` drives `thickness` and cannot go negative there.

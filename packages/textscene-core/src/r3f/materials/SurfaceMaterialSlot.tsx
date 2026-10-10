@@ -20,7 +20,10 @@ import type {
   TextureSlotReferences,
 } from '../../resources/materials/standardmaterial3d/types';
 import { TEXTURE_SLOTS } from '../../resources/materials/standardmaterial3d/types';
-import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
+import {
+  MISSING_TEXTURE_MATERIAL,
+  isAnisotropic,
+} from '../../resources/materials/standardmaterial3d/materialBag';
 import {
   bindSlotTexture,
   materialTextureState,
@@ -220,15 +223,12 @@ export function useMaterialTextures(
 
   // Depend on the two values the repack reads, not their wrappers: a repack is a
   // canvas readback plus a full-buffer copy plus a GPU re-upload.
-  // `anisotropy` is signed, and either sign scales by the flowmap's strength (`material.cpp:1932`).
-  const isAnisotropic = (scalars?.anisotropy ?? 0) !== 0;
+  const drawsAnisotropic = scalars !== null && isAnisotropic(scalars);
   const anisotropyFlowmap = textureSlots.anisotropy_flowmap?.value;
   const repackedFlowmap = useMemo(() => {
-    // Only an anisotropy-enabled material renders as MeshPhysicalMaterial and
-    // samples anisotropyMap.
-    if (!isAnisotropic || !anisotropyFlowmap) return undefined;
+    if (!drawsAnisotropic || !anisotropyFlowmap) return undefined;
     return repackAnisotropyFlowmap(anisotropyFlowmap);
-  }, [isAnisotropic, anisotropyFlowmap]);
+  }, [drawsAnisotropic, anisotropyFlowmap]);
 
   const anisotropyBound = useMemo(
     () => transformedTexture({ value: repackedFlowmap }, textureState, 'anisotropy_flowmap'),
@@ -276,7 +276,9 @@ export function useMaterialTextures(
   // Only an anisotropy-enabled material samples the flowmap, so only it waits for one.
   const anisotropyMap =
     anisotropyBound ??
-    (isAnisotropic && isArriving('anisotropy_flowmap') ? pendingMapStandIn('anisotropy_flowmap') : undefined);
+    (drawsAnisotropic && isArriving('anisotropy_flowmap')
+      ? pendingMapStandIn('anisotropy_flowmap')
+      : undefined);
 
   const isFileMissing = TEXTURE_SLOTS.some((slot) => textureSlots[slot]?.status === 'unavailable');
 

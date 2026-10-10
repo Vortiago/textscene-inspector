@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   GODOT_LIGHT_FUNCTION_EDITS,
-  anisotropyInjection,
+  threeAnisotropy,
   diffuseModeInjection,
   diffuseModeOf,
   diffuseModeUserData,
@@ -22,20 +22,8 @@ const CHUNK = 'lights_physical_pars_fragment';
 const SETUP_CHUNK = 'lights_physical_fragment';
 const MAPS_CHUNK = 'lights_fragment_maps';
 type LightChunk = typeof CHUNK | typeof SETUP_CHUNK | typeof MAPS_CHUNK;
-const threeChunks = {
-  [CHUNK]: THREE.ShaderChunk[CHUNK],
-  [SETUP_CHUNK]: THREE.ShaderChunk[SETUP_CHUNK],
-  [MAPS_CHUNK]: THREE.ShaderChunk[MAPS_CHUNK],
-};
 
-const occurrences = (text: string, part: string) => text.split(part).length - 1;
-
-/** three's chunks with every edit applied. */
-function godotChunks(): Record<LightChunk, string> {
-  return applyChunkEdits(threeChunks, GODOT_LIGHT_FUNCTION_EDITS)!;
-}
-
-/** The two chunks as `THREE.ShaderChunk` holds them now. */
+/** The three chunks as `THREE.ShaderChunk` holds them now. */
 function installedChunks(): Record<LightChunk, string> {
   return {
     [CHUNK]: THREE.ShaderChunk[CHUNK],
@@ -44,9 +32,13 @@ function installedChunks(): Record<LightChunk, string> {
   };
 }
 
-/** three's lighting chunk with every edit applied. */
-function godotLightChunk(): string {
-  return godotChunks()[CHUNK];
+const threeChunks = installedChunks();
+
+const occurrences = (text: string, part: string) => text.split(part).length - 1;
+
+/** three's chunks with every edit applied. */
+function godotChunks(): Record<LightChunk, string> {
+  return applyChunkEdits(threeChunks, GODOT_LIGHT_FUNCTION_EDITS)!;
 }
 
 afterEach(() => {
@@ -69,32 +61,28 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
   });
 
   it('drops the Fresnel weight from both diffuse lines', () => {
-    const patched = godotLightChunk();
+    const patched = godotChunks()[CHUNK];
     expect(patched).not.toContain('* ( 1.0 - F )');
     expect(patched).not.toContain('* ( 1.0 - singleScattering - multiScattering )');
   });
 
   it("defines Godot's light function before the direct light function calls it", () => {
-    const patched = godotLightChunk();
+    const patched = godotChunks()[CHUNK];
     expect(patched.indexOf('float godotDiffuseNL(')).toBeLessThan(
       patched.indexOf('void RE_Direct_Physical(')
     );
   });
 
-  it('keeps the specular term', () => {
-    expect(godotLightChunk()).toContain('irradiance * specularBRDF * material.multiScatteringCompensation');
-  });
-
   it("draws a light's specular with Godot's GGX", () => {
     // `scene_forward_lights_inc.glsl:239-262`.
-    expect(godotLightChunk().split('void RE_Direct_Physical(')[1]).toContain(
+    expect(godotChunks()[CHUNK].split('void RE_Direct_Physical(')[1]).toContain(
       'vec3 specularBRDF = godotSpecularBRDF( directLight.direction, geometryViewDir, geometryNormal, material );'
     );
   });
 
   it('draws no specular at roughness 0, as Godot does (edge case)', () => {
     // `scene_forward_lights_inc.glsl:222`.
-    const direct = godotLightChunk().split('void RE_Direct_Physical(')[1]!;
+    const direct = godotChunks()[CHUNK].split('void RE_Direct_Physical(')[1]!;
     expect(direct).toMatch(
       /if \( material\.godotRoughness <= 0\.0 \) specularBRDF = vec3\( 0\.0 \);\s*reflectedLight\.directSpecular \+=/
     );
@@ -117,15 +105,18 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
 
   it("bends a negative anisotropy's reflection about the tangent, as Godot does (edge case)", () => {
     // `scene_forward_clustered.glsl:1698`.
-    expect(godotLightChunk()).toMatch(
-      /#ifdef GODOT_ANISOTROPY_NEGATIVE\s*#define GODOT_IBL_ANISOTROPIC_DIRECTION material\.anisotropyT/
+    expect(godotChunks()[CHUNK]).toContain(
+      '#define GODOT_IBL_ANISOTROPIC_DIRECTION ( GODOT_ANISOTROPY_IS_NEGATIVE ? material.anisotropyT : material.anisotropyB )'
     );
     expect(godotChunks()[MAPS_CHUNK]).not.toContain('material.anisotropyB');
   });
 
-  it('reads a negative anisotropy from its define (edge case)', () => {
-    expect(godotChunks()[SETUP_CHUNK]).toMatch(
-      /#ifdef GODOT_ANISOTROPY_NEGATIVE\s*float godotAnisotropy = - material\.anisotropy;/
+  it('reads the sign off the frame that threeAnisotropy turns (edge case)', () => {
+    expect(godotChunks()[CHUNK]).toContain(
+      '#define GODOT_ANISOTROPY_IS_NEGATIVE ( anisotropyVector.x < 0.0 )'
+    );
+    expect(godotChunks()[SETUP_CHUNK]).toContain(
+      'float godotAnisotropy = GODOT_ANISOTROPY_IS_NEGATIVE ? - material.anisotropy : material.anisotropy;'
     );
   });
 });
@@ -164,21 +155,19 @@ describe('installGodotLightFunction', () => {
   });
 });
 
-describe('anisotropyInjection', () => {
-  it('defines the sign of a negative anisotropy', () => {
-    const fragment = patchedShader(
-      anisotropyInjection(-0.5)!.onBeforeCompile,
-      THREE.ShaderLib.physical.fragmentShader
-    );
-    expect(fragment).toMatch(/^#define GODOT_ANISOTROPY_NEGATIVE\n/);
+describe('threeAnisotropy', () => {
+  it('passes a positive anisotropy through, unturned', () => {
+    expect(threeAnisotropy(0.5)).toEqual({ anisotropy: 0.5, anisotropyRotation: 0 });
   });
 
-  it('patches nothing for a positive anisotropy', () => {
-    expect(anisotropyInjection(0.5)).toBeUndefined();
+  it('turns a negative anisotropy by π, so anisotropyVector.x carries the sign', () => {
+    const { anisotropy, anisotropyRotation } = threeAnisotropy(-0.5);
+    expect(anisotropy).toBe(0.5);
+    expect(anisotropy * Math.cos(anisotropyRotation)).toBeLessThan(0);
   });
 
-  it('patches nothing for 0, which three draws isotropic (edge case)', () => {
-    expect(anisotropyInjection(0)).toBeUndefined();
+  it('leaves 0 unturned, which three draws isotropic (edge case)', () => {
+    expect(threeAnisotropy(0)).toEqual({ anisotropy: 0, anisotropyRotation: 0 });
   });
 });
 
@@ -202,7 +191,7 @@ describe('diffuseModeInjection', () => {
   });
 
   it('writes Burley in the branch the chunk takes with no define', () => {
-    const lightFunction = godotLightChunk().split('#elif defined( GODOT_DIFFUSE_TOON )')[1]!;
+    const lightFunction = godotChunks()[CHUNK].split('#elif defined( GODOT_DIFFUSE_TOON )')[1]!;
     expect(lightFunction.split('#endif')[0]).toMatch(/#else[\s\S]*fd90Minus1/);
   });
 

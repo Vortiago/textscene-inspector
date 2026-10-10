@@ -74,6 +74,7 @@ float godotDiffuseNL( const in float dotNLRaw, const in float dotNVRaw, const in
  * stretched alphas. Godot's Fresnel is exact Schlick with f90 from F0 (\`:258-260\`).
  */
 const SPECULAR_BRDF = /* glsl */ `
+// Godot's float order (:16-21), not three's algebraically equal D_GGX, which rounds differently.
 float godotGGXDistribution( const in float cNdotH, const in float alpha ) {
 	float a = cNdotH * alpha;
 	float k = alpha / ( 1.0 - cNdotH * cNdotH + a * a );
@@ -142,28 +143,20 @@ const THREE_ALPHA_T =
 
 /**
  * Godot stretches the lobe by an aspect ratio of the signed \`anisotropy\` (\`scene_forward_lights_inc.glsl:242-245\`).
- * three carries the magnitude, and a negative value defines its sign. Godot turns the frame by the
- * flowmap only above 0.01 (\`scene_forward_clustered.glsl:1456-1461\`).
+ * Godot turns the frame by the flowmap only above 0.01 (\`scene_forward_clustered.glsl:1456-1461\`).
  */
-const GODOT_ALPHAS = /* glsl */ `#ifdef GODOT_ANISOTROPY_NEGATIVE
-		float godotAnisotropy = - material.anisotropy;
-	#else
-		float godotAnisotropy = material.anisotropy;
-	#endif
+const GODOT_ALPHAS = /* glsl */ `float godotAnisotropy = GODOT_ANISOTROPY_IS_NEGATIVE ? - material.anisotropy : material.anisotropy;
 	if ( godotAnisotropy <= 0.01 ) anisotropyV = vec2( 1.0, 0.0 );
 	float godotAspect = sqrt( 1.0 - godotAnisotropy * 0.9 );
 	material.alphaT = pow2( material.godotRoughness ) / godotAspect;
 	material.godotAlphaB = pow2( material.godotRoughness ) * godotAspect;`;
 
 /**
- * Godot bends an anisotropic reflection about the bitangent, or the tangent when \`anisotropy\` is
- * negative (\`scene_forward_clustered.glsl:1698\`).
+ * The sign \`threeAnisotropy\` turns into the frame. Godot bends an anisotropic reflection about the
+ * bitangent, or the tangent when \`anisotropy\` is negative (\`scene_forward_clustered.glsl:1698\`).
  */
-const IBL_DIRECTION = /* glsl */ `#ifdef GODOT_ANISOTROPY_NEGATIVE
-	#define GODOT_IBL_ANISOTROPIC_DIRECTION material.anisotropyT
-#else
-	#define GODOT_IBL_ANISOTROPIC_DIRECTION material.anisotropyB
-#endif
+const ANISOTROPY_SIGN = /* glsl */ `#define GODOT_ANISOTROPY_IS_NEGATIVE ( anisotropyVector.x < 0.0 )
+#define GODOT_IBL_ANISOTROPIC_DIRECTION ( GODOT_ANISOTROPY_IS_NEGATIVE ? material.anisotropyT : material.anisotropyB )
 `;
 
 const THREE_IBL_RADIANCE =
@@ -189,7 +182,7 @@ export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
     godot: `${MATERIAL_STRUCT}\n\tfloat godotRoughness;\n\tfloat godotAlphaB;`,
   },
   { chunk: SETUP_CHUNK, three: ROUGHNESS_SETUP, godot: GODOT_ROUGHNESS },
-  { chunk: CHUNK, three: RE_DIRECT, godot: `${IBL_DIRECTION}${DIFFUSE_NL}${SPECULAR_BRDF}${RE_DIRECT}` },
+  { chunk: CHUNK, three: RE_DIRECT, godot: `${ANISOTROPY_SIGN}${DIFFUSE_NL}${SPECULAR_BRDF}${RE_DIRECT}` },
   { chunk: CHUNK, three: THREE_DIRECT_SPECULAR, godot: DIRECT_SPECULAR },
   { chunk: CHUNK, three: THREE_SPECULAR_SUM, godot: SPECULAR_SUM },
   { chunk: SETUP_CHUNK, three: THREE_ALPHA_T, godot: GODOT_ALPHAS },
@@ -259,12 +252,14 @@ export function diffuseModeInjection(mode: number): ProgramInjection | undefined
   return MODE_INJECTIONS.get(mode) ?? MODE_INJECTIONS.get(DiffuseMode.DIFFUSE_LAMBERT);
 }
 
-/** Godot's \`anisotropy\` is signed, and three's is a magnitude, so a negative one brings its sign. */
-const NEGATIVE_ANISOTROPY = defining('GODOT_ANISOTROPY_NEGATIVE');
-
-/** What a material with this \`anisotropy\` compiles with: nothing unless it is negative. */
-export function anisotropyInjection(anisotropy: number): ProgramInjection | undefined {
-  return anisotropy < 0 ? NEGATIVE_ANISOTROPY : undefined;
+/**
+ * three's anisotropy props for Godot's signed \`anisotropy\`. three takes a magnitude, so a negative
+ * one turns the frame by π, which three's D, V and reflection never see: they read T and B squared
+ * or crossed twice. The patched chunks read the sign off \`anisotropyVector\`, so both signs share one
+ * program.
+ */
+export function threeAnisotropy(anisotropy: number): { anisotropy: number; anisotropyRotation: number } {
+  return { anisotropy: Math.abs(anisotropy), anisotropyRotation: anisotropy < 0 ? Math.PI : 0 };
 }
 
 /** Where a material records the `diffuse_mode` of the surface it draws. */

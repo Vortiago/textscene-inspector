@@ -17,11 +17,7 @@ import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../..
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
-import {
-  anisotropyInjection,
-  diffuseModeInjection,
-  diffuseModeUserData,
-} from '../../../r3f/godotLightFunction';
+import { diffuseModeInjection, diffuseModeUserData, threeAnisotropy } from '../../../r3f/godotLightFunction';
 import {
   GODOT_AMBIENT_OCCLUSION,
   ambientOcclusionUserData,
@@ -106,7 +102,15 @@ export const MISSING_TEXTURE_MATERIAL: StandardMaterialBag = {
  * physical-only feature extends this set.
  */
 function needsPhysicalMaterial(scalars: StandardMaterial3DScalars): boolean {
-  return scalars.clearcoat > 0 || scalars.rim > 0 || scalars.anisotropy !== 0 || scalars.transmission > 0;
+  return scalars.clearcoat > 0 || scalars.rim > 0 || isAnisotropic(scalars) || scalars.transmission > 0;
+}
+
+/**
+ * Whether the surface draws anisotropic, and so samples \`anisotropyMap\`. \`anisotropy\` is signed,
+ * and either sign scales by the flowmap's strength (\`material.cpp:1932\`).
+ */
+export function isAnisotropic(scalars: StandardMaterial3DScalars): boolean {
+  return scalars.anisotropy !== 0;
 }
 
 /**
@@ -323,7 +327,6 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
   // occludes nothing.
   const injection = composeInjections([
     diffuseModeInjection(scalars.diffuseMode),
-    anisotropyInjection(scalars.anisotropy),
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
   ]);
   if (!needsPhysicalMaterial(scalars)) return { materialClass: 'standard', props: pbr, injection };
@@ -337,7 +340,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
       sheen: scalars.rim,
       sheenColor: rimSheenColor(scalars),
       sheenRoughness: RIM_SHEEN_ROUGHNESS,
-      anisotropy: Math.abs(scalars.anisotropy),
+      ...threeAnisotropy(scalars.anisotropy),
       // The flowmap needs an alpha→blue repack before it means anything, so
       // only an adapter that can do one ever fills this slot.
       anisotropyMap: slot('anisotropy_flowmap'),

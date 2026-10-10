@@ -281,12 +281,10 @@ describe('the imperative adapter — physical-only features', () => {
     expect(material.thickness).toBeCloseTo(0.2, 5);
   });
 
-  it('maps a negative anisotropy to its magnitude, unturned, with the sign in its program', () => {
-    const material = buildMaterial(
-      parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '-0.75' })
-    ) as THREE.MeshPhysicalMaterial;
-    expect([material.anisotropy, material.anisotropyRotation]).toEqual([0.75, 0]);
-    expect(patchedFragment(material)).toContain('#define GODOT_ANISOTROPY_NEGATIVE\n');
+  it('draws a negative anisotropy with the program of a positive one', () => {
+    const build = (anisotropy: string) =>
+      buildMaterial(parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy }));
+    expect(patchedFragment(build('-0.75'))).toBe(patchedFragment(build('0.75')));
   });
 
   it('stays a MeshStandardMaterial when every physical flag is off', () => {

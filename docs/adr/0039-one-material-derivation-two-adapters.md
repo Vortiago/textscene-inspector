@@ -73,7 +73,7 @@ these paths diverge on.
 
 ```ts
 scalars.clearcoat > 0 || scalars.rim > 0 ||
-scalars.anisotropy > 0 || scalars.transmission > 0
+isAnisotropic(scalars) || scalars.transmission > 0
 ```
 
 Godot has one spatial shader for all four. `FEATURE_CLEARCOAT`, `FEATURE_RIM`,
@@ -116,7 +116,7 @@ uniform, geometry or object state that a mounted material may change freely.
 | `depth_test` | uniform | `depthTest`. `WebGLPrograms` never reads it. |
 | `cull_mode` | program input | `side`, which reaches the program as the `doubleSided`/`flipSided` pair (`WebGLPrograms.js:369-370`). Godot's enum names the faces discarded, and three's names those kept, mapped once in `scalars.ts`. |
 | `diffuse_mode` | program input | A define from a `ProgramInjection` picks Godot's term in the patched lighting chunk (`godotLightFunction.ts`). Burley, the default, takes no define. |
-| `specular_mode` | unimplemented | three has one specular BRDF. Nothing in the repo reads the property. |
+| `specular_mode` | unimplemented | The patched lighting chunk (`godotLightFunction.ts`) draws Godot's SCHLICK_GGX for every surface. TOON and DISABLED would be defines from a `ProgramInjection`, as `diffuse_mode` is. Only the linter reads the property. |
 | `billboard_mode` | neither | A vertex-shader term in Godot. Here it is no program input: the derivation records it on the material's `userData`, and `r3f/surfaceDrawHooks.ts` swaps the world matrix around each draw group whose material billboards, per surface as Godot's shader does. |
 | `detail_blend_mode` | unimplemented | With the detail layer. |
 | `roughness_channel` | unimplemented | A stated parity limitation: Godot reads the channel named by `roughness_texture_channel`/`metallic_texture_channel` (default RED). three's `roughnessMap`/`metalnessMap` read fixed G/B (`SurfaceMaterialSlot.tsx`). |
@@ -137,8 +137,9 @@ uniform, geometry or object state that a mounted material may change freely.
 
 The four physical features are carried through their scalar. `decode.ts` zeroes
 `clearcoat`, `rim`, `anisotropy` and `transmission` when the matching `*_enabled` is
-false, and `needsPhysicalMaterial` then thresholds at `> 0`, the same thresholds three
-keys on (`WebGLPrograms.js:140-145`), so a Godot feature bit and a three layer bit move
+false. `needsPhysicalMaterial` then thresholds the others at `> 0` and the signed
+`anisotropy` at `!== 0`. Those are the thresholds three keys on (`WebGLPrograms.js:140-145`),
+as three takes the anisotropy's magnitude, so a Godot feature bit and a three layer bit move
 together. One divergence follows, on purpose: `rim_enabled = true` with `rim = 0.0` is a
 distinct program in Godot (the bit is set) and is not one here. It is unobservable. The
 emitted code is `RIM = rim * rim_tex.x` (`material.cpp:1904`), and likewise
