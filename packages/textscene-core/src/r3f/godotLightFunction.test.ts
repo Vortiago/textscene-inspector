@@ -85,14 +85,15 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
     // `scene_forward_lights_inc.glsl:222`.
     const direct = godotLightChunk().split('void RE_Direct_Physical(')[1]!;
     expect(direct).toMatch(
-      /#endif\s*if \( material\.godotRoughness <= 0\.0 \) specularBRDF = vec3\( 0\.0 \);/
+      /if \( material\.godotRoughness <= 0\.0 \) specularBRDF = vec3\( 0\.0 \);\s*reflectedLight\.directSpecular \+=/
     );
   });
 
   it("feeds the anisotropic lobe Godot's roughness", () => {
     const ggx = godotLightChunk().split('vec3 BRDF_GGX(')[1]!.split('float alpha')[0];
-    expect([ggx, godotChunks()[SETUP_CHUNK]].join('\n')).not.toMatch(
-      /pow2\( material\.roughness \)|= material\.roughness;/
+    expect(ggx).toContain('float roughness = material.godotRoughness;');
+    expect(godotChunks()[SETUP_CHUNK]).toContain(
+      'material.alphaT = mix( pow2( material.godotRoughness ), 1.0, pow2( material.anisotropy ) );'
     );
   });
 });
