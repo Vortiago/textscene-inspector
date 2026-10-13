@@ -1,6 +1,6 @@
 /**
  * Godot 4.7.2's integral of a rectangle light under a linearly transformed cosine
- * (`area_lights_inc.glsl:6-11,25-94,158-341`), in GLSL for three's lit programs. It reads three's
+ * and its solid angle (`area_lights_inc.glsl:6-11,25-94,137-341`), in GLSL for three's lit programs. It reads three's
  * `ltc_1` and `ltc_2` samplers, which `ltcTextures.ts` fills with Godot's tables. It leaves out the
  * texture fetch of an `area_texture`.
  */
@@ -129,6 +129,20 @@ float godotIntegrateClippedQuad( const in vec3 L[ 5 ], const in vec3 projected[ 
 	if ( vertexCount >= 4 ) integral += godotIntegrateEdge( projected[ 3 ], projected[ 4 ], L[ 3 ], L[ 4 ] );
 	if ( vertexCount == 5 ) integral += godotIntegrateEdge( projected[ 4 ], projected[ 0 ], L[ 4 ], L[ 0 ] );
 	return abs( integral );
+}
+
+// The rectangle's spherical excess, from the angles between the planes through its edges.
+float godotQuadSolidAngle( const in vec3 L[ 4 ] ) {
+	vec3 n0 = normalize( cross( L[ 0 ], L[ 1 ] ) );
+	vec3 n1 = normalize( cross( L[ 1 ], L[ 2 ] ) );
+	vec3 n2 = normalize( cross( L[ 2 ], L[ 3 ] ) );
+	vec3 n3 = normalize( cross( L[ 3 ], L[ 0 ] ) );
+	float g0 = acos( clamp( dot( - n0, n1 ), - 1.0, 1.0 ) );
+	float g1 = acos( clamp( dot( - n1, n2 ), - 1.0, 1.0 ) );
+	float g2 = acos( clamp( dot( - n2, n3 ), - 1.0, 1.0 ) );
+	float g3 = acos( clamp( dot( - n3, n0 ), - 1.0, 1.0 ) );
+	float angleSum = g0 + g1 + g2 + g3;
+	return clamp( angleSum - PI2, 0.0, PI2 );
 }
 
 // The rectangle's corners, relative to the fragment, under the cosine that mInv transforms.

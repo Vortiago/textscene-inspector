@@ -47,7 +47,7 @@ ${lights}`;
 }
 
 describe('the light pass for area lights', () => {
-  it("writes each area light's inverse range, attenuation and specular amount", async () => {
+  it("writes each area light's range, attenuation and specular amount", async () => {
     const renderer = await renderScene(
       areaLightScene(`
 [node name="Area" type="AreaLight3D" parent="."]
@@ -57,7 +57,7 @@ light_specular = 0.25
 `)
     );
     renderThrough(renderer);
-    expect([...areaLightUniformValues().falloffs.subarray(0, 3)]).toEqual([0.25, 2, 0.5]);
+    expect([...areaLightUniformValues().falloffs.subarray(0, 3)]).toEqual([4, 2, 0.5]);
   });
 
   it('gives a hidden area light no slot', async () => {
@@ -72,6 +72,6 @@ area_range = 8.0
 `)
     );
     renderThrough(renderer);
-    expect(areaLightUniformValues().falloffs[0]).toBe(0.125);
+    expect(areaLightUniformValues().falloffs[0]).toBe(8);
   });
 });

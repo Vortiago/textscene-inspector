@@ -29,15 +29,15 @@ function at(buffer: Float32Array, index: number): number[] {
 }
 
 describe('writeAreaLightUniforms', () => {
-  it("writes each light's inverse range, attenuation and twice its specular, in three's order", () => {
+  it("writes each light's range, attenuation and twice its specular, in three's order", () => {
     const scene = new THREE.Scene();
     scene.add(downLight(2, 1, 1), downLight(4, 2, 0.5));
 
     write(scene);
 
     const { falloffs } = areaLightUniformValues();
-    expect(at(falloffs, 0)).toEqual([0.5, 1, 2]);
-    expect(at(falloffs, 1)).toEqual([0.25, 2, 1]);
+    expect(at(falloffs, 0)).toEqual([2, 1, 2]);
+    expect(at(falloffs, 1)).toEqual([4, 2, 1]);
   });
 
   it('writes the direction the light shines in, in view space', () => {
@@ -77,7 +77,7 @@ describe('writeAreaLightUniforms', () => {
 
     write(scene);
 
-    expect(at(areaLightUniformValues().falloffs, 0)[0]).toBe(0.5);
+    expect(at(areaLightUniformValues().falloffs, 0)[0]).toBe(2);
   });
 
   it("clamps a zero range at Godot's 0.001 (edge case)", () => {
@@ -86,7 +86,7 @@ describe('writeAreaLightUniforms', () => {
 
     write(scene);
 
-    expect(at(areaLightUniformValues().falloffs, 0)[0]).toBeCloseTo(1000, 3);
+    expect(at(areaLightUniformValues().falloffs, 0)[0]).toBeCloseTo(0.001, 6);
   });
 
   it('grows the buffers past their capacity, and keeps writing the buffers a program holds', () => {
@@ -99,7 +99,7 @@ describe('writeAreaLightUniforms', () => {
 
     const { falloffs } = areaLightUniformValues();
     expect(falloffs.length).toBeGreaterThanOrEqual(count * 3);
-    expect(at(falloffs, count - 1)[0]).toBeCloseTo(1 / count, 6);
+    expect(at(falloffs, count - 1)[0]).toBe(count);
     expect(at(before, 0)[0]).toBe(1);
   });
 
@@ -109,7 +109,7 @@ describe('writeAreaLightUniforms', () => {
 
     write(scene);
 
-    expect(at(areaLightUniformValues().falloffs, 2)[0]).toBe(0.5);
+    expect(at(areaLightUniformValues().falloffs, 2)[0]).toBe(2);
   });
 
   it('writes the facing of a light without falloff (edge case)', () => {

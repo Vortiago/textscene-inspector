@@ -29,26 +29,11 @@ import { AREA_LIGHT_FACINGS, AREA_LIGHT_FALLOFFS, areaLightUniformValues } from 
 type AreaLightChunkName = 'lights_pars_begin' | 'lights_physical_pars_fragment' | 'lights_fragment_begin';
 
 /**
- * `get_omni_attenuation` (`scene_forward_lights_inc.glsl:457-464`) times the squared distance, as
- * the integral's solid angle already falls with the square (`:1003`).
- */
-const ATTENUATION = /* glsl */ `
-float godotAreaAttenuation( const in float lightDistance, const in float inverseRange, const in float decay ) {
-	float nd = lightDistance * inverseRange;
-	nd *= nd;
-	nd *= nd;
-	nd = max( 1.0 - nd, 0.0 );
-	nd *= nd;
-	return nd * pow( max( lightDistance, 0.0001 ), - decay ) * lightDistance * lightDistance;
-}
-`;
-
-/**
- * `light_process_area` without its shadow and `area_texture` (`scene_forward_lights_inc.glsl:983-1003`,
- * `:1123-1150`, `:1262-1310`). `facing` is the view-space direction the light shines in, and
- * `falloff` its inverse range, attenuation and specular amount. three's light colour carries
- * Godot's `energy * PI`, divided by the area when the light normalises it. Clearcoat adds to three's
- * clearcoat term, which three layers over the base as it does for every light.
+ * `light_process_area` without its shadow and `area_texture` (4.7.2 `scene_forward_lights_inc.glsl:983-1003`,
+ * `:1123-1150`, `:1214-1310`), in the material's `diffuse_mode` and `specular_mode`. `facing` is the
+ * view-space direction the light shines in, and `falloff` its range, attenuation and specular amount.
+ * three's light colour carries Godot's `energy * PI`, divided by the area when the light normalises it.
+ * `getDistanceAttenuation` carries Godot's `get_omni_attenuation` (`godotLightAttenuation.ts`).
  */
 const AREA_LIGHT = /* glsl */ `
 void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in vec3 facing, const in vec3 falloff, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in PhysicalMaterial material, inout ReflectedLight reflectedLight ) {
@@ -58,14 +43,20 @@ void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in
 	vec3 lightToVertex = geometryPosition - rectAreaLight.position;
 	if ( dot( facing, lightToVertex ) <= 0.0 ) return;
 
-	float halfWidthLength = length( areaWidth ) / 2.0;
-	float halfHeightLength = length( areaHeight ) / 2.0;
+	float widthLength = length( areaWidth );
+	float heightLength = length( areaHeight );
+	float halfWidthLength = widthLength / 2.0;
+	float halfHeightLength = heightLength / 2.0;
 	vec3 local = vec3( dot( lightToVertex, normalize( areaWidth ) ), dot( lightToVertex, normalize( areaHeight ) ), dot( lightToVertex, - facing ) );
 	vec3 closest = vec3( clamp( local.x, - halfWidthLength, halfWidthLength ), clamp( local.y, - halfHeightLength, halfHeightLength ), 0.0 );
 	float lightDistance = max( 0.0, length( closest - local ) );
 	// Godot's clusters skip a fragment beyond the range, where the attenuation is zero.
-	if ( lightDistance * falloff.x >= 1.0 ) return;
-	vec3 light = rectAreaLight.color * godotAreaAttenuation( lightDistance, falloff.x, falloff.y );
+	if ( lightDistance >= falloff.x ) return;
+	vec3 light = rectAreaLight.color * getDistanceAttenuation( lightDistance, falloff.x, falloff.y );
+	// The integral's solid angle already falls with the square of the distance (:1003).
+	vec3 ltcLight = light * lightDistance * lightDistance;
+	float area = widthLength * heightLength;
+	float specularAmount = falloff.z;
 
 	vec3 points[ 4 ];
 	points[ 0 ] = rectAreaLight.position - rectAreaLight.halfWidth - rectAreaLight.halfHeight - geometryPosition;
@@ -74,33 +65,57 @@ void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in
 	points[ 3 ] = rectAreaLight.position - rectAreaLight.halfWidth + rectAreaLight.halfHeight - geometryPosition;
 
 	float diffuse = godotLtcIntegral( geometryNormal, geometryViewDir, mat3( 1.0 ), points );
-	reflectedLight.directDiffuse += diffuse * light * material.diffuseContribution;
+	#ifndef GODOT_SPECULAR_DISABLED
+		vec2 ltcFresnel;
+		float specular = godotLtcSpecular( geometryNormal, geometryViewDir, material.godotRoughness, points, ltcFresnel );
+	#endif
+	#if defined( GODOT_DIFFUSE_TOON ) || defined( GODOT_SPECULAR_TOON )
+		float solidAngleOverPi = max( godotQuadSolidAngle( points ), 0.001 ) / PI;
+	#endif
 
-	vec2 ltcFresnel;
-	float specular = godotLtcSpecular( geometryNormal, geometryViewDir, material.roughness, points, ltcFresnel );
-	vec3 f0 = material.specularColorBlended;
-	float f90 = clamp( dot( f0, vec3( 50.0 * 0.33 ) ), material.metalness, 1.0 );
-	vec3 fresnel = f0 * max( ltcFresnel.x, 0.0 ) + ( f90 - f0 ) * max( ltcFresnel.y, 0.0 );
-	reflectedLight.directSpecular += specular * fresnel * light * falloff.z;
-
+	// Godot 4.7.2 dims this light under the clearcoat by the coat's own Fresnel (:1262-1269).
+	float clearcoatAttenuation = 1.0;
 	#ifdef USE_CLEARCOAT
 		vec2 clearcoatLtcFresnel;
 		float clearcoatSpecular = godotLtcSpecular( geometryClearcoatNormal, geometryViewDir, sqrt( mix( 0.001, 0.1, material.clearcoatRoughness ) ), points, clearcoatLtcFresnel );
 		float clearcoatFresnel = 0.04 * max( clearcoatLtcFresnel.x, 0.0 ) + ( 1.0 - 0.04 ) * max( clearcoatLtcFresnel.y, 0.0 );
-		clearcoatSpecularDirect += clearcoatSpecular * clearcoatFresnel * light * falloff.z;
+		clearcoatAttenuation = 1.0 - clearcoatFresnel * material.clearcoat;
+		clearcoatSpecularDirect += clearcoatSpecular * clearcoatFresnel * ltcLight * specularAmount;
+	#endif
+
+	#ifdef GODOT_DIFFUSE_TOON
+		float backDiffuse = godotLtcIntegral( - geometryNormal, geometryViewDir, mat3( 1.0 ), points );
+		float NdotL = ( diffuse - backDiffuse ) / solidAngleOverPi;
+		float diffuseNL = smoothstep( - material.godotRoughness, max( material.godotRoughness, 0.01 ), NdotL ) * RECIPROCAL_PI;
+		reflectedLight.directDiffuse += diffuseNL * light * area * clearcoatAttenuation * material.diffuseContribution;
+	#else
+		reflectedLight.directDiffuse += diffuse * ltcLight * clearcoatAttenuation * material.diffuseContribution;
+	#endif
+
+	// Toon writes to the diffuse, which Godot scales by albedo and 1 - metallic.
+	#if defined( GODOT_SPECULAR_TOON )
+		float mid = pow2( 1.0 - material.godotRoughness );
+		float RdotV = specular / solidAngleOverPi;
+		float intensity = smoothstep( mid - material.godotRoughness * 0.5, mid + material.godotRoughness * 0.5, RdotV ) * mid;
+		reflectedLight.directDiffuse += intensity * light * area * specularAmount * material.diffuseContribution;
+	#elif !defined( GODOT_SPECULAR_DISABLED )
+		vec3 f0 = material.specularColorBlended;
+		float f90 = clamp( dot( f0, vec3( 50.0 * 0.33 ) ), material.metalness, 1.0 );
+		vec3 fresnel = f0 * max( ltcFresnel.x, 0.0 ) + ( f90 - f0 ) * max( ltcFresnel.y, 0.0 );
+		reflectedLight.directSpecular += specular * fresnel * ltcLight * specularAmount * clearcoatAttenuation;
 	#endif
 }
 `;
 
 /** three's area light function, from its signature to the `#endif` that closes its block. */
 const THREE_AREA_LIGHT_START = '\tvoid RE_Direct_RectArea_Physical(';
-const THREE_AREA_LIGHT_END = '\n#endif\nvoid RE_Direct_Physical(';
+const THREE_AREA_LIGHT_END = '\n#endif\n';
 
 function withGodotAreaLight(chunk: string): string | null {
   const start = chunk.indexOf(THREE_AREA_LIGHT_START);
-  const end = chunk.indexOf(THREE_AREA_LIGHT_END);
-  if (start < 0 || end < start || chunk.split(THREE_AREA_LIGHT_START).length !== 2) return null;
-  return `${chunk.slice(0, start)}${LTC_INTEGRAL}${ATTENUATION}${AREA_LIGHT}${chunk.slice(end)}`;
+  const end = chunk.indexOf(THREE_AREA_LIGHT_END, start);
+  if (start < 0 || end < 0 || chunk.split(THREE_AREA_LIGHT_START).length !== 2) return null;
+  return `${chunk.slice(0, start)}${LTC_INTEGRAL}${AREA_LIGHT}${chunk.slice(end)}`;
 }
 
 const THREE_AREA_UNIFORM = 'uniform RectAreaLight rectAreaLights[ NUM_RECT_AREA_LIGHTS ];';
@@ -121,7 +136,13 @@ const UNIFORM_AND_CALL_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
   },
 ];
 
+/** The texts of the patches the area light reads: Godot's roughness and Godot's distance falloff. */
+const GODOT_ROUGHNESS_FIELD = 'float godotRoughness;';
+const GODOT_DISTANCE_FALLOFF = 'pow( max( lightDistance, 0.0001 ), - decayExponent )';
+
 function areaLightChunks(chunks: Chunks<AreaLightChunkName>): Chunks<AreaLightChunkName> | null {
+  if (!chunks.lights_physical_pars_fragment.includes(GODOT_ROUGHNESS_FIELD)) return null;
+  if (!chunks.lights_pars_begin.includes(GODOT_DISTANCE_FALLOFF)) return null;
   const lightFunction = withGodotAreaLight(chunks.lights_physical_pars_fragment);
   if (lightFunction === null) return null;
   return applyChunkEdits({ ...chunks, lights_physical_pars_fragment: lightFunction }, UNIFORM_AND_CALL_EDITS);
@@ -129,8 +150,9 @@ function areaLightChunks(chunks: Chunks<AreaLightChunkName>): Chunks<AreaLightCh
 
 /**
  * Replaces three's area light, and gives its tables and per-light uniforms to every built-in lit
- * material, for every program compiled after the call. A three release that rewrites a replaced
- * text keeps all its own chunks, and `areaLightChunk.test.ts` fails on that release. A second call
+ * material, for every program compiled after the call. It reads the light function's and the
+ * attenuation's patches, so it installs after them. A three release that rewrites a replaced text
+ * keeps all its own chunks, and `areaLightChunk.test.ts` fails on that release. A second call
  * changes nothing.
  */
 export function installGodotAreaLight(): void {
@@ -138,7 +160,7 @@ export function installGodotAreaLight(): void {
     names: ['lights_pars_begin', 'lights_physical_pars_fragment', 'lights_fragment_begin'],
     isApplied: (chunks) => chunks.lights_physical_pars_fragment.includes('godotLtcIntegral('),
     apply: areaLightChunks,
-    missing: 'rect area light lacks a text the Godot area light replaces',
+    missing: 'rect area light lacks a text the Godot area light replaces, or a patch it reads',
   });
   if (!isPatched) return;
   installLtcTextures();
