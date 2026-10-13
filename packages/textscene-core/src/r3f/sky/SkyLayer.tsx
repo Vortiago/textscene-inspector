@@ -67,6 +67,9 @@ export function SkyLayer({
     useTexture2D(sky.kind === 'panorama' ? sky.panorama : undefined, externalResources, internalResources)
       .texture ?? null;
   const lightsKey = useSkyLightsKey(scene);
+  // A ref, not an effect dependency: a new share needs no new bake.
+  const contributionRef = useRef(contribution);
+  contributionRef.current = contribution;
 
   useEffect(() => {
     // No frame has read the lights yet. A bake now would be replaced before it
@@ -88,7 +91,7 @@ export function SkyLayer({
 
     scene.environment = built.environment;
     scene.environmentIntensity = intensity;
-    scene.onBeforeRender = () => showSkyLayers(built.layers, contribution);
+    scene.onBeforeRender = () => showSkyLayers(built.layers, contributionRef.current);
     if (asBackground) {
       scene.background = built.background;
       scene.backgroundIntensity = backgroundIntensity;
@@ -104,7 +107,7 @@ export function SkyLayer({
       }
       built.dispose();
     };
-  }, [gl, scene, sky, intensity, contribution, panorama, asBackground, backgroundIntensity, lightsKey]);
+  }, [gl, scene, sky, intensity, panorama, asBackground, backgroundIntensity, lightsKey]);
 
   return null;
 }

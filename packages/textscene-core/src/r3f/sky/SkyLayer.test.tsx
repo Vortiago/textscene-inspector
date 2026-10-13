@@ -153,6 +153,18 @@ describe('SkyLayer', () => {
     expect(skyContribution[0]).toBe(0.25);
   });
 
+  it('shows a new share of the ambient without a new bake', async () => {
+    built.next = skyEnvironment(skyLayers());
+    const renderer = await ReactThreeTestRenderer.create(<SkyLayer sky={SKY} contribution={0.25} />);
+    await advance(renderer, 1);
+    const bakeCount = bakes.length;
+
+    await renderer.update(<SkyLayer sky={SKY} contribution={0.5} />);
+    layersAfterRender(renderer);
+
+    expect([bakes.length, skyContribution[0]]).toEqual([bakeCount, 0.5]);
+  });
+
   it('stops showing its layers when it unmounts', async () => {
     const layers = skyLayers();
     built.next = skyEnvironment(layers);
