@@ -2,11 +2,12 @@
 /**
  * Bakes Godot 4.7.2's two LTC tables for area lights, which Godot ships as DDS files
  * (`servers/rendering/storage/ltc/ltc_lut1.dds`, `ltc_lut2.dds`), into the committed
- * `ltcTable.generated.ts`: `node scripts/godot-ltc/bake-ltc.mjs [--check]`. It fetches each file at
- * the release tag. `--check` diffs a fresh bake against the committed file and exits 1 on a
- * difference.
+ * `ltcTable.generated.ts`: `node scripts/godot-ltc/bake-ltc.mjs [--check]`. A bake fetches each file at
+ * the release tag. `--check` runs offline: it decodes the committed tables, checks them against
+ * the pinned digests, renders them again and exits 1 on a difference.
  */
 
+import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -16,6 +17,12 @@ const OUT = join(REPO_ROOT, 'packages/textscene-core/src/godot/ltcTable.generate
 
 const SOURCE =
   'https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/servers/rendering/storage/ltc';
+
+/** SHA-256 of each table's texels at the release tag, so a check needs no network. */
+export const TEXEL_SHA256 = {
+  'ltc_lut1.dds': 'c097ded563f9c13625acb1673e2ab6ffa590efcb954354f311e9d15a61d51dc3',
+  'ltc_lut2.dds': '53f93b6a3c097b33be3a47d891cc6fb2b76635dff65cd7c78c01f291d280bc49',
+};
 
 /** `LTC_LUT_DIMENSIONS` (`make_ltc_lut.py:18`). */
 export const LTC_SIZE = 64;
@@ -41,10 +48,38 @@ export function ltcTexels(dds) {
   return dds.subarray(HEADER_BYTES, HEADER_BYTES + LTC_SIZE * LTC_SIZE * 16);
 }
 
+/** `texels` when they are the release's table `name`. Throws on any other bytes. */
+function pinned(name, texels) {
+  const digest = createHash('sha256').update(texels).digest('hex');
+  if (digest !== TEXEL_SHA256[name]) {
+    throw new Error(`expected ${name} texels with SHA-256 ${TEXEL_SHA256[name]}, got ${digest}`);
+  }
+  return texels;
+}
+
 async function fetchTexels(name) {
   const response = await fetch(`${SOURCE}/${name}`);
   if (!response.ok) throw new Error(`fetch ${name}: HTTP ${response.status}`);
-  return ltcTexels(new Uint8Array(await response.arrayBuffer()));
+  return pinned(name, ltcTexels(new Uint8Array(await response.arrayBuffer())));
+}
+
+/** The base64 the generated text assigns to `constant`, or an empty string when it has none. */
+function base64Of(text, constant) {
+  return text.match(new RegExp(`export const ${constant} =\\s*'([^']*)'`))?.[1] ?? '';
+}
+
+/**
+ * The problem with a committed generated `text`, or null when it holds the release's tables in the
+ * bake's exact form.
+ */
+export function generatedProblem(text) {
+  try {
+    const lut1 = pinned('ltc_lut1.dds', Buffer.from(base64Of(text, 'LTC_LUT1_BASE64'), 'base64'));
+    const lut2 = pinned('ltc_lut2.dds', Buffer.from(base64Of(text, 'LTC_LUT2_BASE64'), 'base64'));
+    return render(lut1, lut2) === text ? null : 'its text differs from a fresh bake';
+  } catch (error) {
+    return error.message;
+  }
 }
 
 function render(lut1, lut2) {
@@ -79,17 +114,19 @@ export const LTC_LUT2_BASE64 =
 `;
 }
 
-async function main() {
+async function bake() {
   const [lut1, lut2] = await Promise.all([fetchTexels('ltc_lut1.dds'), fetchTexels('ltc_lut2.dds')]);
-  const text = render(lut1, lut2);
-  if (!process.argv.includes('--check')) {
-    writeFileSync(OUT, text);
-    return;
-  }
-  if (readFileSync(OUT, 'utf8') !== text) {
-    console.error(`${OUT} is stale. Run: pnpm godot:ltc`);
-    process.exit(1);
-  }
+  writeFileSync(OUT, render(lut1, lut2));
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+function check() {
+  const problem = generatedProblem(readFileSync(OUT, 'utf8'));
+  if (problem === null) return;
+  console.error(`${OUT} is stale: ${problem}. Run: pnpm godot:ltc`);
+  process.exit(1);
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  if (process.argv.includes('--check')) check();
+  else await bake();
+}

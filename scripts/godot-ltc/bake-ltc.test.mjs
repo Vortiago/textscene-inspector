@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { LTC_SIZE, ltcTexels } from './bake-ltc.mjs';
+import { generatedProblem, LTC_SIZE, ltcTexels } from './bake-ltc.mjs';
+import { REPO_ROOT } from '../repoRoot.mjs';
 
 const TEXEL_BYTES = LTC_SIZE * LTC_SIZE * 16;
 
@@ -29,5 +32,27 @@ describe('ltcTexels', () => {
 
   it('refuses a table of another size (edge case)', () => {
     expect(() => ltcTexels(dds({ width: 32 }))).toThrow('32×64');
+  });
+});
+
+describe('generatedProblem', () => {
+  const committed = readFileSync(
+    join(REPO_ROOT, 'packages/textscene-core/src/godot/ltcTable.generated.ts'),
+    'utf8'
+  );
+
+  it("passes the committed tables, which are the release's", () => {
+    expect(generatedProblem(committed)).toBeNull();
+  });
+
+  it('names the table whose texels differ from the release (error case)', () => {
+    const tampered = committed.replace(/(LTC_LUT2_BASE64 =\s*')A/, '$1B');
+    expect(generatedProblem(tampered)).toContain('ltc_lut2.dds');
+  });
+
+  it('reports a text that differs from a fresh bake around the same tables (edge case)', () => {
+    expect(generatedProblem(committed.replace('AUTO-GENERATED', 'GENERATED'))).toBe(
+      'its text differs from a fresh bake'
+    );
   });
 });
