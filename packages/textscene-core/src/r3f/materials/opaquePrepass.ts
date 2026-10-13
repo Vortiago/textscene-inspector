@@ -6,6 +6,7 @@
  */
 
 import type * as THREE from 'three';
+import { recordedOn } from './recordedOnMaterial';
 
 /** How Godot's depth passes treat one surface material. */
 export interface OpaquePrepass {
@@ -32,5 +33,5 @@ export function opaquePrepassUserData(prepass: OpaquePrepass): Record<string, Op
 }
 
 export function opaquePrepassOf(material: THREE.Material): OpaquePrepass {
-  return (material.userData[OPAQUE_PREPASS_KEY] as OpaquePrepass | undefined) ?? NO_OPAQUE_PREPASS;
+  return recordedOn(material, OPAQUE_PREPASS_KEY, NO_OPAQUE_PREPASS);
 }

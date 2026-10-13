@@ -87,18 +87,3 @@ export class TrackedObjects<Tracked extends THREE.Object3D> {
     object.removeEventListener('childremoved', this.onChildRemoved);
   }
 }
-
-/**
- * Every drawable (Mesh, Line, Points, Sprite) sets `material` in its constructor, so a later swap on
- * one is an assignment to a holder already in the list.
- */
-function holdsMaterial(object: THREE.Object3D): object is THREE.Object3D {
-  return (object as Partial<THREE.Mesh>).material !== undefined;
-}
-
-/** The objects under a root that carry a `material`. */
-export class MaterialHolders extends TrackedObjects<THREE.Object3D> {
-  constructor(root: THREE.Object3D) {
-    super(root, holdsMaterial);
-  }
-}

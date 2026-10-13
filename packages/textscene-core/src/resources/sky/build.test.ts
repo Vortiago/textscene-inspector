@@ -29,6 +29,34 @@ describe('skyPanoramaTexture', () => {
   });
 });
 
+/** A renderer whose cube reads back the same radiance on every texel. */
+function uniformSkyRenderer(radiance: number): THREE.WebGLRenderer {
+  return {
+    readRenderTargetPixels: (...args: unknown[]) => {
+      (args[5] as Uint16Array).fill(THREE.DataUtils.toHalfFloat(radiance));
+    },
+  } as unknown as THREE.WebGLRenderer;
+}
+
+describe('buildSkyEnvironment layers', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("carries Godot's roughest layers of the sky's radiance", () => {
+    vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(() => {});
+    vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockReturnValue(
+      new THREE.WebGLRenderTarget(1, 1)
+    );
+    const sky = decodeSkyMaterial('ProceduralSkyMaterial', {})!;
+
+    const env = buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [] });
+
+    expect(env!.layers.rough).toHaveLength(3);
+    expect(THREE.DataUtils.fromHalfFloat(env!.layers.last[2]![1]!)).toBeCloseTo(0.25, 3);
+  });
+});
+
 describe('buildSkyEnvironment panorama wiring', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -50,7 +78,7 @@ describe('buildSkyEnvironment panorama wiring', () => {
       new THREE.WebGLRenderTarget(1, 1)
     );
     const sky = decodeSkyMaterial('PanoramaSkyMaterial', {})!;
-    const env = buildSkyEnvironment({} as THREE.WebGLRenderer, { sky, lights: [], panorama });
+    const env = buildSkyEnvironment(uniformSkyRenderer(0), { sky, lights: [], panorama });
     return { env, sampled: sampled as THREE.Texture | null };
   }
 

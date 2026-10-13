@@ -9,6 +9,7 @@ import type { SpotLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
+import { godotConePenumbra } from '../../../../r3f/godotLightAttenuation';
 import { positionalShadowNear } from '../../../../godot/positionalShadow';
 import { spotShadowBias } from '../shared/shadowBias';
 import { LightWithTarget } from '../shared/lightShared';
@@ -24,17 +25,13 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
   );
   const color = parseColorToHex(properties.light_color);
   const angleRadians = (properties.spot_angle * Math.PI) / 180;
-  // `spot_attenuation`, the distance falloff exponent (default 1), is three.js
-  // decay. `spot_angle_attenuation`, the cone-edge exponent (default 1, higher is
-  // sharper), maps inversely to penumbra (0 hard, 1 soft). An explicit `penumbra`
-  // overrides the derived value.
+  // `spot_attenuation` is Godot's distance falloff exponent, which three calls decay.
   const decay = properties.spot_attenuation;
-  const spotAngleAttenuation = properties.spot_angle_attenuation;
-  const penumbra = properties.penumbra ?? Math.max(0, Math.min(1, 1 / (spotAngleAttenuation + 1)));
+  const penumbra = godotConePenumbra(angleRadians, properties.spot_angle_attenuation);
   const { intensity, shadowOpacity, userData } = usePositionalLight(
     lightRef,
     properties,
-    spotAngleAttenuation
+    properties.spot_angle_attenuation
   );
 
   return (

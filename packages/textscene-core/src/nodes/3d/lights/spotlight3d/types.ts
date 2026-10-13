@@ -11,12 +11,9 @@ export interface SpotLight3DProperties extends Node3DProperties, PositionalLight
   /** Cone angle in degrees */
   spot_angle: number;
 
-  /** Distance falloff exponent (Godot default 1) → three.js decay. */
+  /** The distance falloff exponent (Godot default 1). */
   spot_attenuation: number;
 
-  /** Cone-edge falloff exponent (Godot default 1); higher = sharper edge. */
+  /** The inverse of the cone's falloff exponent (Godot default 1). */
   spot_angle_attenuation: number;
-
-  /** Penumbra for soft edges (optional, 0-1). Overrides the derived value. */
-  penumbra?: number;
 }

@@ -1,12 +1,12 @@
 ---
 type: Sky
 category: Resources
-renders_as: a THREE PMREM environment + background
+renders_as: a THREE PMREM environment + Godot's roughest radiance layers + background
 ---
 
 # Sky
 
-A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background plus a PMREM-filtered environment map.
+A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. A PMREM-filtered environment map gives sharp reflections. Godot's roughest radiance layers, baked as Godot bakes them, give rough reflections and the ambient light.
 
 ## ProceduralSkyMaterial
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
@@ -38,4 +38,3 @@ The lenient parser never rejects. An unreadable Sky property falls back to Godot
 ## Known limitations
 
 - **Resource gap** A `ShaderMaterial` sky or a `CompressedCubemap` panorama is not resolved, so the background falls back to a mid-blue solid and metals reflect near-black.
-- **Approximated** A dielectric's faint sky specular is scaled by `ambient_light_sky_contribution` along with its diffuse, where Godot keeps it at full strength.

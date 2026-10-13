@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { heightmapSampledBy } from '../../../r3f/testing/patchedFragment';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -113,9 +114,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     expect(mat.normalMap).toBeInstanceOf(THREE.Texture);
   });
 
-  it('heightmap_texture loaded → material.displacementMap is a THREE.Texture (+ scale)', async () => {
-    // displacementScale alone displaces nothing: the height texture must reach
-    // material.displacementMap.
+  it('heightmap_texture loaded → the parallax samples it, and no vertex moves', async () => {
     const tex = makeTexture();
     const renderer = await renderWithTexture({
       matData: {
@@ -127,8 +126,8 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       cached: [{ path: HEIGHT_PATH, texture: tex }],
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
-    expect(mat.displacementMap).toBeInstanceOf(THREE.Texture);
-    expect(mat.displacementScale).toBeCloseTo(0.3, 5);
+    expect(heightmapSampledBy(mat)).toBeInstanceOf(THREE.Texture);
+    expect(mat.displacementMap).toBeNull();
   });
 
   it('#35 normal_scale=2.0 → material.normalScale.x === 2.0 and .y === 2.0', async () => {

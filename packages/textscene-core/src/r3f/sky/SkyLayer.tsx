@@ -1,5 +1,7 @@
 /**
- * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL. Godot's sky
+ * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its roughest layers
+ * and its share of the ambient to every lit material before each render of the scene
+ * (`skyLayersMap.ts`). Godot's sky
  * shader draws the discs of the first four DirectionalLights that are not Light Only as
  * `LIGHT0..3`. The lights are read from the rendered three.js scene, where an instanced
  * or GLB light has its real world transform.
@@ -16,15 +18,22 @@ import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { skyLightEnergy } from './skyLight';
 import { skyEuler } from './skyRotation';
 import type { Vector3 } from '../../parser/vectors';
+import { showSkyLayers } from './skyLayersMap';
+import { observeSceneCamera } from '../sceneRenderCamera';
 
 export interface SkyLayerProps {
   sky: SkyProperties;
   /**
    * The sky's full reflection strength (`background_energy_multiplier`), as
-   * `scene.environmentIntensity`: a metal reflects the whole sky whatever the
-   * ambient source. `EnvironmentLayer` restores the diffuse share with `envMapIntensity`.
+   * `scene.environmentIntensity`: a surface reflects the whole sky whatever the
+   * ambient source.
    */
   intensity?: number;
+  /**
+   * `ambient_light_sky_contribution`: the sky's share of the ambient, 0 when the ambient
+   * comes from elsewhere.
+   */
+  contribution?: number;
   /**
    * Whether this sky also paints the background. Godot's ambient can come from
    * the sky while the background shows something else (`AMBIENT_SOURCE_SKY`
@@ -46,6 +55,7 @@ const LIGHT_SLOTS = 4;
 export function SkyLayer({
   sky,
   intensity = 1,
+  contribution = 1,
   asBackground = true,
   backgroundIntensity = 1,
   rotation,
@@ -63,6 +73,9 @@ export function SkyLayer({
       .texture ?? null;
   const lightsKey = useSkyLightsKey(scene);
   const { x: rotationX, y: rotationY, z: rotationZ } = rotation;
+  // A ref, not an effect dependency: a new share needs no new bake.
+  const contributionRef = useRef(contribution);
+  contributionRef.current = contribution;
 
   useEffect(() => {
     // No frame has read the lights yet. A bake now would be replaced before it
@@ -87,6 +100,10 @@ export function SkyLayer({
     scene.environment = built.environment;
     scene.environmentIntensity = intensity;
     scene.environmentRotation.copy(skyRotation);
+    // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
+    const stopShowingLayers = observeSceneCamera(scene, () =>
+      showSkyLayers(built.layers, contributionRef.current)
+    );
     if (asBackground) {
       scene.background = built.background;
       scene.backgroundIntensity = backgroundIntensity;
@@ -94,6 +111,7 @@ export function SkyLayer({
     }
 
     return () => {
+      stopShowingLayers();
       scene.environment = previousEnvironment;
       scene.environmentIntensity = previousIntensity;
       scene.environmentRotation.copy(previousEnvironmentRotation);

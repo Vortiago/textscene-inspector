@@ -9,7 +9,7 @@ renders_as: a THREE.SpotLight
 
 # SpotLight3D
 
-Godot's cone-shaped light, emitting from a point along its local -Z axis and fading toward the cone's rim and its range. The previewer renders it as a `THREE.SpotLight` with energy scaled by PI to match Godot's brightness and the cone edge softened through `penumbra`.
+Godot's cone-shaped light, emitting from a point along its local -Z axis and fading toward the cone's rim and its range. The previewer renders it as a `THREE.SpotLight` with energy scaled by PI to match Godot's brightness. A shader patch gives it Godot's distance falloff and Godot's fade from the axis to the cone's rim, at the power `spot_angle_attenuation` sets.
 
 ## Linting
 
@@ -40,6 +40,4 @@ Godot's positional shadow atlas gives the light one slot for the camera, and the
 
 ## Known limitations
 
-- **Approximated** Distance falloff follows three's inverse-square curve rather than Godot's, so the lit pool near the cube reads slightly brighter.
-- **Approximated** `spot_angle_attenuation` maps onto three's single `penumbra` value, so the cone-edge softness curve differs.
 - **Editor only** The wireframe cone gizmo appears only in Godot's editor, but here it is selection-gated.

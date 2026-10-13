@@ -6,18 +6,27 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import { MaterialHolders, TrackedObjects } from './trackedObjects';
+import { TrackedObjects } from './trackedObjects';
+
+function holdsMaterial(object: THREE.Object3D): object is THREE.Object3D {
+  return (object as Partial<THREE.Mesh>).material !== undefined;
+}
+
+/** The objects under `scene` that carry a `material`, the kind these tests track. */
+function materialHolders(scene: THREE.Object3D): TrackedObjects<THREE.Object3D> {
+  return new TrackedObjects(scene, holdsMaterial);
+}
 
 function mesh(): THREE.Mesh {
   return new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial());
 }
 
 /** The list as a set: a removal swaps the last holder into the gap, so order is not kept. */
-function holderSet(holders: MaterialHolders): Set<THREE.Object3D> {
+function holderSet(holders: TrackedObjects<THREE.Object3D>): Set<THREE.Object3D> {
   return new Set(holders.current());
 }
 
-describe('MaterialHolders', () => {
+describe('TrackedObjects of material holders', () => {
   it('lists every object under the root that carries a material, and nothing else', () => {
     const scene = new THREE.Scene();
     const group = new THREE.Group();
@@ -27,14 +36,14 @@ describe('MaterialHolders', () => {
     group.add(inner);
     scene.add(group, outer, sprite, new THREE.PointLight());
 
-    expect(holderSet(new MaterialHolders(scene))).toEqual(new Set([inner, outer, sprite]));
+    expect(holderSet(materialHolders(scene))).toEqual(new Set([inner, outer, sprite]));
   });
 
   it('walks the root once while nothing is added or removed', () => {
     const scene = new THREE.Scene();
     scene.add(mesh());
     const traverse = vi.spyOn(scene, 'traverse');
-    const holders = new MaterialHolders(scene);
+    const holders = materialHolders(scene);
 
     const first = holders.current();
     for (let frame = 0; frame < 10; frame += 1) expect(holders.current()).toBe(first);
@@ -46,7 +55,7 @@ describe('MaterialHolders', () => {
     const holder = mesh();
     scene.add(holder);
     const traverse = vi.spyOn(scene, 'traverse');
-    const holders = new MaterialHolders(scene);
+    const holders = materialHolders(scene);
     holders.current();
 
     holder.material = new THREE.MeshPhysicalMaterial();
@@ -56,7 +65,7 @@ describe('MaterialHolders', () => {
 
   it('picks up a mesh added anywhere below the root, including under a later-added group', () => {
     const scene = new THREE.Scene();
-    const holders = new MaterialHolders(scene);
+    const holders = materialHolders(scene);
     expect(holders.current()).toEqual([]);
 
     const group = new THREE.Group();
@@ -71,7 +80,7 @@ describe('MaterialHolders', () => {
   it('walks only the added subtree, never the root again, when a mesh arrives', () => {
     const scene = new THREE.Scene();
     scene.add(mesh(), mesh());
-    const holders = new MaterialHolders(scene);
+    const holders = materialHolders(scene);
     holders.current();
     const rootWalk = vi.spyOn(scene, 'traverse');
 
@@ -85,7 +94,7 @@ describe('MaterialHolders', () => {
 
   it('picks up a subtree that arrives whole, as a GLB clone does', () => {
     const scene = new THREE.Scene();
-    const holders = new MaterialHolders(scene);
+    const holders = materialHolders(scene);
     holders.current();
 
     const clone = new THREE.Group();
@@ -99,7 +108,7 @@ describe('MaterialHolders', () => {
     const scene = new THREE.Scene();
     const group = new THREE.Group();
     scene.add(group);
-    const holders = new MaterialHolders(scene);
+    const holders = materialHolders(scene);
     holders.current();
 
     const attached = mesh();
@@ -114,7 +123,7 @@ describe('MaterialHolders', () => {
     const moving = mesh();
     from.add(moving);
     scene.add(from, to);
-    const holders = new MaterialHolders(scene);
+    const holders = materialHolders(scene);
     holders.current();
 
     to.add(moving);
@@ -127,7 +136,7 @@ describe('MaterialHolders', () => {
     const leaving = mesh();
     group.add(leaving);
     scene.add(group);
-    const holders = new MaterialHolders(scene);
+    const holders = materialHolders(scene);
     const listeners = listenersAddedTo(group, () => holders.current());
     expect(holders.current()).toEqual([leaving]);
 
@@ -142,7 +151,7 @@ describe('MaterialHolders', () => {
     const scene = new THREE.Scene();
     const [first, middle, last] = [mesh(), mesh(), mesh()];
     scene.add(first, middle, last);
-    const holders = new MaterialHolders(scene);
+    const holders = materialHolders(scene);
     holders.current();
 
     scene.remove(middle);
@@ -155,7 +164,7 @@ describe('MaterialHolders', () => {
     const scene = new THREE.Scene();
     const group = new THREE.Group();
     scene.add(group);
-    const holders = new MaterialHolders(scene);
+    const holders = materialHolders(scene);
     holders.current();
     scene.remove(group);
 
@@ -167,7 +176,7 @@ describe('MaterialHolders', () => {
     const scene = new THREE.Scene();
     const group = new THREE.Group();
     scene.add(group);
-    const holders = new MaterialHolders(scene);
+    const holders = materialHolders(scene);
     const listeners = listenersAddedTo(scene, () => holders.current());
 
     holders.dispose();

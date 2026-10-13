@@ -30,7 +30,7 @@ A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and th
 
 The preview environment enables glow, which blooms the emissive sphere. Both engines draw the same tight halo and leave the ground untouched. The bright pass, the seven-level pyramid and all five blend modes are ported from Godot's shaders.
 
-- **Approximated** The pyramid blurs with a 13-tap downsample and a 9-tap tent upsample rather than Godot's gaussian, so a bare glow buffer (REPLACE) differs slightly.
+- **Approximated** The pyramid blurs with a 13-tap downsample and a 9-tap tent upsample rather than Godot's gaussian, so a bare glow buffer (REPLACE) differs slightly. A specular highlight's halo also spreads less.
 - **Approximated** `glow_map` is not resolved, so a scene supplying one gets unmodulated glow.
 
 ## Depth fog

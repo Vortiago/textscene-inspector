@@ -35,9 +35,9 @@ async function rebuilds(
 }
 
 /**
- * Seven of the eight slots. `anisotropyMap` is asserted separately: three gates it
+ * Six of the eight slots. `anisotropyMap` is asserted separately: three gates it
  * on `HAS_ANISOTROPY` (`WebGLPrograms.js:147`), and only `MeshPhysicalMaterial`
- * declares `anisotropy` (`MeshPhysicalMaterial.js:353`).
+ * declares `anisotropy` (`MeshPhysicalMaterial.js:353`). The heightmap is a uniform.
  */
 const TEXTURE_SLOTS: Array<keyof Maps> = [
   'albedoMap',
@@ -46,7 +46,6 @@ const TEXTURE_SLOTS: Array<keyof Maps> = [
   'metalnessMap',
   'emissiveMap',
   'aoMap',
-  'displacementMap',
 ];
 
 const ALPHA = { transparency: '1' };
@@ -68,6 +67,11 @@ describe('<StandardMaterialSlot> rebuilds when a baked program parameter moves',
 
   it.each(TEXTURE_SLOTS)('%s arriving asynchronously', async (prop) => {
     expect(await rebuilds({}, {}, {}, { [prop]: new THREE.Texture() })).toBe(true);
+  });
+
+  it('keeps the material when a heightmap arrives, which only rebinds a uniform', async () => {
+    const heightmap = { heightmap_enabled: 'true' };
+    expect(await rebuilds(heightmap, heightmap, {}, { heightMap: new THREE.Texture() })).toBe(false);
   });
 
   it.each([
@@ -134,6 +138,25 @@ describe('<StandardMaterialSlot> keeps the compiled material for a plain uniform
     const first = { albedoMap: new THREE.Texture() };
     const second = { albedoMap: new THREE.Texture() };
     expect(await rebuilds({}, {}, first, second)).toBe(false);
+  });
+});
+
+describe('<StandardMaterialSlot> keeps ao_light_affect a uniform', () => {
+  const aoMap = new THREE.Texture();
+  const lightAffect = (value: string) => ({ ao_enabled: 'true', ao_light_affect: value });
+
+  it('keeps the material when only the light affect moves', async () => {
+    expect(await rebuilds(lightAffect('0'), lightAffect('1'), { aoMap })).toBe(false);
+  });
+
+  it('feeds the moved light affect to the compiled uniform', async () => {
+    const renderer = await ReactThreeTestRenderer.create(slot(lightAffect('0'), { aoMap }));
+    const material = (renderer.scene.findByType('Mesh').instance as unknown as THREE.Mesh)
+      .material as THREE.Material;
+    const shader = { vertexShader: '', fragmentShader: '', uniforms: {} as Record<string, THREE.IUniform> };
+    material.onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, undefined as never);
+    await renderer.update(slot(lightAffect('1'), { aoMap }));
+    expect(shader.uniforms.godotAoLightAffect!.value).toBe(1);
   });
 });
 

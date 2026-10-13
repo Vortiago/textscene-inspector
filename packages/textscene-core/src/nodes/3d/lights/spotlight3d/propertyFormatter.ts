@@ -13,10 +13,6 @@ export function formatSpotLight3DProperties(properties: SpotLight3DProperties): 
     { label: 'Angle', value: `${properties.spot_angle.toFixed(1)}°` },
   ];
 
-  if (properties.penumbra !== undefined) {
-    spotLightItems.push({ label: 'Penumbra', value: properties.penumbra.toFixed(2) });
-  }
-
   sections.push(formatBaseLightSection(properties, spotLightItems));
 
   // SpotLight3D has no shadow_normal_bias.

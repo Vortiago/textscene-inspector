@@ -1,7 +1,7 @@
 /**
  * StandardMaterial3D anisotropy upgrades the slot to `<meshPhysicalMaterial>`, the
- * only three.js material with it: `anisotropy` is the strength, `anisotropyRotation`
- * π/2 for a negative value, and `anisotropyMap` the repacked `anisotropy_flowmap`.
+ * only three.js material with it: `anisotropy` is the strength, a negative value defines its
+ * sign in the program, and `anisotropyMap` is the repacked `anisotropy_flowmap`.
  * Every other material stays `MeshStandardMaterial`.
  */
 import { describe, expect, it } from 'vitest';
@@ -52,7 +52,7 @@ function tree(
 }
 
 describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
-  it('renders a positive anisotropy as MeshPhysicalMaterial with strength and no rotation', async () => {
+  it('renders a positive anisotropy as MeshPhysicalMaterial with its strength and no sign define', async () => {
     const loader = loaderServing();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: {} },
@@ -69,11 +69,10 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
     const material = physical[0]!;
-    expect(material.anisotropy).toBeCloseTo(0.8, 5);
-    expect(material.anisotropyRotation).toBeCloseTo(0, 5);
+    expect([material.anisotropy, material.anisotropyRotation]).toEqual([0.8, 0]);
   });
 
-  it('renders a negative anisotropy with a 90° perpendicular rotation', async () => {
+  it('renders a negative anisotropy with its magnitude, turned by π to carry the sign', async () => {
     const loader = loaderServing();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: {} },
@@ -90,8 +89,8 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     const physical = drawnMaterials<THREE.MeshPhysicalMaterial>(renderer.scene, 'MeshPhysicalMaterial');
     expect(physical).toHaveLength(1);
     const material = physical[0]!;
-    expect(material.anisotropy).toBeCloseTo(0.8, 5); // magnitude preserved
-    expect(material.anisotropyRotation).toBeCloseTo(Math.PI / 2, 5); // direction flipped perpendicular
+    // `scene_forward_lights_inc.glsl:242-245`: the sign picks the stretched axis.
+    expect([material.anisotropy, material.anisotropyRotation]).toEqual([0.8, Math.PI]);
   });
 
   it('keeps a material with no anisotropy on the standard (non-physical) material', async () => {
@@ -122,7 +121,10 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
    * Render one anisotropic material whose `anisotropy_flowmap` resolves to
    * `texture`, and hand back the physical material it produced.
    */
-  async function renderWithFlowmap(texture: THREE.Texture): Promise<THREE.MeshPhysicalMaterial> {
+  async function renderWithFlowmap(
+    texture: THREE.Texture,
+    anisotropy = '0.8'
+  ): Promise<THREE.MeshPhysicalMaterial> {
     const loader = loaderServing();
     const path = 'res://textures/aniso_flow.png';
     preloadResource(loader, 'texture', path, texture);
@@ -134,7 +136,7 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
         type: 'StandardMaterial3D',
         data: {
           anisotropy_enabled: 'true',
-          anisotropy: '0.8',
+          anisotropy,
           anisotropy_flowmap: 'ExtResource("2")',
         } as Record<string, string>,
       },
@@ -169,6 +171,16 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
     // The cached source texture is not mutated, since other consumers of that
     // flowmap share it: its blue stays 0.
     expect((flow.image as { data: Uint8Array }).data[2]).toBe(0);
+  });
+
+  it('wires the flowmap of a negative anisotropy, whose strength it scales too (edge case)', async () => {
+    // `material.cpp:1932`: ANISOTROPY = anisotropy_ratio * flowmap strength, for either sign.
+    const flow = new THREE.DataTexture(new Uint8Array([128, 128, 0, 200]), 1, 1, THREE.RGBAFormat);
+    flow.needsUpdate = true;
+
+    const material = await renderWithFlowmap(flow, '-0.8');
+
+    expect((material.anisotropyMap!.image as { data: Uint8Array }).data[2]).toBe(200);
   });
 
   it('keeps scalar anisotropy when the flowmap pixels cannot be read', async () => {

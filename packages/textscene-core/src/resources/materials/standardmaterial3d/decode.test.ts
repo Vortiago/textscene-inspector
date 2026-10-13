@@ -29,7 +29,19 @@ describe('decodeStandardMaterial3D — defaults', () => {
     expect(data.shadingMode).toBe('per_pixel');
     expect(data.normalScale).toEqual({ x: 1, y: 1 });
     expect(data.billboardMode).toBe(0);
+    expect(data.disablesSpecularOcclusion).toBe(false);
+    expect(data.specular).toBe(0.5);
     expect(data.textureSlots).toEqual({});
+  });
+
+  it('reads metallic_specular unclamped, as the setter stores it', () => {
+    expect(decodeStandardMaterial3D({ metallic_specular: '1.5' }).specular).toBe(1.5);
+  });
+
+  it('reads disable_specular_occlusion', () => {
+    expect(decodeStandardMaterial3D({ disable_specular_occlusion: 'true' }).disablesSpecularOcclusion).toBe(
+      true
+    );
   });
 
   it('marks cull_mode explicit only when it is authored', () => {
@@ -522,7 +534,7 @@ describe('decodeStandardMaterial3D — corpus materials', () => {
     expect(data.roughness).toBeCloseTo(0.95770514, 6);
   });
 
-  it('decodes the procedural-materials glass with its normal, refraction and triplanar', () => {
+  it('decodes the procedural-materials glass with its normal and refraction, and no triplanar', () => {
     // A glass material: transparency, normal scale, refraction and triplanar together.
     const data = decodeStandardMaterial3D({
       transparency: '1',
@@ -548,6 +560,7 @@ describe('decodeStandardMaterial3D — corpus materials', () => {
     expect(data.textureSlots.normal_texture).toBe('ExtResource("1_ulrqn")');
     expect(data.transmission).toBe(1);
     expect(data.refractionThickness).toBeCloseTo(0.05, 6);
-    expect(data.triplanar).toBe(true);
+    // `uv1_world_triplanar` without `uv1_triplanar` maps nothing triplanar.
+    expect(data.triplanar).toBe(false);
   });
 });

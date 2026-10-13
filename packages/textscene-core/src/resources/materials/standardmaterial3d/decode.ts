@@ -10,13 +10,19 @@ import { sRGBToLinearRGB } from '../../../utils/colorSpace';
 import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { parseVector3 } from '../../../parser/vectors';
 import { drawsInShadowPass, type PassMembership } from '../../../godot/shadowPass';
+import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/textureChannel';
+import { DiffuseMode } from '../../../godot/diffuseMode';
+import { SpecularMode } from '../../../godot/specularMode';
+import { clamp } from '../../../godot/math';
 import { emissionScalars } from './emission';
 import {
   BlendMode,
   CullMode,
   DepthDrawMode,
+  HEIGHTMAP_DEFAULTS,
   TEXTURE_SLOTS,
   Transparency,
+  type Heightmap,
   type MaterialVec2,
   type StandardMaterial3DData,
   type TextureSlot,
@@ -95,6 +101,9 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
   const heightmapEnabled = boolOr(properties['heightmap_enabled'], false, CONTEXT);
   const anisotropyEnabled = boolOr(properties['anisotropy_enabled'], false, CONTEXT);
   const refractionEnabled = boolOr(properties['refraction_enabled'], false, CONTEXT);
+  // `uv1_world_triplanar` only picks the space of a triplanar mapping (`material.cpp:1386-1421`).
+  // Triplanar mapping overrides height mapping (`:1541`).
+  const triplanar = boolOr(properties['uv1_triplanar'], false, CONTEXT);
 
   // `_update_shader` emits `ALPHA *= albedo.a * albedo_tex.a` only when
   // `transparency != TRANSPARENCY_DISABLED` (or shadow-to-opacity, pixel-alpha
@@ -134,11 +143,6 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
 
   const normalScale = floatOr(properties['normal_scale'], 1, CONTEXT);
 
-  // `anisotropy` is −1..1, where the sign is the tangent direction. three splits it
-  // into a 0..1 magnitude and a rotation, so a negative value keeps its strength and
-  // turns the highlight 90°.
-  const anisotropyRaw = floatOr(properties['anisotropy'], 0, CONTEXT);
-
   // FEATURE_REFRACTION replaces the `ALPHA *= albedo.a * albedo_tex.a` line with
   // `ALPHA = 1.0` (`material.cpp:1832-1837`), so a refractive surface is fully opaque however
   // low its authored alpha. A shader that writes no ALPHA never reads the albedo alpha either.
@@ -149,6 +153,8 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     alpha: readsAlbedoAlpha && albedo ? clamp01(albedo.a) : 1,
     metallic: clamp01(floatOr(properties['metallic'], 0, CONTEXT)),
     roughness: clamp01(floatOr(properties['roughness'], 1, CONTEXT)),
+    // `material.cpp:2160-2163`: the setter checks no range.
+    specular: floatOr(properties['metallic_specular'], 0.5, CONTEXT),
     emission,
     emissionOperator: intOr(properties['emission_operator'], 0, CONTEXT),
     textureFilter: intOr(properties['texture_filter'], TEXTURE_FILTER_DEFAULT, CONTEXT),
@@ -180,24 +186,30 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     cullMode: enumOr(properties['cull_mode'], CullMode.BACK, CULL_MODES, `${CONTEXT}.cull_mode`),
     cullModeExplicit: properties['cull_mode'] !== undefined,
     shadingMode: properties['shading_mode'] === '0' ? 'unshaded' : 'per_pixel',
+    // `material.cpp:2462-2468`: the setter checks no range.
+    diffuseMode: intOr(properties['diffuse_mode'], DiffuseMode.DIFFUSE_BURLEY, CONTEXT),
+    specularMode: intOr(properties['specular_mode'], SpecularMode.SPECULAR_SCHLICK_GGX, CONTEXT),
     useVertexColors: boolOr(properties['vertex_color_use_as_albedo'], false, CONTEXT),
-    aoEnabled: boolOr(properties['ao_enabled'], false, CONTEXT),
-    normalEnabled: boolOr(properties['normal_enabled'], false, CONTEXT),
+    disablesSpecularOcclusion: boolOr(properties['disable_specular_occlusion'], false, CONTEXT),
+    aoLightAffect: floatOr(properties['ao_light_affect'], 0, CONTEXT),
+    aoTextureChannel: enumOr(
+      properties['ao_texture_channel'],
+      TextureChannel.TEXTURE_CHANNEL_RED,
+      TEXTURE_CHANNELS,
+      `${CONTEXT}.ao_texture_channel`
+    ),
     normalScale: { x: normalScale, y: normalScale },
-    triplanar:
-      boolOr(properties['uv1_triplanar'], false, CONTEXT) ||
-      boolOr(properties['uv1_world_triplanar'], false, CONTEXT),
+    triplanar,
+    heightmap: heightmapEnabled && !triplanar ? decodeHeightmap(properties) : null,
     clearcoat: clearcoatEnabled ? clamp01(floatOr(properties['clearcoat'], 1, CONTEXT)) : 0,
     clearcoatRoughness: clearcoatEnabled
       ? clamp01(floatOr(properties['clearcoat_roughness'], 0.5, CONTEXT))
       : 0,
     rim: rimEnabled ? clamp01(floatOr(properties['rim'], 1, CONTEXT)) : 0,
     rimTint: rimEnabled ? clamp01(floatOr(properties['rim_tint'], 0.5, CONTEXT)) : 0,
-    heightmapScale: heightmapEnabled ? floatOr(properties['heightmap_scale'], 5, CONTEXT) : 0,
     billboardMode: intOr(properties['billboard_mode'], 0, CONTEXT),
     billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
-    anisotropy: anisotropyEnabled ? clamp01(Math.abs(anisotropyRaw)) : 0,
-    anisotropyRotation: anisotropyEnabled && anisotropyRaw < 0 ? Math.PI / 2 : 0,
+    anisotropy: anisotropyEnabled ? clamp(floatOr(properties['anisotropy'], 0, CONTEXT), -1, 1) : 0,
     // Godot refraction is a screen-space distortion; three models the same
     // "see the background through this surface" effect volumetrically, so
     // `refraction_scale` drives `thickness` and cannot go negative there.
@@ -324,5 +336,21 @@ function vec2FromVector3(raw: string | undefined, fallback: MaterialVec2): Mater
 }
 
 function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
+  return clamp(value, 0, 1);
+}
+
+/** Height mapping over Godot's defaults. The setters check no range. */
+function decodeHeightmap(properties: Record<string, string>): Heightmap {
+  const defaults = HEIGHTMAP_DEFAULTS;
+  const sign = (key: string) => (boolOr(properties[key], false, CONTEXT) ? -1 : 1);
+  return {
+    scale: floatOr(properties['heightmap_scale'], defaults.scale, CONTEXT),
+    isDeep: boolOr(properties['heightmap_deep_parallax'], defaults.isDeep, CONTEXT),
+    layers: [
+      intOr(properties['heightmap_min_layers'], defaults.layers[0], CONTEXT),
+      intOr(properties['heightmap_max_layers'], defaults.layers[1], CONTEXT),
+    ],
+    flip: [sign('heightmap_flip_tangent'), sign('heightmap_flip_binormal')],
+    readsHeight: boolOr(properties['heightmap_flip_texture'], defaults.readsHeight, CONTEXT),
+  };
 }

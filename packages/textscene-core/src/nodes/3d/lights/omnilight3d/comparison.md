@@ -38,6 +38,5 @@ Godot's positional shadow atlas gives the light two slots for the camera. As in 
 
 ## Known limitations
 
-- **Approximated** Distance falloff follows three's inverse-square curve rather than Godot's, so the mid-range brightness differs.
 - **Approximated** `omni_shadow_mode` Dual Paraboloid draws as Cube mode does, so the edge of a coarse caster's shadow can sit apart from Godot's.
 - **Editor only** The wireframe sphere gizmo appears only in Godot's editor, but here it is selection-gated.

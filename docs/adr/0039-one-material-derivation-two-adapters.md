@@ -73,7 +73,7 @@ these paths diverge on.
 
 ```ts
 scalars.clearcoat > 0 || scalars.rim > 0 ||
-scalars.anisotropy > 0 || scalars.transmission > 0
+isAnisotropic(scalars) || scalars.transmission > 0
 ```
 
 Godot has one spatial shader for all four. `FEATURE_CLEARCOAT`, `FEATURE_RIM`,
@@ -110,13 +110,13 @@ uniform, geometry or object state that a mounted material may change freely.
 | `detail_uv` | unimplemented | No detail layer exists. The detail slots are absent from `TEXTURE_SLOTS` on purpose. |
 | `transparency` | split | Its `transparent` half is a program input, a term of three's `opaque` composite (`WebGLPrograms.js:262`), and keyed. Its `alphaTest` half is a program input that three self-heals on the `> 0` crossing (`Material.js:494-502`), so it is not one of this codebase's. Both, plus `depthWrite`, come from `alphaPassMembership` (`decode.ts:145,180`), the transcription of `ShaderData::uses_alpha_pass` and `uses_depth_in_alpha_pass` that decides which passes the surface lands in, the shadow pass included (`castsShadow`). |
 | `alpha_antialiasing_mode` | program input, indirectly | Read only by `alphaPassMembership`, so it reaches three only through `transparent` (`decode.ts:145`), `depthWrite` (`:180`) and the shadow-pass membership. three's own `alphaToCoverage`, a keyed program input, is never set from it, so alpha-to-coverage itself is unimplemented here. |
-| `shading_mode` | program input | The strongest one here: it selects the material class (`'basic'` for SHADING_MODE_UNSHADED), and React remounts across an element-type change whatever the key says. |
+| `shading_mode` | program input | The strongest one here: it selects the material class (`'basic'` for SHADING_MODE_UNSHADED, three's `MeshBasicMaterial`), and React remounts across an element-type change whatever the key says. |
 | `blend_mode` | program input, through `opaque` only | The five modes reach three's program identity only as the `blending === NormalBlending` term of `opaque`. The factors themselves are per-draw GL state (`blendState.ts`). See the uniform-versus-key rule below. |
 | `depth_draw_mode` | uniform | `depthWrite`, per-draw state. `godotDepthWrite` (`decode.ts`) resolves the mode against the pass. |
 | `depth_test` | uniform | `depthTest`. `WebGLPrograms` never reads it. |
 | `cull_mode` | program input | `side`, which reaches the program as the `doubleSided`/`flipSided` pair (`WebGLPrograms.js:369-370`). Godot's enum names the faces discarded, and three's names those kept, mapped once in `scalars.ts`. |
-| `diffuse_mode` | unimplemented | three has one diffuse BRDF. Nothing in the repo reads the property. |
-| `specular_mode` | unimplemented | As above. |
+| `diffuse_mode` | program input | A define from a `ProgramInjection` picks Godot's term in the patched lighting chunk (`godotLightFunction.ts`). Burley, the default, takes no define. |
+| `specular_mode` | program input | A define from a `ProgramInjection` picks Godot's term in the patched lighting chunk (`godotLightFunction.ts`). SchlickGGX, the default, takes no define. |
 | `billboard_mode` | neither | A vertex-shader term in Godot. Here it is no program input: the derivation records it on the material's `userData`, and `r3f/surfaceDrawHooks.ts` swaps the world matrix around each draw group whose material billboards, per surface as Godot's shader does. |
 | `detail_blend_mode` | unimplemented | With the detail layer. |
 | `roughness_channel` | unimplemented | A stated parity limitation: Godot reads the channel named by `roughness_texture_channel`/`metallic_texture_channel` (default RED). three's `roughnessMap`/`metalnessMap` read fixed G/B (`SurfaceMaterialSlot.tsx`). |
@@ -125,7 +125,7 @@ uniform, geometry or object state that a mounted material may change freely.
 | `stencil_mode`, `stencil_flags`, `stencil_compare`, `stencil_reference` | unimplemented | Nothing in the repo reads any of them. |
 | `feature_mask` (13 bits) | see below | |
 | `flags` (25 bits) | see below | |
-| booleans: `deep_parallax` | unimplemented | Godot's is texture-space parallax. The heightmap slot here drives three's `displacementMap`, that is real vertex displacement, which is a stated parity limitation of its own and not this bit. |
+| booleans: `deep_parallax` | program input | A define from a `ProgramInjection` steps the parallax through Godot's layers (`godotParallax.ts`). The heightmap has its own sampler and coordinate (`bindHeightmap`), so it reaches every material class and moves no vertex. |
 | booleans: `grow` | unimplemented | |
 | booleans: `proximity_fade` | program input, indirectly | Decoded for `alphaPassMembership` only. The fade itself is unimplemented. |
 | booleans: `orm` | non-goal | See below. |
@@ -137,8 +137,9 @@ uniform, geometry or object state that a mounted material may change freely.
 
 The four physical features are carried through their scalar. `decode.ts` zeroes
 `clearcoat`, `rim`, `anisotropy` and `transmission` when the matching `*_enabled` is
-false, and `needsPhysicalMaterial` then thresholds at `> 0`, the same thresholds three
-keys on (`WebGLPrograms.js:140-145`), so a Godot feature bit and a three layer bit move
+false. `needsPhysicalMaterial` then thresholds the others at `> 0` and the signed
+`anisotropy` at `!== 0`. Those are the thresholds three keys on (`WebGLPrograms.js:140-145`),
+as three takes the anisotropy's magnitude, so a Godot feature bit and a three layer bit move
 together. One divergence follows, on purpose: `rim_enabled = true` with `rim = 0.0` is a
 distinct program in Godot (the bit is set) and is not one here. It is unobservable. The
 emitted code is `RIM = rim * rim_tex.x` (`material.cpp:1904`), and likewise
@@ -161,9 +162,12 @@ Carried:
   state like `texture_filter`.
 - `FLAG_USE_SHADOW_TO_OPACITY` → read by `alphaPassMembership` only, so it reaches the
   program indirectly, and its shading effect is unimplemented.
-- `FLAG_UV1_USE_TRIPLANAR` / `FLAG_UV1_USE_WORLD_TRIPLANAR` → one `triplanar` scalar
-  folded into the per-surface UV transform, with its own recorded `uv1_offset`
-  limitation (`SurfaceMaterialSlot.tsx`).
+- `FLAG_UV1_USE_TRIPLANAR` → one `triplanar` scalar folded into the per-surface UV
+  transform, with its own recorded `uv1_offset` limitation (`SurfaceMaterialSlot.tsx`).
+  It also turns height mapping off. `FLAG_UV1_USE_WORLD_TRIPLANAR` only picks the space of
+  a triplanar mapping, so alone it changes nothing.
+- `FLAG_INVERT_HEIGHTMAP` → a define from the parallax `ProgramInjection`, which reads the
+  heightmap as height and not depth.
 - `FLAG_BILLBOARD_KEEP_SCALE` → `userData`, beside the billboard mode. The draw-time
   billboard (`surfaceBillboard.ts`) keeps the model scale only when it is set.
 
