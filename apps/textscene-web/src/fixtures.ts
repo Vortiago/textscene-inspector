@@ -1748,6 +1748,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Volumetric Fog Color Background",
+    "file": "unit-volumetric-fog-color-background.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Volumetric Fog Shadow",
     "file": "unit-volumetric-fog-shadow.tscn",
     "category": "Other"
