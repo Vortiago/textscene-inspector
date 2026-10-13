@@ -28,6 +28,9 @@ export const LIGHTING_SCENES = [
   // Exponential depth fog over boxes at three distances. The header states why no other golden
   // shows it.
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
+  // A colour background under partial fog, drawn as Godot's fog-only sky pass draws it. The header
+  // states why no other golden shows it.
+  { name: 'fog-color-background', file: 'unit-fog-color-background.tscn' },
   // Godot's editor preview sun and environment on a scene that declares neither
   // (ADR-0025). Godot's render of it is at
   // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing.
