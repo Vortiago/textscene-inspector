@@ -26,8 +26,10 @@ class RecordingRenderer {
   copies = 0;
   private target: THREE.WebGLRenderTarget | null = null;
 
+  constructor(private readonly size = new THREE.Vector2(64, 32)) {}
+
   getCurrentViewport(viewport: THREE.Vector4): THREE.Vector4 {
-    return viewport.set(0, 0, 64, 32);
+    return viewport.set(0, 0, this.size.x, this.size.y);
   }
   getRenderTarget(): THREE.WebGLRenderTarget | null {
     return this.target;
@@ -103,6 +105,15 @@ describe('FogVolumePass.prepare', () => {
     const { lightDraws } = renderer.take();
     expect(lightDraws).toHaveLength(PROJECT.volumeDepth);
     expect(lightDraws[0]).toMatchObject({ sampleCount: 1, firstOffset: CENTRE, historyAmount: 0 });
+  });
+
+  it('draws no volume into a viewport with no area, as Godot draws no frame there', () => {
+    const renderer = new RecordingRenderer(new THREE.Vector2(0, 0));
+
+    const isSettling = new FogVolumePass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), inputs());
+
+    expect(isSettling).toBe(false);
+    expect(renderer.take()).toEqual({ lightDraws: [], copies: 0 });
   });
 
   it('draws the mean of the 16 jitters once the view holds still, as Godot converges', () => {

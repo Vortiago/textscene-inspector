@@ -236,7 +236,8 @@ export class FogVolumePass {
   /**
    * Readies the volume and the composite's uniforms for a render of `scene` through `camera`, into
    * the renderer's current target and viewport. Answers whether the volume is still settling, when
-   * the next frame redraws it whether or not anything changes.
+   * the next frame redraws it whether or not anything changes. A viewport with no area leaves the
+   * composite without a volume.
    */
   prepare(
     renderer: THREE.WebGLRenderer,
@@ -245,6 +246,7 @@ export class FogVolumePass {
     inputs: FogVolumeInputs
   ): boolean {
     renderer.getCurrentViewport(this.viewport);
+    if (this.viewport.z < 1 || this.viewport.w < 1) return false;
     const state = this.stateOf(scene);
     const sky = skyRadiance(scene);
     const hasLightsChanged = state.lights.pack(inputs.lights, camera);
