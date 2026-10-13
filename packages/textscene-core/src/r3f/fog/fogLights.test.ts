@@ -125,11 +125,11 @@ describe('FogLightRows.pack', () => {
     const rows = packed(placed(area));
 
     expect(texel(rows, 0, FogLightTexel.POSITION)).toEqual([0, 5, -8, Math.fround(1 / 6)]);
-    // Godot hands the fog the attenuation less one (4.7.2 volumetric_fog_process.glsl:647).
+    // Godot hands the fog the attenuation less one (4.7.2 volumetric_fog_process.glsl:653).
     expect(texel(rows, 0, FogLightTexel.COLOR)[3]).toBe(2);
     const [x, y, z, inverseCentreRange] = texel(rows, 0, FogLightTexel.DIRECTION);
     expectDirection([x!, y!, z!], [0, -1, 0]);
-    // 1 / (range + |area_size| / 2), 4.7.2 light_storage.cpp:1086.
+    // 1 / (range + |area_size| / 2), 4.7.2 light_storage.cpp:1092.
     expect(inverseCentreRange).toBeCloseTo(1 / (6 + Math.sqrt(5) / 2), 6);
     // An area light casts no shadow in the fog, so its rectangle can share the lookup's texels.
     expect(texel(rows, 0, FogLightTexel.CONE).slice(1, 3)).toEqual([FogLightKind.AREA, 0]);
@@ -137,7 +137,7 @@ describe('FogLightRows.pack', () => {
     expectDirection(texel(rows, 0, FogLightTexel.AREA_HEIGHT).slice(0, 3), [0, 0, -1]);
   });
 
-  it('leaves the rectangle out of a scaled area light, as Godot does (edge case)', () => {
+  it('sizes the rectangle of a scaled area light without the scale, as Godot does (edge case)', () => {
     const area = new THREE.RectAreaLight(0xffffff, Math.PI, 2, 1);
     area.scale.set(3, 3, 3);
     area.userData = areaLightUserData({ range: 6, attenuation: 1, specular: 1 });

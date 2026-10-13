@@ -167,7 +167,6 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
 }
 
 /**
-/**
  * An area light's range, attenuation, facing and rectangle, as 4.7.2 packs them
  * (`light_storage.cpp:1059-1094`). Its rectangle ignores the node's scale, as Godot's does. A
  * light without a falloff, such as a GLB light, is left out.
@@ -178,7 +177,7 @@ function writeArea(light: THREE.RectAreaLight, camera: THREE.Camera): boolean {
   const range = Math.max(RANGE_MIN, falloff.range);
   const { x, y, z } = viewPosition(light, camera);
   writeTexel(FogLightTexel.POSITION, x, y, z, 1 / range);
-  // The fog's falloff takes the attenuation less one (4.7.2 `volumetric_fog_process.glsl:647`).
+  // The fog's falloff takes the attenuation less one (4.7.2 `volumetric_fog_process.glsl:653`).
   row[FogLightTexel.COLOR * 4 + 3] = falloff.attenuation - 1;
   const inverseCentreRange = 1 / (range + Math.hypot(light.width, light.height) / 2);
   writeViewAxis(FogLightTexel.DIRECTION, light, AREA_LIGHT_AXES.facing, 1, camera, inverseCentreRange);

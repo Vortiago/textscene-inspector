@@ -41,7 +41,7 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 ## Volumetric fog
 <!-- compare: image=unit-world-environment-basic status=limitation fixture=unit-world-environment-basic.tscn -->
 
-`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. An AreaLight3D scatters its rectangle's light into the fog, as Godot 4.7.2 does. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera shows the mean of Godot's 16 jitters, which Godot converges to.
+`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera shows the mean of Godot's 16 jitters, which Godot converges to.
 
 - **Not drawn** `volumetric_fog_gi_inject` adds no light, because the previewer draws no VoxelGI or SDFGI.
 - **Not drawn** A FogVolume adds no density, colour or emission to the fog.

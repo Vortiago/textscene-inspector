@@ -97,7 +97,7 @@ vec3 froxelView( vec3 unit ) {
 }
 
 // 4.7.2 volumetric_fog_process.glsl:620-695, without the shadow and the area texture. Godot keeps
-// the distance at 1 or more against flicker at froxels the light passes through (:640-643).
+// the distance at 1 or more against flicker at froxels the light passes through (:642-649).
 vec3 areaLightScatter( vec3 view, vec3 eye, vec4 position, vec4 color, vec4 facing, vec3 width, vec3 height ) {
 	if ( dot( width, width ) <= 1e-4 || dot( height, height ) <= 1e-4 ) return vec3( 0.0 );
 	float widthLength = length( width );
