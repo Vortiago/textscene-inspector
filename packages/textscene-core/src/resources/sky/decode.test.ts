@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { decodeSky, decodeSkyMaterial, decodeSkyProcessing, skyMaterialRef } from './decode';
+import { warningsOf } from '../../r3f/testing/logWarnings';
 
 describe('decodeSkyMaterial — ProceduralSkyMaterial', () => {
   it('applies Godot’s constructor defaults for a bare material', () => {
@@ -139,6 +140,13 @@ describe('decodeSkyProcessing — how a Sky bakes its radiance', () => {
 
   it('keeps the default size for an index the setter refuses (edge case)', () => {
     expect(decodeSkyProcessing({ radiance_size: '7' })).toMatchObject({ radianceSize: 256 });
+  });
+
+  it('reads an invalid value as the default and warns nothing, as the validators report it (error path)', () => {
+    const read = () => decodeSkyProcessing({ process_mode: 'x', radiance_size: '-1' });
+
+    expect(warningsOf(read)).toEqual([]);
+    expect(read()).toEqual({ processMode: 'automatic', radianceSize: 256 });
   });
 });
 

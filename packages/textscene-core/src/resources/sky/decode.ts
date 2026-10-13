@@ -7,7 +7,7 @@
 import type { Color } from '../../utils/colorParser';
 import type { RadianceFilter, Sky, SkyProcessMode, SkyProcessing, SkyProperties } from './types';
 import { SKY_RADIANCE_SIZES, SKY_RADIANCE_SIZE_DEFAULT } from '../../godot/skyReflection';
-import { enumOr, floatOr } from '../../parser/valueParsers';
+import { enumOr, floatOr, parseOptionalInt } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
 
 const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
@@ -29,17 +29,21 @@ export function skyMaterialRef(
 const PROCESS_MODES: readonly SkyProcessMode[] = ['automatic', 'quality', 'incremental', 'real-time'];
 
 /**
- * A `Sky`'s process mode and radiance size. `set_radiance_size` refuses an index past the table
- * (`sky.cpp:34`), so such a size stays at the default.
+ * A `Sky`'s process mode and radiance size, for the linter. An invalid value reads as Godot's
+ * default and logs nothing, as the Sky validators report it. `set_radiance_size` refuses an index
+ * past the table (`sky.cpp:34`), so such a size stays at the default.
  */
 export function decodeSkyProcessing(data: Record<string, string>): SkyProcessing {
-  const sizeIndex = enumOr(
-    data.radiance_size,
-    SKY_RADIANCE_SIZES.indexOf(SKY_RADIANCE_SIZE_DEFAULT),
-    indices(SKY_RADIANCE_SIZES),
-    'radiance_size'
-  );
-  return { processMode: processModeOf(data), radianceSize: SKY_RADIANCE_SIZES[sizeIndex]! };
+  return {
+    processMode: entryOr(PROCESS_MODES, data.process_mode, 'automatic'),
+    radianceSize: entryOr(SKY_RADIANCE_SIZES, data.radiance_size, SKY_RADIANCE_SIZE_DEFAULT),
+  };
+}
+
+/** The entry of `table` that the int `value` indexes, or `fallback`. */
+function entryOr<T>(table: readonly T[], value: string | undefined, fallback: T): T {
+  const index = parseOptionalInt(value);
+  return (index === undefined ? undefined : table[index]) ?? fallback;
 }
 
 function processModeOf(data: Record<string, string>): SkyProcessMode {
