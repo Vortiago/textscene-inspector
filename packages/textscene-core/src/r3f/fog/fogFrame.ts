@@ -17,6 +17,7 @@ import { shineDirection } from './fogLights.js';
 import { skyRadiance } from './fogSky.js';
 import { FOG_SUN_MAX, fogUniforms } from './fogUniforms.js';
 import type { VolumetricFog } from './fogVolumePass.js';
+import { writeVec4 } from './writeVec4.js';
 
 export type DepthFog = NonNullable<EnvironmentSettings['fog']>;
 
@@ -26,6 +27,12 @@ export interface FogSettings {
   project: VolumetricFogProjectSettings;
   /** The sky's energy, which Godot's radiance carries and three's does not. */
   skyEnergy: number;
+}
+
+/** The objects of a scene the fog reads: its lights, and the meshes that may cast their shadows. */
+export interface FogObjects {
+  lights: readonly THREE.Light[];
+  casters: readonly THREE.Mesh[];
 }
 
 /** World to sky space for the render being prepared. */
@@ -47,7 +54,7 @@ export function prepareFog(
   camera: THREE.Camera,
   settings: FogSettings,
   passes: FogPasses,
-  lights: readonly THREE.Light[]
+  { lights, casters }: FogObjects
 ): boolean {
   fogUniforms.skyRotation.set(worldToSky(scene.environmentRotation, toSky).elements);
   writeDepthFog(settings.depth, camera);
@@ -62,6 +69,7 @@ export function prepareFog(
     worldToSky: toSky,
     skyEnergy: settings.skyEnergy,
     lights,
+    casters,
   });
 }
 
@@ -86,15 +94,6 @@ function writeDepthFog(fog: DepthFog | null, camera: THREE.Camera): void {
   writeVec4(fogUniforms.depthShape, 0, fog.density, range.begin, range.end, fog.depthCurve);
   writeVec4(fogUniforms.depthLayer, 0, fog.mode, fog.height, fog.heightDensity, fog.aerialPerspective);
   writeVec4(fogUniforms.depthSky, 0, fog.skyAffect, fog.sunScatter, near, far);
-}
-
-/** Writes one vec4 into `target` at vec4 index `slot`, with no array literal per write. */
-function writeVec4(target: Float32Array, slot: number, x: number, y: number, z: number, w: number): void {
-  const offset = slot * 4;
-  target[offset] = x;
-  target[offset + 1] = y;
-  target[offset + 2] = z;
-  target[offset + 3] = w;
 }
 
 /**

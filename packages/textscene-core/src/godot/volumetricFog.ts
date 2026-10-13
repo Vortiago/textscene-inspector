@@ -163,6 +163,15 @@ export const VOLUMETRIC_FOG_FILTER_WEIGHTS: readonly number[] = [
 /** A cell at or below this density scatters no light, only its emission (`.glsl:383`). */
 export const VOLUMETRIC_FOG_LIT_DENSITY_MIN = 0.00005;
 
+/**
+ * How sharply the fog darkens past a shadow's caster, per world unit: `INV_FOG_FADE` (`.glsl:278`).
+ * A cell a tenth of a unit past the caster keeps 1/e of its light.
+ */
+export const VOLUMETRIC_FOG_SHADOW_FADE = 10;
+
+/** A light whose shadow opacity is at or below this lights the fog unshadowed (`.glsl:389`, `:493`, `:557`). */
+export const VOLUMETRIC_FOG_SHADOW_OPACITY_MIN = 0.001;
+
 /** A light whose `light_volumetric_fog_energy` is at or below this leaves the fog dark (`.glsl:385`). */
 export const VOLUMETRIC_FOG_LIGHT_ENERGY_MIN = 0.001;
 

@@ -5,17 +5,23 @@
  * column. The volume's rows run bottom-up, as WebGL's fragments do, where Godot's run top-down.
  */
 
-import { VOLUMETRIC_FOG_TEMPORAL_JITTERS } from '../../godot/volumetricFog.js';
+import {
+  VOLUMETRIC_FOG_SHADOW_FADE,
+  VOLUMETRIC_FOG_SHADOW_OPACITY_MIN,
+  VOLUMETRIC_FOG_TEMPORAL_JITTERS,
+} from '../../godot/volumetricFog.js';
+import { glslFloat } from '../../resources/environment/glslLiterals.js';
 import { HENYEY_GREENSTEIN_GLSL } from '../henyeyGreenstein.js';
-import { FogLightKind } from './fogLights.js';
+import { FogLightKind, FogLightTexel } from './fogLights.js';
 import { LTC_INTEGRAL } from '../areaLight/ltcIntegral.js';
 
 /** The offsets a still froxel samples and averages: Godot's 16 jitters, or its centre alone. */
 export const FOG_SAMPLE_OFFSETS_MAX = VOLUMETRIC_FOG_TEMPORAL_JITTERS.length;
 
 /**
- * Lights one froxel: each light's scatter (`.glsl:252-255`, an area light's from 4.7.2) and the ambient with its sky
- * (`.glsl:430-445`), times the albedo, plus the emission (`.glsl:681`). A moving camera's froxel
+ * Lights one froxel: each light's scatter (`.glsl:252-255`, an area light's from 4.7.2), under its
+ * shadow (`.glsl:388-422,488-510,552-574`), and the ambient with its sky (`.glsl:430-445`), times the
+ * albedo, plus the emission (`.glsl:681`). A moving camera's froxel
  * blends this frame's jitter into its reprojected history (`.glsl:311-335,683`). A still one
  * averages its sample offsets, the mean the history converges to. A clear cell scatters nothing (`.glsl:383`).
  */
@@ -42,6 +48,8 @@ uniform float skyEnergy;
 uniform mat3 viewToSky;
 uniform highp sampler2D fogLights;
 uniform int lightCount;
+uniform highp sampler2D directionalShadowAtlas;
+uniform highp sampler2D positionalShadowAtlas;
 uniform vec3 sampleOffsets[${FOG_SAMPLE_OFFSETS_MAX}];
 uniform int sampleCount;
 uniform highp sampler3D history;
@@ -62,6 +70,23 @@ float omniAttenuation( float range, float inverseRange, float decay ) {
 	nd = max( 1.0 - nd, 0.0 );
 	nd *= nd;
 	return nd * pow( max( range, 0.0001 ), - decay );
+}
+
+// .glsl:418, :509 and :573: the fog past a caster darkens over a tenth of a unit (INV_FOG_FADE,
+// .glsl:278). Depths run from the light, so a cell past the caster is the deeper.
+float fogShadow( float cellDepth, float casterDepth, float depthRange ) {
+	return exp( min( 0.0, casterDepth - cellDepth ) * depthRange * ${glslFloat(VOLUMETRIC_FOG_SHADOW_FADE)} );
+}
+
+// .glsl:420: a directional shadow lifts across the far end of its last split. Ends that do not
+// ascend are a split sun no fit has faded, and keep smoothstep defined.
+float fogShadowFade( float shadow, float viewDepth, float fadeFrom, float fadeTo ) {
+	return fadeTo > fadeFrom ? mix( shadow, 1.0, smoothstep( fadeFrom, fadeTo, viewDepth ) ) : shadow;
+}
+
+// .glsl:422, :509 and :573
+float fogShadowAttenuation( float shadow, float opacity ) {
+	return mix( 1.0 - opacity, 1.0, shadow );
 }
 
 // .glsl:304-309: the unit depth packs towards the camera before it spreads to the frustum.
@@ -105,23 +130,83 @@ vec3 areaLightScatter( vec3 view, vec3 eye, vec4 position, vec4 color, vec4 faci
 	return color.rgb * attenuation * diffuse * inFront * henyey_greenstein( cosTheta, phaseG );
 }
 
+// Godot reads an atlas's depth through a linear sampler that clamps at the edge (.glsl:417, :507,
+// :571). The pass reads the atlas uncompared and unfiltered, so it filters the four nearest texels.
+float atlasDepth( highp sampler2D atlas, vec2 uv ) {
+	ivec2 last = textureSize( atlas, 0 ) - 1;
+	vec2 texel = uv * vec2( last + 1 ) - 0.5;
+	ivec2 base = ivec2( floor( texel ) );
+	vec2 weight = texel - floor( texel );
+	float d00 = texelFetch( atlas, clamp( base, ivec2( 0 ), last ), 0 ).r;
+	float d10 = texelFetch( atlas, clamp( base + ivec2( 1, 0 ), ivec2( 0 ), last ), 0 ).r;
+	float d01 = texelFetch( atlas, clamp( base + ivec2( 0, 1 ), ivec2( 0 ), last ), 0 ).r;
+	float d11 = texelFetch( atlas, clamp( base + ivec2( 1, 1 ), ivec2( 0 ), last ), 0 ).r;
+	return mix( mix( d00, d10, weight.x ), mix( d01, d11, weight.x ), weight.y );
+}
+
+vec4 lightTexel( int light, int texel ) {
+	return texelFetch( fogLights, ivec2( texel, light ), 0 );
+}
+
+mat4 shadowLookup( int light, int slot ) {
+	int first = ${FogLightTexel.SHADOW_MATRICES} + slot * 4;
+	return mat4( lightTexel( light, first ), lightTexel( light, first + 1 ), lightTexel( light, first + 2 ), lightTexel( light, first + 3 ) );
+}
+
+// .glsl:388-422: the split the cell's depth falls in, its depth range and the light's fade.
+float directionalShadow( int light, vec3 view ) {
+	float depth = - view.z;
+	vec4 splits = lightTexel( light, ${FogLightTexel.SHADOW_SPLITS} );
+	int slot = depth < splits.x ? 0 : depth < splits.y ? 1 : depth < splits.z ? 2 : 3;
+	vec4 coord = shadowLookup( light, slot ) * vec4( view, 1.0 );
+	coord.xyz /= coord.w;
+	float range = lightTexel( light, ${FogLightTexel.SHADOW_RANGES} )[ slot ];
+	float shadow = fogShadow( coord.z, atlasDepth( directionalShadowAtlas, coord.xy ), range );
+	vec4 fade = lightTexel( light, ${FogLightTexel.SHADOW_FADE} );
+	return fogShadowFade( shadow, depth, fade.x, fade.y );
+}
+
+// .glsl:488-510: the paraboloid the cell faces, in its slot. The depth runs from the light to its range.
+float omniShadow( int light, vec3 view, float bias, float depthRange ) {
+	vec3 local = ( shadowLookup( light, 0 ) * vec4( view, 1.0 ) ).xyz;
+	vec4 slot = lightTexel( light, ${FogLightTexel.SHADOW_SPLITS} );
+	vec2 flipOffset = slot.zw;
+	vec4 uvRect = vec4( slot.xy, vec2( max( flipOffset.x, flipOffset.y ) ) );
+	vec3 direction = normalize( local );
+	if ( direction.z >= 0.0 ) uvRect.xy += flipOffset;
+	direction.z = 1.0 + abs( direction.z );
+	vec2 uv = uvRect.xy + ( direction.xy / direction.z * 0.5 + 0.5 ) * uvRect.zw;
+	float cellDepth = ( length( local ) - bias ) / depthRange;
+	return fogShadow( cellDepth, atlasDepth( positionalShadowAtlas, uv ), depthRange );
+}
+
+// .glsl:552-574: the depth bias goes in before the divide, as the surfaces' spot lookup puts it.
+float spotShadow( int light, vec3 view, float bias, float depthRange ) {
+	vec4 coord = shadowLookup( light, 0 ) * vec4( view, 1.0 );
+	coord.z -= bias;
+	coord.xyz /= coord.w;
+	return fogShadow( coord.z, atlasDepth( positionalShadowAtlas, coord.xy ), depthRange );
+}
+
 // .glsl:425, :511 and :550-575
 vec3 lightsAt( vec3 view ) {
 	vec3 eye = normalize( view );
 	vec3 total = vec3( 0.0 );
 	for ( int i = 0; i < lightCount; i ++ ) {
-		vec4 position = texelFetch( fogLights, ivec2( 0, i ), 0 );
-		vec4 color = texelFetch( fogLights, ivec2( 1, i ), 0 );
-		vec4 direction = texelFetch( fogLights, ivec2( 2, i ), 0 );
-		vec4 cone = texelFetch( fogLights, ivec2( 3, i ), 0 );
+		vec4 position = lightTexel( i, ${FogLightTexel.POSITION} );
+		vec4 color = lightTexel( i, ${FogLightTexel.COLOR} );
+		vec4 direction = lightTexel( i, ${FogLightTexel.DIRECTION} );
+		vec4 cone = lightTexel( i, ${FogLightTexel.CONE} );
 		int kind = int( cone.y );
+		bool isShadowed = cone.z > ${glslFloat(VOLUMETRIC_FOG_SHADOW_OPACITY_MIN)};
 		if ( kind == ${FogLightKind.DIRECTIONAL} ) {
-			total += color.rgb * henyey_greenstein( dot( eye, direction.xyz ), phaseG );
+			float shadow = isShadowed ? fogShadowAttenuation( directionalShadow( i, view ), cone.z ) : 1.0;
+			total += color.rgb * shadow * henyey_greenstein( dot( eye, direction.xyz ), phaseG );
 			continue;
 		}
 		if ( kind == ${FogLightKind.AREA} ) {
-			vec3 width = texelFetch( fogLights, ivec2( 4, i ), 0 ).xyz;
-			vec3 height = texelFetch( fogLights, ivec2( 5, i ), 0 ).xyz;
+			vec3 width = lightTexel( i, ${FogLightTexel.AREA_WIDTH} ).xyz;
+			vec3 height = lightTexel( i, ${FogLightTexel.AREA_HEIGHT} ).xyz;
 			total += areaLightScatter( view, eye, position, color, direction, width, height );
 			continue;
 		}
@@ -133,6 +218,11 @@ vec3 lightsAt( vec3 view ) {
 			float spotCos = max( dot( - normalize( toLight ), direction.xyz ), direction.w );
 			float rim = max( 0.0001, ( 1.0 - spotCos ) / ( 1.0 - direction.w ) );
 			attenuation *= 1.0 - pow( rim, cone.x );
+		}
+		if ( isShadowed ) {
+			float depthRange = 1.0 / position.w;
+			float shadow = kind == ${FogLightKind.SPOT} ? spotShadow( i, view, cone.w, depthRange ) : omniShadow( i, view, cone.w, depthRange );
+			attenuation *= fogShadowAttenuation( shadow, cone.z );
 		}
 		total += color.rgb * attenuation * henyey_greenstein( dot( normalize( toLight ), eye ), phaseG );
 	}

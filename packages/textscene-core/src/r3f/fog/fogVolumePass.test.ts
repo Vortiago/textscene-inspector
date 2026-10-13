@@ -8,6 +8,8 @@ import { VOLUMETRIC_FOG_TEMPORAL_JITTERS } from '../../godot/volumetricFog';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { decodeEnvironment } from '../../resources/environment/decode';
+import { directionalShadowAtlasDepth } from '../directionalShadow/shadowAtlas';
+import { castingSun } from '../testing/castingSun';
 import { FogVolumePass } from './fogVolumePass';
 
 type FogVolumeInputs = Parameters<FogVolumePass['prepare']>[3];
@@ -19,6 +21,7 @@ interface LightDraw {
   historyAmount: number;
   frustumBegin: THREE.Vector2;
   frustumEnd: THREE.Vector2;
+  directionalShadowAtlas: THREE.Texture | null;
 }
 
 /** A renderer that records each draw instead of drawing it. */
@@ -56,6 +59,7 @@ class RecordingRenderer {
       historyAmount: uniforms['historyAmount']!.value as number,
       frustumBegin: (uniforms['frustumBegin']!.value as THREE.Vector2).clone(),
       frustumEnd: (uniforms['frustumEnd']!.value as THREE.Vector2).clone(),
+      directionalShadowAtlas: uniforms['directionalShadowAtlas']!.value as THREE.Texture | null,
     });
   }
 
@@ -66,6 +70,12 @@ class RecordingRenderer {
     this.copies = 0;
     return taken;
   }
+
+  /** No atlas has a texture here, so the raw depth read binds nothing. */
+  getContext(): object {
+    return {};
+  }
+  readonly properties = { get: () => ({}) };
 
   get asWebGL(): THREE.WebGLRenderer {
     return this as unknown as THREE.WebGLRenderer;
@@ -83,6 +93,7 @@ function inputs(properties: Record<string, string> = {}): FogVolumeInputs {
     worldToSky: new THREE.Matrix3(),
     skyEnergy: 1,
     lights: [],
+    casters: [],
   };
 }
 
@@ -263,5 +274,59 @@ describe('FogVolumePass.prepare', () => {
     const [draw] = renderer.take().lightDraws;
     expect(draw!.frustumBegin).toEqual(draw!.frustumEnd);
     expect(draw!.frustumEnd.x).toBeCloseTo(3, 6);
+  });
+
+  it('reads the directional atlas when a light shadows the fog', () => {
+    const renderer = new RecordingRenderer();
+    new FogVolumePass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), {
+      ...inputs(),
+      lights: [castingSun()],
+    });
+
+    expect(renderer.take().lightDraws[0]!.directionalShadowAtlas).toBe(directionalShadowAtlasDepth());
+  });
+
+  it('reads no atlas when no light shadows the fog (edge case)', () => {
+    const renderer = new RecordingRenderer();
+    new FogVolumePass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), {
+      ...inputs(),
+      lights: [new THREE.DirectionalLight()],
+    });
+
+    expect(renderer.take().lightDraws[0]!.directionalShadowAtlas).toBeNull();
+  });
+
+  it('draws a still view again when a caster of a shadowed light moves', () => {
+    const renderer = new RecordingRenderer();
+    const pass = new FogVolumePass();
+    const scene = new THREE.Scene();
+    const view = camera();
+    const box = Object.assign(new THREE.Mesh(), { castShadow: true });
+    const fog = { ...inputs(), lights: [castingSun()], casters: [box] };
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    renderer.take();
+
+    box.position.y = 1;
+    box.updateMatrixWorld();
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    expect(renderer.take().lightDraws).toHaveLength(PROJECT.volumeDepth);
+  });
+
+  it('holds a still view when a mesh moves and no light shadows the fog (edge case)', () => {
+    const renderer = new RecordingRenderer();
+    const pass = new FogVolumePass();
+    const scene = new THREE.Scene();
+    const view = camera();
+    const box = Object.assign(new THREE.Mesh(), { castShadow: true });
+    const fog = { ...inputs(), casters: [box] };
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    renderer.take();
+
+    box.position.y = 1;
+    box.updateMatrixWorld();
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    expect(renderer.take().lightDraws).toEqual([]);
   });
 });

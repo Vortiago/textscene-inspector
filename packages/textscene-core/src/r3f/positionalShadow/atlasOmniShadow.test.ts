@@ -105,6 +105,26 @@ describe('AtlasOmniShadow.writeLookupMatrix', () => {
   });
 });
 
+describe('AtlasOmniShadow.paraboloidRect', () => {
+  it('gives the first paraboloid and the step to the second, in units of the atlas', () => {
+    const shadow = new AtlasOmniShadow();
+    shadow.slot = { x: 2048, y: 1024, size: 512, paraboloidStep: [1, 0] };
+
+    expect(shadow.paraboloidRect(new THREE.Vector4())!.toArray()).toEqual([0.5, 0.25, 0.125, 0]);
+  });
+
+  it('gives none without a slot (error case)', () => {
+    expect(new AtlasOmniShadow().paraboloidRect(new THREE.Vector4())).toBeNull();
+  });
+
+  it('gives none for a slot without a paraboloid pair (edge case)', () => {
+    const shadow = new AtlasOmniShadow();
+    shadow.slot = { x: 0, y: 0, size: 512, paraboloidStep: null };
+
+    expect(shadow.paraboloidRect(new THREE.Vector4())).toBeNull();
+  });
+});
+
 describe('AtlasOmniShadow.dispose', () => {
   it('frees the cube', () => {
     const shadow = new AtlasOmniShadow();

@@ -16,7 +16,7 @@ import {
 } from './directionalShadow/fitSceneDirectionalShadows.js';
 import { sceneLights } from './directionalShadow/lightLists.js';
 import { fitScenePositionalShadows } from './positionalShadow/fitScenePositionalShadows.js';
-import { installPositionalShadowPass } from './positionalShadow/positionalShadowPass.js';
+import { installShadowPass } from './shadowPass.js';
 import { activeShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas.js';
 import { observeSceneCamera } from './sceneRenderCamera.js';
 import { writeAreaLightUniforms } from './areaLight/areaLightFalloff.js';
@@ -66,7 +66,7 @@ export function useSceneShadowFit(scene: THREE.Scene | null): void {
  */
 export function SceneShadowFitter() {
   const renderer = useThree((state) => state.gl);
-  useEffect(() => installPositionalShadowPass(renderer), [renderer]);
+  useEffect(() => installShadowPass(renderer), [renderer]);
   useSceneShadowFit(useThree((state) => state.scene));
   return null;
 }
