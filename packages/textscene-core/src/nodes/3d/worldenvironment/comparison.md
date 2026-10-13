@@ -9,7 +9,7 @@ renders_as: the scene's background and environment lighting
 
 # WorldEnvironment
 
-Applies the scene's Environment resource to the whole view and draws no geometry of its own. Here the Environment sets a flat dark-navy background and bluish volumetric fog. The previewer paints the background colour and renders the node's children.
+Applies the scene's Environment resource to the whole view and draws no geometry of its own. Here the Environment sets a flat dark-navy background and bluish volumetric fog, which hazes the background and washes out the boxes with distance. The previewer draws both and renders the node's children.
 
 ## Linting
 
@@ -30,7 +30,3 @@ Strict parsing format-checks these `WorldEnvironment` properties, plus 10 inheri
 <!-- lint:end -->
 
 Both properties are assigned straight from the raw string with no format or resource-existence check. An absent `environment` falls back to `''` rather than raising strict's missing-environment warning, and an absent `camera_attributes` stays `undefined`.
-
-## Known limitations
-
-- **Not drawn** Volumetric fog is not drawn, so Godot's steel-blue haze and the boxes washing out with distance are absent, and ours shows the flat navy backdrop.

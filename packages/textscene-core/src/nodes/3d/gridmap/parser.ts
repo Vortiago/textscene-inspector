@@ -5,8 +5,8 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
-import { parseVector3, type Vector3 } from '../../../parser/vectors';
-import { boolOr } from '../../../parser/valueParsers';
+import type { Vector3 } from '../../../parser/vectors';
+import { boolOr, vec3Or } from '../../../parser/valueParsers';
 import type { GridMapProperties } from './types';
 import { readCellsField } from './cellData.js';
 
@@ -48,19 +48,10 @@ function parseCellCenter(properties: Record<string, string>): GridMapProperties[
 export function parseGridMap(heading: ParsedHeading, properties: Record<string, string>): GridMapProperties {
   const baseProperties = parseNode3D(heading, properties);
 
-  let cellSize = DEFAULT_CELL_SIZE;
-  if (properties.cell_size) {
-    try {
-      cellSize = parseVector3(properties.cell_size);
-    } catch {
-      cellSize = DEFAULT_CELL_SIZE;
-    }
-  }
-
   return {
     ...baseProperties,
     meshLibrary: properties.mesh_library,
-    cellSize,
+    cellSize: vec3Or(properties.cell_size, DEFAULT_CELL_SIZE, 'GridMap.cell_size'),
     cellCenter: parseCellCenter(properties),
     cells: extractCells(properties.data),
   };

@@ -1,7 +1,7 @@
 /**
  * Environment ambient and fog against Godot 4.x. `ambient_light_color` defaults to
  * black. DISABLED(1) emits no flat ambient, COLOR(2) and SKY(3) the flat colour, and
- * the default BG(0) the background colour. `fog_enabled` drives scene fog, not `volumetric_fog`.
+ * the default BG(0) the background colour. `fog_enabled` drives the depth fog, not `volumetric_fog`.
  */
 import { describe, it, expect } from 'vitest';
 import { decodeEnvironment } from './decode';
@@ -42,7 +42,7 @@ describe('Environment Godot parity', () => {
     expect(p.fog_mode).toBe(1);
   });
 
-  it('drives scene fog from screen-space fog_enabled, not volumetric_fog', () => {
+  it('drives the depth fog from fog_enabled, not volumetric_fog', () => {
     const screen = createEnvironmentSettings(
       decodeEnvironment({ fog_enabled: 'true', fog_density: '0.01' }),
       DEFAULT_CLEAR_COLOR
@@ -50,7 +50,7 @@ describe('Environment Godot parity', () => {
     expect(screen.fog).not.toBeNull();
     expect(screen.fog?.density).toBeCloseTo(0.01, 5);
 
-    // Volumetric fog alone must not drive scene fog: it has no three.js equivalent.
+    // Volumetric fog alone leaves the depth fog off: the two are separate media.
     const volOnly = createEnvironmentSettings(
       decodeEnvironment({ volumetric_fog_enabled: 'true', volumetric_fog_density: '0.05' }),
       DEFAULT_CLEAR_COLOR

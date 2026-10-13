@@ -1,7 +1,7 @@
 /** Property mapping of the DirectionalLight3D, OmniLight3D and SpotLight3D components. */
 
 import { describe, expect, it } from 'vitest';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { DirectionalLight3D } from '../directionallight3d/Component';
 import { OmniLight3D } from '../omnilight3d/Component';
@@ -12,6 +12,9 @@ import type { DirectionalLight3DProperties } from '../directionallight3d/types';
 import type { OmniLight3DProperties } from '../omnilight3d/types';
 import type { SpotLight3DProperties } from '../spotlight3d/types';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
+import { readFogLightDeclaration } from '../../../../r3f/fog/fogLightDeclaration';
+import { readSkyLightDeclaration } from '../../../../r3f/sky/skyLight';
+import { fireSceneRender } from '../../../../r3f/testing/fireSceneRender';
 
 function dirNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {
@@ -171,5 +174,109 @@ describe('Lights — properties (assertions 67–80)', () => {
   it('#80 SpotLight3D.shadow_enabled → light.castShadow', async () => {
     const r = await ReactThreeTestRenderer.create(<SpotLight3D node={spotNode({ shadow_enabled: true })} />);
     expect(instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight')).castShadow).toBe(true);
+  });
+});
+
+describe('Lights — volumetric fog declaration', () => {
+  it("declares Godot's default fog energy of 1 when the light sets none", async () => {
+    const r = await ReactThreeTestRenderer.create(<OmniLight3D node={omniNode()} />);
+    expect(readFogLightDeclaration(instanceAs<THREE.PointLight>(r.scene.findByType('PointLight')))).toEqual({
+      energy: 1,
+    });
+  });
+
+  it('declares light_volumetric_fog_energy on a DirectionalLight3D', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D node={dirNode({ light_volumetric_fog_energy: 3 })} />
+    );
+    const sun = instanceAs<THREE.DirectionalLight>(r.scene.findByType('DirectionalLight'));
+    expect(readFogLightDeclaration(sun)).toEqual({ energy: 3 });
+  });
+
+  it('declares the cone exponent input of a SpotLight3D', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <SpotLight3D node={spotNode({ light_volumetric_fog_energy: 0.5, spot_angle_attenuation: 2 })} />
+    );
+    const spot = instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight'));
+    expect(readFogLightDeclaration(spot)).toEqual({ energy: 0.5, spotAngleAttenuation: 2 });
+  });
+});
+
+/** Runs the hooks a render of the test scene runs, through a camera `distance` along +Z. */
+function renderFrom(scene: THREE.Scene, distance: number): void {
+  const camera = new THREE.PerspectiveCamera();
+  camera.position.set(0, 0, distance);
+  camera.updateMatrixWorld();
+  scene.updateMatrixWorld();
+  fireSceneRender(scene, camera);
+}
+
+describe('Lights: sign, shadow opacity and distance fade', () => {
+  it('subtracts a light_negative OmniLight3D through a negative intensity', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <OmniLight3D node={omniNode({ light_energy: 2, light_negative: true })} />
+    );
+    const lamp = instanceAs<THREE.PointLight>(r.scene.findByType('PointLight'));
+    expect(lamp.intensity).toBeCloseTo(-2 * LIGHT_INTENSITY_SCALE, 6);
+  });
+
+  it('gives the sky the negative energy of a light_negative DirectionalLight3D', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D node={dirNode({ light_energy: 2, light_negative: true })} />
+    );
+    const sun = instanceAs<THREE.DirectionalLight>(r.scene.findByType('DirectionalLight'));
+    expect(readSkyLightDeclaration(sun)?.energy).toBe(-2);
+  });
+
+  it('maps shadow_opacity onto shadow.intensity, defaulting to 1', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <>
+        <SpotLight3D node={spotNode({ shadow_opacity: 0.4 })} />
+        <OmniLight3D node={omniNode()} />
+      </>
+    );
+    expect(instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight')).shadow.intensity).toBe(0.4);
+    expect(instanceAs<THREE.PointLight>(r.scene.findByType('PointLight')).shadow.intensity).toBe(1);
+  });
+
+  it('fades an OmniLight3D and its shadow by the distance to the rendering camera', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <OmniLight3D
+        node={omniNode({
+          distance_fade_enabled: true,
+          distance_fade_begin: 10,
+          distance_fade_shadow: 6,
+          distance_fade_length: 4,
+        })}
+      />
+    );
+    const lamp = instanceAs<THREE.PointLight>(r.scene.findByType('PointLight'));
+
+    renderFrom(r.scene.instance as THREE.Scene, 12);
+    // smoothstep(0, 1, 1 - (12 - 10) / 4) is 0.5, and the shadow is past 6 + 4.
+    expect(lamp.intensity).toBeCloseTo(0.5 * LIGHT_INTENSITY_SCALE, 6);
+    expect(lamp.shadow.intensity).toBe(0);
+  });
+
+  it('leaves a light whole while distance_fade_enabled is off', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <SpotLight3D node={spotNode({ distance_fade_begin: 1, distance_fade_length: 1 })} />
+    );
+    const spot = instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight'));
+
+    renderFrom(r.scene.instance as THREE.Scene, 50);
+    expect(spot.intensity).toBeCloseTo(LIGHT_INTENSITY_SCALE, 6);
+  });
+
+  it('restores the unfaded light when the fade turns off (edge case)', async () => {
+    const faded = omniNode({ distance_fade_enabled: true, distance_fade_begin: 1, distance_fade_length: 1 });
+    const r = await ReactThreeTestRenderer.create(<OmniLight3D node={faded} />);
+    renderFrom(r.scene.instance as THREE.Scene, 50);
+
+    await r.update(<OmniLight3D node={omniNode()} />);
+    expect(instanceAs<THREE.PointLight>(r.scene.findByType('PointLight')).intensity).toBeCloseTo(
+      LIGHT_INTENSITY_SCALE,
+      6
+    );
   });
 });

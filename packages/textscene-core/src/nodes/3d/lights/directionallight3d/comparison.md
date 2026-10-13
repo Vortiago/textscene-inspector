@@ -42,6 +42,8 @@ The shadow's soft edge takes the four taps of Godot's default Soft Low filter, w
 
 `sky_mode` decides what the light reaches, as in Godot. A Sky Only light draws only its sun in the sky, and casts no shadow. A Light Only light lights surfaces and draws no sun in the sky.
 
+`light_negative` makes the light subtract, on surfaces and in the sky's sun, as in Godot. `shadow_opacity` mixes the shadow towards unshadowed through three's `shadow.intensity`.
+
 Godot draws the first eight visible directional lights in the scene and stops. A light past the eighth neither lights nor casts, here as in Godot. So at most eight directional lights cast a shadow.
 
 ## Known limitations
