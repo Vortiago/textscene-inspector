@@ -12,10 +12,12 @@ import {
   FAST_FILTER_FRAME_LOWER_BOUND,
   FAST_FILTER_SUB_TAPS,
   FAST_FILTER_SUPER_TAPS_PER_FRAME,
+  REAL_TIME_RADIANCE_SIZE,
   REAL_TIME_ROUGHNESS_LAYERS,
+  skyOctmapLayout,
 } from '../../godot/skyReflection.js';
 import { frameAround } from './frame.js';
-import { RADIANCE_LAYOUT, type LayerFilter } from './layerFilter.js';
+import type { LayerFilter } from './layerFilter.js';
 import { addTrilinear, type Octmap } from './octmapImage.js';
 
 const { abs, max, min } = Math;
@@ -25,7 +27,11 @@ const frameX = new Float64Array(3);
 const frameY = new Float64Array(3);
 const tapUv = new Float64Array(2);
 
+/** Godot lays out a real-time sky at `REAL_TIME_SIZE` (`sky.h:248`), and its chain is 160 wide. */
+const REAL_TIME_LAYOUT = skyOctmapLayout(REAL_TIME_RADIANCE_SIZE);
+
 export const fastFilter: LayerFilter = {
+  layout: REAL_TIME_LAYOUT,
   chainSizes: FAST_FILTER_CHAIN_SIZES,
   texel,
 };
@@ -55,7 +61,7 @@ function texel(normal: OctDirection, mips: readonly Octmap[], layer: number, out
           frameX[0]! * x + frameY[0]! * y + normal[0] * z,
           frameX[1]! * x + frameY[1]! * y + normal[1] * z,
           frameX[2]! * x + frameY[2]! * y + normal[2] * z,
-          RADIANCE_LAYOUT.padding,
+          REAL_TIME_LAYOUT.padding,
           tapUv
         );
         const weight = coefficients.weight[index]![sub]! * frameWeight;

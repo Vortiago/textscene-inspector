@@ -29,6 +29,7 @@ const NO_ROTATION = { x: 0, y: 0, z: 0 };
 const SKY: Sky = {
   material: { kind: 'panorama', panorama: undefined, energy_multiplier: 1 },
   radianceFilter: 'importance-sample',
+  radianceSize: 256,
 };
 
 function Scene({ lights }: { lights: number }) {

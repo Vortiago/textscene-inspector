@@ -16,14 +16,24 @@ import { readCubeRadiance, skyLayers, type SkyLayers } from './skyLayers';
 
 export type { SkyLight } from './skyUniforms';
 
-/** Cube face resolution. 256 is ample for a gradient and cheap to prefilter. */
-const CUBE_SIZE = 256;
+/**
+ * The background's cube face. Godot draws the background per pixel, and 256 is ample for a gradient.
+ * It is also the radiance's cube at the default radiance size.
+ */
+const BACKGROUND_SIZE = 256;
+
+/**
+ * The largest radiance the previewer bakes. Godot's own render of rough metal at radiance size 512
+ * differs from 256 by 0.02/255, and each doubling costs four times the bake.
+ */
+const LARGEST_RADIANCE_SIZE = 256;
 
 /**
  * Godot's sky ambient is the sky's own radiance: it lights surfaces and is what
  * they reflect (`Environment.reflection_source` defaults to the background).
- * So one cube render feeds `scene.background`, the PMREM-prefiltered
- * `scene.environment` and Godot's layers 1 to 7 of it.
+ * So a cube render at the radiance size feeds the PMREM-prefiltered
+ * `scene.environment` and Godot's layers 1 to 7 of it, and `scene.background`
+ * when the size is the background's.
  */
 export interface SkyEnvironment {
   /** Sharp cubemap for `scene.background`. */
@@ -78,9 +88,9 @@ export function buildSkyEnvironment(
   const skyScene = new THREE.Scene();
   skyScene.add(new THREE.Mesh(geometry, material));
 
-  const cubeTarget = new THREE.WebGLCubeRenderTarget(CUBE_SIZE, {
-    type: THREE.HalfFloatType,
-  });
+  const radianceSize = Math.min(sky.radianceSize, LARGEST_RADIANCE_SIZE);
+  const backgroundTarget = cubeTarget(BACKGROUND_SIZE);
+  const radianceTarget = radianceSize === BACKGROUND_SIZE ? backgroundTarget : cubeTarget(radianceSize);
   let pmrem: THREE.PMREMGenerator | null = null;
   let prefiltered: THREE.WebGLRenderTarget | null = null;
   let layers: SkyLayers;
@@ -88,19 +98,22 @@ export function buildSkyEnvironment(
   try {
     // The cube camera sits at the origin inside the unit box, so each face
     // samples the same directions Godot's `EYEDIR` covers.
-    new THREE.CubeCamera(0.1, 10, cubeTarget).update(gl, skyScene);
-    layers = skyLayers(readCubeRadiance(gl, cubeTarget), CUBE_SIZE, sky.radianceFilter);
+    renderCube(gl, skyScene, backgroundTarget);
+    if (radianceTarget !== backgroundTarget) renderCube(gl, skyScene, radianceTarget);
+    layers = skyLayers(readCubeRadiance(gl, radianceTarget), radianceSize, sky.radianceFilter);
 
     pmrem = new THREE.PMREMGenerator(gl);
-    prefiltered = pmrem.fromCubemap(cubeTarget.texture);
+    prefiltered = pmrem.fromCubemap(radianceTarget.texture);
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
-    cubeTarget.dispose();
+    backgroundTarget.dispose();
     prefiltered?.dispose();
     return null;
   } finally {
     // The sky scene renders once, so its mesh and panorama are freed here and
-    // not held for the environment's lifetime.
+    // not held for the environment's lifetime. A radiance cube of its own
+    // has served the PMREM and the layers by now.
+    if (radianceTarget !== backgroundTarget) radianceTarget.dispose();
     pmrem?.dispose();
     geometry.dispose();
     material.dispose();
@@ -108,12 +121,20 @@ export function buildSkyEnvironment(
   }
 
   return {
-    background: cubeTarget.texture,
+    background: backgroundTarget.texture,
     environment: prefiltered.texture,
     layers,
     dispose: () => {
-      cubeTarget.dispose();
+      backgroundTarget.dispose();
       prefiltered.dispose();
     },
   };
+}
+
+function cubeTarget(size: number): THREE.WebGLCubeRenderTarget {
+  return new THREE.WebGLCubeRenderTarget(size, { type: THREE.HalfFloatType });
+}
+
+function renderCube(gl: THREE.WebGLRenderer, scene: THREE.Scene, target: THREE.WebGLCubeRenderTarget): void {
+  new THREE.CubeCamera(0.1, 10, target).update(gl, scene);
 }

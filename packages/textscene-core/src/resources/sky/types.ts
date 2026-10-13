@@ -61,8 +61,10 @@ export interface SkyProcessing {
  */
 export type RadianceFilter = 'importance-sample' | 'fast';
 
-/** A Godot `Sky` as the renderer draws it: its material, and the filter its layers bake with. */
+/** A Godot `Sky` as the renderer draws it: its material, and how its radiance layers bake. */
 export interface Sky {
   material: SkyProperties;
   radianceFilter: RadianceFilter;
+  /** The size Godot bakes the radiance at: 256 for a real-time sky, else `radiance_size`'s. */
+  radianceSize: number;
 }

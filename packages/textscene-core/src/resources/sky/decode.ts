@@ -6,7 +6,11 @@
 
 import type { Color } from '../../utils/colorParser';
 import type { RadianceFilter, Sky, SkyProcessMode, SkyProcessing, SkyProperties } from './types';
-import { SKY_RADIANCE_SIZES, SKY_RADIANCE_SIZE_DEFAULT } from '../../godot/skyReflection';
+import {
+  REAL_TIME_RADIANCE_SIZE,
+  SKY_RADIANCE_SIZES,
+  SKY_RADIANCE_SIZE_DEFAULT,
+} from '../../godot/skyReflection';
 import { enumOr, floatOr, parseOptionalInt } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
 
@@ -50,13 +54,28 @@ function processModeOf(data: Record<string, string>): SkyProcessMode {
   return PROCESS_MODES[enumOr(data.process_mode, 0, indices(PROCESS_MODES), 'process_mode')]!;
 }
 
+function radianceSizeOf(data: Record<string, string>): number {
+  const defaultIndex = SKY_RADIANCE_SIZES.indexOf(SKY_RADIANCE_SIZE_DEFAULT);
+  return SKY_RADIANCE_SIZES[
+    enumOr(data.radiance_size, defaultIndex, indices(SKY_RADIANCE_SIZES), 'radiance_size')
+  ]!;
+}
+
 function indices(table: readonly unknown[]): number[] {
   return table.map((_, index) => index);
 }
 
-/** The `Sky` whose properties are `data`, drawing `material`. */
+/**
+ * The `Sky` whose properties are `data`, drawing `material`. Godot bakes a real-time sky at
+ * `REAL_TIME_SIZE` whatever its `radiance_size` (`sky.cpp:590-592`).
+ */
 export function decodeSky(data: Record<string, string>, material: SkyProperties): Sky {
-  return { material, radianceFilter: radianceFilter(processModeOf(data)) };
+  const processMode = processModeOf(data);
+  return {
+    material,
+    radianceFilter: radianceFilter(processMode),
+    radianceSize: processMode === 'real-time' ? REAL_TIME_RADIANCE_SIZE : radianceSizeOf(data),
+  };
 }
 
 /**

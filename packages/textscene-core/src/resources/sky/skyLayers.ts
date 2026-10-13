@@ -7,11 +7,15 @@
 
 import * as THREE from 'three';
 import { octToVec3WithBorder } from '../../godot/octmap.js';
-import { SKY_ROUGHNESS_LAYERS_DEFAULT, downsampleTaps } from '../../godot/skyReflection.js';
+import {
+  SKY_ROUGHNESS_LAYERS_DEFAULT,
+  downsampleTaps,
+  type SkyOctmapLayout,
+} from '../../godot/skyReflection.js';
 import { cubeFace, cubeTexel, texelDirection } from './cubeFaces.js';
 import { fastFilter } from './fastFilter.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
-import { RADIANCE_LAYOUT, type LayerFilter } from './layerFilter.js';
+import type { LayerFilter } from './layerFilter.js';
 import { addBilinear, blankOctmap, type Octmap } from './octmapImage.js';
 import type { RadianceFilter } from './types.js';
 
@@ -46,11 +50,6 @@ export type SkyLayers = Record<keyof typeof SKY_LAYER_GROUPS, Uint16Array[][]>;
 /** Half-float 1, the alpha of every texel. */
 const OPAQUE = toHalfFloat(1);
 
-const FILTERS: Record<RadianceFilter, LayerFilter> = {
-  'importance-sample': importanceSampleFilter,
-  fast: fastFilter,
-};
-
 /** One downsample of the chain, as positions and weights that hold for every sky. */
 interface DownsampleStep {
   size: number;
@@ -62,16 +61,17 @@ interface DownsampleStep {
   weights: Float32Array;
 }
 
-/** The cube texel each radiance octmap texel reads, for one cube size. */
+/** The cube texel each radiance octmap texel reads, for one cube size and one octmap layout. */
 interface BaseTexels {
   cubeSize: number;
+  layout: SkyOctmapLayout;
   /** The face times the face's texel count, plus the texel, that each octmap texel reads. */
   texels: Int32Array;
 }
 
 /**
- * Written only by `baseTexelsOf`, on the first sky of a cube size. 1.6 MB, kept so a later sky
- * builds its octmap without the 400,000 directions that place it.
+ * Written only by `baseTexelsOf`, on the first sky of a cube size and layout. 1.6 MB at 256, kept so
+ * a later sky builds its octmap without the 400,000 directions that place it.
  */
 let cachedBaseTexels: BaseTexels | null = null;
 
@@ -107,7 +107,8 @@ function fromHalfFloats(half: Uint16Array): Float32Array {
 
 /**
  * Godot's baked layers of the sky `radiance` holds, a cube of RGBA faces `size` wide, through
- * `radianceFilter`.
+ * `radianceFilter`. The cube stands for Godot's radiance octmap of the same size, which is twice as
+ * wide to match a cube's texel density (`sky.cpp:1553-1554`).
  */
 export function skyLayers(
   radiance: readonly Float32Array[],
@@ -115,9 +116,9 @@ export function skyLayers(
   radianceFilter: RadianceFilter
 ): SkyLayers {
   checkCube(radiance, size);
-  const filter = FILTERS[radianceFilter];
+  const filter = radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(size);
   const mips: Octmap[] = [];
-  let source = baseOctmap(radiance, size * size, baseTexelsOf(size));
+  let source = baseOctmap(radiance, size * size, filter.layout, baseTexelsOf(size, filter.layout));
   for (const step of stepsOf(filter)) {
     source = downsample(source, step);
     mips.push(source);
@@ -147,21 +148,20 @@ function checkCube(radiance: readonly Float32Array[], size: number): void {
 function stepsOf(filter: LayerFilter): DownsampleStep[] {
   let steps = chainSteps.get(filter);
   if (steps) return steps;
-  steps = filter.chainSizes.map((size) => downsampleStep(size, RADIANCE_LAYOUT.padding));
+  steps = filter.chainSizes.map((size) => downsampleStep(size, filter.layout.padding));
   chainSteps.set(filter, steps);
   return steps;
 }
 
-function baseTexelsOf(cubeSize: number): Int32Array {
-  if (cachedBaseTexels?.cubeSize !== cubeSize) {
-    cachedBaseTexels = { cubeSize, texels: baseTexels(cubeSize) };
+function baseTexelsOf(cubeSize: number, layout: SkyOctmapLayout): Int32Array {
+  if (cachedBaseTexels?.cubeSize !== cubeSize || cachedBaseTexels.layout !== layout) {
+    cachedBaseTexels = { cubeSize, layout, texels: baseTexels(cubeSize, layout) };
   }
   return cachedBaseTexels.texels;
 }
 
 /** The cube texel nearest each texel of the radiance octmap, padding included. */
-function baseTexels(cubeSize: number): Int32Array {
-  const { size, padding } = RADIANCE_LAYOUT;
+function baseTexels(cubeSize: number, { size, padding }: SkyOctmapLayout): Int32Array {
   const texels = new Int32Array(size * size);
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
@@ -193,8 +193,13 @@ function downsampleStep(size: number, padding: number): DownsampleStep {
   return step;
 }
 
-function baseOctmap(radiance: readonly Float32Array[], faceTexels: number, texels: Int32Array): Octmap {
-  const octmap = blankOctmap(RADIANCE_LAYOUT.size);
+function baseOctmap(
+  radiance: readonly Float32Array[],
+  faceTexels: number,
+  layout: SkyOctmapLayout,
+  texels: Int32Array
+): Octmap {
+  const octmap = blankOctmap(layout.size);
   for (let i = 0; i < texels.length; i += 1) {
     const face = radiance[floor(texels[i]! / faceTexels)]!;
     const at = (texels[i]! % faceTexels) * 4;

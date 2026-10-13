@@ -150,7 +150,7 @@ describe('decodeSkyProcessing — how a Sky bakes its radiance', () => {
   });
 });
 
-describe('decodeSky — the filter that bakes a Sky’s rough layers', () => {
+describe('decodeSky — the filter that bakes a Sky’s layers', () => {
   const material = decodeSkyMaterial('ProceduralSkyMaterial', {})!;
 
   it('carries the material it draws', () => {
@@ -167,5 +167,25 @@ describe('decodeSky — the filter that bakes a Sky’s rough layers', () => {
 
   it('importance-samples a process mode past Real-Time, which falls back to Automatic', () => {
     expect(decodeSky({ process_mode: '9' }, material).radianceFilter).toBe('importance-sample');
+  });
+});
+
+describe('decodeSky — the size a Sky’s radiance bakes at', () => {
+  const material = decodeSkyMaterial('ProceduralSkyMaterial', {})!;
+
+  it('bakes at 256 by default', () => {
+    expect(decodeSky({}, material).radianceSize).toBe(256);
+  });
+
+  it('bakes at the size radiance_size names', () => {
+    expect(decodeSky({ radiance_size: '0' }, material).radianceSize).toBe(32);
+  });
+
+  it('bakes a Real-Time sky at 256 whatever its radiance_size, as Godot does (edge case)', () => {
+    expect(decodeSky({ process_mode: '3', radiance_size: '1' }, material).radianceSize).toBe(256);
+  });
+
+  it('keeps 256 for an index the setter refuses (error case)', () => {
+    expect(decodeSky({ radiance_size: '9' }, material).radianceSize).toBe(256);
   });
 });

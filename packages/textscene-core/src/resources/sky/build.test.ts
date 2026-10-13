@@ -52,12 +52,51 @@ describe('buildSkyEnvironment layers', () => {
     const sky: Sky = {
       material: decodeSkyMaterial('ProceduralSkyMaterial', {})!,
       radianceFilter: 'importance-sample',
+      radianceSize: 256,
     };
 
     const env = buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [] });
 
     expect([env!.layers.sharp, env!.layers.rough, env!.layers.last].map((g) => g.length)).toEqual([3, 3, 1]);
     expect(THREE.DataUtils.fromHalfFloat(env!.layers.last[0]![2]![1]!)).toBeCloseTo(0.25, 3);
+  });
+});
+
+describe('buildSkyEnvironment radiance size', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** The face size of each cube the build renders, and of the cube the PMREM prefilters. */
+  function cubeSizes(radianceSize: number) {
+    const rendered: number[] = [];
+    vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(function (this: THREE.CubeCamera) {
+      rendered.push(this.renderTarget.width);
+    });
+    let prefiltered = 0;
+    vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockImplementation((cubemap) => {
+      prefiltered = (cubemap.image as { width: number }[])[0]!.width;
+      return new THREE.WebGLRenderTarget(1, 1);
+    });
+    const sky: Sky = {
+      material: decodeSkyMaterial('ProceduralSkyMaterial', {})!,
+      radianceFilter: 'importance-sample',
+      radianceSize,
+    };
+    buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [] });
+    return { rendered, prefiltered };
+  }
+
+  it('renders one cube for the background and the radiance at the default size', () => {
+    expect(cubeSizes(256)).toEqual({ rendered: [256], prefiltered: 256 });
+  });
+
+  it('renders the radiance at a smaller size on a cube of its own, so a mirror reads it as coarse as Godot', () => {
+    expect(cubeSizes(32)).toEqual({ rendered: [256, 32], prefiltered: 32 });
+  });
+
+  it('bakes a size above 256 at 256 (edge case)', () => {
+    expect(cubeSizes(1024)).toEqual({ rendered: [256], prefiltered: 256 });
   });
 });
 
@@ -84,6 +123,7 @@ describe('buildSkyEnvironment panorama wiring', () => {
     const sky: Sky = {
       material: decodeSkyMaterial('PanoramaSkyMaterial', {})!,
       radianceFilter: 'importance-sample',
+      radianceSize: 256,
     };
     const env = buildSkyEnvironment(uniformSkyRenderer(0), { sky, lights: [], panorama });
     return { env, sampled: sampled as THREE.Texture | null };
