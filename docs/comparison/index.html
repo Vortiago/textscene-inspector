@@ -3998,7 +3998,7 @@ tr:last-child td{border-bottom:0}
 <p>The lenient parser falls back silently when <code>omni_range</code> or <code>omni_attenuation</code> is absent. When one is unparseable, it warns and falls back to <code>5.0</code> and <code>1.0</code>. <code>omni_shadow_mode</code> goes through <code>parseOptionalInt</code>, so an absent or invalid value quietly becomes <code>undefined</code>.</p>
 <p>Godot's positional shadow atlas gives the light two slots for the camera. As in Godot's default Cube mode, each slot holds one paraboloid of the shadow. A light that covers less of the view gets smaller slots and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes smaller slots, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans <code>shadow_blur</code> times two texels of the paraboloid. <code>shadow_bias</code> and <code>shadow_normal_bias</code> move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> Distance falloff follows three's inverse-square curve rather than Godot's, so the mid-range brightness differs.</li><li><strong>Approximated</strong> <code>omni_shadow_mode</code> Dual Paraboloid draws as Cube mode does, so the edge of a coarse caster's shadow can sit apart from Godot's.</li><li><strong>Editor only</strong> The wireframe sphere gizmo appears only in Godot's editor, but here it is selection-gated.</li></ul></div>
+<ul><li><strong>Approximated</strong> <code>omni_shadow_mode</code> Dual Paraboloid draws as Cube mode does, so the edge of a coarse caster's shadow can sit apart from Godot's.</li><li><strong>Editor only</strong> The wireframe sphere gizmo appears only in Godot's editor, but here it is selection-gated.</li></ul></div>
     </article>
     <article class="sheet" data-type="OpenXRBindingModifierEditor" hidden>
       <header class="sheet-head">
@@ -5441,14 +5441,14 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="Sky" hidden>
       <header class="sheet-head">
         <h2>Sky</h2>
-        <span class="renders">renders as a THREE PMREM environment + background</span>
+        <span class="renders">renders as a THREE PMREM environment + Godot's roughest radiance layers + background</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_sky.html" target="_blank" rel="noopener" title="Godot class reference for Sky">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/resources/sky.h" target="_blank" rel="noopener" title="Godot engine source for Sky">source ↗</a>
         
         <span class="status st-done">Done</span>
       </header>
       
-      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background plus a PMREM-filtered environment map.</p></div>
+      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. A PMREM-filtered environment map gives sharp reflections. Godot's roughest radiance layers, baked as Godot bakes them, give rough reflections and the ambient light.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>ProceduralSkyMaterial</h3><span class="status st-done">Done</span></div>
@@ -5505,7 +5505,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects. An unreadable Sky property falls back to Godot's default through the shared value decoders. An unresolvable material or panorama leaves the background at its fallback rather than failing the scene.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Resource gap</strong> A <code>ShaderMaterial</code> sky or a <code>CompressedCubemap</code> panorama is not resolved, so the background falls back to a mid-blue solid and metals reflect near-black.</li><li><strong>Approximated</strong> A dielectric's faint sky specular is scaled by <code>ambient_light_sky_contribution</code> along with its diffuse, where Godot keeps it at full strength.</li></ul></div>
+<ul><li><strong>Resource gap</strong> A <code>ShaderMaterial</code> sky or a <code>CompressedCubemap</code> panorama is not resolved, so the background falls back to a mid-blue solid and metals reflect near-black.</li></ul></div>
     </article>
     <article class="sheet" data-type="SliderJoint3D" hidden>
       <header class="sheet-head">
@@ -5630,7 +5630,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Godot's cone-shaped light, emitting from a point along its local -Z axis and fading toward the cone's rim and its range. The previewer renders it as a <code>THREE.SpotLight</code> with energy scaled by PI to match Godot's brightness and the cone edge softened through <code>penumbra</code>.</p>
+      <div class="prose"><p>Godot's cone-shaped light, emitting from a point along its local -Z axis and fading toward the cone's rim and its range. The previewer renders it as a <code>THREE.SpotLight</code> with energy scaled by PI to match Godot's brightness. A shader patch gives it Godot's distance falloff and Godot's fade from the axis to the cone's rim, at the power <code>spot_angle_attenuation</code> sets.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>SpotLight3D</code> properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>spot_angle</code></td><td>float 0-180</td><td>warning</td></tr><tr><td><code>spot_angle_attenuation</code></td><td>float</td><td></td></tr><tr><td><code>spot_attenuation</code></td><td>float</td><td></td></tr><tr><td><code>spot_range</code></td><td>float &gt;= 0</td><td>warning below</td></tr></tbody></table></div>
@@ -5638,7 +5638,7 @@ tr:last-child td{border-bottom:0}
 <p>The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: <code>spot_range</code> to <code>5.0</code>, <code>spot_angle</code> to <code>45.0</code>, <code>spot_attenuation</code> to <code>1.0</code>, <code>spot_angle_attenuation</code> to <code>1.0</code>.</p>
 <p>Godot's positional shadow atlas gives the light one slot for the camera, and the shadow takes it. A light that covers less of the view gets a smaller slot and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes a smaller slot, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans <code>shadow_blur</code> times two texels of the atlas. <code>shadow_bias</code> and <code>shadow_normal_bias</code> move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> Distance falloff follows three's inverse-square curve rather than Godot's, so the lit pool near the cube reads slightly brighter.</li><li><strong>Approximated</strong> <code>spot_angle_attenuation</code> maps onto three's single <code>penumbra</code> value, so the cone-edge softness curve differs.</li><li><strong>Editor only</strong> The wireframe cone gizmo appears only in Godot's editor, but here it is selection-gated.</li></ul></div>
+<ul><li><strong>Editor only</strong> The wireframe cone gizmo appears only in Godot's editor, but here it is selection-gated.</li></ul></div>
     </article>
     <article class="sheet" data-type="SpringArm3D" hidden>
       <header class="sheet-head">
@@ -6020,7 +6020,7 @@ tr:last-child td{border-bottom:0}
 <ul><li><strong>Approximated</strong> The screen-space distortion is not reproduced, and the surface is not dimmed by <code>1 - ref_amount</code>, so it reads brighter than Godot's.</li></ul></div>
       </section>
       <section class="prop">
-        <div class="prop-head"><h3>Height mapping</h3><span class="status st-limitation">Limitation</span></div>
+        <div class="prop-head"><h3>Height mapping</h3><span class="status st-unreviewed">Unreviewed</span></div>
         <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-material-heightmap-godot.png" alt="Godot render of Height mapping">
@@ -6034,8 +6034,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>Godot's <code>heightmap_*</code> is texture-space parallax, so the silhouette stays a smooth sphere. It maps to <code>displacementMap</code>, which moves real vertices.</p>
-<ul><li><strong>Approximated</strong> The sphere deforms into a lumpy blob, and the depth scale is in world units.</li></ul></div>
+        <div class="prose"><p>Both engines shift every texture coordinate by the depth the heightmap reads, along the view direction in the surface's tangent frame. So the silhouette stays a smooth sphere. Deep parallax steps through Godot's layers, and the flips and the inverted texture follow Godot. Triplanar mapping turns height mapping off, and an unshaded material shifts its albedo too, as in Godot.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Texture filter</h3><span class="status st-done">Done</span></div>
@@ -6059,7 +6058,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects. Each field falls back to Godot's default through the shared value decoders, so a malformed <code>roughness</code> renders with default roughness. A texture reference it cannot resolve leaves the slot empty, and the mesh renders untextured.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Shader missing</strong> <code>alpha_antialiasing_mode</code> is read for the pass decision, but the cutout edge reads hard rather than coverage-blended.</li><li><strong>Shader missing</strong> <code>proximity_fade_*</code> and <code>distance_fade_*</code> decide the pass but are not rendered, so the surface stays at full opacity.</li><li><strong>Shader missing</strong> <code>metallic_specular</code> has no effect, since three fixes dielectric F0 at 0.04.</li><li><strong>Approximated</strong> Godot measures V from the image top and three from the bottom, so a non-integer <code>uv1_scale.y</code> or a non-zero <code>uv1_offset.y</code> shifts V differently.</li><li><strong>Approximated</strong> Under <code>uv1_world_triplanar</code>, <code>uv1_offset</code> is in world units and is not converted.</li><li><strong>Approximated</strong> Triplanar tiling density is exact on planar meshes only, since curved and GLB geometry and a <code>.tres</code> material tile by their own UVs.</li><li><strong>Approximated</strong> A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.</li></ul></div>
+<ul><li><strong>Shader missing</strong> <code>alpha_antialiasing_mode</code> is read for the pass decision, but the cutout edge reads hard rather than coverage-blended.</li><li><strong>Shader missing</strong> <code>proximity_fade_*</code> and <code>distance_fade_*</code> decide the pass but are not rendered, so the surface stays at full opacity.</li><li><strong>Approximated</strong> Godot measures V from the image top and three from the bottom, so a non-integer <code>uv1_scale.y</code> or a non-zero <code>uv1_offset.y</code> shifts V differently.</li><li><strong>Approximated</strong> Under <code>uv1_world_triplanar</code>, <code>uv1_offset</code> is in world units and is not converted.</li><li><strong>Approximated</strong> Triplanar tiling density is exact on planar meshes only, since curved and GLB geometry and a <code>.tres</code> material tile by their own UVs.</li><li><strong>Approximated</strong> A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.</li></ul></div>
     </article>
     <article class="sheet" data-type="StaticBody2D" hidden>
       <header class="sheet-head">
