@@ -1413,6 +1413,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sky Energy",
+    "file": "unit-sky-energy.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sky Panorama",
     "file": "unit-sky-panorama.tscn",
     "category": "Other"
