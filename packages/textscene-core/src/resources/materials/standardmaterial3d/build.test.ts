@@ -9,7 +9,7 @@ import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
-import { patchedFragment } from '../../../r3f/testing/patchedFragment';
+import { heightmapSampledBy, patchedFragment } from '../../../r3f/testing/patchedFragment';
 
 function build(
   properties: Record<string, string>,
@@ -413,12 +413,12 @@ describe('the imperative adapter — texture slots', () => {
   it('binds the heightmap texture for the parallax shift and moves no vertex', () => {
     const texture = loadedTexture();
     const on = build({ heightmap_enabled: 'true' }, { heightmap_texture: texture });
-    expectBoundRaw(on.displacementMap, texture);
-    expect(on.displacementScale).toBe(0);
+    expectBoundRaw(heightmapSampledBy(on), texture);
+    expect(on.displacementMap).toBeNull();
   });
 
-  it('binds no heightmap texture with the feature off (edge case)', () => {
-    expect(build({}, { heightmap_texture: loadedTexture() }).displacementMap).toBeNull();
+  it('samples no heightmap with the feature off (edge case)', () => {
+    expect(heightmapSampledBy(build({}, { heightmap_texture: loadedTexture() }))).toBeNull();
   });
 
   it('applies albedo and normal together', () => {

@@ -52,3 +52,20 @@ export function patchedFragment(material: THREE.Material): string {
     fragmentShader
   );
 }
+
+/** The texture `material`'s parallax samples, or null when it compiles no parallax. */
+export function heightmapSampledBy(material: THREE.Material): THREE.Texture | null {
+  const shader = {
+    vertexShader: '',
+    fragmentShader: FRAGMENT_SHADER_OF_TYPE[material.type] ?? '',
+    uniforms: {},
+  } as THREE.WebGLProgramParametersWithUniforms;
+  material.onBeforeCompile(shader, undefined as never);
+  return (shader.uniforms.godotHeightmap?.value as THREE.Texture | undefined) ?? null;
+}
+
+/** The texture `material` samples as `map`: one of three's map fields, or `heightmap`. */
+export function mapSampledBy(material: THREE.Material, map: string): THREE.Texture | null {
+  if (map === 'heightmap') return heightmapSampledBy(material);
+  return (material as unknown as Record<string, THREE.Texture | null>)[map] ?? null;
+}

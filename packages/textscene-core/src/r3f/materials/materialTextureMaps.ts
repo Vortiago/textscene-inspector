@@ -15,8 +15,8 @@ export interface MaterialTextureMaps {
   metalnessMap?: THREE.Texture;
   emissiveMap?: THREE.Texture;
   aoMap?: THREE.Texture;
-  /** Godot `heightmap_texture` → three.js displacementMap (height mapping). */
-  displacementMap?: THREE.Texture;
+  /** Godot `heightmap_texture`, which the parallax samples through `bindHeightmap`. */
+  heightMap?: THREE.Texture;
   /** Godot `anisotropy_flowmap` → three.js anisotropyMap (flowmap). */
   anisotropyMap?: THREE.Texture;
 }
@@ -30,7 +30,7 @@ export function textureSlotsFromMaps(maps: MaterialTextureMaps): ResolvedTexture
     metallic_texture: maps.metalnessMap ?? null,
     emission_texture: maps.emissiveMap ?? null,
     ao_texture: maps.aoMap ?? null,
-    heightmap_texture: maps.displacementMap ?? null,
+    heightmap_texture: maps.heightMap ?? null,
     anisotropy_flowmap: maps.anisotropyMap ?? null,
   };
 }

@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { injectProgram } from '../../../r3f/materialProgramInputs';
 import type { StandardMaterialBag } from './materialBag';
-import { UnshadedMaterial } from '../../../r3f/materials/unshadedMaterial';
+import { bindHeightmap } from '../../../r3f/materials/godotParallax';
 
 /**
  * A derived bag's material class as a constructed `THREE.Material`, for a caller that
@@ -18,13 +18,14 @@ import { UnshadedMaterial } from '../../../r3f/materials/unshadedMaterial';
 export function materialFromBag(bag: StandardMaterialBag): THREE.Material {
   const material = materialOfClass(bag);
   injectProgram(material, bag.injection);
+  bindHeightmap(material, bag.heightmapTexture ?? null);
   return material;
 }
 
 function materialOfClass(bag: StandardMaterialBag): THREE.Material {
   switch (bag.materialClass) {
     case 'basic':
-      return new UnshadedMaterial(bag.props);
+      return new THREE.MeshBasicMaterial(bag.props);
     case 'physical':
       return new THREE.MeshPhysicalMaterial(bag.props);
     default:

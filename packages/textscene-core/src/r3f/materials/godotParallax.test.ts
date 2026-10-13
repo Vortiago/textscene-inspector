@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { heightmapUserData, parallaxInjection, unshadedParallaxInjection } from './godotParallax';
-import { UnshadedMaterial } from './unshadedMaterial';
+import {
+  bindHeightmap,
+  heightmapUserData,
+  parallaxInjection,
+  unshadedParallaxInjection,
+} from './godotParallax';
 import type { ProgramShader } from '../materialProgramInputs';
 import type { Heightmap } from '../../resources/materials/standardmaterial3d/types';
 
@@ -13,11 +17,12 @@ function patched(
   recorded: Heightmap | null = heightmap,
   fragmentShader = THREE.ShaderLib.physical.fragmentShader
 ): ProgramShader {
-  const material = new THREE.MeshPhysicalMaterial({
-    displacementMap: new THREE.Texture(),
-    userData: heightmapUserData(recorded),
-  });
-  const shader: ProgramShader = { vertexShader: '', fragmentShader, uniforms: {} };
+  const material = new THREE.MeshPhysicalMaterial({ userData: heightmapUserData(recorded) });
+  const shader: ProgramShader = {
+    vertexShader: THREE.ShaderLib.physical.vertexShader,
+    fragmentShader,
+    uniforms: {},
+  };
   parallaxInjection(heightmap)!.onBeforeCompile.call(material, shader);
   return shader;
 }
@@ -80,21 +85,55 @@ describe('parallaxInjection', () => {
     expect(patched(HEIGHTMAP, HEIGHTMAP, 'void main() {}').fragmentShader).toBe('void main() {}');
   });
 
-  it('leaves a material with no heightmap bound unshifted (edge case)', () => {
+  it("writes the heightmap's coordinate under its texture's transform", () => {
+    expect(patched(HEIGHTMAP).vertexShader).toContain(
+      'vGodotHeightmapUv = ( godotHeightmapTransform * vec3( uv, 1.0 ) ).xy;'
+    );
+  });
+});
+
+describe('bindHeightmap', () => {
+  function uniformsOf(material: THREE.Material): ProgramShader['uniforms'] {
     const shader: ProgramShader = {
-      vertexShader: '',
-      fragmentShader: '#include <map_fragment>',
+      vertexShader: THREE.ShaderLib.standard.vertexShader,
+      fragmentShader: THREE.ShaderLib.standard.fragmentShader,
       uniforms: {},
     };
-    parallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(new THREE.MeshStandardMaterial(), shader);
+    parallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(material, shader);
+    return shader.uniforms;
+  }
 
-    expect(shader.fragmentShader).toBe('#include <map_fragment>');
+  it('gives the parallax the texture bound to the material', () => {
+    const material = new THREE.MeshStandardMaterial();
+    const texture = new THREE.Texture();
+    bindHeightmap(material, texture);
+
+    expect(uniformsOf(material).godotHeightmap!.value).toBe(texture);
+  });
+
+  it('carries the texture transform the slot gives it', () => {
+    const material = new THREE.MeshStandardMaterial();
+    const texture = new THREE.Texture();
+    texture.repeat.set(2, 3);
+    bindHeightmap(material, texture);
+
+    const { elements } = uniformsOf(material).godotHeightmapTransform!.value as THREE.Matrix3;
+    expect([elements[0], elements[4]]).toEqual([2, 3]);
+  });
+
+  it("reads black for a material with no texture, as Godot's hint_default_black does (edge case)", () => {
+    const material = new THREE.MeshStandardMaterial();
+    bindHeightmap(material, new THREE.Texture());
+    bindHeightmap(material, null);
+
+    const { image } = uniformsOf(material).godotHeightmap!.value as THREE.DataTexture;
+    expect(Array.from(image.data as Uint8Array)).toEqual([0, 0, 0, 255]);
   });
 });
 
 describe('unshadedParallaxInjection', () => {
   function patchedUnshaded(): ProgramShader {
-    const material = new UnshadedMaterial({ displacementMap: new THREE.Texture() });
+    const material = new THREE.MeshBasicMaterial();
     const shader: ProgramShader = {
       vertexShader: THREE.ShaderLib.basic.vertexShader,
       fragmentShader: THREE.ShaderLib.basic.fragmentShader,
@@ -115,8 +154,8 @@ describe('unshadedParallaxInjection', () => {
     expect(patchedUnshaded().fragmentShader).toContain('#define vMapUv ( vMapUv + godotParallaxShift )');
   });
 
-  it('gives three the displacement uniforms it fills for the slot', () => {
-    expect(patchedUnshaded().uniforms).toHaveProperty('displacementMapTransform');
+  it("writes the heightmap's coordinate", () => {
+    expect(patchedUnshaded().vertexShader).toContain('vGodotHeightmapUv = ');
   });
 });
 

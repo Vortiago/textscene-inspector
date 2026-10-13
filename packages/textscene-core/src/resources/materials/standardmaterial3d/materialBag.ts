@@ -25,7 +25,6 @@ import {
   parallaxInjection,
   unshadedParallaxInjection,
 } from '../../../r3f/materials/godotParallax';
-import type { UnshadedMaterialParameters } from '../../../r3f/materials/unshadedMaterial';
 import {
   GODOT_AMBIENT_OCCLUSION,
   ambientOcclusionUserData,
@@ -63,10 +62,14 @@ export type StandardMaterialClass = 'basic' | 'standard' | 'physical';
  * `injection` composes the program patches the surface needs, which each adapter installs.
  */
 export type StandardMaterialBag = (
-  | { materialClass: 'basic'; props: UnshadedMaterialParameters }
+  | { materialClass: 'basic'; props: THREE.MeshBasicMaterialParameters }
   | { materialClass: 'standard'; props: THREE.MeshStandardMaterialParameters }
   | { materialClass: 'physical'; props: THREE.MeshPhysicalMaterialParameters }
-) & { injection?: ProgramInjection };
+) & {
+  injection?: ProgramInjection;
+  /** The texture the parallax samples, bound to the material with `bindHeightmap`. */
+  heightmapTexture?: THREE.Texture | null;
+};
 
 /**
  * Godot's default 3D material, which a surface with no material draws. A hardcoded
@@ -286,7 +289,6 @@ function withSurfaceAlpha(
 function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureSlots): StandardMaterialBag {
   const slot = (name: TextureSlot): THREE.Texture | null => textures[name] ?? null;
   const { heightmap } = scalars;
-  // The displacement slot carries the heightmap for `godotParallax.ts` to read.
   const heightmapTexture = heightmap ? slot('heightmap_texture') : null;
   const blend = materialBlendProps(scalars);
   // `fromArray` keeps the values linear. A hex would go through
@@ -304,7 +306,6 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
         color,
         vertexColors: scalars.useVertexColors,
         map: slot('albedo_texture'),
-        displacementMap: heightmapTexture,
         transparent: scalars.transparent,
         opacity: scalars.opacity,
         alphaTest: scalars.alphaTest,
@@ -316,6 +317,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
         ...blend,
       },
       injection: heightmap ? unshadedParallaxInjection(heightmap) : undefined,
+      heightmapTexture,
     };
   }
 
@@ -347,9 +349,6 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     // pass-through in `resolveEmission` would splat every scalar onto the material.
     emissive: new THREE.Color().fromArray(emission.emissive),
     emissiveIntensity: emission.emissiveIntensity,
-    // Godot moves no vertex, so the heightmap displaces nothing.
-    displacementMap: heightmapTexture,
-    displacementScale: 0,
     userData: surfaceUserData(scalars),
     ...blend,
   };
@@ -362,10 +361,13 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
   ]);
-  if (!needsPhysicalMaterial(scalars)) return { materialClass: 'standard', props: pbr, injection };
+  if (!needsPhysicalMaterial(scalars)) {
+    return { materialClass: 'standard', props: pbr, injection, heightmapTexture };
+  }
   return {
     materialClass: 'physical',
     injection,
+    heightmapTexture,
     props: {
       ...pbr,
       specularIntensity: specularIntensity(scalars.specular),

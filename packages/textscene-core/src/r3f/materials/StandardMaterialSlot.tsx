@@ -6,7 +6,7 @@
  * GeometryInstance3D drawer it mounts the unfaded and the alpha-pass bag, which the cull swaps.
  */
 
-import { extend } from '@react-three/fiber';
+import type * as THREE from 'three';
 import {
   standardMaterialBags,
   type StandardMaterialBag,
@@ -16,9 +16,7 @@ import { materialProgramInputs } from '../materialProgramInputs';
 import { textureSlotsFromMaps, type MaterialTextureMaps } from './materialTextureMaps';
 import type { MaterialAttach } from './swappedMaterials';
 import { FadedMaterials } from './FadedMaterials';
-import { UnshadedMaterial } from './unshadedMaterial';
-
-const Unshaded = extend(UnshadedMaterial);
+import { bindHeightmap } from './godotParallax';
 
 /**
  * The texture props are `MaterialTextureMaps`', already bound and paired to their
@@ -39,7 +37,7 @@ export function StandardMaterialSlot({
   metalnessMap,
   emissiveMap,
   aoMap,
-  displacementMap,
+  heightMap,
   anisotropyMap,
   attach,
 }: StandardMaterialSlotProps) {
@@ -54,7 +52,7 @@ export function StandardMaterialSlot({
       metalnessMap,
       emissiveMap,
       aoMap,
-      displacementMap,
+      heightMap,
       anisotropyMap,
     })
   );
@@ -70,12 +68,17 @@ export function materialBagElement(bag: StandardMaterialBag, attach: string | Ma
   // one. The key comes from the same merged bag it travels with (ADR-0038): a
   // program input arriving late, or a moved `attach`, reaches three only through a remount.
   const program = materialProgramInputs({ props: { attach, ...bag.props, injection: bag.injection } });
+  const heightmapTexture = bag.heightmapTexture ?? null;
+  // A ref, not a prop: three's classes have no heightmap field, and a rebind needs no remount.
+  const bindsHeightmap = (material: THREE.Material | null) => {
+    if (material) bindHeightmap(material, heightmapTexture);
+  };
   switch (bag.materialClass) {
     case 'basic':
-      return <Unshaded key={program.key} {...program.props} />;
+      return <meshBasicMaterial key={program.key} ref={bindsHeightmap} {...program.props} />;
     case 'physical':
-      return <meshPhysicalMaterial key={program.key} {...program.props} />;
+      return <meshPhysicalMaterial key={program.key} ref={bindsHeightmap} {...program.props} />;
     default:
-      return <meshStandardMaterial key={program.key} {...program.props} />;
+      return <meshStandardMaterial key={program.key} ref={bindsHeightmap} {...program.props} />;
   }
 }

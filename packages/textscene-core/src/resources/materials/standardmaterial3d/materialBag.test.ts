@@ -171,7 +171,16 @@ describe('standardMaterialBags — texture slots', () => {
     expect(props.metalnessMap).toBe(texture);
     expect(props.emissiveMap).toBe(texture);
     expect(props.aoMap).toBe(texture);
-    expect(props.displacementMap).toBe(texture);
+    expect(derived.heightmapTexture).toBe(texture);
+  });
+
+  it("keeps the heightmap out of three's props, which displace no vertex", () => {
+    const derived = bag({ heightmap_enabled: 'true' }, { heightmap_texture: texture });
+    expect(derived.props).not.toHaveProperty('displacementMap');
+  });
+
+  it('carries no heightmap texture without heightmap_enabled (edge case)', () => {
+    expect(bag({}, { heightmap_texture: texture }).heightmapTexture).toBeNull();
   });
 
   it('gives an empty slot a null, never an undefined', () => {
@@ -199,7 +208,7 @@ describe('standardMaterialBags — texture slots', () => {
       { albedo_texture: texture, heightmap_texture: texture }
     );
 
-    expect(derived.props).toMatchObject({ displacementMap: texture });
+    expect(derived.heightmapTexture).toBe(texture);
     expect(derived.injection?.cacheKey).toContain('godot-parallax');
   });
 });

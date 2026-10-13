@@ -211,7 +211,7 @@ export function useMaterialTextures(
       ),
     [proceduralTextures.ao_texture, textureSlots.ao_texture, textureState]
   );
-  const displacementMap = useMemo(
+  const heightMap = useMemo(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.heightmap_texture, textureSlots.heightmap_texture),
@@ -267,12 +267,7 @@ export function useMaterialTextures(
     'emission_texture'
   );
   const aoDrawn = orStandIn(useBoundMapUpload(aoMap), aoMap, isArriving, 'ao_texture');
-  const displacementDrawn = orStandIn(
-    useBoundMapUpload(displacementMap),
-    displacementMap,
-    isArriving,
-    'heightmap_texture'
-  );
+  const heightDrawn = orStandIn(useBoundMapUpload(heightMap), heightMap, isArriving, 'heightmap_texture');
   // Only an anisotropy-enabled material samples the flowmap, so only it waits for one.
   const anisotropyMap =
     anisotropyBound ??
@@ -290,7 +285,7 @@ export function useMaterialTextures(
       metalnessMap: metalnessDrawn,
       emissiveMap: emissiveDrawn,
       aoMap: aoDrawn,
-      displacementMap: displacementDrawn,
+      heightMap: heightDrawn,
       anisotropyMap,
     }),
     [
@@ -300,7 +295,7 @@ export function useMaterialTextures(
       metalnessDrawn,
       emissiveDrawn,
       aoDrawn,
-      displacementDrawn,
+      heightDrawn,
       anisotropyMap,
     ]
   );

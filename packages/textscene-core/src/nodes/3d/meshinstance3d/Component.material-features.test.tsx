@@ -355,7 +355,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
 
     const material = findMaterial(renderer);
     expect(material!.userData.godotHeightmap).toMatchObject({ scale: 3 });
-    expect(material!.displacementScale).toBe(0);
+    expect(material!.displacementMap).toBeNull();
   });
 
   it('records no height mapping for a material without a heightmap', async () => {

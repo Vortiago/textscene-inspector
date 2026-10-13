@@ -17,6 +17,7 @@ import type { MeshInstance3DProperties } from './types';
 import { subResource } from '../../../testing/subResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
+import { mapSampledBy } from '../../../r3f/testing/patchedFragment';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
@@ -29,7 +30,7 @@ const SLOTS = [
   ['roughness_texture', '4_rgh', 'res://textures/rgh.png', 'roughnessMap', THREE.NoColorSpace],
   ['metallic_texture', '5_mtl', 'res://textures/mtl.png', 'metalnessMap', THREE.NoColorSpace],
   ['ao_texture', '6_ao', 'res://textures/ao.png', 'aoMap', THREE.NoColorSpace],
-  ['heightmap_texture', '7_hgt', 'res://textures/hgt.png', 'displacementMap', THREE.NoColorSpace],
+  ['heightmap_texture', '7_hgt', 'res://textures/hgt.png', 'heightmap', THREE.NoColorSpace],
 ] as const;
 
 /** As the loader hands them out: one shared entry per path, tagged sRGB. */
@@ -90,7 +91,7 @@ describe('MeshInstance3D — each slot binds in Godot’s colour space', () => {
     '%s → %s',
     async (_slot, map, colorSpace) => {
       const material = await renderMaterial();
-      const texture = (material as unknown as Record<string, THREE.Texture | null>)[map];
+      const texture = mapSampledBy(material, map);
       expect(texture).not.toBeNull();
       expect(texture!.colorSpace).toBe(colorSpace);
     }

@@ -1,11 +1,11 @@
 /**
  * Godot's height mapping in three's programs: a parallax shift of every texture coordinate
- * by the depth the heightmap reads (`material.cpp:1540-1610`). Godot moves no vertex, so three's
- * `displacementMap` slot carries the heightmap at displacement scale 0, and this patch reads it.
+ * by the depth the heightmap reads (`material.cpp:1540-1610`). The heightmap has its own sampler
+ * and coordinate, so it reaches every material class and moves no vertex, as in Godot.
  */
 
 import * as THREE from 'three';
-import type { IUniform, Material, MeshStandardMaterial } from 'three';
+import type { IUniform, Material } from 'three';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 import { recordedOn } from './recordedOnMaterial';
 import { HEIGHTMAP_DEFAULTS, type Heightmap } from '../../resources/materials/standardmaterial3d/types';
@@ -45,17 +45,17 @@ const SHIFTED_UVS = [
  * `getTangentFrame` builds it.
  */
 const PARALLAX_PARS = /* glsl */ `${PARS_ANCHOR}
-uniform sampler2D displacementMap;
-varying vec2 vDisplacementMapUv;
+uniform sampler2D godotHeightmap;
+varying vec2 vGodotHeightmapUv;
 uniform float godotHeightmapScale;
 uniform vec2 godotHeightmapLayers;
 uniform vec2 godotHeightmapFlip;
 
 float godotHeightmapDepth( const in vec2 uv ) {
 	#ifdef GODOT_HEIGHTMAP_READS_HEIGHT
-		return texture2D( displacementMap, uv ).r;
+		return texture2D( godotHeightmap, uv ).r;
 	#else
-		return 1.0 - texture2D( displacementMap, uv ).r;
+		return 1.0 - texture2D( godotHeightmap, uv ).r;
 	#endif
 }
 
@@ -117,7 +117,7 @@ vec2 godotParallax( const in vec2 uv ) {
  * The shift, then each coordinate redefined to carry it, before the first map is read. A macro
  * never expands inside itself, so each reads its own varying.
  */
-const PARALLAX_SHIFT = `vec2 godotParallaxShift = godotParallax( vDisplacementMapUv ) - vDisplacementMapUv;
+const PARALLAX_SHIFT = `vec2 godotParallaxShift = godotParallax( vGodotHeightmapUv ) - vGodotHeightmapUv;
 ${SHIFTED_UVS.map((uv) => `#define ${uv} ( ${uv} + godotParallaxShift )`).join('\n')}
 ${MAP_ANCHOR}`;
 
@@ -129,10 +129,43 @@ export function heightmapUserData(heightmap: Heightmap | null): Record<string, u
   return heightmap ? { [HEIGHTMAP_KEY]: heightmap } : {};
 }
 
+/**
+ * The heightmap texture of each material. Written only by `bindHeightmap`, and collected with its
+ * material. Not `userData`, which a material's clone copies through JSON.
+ */
+const heightmapTextures = new WeakMap<Material, THREE.Texture>();
+
+/** Gives `material` the texture its heightmap samples, or none. A rebind needs no recompile. */
+export function bindHeightmap(material: Material, texture: THREE.Texture | null): void {
+  if (texture) heightmapTextures.set(material, texture);
+  else heightmapTextures.delete(material);
+}
+
+/** Godot's sampler is `hint_default_black` (`material.cpp:1172`): a heightmap with no texture reads black. */
+const BLACK_HEIGHTMAP = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
+BLACK_HEIGHTMAP.needsUpdate = true;
+
+function heightmapTextureOf(material: Material): THREE.Texture {
+  return heightmapTextures.get(material) ?? BLACK_HEIGHTMAP;
+}
+
 /** Uniforms that read `material` at each upload, so a re-parse that changes only a value needs no remount. */
 function heightmapUniforms(material: Material): Record<string, IUniform> {
   const heightmap = () => recordedOn(material, HEIGHTMAP_KEY, HEIGHTMAP_DEFAULTS);
   return {
+    godotHeightmap: {
+      get value() {
+        return heightmapTextureOf(material);
+      },
+    },
+    // The texture's own transform, as three's `mapTransform` carries the slot's UV1 transform.
+    godotHeightmapTransform: {
+      get value() {
+        const texture = heightmapTextureOf(material);
+        if (texture.matrixAutoUpdate) texture.updateMatrix();
+        return texture.matrix;
+      },
+    },
     godotHeightmapScale: {
       get value() {
         return heightmap().scale;
@@ -151,11 +184,18 @@ function heightmapUniforms(material: Material): Record<string, IUniform> {
   };
 }
 
+/** The heightmap's own coordinate, `base_uv` under the texture's transform. */
+const HEIGHTMAP_UV_PARS = `#include <uv_pars_vertex>
+uniform mat3 godotHeightmapTransform;
+varying vec2 vGodotHeightmapUv;`;
+
+const HEIGHTMAP_UV = `#include <uv_vertex>
+vGodotHeightmapUv = ( godotHeightmapTransform * vec3( uv, 1.0 ) ).xy;`;
+
 /**
- * What three's unshaded program lacks of what the parallax reads: the view position, the normal
- * its fragment program declares but its vertex program never writes, and the displacement
- * uniforms that `WebGLMaterials` fills for any material with the slot. The normal chunks run only
- * where neither an environment map nor skinning has run them already.
+ * What three's unshaded program lacks of what the parallax reads: the view position, and the
+ * normal its fragment program declares but its vertex program never writes. The normal chunks run
+ * only where neither an environment map nor skinning has run them already.
  */
 const UNSHADED_VERTEX_PARS = `#include <common>
 varying vec3 vViewPosition;
@@ -177,16 +217,9 @@ vViewPosition = - mvPosition.xyz;
 const UNSHADED_FRAGMENT_PARS = `varying vec3 vViewPosition;
 ${PARS_ANCHOR}`;
 
-/** True when `material` has a heightmap bound, which keys its program. */
-function hasHeightmap(material: Material): boolean {
-  return !!(material as MeshStandardMaterial).displacementMap;
-}
-
 const UNSHADED_PARALLAX_INPUTS: ProgramInjection = {
   cacheKey: 'godot-parallax-unshaded',
   onBeforeCompile(shader) {
-    if (!hasHeightmap(this)) return;
-    Object.assign(shader.uniforms, THREE.UniformsUtils.clone(THREE.UniformsLib.displacementmap));
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', UNSHADED_VERTEX_PARS)
       .replace('#include <project_vertex>', UNSHADED_VERTEX);
@@ -197,10 +230,10 @@ const UNSHADED_PARALLAX_INPUTS: ProgramInjection = {
 const GODOT_PARALLAX: ProgramInjection = {
   cacheKey: 'godot-parallax',
   onBeforeCompile(shader) {
-    // Only a bound heightmap declares the varying in the vertex program, and three defines
-    // `USE_DISPLACEMENTMAP` there alone.
-    if (!hasHeightmap(this)) return;
     Object.assign(shader.uniforms, heightmapUniforms(this));
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <uv_pars_vertex>', HEIGHTMAP_UV_PARS)
+      .replace('#include <uv_vertex>', HEIGHTMAP_UV);
     shader.fragmentShader = shader.fragmentShader
       .replace(PARS_ANCHOR, PARALLAX_PARS)
       .replace(MAP_ANCHOR, PARALLAX_SHIFT);
@@ -219,7 +252,7 @@ export function parallaxInjection(heightmap: Heightmap): ProgramInjection | unde
   ]);
 }
 
-/** What an `UnshadedMaterial` with `heightmap` compiles with. */
+/** What an unshaded material with `heightmap` compiles with. */
 export function unshadedParallaxInjection(heightmap: Heightmap): ProgramInjection | undefined {
   return composeInjections([UNSHADED_PARALLAX_INPUTS, parallaxInjection(heightmap)]);
 }

@@ -35,9 +35,9 @@ async function rebuilds(
 }
 
 /**
- * Seven of the eight slots. `anisotropyMap` is asserted separately: three gates it
+ * Six of the eight slots. `anisotropyMap` is asserted separately: three gates it
  * on `HAS_ANISOTROPY` (`WebGLPrograms.js:147`), and only `MeshPhysicalMaterial`
- * declares `anisotropy` (`MeshPhysicalMaterial.js:353`).
+ * declares `anisotropy` (`MeshPhysicalMaterial.js:353`). The heightmap is a uniform.
  */
 const TEXTURE_SLOTS: Array<keyof Maps> = [
   'albedoMap',
@@ -46,13 +46,7 @@ const TEXTURE_SLOTS: Array<keyof Maps> = [
   'metalnessMap',
   'emissiveMap',
   'aoMap',
-  'displacementMap',
 ];
-
-/** The feature a slot binds only under. */
-const SLOT_FEATURES: Partial<Record<keyof Maps, Record<string, string>>> = {
-  displacementMap: { heightmap_enabled: 'true' },
-};
 
 const ALPHA = { transparency: '1' };
 /** Physical on both sides of every feature case, so the element type never moves. */
@@ -72,8 +66,12 @@ describe('<StandardMaterialSlot> rebuilds when a baked program parameter moves',
   });
 
   it.each(TEXTURE_SLOTS)('%s arriving asynchronously', async (prop) => {
-    const data = SLOT_FEATURES[prop] ?? {};
-    expect(await rebuilds(data, data, {}, { [prop]: new THREE.Texture() })).toBe(true);
+    expect(await rebuilds({}, {}, {}, { [prop]: new THREE.Texture() })).toBe(true);
+  });
+
+  it('keeps the material when a heightmap arrives, which only rebinds a uniform', async () => {
+    const heightmap = { heightmap_enabled: 'true' };
+    expect(await rebuilds(heightmap, heightmap, {}, { heightMap: new THREE.Texture() })).toBe(false);
   });
 
   it.each([
