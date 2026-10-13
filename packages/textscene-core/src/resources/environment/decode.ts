@@ -6,11 +6,11 @@
 
 import type { EnvironmentProperties } from './types';
 import { BackgroundMode, DEFAULT_AGX_CONTRAST } from './types';
-import { floatOr, intOr, parseOptionalFloat, vec3Or } from '../../parser/valueParsers';
+import { enumOr, floatOr, intOr, parseOptionalFloat, vec3Or } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
 import { boolSlotValue } from '../../godot/index.js';
 import { volumetricFogDetailSpread } from '../../godot/volumetricFog.js';
-import { depthFogDensityDefault, depthFogRange } from '../../godot/depthFog.js';
+import { FogMode, depthFogDensityDefault, depthFogRange } from '../../godot/depthFog.js';
 
 /** `Environment`'s constructor weights, finest mip first. */
 const DEFAULT_GLOW_LEVELS = [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0];
@@ -30,7 +30,7 @@ function parseGlowLevels(properties: Record<string, string>): number[] {
 }
 
 export function decodeEnvironment(properties: Record<string, string>): EnvironmentProperties {
-  const fogMode = intOr(properties.fog_mode, 0, 'fog_mode');
+  const fogMode = enumOr(properties.fog_mode, FogMode.EXPONENTIAL, Object.values(FogMode), 'fog_mode');
   const fogDepthRange = depthFogRange({
     begin: parseOptionalFloat(properties.fog_depth_begin),
     end: parseOptionalFloat(properties.fog_depth_end),

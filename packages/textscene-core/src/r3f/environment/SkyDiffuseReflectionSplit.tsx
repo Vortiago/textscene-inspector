@@ -11,7 +11,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { MaterialHolders } from '../trackedObjects';
 
 /** The scene's sky, which the split stamps onto each material. */
-export type SceneSky = Pick<THREE.Scene, 'environment' | 'environmentRotation'>;
+type SceneSky = Pick<THREE.Scene, 'environment' | 'environmentRotation'>;
 
 /** What a material held before the split, restored when the split ends. */
 export interface EnvMapOriginal {

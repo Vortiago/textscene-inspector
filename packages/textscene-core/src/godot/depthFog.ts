@@ -62,9 +62,11 @@ export const FOG_SUN_SCATTER_MIN = 0.001;
 /** The exponent that narrows the sun's glow in the fog (`scene_forward_clustered.glsl:1132`). */
 export const FOG_SUN_SCATTER_EXPONENT = 8;
 
+/** The blurriest radiance mip, for the default 8 `roughness_layers` (`MAX_ROUGHNESS_LOD`). */
+export const MAX_ROUGHNESS_LOD = 7;
+
 /**
  * The radiance mips the aerial perspective spans, as roughness: from the second mip at the far plane
- * to the blurriest at the near plane (`scene_forward_clustered.glsl:1109`, `MAX_ROUGHNESS_LOD` 7
- * for the default 8 `roughness_layers`).
+ * to the blurriest at the near plane (`scene_forward_clustered.glsl:1109`).
  */
-export const AERIAL_PERSPECTIVE_ROUGHNESS_MIN = 1 / 7;
+export const AERIAL_PERSPECTIVE_ROUGHNESS_MIN = 1 / MAX_ROUGHNESS_LOD;

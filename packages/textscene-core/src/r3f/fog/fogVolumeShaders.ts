@@ -5,18 +5,18 @@
  * column. The volume's rows run bottom-up, as WebGL's fragments do, where Godot's run top-down.
  */
 
+import { VOLUMETRIC_FOG_TEMPORAL_JITTERS } from '../../godot/volumetricFog.js';
 import { HENYEY_GREENSTEIN_GLSL } from '../henyeyGreenstein.js';
 import { FogLightKind } from './fogLights.js';
 
 /** The offsets a still froxel samples and averages: Godot's 16 jitters, or its centre alone. */
-export const FOG_SAMPLE_OFFSETS_MAX = 16;
+export const FOG_SAMPLE_OFFSETS_MAX = VOLUMETRIC_FOG_TEMPORAL_JITTERS.length;
 
 /**
- * Lights one froxel: each light's Henyey-Greenstein scatter (`.glsl:252-255`), and the ambient
- * with its sky (`.glsl:430-445`). The medium scatters them by its albedo and adds its emission
- * (`.glsl:681`). A clear cell scatters nothing (`.glsl:383`). A moving camera's froxel samples this
- * frame's jitter and blends into its reprojected history (`.glsl:311-335,683`). A still one averages
- * its sample offsets, the mean the history converges to.
+ * Lights one froxel: each light's scatter (`.glsl:252-255`) and the ambient with its sky
+ * (`.glsl:430-445`), times the albedo, plus the emission (`.glsl:681`). A moving camera's froxel
+ * blends this frame's jitter into its reprojected history (`.glsl:311-335,683`). A still one
+ * averages its sample offsets, the mean the history converges to. A clear cell scatters nothing (`.glsl:383`).
  */
 export const FOG_LIGHT_FRAGMENT = /* glsl */ `
 #include <common>

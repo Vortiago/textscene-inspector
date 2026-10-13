@@ -51,6 +51,16 @@ export function isViewportPass(camera: THREE.Camera): camera is THREE.Orthograph
   return viewportCanvasCameras.has(camera);
 }
 
+/** Scratch for one measurement, overwritten by each: the render hooks never interleave. */
+const objectOrigin = new THREE.Vector3();
+const cameraOrigin = new THREE.Vector3();
+
+/** The distance from `camera` to `object`'s origin, off the world matrices a render has just updated. */
+export function cameraDistance(object: THREE.Object3D, camera: THREE.Camera): number {
+  objectOrigin.setFromMatrixPosition(object.matrixWorld);
+  return cameraOrigin.setFromMatrixPosition(camera.matrixWorld).distanceTo(objectOrigin);
+}
+
 /**
  * Call `observer` with the camera and target each render of `scene` uses, until the
  * returned disposer runs. Removing the last observer restores the scene's

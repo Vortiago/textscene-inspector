@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { glslFloat } from '../../resources/environment/glslLiterals.js';
 import { FULL_SCREEN_VERTEX } from '../lighting2d/fullScreenQuad.js';
 import { drawOffscreen } from '../offscreen.js';
 import { bindRadiance } from './fogSky.js';
@@ -28,14 +29,14 @@ uniform float energy;
 #endif
 
 void main() {
-	vec2 atlas = gl_FragCoord.xy / vec2( ${FOG_RADIANCE_BAND_WIDTH}.0, ${FOG_RADIANCE_BAND_HEIGHT * FOG_RADIANCE_BANDS}.0 );
-	float band = floor( atlas.y * ${FOG_RADIANCE_BANDS}.0 );
-	float latitude = ( fract( atlas.y * ${FOG_RADIANCE_BANDS}.0 ) - 0.5 ) * PI;
+	vec2 atlas = gl_FragCoord.xy / vec2( ${glslFloat(FOG_RADIANCE_BAND_WIDTH)}, ${glslFloat(FOG_RADIANCE_BAND_HEIGHT * FOG_RADIANCE_BANDS)} );
+	float band = floor( atlas.y * ${glslFloat(FOG_RADIANCE_BANDS)} );
+	float latitude = ( fract( atlas.y * ${glslFloat(FOG_RADIANCE_BANDS)} ) - 0.5 ) * PI;
 	float longitude = ( atlas.x - 0.5 ) * PI2;
 	vec3 direction = vec3( cos( latitude ) * cos( longitude ), sin( latitude ), cos( latitude ) * sin( longitude ) );
 	vec3 radiance = vec3( 0.0 );
 	#ifdef ENVMAP_TYPE_CUBE_UV
-		radiance = textureCubeUV( envMap, direction, ( band + 1.0 ) / ${FOG_RADIANCE_BANDS}.0 ).rgb * energy;
+		radiance = textureCubeUV( envMap, direction, ( band + 1.0 ) / ${glslFloat(FOG_RADIANCE_BANDS)} ).rgb * energy;
 	#endif
 	gl_FragColor = vec4( radiance, 1.0 );
 }

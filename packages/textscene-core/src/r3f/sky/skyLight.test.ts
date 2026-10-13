@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { readSkyLightDeclaration, skyLightUserData } from './skyLight';
+import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
+import { readSkyLightDeclaration, skyLightEnergy, skyLightUserData } from './skyLight';
 
 const lightWith = (userData: Record<string, unknown>) => {
   const light = new THREE.DirectionalLight();
@@ -41,5 +42,23 @@ describe('skyLightUserData', () => {
   it('declares a non-finite energy as written, for the sky to read (error case)', () => {
     const light = lightWith(skyLightUserData({ drawsInSky: true, energy: Number.NaN }));
     expect(readSkyLightDeclaration(light)?.energy).toBeNaN();
+  });
+});
+
+describe('skyLightEnergy', () => {
+  it('reads the energy a light declares for the sky', () => {
+    const light = lightWith(skyLightUserData({ drawsInSky: true, energy: 2 }));
+    expect(skyLightEnergy(light)).toBe(2);
+  });
+
+  it('answers null for a light the sky skips', () => {
+    const light = lightWith(skyLightUserData({ drawsInSky: false, energy: 2 }));
+    expect(skyLightEnergy(light)).toBeNull();
+  });
+
+  it('takes an undeclared light back through the intensity scale (edge case)', () => {
+    const light = lightWith({});
+    light.intensity = 3 * LIGHT_INTENSITY_SCALE;
+    expect(skyLightEnergy(light)).toBeCloseTo(3, 10);
   });
 });

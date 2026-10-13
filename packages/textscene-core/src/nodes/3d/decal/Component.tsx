@@ -23,7 +23,7 @@ import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
 import type { DecalGeometricFade } from './decalFade';
 import { distanceFade } from '../../../godot/distanceFade';
-import { observeSceneCamera } from '../../../r3f/sceneRenderCamera';
+import { cameraDistance, observeSceneCamera } from '../../../r3f/sceneRenderCamera';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import {
   buildDecalProjectionGeometry,
@@ -38,14 +38,6 @@ const BOX_COLOR = '#ff9d3b';
 const BOX_EDGES_MATERIAL = materialProgramInputs({
   props: { color: BOX_COLOR, transparent: true, opacity: 0.9, depthWrite: false },
 });
-
-/**
- * Scratch vectors for the distance fade, so a render allocates nothing. Module scope rather than
- * per instance: the render hooks are synchronous and never interleave, and a scene can carry dozens
- * of decals.
- */
-const decalOrigin = new THREE.Vector3();
-const cameraOrigin = new THREE.Vector3();
 
 export function Decal({ node, children }: NodeComponentProps) {
   const properties = node.properties as DecalProperties;
@@ -220,15 +212,7 @@ export function Decal({ node, children }: NodeComponentProps) {
     const stop = observeSceneCamera(scene, (camera) => {
       const material = materialRef.current;
       if (!material) return;
-      // Both ends read straight off `matrixWorld`, which the render has just updated.
-      decalOrigin.setFromMatrixPosition(group.matrixWorld);
-      cameraOrigin.setFromMatrixPosition(camera.matrixWorld);
-      showFaded(
-        group,
-        material,
-        opacity,
-        distanceFade(fadeBegin, fadeLength, cameraOrigin.distanceTo(decalOrigin))
-      );
+      showFaded(group, material, opacity, distanceFade(fadeBegin, fadeLength, cameraDistance(group, camera)));
     });
     return () => {
       stop();

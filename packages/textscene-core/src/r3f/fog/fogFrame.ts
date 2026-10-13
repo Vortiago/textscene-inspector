@@ -1,6 +1,6 @@
 /**
  * Readies the fog for one render of a scene: the depth fog's terms for its camera, the directional
- * lights its sun scatter reads, the sky's rotation and radiance, and the volumetric fog's volume.
+ * lights its sun scatter reads, the scene's sky rotation and radiance, and the volumetric fog's volume.
  * `finishFog` clears them after that render, so a scene without fog draws none.
  */
 
@@ -8,8 +8,9 @@ import * as THREE from 'three';
 import { renderedDepthFogRange } from '../../godot/depthFog.js';
 import type { VolumetricFogProjectSettings } from '../../godot/volumetricFog.js';
 import type { EnvironmentSettings } from '../../resources/environment/types.js';
-import { godotColorToLinear } from '../godotColor.js';
-import { readSkyLightDeclaration } from '../sky/skyLight.js';
+import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
+import { skyLightEnergy } from '../sky/skyLight.js';
+import { worldToSky } from '../sky/skyRotation.js';
 import { visibleInTree } from '../visibleInTree.js';
 import type { FogPasses } from './fogPasses.js';
 import { skyRadiance } from './fogSky.js';
@@ -22,11 +23,15 @@ export interface FogSettings {
   depth: DepthFog | null;
   volumetric: VolumetricFog | null;
   project: VolumetricFogProjectSettings;
-  /** World to sky space. */
-  worldToSky: THREE.Matrix3;
   /** The sky's energy, which Godot's radiance carries and three's does not. */
   skyEnergy: number;
 }
+
+/** World to sky space for the render being prepared. */
+const toSky = new THREE.Matrix3();
+
+/** Scratch for one render's depth fog colour. */
+const depthColor = new THREE.Color();
 
 /** Scratch for one light, overwritten by each. */
 const from = new THREE.Vector3();
@@ -44,7 +49,7 @@ export function prepareFog(
   passes: FogPasses,
   lights: readonly THREE.Light[]
 ): boolean {
-  fogUniforms.skyRotation.set(settings.worldToSky.elements);
+  fogUniforms.skyRotation.set(worldToSky(scene.environmentRotation, toSky).elements);
   writeDepthFog(settings.depth, camera);
   writeSuns(lights);
   if (settings.depth && settings.depth.aerialPerspective > 0) {
@@ -54,7 +59,7 @@ export function prepareFog(
   return passes.volume.prepare(renderer, scene, camera, {
     fog: settings.volumetric,
     project: settings.project,
-    worldToSky: settings.worldToSky,
+    worldToSky: toSky,
     skyEnergy: settings.skyEnergy,
     lights,
   });
@@ -72,13 +77,24 @@ function writeDepthFog(fog: DepthFog | null, camera: THREE.Camera): void {
     fogUniforms.depthColor[3] = 0;
     return;
   }
-  const color = godotColorToLinear(fog.color).multiplyScalar(fog.lightEnergy);
+  const color = depthColor
+    .setRGB(fog.color.r, fog.color.g, fog.color.b, THREE.SRGBColorSpace)
+    .multiplyScalar(fog.lightEnergy);
   const { near, far } = camera as THREE.PerspectiveCamera;
   const range = renderedDepthFogRange({ begin: fog.depthBegin, end: fog.depthEnd }, far);
-  fogUniforms.depthColor.set([color.r, color.g, color.b, 1]);
-  fogUniforms.depthShape.set([fog.density, range.begin, range.end, fog.depthCurve]);
-  fogUniforms.depthLayer.set([fog.mode, fog.height, fog.heightDensity, fog.aerialPerspective]);
-  fogUniforms.depthSky.set([fog.skyAffect, fog.sunScatter, near, far]);
+  writeVec4(fogUniforms.depthColor, 0, color.r, color.g, color.b, 1);
+  writeVec4(fogUniforms.depthShape, 0, fog.density, range.begin, range.end, fog.depthCurve);
+  writeVec4(fogUniforms.depthLayer, 0, fog.mode, fog.height, fog.heightDensity, fog.aerialPerspective);
+  writeVec4(fogUniforms.depthSky, 0, fog.skyAffect, fog.sunScatter, near, far);
+}
+
+/** Writes one vec4 into `target` at vec4 index `slot`, with no array literal per write. */
+function writeVec4(target: Float32Array, slot: number, x: number, y: number, z: number, w: number): void {
+  const offset = slot * 4;
+  target[offset] = x;
+  target[offset + 1] = y;
+  target[offset + 2] = z;
+  target[offset + 3] = w;
 }
 
 /**
@@ -97,15 +113,13 @@ function writeSuns(lights: readonly THREE.Light[]): void {
     const sun = light as THREE.DirectionalLight;
     from.setFromMatrixPosition(sun.matrixWorld);
     towards.setFromMatrixPosition(sun.target.matrixWorld).sub(from).normalize().negate();
-    const offset = slot * 4;
-    sunDirections.set([towards.x, towards.y, towards.z, 0], offset);
+    writeVec4(sunDirections, slot, towards.x, towards.y, towards.z, 0);
     const { r, g, b } = sun.color;
-    sunSurfaceColors.set([r * sun.intensity, g * sun.intensity, b * sun.intensity, 1], offset);
-    // three's intensity is Godot's energy times PI, and so is the sky's sun once its shader adds PI.
-    const sky = readSkyLightDeclaration(sun);
-    const skyIntensity = sky ? (sky.drawsInSky ? sky.energy * Math.PI : 0) : sun.intensity;
+    writeVec4(sunSurfaceColors, slot, r * sun.intensity, g * sun.intensity, b * sun.intensity, 1);
+    // The sky's sun takes the intensity scale in its shader, as the surfaces' does in three.
+    const skyIntensity = (skyLightEnergy(sun) ?? 0) * LIGHT_INTENSITY_SCALE;
     if (skyIntensity !== 0)
-      sunSkyColors.set([r * skyIntensity, g * skyIntensity, b * skyIntensity, 1], offset);
+      writeVec4(sunSkyColors, slot, r * skyIntensity, g * skyIntensity, b * skyIntensity, 1);
     slot++;
   }
 }

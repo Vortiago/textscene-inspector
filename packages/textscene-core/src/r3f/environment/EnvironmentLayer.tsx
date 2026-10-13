@@ -72,7 +72,6 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
         <FogLayer
           depth={settings.fog}
           volumetric={settings.volumetricFog}
-          skyRotation={settings.skyRotation}
           skyEnergy={settings.background.energyMultiplier}
         />
       )}
@@ -206,17 +205,6 @@ function EnvironmentApplier({ settings, hasSky, hasFog, suppressToneMapping }: E
       scene
     );
   }, [gl, scene, toneMapMode, toneMapExposure, toneMapWhite, toneMapAgxContrast, suppressToneMapping]);
-
-  useEffect(() => {
-    if (!hasFog) return undefined;
-    const previousFog = scene.fog;
-    // three compiles its fog chunks only under a scene fog. Its own terms stay unread, since the
-    // patched chunks draw Godot's fog from the shared fog uniforms.
-    scene.fog = new THREE.FogExp2(0x000000, 0);
-    return () => {
-      scene.fog = previousFog;
-    };
-  }, [scene, hasFog]);
 
   return null;
 }

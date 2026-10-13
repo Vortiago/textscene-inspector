@@ -37,7 +37,7 @@ import {
 
 export type VolumetricFog = NonNullable<EnvironmentSettings['volumetricFog']>;
 
-export interface FogVolumeInputs {
+interface FogVolumeInputs {
   fog: VolumetricFog;
   project: VolumetricFogProjectSettings;
   /** World to sky space, which the anisotropic ambient reads the sky in. */
@@ -108,14 +108,15 @@ function resize(target: THREE.WebGL3DRenderTarget, { width, height, depth }: Vol
 }
 
 /**
- * Every value a scene's volume depends on but its lights. A key compares and copies in place, so a
+ * Every value a view's volume depends on but its lights. A key compares and copies in place, so a
  * render that changes nothing allocates nothing.
  */
 class VolumeKey {
-  private readonly view = new Float64Array(32);
+  /** The camera's world and projection matrices, then world to sky space. */
+  private readonly view = new Float64Array(16 + 16 + 9);
   private width = 0;
   private height = 0;
-  private inputs: Omit<FogVolumeInputs, 'lights'> | null = null;
+  private inputs: Omit<FogVolumeInputs, 'lights' | 'worldToSky'> | null = null;
   private sky: THREE.Texture | null = null;
 
   /** Takes the render's values, and answers whether any differs from the last ones. */
@@ -132,27 +133,31 @@ class VolumeKey {
       this.sky !== sky ||
       this.inputs.fog !== inputs.fog ||
       this.inputs.project !== inputs.project ||
-      this.inputs.worldToSky !== inputs.worldToSky ||
       this.inputs.skyEnergy !== inputs.skyEnergy;
-    const matrices = [camera.matrixWorld.elements, camera.projectionMatrix.elements];
-    for (let m = 0; m < 2; m++) {
-      for (let i = 0; i < 16; i++) {
-        const value = matrices[m]![i]!;
-        if (this.view[m * 16 + i] !== value) hasChanged = true;
-        this.view[m * 16 + i] = value;
-      }
-    }
+    if (this.take(0, camera.matrixWorld.elements)) hasChanged = true;
+    if (this.take(16, camera.projectionMatrix.elements)) hasChanged = true;
+    if (this.take(32, inputs.worldToSky.elements)) hasChanged = true;
     this.width = viewport.z;
     this.height = viewport.w;
     this.sky = sky;
     this.inputs = inputs;
     return hasChanged;
   }
+
+  /** Copies `values` into `view` from `offset`, and answers whether any differed. */
+  private take(offset: number, values: readonly number[]): boolean {
+    let hasChanged = false;
+    for (let i = 0; i < values.length; i++) {
+      if (this.view[offset + i] !== values[i]) hasChanged = true;
+      this.view[offset + i] = values[i]!;
+    }
+    return hasChanged;
+  }
 }
 
-/** A scene's volume, the history its temporal reprojection blends into, and what drew them. */
-class SceneVolume {
-  readonly integrated = volumeTarget('VolumetricFogSceneVolume');
+/** A view's volume, the history its temporal reprojection blends into, and what drew them. */
+class ViewVolume {
+  readonly integrated = volumeTarget('VolumetricFogViewVolume');
   readonly history = volumeTarget('VolumetricFogHistory');
   readonly key = new VolumeKey();
   readonly lights = new FogLightRows();
@@ -175,12 +180,18 @@ class SceneVolume {
 /** How a draw samples each froxel. */
 type Sampling = 'centre' | 'converged' | 'step';
 
+/** A changed view samples centres, or steps its history, and a still one converges once after a step. */
+function samplingFor(hasChanged: boolean, temporal: number | null, isSettling: boolean): Sampling | null {
+  if (hasChanged) return temporal === null ? 'centre' : 'step';
+  return isSettling ? 'converged' : null;
+}
+
 export class FogVolumePass {
   /** The medium per froxel, and the filter's second step. */
   private readonly density = volumeTarget('VolumetricFogDensity');
   /** The filter's first step. */
   private readonly filtered = volumeTarget('VolumetricFogFiltered');
-  /** The integrated fog of the scene that rendered last, through the texture every fog program samples. */
+  /** The integrated fog of the view that rendered last, through the texture every fog program samples. */
   private readonly volume = volumeTarget('VolumetricFogVolume');
   private readonly quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1));
   private readonly quadCamera = new THREE.Camera();
@@ -224,9 +235,12 @@ export class FogVolumePass {
   private readonly copyMaterial = sliceMaterial('Copy', FOG_COPY_FRAGMENT, { source: { value: null } });
   /** What `sliceDepths` holds the depths of. */
   private slices = { depth: 0, length: 0, detailSpread: 0 };
-  private readonly scenes = new WeakMap<THREE.Scene, SceneVolume>();
-  /** The scene volume the renderer's volume holds a copy of, null before the first copy. */
-  private copied: SceneVolume | null = null;
+  /** Each scene's volume per camera, so each camera keeps its own history, as each Godot viewport does. */
+  private readonly views = new WeakMap<THREE.Scene, Map<THREE.Camera, ViewVolume>>();
+  /** The view volume the renderer's volume holds a copy of, null before the first copy. */
+  private copied: ViewVolume | null = null;
+  /** The light rows the light texture holds, null before the first upload. */
+  private uploadedLights: FogLightRows | null = null;
 
   constructor() {
     this.volume.texture = fogUniforms.volume;
@@ -247,36 +261,34 @@ export class FogVolumePass {
   ): boolean {
     renderer.getCurrentViewport(this.viewport);
     if (this.viewport.z < 1 || this.viewport.w < 1) return false;
-    const state = this.stateOf(scene);
+    const state = this.viewOf(scene, camera);
     const sky = skyRadiance(scene);
     const hasLightsChanged = state.lights.pack(inputs.lights, camera);
+    if (hasLightsChanged && this.uploadedLights === state.lights) this.uploadedLights = null;
     const hasChanged = state.key.update(camera, this.viewport, inputs, sky) || hasLightsChanged;
-    const temporal = inputs.fog.temporalReprojection;
-    const sampling: Sampling | null = hasChanged
-      ? temporal === null
-        ? 'centre'
-        : 'step'
-      : state.isSettling
-        ? 'converged'
-        : null;
-    drawOffscreen(renderer, () => {
-      if (sampling) this.draw(renderer, camera, state, inputs, sky, sampling);
-      if (!sampling && this.copied === state) return;
-      resize(this.volume, state.grid);
-      this.copy(renderer, state.integrated, this.volume, state.grid);
-    });
+    const sampling = samplingFor(hasChanged, inputs.fog.temporalReprojection, state.isSettling);
+    if (sampling || this.copied !== state) {
+      drawOffscreen(renderer, () => {
+        if (sampling) this.draw(renderer, camera, state, inputs, sky, sampling);
+        resize(this.volume, state.grid);
+        this.copy(renderer, state.integrated, this.volume, state.grid);
+      });
+    }
     this.copied = state;
     this.writeLookup(inputs);
     return state.isSettling;
   }
 
-  /** Drops `scene`'s volume and history. */
+  /** Drops `scene`'s volumes and histories. */
   forget(scene: THREE.Scene): void {
-    const state = this.scenes.get(scene);
-    if (!state) return;
-    state.dispose();
-    this.scenes.delete(scene);
-    if (this.copied === state) this.copied = null;
+    const views = this.views.get(scene);
+    if (!views) return;
+    for (const state of views.values()) {
+      state.dispose();
+      if (this.copied === state) this.copied = null;
+      if (this.uploadedLights === state.lights) this.uploadedLights = null;
+    }
+    this.views.delete(scene);
   }
 
   dispose(): void {
@@ -291,30 +303,37 @@ export class FogVolumePass {
     this.copyMaterial.dispose();
   }
 
-  private stateOf(scene: THREE.Scene): SceneVolume {
-    const existing = this.scenes.get(scene);
-    if (existing) return existing;
-    const state = new SceneVolume();
-    this.scenes.set(scene, state);
+  private viewOf(scene: THREE.Scene, camera: THREE.Camera): ViewVolume {
+    let views = this.views.get(scene);
+    if (!views) {
+      views = new Map();
+      this.views.set(scene, views);
+    }
+    let state = views.get(camera);
+    if (!state) {
+      state = new ViewVolume();
+      views.set(camera, state);
+    }
     return state;
   }
 
   private writeLookup({ fog, project }: FogVolumeInputs): void {
     const { inverseLength, inverseSpread } = volumetricFogLookup(fog);
-    fogUniforms.volumeLookup.set([
-      inverseLength,
-      inverseSpread,
-      fog.skyAffect,
-      project.useLegacyBlending ? 1 : 0,
-    ]);
-    const { x, y, z, w } = this.viewport;
-    fogUniforms.viewport.set([x, y, 1 / z, 1 / w]);
+    const { volumeLookup, viewport } = fogUniforms;
+    volumeLookup[0] = inverseLength;
+    volumeLookup[1] = inverseSpread;
+    volumeLookup[2] = fog.skyAffect;
+    volumeLookup[3] = project.useLegacyBlending ? 1 : 0;
+    viewport[0] = this.viewport.x;
+    viewport[1] = this.viewport.y;
+    viewport[2] = 1 / this.viewport.z;
+    viewport[3] = 1 / this.viewport.w;
   }
 
   private draw(
     renderer: THREE.WebGLRenderer,
     camera: THREE.Camera,
-    state: SceneVolume,
+    state: ViewVolume,
     inputs: FogVolumeInputs,
     sky: THREE.Texture | null,
     sampling: Sampling
@@ -342,7 +361,7 @@ export class FogVolumePass {
     this.fill(renderer, state.integrated, this.integrateMaterial, grid);
   }
 
-  private resize(state: SceneVolume, grid: VolumetricFogGrid): void {
+  private resize(state: ViewVolume, grid: VolumetricFogGrid): void {
     resize(this.density, grid);
     resize(this.filtered, grid);
     const { width, height, depth } = state.grid;
@@ -394,16 +413,23 @@ export class FogVolumePass {
     this.lightMaterial.uniforms['skyEnergy']!.value = energy;
   }
 
-  /** One row of texels per light. A new light count needs a texture of another height. */
+  /**
+   * One row of texels per light, uploaded only when the rows differ from the texture's. A new light
+   * count needs a texture of another height.
+   */
   private writeLights(rows: FogLightRows): void {
     const height = Math.max(1, rows.count);
     if (this.lights.image.height !== height) {
       this.lights.dispose();
       this.lights = lightTexture(height);
+      this.uploadedLights = null;
     }
-    const texels = this.lights.image.data as Float32Array;
-    texels.set(rows.data.subarray(0, Math.min(texels.length, rows.count * FOG_LIGHT_TEXELS * 4)));
-    this.lights.needsUpdate = true;
+    if (this.uploadedLights !== rows) {
+      const texels = this.lights.image.data as Float32Array;
+      texels.set(rows.data.subarray(0, Math.min(texels.length, rows.count * FOG_LIGHT_TEXELS * 4)));
+      this.lights.needsUpdate = true;
+      this.uploadedLights = rows;
+    }
     this.lightMaterial.uniforms['fogLights']!.value = this.lights;
     this.lightMaterial.uniforms['lightCount']!.value = rows.count;
   }
@@ -413,7 +439,7 @@ export class FogVolumePass {
    * frame averages all 16 jitters, the mean Godot's history converges to (`.glsl:311-335`).
    */
   private writeSampling(
-    state: SceneVolume,
+    state: ViewVolume,
     camera: THREE.Camera,
     temporal: number | null,
     sampling: Sampling
@@ -426,7 +452,7 @@ export class FogVolumePass {
       sampling === 'converged'
         ? JITTER_OFFSETS
         : reprojects
-          ? [JITTER_OFFSETS[state.frame % 16]!]
+          ? [JITTER_OFFSETS[state.frame % JITTER_OFFSETS.length]!]
           : CENTRE_OFFSETS;
     (uniforms['sampleOffsets']!.value as THREE.Vector3[]).forEach((offset, i) =>
       offset.copy(offsets[i] ?? offset)

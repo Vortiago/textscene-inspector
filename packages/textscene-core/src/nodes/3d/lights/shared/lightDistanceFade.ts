@@ -5,10 +5,10 @@
  */
 
 import { useEffect, useMemo, type RefObject } from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { LIGHT_DISTANCE_FADE_DEFAULT, distanceFade } from '../../../../godot/distanceFade';
-import { observeSceneCamera } from '../../../../r3f/sceneRenderCamera';
+import { cameraDistance, observeSceneCamera } from '../../../../r3f/sceneRenderCamera';
 import type { PositionalLightProperties } from './types';
 
 interface LightDistanceFade {
@@ -33,10 +33,6 @@ interface UnfadedLight {
   shadowOpacity: number;
 }
 
-/** Scratch for one light, overwritten by each. */
-const lightOrigin = new THREE.Vector3();
-const cameraOrigin = new THREE.Vector3();
-
 /** Writes `light`'s faded intensity and shadow intensity for a render through `camera`. */
 function fadeLight(
   light: THREE.PointLight | THREE.SpotLight,
@@ -44,8 +40,7 @@ function fadeLight(
   unfaded: UnfadedLight,
   camera: THREE.Camera
 ): void {
-  lightOrigin.setFromMatrixPosition(light.matrixWorld);
-  const distance = cameraOrigin.setFromMatrixPosition(camera.matrixWorld).distanceTo(lightOrigin);
+  const distance = cameraDistance(light, camera);
   light.intensity = unfaded.intensity * distanceFade(fade.begin, fade.length, distance);
   light.shadow.intensity = unfaded.shadowOpacity * distanceFade(fade.shadow, fade.length, distance);
 }

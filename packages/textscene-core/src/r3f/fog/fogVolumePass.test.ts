@@ -8,7 +8,9 @@ import { VOLUMETRIC_FOG_TEMPORAL_JITTERS } from '../../godot/volumetricFog';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { decodeEnvironment } from '../../resources/environment/decode';
-import { FogVolumePass, type FogVolumeInputs } from './fogVolumePass';
+import { FogVolumePass } from './fogVolumePass';
+
+type FogVolumeInputs = Parameters<FogVolumePass['prepare']>[3];
 
 /** One light pass slice as it was drawn. */
 interface LightDraw {
@@ -192,6 +194,40 @@ describe('FogVolumePass.prepare', () => {
 
     pass.prepare(renderer.asWebGL, first, view, fog);
     expect(renderer.take()).toEqual({ lightDraws: [], copies: PROJECT.volumeDepth });
+  });
+
+  it('keeps each camera its own history, so two still cameras on one scene both settle', () => {
+    const renderer = new RecordingRenderer();
+    const pass = new FogVolumePass();
+    const scene = new THREE.Scene();
+    const main = camera();
+    const other = camera();
+    moved(other);
+    const fog = inputs();
+    for (let frame = 0; frame < 2; frame++) {
+      pass.prepare(renderer.asWebGL, scene, main, fog);
+      pass.prepare(renderer.asWebGL, scene, other, fog);
+    }
+    renderer.take();
+
+    expect(pass.prepare(renderer.asWebGL, scene, main, fog)).toBe(false);
+    expect(pass.prepare(renderer.asWebGL, scene, other, fog)).toBe(false);
+    expect(renderer.take().lightDraws).toEqual([]);
+  });
+
+  it('draws again when the sky turns', () => {
+    const renderer = new RecordingRenderer();
+    const pass = new FogVolumePass();
+    const scene = new THREE.Scene();
+    const view = camera();
+    const toSky = new THREE.Matrix3();
+    const fog = { ...inputs({ volumetric_fog_temporal_reprojection_enabled: 'false' }), worldToSky: toSky };
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    renderer.take();
+
+    toSky.makeRotation(0.5);
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    expect(renderer.take().lightDraws).toHaveLength(PROJECT.volumeDepth);
   });
 
   it('spans one section at both ends for an orthographic camera (edge case)', () => {

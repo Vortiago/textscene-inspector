@@ -12,9 +12,7 @@ import { parseColorToHex } from '../../../../utils/colorParser';
 import { positionalShadowNear } from '../../../../godot/positionalShadow';
 import { omniShadowBias } from '../shared/shadowBias';
 import { PointLightGizmo } from '../shared/lightHelpers';
-import { usePositionalLightUserData } from '../shared/positionalLightUserData';
-import { lightIntensity, lightShadowOpacity } from '../shared/lightStrength';
-import { useLightDistanceFade } from '../shared/lightDistanceFade';
+import { usePositionalLight } from '../shared/positionalLight';
 
 export function OmniLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as OmniLight3DProperties;
@@ -24,10 +22,7 @@ export function OmniLight3D({ node, children }: NodeComponentProps) {
     [properties]
   );
   const color = parseColorToHex(properties.light_color);
-  const intensity = lightIntensity(properties);
-  const shadowOpacity = lightShadowOpacity(properties);
-  const userData = usePositionalLightUserData(properties);
-  useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
+  const { intensity, shadowOpacity, userData } = usePositionalLight(lightRef, properties);
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>

@@ -13,9 +13,7 @@ import { positionalShadowNear } from '../../../../godot/positionalShadow';
 import { spotShadowBias } from '../shared/shadowBias';
 import { LightWithTarget } from '../shared/lightShared';
 import { SpotLightGizmo } from '../shared/lightHelpers';
-import { usePositionalLightUserData } from '../shared/positionalLightUserData';
-import { lightIntensity, lightShadowOpacity } from '../shared/lightStrength';
-import { useLightDistanceFade } from '../shared/lightDistanceFade';
+import { usePositionalLight } from '../shared/positionalLight';
 
 export function SpotLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as SpotLight3DProperties;
@@ -25,8 +23,6 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
     [properties]
   );
   const color = parseColorToHex(properties.light_color);
-  const intensity = lightIntensity(properties);
-  const shadowOpacity = lightShadowOpacity(properties);
   const angleRadians = (properties.spot_angle * Math.PI) / 180;
   // `spot_attenuation`, the distance falloff exponent (default 1), is three.js
   // decay. `spot_angle_attenuation`, the cone-edge exponent (default 1, higher is
@@ -35,8 +31,11 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
   const decay = properties.spot_attenuation;
   const spotAngleAttenuation = properties.spot_angle_attenuation;
   const penumbra = properties.penumbra ?? Math.max(0, Math.min(1, 1 / (spotAngleAttenuation + 1)));
-  const userData = usePositionalLightUserData(properties, spotAngleAttenuation);
-  useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
+  const { intensity, shadowOpacity, userData } = usePositionalLight(
+    lightRef,
+    properties,
+    spotAngleAttenuation
+  );
 
   return (
     <LightWithTarget

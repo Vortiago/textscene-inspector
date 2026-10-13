@@ -13,8 +13,7 @@ import type { SkyProperties } from '../../resources/sky/types';
 import { useTexture2D } from '../../resources/useTexture2D';
 import { useSceneResources } from '../SceneResourcesContext';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
-import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
-import { readSkyLightDeclaration } from './skyLight';
+import { skyLightEnergy } from './skyLight';
 import { skyEuler } from './skyRotation';
 import type { Vector3 } from '../../parser/vectors';
 
@@ -166,8 +165,8 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
     // Godot's sky sees only the render list, so a hidden light draws no disc.
     if (!visibleInTree(object)) return;
     const light = object as THREE.DirectionalLight;
-    const declaration = readSkyLightDeclaration(light);
-    if (declaration && !declaration.drawsInSky) return;
+    const energy = skyLightEnergy(light);
+    if (energy === null) return;
 
     light.getWorldPosition(from);
     light.target.getWorldPosition(to);
@@ -178,10 +177,8 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
       direction: direction.normalize(),
       color: light.color.clone(),
       // `sky.cpp` sets `sky_light_data.energy` from LIGHT_PARAM_ENERGY with no PI,
-      // unlike the scene shader. A light that declares no energy goes back through
-      // the scale. A GLB `KHR_lights_punctual` light never went through it, so its
-      // disc reads 1/PI dim.
-      energy: declaration?.energy ?? light.intensity / LIGHT_INTENSITY_SCALE,
+      // unlike the scene shader.
+      energy,
       // `light_angular_distance` defaults to 0: a point sun with only the soft
       // falloff `sun_curve` gives it.
       angularRadius: 0,

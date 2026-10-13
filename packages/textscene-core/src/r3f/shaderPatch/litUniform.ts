@@ -9,7 +9,7 @@ import * as THREE from 'three';
  * One of `UniformsLib`'s groups, and the uniform that marks a `ShaderLib` entry as merging it,
  * which no entry outside the group holds.
  */
-export interface UniformsMerge {
+interface UniformsMerge {
   marker: string;
   group: Record<string, THREE.IUniform>;
 }

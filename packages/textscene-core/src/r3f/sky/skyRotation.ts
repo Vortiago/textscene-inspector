@@ -15,8 +15,10 @@ export function skyEuler(rotation: Vector3): THREE.Euler {
   return new THREE.Euler(rotation.x, rotation.y, rotation.z, 'YXZ');
 }
 
-/** World to sky space: the inverse of `sky_rotation`'s basis. */
-export function worldToSky(rotation: Vector3): THREE.Matrix3 {
-  const basis = new THREE.Matrix4().makeRotationFromEuler(skyEuler(rotation));
-  return new THREE.Matrix3().setFromMatrix4(basis).transpose();
+/** Scratch for one conversion, overwritten by each. */
+const basis = new THREE.Matrix4();
+
+/** World to sky space, the inverse of the sky's `rotation` basis, written into `target`. */
+export function worldToSky(rotation: THREE.Euler, target: THREE.Matrix3): THREE.Matrix3 {
+  return target.setFromMatrix4(basis.makeRotationFromEuler(rotation)).transpose();
 }

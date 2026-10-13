@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import {
+  cameraDistance,
   createViewportCanvasCamera,
   isViewportPass,
   observeSceneCamera,
@@ -141,5 +142,29 @@ describe('isViewportPass', () => {
 
   it('is false for a perspective camera, which frames no canvas', () => {
     expect(isViewportPass(new THREE.PerspectiveCamera())).toBe(false);
+  });
+});
+
+describe('cameraDistance', () => {
+  it("measures from the camera to the object's world origin", () => {
+    const parent = new THREE.Group();
+    parent.position.set(0, 3, 0);
+    const object = new THREE.Object3D();
+    object.position.set(4, 0, 0);
+    parent.add(object);
+    parent.updateMatrixWorld();
+    const camera = new THREE.PerspectiveCamera();
+    camera.updateMatrixWorld();
+
+    expect(cameraDistance(object, camera)).toBeCloseTo(5, 10);
+  });
+
+  it('measures zero for an object at the camera', () => {
+    const object = new THREE.Object3D();
+    object.updateMatrixWorld();
+    const camera = new THREE.PerspectiveCamera();
+    camera.updateMatrixWorld();
+
+    expect(cameraDistance(object, camera)).toBe(0);
   });
 });

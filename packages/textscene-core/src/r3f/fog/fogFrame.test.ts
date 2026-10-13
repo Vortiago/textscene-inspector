@@ -25,7 +25,6 @@ function settings(properties: Record<string, string>): FogSettings {
     depth: environment.fog,
     volumetric: environment.volumetricFog,
     project: VOLUMETRIC_FOG_DEFAULTS,
-    worldToSky: new THREE.Matrix3(),
     skyEnergy: 1,
   };
 }
@@ -44,6 +43,17 @@ function sun(intensity: number): THREE.DirectionalLight {
 afterEach(finishFog);
 
 describe('prepareFog', () => {
+  it("writes the scene's sky rotation as world to sky space", () => {
+    const scene = new THREE.Scene();
+    scene.environmentRotation.set(0, Math.PI / 2, 0);
+    prepareFog(renderer, scene, camera, settings({ fog_enabled: 'true' }), passes(), []);
+
+    const skyDirection = new THREE.Vector3(1, 0, 0).applyMatrix3(
+      new THREE.Matrix3().fromArray(fogUniforms.skyRotation)
+    );
+    expect(skyDirection.z).toBeCloseTo(1, 6);
+  });
+
   it("writes the depth fog's colour times its energy, and its terms", () => {
     prepareFog(
       renderer,

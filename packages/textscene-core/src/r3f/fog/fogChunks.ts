@@ -12,6 +12,7 @@ import {
   FogMode,
   HEIGHT_FOG_DENSITY_MIN,
 } from '../../godot/depthFog.js';
+import { glslFloat } from '../../resources/environment/glslLiterals.js';
 import {
   FOG_RADIANCE_BANDS,
   FOG_RADIANCE_BAND_HEIGHT,
@@ -24,11 +25,6 @@ export const GODOT_FOG_PARS_CHUNK = 'godot_fog_pars_fragment';
 
 /** The sky's directional lights, which the sky's fog reads (`sky.cpp:707`). */
 const FOG_SKY_SUN_MAX = 4;
-
-/** GLSL's float literal for `value`, which a bare integer is not. */
-function glslFloat(value: number): string {
-  return Number.isInteger(value) ? `${value}.0` : `${value}`;
-}
 
 export const GODOT_FOG_PARS = /* glsl */ `
 uniform highp sampler3D ${U.volume};
@@ -74,13 +70,15 @@ vec3 fogRadianceAt( vec3 worldDirection, float roughness ) {
 	return mix( a, b, band - lower );
 }
 
+// How much of sun i's glow a view along direction sees.
+float fogSunAmount( vec3 direction, int i ) {
+	return pow( max( dot( direction, ${U.sunDirections}[ i ].xyz ), 0.0 ), ${glslFloat(FOG_SUN_SCATTER_EXPONENT)} );
+}
+
 // Each surface light's glow towards it (scene_forward_clustered.glsl:1126-1136).
 vec3 fogSurfaceSunScatter( vec3 worldDirection ) {
 	vec3 scatter = vec3( 0.0 );
-	for ( int i = 0; i < ${FOG_SUN_MAX}; i ++ ) {
-		float amount = pow( max( dot( worldDirection, ${U.sunDirections}[ i ].xyz ), 0.0 ), ${glslFloat(FOG_SUN_SCATTER_EXPONENT)} );
-		scatter += ${U.sunSurfaceColors}[ i ].rgb * amount;
-	}
+	for ( int i = 0; i < ${FOG_SUN_MAX}; i ++ ) scatter += ${U.sunSurfaceColors}[ i ].rgb * fogSunAmount( worldDirection, i );
 	return scatter * ${U.depthSky}.y;
 }
 
@@ -92,15 +90,15 @@ vec3 fogSkySunScatter( vec3 skyDirection ) {
 		if ( ${U.sunSkyColors}[ i ].a == 0.0 ) continue;
 		if ( lights == ${FOG_SKY_SUN_MAX} ) break;
 		lights ++;
-		float amount = pow( max( dot( skyDirection, ${U.sunDirections}[ i ].xyz ), 0.0 ), ${glslFloat(FOG_SUN_SCATTER_EXPONENT)} );
-		scatter += ${U.sunSkyColors}[ i ].rgb * amount;
+		scatter += ${U.sunSkyColors}[ i ].rgb * fogSunAmount( skyDirection, i );
 	}
 	return scatter * ${U.depthSky}.y;
 }
 
 // The depth fog's colour and amount at a view-space position (scene_forward_clustered.glsl:1102-1164).
 vec4 depthFogAt( vec3 view ) {
-	vec3 worldDirection = normalize( transpose( mat3( viewMatrix ) ) * view );
+	vec3 worldView = transpose( mat3( viewMatrix ) ) * view;
+	vec3 worldDirection = normalize( worldView );
 	vec3 color = ${U.depthColor}.rgb;
 	float aerial = ${U.depthLayer}.w;
 	if ( aerial > 0.0 ) {
@@ -120,7 +118,7 @@ vec4 depthFogAt( vec3 view ) {
 	}
 	float heightDensity = ${U.depthLayer}.z;
 	if ( abs( heightDensity ) >= ${glslFloat(HEIGHT_FOG_DENSITY_MIN)} ) {
-		float worldHeight = ( transpose( mat3( viewMatrix ) ) * view ).y + cameraPosition.y;
+		float worldHeight = worldView.y + cameraPosition.y;
 		float heightAmount = 1.0 - exp( min( 0.0, ( worldHeight - ${U.depthLayer}.y ) * heightDensity ) );
 		amount = max( heightAmount, amount );
 	}
