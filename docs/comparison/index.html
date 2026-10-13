@@ -395,7 +395,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: <code>light_energy</code> spread over <code>area_size</code>, faded by <code>area_range</code> and <code>area_attenuation</code>, with <code>light_specular</code> on the highlight. The reference image comes from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.</p>
+      <div class="prose"><p>Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: <code>light_energy</code> spread over <code>area_size</code>, faded by <code>area_range</code> and <code>area_attenuation</code>, with <code>light_specular</code> on the highlight. It shades each material in its <code>diffuse_mode</code> and <code>specular_mode</code>, and a clearcoat dims the light beneath it. The reference image comes from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>AreaLight3D</code> properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>area_attenuation</code></td><td>float</td><td></td></tr><tr><td><code>area_normalize_energy</code></td><td>true or false</td><td></td></tr><tr><td><code>area_range</code></td><td>float &gt;= 0</td><td>warning below</td></tr><tr><td><code>area_size</code></td><td>Vector2(x, y), each &gt;= 0</td><td></td></tr><tr><td><code>area_texture</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr></tbody></table></div>
@@ -5892,7 +5892,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A red sphere with a glossy clear coat. <code>clearcoat</code> maps to <code>MeshPhysicalMaterial.clearcoat</code>, and both engines show the same tight highlight over the red body.</p></div>
+        <div class="prose"><p>A red sphere with a glossy clear coat. <code>clearcoat</code> maps to <code>MeshPhysicalMaterial.clearcoat</code>, and both engines show the same tight highlight over the red body. As in Godot, the coat dims only the sky's ambient light and reflection beneath it, not an omni, spot or directional light.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Rim</h3><span class="status st-limitation">Limitation</span></div>
