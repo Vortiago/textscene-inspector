@@ -34,7 +34,7 @@ The lenient parser falls back silently when `omni_range` or `omni_attenuation` i
 
 Godot's positional shadow atlas gives the light two slots for the camera. As in Godot's default Cube mode, each slot holds one paraboloid of the shadow. A light that covers less of the view gets smaller slots and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes smaller slots, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans `shadow_blur` times two texels of the paraboloid. `shadow_bias` and `shadow_normal_bias` move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.
 
-`light_negative` makes the light subtract, with a negative three intensity, as Godot's negative energy does. `shadow_opacity` mixes the shadow towards unshadowed through three's `shadow.intensity`. With `distance_fade_enabled`, the light and its shadow fade by Godot's smoothstep over the distance from the rendering camera, and each drops out past its fade end.
+`light_negative` makes the light subtract with a negative three intensity, as in Godot. `shadow_opacity` mixes the shadow towards unshadowed through three's `shadow.intensity`. With `distance_fade_enabled`, the light and its shadow fade by Godot's smoothstep over the distance from the rendering camera. Each drops out past its fade end.
 
 ## Known limitations
 

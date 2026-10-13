@@ -36,12 +36,12 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 ## Depth fog
 <!-- compare: image=unit-depth-fog status=done fixture=unit-depth-fog.tscn -->
 
-`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too, and `fog_sky_affect` sets how far the fog covers the background.
+`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too. `fog_sky_affect` sets how far the fog covers the background.
 
 ## Volumetric fog
 <!-- compare: image=unit-world-environment-basic status=limitation fixture=unit-world-environment-basic.tscn -->
 
-`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last as Godot's temporal reprojection does, and a still camera shows the mean of Godot's 16 jitters, which Godot converges to.
+`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera shows the mean of Godot's 16 jitters, which Godot converges to.
 
 - **Not drawn** `volumetric_fog_gi_inject` adds no light, because the previewer draws no VoxelGI or SDFGI.
 - **Not drawn** A light that casts shadows lights the fog as if nothing blocks it.
@@ -152,7 +152,7 @@ Strict parsing format-checks these `Environment` properties, plus 2 inherited fr
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-The lenient parser never rejects. Every scalar goes through the shared `floatOr`, `intOr` and `boolOr` decoders, which log the bad literal and fall back to Godot's default. An unreadable `glow_intensity` therefore renders as default glow rather than as no Environment at all. A depth-mode fog with no stored `fog_density` takes 1, and `fog_depth_begin` and `fog_depth_end` drag each other along so the begin never passes the end, as Godot's setters do.
+The lenient parser never rejects. Every scalar goes through the shared `floatOr`, `intOr`, `enumOr` and `boolOr` decoders. Each logs the bad literal and falls back to Godot's default. An unreadable `glow_intensity` therefore renders as default glow rather than as no Environment at all. A depth-mode fog with no stored `fog_density` takes 1. `fog_depth_begin` and `fog_depth_end` drag each other along, so the begin never passes the end, as Godot's setters do.
 
 ## Known limitations
 
