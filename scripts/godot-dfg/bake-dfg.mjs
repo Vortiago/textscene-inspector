@@ -91,7 +91,10 @@ function saturate(value) {
   return Math.min(Math.max(value, 0), 1);
 }
 
-/** `radical_inverse_vdc` (`integrate_dfg.glsl:21-28`), the second Hammersley coordinate. */
+/**
+ * `radical_inverse_vdc` (`integrate_dfg.glsl:21-28`), the second Hammersley coordinate.
+ * `packages/textscene-core/src/godot/skyReflection.ts` holds a copy, which this script cannot import.
+ */
 function radicalInverse(index) {
   let bits = index >>> 0;
   bits = ((bits << 16) | (bits >>> 16)) >>> 0;

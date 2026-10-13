@@ -18,6 +18,7 @@ import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { readSkyLightDeclaration } from './skyLight';
 import { showSkyLayers } from './skyLayersMap';
+import { observeSceneCamera } from '../sceneRenderCamera';
 
 export interface SkyLayerProps {
   sky: SkyProperties;
@@ -87,18 +88,20 @@ export function SkyLayer({
     const previousIntensity = scene.environmentIntensity;
     const previousBackground = scene.background;
     const previousBackgroundIntensity = scene.backgroundIntensity;
-    const previousOnBeforeRender = scene.onBeforeRender;
 
     scene.environment = built.environment;
     scene.environmentIntensity = intensity;
-    scene.onBeforeRender = () => showSkyLayers(built.layers, contributionRef.current);
+    // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
+    const stopShowingLayers = observeSceneCamera(scene, () =>
+      showSkyLayers(built.layers, contributionRef.current)
+    );
     if (asBackground) {
       scene.background = built.background;
       scene.backgroundIntensity = backgroundIntensity;
     }
 
     return () => {
-      scene.onBeforeRender = previousOnBeforeRender;
+      stopShowingLayers();
       scene.environment = previousEnvironment;
       scene.environmentIntensity = previousIntensity;
       if (asBackground) {

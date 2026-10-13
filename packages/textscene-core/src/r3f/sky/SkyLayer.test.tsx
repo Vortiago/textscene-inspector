@@ -9,6 +9,7 @@ import type { SkyEnvironment, SkyEnvironmentInput } from '../../resources/sky/bu
 import type { PanoramaSkyProperties } from '../../resources/sky/types';
 import { SkyLayer } from './SkyLayer';
 import { skyLightUserData } from './skyLight';
+import { observeSceneCamera } from '../sceneRenderCamera';
 import { showSkyLayers, skyContribution, skyLastLayerMap } from './skyLayersMap';
 import type { SkyLayers } from '../../resources/sky/skyLayers';
 
@@ -163,6 +164,20 @@ describe('SkyLayer', () => {
     layersAfterRender(renderer);
 
     expect([bakes.length, skyContribution[0]]).toEqual([bakeCount, 0.5]);
+  });
+
+  it("keeps the scene's other render observers running, as the visibility cull is", async () => {
+    built.next = skyEnvironment(skyLayers());
+    const renderer = await ReactThreeTestRenderer.create(<Scene lights={1} />);
+    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    const observer = vi.fn();
+    const stopObserving = observeSceneCamera(scene, observer);
+    await advance(renderer, 1);
+
+    layersAfterRender(renderer);
+    stopObserving();
+
+    expect(observer).toHaveBeenCalled();
   });
 
   it('stops showing its layers when it unmounts', async () => {

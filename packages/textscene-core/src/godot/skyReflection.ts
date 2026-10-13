@@ -128,7 +128,10 @@ function distributionGGX(cosTheta: number, roughness4: number): number {
   return roughness4 / (Math.PI * denominator * denominator);
 }
 
-/** `radicalInverse_VdC` (`octmap_roughness_inc.glsl:38-45`), the second Hammersley coordinate. */
+/**
+ * `radicalInverse_VdC` (`octmap_roughness_inc.glsl:38-45`), the second Hammersley coordinate.
+ * `scripts/godot-dfg/bake-dfg.mjs` holds a copy, since a build script cannot import this package.
+ */
 function radicalInverse(index: number): number {
   let bits = index >>> 0;
   bits = ((bits << 16) | (bits >>> 16)) >>> 0;
