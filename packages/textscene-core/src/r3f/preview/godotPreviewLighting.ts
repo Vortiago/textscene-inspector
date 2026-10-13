@@ -11,7 +11,7 @@ import type { Color } from '../../utils/colorParser';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
 import type { EnvironmentSettings } from '../../resources/environment/types';
-import { decodeSkyMaterial, decodeSkyProcessing, radianceFilter } from '../../resources/sky/decode';
+import { decodeSky, decodeSkyMaterial } from '../../resources/sky/decode';
 import type { ProceduralSkyProperties, Sky } from '../../resources/sky/types';
 import { decodeEnvironment } from '../../resources/environment/decode';
 
@@ -127,20 +127,20 @@ export function previewEnvironment(): { settings: EnvironmentSettings; sky: Sky 
   );
 
   const horizon = previewHorizonColor();
-  const sky = decodeSkyMaterial('ProceduralSkyMaterial', {}) as ProceduralSkyProperties;
+  const material = decodeSkyMaterial('ProceduralSkyMaterial', {}) as ProceduralSkyProperties;
 
   return {
     settings,
-    sky: {
-      material: {
-        ...sky,
+    // The editor's Sky keeps every default but its material (`node_3d_editor_plugin.cpp:10394`).
+    sky: decodeSky(
+      {},
+      {
+        ...material,
         sky_top_color: PREVIEW_SKY_TOP,
         sky_horizon_color: horizon,
         ground_bottom_color: PREVIEW_GROUND_BOTTOM,
         ground_horizon_color: horizon,
-      },
-      // The editor's Sky keeps every default but its material (`node_3d_editor_plugin.cpp:10394`).
-      radianceFilter: radianceFilter(decodeSkyProcessing({})),
-    },
+      }
+    ),
   };
 }

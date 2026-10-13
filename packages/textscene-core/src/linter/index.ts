@@ -285,6 +285,7 @@ export { validatorRegistry } from './ValidatorRegistry.js';
 // rest of the module stays off the published surface.
 export { registeredTypes } from './registryPopulation.js';
 export { ruleRegistry } from './RuleRegistry.js';
+export { resourceRuleRegistry } from './ResourceRuleRegistry.js';
 export { SEVERITY_ORDER, flooredSeverity, isSeverity } from './types.js';
 export {
   diagnosticLine,

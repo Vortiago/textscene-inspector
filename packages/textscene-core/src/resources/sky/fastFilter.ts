@@ -1,24 +1,17 @@
 /**
- * Godot's fast filter, which bakes a real-time sky's rough layers (`octmap_filter.glsl`): eight taps
+ * Godot's fast filter, which bakes a real-time sky's layers (`octmap_filter.glsl`): eight taps
  * from a coefficient table, in each of up to three frames around the direction, blended by how near
  * the direction lies to each frame's axis. Godot's texture-array path runs it, with no lod offset.
  */
 
 import { vec3ToOctWithBorder, type OctDirection } from '../../godot/octmap.js';
 import { FAST_FILTER_COEFFICIENTS } from '../../godot/skyFastFilterCoefficients.js';
-import {
-  FAST_FILTER_CHAIN_SIZES,
-  REAL_TIME_RADIANCE_SIZE,
-  REAL_TIME_ROUGHNESS_LAYERS,
-  skyOctmapLayout,
-} from '../../godot/skyReflection.js';
-import { cross, normalize } from './direction.js';
-import type { LayerFilter } from './layerFilter.js';
+import { FAST_FILTER_CHAIN_SIZES, REAL_TIME_ROUGHNESS_LAYERS } from '../../godot/skyReflection.js';
+import { frameAround } from './frame.js';
+import { RADIANCE_LAYOUT, type LayerFilter } from './layerFilter.js';
 import { addTrilinear, type Octmap } from './octmapImage.js';
 
 const { abs, max, min } = Math;
-
-const LAYOUT = skyOctmapLayout(REAL_TIME_RADIANCE_SIZE);
 
 /** 1 / sqrt(3): a frame weighs nothing where its axis is no nearer the direction than the others (`:97-98`). */
 const FRAME_LOWER_BOUND = 0.57735;
@@ -35,11 +28,12 @@ const SUPER_TAPS_PER_FRAME = 2;
 
 const SUB_TAPS = 4;
 
-/** The UV of one tap. Written only by `texel`, for the tap it reads next. */
+/** Scratch, written only by `texel`: the frame's axes, and the UV of the tap it reads next. */
+const frameX = new Float64Array(3);
+const frameY = new Float64Array(3);
 const tapUv = new Float64Array(2);
 
 export const fastFilter: LayerFilter = {
-  layout: LAYOUT,
   chainSizes: FAST_FILTER_CHAIN_SIZES,
   texel,
 };
@@ -53,22 +47,22 @@ function texel(normal: OctDirection, mips: readonly Octmap[], layer: number, out
   const coefficients = FAST_FILTER_COEFFICIENTS[min(layer, REAL_TIME_ROUGHNESS_LAYERS - 1) - 1]!;
   out.fill(0);
   let total = 0;
-  for (const [axis, { up, others }] of FRAMES.entries()) {
+  for (let axis = 0; axis < FRAMES.length; axis += 1) {
+    const { up, others } = FRAMES[axis]!;
     const frameWeight =
       (max(abs(normal[others[0]]!), abs(normal[others[1]]!)) - FRAME_LOWER_BOUND) / (1 - FRAME_LOWER_BOUND);
     if (frameWeight <= 0) continue;
-    const frameX = normalize(cross(up, normal));
-    const frameY = cross(normal, frameX);
+    frameAround(up, normal, frameX, frameY);
     for (let index = axis * SUPER_TAPS_PER_FRAME; index < (axis + 1) * SUPER_TAPS_PER_FRAME; index += 1) {
       for (let sub = 0; sub < SUB_TAPS; sub += 1) {
         const x = coefficients.frameX[index]![sub]!;
         const y = coefficients.frameY[index]![sub]!;
         const z = coefficients.frameZ[index]![sub]!;
         vec3ToOctWithBorder(
-          frameX[0] * x + frameY[0] * y + normal[0] * z,
-          frameX[1] * x + frameY[1] * y + normal[1] * z,
-          frameX[2] * x + frameY[2] * y + normal[2] * z,
-          LAYOUT.padding,
+          frameX[0]! * x + frameY[0]! * y + normal[0] * z,
+          frameX[1]! * x + frameY[1]! * y + normal[1] * z,
+          frameX[2]! * x + frameY[2]! * y + normal[2] * z,
+          RADIANCE_LAYOUT.padding,
           tapUv
         );
         const weight = coefficients.weight[index]![sub]! * frameWeight;

@@ -1,10 +1,11 @@
 /**
- * Every arm the linter declares: each registered rule's `emits`, and the file
+ * Every arm the linter declares: each registered rule's and resource rule's `emits`, and the file
  * diagnostics `Linter` stamps itself, which reach no `RuleMeta.emits` but take
  * the same shape. Each carries the rule that declares it, `Linter` for a file one.
  */
 
 import { ruleRegistry } from '../RuleRegistry.js';
+import { resourceRuleRegistry } from '../ResourceRuleRegistry.js';
 import { FILE_DIAGNOSTICS } from '../fileDiagnostics.js';
 import type { RuleArm } from '../ruleArms.js';
 
@@ -15,6 +16,7 @@ export interface DeclaredArm extends RuleArm {
 export function declaredArms(): DeclaredArm[] {
   return [
     ...ruleRegistry.getRules().flatMap((r) => (r.meta.emits ?? []).map((e) => ({ rule: r.meta.name, ...e }))),
+    ...resourceRuleRegistry.getRules().flatMap((r) => r.meta.emits.map((e) => ({ rule: r.meta.name, ...e }))),
     ...Object.values(FILE_DIAGNOSTICS).map((d) => ({ rule: 'Linter', ...d })),
   ];
 }

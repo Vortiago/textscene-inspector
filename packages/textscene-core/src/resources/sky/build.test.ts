@@ -44,7 +44,7 @@ describe('buildSkyEnvironment layers', () => {
     vi.restoreAllMocks();
   });
 
-  it("carries Godot's roughest layers of the sky's radiance", () => {
+  it("carries Godot's layers 1 to 7 of the sky's radiance", () => {
     vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(() => {});
     vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockReturnValue(
       new THREE.WebGLRenderTarget(1, 1)
@@ -56,8 +56,8 @@ describe('buildSkyEnvironment layers', () => {
 
     const env = buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [] });
 
-    expect(env!.layers.rough).toHaveLength(3);
-    expect(THREE.DataUtils.fromHalfFloat(env!.layers.last[2]![1]!)).toBeCloseTo(0.25, 3);
+    expect([env!.layers.sharp, env!.layers.rough, env!.layers.last].map((g) => g.length)).toEqual([3, 3, 1]);
+    expect(THREE.DataUtils.fromHalfFloat(env!.layers.last[0]![2]![1]!)).toBeCloseTo(0.25, 3);
   });
 });
 

@@ -3,23 +3,14 @@
 import { describe, it } from 'vitest';
 import { expectDiagnostic, expectNoDiagnostic } from '../../linter/testing/testkit';
 import './index.linter';
-import '../environment/index.linter';
-import '../../nodes/3d/worldenvironment/index.linter';
-import '../../nodes/3d/camera3d/index.linter';
 
-/** A scene whose WorldEnvironment holds a Sky with `skyProperties`. */
-function sceneWithSky(skyProperties: string, holder = 'WorldEnvironment'): string {
+function sceneWithSky(skyProperties: string): string {
   return `[gd_scene format=3]
 
 [sub_resource type="Sky" id="Sky_1"]
 ${skyProperties}
 
-[sub_resource type="Environment" id="Env_1"]
-background_mode = 2
-sky = SubResource("Sky_1")
-
-[node name="Holder" type="${holder}"]
-environment = SubResource("Env_1")
+[node name="Root" type="Node3D"]
 `;
 }
 

@@ -24,7 +24,6 @@ Strict parsing format-checks the inherited set (15 inherited from Camera3D, 17 i
 | `valid-camera3d-properties` (type-family match) | `camera3d-multiple-current` | info |
 |  | `camera3d-invalid-clipping-planes` | error |
 |  | `camera3d-zero-depth-range` | warning |
-|  | `real-time-sky-radiance-size` | warning |
 | `valid-xrcamera3d-parent` | `xrcamera3d-parent-not-xrorigin3d` | warning |
 <!-- lint:end -->
 

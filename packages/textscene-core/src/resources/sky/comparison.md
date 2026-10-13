@@ -1,12 +1,12 @@
 ---
 type: Sky
 category: Resources
-renders_as: a THREE PMREM environment + Godot's roughest radiance layers + background
+renders_as: a THREE PMREM environment + Godot's radiance layers 1 to 7 + background
 ---
 
 # Sky
 
-A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. A PMREM-filtered environment map gives sharp reflections. Godot's roughest radiance layers, baked as Godot bakes them, give rough reflections and the ambient light.
+A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers 1 to 7, baked as Godot bakes them, give every reflection but a mirror and the ambient light. A mirror reflects the radiance itself, mip 0 of a PMREM-filtered environment map.
 
 ## ProceduralSkyMaterial
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
@@ -26,7 +26,7 @@ An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the
 ## Real-Time process mode
 <!-- compare: image=unit-sky-realtime status=done fixture=unit-sky-realtime.tscn -->
 
-A sky with `process_mode = 3` bakes its rough layers with Godot's fast filter, at a radiance size of 256 whatever `radiance_size` says. Its ambient reads layer 6, its roughest. The metallic sphere's reflection, the default sphere and the ground it lights match Godot's.
+A sky with `process_mode = 3` bakes its layers with Godot's fast filter, at a radiance size of 256 whatever `radiance_size` says. Its ambient reads layer 6, its roughest. The metallic sphere's reflection, the default sphere and the ground it lights match Godot's.
 
 ## Linting
 
@@ -42,6 +42,7 @@ Strict parsing format-checks these `Sky` properties, plus 2 inherited from Resou
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-sky` | `real-time-sky-radiance-size` | warning |
 <!-- lint:end -->
 
 The lenient parser never rejects. An unreadable Sky property falls back to Godot's default through the shared value decoders. An unresolvable material or panorama leaves the background at its fallback rather than failing the scene.

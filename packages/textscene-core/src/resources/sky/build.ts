@@ -23,14 +23,14 @@ const CUBE_SIZE = 256;
  * Godot's sky ambient is the sky's own radiance: it lights surfaces and is what
  * they reflect (`Environment.reflection_source` defaults to the background).
  * So one cube render feeds `scene.background`, the PMREM-prefiltered
- * `scene.environment` and Godot's roughest layers of it.
+ * `scene.environment` and Godot's layers 1 to 7 of it.
  */
 export interface SkyEnvironment {
   /** Sharp cubemap for `scene.background`. */
   background: THREE.Texture;
-  /** PMREM-prefiltered radiance for `scene.environment`, which surfaces reflect. */
+  /** PMREM-prefiltered radiance for `scene.environment`, whose mip 0 a mirror reflects. */
   environment: THREE.Texture;
-  /** Godot's roughest layers, which its ambient and rough reflections read. */
+  /** Godot's layers 1 to 7, which its ambient and its reflections read. */
   layers: SkyLayers;
   dispose: () => void;
 }

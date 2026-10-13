@@ -27,7 +27,6 @@ Strict parsing format-checks these `WorldEnvironment` properties, plus 10 inheri
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-worldenvironment` | `worldenvironment-requires-environment` | warning |
 |  | `single-worldenvironment` | warning |
-|  | `real-time-sky-radiance-size` | warning |
 <!-- lint:end -->
 
 Both properties are assigned straight from the raw string with no format or resource-existence check. An absent `environment` falls back to `''` rather than raising strict's missing-environment warning, and an absent `camera_attributes` stays `undefined`.

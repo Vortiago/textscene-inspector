@@ -1,11 +1,11 @@
 /**
- * The `Out of range` cell, stated independently: `docs:lint-sections --check`
+ * The `Out of range` cell and the rules that reach a type, stated independently: `docs:lint-sections --check`
  * diffs against output from the same code path. `extra_cull_margin` has an
  * enforced floor (visual_instance_3d.cpp:377) and a hinted ceiling (:602).
  */
 
 import { describe, it, expect } from 'vitest';
-import { outOfRangeCell } from './lintCoverage.mjs';
+import { outOfRangeCell, rulesFor } from './lintCoverage.mjs';
 
 describe('the Out of range cell', () => {
   it('names one tier when both ends agree', () => {
@@ -66,5 +66,26 @@ describe('the Out of range cell', () => {
         outOfRangeCell({ min: 'warning', max: 'warning' }, { min: 0, max: 100, enforcedMax: { at: 200 } })
       ).toBe('warning below 0, warning above 100, error above 200');
     });
+  });
+});
+
+describe('the rules that reach a type', () => {
+  const arm = { severity: 'warning', ruleName: 'some-warning', grounding: { kind: 'engine', at: 'a.cpp:1' } };
+  const noNodeRules = { getRulesForNodeType: () => [] };
+  const resourceRules = {
+    getRulesForResourceType: (type) =>
+      type === 'Sky'
+        ? [{ meta: { name: 'valid-sky', description: 'd', resourceType: 'Sky', emits: [arm] } }]
+        : [],
+  };
+
+  it('lists a resource rule on its resource', () => {
+    expect(rulesFor('Sky', noNodeRules, resourceRules)).toEqual([
+      { name: 'valid-sky', description: 'd', universal: false, viaMatcher: false, emits: [arm] },
+    ]);
+  });
+
+  it('lists no resource rule on another type', () => {
+    expect(rulesFor('Environment', noNodeRules, resourceRules)).toEqual([]);
   });
 });

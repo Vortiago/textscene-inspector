@@ -11,12 +11,7 @@ import { decodeEnvironment } from '../../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../../resources/environment/build';
 import { useProjectClearColorSrgb } from '../../../r3f/useProjectClearColor';
 import type { EnvironmentSettings } from '../../../resources/environment/types';
-import {
-  decodeSkyMaterial,
-  decodeSkyProcessing,
-  radianceFilter,
-  skyMaterialRef,
-} from '../../../resources/sky/decode';
+import { decodeSky, decodeSkyMaterial, skyMaterialRef } from '../../../resources/sky/decode';
 import type { Sky } from '../../../resources/sky/types';
 
 export interface ResolvedEnvironment {
@@ -49,8 +44,7 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Reso
   const skyData = skyResource?.resource.data;
   const sky = useMemo(() => {
     const decoded = material ? decodeSkyMaterial(material.type, material.data) : null;
-    if (!decoded || !skyData) return null;
-    return { material: decoded, radianceFilter: radianceFilter(decodeSkyProcessing(skyData)) };
+    return decoded && skyData ? decodeSky(skyData, decoded) : null;
   }, [material, skyData]);
 
   const clearColor = useProjectClearColorSrgb();

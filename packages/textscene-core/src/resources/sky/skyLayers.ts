@@ -1,18 +1,17 @@
 /**
- * Godot's roughest radiance layers of a sky, which its ambient and its rough reflections read
- * (`scene_forward_clustered.glsl:1714-1756`). A chain of downsamples shrinks the radiance to an
- * octmap 10 texels wide, and a filter per layer reads that chain around each direction: GGX
- * importance sampling, or the fast filter of a real-time sky. The chain blurs the sky wider than
- * three's PMREM.
+ * Godot's filtered radiance layers of a sky, 1 to 7, which its ambient and its reflections read
+ * (`scene_forward_clustered.glsl:1714-1756`). Layer 0 is the radiance itself. A chain of downsamples
+ * shrinks the radiance to an octmap 10 texels wide, and a filter per layer reads that chain around
+ * each direction: GGX importance sampling, or the fast filter of a real-time sky.
  */
 
 import * as THREE from 'three';
 import { octToVec3WithBorder } from '../../godot/octmap.js';
-import { downsampleTaps, type SkyOctmapLayout } from '../../godot/skyReflection.js';
+import { SKY_ROUGHNESS_LAYERS_DEFAULT, downsampleTaps } from '../../godot/skyReflection.js';
 import { cubeFace, cubeTexel, texelDirection } from './cubeFaces.js';
 import { fastFilter } from './fastFilter.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
-import type { LayerFilter } from './layerFilter.js';
+import { RADIANCE_LAYOUT, type LayerFilter } from './layerFilter.js';
 import { addBilinear, blankOctmap, type Octmap } from './octmapImage.js';
 import type { RadianceFilter } from './types.js';
 
@@ -21,31 +20,26 @@ import type { RadianceFilter } from './types.js';
  * vitest pool runs this, costs about 100 times a local one, in a loop that runs a million times.
  */
 const { floor } = Math;
-
-/** The first layer baked here. The layers below it are sharp enough for three's PMREM to follow. */
-export const FIRST_BAKED_LAYER = 4;
+const { toHalfFloat } = THREE.DataUtils;
 
 /**
- * The face size of each baked layer before the last. Each halves the one before, so the layers form
- * a cube's mip chain, and a trilinear read blends two of them as Godot does.
+ * Each group of layers, as one cube: its first layer, and the face size of each layer from there.
+ * Within a group each layer halves the one before, so the group is a cube's mip chain and a trilinear
+ * read blends two layers as Godot does. A layer's faces are about as fine as the chain mip its filter
+ * reads, so the sharp layers' first is about as fine as the 320-wide half-size copy.
  */
-export const ROUGH_LAYER_FACE_SIZES = [32, 16, 8];
+export const SKY_LAYER_GROUPS = {
+  sharp: { firstLayer: 1, faceSizes: [128, 64, 32] },
+  rough: { firstLayer: 4, faceSizes: [32, 16, 8] },
+  /** The layer the ambient reads, smooth enough that linear filtering between texels 6 degrees apart follows it. */
+  last: { firstLayer: SKY_ROUGHNESS_LAYERS_DEFAULT - 1, faceSizes: [16] },
+} as const;
 
-/**
- * The face size of the last layer, which the ambient reads. The layer is smooth, so linear filtering
- * between texels 6 degrees apart follows it.
- */
-export const LAST_LAYER_FACE_SIZE = 16;
+/** Godot's layers 1 to 7 of a sky, as six RGBA half-float faces each, in the layout of `cubeFaces.ts`. */
+export type SkyLayers = Record<keyof typeof SKY_LAYER_GROUPS, Uint16Array[][]>;
 
-/** Godot's baked layers of a sky, as six RGBA half-float faces each, in the layout of `cubeFaces.ts`. */
-export interface SkyLayers {
-  /** The layers from `FIRST_BAKED_LAYER` up to the last, at `ROUGH_LAYER_FACE_SIZES`. */
-  rough: Uint16Array[][];
-  /** The last layer, at `LAST_LAYER_FACE_SIZE`. */
-  last: Uint16Array[];
-}
-
-const BAKED_FACE_SIZES = [...ROUGH_LAYER_FACE_SIZES, LAST_LAYER_FACE_SIZE];
+/** Half-float 1, the alpha of every texel. */
+const OPAQUE = THREE.DataUtils.toHalfFloat(1);
 
 const FILTERS: Record<RadianceFilter, LayerFilter> = {
   'importance-sample': importanceSampleFilter,
@@ -63,19 +57,24 @@ interface DownsampleStep {
   weights: Float32Array;
 }
 
-/** The parts of a filter's chain that hold for every sky, for one cube size. */
-interface ChainPlan {
+/** The cube texel each radiance octmap texel reads, for one cube size. */
+interface BaseTexels {
   cubeSize: number;
-  /** The face times the face's texel count, plus the texel, that each base octmap texel reads. */
-  baseTexels: Int32Array;
-  steps: DownsampleStep[];
+  /** The face times the face's texel count, plus the texel, that each octmap texel reads. */
+  texels: Int32Array;
 }
 
 /**
- * Written only by `chainPlan`, on the first sky of a cube size for each filter. Up to 4 MB each, kept
- * so a later sky runs the chain without the 400,000 directions and 500,000 tap weights that build it.
+ * Written only by `baseTexelsOf`, on the first sky of a cube size. 1.6 MB, kept so a later sky
+ * builds its octmap without the 400,000 directions that place it.
  */
-const plans = new Map<LayerFilter, ChainPlan>();
+let cachedBaseTexels: BaseTexels | null = null;
+
+/**
+ * Written only by `stepsOf`, on a filter's first sky. They hold for every sky, and save the 500,000
+ * tap weights that build them.
+ */
+const chainSteps = new Map<LayerFilter, DownsampleStep[]>();
 
 /**
  * Each face of a WebGL cube render target, as linear RGBA floats in `readRenderTargetPixels`
@@ -112,17 +111,21 @@ export function skyLayers(
 ): SkyLayers {
   checkCube(radiance, size);
   const filter = FILTERS[radianceFilter];
-  const { baseTexels, steps } = chainPlan(size, filter);
   const mips: Octmap[] = [];
-  let source = baseOctmap(radiance, size * size, baseTexels, filter.layout.size);
-  for (const step of steps) {
+  let source = baseOctmap(radiance, size * size, baseTexelsOf(size));
+  for (const step of stepsOf(filter)) {
     source = downsample(source, step);
     mips.push(source);
   }
-  const layers = BAKED_FACE_SIZES.map((faceSize, index) =>
-    Array.from({ length: 6 }, (_, face) => layerFace(face, faceSize, mips, filter, FIRST_BAKED_LAYER + index))
-  );
-  return { rough: layers.slice(0, -1), last: layers.at(-1)! };
+  const group = ({ firstLayer, faceSizes }: { firstLayer: number; faceSizes: readonly number[] }) =>
+    faceSizes.map((faceSize, index) =>
+      Array.from({ length: 6 }, (_, face) => layerFace(face, faceSize, mips, filter, firstLayer + index))
+    );
+  return {
+    sharp: group(SKY_LAYER_GROUPS.sharp),
+    rough: group(SKY_LAYER_GROUPS.rough),
+    last: group(SKY_LAYER_GROUPS.last),
+  };
 }
 
 function checkCube(radiance: readonly Float32Array[], size: number): void {
@@ -136,21 +139,24 @@ function checkCube(radiance: readonly Float32Array[], size: number): void {
   });
 }
 
-function chainPlan(cubeSize: number, filter: LayerFilter): ChainPlan {
-  const cached = plans.get(filter);
-  if (cached?.cubeSize === cubeSize) return cached;
-  const { layout, chainSizes } = filter;
-  const plan: ChainPlan = {
-    cubeSize,
-    baseTexels: baseTexels(cubeSize, layout),
-    steps: chainSizes.map((size) => downsampleStep(size, layout.padding)),
-  };
-  plans.set(filter, plan);
-  return plan;
+function stepsOf(filter: LayerFilter): DownsampleStep[] {
+  let steps = chainSteps.get(filter);
+  if (steps) return steps;
+  steps = filter.chainSizes.map((size) => downsampleStep(size, RADIANCE_LAYOUT.padding));
+  chainSteps.set(filter, steps);
+  return steps;
+}
+
+function baseTexelsOf(cubeSize: number): Int32Array {
+  if (cachedBaseTexels?.cubeSize !== cubeSize) {
+    cachedBaseTexels = { cubeSize, texels: baseTexels(cubeSize) };
+  }
+  return cachedBaseTexels.texels;
 }
 
 /** The cube texel nearest each texel of the radiance octmap, padding included. */
-function baseTexels(cubeSize: number, { size, padding }: SkyOctmapLayout): Int32Array {
+function baseTexels(cubeSize: number): Int32Array {
+  const { size, padding } = RADIANCE_LAYOUT;
   const texels = new Int32Array(size * size);
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
@@ -182,13 +188,8 @@ function downsampleStep(size: number, padding: number): DownsampleStep {
   return step;
 }
 
-function baseOctmap(
-  radiance: readonly Float32Array[],
-  faceTexels: number,
-  texels: Int32Array,
-  octmapSize: number
-): Octmap {
-  const octmap = blankOctmap(octmapSize);
+function baseOctmap(radiance: readonly Float32Array[], faceTexels: number, texels: Int32Array): Octmap {
+  const octmap = blankOctmap(RADIANCE_LAYOUT.size);
   for (let i = 0; i < texels.length; i += 1) {
     const face = radiance[floor(texels[i]! / faceTexels)]!;
     const at = (texels[i]! % faceTexels) * 4;
@@ -227,10 +228,11 @@ function layerFace(
   const colour = new Float32Array(3);
   for (let texel = 0; texel < faceSize * faceSize; texel += 1) {
     filter.texel(texelDirection(face, texel, faceSize), mips, layer, colour);
-    out.set(
-      [colour[0]!, colour[1]!, colour[2]!, 1].map((value) => THREE.DataUtils.toHalfFloat(value)),
-      texel * 4
-    );
+    const at = texel * 4;
+    out[at] = toHalfFloat(colour[0]!);
+    out[at + 1] = toHalfFloat(colour[1]!);
+    out[at + 2] = toHalfFloat(colour[2]!);
+    out[at + 3] = OPAQUE;
   }
   return out;
 }
