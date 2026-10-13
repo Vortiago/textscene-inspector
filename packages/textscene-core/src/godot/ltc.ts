@@ -4,11 +4,12 @@
  */
 
 import { LTC_LUT1_BASE64, LTC_LUT2_BASE64, LTC_SIZE } from './ltcTable.generated.js';
+import { decodeBase64Bytes } from './packedBytes.js';
 
 export { LTC_SIZE };
 
 /** The two tables, RGBA floats per texel: a row per view angle and a column per roughness. */
-export interface LtcTables {
+interface LtcTables {
   /** The fit's matrix entries `a, b, c, d`. */
   lut1: Float32Array;
   /** The fit's `e` and its two Fresnel weights, then an unused channel. */
@@ -20,9 +21,8 @@ export function ltcTables(): LtcTables {
 }
 
 function littleEndianFloats(base64: string): Float32Array {
-  const bytes = atob(base64);
-  const view = new DataView(new ArrayBuffer(bytes.length));
-  for (let i = 0; i < bytes.length; i += 1) view.setUint8(i, bytes.charCodeAt(i));
+  const bytes = decodeBase64Bytes(base64);
+  const view = new DataView(bytes.buffer);
   const floats = new Float32Array(bytes.length / 4);
   for (let i = 0; i < floats.length; i += 1) floats[i] = view.getFloat32(i * 4, true);
   return floats;

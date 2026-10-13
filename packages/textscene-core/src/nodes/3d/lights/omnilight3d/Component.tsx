@@ -27,13 +27,7 @@ export function OmniLight3D({ node, children }: NodeComponentProps) {
   const userData = usePositionalShadowUserData(properties);
 
   return (
-    <group
-      name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      visible={properties.visible !== false}
-    >
+    <group name={node.name} position={position} rotation={rotation} scale={scale}>
       <pointLight
         ref={lightRef}
         color={color}

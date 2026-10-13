@@ -145,18 +145,3 @@ describe('<OmniLight3D> shadow fit', () => {
     expect(instanceAs<THREE.PointLight>(renderer.scene.findByType('PointLight')).shadow.radius).toBe(1);
   });
 });
-
-describe('<OmniLight3D> visibility', () => {
-  // A hidden light lights nothing (`light_3d.cpp:300` in 4.6.3), and three skips a hidden subtree.
-  it('hides the light when visible is false', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<OmniLight3D node={makeNode({ visible: false })} />);
-    const light = instanceAs<THREE.PointLight>(renderer.scene.findByType('PointLight'));
-    expect(light.parent!.visible).toBe(false);
-  });
-
-  it('shows the light by default', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<OmniLight3D node={makeNode()} />);
-    const light = instanceAs<THREE.PointLight>(renderer.scene.findByType('PointLight'));
-    expect(light.parent!.visible).toBe(true);
-  });
-});

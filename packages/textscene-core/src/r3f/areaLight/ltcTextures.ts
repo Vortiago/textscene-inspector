@@ -40,13 +40,24 @@ function halfFloats(floats: Float32Array): Uint16Array {
   return Uint16Array.from(floats, (value) => THREE.DataUtils.toHalfFloat(value));
 }
 
-/** Puts Godot's tables where three looks for the LTC textures, for every render after the call. */
-export function installLtcTextures(): void {
+/** Godot's tables as three's four textures. Written only by `installLtcTextures`, once. */
+let godotLtcTextures: Required<LtcUniformsLib> | undefined;
+
+function createLtcTextures(): Required<LtcUniformsLib> {
   const { lut1, lut2 } = ltcTables();
-  Object.assign(THREE.UniformsLib as LtcUniformsLib, {
+  return {
     LTC_FLOAT_1: ltcTexture(lut1, THREE.FloatType),
     LTC_FLOAT_2: ltcTexture(lut2, THREE.FloatType),
     LTC_HALF_1: ltcTexture(halfFloats(lut1), THREE.HalfFloatType),
     LTC_HALF_2: ltcTexture(halfFloats(lut2), THREE.HalfFloatType),
-  } satisfies LtcUniformsLib);
+  };
+}
+
+/**
+ * Puts Godot's tables where three looks for the LTC textures, for every render after the call. A
+ * later call puts back the same textures, so a new canvas decodes and uploads nothing again.
+ */
+export function installLtcTextures(): void {
+  godotLtcTextures ??= createLtcTextures();
+  Object.assign(THREE.UniformsLib as LtcUniformsLib, godotLtcTextures);
 }

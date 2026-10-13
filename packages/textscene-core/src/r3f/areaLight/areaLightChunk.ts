@@ -63,6 +63,8 @@ void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in
 	vec3 local = vec3( dot( lightToVertex, normalize( areaWidth ) ), dot( lightToVertex, normalize( areaHeight ) ), dot( lightToVertex, - facing ) );
 	vec3 closest = vec3( clamp( local.x, - halfWidthLength, halfWidthLength ), clamp( local.y, - halfHeightLength, halfHeightLength ), 0.0 );
 	float lightDistance = max( 0.0, length( closest - local ) );
+	// Godot's clusters skip a fragment beyond the range, where the attenuation is zero.
+	if ( lightDistance * falloff.x >= 1.0 ) return;
 	vec3 light = rectAreaLight.color * godotAreaAttenuation( lightDistance, falloff.x, falloff.y );
 
 	vec3 points[ 4 ];

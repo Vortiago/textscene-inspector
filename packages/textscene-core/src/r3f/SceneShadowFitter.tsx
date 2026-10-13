@@ -1,8 +1,9 @@
 /**
- * The scene-level system that fits every declared shadow before each render of a scene. Godot fits
- * a directional shadow to whichever camera renders, and gives an omni or spot light its slot in the
- * atlas of the viewport that renders it. So the fit rides `scene.onBeforeRender`: the main view, a
- * SubViewport pass and a screenshot each get their own fit, whatever order they render in.
+ * The scene-level light pass before each render of a scene: it fits every declared shadow and writes
+ * the area lights' uniforms. Godot fits a directional shadow to whichever camera renders, and gives an
+ * omni or spot light its slot in the atlas of the viewport that renders it. So the pass rides
+ * `scene.onBeforeRender`: the main view, a SubViewport pass and a screenshot each get their own,
+ * whatever order they render in.
  */
 
 import { useEffect } from 'react';
@@ -18,12 +19,13 @@ import { fitScenePositionalShadows } from './positionalShadow/fitScenePositional
 import { installPositionalShadowPass } from './positionalShadow/positionalShadowPass.js';
 import { activeShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas.js';
 import { observeSceneCamera } from './sceneRenderCamera.js';
+import { writeAreaLightUniforms } from './areaLight/areaLightFalloff.js';
 
 /**
- * One render's fits, the directional one first, from one walk of the scene. The directional fit
- * changes no omni or spot light, so the positional fit reads the same walk.
+ * One render's light pass, the directional fit first, from one walk of the scene. The directional
+ * fit changes no omni, spot or area light, so the rest of the pass reads the same walk.
  */
-function fitSceneShadows(
+function prepareSceneLights(
   scene: THREE.Scene,
   camera: THREE.Camera,
   positionalAtlas: ViewportShadowAtlas,
@@ -32,19 +34,20 @@ function fitSceneShadows(
   const lights = sceneLights(scene);
   fitSceneDirectionalShadows(scene, camera, lights);
   fitScenePositionalShadows(lights, camera, positionalAtlas, tickMsec);
+  writeAreaLightUniforms(lights, camera);
 }
 
 /**
- * Fits `scene`'s declared lights before every render of it, until unmount. A render outside any
+ * Runs the light pass before every render of `scene`, until unmount. A render outside any
  * SubViewport pass is the main view's, which takes the root viewport's atlas. Unmount hands each
- * declared directional light its own shading and layers back. Null fits nothing.
+ * declared directional light its own shading and layers back. Null runs nothing.
  */
 export function useSceneShadowFit(scene: THREE.Scene | null): void {
   useEffect(() => {
     if (!scene) return undefined;
     const rootAtlas = new ViewportShadowAtlas(ROOT_POSITIONAL_SHADOW_ATLAS);
     const stopObserving = observeSceneCamera(scene, (camera) =>
-      fitSceneShadows(scene, camera, activeShadowAtlas() ?? rootAtlas, performance.now())
+      prepareSceneLights(scene, camera, activeShadowAtlas() ?? rootAtlas, performance.now())
     );
     return () => {
       stopObserving();

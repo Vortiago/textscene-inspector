@@ -1,15 +1,14 @@
 /**
  * Each area light's Godot terms that three's `RectAreaLight` struct lacks, in two uniform arrays
  * that every lit program reads by the light's index: the view-space direction the light shines in,
- * and its inverse range, attenuation and specular amount. A scene writes them before each render,
- * in the order three gives its rect area lights their slots.
+ * and its inverse range, attenuation and specular amount. The scene's light pass
+ * (`SceneShadowFitter.tsx`) writes them before each render, in the order three gives its rect area
+ * lights their slots.
  */
 
 import * as THREE from 'three';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
-import { sceneLights } from '../directionalShadow/lightLists.js';
 import { installedUniformValue, installLitUniform } from '../shaderPatch/litUniform.js';
-import { observeSceneCamera } from '../sceneRenderCamera.js';
 
 export const AREA_LIGHT_FACINGS = 'rectAreaLightFacings';
 export const AREA_LIGHT_FALLOFFS = 'rectAreaLightFalloffs';
@@ -63,17 +62,13 @@ function initialBuffers(): AreaLightBuffers {
  */
 const buffers: AreaLightBuffers[] = [initialBuffers()];
 
-function newestBuffers(): AreaLightBuffers {
+/** The arrays the next program to compile reads, which `installGodotAreaLight` installs. */
+export function areaLightUniformValues(): AreaLightBuffers {
   return buffers[buffers.length - 1]!;
 }
 
-/** The arrays the next program to compile reads, which `installGodotAreaLight` installs. */
-export function areaLightUniformValues(): AreaLightBuffers {
-  return newestBuffers();
-}
-
 function growTo(count: number): void {
-  const capacity = newestBuffers().facings.length / 3;
+  const capacity = areaLightUniformValues().facings.length / 3;
   if (count <= capacity) return;
   const grown = createBuffers(Math.max(count, capacity * 2));
   buffers.push(grown);
@@ -107,57 +102,31 @@ const scratchFacing = new THREE.Vector3();
 function writeLight(pair: AreaLightBuffers, index: number, light: THREE.RectAreaLight, camera: THREE.Camera) {
   const falloff = readFalloff(light);
   if (!falloff) return;
+  const offset = index * 3;
   scratchFacing
     .set(0, 0, -1)
     .transformDirection(light.matrixWorld)
     .transformDirection(camera.matrixWorldInverse)
-    .toArray(pair.facings, index * 3);
-  pair.falloffs.set(
-    [1 / Math.max(0.001, falloff.range), falloff.attenuation, falloff.specular * 2],
-    index * 3
-  );
+    .toArray(pair.facings, offset);
+  pair.falloffs[offset] = 1 / Math.max(0.001, falloff.range);
+  pair.falloffs[offset + 1] = falloff.attenuation;
+  pair.falloffs[offset + 2] = falloff.specular * 2;
 }
 
 /**
- * Writes the slotted lights among `lights` into every buffer, for a render through `camera`. A
- * light without a falloff keeps its slot and leaves its entries as they were.
+ * Writes the slotted lights among `lights` into the newest buffers, then copies them into each older
+ * pair as far as it holds, for a render through `camera`. A light without a falloff keeps its slot
+ * and leaves its entries as they were.
  */
 export function writeAreaLightUniforms(lights: readonly SceneLight[], camera: THREE.Camera): void {
   const slotted = slottedAreaLights(lights, camera);
   growTo(slotted.length);
+  const newest = areaLightUniformValues();
+  slotted.forEach((light, index) => writeLight(newest, index, light, camera));
   for (const pair of buffers) {
-    const count = Math.min(slotted.length, pair.facings.length / 3);
-    for (let index = 0; index < count; index += 1) writeLight(pair, index, slotted[index]!, camera);
+    if (pair === newest) continue;
+    const length = Math.min(slotted.length * 3, pair.facings.length);
+    pair.facings.set(newest.facings.subarray(0, length));
+    pair.falloffs.set(newest.falloffs.subarray(0, length));
   }
-}
-
-/** The area lights each observed scene holds. Written only by `observeAreaLight`. */
-const observedScenes = new WeakMap<THREE.Scene, { lights: Set<THREE.RectAreaLight>; stop: () => void }>();
-
-/**
- * Writes the uniforms before every render of the scene `light` sits in, until the returned
- * disposer runs and no other light of that scene is observed. A light outside a scene writes
- * nothing, as no render reaches it.
- */
-export function observeAreaLight(light: THREE.RectAreaLight): () => void {
-  const scene = sceneOf(light);
-  if (!scene) return () => {};
-  const observed = observedScenes.get(scene) ?? {
-    lights: new Set<THREE.RectAreaLight>(),
-    stop: observeSceneCamera(scene, (camera) => writeAreaLightUniforms(sceneLights(scene), camera)),
-  };
-  observedScenes.set(scene, observed);
-  observed.lights.add(light);
-  return () => {
-    observed.lights.delete(light);
-    if (observed.lights.size > 0) return;
-    observed.stop();
-    observedScenes.delete(scene);
-  };
-}
-
-function sceneOf(object: THREE.Object3D): THREE.Scene | null {
-  let root = object;
-  while (root.parent) root = root.parent;
-  return (root as THREE.Scene).isScene ? (root as THREE.Scene) : null;
 }

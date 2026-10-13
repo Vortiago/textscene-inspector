@@ -60,6 +60,8 @@ import {
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
+import { spaceFamilyOf } from '../godot/parentSpace.js';
+import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 
 /** Does this subtree contain anything that needs boolean evaluation? */
 function containsCsgShape(node: TscnNode): boolean {
@@ -70,6 +72,15 @@ function containsCsgShape(node: TscnNode): boolean {
 export interface NodeDispatcherProps {
   /** Root nodes from the active scene (typically `scene.scenes.get(rootScene).nodes`). */
   nodes: readonly TscnNode[];
+}
+
+/**
+ * Whether Godot hides `node` itself: a Node3D whose `visible` is false hides its Node3D descendants
+ * too (`node_3d.cpp:1132-1143`). A descendant of another family escapes to the world root first
+ * (`parentSpaceScope.tsx`), so the wrapper hides only what Godot hides.
+ */
+function isHiddenNode3D(node: TscnNode): boolean {
+  return spaceFamilyOf(node.type) === 'Node3D' && (node.properties as Node3DProperties).visible === false;
 }
 
 export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
@@ -206,7 +217,7 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
   // Before the early returns, for rules-of-hooks. Memoized: `allocateNodePaintRange`
   // walks each child's whole subtree, which on every render is quadratic in depth.
   const allocated = useMemo(() => allocateNodePaintRange(paintRange, node), [paintRange, node]);
-  const isHidden = hiddenNodePaths.has(path);
+  const isHidden = hiddenNodePaths.has(path) || isHiddenNode3D(node);
   const inheritedCanvasRoots = useCanvasRootRanges();
   // A CanvasLayer is a canvas of its own, so the roots below it are indexed by
   // its counter over its children (`canvas_layer.cpp:261-267`).

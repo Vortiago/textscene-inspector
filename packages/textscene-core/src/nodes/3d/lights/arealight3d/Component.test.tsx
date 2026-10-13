@@ -106,18 +106,3 @@ describe('<AreaLight3D>', () => {
     expect(group.instance.position.z).toBe(5);
   });
 });
-
-describe('<AreaLight3D> visibility', () => {
-  // A hidden light lights nothing (`light_3d.cpp:300` in 4.6.3), and three skips a hidden subtree.
-  it('hides the light when visible is false', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode({ visible: false })} />);
-    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
-    expect(light.parent!.visible).toBe(false);
-  });
-
-  it('shows the light by default', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode()} />);
-    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
-    expect(light.parent!.visible).toBe(true);
-  });
-});

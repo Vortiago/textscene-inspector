@@ -53,7 +53,6 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
       position={position}
       rotation={rotation}
       scale={scale}
-      visible={properties.visible !== false}
       renderLight={(target) => (
         <>
           <directionalLight

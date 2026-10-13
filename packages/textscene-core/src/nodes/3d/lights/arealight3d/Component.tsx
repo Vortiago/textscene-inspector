@@ -4,14 +4,13 @@
  * shader, and casts no shadow yet.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
-import type * as THREE from 'three';
+import { useMemo } from 'react';
 import type { AreaLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
-import { areaLightUserData, observeAreaLight } from '../../../../r3f/areaLight/areaLightFalloff';
+import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
 
 /**
  * Godot's colour scale: `energy * PI`, negated for a negative light, divided by the rectangle's
@@ -27,7 +26,6 @@ function areaLightIntensity(properties: AreaLight3DProperties): number {
 
 export function AreaLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as AreaLight3DProperties;
-  const lightRef = useRef<THREE.RectAreaLight | null>(null);
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
     [properties]
@@ -41,18 +39,10 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
       }),
     [properties.area_range, properties.area_attenuation, properties.light_specular]
   );
-  useEffect(() => observeAreaLight(lightRef.current!), []);
 
   return (
-    <group
-      name={node.name}
-      position={position}
-      rotation={rotation}
-      scale={scale}
-      visible={properties.visible !== false}
-    >
+    <group name={node.name} position={position} rotation={rotation} scale={scale}>
       <rectAreaLight
-        ref={lightRef}
         color={parseColorToHex(properties.light_color)}
         intensity={areaLightIntensity(properties)}
         width={properties.area_size.x}

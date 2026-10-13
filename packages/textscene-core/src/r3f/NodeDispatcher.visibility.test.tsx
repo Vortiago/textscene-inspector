@@ -3,6 +3,7 @@
  * the dispatcher's wrapper `<group>`, or the object stays rendered.
  */
 import { describe, expect, it } from 'vitest';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
@@ -89,5 +90,62 @@ describe('<NodeDispatcher> visibility wire-up (WI-UX-1)', () => {
     const soloWrapper = findWrappingGroup(renderer.scene, 'Solo');
     expect(soloWrapper).not.toBeNull();
     expect(soloWrapper!.visible).toBe(true);
+  });
+});
+
+/** Whether three's render reaches `object`: it and every ancestor are visible. */
+function isRendered(object: THREE.Object3D): boolean {
+  for (let current: THREE.Object3D | null = object; current; current = current.parent) {
+    if (!current.visible) return false;
+  }
+  return true;
+}
+
+function omniLight(properties: Record<string, unknown>): TscnNode {
+  return {
+    rawProperties: {},
+    name: 'Lamp',
+    type: 'OmniLight3D',
+    children: [],
+    properties: {
+      name: 'Lamp',
+      light_color: 'Color(1, 1, 1, 1)',
+      light_energy: 1,
+      omni_range: 5,
+      omni_attenuation: 1,
+      ...properties,
+    },
+  };
+}
+
+describe("<NodeDispatcher> Godot's `visible`", () => {
+  it('hides a Node3D-derived node whose visible is false', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <NodeDispatcher nodes={[omniLight({ visible: false })]} />
+      </SelectionProvider>
+    );
+    const light = renderer.scene.findByType('PointLight').instance as THREE.PointLight;
+    expect(isRendered(light)).toBe(false);
+  });
+
+  it('shows a Node3D-derived node whose visible is unset', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <NodeDispatcher nodes={[omniLight({})]} />
+      </SelectionProvider>
+    );
+    const light = renderer.scene.findByType('PointLight').instance as THREE.PointLight;
+    expect(isRendered(light)).toBe(true);
+  });
+
+  it('leaves a type outside the Node3D family to its own component', async () => {
+    const node = { ...makeNode('Plain', 'Node'), properties: { name: 'Plain', visible: false } };
+    const renderer = await ReactThreeTestRenderer.create(
+      <SelectionProvider>
+        <NodeDispatcher nodes={[node]} />
+      </SelectionProvider>
+    );
+    expect(findWrappingGroup(renderer.scene, 'Plain')!.visible).toBe(true);
   });
 });
