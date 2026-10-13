@@ -12,8 +12,7 @@ import { sRGBToLinearRGB } from '../../utils/colorSpace';
  * A cube of the sRGB clear `color`, which already carries the background energy. Godot linearises it
  * twice: once as it sets the fog material's `clear_color` (`:2014`), and once more because a sky
  * material converts every Color parameter (`environment/sky.cpp:193`, `material_storage.cpp:801`).
- * Its brightness (`:2045`) applies the energy again, which the caller sets as `backgroundIntensity`.
- * The caller owns the cube and disposes of it.
+ * Its brightness (`:2045`) applies the energy again as `backgroundIntensity`. The caller disposes of it.
  */
 export function clearColorCube(color: Pick<Color, 'r' | 'g' | 'b'>): THREE.CubeTexture {
   const [r, g, b] = sRGBToLinearRGB(...sRGBToLinearRGB(color.r, color.g, color.b));
