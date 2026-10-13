@@ -50,7 +50,7 @@ export const FOG_JITTER_CYCLE_FRAMES = 16;
 export const FOG_HISTORY_MAX_CYCLES = 48;
 
 /** `--quit-after`: a backstop for a bootstrap that never quits, above the fog history's frames. */
-export const RENDER_QUIT_AFTER_FRAMES = 1200;
+const RENDER_QUIT_AFTER_FRAMES = 1200;
 
 /**
  * Default seconds `--particles` advances: zero. Unlike the preview sun, a particle instant has no
@@ -713,8 +713,8 @@ func _render_3d(target: Node) -> void:
 		return
 	_place_camera(target)
 	await _converge()
-	await _converge_fog_history()
-	get_viewport().get_texture().get_image().save_png(OUT)
+	var frame: Image = await _converged_frame()
+	frame.save_png(OUT)
 	_write_bounds(target)
 
 # A 2D scene has nothing to point a camera at: Godot draws it through the
@@ -943,21 +943,22 @@ func _converge() -> void:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
 
-# Volumetric fog with temporal reprojection mixes temporal_reprojection_amount
+# The frame to capture. Temporal volumetric fog mixes temporal_reprojection_amount
 # of a history that starts black (volumetric_fog_process.glsl:683, fog.cpp:482),
-# so _converge() leaves it dark by amount^6. Each frame also jitters by
-# frame % 16 (fog.cpp:1113), so a frame is compared with the one a cycle earlier.
-func _converge_fog_history() -> void:
+# so it draws on until a frame repeats the one a jitter cycle earlier, as each
+# frame jitters by frame % 16 (fog.cpp:1113).
+func _converged_frame() -> Image:
+	var earlier := get_viewport().get_texture().get_image()
 	if not _has_fog_history():
-		return
-	var earlier := get_viewport().get_texture().get_image().get_data()
+		return earlier
 	for _cycle in FOG_HISTORY_MAX_CYCLES:
 		for _frame in FOG_JITTER_CYCLE_FRAMES:
 			await RenderingServer.frame_post_draw
-		var current := get_viewport().get_texture().get_image().get_data()
-		if current == earlier:
-			return
+		var current := get_viewport().get_texture().get_image()
+		if current.get_data() == earlier.get_data():
+			return current
 		earlier = current
+	return earlier
 
 func _has_fog_history() -> bool:
 	var environment := _environment_in_effect()

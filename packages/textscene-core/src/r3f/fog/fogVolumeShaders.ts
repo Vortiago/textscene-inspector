@@ -80,24 +80,28 @@ vec3 areaLightScatter( vec3 view, vec3 eye, vec4 position, vec4 color, vec4 faci
 	vec3 widthAxis = width / widthLength;
 	vec3 heightAxis = height / heightLength;
 	vec3 lightToView = view - position.xyz;
+	float inFront = smoothstep( 0.0, 0.1, dot( facing.xyz, lightToView ) );
+	if ( inFront <= 0.0 ) return vec3( 0.0 );
 	vec2 local = vec2( dot( lightToView, widthAxis ), dot( lightToView, heightAxis ) );
-	vec2 closest = clamp( local, - vec2( widthLength, heightLength ) / 2.0, vec2( widthLength, heightLength ) / 2.0 );
+	vec2 halfSize = vec2( widthLength, heightLength ) / 2.0;
+	vec2 closest = clamp( local, - halfSize, halfSize );
 	vec3 toLight = position.xyz + closest.x * widthAxis + closest.y * heightAxis - view;
-	float lightDistance = length( toLight );
-	vec3 lightDirection = lightDistance < 1e-4 ? facing.xyz : toLight / lightDistance;
-	lightDistance = max( lightDistance, 1.0 );
+	float toLightLength = length( toLight );
+	vec3 lightDirection = toLightLength < 1e-4 ? facing.xyz : toLight / toLightLength;
+	float lightDistance = max( toLightLength, 1.0 );
 	if ( lightDistance * facing.w >= 1.0 ) return vec3( 0.0 );
 	float attenuation = omniAttenuation( lightDistance, position.w, color.w );
+	vec3 halfWidth = width / 2.0;
+	vec3 halfHeight = height / 2.0;
 	vec3 points[ 4 ];
-	points[ 0 ] = position.xyz - width / 2.0 - height / 2.0 - view;
-	points[ 1 ] = position.xyz + width / 2.0 - height / 2.0 - view;
-	points[ 2 ] = position.xyz + width / 2.0 + height / 2.0 - view;
-	points[ 3 ] = position.xyz - width / 2.0 + height / 2.0 - view;
-	float inFront = smoothstep( 0.0, 0.1, dot( facing.xyz, lightToView ) );
+	points[ 0 ] = position.xyz - halfWidth - halfHeight - view;
+	points[ 1 ] = position.xyz + halfWidth - halfHeight - view;
+	points[ 2 ] = position.xyz + halfWidth + halfHeight - view;
+	points[ 3 ] = position.xyz - halfWidth + halfHeight - view;
 	// ltc_evaluate_diff builds its basis from a fixed axis, not the view (area_lights_inc.glsl:348).
 	vec3 basisAxis = abs( lightDirection.z ) < 0.7 ? vec3( 0.0, 0.0, - 1.0 ) : vec3( 1.0, 0.0, 0.0 );
 	float diffuse = godotLtcIntegral( lightDirection, basisAxis, mat3( 1.0 ), points ) * ( 2.0 * PI );
-	float cosTheta = dot( toLight, toLight ) > 1e-4 ? dot( normalize( toLight ), eye ) : 0.0;
+	float cosTheta = toLightLength > 1e-2 ? dot( lightDirection, eye ) : 0.0;
 	return color.rgb * attenuation * diffuse * inFront * henyey_greenstein( cosTheta, phaseG );
 }
 

@@ -7,7 +7,7 @@ import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import * as THREE from 'three';
 import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
-import { fireSceneRender } from '../../../../r3f/testing/fireSceneRender';
+import { fireSceneRenderFrom } from '../../../../r3f/testing/fireSceneRender';
 import { readFogLightDeclaration } from '../../../../r3f/fog/fogLightDeclaration';
 
 function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
@@ -30,15 +30,6 @@ function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
     children: [],
     properties: props,
   };
-}
-
-/** Runs the hooks a render of the test scene runs, through a camera `distance` along +Z. */
-function renderFrom(scene: THREE.Scene, distance: number): void {
-  const camera = new THREE.PerspectiveCamera();
-  camera.position.set(0, 0, distance);
-  camera.updateMatrixWorld();
-  scene.updateMatrixWorld();
-  fireSceneRender(scene, camera);
 }
 
 describe('<AreaLight3D>', () => {
@@ -119,7 +110,7 @@ describe('<AreaLight3D>', () => {
     );
     const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
 
-    renderFrom(renderer.scene.instance as THREE.Scene, 12);
+    fireSceneRenderFrom(renderer.scene.instance as THREE.Scene, 12);
     // smoothstep(0, 1, 1 - (12 - 10) / 4) is 0.5.
     expect(light.intensity).toBeCloseTo(0.5 * LIGHT_INTENSITY_SCALE, 6);
   });
@@ -132,7 +123,7 @@ describe('<AreaLight3D>', () => {
     );
     const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
 
-    renderFrom(renderer.scene.instance as THREE.Scene, 50);
+    fireSceneRenderFrom(renderer.scene.instance as THREE.Scene, 50);
     expect(light.intensity).toBe(0);
   });
 

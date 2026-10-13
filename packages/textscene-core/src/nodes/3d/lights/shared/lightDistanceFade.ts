@@ -28,32 +28,33 @@ function lightDistanceFade(properties: PositionalLightProperties): LightDistance
   };
 }
 
-/** A light Godot fades by distance. An area light casts no shadow here, so it fades only its light. */
+/** A light Godot fades by distance. */
 type FadingLight = THREE.PointLight | THREE.SpotLight | THREE.RectAreaLight;
 
-/** What the light draws with no fade. */
+/** What the light draws with no fade. An area light has no shadow, so it passes no opacity. */
 interface UnfadedLight {
   intensity: number;
-  shadowOpacity: number;
+  shadowOpacity?: number;
+}
+
+function writeLight(light: FadingLight, intensity: number, shadowOpacity: number): void {
+  light.intensity = intensity;
+  if ('shadow' in light) light.shadow.intensity = shadowOpacity;
 }
 
 /** Writes `light`'s faded intensity and shadow intensity for a render through `camera`. */
 function fadeLight(
   light: FadingLight,
   fade: LightDistanceFade,
-  unfaded: UnfadedLight,
+  { intensity, shadowOpacity }: Required<UnfadedLight>,
   camera: THREE.Camera
 ): void {
   const distance = cameraDistance(light, camera);
-  light.intensity = unfaded.intensity * distanceFade(fade.begin, fade.length, distance);
-  if ('shadow' in light) {
-    light.shadow.intensity = unfaded.shadowOpacity * distanceFade(fade.shadow, fade.length, distance);
-  }
-}
-
-function restoreLight(light: FadingLight, { intensity, shadowOpacity }: UnfadedLight): void {
-  light.intensity = intensity;
-  if ('shadow' in light) light.shadow.intensity = shadowOpacity;
+  writeLight(
+    light,
+    intensity * distanceFade(fade.begin, fade.length, distance),
+    shadowOpacity * distanceFade(fade.shadow, fade.length, distance)
+  );
 }
 
 /**
@@ -63,7 +64,7 @@ function restoreLight(light: FadingLight, { intensity, shadowOpacity }: UnfadedL
 export function useLightDistanceFade(
   lightRef: RefObject<FadingLight | null>,
   properties: PositionalLightProperties,
-  { intensity, shadowOpacity }: UnfadedLight
+  { intensity, shadowOpacity = 0 }: UnfadedLight
 ): void {
   const scene = useThree((state) => state.scene);
   const fade = useMemo(() => lightDistanceFade(properties), [properties]);
@@ -75,7 +76,7 @@ export function useLightDistanceFade(
     const stop = observeSceneCamera(scene, (camera) => fadeLight(light, fade, unfaded, camera));
     return () => {
       stop();
-      restoreLight(light, unfaded);
+      writeLight(light, intensity, shadowOpacity);
     };
   }, [scene, lightRef, fade, intensity, shadowOpacity]);
 }

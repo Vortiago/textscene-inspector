@@ -60,6 +60,26 @@ function isRectAreaLight(light: THREE.Light): light is THREE.RectAreaLight {
   return (light as THREE.RectAreaLight).isRectAreaLight === true;
 }
 
+/** An area light's local axes: it faces -Z, and its width runs along +X and its height along +Y. */
+export const AREA_LIGHT_AXES = {
+  facing: new THREE.Vector3(0, 0, -1),
+  width: new THREE.Vector3(1, 0, 0),
+  height: new THREE.Vector3(0, 1, 0),
+} as const;
+
+/** Writes `light`'s `local` axis into `target` as a unit direction in `camera`'s view space. */
+export function areaLightViewAxis(
+  target: THREE.Vector3,
+  local: THREE.Vector3,
+  light: THREE.RectAreaLight,
+  camera: THREE.Camera
+): THREE.Vector3 {
+  return target
+    .copy(local)
+    .transformDirection(light.matrixWorld)
+    .transformDirection(camera.matrixWorldInverse);
+}
+
 const scratchFacing = new THREE.Vector3();
 
 /**
@@ -74,11 +94,10 @@ function writeLight(
   camera: THREE.Camera
 ) {
   const offset = index * 3;
-  scratchFacing
-    .set(0, 0, -1)
-    .transformDirection(light.matrixWorld)
-    .transformDirection(camera.matrixWorldInverse)
-    .toArray(set[AREA_LIGHT_FACINGS], offset);
+  areaLightViewAxis(scratchFacing, AREA_LIGHT_AXES.facing, light, camera).toArray(
+    set[AREA_LIGHT_FACINGS],
+    offset
+  );
   const falloff = readAreaLightFalloff(light);
   if (!falloff) return;
   const falloffs = set[AREA_LIGHT_FALLOFFS];

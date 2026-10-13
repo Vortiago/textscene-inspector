@@ -32,7 +32,6 @@ import {
   PARTICLES_PROCESS_DEFAULT,
   parseArgs,
   REFERENCE_FIXED_FPS,
-  RENDER_QUIT_AFTER_FRAMES,
   renderArgv,
   renderingMethodFallbackMessage,
   requestedRenderingMethod,
@@ -863,8 +862,14 @@ describe('the fog history fits inside the render pass', () => {
     const argv = renderArgv('/tmp/work');
     const quitAfter = Number(argv[argv.indexOf('--quit-after') + 1]);
 
-    expect(quitAfter).toBe(RENDER_QUIT_AFTER_FRAMES);
     expect(quitAfter).toBeGreaterThan(FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES);
+  });
+
+  it('cycles over the jitters the previewer averages', async () => {
+    const { VOLUMETRIC_FOG_TEMPORAL_JITTERS } =
+      await import('../../packages/textscene-core/src/godot/volumetricFog.ts');
+
+    expect(FOG_JITTER_CYCLE_FRAMES).toBe(VOLUMETRIC_FOG_TEMPORAL_JITTERS.length);
   });
 
   it('gives the bootstrap the cycle length and cap (edge case: the GDScript holds its own copy)', () => {

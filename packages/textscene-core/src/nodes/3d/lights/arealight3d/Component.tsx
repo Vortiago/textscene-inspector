@@ -11,11 +11,10 @@ import type { AreaLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { lightIntensity, lightShadowOpacity } from '../shared/lightStrength';
+import { lightFogEnergy, lightIntensity } from '../shared/lightStrength';
 import { useLightDistanceFade } from '../shared/lightDistanceFade';
 import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
-import { LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT } from '../../../../godot/volumetricFog';
 
 /**
  * Godot's colour scale: `energy * PI`, negated for a negative light, divided by the rectangle's
@@ -36,8 +35,8 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
   );
   const lightRef = useRef<THREE.RectAreaLight>(null);
   const intensity = areaLightIntensity(properties);
-  useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity: lightShadowOpacity(properties) });
-  const fogEnergy = properties.light_volumetric_fog_energy ?? LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT;
+  useLightDistanceFade(lightRef, properties, { intensity });
+  const fogEnergy = lightFogEnergy(properties);
   const userData = useMemo(
     () => ({
       ...areaLightUserData({

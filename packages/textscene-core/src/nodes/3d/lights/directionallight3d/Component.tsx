@@ -22,13 +22,13 @@ import { LightWithTarget } from '../shared/lightShared';
 import { DirectionalLightGizmo } from '../shared/lightHelpers';
 import {
   directionalLightSpecularAmount,
+  lightFogEnergy,
   lightIntensity,
   lightShadowOpacity,
   signedLightEnergy,
 } from '../shared/lightStrength';
 import { lightSpecularUserData } from '../../../../r3f/lightSpecular/lightSpecular';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
-import { LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT } from '../../../../godot/volumetricFog';
 
 export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as DirectionalLight3DProperties;
@@ -43,7 +43,7 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   const intensity = directionalLightLightsSurfaces(skyMode) ? lightIntensity(properties) : 0;
   const skyEnergy = signedLightEnergy(properties);
   const shadow = useMemo(() => directionalShadowDeclaration(properties), [properties]);
-  const fogEnergy = properties.light_volumetric_fog_energy ?? LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT;
+  const fogEnergy = lightFogEnergy(properties);
   const specularAmount = directionalLightSpecularAmount(properties);
   const userData = useMemo(
     () => ({

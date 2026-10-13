@@ -13,7 +13,7 @@ import {
 } from '../../godot/volumetricFog.js';
 import { visibleInTree } from '../visibleInTree.js';
 import { readFogLightDeclaration } from './fogLightDeclaration.js';
-import { readAreaLightFalloff } from '../areaLight/areaLightFalloff.js';
+import { AREA_LIGHT_AXES, areaLightViewAxis, readAreaLightFalloff } from '../areaLight/areaLightFalloff.js';
 
 /**
  * Each row's RGBA texels: position and inverse range, colour and distance decay, direction and
@@ -125,24 +125,22 @@ function writeArea(light: THREE.RectAreaLight, camera: THREE.Camera): boolean {
   row[3] = 1 / range;
   // The fog's falloff takes the attenuation less one (4.7.2 `volumetric_fog_process.glsl:647`).
   row[7] = falloff.attenuation - 1;
-  writeViewAxis(8, light, 0, 0, -1, 1, camera);
+  writeViewAxis(8, light, AREA_LIGHT_AXES.facing, 1, camera);
   row[11] = 1 / (range + Math.hypot(light.width, light.height) / 2);
-  writeViewAxis(16, light, 1, 0, 0, light.width, camera);
-  writeViewAxis(20, light, 0, 1, 0, light.height, camera);
+  writeViewAxis(16, light, AREA_LIGHT_AXES.width, light.width, camera);
+  writeViewAxis(20, light, AREA_LIGHT_AXES.height, light.height, camera);
   return true;
 }
 
-/** The light's local axis (`x`, `y`, `z`) in view space, `length` long, at `offset` of the row. */
+/** The light's `local` axis in view space, `length` long, at `offset` of the row. */
 function writeViewAxis(
   offset: number,
-  light: THREE.Light,
-  x: number,
-  y: number,
-  z: number,
+  light: THREE.RectAreaLight,
+  local: THREE.Vector3,
   length: number,
   camera: THREE.Camera
 ): void {
-  axis.set(x, y, z).transformDirection(light.matrixWorld).transformDirection(camera.matrixWorldInverse);
+  areaLightViewAxis(axis, local, light, camera);
   writeTriple(offset, axis.x * length, axis.y * length, axis.z * length);
 }
 
