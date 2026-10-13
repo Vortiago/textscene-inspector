@@ -6,7 +6,7 @@ renders_as: a THREE PMREM environment + Godot's roughest radiance layers + backg
 
 # Sky
 
-A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background, a PMREM-filtered environment map for sharp reflections and Godot's roughest radiance layers, baked as Godot bakes them, for rough reflections and the ambient light.
+A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. A PMREM-filtered environment map gives sharp reflections. Godot's roughest radiance layers, baked as Godot bakes them, give rough reflections and the ambient light.
 
 ## ProceduralSkyMaterial
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
