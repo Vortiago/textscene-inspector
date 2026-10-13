@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://unitvolfogspotbias"]
 
 ; The volumetric fog's spot shadow bias: a SpotLight3D pointing down with shadow_bias 3 lights the
-; fog under a small box. Godot pushes each fog cell away from the light by the bias, where a surface's
-; bias pulls it towards the light, so the whole cone of fog darkens. No other golden sets a spot
+; fog under a small box. Godot pushes each fog cell away from the light by the bias, so the whole cone
+; of fog darkens. A surface's bias pulls it towards the light instead. No other golden sets a spot
 ; shadow_bias in volumetric fog. The zero-energy sun keeps the editor's preview sun out (ADR-0025).
 
 [sub_resource type="Environment" id="Environment_1"]

@@ -49,7 +49,7 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 ## Volumetric fog shadow
 <!-- compare: image=unit-volumetric-fog-shadow status=done fixture=unit-volumetric-fog-shadow.tscn -->
 
-A thin box under a DirectionalLight3D tilted 60° with `shadow_enabled`, in volumetric fog of density 0.1 over a colour background. The fog under the box stays dark where the box blocks the light, and the shadow's edge in the fog matches Godot. An OmniLight3D or a SpotLight3D that casts shadows darkens the fog behind its casters in the same way.
+A thin box under a DirectionalLight3D tilted 60° with `shadow_enabled`, in volumetric fog of density 0.1 over a colour background. The fog under the box stays dark where the box blocks the light, and the shadow's edge in the fog matches Godot. An OmniLight3D or a SpotLight3D that casts shadows darkens the fog behind its casters in the same way. A SpotLight3D's `shadow_bias` pushes each fog cell away from the light, as in Godot, so a large bias darkens its whole cone.
 
 ## Linting
 
