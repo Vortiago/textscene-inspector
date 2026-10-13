@@ -41,7 +41,7 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 ## Volumetric fog
 <!-- compare: image=unit-world-environment-basic status=limitation fixture=unit-world-environment-basic.tscn -->
 
-`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera shows the mean of Godot's 16 jitters, which Godot converges to.
+`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera shows the mean of Godot's 16 jitters, which Godot converges to. Under either fog, Godot converts a colour background to linear twice, so the background is darker than with no fog, and the previewer matches it.
 
 - **Not drawn** `volumetric_fog_gi_inject` adds no light, because the previewer draws no VoxelGI or SDFGI.
 - **Not drawn** A FogVolume adds no density, colour or emission to the fog.
@@ -49,7 +49,7 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 ## Volumetric fog shadow
 <!-- compare: image=unit-volumetric-fog-shadow status=done fixture=unit-volumetric-fog-shadow.tscn -->
 
-A thin box under a DirectionalLight3D tilted 60° with `shadow_enabled`, in volumetric fog of density 0.1 over a colour background. The fog under the box stays dark where the box blocks the light, and the shadow's edge in the fog matches Godot. An OmniLight3D or a SpotLight3D that casts shadows darkens the fog behind its casters in the same way.
+A thin box under a DirectionalLight3D tilted 60° with `shadow_enabled`, in volumetric fog of density 0.1 over a colour background. The fog under the box stays dark where the box blocks the light, and the shadow's edge in the fog matches Godot. An OmniLight3D or a SpotLight3D that casts shadows darkens the fog behind its casters in the same way. A SpotLight3D's `shadow_bias` pushes each fog cell away from the light, as in Godot, so a large bias darkens its whole cone.
 
 ## Linting
 

@@ -8,14 +8,23 @@ function faceTexels(cube: THREE.CubeTexture): number[][] {
 }
 
 describe('clearColorCube', () => {
-  it('fills all six faces with the linear colour, opaque', () => {
-    const cube = clearColorCube(new THREE.Color(0.25, 0.5, 2));
+  it('fills all six faces with the sRGB colour linearised twice, opaque', () => {
+    const cube = clearColorCube({ r: 0.5, g: 1, b: 0 });
 
-    expect(faceTexels(cube)).toEqual(Array.from({ length: 6 }, () => [0.25, 0.5, 2, 1]));
+    for (const [r, g, b, a] of faceTexels(cube)) {
+      expect(r).toBeCloseTo(0.0376, 4);
+      expect([g, b, a]).toEqual([1, 0, 1]);
+    }
+  });
+
+  it('linearises a channel below the knee twice through its linear segment (edge case)', () => {
+    const r = faceTexels(clearColorCube({ r: 0.02, g: 0, b: 0 }))[0]?.[0];
+
+    expect(r).toBeCloseTo(0.02 / 12.92 / 12.92, 8);
   });
 
   it('samples as linear float texels with no mipmaps, so a bright channel is not clamped', () => {
-    const cube = clearColorCube(new THREE.Color(4, 0, 0));
+    const cube = clearColorCube({ r: 4, g: 0, b: 0 });
 
     expect(cube).toMatchObject({
       type: THREE.FloatType,
@@ -27,7 +36,7 @@ describe('clearColorCube', () => {
   });
 
   it('builds an independent cube per call, which each caller disposes (edge case)', () => {
-    const color = new THREE.Color(0.1, 0.2, 0.3);
+    const color = { r: 0.1, g: 0.2, b: 0.3 };
 
     expect(clearColorCube(color)).not.toBe(clearColorCube(color));
   });
