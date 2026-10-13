@@ -49,13 +49,7 @@ export function PathFollow3D({ node, children }: NodeComponentProps) {
   }
 
   return (
-    <group
-      name={node.name}
-      position={follow.position}
-      quaternion={follow.quaternion}
-      scale={follow.scale}
-      visible={props.visible !== false}
-    >
+    <group name={node.name} position={follow.position} quaternion={follow.quaternion} scale={follow.scale}>
       {dot}
       {children}
     </group>

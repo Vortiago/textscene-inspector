@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
-import { GenericNodeFallback } from '../../../../r3f/internal/generic-node-fallback/Component';
+import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
+import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
+import { visibleInTree } from '../../../../r3f/visibleInTree';
 import { parseCSGCombiner3D } from './parser';
 import './index.r3f';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
@@ -37,28 +39,23 @@ describe('<CSGCombiner3D>', () => {
     expect(renderer.scene.findByProps({ name: 'child' })).toBeDefined();
   });
 
-  it('hides its subtree when visible = false', async () => {
+  it('hides its subtree through the dispatcher when visible = false', async () => {
     // The vendored witness: ragdoll_physics.tscn:92 hides its combiner because the same
     // geometry is already baked into sibling nodes.
+    const child: TscnNode = {
+      rawProperties: {},
+      name: 'child',
+      type: 'Node3D',
+      children: [],
+      properties: { name: 'child' },
+    };
     const renderer = await ReactThreeTestRenderer.create(
-      <CSGCombiner3D node={makeNode({ visible: 'false' })}>
-        <mesh name="child" />
-      </CSGCombiner3D>
+      <SelectionProvider>
+        <NodeDispatcher nodes={[makeNode({ visible: 'false' }, [child])]} />
+      </SelectionProvider>
     );
-    expect((renderer.scene.findByType('Group').instance as THREE.Group).visible).toBe(false);
-    // The child stays mounted, and three hides the subtree through the group. Unmounting it
-    // would break the subtree-conformance contract.
-    expect(renderer.scene.findByProps({ name: 'child' })).toBeDefined();
-  });
-
-  it('is why registering the type matters: the generic fallback ignores visible', async () => {
-    // GenericNodeFallback renders a group with no `visible` prop, so a hidden combiner's
-    // children keep drawing there.
-    const node = makeNode({ visible: 'false' });
-    const fallback = await ReactThreeTestRenderer.create(<GenericNodeFallback node={node} />);
-    expect((fallback.scene.findByType('Group').instance as THREE.Group).visible).toBe(true);
-
-    const registered = await ReactThreeTestRenderer.create(<CSGCombiner3D node={node} />);
-    expect((registered.scene.findByType('Group').instance as THREE.Group).visible).toBe(false);
+    // The child stays mounted, and three hides the subtree through the dispatcher's group.
+    // Unmounting it would break the subtree-conformance contract.
+    expect(visibleInTree(renderer.scene.findByProps({ name: 'child' }).instance)).toBe(false);
   });
 });

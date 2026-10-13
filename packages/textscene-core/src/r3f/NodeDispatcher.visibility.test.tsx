@@ -9,6 +9,7 @@ import type { TscnNode } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { HiddenSeeder } from './testing/HiddenSeeder';
+import { visibleInTree } from './visibleInTree';
 
 import './nodes/index';
 
@@ -93,14 +94,6 @@ describe('<NodeDispatcher> visibility wire-up (WI-UX-1)', () => {
   });
 });
 
-/** Whether three's render reaches `object`: it and every ancestor are visible. */
-function isRendered(object: THREE.Object3D): boolean {
-  for (let current: THREE.Object3D | null = object; current; current = current.parent) {
-    if (!current.visible) return false;
-  }
-  return true;
-}
-
 function omniLight(properties: Record<string, unknown>): TscnNode {
   return {
     rawProperties: {},
@@ -126,7 +119,7 @@ describe("<NodeDispatcher> Godot's `visible`", () => {
       </SelectionProvider>
     );
     const light = renderer.scene.findByType('PointLight').instance as THREE.PointLight;
-    expect(isRendered(light)).toBe(false);
+    expect(visibleInTree(light)).toBe(false);
   });
 
   it('shows a Node3D-derived node whose visible is unset', async () => {
@@ -136,7 +129,7 @@ describe("<NodeDispatcher> Godot's `visible`", () => {
       </SelectionProvider>
     );
     const light = renderer.scene.findByType('PointLight').instance as THREE.PointLight;
-    expect(isRendered(light)).toBe(true);
+    expect(visibleInTree(light)).toBe(true);
   });
 
   it('leaves a type outside the Node3D family to its own component', async () => {
