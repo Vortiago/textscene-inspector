@@ -15,7 +15,7 @@ const areaSizeValidator = v.vector2('area_size', {
   components: (parts) =>
     parts.some((component) => component < 0)
       ? {
-          message: `Property 'area_size' components must be >= 0; Godot's setter clamps a negative component up to 0 (4.7.2: light_3d.cpp:724), got: Vector2(${parts.join(', ')})`,
+          message: `Property 'area_size' components must be >= 0. Godot's setter clamps a negative component up to 0 (4.7.2: light_3d.cpp:724), got: Vector2(${parts.join(', ')})`,
         }
       : null,
   accepts: 'Vector2(x, y), each >= 0',
