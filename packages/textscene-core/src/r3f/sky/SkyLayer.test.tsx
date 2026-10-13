@@ -150,7 +150,7 @@ describe('SkyLayer', () => {
 
     layersAfterRender(renderer);
 
-    expect(skyContribution.x).toBe(0.25);
+    expect(skyContribution[0]).toBe(0.25);
   });
 
   it('stops showing its layers when it unmounts', async () => {

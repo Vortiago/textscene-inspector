@@ -16,8 +16,6 @@ import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk.j
 import { installGodotPositionalShadow } from '../positionalShadow/positionalShadowChunk.js';
 
 export function installShaderPatches(): void {
-  // The specular patch first: both add fields right after `struct PhysicalMaterial {`, and the
-  // light function finds itself installed only while its fields still follow that line.
   installGodotIndirectSpecular();
   installGodotLightFunction();
   installGodotLightAttenuation();

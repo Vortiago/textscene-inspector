@@ -42,7 +42,7 @@ describe('installGodotSkyLighting', () => {
 
   it('samples the last layer along the world normal, turned and scaled as the PMREM is', () => {
     expect(functionBody(patchedChunks().envmap, 'godotIBLIrradiance')).toContain(
-      `PI * textureCube( ${SKY_LAST_LAYER_UNIFORM}, envMapRotation * worldNormal ).rgb * envMapIntensity * ${SKY_CONTRIBUTION_UNIFORM}.x`
+      `PI * textureCube( ${SKY_LAST_LAYER_UNIFORM}, envMapRotation * worldNormal ).rgb * envMapIntensity * ${SKY_CONTRIBUTION_UNIFORM}`
     );
   });
 

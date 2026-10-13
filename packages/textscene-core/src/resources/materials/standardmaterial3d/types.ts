@@ -23,6 +23,15 @@ export interface Heightmap {
   readsHeight: boolean;
 }
 
+/** Godot's height mapping defaults (`material.cpp:3952`, `:3995-3997`). */
+export const HEIGHTMAP_DEFAULTS: Heightmap = {
+  scale: 5,
+  isDeep: false,
+  layers: [8, 32],
+  flip: [1, 1],
+  readsHeight: false,
+};
+
 // One Color declaration repo-wide, re-exported here because this slice's
 // consumers (sky, environment, preview lighting) import it from this module.
 export type { Color } from '../../../utils/colorParser';

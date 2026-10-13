@@ -52,12 +52,6 @@ describe('skyLastLayerMap', () => {
   });
 });
 
-describe('skyContribution', () => {
-  it('is its own clone, so every material reads the share a sky shows', () => {
-    expect(skyContribution.clone()).toBe(skyContribution);
-  });
-});
-
 describe('showSkyLayers', () => {
   it('puts the rough layers in the mips of one cube and the last in the other, and uploads them', () => {
     const sky = skyLayers(0.5);
@@ -74,7 +68,7 @@ describe('showSkyLayers', () => {
   it("shows the sky's share of the ambient", () => {
     showSkyLayers(skyLayers(0.5), 0.3);
 
-    expect(skyContribution.x).toBe(0.3);
+    expect(skyContribution[0]).toBeCloseTo(0.3);
   });
 
   it('shows a new share with layers the cubes already hold (edge case)', () => {
@@ -83,7 +77,7 @@ describe('showSkyLayers', () => {
 
     showSkyLayers(sky, 0);
 
-    expect(skyContribution.x).toBe(0);
+    expect(skyContribution[0]).toBe(0);
   });
 
   it('uploads nothing for the layers the cubes already hold (edge case)', () => {

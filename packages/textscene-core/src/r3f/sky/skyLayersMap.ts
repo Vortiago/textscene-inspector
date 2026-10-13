@@ -90,25 +90,15 @@ export const skyRoughLayersMap: THREE.CubeTexture =
 export const skyLastLayerMap: THREE.CubeTexture =
   installedCube(SKY_LAST_LAYER_UNIFORM) ?? new SkyLayerTexture([LAST_LAYER_FACE_SIZE]);
 
+const installedContribution = installedUniformValue(SKY_CONTRIBUTION_UNIFORM);
+
 /**
- * A vector that is its own clone, so every material reads the share the scene being rendered shows,
- * as `SkyLayerTexture` does for the layers. three's uniform setter takes a float only as a number,
- * which a clone copies.
+ * `ambient_light_sky_contribution` of the scene being rendered. `UniformsUtils.cloneUniforms` keeps
+ * a typed array by reference (three r186 `UniformsUtils.js:43-64`), so every material reads this
+ * buffer. After a dev server reloads this module, it is the buffer the earlier evaluation installed.
  */
-class SharedVector2 extends THREE.Vector2 {
-  override clone(): this {
-    return this;
-  }
-}
-
-function installedVector(uniform: string): THREE.Vector2 | null {
-  const installed = installedUniformValue(uniform);
-  return installed instanceof THREE.Vector2 ? installed : null;
-}
-
-/** `ambient_light_sky_contribution` of the scene being rendered, in `x`. */
-export const skyContribution: THREE.Vector2 =
-  installedVector(SKY_CONTRIBUTION_UNIFORM) ?? new SharedVector2(1, 0);
+export const skyContribution =
+  installedContribution instanceof Float32Array ? installedContribution : Float32Array.of(1);
 
 /** The layers the cubes hold now. Written only by `showSkyLayers`. */
 let shownLayers: SkyLayers | null = null;
@@ -119,7 +109,7 @@ let shownLayers: SkyLayers | null = null;
  * writes nothing.
  */
 export function showSkyLayers(layers: SkyLayers, contribution: number): void {
-  skyContribution.x = contribution;
+  skyContribution[0] = contribution;
   if (layers === shownLayers) return;
   shownLayers = layers;
   showLayers(skyRoughLayersMap, layers.rough);

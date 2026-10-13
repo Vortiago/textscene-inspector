@@ -18,7 +18,7 @@ export const SKY_ROUGHNESS_LAYERS_DEFAULT = 8;
 
 /**
  * The default of `rendering/reflections/sky_reflections/ggx_samples`
- * (`servers/rendering/rendering_server.cpp:3730`).
+ * (`servers/rendering/rendering_server.cpp:3730`), under the filter's cap of 64.
  */
 const SKY_GGX_SAMPLES_DEFAULT = 32;
 
@@ -90,14 +90,13 @@ export interface LayerSample {
 
 /**
  * The GGX samples that filter radiance layer `layer`, at the roughness `layer / 7` that `sky.cpp:473`
- * passes and `copy_effects.cpp:1357-1358` squares, with at most 64 samples. Only the samples above
+ * passes and `copy_effects.cpp:1357-1358` squares. Only the samples above
  * the horizon survive (`octmap_roughness.glsl:32-60`), and the filter weighs each by its cosine.
  * Layer 0 copies the radiance and takes no samples.
  */
 export function layerSamples(layout: SkyOctmapLayout, layer: number): LayerSample[] {
   const roughness = (layer / (SKY_ROUGHNESS_LAYERS_DEFAULT - 1)) ** 2;
-  const sampleCount = Math.min(SKY_GGX_SAMPLES_DEFAULT, 64);
-  const scaledSamples = Math.max(Math.floor(sampleCount * 4 * roughness), 4);
+  const scaledSamples = Math.max(Math.floor(SKY_GGX_SAMPLES_DEFAULT * 4 * roughness), 4);
   const total = Math.max(1, Math.floor(scaledSamples / WORKGROUP_SAMPLES)) * WORKGROUP_SAMPLES;
   const roughness4 = roughness ** 4;
   const solidAngleTexel = (4 * Math.PI) / (layout.size * layout.size);

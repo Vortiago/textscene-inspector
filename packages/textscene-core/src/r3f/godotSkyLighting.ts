@@ -35,7 +35,7 @@ const LAST_LAYER = SKY_ROUGHNESS_LAYERS_DEFAULT - 1;
 const GODOT_IBL_IRRADIANCE = /* glsl */ `vec3 godotIBLIrradiance( const in vec3 normal ) {
 
 		vec3 worldNormal = transformNormalByInverseViewMatrix( normal, viewMatrix );
-		return PI * textureCube( ${SKY_LAST_LAYER_UNIFORM}, envMapRotation * worldNormal ).rgb * envMapIntensity * ${SKY_CONTRIBUTION_UNIFORM}.x;
+		return PI * textureCube( ${SKY_LAST_LAYER_UNIFORM}, envMapRotation * worldNormal ).rgb * envMapIntensity * ${SKY_CONTRIBUTION_UNIFORM};
 
 	}
 
@@ -88,7 +88,7 @@ const GODOT_IBL_RADIANCE = /* glsl */ `vec3 godotIBLRadiance( const in vec3 view
 
 const SKY_LAYER_UNIFORMS = /* glsl */ `uniform samplerCube ${SKY_ROUGH_LAYERS_UNIFORM};
 	uniform samplerCube ${SKY_LAST_LAYER_UNIFORM};
-	uniform vec2 ${SKY_CONTRIBUTION_UNIFORM};
+	uniform float ${SKY_CONTRIBUTION_UNIFORM};
 
 	`;
 

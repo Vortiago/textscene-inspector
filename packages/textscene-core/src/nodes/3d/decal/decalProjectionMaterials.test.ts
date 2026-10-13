@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { DecalProjectionMaterials } from './decalProjectionMaterials';
-import { lightModesUserData } from '../../../r3f/godotLightFunction';
+import { lightModesUserData } from '../../../r3f/lightModes';
 import { DiffuseMode } from '../../../godot/diffuseMode';
 import { SpecularMode } from '../../../godot/specularMode';
 import {

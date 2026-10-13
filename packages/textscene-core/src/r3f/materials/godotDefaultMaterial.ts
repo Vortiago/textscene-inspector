@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { DiffuseMode } from '../../godot/diffuseMode';
 import { SpecularMode } from '../../godot/specularMode';
-import type { LightModes } from '../godotLightFunction';
+import type { LightModes } from '../lightModes';
 
 // Per surface: `RenderForwardClustered::_geometry_instance_update` sends every
 // surface index through the fallback, as its INSTANCE_MULTIMESH branch does for a

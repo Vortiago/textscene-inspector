@@ -6,15 +6,9 @@
 
 import * as THREE from 'three';
 import type { IUniform, Material, MeshStandardMaterial } from 'three';
-import {
-  composeInjections,
-  defining,
-  type ProgramInjection,
-  type ProgramShader,
-} from '../materialProgramInputs';
-import { UnshadedMaterial } from './unshadedMaterial';
+import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 import { recordedOn } from './recordedOnMaterial';
-import type { Heightmap } from '../../resources/materials/standardmaterial3d/types';
+import { HEIGHTMAP_DEFAULTS, type Heightmap } from '../../resources/materials/standardmaterial3d/types';
 
 /** The last declaration before `main`, after the normal and the varyings the parallax reads. */
 const PARS_ANCHOR = '#include <clipping_planes_pars_fragment>';
@@ -135,18 +129,9 @@ export function heightmapUserData(heightmap: Heightmap | null): Record<string, u
   return heightmap ? { [HEIGHTMAP_KEY]: heightmap } : {};
 }
 
-/** Godot's defaults (`material.cpp:3952`, `:3995-3997`), for a material this derivation did not build. */
-const DEFAULT_HEIGHTMAP: Heightmap = {
-  scale: 5,
-  isDeep: false,
-  layers: [8, 32],
-  flip: [1, 1],
-  readsHeight: false,
-};
-
 /** Uniforms that read `material` at each upload, so a re-parse that changes only a value needs no remount. */
 function heightmapUniforms(material: Material): Record<string, IUniform> {
-  const heightmap = () => recordedOn(material, HEIGHTMAP_KEY, DEFAULT_HEIGHTMAP);
+  const heightmap = () => recordedOn(material, HEIGHTMAP_KEY, HEIGHTMAP_DEFAULTS);
   return {
     godotHeightmapScale: {
       get value() {
@@ -192,22 +177,29 @@ vViewPosition = - mvPosition.xyz;
 const UNSHADED_FRAGMENT_PARS = `varying vec3 vViewPosition;
 ${PARS_ANCHOR}`;
 
-function addUnshadedInputs(shader: ProgramShader): void {
-  Object.assign(shader.uniforms, THREE.UniformsUtils.clone(THREE.UniformsLib.displacementmap));
-  shader.vertexShader = shader.vertexShader
-    .replace('#include <common>', UNSHADED_VERTEX_PARS)
-    .replace('#include <project_vertex>', UNSHADED_VERTEX);
-  shader.fragmentShader = shader.fragmentShader.replace(PARS_ANCHOR, UNSHADED_FRAGMENT_PARS);
+/** True when `material` has a heightmap bound, which keys its program. */
+function hasHeightmap(material: Material): boolean {
+  return !!(material as MeshStandardMaterial).displacementMap;
 }
+
+const UNSHADED_PARALLAX_INPUTS: ProgramInjection = {
+  cacheKey: 'godot-parallax-unshaded',
+  onBeforeCompile(shader) {
+    if (!hasHeightmap(this)) return;
+    Object.assign(shader.uniforms, THREE.UniformsUtils.clone(THREE.UniformsLib.displacementmap));
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', UNSHADED_VERTEX_PARS)
+      .replace('#include <project_vertex>', UNSHADED_VERTEX);
+    shader.fragmentShader = shader.fragmentShader.replace(PARS_ANCHOR, UNSHADED_FRAGMENT_PARS);
+  },
+};
 
 const GODOT_PARALLAX: ProgramInjection = {
   cacheKey: 'godot-parallax',
   onBeforeCompile(shader) {
     // Only a bound heightmap declares the varying in the vertex program, and three defines
-    // `USE_DISPLACEMENTMAP` there alone. Its presence keys the program, so a heightmap that
-    // arrives compiles a new one.
-    if (!(this as MeshStandardMaterial).displacementMap) return;
-    if (this instanceof UnshadedMaterial) addUnshadedInputs(shader);
+    // `USE_DISPLACEMENTMAP` there alone.
+    if (!hasHeightmap(this)) return;
     Object.assign(shader.uniforms, heightmapUniforms(this));
     shader.fragmentShader = shader.fragmentShader
       .replace(PARS_ANCHOR, PARALLAX_PARS)
@@ -218,11 +210,16 @@ const GODOT_PARALLAX: ProgramInjection = {
 const DEEP_PARALLAX = defining('GODOT_DEEP_PARALLAX');
 const READS_HEIGHT = defining('GODOT_HEIGHTMAP_READS_HEIGHT');
 
-/** What a material with `heightmap` compiles with. */
+/** What a lit material with `heightmap` compiles with. */
 export function parallaxInjection(heightmap: Heightmap): ProgramInjection | undefined {
   return composeInjections([
     GODOT_PARALLAX,
     heightmap.isDeep ? DEEP_PARALLAX : undefined,
     heightmap.readsHeight ? READS_HEIGHT : undefined,
   ]);
+}
+
+/** What an `UnshadedMaterial` with `heightmap` compiles with. */
+export function unshadedParallaxInjection(heightmap: Heightmap): ProgramInjection | undefined {
+  return composeInjections([UNSHADED_PARALLAX_INPUTS, parallaxInjection(heightmap)]);
 }

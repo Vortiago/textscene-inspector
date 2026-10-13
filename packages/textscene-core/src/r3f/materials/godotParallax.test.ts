@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { heightmapUserData, parallaxInjection } from './godotParallax';
+import { heightmapUserData, parallaxInjection, unshadedParallaxInjection } from './godotParallax';
 import { UnshadedMaterial } from './unshadedMaterial';
 import type { ProgramShader } from '../materialProgramInputs';
 import type { Heightmap } from '../../resources/materials/standardmaterial3d/types';
@@ -92,7 +92,7 @@ describe('parallaxInjection', () => {
   });
 });
 
-describe('parallaxInjection on an unshaded material', () => {
+describe('unshadedParallaxInjection', () => {
   function patchedUnshaded(): ProgramShader {
     const material = new UnshadedMaterial({ displacementMap: new THREE.Texture() });
     const shader: ProgramShader = {
@@ -100,7 +100,7 @@ describe('parallaxInjection on an unshaded material', () => {
       fragmentShader: THREE.ShaderLib.basic.fragmentShader,
       uniforms: {},
     };
-    parallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(material, shader);
+    unshadedParallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(material, shader);
     return shader;
   }
 

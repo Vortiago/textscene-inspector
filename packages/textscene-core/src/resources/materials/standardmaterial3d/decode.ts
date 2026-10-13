@@ -19,6 +19,7 @@ import {
   BlendMode,
   CullMode,
   DepthDrawMode,
+  HEIGHTMAP_DEFAULTS,
   TEXTURE_SLOTS,
   Transparency,
   type Heightmap,
@@ -338,17 +339,18 @@ function clamp01(value: number): number {
   return clamp(value, 0, 1);
 }
 
-/** Height mapping at Godot's defaults (`material.cpp:3952`, `:3995-3997`). The setters check no range. */
+/** Height mapping over Godot's defaults. The setters check no range. */
 function decodeHeightmap(properties: Record<string, string>): Heightmap {
+  const defaults = HEIGHTMAP_DEFAULTS;
   const sign = (key: string) => (boolOr(properties[key], false, CONTEXT) ? -1 : 1);
   return {
-    scale: floatOr(properties['heightmap_scale'], 5, CONTEXT),
-    isDeep: boolOr(properties['heightmap_deep_parallax'], false, CONTEXT),
+    scale: floatOr(properties['heightmap_scale'], defaults.scale, CONTEXT),
+    isDeep: boolOr(properties['heightmap_deep_parallax'], defaults.isDeep, CONTEXT),
     layers: [
-      intOr(properties['heightmap_min_layers'], 8, CONTEXT),
-      intOr(properties['heightmap_max_layers'], 32, CONTEXT),
+      intOr(properties['heightmap_min_layers'], defaults.layers[0], CONTEXT),
+      intOr(properties['heightmap_max_layers'], defaults.layers[1], CONTEXT),
     ],
     flip: [sign('heightmap_flip_tangent'), sign('heightmap_flip_binormal')],
-    readsHeight: boolOr(properties['heightmap_flip_texture'], false, CONTEXT),
+    readsHeight: boolOr(properties['heightmap_flip_texture'], defaults.readsHeight, CONTEXT),
   };
 }

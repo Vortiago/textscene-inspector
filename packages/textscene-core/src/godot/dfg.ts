@@ -5,6 +5,7 @@
  */
 
 import { DFG_SIZE, DFG_TABLE_BASE64 } from './dfgTable.generated.js';
+import { decodeBase64Bytes } from './packedBytes.js';
 
 export { DFG_SIZE };
 
@@ -14,10 +15,10 @@ export { DFG_SIZE };
  * Godot's read.
  */
 export function dfgHalfFloats(): Uint16Array {
-  const bytes = atob(DFG_TABLE_BASE64);
+  const bytes = decodeBase64Bytes(DFG_TABLE_BASE64);
   const halfFloats = new Uint16Array(bytes.length / 2);
   for (let i = 0; i < halfFloats.length; i += 1) {
-    halfFloats[i] = bytes.charCodeAt(i * 2) | (bytes.charCodeAt(i * 2 + 1) << 8);
+    halfFloats[i] = bytes[i * 2]! | (bytes[i * 2 + 1]! << 8);
   }
   return halfFloats;
 }

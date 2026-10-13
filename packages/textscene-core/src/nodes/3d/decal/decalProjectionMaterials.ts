@@ -13,7 +13,7 @@ import {
   lightModesOf,
   lightModesUserData,
   type LightModes,
-} from '../../../r3f/godotLightFunction';
+} from '../../../r3f/lightModes';
 
 /** What every projection of one decal shares: its texture, tint and opacity. */
 export interface DecalProjectionLook {

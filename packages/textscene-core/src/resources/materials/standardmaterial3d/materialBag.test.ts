@@ -14,7 +14,7 @@ import {
 } from './materialBag';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
-import { lightModesUserData } from '../../../r3f/godotLightFunction';
+import { lightModesUserData } from '../../../r3f/lightModes';
 import { DiffuseMode } from '../../../godot/diffuseMode';
 import { SpecularMode } from '../../../godot/specularMode';
 import {
