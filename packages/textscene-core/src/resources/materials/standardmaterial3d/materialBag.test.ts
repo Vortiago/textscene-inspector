@@ -30,6 +30,7 @@ import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 import {
   DRAWS_LAMBERT_DIFFUSE,
+  KEEPS_REFLECTION_UNOCCLUDED,
   DRAWS_TOON_SPECULAR,
   DROPS_ALBEDO_ALPHA,
   OCCLUDES_DIRECT_LIGHT,
@@ -221,6 +222,22 @@ describe('standardMaterialBags — AO on direct light', () => {
     const fragment = patchedFragment(materialFromBag(bag({ ...AO, blend_mode: '1' }, { ao_texture: aoMap })));
     expect(fragment).toContain(OCCLUDES_DIRECT_LIGHT);
     expect(fragment).toContain(DROPS_ALBEDO_ALPHA);
+  });
+});
+
+describe('standardMaterialBags — specular occlusion', () => {
+  it('leaves the reflection of a surface that disables specular occlusion whole', () => {
+    expect(patchedFragment(materialFromBag(bag({ disable_specular_occlusion: 'true' })))).toContain(
+      KEEPS_REFLECTION_UNOCCLUDED
+    );
+  });
+
+  it('patches nothing on a surface that keeps the default occlusion', () => {
+    expect(bag({ disable_specular_occlusion: 'false' }).injection).toBeUndefined();
+  });
+
+  it('patches nothing on an unshaded surface, which has no reflection (edge case)', () => {
+    expect(bag({ disable_specular_occlusion: 'true', shading_mode: '0' }).injection).toBeUndefined();
   });
 });
 

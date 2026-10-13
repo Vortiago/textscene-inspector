@@ -18,6 +18,7 @@ import { composeInjections, type ProgramInjection } from '../../../r3f/materialP
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
 import { lightModesInjection, lightModesUserData, threeAnisotropy } from '../../../r3f/godotLightFunction';
+import { SPECULAR_OCCLUSION_DISABLED } from '../../../r3f/godotIndirectSpecular';
 import {
   GODOT_AMBIENT_OCCLUSION,
   ambientOcclusionUserData,
@@ -328,6 +329,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
   const injection = composeInjections([
     lightModesInjection(scalars),
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
+    scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
   ]);
   if (!needsPhysicalMaterial(scalars)) return { materialClass: 'standard', props: pbr, injection };
   return {

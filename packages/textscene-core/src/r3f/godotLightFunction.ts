@@ -6,7 +6,7 @@
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
-import { composeInjections, type ProgramInjection } from './materialProgramInputs.js';
+import { composeInjections, defining, type ProgramInjection } from './materialProgramInputs.js';
 import type { Material } from 'three';
 import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../godot/diffuseMode.js';
 import { SPECULAR_MODE_NAMES, SpecularMode } from '../godot/specularMode.js';
@@ -21,9 +21,9 @@ const MAPS_CHUNK = 'lights_fragment_maps';
 const ROUGHNESS_SETUP = 'material.roughness = min( material.roughness, 1.0 );';
 
 /**
- * The roughness Godot's light functions read: the limiter at its project defaults, with no floor.
- * three's own `material.roughness` floors at 0.0525 for its cubemap mips, which environment
- * reflections keep. Godot snaps a roughness below 1e-8 to 0, where GGX would divide by a collapsed
+ * The roughness Godot's light functions and sky reflection read: the limiter at its project
+ * defaults, with no floor. three's own `material.roughness` floors at 0.0525, which the clearcoat
+ * keeps. Godot snaps a roughness below 1e-8 to 0, where GGX would divide by a collapsed
  * alpha (`scene_forward_clustered.glsl:1667-1671`).
  */
 const GODOT_ROUGHNESS = /* glsl */ `${ROUGHNESS_SETUP}
@@ -195,6 +195,15 @@ const THREE_IBL_RETRO_RADIANCE =
 const onGodotIBLDirection = (line: string) =>
   line.replace('material.anisotropyB', 'GODOT_IBL_ANISOTROPIC_DIRECTION');
 
+/**
+ * The anisotropic reflection also on Godot's roughness, which `godotIBLRadiance`
+ * (`godotSkyLighting.ts`) reads as the isotropic one does.
+ */
+const GODOT_IBL_RADIANCE = onGodotIBLDirection(THREE_IBL_RADIANCE).replace(
+  'material.roughness',
+  'material.godotRoughness'
+);
+
 type LightChunk = typeof CHUNK | typeof SETUP_CHUNK | typeof MAPS_CHUNK;
 
 /**
@@ -214,7 +223,7 @@ export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
   { chunk: CHUNK, three: THREE_RETRO_SPECULAR, godot: RETRO_SPECULAR },
   { chunk: CHUNK, three: THREE_SPECULAR_SUM, godot: SPECULAR_SUM },
   { chunk: SETUP_CHUNK, three: THREE_ALPHA_T, godot: GODOT_ALPHAS },
-  { chunk: MAPS_CHUNK, three: THREE_IBL_RADIANCE, godot: onGodotIBLDirection(THREE_IBL_RADIANCE) },
+  { chunk: MAPS_CHUNK, three: THREE_IBL_RADIANCE, godot: GODOT_IBL_RADIANCE },
   {
     chunk: MAPS_CHUNK,
     three: THREE_IBL_RETRO_RADIANCE,
@@ -232,6 +241,11 @@ export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
       'vec3 diffuse = irradiance * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - singleScattering - multiScattering );',
     godot: 'vec3 diffuse = irradiance * BRDF_Lambert( material.diffuseContribution );',
   },
+  {
+    chunk: CHUNK,
+    three: 'vec3 diffuse = material.diffuseContribution * ( 1.0 - totalScatteringDielectric );',
+    godot: 'vec3 diffuse = material.diffuseContribution;',
+  },
 ];
 
 /**
@@ -247,15 +261,6 @@ export function installGodotLightFunction(): void {
     apply: (chunks) => applyChunkEdits(chunks, GODOT_LIGHT_FUNCTION_EDITS),
     missing: `${CHUNK}, ${SETUP_CHUNK} or ${MAPS_CHUNK} lacks a line the light function patch replaces`,
   });
-}
-
-function defining(define: string): ProgramInjection {
-  return {
-    cacheKey: define.toLowerCase(),
-    onBeforeCompile(shader) {
-      shader.fragmentShader = `#define ${define}\n${shader.fragmentShader}`;
-    },
-  };
 }
 
 /** The render modes of Godot's light function that a surface draws with. */

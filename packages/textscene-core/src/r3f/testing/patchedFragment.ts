@@ -25,6 +25,9 @@ export const OCCLUDES_DIRECT_LIGHT = 'reflectedLight.directDiffuse *= godotDirec
 /** The shader writes a light's diffuse in Lambert mode, not BaseMaterial3D's default Burley. */
 export const DRAWS_LAMBERT_DIFFUSE = '#define GODOT_DIFFUSE_LAMBERT\n';
 
+/** The shader leaves a reflection whole under a dim ambient. */
+export const KEEPS_REFLECTION_UNOCCLUDED = '#define GODOT_SPECULAR_OCCLUSION_DISABLED\n';
+
 /** The shader writes a light's specular in toon mode, not BaseMaterial3D's default GGX. */
 export const DRAWS_TOON_SPECULAR = '#define GODOT_SPECULAR_TOON\n';
 

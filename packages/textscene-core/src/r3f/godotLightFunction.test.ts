@@ -63,10 +63,11 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
     }
   });
 
-  it('drops the Fresnel weight from both diffuse lines', () => {
+  it('drops the Fresnel weight from every diffuse line', () => {
     const patched = godotChunks()[CHUNK];
     expect(patched).not.toContain('* ( 1.0 - F )');
     expect(patched).not.toContain('* ( 1.0 - singleScattering - multiScattering )');
+    expect(patched).not.toContain('* ( 1.0 - totalScatteringDielectric )');
   });
 
   it("defines Godot's light function before the direct light function calls it", () => {
@@ -138,6 +139,12 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
       '#define GODOT_IBL_ANISOTROPIC_DIRECTION ( GODOT_ANISOTROPY_IS_NEGATIVE ? material.anisotropyT : material.anisotropyB )'
     );
     expect(godotChunks()[MAPS_CHUNK]).not.toContain('material.anisotropyB');
+  });
+
+  it("reflects an anisotropic surface on Godot's roughness, as its isotropic reflection does", () => {
+    expect(godotChunks()[MAPS_CHUNK]).toContain(
+      'getIBLAnisotropyRadiance( geometryViewDir, geometryNormal, material.godotRoughness, '
+    );
   });
 
   it('reads the sign off the frame that threeAnisotropy turns (edge case)', () => {

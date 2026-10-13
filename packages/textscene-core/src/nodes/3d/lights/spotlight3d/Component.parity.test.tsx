@@ -1,7 +1,6 @@
 /**
- * SpotLight3D attenuation against Godot: spot_attenuation, the distance falloff
- * exponent (default 1), maps to three.js decay. spot_angle_attenuation, the
- * cone-edge exponent (default 1), maps monotonically to a smaller penumbra.
+ * SpotLight3D attenuation against Godot: spot_attenuation, the distance falloff exponent, is three's
+ * decay. The inverse of spot_angle_attenuation is the cone exponent, which the penumbra carries.
  */
 import { describe, it, expect } from 'vitest';
 import type * as THREE from 'three';
@@ -36,10 +35,9 @@ describe('SpotLight3D attenuation parity', () => {
     expect((await spot({ spot_attenuation: '2' })).decay).toBe(2);
   });
 
-  it('higher spot_angle_attenuation → sharper edge (smaller penumbra)', async () => {
-    const soft = (await spot({ spot_angle_attenuation: '0.5' })).penumbra;
-    const sharp = (await spot({ spot_angle_attenuation: '8' })).penumbra;
-    expect(sharp).toBeLessThan(soft);
-    expect(sharp).toBeGreaterThanOrEqual(0);
+  it('carries the inverse of spot_angle_attenuation as the cone exponent', async () => {
+    const light = await spot({ spot_angle_attenuation: '2' });
+    const cosine = Math.cos(light.angle * (1 - light.penumbra));
+    expect(-cosine / Math.sqrt(1 - cosine * cosine)).toBeCloseTo(0.5, 10);
   });
 });

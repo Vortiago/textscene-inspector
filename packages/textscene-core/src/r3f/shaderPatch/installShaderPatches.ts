@@ -6,7 +6,10 @@
  */
 
 import { installCanvasSrgbMultiply } from '../canvasSrgbMultiply.js';
+import { installGodotLightAttenuation } from '../godotLightAttenuation.js';
+import { installGodotIndirectSpecular } from '../godotIndirectSpecular.js';
 import { installGodotLightFunction } from '../godotLightFunction.js';
+import { installGodotSkyLighting } from '../godotSkyLighting.js';
 import { installDirectionalShadowFade } from '../directionalShadow/shadowFade.js';
 import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasChunk.js';
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk.js';
@@ -14,6 +17,9 @@ import { installGodotPositionalShadow } from '../positionalShadow/positionalShad
 
 export function installShaderPatches(): void {
   installGodotLightFunction();
+  installGodotLightAttenuation();
+  installGodotIndirectSpecular();
+  installGodotSkyLighting();
   installGodotSplitShadow();
   installDirectionalShadowAtlas();
   installDirectionalShadowFade();

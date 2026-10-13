@@ -50,6 +50,7 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     diffuseMode: data.diffuseMode,
     specularMode: data.specularMode,
     useVertexColors: data.useVertexColors,
+    disablesSpecularOcclusion: data.disablesSpecularOcclusion,
     aoLightAffect: data.aoLightAffect,
     aoTextureChannelMask: textureChannelMask(data.aoTextureChannel),
     side: SIDE[data.cullMode],

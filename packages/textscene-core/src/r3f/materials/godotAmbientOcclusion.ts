@@ -34,12 +34,15 @@ const DIRECT_OCCLUSION = /* glsl */ `
 
 /**
  * three's AO chunk inlined, as `onBeforeCompile` sees only the `#include`, with the channel mask
- * in place of the red sample, and the direct occlusion after it.
+ * in place of the red sample, and the direct occlusion after it. Read at each compile, so it holds
+ * the chunk as the shader patches leave it.
  */
-const GODOT_AO_FRAGMENT = `${ShaderChunk.aomap_fragment.replace(
-  RED_SAMPLE,
-  'dot( texture2D( aoMap, vAoMapUv ), godotAoTextureChannel )'
-)}${DIRECT_OCCLUSION}`;
+function godotAoFragment(): string {
+  return `${ShaderChunk.aomap_fragment.replace(
+    RED_SAMPLE,
+    'dot( texture2D( aoMap, vAoMapUv ), godotAoTextureChannel )'
+  )}${DIRECT_OCCLUSION}`;
+}
 
 const GODOT_AO_PARS = `${AO_PARS_CHUNK}
 uniform float godotAoLightAffect;
@@ -86,6 +89,6 @@ export const GODOT_AMBIENT_OCCLUSION: ProgramInjection = {
     Object.assign(shader.uniforms, ambientOcclusionUniforms(this));
     shader.fragmentShader = shader.fragmentShader
       .replace(AO_PARS_CHUNK, GODOT_AO_PARS)
-      .replace(AO_CHUNK, GODOT_AO_FRAGMENT);
+      .replace(AO_CHUNK, godotAoFragment());
   },
 };

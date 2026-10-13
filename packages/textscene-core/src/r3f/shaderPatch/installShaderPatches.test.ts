@@ -11,6 +11,13 @@ describe('installShaderPatches', () => {
     expect(THREE.ShaderChunk.lights_physical_pars_fragment).not.toBe(diffuseBefore);
   });
 
+  it("installs the sky ambient beside the light function's IBL edits", () => {
+    installShaderPatches();
+    expect(THREE.ShaderChunk.lights_fragment_maps).toContain(
+      'iblIrradiance += godotIBLIrradiance( geometryNormal );'
+    );
+  });
+
   it('changes nothing on a second call', () => {
     installShaderPatches();
     const chunks = { ...THREE.ShaderChunk };

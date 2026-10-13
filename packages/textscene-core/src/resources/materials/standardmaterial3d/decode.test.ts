@@ -29,7 +29,14 @@ describe('decodeStandardMaterial3D — defaults', () => {
     expect(data.shadingMode).toBe('per_pixel');
     expect(data.normalScale).toEqual({ x: 1, y: 1 });
     expect(data.billboardMode).toBe(0);
+    expect(data.disablesSpecularOcclusion).toBe(false);
     expect(data.textureSlots).toEqual({});
+  });
+
+  it('reads disable_specular_occlusion', () => {
+    expect(decodeStandardMaterial3D({ disable_specular_occlusion: 'true' }).disablesSpecularOcclusion).toBe(
+      true
+    );
   });
 
   it('marks cull_mode explicit only when it is authored', () => {

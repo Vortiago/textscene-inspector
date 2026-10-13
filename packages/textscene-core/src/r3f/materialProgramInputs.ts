@@ -195,6 +195,16 @@ export function injectProgram(material: THREE.Material, injection: ProgramInject
   material.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
 }
 
+/** The injection that defines `define` in the fragment shader, its cache key the define's name. */
+export function defining(define: string): ProgramInjection {
+  return {
+    cacheKey: define.toLowerCase(),
+    onBeforeCompile(shader) {
+      shader.fragmentShader = `#define ${define}\n${shader.fragmentShader}`;
+    },
+  };
+}
+
 /**
  * One injection that applies each present part in order, or none when no part is present. One
  * part passes straight through, so `useCanvasItemLighting`'s memo still reaches the material.

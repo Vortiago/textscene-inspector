@@ -1,5 +1,7 @@
 /**
- * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL. Godot's sky
+ * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its roughest layers
+ * and its share of the ambient to every lit material before each render of the scene
+ * (`skyLayersMap.ts`). Godot's sky
  * shader draws the discs of the first four DirectionalLights that are not Light Only as
  * `LIGHT0..3`. The lights are read from the rendered three.js scene, where an instanced
  * or GLB light has its real world transform.
@@ -15,15 +17,21 @@ import { useSceneResources } from '../SceneResourcesContext';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { readSkyLightDeclaration } from './skyLight';
+import { showSkyLayers } from './skyLayersMap';
 
 export interface SkyLayerProps {
   sky: SkyProperties;
   /**
    * The sky's full reflection strength (`background_energy_multiplier`), as
-   * `scene.environmentIntensity`: a metal reflects the whole sky whatever the
-   * ambient source. `EnvironmentLayer` restores the diffuse share with `envMapIntensity`.
+   * `scene.environmentIntensity`: a surface reflects the whole sky whatever the
+   * ambient source.
    */
   intensity?: number;
+  /**
+   * `ambient_light_sky_contribution`: the sky's share of the ambient, 0 when the ambient
+   * comes from elsewhere.
+   */
+  contribution?: number;
   /**
    * Whether this sky also paints the background. Godot's ambient can come from
    * the sky while the background shows something else (`AMBIENT_SOURCE_SKY`
@@ -43,6 +51,7 @@ const LIGHT_SLOTS = 4;
 export function SkyLayer({
   sky,
   intensity = 1,
+  contribution = 1,
   asBackground = true,
   backgroundIntensity = 1,
 }: SkyLayerProps) {
@@ -75,15 +84,18 @@ export function SkyLayer({
     const previousIntensity = scene.environmentIntensity;
     const previousBackground = scene.background;
     const previousBackgroundIntensity = scene.backgroundIntensity;
+    const previousOnBeforeRender = scene.onBeforeRender;
 
     scene.environment = built.environment;
     scene.environmentIntensity = intensity;
+    scene.onBeforeRender = () => showSkyLayers(built.layers, contribution);
     if (asBackground) {
       scene.background = built.background;
       scene.backgroundIntensity = backgroundIntensity;
     }
 
     return () => {
+      scene.onBeforeRender = previousOnBeforeRender;
       scene.environment = previousEnvironment;
       scene.environmentIntensity = previousIntensity;
       if (asBackground) {
@@ -92,7 +104,7 @@ export function SkyLayer({
       }
       built.dispose();
     };
-  }, [gl, scene, sky, intensity, panorama, asBackground, backgroundIntensity, lightsKey]);
+  }, [gl, scene, sky, intensity, contribution, panorama, asBackground, backgroundIntensity, lightsKey]);
 
   return null;
 }

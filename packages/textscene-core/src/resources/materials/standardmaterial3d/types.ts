@@ -178,6 +178,8 @@ export interface StandardMaterial3DData {
   specularMode: number;
   /** `vertex_color_use_as_albedo` (default false). */
   useVertexColors: boolean;
+  /** `disable_specular_occlusion` (default false): a dim ambient leaves the reflection whole. */
+  disablesSpecularOcclusion: boolean;
   /** `ao_light_affect`: how far the AO map also occludes direct light. Unclamped, as the setter is. */
   aoLightAffect: number;
   /** `ao_texture_channel`: the AO map channel the shader reads. */
@@ -270,6 +272,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   diffuseMode: number;
   specularMode: number;
   useVertexColors: boolean;
+  disablesSpecularOcclusion: boolean;
   aoLightAffect: number;
   aoTextureChannelMask: TextureChannelMask;
   side: THREE.Side;
