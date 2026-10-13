@@ -16,8 +16,10 @@ import { DIRECTIONAL_SHADOW_MAX_SPLITS } from '../../godot/directionalShadow.js'
 import { splitSunOf } from '../directionalShadow/splitSun.js';
 import { AtlasOmniShadow } from '../positionalShadow/atlasOmniShadow.js';
 import { AtlasSpotShadow } from '../positionalShadow/atlasSpotShadow.js';
+import { lightPoseMatrix } from '../positionalShadow/lightPose.js';
 import { visibleInTree } from '../visibleInTree.js';
 import { readFogLightDeclaration } from './fogLightDeclaration.js';
+import { writeVec4 } from './writeVec4.js';
 
 /**
  * Where each value sits in a light's row, in texels of four floats. `CONE` holds the cone exponent,
@@ -34,6 +36,14 @@ export const FogLightTexel = {
   SHADOW_SPLITS: 20,
   SHADOW_RANGES: 21,
   SHADOW_FADE: 22,
+} as const;
+
+/** Where each value sits in the cone texel, as an index into the row. */
+const Cone = {
+  EXPONENT: FogLightTexel.CONE * 4,
+  KIND: FogLightTexel.CONE * 4 + 1,
+  SHADOW_OPACITY: FogLightTexel.CONE * 4 + 2,
+  SHADOW_BIAS: FogLightTexel.CONE * 4 + 3,
 } as const;
 
 /** The texels in each row. */
@@ -58,6 +68,7 @@ const position = new THREE.Vector3();
 const towards = new THREE.Vector3();
 const worldToLight = new THREE.Matrix4();
 const viewToShadow = new THREE.Matrix4();
+const paraboloidRect = new THREE.Vector4();
 const row = new Float32Array(ROW_LENGTH);
 
 /**
@@ -73,6 +84,11 @@ export class FogLightRows {
   readsDirectionalAtlas = false;
   readsPositionalAtlas = false;
 
+  /** Whether any row's shadow reads an atlas. */
+  get readsShadowAtlas(): boolean {
+    return this.readsDirectionalAtlas || this.readsPositionalAtlas;
+  }
+
   /** Packs `lights` as `camera` sees them, and answers whether any row changed. */
   pack(lights: readonly THREE.Light[], camera: THREE.Camera): boolean {
     let count = 0;
@@ -81,8 +97,8 @@ export class FogLightRows {
     this.readsPositionalAtlas = false;
     for (const light of lights) {
       if (!visibleInTree(light) || !writeRow(light, camera)) continue;
-      if (isShadowed()) {
-        if (row[FogLightTexel.CONE * 4 + 1] === FogLightKind.DIRECTIONAL) this.readsDirectionalAtlas = true;
+      if (row[Cone.SHADOW_OPACITY]! > VOLUMETRIC_FOG_SHADOW_OPACITY_MIN) {
+        if (row[Cone.KIND] === FogLightKind.DIRECTIONAL) this.readsDirectionalAtlas = true;
         else this.readsPositionalAtlas = true;
       }
       this.reserve(count + 1);
@@ -116,7 +132,7 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
   row.fill(0);
   const energy = light.intensity * fogEnergy;
   writeTexel(FogLightTexel.COLOR, light.color.r * energy, light.color.g * energy, light.color.b * energy);
-  row[FogLightTexel.CONE * 4 + 1] = kind;
+  row[Cone.KIND] = kind;
   if (kind === FogLightKind.DIRECTIONAL) {
     // Godot's directional row points towards the light, its basis +Z (`light_storage.cpp:640`).
     const { x, y, z } = targetDirection(light as THREE.DirectionalLight, camera).negate();
@@ -136,7 +152,7 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
   const travel = targetDirection(spot, camera);
   writeTexel(FogLightTexel.DIRECTION, travel.x, travel.y, travel.z, Math.cos(spot.angle));
   // The cone exponent is the inverse of `spot_angle_attenuation` (`light_storage.cpp:914`).
-  row[FogLightTexel.CONE * 4] = 1 / (declaration?.spotAngleAttenuation ?? SPOT_ANGLE_ATTENUATION_DEFAULT);
+  row[Cone.EXPONENT] = 1 / (declaration?.spotAngleAttenuation ?? SPOT_ANGLE_ATTENUATION_DEFAULT);
   writeSpotShadow(spot, camera);
   return true;
 }
@@ -161,37 +177,37 @@ function writeDirectionalShadow(light: THREE.DirectionalLight, camera: THREE.Cam
 }
 
 /**
- * An omni light with a slot looks up through Godot's world-to-light transform. Its shadow matrix
- * holds that above, and the paraboloids' slot in its bottom row (`../positionalShadow/atlasOmniShadow.ts`).
+ * An omni light with a slot looks up through Godot's world-to-light transform, and keeps its
+ * paraboloids' rect beside it (`../positionalShadow/atlasOmniShadow.ts`).
  */
 function writeOmniShadow(light: THREE.PointLight, camera: THREE.Camera): void {
   const { shadow } = light;
-  if (!light.castShadow || !(shadow instanceof AtlasOmniShadow) || !shadow.slot?.paraboloidStep) return;
-  writeShadowOpacity(shadow.intensity, shadow.bias);
-  const e = shadow.matrix.elements;
-  writeTexel(FogLightTexel.SHADOW_SPLITS, e[3]!, e[7]!, e[11]!, e[15]!);
-  worldToLight.copy(shadow.matrix);
-  worldToLight.elements[3] = worldToLight.elements[7] = worldToLight.elements[11] = 0;
-  worldToLight.elements[15] = 1;
-  writeLookup(0, worldToLight, camera);
+  if (!light.castShadow || !(shadow instanceof AtlasOmniShadow)) return;
+  const rect = shadow.paraboloidRect(paraboloidRect);
+  if (!rect) return;
+  writeTexel(FogLightTexel.SHADOW_SPLITS, rect.x, rect.y, rect.z, rect.w);
+  writePositionalShadow(shadow, lightPoseMatrix(light, worldToLight).invert(), camera);
 }
 
 /** A spot light with a slot looks up through its matrix into the slot (`../positionalShadow/atlasSpotShadow.ts`). */
 function writeSpotShadow(light: THREE.SpotLight, camera: THREE.Camera): void {
   const { shadow } = light;
   if (!light.castShadow || !(shadow instanceof AtlasSpotShadow)) return;
-  writeShadowOpacity(shadow.intensity, shadow.bias);
-  writeLookup(0, shadow.matrix, camera);
+  writePositionalShadow(shadow, shadow.matrix, camera);
 }
 
-/** Whether the scratch row's light shadows the fog. */
-function isShadowed(): boolean {
-  return row[FogLightTexel.CONE * 4 + 2]! > VOLUMETRIC_FOG_SHADOW_OPACITY_MIN;
+function writePositionalShadow(
+  shadow: THREE.LightShadow,
+  worldToShadow: THREE.Matrix4,
+  camera: THREE.Camera
+): void {
+  writeShadowOpacity(shadow.intensity, shadow.bias);
+  writeLookup(0, worldToShadow, camera);
 }
 
 function writeShadowOpacity(opacity: number, bias: number): void {
-  row[FogLightTexel.CONE * 4 + 2] = opacity;
-  row[FogLightTexel.CONE * 4 + 3] = bias;
+  row[Cone.SHADOW_OPACITY] = opacity;
+  row[Cone.SHADOW_BIAS] = bias;
 }
 
 /** Writes `worldToShadow` after the view's own world matrix, so it maps a view-space cell. */
@@ -201,11 +217,7 @@ function writeLookup(slot: number, worldToShadow: THREE.Matrix4, camera: THREE.C
 }
 
 function writeTexel(texel: number, x: number, y: number, z: number, w = 0): void {
-  const offset = texel * 4;
-  row[offset] = x;
-  row[offset + 1] = y;
-  row[offset + 2] = z;
-  row[offset + 3] = w;
+  writeVec4(row, texel, x, y, z, w);
 }
 
 function fogLightKind(light: THREE.Light): Kind | null {

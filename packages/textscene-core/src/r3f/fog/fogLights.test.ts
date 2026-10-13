@@ -209,7 +209,6 @@ describe('FogLightRows.pack, for a light that casts', () => {
     shadow.slot = { x: 512, y: 0, size: 512, paraboloidStep: [1, 0] };
     light.shadow = shadow;
     placed(light);
-    shadow.writeLookupMatrix(light);
 
     const rows = packed([light]);
 

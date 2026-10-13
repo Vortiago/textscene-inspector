@@ -17,6 +17,7 @@ import { shineDirection } from './fogLights.js';
 import { skyRadiance } from './fogSky.js';
 import { FOG_SUN_MAX, fogUniforms } from './fogUniforms.js';
 import type { VolumetricFog } from './fogVolumePass.js';
+import { writeVec4 } from './writeVec4.js';
 
 export type DepthFog = NonNullable<EnvironmentSettings['fog']>;
 
@@ -93,15 +94,6 @@ function writeDepthFog(fog: DepthFog | null, camera: THREE.Camera): void {
   writeVec4(fogUniforms.depthShape, 0, fog.density, range.begin, range.end, fog.depthCurve);
   writeVec4(fogUniforms.depthLayer, 0, fog.mode, fog.height, fog.heightDensity, fog.aerialPerspective);
   writeVec4(fogUniforms.depthSky, 0, fog.skyAffect, fog.sunScatter, near, far);
-}
-
-/** Writes one vec4 into `target` at vec4 index `slot`, with no array literal per write. */
-function writeVec4(target: Float32Array, slot: number, x: number, y: number, z: number, w: number): void {
-  const offset = slot * 4;
-  target[offset] = x;
-  target[offset + 1] = y;
-  target[offset + 2] = z;
-  target[offset + 3] = w;
 }
 
 /**

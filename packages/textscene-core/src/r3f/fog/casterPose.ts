@@ -1,7 +1,7 @@
 /**
- * The pose of every mesh that casts a shadow: its world matrix, its instances, its bones and its
- * morph weights. The fog volume redraws a still view only when this moves, since its shadows read
- * maps the casters draw.
+ * The pose of every mesh that casts a shadow: its geometry, its world matrix, its instances, its
+ * bones and its morph weights. The fog volume redraws a still view only when this moves, since its
+ * shadows read maps the casters draw.
  */
 
 import * as THREE from 'three';
@@ -22,6 +22,7 @@ export class CasterPose {
     for (const mesh of meshes) {
       if (!mesh.castShadow || !visibleInTree(mesh)) continue;
       this.take(mesh.id);
+      this.take(mesh.geometry.id);
       this.takeAll(mesh.matrixWorld.elements);
       this.takePose(mesh);
     }

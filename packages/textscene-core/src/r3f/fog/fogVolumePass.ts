@@ -188,10 +188,6 @@ class ViewVolume {
   }
 }
 
-function readsAtlas(rows: FogLightRows): boolean {
-  return rows.readsDirectionalAtlas || rows.readsPositionalAtlas;
-}
-
 /** How a draw samples each froxel. */
 type Sampling = 'centre' | 'converged' | 'step';
 
@@ -292,7 +288,7 @@ export class FogVolumePass {
     const sky = skyRadiance(scene);
     const hasLightsChanged = state.lights.pack(inputs.lights, camera);
     if (hasLightsChanged && this.uploadedLights === state.lights) this.uploadedLights = null;
-    const haveShadowsMoved = readsAtlas(state.lights) && state.casters.update(inputs.casters);
+    const haveShadowsMoved = state.lights.readsShadowAtlas && state.casters.update(inputs.casters);
     const hasViewChanged = state.key.update(camera, this.viewport, inputs, sky);
     const hasChanged = hasViewChanged || hasLightsChanged || haveShadowsMoved;
     const sampling = samplingFor(hasChanged, inputs.fog.temporalReprojection, state.isSettling);
@@ -470,13 +466,13 @@ export class FogVolumePass {
     this.lightMaterial.uniforms['lightCount']!.value = rows.count;
   }
 
-  /** Binds the atlases the rows' shadows read, and answers them. An atlas no row reads stays unbound. */
-  private writeShadowAtlases(rows: FogLightRows): THREE.DepthTexture[] {
+  /** Binds the atlases the rows' shadows read, and answers them. An atlas no row reads is null. */
+  private writeShadowAtlases(rows: FogLightRows): (THREE.DepthTexture | null)[] {
     const directional = rows.readsDirectionalAtlas ? directionalShadowAtlasDepth() : null;
     const positional = rows.readsPositionalAtlas ? positionalShadowAtlasDepth() : null;
     this.lightMaterial.uniforms['directionalShadowAtlas']!.value = directional;
     this.lightMaterial.uniforms['positionalShadowAtlas']!.value = positional;
-    return [directional, positional].filter((atlas) => atlas !== null);
+    return [directional, positional];
   }
 
   /**

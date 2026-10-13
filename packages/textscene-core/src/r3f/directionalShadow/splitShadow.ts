@@ -52,6 +52,9 @@ const ThreeLightShadow = THREE.LightShadow as unknown as new (
 /** Scratch for `placeSplitFrusta`, which places one frustum at a time. */
 const splitViewProjection = new THREE.Matrix4();
 
+/** The fade of a sun no fit has placed: ends that do not ascend fade nothing. */
+export const NO_SHADOW_FADE: DirectionalShadowFade = { from: 0, to: 0 };
+
 export class DirectionalSplitShadow extends ThreeLightShadow {
   /** How many slots draw a split: 1, 2 or 4. */
   splitCount = SPLIT_SLOTS;
@@ -64,7 +67,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
   readonly _cascadeData: THREE.Vector4[] = [];
 
   /** The fade over the far end of the last split, which the fitter writes with the slots. */
-  fade: DirectionalShadowFade = { from: 0, to: 0 };
+  fade: DirectionalShadowFade = NO_SHADOW_FADE;
 
   /** One camera per slot. The fitter places each drawn one before every render. */
   private readonly splitCameras: THREE.OrthographicCamera[] = [];

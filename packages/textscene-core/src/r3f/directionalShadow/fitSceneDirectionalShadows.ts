@@ -26,9 +26,9 @@ import {
   followDeclaredLight,
   releaseSplitSun,
   splitSunOf,
-  type SplitSunLight,
+  SplitSunLight,
 } from './splitSun.js';
-import { SPLIT_CAMERA_UP } from './splitShadow.js';
+import { NO_SHADOW_FADE, SPLIT_CAMERA_UP } from './splitShadow.js';
 
 /** A declared light and its share of Godot's directional shadow atlas for this render. */
 interface SharingLight {
@@ -42,9 +42,6 @@ interface LightPlacement {
   lightPosition: THREE.Vector3;
   targetPosition: THREE.Vector3;
 }
-
-/** The fade of each light that casts for a declared light: the declared light or its split sun. */
-type CasterFades = Map<THREE.Light, DirectionalShadowFade>;
 
 const NO_FADES: ShadowFades = { directional: [], sun: [] };
 
@@ -89,21 +86,25 @@ export function fitSceneDirectionalShadows(
     writeDirectionalShadowFades(NO_FADES);
     return;
   }
-  const fades: CasterFades = new Map();
   const lists = directionalLightLists(declared);
   let renderedChanged = false;
   for (const declaredLight of declared) {
     const before = renderedFor(declaredLight.light);
-    fitDeclaredLight(declaredLight, lists, camera, fades);
+    fitDeclaredLight(declaredLight, lists, camera);
     if (renderedFor(declaredLight.light) !== before) renderedChanged = true;
   }
   fittedSuns.set(scene, sunsOf(declared));
   // The walk lists what three renders for each light, so a change in that walks the scene again.
   const casters = directionalShadowCasters(renderedChanged ? sceneLights(scene) : lights, camera);
+  // Only a split sun fades: a declared light casts through its sun, and any other casts unfaded.
   writeDirectionalShadowFades({
-    directional: casters.directional.map((light) => fades.get(light) ?? null),
-    sun: casters.sun.map((light) => fades.get(light) ?? null),
+    directional: casters.directional.map(() => null),
+    sun: casters.sun.map(sunFade),
   });
+}
+
+function sunFade(light: THREE.Light): DirectionalShadowFade | null {
+  return light instanceof SplitSunLight ? light.shadow.fade : null;
 }
 
 function sunsOf(declared: readonly DeclaredDirectionalLight[]): SplitSunLight[] {
@@ -164,8 +165,7 @@ export function directionalShadowCasters(
 function fitDeclaredLight(
   { light, declaration, isVisible }: DeclaredDirectionalLight,
   lists: DirectionalLightLists,
-  camera: ViewingCamera,
-  fades: CasterFades
+  camera: ViewingCamera
 ): void {
   if (isVisible && !lists.drawn.has(light)) {
     dropLight(light);
@@ -179,7 +179,7 @@ function fitDeclaredLight(
   }
   // Godot's PCF kernel spans `soft_shadow_scale` atlas texels (`scene_forward_clustered.glsl:2443`).
   light.shadow.radius = declaration.filterRadius;
-  fitSplitLight({ light, declaration, lightRect }, camera, fades);
+  fitSplitLight({ light, declaration, lightRect }, camera);
 }
 
 /**
@@ -203,11 +203,7 @@ function placementOf(light: THREE.DirectionalLight): LightPlacement {
  * never shades with slots no fit has written. The sun casts in the declared light's place, so the
  * fade goes to the sun.
  */
-function fitSplitLight(
-  { light, declaration, lightRect }: SharingLight,
-  camera: ViewingCamera,
-  fades: CasterFades
-): void {
+function fitSplitLight({ light, declaration, lightRect }: SharingLight, camera: ViewingCamera): void {
   const placement = placementOf(light);
   const splits = fitDirectionalShadowSplits({
     camera,
@@ -216,12 +212,16 @@ function fitSplitLight(
     declaration,
     lightRect,
   });
-  if (!splits) return;
+  if (!splits) {
+    // A sun from an earlier fit keeps its splits, unfaded.
+    const sun = splitSunOf(light);
+    if (sun) sun.shadow.fade = NO_SHADOW_FADE;
+    return;
+  }
   const sun = attachSplitSun(light);
   followDeclaredLight(sun, light, placement.lightPosition, placement.targetPosition);
   sun.shadow.setSplits(declaration.splitCount, lightRect);
   applySplits(sun, placement, splits);
-  fades.set(sun, splits.fade);
 }
 
 function applySplits(sun: SplitSunLight, placement: LightPlacement, splits: DirectionalShadowSplits): void {

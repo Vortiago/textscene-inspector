@@ -82,6 +82,7 @@ material's program and uploads its uniforms again, since the lights' state versi
    side of its rectangle (`light_storage.cpp:2603-2623`): 4096 for one light with one or two
    splits, 2048 for four. The normal bias counts in those texels (`:2347`,
    `light_storage.cpp:724`), so the fitter turns it into world units for each box.
+
 6. The far side of each box sits one radius past its centre. The near side sits one radius plus
    `directional_shadow_pancake_size` towards the light (`:2284`, `:2327`).
 7. The shadow fades out across the far end of the last split, from
@@ -240,11 +241,11 @@ active samplers of programs three r186 linked in the visual harness's Chromium, 
 patch `installShaderPatches` installs, for a light with four splits:
 
 | Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with seven maps, an environment and transmission | The same, with an omni and a spot shadow |
-| --- | --- | --- | --- |
-| 0 | 1 | 10 | 11 |
-| 1 | 2 | 11 | 12 |
-| 4 | 2 | 11 | 12 |
-| 8 | 2 | 11 | 12 |
+| ------------- | ---------------------- | ----------------------------------------------------------------------- | ---------------------------------------- |
+| 0             | 1                      | 10                                                                      | 11                                       |
+| 1             | 2                      | 11                                                                      | 12                                       |
+| 4             | 2                      | 11                                                                      | 12                                       |
+| 8             | 2                      | 11                                                                      | 12                                       |
 
 A light with one split counts the same. The one unit of a plain material is three's `dfgLUT`. The
 omni and spot shadows share the one unit of the positional shadow atlas
@@ -273,11 +274,11 @@ two, and the scene draws nothing lit.
 Measured on a synthetic scene of 1,000 shadow-casting boxes on a ground plane, at 955 × 756,
 in the headless Chromium and SwiftShader of the visual harness:
 
-| Mode | Draw calls per frame | Fit per render |
-| --- | --- | --- |
-| 0 (one split) | 1,458 | 23 to 32 µs |
-| 1 (two splits) | 1,503 | 25 to 38 µs |
-| 2 (four splits) | 2,579 | 26 to 30 µs |
+| Mode            | Draw calls per frame | Fit per render |
+| --------------- | -------------------- | -------------- |
+| 0 (one split)   | 1,458                | 23 to 32 µs    |
+| 1 (two splits)  | 1,503                | 25 to 38 µs    |
+| 2 (four splits) | 2,579                | 26 to 30 µs    |
 
 The shadow pass culls casters against each split's box, so a split draws only the casters in
 its own box, as Godot's does. The extra draw calls are the casters that fall in more than one
@@ -304,11 +305,11 @@ The shadow list holds at most eight lights, so a program samples at most eight s
 from the active uniforms of a program three r186 linked in the visual harness's Chromium:
 
 | Shadowed suns | `MeshStandardMaterial` | With every map, an environment and fog |
-| --- | --- | --- |
-| 0 | 4 | 15 |
-| 1 | 31 | 38 |
-| 8 | 196 | 203 |
-| 9 | 219 | 226 |
+| ------------- | ---------------------- | -------------------------------------- |
+| 0             | 4                      | 15                                     |
+| 1             | 31                     | 38                                     |
+| 8             | 196                    | 203                                    |
+| 9             | 219                    | 226                                    |
 
 A sun with one or two splits costs the same as one with four. A slot count that varied by scene
 would need a define three's program key does not hold (`WebGLPrograms.js:476-483`), so a material would

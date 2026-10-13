@@ -40,6 +40,14 @@ describe('CasterPose.update', () => {
     expect(pose.update(meshes)).toBe(true);
   });
 
+  it('answers that the pose changed when a caster takes another geometry', () => {
+    const meshes = [caster()];
+    const pose = posed(meshes);
+    meshes[0]!.geometry = new THREE.SphereGeometry();
+
+    expect(pose.update(meshes)).toBe(true);
+  });
+
   it('ignores a mesh that casts no shadow (edge case)', () => {
     const still = caster();
     const receiver = caster();

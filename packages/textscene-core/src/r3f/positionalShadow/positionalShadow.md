@@ -118,11 +118,11 @@ active samplers of programs three r186 linked in the visual harness's Chromium, 
 patch `TscnCanvas` installs and one shadowed sun:
 
 | Omni and spot shadows | `MeshStandardMaterial` | `MeshPhysicalMaterial` with seven maps, an environment and transmission |
-| --- | --- | --- |
-| None | 2 | 11 |
-| 1 and 1 | 3 | 12 |
-| 4 and 4 | 3 | 12 |
-| 8 and 8 | 3 | 12 |
+| --------------------- | ---------------------- | ----------------------------------------------------------------------- |
+| None                  | 2                      | 11                                                                      |
+| 1 and 1               | 3                      | 12                                                                      |
+| 4 and 4               | 3                      | 12                                                                      |
+| 8 and 8               | 3                      | 12                                                                      |
 
 A sampler per shadow takes 18 units with eight of each and the plain material, and 27 with the
 physical one. A GPU with only 16 units fails to link both, and the scene draws nothing lit.

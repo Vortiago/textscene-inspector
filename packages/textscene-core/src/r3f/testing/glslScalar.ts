@@ -5,7 +5,8 @@
 
 import { functionBody } from './glslSource';
 
-const BUILT_INS = {
+/** GLSL's scalar built-ins, as JS functions. */
+export const GLSL_BUILT_INS = {
   abs: Math.abs,
   exp: Math.exp,
   max: Math.max,
@@ -30,6 +31,8 @@ export function scalarGlslFunction(source: string, name: string): (...args: numb
     return scalar[1]!;
   });
   const body = functionBody(source, `float ${name}`).replace(/\bfloat\s+/g, 'let ');
-  const run = new Function(...Object.keys(BUILT_INS), ...parameters, body) as (...args: unknown[]) => number;
-  return (...args) => run(...Object.values(BUILT_INS), ...args);
+  const run = new Function(...Object.keys(GLSL_BUILT_INS), ...parameters, body) as (
+    ...args: unknown[]
+  ) => number;
+  return (...args) => run(...Object.values(GLSL_BUILT_INS), ...args);
 }

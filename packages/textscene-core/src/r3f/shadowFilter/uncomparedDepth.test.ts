@@ -23,7 +23,6 @@ function recordingRenderer(handles: Map<THREE.Texture, object>) {
   let bound: object | null = null;
   const gl = {
     ...GL,
-    getTexParameter: (_target: number, name: number) => parameters.get(bound!)!.get(name),
     texParameteri: (_target: number, name: number, value: number) => parameters.get(bound!)!.set(name, value),
   };
   for (const handle of handles.values()) {
@@ -82,6 +81,16 @@ describe('drawWithUncomparedDepth', () => {
       })
     ).toThrow('lost context');
     expect(parameters.get(handle)!.get(GL.TEXTURE_COMPARE_MODE)).toBe(GL.COMPARE_REF_TO_TEXTURE);
+  });
+
+  it('leaves a null atlas alone (edge case)', () => {
+    const { renderer } = recordingRenderer(new Map());
+    const draw = vi.fn();
+
+    drawWithUncomparedDepth(renderer, [null], draw);
+
+    expect(renderer.state.bindTexture).not.toHaveBeenCalled();
+    expect(draw).toHaveBeenCalledOnce();
   });
 
   it('leaves an atlas no shadow pass has drawn unbound (edge case)', () => {

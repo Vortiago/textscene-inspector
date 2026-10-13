@@ -37,6 +37,10 @@ describe('the directional fog shadow fade', () => {
   it('leaves no shadow past the fade (edge case)', () => {
     expect(fogShadowFade(0.2, 12, 8, 10)).toBe(1);
   });
+
+  it('keeps the shadow of a split sun no fit has faded (edge case)', () => {
+    expect(fogShadowFade(0.2, 12, 0, 0)).toBe(0.2);
+  });
 });
 
 describe('the fog shadow attenuation', () => {
