@@ -19,7 +19,7 @@ import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
 import { threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { lightModesInjection, lightModesUserData } from '../../../r3f/lightModes';
-import { SPECULAR_OCCLUSION_DISABLED } from '../../../r3f/godotIndirectSpecular';
+import { SPECULAR_OCCLUSION_DISABLED, specularOcclusionUserData } from '../../../r3f/godotIndirectSpecular';
 import {
   heightmapUserData,
   parallaxInjection,
@@ -131,8 +131,8 @@ function specularIntensity(specular: number): number {
 }
 
 /**
- * Whether the surface draws anisotropic, and so samples \`anisotropyMap\`. \`anisotropy\` is signed,
- * and either sign scales by the flowmap's strength (\`material.cpp:1932\`).
+ * Whether the surface draws anisotropic, and so samples `anisotropyMap`. `anisotropy` is signed,
+ * and either sign scales by the flowmap's strength (`material.cpp:1932`).
  */
 export function isAnisotropic(scalars: StandardMaterial3DScalars): boolean {
   return scalars.anisotropy !== 0;
@@ -183,7 +183,7 @@ const CASTS_SHADOW_KEY = 'godotCastsShadow';
 /**
  * Surface state on `userData`, not as material props: the draw hooks apply billboard, shadow and
  * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO and height uniforms read theirs at
- * upload, and a decal reads the light modes. A fresh object per bag, as the `.tres` loader writes
+ * upload, and a decal reads the light modes and the specular occlusion. A fresh object per bag, as the `.tres` loader writes
  * keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
@@ -193,6 +193,7 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
     ...alphaHashScaleUserData(scalars.alphaHashScale),
     ...ambientOcclusionUserData(scalars.aoLightAffect, scalars.aoTextureChannelMask),
     ...lightModesUserData(scalars),
+    ...specularOcclusionUserData(scalars.disablesSpecularOcclusion),
     ...heightmapUserData(scalars.heightmap),
   };
 }

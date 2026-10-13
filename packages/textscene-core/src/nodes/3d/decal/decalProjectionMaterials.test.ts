@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { DecalProjectionMaterials } from './decalProjectionMaterials';
 import { lightModesUserData } from '../../../r3f/lightModes';
+import { specularOcclusionUserData } from '../../../r3f/godotIndirectSpecular';
 import { DiffuseMode } from '../../../godot/diffuseMode';
 import { SpecularMode } from '../../../godot/specularMode';
 import {
@@ -34,8 +35,8 @@ function lambertReceiver(): THREE.Mesh {
 }
 
 /** The material a projection onto `onto` draws with. */
-function projectionMaterial(decal: DecalProjectionMaterials, onto: THREE.Mesh): THREE.MeshStandardMaterial {
-  return decal.project(new THREE.BufferGeometry(), onto).material as THREE.MeshStandardMaterial;
+function projectionMaterial(decal: DecalProjectionMaterials, onto: THREE.Mesh): THREE.MeshPhysicalMaterial {
+  return decal.project(new THREE.BufferGeometry(), onto).material as THREE.MeshPhysicalMaterial;
 }
 
 describe('DecalProjectionMaterials', () => {
@@ -68,9 +69,26 @@ describe('DecalProjectionMaterials', () => {
     expect([projection.roughness, projection.metalness]).toEqual([0.3, 0.6]);
   });
 
+  it("takes the receiver's metallic_specular, which the decal's albedo leaves alone", () => {
+    const projection = projectionMaterial(
+      materials(),
+      receiver(new THREE.MeshPhysicalMaterial({ specularIntensity: 4 }))
+    );
+    expect(projection.specularIntensity).toBe(4);
+  });
+
+  it("keeps Godot's specular occlusion off where the receiver turns it off", () => {
+    const projection = projectionMaterial(
+      materials(),
+      receiver(new THREE.MeshStandardMaterial({ userData: specularOcclusionUserData(true) }))
+    );
+    expect(patchedFragment(projection)).toMatch(/^#define GODOT_SPECULAR_OCCLUSION_DISABLED$/m);
+  });
+
   it("shades an unshaded receiver's projection as BaseMaterial3D's defaults (edge case)", () => {
     const projection = projectionMaterial(materials(), receiver(new THREE.MeshBasicMaterial()));
-    expect([projection.roughness, projection.metalness]).toEqual([1, 0]);
+    expect([projection.roughness, projection.metalness, projection.specularIntensity]).toEqual([1, 0, 1]);
+    expect(patchedFragment(projection)).not.toContain('GODOT_SPECULAR_OCCLUSION_DISABLED');
   });
 
   it('shares one material between receivers that shade alike', () => {
@@ -89,10 +107,18 @@ describe('DecalProjectionMaterials', () => {
     const onto = receiver(new THREE.MeshStandardMaterial());
     const mesh = decal.project(new THREE.BufferGeometry(), onto);
     onto.material = new THREE.MeshStandardMaterial({ roughness: 0.2 });
-    expect([decal.followReceivers(), (mesh.material as THREE.MeshStandardMaterial).roughness]).toEqual([
+    expect([decal.followReceivers(), (mesh.material as THREE.MeshPhysicalMaterial).roughness]).toEqual([
       true,
       0.2,
     ]);
+  });
+
+  it("re-shades a projection once its receiver's specular occlusion turns off", () => {
+    const decal = materials();
+    const onto = receiver(new THREE.MeshStandardMaterial());
+    decal.project(new THREE.BufferGeometry(), onto);
+    onto.material = new THREE.MeshStandardMaterial({ userData: specularOcclusionUserData(true) });
+    expect(decal.followReceivers()).toBe(true);
   });
 
   it('leaves a projection whose receiver is unchanged, and reports nothing', () => {

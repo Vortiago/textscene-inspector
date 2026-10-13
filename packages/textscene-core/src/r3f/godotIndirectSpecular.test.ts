@@ -4,7 +4,12 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { SPECULAR_OCCLUSION_DISABLED, installGodotIndirectSpecular } from './godotIndirectSpecular';
+import {
+  SPECULAR_OCCLUSION_DISABLED,
+  disablesSpecularOcclusion,
+  installGodotIndirectSpecular,
+  specularOcclusionUserData,
+} from './godotIndirectSpecular';
 import { warningsOf } from './testing/logWarnings';
 import { DFG_SIZE } from '../godot/dfg';
 
@@ -101,5 +106,20 @@ describe('installGodotIndirectSpecular', () => {
 
     expect(warningsOf(installGodotIndirectSpecular)).toEqual([]);
     expect(patchedChunks()).toEqual(once);
+  });
+});
+
+describe('disablesSpecularOcclusion', () => {
+  it('reads the setting a material records', () => {
+    const material = new THREE.MeshStandardMaterial({ userData: specularOcclusionUserData(true) });
+    expect(disablesSpecularOcclusion(material)).toBe(true);
+  });
+
+  it("reads Godot's default, occlusion on, off a material that records none (edge case)", () => {
+    expect(disablesSpecularOcclusion(new THREE.MeshStandardMaterial())).toBe(false);
+  });
+
+  it("reads Godot's default for no material (error case)", () => {
+    expect(disablesSpecularOcclusion(undefined)).toBe(false);
   });
 });

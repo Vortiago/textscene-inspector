@@ -19,7 +19,7 @@ export const SKY_ROUGH_LAYERS_UNIFORM = 'godotSkyRoughLayersMap';
 /** The uniform every lit material samples the last layer through. */
 export const SKY_LAST_LAYER_UNIFORM = 'godotSkyLastLayerMap';
 
-/** The uniform every lit material reads the sky's share of the ambient from, in its `x`. */
+/** The one-element array uniform every lit material reads the sky's share of the ambient from. */
 export const SKY_CONTRIBUTION_UNIFORM = 'godotSkyContribution';
 
 /**

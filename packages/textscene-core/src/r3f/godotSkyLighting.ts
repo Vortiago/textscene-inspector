@@ -35,7 +35,7 @@ const LAST_LAYER = SKY_ROUGHNESS_LAYERS_DEFAULT - 1;
 const GODOT_IBL_IRRADIANCE = /* glsl */ `vec3 godotIBLIrradiance( const in vec3 normal ) {
 
 		vec3 worldNormal = transformNormalByInverseViewMatrix( normal, viewMatrix );
-		return PI * textureCube( ${SKY_LAST_LAYER_UNIFORM}, envMapRotation * worldNormal ).rgb * envMapIntensity * ${SKY_CONTRIBUTION_UNIFORM};
+		return PI * textureCube( ${SKY_LAST_LAYER_UNIFORM}, envMapRotation * worldNormal ).rgb * envMapIntensity * ${SKY_CONTRIBUTION_UNIFORM}[ 0 ];
 
 	}
 
@@ -86,9 +86,13 @@ const GODOT_IBL_RADIANCE = /* glsl */ `vec3 godotIBLRadiance( const in vec3 view
 
 	`;
 
+/**
+ * The share is a one-element array, not a float: three caches a float uniform by its value's
+ * identity (r186 `WebGLUniforms.js:163-173`), so a rewritten buffer would never reach the GPU.
+ */
 const SKY_LAYER_UNIFORMS = /* glsl */ `uniform samplerCube ${SKY_ROUGH_LAYERS_UNIFORM};
 	uniform samplerCube ${SKY_LAST_LAYER_UNIFORM};
-	uniform float ${SKY_CONTRIBUTION_UNIFORM};
+	uniform float ${SKY_CONTRIBUTION_UNIFORM}[ 1 ];
 
 	`;
 

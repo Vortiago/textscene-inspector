@@ -11,6 +11,7 @@ import { DFG_SIZE, dfgHalfFloats } from '../godot/dfg.js';
 import { applyChunkEdits, installChunkPatch, type ChunkEdit, type Chunks } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
 import { defining, type ProgramInjection } from './materialProgramInputs.js';
+import { recordedOn } from './materials/recordedOnMaterial.js';
 
 type SpecularChunk = 'lights_physical_pars_fragment' | 'lights_fragment_begin' | 'aomap_fragment';
 
@@ -73,6 +74,18 @@ const GODOT_SPECULAR_OCCLUSION = /* glsl */ `
 
 /** What a material with `disable_specular_occlusion` set compiles with. */
 export const SPECULAR_OCCLUSION_DISABLED: ProgramInjection = defining(OCCLUSION_DISABLED_DEFINE);
+
+/** Where a material records `disable_specular_occlusion`, for a draw that shades it again. */
+const OCCLUSION_DISABLED_KEY = 'godotSpecularOcclusionDisabled';
+
+export function specularOcclusionUserData(isDisabled: boolean): Record<string, unknown> {
+  return { [OCCLUSION_DISABLED_KEY]: isDisabled };
+}
+
+/** Whether `material` records `disable_specular_occlusion`: false, Godot's default, for no record. */
+export function disablesSpecularOcclusion(material: THREE.Material | undefined): boolean {
+  return !!material && recordedOn(material, OCCLUSION_DISABLED_KEY, false);
+}
 
 const EDITS: readonly ChunkEdit<SpecularChunk>[] = [
   {

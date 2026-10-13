@@ -15,6 +15,7 @@ import {
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
 import { lightModesUserData } from '../../../r3f/lightModes';
+import { disablesSpecularOcclusion } from '../../../r3f/godotIndirectSpecular';
 import { DiffuseMode } from '../../../godot/diffuseMode';
 import { SpecularMode } from '../../../godot/specularMode';
 import {
@@ -267,6 +268,11 @@ describe('standardMaterialBags — specular occlusion', () => {
 
   it('patches nothing on an unshaded surface, which has no reflection (edge case)', () => {
     expect(bag({ disable_specular_occlusion: 'true', shading_mode: '0' }).injection).toBeUndefined();
+  });
+
+  it('records the setting, for a decal to shade its projection with', () => {
+    const material = materialFromBag(bag({ disable_specular_occlusion: 'true' }));
+    expect(disablesSpecularOcclusion(material)).toBe(true);
   });
 });
 

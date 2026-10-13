@@ -65,9 +65,9 @@ downsamples to an octmap 10 texels wide, then a GGX filter per layer. Two small 
 hold them. The diffuse light reads the last layer, and a reflection from layer 4 up reads the
 baked layers. A sharper reflection reads three's PMREM. The PMREM blurs a rough layer narrower
 than Godot's chain, and spherical harmonics of order 2 cannot hold the last layer's sharper
-terms. Godot's own DFG table weighs every reflection. A
-`HemisphereLight` approximation is rejected: it is diffuse-only, so each metallic or smooth material stays visibly wrong.
-`ambient_light_energy` sets `scene.environmentIntensity`. `AMBIENT_SOURCE_COLOR` is a
+terms. Godot's own DFG table weighs every reflection. A `HemisphereLight` approximation is
+rejected: it is diffuse-only, so each metallic or smooth material stays visibly wrong.
+`background_energy_multiplier` sets `scene.environmentIntensity`. `AMBIENT_SOURCE_COLOR` is a
 flat `ambientLight`. `AMBIENT_SOURCE_DISABLED` emits nothing. `AMBIENT_SOURCE_SKY` reads
 the IBL, blended with the flat colour by `ambient_light_sky_contribution`. For that
 source, `ambient_light_color × energy` is wrong: the colour is inert at the default
