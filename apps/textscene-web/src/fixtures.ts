@@ -1753,6 +1753,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Volumetric Fog Spot Shadow Bias",
+    "file": "unit-volumetric-fog-spot-shadow-bias.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Voxel Gi",
     "file": "unit-voxel-gi.tscn",
     "category": "Other"
