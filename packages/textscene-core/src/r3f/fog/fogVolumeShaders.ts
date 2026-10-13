@@ -5,15 +5,18 @@
  * column. The volume's rows run bottom-up, as WebGL's fragments do, where Godot's run top-down.
  */
 
+import { HENYEY_GREENSTEIN_GLSL } from '../henyeyGreenstein.js';
 import { FogLightKind } from './fogLights.js';
 
-/** The jitters one froxel samples and averages: 16 under temporal reprojection, else its centre. */
+/** The offsets a still froxel samples and averages: Godot's 16 jitters, or its centre alone. */
 export const FOG_SAMPLE_OFFSETS_MAX = 16;
 
 /**
  * Lights one froxel: each light's Henyey-Greenstein scatter (`.glsl:252-255`), and the ambient
- * with its sky (`.glsl:430-445`), averaged over the froxel's sample offsets. The medium scatters
- * them by its albedo and adds its emission (`.glsl:681`). A clear cell scatters nothing (`.glsl:383`).
+ * with its sky (`.glsl:430-445`). The medium scatters them by its albedo and adds its emission
+ * (`.glsl:681`). A clear cell scatters nothing (`.glsl:383`). A moving camera's froxel samples this
+ * frame's jitter and blends into its reprojected history (`.glsl:311-335,683`). A still one averages
+ * its sample offsets, the mean the history converges to.
  */
 export const FOG_LIGHT_FRAGMENT = /* glsl */ `
 #include <common>
@@ -34,20 +37,21 @@ uniform vec3 ambientColor;
 uniform float ambientInject;
 uniform float skyContribution;
 uniform float skyRoughness;
-uniform mat3 viewToWorld;
+uniform float skyEnergy;
+uniform mat3 viewToSky;
 uniform highp sampler2D fogLights;
 uniform int lightCount;
 uniform vec3 sampleOffsets[${FOG_SAMPLE_OFFSETS_MAX}];
 uniform int sampleCount;
+uniform highp sampler3D history;
+uniform mat4 toPreviousView;
+uniform float historyAmount;
 
 #ifdef ENVMAP_TYPE_CUBE_UV
 	uniform sampler2D envMap;
 #endif
 
-float henyeyGreenstein( float cosTheta, float g ) {
-	return RECIPROCAL_PI * 0.25 * ( 1.0 - g * g ) / pow( 1.0 + g * g - 2.0 * g * cosTheta, 1.5 );
-}
-
+${HENYEY_GREENSTEIN_GLSL}
 // The falloff of omni and spot lights alike (.glsl:228-235).
 float omniAttenuation( float range, float inverseRange, float decay ) {
 	float nd = range * inverseRange;
@@ -76,7 +80,7 @@ vec3 lightsAt( vec3 view ) {
 		vec4 cone = texelFetch( fogLights, ivec2( 3, i ), 0 );
 		int kind = int( cone.y );
 		if ( kind == ${FogLightKind.DIRECTIONAL} ) {
-			total += color.rgb * henyeyGreenstein( dot( eye, direction.xyz ), phaseG );
+			total += color.rgb * henyey_greenstein( dot( eye, direction.xyz ), phaseG );
 			continue;
 		}
 		vec3 toLight = position.xyz - view;
@@ -88,7 +92,7 @@ vec3 lightsAt( vec3 view ) {
 			float rim = max( 0.0001, ( 1.0 - spotCos ) / ( 1.0 - direction.w ) );
 			attenuation *= 1.0 - pow( rim, cone.x );
 		}
-		total += color.rgb * attenuation * henyeyGreenstein( dot( normalize( toLight ), eye ), phaseG );
+		total += color.rgb * attenuation * henyey_greenstein( dot( normalize( toLight ), eye ), phaseG );
 	}
 	return total;
 }
@@ -101,26 +105,47 @@ vec3 ambientAt( vec3 view ) {
 		if ( skyContribution > 0.0 ) {
 			isotropic = textureCubeUV( envMap, vec3( 0.0, 1.0, 0.0 ), skyRoughness ).rgb;
 			if ( phaseG != 0.0 ) {
-				vec3 scatter = viewToWorld * normalize( view ) * sign( phaseG );
+				vec3 scatter = viewToSky * normalize( view ) * sign( phaseG );
 				anisotropic = textureCubeUV( envMap, scatter, skyRoughness ).rgb;
 			}
 		}
 	#endif
-	return mix( ambientColor, mix( isotropic, anisotropic, abs( phaseG ) ), skyContribution ) * ambientInject;
+	vec3 sky = mix( isotropic, anisotropic, abs( phaseG ) ) * skyEnergy;
+	return mix( ambientColor, sky, skyContribution ) * ambientInject;
+}
+
+// The medium at a point of the froxel, as a fraction of its cell.
+vec4 froxelMedium( vec3 froxel, vec3 offset ) {
+	vec3 light = vec3( 0.0 );
+	if ( density > litDensityMin ) {
+		vec3 view = froxelView( ( froxel + offset ) / gridSize );
+		light = lightsAt( view );
+		if ( ambientInject > 0.0 ) light += ambientAt( view );
+	}
+	return vec4( light * scattering + emission, density );
+}
+
+// .glsl:315-324: a view-space point as a unit position in the last frame's volume.
+vec3 previousUnit( vec3 view ) {
+	vec3 previous = ( toPreviousView * vec4( view, 1.0 ) ).xyz;
+	float depth = previous.z / - fogLength;
+	vec2 cell = previous.xy / mix( frustumBegin, frustumEnd, vec2( depth ) ) * 0.5 + 0.5;
+	return vec3( cell, pow( depth, 1.0 / detailSpread ) );
 }
 
 void main() {
 	vec3 froxel = vec3( floor( gl_FragCoord.xy ), slice );
-	vec3 light = vec3( 0.0 );
-	if ( density > litDensityMin ) {
-		for ( int i = 0; i < sampleCount; i ++ ) {
-			vec3 view = froxelView( ( froxel + sampleOffsets[ i ] ) / gridSize );
-			light += lightsAt( view );
-			if ( ambientInject > 0.0 ) light += ambientAt( view );
-		}
-		light /= float( sampleCount );
+	if ( historyAmount > 0.0 ) {
+		vec3 unit = previousUnit( froxelView( ( froxel + 0.5 ) / gridSize ) );
+		bool reprojects = all( greaterThan( unit, vec3( 0.0 ) ) ) && all( lessThan( unit, vec3( 1.0 ) ) );
+		// A cell that cannot reproject keeps its centre and no history.
+		vec4 medium = froxelMedium( froxel, reprojects ? sampleOffsets[ 0 ] : vec3( 0.5 ) );
+		gl_FragColor = reprojects ? mix( medium, texture( history, unit ), historyAmount ) : medium;
+		return;
 	}
-	gl_FragColor = vec4( light * scattering + emission, density );
+	vec4 medium = vec4( 0.0 );
+	for ( int i = 0; i < sampleCount; i ++ ) medium += froxelMedium( froxel, sampleOffsets[ i ] );
+	gl_FragColor = medium / float( sampleCount );
 }
 `;
 
@@ -166,5 +191,15 @@ void main() {
 		previousDepth = depth;
 	}
 	gl_FragColor = accumulated;
+}
+`;
+
+/** One slice of `source`, as it is: the history's copy of the medium (`environment/fog.cpp:1163-1169`). */
+export const FOG_COPY_FRAGMENT = /* glsl */ `
+uniform highp sampler3D source;
+uniform float slice;
+
+void main() {
+	gl_FragColor = texelFetch( source, ivec3( ivec2( gl_FragCoord.xy ), int( slice ) ), 0 );
 }
 `;

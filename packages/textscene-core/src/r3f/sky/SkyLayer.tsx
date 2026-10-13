@@ -15,6 +15,8 @@ import { useSceneResources } from '../SceneResourcesContext';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { readSkyLightDeclaration } from './skyLight';
+import { skyEuler } from './skyRotation';
+import type { Vector3 } from '../../parser/vectors';
 
 export interface SkyLayerProps {
   sky: SkyProperties;
@@ -35,6 +37,8 @@ export interface SkyLayerProps {
    * multiplier brightens the sky as well as the surfaces it lights.
    */
   backgroundIntensity?: number;
+  /** `sky_rotation`, which turns the background and the light the sky gives. */
+  rotation: Vector3;
 }
 
 /** Godot's sky shader has four light slots. The other lights do not reach it. */
@@ -45,6 +49,7 @@ export function SkyLayer({
   intensity = 1,
   asBackground = true,
   backgroundIntensity = 1,
+  rotation,
 }: SkyLayerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
@@ -58,6 +63,7 @@ export function SkyLayer({
     useTexture2D(sky.kind === 'panorama' ? sky.panorama : undefined, externalResources, internalResources)
       .texture ?? null;
   const lightsKey = useSkyLightsKey(scene);
+  const { x: rotationX, y: rotationY, z: rotationZ } = rotation;
 
   useEffect(() => {
     // No frame has read the lights yet. A bake now would be replaced before it
@@ -75,24 +81,43 @@ export function SkyLayer({
     const previousIntensity = scene.environmentIntensity;
     const previousBackground = scene.background;
     const previousBackgroundIntensity = scene.backgroundIntensity;
+    const previousEnvironmentRotation = scene.environmentRotation.clone();
+    const previousBackgroundRotation = scene.backgroundRotation.clone();
+    const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
 
     scene.environment = built.environment;
     scene.environmentIntensity = intensity;
+    scene.environmentRotation.copy(skyRotation);
     if (asBackground) {
       scene.background = built.background;
       scene.backgroundIntensity = backgroundIntensity;
+      scene.backgroundRotation.copy(skyRotation);
     }
 
     return () => {
       scene.environment = previousEnvironment;
       scene.environmentIntensity = previousIntensity;
+      scene.environmentRotation.copy(previousEnvironmentRotation);
       if (asBackground) {
         scene.background = previousBackground;
         scene.backgroundIntensity = previousBackgroundIntensity;
+        scene.backgroundRotation.copy(previousBackgroundRotation);
       }
       built.dispose();
     };
-  }, [gl, scene, sky, intensity, panorama, asBackground, backgroundIntensity, lightsKey]);
+  }, [
+    gl,
+    scene,
+    sky,
+    intensity,
+    panorama,
+    asBackground,
+    backgroundIntensity,
+    lightsKey,
+    rotationX,
+    rotationY,
+    rotationZ,
+  ]);
 
   return null;
 }

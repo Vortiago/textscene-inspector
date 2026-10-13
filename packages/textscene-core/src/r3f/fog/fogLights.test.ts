@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { FOG_LIGHT_TEXELS, FogLightKind, packFogLights } from './fogLights';
+import { FOG_LIGHT_TEXELS, FogLightKind, FogLightRows } from './fogLights';
 import { fogLightUserData } from './fogLightDeclaration';
 
 /** A camera at (0, 3, 8) looking down -Z, as in `unit-world-environment-basic`. */
@@ -11,17 +11,29 @@ function camera(): THREE.PerspectiveCamera {
   return view;
 }
 
-function sceneWith(...lights: THREE.Light[]): THREE.Scene {
+/** Each light in a scene, with its world matrices current, as the fog reads them. */
+function placed(...lights: THREE.Light[]): THREE.Light[] {
   const scene = new THREE.Scene();
-  for (const light of lights) scene.add(light);
+  for (const light of lights) {
+    scene.add(light);
+    const target = (light as THREE.DirectionalLight | THREE.SpotLight).target;
+    if (target) scene.add(target);
+  }
   scene.updateMatrixWorld();
-  return scene;
+  return lights;
+}
+
+/** The rows `lights` pack into through the test camera. */
+function packed(lights: THREE.Light[]): FogLightRows {
+  const rows = new FogLightRows();
+  rows.pack(lights, camera());
+  return rows;
 }
 
 /** Texel `texel` of light row `row`. */
-function texel(rows: Float32Array, row: number, texel: number): number[] {
+function texel(rows: FogLightRows, row: number, texel: number): number[] {
   const start = (row * FOG_LIGHT_TEXELS + texel) * 4;
-  return Array.from(rows.subarray(start, start + 4));
+  return Array.from(rows.data.subarray(start, start + 4));
 }
 
 /** A vector's components to six places, so a negative zero matches a zero. */
@@ -35,11 +47,11 @@ function omni(): THREE.PointLight {
   return light;
 }
 
-describe('packFogLights', () => {
+describe('FogLightRows.pack', () => {
   it('puts an omni light in view space with its range, decay and colour times energy', () => {
-    const rows = packFogLights(sceneWith(omni()), camera());
+    const rows = packed(placed(omni()));
 
-    expect(rows.length).toBe(FOG_LIGHT_TEXELS * 4);
+    expect(rows.count).toBe(1);
     expect(texel(rows, 0, 0)).toEqual([0, 5, -8, Math.fround(1 / 60)]);
     expect(texel(rows, 0, 1)).toEqual([Math.fround(Math.PI), Math.fround(Math.PI), Math.fround(Math.PI), 1]);
     expect(texel(rows, 0, 3)[1]).toBe(FogLightKind.OMNI);
@@ -49,7 +61,7 @@ describe('packFogLights', () => {
     const light = omni();
     light.userData = fogLightUserData({ energy: 0.5 });
 
-    const rows = packFogLights(sceneWith(light), camera());
+    const rows = packed(placed(light));
 
     expect(texel(rows, 0, 1)[0]).toBeCloseTo(Math.PI / 2, 5);
   });
@@ -58,7 +70,7 @@ describe('packFogLights', () => {
     const light = omni();
     light.userData = fogLightUserData({ energy: 0.001 });
 
-    expect(packFogLights(sceneWith(light), camera())).toHaveLength(0);
+    expect(packed(placed(light)).count).toBe(0);
   });
 
   it('leaves out a light under a hidden ancestor', () => {
@@ -69,18 +81,15 @@ describe('packFogLights', () => {
     scene.add(hidden);
     scene.updateMatrixWorld();
 
-    expect(packFogLights(scene, camera())).toHaveLength(0);
+    expect(packed(hidden.children as THREE.Light[]).count).toBe(0);
   });
 
   it('points a directional light towards itself, in view space', () => {
     const sun = new THREE.DirectionalLight(0xffffff, 2);
     sun.position.set(0, 1, 0);
     sun.target.position.set(0, 0, 0);
-    const scene = sceneWith(sun);
-    scene.add(sun.target);
-    scene.updateMatrixWorld();
 
-    const rows = packFogLights(scene, camera());
+    const rows = packed(placed(sun));
 
     expectDirection(texel(rows, 0, 2).slice(0, 3), [0, 1, 0]);
     expect(texel(rows, 0, 3)[1]).toBe(FogLightKind.DIRECTIONAL);
@@ -91,15 +100,41 @@ describe('packFogLights', () => {
     spot.position.set(0, 3, 0);
     spot.target.position.set(0, 3, -1);
     spot.userData = fogLightUserData({ energy: 1, spotAngleAttenuation: 4 });
-    const scene = sceneWith(spot);
-    scene.add(spot.target);
-    scene.updateMatrixWorld();
 
-    const rows = packFogLights(scene, camera());
+    const rows = packed(placed(spot));
 
     const [x, y, z, cosAngle] = texel(rows, 0, 2);
     expectDirection([x!, y!, z!], [0, 0, -1]);
     expect(cosAngle).toBeCloseTo(0.5, 6);
     expect(texel(rows, 0, 3)).toEqual([0.25, FogLightKind.SPOT, 0, 0]);
+  });
+
+  it('keeps a negative light negative, so the fog darkens', () => {
+    const light = omni();
+    light.intensity = -Math.PI;
+
+    expect(texel(packed(placed(light)), 0, 1)[0]).toBeCloseTo(-Math.PI, 5);
+  });
+
+  it('answers that the rows changed only when a light moved', () => {
+    const lights = placed(omni());
+    const view = camera();
+    const rows = new FogLightRows();
+
+    expect(rows.pack(lights, view)).toBe(true);
+    expect(rows.pack(lights, view)).toBe(false);
+    lights[0]!.position.y = 9;
+    lights[0]!.updateMatrixWorld();
+    expect(rows.pack(lights, view)).toBe(true);
+  });
+
+  it('answers that the rows changed when a light leaves', () => {
+    const lights = placed(omni(), omni());
+    const view = camera();
+    const rows = new FogLightRows();
+    rows.pack(lights, view);
+
+    expect(rows.pack(lights.slice(0, 1), view)).toBe(true);
+    expect(rows.count).toBe(1);
   });
 });

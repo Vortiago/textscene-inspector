@@ -25,8 +25,8 @@ import { useLatchedSceneScan } from './useLatchedSceneScan';
 import { SkyLayer } from '../sky/SkyLayer';
 import { ToneMapLayer } from './ToneMapLayer';
 import { SkyDiffuseReflectionSplit } from './SkyDiffuseReflectionSplit';
-import { VolumetricFogLayer } from '../volumetricFog/VolumetricFogLayer';
-import { sceneFogFor } from './sceneFog';
+import { FogLayer } from '../fog/FogLayer';
+import { clearColorCube } from './colorBackground';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -40,7 +40,6 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   // sky can light the scene without being shown (AMBIENT_SOURCE_SKY over a
   // colour background) and can be shown without lighting it (ambient DISABLED).
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
-  const showsColor = showsBackgroundColor(settings.background.mode);
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
   // Blending and glow both need linear HDR ahead of the tone curve, so the
@@ -57,15 +56,24 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   const draws3D = useDraws3D();
   // One value decides the pass and the suppression, so they cannot disagree.
   const composited = draws3D && (activeGlow || hasBlended) ? { glow: activeGlow } : null;
+  // One value decides the fog programs, the fogged colour background and the fog passes.
+  const hasFog = draws3D && (!!settings.fog || !!settings.volumetricFog);
 
   return (
     <>
-      <EnvironmentApplier settings={settings} hasSky={!!sky} suppressToneMapping={!!composited} />
+      <EnvironmentApplier
+        settings={settings}
+        hasSky={!!sky}
+        hasFog={hasFog}
+        suppressToneMapping={!!composited}
+      />
       {composited && <ToneMapLayer glow={composited.glow} toneMapping={settings.toneMapping} />}
-      {draws3D && settings.volumetricFog && (
-        <VolumetricFogLayer
-          fog={settings.volumetricFog}
-          backgroundColor={showsColor ? settings.background.color : null}
+      {hasFog && (
+        <FogLayer
+          depth={settings.fog}
+          volumetric={settings.volumetricFog}
+          skyRotation={settings.skyRotation}
+          skyEnergy={settings.background.energyMultiplier}
         />
       )}
       {sky && (showsSky || skyAmbient) && (
@@ -74,6 +82,7 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
             sky={sky}
             asBackground={showsSky}
             backgroundIntensity={settings.background.energyMultiplier}
+            rotation={settings.skyRotation}
             // The reflection strength drives `environmentIntensity`: Godot reflects the sky at
             // `background_energy_multiplier` whatever the ambient source. The diffuse share is
             // restored per material below.
@@ -140,6 +149,8 @@ interface EnvironmentApplierProps {
   settings: EnvironmentSettings;
   /** When a real sky renders, it owns the background and this must not fight it. */
   hasSky: boolean;
+  /** Whether the depth fog or the volumetric fog draws, which fog every program and the background. */
+  hasFog: boolean;
   /**
    * The composer forces `NoToneMapping` while mounted and `GodotToneMapEffect` applies the curve,
    * so the in-material tonemap is not applied here.
@@ -147,18 +158,23 @@ interface EnvironmentApplierProps {
   suppressToneMapping: boolean;
 }
 
-function EnvironmentApplier({ settings, hasSky, suppressToneMapping }: EnvironmentApplierProps) {
+function EnvironmentApplier({ settings, hasSky, hasFog, suppressToneMapping }: EnvironmentApplierProps) {
   const scene = useThree((state) => state.scene);
   const gl = useThree((state) => state.gl);
 
-  const mode = settings.background.mode;
-  const showBackgroundColor = showsBackgroundColor(mode);
+  const { mode, color: backgroundColor, energyMultiplier: backgroundEnergy } = settings.background;
+  const showsColor = showsBackgroundColor(mode);
 
   useEffect(() => {
     const previousBackground = scene.background;
-    if (showBackgroundColor) {
+    const previousIntensity = scene.backgroundIntensity;
+    let cube: THREE.CubeTexture | null = null;
+    if (showsColor) {
       // Godot Color literals are sRGB; convert to three.js's linear working space.
-      scene.background = godotColorToLinear(settings.background.color);
+      const color = godotColorToLinear(backgroundColor);
+      cube = hasFog ? clearColorCube(color) : null;
+      scene.background = cube ?? color;
+      if (cube) scene.backgroundIntensity = backgroundEnergy;
     } else if (mode === BackgroundMode.BG_SKY && !hasSky) {
       // A sky we cannot resolve (an unsupported material, or one in an ExtResource `.tres`). A
       // mid-blue solid reads as "sky here" rather than as a black void.
@@ -166,8 +182,10 @@ function EnvironmentApplier({ settings, hasSky, suppressToneMapping }: Environme
     }
     return () => {
       scene.background = previousBackground;
+      scene.backgroundIntensity = previousIntensity;
+      cube?.dispose();
     };
-  }, [scene, showBackgroundColor, mode, settings.background.color, hasSky]);
+  }, [scene, showsColor, mode, backgroundColor, backgroundEnergy, hasSky, hasFog]);
 
   const {
     mode: toneMapMode,
@@ -189,15 +207,16 @@ function EnvironmentApplier({ settings, hasSky, suppressToneMapping }: Environme
     );
   }, [gl, scene, toneMapMode, toneMapExposure, toneMapWhite, toneMapAgxContrast, suppressToneMapping]);
 
-  const { fog, volumetricFog } = settings;
-  const sceneFog = useMemo(() => sceneFogFor({ fog, volumetricFog }), [fog, volumetricFog]);
   useEffect(() => {
+    if (!hasFog) return undefined;
     const previousFog = scene.fog;
-    if (sceneFog) scene.fog = sceneFog;
+    // three compiles its fog chunks only under a scene fog. Its own terms stay unread, since the
+    // patched chunks draw Godot's fog from the shared fog uniforms.
+    scene.fog = new THREE.FogExp2(0x000000, 0);
     return () => {
       scene.fog = previousFog;
     };
-  }, [scene, sceneFog]);
+  }, [scene, hasFog]);
 
   return null;
 }

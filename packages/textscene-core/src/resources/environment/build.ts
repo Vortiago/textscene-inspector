@@ -53,13 +53,8 @@ export function createEnvironmentSettings(
       white: whiteFor(properties),
       agxContrast: properties.tonemap_agx_contrast,
     },
-    fog: properties.fog_enabled
-      ? {
-          density: properties.fog_density,
-          color: properties.fog_light_color,
-          mode: properties.fog_mode,
-        }
-      : null,
+    fog: properties.fog_enabled ? depthFogFor(properties) : null,
+    skyRotation: properties.sky_rotation,
     volumetricFog: properties.volumetric_fog_enabled ? volumetricFogFor(properties) : null,
     adjustments: properties.adjustment_enabled
       ? {
@@ -90,6 +85,23 @@ export function createEnvironmentSettings(
   };
 }
 
+function depthFogFor(properties: EnvironmentProperties): NonNullable<EnvironmentSettings['fog']> {
+  return {
+    mode: properties.fog_mode,
+    color: properties.fog_light_color,
+    lightEnergy: properties.fog_light_energy,
+    sunScatter: properties.fog_sun_scatter,
+    density: properties.fog_density,
+    aerialPerspective: properties.fog_aerial_perspective,
+    skyAffect: properties.fog_sky_affect,
+    height: properties.fog_height,
+    heightDensity: properties.fog_height_density,
+    depthCurve: properties.fog_depth_curve,
+    depthBegin: properties.fog_depth_begin,
+    depthEnd: properties.fog_depth_end,
+  };
+}
+
 function volumetricFogFor(
   properties: EnvironmentProperties
 ): NonNullable<EnvironmentSettings['volumetricFog']> {
@@ -107,7 +119,9 @@ function volumetricFogFor(
       skyContribution: properties.ambient_light_sky_contribution,
     },
     skyAffect: properties.volumetric_fog_sky_affect,
-    temporalReprojection: properties.volumetric_fog_temporal_reprojection_enabled,
+    temporalReprojection: properties.volumetric_fog_temporal_reprojection_enabled
+      ? properties.volumetric_fog_temporal_reprojection_amount
+      : null,
   };
 }
 

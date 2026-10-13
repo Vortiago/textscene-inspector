@@ -8,12 +8,16 @@
 import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
-import { MaterialHolders } from './materialHolders';
+import { MaterialHolders } from '../trackedObjects';
+
+/** The scene's sky, which the split stamps onto each material. */
+export type SceneSky = Pick<THREE.Scene, 'environment' | 'environmentRotation'>;
 
 /** What a material held before the split, restored when the split ends. */
 export interface EnvMapOriginal {
   envMap: THREE.Texture | null;
   intensity: number;
+  rotation: THREE.Euler;
 }
 
 export function SkyDiffuseReflectionSplit({
@@ -31,13 +35,12 @@ export function SkyDiffuseReflectionSplit({
   // Stamped every frame: materials arrive across frames (async textures, GLB, sub-scenes), and a
   // mesh can swap its material with no event. three ignores `envMapIntensity` unless the material
   // owns its `envMap` (`material.envMap === null && scene.environment !== null` in WebGLRenderer),
-  // so each points its own `envMap` at the same PMREM texture, with no recompile.
+  // so each points its own `envMap` at the same PMREM texture, with no recompile. A material's own
+  // `envMap` turns by its own `envMapRotation`, not the scene's, so each takes the sky's rotation.
   useFrame(() => {
-    if (!active || contribution >= 1) return;
-    const environment = scene.environment;
-    if (!environment) return;
+    if (!active || contribution >= 1 || !scene.environment) return;
     holders.current ??= new MaterialHolders(scene);
-    splitSkyDiffuse(holders.current.current(), environment, contribution, originals.current);
+    splitSkyDiffuse(holders.current.current(), scene, contribution, originals.current);
   });
 
   // Restores what was found, because the materials outlive any one environment.
@@ -49,6 +52,7 @@ export function SkyDiffuseReflectionSplit({
       for (const [mat, orig] of captured) {
         mat.envMap = orig.envMap;
         mat.envMapIntensity = orig.intensity;
+        mat.envMapRotation.copy(orig.rotation);
       }
       captured.clear();
     };
@@ -64,18 +68,20 @@ export function SkyDiffuseReflectionSplit({
  */
 export function splitSkyDiffuse(
   holders: readonly THREE.Object3D[],
-  environment: THREE.Texture,
+  sky: SceneSky,
   contribution: number,
   originals: Map<THREE.MeshStandardMaterial, EnvMapOriginal>
 ): void {
+  const { environment, environmentRotation } = sky;
+  if (!environment) return;
   for (let i = 0; i < holders.length; i += 1) {
     const material = (holders[i] as THREE.Mesh).material;
     if (Array.isArray(material)) {
       for (let j = 0; j < material.length; j += 1) {
-        stampMaterial(material[j]!, environment, contribution, originals);
+        stampMaterial(material[j]!, environment, environmentRotation, contribution, originals);
       }
     } else if (material) {
-      stampMaterial(material, environment, contribution, originals);
+      stampMaterial(material, environment, environmentRotation, contribution, originals);
     }
   }
 }
@@ -83,6 +89,7 @@ export function splitSkyDiffuse(
 function stampMaterial(
   material: THREE.Material,
   environment: THREE.Texture,
+  environmentRotation: THREE.Euler,
   contribution: number,
   originals: Map<THREE.MeshStandardMaterial, EnvMapOriginal>
 ): void {
@@ -90,10 +97,21 @@ function stampMaterial(
   if (typeof std.envMapIntensity !== 'number') return;
   const metalness = std.metalness ?? 0;
   const intensity = contribution + metalness * (1 - contribution);
-  if (std.envMap === environment && std.envMapIntensity === intensity) return;
+  if (
+    std.envMap === environment &&
+    std.envMapIntensity === intensity &&
+    std.envMapRotation.equals(environmentRotation)
+  ) {
+    return;
+  }
   if (!originals.has(std)) {
-    originals.set(std, { envMap: std.envMap, intensity: std.envMapIntensity });
+    originals.set(std, {
+      envMap: std.envMap,
+      intensity: std.envMapIntensity,
+      rotation: std.envMapRotation.clone(),
+    });
   }
   std.envMap = environment;
   std.envMapIntensity = intensity;
+  std.envMapRotation.copy(environmentRotation);
 }

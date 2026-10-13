@@ -18,12 +18,14 @@ vi.mock('../../resources/sky/build', () => ({
   },
 }));
 
+const NO_ROTATION = { x: 0, y: 0, z: 0 };
+
 const SKY: PanoramaSkyProperties = { kind: 'panorama', panorama: undefined, energy_multiplier: 1 };
 
 function Scene({ lights }: { lights: number }) {
   return (
     <>
-      <SkyLayer sky={SKY} />
+      <SkyLayer sky={SKY} rotation={NO_ROTATION} />
       {Array.from({ length: lights }, (_, i) => (
         <directionalLight key={i} position={[i + 1, 2, 3]} />
       ))}
@@ -77,7 +79,7 @@ describe('SkyLayer', () => {
   it('leaves out a light that declares it draws nothing in the sky', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} />
+        <SkyLayer sky={SKY} rotation={NO_ROTATION} />
         <directionalLight position={[1, 2, 3]} />
         <directionalLight
           position={[3, 2, 1]}
@@ -93,7 +95,7 @@ describe('SkyLayer', () => {
   it('draws a light at its declared energy, though it lights no surface (edge case)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} />
+        <SkyLayer sky={SKY} rotation={NO_ROTATION} />
         <directionalLight intensity={0} userData={skyLightUserData({ drawsInSky: true, energy: 2 })} />
       </>
     );
@@ -105,7 +107,7 @@ describe('SkyLayer', () => {
   it('draws a light that declares nothing at its intensity over the scale (error case)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} />
+        <SkyLayer sky={SKY} rotation={NO_ROTATION} />
         <directionalLight intensity={Math.PI * 3} />
       </>
     );

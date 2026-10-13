@@ -190,6 +190,8 @@ describe('<SkyDiffuseReflectionSplit>', () => {
 
 describe('splitSkyDiffuse', () => {
   const environment = new THREE.Texture();
+  const sky = { environment, environmentRotation: new THREE.Euler() };
+  const unturned = { envMap: null, intensity: 1, rotation: new THREE.Euler() };
 
   it('stamps every entry of a multi-material holder and records each original once', () => {
     const first = new THREE.MeshStandardMaterial();
@@ -197,20 +199,17 @@ describe('splitSkyDiffuse', () => {
     const holder = new THREE.Mesh(new THREE.BufferGeometry(), [first, second]);
     const originals = new Map<THREE.MeshStandardMaterial, EnvMapOriginal>();
 
-    splitSkyDiffuse([holder], environment, 0.2, originals);
-    splitSkyDiffuse([holder], environment, 0.2, originals);
+    splitSkyDiffuse([holder], sky, 0.2, originals);
+    splitSkyDiffuse([holder], sky, 0.2, originals);
     expect(first.envMapIntensity).toBeCloseTo(0.2, 10);
     expect(second.envMapIntensity).toBeCloseTo(1, 10);
-    expect([...originals.values()]).toEqual([
-      { envMap: null, intensity: 1 },
-      { envMap: null, intensity: 1 },
-    ]);
+    expect([...originals.values()]).toEqual([unturned, unturned]);
   });
 
   it('leaves a material with no envMapIntensity alone', () => {
     const basic = new THREE.MeshBasicMaterial();
     const originals = new Map<THREE.MeshStandardMaterial, EnvMapOriginal>();
-    splitSkyDiffuse([new THREE.Mesh(new THREE.BufferGeometry(), basic)], environment, 0, originals);
+    splitSkyDiffuse([new THREE.Mesh(new THREE.BufferGeometry(), basic)], sky, 0, originals);
     expect(basic.envMap).toBeNull();
     expect(originals.size).toBe(0);
   });
@@ -219,10 +218,10 @@ describe('splitSkyDiffuse', () => {
     const material = new THREE.MeshStandardMaterial();
     const holder = new THREE.Mesh(new THREE.BufferGeometry(), material);
     const originals = new Map<THREE.MeshStandardMaterial, EnvMapOriginal>();
-    splitSkyDiffuse([holder], environment, 0.3, originals);
+    splitSkyDiffuse([holder], sky, 0.3, originals);
 
     const writes = countWrites(material, ['envMap', 'envMapIntensity']);
-    splitSkyDiffuse([holder], environment, 0.3, originals);
+    splitSkyDiffuse([holder], sky, 0.3, originals);
     expect(writes()).toBe(0);
   });
 
@@ -230,10 +229,10 @@ describe('splitSkyDiffuse', () => {
     const material = new THREE.MeshStandardMaterial();
     const holder = new THREE.Mesh(new THREE.BufferGeometry(), material);
     const originals = new Map<THREE.MeshStandardMaterial, EnvMapOriginal>();
-    splitSkyDiffuse([holder], environment, 0, originals);
+    splitSkyDiffuse([holder], sky, 0, originals);
 
     material.metalness = 1;
-    splitSkyDiffuse([holder], environment, 0, originals);
+    splitSkyDiffuse([holder], sky, 0, originals);
     expect(material.envMapIntensity).toBe(1);
   });
 
@@ -241,18 +240,33 @@ describe('splitSkyDiffuse', () => {
     const material = new THREE.MeshStandardMaterial();
     const holder = new THREE.Mesh(new THREE.BufferGeometry(), material);
     const originals = new Map<THREE.MeshStandardMaterial, EnvMapOriginal>();
-    splitSkyDiffuse([holder], environment, 0, originals);
+    splitSkyDiffuse([holder], sky, 0, originals);
 
     const next = new THREE.Texture();
-    splitSkyDiffuse([holder], next, 0, originals);
+    splitSkyDiffuse([holder], { ...sky, environment: next }, 0, originals);
     expect(material.envMap).toBe(next);
-    expect(originals.get(material)).toEqual({ envMap: null, intensity: 1 });
+    expect(originals.get(material)).toEqual(unturned);
+  });
+
+  it('turns the material by the sky rotation', () => {
+    const material = new THREE.MeshStandardMaterial();
+    const holder = new THREE.Mesh(new THREE.BufferGeometry(), material);
+    const turned = new THREE.Euler(0.1, 0.2, 0.3, 'YXZ');
+    splitSkyDiffuse([holder], { environment, environmentRotation: turned }, 0, new Map());
+    expect(material.envMapRotation.equals(turned)).toBe(true);
+  });
+
+  it('stamps nothing while the scene has no environment', () => {
+    const material = new THREE.MeshStandardMaterial();
+    const holder = new THREE.Mesh(new THREE.BufferGeometry(), material);
+    splitSkyDiffuse([holder], { ...sky, environment: null }, 0, new Map());
+    expect(material.envMap).toBeNull();
   });
 
   it('skips a holder whose material is null', () => {
     const holder = new THREE.Mesh();
     (holder as unknown as { material: null }).material = null;
-    expect(() => splitSkyDiffuse([holder], environment, 0, new Map())).not.toThrow();
+    expect(() => splitSkyDiffuse([holder], sky, 0, new Map())).not.toThrow();
   });
 });
 

@@ -1,12 +1,12 @@
 /**
- * The material-holder list a per-frame pass reads instead of a scene walk: the root is walked once,
- * each change three reports walks only the subtree it names, and the list stays complete after
- * every kind of change three reports.
+ * The tracked list a per-frame pass reads instead of a scene walk: the root is walked once, each
+ * change three reports walks only the subtree it names, and the list stays complete after every
+ * kind of change three reports.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import { MaterialHolders } from './materialHolders';
+import { MaterialHolders, TrackedObjects } from './trackedObjects';
 
 function mesh(): THREE.Mesh {
   return new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial());
@@ -195,3 +195,27 @@ function listenersAddedTo(object: THREE.Object3D, act: () => void): [ListenerArg
   if (added.length === 0) throw new Error('expected the tracker to listen on the object');
   return added;
 }
+
+describe('TrackedObjects', () => {
+  const isLight = (object: THREE.Object3D): object is THREE.Light => (object as THREE.Light).isLight === true;
+
+  it('lists only the objects its predicate picks', () => {
+    const scene = new THREE.Scene();
+    const light = new THREE.PointLight();
+    scene.add(light, mesh());
+
+    expect(new TrackedObjects(scene, isLight).current()).toEqual([light]);
+  });
+
+  it('follows an object the predicate picks into a later subtree', () => {
+    const scene = new THREE.Scene();
+    const lights = new TrackedObjects(scene, isLight);
+    lights.current();
+    const group = new THREE.Group();
+    const light = new THREE.SpotLight();
+    group.add(light);
+    scene.add(group);
+
+    expect(lights.current()).toEqual([light]);
+  });
+});

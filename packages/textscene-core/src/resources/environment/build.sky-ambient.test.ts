@@ -6,54 +6,13 @@
  */
 import { describe, expect, it } from 'vitest';
 import { createEnvironmentSettings } from './build';
+import { decodeEnvironment } from './decode';
 import { BackgroundMode, type EnvironmentProperties } from './types';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
 
 const base = (overrides: Partial<EnvironmentProperties> = {}): EnvironmentProperties => ({
+  ...decodeEnvironment({}),
   background_mode: BackgroundMode.BG_SKY,
-  background_color: { r: 0, g: 0, b: 0, a: 1 },
-  background_energy_multiplier: 1.0,
-  tonemap_mode: 0,
-  tonemap_agx_white: 16.29,
-  tonemap_agx_contrast: 1.25,
-  tonemap_white: 1.0,
-  tonemap_exposure: 1.0,
-  ambient_light_source: 0,
-  ambient_light_color: { r: 0, g: 0, b: 0, a: 1 },
-  ambient_light_energy: 1.0,
-  ambient_light_sky_contribution: 1.0,
-  fog_enabled: false,
-  fog_density: 0.01,
-  fog_light_color: { r: 0.518, g: 0.553, b: 0.608, a: 1 },
-  fog_mode: 0,
-  volumetric_fog_enabled: false,
-  volumetric_fog_density: 0.05,
-  volumetric_fog_albedo: { r: 1, g: 1, b: 1, a: 1 },
-  volumetric_fog_emission: { r: 0, g: 0, b: 0, a: 1 },
-  volumetric_fog_emission_energy: 1.0,
-  volumetric_fog_anisotropy: 0.2,
-  volumetric_fog_length: 64.0,
-  volumetric_fog_detail_spread: 2.0,
-  volumetric_fog_ambient_inject: 0.0,
-  volumetric_fog_sky_affect: 1.0,
-  volumetric_fog_temporal_reprojection_enabled: true,
-  glow_enabled: false,
-  glow_levels: [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0],
-  glow_normalized: false,
-  glow_intensity: 0.3,
-  glow_strength: 1.0,
-  glow_mix: 0.05,
-  glow_bloom: 0.0,
-  glow_blend_mode: 1,
-  glow_hdr_threshold: 1.0,
-  glow_hdr_scale: 2.0,
-  glow_hdr_luminance_cap: 12.0,
-  glow_map_strength: 0.8,
-  adjustment_enabled: false,
-  adjustment_brightness: 1,
-  adjustment_contrast: 1,
-  adjustment_saturation: 1,
-  ssr_enabled: false,
   ...overrides,
 });
 

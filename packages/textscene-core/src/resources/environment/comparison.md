@@ -11,7 +11,7 @@ The resource a `WorldEnvironment` holds: background and sky, ambient light, tone
 ## Background sky
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
 
-A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and the sphere and floor it lights, match Godot.
+A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and the sphere and floor it lights, match Godot. `sky_rotation` turns the drawn sky, the light it gives and the sky colour the fog reads, as Godot turns them.
 
 ## Tone mapping
 <!-- compare: image=unit-tonemap-agx-shadow status=done fixture=unit-tonemap-agx-shadow.tscn -->
@@ -33,15 +33,19 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 - **Approximated** The pyramid blurs with a 13-tap downsample and a 9-tap tent upsample rather than Godot's gaussian, so a bare glow buffer (REPLACE) differs slightly.
 - **Approximated** `glow_map` is not resolved, so a scene supplying one gets unmodulated glow.
 
+## Depth fog
+<!-- compare: image=unit-depth-fog status=done fixture=unit-depth-fog.tscn -->
+
+`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too, and `fog_sky_affect` sets how far the fog covers the background.
+
 ## Volumetric fog
 <!-- compare: image=unit-world-environment-basic status=limitation fixture=unit-world-environment-basic.tscn -->
 
-`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot.
+`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last as Godot's temporal reprojection does, and a still camera shows the mean of Godot's 16 jitters, which Godot converges to.
 
 - **Not drawn** `volumetric_fog_gi_inject` adds no light, because the previewer draws no VoxelGI or SDFGI.
 - **Not drawn** A light that casts shadows lights the fog as if nothing blocks it.
 - **Not drawn** A FogVolume adds no density, colour or emission to the fog.
-- **Approximated** `volumetric_fog_temporal_reprojection_amount` is not read. The fog is always the still frame that Godot converges to, so a moving camera leaves no trail.
 
 ## Linting
 
@@ -148,7 +152,7 @@ Strict parsing format-checks these `Environment` properties, plus 2 inherited fr
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-The lenient parser never rejects. Every scalar goes through the shared `floatOr`, `intOr` and `boolOr` decoders, which log the bad literal and fall back to Godot's default. An unreadable `glow_intensity` therefore renders as default glow rather than as no Environment at all.
+The lenient parser never rejects. Every scalar goes through the shared `floatOr`, `intOr` and `boolOr` decoders, which log the bad literal and fall back to Godot's default. An unreadable `glow_intensity` therefore renders as default glow rather than as no Environment at all. A depth-mode fog with no stored `fog_density` takes 1, and `fog_depth_begin` and `fog_depth_end` drag each other along so the begin never passes the end, as Godot's setters do.
 
 ## Known limitations
 
