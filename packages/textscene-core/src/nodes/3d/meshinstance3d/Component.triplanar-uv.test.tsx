@@ -1,5 +1,5 @@
 /**
- * World-triplanar tiling on a PlaneMesh. With `uv1_world_triplanar = true`, Godot
+ * World-triplanar tiling on a PlaneMesh. With `uv1_triplanar` and `uv1_world_triplanar`, Godot
  * tiles the texture once per world unit × uv1_scale. No triplanar shader runs
  * here, but `repeat = size × scale` reproduces the density exactly.
  */
@@ -70,6 +70,7 @@ describe('MeshInstance3D — triplanar planar tiling (WI-HALL-5)', () => {
       {
         albedo_texture: 'ExtResource("1")',
         uv1_scale: 'Vector3(0.5, 0.5, 0.5)',
+        uv1_triplanar: 'true',
         uv1_world_triplanar: 'true',
       },
       'Vector2(12, 3.5)'

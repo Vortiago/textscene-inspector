@@ -26,6 +26,7 @@ import { GODOT_ALPHA_HASH } from '../../../r3f/materials/godotAlphaHash';
 import type { ProgramInjection, ProgramShader } from '../../../r3f/materialProgramInputs';
 import { bindSlotTexture, materialTextureState } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
+import { mapSampledBy } from '../../../r3f/testing/patchedFragment';
 import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
 
 interface ParityCase {
@@ -474,7 +475,7 @@ const SNAPSHOT_MAPS = [
   'metalnessMap',
   'emissiveMap',
   'aoMap',
-  'displacementMap',
+  'heightmap',
   'anisotropyMap',
 ] as const;
 
@@ -506,7 +507,7 @@ function snapshot(material: THREE.Material): MaterialSnapshot {
   const m = material as THREE.MeshPhysicalMaterial;
   const maps: Record<string, string> = {};
   for (const key of SNAPSHOT_MAPS) {
-    const texture = (m as unknown as Record<string, THREE.Texture | null>)[key];
+    const texture = mapSampledBy(material, key);
     maps[key] = texture ? textureFingerprint(texture) : 'none';
   }
   return {
@@ -556,7 +557,7 @@ function slotProps(testCase: ParityCase, textures: ResolvedTextureSlots): Standa
     metalnessMap: textures.metallic_texture ?? undefined,
     emissiveMap: textures.emission_texture ?? undefined,
     aoMap: textures.ao_texture ?? undefined,
-    displacementMap: textures.heightmap_texture ?? undefined,
+    heightMap: textures.heightmap_texture ?? undefined,
     anisotropyMap: textures.anisotropy_flowmap ?? undefined,
   };
 }
@@ -730,14 +731,13 @@ describe('StandardMaterial3D arrival parity', () => {
       roughnessMap: THREE.NoColorSpace,
       metalnessMap: THREE.NoColorSpace,
       aoMap: THREE.NoColorSpace,
-      displacementMap: THREE.NoColorSpace,
+      heightmap: THREE.NoColorSpace,
     };
 
     function colorSpaces(material: THREE.Material): Record<string, string> {
-      const m = material as unknown as Record<string, THREE.Texture | null>;
       const out: Record<string, string> = {};
       for (const key of Object.keys(EXPECTED)) {
-        const texture = m[key];
+        const texture = mapSampledBy(material, key);
         out[key] = texture ? texture.colorSpace : 'missing';
       }
       return out;

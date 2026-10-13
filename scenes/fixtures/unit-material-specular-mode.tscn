@@ -1,0 +1,44 @@
+[gd_scene format=3]
+
+; specular_mode, one sphere each: SchlickGGX, toon and disabled, left to right. The light comes
+; from the upper right front, so each mode's highlight faces the camera. Every other lit scene
+; draws SchlickGGX alone, so no other golden shows a regression in toon or disabled.
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.9
+height = 1.8
+radial_segments = 48
+rings = 24
+
+[sub_resource type="StandardMaterial3D" id="Material_ggx"]
+albedo_color = Color(0.85, 0.85, 0.85, 1)
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="Material_toon"]
+albedo_color = Color(0.85, 0.85, 0.85, 1)
+roughness = 0.3
+specular_mode = 1
+
+[sub_resource type="StandardMaterial3D" id="Material_disabled"]
+albedo_color = Color(0.85, 0.85, 0.85, 1)
+roughness = 0.3
+specular_mode = 2
+
+[node name="Root" type="Node3D"]
+
+[node name="SchlickGGX" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_ggx")
+
+[node name="Toon" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_toon")
+
+[node name="Disabled" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.2, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Material_disabled")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.894427191, 0, -0.447213595, -0.211472213, 0.881134221, -0.422944426, 0.394055203, 0.472866244, 0.788110406, 0, 0, 0)

@@ -11,9 +11,6 @@ import { injectProgram, type ProgramInjection } from '../materialProgramInputs';
 type DepthSurface = THREE.Material & {
   map?: THREE.Texture | null;
   alphaMap?: THREE.Texture | null;
-  displacementMap?: THREE.Texture | null;
-  displacementScale?: number;
-  displacementBias?: number;
 };
 
 /** What three's depth and distance materials share. */
@@ -78,13 +75,9 @@ export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, 
     depth.alphaHash !== surface.alphaHash ||
     depth.vertexColors !== surface.vertexColors ||
     !depth.map !== !source.map ||
-    !depth.alphaMap !== !source.alphaMap ||
-    !depth.displacementMap !== !source.displacementMap;
+    !depth.alphaMap !== !source.alphaMap;
   depth.map = source.map ?? null;
   depth.alphaMap = source.alphaMap ?? null;
-  depth.displacementMap = source.displacementMap ?? null;
-  depth.displacementScale = source.displacementScale ?? 1;
-  depth.displacementBias = source.displacementBias ?? 0;
   depth.opacity = surface.opacity;
   depth.vertexColors = surface.vertexColors;
   depth.alphaTest = alphaTest;

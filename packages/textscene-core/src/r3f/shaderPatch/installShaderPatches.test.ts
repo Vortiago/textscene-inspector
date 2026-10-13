@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installShaderPatches } from './installShaderPatches';
 import { CANVAS_SRGB_DEFINES } from '../canvasSrgbMultiply';
+import { warningsOf } from '../testing/logWarnings';
 
 describe('installShaderPatches', () => {
   it('installs the 2D canvas patch with the 3D ones', () => {
@@ -11,11 +12,16 @@ describe('installShaderPatches', () => {
     expect(THREE.ShaderChunk.lights_physical_pars_fragment).not.toBe(diffuseBefore);
   });
 
-  it("installs Godot's area light beside Godot's diffuse", () => {
+  it("installs Godot's area light beside Godot's light function", () => {
     installShaderPatches();
     expect(THREE.ShaderChunk.lights_physical_pars_fragment).toContain('godotLtcIntegral(');
-    expect(THREE.ShaderChunk.lights_physical_pars_fragment).not.toContain(
-      'irradiance * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F )'
+    expect(THREE.ShaderChunk.lights_physical_pars_fragment).toContain('godotSpecularBRDF(');
+  });
+
+  it("installs the sky ambient beside the light function's IBL edits", () => {
+    installShaderPatches();
+    expect(THREE.ShaderChunk.lights_fragment_maps).toContain(
+      'iblIrradiance += godotIBLIrradiance( geometryNormal );'
     );
   });
 
@@ -24,5 +30,11 @@ describe('installShaderPatches', () => {
     const chunks = { ...THREE.ShaderChunk };
     installShaderPatches();
     expect({ ...THREE.ShaderChunk }).toEqual(chunks);
+  });
+
+  it('warns nothing on a second call, as a second canvas makes it (edge case)', () => {
+    installShaderPatches();
+
+    expect(warningsOf(installShaderPatches)).toEqual([]);
   });
 });

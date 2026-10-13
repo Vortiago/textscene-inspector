@@ -11,8 +11,9 @@ Godot's default 3D surface. The scalar PBR base maps onto `MeshStandardMaterial`
 ## Metallic / roughness
 <!-- compare: image=unit-material-metallic status=done fixture=unit-material-metallic.tscn -->
 
-A `metallic = 1.0`, `roughness = 0.1` sphere reflects the preview sky. Both engines render the same blue-grey mirror with a matching highlight.
+A `metallic = 1.0`, `roughness = 0.1` sphere reflects the preview sky. Both engines render the same blue-grey mirror.
 
+- **Approximated** The preview glow spreads the sun's highlight less than Godot's, so the highlight reads smaller. Without glow the highlights match.
 - **Approximated** Godot reads the map channel named by `metallic_texture_channel` and `roughness_texture_channel`. three reads fixed channels, so a map packed in RED is misread.
 
 ## Emission
@@ -41,7 +42,7 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 
 `anisotropy` stretches the specular highlight along one direction. Both engines show a brushed-metal streak.
 
-- **Approximated** Ours reads sharper and more radial where Godot's lobe is soft.
+- **Approximated** three derives the tangent frame per pixel from the UVs, not from the mesh's tangents, so the streak reads faceted and turned from Godot's ring.
 
 ## Anisotropy flowmap
 <!-- compare: image=unit-material-anisotropy-flowmap status=limitation fixture=unit-material-anisotropy-flowmap.tscn -->
@@ -52,6 +53,25 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 - **Approximated** A minified flowmap with zero-alpha texels turns its direction 90 degrees from the first mip level that mixes them.
 - **Approximated** A material loaded from a `.tres` gets its anisotropy scalars and no flowmap.
 
+## Ambient occlusion
+<!-- compare: image=unit-material-ao status=done fixture=unit-material-ao.tscn -->
+
+The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. `ao_texture_channel` picks the map channel.
+
+- **Approximated** `ao_on_uv2` samples through UV1, since no mesh here carries a second UV set.
+
+## Diffuse mode
+<!-- compare: image=unit-material-diffuse-mode status=done fixture=unit-material-diffuse-mode.tscn -->
+
+`diffuse_mode` picks the light's diffuse term: Burley, Lambert, Lambert wrap and toon, left to right, lit from the right. Both engines brighten Burley's rim, wrap the light past Lambert's terminator and band the toon sphere. Godot's default material draws Lambert.
+
+## Specular mode
+<!-- compare: image=unit-material-specular-mode status=done fixture=unit-material-specular-mode.tscn -->
+
+`specular_mode` picks the light's specular term: SchlickGGX, toon and disabled, left to right. Both engines draw a soft highlight, a hard-edged toon disc and no highlight. Toon writes to the diffuse, so the albedo tints it.
+
+- **Approximated** The preview glow spreads the toon disc's halo less than Godot's.
+
 ## Refraction
 <!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
 
@@ -60,11 +80,9 @@ Godot's refraction distorts the background, so the sphere reads bright. `refract
 - **Approximated** The screen-space distortion is not reproduced, and the surface is not dimmed by `1 - ref_amount`, so it reads brighter than Godot's.
 
 ## Height mapping
-<!-- compare: image=unit-material-heightmap status=limitation fixture=unit-material-heightmap.tscn -->
+<!-- compare: image=unit-material-heightmap status=unreviewed fixture=unit-material-heightmap.tscn -->
 
-Godot's `heightmap_*` is texture-space parallax, so the silhouette stays a smooth sphere. It maps to `displacementMap`, which moves real vertices.
-
-- **Approximated** The sphere deforms into a lumpy blob, and the depth scale is in world units.
+Both engines shift every texture coordinate by the depth the heightmap reads, along the view direction in the surface's tangent frame. So the silhouette stays a smooth sphere. Deep parallax steps through Godot's layers, and the flips and the inverted texture follow Godot. Triplanar mapping turns height mapping off, and an unshaded material shifts its albedo too, as in Godot.
 
 ## Texture filter
 <!-- compare: image=unit-material-texture-filter status=done fixture=unit-material-texture-filter.tscn -->
@@ -91,8 +109,6 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 
 - **Shader missing** `alpha_antialiasing_mode` is read for the pass decision, but the cutout edge reads hard rather than coverage-blended.
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
-- **Shader missing** `diffuse_mode` is always Lambert where Godot defaults to Burley, so a rough sphere is slightly darker at the silhouette.
-- **Shader missing** `metallic_specular` has no effect, since three fixes dielectric F0 at 0.04.
 - **Approximated** Godot measures V from the image top and three from the bottom, so a non-integer `uv1_scale.y` or a non-zero `uv1_offset.y` shifts V differently.
 - **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
 - **Approximated** Triplanar tiling density is exact on planar meshes only, since curved and GLB geometry and a `.tres` material tile by their own UVs.

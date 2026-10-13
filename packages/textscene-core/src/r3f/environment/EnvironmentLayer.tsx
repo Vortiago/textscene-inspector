@@ -24,7 +24,6 @@ import { sceneHasBlendedSurface } from './alphaPassScan';
 import { useLatchedSceneScan } from './useLatchedSceneScan';
 import { SkyLayer } from '../sky/SkyLayer';
 import { ToneMapLayer } from './ToneMapLayer';
-import { SkyDiffuseReflectionSplit } from './SkyDiffuseReflectionSplit';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -59,26 +58,19 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
       <EnvironmentApplier settings={settings} hasSky={!!sky} suppressToneMapping={!!composited} />
       {composited && <ToneMapLayer glow={composited.glow} toneMapping={settings.toneMapping} />}
       {sky && (showsSky || skyAmbient) && (
-        <>
-          <SkyLayer
-            sky={sky}
-            asBackground={showsSky}
-            backgroundIntensity={settings.background.energyMultiplier}
-            // The reflection strength drives `environmentIntensity`: Godot reflects the sky at
-            // `background_energy_multiplier` whatever the ambient source. The diffuse share is
-            // restored per material below.
-            intensity={skyAmbient ? skyAmbient.energy : 0}
-          />
-          <SkyDiffuseReflectionSplit
-            contribution={skyAmbient ? skyAmbient.contribution : 1}
-            active={!!skyAmbient}
-          />
-        </>
+        <SkyLayer
+          sky={sky}
+          asBackground={showsSky}
+          backgroundIntensity={settings.background.energyMultiplier}
+          // Godot reflects the sky at `background_energy_multiplier` whatever the ambient source.
+          intensity={skyAmbient ? skyAmbient.energy : 0}
+          contribution={skyAmbient ? skyAmbient.contribution : 1}
+        />
       )}
       {flatAmbient && flatAmbient.energy > 0 && (
         // `* LIGHT_INTENSITY_SCALE`: Godot adds `ambient_light * albedo` with no 1/PI, while three
         // multiplies the colour by `albedo/PI`. The sky ambient takes no factor, because
-        // `getIBLIrradiance` already returns `PI * envColor * intensity`.
+        // `godotIBLIrradiance` already returns `PI * envColor * intensity`.
         <ambientLight
           color={godotColorToLinear(flatAmbient.color)}
           intensity={flatAmbient.energy * LIGHT_INTENSITY_SCALE}

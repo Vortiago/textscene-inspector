@@ -23,7 +23,16 @@ runResourcePropertyValidation('StandardMaterial3D', [
     prop: 'metallic_texture_channel',
     valid: ['0', '4'],
     // ERR_FAIL_INDEX(p_channel, 5) refuses the write outright.
-    invalid: [{ value: '5', contains: ['metallic_texture_channel'], severity: 'error' }],
+    invalid: [
+      { value: '5', contains: ['metallic_texture_channel'], severity: 'error' },
+      { value: '-1', contains: ['metallic_texture_channel'], severity: 'error' },
+    ],
+  },
+  {
+    prop: 'ao_texture_channel',
+    valid: ['0', '4'],
+    // The same shared validator, registered from the features group.
+    invalid: [{ value: '5', contains: ['ao_texture_channel'], severity: 'error' }],
   },
   {
     prop: 'uv1_triplanar_sharpness',

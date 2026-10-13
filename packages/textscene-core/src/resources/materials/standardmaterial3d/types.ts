@@ -7,6 +7,30 @@
 
 import type * as THREE from 'three';
 import type { EmissionScalars } from './emission';
+import type { TextureChannel, TextureChannelMask } from '../../../godot/textureChannel';
+
+/** Godot's height mapping of a surface. */
+export interface Heightmap {
+  /** `heightmap_scale`, unclamped, as the setter stores it (`material.cpp:2283-2286`). */
+  scale: number;
+  /** `heightmap_deep_parallax`: steps through layers, where the default takes one offset. */
+  isDeep: boolean;
+  /** `heightmap_min_layers` and `heightmap_max_layers`, the steps at a head-on and a grazing view. */
+  layers: [min: number, max: number];
+  /** `heightmap_flip_tangent` and `heightmap_flip_binormal`, as -1 or 1. */
+  flip: [tangent: number, binormal: number];
+  /** `heightmap_flip_texture`: the texture holds height, where the default holds depth. */
+  readsHeight: boolean;
+}
+
+/** Godot's height mapping defaults (`material.cpp:3952`, `:3995-3997`). */
+export const HEIGHTMAP_DEFAULTS: Heightmap = {
+  scale: 5,
+  isDeep: false,
+  layers: [8, 32],
+  flip: [1, 1],
+  readsHeight: false,
+};
 
 // One Color declaration repo-wide, re-exported here because this slice's
 // consumers (sky, environment, preview lighting) import it from this module.
@@ -113,6 +137,8 @@ export interface StandardMaterial3DData {
   metallic: number;
   /** `roughness`, clamped 0..1 per its `PROPERTY_HINT_RANGE "0,1,0.01"`. */
   roughness: number;
+  /** `metallic_specular`, unclamped: a dielectric's F0 is `0.16 * specular * specular`. */
+  specular: number;
   /** `emission` × `emission_energy_multiplier`, gated on `emission_enabled`. */
   emission: EmissionScalars;
   /** `emission_operator`: 0 ADD (default), 1 MULTIPLY. */
@@ -171,15 +197,21 @@ export interface StandardMaterial3DData {
   cullModeExplicit: boolean;
   /** `shading_mode`: 'unshaded' (mode 0, unlit) or 'per_pixel' (default). */
   shadingMode: 'unshaded' | 'per_pixel';
+  /** `diffuse_mode`, a `DiffuseMode`. The setter stores it unchecked, so it can lie past the enum. */
+  diffuseMode: number;
+  /** `specular_mode`, a `SpecularMode`, unchecked likewise. */
+  specularMode: number;
   /** `vertex_color_use_as_albedo` (default false). */
   useVertexColors: boolean;
-  /** `ao_enabled`: the AO slot applies only when true. */
-  aoEnabled: boolean;
-  /** `normal_enabled`: the normal slot applies only when true. */
-  normalEnabled: boolean;
+  /** `disable_specular_occlusion` (default false): a dim ambient leaves the reflection whole. */
+  disablesSpecularOcclusion: boolean;
+  /** `ao_light_affect`: how far the AO map also occludes direct light. Unclamped, as the setter is. */
+  aoLightAffect: number;
+  /** `ao_texture_channel`: the AO map channel the shader reads. */
+  aoTextureChannel: TextureChannel;
   /** `normal_scale`, as the uniform XY pair three's `normalScale` wants. */
   normalScale: MaterialVec2;
-  /** `uv1_triplanar` OR `uv1_world_triplanar`. */
+  /** `uv1_triplanar`: triplanar mapping of the first UV set. */
   triplanar: boolean;
   /** `clearcoat` strength (0..1), gated on `clearcoat_enabled`. */
   clearcoat: number;
@@ -189,11 +221,8 @@ export interface StandardMaterial3DData {
   rim: number;
   /** `rim_tint` (0..1, blend light↔albedo), gated on `rim_enabled`. */
   rimTint: number;
-  /**
-   * `heightmap_scale`, gated on `heightmap_enabled` (0 when off). Not clamped
-   * to 0..1: its hint is `"-16,16,0.001"`, a depth factor that may invert.
-   */
-  heightmapScale: number;
+  /** Height mapping, null when `heightmap_enabled` is off or triplanar mapping overrides it. */
+  heightmap: Heightmap | null;
   /**
    * `billboard_mode`: 0 DISABLED, 1 ENABLED, 2 FIXED_Y, 3 PARTICLES. The derived
    * material carries it on `userData`, and `r3f/surfaceDrawHooks.ts` poses each draw.
@@ -204,10 +233,11 @@ export interface StandardMaterial3DData {
    * billboarding (`material.cpp:1274-1281`). It rides the built material's `userData`.
    */
   billboardKeepScale: boolean;
-  /** `anisotropy` magnitude (0..1), gated on `anisotropy_enabled`. */
+  /**
+   * `anisotropy` (−1..1), gated on `anisotropy_enabled`. The sign picks the axis the highlight
+   * stretches along: the tangent when positive, the bitangent when negative.
+   */
   anisotropy: number;
-  /** `anisotropy` direction: 0 when positive, π/2 when negative. */
-  anisotropyRotation: number;
   /** three's `transmission`: 1 when `refraction_enabled`, 0 otherwise. */
   transmission: number;
   /** three's `thickness`, from `refraction_scale`, clamped ≥ 0. */
@@ -244,6 +274,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   opacity: number;
   metalness: number;
   roughness: number;
+  specular: number;
   emissionOperator: number;
   textureFilter: number;
   textureRepeat: boolean;
@@ -261,9 +292,12 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   opaqueAfterCut: boolean;
   depthTest: boolean;
   shadingMode: 'unshaded' | 'per_pixel';
+  diffuseMode: number;
+  specularMode: number;
   useVertexColors: boolean;
-  aoEnabled: boolean;
-  normalEnabled: boolean;
+  disablesSpecularOcclusion: boolean;
+  aoLightAffect: number;
+  aoTextureChannelMask: TextureChannelMask;
   side: THREE.Side;
   cullModeExplicit: boolean;
   normalScale: MaterialVec2;
@@ -272,11 +306,10 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   clearcoatRoughness: number;
   rim: number;
   rimTint: number;
-  heightmapScale: number;
+  heightmap: Heightmap | null;
   billboardMode: number;
   billboardKeepScale: boolean;
   anisotropy: number;
-  anisotropyRotation: number;
   transmission: number;
   refractionThickness: number;
   /** Slot → raw reference string, carried through for the loader's resolution. */

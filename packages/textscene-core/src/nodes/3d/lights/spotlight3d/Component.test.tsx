@@ -78,17 +78,10 @@ describe('<SpotLight3D>', () => {
     expect(instanceAs<THREE.SpotLight>(light).distance).toBe(25);
   });
 
-  it('derives penumbra from spot_angle_attenuation (default 1 → 0.5)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode()} />);
-    const light = renderer.scene.findByType('SpotLight');
-    // penumbra = 1/(spot_angle_attenuation + 1); default attenuation 1 → 0.5.
-    expect(instanceAs<THREE.SpotLight>(light).penumbra).toBeCloseTo(0.5, 5);
-  });
-
-  it('overrides default penumbra when supplied', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode({ penumbra: 0.5 })} />);
-    const light = renderer.scene.findByType('SpotLight');
-    expect(instanceAs<THREE.SpotLight>(light).penumbra).toBe(0.5);
+  it("carries Godot's cone exponent in the penumbra's cosine", async () => {
+    const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode({ spot_angle: 50 })} />);
+    const light = instanceAs<THREE.SpotLight>(renderer.scene.findByType('SpotLight'));
+    expect(Math.cos(light.angle * (1 - light.penumbra))).toBeCloseTo(-Math.SQRT1_2, 10);
   });
 
   it('applies energy * LIGHT_INTENSITY_SCALE as intensity', async () => {

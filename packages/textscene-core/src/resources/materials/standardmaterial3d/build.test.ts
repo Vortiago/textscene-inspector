@@ -9,6 +9,7 @@ import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
+import { heightmapSampledBy, patchedFragment } from '../../../r3f/testing/patchedFragment';
 
 function build(
   properties: Record<string, string>,
@@ -280,12 +281,10 @@ describe('the imperative adapter — physical-only features', () => {
     expect(material.thickness).toBeCloseTo(0.2, 5);
   });
 
-  it('maps a negative anisotropy to full strength turned 90°', () => {
-    const material = buildMaterial(
-      parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '-0.75' })
-    ) as THREE.MeshPhysicalMaterial;
-    expect(material.anisotropy).toBeCloseTo(0.75, 5);
-    expect(material.anisotropyRotation).toBeCloseTo(Math.PI / 2, 5);
+  it('draws a negative anisotropy with the program of a positive one', () => {
+    const build = (anisotropy: string) =>
+      buildMaterial(parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy }));
+    expect(patchedFragment(build('-0.75'))).toBe(patchedFragment(build('0.75')));
   });
 
   it('stays a MeshStandardMaterial when every physical flag is off', () => {
@@ -411,16 +410,15 @@ describe('the imperative adapter — texture slots', () => {
     expect(material.emissiveIntensity).toBe(2);
   });
 
-  it('applies the heightmap texture as a displacement map at Godot’s default depth', () => {
+  it('binds the heightmap texture for the parallax shift and moves no vertex', () => {
     const texture = loadedTexture();
     const on = build({ heightmap_enabled: 'true' }, { heightmap_texture: texture });
-    expectBoundRaw(on.displacementMap, texture);
-    expect(on.displacementScale).toBe(5);
+    expectBoundRaw(heightmapSampledBy(on), texture);
+    expect(on.displacementMap).toBeNull();
   });
 
-  it('leaves displacement inert for a material with the feature off', () => {
-    // Even if a map somehow arrived, a zero scale moves no vertices.
-    expect(build({}).displacementScale).toBe(0);
+  it('samples no heightmap with the feature off (edge case)', () => {
+    expect(heightmapSampledBy(build({}, { heightmap_texture: loadedTexture() }))).toBeNull();
   });
 
   it('applies albedo and normal together', () => {
