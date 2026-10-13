@@ -136,3 +136,18 @@ describe('<SpotLight3D> shadow fit', () => {
     expect(instanceAs<THREE.SpotLight>(renderer.scene.findByType('SpotLight')).shadow.radius).toBe(1);
   });
 });
+
+describe('<SpotLight3D> visibility', () => {
+  // A hidden light lights nothing (`light_3d.cpp:300` in 4.6.3), and three skips a hidden subtree.
+  it('hides the light when visible is false', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode({ visible: false })} />);
+    const light = instanceAs<THREE.SpotLight>(renderer.scene.findByType('SpotLight'));
+    expect(light.parent!.visible).toBe(false);
+  });
+
+  it('shows the light by default', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode()} />);
+    const light = instanceAs<THREE.SpotLight>(renderer.scene.findByType('SpotLight'));
+    expect(light.parent!.visible).toBe(true);
+  });
+});

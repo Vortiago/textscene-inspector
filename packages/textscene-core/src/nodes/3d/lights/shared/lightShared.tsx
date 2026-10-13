@@ -12,6 +12,8 @@ export interface LightWithTargetProps {
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
+  /** A hidden light lights nothing, and hides its descendants. */
+  visible: boolean;
   /**
    * Render-prop returning the light element. Receives the target object
    * the light should point at; pass it as the light's `target` prop.
@@ -30,6 +32,7 @@ export function LightWithTarget({
   position,
   rotation,
   scale,
+  visible,
   renderLight,
   children,
 }: LightWithTargetProps) {
@@ -41,7 +44,7 @@ export function LightWithTarget({
   }, [name]);
 
   return (
-    <group name={name} position={position} rotation={rotation} scale={scale}>
+    <group name={name} position={position} rotation={rotation} scale={scale} visible={visible}>
       {renderLight(targetRef.current)}
       <primitive object={targetRef.current} position={[0, 0, -1]} />
       {children}
