@@ -1,6 +1,6 @@
 /**
  * The fog's shadow terms, run from the light pass's own GLSL, against the values Godot 4.6.3's
- * `volumetric_fog_process.glsl` gives (`.glsl:418-422`, `:509`, `:573`).
+ * `volumetric_fog_process.glsl` gives (`.glsl:418-422`, `:509`, `:566`, `:573`).
  */
 import { describe, expect, it } from 'vitest';
 import { scalarGlslFunction } from '../testing/glslScalar';
@@ -9,6 +9,7 @@ import { FOG_LIGHT_FRAGMENT } from './fogVolumeShaders';
 const fogShadow = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'fogShadow');
 const fogShadowFade = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'fogShadowFade');
 const fogShadowAttenuation = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'fogShadowAttenuation');
+const spotCellDepth = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'spotCellDepth');
 
 describe('the fog shadow term', () => {
   it('darkens a cell a tenth of a unit behind the caster to 1/e', () => {
@@ -50,5 +51,15 @@ describe('the fog shadow attenuation', () => {
 
   it('leaves a lit cell lit at any opacity (edge case)', () => {
     expect(fogShadowAttenuation(1, 0.75)).toBe(1);
+  });
+});
+
+describe('the spot fog cell depth', () => {
+  it('pushes a cell away from the light by the bias', () => {
+    expect(spotCellDepth(0.5, 0.02)).toBeCloseTo(0.52, 6);
+  });
+
+  it('leaves a cell where it is with no bias (edge case)', () => {
+    expect(spotCellDepth(0.5, 0)).toBe(0.5);
   });
 });
