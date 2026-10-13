@@ -111,4 +111,16 @@ describe('writeAreaLightUniforms', () => {
 
     expect(at(areaLightUniformValues().falloffs, 2)[0]).toBe(0.5);
   });
+
+  it('writes the facing of a light without falloff (edge case)', () => {
+    const scene = new THREE.Scene();
+    scene.add(downLight(), new THREE.RectAreaLight());
+
+    write(scene);
+
+    const [x, y, z] = at(areaLightUniformValues().facings, 1);
+    expect(x).toBeCloseTo(0, 6);
+    expect(y).toBeCloseTo(0, 6);
+    expect(z).toBeCloseTo(-1, 6);
+  });
 });

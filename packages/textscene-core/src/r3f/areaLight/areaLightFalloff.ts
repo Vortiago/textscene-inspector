@@ -97,17 +97,18 @@ const scratchFacing = new THREE.Vector3();
 
 /**
  * Godot's direction (4.7.2: `light_storage.cpp:1068`) and its `inv_radius` and `specular_amount`
- * (`:1056`, `:1060-1061`), at `index` of `pair`.
+ * (`:1056`, `:1060-1061`), at `index` of `pair`. The direction needs no falloff, so a light without
+ * one still faces its own way.
  */
 function writeLight(pair: AreaLightBuffers, index: number, light: THREE.RectAreaLight, camera: THREE.Camera) {
-  const falloff = readFalloff(light);
-  if (!falloff) return;
   const offset = index * 3;
   scratchFacing
     .set(0, 0, -1)
     .transformDirection(light.matrixWorld)
     .transformDirection(camera.matrixWorldInverse)
     .toArray(pair.facings, offset);
+  const falloff = readFalloff(light);
+  if (!falloff) return;
   pair.falloffs[offset] = 1 / Math.max(0.001, falloff.range);
   pair.falloffs[offset + 1] = falloff.attenuation;
   pair.falloffs[offset + 2] = falloff.specular * 2;
@@ -116,7 +117,7 @@ function writeLight(pair: AreaLightBuffers, index: number, light: THREE.RectArea
 /**
  * Writes the slotted lights among `lights` into the newest buffers, then copies them into each older
  * pair as far as it holds, for a render through `camera`. A light without a falloff keeps its slot
- * and leaves its entries as they were.
+ * and its facing, and leaves its falloff entries as they were.
  */
 export function writeAreaLightUniforms(lights: readonly SceneLight[], camera: THREE.Camera): void {
   const slotted = slottedAreaLights(lights, camera);

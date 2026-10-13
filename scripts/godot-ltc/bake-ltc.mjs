@@ -80,7 +80,8 @@ export const LTC_LUT2_BASE64 =
 }
 
 async function main() {
-  const text = render(await fetchTexels('ltc_lut1.dds'), await fetchTexels('ltc_lut2.dds'));
+  const [lut1, lut2] = await Promise.all([fetchTexels('ltc_lut1.dds'), fetchTexels('ltc_lut2.dds')]);
+  const text = render(lut1, lut2);
   if (!process.argv.includes('--check')) {
     writeFileSync(OUT, text);
     return;
