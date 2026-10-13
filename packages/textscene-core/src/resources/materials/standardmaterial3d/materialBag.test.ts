@@ -5,8 +5,19 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { billboardOf, castsShadowOf, standardMaterialBags, surfaceBillboard } from './materialBag';
+import {
+  billboardOf,
+  castsShadowOf,
+  isAnisotropic,
+  standardMaterialBags,
+  surfaceBillboard,
+} from './materialBag';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
+import { lightModesUserData } from '../../../r3f/lightModes';
+import { disablesSpecularOcclusion } from '../../../r3f/godotIndirectSpecular';
+import { DiffuseMode } from '../../../godot/diffuseMode';
+import { SpecularMode } from '../../../godot/specularMode';
 import {
   DRAWN_OPAQUE_PREPASS,
   FADED_OPAQUE_PREPASS,
@@ -19,7 +30,11 @@ import { BillboardMode } from '../../../godot/billboard';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 import {
+  DRAWS_LAMBERT_DIFFUSE,
+  KEEPS_REFLECTION_UNOCCLUDED,
+  DRAWS_TOON_SPECULAR,
   DROPS_ALBEDO_ALPHA,
+  OCCLUDES_DIRECT_LIGHT,
   WRITES_OPAQUE_AFTER_CUT,
   patchedFragment,
 } from '../../../r3f/testing/patchedFragment';
@@ -56,12 +71,31 @@ describe('standardMaterialBags — the material class', () => {
     ['FEATURE_RIM', { rim_enabled: 'true', rim: '0.6' }],
     ['FEATURE_ANISOTROPY', { anisotropy_enabled: 'true', anisotropy: '0.5' }],
     ['FEATURE_REFRACTION', { refraction_enabled: 'true' }],
+    ['a metallic_specular past the default', { metallic_specular: '1' }],
   ])('upgrades to a physical material for %s', (_feature, properties) => {
     expect(bag(properties).materialClass).toBe('physical');
   });
 
   it('stays standard while every physical-only feature is off', () => {
     expect(bag({ clearcoat_enabled: 'true', clearcoat: '0' }).materialClass).toBe('standard');
+  });
+});
+
+describe('standardMaterialBags — metallic_specular', () => {
+  it("reflects Godot's dielectric F0 of 0.16 times metallic_specular squared", () => {
+    // three's F0 is 0.04 at ior 1.5, times `specularIntensity` (`scene_forward_lights_inc.glsl:56`).
+    const props = bag({ metallic_specular: '1' }).props as THREE.MeshPhysicalMaterialParameters;
+    expect(0.04 * props.specularIntensity!).toBeCloseTo(0.16, 6);
+  });
+
+  it("keeps three's 0.04 at the default 0.5 (edge case)", () => {
+    const derived = bag({ clearcoat_enabled: 'true' });
+    expect((derived.props as THREE.MeshPhysicalMaterialParameters).specularIntensity).toBe(1);
+  });
+
+  it('reflects nothing from a dielectric at metallic_specular 0 (edge case)', () => {
+    const props = bag({ metallic_specular: '0' }).props as THREE.MeshPhysicalMaterialParameters;
+    expect(props.specularIntensity).toBe(0);
   });
 });
 
@@ -137,7 +171,16 @@ describe('standardMaterialBags — texture slots', () => {
     expect(props.metalnessMap).toBe(texture);
     expect(props.emissiveMap).toBe(texture);
     expect(props.aoMap).toBe(texture);
-    expect(props.displacementMap).toBe(texture);
+    expect(derived.heightmapTexture).toBe(texture);
+  });
+
+  it("keeps the heightmap out of three's props, which displace no vertex", () => {
+    const derived = bag({ heightmap_enabled: 'true' }, { heightmap_texture: texture });
+    expect(derived.props).not.toHaveProperty('displacementMap');
+  });
+
+  it('carries no heightmap texture without heightmap_enabled (edge case)', () => {
+    expect(bag({}, { heightmap_texture: texture }).heightmapTexture).toBeNull();
   });
 
   it('gives an empty slot a null, never an undefined', () => {
@@ -153,10 +196,20 @@ describe('standardMaterialBags — texture slots', () => {
   });
 
   it('drops every PBR slot on an unshaded material', () => {
-    // Only albedo reaches a MeshBasicMaterial.
+    // Only albedo and the heightmap reach an unshaded material.
     const derived = bag({ shading_mode: '0' }, { albedo_texture: texture, normal_texture: texture });
     expect(derived.props.map).toBe(texture);
     expect(derived.props).not.toHaveProperty('normalMap');
+  });
+
+  it('shifts an unshaded material by its heightmap, as Godot does', () => {
+    const derived = bag(
+      { shading_mode: '0', heightmap_enabled: 'true' },
+      { albedo_texture: texture, heightmap_texture: texture }
+    );
+
+    expect(derived.heightmapTexture).toBe(texture);
+    expect(derived.injection?.cacheKey).toContain('godot-parallax');
   });
 });
 
@@ -176,13 +229,129 @@ describe('standardMaterialBags — fragment alpha', () => {
   });
 });
 
+describe('standardMaterialBags — AO on direct light', () => {
+  const aoMap = new THREE.Texture();
+  const AO = { ao_enabled: 'true', ao_light_affect: '0.5' };
+
+  it('occludes the direct light of a lit surface with an AO map', () => {
+    expect(patchedFragment(materialFromBag(bag(AO, { ao_texture: aoMap })))).toContain(OCCLUDES_DIRECT_LIGHT);
+  });
+
+  it('records the light affect and the channel for the uniforms to read', () => {
+    const built = materialFromBag(bag({ ...AO, ao_texture_channel: '1' }, { ao_texture: aoMap }));
+    expect(built.userData).toMatchObject(ambientOcclusionUserData(0.5, [0, 1, 0, 0]));
+  });
+
+  it('occludes the direct light of a physical surface with an AO map', () => {
+    const physical = bag({ ...AO, clearcoat_enabled: 'true' }, { ao_texture: aoMap });
+    expect(physical.materialClass).toBe('physical');
+    expect(patchedFragment(materialFromBag(physical))).toContain(OCCLUDES_DIRECT_LIGHT);
+  });
+
+  it('patches nothing on a surface with no AO map, whose sampler reads white', () => {
+    // `material.cpp:1128`: `hint_default_white`, so AO is 1.
+    expect(bag(AO).injection).toBeUndefined();
+  });
+
+  it('patches nothing on an unshaded surface, which has no lighting', () => {
+    expect(bag({ ...AO, shading_mode: '0' }, { ao_texture: aoMap }).injection).toBeUndefined();
+  });
+
+  it('keeps the fragment-alpha patch beside the AO patch', () => {
+    const fragment = patchedFragment(materialFromBag(bag({ ...AO, blend_mode: '1' }, { ao_texture: aoMap })));
+    expect(fragment).toContain(OCCLUDES_DIRECT_LIGHT);
+    expect(fragment).toContain(DROPS_ALBEDO_ALPHA);
+  });
+});
+
+describe('standardMaterialBags — specular occlusion', () => {
+  it('leaves the reflection of a surface that disables specular occlusion whole', () => {
+    expect(patchedFragment(materialFromBag(bag({ disable_specular_occlusion: 'true' })))).toContain(
+      KEEPS_REFLECTION_UNOCCLUDED
+    );
+  });
+
+  it('patches nothing on a surface that keeps the default occlusion', () => {
+    expect(bag({ disable_specular_occlusion: 'false' }).injection).toBeUndefined();
+  });
+
+  it('patches nothing on an unshaded surface, which has no reflection (edge case)', () => {
+    expect(bag({ disable_specular_occlusion: 'true', shading_mode: '0' }).injection).toBeUndefined();
+  });
+
+  it('records the setting, for a decal to shade its projection with', () => {
+    const material = materialFromBag(bag({ disable_specular_occlusion: 'true' }));
+    expect(disablesSpecularOcclusion(material)).toBe(true);
+  });
+});
+
+describe('standardMaterialBags — light modes', () => {
+  it('records the modes, for a decal to shade its projection with', () => {
+    expect(materialFromBag(bag({ diffuse_mode: '2', specular_mode: '1' })).userData).toMatchObject(
+      lightModesUserData({
+        diffuseMode: DiffuseMode.DIFFUSE_LAMBERT_WRAP,
+        specularMode: SpecularMode.SPECULAR_TOON,
+      })
+    );
+  });
+
+  it("records Lambert and GGX on Godot's default surface", () => {
+    expect(materialFromBag(standardMaterialBags(null).unfaded).userData).toMatchObject(
+      lightModesUserData({
+        diffuseMode: DiffuseMode.DIFFUSE_LAMBERT,
+        specularMode: SpecularMode.SPECULAR_SCHLICK_GGX,
+      })
+    );
+  });
+
+  it('patches nothing for Burley and GGX, the terms the lighting chunk writes by default', () => {
+    // `material.h:608-609`.
+    expect(bag({}).injection).toBeUndefined();
+  });
+
+  it("writes a lit surface's diffuse in its authored mode", () => {
+    expect(patchedFragment(materialFromBag(bag({ diffuse_mode: '1' })))).toContain(DRAWS_LAMBERT_DIFFUSE);
+  });
+
+  it("writes a lit surface's specular in its authored mode", () => {
+    expect(patchedFragment(materialFromBag(bag({ specular_mode: '1' })))).toContain(DRAWS_TOON_SPECULAR);
+  });
+
+  it("writes a physical surface's diffuse in its authored mode too", () => {
+    const physical = bag({ diffuse_mode: '1', clearcoat_enabled: 'true' });
+    expect(physical.materialClass).toBe('physical');
+    expect(patchedFragment(materialFromBag(physical))).toContain(DRAWS_LAMBERT_DIFFUSE);
+  });
+
+  it('patches nothing on an unshaded surface, which has no lighting', () => {
+    expect(bag({ diffuse_mode: '1', shading_mode: '0' }).injection).toBeUndefined();
+  });
+
+  it("writes Godot's default surface in Lambert, as its shader names no diffuse mode (edge case)", () => {
+    // `scene_shader_forward_clustered.cpp:910-925` names no diffuse mode, and `shader_types.cpp:241`
+    // makes Lambert a spatial shader's default.
+    expect(patchedFragment(materialFromBag(standardMaterialBags(null).unfaded))).toContain(
+      DRAWS_LAMBERT_DIFFUSE
+    );
+  });
+
+  it('keeps the AO patch beside the diffuse patch', () => {
+    const textures = { ao_texture: new THREE.Texture() };
+    const fragment = patchedFragment(
+      materialFromBag(bag({ ao_enabled: 'true', diffuse_mode: '1' }, textures))
+    );
+    expect(fragment).toContain(DRAWS_LAMBERT_DIFFUSE);
+    expect(fragment).toContain(OCCLUDES_DIRECT_LIGHT);
+  });
+});
+
 describe('standardMaterialBags — the alpha pass', () => {
   it("blends Godot's default surface without a depth write", () => {
     expect(alphaPassBag(null).props).toMatchObject({ transparent: true, depthWrite: false, opacity: 1 });
   });
 
-  it("patches nothing on Godot's default surface", () => {
-    expect(alphaPassBag(null).injection).toBeUndefined();
+  it("leaves the alpha of Godot's default surface alone", () => {
+    expect(patchedFragment(materialFromBag(alphaPassBag(null)))).not.toContain(DROPS_ALBEDO_ALPHA);
   });
 
   it("keeps the material's own alpha, for the cull to scale", () => {
@@ -330,5 +499,22 @@ describe('standardMaterialBags — opaque prepass', () => {
 
   it('gives a blended surface no opaque prepass (edge case)', () => {
     expect(opaquePrepassOf(materialFromBag(bag({ transparency: '1' })))).toBe(NO_OPAQUE_PREPASS);
+  });
+});
+
+describe('isAnisotropic', () => {
+  const anisotropic = (properties: Record<string, string>) =>
+    isAnisotropic(parseStandardMaterial3DScalars(properties));
+
+  it('draws a positive anisotropy anisotropic', () => {
+    expect(anisotropic({ anisotropy_enabled: 'true', anisotropy: '0.5' })).toBe(true);
+  });
+
+  it('draws a negative anisotropy anisotropic, as either sign scales the flowmap (edge case)', () => {
+    expect(anisotropic({ anisotropy_enabled: 'true', anisotropy: '-0.5' })).toBe(true);
+  });
+
+  it('draws a strength without anisotropy_enabled isotropic (error case)', () => {
+    expect(anisotropic({ anisotropy: '0.5' })).toBe(false);
   });
 });

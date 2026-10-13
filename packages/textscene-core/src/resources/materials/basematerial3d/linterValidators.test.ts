@@ -225,6 +225,23 @@ describe('BaseMaterial3D Linter Validators', () => {
     });
   });
 
+  describe('specular_mode validator', () => {
+    it('should accept 0 (SPECULAR_SCHLICK_GGX) to 2 (SPECULAR_DISABLED)', () => {
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'specular_mode');
+      expect(['0', '1', '2'].map((mode) => validator!('specular_mode', mode, 1))).toEqual([null, null, null]);
+    });
+
+    it("should warn on 3, naming each mode by Godot's constant", () => {
+      // material.cpp:3602, set_specular_mode (:2475-2482) is a bare assignment.
+      const validator = validatorRegistry.findValidator('StandardMaterial3D', 'specular_mode');
+      const result = validator!('specular_mode', '3', 1);
+      expect(result).toBeAtTier('warning');
+      for (const name of ['SPECULAR_SCHLICK_GGX', 'SPECULAR_TOON', 'SPECULAR_DISABLED']) {
+        expect(result!.message).toContain(name);
+      }
+    });
+  });
+
   describe('texture_filter validator', () => {
     it('should accept modes 0-5', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'texture_filter');

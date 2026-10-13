@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { godotBlendState } from './blendState';
 import { decodeStandardMaterial3D } from './decode';
+import { textureChannelMask } from '../../../godot/textureChannel';
 import { CullMode, type StandardMaterial3DData, type StandardMaterial3DScalars } from './types';
 
 /**
@@ -27,6 +28,7 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     opacity: data.alpha,
     metalness: data.metallic,
     roughness: data.roughness,
+    specular: data.specular,
     emissive: data.emission.emissive,
     emissiveIntensity: data.emission.emissiveIntensity,
     emissionOperator: data.emissionOperator,
@@ -46,9 +48,12 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     opaqueAfterCut: data.opaqueAfterCut,
     depthTest: data.depthTest,
     shadingMode: data.shadingMode,
+    diffuseMode: data.diffuseMode,
+    specularMode: data.specularMode,
     useVertexColors: data.useVertexColors,
-    aoEnabled: data.aoEnabled,
-    normalEnabled: data.normalEnabled,
+    disablesSpecularOcclusion: data.disablesSpecularOcclusion,
+    aoLightAffect: data.aoLightAffect,
+    aoTextureChannelMask: textureChannelMask(data.aoTextureChannel),
     side: SIDE[data.cullMode],
     cullModeExplicit: data.cullModeExplicit,
     normalScale: data.normalScale,
@@ -57,11 +62,10 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     clearcoatRoughness: data.clearcoatRoughness,
     rim: data.rim,
     rimTint: data.rimTint,
-    heightmapScale: data.heightmapScale,
+    heightmap: data.heightmap,
     billboardMode: data.billboardMode,
     billboardKeepScale: data.billboardKeepScale,
     anisotropy: data.anisotropy,
-    anisotropyRotation: data.anisotropyRotation,
     transmission: data.transmission,
     refractionThickness: data.refractionThickness,
     textureSlots: data.textureSlots,

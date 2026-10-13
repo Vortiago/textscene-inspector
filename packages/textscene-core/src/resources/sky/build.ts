@@ -12,6 +12,7 @@ import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
 import { applyTextureState } from '../textures/applyTextureState';
 import { releaseBoundTexture } from '../materials/standardmaterial3d/textureBinding';
+import { readCubeRadiance, skyLayers, type SkyLayers } from './skyLayers';
 
 export type { SkyLight } from './skyUniforms';
 
@@ -21,14 +22,16 @@ const CUBE_SIZE = 256;
 /**
  * Godot's sky ambient is the sky's own radiance: it lights surfaces and is what
  * they reflect (`Environment.reflection_source` defaults to the background).
- * So one cube render feeds both `scene.background` and the PMREM-prefiltered
- * `scene.environment`.
+ * So one cube render feeds `scene.background`, the PMREM-prefiltered
+ * `scene.environment` and Godot's roughest layers of it.
  */
 export interface SkyEnvironment {
   /** Sharp cubemap for `scene.background`. */
   background: THREE.Texture;
-  /** PMREM-prefiltered radiance for `scene.environment`. */
+  /** PMREM-prefiltered radiance for `scene.environment`, which surfaces reflect. */
   environment: THREE.Texture;
+  /** Godot's roughest layers, which its ambient and rough reflections read. */
+  layers: SkyLayers;
   dispose: () => void;
 }
 
@@ -80,11 +83,13 @@ export function buildSkyEnvironment(
   });
   let pmrem: THREE.PMREMGenerator | null = null;
   let prefiltered: THREE.WebGLRenderTarget | null = null;
+  let layers: SkyLayers;
 
   try {
     // The cube camera sits at the origin inside the unit box, so each face
     // samples the same directions Godot's `EYEDIR` covers.
     new THREE.CubeCamera(0.1, 10, cubeTarget).update(gl, skyScene);
+    layers = skyLayers(readCubeRadiance(gl, cubeTarget), CUBE_SIZE);
 
     pmrem = new THREE.PMREMGenerator(gl);
     prefiltered = pmrem.fromCubemap(cubeTarget.texture);
@@ -105,6 +110,7 @@ export function buildSkyEnvironment(
   return {
     background: cubeTarget.texture,
     environment: prefiltered.texture,
+    layers,
     dispose: () => {
       cubeTarget.dispose();
       prefiltered.dispose();

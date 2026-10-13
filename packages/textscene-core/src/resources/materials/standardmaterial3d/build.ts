@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { injectProgram } from '../../../r3f/materialProgramInputs';
 import type { StandardMaterialBag } from './materialBag';
+import { bindHeightmap } from '../../../r3f/materials/godotParallax';
 
 /**
  * A derived bag's material class as a constructed `THREE.Material`, for a caller that
@@ -17,6 +18,7 @@ import type { StandardMaterialBag } from './materialBag';
 export function materialFromBag(bag: StandardMaterialBag): THREE.Material {
   const material = materialOfClass(bag);
   injectProgram(material, bag.injection);
+  bindHeightmap(material, bag.heightmapTexture ?? null);
   return material;
 }
 

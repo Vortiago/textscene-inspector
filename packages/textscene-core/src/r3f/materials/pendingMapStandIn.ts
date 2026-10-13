@@ -17,7 +17,8 @@ const BLACK: Rgb = [0, 0, 0];
 
 /**
  * The texel that leaves three's formula for each slot as it is without the map.
- * Albedo, roughness (G), metalness (B) and occlusion (R) multiply by the texel.
+ * Albedo, roughness (G), metalness (B) and occlusion (the `ao_texture_channel` channel, alpha
+ * included) multiply by the texel.
  * Displacement adds it. Emission multiplies by it, but a map turns a black emission
  * colour white (`emission.ts`), so only black keeps the surface dark. A normal and a
  * flowmap decode `2 * rg - 1`, so 128 points along the normal and 255 along the tangent.

@@ -20,7 +20,10 @@ import type {
   TextureSlotReferences,
 } from '../../resources/materials/standardmaterial3d/types';
 import { TEXTURE_SLOTS } from '../../resources/materials/standardmaterial3d/types';
-import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
+import {
+  MISSING_TEXTURE_MATERIAL,
+  isAnisotropic,
+} from '../../resources/materials/standardmaterial3d/materialBag';
 import {
   bindSlotTexture,
   materialTextureState,
@@ -208,7 +211,7 @@ export function useMaterialTextures(
       ),
     [proceduralTextures.ao_texture, textureSlots.ao_texture, textureState]
   );
-  const displacementMap = useMemo(
+  const heightMap = useMemo(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.heightmap_texture, textureSlots.heightmap_texture),
@@ -220,14 +223,12 @@ export function useMaterialTextures(
 
   // Depend on the two values the repack reads, not their wrappers: a repack is a
   // canvas readback plus a full-buffer copy plus a GPU re-upload.
-  const anisotropyStrength = scalars?.anisotropy ?? 0;
+  const drawsAnisotropic = scalars !== null && isAnisotropic(scalars);
   const anisotropyFlowmap = textureSlots.anisotropy_flowmap?.value;
   const repackedFlowmap = useMemo(() => {
-    // Only an anisotropy-enabled material renders as MeshPhysicalMaterial and
-    // samples anisotropyMap.
-    if (anisotropyStrength <= 0 || !anisotropyFlowmap) return undefined;
+    if (!drawsAnisotropic || !anisotropyFlowmap) return undefined;
     return repackAnisotropyFlowmap(anisotropyFlowmap);
-  }, [anisotropyStrength, anisotropyFlowmap]);
+  }, [drawsAnisotropic, anisotropyFlowmap]);
 
   const anisotropyBound = useMemo(
     () => transformedTexture({ value: repackedFlowmap }, textureState, 'anisotropy_flowmap'),
@@ -266,16 +267,11 @@ export function useMaterialTextures(
     'emission_texture'
   );
   const aoDrawn = orStandIn(useBoundMapUpload(aoMap), aoMap, isArriving, 'ao_texture');
-  const displacementDrawn = orStandIn(
-    useBoundMapUpload(displacementMap),
-    displacementMap,
-    isArriving,
-    'heightmap_texture'
-  );
+  const heightDrawn = orStandIn(useBoundMapUpload(heightMap), heightMap, isArriving, 'heightmap_texture');
   // Only an anisotropy-enabled material samples the flowmap, so only it waits for one.
   const anisotropyMap =
     anisotropyBound ??
-    (anisotropyStrength > 0 && isArriving('anisotropy_flowmap')
+    (drawsAnisotropic && isArriving('anisotropy_flowmap')
       ? pendingMapStandIn('anisotropy_flowmap')
       : undefined);
 
@@ -289,7 +285,7 @@ export function useMaterialTextures(
       metalnessMap: metalnessDrawn,
       emissiveMap: emissiveDrawn,
       aoMap: aoDrawn,
-      displacementMap: displacementDrawn,
+      heightMap: heightDrawn,
       anisotropyMap,
     }),
     [
@@ -299,7 +295,7 @@ export function useMaterialTextures(
       metalnessDrawn,
       emissiveDrawn,
       aoDrawn,
-      displacementDrawn,
+      heightDrawn,
       anisotropyMap,
     ]
   );

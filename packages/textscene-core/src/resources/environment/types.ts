@@ -149,8 +149,7 @@ export interface EnvironmentSettings {
     energy: number;
     /**
      * `ambient_light_sky_contribution`: the sky's share of the diffuse ambient, 0 for
-     * `AMBIENT_SOURCE_COLOR`. Godot scales it apart from `energy`, and three.js couples
-     * the two, so the render layer splits them with `envMapIntensity` keyed on metalness.
+     * `AMBIENT_SOURCE_COLOR`. It scales the ambient only, never the reflection.
      */
     contribution: number;
   } | null;

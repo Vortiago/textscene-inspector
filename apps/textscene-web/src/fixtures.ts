@@ -2933,6 +2933,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Diffuse Mode",
+    "file": "unit-material-diffuse-mode.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Emission Hdr",
     "file": "unit-material-emission-hdr.tscn",
     "category": "Unit - Materials"
@@ -2975,6 +2980,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Rim",
     "file": "unit-material-rim.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Specular Mode",
+    "file": "unit-material-specular-mode.tscn",
     "category": "Unit - Materials"
   },
   {

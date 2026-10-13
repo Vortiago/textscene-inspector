@@ -1,6 +1,6 @@
 /**
- * StandardMaterial3D triplanar. Godot's `uv1_triplanar` and `uv1_world_triplanar` tile a
- * texture once per world unit × `uv1_scale`, whatever the mesh's UVs. With no triplanar
+ * StandardMaterial3D triplanar. Godot's `uv1_triplanar` tiles a texture once per unit × `uv1_scale`,
+ * whatever the mesh's UVs, and `uv1_world_triplanar` makes the unit a world one. With no triplanar
  * shader, the `triplanar` flag lets MeshInstance3D reproduce the tiling density on planar
  * meshes (`triplanarPlaneScale`).
  */
@@ -12,8 +12,8 @@ describe('parseStandardMaterial3DScalars — triplanar flag (WI-HALL-5)', () => 
     expect(parseStandardMaterial3DScalars({ uv1_triplanar: 'true' }).triplanar).toBe(true);
   });
 
-  it('sets triplanar=true when uv1_world_triplanar is on alone (no uv1_triplanar)', () => {
-    expect(parseStandardMaterial3DScalars({ uv1_world_triplanar: 'true' }).triplanar).toBe(true);
+  it('leaves triplanar off when uv1_world_triplanar is on alone, as it only picks the space (edge case)', () => {
+    expect(parseStandardMaterial3DScalars({ uv1_world_triplanar: 'true' }).triplanar).toBe(false);
   });
 
   it('triplanar defaults to false when neither flag is present or true', () => {
