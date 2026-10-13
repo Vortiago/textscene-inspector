@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import type { SkyProperties } from './types';
+import type { Sky } from './types';
 import { warn } from '../../logger';
 import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
@@ -36,7 +36,7 @@ export interface SkyEnvironment {
 }
 
 export interface SkyEnvironmentInput {
-  sky: SkyProperties;
+  sky: Sky;
   lights: readonly SkyLight[];
   panorama?: THREE.Texture | null;
 }
@@ -67,9 +67,9 @@ export function buildSkyEnvironment(
   const tiledPanorama = skyPanoramaTexture(panorama);
   const geometry = new THREE.BoxGeometry(2, 2, 2);
   const material = new THREE.ShaderMaterial({
-    uniforms: skyUniforms(sky, lights, tiledPanorama),
+    uniforms: skyUniforms(sky.material, lights, tiledPanorama),
     vertexShader: SKY_VERTEX_SHADER,
-    fragmentShader: skyFragmentShader(sky),
+    fragmentShader: skyFragmentShader(sky.material),
     side: THREE.BackSide,
     depthWrite: false,
     depthTest: false,
@@ -89,7 +89,7 @@ export function buildSkyEnvironment(
     // The cube camera sits at the origin inside the unit box, so each face
     // samples the same directions Godot's `EYEDIR` covers.
     new THREE.CubeCamera(0.1, 10, cubeTarget).update(gl, skyScene);
-    layers = skyLayers(readCubeRadiance(gl, cubeTarget), CUBE_SIZE);
+    layers = skyLayers(readCubeRadiance(gl, cubeTarget), CUBE_SIZE, sky.radianceFilter);
 
     pmrem = new THREE.PMREMGenerator(gl);
     prefiltered = pmrem.fromCubemap(cubeTarget.texture);

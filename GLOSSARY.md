@@ -351,6 +351,14 @@ _Avoid_: "override", "fallback".
 The illumination a sky background gives the scene, which in Godot is a radiance map that both lights and reflects, unlike the flat `AMBIENT_SOURCE_COLOR`.
 _Avoid_: "ambient light" alone for the sky case. "IBL" in user-facing text.
 
+**Radiance layer**:
+One of the blurred copies of a sky's radiance that Godot bakes, each for a wider roughness, which rough reflections and the **Sky ambient** read.
+_Avoid_: "mip" for a layer, "PMREM" for Godot's layers.
+
+**Fast filter**:
+Godot's tap-table filter that bakes the **Radiance layers** of a sky in Real-Time process mode, in place of GGX importance sampling.
+_Avoid_: "real-time filter", "low-quality filter".
+
 **Geometry instance**:
 A drawn 3D Node (a GeometryInstance3D) whose own render state, such as `transparency` and `cast_shadow`, applies to every surface it draws.
 _Avoid_: bare "instance", which names **PackedScene instancing**.

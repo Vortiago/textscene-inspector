@@ -1,13 +1,25 @@
 /**
- * How Godot lays out and filters a sky's radiance layers in high-quality mode, the mode of every
- * sky whose shader reads no `TIME` (`servers/rendering/renderer_rd/environment/sky.cpp`). Godot's
- * sky ambient reads the last layer (`scene_forward_clustered.glsl:1744-1756`).
+ * How Godot lays out and filters a sky's radiance layers (`servers/rendering/renderer_rd/environment/sky.cpp`):
+ * by GGX importance sampling in the high-quality modes, and by the fast filter in real-time mode.
+ * Godot's sky ambient reads the last layer (`scene_forward_clustered.glsl:1744-1756`).
  */
 
 import { octToVec3WithBorder, type OctDirection } from './octmap.js';
 
 /** RADIANCE_SIZE_256, the default of `Sky.radiance_size` (`scene/resources/sky.h:61`). */
 export const SKY_RADIANCE_SIZE_DEFAULT = 256;
+
+/** `Sky::REAL_TIME_SIZE` (`sky.h:248`): a real-time sky bakes at this size whatever its `radiance_size`. */
+export const REAL_TIME_RADIANCE_SIZE = 256;
+
+/** `Sky::REAL_TIME_ROUGHNESS_LAYERS` (`sky.h:249`): a real-time sky has layers 0 to 6. */
+export const REAL_TIME_ROUGHNESS_LAYERS = 7;
+
+/**
+ * The width of each mip of the copy the fast filter reads: 160 with five mips, whatever the
+ * radiance size (`sky.cpp:341-343`).
+ */
+export const FAST_FILTER_CHAIN_SIZES = [160, 80, 40, 20, 10];
 
 /**
  * The default of `rendering/reflections/sky_reflections/roughness_layers`

@@ -1,6 +1,6 @@
 /**
- * Sky resource types: the three materials a Godot `Sky` can carry. Names and
- * units mirror Godot (`sun_angle_max` in degrees, `sky_curve` as authored). The
+ * Sky resource types: how a Godot `Sky` bakes its radiance, and the three materials it can carry.
+ * Names and units mirror Godot (`sun_angle_max` in degrees, `sky_curve` as authored). The
  * shader-uniform conversions happen on upload, in `build.ts`.
  */
 
@@ -44,3 +44,25 @@ export interface PhysicalSkyProperties {
 }
 
 export type SkyProperties = ProceduralSkyProperties | PanoramaSkyProperties | PhysicalSkyProperties;
+
+/** `Sky.process_mode` (`scene/resources/sky.h:51-56`). */
+export type SkyProcessMode = 'automatic' | 'quality' | 'incremental' | 'real-time';
+
+/** The `Sky` resource's own properties, which decide how Godot bakes its radiance layers. */
+export interface SkyProcessing {
+  processMode: SkyProcessMode;
+  /** The radiance's size in pixels, which `radiance_size` names by index. */
+  radianceSize: number;
+}
+
+/**
+ * The filter Godot bakes a sky's rough radiance layers with: GGX importance sampling, or the fast
+ * filter of a real-time sky.
+ */
+export type RadianceFilter = 'importance-sample' | 'fast';
+
+/** A Godot `Sky` as the renderer draws it: its material, and the filter its layers bake with. */
+export interface Sky {
+  material: SkyProperties;
+  radianceFilter: RadianceFilter;
+}

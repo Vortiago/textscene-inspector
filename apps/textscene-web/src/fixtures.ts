@@ -1418,6 +1418,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sky Realtime",
+    "file": "unit-sky-realtime.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Slider Joint 3d",
     "file": "unit-slider-joint-3d.tscn",
     "category": "Other"

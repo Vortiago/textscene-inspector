@@ -10,12 +10,14 @@ import { firstNodeOfType } from '../../../linter/linterUtils.js';
 import { parseResourceReference } from '../../../resources/SubResourceResolver.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { RawNode } from '../../../parser/types.js';
+import { REAL_TIME_SKY_SIZE_ARM, realTimeSkySizeProblem } from '../../../resources/sky/realTimeSkySize.js';
 
 const arms = {
   requiresEnvironment: groundedArm('worldenvironment-requires-environment', {
     kind: 'configuration-warning',
   }),
   notFirstInGroup: groundedArm('single-worldenvironment', { kind: 'configuration-warning' }),
+  realTimeSkySize: REAL_TIME_SKY_SIZE_ARM,
 } as const satisfies RuleArms<string>;
 
 /**
@@ -99,6 +101,9 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
     );
   }
 
+  const skyProblem = realTimeSkySizeProblem(scene, rawProps.environment);
+  if (skyProblem) reportArm(diagnostics, arms.realTimeSkySize, node, skyProblem);
+
   return diagnostics;
 }
 
@@ -106,7 +111,7 @@ const worldEnvironmentValidationRule: LintRule = {
   meta: {
     name: 'valid-worldenvironment',
     description:
-      'Validates WorldEnvironment resource presence and which WorldEnvironment wins each first-wins group',
+      'Validates WorldEnvironment resource presence, which WorldEnvironment wins each first-wins group, and a Real-Time sky at a radiance size Godot replaces',
     category: 'validation',
     applicableNodeTypes: ['WorldEnvironment'],
     emits: armEmits(arms),

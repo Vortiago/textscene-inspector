@@ -27,7 +27,8 @@ describe('skyLayers', () => {
   it('bakes each rough layer at half the size of the one before, as a mip chain', () => {
     const layers = skyLayers(
       cube(() => 0.5),
-      SIZE
+      SIZE,
+      'importance-sample'
     );
     expect(layers.rough.map((faces) => faces[0]!.length)).toEqual([32 * 32 * 4, 16 * 16 * 4, 8 * 8 * 4]);
     expect(layers.last[0]).toHaveLength(LAST_LAYER_FACE_SIZE * LAST_LAYER_FACE_SIZE * 4);
@@ -36,7 +37,8 @@ describe('skyLayers', () => {
   it('gives a uniform sky its own radiance in every direction of the last layer', () => {
     const layers = skyLayers(
       cube(() => 0.5),
-      SIZE
+      SIZE,
+      'importance-sample'
     );
     for (const [face, col, row] of [
       [0, CENTRE, CENTRE],
@@ -50,7 +52,8 @@ describe('skyLayers', () => {
   it.each([0, 1, 2, 3, 4, 5])('lights the side cube face %i faces more than its opposite', (face) => {
     const layers = skyLayers(
       cube((f) => (f === face ? 1 : 0)),
-      SIZE
+      SIZE,
+      'importance-sample'
     );
     const opposite = face ^ 1;
     expect(ambientAt(layers, face, CENTRE, CENTRE)).toBeGreaterThan(0.4);
@@ -60,7 +63,8 @@ describe('skyLayers', () => {
   it('keeps a lit face sharper in the first layer than in the last', () => {
     const layers = skyLayers(
       cube((f) => (f === 2 ? 1 : 0)),
-      SIZE
+      SIZE,
+      'importance-sample'
     );
     const firstSize = ROUGH_LAYER_FACE_SIZES[0]!;
     const firstCentre = THREE.DataUtils.fromHalfFloat(
@@ -72,20 +76,83 @@ describe('skyLayers', () => {
   it('puts the up direction in the first texel row of the +X face, as WebGL samples it', () => {
     const layers = skyLayers(
       cube((f) => (f === 2 ? 1 : 0)),
-      SIZE
+      SIZE,
+      'importance-sample'
     );
     expect(ambientAt(layers, 0, CENTRE, 0)).toBeGreaterThan(ambientAt(layers, 0, CENTRE, LAST));
   });
 
   it('refuses a cube without six faces', () => {
-    expect(() => skyLayers(cube(() => 1).slice(1), SIZE)).toThrow('expected 6 cube faces, got 5');
+    expect(() => skyLayers(cube(() => 1).slice(1), SIZE, 'importance-sample')).toThrow(
+      'expected 6 cube faces, got 5'
+    );
   });
 
   it('refuses a face whose length is not the face size squared in RGBA', () => {
     const faces = cube(() => 1);
     faces[3] = new Float32Array(4);
-    expect(() => skyLayers(faces, SIZE)).toThrow(
+    expect(() => skyLayers(faces, SIZE, 'importance-sample')).toThrow(
       `expected 6 RGBA faces of ${SIZE}x${SIZE}, got face 3 with 4 values`
+    );
+  });
+});
+
+describe('skyLayers with the fast filter', () => {
+  it('bakes the same mip chain as an importance-sampled sky', () => {
+    const layers = skyLayers(
+      cube(() => 0.5),
+      SIZE,
+      'fast'
+    );
+    expect(layers.rough.map((faces) => faces[0]!.length)).toEqual([32 * 32 * 4, 16 * 16 * 4, 8 * 8 * 4]);
+    expect(layers.last[0]).toHaveLength(LAST_LAYER_FACE_SIZE * LAST_LAYER_FACE_SIZE * 4);
+  });
+
+  it('gives a uniform sky its own radiance in every direction of the last layer', () => {
+    const layers = skyLayers(
+      cube(() => 0.5),
+      SIZE,
+      'fast'
+    );
+    for (const [face, col, row] of [
+      [0, CENTRE, CENTRE],
+      [3, 0, 0],
+      [5, LAST, 2],
+    ] as const) {
+      expect(ambientAt(layers, face, col, row)).toBeCloseTo(0.5, 3);
+    }
+  });
+
+  it.each([0, 1, 2, 3, 4, 5])('lights the side cube face %i faces more than its opposite', (face) => {
+    const layers = skyLayers(
+      cube((f) => (f === face ? 1 : 0)),
+      SIZE,
+      'fast'
+    );
+    expect(ambientAt(layers, face, CENTRE, CENTRE)).toBeGreaterThan(0.4);
+    expect(ambientAt(layers, face ^ 1, CENTRE, CENTRE)).toBeLessThan(0.05);
+  });
+
+  it('reads the roughest layer it has, layer 6, as its last', () => {
+    const layers = skyLayers(
+      cube((f) => (f === 2 ? 1 : 0)),
+      SIZE,
+      'fast'
+    );
+    const size = ROUGH_LAYER_FACE_SIZES.at(-1)!;
+    const roughestCentre = layers.rough.at(-1)![2]![((size / 2) * size + size / 2) * 4]!;
+    expect(ambientAt(layers, 2, CENTRE, CENTRE)).toBeCloseTo(
+      THREE.DataUtils.fromHalfFloat(roughestCentre),
+      2
+    );
+  });
+
+  it('keeps a lit face brighter in its ambient than an importance-sampled sky, as layer 6 is sharper than 7', () => {
+    const lit = cube((f) => (f === 2 ? 1 : 0));
+    const fast = skyLayers(lit, SIZE, 'fast');
+    const importanceSampled = skyLayers(lit, SIZE, 'importance-sample');
+    expect(ambientAt(fast, 2, CENTRE, CENTRE)).toBeGreaterThan(
+      ambientAt(importanceSampled, 2, CENTRE, CENTRE)
     );
   });
 });

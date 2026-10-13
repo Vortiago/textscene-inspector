@@ -5,7 +5,7 @@
  * converts it on upload.
  */
 import { describe, expect, it } from 'vitest';
-import { decodeSkyMaterial, skyMaterialRef } from './decode';
+import { decodeSkyMaterial, decodeSkyProcessing, radianceFilter, skyMaterialRef } from './decode';
 
 describe('decodeSkyMaterial — ProceduralSkyMaterial', () => {
   it('applies Godot’s constructor defaults for a bare material', () => {
@@ -123,4 +123,38 @@ describe('skyMaterialRef — the Sky indirection', () => {
     expect(skyMaterialRef('ProceduralSkyMaterial', { sky_material: 'SubResource("x")' })).toBeUndefined();
     expect(skyMaterialRef(undefined, undefined)).toBeUndefined();
   });
+});
+
+describe('decodeSkyProcessing — how a Sky bakes its radiance', () => {
+  it('applies Godot’s defaults, Automatic at 256, for a bare Sky', () => {
+    expect(decodeSkyProcessing({})).toEqual({ processMode: 'automatic', radianceSize: 256 });
+  });
+
+  it('reads an authored process mode and radiance size', () => {
+    expect(decodeSkyProcessing({ process_mode: '3', radiance_size: '1' })).toEqual({
+      processMode: 'real-time',
+      radianceSize: 64,
+    });
+  });
+
+  it('keeps the default size for an index the setter refuses (edge case)', () => {
+    expect(decodeSkyProcessing({ radiance_size: '7' })).toMatchObject({ radianceSize: 256 });
+  });
+});
+
+describe('radianceFilter — the filter that bakes a Sky’s rough layers', () => {
+  it('is the fast filter for a Real-Time sky', () => {
+    expect(radianceFilter({ processMode: 'real-time', radianceSize: 256 })).toBe('fast');
+  });
+
+  it('is the fast filter for a Real-Time sky at any size, which Godot bakes at 256', () => {
+    expect(radianceFilter({ processMode: 'real-time', radianceSize: 128 })).toBe('fast');
+  });
+
+  it.each(['automatic', 'quality', 'incremental'] as const)(
+    'importance-samples a built-in material under %s',
+    (processMode) => {
+      expect(radianceFilter({ processMode, radianceSize: 256 })).toBe('importance-sample');
+    }
+  );
 });

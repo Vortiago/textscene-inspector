@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { SkyEnvironment, SkyEnvironmentInput } from '../../resources/sky/build';
-import type { PanoramaSkyProperties } from '../../resources/sky/types';
+import type { Sky } from '../../resources/sky/types';
 import { SkyLayer } from './SkyLayer';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
@@ -24,7 +24,10 @@ vi.mock('../../resources/sky/build', () => ({
   },
 }));
 
-const SKY: PanoramaSkyProperties = { kind: 'panorama', panorama: undefined, energy_multiplier: 1 };
+const SKY: Sky = {
+  material: { kind: 'panorama', panorama: undefined, energy_multiplier: 1 },
+  radianceFilter: 'importance-sample',
+};
 
 function Scene({ lights }: { lights: number }) {
   return (

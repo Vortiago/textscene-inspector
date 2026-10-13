@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { buildSkyEnvironment, skyPanoramaTexture } from './build';
 import { decodeSkyMaterial } from './decode';
+import type { Sky } from './types';
 
 describe('skyPanoramaTexture', () => {
   it('tiles a clamped panorama on a source-shared clone', () => {
@@ -48,7 +49,10 @@ describe('buildSkyEnvironment layers', () => {
     vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockReturnValue(
       new THREE.WebGLRenderTarget(1, 1)
     );
-    const sky = decodeSkyMaterial('ProceduralSkyMaterial', {})!;
+    const sky: Sky = {
+      material: decodeSkyMaterial('ProceduralSkyMaterial', {})!,
+      radianceFilter: 'importance-sample',
+    };
 
     const env = buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [] });
 
@@ -77,7 +81,10 @@ describe('buildSkyEnvironment panorama wiring', () => {
     vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockReturnValue(
       new THREE.WebGLRenderTarget(1, 1)
     );
-    const sky = decodeSkyMaterial('PanoramaSkyMaterial', {})!;
+    const sky: Sky = {
+      material: decodeSkyMaterial('PanoramaSkyMaterial', {})!,
+      radianceFilter: 'importance-sample',
+    };
     const env = buildSkyEnvironment(uniformSkyRenderer(0), { sky, lights: [], panorama });
     return { env, sampled: sampled as THREE.Texture | null };
   }

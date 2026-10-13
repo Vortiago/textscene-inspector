@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
-import type { SkyProperties } from '../../resources/sky/types';
+import type { Sky } from '../../resources/sky/types';
 import { useTexture2D } from '../../resources/useTexture2D';
 import { useSceneResources } from '../SceneResourcesContext';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
@@ -21,7 +21,7 @@ import { showSkyLayers } from './skyLayersMap';
 import { observeSceneCamera } from '../sceneRenderCamera';
 
 export interface SkyLayerProps {
-  sky: SkyProperties;
+  sky: Sky;
   /**
    * The sky's full reflection strength (`background_energy_multiplier`), as
    * `scene.environmentIntensity`: a surface reflects the whole sky whatever the
@@ -65,8 +65,11 @@ export function SkyLayer({
   // GradientTexture2D sub-resource), which has no path to load from. Every
   // other sky kind passes `undefined` and the hook idles.
   const panorama =
-    useTexture2D(sky.kind === 'panorama' ? sky.panorama : undefined, externalResources, internalResources)
-      .texture ?? null;
+    useTexture2D(
+      sky.material.kind === 'panorama' ? sky.material.panorama : undefined,
+      externalResources,
+      internalResources
+    ).texture ?? null;
   const lightsKey = useSkyLightsKey(scene);
   // A ref, not an effect dependency: a new share needs no new bake.
   const contributionRef = useRef(contribution);

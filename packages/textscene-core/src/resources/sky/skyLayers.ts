@@ -1,28 +1,26 @@
 /**
  * Godot's roughest radiance layers of a sky, which its ambient and its rough reflections read
  * (`scene_forward_clustered.glsl:1714-1756`). A chain of downsamples shrinks the radiance to an
- * octmap 10 texels wide, and a GGX filter per layer takes the cosine-weighted mean of that chain
- * around each direction (`godot/skyReflection.ts`). The chain blurs the sky wider than three's PMREM.
+ * octmap 10 texels wide, and a filter per layer reads that chain around each direction: GGX
+ * importance sampling, or the fast filter of a real-time sky. The chain blurs the sky wider than
+ * three's PMREM.
  */
 
 import * as THREE from 'three';
-import { octToVec3WithBorder, vec3ToOctWithBorder, type OctDirection } from '../../godot/octmap.js';
-import {
-  SKY_RADIANCE_SIZE_DEFAULT,
-  downsampleTaps,
-  layerSamples,
-  skyOctmapLayout,
-  type LayerSample,
-  type SkyOctmapLayout,
-} from '../../godot/skyReflection.js';
+import { octToVec3WithBorder } from '../../godot/octmap.js';
+import { downsampleTaps, type SkyOctmapLayout } from '../../godot/skyReflection.js';
 import { cubeFace, cubeTexel, texelDirection } from './cubeFaces.js';
-import { addBilinear, addTrilinear, blankOctmap, type Octmap } from './octmapImage.js';
+import { fastFilter } from './fastFilter.js';
+import { importanceSampleFilter } from './importanceSampleFilter.js';
+import type { LayerFilter } from './layerFilter.js';
+import { addBilinear, blankOctmap, type Octmap } from './octmapImage.js';
+import type { RadianceFilter } from './types.js';
 
 /**
  * Bound once, not read from `Math` per call: a global lookup inside a VM context, where the
  * vitest pool runs this, costs about 100 times a local one, in a loop that runs a million times.
  */
-const { abs, floor, hypot } = Math;
+const { floor } = Math;
 
 /** The first layer baked here. The layers below it are sharp enough for three's PMREM to follow. */
 export const FIRST_BAKED_LAYER = 4;
@@ -49,11 +47,10 @@ export interface SkyLayers {
 
 const BAKED_FACE_SIZES = [...ROUGH_LAYER_FACE_SIZES, LAST_LAYER_FACE_SIZE];
 
-/**
- * Godot's layout depends on `Sky.radiance_size` only through the chain's length, as the last mip
- * is 10 texels wide at every size. So the default size stands for every size.
- */
-const LAYOUT = skyOctmapLayout(SKY_RADIANCE_SIZE_DEFAULT);
+const FILTERS: Record<RadianceFilter, LayerFilter> = {
+  'importance-sample': importanceSampleFilter,
+  fast: fastFilter,
+};
 
 /** One downsample of the chain, as positions and weights that hold for every sky. */
 interface DownsampleStep {
@@ -66,21 +63,19 @@ interface DownsampleStep {
   weights: Float32Array;
 }
 
-/** The parts of the filter that hold for every sky, for one cube size. */
-interface LayerPlan {
+/** The parts of a filter's chain that hold for every sky, for one cube size. */
+interface ChainPlan {
   cubeSize: number;
   /** The face times the face's texel count, plus the texel, that each base octmap texel reads. */
   baseTexels: Int32Array;
   steps: DownsampleStep[];
-  /** The samples of each baked layer. */
-  samples: LayerSample[][];
 }
 
 /**
- * Written only by `layerPlan`, on the first sky of a cube size. About 4 MB, kept so a later sky
- * runs the chain without the 400,000 directions and 500,000 tap weights that build it.
+ * Written only by `chainPlan`, on the first sky of a cube size for each filter. Up to 4 MB each, kept
+ * so a later sky runs the chain without the 400,000 directions and 500,000 tap weights that build it.
  */
-let plan: LayerPlan | null = null;
+const plans = new Map<LayerFilter, ChainPlan>();
 
 /**
  * Each face of a WebGL cube render target, as linear RGBA floats in `readRenderTargetPixels`
@@ -106,18 +101,26 @@ function fromHalfFloats(half: Uint16Array): Float32Array {
   return floats;
 }
 
-/** Godot's baked layers of the sky `radiance` holds, a cube of RGBA faces `size` wide. */
-export function skyLayers(radiance: readonly Float32Array[], size: number): SkyLayers {
+/**
+ * Godot's baked layers of the sky `radiance` holds, a cube of RGBA faces `size` wide, through
+ * `radianceFilter`.
+ */
+export function skyLayers(
+  radiance: readonly Float32Array[],
+  size: number,
+  radianceFilter: RadianceFilter
+): SkyLayers {
   checkCube(radiance, size);
-  const { baseTexels, steps, samples } = layerPlan(size);
+  const filter = FILTERS[radianceFilter];
+  const { baseTexels, steps } = chainPlan(size, filter);
   const mips: Octmap[] = [];
-  let source = baseOctmap(radiance, size * size, baseTexels);
+  let source = baseOctmap(radiance, size * size, baseTexels, filter.layout.size);
   for (const step of steps) {
     source = downsample(source, step);
     mips.push(source);
   }
   const layers = BAKED_FACE_SIZES.map((faceSize, index) =>
-    Array.from({ length: 6 }, (_, face) => layerFace(face, faceSize, mips, samples[index]!))
+    Array.from({ length: 6 }, (_, face) => layerFace(face, faceSize, mips, filter, FIRST_BAKED_LAYER + index))
   );
   return { rough: layers.slice(0, -1), last: layers.at(-1)! };
 }
@@ -133,14 +136,16 @@ function checkCube(radiance: readonly Float32Array[], size: number): void {
   });
 }
 
-function layerPlan(cubeSize: number): LayerPlan {
-  if (plan?.cubeSize === cubeSize) return plan;
-  plan = {
+function chainPlan(cubeSize: number, filter: LayerFilter): ChainPlan {
+  const cached = plans.get(filter);
+  if (cached?.cubeSize === cubeSize) return cached;
+  const { layout, chainSizes } = filter;
+  const plan: ChainPlan = {
     cubeSize,
-    baseTexels: baseTexels(cubeSize, LAYOUT),
-    steps: LAYOUT.downsampledSizes.map((size) => downsampleStep(size, LAYOUT.padding)),
-    samples: BAKED_FACE_SIZES.map((_, index) => layerSamples(LAYOUT, FIRST_BAKED_LAYER + index)),
+    baseTexels: baseTexels(cubeSize, layout),
+    steps: chainSizes.map((size) => downsampleStep(size, layout.padding)),
   };
+  plans.set(filter, plan);
   return plan;
 }
 
@@ -177,8 +182,13 @@ function downsampleStep(size: number, padding: number): DownsampleStep {
   return step;
 }
 
-function baseOctmap(radiance: readonly Float32Array[], faceTexels: number, texels: Int32Array): Octmap {
-  const octmap = blankOctmap(LAYOUT.size);
+function baseOctmap(
+  radiance: readonly Float32Array[],
+  faceTexels: number,
+  texels: Int32Array,
+  octmapSize: number
+): Octmap {
+  const octmap = blankOctmap(octmapSize);
   for (let i = 0; i < texels.length; i += 1) {
     const face = radiance[floor(texels[i]! / faceTexels)]!;
     const at = (texels[i]! % faceTexels) * 4;
@@ -210,60 +220,17 @@ function layerFace(
   face: number,
   faceSize: number,
   mips: readonly Octmap[],
-  samples: readonly LayerSample[]
+  filter: LayerFilter,
+  layer: number
 ): Uint16Array {
   const out = new Uint16Array(faceSize * faceSize * 4);
   const colour = new Float32Array(3);
   for (let texel = 0; texel < faceSize * faceSize; texel += 1) {
-    layerAt(texelDirection(face, texel, faceSize), mips, samples, colour);
+    filter.texel(texelDirection(face, texel, faceSize), mips, layer, colour);
     out.set(
       [colour[0]!, colour[1]!, colour[2]!, 1].map((value) => THREE.DataUtils.toHalfFloat(value)),
       texel * 4
     );
   }
   return out;
-}
-
-/** The UV of one sample. Written only by `layerAt`, for the sample it reads next. */
-const sampleUv = new Float64Array(2);
-
-/**
- * Writes the texel of a layer at `normal` to `out`: the layer's samples turned into the frame Godot
- * builds around it, read from the mips and weighed by their cosine (`octmap_roughness.glsl:62-84`).
- */
-function layerAt(
-  normal: OctDirection,
-  mips: readonly Octmap[],
-  samples: readonly LayerSample[],
-  out: Float32Array
-): void {
-  const up: OctDirection = abs(normal[1]) < 0.99999 ? [0, 1, 0] : [0, 0, 1];
-  const tangent = normalize(cross(up, normal));
-  const bitangent = cross(normal, tangent);
-  out.fill(0);
-  let total = 0;
-  for (const {
-    direction: [x, y, z],
-    lod,
-  } of samples) {
-    vec3ToOctWithBorder(
-      tangent[0] * x + bitangent[0] * y + normal[0] * z,
-      tangent[1] * x + bitangent[1] * y + normal[1] * z,
-      tangent[2] * x + bitangent[2] * y + normal[2] * z,
-      LAYOUT.padding,
-      sampleUv
-    );
-    addTrilinear(mips, sampleUv[0]!, sampleUv[1]!, lod, z, out);
-    total += z;
-  }
-  for (let channel = 0; channel < 3; channel += 1) out[channel] = out[channel]! / total;
-}
-
-function cross(a: OctDirection, b: OctDirection): OctDirection {
-  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-}
-
-function normalize([x, y, z]: OctDirection): OctDirection {
-  const length = hypot(x, y, z);
-  return [x / length, y / length, z / length];
 }

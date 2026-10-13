@@ -12,6 +12,7 @@ import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValid
 import { boolSlotValue } from '../../../godot/index.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { RawNode } from '../../../parser/types.js';
+import { REAL_TIME_SKY_SIZE_ARM, realTimeSkySizeProblem } from '../../../resources/sky/realTimeSkySize.js';
 
 const arms = {
   multipleCurrent: groundedArm('camera3d-multiple-current', {
@@ -33,6 +34,7 @@ const arms = {
     // `Condition "p_far <= p_near" is true` once per frame. Neither error form applies.
     grounding: { kind: 'engine', at: 'projection.cpp:263' },
   },
+  realTimeSkySize: REAL_TIME_SKY_SIZE_ARM,
 } as const satisfies RuleArms<string>;
 
 /** `Camera3D::ProjectionType` (camera_3d.h:45-47). */
@@ -138,6 +140,9 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
     // no `get_configuration_warnings`, so ADR-0032 licenses no tier and this reports nothing.
   }
 
+  const skyProblem = realTimeSkySizeProblem(scene, rawProps.environment);
+  if (skyProblem) reportArm(diagnostics, arms.realTimeSkySize, node, skyProblem);
+
   return diagnostics;
 }
 
@@ -145,7 +150,7 @@ const camera3DValidationRule: LintRule = {
   meta: {
     name: 'valid-camera3d-properties',
     description:
-      "Validates the Camera3D near/far clipping-plane pair per projection mode, which neither plane's own bound can express, and reports cameras that contend for one viewport's current-camera slot",
+      "Validates the Camera3D near/far clipping-plane pair per projection mode, which neither plane's own bound can express, reports cameras that contend for one viewport's current-camera slot, and a Real-Time sky at a radiance size Godot replaces",
     category: 'validation',
     emits: armEmits(arms),
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Camera3D'),

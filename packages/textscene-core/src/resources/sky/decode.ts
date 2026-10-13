@@ -5,8 +5,8 @@
  */
 
 import type { Color } from '../../utils/colorParser';
-import type { SkyProperties } from './types';
-import { floatOr } from '../../parser/valueParsers';
+import type { RadianceFilter, SkyProcessMode, SkyProcessing, SkyProperties } from './types';
+import { enumOr, floatOr } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
 
 const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
@@ -22,6 +22,39 @@ export function skyMaterialRef(
 ): string | undefined {
   if (type !== 'Sky') return undefined;
   return data?.sky_material;
+}
+
+/** `Sky::ProcessMode` by its value (`scene/resources/sky.h:51-56`). */
+const PROCESS_MODES: readonly SkyProcessMode[] = ['automatic', 'quality', 'incremental', 'real-time'];
+
+/** The size each `Sky::RadianceSize` names (`scene/resources/sky.cpp:37-39`). */
+const RADIANCE_SIZES = [32, 64, 128, 256, 512, 1024, 2048];
+
+/** RADIANCE_SIZE_256, the default (`scene/resources/sky.h:61`). */
+const RADIANCE_SIZE_DEFAULT_INDEX = 3;
+
+/**
+ * A `Sky`'s process mode and radiance size. `set_radiance_size` refuses an index past the table
+ * (`sky.cpp:34`), so such a size stays at the default.
+ */
+export function decodeSkyProcessing(data: Record<string, string>): SkyProcessing {
+  const modeIndex = enumOr(data.process_mode, 0, [0, 1, 2, 3], 'process_mode');
+  const sizeIndex = enumOr(
+    data.radiance_size,
+    RADIANCE_SIZE_DEFAULT_INDEX,
+    RADIANCE_SIZES.map((_, index) => index),
+    'radiance_size'
+  );
+  return { processMode: PROCESS_MODES[modeIndex]!, radianceSize: RADIANCE_SIZES[sizeIndex]! };
+}
+
+/**
+ * The filter Godot bakes a sky's rough layers with (`sky.cpp:1335-1344`). Automatic picks real-time
+ * only for a shader that reads `TIME` or `POSITION` (`sky.cpp:1001-1004`), and no built-in sky
+ * material does (`scene/resources/3d/sky_material.cpp`), so only Real-Time takes the fast filter.
+ */
+export function radianceFilter({ processMode }: SkyProcessing): RadianceFilter {
+  return processMode === 'real-time' ? 'fast' : 'importance-sample';
 }
 
 export function decodeSkyMaterial(type: string, data: Record<string, string>): SkyProperties | null {
