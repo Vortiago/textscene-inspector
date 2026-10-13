@@ -52,9 +52,9 @@ float godotClearcoatBRDF( const in vec3 lightDir, const in vec3 viewDir, const i
 
 /**
  * Godot's coat lobe takes the N.L of the surface's own normal (`:168`), not the coat's, as Godot
- * computes the coat's N.L and leaves it unused.
+ * computes the coat's N.L and leaves it unused. It scales by the light's specular amount (`:185`).
  */
-const DIRECT_CLEARCOAT = /* glsl */ `clearcoatSpecularDirect += irradiance * godotClearcoatBRDF( directLight.direction, geometryViewDir, geometryClearcoatNormal, material.clearcoatRoughness );`;
+const DIRECT_CLEARCOAT = /* glsl */ `clearcoatSpecularDirect += irradiance * godotClearcoatBRDF( directLight.direction, geometryViewDir, geometryClearcoatNormal, material.clearcoatRoughness ) * godotSpecularAmount;`;
 
 /**
  * Godot's reflection on the coat (`scene_forward_clustered.glsl:1768-1795`): about the coat's

@@ -878,6 +878,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Light Specular",
+    "file": "unit-light-specular.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Light Transport Ambient",
     "file": "unit-light-transport-ambient.tscn",
     "category": "Other"

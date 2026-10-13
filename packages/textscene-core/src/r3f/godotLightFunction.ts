@@ -6,6 +6,7 @@
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
+import { LIGHT_SPECULAR_MARK } from './lightSpecular/lightSpecularChunk.js';
 import { ROUGHNESS_LIMITER_AMOUNT, ROUGHNESS_LIMITER_LIMIT } from '../godot/roughnessLimiter.js';
 import { glslFloat } from '../resources/environment/glslLiterals.js';
 
@@ -144,17 +145,19 @@ const THREE_SPECULAR_SUM =
  * in the material's `specular_mode`: GGX unless a define picks another. Toon writes to the diffuse,
  * which Godot then scales by albedo and `1 - metallic` (`scene_forward_clustered.glsl:2941-2948`).
  * The rule sits on the sum, after every branch that sets `specularBRDF`, as GGX is NaN at alpha 0.
+ * Each mode scales by the light's specular amount (`lightSpecular/lightSpecularChunk.ts`).
  */
 const SPECULAR_SUM = /* glsl */ `if ( material.godotRoughness <= 0.0 ) {
 		specularBRDF = vec3( 0.0 );
 	} else {
 		#if defined( GODOT_SPECULAR_TOON )
 			specularBRDF = vec3( 0.0 );
-			reflectedLight.directDiffuse += godotToonSpecular( directLight.direction, geometryViewDir, geometryNormal, material.godotRoughness ) * directLight.color * material.diffuseContribution;
+			reflectedLight.directDiffuse += godotToonSpecular( directLight.direction, geometryViewDir, geometryNormal, material.godotRoughness ) * directLight.color * godotSpecularAmount * material.diffuseContribution;
 		#elif defined( GODOT_SPECULAR_DISABLED )
 			specularBRDF = vec3( 0.0 );
 		#endif
 	}
+	specularBRDF *= godotSpecularAmount;
 	${THREE_SPECULAR_SUM}`;
 
 const THREE_RETRO_SPECULAR =
@@ -262,6 +265,7 @@ export function installGodotLightFunction(): void {
     isApplied: (chunks) => chunks[CHUNK].includes(LIGHT_FUNCTION_MARK),
     apply: (chunks) => applyChunkEdits(chunks, GODOT_LIGHT_FUNCTION_EDITS),
     missing: `${CHUNK}, ${SETUP_CHUNK} or ${MAPS_CHUNK} lacks a line the light function patch replaces`,
+    requires: { lights_pars_begin: LIGHT_SPECULAR_MARK },
   });
 }
 

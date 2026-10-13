@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotClearcoat } from './godotClearcoat';
 import { installGodotLightFunction } from './godotLightFunction';
+import { installGodotLightSpecular } from './lightSpecular/lightSpecularChunk';
 import { installGodotSkyLighting } from './godotSkyLighting';
 import { warningsOf } from './testing/logWarnings';
 import { functionBody } from './testing/glslSource';
@@ -21,6 +22,7 @@ afterEach(() => {
 
 /** The patches the clearcoat calls, then the clearcoat, as `installShaderPatches` orders them. */
 function installWithItsPrerequisites(): void {
+  installGodotLightSpecular();
   installGodotLightFunction();
   installGodotSkyLighting();
   installGodotClearcoat();
@@ -57,6 +59,14 @@ describe('installGodotClearcoat', () => {
 
     expect(direct).toContain('clearcoatSpecularDirect += irradiance * godotClearcoatBRDF(');
     expect(direct).not.toContain('BRDF_GGX_Clearcoat(');
+  });
+
+  it("scales the coat's lobe by the light's specular amount", () => {
+    installWithItsPrerequisites();
+
+    expect(THREE.ShaderChunk.lights_physical_pars_fragment).toContain(
+      'material.clearcoatRoughness ) * godotSpecularAmount;'
+    );
   });
 
   it("reflects the sky on the coat about the coat's normal, below the surface's horizon", () => {
@@ -121,6 +131,7 @@ describe('installGodotClearcoat', () => {
 
   it('leaves the chunks and the fragment shader alone when the shader lacks a replaced line, and warns (error case)', () => {
     THREE.ShaderLib.physical.fragmentShader = 'void main() {}';
+    installGodotLightSpecular();
     installGodotLightFunction();
     installGodotSkyLighting();
     const lightFunction = THREE.ShaderChunk.lights_physical_pars_fragment;

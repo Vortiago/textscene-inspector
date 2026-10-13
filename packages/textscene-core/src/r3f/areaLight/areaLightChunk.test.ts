@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotAreaLight } from './areaLightChunk';
 import { installGodotLightFunction } from '../godotLightFunction';
+import { installGodotLightSpecular } from '../lightSpecular/lightSpecularChunk';
 import { installGodotLightAttenuation } from '../godotLightAttenuation';
 import { ltcTables } from '../../godot/ltc';
 import { warningsOf } from '../testing/logWarnings';
@@ -20,6 +21,7 @@ afterEach(() => {
 
 /** The patches the area light reads, then the area light, as `installShaderPatches` orders them. */
 function installWithItsPrerequisites(): void {
+  installGodotLightSpecular();
   installGodotLightFunction();
   installGodotLightAttenuation();
   installGodotAreaLight();
@@ -143,6 +145,7 @@ describe('installGodotAreaLight', () => {
   });
 
   it('leaves the chunks alone when one lacks a replaced text, and warns (error case)', () => {
+    installGodotLightSpecular();
     installGodotLightFunction();
     installGodotLightAttenuation();
     const lightFunction = THREE.ShaderChunk.lights_physical_pars_fragment;

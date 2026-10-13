@@ -5,7 +5,8 @@ import type * as THREE from 'three';
 import { LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT } from '../../../../godot/volumetricFog';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 import { useLightDistanceFade } from './lightDistanceFade';
-import { lightIntensity, lightShadowOpacity } from './lightStrength';
+import { lightIntensity, lightShadowOpacity, positionalLightSpecularAmount } from './lightStrength';
+import { lightSpecularUserData } from '../../../../r3f/lightSpecular/lightSpecular';
 import { usePositionalShadowUserData } from './positionalShadowDeclaration';
 import type { PositionalLightProperties } from './types';
 
@@ -29,9 +30,14 @@ export function usePositionalLight(
   useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
   const shadowUserData = usePositionalShadowUserData(properties);
   const fogEnergy = properties.light_volumetric_fog_energy ?? LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT;
+  const specularAmount = positionalLightSpecularAmount(properties);
   const userData = useMemo(
-    () => ({ ...shadowUserData, ...fogLightUserData({ energy: fogEnergy, spotAngleAttenuation }) }),
-    [shadowUserData, fogEnergy, spotAngleAttenuation]
+    () => ({
+      ...shadowUserData,
+      ...fogLightUserData({ energy: fogEnergy, spotAngleAttenuation }),
+      ...lightSpecularUserData(specularAmount),
+    }),
+    [shadowUserData, fogEnergy, spotAngleAttenuation, specularAmount]
   );
   return { intensity, shadowOpacity, userData };
 }

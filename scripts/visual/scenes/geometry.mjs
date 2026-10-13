@@ -79,6 +79,9 @@ export const GEOMETRY_SCENES = [
   // coat dims only the sky's light beneath it. No other golden coats a sphere
   // under a punctual light or a sky.
   { name: 'material-clearcoat-layering', file: 'unit-material-clearcoat-layering.tscn' },
+  // A glossy sphere under an omni and a directional light, each at its own
+  // light_specular. No other golden sets a light's specular amount.
+  { name: 'light-specular', file: 'unit-light-specular.tscn' },
   // External ArrayMesh .tres: a decoded quad with Godot's packed normals.
   { name: 'arraymesh', file: 'unit-arraymesh.tscn' },
   // A text .gltf whose buffer and base colour image are separate files, which
