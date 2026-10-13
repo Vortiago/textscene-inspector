@@ -9,7 +9,7 @@ renders_as: a THREE.PointLight
 
 # OmniLight3D
 
-Godot's omnidirectional point light, emitting from a single point in every direction with distance attenuation. The previewer renders it as a `THREE.PointLight` inside the node's transform group, with energy scaled by PI to match Godot's brightness.
+Godot's omnidirectional point light, emitting from a single point in every direction with distance attenuation. The previewer renders it as a `THREE.PointLight` inside the node's transform group, with energy scaled by PI to match Godot's brightness. Its highlight scales by twice `light_specular`, as Godot's does.
 
 ## Linting
 

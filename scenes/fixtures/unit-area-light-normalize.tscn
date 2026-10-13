@@ -1,3 +1,8 @@
+; A 1×1 AreaLight3D panel and a 4×0.05 strip at the same energy, over matte plates, for the one
+; variable no other golden moves: area_normalize_energy dividing each light's colour by its area.
+; unit-area-light3d draws one light, so it cannot show two sizes emitting the same total. A hidden
+; DirectionalLight3D turns the editor preview sun off, so only the area lights reach the plates,
+; and energy 1.0 keeps every plate below white.
 [gd_scene load_steps=3 format=3 uid="uid://unitarealightnorm"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_plate"]
@@ -19,12 +24,15 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
 mesh = SubResource("PlaneMesh_plate")
 surface_material_override/0 = SubResource("StandardMaterial3D_plate")
 
+[node name="SunOff" type="DirectionalLight3D" parent="."]
+visible = false
+
 [node name="UnitPanel" type="AreaLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, -1.5, 1.2, 0)
-light_energy = 3.0
+light_energy = 1.0
 area_size = Vector2(1, 1)
 
 [node name="WideStrip" type="AreaLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 1.5, 1.2, 0)
-light_energy = 3.0
+light_energy = 1.0
 area_size = Vector2(4, 0.05)

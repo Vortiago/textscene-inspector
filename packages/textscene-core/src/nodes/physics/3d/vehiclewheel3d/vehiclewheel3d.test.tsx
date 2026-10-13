@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { visibleInTree } from '../../../../r3f/visibleInTree';
 import '../../../../r3f/nodes/index'; // side-effect: component registrations
 import '../../../../parser/TscnParser'; // side-effect: parser registrations
 import { rendersOwnVisual } from '../../../../r3f/nodeSupport';
@@ -59,12 +60,12 @@ describe('VehicleWheel3D registration', () => {
 
   it('honours visible = false, hiding itself and its wheel mesh', async () => {
     const renderer = await render(wheelNode({ visible: false }));
-    expect(renderer.scene.findByProps({ name: 'Wheel1' }).instance.visible).toBe(false);
+    expect(visibleInTree(renderer.scene.findByProps({ name: 'Wheel1' }).instance)).toBe(false);
   });
 
   it('stays visible when visible is not authored', async () => {
     const renderer = await render(wheelNode());
-    expect(renderer.scene.findByProps({ name: 'Wheel1' }).instance.visible).toBe(true);
+    expect(visibleInTree(renderer.scene.findByProps({ name: 'Wheel1' }).instance)).toBe(true);
   });
 
   it('is a real registration, not the generic placeholder fallback', async () => {

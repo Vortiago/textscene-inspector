@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotSkyLighting } from './godotSkyLighting';
 import { warningsOf } from './testing/logWarnings';
+import { functionBody } from './testing/glslSource';
 import {
   SKY_CONTRIBUTION_UNIFORM,
   SKY_LAST_LAYER_UNIFORM,
@@ -28,11 +29,6 @@ function patchedChunks() {
     maps: THREE.ShaderChunk.lights_fragment_maps,
     envmap: THREE.ShaderChunk.envmap_physical_pars_fragment,
   };
-}
-
-/** The body of the GLSL function `name` in `chunk`. */
-function functionBody(chunk: string, name: string): string {
-  return chunk.split(`vec3 ${name}(`)[1]!.split('\n\t}')[0]!;
 }
 
 describe('installGodotSkyLighting', () => {
@@ -79,34 +75,40 @@ describe('installGodotSkyLighting', () => {
     );
   });
 
-  it("reads the PMREM at the power of the roughness whose blur matches Godot's layer, up to layer 3", () => {
+  it('reflects about the normal, below its own horizon', () => {
     expect(functionBody(patchedChunks().envmap, 'godotIBLRadiance')).toContain(
+      'godotSkyLayer( reflectVec, roughness ) * horizon * horizon'
+    );
+  });
+
+  it("reads the PMREM at the power of the roughness whose blur matches Godot's layer, up to layer 3", () => {
+    expect(functionBody(patchedChunks().envmap, 'godotPmremLayer')).toContain(
       'textureCubeUV( envMap, reflectVec, pow( min( roughness, 0.18367346938775508 ), 0.8 ) )'
     );
   });
 
   it("reads layers 4 to 6 from the rough cube's mips, a trilinear read blending two as Godot's", () => {
-    expect(functionBody(patchedChunks().envmap, 'godotIBLRadiance')).toContain(
+    expect(functionBody(patchedChunks().envmap, 'godotSkyLayer')).toContain(
       `textureLod( ${SKY_ROUGH_LAYERS_UNIFORM}, reflectVec, clamp( layer - 4.0, 0.0, 2.0 ) )`
     );
   });
 
   it('blends the PMREM into the baked layers between layer 3 and layer 4', () => {
-    expect(functionBody(patchedChunks().envmap, 'godotIBLRadiance')).toContain(
+    expect(functionBody(patchedChunks().envmap, 'godotSkyLayer')).toContain(
       'float bakedShare = clamp( layer - 3.0, 0.0, 1.0 );'
     );
   });
 
   it('blends layer 6 into the last layer between layer 6 and layer 7', () => {
-    const body = functionBody(patchedChunks().envmap, 'godotIBLRadiance');
+    const body = functionBody(patchedChunks().envmap, 'godotSkyLayer');
     expect(body).toContain(`textureCube( ${SKY_LAST_LAYER_UNIFORM}, reflectVec )`);
     expect(body).toContain('mix( roughLayer, lastLayer, clamp( layer - 6.0, 0.0, 1.0 ) )');
   });
 
   it('bends the reflection towards the normal by the roughness squared and dims it below the horizon', () => {
-    const body = functionBody(patchedChunks().envmap, 'godotIBLRadiance');
+    const body = functionBody(patchedChunks().envmap, 'godotReflection');
     expect(body).toContain('mix( reflect( - viewDir, normal ), normal, pow2( roughness ) )');
-    expect(body).toContain('* horizon * horizon');
+    expect(body).toContain('horizon = min( 1.0 + dot( reflectVec, surfaceNormal ), 1.0 );');
   });
 
   it("reflects an anisotropic surface's bent normal through the same lookup", () => {

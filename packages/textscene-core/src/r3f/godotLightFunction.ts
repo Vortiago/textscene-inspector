@@ -6,6 +6,7 @@
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
+import { LIGHT_SPECULAR_MARK } from './lightSpecular/lightSpecularChunk.js';
 import { ROUGHNESS_LIMITER_AMOUNT, ROUGHNESS_LIMITER_LIMIT } from '../godot/roughnessLimiter.js';
 import { glslFloat } from '../resources/environment/glslLiterals.js';
 
@@ -17,9 +18,9 @@ const ROUGHNESS_SETUP = 'material.roughness = min( material.roughness, 1.0 );';
 
 /**
  * The roughness Godot's light functions and sky reflection read: the limiter at its project
- * defaults, with no floor. three's own `material.roughness` floors at 0.0525, which the clearcoat
- * keeps. Godot snaps a roughness below 1e-8 to 0, where GGX would divide by a collapsed
- * alpha (`scene_forward_clustered.glsl:1667-1671`).
+ * defaults, with no floor. three's own `material.roughness` floors at 0.0525 and stays for the
+ * terms the patches leave to three. Godot snaps a roughness below 1e-8 to 0, where GGX would
+ * divide by a collapsed alpha (`scene_forward_clustered.glsl:1667-1671`).
  */
 const GODOT_ROUGHNESS = /* glsl */ `${ROUGHNESS_SETUP}
 vec3 godotDndu = dFdx( normal );
@@ -104,17 +105,21 @@ vec3 godotSpecularBRDF( const in vec3 lightDir, const in vec3 viewDir, const in 
 	return F * D * V;
 }
 
-float godotToonSpecular( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in float roughness ) {
-	vec3 R = normalize( - reflect( lightDir, normal ) );
-	float RdotV = dot( R, viewDir );
+float godotToonIntensity( const in float RdotV, const in float roughness ) {
 	float mid = 1.0 - roughness;
 	mid *= mid;
 	return smoothstep( mid - roughness * 0.5, mid + roughness * 0.5, RdotV ) * mid;
 }
 
+float godotToonSpecular( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in float roughness ) {
+	vec3 R = normalize( - reflect( lightDir, normal ) );
+	return godotToonIntensity( dot( R, viewDir ), roughness );
+}
+
 `;
 
-const RE_DIRECT = 'void RE_Direct_Physical( const in IncidentLight directLight';
+/** The signature of three's direct light function, before which a patch declares its helpers. */
+export const RE_DIRECT = 'void RE_Direct_Physical( const in IncidentLight directLight';
 
 /**
  * three's `dotVH` is Godot's L.H, as H bisects L and V. three's sheen energy compensation stays on
@@ -140,17 +145,19 @@ const THREE_SPECULAR_SUM =
  * in the material's `specular_mode`: GGX unless a define picks another. Toon writes to the diffuse,
  * which Godot then scales by albedo and `1 - metallic` (`scene_forward_clustered.glsl:2941-2948`).
  * The rule sits on the sum, after every branch that sets `specularBRDF`, as GGX is NaN at alpha 0.
+ * Each mode scales by the light's specular amount (`lightSpecular/lightSpecularChunk.ts`).
  */
 const SPECULAR_SUM = /* glsl */ `if ( material.godotRoughness <= 0.0 ) {
 		specularBRDF = vec3( 0.0 );
 	} else {
 		#if defined( GODOT_SPECULAR_TOON )
 			specularBRDF = vec3( 0.0 );
-			reflectedLight.directDiffuse += godotToonSpecular( directLight.direction, geometryViewDir, geometryNormal, material.godotRoughness ) * directLight.color * material.diffuseContribution;
+			reflectedLight.directDiffuse += godotToonSpecular( directLight.direction, geometryViewDir, geometryNormal, material.godotRoughness ) * directLight.color * godotSpecularAmount * material.diffuseContribution;
 		#elif defined( GODOT_SPECULAR_DISABLED )
 			specularBRDF = vec3( 0.0 );
 		#endif
 	}
+	specularBRDF *= godotSpecularAmount;
 	${THREE_SPECULAR_SUM}`;
 
 const THREE_RETRO_SPECULAR =
@@ -243,6 +250,9 @@ export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
   },
 ];
 
+/** The text that proves the patch installed, which a patch that reads it requires. */
+export const LIGHT_FUNCTION_MARK = DIFFUSE_NL;
+
 /**
  * Replaces three's chunks for every program compiled after the call. A three release that
  * rewrites the lines keeps its own chunk, and `godotLightFunction.test.ts` fails on that release. A
@@ -252,9 +262,10 @@ export function installGodotLightFunction(): void {
   installChunkPatch({
     names: [CHUNK, SETUP_CHUNK, MAPS_CHUNK],
     // One sentinel, as the other patches check: they may edit next to this patch's lines.
-    isApplied: (chunks) => chunks[CHUNK].includes(DIFFUSE_NL),
+    isApplied: (chunks) => chunks[CHUNK].includes(LIGHT_FUNCTION_MARK),
     apply: (chunks) => applyChunkEdits(chunks, GODOT_LIGHT_FUNCTION_EDITS),
     missing: `${CHUNK}, ${SETUP_CHUNK} or ${MAPS_CHUNK} lacks a line the light function patch replaces`,
+    requires: { lights_pars_begin: LIGHT_SPECULAR_MARK },
   });
 }
 

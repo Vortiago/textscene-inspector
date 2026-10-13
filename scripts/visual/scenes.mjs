@@ -16,9 +16,9 @@ import { TILE_AND_TARGET_SCENES } from './scenes/targets.mjs';
 
 /**
  * Not in the set until fixed: unit-label3d.tscn, whose labels render near invisible after
- * auto-framing (pixel_size 0.005 is about 0.08 world units tall), and AreaLight3D, whose
- * light-only fixture renders blank. unit-animation-player*.tscn stays out: the fixtures exist to be
- * played, and playback never reaches a byte-stable frame.
+ * auto-framing (pixel_size 0.005 is about 0.08 world units tall). unit-area-light3d.tscn stays out:
+ * its ground lies beyond `area_range`, so only the preview sun draws it. unit-animation-player*.tscn
+ * stays out: the fixtures exist to be played, and playback never reaches a byte-stable frame.
  */
 export const GOLDEN_SCENES = [
   // The `scenes/` chapters run in the order they are concatenated here.

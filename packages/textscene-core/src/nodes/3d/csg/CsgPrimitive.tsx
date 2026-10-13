@@ -128,7 +128,6 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   );
   const scope = <CsgSubtreeProvider value={publishedSubtree}>{children}</CsgSubtreeProvider>;
 
-  const visible = properties.visible !== false;
   const combining = plan !== null && plan.geometryCount > 1;
   // A root's own: a contributor's solid, and its range and transparency with it, belong to the
   // root's mesh. Whichever mesh the root draws, its own solid or the evaluated one, is `drawnRef`.
@@ -137,7 +136,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const placement = useMemo(() => livePlacement(nodeRef, drawnRef), []);
   const shadow = useGeometryInstance(placement);
 
-  const transform = { ref: nodeRef, name: node.name, position, rotation, scale, visible } as const;
+  const transform = { ref: nodeRef, name: node.name, position, rotation, scale } as const;
 
   // A. Contributor: its solid belongs to an ancestor's boolean. D. Skipped: invisible, so its CSG
   // parent's boolean never reached it. Neither draws a solid, and both stay mounted so

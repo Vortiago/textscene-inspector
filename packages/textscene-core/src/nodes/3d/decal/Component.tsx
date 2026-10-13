@@ -1,7 +1,7 @@
 /**
  * <Decal>: Godot's texture projector, rendered as a real projection of `texture_albedo` down local
  * -Y, clipped to an origin-centred box of `size` and blended onto the lit surfaces inside it.
- * Wraps `<Node3D>` for transform, visibility and children. Parsed but not yet projected: the
+ * Wraps `<Node3D>` for transform and children. Parsed but not yet projected: the
  * normal/ORM/emission maps and `emission_energy`, which Godot's distance fade also scales.
  */
 

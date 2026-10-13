@@ -28,7 +28,7 @@ An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the previe
 ## Clearcoat
 <!-- compare: image=unit-material-clearcoat status=done fixture=unit-material-clearcoat.tscn -->
 
-A red sphere with a glossy clear coat. `clearcoat` maps to `MeshPhysicalMaterial.clearcoat`, and both engines show the same tight highlight over the red body.
+A red sphere with a glossy clear coat. `clearcoat` maps to `MeshPhysicalMaterial.clearcoat`, and both engines show the same tight highlight over the red body. As in Godot, the coat dims only the sky's ambient light and reflection beneath it, not an omni, spot or directional light.
 
 ## Rim
 <!-- compare: image=unit-material-rim status=limitation fixture=unit-material-rim.tscn -->

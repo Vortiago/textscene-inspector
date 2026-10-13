@@ -1,0 +1,43 @@
+; A glossy sphere under an OmniLight3D at light_specular 2 and a DirectionalLight3D at
+; light_specular 0.1, for the one variable no other golden moves: each light's specular amount.
+; Godot doubles an omni or spot light's light_specular (light_storage.cpp:891) and takes a
+; directional light's as it is (:665), so the omni's highlight reads bright and the directional
+; light's faint over the same diffuse. An environment without ambient light leaves the two lights
+; alone on the sphere.
+[gd_scene load_steps=4 format=3]
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.05, 0.05, 0.05, 1)
+ambient_light_source = 1
+reflected_light_source = 1
+
+[sub_resource type="SphereMesh" id="Sphere_1"]
+radius = 1.0
+height = 2.0
+radial_segments = 64
+rings = 32
+
+[sub_resource type="StandardMaterial3D" id="Glossy_1"]
+albedo_color = Color(0.3, 0.35, 0.6, 1)
+roughness = 0.3
+
+[node name="LightSpecular" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.7071068, -0.40824828, 0.57735026, 0, 0.81649655, 0.57735026, -0.7071068, -0.40824828, 0.57735026, 0, 0, 0)
+light_energy = 0.8
+light_specular = 0.1
+
+[node name="Omni" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 1.2, 2)
+omni_range = 8.0
+light_energy = 1.5
+light_specular = 2.0
+
+[node name="Sphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("Sphere_1")
+surface_material_override/0 = SubResource("Glossy_1")

@@ -22,7 +22,7 @@ const sizeValidator = v.vector3('size', {
     // here too: `MAX(-inf, 0)` is 0.
     if (parts.some((component) => component < 0)) {
       return {
-        message: `Property 'size' components must be >= 0; Godot's setter clamps a negative component up to 0 (fog_volume.cpp:78), got: ${written}`,
+        message: `Property 'size' components must be >= 0. Godot's setter clamps a negative component up to 0 (fog_volume.cpp:78), got: ${written}`,
       };
     }
     // The hint `"0.01,1024,0.01,or_greater"` (fog_volume.cpp:46) floors at 0.01,

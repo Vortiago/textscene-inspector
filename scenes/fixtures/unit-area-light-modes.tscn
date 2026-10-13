@@ -1,0 +1,74 @@
+; Four spheres under one AreaLight3D, for the one variable no other golden moves: the area light
+; in each light-function mode of Godot 4.7.2's light_process_area. Left to right: Burley and GGX,
+; toon diffuse and toon specular, specular disabled, and a clearcoat that dims the light beneath.
+; area-light-normalize draws only matte plates in the default modes. A hidden DirectionalLight3D
+; turns the editor preview sun off, and an environment without ambient light leaves the area light
+; alone on the spheres.
+[gd_scene load_steps=7 format=3]
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.05, 0.05, 0.05, 1)
+ambient_light_source = 1
+reflected_light_source = 1
+
+[sub_resource type="SphereMesh" id="Sphere_1"]
+radius = 0.6
+height = 1.2
+radial_segments = 48
+rings = 24
+
+[sub_resource type="StandardMaterial3D" id="Default_1"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="Toon_1"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 0.35
+diffuse_mode = 3
+specular_mode = 1
+
+[sub_resource type="StandardMaterial3D" id="NoSpecular_1"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 0.35
+specular_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="Coated_1"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 0.35
+clearcoat_enabled = true
+clearcoat = 1.0
+clearcoat_roughness = 0.1
+
+[node name="AreaLightModes" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="SunOff" type="DirectionalLight3D" parent="."]
+visible = false
+
+[node name="Panel" type="AreaLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.7071068, 0.7071068, 0, -0.7071068, 0.7071068, 0, 1.6, 1.6)
+light_energy = 3.0
+area_size = Vector2(4, 1)
+
+[node name="Default" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.1, 0, 0)
+mesh = SubResource("Sphere_1")
+surface_material_override/0 = SubResource("Default_1")
+
+[node name="Toon" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 0, 0)
+mesh = SubResource("Sphere_1")
+surface_material_override/0 = SubResource("Toon_1")
+
+[node name="NoSpecular" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0, 0)
+mesh = SubResource("Sphere_1")
+surface_material_override/0 = SubResource("NoSpecular_1")
+
+[node name="Coated" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.1, 0, 0)
+mesh = SubResource("Sphere_1")
+surface_material_override/0 = SubResource("Coated_1")

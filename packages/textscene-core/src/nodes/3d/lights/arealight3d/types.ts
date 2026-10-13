@@ -6,24 +6,24 @@ import type { Vector2 } from '../../../../parser/vectors';
 
 /** AreaLight3D properties: Light3D plus the rectangle. */
 export interface AreaLight3DProperties extends Node3DProperties, BaseLightWithNormalBias {
-  /**
-   * Penumbra of the area light (optional, default 1.0). Parsed and validated
-   * but not applied, since three.js RectAreaLight has no penumbra or range
-   * control, as with shadow_*.
-   */
-  area_range?: number;
+  /** The AreaLight3D default is 1.0, where the other lights default to 0.5. */
+  light_specular: number;
+
+  /** The distance at which the light reaches zero, from the closest point of the rectangle. */
+  area_range: number;
+
+  /** The exponent of the distance falloff, beyond the falloff of the rectangle's solid angle. */
+  area_attenuation: number;
+
+  /** Rectangle size, each axis 0 or more. The render and the inspector both read these numbers. */
+  area_size: Vector2;
 
   /**
-   * Rectangle size, parsed once from `Vector2(w, h)` (default `{x: 1, y: 1}`).
-   * The render and the inspector both read these numbers.
-   */
-  area_size?: Vector2;
-
-  /**
-   * Godot divides the light's colour by `area_size.x * area_size.y` when this
-   * is on (its default), so resizing the rectangle does not change how much
-   * light it emits. three.js RectAreaLight intensity is a luminance and scales
-   * with area for the same reason, so the same division applies at render.
+   * Godot divides the light's colour by `area_size.x * area_size.y` when this is on (its
+   * default), so resizing the rectangle does not change how much light it emits.
    */
   area_normalize_energy: boolean;
+
+  /** The Texture2D reference the rectangle emits, or undefined for a plain colour. */
+  area_texture?: string;
 }

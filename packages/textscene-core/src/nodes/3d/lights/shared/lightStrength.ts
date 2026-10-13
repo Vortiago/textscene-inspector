@@ -1,6 +1,13 @@
-/** A light's three intensity and shadow intensity, from its Godot energy, sign and shadow opacity. */
+/**
+ * A light's three intensity, shadow intensity and specular amount, from its Godot energy, sign,
+ * shadow opacity and `light_specular`.
+ */
 
-import { LIGHT_SHADOW_OPACITY_DEFAULT } from '../../../../godot/light';
+import {
+  DIRECTIONAL_LIGHT_SPECULAR_DEFAULT,
+  LIGHT_SHADOW_OPACITY_DEFAULT,
+  LIGHT_SPECULAR_DEFAULT,
+} from '../../../../godot/light';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import type { BaseLightProperties } from './types';
 
@@ -21,4 +28,18 @@ export function lightIntensity(
 /** three's `shadow.intensity` mixes towards unshadowed as Godot's `shadow_opacity` does (`scene_forward_lights_inc.glsl:577`). */
 export function lightShadowOpacity(properties: Pick<BaseLightProperties, 'shadow_opacity'>): number {
   return properties.shadow_opacity ?? LIGHT_SHADOW_OPACITY_DEFAULT;
+}
+
+/** An omni or spot light's `specular_amount`: twice its `light_specular` (`light_storage.cpp:891`). */
+export function positionalLightSpecularAmount(
+  properties: Pick<BaseLightProperties, 'light_specular'>
+): number {
+  return (properties.light_specular ?? LIGHT_SPECULAR_DEFAULT) * 2;
+}
+
+/** A directional light's specular amount: its `light_specular` itself (`light_storage.cpp:665`). */
+export function directionalLightSpecularAmount(
+  properties: Pick<BaseLightProperties, 'light_specular'>
+): number {
+  return properties.light_specular ?? DIRECTIONAL_LIGHT_SPECULAR_DEFAULT;
 }

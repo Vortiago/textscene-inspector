@@ -1,8 +1,7 @@
 /**
  * AreaLight3D `area_normalize_energy`, true by default: Godot divides the colour
- * by `area_size.x × area_size.y`, so resizing does not change the output. A
- * RectAreaLight intensity is a luminance, so the same division keeps a
- * 4 × 0.05 strip as bright as a 1 × 1 panel.
+ * by `area_size.x × area_size.y` (4.7.2: `light_storage.cpp:1094-1100`), so
+ * resizing does not change the output.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

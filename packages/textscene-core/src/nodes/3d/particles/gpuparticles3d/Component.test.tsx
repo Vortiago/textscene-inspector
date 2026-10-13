@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { visibleInTree } from '../../../../r3f/visibleInTree';
 import { Node3D } from '../../../base/node3d/Component';
 import type { Node3DProperties, Transform3D } from '../../../base/node3d/types';
 import type { TscnNode } from '../../../../parser/types';
@@ -52,24 +53,14 @@ describe('<Node3D> (gpuparticles3d component)', () => {
     expect(group.instance.position.z).toBe(3);
   });
 
-  it('hides the group when visible is false, without crashing', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <Node3D node={makeNode({ name: 'HiddenParticles', visible: false })} />
-    );
-    const group = renderer.scene.findByProps({ name: 'HiddenParticles' });
-    expect(group.instance.visible).toBe(false);
-  });
-
   it('honours visible = false through the dispatcher, not just in isolation', async () => {
-    // The test above mounts Node3D directly. This one checks that dispatching the type
-    // still reaches a component that carries `visible`.
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
         <NodeDispatcher nodes={[makeNode({ name: 'HiddenEmitter', visible: false })]} />
       </SelectionProvider>
     );
     const group = renderer.scene.findByProps({ name: 'HiddenEmitter' });
-    expect(group.instance.visible).toBe(false);
+    expect(visibleInTree(group.instance)).toBe(false);
   });
 });
 

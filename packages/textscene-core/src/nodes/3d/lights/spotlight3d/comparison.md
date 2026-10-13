@@ -9,7 +9,7 @@ renders_as: a THREE.SpotLight
 
 # SpotLight3D
 
-Godot's cone-shaped light, emitting from a point along its local -Z axis and fading toward the cone's rim and its range. The previewer renders it as a `THREE.SpotLight` with energy scaled by PI to match Godot's brightness. A shader patch gives it Godot's distance falloff and Godot's fade from the axis to the cone's rim, at the power `spot_angle_attenuation` sets.
+Godot's cone-shaped light, emitting from a point along its local -Z axis and fading toward the cone's rim and its range. The previewer renders it as a `THREE.SpotLight` with energy scaled by PI to match Godot's brightness. A shader patch gives it Godot's distance falloff and Godot's fade from the axis to the cone's rim, at the power `spot_angle_attenuation` sets. Its highlight scales by twice `light_specular`, as Godot's does.
 
 ## Linting
 

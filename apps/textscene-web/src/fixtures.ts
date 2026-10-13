@@ -878,6 +878,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Light Specular",
+    "file": "unit-light-specular.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Light Transport Ambient",
     "file": "unit-light-transport-ambient.tscn",
     "category": "Other"
@@ -2213,6 +2218,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Area Light Modes",
+    "file": "unit-area-light-modes.tscn",
+    "category": "Unit - Lights"
+  },
+  {
     "name": "Area Light Normalize",
     "file": "unit-area-light-normalize.tscn",
     "category": "Unit - Lights"
@@ -2930,6 +2940,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Billboard",
     "file": "unit-material-billboard.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Clearcoat Layering",
+    "file": "unit-material-clearcoat-layering.tscn",
     "category": "Unit - Materials"
   },
   {

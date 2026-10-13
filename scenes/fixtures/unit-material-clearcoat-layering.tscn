@@ -1,0 +1,57 @@
+; A clearcoat sphere beside the same sphere bare, under one OmniLight3D and a sky, for the one
+; variable no other golden moves: how the coat layers over the light beneath it. area-light-modes
+; coats a sphere only under an AreaLight3D. Godot 4.6.3 dims only the sky's ambient and reflection
+; under the coat (scene_forward_clustered.glsl:1764-1773), so the coated sphere's lit side matches
+; the bare one.
+[gd_scene load_steps=7 format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("SkyMat_1")
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 0
+
+[sub_resource type="SphereMesh" id="Sphere_1"]
+radius = 0.8
+height = 1.6
+radial_segments = 48
+rings = 24
+
+[sub_resource type="StandardMaterial3D" id="Bare_1"]
+albedo_color = Color(0.7, 0.12, 0.12, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="Coated_1"]
+albedo_color = Color(0.7, 0.12, 0.12, 1)
+roughness = 0.6
+clearcoat_enabled = true
+clearcoat = 1.0
+clearcoat_roughness = 0.2
+
+[node name="ClearcoatLayering" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+; Energy 0 suppresses Godot's editor preview sun, so the omni light is the only direct light.
+[node name="DarkSun" type="DirectionalLight3D" parent="."]
+light_energy = 0.0
+
+[node name="Key" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1.5, 2.5)
+omni_range = 10.0
+light_energy = 2.0
+
+[node name="Bare" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+mesh = SubResource("Sphere_1")
+surface_material_override/0 = SubResource("Bare_1")
+
+[node name="Coated" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+mesh = SubResource("Sphere_1")
+surface_material_override/0 = SubResource("Coated_1")
