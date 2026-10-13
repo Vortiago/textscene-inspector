@@ -25,11 +25,14 @@ import {
   EDITOR_FOV,
   ENGINE_KILL_AFTER_S,
   ENGINE_TIMEOUT_S,
+  FOG_HISTORY_MAX_CYCLES,
+  FOG_JITTER_CYCLE_FRAMES,
   FRAME_MARGIN,
   godotSpawnPlan,
   PARTICLES_PROCESS_DEFAULT,
   parseArgs,
   REFERENCE_FIXED_FPS,
+  RENDER_QUIT_AFTER_FRAMES,
   renderArgv,
   renderingMethodFallbackMessage,
   requestedRenderingMethod,
@@ -700,6 +703,31 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     await expect(renderReference({ scene: snapScene, out, mode: '2d' })).rejects.toThrow(/--mode 2d-root/);
   }, 360_000);
 
+  /**
+   * Volumetric fog with temporal reprojection mixes 0.9 of a history that starts black
+   * (`volumetric_fog_process.glsl:683`, `fog.cpp:482`), so six frames leave it dark by 0.9^6.
+   * A converged capture shows the fog a running game shows, which reprojection off draws at once.
+   */
+  it('captures volumetric fog once its temporal history has converged', async () => {
+    const capture = async (variant) => {
+      const out = join(await scratchDir(), 'fog.png');
+      await renderReference({
+        scene: join(import.meta.dirname, 'scenes', `volumetric-fog-history-${variant}.tscn`),
+        out,
+        width: 160,
+        height: 120,
+        previews: false,
+        camera: [0, 2.5, 6],
+        lookAt: [0, 1.5, 0],
+      });
+      return PNG.sync.read(await readFile(out)).data;
+    };
+    const [blended, direct] = [await capture('on'), await capture('off')];
+
+    const largestGap = blended.reduce((gap, value, i) => Math.max(gap, Math.abs(value - direct[i])), 0);
+    expect(largestGap).toBeLessThanOrEqual(1);
+  }, 360_000);
+
   it('lights the scene only because of the previews — --no-previews is runtime semantics', async () => {
     const [lit, unlit] = [await render(true), await render(false)];
     // The same geometry and camera. With the previews the ground is lit. Without them it is the
@@ -827,6 +855,21 @@ describe('the reference renders on a fixed clock', () => {
     const ask = () => bootstrap({ simSeconds: 0.5 });
     expect(ask).toThrow(/paused before the scene is ever instantiated/);
     expect(ask).toThrow(/--particles/);
+  });
+});
+
+describe('the fog history fits inside the render pass', () => {
+  it('quits after more frames than the longest fog convergence draws', () => {
+    const argv = renderArgv('/tmp/work');
+    const quitAfter = Number(argv[argv.indexOf('--quit-after') + 1]);
+
+    expect(quitAfter).toBe(RENDER_QUIT_AFTER_FRAMES);
+    expect(quitAfter).toBeGreaterThan(FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES);
+  });
+
+  it('gives the bootstrap the cycle length and cap (edge case: the GDScript holds its own copy)', () => {
+    expect(bootstrap()).toContain(`const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}`);
+    expect(bootstrap()).toContain(`const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}`);
   });
 });
 

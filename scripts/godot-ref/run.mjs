@@ -39,6 +39,19 @@ export const EDITOR_FOV = 70;
  */
 export const REFERENCE_FIXED_FPS = 1000;
 
+/** `VolumetricFog::MAX_TEMPORAL_FRAMES` (`servers/rendering/renderer_rd/environment/fog.h:303`). */
+export const FOG_JITTER_CYCLE_FRAMES = 16;
+
+/**
+ * Jitter cycles the bootstrap draws while volumetric fog's temporal history converges. At the
+ * largest `temporal_reprojection_amount`, 0.99 (`scene/resources/environment.cpp:1548`), the
+ * history needs about 620 frames to come within half a step of 255.
+ */
+export const FOG_HISTORY_MAX_CYCLES = 48;
+
+/** `--quit-after`: a backstop for a bootstrap that never quits, above the fog history's frames. */
+export const RENDER_QUIT_AFTER_FRAMES = 1200;
+
 /**
  * Default seconds `--particles` advances: zero. Unlike the preview sun, a particle instant has no
  * value Godot defines: the editor runs the emitter on wall clock (`cpu_particles_2d.cpp:1262`
@@ -636,6 +649,8 @@ const FOV := ${fov}
 const PARTICLES_PROCESS := ${particles}
 const CANVAS_2D_SIZE := Vector2i(${canvas2DSize.width}, ${canvas2DSize.height})
 const CLEAR_2D := ${gdColor(CANVAS_2D_CAPTURE.clearColor)}
+const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}
+const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}
 
 # Set by a refusal inside the render, so the ONE quit() below carries a non-zero
 # exit code. A mid-walk quit() would be reset to 0 by that same call.
@@ -698,6 +713,7 @@ func _render_3d(target: Node) -> void:
 		return
 	_place_camera(target)
 	await _converge()
+	await _converge_fog_history()
 	get_viewport().get_texture().get_image().save_png(OUT)
 	_write_bounds(target)
 
@@ -926,6 +942,35 @@ func _converge() -> void:
 	for _i in 6:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
+
+# Volumetric fog with temporal reprojection mixes temporal_reprojection_amount
+# of a history that starts black (volumetric_fog_process.glsl:683, fog.cpp:482),
+# so _converge() leaves it dark by amount^6. Each frame also jitters by
+# frame % 16 (fog.cpp:1113), so a frame is compared with the one a cycle earlier.
+func _converge_fog_history() -> void:
+	if not _has_fog_history():
+		return
+	var earlier := get_viewport().get_texture().get_image().get_data()
+	for _cycle in FOG_HISTORY_MAX_CYCLES:
+		for _frame in FOG_JITTER_CYCLE_FRAMES:
+			await RenderingServer.frame_post_draw
+		var current := get_viewport().get_texture().get_image().get_data()
+		if current == earlier:
+			return
+		earlier = current
+
+func _has_fog_history() -> bool:
+	var environment := _environment_in_effect()
+	return environment != null and environment.volumetric_fog_enabled \
+		and environment.volumetric_fog_temporal_reprojection_enabled
+
+# Camera3D.environment overrides the world's, which falls back to the project's.
+func _environment_in_effect() -> Environment:
+	var camera := get_viewport().get_camera_3d()
+	if camera != null and camera.environment != null:
+		return camera.environment
+	var world := get_viewport().find_world_3d()
+	return world.environment if world.environment != null else world.fallback_environment
 
 # The method and driver that drew this frame, which the caller compares with
 # the ones it asked for: a fallback renders without failing.
@@ -1176,7 +1221,14 @@ script = ExtResource("1")
  * host, only sometimes, and the reference still renders.
  */
 export function renderArgv(work, { renderingDriver = null } = {}) {
-  const argv = ['--path', work, '--fixed-fps', String(REFERENCE_FIXED_FPS), '--quit-after', '400'];
+  const argv = [
+    '--path',
+    work,
+    '--fixed-fps',
+    String(REFERENCE_FIXED_FPS),
+    '--quit-after',
+    String(RENDER_QUIT_AFTER_FRAMES),
+  ];
   // main.cpp:2582 aborts on a driver its method does not offer, so the driver alone would abort
   // under the default `forward_plus`.
   if (renderingDriver) {
