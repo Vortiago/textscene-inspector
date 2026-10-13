@@ -17,12 +17,13 @@
 
 import {
   applyChunkEdits,
+  applyEdits,
   installChunkPatch,
   type ChunkEdit,
   type Chunks,
 } from '../shaderPatch/chunkPatch.js';
 import { installLitUniform } from '../shaderPatch/litUniform.js';
-import { LIGHT_FUNCTION_MARK } from '../godotLightFunction.js';
+import { LIGHT_FUNCTION_MARK, RE_DIRECT } from '../godotLightFunction.js';
 import { LIGHT_ATTENUATION_MARK } from '../godotLightAttenuation.js';
 import { LTC_INTEGRAL } from './ltcIntegral.js';
 import { installLtcTextures } from './ltcTextures.js';
@@ -109,15 +110,25 @@ void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in
 }
 `;
 
-/** three's area light function, from its signature to the `#endif` that closes its block. */
+/** three's area light block, from the `#if` that opens it to the `#endif` that closes it. */
+const THREE_AREA_LIGHT_IF = '#if NUM_RECT_AREA_LIGHTS > 0';
 const THREE_AREA_LIGHT_START = '\tvoid RE_Direct_RectArea_Physical(';
 const THREE_AREA_LIGHT_END = '\n#endif\n';
 
+/**
+ * The chunk without three's area light block, and Godot's before the light function's own
+ * `RE_Direct_Physical`: Godot's calls the light function's diffuse and toon terms, which the light
+ * function patch declares just before it.
+ */
 function withGodotAreaLight(chunk: string): string | null {
   const start = chunk.indexOf(THREE_AREA_LIGHT_START);
+  const blockStart = chunk.lastIndexOf(THREE_AREA_LIGHT_IF, start);
   const end = chunk.indexOf(THREE_AREA_LIGHT_END, start);
-  if (start < 0 || end < 0 || chunk.split(THREE_AREA_LIGHT_START).length !== 2) return null;
-  return `${chunk.slice(0, start)}${LTC_INTEGRAL}${AREA_LIGHT}${chunk.slice(end)}`;
+  if (start < 0 || blockStart < 0 || end < 0 || chunk.split(THREE_AREA_LIGHT_START).length !== 2) return null;
+  const withoutThree = `${chunk.slice(0, blockStart)}${chunk.slice(end + THREE_AREA_LIGHT_END.length)}`;
+  return applyEdits(withoutThree, [
+    { three: RE_DIRECT, godot: `${THREE_AREA_LIGHT_IF}\n${LTC_INTEGRAL}${AREA_LIGHT}#endif\n${RE_DIRECT}` },
+  ]);
 }
 
 const THREE_AREA_UNIFORM = 'uniform RectAreaLight rectAreaLights[ NUM_RECT_AREA_LIGHTS ];';

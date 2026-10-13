@@ -116,6 +116,20 @@ describe('installGodotAreaLight', () => {
     expect(area).toContain('specularAmount * clearcoatAttenuation;');
   });
 
+  it('declares the area light after the light function terms it calls', () => {
+    const chunk = patchedChunk('lights_physical_pars_fragment');
+    const areaLight = chunk.indexOf('void RE_Direct_RectArea_Physical(');
+
+    expect(chunk.indexOf('float godotDiffuseNL(')).toBeLessThan(areaLight);
+    expect(chunk.indexOf('float godotToonIntensity(')).toBeLessThan(areaLight);
+  });
+
+  it("drops three's area light block whole (edge case)", () => {
+    expect(patchedChunk('lights_physical_pars_fragment').match(/#if NUM_RECT_AREA_LIGHTS > 0/g)).toHaveLength(
+      1
+    );
+  });
+
   it("samples Godot's LTC tables in place of three's", () => {
     installWithItsPrerequisites();
     const { lut1, lut2 } = ltcTables();
