@@ -36,7 +36,7 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 ## Depth fog
 <!-- compare: image=unit-depth-fog status=done fixture=unit-depth-fog.tscn -->
 
-`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too. `fog_sky_affect` sets how far the fog covers the background. Under depth fog or volumetric fog, Godot converts a colour background to linear twice, so it draws darker than without fog. The previewer draws it the same way.
+`fog_enabled` in exponential mode over a colour background. The fog thickens with distance over the three boxes and hides the background, as in Godot. Godot's depth mode and its curve, the height fog, `fog_sun_scatter` and `fog_aerial_perspective` follow Godot's shader too. `fog_sky_affect` sets how far the fog covers the background.
 
 ## Volumetric fog
 <!-- compare: image=unit-world-environment-basic status=limitation fixture=unit-world-environment-basic.tscn -->

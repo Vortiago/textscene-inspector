@@ -503,11 +503,6 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "Fog Color Background",
-    "file": "unit-fog-color-background.tscn",
-    "category": "Other"
-  },
-  {
     "name": "Fog Volume",
     "file": "unit-fog-volume.tscn",
     "category": "Other"

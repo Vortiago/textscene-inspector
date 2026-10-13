@@ -159,10 +159,10 @@ function EnvironmentApplier({ settings, hasSky, hasFog, suppressToneMapping }: E
   // Each branch restores only what it wrote: a sky's background and intensity belong to `<SkyLayer>`.
   useEffect(() => {
     if (showsColor) {
-      if (!hasFog) {
-        return showBackground(scene, godotColorToLinear(backgroundColor), scene.backgroundIntensity);
-      }
-      const cube = clearColorCube(backgroundColor);
+      // Godot Color literals are sRGB; convert to three.js's linear working space.
+      const color = godotColorToLinear(backgroundColor);
+      if (!hasFog) return showBackground(scene, color, scene.backgroundIntensity);
+      const cube = clearColorCube(color);
       const restore = showBackground(scene, cube, backgroundEnergy);
       return () => {
         restore();
