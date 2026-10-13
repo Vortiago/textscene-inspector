@@ -9,7 +9,7 @@ import type { AreaLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
+import { lightIntensity } from '../shared/lightStrength';
 import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
 
 /**
@@ -19,8 +19,7 @@ import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
 function areaLightIntensity(properties: AreaLight3DProperties): number {
   const { x: width, y: height } = properties.area_size;
   const area = width * height;
-  const sign = properties.light_negative ? -1 : 1;
-  const intensity = sign * properties.light_energy * LIGHT_INTENSITY_SCALE;
+  const intensity = lightIntensity(properties);
   return properties.area_normalize_energy && area > 0 ? intensity / area : intensity;
 }
 
