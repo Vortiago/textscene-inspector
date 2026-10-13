@@ -1,6 +1,6 @@
 /** Parsing shared by the light nodes. */
 
-import type { BaseLightProperties, BaseLightWithNormalBias } from './types';
+import type { BaseLightProperties, BaseLightWithNormalBias, PositionalLightProperties } from './types';
 import { floatOr, parseOptionalFloat } from '../../../../parser/valueParsers';
 import { boolSlotValue } from '../../../../godot/index.js';
 
@@ -16,6 +16,7 @@ export function parseBaseLightProperties(properties: Record<string, string>): Ba
     shadow_enabled: boolSlotValue(properties.shadow_enabled) === true,
     shadow_bias: parseOptionalFloat(properties.shadow_bias),
     shadow_blur: parseOptionalFloat(properties.shadow_blur),
+    shadow_opacity: parseOptionalFloat(properties.shadow_opacity),
   };
 }
 
@@ -24,5 +25,21 @@ export function parseBaseLightWithNormalBias(properties: Record<string, string>)
   return {
     ...parseBaseLightProperties(properties),
     shadow_normal_bias: parseOptionalFloat(properties.shadow_normal_bias),
+  };
+}
+
+/** The shared properties plus the distance fade, for an omni or spot light. */
+export function parsePositionalLightProperties(
+  properties: Record<string, string>
+): PositionalLightProperties {
+  return {
+    ...parseBaseLightWithNormalBias(properties),
+    distance_fade_enabled:
+      properties.distance_fade_enabled !== undefined
+        ? boolSlotValue(properties.distance_fade_enabled) === true
+        : undefined,
+    distance_fade_begin: parseOptionalFloat(properties.distance_fade_begin),
+    distance_fade_shadow: parseOptionalFloat(properties.distance_fade_shadow),
+    distance_fade_length: parseOptionalFloat(properties.distance_fade_length),
   };
 }

@@ -10,7 +10,6 @@ import type { DirectionalLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import {
   DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
   directionalLightDrawsInSky,
@@ -21,7 +20,8 @@ import { skyLightUserData } from '../../../../r3f/sky/skyLight';
 import { directionalShadowDeclaration } from './shadowDeclaration';
 import { LightWithTarget } from '../shared/lightShared';
 import { DirectionalLightGizmo } from '../shared/lightHelpers';
-import { fogLightUserData } from '../../../../r3f/volumetricFog/fogLightDeclaration';
+import { lightIntensity, lightShadowOpacity, signedLightEnergy } from '../shared/lightStrength';
+import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 import { LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT } from '../../../../godot/volumetricFog';
 
 export function DirectionalLight3D({ node, children }: NodeComponentProps) {
@@ -34,21 +34,20 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   const color = parseColorToHex(properties.light_color);
   const skyMode = properties.sky_mode ?? DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT;
   // A Sky Only light lights no surface. It keeps its energy for the sky, which reads it from `userData`.
-  const intensity = directionalLightLightsSurfaces(skyMode)
-    ? properties.light_energy * LIGHT_INTENSITY_SCALE
-    : 0;
+  const intensity = directionalLightLightsSurfaces(skyMode) ? lightIntensity(properties) : 0;
+  const skyEnergy = signedLightEnergy(properties);
   const shadow = useMemo(() => directionalShadowDeclaration(properties), [properties]);
   const fogEnergy = properties.light_volumetric_fog_energy ?? LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT;
   const userData = useMemo(
     () => ({
       ...skyLightUserData({
         drawsInSky: directionalLightDrawsInSky(skyMode),
-        energy: properties.light_energy,
+        energy: skyEnergy,
       }),
       ...directionalShadowUserData(shadow),
       ...fogLightUserData({ energy: fogEnergy }),
     }),
-    [skyMode, properties.light_energy, shadow, fogEnergy]
+    [skyMode, skyEnergy, shadow, fogEnergy]
   );
 
   return (
@@ -66,6 +65,7 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
             intensity={intensity}
             // A mode with no split casts nothing, as Godot sets up no shadow map for it.
             castShadow={shadow.sharesAtlas && shadow.splitCount > 0}
+            shadow-intensity={lightShadowOpacity(properties)}
             userData={userData}
             target={target}
           />

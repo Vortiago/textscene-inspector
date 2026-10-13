@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { bakeDecalFadeAttribute, decalDistanceFade } from './decalFade';
+import { bakeDecalFadeAttribute } from './decalFade';
 
 /**
  * A geometry with the given decal-local vertex Ys, and optionally normals.
@@ -153,30 +153,5 @@ describe('bakeDecalFadeAttribute', () => {
     expect(baked.every((f) => !Number.isNaN(f))).toBe(true);
     expect(baked[0]).toBe(1); // n.y = 1 → remapped 1, not below the edge
     expect(baked[1]).toBe(0); // n.y = -1 → remapped 0, below it
-  });
-});
-
-describe('decalDistanceFade', () => {
-  it('is full strength up to `begin`', () => {
-    expect(decalDistanceFade(2.5, 4, 2)).toBe(1);
-    expect(decalDistanceFade(2.5, 4, 2.5)).toBe(1);
-  });
-
-  it('smoothsteps between `begin` and `begin + length`', () => {
-    // Godot: smoothstep(0, 1, 1 - (d - begin)/length). At the midpoint the
-    // argument is 0.5, and smoothstep(0,1,0.5) = 0.5² × (3 - 2×0.5) = 0.5.
-    expect(decalDistanceFade(2.5, 4, 4.5)).toBeCloseTo(0.5, 6);
-    // A quarter in: arg 0.75 → 0.75² × (3 - 1.5) = 0.84375
-    expect(decalDistanceFade(2.5, 4, 3.5)).toBeCloseTo(0.84375, 6);
-  });
-
-  it('is culled beyond `begin + length`', () => {
-    expect(decalDistanceFade(2.5, 4, 7)).toBe(0);
-  });
-
-  it('hard-cuts at `begin` when length is zero instead of dividing by it', () => {
-    // The cull runs first in Godot, so `length = 0` can never reach the divide.
-    expect(decalDistanceFade(2.5, 0, 2.4)).toBe(1);
-    expect(decalDistanceFade(2.5, 0, 2.6)).toBe(0);
   });
 });

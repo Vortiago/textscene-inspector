@@ -20,6 +20,7 @@ import {
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import { parseDecal } from './parser';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
+import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
 
 const TEXTURE_PATH = 'res://textures/decal.png';
 const NODE_NAME = 'MyDecal';
@@ -278,9 +279,9 @@ describe('<Decal>', () => {
   });
 
   it('restores a distance-faded decal when the fade is turned back off', async () => {
-    // The frame callback culls a decal past `begin + length` by hiding its group and zeroing
-    // opacity. The rebuild effect ignores both, so after a re-parse disables the fade the callback
-    // itself must settle back at full strength, or the decal stays invisible.
+    // A render culls a decal past `begin + length` by hiding its group and zeroing opacity. The
+    // rebuild effect ignores both, so after a re-parse disables the fade the fade itself must
+    // settle back at full strength, or the decal stays invisible.
     const loader = seededLoader([{ path: TEXTURE_PATH, texture: makeTexture() }]);
     const options = {
       externals: [extRef('1_tex', TEXTURE_PATH)],
@@ -289,7 +290,7 @@ describe('<Decal>', () => {
     const faded = {
       texture_albedo: 'ExtResource("1_tex")',
       distance_fade_enabled: 'true',
-      // The test renderer's camera sits metres away, so anything past this is culled.
+      // The render's camera sits metres away, so anything past this is culled.
       distance_fade_begin: '0.01',
       distance_fade_length: '0.01',
     };
@@ -297,7 +298,9 @@ describe('<Decal>', () => {
     const renderer = await ReactThreeTestRenderer.create(
       decalTree({ ...options, node: makeNode(faded) }, loader)
     );
-    await renderer.advanceFrames(1, 16);
+    const scene = renderer.scene.instance as THREE.Scene;
+    scene.updateMatrixWorld();
+    fireSceneRender(scene, farCamera());
 
     const projection = projections(renderer)[0]!;
     // The group is the component's own ref and outlives a rebuild; the meshes
@@ -309,7 +312,7 @@ describe('<Decal>', () => {
     await renderer.update(
       decalTree({ ...options, node: makeNode({ ...faded, distance_fade_enabled: 'false' }) }, loader)
     );
-    await renderer.advanceFrames(1, 16);
+    fireSceneRender(scene, farCamera());
 
     expect(group.visible).toBe(true);
     const rebuilt = projections(renderer)[0]!;
@@ -374,3 +377,11 @@ describe('<Decal>', () => {
     expect(sizingScale()).toEqual([2, 2, 2]); // released → authored size
   });
 });
+
+/** A camera metres from the origin, past a tight fade's end. */
+function farCamera(): THREE.PerspectiveCamera {
+  const camera = new THREE.PerspectiveCamera();
+  camera.position.set(0, 0, 5);
+  camera.updateMatrixWorld();
+  return camera;
+}

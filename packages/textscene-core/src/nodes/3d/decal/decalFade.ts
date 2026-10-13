@@ -1,8 +1,7 @@
 /**
  * Godot's Decal fade terms as pure maths over a baked projection. `upper_fade`, `lower_fade` and
  * `normal_fade` are per fragment in the engine and bake per vertex here. `distance_fade_*` is per
- * decal per frame on camera distance, computed CPU side in `TextureStorage::update_decal_buffer`
- * and folded into modulate alpha.
+ * decal per frame on camera distance (`godot/distanceFade.ts`), folded into modulate alpha.
  */
 
 import * as THREE from 'three';
@@ -81,17 +80,4 @@ export function bakeDecalFadeAttribute(
   // against a geometry with no `color` it samples `defaultAttributeValues`, which nothing here
   // guarantees. The bake and that flag must not be separable.
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
-}
-
-/**
- * Godot's camera-distance fade (`TextureStorage::update_decal_buffer`) over camera-to-decal-origin
- * `distance`, one scalar per decal per frame. The curve only: the caller guards whether a decal
- * fades, so one with the feature off skips the matrix reads and the distance measurement too.
- */
-export function decalDistanceFade(begin: number, length: number, distance: number): number {
-  // Order matters: Godot drops a decal past `begin + length` before the smoothstep, which makes
-  // `length = 0` a hard cut at `begin`, not a division by zero.
-  if (distance > begin + length) return 0;
-  if (distance <= begin) return 1;
-  return smoothstep(0, 1, 1 - (distance - begin) / length);
 }

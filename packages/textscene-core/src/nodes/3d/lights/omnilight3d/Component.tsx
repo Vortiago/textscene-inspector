@@ -9,13 +9,12 @@ import type { OmniLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import { positionalShadowNear } from '../../../../godot/positionalShadow';
 import { omniShadowBias } from '../shared/shadowBias';
-import { usePositionalShadowUserData } from '../shared/positionalShadowDeclaration';
 import { PointLightGizmo } from '../shared/lightHelpers';
-import { fogLightUserData } from '../../../../r3f/volumetricFog/fogLightDeclaration';
-import { LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT } from '../../../../godot/volumetricFog';
+import { usePositionalLightUserData } from '../shared/positionalLightUserData';
+import { lightIntensity, lightShadowOpacity } from '../shared/lightStrength';
+import { useLightDistanceFade } from '../shared/lightDistanceFade';
 
 export function OmniLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as OmniLight3DProperties;
@@ -25,13 +24,10 @@ export function OmniLight3D({ node, children }: NodeComponentProps) {
     [properties]
   );
   const color = parseColorToHex(properties.light_color);
-  const intensity = properties.light_energy * LIGHT_INTENSITY_SCALE;
-  const shadowUserData = usePositionalShadowUserData(properties);
-  const fogEnergy = properties.light_volumetric_fog_energy ?? LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT;
-  const userData = useMemo(
-    () => ({ ...shadowUserData, ...fogLightUserData({ energy: fogEnergy }) }),
-    [shadowUserData, fogEnergy]
-  );
+  const intensity = lightIntensity(properties);
+  const shadowOpacity = lightShadowOpacity(properties);
+  const userData = usePositionalLightUserData(properties);
+  useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>
@@ -42,6 +38,7 @@ export function OmniLight3D({ node, children }: NodeComponentProps) {
         distance={properties.omni_range}
         decay={properties.omni_attenuation}
         castShadow={properties.shadow_enabled}
+        shadow-intensity={shadowOpacity}
         userData={userData}
         shadow-bias={omniShadowBias(properties.shadow_bias)}
         shadow-camera-near={positionalShadowNear(properties.omni_range)}

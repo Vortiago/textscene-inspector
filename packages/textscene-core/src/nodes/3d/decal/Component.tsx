@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useThree } from '@react-three/fiber';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
@@ -21,7 +21,9 @@ import { applyTextureState, isMaterialOwnedTexture } from '../../../resources/te
 import type { Color } from '../../../utils/colorParser';
 import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
-import { decalDistanceFade, type DecalGeometricFade } from './decalFade';
+import type { DecalGeometricFade } from './decalFade';
+import { distanceFade } from '../../../godot/distanceFade';
+import { observeSceneCamera } from '../../../r3f/sceneRenderCamera';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import {
   buildDecalProjectionGeometry,
@@ -38,9 +40,9 @@ const BOX_EDGES_MATERIAL = materialProgramInputs({
 });
 
 /**
- * Scratch vectors for the distance-fade frame callback, so it allocates
- * nothing. Module scope rather than per instance: `useFrame` callbacks are
- * synchronous and never interleave, and a scene can carry dozens of decals.
+ * Scratch vectors for the distance fade, so a render allocates nothing. Module scope rather than
+ * per instance: the render hooks are synchronous and never interleave, and a scene can carry dozens
+ * of decals.
  */
 const decalOrigin = new THREE.Vector3();
 const cameraOrigin = new THREE.Vector3();
@@ -203,40 +205,40 @@ export function Decal({ node, children }: NodeComponentProps) {
     resourceVersion,
   ]);
 
-  // Distance fade is the one term Godot computes per decal per frame, not per fragment:
-  // `update_decal_buffer` measures camera-to-decal-origin, culls past `begin + length` and folds
-  // the rest into modulate alpha. An opacity write mirrors it with no shader and no rebuild.
-  useFrame((state) => {
+  // Distance fade is the one term Godot computes per decal per render, not per fragment:
+  // `update_decal_buffer` measures the rendering camera's distance to the decal's origin, culls past
+  // `begin + length` and folds the rest into modulate alpha. An opacity write before each render
+  // mirrors it with no shader and no rebuild, for whichever camera renders the scene.
+  const {
+    distance_fade_enabled: fades,
+    distance_fade_begin: fadeBegin,
+    distance_fade_length: fadeLength,
+  } = properties;
+  useEffect(() => {
     const group = projectionRef.current;
-    const material = materialRef.current;
-    if (!group || !material) return;
-
-    // Hooks cannot be conditional, so the enabled test sits inside. The disabled case settles at
-    // fade = 1: the effect above ignores `distance_fade_enabled`, so a decal faded or hidden by an
-    // earlier frame would otherwise stay that way after the feature is turned off.
-    let fade = 1;
-    if (properties.distance_fade_enabled) {
-      // Both ends read straight off `matrixWorld`, with no update forced. `getWorldPosition` would
-      // call `updateWorldMatrix` first, ~20x the cost, for no extra consistency.
+    if (!fades || !group) return undefined;
+    const stop = observeSceneCamera(scene, (camera) => {
+      const material = materialRef.current;
+      if (!material) return;
+      // Both ends read straight off `matrixWorld`, which the render has just updated.
       decalOrigin.setFromMatrixPosition(group.matrixWorld);
-      cameraOrigin.setFromMatrixPosition(state.camera.matrixWorld);
-      fade = decalDistanceFade(
-        properties.distance_fade_begin,
-        properties.distance_fade_length,
-        cameraOrigin.distanceTo(decalOrigin)
+      cameraOrigin.setFromMatrixPosition(camera.matrixWorld);
+      showFaded(
+        group,
+        material,
+        opacity,
+        distanceFade(fadeBegin, fadeLength, cameraOrigin.distanceTo(decalOrigin))
       );
-    }
-
-    const next = opacity * fade;
-    if (material.opacity !== next) {
-      material.opacity = next;
-      invalidate();
-    }
-    // A fully faded decal is dropped from Godot's buffer outright; hiding the
-    // group is the same picture and skips the draw.
-    const visible = fade > 0;
-    if (group.visible !== visible) group.visible = visible;
-  });
+    });
+    return () => {
+      stop();
+      // A decal faded or hidden by an earlier render stays so unless the end of the fade restores
+      // it. A rebuild that ends the fade too has already dropped the material, and builds its next
+      // one unfaded, but the group outlives it.
+      group.visible = true;
+      if (materialRef.current) materialRef.current.opacity = opacity;
+    };
+  }, [scene, fades, fadeBegin, fadeLength, opacity]);
 
   return (
     <Node3D node={node}>
@@ -254,6 +256,12 @@ export function Decal({ node, children }: NodeComponentProps) {
       {children}
     </Node3D>
   );
+}
+
+/** Folds `fade` into the decal's opacity. Godot drops a fully faded decal, and so does the group. */
+function showFaded(group: THREE.Group, material: THREE.Material, opacity: number, fade: number): void {
+  material.opacity = opacity * fade;
+  group.visible = fade > 0;
 }
 
 function clamp01(value: number): number {
