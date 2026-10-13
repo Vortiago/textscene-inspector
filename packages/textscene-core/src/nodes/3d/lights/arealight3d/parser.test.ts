@@ -15,10 +15,46 @@ describe('AreaLight3D Parser', () => {
       expect(result.parent).toBe('.');
       expect(result.light_color).toBe('Color(1, 1, 1, 1)');
       expect(result.light_energy).toBe(1.0);
-      // class_arealight3d.html properties table: area_range defaults to 5.0.
+      // 4.7.2: light_3d.cpp:493,495 set range 5 and attenuation 1, and :749 the 1×1 size.
       expect(result.area_range).toBe(5.0);
+      expect(result.area_attenuation).toBe(1.0);
       expect(result.area_size).toEqual({ x: 1, y: 1 });
+      expect(result.area_texture).toBeUndefined();
       expect(result.shadow_enabled).toBe(false);
+    });
+
+    it('defaults light_specular to the AreaLight3D 1.0, not the Light3D 0.5', () => {
+      // 4.7.2: light_3d.cpp:748 overrides the Light3D default of :492.
+      const result = parseAreaLight3D(heading('AreaLight3D', { name: 'Area', parent: '.' }), {});
+
+      expect(result.light_specular).toBe(1.0);
+    });
+
+    it('parses area_attenuation and area_texture', () => {
+      const result = parseAreaLight3D(heading('AreaLight3D', { name: 'Area', parent: '.' }), {
+        area_attenuation: '2.0',
+        area_texture: 'ExtResource("1_panel")',
+      });
+
+      expect(result.area_attenuation).toBe(2.0);
+      expect(result.area_texture).toBe('ExtResource("1_panel")');
+    });
+
+    it('falls back to attenuation 1 for an unparseable area_attenuation (error case)', () => {
+      const result = parseAreaLight3D(heading('AreaLight3D', { name: 'Area', parent: '.' }), {
+        area_attenuation: 'steep',
+      });
+
+      expect(result.area_attenuation).toBe(1.0);
+    });
+
+    it('clamps a negative area_size axis to 0, as the setter does (edge case)', () => {
+      // 4.7.2: light_3d.cpp:724 stores `p_size.maxf(0.0f)`.
+      const result = parseAreaLight3D(heading('AreaLight3D', { name: 'Area', parent: '.' }), {
+        area_size: 'Vector2(-2, 3)',
+      });
+
+      expect(result.area_size).toEqual({ x: 0, y: 3 });
     });
 
     it('should parse AreaLight3D with all properties', () => {

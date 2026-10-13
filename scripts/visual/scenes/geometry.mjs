@@ -70,7 +70,7 @@ export const GEOMETRY_SCENES = [
   // Two AreaLight3D panels of the same light_energy and different area_size.
   // Godot normalises the colour by the area (area_normalize_energy, default
   // true), so both plates read the same. Without it the 4 x 0.05 strip is 5x
-  // dimmer. No other AreaLight3D fixture lights geometry.
+  // dimmer. No other golden has an AreaLight3D.
   { name: 'area-light-normalize', file: 'unit-area-light-normalize.tscn' },
   // External ArrayMesh .tres: a decoded quad with Godot's packed normals.
   { name: 'arraymesh', file: 'unit-arraymesh.tscn' },

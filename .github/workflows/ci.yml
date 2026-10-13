@@ -61,6 +61,7 @@ jobs:
       # After the sheets, which the gallery is assembled from.
       - run: pnpm docs:gallery --check
       - run: pnpm fonts:bake --check
+      - run: pnpm godot:ltc --check
 
   unit:
     name: Unit tests (${{ matrix.shard }}/4)

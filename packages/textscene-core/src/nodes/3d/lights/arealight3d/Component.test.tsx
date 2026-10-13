@@ -6,13 +6,18 @@ import type { AreaLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import type * as THREE from 'three';
+import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
 
 function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
   const props: AreaLight3DProperties = {
     name: 'Area',
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
+    light_specular: 1,
     shadow_enabled: false,
+    area_range: 5,
+    area_attenuation: 1,
+    area_size: { x: 1, y: 1 },
     area_normalize_energy: true,
     ...overrides,
   };
@@ -47,15 +52,6 @@ describe('<AreaLight3D>', () => {
     expect(instanceAs<THREE.RectAreaLight>(light).height).toBe(3);
   });
 
-  it('defaults to width=1, height=1 when area_size is absent', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <AreaLight3D node={makeNode({ area_size: undefined })} />
-    );
-    const light = renderer.scene.findByType('RectAreaLight');
-    expect(instanceAs<THREE.RectAreaLight>(light).width).toBe(1);
-    expect(instanceAs<THREE.RectAreaLight>(light).height).toBe(1);
-  });
-
   it('applies energy * LIGHT_INTENSITY_SCALE as intensity', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <AreaLight3D node={makeNode({ light_energy: 2.0 })} />
@@ -64,9 +60,7 @@ describe('<AreaLight3D>', () => {
     expect(instanceAs<THREE.RectAreaLight>(light).intensity).toBe(2.0 * LIGHT_INTENSITY_SCALE);
   });
 
-  it('does not cast shadows even when shadow_enabled is true (RectAreaLight has no shadow support)', async () => {
-    // shadow_* is parsed and validated but dropped at render, since a
-    // RectAreaLight cannot cast.
+  it('casts no shadow yet, even when shadow_enabled is true', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <AreaLight3D node={makeNode({ shadow_enabled: true })} />
     );
@@ -74,14 +68,22 @@ describe('<AreaLight3D>', () => {
     expect((light.instance as { castShadow: boolean }).castShadow).toBe(false);
   });
 
-  it('does not leak area_range onto the RectAreaLight', async () => {
-    // area_range is carried on the parsed node but intentionally not applied
-    // (three.js RectAreaLight has no range/penumbra control).
+  it('carries area_range, area_attenuation and light_specular to the shader', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <AreaLight3D node={makeNode({ area_range: 2.0 } as Partial<AreaLight3DProperties>)} />
+      <AreaLight3D node={makeNode({ area_range: 2, area_attenuation: 0.5, light_specular: 0.25 })} />
     );
     const light = renderer.scene.findByType('RectAreaLight');
-    expect((light.instance as unknown as Record<string, unknown>).area_range).toBeUndefined();
+    expect(instanceAs<THREE.RectAreaLight>(light).userData).toEqual(
+      areaLightUserData({ range: 2, attenuation: 0.5, specular: 0.25 })
+    );
+  });
+
+  it('subtracts light when light_negative is on', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <AreaLight3D node={makeNode({ light_energy: 2.0, light_negative: true })} />
+    );
+    const light = renderer.scene.findByType('RectAreaLight');
+    expect(instanceAs<THREE.RectAreaLight>(light).intensity).toBe(-2.0 * LIGHT_INTENSITY_SCALE);
   });
 
   it('places light at the transform origin', async () => {
@@ -102,5 +104,20 @@ describe('<AreaLight3D>', () => {
     expect(group.instance.position.x).toBe(3);
     expect(group.instance.position.y).toBe(4);
     expect(group.instance.position.z).toBe(5);
+  });
+});
+
+describe('<AreaLight3D> visibility', () => {
+  // A hidden light lights nothing (`light_3d.cpp:300` in 4.6.3), and three skips a hidden subtree.
+  it('hides the light when visible is false', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode({ visible: false })} />);
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
+    expect(light.parent!.visible).toBe(false);
+  });
+
+  it('shows the light by default', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode()} />);
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
+    expect(light.parent!.visible).toBe(true);
   });
 });

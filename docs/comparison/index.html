@@ -374,18 +374,18 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="AreaLight3D" hidden>
       <header class="sheet-head">
         <h2>AreaLight3D</h2>
-        <span class="renders">renders as a THREE.RectAreaLight</span>
+        <span class="renders">renders as a THREE.RectAreaLight shaded as Godot 4.7.2's area light</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_arealight3d.html" target="_blank" rel="noopener" title="Godot class reference for AreaLight3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/light_3d.h" target="_blank" rel="noopener" title="Godot engine source for AreaLight3D">source ↗</a>
-        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-area-light3d.tscn" target="_blank" rel="noopener" title="Open unit-area-light3d.tscn in the previewer"><code>unit-area-light3d.tscn</code> ↗</a>
+        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-area-light-normalize.tscn" target="_blank" rel="noopener" title="Open unit-area-light-normalize.tscn in the previewer"><code>unit-area-light-normalize.tscn</code> ↗</a>
         <span class="status st-unreviewed">Unreviewed</span>
       </header>
       <div class="status-note st-unreviewed"></div>
       
       <div class="compare">
         <div class="stage">
-          <img class="img-godot" src="images/unit-area-light3d-godot.png" alt="Godot render of AreaLight3D">
-          <img class="img-ours" src="images/unit-area-light3d-ours.png" alt="Our render of AreaLight3D">
+          <img class="img-godot" src="images/unit-area-light-normalize-godot.png" alt="Godot render of AreaLight3D">
+          <img class="img-ours" src="images/unit-area-light-normalize-ours.png" alt="Our render of AreaLight3D">
           <div class="handle"></div>
           <span class="tag g">Godot 4.6.3</span>
           <span class="tag o">Ours</span>
@@ -395,14 +395,14 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Godot's rectangular area lamp. The previewer renders it as a <code>THREE.RectAreaLight</code> sized from <code>area_size</code>, emitting <code>light_color</code> at <code>light_energy</code>. Godot 4.6.3 parses the node but emits no light from it, so the reference image is lit by the editor preview sun alone.</p>
+      <div class="prose"><p>Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: <code>light_energy</code> spread over <code>area_size</code>, faded by <code>area_range</code> and <code>area_attenuation</code>, with <code>light_specular</code> on the highlight. The reference image comes from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>AreaLight3D</code> properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
-<div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>area_normalize_energy</code></td><td>true or false</td><td></td></tr><tr><td><code>area_range</code></td><td>float</td><td></td></tr><tr><td><code>area_size</code></td><td>Vector2(x, y), or the Vector2i spelling Godot converts</td><td></td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>area_attenuation</code></td><td>float</td><td></td></tr><tr><td><code>area_normalize_energy</code></td><td>true or false</td><td></td></tr><tr><td><code>area_range</code></td><td>float &gt;= 0</td><td>warning below</td></tr><tr><td><code>area_size</code></td><td>Vector2(x, y), each &gt;= 0</td><td></td></tr><tr><td><code>area_texture</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-light3d-scale</code> (type-family match)</td><td><code>light3d-non-unit-scale</code></td><td>warning</td></tr></tbody></table></div>
-<p>The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: <code>area_range</code> to <code>5.0</code>, <code>area_size</code> to <code>Vector2(1, 1)</code>, <code>area_normalize_energy</code> to <code>true</code>.</p>
+<p>The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: <code>area_range</code> to <code>5.0</code>, <code>area_attenuation</code> to <code>1.0</code>, <code>area_size</code> to <code>Vector2(1, 1)</code>, <code>area_normalize_energy</code> to <code>true</code>.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> <code>THREE.RectAreaLight</code> has no shadow or range control, so <code>shadow_enabled</code> and <code>area_range</code> are parsed but never drawn.</li></ul></div>
+<ul><li><strong>Approximated</strong> <code>shadow_enabled</code> casts no shadow, so a surface behind an occluder stays lit.</li><li><strong>Shader missing</strong> <code>area_texture</code> is not drawn, so the light emits its flat <code>light_color</code>.</li></ul></div>
     </article>
     <article class="sheet" data-type="ArrayMesh" hidden>
       <header class="sheet-head">

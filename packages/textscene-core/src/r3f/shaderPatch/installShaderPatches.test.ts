@@ -11,6 +11,14 @@ describe('installShaderPatches', () => {
     expect(THREE.ShaderChunk.lights_physical_pars_fragment).not.toBe(diffuseBefore);
   });
 
+  it("installs Godot's area light beside Godot's diffuse", () => {
+    installShaderPatches();
+    expect(THREE.ShaderChunk.lights_physical_pars_fragment).toContain('godotLtcIntegral(');
+    expect(THREE.ShaderChunk.lights_physical_pars_fragment).not.toContain(
+      'irradiance * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F )'
+    );
+  });
+
   it('changes nothing on a second call', () => {
     installShaderPatches();
     const chunks = { ...THREE.ShaderChunk };
