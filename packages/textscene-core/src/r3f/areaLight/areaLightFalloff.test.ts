@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { areaLightUniformValues, areaLightUserData, writeAreaLightUniforms } from './areaLightFalloff';
+import {
+  AREA_LIGHT_FACINGS,
+  AREA_LIGHT_FALLOFFS,
+  areaLightUserData,
+  installAreaLightUniforms,
+  writeAreaLightUniforms,
+} from './areaLightFalloff';
+import { litUniformArray } from '../testing/litUniformArray';
 import { sceneLights } from '../directionalShadow/lightLists';
 
 /** An area light shining down, as AreaLight3D's basis puts its -Z at -Y. */
@@ -23,6 +30,12 @@ function write(scene: THREE.Scene, through = camera()): void {
   writeAreaLightUniforms(sceneLights(scene), through);
 }
 
+/** The arrays the lit materials read now. */
+function uniforms(): { facings: Float32Array; falloffs: Float32Array } {
+  installAreaLightUniforms();
+  return { facings: litUniformArray(AREA_LIGHT_FACINGS), falloffs: litUniformArray(AREA_LIGHT_FALLOFFS) };
+}
+
 /** The three floats at `index` of `buffer`. */
 function at(buffer: Float32Array, index: number): number[] {
   return Array.from(buffer.subarray(index * 3, index * 3 + 3));
@@ -35,7 +48,7 @@ describe('writeAreaLightUniforms', () => {
 
     write(scene);
 
-    const { falloffs } = areaLightUniformValues();
+    const { falloffs } = uniforms();
     expect(at(falloffs, 0)).toEqual([2, 1, 2]);
     expect(at(falloffs, 1)).toEqual([4, 2, 1]);
   });
@@ -49,7 +62,7 @@ describe('writeAreaLightUniforms', () => {
 
     write(scene, lookingDown);
 
-    const [x, y, z] = at(areaLightUniformValues().facings, 0);
+    const [x, y, z] = at(uniforms().facings, 0);
     expect(x).toBeCloseTo(0, 6);
     expect(y).toBeCloseTo(0, 6);
     expect(z).toBeCloseTo(-1, 6);
@@ -63,7 +76,7 @@ describe('writeAreaLightUniforms', () => {
 
     write(scene);
 
-    const [x, y, z] = at(areaLightUniformValues().facings, 0);
+    const [x, y, z] = at(uniforms().facings, 0);
     expect(x).toBeCloseTo(0, 6);
     expect(y).toBeCloseTo(-1, 6);
     expect(z).toBeCloseTo(0, 6);
@@ -77,7 +90,7 @@ describe('writeAreaLightUniforms', () => {
 
     write(scene);
 
-    expect(at(areaLightUniformValues().falloffs, 0)[0]).toBe(2);
+    expect(at(uniforms().falloffs, 0)[0]).toBe(2);
   });
 
   it("clamps a zero range at Godot's 0.001 (edge case)", () => {
@@ -86,21 +99,17 @@ describe('writeAreaLightUniforms', () => {
 
     write(scene);
 
-    expect(at(areaLightUniformValues().falloffs, 0)[0]).toBeCloseTo(0.001, 6);
+    expect(at(uniforms().falloffs, 0)[0]).toBeCloseTo(0.001, 6);
   });
 
-  it('grows the buffers past their capacity, and keeps writing the buffers a program holds', () => {
-    const before = areaLightUniformValues().falloffs;
+  it("writes past the arrays' first capacity (edge case)", () => {
     const scene = new THREE.Scene();
-    const count = before.length / 3 + 1;
+    const count = uniforms().falloffs.length / 3 + 1;
     for (let i = 0; i < count; i += 1) scene.add(downLight(i + 1));
 
     write(scene);
 
-    const { falloffs } = areaLightUniformValues();
-    expect(falloffs.length).toBeGreaterThanOrEqual(count * 3);
-    expect(at(falloffs, count - 1)[0]).toBe(count);
-    expect(at(before, 0)[0]).toBe(1);
+    expect(at(uniforms().falloffs, count - 1)[0]).toBe(count);
   });
 
   it('writes nothing for a light without falloff, and keeps its index (error case)', () => {
@@ -109,7 +118,7 @@ describe('writeAreaLightUniforms', () => {
 
     write(scene);
 
-    expect(at(areaLightUniformValues().falloffs, 2)[0]).toBe(2);
+    expect(at(uniforms().falloffs, 2)[0]).toBe(2);
   });
 
   it('writes the facing of a light without falloff (edge case)', () => {
@@ -118,7 +127,7 @@ describe('writeAreaLightUniforms', () => {
 
     write(scene);
 
-    const [x, y, z] = at(areaLightUniformValues().facings, 1);
+    const [x, y, z] = at(uniforms().facings, 1);
     expect(x).toBeCloseTo(0, 6);
     expect(y).toBeCloseTo(0, 6);
     expect(z).toBeCloseTo(-1, 6);

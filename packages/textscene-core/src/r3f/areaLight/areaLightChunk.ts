@@ -22,12 +22,11 @@ import {
   type ChunkEdit,
   type Chunks,
 } from '../shaderPatch/chunkPatch.js';
-import { installLitUniform } from '../shaderPatch/litUniform.js';
 import { LIGHT_FUNCTION_MARK, RE_DIRECT } from '../godotLightFunction.js';
 import { LIGHT_ATTENUATION_MARK } from '../godotLightAttenuation.js';
 import { LTC_INTEGRAL } from './ltcIntegral.js';
 import { installLtcTextures } from './ltcTextures.js';
-import { AREA_LIGHT_FACINGS, AREA_LIGHT_FALLOFFS, areaLightUniformValues } from './areaLightFalloff.js';
+import { AREA_LIGHT_FACINGS, AREA_LIGHT_FALLOFFS, installAreaLightUniforms } from './areaLightFalloff.js';
 
 export type AreaLightChunkName =
   'lights_pars_begin' | 'lights_physical_pars_fragment' | 'lights_fragment_begin';
@@ -175,7 +174,5 @@ export function installGodotAreaLight(): void {
   });
   if (!isPatched) return;
   installLtcTextures();
-  const { facings, falloffs } = areaLightUniformValues();
-  installLitUniform(AREA_LIGHT_FACINGS, facings);
-  installLitUniform(AREA_LIGHT_FALLOFFS, falloffs);
+  installAreaLightUniforms();
 }

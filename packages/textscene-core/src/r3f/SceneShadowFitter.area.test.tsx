@@ -11,7 +11,8 @@ import { SelectionProvider } from './contexts/SelectionContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
 import { TscnParser } from '../parser/TscnParser';
-import { areaLightUniformValues } from './areaLight/areaLightFalloff';
+import { AREA_LIGHT_FALLOFFS, installAreaLightUniforms } from './areaLight/areaLightFalloff';
+import { litUniformArray } from './testing/litUniformArray';
 
 import './nodes/index';
 
@@ -46,6 +47,12 @@ function areaLightScene(lights: string): string {
 ${lights}`;
 }
 
+/** The falloffs the lit materials read now. */
+function areaLightFalloffs(): Float32Array {
+  installAreaLightUniforms();
+  return litUniformArray(AREA_LIGHT_FALLOFFS);
+}
+
 describe('the light pass for area lights', () => {
   it("writes each area light's range, attenuation and specular amount", async () => {
     const renderer = await renderScene(
@@ -57,7 +64,7 @@ light_specular = 0.25
 `)
     );
     renderThrough(renderer);
-    expect([...areaLightUniformValues().falloffs.subarray(0, 3)]).toEqual([4, 2, 0.5]);
+    expect([...areaLightFalloffs().subarray(0, 3)]).toEqual([4, 2, 0.5]);
   });
 
   it('gives a hidden area light no slot', async () => {
@@ -72,6 +79,6 @@ area_range = 8.0
 `)
     );
     renderThrough(renderer);
-    expect(areaLightUniformValues().falloffs[0]).toBe(8);
+    expect(areaLightFalloffs()[0]).toBe(8);
   });
 });
