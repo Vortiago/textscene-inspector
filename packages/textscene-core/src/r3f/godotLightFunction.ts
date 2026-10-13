@@ -104,12 +104,15 @@ vec3 godotSpecularBRDF( const in vec3 lightDir, const in vec3 viewDir, const in 
 	return F * D * V;
 }
 
-float godotToonSpecular( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in float roughness ) {
-	vec3 R = normalize( - reflect( lightDir, normal ) );
-	float RdotV = dot( R, viewDir );
+float godotToonIntensity( const in float RdotV, const in float roughness ) {
 	float mid = 1.0 - roughness;
 	mid *= mid;
 	return smoothstep( mid - roughness * 0.5, mid + roughness * 0.5, RdotV ) * mid;
+}
+
+float godotToonSpecular( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in float roughness ) {
+	vec3 R = normalize( - reflect( lightDir, normal ) );
+	return godotToonIntensity( dot( R, viewDir ), roughness );
 }
 
 `;
@@ -243,6 +246,9 @@ export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
   },
 ];
 
+/** The text that proves the patch installed, which a patch that reads it requires. */
+export const LIGHT_FUNCTION_MARK = DIFFUSE_NL;
+
 /**
  * Replaces three's chunks for every program compiled after the call. A three release that
  * rewrites the lines keeps its own chunk, and `godotLightFunction.test.ts` fails on that release. A
@@ -252,7 +258,7 @@ export function installGodotLightFunction(): void {
   installChunkPatch({
     names: [CHUNK, SETUP_CHUNK, MAPS_CHUNK],
     // One sentinel, as the other patches check: they may edit next to this patch's lines.
-    isApplied: (chunks) => chunks[CHUNK].includes(DIFFUSE_NL),
+    isApplied: (chunks) => chunks[CHUNK].includes(LIGHT_FUNCTION_MARK),
     apply: (chunks) => applyChunkEdits(chunks, GODOT_LIGHT_FUNCTION_EDITS),
     missing: `${CHUNK}, ${SETUP_CHUNK} or ${MAPS_CHUNK} lacks a line the light function patch replaces`,
   });

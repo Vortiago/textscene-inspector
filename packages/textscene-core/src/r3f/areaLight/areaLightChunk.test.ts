@@ -9,8 +9,8 @@ import { installGodotLightFunction } from '../godotLightFunction';
 import { installGodotLightAttenuation } from '../godotLightAttenuation';
 import { ltcTables } from '../../godot/ltc';
 import { warningsOf } from '../testing/logWarnings';
-
-type AreaLightChunkName = 'lights_pars_begin' | 'lights_physical_pars_fragment' | 'lights_fragment_begin';
+import { functionBody, preprocessorBranch } from '../testing/glslSource';
+import type { AreaLightChunkName } from './areaLightChunk';
 
 const threeChunks = { ...THREE.ShaderChunk };
 
@@ -30,19 +30,8 @@ function patchedChunk(name: AreaLightChunkName): string {
   return THREE.ShaderChunk[name];
 }
 
-/** The body of the GLSL function `name` in `chunk`, between its braces. */
-function functionBody(chunk: string, name: string): string {
-  const open = chunk.indexOf('{', chunk.indexOf(`${name}(`)) + 1;
-  return chunk.slice(open, chunk.indexOf('\n}', open));
-}
-
 function areaLightBody(): string {
   return functionBody(patchedChunk('lights_physical_pars_fragment'), 'void RE_Direct_RectArea_Physical');
-}
-
-/** The text of `area` from the line that opens `branch` to the next `#elif`, `#else` or `#endif`. */
-function branch(area: string, opening: string): string {
-  return area.split(opening)[1]!.split(/#el|#endif/)[0]!;
 }
 
 describe('installGodotAreaLight', () => {
@@ -92,16 +81,18 @@ describe('installGodotAreaLight', () => {
   });
 
   it("draws a toon diffuse from the light's front and back integrals over its solid angle", () => {
-    const toon = branch(areaLightBody(), '#ifdef GODOT_DIFFUSE_TOON');
+    const toon = preprocessorBranch(areaLightBody(), '#ifdef GODOT_DIFFUSE_TOON');
 
     expect(toon).toContain('godotLtcIntegral( - geometryNormal, geometryViewDir, mat3( 1.0 ), points );');
     expect(toon).toContain('( diffuse - backDiffuse ) / solidAngleOverPi');
+    expect(toon).toContain('godotDiffuseNL( NdotL, 0.0, 0.0, material.godotRoughness )');
     expect(toon).toContain('light * area * clearcoatAttenuation * material.diffuseContribution');
   });
 
   it("writes a toon specular into the light's diffuse, as Godot does", () => {
-    const toon = branch(areaLightBody(), '#if defined( GODOT_SPECULAR_TOON )');
+    const toon = preprocessorBranch(areaLightBody(), '#if defined( GODOT_SPECULAR_TOON )');
 
+    expect(toon).toContain('godotToonIntensity( specular / solidAngleOverPi, material.godotRoughness )');
     expect(toon).toContain('reflectedLight.directDiffuse +=');
     expect(toon).not.toContain('directSpecular');
   });
@@ -109,8 +100,8 @@ describe('installGodotAreaLight', () => {
   it('reads no specular lobe when the specular mode is disabled', () => {
     const area = areaLightBody();
 
-    expect(branch(area, '#ifndef GODOT_SPECULAR_DISABLED')).toContain('godotLtcSpecular(');
-    expect(branch(area, '#elif !defined( GODOT_SPECULAR_DISABLED )')).toContain(
+    expect(preprocessorBranch(area, '#ifndef GODOT_SPECULAR_DISABLED')).toContain('godotLtcSpecular(');
+    expect(preprocessorBranch(area, '#elif !defined( GODOT_SPECULAR_DISABLED )')).toContain(
       'reflectedLight.directSpecular +='
     );
   });
@@ -118,7 +109,7 @@ describe('installGodotAreaLight', () => {
   it("dims the light's diffuse and specular by the clearcoat's own Fresnel", () => {
     const area = areaLightBody();
 
-    expect(branch(area, '#ifdef USE_CLEARCOAT')).toContain(
+    expect(preprocessorBranch(area, '#ifdef USE_CLEARCOAT')).toContain(
       'clearcoatAttenuation = 1.0 - clearcoatFresnel * material.clearcoat;'
     );
     expect(area).toContain('reflectedLight.directDiffuse += diffuse * ltcLight * clearcoatAttenuation');

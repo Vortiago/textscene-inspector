@@ -22,11 +22,14 @@ import {
   type Chunks,
 } from '../shaderPatch/chunkPatch.js';
 import { installLitUniform } from '../shaderPatch/litUniform.js';
+import { LIGHT_FUNCTION_MARK } from '../godotLightFunction.js';
+import { LIGHT_ATTENUATION_MARK } from '../godotLightAttenuation.js';
 import { LTC_INTEGRAL } from './ltcIntegral.js';
 import { installLtcTextures } from './ltcTextures.js';
 import { AREA_LIGHT_FACINGS, AREA_LIGHT_FALLOFFS, areaLightUniformValues } from './areaLightFalloff.js';
 
-type AreaLightChunkName = 'lights_pars_begin' | 'lights_physical_pars_fragment' | 'lights_fragment_begin';
+export type AreaLightChunkName =
+  'lights_pars_begin' | 'lights_physical_pars_fragment' | 'lights_fragment_begin';
 
 /**
  * `light_process_area` without its shadow and `area_texture` (4.7.2 `scene_forward_lights_inc.glsl:983-1003`,
@@ -47,7 +50,7 @@ void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in
 	float heightLength = length( areaHeight );
 	float halfWidthLength = widthLength / 2.0;
 	float halfHeightLength = heightLength / 2.0;
-	vec3 local = vec3( dot( lightToVertex, normalize( areaWidth ) ), dot( lightToVertex, normalize( areaHeight ) ), dot( lightToVertex, - facing ) );
+	vec3 local = vec3( dot( lightToVertex, areaWidth / widthLength ), dot( lightToVertex, areaHeight / heightLength ), dot( lightToVertex, - facing ) );
 	vec3 closest = vec3( clamp( local.x, - halfWidthLength, halfWidthLength ), clamp( local.y, - halfHeightLength, halfHeightLength ), 0.0 );
 	float lightDistance = max( 0.0, length( closest - local ) );
 	// Godot's clusters skip a fragment beyond the range, where the attenuation is zero.
@@ -86,7 +89,7 @@ void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in
 	#ifdef GODOT_DIFFUSE_TOON
 		float backDiffuse = godotLtcIntegral( - geometryNormal, geometryViewDir, mat3( 1.0 ), points );
 		float NdotL = ( diffuse - backDiffuse ) / solidAngleOverPi;
-		float diffuseNL = smoothstep( - material.godotRoughness, max( material.godotRoughness, 0.01 ), NdotL ) * RECIPROCAL_PI;
+		float diffuseNL = godotDiffuseNL( NdotL, 0.0, 0.0, material.godotRoughness ) * RECIPROCAL_PI;
 		reflectedLight.directDiffuse += diffuseNL * light * area * clearcoatAttenuation * material.diffuseContribution;
 	#else
 		reflectedLight.directDiffuse += diffuse * ltcLight * clearcoatAttenuation * material.diffuseContribution;
@@ -94,9 +97,7 @@ void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in
 
 	// Toon writes to the diffuse, which Godot scales by albedo and 1 - metallic.
 	#if defined( GODOT_SPECULAR_TOON )
-		float mid = pow2( 1.0 - material.godotRoughness );
-		float RdotV = specular / solidAngleOverPi;
-		float intensity = smoothstep( mid - material.godotRoughness * 0.5, mid + material.godotRoughness * 0.5, RdotV ) * mid;
+		float intensity = godotToonIntensity( specular / solidAngleOverPi, material.godotRoughness );
 		reflectedLight.directDiffuse += intensity * light * area * specularAmount * material.diffuseContribution;
 	#elif !defined( GODOT_SPECULAR_DISABLED )
 		vec3 f0 = material.specularColorBlended;
@@ -136,13 +137,7 @@ const UNIFORM_AND_CALL_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
   },
 ];
 
-/** The texts of the patches the area light reads: Godot's roughness and Godot's distance falloff. */
-const GODOT_ROUGHNESS_FIELD = 'float godotRoughness;';
-const GODOT_DISTANCE_FALLOFF = 'pow( max( lightDistance, 0.0001 ), - decayExponent )';
-
 function areaLightChunks(chunks: Chunks<AreaLightChunkName>): Chunks<AreaLightChunkName> | null {
-  if (!chunks.lights_physical_pars_fragment.includes(GODOT_ROUGHNESS_FIELD)) return null;
-  if (!chunks.lights_pars_begin.includes(GODOT_DISTANCE_FALLOFF)) return null;
   const lightFunction = withGodotAreaLight(chunks.lights_physical_pars_fragment);
   if (lightFunction === null) return null;
   return applyChunkEdits({ ...chunks, lights_physical_pars_fragment: lightFunction }, UNIFORM_AND_CALL_EDITS);
@@ -160,7 +155,11 @@ export function installGodotAreaLight(): void {
     names: ['lights_pars_begin', 'lights_physical_pars_fragment', 'lights_fragment_begin'],
     isApplied: (chunks) => chunks.lights_physical_pars_fragment.includes('godotLtcIntegral('),
     apply: areaLightChunks,
-    missing: 'rect area light lacks a text the Godot area light replaces, or a patch it reads',
+    missing: 'rect area light lacks a text the Godot area light replaces',
+    requires: {
+      lights_physical_pars_fragment: LIGHT_FUNCTION_MARK,
+      lights_pars_begin: LIGHT_ATTENUATION_MARK,
+    },
   });
   if (!isPatched) return;
   installLtcTextures();

@@ -7,9 +7,14 @@
  * reflection, so three's own term for it stays empty.
  */
 
-import * as THREE from 'three';
-import { warn } from '../logger.js';
-import { applyChunkEdits, installChunkPatch, type ChunkEdit, type Chunks } from './shaderPatch/chunkPatch.js';
+import {
+  applyChunkEdits,
+  installChunkPatch,
+  type ChunkEdit,
+  type TextEdit,
+} from './shaderPatch/chunkPatch.js';
+import { LIGHT_FUNCTION_MARK } from './godotLightFunction.js';
+import { SKY_LIGHTING_MARK } from './godotSkyLighting.js';
 
 type ClearcoatChunk =
   | 'lights_physical_fragment'
@@ -57,16 +62,15 @@ const DIRECT_CLEARCOAT = /* glsl */ `clearcoatSpecularDirect += irradiance * god
 
 /**
  * Godot's reflection on the coat (`scene_forward_clustered.glsl:1768-1795`): about the coat's
- * normal, bent by the roughness squared, dimmed below the surface's horizon, from radiance layer
- * mix( 0.001, 0.1, sqrt( roughness ) ) times the last layer's index. `godotSkyLayer` reads the
- * layer at the roughness whose square root is that fraction.
+ * normal, dimmed below the surface's horizon, from radiance layer mix( 0.001, 0.1, sqrt( roughness ) )
+ * times the last layer's index. That layer is below 1, so the PMREM alone holds it, read at the
+ * roughness whose square root is that fraction.
  */
 const CLEARCOAT_RADIANCE = /* glsl */ `vec3 godotClearcoatRadiance( const in vec3 viewDir, const in vec3 clearcoatNormal, const in vec3 normal, const in float roughness ) {
 
-		vec3 reflectVec = mix( reflect( - viewDir, clearcoatNormal ), clearcoatNormal, pow2( roughness ) );
-		float horizon = min( 1.0 + dot( reflectVec, normal ), 1.0 );
-		reflectVec = envMapRotation * transformDirectionByInverseViewMatrix( reflectVec, viewMatrix );
-		return godotSkyLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * horizon * horizon;
+		float horizon;
+		vec3 reflectVec = godotReflection( viewDir, clearcoatNormal, normal, roughness, horizon );
+		return godotPmremLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * envMapIntensity * horizon * horizon;
 
 	}
 
@@ -142,59 +146,29 @@ const CLEARCOAT_EDITS: readonly ChunkEdit<ClearcoatChunk>[] = [
   { chunk: 'lights_fragment_end', three: THREE_INDIRECT_SPECULAR, godot: GODOT_INDIRECT_UNDER_COAT },
 ];
 
-/** The functions of the light function and sky patches that the coat's terms call. */
-const PREREQUISITES: Readonly<Partial<Record<ClearcoatChunk, string>>> = {
-  lights_physical_pars_fragment: 'float godotGGXDistribution(',
-  envmap_physical_pars_fragment: 'vec3 godotSkyLayer(',
-};
-
-function clearcoatChunks(chunks: Chunks<ClearcoatChunk>): Chunks<ClearcoatChunk> | null {
-  const hasPrerequisites = Object.entries(PREREQUISITES).every(([chunk, text]) =>
-    chunks[chunk as ClearcoatChunk].includes(text)
-  );
-  return hasPrerequisites ? applyChunkEdits(chunks, CLEARCOAT_EDITS) : null;
-}
-
-/** three's clearcoat lines, each on a line of its own: three's build drops the blank lines between. */
-const THREE_FRESNEL_LINES = [
-  'float dotNVcc = saturate( dot( geometryClearcoatNormal, geometryViewDir ) );',
-  'vec3 Fcc = F_Schlick( material.clearcoatF0, material.clearcoatF90, dotNVcc );',
-];
-const THREE_LAYER =
-  'outgoingLight = outgoingLight * ( 1.0 - material.clearcoat * Fcc ) + ( clearcoatSpecularDirect + clearcoatSpecularIndirect ) * material.clearcoat;';
-
-/** Godot adds the coat's lobe under each light and dims no light beneath it. */
-const GODOT_LAYER = 'outgoingLight += clearcoatSpecularDirect * material.clearcoat;';
-
 /**
- * The layering lives in the physical material's own fragment shader, not in an include, so this
- * part writes `ShaderLib`.
+ * Godot adds the coat's lobe under each light and dims no light beneath it. The layering lives in
+ * the physical material's own fragment shader, not in an include. three's build drops the blank
+ * lines between its lines, so each edit is one line.
  */
-function installClearcoatLayering(): void {
-  const physical = THREE.ShaderLib.physical;
-  if (physical.fragmentShader.includes(GODOT_LAYER)) return;
-  const edits = [
-    ...THREE_FRESNEL_LINES.map((three) => ({ three, godot: '' })),
-    { three: THREE_LAYER, godot: GODOT_LAYER },
-  ];
-  if (edits.some(({ three }) => physical.fragmentShader.split(three).length !== 2)) {
-    warn("[Shading] three's physical fragment shader lacks the clearcoat lines the Godot clearcoat replaces");
-    return;
-  }
-  physical.fragmentShader = edits.reduce(
-    (shader, { three, godot }) => shader.replace(three, () => godot),
-    physical.fragmentShader
-  );
-}
+const LAYERING_EDITS: readonly TextEdit[] = [
+  { three: 'float dotNVcc = saturate( dot( geometryClearcoatNormal, geometryViewDir ) );', godot: '' },
+  { three: 'vec3 Fcc = F_Schlick( material.clearcoatF0, material.clearcoatF90, dotNVcc );', godot: '' },
+  {
+    three:
+      'outgoingLight = outgoingLight * ( 1.0 - material.clearcoat * Fcc ) + ( clearcoatSpecularDirect + clearcoatSpecularIndirect ) * material.clearcoat;',
+    godot: 'outgoingLight += clearcoatSpecularDirect * material.clearcoat;',
+  },
+];
 
 /**
  * Replaces three's clearcoat for every program compiled after the call. It calls the light
  * function's and the sky lighting's functions, so it installs after them. A three release that
- * rewrites a replaced line keeps its own and warns, and `godotClearcoat.test.ts` fails on that
- * release. A second call changes nothing.
+ * rewrites a replaced line keeps all its own text and warns, and `godotClearcoat.test.ts` fails on
+ * that release. A second call changes nothing.
  */
 export function installGodotClearcoat(): void {
-  const isPatched = installChunkPatch({
+  installChunkPatch({
     names: [
       'lights_physical_fragment',
       'lights_physical_pars_fragment',
@@ -203,8 +177,12 @@ export function installGodotClearcoat(): void {
       'envmap_physical_pars_fragment',
     ],
     isApplied: (chunks) => chunks.lights_physical_pars_fragment.includes(CLEARCOAT_BRDF),
-    apply: clearcoatChunks,
-    missing: 'lighting chunks lack a line the clearcoat patch replaces, or a patch it reads',
+    apply: (chunks) => applyChunkEdits(chunks, CLEARCOAT_EDITS),
+    fragmentShaders: { physical: LAYERING_EDITS },
+    missing: 'lighting chunks or physical fragment shader lack a line the clearcoat patch replaces',
+    requires: {
+      lights_physical_pars_fragment: LIGHT_FUNCTION_MARK,
+      envmap_physical_pars_fragment: SKY_LIGHTING_MARK,
+    },
   });
-  if (isPatched) installClearcoatLayering();
 }

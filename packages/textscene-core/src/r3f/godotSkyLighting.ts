@@ -55,22 +55,15 @@ const LAST_ROUGH_MIP = LAST_LAYER - 1 - FIRST_BAKED_LAYER;
 const LAST_PMREM_ROUGHNESS = ((FIRST_BAKED_LAYER - 1) / LAST_LAYER) ** 2;
 
 /**
- * Godot's radiance layer `sqrt( roughness )` times the last layer's index, in the world direction
- * `reflectVec`, blending the two layers around it (`:1714-1721`): the PMREM below the first baked
- * layer, the rough cube's mips from there, where a trilinear read is that blend, and the last
- * layer's cube at the top. It scales by `envMapIntensity`.
+ * Godot's radiance layer below the first baked one, read from the PMREM, in the world direction
+ * `reflectVec`. A roughness below `LAST_PMREM_ROUGHNESS` reads no baked layer, so this alone is its
+ * layer. The caller scales it by `envMapIntensity`.
  */
-const GODOT_SKY_LAYER = /* glsl */ `vec3 godotSkyLayer( const in vec3 reflectVec, const in float roughness ) {
+const GODOT_PMREM_LAYER = /* glsl */ `vec3 godotPmremLayer( const in vec3 reflectVec, const in float roughness ) {
 
 		#ifdef ENVMAP_TYPE_CUBE_UV
 
-			float layer = sqrt( roughness ) * ${glslFloat(LAST_LAYER)};
-			vec3 pmremLayer = textureCubeUV( envMap, reflectVec, pow( min( roughness, ${glslFloat(LAST_PMREM_ROUGHNESS)} ), ${glslFloat(PMREM_ROUGHNESS_EXPONENT)} ) ).rgb;
-			vec3 roughLayer = textureLod( ${SKY_ROUGH_LAYERS_UNIFORM}, reflectVec, clamp( layer - ${glslFloat(FIRST_BAKED_LAYER)}, 0.0, ${glslFloat(LAST_ROUGH_MIP)} ) ).rgb;
-			vec3 lastLayer = textureCube( ${SKY_LAST_LAYER_UNIFORM}, reflectVec ).rgb;
-			vec3 bakedLayer = mix( roughLayer, lastLayer, clamp( layer - ${glslFloat(LAST_LAYER - 1)}, 0.0, 1.0 ) );
-			float bakedShare = clamp( layer - ${glslFloat(FIRST_BAKED_LAYER - 1)}, 0.0, 1.0 );
-			return mix( pmremLayer, bakedLayer, bakedShare ) * envMapIntensity;
+			return textureCubeUV( envMap, reflectVec, pow( min( roughness, ${glslFloat(LAST_PMREM_ROUGHNESS)} ), ${glslFloat(PMREM_ROUGHNESS_EXPONENT)} ) ).rgb;
 
 		#else
 
@@ -83,14 +76,52 @@ const GODOT_SKY_LAYER = /* glsl */ `vec3 godotSkyLayer( const in vec3 reflectVec
 	`;
 
 /**
- * Godot's reflection of the sky. It bends the reflection towards the normal by the roughness
- * squared and dims what falls below the horizon (`:1704-1708`).
+ * Godot's radiance layer `sqrt( roughness )` times the last layer's index, in the world direction
+ * `reflectVec`, blending the two layers around it (`:1714-1721`): the PMREM below the first baked
+ * layer, the rough cube's mips from there, where a trilinear read is that blend, and the last
+ * layer's cube at the top. It scales by `envMapIntensity`.
  */
-const GODOT_IBL_RADIANCE = /* glsl */ `vec3 godotIBLRadiance( const in vec3 viewDir, const in vec3 normal, const in float roughness ) {
+const GODOT_SKY_LAYER = /* glsl */ `vec3 godotSkyLayer( const in vec3 reflectVec, const in float roughness ) {
+
+		#ifdef ENVMAP_TYPE_CUBE_UV
+
+			float layer = sqrt( roughness ) * ${glslFloat(LAST_LAYER)};
+			vec3 roughLayer = textureLod( ${SKY_ROUGH_LAYERS_UNIFORM}, reflectVec, clamp( layer - ${glslFloat(FIRST_BAKED_LAYER)}, 0.0, ${glslFloat(LAST_ROUGH_MIP)} ) ).rgb;
+			vec3 lastLayer = textureCube( ${SKY_LAST_LAYER_UNIFORM}, reflectVec ).rgb;
+			vec3 bakedLayer = mix( roughLayer, lastLayer, clamp( layer - ${glslFloat(LAST_LAYER - 1)}, 0.0, 1.0 ) );
+			float bakedShare = clamp( layer - ${glslFloat(FIRST_BAKED_LAYER - 1)}, 0.0, 1.0 );
+			return mix( godotPmremLayer( reflectVec, roughness ), bakedLayer, bakedShare ) * envMapIntensity;
+
+		#else
+
+			return vec3( 0.0 );
+
+		#endif
+
+	}
+
+	`;
+
+/**
+ * Godot's reflection direction in the world (`:1704-1708`): the view reflected about `normal`, bent
+ * towards it by the roughness squared. The caller dims it by `horizon` squared, which falls below
+ * the horizon of `surfaceNormal`: the clearcoat's reflection takes it from the surface under the coat.
+ */
+const GODOT_REFLECTION = /* glsl */ `vec3 godotReflection( const in vec3 viewDir, const in vec3 normal, const in vec3 surfaceNormal, const in float roughness, out float horizon ) {
 
 		vec3 reflectVec = mix( reflect( - viewDir, normal ), normal, pow2( roughness ) );
-		float horizon = min( 1.0 + dot( reflectVec, normal ), 1.0 );
-		reflectVec = envMapRotation * transformDirectionByInverseViewMatrix( reflectVec, viewMatrix );
+		horizon = min( 1.0 + dot( reflectVec, surfaceNormal ), 1.0 );
+		return envMapRotation * transformDirectionByInverseViewMatrix( reflectVec, viewMatrix );
+
+	}
+
+	`;
+
+/** Godot's reflection of the sky. */
+const GODOT_IBL_RADIANCE = /* glsl */ `vec3 godotIBLRadiance( const in vec3 viewDir, const in vec3 normal, const in float roughness ) {
+
+		float horizon;
+		vec3 reflectVec = godotReflection( viewDir, normal, normal, roughness, horizon );
 		return godotSkyLayer( reflectVec, roughness ) * horizon * horizon;
 
 	}
@@ -121,7 +152,7 @@ const SKY_LIGHTING_EDITS: readonly ChunkEdit<SkyChunk>[] = [
   {
     chunk: 'envmap_physical_pars_fragment',
     three: THREE_IBL_RADIANCE_FUNCTION,
-    godot: `${SKY_LAYER_UNIFORMS}${GODOT_IBL_IRRADIANCE}${GODOT_SKY_LAYER}${GODOT_IBL_RADIANCE}${THREE_IBL_RADIANCE_FUNCTION}`,
+    godot: `${SKY_LAYER_UNIFORMS}${GODOT_IBL_IRRADIANCE}${GODOT_PMREM_LAYER}${GODOT_SKY_LAYER}${GODOT_REFLECTION}${GODOT_IBL_RADIANCE}${THREE_IBL_RADIANCE_FUNCTION}`,
   },
   {
     chunk: 'envmap_physical_pars_fragment',
@@ -129,6 +160,9 @@ const SKY_LIGHTING_EDITS: readonly ChunkEdit<SkyChunk>[] = [
     godot: 'return godotIBLRadiance( viewDir, bentNormal, roughness );',
   },
 ];
+
+/** The text that proves the patch installed, which a patch that reads it requires. */
+export const SKY_LIGHTING_MARK = GODOT_IBL_RADIANCE;
 
 /**
  * Replaces three's chunks and gives the layer cubes and the sky's share to every built-in lit material and to
@@ -139,7 +173,7 @@ const SKY_LIGHTING_EDITS: readonly ChunkEdit<SkyChunk>[] = [
 export function installGodotSkyLighting(): void {
   const isPatched = installChunkPatch({
     names: ['lights_fragment_maps', 'envmap_physical_pars_fragment'],
-    isApplied: (chunks) => chunks.envmap_physical_pars_fragment.includes(GODOT_IBL_RADIANCE),
+    isApplied: (chunks) => chunks.envmap_physical_pars_fragment.includes(SKY_LIGHTING_MARK),
     apply: (chunks) => applyChunkEdits(chunks, SKY_LIGHTING_EDITS),
     missing:
       'lights_fragment_maps or envmap_physical_pars_fragment lacks a line the sky lighting patch replaces',

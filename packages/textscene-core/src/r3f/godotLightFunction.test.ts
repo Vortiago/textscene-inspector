@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { GODOT_LIGHT_FUNCTION_EDITS, threeAnisotropy, installGodotLightFunction } from './godotLightFunction';
 import { applyChunkEdits } from './shaderPatch/chunkPatch';
 import { warningsOf } from './testing/logWarnings';
+import { preprocessorBranch } from './testing/glslSource';
 
 const CHUNK = 'lights_physical_pars_fragment';
 const SETUP_CHUNK = 'lights_physical_fragment';
@@ -82,7 +83,7 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
 
   it("writes a toon specular into the light's diffuse, as Godot does", () => {
     // `scene_forward_lights_inc.glsl:228-234`.
-    const toon = godotChunks()[CHUNK].split('#if defined( GODOT_SPECULAR_TOON )')[1]!.split('#elif')[0]!;
+    const toon = preprocessorBranch(godotChunks()[CHUNK], '#if defined( GODOT_SPECULAR_TOON )');
     expect(toon).toContain('specularBRDF = vec3( 0.0 );');
     expect(toon).toContain('reflectedLight.directDiffuse += godotToonSpecular(');
   });
