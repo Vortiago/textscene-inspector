@@ -19,7 +19,7 @@ one sampler. It ports Godot 4.6.3's positional shadow atlas: the slot allocation
   `AtlasSpotShadow` or an `AtlasOmniShadow`. The new shadow copies what the light's component set
   on the old one.
 - `<SceneShadowFitter>` also wraps the canvas renderer's shadow pass
-  (`positionalShadowPass.ts`), which copies each omni cube into the atlas.
+  (`../shadowPass.ts`), which copies each omni cube into the atlas.
 - `positionalShadowChunk.ts` replaces three's omni and spot lookups with Godot's
   (`positionalShadowLookup.ts`). It installs once at import of `TscnCanvas.tsx`, before any program
   compiles.
@@ -74,7 +74,7 @@ the first of the next row after a row's last slot (`light_storage.h:683-691`).
   nothing and filters nothing. The copy filters the four nearest texels itself, as Godot's linear
   sampler does. A texel past a face's edge reads the neighbouring face.
 - three gives the renderer no hook between its shadow pass and its draw. So
-  `installPositionalShadowPass` wraps `renderer.shadowMap.render`: three's own pass, then each omni
+  `installShadowPass` wraps `renderer.shadowMap.render`: three's own pass, then each omni
   light's copy, before the draw uploads the lights (`WebGLRenderer.js:1737-1752`).
 - `OmniShadowCopy` ports `cube_to_dp.glsl`. Each texel of a slot holds the distance to the light
   over its range, along the direction its paraboloid maps it to. The first slot holds the light's
@@ -118,11 +118,11 @@ active samplers of programs three r186 linked in the visual harness's Chromium, 
 patch `TscnCanvas` installs and one shadowed sun:
 
 | Omni and spot shadows | `MeshStandardMaterial` | `MeshPhysicalMaterial` with seven maps, an environment and transmission |
-| --- | --- | --- |
-| None | 2 | 11 |
-| 1 and 1 | 3 | 12 |
-| 4 and 4 | 3 | 12 |
-| 8 and 8 | 3 | 12 |
+| --------------------- | ---------------------- | ----------------------------------------------------------------------- |
+| None                  | 2                      | 11                                                                      |
+| 1 and 1               | 3                      | 12                                                                      |
+| 4 and 4               | 3                      | 12                                                                      |
+| 8 and 8               | 3                      | 12                                                                      |
 
 A sampler per shadow takes 18 units with eight of each and the plain material, and 27 with the
 physical one. A GPU with only 16 units fails to link both, and the scene draws nothing lit.

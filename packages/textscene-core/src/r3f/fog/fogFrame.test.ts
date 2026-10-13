@@ -31,6 +31,8 @@ function settings(properties: Record<string, string>): FogSettings {
 
 const camera = new THREE.PerspectiveCamera(75, 1, 0.05, 400);
 
+const NO_OBJECTS = { lights: [], casters: [] };
+
 function sun(intensity: number): THREE.DirectionalLight {
   const light = new THREE.DirectionalLight(0xffffff, intensity);
   light.position.set(0, 1, 0);
@@ -46,7 +48,7 @@ describe('prepareFog', () => {
   it("writes the scene's sky rotation as world to sky space", () => {
     const scene = new THREE.Scene();
     scene.environmentRotation.set(0, Math.PI / 2, 0);
-    prepareFog(renderer, scene, camera, settings({ fog_enabled: 'true' }), passes(), []);
+    prepareFog(renderer, scene, camera, settings({ fog_enabled: 'true' }), passes(), NO_OBJECTS);
 
     const skyDirection = new THREE.Vector3(1, 0, 0).applyMatrix3(
       new THREE.Matrix3().fromArray(fogUniforms.skyRotation)
@@ -66,7 +68,7 @@ describe('prepareFog', () => {
         fog_density: '0.3',
       }),
       passes(),
-      []
+      NO_OBJECTS
     );
 
     expect(Array.from(fogUniforms.depthColor)).toEqual([2, 2, 2, 1]);
@@ -80,7 +82,7 @@ describe('prepareFog', () => {
       camera,
       settings({ fog_enabled: 'true', fog_mode: '1', fog_depth_end: '0' }),
       passes(),
-      []
+      NO_OBJECTS
     );
 
     expect(fogUniforms.depthShape[2]).toBe(400);
@@ -89,10 +91,10 @@ describe('prepareFog', () => {
   it('writes each sun for the surfaces and for the sky apart', () => {
     const lightOnly = sun(2);
     lightOnly.userData = skyLightUserData({ drawsInSky: false, energy: 2 / Math.PI });
-    prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), passes(), [
-      sun(Math.PI),
-      lightOnly,
-    ]);
+    prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), passes(), {
+      lights: [sun(Math.PI), lightOnly],
+      casters: [],
+    });
 
     expect(fogUniforms.sunDirections[1]).toBe(1);
     expect(fogUniforms.sunSurfaceColors[0]).toBeCloseTo(Math.PI, 5);
@@ -103,7 +105,7 @@ describe('prepareFog', () => {
 
   it('bakes the sky radiance only for an aerial perspective', () => {
     const plain = passes();
-    prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), plain, []);
+    prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), plain, NO_OBJECTS);
     const aerial = passes();
     prepareFog(
       renderer,
@@ -111,7 +113,7 @@ describe('prepareFog', () => {
       camera,
       settings({ fog_enabled: 'true', fog_aerial_perspective: '0.5' }),
       aerial,
-      []
+      NO_OBJECTS
     );
 
     expect(plain.radiance.bake).not.toHaveBeenCalled();
@@ -121,7 +123,14 @@ describe('prepareFog', () => {
   it('prepares the volume only for a volumetric fog, and answers whether it settles', () => {
     const depthOnly = passes();
     expect(
-      prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), depthOnly, [])
+      prepareFog(
+        renderer,
+        new THREE.Scene(),
+        camera,
+        settings({ fog_enabled: 'true' }),
+        depthOnly,
+        NO_OBJECTS
+      )
     ).toBe(false);
     const volumetric = passes();
     expect(
@@ -131,7 +140,7 @@ describe('prepareFog', () => {
         camera,
         settings({ volumetric_fog_enabled: 'true' }),
         volumetric,
-        []
+        NO_OBJECTS
       )
     ).toBe(true);
 
@@ -142,7 +151,7 @@ describe('prepareFog', () => {
 
 describe('finishFog', () => {
   it('leaves the next render without fog', () => {
-    prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), passes(), []);
+    prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), passes(), NO_OBJECTS);
     fogUniforms.volumeLookup[0] = 1;
 
     finishFog();

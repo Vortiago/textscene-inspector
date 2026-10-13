@@ -7,11 +7,11 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { AtlasOmniShadow } from './atlasOmniShadow';
-import { framebufferHeight } from '../shadowFilter/framebufferRows';
-import { OmniShadowCopy } from './omniShadowCopy';
-import { installPositionalShadowPass } from './positionalShadowPass';
-import { holdPositionalShadowAtlas } from './shadowAtlasTarget';
+import { AtlasOmniShadow } from './positionalShadow/atlasOmniShadow';
+import { framebufferHeight } from './shadowFilter/framebufferRows';
+import { OmniShadowCopy } from './positionalShadow/omniShadowCopy';
+import { installShadowPass, readShadowMaps } from './shadowPass';
+import { holdPositionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
 
 holdPositionalShadowAtlas({}, 4096);
 
@@ -44,11 +44,11 @@ function omniLight(hasSlot = true): THREE.PointLight {
 const runPass = (renderer: THREE.WebGLRenderer, lights: THREE.Light[]) =>
   renderer.shadowMap.render(lights, new THREE.Scene(), new THREE.PerspectiveCamera());
 
-describe('installPositionalShadowPass', () => {
+describe('installShadowPass', () => {
   it('runs three’s pass, then copies each omni light that holds a slot', () => {
     const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => {});
     const { renderer, threePass } = fakeRenderer();
-    installPositionalShadowPass(renderer);
+    installShadowPass(renderer);
     const [held, unheld] = [omniLight(), omniLight(false)];
     const spot = new THREE.SpotLight();
     runPass(renderer, [held, unheld, spot]);
@@ -61,7 +61,7 @@ describe('installPositionalShadowPass', () => {
   it('restores the render target the draw goes to, and records its height', () => {
     const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => {});
     const { renderer } = fakeRenderer();
-    installPositionalShadowPass(renderer);
+    installShadowPass(renderer);
     runPass(renderer, [omniLight()]);
     expect(renderer.setRenderTarget).toHaveBeenLastCalledWith(renderer.getRenderTarget(), 0, 0);
     expect(framebufferHeight[0]).toBe(48);
@@ -71,7 +71,7 @@ describe('installPositionalShadowPass', () => {
   it('copies nothing that three’s pass did not draw (edge case)', () => {
     const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => {});
     const { renderer } = fakeRenderer();
-    installPositionalShadowPass(renderer);
+    installShadowPass(renderer);
     const light = omniLight();
     light.shadow.autoUpdate = false;
     runPass(renderer, [light]);
@@ -84,12 +84,66 @@ describe('installPositionalShadowPass', () => {
   it('wraps a renderer’s pass once, however often it is installed (error case)', () => {
     const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => {});
     const { renderer, threePass } = fakeRenderer();
-    installPositionalShadowPass(renderer);
-    installPositionalShadowPass(renderer);
+    installShadowPass(renderer);
+    installShadowPass(renderer);
     runPass(renderer, [omniLight()]);
     expect(threePass).toHaveBeenCalledOnce();
     expect(copy).toHaveBeenCalledOnce();
     copy.mockRestore();
+  });
+});
+
+describe('readShadowMaps', () => {
+  it('reads the maps after three’s pass and the omni copies, for the scene and camera rendered', () => {
+    const order: string[] = [];
+    const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => order.push('copy'));
+    const { renderer, threePass } = fakeRenderer();
+    threePass.mockImplementation(() => order.push('three'));
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera();
+    const reader = vi.fn(() => order.push('read'));
+    readShadowMaps(renderer, reader);
+
+    renderer.shadowMap.render([omniLight()], scene, camera);
+
+    expect(order).toEqual(['three', 'copy', 'read']);
+    expect(reader).toHaveBeenCalledWith(scene, camera);
+    copy.mockRestore();
+  });
+
+  it('records the height of the draw’s target after a reader renders into another (edge case)', () => {
+    const { renderer } = fakeRenderer();
+    readShadowMaps(renderer, () => {
+      framebufferHeight[0] = 1;
+    });
+
+    runPass(renderer, []);
+
+    expect(framebufferHeight[0]).toBe(48);
+  });
+
+  it('calls a reader that a module evaluated again adds to a pass already wrapped (edge case)', async () => {
+    const { renderer } = fakeRenderer();
+    installShadowPass(renderer);
+    vi.resetModules();
+    const reloaded = await import('./shadowPass');
+    const reader = vi.fn();
+    reloaded.readShadowMaps(renderer, reader);
+
+    runPass(renderer, []);
+
+    expect(reader).toHaveBeenCalledOnce();
+  });
+
+  it('stops calling a reader once its disposer runs (error case)', () => {
+    const { renderer } = fakeRenderer();
+    const reader = vi.fn();
+    const stop = readShadowMaps(renderer, reader);
+    stop();
+
+    runPass(renderer, []);
+
+    expect(reader).not.toHaveBeenCalled();
   });
 });
 

@@ -14,6 +14,9 @@ import { positionalShadowAtlas } from './shadowAtlasTarget.js';
 /** three exports no `PointLightShadow` class, so it comes from a point light's own shadow. */
 const ThreePointLightShadow = new THREE.PointLight().shadow.constructor as new () => PointLightShadow;
 
+/** Written only by `writeLookupMatrix`, and valid only inside that call. */
+const scratchRect = new THREE.Vector4();
+
 export class AtlasOmniShadow extends ThreePointLightShadow {
   /** The light's slot in the atlas of the viewport that renders now, or null for none. */
   slot: PositionalShadowSlot | null = null;
@@ -57,20 +60,35 @@ export class AtlasOmniShadow extends ThreePointLightShadow {
 
   /**
    * Writes `pointShadowMatrix`: Godot's world-to-light transform (`light_storage.cpp:989-991`) above,
-   * and in the bottom row, which a light-space position never needs, the first paraboloid's corner and
-   * the step to the second, in units of the atlas texture (`:981-984`, `:1002-1003`). three overwrites
-   * it in its pass (`WebGLShadowMap.js:320`), so the shadow pass writes it after.
+   * and in the bottom row, which a light-space position never needs, the paraboloids' rect. three
+   * overwrites it in its pass (`WebGLShadowMap.js:320`), so the shadow pass writes it after.
    */
   writeLookupMatrix(light: THREE.Object3D): void {
-    const atlasSize = positionalShadowAtlas().width;
     lightPoseMatrix(light, this.matrix).invert();
-    const slot = this.slot;
-    if (!slot?.paraboloidStep) return;
+    const rect = this.paraboloidRect(scratchRect);
+    if (!rect) return;
     const e = this.matrix.elements;
-    e[3] = slot.x / atlasSize;
-    e[7] = slot.y / atlasSize;
-    e[11] = (slot.paraboloidStep[0] * slot.size) / atlasSize;
-    e[15] = (slot.paraboloidStep[1] * slot.size) / atlasSize;
+    e[3] = rect.x;
+    e[7] = rect.y;
+    e[11] = rect.z;
+    e[15] = rect.w;
+  }
+
+  /**
+   * The first paraboloid's corner and the step to the second, in units of the atlas texture
+   * (`light_storage.cpp:981-984`, `:1002-1003`), written into `target`. Null without a slot.
+   */
+  paraboloidRect(target: THREE.Vector4): THREE.Vector4 | null {
+    const slot = this.slot;
+    if (!slot?.paraboloidStep) return null;
+    const atlasSize = positionalShadowAtlas().width;
+    const [stepX, stepY] = slot.paraboloidStep;
+    return target.set(
+      slot.x / atlasSize,
+      slot.y / atlasSize,
+      (stepX * slot.size) / atlasSize,
+      (stepY * slot.size) / atlasSize
+    );
   }
 
   /** Frees the cube. */
