@@ -14,7 +14,7 @@ import {
   skyContribution,
   skyLayerMaps,
 } from './sky/skyLayersMap.js';
-import { SKY_LAYER_GROUPS } from '../resources/sky/skyLayers.js';
+import { SKY_LAYER_GROUPS, type SkyLayerGroup } from '../resources/sky/skyLayers.js';
 
 type SkyChunk = 'lights_fragment_maps' | 'envmap_physical_pars_fragment';
 
@@ -38,7 +38,7 @@ const GODOT_IBL_IRRADIANCE = /* glsl */ `vec3 godotIBLIrradiance( const in vec3 
 	`;
 
 /** A group's first layer and its last mip, as GLSL literals, for the read that clamps to them. */
-function layerRange({ firstLayer, faceSizes }: { firstLayer: number; faceSizes: readonly number[] }) {
+function layerRange({ firstLayer, faceSizes }: SkyLayerGroup) {
   return { first: glslFloat(firstLayer), lastMip: glslFloat(faceSizes.length - 1) };
 }
 

@@ -6,27 +6,19 @@
 
 import { vec3ToOctWithBorder, type OctDirection } from '../../godot/octmap.js';
 import { FAST_FILTER_COEFFICIENTS } from '../../godot/skyFastFilterCoefficients.js';
-import { FAST_FILTER_CHAIN_SIZES, REAL_TIME_ROUGHNESS_LAYERS } from '../../godot/skyReflection.js';
+import {
+  FAST_FILTER_CHAIN_SIZES,
+  FAST_FILTER_FRAMES,
+  FAST_FILTER_FRAME_LOWER_BOUND,
+  FAST_FILTER_SUB_TAPS,
+  FAST_FILTER_SUPER_TAPS_PER_FRAME,
+  REAL_TIME_ROUGHNESS_LAYERS,
+} from '../../godot/skyReflection.js';
 import { frameAround } from './frame.js';
 import { RADIANCE_LAYOUT, type LayerFilter } from './layerFilter.js';
 import { addTrilinear, type Octmap } from './octmapImage.js';
 
 const { abs, max, min } = Math;
-
-/** 1 / sqrt(3): a frame weighs nothing where its axis is no nearer the direction than the others (`:97-98`). */
-const FRAME_LOWER_BOUND = 0.57735;
-
-/** Each frame's up axis, and the two other axes that weigh it (`:95-96`, `:101-112`). */
-const FRAMES: readonly { up: OctDirection; others: readonly [number, number] }[] = [
-  { up: [1, 0, 0], others: [1, 2] },
-  { up: [0, 1, 0], others: [0, 2] },
-  { up: [0, 0, 1], others: [0, 1] },
-];
-
-/** NUM_TAPS / 4 with the low-quality table's eight taps a frame (`:42-46`, `:155`). */
-const SUPER_TAPS_PER_FRAME = 2;
-
-const SUB_TAPS = 4;
 
 /** Scratch, written only by `texel`: the frame's axes, and the UV of the tap it reads next. */
 const frameX = new Float64Array(3);
@@ -47,14 +39,15 @@ function texel(normal: OctDirection, mips: readonly Octmap[], layer: number, out
   const coefficients = FAST_FILTER_COEFFICIENTS[min(layer, REAL_TIME_ROUGHNESS_LAYERS - 1) - 1]!;
   out.fill(0);
   let total = 0;
-  for (let axis = 0; axis < FRAMES.length; axis += 1) {
-    const { up, others } = FRAMES[axis]!;
-    const frameWeight =
-      (max(abs(normal[others[0]]!), abs(normal[others[1]]!)) - FRAME_LOWER_BOUND) / (1 - FRAME_LOWER_BOUND);
+  for (let axis = 0; axis < FAST_FILTER_FRAMES.length; axis += 1) {
+    const { up, others } = FAST_FILTER_FRAMES[axis]!;
+    const nearest = max(abs(normal[others[0]]!), abs(normal[others[1]]!));
+    const frameWeight = (nearest - FAST_FILTER_FRAME_LOWER_BOUND) / (1 - FAST_FILTER_FRAME_LOWER_BOUND);
     if (frameWeight <= 0) continue;
     frameAround(up, normal, frameX, frameY);
-    for (let index = axis * SUPER_TAPS_PER_FRAME; index < (axis + 1) * SUPER_TAPS_PER_FRAME; index += 1) {
-      for (let sub = 0; sub < SUB_TAPS; sub += 1) {
+    const firstTap = axis * FAST_FILTER_SUPER_TAPS_PER_FRAME;
+    for (let index = firstTap; index < firstTap + FAST_FILTER_SUPER_TAPS_PER_FRAME; index += 1) {
+      for (let sub = 0; sub < FAST_FILTER_SUB_TAPS; sub += 1) {
         const x = coefficients.frameX[index]![sub]!;
         const y = coefficients.frameY[index]![sub]!;
         const z = coefficients.frameZ[index]![sub]!;

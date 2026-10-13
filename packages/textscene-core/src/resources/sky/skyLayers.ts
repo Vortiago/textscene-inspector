@@ -22,9 +22,14 @@ import type { RadianceFilter } from './types.js';
 const { floor } = Math;
 const { toHalfFloat } = THREE.DataUtils;
 
+/** A group of layers shown as one cube: its first layer, and the face size of each layer from there. */
+export interface SkyLayerGroup {
+  readonly firstLayer: number;
+  readonly faceSizes: readonly number[];
+}
+
 /**
- * Each group of layers, as one cube: its first layer, and the face size of each layer from there.
- * Within a group each layer halves the one before, so the group is a cube's mip chain and a trilinear
+ * Godot's layers 1 to 7 in three groups. Within a group each layer halves the one before, so the group is a cube's mip chain and a trilinear
  * read blends two layers as Godot does. A layer's faces are about as fine as the chain mip its filter
  * reads, so the sharp layers' first is about as fine as the 320-wide half-size copy.
  */
@@ -33,13 +38,13 @@ export const SKY_LAYER_GROUPS = {
   rough: { firstLayer: 4, faceSizes: [32, 16, 8] },
   /** The layer the ambient reads, smooth enough that linear filtering between texels 6 degrees apart follows it. */
   last: { firstLayer: SKY_ROUGHNESS_LAYERS_DEFAULT - 1, faceSizes: [16] },
-} as const;
+} as const satisfies Record<string, SkyLayerGroup>;
 
 /** Godot's layers 1 to 7 of a sky, as six RGBA half-float faces each, in the layout of `cubeFaces.ts`. */
 export type SkyLayers = Record<keyof typeof SKY_LAYER_GROUPS, Uint16Array[][]>;
 
 /** Half-float 1, the alpha of every texel. */
-const OPAQUE = THREE.DataUtils.toHalfFloat(1);
+const OPAQUE = toHalfFloat(1);
 
 const FILTERS: Record<RadianceFilter, LayerFilter> = {
   'importance-sample': importanceSampleFilter,
@@ -117,7 +122,7 @@ export function skyLayers(
     source = downsample(source, step);
     mips.push(source);
   }
-  const group = ({ firstLayer, faceSizes }: { firstLayer: number; faceSizes: readonly number[] }) =>
+  const group = ({ firstLayer, faceSizes }: SkyLayerGroup) =>
     faceSizes.map((faceSize, index) =>
       Array.from({ length: 6 }, (_, face) => layerFace(face, faceSize, mips, filter, firstLayer + index))
     );

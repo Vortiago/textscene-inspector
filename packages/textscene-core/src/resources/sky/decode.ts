@@ -33,14 +33,17 @@ const PROCESS_MODES: readonly SkyProcessMode[] = ['automatic', 'quality', 'incre
  * (`sky.cpp:34`), so such a size stays at the default.
  */
 export function decodeSkyProcessing(data: Record<string, string>): SkyProcessing {
-  const modeIndex = enumOr(data.process_mode, 0, indices(PROCESS_MODES), 'process_mode');
   const sizeIndex = enumOr(
     data.radiance_size,
     SKY_RADIANCE_SIZES.indexOf(SKY_RADIANCE_SIZE_DEFAULT),
     indices(SKY_RADIANCE_SIZES),
     'radiance_size'
   );
-  return { processMode: PROCESS_MODES[modeIndex]!, radianceSize: SKY_RADIANCE_SIZES[sizeIndex]! };
+  return { processMode: processModeOf(data), radianceSize: SKY_RADIANCE_SIZES[sizeIndex]! };
+}
+
+function processModeOf(data: Record<string, string>): SkyProcessMode {
+  return PROCESS_MODES[enumOr(data.process_mode, 0, indices(PROCESS_MODES), 'process_mode')]!;
 }
 
 function indices(table: readonly unknown[]): number[] {
@@ -49,11 +52,11 @@ function indices(table: readonly unknown[]): number[] {
 
 /** The `Sky` whose properties are `data`, drawing `material`. */
 export function decodeSky(data: Record<string, string>, material: SkyProperties): Sky {
-  return { material, radianceFilter: radianceFilter(decodeSkyProcessing(data).processMode) };
+  return { material, radianceFilter: radianceFilter(processModeOf(data)) };
 }
 
 /**
- * The filter Godot bakes a sky's rough layers with (`sky.cpp:1335-1344`). Automatic picks real-time
+ * The filter Godot bakes a sky's layers with (`sky.cpp:1335-1344`). Automatic picks real-time
  * only for a shader that reads `TIME` or `POSITION` (`sky.cpp:1001-1004`), and no built-in sky
  * material does (`scene/resources/3d/sky_material.cpp`), so only Real-Time takes the fast filter.
  */

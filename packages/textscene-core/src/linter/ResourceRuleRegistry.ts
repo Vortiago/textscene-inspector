@@ -8,7 +8,10 @@
 import type { RuleArm } from './types.js';
 import * as logger from '../logger';
 
-/** One diagnostic a resource rule reports, on the line of the property it names. */
+/**
+ * One diagnostic a resource rule reports, on the line of the property it names, or on the
+ * section's heading where the section omits that property.
+ */
 export interface ResourceFinding {
   readonly arm: RuleArm;
   readonly message: string;

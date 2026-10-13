@@ -21,6 +21,12 @@ resourceRuleRegistry.register({
   meta: { name: 'test-marked', description: '', resourceType: 'TestMarked', emits: [MARKED_ARM] },
   check: (data) => (data.marked ? [{ arm: MARKED_ARM, message: 'marked', property: 'marked' }] : []),
 });
+const ABSENT_ARM: RuleArm = { ...MARKED_ARM, ruleName: 'test-absent' };
+
+resourceRuleRegistry.register({
+  meta: { name: 'test-absent', description: '', resourceType: 'TestAbsent', emits: [ABSENT_ARM] },
+  check: () => [{ arm: ABSENT_ARM, message: 'absent', property: 'absent' }],
+});
 resourceRuleRegistry.register({
   meta: { name: 'test-throws', description: '', resourceType: 'TestThrows', emits: [] },
   check: () => {
@@ -45,6 +51,12 @@ describe('resource rules', () => {
     const [diagnostic] = reported(sceneWith('TestMarked', 'other = 1\nmarked = true'), 'test-marked');
     expect(diagnostic).toBeAtTier('warning');
     expect(diagnostic).toMatchObject({ nodeName: 'Res_1', nodeType: 'TestMarked', location: { line: 5 } });
+  });
+
+  it('reports on the heading when the section omits the property', () => {
+    expect(reported(sceneWith('TestAbsent', ''), 'test-absent')).toMatchObject([
+      { location: { line: 3, column: 1 } },
+    ]);
   });
 
   it('reports on the body of a .tres of that class', () => {

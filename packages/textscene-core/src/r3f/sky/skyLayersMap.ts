@@ -1,7 +1,8 @@
 /**
  * What every lit program reads of the sky (`../godotSkyLighting.ts`): Godot's baked layers in three
- * cubes, each holding a group of layers a mip each, and the sky's share of the ambient. Each scene with a sky shows its own before each of
- * its renders, so a main view and a sub-viewport with its own sky each light by their own.
+ * cubes, each holding a group of layers a mip each, and the sky's share of the ambient. Each scene
+ * with a sky shows its own before each of its renders, so a main view and a sub-viewport with its
+ * own sky each light by their own.
  */
 
 import * as THREE from 'three';

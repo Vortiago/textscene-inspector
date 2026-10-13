@@ -1,7 +1,7 @@
 /**
  * Runs the resource rules over every resource section of a file: each `[sub_resource]`, named by its
  * `id=`, and a `.tres`'s `[resource]` body. Godot loads each section once, so a finding reports once,
- * on the line of the property it names.
+ * on the line of the property it names, or on the section's heading where the section omits it.
  */
 
 import type { BuiltSection, RawScene } from '../parser/types.js';
@@ -50,12 +50,14 @@ function checkSection(
   lines: SourceLines,
   into: Diagnostic[]
 ): void {
+  const heading = headingLocation(lines, section.built);
   try {
     for (const { arm, message, property } of rule.check(section.data)) {
       if (!rule.meta.emits.includes(arm)) {
         throw new Error(`reported '${arm.ruleName}', which its emits does not declare`);
       }
-      into.push(armDiagnostic(arm, section, message, propertyLocation(lines, section.built, property)));
+      const location = propertyLocation(lines, section.built, property) ?? heading;
+      into.push(armDiagnostic(arm, section, message, location));
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
@@ -65,7 +67,7 @@ function checkSection(
         section,
         `Rule '${rule.meta.name}' threw while linting '${section.name}': ${reason}. ` +
           'Its own findings for this resource are missing; every other rule ran.',
-        headingLocation(lines, section.built)
+        heading
       )
     );
   }
