@@ -13,8 +13,8 @@ import {
   type ChunkEdit,
   type TextEdit,
 } from './shaderPatch/chunkPatch.js';
-import { LIGHT_FUNCTION_MARK } from './godotLightFunction.js';
-import { SKY_LIGHTING_MARK } from './godotSkyLighting.js';
+import { LIGHT_FUNCTION_MARK, RE_DIRECT } from './godotLightFunction.js';
+import { SKY_LIGHTING_MARK, THREE_IBL_RADIANCE_FUNCTION } from './godotSkyLighting.js';
 
 type ClearcoatChunk =
   | 'lights_physical_fragment'
@@ -22,10 +22,6 @@ type ClearcoatChunk =
   | 'lights_fragment_maps'
   | 'lights_fragment_end'
   | 'envmap_physical_pars_fragment';
-
-const RE_DIRECT = 'void RE_Direct_Physical( const in IncidentLight directLight';
-const THREE_IBL_RADIANCE_FUNCTION =
-  'vec3 getIBLRadiance( const in vec3 viewDir, const in vec3 normal, const in float roughness ) {';
 
 /**
  * Godot's `Fc` without the `clearcoat` that three's layering multiplies in: Schlick at 4%

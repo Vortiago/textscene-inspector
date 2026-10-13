@@ -76,7 +76,8 @@ export const GEOMETRY_SCENES = [
   // and clearcoat light modes. area-light-normalize draws only matte plates.
   { name: 'area-light-modes', file: 'unit-area-light-modes.tscn' },
   // A clearcoat sphere beside a bare one, under an omni light and a sky. The
-  // coat dims only the sky's light beneath it. No other golden has a clearcoat.
+  // coat dims only the sky's light beneath it. No other golden coats a sphere
+  // under a punctual light or a sky.
   { name: 'material-clearcoat-layering', file: 'unit-material-clearcoat-layering.tscn' },
   // External ArrayMesh .tres: a decoded quad with Godot's packed normals.
   { name: 'arraymesh', file: 'unit-arraymesh.tscn' },

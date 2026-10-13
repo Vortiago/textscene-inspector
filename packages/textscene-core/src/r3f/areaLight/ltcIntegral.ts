@@ -1,8 +1,8 @@
 /**
- * Godot 4.7.2's integral of a rectangle light under a linearly transformed cosine
- * and its solid angle (`area_lights_inc.glsl:6-11,25-94,137-341`), in GLSL for three's lit programs. It reads three's
- * `ltc_1` and `ltc_2` samplers, which `ltcTextures.ts` fills with Godot's tables. It leaves out the
- * texture fetch of an `area_texture`.
+ * Godot 4.7.2's integral of a rectangle light under a linearly transformed cosine, and its solid
+ * angle (`area_lights_inc.glsl:6-11,25-94,137-341`), in GLSL for three's lit programs. It reads
+ * three's `ltc_1` and `ltc_2` samplers, which `ltcTextures.ts` fills with Godot's tables. It leaves
+ * out the texture fetch of an `area_texture`.
  */
 
 /*

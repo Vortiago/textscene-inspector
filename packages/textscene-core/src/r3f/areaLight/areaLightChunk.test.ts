@@ -71,7 +71,7 @@ describe('installGodotAreaLight', () => {
   });
 
   it('skips a fragment at and past the range (edge case)', () => {
-    expect(areaLightBody()).toContain('if ( lightDistance >= falloff.x ) return;');
+    expect(areaLightBody()).toContain('if ( falloff.x > 0.0 && lightDistance >= falloff.x ) return;');
   });
 
   it("reads the specular lobe at Godot's limited roughness", () => {

@@ -2,7 +2,9 @@
 
 /** The body of the first GLSL function whose declaration ends in `name`, between its braces. */
 export function functionBody(source: string, name: string): string {
-  const open = source.indexOf('{', source.indexOf(`${name}(`)) + 1;
+  const declaration = source.indexOf(`${name}(`);
+  if (declaration < 0) throw new Error(`expected a function ${name}, found none`);
+  const open = source.indexOf('{', declaration) + 1;
   let depth = 1;
   for (let i = open; i < source.length; i++) {
     if (source[i] === '{') depth++;
@@ -13,5 +15,7 @@ export function functionBody(source: string, name: string): string {
 
 /** The text of `source` from the line `opening` to the next `#elif`, `#else` or `#endif`. */
 export function preprocessorBranch(source: string, opening: string): string {
-  return source.split(opening)[1]!.split(/#el|#endif/)[0]!;
+  const start = source.indexOf(opening);
+  if (start < 0) throw new Error(`expected the line ${opening}, found none`);
+  return source.slice(start + opening.length).split(/#el|#endif/)[0]!;
 }

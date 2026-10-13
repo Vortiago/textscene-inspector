@@ -18,8 +18,8 @@ const ROUGHNESS_SETUP = 'material.roughness = min( material.roughness, 1.0 );';
 /**
  * The roughness Godot's light functions and sky reflection read: the limiter at its project
  * defaults, with no floor. three's own `material.roughness` floors at 0.0525 and stays for the
- * terms the patches leave to three. Godot snaps a roughness below 1e-8 to 0, where GGX would divide by a collapsed
- * alpha (`scene_forward_clustered.glsl:1667-1671`).
+ * terms the patches leave to three. Godot snaps a roughness below 1e-8 to 0, where GGX would
+ * divide by a collapsed alpha (`scene_forward_clustered.glsl:1667-1671`).
  */
 const GODOT_ROUGHNESS = /* glsl */ `${ROUGHNESS_SETUP}
 vec3 godotDndu = dFdx( normal );
@@ -117,7 +117,8 @@ float godotToonSpecular( const in vec3 lightDir, const in vec3 viewDir, const in
 
 `;
 
-const RE_DIRECT = 'void RE_Direct_Physical( const in IncidentLight directLight';
+/** The signature of three's direct light function, before which a patch declares its helpers. */
+export const RE_DIRECT = 'void RE_Direct_Physical( const in IncidentLight directLight';
 
 /**
  * three's `dotVH` is Godot's L.H, as H bisects L and V. three's sheen energy compensation stays on

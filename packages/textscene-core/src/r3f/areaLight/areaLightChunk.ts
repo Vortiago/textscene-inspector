@@ -53,8 +53,9 @@ void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in
 	vec3 local = vec3( dot( lightToVertex, areaWidth / widthLength ), dot( lightToVertex, areaHeight / heightLength ), dot( lightToVertex, - facing ) );
 	vec3 closest = vec3( clamp( local.x, - halfWidthLength, halfWidthLength ), clamp( local.y, - halfHeightLength, halfHeightLength ), 0.0 );
 	float lightDistance = max( 0.0, length( closest - local ) );
-	// Godot's clusters skip a fragment beyond the range, where the attenuation is zero.
-	if ( lightDistance >= falloff.x ) return;
+	// Godot's clusters skip a fragment beyond the range, where the attenuation is zero. A zero
+	// range is a light without a falloff, which three's attenuation leaves unbounded.
+	if ( falloff.x > 0.0 && lightDistance >= falloff.x ) return;
 	vec3 light = rectAreaLight.color * getDistanceAttenuation( lightDistance, falloff.x, falloff.y );
 	// The integral's solid angle already falls with the square of the distance (:1003).
 	vec3 ltcLight = light * lightDistance * lightDistance;

@@ -1,7 +1,8 @@
 ; A clearcoat sphere beside the same sphere bare, under one OmniLight3D and a sky, for the one
-; variable no other golden moves: how the coat layers over the light beneath it. No other golden
-; draws a clearcoat. Godot 4.6.3 dims only the sky's ambient and reflection under the coat
-; (scene_forward_clustered.glsl:1764-1773), so the coated sphere's lit side matches the bare one.
+; variable no other golden moves: how the coat layers over the light beneath it. area-light-modes
+; coats a sphere only under an AreaLight3D. Godot 4.6.3 dims only the sky's ambient and reflection
+; under the coat (scene_forward_clustered.glsl:1764-1773), so the coated sphere's lit side matches
+; the bare one.
 [gd_scene load_steps=7 format=3]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]

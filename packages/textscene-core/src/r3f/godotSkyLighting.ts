@@ -22,7 +22,8 @@ import { FIRST_BAKED_LAYER } from '../resources/sky/skyLayers.js';
 
 type SkyChunk = 'lights_fragment_maps' | 'envmap_physical_pars_fragment';
 
-const THREE_IBL_RADIANCE_FUNCTION =
+/** The signature of three's reflection, before which a patch declares its helpers. */
+export const THREE_IBL_RADIANCE_FUNCTION =
   'vec3 getIBLRadiance( const in vec3 viewDir, const in vec3 normal, const in float roughness ) {';
 
 const LAST_LAYER = SKY_ROUGHNESS_LAYERS_DEFAULT - 1;
