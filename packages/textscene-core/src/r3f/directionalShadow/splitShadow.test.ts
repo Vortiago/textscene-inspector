@@ -45,6 +45,8 @@ function declaredSplitLight(splitCount: number): THREE.DirectionalLight {
     depthBias: 0,
     normalBias: 2,
     filterRadius: 2,
+    softShadowAngle: 0,
+    drawsSoftShadow: false,
     splitCount,
     splitOffsets: [0.1, 0.2, 0.5],
     blendSplits: false,
@@ -86,6 +88,12 @@ function landsIn(matrix: THREE.Matrix4, point: THREE.Vector3, rect: DirectionalS
 }
 
 const nothing = new THREE.Sphere(new THREE.Vector3(), 1e6);
+
+describe('DirectionalSplitShadow', () => {
+  it('leaves its draw to the shadow pass’s atlas step, which writes the colour (`shadowPass.ts`)', () => {
+    expect(new DirectionalSplitShadow().autoUpdate).toBe(false);
+  });
+});
 
 describe('DirectionalSplitShadow.setSplits', () => {
   it('lays four splits out as quadrants of the atlas', () => {

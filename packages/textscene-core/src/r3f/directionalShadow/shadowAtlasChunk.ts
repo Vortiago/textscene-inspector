@@ -11,7 +11,12 @@ import {
   type Chunks,
 } from '../shaderPatch/chunkPatch.js';
 import { installLitUniform } from '../shaderPatch/litUniform.js';
-import { DIRECTIONAL_SHADOW_ATLAS_UNIFORM, directionalShadowAtlasDepth } from './shadowAtlas.js';
+import {
+  DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM,
+  DIRECTIONAL_SHADOW_ATLAS_UNIFORM,
+  directionalShadowAtlasColour,
+  directionalShadowAtlasDepth,
+} from './shadowAtlas.js';
 
 /** The chunks that declare and sample a sun shadow: the lit materials' and `ShadowMaterial`'s. */
 type AtlasChunkName = 'shadowmap_pars_fragment' | 'lights_fragment_begin' | 'shadowmask_pars_fragment';
@@ -55,7 +60,7 @@ export function shadowAtlasChunks(chunks: ShadowAtlasChunks): ShadowAtlasChunks 
 }
 
 /**
- * Patches three's chunks and gives the atlas uniform to every built-in lit material and to
+ * Patches three's chunks and gives the atlas and its colour to every built-in lit material and to
  * `UniformsLib.lights`, for every program compiled after the call. A three release that rewrites a
  * replaced line keeps its own chunks, and `shadowAtlasChunk.test.ts` fails on that release.
  */
@@ -66,5 +71,7 @@ export function installDirectionalShadowAtlas(): void {
     apply: shadowAtlasChunks,
     missing: 'sun shadow chunks have no per-shadow sampler to replace',
   });
-  if (isPatched) installLitUniform(DIRECTIONAL_SHADOW_ATLAS_UNIFORM, directionalShadowAtlasDepth());
+  if (!isPatched) return;
+  installLitUniform(DIRECTIONAL_SHADOW_ATLAS_UNIFORM, directionalShadowAtlasDepth());
+  installLitUniform(DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM, directionalShadowAtlasColour());
 }

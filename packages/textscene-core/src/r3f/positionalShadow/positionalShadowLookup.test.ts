@@ -7,6 +7,8 @@ import {
   AREA_LIGHT_SHADOWS,
   AREA_LIGHT_SOFT_SHADOW_RADII,
 } from '../areaLight/areaLightShadowUniforms';
+import { LIGHT_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch';
+import { withoutBlock } from '../testing/glslSource';
 
 describe('the positional shadow lookups', () => {
   it('declare the atlas, and leave Godot’s soft shadow filter to its own install', () => {
@@ -33,12 +35,21 @@ describe('the positional shadow lookups', () => {
 
   it('search for blockers in the raw depth the atlas colour holds, under a linear filter', () => {
     expect(ATLAS_SAMPLING).toContain(`uniform sampler2D ${POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM};`);
-    expect(ATLAS_SAMPLING).toContain('texelFetch(');
+    expect(ATLAS_SAMPLING).toContain(`godotRawDepth( ${POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM},`);
     expect(ATLAS_SAMPLING).toContain('if ( blocker < depth ) {');
   });
 
+  it('compile no blocker search without Godot’s light soft shadows, so bind no atlas colour (edge case)', () => {
+    const sources = [ATLAS_SAMPLING, SPOT_LOOKUP, OMNI_LOOKUP, AREA_LOOKUP];
+    const compiled = sources.map((source) => withoutBlock(source, `#ifdef ${LIGHT_SOFT_SHADOWS}`)).join('\n');
+    expect(compiled).not.toContain(POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM);
+    expect(compiled).not.toContain('SoftShadow(');
+    expect(compiled).toContain('godotPcf(');
+    expect(compiled.match(/godotOmniPcf\(/g)).toHaveLength(3);
+  });
+
   it('take the penumbra taps of Soft Low, through the compare', () => {
-    expect(ATLAS_SAMPLING).toContain('const int GODOT_PENUMBRA_SHADOW_SAMPLES = 8;');
+    expect(ATLAS_SAMPLING).toContain('i < GODOT_PENUMBRA_SHADOW_SAMPLES;');
     expect(ATLAS_SAMPLING).toContain(`texture( ${POSITIONAL_SHADOW_ATLAS_UNIFORM}, vec3(`);
   });
 });

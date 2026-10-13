@@ -1,6 +1,6 @@
 /**
  * The light pass's light sizes as the hosts mount it: inside `<TscnSceneContents>`, written for each
- * omni and spot light before every render.
+ * light before every render.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -64,6 +64,22 @@ light_size = 0.25
 
   it('writes zero for a light without light_size (edge case)', async () => {
     const renderer = await renderScene(`[node name="Omni" type="OmniLight3D" parent="."]
+`);
+    expect(sizesAfterRender(renderer, 1)).toEqual([0]);
+  });
+
+  it("writes a shadowed directional light's angular distance as Godot's size", async () => {
+    const renderer = await renderScene(`[node name="Sun" type="DirectionalLight3D" parent="."]
+shadow_enabled = true
+light_angular_distance = 5.0
+`);
+    const [size] = sizesAfterRender(renderer, 1);
+    expect(size).toBeCloseTo(1 - Math.cos((5 * Math.PI) / 180), 7);
+  });
+
+  it('writes zero for a directional light whose shadow is off, as no soft shadow is drawn (edge case)', async () => {
+    const renderer = await renderScene(`[node name="Sun" type="DirectionalLight3D" parent="."]
+light_angular_distance = 5.0
 `);
     expect(sizesAfterRender(renderer, 1)).toEqual([0]);
   });

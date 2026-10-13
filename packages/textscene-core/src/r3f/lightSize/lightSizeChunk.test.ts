@@ -48,11 +48,15 @@ describe('installGodotLightSize', () => {
     expect(pointLoop.indexOf('godotSizeOffset =')).toBeLessThan(pointLoop.indexOf('RE_Direct('));
   });
 
-  it('gives a directional or sun light no offset, after the loops that set one (edge case)', () => {
+  it("sets each directional and sun loop's offset from its slot, as Godot passes `size` as is", () => {
     const loops = patchedLoops();
-    for (const pick of ['directionalLight = directionalLights[ i ];', 'sunLight = sunLights[ i ];']) {
-      expect(loops.split(pick)[1]!.trimStart().startsWith('godotSizeOffset = 0.0;')).toBe(true);
-    }
+    expect(loops).toContain(`godotSizeOffset = ${LIGHT_SIZES}[ UNROLLED_LOOP_INDEX ];`);
+    expect(loops).toContain(`godotSizeOffset = ${LIGHT_SIZES}[ NUM_DIR_LIGHTS + UNROLLED_LOOP_INDEX ];`);
+  });
+
+  it('sets a sun loop’s offset before the loop shades the light (edge case)', () => {
+    const sunLoop = patchedLoops().split('sunLight = sunLights[ i ];')[1]!;
+    expect(sunLoop.indexOf('godotSizeOffset =')).toBeLessThan(sunLoop.indexOf('RE_Direct('));
   });
 
   it('leaves both chunks alone when the loops lack a replaced line, and warns (error case)', () => {

@@ -20,8 +20,15 @@ export interface DirectionalShadowDeclaration {
   depthBias: number;
   /** `shadow_normal_bias`, in shadow-map texels. The fitter turns it into world units. */
   normalBias: number;
-  /** The PCF kernel's radius in atlas texels: Godot's `soft_shadow_scale`. */
+  /**
+   * Godot's `soft_shadow_scale`: the PCF kernel's radius in atlas texels, or the blocker search's
+   * spread for a light with an angular distance.
+   */
   filterRadius: number;
+  /** `softshadow_angle`: the tangent of `light_angular_distance`, which widens each split's box. */
+  softShadowAngle: number;
+  /** Whether the light turns on Godot's directional soft shadows for the render. */
+  drawsSoftShadow: boolean;
   /**
    * How many splits `directional_shadow_mode` draws: 1, 2 or 4. Each split draws one fitted box
    * into its part of the light's share of the atlas. One split is the whole slice.
@@ -47,6 +54,8 @@ const declaration = userDataDeclaration<DirectionalShadowDeclaration>(
     typeof candidate.depthBias === 'number' &&
     typeof candidate.normalBias === 'number' &&
     typeof candidate.filterRadius === 'number' &&
+    typeof candidate.softShadowAngle === 'number' &&
+    typeof candidate.drawsSoftShadow === 'boolean' &&
     typeof candidate.splitCount === 'number' &&
     Array.isArray(candidate.splitOffsets) &&
     typeof candidate.blendSplits === 'boolean' &&

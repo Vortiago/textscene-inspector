@@ -15,6 +15,7 @@ import { holdPositionalShadowAtlas } from './positionalShadow/shadowAtlasTarget'
 import { AtlasAreaShadow, type AreaShadowLight } from './positionalShadow/atlasAreaShadow';
 import { AtlasDepthMaterial, ParaboloidDepthMaterial } from './positionalShadow/atlasDepthMaterials';
 import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow';
+import { SplitSunLight } from './directionalShadow/splitSun';
 
 holdPositionalShadowAtlas({}, 4096);
 
@@ -121,6 +122,28 @@ describe('installShadowPass', () => {
     const [held, unheld, area] = [spotLight(), spotLight(false), areaLight()];
     runPass(renderer, [held, unheld, area]);
     expect(threePass.mock.calls.map(([lights]) => lights)).toEqual([[held, unheld, area], [held], [area]]);
+  });
+
+  it('draws each split sun with the spot lights in one pass again, before the area lights', () => {
+    const { renderer, threePass } = fakeRenderer();
+    installShadowPass(renderer);
+    const [spot, sun, area] = [spotLight(), new SplitSunLight(), areaLight()];
+    runPass(renderer, [sun, spot, area]);
+    expect(threePass.mock.calls.map(([lights]) => lights)).toEqual([[sun, spot, area], [sun, spot], [area]]);
+    expect(sun.shadow.needsUpdate).toBe(true);
+  });
+
+  it('draws a split sun’s casters with the atlas’s depth, which writes the colour (edge case)', () => {
+    const { renderer, threePass } = fakeRenderer();
+    const scene = new THREE.Scene();
+    const caster = new THREE.Mesh();
+    caster.castShadow = true;
+    scene.add(caster);
+    const worn: unknown[] = [];
+    threePass.mockImplementation(() => worn.push(caster.customDepthMaterial));
+    installShadowPass(renderer);
+    renderer.shadowMap.render([new SplitSunLight()], scene, new THREE.PerspectiveCamera());
+    expect(worn[1]).toBeInstanceOf(AtlasDepthMaterial);
   });
 
   it('draws a spot light’s casters with the atlas’s depth, which writes the colour (edge case)', () => {

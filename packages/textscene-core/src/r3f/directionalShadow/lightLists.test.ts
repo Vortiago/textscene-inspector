@@ -10,6 +10,8 @@ const DECLARATION: DirectionalShadowDeclaration = {
   depthBias: -0.002,
   normalBias: 2,
   filterRadius: 2,
+  softShadowAngle: 0,
+  drawsSoftShadow: false,
   splitCount: 1,
   splitOffsets: [0.1, 0.2, 0.5],
   blendSplits: false,

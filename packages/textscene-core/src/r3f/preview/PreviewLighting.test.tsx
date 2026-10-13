@@ -134,6 +134,6 @@ describe('preview sun shadow', () => {
 
   it('keeps the class default depth bias an authored sun gets', async () => {
     // The editor never sets `PARAM_SHADOW_BIAS` or `PARAM_SHADOW_BLUR` on its sun.
-    expect((await previewSunDeclaration())?.depthBias).toBe(directionalShadowBias(undefined, undefined));
+    expect((await previewSunDeclaration())?.depthBias).toBe(directionalShadowBias({}));
   });
 });

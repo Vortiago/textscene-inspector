@@ -16,7 +16,12 @@ import {
   sharesDirectionalShadowAtlas,
 } from '../../../../godot/directionalShadow';
 import { DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT } from '../../../../godot/directionalLightSkyMode';
-import { softShadowScale } from '../../../../godot/softShadowScale';
+import { SHADOW_BLUR_DEFAULT, softShadowScale } from '../../../../godot/softShadowScale';
+import {
+  LIGHT_ANGULAR_DISTANCE_DEFAULT,
+  drawsDirectionalSoftShadow,
+  softShadowAngle,
+} from '../../../../godot/directionalSoftShadow';
 import type { DirectionalShadowDeclaration } from '../../../../r3f/directionalShadow/declaration';
 import { directionalShadowBias } from '../shared/shadowBias';
 import type { DirectionalLight3DProperties } from './types';
@@ -28,6 +33,7 @@ type DirectionalShadowProperties = Pick<
   | 'shadow_bias'
   | 'shadow_blur'
   | 'shadow_normal_bias'
+  | 'light_angular_distance'
   | 'sky_mode'
   | 'directional_shadow_mode'
   | 'directional_shadow_split_1'
@@ -42,13 +48,20 @@ type DirectionalShadowProperties = Pick<
 export function directionalShadowDeclaration(
   properties: DirectionalShadowProperties
 ): DirectionalShadowDeclaration {
+  const angularDistance = properties.light_angular_distance ?? LIGHT_ANGULAR_DISTANCE_DEFAULT;
   return {
     maxDistance: properties.directional_shadow_max_distance ?? DIRECTIONAL_SHADOW_MAX_DISTANCE_DEFAULT,
     pancakeSize: properties.directional_shadow_pancake_size ?? DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
     fadeStart: properties.directional_shadow_fade_start ?? DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
-    depthBias: directionalShadowBias(properties.shadow_bias, properties.shadow_blur),
+    depthBias: directionalShadowBias(properties),
     normalBias: properties.shadow_normal_bias ?? DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
-    filterRadius: softShadowScale(properties.shadow_blur),
+    filterRadius: softShadowScale(properties.shadow_blur, angularDistance),
+    softShadowAngle: softShadowAngle(angularDistance),
+    drawsSoftShadow: drawsDirectionalSoftShadow({
+      angularDistance,
+      shadowEnabled: properties.shadow_enabled,
+      shadowBlur: properties.shadow_blur ?? SHADOW_BLUR_DEFAULT,
+    }),
     splitCount: directionalShadowSplitCount(
       properties.directional_shadow_mode ?? DIRECTIONAL_SHADOW_MODE_DEFAULT
     ),

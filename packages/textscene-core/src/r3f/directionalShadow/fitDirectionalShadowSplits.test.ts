@@ -31,6 +31,8 @@ function declaring(overrides: Partial<DirectionalShadowDeclaration> = {}): Direc
     depthBias: -0.0003,
     normalBias: 2,
     filterRadius: 2,
+    softShadowAngle: 0,
+    drawsSoftShadow: false,
     splitCount: 4,
     splitOffsets: [0.1, 0.2, 0.5],
     blendSplits: false,
@@ -226,6 +228,45 @@ describe('fitDirectionalShadowSplits', () => {
     // Godot blends its last split against a slot it never set up. Here it does not blend.
     expect(slots[1]![3]).toBe(NO_BLEND);
     expect(slots[2]![3]).toBe(NO_BLEND);
+  });
+
+  it('writes each split’s range start and its box’s size in the atlas into its soft slot', () => {
+    // `light_storage.cpp:727-731`: a quarter of the atlas over the box's width and height.
+    const { boxes, softSlots } = fit(fitInput());
+    boxes.forEach((box, split) => {
+      const [rangeBegin, uvScaleX, uvScaleY] = softSlots[split]!;
+      // The bias moves the receiver towards the light by its world length.
+      expect(rangeBegin).toBeCloseTo(box.rangeBegin + box.bias * (box.far - box.near), 12);
+      expect(uvScaleX).toBeCloseTo(0.5 / boxWidth(box), 12);
+      expect(uvScaleY).toBeCloseTo(0.5 / (box.top - box.bottom), 12);
+    });
+  });
+
+  it('moves each range start in proportion to the declared bias', () => {
+    const shiftFor = (depthBias: number) => {
+      const { boxes, softSlots } = fit(fitInput(declaring({ depthBias })));
+      return softSlots[0]![0] - boxes[0]!.rangeBegin;
+    };
+    expect(shiftFor(-0.006)).toBeLessThan(0);
+    expect(shiftFor(-0.006)).toBeCloseTo(2 * shiftFor(-0.003), 9);
+  });
+
+  it('keeps the range start of a light with no bias (edge case)', () => {
+    const { boxes, softSlots } = fit(fitInput(declaring({ depthBias: 0 })));
+    expect(softSlots[0]![0]).toBe(boxes[0]!.rangeBegin);
+  });
+
+  it('scales each soft slot by its light’s share of the atlas', () => {
+    // Two splits of one of two lights: half the width and half the height.
+    const { boxes, softSlots } = fit(fitInput(declaring({ splitCount: 2 }), SECOND_OF_TWO));
+    expect(softSlots[0]![1]).toBeCloseTo(0.5 / boxWidth(boxes[0]!), 12);
+    expect(softSlots[0]![2]).toBeCloseTo(0.5 / (boxes[0]!.top - boxes[0]!.bottom), 12);
+  });
+
+  it('repeats the last split’s soft slot past it (edge case)', () => {
+    const { softSlots } = fit(fitInput(declaring({ splitCount: 2 })));
+    expect(softSlots[2]).toEqual(softSlots[1]);
+    expect(softSlots[3]).toEqual(softSlots[1]);
   });
 
   it('answers null when a split gets no finite box (error case)', () => {

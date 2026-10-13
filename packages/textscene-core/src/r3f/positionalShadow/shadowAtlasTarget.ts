@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import { POSITIONAL_SHADOW_ATLAS_DEPTH_BITS } from '../../godot/positionalShadowAtlas.js';
+import { AtlasColourTexture } from '../shadowFilter/atlasColourTexture.js';
 import { AtlasDepthTexture, atlasTargetOf } from '../shadowFilter/atlasDepthTexture.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 
@@ -20,38 +21,13 @@ const DEPTH_TYPE =
   POSITIONAL_SHADOW_ATLAS_DEPTH_BITS === 16 ? THREE.UnsignedShortType : THREE.UnsignedIntType;
 
 /**
- * The atlas's colour. An area light's depth material writes its 16-bit depth here as two bytes
- * (`paraboloidDepthMaterial.ts`), for the blocker search, which Godot reads from the depth with a
- * second, uncompared sampler (4.7.2 `scene_forward_lights_inc.glsl:1035-1051`). A lit draw cannot
- * read one depth texture both ways. A render target's texture would reach each material's clone as
- * null (three r186 `UniformsUtils.js:32-35`), so a clone of this one is itself.
- */
-class AtlasColourTexture extends THREE.Texture {
-  constructor(size: number) {
-    super();
-    this.name = 'PositionalShadowAtlasColour';
-    this.image = { width: size, height: size, depth: 1 };
-    this.format = THREE.RGFormat;
-    this.type = THREE.UnsignedByteType;
-    this.minFilter = THREE.NearestFilter;
-    this.magFilter = THREE.NearestFilter;
-    this.generateMipmaps = false;
-    this.flipY = false;
-  }
-
-  override clone(): this {
-    return this;
-  }
-}
-
-/**
  * A depth texture that a linear filter compares, as Godot's `shadow_sampler` does
  * (`scene_shader_forward_clustered.cpp:995-1001`). Godot compares `GREATER` on its reversed depth, so
  * a lookup reads as lit only where the receiver is strictly nearer than the caster: `Less` here.
  */
 function createAtlas(size: number): THREE.WebGLRenderTarget {
   const atlas = new THREE.WebGLRenderTarget(size, size, { depthBuffer: true });
-  atlas.texture = new AtlasColourTexture(size);
+  atlas.texture = new AtlasColourTexture('PositionalShadowAtlasColour', size);
   atlas.depthTexture = new AtlasDepthTexture({
     name: 'PositionalShadowAtlas',
     size,

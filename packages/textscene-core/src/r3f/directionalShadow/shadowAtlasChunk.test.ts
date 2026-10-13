@@ -10,7 +10,12 @@ import {
   shadowAtlasChunks,
   type ShadowAtlasChunks,
 } from './shadowAtlasChunk';
-import { DIRECTIONAL_SHADOW_ATLAS_UNIFORM, directionalShadowAtlasDepth } from './shadowAtlas';
+import {
+  DIRECTIONAL_SHADOW_ATLAS_UNIFORM,
+  DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM,
+  directionalShadowAtlasColour,
+  directionalShadowAtlasDepth,
+} from './shadowAtlas';
 import { godotSplitShadowChunk } from './splitShadowChunk';
 import { shadowFadeChunks, type ShadowFadeChunks } from './shadowFade';
 import { warningsOf } from '../testing/logWarnings';
@@ -89,6 +94,15 @@ describe('installDirectionalShadowAtlas', () => {
     for (const name of LIT_SHADERS) {
       expect(THREE.ShaderLib[name]!.uniforms[DIRECTIONAL_SHADOW_ATLAS_UNIFORM]!.value).toBe(
         directionalShadowAtlasDepth()
+      );
+    }
+  });
+
+  it('gives every lit built-in material the atlas colour, for the blocker search', () => {
+    installDirectionalShadowAtlas();
+    for (const name of LIT_SHADERS) {
+      expect(THREE.ShaderLib[name]!.uniforms[DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM]!.value).toBe(
+        directionalShadowAtlasColour()
       );
     }
   });

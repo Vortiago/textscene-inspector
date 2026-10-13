@@ -39,6 +39,8 @@ function declaring(maxDistance: number, pancakeSize = 20): DirectionalShadowFitI
     depthBias: 0,
     normalBias: 2,
     filterRadius: 2,
+    softShadowAngle: 0,
+    drawsSoftShadow: false,
     ...ONE_SPLIT,
   };
 }
@@ -67,6 +69,8 @@ function fitInput(overrides: Partial<DirectionalShadowFitInput> = {}): Direction
       depthBias: -0.0003,
       normalBias: 2,
       filterRadius: 2,
+      softShadowAngle: 0,
+      drawsSoftShadow: false,
       ...ONE_SPLIT,
     },
     shadowMapSize: MAP_SIZE,
@@ -314,5 +318,48 @@ describe('isViewingCamera', () => {
 
   it('refuses a bare camera, which has no depth range (error case)', () => {
     expect(isViewingCamera(new THREE.Camera())).toBe(false);
+  });
+});
+
+/** The padded radius of the sphere round the whole view slice, as Godot fits it. */
+function sliceSphere(input: DirectionalShadowFitInput): { centre: THREE.Vector3; radius: number } {
+  const slice = viewSlice(input);
+  const corners = cameraSliceCorners(input.camera, slice.near, slice.far);
+  const centre = corners.reduce((sum, corner) => sum.add(corner), new THREE.Vector3()).divideScalar(8);
+  const radius =
+    Math.max(...corners.map((corner) => corner.distanceTo(centre))) * (MAP_SIZE / (MAP_SIZE - 2));
+  return { centre, radius };
+}
+
+describe('a light with an angular distance', () => {
+  it('widens each side of the box by the angle over the depth range (renderer_scene_cull.cpp:2286-2299)', () => {
+    const input = fitInput();
+    const angle = 0.05;
+    const box = fit({ declaration: { ...input.declaration, softShadowAngle: angle } });
+    const { radius } = sliceSphere(input);
+    const halfWidth = radius + angle * (2 * radius + input.declaration.pancakeSize);
+    const step = (halfWidth * 4) / MAP_SIZE;
+    expect(Math.abs(box.right - box.left - 2 * halfWidth)).toBeLessThanOrEqual(step);
+  });
+
+  it('keeps the box of a light without one (edge case)', () => {
+    const input = fitInput();
+    expect(fit({ declaration: { ...input.declaration, softShadowAngle: 0 } })).toEqual(fit());
+  });
+
+  it('keeps the texel size of the normal bias, which the expansion leaves out (error case)', () => {
+    const input = fitInput();
+    expect(fit({ declaration: { ...input.declaration, softShadowAngle: 0.05 } }).normalBias).toBe(
+      fit().normalBias
+    );
+  });
+});
+
+describe('the range start', () => {
+  it('is the light side of the split sphere, along the light, plus the pancake (renderer_scene_cull.cpp:2327)', () => {
+    const input = fitInput();
+    const { centre, radius } = sliceSphere(input);
+    const towardsLight = SUN_DIRECTION.clone().negate();
+    expect(fit().rangeBegin).toBeCloseTo(towardsLight.dot(centre) + radius + 20, 6);
   });
 });

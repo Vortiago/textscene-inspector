@@ -1,8 +1,9 @@
 /**
- * Each omni and spot light's size in three's light loops: the loop sets `godotSizeOffset` from the
- * light's slot in `godotLightSizes` and its distance to the fragment before it shades the light, and
- * the light function adds it to N.L, N.H and L.H (`scene_forward_lights_inc.glsl:133`, `:171-176`,
- * `:224`). A directional or sun light takes none.
+ * Each light's size in three's light loops: the loop sets `godotSizeOffset` from the light's slot in
+ * `godotLightSizes` before it shades the light, and the light function adds it to N.L, N.H and L.H
+ * (`scene_forward_lights_inc.glsl:133`, `:171-176`, `:224`). An omni or spot light's offset grows as
+ * the fragment nears it. A directional or sun light's slot holds its offset as is
+ * (`scene_forward_clustered.glsl:2617`).
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
@@ -42,8 +43,11 @@ const SIZED_LOOPS = [
   },
 ];
 
-/** three's loops run the directional and sun lights after the point and spot lights. */
-const UNSIZED_LOOPS = ['directionalLight = directionalLights[ i ];', 'sunLight = sunLights[ i ];'];
+/** The line that picks each directional loop's light, and the offset of that kind's slots. */
+const DIRECTIONAL_LOOPS = [
+  { three: 'directionalLight = directionalLights[ i ];', offset: '' },
+  { three: 'sunLight = sunLights[ i ];', offset: 'NUM_DIR_LIGHTS + ' },
+];
 
 const LIGHT_SIZE_EDITS: readonly ChunkEdit<LightSizeChunk>[] = [
   {
@@ -57,11 +61,11 @@ const LIGHT_SIZE_EDITS: readonly ChunkEdit<LightSizeChunk>[] = [
     godot: `${three}
 		godotSizeOffset = godotSizeOffsetAt( ${LIGHT_SIZES}[ ${offset} + UNROLLED_LOOP_INDEX ], length( ${light}.position - geometryPosition ) );`,
   })),
-  ...UNSIZED_LOOPS.map((three) => ({
+  ...DIRECTIONAL_LOOPS.map(({ three, offset }) => ({
     chunk: 'lights_fragment_begin' as const,
     three,
     godot: `${three}
-		godotSizeOffset = 0.0;`,
+		godotSizeOffset = ${LIGHT_SIZES}[ ${offset}UNROLLED_LOOP_INDEX ];`,
   })),
 ];
 

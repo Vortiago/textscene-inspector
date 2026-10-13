@@ -24,9 +24,11 @@ describe('directionalShadowDeclaration', () => {
       maxDistance: 80,
       pancakeSize: 5,
       fadeStart: 0.5,
-      depthBias: directionalShadowBias(0.5, 2),
+      depthBias: directionalShadowBias({ shadow_bias: 0.5, shadow_blur: 2 }),
       normalBias: 1.5,
       filterRadius: 4,
+      softShadowAngle: 0,
+      drawsSoftShadow: false,
       splitCount: 2,
       splitOffsets: [0.3, 0.4, 0.9],
       blendSplits: true,
@@ -40,9 +42,11 @@ describe('directionalShadowDeclaration', () => {
       maxDistance: 100,
       pancakeSize: 20,
       fadeStart: 0.8,
-      depthBias: directionalShadowBias(undefined, undefined),
+      depthBias: directionalShadowBias({}),
       normalBias: 2,
       filterRadius: 2,
+      softShadowAngle: 0,
+      drawsSoftShadow: false,
       splitCount: 4,
       splitOffsets: [0.1, 0.2, 0.5],
       blendSplits: false,
@@ -53,6 +57,28 @@ describe('directionalShadowDeclaration', () => {
   it('declares a kernel of zero radius for a light with no blur (edge case)', () => {
     // `light_storage.cpp:697-703`: 0 * 2. Every PCF tap then reads the centre texel.
     expect(directionalShadowDeclaration({ shadow_enabled: true, shadow_blur: 0 }).filterRadius).toBe(0);
+  });
+
+  it('declares the blocker search of a light with an angular distance', () => {
+    // `light_storage.cpp:676-703`: tan(45°) = 1, and the blur alone spreads the search.
+    const declaration = directionalShadowDeclaration({
+      shadow_enabled: true,
+      shadow_blur: 1.5,
+      light_angular_distance: 45,
+    });
+    expect(declaration.softShadowAngle).toBeCloseTo(1, 12);
+    expect(declaration.filterRadius).toBe(1.5);
+    expect(declaration.drawsSoftShadow).toBe(true);
+  });
+
+  it('declares no blocker search for an angular distance without a blur (edge case)', () => {
+    const declaration = directionalShadowDeclaration({
+      shadow_enabled: true,
+      shadow_blur: 0,
+      light_angular_distance: 2,
+    });
+    expect(declaration.drawsSoftShadow).toBe(false);
+    expect(declaration.softShadowAngle).toBeGreaterThan(0);
   });
 
   it('declares no share of the atlas for a light that lights only the sky (edge case)', () => {

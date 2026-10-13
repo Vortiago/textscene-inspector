@@ -7,6 +7,7 @@ import {
   writeLightSizeUniforms,
 } from './lightSize';
 import { sceneLights } from '../directionalShadow/lightLists';
+import { attachSplitSun } from '../directionalShadow/splitSun';
 import { litUniformArray } from '../testing/litUniformArray';
 
 function declared<Light extends THREE.Light>(light: Light, size: number): Light {
@@ -15,8 +16,8 @@ function declared<Light extends THREE.Light>(light: Light, size: number): Light 
 }
 
 /** The first `count` sizes the lit materials read after a render of `scene`. */
-function sizesAfterRender(scene: THREE.Scene, count: number): number[] {
-  writeLightSizeUniforms(sceneLights(scene), new THREE.PerspectiveCamera());
+function sizesAfterRender(scene: THREE.Scene, count: number, drawsDirectionalSoftShadows = false): number[] {
+  writeLightSizeUniforms(sceneLights(scene), new THREE.PerspectiveCamera(), drawsDirectionalSoftShadows);
   installLightSizeUniforms();
   return [...litUniformArray(LIGHT_SIZES).subarray(0, count)];
 }
@@ -28,9 +29,23 @@ describe('writeLightSizeUniforms', () => {
     expect(sizesAfterRender(scene, 2)).toEqual([0.5, 0.25]);
   });
 
-  it('gives a directional light no size, as its angular size is not drawn (edge case)', () => {
+  it("writes a directional light's size while Godot's directional soft shadows are on", () => {
     const scene = new THREE.Scene();
-    scene.add(declared(new THREE.DirectionalLight(), 2), declared(new THREE.PointLight(), 0.5));
+    scene.add(declared(new THREE.DirectionalLight(), 0.02), declared(new THREE.PointLight(), 0.5));
+    expect(sizesAfterRender(scene, 2, true)).toEqual([Math.fround(0.02), 0.5]);
+  });
+
+  it("writes a split sun's size from the light it shades for", () => {
+    const scene = new THREE.Scene();
+    const light = declared(new THREE.DirectionalLight(), 0.02);
+    attachSplitSun(light);
+    scene.add(light);
+    expect(sizesAfterRender(scene, 1, true)).toEqual([Math.fround(0.02)]);
+  });
+
+  it("gives a directional light no size while Godot's directional soft shadows are off (edge case)", () => {
+    const scene = new THREE.Scene();
+    scene.add(declared(new THREE.DirectionalLight(), 0.02), declared(new THREE.PointLight(), 0.5));
     expect(sizesAfterRender(scene, 2)).toEqual([0, 0.5]);
   });
 

@@ -6,8 +6,6 @@
  * that searches for blockers (`softShadowRadius.ts`).
  */
 
-import { SOFT_LOW_PENUMBRA_SAMPLES, vogelDisk } from '../../godot/softShadowKernel.js';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
 import {
   AREA_LIGHT_SHADOW_MATRICES,
   AREA_LIGHT_SHADOW_RECTS,
@@ -18,13 +16,10 @@ import {
   POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM,
   POSITIONAL_SHADOW_ATLAS_UNIFORM,
 } from './shadowAtlasTarget.js';
+import { LIGHT_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch.js';
 
 const ATLAS = POSITIONAL_SHADOW_ATLAS_UNIFORM;
 const ATLAS_COLOUR = POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM;
-
-const PENUMBRA_KERNEL = vogelDisk(SOFT_LOW_PENUMBRA_SAMPLES)
-  .map(([x, y]) => `vec2( ${glslFloat(x)}, ${glslFloat(y)} )`)
-  .join(', ');
 
 /**
  * The atlas, its texel and `sample_omni_pcf_shadow` (`:337-379`), shared by every lookup. Each calls
@@ -32,16 +27,16 @@ const PENUMBRA_KERNEL = vogelDisk(SOFT_LOW_PENUMBRA_SAMPLES)
  * (`../shadowFilter/softShadowFilter.ts`). A tap that leaves the unit disc reads the other
  * paraboloid, `flipOffset` away, and an area light's one paraboloid passes no offset.
  *
- * The blocker search of an omni or area light reads the depth uncompared, which the atlas's colour
- * holds as two bytes, and filters four texels as Godot's linear sampler does (`:498-551`). The depth
- * runs from the light to the far plane, so a blocker is a smaller depth, where Godot's reversed depth
- * is a larger one.
+ * The blocker search of an omni or area light reads the depth uncompared from the atlas's colour
+ * (`godotRawDepth`, `:498-551`). The depth runs from the light to the far plane, so a blocker is a
+ * smaller depth, where Godot's reversed depth is a larger one. Every search compiles only under
+ * Godot's light soft shadows (`../shadowFilter/softShadowSearch.ts`).
  */
 export const ATLAS_SAMPLING = `
 		uniform sampler2DShadow ${ATLAS};
+		#ifdef ${LIGHT_SOFT_SHADOWS}
 		uniform sampler2D ${ATLAS_COLOUR};
-		const int GODOT_PENUMBRA_SHADOW_SAMPLES = ${SOFT_LOW_PENUMBRA_SAMPLES};
-		const vec2 GODOT_PENUMBRA_SHADOW_KERNEL[ ${SOFT_LOW_PENUMBRA_SAMPLES} ] = vec2[]( ${PENUMBRA_KERNEL} );
+		#endif
 		vec2 godotAtlasTexel() {
 			return 1.0 / vec2( textureSize( ${ATLAS}, 0 ) );
 		}
@@ -60,20 +55,7 @@ export const ATLAS_SAMPLING = `
 			}
 			return shadow * ( 1.0 / float( GODOT_SOFT_SHADOW_SAMPLES ) );
 		}
-		float godotAtlasRawDepthAt( ivec2 texel, ivec2 last ) {
-			vec2 bytes = floor( texelFetch( ${ATLAS_COLOUR}, clamp( texel, ivec2( 0 ), last ), 0 ).rg * 255.0 + 0.5 );
-			return dot( bytes, vec2( 256.0, 1.0 ) ) / 65535.0;
-		}
-		float godotAtlasRawDepth( vec2 uv ) {
-			ivec2 size = textureSize( ${ATLAS_COLOUR}, 0 );
-			ivec2 last = size - 1;
-			vec2 position = uv * vec2( size ) - 0.5;
-			ivec2 corner = ivec2( floor( position ) );
-			vec2 weight = fract( position );
-			float bottom = mix( godotAtlasRawDepthAt( corner, last ), godotAtlasRawDepthAt( corner + ivec2( 1, 0 ), last ), weight.x );
-			float top = mix( godotAtlasRawDepthAt( corner + ivec2( 0, 1 ), last ), godotAtlasRawDepthAt( corner + ivec2( 1, 1 ), last ), weight.x );
-			return mix( bottom, top, weight.y );
-		}
+		#ifdef ${LIGHT_SOFT_SHADOWS}
 		vec2 godotParaboloidUv( vec3 direction, vec4 uvRect, vec2 flipOffset ) {
 			if ( direction.z >= 0.0 ) uvRect.xy += flipOffset;
 			direction.z = 1.0 + abs( direction.z );
@@ -92,7 +74,7 @@ export const ATLAS_SAMPLING = `
 			for ( int i = 0; i < GODOT_PENUMBRA_SHADOW_SAMPLES; i ++ ) {
 				vec2 disk = rotation * GODOT_PENUMBRA_SHADOW_KERNEL[ i ];
 				vec3 tap = normalize( localVert + tangent * disk.x + bitangent * disk.y );
-				float blocker = godotAtlasRawDepth( godotParaboloidUv( tap, uvRect, flipOffset ) );
+				float blocker = godotRawDepth( ${ATLAS_COLOUR}, godotParaboloidUv( tap, uvRect, flipOffset ) );
 				if ( blocker < depth ) {
 					blockerSum += blocker;
 					blockerCount += 1.0;
@@ -112,6 +94,7 @@ export const ATLAS_SAMPLING = `
 			}
 			return shadow / float( GODOT_PENUMBRA_SHADOW_SAMPLES );
 		}
+		#endif
 `;
 
 /**
@@ -140,6 +123,7 @@ export const SPOT_LOOKUP = `
 			vec4 coord = shadowCoord + lightMatrix * vec4( worldNormal * lightLength * normalBias * slope, 0.0 );
 			return godotSpotDepthBias( coord, depthBias );
 		}
+		#ifdef ${LIGHT_SOFT_SHADOWS}
 		vec4 godotSpotSlotRect( mat4 lightMatrix, vec3 viewDirection, vec2 slotTexels ) {
 			vec4 axis = lightMatrix * vec4( - viewDirection * mat3( viewMatrix ), 0.0 );
 			vec2 size = slotTexels * godotAtlasTexel();
@@ -156,7 +140,7 @@ export const SPOT_LOOKUP = `
 			float blockerCount = 0.0;
 			for ( int i = 0; i < GODOT_PENUMBRA_SHADOW_SAMPLES; i ++ ) {
 				vec2 offset = ( rotation * GODOT_PENUMBRA_SHADOW_KERNEL[ i ] ) * uvSize;
-				float blocker = godotAtlasRawDepth( clamp( coord.xy + offset, slotRect.xy, slotRect.xy + slotRect.zw ) );
+				float blocker = godotRawDepth( ${ATLAS_COLOUR}, clamp( coord.xy + offset, slotRect.xy, slotRect.xy + slotRect.zw ) );
 				if ( blocker < coord.z ) {
 					blockerSum += blocker;
 					blockerCount += 1.0;
@@ -172,12 +156,16 @@ export const SPOT_LOOKUP = `
 			}
 			return lit / float( GODOT_PENUMBRA_SHADOW_SAMPLES );
 		}
+		#endif
 		float godotSpotShadow( vec4 shadowCoord, float lightDepth, SpotLight light, mat4 lightMatrix, SpotLightShadow shadow ) {
 			vec3 coord = shadowCoord.xyz / shadowCoord.w;
 			float lit;
+			#ifdef ${LIGHT_SOFT_SHADOWS}
 			if ( shadow.shadowRadius < 0.0 ) {
 				lit = godotSpotSoftShadow( coord, lightDepth, light, lightMatrix, shadow );
-			} else {
+			} else
+			#endif
+			{
 				lit = godotPcf( ${ATLAS}, shadow.shadowRadius * godotAtlasTexel(), coord );
 			}
 			return mix( 1.0, lit, shadow.shadowIntensity );
@@ -206,9 +194,12 @@ export const OMNI_LOOKUP = `
 			float depth = shadowLength / pointShadow.shadowCameraFar;
 			float referenceOffset = pointShadow.shadowBias / pointShadow.shadowCameraFar;
 			float shadow;
+			#ifdef ${LIGHT_SOFT_SHADOWS}
 			if ( pointShadow.shadowRadius < 0.0 ) {
 				shadow = godotParaboloidSoftShadow( localVert, normalBias, uvRect, flipOffset, depth, referenceOffset, - pointShadow.shadowRadius );
-			} else {
+			} else
+			#endif
+			{
 				vec3 shadowSample = normalize( shadowDir + normalBias );
 				if ( shadowSample.z >= 0.0 ) {
 					uvRect.xy += flipOffset;
@@ -250,9 +241,12 @@ export const AREA_LOOKUP = `
 			vec3 normalBias = localNormal * terms.y * ( 1.0 - abs( dot( localNormal, shadowDir ) ) );
 			float radius = ${AREA_LIGHT_SOFT_SHADOW_RADII}[ index ];
 			float shadow;
+			#ifdef ${LIGHT_SOFT_SHADOWS}
 			if ( radius < 0.0 ) {
 				shadow = godotParaboloidSoftShadow( localVert, normalBias, uvRect, vec2( 0.0 ), shadowLength * terms.w, terms.z * terms.w, - radius );
-			} else {
+			} else
+			#endif
+			{
 				vec3 shadowSample = normalize( shadowDir + normalBias );
 				shadowSample.z = 1.0 + abs( shadowSample.z );
 				float depth = ( shadowLength - terms.z ) * terms.w;

@@ -7,22 +7,27 @@ describe('directionalShadowBias', () => {
     // `renderer_scene_cull.cpp:2348` and `scene_forward_clustered.glsl:2304` cancel
     // the range. The default 0.1 (`light_3d.cpp:490`) at PCF radius 2 (`rendering_server.cpp:3706`,
     // `renderer_scene_render_rd.cpp:1204-1207`) is 0.1 / 100 * 2 = 0.002.
-    expect(directionalShadowBias(undefined, undefined)).toBeCloseTo(-0.002, 12);
+    expect(directionalShadowBias({})).toBeCloseTo(-0.002, 12);
   });
 
   it('scales linearly with shadow_bias', () => {
     // 0.5 / 100 * 2 = 0.01.
-    expect(directionalShadowBias(0.5, undefined)).toBeCloseTo(-0.01, 12);
+    expect(directionalShadowBias({ shadow_bias: 0.5 })).toBeCloseTo(-0.01, 12);
   });
 
   it('takes shadow_blur into the same product Godot does', () => {
     // `light_storage.cpp:697` seeds soft_shadow_scale from SHADOW_BLUR before
     // the quality radius multiplies it: 0.1 / 100 * (0.5 * 2) = 0.001.
-    expect(directionalShadowBias(0.1, 0.5)).toBeCloseTo(-0.001, 12);
+    expect(directionalShadowBias({ shadow_bias: 0.1, shadow_blur: 0.5 })).toBeCloseTo(-0.001, 12);
+  });
+
+  it('drops the quality radius for a light with an angular distance', () => {
+    // `light_storage.cpp:700-702`: 0.1 / 100 * 1 = 0.001.
+    expect(directionalShadowBias({ light_angular_distance: 2 })).toBeCloseTo(-0.001, 12);
   });
 
   it('is zero when the author zeroes the bias', () => {
-    expect(directionalShadowBias(0, undefined)).toBe(-0);
+    expect(directionalShadowBias({ shadow_bias: 0 })).toBe(-0);
   });
 });
 

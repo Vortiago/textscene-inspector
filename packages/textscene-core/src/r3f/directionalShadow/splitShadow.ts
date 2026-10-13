@@ -66,6 +66,13 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
    */
   readonly _cascadeData: THREE.Vector4[] = [];
 
+  /**
+   * One per slot: the range start and the box's size in the atlas, in the layout
+   * `fitDirectionalShadowSplits.ts` documents, which the blocker search reads
+   * (`sunSoftShadow.ts`). The fitter writes them with `_cascadeData`.
+   */
+  readonly softSlots: THREE.Vector3[] = [];
+
   /** The fade over the far end of the last split, which the fitter writes with the slots. */
   fade: DirectionalShadowFade = NO_SHADOW_FADE;
 
@@ -89,6 +96,9 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
 
   constructor() {
     super(new THREE.OrthographicCamera());
+    // three's pass never draws it by itself: the atlas step draws it with the depth that also
+    // writes the atlas's colour for the blocker search (`shadowPass.ts`).
+    this.autoUpdate = false;
     this.map = holdDirectionalShadowAtlas(this);
     this._viewportCount = SPLIT_SLOTS;
     this._viewports = [];
@@ -100,6 +110,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
       this.splitFrustums.push(new THREE.Frustum());
       this._viewports.push(new THREE.Vector4());
       this._cascadeData.push(new THREE.Vector4(0, 0, 0, 0));
+      this.softSlots.push(new THREE.Vector3());
     }
   }
 

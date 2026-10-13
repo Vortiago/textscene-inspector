@@ -1,9 +1,9 @@
 /**
  * The renderer's shadow pass. three r186 has no hook between its shadow pass and its draw
  * (`WebGLRenderer.js:1737-1752`), so the pass runs three's pass, then Godot's copy of each omni cube
- * into its two paraboloids (`render_forward_clustered.cpp:2722-2738`), then each spot light and each
- * area light's paraboloid (`atlasDepthPass.ts`), then each reader of the maps, and last records the
- * framebuffer height.
+ * into its two paraboloids (`render_forward_clustered.cpp:2722-2738`), then each spot light and split
+ * sun, then each area light's paraboloid (`atlasDepthPass.ts`), then each reader of the maps, and
+ * last records the framebuffer height.
  */
 
 import * as THREE from 'three';
@@ -12,10 +12,11 @@ import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow.js';
 import { isAreaShadowLight, type AreaShadowLight } from './positionalShadow/atlasAreaShadow.js';
 import {
   drawAreaShadows,
-  drawSpotShadows,
-  type SpotShadowLight,
+  drawProjectedShadows,
+  type ProjectedShadowLight,
   type ThreeShadowPass,
 } from './positionalShadow/atlasDepthPass.js';
+import { DirectionalSplitShadow } from './directionalShadow/splitShadow.js';
 import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
 import { drawOffscreen } from './offscreen.js';
@@ -74,11 +75,11 @@ function readersOf(renderer: THREE.WebGLRenderer): Set<ShadowMapReader> {
   shadowMap.render = (lights, scene, camera) => {
     const draws = passDraws(shadowMap);
     const copied = draws ? lightsToCopy(lights) : NO_LIGHTS;
-    const spots = draws ? slottedLights(lights, isSpotShadowLight) : NO_LIGHTS;
-    const areas = draws ? slottedLights(lights, isAreaShadowLight) : NO_LIGHTS;
+    const projected = draws ? projectedLights(lights) : NO_LIGHTS;
+    const areas = draws ? slottedAreaLights(lights) : NO_LIGHTS;
     threePass.draw(lights, scene, camera);
     copyOmniShadows(renderer, copy, copied);
-    drawSpotShadows(threePass, spots, scene, camera);
+    drawProjectedShadows(threePass, projected, scene, camera);
     drawAreaShadows(threePass, areas, scene, camera);
     for (const read of readers) read(scene, camera);
     // Last: each copy and each reader's render records its own target's height.
@@ -126,21 +127,30 @@ function needsCopy(light: THREE.Light): light is OmniLight {
   );
 }
 
-function isSpotShadowLight(light: THREE.Light): light is SpotShadowLight {
-  return (light as { shadow?: unknown }).shadow instanceof AtlasSpotShadow;
+/**
+ * The split suns, and the spot lights that hold a slot. three's pass never draws one by itself
+ * (`splitShadow.ts`, `atlasSpotShadow.ts`).
+ */
+function projectedLights(lights: readonly THREE.Light[]): readonly ProjectedShadowLight[] {
+  let projected: ProjectedShadowLight[] | null = null;
+  for (const light of lights) {
+    if (isProjectedShadowLight(light)) (projected ??= []).push(light);
+  }
+  return projected ?? NO_LIGHTS;
 }
 
-/**
- * The spot or area lights that hold a slot. three's pass never draws one by itself
- * (`atlasSpotShadow.ts`, `atlasAreaShadow.ts`).
- */
-function slottedLights<L extends SpotShadowLight | AreaShadowLight>(
-  lights: readonly THREE.Light[],
-  isKind: (light: THREE.Light) => light is L
-): readonly L[] {
-  let slotted: L[] | null = null;
+function isProjectedShadowLight(light: THREE.Light): light is ProjectedShadowLight {
+  const { shadow } = light as { shadow?: unknown };
+  return (
+    shadow instanceof DirectionalSplitShadow || (shadow instanceof AtlasSpotShadow && shadow.slot !== null)
+  );
+}
+
+/** The area lights that hold a slot. three's pass never draws one by itself (`atlasAreaShadow.ts`). */
+function slottedAreaLights(lights: readonly THREE.Light[]): readonly AreaShadowLight[] {
+  let slotted: AreaShadowLight[] | null = null;
   for (const light of lights) {
-    if (isKind(light) && light.shadow.slot !== null) (slotted ??= []).push(light);
+    if (isAreaShadowLight(light) && light.shadow.slot !== null) (slotted ??= []).push(light);
   }
   return slotted ?? NO_LIGHTS;
 }
