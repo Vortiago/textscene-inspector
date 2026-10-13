@@ -245,7 +245,7 @@ describe('useSceneShadowFit', () => {
     const sun = declaredLight(1);
     const spot = new THREE.SpotLight(0xffffff, 1, 8, Math.PI / 4);
     spot.castShadow = true;
-    spot.userData = positionalShadowUserData({ normalBias: 1, softShadowScale: 2 });
+    spot.userData = positionalShadowUserData({ normalBias: 1, softShadowRadius: 2 });
     spot.shadow.mapSize.set(64, 64);
     own.add(sun, spot, spot.target);
     await ReactThreeTestRenderer.create(<FitScene scene={own} />);

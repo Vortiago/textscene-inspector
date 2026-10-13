@@ -17,6 +17,8 @@ interface Draw {
   uniforms: Record<string, unknown>;
   autoClear: boolean;
   autoReset: boolean;
+  colorWrite: boolean;
+  fragmentShader: string;
 }
 
 /** A renderer that records the atlas's viewport and the copy's uniforms at each draw. */
@@ -37,6 +39,8 @@ function recordingRenderer(): { renderer: THREE.WebGLRenderer; draws: Draw[] } {
         uniforms: Object.fromEntries(Object.entries(material.uniforms).map(([k, u]) => [k, u.value])),
         autoClear: renderer.autoClear,
         autoReset: renderer.info.autoReset,
+        colorWrite: material.colorWrite,
+        fragmentShader: material.fragmentShader,
       });
     },
   };
@@ -96,6 +100,13 @@ describe('OmniShadowCopy.copy', () => {
     new OmniShadowCopy().copy(renderer, renderedLight(), pair);
     expect(draws.every((draw) => !draw.autoClear && !draw.autoReset)).toBe(true);
     expect([renderer.autoClear, renderer.info.autoReset]).toEqual([true, true]);
+  });
+
+  it('writes the depth into the atlas colour too, for the blocker search', () => {
+    const { renderer, draws } = recordingRenderer();
+    new OmniShadowCopy().copy(renderer, renderedLight(), pair);
+    expect(draws.every((draw) => draw.colorWrite)).toBe(true);
+    expect(draws[0]!.fragmentShader).toContain('gl_FragColor = vec4( packAtlasDepth( depth ), 0.0, 1.0 );');
   });
 
   it('draws nothing for a spot slot or a light without a cube (error case)', () => {

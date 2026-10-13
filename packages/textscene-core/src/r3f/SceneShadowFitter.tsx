@@ -1,6 +1,6 @@
 /**
  * The scene-level light pass before each render of a scene: it fits every declared shadow and writes
- * the area lights' uniforms and every light's specular amount. Godot fits a directional shadow to whichever camera renders, and gives an
+ * the area lights' uniforms and every light's specular amount and size. Godot fits a directional shadow to whichever camera renders, and gives an
  * omni or spot light its slot in the atlas of the viewport that renders it. So the pass rides
  * `scene.onBeforeRender`: the main view, a SubViewport pass and a screenshot each get their own,
  * whatever order they render in.
@@ -21,11 +21,12 @@ import { activeShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewp
 import { observeSceneCamera } from './sceneRenderCamera.js';
 import { writeAreaLightUniforms } from './areaLight/areaLightFalloff.js';
 import { writeLightSpecularUniforms } from './lightSpecular/lightSpecular.js';
+import { writeLightSizeUniforms } from './lightSize/lightSize.js';
 
 /**
  * One render's light pass, the directional fit first. The directional fit changes no omni, spot or
  * area light, so their part of the pass reads the same walk. It hangs a sun under a declared
- * directional light and hides that light, so the specular amounts read a second walk.
+ * directional light and hides that light, so the specular amounts and light sizes read a second walk.
  */
 function prepareSceneLights(
   scene: THREE.Scene,
@@ -37,7 +38,9 @@ function prepareSceneLights(
   fitSceneDirectionalShadows(scene, camera, lights);
   fitScenePositionalShadows(lights, camera, positionalAtlas, tickMsec);
   writeAreaLightUniforms(lights, camera);
-  writeLightSpecularUniforms(sceneLights(scene), camera);
+  const shadedLights = sceneLights(scene);
+  writeLightSpecularUniforms(shadedLights, camera);
+  writeLightSizeUniforms(shadedLights, camera);
 }
 
 /**

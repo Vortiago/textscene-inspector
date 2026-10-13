@@ -48,19 +48,24 @@ describe('omniShadowBias', () => {
 describe('spotShadowBias', () => {
   it('scales SpotLight3D’s default by soft_shadow_scale, in Godot’s clip depth', () => {
     // 0.03 (`light_3d.cpp:681`) / 100 * 2 (`light_storage.cpp:1024`).
-    expect(spotShadowBias(undefined, undefined)).toBeCloseTo(0.0006, 12);
+    expect(spotShadowBias({})).toBeCloseTo(0.0006, 12);
   });
 
   it('carries shadow_blur, which Godot folds into the spot bias alone', () => {
     // 0.03 / 100 * (0.5 * 2).
-    expect(spotShadowBias(0.03, 0.5)).toBeCloseTo(0.0003, 12);
+    expect(spotShadowBias({ shadow_bias: 0.03, shadow_blur: 0.5 })).toBeCloseTo(0.0003, 12);
+  });
+
+  it('scales a light with a size by the blur alone, as its scale skips the quality radius', () => {
+    // 0.03 / 100 * 0.5 (`light_storage.cpp:1015-1024`).
+    expect(spotShadowBias({ shadow_bias: 0.03, shadow_blur: 0.5, light_size: 0.2 })).toBeCloseTo(0.00015, 12);
   });
 
   it('is zero for a light with no blur (edge case)', () => {
-    expect(spotShadowBias(0.03, 0)).toBe(0);
+    expect(spotShadowBias({ shadow_bias: 0.03, shadow_blur: 0 })).toBe(0);
   });
 
   it('passes a non-finite bias through (error case)', () => {
-    expect(spotShadowBias(Number.NaN, undefined)).toBeNaN();
+    expect(spotShadowBias({ shadow_bias: Number.NaN })).toBeNaN();
   });
 });

@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { installGodotAreaLight } from './areaLightChunk';
 import { installGodotLightFunction } from '../godotLightFunction';
 import { installGodotLightSpecular } from '../lightSpecular/lightSpecularChunk';
+import { installGodotLightSize } from '../lightSize/lightSizeChunk';
 import { installGodotLightAttenuation } from '../godotLightAttenuation';
 import { ltcTables } from '../../godot/ltc';
 import { warningsOf } from '../testing/logWarnings';
@@ -22,6 +23,7 @@ afterEach(() => {
 /** The patches the area light reads, then the area light, as `installShaderPatches` orders them. */
 function installWithItsPrerequisites(): void {
   installGodotLightSpecular();
+  installGodotLightSize();
   installGodotLightFunction();
   installGodotLightAttenuation();
   installGodotAreaLight();
@@ -60,6 +62,22 @@ describe('installGodotAreaLight', () => {
     );
     expect(patchedChunk('lights_pars_begin')).toContain(
       'uniform vec3 rectAreaLightFalloffs[ NUM_RECT_AREA_LIGHTS ];'
+    );
+  });
+
+  it("dims both terms by the light's shadow, from the lookup the positional shadows install", () => {
+    const area = areaLightBody();
+    expect(area).toMatch(
+      /vec3 ltcLight = light \* lightDistance \* lightDistance;\s*light \*= shadow;\s*ltcLight \*= shadow;/
+    );
+    expect(patchedChunk('lights_fragment_begin')).toContain(
+      'rectAreaLightFalloffs[ i ], receiveShadow ? GODOT_AREA_SHADOW( UNROLLED_LOOP_INDEX ) : 1.0, geometryPosition,'
+    );
+  });
+
+  it('reads every light as lit when no lookup is installed (edge case)', () => {
+    expect(patchedChunk('lights_fragment_begin')).toMatch(
+      /#ifndef GODOT_AREA_SHADOW\s*#define GODOT_AREA_SHADOW\( index \) 1\.0\s*#endif\s*#if \( NUM_RECT_AREA_LIGHTS > 0 \)/
     );
   });
 
@@ -146,6 +164,7 @@ describe('installGodotAreaLight', () => {
 
   it('leaves the chunks alone when one lacks a replaced text, and warns (error case)', () => {
     installGodotLightSpecular();
+    installGodotLightSize();
     installGodotLightFunction();
     installGodotLightAttenuation();
     const lightFunction = THREE.ShaderChunk.lights_physical_pars_fragment;

@@ -27,12 +27,13 @@ export function parseBaseLightWithNormalBias(properties: Record<string, string>)
   };
 }
 
-/** The shared properties plus the distance fade, for an omni or spot light. */
+/** The shared properties plus the size and the distance fade, for an omni, spot or area light. */
 export function parsePositionalLightProperties(
   properties: Record<string, string>
 ): PositionalLightProperties {
   return {
     ...parseBaseLightWithNormalBias(properties),
+    light_size: parseOptionalFloat(properties.light_size),
     distance_fade_enabled: parseOptionalBool(properties.distance_fade_enabled),
     distance_fade_begin: parseOptionalFloat(properties.distance_fade_begin),
     distance_fade_shadow: parseOptionalFloat(properties.distance_fade_shadow),

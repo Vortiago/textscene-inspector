@@ -43,6 +43,17 @@ describe('AtlasSpotShadow.place', () => {
     expect(shadow.getViewport(0).toArray()).toEqual([2, 1, 1, 1]);
   });
 
+  it('is never drawn by three’s own pass, whose depth writes no colour (edge case)', () => {
+    const shadow = new AtlasSpotShadow();
+    shadow.place({ x: 0, y: 0, size: 512, paraboloidStep: null });
+    expect(shadow.autoUpdate).toBe(false);
+  });
+
+  it('stays undrawn by three’s own pass when it copies three’s shadow (edge case)', () => {
+    const shadow = new AtlasSpotShadow().copy(new THREE.SpotLight().shadow);
+    expect(shadow.autoUpdate).toBe(false);
+  });
+
   it('takes the atlas again after a dispose let it go (edge case)', () => {
     const shadow = new AtlasSpotShadow();
     shadow.dispose();

@@ -1,7 +1,11 @@
 /** Shared light parsing. */
 
 import { describe, it, expect } from 'vitest';
-import { parseBaseLightProperties, parseBaseLightWithNormalBias } from './parser';
+import {
+  parseBaseLightProperties,
+  parseBaseLightWithNormalBias,
+  parsePositionalLightProperties,
+} from './parser';
 
 describe('Base Light Parser', () => {
   describe('parseBaseLightProperties', () => {
@@ -181,6 +185,20 @@ describe('Base Light Parser', () => {
     it('should handle fractional shadow_normal_bias', () => {
       const result = parseBaseLightWithNormalBias({ shadow_normal_bias: '0.005' });
       expect(result.shadow_normal_bias).toBe(0.005);
+    });
+  });
+
+  describe('parsePositionalLightProperties', () => {
+    it('parses light_size, which an omni or spot light’s soft shadow reads', () => {
+      expect(parsePositionalLightProperties({ light_size: '0.25' }).light_size).toBe(0.25);
+    });
+
+    it('leaves light_size out when the scene leaves it out (edge case)', () => {
+      expect(parsePositionalLightProperties({}).light_size).toBeUndefined();
+    });
+
+    it('leaves out a light_size it cannot read (error case)', () => {
+      expect(parsePositionalLightProperties({ light_size: 'abc' }).light_size).toBeUndefined();
     });
   });
 });

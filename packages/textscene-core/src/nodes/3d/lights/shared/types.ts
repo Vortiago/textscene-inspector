@@ -34,8 +34,14 @@ export interface BaseLightWithNormalBias extends BaseLightProperties {
   shadow_normal_bias?: number;
 }
 
-/** The base plus the distance fade, which only an omni or spot light draws (`light_3d.cpp:560`). */
+/**
+ * The base plus the distance fade, which every positional light draws (4.7.2
+ * `light_storage.cpp:1013-1028`). A DirectionalLight3D hides it (`light_3d.cpp:575`).
+ */
 export interface PositionalLightProperties extends BaseLightWithNormalBias {
+  /** The light's size in metres, which softens its shadow (optional). */
+  light_size?: number;
+
   distance_fade_enabled?: boolean;
 
   /** Camera distance where the light starts to fade (optional). */

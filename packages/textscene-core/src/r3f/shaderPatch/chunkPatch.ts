@@ -73,7 +73,7 @@ export interface ChunkPatch<Name extends ChunkName> {
   /** What three lacks when an edit's text is missing, after "three's". */
   missing: string;
   /** The text of each patch this one reads, by the chunk that patch writes it into. */
-  requires?: Partial<Record<ChunkName, string>>;
+  requires?: Partial<Record<ChunkName, string | readonly string[]>>;
 }
 
 /** The record form of a patch of one chunk's text. */
@@ -88,9 +88,9 @@ export function onChunk<Name extends ChunkName>(
 }
 
 /** The chunks that lack the text of a patch this one reads. */
-function unmetRequirements(requires: Partial<Record<ChunkName, string>>): ChunkName[] {
-  return (Object.entries(requires) as [ChunkName, string][])
-    .filter(([name, text]) => !THREE.ShaderChunk[name].includes(text))
+function unmetRequirements(requires: Partial<Record<ChunkName, string | readonly string[]>>): ChunkName[] {
+  return (Object.entries(requires) as [ChunkName, string | readonly string[]][])
+    .filter(([name, texts]) => [texts].flat().some((text) => !THREE.ShaderChunk[name].includes(text)))
     .map(([name]) => name);
 }
 
