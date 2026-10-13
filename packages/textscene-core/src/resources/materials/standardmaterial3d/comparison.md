@@ -80,11 +80,11 @@ Godot's refraction distorts the background, so the sphere reads bright. `refract
 - **Approximated** The screen-space distortion is not reproduced, and the surface is not dimmed by `1 - ref_amount`, so it reads brighter than Godot's.
 
 ## Height mapping
-<!-- compare: image=unit-material-heightmap status=limitation fixture=unit-material-heightmap.tscn -->
+<!-- compare: image=unit-material-heightmap status=unreviewed fixture=unit-material-heightmap.tscn -->
 
-Godot's `heightmap_*` is texture-space parallax, so the silhouette stays a smooth sphere. It maps to `displacementMap`, which moves real vertices.
+Both engines shift every texture coordinate by the depth the heightmap reads, along the view direction in the surface's tangent frame, so the silhouette stays a smooth sphere. Deep parallax steps through Godot's layers, and the flips and the inverted texture follow Godot. Triplanar mapping turns height mapping off, as in Godot.
 
-- **Approximated** The sphere deforms into a lumpy blob, and the depth scale is in world units.
+- **Shader missing** An unshaded material draws no height mapping.
 
 ## Texture filter
 <!-- compare: image=unit-material-texture-filter status=done fixture=unit-material-texture-filter.tscn -->

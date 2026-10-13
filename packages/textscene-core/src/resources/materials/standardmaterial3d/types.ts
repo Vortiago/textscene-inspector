@@ -9,6 +9,20 @@ import type * as THREE from 'three';
 import type { EmissionScalars } from './emission';
 import type { TextureChannel, TextureChannelMask } from '../../../godot/textureChannel';
 
+/** Godot's height mapping of a surface. */
+export interface Heightmap {
+  /** `heightmap_scale`, unclamped, as the setter stores it (`material.cpp:2283-2286`). */
+  scale: number;
+  /** `heightmap_deep_parallax`: steps through layers, where the default takes one offset. */
+  isDeep: boolean;
+  /** `heightmap_min_layers` and `heightmap_max_layers`, the steps at a head-on and a grazing view. */
+  layers: [min: number, max: number];
+  /** `heightmap_flip_tangent` and `heightmap_flip_binormal`, as -1 or 1. */
+  flip: [tangent: number, binormal: number];
+  /** `heightmap_flip_texture`: the texture holds height, where the default holds depth. */
+  readsHeight: boolean;
+}
+
 // One Color declaration repo-wide, re-exported here because this slice's
 // consumers (sky, environment, preview lighting) import it from this module.
 export type { Color } from '../../../utils/colorParser';
@@ -188,7 +202,7 @@ export interface StandardMaterial3DData {
   aoTextureChannel: TextureChannel;
   /** `normal_scale`, as the uniform XY pair three's `normalScale` wants. */
   normalScale: MaterialVec2;
-  /** `uv1_triplanar` OR `uv1_world_triplanar`. */
+  /** `uv1_triplanar`: triplanar mapping of the first UV set. */
   triplanar: boolean;
   /** `clearcoat` strength (0..1), gated on `clearcoat_enabled`. */
   clearcoat: number;
@@ -198,11 +212,8 @@ export interface StandardMaterial3DData {
   rim: number;
   /** `rim_tint` (0..1, blend light↔albedo), gated on `rim_enabled`. */
   rimTint: number;
-  /**
-   * `heightmap_scale`, gated on `heightmap_enabled` (0 when off). Not clamped
-   * to 0..1: its hint is `"-16,16,0.001"`, a depth factor that may invert.
-   */
-  heightmapScale: number;
+  /** Height mapping, null when `heightmap_enabled` is off or triplanar mapping overrides it. */
+  heightmap: Heightmap | null;
   /**
    * `billboard_mode`: 0 DISABLED, 1 ENABLED, 2 FIXED_Y, 3 PARTICLES. The derived
    * material carries it on `userData`, and `r3f/surfaceDrawHooks.ts` poses each draw.
@@ -286,7 +297,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   clearcoatRoughness: number;
   rim: number;
   rimTint: number;
-  heightmapScale: number;
+  heightmap: Heightmap | null;
   billboardMode: number;
   billboardKeepScale: boolean;
   anisotropy: number;

@@ -113,9 +113,8 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     expect(mat.normalMap).toBeInstanceOf(THREE.Texture);
   });
 
-  it('heightmap_texture loaded → material.displacementMap is a THREE.Texture (+ scale)', async () => {
-    // displacementScale alone displaces nothing: the height texture must reach
-    // material.displacementMap.
+  it('heightmap_texture loaded → material.displacementMap carries it, at no displacement', async () => {
+    // The parallax shift reads the heightmap from the displacement slot. Godot moves no vertex.
     const tex = makeTexture();
     const renderer = await renderWithTexture({
       matData: {
@@ -128,7 +127,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     });
     const mat = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(mat.displacementMap).toBeInstanceOf(THREE.Texture);
-    expect(mat.displacementScale).toBeCloseTo(0.3, 5);
+    expect(mat.displacementScale).toBe(0);
   });
 
   it('#35 normal_scale=2.0 → material.normalScale.x === 2.0 and .y === 2.0', async () => {

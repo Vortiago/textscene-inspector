@@ -49,6 +49,11 @@ const TEXTURE_SLOTS: Array<keyof Maps> = [
   'displacementMap',
 ];
 
+/** The feature a slot binds only under. */
+const SLOT_FEATURES: Partial<Record<keyof Maps, Record<string, string>>> = {
+  displacementMap: { heightmap_enabled: 'true' },
+};
+
 const ALPHA = { transparency: '1' };
 /** Physical on both sides of every feature case, so the element type never moves. */
 const PHYSICAL = { clearcoat_enabled: 'true', clearcoat: '0.5' };
@@ -67,7 +72,8 @@ describe('<StandardMaterialSlot> rebuilds when a baked program parameter moves',
   });
 
   it.each(TEXTURE_SLOTS)('%s arriving asynchronously', async (prop) => {
-    expect(await rebuilds({}, {}, {}, { [prop]: new THREE.Texture() })).toBe(true);
+    const data = SLOT_FEATURES[prop] ?? {};
+    expect(await rebuilds(data, data, {}, { [prop]: new THREE.Texture() })).toBe(true);
   });
 
   it.each([

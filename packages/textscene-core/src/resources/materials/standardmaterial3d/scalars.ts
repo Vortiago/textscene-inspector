@@ -62,7 +62,7 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     clearcoatRoughness: data.clearcoatRoughness,
     rim: data.rim,
     rimTint: data.rimTint,
-    heightmapScale: data.heightmapScale,
+    heightmap: data.heightmap,
     billboardMode: data.billboardMode,
     billboardKeepScale: data.billboardKeepScale,
     anisotropy: data.anisotropy,

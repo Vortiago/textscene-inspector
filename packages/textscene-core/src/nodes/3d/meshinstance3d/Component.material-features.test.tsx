@@ -336,7 +336,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     expect(material.sheen).toBeCloseTo(0.7, 5);
   });
 
-  it('applies heightmap_scale to the rendered material.displacementScale', async () => {
+  it('records heightmap_scale for the parallax shift and moves no vertex', async () => {
     const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: {} },
@@ -354,11 +354,11 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     await new Promise<void>((r) => setTimeout(r, 10));
 
     const material = findMaterial(renderer);
-    expect(material).toBeDefined();
-    expect(material!.displacementScale).toBe(3);
+    expect(material!.userData.godotHeightmap).toMatchObject({ scale: 3 });
+    expect(material!.displacementScale).toBe(0);
   });
 
-  it('leaves displacementScale at 0 (no displacement) for a non-heightmap material', async () => {
+  it('records no height mapping for a material without a heightmap', async () => {
     const loader = loaderServing();
     const internalResources: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: {} },
@@ -373,6 +373,6 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     await new Promise<void>((r) => setTimeout(r, 10));
 
     const material = findMaterial(renderer);
-    expect(material!.displacementScale).toBe(0);
+    expect(material!.userData).not.toHaveProperty('godotHeightmap');
   });
 });

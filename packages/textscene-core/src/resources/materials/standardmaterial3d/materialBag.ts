@@ -19,6 +19,7 @@ import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
 import { lightModesInjection, lightModesUserData, threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { SPECULAR_OCCLUSION_DISABLED } from '../../../r3f/godotIndirectSpecular';
+import { heightmapUserData, parallaxInjection } from '../../../r3f/materials/godotParallax';
 import {
   GODOT_AMBIENT_OCCLUSION,
   ambientOcclusionUserData,
@@ -175,8 +176,9 @@ const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
  * Surface state on `userData`, not as material props: the draw hooks apply billboard, shadow and
- * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO uniforms read theirs at upload, and
- * a decal reads the light modes. A fresh object per bag, as the `.tres` loader writes keys into it.
+ * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO and height uniforms read theirs at
+ * upload, and a decal reads the light modes. A fresh object per bag, as the `.tres` loader writes
+ * keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
@@ -185,6 +187,7 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
     ...alphaHashScaleUserData(scalars.alphaHashScale),
     ...ambientOcclusionUserData(scalars.aoLightAffect, scalars.aoTextureChannelMask),
     ...lightModesUserData(scalars),
+    ...heightmapUserData(scalars.heightmap),
   };
 }
 
@@ -332,11 +335,10 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     // pass-through in `resolveEmission` would splat every scalar onto the material.
     emissive: new THREE.Color().fromArray(emission.emissive),
     emissiveIntensity: emission.emissiveIntensity,
-    // Godot heightmap → three vertex displacement, a parity limitation: Godot uses
-    // texture-space parallax, and three moves vertices, so it needs a subdivided mesh
-    // and its depth is in world units. Inert without a heightmap (scale 0, no map).
-    displacementMap: slot('heightmap_texture'),
-    displacementScale: scalars.heightmapScale,
+    // The displacement slot carries the heightmap for `godotParallax.ts` to read. Godot moves
+    // no vertex, so the scale is 0.
+    displacementMap: scalars.heightmap ? slot('heightmap_texture') : null,
+    displacementScale: 0,
     userData: surfaceUserData(scalars),
     ...blend,
   };
@@ -347,6 +349,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     lightModesInjection(scalars),
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
+    scalars.heightmap ? parallaxInjection(scalars.heightmap) : undefined,
   ]);
   if (!needsPhysicalMaterial(scalars)) return { materialClass: 'standard', props: pbr, injection };
   return {

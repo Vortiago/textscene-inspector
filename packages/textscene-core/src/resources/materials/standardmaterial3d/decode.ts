@@ -21,6 +21,7 @@ import {
   DepthDrawMode,
   TEXTURE_SLOTS,
   Transparency,
+  type Heightmap,
   type MaterialVec2,
   type StandardMaterial3DData,
   type TextureSlot,
@@ -99,6 +100,9 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
   const heightmapEnabled = boolOr(properties['heightmap_enabled'], false, CONTEXT);
   const anisotropyEnabled = boolOr(properties['anisotropy_enabled'], false, CONTEXT);
   const refractionEnabled = boolOr(properties['refraction_enabled'], false, CONTEXT);
+  // `uv1_world_triplanar` only picks the space of a triplanar mapping (`material.cpp:1386-1421`).
+  // Triplanar mapping overrides height mapping (`:1541`).
+  const triplanar = boolOr(properties['uv1_triplanar'], false, CONTEXT);
 
   // `_update_shader` emits `ALPHA *= albedo.a * albedo_tex.a` only when
   // `transparency != TRANSPARENCY_DISABLED` (or shadow-to-opacity, pixel-alpha
@@ -194,16 +198,14 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
       `${CONTEXT}.ao_texture_channel`
     ),
     normalScale: { x: normalScale, y: normalScale },
-    triplanar:
-      boolOr(properties['uv1_triplanar'], false, CONTEXT) ||
-      boolOr(properties['uv1_world_triplanar'], false, CONTEXT),
+    triplanar,
+    heightmap: heightmapEnabled && !triplanar ? decodeHeightmap(properties) : null,
     clearcoat: clearcoatEnabled ? clamp01(floatOr(properties['clearcoat'], 1, CONTEXT)) : 0,
     clearcoatRoughness: clearcoatEnabled
       ? clamp01(floatOr(properties['clearcoat_roughness'], 0.5, CONTEXT))
       : 0,
     rim: rimEnabled ? clamp01(floatOr(properties['rim'], 1, CONTEXT)) : 0,
     rimTint: rimEnabled ? clamp01(floatOr(properties['rim_tint'], 0.5, CONTEXT)) : 0,
-    heightmapScale: heightmapEnabled ? floatOr(properties['heightmap_scale'], 5, CONTEXT) : 0,
     billboardMode: intOr(properties['billboard_mode'], 0, CONTEXT),
     billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
     anisotropy: anisotropyEnabled ? clamp(floatOr(properties['anisotropy'], 0, CONTEXT), -1, 1) : 0,
@@ -334,4 +336,19 @@ function vec2FromVector3(raw: string | undefined, fallback: MaterialVec2): Mater
 
 function clamp01(value: number): number {
   return clamp(value, 0, 1);
+}
+
+/** Height mapping at Godot's defaults (`material.cpp:3952`, `:3995-3997`). The setters check no range. */
+function decodeHeightmap(properties: Record<string, string>): Heightmap {
+  const sign = (key: string) => (boolOr(properties[key], false, CONTEXT) ? -1 : 1);
+  return {
+    scale: floatOr(properties['heightmap_scale'], 5, CONTEXT),
+    isDeep: boolOr(properties['heightmap_deep_parallax'], false, CONTEXT),
+    layers: [
+      intOr(properties['heightmap_min_layers'], 8, CONTEXT),
+      intOr(properties['heightmap_max_layers'], 32, CONTEXT),
+    ],
+    flip: [sign('heightmap_flip_tangent'), sign('heightmap_flip_binormal')],
+    readsHeight: boolOr(properties['heightmap_flip_texture'], false, CONTEXT),
+  };
 }

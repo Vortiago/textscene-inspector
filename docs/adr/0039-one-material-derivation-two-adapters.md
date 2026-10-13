@@ -125,7 +125,7 @@ uniform, geometry or object state that a mounted material may change freely.
 | `stencil_mode`, `stencil_flags`, `stencil_compare`, `stencil_reference` | unimplemented | Nothing in the repo reads any of them. |
 | `feature_mask` (13 bits) | see below | |
 | `flags` (25 bits) | see below | |
-| booleans: `deep_parallax` | unimplemented | Godot's is texture-space parallax. The heightmap slot here drives three's `displacementMap`, that is real vertex displacement, which is a stated parity limitation of its own and not this bit. |
+| booleans: `deep_parallax` | program input | A define from a `ProgramInjection` steps the parallax through Godot's layers (`godotParallax.ts`). The heightmap rides three's `displacementMap` slot at displacement scale 0, so no vertex moves. |
 | booleans: `grow` | unimplemented | |
 | booleans: `proximity_fade` | program input, indirectly | Decoded for `alphaPassMembership` only. The fade itself is unimplemented. |
 | booleans: `orm` | non-goal | See below. |
@@ -162,9 +162,12 @@ Carried:
   state like `texture_filter`.
 - `FLAG_USE_SHADOW_TO_OPACITY` → read by `alphaPassMembership` only, so it reaches the
   program indirectly, and its shading effect is unimplemented.
-- `FLAG_UV1_USE_TRIPLANAR` / `FLAG_UV1_USE_WORLD_TRIPLANAR` → one `triplanar` scalar
-  folded into the per-surface UV transform, with its own recorded `uv1_offset`
-  limitation (`SurfaceMaterialSlot.tsx`).
+- `FLAG_UV1_USE_TRIPLANAR` → one `triplanar` scalar folded into the per-surface UV
+  transform, with its own recorded `uv1_offset` limitation (`SurfaceMaterialSlot.tsx`).
+  It also turns height mapping off. `FLAG_UV1_USE_WORLD_TRIPLANAR` only picks the space of
+  a triplanar mapping, so alone it changes nothing.
+- `FLAG_INVERT_HEIGHTMAP` → a define from the parallax `ProgramInjection`, which reads the
+  heightmap as height and not depth.
 - `FLAG_BILLBOARD_KEEP_SCALE` → `userData`, beside the billboard mode. The draw-time
   billboard (`surfaceBillboard.ts`) keeps the model scale only when it is set.
 

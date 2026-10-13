@@ -410,16 +410,15 @@ describe('the imperative adapter — texture slots', () => {
     expect(material.emissiveIntensity).toBe(2);
   });
 
-  it('applies the heightmap texture as a displacement map at Godot’s default depth', () => {
+  it('binds the heightmap texture for the parallax shift and moves no vertex', () => {
     const texture = loadedTexture();
     const on = build({ heightmap_enabled: 'true' }, { heightmap_texture: texture });
     expectBoundRaw(on.displacementMap, texture);
-    expect(on.displacementScale).toBe(5);
+    expect(on.displacementScale).toBe(0);
   });
 
-  it('leaves displacement inert for a material with the feature off', () => {
-    // Even if a map somehow arrived, a zero scale moves no vertices.
-    expect(build({}).displacementScale).toBe(0);
+  it('binds no heightmap texture with the feature off (edge case)', () => {
+    expect(build({}, { heightmap_texture: loadedTexture() }).displacementMap).toBeNull();
   });
 
   it('applies albedo and normal together', () => {
