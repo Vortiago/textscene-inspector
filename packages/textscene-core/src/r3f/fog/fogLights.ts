@@ -166,7 +166,7 @@ function writeDirectionalShadow(light: THREE.DirectionalLight, camera: THREE.Cam
   const sun = splitSunOf(light);
   if (!sun) return;
   const { shadow } = sun;
-  writeShadowOpacity(shadow.intensity, 0);
+  row[Cone.SHADOW_OPACITY] = shadow.intensity;
   for (let slot = 0; slot < DIRECTIONAL_SHADOW_MAX_SPLITS; slot++) {
     writeLookup(slot, shadow.getMatrix(slot), camera);
     const split = shadow.getCamera(Math.min(slot, shadow.splitCount - 1));
@@ -201,13 +201,9 @@ function writePositionalShadow(
   worldToShadow: THREE.Matrix4,
   camera: THREE.Camera
 ): void {
-  writeShadowOpacity(shadow.intensity, shadow.bias);
+  row[Cone.SHADOW_OPACITY] = shadow.intensity;
+  row[Cone.SHADOW_BIAS] = shadow.bias;
   writeLookup(0, worldToShadow, camera);
-}
-
-function writeShadowOpacity(opacity: number, bias: number): void {
-  row[Cone.SHADOW_OPACITY] = opacity;
-  row[Cone.SHADOW_BIAS] = bias;
 }
 
 /** Writes `worldToShadow` after the view's own world matrix, so it maps a view-space cell. */

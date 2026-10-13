@@ -122,6 +122,19 @@ describe('readShadowMaps', () => {
     expect(framebufferHeight[0]).toBe(48);
   });
 
+  it('calls a reader that a module evaluated again adds to a pass already wrapped (edge case)', async () => {
+    const { renderer } = fakeRenderer();
+    installShadowPass(renderer);
+    vi.resetModules();
+    const reloaded = await import('./shadowPass');
+    const reader = vi.fn();
+    reloaded.readShadowMaps(renderer, reader);
+
+    runPass(renderer, []);
+
+    expect(reader).toHaveBeenCalledOnce();
+  });
+
   it('stops calling a reader once its disposer runs (error case)', () => {
     const { renderer } = fakeRenderer();
     const reader = vi.fn();

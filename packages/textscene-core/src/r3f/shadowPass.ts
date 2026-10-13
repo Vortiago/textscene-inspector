@@ -19,11 +19,14 @@ type ShadowPass = THREE.WebGLShadowMap['render'];
  */
 export type ShadowMapReader = (scene: THREE.Object3D, camera: THREE.Camera) => void;
 
-/** A global key, so a module that a dev server evaluates again finds the pass already wrapped. */
-const WRAPPED = Symbol.for('textscene.shadowPass');
+/**
+ * A global key for a wrapped pass's readers, kept on the renderer's shadow map. A module that a dev
+ * server evaluates again finds the pass already wrapped, and adds its readers to the set that pass
+ * calls. Written only by `readersOf`, `readShadowMaps` and the disposer it returns.
+ */
+const READERS = Symbol.for('textscene.shadowPass');
 
-/** Each renderer's readers. Written only by `readShadowMaps` and the disposer it returns. */
-const readers = new WeakMap<THREE.WebGLRenderer, Set<ShadowMapReader>>();
+type WrappedShadowMap = THREE.WebGLShadowMap & { [READERS]?: Set<ShadowMapReader> };
 
 interface OmniLight extends THREE.PointLight {
   shadow: AtlasOmniShadow;
@@ -37,19 +40,7 @@ const NO_LIGHTS: readonly OmniLight[] = [];
 
 /** Wraps `renderer`'s shadow pass once. A second call changes nothing. */
 export function installShadowPass(renderer: THREE.WebGLRenderer): void {
-  const shadowMap = renderer.shadowMap as THREE.WebGLShadowMap & { [WRAPPED]?: true };
-  if (shadowMap[WRAPPED]) return;
-  shadowMap[WRAPPED] = true;
-  const threePass: ShadowPass = shadowMap.render.bind(shadowMap);
-  const copy = new OmniShadowCopy();
-  shadowMap.render = (lights, scene, camera) => {
-    const copied = lightsToCopy(shadowMap, lights);
-    threePass(lights, scene, camera);
-    copyOmniShadows(renderer, copy, copied);
-    for (const read of readers.get(renderer) ?? []) read(scene, camera);
-    // Last: each copy and each reader's render records its own target's height.
-    writeFramebufferHeight(renderer);
-  };
+  readersOf(renderer);
 }
 
 /**
@@ -57,13 +48,31 @@ export function installShadowPass(renderer: THREE.WebGLRenderer): void {
  * wraps itself on the first reader.
  */
 export function readShadowMaps(renderer: THREE.WebGLRenderer, reader: ShadowMapReader): () => void {
-  installShadowPass(renderer);
-  const set = readers.get(renderer) ?? new Set();
-  readers.set(renderer, set);
-  set.add(reader);
+  const readers = readersOf(renderer);
+  readers.add(reader);
   return () => {
-    set.delete(reader);
+    readers.delete(reader);
   };
+}
+
+/** The readers the wrapped pass of `renderer` calls, the pass wrapped on the first call. */
+function readersOf(renderer: THREE.WebGLRenderer): Set<ShadowMapReader> {
+  const shadowMap = renderer.shadowMap as WrappedShadowMap;
+  const existing = shadowMap[READERS];
+  if (existing) return existing;
+  const readers = new Set<ShadowMapReader>();
+  shadowMap[READERS] = readers;
+  const threePass: ShadowPass = shadowMap.render.bind(shadowMap);
+  const copy = new OmniShadowCopy();
+  shadowMap.render = (lights, scene, camera) => {
+    const copied = lightsToCopy(shadowMap, lights);
+    threePass(lights, scene, camera);
+    copyOmniShadows(renderer, copy, copied);
+    for (const read of readers) read(scene, camera);
+    // Last: each copy and each reader's render records its own target's height.
+    writeFramebufferHeight(renderer);
+  };
+  return readers;
 }
 
 /** Copies each light's cube into the atlas, and leaves the render target as it found it. */

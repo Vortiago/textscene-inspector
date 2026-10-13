@@ -1,7 +1,7 @@
 /**
  * The pose of every mesh that casts a shadow: its geometry, its world matrix, its instances, its
- * bones and its morph weights. The fog volume redraws a still view only when this moves, since its
- * shadows read maps the casters draw.
+ * bones, its morph weights and the materials and textures its depth draw reads. The fog volume
+ * redraws a still view only when this moves, since its shadows read maps the casters draw.
  */
 
 import * as THREE from 'three';
@@ -25,6 +25,7 @@ export class CasterPose {
       this.take(mesh.geometry.id);
       this.takeAll(mesh.matrixWorld.elements);
       this.takePose(mesh);
+      this.takeMaterials(mesh.material);
     }
     const hasChanged = this.hasChanged || this.cursor !== this.length;
     this.length = this.cursor;
@@ -41,6 +42,26 @@ export class CasterPose {
     const bones = (mesh as THREE.SkinnedMesh).skeleton?.boneMatrices;
     if (bones) this.takeAll(bones);
     if (mesh.morphTargetInfluences) this.takeAll(mesh.morphTargetInfluences);
+  }
+
+  /**
+   * What changes the depth a mesh draws without moving it: a material swap, a material update, and a
+   * texture whose image arrives after the first draw, which an alpha-tested caster cuts its shape by.
+   */
+  private takeMaterials(materials: THREE.Material | THREE.Material[]): void {
+    if (!Array.isArray(materials)) {
+      this.takeMaterial(materials);
+      return;
+    }
+    for (const material of materials) this.takeMaterial(material);
+  }
+
+  private takeMaterial(material: THREE.Material): void {
+    const { map, alphaMap } = material as THREE.MeshStandardMaterial;
+    this.take((material as THREE.Material & { id: number }).id);
+    this.take(material.version);
+    this.take(map?.version ?? -1);
+    this.take(alphaMap?.version ?? -1);
   }
 
   private takeAll(values: ArrayLike<number>): void {

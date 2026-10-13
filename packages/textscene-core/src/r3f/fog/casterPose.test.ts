@@ -48,6 +48,24 @@ describe('CasterPose.update', () => {
     expect(pose.update(meshes)).toBe(true);
   });
 
+  it('answers that the pose changed when a caster takes another material', () => {
+    const meshes = [caster()];
+    const pose = posed(meshes);
+    meshes[0]!.material = new THREE.MeshStandardMaterial();
+
+    expect(pose.update(meshes)).toBe(true);
+  });
+
+  it("answers that the pose changed when a caster's texture arrives", () => {
+    const meshes = [caster()];
+    const map = new THREE.Texture();
+    meshes[0]!.material = new THREE.MeshStandardMaterial({ map, alphaTest: 0.5 });
+    const pose = posed(meshes);
+    map.needsUpdate = true;
+
+    expect(pose.update(meshes)).toBe(true);
+  });
+
   it('ignores a mesh that casts no shadow (edge case)', () => {
     const still = caster();
     const receiver = caster();

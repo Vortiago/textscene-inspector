@@ -30,6 +30,9 @@ function isMesh(object: THREE.Object3D): object is THREE.Mesh {
   return (object as THREE.Mesh).isMesh === true;
 }
 
+/** Depth fog reads no shadow, so it leaves the casters untracked. */
+const NO_CASTERS: readonly THREE.Mesh[] = [];
+
 export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
@@ -60,7 +63,8 @@ export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
     // fade for this camera, which the scene's observers wrote before it.
     const stopPreparing = readShadowMaps(gl, (rendered, camera) => {
       if (rendered !== scene) return;
-      const objects = { lights: lights.current(), casters: casters.current() };
+      const isVolumetric = settings.current.volumetric !== null;
+      const objects = { lights: lights.current(), casters: isVolumetric ? casters.current() : NO_CASTERS };
       if (prepareFog(gl, scene, camera, settings.current, passes, objects)) invalidate();
     });
     const stopFinishing = observeSceneRenderEnd(scene, finishFog);
