@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installShaderPatches } from './installShaderPatches';
 import { CANVAS_SRGB_DEFINES } from '../canvasSrgbMultiply';
+import { warningsOf } from '../testing/logWarnings';
 
 describe('installShaderPatches', () => {
   it('installs the 2D canvas patch with the 3D ones', () => {
@@ -23,5 +24,11 @@ describe('installShaderPatches', () => {
     const chunks = { ...THREE.ShaderChunk };
     installShaderPatches();
     expect({ ...THREE.ShaderChunk }).toEqual(chunks);
+  });
+
+  it('warns nothing on a second call, as a second canvas makes it (edge case)', () => {
+    installShaderPatches();
+
+    expect(warningsOf(installShaderPatches)).toEqual([]);
   });
 });
