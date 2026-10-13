@@ -13,6 +13,7 @@ import { skyLightEnergy } from '../sky/skyLight.js';
 import { worldToSky } from '../sky/skyRotation.js';
 import { visibleInTree } from '../visibleInTree.js';
 import type { FogPasses } from './fogPasses.js';
+import { shineDirection } from './fogLights.js';
 import { skyRadiance } from './fogSky.js';
 import { FOG_SUN_MAX, fogUniforms } from './fogUniforms.js';
 import type { VolumetricFog } from './fogVolumePass.js';
@@ -34,7 +35,6 @@ const toSky = new THREE.Matrix3();
 const depthColor = new THREE.Color();
 
 /** Scratch for one light, overwritten by each. */
-const from = new THREE.Vector3();
 const towards = new THREE.Vector3();
 
 /**
@@ -111,8 +111,7 @@ function writeSuns(lights: readonly THREE.Light[]): void {
     if (slot === FOG_SUN_MAX) break;
     if (!(light as THREE.DirectionalLight).isDirectionalLight || !visibleInTree(light)) continue;
     const sun = light as THREE.DirectionalLight;
-    from.setFromMatrixPosition(sun.matrixWorld);
-    towards.setFromMatrixPosition(sun.target.matrixWorld).sub(from).normalize().negate();
+    shineDirection(sun, towards).normalize().negate();
     writeVec4(sunDirections, slot, towards.x, towards.y, towards.z, 0);
     const { r, g, b } = sun.color;
     writeVec4(sunSurfaceColors, slot, r * sun.intensity, g * sun.intensity, b * sun.intensity, 1);

@@ -21,7 +21,6 @@ import {
   type VolumetricFogProjectSettings,
 } from '../../godot/volumetricFog.js';
 import type { EnvironmentSettings } from '../../resources/environment/types.js';
-import { godotColorToLinear } from '../godotColor.js';
 import { FULL_SCREEN_VERTEX } from '../lighting2d/fullScreenQuad.js';
 import { drawOffscreen } from '../offscreen.js';
 import { FOG_LIGHT_TEXELS, FogLightRows } from './fogLights.js';
@@ -101,6 +100,11 @@ function volumeTarget(name: string): THREE.WebGL3DRenderTarget {
   });
   target.texture.name = name;
   return target;
+}
+
+/** Writes Godot's sRGB `color` into `target` as linear, with no allocation per draw. */
+function setLinear(target: THREE.Color, { r, g, b }: { r: number; g: number; b: number }): THREE.Color {
+  return target.setRGB(r, g, b, THREE.SRGBColorSpace);
 }
 
 function resize(target: THREE.WebGL3DRenderTarget, { width, height, depth }: VolumetricFogGrid): void {
@@ -236,7 +240,16 @@ export class FogVolumePass {
   /** What `sliceDepths` holds the depths of. */
   private slices = { depth: 0, length: 0, detailSpread: 0 };
   /** Each scene's volume per camera, so each camera keeps its own history, as each Godot viewport does. */
-  private readonly views = new WeakMap<THREE.Scene, Map<THREE.Camera, ViewVolume>>();
+  private readonly views = new WeakMap<THREE.Scene, WeakMap<THREE.Camera, ViewVolume>>();
+  /** Every live view volume of each scene, which `forget` disposes. */
+  private readonly liveViews = new WeakMap<THREE.Scene, Set<ViewVolume>>();
+  /** Disposes a view's targets once its camera is collected, so a camera that is gone holds no GPU memory. */
+  private readonly cameraGone = new FinalizationRegistry<{ live: Set<ViewVolume>; state: ViewVolume }>(
+    ({ live, state }) => {
+      live.delete(state);
+      this.drop(state);
+    }
+  );
   /** The view volume the renderer's volume holds a copy of, null before the first copy. */
   private copied: ViewVolume | null = null;
   /** The light rows the light texture holds, null before the first upload. */
@@ -250,8 +263,7 @@ export class FogVolumePass {
   /**
    * Readies the volume and the composite's uniforms for a render of `scene` through `camera`, into
    * the renderer's current target and viewport. Answers whether the volume is still settling, when
-   * the next frame redraws it whether or not anything changes. A viewport with no area leaves the
-   * composite without a volume.
+   * the next frame redraws it. A grid with an empty side leaves the composite without a volume.
    */
   prepare(
     renderer: THREE.WebGLRenderer,
@@ -261,6 +273,8 @@ export class FogVolumePass {
   ): boolean {
     renderer.getCurrentViewport(this.viewport);
     if (this.viewport.z < 1 || this.viewport.w < 1) return false;
+    const grid = volumetricFogGrid({ width: this.viewport.z, height: this.viewport.w }, inputs.project);
+    if (grid.width < 1 || grid.height < 1) return false;
     const state = this.viewOf(scene, camera);
     const sky = skyRadiance(scene);
     const hasLightsChanged = state.lights.pack(inputs.lights, camera);
@@ -269,7 +283,7 @@ export class FogVolumePass {
     const sampling = samplingFor(hasChanged, inputs.fog.temporalReprojection, state.isSettling);
     if (sampling || this.copied !== state) {
       drawOffscreen(renderer, () => {
-        if (sampling) this.draw(renderer, camera, state, inputs, sky, sampling);
+        if (sampling) this.draw(renderer, camera, state, inputs, { sky, sampling, grid });
         resize(this.volume, state.grid);
         this.copy(renderer, state.integrated, this.volume, state.grid);
       });
@@ -281,14 +295,12 @@ export class FogVolumePass {
 
   /** Drops `scene`'s volumes and histories. */
   forget(scene: THREE.Scene): void {
-    const views = this.views.get(scene);
-    if (!views) return;
-    for (const state of views.values()) {
-      state.dispose();
-      if (this.copied === state) this.copied = null;
-      if (this.uploadedLights === state.lights) this.uploadedLights = null;
+    for (const state of this.liveViews.get(scene) ?? []) {
+      this.cameraGone.unregister(state);
+      this.drop(state);
     }
     this.views.delete(scene);
+    this.liveViews.delete(scene);
   }
 
   dispose(): void {
@@ -305,16 +317,26 @@ export class FogVolumePass {
 
   private viewOf(scene: THREE.Scene, camera: THREE.Camera): ViewVolume {
     let views = this.views.get(scene);
-    if (!views) {
-      views = new Map();
+    let live = this.liveViews.get(scene);
+    if (!views || !live) {
+      views = new WeakMap();
+      live = new Set();
       this.views.set(scene, views);
+      this.liveViews.set(scene, live);
     }
-    let state = views.get(camera);
-    if (!state) {
-      state = new ViewVolume();
-      views.set(camera, state);
-    }
+    const existing = views.get(camera);
+    if (existing) return existing;
+    const state = new ViewVolume();
+    views.set(camera, state);
+    live.add(state);
+    this.cameraGone.register(camera, { live, state }, state);
     return state;
+  }
+
+  private drop(state: ViewVolume): void {
+    state.dispose();
+    if (this.copied === state) this.copied = null;
+    if (this.uploadedLights === state.lights) this.uploadedLights = null;
   }
 
   private writeLookup({ fog, project }: FogVolumeInputs): void {
@@ -335,11 +357,9 @@ export class FogVolumePass {
     camera: THREE.Camera,
     state: ViewVolume,
     inputs: FogVolumeInputs,
-    sky: THREE.Texture | null,
-    sampling: Sampling
+    { sky, sampling, grid }: { sky: THREE.Texture | null; sampling: Sampling; grid: VolumetricFogGrid }
   ): void {
-    const grid = volumetricFogGrid({ width: this.viewport.z, height: this.viewport.w }, inputs.project);
-    this.resize(state, grid);
+    this.fitToGrid(state, grid);
     this.writeMedium(inputs);
     this.writeView(camera, inputs, grid);
     this.writeSky(sky, inputs.skyEnergy);
@@ -361,7 +381,7 @@ export class FogVolumePass {
     this.fill(renderer, state.integrated, this.integrateMaterial, grid);
   }
 
-  private resize(state: ViewVolume, grid: VolumetricFogGrid): void {
+  private fitToGrid(state: ViewVolume, grid: VolumetricFogGrid): void {
     resize(this.density, grid);
     resize(this.filtered, grid);
     const { width, height, depth } = state.grid;
@@ -379,14 +399,12 @@ export class FogVolumePass {
     uniforms['fogLength']!.value = fog.length;
     uniforms['detailSpread']!.value = fog.detailSpread;
     uniforms['density']!.value = density;
-    (uniforms['scattering']!.value as THREE.Color)
-      .copy(godotColorToLinear(fog.albedo))
-      .multiplyScalar(density);
-    (uniforms['emission']!.value as THREE.Color)
-      .copy(godotColorToLinear(fog.emission))
-      .multiplyScalar(fog.emissionEnergy * density);
+    setLinear(uniforms['scattering']!.value as THREE.Color, fog.albedo).multiplyScalar(density);
+    setLinear(uniforms['emission']!.value as THREE.Color, fog.emission).multiplyScalar(
+      fog.emissionEnergy * density
+    );
     uniforms['phaseG']!.value = fog.anisotropy;
-    (uniforms['ambientColor']!.value as THREE.Color).copy(godotColorToLinear(fog.ambient.color));
+    setLinear(uniforms['ambientColor']!.value as THREE.Color, fog.ambient.color);
     uniforms['ambientInject']!.value = fog.ambient.inject;
     uniforms['skyContribution']!.value = fog.ambient.skyContribution;
     uniforms['skyRoughness']!.value = volumetricFogSkyRoughness(density);

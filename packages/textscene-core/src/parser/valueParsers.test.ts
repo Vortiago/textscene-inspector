@@ -13,6 +13,7 @@ import {
   parseOptionalVector2i,
   enumOr,
   vec2Or,
+  vec3Or,
   parseOptionalInt,
   parseOptionalFloat,
   parseNodePathLiteral,
@@ -142,6 +143,22 @@ describe('vec2Or', () => {
     expect(vec2Or('Vector2(oops)', { x: 1, y: 1 }, 'Sprite2D')).toEqual({ x: 1, y: 1 });
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0]?.[0]).toContain('Sprite2D');
+  });
+});
+
+describe('vec3Or', () => {
+  const ORIGIN = { x: 0, y: 0, z: 0 };
+  it('parses a valid Vector3', () => {
+    expect(vec3Or('Vector3(1, -2, 0.5)', ORIGIN)).toEqual({ x: 1, y: -2, z: 0.5 });
+  });
+  it('falls back silently when absent', () => {
+    expect(vec3Or(undefined, ORIGIN)).toEqual(ORIGIN);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+  it('warns then falls back when present but invalid', () => {
+    expect(vec3Or('Vector3(1, 2)', ORIGIN, 'sky_rotation')).toEqual(ORIGIN);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0]?.[0]).toContain('sky_rotation');
   });
 });
 

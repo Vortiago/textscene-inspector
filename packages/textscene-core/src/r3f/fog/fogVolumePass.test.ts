@@ -2,7 +2,7 @@
  * What the volume pass draws for each render: the light pass's sampling and history blend, and the
  * copy into the volume every fog program reads. A recording renderer stands in for WebGL.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { VOLUMETRIC_FOG_TEMPORAL_JITTERS } from '../../godot/volumetricFog';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
@@ -118,6 +118,16 @@ describe('FogVolumePass.prepare', () => {
     expect(renderer.take()).toEqual({ lightDraws: [], copies: 0 });
   });
 
+  it('draws no volume into a viewport so narrow that the grid has no column (edge case)', () => {
+    // 1x40 against a side of 4: the ratio is 1 / 20, so the grid's width truncates to 0.
+    const renderer = new RecordingRenderer(new THREE.Vector2(1, 40));
+
+    const isSettling = new FogVolumePass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), inputs());
+
+    expect(isSettling).toBe(false);
+    expect(renderer.take()).toEqual({ lightDraws: [], copies: 0 });
+  });
+
   it('draws the mean of the 16 jitters once the view holds still, as Godot converges', () => {
     const renderer = new RecordingRenderer();
     const pass = new FogVolumePass();
@@ -213,6 +223,20 @@ describe('FogVolumePass.prepare', () => {
     expect(pass.prepare(renderer.asWebGL, scene, main, fog)).toBe(false);
     expect(pass.prepare(renderer.asWebGL, scene, other, fog)).toBe(false);
     expect(renderer.take().lightDraws).toEqual([]);
+  });
+
+  it("frees every camera's volume and history when the scene is forgotten", () => {
+    const renderer = new RecordingRenderer();
+    const pass = new FogVolumePass();
+    const scene = new THREE.Scene();
+    pass.prepare(renderer.asWebGL, scene, camera(), inputs());
+    pass.prepare(renderer.asWebGL, scene, camera(), inputs());
+    const dispose = vi.spyOn(THREE.WebGL3DRenderTarget.prototype, 'dispose');
+
+    pass.forget(scene);
+
+    expect(dispose).toHaveBeenCalledTimes(4);
+    dispose.mockRestore();
   });
 
   it('draws again when the sky turns', () => {

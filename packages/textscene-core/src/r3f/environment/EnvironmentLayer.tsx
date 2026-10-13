@@ -164,26 +164,29 @@ function EnvironmentApplier({ settings, hasSky, hasFog, suppressToneMapping }: E
   const { mode, color: backgroundColor, energyMultiplier: backgroundEnergy } = settings.background;
   const showsColor = showsBackgroundColor(mode);
 
+  // Each branch restores only what it wrote: a sky's background and intensity belong to `<SkyLayer>`.
   useEffect(() => {
-    const previousBackground = scene.background;
-    const previousIntensity = scene.backgroundIntensity;
-    let cube: THREE.CubeTexture | null = null;
     if (showsColor) {
       // Godot Color literals are sRGB; convert to three.js's linear working space.
       const color = godotColorToLinear(backgroundColor);
-      cube = hasFog ? clearColorCube(color) : null;
-      scene.background = cube ?? color;
-      if (cube) scene.backgroundIntensity = backgroundEnergy;
-    } else if (mode === BackgroundMode.BG_SKY && !hasSky) {
+      if (!hasFog) return showBackground(scene, color, scene.backgroundIntensity);
+      const cube = clearColorCube(color);
+      const restore = showBackground(scene, cube, backgroundEnergy);
+      return () => {
+        restore();
+        cube.dispose();
+      };
+    }
+    if (mode === BackgroundMode.BG_SKY && !hasSky) {
       // A sky we cannot resolve (an unsupported material, or one in an ExtResource `.tres`). A
       // mid-blue solid reads as "sky here" rather than as a black void.
-      scene.background = godotColorToLinear({ r: 0.5, g: 0.6, b: 0.75 });
+      return showBackground(
+        scene,
+        godotColorToLinear({ r: 0.5, g: 0.6, b: 0.75 }),
+        scene.backgroundIntensity
+      );
     }
-    return () => {
-      scene.background = previousBackground;
-      scene.backgroundIntensity = previousIntensity;
-      cube?.dispose();
-    };
+    return undefined;
   }, [scene, showsColor, mode, backgroundColor, backgroundEnergy, hasSky, hasFog]);
 
   const {
@@ -207,6 +210,22 @@ function EnvironmentApplier({ settings, hasSky, hasFog, suppressToneMapping }: E
   }, [gl, scene, toneMapMode, toneMapExposure, toneMapWhite, toneMapAgxContrast, suppressToneMapping]);
 
   return null;
+}
+
+/** Draws `background` at `intensity` behind `scene`, and answers the restore of what it found. */
+function showBackground(
+  scene: THREE.Scene,
+  background: THREE.Color | THREE.CubeTexture,
+  intensity: number
+): () => void {
+  const previousBackground = scene.background;
+  const previousIntensity = scene.backgroundIntensity;
+  scene.background = background;
+  scene.backgroundIntensity = intensity;
+  return () => {
+    scene.background = previousBackground;
+    scene.backgroundIntensity = previousIntensity;
+  };
 }
 
 function showsBackgroundColor(mode: BackgroundMode): boolean {

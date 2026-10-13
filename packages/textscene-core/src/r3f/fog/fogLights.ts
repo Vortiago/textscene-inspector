@@ -124,14 +124,19 @@ function viewPosition(light: THREE.Light, camera: THREE.Camera): THREE.Vector3 {
   return position.setFromMatrixPosition(light.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
 }
 
+/** The world direction `light` shines along, from itself to its target, unnormalised, into `out`. */
+export function shineDirection(
+  light: THREE.DirectionalLight | THREE.SpotLight,
+  out: THREE.Vector3
+): THREE.Vector3 {
+  position.setFromMatrixPosition(light.matrixWorld);
+  return out.setFromMatrixPosition(light.target.matrixWorld).sub(position);
+}
+
 /** The unit view-space direction a light shines along, from itself to its target. */
 function targetDirection(
   light: THREE.DirectionalLight | THREE.SpotLight,
   camera: THREE.Camera
 ): THREE.Vector3 {
-  position.setFromMatrixPosition(light.matrixWorld);
-  return towards
-    .setFromMatrixPosition(light.target.matrixWorld)
-    .sub(position)
-    .transformDirection(camera.matrixWorldInverse);
+  return shineDirection(light, towards).transformDirection(camera.matrixWorldInverse);
 }
