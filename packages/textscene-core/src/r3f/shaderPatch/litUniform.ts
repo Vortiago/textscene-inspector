@@ -1,27 +1,54 @@
 /**
- * How this repository gives three's lit materials a uniform that a patched chunk declares, and finds
- * the value an earlier evaluation of a module installed.
+ * How this repository gives three's built-in materials a uniform that a patched chunk declares, and
+ * finds the value an earlier evaluation of a module installed.
  */
 
 import * as THREE from 'three';
 
 /**
- * Gives `value` to every built-in material that merges `UniformsLib.lights`, and to
- * `UniformsLib.lights`, for every material created after the call. `pointLightShadows` marks the
- * merge, which three's lit materials and `ShadowMaterial` make and no other entry does (r186
- * `ShaderLib.js:40`, `:65`, `:93`, `:119`, `:289`, and `physical` through `standard`).
+ * One of `UniformsLib`'s groups, and the uniform that marks a `ShaderLib` entry as merging it,
+ * which no entry outside the group holds.
  */
-export function installLitUniform(name: string, value: unknown): void {
-  for (const shader of Object.values(THREE.ShaderLib)) {
-    if ('pointLightShadows' in shader.uniforms) shader.uniforms[name] = { value };
-  }
-  (THREE.UniformsLib.lights as Record<string, THREE.IUniform>)[name] = { value };
+interface UniformsMerge {
+  marker: string;
+  group: Record<string, THREE.IUniform>;
 }
 
 /**
- * The value an earlier evaluation of a module gave the lit materials, as after a dev server reloads
- * it, or undefined before any install. Every program compiled since reads that value, so the caller
- * keeps writing it. The caller narrows the type.
+ * The lit materials and `ShadowMaterial` merge `UniformsLib.lights` (r186 `ShaderLib.js:40`, `:65`,
+ * `:93`, `:119`, `:289`, and `physical` through `standard`).
+ */
+const LIGHTS_MERGE: UniformsMerge = {
+  marker: 'pointLightShadows',
+  group: THREE.UniformsLib.lights as Record<string, THREE.IUniform>,
+};
+
+/** Every material with fog merges `UniformsLib.fog`, and only they hold `fogDensity`. */
+export const FOG_UNIFORMS_MERGE: UniformsMerge = {
+  marker: 'fogDensity',
+  group: THREE.UniformsLib.fog as Record<string, THREE.IUniform>,
+};
+
+/**
+ * Gives `value` to every built-in material that makes `merge`, and to its group, for every material
+ * created after the call.
+ */
+export function installMergedUniform(merge: UniformsMerge, name: string, value: unknown): void {
+  for (const shader of Object.values(THREE.ShaderLib)) {
+    if (merge.marker in shader.uniforms) shader.uniforms[name] = { value };
+  }
+  merge.group[name] = { value };
+}
+
+/** {@link installMergedUniform} for the lit materials. */
+export function installLitUniform(name: string, value: unknown): void {
+  installMergedUniform(LIGHTS_MERGE, name, value);
+}
+
+/**
+ * The value an earlier evaluation of a module gave the built-in materials, as after a dev server
+ * reloads it, or undefined before any install. `standard` makes both merges, and every program
+ * compiled since reads that value, so the caller keeps writing it. The caller narrows the type.
  */
 export function installedUniformValue(name: string): unknown {
   return THREE.ShaderLib.standard.uniforms[name]?.value;

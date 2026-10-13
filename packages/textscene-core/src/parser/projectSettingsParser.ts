@@ -21,6 +21,7 @@ import {
 import { unquoteLiteral } from './utils.js';
 import { colorOr, type Color } from '../utils/colorParser.js';
 import { parseOptionalInt } from './valueParsers.js';
+import { VOLUMETRIC_FOG_DEFAULTS, type VolumetricFogProjectSettings } from '../godot/volumetricFog.js';
 
 /**
  * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,
@@ -138,6 +139,31 @@ export function projectViewportSize(settings: ProjectSettings | null): ProjectVi
  */
 export function projectClearColor(settings: ProjectSettings | null): Color {
   return colorOr(settings?.['rendering/environment/defaults/default_clear_color'], DEFAULT_CLEAR_COLOR);
+}
+
+/**
+ * The `rendering/environment/volumetric_fog/*` settings and `fog/use_legacy_blending`, which Godot
+ * reads once for every Environment (`renderer_scene_render_rd.cpp:1726-1728`). A volume side that
+ * is not a positive integer keeps its default, since no volume has an empty side.
+ */
+export function projectVolumetricFogSettings(settings: ProjectSettings | null): VolumetricFogProjectSettings {
+  const side = (key: string, fallback: number): number => {
+    const value = parseOptionalInt(settings?.[key]);
+    return value !== undefined && value > 0 ? value : fallback;
+  };
+  const flag = (key: string, fallback: boolean): boolean => boolSlotValue(settings?.[key]) ?? fallback;
+  return {
+    volumeSize: side('rendering/environment/volumetric_fog/volume_size', VOLUMETRIC_FOG_DEFAULTS.volumeSize),
+    volumeDepth: side(
+      'rendering/environment/volumetric_fog/volume_depth',
+      VOLUMETRIC_FOG_DEFAULTS.volumeDepth
+    ),
+    useFilter: flag('rendering/environment/volumetric_fog/use_filter', VOLUMETRIC_FOG_DEFAULTS.useFilter),
+    useLegacyBlending: flag(
+      'rendering/environment/fog/use_legacy_blending',
+      VOLUMETRIC_FOG_DEFAULTS.useLegacyBlending
+    ),
+  };
 }
 
 /**

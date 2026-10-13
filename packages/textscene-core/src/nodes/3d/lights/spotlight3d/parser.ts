@@ -3,7 +3,7 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { SpotLight3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
-import { parseBaseLightWithNormalBias } from '../shared/parser';
+import { parsePositionalLightProperties } from '../shared/parser';
 import { floatOr } from '../../../../parser/valueParsers';
 
 export function parseSpotLight3D(
@@ -11,7 +11,7 @@ export function parseSpotLight3D(
   properties: Record<string, string>
 ): SpotLight3DProperties {
   const node3dProps = parseNode3D(heading, properties);
-  const baseLightProps = parseBaseLightWithNormalBias(properties);
+  const baseLightProps = parsePositionalLightProperties(properties);
 
   return {
     ...node3dProps,

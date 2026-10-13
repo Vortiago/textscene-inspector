@@ -1,6 +1,6 @@
 /**
- * Reports the camera and the target each render of a scene uses. A sub-viewport's pass camera
- * never enters the R3F store, so only the render sees it, and
+ * Reports the camera and the target each render of a scene uses, and the end of each render. A
+ * sub-viewport's pass camera never enters the R3F store, so only the render sees it, and
  * `scene.onBeforeRender` runs before the render list, so content moves that frame. A cull runs
  * after every other observer, so it reads the content and the shadow fit that render places.
  */
@@ -15,13 +15,18 @@ type SceneCameraObserver = (camera: THREE.Camera, target: THREE.WebGLRenderTarge
  * untouched, so their shape never matters here.
  */
 type BeforeRender = THREE.Object3D['onBeforeRender'];
+type AfterRender = THREE.Object3D['onAfterRender'];
 
 interface SceneHook {
   observers: Set<SceneCameraObserver>;
   /** Run after every observer. */
   cullers: Set<SceneCameraObserver>;
+  /** Run once the render has drawn the scene. */
+  finishers: Set<() => void>;
   /** Whatever `onBeforeRender` was before we chained onto it. */
   previous: BeforeRender;
+  /** Whatever `onAfterRender` was before we chained onto it. */
+  previousAfter: AfterRender;
 }
 
 const hooks = new WeakMap<THREE.Scene, SceneHook>();
@@ -46,6 +51,16 @@ export function isViewportPass(camera: THREE.Camera): camera is THREE.Orthograph
   return viewportCanvasCameras.has(camera);
 }
 
+/** Scratch for one measurement, overwritten by each: the render hooks never interleave. */
+const objectOrigin = new THREE.Vector3();
+const cameraOrigin = new THREE.Vector3();
+
+/** The distance from `camera` to `object`'s origin, off the world matrices a render has just updated. */
+export function cameraDistance(object: THREE.Object3D, camera: THREE.Camera): number {
+  objectOrigin.setFromMatrixPosition(object.matrixWorld);
+  return cameraOrigin.setFromMatrixPosition(camera.matrixWorld).distanceTo(objectOrigin);
+}
+
 /**
  * Call `observer` with the camera and target each render of `scene` uses, until the
  * returned disposer runs. Removing the last observer restores the scene's
@@ -60,10 +75,15 @@ export function observeSceneCull(scene: THREE.Scene, culler: SceneCameraObserver
   return observeIn(scene, culler, (hook) => hook.cullers);
 }
 
-function observeIn(
+/** Call `finisher` once each render of `scene` has drawn it, until the returned disposer runs. */
+export function observeSceneRenderEnd(scene: THREE.Scene, finisher: () => void): () => void {
+  return observeIn(scene, finisher, (hook) => hook.finishers);
+}
+
+function observeIn<Observer>(
   scene: THREE.Scene,
-  observer: SceneCameraObserver,
-  listOf: (hook: SceneHook) => Set<SceneCameraObserver>
+  observer: Observer,
+  listOf: (hook: SceneHook) => Set<Observer>
 ): () => void {
   const hook = hooks.get(scene) ?? installHook(scene);
   listOf(hook).add(observer);
@@ -71,14 +91,21 @@ function observeIn(
     const current = hooks.get(scene);
     if (!current) return;
     listOf(current).delete(observer);
-    if (current.observers.size > 0 || current.cullers.size > 0) return;
+    if (current.observers.size > 0 || current.cullers.size > 0 || current.finishers.size > 0) return;
     scene.onBeforeRender = current.previous;
+    scene.onAfterRender = current.previousAfter;
     hooks.delete(scene);
   };
 }
 
 function installHook(scene: THREE.Scene): SceneHook {
-  const hook: SceneHook = { observers: new Set(), cullers: new Set(), previous: scene.onBeforeRender };
+  const hook: SceneHook = {
+    observers: new Set(),
+    cullers: new Set(),
+    finishers: new Set(),
+    previous: scene.onBeforeRender,
+    previousAfter: scene.onAfterRender,
+  };
   hooks.set(scene, hook);
   const chained: BeforeRender = function chainedOnBeforeRender(this: THREE.Object3D, ...args) {
     hook.previous.apply(this, args);
@@ -88,7 +115,12 @@ function installHook(scene: THREE.Scene): SceneHook {
     for (const fn of hook.observers) fn(camera, target);
     for (const fn of hook.cullers) fn(camera, target);
   };
+  const chainedAfter: AfterRender = function chainedOnAfterRender(this: THREE.Object3D, ...args) {
+    hook.previousAfter.apply(this, args);
+    for (const fn of hook.finishers) fn();
+  };
   // Chained, not replaced: several ParallaxBackgrounds and the shadow fitter share one scene.
   scene.onBeforeRender = chained;
+  scene.onAfterRender = chainedAfter;
   return hook;
 }

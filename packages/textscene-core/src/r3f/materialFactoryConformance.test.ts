@@ -183,6 +183,10 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the accumulator seed quad: fixed shaders, one uniform, one instance per accumulator',
   'packages/textscene-core/src/r3f/positionalShadow/omniShadowCopy.ts':
     'the cube-to-paraboloid copy: shaders fixed at construction, only uniforms move, one instance per renderer',
+  'packages/textscene-core/src/r3f/fog/fogVolumePass.ts':
+    'the fog volume passes: shaders fixed at construction, only uniforms move, and a `defines` change sets `needsUpdate`; one instance per renderer',
+  'packages/textscene-core/src/r3f/fog/fogRadiancePass.ts':
+    'the sky radiance bake: shaders fixed at construction, only uniforms move, and a new sky layout sets `needsUpdate`; one instance per renderer',
   'packages/textscene-core/src/r3f/testing/threePasses.ts':
     "a test stand-in for three's shared `_depthMaterial`, read by a probe and never rendered, so never compiled",
   'packages/textscene-core/src/r3f/lighting2d/directionalLightQuad.ts':
@@ -250,6 +254,8 @@ export function meshArgumentMounts(source: string): MeshArgumentMount[] {
 const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
+  'packages/textscene-core/src/r3f/fog/fogVolumePass.ts':
+    'swaps the slice quad between the four fog pass materials, each built with its shaders fixed at construction, so only uniforms and `needsUpdate`-flagged `defines` move',
   'packages/textscene-core/src/nodes/3d/decal/decalProjectionMaterials.ts':
     'moves a projection mesh, which is not React state, to the material built for its receiver’s new shading, each built with its program fixed, so a swap changes which material draws and never a program input of one',
   'packages/textscene-core/src/r3f/materials/fadedMeshMaterials.ts':
@@ -273,6 +279,8 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the screen quad: its pass materials have their shaders fixed at construction, and it is disposed with the effect',
   'packages/textscene-core/src/r3f/positionalShadow/omniShadowCopy.ts':
     'the copy quad: its material has its shaders fixed at construction, and only its uniforms move',
+  'packages/textscene-core/src/r3f/fog/fogRadiancePass.ts':
+    'the radiance bake quad: its material has its shaders fixed at construction, and quad and material are built and disposed together',
   'packages/textscene-core/src/resources/sky/build.ts':
     'the sky cube: built once, consumed by a single cube render, disposed with the environment',
 };

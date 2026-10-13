@@ -65,6 +65,116 @@ describe('decodeEnvironment', () => {
     expect(result.volumetric_fog_emission).toEqual({ r: 0.1, g: 0.05, b: 0, a: 1 });
   });
 
+  it("carries Godot's defaults for the volumetric fog medium and its pass", () => {
+    const result = decodeEnvironment({});
+
+    expect(result.volumetric_fog_emission_energy).toBe(1.0);
+    expect(result.volumetric_fog_anisotropy).toBe(0.2);
+    expect(result.volumetric_fog_length).toBe(64.0);
+    expect(result.volumetric_fog_detail_spread).toBe(2.0);
+    expect(result.volumetric_fog_ambient_inject).toBe(0.0);
+    expect(result.volumetric_fog_sky_affect).toBe(1.0);
+    expect(result.volumetric_fog_temporal_reprojection_enabled).toBe(true);
+  });
+
+  it('parses the volumetric fog medium and pass properties', () => {
+    const result = decodeEnvironment({
+      volumetric_fog_emission_energy: '3.5',
+      volumetric_fog_anisotropy: '-0.4',
+      volumetric_fog_length: '120',
+      volumetric_fog_detail_spread: '4',
+      volumetric_fog_ambient_inject: '0.5',
+      volumetric_fog_sky_affect: '0.25',
+      volumetric_fog_temporal_reprojection_enabled: 'false',
+    });
+
+    expect(result.volumetric_fog_emission_energy).toBe(3.5);
+    expect(result.volumetric_fog_anisotropy).toBe(-0.4);
+    expect(result.volumetric_fog_length).toBe(120);
+    expect(result.volumetric_fog_detail_spread).toBe(4);
+    expect(result.volumetric_fog_ambient_inject).toBe(0.5);
+    expect(result.volumetric_fog_sky_affect).toBe(0.25);
+    expect(result.volumetric_fog_temporal_reprojection_enabled).toBe(false);
+  });
+
+  it('clamps volumetric_fog_detail_spread into 0.5-6, as its setter does', () => {
+    expect(decodeEnvironment({ volumetric_fog_detail_spread: '9' }).volumetric_fog_detail_spread).toBe(6);
+    expect(decodeEnvironment({ volumetric_fog_detail_spread: '0.1' }).volumetric_fog_detail_spread).toBe(0.5);
+  });
+
+  it("carries Godot's defaults for the depth fog", () => {
+    const result = decodeEnvironment({});
+    expect(result.fog_mode).toBe(0);
+    expect(result.fog_light_energy).toBe(1);
+    expect(result.fog_sun_scatter).toBe(0);
+    expect(result.fog_density).toBe(0.01);
+    expect(result.fog_aerial_perspective).toBe(0);
+    expect(result.fog_sky_affect).toBe(1);
+    expect(result.fog_height).toBe(0);
+    expect(result.fog_height_density).toBe(0);
+    expect(result.fog_depth_curve).toBe(1);
+    expect(result.fog_depth_begin).toBe(10);
+    expect(result.fog_depth_end).toBe(100);
+  });
+
+  it('parses the depth fog properties', () => {
+    const result = decodeEnvironment({
+      fog_enabled: 'true',
+      fog_mode: '1',
+      fog_light_energy: '2',
+      fog_sun_scatter: '0.5',
+      fog_density: '0.8',
+      fog_aerial_perspective: '0.25',
+      fog_sky_affect: '0.4',
+      fog_height: '3',
+      fog_height_density: '-0.2',
+      fog_depth_curve: '2',
+      fog_depth_begin: '5',
+      fog_depth_end: '40',
+    });
+    expect(result).toMatchObject({
+      fog_enabled: true,
+      fog_mode: 1,
+      fog_light_energy: 2,
+      fog_sun_scatter: 0.5,
+      fog_density: 0.8,
+      fog_aerial_perspective: 0.25,
+      fog_sky_affect: 0.4,
+      fog_height: 3,
+      fog_height_density: -0.2,
+      fog_depth_curve: 2,
+      fog_depth_begin: 5,
+      fog_depth_end: 40,
+    });
+  });
+
+  it('defaults a depth fog with no stored density to 1, as set_fog_mode leaves it', () => {
+    expect(decodeEnvironment({ fog_mode: '1' }).fog_density).toBe(1);
+  });
+
+  it('keeps the depth fog begin at or before its end, as the setters do', () => {
+    const result = decodeEnvironment({ fog_depth_begin: '150' });
+    expect(result.fog_depth_begin).toBe(150);
+    expect(result.fog_depth_end).toBe(150);
+  });
+
+  it('parses sky_rotation, which defaults to none', () => {
+    expect(decodeEnvironment({}).sky_rotation).toEqual({ x: 0, y: 0, z: 0 });
+    expect(decodeEnvironment({ sky_rotation: 'Vector3(0.1, 0.2, 0.3)' }).sky_rotation).toEqual({
+      x: 0.1,
+      y: 0.2,
+      z: 0.3,
+    });
+  });
+
+  it('parses the temporal reprojection amount, which defaults to 0.9', () => {
+    expect(decodeEnvironment({}).volumetric_fog_temporal_reprojection_amount).toBe(0.9);
+    expect(
+      decodeEnvironment({ volumetric_fog_temporal_reprojection_amount: '0.6' })
+        .volumetric_fog_temporal_reprojection_amount
+    ).toBe(0.6);
+  });
+
   it('should parse adjustment settings', () => {
     const result = decodeEnvironment({
       adjustment_enabled: 'true',
