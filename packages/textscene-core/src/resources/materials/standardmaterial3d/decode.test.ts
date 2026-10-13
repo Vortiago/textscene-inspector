@@ -30,7 +30,12 @@ describe('decodeStandardMaterial3D — defaults', () => {
     expect(data.normalScale).toEqual({ x: 1, y: 1 });
     expect(data.billboardMode).toBe(0);
     expect(data.disablesSpecularOcclusion).toBe(false);
+    expect(data.specular).toBe(0.5);
     expect(data.textureSlots).toEqual({});
+  });
+
+  it('reads metallic_specular unclamped, as the setter stores it', () => {
+    expect(decodeStandardMaterial3D({ metallic_specular: '1.5' }).specular).toBe(1.5);
   });
 
   it('reads disable_specular_occlusion', () => {

@@ -28,6 +28,7 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     opacity: data.alpha,
     metalness: data.metallic,
     roughness: data.roughness,
+    specular: data.specular,
     emissive: data.emission.emissive,
     emissiveIntensity: data.emission.emissiveIntensity,
     emissionOperator: data.emissionOperator,

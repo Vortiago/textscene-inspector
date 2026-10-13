@@ -103,7 +103,24 @@ export const MISSING_TEXTURE_MATERIAL: StandardMaterialBag = {
  * physical-only feature extends this set.
  */
 function needsPhysicalMaterial(scalars: StandardMaterial3DScalars): boolean {
-  return scalars.clearcoat > 0 || scalars.rim > 0 || isAnisotropic(scalars) || scalars.transmission > 0;
+  return (
+    scalars.clearcoat > 0 ||
+    scalars.rim > 0 ||
+    isAnisotropic(scalars) ||
+    scalars.transmission > 0 ||
+    scalars.specular !== DEFAULT_SPECULAR
+  );
+}
+
+/** `metallic_specular`'s default (`material.cpp:3941`), whose F0 is three's fixed 0.04. */
+const DEFAULT_SPECULAR = 0.5;
+
+/**
+ * three's `specularIntensity` for Godot's dielectric F0 of `0.16 * specular * specular`
+ * (`scene_forward_lights_inc.glsl:56`): three scales its F0 of 0.04 at ior 1.5.
+ */
+function specularIntensity(specular: number): number {
+  return (0.16 * specular * specular) / 0.04;
 }
 
 /**
@@ -337,6 +354,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     injection,
     props: {
       ...pbr,
+      specularIntensity: specularIntensity(scalars.specular),
       clearcoat: scalars.clearcoat,
       clearcoatRoughness: scalars.clearcoatRoughness,
       sheen: scalars.rim,

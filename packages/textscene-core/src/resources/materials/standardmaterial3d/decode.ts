@@ -148,6 +148,8 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     alpha: readsAlbedoAlpha && albedo ? clamp01(albedo.a) : 1,
     metallic: clamp01(floatOr(properties['metallic'], 0, CONTEXT)),
     roughness: clamp01(floatOr(properties['roughness'], 1, CONTEXT)),
+    // `material.cpp:2160-2163`: the setter checks no range.
+    specular: floatOr(properties['metallic_specular'], 0.5, CONTEXT),
     emission,
     emissionOperator: intOr(properties['emission_operator'], 0, CONTEXT),
     textureFilter: intOr(properties['texture_filter'], TEXTURE_FILTER_DEFAULT, CONTEXT),

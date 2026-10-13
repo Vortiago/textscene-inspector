@@ -70,12 +70,31 @@ describe('standardMaterialBags — the material class', () => {
     ['FEATURE_RIM', { rim_enabled: 'true', rim: '0.6' }],
     ['FEATURE_ANISOTROPY', { anisotropy_enabled: 'true', anisotropy: '0.5' }],
     ['FEATURE_REFRACTION', { refraction_enabled: 'true' }],
+    ['a metallic_specular past the default', { metallic_specular: '1' }],
   ])('upgrades to a physical material for %s', (_feature, properties) => {
     expect(bag(properties).materialClass).toBe('physical');
   });
 
   it('stays standard while every physical-only feature is off', () => {
     expect(bag({ clearcoat_enabled: 'true', clearcoat: '0' }).materialClass).toBe('standard');
+  });
+});
+
+describe('standardMaterialBags — metallic_specular', () => {
+  it("reflects Godot's dielectric F0 of 0.16 times metallic_specular squared", () => {
+    // three's F0 is 0.04 at ior 1.5, times `specularIntensity` (`scene_forward_lights_inc.glsl:56`).
+    const props = bag({ metallic_specular: '1' }).props as THREE.MeshPhysicalMaterialParameters;
+    expect(0.04 * props.specularIntensity!).toBeCloseTo(0.16, 6);
+  });
+
+  it("keeps three's 0.04 at the default 0.5 (edge case)", () => {
+    const derived = bag({ clearcoat_enabled: 'true' });
+    expect((derived.props as THREE.MeshPhysicalMaterialParameters).specularIntensity).toBe(1);
+  });
+
+  it('reflects nothing from a dielectric at metallic_specular 0 (edge case)', () => {
+    const props = bag({ metallic_specular: '0' }).props as THREE.MeshPhysicalMaterialParameters;
+    expect(props.specularIntensity).toBe(0);
   });
 });
 

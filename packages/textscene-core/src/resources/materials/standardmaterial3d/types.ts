@@ -114,6 +114,8 @@ export interface StandardMaterial3DData {
   metallic: number;
   /** `roughness`, clamped 0..1 per its `PROPERTY_HINT_RANGE "0,1,0.01"`. */
   roughness: number;
+  /** `metallic_specular`, unclamped: a dielectric's F0 is `0.16 * specular * specular`. */
+  specular: number;
   /** `emission` × `emission_energy_multiplier`, gated on `emission_enabled`. */
   emission: EmissionScalars;
   /** `emission_operator`: 0 ADD (default), 1 MULTIPLY. */
@@ -252,6 +254,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   opacity: number;
   metalness: number;
   roughness: number;
+  specular: number;
   emissionOperator: number;
   textureFilter: number;
   textureRepeat: boolean;
