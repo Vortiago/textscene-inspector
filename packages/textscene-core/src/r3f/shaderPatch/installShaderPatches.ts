@@ -11,6 +11,7 @@ import { installDirectionalShadowFade } from '../directionalShadow/shadowFade.js
 import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasChunk.js';
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk.js';
 import { installGodotPositionalShadow } from '../positionalShadow/positionalShadowChunk.js';
+import { installVolumetricFogComposite } from '../volumetricFog/fogComposite.js';
 
 export function installShaderPatches(): void {
   installGodotDiffuse();
@@ -19,4 +20,5 @@ export function installShaderPatches(): void {
   installDirectionalShadowFade();
   installGodotPositionalShadow();
   installCanvasSrgbMultiply();
+  installVolumetricFogComposite();
 }

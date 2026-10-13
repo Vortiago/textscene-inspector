@@ -5,8 +5,9 @@ import {
   isViewportPass,
   observeSceneCamera,
   observeSceneCull,
+  observeSceneRenderEnd,
 } from './sceneRenderCamera';
-import { fireSceneRender } from './testing/fireSceneRender';
+import { fireSceneRender, fireSceneRenderEnd } from './testing/fireSceneRender';
 
 describe('observeSceneCamera', () => {
   it('reports the camera each render uses', () => {
@@ -90,6 +91,42 @@ describe('observeSceneCamera', () => {
 
     fireSceneRender(scene, new THREE.OrthographicCamera());
     expect(observer).not.toHaveBeenCalled();
+  });
+});
+
+describe('observeSceneRenderEnd', () => {
+  it('reports the end of each render, after the original hook', () => {
+    const scene = new THREE.Scene();
+    const order: string[] = [];
+    scene.onAfterRender = () => order.push('original');
+    observeSceneRenderEnd(scene, () => order.push('end'));
+
+    fireSceneRenderEnd(scene, new THREE.OrthographicCamera());
+
+    expect(order).toEqual(['original', 'end']);
+  });
+
+  it('reports no start of a render (edge case)', () => {
+    const scene = new THREE.Scene();
+    const finisher = vi.fn();
+    observeSceneRenderEnd(scene, finisher);
+
+    fireSceneRender(scene, new THREE.OrthographicCamera());
+
+    expect(finisher).not.toHaveBeenCalled();
+  });
+
+  it('restores both original hooks once the last observer of either kind disposes', () => {
+    const scene = new THREE.Scene();
+    const { onBeforeRender, onAfterRender } = scene;
+    const disposeEnd = observeSceneRenderEnd(scene, vi.fn());
+    const disposeCamera = observeSceneCamera(scene, vi.fn());
+
+    disposeCamera();
+    expect(scene.onAfterRender).not.toBe(onAfterRender);
+    disposeEnd();
+    expect(scene.onBeforeRender).toBe(onBeforeRender);
+    expect(scene.onAfterRender).toBe(onAfterRender);
   });
 });
 

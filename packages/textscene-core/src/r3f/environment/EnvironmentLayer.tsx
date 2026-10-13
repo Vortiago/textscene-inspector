@@ -1,6 +1,7 @@
 /**
  * Applies one Godot `Environment` to the scene, for an authored `WorldEnvironment` and for the
- * editor preview environment alike (ADR-0025): background, sky, flat ambient, tonemapping and fog.
+ * editor preview environment alike (ADR-0025): background, sky, flat ambient, tonemapping, depth
+ * fog and volumetric fog.
  * Each restores what it found on unmount, because the renderer and scene outlive an environment.
  */
 
@@ -13,7 +14,6 @@ import {
   unexposedBrightPassThreshold,
   glowNeedsEveryPixel,
   glowParamsFor,
-  type GlowParams,
 } from '../../resources/environment/godotGlow';
 import type { SkyProperties } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
@@ -25,6 +25,8 @@ import { useLatchedSceneScan } from './useLatchedSceneScan';
 import { SkyLayer } from '../sky/SkyLayer';
 import { ToneMapLayer } from './ToneMapLayer';
 import { SkyDiffuseReflectionSplit } from './SkyDiffuseReflectionSplit';
+import { VolumetricFogLayer } from '../volumetricFog/VolumetricFogLayer';
+import { sceneFogFor } from './sceneFog';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -38,6 +40,7 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   // sky can light the scene without being shown (AMBIENT_SOURCE_SKY over a
   // colour background) and can be shown without lighting it (ambient DISABLED).
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
+  const showsColor = showsBackgroundColor(settings.background.mode);
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
   // Blending and glow both need linear HDR ahead of the tone curve, so the
@@ -51,13 +54,20 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   const hasBloomable = useSceneHasBloomableEmissive(scanThreshold);
   const hasBlended = useSceneHasBlendedSurface();
   const activeGlow = glowParams && (scanThreshold === null || hasBloomable) ? glowParams : null;
+  const draws3D = useDraws3D();
   // One value decides the pass and the suppression, so they cannot disagree.
-  const composited = useComposedToneMapping(activeGlow, hasBlended);
+  const composited = draws3D && (activeGlow || hasBlended) ? { glow: activeGlow } : null;
 
   return (
     <>
       <EnvironmentApplier settings={settings} hasSky={!!sky} suppressToneMapping={!!composited} />
       {composited && <ToneMapLayer glow={composited.glow} toneMapping={settings.toneMapping} />}
+      {draws3D && settings.volumetricFog && (
+        <VolumetricFogLayer
+          fog={settings.volumetricFog}
+          backgroundColor={showsColor ? settings.background.color : null}
+        />
+      )}
       {sky && (showsSky || skyAmbient) && (
         <>
           <SkyLayer
@@ -105,23 +115,16 @@ function useSceneHasBlendedSurface(): boolean {
 }
 
 /**
- * The compositor's mount decision and its glow; null stays on three's in-material curve. The
- * GL-context check lives here, since the same value suppresses the in-material tonemap and
- * `postprocessing` needs a real context (none under test-renderer or a headless DOM).
+ * Whether this canvas draws the 3D passes: the tone-map compositor and the volumetric fog. Both need
+ * a real GL context, which test-renderer and a headless DOM lack. Godot composites canvas items
+ * after `_render_buffers_post_process_and_tonemap`, so a 2D canvas gets neither, and every canvas
+ * item there blends.
  */
-function useComposedToneMapping(
-  glow: GlowParams | null,
-  hasBlendedSurface: boolean
-): { glow: GlowParams | null } | null {
+function useDraws3D(): boolean {
   const gl = useThree((s) => s.gl);
   const glReady = useMemo(() => hasRealGlContext(gl), [gl]);
-  // Godot composites canvas items after `_render_buffers_post_process_and_tonemap`, so a 2D canvas
-  // gets no pass. Without this check, every canvas item blends and would mount one.
   const is2D = useCanvasWorkspace() === '2d';
-  return useMemo(
-    () => (glReady && !is2D && (glow || hasBlendedSurface) ? { glow } : null),
-    [glReady, is2D, glow, hasBlendedSurface]
-  );
+  return glReady && !is2D;
 }
 
 function hasRealGlContext(gl: { getContext?: () => unknown }): boolean {
@@ -149,7 +152,7 @@ function EnvironmentApplier({ settings, hasSky, suppressToneMapping }: Environme
   const gl = useThree((state) => state.gl);
 
   const mode = settings.background.mode;
-  const showBackgroundColor = mode === BackgroundMode.BG_COLOR || mode === BackgroundMode.BG_CLEAR_COLOR;
+  const showBackgroundColor = showsBackgroundColor(mode);
 
   useEffect(() => {
     const previousBackground = scene.background;
@@ -186,18 +189,19 @@ function EnvironmentApplier({ settings, hasSky, suppressToneMapping }: Environme
     );
   }, [gl, scene, toneMapMode, toneMapExposure, toneMapWhite, toneMapAgxContrast, suppressToneMapping]);
 
-  const fog = settings.fog;
+  const { fog, volumetricFog } = settings;
+  const sceneFog = useMemo(() => sceneFogFor({ fog, volumetricFog }), [fog, volumetricFog]);
   useEffect(() => {
     const previousFog = scene.fog;
-    if (fog) {
-      // Godot fog maps to exponential-squared fog, the closest THREE match, and DEPTH mode (1)
-      // uses the same density-based fog.
-      scene.fog = new THREE.FogExp2(godotColorToLinear(fog.color).getHex(), fog.density);
-    }
+    if (sceneFog) scene.fog = sceneFog;
     return () => {
       scene.fog = previousFog;
     };
-  }, [scene, fog]);
+  }, [scene, sceneFog]);
 
   return null;
+}
+
+function showsBackgroundColor(mode: BackgroundMode): boolean {
+  return mode === BackgroundMode.BG_COLOR || mode === BackgroundMode.BG_CLEAR_COLOR;
 }

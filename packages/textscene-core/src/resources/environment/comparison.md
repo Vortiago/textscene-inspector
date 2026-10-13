@@ -6,7 +6,7 @@ renders_as: THREE scene.environment / background / tone mapping / fog
 
 # Environment
 
-The resource a `WorldEnvironment` holds: background and sky, ambient light, tone mapping, glow and fog. The editor injects a preview Environment on a scene that declares none (ADR-0025). Each section drives one feature from its own fixture.
+The resource a `WorldEnvironment` holds: background and sky, ambient light, tone mapping, glow, depth fog and volumetric fog. The editor injects a preview Environment on a scene that declares none (ADR-0025). Each section drives one feature from its own fixture.
 
 ## Background sky
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
@@ -32,6 +32,16 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 
 - **Approximated** The pyramid blurs with a 13-tap downsample and a 9-tap tent upsample rather than Godot's gaussian, so a bare glow buffer (REPLACE) differs slightly.
 - **Approximated** `glow_map` is not resolved, so a scene supplying one gets unmodulated glow.
+
+## Volumetric fog
+<!-- compare: image=unit-world-environment-basic status=limitation fixture=unit-world-environment-basic.tscn -->
+
+`volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot.
+
+- **Not drawn** `volumetric_fog_gi_inject` adds no light, because the previewer draws no VoxelGI or SDFGI.
+- **Not drawn** A light that casts shadows lights the fog as if nothing blocks it.
+- **Not drawn** A FogVolume adds no density, colour or emission to the fog.
+- **Approximated** `volumetric_fog_temporal_reprojection_amount` is not read. The fog is always the still frame that Godot converges to, so a moving camera leaves no trail.
 
 ## Linting
 
@@ -142,5 +152,4 @@ The lenient parser never rejects. Every scalar goes through the shared `floatOr`
 
 ## Known limitations
 
-- **Not drawn** Volumetric fog (`volumetric_fog_*`) has no three.js equivalent, while screen-space `fog_enabled` maps to `THREE.FogExp2` and is drawn.
 - **Approximated** `tonemap_exposure` under the default LINEAR tonemapper is ignored, because three applies exposure only while a tone curve is active.

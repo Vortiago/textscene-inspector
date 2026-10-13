@@ -53,8 +53,6 @@ export function createEnvironmentSettings(
       white: whiteFor(properties),
       agxContrast: properties.tonemap_agx_contrast,
     },
-    // Scene fog follows Godot's screen-space fog. Volumetric fog has no THREE
-    // equivalent and is not applied.
     fog: properties.fog_enabled
       ? {
           density: properties.fog_density,
@@ -62,6 +60,7 @@ export function createEnvironmentSettings(
           mode: properties.fog_mode,
         }
       : null,
+    volumetricFog: properties.volumetric_fog_enabled ? volumetricFogFor(properties) : null,
     adjustments: properties.adjustment_enabled
       ? {
           enabled: true,
@@ -88,6 +87,27 @@ export function createEnvironmentSettings(
           luminanceCap: properties.glow_hdr_luminance_cap,
         }
       : null,
+  };
+}
+
+function volumetricFogFor(
+  properties: EnvironmentProperties
+): NonNullable<EnvironmentSettings['volumetricFog']> {
+  return {
+    density: properties.volumetric_fog_density,
+    albedo: properties.volumetric_fog_albedo,
+    emission: properties.volumetric_fog_emission,
+    emissionEnergy: properties.volumetric_fog_emission_energy,
+    anisotropy: properties.volumetric_fog_anisotropy,
+    length: properties.volumetric_fog_length,
+    detailSpread: properties.volumetric_fog_detail_spread,
+    ambient: {
+      inject: properties.volumetric_fog_ambient_inject * properties.ambient_light_energy,
+      color: properties.ambient_light_color,
+      skyContribution: properties.ambient_light_sky_contribution,
+    },
+    skyAffect: properties.volumetric_fog_sky_affect,
+    temporalReprojection: properties.volumetric_fog_temporal_reprojection_enabled,
   };
 }
 

@@ -76,8 +76,22 @@ export interface EnvironmentProperties {
   // Volumetric Fog
   volumetric_fog_enabled: boolean;
   volumetric_fog_density: number;
+  /** The scattering colour, sRGB: the share of the light the medium scatters into the view. */
   volumetric_fog_albedo: Color;
   volumetric_fog_emission: Color;
+  volumetric_fog_emission_energy: number;
+  /** The Henyey-Greenstein `g`: positive scatters forward, towards the light. */
+  volumetric_fog_anisotropy: number;
+  /** How far from the camera the froxel volume reaches, in metres. */
+  volumetric_fog_length: number;
+  /** The exponent that packs the volume's slices towards the camera, already clamped to 0.5-6. */
+  volumetric_fog_detail_spread: number;
+  /** How much of the ambient light and sky the medium scatters. 0 injects none. */
+  volumetric_fog_ambient_inject: number;
+  /** How far the fog covers the background, 0-1. */
+  volumetric_fog_sky_affect: number;
+  /** Whether the fog averages Godot's 16 temporal jitters, or samples each froxel at its centre. */
+  volumetric_fog_temporal_reprojection_enabled: boolean;
 
   // Glow, a compositor post-process: a peak-channel bright pass over a weighted mip
   // pyramid, blended back around the tone curve. The editor preview environment
@@ -171,11 +185,39 @@ export interface EnvironmentSettings {
     /** `tonemap_agx_contrast`, carried whatever the mode. Only AgX reads it. */
     agxContrast: number;
   };
-  /** Screen-space fog (Godot fog_enabled). Volumetric fog has no THREE equivalent. */
+  /** Depth fog (Godot `fog_enabled`), apart from the volumetric fog below. */
   fog: {
     density: number;
     color: Color;
     mode: number;
+  } | null;
+  /**
+   * Volumetric fog, null when disabled: a medium in a froxel volume in front of the camera, lit by
+   * the lights and the ambient, which every surface and the background sample. Colours stay in
+   * Godot space: the consumer converts sRGB to linear.
+   */
+  volumetricFog: {
+    density: number;
+    albedo: Color;
+    emission: Color;
+    emissionEnergy: number;
+    /** The Henyey-Greenstein `g` of every light the medium scatters. */
+    anisotropy: number;
+    length: number;
+    detailSpread: number;
+    /**
+     * The ambient the medium scatters, read whatever the ambient source (`fog.cpp:1067-1076`).
+     * `inject` already carries `ambient_light_energy`.
+     */
+    ambient: {
+      inject: number;
+      color: Color;
+      /** The sky's share of the injected ambient, against `color`. */
+      skyContribution: number;
+    };
+    skyAffect: number;
+    /** Average Godot's 16 temporal jitters, as a still camera converges to, or sample each centre. */
+    temporalReprojection: boolean;
   } | null;
   adjustments: {
     enabled: boolean;

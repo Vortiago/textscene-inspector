@@ -9,6 +9,7 @@ import { BackgroundMode, DEFAULT_AGX_CONTRAST } from './types';
 import { floatOr, intOr } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
 import { boolSlotValue } from '../../godot/index.js';
+import { volumetricFogDetailSpread } from '../../godot/volumetricFog.js';
 
 /** `Environment`'s constructor weights, finest mip first. */
 const DEFAULT_GLOW_LEVELS = [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0];
@@ -73,6 +74,32 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
     volumetric_fog_density: floatOr(properties.volumetric_fog_density, 0.05, 'volumetric_fog_density'),
     volumetric_fog_albedo: colorOr(properties.volumetric_fog_albedo, { r: 1, g: 1, b: 1, a: 1 }),
     volumetric_fog_emission: colorOr(properties.volumetric_fog_emission, { r: 0, g: 0, b: 0, a: 1 }),
+    volumetric_fog_emission_energy: floatOr(
+      properties.volumetric_fog_emission_energy,
+      1.0,
+      'volumetric_fog_emission_energy'
+    ),
+    volumetric_fog_anisotropy: floatOr(
+      properties.volumetric_fog_anisotropy,
+      0.2,
+      'volumetric_fog_anisotropy'
+    ),
+    volumetric_fog_length: floatOr(properties.volumetric_fog_length, 64.0, 'volumetric_fog_length'),
+    volumetric_fog_detail_spread: volumetricFogDetailSpread(
+      floatOr(properties.volumetric_fog_detail_spread, 2.0, 'volumetric_fog_detail_spread')
+    ),
+    volumetric_fog_ambient_inject: floatOr(
+      properties.volumetric_fog_ambient_inject,
+      0.0,
+      'volumetric_fog_ambient_inject'
+    ),
+    volumetric_fog_sky_affect: floatOr(
+      properties.volumetric_fog_sky_affect,
+      1.0,
+      'volumetric_fog_sky_affect'
+    ),
+    volumetric_fog_temporal_reprojection_enabled:
+      boolSlotValue(properties.volumetric_fog_temporal_reprojection_enabled) !== false,
 
     // Glow.
     glow_enabled: boolSlotValue(properties.glow_enabled) === true,

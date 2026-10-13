@@ -12,6 +12,7 @@ import type { DirectionalLight3DProperties } from '../directionallight3d/types';
 import type { OmniLight3DProperties } from '../omnilight3d/types';
 import type { SpotLight3DProperties } from '../spotlight3d/types';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
+import { readFogLightDeclaration } from '../../../../r3f/volumetricFog/fogLightDeclaration';
 
 function dirNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {
@@ -171,5 +172,30 @@ describe('Lights — properties (assertions 67–80)', () => {
   it('#80 SpotLight3D.shadow_enabled → light.castShadow', async () => {
     const r = await ReactThreeTestRenderer.create(<SpotLight3D node={spotNode({ shadow_enabled: true })} />);
     expect(instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight')).castShadow).toBe(true);
+  });
+});
+
+describe('Lights — volumetric fog declaration', () => {
+  it("declares Godot's default fog energy of 1 when the light sets none", async () => {
+    const r = await ReactThreeTestRenderer.create(<OmniLight3D node={omniNode()} />);
+    expect(readFogLightDeclaration(instanceAs<THREE.PointLight>(r.scene.findByType('PointLight')))).toEqual({
+      energy: 1,
+    });
+  });
+
+  it('declares light_volumetric_fog_energy on a DirectionalLight3D', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D node={dirNode({ light_volumetric_fog_energy: 3 })} />
+    );
+    const sun = instanceAs<THREE.DirectionalLight>(r.scene.findByType('DirectionalLight'));
+    expect(readFogLightDeclaration(sun)).toEqual({ energy: 3 });
+  });
+
+  it('declares the cone exponent input of a SpotLight3D', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <SpotLight3D node={spotNode({ light_volumetric_fog_energy: 0.5, spot_angle_attenuation: 2 })} />
+    );
+    const spot = instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight'));
+    expect(readFogLightDeclaration(spot)).toEqual({ energy: 0.5, spotAngleAttenuation: 2 });
   });
 });

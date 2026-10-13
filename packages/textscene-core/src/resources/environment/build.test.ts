@@ -32,6 +32,13 @@ function base(over: Partial<EnvironmentProperties> = {}): EnvironmentProperties 
     volumetric_fog_density: 0.05,
     volumetric_fog_albedo: { r: 1, g: 1, b: 1, a: 1 },
     volumetric_fog_emission: { r: 0, g: 0, b: 0, a: 1 },
+    volumetric_fog_emission_energy: 1.0,
+    volumetric_fog_anisotropy: 0.2,
+    volumetric_fog_length: 64.0,
+    volumetric_fog_detail_spread: 2.0,
+    volumetric_fog_ambient_inject: 0.0,
+    volumetric_fog_sky_affect: 1.0,
+    volumetric_fog_temporal_reprojection_enabled: true,
     glow_enabled: false,
     glow_levels: [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0],
     glow_normalized: false,
@@ -102,9 +109,66 @@ describe('createEnvironmentSettings', () => {
     expect(settings.fog?.mode).toBe(1);
   });
 
-  it('does NOT drive scene fog from volumetric_fog (no THREE equivalent)', () => {
+  it('keeps depth fog off when only volumetric fog is on', () => {
     const settings = createEnvironmentSettings(base({ volumetric_fog_enabled: true }), DEFAULT_CLEAR_COLOR);
     expect(settings.fog).toBeNull();
+  });
+
+  it('has no volumetric fog while volumetric_fog_enabled is off', () => {
+    expect(createEnvironmentSettings(base(), DEFAULT_CLEAR_COLOR).volumetricFog).toBeNull();
+  });
+
+  it('carries the volumetric fog medium and pass, in Godot space', () => {
+    const settings = createEnvironmentSettings(
+      base({
+        volumetric_fog_enabled: true,
+        volumetric_fog_density: 0.1,
+        volumetric_fog_albedo: { r: 0.6, g: 0.7, b: 0.9, a: 1 },
+        volumetric_fog_emission: { r: 0.2, g: 0, b: 0, a: 1 },
+        volumetric_fog_emission_energy: 2,
+        volumetric_fog_anisotropy: -0.3,
+        volumetric_fog_length: 32,
+        volumetric_fog_detail_spread: 3,
+        volumetric_fog_sky_affect: 0.5,
+        volumetric_fog_temporal_reprojection_enabled: false,
+      }),
+      DEFAULT_CLEAR_COLOR
+    );
+
+    expect(settings.volumetricFog).toEqual({
+      density: 0.1,
+      albedo: { r: 0.6, g: 0.7, b: 0.9, a: 1 },
+      emission: { r: 0.2, g: 0, b: 0, a: 1 },
+      emissionEnergy: 2,
+      anisotropy: -0.3,
+      length: 32,
+      detailSpread: 3,
+      ambient: { inject: 0, color: { r: 0, g: 0, b: 0, a: 1 }, skyContribution: 1 },
+      skyAffect: 0.5,
+      temporalReprojection: false,
+    });
+  });
+
+  it('scales the ambient inject by ambient_light_energy, whatever the ambient source', () => {
+    // fog.cpp:1067-1076 reads the ambient colour, energy and sky contribution with no regard
+    // for `ambient_light_source`: a BG source over a colour background still injects
+    // `ambient_light_color`.
+    const settings = createEnvironmentSettings(
+      base({
+        volumetric_fog_enabled: true,
+        volumetric_fog_ambient_inject: 0.5,
+        ambient_light_color: { r: 0.4, g: 0.3, b: 0.2, a: 1 },
+        ambient_light_energy: 3,
+        ambient_light_sky_contribution: 0.25,
+      }),
+      DEFAULT_CLEAR_COLOR
+    );
+
+    expect(settings.volumetricFog?.ambient).toEqual({
+      inject: 1.5,
+      color: { r: 0.4, g: 0.3, b: 0.2, a: 1 },
+      skyContribution: 0.25,
+    });
   });
 
   it('gates flat ambient on ambient_light_source', () => {

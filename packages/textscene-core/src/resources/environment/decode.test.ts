@@ -65,6 +65,43 @@ describe('decodeEnvironment', () => {
     expect(result.volumetric_fog_emission).toEqual({ r: 0.1, g: 0.05, b: 0, a: 1 });
   });
 
+  it("carries Godot's defaults for the volumetric fog medium and its pass", () => {
+    const result = decodeEnvironment({});
+
+    expect(result.volumetric_fog_emission_energy).toBe(1.0);
+    expect(result.volumetric_fog_anisotropy).toBe(0.2);
+    expect(result.volumetric_fog_length).toBe(64.0);
+    expect(result.volumetric_fog_detail_spread).toBe(2.0);
+    expect(result.volumetric_fog_ambient_inject).toBe(0.0);
+    expect(result.volumetric_fog_sky_affect).toBe(1.0);
+    expect(result.volumetric_fog_temporal_reprojection_enabled).toBe(true);
+  });
+
+  it('parses the volumetric fog medium and pass properties', () => {
+    const result = decodeEnvironment({
+      volumetric_fog_emission_energy: '3.5',
+      volumetric_fog_anisotropy: '-0.4',
+      volumetric_fog_length: '120',
+      volumetric_fog_detail_spread: '4',
+      volumetric_fog_ambient_inject: '0.5',
+      volumetric_fog_sky_affect: '0.25',
+      volumetric_fog_temporal_reprojection_enabled: 'false',
+    });
+
+    expect(result.volumetric_fog_emission_energy).toBe(3.5);
+    expect(result.volumetric_fog_anisotropy).toBe(-0.4);
+    expect(result.volumetric_fog_length).toBe(120);
+    expect(result.volumetric_fog_detail_spread).toBe(4);
+    expect(result.volumetric_fog_ambient_inject).toBe(0.5);
+    expect(result.volumetric_fog_sky_affect).toBe(0.25);
+    expect(result.volumetric_fog_temporal_reprojection_enabled).toBe(false);
+  });
+
+  it('clamps volumetric_fog_detail_spread into 0.5-6, as its setter does', () => {
+    expect(decodeEnvironment({ volumetric_fog_detail_spread: '9' }).volumetric_fog_detail_spread).toBe(6);
+    expect(decodeEnvironment({ volumetric_fog_detail_spread: '0.1' }).volumetric_fog_detail_spread).toBe(0.5);
+  });
+
   it('should parse adjustment settings', () => {
     const result = decodeEnvironment({
       adjustment_enabled: 'true',

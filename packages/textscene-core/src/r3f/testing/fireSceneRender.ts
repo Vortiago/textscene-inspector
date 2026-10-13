@@ -1,4 +1,4 @@
-/** Replays the hook `WebGLRenderer.render` runs on a scene before it builds its render list. */
+/** Replays the hooks `WebGLRenderer.render` runs on a scene before it builds its render list and after it draws. */
 
 import type * as THREE from 'three';
 
@@ -14,6 +14,18 @@ export function fireSceneRender(
     scene as THREE.Scene,
     camera,
     target as unknown as THREE.BufferGeometry,
+    null as unknown as THREE.Material,
+    null as unknown as THREE.Group
+  );
+}
+
+/** Fires `scene.onAfterRender` as a render through `camera` does once it has drawn the scene. */
+export function fireSceneRenderEnd(scene: THREE.Object3D, camera: THREE.Camera): void {
+  scene.onAfterRender(
+    null as unknown as THREE.WebGLRenderer,
+    scene as THREE.Scene,
+    camera,
+    null as unknown as THREE.BufferGeometry,
     null as unknown as THREE.Material,
     null as unknown as THREE.Group
   );

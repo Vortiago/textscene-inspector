@@ -15,6 +15,8 @@ import { spotShadowBias } from '../shared/shadowBias';
 import { usePositionalShadowUserData } from '../shared/positionalShadowDeclaration';
 import { LightWithTarget } from '../shared/lightShared';
 import { SpotLightGizmo } from '../shared/lightHelpers';
+import { fogLightUserData } from '../../../../r3f/volumetricFog/fogLightDeclaration';
+import { LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT } from '../../../../godot/volumetricFog';
 
 export function SpotLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as SpotLight3DProperties;
@@ -30,10 +32,15 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
   // decay. `spot_angle_attenuation`, the cone-edge exponent (default 1, higher is
   // sharper), maps inversely to penumbra (0 hard, 1 soft). An explicit `penumbra`
   // overrides the derived value.
-  const decay = properties.spot_attenuation ?? 1;
-  const penumbra =
-    properties.penumbra ?? Math.max(0, Math.min(1, 1 / ((properties.spot_angle_attenuation ?? 1) + 1)));
-  const userData = usePositionalShadowUserData(properties);
+  const decay = properties.spot_attenuation;
+  const spotAngleAttenuation = properties.spot_angle_attenuation;
+  const penumbra = properties.penumbra ?? Math.max(0, Math.min(1, 1 / (spotAngleAttenuation + 1)));
+  const shadowUserData = usePositionalShadowUserData(properties);
+  const fogEnergy = properties.light_volumetric_fog_energy ?? LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT;
+  const userData = useMemo(
+    () => ({ ...shadowUserData, ...fogLightUserData({ energy: fogEnergy, spotAngleAttenuation }) }),
+    [shadowUserData, fogEnergy, spotAngleAttenuation]
+  );
 
   return (
     <LightWithTarget

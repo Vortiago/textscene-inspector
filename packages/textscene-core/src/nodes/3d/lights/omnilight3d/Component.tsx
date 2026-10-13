@@ -14,6 +14,8 @@ import { positionalShadowNear } from '../../../../godot/positionalShadow';
 import { omniShadowBias } from '../shared/shadowBias';
 import { usePositionalShadowUserData } from '../shared/positionalShadowDeclaration';
 import { PointLightGizmo } from '../shared/lightHelpers';
+import { fogLightUserData } from '../../../../r3f/volumetricFog/fogLightDeclaration';
+import { LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT } from '../../../../godot/volumetricFog';
 
 export function OmniLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as OmniLight3DProperties;
@@ -24,7 +26,12 @@ export function OmniLight3D({ node, children }: NodeComponentProps) {
   );
   const color = parseColorToHex(properties.light_color);
   const intensity = properties.light_energy * LIGHT_INTENSITY_SCALE;
-  const userData = usePositionalShadowUserData(properties);
+  const shadowUserData = usePositionalShadowUserData(properties);
+  const fogEnergy = properties.light_volumetric_fog_energy ?? LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT;
+  const userData = useMemo(
+    () => ({ ...shadowUserData, ...fogLightUserData({ energy: fogEnergy }) }),
+    [shadowUserData, fogEnergy]
+  );
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>
