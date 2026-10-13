@@ -28,6 +28,12 @@ export interface FogSettings {
   skyEnergy: number;
 }
 
+/** The objects of a scene the fog reads: its lights, and the meshes that may cast their shadows. */
+export interface FogObjects {
+  lights: readonly THREE.Light[];
+  casters: readonly THREE.Mesh[];
+}
+
 /** World to sky space for the render being prepared. */
 const toSky = new THREE.Matrix3();
 
@@ -47,7 +53,7 @@ export function prepareFog(
   camera: THREE.Camera,
   settings: FogSettings,
   passes: FogPasses,
-  lights: readonly THREE.Light[]
+  { lights, casters }: FogObjects
 ): boolean {
   fogUniforms.skyRotation.set(worldToSky(scene.environmentRotation, toSky).elements);
   writeDepthFog(settings.depth, camera);
@@ -62,6 +68,7 @@ export function prepareFog(
     worldToSky: toSky,
     skyEnergy: settings.skyEnergy,
     lights,
+    casters,
   });
 }
 

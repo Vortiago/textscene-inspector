@@ -11,6 +11,7 @@ import {
   DIRECTIONAL_SHADOW_SIZE_DEFAULT,
   directionalShadowSplitAtlasRect,
   type DirectionalShadowAtlasRect,
+  type DirectionalShadowFade,
 } from '../../godot/directionalShadow.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { holdDirectionalShadowAtlas, releaseDirectionalShadowAtlas } from './shadowAtlas.js';
@@ -61,6 +62,9 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
    * first render.
    */
   readonly _cascadeData: THREE.Vector4[] = [];
+
+  /** The fade over the far end of the last split, which the fitter writes with the slots. */
+  fade: DirectionalShadowFade = { from: 0, to: 0 };
 
   /** One camera per slot. The fitter places each drawn one before every render. */
   private readonly splitCameras: THREE.OrthographicCamera[] = [];

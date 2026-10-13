@@ -21,8 +21,12 @@ import {
   type VolumetricFogProjectSettings,
 } from '../../godot/volumetricFog.js';
 import type { EnvironmentSettings } from '../../resources/environment/types.js';
+import { directionalShadowAtlasDepth } from '../directionalShadow/shadowAtlas.js';
 import { FULL_SCREEN_VERTEX } from '../lighting2d/fullScreenQuad.js';
 import { drawOffscreen } from '../offscreen.js';
+import { positionalShadowAtlasDepth } from '../positionalShadow/shadowAtlasTarget.js';
+import { drawWithUncomparedDepth } from '../shadowFilter/uncomparedDepth.js';
+import { CasterPose } from './casterPose.js';
 import { FOG_LIGHT_TEXELS, FogLightRows } from './fogLights.js';
 import { bindRadiance, skyRadiance } from './fogSky.js';
 import { fogUniforms } from './fogUniforms.js';
@@ -45,6 +49,8 @@ interface FogVolumeInputs {
   skyEnergy: number;
   /** The scene's lights, hidden ones included. */
   lights: readonly THREE.Light[];
+  /** The scene's meshes, whose pose moves the shadows the fog reads. */
+  casters: readonly THREE.Mesh[];
 }
 
 /** The volume's rows run bottom-up, so a jitter's top-down y flips. */
@@ -120,7 +126,7 @@ class VolumeKey {
   private readonly view = new Float64Array(16 + 16 + 9);
   private width = 0;
   private height = 0;
-  private inputs: Omit<FogVolumeInputs, 'lights' | 'worldToSky'> | null = null;
+  private inputs: Omit<FogVolumeInputs, 'lights' | 'casters' | 'worldToSky'> | null = null;
   private sky: THREE.Texture | null = null;
 
   /** Takes the render's values, and answers whether any differs from the last ones. */
@@ -165,6 +171,7 @@ class ViewVolume {
   readonly history = volumeTarget('VolumetricFogHistory');
   readonly key = new VolumeKey();
   readonly lights = new FogLightRows();
+  readonly casters = new CasterPose();
   /** The camera's world matrix at the last draw, which the next reprojects from. */
   readonly previousCamera = new THREE.Matrix4();
   grid: VolumetricFogGrid = { width: 0, height: 0, depth: 0 };
@@ -179,6 +186,10 @@ class ViewVolume {
     this.integrated.dispose();
     this.history.dispose();
   }
+}
+
+function readsAtlas(rows: FogLightRows): boolean {
+  return rows.readsDirectionalAtlas || rows.readsPositionalAtlas;
 }
 
 /** How a draw samples each froxel. */
@@ -221,6 +232,8 @@ export class FogVolumePass {
     envMap: { value: null },
     fogLights: { value: null },
     lightCount: { value: 0 },
+    directionalShadowAtlas: { value: null },
+    positionalShadowAtlas: { value: null },
     sampleOffsets: { value: Array.from({ length: FOG_SAMPLE_OFFSETS_MAX }, () => new THREE.Vector3()) },
     sampleCount: { value: 1 },
     history: { value: null },
@@ -279,7 +292,9 @@ export class FogVolumePass {
     const sky = skyRadiance(scene);
     const hasLightsChanged = state.lights.pack(inputs.lights, camera);
     if (hasLightsChanged && this.uploadedLights === state.lights) this.uploadedLights = null;
-    const hasChanged = state.key.update(camera, this.viewport, inputs, sky) || hasLightsChanged;
+    const haveShadowsMoved = readsAtlas(state.lights) && state.casters.update(inputs.casters);
+    const hasViewChanged = state.key.update(camera, this.viewport, inputs, sky);
+    const hasChanged = hasViewChanged || hasLightsChanged || haveShadowsMoved;
     const sampling = samplingFor(hasChanged, inputs.fog.temporalReprojection, state.isSettling);
     if (sampling || this.copied !== state) {
       drawOffscreen(renderer, () => {
@@ -367,7 +382,10 @@ export class FogVolumePass {
     this.writeSampling(state, camera, inputs.fog.temporalReprojection, sampling);
     this.writeIntegrate(inputs.fog, grid);
 
-    this.fill(renderer, this.density, this.lightMaterial, grid);
+    const atlases = this.writeShadowAtlases(state.lights);
+    drawWithUncomparedDepth(renderer, atlases, () =>
+      this.fill(renderer, this.density, this.lightMaterial, grid)
+    );
     if (inputs.fog.temporalReprojection !== null) {
       // Godot keeps the medium before the filter, so the history is never blurred twice (`fog.cpp:1163`).
       this.copy(renderer, this.density, state.history, grid);
@@ -450,6 +468,15 @@ export class FogVolumePass {
     }
     this.lightMaterial.uniforms['fogLights']!.value = this.lights;
     this.lightMaterial.uniforms['lightCount']!.value = rows.count;
+  }
+
+  /** Binds the atlases the rows' shadows read, and answers them. An atlas no row reads stays unbound. */
+  private writeShadowAtlases(rows: FogLightRows): THREE.DepthTexture[] {
+    const directional = rows.readsDirectionalAtlas ? directionalShadowAtlasDepth() : null;
+    const positional = rows.readsPositionalAtlas ? positionalShadowAtlasDepth() : null;
+    this.lightMaterial.uniforms['directionalShadowAtlas']!.value = directional;
+    this.lightMaterial.uniforms['positionalShadowAtlas']!.value = positional;
+    return [directional, positional].filter((atlas) => atlas !== null);
   }
 
   /**

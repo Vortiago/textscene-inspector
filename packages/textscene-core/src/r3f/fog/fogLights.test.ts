@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { FOG_LIGHT_TEXELS, FogLightKind, FogLightRows } from './fogLights';
+import { castingSun } from '../testing/castingSun';
+import { AtlasOmniShadow } from '../positionalShadow/atlasOmniShadow';
+import { AtlasSpotShadow } from '../positionalShadow/atlasSpotShadow';
+import { holdPositionalShadowAtlas } from '../positionalShadow/shadowAtlasTarget';
+import { FOG_LIGHT_TEXELS, FogLightKind, FogLightRows, FogLightTexel } from './fogLights';
 import { fogLightUserData } from './fogLightDeclaration';
+
+holdPositionalShadowAtlas({}, 4096);
 
 /** A camera at (0, 3, 8) looking down -Z, as in `unit-world-environment-basic`. */
 function camera(): THREE.PerspectiveCamera {
@@ -136,5 +142,86 @@ describe('FogLightRows.pack', () => {
 
     expect(rows.pack(lights.slice(0, 1), view)).toBe(true);
     expect(rows.count).toBe(1);
+  });
+});
+
+/** The matrix in the four texels from `first`, as the shader's `mat4` of four columns reads it. */
+function packedMatrix(rows: FogLightRows, row: number, first: number): THREE.Matrix4 {
+  const columns = [0, 1, 2, 3].flatMap((column) => texel(rows, row, first + column));
+  return new THREE.Matrix4().fromArray(columns);
+}
+
+/** Where `world` lands through the packed matrix, after the divide by w. */
+function landing(rows: FogLightRows, world: THREE.Vector3): number[] {
+  const view = world.clone().applyMatrix4(camera().matrixWorldInverse);
+  const shadow = new THREE.Vector4(view.x, view.y, view.z, 1).applyMatrix4(
+    packedMatrix(rows, 0, FogLightTexel.SHADOW_MATRICES)
+  );
+  return [shadow.x / shadow.w, shadow.y / shadow.w, shadow.z / shadow.w];
+}
+
+describe('FogLightRows.pack, for a light that casts', () => {
+  it("maps a view-space cell into a directional light's split of the atlas", () => {
+    const rows = packed([castingSun()]);
+
+    landing(rows, new THREE.Vector3(0, 0, 0)).forEach((component) => expect(component).toBeCloseTo(0.5, 6));
+  });
+
+  it("gives a directional light its shadow opacity, each slot's split end and depth range, and its fade", () => {
+    const rows = packed([castingSun()]);
+
+    expect(texel(rows, 0, FogLightTexel.CONE)[2]).toBeCloseTo(0.8, 6);
+    expect(texel(rows, 0, FogLightTexel.SHADOW_SPLITS)).toEqual([12, 12, 12, 12]);
+    expect(texel(rows, 0, FogLightTexel.SHADOW_RANGES)).toEqual([20, 20, 20, 20]);
+    expect(texel(rows, 0, FogLightTexel.SHADOW_FADE)).toEqual([Math.fround(9.6), 12, 0, 0]);
+  });
+
+  it('leaves the shadow opacity of a light that casts nothing at zero (edge case)', () => {
+    const sun = new THREE.DirectionalLight(0xffffff, 1);
+    sun.shadow.intensity = 0.8;
+
+    expect(texel(packed(placed(sun)), 0, FogLightTexel.CONE)[2]).toBe(0);
+  });
+
+  it("maps a cell on a spot light's axis to the centre of its slot, with its depth bias", () => {
+    const spot = new THREE.SpotLight(0xffffff, 1, 10, Math.PI / 4);
+    spot.position.set(0, 3, 0);
+    spot.castShadow = true;
+    const shadow = new AtlasSpotShadow();
+    shadow.place({ x: 0, y: 0, size: 4096, paraboloidStep: null });
+    shadow.bias = 0.002;
+    spot.shadow = shadow;
+    placed(spot);
+    shadow.updateMatrices(spot);
+
+    const rows = packed([spot]);
+
+    landing(rows, new THREE.Vector3(0, 3, -5))
+      .slice(0, 2)
+      .forEach((component) => expect(component).toBeCloseTo(0.5, 6));
+    expect(texel(rows, 0, FogLightTexel.CONE).slice(2)).toEqual([1, Math.fround(0.002)]);
+  });
+
+  it("puts a cell in an omni light's own space, beside its paraboloids' slot", () => {
+    const light = omni();
+    light.castShadow = true;
+    const shadow = new AtlasOmniShadow();
+    shadow.slot = { x: 512, y: 0, size: 512, paraboloidStep: [1, 0] };
+    light.shadow = shadow;
+    placed(light);
+    shadow.writeLookupMatrix(light);
+
+    const rows = packed([light]);
+
+    expectDirection(landing(rows, new THREE.Vector3(0, 8, -2)), [0, 0, -2]);
+    expect(texel(rows, 0, FogLightTexel.SHADOW_SPLITS)).toEqual([0.125, 0, 0.125, 0]);
+  });
+
+  it('leaves an omni light without a slot unshadowed (error case)', () => {
+    const light = omni();
+    light.castShadow = true;
+    light.shadow = new AtlasOmniShadow();
+
+    expect(texel(packed(placed(light)), 0, FogLightTexel.CONE)[2]).toBe(0);
   });
 });

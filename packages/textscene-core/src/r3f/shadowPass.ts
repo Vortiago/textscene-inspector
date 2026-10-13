@@ -1,19 +1,29 @@
 /**
- * Godot's copy of each omni cube into its two paraboloids (`render_forward_clustered.cpp:2722-2738`).
- * three r186 has no hook between its shadow pass and its draw (`WebGLRenderer.js:1737-1752`), so the
- * renderer's shadow pass runs three's pass, then each copy, and then records the framebuffer height.
+ * The renderer's shadow pass. three r186 has no hook between its shadow pass and its draw
+ * (`WebGLRenderer.js:1737-1752`), so the pass runs three's pass, then Godot's copy of each omni cube
+ * into its two paraboloids (`render_forward_clustered.cpp:2722-2738`), then each reader of the maps,
+ * and last records the framebuffer height.
  */
 
 import * as THREE from 'three';
-import { AtlasOmniShadow } from './atlasOmniShadow.js';
-import { writeFramebufferHeight } from '../shadowFilter/framebufferRows.js';
-import { OmniShadowCopy } from './omniShadowCopy.js';
-import { drawOffscreen } from '../offscreen.js';
+import { AtlasOmniShadow } from './positionalShadow/atlasOmniShadow.js';
+import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
+import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
+import { drawOffscreen } from './offscreen.js';
 
 type ShadowPass = THREE.WebGLShadowMap['render'];
 
+/**
+ * Reads the maps a render's shadow pass has just drawn, for `scene`, the object that render draws,
+ * through `camera`. A reader may render, and its renders run the pass again for their own objects.
+ */
+export type ShadowMapReader = (scene: THREE.Object3D, camera: THREE.Camera) => void;
+
 /** A global key, so a module that a dev server evaluates again finds the pass already wrapped. */
-const WRAPPED = Symbol.for('textscene.positionalShadowPass');
+const WRAPPED = Symbol.for('textscene.shadowPass');
+
+/** Each renderer's readers. Written only by `readShadowMaps` and the disposer it returns. */
+const readers = new WeakMap<THREE.WebGLRenderer, Set<ShadowMapReader>>();
 
 interface OmniLight extends THREE.PointLight {
   shadow: AtlasOmniShadow;
@@ -26,7 +36,7 @@ interface OmniLight extends THREE.PointLight {
 const NO_LIGHTS: readonly OmniLight[] = [];
 
 /** Wraps `renderer`'s shadow pass once. A second call changes nothing. */
-export function installPositionalShadowPass(renderer: THREE.WebGLRenderer): void {
+export function installShadowPass(renderer: THREE.WebGLRenderer): void {
   const shadowMap = renderer.shadowMap as THREE.WebGLShadowMap & { [WRAPPED]?: true };
   if (shadowMap[WRAPPED]) return;
   shadowMap[WRAPPED] = true;
@@ -36,8 +46,23 @@ export function installPositionalShadowPass(renderer: THREE.WebGLRenderer): void
     const copied = lightsToCopy(shadowMap, lights);
     threePass(lights, scene, camera);
     copyOmniShadows(renderer, copy, copied);
-    // Last: each copy is a render of its own, which records the atlas's height.
+    for (const read of readers.get(renderer) ?? []) read(scene, camera);
+    // Last: each copy and each reader's render records its own target's height.
     writeFramebufferHeight(renderer);
+  };
+}
+
+/**
+ * Calls `reader` after each shadow pass of `renderer`, until the returned disposer runs. The pass
+ * wraps itself on the first reader.
+ */
+export function readShadowMaps(renderer: THREE.WebGLRenderer, reader: ShadowMapReader): () => void {
+  installShadowPass(renderer);
+  const set = readers.get(renderer) ?? new Set();
+  readers.set(renderer, set);
+  set.add(reader);
+  return () => {
+    set.delete(reader);
   };
 }
 

@@ -233,6 +233,7 @@ function applySplits(sun: SplitSunLight, placement: LightPlacement, splits: Dire
     splitCamera.updateMatrixWorld();
   });
   splits.slots.forEach((slot, index) => sun.shadow._cascadeData[index]!.fromArray(slot));
+  sun.shadow.fade = splits.fade;
   sun.shadow.placeSplitFrusta();
 }
 

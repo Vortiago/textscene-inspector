@@ -155,7 +155,7 @@ for each split it samples:
 - The kernel turns per fragment by `quick_hash` of its position, with its rows counted from the top
   of the framebuffer, as Vulkan's are (`scene_forward_lights_inc.glsl:278-281`, `:292-298`).
   The renderer's shadow pass records that framebuffer's height before each draw
-  (`../positionalShadow/positionalShadowPass.ts`), and `TscnCanvas` mounts it beside this fitter.
+  (`../shadowPass.ts`), and `TscnCanvas` mounts it beside this fitter.
 - The pixel size is one texel of the whole atlas times `soft_shadow_scale` and the split's blur
   factor. three uploads a sun shadow's map size as the atlas's size (`WebGLLights.js:305`).
 
