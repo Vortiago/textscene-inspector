@@ -18,7 +18,8 @@ import { SKY_LAYER_GROUPS, type SkyLayerGroup } from '../resources/sky/skyLayers
 
 type SkyChunk = 'lights_fragment_maps' | 'envmap_physical_pars_fragment';
 
-const THREE_IBL_RADIANCE_FUNCTION =
+/** The signature of three's reflection, before which a patch declares its helpers. */
+export const THREE_IBL_RADIANCE_FUNCTION =
   'vec3 getIBLRadiance( const in vec3 viewDir, const in vec3 normal, const in float roughness ) {';
 
 const { sharp, rough, last } = SKY_LAYER_GROUPS;
@@ -46,34 +47,57 @@ const SHARP = layerRange(sharp);
 const ROUGH = layerRange(rough);
 
 /**
- * Godot's reflection of the sky. It bends the reflection towards the normal by the roughness
- * squared and dims what falls below the horizon (`:1704-1708`). It reads layer `sqrt( roughness )`
- * times the last layer's index and blends the two layers around it (`:1714-1721`). Each group's
- * cube clamps its read to its own layers, so the mix between two groups blends the last layer of
- * one with the first of the next, and a trilinear read inside a group is the blend.
+ * Godot's radiance layer `sqrt( roughness )` times the last layer's index, in the world direction
+ * `reflectVec`, blending the two layers around it (`:1714-1721`). Layer 0 is the radiance, mip 0 of
+ * the PMREM. Each group's cube clamps its read to its own layers, so the mix between two groups
+ * blends the last layer of one with the first of the next, and a trilinear read inside a group is
+ * the blend. It scales by `envMapIntensity`.
  */
-const GODOT_IBL_RADIANCE = /* glsl */ `vec3 godotIBLRadiance( const in vec3 viewDir, const in vec3 normal, const in float roughness ) {
+const GODOT_SKY_LAYER = /* glsl */ `vec3 godotSkyLayer( const in vec3 reflectVec, const in float roughness ) {
 
 		#ifdef ENVMAP_TYPE_CUBE_UV
 
-			vec3 reflectVec = mix( reflect( - viewDir, normal ), normal, pow2( roughness ) );
-			float horizon = min( 1.0 + dot( reflectVec, normal ), 1.0 );
-			reflectVec = envMapRotation * transformDirectionByInverseViewMatrix( reflectVec, viewMatrix );
 			float layer = sqrt( roughness ) * ${glslFloat(last.firstLayer)};
 			vec3 radiance = textureCubeUV( envMap, reflectVec, 0.0 ).rgb;
 			vec3 sharpLayer = textureLod( ${SKY_LAYER_UNIFORMS.sharp}, reflectVec, clamp( layer - ${SHARP.first}, 0.0, ${SHARP.lastMip} ) ).rgb;
 			vec3 roughLayer = textureLod( ${SKY_LAYER_UNIFORMS.rough}, reflectVec, clamp( layer - ${ROUGH.first}, 0.0, ${ROUGH.lastMip} ) ).rgb;
 			vec3 lastLayer = textureCube( ${SKY_LAYER_UNIFORMS.last}, reflectVec ).rgb;
-			vec3 reflection = mix( radiance, sharpLayer, clamp( layer, 0.0, 1.0 ) );
-			reflection = mix( reflection, roughLayer, clamp( layer - ${glslFloat(rough.firstLayer - 1)}, 0.0, 1.0 ) );
-			reflection = mix( reflection, lastLayer, clamp( layer - ${glslFloat(last.firstLayer - 1)}, 0.0, 1.0 ) );
-			return reflection * envMapIntensity * horizon * horizon;
+			vec3 skyLayer = mix( radiance, sharpLayer, clamp( layer, 0.0, 1.0 ) );
+			skyLayer = mix( skyLayer, roughLayer, clamp( layer - ${glslFloat(rough.firstLayer - 1)}, 0.0, 1.0 ) );
+			skyLayer = mix( skyLayer, lastLayer, clamp( layer - ${glslFloat(last.firstLayer - 1)}, 0.0, 1.0 ) );
+			return skyLayer * envMapIntensity;
 
 		#else
 
 			return vec3( 0.0 );
 
 		#endif
+
+	}
+
+	`;
+
+/**
+ * Godot's reflection direction in the world (`:1704-1708`): the view reflected about `normal`, bent
+ * towards it by the roughness squared. The caller dims it by `horizon` squared, which falls below
+ * the horizon of `surfaceNormal`: the clearcoat's reflection takes it from the surface under the coat.
+ */
+const GODOT_REFLECTION = /* glsl */ `vec3 godotReflection( const in vec3 viewDir, const in vec3 normal, const in vec3 surfaceNormal, const in float roughness, out float horizon ) {
+
+		vec3 reflectVec = mix( reflect( - viewDir, normal ), normal, pow2( roughness ) );
+		horizon = min( 1.0 + dot( reflectVec, surfaceNormal ), 1.0 );
+		return envMapRotation * transformDirectionByInverseViewMatrix( reflectVec, viewMatrix );
+
+	}
+
+	`;
+
+/** Godot's reflection of the sky. */
+const GODOT_IBL_RADIANCE = /* glsl */ `vec3 godotIBLRadiance( const in vec3 viewDir, const in vec3 normal, const in float roughness ) {
+
+		float horizon;
+		vec3 reflectVec = godotReflection( viewDir, normal, normal, roughness, horizon );
+		return godotSkyLayer( reflectVec, roughness ) * horizon * horizon;
 
 	}
 
@@ -104,7 +128,7 @@ const SKY_LIGHTING_EDITS: readonly ChunkEdit<SkyChunk>[] = [
   {
     chunk: 'envmap_physical_pars_fragment',
     three: THREE_IBL_RADIANCE_FUNCTION,
-    godot: `${SKY_LAYER_DECLARATIONS}${GODOT_IBL_IRRADIANCE}${GODOT_IBL_RADIANCE}${THREE_IBL_RADIANCE_FUNCTION}`,
+    godot: `${SKY_LAYER_DECLARATIONS}${GODOT_IBL_IRRADIANCE}${GODOT_SKY_LAYER}${GODOT_REFLECTION}${GODOT_IBL_RADIANCE}${THREE_IBL_RADIANCE_FUNCTION}`,
   },
   {
     chunk: 'envmap_physical_pars_fragment',
@@ -112,6 +136,9 @@ const SKY_LIGHTING_EDITS: readonly ChunkEdit<SkyChunk>[] = [
     godot: 'return godotIBLRadiance( viewDir, bentNormal, roughness );',
   },
 ];
+
+/** The text that proves the patch installed, which a patch that reads it requires. */
+export const SKY_LIGHTING_MARK = GODOT_IBL_RADIANCE;
 
 /**
  * Replaces three's chunks and gives the layer cubes and the sky's share to every built-in lit material and to
@@ -122,7 +149,7 @@ const SKY_LIGHTING_EDITS: readonly ChunkEdit<SkyChunk>[] = [
 export function installGodotSkyLighting(): void {
   const isPatched = installChunkPatch({
     names: ['lights_fragment_maps', 'envmap_physical_pars_fragment'],
-    isApplied: (chunks) => chunks.envmap_physical_pars_fragment.includes(GODOT_IBL_RADIANCE),
+    isApplied: (chunks) => chunks.envmap_physical_pars_fragment.includes(SKY_LIGHTING_MARK),
     apply: (chunks) => applyChunkEdits(chunks, SKY_LIGHTING_EDITS),
     missing:
       'lights_fragment_maps or envmap_physical_pars_fragment lacks a line the sky lighting patch replaces',

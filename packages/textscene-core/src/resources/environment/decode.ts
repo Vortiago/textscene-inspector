@@ -6,9 +6,11 @@
 
 import type { EnvironmentProperties } from './types';
 import { BackgroundMode, DEFAULT_AGX_CONTRAST } from './types';
-import { floatOr, intOr } from '../../parser/valueParsers';
+import { enumOr, floatOr, intOr, parseOptionalFloat, vec3Or } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
 import { boolSlotValue } from '../../godot/index.js';
+import { volumetricFogDetailSpread } from '../../godot/volumetricFog.js';
+import { FogMode, depthFogDensityDefault, depthFogRange } from '../../godot/depthFog.js';
 
 /** `Environment`'s constructor weights, finest mip first. */
 const DEFAULT_GLOW_LEVELS = [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0];
@@ -28,6 +30,11 @@ function parseGlowLevels(properties: Record<string, string>): number[] {
 }
 
 export function decodeEnvironment(properties: Record<string, string>): EnvironmentProperties {
+  const fogMode = enumOr(properties.fog_mode, FogMode.EXPONENTIAL, Object.values(FogMode), 'fog_mode');
+  const fogDepthRange = depthFogRange({
+    begin: parseOptionalFloat(properties.fog_depth_begin),
+    end: parseOptionalFloat(properties.fog_depth_end),
+  });
   return {
     // Background
     background_mode: intOr(properties.background_mode, 0, 'background_mode') as BackgroundMode,
@@ -38,6 +45,7 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
       'background_energy_multiplier'
     ),
     sky: properties.sky,
+    sky_rotation: vec3Or(properties.sky_rotation, { x: 0, y: 0, z: 0 }, 'sky_rotation'),
 
     // Tonemapping. AgX reads its own two properties rather than `tonemap_white`
     // (`Environment::_update_tonemap`), and their defaults are Blender's AgX
@@ -62,17 +70,57 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
       'ambient_light_sky_contribution'
     ),
 
-    // Screen-space fog.
+    // Depth fog.
     fog_enabled: boolSlotValue(properties.fog_enabled) === true,
-    fog_density: floatOr(properties.fog_density, 0.01, 'fog_density'),
+    fog_mode: fogMode,
     fog_light_color: colorOr(properties.fog_light_color, { r: 0.518, g: 0.553, b: 0.608, a: 1 }),
-    fog_mode: intOr(properties.fog_mode, 0, 'fog_mode'),
+    fog_light_energy: floatOr(properties.fog_light_energy, 1.0, 'fog_light_energy'),
+    fog_sun_scatter: floatOr(properties.fog_sun_scatter, 0.0, 'fog_sun_scatter'),
+    fog_density: floatOr(properties.fog_density, depthFogDensityDefault(fogMode), 'fog_density'),
+    fog_aerial_perspective: floatOr(properties.fog_aerial_perspective, 0.0, 'fog_aerial_perspective'),
+    fog_sky_affect: floatOr(properties.fog_sky_affect, 1.0, 'fog_sky_affect'),
+    fog_height: floatOr(properties.fog_height, 0.0, 'fog_height'),
+    fog_height_density: floatOr(properties.fog_height_density, 0.0, 'fog_height_density'),
+    fog_depth_curve: floatOr(properties.fog_depth_curve, 1.0, 'fog_depth_curve'),
+    fog_depth_begin: fogDepthRange.begin,
+    fog_depth_end: fogDepthRange.end,
 
     // Volumetric Fog
     volumetric_fog_enabled: boolSlotValue(properties.volumetric_fog_enabled) === true,
     volumetric_fog_density: floatOr(properties.volumetric_fog_density, 0.05, 'volumetric_fog_density'),
     volumetric_fog_albedo: colorOr(properties.volumetric_fog_albedo, { r: 1, g: 1, b: 1, a: 1 }),
     volumetric_fog_emission: colorOr(properties.volumetric_fog_emission, { r: 0, g: 0, b: 0, a: 1 }),
+    volumetric_fog_emission_energy: floatOr(
+      properties.volumetric_fog_emission_energy,
+      1.0,
+      'volumetric_fog_emission_energy'
+    ),
+    volumetric_fog_anisotropy: floatOr(
+      properties.volumetric_fog_anisotropy,
+      0.2,
+      'volumetric_fog_anisotropy'
+    ),
+    volumetric_fog_length: floatOr(properties.volumetric_fog_length, 64.0, 'volumetric_fog_length'),
+    volumetric_fog_detail_spread: volumetricFogDetailSpread(
+      floatOr(properties.volumetric_fog_detail_spread, 2.0, 'volumetric_fog_detail_spread')
+    ),
+    volumetric_fog_ambient_inject: floatOr(
+      properties.volumetric_fog_ambient_inject,
+      0.0,
+      'volumetric_fog_ambient_inject'
+    ),
+    volumetric_fog_sky_affect: floatOr(
+      properties.volumetric_fog_sky_affect,
+      1.0,
+      'volumetric_fog_sky_affect'
+    ),
+    volumetric_fog_temporal_reprojection_enabled:
+      boolSlotValue(properties.volumetric_fog_temporal_reprojection_enabled) !== false,
+    volumetric_fog_temporal_reprojection_amount: floatOr(
+      properties.volumetric_fog_temporal_reprojection_amount,
+      0.9,
+      'volumetric_fog_temporal_reprojection_amount'
+    ),
 
     // Glow.
     glow_enabled: boolSlotValue(properties.glow_enabled) === true,

@@ -4,6 +4,8 @@
  * sky on its own `userData`, and `<SkyLayer>` reads it.
  */
 
+import type * as THREE from 'three';
+import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
 
 export interface SkyLightDeclaration {
@@ -26,3 +28,13 @@ export const skyLightUserData = declaration.userData;
 
 /** The light's declaration, or null for a light that made none, such as a GLB light. */
 export const readSkyLightDeclaration = declaration.read;
+
+/**
+ * The energy the sky reads from `light`, or null for a light the sky skips. A light that declares
+ * none, such as a GLB light, goes back through the intensity scale, so its disc reads 1/PI dim.
+ */
+export function skyLightEnergy(light: THREE.DirectionalLight): number | null {
+  const sky = readSkyLightDeclaration(light);
+  if (!sky) return light.intensity / LIGHT_INTENSITY_SCALE;
+  return sky.drawsInSky ? sky.energy : null;
+}

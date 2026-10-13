@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { AtlasOmniShadow } from './atlasOmniShadow.js';
 import { writeFramebufferHeight } from '../shadowFilter/framebufferRows.js';
 import { OmniShadowCopy } from './omniShadowCopy.js';
+import { drawOffscreen } from '../offscreen.js';
 
 type ShadowPass = THREE.WebGLShadowMap['render'];
 
@@ -47,14 +48,12 @@ function copyOmniShadows(
   lights: readonly OmniLight[]
 ): void {
   if (lights.length === 0) return;
-  const target = renderer.getRenderTarget();
-  const face = renderer.getActiveCubeFace();
-  const mipmapLevel = renderer.getActiveMipmapLevel();
-  for (const light of lights) {
-    copy.copy(renderer, light, light.shadow.slot!);
-    light.shadow.writeLookupMatrix(light);
-  }
-  renderer.setRenderTarget(target, face, mipmapLevel);
+  drawOffscreen(renderer, () => {
+    for (const light of lights) {
+      copy.copy(renderer, light, light.shadow.slot!);
+      light.shadow.writeLookupMatrix(light);
+    }
+  });
 }
 
 /**

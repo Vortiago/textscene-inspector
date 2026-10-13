@@ -78,8 +78,8 @@ omission.
 > both nodes that draw nothing by nature and nodes nobody has implemented.
 > `NodeComponentRegistration.renderIntent: 'transform-only'` means finished-and-invisible (sheet
 > status `linter-only`). `renderIntent: 'pending'` means not-implemented (sheet status
-> `unimplemented`), and the base component still mounts so the node keeps its `visible` flag and its
-> workspace. No registration at all is also not-implemented. All three render as an invisible
+> `unimplemented`), and the base component still mounts so the node keeps its workspace. The
+> dispatcher applies a Node3D's `visible` to every type alike. No registration at all is also not-implemented. All three render as an invisible
 > transform-only group, and `GenericNodeFallback` applies the Node3D transform. `GPUParticles3D` is in
 > the second group: Godot rasterises a particle cloud at runtime (`unit-gpuparticles3d-godot.png`)
 > and the previewer draws nothing, so it is a gap, not a node that draws nothing by nature. The

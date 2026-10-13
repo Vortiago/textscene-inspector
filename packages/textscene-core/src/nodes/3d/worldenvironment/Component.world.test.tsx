@@ -23,7 +23,7 @@ async function render(node: TscnNode, resources: TscnInternalResource[]) {
   );
 }
 
-describe('WorldEnvironment (assertions 81–89)', () => {
+describe('WorldEnvironment (assertions 81–87)', () => {
   it('#81 background_mode SKY → scene background is set (non-null)', async () => {
     const renderer = await render(makeNode(), [subResource('Environment', 'Env', { background_mode: '2' })]);
     // SKY mode (2) sets some scene.background.
@@ -110,35 +110,10 @@ describe('WorldEnvironment (assertions 81–89)', () => {
     expect(instanceAs<THREE.Scene>(renderer.scene).fog).toBeNull();
   });
 
-  it('#87 fog_enabled=true → scene.fog is non-null', async () => {
+  it('#87 fog_enabled=true → no three fog without the GL context the fog passes need', async () => {
     const renderer = await render(makeNode(), [
       subResource('Environment', 'Env', { background_mode: '1', fog_enabled: 'true', fog_density: '0.1' }),
     ]);
-    expect(instanceAs<THREE.Scene>(renderer.scene).fog).not.toBeNull();
-  });
-
-  it('#88 fog_light_color → scene.fog.color matches (sRGB)', async () => {
-    const renderer = await render(makeNode(), [
-      subResource('Environment', 'Env', {
-        background_mode: '1',
-        fog_enabled: 'true',
-        fog_density: '0.05',
-        fog_light_color: 'Color(0.4, 0.5, 0.6, 1)',
-      }),
-    ]);
-    const fog = instanceAs<THREE.Scene>(renderer.scene).fog as {
-      color: { getHexString(): string };
-    } | null;
-    expect(fog).not.toBeNull();
-    expect(fog!.color.getHexString()).toBe('668099'); // (0.4,0.5,0.6) sRGB
-  });
-
-  it('#89 fog_density → scene.fog.density matches', async () => {
-    const renderer = await render(makeNode(), [
-      subResource('Environment', 'Env', { background_mode: '1', fog_enabled: 'true', fog_density: '0.25' }),
-    ]);
-    const fog = instanceAs<THREE.Scene>(renderer.scene).fog as { density: number } | null;
-    expect(fog).not.toBeNull();
-    expect(fog!.density).toBeCloseTo(0.25, 4);
+    expect(instanceAs<THREE.Scene>(renderer.scene).fog).toBeNull();
   });
 });

@@ -5,6 +5,7 @@
  */
 
 import type { Color } from '../../utils/colorParser';
+import type { Vector3 } from '../../parser/vectors';
 
 /**
  * Godot's `Environment.tonemap_agx_contrast` default (`environment.h`; `ADD_PROPERTY`
@@ -34,6 +35,8 @@ export interface EnvironmentProperties {
    * rendering is deferred (BG_SKY falls back to a flat background).
    */
   sky?: string;
+  /** The sky's Euler rotation in radians, YXZ order as `Basis::from_euler` reads it. */
+  sky_rotation: Vector3;
 
   // Tonemapping
   /** 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
@@ -66,18 +69,51 @@ export interface EnvironmentProperties {
    */
   ambient_light_sky_contribution: number;
 
-  // Screen-space fog (maps to THREE.Fog/FogExp2)
+  // Depth fog
   fog_enabled: boolean;
-  fog_density: number;
-  fog_light_color: Color;
   /** 0 EXPONENTIAL (default), 1 DEPTH. */
   fog_mode: number;
+  fog_light_color: Color;
+  fog_light_energy: number;
+  /** How much the directional lights tint the fog towards them. */
+  fog_sun_scatter: number;
+  /** The default follows `fog_mode`: 0.01 when exponential, 1 when depth. */
+  fog_density: number;
+  /** How far the sky shows through the fog colour, 0-1. */
+  fog_aerial_perspective: number;
+  /** How far the fog covers the background, 0-1. */
+  fog_sky_affect: number;
+  fog_height: number;
+  /** Negative fogs above `fog_height`, positive below it. 0 turns the height fog off. */
+  fog_height_density: number;
+  /** DEPTH mode's exponent on the fog between its begin and end. */
+  fog_depth_curve: number;
+  /** DEPTH mode's range, after the setters keep `begin <= end`. */
+  fog_depth_begin: number;
+  /** 0 or below ends the fog at the camera's far plane. */
+  fog_depth_end: number;
 
   // Volumetric Fog
   volumetric_fog_enabled: boolean;
   volumetric_fog_density: number;
+  /** The scattering colour, sRGB: the share of the light the medium scatters into the view. */
   volumetric_fog_albedo: Color;
   volumetric_fog_emission: Color;
+  volumetric_fog_emission_energy: number;
+  /** The Henyey-Greenstein `g`: positive scatters forward, towards the light. */
+  volumetric_fog_anisotropy: number;
+  /** How far from the camera the froxel volume reaches, in metres. */
+  volumetric_fog_length: number;
+  /** The exponent that packs the volume's slices towards the camera, already clamped to 0.5-6. */
+  volumetric_fog_detail_spread: number;
+  /** How much of the ambient light and sky the medium scatters. 0 injects none. */
+  volumetric_fog_ambient_inject: number;
+  /** How far the fog covers the background, 0-1. */
+  volumetric_fog_sky_affect: number;
+  /** Whether each frame blends into the last, reprojected, over Godot's 16 temporal jitters. */
+  volumetric_fog_temporal_reprojection_enabled: boolean;
+  /** The share of the last frame each frame keeps, 0.5-0.99. */
+  volumetric_fog_temporal_reprojection_amount: number;
 
   // Glow, a compositor post-process: a peak-channel bright pass over a weighted mip
   // pyramid, blended back around the tone curve. The editor preview environment
@@ -170,11 +206,56 @@ export interface EnvironmentSettings {
     /** `tonemap_agx_contrast`, carried whatever the mode. Only AgX reads it. */
     agxContrast: number;
   };
-  /** Screen-space fog (Godot fog_enabled). Volumetric fog has no THREE equivalent. */
+  /** Depth fog (Godot `fog_enabled`), apart from the volumetric fog below. */
   fog: {
-    density: number;
-    color: Color;
+    /** 0 EXPONENTIAL, 1 DEPTH. */
     mode: number;
+    /** sRGB, not yet times `lightEnergy`. */
+    color: Color;
+    lightEnergy: number;
+    sunScatter: number;
+    density: number;
+    aerialPerspective: number;
+    skyAffect: number;
+    height: number;
+    heightDensity: number;
+    depthCurve: number;
+    depthBegin: number;
+    /** 0 or below ends the fog at the camera's far plane. */
+    depthEnd: number;
+  } | null;
+  /** The sky's Euler rotation in radians, YXZ order: the background, its light and the fog read it. */
+  skyRotation: Vector3;
+  /**
+   * Volumetric fog, null when disabled: a medium in a froxel volume in front of the camera, lit by
+   * the lights and the ambient, which every surface and the background sample. Colours stay in
+   * Godot space: the consumer converts sRGB to linear.
+   */
+  volumetricFog: {
+    density: number;
+    albedo: Color;
+    emission: Color;
+    emissionEnergy: number;
+    /** The Henyey-Greenstein `g` of every light the medium scatters. */
+    anisotropy: number;
+    length: number;
+    detailSpread: number;
+    /**
+     * The ambient the medium scatters, read whatever the ambient source (`fog.cpp:1067-1076`).
+     * `inject` already carries `ambient_light_energy`.
+     */
+    ambient: {
+      inject: number;
+      color: Color;
+      /** The sky's share of the injected ambient, against `color`. */
+      skyContribution: number;
+    };
+    skyAffect: number;
+    /**
+     * The share of the last frame each frame keeps while the cells jitter, or null to sample each
+     * cell at its centre with no history.
+     */
+    temporalReprojection: number | null;
   } | null;
   adjustments: {
     enabled: boolean;

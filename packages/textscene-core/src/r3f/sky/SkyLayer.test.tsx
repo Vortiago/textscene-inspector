@@ -24,6 +24,8 @@ vi.mock('../../resources/sky/build', () => ({
   },
 }));
 
+const NO_ROTATION = { x: 0, y: 0, z: 0 };
+
 const SKY: Sky = {
   material: { kind: 'panorama', panorama: undefined, energy_multiplier: 1 },
   radianceFilter: 'importance-sample',
@@ -32,7 +34,7 @@ const SKY: Sky = {
 function Scene({ lights }: { lights: number }) {
   return (
     <>
-      <SkyLayer sky={SKY} />
+      <SkyLayer sky={SKY} rotation={NO_ROTATION} />
       {Array.from({ length: lights }, (_, i) => (
         <directionalLight key={i} position={[i + 1, 2, 3]} />
       ))}
@@ -101,7 +103,7 @@ describe('SkyLayer', () => {
   it('leaves out a light that declares it draws nothing in the sky', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} />
+        <SkyLayer sky={SKY} rotation={NO_ROTATION} />
         <directionalLight position={[1, 2, 3]} />
         <directionalLight
           position={[3, 2, 1]}
@@ -117,7 +119,7 @@ describe('SkyLayer', () => {
   it('draws a light at its declared energy, though it lights no surface (edge case)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} />
+        <SkyLayer sky={SKY} rotation={NO_ROTATION} />
         <directionalLight intensity={0} userData={skyLightUserData({ drawsInSky: true, energy: 2 })} />
       </>
     );
@@ -129,7 +131,7 @@ describe('SkyLayer', () => {
   it('draws a light that declares nothing at its intensity over the scale (error case)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} />
+        <SkyLayer sky={SKY} rotation={NO_ROTATION} />
         <directionalLight intensity={Math.PI * 3} />
       </>
     );
@@ -149,7 +151,9 @@ describe('SkyLayer', () => {
 
   it('shows its share of the ambient with its layers', async () => {
     built.next = skyEnvironment(skyLayers());
-    const renderer = await ReactThreeTestRenderer.create(<SkyLayer sky={SKY} contribution={0.25} />);
+    const renderer = await ReactThreeTestRenderer.create(
+      <SkyLayer sky={SKY} rotation={NO_ROTATION} contribution={0.25} />
+    );
     await advance(renderer, 1);
 
     layersAfterRender(renderer);
@@ -159,11 +163,13 @@ describe('SkyLayer', () => {
 
   it('shows a new share of the ambient without a new bake', async () => {
     built.next = skyEnvironment(skyLayers());
-    const renderer = await ReactThreeTestRenderer.create(<SkyLayer sky={SKY} contribution={0.25} />);
+    const renderer = await ReactThreeTestRenderer.create(
+      <SkyLayer sky={SKY} rotation={NO_ROTATION} contribution={0.25} />
+    );
     await advance(renderer, 1);
     const bakeCount = bakes.length;
 
-    await renderer.update(<SkyLayer sky={SKY} contribution={0.5} />);
+    await renderer.update(<SkyLayer sky={SKY} rotation={NO_ROTATION} contribution={0.5} />);
     layersAfterRender(renderer);
 
     expect([bakes.length, skyContribution[0]]).toEqual([bakeCount, 0.5]);

@@ -84,7 +84,6 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const content = meshContent(mesh, arrayMeshResult, sceneArrayMesh);
   // The placeholder box is not the mesh's, so the cull cannot measure the instance.
   const shadow = useGeometryInstance(content.kind === 'unresolved' ? UNPLACED : placement);
-  const visible = properties.visible !== false;
 
   const shellProps = {
     name: node.name,
@@ -92,7 +91,6 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     position,
     rotation,
     scale,
-    visible,
     shadow,
     godotLayers: properties.layers,
     subtree: children,
@@ -233,7 +231,6 @@ interface MeshShellProps {
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
-  visible: boolean;
   /** `cast_shadow`, with the per-surface draw hooks: billboard, shadow pass, SHADOWS_ONLY. */
   shadow: ShadowCastingEffects;
   /** `layers`: the VisualInstance3D render mask a Decal's `cull_mask` filters on. */
@@ -257,7 +254,6 @@ function MeshShell({
   position,
   rotation,
   scale,
-  visible,
   shadow,
   godotLayers,
   subtree,
@@ -271,7 +267,6 @@ function MeshShell({
       position={position}
       rotation={rotation}
       scale={scale}
-      visible={visible}
       castShadow={shadow.castShadow}
       // three fires these per draw group, the shadow pair after `getDepthMaterial` has
       // set the side (`WebGLShadowMap.js:488,546,560`): the only per-surface reach into

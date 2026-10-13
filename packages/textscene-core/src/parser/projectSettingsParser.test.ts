@@ -18,7 +18,9 @@ import {
   projectClearColor,
   projectTransparentBackground,
   projectViewportSize,
+  projectVolumetricFogSettings,
 } from './projectSettingsParser';
+import { VOLUMETRIC_FOG_DEFAULTS } from '../godot/volumetricFog';
 
 /** The head of the real demo project, verbatim, comments and wrap included. */
 const GUI_IN_3D = `; Engine configuration file.
@@ -166,6 +168,35 @@ describe('projectClearColor', () => {
 
   it("gives Godot's 0.3 grey with no project", () => {
     expect(projectClearColor(null)).toEqual({ r: 0.3, g: 0.3, b: 0.3, a: 1 });
+  });
+});
+
+describe('projectVolumetricFogSettings', () => {
+  it("gives Godot's defaults with no project", () => {
+    expect(projectVolumetricFogSettings(null)).toEqual(VOLUMETRIC_FOG_DEFAULTS);
+  });
+
+  it('reads the volume size, depth, filter and legacy blending', () => {
+    const settings = {
+      'rendering/environment/volumetric_fog/volume_size': '128',
+      'rendering/environment/volumetric_fog/volume_depth': '32',
+      'rendering/environment/volumetric_fog/use_filter': '0',
+      'rendering/environment/fog/use_legacy_blending': 'true',
+    };
+    expect(projectVolumetricFogSettings(settings)).toEqual({
+      volumeSize: 128,
+      volumeDepth: 32,
+      useFilter: false,
+      useLegacyBlending: true,
+    });
+  });
+
+  it('keeps the default for a volume side that is not a positive integer', () => {
+    const settings = {
+      'rendering/environment/volumetric_fog/volume_size': '0',
+      'rendering/environment/volumetric_fog/volume_depth': 'deep',
+    };
+    expect(projectVolumetricFogSettings(settings)).toEqual(VOLUMETRIC_FOG_DEFAULTS);
   });
 });
 

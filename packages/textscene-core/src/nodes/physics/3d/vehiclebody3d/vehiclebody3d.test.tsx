@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { visibleInTree } from '../../../../r3f/visibleInTree';
 import '../../../../r3f/nodes/index'; // side-effect: component registrations
 import '../../../../parser/TscnParser'; // side-effect: parser registrations
 import { rendersOwnVisual } from '../../../../r3f/nodeSupport';
@@ -58,6 +59,6 @@ async function render(node: TscnNode) {
 describe('<VehicleBody3D> render contract', () => {
   it('honours visible = false, hiding itself and its subtree', async () => {
     const renderer = await render(vehicleNode({ visible: false }));
-    expect(renderer.scene.findByProps({ name: 'Vehicle' }).instance.visible).toBe(false);
+    expect(visibleInTree(renderer.scene.findByProps({ name: 'Vehicle' }).instance)).toBe(false);
   });
 });

@@ -64,11 +64,4 @@ describe('<MeshInstance3D> cast_shadow = SHADOWS_ONLY', () => {
     expect(drawsColour(mesh)).toBe(true);
     expect(mesh.visible).toBe(true);
   });
-
-  it('still hides a mesh whose `visible` is false — and its subtree with it', async () => {
-    // Godot's visibility is hierarchical (class_node3d.html `is_visible_in_tree`).
-    const renderer = await render({ visible: false });
-    expect(findMesh(renderer.scene).visible).toBe(false);
-    expect(childIsRendered(renderer)).toBe(false);
-  });
 });

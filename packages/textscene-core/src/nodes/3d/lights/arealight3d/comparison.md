@@ -3,14 +3,14 @@ type: AreaLight3D
 category: 3D
 status: unreviewed
 group: Lighting
-fixture: unit-area-light3d.tscn
-image: unit-area-light3d
-renders_as: a THREE.RectAreaLight
+fixture: unit-area-light-normalize.tscn
+image: unit-area-light-normalize
+renders_as: a THREE.RectAreaLight shaded as Godot 4.7.2's area light
 ---
 
 # AreaLight3D
 
-Godot's rectangular area lamp. The previewer renders it as a `THREE.RectAreaLight` sized from `area_size`, emitting `light_color` at `light_energy`. Godot 4.6.3 parses the node but emits no light from it, so the reference image is lit by the editor preview sun alone.
+Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: `light_energy` spread over `area_size`, faded by `area_range` and `area_attenuation`, with `light_specular` on the highlight. It shades each material in its `diffuse_mode` and `specular_mode`, and a clearcoat dims the light beneath it. The reference image comes from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.
 
 ## Linting
 
@@ -19,9 +19,11 @@ Strict parsing format-checks these `AreaLight3D` properties, plus 27 inherited f
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
+| `area_attenuation` | float |  |
 | `area_normalize_energy` | true or false |  |
-| `area_range` | float |  |
-| `area_size` | Vector2(x, y), or the Vector2i spelling Godot converts |  |
+| `area_range` | float >= 0 | warning below |
+| `area_size` | Vector2(x, y), each >= 0 |  |
+| `area_texture` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
@@ -30,8 +32,9 @@ Strict parsing format-checks these `AreaLight3D` properties, plus 27 inherited f
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
-The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: `area_range` to `5.0`, `area_size` to `Vector2(1, 1)`, `area_normalize_energy` to `true`.
+The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: `area_range` to `5.0`, `area_attenuation` to `1.0`, `area_size` to `Vector2(1, 1)`, `area_normalize_energy` to `true`.
 
 ## Known limitations
 
-- **Approximated** `THREE.RectAreaLight` has no shadow or range control, so `shadow_enabled` and `area_range` are parsed but never drawn.
+- **Approximated** `shadow_enabled` casts no shadow, so a surface behind an occluder stays lit.
+- **Shader missing** `area_texture` is not drawn, so the light emits its flat `light_color`.

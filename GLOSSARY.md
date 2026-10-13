@@ -363,6 +363,18 @@ _Avoid_: "mip" for a layer, "PMREM" for Godot's layers.
 Godot's tap-table filter that bakes the **Radiance layers** of a sky in Real-Time process mode, in place of GGX importance sampling.
 _Avoid_: "real-time filter", "low-quality filter".
 
+**Depth fog**:
+The Environment's `fog_*` fog, which fades a surface towards the fog colour with its distance from the camera.
+_Avoid_: "screen-space fog". Bare "fog" where **volumetric fog** is on too.
+
+**Volumetric fog**:
+The Environment's `volumetric_fog_*` medium. It fills a volume of **froxels** in front of the camera, scatters the lights and the ambient, and hazes every surface and the background behind it.
+_Avoid_: "fog volume", which names the FogVolume node.
+
+**Froxel**:
+One cell of the volume that **volumetric fog** fills: a screen tile at one depth slice, shaped like a piece of the camera frustum.
+_Avoid_: "voxel", which names a cube in world space.
+
 **Geometry instance**:
 A drawn 3D Node (a GeometryInstance3D) whose own render state, such as `transparency` and `cast_shadow`, applies to every surface it draws.
 _Avoid_: bare "instance", which names **PackedScene instancing**.

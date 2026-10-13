@@ -1,0 +1,102 @@
+/**
+ * The fog chunks draw Godot's fog ahead of the tone curve, the cube background fogs the sky, and
+ * every fog program reads one shared set of fog uniforms. The tests read the installed three, so a
+ * release that rewrites a replaced line fails here, not in a golden.
+ */
+import { afterEach, describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import { installFogComposite } from './fogComposite';
+import { GODOT_FOG_PARS_CHUNK } from './fogChunks';
+import { fogUniforms } from './fogUniforms';
+import { warningsOf } from '../testing/logWarnings';
+
+const threeChunks = {
+  fog_pars_vertex: THREE.ShaderChunk.fog_pars_vertex,
+  fog_vertex: THREE.ShaderChunk.fog_vertex,
+  fog_pars_fragment: THREE.ShaderChunk.fog_pars_fragment,
+  fog_fragment: THREE.ShaderChunk.fog_fragment,
+  tonemapping_fragment: THREE.ShaderChunk.tonemapping_fragment,
+  backgroundCube_frag: THREE.ShaderChunk.backgroundCube_frag,
+};
+const backgroundCube = THREE.ShaderLib.backgroundCube!;
+const threeBackgroundShader = backgroundCube.fragmentShader;
+
+afterEach(() => {
+  Object.assign(THREE.ShaderChunk, threeChunks);
+  backgroundCube.fragmentShader = threeBackgroundShader;
+});
+
+describe('installFogComposite', () => {
+  it('draws the fog ahead of the tone curve, in place of three’s', () => {
+    installFogComposite();
+
+    const toneCurve = THREE.ShaderChunk.tonemapping_fragment;
+    expect(THREE.ShaderChunk.fog_fragment).toBe('');
+    expect(toneCurve.indexOf('godotFogAt( vGodotFogView )')).toBeLessThan(
+      toneCurve.indexOf('toneMapping( gl_FragColor.rgb )')
+    );
+  });
+
+  it('hands the view-space position from the vertex to the fragment', () => {
+    installFogComposite();
+
+    expect(THREE.ShaderChunk.fog_pars_vertex).toContain('varying vec3 vGodotFogView;');
+    expect(THREE.ShaderChunk.fog_vertex).toContain('vGodotFogView = mvPosition.xyz;');
+    expect(THREE.ShaderChunk.fog_pars_fragment).toContain('varying vec3 vGodotFogView;');
+  });
+
+  it('declares the fog functions with the fog uniforms', () => {
+    installFogComposite();
+
+    expect(THREE.ShaderChunk.fog_pars_fragment).toContain(`#include <${GODOT_FOG_PARS_CHUNK}>`);
+    const pars = THREE.ShaderChunk[GODOT_FOG_PARS_CHUNK as keyof typeof THREE.ShaderChunk];
+    expect(pars).toContain('vec4 depthFogAt( vec3 view )');
+    expect(pars).toContain('vec4 volumetricFogAtDepth( float viewDepth )');
+  });
+
+  it('fogs the cube background before its tone curve', () => {
+    installFogComposite();
+
+    const shader = backgroundCube.fragmentShader;
+    expect(shader.startsWith(`#include <${GODOT_FOG_PARS_CHUNK}>`)).toBe(true);
+    expect(shader.indexOf('godotSkyFog( gl_FragColor.rgb, vWorldDirection )')).toBeLessThan(
+      shader.indexOf('<tonemapping_fragment>')
+    );
+  });
+
+  it('gives every fog material and the background the same uniform values', () => {
+    installFogComposite();
+
+    const fogShaders = [THREE.ShaderLib.standard!, THREE.ShaderLib.basic, backgroundCube];
+    for (const shader of fogShaders) {
+      const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
+      expect(uniforms.volumetricFogVolume!.value).toBe(fogUniforms.volume);
+      expect(uniforms.fogRadiance!.value).toBe(fogUniforms.radiance);
+      expect(uniforms.depthFogShape!.value).toBe(fogUniforms.depthShape);
+      expect(uniforms.fogSkyRotation!.value).toBe(fogUniforms.skyRotation);
+    }
+  });
+
+  it('gives no uniform to a shader without fog (edge case)', () => {
+    installFogComposite();
+
+    expect(THREE.ShaderLib.depth.uniforms).not.toHaveProperty('depthFogShape');
+  });
+
+  it('changes nothing on a second call (edge case)', () => {
+    installFogComposite();
+    const chunks = { ...THREE.ShaderChunk };
+    installFogComposite();
+
+    expect({ ...THREE.ShaderChunk }).toEqual(chunks);
+  });
+
+  it('keeps three’s fog and warns when three lacks its fog depth (error case)', () => {
+    THREE.ShaderChunk.fog_vertex = 'vFogDepth = 0.0;';
+
+    const warnings = warningsOf(installFogComposite);
+
+    expect(warnings).toContain("[Shading] three's fog_vertex has no vFogDepth = - mvPosition.z;");
+    expect(THREE.ShaderChunk.tonemapping_fragment).toBe(threeChunks.tonemapping_fragment);
+  });
+});

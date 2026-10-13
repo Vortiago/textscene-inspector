@@ -65,9 +65,6 @@ const GODOT_SPECULAR_OCCLUSION = /* glsl */ `
 	float godotReflective = ( 1.0 - material.godotRoughness ) * material.metalness;
 	godotSpecularOcclusion = max( min( godotReflective * godotSpecularOcclusion * 10.0, 1.0 ), godotSpecularOcclusion );
 	reflectedLight.indirectSpecular *= godotSpecularOcclusion;
-	#ifdef USE_CLEARCOAT
-		clearcoatSpecularIndirect *= godotSpecularOcclusion;
-	#endif
 
 #endif
 `;

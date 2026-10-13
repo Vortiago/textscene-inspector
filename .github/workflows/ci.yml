@@ -62,6 +62,7 @@ jobs:
       - run: pnpm docs:gallery --check
       - run: pnpm fonts:bake --check
       - run: pnpm godot:dfg --check
+      - run: pnpm godot:ltc --check
 
   unit:
     name: Unit tests (${{ matrix.shard }}/4)

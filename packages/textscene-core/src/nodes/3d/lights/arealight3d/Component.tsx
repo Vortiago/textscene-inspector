@@ -1,43 +1,53 @@
 /**
- * <AreaLight3D>: a three.js RectAreaLight sized from `area_size` (default 1×1).
- * RectAreaLight has no shadows and no range, so shadow_* and `area_range` are
- * not applied. It emits nothing until the LTC uniforms exist, so module load
- * calls the idempotent `RectAreaLightUniformsLib.init()` once.
+ * <AreaLight3D>: a three.js RectAreaLight sized from `area_size`, which the patched chunks shade
+ * with Godot's area light (`r3f/areaLight/`). It carries its range, attenuation and specular to the
+ * shader, and casts no shadow yet.
  */
 
-import { useMemo, useRef } from 'react';
-import type * as THREE from 'three';
-import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
+import { useMemo } from 'react';
 import type { AreaLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
+import { lightIntensity } from '../shared/lightStrength';
+import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
 
-RectAreaLightUniformsLib.init();
-
-const DEFAULT_AREA_SIZE = { x: 1, y: 1 } as const;
+/**
+ * Godot's colour scale: `energy * PI`, negated for a negative light, divided by the rectangle's
+ * area when the light normalises its energy (4.7.2: `light_storage.cpp:1003`, `:1046`, `:1094-1100`).
+ */
+function areaLightIntensity(properties: AreaLight3DProperties): number {
+  const { x: width, y: height } = properties.area_size;
+  const area = width * height;
+  const intensity = lightIntensity(properties);
+  return properties.area_normalize_energy && area > 0 ? intensity / area : intensity;
+}
 
 export function AreaLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as AreaLight3DProperties;
-  const lightRef = useRef<THREE.RectAreaLight | null>(null);
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
     [properties]
   );
-  const color = parseColorToHex(properties.light_color);
-  const { x: width, y: height } = properties.area_size ?? DEFAULT_AREA_SIZE;
-  // Godot divides the emitted colour by the rectangle's surface area when
-  // `area_normalize_energy` is on (its default), so the total output is
-  // size-independent. three.js RectAreaLight intensity is a luminance, which
-  // scales with area for the same reason, so the same division applies here.
-  const area = width * height;
-  const normalize = properties.area_normalize_energy && area > 0;
-  const intensity = (properties.light_energy * LIGHT_INTENSITY_SCALE) / (normalize ? area : 1);
+  const userData = useMemo(
+    () =>
+      areaLightUserData({
+        range: properties.area_range,
+        attenuation: properties.area_attenuation,
+        specular: properties.light_specular,
+      }),
+    [properties.area_range, properties.area_attenuation, properties.light_specular]
+  );
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>
-      <rectAreaLight ref={lightRef} color={color} intensity={intensity} width={width} height={height} />
+      <rectAreaLight
+        color={parseColorToHex(properties.light_color)}
+        intensity={areaLightIntensity(properties)}
+        width={properties.area_size.x}
+        height={properties.area_size.y}
+        userData={userData}
+      />
       {children}
     </group>
   );

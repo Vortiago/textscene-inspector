@@ -9,7 +9,7 @@ renders_as: a THREE.DirectionalLight
 
 # DirectionalLight3D
 
-A sun-like light that lights every surface from one direction, down the node's local -Z. The previewer draws a `THREE.DirectionalLight` with Godot's shadow, fitted to the camera in one, two or four splits. Each shadow draws into its share of one atlas texture and fades out at `directional_shadow_max_distance`. Every lit surface samples that one texture, as in Godot, so eight shadowed lights take one texture unit.
+A sun-like light that lights every surface from one direction, down the node's local -Z. The previewer draws a `THREE.DirectionalLight` with Godot's shadow, fitted to the camera in one, two or four splits. Each shadow draws into its share of one atlas texture and fades out at `directional_shadow_max_distance`. Every lit surface samples that one texture, as in Godot, so eight shadowed lights take one texture unit. Its highlight scales by `light_specular`, as Godot's does.
 
 ## Linting
 
@@ -41,6 +41,8 @@ The lenient parser reads the shadow mode, the three split offsets, the max dista
 The shadow's soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter reaches `shadow_blur` times two atlas texels.
 
 `sky_mode` decides what the light reaches, as in Godot. A Sky Only light draws only its sun in the sky, and casts no shadow. A Light Only light lights surfaces and draws no sun in the sky.
+
+`light_negative` makes the light subtract, on surfaces and in the sky's sun, as in Godot. `shadow_opacity` mixes the shadow towards unshadowed through three's `shadow.intensity`.
 
 Godot draws the first eight visible directional lights in the scene and stops. A light past the eighth neither lights nor casts, here as in Godot. So at most eight directional lights cast a shadow.
 

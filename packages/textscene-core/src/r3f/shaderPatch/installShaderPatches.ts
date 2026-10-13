@@ -6,23 +6,31 @@
  */
 
 import { installCanvasSrgbMultiply } from '../canvasSrgbMultiply.js';
+import { installGodotAreaLight } from '../areaLight/areaLightChunk.js';
+import { installGodotClearcoat } from '../godotClearcoat.js';
 import { installGodotLightAttenuation } from '../godotLightAttenuation.js';
 import { installGodotIndirectSpecular } from '../godotIndirectSpecular.js';
 import { installGodotLightFunction } from '../godotLightFunction.js';
+import { installGodotLightSpecular } from '../lightSpecular/lightSpecularChunk.js';
 import { installGodotSkyLighting } from '../godotSkyLighting.js';
 import { installDirectionalShadowFade } from '../directionalShadow/shadowFade.js';
 import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasChunk.js';
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk.js';
 import { installGodotPositionalShadow } from '../positionalShadow/positionalShadowChunk.js';
+import { installFogComposite } from '../fog/fogComposite.js';
 
 export function installShaderPatches(): void {
   installGodotIndirectSpecular();
+  installGodotLightSpecular();
   installGodotLightFunction();
   installGodotLightAttenuation();
   installGodotSkyLighting();
+  installGodotAreaLight();
+  installGodotClearcoat();
   installGodotSplitShadow();
   installDirectionalShadowAtlas();
   installDirectionalShadowFade();
   installGodotPositionalShadow();
   installCanvasSrgbMultiply();
+  installFogComposite();
 }

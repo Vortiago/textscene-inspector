@@ -98,15 +98,6 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
     expect(mesh.material.color.g).not.toBe(1);
   });
 
-  it('#15 visible=false propagates to mesh.visible', async () => {
-    const node = makeNode({ name: 'invisible', mesh: 'SubResource("Box_1")' });
-    // Node3DProperties has no `visible` field, so it is set on the properties record.
-    (node.properties as unknown as { visible: boolean }).visible = false;
-    const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
-    const mesh = renderer.scene.findByType('Mesh');
-    expect(mesh.instance.visible).toBe(false);
-  });
-
   it('#16 cast_shadow=0 (OFF) → mesh.castShadow === false', async () => {
     const node = makeNode({ mesh: 'SubResource("Box_1")', castShadow: 0 });
     const renderer = await render(node, [subResource('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);

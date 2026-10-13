@@ -12,6 +12,7 @@ import { NodeDispatcher } from '../NodeDispatcher';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import { descendsFrom } from '../../godot/nodeBaseTypes.js';
+import { visibleInTree } from '../visibleInTree';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 
 // Side-effect import: registers every node component (same barrel the apps use).
@@ -119,9 +120,8 @@ describe('transform-only 3D types: rendered contract (ADR-0008)', () => {
   // Godot hides a subtree under any hidden Node3D (node_3d.cpp:1132-1143).
   it.each([...TRANSFORM_ONLY_3D_TYPES])('%s hides its children when not visible', async (type) => {
     const renderer = await renderScene([hiddenSubjectNode(type)]);
-    const subject = renderer.scene.findByProps({ name: 'Subject' });
+    const kid = renderer.scene.findByProps({ name: 'Kid' });
 
-    // three.js skips a hidden group's subtree, so the subject's own flag hides the child.
-    expect(subject.instance.visible).toBe(false);
+    expect(visibleInTree(kid.instance)).toBe(false);
   });
 });

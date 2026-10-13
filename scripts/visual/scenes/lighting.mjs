@@ -25,6 +25,9 @@ export const LIGHTING_SCENES = [
   // sphere. A normal map, or a missing displacementMap, reads as a flat ball.
   { name: 'material-heightmap', file: 'unit-material-heightmap.tscn' },
   { name: 'world-environment', file: 'unit-world-environment-basic.tscn' },
+  // Exponential depth fog over boxes at three distances. The header states why no other golden
+  // shows it.
+  { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
   // Godot's editor preview sun and environment on a scene that declares neither
   // (ADR-0025). Godot's render of it is at
   // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing.

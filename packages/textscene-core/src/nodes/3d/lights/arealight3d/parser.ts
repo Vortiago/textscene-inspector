@@ -12,14 +12,19 @@ export function parseAreaLight3D(
 ): AreaLight3DProperties {
   const node3dProps = parseNode3D(heading, properties);
   const baseLightProps = parseBaseLightWithNormalBias(properties);
+  const areaSize = vec2Or(properties.area_size, { x: 1, y: 1 }, 'AreaLight3D');
 
   return {
     ...node3dProps,
     ...baseLightProps,
-    // class_arealight3d.html: area_range 5.0, area_size Vector2(1, 1),
-    // area_normalize_energy true.
+    // 4.7.2: light_3d.cpp:748 overrides the Light3D 0.5 of :492.
+    light_specular: floatOr(properties.light_specular, 1.0, 'AreaLight3D'),
+    // 4.7.2: light_3d.cpp:493,495.
     area_range: floatOr(properties.area_range, 5.0, 'AreaLight3D'),
-    area_size: vec2Or(properties.area_size, { x: 1, y: 1 }, 'AreaLight3D'),
+    area_attenuation: floatOr(properties.area_attenuation, 1.0, 'AreaLight3D'),
+    // 4.7.2: light_3d.cpp:724, the setter stores `p_size.maxf(0.0f)`.
+    area_size: { x: Math.max(areaSize.x, 0), y: Math.max(areaSize.y, 0) },
     area_normalize_energy: boolOr(properties.area_normalize_energy, true),
+    area_texture: properties.area_texture,
   };
 }

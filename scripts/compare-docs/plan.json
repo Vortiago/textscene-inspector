@@ -203,7 +203,7 @@
   {
    "type": "AreaLight3D",
    "slice": "3d/lights/arealight3d",
-   "fixture": "unit-area-light3d.tscn"
+   "fixture": "unit-area-light-normalize.tscn"
   },
   {
    "type": "DirectionalLight3D",
@@ -400,7 +400,7 @@
   "unit-csg-transparency.tscn",
   "unit-grid-map.tscn",
   "unit-label3d.tscn",
-  "unit-area-light3d.tscn",
+  "unit-area-light-normalize.tscn",
   "unit-directional-light-3d.tscn",
   "unit-omni-light-3d.tscn",
   "unit-spot-light-3d.tscn",

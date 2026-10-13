@@ -12,6 +12,12 @@ describe('installShaderPatches', () => {
     expect(THREE.ShaderChunk.lights_physical_pars_fragment).not.toBe(diffuseBefore);
   });
 
+  it("installs Godot's area light beside Godot's light function", () => {
+    installShaderPatches();
+    expect(THREE.ShaderChunk.lights_physical_pars_fragment).toContain('godotLtcIntegral(');
+    expect(THREE.ShaderChunk.lights_physical_pars_fragment).toContain('godotSpecularBRDF(');
+  });
+
   it("installs the sky ambient beside the light function's IBL edits", () => {
     installShaderPatches();
     expect(THREE.ShaderChunk.lights_fragment_maps).toContain(

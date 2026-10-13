@@ -22,6 +22,9 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 |---|---|
 | `packages/textscene-core/src/resources/sky/skyShaders.ts` | `scene/resources/3d/sky_material.cpp` |
 | `packages/textscene-core/src/resources/sky/fastFilter.ts` | `servers/rendering/renderer_rd/shaders/effects/octmap_filter.glsl` (the low-quality fast filter: its three frames, their weights and the eight taps of each) |
+| `packages/textscene-core/src/r3f/areaLight/ltcIntegral.ts` | `servers/rendering/renderer_rd/shaders/area_lights_inc.glsl` (the edge fit, the horizon clip and the LTC integrals for diffuse and specular) |
+| `packages/textscene-core/src/r3f/areaLight/areaLightChunk.ts` | `servers/rendering/renderer_rd/shaders/scene_forward_lights_inc.glsl` (`light_process_area` and `get_omni_attenuation`) |
+| `packages/textscene-core/src/godot/ltcTable.generated.ts` | `servers/rendering/storage/ltc/ltc_lut1.dds` and `ltc_lut2.dds` (Godot 4.7.2's LTC tables, which Eric Heitz fitted, baked by `scripts/godot-ltc/bake-ltc.mjs`) |
 | `packages/textscene-core/src/resources/environment/godotToneMapping.ts` | `drivers/gles3/shaders/tonemap_inc.glsl` |
 | `packages/textscene-core/src/resources/environment/godotGlow.ts` | `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (`MODE_GLOW` bright pass under `FLAG_GLOW_FIRST_PASS`) and `.../effects/tonemap.glsl` (`gather_glow`, `apply_glow`, and `main()`'s pre/post-tonemap glow ordering) |
 | `packages/textscene-core/src/utils/colorSpace.ts` | `core/math/color.h` (`Color::srgb_to_linear`, `Color::linear_to_srgb`) |

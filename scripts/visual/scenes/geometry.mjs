@@ -70,8 +70,18 @@ export const GEOMETRY_SCENES = [
   // Two AreaLight3D panels of the same light_energy and different area_size.
   // Godot normalises the colour by the area (area_normalize_energy, default
   // true), so both plates read the same. Without it the 4 x 0.05 strip is 5x
-  // dimmer. No other AreaLight3D fixture lights geometry.
+  // dimmer.
   { name: 'area-light-normalize', file: 'unit-area-light-normalize.tscn' },
+  // Four spheres under one AreaLight3D, in the default, toon, specular-disabled
+  // and clearcoat light modes. area-light-normalize draws only matte plates.
+  { name: 'area-light-modes', file: 'unit-area-light-modes.tscn' },
+  // A clearcoat sphere beside a bare one, under an omni light and a sky. The
+  // coat dims only the sky's light beneath it. No other golden coats a sphere
+  // under a punctual light or a sky.
+  { name: 'material-clearcoat-layering', file: 'unit-material-clearcoat-layering.tscn' },
+  // A glossy sphere under an omni and a directional light, each at its own
+  // light_specular. No other golden sets a light's specular amount.
+  { name: 'light-specular', file: 'unit-light-specular.tscn' },
   // External ArrayMesh .tres: a decoded quad with Godot's packed normals.
   { name: 'arraymesh', file: 'unit-arraymesh.tscn' },
   // A text .gltf whose buffer and base colour image are separate files, which
