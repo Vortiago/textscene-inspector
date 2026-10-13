@@ -3,7 +3,7 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { AreaLight3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
-import { parseBaseLightWithNormalBias } from '../shared/parser';
+import { parsePositionalLightProperties } from '../shared/parser';
 import { boolOr, floatOr, vec2Or } from '../../../../parser/valueParsers';
 
 export function parseAreaLight3D(
@@ -11,7 +11,7 @@ export function parseAreaLight3D(
   properties: Record<string, string>
 ): AreaLight3DProperties {
   const node3dProps = parseNode3D(heading, properties);
-  const baseLightProps = parseBaseLightWithNormalBias(properties);
+  const baseLightProps = parsePositionalLightProperties(properties);
   const areaSize = vec2Or(properties.area_size, { x: 1, y: 1 }, 'AreaLight3D');
 
   return {

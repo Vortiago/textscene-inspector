@@ -1,0 +1,49 @@
+; Two equal AreaLight3D panels over matte plates, for the one variable no other golden moves: the
+; distance fade, which Godot 4.7.2 applies to an area light as to an omni or spot light. The
+; editor camera sits 3.17 m from the right panel, half way through its 2.17 to 4.17 m fade, so the
+; right plate draws at half the light it would draw unfaded. The other area light goldens turn no
+; fade on. A hidden DirectionalLight3D turns the editor preview sun off, and an environment without
+; ambient light leaves the area lights alone on the plates.
+[gd_scene load_steps=4 format=3 uid="uid://unitarealightfade"]
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.05, 0.05, 0.05, 1)
+ambient_light_source = 1
+reflected_light_source = 1
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_plate"]
+size = Vector2(2, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_plate"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 1.0
+
+[node name="AreaFadeRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="LeftPlate" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+mesh = SubResource("PlaneMesh_plate")
+surface_material_override/0 = SubResource("StandardMaterial3D_plate")
+
+[node name="RightPlate" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+mesh = SubResource("PlaneMesh_plate")
+surface_material_override/0 = SubResource("StandardMaterial3D_plate")
+
+[node name="SunOff" type="DirectionalLight3D" parent="."]
+visible = false
+
+[node name="Unfaded" type="AreaLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, -1.5, 1.2, 0)
+area_size = Vector2(1, 1)
+
+[node name="Faded" type="AreaLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 1.5, 1.2, 0)
+area_size = Vector2(1, 1)
+distance_fade_enabled = true
+distance_fade_begin = 2.17
+distance_fade_length = 2.0

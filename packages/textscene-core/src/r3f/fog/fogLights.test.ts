@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { FOG_LIGHT_TEXELS, FogLightKind, FogLightRows } from './fogLights';
 import { fogLightUserData } from './fogLightDeclaration';
+import { areaLightUserData } from '../areaLight/areaLightFalloff';
 
 /** A camera at (0, 3, 8) looking down -Z, as in `unit-world-environment-basic`. */
 function camera(): THREE.PerspectiveCamera {
@@ -107,6 +108,38 @@ describe('FogLightRows.pack', () => {
     expectDirection([x!, y!, z!], [0, 0, -1]);
     expect(cosAngle).toBeCloseTo(0.5, 6);
     expect(texel(rows, 0, 3)).toEqual([0.25, FogLightKind.SPOT, 0, 0]);
+  });
+
+  it('gives an area light its facing, rectangle, range, centre range and attenuation', () => {
+    const area = new THREE.RectAreaLight(0xffffff, Math.PI, 2, 1);
+    area.position.set(0, 8, 0);
+    area.rotation.x = -Math.PI / 2;
+    area.userData = areaLightUserData({ range: 6, attenuation: 3, specular: 1 });
+
+    const rows = packed(placed(area));
+
+    expect(texel(rows, 0, 0)).toEqual([0, 5, -8, Math.fround(1 / 6)]);
+    // Godot hands the fog the attenuation less one (4.7.2 volumetric_fog_process.glsl:647).
+    expect(texel(rows, 0, 1)[3]).toBe(2);
+    const [x, y, z, inverseCentreRange] = texel(rows, 0, 2);
+    expectDirection([x!, y!, z!], [0, -1, 0]);
+    // 1 / (range + |area_size| / 2), 4.7.2 light_storage.cpp:1086.
+    expect(inverseCentreRange).toBeCloseTo(1 / (6 + Math.sqrt(5) / 2), 6);
+    expect(texel(rows, 0, 3)[1]).toBe(FogLightKind.AREA);
+    expectDirection(texel(rows, 0, 4).slice(0, 3), [2, 0, 0]);
+    expectDirection(texel(rows, 0, 5).slice(0, 3), [0, 0, -1]);
+  });
+
+  it('leaves the rectangle out of a scaled area light, as Godot does (edge case)', () => {
+    const area = new THREE.RectAreaLight(0xffffff, Math.PI, 2, 1);
+    area.scale.set(3, 3, 3);
+    area.userData = areaLightUserData({ range: 6, attenuation: 1, specular: 1 });
+
+    const rows = packed(placed(area));
+
+    expect(rows.count).toBe(1);
+    expectDirection(texel(rows, 0, 4).slice(0, 3), [2, 0, 0]);
+    expectDirection(texel(rows, 0, 5).slice(0, 3), [0, 1, 0]);
   });
 
   it('keeps a negative light negative, so the fog darkens', () => {

@@ -1,7 +1,8 @@
 /**
  * The lights the volumetric fog scatters, packed as Godot's light buffers hold them for the fog
- * pass (`storage_rd/light_storage.cpp:636-670,840-910`): view-space positions and directions, and a
- * colour already times the light's energy and its fog energy. One row of texels per light.
+ * pass (`storage_rd/light_storage.cpp:636-670,840-910`, 4.7.2 `:1054-1094` for the area light):
+ * view-space positions and directions, and a colour already times the light's energy and its fog
+ * energy. One row of texels per light.
  */
 
 import * as THREE from 'three';
@@ -12,12 +13,14 @@ import {
 } from '../../godot/volumetricFog.js';
 import { visibleInTree } from '../visibleInTree.js';
 import { readFogLightDeclaration } from './fogLightDeclaration.js';
+import { readAreaLightFalloff } from '../areaLight/areaLightFalloff.js';
 
 /**
  * Each row's RGBA texels: position and inverse range, colour and distance decay, direction and
- * cone cosine, then cone exponent and kind.
+ * cone cosine, cone exponent and kind, then an area light's width and height. An area light's
+ * direction texel carries its inverse centre range in place of the cone cosine.
  */
-export const FOG_LIGHT_TEXELS = 4;
+export const FOG_LIGHT_TEXELS = 6;
 
 const ROW_LENGTH = FOG_LIGHT_TEXELS * 4;
 
@@ -26,6 +29,7 @@ export const FogLightKind = {
   DIRECTIONAL: 0,
   OMNI: 1,
   SPOT: 2,
+  AREA: 3,
 } as const;
 
 type Kind = (typeof FogLightKind)[keyof typeof FogLightKind];
@@ -36,6 +40,7 @@ const RANGE_MIN = 0.001;
 /** Scratch for one row, overwritten by each light. */
 const position = new THREE.Vector3();
 const towards = new THREE.Vector3();
+const axis = new THREE.Vector3();
 const row = new Float32Array(ROW_LENGTH);
 
 /**
@@ -92,9 +97,10 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
     writeTriple(8, x, y, z);
     return true;
   }
-  const positional = light as THREE.PointLight | THREE.SpotLight;
   const { x, y, z } = viewPosition(light, camera);
   writeTriple(0, x, y, z);
+  if (kind === FogLightKind.AREA) return writeArea(light as THREE.RectAreaLight, camera);
+  const positional = light as THREE.PointLight | THREE.SpotLight;
   row[3] = 1 / Math.max(RANGE_MIN, positional.distance);
   row[7] = positional.decay;
   if (kind === FogLightKind.OMNI) return true;
@@ -107,6 +113,39 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
   return true;
 }
 
+/**
+ * An area light's range, attenuation, facing and rectangle, as 4.7.2 packs them
+ * (`light_storage.cpp:1059-1094`). Its rectangle ignores the node's scale, as Godot's does. A
+ * light without a falloff, such as a GLB light, is left out.
+ */
+function writeArea(light: THREE.RectAreaLight, camera: THREE.Camera): boolean {
+  const falloff = readAreaLightFalloff(light);
+  if (!falloff) return false;
+  const range = Math.max(RANGE_MIN, falloff.range);
+  row[3] = 1 / range;
+  // The fog's falloff takes the attenuation less one (4.7.2 `volumetric_fog_process.glsl:647`).
+  row[7] = falloff.attenuation - 1;
+  writeViewAxis(8, light, 0, 0, -1, 1, camera);
+  row[11] = 1 / (range + Math.hypot(light.width, light.height) / 2);
+  writeViewAxis(16, light, 1, 0, 0, light.width, camera);
+  writeViewAxis(20, light, 0, 1, 0, light.height, camera);
+  return true;
+}
+
+/** The light's local axis (`x`, `y`, `z`) in view space, `length` long, at `offset` of the row. */
+function writeViewAxis(
+  offset: number,
+  light: THREE.Light,
+  x: number,
+  y: number,
+  z: number,
+  length: number,
+  camera: THREE.Camera
+): void {
+  axis.set(x, y, z).transformDirection(light.matrixWorld).transformDirection(camera.matrixWorldInverse);
+  writeTriple(offset, axis.x * length, axis.y * length, axis.z * length);
+}
+
 function writeTriple(offset: number, x: number, y: number, z: number): void {
   row[offset] = x;
   row[offset + 1] = y;
@@ -117,6 +156,7 @@ function fogLightKind(light: THREE.Light): Kind | null {
   if ((light as THREE.DirectionalLight).isDirectionalLight) return FogLightKind.DIRECTIONAL;
   if ((light as THREE.SpotLight).isSpotLight) return FogLightKind.SPOT;
   if ((light as THREE.PointLight).isPointLight) return FogLightKind.OMNI;
+  if ((light as THREE.RectAreaLight).isRectAreaLight) return FogLightKind.AREA;
   return null;
 }
 

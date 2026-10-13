@@ -28,7 +28,8 @@ export function areaLightUserData(falloff: AreaLightFalloff): Record<string, unk
   return { [FALLOFF_KEY]: falloff };
 }
 
-function readFalloff(light: THREE.RectAreaLight): AreaLightFalloff | undefined {
+/** The falloff `areaLightUserData` declared, or undefined for a light that declared none. */
+export function readAreaLightFalloff(light: THREE.RectAreaLight): AreaLightFalloff | undefined {
   return light.userData[FALLOFF_KEY] as AreaLightFalloff | undefined;
 }
 
@@ -78,7 +79,7 @@ function writeLight(
     .transformDirection(light.matrixWorld)
     .transformDirection(camera.matrixWorldInverse)
     .toArray(set[AREA_LIGHT_FACINGS], offset);
-  const falloff = readFalloff(light);
+  const falloff = readAreaLightFalloff(light);
   if (!falloff) return;
   const falloffs = set[AREA_LIGHT_FALLOFFS];
   falloffs[offset] = Math.max(0.001, falloff.range);

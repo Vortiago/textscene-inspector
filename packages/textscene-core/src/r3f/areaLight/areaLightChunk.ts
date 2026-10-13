@@ -24,7 +24,7 @@ import {
 } from '../shaderPatch/chunkPatch.js';
 import { LIGHT_FUNCTION_MARK, RE_DIRECT } from '../godotLightFunction.js';
 import { LIGHT_ATTENUATION_MARK } from '../godotLightAttenuation.js';
-import { LTC_INTEGRAL } from './ltcIntegral.js';
+import { LTC_INTEGRAL, LTC_SPECULAR } from './ltcIntegral.js';
 import { installLtcTextures } from './ltcTextures.js';
 import { AREA_LIGHT_FACINGS, AREA_LIGHT_FALLOFFS, installAreaLightUniforms } from './areaLightFalloff.js';
 
@@ -126,7 +126,10 @@ function withGodotAreaLight(chunk: string): string | null {
   if (start < 0 || blockStart < 0 || end < 0 || chunk.split(THREE_AREA_LIGHT_START).length !== 2) return null;
   const withoutThree = `${chunk.slice(0, blockStart)}${chunk.slice(end + THREE_AREA_LIGHT_END.length)}`;
   return applyEdits(withoutThree, [
-    { three: RE_DIRECT, godot: `${THREE_AREA_LIGHT_IF}\n${LTC_INTEGRAL}${AREA_LIGHT}#endif\n${RE_DIRECT}` },
+    {
+      three: RE_DIRECT,
+      godot: `${THREE_AREA_LIGHT_IF}\n${LTC_INTEGRAL}${LTC_SPECULAR}${AREA_LIGHT}#endif\n${RE_DIRECT}`,
+    },
   ]);
 }
 

@@ -1,11 +1,11 @@
 /** AreaLight3D node data. */
 
 import type { Node3DProperties } from '../../../base/node3d/types';
-import type { BaseLightWithNormalBias } from '../shared/types';
+import type { PositionalLightProperties } from '../shared/types';
 import type { Vector2 } from '../../../../parser/vectors';
 
 /** AreaLight3D properties: Light3D plus the rectangle. */
-export interface AreaLight3DProperties extends Node3DProperties, BaseLightWithNormalBias {
+export interface AreaLight3DProperties extends Node3DProperties, PositionalLightProperties {
   /** The AreaLight3D default is 1.0, where the other lights default to 0.5. */
   light_specular: number;
 

@@ -10,7 +10,7 @@ renders_as: a THREE.RectAreaLight shaded as Godot 4.7.2's area light
 
 # AreaLight3D
 
-Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: `light_energy` spread over `area_size`, faded by `area_range` and `area_attenuation`, with `light_specular` on the highlight. It shades each material in its `diffuse_mode` and `specular_mode`, and a clearcoat dims the light beneath it. The reference image comes from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.
+Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: `light_energy` spread over `area_size`, faded by `area_range` and `area_attenuation`, with `light_specular` on the highlight. It shades each material in its `diffuse_mode` and `specular_mode`, and a clearcoat dims the light beneath it. With `distance_fade_enabled`, the light fades by Godot's smoothstep over the distance from the rendering camera. In volumetric fog, it scatters `light_volumetric_fog_energy` times its light into the medium. The reference image comes from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.
 
 ## Linting
 

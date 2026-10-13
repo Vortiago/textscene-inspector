@@ -5,8 +5,10 @@ import type { TscnNode } from '../../../../parser/types';
 import type { AreaLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
+import { fireSceneRender } from '../../../../r3f/testing/fireSceneRender';
+import { readFogLightDeclaration } from '../../../../r3f/fog/fogLightDeclaration';
 
 function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
   const props: AreaLight3DProperties = {
@@ -28,6 +30,15 @@ function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
     children: [],
     properties: props,
   };
+}
+
+/** Runs the hooks a render of the test scene runs, through a camera `distance` along +Z. */
+function renderFrom(scene: THREE.Scene, distance: number): void {
+  const camera = new THREE.PerspectiveCamera();
+  camera.position.set(0, 0, distance);
+  camera.updateMatrixWorld();
+  scene.updateMatrixWorld();
+  fireSceneRender(scene, camera);
 }
 
 describe('<AreaLight3D>', () => {
@@ -73,9 +84,23 @@ describe('<AreaLight3D>', () => {
       <AreaLight3D node={makeNode({ area_range: 2, area_attenuation: 0.5, light_specular: 0.25 })} />
     );
     const light = renderer.scene.findByType('RectAreaLight');
-    expect(instanceAs<THREE.RectAreaLight>(light).userData).toEqual(
+    expect(instanceAs<THREE.RectAreaLight>(light).userData).toMatchObject(
       areaLightUserData({ range: 2, attenuation: 0.5, specular: 0.25 })
     );
+  });
+
+  it('declares light_volumetric_fog_energy to the volumetric fog', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <AreaLight3D node={makeNode({ light_volumetric_fog_energy: 2.5 })} />
+    );
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
+    expect(readFogLightDeclaration(light)).toEqual({ energy: 2.5 });
+  });
+
+  it("declares Godot's fog energy of 1 when the scene sets none (edge case)", async () => {
+    const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode()} />);
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
+    expect(readFogLightDeclaration(light)).toEqual({ energy: 1 });
   });
 
   it('subtracts light when light_negative is on', async () => {
@@ -84,6 +109,31 @@ describe('<AreaLight3D>', () => {
     );
     const light = renderer.scene.findByType('RectAreaLight');
     expect(instanceAs<THREE.RectAreaLight>(light).intensity).toBe(-2.0 * LIGHT_INTENSITY_SCALE);
+  });
+
+  it('fades by the distance to the rendering camera', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <AreaLight3D
+        node={makeNode({ distance_fade_enabled: true, distance_fade_begin: 10, distance_fade_length: 4 })}
+      />
+    );
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
+
+    renderFrom(renderer.scene.instance as THREE.Scene, 12);
+    // smoothstep(0, 1, 1 - (12 - 10) / 4) is 0.5.
+    expect(light.intensity).toBeCloseTo(0.5 * LIGHT_INTENSITY_SCALE, 6);
+  });
+
+  it('draws nothing past the end of the fade (edge case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <AreaLight3D
+        node={makeNode({ distance_fade_enabled: true, distance_fade_begin: 1, distance_fade_length: 1 })}
+      />
+    );
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
+
+    renderFrom(renderer.scene.instance as THREE.Scene, 50);
+    expect(light.intensity).toBe(0);
   });
 
   it('places light at the transform origin', async () => {

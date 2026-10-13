@@ -1,7 +1,8 @@
 /**
- * An omni or spot light's distance fade: Godot scales the light's energy and its shadow's opacity
- * by the distance from each render's camera (`storage_rd/light_storage.cpp:840-863`), so the fade
- * applies before each render of the scene, through whichever camera renders it.
+ * An omni, spot or area light's distance fade: Godot scales the light's energy and its shadow's
+ * opacity by the distance from each render's camera (`storage_rd/light_storage.cpp:840-863`, and
+ * 4.7.2 `:1012-1029` for the area light), so the fade applies before each render of the scene,
+ * through whichever camera renders it.
  */
 
 import { useEffect, useMemo, type RefObject } from 'react';
@@ -27,6 +28,9 @@ function lightDistanceFade(properties: PositionalLightProperties): LightDistance
   };
 }
 
+/** A light Godot fades by distance. An area light casts no shadow here, so it fades only its light. */
+type FadingLight = THREE.PointLight | THREE.SpotLight | THREE.RectAreaLight;
+
 /** What the light draws with no fade. */
 interface UnfadedLight {
   intensity: number;
@@ -35,14 +39,21 @@ interface UnfadedLight {
 
 /** Writes `light`'s faded intensity and shadow intensity for a render through `camera`. */
 function fadeLight(
-  light: THREE.PointLight | THREE.SpotLight,
+  light: FadingLight,
   fade: LightDistanceFade,
   unfaded: UnfadedLight,
   camera: THREE.Camera
 ): void {
   const distance = cameraDistance(light, camera);
   light.intensity = unfaded.intensity * distanceFade(fade.begin, fade.length, distance);
-  light.shadow.intensity = unfaded.shadowOpacity * distanceFade(fade.shadow, fade.length, distance);
+  if ('shadow' in light) {
+    light.shadow.intensity = unfaded.shadowOpacity * distanceFade(fade.shadow, fade.length, distance);
+  }
+}
+
+function restoreLight(light: FadingLight, { intensity, shadowOpacity }: UnfadedLight): void {
+  light.intensity = intensity;
+  if ('shadow' in light) light.shadow.intensity = shadowOpacity;
 }
 
 /**
@@ -50,7 +61,7 @@ function fadeLight(
  * on, and restores `unfaded` when the fade ends.
  */
 export function useLightDistanceFade(
-  lightRef: RefObject<THREE.PointLight | THREE.SpotLight | null>,
+  lightRef: RefObject<FadingLight | null>,
   properties: PositionalLightProperties,
   { intensity, shadowOpacity }: UnfadedLight
 ): void {
@@ -64,8 +75,7 @@ export function useLightDistanceFade(
     const stop = observeSceneCamera(scene, (camera) => fadeLight(light, fade, unfaded, camera));
     return () => {
       stop();
-      light.intensity = intensity;
-      light.shadow.intensity = shadowOpacity;
+      restoreLight(light, unfaded);
     };
   }, [scene, lightRef, fade, intensity, shadowOpacity]);
 }

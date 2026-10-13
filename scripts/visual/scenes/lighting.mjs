@@ -31,6 +31,9 @@ export const LIGHTING_SCENES = [
   // A colour background under partial fog, drawn as Godot's fog-only sky pass draws it. The header
   // states why no other golden shows it.
   { name: 'fog-color-background', file: 'unit-fog-color-background.tscn' },
+  // An area light's scatter in volumetric fog, from Godot 4.7.2. The header states why no other
+  // golden shows it.
+  { name: 'area-light-fog', file: 'unit-area-light-fog.tscn' },
   // Godot's editor preview sun and environment on a scene that declares neither
   // (ADR-0025). Godot's render of it is at
   // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing.

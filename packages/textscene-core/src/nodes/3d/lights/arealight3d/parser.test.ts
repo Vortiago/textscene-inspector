@@ -57,6 +57,19 @@ describe('AreaLight3D Parser', () => {
       expect(result.area_size).toEqual({ x: 0, y: 3 });
     });
 
+    it('parses the distance fade, which 4.7.2 applies to an area light', () => {
+      // 4.7.2: light_storage.cpp:1012-1029 fades every positional light, area included.
+      const result = parseAreaLight3D(heading('AreaLight3D', { name: 'Area', parent: '.' }), {
+        distance_fade_enabled: 'true',
+        distance_fade_begin: '12',
+        distance_fade_length: '3',
+      });
+
+      expect(result.distance_fade_enabled).toBe(true);
+      expect(result.distance_fade_begin).toBe(12);
+      expect(result.distance_fade_length).toBe(3);
+    });
+
     it('should parse AreaLight3D with all properties', () => {
       const h = heading('AreaLight3D', { name: 'RectLight', parent: '.' });
 

@@ -8,12 +8,13 @@
 import { VOLUMETRIC_FOG_TEMPORAL_JITTERS } from '../../godot/volumetricFog.js';
 import { HENYEY_GREENSTEIN_GLSL } from '../henyeyGreenstein.js';
 import { FogLightKind } from './fogLights.js';
+import { LTC_INTEGRAL } from '../areaLight/ltcIntegral.js';
 
 /** The offsets a still froxel samples and averages: Godot's 16 jitters, or its centre alone. */
 export const FOG_SAMPLE_OFFSETS_MAX = VOLUMETRIC_FOG_TEMPORAL_JITTERS.length;
 
 /**
- * Lights one froxel: each light's scatter (`.glsl:252-255`) and the ambient with its sky
+ * Lights one froxel: each light's scatter (`.glsl:252-255`, an area light's from 4.7.2) and the ambient with its sky
  * (`.glsl:430-445`), times the albedo, plus the emission (`.glsl:681`). A moving camera's froxel
  * blends this frame's jitter into its reprojected history (`.glsl:311-335,683`). A still one
  * averages its sample offsets, the mean the history converges to. A clear cell scatters nothing (`.glsl:383`).
@@ -52,6 +53,7 @@ uniform float historyAmount;
 #endif
 
 ${HENYEY_GREENSTEIN_GLSL}
+${LTC_INTEGRAL}
 // The falloff of omni and spot lights alike (.glsl:228-235).
 float omniAttenuation( float range, float inverseRange, float decay ) {
 	float nd = range * inverseRange;
@@ -69,6 +71,36 @@ vec3 froxelView( vec3 unit ) {
 	return vec3( ( unit.xy * 2.0 - 1.0 ) * halfExtents, - fogLength * depth );
 }
 
+// 4.7.2 volumetric_fog_process.glsl:620-695, without the shadow and the area texture. Godot keeps
+// the distance at 1 or more against flicker at froxels the light passes through (:640-643).
+vec3 areaLightScatter( vec3 view, vec3 eye, vec4 position, vec4 color, vec4 facing, vec3 width, vec3 height ) {
+	if ( dot( width, width ) <= 1e-4 || dot( height, height ) <= 1e-4 ) return vec3( 0.0 );
+	float widthLength = length( width );
+	float heightLength = length( height );
+	vec3 widthAxis = width / widthLength;
+	vec3 heightAxis = height / heightLength;
+	vec3 lightToView = view - position.xyz;
+	vec2 local = vec2( dot( lightToView, widthAxis ), dot( lightToView, heightAxis ) );
+	vec2 closest = clamp( local, - vec2( widthLength, heightLength ) / 2.0, vec2( widthLength, heightLength ) / 2.0 );
+	vec3 toLight = position.xyz + closest.x * widthAxis + closest.y * heightAxis - view;
+	float lightDistance = length( toLight );
+	vec3 lightDirection = lightDistance < 1e-4 ? facing.xyz : toLight / lightDistance;
+	lightDistance = max( lightDistance, 1.0 );
+	if ( lightDistance * facing.w >= 1.0 ) return vec3( 0.0 );
+	float attenuation = omniAttenuation( lightDistance, position.w, color.w );
+	vec3 points[ 4 ];
+	points[ 0 ] = position.xyz - width / 2.0 - height / 2.0 - view;
+	points[ 1 ] = position.xyz + width / 2.0 - height / 2.0 - view;
+	points[ 2 ] = position.xyz + width / 2.0 + height / 2.0 - view;
+	points[ 3 ] = position.xyz - width / 2.0 + height / 2.0 - view;
+	float inFront = smoothstep( 0.0, 0.1, dot( facing.xyz, lightToView ) );
+	// ltc_evaluate_diff builds its basis from a fixed axis, not the view (area_lights_inc.glsl:348).
+	vec3 basisAxis = abs( lightDirection.z ) < 0.7 ? vec3( 0.0, 0.0, - 1.0 ) : vec3( 1.0, 0.0, 0.0 );
+	float diffuse = godotLtcIntegral( lightDirection, basisAxis, mat3( 1.0 ), points ) * ( 2.0 * PI );
+	float cosTheta = dot( toLight, toLight ) > 1e-4 ? dot( normalize( toLight ), eye ) : 0.0;
+	return color.rgb * attenuation * diffuse * inFront * henyey_greenstein( cosTheta, phaseG );
+}
+
 // .glsl:425, :511 and :550-575
 vec3 lightsAt( vec3 view ) {
 	vec3 eye = normalize( view );
@@ -81,6 +113,12 @@ vec3 lightsAt( vec3 view ) {
 		int kind = int( cone.y );
 		if ( kind == ${FogLightKind.DIRECTIONAL} ) {
 			total += color.rgb * henyey_greenstein( dot( eye, direction.xyz ), phaseG );
+			continue;
+		}
+		if ( kind == ${FogLightKind.AREA} ) {
+			vec3 width = texelFetch( fogLights, ivec2( 4, i ), 0 ).xyz;
+			vec3 height = texelFetch( fogLights, ivec2( 5, i ), 0 ).xyz;
+			total += areaLightScatter( view, eye, position, color, direction, width, height );
 			continue;
 		}
 		vec3 toLight = position.xyz - view;
