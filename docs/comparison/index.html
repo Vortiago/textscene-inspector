@@ -5485,7 +5485,7 @@ tr:last-child td{border-bottom:0}
         <span class="status st-done">Done</span>
       </header>
       
-      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers 1 to 7, baked as Godot bakes them, give every reflection but a mirror and the ambient light. A mirror reflects the radiance itself, mip 0 of a PMREM-filtered environment map.</p></div>
+      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers 1 to 7, baked as Godot bakes them, give every reflection but a mirror and the ambient light. A mirror reflects the radiance itself, mip 0 of a PMREM-filtered environment map. The radiance renders at the sky's <code>radiance_size</code>, so a small size blurs a mirror as in Godot. A size above 256 renders at 256: Godot's own render of rough metal at 512 differs from 256 by 0.02/255.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>ProceduralSkyMaterial</h3><span class="status st-done">Done</span></div>
@@ -5502,7 +5502,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A gradient sky from top, horizon and ground colours. The warm-top, green-horizon gradient and the sphere and floor it lights match Godot.</p></div>
+        <div class="prose"><p>A gradient sky from top, horizon and ground colours. The warm-top, green-horizon gradient and the sphere and floor it lights match Godot. Godot multiplies each sRGB colour by its energy multiplier before the linear conversion, and so does the previewer.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>PanoramaSkyMaterial</h3><span class="status st-done">Done</span></div>
