@@ -17,8 +17,8 @@ const ROUGHNESS_SETUP = 'material.roughness = min( material.roughness, 1.0 );';
 
 /**
  * The roughness Godot's light functions and sky reflection read: the limiter at its project
- * defaults, with no floor. three's own `material.roughness` floors at 0.0525, which the clearcoat
- * keeps. Godot snaps a roughness below 1e-8 to 0, where GGX would divide by a collapsed
+ * defaults, with no floor. three's own `material.roughness` floors at 0.0525 and stays for the
+ * terms the patches leave to three. Godot snaps a roughness below 1e-8 to 0, where GGX would divide by a collapsed
  * alpha (`scene_forward_clustered.glsl:1667-1671`).
  */
 const GODOT_ROUGHNESS = /* glsl */ `${ROUGHNESS_SETUP}

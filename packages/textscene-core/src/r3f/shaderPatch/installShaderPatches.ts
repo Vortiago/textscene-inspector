@@ -7,6 +7,7 @@
 
 import { installCanvasSrgbMultiply } from '../canvasSrgbMultiply.js';
 import { installGodotAreaLight } from '../areaLight/areaLightChunk.js';
+import { installGodotClearcoat } from '../godotClearcoat.js';
 import { installGodotLightAttenuation } from '../godotLightAttenuation.js';
 import { installGodotIndirectSpecular } from '../godotIndirectSpecular.js';
 import { installGodotLightFunction } from '../godotLightFunction.js';
@@ -22,6 +23,7 @@ export function installShaderPatches(): void {
   installGodotLightAttenuation();
   installGodotSkyLighting();
   installGodotAreaLight();
+  installGodotClearcoat();
   installGodotSplitShadow();
   installDirectionalShadowAtlas();
   installDirectionalShadowFade();

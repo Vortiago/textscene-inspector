@@ -1,0 +1,135 @@
+/**
+ * Godot's clearcoat rides three's physical lighting chunks and its physical fragment shader. The
+ * tests read the installed three, so a release that rewrites a replaced line fails here, not in a
+ * golden.
+ */
+import { afterEach, describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import { installGodotClearcoat } from './godotClearcoat';
+import { installGodotLightFunction } from './godotLightFunction';
+import { installGodotSkyLighting } from './godotSkyLighting';
+import { warningsOf } from './testing/logWarnings';
+
+const threeChunks = { ...THREE.ShaderChunk };
+const threeFragment = THREE.ShaderLib.physical.fragmentShader;
+
+afterEach(() => {
+  Object.assign(THREE.ShaderChunk, threeChunks);
+  THREE.ShaderLib.physical.fragmentShader = threeFragment;
+});
+
+/** The patches the clearcoat calls, then the clearcoat, as `installShaderPatches` orders them. */
+function installWithItsPrerequisites(): void {
+  installGodotLightFunction();
+  installGodotSkyLighting();
+  installGodotClearcoat();
+}
+
+/** The body of the GLSL function `name` in `chunk`, between its braces. */
+function functionBody(chunk: string, name: string): string {
+  const open = chunk.indexOf('{', chunk.indexOf(`${name}(`)) + 1;
+  return chunk.slice(open, chunk.indexOf('\n}', open));
+}
+
+/** The clearcoat block of the physical fragment shader. */
+function clearcoatLayer(): string {
+  installWithItsPrerequisites();
+  const fragment = THREE.ShaderLib.physical.fragmentShader;
+  return fragment.slice(fragment.lastIndexOf('#ifdef USE_CLEARCOAT')).split('#include <opaque_fragment>')[0]!;
+}
+
+describe('installGodotClearcoat', () => {
+  it("reads the coat's raw roughness, with no floor and no geometry roughness", () => {
+    installWithItsPrerequisites();
+    const setup = THREE.ShaderChunk.lights_physical_fragment;
+
+    expect(setup).not.toContain('material.clearcoatRoughness = max( material.clearcoatRoughness, 0.0525 );');
+    expect(setup).not.toContain('material.clearcoatRoughness += geometryRoughness;');
+  });
+
+  it("draws the coat's lobe under a light with Godot's D, G and F", () => {
+    installWithItsPrerequisites();
+    const lobe = functionBody(THREE.ShaderChunk.lights_physical_pars_fragment, 'float godotClearcoatBRDF');
+
+    expect(lobe).toContain('godotGGXDistribution( ccNdotH, mix( 0.001, 0.1, roughness ) )');
+    expect(lobe).toContain('0.25 / ( cLdotH * cLdotH + 1e-4 )');
+    expect(lobe).toContain('mix( 0.04, 1.0, godotSchlickFresnel( cLdotH ) )');
+  });
+
+  it("weighs the coat's lobe by the surface's N.L, as Godot does", () => {
+    installWithItsPrerequisites();
+    const direct = THREE.ShaderChunk.lights_physical_pars_fragment.split('void RE_Direct_Physical(')[1]!;
+
+    expect(direct).toContain('clearcoatSpecularDirect += irradiance * godotClearcoatBRDF(');
+    expect(direct).not.toContain('BRDF_GGX_Clearcoat(');
+  });
+
+  it("reflects the sky on the coat from Godot's layer, about the coat's normal", () => {
+    installWithItsPrerequisites();
+
+    expect(THREE.ShaderChunk.lights_fragment_maps).toContain(
+      'clearcoatRadiance += godotClearcoatRadiance( geometryViewDir, geometryClearcoatNormal, geometryNormal, material.clearcoatRoughness );'
+    );
+    expect(
+      functionBody(THREE.ShaderChunk.envmap_physical_pars_fragment, 'vec3 godotClearcoatRadiance')
+    ).toContain(
+      'godotSkyLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * horizon * horizon'
+    );
+  });
+
+  it("dims the reflection by the coat's Fresnel and adds the coat's, before the base layer weighs both", () => {
+    installWithItsPrerequisites();
+    const end = THREE.ShaderChunk.lights_fragment_end;
+
+    expect(end.indexOf('radiance = mix( radiance, clearcoatRadiance, godotCoatFresnel );')).toBeLessThan(
+      end.indexOf('RE_IndirectSpecular(')
+    );
+    expect(THREE.ShaderChunk.lights_physical_pars_fragment).not.toContain('clearcoatSpecularIndirect +=');
+  });
+
+  it("dims the ambient light by the coat's Fresnel", () => {
+    installWithItsPrerequisites();
+    const end = THREE.ShaderChunk.lights_fragment_end;
+
+    expect(end.split('RE_IndirectSpecular(')[1]).toContain(
+      'reflectedLight.indirectDiffuse *= 1.0 - godotCoatFresnel;'
+    );
+  });
+
+  it('dims nothing without a sky reflection, as Godot does (edge case)', () => {
+    installWithItsPrerequisites();
+    const end = THREE.ShaderChunk.lights_fragment_end;
+
+    expect(end.match(/#if defined\( USE_CLEARCOAT \) && defined\( USE_ENVMAP \)/g)).toHaveLength(2);
+  });
+
+  it("adds the coat's lobe and dims no light beneath it in the layering", () => {
+    expect(clearcoatLayer()).toContain('outgoingLight += clearcoatSpecularDirect * material.clearcoat;');
+    expect(clearcoatLayer()).not.toContain('Fcc');
+  });
+
+  it('leaves three alone before the patches it calls, and warns (error case)', () => {
+    expect(warningsOf(installGodotClearcoat)).toHaveLength(1);
+    expect(THREE.ShaderChunk.lights_physical_pars_fragment).toBe(threeChunks.lights_physical_pars_fragment);
+    expect(THREE.ShaderLib.physical.fragmentShader).toBe(threeFragment);
+  });
+
+  it('leaves the fragment shader alone when it lacks the replaced lines, and warns (error case)', () => {
+    THREE.ShaderLib.physical.fragmentShader = 'void main() {}';
+    installGodotLightFunction();
+    installGodotSkyLighting();
+
+    expect(warningsOf(installGodotClearcoat)).toHaveLength(1);
+    expect(THREE.ShaderLib.physical.fragmentShader).toBe('void main() {}');
+  });
+
+  it('changes nothing and warns nothing on a second call (edge case)', () => {
+    installWithItsPrerequisites();
+    const chunks = { ...THREE.ShaderChunk };
+    const fragment = THREE.ShaderLib.physical.fragmentShader;
+
+    expect(warningsOf(installGodotClearcoat)).toEqual([]);
+    expect({ ...THREE.ShaderChunk }).toEqual(chunks);
+    expect(THREE.ShaderLib.physical.fragmentShader).toBe(fragment);
+  });
+});
