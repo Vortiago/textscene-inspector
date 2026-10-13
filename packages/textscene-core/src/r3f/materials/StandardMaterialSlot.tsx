@@ -6,6 +6,7 @@
  * GeometryInstance3D drawer it mounts the unfaded and the alpha-pass bag, which the cull swaps.
  */
 
+import { extend } from '@react-three/fiber';
 import {
   standardMaterialBags,
   type StandardMaterialBag,
@@ -15,6 +16,9 @@ import { materialProgramInputs } from '../materialProgramInputs';
 import { textureSlotsFromMaps, type MaterialTextureMaps } from './materialTextureMaps';
 import type { MaterialAttach } from './swappedMaterials';
 import { FadedMaterials } from './FadedMaterials';
+import { UnshadedMaterial } from './unshadedMaterial';
+
+const Unshaded = extend(UnshadedMaterial);
 
 /**
  * The texture props are `MaterialTextureMaps`', already bound and paired to their
@@ -68,7 +72,7 @@ export function materialBagElement(bag: StandardMaterialBag, attach: string | Ma
   const program = materialProgramInputs({ props: { attach, ...bag.props, injection: bag.injection } });
   switch (bag.materialClass) {
     case 'basic':
-      return <meshBasicMaterial key={program.key} {...program.props} />;
+      return <Unshaded key={program.key} {...program.props} />;
     case 'physical':
       return <meshPhysicalMaterial key={program.key} {...program.props} />;
     default:

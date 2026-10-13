@@ -186,10 +186,20 @@ describe('standardMaterialBags — texture slots', () => {
   });
 
   it('drops every PBR slot on an unshaded material', () => {
-    // Only albedo reaches a MeshBasicMaterial.
+    // Only albedo and the heightmap reach an unshaded material.
     const derived = bag({ shading_mode: '0' }, { albedo_texture: texture, normal_texture: texture });
     expect(derived.props.map).toBe(texture);
     expect(derived.props).not.toHaveProperty('normalMap');
+  });
+
+  it('shifts an unshaded material by its heightmap, as Godot does', () => {
+    const derived = bag(
+      { shading_mode: '0', heightmap_enabled: 'true' },
+      { albedo_texture: texture, heightmap_texture: texture }
+    );
+
+    expect(derived.props).toMatchObject({ displacementMap: texture });
+    expect(derived.injection?.cacheKey).toContain('godot-parallax');
   });
 });
 

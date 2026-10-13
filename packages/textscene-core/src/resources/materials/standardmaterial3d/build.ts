@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { injectProgram } from '../../../r3f/materialProgramInputs';
 import type { StandardMaterialBag } from './materialBag';
+import { UnshadedMaterial } from '../../../r3f/materials/unshadedMaterial';
 
 /**
  * A derived bag's material class as a constructed `THREE.Material`, for a caller that
@@ -23,7 +24,7 @@ export function materialFromBag(bag: StandardMaterialBag): THREE.Material {
 function materialOfClass(bag: StandardMaterialBag): THREE.Material {
   switch (bag.materialClass) {
     case 'basic':
-      return new THREE.MeshBasicMaterial(bag.props);
+      return new UnshadedMaterial(bag.props);
     case 'physical':
       return new THREE.MeshPhysicalMaterial(bag.props);
     default:

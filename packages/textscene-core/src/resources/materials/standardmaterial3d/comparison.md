@@ -82,9 +82,7 @@ Godot's refraction distorts the background, so the sphere reads bright. `refract
 ## Height mapping
 <!-- compare: image=unit-material-heightmap status=unreviewed fixture=unit-material-heightmap.tscn -->
 
-Both engines shift every texture coordinate by the depth the heightmap reads, along the view direction in the surface's tangent frame, so the silhouette stays a smooth sphere. Deep parallax steps through Godot's layers, and the flips and the inverted texture follow Godot. Triplanar mapping turns height mapping off, as in Godot.
-
-- **Shader missing** An unshaded material draws no height mapping.
+Both engines shift every texture coordinate by the depth the heightmap reads, along the view direction in the surface's tangent frame, so the silhouette stays a smooth sphere. Deep parallax steps through Godot's layers, and the flips and the inverted texture follow Godot. Triplanar mapping turns height mapping off, and an unshaded material shifts its albedo too, as in Godot.
 
 ## Texture filter
 <!-- compare: image=unit-material-texture-filter status=done fixture=unit-material-texture-filter.tscn -->

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { heightmapUserData, parallaxInjection } from './godotParallax';
+import { UnshadedMaterial } from './unshadedMaterial';
 import type { ProgramShader } from '../materialProgramInputs';
 import type { Heightmap } from '../../resources/materials/standardmaterial3d/types';
 
@@ -88,6 +89,34 @@ describe('parallaxInjection', () => {
     parallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(new THREE.MeshStandardMaterial(), shader);
 
     expect(shader.fragmentShader).toBe('#include <map_fragment>');
+  });
+});
+
+describe('parallaxInjection on an unshaded material', () => {
+  function patchedUnshaded(): ProgramShader {
+    const material = new UnshadedMaterial({ displacementMap: new THREE.Texture() });
+    const shader: ProgramShader = {
+      vertexShader: THREE.ShaderLib.basic.vertexShader,
+      fragmentShader: THREE.ShaderLib.basic.fragmentShader,
+      uniforms: {},
+    };
+    parallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(material, shader);
+    return shader;
+  }
+
+  it('writes the view position and the normal the parallax reads', () => {
+    const { vertexShader } = patchedUnshaded();
+
+    expect(vertexShader).toContain('vViewPosition = - mvPosition.xyz;');
+    expect(vertexShader).toContain('vNormal = normalize( transformedNormal );');
+  });
+
+  it('shifts the albedo coordinate', () => {
+    expect(patchedUnshaded().fragmentShader).toContain('#define vMapUv ( vMapUv + godotParallaxShift )');
+  });
+
+  it('gives three the displacement uniforms it fills for the slot', () => {
+    expect(patchedUnshaded().uniforms).toHaveProperty('displacementMapTransform');
   });
 });
 

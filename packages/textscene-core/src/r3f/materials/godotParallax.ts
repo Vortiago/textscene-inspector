@@ -1,11 +1,18 @@
 /**
- * Godot's height mapping in three's lit programs: a parallax shift of every texture coordinate
+ * Godot's height mapping in three's programs: a parallax shift of every texture coordinate
  * by the depth the heightmap reads (`material.cpp:1540-1610`). Godot moves no vertex, so three's
  * `displacementMap` slot carries the heightmap at displacement scale 0, and this patch reads it.
  */
 
+import * as THREE from 'three';
 import type { IUniform, Material, MeshStandardMaterial } from 'three';
-import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
+import {
+  composeInjections,
+  defining,
+  type ProgramInjection,
+  type ProgramShader,
+} from '../materialProgramInputs';
+import { UnshadedMaterial } from './unshadedMaterial';
 import { recordedOn } from './recordedOnMaterial';
 import type { Heightmap } from '../../resources/materials/standardmaterial3d/types';
 
@@ -159,6 +166,40 @@ function heightmapUniforms(material: Material): Record<string, IUniform> {
   };
 }
 
+/**
+ * What three's unshaded program lacks of what the parallax reads: the view position, the normal
+ * its fragment program declares but its vertex program never writes, and the displacement
+ * uniforms that `WebGLMaterials` fills for any material with the slot. The normal chunks run only
+ * where neither an environment map nor skinning has run them already.
+ */
+const UNSHADED_VERTEX_PARS = `#include <common>
+varying vec3 vViewPosition;
+#ifndef FLAT_SHADED
+	varying vec3 vNormal;
+#endif`;
+
+const UNSHADED_VERTEX = `#include <project_vertex>
+vViewPosition = - mvPosition.xyz;
+#ifndef FLAT_SHADED
+	#if ! defined( USE_ENVMAP ) && ! defined( USE_SKINNING )
+		#include <beginnormal_vertex>
+		#include <morphnormal_vertex>
+		#include <defaultnormal_vertex>
+	#endif
+	vNormal = normalize( transformedNormal );
+#endif`;
+
+const UNSHADED_FRAGMENT_PARS = `varying vec3 vViewPosition;
+${PARS_ANCHOR}`;
+
+function addUnshadedInputs(shader: ProgramShader): void {
+  Object.assign(shader.uniforms, THREE.UniformsUtils.clone(THREE.UniformsLib.displacementmap));
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', UNSHADED_VERTEX_PARS)
+    .replace('#include <project_vertex>', UNSHADED_VERTEX);
+  shader.fragmentShader = shader.fragmentShader.replace(PARS_ANCHOR, UNSHADED_FRAGMENT_PARS);
+}
+
 const GODOT_PARALLAX: ProgramInjection = {
   cacheKey: 'godot-parallax',
   onBeforeCompile(shader) {
@@ -166,6 +207,7 @@ const GODOT_PARALLAX: ProgramInjection = {
     // `USE_DISPLACEMENTMAP` there alone. Its presence keys the program, so a heightmap that
     // arrives compiles a new one.
     if (!(this as MeshStandardMaterial).displacementMap) return;
+    if (this instanceof UnshadedMaterial) addUnshadedInputs(shader);
     Object.assign(shader.uniforms, heightmapUniforms(this));
     shader.fragmentShader = shader.fragmentShader
       .replace(PARS_ANCHOR, PARALLAX_PARS)
@@ -176,7 +218,7 @@ const GODOT_PARALLAX: ProgramInjection = {
 const DEEP_PARALLAX = defining('GODOT_DEEP_PARALLAX');
 const READS_HEIGHT = defining('GODOT_HEIGHTMAP_READS_HEIGHT');
 
-/** What a lit material with `heightmap` compiles with. */
+/** What a material with `heightmap` compiles with. */
 export function parallaxInjection(heightmap: Heightmap): ProgramInjection | undefined {
   return composeInjections([
     GODOT_PARALLAX,

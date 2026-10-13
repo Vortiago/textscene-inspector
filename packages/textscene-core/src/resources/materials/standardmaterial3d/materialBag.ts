@@ -20,6 +20,7 @@ import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
 import { lightModesInjection, lightModesUserData, threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { SPECULAR_OCCLUSION_DISABLED } from '../../../r3f/godotIndirectSpecular';
 import { heightmapUserData, parallaxInjection } from '../../../r3f/materials/godotParallax';
+import type { UnshadedMaterialParameters } from '../../../r3f/materials/unshadedMaterial';
 import {
   GODOT_AMBIENT_OCCLUSION,
   ambientOcclusionUserData,
@@ -57,7 +58,7 @@ export type StandardMaterialClass = 'basic' | 'standard' | 'physical';
  * `injection` composes the program patches the surface needs, which each adapter installs.
  */
 export type StandardMaterialBag = (
-  | { materialClass: 'basic'; props: THREE.MeshBasicMaterialParameters }
+  | { materialClass: 'basic'; props: UnshadedMaterialParameters }
   | { materialClass: 'standard'; props: THREE.MeshStandardMaterialParameters }
   | { materialClass: 'physical'; props: THREE.MeshPhysicalMaterialParameters }
 ) & { injection?: ProgramInjection };
@@ -278,6 +279,9 @@ function withSurfaceAlpha(
 /** The class `scalars` need, and its props. */
 function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureSlots): StandardMaterialBag {
   const slot = (name: TextureSlot): THREE.Texture | null => textures[name] ?? null;
+  // The displacement slot carries the heightmap for `godotParallax.ts` to read.
+  const heightmapSlot = () => (scalars.heightmap ? slot('heightmap_texture') : null);
+  const parallax = scalars.heightmap ? parallaxInjection(scalars.heightmap) : undefined;
   const blend = materialBlendProps(scalars);
   // `fromArray` keeps the values linear. A hex would go through
   // `setHex(…, SRGBColorSpace)` and decode these already-linear channels a
@@ -285,8 +289,8 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
   const color = new THREE.Color().fromArray(scalars.color);
 
   // Godot SHADING_MODE_UNSHADED (0) outputs albedo unlit, as three's MeshBasicMaterial
-  // does. Dropping emission is parity: Godot's unshaded branch writes
-  // `frag_color = vec4(albedo, alpha)` and never reads the emission term.
+  // does, and still shifts it by the heightmap. Dropping emission is parity: Godot's
+  // unshaded branch writes `frag_color = vec4(albedo, alpha)` and never reads the emission term.
   if (scalars.shadingMode === 'unshaded') {
     return {
       materialClass: 'basic',
@@ -294,6 +298,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
         color,
         vertexColors: scalars.useVertexColors,
         map: slot('albedo_texture'),
+        displacementMap: heightmapSlot(),
         transparent: scalars.transparent,
         opacity: scalars.opacity,
         alphaTest: scalars.alphaTest,
@@ -304,6 +309,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
         userData: surfaceUserData(scalars),
         ...blend,
       },
+      injection: parallax,
     };
   }
 
@@ -335,9 +341,8 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     // pass-through in `resolveEmission` would splat every scalar onto the material.
     emissive: new THREE.Color().fromArray(emission.emissive),
     emissiveIntensity: emission.emissiveIntensity,
-    // The displacement slot carries the heightmap for `godotParallax.ts` to read. Godot moves
-    // no vertex, so the scale is 0.
-    displacementMap: scalars.heightmap ? slot('heightmap_texture') : null,
+    // Godot moves no vertex, so the heightmap displaces nothing.
+    displacementMap: heightmapSlot(),
     displacementScale: 0,
     userData: surfaceUserData(scalars),
     ...blend,
@@ -349,7 +354,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     lightModesInjection(scalars),
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
-    scalars.heightmap ? parallaxInjection(scalars.heightmap) : undefined,
+    parallax,
   ]);
   if (!needsPhysicalMaterial(scalars)) return { materialClass: 'standard', props: pbr, injection };
   return {
