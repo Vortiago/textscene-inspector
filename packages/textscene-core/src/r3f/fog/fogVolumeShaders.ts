@@ -144,8 +144,9 @@ float omniShadow( int light, vec3 view, float bias, float depthRange ) {
 	return fogShadow( cellDepth, atlasDepth( positionalShadowAtlas, uv ), depthRange );
 }
 
-// .glsl:566: the fog subtracts the bias from Godot's reversed depth before the divide, where the
-// surfaces add it (scene_forward_lights_inc.glsl:786). So a fog cell moves away from the light.
+// .glsl:566: Godot's fog subtracts the bias from its reversed depth before the divide. three's depth
+// runs forward, so the bias adds, and the cell moves away from the light, where a surface's bias pulls
+// it towards the light (scene_forward_lights_inc.glsl:786).
 float spotCellDepth( float clipDepth, float bias ) {
 	return clipDepth + bias;
 }

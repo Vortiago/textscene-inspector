@@ -1,6 +1,6 @@
 /**
  * The fog's shadow terms, run from the light pass's own GLSL, against the values Godot 4.6.3's
- * `volumetric_fog_process.glsl` gives (`.glsl:418-422`, `:509`, `:573`).
+ * `volumetric_fog_process.glsl` gives (`.glsl:418-422`, `:509`, `:566`, `:573`).
  */
 import { describe, expect, it } from 'vitest';
 import { scalarGlslFunction } from '../testing/glslScalar';
@@ -55,7 +55,7 @@ describe('the fog shadow attenuation', () => {
 });
 
 describe('the spot fog cell depth', () => {
-  it('pushes a cell away from the light by the bias, as Godot subtracts it in reversed depth', () => {
+  it('pushes a cell away from the light by the bias', () => {
     expect(spotCellDepth(0.5, 0.02)).toBeCloseTo(0.52, 6);
   });
 
