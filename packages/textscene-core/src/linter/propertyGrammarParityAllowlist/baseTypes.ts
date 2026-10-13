@@ -15,7 +15,6 @@ const LIGHT3D_LINTER_ONLY_KEYS = [
   'light_bake_mode',
   'light_cull_mask',
   'light_indirect_energy',
-  'shadow_opacity',
   'shadow_reverse_cull_face',
   'shadow_transmittance_bias',
   // The physical-light-units trio, dead unless the project setting
@@ -42,12 +41,6 @@ const LIGHT3D_RENDER_GAP_KEYS = [
   // Which render layers cast into this light's shadow, distinct from
   // light_cull_mask's "what this light illuminates".
   'shadow_caster_mask',
-  // The light LOD system: past distance_fade_begin the light fades out over
-  // distance_fade_length and drops its shadow at distance_fade_shadow.
-  'distance_fade_enabled',
-  'distance_fade_begin',
-  'distance_fade_shadow',
-  'distance_fade_length',
   'editor_only',
 ] as const;
 

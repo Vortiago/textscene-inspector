@@ -53,15 +53,9 @@ export function createEnvironmentSettings(
       white: whiteFor(properties),
       agxContrast: properties.tonemap_agx_contrast,
     },
-    // Scene fog follows Godot's screen-space fog. Volumetric fog has no THREE
-    // equivalent and is not applied.
-    fog: properties.fog_enabled
-      ? {
-          density: properties.fog_density,
-          color: properties.fog_light_color,
-          mode: properties.fog_mode,
-        }
-      : null,
+    fog: properties.fog_enabled ? depthFogFor(properties) : null,
+    skyRotation: properties.sky_rotation,
+    volumetricFog: properties.volumetric_fog_enabled ? volumetricFogFor(properties) : null,
     adjustments: properties.adjustment_enabled
       ? {
           enabled: true,
@@ -87,6 +81,46 @@ export function createEnvironmentSettings(
           hdrScale: properties.glow_hdr_scale,
           luminanceCap: properties.glow_hdr_luminance_cap,
         }
+      : null,
+  };
+}
+
+function depthFogFor(properties: EnvironmentProperties): NonNullable<EnvironmentSettings['fog']> {
+  return {
+    mode: properties.fog_mode,
+    color: properties.fog_light_color,
+    lightEnergy: properties.fog_light_energy,
+    sunScatter: properties.fog_sun_scatter,
+    density: properties.fog_density,
+    aerialPerspective: properties.fog_aerial_perspective,
+    skyAffect: properties.fog_sky_affect,
+    height: properties.fog_height,
+    heightDensity: properties.fog_height_density,
+    depthCurve: properties.fog_depth_curve,
+    depthBegin: properties.fog_depth_begin,
+    depthEnd: properties.fog_depth_end,
+  };
+}
+
+function volumetricFogFor(
+  properties: EnvironmentProperties
+): NonNullable<EnvironmentSettings['volumetricFog']> {
+  return {
+    density: properties.volumetric_fog_density,
+    albedo: properties.volumetric_fog_albedo,
+    emission: properties.volumetric_fog_emission,
+    emissionEnergy: properties.volumetric_fog_emission_energy,
+    anisotropy: properties.volumetric_fog_anisotropy,
+    length: properties.volumetric_fog_length,
+    detailSpread: properties.volumetric_fog_detail_spread,
+    ambient: {
+      inject: properties.volumetric_fog_ambient_inject * properties.ambient_light_energy,
+      color: properties.ambient_light_color,
+      skyContribution: properties.ambient_light_sky_contribution,
+    },
+    skyAffect: properties.volumetric_fog_sky_affect,
+    temporalReprojection: properties.volumetric_fog_temporal_reprojection_enabled
+      ? properties.volumetric_fog_temporal_reprojection_amount
       : null,
   };
 }

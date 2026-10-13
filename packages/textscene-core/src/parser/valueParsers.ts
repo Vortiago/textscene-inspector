@@ -7,7 +7,7 @@
 import { warn } from '../logger';
 // These wrap the canonical leaf scanners. One-off structured literals (StyleBox shapes)
 // stay in their slice.
-import { parseVector2, type Vector2 } from './vectors';
+import { parseVector2, parseVector3, type Vector2, type Vector3 } from './vectors';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../godot/number.js';
 import { slotComponents, storedFromFloat, storedVector2i, type IntWidth } from '../godot/int.js';
 import type { Aabb } from '../godot/aabb.js';
@@ -236,6 +236,17 @@ export function vec2Or(value: string | undefined, fallback: Vector2, context = '
     return parseVector2(value);
   } catch {
     warn(`${context}: invalid Vector2 "${value}", using fallback`);
+    return fallback;
+  }
+}
+
+/** A `Vector3(x, y, z)` property through the throwing `parseVector3` scanner. */
+export function vec3Or(value: string | undefined, fallback: Vector3, context = 'value'): Vector3 {
+  if (!value) return fallback;
+  try {
+    return parseVector3(value);
+  } catch {
+    warn(`${context}: invalid Vector3 "${value}", using fallback`);
     return fallback;
   }
 }

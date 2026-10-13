@@ -31,6 +31,7 @@
  */
 
 import type { SkyProperties } from './types';
+import { HENYEY_GREENSTEIN_GLSL } from '../../r3f/henyeyGreenstein';
 
 /**
  * The sky draws on the inside of a unit cube, so the object-space position is
@@ -146,11 +147,7 @@ const float PI_ = 3.141592653589793;
 const float rayleigh_zenith_size = 8.4e3;
 const float mie_zenith_size = 1.25e3;
 
-float henyey_greenstein(float cos_theta, float g) {
-  const float k = 0.0795774715459;
-  return k * (1.0 - g * g) / (pow(1.0 + g * g - 2.0 * g * cos_theta, 1.5));
-}
-
+${HENYEY_GREENSTEIN_GLSL}
 void main() {
   vec3 eyedir = normalize(vEyeDirection);
 

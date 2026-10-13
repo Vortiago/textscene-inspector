@@ -351,6 +351,18 @@ _Avoid_: "override", "fallback".
 The illumination a sky background gives the scene, which in Godot is a radiance map that both lights and reflects, unlike the flat `AMBIENT_SOURCE_COLOR`.
 _Avoid_: "ambient light" alone for the sky case. "IBL" in user-facing text.
 
+**Depth fog**:
+The Environment's `fog_*` fog, which fades a surface towards the fog colour with its distance from the camera.
+_Avoid_: "screen-space fog". Bare "fog" where **volumetric fog** is on too.
+
+**Volumetric fog**:
+The Environment's `volumetric_fog_*` medium. It fills a volume of **froxels** in front of the camera, scatters the lights and the ambient, and hazes every surface and the background behind it.
+_Avoid_: "fog volume", which names the FogVolume node.
+
+**Froxel**:
+One cell of the volume that **volumetric fog** fills: a screen tile at one depth slice, shaped like a piece of the camera frustum.
+_Avoid_: "voxel", which names a cube in world space.
+
 **Geometry instance**:
 A drawn 3D Node (a GeometryInstance3D) whose own render state, such as `transparency` and `cast_shadow`, applies to every surface it draws.
 _Avoid_: bare "instance", which names **PackedScene instancing**.

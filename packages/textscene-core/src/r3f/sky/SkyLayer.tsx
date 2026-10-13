@@ -15,8 +15,9 @@ import type { SkyProperties } from '../../resources/sky/types';
 import { useTexture2D } from '../../resources/useTexture2D';
 import { useSceneResources } from '../SceneResourcesContext';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
-import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
-import { readSkyLightDeclaration } from './skyLight';
+import { skyLightEnergy } from './skyLight';
+import { skyEuler } from './skyRotation';
+import type { Vector3 } from '../../parser/vectors';
 import { showSkyLayers } from './skyLayersMap';
 import { observeSceneCamera } from '../sceneRenderCamera';
 
@@ -44,6 +45,8 @@ export interface SkyLayerProps {
    * multiplier brightens the sky as well as the surfaces it lights.
    */
   backgroundIntensity?: number;
+  /** `sky_rotation`, which turns the background and the light the sky gives. */
+  rotation: Vector3;
 }
 
 /** Godot's sky shader has four light slots. The other lights do not reach it. */
@@ -55,6 +58,7 @@ export function SkyLayer({
   contribution = 1,
   asBackground = true,
   backgroundIntensity = 1,
+  rotation,
 }: SkyLayerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
@@ -68,6 +72,7 @@ export function SkyLayer({
     useTexture2D(sky.kind === 'panorama' ? sky.panorama : undefined, externalResources, internalResources)
       .texture ?? null;
   const lightsKey = useSkyLightsKey(scene);
+  const { x: rotationX, y: rotationY, z: rotationZ } = rotation;
   // A ref, not an effect dependency: a new share needs no new bake.
   const contributionRef = useRef(contribution);
   contributionRef.current = contribution;
@@ -88,9 +93,13 @@ export function SkyLayer({
     const previousIntensity = scene.environmentIntensity;
     const previousBackground = scene.background;
     const previousBackgroundIntensity = scene.backgroundIntensity;
+    const previousEnvironmentRotation = scene.environmentRotation.clone();
+    const previousBackgroundRotation = scene.backgroundRotation.clone();
+    const skyRotation = skyEuler({ x: rotationX, y: rotationY, z: rotationZ });
 
     scene.environment = built.environment;
     scene.environmentIntensity = intensity;
+    scene.environmentRotation.copy(skyRotation);
     // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
     const stopShowingLayers = observeSceneCamera(scene, () =>
       showSkyLayers(built.layers, contributionRef.current)
@@ -98,19 +107,34 @@ export function SkyLayer({
     if (asBackground) {
       scene.background = built.background;
       scene.backgroundIntensity = backgroundIntensity;
+      scene.backgroundRotation.copy(skyRotation);
     }
 
     return () => {
       stopShowingLayers();
       scene.environment = previousEnvironment;
       scene.environmentIntensity = previousIntensity;
+      scene.environmentRotation.copy(previousEnvironmentRotation);
       if (asBackground) {
         scene.background = previousBackground;
         scene.backgroundIntensity = previousBackgroundIntensity;
+        scene.backgroundRotation.copy(previousBackgroundRotation);
       }
       built.dispose();
     };
-  }, [gl, scene, sky, intensity, panorama, asBackground, backgroundIntensity, lightsKey]);
+  }, [
+    gl,
+    scene,
+    sky,
+    intensity,
+    panorama,
+    asBackground,
+    backgroundIntensity,
+    lightsKey,
+    rotationX,
+    rotationY,
+    rotationZ,
+  ]);
 
   return null;
 }
@@ -159,8 +183,8 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
     // Godot's sky sees only the render list, so a hidden light draws no disc.
     if (!visibleInTree(object)) return;
     const light = object as THREE.DirectionalLight;
-    const declaration = readSkyLightDeclaration(light);
-    if (declaration && !declaration.drawsInSky) return;
+    const energy = skyLightEnergy(light);
+    if (energy === null) return;
 
     light.getWorldPosition(from);
     light.target.getWorldPosition(to);
@@ -171,10 +195,8 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
       direction: direction.normalize(),
       color: light.color.clone(),
       // `sky.cpp` sets `sky_light_data.energy` from LIGHT_PARAM_ENERGY with no PI,
-      // unlike the scene shader. A light that declares no energy goes back through
-      // the scale. A GLB `KHR_lights_punctual` light never went through it, so its
-      // disc reads 1/PI dim.
-      energy: declaration?.energy ?? light.intensity / LIGHT_INTENSITY_SCALE,
+      // unlike the scene shader.
+      energy,
       // `light_angular_distance` defaults to 0: a point sun with only the soft
       // falloff `sun_curve` gives it.
       angularRadius: 0,

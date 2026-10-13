@@ -1,12 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import {
+  cameraDistance,
   createViewportCanvasCamera,
   isViewportPass,
   observeSceneCamera,
   observeSceneCull,
+  observeSceneRenderEnd,
 } from './sceneRenderCamera';
-import { fireSceneRender } from './testing/fireSceneRender';
+import { fireSceneRender, fireSceneRenderEnd } from './testing/fireSceneRender';
 
 describe('observeSceneCamera', () => {
   it('reports the camera each render uses', () => {
@@ -93,6 +95,42 @@ describe('observeSceneCamera', () => {
   });
 });
 
+describe('observeSceneRenderEnd', () => {
+  it('reports the end of each render, after the original hook', () => {
+    const scene = new THREE.Scene();
+    const order: string[] = [];
+    scene.onAfterRender = () => order.push('original');
+    observeSceneRenderEnd(scene, () => order.push('end'));
+
+    fireSceneRenderEnd(scene, new THREE.OrthographicCamera());
+
+    expect(order).toEqual(['original', 'end']);
+  });
+
+  it('reports no start of a render (edge case)', () => {
+    const scene = new THREE.Scene();
+    const finisher = vi.fn();
+    observeSceneRenderEnd(scene, finisher);
+
+    fireSceneRender(scene, new THREE.OrthographicCamera());
+
+    expect(finisher).not.toHaveBeenCalled();
+  });
+
+  it('restores both original hooks once the last observer of either kind disposes', () => {
+    const scene = new THREE.Scene();
+    const { onBeforeRender, onAfterRender } = scene;
+    const disposeEnd = observeSceneRenderEnd(scene, vi.fn());
+    const disposeCamera = observeSceneCamera(scene, vi.fn());
+
+    disposeCamera();
+    expect(scene.onAfterRender).not.toBe(onAfterRender);
+    disposeEnd();
+    expect(scene.onBeforeRender).toBe(onBeforeRender);
+    expect(scene.onAfterRender).toBe(onAfterRender);
+  });
+});
+
 describe('isViewportPass', () => {
   it("is true for a sub-viewport's canvas camera", () => {
     expect(isViewportPass(createViewportCanvasCamera())).toBe(true);
@@ -104,5 +142,29 @@ describe('isViewportPass', () => {
 
   it('is false for a perspective camera, which frames no canvas', () => {
     expect(isViewportPass(new THREE.PerspectiveCamera())).toBe(false);
+  });
+});
+
+describe('cameraDistance', () => {
+  it("measures from the camera to the object's world origin", () => {
+    const parent = new THREE.Group();
+    parent.position.set(0, 3, 0);
+    const object = new THREE.Object3D();
+    object.position.set(4, 0, 0);
+    parent.add(object);
+    parent.updateMatrixWorld();
+    const camera = new THREE.PerspectiveCamera();
+    camera.updateMatrixWorld();
+
+    expect(cameraDistance(object, camera)).toBeCloseTo(5, 10);
+  });
+
+  it('measures zero for an object at the camera', () => {
+    const object = new THREE.Object3D();
+    object.updateMatrixWorld();
+    const camera = new THREE.PerspectiveCamera();
+    camera.updateMatrixWorld();
+
+    expect(cameraDistance(object, camera)).toBe(0);
   });
 });

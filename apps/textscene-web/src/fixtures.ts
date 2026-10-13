@@ -418,6 +418,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Depth Fog",
+    "file": "unit-depth-fog.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Directional Light 2d",
     "file": "unit-directional-light-2d.tscn",
     "category": "Other"

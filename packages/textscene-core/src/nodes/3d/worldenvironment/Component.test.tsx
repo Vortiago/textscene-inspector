@@ -53,21 +53,11 @@ describe('<WorldEnvironment>', () => {
     expect(bg!.getHexString()).toBe('3366cc'); // (0.2,0.4,0.8) → 8-bit sRGB
   });
 
-  it('attaches fog when fog_enabled=true (screen-space fog)', async () => {
+  it('leaves the scene without fog in a canvas with no GL context, which the fog passes need', async () => {
     const node = makeNode('SubResource("Env_2")');
     const resource = environmentResource('Env_2', {
       fog_enabled: 'true',
       fog_density: '0.1',
-    });
-    const renderer = await render(node, [resource]);
-    expect(instanceAs<THREE.Scene>(renderer.scene).fog).not.toBeNull();
-  });
-
-  it('does NOT attach fog when volumetric_fog_enabled is false', async () => {
-    const node = makeNode('SubResource("Env_3")');
-    const resource = environmentResource('Env_3', {
-      background_mode: '1',
-      background_color: 'Color(0, 0, 0, 1)',
     });
     const renderer = await render(node, [resource]);
     expect(instanceAs<THREE.Scene>(renderer.scene).fog).toBeNull();
