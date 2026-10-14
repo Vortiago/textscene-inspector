@@ -58,6 +58,16 @@ export function byGroup<T>(make: (group: keyof SkyLayers) => T): Record<keyof Sk
 const radianceOctmapPass = skyPass(RADIANCE_OCTMAP_FRAGMENT_SHADER, ['radiance', 'size', 'borderSize']);
 const downsamplePass = skyPass(DOWNSAMPLE_FRAGMENT_SHADER, ['source', 'size', 'borderSize']);
 
+/** Godot's fast filter, or its importance-sampling filter for an octmap laid out as `layout`. */
+function layerFilter(radianceFilter: SkyBake['radianceFilter'], layout: SkyOctmapLayout): LayerFilter {
+  return radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(layout);
+}
+
+/** Lets go of the textures a bake set on the passes, as the passes outlive it. */
+function releasePasses(filter: LayerFilter): void {
+  for (const pass of [radianceOctmapPass, downsamplePass, filter.pass]) releaseTextures(pass);
+}
+
 /**
  * Godot's baked layers of the sky in `radiance`, a cube as wide as the bake's radiance size. The
  * cube stands for Godot's radiance octmap of the same size, which is twice as wide to match a cube's
@@ -69,8 +79,7 @@ export function bakeSkyLayers(
   radiance: THREE.CubeTexture,
   bake: SkyBake
 ): SkyLayers {
-  const filter =
-    bake.radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(skyOctmapLayout(bake.radianceSize));
+  const filter = layerFilter(bake.radianceFilter, skyOctmapLayout(bake.radianceSize));
   const layers = byGroup((group) => layerCube(SKY_LAYER_GROUPS[group]));
   try {
     drawOffscreen(gl, () => {
@@ -87,7 +96,7 @@ export function bakeSkyLayers(
     disposeSkyLayers(layers);
     throw error;
   } finally {
-    for (const pass of [radianceOctmapPass, downsamplePass, filter.pass]) releaseTextures(pass);
+    releasePasses(filter);
   }
 }
 
@@ -127,7 +136,7 @@ export function bakeAtlasLayers(
   const { layout, target } = atlas;
   if (index < 0 || index >= target.depth)
     throw new Error(`expected an atlas layer from 0 to ${target.depth - 1}, got ${index}`);
-  const filter = radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(layout);
+  const filter = layerFilter(radianceFilter, layout);
   try {
     drawOffscreen(gl, () => {
       setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize: layout.borderSize });
@@ -140,7 +149,7 @@ export function bakeAtlasLayers(
       }
     });
   } finally {
-    for (const pass of [radianceOctmapPass, downsamplePass, filter.pass]) releaseTextures(pass);
+    releasePasses(filter);
   }
 }
 

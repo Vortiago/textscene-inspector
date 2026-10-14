@@ -13,7 +13,7 @@ export interface ToneMappedRenderer {
   toneMappingExposure: number;
 }
 
-export interface ToneMappingSettings {
+interface ToneMappingSettings {
   /** Godot `tonemap_mode`: 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
   mode: number;
   /** Godot `tonemap_exposure`, default 1.0. */

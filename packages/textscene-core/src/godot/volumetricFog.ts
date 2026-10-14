@@ -75,7 +75,7 @@ export function volumetricFogSliceDepths({
 }
 
 /** How a surface finds its depth in the volume: the inverses of the slice mapping's two terms. */
-export interface VolumetricFogLookup {
+interface VolumetricFogLookup {
   inverseLength: number;
   inverseSpread: number;
 }

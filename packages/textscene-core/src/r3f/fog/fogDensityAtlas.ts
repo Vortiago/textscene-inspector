@@ -9,7 +9,7 @@ import { dataTexture3D } from '../../resources/textures/dataTexture3D.js';
 import { MAX_3D_TEXTURE_EXTENT } from '../webglLimits.js';
 
 /** Where a texture sits in the stack, in texels: its size, and its first slice. */
-export interface FogDensityRegion {
+interface FogDensityRegion {
   width: number;
   height: number;
   depth: number;

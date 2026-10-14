@@ -25,7 +25,7 @@ import { drawOffscreen } from './offscreen.js';
  * Reads the maps a render's shadow pass has just drawn, for `scene`, the object that render draws,
  * through `camera`. A reader may render, and its renders run the pass again for their own objects.
  */
-export type ShadowMapReader = (scene: THREE.Object3D, camera: THREE.Camera) => void;
+type ShadowMapReader = (scene: THREE.Object3D, camera: THREE.Camera) => void;
 
 /**
  * A global key for a wrapped pass's readers, kept on the renderer's shadow map. A module that a dev

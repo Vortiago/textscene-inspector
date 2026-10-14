@@ -41,7 +41,7 @@ export function captureFog(settings: FogSettings, isInterior: boolean): FogSetti
 }
 
 /** The objects of a scene the fog reads: its lights, the meshes that may cast their shadows, and its FogVolumes. */
-export interface FogObjects {
+interface FogObjects {
   lights: readonly THREE.Light[];
   casters: readonly THREE.Mesh[];
   volumes: readonly FogVolumeObject[];
