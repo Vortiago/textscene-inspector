@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
 import { LightUniformArrays, type LightArrays } from '../shaderPatch/lightUniformArrays.js';
+import { writeAreaLightShadowUniforms } from './areaLightShadowUniforms.js';
 
 export const AREA_LIGHT_FACINGS = 'rectAreaLightFacings';
 export const AREA_LIGHT_FALLOFFS = 'rectAreaLightFalloffs';
@@ -45,15 +46,16 @@ export function installAreaLightUniforms(): void {
 
 /**
  * The rect area lights three gives a slot when it renders through `camera`: visible, on a layer the
- * camera sees, in tree order (r186 `WebGLRenderer.js:1860-1882`). three's sort moves only shadowed
- * and textured lights, and a rect area light is neither (`WebGLLights.js:153-157`, `:245`).
+ * camera sees, in tree order (r186 `WebGLRenderer.js:1860-1882`). three's stable sort then moves each
+ * light that casts a shadow ahead of the rest (`WebGLLights.js:153-157`, `:245`). A rect area light
+ * has no map.
  */
 function slottedAreaLights(lights: readonly SceneLight[], camera: THREE.Camera): THREE.RectAreaLight[] {
   const slotted: THREE.RectAreaLight[] = [];
   for (const { light, isVisible } of lights) {
     if (isVisible && isRectAreaLight(light) && light.layers.test(camera.layers)) slotted.push(light);
   }
-  return slotted;
+  return slotted.sort((a, b) => Number(b.castShadow) - Number(a.castShadow));
 }
 
 function isRectAreaLight(light: THREE.Light): light is THREE.RectAreaLight {
@@ -107,12 +109,14 @@ function writeLight(
 }
 
 /**
- * Writes the slotted lights among `lights`, for a render through `camera`. A light without a
- * falloff keeps its slot and its facing, and leaves its falloff entries as they were.
+ * Writes the slotted lights among `lights`, their shadows' terms too, for a render through
+ * `camera`. A light without a falloff keeps its slot and its facing, and leaves its falloff entries
+ * as they were.
  */
 export function writeAreaLightUniforms(lights: readonly SceneLight[], camera: THREE.Camera): void {
   const slotted = slottedAreaLights(lights, camera);
   arrays.write(slotted.length, (set) =>
     slotted.forEach((light, index) => writeLight(set, index, light, camera))
   );
+  writeAreaLightShadowUniforms(slotted, camera);
 }

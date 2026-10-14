@@ -5,6 +5,9 @@ import type { BaseLightWithNormalBias } from '../shared/types';
 
 /** DirectionalLight3D properties: Light3D plus the directional shadow and the sky mode. */
 export interface DirectionalLight3DProperties extends Node3DProperties, BaseLightWithNormalBias {
+  /** The sun's angular size in degrees, which softens its shadow and widens its lit side (optional). */
+  light_angular_distance?: number;
+
   /** 0 draws one shadow map, 1 two splits and 2 four splits (optional). */
   directional_shadow_mode?: number;
 

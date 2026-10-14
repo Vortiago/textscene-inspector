@@ -1,6 +1,6 @@
 /**
- * One render's positional shadows: the lights of the scene ask the viewport's atlas for slots in
- * Godot's order, and each light's shadow takes the slot it holds.
+ * One render's positional shadows: the omni, spot and area lights of the scene ask the viewport's
+ * atlas for slots in Godot's order, and each light's shadow takes the slot it holds.
  */
 
 import * as THREE from 'three';
@@ -13,8 +13,9 @@ import { adoptAtlasShadow } from './adoptAtlasShadow.js';
 import { fitPositionalShadow } from './fitPositionalShadow.js';
 import { omniShadowCoverage, spotShadowCoverage } from './shadowCoverage.js';
 import type { PositionalLight, ViewportShadowAtlas } from './viewportShadowAtlas.js';
+import { isAreaShadowLight } from './atlasAreaShadow.js';
 
-/** An omni or spot light that declared its shadow. */
+/** An omni, spot or area light that declared its shadow. */
 type DeclaredPositionalLight = DeclaredLight<PositionalLight, PositionalShadowDeclaration>;
 
 /**
@@ -44,7 +45,7 @@ export function fitScenePositionalShadows(
   atlas.allocate(slotRequests(declared, camera), tickMsec);
   for (const { light, declaration } of declared) {
     const atlasLight = adoptAtlasShadow(light);
-    if (!isSpotLight(atlasLight)) atlas.bind(atlasLight.shadow);
+    if (isPointLight(atlasLight)) atlas.bind(atlasLight.shadow);
     fitPositionalShadow(atlasLight, atlas.slot(light), declaration);
   }
 }
@@ -72,7 +73,7 @@ function slotRequests(
     if (!isVisible || !light.castShadow || !frustum.intersectsBox(lightVolume(light))) continue;
     requests.push({
       owner: light,
-      isOmni: !isSpotLight(light),
+      isOmni: isPointLight(light),
       coverage: lightCoverage(light, camera),
     });
   }
@@ -90,22 +91,33 @@ function cameraFrustum(camera: ViewingCamera): THREE.Frustum {
 
 /** The light's volume in world space: Godot's local box, transformed and boxed again. */
 function lightVolume(light: PositionalLight): THREE.Box3 {
-  const spotAngle = isSpotLight(light) ? THREE.MathUtils.radToDeg(light.angle) : null;
-  const { min, max } = positionalLightBounds(light.distance, spotAngle);
+  const { min, max } = localBounds(light);
   scratchVolume.min.set(min[0], min[1], min[2]);
   scratchVolume.max.set(max[0], max[1], max[2]);
   return scratchVolume.applyMatrix4(light.matrixWorld);
 }
 
+function localBounds(light: PositionalLight): ReturnType<typeof positionalLightBounds> {
+  if (isAreaShadowLight(light)) return light.shadow.bounds();
+  const spotAngle = isSpotLight(light) ? THREE.MathUtils.radToDeg(light.angle) : null;
+  return positionalLightBounds(light.distance, spotAngle);
+}
+
+/** An area light measures as an omni light of its coverage radius (4.7.2 `renderer_scene_cull.cpp:3573-3593`). */
 function lightCoverage(light: PositionalLight, camera: ViewingCamera): number {
   const position = light.getWorldPosition(scratchPosition);
-  if (!isSpotLight(light)) return omniShadowCoverage(position, light.distance, camera);
+  if (isAreaShadowLight(light)) return omniShadowCoverage(position, light.shadow.coverageRadius(), camera);
+  if (isPointLight(light)) return omniShadowCoverage(position, light.distance, camera);
   const direction = light.target.getWorldPosition(scratchDirection).sub(position).normalize();
   return spotShadowCoverage(position, direction, light.distance, light.angle, camera);
 }
 
 function isPositionalLight(light: THREE.Light): light is PositionalLight {
-  return (light as THREE.PointLight).isPointLight === true || isSpotLight(light);
+  return isPointLight(light) || isSpotLight(light) || isAreaShadowLight(light);
+}
+
+function isPointLight(light: THREE.Light): light is THREE.PointLight {
+  return (light as THREE.PointLight).isPointLight === true;
 }
 
 function isSpotLight(light: THREE.Light): light is THREE.SpotLight {

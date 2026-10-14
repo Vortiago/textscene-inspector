@@ -52,6 +52,13 @@ export interface DirectionalShadowSplits {
   fade: DirectionalShadowFade;
   /** Always four: a light with two splits repeats its last split in the slots past it. */
   slots: SplitSlot[];
+  /**
+   * Always four, as `slots` are: Godot's `shadow_range_begin` of each slot, the box's light side in
+   * world units, which the blocker search measures from. Godot measures from a receiver its depth
+   * bias moved towards the light (`scene_forward_clustered.glsl:2304`, `:2321`), so the range start
+   * moves away by that bias.
+   */
+  rangeBegins: number[];
 }
 
 /** Null when a split gets no finite box. The caller then leaves the light's shadow as it is. */
@@ -80,5 +87,15 @@ export function fitDirectionalShadowSplits(
     const blendStart = blends && slot < lastSplit ? directionalShadowBlendStart(splitEnd) : NO_BLEND;
     return [splitEnd, box.bias, box.normalBias, blendStart];
   });
-  return { boxes, fade: directionalShadowFade(distances[splitCount]!, declaration.fadeStart), slots };
+  const rangeBegins = slots.map((_, slot) => rangeBegin(boxes[Math.min(slot, lastSplit)]!));
+  return {
+    boxes,
+    fade: directionalShadowFade(distances[splitCount]!, declaration.fadeStart),
+    slots,
+    rangeBegins,
+  };
+}
+
+function rangeBegin(box: DirectionalShadowBox): number {
+  return box.rangeBegin + box.bias * (box.far - box.near);
 }

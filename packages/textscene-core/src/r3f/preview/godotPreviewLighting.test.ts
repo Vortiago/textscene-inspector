@@ -108,7 +108,7 @@ describe('previewEnvironment', () => {
   });
 
   it('carries Godot’s authored sky and ground colours', () => {
-    const sky = previewEnvironment().sky as ProceduralSkyProperties;
+    const sky = previewEnvironment().sky.material as ProceduralSkyProperties;
     expect(sky.kind).toBe('procedural');
     expect(sky.sky_top_color).toMatchObject({ r: 0.385, g: 0.454, b: 0.55 });
     expect(sky.ground_bottom_color).toMatchObject({ r: 0.2, g: 0.169, b: 0.133 });
@@ -119,14 +119,14 @@ describe('previewEnvironment', () => {
     //   hz     = sky.lerp(ground, 0.5)              -> (0.2925, 0.3115, 0.3415)
     //   hz_lum = hz.get_luminance() * 3.333         -> 1.0320
     //   hz     = hz.lerp(Color(lum, lum, lum), 0.5) -> (0.6623, 0.6718, 0.6868)
-    const sky = previewEnvironment().sky as ProceduralSkyProperties;
+    const sky = previewEnvironment().sky.material as ProceduralSkyProperties;
     expect(sky.sky_horizon_color.r).toBeCloseTo(0.6623, 3);
     expect(sky.sky_horizon_color.g).toBeCloseTo(0.6718, 3);
     expect(sky.sky_horizon_color.b).toBeCloseTo(0.6868, 3);
   });
 
   it('uses one horizon colour for both the sky and the ground half', () => {
-    const sky = previewEnvironment().sky as ProceduralSkyProperties;
+    const sky = previewEnvironment().sky.material as ProceduralSkyProperties;
     expect(sky.ground_horizon_color).toEqual(sky.sky_horizon_color);
   });
 });

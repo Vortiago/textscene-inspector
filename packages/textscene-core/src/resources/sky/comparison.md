@@ -1,17 +1,17 @@
 ---
 type: Sky
 category: Resources
-renders_as: a THREE PMREM environment + Godot's roughest radiance layers + background
+renders_as: a THREE PMREM environment + Godot's radiance layers 1 to 7 + background
 ---
 
 # Sky
 
-A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. A PMREM-filtered environment map gives sharp reflections. Godot's roughest radiance layers, baked as Godot bakes them, give rough reflections and the ambient light.
+A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers 1 to 7, baked as Godot bakes them, give every reflection but a mirror and the ambient light. A mirror reflects the radiance itself, mip 0 of a PMREM-filtered environment map. The radiance renders at the sky's `radiance_size`, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.
 
 ## ProceduralSkyMaterial
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
 
-A gradient sky from top, horizon and ground colours. The warm-top, green-horizon gradient and the sphere and floor it lights match Godot.
+A gradient sky from top, horizon and ground colours. The warm-top, green-horizon gradient and the sphere and floor it lights match Godot. Godot multiplies each sRGB colour by its energy multiplier before the linear conversion, and so does the previewer.
 
 ## PanoramaSkyMaterial
 <!-- compare: image=unit-sky-panorama status=done fixture=unit-sky-panorama.tscn -->
@@ -23,14 +23,26 @@ An equirectangular image wrapped onto the sky. The coloured calibration bands an
 
 An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the sphere and ground it lights match Godot's.
 
+## Real-Time process mode
+<!-- compare: image=unit-sky-realtime status=done fixture=unit-sky-realtime.tscn -->
+
+A sky with `process_mode = 3` bakes its layers with Godot's fast filter, at a radiance size of 256 whatever `radiance_size` says. Its ambient reads layer 6, its roughest. The metallic sphere's reflection, the default sphere and the ground it lights match Godot's.
+
 ## Linting
 
 <!-- lint:begin Sky -->
-Strict parsing format-checks the inherited set (2 inherited from Resource); `Sky` declares none of its own. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+Strict parsing format-checks these `Sky` properties, plus 2 inherited from Resource. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `process_mode` | enum 0-3 (PROCESS_MODE_AUTOMATIC/PROCESS_MODE_QUALITY/PROCESS_MODE_INCREMENTAL/PROCESS_MODE_REALTIME) | warning |
+| `radiance_size` | enum 0-6 (RADIANCE_SIZE_32/RADIANCE_SIZE_64/RADIANCE_SIZE_128/RADIANCE_SIZE_256/RADIANCE_SIZE_512/RADIANCE_SIZE_1024/RADIANCE_SIZE_2048) | error |
+| `sky_material` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-sky` | `real-time-sky-radiance-size` | warning |
 <!-- lint:end -->
 
 The lenient parser never rejects. An unreadable Sky property falls back to Godot's default through the shared value decoders. An unresolvable material or panorama leaves the background at its fallback rather than failing the scene.

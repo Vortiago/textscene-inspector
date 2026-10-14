@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
+import { PACK_ATLAS_DEPTH } from './atlasDepthMaterials.js';
 import { lightPoseMatrix } from './lightPose.js';
 import { positionalShadowAtlas } from './shadowAtlasTarget.js';
 
@@ -21,9 +22,10 @@ void main() {
 /**
  * `cube_to_dp.glsl`'s fragment stage, which reads three's cube through a world direction. A depth
  * texture reads only unfiltered (OpenGL ES 3.0 §3.8.13), so it filters the four nearest texels
- * itself, as Godot's linear sampler does (`copy_effects.cpp:1104`). `positionalShadow.md` has more.
+ * itself, as Godot's linear sampler does (`copy_effects.cpp:1104`). It writes the depth into the
+ * atlas's colour too, for the blocker search. `positionalShadow.md` has more.
  */
-const FRAGMENT = /* glsl */ `
+const FRAGMENT = /* glsl */ `${PACK_ATLAS_DEPTH}
 uniform samplerCube cube;
 uniform float faceSize;
 uniform float zNear;
@@ -81,7 +83,9 @@ void main() {
 	float axisCos = max( max( a.x, a.y ), a.z );
 	float ndcDepth = 2.0 * cubeDepth( dir ) - 1.0;
 	float viewDepth = 2.0 * zNear * zFar / ( zFar + zNear - ndcDepth * ( zFar - zNear ) );
-	gl_FragDepth = viewDepth / axisCos / zFar;
+	float depth = viewDepth / axisCos / zFar;
+	gl_FragDepth = depth;
+	gl_FragColor = vec4( packAtlasDepth( depth ), 0.0, 1.0 );
 }
 `;
 
@@ -107,7 +111,6 @@ export class OmniShadowCopy {
     depthTest: true,
     depthFunc: THREE.AlwaysDepth,
     depthWrite: true,
-    colorWrite: false,
   });
   private readonly quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.material);
   private readonly camera = new THREE.Camera();

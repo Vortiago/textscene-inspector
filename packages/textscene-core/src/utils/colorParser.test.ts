@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { formatColorRgba, parseColor, parseColorOrUndefined, parseColorToHex } from './colorParser';
+import {
+  formatColorRgba,
+  parseColor,
+  parseColorOrUndefined,
+  parseColorToHex,
+  scaledRgb,
+} from './colorParser';
 
 describe('colorParser', () => {
   describe('parseColor', () => {
@@ -140,6 +146,16 @@ describe('colorParser', () => {
 
     it('rounds channels to integers and keeps fractional alpha', () => {
       expect(formatColorRgba({ r: 0.662745, g: 0.247059, b: 1, a: 0.8 })).toBe('rgba(169, 63, 255, 0.80)');
+    });
+  });
+
+  describe('scaledRgb', () => {
+    it('multiplies each channel by the energy and keeps the alpha', () => {
+      expect(scaledRgb({ r: 0.5, g: 0.25, b: 1, a: 0.5 }, 2)).toEqual({ r: 1, g: 0.5, b: 2, a: 0.5 });
+    });
+
+    it('turns every channel black at energy 0 (edge case)', () => {
+      expect(scaledRgb({ r: 0.5, g: 0.25, b: 1, a: 1 }, 0)).toEqual({ r: 0, g: 0, b: 0, a: 1 });
     });
   });
 });

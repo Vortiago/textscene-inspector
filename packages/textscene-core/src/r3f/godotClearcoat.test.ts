@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { installGodotClearcoat } from './godotClearcoat';
 import { installGodotLightFunction } from './godotLightFunction';
 import { installGodotLightSpecular } from './lightSpecular/lightSpecularChunk';
+import { installGodotLightSize } from './lightSize/lightSizeChunk';
 import { installGodotSkyLighting } from './godotSkyLighting';
 import { warningsOf } from './testing/logWarnings';
 import { functionBody } from './testing/glslSource';
@@ -23,6 +24,7 @@ afterEach(() => {
 /** The patches the clearcoat calls, then the clearcoat, as `installShaderPatches` orders them. */
 function installWithItsPrerequisites(): void {
   installGodotLightSpecular();
+  installGodotLightSize();
   installGodotLightFunction();
   installGodotSkyLighting();
   installGodotClearcoat();
@@ -53,6 +55,16 @@ describe('installGodotClearcoat', () => {
     expect(lobe).toContain('mix( 0.04, 1.0, godotSchlickFresnel( cLdotH ) )');
   });
 
+  it("widens the coat's L.H and N.H by the light's size, as Godot does", () => {
+    installWithItsPrerequisites();
+    const pars = THREE.ShaderChunk.lights_physical_pars_fragment;
+    const lobe = functionBody(pars, 'float godotClearcoatBRDF');
+
+    expect(lobe).toContain('float cLdotH = saturate( sizeOffset + dot( lightDir, halfDir ) );');
+    expect(lobe).toContain('float ccNdotH = saturate( sizeOffset + dot( normal, halfDir ) );');
+    expect(pars).toContain('material.clearcoatRoughness, godotSizeOffset )');
+  });
+
   it("weighs the coat's lobe by the surface's N.L, as Godot does", () => {
     installWithItsPrerequisites();
     const direct = THREE.ShaderChunk.lights_physical_pars_fragment.split('void RE_Direct_Physical(')[1]!;
@@ -65,7 +77,7 @@ describe('installGodotClearcoat', () => {
     installWithItsPrerequisites();
 
     expect(THREE.ShaderChunk.lights_physical_pars_fragment).toContain(
-      'material.clearcoatRoughness ) * godotSpecularAmount;'
+      'material.clearcoatRoughness, godotSizeOffset ) * godotSpecularAmount;'
     );
   });
 
@@ -80,13 +92,13 @@ describe('installGodotClearcoat', () => {
     ).toContain('godotReflection( viewDir, clearcoatNormal, normal, roughness, horizon );');
   });
 
-  it("reads the coat's reflection from the PMREM alone, as its layer is below the first baked one", () => {
+  it("reads the coat's reflection from the radiance and layer 1, as its layer is below 1", () => {
     installWithItsPrerequisites();
 
     expect(
       functionBody(THREE.ShaderChunk.envmap_physical_pars_fragment, 'vec3 godotClearcoatRadiance')
     ).toContain(
-      'godotPmremLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * envMapIntensity * horizon * horizon'
+      'godotSkyLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * horizon * horizon'
     );
   });
 
@@ -132,6 +144,7 @@ describe('installGodotClearcoat', () => {
   it('leaves the chunks and the fragment shader alone when the shader lacks a replaced line, and warns (error case)', () => {
     THREE.ShaderLib.physical.fragmentShader = 'void main() {}';
     installGodotLightSpecular();
+    installGodotLightSize();
     installGodotLightFunction();
     installGodotSkyLighting();
     const lightFunction = THREE.ShaderChunk.lights_physical_pars_fragment;

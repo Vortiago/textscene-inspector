@@ -1,16 +1,23 @@
 ---
 type: AreaLight3D
 category: 3D
-status: unreviewed
 group: Lighting
-fixture: unit-area-light-normalize.tscn
-image: unit-area-light-normalize
 renders_as: a THREE.RectAreaLight shaded as Godot 4.7.2's area light
 ---
 
 # AreaLight3D
 
-Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: `light_energy` spread over `area_size`, faded by `area_range` and `area_attenuation`, with `light_specular` on the highlight. It shades each material in its `diffuse_mode` and `specular_mode`, and a clearcoat dims the light beneath it. With `distance_fade_enabled`, the light fades by Godot's smoothstep over the distance from the rendering camera. In volumetric fog, it scatters `light_volumetric_fog_energy` times its light into the medium. The reference image comes from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.
+Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: `light_energy` spread over `area_size`, faded by `area_range` and `area_attenuation`, with `light_specular` on the highlight. It shades each material in its `diffuse_mode` and `specular_mode`, and a clearcoat dims the light beneath it. With `distance_fade_enabled`, the light fades by Godot's smoothstep over the distance from the rendering camera. In volumetric fog, it scatters `light_volumetric_fog_energy` times its light into the medium. The reference images come from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.
+
+## Energy over the rectangle
+<!-- compare: image=unit-area-light-normalize status=unreviewed fixture=unit-area-light-normalize.tscn -->
+
+A 1×1 panel and a 4×0.05 strip at the same energy, over matte plates. `area_normalize_energy` divides each light's colour by its area, so both plates receive the same total light.
+
+## Shadow
+<!-- compare: image=unit-area-light3d status=done fixture=unit-area-light3d.tscn -->
+
+A 2×1 light over a box on the ground, with `shadow_enabled` on and `area_range` 6. The box casts a soft shadow on the ground that widens away from the box, at the default `light_size` of 0.5. `shadow_opacity`, `shadow_bias`, `shadow_normal_bias`, `shadow_blur` and the distance fade apply as in Godot.
 
 ## Linting
 
@@ -32,9 +39,8 @@ Strict parsing format-checks these `AreaLight3D` properties, plus 27 inherited f
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
-The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: `area_range` to `5.0`, `area_attenuation` to `1.0`, `area_size` to `Vector2(1, 1)`, `area_normalize_energy` to `true`.
+The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: `area_range` to `5.0`, `area_attenuation` to `1.0`, `area_size` to `Vector2(1, 1)`, `area_normalize_energy` to `true`, `light_size` to `0.5`.
 
 ## Known limitations
 
-- **Approximated** `shadow_enabled` casts no shadow, so a surface behind an occluder stays lit.
 - **Shader missing** `area_texture` is not drawn, so the light emits its flat `light_color`.

@@ -10,6 +10,7 @@ import type { PointLightShadow } from 'three/src/lights/PointLightShadow.js';
 import { omniShadowCubeSize, type PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
 import { lightPoseMatrix } from './lightPose.js';
 import { positionalShadowAtlas } from './shadowAtlasTarget.js';
+import { readIntensityThroughSlot, type SlottedShadow } from './slotOpacity.js';
 
 /** three exports no `PointLightShadow` class, so it comes from a point light's own shadow. */
 const ThreePointLightShadow = new THREE.PointLight().shadow.constructor as new () => PointLightShadow;
@@ -17,16 +18,18 @@ const ThreePointLightShadow = new THREE.PointLight().shadow.constructor as new (
 /** Written only by `writeLookupMatrix`, and valid only inside that call. */
 const scratchRect = new THREE.Vector4();
 
-export class AtlasOmniShadow extends ThreePointLightShadow {
+export class AtlasOmniShadow extends ThreePointLightShadow implements SlottedShadow {
   /** The light's slot in the atlas of the viewport that renders now, or null for none. */
   slot: PositionalShadowSlot | null = null;
+  opacity = 1;
 
   /**
    * Takes `slot`, which the shadow pass copies the cube into, and renders the cube at the side the
-   * slot asks for. A null slot keeps the cube.
+   * slot asks for. A null slot keeps the cube, and three renders none.
    */
   place(slot: PositionalShadowSlot | null): void {
     this.slot = slot;
+    this.autoUpdate = slot !== null;
     if (slot !== null) this.fitCube(omniShadowCubeSize(slot.size));
   }
 
@@ -97,6 +100,8 @@ export class AtlasOmniShadow extends ThreePointLightShadow {
     this.map = null;
   }
 }
+
+readIntensityThroughSlot(AtlasOmniShadow);
 
 function isReadable(cube: THREE.WebGLCubeRenderTarget): boolean {
   return cube.depthTexture?.compareFunction === null;

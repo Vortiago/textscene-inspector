@@ -4,6 +4,7 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import type { AreaLight3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
 import { parsePositionalLightProperties } from '../shared/parser';
+import { AREA_LIGHT_SIZE_DEFAULT } from '../../../../godot/areaLightShadow';
 import { boolOr, floatOr, vec2Or } from '../../../../parser/valueParsers';
 
 export function parseAreaLight3D(
@@ -19,6 +20,7 @@ export function parseAreaLight3D(
     ...baseLightProps,
     // 4.7.2: light_3d.cpp:748 overrides the Light3D 0.5 of :492.
     light_specular: floatOr(properties.light_specular, 1.0, 'AreaLight3D'),
+    light_size: floatOr(properties.light_size, AREA_LIGHT_SIZE_DEFAULT, 'AreaLight3D'),
     // 4.7.2: light_3d.cpp:493,495.
     area_range: floatOr(properties.area_range, 5.0, 'AreaLight3D'),
     area_attenuation: floatOr(properties.area_attenuation, 1.0, 'AreaLight3D'),

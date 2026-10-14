@@ -5,8 +5,13 @@
  */
 
 import type { Color } from '../../utils/colorParser';
-import type { SkyProperties } from './types';
-import { floatOr } from '../../parser/valueParsers';
+import type { Sky, SkyBake, SkyProcessMode, SkyProcessing, SkyProperties } from './types';
+import {
+  REAL_TIME_RADIANCE_SIZE,
+  SKY_RADIANCE_SIZES,
+  SKY_RADIANCE_SIZE_DEFAULT,
+} from '../../godot/skyReflection';
+import { floatOr, parseOptionalInt } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
 
 const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
@@ -22,6 +27,46 @@ export function skyMaterialRef(
 ): string | undefined {
   if (type !== 'Sky') return undefined;
   return data?.sky_material;
+}
+
+/** `Sky::ProcessMode` by its value (`scene/resources/sky.h:51-56`). */
+const PROCESS_MODES: readonly SkyProcessMode[] = ['automatic', 'quality', 'incremental', 'real-time'];
+
+/**
+ * A `Sky`'s process mode and radiance size. An invalid value reads as Godot's default and logs
+ * nothing, as the Sky validators report it. `set_radiance_size` refuses an index past the table
+ * (`sky.cpp:34`), so such a size stays at the default.
+ */
+export function decodeSkyProcessing(data: Record<string, string>): SkyProcessing {
+  return {
+    processMode: entryOr(PROCESS_MODES, data.process_mode, 'automatic'),
+    radianceSize: entryOr(SKY_RADIANCE_SIZES, data.radiance_size, SKY_RADIANCE_SIZE_DEFAULT),
+  };
+}
+
+/** The entry of `table` that the int `value` indexes, or `fallback`. */
+function entryOr<T>(table: readonly T[], value: string | undefined, fallback: T): T {
+  const index = parseOptionalInt(value);
+  return (index === undefined ? undefined : table[index]) ?? fallback;
+}
+
+/**
+ * The `Sky` whose properties are `data`, drawing `material`. An invalid value reads as
+ * `decodeSkyProcessing` reads it.
+ */
+export function decodeSky(data: Record<string, string>, material: SkyProperties): Sky {
+  return { material, ...skyBake(decodeSkyProcessing(data)) };
+}
+
+/**
+ * How Godot bakes the layers (`sky.cpp:1335-1344`). Automatic picks real-time only for a shader
+ * that reads `TIME` or `POSITION` (`sky.cpp:1001-1004`), and no built-in sky material does
+ * (`scene/resources/3d/sky_material.cpp`), so only Real-Time takes the fast filter.
+ */
+function skyBake({ processMode, radianceSize }: SkyProcessing): SkyBake {
+  return processMode === 'real-time'
+    ? { radianceFilter: 'fast', radianceSize: REAL_TIME_RADIANCE_SIZE }
+    : { radianceFilter: 'importance-sample', radianceSize };
 }
 
 export function decodeSkyMaterial(type: string, data: Record<string, string>): SkyProperties | null {

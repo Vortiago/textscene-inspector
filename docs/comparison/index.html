@@ -377,15 +377,18 @@ tr:last-child td{border-bottom:0}
         <span class="renders">renders as a THREE.RectAreaLight shaded as Godot 4.7.2's area light</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_arealight3d.html" target="_blank" rel="noopener" title="Godot class reference for AreaLight3D">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/light_3d.h" target="_blank" rel="noopener" title="Godot engine source for AreaLight3D">source ↗</a>
-        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-area-light-normalize.tscn" target="_blank" rel="noopener" title="Open unit-area-light-normalize.tscn in the previewer"><code>unit-area-light-normalize.tscn</code> ↗</a>
+        
         <span class="status st-unreviewed">Unreviewed</span>
       </header>
-      <div class="status-note st-unreviewed"></div>
       
-      <div class="compare">
+      <div class="prose intro"><p>Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: <code>light_energy</code> spread over <code>area_size</code>, faded by <code>area_range</code> and <code>area_attenuation</code>, with <code>light_specular</code> on the highlight. It shades each material in its <code>diffuse_mode</code> and <code>specular_mode</code>, and a clearcoat dims the light beneath it. With <code>distance_fade_enabled</code>, the light fades by Godot's smoothstep over the distance from the rendering camera. In volumetric fog, it scatters <code>light_volumetric_fog_energy</code> times its light into the medium. The reference images come from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.</p></div>
+      
+      <section class="prop">
+        <div class="prop-head"><h3>Energy over the rectangle</h3><span class="status st-unreviewed">Unreviewed</span></div>
+        <div class="compare">
         <div class="stage">
-          <img class="img-godot" src="images/unit-area-light-normalize-godot.png" alt="Godot render of AreaLight3D">
-          <img class="img-ours" src="images/unit-area-light-normalize-ours.png" alt="Our render of AreaLight3D">
+          <img class="img-godot" src="images/unit-area-light-normalize-godot.png" alt="Godot render of Energy over the rectangle">
+          <img class="img-ours" src="images/unit-area-light-normalize-ours.png" alt="Our render of Energy over the rectangle">
           <div class="handle"></div>
           <span class="tag g">Godot 4.6.3</span>
           <span class="tag o">Ours</span>
@@ -395,14 +398,31 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: <code>light_energy</code> spread over <code>area_size</code>, faded by <code>area_range</code> and <code>area_attenuation</code>, with <code>light_specular</code> on the highlight. It shades each material in its <code>diffuse_mode</code> and <code>specular_mode</code>, and a clearcoat dims the light beneath it. With <code>distance_fade_enabled</code>, the light fades by Godot's smoothstep over the distance from the rendering camera. In volumetric fog, it scatters <code>light_volumetric_fog_energy</code> times its light into the medium. The reference image comes from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.</p>
-<h3>Linting</h3>
+        <div class="prose"><p>A 1×1 panel and a 4×0.05 strip at the same energy, over matte plates. <code>area_normalize_energy</code> divides each light's colour by its area, so both plates receive the same total light.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Shadow</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-area-light3d-godot.png" alt="Godot render of Shadow">
+          <img class="img-ours" src="images/unit-area-light3d-ours.png" alt="Our render of Shadow">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A 2×1 light over a box on the ground, with <code>shadow_enabled</code> on and <code>area_range</code> 6. The box casts a soft shadow on the ground that widens away from the box, at the default <code>light_size</code> of 0.5. <code>shadow_opacity</code>, <code>shadow_bias</code>, <code>shadow_normal_bias</code>, <code>shadow_blur</code> and the distance fade apply as in Godot.</p></div>
+      </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks these <code>AreaLight3D</code> properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>area_attenuation</code></td><td>float</td><td></td></tr><tr><td><code>area_normalize_energy</code></td><td>true or false</td><td></td></tr><tr><td><code>area_range</code></td><td>float &gt;= 0</td><td>warning below</td></tr><tr><td><code>area_size</code></td><td>Vector2(x, y), each &gt;= 0</td><td></td></tr><tr><td><code>area_texture</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-light3d-scale</code> (type-family match)</td><td><code>light3d-non-unit-scale</code></td><td>warning</td></tr></tbody></table></div>
-<p>The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: <code>area_range</code> to <code>5.0</code>, <code>area_attenuation</code> to <code>1.0</code>, <code>area_size</code> to <code>Vector2(1, 1)</code>, <code>area_normalize_energy</code> to <code>true</code>.</p>
+<p>The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: <code>area_range</code> to <code>5.0</code>, <code>area_attenuation</code> to <code>1.0</code>, <code>area_size</code> to <code>Vector2(1, 1)</code>, <code>area_normalize_energy</code> to <code>true</code>, <code>light_size</code> to <code>0.5</code>.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> <code>shadow_enabled</code> casts no shadow, so a surface behind an occluder stays lit.</li><li><strong>Shader missing</strong> <code>area_texture</code> is not drawn, so the light emits its flat <code>light_color</code>.</li></ul></div>
+<ul><li><strong>Shader missing</strong> <code>area_texture</code> is not drawn, so the light emits its flat <code>light_color</code>.</li></ul></div>
     </article>
     <article class="sheet" data-type="ArrayMesh" hidden>
       <header class="sheet-head">
@@ -1989,6 +2009,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-directionallight3d-properties</code></td><td><code>directionallight3d-unused-splits</code></td><td>info</td></tr><tr><td><code>valid-light3d-scale</code> (type-family match)</td><td><code>light3d-non-unit-scale</code></td><td>warning</td></tr></tbody></table></div>
 <p>The lenient parser reads the shadow mode, the three split offsets, the max distance, the pancake size, the fade start, <code>directional_shadow_blend_splits</code> and <code>sky_mode</code>. An absent, unparseable or non-finite value takes Godot's default. The defaults are four splits at 0.1, 0.2 and 0.5, no blending, and a fade from 0.8 of the distance. An out-of-range split offset or fade start reaches the renderer as written, as Godot's setter keeps it.</p>
 <p>The shadow's soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter reaches <code>shadow_blur</code> times two atlas texels.</p>
+<p>A shadowed light with a <code>light_angular_distance</code> and a <code>shadow_blur</code> above zero turns on Godot's directional soft shadows. Then each directional light with an angular distance searches its split for blockers. Its penumbra widens with the distance from the caster, as Godot's does. It also lights each surface with Godot's size term, which widens the lit side by <code>1 - cos</code> of the angle. Without the soft shadows, the light keeps the filter above and no size term.</p>
 <p><code>sky_mode</code> decides what the light reaches, as in Godot. A Sky Only light draws only its sun in the sky, and casts no shadow. A Light Only light lights surfaces and draws no sun in the sky.</p>
 <p><code>light_negative</code> makes the light subtract, on surfaces and in the sky's sun, as in Godot. <code>shadow_opacity</code> mixes the shadow towards unshadowed through three's <code>shadow.intensity</code>.</p>
 <p>Godot draws the first eight visible directional lights in the scene and stops. A light past the eighth neither lights nor casts, here as in Godot. So at most eight directional lights cast a shadow.</p>
@@ -4043,13 +4064,13 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Godot's omnidirectional point light, emitting from a single point in every direction with distance attenuation. The previewer renders it as a <code>THREE.PointLight</code> inside the node's transform group, with energy scaled by PI to match Godot's brightness. Its highlight scales by twice <code>light_specular</code>, as Godot's does.</p>
+      <div class="prose"><p>Godot's omnidirectional point light, emitting from a single point in every direction with distance attenuation. The previewer renders it as a <code>THREE.PointLight</code> inside the node's transform group, with energy scaled by PI to match Godot's brightness. Its highlight scales by twice <code>light_specular</code>, as Godot's does. <code>light_size</code> widens its lit side and its highlight by Godot's size term, so a large light near a surface reaches past the surface's horizon.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>OmniLight3D</code> properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>omni_attenuation</code></td><td>float</td><td></td></tr><tr><td><code>omni_range</code></td><td>float &gt;= 0</td><td>warning below</td></tr><tr><td><code>omni_shadow_mode</code></td><td>enum 0-1 (DUAL_PARABOLOID/CUBE)</td><td>warning</td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-omnilight3d-properties</code></td><td><code>omnilight3d-projector-without-shadow</code></td><td>warning</td></tr><tr><td><code>valid-light3d-scale</code> (type-family match)</td><td><code>light3d-non-unit-scale</code></td><td>warning</td></tr></tbody></table></div>
 <p>The lenient parser falls back silently when <code>omni_range</code> or <code>omni_attenuation</code> is absent. When one is unparseable, it warns and falls back to <code>5.0</code> and <code>1.0</code>. <code>omni_shadow_mode</code> goes through <code>parseOptionalInt</code>, so an absent or invalid value quietly becomes <code>undefined</code>.</p>
-<p>Godot's positional shadow atlas gives the light two slots for the camera. As in Godot's default Cube mode, each slot holds one paraboloid of the shadow. A light that covers less of the view gets smaller slots and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes smaller slots, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans <code>shadow_blur</code> times two texels of the paraboloid. <code>shadow_bias</code> and <code>shadow_normal_bias</code> move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.</p>
+<p>Godot's positional shadow atlas gives the light two slots for the camera. As in Godot's default Cube mode, each slot holds one paraboloid of the shadow. A light that covers less of the view gets smaller slots and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes smaller slots, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans <code>shadow_blur</code> times two texels of the paraboloid. With a <code>light_size</code> and a <code>shadow_blur</code>, the shadow searches for blockers, as Godot's does. Its penumbra widens with the light's size and with the distance from the caster. <code>shadow_bias</code> and <code>shadow_normal_bias</code> move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.</p>
 <p><code>light_negative</code> makes the light subtract with a negative three intensity, as in Godot. <code>shadow_opacity</code> mixes the shadow towards unshadowed through three's <code>shadow.intensity</code>. With <code>distance_fade_enabled</code>, the light and its shadow fade by Godot's smoothstep over the distance from the rendering camera. Each drops out past its fade end.</p>
 <h3>Known limitations</h3>
 <ul><li><strong>Approximated</strong> <code>omni_shadow_mode</code> Dual Paraboloid draws as Cube mode does, so the edge of a coarse caster's shadow can sit apart from Godot's.</li><li><strong>Editor only</strong> The wireframe sphere gizmo appears only in Godot's editor, but here it is selection-gated.</li></ul></div>
@@ -5495,14 +5516,14 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="Sky" hidden>
       <header class="sheet-head">
         <h2>Sky</h2>
-        <span class="renders">renders as a THREE PMREM environment + Godot's roughest radiance layers + background</span>
+        <span class="renders">renders as a THREE PMREM environment + Godot's radiance layers 1 to 7 + background</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_sky.html" target="_blank" rel="noopener" title="Godot class reference for Sky">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/resources/sky.h" target="_blank" rel="noopener" title="Godot engine source for Sky">source ↗</a>
         
         <span class="status st-done">Done</span>
       </header>
       
-      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. A PMREM-filtered environment map gives sharp reflections. Godot's roughest radiance layers, baked as Godot bakes them, give rough reflections and the ambient light.</p></div>
+      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers 1 to 7, baked as Godot bakes them, give every reflection but a mirror and the ambient light. A mirror reflects the radiance itself, mip 0 of a PMREM-filtered environment map. The radiance renders at the sky's <code>radiance_size</code>, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>ProceduralSkyMaterial</h3><span class="status st-done">Done</span></div>
@@ -5519,7 +5540,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A gradient sky from top, horizon and ground colours. The warm-top, green-horizon gradient and the sphere and floor it lights match Godot.</p></div>
+        <div class="prose"><p>A gradient sky from top, horizon and ground colours. The warm-top, green-horizon gradient and the sphere and floor it lights match Godot. Godot multiplies each sRGB colour by its energy multiplier before the linear conversion, and so does the previewer.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>PanoramaSkyMaterial</h3><span class="status st-done">Done</span></div>
@@ -5554,9 +5575,27 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the sphere and ground it lights match Godot's.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Real-Time process mode</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-sky-realtime-godot.png" alt="Godot render of Real-Time process mode">
+          <img class="img-ours" src="images/unit-sky-realtime-ours.png" alt="Our render of Real-Time process mode">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A sky with <code>process_mode = 3</code> bakes its layers with Godot's fast filter, at a radiance size of 256 whatever <code>radiance_size</code> says. Its ambient reads layer 6, its roughest. The metallic sphere's reflection, the default sphere and the ground it lights match Godot's.</p></div>
       </section><div class="prose"><h3>Linting</h3>
-<p>Strict parsing format-checks the inherited set (2 inherited from Resource); <code>Sky</code> declares none of its own. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
-<div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
+<p>Strict parsing format-checks these <code>Sky</code> properties, plus 2 inherited from Resource. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
+<div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>process_mode</code></td><td>enum 0-3 (PROCESS_MODE_AUTOMATIC/PROCESS_MODE_QUALITY/PROCESS_MODE_INCREMENTAL/PROCESS_MODE_REALTIME)</td><td>warning</td></tr><tr><td><code>radiance_size</code></td><td>enum 0-6 (RADIANCE_SIZE_32/RADIANCE_SIZE_64/RADIANCE_SIZE_128/RADIANCE_SIZE_256/RADIANCE_SIZE_512/RADIANCE_SIZE_1024/RADIANCE_SIZE_2048)</td><td>error</td></tr><tr><td><code>sky_material</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr></tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-sky</code></td><td><code>real-time-sky-radiance-size</code></td><td>warning</td></tr></tbody></table></div>
 <p>The lenient parser never rejects. An unreadable Sky property falls back to Godot's default through the shared value decoders. An unresolvable material or panorama leaves the background at its fallback rather than failing the scene.</p>
 <h3>Known limitations</h3>
 <ul><li><strong>Resource gap</strong> A <code>ShaderMaterial</code> sky or a <code>CompressedCubemap</code> panorama is not resolved, so the background falls back to a mid-blue solid and metals reflect near-black.</li></ul></div>
@@ -5684,13 +5723,13 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Godot's cone-shaped light, emitting from a point along its local -Z axis and fading toward the cone's rim and its range. The previewer renders it as a <code>THREE.SpotLight</code> with energy scaled by PI to match Godot's brightness. A shader patch gives it Godot's distance falloff and Godot's fade from the axis to the cone's rim, at the power <code>spot_angle_attenuation</code> sets. Its highlight scales by twice <code>light_specular</code>, as Godot's does.</p>
+      <div class="prose"><p>Godot's cone-shaped light, emitting from a point along its local -Z axis and fading toward the cone's rim and its range. The previewer renders it as a <code>THREE.SpotLight</code> with energy scaled by PI to match Godot's brightness. A shader patch gives it Godot's distance falloff and Godot's fade from the axis to the cone's rim, at the power <code>spot_angle_attenuation</code> sets. Its highlight scales by twice <code>light_specular</code>, as Godot's does. <code>light_size</code> widens its lit side and its highlight by Godot's size term, so a large light near a surface reaches past the surface's horizon.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>SpotLight3D</code> properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>spot_angle</code></td><td>float 0-180</td><td>warning</td></tr><tr><td><code>spot_angle_attenuation</code></td><td>float</td><td></td></tr><tr><td><code>spot_attenuation</code></td><td>float</td><td></td></tr><tr><td><code>spot_range</code></td><td>float &gt;= 0</td><td>warning below</td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-spotlight3d-properties</code></td><td><code>spotlight3d-shadow-angle-too-wide</code></td><td>warning</td></tr><tr><td></td><td><code>spotlight3d-projector-without-shadow</code></td><td>warning</td></tr><tr><td><code>valid-light3d-scale</code> (type-family match)</td><td><code>light3d-non-unit-scale</code></td><td>warning</td></tr></tbody></table></div>
 <p>The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: <code>spot_range</code> to <code>5.0</code>, <code>spot_angle</code> to <code>45.0</code>, <code>spot_attenuation</code> to <code>1.0</code>, <code>spot_angle_attenuation</code> to <code>1.0</code>.</p>
-<p>Godot's positional shadow atlas gives the light one slot for the camera, and the shadow takes it. A light that covers less of the view gets a smaller slot and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes a smaller slot, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans <code>shadow_blur</code> times two texels of the atlas. <code>shadow_bias</code> and <code>shadow_normal_bias</code> move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.</p>
+<p>Godot's positional shadow atlas gives the light one slot for the camera, and the shadow takes it. A light that covers less of the view gets a smaller slot and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes a smaller slot, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans <code>shadow_blur</code> times two texels of the atlas. With a <code>light_size</code> and a <code>shadow_blur</code>, the shadow searches for blockers, as Godot's does. Its penumbra widens with the light's size and with the distance from the caster. <code>shadow_bias</code> and <code>shadow_normal_bias</code> move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.</p>
 <p><code>light_negative</code> makes the light subtract with a negative three intensity, as in Godot. <code>shadow_opacity</code> mixes the shadow towards unshadowed through three's <code>shadow.intensity</code>. With <code>distance_fade_enabled</code>, the light and its shadow fade by Godot's smoothstep over the distance from the rendering camera. Each drops out past its fade end.</p>
 <h3>Known limitations</h3>
 <ul><li><strong>Editor only</strong> The wireframe cone gizmo appears only in Godot's editor, but here it is selection-gated.</li></ul></div>

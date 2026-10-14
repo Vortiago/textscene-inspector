@@ -2,7 +2,8 @@
  * Godot 4.7.2's area light in three's rect area light chunks: `light_process_area`
  * (`scene_forward_lights_inc.glsl:958-1312`) in place of three's clipped-sphere approximation, on
  * Godot's LTC tables. Each light's facing, range, attenuation and specular amount reach the program
- * through `areaLightFalloff.ts`.
+ * through `areaLightFalloff.ts`, and its shadow through `GODOT_AREA_SHADOW`, which the positional
+ * shadow lookups define (`positionalShadowChunk.ts`).
  */
 
 /*
@@ -32,14 +33,15 @@ export type AreaLightChunkName =
   'lights_pars_begin' | 'lights_physical_pars_fragment' | 'lights_fragment_begin';
 
 /**
- * `light_process_area` without its shadow and `area_texture` (4.7.2 `scene_forward_lights_inc.glsl:983-1003`,
- * `:1123-1150`, `:1214-1310`), in the material's `diffuse_mode` and `specular_mode`. `facing` is the
- * view-space direction the light shines in, and `falloff` its range, attenuation and specular amount.
+ * `light_process_area` without `area_texture` (4.7.2 `scene_forward_lights_inc.glsl:983-1003`,
+ * `:1112-1150`, `:1214-1310`), in the material's `diffuse_mode` and `specular_mode`. `facing` is the
+ * view-space direction the light shines in, `falloff` its range, attenuation and specular amount,
+ * and `shadow` the light's shadow at the fragment, which dims both of Godot's terms.
  * three's light colour carries Godot's `energy * PI`, divided by the area when the light normalises it.
  * `getDistanceAttenuation` carries Godot's `get_omni_attenuation` (`godotLightAttenuation.ts`).
  */
 const AREA_LIGHT = /* glsl */ `
-void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in vec3 facing, const in vec3 falloff, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in PhysicalMaterial material, inout ReflectedLight reflectedLight ) {
+void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in vec3 facing, const in vec3 falloff, const in float shadow, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in PhysicalMaterial material, inout ReflectedLight reflectedLight ) {
 	vec3 areaWidth = 2.0 * rectAreaLight.halfWidth;
 	vec3 areaHeight = 2.0 * rectAreaLight.halfHeight;
 	if ( dot( areaWidth, areaWidth ) < 1e-7 || dot( areaHeight, areaHeight ) < 1e-7 ) return;
@@ -59,6 +61,8 @@ void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in
 	vec3 light = rectAreaLight.color * getDistanceAttenuation( lightDistance, falloff.x, falloff.y );
 	// The integral's solid angle already falls with the square of the distance (:1003).
 	vec3 ltcLight = light * lightDistance * lightDistance;
+	light *= shadow;
+	ltcLight *= shadow;
 	float area = widthLength * heightLength;
 	float specularAmount = falloff.z;
 
@@ -135,6 +139,17 @@ function withGodotAreaLight(chunk: string): string | null {
 
 const THREE_AREA_UNIFORM = 'uniform RectAreaLight rectAreaLights[ NUM_RECT_AREA_LIGHTS ];';
 const THREE_AREA_CALL = 'RE_Direct_RectArea( rectAreaLight, geometryPosition,';
+const THREE_AREA_LOOP = '#if ( NUM_RECT_AREA_LIGHTS > 0 ) && defined( RE_Direct_RectArea )';
+
+/**
+ * A program without the positional shadow lookups reads every area light as lit. The lookup's index
+ * is `UNROLLED_LOOP_INDEX`, which three writes into each copy of the unrolled loop, where it rewrites
+ * only a bracketed `i` (r186 `WebGLProgram.js:297-298`).
+ */
+const UNSHADOWED_AREA_LIGHT = `#ifndef GODOT_AREA_SHADOW
+	#define GODOT_AREA_SHADOW( index ) 1.0
+#endif
+`;
 
 const UNIFORM_AND_CALL_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
   {
@@ -147,7 +162,12 @@ const UNIFORM_AND_CALL_EDITS: readonly ChunkEdit<AreaLightChunkName>[] = [
   {
     chunk: 'lights_fragment_begin',
     three: THREE_AREA_CALL,
-    godot: `RE_Direct_RectArea( rectAreaLight, ${AREA_LIGHT_FACINGS}[ i ], ${AREA_LIGHT_FALLOFFS}[ i ], geometryPosition,`,
+    godot: `RE_Direct_RectArea( rectAreaLight, ${AREA_LIGHT_FACINGS}[ i ], ${AREA_LIGHT_FALLOFFS}[ i ], receiveShadow ? GODOT_AREA_SHADOW( UNROLLED_LOOP_INDEX ) : 1.0, geometryPosition,`,
+  },
+  {
+    chunk: 'lights_fragment_begin',
+    three: THREE_AREA_LOOP,
+    godot: `${UNSHADOWED_AREA_LIGHT}${THREE_AREA_LOOP}`,
   },
 ];
 

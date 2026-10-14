@@ -35,10 +35,13 @@ export interface BaseLightWithNormalBias extends BaseLightProperties {
 }
 
 /**
- * The base plus the distance fade, which an omni, spot or area light draws, and a directional light
- * hides (`light_3d.cpp:560`, 4.7.2 `storage_rd/light_storage.cpp:1012-1029`).
+ * The base plus the distance fade, which every positional light draws (4.7.2
+ * `light_storage.cpp:1013-1028`). A DirectionalLight3D hides it (`light_3d.cpp:575`).
  */
 export interface PositionalLightProperties extends BaseLightWithNormalBias {
+  /** The light's size in metres, which softens its shadow (optional). */
+  light_size?: number;
+
   distance_fade_enabled?: boolean;
 
   /** Camera distance where the light starts to fade (optional). */

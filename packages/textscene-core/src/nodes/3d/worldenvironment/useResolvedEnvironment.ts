@@ -11,13 +11,13 @@ import { decodeEnvironment } from '../../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../../resources/environment/build';
 import { useProjectClearColorSrgb } from '../../../r3f/useProjectClearColor';
 import type { EnvironmentSettings } from '../../../resources/environment/types';
-import { decodeSkyMaterial, skyMaterialRef } from '../../../resources/sky/decode';
-import type { SkyProperties } from '../../../resources/sky/types';
+import { decodeSky, decodeSkyMaterial, skyMaterialRef } from '../../../resources/sky/decode';
+import type { Sky } from '../../../resources/sky/types';
 
 export interface ResolvedEnvironment {
   settings: EnvironmentSettings;
   /** Null while a sky `.tres` is loading, and for an environment with no sky. */
-  sky: SkyProperties | null;
+  sky: Sky | null;
 }
 
 /**
@@ -41,7 +41,11 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Reso
   const materialRef = skyMaterialRef(skyResource?.resource.type, skyResource?.resource.data);
   const material = useSubOrExtResource(materialRef, skyResource?.resources ?? NO_RESOURCES)?.resource;
 
-  const sky = useMemo(() => (material ? decodeSkyMaterial(material.type, material.data) : null), [material]);
+  const skyData = skyResource?.resource.data;
+  const sky = useMemo(() => {
+    const decoded = material ? decodeSkyMaterial(material.type, material.data) : null;
+    return decoded && skyData ? decodeSky(skyData, decoded) : null;
+  }, [material, skyData]);
 
   const clearColor = useProjectClearColorSrgb();
 

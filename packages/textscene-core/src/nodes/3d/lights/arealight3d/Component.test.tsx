@@ -9,6 +9,8 @@ import * as THREE from 'three';
 import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
 import { fireSceneRenderFrom } from '../../../../r3f/testing/fireSceneRender';
 import { readFogLightDeclaration } from '../../../../r3f/fog/fogLightDeclaration';
+import { AtlasAreaShadow, type AreaShadowLight } from '../../../../r3f/positionalShadow/atlasAreaShadow';
+import { readPositionalShadowDeclaration } from '../../../../r3f/positionalShadow/declaration';
 
 function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
   const props: AreaLight3DProperties = {
@@ -16,6 +18,7 @@ function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
     light_specular: 1,
+    light_size: 0.5,
     shadow_enabled: false,
     area_range: 5,
     area_attenuation: 1,
@@ -30,6 +33,10 @@ function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
     children: [],
     properties: props,
   };
+}
+
+function areaShadowOf(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>): AtlasAreaShadow {
+  return instanceAs<AreaShadowLight>(renderer.scene.findByType('RectAreaLight')).shadow;
 }
 
 describe('<AreaLight3D>', () => {
@@ -62,12 +69,61 @@ describe('<AreaLight3D>', () => {
     expect(instanceAs<THREE.RectAreaLight>(light).intensity).toBe(2.0 * LIGHT_INTENSITY_SCALE);
   });
 
-  it('casts no shadow yet, even when shadow_enabled is true', async () => {
+  it('casts its shadow while shadow_enabled is on', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <AreaLight3D node={makeNode({ shadow_enabled: true })} />
     );
-    const light = renderer.scene.findByType('RectAreaLight');
-    expect((light.instance as { castShadow: boolean }).castShadow).toBe(false);
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
+    expect(light.castShadow).toBe(true);
+    expect((light as { shadow?: unknown }).shadow).toBeInstanceOf(AtlasAreaShadow);
+  });
+
+  it('casts nothing while shadow_enabled is off (edge case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode()} />);
+    expect(instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight')).castShadow).toBe(
+      false
+    );
+  });
+
+  it('gives its shadow the range, the size, the bias, the opacity and the penumbra', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <AreaLight3D
+        node={makeNode({
+          shadow_enabled: true,
+          area_range: 6,
+          area_size: { x: 2, y: 1 },
+          shadow_bias: 0.3,
+          shadow_opacity: 0.6,
+          light_size: 0.25,
+        })}
+      />
+    );
+    const shadow = areaShadowOf(renderer);
+    expect([shadow.range, shadow.size.x, shadow.size.y, shadow.bias]).toEqual([6, 2, 1, 0.3]);
+    expect(shadow.opacity).toBe(0.6);
+  });
+
+  it("takes AreaLight3D's own shadow bias, 0.1, when the scene sets none", async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <AreaLight3D node={makeNode({ shadow_enabled: true })} />
+    );
+    expect(areaShadowOf(renderer).bias).toBe(0.1);
+  });
+
+  it('declares its shadow to the fitter, a penumbra of its size times the blur alone', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <AreaLight3D node={makeNode({ shadow_enabled: true, shadow_blur: 1.5, shadow_normal_bias: 2 })} />
+    );
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
+    expect(readPositionalShadowDeclaration(light)).toEqual({ normalBias: 2, softShadowRadius: -0.75 });
+  });
+
+  it('filters a light without a size at the blur times the quality radius (edge case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <AreaLight3D node={makeNode({ shadow_enabled: true, light_size: 0 })} />
+    );
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
+    expect(readPositionalShadowDeclaration(light)?.softShadowRadius).toBe(2);
   });
 
   it('carries area_range, area_attenuation and light_specular to the shader', async () => {
@@ -94,25 +150,31 @@ describe('<AreaLight3D>', () => {
     expect(readFogLightDeclaration(light)).toEqual({ energy: 1 });
   });
 
+  it('fades the light and its shadow by the distance to the rendering camera', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <AreaLight3D
+        node={makeNode({
+          shadow_enabled: true,
+          distance_fade_enabled: true,
+          distance_fade_begin: 10,
+          distance_fade_shadow: 6,
+          distance_fade_length: 4,
+        })}
+      />
+    );
+    fireSceneRenderFrom(renderer.scene.instance as THREE.Scene, 12);
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
+    // smoothstep(0, 1, 1 - (12 - 10) / 4) is 0.5, and the shadow is past 6 + 4.
+    expect(light.intensity).toBeCloseTo(0.5 * LIGHT_INTENSITY_SCALE, 6);
+    expect(areaShadowOf(renderer).opacity).toBe(0);
+  });
+
   it('subtracts light when light_negative is on', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <AreaLight3D node={makeNode({ light_energy: 2.0, light_negative: true })} />
     );
     const light = renderer.scene.findByType('RectAreaLight');
     expect(instanceAs<THREE.RectAreaLight>(light).intensity).toBe(-2.0 * LIGHT_INTENSITY_SCALE);
-  });
-
-  it('fades by the distance to the rendering camera', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <AreaLight3D
-        node={makeNode({ distance_fade_enabled: true, distance_fade_begin: 10, distance_fade_length: 4 })}
-      />
-    );
-    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
-
-    fireSceneRenderFrom(renderer.scene.instance as THREE.Scene, 12);
-    // smoothstep(0, 1, 1 - (12 - 10) / 4) is 0.5.
-    expect(light.intensity).toBeCloseTo(0.5 * LIGHT_INTENSITY_SCALE, 6);
   });
 
   it('draws nothing past the end of the fade (edge case)', async () => {

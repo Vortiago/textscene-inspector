@@ -15,7 +15,7 @@ import {
   glowNeedsEveryPixel,
   glowParamsFor,
 } from '../../resources/environment/godotGlow';
-import type { SkyProperties } from '../../resources/sky/types';
+import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
@@ -30,7 +30,7 @@ import { clearColorCube } from './colorBackground';
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
   /** The resolved sky, or null when there is none to render. */
-  sky: SkyProperties | null;
+  sky: Sky | null;
 }
 
 export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {

@@ -183,6 +183,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the accumulator seed quad: fixed shaders, one uniform, one instance per accumulator',
   'packages/textscene-core/src/r3f/positionalShadow/omniShadowCopy.ts':
     'the cube-to-paraboloid copy: shaders fixed at construction, only uniforms move, one instance per renderer',
+  'packages/textscene-core/src/r3f/positionalShadow/atlasDepthPass.ts':
+    'one depth material per light kind for the whole app, its program fixed at construction and never mutated',
   'packages/textscene-core/src/r3f/fog/fogVolumePass.ts':
     'the fog volume passes: shaders fixed at construction, only uniforms move, and a `defines` change sets `needsUpdate`; one instance per renderer',
   'packages/textscene-core/src/r3f/fog/fogRadiancePass.ts':
@@ -252,6 +254,8 @@ export function meshArgumentMounts(source: string): MeshArgumentMount[] {
  * to mount one.
  */
 const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/positionalShadow/atlasDepthPass.ts':
+    'lends each caster, which is not React state, the atlas depth material for one shadow draw and gives its own back after it, so no mount ever sees the swap',
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
   'packages/textscene-core/src/r3f/fog/fogVolumePass.ts':

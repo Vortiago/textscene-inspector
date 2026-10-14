@@ -9,6 +9,9 @@ export interface AreaLight3DProperties extends Node3DProperties, PositionalLight
   /** The AreaLight3D default is 1.0, where the other lights default to 0.5. */
   light_specular: number;
 
+  /** The penumbra's size: a soft shadow spreads over it. The AreaLight3D default is 0.5. */
+  light_size: number;
+
   /** The distance at which the light reaches zero, from the closest point of the rectangle. */
   area_range: number;
 

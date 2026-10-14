@@ -1,0 +1,56 @@
+; One variable: Sky.process_mode = 3 (Real-Time). Godot bakes a real-time sky's radiance layers
+; with its fast filter, not with the GGX importance sampling of every other sky golden. So the
+; metallic sphere (roughness 0.4) shows the fast filter's reflection, and the default sphere its
+; ambient. Every other sky scene leaves process_mode at Automatic, which bakes a built-in sky in
+; quality mode, so none of them shows a regression in this filter.
+[gd_scene load_steps=8 format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]
+sky_top_color = Color(0.9, 0.35, 0.1, 1)
+sky_horizon_color = Color(1, 0.8, 0.5, 1)
+sky_curve = 0.25
+ground_bottom_color = Color(0.05, 0.2, 0.08, 1)
+ground_horizon_color = Color(0.3, 0.45, 0.2, 1)
+ground_curve = 0.1
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_mat")
+process_mode = 3
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+
+[sub_resource type="PlaneMesh" id="Plane_1"]
+size = Vector2(12, 12)
+
+[sub_resource type="SphereMesh" id="Sphere_1"]
+
+[sub_resource type="StandardMaterial3D" id="Metal"]
+metallic = 1.0
+roughness = 0.4
+
+[node name="SkyRealtime" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, 0.433013, -0.75, 0, 0, 0)
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("Plane_1")
+
+[node name="MetalBall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 1, 0)
+mesh = SubResource("Sphere_1")
+surface_material_override/0 = SubResource("Metal")
+
+[node name="Ball" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 1, 0)
+mesh = SubResource("Sphere_1")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.94, 0.342, 0, -0.342, 0.94, 0, 2.2, 5)
+fov = 60.0

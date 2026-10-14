@@ -4,6 +4,7 @@ import {
   positionalLightBounds,
   positionalShadowNear,
   positionalShadowNormalBias,
+  positionalSoftShadow,
   spotShadowDepthBias,
 } from './positionalShadow';
 
@@ -75,5 +76,19 @@ describe('positionalLightBounds', () => {
 
   it('carries a non-finite angle into the box (error case)', () => {
     expect(positionalLightBounds(2, Number.NaN).min[0]).toBeNaN();
+  });
+});
+
+describe('positionalSoftShadow', () => {
+  it('spreads a sized light over its size, scaled by the blur alone', () => {
+    expect(positionalSoftShadow(0.5, 1)).toEqual({ size: 0.5, scale: 1 });
+  });
+
+  it('filters a light without a size at the blur times the quality radius (edge case)', () => {
+    expect(positionalSoftShadow(0, 1.5)).toEqual({ size: 0, scale: 3 });
+  });
+
+  it('filters a light without a blur at no radius, whatever its size (edge case)', () => {
+    expect(positionalSoftShadow(0.5, 0)).toEqual({ size: 0, scale: 0 });
   });
 });

@@ -1,20 +1,23 @@
 /**
  * <AreaLight3D>: a three.js RectAreaLight sized from `area_size`, which the patched chunks shade
  * with Godot's area light (`r3f/areaLight/`). It carries its range, attenuation and specular to the
- * shader and its fog energy to the volumetric fog, fades by the camera's distance, and casts no
- * shadow yet.
+ * shader and its fog energy to the volumetric fog, and casts its shadow through the positional
+ * shadow atlas (`AtlasAreaShadow`).
  */
 
 import { useMemo, useRef } from 'react';
-import type * as THREE from 'three';
 import type { AreaLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { lightFogEnergy, lightIntensity } from '../shared/lightStrength';
+import { lightFogEnergy, lightIntensity, lightShadowOpacity } from '../shared/lightStrength';
 import { useLightDistanceFade } from '../shared/lightDistanceFade';
 import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
+import { positionalShadowUserData } from '../../../../r3f/positionalShadow/declaration';
+import { AtlasAreaShadow, type AreaShadowLight } from '../../../../r3f/positionalShadow/atlasAreaShadow';
+import { AREA_LIGHT_SHADOW_BIAS_DEFAULT } from '../../../../godot/areaLightShadow';
+import { areaShadowDeclaration } from './areaLightShadow';
 
 /**
  * Godot's colour scale: `energy * PI`, negated for a negative light, divided by the rectangle's
@@ -27,27 +30,36 @@ function areaLightIntensity(properties: AreaLight3DProperties): number {
   return properties.area_normalize_energy && area > 0 ? intensity / area : intensity;
 }
 
+/**
+ * The falloff the shader reads, the shadow the fitter reads and the energy the fog reads, rebuilt
+ * only when one of them changes.
+ */
+function useAreaLightUserData(properties: AreaLight3DProperties): Record<string, unknown> {
+  const { area_range, area_attenuation, light_specular, light_size, shadow_blur, shadow_normal_bias } =
+    properties;
+  const fogEnergy = lightFogEnergy(properties);
+  return useMemo(
+    () => ({
+      ...areaLightUserData({ range: area_range, attenuation: area_attenuation, specular: light_specular }),
+      ...positionalShadowUserData(areaShadowDeclaration({ light_size, shadow_blur, shadow_normal_bias })),
+      ...fogLightUserData({ energy: fogEnergy }),
+    }),
+    [area_range, area_attenuation, light_specular, light_size, shadow_blur, shadow_normal_bias, fogEnergy]
+  );
+}
+
 export function AreaLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as AreaLight3DProperties;
+  const lightRef = useRef<AreaShadowLight | null>(null);
+  const shadow = useMemo(() => new AtlasAreaShadow(), []);
   const { position, rotation, scale } = useMemo(
     () => transformFromNode3DProperties(properties),
     [properties]
   );
-  const lightRef = useRef<THREE.RectAreaLight>(null);
   const intensity = areaLightIntensity(properties);
-  useLightDistanceFade(lightRef, properties, { intensity });
-  const fogEnergy = lightFogEnergy(properties);
-  const userData = useMemo(
-    () => ({
-      ...areaLightUserData({
-        range: properties.area_range,
-        attenuation: properties.area_attenuation,
-        specular: properties.light_specular,
-      }),
-      ...fogLightUserData({ energy: fogEnergy }),
-    }),
-    [properties.area_range, properties.area_attenuation, properties.light_specular, fogEnergy]
-  );
+  const shadowOpacity = lightShadowOpacity(properties);
+  useLightDistanceFade(lightRef, properties, { intensity, shadowOpacity });
+  const userData = useAreaLightUserData(properties);
 
   return (
     <group name={node.name} position={position} rotation={rotation} scale={scale}>
@@ -57,8 +69,18 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
         intensity={intensity}
         width={properties.area_size.x}
         height={properties.area_size.y}
+        castShadow={properties.shadow_enabled}
         userData={userData}
-      />
+      >
+        <primitive
+          object={shadow}
+          attach="shadow"
+          intensity={shadowOpacity}
+          bias={properties.shadow_bias ?? AREA_LIGHT_SHADOW_BIAS_DEFAULT}
+          range={properties.area_range}
+          size={[properties.area_size.x, properties.area_size.y]}
+        />
+      </rectAreaLight>
       {children}
     </group>
   );

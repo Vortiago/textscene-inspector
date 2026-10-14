@@ -54,7 +54,7 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
             castShadow={properties.shadow_enabled}
             shadow-intensity={shadowOpacity}
             userData={userData}
-            shadow-bias={spotShadowBias(properties.shadow_bias, properties.shadow_blur)}
+            shadow-bias={spotShadowBias(properties)}
             shadow-camera-near={positionalShadowNear(properties.spot_range)}
             shadow-camera-far={properties.spot_range}
             target={target}

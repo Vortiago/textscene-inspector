@@ -10,6 +10,12 @@ import { SceneShadowFitter, useSceneShadowFit } from './SceneShadowFitter';
 import { directionalShadowUserData } from './directionalShadow/declaration';
 import { splitSunOf } from './directionalShadow/splitSun';
 import { positionalShadowUserData } from './positionalShadow/declaration';
+import {
+  SUN_SOFT_SHADOWS,
+  SUN_RANGE_BEGINS,
+  installSunSoftShadowUniforms,
+} from './directionalShadow/sunSoftShadow';
+import { litUniformArray } from './testing/litUniformArray';
 import { TscnSceneContents } from './TscnCanvas';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { SelectionProvider } from './contexts/SelectionContext';
@@ -111,6 +117,38 @@ directional_shadow_max_distance = 80.0
     expect(splitWidth(light, 0)! * 2).toBeLessThan(splitWidth(light, 3)!);
   });
 
+  it('writes the soft shadow of an authored sun with an angular distance before a render', async () => {
+    const renderer = await renderScene(
+      scene(`
+[node name="Sun" type="DirectionalLight3D" parent="."]
+shadow_enabled = true
+light_angular_distance = 5.0
+`)
+    );
+    renderThrough(renderer, cameraAt(0));
+    installSunSoftShadowUniforms();
+    expect(litUniformArray(SUN_SOFT_SHADOWS)[3]).toBeCloseTo(Math.tan((5 * Math.PI) / 180), 6);
+    expect(
+      litUniformArray(SUN_RANGE_BEGINS)
+        .subarray(0, 4)
+        .some((rangeBegin) => rangeBegin !== 0)
+    ).toBe(true);
+  });
+
+  it('writes no soft shadow angle for a sun whose blur is zero, as Godot takes the PCF (edge case)', async () => {
+    const renderer = await renderScene(
+      scene(`
+[node name="Sun" type="DirectionalLight3D" parent="."]
+shadow_enabled = true
+shadow_blur = 0.0
+light_angular_distance = 5.0
+`)
+    );
+    renderThrough(renderer, cameraAt(0));
+    installSunSoftShadowUniforms();
+    expect(litUniformArray(SUN_SOFT_SHADOWS)[3]).toBe(0);
+  });
+
   it('leaves a sun without shadows alone (edge case)', async () => {
     const renderer = await renderScene(scene('\n[node name="Sun" type="DirectionalLight3D" parent="."]\n'));
     renderThrough(renderer, cameraAt(0));
@@ -131,6 +169,8 @@ function declaredLight(splitCount: number): THREE.DirectionalLight {
     depthBias: 0,
     normalBias: 2,
     filterRadius: 2,
+    softShadowAngle: 0,
+    drawsSoftShadow: false,
     splitCount,
     splitOffsets: [0.1, 0.2, 0.5],
     blendSplits: false,
@@ -245,7 +285,7 @@ describe('useSceneShadowFit', () => {
     const sun = declaredLight(1);
     const spot = new THREE.SpotLight(0xffffff, 1, 8, Math.PI / 4);
     spot.castShadow = true;
-    spot.userData = positionalShadowUserData({ normalBias: 1, softShadowScale: 2 });
+    spot.userData = positionalShadowUserData({ normalBias: 1, softShadowRadius: 2 });
     spot.shadow.mapSize.set(64, 64);
     own.add(sun, spot, spot.target);
     await ReactThreeTestRenderer.create(<FitScene scene={own} />);

@@ -4,6 +4,7 @@ import type { RawNode, RawScene } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { orphanDiagnostics } from './orphanDiagnostics.js';
 import { danglingResourceDiagnostics } from './danglingResources.js';
+import { resourceRuleDiagnostics } from './resourceRules.js';
 import {
   unimportableGltfDiagnostics,
   usedGltfResources,
@@ -150,6 +151,7 @@ export class Linter {
       const { scene, lines } = parseResult;
       for (const d of orphanDiagnostics(scene)) diagnostics.push(d);
       for (const d of danglingResourceDiagnostics(scene, lines)) diagnostics.push(d);
+      for (const d of resourceRuleDiagnostics(scene, lines)) diagnostics.push(d);
       for (const d of this.lintScene(scene, lines)) diagnostics.push(d);
     }
 

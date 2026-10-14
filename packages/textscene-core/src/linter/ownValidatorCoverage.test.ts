@@ -148,7 +148,6 @@ const UNDECLARED_RESOURCES: readonly string[] = [
   'QuadMesh',
   'RectangleShape2D',
   'ShaderMaterial',
-  'Sky',
   'SphereMesh',
   'SpriteFrames',
   'StandardMaterial3D',
@@ -213,7 +212,7 @@ describe('own-validator coverage for resource slices', () => {
     // The ratchet, exact rather than a ceiling: a ceiling above the current length is
     // a free slot for the next unvalidated slice. Raising it records slices that draw
     // without validating, and the only correct edit afterwards is lowering it.
-    expect(UNDECLARED_RESOURCES.length).toBe(47);
+    expect(UNDECLARED_RESOURCES.length).toBe(46);
   });
 
   it('sweeps a population that cannot quietly empty', () => {

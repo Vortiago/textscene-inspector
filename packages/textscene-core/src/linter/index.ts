@@ -157,6 +157,7 @@ import '../nodes/paths/pathfollow3d/index.linter.js';
 // Import resource validators
 import '../resources/materials/basematerial3d/linterValidators.js';
 import '../resources/environment/index.linter.js';
+import '../resources/sky/index.linter.js';
 import '../resources/meshlibrary/index.linter.js';
 import '../resources/tileset/index.linter.js';
 import '../resources/meshes/planemesh/linterValidators.js';
@@ -284,6 +285,7 @@ export { validatorRegistry } from './ValidatorRegistry.js';
 // rest of the module stays off the published surface.
 export { registeredTypes } from './registryPopulation.js';
 export { ruleRegistry } from './RuleRegistry.js';
+export { resourceRuleRegistry } from './ResourceRuleRegistry.js';
 export { SEVERITY_ORDER, flooredSeverity, isSeverity } from './types.js';
 export {
   diagnosticLine,

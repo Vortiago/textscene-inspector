@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { LAST_LAYER_FACE_SIZE, ROUGH_LAYER_FACE_SIZES, type SkyLayers } from '../../resources/sky/skyLayers';
-import { showSkyLayers, skyContribution, skyLastLayerMap, skyRoughLayersMap } from './skyLayersMap';
+import { SKY_LAYER_GROUPS, type SkyLayers } from '../../resources/sky/skyLayers';
+import { showSkyLayers, skyContribution, skyLayerMaps } from './skyLayersMap';
+
+const { sharp, last } = skyLayerMaps;
+const GROUPS = ['sharp', 'rough', 'last'] as const;
 
 /** Six faces `size` wide, each holding `value`. */
 function faces(size: number, value: number): Uint16Array[] {
@@ -11,9 +14,11 @@ function faces(size: number, value: number): Uint16Array[] {
 }
 
 function skyLayers(value: number): SkyLayers {
+  const group = (sizes: readonly number[]) => sizes.map((size) => faces(size, value));
   return {
-    rough: ROUGH_LAYER_FACE_SIZES.map((size) => faces(size, value)),
-    last: faces(LAST_LAYER_FACE_SIZE, value),
+    sharp: group(SKY_LAYER_GROUPS.sharp.faceSizes),
+    rough: group(SKY_LAYER_GROUPS.rough.faceSizes),
+    last: group(SKY_LAYER_GROUPS.last.faceSizes),
   };
 }
 
@@ -24,45 +29,45 @@ function facesAt(cube: THREE.CubeTexture, level: number): unknown[] {
   return levelFaces.map((face) => face.image.data);
 }
 
-describe('skyRoughLayersMap', () => {
-  it('holds black half-float rough layers before any sky shows, a mip each', () => {
-    const base = skyRoughLayersMap.image as THREE.DataTexture[];
+describe.each(['sharp', 'rough'] as const)('the %s layers cube', (group) => {
+  const cube = skyLayerMaps[group];
+  const { faceSizes } = SKY_LAYER_GROUPS[group];
+
+  it('holds black half-float layers before any sky shows, a mip each', () => {
+    const base = cube.image as THREE.DataTexture[];
     expect(base).toHaveLength(6);
-    expect(base[0]!.image).toMatchObject({
-      width: ROUGH_LAYER_FACE_SIZES[0],
-      height: ROUGH_LAYER_FACE_SIZES[0],
-    });
-    expect(skyRoughLayersMap.mipmaps).toHaveLength(ROUGH_LAYER_FACE_SIZES.length - 1);
-    expect(skyRoughLayersMap.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+    expect(base[0]!.image).toMatchObject({ width: faceSizes[0], height: faceSizes[0] });
+    expect(cube.mipmaps).toHaveLength(faceSizes.length - 1);
+    expect(cube.minFilter).toBe(THREE.LinearMipmapLinearFilter);
   });
 
   it('is its own clone, so every material samples the layers a sky shows', () => {
-    expect(skyRoughLayersMap.clone()).toBe(skyRoughLayersMap);
+    expect(cube.clone()).toBe(cube);
   });
 });
 
-describe('skyLastLayerMap', () => {
+describe('the last layer cube', () => {
   it('holds one black half-float layer with no mips before any sky shows', () => {
-    expect((skyLastLayerMap.image as THREE.DataTexture[])[0]!.image).toMatchObject({
-      width: LAST_LAYER_FACE_SIZE,
-      height: LAST_LAYER_FACE_SIZE,
-    });
-    expect(skyLastLayerMap.mipmaps).toEqual([]);
-    expect(skyLastLayerMap.minFilter).toBe(THREE.LinearFilter);
+    const [size] = SKY_LAYER_GROUPS.last.faceSizes;
+    expect((last.image as THREE.DataTexture[])[0]!.image).toMatchObject({ width: size, height: size });
+    expect(last.mipmaps).toEqual([]);
+    expect(last.minFilter).toBe(THREE.LinearFilter);
   });
 });
 
 describe('showSkyLayers', () => {
-  it('puts the rough layers in the mips of one cube and the last in the other, and uploads them', () => {
+  it("puts each group's layers in the mips of its cube, and uploads them", () => {
     const sky = skyLayers(0.5);
-    const versions = [skyRoughLayersMap.version, skyLastLayerMap.version];
+    const versions = GROUPS.map((group) => skyLayerMaps[group].version);
 
     showSkyLayers(sky, 1);
 
-    expect(facesAt(skyRoughLayersMap, 0)).toEqual(sky.rough[0]);
-    expect(facesAt(skyRoughLayersMap, ROUGH_LAYER_FACE_SIZES.length - 1)).toEqual(sky.rough.at(-1));
-    expect(facesAt(skyLastLayerMap, 0)).toEqual(sky.last);
-    expect([skyRoughLayersMap.version, skyLastLayerMap.version]).toEqual(versions.map((v) => v + 1));
+    for (const group of GROUPS) {
+      sky[group].forEach((layer, mip) =>
+        facesAt(skyLayerMaps[group], mip).forEach((face, index) => expect(face).toBe(layer[index]))
+      );
+    }
+    expect(GROUPS.map((group) => skyLayerMaps[group].version)).toEqual(versions.map((v) => v + 1));
   });
 
   it("shows the sky's share of the ambient", () => {
@@ -83,10 +88,10 @@ describe('showSkyLayers', () => {
   it('uploads nothing for the layers the cubes already hold (edge case)', () => {
     const sky = skyLayers(0.25);
     showSkyLayers(sky, 1);
-    const version = skyRoughLayersMap.version;
+    const version = sharp.version;
 
     showSkyLayers(sky, 1);
 
-    expect(skyRoughLayersMap.version).toBe(version);
+    expect(sharp.version).toBe(version);
   });
 });

@@ -4,23 +4,35 @@
  */
 
 import { useMemo } from 'react';
-import { POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT } from '../../../../godot/positionalShadow';
-import { softShadowScale } from '../../../../godot/softShadowScale';
+import {
+  LIGHT_SIZE_DEFAULT,
+  POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
+  positionalSoftShadow,
+} from '../../../../godot/positionalShadow';
+import { SHADOW_BLUR_DEFAULT } from '../../../../godot/softShadowScale';
 import {
   positionalShadowUserData,
   type PositionalShadowDeclaration,
 } from '../../../../r3f/positionalShadow/declaration';
-import type { BaseLightWithNormalBias } from './types';
+import { softShadowRadius } from '../../../../r3f/positionalShadow/softShadowRadius';
+import type { PositionalLightProperties } from './types';
 
 /** The properties an omni or spot light's shadow declaration reads. */
-type PositionalShadowProperties = Pick<BaseLightWithNormalBias, 'shadow_normal_bias' | 'shadow_blur'>;
+type PositionalShadowProperties = Pick<
+  PositionalLightProperties,
+  'shadow_normal_bias' | 'shadow_blur' | 'light_size'
+>;
 
 export function positionalShadowDeclaration(
   properties: PositionalShadowProperties
 ): PositionalShadowDeclaration {
+  const softShadow = positionalSoftShadow(
+    properties.light_size ?? LIGHT_SIZE_DEFAULT,
+    properties.shadow_blur ?? SHADOW_BLUR_DEFAULT
+  );
   return {
     normalBias: properties.shadow_normal_bias ?? POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
-    softShadowScale: softShadowScale(properties.shadow_blur),
+    softShadowRadius: softShadowRadius(softShadow),
   };
 }
 
@@ -28,9 +40,11 @@ export function positionalShadowDeclaration(
 export function usePositionalShadowUserData({
   shadow_normal_bias,
   shadow_blur,
+  light_size,
 }: PositionalShadowProperties): Record<string, unknown> {
   return useMemo(
-    () => positionalShadowUserData(positionalShadowDeclaration({ shadow_normal_bias, shadow_blur })),
-    [shadow_normal_bias, shadow_blur]
+    () =>
+      positionalShadowUserData(positionalShadowDeclaration({ shadow_normal_bias, shadow_blur, light_size })),
+    [shadow_normal_bias, shadow_blur, light_size]
   );
 }

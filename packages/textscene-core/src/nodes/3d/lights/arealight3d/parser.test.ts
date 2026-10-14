@@ -30,6 +30,33 @@ describe('AreaLight3D Parser', () => {
       expect(result.light_specular).toBe(1.0);
     });
 
+    it('defaults light_size to the AreaLight3D 0.5, not the Light3D 0', () => {
+      // 4.7.2: light_3d.cpp:747 overrides the Light3D default of :494.
+      const result = parseAreaLight3D(heading('AreaLight3D', { name: 'Area', parent: '.' }), {});
+
+      expect(result.light_size).toBe(0.5);
+    });
+
+    it('parses light_size and the distance fade, which an area light draws too', () => {
+      const result = parseAreaLight3D(heading('AreaLight3D', { name: 'Area', parent: '.' }), {
+        light_size: '0.0',
+        distance_fade_enabled: 'true',
+        distance_fade_begin: '10.0',
+      });
+
+      expect(result.light_size).toBe(0);
+      expect(result.distance_fade_enabled).toBe(true);
+      expect(result.distance_fade_begin).toBe(10);
+    });
+
+    it('reads a light_size it cannot parse as the default (error case)', () => {
+      const result = parseAreaLight3D(heading('AreaLight3D', { name: 'Area', parent: '.' }), {
+        light_size: 'oops',
+      });
+
+      expect(result.light_size).toBe(0.5);
+    });
+
     it('parses area_attenuation and area_texture', () => {
       const result = parseAreaLight3D(heading('AreaLight3D', { name: 'Area', parent: '.' }), {
         area_attenuation: '2.0',

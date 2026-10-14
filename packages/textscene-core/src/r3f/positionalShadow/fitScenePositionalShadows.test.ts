@@ -5,6 +5,7 @@ import { sceneLights, type SceneLight } from '../directionalShadow/lightLists';
 import { positionalShadowUserData } from './declaration';
 import { fitScenePositionalShadows } from './fitScenePositionalShadows';
 import { ViewportShadowAtlas } from './viewportShadowAtlas';
+import { AtlasAreaShadow, type AreaShadowLight } from './atlasAreaShadow';
 
 /** Looks down -z from z = 10, with a square 90-degree view. */
 function camera(): THREE.PerspectiveCamera {
@@ -20,7 +21,23 @@ function omniAt(x: number, name: string): THREE.PointLight {
   light.name = name;
   light.position.set(x, 0, 0);
   light.castShadow = true;
-  light.userData = positionalShadowUserData({ normalBias: 1, softShadowScale: 2 });
+  light.userData = positionalShadowUserData({ normalBias: 1, softShadowRadius: 2 });
+  return light;
+}
+
+/**
+ * A declared, casting 2×1 area light at `z`, facing -z towards the camera's view axis when
+ * `facesAway` is false, with a range of 6.
+ */
+function areaAt(z: number, facesAway = false): AreaShadowLight {
+  const light = new THREE.RectAreaLight(0xffffff, 1, 2, 1) as AreaShadowLight;
+  light.shadow = new AtlasAreaShadow();
+  light.shadow.range = 6;
+  light.shadow.size.set(2, 1);
+  light.position.set(0, 0, z);
+  if (facesAway) light.rotation.y = Math.PI;
+  light.castShadow = true;
+  light.userData = positionalShadowUserData({ normalBias: 1, softShadowRadius: 2 });
   return light;
 }
 
@@ -78,5 +95,38 @@ describe('fitScenePositionalShadows', () => {
     light.shadow.mapSize.set(64, 64);
     fitScenePositionalShadows(lightsOf(light), new THREE.Camera(), rootAtlas(), 0);
     expect(light.shadow.mapSize.x).toBe(64);
+  });
+
+  it('gives an area light one slot, so three omni lights and two area lights fill both 1024 quadrants', () => {
+    const omnis = Array.from({ length: 3 }, (_, i) => omniAt(i * 0.1, `lamp${i}`));
+    const areas = [areaAt(0), areaAt(1)];
+    fitScenePositionalShadows(lightsOf(...areas, ...omnis), camera(), rootAtlas(), 0);
+    expect(areas.map((light) => light.shadow.slot?.size)).toEqual([1024, 1024]);
+  });
+
+  it("fits an area light's normal bias and kernel to its slot", () => {
+    const light = areaAt(0);
+    fitScenePositionalShadows(lightsOf(light), camera(), rootAtlas(), 0);
+    expect(light.shadow.normalBias).toBeCloseTo(10 / 1024, 12);
+    expect(light.shadow.radius).toBe(2);
+  });
+
+  it('leaves out an area light whose volume, in front of it, lies behind the camera (edge case)', () => {
+    const light = areaAt(12, true);
+    fitScenePositionalShadows(lightsOf(light), camera(), rootAtlas(), 0);
+    expect(light.shadow.slot).toBeNull();
+  });
+
+  it('gives an area light behind the camera a slot when its volume reaches the view (edge case)', () => {
+    const light = areaAt(12);
+    fitScenePositionalShadows(lightsOf(light), camera(), rootAtlas(), 0);
+    expect(light.shadow.slot).not.toBeNull();
+  });
+
+  it('leaves an area light without the atlas shadow out (error case)', () => {
+    const light = new THREE.RectAreaLight(0xffffff, 1, 2, 1);
+    light.castShadow = true;
+    light.userData = positionalShadowUserData({ normalBias: 1, softShadowRadius: 2 });
+    expect(() => fitScenePositionalShadows(lightsOf(light), camera(), rootAtlas(), 0)).not.toThrow();
   });
 });

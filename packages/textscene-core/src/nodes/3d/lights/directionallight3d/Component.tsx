@@ -28,6 +28,11 @@ import {
   signedLightEnergy,
 } from '../shared/lightStrength';
 import { lightSpecularUserData } from '../../../../r3f/lightSpecular/lightSpecular';
+import { lightSizeUserData } from '../../../../r3f/lightSize/lightSize';
+import {
+  directionalLightSize,
+  LIGHT_ANGULAR_DISTANCE_DEFAULT,
+} from '../../../../godot/directionalSoftShadow';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 
 export function DirectionalLight3D({ node, children }: NodeComponentProps) {
@@ -45,6 +50,7 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
   const shadow = useMemo(() => directionalShadowDeclaration(properties), [properties]);
   const fogEnergy = lightFogEnergy(properties);
   const specularAmount = directionalLightSpecularAmount(properties);
+  const size = directionalLightSize(properties.light_angular_distance ?? LIGHT_ANGULAR_DISTANCE_DEFAULT);
   const userData = useMemo(
     () => ({
       ...skyLightUserData({
@@ -54,8 +60,9 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
       ...directionalShadowUserData(shadow),
       ...fogLightUserData({ energy: fogEnergy }),
       ...lightSpecularUserData(specularAmount),
+      ...lightSizeUserData(size),
     }),
-    [skyMode, skyEnergy, shadow, fogEnergy, specularAmount]
+    [skyMode, skyEnergy, shadow, fogEnergy, specularAmount, size]
   );
 
   return (

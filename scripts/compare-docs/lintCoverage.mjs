@@ -74,9 +74,12 @@ export function validatorsFor(type, validatorRegistry, baseTypes) {
   return out;
 }
 
-/** Semantic rules that reach `type`, with the diagnostics each can report. */
-export function rulesFor(type, ruleRegistry) {
-  return ruleRegistry.getRulesForNodeType(type).map((rule) => ({
+/**
+ * Semantic rules that reach `type`, with the diagnostics each can report: the node rules for a node,
+ * and the resource rules, which check every section of their class, for a resource.
+ */
+export function rulesFor(type, ruleRegistry, resourceRuleRegistry) {
+  const nodeRules = ruleRegistry.getRulesForNodeType(type).map((rule) => ({
     name: rule.meta.name,
     description: rule.meta.description,
     // A rule with neither applicableNodeTypes nor a matcher runs everywhere.
@@ -84,12 +87,20 @@ export function rulesFor(type, ruleRegistry) {
     viaMatcher: Boolean(rule.meta.applicableNodeTypeMatcher),
     emits: (rule.meta.emits ?? []).map((e) => ({ ...e })),
   }));
+  const resourceRules = resourceRuleRegistry.getRulesForResourceType(type).map((rule) => ({
+    name: rule.meta.name,
+    description: rule.meta.description,
+    universal: false,
+    viaMatcher: false,
+    emits: rule.meta.emits.map((e) => ({ ...e })),
+  }));
+  return [...nodeRules, ...resourceRules];
 }
 
-export function coverageFor(type, { ruleRegistry, validatorRegistry, baseTypes }) {
+export function coverageFor(type, { ruleRegistry, resourceRuleRegistry, validatorRegistry, baseTypes }) {
   return {
     validators: validatorsFor(type, validatorRegistry, baseTypes),
-    rules: rulesFor(type, ruleRegistry),
+    rules: rulesFor(type, ruleRegistry, resourceRuleRegistry),
   };
 }
 

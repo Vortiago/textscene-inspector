@@ -36,12 +36,13 @@ float godotClearcoatFresnel( const in vec3 normal, const in vec3 viewDir ) {
 /**
  * Godot's coat lobe under a light (`scene_forward_lights_inc.glsl:173-185`) without the N.L, which
  * three's irradiance carries, nor `clearcoat`. Its D_GGX reads the alpha mix( 0.001, 0.1, roughness ).
+ * `sizeOffset` is the light's `A`, which widens L.H and N.H (`:171-176`).
  */
 const CLEARCOAT_BRDF = /* glsl */ `
-float godotClearcoatBRDF( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in float roughness ) {
+float godotClearcoatBRDF( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in float roughness, const in float sizeOffset ) {
 	vec3 halfDir = normalize( viewDir + lightDir );
-	float cLdotH = saturate( dot( lightDir, halfDir ) );
-	float ccNdotH = saturate( dot( normal, halfDir ) );
+	float cLdotH = saturate( sizeOffset + dot( lightDir, halfDir ) );
+	float ccNdotH = saturate( sizeOffset + dot( normal, halfDir ) );
 	float Dr = godotGGXDistribution( ccNdotH, mix( 0.001, 0.1, roughness ) );
 	float Gr = 0.25 / ( cLdotH * cLdotH + 1e-4 );
 	float Fr = mix( 0.04, 1.0, godotSchlickFresnel( cLdotH ) );
@@ -54,19 +55,19 @@ float godotClearcoatBRDF( const in vec3 lightDir, const in vec3 viewDir, const i
  * Godot's coat lobe takes the N.L of the surface's own normal (`:168`), not the coat's, as Godot
  * computes the coat's N.L and leaves it unused. It scales by the light's specular amount (`:185`).
  */
-const DIRECT_CLEARCOAT = /* glsl */ `clearcoatSpecularDirect += irradiance * godotClearcoatBRDF( directLight.direction, geometryViewDir, geometryClearcoatNormal, material.clearcoatRoughness ) * godotSpecularAmount;`;
+const DIRECT_CLEARCOAT = /* glsl */ `clearcoatSpecularDirect += irradiance * godotClearcoatBRDF( directLight.direction, geometryViewDir, geometryClearcoatNormal, material.clearcoatRoughness, godotSizeOffset ) * godotSpecularAmount;`;
 
 /**
  * Godot's reflection on the coat (`scene_forward_clustered.glsl:1768-1795`): about the coat's
  * normal, dimmed below the surface's horizon, from radiance layer mix( 0.001, 0.1, sqrt( roughness ) )
- * times the last layer's index. That layer is below 1, so the PMREM alone holds it, read at the
- * roughness whose square root is that fraction.
+ * times the last layer's index, read at the roughness whose square root is that fraction. That layer
+ * is below 1, so it blends the radiance with layer 1.
  */
 const CLEARCOAT_RADIANCE = /* glsl */ `vec3 godotClearcoatRadiance( const in vec3 viewDir, const in vec3 clearcoatNormal, const in vec3 normal, const in float roughness ) {
 
 		float horizon;
 		vec3 reflectVec = godotReflection( viewDir, clearcoatNormal, normal, roughness, horizon );
-		return godotPmremLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * envMapIntensity * horizon * horizon;
+		return godotSkyLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * horizon * horizon;
 
 	}
 

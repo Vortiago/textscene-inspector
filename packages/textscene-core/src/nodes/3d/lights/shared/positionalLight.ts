@@ -11,6 +11,8 @@ import {
   positionalLightSpecularAmount,
 } from './lightStrength';
 import { lightSpecularUserData } from '../../../../r3f/lightSpecular/lightSpecular';
+import { lightSizeUserData } from '../../../../r3f/lightSize/lightSize';
+import { LIGHT_SIZE_DEFAULT } from '../../../../godot/positionalShadow';
 import { usePositionalShadowUserData } from './positionalShadowDeclaration';
 import type { PositionalLightProperties } from './types';
 
@@ -35,13 +37,15 @@ export function usePositionalLight(
   const shadowUserData = usePositionalShadowUserData(properties);
   const fogEnergy = lightFogEnergy(properties);
   const specularAmount = positionalLightSpecularAmount(properties);
+  const size = properties.light_size ?? LIGHT_SIZE_DEFAULT;
   const userData = useMemo(
     () => ({
       ...shadowUserData,
       ...fogLightUserData({ energy: fogEnergy, spotAngleAttenuation }),
       ...lightSpecularUserData(specularAmount),
+      ...lightSizeUserData(size),
     }),
-    [shadowUserData, fogEnergy, spotAngleAttenuation, specularAmount]
+    [shadowUserData, fogEnergy, spotAngleAttenuation, specularAmount, size]
   );
   return { intensity, shadowOpacity, userData };
 }
