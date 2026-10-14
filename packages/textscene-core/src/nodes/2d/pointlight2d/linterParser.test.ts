@@ -8,6 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
+import { formatRuleName } from '../../../linter/fileDiagnostics';
 import '../../../linter/index';
 import { errorsOf, warningsOf } from '../../../linter/testing/tierLists';
 
@@ -16,14 +17,12 @@ const lintErrors = (raw: string): number => errorsOf(new Linter().lint(raw)).len
 const lintWarnings = (raw: string): number => warningsOf(new Linter().lint(raw)).length;
 
 /**
- * Phase-1 warnings naming `prop`. A textureless scene always carries the
+ * The validator warnings on `prop`. A textureless scene always carries the
  * `pointlight2d-requires-texture` advisory, so a bare warning count says
  * nothing about whether the validator under test fired.
  */
 function propWarnings(raw: string, prop: string): number {
-  return warningsOf(new Linter().lint(raw)).filter(
-    (d) => d.ruleName === 'strict-parser' && d.message.includes(prop)
-  ).length;
+  return warningsOf(new Linter().lint(raw)).filter((d) => d.ruleName === formatRuleName(prop)).length;
 }
 
 describe('PointLight2D linterParser validators', () => {

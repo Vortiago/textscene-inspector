@@ -398,7 +398,7 @@ describe('Camera2D Linter', () => {
           );
           const errors = errorsOf(diagnostics);
           expect(errors).toHaveLength(1);
-          expect(errors[0]?.ruleName).toBe('strict-parser');
+          expect(errors[0]?.ruleName).toBe('format:position_smoothing_speed');
           expect(errors[0]?.message).toContain('position_smoothing_speed');
         }
       );
@@ -432,7 +432,7 @@ describe('Camera2D Linter', () => {
           );
           const errors = errorsOf(diagnostics);
           expect(errors).toHaveLength(1);
-          expect(errors[0]?.ruleName).toBe('strict-parser');
+          expect(errors[0]?.ruleName).toBe('format:rotation_smoothing_speed');
           expect(errors[0]?.message).toContain('rotation_smoothing_speed');
         }
       );

@@ -61,7 +61,7 @@ shape = ExtResource("ext_shape")
           node('StaticBody3D', {}, { name: 'StaticBody' }),
           node('CollisionShape3D', { shape: '"invalid_format"' }, { name: 'InvalidShape', parent: '.' })
         );
-        expectDiagnostic(content, { ruleName: 'strict-parser', contains: ['resource reference'] });
+        expectDiagnostic(content, { ruleName: 'format:shape', contains: ['resource reference'] });
       });
 
       it('should reject shape with invalid characters', () => {
@@ -69,7 +69,7 @@ shape = ExtResource("ext_shape")
           node('StaticBody3D', {}, { name: 'StaticBody' }),
           node('CollisionShape3D', { shape: 'SubResource(box shape)' }, { name: 'BadShape', parent: '.' })
         );
-        expectDiagnostic(content, { ruleName: 'strict-parser', contains: ['shape'] });
+        expectDiagnostic(content, { ruleName: 'format:shape', contains: ['shape'] });
       });
     });
 
@@ -111,7 +111,7 @@ disabled = false
 shape = SubResource("shape_1")
 disabled = 1
 `;
-        expectDiagnostic(content, { ruleName: 'strict-parser', contains: ['converts'] });
+        expectDiagnostic(content, { ruleName: 'format:disabled', contains: ['converts'] });
       });
 
       it('should reject string non-boolean disabled value', () => {
@@ -188,7 +188,7 @@ shape = SubResource("shape_1")
       );
       expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
       expectDiagnostic(content, {
-        ruleName: 'strict-parser',
+        ruleName: 'format:shape',
         contains: ['shape', 'resource reference'],
       });
     });

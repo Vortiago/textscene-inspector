@@ -6,9 +6,10 @@
 
 import { describe, it, expect } from 'vitest';
 import { Linter } from '../Linter.js';
-import { FILE_DIAGNOSTICS, STRICT_PARSER_RULE_NAME } from '../fileDiagnostics.js';
+import { FILE_DIAGNOSTICS, STRICT_PARSER_RULE_NAME, isFormatRuleName } from '../fileDiagnostics.js';
 import { declaredArms } from './declaredArms.js';
 import { recordTier } from './titleTier.js';
+import { errorsOf } from './tierLists.js';
 import type { Diagnostic, Severity } from '../types.js';
 
 /** A property value: rendered verbatim if a string, else `String(value)`. */
@@ -190,7 +191,7 @@ function declaredTiers(ruleName: string): Severity[] {
  * and a message substring cannot say whose tier applies.
  */
 function expectTierReachable(ruleName: string | undefined, severity: Severity): void {
-  if (ruleName === undefined || ruleName === STRICT_PARSER_RULE_NAME) {
+  if (ruleName === undefined || ruleName === STRICT_PARSER_RULE_NAME || isFormatRuleName(ruleName)) {
     expect(
       severity,
       `only error is reachable without a declared arm; name the rule that reports ${severity}`
@@ -225,10 +226,17 @@ export function expectNoDiagnostic(content: string, where: DiagnosticExpectation
 /**
  * Assert the scene produces no *error*-severity diagnostics (warnings tolerated).
  * Optionally narrow to errors mentioning a property (`prop`) or with a given `ruleName`,
- * such as `{ ruleName: 'strict-parser' }` for "no strict-parser format errors".
+ * such as `{ ruleName: 'format:fov' }` for "no format error on `fov`".
  */
 export function expectNoErrors(content: string, where: DiagnosticExpectation = {}): void {
   expectNoDiagnostic(content, { prop: where.prop, ruleName: where.ruleName, severity: 'error' });
+}
+
+/** Assert the scene has no format error: no syntax error and no validator refusal (warnings tolerated). */
+export function expectNoFormatErrors(content: string): void {
+  const diagnostics = lint(content);
+  expectEveryHeadingPlaced(diagnostics);
+  expect(errorsOf(diagnostics, 'format').map(describe1)).toEqual([]);
 }
 
 /** Assert at least one diagnostic of the given severity is present. */
@@ -241,7 +249,7 @@ export function expectSeverity(content: string, severity: Severity): void {
 export interface InvalidCase {
   value: PropValue;
   contains?: string[];
-  /** Also require the located diagnostic to carry this rule, such as `'strict-parser'`. */
+  /** Also require the located diagnostic to carry this rule, such as `'format:fov'`. */
   ruleName?: string;
   /**
    * Also require the located diagnostic to carry this severity. The DSL derives

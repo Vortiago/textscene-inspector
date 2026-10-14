@@ -9,6 +9,7 @@ function diagnostic(severity: Severity, ruleName: string): Diagnostic {
 
 const parserError = diagnostic('error', 'strict-parser');
 const parserWarning = diagnostic('warning', 'strict-parser');
+const validatorError = diagnostic('error', 'format:position');
 const ruleError = diagnostic('error', 'some-rule');
 const ruleWarning = diagnostic('warning', 'some-rule');
 const all = [parserError, parserWarning, ruleError, ruleWarning];
@@ -24,8 +25,8 @@ describe('errorsOf, warningsOf and infosOf', () => {
     ]);
   });
 
-  it('narrow to one rule when given its name', () => {
-    expect(errorsOf(all, 'strict-parser')).toEqual([parserError]);
+  it("narrow to the format checks' diagnostics, a syntax error's and a validator's", () => {
+    expect(errorsOf([...all, validatorError], 'format')).toEqual([parserError, validatorError]);
   });
 
   it('return an empty list when nothing is at the tier', () => {

@@ -1,7 +1,8 @@
 /**
  * Linter: turning a strict-parser `ParseError` into a diagnostic: position,
- * severity, message and the `strict-parser` rule name. `Diagnostic` has no
- * `code`, so the `ParseError` one does not survive the conversion.
+ * severity, message and the `strict-parser` rule name of an error no property
+ * owns. `Diagnostic` has no `code`, so the `ParseError` one does not survive the
+ * conversion. `Linter.ruleName.test.ts` covers a validator's `format:<key>`.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -15,7 +16,7 @@ describe('Linter', () => {
   });
 
   describe('Parse Error to Diagnostic Conversion', () => {
-    it('should set ruleName to "strict-parser" for parse errors', () => {
+    it('should set ruleName to "strict-parser" for a heading error', () => {
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root"]

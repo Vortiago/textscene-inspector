@@ -25,6 +25,13 @@ const BAD_TSCN = `[gd_scene format=3]
 transform = Transform3D(invalid, values, here)
 `;
 
+// A property line with no `=`: a syntax error, which no property owns.
+const SYNTAX_TSCN = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+transform
+`;
+
 const CLEAN_TSCN = `[gd_scene format=3]
 
 [node name="Root" type="Node3D"]
@@ -59,6 +66,7 @@ scale = "\x1b]52;c;aGVsbG8=\x07\x9b2J"
 
 let tempDir: string;
 let badPath: string;
+let syntaxPath: string;
 let warningPath: string;
 let infoPath: string;
 let hostilePath: string;
@@ -83,6 +91,8 @@ beforeAll(() => {
   tempDir = mkdtempSync(join(tmpdir(), 'tscn-lint-e2e-'));
   badPath = join(tempDir, 'broken.tscn');
   writeFileSync(badPath, BAD_TSCN);
+  syntaxPath = join(tempDir, 'syntax.tscn');
+  writeFileSync(syntaxPath, SYNTAX_TSCN);
   warningPath = join(tempDir, 'warning.tscn');
   writeFileSync(warningPath, WARNING_TSCN);
   infoPath = join(tempDir, 'info.tscn');
@@ -121,12 +131,20 @@ describe('CLI end-to-end', () => {
     expect(result.stderr).toBe('');
   });
 
-  it('exits 1 and reports the error for a syntactically invalid file', () => {
+  it('exits 1 and names the property for a value the format check refuses', () => {
     const result = runCli(['--no-color', badPath]);
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain(badPath);
     expect(result.stdout).toContain('error');
+    expect(result.stdout).toContain('(format:transform)');
+  });
+
+  it('exits 1 and reports strict-parser for a syntactically invalid file', () => {
+    const result = runCli(['--no-color', syntaxPath]);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(syntaxPath);
     expect(result.stdout).toContain('(strict-parser)');
   });
 
@@ -144,7 +162,7 @@ describe('CLI end-to-end', () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain('✓');
-    expect(result.stdout).toContain('(strict-parser)');
+    expect(result.stdout).toContain('(format:transform)');
   });
 
   it('recurses into a directory argument and lints every nested .tscn file', () => {
@@ -153,7 +171,7 @@ describe('CLI end-to-end', () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toContain(nestedCleanPath);
     expect(result.stdout).toContain(nestedBadPath);
-    expect(result.stdout).toContain('(strict-parser)');
+    expect(result.stdout).toContain('(format:transform)');
   });
 
   it("reads a scene's glTF dependency under its project.godot and exits 1 on one Godot refuses", () => {
@@ -198,7 +216,7 @@ describe('CLI --format output modes', () => {
     expect(badFinding).toMatchObject({
       file: badPath,
       severity: 'error',
-      rule: 'strict-parser',
+      rule: 'format:transform',
     });
     expect(typeof badFinding?.line).toBe('number');
     // The clean fixture contributes no findings at all.
@@ -259,7 +277,7 @@ describe('CLI --format output modes', () => {
     try {
       const result = runCli(['--no-color', badPath]); // no explicit env override
       expect(result.status).toBe(1);
-      expect(result.stdout).toContain('(strict-parser)');
+      expect(result.stdout).toContain('(format:transform)');
       expect(result.stdout).not.toContain('::error');
     } finally {
       if (previous === undefined) {
@@ -285,7 +303,7 @@ describe('CLI --format output modes', () => {
     });
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toContain('(strict-parser)');
+    expect(result.stdout).toContain('(format:transform)');
     expect(result.stdout).not.toContain('::error');
   });
 });

@@ -83,17 +83,22 @@ describe('CollisionShape2D Linter', () => {
           invalid: [
             {
               value: '"invalid_format"',
-              ruleName: 'strict-parser',
+              ruleName: 'format:shape',
               contains: ['shape', 'resource reference'],
             },
-            { value: 'SubResource(rect shape)', ruleName: 'strict-parser', contains: ['shape'] },
+            { value: 'SubResource(rect shape)', ruleName: 'format:shape', contains: ['shape'] },
           ],
         },
         {
           prop: 'disabled',
           valid: [true, false],
           invalid: [
-            { value: 1, ruleName: 'strict-parser', severity: 'warning', contains: ['disabled', 'converts'] },
+            {
+              value: 1,
+              ruleName: 'format:disabled',
+              severity: 'warning',
+              contains: ['disabled', 'converts'],
+            },
             { value: '"yes"', contains: ['disabled', 'boolean'] },
           ],
         },
@@ -103,7 +108,7 @@ describe('CollisionShape2D Linter', () => {
           invalid: [
             {
               value: 1,
-              ruleName: 'strict-parser',
+              ruleName: 'format:one_way_collision',
               severity: 'warning',
               contains: ['one_way_collision', 'converts'],
             },
@@ -117,7 +122,7 @@ describe('CollisionShape2D Linter', () => {
           invalid: [
             {
               value: -1.0,
-              ruleName: 'strict-parser',
+              ruleName: 'format:one_way_collision_margin',
               // Both ends share the derived message, since a min-only override reads
               // as satisfied by an over-max value.
               contains: ['one_way_collision_margin', 'between 0 and 128'],
@@ -139,7 +144,7 @@ describe('CollisionShape2D Linter', () => {
             'Color(inf, 0, 0, 1)',
           ],
           invalid: [
-            { value: '"red"', ruleName: 'strict-parser', contains: ['debug_color', 'Color'] },
+            { value: '"red"', ruleName: 'format:debug_color', contains: ['debug_color', 'Color'] },
             { value: 'Color(1, 0)', contains: ['debug_color'] },
             // variant_parser.cpp:913: `args.size() != 4` is ERR_PARSE_ERROR, so
             // the three-argument spelling GDScript allows does not load from a
@@ -207,7 +212,7 @@ describe('CollisionShape2D Linter', () => {
       );
       expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
       expectDiagnostic(content, {
-        ruleName: 'strict-parser',
+        ruleName: 'format:shape',
         contains: ['shape', 'resource reference'],
       });
     });

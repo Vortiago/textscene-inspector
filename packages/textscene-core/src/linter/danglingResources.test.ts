@@ -68,7 +68,7 @@ describe('dangling-resource-reference', () => {
     expect(dangling(scene(node('CSGBox3D', { unknown_key: 'SubResource("nope")' })))).toEqual([]);
     const diagnostics = lint(scene(node('CSGBox3D', { size: 'SubResource("nope")' })));
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]!.ruleName).toBe('strict-parser');
+    expect(diagnostics[0]!.ruleName).toBe('format:size');
   });
 
   it('leaves a malformed reference to phase 1', () => {
@@ -76,7 +76,7 @@ describe('dangling-resource-reference', () => {
     // strict parser's and must not be doubled.
     const diagnostics = lint(scene(node('CSGBox3D', { material: 'SubResource(nope)' })));
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]!.ruleName).toBe('strict-parser');
+    expect(diagnostics[0]!.ruleName).toBe('format:material');
   });
 
   it('reads the old-style integer index as a reference, and reports it dangling once', () => {
@@ -107,7 +107,7 @@ describe('dangling-resource-reference', () => {
     expect(lint(scene(item('icon')))).toMatchObject([{ ruleName: RULE }]);
     const diagnostics = lint(scene(item('text')));
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]!.ruleName).toBe('strict-parser');
+    expect(diagnostics[0]!.ruleName).toBe('format:item_0/text');
   });
 
   it('reports a sub-resource body that names an id nothing declares, by its id', () => {

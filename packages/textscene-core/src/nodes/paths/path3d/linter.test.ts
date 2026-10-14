@@ -93,7 +93,7 @@ curve = ExtResource("curve_ext")
 
       it('should reject curve with plain string value', () => {
         expectDiagnostic(scene(node('Path3D', { curve: 'some_value' })), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:curve',
           contains: ['resource reference'],
         });
       });
@@ -254,7 +254,7 @@ curve = ExtResource("curve_ext")
     it('should handle Path3D with invalid curve format', () => {
       // A format error in strict parsing stops semantic validation, so only the format error shows.
       expectDiagnostic(scene(node('Path3D', { curve: 'invalid_value' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:curve',
         severity: 'error',
         contains: ['resource reference'],
       });

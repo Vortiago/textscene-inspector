@@ -96,7 +96,7 @@ describe('AnimationTree Linter', () => {
         // format claim names its own rule.
         expectDiagnostic(scene(node('AnimationTree', { tree_root: 'invalid' })), {
           prop: 'tree_root',
-          ruleName: 'strict-parser',
+          ruleName: 'format:tree_root',
           contains: ['must be a resource reference'],
         });
       });
