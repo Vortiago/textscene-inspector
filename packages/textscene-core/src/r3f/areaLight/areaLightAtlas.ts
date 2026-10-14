@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { sharedTexture } from '../sharedTexture.js';
 import {
   buildAreaLightAtlas,
   type AreaLightAtlas,
@@ -18,21 +19,14 @@ import { installLitUniform, installedUniformValue } from '../shaderPatch/litUnif
 import { AREA_LIGHT_ATLAS_UNIFORM } from './areaTextureFetch.js';
 import { reversedRows } from '../../utils/reversedRows.js';
 
-/**
- * `cloneUniforms` clones a texture for each material (three r186 `UniformsUtils.js:28-39`), and a
- * clone would keep the atlas it was cloned from. So a clone of this texture is the texture itself.
- */
-class AreaLightAtlasTexture extends THREE.DataTexture {
+/** The atlas every lit material and the fog pass sample, refilled in place. */
+class AreaLightAtlasTexture extends sharedTexture(THREE.DataTexture) {
   constructor() {
     super(null, 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType);
     this.name = 'AreaLightAtlas';
     this.generateMipmaps = false;
     this.minFilter = THREE.LinearMipmapLinearFilter;
     this.magFilter = THREE.LinearFilter;
-  }
-
-  override clone(): this {
-    return this;
   }
 
   /**

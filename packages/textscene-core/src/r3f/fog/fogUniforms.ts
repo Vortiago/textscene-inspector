@@ -5,6 +5,7 @@
  */
 
 import * as THREE from 'three';
+import { sharedTexture } from '../sharedTexture.js';
 import { MAX_ROUGHNESS_LOD } from '../../godot/depthFog.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 
@@ -19,12 +20,11 @@ export const FOG_RADIANCE_BAND_HEIGHT = 64;
 export const FOG_RADIANCE_BANDS = MAX_ROUGHNESS_LOD;
 
 /**
- * The volume the fog pass integrates into. A render target's texture would reach each material's
- * clone as null, so the pass draws into this one, which is no render target's in three's eyes, and
- * a clone of it is itself. Until a pass draws it, three binds its empty 3D texture in its place
- * (`WebGLState.js:952`).
+ * The volume the fog pass integrates into. It is no render target's texture in three's eyes, so it
+ * reaches each material's clone. Until a pass draws it, three binds its empty 3D texture in its
+ * place (`WebGLState.js:952`).
  */
-class FogVolumeTexture extends THREE.Data3DTexture {
+class FogVolumeTexture extends sharedTexture(THREE.Data3DTexture) {
   constructor() {
     super(null, 1, 1, 1);
     this.name = 'VolumetricFogVolume';
@@ -34,17 +34,13 @@ class FogVolumeTexture extends THREE.Data3DTexture {
     this.magFilter = THREE.LinearFilter;
     this.generateMipmaps = false;
   }
-
-  override clone(): this {
-    return this;
-  }
 }
 
 /**
  * The sky's radiance as the aerial perspective reads it, one equirectangular band per roughness,
- * stacked bottom-up. It shares the volume's trick, so a pass draws it in place.
+ * stacked bottom-up. A pass draws it in place, as it does the volume.
  */
-class FogRadianceTexture extends THREE.Texture {
+class FogRadianceTexture extends sharedTexture(THREE.Texture) {
   constructor() {
     super();
     this.name = 'FogRadiance';
@@ -55,10 +51,6 @@ class FogRadianceTexture extends THREE.Texture {
     this.magFilter = THREE.LinearFilter;
     this.wrapS = THREE.RepeatWrapping;
     this.generateMipmaps = false;
-  }
-
-  override clone(): this {
-    return this;
   }
 }
 
