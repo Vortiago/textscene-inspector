@@ -25,6 +25,7 @@ import { SOFT_SHADOW_FILTER, softShadowFilterChunk } from '../shadowFilter/softS
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk';
 import { installDirectionalShadowFade } from '../directionalShadow/shadowFade';
 import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasChunk';
+import { LIT_SHADERS } from '../testing/litShaders';
 
 const threeChunks: PositionalShadowChunks = {
   shadowmap_vertex: THREE.ShaderChunk.shadowmap_vertex,
@@ -32,7 +33,6 @@ const threeChunks: PositionalShadowChunks = {
   lights_fragment_begin: THREE.ShaderChunk.lights_fragment_begin,
   shadowmask_pars_fragment: THREE.ShaderChunk.shadowmask_pars_fragment,
 };
-const LIT_SHADERS = ['lambert', 'phong', 'standard', 'physical', 'toon', 'shadow'] as const;
 
 const occurrences = (text: string, part: string) => text.split(part).length - 1;
 

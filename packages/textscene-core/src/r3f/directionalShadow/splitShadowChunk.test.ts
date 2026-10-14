@@ -376,7 +376,10 @@ describe('the soft split shadow', () => {
   it('reads the box’s size in the atlas off the slot’s matrix, and the range start by slot', () => {
     // `light_storage.cpp:727-731`; `splitShadow.test.ts` pins the matrix's scale.
     expect(chunk()).toContain(
-      'vec2 uvScale = vec2( length( vec3( matrix[ 0 ][ 0 ], matrix[ 1 ][ 0 ], matrix[ 2 ][ 0 ] ) ), length( vec3( matrix[ 0 ][ 1 ], matrix[ 1 ][ 1 ], matrix[ 2 ][ 1 ] ) ) );'
+      'vec2 uvScale = vec2( godotRowLength( matrix, 0 ), godotRowLength( matrix, 1 ) );'
+    );
+    expect(chunk()).toContain(
+      'return length( vec3( matrix[ 0 ][ row ], matrix[ 1 ][ row ], matrix[ 2 ][ row ] ) );'
     );
     expect(chunk()).toContain(`${SUN_RANGE_BEGINS}[ shadowIndex ][ split ]`);
   });
@@ -393,7 +396,7 @@ describe('the soft split shadow', () => {
     // Godot's near plane is the range start (`renderer_scene_cull.cpp:2327-2349`). The caster reach
     // moves this box's near plane further towards the light, so its depth 0 lies before that side.
     expect(chunk()).toContain(
-      'float lightSide = coord.z - length( vec3( matrix[ 0 ][ 2 ], matrix[ 1 ][ 2 ], matrix[ 2 ][ 2 ] ) ) * ( rangeBegin - dot( light.xyz, position ) );'
+      'float lightSide = coord.z - godotRowLength( matrix, 2 ) * ( rangeBegin - dot( light.xyz, position ) );'
     );
     expect(chunk()).toContain('godotSunBlockerShadow( shadowMap, coord, texScale, lightSide )');
   });

@@ -10,7 +10,7 @@ import type * as THREE from 'three';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
 import { LIGHT_KINDS, slottedLights, type LightKind } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
-import { SplitSunLight } from '../directionalShadow/splitSun.js';
+import { declaredLightOf } from '../directionalShadow/splitSun.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
 
 export const LIGHT_SIZES = 'godotLightSizes';
@@ -46,7 +46,7 @@ export function installLightSizeUniforms(): void {
 function sizeOf(light: THREE.Light, kind: LightKind, drawsDirectionalSoftShadows: boolean): number {
   const isDirectional = kind === 'directional' || kind === 'sun';
   if (isDirectional && !drawsDirectionalSoftShadows) return 0;
-  const declared = light instanceof SplitSunLight ? light.parent : light;
+  const declared = declaredLightOf(light);
   if (!declared) return 0;
   return declaration.read(declared)?.size ?? 0;
 }

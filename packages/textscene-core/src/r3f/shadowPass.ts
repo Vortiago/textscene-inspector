@@ -74,9 +74,9 @@ function readersOf(renderer: THREE.WebGLRenderer): Set<ShadowMapReader> {
   const copy = new OmniShadowCopy();
   shadowMap.render = (lights, scene, camera) => {
     const draws = passDraws(shadowMap);
-    const copied = draws ? lightsToCopy(lights) : NO_LIGHTS;
-    const projected = draws ? projectedLights(lights) : NO_LIGHTS;
-    const areas = draws ? slottedAreaLights(lights) : NO_LIGHTS;
+    const copied = draws ? collected(lights, needsCopy) : NO_LIGHTS;
+    const projected = draws ? collected(lights, isProjectedShadowLight) : NO_LIGHTS;
+    const areas = draws ? collected(lights, isSlottedAreaLight) : NO_LIGHTS;
     threePass.draw(lights, scene, camera);
     copyOmniShadows(renderer, copy, copied);
     drawProjectedShadows(threePass, projected, scene, camera);
@@ -111,15 +111,19 @@ function passDraws(shadowMap: THREE.WebGLShadowMap): boolean {
   return shadowMap.enabled && (shadowMap.autoUpdate || shadowMap.needsUpdate);
 }
 
-/** The omni lights with a slot whose cube three's pass is about to draw. */
-function lightsToCopy(lights: readonly THREE.Light[]): readonly OmniLight[] {
-  let copied: OmniLight[] | null = null;
+/** The lights of one kind, without an array while there is none. */
+function collected<Kind extends THREE.Light>(
+  lights: readonly THREE.Light[],
+  isKind: (light: THREE.Light) => light is Kind
+): readonly Kind[] {
+  let kind: Kind[] | null = null;
   for (const light of lights) {
-    if (needsCopy(light)) (copied ??= []).push(light);
+    if (isKind(light)) (kind ??= []).push(light);
   }
-  return copied ?? NO_LIGHTS;
+  return kind ?? NO_LIGHTS;
 }
 
+/** An omni light with a slot whose cube three's pass is about to draw. */
 function needsCopy(light: THREE.Light): light is OmniLight {
   const { shadow } = light as THREE.Light & { shadow?: unknown };
   return (
@@ -128,17 +132,9 @@ function needsCopy(light: THREE.Light): light is OmniLight {
 }
 
 /**
- * The split suns, and the spot lights that hold a slot. three's pass never draws one by itself
+ * A split sun, or a spot light that holds a slot. three's pass never draws one by itself
  * (`splitShadow.ts`, `atlasSpotShadow.ts`).
  */
-function projectedLights(lights: readonly THREE.Light[]): readonly ProjectedShadowLight[] {
-  let projected: ProjectedShadowLight[] | null = null;
-  for (const light of lights) {
-    if (isProjectedShadowLight(light)) (projected ??= []).push(light);
-  }
-  return projected ?? NO_LIGHTS;
-}
-
 function isProjectedShadowLight(light: THREE.Light): light is ProjectedShadowLight {
   const { shadow } = light as { shadow?: unknown };
   return (
@@ -146,11 +142,7 @@ function isProjectedShadowLight(light: THREE.Light): light is ProjectedShadowLig
   );
 }
 
-/** The area lights that hold a slot. three's pass never draws one by itself (`atlasAreaShadow.ts`). */
-function slottedAreaLights(lights: readonly THREE.Light[]): readonly AreaShadowLight[] {
-  let slotted: AreaShadowLight[] | null = null;
-  for (const light of lights) {
-    if (isAreaShadowLight(light) && light.shadow.slot !== null) (slotted ??= []).push(light);
-  }
-  return slotted ?? NO_LIGHTS;
+/** An area light that holds a slot. three's pass never draws one by itself (`atlasAreaShadow.ts`). */
+function isSlottedAreaLight(light: THREE.Light): light is AreaShadowLight {
+  return isAreaShadowLight(light) && light.shadow.slot !== null;
 }

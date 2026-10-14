@@ -1,6 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import { SplitSunLight, attachSplitSun, followDeclaredLight, releaseSplitSun, splitSunOf } from './splitSun';
+import {
+  SplitSunLight,
+  attachSplitSun,
+  declaredLightOf,
+  followDeclaredLight,
+  releaseSplitSun,
+  splitSunOf,
+} from './splitSun';
 
 describe('SplitSunLight', () => {
   it('stands on three’s sun path', () => {
@@ -87,6 +94,22 @@ describe('splitSunOf', () => {
     const light = new THREE.DirectionalLight();
     light.add(new THREE.Object3D());
     expect(splitSunOf(light)).toBeNull();
+  });
+});
+
+describe('declaredLightOf', () => {
+  it('answers the light a split sun shades for', () => {
+    const light = new THREE.DirectionalLight();
+    expect(declaredLightOf(attachSplitSun(light))).toBe(light);
+  });
+
+  it('answers any other light itself', () => {
+    const light = new THREE.SpotLight();
+    expect(declaredLightOf(light)).toBe(light);
+  });
+
+  it('answers null for a split sun off its light (edge case)', () => {
+    expect(declaredLightOf(new SplitSunLight())).toBeNull();
   });
 });
 

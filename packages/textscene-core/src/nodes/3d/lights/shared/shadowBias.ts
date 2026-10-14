@@ -3,40 +3,25 @@
  * normalised depth. An omni or spot light's keeps Godot's unit, which the patched lookup reads.
  */
 
-import { SHADOW_BLUR_DEFAULT, softShadowScale } from '../../../../godot/softShadowScale';
+import { SHADOW_BLUR_DEFAULT } from '../../../../godot/softShadowScale';
 import {
   LIGHT_SIZE_DEFAULT,
   positionalSoftShadow,
   spotShadowDepthBias,
 } from '../../../../godot/positionalShadow';
-import { LIGHT_ANGULAR_DISTANCE_DEFAULT } from '../../../../godot/directionalSoftShadow';
-import type { DirectionalLight3DProperties } from '../directionallight3d/types';
 import type { PositionalLightProperties } from './types';
 
 /** `scene/3d/light_3d.cpp:490` (Light3D) and `:681` (SpotLight3D). */
 const GODOT_SHADOW_BIAS_DEFAULT = { DIRECTIONAL: 0.1, OMNI: 0.1, SPOT: 0.03 } as const;
 
-/** The properties a directional light's depth bias reads. */
-type DirectionalBiasProperties = Pick<
-  DirectionalLight3DProperties,
-  'shadow_bias' | 'shadow_blur' | 'light_angular_distance'
->;
-
 /**
- * Exact: `light_storage.cpp:723` sends `shadow_bias / 100 * bias_scale`,
+ * Exact: `light_storage.cpp:723` sends `shadow_bias / 100 * bias_scale` times `soft_shadow_scale`,
  * `renderer_scene_cull.cpp:2348` makes `bias_scale` the cascade's ortho depth range,
  * and `scene_forward_clustered.glsl:2304` spends it inside that range, so in
  * normalised depth the range cancels.
  */
-export function directionalShadowBias({
-  shadow_bias,
-  shadow_blur,
-  light_angular_distance,
-}: DirectionalBiasProperties): number {
-  const bias = shadow_bias ?? GODOT_SHADOW_BIAS_DEFAULT.DIRECTIONAL;
-  return (
-    -(bias / 100) * softShadowScale(shadow_blur, light_angular_distance ?? LIGHT_ANGULAR_DISTANCE_DEFAULT)
-  );
+export function directionalShadowBias(shadowBias: number | undefined, softShadowScale: number): number {
+  return -((shadowBias ?? GODOT_SHADOW_BIAS_DEFAULT.DIRECTIONAL) / 100) * softShadowScale;
 }
 
 /**

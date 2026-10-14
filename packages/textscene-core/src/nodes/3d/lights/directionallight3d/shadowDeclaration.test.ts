@@ -24,7 +24,7 @@ describe('directionalShadowDeclaration', () => {
       maxDistance: 80,
       pancakeSize: 5,
       fadeStart: 0.5,
-      depthBias: directionalShadowBias({ shadow_bias: 0.5, shadow_blur: 2 }),
+      depthBias: directionalShadowBias(0.5, 4),
       normalBias: 1.5,
       filterRadius: 4,
       softShadowAngle: 0,
@@ -42,7 +42,7 @@ describe('directionalShadowDeclaration', () => {
       maxDistance: 100,
       pancakeSize: 20,
       fadeStart: 0.8,
-      depthBias: directionalShadowBias({}),
+      depthBias: directionalShadowBias(undefined, 2),
       normalBias: 2,
       filterRadius: 2,
       softShadowAngle: 0,
@@ -69,6 +69,12 @@ describe('directionalShadowDeclaration', () => {
     expect(declaration.softShadowAngle).toBeCloseTo(1, 12);
     expect(declaration.filterRadius).toBe(1.5);
     expect(declaration.drawsSoftShadow).toBe(true);
+  });
+
+  it('scales the depth bias by the search’s spread, without the quality radius', () => {
+    // `light_storage.cpp:700-702`, `:723`: 0.1 / 100 * 1.
+    const declaration = directionalShadowDeclaration({ shadow_enabled: true, light_angular_distance: 2 });
+    expect(declaration.depthBias).toBeCloseTo(-0.001, 12);
   });
 
   it('declares no blocker search for an angular distance without a blur (edge case)', () => {

@@ -12,6 +12,7 @@ import { ViewportModeProvider } from './contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
 import { TscnParser } from '../parser/TscnParser';
 import { DIRECTIONAL_SOFT_SHADOWS, LIGHT_SOFT_SHADOWS } from './shadowFilter/softShadowSearch';
+import { fireSceneRender } from './testing/fireSceneRender';
 
 import './nodes/index';
 
@@ -40,8 +41,7 @@ ${lights}`;
   const camera = new THREE.PerspectiveCamera();
   scene.updateMatrixWorld();
   camera.updateMatrixWorld();
-  const beforeRender = scene.onBeforeRender as (...args: unknown[]) => void;
-  beforeRender.call(scene, null, scene, camera, null);
+  fireSceneRender(scene, camera);
   const box = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
   const defines = (box.material as THREE.Material & { defines?: Record<string, unknown> }).defines ?? {};
   await renderer.unmount();

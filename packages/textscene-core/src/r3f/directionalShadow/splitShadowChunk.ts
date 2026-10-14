@@ -77,6 +77,9 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\tuniform vec4 ${SUN_SOFT_SHADOWS}[ NUM_SUN_LIGHT_SHADOWS ];
 \t\tuniform vec4 ${SUN_RANGE_BEGINS}[ NUM_SUN_LIGHT_SHADOWS ];
 \t\tconst float GODOT_SUN_PANCAKED = 1e-7;
+\t\tfloat godotRowLength( mat4 matrix, int row ) {
+\t\t\treturn length( vec3( matrix[ 0 ][ row ], matrix[ 1 ][ row ], matrix[ 2 ][ row ] ) );
+\t\t}
 \t\tfloat godotSunBlockerShadow( sampler2DShadow atlas, vec3 coord, vec2 texScale, float lightSide ) {
 \t\t\tmat2 rotation = godotDiskRotation();
 \t\t\tfloat blockerSum = 0.0;
@@ -102,7 +105,7 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\tfloat godotSunSoftSplit( sampler2DShadow shadowMap, SunLightShadow sunLightShadow, int slot, vec4 light, float rangeBegin ) {
 \t\t\tvec4 split = sunShadowCascade[ slot ];
 \t\t\tmat4 matrix = sunShadowMatrix[ slot ];
-\t\t\tvec2 uvScale = vec2( length( vec3( matrix[ 0 ][ 0 ], matrix[ 1 ][ 0 ], matrix[ 2 ][ 0 ] ) ), length( vec3( matrix[ 0 ][ 1 ], matrix[ 1 ][ 1 ], matrix[ 2 ][ 1 ] ) ) );
+\t\t\tvec2 uvScale = vec2( godotRowLength( matrix, 0 ), godotRowLength( matrix, 1 ) );
 \t\t\tvec3 position = vSunShadowWorldPosition.xyz + vSunShadowWorldNormal * split.z;
 \t\t\tvec4 shadowCoord = matrix * vec4( position, 1.0 );
 \t\t\tvec3 coord = shadowCoord.xyz / shadowCoord.w;
@@ -111,7 +114,7 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\t\tif ( ! ( inFrustum && coord.z <= 1.0 ) ) return 1.0;
 \t\t\tfloat testRadius = ( dot( light.xyz, position - cameraPosition ) - rangeBegin ) * light.w;
 \t\t\tvec2 texScale = uvScale * testRadius * sunLightShadow.shadowRadius;
-\t\t\tfloat lightSide = coord.z - length( vec3( matrix[ 0 ][ 2 ], matrix[ 1 ][ 2 ], matrix[ 2 ][ 2 ] ) ) * ( rangeBegin - dot( light.xyz, position ) );
+\t\t\tfloat lightSide = coord.z - godotRowLength( matrix, 2 ) * ( rangeBegin - dot( light.xyz, position ) );
 \t\t\treturn mix( 1.0, godotSunBlockerShadow( shadowMap, coord, texScale, lightSide ), sunLightShadow.shadowIntensity );
 \t\t}
 \t\tfloat godotSunSoftShadow( sampler2DShadow shadowMap, SunLightShadow sunLightShadow, int shadowIndex ) {

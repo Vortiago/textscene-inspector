@@ -19,6 +19,7 @@ import {
 import { godotSplitShadowChunk } from './splitShadowChunk';
 import { shadowFadeChunks, type ShadowFadeChunks } from './shadowFade';
 import { warningsOf } from '../testing/logWarnings';
+import { LIT_SHADERS } from '../testing/litShaders';
 
 const PARS = 'shadowmap_pars_fragment';
 const LIGHTS = 'lights_fragment_begin';
@@ -28,7 +29,6 @@ const threeChunks: ShadowAtlasChunks = {
   [LIGHTS]: THREE.ShaderChunk[LIGHTS],
   [SHADOW_MASK]: THREE.ShaderChunk[SHADOW_MASK],
 };
-const LIT_SHADERS = ['lambert', 'phong', 'standard', 'physical', 'toon', 'shadow'] as const;
 
 const occurrences = (text: string, part: string) => text.split(part).length - 1;
 

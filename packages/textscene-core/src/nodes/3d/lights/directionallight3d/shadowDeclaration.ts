@@ -49,13 +49,14 @@ export function directionalShadowDeclaration(
   properties: DirectionalShadowProperties
 ): DirectionalShadowDeclaration {
   const angularDistance = properties.light_angular_distance ?? LIGHT_ANGULAR_DISTANCE_DEFAULT;
+  const filterRadius = softShadowScale(properties.shadow_blur, angularDistance);
   return {
     maxDistance: properties.directional_shadow_max_distance ?? DIRECTIONAL_SHADOW_MAX_DISTANCE_DEFAULT,
     pancakeSize: properties.directional_shadow_pancake_size ?? DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT,
     fadeStart: properties.directional_shadow_fade_start ?? DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
-    depthBias: directionalShadowBias(properties),
+    depthBias: directionalShadowBias(properties.shadow_bias, filterRadius),
     normalBias: properties.shadow_normal_bias ?? DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
-    filterRadius: softShadowScale(properties.shadow_blur, angularDistance),
+    filterRadius,
     softShadowAngle: softShadowAngle(angularDistance),
     drawsSoftShadow: drawsDirectionalSoftShadow({
       angularDistance,

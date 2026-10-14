@@ -14,6 +14,7 @@ import { SelectionProvider } from '../contexts/SelectionContext';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
 import { TscnParser } from '../../parser/TscnParser';
+import { SOFT_LOW_QUALITY_RADIUS } from '../../godot/softShadowScale';
 
 import '../nodes/index';
 
@@ -134,6 +135,8 @@ describe('preview sun shadow', () => {
 
   it('keeps the class default depth bias an authored sun gets', async () => {
     // The editor never sets `PARAM_SHADOW_BIAS` or `PARAM_SHADOW_BLUR` on its sun.
-    expect((await previewSunDeclaration())?.depthBias).toBe(directionalShadowBias({}));
+    expect((await previewSunDeclaration())?.depthBias).toBe(
+      directionalShadowBias(undefined, SOFT_LOW_QUALITY_RADIUS)
+    );
   });
 });
