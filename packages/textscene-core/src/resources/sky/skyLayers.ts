@@ -7,6 +7,7 @@
  */
 
 import * as THREE from 'three';
+import { drawOffscreen } from '../../r3f/offscreen.js';
 import { SKY_ROUGHNESS_LAYERS_DEFAULT } from '../../godot/skyReflection.js';
 import { fastFilter } from './fastFilter.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
@@ -40,6 +41,14 @@ export type SkyLayers = Record<keyof typeof SKY_LAYER_GROUPS, THREE.WebGLCubeRen
 /** The groups of layers, each baked into a cube of its own. */
 export const SKY_LAYER_GROUP_NAMES = Object.keys(SKY_LAYER_GROUPS) as readonly (keyof SkyLayers)[];
 
+/** A record with `make`'s value for each group. */
+export function byGroup<T>(make: (group: keyof SkyLayers) => T): Record<keyof SkyLayers, T> {
+  return Object.fromEntries(SKY_LAYER_GROUP_NAMES.map((group) => [group, make(group)])) as Record<
+    keyof SkyLayers,
+    T
+  >;
+}
+
 /** Made once, as each bake would otherwise compile them again. */
 const radianceOctmapPass = skyPass(RADIANCE_OCTMAP_FRAGMENT_SHADER, ['radiance', 'size', 'borderSize']);
 const downsamplePass = skyPass(DOWNSAMPLE_FRAGMENT_SHADER, ['source', 'size', 'borderSize']);
@@ -56,20 +65,22 @@ export function bakeSkyLayers(
   bake: SkyBake
 ): SkyLayers {
   const filter = bake.radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(bake.radianceSize);
-  const restoreTarget = keepRenderTarget(gl);
-  const layers = layerCubes();
-  let chain: THREE.WebGLRenderTarget | null = null;
+  const layers = byGroup((group) => layerCube(SKY_LAYER_GROUPS[group]));
   try {
-    chain = downsampleChain(gl, radiance, filter);
-    for (const group of SKY_LAYER_GROUP_NAMES)
-      filterGroup(gl, chain, filter, SKY_LAYER_GROUPS[group], layers[group]);
+    drawOffscreen(gl, () => {
+      const chain = downsampleChain(gl, radiance, filter);
+      try {
+        for (const group of SKY_LAYER_GROUP_NAMES)
+          filterGroup(gl, chain, filter, SKY_LAYER_GROUPS[group], layers[group]);
+      } finally {
+        chain.dispose();
+      }
+    });
     return layers;
   } catch (error) {
     disposeSkyLayers(layers);
     throw error;
   } finally {
-    chain?.dispose();
-    restoreTarget();
     for (const pass of [radianceOctmapPass, downsamplePass, filter.pass]) releaseTextures(pass);
   }
 }
@@ -88,7 +99,7 @@ function downsampleChain(
   radiance: THREE.CubeTexture,
   { layout, chainSizes }: LayerFilter
 ): THREE.WebGLRenderTarget {
-  const borderSize = 1 - layout.padding * 2;
+  const { borderSize } = layout;
   const chain = octmapTarget(chainSizes[0]!, true);
   const octmap = octmapTarget(layout.size, false);
   const mips = chainSizes.map((size) => octmapTarget(size, false));
@@ -124,48 +135,41 @@ function filterGroup(
   setUniforms(pass, {
     chain: chain.texture,
     lastMip: chainSizes.length - 1,
-    borderSize: 1 - layout.padding * 2,
+    borderSize: layout.borderSize,
   });
   faceSizes.forEach((faceSize, mip) => {
     filter.selectLayer(firstLayer + mip);
-    pass.uniforms.faceSize!.value = faceSize;
     for (let face = 0; face < 6; face += 1) {
-      pass.uniforms.face!.value = face;
+      setUniforms(pass, { face, faceSize });
       draw(gl, pass, cube, face, mip);
     }
   });
 }
 
-function layerCubes(): SkyLayers {
-  return {
-    sharp: layerCube(SKY_LAYER_GROUPS.sharp),
-    rough: layerCube(SKY_LAYER_GROUPS.rough),
-    last: layerCube(SKY_LAYER_GROUPS.last),
-  };
-}
-
 /** A cube for `group`, a mip per layer when it has more than one. */
 function layerCube({ faceSizes }: SkyLayerGroup): THREE.WebGLCubeRenderTarget {
-  const hasMips = faceSizes.length > 1;
-  const cube = new THREE.WebGLCubeRenderTarget(faceSizes[0]!, {
-    type: THREE.HalfFloatType,
-    depthBuffer: false,
-    generateMipmaps: false,
-    minFilter: hasMips ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter,
-  });
-  if (hasMips) cube.texture.mipmaps = fullMipChain(faceSizes[0]!);
-  return cube;
+  return withMips(new THREE.WebGLCubeRenderTarget(faceSizes[0]!, layerTargetOptions(faceSizes.length > 1)));
 }
 
 /** An octmap `size` wide that clamps to its edge, as Godot's samplers for it do (`copy_effects.cpp:1155`, `:1366`). */
 function octmapTarget(size: number, hasMips: boolean): THREE.WebGLRenderTarget {
-  const target = new THREE.WebGLRenderTarget(size, size, {
+  const target = new THREE.WebGLRenderTarget(size, size, layerTargetOptions(hasMips));
+  return hasMips ? withMips(target) : target;
+}
+
+function layerTargetOptions(hasMips: boolean): THREE.RenderTargetOptions {
+  return {
     type: THREE.HalfFloatType,
     depthBuffer: false,
     generateMipmaps: false,
     minFilter: hasMips ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter,
-  });
-  if (hasMips) target.texture.mipmaps = fullMipChain(size);
+  };
+}
+
+/** `target` with a level for each mip, when it filters between them. */
+function withMips<T extends THREE.WebGLRenderTarget>(target: T): T {
+  if (target.texture.minFilter === THREE.LinearMipmapLinearFilter)
+    target.texture.mipmaps = fullMipChain(target.width);
   return target;
 }
 
@@ -178,12 +182,4 @@ function octmapTarget(size: number, hasMips: boolean): THREE.WebGLRenderTarget {
 function fullMipChain(size: number): THREE.Texture['mipmaps'] {
   const levels = Array.from({ length: Math.floor(Math.log2(size)) + 1 }, () => ({}));
   return levels as unknown as THREE.Texture['mipmaps'];
-}
-
-/** Puts back the render target `gl` draws into now, once the bake has drawn into its own. */
-function keepRenderTarget(gl: THREE.WebGLRenderer): () => void {
-  const target = gl.getRenderTarget();
-  const face = gl.getActiveCubeFace();
-  const mip = gl.getActiveMipmapLevel();
-  return () => gl.setRenderTarget(target, face, mip);
 }

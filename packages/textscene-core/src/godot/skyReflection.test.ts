@@ -5,7 +5,7 @@ describe('skyOctmapLayout', () => {
   it('pads the default 256 sky to 640 texels with 64 on each side', () => {
     const layout = skyOctmapLayout(256);
     expect(layout.size).toBe(640);
-    expect(layout.padding).toBeCloseTo(0.1, 10);
+    expect(layout.borderSize).toBeCloseTo(0.8, 10);
     expect(layout.downsampledSizes).toEqual([320, 160, 80, 40, 20, 10]);
   });
 

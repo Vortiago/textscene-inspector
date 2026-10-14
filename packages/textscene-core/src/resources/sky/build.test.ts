@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { buildSkyEnvironment, skyPanoramaTexture } from './build';
 import { decodeSky, decodeSkyMaterial } from './decode';
 import type { Sky } from './types';
-import { renderTargetTestRenderer } from '../../testing/recordingWebGL';
+import { testRenderer } from '../../testing/recordingWebGL';
 
 /** A sky of `materialType` with every property at Godot's default. */
 function defaultSky(materialType: string): Sky {
@@ -42,7 +42,7 @@ describe('buildSkyEnvironment layers', () => {
   });
 
   it("bakes the sky's layers without reading a pixel back", async () => {
-    const { renderer } = await renderTargetTestRenderer();
+    const { renderer } = await testRenderer();
     const readBack = vi.spyOn(renderer.getContext(), 'readPixels');
 
     const env = buildSkyEnvironment(renderer, {
@@ -56,13 +56,14 @@ describe('buildSkyEnvironment layers', () => {
   });
 
   it("draws each of Godot's layers 1 to 7 into a mip of its group's cube, on all six faces", async () => {
-    const { renderer } = await renderTargetTestRenderer();
+    const { renderer } = await testRenderer();
     const context = renderer.getContext();
     // Each draw writes to the texture level attached last.
     let attached: unknown[] = [];
     const draws: unknown[][] = [];
     vi.spyOn(context, 'framebufferTexture2D').mockImplementation((...args) => void (attached = args));
     vi.spyOn(context, 'drawArrays').mockImplementation(() => void draws.push(attached));
+    vi.spyOn(context, 'drawElements').mockImplementation(() => void draws.push(attached));
 
     const env = buildSkyEnvironment(renderer, {
       sky: defaultSky('ProceduralSkyMaterial'),
@@ -90,7 +91,7 @@ describe('buildSkyEnvironment radiance size', () => {
 
   /** The face size of each cube the build renders, and of the cube the PMREM prefilters. */
   async function cubeSizes(radianceSize: number, asBackground = true) {
-    const { renderer } = await renderTargetTestRenderer();
+    const { renderer } = await testRenderer();
     const rendered: number[] = [];
     vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(function (this: THREE.CubeCamera) {
       rendered.push(this.renderTarget.width);
@@ -137,7 +138,7 @@ describe('buildSkyEnvironment panorama wiring', () => {
    * frees it straight after. With `renders` false the render throws.
    */
   async function build(panorama: THREE.Texture, renders = true) {
-    const { renderer } = await renderTargetTestRenderer();
+    const { renderer } = await testRenderer();
     let sampled: THREE.Texture | null = null;
     vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation((_renderer, scene) => {
       const mesh = scene.children[0] as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;

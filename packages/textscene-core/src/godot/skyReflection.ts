@@ -50,8 +50,8 @@ const WORKGROUP_SAMPLES = 64;
 export interface SkyOctmapLayout {
   /** The width of each roughness layer's octmap, padding included. */
   size: number;
-  /** The padding on each side, in UV. */
-  padding: number;
+  /** The width inside the padding, in UV: `oct_inc.glsl`'s `border_size`. */
+  borderSize: number;
   /** The width of each mip of the half-size radiance copy the roughness filter reads. */
   downsampledSizes: number[];
 }
@@ -67,7 +67,7 @@ export function skyOctmapLayout(radianceSize: number): SkyOctmapLayout {
   const size = radianceSize * 2 + paddingPixels * 2;
   return {
     size,
-    padding: paddingPixels / size,
+    borderSize: 1 - (paddingPixels * 2) / size,
     downsampledSizes: Array.from({ length: mipmaps - 1 }, (_, mip) => Math.max(1, (size / 2) >> mip)),
   };
 }

@@ -3,7 +3,7 @@ import { FAST_FILTER_COEFFICIENTS } from '../../godot/skyFastFilterCoefficients'
 import { FAST_FILTER_CHAIN_SIZES } from '../../godot/skyReflection';
 import { fastFilter } from './fastFilter';
 
-const tapWeights = () => fastFilter.pass.uniforms.tapWeight!.value as Float32Array;
+const tapWeights = () => fastFilter.pass.uniforms.weight!.value as Float32Array;
 
 describe('fastFilter', () => {
   it("reads Godot's 160-wide chain", () => {

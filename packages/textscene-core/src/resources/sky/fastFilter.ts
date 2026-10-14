@@ -14,18 +14,21 @@ import { LAYER_FILTER_UNIFORMS, type LayerFilter } from './layerFilter.js';
 import { FAST_FILTER_FRAGMENT_SHADER } from './skyLayerShaders.js';
 import { setUniforms, skyPass } from './skyPass.js';
 
-type FastTaps = Record<keyof FastFilterCoefficients, Float32Array>;
-
-/** Written only by `fastTapsOf`, the first time a level bakes. */
-const fastTapsByLevel = new Map<number, FastTaps>();
+/** Each level of Godot's table, its parts flattened as the shader's `vec4` arrays of the same names read them. */
+const tapsByLevel = FAST_FILTER_COEFFICIENTS.map(
+  (level) =>
+    Object.fromEntries(
+      Object.entries(level).map(([part, values]) => [part, Float32Array.from((values as number[][]).flat())])
+    ) as Record<keyof FastFilterCoefficients, Float32Array>
+);
 
 const fastFilterPass = skyPass(FAST_FILTER_FRAGMENT_SHADER, [
   ...LAYER_FILTER_UNIFORMS,
-  'tapX',
-  'tapY',
-  'tapZ',
-  'tapLod',
-  'tapWeight',
+  'frameX',
+  'frameY',
+  'frameZ',
+  'lod',
+  'weight',
 ]);
 
 /** Godot lays out a real-time sky at `REAL_TIME_SIZE` (`sky.h:248`), and its chain is 160 wide. */
@@ -39,31 +42,9 @@ export const fastFilter: LayerFilter = {
    * scene shader's array read clamps to the layers a real-time sky has.
    */
   selectLayer(layer) {
-    const taps = fastTapsOf(Math.min(layer, REAL_TIME_ROUGHNESS_LAYERS - 1) - 1);
-    setUniforms(fastFilterPass, {
-      tapX: taps.frameX,
-      tapY: taps.frameY,
-      tapZ: taps.frameZ,
-      tapLod: taps.lod,
-      tapWeight: taps.weight,
-    });
+    const level = Math.min(layer, REAL_TIME_ROUGHNESS_LAYERS - 1) - 1;
+    const taps = tapsByLevel[level];
+    if (!taps) throw new Error(`expected a level of the fast filter's table, got ${level}`);
+    setUniforms(fastFilterPass, taps);
   },
 };
-
-/** Level `level` of Godot's table, flattened as the shader's `vec4` arrays read it. */
-function fastTapsOf(level: number): FastTaps {
-  let taps = fastTapsByLevel.get(level);
-  if (taps) return taps;
-  const coefficients = FAST_FILTER_COEFFICIENTS[level];
-  if (!coefficients) throw new Error(`expected a level of the fast filter's table, got ${level}`);
-  const { frameX, frameY, frameZ, lod, weight } = coefficients;
-  taps = {
-    frameX: Float32Array.from(frameX.flat()),
-    frameY: Float32Array.from(frameY.flat()),
-    frameZ: Float32Array.from(frameZ.flat()),
-    lod: Float32Array.from(lod.flat()),
-    weight: Float32Array.from(weight.flat()),
-  };
-  fastTapsByLevel.set(level, taps);
-  return taps;
-}

@@ -20,6 +20,10 @@ describe('importanceSampleFilter', () => {
     );
   });
 
+  it('refuses a layer past the last (error case)', () => {
+    expect(() => importanceSampleFilter(256).selectLayer(8)).toThrow('expected a layer from 0 to 7, got 8');
+  });
+
   it('makes one filter per radiance size, and reuses it (edge case)', () => {
     expect(importanceSampleFilter(128)).toBe(importanceSampleFilter(128));
     expect(importanceSampleFilter(128)).not.toBe(importanceSampleFilter(32));

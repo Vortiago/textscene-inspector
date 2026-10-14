@@ -41,13 +41,7 @@ import {
   FAST_FILTER_SUPER_TAPS_PER_FRAME,
   MOST_LAYER_SAMPLES,
 } from '../../godot/skyReflection.js';
-
-/** A triangle in clip space that covers the whole target. */
-export const FULL_TARGET_VERTEX_SHADER = /* glsl */ `
-void main() {
-  gl_Position = vec4(position.xy, 0.0, 1.0);
-}
-`;
+import { glslFloat } from '../environment/glslLiterals.js';
 
 /** `oct_inc.glsl:2-41`. `borderSize` is 1 minus twice the padding in UV. */
 const OCTMAP_GLSL = /* glsl */ `
@@ -192,46 +186,46 @@ void main() {
 export const FAST_FILTER_FRAGMENT_SHADER = /* glsl */ `
 #define SUPER_TAPS_PER_FRAME ${FAST_FILTER_SUPER_TAPS_PER_FRAME}
 #define SUPER_TAPS (SUPER_TAPS_PER_FRAME * 3)
-uniform vec4 tapX[SUPER_TAPS];
-uniform vec4 tapY[SUPER_TAPS];
-uniform vec4 tapZ[SUPER_TAPS];
-uniform vec4 tapLod[SUPER_TAPS];
-uniform vec4 tapWeight[SUPER_TAPS];
+uniform vec4 frameX[SUPER_TAPS];
+uniform vec4 frameY[SUPER_TAPS];
+uniform vec4 frameZ[SUPER_TAPS];
+uniform vec4 lod[SUPER_TAPS];
+uniform vec4 weight[SUPER_TAPS];
 ${LAYER_FILTER_GLSL}
 vec3 sum = vec3(0.0);
 float total = 0.0;
 
-void addTap(vec3 frameX, vec3 frameY, vec3 frameZ, float x, float y, float z, float lod, float weight) {
-  sum += chainAt(frameX * x + frameY * y + frameZ * z, lod) * weight;
-  total += weight;
+void addTap(vec3 axisX, vec3 axisY, vec3 axisZ, float x, float y, float z, float tapLod, float tapWeight) {
+  sum += chainAt(axisX * x + axisY * y + axisZ * z, tapLod) * tapWeight;
+  total += tapWeight;
 }
 
-void addFrame(int axis, vec3 up, vec2 others) {
-  const float lowerBound = ${FAST_FILTER_FRAME_LOWER_BOUND};
+void addFrame(int axis, vec3 up, vec3 normal, vec2 others) {
+  const float lowerBound = ${glslFloat(FAST_FILTER_FRAME_LOWER_BOUND)};
   float frameWeight = (max(others.x, others.y) - lowerBound) / (1.0 - lowerBound);
   if (frameWeight <= 0.0) return;
-  vec3 frameZ = texelDirection();
-  vec3 frameX = normalize(cross(up, frameZ));
-  vec3 frameY = cross(frameZ, frameX);
+  vec3 axisX = normalize(cross(up, normal));
+  vec3 axisY = cross(normal, axisX);
   for (int tap = 0; tap < SUPER_TAPS_PER_FRAME; tap++) {
     int index = axis * SUPER_TAPS_PER_FRAME + tap;
-    vec4 x = tapX[index];
-    vec4 y = tapY[index];
-    vec4 z = tapZ[index];
-    vec4 lod = tapLod[index];
-    vec4 weight = tapWeight[index] * frameWeight;
-    addTap(frameX, frameY, frameZ, x.x, y.x, z.x, lod.x, weight.x);
-    addTap(frameX, frameY, frameZ, x.y, y.y, z.y, lod.y, weight.y);
-    addTap(frameX, frameY, frameZ, x.z, y.z, z.z, lod.z, weight.z);
-    addTap(frameX, frameY, frameZ, x.w, y.w, z.w, lod.w, weight.w);
+    vec4 x = frameX[index];
+    vec4 y = frameY[index];
+    vec4 z = frameZ[index];
+    vec4 tapLods = lod[index];
+    vec4 tapWeights = weight[index] * frameWeight;
+    addTap(axisX, axisY, normal, x.x, y.x, z.x, tapLods.x, tapWeights.x);
+    addTap(axisX, axisY, normal, x.y, y.y, z.y, tapLods.y, tapWeights.y);
+    addTap(axisX, axisY, normal, x.z, y.z, z.z, tapLods.z, tapWeights.z);
+    addTap(axisX, axisY, normal, x.w, y.w, z.w, tapLods.w, tapWeights.w);
   }
 }
 
 void main() {
-  vec3 along = abs(texelDirection());
-  addFrame(0, vec3(1.0, 0.0, 0.0), along.yz);
-  addFrame(1, vec3(0.0, 1.0, 0.0), along.xz);
-  addFrame(2, vec3(0.0, 0.0, 1.0), along.xy);
+  vec3 normal = texelDirection();
+  vec3 along = abs(normal);
+  addFrame(0, vec3(1.0, 0.0, 0.0), normal, along.yz);
+  addFrame(1, vec3(0.0, 1.0, 0.0), normal, along.xz);
+  addFrame(2, vec3(0.0, 0.0, 1.0), normal, along.xy);
   gl_FragColor = vec4(max(vec3(0.0), sum / total), 1.0);
 }
 `;

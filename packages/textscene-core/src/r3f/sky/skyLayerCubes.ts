@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { sharedTexture } from '../sharedTexture.js';
-import { SKY_LAYER_GROUP_NAMES, type SkyLayers } from '../../resources/sky/skyLayers.js';
+import { SKY_LAYER_GROUP_NAMES, byGroup, type SkyLayers } from '../../resources/sky/skyLayers.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 
 /** The uniform every lit material samples each group of layers through, a mip each. */
@@ -26,14 +26,6 @@ export const SKY_CONTRIBUTION_UNIFORM = 'godotSkyContribution';
  * the cube of the sky shown last, or three's black empty cube (`WebGLState.js:952`).
  */
 class SkyLayerSlot extends sharedTexture(THREE.CubeTexture) {}
-
-/** One value per group of layers, each made by `make`. */
-function byGroup<T>(make: (group: keyof SkyLayers) => T): Record<keyof SkyLayers, T> {
-  return Object.fromEntries(SKY_LAYER_GROUP_NAMES.map((group) => [group, make(group)])) as Record<
-    keyof SkyLayers,
-    T
-  >;
-}
 
 /**
  * The slot each group of layers shows in, which every lit material samples. After a dev server

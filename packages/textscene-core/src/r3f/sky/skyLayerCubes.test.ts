@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { SKY_LAYER_GROUPS, SKY_LAYER_GROUP_NAMES, type SkyLayers } from '../../resources/sky/skyLayers';
 import { SkyLayerCubes, skyContribution, skyLayerSlots } from './skyLayerCubes';
-import { boundHandle, renderTargetTestRenderer, testRenderer } from '../../testing/recordingWebGL';
+import { boundHandle, testRenderer } from '../../testing/recordingWebGL';
 
 /** A sky's layer cubes, set up on `renderer` as a bake leaves them. */
 function bakedLayers(renderer: THREE.WebGLRenderer): SkyLayers {
@@ -35,7 +35,7 @@ describe('skyLayerSlots', () => {
 
 describe('SkyLayerCubes', () => {
   it('points every lit material at the cubes of the sky it shows', async () => {
-    const { renderer } = await renderTargetTestRenderer();
+    const { renderer } = await testRenderer();
     const first = new SkyLayerCubes(renderer, bakedLayers(renderer));
     const second = new SkyLayerCubes(renderer, bakedLayers(renderer));
 
@@ -50,7 +50,7 @@ describe('SkyLayerCubes', () => {
   });
 
   it('uploads nothing while two skies take turns', async () => {
-    const { renderer, recording } = await renderTargetTestRenderer();
+    const { renderer, recording } = await testRenderer();
     const skies = [
       new SkyLayerCubes(renderer, bakedLayers(renderer)),
       new SkyLayerCubes(renderer, bakedLayers(renderer)),
@@ -63,7 +63,7 @@ describe('SkyLayerCubes', () => {
   });
 
   it("shows the sky's share of the ambient", async () => {
-    const { renderer } = await renderTargetTestRenderer();
+    const { renderer } = await testRenderer();
 
     new SkyLayerCubes(renderer, bakedLayers(renderer)).show(0.3);
 
@@ -71,7 +71,7 @@ describe('SkyLayerCubes', () => {
   });
 
   it('shows a new share with the cubes it already shows (edge case)', async () => {
-    const { renderer } = await renderTargetTestRenderer();
+    const { renderer } = await testRenderer();
     const sky = new SkyLayerCubes(renderer, bakedLayers(renderer));
     sky.show(1);
 
@@ -81,7 +81,7 @@ describe('SkyLayerCubes', () => {
   });
 
   it('leaves the lit materials sampling none of its cubes when hidden, as they are freed next (error case)', async () => {
-    const { renderer } = await renderTargetTestRenderer();
+    const { renderer } = await testRenderer();
     const sky = new SkyLayerCubes(renderer, bakedLayers(renderer));
     sky.show(1);
 
@@ -91,7 +91,7 @@ describe('SkyLayerCubes', () => {
   });
 
   it('keeps the cubes another sky shows when hidden (edge case)', async () => {
-    const { renderer } = await renderTargetTestRenderer();
+    const { renderer } = await testRenderer();
     const shown = new SkyLayerCubes(renderer, bakedLayers(renderer));
     const hidden = new SkyLayerCubes(renderer, bakedLayers(renderer));
     hidden.show(1);

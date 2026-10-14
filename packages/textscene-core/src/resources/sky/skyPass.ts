@@ -4,10 +4,10 @@
  */
 
 import * as THREE from 'three';
-import { FULL_TARGET_VERTEX_SHADER } from './skyLayerShaders.js';
+import { FULL_SCREEN_VERTEX } from '../../r3f/lighting2d/fullScreenQuad.js';
 
-/** The one triangle every pass draws over its target. */
-const passMesh = new THREE.Mesh(fullTargetTriangle());
+/** The one quad every pass draws over its target. */
+const passMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1));
 passMesh.frustumCulled = false;
 const passScene = new THREE.Scene().add(passMesh);
 const passCamera = new THREE.Camera();
@@ -15,7 +15,7 @@ const passCamera = new THREE.Camera();
 /** A pass for `fragmentShader`, its uniforms `uniformNames`, each empty until the bake sets it. */
 export function skyPass(fragmentShader: string, uniformNames: readonly string[]): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    vertexShader: FULL_TARGET_VERTEX_SHADER,
+    vertexShader: FULL_SCREEN_VERTEX,
     fragmentShader,
     uniforms: Object.fromEntries(uniformNames.map((name) => [name, { value: null }])),
     depthTest: false,
@@ -49,10 +49,4 @@ export function draw(
   passMesh.material = pass;
   gl.setRenderTarget(target, face, mip);
   gl.render(passScene, passCamera);
-}
-
-function fullTargetTriangle(): THREE.BufferGeometry {
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3));
-  return geometry;
 }
