@@ -1,85 +1,53 @@
-/**
- * Godot's GGX importance-sampled filter, which bakes the layers of every sky but a real-time one: the
- * cosine-weighted mean of the half-size chain around each direction (`octmap_roughness.glsl`).
- */
+/** GGX importance sampling of a sky's layers (`octmap_roughness.glsl:62-84`), Godot's default filter. */
 
-import { vec3ToOctWithBorder, type OctDirection } from '../../godot/octmap.js';
 import { layerSamples, skyOctmapLayout, type SkyOctmapLayout } from '../../godot/skyReflection.js';
-import { frameAround } from './frame.js';
-import type { LayerFilter } from './layerFilter.js';
-import { addTrilinear, type Octmap } from './octmapImage.js';
+import { LAYER_FILTER_UNIFORMS, type LayerFilter } from './layerFilter.js';
+import { IMPORTANCE_SAMPLE_FRAGMENT_SHADER } from './skyLayerShaders.js';
+import { setUniforms, skyPass } from './skyPass.js';
 
-const { abs } = Math;
+interface PackedSamples {
+  /** Each sample's direction, then the mip it reads. */
+  readonly samples: Float32Array;
+  readonly count: number;
+}
 
-const UP_Y: OctDirection = [0, 1, 0];
-const UP_Z: OctDirection = [0, 0, 1];
-
-/** Each sample's x, y and z in the texel's frame, then the mip it reads. */
-const SAMPLE_STRIDE = 4;
-
-/** Scratch, written only by `texel`: the frame's axes, and the UV of the sample it reads next. */
-const tangent = new Float64Array(3);
-const bitangent = new Float64Array(3);
-const sampleUv = new Float64Array(2);
+/** One pass for every radiance size, as each filter would otherwise compile it again. */
+const importanceSamplePass = skyPass(IMPORTANCE_SAMPLE_FRAGMENT_SHADER, [
+  ...LAYER_FILTER_UNIFORMS,
+  'samples',
+  'sampleCount',
+]);
 
 /** Written only by `importanceSampleFilter`, on the first sky of a radiance size. */
-const filtersBySize = new Map<number, ImportanceSampleFilter>();
+const filtersBySize = new Map<number, LayerFilter>();
 
 /** The filter for a sky whose radiance is `radianceSize` wide, made once per size. */
 export function importanceSampleFilter(radianceSize: number): LayerFilter {
   let filter = filtersBySize.get(radianceSize);
-  if (!filter) {
-    filter = new ImportanceSampleFilter(skyOctmapLayout(radianceSize));
-    filtersBySize.set(radianceSize, filter);
-  }
+  if (filter) return filter;
+  const layout = skyOctmapLayout(radianceSize);
+  /** Written only by `selectLayer`, the first time a layer bakes. They hold for every sky of the size. */
+  const samplesByLayer = new Map<number, PackedSamples>();
+  filter = {
+    layout,
+    chainSizes: layout.downsampledSizes,
+    pass: importanceSamplePass,
+    selectLayer(layer) {
+      let packed = samplesByLayer.get(layer);
+      if (!packed) {
+        packed = packedSamples(layout, layer);
+        samplesByLayer.set(layer, packed);
+      }
+      setUniforms(importanceSamplePass, { samples: packed.samples, sampleCount: packed.count });
+    },
+  };
+  filtersBySize.set(radianceSize, filter);
   return filter;
 }
 
-class ImportanceSampleFilter implements LayerFilter {
-  /** Written only by `samplesOf`, the first time a layer bakes. They hold for every sky of the size. */
-  private readonly samplesByLayer = new Map<number, Float64Array>();
-
-  constructor(readonly layout: SkyOctmapLayout) {}
-
-  get chainSizes(): readonly number[] {
-    return this.layout.downsampledSizes;
-  }
-
-  /**
-   * The layer's samples turned into the frame Godot builds around `normal`, read from the mips and
-   * weighed by their cosine (`octmap_roughness.glsl:62-84`).
-   */
-  texel(normal: OctDirection, mips: readonly Octmap[], layer: number, out: Float32Array): void {
-    frameAround(abs(normal[1]) < 0.99999 ? UP_Y : UP_Z, normal, tangent, bitangent);
-    const samples = this.samplesOf(layer);
-    const { padding } = this.layout;
-    out.fill(0);
-    let total = 0;
-    for (let at = 0; at < samples.length; at += SAMPLE_STRIDE) {
-      const x = samples[at]!;
-      const y = samples[at + 1]!;
-      const z = samples[at + 2]!;
-      vec3ToOctWithBorder(
-        tangent[0]! * x + bitangent[0]! * y + normal[0] * z,
-        tangent[1]! * x + bitangent[1]! * y + normal[1] * z,
-        tangent[2]! * x + bitangent[2]! * y + normal[2] * z,
-        padding,
-        sampleUv
-      );
-      addTrilinear(mips, sampleUv[0]!, sampleUv[1]!, samples[at + 3]!, z, out);
-      total += z;
-    }
-    for (let channel = 0; channel < 3; channel += 1) out[channel] = out[channel]! / total;
-  }
-
-  /** A flat array, not `LayerSample` objects: the bake reads it about 20 million times. */
-  private samplesOf(layer: number): Float64Array {
-    let samples = this.samplesByLayer.get(layer);
-    if (samples) return samples;
-    const objects = layerSamples(this.layout, layer);
-    samples = new Float64Array(objects.length * SAMPLE_STRIDE);
-    objects.forEach(({ direction, lod }, index) => samples!.set([...direction, lod], index * SAMPLE_STRIDE));
-    this.samplesByLayer.set(layer, samples);
-    return samples;
-  }
+function packedSamples(layout: SkyOctmapLayout, layer: number): PackedSamples {
+  const objects = layerSamples(layout, layer);
+  const samples = new Float32Array(objects.length * 4);
+  objects.forEach(({ direction, lod }, index) => samples.set([...direction, lod], index * 4));
+  return { samples, count: objects.length };
 }

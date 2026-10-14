@@ -10,12 +10,11 @@ import { installLitUniform } from './shaderPatch/litUniform.js';
 import { glslFloat } from '../resources/environment/glslLiterals.js';
 import {
   SKY_CONTRIBUTION_UNIFORM,
-  SKY_LAYER_GROUP_NAMES,
   SKY_LAYER_UNIFORMS,
   skyContribution,
   skyLayerSlots,
 } from './sky/skyLayerCubes.js';
-import { SKY_LAYER_GROUPS, type SkyLayerGroup } from '../resources/sky/skyLayers.js';
+import { SKY_LAYER_GROUPS, SKY_LAYER_GROUP_NAMES, type SkyLayerGroup } from '../resources/sky/skyLayers.js';
 
 type SkyChunk = 'lights_fragment_maps' | 'envmap_physical_pars_fragment';
 

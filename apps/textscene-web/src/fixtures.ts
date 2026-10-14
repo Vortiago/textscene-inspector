@@ -1433,6 +1433,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sky Radiance Size 32",
+    "file": "unit-sky-radiance-size-32.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sky Realtime",
     "file": "unit-sky-realtime.tscn",
     "category": "Other"

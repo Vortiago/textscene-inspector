@@ -74,6 +74,7 @@ export function SkyLayer({
       internalResources
     ).texture ?? null;
   const lightsKey = useSkyLightsKey(scene);
+  const contextRestores = useContextRestores(gl);
   const { x: rotationX, y: rotationY, z: rotationZ } = rotation;
   // A ref, not an effect dependency: a new share needs no new bake.
   const contributionRef = useRef(contribution);
@@ -81,7 +82,8 @@ export function SkyLayer({
 
   useEffect(() => {
     // No frame has read the lights yet. A bake now would be replaced before it
-    // is seen, and each bake costs a six-face cube render and a PMREM prefilter.
+    // is seen, and each bake costs a six-face cube render, the layer passes and a
+    // PMREM prefilter.
     if (lightsKey === null) return undefined;
 
     const built = buildSkyEnvironment(gl, {
@@ -122,7 +124,7 @@ export function SkyLayer({
         scene.backgroundIntensity = previousBackgroundIntensity;
         scene.backgroundRotation.copy(previousBackgroundRotation);
       }
-      layerCubes.dispose();
+      layerCubes.hide();
       built.dispose();
     };
   }, [
@@ -134,12 +136,27 @@ export function SkyLayer({
     asBackground,
     backgroundIntensity,
     lightsKey,
+    contextRestores,
     rotationX,
     rotationY,
     rotationZ,
   ]);
 
   return null;
+}
+
+/**
+ * Counts the contexts `gl` restores. A lost context loses every texture the bake drew, and the bake
+ * keeps nothing on the CPU to upload again, so the sky bakes again on each.
+ */
+function useContextRestores(gl: THREE.WebGLRenderer): number {
+  const [restores, setRestores] = useState(0);
+  useEffect(() => {
+    const restored = () => setRestores((count) => count + 1);
+    gl.domElement.addEventListener('webglcontextrestored', restored);
+    return () => gl.domElement.removeEventListener('webglcontextrestored', restored);
+  }, [gl]);
+  return restores;
 }
 
 /**

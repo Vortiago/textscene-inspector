@@ -23,6 +23,11 @@ An equirectangular image wrapped onto the sky. The coloured calibration bands an
 
 An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the sphere and ground it lights match Godot's.
 
+## Radiance size 32
+<!-- compare: image=unit-sky-radiance-size-32 status=done fixture=unit-sky-radiance-size-32.tscn -->
+
+A sky with `radiance_size = 0` bakes from a radiance 32 texels wide, the smallest Godot allows. The mirror sphere reflects a coarse sky, and the rough sphere reads layers filtered from a 32-wide octmap and its short downsample chain. Both spheres and the ground they light match Godot's.
+
 ## Real-Time process mode
 <!-- compare: image=unit-sky-realtime status=done fixture=unit-sky-realtime.tscn -->
 

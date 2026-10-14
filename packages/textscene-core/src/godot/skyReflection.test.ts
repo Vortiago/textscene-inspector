@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { downsampleTaps, layerSamples, skyOctmapLayout } from './skyReflection';
+import { MOST_LAYER_SAMPLES, layerSamples, skyOctmapLayout } from './skyReflection';
 
 describe('skyOctmapLayout', () => {
   it('pads the default 256 sky to 640 texels with 64 on each side', () => {
@@ -11,25 +11,6 @@ describe('skyOctmapLayout', () => {
 
   it('ends the downsampled chain at 10 texels at the smallest radiance size (edge case)', () => {
     expect(skyOctmapLayout(32).downsampledSizes).toEqual([40, 20, 10]);
-  });
-});
-
-describe('downsampleTaps', () => {
-  it('blends four taps whose weights sum to 1', () => {
-    const taps = downsampleTaps(3, 5, 20, 0.1);
-    expect(taps).toHaveLength(4);
-    expect(taps.reduce((sum, tap) => sum + tap.weight, 0)).toBeCloseTo(1, 10);
-  });
-
-  it('places the taps 0.75 of a source texel either side of the texel centre', () => {
-    const [first, , , last] = downsampleTaps(0, 0, 10, 0.1);
-    expect(first!.u).toBeCloseTo((0.5 - 0.375) / 10, 10);
-    expect(last!.v).toBeCloseTo((0.5 + 0.375) / 10, 10);
-  });
-
-  it('weighs the tap nearest the equator most, as its texel covers the most of the sphere', () => {
-    const [nearCentre, , , farFromCentre] = downsampleTaps(5, 5, 10, 0.1).map((tap) => tap.weight);
-    expect(farFromCentre!).toBeGreaterThan(nearCentre!);
   });
 });
 
@@ -59,5 +40,14 @@ describe('layerSamples', () => {
     expect(smoother).toHaveLength(64);
     expect(mean(smoother, cosine)).toBeGreaterThan(mean(samples, cosine));
     expect(mean(smoother, lod)).toBeLessThan(mean(samples, lod));
+  });
+});
+
+describe('MOST_LAYER_SAMPLES', () => {
+  it("is the roughest layer's sample count, which no layer's survivors exceed", () => {
+    expect(MOST_LAYER_SAMPLES).toBe(128);
+    for (let layer = 1; layer <= 7; layer += 1) {
+      expect(layerSamples(skyOctmapLayout(256), layer).length).toBeLessThanOrEqual(MOST_LAYER_SAMPLES);
+    }
   });
 });

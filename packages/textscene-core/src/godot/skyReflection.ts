@@ -4,8 +4,6 @@
  * Godot's sky ambient reads the last layer (`scene_forward_clustered.glsl:1744-1756`).
  */
 
-import { octToVec3WithBorder, type OctDirection } from './octmap.js';
-
 /** The size each `Sky::RadianceSize` names, by its value (`scene/resources/sky.cpp:37-39`). */
 export const SKY_RADIANCE_SIZES: readonly number[] = [32, 64, 128, 256, 512, 1024, 2048];
 
@@ -30,18 +28,8 @@ export const FAST_FILTER_CHAIN_SIZES: readonly number[] = [160, 80, 40, 20, 10];
  */
 export const FAST_FILTER_FRAME_LOWER_BOUND = 0.57735;
 
-/** Each fast-filter frame's up axis, and the two other axes that weigh it (`octmap_filter.glsl:95-112`). */
-export const FAST_FILTER_FRAMES: readonly { up: OctDirection; others: readonly [number, number] }[] = [
-  { up: [1, 0, 0], others: [1, 2] },
-  { up: [0, 1, 0], others: [0, 2] },
-  { up: [0, 0, 1], others: [0, 1] },
-];
-
 /** NUM_TAPS / 4 with the low-quality table's eight taps a frame (`octmap_filter.glsl:42-46`, `:155`). */
 export const FAST_FILTER_SUPER_TAPS_PER_FRAME = 2;
-
-/** The sub-taps of each super-tap, one per `vec4` lane of the table (`octmap_filter.glsl:62`). */
-export const FAST_FILTER_SUB_TAPS = 4;
 
 /**
  * The default of `rendering/reflections/sky_reflections/roughness_layers`
@@ -84,40 +72,9 @@ export function skyOctmapLayout(radianceSize: number): SkyOctmapLayout {
   };
 }
 
-export interface OctmapTap {
-  u: number;
-  v: number;
-  weight: number;
-}
-
-/**
- * The four bilinear taps `octmap_downsampler.glsl:53-75` blends for texel `x`, `y` of a mip `size`
- * wide, in UV of the mip above. Each weighs half by the octahedral Jacobian and half evenly.
- */
-export function downsampleTaps(x: number, y: number, size: number, padding: number): OctmapTap[] {
-  const borderSize = 1 - padding * 2;
-  const near = (index: number) => ((index * 2 + 1 - 0.75) / size - 1) * 0.5 + 0.5;
-  const far = (index: number) => ((index * 2 + 1 + 0.75) / size - 1) * 0.5 + 0.5;
-  const taps: OctmapTap[] = [
-    tap(near(x), near(y), borderSize),
-    tap(far(x), near(y), borderSize),
-    tap(near(x), far(y), borderSize),
-    tap(far(x), far(y), borderSize),
-  ];
-  const scale = 0.5 / (taps[0]!.weight + taps[1]!.weight + taps[2]!.weight + taps[3]!.weight);
-  for (const each of taps) each.weight = each.weight * scale + 0.125;
-  return taps;
-}
-
-/** A tap at `u`, `v`, weighed by `calcWeight` (`octmap_downsampler.glsl:46-49`) before the blend. */
-function tap(u: number, v: number, borderSize: number): OctmapTap {
-  const [, , z] = octToVec3WithBorder(u, v, borderSize);
-  return { u, v, weight: 1 / (Math.abs(z) + 1) ** 3 };
-}
-
 export interface LayerSample {
   /** The sample's direction in the frame whose +Z is the texel's direction. */
-  direction: OctDirection;
+  direction: readonly [number, number, number];
   /** The mip of the half-size copy it reads. */
   lod: number;
 }
@@ -130,8 +87,7 @@ export interface LayerSample {
  */
 export function layerSamples(layout: SkyOctmapLayout, layer: number): LayerSample[] {
   const roughness = (layer / (SKY_ROUGHNESS_LAYERS_DEFAULT - 1)) ** 2;
-  const scaledSamples = Math.max(Math.floor(SKY_GGX_SAMPLES_DEFAULT * 4 * roughness), 4);
-  const total = Math.max(1, Math.floor(scaledSamples / WORKGROUP_SAMPLES)) * WORKGROUP_SAMPLES;
+  const total = sampleTotal(roughness);
   const roughness4 = roughness ** 4;
   const solidAngleTexel = (4 * Math.PI) / (layout.size * layout.size);
 
@@ -144,7 +100,7 @@ export function layerSamples(layout: SkyOctmapLayout, layer: number): LayerSampl
     // In float32, as the GPU computes it: the sample at the horizon lands just below it.
     const z = f(f(2 * cosTheta) * cosTheta) - 1;
     if (z <= 0) continue;
-    const direction: OctDirection = [
+    const direction: LayerSample['direction'] = [
       2 * cosTheta * sinTheta * Math.cos(phi),
       2 * cosTheta * sinTheta * Math.sin(phi),
       z,
@@ -155,6 +111,18 @@ export function layerSamples(layout: SkyOctmapLayout, layer: number): LayerSampl
   }
   return samples;
 }
+
+/**
+ * The samples the filter takes at `roughness`, rounded up to whole workgroups
+ * (`octmap_roughness.glsl:32-36`), of which only those above the horizon survive.
+ */
+function sampleTotal(roughness: number): number {
+  const scaledSamples = Math.max(Math.floor(SKY_GGX_SAMPLES_DEFAULT * 4 * roughness), 4);
+  return Math.max(1, Math.floor(scaledSamples / WORKGROUP_SAMPLES)) * WORKGROUP_SAMPLES;
+}
+
+/** The most samples any layer takes: the roughest layer's, at roughness 1. */
+export const MOST_LAYER_SAMPLES = sampleTotal(1);
 
 /** `DistributionGGX` (`octmap_roughness_inc.glsl:30-36`). */
 function distributionGGX(cosTheta: number, roughness4: number): number {
