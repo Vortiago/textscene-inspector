@@ -200,7 +200,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
     return false;
   }
 
-  /** The world-to-atlas matrix of `slot`, read by `WebGLLights.js:314`. */
+  /** The world-to-atlas matrix of `slot`, which `sunShadowRows.ts` hands the lookup as rows. */
   getMatrix(slot = 0): THREE.Matrix4 {
     return this.splitMatrices[slot]!;
   }

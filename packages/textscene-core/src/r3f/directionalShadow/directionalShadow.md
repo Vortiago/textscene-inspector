@@ -220,8 +220,9 @@ shades through three parts, whatever its split count:
   the splits where Godot puts them in that share. A slot past the light's last split draws nothing
   and repeats the last split's matrix.
 - `splitShadowChunk.ts`, which replaces three's cascade walk in `shadowmap_pars_fragment` with
-  Godot's split lookup and PCF, and gives every sun four slots. `installShaderPatches` installs it
-  when a canvas is created, before any program compiles.
+  Godot's split lookup and PCF, and gives every sun four slots. It reads each slot's matrix as the
+  three rows `sunShadowRows.ts` writes, in place of three's `mat4` (Fragment uniforms).
+  `installShaderPatches` installs it when a canvas is created, before any program compiles.
 
 `fitDirectionalShadowSplits.ts` holds the maths. It fits one box per split through
 `directionalShadowBoxFitter`, which computes the light's axes and caster reach once. It returns
@@ -338,32 +339,37 @@ moves each light's share and keeps the atlas.
 WebGL 2 guarantees 224 fragment uniform vectors (`MAX_FRAGMENT_UNIFORM_VECTORS`), and ANGLE
 packs a WebGL program's uniforms by the rule of GLSL ES 1.00 Appendix A.7. Every sun shadow
 declares four slots, since the shader finds a light's slots at `shadowIndex * SUN_LIGHT_CASCADES`.
-Each slot takes a matrix (four vectors) and a vec4. With the sun's light, its shadow and its fade, a
-shadowed sun takes about 24 vectors, whatever its split count.
+Each slot takes three vec4 rows of its matrix and a vec4. With the sun's light, its shadow and its
+fade, a shadowed sun takes about 20 vectors, whatever its split count.
 
-The shadow list holds at most eight lights, so a program samples at most eight sun shadows. Each
-lit program's fragment shader was linked again in the visual harness's Chromium, with a vertex
-shader that only declares its inputs. Its active non-sampler uniforms, packed by A.7, give the
-highest of the lit programs each scene compiles:
+three declares each slot's matrix as a `mat4`, which takes four vectors. The fourth row of every
+slot matrix is (0, 0, 0, 1): it is a bias times an orthographic projection times a view. So the
+patch declares three vec4 rows per slot in its place, and `sunShadowRows.ts` writes them from the
+slot matrices after each shadow pass. That saves four vectors per sun.
+
+The shadow list holds at most eight lights, so a program samples at most eight sun shadows.
+`node scripts/uniform-vectors/measure.mjs` measures each case in the visual harness's Chromium. It
+uploads the scene, links each lit program's fragment shader again with a vertex shader that only
+declares its outputs, and packs its active non-sampler uniforms by A.7, as ANGLE's
+`VariablePacker` does. It prints the highest of the lit programs each scene compiles:
 
 | Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with five maps, clearcoat, a sky and fog |
 | ------------- | ---------------------- | --------------------------------------------------------------- |
-| 1             | 35                     | 64                                                              |
-| 8             | 207                    | 235                                                             |
-| 9             | 207                    | 235                                                             |
-| 1, soft       | 38                     | 66                                                              |
-| 8, soft       | 224                    | 251                                                             |
+| 1             | 33                     | 59                                                              |
+| 8             | 173                    | 199                                                             |
+| 9             | 173                    | 199                                                             |
+| 1, soft       | 35                     | 61                                                              |
+| 8, soft       | 189                    | 215                                                             |
 
 A scene without a light draws the preview sun, so it counts as one sun. The ninth sun leaves the
-shadow list. Eight suns on the physical material exceed the 224 vectors WebGL 2 guarantees, so a GPU
-that reports only 224 fails to link it. The harness's SwiftShader reports 4096.
+shadow list. Every case fits the 224 vectors WebGL 2 guarantees. The harness's SwiftShader
+reports 4096.
 
 A sun with one or two splits costs the same as one with four. A program compiled with the soft
 shadow's define adds two vec4 per sun shadow: the direction towards the light with the angle, and
-the four slots' range starts. The slot matrices give the box sizes. The rows marked soft have the
-define. A slot count that varied by scene
-would need a define three's program key does not hold (`WebGLPrograms.js:476-483`), so a material would
-reuse a program compiled for another count.
+the four slots' range starts. The slot rows give the box sizes. The rows marked soft have the
+define. A slot count that varied by scene would need a define three's program key does not hold
+(`WebGLPrograms.js:476-483`), so a material would reuse a program compiled for another count.
 
 ## Where it differs from Godot
 

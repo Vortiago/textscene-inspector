@@ -3,7 +3,7 @@
  * (`WebGLRenderer.js:1737-1752`), so the pass runs three's pass, then Godot's copy of each omni cube
  * into its two paraboloids (`render_forward_clustered.cpp:2722-2738`), then each spot light and split
  * sun, then each area light's paraboloid (`atlasDepthPass.ts`), then each reader of the maps, and
- * last records the framebuffer height.
+ * last writes the sun shadow rows and records the framebuffer height.
  */
 
 import * as THREE from 'three';
@@ -18,6 +18,7 @@ import {
 } from './positionalShadow/atlasDepthPass.js';
 import { DirectionalSplitShadow } from './directionalShadow/splitShadow.js';
 import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
+import { writeSunShadowRows } from './directionalShadow/sunShadowRows.js';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
 import { drawOffscreen } from './offscreen.js';
 
@@ -82,7 +83,8 @@ function readersOf(renderer: THREE.WebGLRenderer): Set<ShadowMapReader> {
     drawProjectedShadows(threePass, projected, scene, camera);
     drawAreaShadows(threePass, areas, scene, camera);
     for (const read of readers) read(scene, camera);
-    // Last: each copy and each reader's render records its own target's height.
+    // Last: each copy and each reader's render writes its own suns' rows and target's height.
+    writeSunShadowRows(lights);
     writeFramebufferHeight(renderer);
   };
   return readers;
