@@ -1,26 +1,21 @@
-/**
- * ReflectionProbe registration: parsed and validated, not rendered. The slice
- * registers a base component under `renderIntent: 'pending'`, so the badge
- * reads a gap while `visible` and the workspace split still behave.
- */
+/** ReflectionProbe registration: its own parser, and a component that draws. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { rendersOwnVisual } from '../../../r3f/nodeSupport';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseReflectionProbe } from './parser';
+import { ReflectionProbe } from './Component';
 import './index';
 import './index.r3f';
 
 describe('ReflectionProbe registration', () => {
-  it('registers the parseNode3D parse it reuses', () => {
-    const registration = nodeRegistry.getRegistration('ReflectionProbe');
-    expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode3D);
+  it('registers its own parser', () => {
+    expect(nodeRegistry.getRegistration('ReflectionProbe')!.parser).toBe(parseReflectionProbe);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('ReflectionProbe')).toBe('pending');
-    expect(rendersOwnVisual('ReflectionProbe')).toBe('not-implemented');
+  it('registers its component as one that draws', () => {
+    expect(nodeComponentRegistry.get('ReflectionProbe')).toBe(ReflectionProbe);
+    expect(rendersOwnVisual('ReflectionProbe')).toBe('draws');
   });
 });

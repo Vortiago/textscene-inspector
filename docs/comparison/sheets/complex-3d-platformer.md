@@ -27,5 +27,3 @@ Framing, terrain, props and shadow shapes match.
 
 - **Shader missing** The previewer does not run the custom `sky` shader over a
   `CompressedCubemap`, so smooth metal reflects black and the coins read grey, not gold.
-- **Resource gap** The ReflectionProbe nodes have no effect, so shadowed ground and recesses
-  take the flat ambient, not the darker probe captures Godot uses.

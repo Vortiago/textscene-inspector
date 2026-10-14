@@ -112,20 +112,19 @@ describe('installGodotClearcoat', () => {
     expect(THREE.ShaderChunk.lights_physical_pars_fragment).not.toContain('clearcoatSpecularIndirect +=');
   });
 
-  it("dims the ambient light by the coat's Fresnel", () => {
+  it("dims the ambient light by the coat's Fresnel before any light reads it", () => {
     installWithItsPrerequisites();
-    const end = THREE.ShaderChunk.lights_fragment_end;
+    const beforeIndirect = THREE.ShaderChunk.lights_fragment_end.split('RE_IndirectDiffuse(')[0];
 
-    expect(end.split('RE_IndirectSpecular(')[1]).toContain(
-      'reflectedLight.indirectDiffuse *= 1.0 - godotCoatFresnel;'
-    );
+    expect(beforeIndirect).toContain('irradiance *= 1.0 - godotCoatFresnel;');
+    expect(beforeIndirect).toContain('iblIrradiance *= 1.0 - godotCoatFresnel;');
   });
 
   it('dims nothing without a sky reflection, as Godot does (edge case)', () => {
     installWithItsPrerequisites();
     const end = THREE.ShaderChunk.lights_fragment_end;
 
-    expect(end.match(/#if defined\( USE_CLEARCOAT \) && defined\( USE_ENVMAP \)/g)).toHaveLength(2);
+    expect(end.match(/#if defined\( USE_CLEARCOAT \) && defined\( USE_ENVMAP \)/g)).toHaveLength(1);
   });
 
   it("adds the coat's lobe and dims no light beneath it in the layering", () => {

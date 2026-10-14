@@ -5,6 +5,7 @@
  */
 
 import { useMemo, useRef } from 'react';
+import { visualLayersUserData } from '../../../../r3f/visualLayers';
 import * as THREE from 'three';
 import type { DirectionalLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
@@ -61,8 +62,9 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
       ...fogLightUserData({ energy: fogEnergy }),
       ...lightSpecularUserData(specularAmount),
       ...lightSizeUserData(size),
+      ...visualLayersUserData(properties.layers),
     }),
-    [skyMode, skyEnergy, shadow, fogEnergy, specularAmount, size]
+    [skyMode, skyEnergy, shadow, fogEnergy, specularAmount, size, properties.layers]
   );
 
   return (

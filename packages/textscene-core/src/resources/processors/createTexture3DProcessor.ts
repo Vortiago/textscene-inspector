@@ -36,7 +36,8 @@ export function createTexture3DProcessor(
     fileEventBus,
     eventBus,
     resourceType: 'texture3d',
-    shouldProcess: (path, data) => isTexturePath(path) && data instanceof ArrayBuffer,
+    readsFile: isTexturePath,
+    shouldProcess: (_path, data) => data instanceof ArrayBuffer,
     process: async (path, data) => {
       const slices = await slicesOf(path);
       const image = await decodeImagePixels(

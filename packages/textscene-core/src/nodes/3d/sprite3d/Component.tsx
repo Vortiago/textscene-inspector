@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useMemo, useRef } from 'react';
+import { visualLayersUserData } from '../../../r3f/visualLayers';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
@@ -243,6 +244,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         onAfterRender={shadow.onAfterRender}
         onBeforeShadow={shadow.onBeforeShadow}
         onAfterShadow={shadow.onAfterShadow}
+        userData={visualLayersUserData(properties.layers)}
       >
         <primitive object={geometry} attach="geometry" />
         <FadedMaterials>{material}</FadedMaterials>

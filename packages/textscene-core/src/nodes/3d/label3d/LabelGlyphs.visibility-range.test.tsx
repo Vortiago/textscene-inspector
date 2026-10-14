@@ -4,6 +4,7 @@
  * them, so the distance runs through the group's parent. Driven by one scene render from 11 units.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { visualLayersOf } from '../../../r3f/visualLayers';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useRef } from 'react';
@@ -124,5 +125,11 @@ describe('<LabelGlyphs> shadow casting', () => {
   it('still casts into an omni or spot shadow past its end (edge case)', async () => {
     const culled = props({ end: 10 }, { alpha_cut: AlphaCutMode.DISCARD });
     expect(castsFrom(textMesh(await renderFrames(culled)))).toBe(true);
+  });
+});
+
+describe('<LabelGlyphs> render layers', () => {
+  it("carries the label's layers on its glyphs, which a ReflectionProbe cull_mask tests", async () => {
+    expect(visualLayersOf(textMesh(await renderFrames(props({}, { layers: 2 }))))).toBe(2);
   });
 });

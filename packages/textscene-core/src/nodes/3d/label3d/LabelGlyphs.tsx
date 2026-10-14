@@ -154,6 +154,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   textureFilter={textureFilter}
                   blends={blends}
                   shadow={surfaceShadow}
+                  layers={properties.layers}
                   frameExcluded
                 />
               </group>
@@ -169,6 +170,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                 textureFilter={textureFilter}
                 blends={blends}
                 shadow={surfaceShadow}
+                layers={properties.layers}
                 frameExcluded
               />
             </group>

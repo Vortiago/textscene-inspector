@@ -1,14 +1,12 @@
 /**
- * Godot's 32-bit `VisualInstance3D.layers` mask on the THREE object graph. A decal
- * draws on an instance only when `decal.cull_mask & instance.layer_mask` is non-zero
- * (`scene_forward_clustered.glsl`, `renderer_scene_cull.cpp`). The mask is per
- * instance, not inherited, so a reader looks at one object, never its ancestors.
+ * Godot's 32-bit `VisualInstance3D.layers` mask on the THREE object graph. A decal draws on an
+ * instance, and a reflection probe captures or reflects on it, only when its mask shares a bit
+ * with the instance's (`scene_forward_clustered.glsl`, `renderer_scene_cull.cpp`). The mask is
+ * per instance, not inherited, so a reader looks at one object, never its ancestors.
  */
 
 import type * as THREE from 'three';
-
-/** `VisualInstance3D::layers` default: layer 1 only (`visual_instance_3d.h`). */
-export const GODOT_DEFAULT_VISUAL_LAYERS = 1;
+import { GODOT_DEFAULT_VISUAL_LAYERS } from '../godot/visualLayers.js';
 
 /**
  * The `userData` key the mask travels under, not `THREE.Object3D.layers`: that is
@@ -19,11 +17,10 @@ const VISUAL_LAYERS_KEY = 'godotLayers';
 
 /**
  * The `userData` object a visual-instance component hands R3F, such as
- * `<mesh userData={visualLayersUserData(properties.layers)} />`. Absent `layers`
- * resolves to Godot's default here, so a mesh's tag always states its mask.
+ * `<mesh userData={visualLayersUserData(properties.layers)} />`.
  */
-export function visualLayersUserData(layers?: number): { godotLayers: number } {
-  return { [VISUAL_LAYERS_KEY]: layers ?? GODOT_DEFAULT_VISUAL_LAYERS };
+export function visualLayersUserData(layers: number): { godotLayers: number } {
+  return { [VISUAL_LAYERS_KEY]: layers };
 }
 
 /**
@@ -33,6 +30,11 @@ export function visualLayersUserData(layers?: number): { godotLayers: number } {
 export function visualLayersOf(object: THREE.Object3D): number {
   const layers = object.userData[VISUAL_LAYERS_KEY];
   return typeof layers === 'number' ? layers : GODOT_DEFAULT_VISUAL_LAYERS;
+}
+
+/** Whether `mask` admits `object`: Godot's test, that the mask and the instance's layers share a bit. */
+export function isInMask(object: THREE.Object3D, mask: number): boolean {
+  return (mask & visualLayersOf(object)) !== 0;
 }
 
 /** Sets the mask of one object built outside JSX, such as a GLB's mesh. */

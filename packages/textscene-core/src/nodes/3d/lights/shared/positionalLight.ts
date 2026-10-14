@@ -1,6 +1,7 @@
 /** What an omni or spot light draws with: its intensity, shadow opacity and `userData`, faded by distance. */
 
 import { useMemo, type RefObject } from 'react';
+import { visualLayersUserData } from '../../../../r3f/visualLayers';
 import type * as THREE from 'three';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 import { useLightDistanceFade } from './lightDistanceFade';
@@ -44,8 +45,9 @@ export function usePositionalLight(
       ...fogLightUserData({ energy: fogEnergy, spotAngleAttenuation }),
       ...lightSpecularUserData(specularAmount),
       ...lightSizeUserData(size),
+      ...visualLayersUserData(properties.layers),
     }),
-    [shadowUserData, fogEnergy, spotAngleAttenuation, specularAmount, size]
+    [shadowUserData, fogEnergy, spotAngleAttenuation, specularAmount, size, properties.layers]
   );
   return { intensity, shadowOpacity, userData };
 }

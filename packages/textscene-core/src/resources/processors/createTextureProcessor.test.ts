@@ -114,21 +114,21 @@ describe('createTextureProcessor', () => {
     expect(processor.getCached(PNG_PATH)).toBeNull();
   });
 
-  it('leaves a non-image file to another processor', async () => {
+  it('fails a request for a non-image file without decoding it', async () => {
     // The byte bus is shared: every processor sees every arrival, and the gate
-    // is what keeps a GLB out of the image decoder.
-    const glbPath = 'res://models/rock.glb';
-    const { processor, loaded, failed } = harness({ [glbPath]: bytes() });
+    // is what keeps a GLB, or a Radiance `.hdr`, out of the image decoder.
+    const hdrPath = 'res://backgrounds/sky.hdr';
+    const { processor, loaded, failed } = harness({ [hdrPath]: bytes() });
 
-    processor.request(glbPath);
+    processor.request(hdrPath);
     await flush();
 
     expect(decode).not.toHaveBeenCalled();
     expect(loaded).not.toHaveBeenCalled();
-    expect(failed).not.toHaveBeenCalled();
+    expect(failed).toHaveBeenCalledWith(hdrPath, expect.any(Error));
   });
 
-  it('leaves an image path whose bytes came back as text alone', async () => {
+  it('fails an image path whose bytes came back as text, without decoding them', async () => {
     // A host that answers a missing file with an HTML 404 body: text is not
     // something the image decoder can be handed.
     const { processor, loaded, failed } = harness({ [PNG_PATH]: '<!doctype html>' });
@@ -138,7 +138,7 @@ describe('createTextureProcessor', () => {
 
     expect(decode).not.toHaveBeenCalled();
     expect(loaded).not.toHaveBeenCalled();
-    expect(failed).not.toHaveBeenCalled();
+    expect(failed).toHaveBeenCalledWith(PNG_PATH, expect.any(Error));
   });
 
   it('disposes the texture when its cache entry is cleared', async () => {

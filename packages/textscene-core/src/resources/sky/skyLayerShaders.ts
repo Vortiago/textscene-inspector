@@ -44,7 +44,7 @@ import {
 import { glslFloat } from '../environment/glslLiterals.js';
 
 /** `oct_inc.glsl:2-41`. `borderSize` is 1 minus twice the padding in UV. */
-const OCTMAP_GLSL = /* glsl */ `
+export const OCTMAP_GLSL = /* glsl */ `
 vec3 octToVec3(vec2 e) {
   vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
   float t = max(-v.z, 0.0);
@@ -120,10 +120,13 @@ void main() {
 }
 `;
 
+/** The `face` that draws a filtered layer into an octmap `faceSize` wide, as a reflection atlas holds it. */
+export const OCTMAP_FACE = -1;
+
 /**
- * What both filters share: the chain they read, and the direction through the centre of the cube
- * texel the fragment writes. A cube's faces are +X, -X, +Y, -Y, +Z, -Z, with `s` along a texel row
- * and `t` across the rows from the first row up (OpenGL ES 3.0 table 3.21).
+ * What both filters share: the chain they read, and the direction through the centre of the texel
+ * the fragment writes. A cube's faces are +X, -X, +Y, -Y, +Z, -Z, with `s` along a texel row and `t`
+ * across the rows from the first row up (OpenGL ES 3.0 table 3.21). `OCTMAP_FACE` writes an octmap.
  */
 const LAYER_FILTER_GLSL = /* glsl */ `
 uniform sampler2D chain;
@@ -133,6 +136,7 @@ uniform int face;
 uniform float faceSize;
 ${OCTMAP_GLSL}
 vec3 texelDirection() {
+  if (face == ${OCTMAP_FACE}) return octToVec3WithBorder(gl_FragCoord.xy / faceSize, borderSize);
   vec2 st = gl_FragCoord.xy * 2.0 / faceSize - 1.0;
   float s = st.x;
   float t = st.y;

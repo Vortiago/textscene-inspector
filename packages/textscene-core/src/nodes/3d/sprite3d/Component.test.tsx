@@ -5,6 +5,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
+import { visualLayersOf } from '../../../r3f/visualLayers';
 import * as THREE from 'three';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
@@ -552,5 +553,16 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
 
       expect(sourceDispose).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('<Sprite3D> render layers', () => {
+  it("carries the node's layers on its quad, which a ReflectionProbe's masks test", async () => {
+    const renderer = await render({
+      node: makeNode({ texture: 'ExtResource("1_tex")', layers: 2 }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeTexture(64, 64) }],
+    });
+    expect(visualLayersOf(findMesh(renderer.scene))).toBe(2);
   });
 });

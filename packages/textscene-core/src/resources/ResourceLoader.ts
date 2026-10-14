@@ -112,8 +112,8 @@ export class ResourceLoader {
   /**
    * Await a peer processor's resource for `dependent`: answer from cache, else request
    * it and wait on that processor's bus slot. Rejects with the peer's failure. Bounded,
-   * far above any real fetch: a processor whose `shouldProcess` refuses the bytes settles
-   * nothing, and an unbounded await would leave a GLB that never appears nor reports missing.
+   * far above any real fetch: an unbounded await would leave a GLB whose peer never settles
+   * neither appearing nor reporting missing.
    */
   private async peerRequire<T>(
     dependent: Dependent,

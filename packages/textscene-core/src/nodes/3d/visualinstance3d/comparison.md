@@ -27,4 +27,4 @@ Strict parsing format-checks these `VisualInstance3D` properties, plus 17 inheri
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-A non-numeric or negative `layers` fails strict validation. The lenient parser (`parseNode3D`) never reads `layers`, so a bad value is ignored rather than substituted or reported.
+A non-numeric or negative `layers` fails strict validation. The lenient parser reads `layers` on top of the Node3D fields. A malformed value keeps Godot's default, layer 1, with no warning. A Decal's `cull_mask` and a ReflectionProbe's `cull_mask` and `reflection_mask` test it.

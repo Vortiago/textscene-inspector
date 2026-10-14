@@ -3,9 +3,16 @@
  * so a `real_t` field, and every Vector, Rect2 and Transform component, holds single precision.
  */
 
+import type { Xyz } from './xyz.js';
+
 /** The value a `real_t` field holds after `value` is assigned to it. */
 export function storedReal(value: number): number {
   return Math.fround(value);
+}
+
+/** The vector a `Vector3` field holds after `value` is assigned to it. */
+export function storedXyz(value: Xyz): Xyz {
+  return { x: storedReal(value.x), y: storedReal(value.y), z: storedReal(value.z) };
 }
 
 /** Single precision needs at most nine significant digits to read back unchanged. */
