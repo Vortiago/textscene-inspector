@@ -1,0 +1,44 @@
+; The normalize scene of unit-area-light-normalize with a red-to-blue GradientTexture2D on the 1×1
+; panel, for the one variable no other golden moves: area_texture colouring the light. No other
+; scene sets area_texture, so every other area light draws its flat light_color. The texture's
+; prefiltered mips colour the plate by distance, and the strip stays untextured beside it.
+[gd_scene load_steps=5 format=3 uid="uid://unitarealighttex"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_plate"]
+size = Vector2(2, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_plate"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 1.0
+
+[sub_resource type="Gradient" id="Gradient_panel"]
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_panel"]
+gradient = SubResource("Gradient_panel")
+
+[node name="AreaTextureRoot" type="Node3D"]
+
+[node name="LeftPlate" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+mesh = SubResource("PlaneMesh_plate")
+surface_material_override/0 = SubResource("StandardMaterial3D_plate")
+
+[node name="RightPlate" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+mesh = SubResource("PlaneMesh_plate")
+surface_material_override/0 = SubResource("StandardMaterial3D_plate")
+
+[node name="SunOff" type="DirectionalLight3D" parent="."]
+visible = false
+
+[node name="UnitPanel" type="AreaLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, -1.5, 1.2, 0)
+light_energy = 1.0
+area_size = Vector2(1, 1)
+area_texture = SubResource("GradientTexture2D_panel")
+
+[node name="WideStrip" type="AreaLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 1.5, 1.2, 0)
+light_energy = 1.0
+area_size = Vector2(4, 0.05)
