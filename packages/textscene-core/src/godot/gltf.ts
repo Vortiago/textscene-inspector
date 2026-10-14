@@ -37,8 +37,27 @@ export function isGltfJsonObject(value: unknown): value is GltfJsonObject {
 /** `TRIANGLES`, the mode a glTF primitive without one has. */
 export const GLTF_MODE_TRIANGLES = 4;
 
-/** `TRIANGLE_FAN`, which Godot imports as a triangle list (`gltf_document.cpp:1462`). */
+/**
+ * `TRIANGLE_FAN`, whose indices Godot reads as a triangle list (`gltf_document.cpp:1462`): it
+ * swaps each group of three (`:1486-1494`), or numbers the vertices so without indices (`:1700-1714`).
+ */
 export const GLTF_MODE_TRIANGLE_FAN = 6;
+
+/**
+ * The primitives of a glTF mesh, by index, that Godot's importer keeps as surfaces. The first
+ * primitive's targets alone add blend shapes (`gltf_document.cpp:1784-1799`), and
+ * `ImporterMesh::add_surface` refuses a surface with another target count (`importer_mesh.cpp:68`).
+ */
+export function godotSurfacePrimitives(primitives: readonly GltfJsonObject[]): number[] {
+  const blendShapes = targetCount(primitives[0]);
+  return primitives.flatMap((primitive, index) => (targetCount(primitive) === blendShapes ? [index] : []));
+}
+
+/** The morph targets of `primitive`: none for a missing or non-array `targets`. */
+export function targetCount(primitive: GltfJsonObject | undefined): number {
+  const targets = primitive?.['targets'];
+  return Array.isArray(targets) ? targets.length : 0;
+}
 
 /** The entries of a glTF array property: an entry that is not an object reads as empty, and a non-array as none. */
 export function gltfObjects(value: unknown): GltfJsonObject[] {

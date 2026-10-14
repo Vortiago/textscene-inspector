@@ -6,8 +6,15 @@
 
 import type * as THREE from 'three';
 import type { GLTF, GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
-import { GLTF_MODE_TRIANGLE_FAN, GLTF_MODE_TRIANGLES, gltfObjects } from '../../../../godot/gltf';
-import { gltfMeshNames, type GltfNamingOptions } from '../../../../godot/gltfNodeNames';
+import {
+  GLTF_MODE_TRIANGLE_FAN,
+  GLTF_MODE_TRIANGLES,
+  godotSurfacePrimitives,
+  gltfObjects,
+  targetCount,
+  type GltfJsonObject,
+} from '../../../../godot/gltf';
+import { meshSurfaces } from '../godotPrimitives';
 import {
   IDENTITY_BASIS,
   gltfNodeBasis,
@@ -33,32 +40,43 @@ export interface LightmapUvImport {
   path: string;
 }
 
-/** Gives each mesh under `root` that Godot unwraps its cached UV2. `gltf` is the loaded file. */
+/**
+ * Gives each mesh under `root` that Godot unwraps its cached UV2. `gltf` is the loaded file, and
+ * `meshIds` holds each glTF mesh's import id.
+ */
 export async function applyLightmapUv(
   gltf: GLTF,
   root: THREE.Object3D,
   lightmapUv: LightmapUvImport,
-  naming: GltfNamingOptions
+  meshIds: readonly string[]
 ): Promise<void> {
   const entries = readEntries(lightmapUv);
-  const meshIds = gltfMeshNames(gltf.parser.json, naming);
-  const rebuiltMeshes = new Map<number, readonly (THREE.BufferGeometry | null)[]>();
+  const rebuiltMeshes = new Map<number, RebuiltPrimitives>();
   for (const [mesh, node] of firstMeshNodes(root, gltf.parser.associations)) {
     const meshId = meshIds[mesh] ?? '';
     if (!lightmapUv.unwrap.unwraps(meshId)) continue;
-    const surfaces = await unwrappableSurfaces(gltf, mesh, meshId, lightmapUv.path);
+    const surfaces = await unwrappableSurfaces(gltf, mesh);
     if (!surfaces) continue;
     const rebuilt = rebuiltSurfaces(
-      surfaces,
+      surfaces.geometries,
       placement(gltf, root, node, lightmapUv.rootScale),
       entries,
       meshId,
       lightmapUv
     );
-    if (rebuilt) rebuiltMeshes.set(mesh, rebuilt);
+    if (rebuilt)
+      rebuiltMeshes.set(mesh, new Map(surfaces.primitives.map((primitive, i) => [primitive, rebuilt[i]!])));
   }
   if (rebuiltMeshes.size > 0) replaceSurfaces(root, gltf.parser.associations, rebuiltMeshes);
 }
+
+function isReadAsList(primitive: GltfJsonObject): boolean {
+  const mode = primitive['mode'] ?? GLTF_MODE_TRIANGLES;
+  return mode === GLTF_MODE_TRIANGLES || mode === GLTF_MODE_TRIANGLE_FAN;
+}
+
+/** Each kept primitive's rebuilt geometry, or null for one the unwrapped mesh drops. */
+type RebuiltPrimitives = ReadonlyMap<number, THREE.BufferGeometry | null>;
 
 /** The cache's entries by hash: none for a missing or unreadable cache. */
 function readEntries({ cache, path }: LightmapUvImport): ReadonlyMap<string, UnwrapCacheEntry> {
@@ -74,8 +92,8 @@ function readEntries({ cache, path }: LightmapUvImport): ReadonlyMap<string, Unw
 /**
  * Each glTF mesh with the first node that holds it, in the importer's depth-first order: a mesh
  * several nodes share is unwrapped once, in the first node's place (`resource_importer_scene.cpp:2616`).
- * The mesh of a `GODOT_single_root` file's root node stays out: Godot 4.6.3 gives it no UV2
- * (measured: no `TEX_UV2` and a zero size hint after an import at Static Lightmaps).
+ * The mesh of a `GODOT_single_root` file's root node stays out: `generate_scene` converts that
+ * root to a `MeshInstance3D` before the importer unwraps (`gltf_document.cpp:7074-7077`).
  */
 function firstMeshNodes(
   root: THREE.Object3D,
@@ -105,38 +123,25 @@ function meshNode(
   return parent && associations.get(parent)?.nodes !== undefined ? parent : null;
 }
 
-/**
- * The geometry of each primitive of glTF mesh `mesh`, or null when Godot does not unwrap it: a
- * mesh with blend shapes (`importer_mesh.cpp:1041`) or a primitive that is not a triangle list
- * (`:1064`). A triangle fan, which Godot reads as a list, is logged: its layout is not reproduced.
- */
-async function unwrappableSurfaces(
-  gltf: GLTF,
-  mesh: number,
-  meshId: string,
-  path: string
-): Promise<THREE.BufferGeometry[] | null> {
-  const primitives = gltfObjects(gltfObjects(gltf.parser.json['meshes'])[mesh]?.['primitives']);
-  if (hasBlendShapes(primitives[0])) return null;
-  const modes = primitives.map((primitive) => primitive['mode'] ?? GLTF_MODE_TRIANGLES);
-  if (modes.includes(GLTF_MODE_TRIANGLE_FAN)) {
-    logger.info(`[GLBProcessor] ${path}: mesh '${meshId}' has a triangle fan, so it keeps the GLB's own UV2`);
-    return null;
-  }
-  if (modes.some((mode) => mode !== GLTF_MODE_TRIANGLES)) return null;
-
-  const object = (await gltf.parser.getDependency('mesh', mesh)) as THREE.Object3D;
-  const drawn = (object as THREE.Mesh).isMesh ? [object] : object.children;
-  return drawn.map((primitive) => (primitive as THREE.Mesh).geometry);
+/** The surfaces Godot's importer keeps of a glTF mesh: each primitive's index and geometry. */
+interface KeptSurfaces {
+  primitives: number[];
+  geometries: THREE.BufferGeometry[];
 }
 
 /**
- * The importer adds a blend shape per target of the first primitive only, so an empty or absent
- * `targets` there gives the mesh none (`gltf_document.cpp:1784-1799`).
+ * The surfaces of glTF mesh `mesh` that Godot unwraps, or null when it unwraps none: a mesh with
+ * blend shapes (`importer_mesh.cpp:1041`) or a primitive that is not read as a triangle list
+ * (`:1064`). A fan is one, as `readFansAsLists` has read it.
  */
-function hasBlendShapes(primitive: Record<string, unknown> | undefined): boolean {
-  const targets = primitive?.['targets'];
-  return Array.isArray(targets) && targets.length > 0;
+async function unwrappableSurfaces(gltf: GLTF, mesh: number): Promise<KeptSurfaces | null> {
+  const primitives = gltfObjects(gltfObjects(gltf.parser.json['meshes'])[mesh]?.['primitives']);
+  if (targetCount(primitives[0]) > 0) return null;
+  if (!primitives.every(isReadAsList)) return null;
+
+  const geometries = await meshSurfaces(gltf, mesh);
+  const kept = godotSurfacePrimitives(primitives);
+  return { primitives: kept, geometries: kept.map((primitive) => geometries.get(primitive)!) };
 }
 
 /**
@@ -205,17 +210,17 @@ function rebuiltSurfaces(
 function replaceSurfaces(
   root: THREE.Object3D,
   associations: ReadonlyMap<unknown, GLTFReference>,
-  rebuiltMeshes: ReadonlyMap<number, readonly (THREE.BufferGeometry | null)[]>
+  rebuiltMeshes: ReadonlyMap<number, RebuiltPrimitives>
 ): void {
   const replaced = new Set<THREE.BufferGeometry>();
   const dropped: THREE.Object3D[] = [];
   root.traverse((object) => {
     const { meshes, primitives } = associations.get(object) ?? {};
     const rebuilt = meshes === undefined ? undefined : rebuiltMeshes.get(meshes);
-    if (!rebuilt || primitives === undefined) return;
+    if (!rebuilt || primitives === undefined || !rebuilt.has(primitives)) return;
     const surface = object as THREE.Mesh;
     replaced.add(surface.geometry);
-    const geometry = rebuilt[primitives];
+    const geometry = rebuilt.get(primitives);
     if (geometry) surface.geometry = geometry;
     else dropped.push(surface);
   });

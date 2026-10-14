@@ -1,5 +1,5 @@
 /**
- * The node names Godot 4.6.3's glTF importer gives a file's nodes: `_assign_node_names`
+ * The node and mesh names Godot 4.6.3's glTF importer gives a file: `_assign_node_names`
  * (`gltf_document.cpp:3968-3996`), the bone names of `_create_skeletons` (`skin_tool.cpp:560-628`)
  * and the parse steps they depend on. A scene's node path into an instanced glTF names these, not
  * the names three's loader gives.
@@ -139,23 +139,18 @@ function unnamedNodeName(node: GltfJsonObject, namingVersion: number): string {
   return 'Node';
 }
 
-/**
- * Each node's name and role by glTF index. `json` is the parsed glTF document. A document with no
- * `nodes` gives none.
- */
-export function gltfNodeNames(json: unknown, options: GltfNamingOptions): GltfNodeName[] {
-  return importNames(json, options).nodes;
+/** What the importer names a file's nodes and meshes, each list by glTF index. */
+export interface GltfImportNames {
+  nodes: GltfNodeName[];
+  /**
+   * Each mesh's `<scene>_<mesh>` made unique (`gltf_document.cpp:1434`). It is also the mesh's
+   * import id, which keys its `_subresources` settings (`resource_importer_scene.cpp:2625`).
+   */
+  meshes: string[];
 }
 
-/**
- * Each mesh's name by glTF index, `<scene>_<mesh>` made unique (`gltf_document.cpp:1434`). It is
- * also the mesh's import id, which keys its `_subresources` settings (`resource_importer_scene.cpp:2625`).
- */
-export function gltfMeshNames(json: unknown, options: GltfNamingOptions): string[] {
-  return importNames(json, options).meshes;
-}
-
-function importNames(json: unknown, options: GltfNamingOptions): { nodes: GltfNodeName[]; meshes: string[] } {
+/** The names of `json`, the parsed glTF document. A document with no `nodes` names none. */
+export function gltfImportNames(json: unknown, options: GltfNamingOptions): GltfImportNames {
   if (!isGltfJsonObject(json)) return { nodes: [], meshes: [] };
   const { namingVersion, importAsSkeletonBones, fileName } = options;
   const names = new UniqueNames();

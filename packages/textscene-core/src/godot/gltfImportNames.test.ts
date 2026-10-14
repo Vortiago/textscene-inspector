@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { gltfMeshNames, gltfNodeNames, type GltfNamingOptions, type GltfNodeRole } from './gltfNodeNames';
+import { gltfImportNames, type GltfNamingOptions, type GltfNodeRole } from './gltfImportNames';
 
 const CURRENT: GltfNamingOptions = { namingVersion: 2, importAsSkeletonBones: false, fileName: 'robot' };
 const GODOT_4_0: GltfNamingOptions = { ...CURRENT, namingVersion: 0 };
 
 function names(json: unknown, options: GltfNamingOptions = CURRENT): string[] {
-  return gltfNodeNames(json, options).map(({ name }) => name);
+  return gltfImportNames(json, options).nodes.map(({ name }) => name);
 }
 
 function roles(json: unknown, options: GltfNamingOptions = CURRENT): GltfNodeRole[] {
-  return gltfNodeNames(json, options).map(({ role }) => role);
+  return gltfImportNames(json, options).nodes.map(({ role }) => role);
 }
 
-describe('gltfNodeNames: named nodes', () => {
+describe('gltfImportNames: named nodes', () => {
   it('numbers a repeated name from 2', () => {
     expect(names({ nodes: [{ name: 'Cube' }, { name: 'Cube' }, { name: 'Cube' }] })).toEqual([
       'Cube',
@@ -42,7 +42,7 @@ describe('gltfNodeNames: named nodes', () => {
   });
 });
 
-describe('gltfNodeNames: unnamed nodes', () => {
+describe('gltfImportNames: unnamed nodes', () => {
   it('names each by what it holds', () => {
     expect(names({ nodes: [{ mesh: 0 }, { camera: 0 }, {}, { mesh: 1 }] })).toEqual([
       'Mesh',
@@ -62,7 +62,7 @@ describe('gltfNodeNames: unnamed nodes', () => {
   });
 });
 
-describe('gltfNodeNames: the scene name', () => {
+describe('gltfImportNames: the scene name', () => {
   it('reserves the scene name before 4.2', () => {
     const json = { scenes: [{ name: 'Robot', nodes: [0] }], nodes: [{ name: 'Robot' }] };
     expect(names(json, GODOT_4_0)).toEqual(['Robot2']);
@@ -79,7 +79,7 @@ describe('gltfNodeNames: the scene name', () => {
   });
 });
 
-describe('gltfNodeNames: bones', () => {
+describe('gltfImportNames: bones', () => {
   /** Arm (0) holds the joints Upper (1) and Lower (2), and the skinned Body (3). */
   const rig = {
     scenes: [{ nodes: [0] }],
@@ -190,7 +190,7 @@ describe('gltfNodeNames: bones', () => {
   });
 });
 
-describe('gltfNodeNames: malformed documents', () => {
+describe('gltfImportNames: malformed documents', () => {
   it('gives no names for a document that is not an object', () => {
     expect(names([{ name: 'Cube' }])).toEqual([]);
   });
@@ -204,7 +204,7 @@ describe('gltfNodeNames: malformed documents', () => {
   });
 });
 
-describe('gltfMeshNames', () => {
+describe('gltfImportNames: meshes', () => {
   const scene = { scenes: [{ name: 'Scene', nodes: [0] }], scene: 0 };
 
   it("names a mesh after the file and the glTF mesh, as godot_ball's sidecar keys it", () => {
@@ -214,16 +214,18 @@ describe('gltfMeshNames', () => {
       meshes: [{ name: 'MSH_GodotBall' }],
     };
 
-    expect(gltfMeshNames(json, { ...CURRENT, fileName: 'godot_ball' })).toEqual(['godot_ball_MSH_GodotBall']);
+    expect(gltfImportNames(json, { ...CURRENT, fileName: 'godot_ball' }).meshes).toEqual([
+      'godot_ball_MSH_GodotBall',
+    ]);
   });
 
   it('numbers a mesh name a node already took', () => {
     const json = { ...scene, nodes: [{ name: 'robot_Arm', mesh: 0 }], meshes: [{ name: 'Arm' }] };
 
-    expect(gltfMeshNames(json, CURRENT)).toEqual(['robot_Arm2']);
+    expect(gltfImportNames(json, CURRENT).meshes).toEqual(['robot_Arm2']);
   });
 
   it('names an unnamed mesh mesh (edge case)', () => {
-    expect(gltfMeshNames({ ...scene, nodes: [], meshes: [{}] }, CURRENT)).toEqual(['robot_mesh']);
+    expect(gltfImportNames({ ...scene, nodes: [], meshes: [{}] }, CURRENT).meshes).toEqual(['robot_mesh']);
   });
 });

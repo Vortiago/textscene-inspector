@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import type * as THREE from 'three';
 import { scenesDir } from '../../../../../parser/testing/parserKit';
 import { initGlbModules } from '../../glbProcessing';
+import { meshSurfaces } from '../../godotPrimitives';
 
 const DEMO = resolve(scenesDir(), 'demos/3d/global_illumination');
 
@@ -17,7 +18,5 @@ export function demoBytes(file: string): ArrayBuffer {
 export async function demoMeshSurfaces(file: string): Promise<THREE.BufferGeometry[]> {
   const { GLTFLoader } = await initGlbModules();
   const gltf = await new GLTFLoader().parseAsync(demoBytes(file), '');
-  const mesh = (await gltf.parser.getDependency('mesh', 0)) as THREE.Object3D;
-  const primitives = (mesh as THREE.Mesh).isMesh ? [mesh] : mesh.children;
-  return primitives.map((primitive) => (primitive as THREE.Mesh).geometry);
+  return [...(await meshSurfaces(gltf, 0)).values()];
 }

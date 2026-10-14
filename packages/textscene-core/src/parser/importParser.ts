@@ -14,7 +14,7 @@ import {
 } from './utils';
 import * as logger from '../logger';
 import { boolSlotValue } from '../godot/index.js';
-import { DEFAULT_GLTF_NAMING_VERSION, type GltfNamingOptions } from '../godot/gltfNodeNames.js';
+import { DEFAULT_GLTF_NAMING_VERSION, type GltfNamingOptions } from '../godot/gltfImportNames.js';
 import { parseOptionalInt } from './valueParsers.js';
 import {
   DEFAULT_LIGHT_BAKE_MODE,
