@@ -381,7 +381,7 @@ tr:last-child td{border-bottom:0}
         <span class="status st-unreviewed">Unreviewed</span>
       </header>
       
-      <div class="prose intro"><p>Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: <code>light_energy</code> spread over <code>area_size</code>, faded by <code>area_range</code> and <code>area_attenuation</code>, with <code>light_specular</code> on the highlight. It shades each material in its <code>diffuse_mode</code> and <code>specular_mode</code>, and a clearcoat dims the light beneath it. The reference images come from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.</p></div>
+      <div class="prose intro"><p>Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: <code>light_energy</code> spread over <code>area_size</code>, faded by <code>area_range</code> and <code>area_attenuation</code>, with <code>light_specular</code> on the highlight. It shades each material in its <code>diffuse_mode</code> and <code>specular_mode</code>, and a clearcoat dims the light beneath it. With <code>distance_fade_enabled</code>, the light fades by Godot's smoothstep over the distance from the rendering camera. In volumetric fog, it scatters <code>light_volumetric_fog_energy</code> times its light into the medium, under its shadow. The reference images come from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>Energy over the rectangle</h3><span class="status st-unreviewed">Unreviewed</span></div>

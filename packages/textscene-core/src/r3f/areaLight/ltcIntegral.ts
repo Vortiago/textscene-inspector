@@ -1,8 +1,8 @@
 /**
  * Godot 4.7.2's integral of a rectangle light under a linearly transformed cosine, and its solid
- * angle (`area_lights_inc.glsl:6-11,25-94,137-341`), in GLSL for three's lit programs. It reads
- * three's `ltc_1` and `ltc_2` samplers, which `ltcTextures.ts` fills with Godot's tables. It leaves
- * out the texture fetch of an `area_texture`.
+ * angle (`area_lights_inc.glsl:6-11,25-94,137-341`), in GLSL for three's lit programs and the fog.
+ * The specular part reads three's `ltc_1` and `ltc_2` samplers, which `ltcTextures.ts` fills with
+ * Godot's tables. It leaves out the texture fetch of an `area_texture`.
  */
 
 /*
@@ -180,7 +180,10 @@ float godotLtcIntegral( const in vec3 normal, const in vec3 viewDir, const in ma
 
 	return godotIntegrateClippedQuad( L, projected, vertexCount ) / ( 2.0 * PI );
 }
+`;
 
+/** The GGX lobe's integral, after `LTC_INTEGRAL`, for programs that bind three's `ltc_1` and `ltc_2`. */
+export const LTC_SPECULAR = /* glsl */ `
 // The GGX lobe as Godot's fit transforms it, at the texel centre for roughness and view angle.
 float godotLtcSpecular( const in vec3 normal, const in vec3 viewDir, const in float roughness, const in vec3 points[ 4 ], out vec2 fresnel ) {
 	float theta = godotAcosApprox( dot( normal, viewDir ) );

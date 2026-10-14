@@ -13,16 +13,18 @@ import {
 import { glslFloat } from '../../resources/environment/glslLiterals.js';
 import { HENYEY_GREENSTEIN_GLSL } from '../henyeyGreenstein.js';
 import { FogLightKind, FogLightTexel } from './fogLights.js';
+import { LTC_INTEGRAL } from '../areaLight/ltcIntegral.js';
 
 /** The offsets a still froxel samples and averages: Godot's 16 jitters, or its centre alone. */
 export const FOG_SAMPLE_OFFSETS_MAX = VOLUMETRIC_FOG_TEMPORAL_JITTERS.length;
 
 /**
- * Lights one froxel: each light's scatter (`.glsl:252-255`), under its shadow
- * (`.glsl:388-422,488-510,552-574`), and the ambient with its sky (`.glsl:430-445`), times the
- * albedo, plus the emission (`.glsl:681`). A moving camera's froxel
+ * Lights one froxel: each light's scatter (`.glsl:252-255`, an area light's from 4.7.2), under its
+ * shadow (`.glsl:388-422,488-510,552-574`, 4.7.2 `:671-691`), and the ambient with its sky
+ * (`.glsl:430-445`), times the albedo, plus the emission (`.glsl:681`). A moving camera's froxel
  * blends this frame's jitter into its reprojected history (`.glsl:311-335,683`). A still one
- * averages its sample offsets, the mean the history converges to. A clear cell scatters nothing (`.glsl:383`).
+ * averages its sample offsets, the mean the history converges to. A clear cell scatters nothing
+ * (`.glsl:383`).
  */
 export const FOG_LIGHT_FRAGMENT = /* glsl */ `
 #include <common>
@@ -60,6 +62,7 @@ uniform float historyAmount;
 #endif
 
 ${HENYEY_GREENSTEIN_GLSL}
+${LTC_INTEGRAL}
 // The falloff of omni and spot lights alike (.glsl:228-235).
 float omniAttenuation( float range, float inverseRange, float decay ) {
 	float nd = range * inverseRange;
@@ -92,6 +95,41 @@ vec3 froxelView( vec3 unit ) {
 	float depth = pow( unit.z, detailSpread );
 	vec2 halfExtents = mix( frustumBegin, frustumEnd, vec2( depth ) );
 	return vec3( ( unit.xy * 2.0 - 1.0 ) * halfExtents, - fogLength * depth );
+}
+
+// 4.7.2 volumetric_fog_process.glsl:620-695, without the shadow, which lightsAt applies, and the
+// area texture. Godot keeps the distance at 1 or more against flicker at froxels the light passes
+// through (:642-649).
+vec3 areaLightScatter( vec3 view, vec3 eye, vec4 position, vec4 color, vec4 facing, vec3 width, vec3 height ) {
+	if ( dot( width, width ) <= 1e-4 || dot( height, height ) <= 1e-4 ) return vec3( 0.0 );
+	float widthLength = length( width );
+	float heightLength = length( height );
+	vec3 widthAxis = width / widthLength;
+	vec3 heightAxis = height / heightLength;
+	vec3 lightToView = view - position.xyz;
+	float inFront = smoothstep( 0.0, 0.1, dot( facing.xyz, lightToView ) );
+	if ( inFront <= 0.0 ) return vec3( 0.0 );
+	vec2 local = vec2( dot( lightToView, widthAxis ), dot( lightToView, heightAxis ) );
+	vec2 halfSize = vec2( widthLength, heightLength ) / 2.0;
+	vec2 closest = clamp( local, - halfSize, halfSize );
+	vec3 toLight = position.xyz + closest.x * widthAxis + closest.y * heightAxis - view;
+	float toLightLength = length( toLight );
+	vec3 lightDirection = toLightLength < 1e-4 ? facing.xyz : toLight / toLightLength;
+	float lightDistance = max( toLightLength, 1.0 );
+	if ( lightDistance * facing.w >= 1.0 ) return vec3( 0.0 );
+	float attenuation = omniAttenuation( lightDistance, position.w, color.w );
+	vec3 halfWidth = width / 2.0;
+	vec3 halfHeight = height / 2.0;
+	vec3 points[ 4 ];
+	points[ 0 ] = position.xyz - halfWidth - halfHeight - view;
+	points[ 1 ] = position.xyz + halfWidth - halfHeight - view;
+	points[ 2 ] = position.xyz + halfWidth + halfHeight - view;
+	points[ 3 ] = position.xyz - halfWidth + halfHeight - view;
+	// ltc_evaluate_diff builds its basis from a fixed axis, not the view (area_lights_inc.glsl:348).
+	vec3 basisAxis = abs( lightDirection.z ) < 0.7 ? vec3( 0.0, 0.0, - 1.0 ) : vec3( 1.0, 0.0, 0.0 );
+	float diffuse = godotLtcIntegral( lightDirection, basisAxis, mat3( 1.0 ), points ) * ( 2.0 * PI );
+	float cosTheta = toLightLength > 1e-2 ? dot( lightDirection, eye ) : 0.0;
+	return color.rgb * attenuation * diffuse * inFront * henyey_greenstein( cosTheta, phaseG );
 }
 
 // Godot reads an atlas's depth through a linear sampler that clamps at the edge (.glsl:417, :507,
@@ -159,6 +197,19 @@ float spotShadow( int light, vec3 view, float bias, float depthRange ) {
 	return fogShadow( coord.z, atlasDepth( positionalShadowAtlas, coord.xy ), depthRange );
 }
 
+// 4.7.2 .glsl:671-691: the light's one paraboloid in its slot. The depth runs from the light over
+// its centre range, which the row's direction carries.
+float areaShadow( int light, vec3 view, float bias, float inverseCentreRange ) {
+	vec3 local = ( shadowLookup( light, 0 ) * vec4( view, 1.0 ) ).xyz;
+	vec4 uvRect = lightTexel( light, ${FogLightTexel.SHADOW_SPLITS} );
+	vec3 direction = normalize( local );
+	direction.z = 1.0 + abs( direction.z );
+	vec2 uv = uvRect.xy + ( direction.xy / direction.z * 0.5 + 0.5 ) * uvRect.zw;
+	float depthRange = 1.0 / inverseCentreRange;
+	float cellDepth = ( length( local ) - bias ) / depthRange;
+	return fogShadow( cellDepth, atlasDepth( positionalShadowAtlas, uv ), depthRange );
+}
+
 // .glsl:425, :511 and :550-575
 vec3 lightsAt( vec3 view ) {
 	vec3 eye = normalize( view );
@@ -173,6 +224,14 @@ vec3 lightsAt( vec3 view ) {
 		if ( kind == ${FogLightKind.DIRECTIONAL} ) {
 			float shadow = isShadowed ? fogShadowAttenuation( directionalShadow( i, view ), cone.z ) : 1.0;
 			total += color.rgb * shadow * henyey_greenstein( dot( eye, direction.xyz ), phaseG );
+			continue;
+		}
+		if ( kind == ${FogLightKind.AREA} ) {
+			vec3 width = lightTexel( i, ${FogLightTexel.AREA_WIDTH} ).xyz;
+			vec3 height = lightTexel( i, ${FogLightTexel.AREA_HEIGHT} ).xyz;
+			vec3 scatter = areaLightScatter( view, eye, position, color, direction, width, height );
+			float shadow = isShadowed ? fogShadowAttenuation( areaShadow( i, view, cone.w, direction.w ), cone.z ) : 1.0;
+			total += scatter * shadow;
 			continue;
 		}
 		vec3 toLight = position.xyz - view;
