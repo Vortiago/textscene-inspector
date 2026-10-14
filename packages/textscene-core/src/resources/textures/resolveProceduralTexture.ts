@@ -1,6 +1,7 @@
 /**
  * Whether a texture reference is generated rather than loaded, for every
- * procedural slice. A first-match walk: each resolver declines another type. A
+ * procedural slice of each texture dimension. A first-match walk: each resolver
+ * declines another type. A
  * gradient is ready at once. A noise texture is a build its holders start. A ready
  * texture is borrowed from `proceduralTextureCache`: never dispose it, and pin
  * `key` while holding it.
@@ -9,6 +10,7 @@
 import type { TscnInternalResource } from '../../parser/types.js';
 import { resolveGradientTexture2D } from './gradienttexture2d/resolveGradientTexture.js';
 import { resolveNoiseTexture2D } from './noisetexture2d/resolveNoiseTexture.js';
+import { resolveNoiseTexture3D } from './noisetexture3d/resolveNoiseTexture.js';
 import type { ProceduralTextureLookup } from './proceduralBuilds.js';
 
 export function resolveProceduralTexture(
@@ -18,4 +20,12 @@ export function resolveProceduralTexture(
   const gradient = resolveGradientTexture2D(ref, internalResources);
   if (gradient) return { status: 'ready', ...gradient };
   return resolveNoiseTexture2D(ref, internalResources);
+}
+
+/** {@link resolveProceduralTexture} for a Texture3D slot. */
+export function resolveProceduralTexture3D(
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[]
+): ProceduralTextureLookup | null {
+  return resolveNoiseTexture3D(ref, internalResources);
 }

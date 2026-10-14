@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { IMAGE_MAX_PIXELS } from '../../../godot/index.js';
 import { MAX_3D_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
-import { densityDataTexture3D } from '../dataTexture3D';
+import { dataTexture3D } from '../dataTexture3D';
 import type { NoiseTexture3DData } from './types';
 
 /**
@@ -25,5 +25,5 @@ export function noiseDataTexture3D(
   texels: Uint8Array,
   { width, height }: NoiseTexture3DData
 ): THREE.Data3DTexture {
-  return densityDataTexture3D(texels, width, height, texels.length / (width * height), THREE.RedFormat);
+  return dataTexture3D(texels, width, height, texels.length / (width * height), THREE.RedFormat);
 }

@@ -14,8 +14,7 @@ import { usePendingWhile } from './usePendingWhile.js';
 import { beginTextureWork } from './textures/textureWork.js';
 import { useResourceLoader } from './useResource.js';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds.js';
-import { resolveProceduralTexture } from './textures/resolveProceduralTexture.js';
-import { resolveNoiseTexture3D } from './textures/noisetexture3d/resolveNoiseTexture.js';
+import { resolveProceduralTexture, resolveProceduralTexture3D } from './textures/resolveProceduralTexture.js';
 import { pinProceduralTexture, unpinProceduralTexture } from './textures/proceduralTextureCache.js';
 
 /** One slot's procedural texture. */
@@ -33,8 +32,6 @@ interface Shown {
   key: string;
 }
 
-const UNCLAIMED: ProceduralSlot = { texture: null, claimed: false, building: false };
-
 /**
  * The procedural texture a `SubResource` ref names, held resident while the caller is mounted.
  * Unclaimed for every other form, which the caller's async path handles. `resolveProceduralTexture`
@@ -45,7 +42,7 @@ export function useProceduralTexture(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): ProceduralSlot {
-  return useProceduralTextures([ref], internalResources)[0] ?? UNCLAIMED;
+  return useProceduralTextures([ref], internalResources)[0]!;
 }
 
 /** {@link useProceduralTexture} for several slots at once, one result per ref, in order. */
@@ -56,15 +53,12 @@ export function useProceduralTextures(
   return useProceduralSlots(refs, internalResources, resolveProceduralTexture);
 }
 
-/**
- * The `NoiseTexture3D` a `SubResource` ref names, held resident while the caller is mounted, for a
- * Texture3D slot. Unclaimed for every other form.
- */
+/** {@link useProceduralTexture} for a Texture3D slot, which `useTexture3D` reads through. */
 export function useProceduralTexture3D(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): ProceduralSlot {
-  return useProceduralSlots([ref], internalResources, resolveNoiseTexture3D)[0] ?? UNCLAIMED;
+  return useProceduralSlots([ref], internalResources, resolveProceduralTexture3D)[0]!;
 }
 
 /** Resolves a ref to the procedural texture of one kind of slot. Module-level, so a memo holds it. */

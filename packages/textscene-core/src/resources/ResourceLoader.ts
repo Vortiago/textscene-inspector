@@ -11,6 +11,7 @@ import type { ResourceProvider } from './ResourceProvider';
 import { ResourceEventBus, type ResourceChange, type ResourceType } from './ResourceEventBus';
 import { MetadataStore } from './MetadataStore';
 import { createTextureProcessor } from './processors/createTextureProcessor';
+import { createTexture3DProcessor } from './processors/createTexture3DProcessor';
 import { createGLBProcessor } from './processors/createGLBProcessor';
 import { createSceneProcessor } from './processors/createSceneProcessor';
 import { createTresResourceProcessor } from './processors/createTresResourceProcessor';
@@ -244,6 +245,14 @@ export class ResourceLoader {
 
     this.processors = new Map<ResourceType, ResourceProcessor<unknown>>([
       ['texture', this.textures as ResourceProcessor<unknown>],
+      [
+        'texture3d',
+        createTexture3DProcessor(
+          fileEventBus,
+          this.eventBus,
+          this.dependencies
+        ) as ResourceProcessor<unknown>,
+      ],
       ['glb', this.glbMeshes as ResourceProcessor<unknown>],
       ['scene', this.scenes as ResourceProcessor<unknown>],
       ['resource', this.resources as ResourceProcessor<unknown>],

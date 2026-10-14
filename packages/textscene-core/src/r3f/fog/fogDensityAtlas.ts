@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import * as logger from '../../logger.js';
-import { densityDataTexture3D } from '../../resources/textures/dataTexture3D.js';
+import { dataTexture3D } from '../../resources/textures/dataTexture3D.js';
 import { MAX_3D_TEXTURE_EXTENT } from '../webglLimits.js';
 
 /** Where a texture sits in the stack, in texels: its size, and its first slice. */
@@ -17,7 +17,7 @@ export interface FogDensityRegion {
 }
 
 export class FogDensityAtlas {
-  texture = densityDataTexture3D(new Uint8Array(1), 1, 1, 1, THREE.RedFormat);
+  texture = dataTexture3D(new Uint8Array(1), 1, 1, 1, THREE.RedFormat);
   /** Written by `update`: the distinct textures the stack holds, in order. */
   private stacked: THREE.Data3DTexture[] = [];
   private readonly regions = new Map<THREE.Data3DTexture, FogDensityRegion>();
@@ -71,7 +71,7 @@ export class FogDensityAtlas {
     const data = new Uint8Array(width * height * Math.max(1, depth));
     for (const [texture, region] of this.regions) copyInto(data, width, height, texture, region);
     this.texture.dispose();
-    this.texture = densityDataTexture3D(data, width, height, Math.max(1, depth), THREE.RedFormat);
+    this.texture = dataTexture3D(data, width, height, Math.max(1, depth), THREE.RedFormat);
   }
 }
 

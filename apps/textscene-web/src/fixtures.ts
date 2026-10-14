@@ -503,6 +503,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fog Volume Density Image",
+    "file": "unit-fog-volume-density-image.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Fog Volume",
     "file": "unit-fog-volume.tscn",
     "category": "Other"

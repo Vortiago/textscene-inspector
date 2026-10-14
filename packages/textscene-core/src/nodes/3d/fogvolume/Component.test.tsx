@@ -6,10 +6,12 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { FogVolumeShape } from '../../../godot/fogVolume';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import { FogVolumeObject } from '../../../r3f/fog/fogVolumeObject';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { FogVolume } from './Component';
 import { parseFogVolume } from './parser';
 
@@ -30,7 +32,18 @@ const TEXTURED_MATERIAL: TscnInternalResource = {
   type: 'FogMaterial',
   data: { density_texture: 'SubResource("NoiseTexture3D_1")' },
 };
-const RESOURCES = [FOG_MATERIAL, SHADER_MATERIAL, NOISE, NOISE_TEXTURE, TEXTURED_MATERIAL];
+const IMAGE_MATERIAL: TscnInternalResource = {
+  id: 'FogMaterial_3',
+  type: 'FogMaterial',
+  data: { density_texture: 'ExtResource("1_density")' },
+};
+const RESOURCES = [FOG_MATERIAL, SHADER_MATERIAL, NOISE, NOISE_TEXTURE, TEXTURED_MATERIAL, IMAGE_MATERIAL];
+const IMAGE_PATH = 'res://fog/density.png';
+const EXTERNAL_RESOURCES: TscnExternalResource[] = [
+  { id: '1_density', type: 'CompressedTexture3D', path: IMAGE_PATH },
+];
+/** The imported 3D texture the loader holds for `IMAGE_PATH`. */
+const IMPORTED = new THREE.Data3DTexture(new Uint8Array(32), 2, 2, 2);
 
 function fogVolumeNode(props: Record<string, string>): TscnNode {
   return {
@@ -44,12 +57,16 @@ function fogVolumeNode(props: Record<string, string>): TscnNode {
 
 /** The fog volume a FogVolume node with `props` puts into its scene. */
 async function mountedVolume(props: Record<string, string>): Promise<FogVolumeObject> {
+  const fake = createFakeResourceLoader();
+  fake.textures3D.seed(IMAGE_PATH, IMPORTED);
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneResourcesProvider internalResources={RESOURCES} externalResources={[]}>
-      <NodePathProvider path="Fog">
-        <FogVolume node={fogVolumeNode(props)} />
-      </NodePathProvider>
-    </SceneResourcesProvider>
+    <ResourceLoaderProvider loader={fake.loader}>
+      <SceneResourcesProvider internalResources={RESOURCES} externalResources={EXTERNAL_RESOURCES}>
+        <NodePathProvider path="Fog">
+          <FogVolume node={fogVolumeNode(props)} />
+        </NodePathProvider>
+      </SceneResourcesProvider>
+    </ResourceLoaderProvider>
   );
   // Lets the density texture's build land.
   await ReactThreeTestRenderer.act(() => new Promise((resolve) => setTimeout(resolve, 0)));
@@ -76,6 +93,11 @@ describe('<FogVolume>', () => {
   it('fills a FogMaterial volume with its NoiseTexture3D once built', async () => {
     const volume = await mountedVolume({ material: 'SubResource("FogMaterial_2")' });
     expect(volume.fill.kind === 'material' && volume.fill.densityTexture).toBeInstanceOf(THREE.Data3DTexture);
+  });
+
+  it('fills a FogMaterial volume with its imported 3D texture', async () => {
+    const volume = await mountedVolume({ material: 'SubResource("FogMaterial_3")' });
+    expect(volume.fill).toMatchObject({ densityTexture: IMPORTED });
   });
 
   it('leaves the density texture empty for a FogMaterial without one', async () => {

@@ -5,10 +5,9 @@
  */
 
 import { useMemo } from 'react';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import { extend } from '@react-three/fiber';
 import { fogVolumeSize } from '../../../godot/fogVolume';
-import type { TscnInternalResource } from '../../../parser/types';
 import type { Vector3 } from '../../../parser/vectors';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import {
@@ -17,16 +16,15 @@ import {
   type FogVolumeFill,
 } from '../../../r3f/fog/fogVolumeObject';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { decodeFogMaterial } from '../../../resources/materials/fogmaterial/decode';
-import { useProceduralTexture3D } from '../../../resources/useProceduralTexture';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
+import { useTexture3D } from '../../../resources/useTexture3D';
 import { Node3D } from '../../base/node3d/Component';
 import type { FogVolumeProperties } from './types';
 
 /** An element, not a `<primitive>`: it carries no material, and R3F sets its fields as props. */
 const FogVolumeElement = extend(FogVolumeObject);
-const NO_RESOURCES: readonly TscnInternalResource[] = [];
 
 /**
  * What fills a volume with this material. A ShaderMaterial runs its own fog shader. Anything else,
@@ -40,9 +38,9 @@ function fillOf(material: { type: string; data: Record<string, string> } | null)
   return DEFAULT_FOG_VOLUME_FILL;
 }
 
-/** `fill` with the FogMaterial's density texture, once built. */
-function withDensityTexture(fill: FogVolumeFill, texture: THREE.Texture | null): FogVolumeFill {
-  if (fill.kind !== 'material' || !(texture instanceof THREE.Data3DTexture)) return fill;
+/** `fill` with the FogMaterial's density texture, once built or loaded. */
+function withDensityTexture(fill: FogVolumeFill, texture: THREE.Data3DTexture | null): FogVolumeFill {
+  if (fill.kind !== 'material' || !texture) return fill;
   return { ...fill, densityTexture: texture };
 }
 
@@ -51,13 +49,10 @@ export function FogVolume({ node, children }: NodeComponentProps) {
   const { scoped } = useResourceResolution(properties.material, useSceneResources());
   const materialFill = useMemo(() => fillOf(scoped?.resource ?? null), [scoped]);
   const densityTextureRef = materialFill.kind === 'material' ? materialFill.material.densityTexture : null;
-  const densitySlot = useProceduralTexture3D(
-    densityTextureRef ?? undefined,
-    scoped?.resources.internalResources ?? NO_RESOURCES
-  );
+  const densityTexture = useTexture3D(densityTextureRef ?? undefined, scoped?.resources ?? NO_RESOURCES);
   const fill = useMemo(
-    () => withDensityTexture(materialFill, densitySlot.texture),
-    [materialFill, densitySlot.texture]
+    () => withDensityTexture(materialFill, densityTexture),
+    [materialFill, densityTexture]
   );
   const animatedSize = useAnimatedValue<Vector3>('size', (v) => ({
     x: v[0] ?? 0,
