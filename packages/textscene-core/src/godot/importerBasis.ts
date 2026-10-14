@@ -181,12 +181,12 @@ function subtract(a: Triple, b: Triple): Triple {
   return [f(a[0] - b[0]), f(a[1] - b[1]), f(a[2] - b[2])];
 }
 
-/** `Triple::length` (`vector3.h:532-538`). */
+/** `Vector3::length` (`vector3.h:532-538`). */
 function length(v: Triple): number {
   return f(Math.sqrt(dot(v, v)));
 }
 
-/** `Triple::normalize` (`vector3.h:548-558`): a zero vector stays zero. */
+/** `Vector3::normalize` (`vector3.h:548-558`): a zero vector stays zero. */
 function normalized(v: Triple): Triple {
   const lengthSquared = dot(v, v);
   if (lengthSquared === 0) return [0, 0, 0];

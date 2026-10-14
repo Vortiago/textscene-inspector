@@ -11,9 +11,8 @@
  */
 
 import { isEqualApprox, isZeroApprox } from '../../../../godot/index.js';
-import { clamp } from '../../../../godot/math';
+import { clamp, type Rgba } from '../../../../godot/math';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
-import type { Rgba } from '../../../../godot/math';
 import type { GeometryBuffers } from './connectionStroke';
 
 /** `FEATHER_SIZE` (`renderer_canvas_cull.cpp:45`). */
