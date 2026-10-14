@@ -23,13 +23,20 @@ function glowOn(extra: Record<string, string> = {}): GlowParams {
   return params;
 }
 
+const FILMIC: CompositeToneMapping = { mode: GodotToneMapper.FILMIC, white: 1 };
+
+/** The whole shader with `FLAG_USE_BCS` clear. */
+function composite(glow: GlowParams | null, toneMapping: CompositeToneMapping = FILMIC): string {
+  return compositeGlsl({ glow, toneMapping, adjustments: null });
+}
+
 /** `mainImage`'s body: above it sit the definitions, not the call order. */
 function body(
-  params: GlowParams | null,
-  toneMapping: CompositeToneMapping = { mode: GodotToneMapper.FILMIC, white: 1 },
+  glow: GlowParams | null,
+  toneMapping: CompositeToneMapping = FILMIC,
   adjustments: EnvironmentAdjustments | null = null
 ) {
-  const glsl = compositeGlsl({ glow: params, toneMapping, adjustments });
+  const glsl = compositeGlsl({ glow, toneMapping, adjustments });
   return glsl.slice(glsl.indexOf('void mainImage'));
 }
 
@@ -37,22 +44,14 @@ describe('compositeGlsl — the shader it emits', () => {
   it('is self-contained: the curve and the blend are defined above mainImage', () => {
     // The effect compiles this one string. A function it only calls would be a
     // link error at shader-compile time: a black frame.
-    const glsl = compositeGlsl({
-      glow: glowOn(),
-      toneMapping: { mode: GodotToneMapper.FILMIC, white: 1 },
-      adjustments: null,
-    });
+    const glsl = composite(glowOn());
     expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
     expect(glsl).toContain('vec3 godotGlowBlend(vec3 color, vec3 glow)');
     expect(glsl).toContain('void mainImage(const in vec4 inputColor, const in vec2 uv,');
   });
 
   it('declares the two uniforms the pass feeds it', () => {
-    const glsl = compositeGlsl({
-      glow: glowOn(),
-      toneMapping: { mode: GodotToneMapper.FILMIC, white: 1 },
-      adjustments: null,
-    });
+    const glsl = composite(glowOn());
     expect(glsl).toContain('uniform sampler2D godotGlowBuffer;');
     expect(glsl).toContain('uniform float godotExposure;');
   });
@@ -80,14 +79,7 @@ describe('compositeGlsl — exposure', () => {
   // the bright pass already exposed the glow. Every glow fixture leaves
   // `tonemap_exposure` at 1.0, where a double-exposed glow or a scaled sum looks the same.
   it('exposes the scene colour and leaves the glow alone, pre-tonemap modes', () => {
-    const glsl = compositeGlsl({
-      glow: glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }),
-      toneMapping: {
-        mode: GodotToneMapper.FILMIC,
-        white: 1,
-      },
-      adjustments: null,
-    });
+    const glsl = composite(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }));
     expect(glsl).toContain('* godotExposure');
     expect(glsl).toContain('godotToneMap(color, 1.0)');
     expect(glsl).not.toMatch(/glow[^;]*godotExposure/);
@@ -115,14 +107,7 @@ describe('compositeGlsl — exposure', () => {
 
 describe('compositeGlsl — which side of the tone curve the blend falls on', () => {
   it('tonemaps both operands and neither twice, SOFTLIGHT', () => {
-    const glsl = compositeGlsl({
-      glow: glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }),
-      toneMapping: {
-        mode: GodotToneMapper.FILMIC,
-        white: 1,
-      },
-      adjustments: null,
-    });
+    const glsl = composite(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
     expect(glsl).toContain('godotToneMap(glow, 1.0)');
     expect(glsl).not.toMatch(/glow[^;]*godotExposure/);
   });
@@ -154,13 +139,9 @@ describe('compositeGlsl — the white SCREEN normalises against', () => {
     // `apply_glow` divides by `params.white`, which `renderer_scene_render_rd.cpp` fills
     // from `environment_get_white`, floored at 1.0 for every SDR curve: "white cannot be
     // smaller than the maximum output value". A raw `tonemap_white` below 1 blows the glow out.
-    const glsl = compositeGlsl({
-      glow: glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }),
-      toneMapping: {
-        mode: GodotToneMapper.FILMIC,
-        white: 0.5,
-      },
-      adjustments: null,
+    const glsl = composite(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), {
+      mode: GodotToneMapper.FILMIC,
+      white: 0.5,
     });
     expect(glsl).toContain('clamp(glow, 0.0, 1.0)');
     expect(glsl).toContain('color * glow / 1.0');
@@ -168,13 +149,9 @@ describe('compositeGlsl — the white SCREEN normalises against', () => {
   });
 
   it('passes an authored white above the floor straight through', () => {
-    const glsl = compositeGlsl({
-      glow: glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }),
-      toneMapping: {
-        mode: GodotToneMapper.FILMIC,
-        white: 6,
-      },
-      adjustments: null,
+    const glsl = composite(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), {
+      mode: GodotToneMapper.FILMIC,
+      white: 6,
     });
     expect(glsl).toContain('clamp(glow, 0.0, 6.0)');
     expect(glsl).toContain('color * glow / 6.0');
@@ -183,13 +160,9 @@ describe('compositeGlsl — the white SCREEN normalises against', () => {
   it('normalises SCREEN against 1.0 under LINEAR, which has no white', () => {
     // `environment_get_white` returns `output_max_value` for LINEAR whatever the
     // scene authored.
-    const glsl = compositeGlsl({
-      glow: glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }),
-      toneMapping: {
-        mode: GodotToneMapper.LINEAR,
-        white: 6,
-      },
-      adjustments: null,
+    const glsl = composite(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), {
+      mode: GodotToneMapper.LINEAR,
+      white: 6,
     });
     expect(glsl).toContain('clamp(glow, 0.0, 1.0)');
   });
@@ -200,61 +173,29 @@ describe('compositeGlsl — malformed input', () => {
     // `glow_blend_mode` is decoded leniently, so a hand-edited scene can carry
     // anything. An unknown mode must still compile.
     expect(body(glowOn({ glow_blend_mode: '99' }))).toContain('godotGlowBlend');
-    expect(
-      compositeGlsl({
-        glow: glowOn({ glow_blend_mode: '99' }),
-        toneMapping: {
-          mode: GodotToneMapper.FILMIC,
-          white: 1,
-        },
-        adjustments: null,
-      })
-    ).toContain('return color + glow;');
+    expect(composite(glowOn({ glow_blend_mode: '99' }))).toContain('return color + glow;');
   });
 
   it('emits no uncompilable literal for a malformed tonemap white (error path)', () => {
-    const glsl = compositeGlsl({
-      glow: glowOn(),
-      toneMapping: { mode: GodotToneMapper.FILMIC, white: Number.NaN },
-      adjustments: null,
-    });
+    const glsl = composite(glowOn(), { mode: GodotToneMapper.FILMIC, white: Number.NaN });
     expect(glsl).not.toMatch(/=\s*(NaN|Infinity)/);
     expect(glsl).not.toMatch(/\*\s*(NaN|Infinity)/);
   });
 
   it('emits no uncompilable literal for a malformed glow intensity (error path)', () => {
-    const glsl = compositeGlsl({
-      glow: glowOn({ glow_intensity: 'not-a-number' }),
-      toneMapping: {
-        mode: GodotToneMapper.FILMIC,
-        white: 1,
-      },
-      adjustments: null,
-    });
+    const glsl = composite(glowOn({ glow_intensity: 'not-a-number' }));
     expect(glsl).not.toMatch(/[=*]\s*(NaN|Infinity)/);
   });
 });
 
 describe('compositeGlsl — the AgX contrast', () => {
   it('threads an authored tonemap_agx_contrast into the composed curve', () => {
-    const glsl = compositeGlsl({
-      glow: glowOn(),
-      toneMapping: {
-        mode: GodotToneMapper.AGX,
-        white: 16.29,
-        agxContrast: 1.8,
-      },
-      adjustments: null,
-    });
+    const glsl = composite(glowOn(), { mode: GodotToneMapper.AGX, white: 16.29, agxContrast: 1.8 });
     expect(glsl).toContain('awp_contrast = 1.8;');
   });
 
   it('falls back to Godot’s default when the caller omits it (edge case)', () => {
-    const glsl = compositeGlsl({
-      glow: glowOn(),
-      toneMapping: { mode: GodotToneMapper.AGX, white: 16.29 },
-      adjustments: null,
-    });
+    const glsl = composite(glowOn(), { mode: GodotToneMapper.AGX, white: 16.29 });
     expect(glsl).toContain('awp_contrast = 1.25;');
   });
 });
@@ -269,7 +210,7 @@ describe('compositeGlsl — with the glow flag clear', () => {
   });
 
   it('gathers no glow and declares no buffer to gather from', () => {
-    const glsl = compositeGlsl({ glow: null, toneMapping: tone, adjustments: null });
+    const glsl = composite(null, tone);
     expect(glsl).not.toContain('godotGlowBuffer');
     expect(glsl).not.toContain('godotGlowBlend');
     expect(glsl).toContain('uniform float godotExposure;');
@@ -280,11 +221,7 @@ describe('compositeGlsl — with the glow flag clear', () => {
   });
 
   it('still emits a real curve under LINEAR, which is exposure and nothing else', () => {
-    const glsl = compositeGlsl({
-      glow: null,
-      toneMapping: { mode: GodotToneMapper.LINEAR, white: 1 },
-      adjustments: null,
-    });
+    const glsl = composite(null, { mode: GodotToneMapper.LINEAR, white: 1 });
     expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
     expect(glsl).toContain('* godotExposure');
   });
@@ -318,8 +255,12 @@ describe('compositeGlsl — the adjustments (FLAG_USE_BCS, tonemap.glsl:916-949)
 
   it('decodes back to linear last, since the composer encodes the output itself', () => {
     const glsl = adjusted({});
-    expect(glsl.indexOf('mix(vec3(dot(')).toBeLessThan(glsl.indexOf('godotToLinear(color)'));
-    expect(glsl.indexOf('godotToLinear(color)')).toBeLessThan(glsl.indexOf('outputColor ='));
+    expect(glsl.indexOf('mix(vec3(dot(')).toBeLessThan(glsl.indexOf('godotToLinear('));
+    expect(glsl.indexOf('godotToLinear(')).toBeLessThan(glsl.indexOf('outputColor ='));
+  });
+
+  it('clamps the sRGB colour at 0 before the decode, since the output encode cannot take a negative', () => {
+    expect(adjusted({ contrast: 2 })).toContain('color = godotToLinear(max(color, vec3(0.0)));');
   });
 
   it('keeps a brightness of 0, which draws the whole frame black (edge case)', () => {
@@ -340,7 +281,7 @@ describe('compositeGlsl — the adjustments (FLAG_USE_BCS, tonemap.glsl:916-949)
   });
 
   it('adds no adjustment step when adjustment_enabled is false', () => {
-    const glsl = compositeGlsl({ glow: null, toneMapping: tone, adjustments: null });
+    const glsl = composite(null, tone);
     expect(glsl).not.toContain('godotToSrgb');
     expect(glsl).not.toContain('godotToLinear');
   });

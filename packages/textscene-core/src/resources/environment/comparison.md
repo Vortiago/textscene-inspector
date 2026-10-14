@@ -164,6 +164,6 @@ The lenient parser never rejects. Every scalar goes through the shared `floatOr`
 
 ## Known limitations
 
-- **Approximated** `tonemap_exposure` under the default LINEAR tonemapper is ignored, because three applies exposure only while a tone curve is active.
-- **Shader missing** `ssr_enabled` draws no screen-space reflections, as `edge-world-environment-unsupported.tscn` shows.
+- **Approximated** `tonemap_exposure` under LINEAR is ignored when no glow, blended surface or adjustment runs the tone-map pass: three applies exposure only under a tone curve.
+- **Shader missing** `ssr_enabled` draws no screen-space reflections.
 - **Resource gap** `adjustment_color_correction` is not applied, so a colour-correction texture leaves the frame unchanged.

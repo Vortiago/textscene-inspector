@@ -1,6 +1,6 @@
 /**
- * Godot's `tonemap.glsl` `main()`: one fragment shader from a glow blend and a tone
- * curve. Its own module, so asking "does this environment glow?" pulls in no tone
+ * Godot's `tonemap.glsl` `main()`: one fragment shader from a glow blend, a tone curve and the
+ * colour adjustments. Its own module, so asking "does this environment glow?" pulls in no tone
  * curve, and the in-material tonemap path pulls in no glow.
  */
 
@@ -15,14 +15,15 @@ import { resolvedWhite, toneMappingEffectGlsl } from './godotToneMapping';
 import type { EnvironmentAdjustments, EnvironmentSettings } from './types';
 import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/srgbTransfer';
 
-export type CompositeToneMapping = Pick<EnvironmentSettings['toneMapping'], 'mode' | 'white'> & {
-  agxContrast?: number;
-};
+export type CompositeToneMapping = Pick<EnvironmentSettings['toneMapping'], 'mode' | 'white'> &
+  Partial<Pick<EnvironmentSettings['toneMapping'], 'agxContrast'>>;
 
 /** One field per `tonemap.glsl` flag group. A null clears that flag. */
 export interface CompositeOptions {
+  /** Null when the environment has no glow: `FLAG_USE_GLOW` clear. */
   glow: GlowParams | null;
   toneMapping: CompositeToneMapping;
+  /** Null when `adjustment_enabled` is false: `FLAG_USE_BCS` clear. */
   adjustments: EnvironmentAdjustments | null;
 }
 
@@ -74,12 +75,13 @@ const TONE_MAP_ONLY_GLSL = /* glsl */ `  vec3 color = godotToneMap(max(inputColo
 /**
  * `tonemap.glsl:916-946`: brightness on linear values, contrast and an equal-weight saturation on
  * sRGB values, then back to linear, because the composer encodes the output as Godot's sRGB
- * framebuffer does.
+ * framebuffer does. The decode clamps at 0, as Godot's 8-bit store does: three's encode takes
+ * `pow` of the value, and GLSL leaves `pow` of a negative undefined.
  */
 function adjustmentsGlsl({ brightness, contrast, saturation }: EnvironmentAdjustments): string {
   return /* glsl */ `  color *= ${glslFloat(brightness)};
   color = godotToSrgb(color);
   color = mix(vec3(0.5), color, ${glslFloat(contrast)});
   color = mix(vec3(dot(vec3(1.0), color) / 3.0), color, ${glslFloat(saturation)});
-  color = godotToLinear(color);`;
+  color = godotToLinear(max(color, vec3(0.0)));`;
 }

@@ -8,32 +8,15 @@
 import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
 import { brightPassGlsl, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
-import { compositeGlsl } from '../../resources/environment/godotCompositor';
+import { compositeGlsl, type CompositeOptions } from '../../resources/environment/godotCompositor';
 import { glslFloat } from '../../resources/environment/glslLiterals';
-import type { EnvironmentAdjustments } from '../../resources/environment/types';
 
-export interface GodotToneMapOptions {
-  /** Null when the environment has no glow: `FLAG_USE_GLOW` clear. */
-  glow: GlowParams | null;
-  /** Null when `adjustment_enabled` is false: `FLAG_USE_BCS` clear. */
-  adjustments: EnvironmentAdjustments | null;
-  /** Godot `tonemap_mode`: 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
-  toneMapMode: number;
-  /**
-   * Godot's `env->white`: the value the curve maps to 1.0, and, after the per-curve floor, the
-   * point SCREEN normalises the glow against.
-   */
-  toneMapWhite: number;
+export interface GodotToneMapOptions extends CompositeOptions {
   /**
    * Godot `tonemap_exposure`, applied to the scene colour once at the top of
    * `main()`. The bright pass has already applied the same value to the glow.
    */
-  toneMapExposure: number;
-  /**
-   * Godot `tonemap_agx_contrast`, read only by AgX. Threaded, not defaulted, so this path and the
-   * in-material one draw the same curve.
-   */
-  toneMapAgxContrast?: number;
+  exposure: number;
 }
 
 /** Shared by every pyramid material so they agree on how `vUv` is derived. */
@@ -49,32 +32,18 @@ export class GodotToneMapEffect extends Effect {
   /** Null when the environment has no glow: nothing to gather, nothing to own. */
   private readonly pyramid: GlowPyramid | null;
 
-  constructor({
-    glow,
-    adjustments,
-    toneMapMode,
-    toneMapWhite,
-    toneMapExposure,
-    toneMapAgxContrast,
-  }: GodotToneMapOptions) {
-    const uniforms = new Map<string, THREE.Uniform>([['godotExposure', new THREE.Uniform(toneMapExposure)]]);
+  constructor({ exposure, ...composite }: GodotToneMapOptions) {
+    const { glow } = composite;
+    const uniforms = new Map<string, THREE.Uniform>([['godotExposure', new THREE.Uniform(exposure)]]);
     // Only the glow arm of the shader reads it.
     if (glow) uniforms.set('godotGlowBuffer', new THREE.Uniform(null));
 
-    super(
-      'GodotToneMapEffect',
-      compositeGlsl({
-        glow,
-        toneMapping: { mode: toneMapMode, white: toneMapWhite, agxContrast: toneMapAgxContrast },
-        adjustments,
-      }),
-      {
-        // The effect writes the finished frame, glow and curve applied, so the composer must not
-        // blend it into the scene again.
-        blendFunction: BlendFunction.SRC,
-        uniforms,
-      }
-    );
+    super('GodotToneMapEffect', compositeGlsl(composite), {
+      // The effect writes the finished frame, glow and curve applied, so the composer must not
+      // blend it into the scene again.
+      blendFunction: BlendFunction.SRC,
+      uniforms,
+    });
 
     this.pyramid = glow ? new GlowPyramid(glow) : null;
   }

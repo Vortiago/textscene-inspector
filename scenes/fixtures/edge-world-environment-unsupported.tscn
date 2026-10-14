@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
-; An Environment feature the previewer does not draw: screen-space reflections. The metallic
-; cylinder reflects no screen-space surroundings.
+; An Environment that enables a feature the previewer does not draw: screen-space reflections.
+; The scene loads and draws the rest of the Environment, and the linter accepts ssr_enabled.
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 2

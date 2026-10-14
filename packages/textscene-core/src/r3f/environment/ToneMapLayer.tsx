@@ -14,6 +14,7 @@ import { GodotToneMapEffect } from './GodotToneMapEffect';
 export interface ToneMapLayerProps {
   /** Null when the environment has no glow, or nothing in the scene can bloom. */
   glow: GlowParams | null;
+  /** Null when `adjustment_enabled` is false. */
   adjustments: EnvironmentAdjustments | null;
   toneMapping: EnvironmentSettings['toneMapping'];
 }
@@ -30,10 +31,8 @@ export function ToneMapLayer({ glow, adjustments, toneMapping }: ToneMapLayerPro
       new GodotToneMapEffect({
         glow,
         adjustments,
-        toneMapMode: mode,
-        toneMapWhite: white,
-        toneMapExposure: exposure,
-        toneMapAgxContrast: agxContrast,
+        toneMapping: { mode, white, agxContrast },
+        exposure,
       }) as Effect,
     [glow, adjustments, mode, white, exposure, agxContrast]
   );
