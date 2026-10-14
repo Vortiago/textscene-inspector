@@ -2357,7 +2357,7 @@ tr:last-child td{border-bottom:0}
 <h3>What it exercises</h3>
 <ul><li>TileMapLayer platforms and a full-height rock column</li><li>Sprite2D decoration and enemy sprites</li><li>A multi-layer parallax background</li><li>A Camera2D framing the level</li></ul>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> A platform underside and its vines show along the top edge, where Godot shows sky, for a cause not yet known.</li><li><strong>Approximated</strong> The lower-right platform stops short of the right edge, and its tree crown is cut, for a cause not yet known.</li></ul></div>
+<ul><li><strong>Approximated</strong> The coins and the crab enemies draw smoothed, where Godot draws them pixel-sharp, for a cause not yet known.</li><li><strong>Approximated</strong> Each crab shows another pose than Godot's, for a cause not yet known.</li></ul></div>
     </article>
     <article class="sheet" data-type="Godot 3D Platformer" hidden>
       <header class="sheet-head">
@@ -2992,7 +2992,7 @@ tr:last-child td{border-bottom:0}
 <ul><li>A large isometric TileMapLayer</li><li>Sprite2D props as PackedScene instances inside a <code>y_sort_enabled</code> subtree</li><li>Draw order and occlusion down the isometric depth</li><li>61 Polygon2D nodes: soft shadows, floor decals and additive torch pools</li><li>A CanvasModulate over 23 PointLight2D nodes and 7 LightOccluder2D nodes</li></ul>
 <p>Draw order and the light pass match.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Needs runtime</strong> The candle flames and sparks draw here and not in Godot (see Candle).</li><li><strong>Approximated</strong> The area around the pillar right of centre is brighter than Godot's, for a cause not yet known.</li><li><strong>Approximated</strong> Some brighter areas are darker and bluer than Godot's, for a cause not yet known.</li></ul>
+<ul><li><strong>Needs runtime</strong> The candle sparks draw here and not in Godot (see Candle).</li><li><strong>Approximated</strong> A thin light seam shows between floor tiles, where Godot's tiles meet without one.</li></ul>
 <h3>The pieces on their own</h3>
 <p>Each section below shows one of the dungeon's own PackedScenes on a neutral backdrop, so a difference has one owner. The wrappers in <code>scenes/isometric/previews/</code> only re-centre them.</p></div>
       <div class="compare">
@@ -3023,8 +3023,8 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A wick, four CPUParticles2D emitters and two PointLight2D nodes. The wick and the light pools match.</p>
-<ul><li><strong>Needs runtime</strong> Godot's reference is captured before any particle is emitted. The previewer draws each emitter settled over one lifetime, so the flame and sparks show here only.</li></ul></div>
+        <div class="prose"><p>A wick, four CPUParticles2D emitters and two PointLight2D nodes. The wick, the flame and the light pools match.</p>
+<ul><li><strong>Needs runtime</strong> The previewer draws each emitter settled over one lifetime, so a spark above the flame shows here and not in Godot's first frame.</li></ul></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Internal shadow</h3><span class="status st-done">Done</span></div>
@@ -3044,7 +3044,7 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>One Polygon2D with a gradient texture and UVs outside 0 to 1. It matches Godot.</p></div>
       </section>
       <section class="prop">
-        <div class="prop-head"><h3>Goblin</h3><span class="status st-limitation">Limitation</span></div>
+        <div class="prop-head"><h3>Goblin</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/complex-isometric-dungeon-goblin-godot.png" alt="Godot render of Goblin">
@@ -3058,8 +3058,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A CharacterBody2D with an AnimatedSprite2D, a drop-shadow Sprite2D, a Camera2D and a hidden LightOccluder2D. The sprite and its frame match.</p>
-<ul><li><strong>Resource gap</strong> The drop shadow is missing. A Sprite2D does not draw an inline <code>GradientTexture2D</code>.</li></ul></div>
+        <div class="prose"><p>A CharacterBody2D with an AnimatedSprite2D, a drop-shadow Sprite2D, a Camera2D and a hidden LightOccluder2D. The sprite, its frame and the drop shadow match Godot.</p></div>
       </section>
     </article>
     <article class="sheet" data-type="ItemList" hidden>
@@ -6667,8 +6666,8 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p><code>town_scene.tscn</code>: a glTF town, ten instanced lamps, a CSG racetrack, a procedural sky with fog and AgX tonemapping, a shadow-casting sun and a Control UI. Neither automatic framing suits it, so both sides look through the scene's <code>PreviewCamera</code>.</p>
 <p>It exercises:</p>
 <ul><li>A glTF scene instanced as a PackedScene, with nested glTF tree instances</li><li>The <code>.gltf.import</code> sidecar's <code>root_scale</code> (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0028-honour-import-sidecars-for-source-assets.md" target="_blank" rel="noopener">ADR-0028</a>), which sizes the trees</li><li>A CSGPolygon3D racetrack swept along a Path3D</li><li>DirectionalLight3D shadows over open terrain</li><li>An external <code>sky_material</code> and sky ambient light</li><li>Material overrides on nodes inside the instanced glTF</li></ul>
-<p>Geometry, framing, tree scale, the sky and the override materials match.</p>
-<ul><li><strong>Approximated</strong> The ground is much brighter and more yellow than Godot's. The cause is not known. Fog and AgX are the candidates.</li><li><strong>Needs runtime</strong> The town has no vehicles. The game spawns them at runtime.</li></ul></div>
+<p>Geometry, framing, tree scale, the sky, the fog, the ground and the override materials match.</p>
+<ul><li><strong>Needs runtime</strong> The town has no vehicles. The game spawns them at runtime.</li></ul></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Trailer truck</h3><span class="status st-limitation">Limitation</span></div>
