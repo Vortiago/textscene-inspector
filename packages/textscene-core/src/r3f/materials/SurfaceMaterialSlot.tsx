@@ -98,9 +98,6 @@ export function useMaterialTextures(
     heightmap_texture: useSlotTexture(references, resourceTables, 'heightmap_texture'),
     anisotropy_flowmap: useSlotTexture(references, resourceTables, 'anisotropy_flowmap'),
   };
-  // A slot whose map is still loading or building binds a stand-in, never nothing.
-  const isArriving = (slot: TextureSlot): boolean => slotTextures[slot].isArriving;
-
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `bindSlotTexture`'s.
   const textureStates = useMemo(
@@ -115,41 +112,39 @@ export function useMaterialTextures(
     resourceTables.internalResources
   );
 
-  const albedoMap = useMemo(
-    () =>
-      transformedTexture(
-        viewportAlbedo ?? slotTextures.albedo_texture.texture,
-        textureStates,
-        'albedo_texture'
-      ),
-    [viewportAlbedo, slotTextures.albedo_texture.texture, textureStates]
+  const albedoMap = useTransformedTexture(
+    viewportAlbedo ?? slotTextures.albedo_texture.texture,
+    textureStates,
+    'albedo_texture'
   );
-  const normalMap = useMemo(
-    () => transformedTexture(slotTextures.normal_texture.texture, textureStates, 'normal_texture'),
-    [slotTextures.normal_texture.texture, textureStates]
+  const normalMap = useTransformedTexture(
+    slotTextures.normal_texture.texture,
+    textureStates,
+    'normal_texture'
   );
   // PARITY LIMITATION (metallic/roughness texture channel): Godot reads the
   // channel named by `metallic_texture_channel` / `roughness_texture_channel`
   // (default RED); three's metalnessMap/roughnessMap read BLUE / GREEN.
-  const roughnessMap = useMemo(
-    () => transformedTexture(slotTextures.roughness_texture.texture, textureStates, 'roughness_texture'),
-    [slotTextures.roughness_texture.texture, textureStates]
+  const roughnessMap = useTransformedTexture(
+    slotTextures.roughness_texture.texture,
+    textureStates,
+    'roughness_texture'
   );
-  const metalnessMap = useMemo(
-    () => transformedTexture(slotTextures.metallic_texture.texture, textureStates, 'metallic_texture'),
-    [slotTextures.metallic_texture.texture, textureStates]
+  const metalnessMap = useTransformedTexture(
+    slotTextures.metallic_texture.texture,
+    textureStates,
+    'metallic_texture'
   );
-  const emissiveMap = useMemo(
-    () => transformedTexture(slotTextures.emission_texture.texture, textureStates, 'emission_texture'),
-    [slotTextures.emission_texture.texture, textureStates]
+  const emissiveMap = useTransformedTexture(
+    slotTextures.emission_texture.texture,
+    textureStates,
+    'emission_texture'
   );
-  const aoMap = useMemo(
-    () => transformedTexture(slotTextures.ao_texture.texture, textureStates, 'ao_texture'),
-    [slotTextures.ao_texture.texture, textureStates]
-  );
-  const heightMap = useMemo(
-    () => transformedTexture(slotTextures.heightmap_texture.texture, textureStates, 'heightmap_texture'),
-    [slotTextures.heightmap_texture.texture, textureStates]
+  const aoMap = useTransformedTexture(slotTextures.ao_texture.texture, textureStates, 'ao_texture');
+  const heightMap = useTransformedTexture(
+    slotTextures.heightmap_texture.texture,
+    textureStates,
+    'heightmap_texture'
   );
 
   // Depend on the two values the repack reads, not their wrappers: a repack is a
@@ -161,10 +156,7 @@ export function useMaterialTextures(
     return repackAnisotropyFlowmap(anisotropyFlowmap);
   }, [drawsAnisotropic, anisotropyFlowmap]);
 
-  const anisotropyBound = useMemo(
-    () => transformedTexture(repackedFlowmap, textureStates, 'anisotropy_flowmap'),
-    [repackedFlowmap, textureStates]
-  );
+  const anisotropyBound = useTransformedTexture(repackedFlowmap, textureStates, 'anisotropy_flowmap');
 
   // The binding may hand back a clone of the repack with its own upload. Only
   // the clone is a second object: when nothing diverged the two are one texture,
@@ -175,34 +167,29 @@ export function useMaterialTextures(
   // slot resolves, freeing still-bound textures that three then re-uploads.
   useDisposeTexture(repackedFlowmap);
   useDisposeTexture(anisotropyClone);
-  // Each map draws once it is on the GPU: a large one uploads in bands, and its
-  // slot keeps the map it had meanwhile. The hook releases each map it stops drawing.
-  const albedoDrawn = orStandIn(useBoundMapUpload(albedoMap), albedoMap, isArriving, 'albedo_texture');
-  const normalDrawn = orStandIn(useBoundMapUpload(normalMap), normalMap, isArriving, 'normal_texture');
-  const roughnessDrawn = orStandIn(
-    useBoundMapUpload(roughnessMap),
+  const albedoDrawn = useDrawnMap(albedoMap, slotTextures.albedo_texture.isArriving, 'albedo_texture');
+  const normalDrawn = useDrawnMap(normalMap, slotTextures.normal_texture.isArriving, 'normal_texture');
+  const roughnessDrawn = useDrawnMap(
     roughnessMap,
-    isArriving,
+    slotTextures.roughness_texture.isArriving,
     'roughness_texture'
   );
-  const metalnessDrawn = orStandIn(
-    useBoundMapUpload(metalnessMap),
+  const metalnessDrawn = useDrawnMap(
     metalnessMap,
-    isArriving,
+    slotTextures.metallic_texture.isArriving,
     'metallic_texture'
   );
-  const emissiveDrawn = orStandIn(
-    useBoundMapUpload(emissiveMap),
+  const emissiveDrawn = useDrawnMap(
     emissiveMap,
-    isArriving,
+    slotTextures.emission_texture.isArriving,
     'emission_texture'
   );
-  const aoDrawn = orStandIn(useBoundMapUpload(aoMap), aoMap, isArriving, 'ao_texture');
-  const heightDrawn = orStandIn(useBoundMapUpload(heightMap), heightMap, isArriving, 'heightmap_texture');
+  const aoDrawn = useDrawnMap(aoMap, slotTextures.ao_texture.isArriving, 'ao_texture');
+  const heightDrawn = useDrawnMap(heightMap, slotTextures.heightmap_texture.isArriving, 'heightmap_texture');
   // Only an anisotropy-enabled material samples the flowmap, so only it waits for one.
   const anisotropyMap =
     anisotropyBound ??
-    (drawsAnisotropic && isArriving('anisotropy_flowmap')
+    (drawsAnisotropic && slotTextures.anisotropy_flowmap.isArriving
       ? pendingMapStandIn('anisotropy_flowmap')
       : undefined);
 
@@ -294,13 +281,22 @@ function textureSlotReference(
  * The slot's texture with the material's own texture state applied. Undefined while nothing is
  * loaded, so the slot falls back to null.
  */
+function useTransformedTexture(
+  texture: THREE.Texture | null | undefined,
+  states: MaterialTextureStates | null,
+  slot: TextureSlot
+): THREE.Texture | undefined {
+  return useMemo(() => transformedTexture(texture, states, slot), [texture, states, slot]);
+}
+
 function transformedTexture(
   texture: THREE.Texture | null | undefined,
   states: MaterialTextureStates | null,
   slot: TextureSlot
 ): THREE.Texture | undefined {
   if (!texture) return undefined;
-  if (!states) return texture;
+  // White samples the same under any wrap, filter, UV transform or colour space, so a clone buys nothing.
+  if (!states || texture === defaultWhiteTexture()) return texture;
   return bindSlotTexture(texture, slot, states);
 }
 
@@ -336,22 +332,18 @@ function planeTiled(state: UVSetState, mesh: TscnInternalResource): UVSetState {
 }
 
 /**
- * The map a slot draws: the uploaded one, else a stand-in while a bound map uploads or
- * the map is still arriving (`pendingMapStandIn.ts` says why), else nothing.
+ * The map a slot draws once it is on the GPU: a large one uploads in bands, and the slot keeps the
+ * map it had meanwhile. With none yet, a stand-in fills the slot while a map uploads or arrives
+ * (`pendingMapStandIn.ts` says why). The upload releases each map the slot stops drawing.
  */
-function orStandIn(
-  drawn: THREE.Texture | undefined,
+function useDrawnMap(
   bound: THREE.Texture | undefined,
-  isArriving: (slot: TextureSlot) => boolean,
+  isArriving: boolean,
   slot: TextureSlot
 ): THREE.Texture | undefined {
+  const drawn = useTiledUpload(bound ?? null, releaseBoundTexture) ?? undefined;
   if (drawn) return drawn;
-  return bound || isArriving(slot) ? pendingMapStandIn(slot) : undefined;
-}
-
-/** One bound map as it draws: uploaded in bands where large, released once it no longer draws. */
-function useBoundMapUpload(texture: THREE.Texture | undefined): THREE.Texture | undefined {
-  return useTiledUpload(texture ?? null, releaseBoundTexture) ?? undefined;
+  return bound || isArriving ? pendingMapStandIn(slot) : undefined;
 }
 
 /** Disposes a texture this module allocated itself, which no binding releases, once it is replaced or the slot unmounts. */

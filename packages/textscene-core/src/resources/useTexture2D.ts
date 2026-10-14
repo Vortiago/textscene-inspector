@@ -82,14 +82,9 @@ export function useTexture2DRid(
   return namesCanvasTexture ? CANVAS_TEXTURE_RID : { ...result, namesTexture: true };
 }
 
-const CANVAS_TEXTURE_RID: Texture2DRidResult = {
-  texture: null,
-  missing: false,
-  isArriving: false,
-  namesTexture: false,
-};
-
 const NOTHING: Texture2DResult = { texture: null, missing: false, isArriving: false };
+
+const CANVAS_TEXTURE_RID: Texture2DRidResult = { ...NOTHING, namesTexture: false };
 
 interface Texture2DSlot {
   /** The AtlasTexture the slot names, or null for any other form. */
@@ -141,16 +136,20 @@ function useTexture2DSlot(
   const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
   const source = procedural.texture ?? loaded.value ?? null;
   const atlasResources = slot.internalResources;
+  // The peel returns any other reference as it is, so a changed reference names a CanvasTexture.
+  const atlasSheet = atlas?.texture.atlas;
   const namesCanvasTexture =
-    isCanvasTextureRef(ref, internalResources) ||
-    isCanvasTextureRef(slot.ref, slot.internalResources) ||
-    (atlas !== null && isCanvasTextureRef(atlas.texture.atlas ?? undefined, slot.internalResources));
+    isPeeled(ref, unwrapped) || isPeeled(slot.ref, slotRef) || isPeeled(atlasSheet, sourceRef);
   const peeled = { atlas, atlasResources, source, namesCanvasTexture };
 
   if (!ref) return { ...peeled, result: NOTHING };
   // Nothing to resolve: a `.tres` still loading or proved absent, or a wrapper with no texture.
   if (!slot.ref) {
-    const result = { texture: null, missing: slot.missing, isArriving: slot.isLoading };
+    const result = {
+      texture: null,
+      missing: slot.status === 'missing',
+      isArriving: slot.status === 'loading',
+    };
     return { ...peeled, result };
   }
 
@@ -159,11 +158,9 @@ function useTexture2DSlot(
   return { ...peeled, result: { texture: source, missing: sourceMissing, isArriving } };
 }
 
-function isCanvasTextureRef(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): boolean {
-  return resolveSubResourceRef(ref, internalResources)?.type === 'CanvasTexture';
+/** An empty reference peels to undefined too, but names nothing to peel. */
+function isPeeled(ref: string | null | undefined, peeled: string | undefined): boolean {
+  return !!ref && ref !== peeled;
 }
 
 /** Pixel dimensions of a Texture2D slot, in the `Vec2` shape the rect solver uses. */

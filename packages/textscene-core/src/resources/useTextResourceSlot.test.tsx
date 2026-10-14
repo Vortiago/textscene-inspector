@@ -41,7 +41,7 @@ describe('useTextResourceSlot', () => {
     );
     expect(resource?.type).toBe('GradientTexture2D');
     expect(result.current.internalResources.map(({ id }) => id)).toContain('Gradient_a');
-    expect(result.current.missing).toBe(false);
+    expect(result.current.status).toBe('ready');
   });
 
   it("passes any other reference through with the scene's tables", () => {
@@ -50,18 +50,17 @@ describe('useTextResourceSlot', () => {
       ref: 'ExtResource("2")',
       externalResources: SCENE_EXTERNAL,
       internalResources: SCENE_INTERNAL,
-      missing: false,
-      isLoading: false,
+      status: 'ready',
     });
   });
 
   it('names nothing, and is not missing, while the .tres loads', () => {
     const result = render('ExtResource("1")');
-    expect(result.current).toMatchObject({ ref: undefined, missing: false, isLoading: true });
+    expect(result.current).toMatchObject({ ref: undefined, status: 'loading' });
   });
 
   it('reports a .tres that fails to load as missing (error path)', () => {
     const result = render('ExtResource("1")', (fake) => fake.resources.seed('res://ramp.tres', null));
-    expect(result.current).toMatchObject({ ref: undefined, missing: true, isLoading: false });
+    expect(result.current).toMatchObject({ ref: undefined, status: 'missing' });
   });
 });
