@@ -14,10 +14,11 @@ import { GodotToneMapEffect } from './GodotToneMapEffect';
 export interface ToneMapLayerProps {
   /** Null when the environment has no glow, or nothing in the scene can bloom. */
   glow: GlowParams | null;
+  adjustments: EnvironmentSettings['adjustments'];
   toneMapping: EnvironmentSettings['toneMapping'];
 }
 
-export function ToneMapLayer({ glow, toneMapping }: ToneMapLayerProps) {
+export function ToneMapLayer({ glow, adjustments, toneMapping }: ToneMapLayerProps) {
   const { mode, white, exposure, agxContrast } = toneMapping;
 
   // Typed as the base `Effect`: with the library's `declaration: true`, a class
@@ -28,12 +29,13 @@ export function ToneMapLayer({ glow, toneMapping }: ToneMapLayerProps) {
     () =>
       new GodotToneMapEffect({
         glow,
+        adjustments,
         toneMapMode: mode,
         toneMapWhite: white,
         toneMapExposure: exposure,
         toneMapAgxContrast: agxContrast,
       }) as Effect,
-    [glow, mode, white, exposure, agxContrast]
+    [glow, adjustments, mode, white, exposure, agxContrast]
   );
   useEffect(() => () => effect.dispose(), [effect]);
 

@@ -28,6 +28,9 @@ export const LIGHTING_SCENES = [
   // Exponential depth fog over boxes at three distances. The header states why no other golden
   // shows it.
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
+  // The Environment's brightness, contrast and saturation over an unshaded box. The header states
+  // why no other golden shows them.
+  { name: 'environment-adjustments', file: 'unit-environment-adjustments.tscn' },
   // An area light's scatter in volumetric fog, from Godot 4.7.2. The header states why no other
   // golden shows it.
   { name: 'area-light-fog', file: 'unit-area-light-fog.tscn' },

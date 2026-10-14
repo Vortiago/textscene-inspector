@@ -1,6 +1,6 @@
 /**
  * Godot's tonemap pass as one effect: the tone curve, plus the glow gather and blend under
- * `FLAG_USE_GLOW`, as in `tonemap.glsl`. One shader lets SOFTLIGHT composite after the curve, with
+ * `FLAG_USE_GLOW` and the colour adjustments under `FLAG_USE_BCS`, as in `tonemap.glsl`. One shader lets SOFTLIGHT composite after the curve, with
  * the glow buffer tonemapped, and every other mode before it, which a fixed pass order cannot express.
  */
 
@@ -9,10 +9,13 @@ import * as THREE from 'three';
 import { brightPassGlsl, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
 import { compositeGlsl } from '../../resources/environment/godotCompositor';
 import { glslFloat } from '../../resources/environment/glslLiterals';
+import type { EnvironmentAdjustments } from '../../resources/environment/types';
 
 export interface GodotToneMapOptions {
   /** Null when the environment has no glow: `FLAG_USE_GLOW` clear. */
   glow: GlowParams | null;
+  /** Null when `adjustment_enabled` is false: `FLAG_USE_BCS` clear. */
+  adjustments: EnvironmentAdjustments | null;
   /** Godot `tonemap_mode`: 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
   toneMapMode: number;
   /**
@@ -45,18 +48,25 @@ export class GodotToneMapEffect extends Effect {
   /** Null when the environment has no glow: nothing to gather, nothing to own. */
   private readonly pyramid: GlowPyramid | null;
 
-  constructor({ glow, toneMapMode, toneMapWhite, toneMapExposure, toneMapAgxContrast }: GodotToneMapOptions) {
+  constructor({
+    glow,
+    adjustments,
+    toneMapMode,
+    toneMapWhite,
+    toneMapExposure,
+    toneMapAgxContrast,
+  }: GodotToneMapOptions) {
     const uniforms = new Map<string, THREE.Uniform>([['godotExposure', new THREE.Uniform(toneMapExposure)]]);
     // Only the glow arm of the shader reads it.
     if (glow) uniforms.set('godotGlowBuffer', new THREE.Uniform(null));
 
     super(
       'GodotToneMapEffect',
-      compositeGlsl(glow, {
-        mode: toneMapMode,
-        white: toneMapWhite,
-        agxContrast: toneMapAgxContrast,
-      }),
+      compositeGlsl(
+        glow,
+        { mode: toneMapMode, white: toneMapWhite, agxContrast: toneMapAgxContrast },
+        adjustments
+      ),
       {
         // The effect writes the finished frame, glow and curve applied, so the composer must not
         // blend it into the scene again.
