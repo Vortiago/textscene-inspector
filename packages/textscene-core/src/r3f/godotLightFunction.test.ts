@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { GODOT_LIGHT_FUNCTION_EDITS, threeAnisotropy, installGodotLightFunction } from './godotLightFunction';
 import { applyChunkEdits } from './shaderPatch/chunkPatch';
 import { installGodotLightSpecular } from './lightSpecular/lightSpecularChunk';
+import { installGodotLightSize } from './lightSize/lightSizeChunk';
 import { warningsOf } from './testing/logWarnings';
 import { preprocessorBranch } from './testing/glslSource';
 
@@ -80,8 +81,24 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
   it("draws a light's specular with Godot's GGX", () => {
     // `scene_forward_lights_inc.glsl:239-262`.
     expect(godotChunks()[CHUNK].split('void RE_Direct_Physical(')[1]).toContain(
-      'vec3 specularBRDF = godotSpecularBRDF( directLight.direction, geometryViewDir, geometryNormal, material );'
+      'vec3 specularBRDF = godotSpecularBRDF( directLight.direction, geometryViewDir, geometryNormal, material, godotSizeOffset );'
     );
+  });
+
+  it("widens N.L, N.H and L.H by the light's size, as Godot does", () => {
+    const chunk = godotChunks()[CHUNK];
+    const specular = chunk.split('vec3 godotSpecularBRDF(')[1]!.split('return F * D * V;')[0]!;
+    expect(specular).toContain('float cNdotL = saturate( sizeOffset + dot( normal, lightDir ) );');
+    expect(specular).toContain('float cNdotH = saturate( sizeOffset + dot( normal, halfDir ) );');
+    expect(specular).toContain('float cLdotH = saturate( sizeOffset + dot( lightDir, halfDir ) );');
+    const direct = chunk.split('void RE_Direct_Physical(')[1]!;
+    expect(direct).toContain(
+      'float dotNL = saturate( godotSizeOffset + dot( geometryNormal, directLight.direction ) );'
+    );
+    expect(direct).toContain(
+      'godotDiffuseNL( godotSizeOffset + dot( geometryNormal, directLight.direction ),'
+    );
+    expect(direct).toContain('saturate( godotSizeOffset + dotVH )');
   });
 
   it('draws no specular at roughness 0, as Godot does (edge case)', () => {
@@ -107,7 +124,7 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
 
   it("draws a retroreflective lobe with Godot's GGX, not three's", () => {
     expect(godotChunks()[CHUNK]).toContain(
-      'vec3 retroSpecularBRDF = godotSpecularBRDF( directLight.direction, retroViewDir, geometryNormal, material );'
+      'vec3 retroSpecularBRDF = godotSpecularBRDF( directLight.direction, retroViewDir, geometryNormal, material, godotSizeOffset );'
     );
   });
 
@@ -158,7 +175,10 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
 });
 
 describe('installGodotLightFunction', () => {
-  beforeEach(installGodotLightSpecular);
+  beforeEach(() => {
+    installGodotLightSpecular();
+    installGodotLightSize();
+  });
 
   it('replaces three’s chunks with the patched ones', () => {
     installGodotLightFunction();
@@ -194,6 +214,14 @@ describe('installGodotLightFunction', () => {
 
   it("leaves three's chunks alone before the light specular it reads, and warns (error case)", () => {
     Object.assign(THREE.ShaderChunk, threeLightChunks);
+
+    expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
+    expect(installedChunks()).toEqual(threeChunks);
+  });
+
+  it("leaves three's chunks alone before the light size it reads, and warns (error case)", () => {
+    Object.assign(THREE.ShaderChunk, threeLightChunks);
+    installGodotLightSpecular();
 
     expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
     expect(installedChunks()).toEqual(threeChunks);

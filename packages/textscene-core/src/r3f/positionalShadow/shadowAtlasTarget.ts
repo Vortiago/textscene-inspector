@@ -1,16 +1,20 @@
 /**
- * The one depth texture every omni and spot shadow draws into, and every lit program samples through
+ * The one depth texture every positional shadow draws into, and every lit program samples through
  * one sampler, as Godot samples one positional shadow atlas (`scene_forward_clustered_inc.glsl:372`).
  * Every viewport lays its slots out in it. `positionalShadow.md` beside this file has the design.
  */
 
 import * as THREE from 'three';
 import { POSITIONAL_SHADOW_ATLAS_DEPTH_BITS } from '../../godot/positionalShadowAtlas.js';
+import { AtlasColourTexture } from '../shadowFilter/atlasColourTexture.js';
 import { AtlasDepthTexture, atlasTargetOf } from '../shadowFilter/atlasDepthTexture.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 
 /** The uniform every lit material samples the atlas through. */
 export const POSITIONAL_SHADOW_ATLAS_UNIFORM = 'positionalShadowAtlas';
+
+/** The uniform every lit material reads the atlas's raw depth through, from its colour. */
+export const POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM = 'positionalShadowAtlasColour';
 
 /** The 16-bit depth Godot's atlas stores, in three's type for it. */
 const DEPTH_TYPE =
@@ -20,10 +24,10 @@ const DEPTH_TYPE =
  * A depth texture that a linear filter compares, as Godot's `shadow_sampler` does
  * (`scene_shader_forward_clustered.cpp:995-1001`). Godot compares `GREATER` on its reversed depth, so
  * a lookup reads as lit only where the receiver is strictly nearer than the caster: `Less` here.
- * three needs a colour attachment, so it is the smallest one it renders: one 8-bit channel.
  */
 function createAtlas(size: number): THREE.WebGLRenderTarget {
-  const atlas = new THREE.WebGLRenderTarget(size, size, { format: THREE.RedFormat, depthBuffer: true });
+  const atlas = new THREE.WebGLRenderTarget(size, size, { depthBuffer: true });
+  atlas.texture = new AtlasColourTexture('PositionalShadowAtlasColour', size);
   atlas.depthTexture = new AtlasDepthTexture({
     name: 'PositionalShadowAtlas',
     size,
@@ -53,6 +57,11 @@ const holders = new Map<object, number>();
 /** The depth texture every lit program samples. */
 export function positionalShadowAtlasDepth(): THREE.DepthTexture {
   return atlas.depthTexture!;
+}
+
+/** The colour every lit program reads the raw depth of an area light's slot from. */
+export function positionalShadowAtlasColour(): THREE.Texture {
+  return atlas.texture;
 }
 
 /** The atlas every positional shadow draws into. Its side is the largest any holder asks for. */

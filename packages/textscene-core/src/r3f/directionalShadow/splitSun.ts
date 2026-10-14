@@ -48,6 +48,14 @@ export function splitSunOf(light: THREE.DirectionalLight): SplitSunLight | null 
   return sun?.parent === light ? sun : null;
 }
 
+/**
+ * The light whose declaration `light` reads: a split sun reads the light it shades for. Nothing for
+ * a split sun off its light.
+ */
+export function declaredLightOf(light: THREE.Light): THREE.Object3D | null {
+  return light instanceof SplitSunLight ? light.parent : light;
+}
+
 /** The light's split sun, attached on the first call. The declared light stops shading then. */
 export function attachSplitSun(light: THREE.DirectionalLight): SplitSunLight {
   const existing = splitSunOf(light);

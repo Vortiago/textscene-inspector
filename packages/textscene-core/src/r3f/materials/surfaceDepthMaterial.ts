@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { injectProgram, type ProgramInjection } from '../materialProgramInputs';
+import { composeInjections, injectProgram, type ProgramInjection } from '../materialProgramInputs';
 
 /** The material state a depth draw of a surface reads. */
 type DepthSurface = THREE.Material & {
@@ -13,8 +13,13 @@ type DepthSurface = THREE.Material & {
   alphaMap?: THREE.Texture | null;
 };
 
-/** What three's depth and distance materials share. */
-type DepthMaterial = THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
+/**
+ * What three's depth and distance materials share. A base that changes three's depth program
+ * carries its own injection, which each copy applies first.
+ */
+type DepthMaterial = (THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial) & {
+  readonly depthInjection?: ProgramInjection;
+};
 
 /** Seeds the alpha with `opacity` and multiplies the vertex colour in, as three's colour programs do. */
 const SURFACE_ALPHA: ProgramInjection = {
@@ -45,7 +50,7 @@ export function surfaceDepthMaterial<M extends DepthMaterial>(surface: THREE.Mat
   if (!copy) {
     copy = base.clone() as M;
     copy.alphaHash = surface.alphaHash;
-    injectProgram(copy, SURFACE_ALPHA);
+    injectProgram(copy, surfaceAlphaOf(copy));
     copies.set(base, copy);
   }
   return copy;
@@ -87,6 +92,11 @@ export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, 
   depth.clipShadows = surface.clipShadows;
   if (!recompiles) return;
   depth.alphaHash = surface.alphaHash;
-  injectProgram(depth, SURFACE_ALPHA);
+  injectProgram(depth, surfaceAlphaOf(depth));
   depth.needsUpdate = true;
+}
+
+/** The surface's alpha cut, after the depth program's own injection. */
+function surfaceAlphaOf(depth: DepthMaterial): ProgramInjection | undefined {
+  return composeInjections([depth.depthInjection, SURFACE_ALPHA]);
 }

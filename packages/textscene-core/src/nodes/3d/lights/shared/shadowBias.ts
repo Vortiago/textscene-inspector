@@ -3,24 +3,25 @@
  * normalised depth. An omni or spot light's keeps Godot's unit, which the patched lookup reads.
  */
 
-import { softShadowScale } from '../../../../godot/softShadowScale';
-import { spotShadowDepthBias } from '../../../../godot/positionalShadow';
+import { SHADOW_BLUR_DEFAULT } from '../../../../godot/softShadowScale';
+import {
+  LIGHT_SIZE_DEFAULT,
+  positionalSoftShadow,
+  spotShadowDepthBias,
+} from '../../../../godot/positionalShadow';
+import type { PositionalLightProperties } from './types';
 
 /** `scene/3d/light_3d.cpp:490` (Light3D) and `:681` (SpotLight3D). */
 const GODOT_SHADOW_BIAS_DEFAULT = { DIRECTIONAL: 0.1, OMNI: 0.1, SPOT: 0.03 } as const;
 
 /**
- * Exact: `light_storage.cpp:723` sends `shadow_bias / 100 * bias_scale`,
+ * Exact: `light_storage.cpp:723` sends `shadow_bias / 100 * bias_scale` times `soft_shadow_scale`,
  * `renderer_scene_cull.cpp:2348` makes `bias_scale` the cascade's ortho depth range,
  * and `scene_forward_clustered.glsl:2304` spends it inside that range, so in
  * normalised depth the range cancels.
  */
-export function directionalShadowBias(
-  shadowBias: number | undefined,
-  shadowBlur: number | undefined
-): number {
-  const bias = shadowBias ?? GODOT_SHADOW_BIAS_DEFAULT.DIRECTIONAL;
-  return -(bias / 100) * softShadowScale(shadowBlur);
+export function directionalShadowBias(shadowBias: number | undefined, softShadowScale: number): number {
+  return -((shadowBias ?? GODOT_SHADOW_BIAS_DEFAULT.DIRECTIONAL) / 100) * softShadowScale;
 }
 
 /**
@@ -32,7 +33,14 @@ export function omniShadowBias(shadowBias: number | undefined): number {
   return shadowBias ?? GODOT_SHADOW_BIAS_DEFAULT.OMNI;
 }
 
+/** The properties a spot light's depth bias reads. */
+type SpotBiasProperties = Pick<PositionalLightProperties, 'shadow_bias' | 'shadow_blur' | 'light_size'>;
+
 /** In Godot's reversed clip depth, for the spot lookup Godot's shader runs (`positionalShadowLookup.ts`). */
-export function spotShadowBias(shadowBias: number | undefined, shadowBlur: number | undefined): number {
-  return spotShadowDepthBias(shadowBias ?? GODOT_SHADOW_BIAS_DEFAULT.SPOT, softShadowScale(shadowBlur));
+export function spotShadowBias({ shadow_bias, shadow_blur, light_size }: SpotBiasProperties): number {
+  const { scale } = positionalSoftShadow(
+    light_size ?? LIGHT_SIZE_DEFAULT,
+    shadow_blur ?? SHADOW_BLUR_DEFAULT
+  );
+  return spotShadowDepthBias(shadow_bias ?? GODOT_SHADOW_BIAS_DEFAULT.SPOT, scale);
 }

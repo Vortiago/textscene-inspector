@@ -137,6 +137,21 @@ describe('installChunkPatch', () => {
     );
   });
 
+  it('installs once one chunk holds the text of every patch it requires there', () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[REQUIRED_CHUNK] = 'earlier patch, later patch';
+    const patch = { ...swapPatch('one', 'two'), requires: { [REQUIRED_CHUNK]: ['earlier', 'later'] } };
+    expect(installChunkPatch(patch)).toBe(true);
+  });
+
+  it('leaves the chunks alone when one chunk lacks one of the patches it requires (edge case)', () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[REQUIRED_CHUNK] = 'earlier patch';
+    const patch = { ...swapPatch('one', 'two'), requires: { [REQUIRED_CHUNK]: ['earlier', 'later'] } };
+    expect(warningsOf(() => installChunkPatch(patch))).toHaveLength(1);
+    expect(THREE.ShaderChunk[CHUNK]).toBe('one');
+  });
+
   it('leaves the chunks alone and names the chunk that lacks a required patch (error case)', () => {
     THREE.ShaderChunk[CHUNK] = 'one';
     const patch = { ...swapPatch('one', 'two'), requires: { [REQUIRED_CHUNK]: 'earlier' } };

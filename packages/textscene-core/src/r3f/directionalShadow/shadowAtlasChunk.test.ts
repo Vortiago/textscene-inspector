@@ -10,10 +10,16 @@ import {
   shadowAtlasChunks,
   type ShadowAtlasChunks,
 } from './shadowAtlasChunk';
-import { DIRECTIONAL_SHADOW_ATLAS_UNIFORM, directionalShadowAtlasDepth } from './shadowAtlas';
+import {
+  DIRECTIONAL_SHADOW_ATLAS_UNIFORM,
+  DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM,
+  directionalShadowAtlasColour,
+  directionalShadowAtlasDepth,
+} from './shadowAtlas';
 import { godotSplitShadowChunk } from './splitShadowChunk';
 import { shadowFadeChunks, type ShadowFadeChunks } from './shadowFade';
 import { warningsOf } from '../testing/logWarnings';
+import { LIT_SHADERS } from '../testing/litShaders';
 
 const PARS = 'shadowmap_pars_fragment';
 const LIGHTS = 'lights_fragment_begin';
@@ -23,7 +29,6 @@ const threeChunks: ShadowAtlasChunks = {
   [LIGHTS]: THREE.ShaderChunk[LIGHTS],
   [SHADOW_MASK]: THREE.ShaderChunk[SHADOW_MASK],
 };
-const LIT_SHADERS = ['lambert', 'phong', 'standard', 'physical', 'toon', 'shadow'] as const;
 
 const occurrences = (text: string, part: string) => text.split(part).length - 1;
 
@@ -93,6 +98,15 @@ describe('installDirectionalShadowAtlas', () => {
     }
   });
 
+  it('gives every lit built-in material the atlas colour, for the blocker search', () => {
+    installDirectionalShadowAtlas();
+    for (const name of LIT_SHADERS) {
+      expect(THREE.ShaderLib[name]!.uniforms[DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM]!.value).toBe(
+        directionalShadowAtlasColour()
+      );
+    }
+  });
+
   it('leaves an unlit material without it (edge case)', () => {
     installDirectionalShadowAtlas();
     expect(THREE.ShaderLib.basic.uniforms[DIRECTIONAL_SHADOW_ATLAS_UNIFORM]).toBeUndefined();
@@ -102,6 +116,13 @@ describe('installDirectionalShadowAtlas', () => {
     installDirectionalShadowAtlas();
     const merged = THREE.UniformsUtils.merge([THREE.UniformsLib.lights]);
     expect(merged[DIRECTIONAL_SHADOW_ATLAS_UNIFORM]!.value).toBe(directionalShadowAtlasDepth());
+  });
+
+  it('patches chunks the split lookup patched first, whose soft shadow names the atlas colour (edge case)', () => {
+    THREE.ShaderChunk[PARS] = godotSplitShadowChunk(threeChunks[PARS])!;
+    installDirectionalShadowAtlas();
+    expect(THREE.ShaderChunk[PARS]).toContain(`uniform sampler2DShadow ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM};`);
+    expect(THREE.ShaderChunk[LIGHTS]).toContain(`getSunShadow( ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM},`);
   });
 
   it('patches each chunk once when called twice (edge case)', () => {

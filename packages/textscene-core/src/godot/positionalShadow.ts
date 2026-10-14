@@ -1,10 +1,16 @@
 /**
  * How Godot's forward renderer sets up an omni or spot light's shadow: which lights the cull hands
- * the atlas, the depth range of the map, and the two biases the lookup moves the receiver by.
+ * the atlas, the depth range of the map, the two biases the lookup moves the receiver by, and its
+ * soft shadow.
  */
+
+import { SOFT_LOW_QUALITY_RADIUS } from './softShadowScale.js';
 
 /** `Light3D()` sets `PARAM_SHADOW_NORMAL_BIAS` to 1 (`scene/3d/light_3d.cpp:491`). */
 export const POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT = 1;
+
+/** `Light3D()` sets `PARAM_SIZE` to 0 (`scene/3d/light_3d.cpp:478`). AreaLight3D sets its own. */
+export const LIGHT_SIZE_DEFAULT = 0;
 
 /** The near plane Godot renders an omni or spot shadow from (`renderer_scene_cull.cpp:2442`, `:2531`). */
 const SHADOW_Z_NEAR = 0.025;
@@ -33,6 +39,22 @@ export function positionalShadowNormalBias(normalBias: number, slotSize: number)
  */
 export function spotShadowDepthBias(shadowBias: number, softShadowScale: number): number {
   return (shadowBias / 100) * softShadowScale;
+}
+
+/** The lookup's soft shadow: the penumbra's `size`, zero for PCF, and the kernel's `scale`. */
+export interface PositionalSoftShadow {
+  size: number;
+  scale: number;
+}
+
+/**
+ * A light with a `light_size` and a `shadow_blur` searches for blockers and spreads its penumbra
+ * over its size. Any other light filters at `shadow_blur` times the quality radius
+ * (`light_storage.cpp:986-999`, `:1015-1022`, 4.7.2 `:1199-1210` for an area light).
+ */
+export function positionalSoftShadow(lightSize: number, shadowBlur: number): PositionalSoftShadow {
+  if (lightSize > 0 && shadowBlur > 0) return { size: lightSize, scale: shadowBlur };
+  return { size: 0, scale: shadowBlur * SOFT_LOW_QUALITY_RADIUS };
 }
 
 /** The box a light's volume fills in its own space, its corners at `min` and `max`. */

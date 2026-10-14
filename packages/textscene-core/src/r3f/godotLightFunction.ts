@@ -6,6 +6,7 @@
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
+import { LIGHT_SIZE_MARK } from './lightSize/lightSizeChunk.js';
 import { LIGHT_SPECULAR_MARK } from './lightSpecular/lightSpecularChunk.js';
 import { ROUGHNESS_LIMITER_AMOUNT, ROUGHNESS_LIMITER_LIMIT } from '../godot/roughnessLimiter.js';
 import { glslFloat } from '../resources/environment/glslLiterals.js';
@@ -35,7 +36,8 @@ const MATERIAL_STRUCT = 'struct PhysicalMaterial {';
 /**
  * `diffuse_brdf_NL` times pi in each mode (`scene_forward_lights_inc.glsl:133-134,194-213`), as
  * `BRDF_Lambert` carries the 1 / pi. It takes the raw N.L, since wrap and toon read past the
- * terminator. Godot's light size `A` is 0 for a punctual light. Burley is the branch with no define.
+ * terminator. The caller adds the light's size offset `A` to N.L and L.H. Burley is the branch with
+ * no define.
  */
 const DIFFUSE_NL = /* glsl */ `
 float godotSchlickFresnel( const in float u ) {
@@ -67,7 +69,8 @@ float godotDiffuseNL( const in float dotNLRaw, const in float dotNVRaw, const in
 
 /**
  * Godot's GGX specular (`scene_forward_lights_inc.glsl:16-47,239-262`), divided by N.L as three's
- * `irradiance` carries it. three's anisotropic D and V have Godot's form, so they take Godot's
+ * `irradiance` carries it. `sizeOffset` is the light's `A`, which widens N.L, N.H and L.H (`:171`,
+ * `:224`). three's anisotropic D and V have Godot's form, so they take Godot's
  * stretched alphas. Godot's Fresnel is exact Schlick with f90 from F0 (`:256-261`).
  */
 const SPECULAR_BRDF = /* glsl */ `
@@ -82,13 +85,13 @@ float godotGGXVisibility( const in float cNdotL, const in float cNdotV, const in
 	return 0.5 / mix( 2.0 * cNdotL * cNdotV, cNdotL + cNdotV, alpha );
 }
 
-vec3 godotSpecularBRDF( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in PhysicalMaterial material ) {
-	float cNdotL = saturate( dot( normal, lightDir ) );
+vec3 godotSpecularBRDF( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in PhysicalMaterial material, const in float sizeOffset ) {
+	float cNdotL = saturate( sizeOffset + dot( normal, lightDir ) );
 	if ( cNdotL <= 0.0 ) return vec3( 0.0 );
 	vec3 halfDir = normalize( lightDir + viewDir );
 	float cNdotV = max( dot( normal, viewDir ), 1e-4 );
-	float cNdotH = saturate( dot( normal, halfDir ) );
-	float cLdotH = saturate( dot( lightDir, halfDir ) );
+	float cNdotH = saturate( sizeOffset + dot( normal, halfDir ) );
+	float cLdotH = saturate( sizeOffset + dot( lightDir, halfDir ) );
 	vec3 f0 = material.specularColorBlended;
 	float f90 = clamp( dot( f0, vec3( 50.0 * 0.33 ) ), material.metalness, 1.0 );
 	vec3 F = f0 + ( f90 - f0 ) * godotSchlickFresnel( cLdotH );
@@ -125,7 +128,7 @@ export const RE_DIRECT = 'void RE_Direct_Physical( const in IncidentLight direct
  * three's `dotVH` is Godot's L.H, as H bisects L and V. three's sheen energy compensation stays on
  * the diffuse, as it does on `irradiance`, so Lambert keeps three's exact term.
  */
-const DIRECT_DIFFUSE = /* glsl */ `vec3 godotDiffuseIrradiance = godotDiffuseNL( dot( geometryNormal, directLight.direction ), dot( geometryNormal, geometryViewDir ), dotVH, material.godotRoughness ) * directLight.color;
+const DIRECT_DIFFUSE = /* glsl */ `vec3 godotDiffuseIrradiance = godotDiffuseNL( godotSizeOffset + dot( geometryNormal, directLight.direction ), dot( geometryNormal, geometryViewDir ), saturate( godotSizeOffset + dotVH ), material.godotRoughness ) * directLight.color;
 	#ifdef USE_SHEEN
 		godotDiffuseIrradiance *= sheenEnergyComp;
 	#endif
@@ -135,7 +138,13 @@ const THREE_DIRECT_SPECULAR =
   'vec3 specularBRDF = BRDF_GGX( directLight.direction, geometryViewDir, geometryNormal, material );';
 
 const DIRECT_SPECULAR =
-  'vec3 specularBRDF = godotSpecularBRDF( directLight.direction, geometryViewDir, geometryNormal, material );';
+  'vec3 specularBRDF = godotSpecularBRDF( directLight.direction, geometryViewDir, geometryNormal, material, godotSizeOffset );';
+
+const THREE_IRRADIANCE_NL = 'float dotNL = saturate( dot( geometryNormal, directLight.direction ) );';
+
+/** Godot's specular and clearcoat read the N.L the light's size widens (`:133`, `:168`). */
+const IRRADIANCE_NL =
+  'float dotNL = saturate( godotSizeOffset + dot( geometryNormal, directLight.direction ) );';
 
 const THREE_SPECULAR_SUM =
   'reflectedLight.directSpecular += irradiance * specularBRDF * material.multiScatteringCompensation;';
@@ -165,7 +174,7 @@ const THREE_RETRO_SPECULAR =
 
 /** Godot has no retroreflection, so a retroreflective lobe takes Godot's GGX and its stretched alphas. */
 const RETRO_SPECULAR =
-  'vec3 retroSpecularBRDF = godotSpecularBRDF( directLight.direction, retroViewDir, geometryNormal, material );';
+  'vec3 retroSpecularBRDF = godotSpecularBRDF( directLight.direction, retroViewDir, geometryNormal, material, godotSizeOffset );';
 
 const THREE_ALPHA_T =
   'material.alphaT = mix( pow2( material.roughness ), 1.0, pow2( material.anisotropy ) );';
@@ -221,6 +230,7 @@ export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
   },
   { chunk: SETUP_CHUNK, three: ROUGHNESS_SETUP, godot: GODOT_ROUGHNESS },
   { chunk: CHUNK, three: RE_DIRECT, godot: `${ANISOTROPY_SIGN}${DIFFUSE_NL}${SPECULAR_BRDF}${RE_DIRECT}` },
+  { chunk: CHUNK, three: THREE_IRRADIANCE_NL, godot: IRRADIANCE_NL },
   { chunk: CHUNK, three: THREE_DIRECT_SPECULAR, godot: DIRECT_SPECULAR },
   { chunk: CHUNK, three: THREE_RETRO_SPECULAR, godot: RETRO_SPECULAR },
   { chunk: CHUNK, three: THREE_SPECULAR_SUM, godot: SPECULAR_SUM },
@@ -265,7 +275,7 @@ export function installGodotLightFunction(): void {
     isApplied: (chunks) => chunks[CHUNK].includes(LIGHT_FUNCTION_MARK),
     apply: (chunks) => applyChunkEdits(chunks, GODOT_LIGHT_FUNCTION_EDITS),
     missing: `${CHUNK}, ${SETUP_CHUNK} or ${MAPS_CHUNK} lacks a line the light function patch replaces`,
-    requires: { lights_pars_begin: LIGHT_SPECULAR_MARK },
+    requires: { lights_pars_begin: [LIGHT_SPECULAR_MARK, LIGHT_SIZE_MARK] },
   });
 }
 

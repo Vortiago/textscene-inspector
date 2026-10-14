@@ -45,6 +45,8 @@ function declaredSplitLight(splitCount: number): THREE.DirectionalLight {
     depthBias: 0,
     normalBias: 2,
     filterRadius: 2,
+    softShadowAngle: 0,
+    drawsSoftShadow: false,
     splitCount,
     splitOffsets: [0.1, 0.2, 0.5],
     blendSplits: false,
@@ -85,7 +87,19 @@ function landsIn(matrix: THREE.Matrix4, point: THREE.Vector3, rect: DirectionalS
   );
 }
 
+/** The lengths of the matrix's x and y rows over world x, y and z, as the soft lookup reads them. */
+function matrixRowLengths(matrix: THREE.Matrix4): [number, number] {
+  const e = matrix.elements;
+  return [Math.hypot(e[0]!, e[4]!, e[8]!), Math.hypot(e[1]!, e[5]!, e[9]!)];
+}
+
 const nothing = new THREE.Sphere(new THREE.Vector3(), 1e6);
+
+describe('DirectionalSplitShadow', () => {
+  it('leaves its draw to the shadow pass’s atlas step, which writes the colour (`shadowPass.ts`)', () => {
+    expect(new DirectionalSplitShadow().autoUpdate).toBe(false);
+  });
+});
 
 describe('DirectionalSplitShadow.setSplits', () => {
   it('lays four splits out as quadrants of the atlas', () => {
@@ -201,6 +215,18 @@ describe('DirectionalSplitShadow.updateMatrices', () => {
       for (const corner of cameraSliceCorners(camera, starts[split]!, ends[split]!)) {
         expect(landsIn(shadow.getMatrix(split), corner, rect)).toBe(true);
       }
+    }
+  });
+
+  it('scales x and y by the box’s size in the atlas, which the blocker search reads off the matrix', () => {
+    // `light_storage.cpp:727-731`: the split's share of the atlas over the box's width and height.
+    const shadow = fittedShadow(viewingCamera(), 2, 2);
+    for (let split = 0; split < 2; split++) {
+      const rect = directionalShadowSplitAtlasRect(2, split, SECOND_OF_TWO);
+      const camera = shadow.getCamera(split);
+      const [x, y] = matrixRowLengths(shadow.getMatrix(split));
+      expect(x).toBeCloseTo(rect.width / ATLAS_SIZE / (camera.right - camera.left), 12);
+      expect(y).toBeCloseTo(rect.height / ATLAS_SIZE / (camera.top - camera.bottom), 12);
     }
   });
 

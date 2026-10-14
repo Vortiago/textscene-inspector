@@ -1,5 +1,5 @@
 /**
- * An omni or spot light's pose in the world: its position and rotation. A light's scale counts for
+ * A positional light's pose in the world: its position and rotation. A light's scale counts for
  * nothing in Godot's shadow (`renderer_scene_cull.cpp:2358-2359`), so the pose drops it. The shadow
  * pass reads it on every render, so it writes into the caller's objects.
  */

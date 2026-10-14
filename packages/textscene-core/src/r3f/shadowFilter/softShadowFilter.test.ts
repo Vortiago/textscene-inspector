@@ -50,6 +50,19 @@ describe('the soft shadow filter', () => {
     expect(SOFT_SHADOW_FILTER).toContain('return mat2( vec2( cr, - sr ), vec2( sr, cr ) );');
   });
 
+  it('declares Godot’s Soft Low penumbra kernel for every blocker search', () => {
+    // `renderer_scene_render_rd.cpp:1158` and `:1205`: eight taps for an omni, spot, area or sun.
+    expect(SOFT_SHADOW_FILTER).toContain('const int GODOT_PENUMBRA_SHADOW_SAMPLES = 8;');
+  });
+
+  it('unpacks the two bytes of an atlas colour into the depth', () => {
+    expect(SOFT_SHADOW_FILTER).toContain('return dot( bytes, vec2( 256.0, 1.0 ) ) / 65535.0;');
+  });
+
+  it('clamps each texel of the raw depth read to the atlas (edge case)', () => {
+    expect(SOFT_SHADOW_FILTER).toContain('clamp( texel, ivec2( 0 ), last )');
+  });
+
   it('writes every kernel value as a float GLSL accepts (edge case)', () => {
     const kernel = /vec2\[\]\((.*)\);/.exec(SOFT_SHADOW_FILTER)![1]!;
     expect(kernel).not.toMatch(/[(, ]-?\d+ [,)]/);

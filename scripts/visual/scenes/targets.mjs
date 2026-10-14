@@ -16,7 +16,8 @@ export const TILE_AND_TARGET_SCENES = [
   // Y-sort: sibling y-sort subtrees (Floor, Walls, Decorations under a
   // non-y-sorted root) layer in disjoint tree-ordered z-bands, and each layer's
   // tiles interleave with decorations by Y. No decoration hides behind the floor.
-  { name: 'isometric-dungeon', file: 'dungeon.tscn', mode: '2d' },
+  // A slow CI runner takes over 30 s, Playwright's default, to find the frame stable.
+  { name: 'isometric-dungeon', file: 'dungeon.tscn', mode: '2d', settleTimeout: 120000 },
   // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by half a
   // tile.
   { name: 'tile-map-layer-hexagon', file: 'unit-tile-map-layer-hexagon.tscn', mode: '2d' },

@@ -31,6 +31,8 @@ const DECLARATION: DirectionalShadowDeclaration = {
   depthBias: -0.002,
   normalBias: 2,
   filterRadius: 2,
+  softShadowAngle: 0,
+  drawsSoftShadow: false,
   splitCount: 1,
   splitOffsets: [0.1, 0.2, 0.5],
   blendSplits: false,
@@ -190,6 +192,14 @@ describe('fitSceneDirectionalShadows with splits', () => {
     fitRender(scene, viewingCamera());
     const ends = splitSunOf(light)!.shadow._cascadeData.map((slot) => slot.x);
     [8.045, 16.04, 40.025, 80].forEach((end, i) => expect(ends[i]).toBeCloseTo(end, 9));
+  });
+
+  it('writes each split’s range start, which the blocker search reads', () => {
+    const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
+    fitRender(scene, viewingCamera());
+    const { rangeBegins } = splitSunOf(light)!.shadow;
+    expect(rangeBegins.toArray().every(Number.isFinite)).toBe(true);
+    expect(rangeBegins.x).not.toBe(rangeBegins.w);
   });
 
   it('keeps the sun, with one split, when the light goes orthogonal', () => {

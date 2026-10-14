@@ -13,9 +13,10 @@ import {
   type PositionalShadowSlot,
 } from '../../godot/positionalShadowAtlas.js';
 import { holdPositionalShadowAtlas, releasePositionalShadowAtlas } from './shadowAtlasTarget.js';
+import type { AreaShadowLight } from './atlasAreaShadow.js';
 
-/** An omni or spot light. */
-export type PositionalLight = THREE.PointLight | THREE.SpotLight;
+/** An omni, spot or area light. */
+export type PositionalLight = THREE.PointLight | THREE.SpotLight | AreaShadowLight;
 
 /** The cube three renders an omni light's shadow into. */
 type ShadowMap = NonNullable<THREE.LightShadow['map']>;

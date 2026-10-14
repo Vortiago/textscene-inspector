@@ -4,8 +4,8 @@ The fitter fits each shadow-casting directional light's shadow to the viewing ca
 two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
 `RendererSceneCull::_light_instance_setup_directional_shadow`
 (`servers/rendering/renderer_scene_cull.cpp:2134-2353`), the split lookup of
-`scene_forward_clustered.glsl:2403-2478`, the distance fade of `:2491` and the PCF of
-`scene_forward_lights_inc.glsl:283-308`.
+`scene_forward_clustered.glsl:2403-2478`, the distance fade of `:2491`, the PCF of
+`scene_forward_lights_inc.glsl:283-308` and the soft shadow of `scene_forward_clustered.glsl:2310-2398`.
 
 ## Who does what
 
@@ -163,8 +163,45 @@ for each split it samples:
 The kernel, the turn and the PCF are one GLSL block in `../shadowFilter/softShadowFilter.ts`,
 which the omni and spot lookups share. `installSoftShadowFilter` puts it in
 `shadowmap_pars_fragment` once, ahead of every shadow block, and both lookups' installs call it
-first. So the soft edge's dither matches Godot's pixel for pixel where the shadow map matches. The lookup keeps three's test that leaves a receiver outside the atlas
-or past its far plane unshadowed. A map type other than PCF keeps three's own lookup.
+first. So the soft edge's dither matches Godot's pixel for pixel where the shadow map matches. The
+lookup keeps three's test that leaves a receiver outside the atlas or past its far plane unshadowed.
+A map type other than PCF keeps three's own lookup.
+
+## The soft shadow
+
+A light that lights surfaces, with a `light_angular_distance` above zero, a shadow and a
+`shadow_blur` above zero, turns on Godot's directional soft shadows for the render
+(`light_storage.cpp:632`, `:680-686`). Then every directional light with an angular distance
+searches for blockers in place of the PCF (`scene_forward_clustered.glsl:2310-2398`), and lights a
+surface with its size term, `1 - cos` of the angle (`light_storage.cpp:670`,
+`scene_forward_clustered.glsl:2617`). Without the flag, the light keeps the PCF and no size term.
+`godot/directionalSoftShadow.ts` holds these facts.
+
+- The light pass defines `GODOT_USE_DIRECTIONAL_SOFT_SHADOWS` on every lit material while a light
+  of any scene turns the flag on, drawn or not (`../shadowFilter/softShadowSearch.ts`). Only a
+  program with that define compiles the search. A light that no camera draws keeps its angle off.
+- Each split searches its own box (`sample_directional_soft_shadow`,
+  `scene_forward_lights_inc.glsl:381-424`). The search radius grows with the receiver's distance
+  from the box's light side, Godot's `range_begin` (`renderer_scene_cull.cpp:2327`, `:2349`).
+  Godot measures that distance in view space from a range start in world space, so the radius moves
+  with the camera. The search does the same.
+- The box's size in the atlas, Godot's `uv_scale`, is the length of the slot matrix's x and y rows.
+- A blending light blends each split over the whole split before it, from the camera for the first
+  (`scene_forward_clustered.glsl:2348`, `:2373`, `:2398`).
+- The depth grows away from the light, where Godot's reversed depth shrinks, so a blocker is a
+  smaller depth.
+- Godot's penumbra divides by a blocker's distance from its near plane, the range start
+  (`scene_forward_lights_inc.glsl:407`). The caster reach moves this box's near plane further towards
+  the light, so the search finds the range start's depth, `lightSide`, through the slot matrix's z
+  row. A blocker nearer the light lies on that side in Godot, which pancakes it to `0.9999` of its
+  depth range (`scene_forward_clustered.glsl:679-682`). That range is `1 - lightSide` in this box's
+  depth, so the search raises such a blocker to `1e-4` of it past `lightSide`.
+- The fitter widens each split's box by the tangent of the angle times its depth
+  (`renderer_scene_cull.cpp:2286-2299`), so a caster the search reaches is in the box.
+- The search reads the atlas's depth raw, from its colour attachment. The atlas pass of the
+  positional shadows draws the suns' shares too, with `AtlasDepthMaterial`, which writes the depth
+  again into that colour (`../positionalShadow/atlasDepthPass.ts`). So a `DirectionalSplitShadow`
+  turns three's own update off.
 
 ## The three.js design
 
@@ -249,7 +286,9 @@ patch `installShaderPatches` installs, for a light with four splits:
 
 A light with one split counts the same. The one unit of a plain material is three's `dfgLUT`. The
 omni and spot shadows share the one unit of the positional shadow atlas
-(`../positionalShadow/positionalShadow.md`).
+(`../positionalShadow/positionalShadow.md`). A program compiled with the soft shadow's define adds one
+unit, the atlas colour: eight soft suns on `MeshStandardMaterial` measure one unit more than eight
+suns without it.
 
 A sampler per sun would take 9 units with eight suns and the plain material, 18 with the physical
 one, and one more with any omni or spot shadow. A GPU with only 16 units fails to link the last
@@ -288,8 +327,9 @@ skips that test (`WebGLShadowMap.js:526`), so it draws into every slot, and into
 at no size. The fit costs microseconds in every mode, far below the draw. Most of it is the one
 walk of the scene that finds the lights.
 
-The atlas is one 4096 target, as three builds a shadow map: an RGBA colour attachment beside a
-24-bit depth texture, so it takes about 128 MiB. Godot's atlas takes 32 MiB, since it stores 16-bit
+The atlas is one 4096 target, as three builds a shadow map: an RG colour attachment of two bytes
+that holds the depth again for the soft shadow, beside a 24-bit depth texture, so it takes about
+96 MiB. Godot's atlas takes 32 MiB, since it stores 16-bit
 depth and nothing else (`rendering_server.cpp:3708`). A change in how many lights share the atlas
 moves each light's share and keeps the atlas.
 
@@ -301,17 +341,27 @@ declares four slots, since the shader finds a light's slots at `shadowIndex * SU
 Each slot takes a matrix (four vectors) and a vec4. With the sun's light, its shadow and its fade, a
 shadowed sun takes about 24 vectors, whatever its split count.
 
-The shadow list holds at most eight lights, so a program samples at most eight sun shadows. Packed
-from the active uniforms of a program three r186 linked in the visual harness's Chromium:
+The shadow list holds at most eight lights, so a program samples at most eight sun shadows. Each
+lit program's fragment shader was linked again in the visual harness's Chromium, with a vertex
+shader that only declares its inputs. Its active non-sampler uniforms, packed by A.7, give the
+highest of the lit programs each scene compiles:
 
-| Shadowed suns | `MeshStandardMaterial` | With every map, an environment and fog |
-| ------------- | ---------------------- | -------------------------------------- |
-| 0             | 4                      | 15                                     |
-| 1             | 31                     | 38                                     |
-| 8             | 196                    | 203                                    |
-| 9             | 219                    | 226                                    |
+| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with five maps, clearcoat, a sky and fog |
+| ------------- | ---------------------- | --------------------------------------------------------------- |
+| 1             | 35                     | 64                                                              |
+| 8             | 207                    | 235                                                             |
+| 9             | 207                    | 235                                                             |
+| 1, soft       | 38                     | 66                                                              |
+| 8, soft       | 224                    | 251                                                             |
 
-A sun with one or two splits costs the same as one with four. A slot count that varied by scene
+A scene without a light draws the preview sun, so it counts as one sun. The ninth sun leaves the
+shadow list. Eight suns on the physical material exceed the 224 vectors WebGL 2 guarantees, so a GPU
+that reports only 224 fails to link it. The harness's SwiftShader reports 4096.
+
+A sun with one or two splits costs the same as one with four. A program compiled with the soft
+shadow's define adds two vec4 per sun shadow: the direction towards the light with the angle, and
+the four slots' range starts. The slot matrices give the box sizes. The rows marked soft have the
+define. A slot count that varied by scene
 would need a define three's program key does not hold (`WebGLPrograms.js:476-483`), so a material would
 reuse a program compiled for another count.
 
@@ -334,9 +384,6 @@ reuse a program compiled for another count.
   lit face, and removes its component along the light (`scene_forward_clustered.glsl:2301-2307`).
   So its offset is never longer than three's. The offset is two texels. In Truck Town, even a zero
   normal bias changes only acne and shadow edges one pixel wide, not the extent of a shadow.
-- **Soft-shadow widening.** Godot widens the box by `tan(light_angular_distance)` times its
-  depth (`:2286-2299`) to fit its soft-shadow blur. The previewer draws no angular soft shadow,
-  so the box omits it.
 - **Last of two splits.** With blending on, Godot's last split of two blends towards a third
   slot it never set up. Here the last split never blends.
 - **Clip planes.** Godot's editor camera clips at 0.05 and 4000 (`editor_settings.cpp:931-932`),

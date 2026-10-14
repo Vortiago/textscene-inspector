@@ -12,6 +12,12 @@
  */
 export const SOFT_LOW_SHADOW_SAMPLES = 4;
 
+/**
+ * Soft Low's `penumbra_shadow_samples` (`renderer_scene_render_rd.cpp:1158`), the taps of a soft
+ * shadow's blocker search and of its penumbra.
+ */
+export const SOFT_LOW_PENUMBRA_SAMPLES = 8;
+
 /** `get_vogel_disk`'s `golden_angle` (`renderer_scene_render_rd.cpp:46`): 2.4, not the true 2.39996. */
 const VOGEL_GOLDEN_ANGLE = 2.4;
 

@@ -6,6 +6,7 @@ import {
   installFramebufferHeightUniform,
   writeFramebufferHeight,
 } from './framebufferRows';
+import { LIT_SHADERS } from '../testing/litShaders';
 
 afterEach(() => {
   for (const shader of Object.values(THREE.ShaderLib)) delete shader.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM];
@@ -50,7 +51,7 @@ describe('writeFramebufferHeight', () => {
 describe('installFramebufferHeightUniform', () => {
   it('gives every lit built-in material and three’s light uniforms the one buffer', () => {
     installFramebufferHeightUniform();
-    for (const name of ['lambert', 'phong', 'standard', 'physical', 'toon', 'shadow']) {
+    for (const name of LIT_SHADERS) {
       expect(THREE.ShaderLib[name]!.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(framebufferHeight);
     }
     const merged = THREE.UniformsUtils.merge([THREE.UniformsLib.lights]);

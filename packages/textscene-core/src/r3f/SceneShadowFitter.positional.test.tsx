@@ -106,7 +106,7 @@ describe('<SceneShadowFitter> positional fit in the scene contents', () => {
 function declaredSpot(): THREE.SpotLight {
   const light = new THREE.SpotLight(0xffffff, 1, 8, Math.PI / 4);
   light.castShadow = true;
-  light.userData = positionalShadowUserData({ normalBias: 1, softShadowScale: 2 });
+  light.userData = positionalShadowUserData({ normalBias: 1, softShadowRadius: 2 });
   light.target.position.set(0, 0, -1);
   return light;
 }
@@ -115,7 +115,7 @@ function declaredSpot(): THREE.SpotLight {
 function declaredOmni(): THREE.PointLight {
   const light = new THREE.PointLight(0xffffff, 1, 8);
   light.castShadow = true;
-  light.userData = positionalShadowUserData({ normalBias: 1, softShadowScale: 2 });
+  light.userData = positionalShadowUserData({ normalBias: 1, softShadowRadius: 2 });
   return light;
 }
 

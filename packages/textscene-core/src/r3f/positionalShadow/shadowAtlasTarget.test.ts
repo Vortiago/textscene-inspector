@@ -38,6 +38,23 @@ describe('the positional shadow atlas texture', () => {
     expect(THREE.UniformsUtils.clone(uniforms).atlas!.value).toBe(target.positionalShadowAtlasDepth());
   });
 
+  it('holds the depth in its colour too, as two exact bytes a raw read takes', () => {
+    const colour = target.positionalShadowAtlasColour();
+    expect(target.positionalShadowAtlas().texture).toBe(colour);
+    expect([colour.format, colour.type]).toEqual([THREE.RGFormat, THREE.UnsignedByteType]);
+    expect([colour.minFilter, colour.magFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
+  });
+
+  it('keeps one colour texture through a material’s uniform clone (edge case)', () => {
+    const uniforms = { atlas: { value: target.positionalShadowAtlasColour() } };
+    expect(THREE.UniformsUtils.clone(uniforms).atlas!.value).toBe(target.positionalShadowAtlasColour());
+  });
+
+  it('resizes its colour with the atlas (edge case)', () => {
+    target.holdPositionalShadowAtlas({}, 2048);
+    expect(target.positionalShadowAtlasColour().image).toMatchObject({ width: 2048, height: 2048 });
+  });
+
   it('draws into the atlas an earlier evaluation gave the lit materials (edge case)', async () => {
     const installed = target.positionalShadowAtlasDepth();
     THREE.ShaderLib.standard.uniforms[target.POSITIONAL_SHADOW_ATLAS_UNIFORM] = { value: installed };

@@ -1,7 +1,9 @@
 /**
- * Godot's omni and spot shadow lookups in three r186's chunks. Every omni and spot shadow samples one
- * atlas through one sampler, as Godot's do (`scene_forward_clustered_inc.glsl:372`), where three binds
- * a sampler per shadow. The lookups move the receiver as Godot's do (`positionalShadowLookup.ts`).
+ * Godot's omni, spot and area shadow lookups in three r186's chunks. Every positional shadow samples
+ * one atlas through one sampler, as Godot's do (`scene_forward_clustered_inc.glsl:372`), where three
+ * binds a sampler per shadow. The lookups move the receiver as Godot's do
+ * (`positionalShadowLookup.ts`). The area lookup defines `GODOT_AREA_SHADOW`, which the area light
+ * chunk calls (`areaLightChunk.ts`).
  */
 
 import {
@@ -12,8 +14,14 @@ import {
 } from '../shaderPatch/chunkPatch.js';
 import { installLitUniform } from '../shaderPatch/litUniform.js';
 import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
-import { ATLAS_SAMPLING, OMNI_LOOKUP, SPOT_LOOKUP } from './positionalShadowLookup.js';
-import { POSITIONAL_SHADOW_ATLAS_UNIFORM, positionalShadowAtlasDepth } from './shadowAtlasTarget.js';
+import { installAreaLightShadowUniforms } from '../areaLight/areaLightShadowUniforms.js';
+import { AREA_LOOKUP, ATLAS_SAMPLING, OMNI_LOOKUP, SPOT_LOOKUP } from './positionalShadowLookup.js';
+import {
+  POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM,
+  POSITIONAL_SHADOW_ATLAS_UNIFORM,
+  positionalShadowAtlasColour,
+  positionalShadowAtlasDepth,
+} from './shadowAtlasTarget.js';
 
 type PositionalChunkName =
   'shadowmap_vertex' | 'shadowmap_pars_fragment' | 'lights_fragment_begin' | 'shadowmask_pars_fragment';
@@ -57,8 +65,12 @@ export const POSITIONAL_SHADOW_EDITS: readonly ChunkEdit<PositionalChunkName>[] 
 			uniform sampler2D spotShadowMap[ NUM_SPOT_LIGHT_SHADOWS ];
 		#endif
 `,
-    godot: `	#if NUM_SPOT_LIGHT_SHADOWS > 0 || NUM_POINT_LIGHT_SHADOWS > 0
+    godot: `	#if NUM_SPOT_LIGHT_SHADOWS > 0 || NUM_POINT_LIGHT_SHADOWS > 0 || NUM_RECT_AREA_LIGHTS > 0
 ${ATLAS_SAMPLING}
+	#endif
+	#if NUM_RECT_AREA_LIGHTS > 0
+${AREA_LOOKUP}
+		#define GODOT_AREA_SHADOW( index ) godotAreaShadow( index, geometryPosition, geometryNormal )
 	#endif
 	#if NUM_SPOT_LIGHT_SHADOWS > 0
 `,
@@ -97,7 +109,7 @@ ${OMNI_LOOKUP}`,
     three:
       'getShadow( spotShadowMap[ i ], spotLightShadow.shadowMapSize, spotLightShadow.shadowIntensity, spotLightShadow.shadowBias, spotLightShadow.shadowRadius, vSpotLightCoord[ i ] )',
     godot:
-      'godotSpotShadow( godotSpotShadowCoord( vSpotLightCoord[ i ], spotLightMatrix[ i ], spotLight.position - geometryPosition, normal, spotLightShadow.shadowNormalBias, spotLightShadow.shadowBias ), spotLightShadow.shadowRadius, spotLightShadow.shadowIntensity )',
+      'godotSpotShadow( godotSpotShadowCoord( vSpotLightCoord[ i ], spotLightMatrix[ i ], spotLight.position - geometryPosition, normal, spotLightShadow.shadowNormalBias, spotLightShadow.shadowBias ), vSpotLightCoord[ i ].w, spotLight, spotLightMatrix[ i ], spotLightShadow )',
   },
   // `ShadowMaterial` has no normal, so its lookups move the receiver by the depth bias alone.
   {
@@ -105,7 +117,7 @@ ${OMNI_LOOKUP}`,
     three:
       'getShadow( spotShadowMap[ i ], spotLight.shadowMapSize, spotLight.shadowIntensity, spotLight.shadowBias, spotLight.shadowRadius, vSpotLightCoord[ i ] )',
     godot:
-      'godotSpotShadow( godotSpotDepthBias( vSpotLightCoord[ i ], spotLight.shadowBias ), spotLight.shadowRadius, spotLight.shadowIntensity )',
+      'godotSpotShadow( godotSpotDepthBias( vSpotLightCoord[ i ], spotLight.shadowBias ), vSpotLightCoord[ i ].w, spotLights[ i ], spotLightMatrix[ i ], spotLight )',
   },
   {
     chunk: 'shadowmask_pars_fragment',
@@ -126,8 +138,9 @@ export function positionalShadowChunks(chunks: PositionalShadowChunks): Position
 }
 
 /**
- * Installs the soft shadow filter, then replaces three's chunks and gives the atlas uniform to every
- * built-in lit material and to `UniformsLib.lights`, for every program compiled after the call. A
+ * Installs the soft shadow filter, then replaces three's chunks and gives the atlas, its colour and
+ * the area lights' shadow terms to every built-in lit material and to `UniformsLib.lights`, for every
+ * program compiled after the call. A
  * three release that rewrites any edited text keeps all its own chunks, and
  * `positionalShadowChunk.test.ts` fails on that release. A second call changes nothing.
  */
@@ -144,5 +157,8 @@ export function installGodotPositionalShadow(): void {
     apply: positionalShadowChunks,
     missing: 'omni and spot shadow lookups lack a line the Godot lookups replace',
   });
-  if (isPatched) installLitUniform(POSITIONAL_SHADOW_ATLAS_UNIFORM, positionalShadowAtlasDepth());
+  if (!isPatched) return;
+  installLitUniform(POSITIONAL_SHADOW_ATLAS_UNIFORM, positionalShadowAtlasDepth());
+  installLitUniform(POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM, positionalShadowAtlasColour());
+  installAreaLightShadowUniforms();
 }
