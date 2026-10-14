@@ -68,10 +68,16 @@ interface Held {
  */
 const heldTextures = new Map<THREE.Texture, Held>();
 
-/** Where the last build placed each texture it could read. Written only by `updateAreaLightAtlas`. */
+/**
+ * Where the last build placed each held texture it could read. Written by `updateAreaLightAtlas`,
+ * and cleared of a texture the moment its last holder lets go.
+ */
 let placements = new Map<THREE.Texture, AreaTexturePlacement>();
 
-/** Whether a texture joined since the last build. Godot leaves a texture that leaves in place until then. */
+/**
+ * Whether a texture joined or changed its pixels since the last build. Godot leaves the pixels of
+ * a texture that leaves in place until then.
+ */
 let isDirty = true;
 
 /** The one atlas, an empty one until a texture joins it. Its identity never changes. */
@@ -101,7 +107,9 @@ export function releaseAreaTexture(texture: THREE.Texture): void {
   const held = heldTextures.get(texture);
   if (!held) return;
   held.users--;
-  if (held.users === 0) heldTextures.delete(texture);
+  if (held.users > 0) return;
+  heldTextures.delete(texture);
+  placements.delete(texture);
 }
 
 const TEXTURE_KEY = 'godotAreaTexture';
@@ -120,8 +128,7 @@ export const NO_AREA_TEXTURE: AreaTexturePlacement = { rect: [0, 0, 0, 0], maxMi
  */
 export function areaTexturePlacement(light: THREE.Object3D): AreaTexturePlacement {
   const texture = light.userData[TEXTURE_KEY] as THREE.Texture | null | undefined;
-  const placement = texture && heldTextures.has(texture) ? placements.get(texture) : undefined;
-  return placement ?? NO_AREA_TEXTURE;
+  return (texture && placements.get(texture)) ?? NO_AREA_TEXTURE;
 }
 
 /** A texture's sRGB bytes with the top row first, as Godot's image holds it. */
@@ -136,9 +143,12 @@ function godotImage(texture: THREE.Texture): AreaTextureImage | undefined {
   };
 }
 
-/** Whether `texture`'s pixels are a typed array, which runs bottom-up in this previewer. */
+/**
+ * Whether `texture`'s pixels run bottom-up: a typed array that uploads unflipped. A typed array with
+ * `flipY`, such as `applyAlphaBorderFix`'s readback of a decoded image, runs top-down.
+ */
 function isBottomUp(texture: THREE.Texture): boolean {
-  return ArrayBuffer.isView((texture.image as { data?: unknown } | null)?.data);
+  return !texture.flipY && ArrayBuffer.isView((texture.image as { data?: unknown } | null)?.data);
 }
 
 /** Marks the atlas dirty when a held texture uploaded new pixels (`area_light_atlas_mark_dirty_on_texture`). */

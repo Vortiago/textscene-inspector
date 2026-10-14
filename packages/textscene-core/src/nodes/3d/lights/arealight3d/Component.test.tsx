@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AreaLight3D } from './Component';
 import type { TscnNode } from '../../../../parser/types';
@@ -49,8 +49,18 @@ const GRADIENT_RESOURCES: TscnInternalResource[] = [
   { id: 'GradientTexture2D_1', type: 'GradientTexture2D', data: { gradient: 'SubResource("Gradient_1")' } },
 ];
 
-function createWithGradient(node: TscnNode) {
-  return ReactThreeTestRenderer.create(
+type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
+/** Renderers whose lights may still hold a texture in the shared atlas, unmounted after each test. */
+const gradientRenderers: Renderer[] = [];
+
+afterEach(async () => {
+  for (const renderer of gradientRenderers.splice(0)) await renderer.unmount();
+  updateAreaLightAtlas();
+});
+
+async function createWithGradient(node: TscnNode): Promise<Renderer> {
+  const renderer = await ReactThreeTestRenderer.create(
     <SceneStack
       loader={createFakeResourceLoader().loader}
       scene={{ internalResources: GRADIENT_RESOURCES, externalResources: [] }}
@@ -58,15 +68,17 @@ function createWithGradient(node: TscnNode) {
       <AreaLight3D node={node} />
     </SceneStack>
   );
+  gradientRenderers.push(renderer);
+  return renderer;
 }
 
 /** Where the light pass finds the rendered light's texture in the atlas. */
-function placementOf(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>) {
+function placementOf(renderer: Renderer) {
   updateAreaLightAtlas();
   return areaTexturePlacement(instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight')));
 }
 
-function areaShadowOf(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>): AtlasAreaShadow {
+function areaShadowOf(renderer: Renderer): AtlasAreaShadow {
   return instanceAs<AreaShadowLight>(renderer.scene.findByType('RectAreaLight')).shadow;
 }
 

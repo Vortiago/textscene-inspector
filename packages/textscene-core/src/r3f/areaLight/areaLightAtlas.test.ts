@@ -67,6 +67,16 @@ describe('the area light atlas', () => {
     expect(atlasCorner()).toEqual([0, 0, 255, 255]);
   });
 
+  it("keeps a flipped texture's first row at the atlas's top, as a decoded image uploads (edge case)", () => {
+    const texture = dataTexture(2, (row) => (row === 0 ? [255, 0, 0, 255] : [0, 0, 255, 255]));
+    texture.flipY = true;
+    hold(texture);
+
+    updateAreaLightAtlas();
+
+    expect(atlasCorner()).toEqual([255, 0, 0, 255]);
+  });
+
   it("rebuilds once a held texture's pixels change", () => {
     const texture = dataTexture(2, () => [0, 0, 0, 255]);
     hold(texture);

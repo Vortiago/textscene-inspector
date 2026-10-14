@@ -1,6 +1,6 @@
 /**
- * Row order of RGBA8 pixels. A typed-array `DataTexture` runs bottom-up in this previewer, as UV
- * v = 0 reads it, and a decoded image and Godot's `Image` run top-down.
+ * Row order of RGBA8 pixels. A typed-array `DataTexture` without `flipY` runs bottom-up in this
+ * previewer, as UV v = 0 reads it, and a decoded image and Godot's `Image` run top-down.
  */
 
 /** `rgba`'s rows in reverse order. Reversing twice gives back the input. */

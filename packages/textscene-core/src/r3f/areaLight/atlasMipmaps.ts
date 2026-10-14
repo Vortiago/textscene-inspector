@@ -50,7 +50,9 @@ const BLUR_GROUP_SIDE = 8;
 const LINEAR_OF_BYTE = Float32Array.from({ length: 256 }, (_, byte) => sRGBChannelToLinear(byte / 255));
 
 function quantised(pixels: Pixels): Pixels {
-  return { ...pixels, data: pixels.data.map((value) => channelToByte(value) / 255) };
+  const data = new Float32Array(pixels.data.length);
+  for (let i = 0; i < data.length; i++) data[i] = channelToByte(pixels.data[i]!) / 255;
+  return { ...pixels, data };
 }
 
 function rgbDecoded(pixels: Pixels): Pixels {
@@ -59,12 +61,11 @@ function rgbDecoded(pixels: Pixels): Pixels {
   return { ...pixels, data };
 }
 
+/** A plain loop, not `Float32Array.from` with a map: a callback per byte costs more than the blur. */
 function pixelsOf(image: AreaTextureImage): Pixels {
-  return {
-    width: image.width,
-    height: image.height,
-    data: Float32Array.from(image.data, (byte) => byte / 255),
-  };
+  const data = new Float32Array(image.data.length);
+  for (let i = 0; i < data.length; i++) data[i] = image.data[i]! / 255;
+  return { width: image.width, height: image.height, data };
 }
 
 /** A clamped bilinear tap at `coordinate`, in texels, as the two texels and the far one's weight. */
