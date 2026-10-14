@@ -7,10 +7,12 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { createTextureFromBuffer, getMimeType, isTexturePath } from './textureProcessing';
+import { createTextureFromBuffer, decodeImagePixels, getMimeType, isTexturePath } from './textureProcessing';
 
 const fakeLoader = vi.hoisted(() => ({
   mode: 'success' as 'success' | 'error',
+  /** The image a successful load decodes to: none, or raw RGBA8 pixels. */
+  image: null as { data: Uint8Array; width: number; height: number } | null,
   lastUrl: undefined as string | undefined,
   lastManager: undefined as unknown,
 }));
@@ -31,7 +33,7 @@ vi.mock('three', async (importOriginal) => {
     ): void {
       fakeLoader.lastUrl = url;
       if (fakeLoader.mode === 'success') {
-        onLoad(new actual.Texture());
+        onLoad(new actual.Texture(fakeLoader.image ?? undefined));
       } else {
         onError(new Error('decode failed'));
       }
@@ -165,5 +167,35 @@ describe('createTextureFromBuffer', () => {
   it('constructs the TextureLoader without a manager when none is given', async () => {
     await createTextureFromBuffer(data, 'image/png');
     expect(fakeLoader.lastManager).toBeUndefined();
+  });
+});
+
+describe('decodeImagePixels', () => {
+  const data = new Uint8Array([1, 2, 3, 4]).buffer;
+
+  beforeEach(() => {
+    fakeLoader.mode = 'success';
+    fakeLoader.image = null;
+  });
+
+  afterEach(() => {
+    fakeLoader.image = null;
+  });
+
+  it('resolves with the decoded RGBA8 pixels, top row first', async () => {
+    // A transparent texel keeps its RGB: no alpha-border pass runs, as in Godot's layered importer.
+    fakeLoader.image = { data: new Uint8Array([9, 8, 7, 0, 1, 2, 3, 255]), width: 2, height: 1 };
+    const pixels = await decodeImagePixels(data, 'image/png');
+    expect(pixels).toMatchObject({ width: 2, height: 1 });
+    expect([...pixels.data]).toEqual([9, 8, 7, 0, 1, 2, 3, 255]);
+  });
+
+  it('rejects with the decode-failure message on loader error', async () => {
+    fakeLoader.mode = 'error';
+    await expect(decodeImagePixels(data, 'image/png')).rejects.toThrow('Failed to decode texture');
+  });
+
+  it('rejects an image whose pixels no canvas can read (edge case)', async () => {
+    await expect(decodeImagePixels(data, 'image/png')).rejects.toThrow('Failed to read the pixels');
   });
 });

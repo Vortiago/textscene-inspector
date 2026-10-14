@@ -6,6 +6,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+  cubicInterpolatef,
+  lerpf,
   CMP_EPSILON,
   bezierInterpolate,
   isZeroApprox,
@@ -145,5 +147,32 @@ describe('snapped', () => {
 
   it('passes nan through (error case)', () => {
     expect(snapped(Number.NaN, 1)).toBeNaN();
+  });
+});
+
+/** A float32 from its IEEE bits, as Godot printed it. */
+const float32 = (bits: number) => new Float32Array(new Uint32Array([bits]).buffer)[0]!;
+const f = Math.fround;
+
+describe('lerpf', () => {
+  it('rounds each step in float, landing on the value Godot computes', () => {
+    // A Gradient's red at offset 0.1 between stops at 0 (0.1) and 0.3 (0.9).
+    expect(lerpf(f(0.1), f(0.9), f(f(0.1) / f(0.3)))).toBe(float32(0x3ebbbbba));
+  });
+
+  it('gives the end points at weights 0 and 1 (edge case)', () => {
+    expect(lerpf(f(0.2), f(0.7), 0)).toBe(f(0.2));
+    expect(lerpf(f(0.2), f(0.7), 1)).toBe(f(0.7));
+  });
+});
+
+describe('cubicInterpolatef', () => {
+  it('passes through the end points at weights 0 and 1', () => {
+    expect(cubicInterpolatef(f(0.2), f(0.7), f(0.1), f(0.9), 0)).toBe(f(0.2));
+    expect(cubicInterpolatef(1, 3, 0, 4, 1)).toBe(3);
+  });
+
+  it('follows a straight line when the neighbours continue it (edge case)', () => {
+    expect(cubicInterpolatef(1, 2, 0, 3, 0.5)).toBe(1.5);
   });
 });

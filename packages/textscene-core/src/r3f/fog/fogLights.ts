@@ -22,6 +22,7 @@ import { lightPoseMatrix } from '../positionalShadow/lightPose.js';
 import { visibleInTree } from '../visibleInTree.js';
 import { readFogLightDeclaration } from './fogLightDeclaration.js';
 import { AREA_LIGHT_AXES, areaLightViewAxis, readAreaLightFalloff } from '../areaLight/areaLightFalloff.js';
+import { RowBuffer } from './packedRows.js';
 import { areaTexturePlacement } from '../areaLight/areaLightAtlas.js';
 import { writeVec4 } from './writeVec4.js';
 
@@ -87,13 +88,14 @@ const row = new Float32Array(ROW_LENGTH);
  * `intensity` is already Godot's `light_energy * PI` with its sign and distance fade
  * (`lightConstants.ts`), and its colour is linear, as in Godot's buffer.
  */
-export class FogLightRows {
-  /** The rows, `count` of them, then unused space. */
-  data = new Float32Array(ROW_LENGTH);
-  count = 0;
+export class FogLightRows extends RowBuffer {
   /** Whether a row's shadow reads the directional atlas, and whether one reads the positional atlas. */
   readsDirectionalAtlas = false;
   readsPositionalAtlas = false;
+
+  constructor() {
+    super(ROW_LENGTH);
+  }
 
   /** Whether any row's shadow reads an atlas. */
   get readsShadowAtlas(): boolean {
@@ -102,8 +104,7 @@ export class FogLightRows {
 
   /** Packs `lights` as `camera` sees them, and answers whether any row changed. */
   pack(lights: readonly THREE.Light[], camera: THREE.Camera): boolean {
-    let count = 0;
-    let hasChanged = false;
+    this.begin();
     this.readsDirectionalAtlas = false;
     this.readsPositionalAtlas = false;
     for (const light of lights) {
@@ -112,24 +113,9 @@ export class FogLightRows {
         if (row[Cone.KIND] === FogLightKind.DIRECTIONAL) this.readsDirectionalAtlas = true;
         else this.readsPositionalAtlas = true;
       }
-      this.reserve(count + 1);
-      const start = count * ROW_LENGTH;
-      for (let i = 0; i < ROW_LENGTH; i++) {
-        if (this.data[start + i] !== row[i]) hasChanged = true;
-        this.data[start + i] = row[i]!;
-      }
-      count++;
+      this.append(row);
     }
-    hasChanged ||= count !== this.count;
-    this.count = count;
-    return hasChanged;
-  }
-
-  private reserve(rows: number): void {
-    if (this.data.length >= rows * ROW_LENGTH) return;
-    const grown = new Float32Array(rows * 2 * ROW_LENGTH);
-    grown.set(this.data);
-    this.data = grown;
+    return this.finish();
   }
 }
 

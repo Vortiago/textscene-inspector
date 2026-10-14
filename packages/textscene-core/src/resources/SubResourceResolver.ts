@@ -171,11 +171,10 @@ export function unwrapCanvasTextureRef(
 
 /**
  * The text-resource (`.tres`, `.res`) path an `ExtResource` reference names, which
- * the caller parses to learn what it holds. Null for any other form. Any text
- * resource, not only an atlas: the texture bus never decodes one, and
- * `decodeExtAtlasTextureRef` declines the non-atlases.
+ * the caller parses on the `resource` bus to learn what it holds. Null for any other
+ * form: the texture buses never decode text.
  */
-export function resolveExtAtlasTexturePath(
+export function resolveExtTextResourcePath(
   ref: string | null | undefined,
   externalResources: readonly TscnExternalResource[]
 ): string | null {
@@ -208,8 +207,8 @@ export function resolveTexture2DPath(
   const unwrapped = unwrapCanvasTextureRef(ref, internalResources);
   // An AtlasTexture, inline or `.tres`, resolves to null, not its sheet: this answer
   // also sizes a Control's slot, and an atlas is the size of its region.
-  // `inlineTexture2DSize` and `extResourceAtlasTextureSize` answer that size.
-  if (resolveExtAtlasTexturePath(unwrapped, externalResources)) return null;
+  // `inlineTexture2DSize` and `extResourceTexture2DSize` answer that size.
+  if (resolveExtTextResourcePath(unwrapped, externalResources)) return null;
   return resolveExtResourcePath(unwrapped, externalResources);
 }
 

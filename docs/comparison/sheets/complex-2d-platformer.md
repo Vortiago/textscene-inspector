@@ -21,7 +21,6 @@ coins, rocks, mushrooms and crab enemies.
 
 ## Known limitations
 
-- **Approximated** A platform underside and its vines show along the top edge, where Godot
-  shows sky, for a cause not yet known.
-- **Approximated** The lower-right platform stops short of the right edge, and its tree
-  crown is cut, for a cause not yet known.
+- **Approximated** The coins and the crab enemies draw smoothed, where Godot draws them
+  pixel-sharp, for a cause not yet known.
+- **Approximated** Each crab shows another pose than Godot's, for a cause not yet known.

@@ -7,12 +7,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import {
-  extResourceAtlasTextureSize,
-  inlineTexture2DSize,
-  useTexture2D,
-  useTexture2DRid,
-} from './useTexture2D';
+import { extResourceTexture2DSize, inlineTexture2DSize, useTexture2D, useTexture2DRid } from './useTexture2D';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { parseTresFile, type ParsedResource } from '../parser/parsedResource';
 import { TscnParser } from '../parser/TscnParser';
@@ -407,6 +402,27 @@ describe('inlineTexture2DSize', () => {
       data: { atlas: 'ExtResource("1")' },
     },
   ];
+
+  it("reports an inline NoiseTexture2D's declared size before its build lands", () => {
+    const noise: TscnInternalResource[] = [
+      { id: 'NoiseTexture2D_a', type: 'NoiseTexture2D', data: { width: '48', height: '24' } },
+    ];
+    expect(inlineTexture2DSize('SubResource("NoiseTexture2D_a")', noise)).toEqual({ x: 48, y: 24 });
+  });
+
+  it("reports an inline ImageTexture's size as its image's", () => {
+    const saved: TscnInternalResource[] = [
+      {
+        id: 'Image_a',
+        type: 'Image',
+        data: { data: '{\n"data": PackedByteArray(),\n"format": "RGBAHalf",\n"height": 6,\n"width": 10\n}' },
+      },
+      { id: 'ImageTexture_a', type: 'ImageTexture', data: { image: 'SubResource("Image_a")' } },
+      { id: 'ImageTexture_empty', type: 'ImageTexture', data: {} },
+    ];
+    expect(inlineTexture2DSize('SubResource("ImageTexture_a")', saved)).toEqual({ x: 10, y: 6 });
+    expect(inlineTexture2DSize('SubResource("ImageTexture_empty")', saved)).toBeNull();
+  });
 
   it("reports an inline GradientTexture2D's declared pixel size", () => {
     expect(inlineTexture2DSize('SubResource("GradientTexture2D_a")', resources)).toEqual({
@@ -859,7 +875,104 @@ region = Rect2(0, 0, 8, 8)
   });
 });
 
-describe('extResourceAtlasTextureSize', () => {
+/** A procedural texture saved as its own `.tres`, which the scene names by `ExtResource`. */
+describe('useTexture2D — a .tres procedural texture', () => {
+  const externalResources: TscnExternalResource[] = [
+    { id: '1_tex', type: 'Texture2D', path: 'res://textures/procedural.tres' },
+  ];
+
+  const GRADIENT_TRES = parseTresFile(`[gd_resource type="GradientTexture2D" format=3]
+
+[sub_resource type="Gradient" id="Gradient_k2d7a"]
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[resource]
+gradient = SubResource("Gradient_k2d7a")
+width = 8
+height = 4
+`);
+
+  const NOISE_TRES = parseTresFile(`[gd_resource type="NoiseTexture2D" format=3]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_huop3"]
+
+[resource]
+width = 16
+height = 16
+noise = SubResource("FastNoiseLite_huop3")
+`);
+
+  function withLoader(runner: JobRunner = fakeJobRunner().runner) {
+    const fake = createFakeResourceLoader();
+    const loader = Object.assign(fake.loader, { jobRunner: runner }) as ResourceLoader;
+    const requested: string[] = [];
+    fake.textures.setRequestImpl((path) => requested.push(path));
+    function Wrapper({ children }: { children: ReactNode }) {
+      return <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>;
+    }
+    return { fake, Wrapper, requested };
+  }
+
+  afterEach(() => {
+    abortProceduralBuilds();
+    clearProceduralTextureCache();
+  });
+
+  it('rasterises a GradientTexture2D .tres against its own gradient', () => {
+    const { fake, Wrapper, requested } = withLoader();
+    fake.resources.seed('res://textures/procedural.tres', GRADIENT_TRES);
+
+    const { result } = renderHook(() => useTexture2D('ExtResource("1_tex")', externalResources, []), {
+      wrapper: Wrapper,
+    });
+
+    expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
+    expect(result.current.texture!.image).toMatchObject({ width: 8, height: 4 });
+    expect(result.current.missing).toBe(false);
+    expect(requested).toEqual([]);
+  });
+
+  it('builds a NoiseTexture2D .tres once its job lands', async () => {
+    const { runner, runs } = fakeJobRunner();
+    const { fake, Wrapper } = withLoader(runner);
+    fake.resources.seed('res://textures/procedural.tres', NOISE_TRES);
+
+    const { result } = renderHook(() => useTexture2D('ExtResource("1_tex")', externalResources, []), {
+      wrapper: Wrapper,
+    });
+    expect(result.current).toEqual({ texture: null, missing: false });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      runs[0]?.complete();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
+    expect(result.current.missing).toBe(false);
+  });
+
+  it('reports a .tres of a texture type the previewer cannot build as missing (edge case)', () => {
+    const { fake, Wrapper } = withLoader();
+    fake.resources.seed(
+      'res://textures/procedural.tres',
+      parseTresFile(`[gd_resource type="ViewportTexture" format=3]
+
+[resource]
+viewport_path = NodePath("SubViewport")
+`)
+    );
+
+    const { result } = renderHook(() => useTexture2D('ExtResource("1_tex")', externalResources, []), {
+      wrapper: Wrapper,
+    });
+
+    expect(result.current).toEqual({ texture: null, missing: true });
+  });
+});
+
+describe('extResourceTexture2DSize', () => {
   it("reports an ExtResource .tres AtlasTexture's region size", () => {
     const tres: ParsedResource = {
       resourceType: 'AtlasTexture',
@@ -867,20 +980,7 @@ describe('extResourceAtlasTextureSize', () => {
       extResources: [],
       subResources: [],
     };
-    expect(extResourceAtlasTextureSize(tres, null)).toEqual({ x: 48, y: 24 });
-  });
-
-  it('falls back to the sheet size on a zero-size region axis', () => {
-    const tres: ParsedResource = {
-      resourceType: 'AtlasTexture',
-      properties: {},
-      extResources: [],
-      subResources: [],
-    };
-    expect(extResourceAtlasTextureSize(tres, { width: 200, height: 100 })).toEqual({
-      x: 200,
-      y: 100,
-    });
+    expect(extResourceTexture2DSize(tres)).toEqual({ x: 48, y: 24 });
   });
 
   it('declines without the sheet size on a zero-size region axis', () => {
@@ -890,16 +990,26 @@ describe('extResourceAtlasTextureSize', () => {
       extResources: [],
       subResources: [],
     };
-    expect(extResourceAtlasTextureSize(tres, null)).toBeNull();
+    expect(extResourceTexture2DSize(tres)).toBeNull();
   });
 
-  it('declines a .tres whose own header names a different resource type', () => {
+  it("reports a .tres GradientTexture2D's declared size", () => {
     const tres: ParsedResource = {
       resourceType: 'GradientTexture2D',
-      properties: { width: '64', height: '64' },
+      properties: { width: '96', height: '32' },
       extResources: [],
       subResources: [],
     };
-    expect(extResourceAtlasTextureSize(tres, null)).toBeNull();
+    expect(extResourceTexture2DSize(tres)).toEqual({ x: 96, y: 32 });
+  });
+
+  it('declines a .tres that holds no texture (edge case)', () => {
+    const tres: ParsedResource = {
+      resourceType: 'StyleBoxFlat',
+      properties: {},
+      extResources: [],
+      subResources: [],
+    };
+    expect(extResourceTexture2DSize(tres)).toBeNull();
   });
 });

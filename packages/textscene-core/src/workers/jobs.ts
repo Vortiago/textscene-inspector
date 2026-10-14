@@ -5,6 +5,7 @@
  */
 
 import { noiseTexture2DPixels, type NoiseTexture2DInput } from '../resources/textures/noisetexture2d/pixels';
+import { noiseTexture3DTexels, type NoiseTexture3DInput } from '../resources/textures/noisetexture3d/texels';
 
 export interface WorkerJob<Input, Output> {
   run(input: Input): Output;
@@ -16,10 +17,18 @@ export interface PixelsOutput {
   pixels: Uint8Array;
 }
 
+export interface TexelsOutput {
+  texels: Uint8Array;
+}
+
 export const WORKER_JOBS = {
   'noise-texture-2d': {
     run: (input: NoiseTexture2DInput): PixelsOutput => ({ pixels: noiseTexture2DPixels(input) }),
     transfer: (output: PixelsOutput) => [output.pixels.buffer],
+  },
+  'noise-texture-3d': {
+    run: (input: NoiseTexture3DInput): TexelsOutput => ({ texels: noiseTexture3DTexels(input) }),
+    transfer: (output: TexelsOutput) => [output.texels.buffer],
   },
 } satisfies Record<string, WorkerJob<never, unknown>>;
 

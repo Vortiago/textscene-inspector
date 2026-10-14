@@ -22,6 +22,12 @@ describe('reversedRows', () => {
     expect(reversed).not.toBe(rgba);
   });
 
+  it('keeps the floats of a float image', () => {
+    expect(reversedRows(Float32Array.of(2, 2, 2, 2, 0.5, 0.5, 0.5, 0.5), 1, 2)).toEqual(
+      Float32Array.of(0.5, 0.5, 0.5, 0.5, 2, 2, 2, 2)
+    );
+  });
+
   it('gives an empty array for an empty image (error case)', () => {
     expect(reversedRows(new Uint8Array(0), 0, 0)).toHaveLength(0);
   });

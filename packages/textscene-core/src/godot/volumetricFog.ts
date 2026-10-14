@@ -185,11 +185,7 @@ export const SPOT_ANGLE_ATTENUATION_DEFAULT = 1;
 const SKY_ROUGHNESS_LAYERS_DEFAULT = 8;
 
 /**
- * The radiance mip the ambient inject reads the sky at, as a fraction of the coarsest
- * (`MAX_SKY_LOD`, the default 8 `roughness_layers` less one, `environment/fog.cpp:304`). A denser
- * medium reads a blurrier sky (`.glsl:434`).
+ * The coarsest radiance mip, `MAX_SKY_LOD` (`environment/fog.cpp:304`). The ambient inject reads
+ * the sky at mip `2 + density * (MAX_SKY_LOD - 2)`, so a denser froxel reads a blurrier sky (`.glsl:434`).
  */
-export function volumetricFogSkyRoughness(density: number): number {
-  const maxSkyLod = SKY_ROUGHNESS_LAYERS_DEFAULT - 1;
-  return Math.min((2 + density * (maxSkyLod - 2)) / maxSkyLod, 1);
-}
+export const VOLUMETRIC_FOG_MAX_SKY_LOD = SKY_ROUGHNESS_LAYERS_DEFAULT - 1;

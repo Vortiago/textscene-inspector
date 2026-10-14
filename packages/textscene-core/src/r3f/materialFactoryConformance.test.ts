@@ -185,7 +185,7 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the cube-to-paraboloid copy: shaders fixed at construction, only uniforms move, one instance per renderer',
   'packages/textscene-core/src/r3f/positionalShadow/atlasDepthPass.ts':
     'one depth material per light kind for the whole app, its program fixed at construction and never mutated',
-  'packages/textscene-core/src/r3f/fog/fogVolumePass.ts':
+  'packages/textscene-core/src/r3f/fog/volumetricFogPass.ts':
     'the fog volume passes: shaders fixed at construction, only uniforms move, and a `defines` change sets `needsUpdate`; one instance per renderer',
   'packages/textscene-core/src/r3f/fog/fogRadiancePass.ts':
     'the sky radiance bake: shaders fixed at construction, only uniforms move, and a new sky layout sets `needsUpdate`; one instance per renderer',
@@ -258,7 +258,7 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'lends each caster, which is not React state, the atlas depth material for one shadow draw and gives its own back after it, so no mount ever sees the swap',
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
-  'packages/textscene-core/src/r3f/fog/fogVolumePass.ts':
+  'packages/textscene-core/src/r3f/fog/volumetricFogPass.ts':
     'swaps the slice quad between the four fog pass materials, each built with its shaders fixed at construction, so only uniforms and `needsUpdate`-flagged `defines` move',
   'packages/textscene-core/src/nodes/3d/decal/decalProjectionMaterials.ts':
     'moves a projection mesh, which is not React state, to the material built for its receiver’s new shading, each built with its program fixed, so a swap changes which material draws and never a program input of one',

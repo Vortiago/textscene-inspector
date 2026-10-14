@@ -9,7 +9,15 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 
 export function godotColorToLinear(c: { r: number; g: number; b: number }): THREE.Color {
-  return new THREE.Color().setRGB(c.r, c.g, c.b, THREE.SRGBColorSpace);
+  return setGodotColorLinear(new THREE.Color(), c);
+}
+
+/** Writes Godot's sRGB `color` into `target` as linear, for a caller that allocates nothing per draw. */
+export function setGodotColorLinear(
+  target: THREE.Color,
+  { r, g, b }: { r: number; g: number; b: number }
+): THREE.Color {
+  return target.setRGB(r, g, b, THREE.SRGBColorSpace);
 }
 
 /**

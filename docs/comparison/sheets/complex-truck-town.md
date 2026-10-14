@@ -26,10 +26,8 @@ It exercises:
 - An external `sky_material` and sky ambient light
 - Material overrides on nodes inside the instanced glTF
 
-Geometry, framing, tree scale, the sky and the override materials match.
+Geometry, framing, tree scale, the sky, the fog, the ground and the override materials match.
 
-- **Approximated** The ground is much brighter and more yellow than Godot's. The cause is
-  not known. Fog and AgX are the candidates.
 - **Needs runtime** The town has no vehicles. The game spawns them at runtime.
 
 ## Trailer truck
