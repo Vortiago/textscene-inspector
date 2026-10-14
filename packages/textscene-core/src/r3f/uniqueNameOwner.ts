@@ -17,6 +17,7 @@ import {
 } from '../utils/uniqueNames.js';
 import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
 import { scopeOf, type LiveNode } from '../resources/liveNode.js';
+import { GLB_SCENE_ROOT_TYPE } from './internal/glb-scene-root/Component.js';
 
 export interface ClaimOwner {
   /** Live path of the node this owner's root renders at. */
@@ -98,20 +99,34 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
     }
     const scope = scopeOf(match, found.group.scope);
     const subRoots = cachedSubRoots(match, scope, ctx);
+    const glbInstance = glbInstanceOwner(match, found, parentPath, owner);
     candidates = liveChildGroups(match, scope, ctx.sceneCache, ctx.glbCache).map((group) => ({
       group,
       owner:
         group.origin === 'merged' && subRoots
           ? { path: livePath, roots: subRoots, parent: owner }
-          : found.rootOf
-            ? { path: livePath, roots: found.rootOf, parent: owner }
-            : owner,
+          : (glbInstance ?? (found.rootOf ? { path: livePath, roots: found.rootOf, parent: owner } : owner)),
       ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
     }));
-    into = candidates.find((c) => c.group.origin === 'merged')?.owner ?? owner;
+    into = glbInstance ?? candidates.find((c) => c.group.origin === 'merged')?.owner ?? owner;
     parentPath = livePath;
   }
   return { owner, into, node: match };
+}
+
+/**
+ * The owner a GLB root's content has: the instance node, which in Godot is the GLB root itself
+ * and owns the imported nodes. This tree renders the GLB root one segment below it, at
+ * `parentPath`. Undefined for any other node.
+ */
+function glbInstanceOwner(
+  node: LiveNode,
+  found: Candidate,
+  parentPath: string,
+  owner: ClaimOwner
+): ClaimOwner | undefined {
+  if (!found.rootOf || node.type !== GLB_SCENE_ROOT_TYPE) return undefined;
+  return { path: parentPath, roots: found.rootOf, parent: owner };
 }
 
 /**
