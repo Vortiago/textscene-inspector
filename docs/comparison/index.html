@@ -133,7 +133,9 @@ tr:last-child td{border-bottom:0}
 <h3>What a RemoteTransform relay does not reproduce</h3>
 <p><code>RemoteTransform2D</code> and <code>RemoteTransform3D</code> share one implementation and one set of limitations, so this file records them once.</p>
 <p>A relay copies its transform onto its <code>remote_path</code> target once on load: the static enter-tree effect, not a per-frame drive. Three cases are not fully reproduced:</p>
-<ul><li><strong><code>use_global_coordinates = false</code></strong> is a no-op on a static load. Only the default global-coordinate drive repositions the target.</li><li><strong>A cross-instance <code>remote_path</code></strong>, one crossing into or out of an instanced sub-scene, stays unresolved. In-scene resolution, the common case, works.</li><li><strong>Relay chains</strong> resolve in document (pre-order) order. A feedback loop is not iterated to a fixed point.</li></ul></div>
+<ul><li><strong><code>use_global_coordinates = false</code></strong> is a no-op on a static load. Only the default global-coordinate drive repositions the target.</li><li><strong>A cross-instance <code>remote_path</code></strong>, one crossing into or out of an instanced sub-scene, stays unresolved. In-scene resolution, the common case, works.</li><li><strong>Relay chains</strong> resolve in document (pre-order) order. A feedback loop is not iterated to a fixed point.</li></ul>
+<h3>Why a 2D background reads 77 here and 76 in Godot</h3>
+<p>Both sides clear a 2D scene to <code>default_clear_color</code>, 0.3 grey. The Godot images read 76 there, and the previewer reads 77. The value is 76.5 in 8 bits, so the driver's rounding decides the byte. <code>pnpm ref:godot</code> renders on Vulkan through lavapipe, which gives 76, and <code>--rendering-driver opengl3</code> gives 77. The previewer clears through WebGL, which gives 77. This 1/255 gap is not a parity defect.</p></div>
     </article>
     <article class="sheet" data-type="AcceptDialog" hidden>
       <header class="sheet-head">
