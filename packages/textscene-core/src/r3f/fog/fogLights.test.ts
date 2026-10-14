@@ -137,12 +137,10 @@ describe('FogLightRows.pack', () => {
   });
 
   it('gives an area light its facing, rectangle, range, centre range and attenuation', () => {
-    const area = new THREE.RectAreaLight(0xffffff, Math.PI, 2, 1);
-    area.position.set(0, 8, 0);
-    area.rotation.x = -Math.PI / 2;
-    area.userData = areaLightUserData({ range: 6, attenuation: 3, specular: 1 });
+    const light = area();
+    light.userData = areaLightUserData({ range: 6, attenuation: 3, specular: 1 });
 
-    const rows = packed(placed(area));
+    const rows = packed(placed(light));
 
     expect(texel(rows, 0, FogLightTexel.POSITION)).toEqual([0, 5, -8, Math.fround(1 / 6)]);
     // Godot hands the fog the attenuation less one (4.7.2 volumetric_fog_process.glsl:653).
@@ -269,12 +267,17 @@ describe('FogLightRows.pack, for a light that casts', () => {
     expect(texel(rows, 0, FogLightTexel.SHADOW_SPLITS)).toEqual([0.125, 0, 0.125, 0]);
   });
 
-  it("puts a cell in an area light's own space, with its slot, opacity and depth bias", () => {
+  it("puts a cell in an area light's own space, beside its paraboloid's slot", () => {
     const rows = packed(placed(castingArea()));
 
     // The light faces down its -Z, so a cell 2 below it lies 2 along its -Z.
     expectDirection(landing(rows, new THREE.Vector3(0, 6, 0)), [0, 0, -2]);
     expect(texel(rows, 0, FogLightTexel.SHADOW_SPLITS)).toEqual([0.25, 0, 0.125, 0.125]);
+  });
+
+  it('gives a casting area light its shadow opacity and depth bias from the positional atlas', () => {
+    const rows = packed(placed(castingArea()));
+
     expect(texel(rows, 0, FogLightTexel.CONE).slice(2)).toEqual([1, Math.fround(0.1)]);
     expect(rows.readsPositionalAtlas).toBe(true);
   });
