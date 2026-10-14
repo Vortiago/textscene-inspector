@@ -1,7 +1,7 @@
 ---
 type: Line2D
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-line2d.tscn
 image: unit-line2d
 renders_as: a stroked mesh polyline
@@ -45,3 +45,8 @@ Strict parsing format-checks these `Line2D` properties, plus 12 inherited from N
 `false` and `round_precision` to `8`, each with a warning. `joint_mode` is read as a
 plain int, so an out-of-range value passes silently. A malformed `default_color` falls
 back to white with no warning, and malformed `points` warn and leave the line empty.
+
+## Known limitations
+
+- **Approximated** `gradient`, `texture`, `width_curve`, the cap modes and `antialiased`
+  are not read, so the line draws in `default_color` at one width with flat ends.

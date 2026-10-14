@@ -1,0 +1,25 @@
+[gd_scene load_steps=2 format=3 uid="uid://unit_label_label_settings_tres_scene"]
+
+[ext_resource type="LabelSettings" path="res://unit-label-label-settings-tres.tres" id="1_settings"]
+
+; One variable: a `label_settings` saved in its own `.tres` file. It draws as the inline
+; resource in unit-label-label-settings.tscn does, at font_size 32 in red over two lines
+; 10 px apart, beating the node-local 12/blue override (label.cpp:759,761). That scene
+; inlines its settings, so no other scene loads a LabelSettings file.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Label" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 260.0
+offset_bottom = 140.0
+theme_override_colors/font_color = Color(0, 0, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "Settings
+from a file"
+label_settings = ExtResource("1_settings")

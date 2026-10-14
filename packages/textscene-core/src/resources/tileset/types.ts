@@ -44,6 +44,8 @@ export interface AtlasSourceModel {
   margins: Vec2i;
   separation: Vec2i;
   textureRegionSize: Vec2i;
+  /** `use_texture_padding`: the draw samples a copy of the atlas with each tile's edge repeated around it. */
+  usesTexturePadding: boolean;
   /** Per-tile entries keyed `${atlasX}:${atlasY}`. */
   tiles: Map<string, AtlasTileModel>;
 }
@@ -99,6 +101,21 @@ export function alternativeNoTransform(alternativeId: number): number {
   return alternativeId & ~TILE_TRANSFORM_MASK;
 }
 
+/** A tile's pixel rect in the atlas image, frame 0 (`get_tile_texture_region`, `tile_set.cpp:5283-5296`). */
+function atlasTileRegion(
+  source: Pick<AtlasSourceModel, 'margins' | 'separation' | 'textureRegionSize'>,
+  atlasCoords: Vec2i,
+  sizeInAtlas: Vec2i
+): TileDrawInfo['regionPx'] {
+  const { margins, separation, textureRegionSize: region } = source;
+  return {
+    x: margins.x + atlasCoords.x * (region.x + separation.x),
+    y: margins.y + atlasCoords.y * (region.y + separation.y),
+    width: region.x * sizeInAtlas.x + separation.x * (sizeInAtlas.x - 1),
+    height: region.y * sizeInAtlas.y + separation.y * (sizeInAtlas.y - 1),
+  };
+}
+
 export interface TileDrawInfo {
   /** Pixel rect of the tile's texture region within the atlas (image-Y top-left). */
   regionPx: { x: number; y: number; width: number; height: number };
@@ -117,8 +134,6 @@ export function tileDrawInfo(
   cell: Pick<DrawableCell, 'atlasCoords' | 'alternativeId' | 'tile' | 'tileData'>
 ): TileDrawInfo {
   const { atlasCoords, alternativeId, tile, tileData } = cell;
-  const stepX = source.textureRegionSize.x + source.separation.x;
-  const stepY = source.textureRegionSize.y + source.separation.y;
   const cellTranspose = (alternativeId & TILE_TRANSFORM_TRANSPOSE) !== 0;
   const cellFlipH = (alternativeId & TILE_TRANSFORM_FLIP_H) !== 0;
   const cellFlipV = (alternativeId & TILE_TRANSFORM_FLIP_V) !== 0;
@@ -126,13 +141,7 @@ export function tileDrawInfo(
   const origin = cellTranspose ? { x: textureOrigin.y, y: textureOrigin.x } : textureOrigin;
 
   return {
-    regionPx: {
-      x: source.margins.x + atlasCoords.x * stepX,
-      y: source.margins.y + atlasCoords.y * stepY,
-      width: source.textureRegionSize.x * tile.sizeInAtlas.x + source.separation.x * (tile.sizeInAtlas.x - 1),
-      height:
-        source.textureRegionSize.y * tile.sizeInAtlas.y + source.separation.y * (tile.sizeInAtlas.y - 1),
-    },
+    regionPx: atlasTileRegion(source, atlasCoords, tile.sizeInAtlas),
     orientation: {
       // A cell transpose swaps the axes the tile's own flips act on.
       flipH: cellFlipH !== (cellTranspose ? tileData.flipV : tileData.flipH),

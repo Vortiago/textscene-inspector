@@ -1,7 +1,7 @@
 ---
 type: NinePatchRect
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-nine-patch-rect.tscn
 image: unit-nine-patch-rect
 renders_as: a 9-sliced textured quad in the control's rect

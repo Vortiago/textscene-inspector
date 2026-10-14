@@ -14,10 +14,10 @@ import {
   type AreaTexturePlacement,
 } from './atlasLayout.js';
 import { mipSize } from './atlasMipmaps.js';
-import { readImagePixels } from '../controls/withImageCanvas.js';
+import { readImagePixels } from '../../resources/formats/image/imagePixels.js';
 import { installLitUniform, installedUniformValue } from '../shaderPatch/litUniform.js';
 import { AREA_LIGHT_ATLAS_UNIFORM } from './areaTextureFetch.js';
-import { reversedRows } from '../../utils/reversedRows.js';
+import { isBottomUp, reversedRows } from '../../utils/reversedRows.js';
 
 /** The atlas every lit material and the fog pass sample, refilled in place. */
 class AreaLightAtlasTexture extends sharedTexture(THREE.DataTexture) {
@@ -135,14 +135,6 @@ function godotImage(texture: THREE.Texture): AreaTextureImage | undefined {
     height: pixels.height,
     data: reversedRows(pixels.data, pixels.width, pixels.height),
   };
-}
-
-/**
- * Whether `texture`'s pixels run bottom-up: a typed array that uploads unflipped. A typed array with
- * `flipY`, such as `applyAlphaBorderFix`'s readback of a decoded image, runs top-down.
- */
-function isBottomUp(texture: THREE.Texture): boolean {
-  return !texture.flipY && ArrayBuffer.isView((texture.image as { data?: unknown } | null)?.data);
 }
 
 /** Marks the atlas dirty when a held texture uploaded new pixels (`area_light_atlas_mark_dirty_on_texture`). */

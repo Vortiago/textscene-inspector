@@ -75,30 +75,12 @@ describe('CPUParticles2D preview rule', () => {
     );
   });
 
-  it('reports when `fract_delta` is explicitly enabled', () => {
-    const content = scene('fract_delta = true\n');
-    expect(namesOf(content)).toContain('cpuparticles2d-fract-delta-ignored');
-    expect(reportsOf(linter.lint(content), 'cpuparticles2d-fract-delta-ignored', 'info')).toHaveLength(1);
+  it('stays silent when `fract_delta` is explicitly enabled, since the pose honours it', () => {
+    expect(namesOf(scene('fract_delta = true\n'))).toEqual([]);
   });
 
-  it('stays silent when `fract_delta` is omitted, though Godot defaults it TRUE', () => {
-    // A report on the default would fire for every emitter and say nothing about
-    // this one.
-    expect(namesOf(scene('amount = 8\n'))).not.toContain('cpuparticles2d-fract-delta-ignored');
-  });
-
-  it('stays silent when `fract_delta` is explicitly disabled', () => {
-    expect(namesOf(scene('fract_delta = false\n'))).not.toContain('cpuparticles2d-fract-delta-ignored');
-  });
-
-  it('reports both diagnostics together when both apply', () => {
-    const names = namesOf(scene('emission_shape = 6\nfract_delta = true\n'));
-    expect(names).toContain('cpuparticles2d-nondeterministic-emission-shape');
-    expect(names).toContain('cpuparticles2d-fract-delta-ignored');
-  });
-
-  it('never raises an ERROR — both conditions are legal Godot (severity contract)', () => {
-    const diagnostics = linter.lint(scene('emission_shape = 6\nfract_delta = true\n'));
+  it('never raises an ERROR for a global-RNG shape (severity contract)', () => {
+    const diagnostics = linter.lint(scene('emission_shape = 6\n'));
     expect(errorsOf(diagnostics)).toEqual([]);
   });
 

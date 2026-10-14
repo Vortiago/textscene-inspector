@@ -1,7 +1,7 @@
 ---
 type: CSGBox3D
 category: 3D
-status: unreviewed
+status: done
 fixture: unit-csg-box.tscn
 image: unit-csg-box
 renders_as: a solid box mesh

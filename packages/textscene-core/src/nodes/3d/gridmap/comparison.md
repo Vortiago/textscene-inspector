@@ -1,7 +1,7 @@
 ---
 type: GridMap
 category: 3D
-status: unreviewed
+status: limitation
 fixture: unit-grid-map.tscn
 image: unit-grid-map
 renders_as: a THREE.InstancedMesh per MeshLibrary item surface, or a mesh per cell when that surface's material billboards
@@ -44,5 +44,4 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 
 ## Known limitations
 
-- **Approximated** A tile whose mesh declares no material gets the previewer's neutral grey placeholder, which reads a few values darker than Godot's.
 - **Approximated** `cell_scale` is not parsed, so a map that sets it renders every tile at the wrong size.

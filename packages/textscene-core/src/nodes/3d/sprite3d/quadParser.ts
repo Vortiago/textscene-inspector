@@ -11,11 +11,12 @@ export type SpriteQuadProperties = Pick<
 
 export function parseSpriteQuad(properties: Record<string, string>, context: string): SpriteQuadProperties {
   return {
+    // The setter refuses an index outside 0-2, PARTICLES included (`sprite_3d.cpp:598`), so the
+    // sprite keeps its DISABLED default.
     billboard: enumOr(properties.billboard, BillboardMode.BILLBOARD_DISABLED, [
       BillboardMode.BILLBOARD_DISABLED,
       BillboardMode.BILLBOARD_ENABLED,
       BillboardMode.BILLBOARD_FIXED_Y,
-      BillboardMode.BILLBOARD_PARTICLES,
     ]),
     axis: enumOr(properties.axis, AxisMode.AXIS_Z, [AxisMode.AXIS_X, AxisMode.AXIS_Y, AxisMode.AXIS_Z]),
     pixel_size: floatOr(properties.pixel_size, 0.01),

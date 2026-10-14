@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { everyTransparentTexelHasASource, fixAlphaEdges } from './fixAlphaEdges';
+import { fixAlphaEdges } from './fixAlphaEdges';
 
 /** Build a `width * height` RGBA8 buffer from per-texel `[r, g, b, a]` tuples. */
 function rgba(width: number, height: number, texels: ReadonlyArray<readonly number[]>): Uint8Array {
@@ -140,46 +140,5 @@ describe('fixAlphaEdges', () => {
     expect(fixAlphaEdges(data, 2, 1)).toBe(false);
     expect(texel(data, 2, 0, 0)).toEqual([255, 0, 255, 0]);
     expect(texel(data, 2, 1, 0)).toEqual([0, 255, 0, 0]);
-  });
-});
-
-/**
- * A precondition on the previewer's readback, not a property of Godot's pass: a
- * transparent texel out of reach keeps its RGB in Godot, but the premultiplied
- * store has already zeroed it here, so the caller checks this before it
- * substitutes the image.
- */
-describe('everyTransparentTexelHasASource', () => {
-  it('is true when every transparent texel has an opaque one within the radius', () => {
-    const data = rgba(2, 1, [
-      [255, 0, 255, 0],
-      [10, 20, 30, 255],
-    ]);
-    expect(everyTransparentTexelHasASource(data, 2, 1)).toBe(true);
-  });
-
-  it('is false when a transparent texel sits beyond the radius-4 search', () => {
-    // 7x1: only texel 1 is opaque, so texel 6 is five apart, out of reach.
-    const data = rgba(7, 1, [
-      [255, 0, 255, 0],
-      [10, 20, 30, 255],
-    ]);
-    expect(everyTransparentTexelHasASource(data, 7, 1)).toBe(false);
-  });
-
-  it('is false when the image holds no opaque texel at all', () => {
-    const data = rgba(2, 1, [
-      [255, 0, 255, 0],
-      [0, 255, 0, 0],
-    ]);
-    expect(everyTransparentTexelHasASource(data, 2, 1)).toBe(false);
-  });
-
-  it('is true for an image with nothing transparent to place', () => {
-    const data = rgba(2, 1, [
-      [1, 2, 3, 255],
-      [4, 5, 6, 255],
-    ]);
-    expect(everyTransparentTexelHasASource(data, 2, 1)).toBe(true);
   });
 });

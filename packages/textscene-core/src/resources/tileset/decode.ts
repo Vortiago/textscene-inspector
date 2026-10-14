@@ -181,6 +181,8 @@ function resolveAtlasSource(
     margins: tileSetVec2i(props.margins, { x: 0, y: 0 }, 'margins'),
     separation: tileSetVec2i(props.separation, { x: 0, y: 0 }, 'separation'),
     textureRegionSize: tileSetVec2i(props.texture_region_size, { x: 16, y: 16 }, 'texture_region_size'),
+    // On unless the file says `false` (`tile_set.h:673`).
+    usesTexturePadding: boolSlotValue(props.use_texture_padding) !== false,
     tiles: resolveTiles(props, tileMaterial),
   };
 }

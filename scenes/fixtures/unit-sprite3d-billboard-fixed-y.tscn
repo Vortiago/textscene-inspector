@@ -1,0 +1,37 @@
+[gd_scene load_steps=2 format=3 uid="uid://test_sprite3d_billboard_fixed_y"]
+
+; One variable: the basis of a whole-node FIXED_Y billboard. Godot builds it from the camera's
+; axes about world up (`material.cpp:1291-1295`), not from the direction to the camera, so the
+; sprites far left and far right of the view face the camera's forward axis, not the camera.
+; The middle sprite sits under a parent turned 60 degrees, which the billboard throws away.
+; No other scene shows FIXED_Y on a Sprite3D: unit-sprite3d.tscn bills only ENABLED, and
+; unit-material-billboard.tscn bills a material surface, not a node.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_sprite_tex"]
+
+[node name="Scene" type="Node3D"]
+
+[node name="Floor" type="CSGBox3D" parent="."]
+size = Vector3(12, 0.1, 4)
+
+[node name="Left" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 1, 0)
+texture = ExtResource("1_sprite_tex")
+pixel_size = 0.035
+billboard = 2
+
+[node name="Turned" type="Node3D" parent="."]
+transform = Transform3D(0.5, 0, 0.866025, 0, 1, 0, -0.866025, 0, 0.5, 0, 1, 0)
+
+[node name="Middle" type="Sprite3D" parent="Turned"]
+texture = ExtResource("1_sprite_tex")
+pixel_size = 0.035
+billboard = 2
+modulate = Color(1, 0.7, 0.4, 1)
+
+[node name="Right" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 1, 0)
+texture = ExtResource("1_sprite_tex")
+pixel_size = 0.035
+billboard = 2
+modulate = Color(0.4, 0.7, 1, 1)

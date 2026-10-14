@@ -63,15 +63,14 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-`pixel_size`, `outline_size`, `font_size` and `line_spacing` warn and fall back through `floatOr` to `0.005`, `12`, `32` and `0`. A malformed `transparency` keeps Godot's default (`0`) silently, which draws the label opaque. A present `billboard` other than `0` or `2` silently resolves to `ENABLED`. `no_depth_test` is a raw `=== 'true'` comparison, so any other value renders false without a warning. `modulate` and `outline_modulate` fall back silently to opaque white and opaque black on a malformed `Color`.
+`pixel_size`, `outline_size`, `font_size` and `line_spacing` warn and fall back through `floatOr` to `0.005`, `12`, `32` and `0`. A malformed `transparency` keeps Godot's default (`0`) silently, which draws the label opaque. A `billboard` outside `0` to `2` keeps `DISABLED`, as Godot's setter refuses it. `no_depth_test` is a raw `=== 'true'` comparison, so any other value renders false without a warning. `modulate` and `outline_modulate` fall back silently to opaque white and opaque black on a malformed `Color`.
 
 ## Known limitations
 
-- **Approximated** The outline is a dilated fill rather than a stroked contour, so it
-  reads softer than Godot's.
 - **Approximated** `width` and `autowrap_mode` are not read, so a long label runs on one
   line where Godot wraps it.
 - **Approximated** The glyph texture carries no mipmaps, so a label seen small sparkles
   where Godot's stays smooth.
+- **Approximated** Godot draws the glyphs softer, and an `outline_size = 8` outline as a faint grey halo, where here it is a crisp black ring.
 - **Shader missing** `alpha_antialiasing_mode` and `alpha_antialiasing_edge` have no
   counterpart, so a cut label's edges are not feathered.

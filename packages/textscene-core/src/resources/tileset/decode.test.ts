@@ -50,6 +50,27 @@ describe('tileSetFromScene', () => {
     expect(source!.separation).toEqual({ x: 0, y: 0 });
   });
 
+  it('pads the atlas by default, as TileSetAtlasSource does (tile_set.h use_texture_padding = true)', () => {
+    const source = tileSetFromScene('SubResource("ts")', internals, externals)!.sources.get(0)!;
+    expect(source.usesTexturePadding).toBe(true);
+  });
+
+  it('reads `use_texture_padding = false` as an unpadded atlas', () => {
+    const unpadded = internals.map((r) =>
+      r.id === 'atlas1' ? { ...r, data: { ...r.data, use_texture_padding: 'false' } } : r
+    );
+    const source = tileSetFromScene('SubResource("ts")', unpadded, externals)!.sources.get(0)!;
+    expect(source.usesTexturePadding).toBe(false);
+  });
+
+  it('keeps the padding for a value Godot does not read as false (edge)', () => {
+    const odd = internals.map((r) =>
+      r.id === 'atlas1' ? { ...r, data: { ...r.data, use_texture_padding: 'maybe' } } : r
+    );
+    const source = tileSetFromScene('SubResource("ts")', odd, externals)!.sources.get(0)!;
+    expect(source.usesTexturePadding).toBe(true);
+  });
+
   it('reads per-tile entries: alternatives with flip flags, texture_origin, and size_in_atlas', () => {
     const richInternals: TscnInternalResource[] = [
       {

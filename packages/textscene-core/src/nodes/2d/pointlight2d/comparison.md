@@ -150,3 +150,5 @@ white silently. `texture` is stored with no reference check.
 
 - **Shader missing** A `CanvasTexture.normal_texture` is not read, so every surface
   takes the light head-on with no specular response.
+- **Approximated** Under a `shadow_filter`, a step of the penumbra can sit one polar bin
+  from Godot's, so its stepped edge shifts slightly in places.

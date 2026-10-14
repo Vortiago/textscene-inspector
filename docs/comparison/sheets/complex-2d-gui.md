@@ -4,12 +4,12 @@ category: Complex Scenes
 status: limitation
 fixture: complex-2d-gui.tscn
 image: complex-2d-gui
-renders_as: a composed settings/HUD panel — 23 Control types in one tree
+renders_as: a composed settings/HUD panel of 22 Control types in one tree
 ---
 
 # Complex 2D GUI
 
-A mission settings panel built from 23 Control types. It holds a header card, a scrolling
+A mission settings panel built from 22 Control types. It holds a header card, a scrolling
 column of controls, a briefing, an action row, a sector map and a status readout. An alert
 strip sits over everything.
 
@@ -34,4 +34,6 @@ broke. Find a regression here, then pin it in the `unit-*` fixture of the type t
 
 - **Approximated** Text edges differ slightly from Godot's, because glyphs come from an MSDF
   atlas, while layout, wrap points and every non-text surface match.
-- **Approximated** A `[u]` underline sits two pixels higher and softer than Godot's.
+- **Approximated** A `[u]` underline sits slightly higher and softer than Godot's.
+- **Approximated** The `[b]` span reads heavier than Godot's and pushes the rest of its line
+  slightly to the right.

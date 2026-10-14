@@ -36,8 +36,8 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason: 'exists to show unsupported types; the Area3D has no shape on purpose',
   },
   'unit-cpuparticles2d-unpreviewable.tscn': {
-    rules: ['cpuparticles2d-nondeterministic-emission-shape', 'cpuparticles2d-fract-delta-ignored'],
-    reason: 'named for the two advisories it carries; they are the fixture',
+    rules: ['cpuparticles2d-nondeterministic-emission-shape'],
+    reason: 'named for the advisory it carries; it is the fixture',
   },
   'unit-label-autowrap-in-container.tscn': {
     rules: ['label-autowrap-needs-custom-minimum-size'],

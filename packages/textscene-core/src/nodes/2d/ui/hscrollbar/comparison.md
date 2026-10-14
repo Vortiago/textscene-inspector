@@ -1,7 +1,7 @@
 ---
 type: HScrollBar
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-h-scroll-bar.tscn
 image: unit-h-scroll-bar
 renders_as: a horizontal track with a rectangular grabber

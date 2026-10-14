@@ -40,6 +40,7 @@ export function solveNode(): Pick<
   | 'hidden'
   | 'parentVisibleInTree'
   | 'fontOverrides'
+  | 'labelSettings'
   | 'themeChain'
   | 'projectTheme'
   | 'colors'
@@ -61,6 +62,7 @@ export function solveNode(): Pick<
     // root, and what every visible ancestor passes down.
     parentVisibleInTree: true,
     fontOverrides: NO_FONT_OVERRIDES,
+    labelSettings: null,
     themeChain: NO_THEME_CHAIN,
     projectTheme: null,
     colors: NO_COLORS,

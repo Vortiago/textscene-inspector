@@ -6,38 +6,62 @@
  */
 
 import * as THREE from 'three';
-import { imageSize } from '../../../r3f/controls/withImageCanvas';
+import { imageSize, readImagePixels, type ImagePixels } from '../../formats/image/imagePixels';
+import { copySampling } from '../copySampling';
+import { isBottomUp } from '../../../utils/reversedRows';
 import type { AtlasTextureLayout } from './types';
 
 /**
- * The `{data, width, height}` a `DataTexture` carries. It is copied row by row:
- * a premultiplied canvas would zero the RGB behind alpha 0 that
- * `applyAlphaBorderFix` preserves. A `Uint16Array` holds the half floats
- * `colourDataTexture` uploads for a float image.
+ * A sheet's RGBA texels, copied row by row: a premultiplied canvas would zero the RGB behind
+ * alpha 0 that Godot keeps. A `Uint16Array` holds the half floats `colourDataTexture` uploads
+ * for a float image.
  */
 interface RawPixels {
   data: Uint8Array | Uint8ClampedArray | Uint16Array;
   width: number;
   height: number;
-}
-
-/** `image` as raw RGBA pixels, or null when it is a drawable image source instead. */
-function rawPixels(image: unknown, atlas: { width: number; height: number }): RawPixels | null {
-  const candidate = image as Partial<RawPixels> | null;
-  const data = candidate?.data;
-  if (!ArrayBuffer.isView(data)) return null;
-  // A crop indexes 4 channels per texel only. Other formats go to the canvas path,
-  // which declines in turn.
-  if (data.length !== atlas.width * atlas.height * 4) return null;
-  return { data: data as RawPixels['data'], width: atlas.width, height: atlas.height };
+  /** Row 0 is the bottom row: a typed array that uploads without `flipY` (`utils/reversedRows.ts`). */
+  isBottomUp: boolean;
 }
 
 /**
- * The crop `layout` describes, as a whole-texel blit with smoothing off, or null:
- * an undecoded image, a region that misses the atlas, or no 2D canvas. Null never
- * means "draw the sheet": a whole sprite sheet is the failure this prevents.
+ * Written only by `decodedPixels`. One readback serves every AtlasTexture cut from a decoded
+ * sheet, and an entry goes with its image.
  */
-export function rasterizeAtlasTexture(image: unknown, layout: AtlasTextureLayout): THREE.Texture | null {
+const decodedSheetPixels = new WeakMap<object, ImagePixels | null>();
+
+/** A decoded image's bytes, top row first, read once per image. Null when they cannot be read. */
+function decodedPixels(image: object): ImagePixels | null {
+  let pixels = decodedSheetPixels.get(image);
+  if (pixels === undefined) {
+    pixels = readImagePixels(image) ?? null;
+    decodedSheetPixels.set(image, pixels);
+  }
+  return pixels;
+}
+
+/** `sheet`'s texels, or null when they cannot be read or are not 4 channels per texel. */
+function rawPixels(sheet: THREE.Texture, atlas: { width: number; height: number }): RawPixels | null {
+  const image = sheet.image as Partial<RawPixels> | null;
+  if (!image) return null;
+  const own = image.data;
+  const pixels = ArrayBuffer.isView(own)
+    ? { data: own, isBottomUp: isBottomUp(sheet) }
+    : { data: decodedPixels(image)?.data, isBottomUp: false };
+  if (pixels.data?.length !== atlas.width * atlas.height * 4) return null;
+  return { data: pixels.data, width: atlas.width, height: atlas.height, isBottomUp: pixels.isBottomUp };
+}
+
+/**
+ * The crop `layout` describes, as a whole-texel blit, or null: an undecoded or unreadable
+ * image, or a region that misses the atlas. Null never means "draw the sheet": a whole
+ * sprite sheet is the failure this prevents.
+ */
+export function rasterizeAtlasTexture(
+  sheet: THREE.Texture,
+  layout: AtlasTextureLayout
+): THREE.Texture | null {
+  const image: unknown = sheet.image;
   const atlas = imageSize(image);
   if (!atlas) return null;
 
@@ -53,43 +77,12 @@ export function rasterizeAtlasTexture(image: unknown, layout: AtlasTextureLayout
   const sh = bottom - top;
   if (sw <= 0 || sh <= 0) return null;
 
-  const raw = rawPixels(image, atlas);
-  if (raw) return cropRawPixels(raw, layout, left, top, sw, sh);
-
-  const doc = globalThis.document;
-  if (!doc) return null;
-  try {
-    const canvas = doc.createElement('canvas');
-    canvas.width = layout.width;
-    canvas.height = layout.height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(
-      image as CanvasImageSource,
-      left,
-      top,
-      sw,
-      sh,
-      layout.dest.x + (left - layout.source.x),
-      layout.dest.y + (top - layout.source.y),
-      sw,
-      sh
-    );
-
-    const texture = new THREE.CanvasTexture(canvas);
-    // The tag `createTextureFromBuffer` puts on a loaded image: these are the
-    // sheet's sRGB bytes, and a consumer that needs another retags its own clone.
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.needsUpdate = true;
-    return texture;
-  } catch {
-    return null; // A tainted canvas or an unsupported image source.
-  }
+  const raw = rawPixels(sheet, atlas);
+  return raw && copySampling(cropRawPixels(raw, layout, left, top, sw, sh), sheet);
 }
 
 /**
- * The same blit over raw RGBA texels, in the sheet's own texel type: the
+ * The same blit over raw RGBA texels, in the sheet's own texel type and row order: the
  * destination starts fully transparent (a fresh typed array is zeroed, and a
  * zero half float is 0), so the margin the region does not cover needs no
  * separate clear.
@@ -108,14 +101,19 @@ function cropRawPixels(
   const destX = layout.dest.x + (left - layout.source.x);
   const destY = layout.dest.y + (top - layout.source.y);
 
+  // Layout rows count from the top, as Godot's do.
+  const storedRow = (godotRow: number, height: number) => (raw.isBottomUp ? height - 1 - godotRow : godotRow);
+
   for (let row = 0; row < sh; row += 1) {
     const dy = destY + row;
     if (dy < 0 || dy >= layout.height) continue;
+    const fromRow = storedRow(top + row, raw.height);
+    const toRow = storedRow(dy, layout.height);
     for (let col = 0; col < sw; col += 1) {
       const dx = destX + col;
       if (dx < 0 || dx >= layout.width) continue;
-      const from = ((top + row) * raw.width + (left + col)) * 4;
-      const to = (dy * layout.width + dx) * 4;
+      const from = (fromRow * raw.width + (left + col)) * 4;
+      const to = (toRow * layout.width + dx) * 4;
       out[to] = raw.data[from]!;
       out[to + 1] = raw.data[from + 1]!;
       out[to + 2] = raw.data[from + 2]!;
@@ -127,9 +125,7 @@ function cropRawPixels(
   // The sheet's own tags, as `colourDataTexture` sets them: floats read raw, bytes as sRGB.
   texture.type = isHalfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType;
   texture.colorSpace = isHalfFloat ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace;
-  // Row 0 is the sheet's row 0, and a DataTexture uploads unflipped, so the crop
-  // lines up with its sheet.
-  texture.flipY = false;
+  texture.flipY = !raw.isBottomUp;
   texture.needsUpdate = true;
   return texture;
 }

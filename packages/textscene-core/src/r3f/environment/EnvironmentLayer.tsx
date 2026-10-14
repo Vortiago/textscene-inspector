@@ -175,8 +175,8 @@ function EnvironmentApplier({ settings, hasSky, hasFog, suppressToneMapping }: E
       };
     }
     if (mode === BackgroundMode.BG_SKY && !hasSky) {
-      // A sky we cannot resolve (an unsupported material, or one in an ExtResource `.tres`). A
-      // mid-blue solid reads as "sky here" rather than as a black void.
+      // A sky we cannot resolve, such as a ShaderMaterial sky. A mid-blue solid reads as
+      // "sky here" rather than as a black void.
       return showBackground(
         scene,
         godotColorToLinear({ r: 0.5, g: 0.6, b: 0.75 }),

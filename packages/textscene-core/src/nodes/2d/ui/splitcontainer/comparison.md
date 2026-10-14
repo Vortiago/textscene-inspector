@@ -51,5 +51,8 @@ parser reads `split_offset`, `collapsed`, `dragger_visibility` and `vertical` fo
 scalar type only. An unparseable `split_offset` or `dragger_visibility` leaves the
 property `undefined`, and Godot's default applies. An unparseable `collapsed` or
 `vertical` reads as `false`, because a bool slot stores what it can and is never unset.
-An out-of-range `dragger_visibility` behaves as VISIBLE.
+An out-of-range `dragger_visibility` behaves as VISIBLE. The lenient parser also reads
+the `split_offsets` array, and replays a `split_offset` scalar onto its first entry in
+file order. A malformed `split_offsets` is skipped, so the next key or the default `[0]`
+applies.
 

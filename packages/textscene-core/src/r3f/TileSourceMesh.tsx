@@ -13,6 +13,7 @@ import { MissingResourcePlaceholder } from './components/MissingResourcePlacehol
 import { useCanvas2DTexture } from './canvas2DTextureDecode';
 import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
 import { canvasItemFacing } from './canvasItemFacing';
+import { TILE_TEXTURE_PADDING, TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
 import { materialProgramInputs } from './materialProgramInputs';
 import type { CanvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
 import type { CanvasItemLightingProps } from './lighting2d/useCanvasItemLighting';
@@ -58,6 +59,8 @@ export function TileSourceMesh({
     geom.setAttribute('position', new THREE.BufferAttribute(arrays.positions, 3));
     geom.setAttribute('uv', new THREE.BufferAttribute(arrays.uvs, 2));
     geom.setAttribute('color', new THREE.BufferAttribute(arrays.colors, 4));
+    if (arrays.uvBounds)
+      geom.setAttribute(TILE_UV_BOUNDS_ATTRIBUTE, new THREE.BufferAttribute(arrays.uvBounds, 4));
     geom.setIndex(new THREE.BufferAttribute(arrays.indices, 1));
     return geom;
   }, [cells, source, grid, texW, texH]);
@@ -88,7 +91,12 @@ export function TileSourceMesh({
       depthWrite: false,
       defines: CANVAS_SRGB_DEFINES,
     },
-    merge: [canvasItemFacing(), blend, lighting],
+    merge: [
+      canvasItemFacing(),
+      blend,
+      lighting,
+      source.usesTexturePadding ? { injection: TILE_TEXTURE_PADDING } : undefined,
+    ],
   });
 
   return (

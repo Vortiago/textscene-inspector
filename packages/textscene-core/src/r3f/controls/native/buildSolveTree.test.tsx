@@ -2210,3 +2210,65 @@ visible = false
     expect((child.node.properties as { visible?: boolean }).visible).toBe(false);
   });
 });
+
+describe("useBuildSolveTree — a Label's own label_settings", () => {
+  const SETTINGS_PATH = 'res://settings.tres';
+  const settingsFile = (fontSize: number): ParsedResource =>
+    parseTresFile(`[gd_resource type="LabelSettings" format=3]\n\n[resource]\nfont_size = ${fontSize}\n`);
+
+  it('decodes an ExtResource .tres from the resource cache', () => {
+    const loader = createFakeResourceLoader();
+    loader.resources.seed(SETTINGS_PATH, settingsFile(40));
+    const nodes = [label('L', { labelSettings: 'ExtResource("1_settings")' })];
+    const externalResources = [{ id: '1_settings', path: SETTINGS_PATH, type: 'LabelSettings' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.labelSettings?.fontSize).toBe(40);
+  });
+
+  it('decodes an inline SubResource in the node scope', () => {
+    const loader = createFakeResourceLoader();
+    const nodes = [label('L', { labelSettings: 'SubResource("1")' })];
+    const internalResources = [{ id: '1', type: 'LabelSettings', data: { font_size: '28' } }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], internalResources as never), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.labelSettings?.fontSize).toBe(28);
+  });
+
+  it('requests an uncached .tres and holds no settings until it arrives', () => {
+    const loader = createFakeResourceLoader();
+    const requested: string[] = [];
+    loader.resources.setRequestImpl((path) => requested.push(path));
+    const nodes = [label('L', { labelSettings: 'ExtResource("1_settings")' })];
+    const externalResources = [{ id: '1_settings', path: SETTINGS_PATH, type: 'LabelSettings' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.labelSettings).toBeNull();
+    expect(requested).toContain(SETTINGS_PATH);
+  });
+
+  it('holds no settings for a .tres of another resource type', () => {
+    const loader = createFakeResourceLoader();
+    loader.resources.seed(
+      SETTINGS_PATH,
+      parseTresFile('[gd_resource type="Curve" format=3]\n\n[resource]\n')
+    );
+    const nodes = [label('L', { labelSettings: 'ExtResource("1_settings")' })];
+    const externalResources = [{ id: '1_settings', path: SETTINGS_PATH, type: 'LabelSettings' }];
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, externalResources, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree[0]?.labelSettings).toBeNull();
+  });
+});

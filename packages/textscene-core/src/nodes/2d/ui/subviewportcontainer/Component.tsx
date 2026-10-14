@@ -139,6 +139,7 @@ function ViewportSurfaceNative({
       // This synthetic root stands in for the SubViewport, not a Control `buildSolveTree.ts` walked,
       // so it carries no theme, as that walker gives a themeless root.
       fontOverrides: {},
+      labelSettings: null,
       themeChain: [],
       projectTheme: null,
       colors: {},
@@ -188,7 +189,7 @@ function ViewportSurfaceNative({
           <ControlQuad
             width={viewportWidth}
             height={viewportHeight}
-            // Measured in Godot 4.6.3 (`comparison.md`, Item 2): 0.8 grey reads 204, 102 under
+            // Measured in Godot 4.6.3: 0.8 grey reads 204, 102 under
             // `self_modulate` 0.5 and 51 with an ancestor `modulate` 0.5 on top, a plain multiply.
             color={tint.color}
             opacity={tint.opacity}
