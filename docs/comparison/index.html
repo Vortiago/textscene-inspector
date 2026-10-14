@@ -5605,6 +5605,23 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the sphere and ground it lights match Godot's.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Radiance size 32</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-sky-radiance-size-32-godot.png" alt="Godot render of Radiance size 32">
+          <img class="img-ours" src="images/unit-sky-radiance-size-32-ours.png" alt="Our render of Radiance size 32">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A sky with <code>radiance_size = 0</code> bakes from a radiance 32 texels wide, the smallest Godot allows. The mirror sphere reflects a coarse sky, and the rough sphere reads layers filtered from a 32-wide octmap and its short downsample chain. Both spheres and the ground they light match Godot's.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Real-Time process mode</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
