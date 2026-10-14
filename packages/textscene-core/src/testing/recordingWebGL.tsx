@@ -41,9 +41,12 @@ export function RendererProbe({ onRenderer }: { onRenderer: (renderer: THREE.Web
   return null;
 }
 
-/** A renderer of its own on a test root, for a test that needs no scene. */
-export async function testRenderer(): Promise<THREE.WebGLRenderer> {
+/** A recorded renderer of its own on a test root, for a test that needs no scene. */
+export async function testRenderer(): Promise<{
+  renderer: THREE.WebGLRenderer;
+  recording: TextureRecording;
+}> {
   let found: THREE.WebGLRenderer | undefined;
   await ReactThreeTestRenderer.create(<RendererProbe onRenderer={(renderer) => (found = renderer)} />);
-  return found!;
+  return { renderer: found!, recording: recordTextures(found!) };
 }

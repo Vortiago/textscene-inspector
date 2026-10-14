@@ -60,25 +60,26 @@ function faceTextures(faces: readonly Uint16Array[]): THREE.DataTexture[] {
   });
 }
 
+/** The groups of layers, each shown as one cube. */
+export const SKY_LAYER_GROUP_NAMES = Object.keys(SKY_LAYER_UNIFORMS) as readonly (keyof SkyLayers)[];
+
+/** One value per group of layers, each made by `make`. */
+function byGroup<T>(make: (group: keyof SkyLayers) => T): Record<keyof SkyLayers, T> {
+  return Object.fromEntries(SKY_LAYER_GROUP_NAMES.map((group) => [group, make(group)])) as Record<
+    keyof SkyLayers,
+    T
+  >;
+}
+
 /**
- * The slot an earlier evaluation of this module gave the lit materials under `uniform`, as after a
- * dev server reloads it. Every program compiled since samples that slot, so this evaluation points it.
+ * The slot each group of layers shows in, which every lit material samples. After a dev server
+ * reloads this module, it is the slot the earlier evaluation installed, which every program compiled
+ * since samples.
  */
-function installedSlot(uniform: string): THREE.CubeTexture | null {
-  const installed = installedUniformValue(uniform);
-  return installed instanceof THREE.CubeTexture ? installed : null;
-}
-
-/** The slot each group of layers shows in, which every lit material samples. */
-export const skyLayerSlots = {
-  sharp: layerSlot('sharp'),
-  rough: layerSlot('rough'),
-  last: layerSlot('last'),
-} as const satisfies Record<keyof SkyLayers, THREE.CubeTexture>;
-
-function layerSlot(group: keyof SkyLayers): THREE.CubeTexture {
-  return installedSlot(SKY_LAYER_UNIFORMS[group]) ?? new SkyLayerSlot();
-}
+export const skyLayerSlots = byGroup((group) => {
+  const installed = installedUniformValue(SKY_LAYER_UNIFORMS[group]);
+  return installed instanceof THREE.CubeTexture ? installed : new SkyLayerSlot();
+});
 
 const installedContribution = installedUniformValue(SKY_CONTRIBUTION_UNIFORM);
 
@@ -90,65 +91,52 @@ const installedContribution = installedUniformValue(SKY_CONTRIBUTION_UNIFORM);
 export const skyContribution =
   installedContribution instanceof Float32Array ? installedContribution : Float32Array.of(1);
 
-const GROUPS = Object.keys(SKY_LAYER_UNIFORMS) as (keyof SkyLayers)[];
-
 /** The part of three's per-renderer state of a texture that holds its GL handle. */
 interface TextureHandle {
   __webglTexture?: WebGLTexture;
 }
 
-function handleOf(renderer: THREE.WebGLRenderer, texture: THREE.Texture): TextureHandle {
-  return renderer.properties.get(texture) as TextureHandle;
-}
-
 /**
- * A sky's layers in cubes of its own, as Godot keeps a radiance texture per sky
+ * A sky's layers in cubes of its own on one renderer, as Godot keeps a radiance texture per sky
  * (`servers/rendering/renderer_rd/environment/sky.h:251`). Each cube uploads on the sky's first
  * show, so skies that take turns in one frame upload nothing more.
  */
 export class SkyLayerCubes {
   private readonly cubes: Record<keyof SkyLayers, THREE.CubeTexture>;
 
-  /** The renderers whose slots this sky has pointed at its cubes. Cleared by `dispose`. */
-  private readonly renderers = new Set<THREE.WebGLRenderer>();
-
-  constructor(layers: SkyLayers) {
-    this.cubes = {
-      sharp: layerCube(layers.sharp),
-      rough: layerCube(layers.rough),
-      last: layerCube(layers.last),
-    };
+  constructor(
+    private readonly renderer: THREE.WebGLRenderer,
+    layers: SkyLayers
+  ) {
+    this.cubes = byGroup((group) => layerCube(layers[group]));
   }
 
   /**
-   * Points every lit material at these cubes for the renders `renderer` draws from now, and puts
-   * `contribution`, the sky's share of the ambient, in `skyContribution`. Each material holds a
-   * uniform of its own (three r186 `UniformsUtils.js:24`), all on the one slot, so the slot takes
-   * the cube's handle: the switch uploads nothing.
+   * Points every lit material at these cubes for the renders that follow, and puts `contribution`,
+   * the sky's share of the ambient, in `skyContribution`. Each material holds a uniform of its own
+   * (three r186 `UniformsUtils.js:24`), all on the one slot, so the slot takes the cube's handle, as
+   * three's `XREstimatedLight.js:62-70` does: the switch uploads nothing.
    */
-  show(renderer: THREE.WebGLRenderer, contribution: number): void {
+  show(contribution: number): void {
     skyContribution[0] = contribution;
-    this.renderers.add(renderer);
-    for (const group of GROUPS) {
-      // Uploads the cube on its first show only.
-      renderer.initTexture(this.cubes[group]);
-      handleOf(renderer, skyLayerSlots[group]).__webglTexture = handleOf(
-        renderer,
-        this.cubes[group]
-      ).__webglTexture;
+    for (const group of SKY_LAYER_GROUP_NAMES) {
+      const cube = this.handleOf(this.cubes[group]);
+      // A lost context clears the handle, so this uploads again after one.
+      if (!cube.__webglTexture) this.renderer.initTexture(this.cubes[group]);
+      this.handleOf(skyLayerSlots[group]).__webglTexture = cube.__webglTexture;
     }
   }
 
   /** Frees the cubes, and leaves no slot on a freed handle: binding a deleted texture is an error. */
   dispose(): void {
-    for (const renderer of this.renderers) {
-      for (const group of GROUPS) {
-        const slot = handleOf(renderer, skyLayerSlots[group]);
-        if (slot.__webglTexture === handleOf(renderer, this.cubes[group]).__webglTexture)
-          delete slot.__webglTexture;
-      }
+    for (const group of SKY_LAYER_GROUP_NAMES) {
+      const slot = this.handleOf(skyLayerSlots[group]);
+      if (slot.__webglTexture === this.handleOf(this.cubes[group]).__webglTexture) delete slot.__webglTexture;
+      this.cubes[group].dispose();
     }
-    this.renderers.clear();
-    for (const group of GROUPS) this.cubes[group].dispose();
+  }
+
+  private handleOf(texture: THREE.Texture): TextureHandle {
+    return this.renderer.properties.get(texture) as TextureHandle;
   }
 }

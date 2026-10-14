@@ -103,9 +103,9 @@ export function SkyLayer({
     scene.environment = built.environment;
     scene.environmentIntensity = intensity;
     scene.environmentRotation.copy(skyRotation);
-    const layerCubes = new SkyLayerCubes(built.layers);
+    const layerCubes = new SkyLayerCubes(gl, built.layers);
     // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
-    const stopShowingLayers = observeSceneCamera(scene, () => layerCubes.show(gl, contributionRef.current));
+    const stopShowingLayers = observeSceneCamera(scene, () => layerCubes.show(contributionRef.current));
     if (asBackground) {
       scene.background = built.background;
       scene.backgroundIntensity = backgroundIntensity;

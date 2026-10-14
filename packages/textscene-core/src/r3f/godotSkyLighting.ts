@@ -10,6 +10,7 @@ import { installLitUniform } from './shaderPatch/litUniform.js';
 import { glslFloat } from '../resources/environment/glslLiterals.js';
 import {
   SKY_CONTRIBUTION_UNIFORM,
+  SKY_LAYER_GROUP_NAMES,
   SKY_LAYER_UNIFORMS,
   skyContribution,
   skyLayerSlots,
@@ -155,7 +156,7 @@ export function installGodotSkyLighting(): void {
       'lights_fragment_maps or envmap_physical_pars_fragment lacks a line the sky lighting patch replaces',
   });
   if (!isPatched) return;
-  for (const group of ['sharp', 'rough', 'last'] as const) {
+  for (const group of SKY_LAYER_GROUP_NAMES) {
     installLitUniform(SKY_LAYER_UNIFORMS[group], skyLayerSlots[group]);
   }
   installLitUniform(SKY_CONTRIBUTION_UNIFORM, skyContribution);
