@@ -71,7 +71,11 @@ jobs:
           # binary file.
           if ! gh pr diff "$PR_NUMBER" > "$PR_CONTEXT/diff.patch"; then
             gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[] |
-              "diff --git a/\(.filename) b/\(.filename)\n--- a/\(.filename)\n+++ b/\(.filename)\n\(.patch // "Binary or oversized file, no patch")\n"
+              (.previous_filename // .filename) as $old |
+              "diff --git a/\($old) b/\(.filename)\n" +
+              "--- \(if .status == "added" then "/dev/null" else "a/\($old)" end)\n" +
+              "+++ \(if .status == "removed" then "/dev/null" else "b/\(.filename)" end)\n" +
+              "\(.patch // "Binary or oversized file, no patch")\n"
             ' > "$PR_CONTEXT/diff.patch"
           fi
           # JSON, not `gh pr view --comments`: off a terminal that prints the comments only, so
