@@ -8,7 +8,11 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
-import { loadedOriginOffset } from '../../../godot/reflectionProbe.js';
+import {
+  loadedOriginOffset,
+  REFLECTION_PROBE_DEFAULTS,
+  ReflectionProbeAmbientMode,
+} from '../../../godot/reflectionProbe.js';
 import { formatReal, storedXyz } from '../../../godot/real.js';
 import type { Vector3 } from '../../../parser/vectors.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
@@ -26,11 +30,6 @@ const arms = {
   },
 } as const satisfies RuleArms<string>;
 
-/** reflection_probe.h:44-48 enum AmbientMode; AMBIENT_COLOR is the last value. */
-const AMBIENT_COLOR = 2;
-/** reflection_probe.h:60, `AmbientMode ambient_mode = AMBIENT_ENVIRONMENT;` (1): the default for an absent key. */
-const AMBIENT_MODE_DEFAULT = 1;
-
 // `_validate_property` (reflection_probe.cpp:203-212) only sets PROPERTY_USAGE_NO_EDITOR,
 // which equals PROPERTY_USAGE_STORAGE (object.h:132), so the keys still serialise. The
 // class doc's prose is no basis (ADR-0032).
@@ -42,8 +41,8 @@ function checkAmbientMode(node: RuleContext['node'], props: Record<string, strin
   // switch at scene_forward_lights_inc.glsl:977, in the `renderer_rd` backend of Forward+
   // and Mobile.
   const modeRaw = props.ambient_mode;
-  const mode = ruleInt(modeRaw, AMBIENT_MODE_DEFAULT);
-  if (mode === AMBIENT_COLOR) return [];
+  const mode = ruleInt(modeRaw, REFLECTION_PROBE_DEFAULTS.ambientMode);
+  if (mode === ReflectionProbeAmbientMode.COLOR) return [];
 
   const diagnostics: Diagnostic[] = [];
   for (const key of AMBIENT_ONLY_KEYS) {

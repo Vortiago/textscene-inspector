@@ -34,6 +34,8 @@ import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbe
 /** What a probe's capture shows: changed, it captures again. */
 interface Capture {
   layer: number;
+  /** The `generation` it was captured in. An earlier one draws until the probe captures again. */
+  generation: number;
   probe: ReflectionProbeObject['probe'];
   matrixWorld: THREE.Matrix4;
 }
@@ -53,6 +55,8 @@ export class SceneProbes {
   private atlasHasRealTimeProbe = false;
   /** The capture each probe holds in the atlas, written by `capture` and cleared with the atlas. */
   private readonly captures = new Map<ReflectionProbeObject, Capture>();
+  /** Advanced only by `markCapturesStale`, so each probe captures again. */
+  private generation = 0;
   /** The rows of the drawn probes, made again when their count changes. */
   private rows = rowsTexture(probeRows([]));
   /** The probes the rows hold, written only by `pack`. */
@@ -98,7 +102,7 @@ export class SceneProbes {
       .slice(0, REFLECTION_ATLAS_COUNT);
     const atlas = this.atlasFor(probes);
     if (this.settledFrames < SCAN_FRAMES_AFTER_SETTLE) return false;
-    this.forgetStaleCaptures(clearColor);
+    this.markCapturesStale(clearColor);
     const stale = probes.findIndex((probe, layer) => !this.isCaptured(probe, layer));
     if (stale !== -1) this.capture(probes[stale]!, stale, atlas, clearColor);
     const captured = probes.filter((probe) => this.captures.has(probe));
@@ -136,8 +140,11 @@ export class SceneProbes {
     return this.atlas;
   }
 
-  /** Drops every capture once new content settles, or once the environment the captures saw changes. */
-  private forgetStaleCaptures(clearColor: THREE.Color): void {
+  /**
+   * Marks every capture stale once new content settles, or once the environment the captures saw
+   * changes. A stale capture still draws, so no probe vanishes until it captures again.
+   */
+  private markCapturesStale(clearColor: THREE.Color): void {
     const { environment, background } = this.scene;
     const { seen } = this;
     const hasNewEnvironment =
@@ -147,7 +154,7 @@ export class SceneProbes {
     if (!this.hasNewContent && !hasNewEnvironment) return;
     this.seen = { environment, background, clearColor: clearColor.getHex() };
     this.hasNewContent = false;
-    this.captures.clear();
+    this.generation += 1;
   }
 
   /**
@@ -160,6 +167,7 @@ export class SceneProbes {
     return (
       !!capture &&
       capture.layer === layer &&
+      capture.generation === this.generation &&
       capture.probe === object.probe &&
       capture.matrixWorld.equals(object.matrixWorld)
     );
@@ -191,7 +199,8 @@ export class SceneProbes {
     const radianceFilter =
       probe.updateMode === ReflectionProbeUpdateMode.ALWAYS ? 'fast' : 'importance-sample';
     bakeAtlasLayers(this.renderer, this.cube.texture, atlas, layer, radianceFilter);
-    this.captures.set(object, { layer, probe, matrixWorld: object.matrixWorld.clone() });
+    const { generation } = this;
+    this.captures.set(object, { layer, generation, probe, matrixWorld: object.matrixWorld.clone() });
   }
 
   /** Writes the rows of `probes` in Godot's order, and uploads them. */

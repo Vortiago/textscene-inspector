@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { installLitUniform, installedUniformValue } from './litUniform';
+import { installLitUniform, installedOr, installedUniformValue } from './litUniform';
 import { LIT_SHADERS } from '../testing/litShaders';
 
 const UNIFORM = 'litUniformTest';
@@ -40,5 +40,27 @@ describe('installedUniformValue', () => {
 
   it('is undefined before any install (edge case)', () => {
     expect(installedUniformValue(UNIFORM)).toBeUndefined();
+  });
+});
+
+describe('installedOr', () => {
+  it('answers the installed value when it is of the type', () => {
+    const installed = new Float32Array(1);
+    installLitUniform(UNIFORM, installed);
+
+    expect(installedOr(UNIFORM, Float32Array, () => new Float32Array(1))).toBe(installed);
+  });
+
+  it('makes a value when another type is installed', () => {
+    installLitUniform(UNIFORM, 7);
+    const made = new Float32Array(1);
+
+    expect(installedOr(UNIFORM, Float32Array, () => made)).toBe(made);
+  });
+
+  it('makes a value before any install (edge case)', () => {
+    const made = new Float32Array(1);
+
+    expect(installedOr(UNIFORM, Float32Array, () => made)).toBe(made);
   });
 });

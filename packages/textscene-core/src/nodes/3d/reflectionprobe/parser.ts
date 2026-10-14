@@ -96,6 +96,6 @@ function layerMask(value: string | undefined, context: string): number {
  * modes (`scene_forward_lights_inc.glsl:977-1001`), so another value adds no ambient.
  */
 function parseAmbientMode(value: string | undefined): ReflectionProbeAmbientMode {
-  const mode = intOr(value, ReflectionProbeAmbientMode.ENVIRONMENT, 'ReflectionProbe ambient_mode');
+  const mode = intOr(value, REFLECTION_PROBE_DEFAULTS.ambientMode, 'ReflectionProbe ambient_mode');
   return AMBIENT_MODES.includes(mode) ? mode : ReflectionProbeAmbientMode.DISABLED;
 }

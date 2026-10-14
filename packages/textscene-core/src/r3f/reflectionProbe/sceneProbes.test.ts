@@ -101,6 +101,20 @@ describe('SceneProbes.update', () => {
     expect(facesDrawn()).toBe(6);
   });
 
+  it('keeps showing a stale capture until its probe captures again (edge case)', async () => {
+    const { scene, facesDrawn, settle } = await sceneWith(probeObject(), probeObject());
+    settle();
+    facesDrawn();
+    facesDrawn();
+
+    facesDrawn(1);
+    settle();
+    facesDrawn();
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+
+    expect(shownProbes[0]).toBe(2);
+  });
+
   it('captures no hidden probe (edge case)', async () => {
     const probe = probeObject();
     probe.visible = false;

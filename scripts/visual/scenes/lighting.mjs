@@ -86,9 +86,11 @@ export const LIGHTING_SCENES = [
   // Two overlapping ReflectionProbes that update ALWAYS: the floor takes its ambient and its
   // reflection from the fast-filtered captures, which the blue background tints.
   { name: 'reflection-probe-always', file: 'unit-reflection-probe-always.tscn' },
-  // One ReflectionProbe that updates ONCE, under a red AMBIENT_COLOR, with a mirror sphere that
-  // reads its importance-sampled capture through box projection.
-  { name: 'reflection-probe-mirror', file: 'unit-reflection-probe-mirror.tscn' },
+  // box_projection on one ReflectionProbe: a mirror sphere reads its importance-sampled capture
+  // where the reflection leaves the box.
+  { name: 'reflection-probe-box-projection', file: 'unit-reflection-probe-box-projection.tscn' },
+  // AMBIENT_COLOR on one ReflectionProbe: the floor in its box takes a red ambient.
+  { name: 'reflection-probe-ambient-color', file: 'unit-reflection-probe-ambient-color.tscn' },
   // BG_SKY over a gold sky with AMBIENT_SOURCE_COLOR (grey 0.6, sky_contribution
   // 0) and AgX. The shadowed grass stays grey, with no sky IBL in diffuse, while
   // the metallic sphere reflects the gold sky in full. Matches Godot to ≤6/255,

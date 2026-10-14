@@ -16,11 +16,16 @@ meshes and textures load.
 Two probes that update ALWAYS share the floor. Each probe captures the blue background. The floor
 takes that capture as its ambient light and its reflection, so the floor and the shadow turn blue.
 
-## Colour ambient and box projection
-<!-- compare: image=unit-reflection-probe-mirror status=unreviewed fixture=unit-reflection-probe-mirror.tscn -->
+## Box projection
+<!-- compare: image=unit-reflection-probe-box-projection status=unreviewed fixture=unit-reflection-probe-box-projection.tscn -->
 
-One probe that updates ONCE sets its ambient to red and projects its reflection onto its box. The
-floor takes the red ambient, and the mirror sphere reflects the floor, the box and the background.
+One probe that updates ONCE projects its reflection onto its box. The mirror sphere reflects the
+floor, the glowing box and the background where its reflection leaves the box.
+
+## Colour ambient
+<!-- compare: image=unit-reflection-probe-ambient-color status=unreviewed fixture=unit-reflection-probe-ambient-color.tscn -->
+
+One probe sets its ambient to red. The floor inside its box takes the red as its ambient light.
 
 ## Linting
 

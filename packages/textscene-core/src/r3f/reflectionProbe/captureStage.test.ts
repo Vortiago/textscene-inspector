@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { stageCapture } from './captureStage';
+import { markEditorHelper } from '../editorHelpers';
 import { setVisualLayers } from '../visualLayers';
 
 const CLEAR = new THREE.Color(0.3, 0.3, 0.3);
@@ -34,6 +35,20 @@ describe('stageCapture', () => {
 
     expect(during).toEqual([false, true]);
     expect(hidden.visible).toBe(true);
+  });
+
+  it('hides editor chrome, which no scene mask holds, until the restore', () => {
+    const scene = new THREE.Scene();
+    const gizmo = new THREE.Group();
+    gizmo.add(new THREE.LineSegments());
+    markEditorHelper(gizmo);
+    scene.add(gizmo);
+
+    const restore = stageCapture(scene, { cullMask: 0xffffffff, interior: false }, CLEAR);
+    const during = gizmo.visible;
+    restore();
+
+    expect([during, gizmo.visible]).toEqual([false, true]);
   });
 
   it('hides a light whose layers miss the cull mask, as Godot culls every instance by it', () => {

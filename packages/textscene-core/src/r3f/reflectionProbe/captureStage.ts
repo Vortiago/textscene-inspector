@@ -6,6 +6,7 @@
 
 import type * as THREE from 'three';
 import type { ReflectionProbeProperties } from '../../nodes/3d/reflectionprobe/types.js';
+import { isEditorHelper } from '../editorHelpers.js';
 import { isInMask } from '../visualLayers.js';
 
 /**
@@ -39,10 +40,11 @@ function isInstance(object: THREE.Object3D): boolean {
   );
 }
 
+/** Hides the instances outside `cullMask`, and the editor chrome, which no scene mask holds. */
 function hideCulled(scene: THREE.Scene, cullMask: number): () => void {
   const hidden: THREE.Object3D[] = [];
   scene.traverseVisible((object) => {
-    if (isInstance(object) && !isInMask(object, cullMask)) hidden.push(object);
+    if (isEditorHelper(object) || (isInstance(object) && !isInMask(object, cullMask))) hidden.push(object);
   });
   for (const object of hidden) object.visible = false;
   return () => {

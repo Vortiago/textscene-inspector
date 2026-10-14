@@ -396,6 +396,14 @@ export function TextRun({
     const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
     return new THREE.Color(r, g, b);
   }, [tint.r, tint.g, tint.b]);
+  // Memoised, as R3F assigns a new `userData` object on each render and drops what it held.
+  const userData = useMemo(
+    () => ({
+      ...(frameExcluded && { tscnFrameExcluded: true }),
+      ...(layers !== undefined && visualLayersUserData(layers)),
+    }),
+    [frameExcluded, layers]
+  );
 
   return (
     <>
@@ -407,10 +415,7 @@ export function TextRun({
         // A faded run's materials go on through the swap alone, which the fade owns.
         material={alphaPassMaterial ? undefined : material}
         renderOrder={renderOrder}
-        userData={{
-          ...(frameExcluded && { tscnFrameExcluded: true }),
-          ...(layers !== undefined && visualLayersUserData(layers)),
-        }}
+        userData={userData}
         castShadow={shadow?.castShadow}
         onBeforeRender={shadow?.onBeforeRender}
         onAfterRender={shadow?.onAfterRender}

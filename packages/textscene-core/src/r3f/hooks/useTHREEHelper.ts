@@ -1,12 +1,13 @@
 /**
  * The THREE helper lifecycle: build a helper bound to a target, update it per frame, and dispose
  * it when the deps change or the component unmounts. A factory that returns null tears the helper
- * down, which is how a gizmo applies its selection gate.
+ * down, which is how a gizmo applies its selection gate. Every helper is editor chrome.
  */
 import { useEffect, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAnimationTransport } from '../contexts/AnimationTransportContext.js';
+import { markEditorHelper } from '../editorHelpers.js';
 
 interface HelperLike extends THREE.Object3D {
   /** Most THREE helpers (BoxHelper, *LightHelper) expose this. */
@@ -46,6 +47,7 @@ function useHelperLifecycle<H extends HelperLike>(
       helperRef.current = null;
       return;
     }
+    markEditorHelper(created);
     const unmount = mount(created);
     setHelper(created);
     helperRef.current = created;

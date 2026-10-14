@@ -38,6 +38,7 @@ export const REFLECTION_PROBE_DEFAULTS = {
   maxDistance: 0,
   size: { x: 20, y: 20, z: 20 },
   originOffset: { x: 0, y: 0, z: 0 },
+  ambientMode: ReflectionProbeAmbientMode.ENVIRONMENT,
   ambientColorEnergy: 1,
   layerMask: GODOT_EDITOR_LAYERS_MASK,
 } as const;

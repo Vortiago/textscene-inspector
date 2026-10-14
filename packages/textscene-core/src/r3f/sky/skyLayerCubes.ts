@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { leaveSlot, sharedTexture, showInSlot } from '../sharedTexture.js';
 import { SKY_LAYER_GROUP_NAMES, byGroup, type SkyLayers } from '../../resources/sky/skyLayers.js';
-import { installedOr, installedUniformValue } from '../shaderPatch/litUniform.js';
+import { installedOr } from '../shaderPatch/litUniform.js';
 
 /** The uniform every lit material samples each group of layers through, a mip each. */
 export const SKY_LAYER_UNIFORMS: Record<keyof SkyLayers, string> = {
@@ -36,15 +36,12 @@ export const skyLayerSlots = byGroup((group) =>
   installedOr(SKY_LAYER_UNIFORMS[group], THREE.CubeTexture, () => new SkyLayerSlot())
 );
 
-const installedContribution = installedUniformValue(SKY_CONTRIBUTION_UNIFORM);
-
 /**
  * `ambient_light_sky_contribution` of the scene being rendered. `UniformsUtils.cloneUniforms` keeps
  * a typed array by reference (three r186 `UniformsUtils.js:43-64`), so every material reads this
  * buffer. After a dev server reloads this module, it is the buffer the earlier evaluation installed.
  */
-export const skyContribution =
-  installedContribution instanceof Float32Array ? installedContribution : Float32Array.of(1);
+export const skyContribution = installedOr(SKY_CONTRIBUTION_UNIFORM, Float32Array, () => Float32Array.of(1));
 
 /**
  * A sky's baked layers on one renderer, in cubes of its own as Godot keeps a radiance texture per sky
