@@ -169,25 +169,33 @@ A map type other than PCF keeps three's own lookup.
 
 ## The soft shadow
 
-A light with a `light_angular_distance` above zero, a shadow and a `shadow_blur` above zero turns
-on Godot's directional soft shadows for the render (`light_storage.cpp:680-686`). Then every
-directional light with an angular distance searches for blockers in place of the PCF
-(`scene_forward_clustered.glsl:2310-2398`), and lights a surface with its size term, `1 - cos` of
-the angle (`light_storage.cpp:670`, `:2617`). Without the flag, the light keeps the PCF and no size
-term. `godot/directionalSoftShadow.ts` holds these facts.
+A light that lights surfaces, with a `light_angular_distance` above zero, a shadow and a
+`shadow_blur` above zero, turns on Godot's directional soft shadows for the render
+(`light_storage.cpp:632`, `:680-686`). Then every directional light with an angular distance
+searches for blockers in place of the PCF (`scene_forward_clustered.glsl:2310-2398`), and lights a
+surface with its size term, `1 - cos` of the angle (`light_storage.cpp:670`,
+`scene_forward_clustered.glsl:2617`). Without the flag, the light keeps the PCF and no size term.
+`godot/directionalSoftShadow.ts` holds these facts.
 
-- The light pass defines `GODOT_USE_DIRECTIONAL_SOFT_SHADOWS` on every lit material while the flag
-  is on (`../shadowFilter/softShadowSearch.ts`). Only a program with that define compiles the search.
+- The light pass defines `GODOT_USE_DIRECTIONAL_SOFT_SHADOWS` on every lit material while a light
+  of any scene turns the flag on, drawn or not (`../shadowFilter/softShadowSearch.ts`). Only a
+  program with that define compiles the search. A light that no camera draws keeps its angle off.
 - Each split searches its own box (`sample_directional_soft_shadow`,
   `scene_forward_lights_inc.glsl:381-424`). The search radius grows with the receiver's distance
   from the box's light side, Godot's `range_begin` (`renderer_scene_cull.cpp:2327`, `:2349`).
+  Godot measures that distance in view space from a range start in world space, so the radius moves
+  with the camera. The search does the same.
 - The box's size in the atlas, Godot's `uv_scale`, is the length of the slot matrix's x and y rows.
+- A blending light blends each split over the whole split before it, from the camera for the first
+  (`scene_forward_clustered.glsl:2348`, `:2373`, `:2398`).
+- The depth grows away from the light, where Godot's reversed depth shrinks, so a blocker is a
+  smaller depth.
 - Godot's penumbra divides by a blocker's distance from its near plane, the range start
   (`scene_forward_lights_inc.glsl:407`). The caster reach moves this box's near plane further towards
   the light, so the search finds the range start's depth, `lightSide`, through the slot matrix's z
-  row. A blocker nearer the light lies on that side in Godot, which pancakes it
-  (`scene_forward_clustered.glsl:679-682`), so the search raises it to `lightSide`. Godot divides by
-  zero for such a blocker. A floor of `1e-7` keeps the spread finite.
+  row. A blocker nearer the light lies on that side in Godot, which pancakes it to `0.9999` of its
+  depth range (`scene_forward_clustered.glsl:679-682`). That range is `1 - lightSide` in this box's
+  depth, so the search raises such a blocker to `1e-4` of it past `lightSide`.
 - The fitter widens each split's box by the tangent of the angle times its depth
   (`renderer_scene_cull.cpp:2286-2299`), so a caster the search reaches is in the box.
 - The search reads the atlas's depth raw, from its colour attachment. The atlas pass of the

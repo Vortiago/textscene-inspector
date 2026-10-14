@@ -174,8 +174,9 @@ patch `TscnCanvas` installs, one shadowed sun and a sky:
 
 Any omni, spot or area shadow adds one unit: the atlas depth that the lookups compare. A light that
 searches for blockers adds the atlas colour too. The light pass defines `GODOT_USE_LIGHT_SOFT_SHADOWS`
-on every lit material only while one such light draws, as Godot's `sc_use_light_soft_shadows` does
-(`scene_forward_clustered_inc.glsl:85-91`), so a program without it binds no colour sampler.
+on every lit material only while a casting light of any scene searches, as Godot's
+`sc_use_light_soft_shadows` does (`scene_forward_clustered_inc.glsl:85-91`). So a program without it
+binds no colour sampler. A hidden light counts, so hiding one compiles no material again.
 
 ## Where it differs from Godot
 

@@ -1,10 +1,10 @@
 /**
  * The scene-level light pass before each render of a scene: it fits every declared shadow and writes
  * the area lights' uniforms, the sun shadows' soft shadow terms, every light's specular amount and
- * size, and the blocker searches every lit material compiles. Godot fits a directional shadow to whichever camera renders, and gives an omni or spot light
- * its slot in the atlas of the viewport that renders it. So the pass rides
- * `scene.onBeforeRender`: the main view, a SubViewport pass and a screenshot each get their own,
- * whatever order they render in.
+ * size, and the blocker searches every lit material compiles. Godot fits a directional shadow to
+ * whichever camera renders, and gives an omni or spot light its slot in the atlas of the viewport
+ * that renders it. So the pass rides `scene.onBeforeRender`: the main view, a SubViewport pass and a
+ * screenshot each get their own, whatever order they render in.
  */
 
 import { useEffect } from 'react';

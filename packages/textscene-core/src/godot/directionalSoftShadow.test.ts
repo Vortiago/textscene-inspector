@@ -24,22 +24,55 @@ describe('softShadowAngle', () => {
 
 describe('drawsDirectionalSoftShadow', () => {
   it('holds for a shadowed light with an angular distance and a blur', () => {
-    expect(drawsDirectionalSoftShadow({ angularDistance: 2, shadowEnabled: true, shadowBlur: 1 })).toBe(true);
+    expect(
+      drawsDirectionalSoftShadow({
+        angularDistance: 2,
+        shadowEnabled: true,
+        shadowBlur: 1,
+        lightsSurfaces: true,
+      })
+    ).toBe(true);
   });
 
   it('does not hold without a blur (edge case)', () => {
-    expect(drawsDirectionalSoftShadow({ angularDistance: 2, shadowEnabled: true, shadowBlur: 0 })).toBe(
-      false
-    );
+    expect(
+      drawsDirectionalSoftShadow({
+        angularDistance: 2,
+        shadowEnabled: true,
+        shadowBlur: 0,
+        lightsSurfaces: true,
+      })
+    ).toBe(false);
+  });
+
+  it('does not hold for a Sky Only light, which the scene skips (edge case)', () => {
+    expect(
+      drawsDirectionalSoftShadow({
+        angularDistance: 2,
+        shadowEnabled: true,
+        shadowBlur: 1,
+        lightsSurfaces: false,
+      })
+    ).toBe(false);
   });
 
   it('does not hold without a shadow or an angular distance (error case)', () => {
-    expect(drawsDirectionalSoftShadow({ angularDistance: 2, shadowEnabled: false, shadowBlur: 1 })).toBe(
-      false
-    );
-    expect(drawsDirectionalSoftShadow({ angularDistance: 0, shadowEnabled: true, shadowBlur: 1 })).toBe(
-      false
-    );
+    expect(
+      drawsDirectionalSoftShadow({
+        angularDistance: 2,
+        shadowEnabled: false,
+        shadowBlur: 1,
+        lightsSurfaces: true,
+      })
+    ).toBe(false);
+    expect(
+      drawsDirectionalSoftShadow({
+        angularDistance: 0,
+        shadowEnabled: true,
+        shadowBlur: 1,
+        lightsSurfaces: true,
+      })
+    ).toBe(false);
   });
 });
 

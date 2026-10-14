@@ -15,7 +15,10 @@ import {
   directionalShadowSplitCount,
   sharesDirectionalShadowAtlas,
 } from '../../../../godot/directionalShadow';
-import { DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT } from '../../../../godot/directionalLightSkyMode';
+import {
+  DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
+  directionalLightLightsSurfaces,
+} from '../../../../godot/directionalLightSkyMode';
 import { SHADOW_BLUR_DEFAULT, softShadowScale } from '../../../../godot/softShadowScale';
 import {
   LIGHT_ANGULAR_DISTANCE_DEFAULT,
@@ -49,6 +52,7 @@ export function directionalShadowDeclaration(
   properties: DirectionalShadowProperties
 ): DirectionalShadowDeclaration {
   const angularDistance = properties.light_angular_distance ?? LIGHT_ANGULAR_DISTANCE_DEFAULT;
+  const skyMode = properties.sky_mode ?? DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT;
   const filterRadius = softShadowScale(properties.shadow_blur, angularDistance);
   return {
     maxDistance: properties.directional_shadow_max_distance ?? DIRECTIONAL_SHADOW_MAX_DISTANCE_DEFAULT,
@@ -62,6 +66,7 @@ export function directionalShadowDeclaration(
       angularDistance,
       shadowEnabled: properties.shadow_enabled,
       shadowBlur: properties.shadow_blur ?? SHADOW_BLUR_DEFAULT,
+      lightsSurfaces: directionalLightLightsSurfaces(skyMode),
     }),
     splitCount: directionalShadowSplitCount(
       properties.directional_shadow_mode ?? DIRECTIONAL_SHADOW_MODE_DEFAULT
@@ -72,9 +77,6 @@ export function directionalShadowDeclaration(
       properties.directional_shadow_split_3 ?? DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT[2],
     ],
     blendSplits: properties.directional_shadow_blend_splits ?? DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
-    sharesAtlas: sharesDirectionalShadowAtlas(
-      properties.shadow_enabled,
-      properties.sky_mode ?? DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT
-    ),
+    sharesAtlas: sharesDirectionalShadowAtlas(properties.shadow_enabled, skyMode),
   };
 }

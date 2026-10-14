@@ -60,23 +60,16 @@ const SOFT_SHADOW_BLOCK = `#if defined( SHADOWMAP_TYPE_PCF ) && defined( ${DIREC
 
 /**
  * Godot's soft shadow of a sun with an angular distance (`:2310-2398`), under PCF shadows and
- * Godot's directional soft shadows (`../shadowFilter/softShadowSearch.ts`). Each split
- * searches its own box for blockers (`sample_directional_soft_shadow`,
- * `scene_forward_lights_inc.glsl:381-424`) over a radius that grows with the receiver's distance from
- * the box's light side (`sunSoftShadow.ts`). The box's size in the atlas, Godot's `uv_scale`, is the
- * length of the slot matrix's x and y rows. Godot measures that distance in view space from a range
- * start in world space, so it moves with the camera, and so does this. A blending light blends each
- * split over the whole split before it, from the camera for the first. The depth grows away from the
- * light, where Godot's reversed depth shrinks, so a blocker is a smaller depth.
- * The penumbra measures a blocker from Godot's near plane, the range start, at depth `lightSide`
- * (`directionalShadow.md`).
+ * Godot's directional soft shadows. Each split searches its own box for blockers
+ * (`sample_directional_soft_shadow`, `scene_forward_lights_inc.glsl:381-424`). `directionalShadow.md`
+ * holds how it measures the search radius, the box size and the penumbra.
  */
 const GODOT_SUN_SOFT_SHADOW = `
 \t\t${SOFT_SHADOW_BLOCK}
 \t\tuniform sampler2D ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM};
 \t\tuniform vec4 ${SUN_SOFT_SHADOWS}[ NUM_SUN_LIGHT_SHADOWS ];
 \t\tuniform vec4 ${SUN_RANGE_BEGINS}[ NUM_SUN_LIGHT_SHADOWS ];
-\t\tconst float GODOT_SUN_PANCAKED = 1e-7;
+\t\tconst float GODOT_SUN_PANCAKE = 1e-4;
 \t\tfloat godotRowLength( mat4 matrix, int row ) {
 \t\t\treturn length( vec3( matrix[ 0 ][ row ], matrix[ 1 ][ row ], matrix[ 2 ][ row ] ) );
 \t\t}
@@ -84,9 +77,10 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\t\tmat2 rotation = godotDiskRotation();
 \t\t\tfloat blockerSum = 0.0;
 \t\t\tfloat blockerCount = 0.0;
+\t\t\tfloat pancaked = lightSide + GODOT_SUN_PANCAKE * ( 1.0 - lightSide );
 \t\t\tfor ( int i = 0; i < GODOT_PENUMBRA_SHADOW_SAMPLES; i ++ ) {
 \t\t\t\tvec2 uv = coord.xy + ( rotation * GODOT_PENUMBRA_SHADOW_KERNEL[ i ] ) * texScale;
-\t\t\t\tfloat blocker = max( godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv ), lightSide );
+\t\t\t\tfloat blocker = max( godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv ), pancaked );
 \t\t\t\tif ( blocker < coord.z ) {
 \t\t\t\t\tblockerSum += blocker;
 \t\t\t\t\tblockerCount += 1.0;
@@ -94,7 +88,7 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\t\t}
 \t\t\tif ( blockerCount == 0.0 ) return 1.0;
 \t\t\tfloat blockerAverage = blockerSum / blockerCount;
-\t\t\ttexScale *= ( coord.z - blockerAverage ) / max( blockerAverage - lightSide, GODOT_SUN_PANCAKED );
+\t\t\ttexScale *= ( coord.z - blockerAverage ) / ( blockerAverage - lightSide );
 \t\t\tfloat shadow = 0.0;
 \t\t\tfor ( int i = 0; i < GODOT_PENUMBRA_SHADOW_SAMPLES; i ++ ) {
 \t\t\t\tvec2 uv = coord.xy + ( rotation * GODOT_PENUMBRA_SHADOW_KERNEL[ i ] ) * texScale;
@@ -243,9 +237,10 @@ export function godotSplitShadowChunk(chunk: string): string | null {
 
 /**
  * Installs the soft shadow filter, then replaces three's chunk, for every program compiled after the
- * call, and gives the soft shadow's arrays to every built-in lit material. A three release that rewrites the lookup keeps its own chunk, and `splitShadowChunk.test.ts`
- * fails on that release. A second call changes nothing. The patch touches only the sun block, so it
- * composes with the fade in `shadowFade.ts` in either install order.
+ * call, and gives the soft shadow's arrays to every built-in lit material. A three release that
+ * rewrites the lookup keeps its own chunk, and `splitShadowChunk.test.ts` fails on that release. A
+ * second call changes nothing. The patch touches only the sun block, so it composes with the fade
+ * in `shadowFade.ts` in either install order.
  */
 export function installGodotSplitShadow(): void {
   if (!installSoftShadowFilter()) return;

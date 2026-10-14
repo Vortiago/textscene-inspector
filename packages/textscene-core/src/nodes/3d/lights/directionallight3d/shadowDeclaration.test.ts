@@ -87,6 +87,16 @@ describe('directionalShadowDeclaration', () => {
     expect(declaration.softShadowAngle).toBeGreaterThan(0);
   });
 
+  it('declares no blocker search for a light that lights only the sky (edge case)', () => {
+    // `light_storage.cpp:632` skips a Sky Only light before `:680-686` can turn the search on.
+    const declaration = directionalShadowDeclaration({
+      shadow_enabled: true,
+      light_angular_distance: 2,
+      sky_mode: DirectionalLightSkyMode.SKY_ONLY,
+    });
+    expect(declaration.drawsSoftShadow).toBe(false);
+  });
+
   it('declares no share of the atlas for a light that lights only the sky (edge case)', () => {
     const declaration = directionalShadowDeclaration({
       shadow_enabled: true,

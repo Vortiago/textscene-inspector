@@ -25,6 +25,8 @@ interface DirectionalSoftShadowInput {
   angularDistance: number;
   shadowEnabled: boolean;
   shadowBlur: number;
+  /** False for a Sky Only light, which the scene's light buffer skips (`light_storage.cpp:632`). */
+  lightsSurfaces: boolean;
 }
 
 /**
@@ -35,8 +37,9 @@ export function drawsDirectionalSoftShadow({
   angularDistance,
   shadowEnabled,
   shadowBlur,
+  lightsSurfaces,
 }: DirectionalSoftShadowInput): boolean {
-  return angularDistance > 0 && shadowEnabled && shadowBlur > 0;
+  return lightsSurfaces && angularDistance > 0 && shadowEnabled && shadowBlur > 0;
 }
 
 /** The light's `size`: the cosine offset its angular distance adds to N.L (`light_storage.cpp:670`). */
