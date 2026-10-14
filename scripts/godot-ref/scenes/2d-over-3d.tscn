@@ -1,0 +1,26 @@
+; A 3D scene with 2D content over each half of the frame in magenta: a ColorRect in a
+; CanvasLayer on the left, and a ColorRect straight under the Node3D root on the right. The 3D
+; editor viewport draws neither, since the edited scene lives under the 2D editor's viewport.
+[gd_scene format=3]
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.1, 0.3, 0.2, 1)
+
+[node name="TwoDOver3D" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Overlay" type="CanvasLayer" parent="."]
+
+[node name="LayerCover" type="ColorRect" parent="Overlay"]
+offset_right = 80.0
+offset_bottom = 120.0
+color = Color(1, 0, 1, 1)
+
+[node name="RootCover" type="ColorRect" parent="."]
+offset_left = 80.0
+offset_right = 160.0
+offset_bottom = 120.0
+color = Color(1, 0, 1, 1)
