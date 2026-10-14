@@ -375,7 +375,7 @@ _Avoid_: "fog volume", which names the FogVolume node.
 One cell of the volume that **volumetric fog** fills: a screen tile at one depth slice, shaped like a piece of the camera frustum.
 _Avoid_: "voxel", which names a cube in world space.
 
-**Area light atlas** (`godot/areaLightAtlas.ts`, `r3f/areaLight/areaLightAtlas.ts`):
+**Area light atlas** (`r3f/areaLight/areaLightAtlas.ts`, `atlasLayout.ts`, `atlasMipmaps.ts`):
 The one texture that holds the `area_texture` of every AreaLight3D, each in a cell with a border and a chain of blurred mips, as Godot 4.7.2 builds it.
 A surface reads the mip its distance to the light asks for, so a far surface sees the texture's average colour.
 _Avoid_: "projector atlas", which names the omni and spot lights' `light_projector` textures.

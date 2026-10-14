@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
 import { LightUniformArrays, type LightArrays } from '../shaderPatch/lightUniformArrays.js';
 import { writeAreaLightShadowUniforms } from './areaLightShadowUniforms.js';
-import { areaTexturePlacement, updateAreaLightAtlas } from './areaLightAtlas.js';
+import { areaTexturePlacement } from './areaLightAtlas.js';
 
 export const AREA_LIGHT_FACINGS = 'rectAreaLightFacings';
 export const AREA_LIGHT_FALLOFFS = 'rectAreaLightFalloffs';
@@ -116,7 +116,6 @@ function writeLight(
  * as they were.
  */
 export function writeAreaLightUniforms(lights: readonly SceneLight[], camera: THREE.Camera): void {
-  updateAreaLightAtlas();
   const slotted = slottedAreaLights(lights, camera);
   arrays.write(slotted.length, (set) =>
     slotted.forEach((light, index) => writeLight(set, index, light, camera))

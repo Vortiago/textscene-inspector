@@ -4,8 +4,8 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
-import { resourceRef } from '../../../../godot/index.js';
+import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { hasProjector } from '../shared/linterChecks.js';
 
 const arms = {
   projectorUnsupported: groundedArm('arealight3d-projector-unsupported', { kind: 'configuration-warning' }),
@@ -17,18 +17,14 @@ const arms = {
  */
 function checkAreaLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  const diagnostics: Diagnostic[] = [];
-  // A parseable reference, not merely a present key: Godot's reader rejects a malformed value,
-  // so no projector is set, and the validator already reports it.
-  if (resourceRef(node.rawProperties.light_projector ?? '')) {
-    reportArm(
-      diagnostics,
+  if (!hasProjector(node)) return [];
+  return [
+    armDiagnostic(
       arms.projectorUnsupported,
       node,
       `AreaLight3D '${node.name}' has a light_projector texture set. Projector texture is not supported for area lights. Use the area_texture field instead.`
-    );
-  }
-  return diagnostics;
+    ),
+  ];
 }
 
 const areaLight3DValidationRule: LintRule = {

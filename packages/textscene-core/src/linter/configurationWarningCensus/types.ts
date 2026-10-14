@@ -37,8 +37,10 @@ export type Verdict =
   | { readonly unimplemented: string };
 
 export interface WarningRow {
-  /** `file.cpp:line` of the `warnings.push_back`, in the 4.6.3 tree, or the 4.7.2 tree for a class new in 4.7. */
+  /** `file.cpp:line` of the `warnings.push_back`, in the 4.6.3 tree unless `source` names another. */
   readonly at: string;
+  /** The Godot tree `at` cites when not 4.6.3: 4.7.2 for a class new in 4.7. */
+  readonly source?: '4.7.2';
   /** What Godot tells the author, compressed to a clause. */
   readonly says: string;
   readonly verdict: Verdict;

@@ -14,7 +14,8 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
-import { areaTextureMipmaps, type PlacedTexture } from './areaLightAtlasMips.js';
+import { nextPowerOfTwo } from '../../godot/powerOfTwo.js';
+import { AREA_LIGHT_ATLAS_MIPMAPS, areaTextureMipmaps, type PlacedTexture } from './atlasMipmaps.js';
 
 /** A texture's sRGB RGBA8 pixels, first row the top row. */
 export interface AreaTextureImage {
@@ -40,19 +41,10 @@ export interface AreaLightAtlas {
   placements: AreaTexturePlacement[];
 }
 
-/** The atlas's mip count (`texture_storage.h:279`). */
-export const AREA_LIGHT_ATLAS_MIPMAPS = 8;
-
 /** Each texture takes whole cells of this side, plus one cell of border (`texture_storage.cpp:3361`). */
 const BORDER = 1 << (AREA_LIGHT_ATLAS_MIPMAPS - 1);
 
-/** Godot's `nearest_power_of_2_templated`: the least power of two at or above `value`. */
-function nextPowerOfTwo(value: number): number {
-  return 2 ** Math.ceil(Math.log2(Math.max(value, 1)));
-}
-
 interface Cell {
-  index: number;
   /** In cells, the border cell included. */
   width: number;
   height: number;
@@ -64,11 +56,10 @@ interface Cell {
 }
 
 /** A texture's cells, and the texels it fills: whole cells, or a power of two below one cell (`:3373-3383`). */
-function cellOf(image: AreaTextureImage, index: number): Cell {
+function cellOf(image: AreaTextureImage): Cell {
   const cellsX = Math.ceil(image.width / BORDER);
   const cellsY = Math.ceil(image.height / BORDER);
   return {
-    index,
     width: cellsX + 1,
     height: cellsY + 1,
     pixelWidth: image.width < BORDER ? nextPowerOfTwo(image.width) : cellsX * BORDER,
@@ -116,8 +107,8 @@ function layOut(cells: Cell[]): { columns: number; rows: number } {
 }
 
 /** Godot's `cone_angle` for an area light: the mips the texture's shorter side holds, up to the atlas's. */
-function maxMipmapOf(cell: Cell): number {
-  const shorter = Math.max(Math.min(cell.pixelWidth, cell.pixelHeight), 1);
+function maxMipmapOf(texture: PlacedTexture): number {
+  const shorter = Math.max(Math.min(texture.width, texture.height), 1);
   return Math.min(Math.floor(Math.log2(shorter)), AREA_LIGHT_ATLAS_MIPMAPS) - 1;
 }
 
@@ -130,22 +121,17 @@ export function buildAreaLightAtlas(images: readonly AreaTextureImage[]): AreaLi
   const { columns, rows } = cells.length > 0 ? layOut(cells) : { columns: 1, rows: 1 };
   const width = columns * BORDER;
   const height = cells.length > 0 ? nextPowerOfTwo(rows * BORDER) : BORDER;
-  const placements = cells.map((cell): AreaTexturePlacement => ({
-    rect: [
-      (cell.x * BORDER) / width,
-      (cell.y * BORDER) / height,
-      cell.pixelWidth / width,
-      cell.pixelHeight / height,
-    ],
-    maxMipmap: maxMipmapOf(cell),
-  }));
-  const placed = cells.map((cell): PlacedTexture => ({
-    image: images[cell.index]!,
+  const placed = cells.map((cell, index): PlacedTexture => ({
+    image: images[index]!,
     x: cell.x * BORDER,
     y: cell.y * BORDER,
     width: cell.pixelWidth,
     height: cell.pixelHeight,
   }));
-  const mipmaps = areaTextureMipmaps(width, height, AREA_LIGHT_ATLAS_MIPMAPS, placed);
+  const placements = placed.map((texture): AreaTexturePlacement => ({
+    rect: [texture.x / width, texture.y / height, texture.width / width, texture.height / height],
+    maxMipmap: maxMipmapOf(texture),
+  }));
+  const mipmaps = areaTextureMipmaps(width, height, placed);
   return { width, height, mipmaps, placements };
 }

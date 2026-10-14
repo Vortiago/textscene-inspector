@@ -2,7 +2,7 @@
  * The one area light atlas every lit program samples, as Godot keeps one for every viewport
  * (4.7.2 `texture_storage.cpp:3330-3605`). Each AreaLight3D holds its `area_texture` while it
  * shows it, and the light pass rebuilds the atlas before a render when a texture joined it or
- * changed its pixels. `godot/areaLightAtlas.ts` lays it out and fills its mips.
+ * changed its pixels. `atlasLayout.ts` lays it out and `atlasMipmaps.ts` fills its mips.
  */
 
 import * as THREE from 'three';
@@ -11,10 +11,12 @@ import {
   type AreaLightAtlas,
   type AreaTextureImage,
   type AreaTexturePlacement,
-} from '../../godot/areaLightAtlas.js';
+} from './atlasLayout.js';
+import { mipSize } from './atlasMipmaps.js';
 import { readImagePixels } from '../controls/withImageCanvas.js';
 import { installLitUniform, installedUniformValue } from '../shaderPatch/litUniform.js';
 import { AREA_LIGHT_ATLAS_UNIFORM } from './areaTextureFetch.js';
+import { reversedRows } from '../../utils/reversedRows.js';
 
 /**
  * `cloneUniforms` clones a texture for each material (three r186 `UniformsUtils.js:28-39`), and a
@@ -41,8 +43,8 @@ class AreaLightAtlasTexture extends THREE.DataTexture {
     this.dispose();
     this.mipmaps = atlas.mipmaps.map((data, level) => ({
       data,
-      width: Math.max(atlas.width >> level, 1),
-      height: Math.max(atlas.height >> level, 1),
+      width: mipSize(atlas.width, level),
+      height: mipSize(atlas.height, level),
     }));
     this.image = this.mipmaps[0] as unknown as typeof this.image;
     this.needsUpdate = true;
@@ -113,22 +115,21 @@ export function areaTexturePlacement(light: THREE.Object3D): AreaTexturePlacemen
   return texture && heldTextures.has(texture) ? placements.get(texture) : undefined;
 }
 
-/**
- * A texture's sRGB bytes with the top row first, as Godot's image holds it. A typed array runs
- * bottom-up in this previewer, as UV v = 0 reads it, and a decoded image runs top-down.
- */
+/** A texture's sRGB bytes with the top row first, as Godot's image holds it. */
 function godotImage(texture: THREE.Texture): AreaTextureImage | undefined {
   const pixels = readImagePixels(texture.image);
   if (!pixels) return undefined;
-  const isBottomUp = ArrayBuffer.isView((texture.image as { data?: unknown }).data);
-  if (!isBottomUp) return pixels;
-  const rowLength = pixels.width * 4;
-  const data = new Uint8Array(pixels.data.length);
-  for (let row = 0; row < pixels.height; row++) {
-    const from = (pixels.height - 1 - row) * rowLength;
-    data.set(pixels.data.subarray(from, from + rowLength), row * rowLength);
-  }
-  return { width: pixels.width, height: pixels.height, data };
+  if (!isBottomUp(texture)) return pixels;
+  return {
+    width: pixels.width,
+    height: pixels.height,
+    data: reversedRows(pixels.data, pixels.width, pixels.height),
+  };
+}
+
+/** Whether `texture`'s pixels are a typed array, which runs bottom-up in this previewer. */
+function isBottomUp(texture: THREE.Texture): boolean {
+  return ArrayBuffer.isView((texture.image as { data?: unknown } | null)?.data);
 }
 
 /** Marks the atlas dirty when a held texture uploaded new pixels (`area_light_atlas_mark_dirty_on_texture`). */

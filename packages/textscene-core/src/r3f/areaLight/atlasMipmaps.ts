@@ -15,7 +15,11 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
-import type { AreaTextureImage } from './areaLightAtlas.js';
+import { channelToByte, sRGBChannelToLinear } from '../../utils/colorSpace.js';
+import type { AreaTextureImage } from './atlasLayout.js';
+
+/** The atlas's mip count (`texture_storage.h:279`). */
+export const AREA_LIGHT_ATLAS_MIPMAPS = 8;
 
 /** A texture where the atlas holds it, in mip 0's texels. */
 export interface PlacedTexture {
@@ -39,22 +43,20 @@ const BLUR_KERNEL = [0.214607, 0.189879, 0.131514, 0.071303] as const;
 /** The blur's thread groups are 8 texels wide, and each reads its own window (`copy.glsl:9`). */
 const BLUR_GROUP_SIDE = 8;
 
-/** `srgb_to_linear` (`copy_to_fb.glsl:113-115`), which the GPU's sRGB view of mip 0 matches. */
-function srgbToLinear(value: number): number {
-  return value < 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-}
-
-/** An RGBA8 target's store: round to the nearest byte. */
-function toByte(value: number): number {
-  return Math.round(Math.min(Math.max(value, 0), 1) * 255);
-}
+/**
+ * `srgb_to_linear` (`copy_to_fb.glsl:113-115`), which the GPU's sRGB view of mip 0 matches, for
+ * each byte: every value this decodes is a byte over 255.
+ */
+const LINEAR_OF_BYTE = Float32Array.from({ length: 256 }, (_, byte) => sRGBChannelToLinear(byte / 255));
 
 function quantised(pixels: Pixels): Pixels {
-  return { ...pixels, data: pixels.data.map((value) => toByte(value) / 255) };
+  return { ...pixels, data: pixels.data.map((value) => channelToByte(value) / 255) };
 }
 
 function rgbDecoded(pixels: Pixels): Pixels {
-  return { ...pixels, data: pixels.data.map((value, i) => (i % 4 === 3 ? value : srgbToLinear(value))) };
+  const data = pixels.data.slice();
+  for (let i = 0; i < data.length; i++) if (i % 4 !== 3) data[i] = LINEAR_OF_BYTE[channelToByte(data[i]!)]!;
+  return { ...pixels, data };
 }
 
 function pixelsOf(image: AreaTextureImage): Pixels {
@@ -107,8 +109,12 @@ function resampleAxis(
   return { width, height, data };
 }
 
-/** One bilinear tap at each target texel's centre: `copy_to_atlas_fb`'s stretch. */
+/**
+ * One bilinear tap at each target texel's centre: `copy_to_atlas_fb`'s stretch. At the source's own
+ * size each tap lands on a texel centre, so the source stands.
+ */
 function stretched(source: Pixels, width: number, height: number): Pixels {
+  if (width === source.width && height === source.height) return source;
   const centre = (size: number) => (target: number) => [{ uv: (target + 0.5) / size, weight: 1 }];
   return resampleAxis(resampleAxis(source, 'x', width, centre(width)), 'y', height, centre(height));
 }
@@ -149,24 +155,30 @@ function blurred(source: Pixels, width: number, height: number): Pixels {
 function store(mip: Uint8Array, mipWidth: number, pixels: Pixels, x: number, y: number): void {
   for (let row = 0; row < pixels.height; row++) {
     for (let column = 0; column < pixels.width * 4; column++) {
-      mip[((y + row) * mipWidth + x) * 4 + column] = toByte(pixels.data[row * pixels.width * 4 + column]!);
+      mip[((y + row) * mipWidth + x) * 4 + column] = channelToByte(
+        pixels.data[row * pixels.width * 4 + column]!
+      );
     }
   }
 }
 
-/** The texture's mips past 0, each blurred from the one before (`:3528-3575`). */
+/** A mip's side: the atlas's side halved `level` times, at least 1. */
+export function mipSize(size: number, level: number): number {
+  return Math.max(size >> level, 1);
+}
+
+/** `raw`'s mips past 0, each blurred from the one before (`:3528-3575`). */
 function storeBlurredMips(
   mipmaps: Uint8Array[],
   atlasWidth: number,
   atlasHeight: number,
-  placed: PlacedTexture
+  placed: PlacedTexture,
+  raw: Pixels
 ) {
-  const raw = pixelsOf(placed.image);
-  const isStretched = placed.width !== placed.image.width || placed.height !== placed.image.height;
-  let previous = isStretched ? quantised(stretched(raw, placed.width, placed.height)) : raw;
+  let previous = quantised(stretched(raw, placed.width, placed.height));
   for (let level = 1; level < mipmaps.length; level++) {
-    const mipWidth = Math.floor(atlasWidth / 2 ** level);
-    const mipHeight = Math.floor(atlasHeight / 2 ** level);
+    const mipWidth = mipSize(atlasWidth, level);
+    const mipHeight = mipSize(atlasHeight, level);
     const width = Math.floor((placed.width * mipWidth) / atlasWidth);
     const height = Math.floor((placed.height * mipHeight) / atlasHeight);
     if (Math.min(width, height) < 1) return;
@@ -177,22 +189,20 @@ function storeBlurredMips(
   }
 }
 
-/** The atlas's `levels` mips, clear where no texture lies. */
+/** The atlas's mips, clear where no texture lies. */
 export function areaTextureMipmaps(
   width: number,
   height: number,
-  levels: number,
   textures: readonly PlacedTexture[]
 ): Uint8Array[] {
-  const mipmaps = Array.from({ length: levels }, (_, level) => {
-    const mipWidth = Math.max(width >> level, 1);
-    const mipHeight = Math.max(height >> level, 1);
-    return new Uint8Array(mipWidth * mipHeight * 4);
-  });
+  const mipmaps = Array.from(
+    { length: AREA_LIGHT_ATLAS_MIPMAPS },
+    (_, level) => new Uint8Array(mipSize(width, level) * mipSize(height, level) * 4)
+  );
   for (const placed of textures) {
-    const decoded = stretched(rgbDecoded(pixelsOf(placed.image)), placed.width, placed.height);
-    store(mipmaps[0]!, width, decoded, placed.x, placed.y);
-    storeBlurredMips(mipmaps, width, height, placed);
+    const raw = pixelsOf(placed.image);
+    store(mipmaps[0]!, width, stretched(rgbDecoded(raw), placed.width, placed.height), placed.x, placed.y);
+    storeBlurredMips(mipmaps, width, height, placed, raw);
   }
   return mipmaps;
 }

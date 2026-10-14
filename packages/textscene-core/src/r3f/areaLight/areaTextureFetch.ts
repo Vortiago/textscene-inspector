@@ -45,10 +45,14 @@ vec3 godotAreaTextureAt( const in vec2 uv, const in vec4 textureRect, const in f
 // The texture where the light's integral looks at it: the point the form factor points to, at
 // the mip the corners' distance asks for. L holds the corners under the integral's transform.
 vec3 godotAreaTextureColor( const in vec4 textureRect, const in float maxMipmap, const in vec3 L[ 4 ] ) {
-	vec3 formFactor = godotEdgeVector( normalize( L[ 0 ] ), normalize( L[ 1 ] ) );
-	formFactor += godotEdgeVector( normalize( L[ 1 ] ), normalize( L[ 2 ] ) );
-	formFactor += godotEdgeVector( normalize( L[ 2 ] ), normalize( L[ 3 ] ) );
-	formFactor += godotEdgeVector( normalize( L[ 3 ] ), normalize( L[ 0 ] ) );
+	vec3 corner0 = normalize( L[ 0 ] );
+	vec3 corner1 = normalize( L[ 1 ] );
+	vec3 corner2 = normalize( L[ 2 ] );
+	vec3 corner3 = normalize( L[ 3 ] );
+	vec3 formFactor = godotEdgeVector( corner0, corner1 );
+	formFactor += godotEdgeVector( corner1, corner2 );
+	formFactor += godotEdgeVector( corner2, corner3 );
+	formFactor += godotEdgeVector( corner3, corner0 );
 
 	if ( dot( formFactor, formFactor ) < 1e-16 ) {
 		return godotAreaTextureAt( vec2( 0.5 ), textureRect, maxMipmap, maxMipmap );

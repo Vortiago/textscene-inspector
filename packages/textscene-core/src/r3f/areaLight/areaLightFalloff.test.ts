@@ -13,7 +13,12 @@ import { litUniformArray } from '../testing/litUniformArray';
 import { sceneLights } from '../directionalShadow/lightLists';
 import { AREA_LIGHT_SHADOWS, installAreaLightShadowUniforms } from './areaLightShadowUniforms';
 import { AtlasAreaShadow, type AreaShadowLight } from '../positionalShadow/atlasAreaShadow';
-import { areaTextureUserData, holdAreaTexture, releaseAreaTexture } from './areaLightAtlas';
+import {
+  areaTextureUserData,
+  holdAreaTexture,
+  releaseAreaTexture,
+  updateAreaLightAtlas,
+} from './areaLightAtlas';
 
 /** An area light shining down, as AreaLight3D's basis puts its -Z at -Y. */
 function downLight(range = 5, attenuation = 1, specular = 1): THREE.RectAreaLight {
@@ -150,6 +155,7 @@ describe('writeAreaLightUniforms', () => {
     Object.assign(light.userData, areaTextureUserData(texture));
     const scene = new THREE.Scene();
     scene.add(light);
+    updateAreaLightAtlas();
 
     write(scene);
     releaseAreaTexture(texture);

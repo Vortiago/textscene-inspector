@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildAreaLightAtlas, type AreaTextureImage } from './areaLightAtlas';
+import { buildAreaLightAtlas, type AreaTextureImage } from './atlasLayout';
+import { mipSize } from './atlasMipmaps';
 
 /** A `width × height` image whose texel at `x`, `y` is `rgbaAt(x, y)`, in sRGB bytes. */
 function image(
@@ -18,7 +19,7 @@ const solid = (width: number, height: number, rgba: readonly number[]) => image(
 
 /** The RGBA bytes of mip `level` at texel `x`, `y`. */
 function texel(level: number, x: number, y: number, atlas: ReturnType<typeof buildAreaLightAtlas>): number[] {
-  const width = Math.max(atlas.width >> level, 1);
+  const width = mipSize(atlas.width, level);
   const at = (y * width + x) * 4;
   return [...atlas.mipmaps[level]!.subarray(at, at + 4)];
 }

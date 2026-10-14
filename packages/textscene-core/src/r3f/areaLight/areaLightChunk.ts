@@ -80,8 +80,14 @@ void RE_Direct_RectArea_Physical( const in RectAreaLight rectAreaLight, const in
 	points[ 2 ] = rectAreaLight.position + rectAreaLight.halfWidth + rectAreaLight.halfHeight - geometryPosition;
 	points[ 3 ] = rectAreaLight.position - rectAreaLight.halfWidth + rectAreaLight.halfHeight - geometryPosition;
 
+	#if defined( GODOT_DIFFUSE_TOON )
+		// A toon diffuse reads its texture at the light's closest point, so its integral fetches none.
+		vec4 diffuseTextureRect = vec4( 0.0 );
+	#else
+		vec4 diffuseTextureRect = textureRect;
+	#endif
 	vec3 diffuseTexture;
-	float diffuse = godotLtcIntegral( geometryNormal, geometryViewDir, mat3( 1.0 ), points, textureRect, textureMipmaps, diffuseTexture );
+	float diffuse = godotLtcIntegral( geometryNormal, geometryViewDir, mat3( 1.0 ), points, diffuseTextureRect, textureMipmaps, diffuseTexture );
 	#ifndef GODOT_SPECULAR_DISABLED
 		vec2 ltcFresnel;
 		vec3 specularTexture;

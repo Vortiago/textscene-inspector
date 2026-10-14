@@ -1,7 +1,7 @@
-/** The projector-without-shadow warning OmniLight3D and SpotLight3D share, under each class's arm. */
+/** The projector checks the 3D lights share, under each class's arm. */
 import { describe, it, expect } from 'vitest';
 import type { RawNode } from '../../../../parser/types.js';
-import { projectorArm, projectorWithoutShadowDiagnostic } from './linterChecks.js';
+import { hasProjector, projectorArm, projectorWithoutShadowDiagnostic } from './linterChecks.js';
 
 const arm = projectorArm('omnilight3d');
 
@@ -33,5 +33,19 @@ describe('projectorWithoutShadowDiagnostic', () => {
   it('reports nothing when shadows are on', () => {
     const lit = light({ light_projector: 'ExtResource("1")', shadow_enabled: 'true' });
     expect(projectorWithoutShadowDiagnostic(lit, arm)).toBeNull();
+  });
+});
+
+describe('hasProjector', () => {
+  it('finds a projector reference', () => {
+    expect(hasProjector(light({ light_projector: 'SubResource("G")' }))).toBe(true);
+  });
+
+  it('finds none without the key (edge case)', () => {
+    expect(hasProjector(light({}))).toBe(false);
+  });
+
+  it('finds none in a malformed value, which Godot never sets (error case)', () => {
+    expect(hasProjector(light({ light_projector: 'not-a-reference' }))).toBe(false);
   });
 });

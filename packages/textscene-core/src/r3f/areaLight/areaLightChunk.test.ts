@@ -113,9 +113,15 @@ describe('installGodotAreaLight', () => {
     const area = areaLightBody();
 
     expect(area).toContain(
-      'godotLtcIntegral( geometryNormal, geometryViewDir, mat3( 1.0 ), points, textureRect, textureMipmaps, diffuseTexture );'
+      'godotLtcIntegral( geometryNormal, geometryViewDir, mat3( 1.0 ), points, diffuseTextureRect, textureMipmaps, diffuseTexture );'
     );
     expect(area).toContain('reflectedLight.directDiffuse += diffuse * diffuseTexture * ltcLight');
+  });
+
+  it("skips the diffuse integral's fetch for a toon diffuse, which reads its own (edge case)", () => {
+    const toon = preprocessorBranch(areaLightBody(), '#if defined( GODOT_DIFFUSE_TOON )');
+
+    expect(toon).toContain('vec4 diffuseTextureRect = vec4( 0.0 );');
   });
 
   it("colours the specular by the light's texture where the lobe sees it", () => {
