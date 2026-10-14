@@ -1,12 +1,13 @@
 /**
  * Rebuilds a mesh's surfaces from its **Unwrap cache** entry, as `lightmap_unwrap_cached` does
  * after xatlas returns (`importer_mesh.cpp:1181-1226`): each output triangle takes its corners'
- * source vertices with every attribute they had, plus the cached UV2 as `uv1`.
+ * source vertices with every attribute they had, plus the cached UV2.
  */
 
 import * as THREE from 'three';
 import type { UnwrapCacheEntry } from './unwrapCache';
 import type { UnwrapInput } from './unwrapInput';
+import { UV2_ATTRIBUTE } from '../../../meshes/uv2';
 
 /** One rebuilt surface: its output vertices in first-use order, and its triangles over them. */
 interface SurfaceCorners {
@@ -93,13 +94,13 @@ function surfaceGeometry(
   const geometry = new THREE.BufferGeometry();
   geometry.name = source.name;
   for (const [name, attribute] of Object.entries(source.attributes)) {
-    if (name !== 'uv1') geometry.setAttribute(name, gathered(attribute, sourceVertices));
+    if (name !== UV2_ATTRIBUTE) geometry.setAttribute(name, gathered(attribute, sourceVertices));
   }
   const uv2 = new Float32Array(corners.outputVertices.length * 2);
   corners.outputVertices.forEach((outputVertex, slot) =>
     uv2.set(entry.uvs.subarray(outputVertex * 2, outputVertex * 2 + 2), slot * 2)
   );
-  geometry.setAttribute('uv1', new THREE.BufferAttribute(uv2, 2));
+  geometry.setAttribute(UV2_ATTRIBUTE, new THREE.BufferAttribute(uv2, 2));
   geometry.setIndex(corners.index);
   return geometry;
 }

@@ -6,6 +6,7 @@
 
 import type * as THREE from 'three';
 import { md5Hex } from '../md5';
+import { UV2_ATTRIBUTE } from '../../../../meshes/uv2';
 
 const CORNER_BYTES = 20;
 
@@ -25,7 +26,7 @@ function godotTriangles(surfaces: readonly THREE.BufferGeometry[]): Uint8Array[]
 
 function cornerBytes(geometry: THREE.BufferGeometry, vertex: number): Uint8Array {
   const position = geometry.getAttribute('position');
-  const uv2 = geometry.getAttribute('uv1');
+  const uv2 = geometry.getAttribute(UV2_ATTRIBUTE);
   const view = new DataView(new ArrayBuffer(CORNER_BYTES));
   [
     position.getX(vertex),

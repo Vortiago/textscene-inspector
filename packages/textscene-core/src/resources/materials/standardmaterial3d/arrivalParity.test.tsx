@@ -24,7 +24,7 @@ import { buildMaterial } from './buildMaterial.testkit';
 import { standardMaterialBags, type StandardMaterialBag, type StandardMaterialClass } from './materialBag';
 import { GODOT_ALPHA_HASH } from '../../../r3f/materials/godotAlphaHash';
 import type { ProgramInjection, ProgramShader } from '../../../r3f/materialProgramInputs';
-import { bindSlotTexture, materialTextureState } from './textureBinding';
+import { bindSlotTexture, materialTextureStates } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { mapSampledBy } from '../../../r3f/testing/patchedFragment';
 import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
@@ -406,7 +406,7 @@ function meshTresCarryingIt(testCase: ParityCase): string {
  */
 function inlineTextures(testCase: ParityCase): ResolvedTextureSlots {
   const scalars = parseStandardMaterial3DScalars(testCase.properties);
-  const state = materialTextureState(scalars);
+  const state = materialTextureStates(scalars);
   const resolved: ResolvedTextureSlots = {};
   for (const slot of TEXTURE_SLOTS) {
     const reference = scalars.textureSlots[slot];

@@ -149,6 +149,14 @@ export interface StandardMaterial3DData {
   textureRepeat: boolean;
   uv1Scale: MaterialVec2;
   uv1Offset: MaterialVec2;
+  /** `uv2_scale`, identity where Godot never applies it (see `decode.ts`). */
+  uv2Scale: MaterialVec2;
+  /** `uv2_offset`, identity where Godot never applies it. */
+  uv2Offset: MaterialVec2;
+  /** `uv2_triplanar`: triplanar mapping of the second UV set. */
+  uv2Triplanar: boolean;
+  /** The slots that sample UV2 (`emission_on_uv2`, `ao_on_uv2`). */
+  uv2Slots: readonly TextureSlot[];
   /** The authored `transparency` mode. */
   transparency: Transparency;
   /**
@@ -280,6 +288,10 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   textureRepeat: boolean;
   uv1Scale: MaterialVec2;
   uv1Offset: MaterialVec2;
+  uv2Scale: MaterialVec2;
+  uv2Offset: MaterialVec2;
+  uv2Triplanar: boolean;
+  uv2Slots: readonly TextureSlot[];
   transparent: boolean;
   castsShadow: boolean;
   alphaTest: number;

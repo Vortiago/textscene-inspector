@@ -16,6 +16,7 @@ import { isMesh } from '../../r3f/testing/threeNarrow';
 import { triangleGlb } from '../formats/glb/testing/triangleGlb';
 import { LIT_UV2, litCache, litGlb, type LitGlb } from '../formats/glb/lightmapUv/testing/litGlb';
 import * as logger from '../../logger';
+import { UV2_ATTRIBUTE } from '../meshes/uv2';
 
 const CUBE_PATH = 'res://cube.glb';
 const CUBE_MESH_ID = 'cube_Cube_001';
@@ -78,7 +79,7 @@ describe('createGLBProcessor: lightmap UV2 from the unwrap cache', () => {
       [`${CUBE_PATH}.unwrap_cache`]: demoBytes('cube.glb.unwrap_cache'),
     });
 
-    expect(geometry.getAttribute('uv1')).toBeUndefined();
+    expect(geometry.getAttribute(UV2_ATTRIBUTE)).toBeUndefined();
   });
 
   it('skips a mesh whose generate/lightmap_uv is Disable', async () => {
@@ -88,7 +89,7 @@ describe('createGLBProcessor: lightmap UV2 from the unwrap cache', () => {
       [`${CUBE_PATH}.unwrap_cache`]: demoBytes('cube.glb.unwrap_cache'),
     });
 
-    expect(geometry.getAttribute('uv1')).toBeUndefined();
+    expect(geometry.getAttribute(UV2_ATTRIBUTE)).toBeUndefined();
   });
 
   it('keeps the GLB attributes without a cache, and says so once, naming the mesh', async () => {
@@ -96,7 +97,7 @@ describe('createGLBProcessor: lightmap UV2 from the unwrap cache', () => {
 
     const geometry = await loadCube({ [`${CUBE_PATH}.import`]: STATIC_LIGHTMAPS });
 
-    expect(geometry.getAttribute('uv1')).toBeUndefined();
+    expect(geometry.getAttribute(UV2_ATTRIBUTE)).toBeUndefined();
     expect(info.mock.calls.filter(([line]) => String(line).includes(`'${CUBE_MESH_ID}'`))).toHaveLength(1);
   });
 
@@ -108,7 +109,7 @@ describe('createGLBProcessor: lightmap UV2 from the unwrap cache', () => {
       [`${CUBE_PATH}.unwrap_cache`]: demoBytes('cube.glb.unwrap_cache'),
     });
 
-    expect(geometry.getAttribute('uv1')).toBeUndefined();
+    expect(geometry.getAttribute(UV2_ATTRIBUTE)).toBeUndefined();
     expect(info.mock.calls.filter(([line]) => String(line).includes(`'${CUBE_MESH_ID}'`))).toHaveLength(1);
   });
 
@@ -120,7 +121,7 @@ describe('createGLBProcessor: lightmap UV2 from the unwrap cache', () => {
       [`${CUBE_PATH}.unwrap_cache`]: demoBytes('cube.glb.unwrap_cache').slice(0, 100),
     });
 
-    expect(geometry.getAttribute('uv1')).toBeUndefined();
+    expect(geometry.getAttribute(UV2_ATTRIBUTE)).toBeUndefined();
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('entry 0 needs 324 bytes'));
   });
 
@@ -176,6 +177,6 @@ function loadLit(options: LitGlb, params = 'meshes/light_baking=2'): Promise<THR
 }
 
 function uv2(surface: THREE.Mesh): number[] | undefined {
-  const attribute = surface.geometry.getAttribute('uv1');
+  const attribute = surface.geometry.getAttribute(UV2_ATTRIBUTE);
   return attribute && Array.from(attribute.array);
 }

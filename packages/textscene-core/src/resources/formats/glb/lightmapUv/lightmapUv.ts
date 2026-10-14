@@ -1,7 +1,7 @@
 /**
  * Gives a loaded glTF the lightmap UV2 Godot's importer unwrapped for it (ADR-0028). Godot keys
  * each unwrap in the **Unwrap cache** by the MD5 of its input, so each mesh the sidecar unwraps
- * rebuilds its input, looks the hash up and, on a match, takes the cached layout as `uv1`.
+ * rebuilds its input, looks the hash up and, on a match, takes the cached layout as its UV2.
  */
 
 import type * as THREE from 'three';

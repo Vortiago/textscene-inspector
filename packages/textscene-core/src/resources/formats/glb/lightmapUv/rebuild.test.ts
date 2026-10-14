@@ -5,6 +5,7 @@ import { parseUnwrapCache } from './unwrapCache';
 import { unwrapInput } from './unwrapInput';
 import { demoBytes, demoMeshSurfaces } from './testing/globalIllumination';
 import { orderedCornerDigest, triangleSetDigest } from './testing/godotCorners';
+import { UV2_ATTRIBUTE } from '../../../meshes/uv2';
 
 const UNIT_SCALE = { scale: [1, 1, 1], vertexScale: 1 } as const;
 const DEMO_TEXEL_SIZE = 0.2;
@@ -26,7 +27,7 @@ function quad(): THREE.BufferGeometry {
     'normal',
     new THREE.Float32BufferAttribute(Array<number[]>(4).fill([0, 0, 1]).flat(), 3)
   );
-  geometry.setAttribute('uv1', new THREE.Float32BufferAttribute([9, 9, 9, 9, 9, 9, 9, 9], 2));
+  geometry.setAttribute(UV2_ATTRIBUTE, new THREE.Float32BufferAttribute([9, 9, 9, 9, 9, 9, 9, 9], 2));
   geometry.setIndex([0, 1, 2, 0, 2, 3]);
   return geometry;
 }
@@ -56,7 +57,7 @@ describe('rebuildSurfaces', () => {
       QUAD_ENTRY
     );
 
-    expect(Array.from(rebuilt!.getAttribute('uv1').array)).toEqual([0, 0, 0.5, 0, 0.5, 0.5, 0, 0.5]);
+    expect(Array.from(rebuilt!.getAttribute(UV2_ATTRIBUTE).array)).toEqual([0, 0, 0.5, 0, 0.5, 0.5, 0, 0.5]);
     expect(Array.from(rebuilt!.getAttribute('normal').array)).toEqual(
       Array<number[]>(4).fill([0, 0, 1]).flat()
     );

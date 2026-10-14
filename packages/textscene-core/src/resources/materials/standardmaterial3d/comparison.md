@@ -19,10 +19,9 @@ A `metallic = 1.0`, `roughness = 0.1` sphere reflects the preview sky. Both engi
 ## Emission
 <!-- compare: image=unit-material-emissive status=done fixture=unit-material-emissive.tscn -->
 
-An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the preview environment blooms it. `emission_operator` is honoured, including MULTIPLY with no texture, which emits nothing.
+An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the preview environment blooms it. `emission_operator` is honoured, including MULTIPLY with no texture, which emits nothing. `emission_on_uv2` samples the mesh's UV2, and the `glb-lightmap-uv2` golden draws it through a GLB's unwrapped UV2.
 
 - **Approximated** ADD with both a lit colour and a texture is applied as a multiply, so the surface reads darker and more tinted.
-- **Approximated** `emission_on_uv2` samples through UV1, since no mesh here carries a second UV set.
 - **Approximated** `emission_intensity` is ignored. `emission_energy_multiplier` alone drives the strength.
 
 ## Clearcoat
@@ -56,9 +55,7 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 ## Ambient occlusion
 <!-- compare: image=unit-material-ao status=done fixture=unit-material-ao.tscn -->
 
-The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. `ao_texture_channel` picks the map channel.
-
-- **Approximated** `ao_on_uv2` samples through UV1, since no mesh here carries a second UV set.
+The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. `ao_texture_channel` picks the map channel, and `ao_on_uv2` samples the mesh's UV2.
 
 ## Diffuse mode
 <!-- compare: image=unit-material-diffuse-mode status=done fixture=unit-material-diffuse-mode.tscn -->

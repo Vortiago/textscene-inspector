@@ -528,6 +528,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glb Lightmap Uv2",
+    "file": "unit-glb-lightmap-uv2.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glb Surface Material Override",
     "file": "unit-glb-surface-material-override.tscn",
     "category": "Other"

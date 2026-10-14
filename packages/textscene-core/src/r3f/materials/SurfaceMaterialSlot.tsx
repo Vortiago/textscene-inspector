@@ -26,12 +26,14 @@ import {
 } from '../../resources/materials/standardmaterial3d/materialBag';
 import {
   bindSlotTexture,
-  materialTextureState,
+  materialTextureStates,
   releaseBoundTexture,
+  type MaterialTextureStates,
+  type UVSetState,
 } from '../../resources/materials/standardmaterial3d/textureBinding';
-import type { MaterialTextureState } from '../../resources/textures/applyTextureState';
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
 import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
+import { bottomUpV } from '../../godot/uv';
 import { materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource, MaterialSource } from './materialSource';
@@ -54,17 +56,26 @@ export type MaterialTables = Pick<MaterialResource, 'internalResources' | 'exter
 
 const NO_TABLES: MaterialTables = { internalResources: [], externalResources: [] };
 
+/** The glTF surface a GLB override draws on, whose UVs keep Godot's top-down V (`godot/uv.ts`). */
+export const GLTF_SURFACE = 'gltf';
+
+/**
+ * What a material's textures draw on, where the binding cares: the Godot mesh sub-resource a
+ * triplanar material tiles against, or a glTF surface. Stable identity, as a memo reads it.
+ */
+export type TexturedSurface = TscnInternalResource | typeof GLTF_SURFACE;
+
 /**
  * Resolve every texture slot of one StandardMaterial3D, from gated references through
  * loads, precedence and binding to the eight three maps. Each reference resolves in
  * `tables`, the material's own file, whichever file that is. A triplanar material tiles
- * per world unit, so `triplanarMesh` folds in a PlaneMesh's size. CSG and GridMap pass
+ * per world unit, so a PlaneMesh `surface` folds in its size. CSG and GridMap pass
  * nothing and get the material's own `uv1_scale`.
  */
 export function useMaterialTextures(
   scalars: StandardMaterial3DScalars | null,
   tables: MaterialTables | null,
-  triplanarMesh?: TscnInternalResource
+  surface?: TexturedSurface
 ): ResolvedMaterialTextures {
   const { internalResources, externalResources } = tables ?? NO_TABLES;
 
@@ -130,19 +141,12 @@ export function useMaterialTextures(
     textureSlots[slot]?.status === 'pending' ||
     (proceduralSlots[TEXTURE_SLOTS.indexOf(slot)]?.building ?? false);
 
-  // The per-material half of every binding: UV transform, sampler filter and
-  // wrapping. The per-slot half (which slots decode sRGB) is `bindSlotTexture`'s.
-  const textureState = useMemo((): MaterialTextureState | null => {
-    if (!scalars) return null;
-    const state = materialTextureState(scalars);
-    if (!scalars.triplanar || !triplanarMesh) return state;
-    // PARITY LIMITATION (uv1_offset + world-triplanar): three applies `offset`
-    // in UV space, Godot's world-triplanar offset is in world units.
-    return {
-      ...state,
-      uv: { scale: triplanarPlaneScale(triplanarMesh, scalars.uv1Scale), offset: scalars.uv1Offset },
-    };
-  }, [scalars, triplanarMesh]);
+  // The per-material half of every binding: UV set and transform, sampler filter and
+  // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `bindSlotTexture`'s.
+  const textureStates = useMemo(
+    (): MaterialTextureStates | null => scalars && surfaceTextureStates(scalars, surface),
+    [scalars, surface]
+  );
 
   // A ViewportTexture albedo names a `<SubViewport>`, not a file: it resolves
   // through the live registry and arrives after first paint. Highest precedence
@@ -158,19 +162,19 @@ export function useMaterialTextures(
         viewportAlbedo
           ? { value: viewportAlbedo }
           : effectiveSlot(proceduralTextures.albedo_texture, textureSlots.albedo_texture),
-        textureState,
+        textureStates,
         'albedo_texture'
       ),
-    [viewportAlbedo, proceduralTextures.albedo_texture, textureSlots.albedo_texture, textureState]
+    [viewportAlbedo, proceduralTextures.albedo_texture, textureSlots.albedo_texture, textureStates]
   );
   const normalMap = useMemo(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.normal_texture, textureSlots.normal_texture),
-        textureState,
+        textureStates,
         'normal_texture'
       ),
-    [proceduralTextures.normal_texture, textureSlots.normal_texture, textureState]
+    [proceduralTextures.normal_texture, textureSlots.normal_texture, textureStates]
   );
   // PARITY LIMITATION (metallic/roughness texture channel): Godot reads the
   // channel named by `metallic_texture_channel` / `roughness_texture_channel`
@@ -179,46 +183,46 @@ export function useMaterialTextures(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.roughness_texture, textureSlots.roughness_texture),
-        textureState,
+        textureStates,
         'roughness_texture'
       ),
-    [proceduralTextures.roughness_texture, textureSlots.roughness_texture, textureState]
+    [proceduralTextures.roughness_texture, textureSlots.roughness_texture, textureStates]
   );
   const metalnessMap = useMemo(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.metallic_texture, textureSlots.metallic_texture),
-        textureState,
+        textureStates,
         'metallic_texture'
       ),
-    [proceduralTextures.metallic_texture, textureSlots.metallic_texture, textureState]
+    [proceduralTextures.metallic_texture, textureSlots.metallic_texture, textureStates]
   );
   const emissiveMap = useMemo(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.emission_texture, textureSlots.emission_texture),
-        textureState,
+        textureStates,
         'emission_texture'
       ),
-    [proceduralTextures.emission_texture, textureSlots.emission_texture, textureState]
+    [proceduralTextures.emission_texture, textureSlots.emission_texture, textureStates]
   );
   const aoMap = useMemo(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.ao_texture, textureSlots.ao_texture),
-        textureState,
+        textureStates,
         'ao_texture'
       ),
-    [proceduralTextures.ao_texture, textureSlots.ao_texture, textureState]
+    [proceduralTextures.ao_texture, textureSlots.ao_texture, textureStates]
   );
   const heightMap = useMemo(
     () =>
       transformedTexture(
         effectiveSlot(proceduralTextures.heightmap_texture, textureSlots.heightmap_texture),
-        textureState,
+        textureStates,
         'heightmap_texture'
       ),
-    [proceduralTextures.heightmap_texture, textureSlots.heightmap_texture, textureState]
+    [proceduralTextures.heightmap_texture, textureSlots.heightmap_texture, textureStates]
   );
 
   // Depend on the two values the repack reads, not their wrappers: a repack is a
@@ -231,8 +235,8 @@ export function useMaterialTextures(
   }, [drawsAnisotropic, anisotropyFlowmap]);
 
   const anisotropyBound = useMemo(
-    () => transformedTexture({ value: repackedFlowmap }, textureState, 'anisotropy_flowmap'),
-    [repackedFlowmap, textureState]
+    () => transformedTexture({ value: repackedFlowmap }, textureStates, 'anisotropy_flowmap'),
+    [repackedFlowmap, textureStates]
   );
 
   // The binding may hand back a clone of the repack with its own upload. Only
@@ -380,13 +384,45 @@ function proceduralTexturesBySlot(
  */
 function transformedTexture(
   resolved: { value: THREE.Texture | undefined } | null,
-  state: MaterialTextureState | null,
+  states: MaterialTextureStates | null,
   slot: TextureSlot
 ): THREE.Texture | undefined {
   const value = resolved?.value;
   if (!value) return undefined;
-  if (!state) return value;
-  return bindSlotTexture(value, slot, state);
+  if (!states) return value;
+  return bindSlotTexture(value, slot, states);
+}
+
+/** The texture states of `scalars` on `surface`. */
+function surfaceTextureStates(
+  scalars: StandardMaterial3DScalars,
+  surface: TexturedSurface | undefined
+): MaterialTextureStates {
+  const states = materialTextureStates(scalars);
+  if (surface === GLTF_SURFACE) return { ...states, uv1: topDownV(states.uv1), uv2: topDownV(states.uv2) };
+  if (!surface) return states;
+  return {
+    ...states,
+    uv1: scalars.triplanar ? planeTiled(states.uv1, surface) : states.uv1,
+    uv2: scalars.uv2Triplanar ? planeTiled(states.uv2, surface) : states.uv2,
+  };
+}
+
+/** A state that samples `1 - (v * scale + offset)`, Godot's V on a bottom-up upload. */
+function topDownV(state: UVSetState): UVSetState {
+  const { scale, offset } = state.uv;
+  return {
+    ...state,
+    uv: { scale: { x: scale.x, y: -scale.y }, offset: { x: offset.x, y: bottomUpV(offset.y) } },
+  };
+}
+
+/**
+ * A triplanar state tiled to the mesh's size. PARITY LIMITATION (offset + world-triplanar):
+ * three applies `offset` in UV space, Godot's world-triplanar offset is in world units.
+ */
+function planeTiled(state: UVSetState, mesh: TscnInternalResource): UVSetState {
+  return { ...state, uv: { scale: triplanarPlaneScale(mesh, state.uv.scale), offset: state.uv.offset } };
 }
 
 /** A procedural texture takes precedence over the file-loaded slot for the same map. */
