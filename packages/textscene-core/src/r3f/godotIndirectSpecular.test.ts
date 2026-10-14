@@ -44,6 +44,15 @@ describe('installGodotIndirectSpecular', () => {
     expect(pars).not.toContain('indirectSpecular += multiScattering * cosineWeightedIrradiance;');
   });
 
+  it("weighs a toon surface's reflection by its specular, metallic and albedo instead", () => {
+    const { pars } = patchedChunks();
+
+    expect(pars).toContain('#ifdef GODOT_DIFFUSE_TOON');
+    expect(pars).toContain(
+      'radiance * sqrt( material.specularColor.g / 0.16 ) * material.metalness * material.diffuseColor * 2.0'
+    );
+  });
+
   it("compensates the direct specular from Godot's table", () => {
     expect(patchedChunks().begin).toContain('( 1.0 / material.godotDfg.y - 1.0 )');
   });
