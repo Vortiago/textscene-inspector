@@ -327,10 +327,6 @@ function decodeTextureSlots(properties: Record<string, string>): TextureSlotRefe
 }
 
 /**
- * Godot writes UV transforms as `Vector3`, and only x and y reach a 2D UV. It wraps the
- * throwing `parseVector3`, so the float grammar, scientific notation included, is shared.
- */
-/**
  * `uv2_scale` and `uv2_offset`, where Godot applies them: to UV2 under a UV2 detail layer
  * (`material.cpp:1249-1256`), and to the projected position under UV2 triplanar mapping
  * (:1439-1451). Elsewhere the shader reads UV2 as stored.
@@ -359,6 +355,10 @@ function uv2Slots(properties: Record<string, string>): TextureSlot[] {
   return slots;
 }
 
+/**
+ * Godot writes UV transforms as `Vector3`, and only x and y reach a 2D UV. It wraps the
+ * throwing `parseVector3`, so the float grammar, scientific notation included, is shared.
+ */
 function vec2FromVector3(raw: string | undefined, fallback: MaterialVec2): MaterialVec2 {
   if (!raw) return fallback;
   try {

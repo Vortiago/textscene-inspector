@@ -14,11 +14,11 @@ export function boundTextureSlots(
   scalars: StandardMaterial3DScalars,
   textures: ResolvedTextureSlots
 ): ResolvedTextureSlots {
-  const state = materialTextureStates(scalars);
+  const states = materialTextureStates(scalars);
   const bound: ResolvedTextureSlots = {};
   for (const slot of Object.keys(textures) as TextureSlot[]) {
     const texture = textures[slot];
-    if (texture) bound[slot] = bindSlotTexture(texture, slot, state);
+    if (texture) bound[slot] = bindSlotTexture(texture, slot, states);
   }
   return bound;
 }

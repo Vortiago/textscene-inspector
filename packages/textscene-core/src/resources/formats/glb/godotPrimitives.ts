@@ -1,17 +1,75 @@
 /**
- * Corrects three's reading of a glTF's primitives to Godot's importer: a triangle fan draws its
- * indices as a triangle list, and a surface `ImporterMesh::add_surface` refuses is left out.
+ * Reads a glTF's primitives as Godot's importer does, before three builds them: a triangle fan
+ * draws its indices as a triangle list, a list Godot refuses fails the load, and a surface
+ * `ImporterMesh::add_surface` refuses is left out. Each primitive index three records is then
+ * Godot's surface index.
  */
 
 import type * as THREE from 'three';
-import type { GLTF, GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
-import { GLTF_MODE_TRIANGLE_FAN, godotSurfacePrimitives, gltfObjects } from '../../../godot/gltf';
+import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
+import {
+  GLTF_MODE_TRIANGLE_FAN,
+  GLTF_MODE_TRIANGLES,
+  godotSurfacePrimitives,
+  gltfObjects,
+  type GltfJsonObject,
+} from '../../../godot/gltf';
 import * as logger from '../../../logger';
 
+/** A GLTFLoader plugin that rewrites each mesh's primitives in `parser.json` before the parse. */
+export function godotPrimitives(parser: GLTFParser): GLTFLoaderPlugin {
+  return {
+    name: 'textscene_godot_primitives',
+    beforeRoot: async () => {
+      const accessors = gltfObjects(parser.json['accessors']);
+      for (const [mesh, json] of gltfObjects(parser.json['meshes']).entries()) {
+        const primitives = gltfObjects(json['primitives']);
+        const kept = godotSurfacePrimitives(primitives);
+        if (kept.length < primitives.length) logRefused(json, mesh);
+        json['primitives'] = kept.map((index) =>
+          readFanAsList(primitives[index]!, accessors, `${mesh} surface ${index}`)
+        );
+      }
+    },
+  };
+}
+
+function logRefused(mesh: GltfJsonObject, index: number): void {
+  const name = typeof mesh['name'] === 'string' ? mesh['name'] : `mesh ${index}`;
+  logger.info(
+    `[GLBProcessor] '${name}' has a surface with another target count than its first, so Godot drops it`
+  );
+}
+
 /**
- * The geometry three built for each primitive of glTF mesh `mesh`, by primitive index. A primitive
- * whose surface `removeRefusedSurfaces` took out has none.
+ * The primitive as Godot reads it: a fan's indices, or its vertices in order, as a triangle list
+ * (`gltf_document.cpp:1462`, `:1700-1714`). A list whose count is no multiple of three fails
+ * Godot's whole import (`:1487`, `:1705`), so it fails the load too.
  */
+function readFanAsList(
+  primitive: GltfJsonObject,
+  accessors: readonly GltfJsonObject[],
+  label: string
+): GltfJsonObject {
+  const mode = primitive['mode'] ?? GLTF_MODE_TRIANGLES;
+  if (mode !== GLTF_MODE_TRIANGLES && mode !== GLTF_MODE_TRIANGLE_FAN) return primitive;
+  const count = listedCount(primitive, accessors);
+  if (count % 3 !== 0)
+    throw new Error(
+      `glTF: mesh ${label} lists ${count} triangle indices, not a multiple of 3, so Godot refuses it`
+    );
+  return mode === GLTF_MODE_TRIANGLE_FAN ? { ...primitive, mode: GLTF_MODE_TRIANGLES } : primitive;
+}
+
+/** How many indices the primitive lists: its index accessor's count, else its vertex count. */
+function listedCount(primitive: GltfJsonObject, accessors: readonly GltfJsonObject[]): number {
+  const attributes = primitive['attributes'] as GltfJsonObject | undefined;
+  const accessor = typeof primitive['indices'] === 'number' ? primitive['indices'] : attributes?.['POSITION'];
+  const count = typeof accessor === 'number' ? accessors[accessor]?.['count'] : undefined;
+  return typeof count === 'number' ? count : 0;
+}
+
+/** The geometry three built for each primitive of glTF mesh `mesh`, by primitive index. */
 export async function meshSurfaces(gltf: GLTF, mesh: number): Promise<Map<number, THREE.BufferGeometry>> {
   const object = (await gltf.parser.getDependency('mesh', mesh)) as THREE.Object3D;
   const drawn = (object as THREE.Mesh).isMesh ? [object] : object.children;
@@ -21,58 +79,4 @@ export async function meshSurfaces(gltf: GLTF, mesh: number): Promise<Map<number
     if (primitive !== undefined) surfaces.set(primitive, (surface as THREE.Mesh).geometry);
   }
   return surfaces;
-}
-
-/**
- * Gives each triangle fan of the parsed `gltf` the triangles Godot reads from it, where three
- * builds a fan. A fan whose index count is no multiple of three fails Godot's whole import
- * (`gltf_document.cpp:1485`, `:1705`), so it keeps three's triangles and a warning.
- */
-export async function readFansAsLists(gltf: GLTF): Promise<void> {
-  const meshes = gltfObjects(gltf.parser.json['meshes']);
-  for (const [mesh, json] of meshes.entries()) {
-    const primitives = gltfObjects(json['primitives']);
-    if (!primitives.some((primitive) => primitive['mode'] === GLTF_MODE_TRIANGLE_FAN)) continue;
-    const surfaces = await meshSurfaces(gltf, mesh);
-    for (const [index, primitive] of primitives.entries()) {
-      const geometry = surfaces.get(index);
-      if (primitive['mode'] !== GLTF_MODE_TRIANGLE_FAN || !geometry) continue;
-      await readFanAsList(gltf, primitive['indices'], geometry, `${mesh}/${index}`);
-    }
-  }
-}
-
-async function readFanAsList(
-  gltf: GLTF,
-  indices: unknown,
-  geometry: THREE.BufferGeometry,
-  primitive: string
-): Promise<void> {
-  const fanIndex =
-    typeof indices === 'number'
-      ? ((await gltf.parser.getDependency('accessor', indices)) as THREE.BufferAttribute)
-      : null;
-  const count = fanIndex ? fanIndex.count : geometry.getAttribute('position').count;
-  if (count % 3 !== 0) {
-    logger.warn(`[GLBProcessor] glTF primitive ${primitive}: a fan of ${count} indices, which Godot refuses`);
-    return;
-  }
-  geometry.setIndex(fanIndex);
-}
-
-/** Removes each surface under `root` whose primitive Godot does not keep (`godotSurfacePrimitives`). */
-export function removeRefusedSurfaces(root: THREE.Object3D, gltf: GLTF): void {
-  const kept = gltfObjects(gltf.parser.json['meshes']).map(
-    (mesh) => new Set(godotSurfacePrimitives(gltfObjects(mesh['primitives'])))
-  );
-  const refused: THREE.Object3D[] = [];
-  root.traverse((object) => {
-    const { meshes, primitives } = (gltf.parser.associations.get(object) ?? {}) as Partial<GLTFReference>;
-    if (meshes !== undefined && primitives !== undefined && !kept[meshes]?.has(primitives))
-      refused.push(object);
-  });
-  for (const surface of refused) {
-    logger.info(`[GLBProcessor] '${surface.name}' has another target count than its mesh, so Godot drops it`);
-    surface.removeFromParent();
-  }
 }

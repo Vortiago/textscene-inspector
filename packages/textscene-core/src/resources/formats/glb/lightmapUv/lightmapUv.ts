@@ -6,14 +6,7 @@
 
 import type * as THREE from 'three';
 import type { GLTF, GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
-import {
-  GLTF_MODE_TRIANGLE_FAN,
-  GLTF_MODE_TRIANGLES,
-  godotSurfacePrimitives,
-  gltfObjects,
-  targetCount,
-  type GltfJsonObject,
-} from '../../../../godot/gltf';
+import { GLTF_MODE_TRIANGLES, gltfObjects, targetCount } from '../../../../godot/gltf';
 import { meshSurfaces } from '../godotPrimitives';
 import {
   IDENTITY_BASIS,
@@ -58,21 +51,16 @@ export async function applyLightmapUv(
     const surfaces = await unwrappableSurfaces(gltf, mesh);
     if (!surfaces) continue;
     const rebuilt = rebuiltSurfaces(
-      surfaces.geometries,
+      [...surfaces.values()],
       placement(gltf, root, node, lightmapUv.rootScale),
       entries,
       meshId,
       lightmapUv
     );
     if (rebuilt)
-      rebuiltMeshes.set(mesh, new Map(surfaces.primitives.map((primitive, i) => [primitive, rebuilt[i]!])));
+      rebuiltMeshes.set(mesh, new Map([...surfaces.keys()].map((primitive, i) => [primitive, rebuilt[i]!])));
   }
   if (rebuiltMeshes.size > 0) replaceSurfaces(root, gltf.parser.associations, rebuiltMeshes);
-}
-
-function isReadAsList(primitive: GltfJsonObject): boolean {
-  const mode = primitive['mode'] ?? GLTF_MODE_TRIANGLES;
-  return mode === GLTF_MODE_TRIANGLES || mode === GLTF_MODE_TRIANGLE_FAN;
 }
 
 /** Each kept primitive's rebuilt geometry, or null for one the unwrapped mesh drops. */
@@ -123,25 +111,20 @@ function meshNode(
   return parent && associations.get(parent)?.nodes !== undefined ? parent : null;
 }
 
-/** The surfaces Godot's importer keeps of a glTF mesh: each primitive's index and geometry. */
-interface KeptSurfaces {
-  primitives: number[];
-  geometries: THREE.BufferGeometry[];
-}
-
 /**
- * The surfaces of glTF mesh `mesh` that Godot unwraps, or null when it unwraps none: a mesh with
- * blend shapes (`importer_mesh.cpp:1041`) or a primitive that is not read as a triangle list
- * (`:1064`). A fan is one, as `readFansAsLists` has read it.
+ * The surfaces of glTF mesh `mesh` that Godot unwraps, by primitive index, or null when it unwraps
+ * none: a mesh with blend shapes (`importer_mesh.cpp:1041`) or a primitive that is not a triangle
+ * list (`:1064`). `godotPrimitives` has already read each fan as a list.
  */
-async function unwrappableSurfaces(gltf: GLTF, mesh: number): Promise<KeptSurfaces | null> {
+async function unwrappableSurfaces(
+  gltf: GLTF,
+  mesh: number
+): Promise<ReadonlyMap<number, THREE.BufferGeometry> | null> {
   const primitives = gltfObjects(gltfObjects(gltf.parser.json['meshes'])[mesh]?.['primitives']);
   if (targetCount(primitives[0]) > 0) return null;
-  if (!primitives.every(isReadAsList)) return null;
-
-  const geometries = await meshSurfaces(gltf, mesh);
-  const kept = godotSurfacePrimitives(primitives);
-  return { primitives: kept, geometries: kept.map((primitive) => geometries.get(primitive)!) };
+  if (!primitives.every((primitive) => (primitive['mode'] ?? GLTF_MODE_TRIANGLES) === GLTF_MODE_TRIANGLES))
+    return null;
+  return meshSurfaces(gltf, mesh);
 }
 
 /**

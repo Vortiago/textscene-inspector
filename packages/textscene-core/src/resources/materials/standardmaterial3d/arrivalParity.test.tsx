@@ -406,14 +406,14 @@ function meshTresCarryingIt(testCase: ParityCase): string {
  */
 function inlineTextures(testCase: ParityCase): ResolvedTextureSlots {
   const scalars = parseStandardMaterial3DScalars(testCase.properties);
-  const state = materialTextureStates(scalars);
+  const states = materialTextureStates(scalars);
   const resolved: ResolvedTextureSlots = {};
   for (const slot of TEXTURE_SLOTS) {
     const reference = scalars.textureSlots[slot];
     if (reference === undefined) continue;
     const path = resolveExtResourcePath(reference, testCase.extResources ?? []);
     if (path === null) continue;
-    resolved[slot] = bindSlotTexture(textureFor(path), slot, state);
+    resolved[slot] = bindSlotTexture(textureFor(path), slot, states);
   }
   return resolved;
 }
