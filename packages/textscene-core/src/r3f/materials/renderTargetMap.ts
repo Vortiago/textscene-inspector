@@ -21,13 +21,21 @@ export function renderTargetMapUserData(uv: UVTransform | undefined): Record<str
   return uv ? { [TARGET_MAP_UV_KEY]: uv } : {};
 }
 
-/** A uniform that reads `material`'s recorded transform at each upload, into one matrix. */
+/**
+ * A uniform that reads `material`'s recorded transform at each upload, into one matrix. It
+ * rebuilds the matrix only when the recorded transform is another object.
+ */
 function targetMapTransform(material: Material): IUniform<THREE.Matrix3> {
   const matrix = new THREE.Matrix3();
+  let built: UVTransform | undefined;
   return {
     get value() {
-      const { scale, offset } = recordedOn(material, TARGET_MAP_UV_KEY, IDENTITY_UV);
-      return matrix.setUvTransform(offset.x, offset.y, scale.x, scale.y, 0, 0, 0);
+      const uv = recordedOn(material, TARGET_MAP_UV_KEY, IDENTITY_UV);
+      if (uv !== built) {
+        matrix.setUvTransform(uv.offset.x, uv.offset.y, uv.scale.x, uv.scale.y, 0, 0, 0);
+        built = uv;
+      }
+      return matrix;
     },
   };
 }
@@ -97,6 +105,6 @@ const TARGET_MAP_REPEAT: ProgramInjection = {
  * Godot's `texture_repeat` sampler gives, where three's target clamps. Last among a material's
  * injections, as the repeat replaces the map chunk's include.
  */
-export function renderTargetMapInjection(repeats: boolean): ProgramInjection | undefined {
-  return composeInjections([TARGET_MAP_UV, repeats ? TARGET_MAP_REPEAT : undefined]);
+export function renderTargetMapInjection(repeats: boolean): ProgramInjection {
+  return repeats ? composeInjections([TARGET_MAP_UV, TARGET_MAP_REPEAT])! : TARGET_MAP_UV;
 }

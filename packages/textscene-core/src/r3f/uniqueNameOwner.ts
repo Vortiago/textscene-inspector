@@ -99,34 +99,24 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
     }
     const scope = scopeOf(match, found.group.scope);
     const subRoots = cachedSubRoots(match, scope, ctx);
-    const glbInstance = glbInstanceOwner(match, found, parentPath, owner);
+    // In Godot a GLB root is its instance node, which owns the imported nodes. This tree renders
+    // the GLB root one segment below the instance, at `parentPath`.
+    const isGlbRoot = found.rootOf !== undefined && match.type === GLB_SCENE_ROOT_TYPE;
+    const contentOwner: ClaimOwner = found.rootOf
+      ? { path: isGlbRoot ? parentPath : livePath, roots: found.rootOf, parent: owner }
+      : owner;
     candidates = liveChildGroups(match, scope, ctx.sceneCache, ctx.glbCache).map((group) => ({
       group,
       owner:
         group.origin === 'merged' && subRoots
           ? { path: livePath, roots: subRoots, parent: owner }
-          : (glbInstance ?? (found.rootOf ? { path: livePath, roots: found.rootOf, parent: owner } : owner)),
+          : contentOwner,
       ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
     }));
-    into = glbInstance ?? candidates.find((c) => c.group.origin === 'merged')?.owner ?? owner;
+    into = isGlbRoot ? contentOwner : (candidates.find((c) => c.group.origin === 'merged')?.owner ?? owner);
     parentPath = livePath;
   }
   return { owner, into, node: match };
-}
-
-/**
- * The owner a GLB root's content has: the instance node, which in Godot is the GLB root itself
- * and owns the imported nodes. This tree renders the GLB root one segment below it, at
- * `parentPath`. Undefined for any other node.
- */
-function glbInstanceOwner(
-  node: LiveNode,
-  found: Candidate,
-  parentPath: string,
-  owner: ClaimOwner
-): ClaimOwner | undefined {
-  if (!found.rootOf || node.type !== GLB_SCENE_ROOT_TYPE) return undefined;
-  return { path: parentPath, roots: found.rootOf, parent: owner };
 }
 
 /**

@@ -91,12 +91,13 @@ export function decodeUVs(
     view: new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength),
     attributeStride,
     vertexCount,
+    compressed: layout.compressed,
   };
   // Godot re-expands when any component of the whole Vector4 is non-zero.
   const scale = uvScale && uvScale.some((component) => component !== 0) ? uvScale : undefined;
   return {
-    uvs: decodeUvSet(record, layout, layout.uvOffset, scale && [scale[0], scale[1]]),
-    uv2s: decodeUvSet(record, layout, layout.uv2Offset, scale && [scale[2], scale[3]]),
+    uvs: decodeUvSet(record, layout.uvOffset, scale && [scale[0], scale[1]]),
+    uv2s: decodeUvSet(record, layout.uv2Offset, scale && [scale[2], scale[3]]),
   };
 }
 
@@ -104,24 +105,27 @@ interface AttributeRecords {
   view: DataView;
   attributeStride: number;
   vertexCount: number;
+  compressed: boolean;
 }
 
 /** One UV set at `offset` in each record, re-expanded by `scale` when given. */
 function decodeUvSet(
-  { view, attributeStride, vertexCount }: AttributeRecords,
-  layout: SurfaceLayout,
+  { view, attributeStride, vertexCount, compressed }: AttributeRecords,
   offset: number,
   scale: readonly [number, number] | undefined
 ): Float32Array | undefined {
   if (offset < 0) return undefined;
   const out = new Float32Array(vertexCount * 2);
-  for (let i = 0; i < vertexCount; i++) {
-    const o = i * attributeStride + offset;
-    if (!layout.compressed) {
+  if (!compressed) {
+    for (let i = 0; i < vertexCount; i++) {
+      const o = i * attributeStride + offset;
       out[i * 2] = view.getFloat32(o, true);
       out[i * 2 + 1] = view.getFloat32(o + 4, true);
-      continue;
     }
+    return out;
+  }
+  for (let i = 0; i < vertexCount; i++) {
+    const o = i * attributeStride + offset;
     const u = view.getUint16(o, true) / 65535;
     const v = view.getUint16(o + 2, true) / 65535;
     out[i * 2] = scale ? (u - 0.5) * scale[0] : u;

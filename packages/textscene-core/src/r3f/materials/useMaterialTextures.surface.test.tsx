@@ -14,6 +14,7 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 import { GLTF_SURFACE, useMaterialTextures, type TexturedSurface } from './SurfaceMaterialSlot';
 import { NodePathProvider } from '../contexts/NodePathContext';
+import type { MaterialTextureMaps } from './materialTextureMaps';
 import { ViewportTextureProvider, useRegisterViewportTexture } from '../contexts/ViewportTextureContext';
 
 const GRADIENT: TscnInternalResource[] = [
@@ -25,23 +26,33 @@ const GRADIENT: TscnInternalResource[] = [
   },
 ];
 
-/** The emission map a material with `properties` binds on `surface`. */
-function emissionMap(properties: Record<string, string>, surface?: TexturedSurface): THREE.Texture {
-  const scalars = parseStandardMaterial3DScalars({
-    emission_enabled: 'true',
-    emission_texture: 'SubResource("GradientTexture2D_a")',
-    ...properties,
-  });
+/**
+ * The maps a material with `properties` binds on `surface`, its references resolved in
+ * `resources`, with the hook mounted inside `around`.
+ */
+function materialMaps(
+  properties: Record<string, string>,
+  resources: TscnInternalResource[],
+  surface?: TexturedSurface,
+  around: (children: ReactNode) => ReactNode = (children) => children
+): MaterialTextureMaps {
+  const scalars = parseStandardMaterial3DScalars(properties);
   const { loader } = createFakeResourceLoader();
   const { result } = renderHook(
-    () => useMaterialTextures(scalars, { internalResources: GRADIENT, externalResources: [] }, surface),
+    () => useMaterialTextures(scalars, { internalResources: resources, externalResources: [] }, surface),
     {
       wrapper: ({ children }: { children: ReactNode }) => (
-        <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
+        <ResourceLoaderProvider loader={loader}>{around(children)}</ResourceLoaderProvider>
       ),
     }
   );
-  return result.current.maps.emissiveMap!;
+  return result.current.maps;
+}
+
+/** The emission map a material with `properties` binds on `surface`. */
+function emissionMap(properties: Record<string, string>, surface?: TexturedSurface): THREE.Texture {
+  const emission = { emission_enabled: 'true', emission_texture: 'SubResource("GradientTexture2D_a")' };
+  return materialMaps({ ...emission, ...properties }, GRADIENT, surface).emissiveMap!;
 }
 
 describe('useMaterialTextures on a glTF surface', () => {
@@ -99,25 +110,14 @@ function Publisher({ texture }: { texture: THREE.Texture }) {
 /** The maps a material whose albedo is the SubViewport's render target binds on `surface`. */
 function viewportMaps(properties: Record<string, string>, surface?: TexturedSurface) {
   const target = new THREE.WebGLRenderTarget(4, 4).texture;
-  const scalars = parseStandardMaterial3DScalars({
-    albedo_texture: 'SubResource("ViewportTexture_a")',
-    ...properties,
-  });
-  const { loader } = createFakeResourceLoader();
-  const { result } = renderHook(
-    () => useMaterialTextures(scalars, { internalResources: VIEWPORT, externalResources: [] }, surface),
-    {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <ResourceLoaderProvider loader={loader}>
-          <ViewportTextureProvider>
-            <Publisher texture={target} />
-            <NodePathProvider path="Root/Mesh">{children}</NodePathProvider>
-          </ViewportTextureProvider>
-        </ResourceLoaderProvider>
-      ),
-    }
-  );
-  return { maps: result.current.maps, target };
+  const albedo = { albedo_texture: 'SubResource("ViewportTexture_a")' };
+  const maps = materialMaps({ ...albedo, ...properties }, VIEWPORT, surface, (children) => (
+    <ViewportTextureProvider>
+      <Publisher texture={target} />
+      <NodePathProvider path="Root/Mesh">{children}</NodePathProvider>
+    </ViewportTextureProvider>
+  ));
+  return { maps, target };
 }
 
 describe('useMaterialTextures with a render-target albedo', () => {
@@ -135,21 +135,8 @@ describe('useMaterialTextures with a render-target albedo', () => {
   });
 
   it('hands no UV transform for a file albedo, which carries its own (edge case)', () => {
-    expect(fileAlbedoTargetUv()).toBeUndefined();
+    const maps = materialMaps({ albedo_texture: 'SubResource("GradientTexture2D_a")' }, GRADIENT);
+
+    expect(maps.albedoTargetUv).toBeUndefined();
   });
 });
-
-/** The render-target UV transform of a material whose albedo is a gradient, which none needs. */
-function fileAlbedoTargetUv() {
-  const scalars = parseStandardMaterial3DScalars({ albedo_texture: 'SubResource("GradientTexture2D_a")' });
-  const { loader } = createFakeResourceLoader();
-  const { result } = renderHook(
-    () => useMaterialTextures(scalars, { internalResources: GRADIENT, externalResources: [] }),
-    {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
-      ),
-    }
-  );
-  return result.current.maps.albedoTargetUv;
-}

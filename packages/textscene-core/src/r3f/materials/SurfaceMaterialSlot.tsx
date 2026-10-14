@@ -32,6 +32,7 @@ import {
   type MaterialTextureStates,
   type UVSetState,
 } from '../../resources/materials/standardmaterial3d/textureBinding';
+import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
 import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
 import { materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
@@ -402,8 +403,7 @@ function surfaceTextureStates(
   surface: TexturedSurface | undefined
 ): MaterialTextureStates {
   const states = materialTextureStates(scalars);
-  if (surface === GLTF_SURFACE)
-    return { ...states, uv1: topDownV(states.uv1), uv2: gltfUv2(scalars, states.uv2) };
+  if (surface === GLTF_SURFACE) return { ...states, uv1: onGltfUvs(states.uv1), uv2: onGltfUvs(states.uv2) };
   if (!surface) return states;
   return {
     ...states,
@@ -412,9 +412,12 @@ function surfaceTextureStates(
   };
 }
 
-/** A triplanar UV2 reads the glTF's first UV set, as UV1 does. Any other UV2 is top-down already. */
-function gltfUv2(scalars: StandardMaterial3DScalars, uv2: UVSetState): UVSetState {
-  return scalars.uv2Triplanar ? topDownV(uv2) : uv2;
+/**
+ * A state on a glTF surface. Its first UV set keeps Godot's top-down V, so a state that reads it
+ * flips. A state that reads UV2 flips already, in `materialTextureStates`.
+ */
+function onGltfUvs(state: UVSetState): UVSetState {
+  return state.channel === UV2_CHANNEL ? state : topDownV(state);
 }
 
 /**

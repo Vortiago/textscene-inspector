@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { renderTargetMapInjection, renderTargetMapUserData } from './renderTargetMap';
 import type { ProgramShader } from '../materialProgramInputs';
+import { createOffscreenTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
 
 const FLIPPED_V = { scale: { x: 2, y: -3 }, offset: { x: 0.25, y: 1 } };
 
@@ -12,7 +13,7 @@ function patchedFor(material: THREE.Material, repeats = true): ProgramShader {
     fragmentShader: THREE.ShaderLib.basic.fragmentShader,
     uniforms: {},
   };
-  renderTargetMapInjection(repeats)!.onBeforeCompile.call(material, shader);
+  renderTargetMapInjection(repeats).onBeforeCompile.call(material, shader);
   return shader;
 }
 
@@ -61,6 +62,16 @@ describe('renderTargetMapInjection: the wrap', () => {
     expect(patchedFor(new THREE.MeshBasicMaterial()).fragmentShader).toContain(
       'ivec2 far = ivec2( mod( corner + 1.0, size ) );'
     );
+  });
+
+  it('filters a target the hand-written filter matches: linear, with no mipmaps', () => {
+    const { texture } = createOffscreenTarget(4, 4, 'Target');
+
+    expect([texture.minFilter, texture.magFilter, texture.generateMipmaps]).toEqual([
+      THREE.LinearFilter,
+      THREE.LinearFilter,
+      false,
+    ]);
   });
 
   it("keeps three's clamped sample for a material that does not repeat (edge case)", () => {
