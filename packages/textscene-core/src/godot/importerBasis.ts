@@ -19,7 +19,7 @@ type Vector3 = [number, number, number];
 
 const f = Math.fround;
 
-const IDENTITY: Basis32 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+export const IDENTITY_BASIS: Basis32 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 /**
  * The node's basis as `_parse_nodes` sets it (`gltf_document.cpp:586-597`): a matrix by columns
@@ -27,16 +27,16 @@ const IDENTITY: Basis32 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
  */
 export function gltfNodeBasis(node: GltfNodeTransform): Basis32 {
   if (node.matrix) return basisFromColumns(node.matrix);
-  let basis = IDENTITY;
+  let basis = IDENTITY_BASIS;
   // `set_quaternion_scale(q, get_scale())`, and the identity's scale is exactly one.
-  if (node.rotation) basis = multiply(quaternionBasis(node.rotation), IDENTITY);
+  if (node.rotation) basis = multiply(quaternionBasis(node.rotation), IDENTITY_BASIS);
   if (node.scale) basis = multiply(orthonormalized(basis), diagonal(node.scale));
   return basis;
 }
 
-/** `Basis::scale` (`basis.cpp:234-238`): `Node3D::scale` on the scene root, which scales each row. */
-export function rowScaledBasis(basis: Basis32, scale: number): Basis32 {
-  return basis.map((component) => f(component * f(scale)));
+/** `Basis::scale` (`basis.cpp:234-238`), which multiplies row `i` by `rowScales[i]`. */
+export function rowScaledBasis(basis: Basis32, rowScales: readonly number[]): Basis32 {
+  return basis.map((component, i) => f(component * f(rowScales[Math.floor(i / 3)]!)));
 }
 
 /**
@@ -44,38 +44,45 @@ export function rowScaledBasis(basis: Basis32, scale: number): Basis32 {
  * (`resource_importer_scene.cpp:2683-2689`).
  */
 export function transformChainScale(chain: readonly Basis32[]): Vector3 {
-  const basis = chain.reduce<Basis32>((xf, node) => multiply(node, xf), IDENTITY);
+  const basis = chain.reduce<Basis32>((xf, node) => multiply(node, xf), IDENTITY_BASIS);
   return [0, 1, 2].map((axis) => length(column(basis, axis))) as Vector3;
 }
 
 /**
- * Where `lightmap_unwrap_cached` puts a vertex and its normal: the transform keeps only `scale`
- * (`importer_mesh.cpp:1051-1056`), and a normal goes through its inverse transpose, normalised
- * (`:1058`, `:1081-1093`).
+ * Where `lightmap_unwrap_cached` puts the vertices and normals, as flat `xyz` arrays it rewrites in
+ * place: the transform keeps only `scale` (`importer_mesh.cpp:1051-1056`), and a normal goes
+ * through its inverse transpose, normalised (`:1058`, `:1081-1093`).
  */
 export function unwrapSpace(scale: readonly number[]): {
-  position: (v: Vector3) => Vector3;
-  normal: (n: Vector3) => Vector3;
+  transformPositions: (xyz: Float32Array) => void;
+  transformNormals: (xyz: Float32Array) => void;
 } {
-  const basis = rowScaledRows(IDENTITY, scale);
+  const basis = rowScaledBasis(IDENTITY_BASIS, scale);
   const normalBasis = transposed(inverse(basis));
-  // `Transform3D::xform` (`transform_3d.h:177-182`) adds the origin, which is zero, so a `-0` coordinate leaves as `+0`.
   return {
-    position: (v) => xform(basis, v).map((component) => f(component + 0)) as Vector3,
-    normal: (n) => normalized(xform(normalBasis, n)),
+    transformPositions: (xyz) => {
+      for (let i = 0; i < xyz.length; i += 3) {
+        // `Transform3D::xform` (`transform_3d.h:177-182`) adds the origin, which is zero, so a `-0` leaves as `+0`.
+        xyz.set(
+          xform(basis, xyz, i).map((component) => component + 0),
+          i
+        );
+      }
+    },
+    transformNormals: (xyz) => {
+      for (let i = 0; i < xyz.length; i += 3) xyz.set(normalized(xform(normalBasis, xyz, i)), i);
+    },
   };
 }
 
-/** `Basis::scale` with a per-row factor (`basis.cpp:234-238`). */
-function rowScaledRows(basis: Basis32, scale: readonly number[]): Basis32 {
-  return basis.map((component, i) => f(component * f(scale[Math.floor(i / 3)]!)));
+/** `Basis::xform` (`basis.h:336-341`) of the vector at `xyz[at]`: each row dotted with it. */
+function xform(basis: Basis32, xyz: Float32Array, at: number): Vector3 {
+  const v: Vector3 = [xyz[at]!, xyz[at + 1]!, xyz[at + 2]!];
+  return [rowDot(basis, 0, v), rowDot(basis, 1, v), rowDot(basis, 2, v)];
 }
 
-/** `Basis::xform` (`basis.h:336-341`): each row dotted with the vector. */
-function xform(basis: Basis32, v: Vector3): Vector3 {
-  return [0, 1, 2].map((row) =>
-    dot([basis[3 * row]!, basis[3 * row + 1]!, basis[3 * row + 2]!], v)
-  ) as Vector3;
+function rowDot(basis: Basis32, row: number, v: Vector3): number {
+  return f(f(f(basis[3 * row]! * v[0]) + f(basis[3 * row + 1]! * v[1])) + f(basis[3 * row + 2]! * v[2]));
 }
 
 /** `Basis::invert` (`basis.cpp:39-54`), cofactors over the determinant. */

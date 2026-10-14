@@ -34,7 +34,6 @@ function quad(): THREE.BufferGeometry {
 /** An entry that unwraps `quad`'s two triangles, in Godot's winding, onto four output vertices. */
 const QUAD_ENTRY = {
   hash: '',
-  sizeHint: [8, 8] as [number, number],
   sourceVertices: Int32Array.from([0, 1, 2, 3]),
   uvs: Float32Array.from([0, 0, 0.5, 0, 0.5, 0.5, 0, 0.5]),
   indices: Int32Array.from([0, 2, 1, 0, 3, 2]),
@@ -70,6 +69,17 @@ describe('rebuildSurfaces', () => {
     expect(() =>
       rebuildSurfaces([surface], unwrapInput([surface], UNIT_SCALE, DEMO_TEXEL_SIZE)!, corrupt)
     ).toThrow('unwrap cache: output vertex 3 names input vertex 7, the input has 4');
+  });
+
+  it('refuses an entry whose triangle spans two surfaces (edge case)', () => {
+    const [first, second] = [quad(), quad()];
+    const input = unwrapInput([first, second], UNIT_SCALE, DEMO_TEXEL_SIZE)!;
+    // Output vertex 4 is the second surface's first input vertex.
+    const spanning = { ...QUAD_ENTRY, sourceVertices: Int32Array.from([0, 1, 2, 4]) };
+
+    expect(() => rebuildSurfaces([first, second], input, spanning)).toThrow(
+      'unwrap cache: a triangle spans surfaces 0, 1 and 0'
+    );
   });
 
   it("drops a last surface without normals, as Godot's rebuilt mesh lacks it", () => {

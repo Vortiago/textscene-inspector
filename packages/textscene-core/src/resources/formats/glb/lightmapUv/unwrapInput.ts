@@ -29,15 +29,22 @@ export interface UnwrapInput {
 /** `eps`, which `importer_mesh.cpp:1102` takes from `xatlas.h`, as a float. */
 const SHORTEST_EDGE_SQUARED = Math.fround(1.1920929e-7);
 
-type Vector3 = [number, number, number];
+const f = Math.fround;
+
+/** Marks in `usedVertices` before a used vertex takes its input number, which is never negative. */
+const UNUSED = -1;
+const USED = -2;
+
 type UnwrapSpace = ReturnType<typeof unwrapSpace>;
 
 interface SurfaceInput {
-  positions: Vector3[];
-  normals: Vector3[];
+  /** The input vertices' positions, `xyz` per vertex. */
+  positions: Float32Array;
+  normals: Float32Array;
   /** Triangles over this surface's input vertices, in Godot's winding. */
-  triangles: number[];
-  sources: number[];
+  triangles: Int32Array;
+  /** The geometry vertex of each input vertex. */
+  sources: Int32Array;
 }
 
 /**
@@ -68,56 +75,75 @@ export function unwrapInput(
  */
 function surfaceInput(geometry: THREE.BufferGeometry, vertexScale: number, space: UnwrapSpace): SurfaceInput {
   const position = geometry.getAttribute('position');
-  const normal = geometry.getAttribute('normal');
-  const gltfIndices = geometry.index ? Array.from(geometry.index.array) : [...Array(position.count).keys()];
-  const sources = usedVertices(gltfIndices, position.count);
-  const inputVertexOf = new Map(sources.map((source, inputVertex) => [source, inputVertex]));
+  const gltfIndices =
+    geometry.index?.array ?? Int32Array.from({ length: position.count }, (_, vertex) => vertex);
+  const { sources, inputVertexOf } = usedVertices(gltfIndices, position.count);
 
   // `_rescale_importer_mesh` multiplies each vertex by the baked root scale (`resource_importer_scene.cpp:500-505`).
-  const scale = Math.fround(vertexScale);
-  const positions = sources.map((source) =>
-    space.position(vectorAt(position, source).map((component) => Math.fround(component * scale)) as Vector3)
-  );
-  const normals = sources.map((source) => space.normal(vectorAt(normal, source)));
+  const positions = gathered(position, sources, f(vertexScale));
+  space.transformPositions(positions);
+  const normals = gathered(geometry.getAttribute('normal'), sources, 1);
+  space.transformNormals(normals);
 
-  const triangles: number[] = [];
+  const triangles = new Int32Array(gltfIndices.length);
+  let corners = 0;
   for (let i = 0; i + 2 < gltfIndices.length; i += 3) {
-    const corners = [gltfIndices[i]!, gltfIndices[i + 2]!, gltfIndices[i + 1]!].map((v) =>
-      inputVertexOf.get(v)!
-    );
-    if (!hasShortEdge(corners.map((corner) => positions[corner]!))) triangles.push(...corners);
+    const a = inputVertexOf[gltfIndices[i]!]!;
+    const b = inputVertexOf[gltfIndices[i + 2]!]!;
+    const c = inputVertexOf[gltfIndices[i + 1]!]!;
+    if (hasShortEdge(positions, a, b, c)) continue;
+    triangles.set([a, b, c], corners);
+    corners += 3;
   }
-  return { positions, normals, triangles, sources };
+  return { positions, normals, triangles: triangles.subarray(0, corners), sources };
 }
 
-/** The vertices `indices` name, ascending, as the importer keeps them. */
-function usedVertices(indices: readonly number[], vertexCount: number): number[] {
-  const used = new Uint8Array(vertexCount);
-  for (const index of indices) used[index] = 1;
-  return [...used.keys()].filter((vertex) => used[vertex] === 1);
+/**
+ * The vertices `indices` name, ascending, as the importer keeps them, and the input vertex each
+ * geometry vertex becomes.
+ */
+function usedVertices(
+  indices: ArrayLike<number>,
+  vertexCount: number
+): { sources: Int32Array; inputVertexOf: Int32Array } {
+  const inputVertexOf = new Int32Array(vertexCount).fill(UNUSED);
+  for (let i = 0; i < indices.length; i++) inputVertexOf[indices[i]!] = USED;
+  const sources: number[] = [];
+  for (let vertex = 0; vertex < vertexCount; vertex++) {
+    if (inputVertexOf[vertex] === USED) inputVertexOf[vertex] = sources.push(vertex) - 1;
+  }
+  return { sources: Int32Array.from(sources), inputVertexOf };
 }
 
-function vectorAt(
+/** The attribute's `xyz` at each of `sources`, as float32 times `scale`. */
+function gathered(
   attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-  index: number
-): Vector3 {
-  return [
-    Math.fround(attribute.getX(index)),
-    Math.fround(attribute.getY(index)),
-    Math.fround(attribute.getZ(index)),
-  ];
+  sources: Int32Array,
+  scale: number
+): Float32Array {
+  const xyz = new Float32Array(sources.length * 3);
+  sources.forEach((source, vertex) => {
+    xyz[3 * vertex] = f(f(attribute.getX(source)) * scale);
+    xyz[3 * vertex + 1] = f(f(attribute.getY(source)) * scale);
+    xyz[3 * vertex + 2] = f(f(attribute.getZ(source)) * scale);
+  });
+  return xyz;
 }
 
-function hasShortEdge([p0, p1, p2]: Vector3[]): boolean {
-  return [lengthSquared(p0!, p1!), lengthSquared(p1!, p2!), lengthSquared(p2!, p0!)].some(
-    (edge) => edge < SHORTEST_EDGE_SQUARED
+function hasShortEdge(positions: Float32Array, a: number, b: number, c: number): boolean {
+  return (
+    lengthSquared(positions, a, b) < SHORTEST_EDGE_SQUARED ||
+    lengthSquared(positions, b, c) < SHORTEST_EDGE_SQUARED ||
+    lengthSquared(positions, c, a) < SHORTEST_EDGE_SQUARED
   );
 }
 
-/** `(a - b).length_squared()` in float32. */
-function lengthSquared(a: Vector3, b: Vector3): number {
-  const [x, y, z] = [0, 1, 2].map((axis) => Math.fround(a[axis]! - b[axis]!)) as Vector3;
-  return Math.fround(Math.fround(Math.fround(x * x) + Math.fround(y * y)) + Math.fround(z * z));
+/** `(p[a] - p[b]).length_squared()` in float32. */
+function lengthSquared(positions: Float32Array, a: number, b: number): number {
+  const x = f(positions[3 * a]! - positions[3 * b]!);
+  const y = f(positions[3 * a + 1]! - positions[3 * b + 1]!);
+  const z = f(positions[3 * a + 2]! - positions[3 * b + 2]!);
+  return f(f(f(x * x) + f(y * y)) + f(z * z));
 }
 
 /**
@@ -127,24 +153,33 @@ function lengthSquared(a: Vector3, b: Vector3): number {
  * browser and Node target, as the cache is.
  */
 function inputHash(inputs: readonly SurfaceInput[], texelSize: number): string {
-  const indices: number[] = [];
+  const indices = new Int32Array(inputs.reduce((count, input) => count + input.triangles.length, 0));
+  let corner = 0;
   let vertexOffset = 0;
   for (const input of inputs) {
-    for (const corner of input.triangles) indices.push(corner + vertexOffset);
-    vertexOffset += input.positions.length;
+    for (const inputVertex of input.triangles) indices[corner++] = inputVertex + vertexOffset;
+    vertexOffset += input.sources.length;
   }
-  const bytesOf = (array: Float32Array | Int32Array): Uint8Array => new Uint8Array(array.buffer);
+  const bytesOf = (array: Float32Array | Int32Array): Uint8Array =>
+    new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
   return md5Hex([
     bytesOf(new Float32Array([texelSize])),
-    bytesOf(Int32Array.from(indices)),
-    bytesOf(Float32Array.from(inputs.flatMap((input) => input.positions.flat()))),
-    bytesOf(Float32Array.from(inputs.flatMap((input) => input.normals.flat()))),
+    bytesOf(indices),
+    ...inputs.map((input) => bytesOf(input.positions)),
+    ...inputs.map((input) => bytesOf(input.normals)),
   ]);
 }
 
 /** The surface and geometry vertex of each input vertex, across every surface. */
 function vertexOrigins(inputs: readonly SurfaceInput[]): Pick<UnwrapInput, 'vertexSurface' | 'vertexSource'> {
-  const vertexSurface = Int32Array.from(inputs.flatMap((input, surface) => input.sources.map(() => surface)));
-  const vertexSource = Int32Array.from(inputs.flatMap((input) => input.sources));
+  const vertexCount = inputs.reduce((count, input) => count + input.sources.length, 0);
+  const vertexSurface = new Int32Array(vertexCount);
+  const vertexSource = new Int32Array(vertexCount);
+  let first = 0;
+  inputs.forEach((input, surface) => {
+    vertexSurface.fill(surface, first, first + input.sources.length);
+    vertexSource.set(input.sources, first);
+    first += input.sources.length;
+  });
   return { vertexSurface, vertexSource };
 }

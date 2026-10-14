@@ -3,7 +3,9 @@
  * unwraps for lightmaps. The format is `xatlas_mesh_lightmap_unwrap_callback`'s
  * (`modules/xatlas_unwrap/register_types.cpp:57-108`, `:181-219`), filed by
  * `resource_importer_scene.cpp:3257-3266`: little-endian 32-bit words, an entry count, then each
- * entry as a 16-byte MD5 of the unwrap input, the size hint, and the unwrapped mesh.
+ * entry as a 16-byte MD5 of the unwrap input, the size hint, and the unwrapped mesh. Every word
+ * sits at a multiple of 4 bytes, so an entry's arrays are views into `bytes`, which read in the
+ * platform's byte order: little-endian on every browser and Node target.
  */
 
 import { hexBytes } from './md5';
@@ -12,8 +14,6 @@ import { hexBytes } from './md5';
 export interface UnwrapCacheEntry {
   /** The MD5 of the unwrap input, as lowercase hex. */
   hash: string;
-  /** The lightmap size in texels Godot sets as the mesh's `lightmap_size_hint`. */
-  sizeHint: [number, number];
   sourceVertices: Int32Array;
   uvs: Float32Array;
   /** Output triangles over the output vertices, in Godot's winding. */
@@ -22,6 +22,8 @@ export interface UnwrapCacheEntry {
 
 const WORD = 4;
 const HASH_WORDS = 4;
+/** The size hint's two words, which the previewer does not read. */
+const SIZE_HINT_WORDS = 2;
 
 /** The cache's entries in file order. Throws when an entry runs past the end of `bytes`. */
 export function parseUnwrapCache(bytes: ArrayBuffer): UnwrapCacheEntry[] {
@@ -43,11 +45,11 @@ function readEntry(view: DataView, start: number, index: number): { value: Unwra
       throw new Error(`unwrap cache: entry ${index} needs ${end} bytes, the file has ${view.byteLength}`);
     }
   };
-  const headerEnd = start + (HASH_WORDS + 3) * WORD;
+  const vertexCountAt = start + (HASH_WORDS + SIZE_HINT_WORDS) * WORD;
+  const headerEnd = vertexCountAt + WORD;
   need(headerEnd);
   const hash = hexBytes(new Uint8Array(view.buffer, start, HASH_WORDS * WORD));
-  const sizeHint: [number, number] = [view.getInt32(start + 16, true), view.getInt32(start + 20, true)];
-  const vertexCount = view.getInt32(start + 24, true);
+  const vertexCount = view.getInt32(vertexCountAt, true);
 
   const uvsStart = headerEnd + vertexCount * WORD;
   const indexCountAt = uvsStart + vertexCount * 2 * WORD;
@@ -59,23 +61,10 @@ function readEntry(view: DataView, start: number, index: number): { value: Unwra
   return {
     value: {
       hash,
-      sizeHint,
-      sourceVertices: readInt32s(view, headerEnd, vertexCount),
-      uvs: readFloat32s(view, uvsStart, vertexCount * 2),
-      indices: readInt32s(view, indexCountAt + WORD, indexCount),
+      sourceVertices: new Int32Array(view.buffer, headerEnd, vertexCount),
+      uvs: new Float32Array(view.buffer, uvsStart, vertexCount * 2),
+      indices: new Int32Array(view.buffer, indexCountAt + WORD, indexCount),
     },
     end,
   };
-}
-
-function readInt32s(view: DataView, start: number, count: number): Int32Array {
-  const values = new Int32Array(count);
-  for (let i = 0; i < count; i++) values[i] = view.getInt32(start + i * WORD, true);
-  return values;
-}
-
-function readFloat32s(view: DataView, start: number, count: number): Float32Array {
-  const values = new Float32Array(count);
-  for (let i = 0; i < count; i++) values[i] = view.getFloat32(start + i * WORD, true);
-  return values;
 }

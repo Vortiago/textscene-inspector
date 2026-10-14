@@ -11,7 +11,6 @@ import type { UnwrapInput } from './unwrapInput';
 /** One rebuilt surface: its output vertices in first-use order, and its triangles over them. */
 interface SurfaceCorners {
   outputVertices: number[];
-  slotOf: Map<number, number>;
   index: number[];
 }
 
@@ -27,13 +26,16 @@ export function rebuildSurfaces(
   entry: UnwrapCacheEntry
 ): (THREE.BufferGeometry | null)[] {
   const unwrapped = surfaces.slice(0, input.surfaceCount);
-  const corners = unwrapped.map((): SurfaceCorners => ({ outputVertices: [], slotOf: new Map(), index: [] }));
-  for (let i = 0; i < entry.indices.length; i += 3) {
-    const triangle = [entry.indices[i]!, entry.indices[i + 1]!, entry.indices[i + 2]!];
-    const surface = triangleSurface(triangle, input, entry);
+  const corners = unwrapped.map((): SurfaceCorners => ({ outputVertices: [], index: [] }));
+  // An output vertex belongs to one surface, so one table numbers them for every surface.
+  const slotOf = new Int32Array(entry.sourceVertices.length).fill(-1);
+  for (let i = 0; i + 2 < entry.indices.length; i += 3) {
+    const [a, b, c] = [entry.indices[i]!, entry.indices[i + 1]!, entry.indices[i + 2]!];
+    const surface = corners[triangleSurface(a, b, c, input, entry)]!;
     // Godot's winding is the glTF winding with two corners swapped, so swap them back for three.
-    for (const outputVertex of [triangle[0]!, triangle[2]!, triangle[1]!])
-      addCorner(corners[surface]!, outputVertex);
+    addCorner(surface, slotOf, a);
+    addCorner(surface, slotOf, c);
+    addCorner(surface, slotOf, b);
   }
   return surfaces.map((geometry, surface) =>
     surface < unwrapped.length ? surfaceGeometry(geometry, corners[surface]!, input, entry) : null
@@ -41,14 +43,20 @@ export function rebuildSurfaces(
 }
 
 /** The one surface a triangle's corners come from (`importer_mesh.cpp:1186-1192`). */
-function triangleSurface(triangle: readonly number[], input: UnwrapInput, entry: UnwrapCacheEntry): number {
-  const [first, ...rest] = triangle.map(
-    (outputVertex) => input.vertexSurface[inputVertex(outputVertex, input, entry)]!
-  );
-  if (rest.some((surface) => surface !== first)) {
-    throw new Error(`unwrap cache: a triangle spans surfaces ${first} and ${rest.join(', ')}`);
+function triangleSurface(
+  a: number,
+  b: number,
+  c: number,
+  input: UnwrapInput,
+  entry: UnwrapCacheEntry
+): number {
+  const surfaceOf = (outputVertex: number): number =>
+    input.vertexSurface[inputVertex(outputVertex, input, entry)]!;
+  const [first, second, third] = [surfaceOf(a), surfaceOf(b), surfaceOf(c)];
+  if (second !== first || third !== first) {
+    throw new Error(`unwrap cache: a triangle spans surfaces ${first}, ${second} and ${third}`);
   }
-  return first!;
+  return first;
 }
 
 function inputVertex(outputVertex: number, input: UnwrapInput, entry: UnwrapCacheEntry): number {
@@ -68,13 +76,9 @@ function inputVertex(outputVertex: number, input: UnwrapInput, entry: UnwrapCach
   return source;
 }
 
-function addCorner(corners: SurfaceCorners, outputVertex: number): void {
-  let slot = corners.slotOf.get(outputVertex);
-  if (slot === undefined) {
-    slot = corners.outputVertices.push(outputVertex) - 1;
-    corners.slotOf.set(outputVertex, slot);
-  }
-  corners.index.push(slot);
+function addCorner(corners: SurfaceCorners, slotOf: Int32Array, outputVertex: number): void {
+  if (slotOf[outputVertex] === -1) slotOf[outputVertex] = corners.outputVertices.push(outputVertex) - 1;
+  corners.index.push(slotOf[outputVertex]!);
 }
 
 function surfaceGeometry(

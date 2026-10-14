@@ -5,6 +5,7 @@
  * provider read the claim table without pulling in a renderer.
  */
 
+import { UNWRAP_CACHE_SUFFIX } from '../../../godot/index.js';
 import { registerResourceSlice } from '../../sliceRegistration';
 
 registerResourceSlice({
@@ -15,7 +16,7 @@ registerResourceSlice({
   typeNames: ['GLB', 'GLTF', 'GLBMesh'],
   // `.bin` is a text glTF's external buffer, and `.unwrap_cache` the importer's lightmap UV2 of
   // an asset: binary, and watched with its glTF.
-  extensions: ['.glb', '.gltf', '.bin', '.unwrap_cache'],
+  extensions: ['.glb', '.gltf', '.bin', UNWRAP_CACHE_SUFFIX],
   binaryBytes: true,
   // A loaded glTF is one Object3D tree; two consumers of the same file each need
   // their own, or the second mount reparents the first's.

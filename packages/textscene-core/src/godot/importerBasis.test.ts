@@ -4,9 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { gltfNodeBasis, rowScaledBasis, transformChainScale } from './importerBasis';
-
-const IDENTITY = gltfNodeBasis({});
+import { IDENTITY_BASIS, gltfNodeBasis, rowScaledBasis, transformChainScale } from './importerBasis';
 
 function float32(bits: number): number {
   const view = new DataView(new ArrayBuffer(4));
@@ -20,7 +18,7 @@ describe('transformChainScale', () => {
   it('measures a quarter turn about X, as zdm2 carries it, at exactly 1', () => {
     const zdm2 = gltfNodeBasis({ rotation: [0.7071068286895752, 0, 0, 0.7071068286895752] });
 
-    expect(transformChainScale([zdm2, IDENTITY])).toEqual([1, 1, 1]);
+    expect(transformChainScale([zdm2, IDENTITY_BASIS])).toEqual([1, 1, 1]);
   });
 
   it("measures a rotated, scaled node at Godot's rounded column lengths", () => {
@@ -47,7 +45,7 @@ describe('transformChainScale', () => {
 
   it("includes a root scaled by the sidecar's unbaked root scale", () => {
     const child = gltfNodeBasis({ rotation: [0.1, 0.7, 0.1, 0.7], scale: [-1.5, 1, 1] });
-    const root = rowScaledBasis(IDENTITY, 0.1);
+    const root = rowScaledBasis(IDENTITY_BASIS, [0.1, 0.1, 0.1]);
 
     expect(transformChainScale([child, root])).toEqual(scaleOf(0x3e199999, 0x3dcccccd, 0x3dcccccd));
   });

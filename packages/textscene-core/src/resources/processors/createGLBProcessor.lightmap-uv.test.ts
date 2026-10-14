@@ -23,10 +23,11 @@ const CUBE_MESH_ID = 'cube_Cube_001';
 const sidecar = (params: string): string => `[remap]\n\nimporter="scene"\n\n[params]\n\n${params}\n`;
 const STATIC_LIGHTMAPS = sidecar('meshes/light_baking=2\nmeshes/lightmap_texel_size=0.2');
 
-async function load(
+/** Every surface of the loaded asset at `path`, in scene order. */
+async function loadSurfaces(
   path: string,
   files: Record<string, string | ArrayBuffer>
-): Promise<THREE.BufferGeometry> {
+): Promise<THREE.Mesh[]> {
   const fileEventBus = new FileEventBus({
     loadResource: async (requested: string) => files[requested] ?? null,
   });
@@ -35,11 +36,18 @@ async function load(
 
   const loaded = eventBus.once<THREE.Object3D>('glb', 'loaded', path, 5000);
   processor.request(path);
-  let geometry: THREE.BufferGeometry | undefined;
+  const surfaces: THREE.Mesh[] = [];
   (await loaded).traverse((node) => {
-    if (isMesh(node)) geometry = node.geometry;
+    if (isMesh(node)) surfaces.push(node);
   });
-  return geometry!;
+  return surfaces;
+}
+
+async function load(
+  path: string,
+  files: Record<string, string | ArrayBuffer>
+): Promise<THREE.BufferGeometry> {
+  return (await loadSurfaces(path, files)).at(-1)!.geometry;
 }
 
 function loadCube(files: Record<string, string | ArrayBuffer>): Promise<THREE.BufferGeometry> {
@@ -130,22 +138,13 @@ describe('createGLBProcessor: lightmap UV2 from the unwrap cache', () => {
 
   it("drops a last surface without normals, which Godot's unwrapped mesh lacks", async () => {
     const path = 'res://mix.glb';
-    const fileEventBus = new FileEventBus({
-      loadResource: async (requested: string) =>
-        ({
-          [path]: litAndBareGlb(),
-          [`${path}.import`]: STATIC_LIGHTMAPS,
-          [`${path}.unwrap_cache`]: litAndBareCache(Math.fround(0.2)),
-        })[requested] ?? null,
-    });
-    const eventBus = new ResourceEventBus();
-    const loaded = eventBus.once<THREE.Object3D>('glb', 'loaded', path, 5000);
-    createGLBProcessor(fileEventBus, eventBus, new DependencyGraph()).request(path);
 
-    const surfaces: THREE.Mesh[] = [];
-    (await loaded).traverse((node) => {
-      if (isMesh(node)) surfaces.push(node);
+    const surfaces = await loadSurfaces(path, {
+      [path]: litAndBareGlb(),
+      [`${path}.import`]: STATIC_LIGHTMAPS,
+      [`${path}.unwrap_cache`]: litAndBareCache(Math.fround(0.2)),
     });
+
     expect(surfaces.map((surface) => Array.from(surface.geometry.getAttribute('uv1').array))).toEqual([
       LIT_UV2,
     ]);

@@ -34,6 +34,11 @@ export function isGltfJsonObject(value: unknown): value is GltfJsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** The entries of a glTF array property: an entry that is not an object reads as empty, and a non-array as none. */
+export function gltfObjects(value: unknown): GltfJsonObject[] {
+  return Array.isArray(value) ? value.map((entry) => (isGltfJsonObject(entry) ? entry : {})) : [];
+}
+
 /**
  * Whether a parsed glTF document uses `GODOT_single_root`. Its glTF node 0 is then the scene root,
  * and the importer generates no other root (`gltf_document.cpp:6873-6883`).

@@ -6,9 +6,10 @@
 
 import type * as THREE from 'three';
 import type { GLTF, GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
-import { isGltfJsonObject, type GltfJsonObject } from '../../../../godot/gltf';
+import { gltfObjects } from '../../../../godot/gltf';
 import { gltfMeshNames, type GltfNamingOptions } from '../../../../godot/gltfNodeNames';
 import {
+  IDENTITY_BASIS,
   gltfNodeBasis,
   rowScaledBasis,
   transformChainScale,
@@ -46,6 +47,7 @@ export async function applyLightmapUv(
 ): Promise<void> {
   const entries = readEntries(lightmapUv);
   const meshIds = gltfMeshNames(gltf.parser.json, naming);
+  const rebuiltMeshes = new Map<number, readonly (THREE.BufferGeometry | null)[]>();
   for (const [mesh, node] of firstMeshNodes(root, gltf.parser.associations)) {
     const meshId = meshIds[mesh] ?? '';
     if (!lightmapUv.unwrap.unwraps(meshId)) continue;
@@ -58,8 +60,9 @@ export async function applyLightmapUv(
       meshId,
       lightmapUv
     );
-    if (rebuilt) replaceSurfaces(root, gltf.parser.associations, mesh, rebuilt);
+    if (rebuilt) rebuiltMeshes.set(mesh, rebuilt);
   }
+  if (rebuiltMeshes.size > 0) replaceSurfaces(root, gltf.parser.associations, rebuiltMeshes);
 }
 
 /** The cache's entries by hash: none for a missing or unreadable cache. */
@@ -134,18 +137,14 @@ function placement(
     const index = gltf.parser.associations.get(object)?.nodes;
     if (index !== undefined) chain.push(gltfNodeBasis(nodes[index] ?? {}));
   }
-  if (rootScale && !rootScale.bake) scaleSceneRoot(chain, root, gltf, rootScale.scale);
+  if (rootScale && !rootScale.bake) {
+    // `Node3D::scale` on the scene root: a `GODOT_single_root` file's root is its node 0, which
+    // ends the chain, and any other file's root is a node of its own.
+    const rootIsNode = gltf.parser.associations.get(root)?.nodes !== undefined;
+    const { scale } = rootScale;
+    chain.push(rowScaledBasis(rootIsNode ? chain.pop()! : IDENTITY_BASIS, [scale, scale, scale]));
+  }
   return { scale: transformChainScale(chain), vertexScale: rootScale?.bake ? rootScale.scale : 1 };
-}
-
-/**
- * `Node3D::scale` on the scene root: a `GODOT_single_root` file's root is its node 0, which the
- * chain already ends with, and any other file's root is a node of its own.
- */
-function scaleSceneRoot(chain: Basis32[], root: THREE.Object3D, gltf: GLTF, scale: number): void {
-  const rootIsNode = gltf.parser.associations.get(root)?.nodes !== undefined;
-  if (rootIsNode) chain.push(rowScaledBasis(chain.pop()!, scale));
-  else chain.push(rowScaledBasis(gltfNodeBasis({}), scale));
 }
 
 function rebuiltSurfaces(
@@ -182,19 +181,20 @@ function rebuiltSurfaces(
 
 /**
  * Puts each rebuilt surface on every object that draws that primitive, the node clones included,
- * and removes the objects of a surface the rebuild dropped.
+ * and removes the objects of a surface the rebuild dropped. `rebuiltMeshes` maps a glTF mesh to
+ * its rebuilt surfaces.
  */
 function replaceSurfaces(
   root: THREE.Object3D,
   associations: ReadonlyMap<unknown, GLTFReference>,
-  mesh: number,
-  rebuilt: readonly (THREE.BufferGeometry | null)[]
+  rebuiltMeshes: ReadonlyMap<number, readonly (THREE.BufferGeometry | null)[]>
 ): void {
   const replaced = new Set<THREE.BufferGeometry>();
   const dropped: THREE.Object3D[] = [];
   root.traverse((object) => {
     const { meshes, primitives } = associations.get(object) ?? {};
-    if (meshes !== mesh || primitives === undefined) return;
+    const rebuilt = meshes === undefined ? undefined : rebuiltMeshes.get(meshes);
+    if (!rebuilt || primitives === undefined) return;
     const surface = object as THREE.Mesh;
     replaced.add(surface.geometry);
     const geometry = rebuilt[primitives];
@@ -203,8 +203,4 @@ function replaceSurfaces(
   });
   for (const surface of dropped) surface.removeFromParent();
   for (const geometry of replaced) geometry.dispose();
-}
-
-function gltfObjects(value: unknown): GltfJsonObject[] {
-  return Array.isArray(value) ? value.map((entry) => (isGltfJsonObject(entry) ? entry : {})) : [];
 }

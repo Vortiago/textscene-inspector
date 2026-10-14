@@ -3,9 +3,10 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type * as THREE from 'three';
+import { scenesDir } from '../../../../../parser/testing/parserKit';
 import { initGlbModules } from '../../glbProcessing';
 
-const DEMO = resolve(import.meta.dirname, '../../../../../../../../scenes/demos/3d/global_illumination');
+const DEMO = resolve(scenesDir(), 'demos/3d/global_illumination');
 
 /** A demo file as a standalone ArrayBuffer, since a Node Buffer is a view into a shared pool. */
 export function demoBytes(file: string): ArrayBuffer {

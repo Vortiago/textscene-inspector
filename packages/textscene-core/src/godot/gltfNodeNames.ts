@@ -5,7 +5,7 @@
  * the names three's loader gives.
  */
 
-import { isGltfJsonObject, type GltfJsonObject } from './gltf.js';
+import { gltfObjects, isGltfJsonObject, type GltfJsonObject } from './gltf.js';
 import { gltfSkeletonBones, type ImportNode } from './gltfSkeletons.js';
 import { validateNodeName } from './nodeName.js';
 
@@ -84,10 +84,6 @@ function boneNames(
   return byNode;
 }
 
-function objects(value: unknown): GltfJsonObject[] {
-  return Array.isArray(value) ? value.map((entry) => (isGltfJsonObject(entry) ? entry : {})) : [];
-}
-
 function indexes(value: unknown): number[] {
   return Array.isArray(value) ? value.filter((entry): entry is number => Number.isInteger(entry)) : [];
 }
@@ -129,7 +125,7 @@ function importNodes(nodes: readonly GltfJsonObject[]): ImportNode[] {
 
 /** `_parse_scenes` (`gltf_document.cpp:527-561`): the loaded scene's root nodes and its name. */
 function loadedScene(json: GltfJsonObject, fileName: string): { roots: number[]; name: string } {
-  const scenes = objects(json['scenes']);
+  const scenes = gltfObjects(json['scenes']);
   const scene = scenes[Number.isInteger(json['scene']) ? (json['scene'] as number) : 0];
   if (!scene) return { roots: [], name: '' };
   const name = text(scene['name']);
@@ -167,13 +163,13 @@ function importNames(json: unknown, options: GltfNamingOptions): { nodes: GltfNo
   names.take('Skeleton3D');
   const scene = loadedScene(json, fileName);
   const sceneName =
-    namingVersion === 0 && objects(json['scenes']).length > 0 ? names.take(scene.name) : scene.name;
+    namingVersion === 0 && gltfObjects(json['scenes']).length > 0 ? names.take(scene.name) : scene.name;
 
-  const nodeObjects = objects(json['nodes']);
+  const nodeObjects = gltfObjects(json['nodes']);
   const nodes = importNodes(nodeObjects);
   // Before 4.5 the roots are every parentless node (`gltf_document.cpp:655-676`).
   const roots = namingVersion < 2 ? nodes.flatMap((node, i) => (node.parent < 0 ? [i] : [])) : scene.roots;
-  const skinJoints = objects(json['skins']).map((skin) =>
+  const skinJoints = gltfObjects(json['skins']).map((skin) =>
     indexes(skin['joints']).filter((j) => j < nodes.length)
   );
   const skeletons = gltfSkeletonBones(
@@ -192,7 +188,7 @@ function importNames(json: unknown, options: GltfNamingOptions): { nodes: GltfNo
     return names.take(namingVersion === 0 ? names.take(unnamed) : unnamed);
   });
   // `_parse_meshes` names each mesh before `_create_skeletons` names a bone (`gltf_document.cpp:1434`).
-  const meshes = objects(json['meshes']).map((mesh) =>
+  const meshes = gltfObjects(json['meshes']).map((mesh) =>
     names.take(`${sceneName}_${text(mesh['name']) || 'mesh'}`)
   );
   const bonesByNode = boneNames(nodeObjects, skeletons, names.used, namingVersion);
