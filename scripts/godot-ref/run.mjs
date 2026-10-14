@@ -707,7 +707,7 @@ func _render_3d(target: Node) -> void:
 	_advance_particles(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
-		_hide_canvas_layers(target)
+		_hide_2d(target)
 		_apply_preview_lighting(target)
 	# A refusal must not reach _place_camera: rendering nothing is the whole point.
 	if not _build_csg(target):
@@ -892,14 +892,11 @@ func _freeze_game_logic(node: Node) -> void:
 	for child in node.get_children():
 		_freeze_game_logic(child)
 
-# The editor keeps the edited scene under the 2D editor's viewport
-# (editor_node.cpp:8648), and a CanvasLayer attaches to its own viewport
-# (canvas_layer.cpp:174-177), so the 3D editor viewport never draws one.
-func _hide_canvas_layers(node: Node) -> void:
-	if node is CanvasLayer:
-		(node as CanvasLayer).visible = false
-	for child in node.get_children():
-		_hide_canvas_layers(child)
+# The editor keeps the edited scene under the 2D editor's viewport, which draws
+# no 3D (editor_node.cpp:8648-8652). Every CanvasItem and CanvasLayer draws on
+# that viewport's canvas, so the 3D editor view shows none of them.
+func _hide_2d(target: Node) -> void:
+	RenderingServer.viewport_set_disable_2d(target.get_viewport().get_viewport_rid(), true)
 
 # EDITOR-MODE PARTICLES. The pause above stops game logic, which is what the
 # Node3D editor does — except for one thing it does NOT do: particles keep
@@ -955,21 +952,18 @@ func _converge() -> void:
 	await RenderingServer.frame_post_draw
 
 # An UPDATE_ONCE ReflectionProbe renders its faces in one frame, then filters one
-# roughness layer per frame until its mipmaps run out (light_storage.cpp:1661-1668),
-# capped at roughness_layers (:1525). The scene renders one such probe at a time
-# (renderer_scene_cull.cpp:3739-3751), so the editor shows each capture only later.
-func _capture_reflection_probes(node: Node) -> void:
-	var layers: int = ProjectSettings.get_setting("rendering/reflections/sky_reflections/roughness_layers")
-	for _frame in _count_once_probes(node) * layers:
-		await RenderingServer.frame_post_draw
+# roughness layer per frame: at most roughness_layers frames in all on Forward+
+# (light_storage.cpp:1525,1661-1668), and 1 + 8 on Compatibility
+# (drivers/gles3/storage/light_storage.cpp:832-833,1026-1033). The scene renders
+# one such probe at a time (renderer_scene_cull.cpp:3739-3751).
+const COMPATIBILITY_PROBE_FRAMES := 9
 
-func _count_once_probes(node: Node) -> int:
-	var count := 0
-	if node is ReflectionProbe and (node as ReflectionProbe).update_mode == ReflectionProbe.UPDATE_ONCE:
-		count = 1
-	for child in node.get_children():
-		count += _count_once_probes(child)
-	return count
+func _capture_reflection_probes(target: Node) -> void:
+	var layers: int = ProjectSettings.get_setting("rendering/reflections/sky_reflections/roughness_layers")
+	var probes := target.find_children("*", "ReflectionProbe", true, false) \
+		.filter(func(probe): return probe.update_mode == ReflectionProbe.UPDATE_ONCE)
+	for _frame in probes.size() * maxi(layers, COMPATIBILITY_PROBE_FRAMES):
+		await RenderingServer.frame_post_draw
 
 # The frame to capture. Temporal volumetric fog mixes temporal_reprojection_amount
 # of a history that starts black (volumetric_fog_process.glsl:683, fog.cpp:482),

@@ -702,26 +702,30 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     await expect(renderReference({ scene: snapScene, out, mode: '2d' })).rejects.toThrow(/--mode 2d-root/);
   }, 360_000);
 
+  /** A calibration scene from `scenes/`, rendered at 160x120, as PNG bytes. */
+  async function renderCalibrationScene(file, options) {
+    const out = join(await scratchDir(), 'calibration.png');
+    await renderReference({
+      scene: join(import.meta.dirname, 'scenes', file),
+      out,
+      width: 160,
+      height: 120,
+      ...options,
+    });
+    return readFile(out);
+  }
+
+  const channelsOf = async (file, options) => PNG.sync.read(await renderCalibrationScene(file, options)).data;
+
   /**
    * Volumetric fog with temporal reprojection mixes 0.9 of a history that starts black
    * (`volumetric_fog_process.glsl:683`, `fog.cpp:482`), so six frames leave it dark by 0.9^6.
    * A converged capture shows the fog a running game shows, which reprojection off draws at once.
    */
   it('captures volumetric fog once its temporal history has converged', async () => {
-    const capture = async (variant) => {
-      const out = join(await scratchDir(), 'fog.png');
-      await renderReference({
-        scene: join(import.meta.dirname, 'scenes', `volumetric-fog-history-${variant}.tscn`),
-        out,
-        width: 160,
-        height: 120,
-        previews: false,
-        camera: [0, 2.5, 6],
-        lookAt: [0, 1.5, 0],
-      });
-      return PNG.sync.read(await readFile(out)).data;
-    };
-    const [blended, direct] = [await capture('on'), await capture('off')];
+    const options = { previews: false, camera: [0, 2.5, 6], lookAt: [0, 1.5, 0] };
+    const blended = await channelsOf('volumetric-fog-history-on.tscn', options);
+    const direct = await channelsOf('volumetric-fog-history-off.tscn', options);
 
     const largestGap = blended.reduce((gap, value, i) => Math.max(gap, Math.abs(value - direct[i])), 0);
     expect(largestGap).toBeLessThanOrEqual(1);
@@ -729,51 +733,35 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
 
   /**
    * An UPDATE_ONCE ReflectionProbe captures over several frames, and the scene renders one such
-   * probe at a time (`renderer_scene_cull.cpp:3739-3751`), so six frames leave most probes empty.
-   * A capture that waits them out shows what UPDATE_ALWAYS shows at once. The two filter the
-   * roughness layers differently (`light_storage.cpp:1655,1661`), so they agree on average only.
+   * probe at a time (`renderer_scene_cull.cpp:3739-3751`), so six frames leave a probe empty. A
+   * capture that waits them out shows what UPDATE_ALWAYS shows at once. The two filter the
+   * roughness layers differently (`light_storage.cpp:1655,1661`), so a few texels differ.
    */
   it('captures every ReflectionProbe that updates once before it saves the frame', async () => {
-    const capture = async (variant) => {
-      const out = join(await scratchDir(), 'probe.png');
-      await renderReference({
-        scene: join(import.meta.dirname, 'scenes', `reflection-probe-capture-${variant}.tscn`),
-        out,
-        width: 160,
-        height: 120,
-        camera: [0, 2.5, 6],
-        lookAt: [0, 0.5, 0],
-      });
-      return PNG.sync.read(await readFile(out)).data;
-    };
-    const [once, always] = [await capture('once'), await capture('always')];
+    const options = { camera: [0, 2.5, 6], lookAt: [0, 0.5, 0] };
+    const once = await channelsOf('reflection-probe-capture-once.tscn', options);
+    const always = await channelsOf('reflection-probe-capture-always.tscn', options);
 
-    const meanGap = once.reduce((sum, value, i) => sum + Math.abs(value - always[i]), 0) / once.length;
-    expect(meanGap).toBeLessThanOrEqual(1);
+    const farOff = once.filter((value, i) => Math.abs(value - always[i]) > 4).length;
+    expect(farOff / once.length).toBeLessThan(0.01);
   }, 360_000);
 
   /**
-   * The editor keeps the edited scene under its 2D viewport (`editor_node.cpp:8648`), and a
-   * CanvasLayer attaches to its own viewport (`canvas_layer.cpp:174-177`), so the 3D editor
-   * viewport never draws one. A running game draws it over the 3D frame.
+   * The editor keeps the edited scene under its 2D viewport (`editor_node.cpp:8648-8652`), so the
+   * 3D editor viewport draws no CanvasItem, in a CanvasLayer or not. A running game draws both.
    */
-  it('draws no CanvasLayer over a 3D scene under the previews', async () => {
-    const centre = async (previews) => {
-      const out = join(await scratchDir(), 'overlay.png');
-      await renderReference({
-        scene: join(import.meta.dirname, 'scenes', 'canvas-layer-over-3d.tscn'),
-        out,
-        width: 160,
-        height: 120,
-        previews,
-      });
-      const [pixel] = probePixels(await readFile(out), [[80, 60]]);
-      return pixel.rgb;
+  it('draws no 2D over a 3D scene under the previews', async () => {
+    const covers = async (previews) => {
+      const png = await renderCalibrationScene('2d-over-3d.tscn', { previews });
+      return probePixels(png, [
+        [40, 60],
+        [120, 60],
+      ]).map((pixel) => pixel.rgb);
     };
     const MAGENTA = [255, 0, 255];
 
-    expect(await centre(true)).not.toEqual(MAGENTA);
-    expect(await centre(false)).toEqual(MAGENTA);
+    for (const rgb of await covers(true)) expect(rgb).not.toEqual(MAGENTA);
+    expect(await covers(false)).toEqual([MAGENTA, MAGENTA]);
   }, 360_000);
 
   it('lights the scene only because of the previews — --no-previews is runtime semantics', async () => {
