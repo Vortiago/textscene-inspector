@@ -19,6 +19,8 @@ A 1×1 panel and a 4×0.05 strip at the same energy, over matte plates. `area_no
 
 The 1×1 panel of the energy scene with a red-to-blue gradient as its `area_texture`. The plate below the panel turns purple: at that distance the light reads a blurred mip of the texture, which mixes the two colours. A surface closer to the panel reads a sharper mip and shows the red and the blue apart.
 
+An `AtlasTexture` as the `area_texture` colours the light with its whole sheet, not its region, as Godot does: the light reads the texture by its RID, which is the sheet's.
+
 ## Shadow
 <!-- compare: image=unit-area-light3d status=done fixture=unit-area-light3d.tscn -->
 

@@ -7,7 +7,12 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { extResourceAtlasTextureSize, inlineTexture2DSize, useTexture2D } from './useTexture2D';
+import {
+  extResourceAtlasTextureSize,
+  inlineTexture2DSize,
+  useTexture2D,
+  useTexture2DRid,
+} from './useTexture2D';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { parseTresFile, type ParsedResource } from '../parser/parsedResource';
 import { TscnParser } from '../parser/TscnParser';
@@ -658,6 +663,39 @@ describe('useTexture2D — inline AtlasTexture', () => {
 
     expect(unknown.result.current.missing).toBe(true);
     expect(orphan.result.current.missing).toBe(true);
+  });
+
+  it("gives a slot read by RID the AtlasTexture's whole sheet, uncropped", () => {
+    const { calls } = stubCanvas();
+    const whole = sheet();
+    const { result } = renderHook(
+      () => useTexture2DRid('SubResource("AtlasTexture_cell")', externalResources, resources),
+      { wrapper: withLoader({ path: 'res://sheet.png', texture: whole }) }
+    );
+
+    expect(result.current).toEqual({ texture: whole, missing: false });
+    expect(calls).toEqual([]);
+  });
+
+  it('gives a slot read by RID a plain image as it is (edge case)', () => {
+    const image = sheet();
+    const { result } = renderHook(
+      () => useTexture2DRid('ExtResource("1_sheet")', externalResources, resources),
+      {
+        wrapper: withLoader({ path: 'res://sheet.png', texture: image }),
+      }
+    );
+
+    expect(result.current).toEqual({ texture: image, missing: false });
+  });
+
+  it('reports an unresolvable sheet behind a slot read by RID as missing (error case)', () => {
+    const { result } = renderHook(
+      () => useTexture2DRid('SubResource("AtlasTexture_unknownsheet")', externalResources, resources),
+      { wrapper: withLoader() }
+    );
+
+    expect(result.current).toEqual({ texture: null, missing: true });
   });
 });
 

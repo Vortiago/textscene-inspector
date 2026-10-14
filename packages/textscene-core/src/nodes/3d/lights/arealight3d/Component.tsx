@@ -20,7 +20,7 @@ import { AtlasAreaShadow, type AreaShadowLight } from '../../../../r3f/positiona
 import { AREA_LIGHT_SHADOW_BIAS_DEFAULT } from '../../../../godot/areaLightShadow';
 import { areaShadowDeclaration } from './areaLightShadow';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { useTexture2D } from '../../../../resources/useTexture2D';
+import { useTexture2DRid } from '../../../../resources/useTexture2D';
 import {
   areaTextureUserData,
   holdAreaTexture,
@@ -41,7 +41,7 @@ function areaLightIntensity(properties: AreaLight3DProperties): number {
 /** The `area_texture`, held in the area light atlas while the light shows it. */
 function useAreaTexture(ref: string | undefined): THREE.Texture | null {
   const { externalResources, internalResources } = useSceneResources();
-  const { texture } = useTexture2D(ref, externalResources, internalResources);
+  const { texture } = useTexture2DRid(ref, externalResources, internalResources);
   useEffect(() => {
     if (!texture) return;
     holdAreaTexture(texture);

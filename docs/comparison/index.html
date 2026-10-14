@@ -415,7 +415,8 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>The 1×1 panel of the energy scene with a red-to-blue gradient as its <code>area_texture</code>. The plate below the panel turns purple: at that distance the light reads a blurred mip of the texture, which mixes the two colours. A surface closer to the panel reads a sharper mip and shows the red and the blue apart.</p></div>
+        <div class="prose"><p>The 1×1 panel of the energy scene with a red-to-blue gradient as its <code>area_texture</code>. The plate below the panel turns purple: at that distance the light reads a blurred mip of the texture, which mixes the two colours. A surface closer to the panel reads a sharper mip and shows the red and the blue apart.</p>
+<p>An <code>AtlasTexture</code> as the <code>area_texture</code> colours the light with its whole sheet, not its region, as Godot does: the light reads the texture by its RID, which is the sheet's.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Shadow</h3><span class="status st-done">Done</span></div>
