@@ -17,7 +17,7 @@ const installedHeight = installedUniformValue(FRAMEBUFFER_HEIGHT_UNIFORM);
  * One shared value. `UniformsUtils.cloneUniforms` keeps a typed array by reference
  * (three r186 `UniformsUtils.js:43-64`), so every material's clone reads this buffer. Written only by
  * `writeFramebufferHeight`, which the renderer's shadow pass calls before each render's draw
- * (`../positionalShadow/positionalShadowPass.ts`). After a dev server reloads this module, it is the
+ * (`../shadowPass.ts`). After a dev server reloads this module, it is the
  * buffer the earlier evaluation installed, which every compiled program reads.
  */
 export const framebufferHeight =

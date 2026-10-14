@@ -9,7 +9,8 @@ import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { projectVolumetricFogSettings } from '../../parser/projectSettingsParser.js';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
-import { observeSceneCull, observeSceneRenderEnd } from '../sceneRenderCamera.js';
+import { observeSceneRenderEnd } from '../sceneRenderCamera.js';
+import { readShadowMaps } from '../shadowPass.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { finishFog, prepareFog, type DepthFog, type FogSettings } from './fogFrame.js';
 import { acquireFogPasses } from './fogPasses.js';
@@ -24,6 +25,13 @@ export interface FogLayerProps {
 function isLight(object: THREE.Object3D): object is THREE.Light {
   return (object as THREE.Light).isLight === true;
 }
+
+function isMesh(object: THREE.Object3D): object is THREE.Mesh {
+  return (object as THREE.Mesh).isMesh === true;
+}
+
+/** Depth fog reads no shadow, so it leaves the casters untracked. */
+const NO_CASTERS: readonly THREE.Mesh[] = [];
 
 export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
   const gl = useThree((state) => state.gl);
@@ -50,15 +58,21 @@ export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
   useEffect(() => {
     const { passes, release } = acquireFogPasses(gl);
     const lights = new TrackedObjects(scene, isLight);
-    // After every other observer, so the fog reads each light's distance fade for this camera.
-    const stopPreparing = observeSceneCull(scene, (camera) => {
-      if (prepareFog(gl, scene, camera, settings.current, passes, lights.current())) invalidate();
+    const casters = new TrackedObjects(scene, isMesh);
+    // After the shadow pass, so the fog reads this render's shadow maps, and each light's distance
+    // fade for this camera, which the scene's observers wrote before it.
+    const stopPreparing = readShadowMaps(gl, (rendered, camera) => {
+      if (rendered !== scene) return;
+      const isVolumetric = settings.current.volumetric !== null;
+      const objects = { lights: lights.current(), casters: isVolumetric ? casters.current() : NO_CASTERS };
+      if (prepareFog(gl, scene, camera, settings.current, passes, objects)) invalidate();
     });
     const stopFinishing = observeSceneRenderEnd(scene, finishFog);
     return () => {
       stopPreparing();
       stopFinishing();
       lights.dispose();
+      casters.dispose();
       passes.volume.forget(scene);
       release();
     };

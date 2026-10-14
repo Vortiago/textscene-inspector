@@ -28,6 +28,12 @@ export const LIGHTING_SCENES = [
   // Exponential depth fog over boxes at three distances. The header states why no other golden
   // shows it.
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
+  // A directional shadow in the volumetric fog. The header states why no other golden shows it.
+  { name: 'volumetric-fog-shadow', file: 'unit-volumetric-fog-shadow.tscn' },
+  // The spot shadow bias in the volumetric fog. The header states why no other golden shows it.
+  { name: 'volumetric-fog-spot-shadow-bias', file: 'unit-volumetric-fog-spot-shadow-bias.tscn' },
+  // A colour background under thin volumetric fog. The header states why no other golden shows it.
+  { name: 'volumetric-fog-color-background', file: 'unit-volumetric-fog-color-background.tscn' },
   // Godot's editor preview sun and environment on a scene that declares neither
   // (ADR-0025). Godot's render of it is at
   // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing.

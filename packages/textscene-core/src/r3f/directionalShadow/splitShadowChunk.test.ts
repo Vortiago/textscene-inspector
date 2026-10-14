@@ -11,6 +11,7 @@ import { SOFT_SHADOW_FILTER, softShadowFilterChunk } from '../shadowFilter/softS
 import { FRAMEBUFFER_HEIGHT_UNIFORM, framebufferHeight } from '../shadowFilter/framebufferRows';
 import { godotSplitShadowChunk, installGodotSplitShadow } from './splitShadowChunk';
 import { NO_BLEND, type SplitSlot } from './fitDirectionalShadowSplits';
+import { GLSL_BUILT_INS } from '../testing/glslScalar';
 import { warningsOf } from '../testing/logWarnings';
 
 const CHUNK = 'shadowmap_pars_fragment';
@@ -53,16 +54,6 @@ function lookupBody(chunk: string): string {
   return chunk.slice(open, close);
 }
 
-/** GLSL's `smoothstep`, whose band the blend runs through. */
-function smoothstep(edge0: number, edge1: number, x: number): number {
-  const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0), 1);
-  return t * t * (3 - 2 * t);
-}
-
-function mix(a: number, b: number, weight: number): number {
-  return a * (1 - weight) + b * weight;
-}
-
 /**
  * Runs the lookup at `depth` over `slots`. Each slot's split shadows at `shadowBySlot[slot]`. A
  * declaration keyword becomes `let`, since every name the body declares is a scalar or a vec4.
@@ -90,6 +81,7 @@ function runLookup(slots: SplitSlot[], depth: number, shadowBySlot = [0, 0, 0, 0
     'sunLightShadow',
     body
   ) as (...args: unknown[]) => number;
+  const { smoothstep, mix } = GLSL_BUILT_INS;
   const shadow = run(smoothstep, mix, sampleSplit, 4, 0, { w: depth }, cascade, null, null);
   return { shadow, samples };
 }

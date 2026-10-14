@@ -189,7 +189,7 @@ describe('<SceneShadowFitter> positional fit on its own', () => {
         <SceneShadowFitter />
       </>
     );
-    expect(Symbol.for('textscene.positionalShadowPass') in gl!.shadowMap).toBe(true);
+    expect(Symbol.for('textscene.shadowPass') in gl!.shadowMap).toBe(true);
   });
 
   it('fits nothing for a light that declared nothing (edge case)', async () => {
