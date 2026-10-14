@@ -333,20 +333,27 @@ declares four slots, since the shader finds a light's slots at `shadowIndex * SU
 Each slot takes a matrix (four vectors) and a vec4. With the sun's light, its shadow and its fade, a
 shadowed sun takes about 24 vectors, whatever its split count.
 
-The shadow list holds at most eight lights, so a program samples at most eight sun shadows. Packed
-from the active uniforms of a program three r186 linked in the visual harness's Chromium:
+The shadow list holds at most eight lights, so a program samples at most eight sun shadows. Each
+lit program's fragment shader was linked again in the visual harness's Chromium, with a vertex
+shader that only declares its inputs. Its active non-sampler uniforms, packed by A.7, give the
+highest of the lit programs each scene compiles:
 
-| Shadowed suns | `MeshStandardMaterial` | With every map, an environment and fog |
-| ------------- | ---------------------- | -------------------------------------- |
-| 0             | 4                      | 15                                     |
-| 1             | 31                     | 38                                     |
-| 8             | 196                    | 203                                    |
-| 9             | 219                    | 226                                    |
+| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with five maps, clearcoat, a sky and fog |
+| ------------- | ---------------------- | --------------------------------------------------------------- |
+| 1             | 35                     | 64                                                              |
+| 8             | 207                    | 235                                                             |
+| 9             | 207                    | 235                                                             |
+| 1, soft       | 38                     | 66                                                              |
+| 8, soft       | 224                    | 251                                                             |
+
+A scene without a light draws the preview sun, so it counts as one sun. The ninth sun leaves the
+shadow list. Eight suns on the physical material exceed the 224 vectors WebGL 2 guarantees, so a GPU
+that reports only 224 fails to link it. The harness's SwiftShader reports 4096.
 
 A sun with one or two splits costs the same as one with four. A program compiled with the soft
 shadow's define adds two vec4 per sun shadow: the direction towards the light with the angle, and
-the four slots' range starts. The slot matrices give the box sizes. Packed by the same rule, eight
-soft suns on `MeshStandardMaterial` take 17 vectors more than eight suns without the define. A slot count that varied by scene
+the four slots' range starts. The slot matrices give the box sizes. The rows marked soft have the
+define. A slot count that varied by scene
 would need a define three's program key does not hold (`WebGLPrograms.js:476-483`), so a material would
 reuse a program compiled for another count.
 
