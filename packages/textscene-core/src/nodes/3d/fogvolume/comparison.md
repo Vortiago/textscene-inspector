@@ -9,7 +9,9 @@ renders_as: density, scattering and emission added to the volumetric fog
 
 # FogVolume
 
-A FogVolume adds a local region of fog to the Environment's volumetric fog. A negative-density `FogMaterial` removes fog instead. The previewer adds each volume's density, albedo and emission to the froxels its shape covers, as Godot's volume pass does. It draws nothing where the Environment's volumetric fog is off. A `FogMaterial` `density_texture` shapes the density by its red channel: a NoiseTexture3D or an ImageTexture3D, inline or saved as its own `.tres`, or an image its import sidecar imports as a 3D texture.
+A FogVolume adds a local region of fog to the Environment's volumetric fog. A negative-density `FogMaterial` removes fog instead. The previewer adds each volume's density, albedo and emission to the froxels its shape covers, as Godot's volume pass does. It draws nothing where the Environment's volumetric fog is off.
+
+A `FogMaterial` `density_texture` shapes the density by its red channel. It can be a NoiseTexture3D or an ImageTexture3D, inline or saved as its own `.tres`. It can also be an image its import sidecar imports as a 3D texture. A float ImageTexture3D keeps a density above 1, as Godot does.
 
 ## Linting
 
@@ -34,8 +36,8 @@ The lenient parser clamps each negative `size` component to 0, as `set_size` doe
 ## Known limitations
 
 - **Shader missing** A volume whose material is a fog `ShaderMaterial` adds no fog, where Godot runs its fog shader.
-- **Resource gap** An ImageTexture3D saved in a float, half, 16-bit or block-compressed image format leaves the density even. The 8-bit formats draw.
-- **Approximated** An imported 3D texture reads its source image, where Godot's default Lossy and its VRAM compression store an approximation of it, so the density differs slightly from Godot's.
+- **Resource gap** An ImageTexture3D saved in a block-compressed image format (#736) or an integer format leaves the density even.
+- **Approximated** An imported 3D texture reads its source image, so its density differs slightly from Godot's Lossy or VRAM-compressed copy.
 - **Approximated** A NoiseTexture3D `density_texture` leaves the density even on first load until its build finishes, where Godot shapes the fog on its first frame.
 - **Approximated** A NoiseTexture3D's domain warp is not applied, so the density keeps its scale while the swirl does not match.
 - **Approximated** Past 2048 stacked slices of distinct density textures in one view, each further texture leaves its density even.

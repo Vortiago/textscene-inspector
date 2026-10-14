@@ -4,8 +4,6 @@
  */
 
 import {
-  literalText,
-  STRING_LITERAL_RE,
   packedArrayBody,
   packedArrayCallAnywhere,
   packedArrayForms,
@@ -15,8 +13,6 @@ import {
   parseGodotInt,
   splitTopLevel,
 } from '../../godot/index.js';
-import { toUint8 } from '../../godot/intWidth.js';
-import { decodeBase64Bytes } from '../../godot/packedBytes.js';
 import { arrayLiteralBody } from '../../godot/variantParser.js';
 
 /**
@@ -50,12 +46,11 @@ export function floatElements(inner: string, wrapper: string, value: string): nu
 }
 
 /**
- * A packed tuple slot in any of its three spellings, as the constructor's flat components at
- * double precision, for the caller to narrow to the precision its slot stores. The bare and typed bodies hold one element
- * per top-level comma, and another group size throws rather than add a short vertex: Godot makes
- * no such conversion.
+ * A packed tuple slot in any of its three spellings, as the constructor's flat components. The
+ * bare and typed bodies hold one element per top-level comma, and another group size throws
+ * rather than add a short vertex: Godot makes no such conversion.
  */
-export function packedTupleNumbers(value: string, type: PackedTupleType): number[] {
+function packedTupleNumbers(value: string, type: PackedTupleType): number[] {
   const { typeName, forms, groupSize } = type;
   const matched = packedArrayBody(forms, value);
   if (!matched) throw new Error(`Invalid ${typeName} format: ${value}`);
@@ -99,8 +94,6 @@ function float32Reader(type: PackedTupleType): (value: string) => Float32Array {
   return (value) => new Float32Array(packedTupleNumbers(value, type));
 }
 
-const PACKED_COLOR_ARRAY = packedTupleType('PackedColorArray', 4);
-
 /** A Godot `PackedVector3Array` slot as flat components. */
 export const parsePackedVector3Array = float32Reader(packedTupleType('PackedVector3Array', 3));
 
@@ -108,29 +101,7 @@ export const parsePackedVector3Array = float32Reader(packedTupleType('PackedVect
 export const parsePackedVector2Array = float32Reader(packedTupleType('PackedVector2Array', 2));
 
 /** A Godot `PackedColorArray` slot as flat components. */
-export const parsePackedColorArray = float32Reader(PACKED_COLOR_ARRAY);
-
-const PACKED_BYTE_FORMS = packedArrayForms('PackedByteArray');
-
-/**
- * A `PackedByteArray` slot as its bytes: the base64 body Godot's writer gives a file with an array
- * over 64 bytes (`resource_format_text.cpp:1724-1732`), or the element list. Each element is an
- * int Variant narrowed by `(uint8_t)` (`variant_parser.cpp:650`, `variant.h:442`), so -1 stores 255.
- * Throws on a body Godot cannot read.
- */
-export function parsePackedByteArray(value: string): Uint8Array {
-  const matched = packedArrayBody(PACKED_BYTE_FORMS, value);
-  if (!matched) throw new Error(`Invalid PackedByteArray format: ${value}`);
-  const base64 = STRING_LITERAL_RE.exec(matched.body) ? literalText(matched.body) : null;
-  if (base64 !== null) return decodeBase64Bytes(base64);
-  if (matched.body === '') return new Uint8Array(0);
-  return Uint8Array.from(matched.body.split(','), (part) => {
-    const element = parseGodotInt(part, 'int64');
-    if (element === null || Number.isNaN(element))
-      throw new Error(`Invalid number in PackedByteArray: ${value}`);
-    return toUint8(element);
-  });
-}
+export const parsePackedColorArray = float32Reader(packedTupleType('PackedColorArray', 4));
 
 /** One `[...]` group nested inside an outer array, its body captured. */
 const BARE_INNER_ARRAY_RE = /\[([^[\]]*)\]/g;

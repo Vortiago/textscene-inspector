@@ -11,24 +11,23 @@ import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import type { ParsedResource } from '../parser/parsedResource.js';
 import {
-  resolveExtTextResourcePath,
   resolveExtResourcePath,
   resolveSubResourceRef,
   unwrapCanvasTextureRef,
 } from './SubResourceResolver.js';
-import { atlasTextureLayout, decodeAtlasTexture } from './textures/atlastexture/decode.js';
+import { atlasTextureLayout } from './textures/atlastexture/decode.js';
 import {
-  decodeExtAtlasTextureRef,
   resolveAtlasTexture,
   resolveAtlasTextureRef,
   type AtlasTextureReference,
 } from './textures/atlastexture/resolveAtlasTexture.js';
-import { ATLAS_TEXTURE_TYPE } from './textures/atlastexture/types.js';
 import { decodeGradientTexture2D } from './textures/gradienttexture2d/decode.js';
+import { imageRefSize } from './textures/image/decode.js';
 import { decodeNoiseTexture2D } from './textures/noisetexture2d/decode.js';
 import { textResourceTexture } from './textures/textResourceTexture.js';
 import { useProceduralTexture, useProceduralTexturePins } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
+import { useTextResourceSlot } from './useTextResourceSlot.js';
 
 export interface Texture2DResult {
   /** The resolved texture, or null while loading / when there is nothing to show. */
@@ -45,11 +44,11 @@ export function useTexture2D(
   const slot = useTexture2DSlot(ref, externalResources, internalResources);
 
   // The crop is cache-owned and pinned while mounted, like the procedural texture. Keyed on the
-  // previewed scene's resources: its re-parse invalidates the crop, a `.tres` reload does not.
-  const { atlas, source } = slot;
+  // tables the atlas sits in, so a re-parse of the scene or of its `.tres` invalidates it.
+  const { atlas, source, atlasResources } = slot;
   const cropped = useMemo(
-    () => (atlas ? resolveAtlasTexture(atlas, source, internalResources) : null),
-    [atlas, source, internalResources]
+    () => (atlas ? resolveAtlasTexture(atlas, source, atlasResources) : null),
+    [atlas, source, atlasResources]
   );
   useProceduralTexturePins(cropped ? [cropped.key] : []);
 
@@ -74,6 +73,8 @@ export function useTexture2DRid(
 interface Texture2DSlot {
   /** The AtlasTexture the slot names, or null for any other form. */
   atlas: AtlasTextureReference | null;
+  /** The sub-resources the atlas sits in: the scene's, or its `.tres` file's. */
+  atlasResources: readonly TscnInternalResource[];
   /** The image or procedural texture behind the slot: an AtlasTexture's sheet. */
   source: THREE.Texture | null;
   /** The slot's result with an AtlasTexture's sheet in its place. */
@@ -85,67 +86,45 @@ function useTexture2DSlot(
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[]
 ): Texture2DSlot {
-  // An AtlasTexture windows the sheet it names, so the sheet's ref resolves below. Unwrapped before
-  // the atlas lookup: a CanvasTexture may wrap an AtlasTexture, and the raw ref loses the window.
+  // Wrappers peel before the atlas lookup: a CanvasTexture may wrap an AtlasTexture, and the raw
+  // ref loses the window. A `.tres` may hold either, so its `[resource]` peels again.
   const unwrapped = useMemo(() => unwrapCanvasTextureRef(ref, internalResources), [ref, internalResources]);
-  const inlineAtlas = useMemo(
-    () => resolveAtlasTextureRef(unwrapped, internalResources),
-    [unwrapped, internalResources]
+  const slot = useTextResourceSlot(unwrapped, externalResources, internalResources);
+  const slotRef = useMemo(
+    () => unwrapCanvasTextureRef(slot.ref, slot.internalResources),
+    [slot.ref, slot.internalResources]
   );
-
-  // A `.tres`, which loads on the `resource` bus, since the image bus cannot decode text. Its own
-  // header says what it holds: an AtlasTexture, or a texture its own tables describe.
-  const textResourcePath = useMemo(
-    () => (inlineAtlas ? null : resolveExtTextResourcePath(unwrapped, externalResources)),
-    [inlineAtlas, unwrapped, externalResources]
+  // An AtlasTexture windows the sheet it names, an ordinary Texture2D slot with the same unwrap.
+  const atlas = useMemo(
+    () => resolveAtlasTextureRef(slotRef, slot.internalResources),
+    [slotRef, slot.internalResources]
   );
-  const textResourceFile = useResource<ParsedResource>(textResourcePath ?? '', 'resource');
-  const extAtlas = useMemo(
-    () =>
-      textResourcePath && textResourceFile.value
-        ? decodeExtAtlasTextureRef(textResourcePath, textResourceFile.value)
-        : null,
-    [textResourcePath, textResourceFile.value]
+  const sourceRef = useMemo(
+    () => (atlas ? unwrapCanvasTextureRef(atlas.texture.atlas, slot.internalResources) : slotRef),
+    [atlas, slot.internalResources, slotRef]
   );
-  const saved =
-    textResourcePath && textResourceFile.value ? textResourceTexture(textResourceFile.value) : null;
-
-  const atlas = inlineAtlas ?? extAtlas;
-  // A `.tres` file's ids are its own, so its refs resolve against its own resource tables.
-  const externalResourcesForSource = saved?.externalResources ?? externalResources;
-  const internalResourcesForSource = saved?.internalResources ?? internalResources;
-
-  // The sheet is an ordinary Texture2D slot, so it gets the same unwrap. A `.tres` still loading
-  // names nothing yet.
-  const sourceRef = useMemo(() => {
-    if (textResourcePath && !textResourceFile.value) return undefined;
-    if (atlas) return unwrapCanvasTextureRef(atlas.texture.atlas, internalResourcesForSource);
-    return saved?.ref ?? unwrapped;
-  }, [textResourcePath, textResourceFile.value, atlas, internalResourcesForSource, saved, unwrapped]);
 
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
   // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook
   // pins it while mounted and never disposes it.
-  const procedural = useProceduralTexture(sourceRef, internalResourcesForSource);
+  const procedural = useProceduralTexture(sourceRef, slot.internalResources);
 
   // `resolveExtResourcePath`, not `resolveTexture2DPath`: `sourceRef` is already
   // at its fixed point, so that resolver's own peel could only return it again.
   const path = useMemo(
-    () => (procedural.claimed ? null : resolveExtResourcePath(sourceRef, externalResourcesForSource)),
-    [procedural.claimed, sourceRef, externalResourcesForSource]
+    () => (procedural.claimed ? null : resolveExtResourcePath(sourceRef, slot.externalResources)),
+    [procedural.claimed, sourceRef, slot.externalResources]
   );
   const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
   const source = procedural.texture ?? loaded.value ?? null;
+  const atlasResources = slot.internalResources;
 
-  if (!ref) return { atlas, source, result: { texture: null, missing: false } };
-
-  if (textResourcePath && !textResourceFile.value) {
-    // Missing only once the file leaves 'pending': it is absent.
-    return { atlas, source, result: { texture: null, missing: textResourceFile.status !== 'pending' } };
-  }
+  if (!ref) return { atlas, atlasResources, source, result: { texture: null, missing: false } };
+  // A `.tres` still loading names nothing yet.
+  if (!slot.ref) return { atlas, atlasResources, source, result: { texture: null, missing: slot.missing } };
 
   const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');
-  return { atlas, source, result: { texture: source, missing: sourceMissing } };
+  return { atlas, atlasResources, source, result: { texture: source, missing: sourceMissing } };
 }
 
 /** Pixel dimensions of a Texture2D slot, in the `Vec2` shape the rect solver uses. */
@@ -177,30 +156,30 @@ export function inlineTexture2DSize(
   // (`scene/resources/gradient_texture.cpp`, `modules/noise/noise_texture_2d.cpp:378-384`), and
   // building one here mints a cache entry no consumer pins, open to eviction.
   const resource = resolveSubResourceRef(unwrapped, internalResources);
-  if (resource?.type === 'GradientTexture2D') {
-    const { width, height } = decodeGradientTexture2D(resource.data);
+  const decode = resource && DECLARED_SIZES[resource.type];
+  if (decode) {
+    const { width, height } = decode(resource.data);
     return { x: width, y: height };
   }
-  if (resource?.type === 'NoiseTexture2D') {
-    const { width, height } = decodeNoiseTexture2D(resource.data);
-    return { x: width, y: height };
-  }
-  return null;
+  // An ImageTexture's size is its image's (`scene/resources/image_texture.cpp:74-75`, `:122-128`).
+  const image =
+    resource?.type === 'ImageTexture' ? imageRefSize(resource.data.image, internalResources) : null;
+  return image ? { x: image.width, y: image.height } : null;
 }
+
+/** The texture types whose properties state their size. */
+const DECLARED_SIZES: Readonly<
+  Record<string, (data: Record<string, string>) => { width: number; height: number }>
+> = {
+  GradientTexture2D: decodeGradientTexture2D,
+  NoiseTexture2D: decodeNoiseTexture2D,
+};
 
 /**
  * The pixel size of an `ExtResource` slot from its parsed `.tres`, for a caller with a synchronous
- * cache instead of hooks. `sheetSize` answers an AtlasTexture's zero region axis, and null leaves
- * it unanswered. Null for a `.tres` that holds no texture the scene could state inline.
+ * cache instead of hooks. Null for a `.tres` that holds no texture the scene could state inline.
  */
-export function extResourceTexture2DSize(
-  tres: ParsedResource,
-  sheetSize: { width: number; height: number } | null
-): Texture2DSize | null {
-  if (tres.resourceType === ATLAS_TEXTURE_TYPE) {
-    const layout = atlasTextureLayout(decodeAtlasTexture(tres.properties), sheetSize);
-    return layout ? { x: layout.width, y: layout.height } : null;
-  }
+export function extResourceTexture2DSize(tres: ParsedResource): Texture2DSize | null {
   const saved = textResourceTexture(tres);
   return inlineTexture2DSize(saved.ref, saved.internalResources);
 }

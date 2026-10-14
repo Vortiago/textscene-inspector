@@ -503,6 +503,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fog Volume Density Half Tres",
+    "file": "unit-fog-volume-density-half-tres.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Fog Volume Density Image",
     "file": "unit-fog-volume-density-image.tscn",
     "category": "Other"
@@ -2190,6 +2195,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite2d Gradienttexture",
     "file": "unit-sprite2d-gradienttexture.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Imagetexture Half Tres",
+    "file": "unit-sprite2d-imagetexture-half-tres.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

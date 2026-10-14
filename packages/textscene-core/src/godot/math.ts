@@ -5,6 +5,9 @@
  * in several setters the value substituted for a component that trips it. `1e-6` is ten times too
  * small: 5e-6 is zero-approx to Godot.
  */
+/** Float arithmetic: each `f(...)` rounds as a C++ `float` operation does. */
+const f = Math.fround;
+
 export const CMP_EPSILON = 0.00001;
 
 /**
@@ -54,6 +57,32 @@ export function round(value: number): number {
  */
 export function lerp(from: number, to: number, weight: number): number {
   return from + (to - from) * weight;
+}
+
+/** The float overload of `Math::lerp` (`core/math/math_funcs.h:339-341`). */
+export function lerpf(from: number, to: number, weight: number): number {
+  return f(from + f(f(to - from) * weight));
+}
+
+/**
+ * The float overload of `Math::cubic_interpolate` (`core/math/math_funcs.h:350-356`), a
+ * Catmull-Rom from `from` to `to` with the neighbours as tangents, rounded as each float
+ * operation rounds.
+ */
+export function cubicInterpolatef(
+  from: number,
+  to: number,
+  pre: number,
+  post: number,
+  weight: number
+): number {
+  const w2 = f(weight * weight);
+  const w3 = f(w2 * weight);
+  const constant = f(from * 2);
+  const linear = f(f(-pre + to) * weight);
+  const quadratic = f(f(f(f(f(2 * pre) - f(5 * from)) + f(4 * to)) - post) * w2);
+  const cubic = f(f(f(f(-pre + f(3 * from)) - f(3 * to)) + post) * w3);
+  return f(0.5 * f(f(f(constant + linear) + quadratic) + cubic));
 }
 
 /**

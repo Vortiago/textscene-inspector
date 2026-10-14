@@ -5,9 +5,12 @@
  * `Gradient.interpolation_color_space` is always sRGB, so OKLab differs mid-stop.
  */
 
+import { cubicInterpolatef, lerpf } from '../../../godot/math';
 import type { Color } from '../../../utils/colorParser';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
 import type { Gradient, GradientTexture2D } from './types';
+
+const f = Math.fround;
 
 /**
  * The normalised gradient offset at integer pixel `(x, y)`, mirroring Godot's
@@ -113,26 +116,4 @@ export function sampleGradientColor(gradient: Gradient, offset: number): Color {
     b: lerpf(c1.b, c2.b, weight),
     a: lerpf(c1.a, c2.a, weight),
   };
-}
-
-const f = Math.fround;
-
-/** The float overload of `Math::lerp` (`core/math/math_funcs.h:339-341`). */
-function lerpf(from: number, to: number, weight: number): number {
-  return f(from + f(f(to - from) * weight));
-}
-
-/**
- * The float overload of `Math::cubic_interpolate` (`core/math/math_funcs.h:350-356`), a
- * Catmull-Rom from `from` to `to` with the neighbours as tangents, rounded as each float
- * operation rounds.
- */
-function cubicInterpolatef(from: number, to: number, pre: number, post: number, weight: number): number {
-  const w2 = f(weight * weight);
-  const w3 = f(w2 * weight);
-  const constant = f(from * 2);
-  const linear = f(f(-pre + to) * weight);
-  const quadratic = f(f(f(f(f(2 * pre) - f(5 * from)) + f(4 * to)) - post) * w2);
-  const cubic = f(f(f(f(-pre + f(3 * from)) - f(3 * to)) + post) * w3);
-  return f(0.5 * f(f(f(constant + linear) + quadratic) + cubic));
 }

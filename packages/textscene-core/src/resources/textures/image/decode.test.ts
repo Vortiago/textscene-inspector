@@ -1,14 +1,23 @@
 /** An `Image` sub-resource as Godot 4.6.3 writes it, decoded to RGBA8. */
 import { describe, expect, it } from 'vitest';
-import { decodeImage } from './decode';
+import type { TscnInternalResource } from '../../../parser/types';
+import { decodeImageRef } from './decode';
 
-function image(format: string, width: number, height: number, bytes: string): Record<string, string> {
+function image(format: string, width: number, height: number, bytes: string): TscnInternalResource {
   return {
-    data: `{\n"data": PackedByteArray(${bytes}),\n"format": "${format}",\n"height": ${height},\n"mipmaps": false,\n"width": ${width}\n}`,
+    id: 'Image_a',
+    type: 'Image',
+    data: {
+      data: `{\n"data": PackedByteArray(${bytes}),\n"format": "${format}",\n"height": ${height},\n"mipmaps": false,\n"width": ${width}\n}`,
+    },
   };
 }
 
-describe('decodeImage', () => {
+function decodeImage(resource: TscnInternalResource) {
+  return decodeImageRef('SubResource("Image_a")', [resource]);
+}
+
+describe('decodeImageRef', () => {
   it('spreads a Lum8 image to grey, opaque RGBA8', () => {
     expect(decodeImage(image('Lum8', 2, 1, '63, 127'))).toEqual({
       data: new Uint8Array([63, 63, 63, 255, 127, 127, 127, 255]),
@@ -32,12 +41,38 @@ describe('decodeImage', () => {
     expect([...decodeImage(image('Red8', 1, 1, '"Pw=="'))!.data]).toEqual([63, 0, 0, 255]);
   });
 
-  it('draws nothing for a format it does not decode', () => {
-    expect(decodeImage(image('RFloat', 1, 1, '0, 0, 128, 63'))).toBeNull();
+  it.each([
+    ['RFloat', '0, 0, 128, 63', [1, 0, 0, 1]],
+    ['RGFloat', '0, 0, 0, 64, 0, 0, 128, 62', [2, 0.25, 0, 1]],
+    ['RGBFloat', '0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 191', [1, 0, -0.5, 1]],
+    ['RGBAFloat', '0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 0, 63', [1, 2, 3, 0.5]],
+    ['RHalf', '0, 60', [1, 0, 0, 1]],
+    ['RGHalf', '0, 64, 0, 56', [2, 0.5, 0, 1]],
+    ['RGBHalf', '0, 60, 1, 0, 0, 124', [1, 2 ** -24, Infinity, 1]],
+    ['RGBAHalf', '0, 60, 0, 188, 0, 0, 0, 56', [1, -1, 0, 0.5]],
+    ['RGBA4444', '52, 18', [1 / 15, 2 / 15, 3 / 15, 4 / 15]],
+    ['RGBA5551', '16, 132', [16 / 31, 32 / 63, 16 / 31, 1]],
+    ['RGBE9995', '0, 1, 0, 128', [1, 0, 0, 1]],
+    ['R16', '255, 255', [1, 0, 0, 1]],
+    ['RG16', '255, 255, 0, 128', [1, 32768 / 65535, 0, 1]],
+    ['RGB16', '0, 0, 255, 255, 0, 0', [0, 1, 0, 1]],
+    ['RGBA16', '255, 255, 0, 0, 255, 255, 0, 128', [1, 0, 1, 32768 / 65535]],
+  ])('reads a %s pixel to raw floats, as Godot unpacks it', (format, bytes, rgba) => {
+    expect(decodeImage(image(format, 1, 1, bytes))!.data).toEqual(new Float32Array(rgba));
+  });
+
+  it('draws nothing for an integer or block-compressed format', () => {
+    expect(decodeImage(image('R16Int', 1, 1, '1, 0'))).toBeNull();
+    expect(decodeImage(image('DXT1 RGB8', 4, 4, '0, 0, 0, 0, 0, 0, 0, 0'))).toBeNull();
+  });
+
+  it('decodes nothing for a reference to another type', () => {
+    expect(decodeImage({ ...image('RGB8', 1, 1, '1, 2, 3'), type: 'ImageTexture' })).toBeNull();
   });
 
   it('draws nothing for fewer bytes than the size needs, which Godot refuses (edge case)', () => {
     expect(decodeImage(image('RGB8', 2, 1, '1, 2, 3'))).toBeNull();
-    expect(decodeImage({})).toBeNull();
+    expect(decodeImage(image('RHalf', 2, 1, '0, 60'))).toBeNull();
+    expect(decodeImage({ id: 'Image_a', type: 'Image', data: {} })).toBeNull();
   });
 });

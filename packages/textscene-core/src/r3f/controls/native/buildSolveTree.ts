@@ -429,9 +429,7 @@ function buildForest(
         return null;
       }
       if (cachedTres === null) return null;
-      // An atlas sheet's size matters only for a region axis that rounds to zero,
-      // and `inlineTexture2DSize` never fetches it either.
-      return extResourceTexture2DSize(cachedTres, null);
+      return extResourceTexture2DSize(cachedTres);
     }
 
     // `resolveTexture2DPath`, as the painters use: it unwraps a `SubResource(...)`

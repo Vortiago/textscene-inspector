@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { dataTexture3D } from '../../resources/textures/dataTexture3D';
 import { MAX_3D_TEXTURE_EXTENT } from '../webglLimits';
 import { FogDensityAtlas } from './fogDensityAtlas';
 
@@ -68,6 +69,21 @@ describe('FogDensityAtlas.update', () => {
     const rgba = new THREE.Data3DTexture(new Uint8Array([9, 1, 1, 1, 7, 1, 1, 1]), 2, 1, 1);
     atlas.update([rgba]);
     expect(Array.from(atlas.texture.image.data as Uint8Array)).toEqual([9, 7]);
+  });
+
+  it('stacks in floats once a texture holds floats, so a density past 1 survives', () => {
+    const atlas = new FogDensityAtlas();
+    const floats = dataTexture3D(new Float32Array([2.5, 0, 0, 1]), 1, 1, 1, THREE.RGBAFormat);
+    atlas.update([floats, redTexture(new Uint8Array([255]), 1, 1, 1)]);
+    expect(atlas.texture.type).toBe(THREE.HalfFloatType);
+    const stacked = Array.from(atlas.texture.image.data as Uint16Array, THREE.DataUtils.fromHalfFloat);
+    expect(stacked).toEqual([2.5, 1]);
+  });
+
+  it('stacks in bytes while every texture holds bytes', () => {
+    const atlas = new FogDensityAtlas();
+    atlas.update([volume(1, 1, 1)]);
+    expect(atlas.texture.type).toBe(THREE.UnsignedByteType);
   });
 
   it('leaves out a texture past the 3D texture ceiling, which samples as no texture (edge case)', () => {

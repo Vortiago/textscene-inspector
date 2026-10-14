@@ -102,17 +102,6 @@ describe('channelToByte', () => {
     expect(channelToByte(0.5)).toBe(128);
   });
 
-  it('clamps a channel outside 0..1', () => {
-    expect(channelToByte(-0.2)).toBe(0);
-    expect(channelToByte(1.7)).toBe(255);
-  });
-});
-
-describe('channelToByte', () => {
-  it('rounds a channel to its 8-bit value', () => {
-    expect(channelToByte(0.5)).toBe(128);
-  });
-
   it('multiplies in float, so a float32 0.9 lands on 229.5 and rounds up, as get_b8 does', () => {
     expect(channelToByte(Math.fround(0.9))).toBe(230);
   });

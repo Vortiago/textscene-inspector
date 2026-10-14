@@ -142,6 +142,7 @@ export const CANVAS_2D_SCENES = [
   // A Sprite2D whose `texture` is an ImageTexture saved as its own .tres, its pixels an inline
   // Image. The header states why no other golden shows it.
   { name: 'sprite2d-imagetexture-tres', file: 'unit-sprite2d-imagetexture-tres.tscn', mode: '2d' },
+  { name: 'sprite2d-imagetexture-half-tres', file: 'unit-sprite2d-imagetexture-half-tres.tscn', mode: '2d' },
   // Native Control rendering (ADR-0037): Controls draw into the WebGL canvas
   // like every other 2D item, captured in a 1:1 frame with no camera fit. Each
   // scene below moves one piece of that renderer. Its fixture header says which

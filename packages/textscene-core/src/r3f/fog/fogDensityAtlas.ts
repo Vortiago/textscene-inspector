@@ -53,6 +53,12 @@ export class FogDensityAtlas {
     return true;
   }
 
+  /** A float density can pass 1, which a byte stack would clamp. */
+  private holdsFloats(): boolean {
+    for (const texture of this.regions.keys()) if (texture.type === THREE.HalfFloatType) return true;
+    return false;
+  }
+
   private restack(): void {
     this.regions.clear();
     let depth = 0;
@@ -68,7 +74,8 @@ export class FogDensityAtlas {
     const regions = [...this.regions.values()];
     const width = Math.max(1, ...regions.map((region) => region.width));
     const height = Math.max(1, ...regions.map((region) => region.height));
-    const data = new Uint8Array(width * height * Math.max(1, depth));
+    const texelCount = width * height * Math.max(1, depth);
+    const data = this.holdsFloats() ? new Float32Array(texelCount) : new Uint8Array(texelCount);
     for (const [texture, region] of this.regions) copyInto(data, width, height, texture, region);
     this.texture.dispose();
     this.texture = dataTexture3D(data, width, height, Math.max(1, depth), THREE.RedFormat);
@@ -77,22 +84,29 @@ export class FogDensityAtlas {
 
 /**
  * Copies the red channel of each row of `texture` into its region of the stack, whose rows are
- * `width` texels long. A density reads only red (`scene/resources/3d/fog_material.cpp:160`).
+ * `width` texels long. A density reads only red (`scene/resources/3d/fog_material.cpp:161`).
  */
 function copyInto(
-  data: Uint8Array,
+  data: Uint8Array | Float32Array,
   width: number,
   height: number,
   texture: THREE.Data3DTexture,
   region: FogDensityRegion
 ): void {
-  const texels = texture.image.data as Uint8Array;
+  const read = texelReader(texture, data instanceof Float32Array);
   const stride = texture.format === THREE.RedFormat ? 1 : 4;
   for (let z = 0; z < region.depth; z++) {
     for (let y = 0; y < region.height; y++) {
       const source = (z * region.height + y) * region.width;
       const target = ((region.zStart + z) * height + y) * width;
-      for (let x = 0; x < region.width; x++) data[target + x] = texels[(source + x) * stride]!;
+      for (let x = 0; x < region.width; x++) data[target + x] = read((source + x) * stride);
     }
   }
+}
+
+/** A texel of `texture` as the stack stores it: a byte as is, else the value the GPU samples. */
+function texelReader(texture: THREE.Data3DTexture, isFloatStack: boolean): (index: number) => number {
+  const texels = texture.image.data as Uint8Array | Uint16Array;
+  if (texture.type === THREE.HalfFloatType) return (index) => THREE.DataUtils.fromHalfFloat(texels[index]!);
+  return isFloatStack ? (index) => texels[index]! / 255 : (index) => texels[index]!;
 }

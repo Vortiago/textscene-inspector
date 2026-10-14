@@ -966,20 +966,7 @@ describe('extResourceTexture2DSize', () => {
       extResources: [],
       subResources: [],
     };
-    expect(extResourceTexture2DSize(tres, null)).toEqual({ x: 48, y: 24 });
-  });
-
-  it('falls back to the sheet size on a zero-size region axis', () => {
-    const tres: ParsedResource = {
-      resourceType: 'AtlasTexture',
-      properties: {},
-      extResources: [],
-      subResources: [],
-    };
-    expect(extResourceTexture2DSize(tres, { width: 200, height: 100 })).toEqual({
-      x: 200,
-      y: 100,
-    });
+    expect(extResourceTexture2DSize(tres)).toEqual({ x: 48, y: 24 });
   });
 
   it('declines without the sheet size on a zero-size region axis', () => {
@@ -989,7 +976,7 @@ describe('extResourceTexture2DSize', () => {
       extResources: [],
       subResources: [],
     };
-    expect(extResourceTexture2DSize(tres, null)).toBeNull();
+    expect(extResourceTexture2DSize(tres)).toBeNull();
   });
 
   it("reports a .tres GradientTexture2D's declared size", () => {
@@ -999,7 +986,7 @@ describe('extResourceTexture2DSize', () => {
       extResources: [],
       subResources: [],
     };
-    expect(extResourceTexture2DSize(tres, null)).toEqual({ x: 96, y: 32 });
+    expect(extResourceTexture2DSize(tres)).toEqual({ x: 96, y: 32 });
   });
 
   it('declines a .tres that holds no texture (edge case)', () => {
@@ -1009,6 +996,6 @@ describe('extResourceTexture2DSize', () => {
       extResources: [],
       subResources: [],
     };
-    expect(extResourceTexture2DSize(tres, null)).toBeNull();
+    expect(extResourceTexture2DSize(tres)).toBeNull();
   });
 });

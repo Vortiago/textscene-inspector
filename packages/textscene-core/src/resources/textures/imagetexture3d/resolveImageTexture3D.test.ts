@@ -18,16 +18,16 @@ function image(id: string, format: string, bytes: string): TscnInternalResource 
 const RESOURCES: TscnInternalResource[] = [
   image('Image_a', 'Lum8', '63, 63'),
   image('Image_b', 'Lum8', '127, 127'),
-  image('Image_rgb', 'RGB8', '1, 2, 3, 4, 5, 6'),
+  image('Image_half', 'RHalf', '0, 64, 0, 60'),
   {
     id: 'Volume',
     type: 'ImageTexture3D',
     data: { _images: 'Array[Image]([SubResource("Image_a"), SubResource("Image_b")])' },
   },
   {
-    id: 'Mixed',
+    id: 'Half',
     type: 'ImageTexture3D',
-    data: { _images: 'Array[Image]([SubResource("Image_a"), SubResource("Image_rgb")])' },
+    data: { _images: 'Array[Image]([SubResource("Image_half")])' },
   },
 ];
 
@@ -45,8 +45,12 @@ describe('resolveImageTexture3D', () => {
     ]);
   });
 
-  it('builds nothing from slices of different formats, which _set_images refuses', () => {
-    expect(resolveImageTexture3D('SubResource("Mixed")', RESOURCES)).toBeNull();
+  it('keeps the raw values of a half-float volume in a half-float texture', () => {
+    const texture = resolveImageTexture3D('SubResource("Half")', RESOURCES)!.texture;
+    expect(texture.type).toBe(THREE.HalfFloatType);
+    expect(Array.from(texture.image.data as Uint16Array, THREE.DataUtils.fromHalfFloat)).toEqual([
+      2, 0, 0, 1, 1, 0, 0, 1,
+    ]);
   });
 
   it('declines a reference to another type (edge case)', () => {

@@ -7,9 +7,9 @@
 import type { ImagePixels } from '../../../r3f/controls/withImageCanvas';
 import type { ImportSlices } from './importSlices';
 
-/** RGBA8 texels, slice after slice, each slice's rows from the top. */
-export interface Texture3DTexels {
-  texels: Uint8Array;
+/** RGBA texels, slice after slice, each slice's rows from the top. */
+export interface Texture3DTexels<Texels extends Uint8Array | Float32Array = Uint8Array> {
+  texels: Texels;
   width: number;
   height: number;
   depth: number;

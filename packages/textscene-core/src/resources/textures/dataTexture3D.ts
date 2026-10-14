@@ -5,19 +5,23 @@
  */
 
 import * as THREE from 'three';
+import { toHalfFloatTexels } from './halfFloatTexels';
 
 /** Single-channel or RGBA texels, slice after slice, rows from the top. */
 export type Texture3DFormat = typeof THREE.RedFormat | typeof THREE.RGBAFormat;
 
+/** Bytes upload as unsigned normalised, and floats as half floats that keep their raw values. */
 export function dataTexture3D(
-  texels: Uint8Array,
+  texels: Uint8Array | Float32Array,
   width: number,
   height: number,
   depth: number,
   format: Texture3DFormat
 ): THREE.Data3DTexture {
-  const texture = new THREE.Data3DTexture(texels, width, height, depth);
+  const isFloat = texels instanceof Float32Array;
+  const texture = new THREE.Data3DTexture(isFloat ? toHalfFloatTexels(texels) : texels, width, height, depth);
   texture.format = format;
+  texture.type = isFloat ? THREE.HalfFloatType : THREE.UnsignedByteType;
   texture.colorSpace = THREE.NoColorSpace;
   texture.magFilter = THREE.LinearFilter;
   texture.minFilter = THREE.LinearFilter;

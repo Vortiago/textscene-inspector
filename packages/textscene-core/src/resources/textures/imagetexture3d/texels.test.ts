@@ -18,6 +18,11 @@ describe('stackSlices', () => {
     expect(volume).toMatchObject({ width: 2, height: 2, depth: 2 });
   });
 
+  it('keeps the raw floats of a float format, which can pass 1', () => {
+    const floats = { data: new Float32Array([2, 0, 0, 1]), width: 1, height: 1 };
+    expect(stackSlices([floats, floats])!.texels).toEqual(new Float32Array([2, 0, 0, 1, 2, 0, 0, 1]));
+  });
+
   it('stacks nothing from no image (edge case)', () => {
     expect(stackSlices([])).toBeNull();
   });

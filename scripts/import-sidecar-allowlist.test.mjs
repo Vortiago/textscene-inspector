@@ -15,9 +15,16 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'games']);
 
 /**
  * The parameters the previewer honours. `_subresources` is honoured only in part (its material
- * remaps and its per-node layer mask), so each non-empty block is still named below.
+ * remaps and its per-node layer mask), so each non-empty block is still named below. The
+ * `3d_texture` importer's slice grid is how the previewer cuts the source image into slices.
  */
-const HONOURED = new Set(['nodes/root_scale', 'nodes/apply_root_scale', '_subresources']);
+const HONOURED = new Set([
+  'nodes/root_scale',
+  'nodes/apply_root_scale',
+  '_subresources',
+  'slices/horizontal',
+  'slices/vertical',
+]);
 
 /**
  * Inert at any value, so they need no per-file check. Each is a bake or performance concern with
@@ -59,6 +66,17 @@ const INERT = new Set([
   'generate_lightmap_uv2',
   'generate_lightmap_uv2_texel_size',
   'force_disable_mesh_compression',
+  // The 3d_texture importer's storage. The previewer reads the source image, and a fog density
+  // texture is sampled in a compute shader, so at mipmap 0 (`fog_material.cpp:161`).
+  'compress/mode',
+  'compress/high_quality',
+  'compress/lossy_quality',
+  'compress/uastc_level',
+  'compress/rdo_quality_loss',
+  'compress/hdr_compression',
+  'compress/channel_pack',
+  'mipmaps/generate',
+  'mipmaps/limit',
 ]);
 
 /**
