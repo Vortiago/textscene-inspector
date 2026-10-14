@@ -5984,8 +5984,8 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>An emissive sphere at <code>emission_energy = 2.0</code> glows cyan in both, and the preview environment blooms it. <code>emission_operator</code> is honoured, including MULTIPLY with no texture, which emits nothing.</p>
-<ul><li><strong>Approximated</strong> ADD with both a lit colour and a texture is applied as a multiply, so the surface reads darker and more tinted.</li><li><strong>Approximated</strong> <code>emission_on_uv2</code> samples through UV1, since no mesh here carries a second UV set.</li><li><strong>Approximated</strong> <code>emission_intensity</code> is ignored. <code>emission_energy_multiplier</code> alone drives the strength.</li></ul></div>
+        <div class="prose"><p>An emissive sphere at <code>emission_energy = 2.0</code> glows cyan in both, and the preview environment blooms it. <code>emission_operator</code> is honoured, including MULTIPLY with no texture, which emits nothing. <code>emission_on_uv2</code> samples the mesh's UV2, and the <code>glb-lightmap-uv2</code> golden draws it through a GLB's unwrapped UV2.</p>
+<ul><li><strong>Approximated</strong> ADD with both a lit colour and a texture is applied as a multiply, so the surface reads darker and more tinted.</li><li><strong>Approximated</strong> <code>emission_intensity</code> is ignored. <code>emission_energy_multiplier</code> alone drives the strength.</li></ul></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Clearcoat</h3><span class="status st-done">Done</span></div>
@@ -6073,8 +6073,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>The left plate reads a checkerboard AO map at <code>ao_light_affect = 1.0</code>, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. <code>ao_texture_channel</code> picks the map channel.</p>
-<ul><li><strong>Approximated</strong> <code>ao_on_uv2</code> samples through UV1, since no mesh here carries a second UV set.</li></ul></div>
+        <div class="prose"><p>The left plate reads a checkerboard AO map at <code>ao_light_affect = 1.0</code>, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. <code>ao_texture_channel</code> picks the map channel, and <code>ao_on_uv2</code> samples the mesh's UV2.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Diffuse mode</h3><span class="status st-done">Done</span></div>
