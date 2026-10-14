@@ -194,15 +194,12 @@ describe('fitSceneDirectionalShadows with splits', () => {
     [8.045, 16.04, 40.025, 80].forEach((end, i) => expect(ends[i]).toBeCloseTo(end, 9));
   });
 
-  it('writes each split’s soft slot, which the blocker search reads', () => {
+  it('writes each split’s range start, which the blocker search reads', () => {
     const { scene, light } = sceneWithSun({ declared: true, casts: true, splitCount: 4 });
     fitRender(scene, viewingCamera());
-    const shadow = splitSunOf(light)!.shadow;
-    shadow.softSlots.forEach((slot) => {
-      expect(slot.y).toBeGreaterThan(0);
-      expect(slot.z).toBeGreaterThan(0);
-    });
-    expect(shadow.softSlots[0]!.y).toBeGreaterThan(shadow.softSlots[3]!.y);
+    const { rangeBegins } = splitSunOf(light)!.shadow;
+    expect(rangeBegins.toArray().every(Number.isFinite)).toBe(true);
+    expect(rangeBegins.x).not.toBe(rangeBegins.w);
   });
 
   it('keeps the sun, with one split, when the light goes orthogonal', () => {

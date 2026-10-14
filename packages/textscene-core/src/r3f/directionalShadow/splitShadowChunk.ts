@@ -13,7 +13,7 @@ import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
 import { SPLIT_SLOTS } from './splitShadow.js';
 import { NO_BLEND } from './fitDirectionalShadowSplits.js';
 import { DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM } from './shadowAtlas.js';
-import { installSunSoftShadowUniforms, SUN_SOFT_SHADOWS, SUN_SOFT_SPLITS } from './sunSoftShadow.js';
+import { installSunSoftShadowUniforms, SUN_RANGE_BEGINS, SUN_SOFT_SHADOWS } from './sunSoftShadow.js';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch.js';
 
 const CHUNK = 'shadowmap_pars_fragment';
@@ -63,7 +63,8 @@ const SOFT_SHADOW_BLOCK = `#if defined( SHADOWMAP_TYPE_PCF ) && defined( ${DIREC
  * Godot's directional soft shadows (`../shadowFilter/softShadowSearch.ts`). Each split
  * searches its own box for blockers (`sample_directional_soft_shadow`,
  * `scene_forward_lights_inc.glsl:381-424`) over a radius that grows with the receiver's distance from
- * the box's light side (`sunSoftShadow.ts`). Godot measures that distance in view space from a range
+ * the box's light side (`sunSoftShadow.ts`). The box's size in the atlas, Godot's `uv_scale`, is the
+ * length of the slot matrix's x and y rows. Godot measures that distance in view space from a range
  * start in world space, so it moves with the camera, and so does this. A blending light blends each
  * split over the whole split before it, from the camera for the first. The depth grows away from the
  * light, where Godot's reversed depth shrinks, so a blocker is a smaller depth.
@@ -72,7 +73,7 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\t${SOFT_SHADOW_BLOCK}
 \t\tuniform sampler2D ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM};
 \t\tuniform vec4 ${SUN_SOFT_SHADOWS}[ NUM_SUN_LIGHT_SHADOWS ];
-\t\tuniform vec4 ${SUN_SOFT_SPLITS}[ NUM_SUN_LIGHT_SHADOWS * SUN_LIGHT_CASCADES ];
+\t\tuniform vec4 ${SUN_RANGE_BEGINS}[ NUM_SUN_LIGHT_SHADOWS ];
 \t\tfloat godotSunBlockerShadow( sampler2DShadow atlas, vec3 coord, vec2 texScale ) {
 \t\t\tmat2 rotation = godotDiskRotation();
 \t\t\tfloat blockerSum = 0.0;
@@ -95,17 +96,18 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\t\t}
 \t\t\treturn shadow / float( GODOT_PENUMBRA_SHADOW_SAMPLES );
 \t\t}
-\t\tfloat godotSunSoftSplit( sampler2DShadow shadowMap, SunLightShadow sunLightShadow, int slot, vec4 light ) {
+\t\tfloat godotSunSoftSplit( sampler2DShadow shadowMap, SunLightShadow sunLightShadow, int slot, vec4 light, float rangeBegin ) {
 \t\t\tvec4 split = sunShadowCascade[ slot ];
-\t\t\tvec4 soft = ${SUN_SOFT_SPLITS}[ slot ];
+\t\t\tmat4 matrix = sunShadowMatrix[ slot ];
+\t\t\tvec2 uvScale = vec2( length( vec3( matrix[ 0 ][ 0 ], matrix[ 1 ][ 0 ], matrix[ 2 ][ 0 ] ) ), length( vec3( matrix[ 0 ][ 1 ], matrix[ 1 ][ 1 ], matrix[ 2 ][ 1 ] ) ) );
 \t\t\tvec3 position = vSunShadowWorldPosition.xyz + vSunShadowWorldNormal * split.z;
-\t\t\tvec4 shadowCoord = sunShadowMatrix[ slot ] * vec4( position, 1.0 );
+\t\t\tvec4 shadowCoord = matrix * vec4( position, 1.0 );
 \t\t\tvec3 coord = shadowCoord.xyz / shadowCoord.w;
 \t\t\tcoord.z += split.y;
 \t\t\tbool inFrustum = coord.x >= 0.0 && coord.x <= 1.0 && coord.y >= 0.0 && coord.y <= 1.0;
 \t\t\tif ( ! ( inFrustum && coord.z <= 1.0 ) ) return 1.0;
-\t\t\tfloat testRadius = ( dot( light.xyz, position - cameraPosition ) - soft.x ) * light.w;
-\t\t\tvec2 texScale = soft.yz * testRadius * sunLightShadow.shadowRadius;
+\t\t\tfloat testRadius = ( dot( light.xyz, position - cameraPosition ) - rangeBegin ) * light.w;
+\t\t\tvec2 texScale = uvScale * testRadius * sunLightShadow.shadowRadius;
 \t\t\treturn mix( 1.0, godotSunBlockerShadow( shadowMap, coord, texScale ), sunLightShadow.shadowIntensity );
 \t\t}
 \t\tfloat godotSunSoftShadow( sampler2DShadow shadowMap, SunLightShadow sunLightShadow, int shadowIndex ) {
@@ -118,7 +120,7 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\t\tfor ( int split = 0; split < SUN_LIGHT_CASCADES; split ++ ) {
 \t\t\t\tif ( blended == blendMax ) break;
 \t\t\t\tif ( split < SUN_LIGHT_CASCADES - 1 && ! ( depth < sunShadowCascade[ first + split ].x ) ) continue;
-\t\t\t\tfloat splitShadow = godotSunSoftSplit( shadowMap, sunLightShadow, first + split, light );
+\t\t\t\tfloat splitShadow = godotSunSoftSplit( shadowMap, sunLightShadow, first + split, light, ${SUN_RANGE_BEGINS}[ shadowIndex ][ split ] );
 \t\t\t\tif ( blended == 0 ) {
 \t\t\t\t\tshadow = splitShadow;
 \t\t\t\t} else {

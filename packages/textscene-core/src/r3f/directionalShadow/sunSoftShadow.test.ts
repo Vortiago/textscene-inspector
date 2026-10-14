@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   SUN_SOFT_SHADOWS,
-  SUN_SOFT_SPLITS,
+  SUN_RANGE_BEGINS,
   drawsDirectionalSoftShadows,
   installSunSoftShadowUniforms,
   searchesDirectionalBlockers,
@@ -34,29 +34,31 @@ function sunLight(declaration: Partial<DirectionalShadowDeclaration> = {}): THRE
   light.userData = directionalShadowUserData({ ...DECLARATION, ...declaration });
   const sun = attachSplitSun(light);
   sun.matrixWorld.makeTranslation(0, 10, 0);
-  sun.shadow.softSlots.forEach((slot, index) => slot.set(40 + index, 0.01, 0.02));
+  sun.shadow.rangeBegins.set(40, 41, 42, 43);
   return light;
 }
 
 const camera = new THREE.PerspectiveCamera();
 
-function written(scene: THREE.Scene, drawsSoftShadows: boolean): { shadows: number[]; splits: number[] } {
+function written(
+  scene: THREE.Scene,
+  drawsSoftShadows: boolean
+): { shadows: number[]; rangeBegins: number[] } {
   writeSunSoftShadowUniforms(sceneLights(scene), camera, drawsSoftShadows);
   installSunSoftShadowUniforms();
   return {
     shadows: [...litUniformArray(SUN_SOFT_SHADOWS).subarray(0, 4)],
-    splits: [...litUniformArray(SUN_SOFT_SPLITS).subarray(0, 16)],
+    rangeBegins: [...litUniformArray(SUN_RANGE_BEGINS).subarray(0, 4)],
   };
 }
 
 describe('writeSunSoftShadowUniforms', () => {
-  it("writes the direction towards the light, the angle and each slot of a sun's shadow", () => {
+  it("writes the direction towards the light, the angle and each slot's range start of a sun's shadow", () => {
     const scene = new THREE.Scene();
     scene.add(sunLight());
-    const { shadows, splits } = written(scene, true);
+    const { shadows, rangeBegins } = written(scene, true);
     expect(shadows).toEqual([0, 1, 0, 0.5]);
-    expect(splits.slice(0, 3)).toEqual([40, Math.fround(0.01), Math.fround(0.02)]);
-    expect(splits[12]).toBe(43);
+    expect(rangeBegins).toEqual([40, 41, 42, 43]);
   });
 
   it('writes no angle while no light turns the soft shadows on (edge case)', () => {

@@ -37,13 +37,12 @@ function atlasSampler(type: 'sampler2DShadow' | 'sampler2D'): ChunkEdit<AtlasChu
   };
 }
 
+/** The atlas as the sun shadow lookup's sampler argument, the text that proves the patch installed. */
+const ATLAS_ARGUMENT = `getSunShadow( ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM},`;
+
 /** The sampler argument of the sun shadow lookup in a chunk that calls it. */
 function atlasSample(chunk: AtlasChunkName): ChunkEdit<AtlasChunkName> {
-  return {
-    chunk,
-    three: 'getSunShadow( sunShadowMap[ i ],',
-    godot: `getSunShadow( ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM},`,
-  };
+  return { chunk, three: 'getSunShadow( sunShadowMap[ i ],', godot: ATLAS_ARGUMENT };
 }
 
 /** Each edit. Each `three` text occurs once in its chunk. */
@@ -67,7 +66,8 @@ export function shadowAtlasChunks(chunks: ShadowAtlasChunks): ShadowAtlasChunks 
 export function installDirectionalShadowAtlas(): void {
   const isPatched = installChunkPatch({
     names: ['shadowmap_pars_fragment', 'lights_fragment_begin', 'shadowmask_pars_fragment'],
-    isApplied: (chunks) => chunks.shadowmap_pars_fragment.includes(DIRECTIONAL_SHADOW_ATLAS_UNIFORM),
+    // The call, not the uniform's name: the split lookup's soft shadow names the atlas colour.
+    isApplied: (chunks) => chunks.lights_fragment_begin.includes(ATLAS_ARGUMENT),
     apply: shadowAtlasChunks,
     missing: 'sun shadow chunks have no per-shadow sampler to replace',
   });

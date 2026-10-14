@@ -13,8 +13,6 @@ import {
   directionalShadowSplitEnds,
   directionalShadowSplitRange,
   directionalShadowSplitTextureSize,
-  directionalShadowSplitAtlasRect,
-  DIRECTIONAL_SHADOW_SIZE_DEFAULT,
   type DirectionalShadowAtlasRect,
   type DirectionalShadowFade,
 } from '../../godot/directionalShadow.js';
@@ -44,14 +42,6 @@ export const NO_BLEND = -1e30;
  */
 export type SplitSlot = [splitEnd: number, depthBias: number, normalBias: number, blendStart: number];
 
-/**
- * One slot of a light with an angular distance: Godot's `shadow_range_begin[slot]` and `uv_scale`
- * (`light_storage.cpp:727-731`), the box's light side in world units and one over its size, in
- * units of the atlas. Godot measures from a receiver its depth bias moved towards the light
- * (`scene_forward_clustered.glsl:2304`, `:2321`), so the range start moves away by that bias.
- */
-export type SoftSplitSlot = [rangeBegin: number, uvScaleX: number, uvScaleY: number];
-
 export interface DirectionalShadowSplits {
   /** One box per drawn split, nearest first. */
   boxes: DirectionalShadowBox[];
@@ -62,8 +52,13 @@ export interface DirectionalShadowSplits {
   fade: DirectionalShadowFade;
   /** Always four: a light with two splits repeats its last split in the slots past it. */
   slots: SplitSlot[];
-  /** Always four, as `slots` are, for the blocker search. */
-  softSlots: SoftSplitSlot[];
+  /**
+   * Always four, as `slots` are: Godot's `shadow_range_begin` of each slot, the box's light side in
+   * world units, which the blocker search measures from. Godot measures from a receiver its depth
+   * bias moved towards the light (`scene_forward_clustered.glsl:2304`, `:2321`), so the range start
+   * moves away by that bias.
+   */
+  rangeBegins: number[];
 }
 
 /** Null when a split gets no finite box. The caller then leaves the light's shadow as it is. */
@@ -92,28 +87,15 @@ export function fitDirectionalShadowSplits(
     const blendStart = blends && slot < lastSplit ? directionalShadowBlendStart(splitEnd) : NO_BLEND;
     return [splitEnd, box.bias, box.normalBias, blendStart];
   });
-  const softSlots = slots.map((_, slot) => softSplitSlot(boxes, slot, input.lightRect));
+  const rangeBegins = slots.map((_, slot) => rangeBegin(boxes[Math.min(slot, lastSplit)]!));
   return {
     boxes,
     fade: directionalShadowFade(distances[splitCount]!, declaration.fadeStart),
     slots,
-    softSlots,
+    rangeBegins,
   };
 }
 
-/** The soft slot of `slot`, which past the last split repeats it, as its matrix does. */
-function softSplitSlot(
-  boxes: readonly DirectionalShadowBox[],
-  slot: number,
-  lightRect: DirectionalShadowAtlasRect
-): SoftSplitSlot {
-  const split = Math.min(slot, boxes.length - 1);
-  const box = boxes[split]!;
-  const rect = directionalShadowSplitAtlasRect(boxes.length, split, lightRect);
-  const depthBiasInWorld = box.bias * (box.far - box.near);
-  return [
-    box.rangeBegin + depthBiasInWorld,
-    rect.width / DIRECTIONAL_SHADOW_SIZE_DEFAULT / (box.right - box.left),
-    rect.height / DIRECTIONAL_SHADOW_SIZE_DEFAULT / (box.top - box.bottom),
-  ];
+function rangeBegin(box: DirectionalShadowBox): number {
+  return box.rangeBegin + box.bias * (box.far - box.near);
 }

@@ -118,6 +118,13 @@ describe('installDirectionalShadowAtlas', () => {
     expect(merged[DIRECTIONAL_SHADOW_ATLAS_UNIFORM]!.value).toBe(directionalShadowAtlasDepth());
   });
 
+  it('patches chunks the split lookup patched first, whose soft shadow names the atlas colour (edge case)', () => {
+    THREE.ShaderChunk[PARS] = godotSplitShadowChunk(threeChunks[PARS])!;
+    installDirectionalShadowAtlas();
+    expect(THREE.ShaderChunk[PARS]).toContain(`uniform sampler2DShadow ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM};`);
+    expect(THREE.ShaderChunk[LIGHTS]).toContain(`getSunShadow( ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM},`);
+  });
+
   it('patches each chunk once when called twice (edge case)', () => {
     installDirectionalShadowAtlas();
     installDirectionalShadowAtlas();

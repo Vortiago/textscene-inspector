@@ -67,11 +67,10 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
   readonly _cascadeData: THREE.Vector4[] = [];
 
   /**
-   * One per slot: the range start and the box's size in the atlas, in the layout
-   * `fitDirectionalShadowSplits.ts` documents, which the blocker search reads
-   * (`sunSoftShadow.ts`). The fitter writes them with `_cascadeData`.
+   * Each slot's range start, which the blocker search measures from (`sunSoftShadow.ts`), in the
+   * layout `fitDirectionalShadowSplits.ts` documents. The fitter writes it with `_cascadeData`.
    */
-  readonly softSlots: THREE.Vector3[] = [];
+  readonly rangeBegins = new THREE.Vector4();
 
   /** The fade over the far end of the last split, which the fitter writes with the slots. */
   fade: DirectionalShadowFade = NO_SHADOW_FADE;
@@ -110,7 +109,6 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
       this.splitFrustums.push(new THREE.Frustum());
       this._viewports.push(new THREE.Vector4());
       this._cascadeData.push(new THREE.Vector4(0, 0, 0, 0));
-      this.softSlots.push(new THREE.Vector3());
     }
   }
 

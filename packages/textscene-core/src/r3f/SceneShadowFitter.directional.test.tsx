@@ -12,7 +12,7 @@ import { splitSunOf } from './directionalShadow/splitSun';
 import { positionalShadowUserData } from './positionalShadow/declaration';
 import {
   SUN_SOFT_SHADOWS,
-  SUN_SOFT_SPLITS,
+  SUN_RANGE_BEGINS,
   installSunSoftShadowUniforms,
 } from './directionalShadow/sunSoftShadow';
 import { litUniformArray } from './testing/litUniformArray';
@@ -128,7 +128,11 @@ light_angular_distance = 5.0
     renderThrough(renderer, cameraAt(0));
     installSunSoftShadowUniforms();
     expect(litUniformArray(SUN_SOFT_SHADOWS)[3]).toBeCloseTo(Math.tan((5 * Math.PI) / 180), 6);
-    expect(litUniformArray(SUN_SOFT_SPLITS)[1]).toBeGreaterThan(0);
+    expect(
+      litUniformArray(SUN_RANGE_BEGINS)
+        .subarray(0, 4)
+        .some((rangeBegin) => rangeBegin !== 0)
+    ).toBe(true);
   });
 
   it('writes no soft shadow angle for a sun whose blur is zero, as Godot takes the PCF (edge case)', async () => {

@@ -12,7 +12,7 @@ import { FRAMEBUFFER_HEIGHT_UNIFORM, framebufferHeight } from '../shadowFilter/f
 import { godotSplitShadowChunk, installGodotSplitShadow } from './splitShadowChunk';
 import { NO_BLEND, type SplitSlot } from './fitDirectionalShadowSplits';
 import { DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM } from './shadowAtlas';
-import { SUN_SOFT_SHADOWS, SUN_SOFT_SPLITS } from './sunSoftShadow';
+import { SUN_SOFT_SHADOWS, SUN_RANGE_BEGINS } from './sunSoftShadow';
 import { GLSL_BUILT_INS } from '../testing/glslScalar';
 import { withoutBlock } from '../testing/glslSource';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch';
@@ -115,13 +115,27 @@ function runSoftLookup(slots: SplitSlot[], depth: number, shadowBySlot = [0, 0, 
     'vSunShadowWorldPosition',
     'sunShadowCascade',
     'godotSunSoftShadows',
+    'godotSunRangeBegins',
     'shadowMap',
     'sunLightShadow',
     body
   ) as (...args: unknown[]) => number;
   const { smoothstep, mix, max } = GLSL_BUILT_INS;
   const light = [{ x: 0, y: 1, z: 0, w: 0.5 }];
-  const shadow = run(smoothstep, mix, max, sampleSplit, 4, 0, { w: depth }, cascade, light, null, null);
+  const shadow = run(
+    smoothstep,
+    mix,
+    max,
+    sampleSplit,
+    4,
+    0,
+    { w: depth },
+    cascade,
+    light,
+    [[0, 0, 0, 0]],
+    null,
+    null
+  );
   return { shadow, samples };
 }
 
@@ -354,9 +368,17 @@ describe('the soft split shadow', () => {
   it('spreads the search by the distance from the range start, the angle and the blur', () => {
     // `scene_forward_clustered.glsl:2321-2326`: the receiver's position along the light is in view space.
     expect(chunk()).toContain(
-      'float testRadius = ( dot( light.xyz, position - cameraPosition ) - soft.x ) * light.w;'
+      'float testRadius = ( dot( light.xyz, position - cameraPosition ) - rangeBegin ) * light.w;'
     );
-    expect(chunk()).toContain('vec2 texScale = soft.yz * testRadius * sunLightShadow.shadowRadius;');
+    expect(chunk()).toContain('vec2 texScale = uvScale * testRadius * sunLightShadow.shadowRadius;');
+  });
+
+  it('reads the box’s size in the atlas off the slot’s matrix, and the range start by slot', () => {
+    // `light_storage.cpp:727-731`; `splitShadow.test.ts` pins the matrix's scale.
+    expect(chunk()).toContain(
+      'vec2 uvScale = vec2( length( vec3( matrix[ 0 ][ 0 ], matrix[ 1 ][ 0 ], matrix[ 2 ][ 0 ] ) ), length( vec3( matrix[ 0 ][ 1 ], matrix[ 1 ][ 1 ], matrix[ 2 ][ 1 ] ) ) );'
+    );
+    expect(chunk()).toContain(`${SUN_RANGE_BEGINS}[ shadowIndex ][ split ]`);
   });
 
   it('reads blockers from the atlas colour and widens the penumbra by their distance', () => {
@@ -388,7 +410,7 @@ describe('installGodotSplitShadow', () => {
 
   it('gives every lit built-in material the arrays the soft shadow reads', () => {
     installGodotSplitShadow();
-    for (const name of [SUN_SOFT_SHADOWS, SUN_SOFT_SPLITS])
+    for (const name of [SUN_SOFT_SHADOWS, SUN_RANGE_BEGINS])
       expect(THREE.ShaderLib.standard.uniforms[name]!.value).toBeInstanceOf(Float32Array);
   });
 

@@ -40,6 +40,8 @@ The lenient parser reads the shadow mode, the three split offsets, the max dista
 
 The shadow's soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter reaches `shadow_blur` times two atlas texels.
 
+A shadowed light with a `light_angular_distance` and a `shadow_blur` above zero turns on Godot's directional soft shadows. Then each directional light with an angular distance searches its split for blockers. Its penumbra widens with the distance from the caster, as Godot's does. It also lights each surface with Godot's size term, which widens the lit side by `1 - cos` of the angle. Without the soft shadows, the light keeps the filter above and no size term.
+
 `sky_mode` decides what the light reaches, as in Godot. A Sky Only light draws only its sun in the sky, and casts no shadow. A Light Only light lights surfaces and draws no sun in the sky.
 
 `light_negative` makes the light subtract, on surfaces and in the sky's sun, as in Godot. `shadow_opacity` mixes the shadow towards unshadowed through three's `shadow.intensity`.

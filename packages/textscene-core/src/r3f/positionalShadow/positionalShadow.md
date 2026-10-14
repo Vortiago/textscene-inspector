@@ -166,15 +166,16 @@ patch `TscnCanvas` installs, one shadowed sun and a sky:
 | Omni and spot shadows | `MeshStandardMaterial` | `MeshPhysicalMaterial` with six maps and refraction |
 | --------------------- | ---------------------- | --------------------------------------------------- |
 | None                  | 6                      | 13                                                  |
-| 1 and 1               | 8                      | 15                                                  |
-| 4 and 4               | 8                      | 15                                                  |
-| 8 and 8               | 8                      | 15                                                  |
+| 1 and 1, no search    | 7                      | 14                                                  |
+| 1 and 1, with search  | 8                      | 15                                                  |
+| 4 and 4, with search  | 8                      | 15                                                  |
+| 8 and 8, no search    | 7                      | 14                                                  |
+| 8 and 8, with search  | 8                      | 15                                                  |
 
-Any omni, spot or area shadow adds two units: the atlas depth that the lookups compare, and the
-atlas colour that the blocker search reads.
-
-three's own lookups bind a sampler per shadow, so eight of each add 16 units to the row without
-shadows. A GPU with only 16 units fails to link either material, and the scene draws nothing lit.
+Any omni, spot or area shadow adds one unit: the atlas depth that the lookups compare. A light that
+searches for blockers adds the atlas colour too. The light pass defines `GODOT_USE_LIGHT_SOFT_SHADOWS`
+on every lit material only while one such light draws, as Godot's `sc_use_light_soft_shadows` does
+(`scene_forward_clustered_inc.glsl:85-91`), so a program without it binds no colour sampler.
 
 ## Where it differs from Godot
 

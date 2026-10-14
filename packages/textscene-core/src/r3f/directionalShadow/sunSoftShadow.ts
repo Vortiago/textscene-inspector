@@ -1,7 +1,8 @@
 /**
  * What the blocker search of a directional light with an angular distance reads, beyond three's sun
- * shadow: the direction towards the light and the angle, per sun shadow, and each slot's range start
- * and box size (`splitShadowChunk.ts`). Godot turns the search on for every directional light of a
+ * shadow: the direction towards the light and the angle, and each slot's range start, one vec4 each
+ * per sun shadow (`splitShadowChunk.ts`). Each slot's box size in the atlas is its matrix's scale, so
+ * eight suns spend 16 of the 224 fragment uniform vectors WebGL 2 guarantees. Godot turns the search on for every directional light of a
  * render once one light needs it (`light_storage.cpp:680-686`, `scene_forward_clustered.glsl:2310`).
  * The scene's light pass (`SceneShadowFitter.tsx`) writes both arrays before each render.
  */
@@ -15,15 +16,10 @@ import { slottedLights } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
 
 export const SUN_SOFT_SHADOWS = 'godotSunSoftShadows';
-export const SUN_SOFT_SPLITS = 'godotSunSoftSplits';
+export const SUN_RANGE_BEGINS = 'godotSunRangeBegins';
 
-const FLOATS_PER_SLOT = 4;
-
-/** One vec4 per sun shadow and one per slot. Written only by `writeSunSoftShadowUniforms`. */
-const arrays = new LightUniformArrays({
-  [SUN_SOFT_SHADOWS]: 4,
-  [SUN_SOFT_SPLITS]: SPLIT_SLOTS * FLOATS_PER_SLOT,
-});
+/** Two vec4s per sun shadow. Written only by `writeSunSoftShadowUniforms`. */
+const arrays = new LightUniformArrays({ [SUN_SOFT_SHADOWS]: 4, [SUN_RANGE_BEGINS]: SPLIT_SLOTS });
 
 /** Scratch for the writer, which runs on every render. */
 const scratchDirection = new THREE.Vector3();
@@ -73,10 +69,7 @@ export function writeSunSoftShadowUniforms(
       // The fitter places the sun at the light's offset from its target (`followDeclaredLight`).
       const towardsLight = scratchDirection.setFromMatrixPosition(sun.matrixWorld).normalize();
       set[SUN_SOFT_SHADOWS].set([...towardsLight.toArray(), angle], index * 4);
-      sun.shadow.softSlots.forEach((slot, slotIndex) => {
-        const offset = (index * SPLIT_SLOTS + slotIndex) * FLOATS_PER_SLOT;
-        set[SUN_SOFT_SPLITS].set([slot.x, slot.y, slot.z, 0], offset);
-      });
+      set[SUN_RANGE_BEGINS].set(sun.shadow.rangeBegins.toArray(), index * SPLIT_SLOTS);
     });
   });
 }
