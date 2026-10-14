@@ -61,7 +61,7 @@ describe('captureScene seam selection', () => {
       expect.any(Function)
     );
     expect(findCaptureTarget).toHaveBeenCalledWith(pages.canvas2D.page, { canvas2D: true });
-    expect(settleCanvas).toHaveBeenCalledWith(pages.canvas2D.page, expect.anything());
+    expect(settleCanvas).toHaveBeenCalledWith(pages.canvas2D.page, expect.anything(), expect.anything());
     // Never touches the 3D page at all.
     expect(gotoFixture).not.toHaveBeenCalledWith(
       pages.default.page,
@@ -95,6 +95,36 @@ describe('captureScene seam selection', () => {
     await expect(captureScene(pages, 'http://localhost:1', scene)).rejects.toThrow(
       /canvas2D capture context/
     );
+  });
+});
+
+describe('captureScene settle timeout', () => {
+  const pages = { default: { page: {}, errors: [] }, canvas2D: null };
+
+  it('gives each screenshot the time a scene declares in settleTimeout', async () => {
+    findCaptureTarget.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
+    settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
+
+    await captureScene(pages, 'http://localhost:1', {
+      name: 'game-world',
+      file: 'unit-game-world.tscn',
+      settleTimeout: 120000,
+    });
+
+    expect(settleCanvas).toHaveBeenLastCalledWith(pages.default.page, expect.anything(), {
+      screenshotTimeout: 120000,
+    });
+  });
+
+  it("keeps Playwright's default action timeout for a scene that declares none", async () => {
+    findCaptureTarget.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
+    settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
+
+    await captureScene(pages, 'http://localhost:1', { name: 'small', file: 'unit-small.tscn' });
+
+    expect(settleCanvas).toHaveBeenLastCalledWith(pages.default.page, expect.anything(), {
+      screenshotTimeout: undefined,
+    });
   });
 });
 

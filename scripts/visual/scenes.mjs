@@ -2,7 +2,8 @@
  * The golden-scene manifest: WebGL-canvas scenes only, with no 2D DOM overlay, so the image depends
  * on the renderer alone. A resource load must resolve from local fixtures and settle (`arraymesh`,
  * `decal`). `file` is the fixture filename exactly as in apps/textscene-web/src/fixtures.ts. An
- * entry may set `mode: '2d'`, `collisions: true`, `navigation: true` or `select: <node path>`.
+ * entry may set `mode: '2d'`, `collisions: true`, `navigation: true`, `select: <node path>` or
+ * `settleTimeout: <ms>`, each screenshot's limit where one frame outlasts Playwright's default.
  */
 
 import { GEOMETRY_SCENES } from './scenes/geometry.mjs';
