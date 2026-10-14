@@ -7,12 +7,13 @@
 
 import * as THREE from 'three';
 import { useEffect, useMemo } from 'react';
-import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
-import { findExtResource, parseResourceReference } from '../../resources/SubResourceResolver';
-import { useViewportTextureSlot } from '../../resources/textures/viewporttexture/useViewportTextureSlot';
-import { useProceduralTextures, type ProceduralSlot } from '../../resources/useProceduralTexture';
+import type { TscnInternalResource } from '../../parser/types';
+import {
+  isViewportTextureRef,
+  useViewportTextureSlot,
+} from '../../resources/textures/viewporttexture/useViewportTextureSlot';
+import { useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
 import { useTiledUpload } from '../tiledUpload/useTiledUpload';
-import { useResource } from '../../resources/useResource';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import type {
   StandardMaterial3DScalars,
@@ -36,6 +37,7 @@ import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
 import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
 import { materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
+import { defaultWhiteTexture } from './defaultWhiteTexture';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource, MaterialSource } from './materialSource';
 import { readyMaterial, useMaterial } from './useMaterial';
@@ -78,7 +80,7 @@ export function useMaterialTextures(
   tables: MaterialTables | null,
   surface?: TexturedSurface
 ): ResolvedMaterialTextures {
-  const { internalResources, externalResources } = tables ?? NO_TABLES;
+  const resourceTables = tables ?? NO_TABLES;
 
   // The decode's gated table, never the raw property bag: Godot declares and
   // samples a gated slot's sampler only inside its `if (features[…])` branch
@@ -86,61 +88,18 @@ export function useMaterialTextures(
   // `normal_enabled` reaches no shader at all.
   const references = scalars?.textureSlots;
 
-  const textureRequests = useMemo(
-    () => collectTextureRequests(references, externalResources),
-    [references, externalResources]
-  );
-
-  // Hooks must be called unconditionally, in stable order, so every slot calls
-  // `useResource` even when it has no path. The hook treats `''` as a no-op.
-  const albedoStatus = useResource<THREE.Texture>(textureRequests.albedo_texture ?? '', 'texture');
-  const normalStatus = useResource<THREE.Texture>(textureRequests.normal_texture ?? '', 'texture');
-  const roughnessStatus = useResource<THREE.Texture>(textureRequests.roughness_texture ?? '', 'texture');
-  const metallicStatus = useResource<THREE.Texture>(textureRequests.metallic_texture ?? '', 'texture');
-  const emissionStatus = useResource<THREE.Texture>(textureRequests.emission_texture ?? '', 'texture');
-  const aoStatus = useResource<THREE.Texture>(textureRequests.ao_texture ?? '', 'texture');
-  const heightmapStatus = useResource<THREE.Texture>(textureRequests.heightmap_texture ?? '', 'texture');
-  const anisotropyFlowmapStatus = useResource<THREE.Texture>(
-    textureRequests.anisotropy_flowmap ?? '',
-    'texture'
-  );
-
-  const textureSlots = useMemo(
-    () => ({
-      albedo_texture: textureRequests.albedo_texture ? albedoStatus : null,
-      normal_texture: textureRequests.normal_texture ? normalStatus : null,
-      roughness_texture: textureRequests.roughness_texture ? roughnessStatus : null,
-      metallic_texture: textureRequests.metallic_texture ? metallicStatus : null,
-      emission_texture: textureRequests.emission_texture ? emissionStatus : null,
-      ao_texture: textureRequests.ao_texture ? aoStatus : null,
-      heightmap_texture: textureRequests.heightmap_texture ? heightmapStatus : null,
-      anisotropy_flowmap: textureRequests.anisotropy_flowmap ? anisotropyFlowmapStatus : null,
-    }),
-    [
-      textureRequests,
-      albedoStatus,
-      normalStatus,
-      roughnessStatus,
-      metallicStatus,
-      emissionStatus,
-      aoStatus,
-      heightmapStatus,
-      anisotropyFlowmapStatus,
-    ]
-  );
-
-  // A procedural slot (`SubResource(GradientTexture2D)`, `SubResource(NoiseTexture2D)`) is
-  // fully described in the scene, so it resolves here: a gradient at once, a noise texture
-  // when its build lands. The procedural cache owns and shares it, and the hook pins it.
-  const proceduralSlots = useProceduralTextures(
-    TEXTURE_SLOTS.map((slot) => textureSlotReference(references, slot)),
-    internalResources
-  );
-  const proceduralTextures = proceduralTexturesBySlot(proceduralSlots);
+  const slotTextures: Readonly<Record<TextureSlot, Texture2DResult>> = {
+    albedo_texture: useSlotTexture(references, resourceTables, 'albedo_texture'),
+    normal_texture: useSlotTexture(references, resourceTables, 'normal_texture'),
+    roughness_texture: useSlotTexture(references, resourceTables, 'roughness_texture'),
+    metallic_texture: useSlotTexture(references, resourceTables, 'metallic_texture'),
+    emission_texture: useSlotTexture(references, resourceTables, 'emission_texture'),
+    ao_texture: useSlotTexture(references, resourceTables, 'ao_texture'),
+    heightmap_texture: useSlotTexture(references, resourceTables, 'heightmap_texture'),
+    anisotropy_flowmap: useSlotTexture(references, resourceTables, 'anisotropy_flowmap'),
+  };
   // A slot whose map is still loading or building binds a stand-in, never nothing.
-  const isArriving = (slot: TextureSlot): boolean =>
-    textureSlots[slot]?.status === 'pending' ||
-    (proceduralSlots[TEXTURE_SLOTS.indexOf(slot)]?.building ?? false);
+  const isArriving = (slot: TextureSlot): boolean => slotTextures[slot].isArriving;
 
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `bindSlotTexture`'s.
@@ -149,94 +108,61 @@ export function useMaterialTextures(
     [scalars, surface]
   );
 
-  // A ViewportTexture albedo names a `<SubViewport>`, not a file: it resolves
-  // through the live registry and arrives after first paint. Highest precedence
-  // of the three sources for this slot.
+  // A ViewportTexture albedo names a `<SubViewport>`, not a texture resource: it resolves
+  // through the live registry and arrives after first paint.
   const { texture: viewportAlbedo, cyclic: viewportCyclic } = useViewportTextureSlot(
     references?.albedo_texture,
-    internalResources
+    resourceTables.internalResources
   );
 
   const albedoMap = useMemo(
     () =>
       transformedTexture(
-        viewportAlbedo
-          ? { value: viewportAlbedo }
-          : effectiveSlot(proceduralTextures.albedo_texture, textureSlots.albedo_texture),
+        viewportAlbedo ?? slotTextures.albedo_texture.texture,
         textureStates,
         'albedo_texture'
       ),
-    [viewportAlbedo, proceduralTextures.albedo_texture, textureSlots.albedo_texture, textureStates]
+    [viewportAlbedo, slotTextures.albedo_texture.texture, textureStates]
   );
   const normalMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.normal_texture, textureSlots.normal_texture),
-        textureStates,
-        'normal_texture'
-      ),
-    [proceduralTextures.normal_texture, textureSlots.normal_texture, textureStates]
+    () => transformedTexture(slotTextures.normal_texture.texture, textureStates, 'normal_texture'),
+    [slotTextures.normal_texture.texture, textureStates]
   );
   // PARITY LIMITATION (metallic/roughness texture channel): Godot reads the
   // channel named by `metallic_texture_channel` / `roughness_texture_channel`
   // (default RED); three's metalnessMap/roughnessMap read BLUE / GREEN.
   const roughnessMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.roughness_texture, textureSlots.roughness_texture),
-        textureStates,
-        'roughness_texture'
-      ),
-    [proceduralTextures.roughness_texture, textureSlots.roughness_texture, textureStates]
+    () => transformedTexture(slotTextures.roughness_texture.texture, textureStates, 'roughness_texture'),
+    [slotTextures.roughness_texture.texture, textureStates]
   );
   const metalnessMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.metallic_texture, textureSlots.metallic_texture),
-        textureStates,
-        'metallic_texture'
-      ),
-    [proceduralTextures.metallic_texture, textureSlots.metallic_texture, textureStates]
+    () => transformedTexture(slotTextures.metallic_texture.texture, textureStates, 'metallic_texture'),
+    [slotTextures.metallic_texture.texture, textureStates]
   );
   const emissiveMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.emission_texture, textureSlots.emission_texture),
-        textureStates,
-        'emission_texture'
-      ),
-    [proceduralTextures.emission_texture, textureSlots.emission_texture, textureStates]
+    () => transformedTexture(slotTextures.emission_texture.texture, textureStates, 'emission_texture'),
+    [slotTextures.emission_texture.texture, textureStates]
   );
   const aoMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.ao_texture, textureSlots.ao_texture),
-        textureStates,
-        'ao_texture'
-      ),
-    [proceduralTextures.ao_texture, textureSlots.ao_texture, textureStates]
+    () => transformedTexture(slotTextures.ao_texture.texture, textureStates, 'ao_texture'),
+    [slotTextures.ao_texture.texture, textureStates]
   );
   const heightMap = useMemo(
-    () =>
-      transformedTexture(
-        effectiveSlot(proceduralTextures.heightmap_texture, textureSlots.heightmap_texture),
-        textureStates,
-        'heightmap_texture'
-      ),
-    [proceduralTextures.heightmap_texture, textureSlots.heightmap_texture, textureStates]
+    () => transformedTexture(slotTextures.heightmap_texture.texture, textureStates, 'heightmap_texture'),
+    [slotTextures.heightmap_texture.texture, textureStates]
   );
 
   // Depend on the two values the repack reads, not their wrappers: a repack is a
   // canvas readback plus a full-buffer copy plus a GPU re-upload.
   const drawsAnisotropic = scalars !== null && isAnisotropic(scalars);
-  const anisotropyFlowmap = textureSlots.anisotropy_flowmap?.value;
+  const anisotropyFlowmap = slotTextures.anisotropy_flowmap.texture;
   const repackedFlowmap = useMemo(() => {
     if (!drawsAnisotropic || !anisotropyFlowmap) return undefined;
     return repackAnisotropyFlowmap(anisotropyFlowmap);
   }, [drawsAnisotropic, anisotropyFlowmap]);
 
   const anisotropyBound = useMemo(
-    () => transformedTexture({ value: repackedFlowmap }, textureStates, 'anisotropy_flowmap'),
+    () => transformedTexture(repackedFlowmap, textureStates, 'anisotropy_flowmap'),
     [repackedFlowmap, textureStates]
   );
 
@@ -280,7 +206,7 @@ export function useMaterialTextures(
       ? pendingMapStandIn('anisotropy_flowmap')
       : undefined);
 
-  const isFileMissing = TEXTURE_SLOTS.some((slot) => textureSlots[slot]?.status === 'unavailable');
+  const isUnresolvable = TEXTURE_SLOTS.some((slot) => slotTextures[slot].missing);
 
   const maps = useMemo(
     (): MaterialTextureMaps => ({
@@ -307,7 +233,7 @@ export function useMaterialTextures(
     ]
   );
 
-  return { maps, isUnresolved: isFileMissing || viewportCyclic };
+  return { maps, isUnresolved: isUnresolvable || viewportCyclic };
 }
 
 export interface SurfaceMaterialSlotProps {
@@ -340,25 +266,20 @@ export function useMaterialScalars(material: MaterialResource | null): StandardM
 }
 
 /**
- * Resolve each gated slot reference that names an `ExtResource` to its path, so
- * the caller can fan out to `useResource`. A `SubResource` reference (procedural
- * or ViewportTexture) is not a path and is deliberately dropped here.
+ * One slot's texture, through every form a Texture2D slot takes, null while it arrives. A material
+ * binds a texture by its RID: an AtlasTexture's RID is its whole sheet
+ * (`scene/resources/atlas_texture.cpp:55-58`), and a CanvasTexture's names no texture.
  */
-function collectTextureRequests(
+function useSlotTexture(
   references: TextureSlotReferences | undefined,
-  externalResources: readonly TscnExternalResource[]
-): Partial<Record<TextureSlot, string>> {
-  const out: Partial<Record<TextureSlot, string>> = {};
-  if (!references) return out;
-  for (const slot of TEXTURE_SLOTS) {
-    const raw = references[slot];
-    if (typeof raw !== 'string') continue;
-    const parsed = parseResourceReference(raw);
-    if (!parsed || parsed.type !== 'ExtResource') continue;
-    const ext = findExtResource(externalResources, parsed.id);
-    if (ext?.path) out[slot] = ext.path;
-  }
-  return out;
+  { externalResources, internalResources }: MaterialTables,
+  slot: TextureSlot
+): Texture2DResult {
+  const ref = textureSlotReference(references, slot);
+  // `useViewportTextureSlot` resolves a ViewportTexture, which names a node.
+  const resourceRef = isViewportTextureRef(ref, internalResources) ? undefined : ref;
+  const result = useTexture2DRid(resourceRef, externalResources, internalResources);
+  return result.namesTexture ? result : { ...result, texture: defaultWhiteTexture() };
 }
 
 function textureSlotReference(
@@ -369,31 +290,18 @@ function textureSlotReference(
   return typeof raw === 'string' ? raw : undefined;
 }
 
-/** The hook's results, indexed like `TEXTURE_SLOTS`, keyed by slot name. */
-function proceduralTexturesBySlot(
-  slots: readonly ProceduralSlot[]
-): Partial<Record<TextureSlot, THREE.Texture>> {
-  const textures: Partial<Record<TextureSlot, THREE.Texture>> = {};
-  TEXTURE_SLOTS.forEach((slot, index) => {
-    const texture = slots[index]?.texture;
-    if (texture) textures[slot] = texture;
-  });
-  return textures;
-}
-
 /**
- * Clone the loaded texture (if any) with the material's own texture state
- * applied. Undefined when nothing is loaded yet, so the slot falls back to null.
+ * The slot's texture with the material's own texture state applied. Undefined while nothing is
+ * loaded, so the slot falls back to null.
  */
 function transformedTexture(
-  resolved: { value: THREE.Texture | undefined } | null,
+  texture: THREE.Texture | null | undefined,
   states: MaterialTextureStates | null,
   slot: TextureSlot
 ): THREE.Texture | undefined {
-  const value = resolved?.value;
-  if (!value) return undefined;
-  if (!states) return value;
-  return bindSlotTexture(value, slot, states);
+  if (!texture) return undefined;
+  if (!states) return texture;
+  return bindSlotTexture(texture, slot, states);
 }
 
 /** The texture states of `scalars` on `surface`. */
@@ -425,14 +333,6 @@ function onGltfUvs(state: UVSetState): UVSetState {
  */
 function planeTiled(state: UVSetState, mesh: TscnInternalResource): UVSetState {
   return { ...state, uv: { scale: triplanarPlaneScale(mesh, state.uv.scale), offset: state.uv.offset } };
-}
-
-/** A procedural texture takes precedence over the file-loaded slot for the same map. */
-function effectiveSlot(
-  procedural: THREE.Texture | undefined,
-  asyncSlot: { value: THREE.Texture | undefined } | null
-): { value: THREE.Texture | undefined } | null {
-  return procedural ? { value: procedural } : asyncSlot;
 }
 
 /**

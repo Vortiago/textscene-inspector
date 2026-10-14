@@ -3058,6 +3058,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "Material Albedo Atlas Texture",
+    "file": "unit-material-albedo-atlas-texture.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Albedo Image Format",
     "file": "unit-material-albedo-image-format.tscn",
     "category": "Unit - Materials"

@@ -6515,7 +6515,24 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A Texture2D that wraps an image with optional normal and specular maps. The sprite renders identically to the sibling that references the image directly, in both engines.</p></div>
+        <div class="prose"><p>A Texture2D that wraps an image with optional normal and specular maps. The sprite renders identically to the sibling that references the image directly, in both engines. A CanvasTexture is a 2D object: in a material slot its RID names no texture, so Godot and the previewer bind a white texture there, in any slot.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>AtlasTexture</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-material-albedo-atlas-texture-godot.png" alt="Godot render of AtlasTexture">
+          <img class="img-ours" src="images/unit-material-albedo-atlas-texture-ours.png" alt="Our render of AtlasTexture">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A Texture2D that windows a region of another texture. A 2D consumer draws the region. A material slot binds the whole sheet, as Godot does, because a material reads a texture by its RID and an AtlasTexture's RID is its sheet's (<code>atlas_texture.cpp:55-58</code>). The left quad names the top-left texel and draws all four. The right quad binds a CanvasTexture and draws white.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>ImageTexture</h3><span class="status st-done">Done</span></div>

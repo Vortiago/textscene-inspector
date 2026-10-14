@@ -18,7 +18,12 @@ A procedural gradient baked to a texture, here a radial white-to-transparent glo
 ## CanvasTexture
 <!-- compare: image=unit-sprite2d-canvastexture status=done fixture=unit-sprite2d-canvastexture.tscn -->
 
-A Texture2D that wraps an image with optional normal and specular maps. The sprite renders identically to the sibling that references the image directly, in both engines.
+A Texture2D that wraps an image with optional normal and specular maps. The sprite renders identically to the sibling that references the image directly, in both engines. A CanvasTexture is a 2D object: in a material slot its RID names no texture, so Godot and the previewer bind a white texture there, in any slot.
+
+## AtlasTexture
+<!-- compare: image=unit-material-albedo-atlas-texture status=done fixture=unit-material-albedo-atlas-texture.tscn -->
+
+A Texture2D that windows a region of another texture. A 2D consumer draws the region. A material slot binds the whole sheet, as Godot does, because a material reads a texture by its RID and an AtlasTexture's RID is its sheet's (`atlas_texture.cpp:55-58`). The left quad names the top-left texel and draws all four. The right quad binds a CanvasTexture and draws white.
 
 ## ImageTexture
 <!-- compare: image=unit-material-albedo-image-format status=done fixture=unit-material-albedo-image-format.tscn -->

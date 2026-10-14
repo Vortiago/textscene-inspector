@@ -51,16 +51,17 @@ describe('useTextResourceSlot', () => {
       externalResources: SCENE_EXTERNAL,
       internalResources: SCENE_INTERNAL,
       missing: false,
+      isLoading: false,
     });
   });
 
   it('names nothing, and is not missing, while the .tres loads', () => {
     const result = render('ExtResource("1")');
-    expect(result.current).toMatchObject({ ref: undefined, missing: false });
+    expect(result.current).toMatchObject({ ref: undefined, missing: false, isLoading: true });
   });
 
   it('reports a .tres that fails to load as missing (error path)', () => {
     const result = render('ExtResource("1")', (fake) => fake.resources.seed('res://ramp.tres', null));
-    expect(result.current).toMatchObject({ ref: undefined, missing: true });
+    expect(result.current).toMatchObject({ ref: undefined, missing: true, isLoading: false });
   });
 });

@@ -36,6 +36,11 @@ Each producer records the format Godot holds its image in
 | AtlasTexture | its atlas's format |
 | an image file | none recorded, read as sRGB |
 
+An image file records no format, so a colour slot reads it sRGB. That matches Godot for an RGB or
+RGBA file and for a VRAM-compressed import. Godot loads a greyscale PNG or JPEG as L8 or LA8
+(`drivers/png/png_driver_common.cpp:84-87`), and a lossless import keeps that format, so Godot
+reads it raw. The previewer reads no texture `.import` sidecar yet, so it reads that file sRGB.
+
 ## The samplers of BaseMaterial3D
 
 Three samplers carry `source_color` and read sRGB:

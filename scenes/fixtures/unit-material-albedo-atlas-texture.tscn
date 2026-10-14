@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+; One variable: the albedo texture wrapped in an AtlasTexture or a CanvasTexture. A material binds a
+; texture by its RID, and an AtlasTexture's RID is its whole atlas (`atlas_texture.cpp:55-58`), so
+; the left quad draws all four texels of the sheet, not the top-left one its region names. The right
+; quad binds a CanvasTexture's diffuse texture. No other albedo texture is wrapped, so no other
+; scene shows a wrapper in a material slot.
+
+[sub_resource type="Image" id="Image_sheet"]
+data = {
+"data": PackedByteArray(255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0),
+"format": "RGB8",
+"height": 2,
+"mipmaps": false,
+"width": 2
+}
+
+[sub_resource type="ImageTexture" id="ImageTexture_sheet"]
+image = SubResource("Image_sheet")
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_cell"]
+atlas = SubResource("ImageTexture_sheet")
+region = Rect2(0, 0, 1, 1)
+
+[sub_resource type="CanvasTexture" id="CanvasTexture_sheet"]
+diffuse_texture = SubResource("ImageTexture_sheet")
+
+[sub_resource type="QuadMesh" id="QuadMesh_square"]
+size = Vector2(2, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_atlas"]
+shading_mode = 0
+albedo_texture = SubResource("AtlasTexture_cell")
+texture_filter = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_canvas"]
+shading_mode = 0
+albedo_texture = SubResource("CanvasTexture_sheet")
+texture_filter = 0
+
+[node name="AlbedoAtlasTexture" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+projection = 1
+size = 3.0
+
+[node name="Atlas" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 0)
+mesh = SubResource("QuadMesh_square")
+surface_material_override/0 = SubResource("StandardMaterial3D_atlas")
+
+[node name="Canvas" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, 0)
+mesh = SubResource("QuadMesh_square")
+surface_material_override/0 = SubResource("StandardMaterial3D_canvas")

@@ -81,6 +81,9 @@ export const MATERIAL_SCENES = [
   // The saved format of an albedo ImageTexture: the same greys as Lum8, which has no sRGB view and
   // reads raw, over RGB8, which reads as sRGB. A format read the wrong way darkens or lifts a strip.
   { name: 'material-albedo-image-format', file: 'unit-material-albedo-image-format.tscn' },
+  // A wrapped albedo texture: an AtlasTexture binds its whole sheet, not its region, and a
+  // CanvasTexture binds Godot's white default. A cropped sheet or a drawn diffuse shows at once.
+  { name: 'material-albedo-atlas-texture', file: 'unit-material-albedo-atlas-texture.tscn' },
   // Decal `texture_albedo` as an inline GradientTexture2D. The albedo is all a
   // decal projects, so an unresolved slot leaves the floor bare.
   { name: 'decal-gradienttexture', file: 'unit-decal-gradienttexture.tscn' },
