@@ -6,7 +6,7 @@
 import type * as THREE from 'three';
 import { materialFromBag } from './build';
 import { standardMaterialBags } from './materialBag';
-import { bindSlotTexture, materialTextureState } from './textureBinding';
+import { bindSlotTexture, materialTextureStates } from './textureBinding';
 import type { ResolvedTextureSlots, StandardMaterial3DScalars, TextureSlot } from './types';
 
 /** Each populated slot's texture put through the material's own binding. */
@@ -14,11 +14,11 @@ export function boundTextureSlots(
   scalars: StandardMaterial3DScalars,
   textures: ResolvedTextureSlots
 ): ResolvedTextureSlots {
-  const state = materialTextureState(scalars);
+  const states = materialTextureStates(scalars);
   const bound: ResolvedTextureSlots = {};
   for (const slot of Object.keys(textures) as TextureSlot[]) {
     const texture = textures[slot];
-    if (texture) bound[slot] = bindSlotTexture(texture, slot, state);
+    if (texture) bound[slot] = bindSlotTexture(texture, slot, states);
   }
   return bound;
 }

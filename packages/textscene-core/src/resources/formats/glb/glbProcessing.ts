@@ -10,11 +10,13 @@ import { ShadowCastingSetting } from '../../../godot/rendering';
 import { withExtensionRules } from './extensionRules';
 import { tagMeshInstances } from './meshInstances';
 import { tagGodotNodeNames } from './nodeNames';
-import { gltfNodeNames, type GltfNamingOptions } from '../../../godot/gltfNodeNames';
+import { gltfImportNames, type GltfNamingOptions } from '../../../godot/gltfImportNames';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
 import type { GltfExtensionRules } from './types';
 import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
 import { usesGodotSingleRoot } from '../../../godot/gltf';
+import { applyLightmapUv, type LightmapUvImport } from './lightmapUv/lightmapUv';
+import { godotPrimitives } from './godotPrimitives';
 
 interface GlbModules {
   GLTFLoader: (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
@@ -153,6 +155,8 @@ export interface GlbLoadOptions {
   extensionRules?: GltfExtensionRules;
   /** The **Import sidecar**'s naming options. */
   naming: GltfNamingOptions;
+  /** The lightmap UV2 to give the meshes Godot unwraps, absent when the sidecar unwraps none. */
+  lightmapUv?: LightmapUvImport;
 }
 
 /**
@@ -161,19 +165,21 @@ export interface GlbLoadOptions {
  */
 export async function createGLBMesh(
   data: ArrayBuffer,
-  { extensionRules = 'godot-importer', naming }: GlbLoadOptions
+  { extensionRules = 'godot-importer', naming, lightmapUv }: GlbLoadOptions
 ): Promise<THREE.Object3D> {
   const { GLTFLoader } = await initGlbModules();
-  const loader = withExtensionRules(new GLTFLoader(inMemoryOnlyManager()), extensionRules).register(
-    decodeImagesInImageElements
-  );
+  const loader = withExtensionRules(new GLTFLoader(inMemoryOnlyManager()), extensionRules)
+    .register(decodeImagesInImageElements)
+    .register(godotPrimitives);
   const gltf = await loader.parseAsync(data, '');
   const root = await godotSceneRoot(gltf);
+  const names = gltfImportNames(gltf.parser.json, naming);
+  if (lightmapUv) await applyLightmapUv(gltf, root, lightmapUv, names.meshes);
   // GLTFLoader returns embedded clips on `gltf.animations`. The root's `.animations`
   // is where GLBSceneRoot plays them from and where `cloneWithMaterials` copies them.
   root.animations = gltf.animations;
   tagMeshInstances(root, gltf.parser.associations);
-  tagGodotNodeNames(root, gltf.parser.associations, gltfNodeNames(gltf.parser.json, naming));
+  tagGodotNodeNames(root, gltf.parser.associations, names.nodes);
   importBlendAsDepthPrepass(root);
   return root;
 }

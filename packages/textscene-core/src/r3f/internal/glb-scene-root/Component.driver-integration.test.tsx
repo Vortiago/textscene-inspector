@@ -17,7 +17,7 @@ import {
   type AnimationTransport,
 } from '../../contexts/AnimationTransportContext';
 import { useOptionalSelection, type SelectionContextValue } from '../../contexts/SelectionContext';
-import { GLB_SCENE_ROOT_TYPE } from './Component';
+import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
 import { initGlbModules } from '../../../resources/processing/glbProcessing';
 
 // Register node-type components (Node3D / GLBSceneRoot / …).

@@ -6,7 +6,7 @@ import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
 import { liveChildGroups, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
-import { GLB_SCENE_ROOT_TYPE } from '../../internal/glb-scene-root/Component.js';
+import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
 import { useGlbChildren } from './useGlbChildren.js';
 import styles from './SceneTreeViewer.module.css';
