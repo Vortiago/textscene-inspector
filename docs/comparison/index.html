@@ -133,7 +133,9 @@ tr:last-child td{border-bottom:0}
 <h3>What a RemoteTransform relay does not reproduce</h3>
 <p><code>RemoteTransform2D</code> and <code>RemoteTransform3D</code> share one implementation and one set of limitations, so this file records them once.</p>
 <p>A relay copies its transform onto its <code>remote_path</code> target once on load: the static enter-tree effect, not a per-frame drive. Three cases are not fully reproduced:</p>
-<ul><li><strong><code>use_global_coordinates = false</code></strong> is a no-op on a static load. Only the default global-coordinate drive repositions the target.</li><li><strong>A cross-instance <code>remote_path</code></strong>, one crossing into or out of an instanced sub-scene, stays unresolved. In-scene resolution, the common case, works.</li><li><strong>Relay chains</strong> resolve in document (pre-order) order. A feedback loop is not iterated to a fixed point.</li></ul></div>
+<ul><li><strong><code>use_global_coordinates = false</code></strong> is a no-op on a static load. Only the default global-coordinate drive repositions the target.</li><li><strong>A cross-instance <code>remote_path</code></strong>, one crossing into or out of an instanced sub-scene, stays unresolved. In-scene resolution, the common case, works.</li><li><strong>Relay chains</strong> resolve in document (pre-order) order. A feedback loop is not iterated to a fixed point.</li></ul>
+<h3>Why a 2D background reads 77 here and 76 in Godot</h3>
+<p>Both sides clear a 2D scene to <code>default_clear_color</code>, 0.3 grey. The Godot images read 76 there, and the previewer reads 77. The value is 76.5 in 8 bits, so the driver's rounding decides the byte. <code>pnpm ref:godot</code> renders on Vulkan through lavapipe, which gives 76, and <code>--rendering-driver opengl3</code> gives 77. The previewer clears through WebGL, which gives 77. This 1/255 gap is not a parity defect.</p></div>
     </article>
     <article class="sheet" data-type="AcceptDialog" hidden>
       <header class="sheet-head">
@@ -2385,10 +2387,10 @@ tr:last-child td{border-bottom:0}
       </div>
       <div class="prose"><p>Godot's 3D platformer demo (<code>game.tscn</code>): textured terrain blocks, floating platforms, an enemy and coins under a blue sky. Both sides use the same editor orbit.</p>
 <h3>What it exercises</h3>
-<ul><li>GridMap terrain</li><li>StandardMaterial3D albedo textures</li><li>Textured mesh characters and props, including a GLB enemy that self-shadows</li><li>Coin instances with additive glow sprites</li><li>The stage's own WorldEnvironment: AgX tonemapping and a flat colour ambient</li></ul>
+<ul><li>GridMap terrain</li><li>StandardMaterial3D albedo textures</li><li>Textured mesh characters and props, including a GLB enemy that self-shadows</li><li>Coin instances with additive glow sprites</li><li>The stage's own WorldEnvironment: AgX tonemapping, a flat colour ambient and depth fog</li><li>Seven ReflectionProbes that update once</li></ul>
 <p>Framing, terrain, props and shadow shapes match.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Shader missing</strong> The previewer does not run the custom <code>sky</code> shader over a <code>CompressedCubemap</code>, so smooth metal reflects black and the coins read grey, not gold.</li><li><strong>Resource gap</strong> The ReflectionProbe nodes have no effect, so recesses are lighter and the coin halos look faint.</li></ul></div>
+<ul><li><strong>Shader missing</strong> The previewer does not run the custom <code>sky</code> shader over a <code>CompressedCubemap</code>, so smooth metal reflects black and the coins read grey, not gold.</li><li><strong>Resource gap</strong> The ReflectionProbe nodes have no effect, so shadowed ground and recesses take the flat ambient, not the darker probe captures Godot uses.</li></ul></div>
     </article>
     <article class="sheet" data-type="GPUParticles2D" hidden>
       <header class="sheet-head">
