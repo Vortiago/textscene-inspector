@@ -61,7 +61,7 @@ export function splitSunOf(light: THREE.DirectionalLight): SplitSunLight | null 
  * a split sun off its light.
  */
 export function declaredLightOf(light: THREE.Light): THREE.Object3D | null {
-  return light instanceof SplitSunLight ? light.parent : light;
+  return isSplitSun(light) ? light.parent : light;
 }
 
 /** The light's split sun, attached on the first call. The declared light stops shading then. */

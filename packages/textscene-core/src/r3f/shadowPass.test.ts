@@ -16,7 +16,7 @@ import { AtlasAreaShadow, type AreaShadowLight } from './positionalShadow/atlasA
 import { AtlasDepthMaterial, ParaboloidDepthMaterial } from './positionalShadow/atlasDepthMaterials';
 import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow';
 import { SplitSunLight } from './directionalShadow/splitSun';
-import { installSunShadowRows, SUN_SHADOW_ROWS } from './directionalShadow/sunShadowRows';
+import { installSunShadowRows, SLOT_MATRIX_ROWS, SUN_SHADOW_ROWS } from './directionalShadow/sunShadowRows';
 import { litUniformArray } from './testing/litUniformArray';
 
 holdPositionalShadowAtlas({}, 4096);
@@ -284,7 +284,7 @@ describe('the sun shadow rows', () => {
 
   const firstSlotRows = () => {
     installSunShadowRows();
-    return [...litUniformArray(SUN_SHADOW_ROWS).subarray(0, 12)];
+    return [...litUniformArray(SUN_SHADOW_ROWS).subarray(0, SLOT_MATRIX_ROWS * 4)];
   };
 
   it('holds each split sun’s slot matrices after the pass', () => {

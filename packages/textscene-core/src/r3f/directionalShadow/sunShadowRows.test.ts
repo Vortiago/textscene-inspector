@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { installSunShadowRows, SUN_SHADOW_ROWS, writeSunShadowRows } from './sunShadowRows';
+import { installSunShadowRows, SLOT_MATRIX_ROWS, SUN_SHADOW_ROWS, writeSunShadowRows } from './sunShadowRows';
 import { SplitSunLight } from './splitSun';
 import { SPLIT_SLOTS } from './splitShadow';
 import { litUniformArray } from '../testing/litUniformArray';
 
-/** Floats one sun shadow takes: four slots of three vec4 rows. */
-const SUN_FLOATS = SPLIT_SLOTS * 3 * 4;
+/** Floats one slot takes: three vec4 rows. */
+const SLOT_FLOATS = SLOT_MATRIX_ROWS * 4;
+const SUN_FLOATS = SPLIT_SLOTS * SLOT_FLOATS;
 
 /** A split sun whose slot `n` maps x by `n + 1`, y by `n + 2`, z by `n + 3`, and offsets by `base`. */
 function sunWithSlotMatrices(base = 0): SplitSunLight {
@@ -28,8 +29,10 @@ function writtenRows(lights: THREE.Light[]): Float32Array {
 describe('writeSunShadowRows', () => {
   it('writes the first three rows of each slot matrix, slot after slot', () => {
     const rows = writtenRows([sunWithSlotMatrices()]);
-    expect([...rows.subarray(0, 12)]).toEqual([1, 0, 0, 0.5, 0, 2, 0, 0.25, 0, 0, 3, 0.125]);
-    expect([...rows.subarray(36, 48)]).toEqual([4, 0, 0, 0.5, 0, 5, 0, 0.25, 0, 0, 6, 0.125]);
+    expect([...rows.subarray(0, SLOT_FLOATS)]).toEqual([1, 0, 0, 0.5, 0, 2, 0, 0.25, 0, 0, 3, 0.125]);
+    expect([...rows.subarray(3 * SLOT_FLOATS, 4 * SLOT_FLOATS)]).toEqual([
+      4, 0, 0, 0.5, 0, 5, 0, 0.25, 0, 0, 6, 0.125,
+    ]);
   });
 
   it('writes each sun shadow in the order three lists the lights', () => {

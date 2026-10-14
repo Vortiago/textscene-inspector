@@ -5,6 +5,7 @@ import {
   attachSplitSun,
   declaredLightOf,
   followDeclaredLight,
+  isSplitSun,
   releaseSplitSun,
   splitSunOf,
 } from './splitSun';
@@ -25,6 +26,23 @@ describe('SplitSunLight', () => {
     sun.matrixWorld.makeTranslation(1, 2, 3);
     parent.updateMatrixWorld(true);
     expect(new THREE.Vector3().setFromMatrixPosition(sun.matrixWorld).toArray()).toEqual([1, 2, 3]);
+  });
+});
+
+describe('isSplitSun', () => {
+  it('holds for a split sun', () => {
+    expect(isSplitSun(new SplitSunLight())).toBe(true);
+  });
+
+  it('does not hold for the declared directional light (error case)', () => {
+    expect(isSplitSun(new THREE.DirectionalLight())).toBe(false);
+  });
+
+  it('holds for a split sun off its declared light (edge case)', () => {
+    const light = new THREE.DirectionalLight();
+    const sun = attachSplitSun(light);
+    releaseSplitSun(light);
+    expect(isSplitSun(sun)).toBe(true);
   });
 });
 

@@ -357,7 +357,7 @@ declares its outputs, and packs its active non-sampler uniforms by A.7, as ANGLE
 | ------------- | ---------------------- | --------------------------------------------------------------- |
 | 1             | 33                     | 59                                                              |
 | 8             | 173                    | 199                                                             |
-| 9             | 173                    | 199                                                             |
+| 9 (8 sun shadows drawn) | 173 | 199 |
 | 1, soft       | 35                     | 61                                                              |
 | 8, soft       | 189                    | 215                                                             |
 
