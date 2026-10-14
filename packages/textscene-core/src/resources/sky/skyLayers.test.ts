@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { SKY_LAYER_GROUPS, readCubeRadiance, skyLayers, type SkyLayers } from './skyLayers';
 import type { RadianceFilter } from './types';
 
-const SIZE = 8;
+/** Godot's smallest radiance size, so the importance-sample filter bakes a layout Godot uses. */
+const SIZE = 32;
 
 /** Six RGBA faces, each filled with the radiance `radiance` gives its index. */
 function cube(radiance: (face: number) => number): Float32Array[] {

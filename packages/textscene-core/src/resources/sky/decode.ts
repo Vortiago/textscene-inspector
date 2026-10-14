@@ -33,9 +33,9 @@ export function skyMaterialRef(
 const PROCESS_MODES: readonly SkyProcessMode[] = ['automatic', 'quality', 'incremental', 'real-time'];
 
 /**
- * A `Sky`'s process mode and radiance size as Godot stores them. An invalid value reads as Godot's
- * default and logs nothing, as the Sky validators report it. `set_radiance_size` refuses an index
- * past the table (`sky.cpp:34`), so such a size stays at the default.
+ * A `Sky`'s process mode and radiance size. An invalid value reads as Godot's default and logs
+ * nothing, as the Sky validators report it. `set_radiance_size` refuses an index past the table
+ * (`sky.cpp:34`), so such a size stays at the default.
  */
 export function decodeSkyProcessing(data: Record<string, string>): SkyProcessing {
   return {

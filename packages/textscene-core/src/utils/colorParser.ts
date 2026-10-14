@@ -1,5 +1,6 @@
 /**
- * Reads a Godot `Color(r, g, b, a)` literal as channels or as a three.js hex colour.
+ * A Godot `Color(r, g, b, a)`: its literal read as channels or as a three.js hex colour, and its
+ * channels scaled by an energy as Godot scales them.
  */
 
 import { COLOR_RE } from '../parser/vectors';

@@ -23,8 +23,8 @@ export type { SkyLight } from './skyUniforms';
 const BACKGROUND_SIZE = 256;
 
 /**
- * The largest radiance the previewer bakes. Godot's own render of rough metal at radiance size 512
- * differs from 256 by 0.02/255, and each doubling costs four times the bake.
+ * The largest radiance the previewer bakes, as each doubling costs four times the bake. Metal balls
+ * from mirror to rough under a sky of radiance size 512 draw within 0.07/255 of Godot's at this cap.
  */
 const LARGEST_RADIANCE_SIZE = 256;
 

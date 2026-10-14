@@ -61,19 +61,13 @@ interface DownsampleStep {
   weights: Float32Array;
 }
 
-/** The cube texel each radiance octmap texel reads, for one cube size and one octmap size. */
-interface BaseTexels {
-  cubeSize: number;
-  octmapSize: number;
-  /** The face times the face's texel count, plus the texel, that each octmap texel reads. */
-  texels: Int32Array;
-}
-
 /**
- * Written only by `baseTexelsOf`, on the first sky of a cube size and octmap size. 1.6 MB at 256, kept so
- * a later sky builds its octmap without the 400,000 directions that place it.
+ * Written only by `baseTexelsOf`, on the first sky of a cube size and octmap size: the face times
+ * the face's texel count, plus the texel, that each octmap texel reads. 1.6 MB at 256, kept so a
+ * later sky builds its octmap without the 400,000 directions that place it. A key per size, not
+ * one slot: skies of two sizes in turn would each place them again.
  */
-let cachedBaseTexels: BaseTexels | null = null;
+const baseTexelsBySize = new Map<string, Int32Array>();
 
 /**
  * Written only by `stepsOf`, on a filter's first sky. They hold for every sky, and save the 500,000
@@ -154,10 +148,13 @@ function stepsOf(filter: LayerFilter): DownsampleStep[] {
 }
 
 function baseTexelsOf(cubeSize: number, layout: SkyOctmapLayout): Int32Array {
-  if (cachedBaseTexels?.cubeSize !== cubeSize || cachedBaseTexels.octmapSize !== layout.size) {
-    cachedBaseTexels = { cubeSize, octmapSize: layout.size, texels: baseTexels(cubeSize, layout) };
+  const key = `${cubeSize}:${layout.size}`;
+  let texels = baseTexelsBySize.get(key);
+  if (!texels) {
+    texels = baseTexels(cubeSize, layout);
+    baseTexelsBySize.set(key, texels);
   }
-  return cachedBaseTexels.texels;
+  return texels;
 }
 
 /** The cube texel nearest each texel of the radiance octmap, padding included. */
