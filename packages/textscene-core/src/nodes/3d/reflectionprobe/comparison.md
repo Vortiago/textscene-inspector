@@ -1,15 +1,26 @@
 ---
 type: ReflectionProbe
 category: 3D
-status: unimplemented
-fixture: unit-reflection-probe.tscn
-# image: unit-reflection-probe
-renders_as: invisible transform-only fallback
+renders_as: a capture of the scene, baked into an atlas layer that lit surfaces in its box read
 ---
 
 # ReflectionProbe
 
-Captures its surroundings as a cubemap so nearby materials reflect them at low cost. The previewer does not draw it yet, so the node is an invisible transform-only fallback and its children still show.
+Captures the scene around it in six directions and gives each lit surface inside its box the
+capture's reflection and ambient light. The previewer captures each probe once, after the scene's
+meshes and textures load.
+
+## Two overlapping probes
+<!-- compare: image=unit-reflection-probe-always status=unreviewed fixture=unit-reflection-probe-always.tscn -->
+
+Two probes that update ALWAYS share the floor. Each probe captures the blue background. The floor
+takes that capture as its ambient light and its reflection, so the floor and the shadow turn blue.
+
+## Colour ambient and box projection
+<!-- compare: image=unit-reflection-probe-mirror status=unreviewed fixture=unit-reflection-probe-mirror.tscn -->
+
+One probe that updates ONCE sets its ambient to red and projects its reflection onto its box. The
+floor takes the red ambient, and the mirror sphere reflects the floor, the box and the background.
 
 ## Linting
 
@@ -42,8 +53,10 @@ Strict parsing format-checks these `ReflectionProbe` properties, plus 1 inherite
 |  | `reflectionprobe-origin-offset-clamped` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. An `intensity = "bright"` or `ambient_mode = "Environment"` parses with no warning and reaches no in-memory state.
+The lenient parser reads every property above. A malformed value keeps Godot's default, a
+`max_distance` above 262144 clamps to it, and an `ambient_mode` outside 0 to 2 reads as
+`AMBIENT_DISABLED`.
 
 ## Known limitations
 
-- **Not drawn** Godot applies the probe's reflection to surfaces inside its box, but here they get none.
+- **Approximated** A probe that updates ALWAYS captures once, so it does not follow a moving node.

@@ -98,9 +98,14 @@ export function createLoadLane<T>(ctx: LoadLaneContext<T>): LoadLane<T> {
 
   // Bound handler for FileEventBus events (stored once to allow proper unsubscription)
   const handleFileLoaded = async (filePath: string, data: FileData): Promise<void> => {
-    // Only process if this processor handles this file's data. Asked about
-    // the file, never a sub-resource path: the question is what these bytes are.
-    if (shouldProcess && !shouldProcess(filePath, data)) return;
+    // Asked about the file, never a sub-resource path: the question is what these bytes are.
+    // A refusal fails only this processor's own requests, as no later arrival settles them,
+    // and leaves the bytes on the bus for a sibling processor that reads them.
+    if (shouldProcess && !shouldProcess(filePath, data)) {
+      const refused = new Error(`${resourceType} processor does not read ${filePath}`);
+      for (const path of awaitingFile(filePath)) fail(path, refused);
+      return;
+    }
 
     // Concurrently: each address owns its flight token and cache slot, and a
     // material's `process` ends awaiting its textures, network I/O that serial

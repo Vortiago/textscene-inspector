@@ -30,6 +30,15 @@ export interface FogSettings {
   skyEnergy: number;
 }
 
+/**
+ * The fog a reflection probe capture draws: an exterior probe's depth fog, and no volumetric fog, as
+ * a capture's buffers hold no fog volume (`render_forward_clustered.cpp:1680-1684`, `:1646-1650`). An
+ * interior probe draws without the environment, so without its fog.
+ */
+export function captureFog(settings: FogSettings, isInterior: boolean): FogSettings {
+  return { ...settings, depth: isInterior ? null : settings.depth, volumetric: null };
+}
+
 /** The objects of a scene the fog reads: its lights, the meshes that may cast their shadows, and its FogVolumes. */
 export interface FogObjects {
   lights: readonly THREE.Light[];

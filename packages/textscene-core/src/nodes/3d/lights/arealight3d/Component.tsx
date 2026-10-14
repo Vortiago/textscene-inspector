@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useMemo, useRef } from 'react';
+import { visualLayersUserData } from '../../../../r3f/visualLayers';
 import type * as THREE from 'three';
 import type { AreaLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
@@ -55,8 +56,15 @@ function useAreaTexture(ref: string | undefined): THREE.Texture | null {
  * reads, rebuilt only when one of them changes.
  */
 function useAreaLightUserData(properties: AreaLight3DProperties): Record<string, unknown> {
-  const { area_range, area_attenuation, light_specular, light_size, shadow_blur, shadow_normal_bias } =
-    properties;
+  const {
+    layers,
+    area_range,
+    area_attenuation,
+    light_specular,
+    light_size,
+    shadow_blur,
+    shadow_normal_bias,
+  } = properties;
   const texture = useAreaTexture(properties.area_texture);
   const fogEnergy = lightFogEnergy(properties);
   return useMemo(
@@ -65,8 +73,10 @@ function useAreaLightUserData(properties: AreaLight3DProperties): Record<string,
       ...areaTextureUserData(texture),
       ...positionalShadowUserData(areaShadowDeclaration({ light_size, shadow_blur, shadow_normal_bias })),
       ...fogLightUserData({ energy: fogEnergy }),
+      ...visualLayersUserData(layers),
     }),
     [
+      layers,
       area_range,
       area_attenuation,
       light_specular,

@@ -1353,6 +1353,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Reflection Probe Always",
+    "file": "unit-reflection-probe-always.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Reflection Probe Mirror",
+    "file": "unit-reflection-probe-mirror.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Reflection Probe",
     "file": "unit-reflection-probe.tscn",
     "category": "Other"

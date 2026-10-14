@@ -1,25 +1,16 @@
 /**
  * The Godot render-layer mask carried on THREE `userData`: the writer a slice
- * hands R3F, and the reader a consumer (currently `Decal.cull_mask`) filters with.
+ * hands R3F, and the reader a consumer (`Decal.cull_mask`, a ReflectionProbe's masks) filters with.
  */
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  GODOT_DEFAULT_VISUAL_LAYERS,
-  setVisualLayers,
-  visualLayersOf,
-  visualLayersUserData,
-} from './visualLayers';
+import { GODOT_DEFAULT_VISUAL_LAYERS } from '../godot/visualLayers';
+import { setVisualLayers, visualLayersOf, visualLayersUserData } from './visualLayers';
 
 describe('visualLayersUserData', () => {
   it('carries an authored layers mask', () => {
     expect(visualLayersUserData(2)).toEqual({ godotLayers: 2 });
-  });
-
-  it("resolves an absent layers property to Godot's default", () => {
-    expect(visualLayersUserData(undefined)).toEqual({ godotLayers: GODOT_DEFAULT_VISUAL_LAYERS });
-    expect(visualLayersUserData()).toEqual({ godotLayers: 1 });
   });
 
   it('keeps a zero mask rather than defaulting it — Godot allows "no layers"', () => {

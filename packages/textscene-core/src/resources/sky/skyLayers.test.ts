@@ -3,10 +3,13 @@ import * as THREE from 'three';
 import {
   SKY_LAYER_GROUPS,
   SKY_LAYER_GROUP_NAMES,
+  bakeAtlasLayers,
   bakeSkyLayers,
   byGroup,
+  createReflectionAtlas,
   disposeSkyLayers,
 } from './skyLayers';
+import { reflectionAtlasLayout } from '../../godot/reflectionProbe';
 import { fastFilter } from './fastFilter';
 import { testRenderer } from '../../testing/recordingWebGL';
 import type { SkyBake } from './types';
@@ -101,5 +104,74 @@ describe('disposeSkyLayers', () => {
     const layers = byGroup(() => new THREE.WebGLCubeRenderTarget(1));
 
     expect(() => disposeSkyLayers(layers)).not.toThrow();
+  });
+});
+
+describe('createReflectionAtlas', () => {
+  it('holds an octmap layer per probe, as wide as the layout', () => {
+    const atlas = createReflectionAtlas(reflectionAtlasLayout(false), 3);
+
+    expect([atlas.target.width, atlas.target.height, atlas.target.depth]).toEqual([768, 768, 3]);
+  });
+
+  it("holds every mip down to one texel past Godot's layers, so the texture is complete (edge case)", () => {
+    expect(createReflectionAtlas(reflectionAtlasLayout(false), 1).target.texture.mipmaps).toHaveLength(10);
+  });
+
+  it('holds one layer for an atlas of no probes, as a texture array needs a layer (edge case)', () => {
+    expect(createReflectionAtlas(reflectionAtlasLayout(true), 0).target.depth).toBe(1);
+  });
+});
+
+describe('bakeAtlasLayers', () => {
+  /** The layer and the mip of each draw into `atlas`'s target. */
+  function drawsInto(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget) {
+    const set = vi.spyOn(renderer, 'setRenderTarget');
+    return () => set.mock.calls.filter(([drawn]) => drawn === target).map(([, layer, mip]) => [layer, mip]);
+  }
+
+  it("draws the capture into mip 0 of the probe's layer, and each filtered layer into its own mip", async () => {
+    const { renderer } = await testRenderer();
+    const atlas = createReflectionAtlas(reflectionAtlasLayout(false), 3);
+    const draws = drawsInto(renderer, atlas.target);
+
+    bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 2, 'importance-sample');
+
+    expect(draws()).toEqual([0, 1, 2, 3, 4, 5, 6, 7].map((mip) => [2, mip]));
+  });
+
+  it("filters an update-always probe's layers 1 to 6 with the fast filter", async () => {
+    const { renderer } = await testRenderer();
+    const atlas = createReflectionAtlas(reflectionAtlasLayout(true), 1);
+    const selected = vi.spyOn(fastFilter, 'selectLayer');
+
+    bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 0, 'fast');
+
+    expect(selected.mock.calls.map(([layer]) => layer)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it('leaves the renderer on the target it had', async () => {
+    const { renderer } = await testRenderer();
+    const target = new THREE.WebGLRenderTarget(4, 4);
+    renderer.setRenderTarget(target);
+
+    bakeAtlasLayers(
+      renderer,
+      radianceCube(renderer),
+      createReflectionAtlas(reflectionAtlasLayout(false), 1),
+      0,
+      'importance-sample'
+    );
+
+    expect(renderer.getRenderTarget()).toBe(target);
+  });
+
+  it('refuses a layer the atlas lacks (error case)', async () => {
+    const { renderer } = await testRenderer();
+    const atlas = createReflectionAtlas(reflectionAtlasLayout(false), 2);
+
+    expect(() => bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 2, 'importance-sample')).toThrow(
+      'expected an atlas layer from 0 to 1, got 2'
+    );
   });
 });

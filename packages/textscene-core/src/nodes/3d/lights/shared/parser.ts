@@ -3,10 +3,12 @@
 import type { BaseLightProperties, BaseLightWithNormalBias, PositionalLightProperties } from './types';
 import { floatOr, parseOptionalBool, parseOptionalFloat } from '../../../../parser/valueParsers';
 import { boolSlotValue } from '../../../../godot/index.js';
+import { parseVisualLayers } from '../../visualinstance3d/parser';
 
 /** The colour, energy and shadow properties every light type shares. */
 export function parseBaseLightProperties(properties: Record<string, string>): BaseLightProperties {
   return {
+    layers: parseVisualLayers(properties),
     light_color: properties.light_color || 'Color(1, 1, 1, 1)',
     light_energy: floatOr(properties.light_energy, 1.0, 'light_energy'),
     light_negative: parseOptionalBool(properties.light_negative),

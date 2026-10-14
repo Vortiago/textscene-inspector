@@ -1,7 +1,7 @@
 /**
  * Godot surface state that three holds per object, applied per draw group: a billboard's
- * pose, the object space of an alpha hash, shadow-pass membership, the shadow's alpha cut and
- * SHADOWS_ONLY. three calls each before-hook and its
+ * pose, the object space of an alpha hash, the layers a probe's mask meets, shadow-pass membership,
+ * the shadow's alpha cut and SHADOWS_ONLY. three calls each before-hook and its
  * after-hook around one group's draw, with that group's material (`WebGLRenderer.js:2158-2183`,
  * `WebGLShadowMap.js:546-564`), so one mesh can mix surfaces the way Godot does.
  */
@@ -14,6 +14,7 @@ import {
   type SurfaceBillboard,
 } from '../resources/materials/standardmaterial3d/materialBag';
 import { billboardWorldMatrix } from './surfaceBillboard';
+import { restoreInstanceLayers, showInstanceLayers } from './reflectionProbe/instanceLayers';
 import { alignAlphaHash } from './materials/godotAlphaHash';
 import { opaquePrepassOf } from './materials/opaquePrepass';
 import { surfaceDepthMaterial, syncSurfaceDepth } from './materials/surfaceDepthMaterial';
@@ -194,6 +195,7 @@ function cutsShadow(material: THREE.Material): boolean {
 }
 
 function closeDraw(): void {
+  restoreInstanceLayers();
   if (skipped) {
     skipped.drawRange.count = skippedCount;
     skipped = null;
@@ -226,13 +228,14 @@ export const skipColourDraw: CastRule['colourDraw'] = (_object, geometry) => {
 export function surfaceDrawHooks(rule: CastRule, instance: DrawnInstance): SurfaceDrawHooks {
   return {
     // three recomputes `modelViewMatrix` from `matrixWorld` after this hook (`:2160`).
-    onBeforeRender(this: THREE.Object3D, _renderer, _scene, camera, geometry, material) {
+    onBeforeRender(this: THREE.Object3D, renderer, _scene, camera, geometry, material) {
       if (!instance.isVisible) {
         skip(geometry);
         return;
       }
       rule.colourDraw(this, geometry, material, camera);
       alignHash(this, material, instance);
+      showInstanceLayers(renderer, this);
     },
     onAfterRender: closeDraw,
     // three sets `modelViewMatrix` once per object before its group loop

@@ -104,27 +104,42 @@ describe('createResourceProcessor', () => {
       expect(fileEventBus.isCached('res://a.txt')).toBe(false);
     });
 
-    it('shouldProcess gating: a non-matching arrival is left for another processor (no process, no emission, still inflight)', async () => {
+    it('shouldProcess gating: fails its own request for bytes it refuses, so no consumer waits forever', async () => {
       // ArrayBuffer data fails this processor's `typeof data === 'string'` gate.
       provider.files.set('res://a.bin', new ArrayBuffer(4));
-      const loadedHandler = vi.fn();
       const failedHandler = vi.fn();
-      eventBus.on('resource', 'loaded', loadedHandler);
-      eventBus.on('resource', 'failed', failedHandler);
+      eventBus.on<Error>('resource', 'failed', failedHandler);
 
       processor.request('res://a.bin');
       await flush();
 
       expect(processSpy).not.toHaveBeenCalled();
-      expect(loadedHandler).not.toHaveBeenCalled();
-      expect(failedHandler).not.toHaveBeenCalled();
-      // The request stays in flight: a sibling processor on the same FileEventBus
-      // handles data this one rejects.
-      expect(processor.isLoading('res://a.bin')).toBe(true);
-      expect(processor.isCached('res://a.bin')).toBe(false);
-      // This processor did not consume the bytes, so it must not drop them
-      // from under the sibling processor that will.
+      expect(failedHandler).toHaveBeenCalledWith('res://a.bin', expect.any(Error));
+      expect(String(failedHandler.mock.calls[0]![1])).toContain(
+        'resource processor does not read res://a.bin'
+      );
+      expect(processor.isLoading('res://a.bin')).toBe(false);
+    });
+
+    it('shouldProcess gating: leaves the bytes it refuses for a sibling processor on the same bus', async () => {
+      provider.files.set('res://a.bin', new ArrayBuffer(4));
+
+      processor.request('res://a.bin');
+      await flush();
+
       expect(fileEventBus.isCached('res://a.bin')).toBe(true);
+    });
+
+    it('shouldProcess gating: ignores refused bytes it never asked for (edge case)', async () => {
+      provider.files.set('res://a.bin', new ArrayBuffer(4));
+      const failedHandler = vi.fn();
+      eventBus.on('resource', 'failed', failedHandler);
+
+      fileEventBus.request('res://a.bin');
+      await flush();
+
+      expect(failedHandler).not.toHaveBeenCalled();
+      expect(processor.isCached('res://a.bin')).toBe(false);
     });
 
     it('a failure is cached and a repeat request re-emits its reason WITHOUT re-hitting the provider', async () => {

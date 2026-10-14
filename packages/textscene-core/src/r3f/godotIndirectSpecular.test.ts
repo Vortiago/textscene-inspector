@@ -67,6 +67,12 @@ describe('installGodotIndirectSpecular', () => {
     );
   });
 
+  it('occludes a reflection without a sky too, as a ReflectionProbe reflects without one (edge case)', () => {
+    expect(patchedChunks().ao).toContain(
+      '#if defined( STANDARD ) && ! defined( GODOT_SPECULAR_OCCLUSION_DISABLED )'
+    );
+  });
+
   it('keeps more of a smooth metal reflection under a dim ambient', () => {
     expect(patchedChunks().ao).toContain(
       'max( min( godotReflective * godotSpecularOcclusion * 10.0, 1.0 ), godotSpecularOcclusion )'

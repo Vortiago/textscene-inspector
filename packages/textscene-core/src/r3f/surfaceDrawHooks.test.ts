@@ -4,6 +4,9 @@ import { applyShadowCasting, rangedShadowCastingEffects, shadowCastingEffects } 
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
 import type { ProgramShader } from './materialProgramInputs';
 import { drawsAsOneBatch } from './surfaceDrawHooks';
+import { instanceLayers } from './reflectionProbe/probeSlots';
+import { setVisualLayers } from './visualLayers';
+import { testRenderer } from '../testing/recordingWebGL';
 import { billboardOf } from '../resources/materials/standardmaterial3d/materialBag';
 import { ShadowCastingSetting } from '../godot/rendering';
 import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/opaquePrepass';
@@ -296,5 +299,27 @@ describe('surfaceDrawHooks — identity', () => {
     const second = shadowCastingEffects(ShadowCastingSetting.ON);
     expect(second.onBeforeRender).toBe(first.onBeforeRender);
     expect(second.onBeforeShadow).toBe(first.onBeforeShadow);
+  });
+});
+
+describe('surfaceDrawHooks — instance layers', () => {
+  it("shows the instance's layers to its colour draw, and the default after it", async () => {
+    const { renderer } = await testRenderer();
+    const mesh = surfacesMesh();
+    setVisualLayers(mesh, 4);
+    const args = [
+      renderer,
+      null,
+      camera,
+      mesh.geometry,
+      (mesh.material as THREE.Material[])[OPAQUE],
+      mesh.geometry.groups[OPAQUE],
+    ] as unknown as Parameters<THREE.Object3D['onBeforeRender']>;
+
+    mesh.onBeforeRender(...args);
+    const shown = instanceLayers[0];
+    mesh.onAfterRender(...args);
+
+    expect([shown, instanceLayers[0]]).toEqual([4, 1]);
   });
 });

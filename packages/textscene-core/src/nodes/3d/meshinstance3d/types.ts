@@ -27,7 +27,4 @@ export interface MeshInstance3DProperties extends GeometryInstance3DProperties {
 
   /** Lightmap detail scale (0=1x, 1=2x, 2=4x, 3=8x). */
   giLightmapScale?: number;
-
-  /** Render layer bitmask (32 bits; the editor exposes the first 20). */
-  layers?: number;
 }

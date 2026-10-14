@@ -73,22 +73,22 @@ const CLEARCOAT_RADIANCE = /* glsl */ `vec3 godotClearcoatRadiance( const in vec
 
 	`;
 
-const THREE_INDIRECT_SPECULAR =
-  'RE_IndirectSpecular( radiance, iblIrradiance, clearcoatRadiance, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );';
+/** The opening of three's indirect light, before which the coat dims what lies beneath it. */
+const THREE_INDIRECT_DIFFUSE = '#if defined( RE_IndirectDiffuse )';
 
 /**
  * Godot dims the ambient light and the reflection by `Fc`, then adds the coat's reflection to the
  * reflection (`scene_forward_clustered.glsl:1771-1795`), which its base layer's weights then scale
- * (`:2221-2231`). It does so only while the sky gives a reflection, which three's `USE_ENVMAP` marks.
+ * (`:2221-2231`). It does so only while the sky gives a reflection, which three's `USE_ENVMAP` marks,
+ * and before a ReflectionProbe or the occlusion of a reflection reads either.
  */
 const GODOT_INDIRECT_UNDER_COAT = /* glsl */ `#if defined( USE_CLEARCOAT ) && defined( USE_ENVMAP )
 		float godotCoatFresnel = material.clearcoat * godotClearcoatFresnel( geometryClearcoatNormal, geometryViewDir );
+		irradiance *= 1.0 - godotCoatFresnel;
+		iblIrradiance *= 1.0 - godotCoatFresnel;
 		radiance = mix( radiance, clearcoatRadiance, godotCoatFresnel );
 	#endif
-	${THREE_INDIRECT_SPECULAR}
-	#if defined( USE_CLEARCOAT ) && defined( USE_ENVMAP )
-		reflectedLight.indirectDiffuse *= 1.0 - godotCoatFresnel;
-	#endif`;
+	${THREE_INDIRECT_DIFFUSE}`;
 
 const CLEARCOAT_EDITS: readonly ChunkEdit<ClearcoatChunk>[] = [
   {
@@ -140,7 +140,7 @@ const CLEARCOAT_EDITS: readonly ChunkEdit<ClearcoatChunk>[] = [
     godot:
       'clearcoatRadiance += godotClearcoatRadiance( geometryViewDir, geometryClearcoatNormal, geometryNormal, material.clearcoatRoughness );',
   },
-  { chunk: 'lights_fragment_end', three: THREE_INDIRECT_SPECULAR, godot: GODOT_INDIRECT_UNDER_COAT },
+  { chunk: 'lights_fragment_end', three: THREE_INDIRECT_DIFFUSE, godot: GODOT_INDIRECT_UNDER_COAT },
 ];
 
 /**

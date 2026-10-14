@@ -1,7 +1,7 @@
 /**
  * Draws an Environment's depth fog and volumetric fog into its scene. The fog readies itself for
  * each render of the scene, through whichever camera renders it, so the main view, a SubViewport
- * pass and a screenshot each get their own.
+ * pass, a screenshot and a reflection probe capture each get their own.
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -12,7 +12,8 @@ import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
 import { observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { readShadowMaps } from '../shadowPass.js';
 import { TrackedObjects } from '../trackedObjects.js';
-import { finishFog, prepareFog, type DepthFog, type FogSettings } from './fogFrame.js';
+import { probeCaptureOf } from '../reflectionProbe/captureCameras.js';
+import { captureFog, finishFog, prepareFog, type DepthFog, type FogSettings } from './fogFrame.js';
 import { acquireFogPasses } from './fogPasses.js';
 import { isFogVolume, type FogVolumeObject } from './fogVolumeObject.js';
 import type { VolumetricFog } from './volumetricFogPass.js';
@@ -66,13 +67,15 @@ export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
     // fade for this camera, which the scene's observers wrote before it.
     const stopPreparing = readShadowMaps(gl, (rendered, camera) => {
       if (rendered !== scene) return;
-      const isVolumetric = settings.current.volumetric !== null;
+      const capture = probeCaptureOf(camera);
+      const fog = capture ? captureFog(settings.current, capture.isInterior) : settings.current;
+      const isVolumetric = fog.volumetric !== null;
       const objects = {
         lights: lights.current(),
         casters: isVolumetric ? casters.current() : NO_CASTERS,
         volumes: isVolumetric ? volumes.current() : NO_VOLUMES,
       };
-      if (prepareFog(gl, scene, camera, settings.current, passes, objects)) invalidate();
+      if (prepareFog(gl, scene, camera, fog, passes, objects)) invalidate();
     });
     const stopFinishing = observeSceneRenderEnd(scene, finishFog);
     return () => {

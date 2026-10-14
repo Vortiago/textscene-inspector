@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { reflectionAtlasLayout } from './reflectionProbe';
 import { MOST_LAYER_SAMPLES, layerSamples, skyOctmapLayout } from './skyReflection';
 
 describe('skyOctmapLayout', () => {
@@ -7,6 +8,10 @@ describe('skyOctmapLayout', () => {
     expect(layout.size).toBe(640);
     expect(layout.borderSize).toBeCloseTo(0.8, 10);
     expect(layout.downsampledSizes).toEqual([320, 160, 80, 40, 20, 10]);
+  });
+
+  it('gives each of the eight layers the full width, as each is a layer of an array', () => {
+    expect(skyOctmapLayout(256).layerSizes).toEqual([640, 640, 640, 640, 640, 640, 640, 640]);
   });
 
   it('ends the downsampled chain at 10 texels at the smallest radiance size (edge case)', () => {
@@ -40,6 +45,23 @@ describe('layerSamples', () => {
     expect(smoother).toHaveLength(64);
     expect(mean(smoother, cosine)).toBeGreaterThan(mean(samples, cosine));
     expect(mean(smoother, lod)).toBeLessThan(mean(samples, lod));
+  });
+});
+
+describe('layerSamples in a reflection atlas', () => {
+  const atlas = reflectionAtlasLayout(false);
+  const lods = (layout: typeof atlas, layer: number) => layerSamples(layout, layer).map(({ lod }) => lod);
+
+  it('reads a mip finer for each halving of the layer it fills, as each atlas layer is a mip', () => {
+    const fullWidth = { ...atlas, layerSizes: atlas.layerSizes.map(() => atlas.size) };
+    const finer = lods(fullWidth, 3).map((lod) => lod - 3);
+    lods(atlas, 3).forEach((lod, sample) => expect(lod).toBeCloseTo(finer[sample]!, 9));
+  });
+
+  it("filters the seven-layer atlas's last layer at roughness 1, as the roughest sky layer", () => {
+    expect(layerSamples(reflectionAtlasLayout(true), 6)).toHaveLength(
+      layerSamples(skyOctmapLayout(256), 7).length
+    );
   });
 });
 

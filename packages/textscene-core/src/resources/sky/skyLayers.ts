@@ -1,18 +1,26 @@
 /**
  * Godot's filtered radiance layers of a sky, 1 to 7, which its ambient and its reflections read
- * (`scene_forward_clustered.glsl:1714-1756`), baked on the GPU as Godot bakes them. Layer 0 is the
- * radiance itself. A pass draws the radiance into Godot's octmap, a chain of downsamples shrinks it
- * to 10 texels wide, and a filter per layer reads that chain around each direction: GGX importance
- * sampling, or the fast filter of a real-time sky. Nothing comes back to the CPU.
+ * (`scene_forward_clustered.glsl:1714-1756`), and of each ReflectionProbe's capture, baked on the GPU
+ * as Godot bakes them. Layer 0 is the radiance itself. A pass draws the radiance into Godot's octmap,
+ * a chain of downsamples shrinks it, and a filter per layer reads that chain around each direction:
+ * GGX importance sampling, or the fast filter of a real-time sky or probe. Nothing comes back to the CPU.
  */
 
 import * as THREE from 'three';
 import { drawOffscreen } from '../../r3f/offscreen.js';
-import { SKY_ROUGHNESS_LAYERS_DEFAULT } from '../../godot/skyReflection.js';
+import {
+  SKY_ROUGHNESS_LAYERS_DEFAULT,
+  skyOctmapLayout,
+  type SkyOctmapLayout,
+} from '../../godot/skyReflection.js';
 import { fastFilter } from './fastFilter.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
 import type { LayerFilter } from './layerFilter.js';
-import { DOWNSAMPLE_FRAGMENT_SHADER, RADIANCE_OCTMAP_FRAGMENT_SHADER } from './skyLayerShaders.js';
+import {
+  DOWNSAMPLE_FRAGMENT_SHADER,
+  OCTMAP_FACE,
+  RADIANCE_OCTMAP_FRAGMENT_SHADER,
+} from './skyLayerShaders.js';
 import { draw, releaseTextures, setUniforms, skyPass } from './skyPass.js';
 import type { SkyBake } from './types.js';
 
@@ -64,7 +72,8 @@ export function bakeSkyLayers(
   radiance: THREE.CubeTexture,
   bake: SkyBake
 ): SkyLayers {
-  const filter = bake.radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(bake.radianceSize);
+  const filter =
+    bake.radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(skyOctmapLayout(bake.radianceSize));
   const layers = byGroup((group) => layerCube(SKY_LAYER_GROUPS[group]));
   try {
     drawOffscreen(gl, () => {
@@ -87,6 +96,55 @@ export function bakeSkyLayers(
 
 export function disposeSkyLayers(layers: SkyLayers): void {
   for (const group of SKY_LAYER_GROUP_NAMES) layers[group].dispose();
+}
+
+/**
+ * Godot's reflection atlas (`light_storage.cpp:1487-1590`): a layer of the texture array per probe,
+ * each an octmap with a mip per Godot layer. A read clamps its lod to the last layer, as Godot's
+ * texture ends there.
+ */
+export interface ReflectionAtlas {
+  readonly layout: SkyOctmapLayout;
+  readonly target: THREE.WebGLArrayRenderTarget;
+}
+
+/** An atlas of `probeCount` layers laid out as `layout`. The caller owns its target. */
+export function createReflectionAtlas(layout: SkyOctmapLayout, probeCount: number): ReflectionAtlas {
+  // A texture array needs a layer, so an atlas of no probes holds one nothing reads.
+  const depth = Math.max(probeCount, 1);
+  const target = new THREE.WebGLArrayRenderTarget(layout.size, layout.size, depth, MIPMAPPED_TARGET_OPTIONS);
+  return { layout, target: withMips(target) };
+}
+
+/**
+ * Draws the capture in `radiance` into layer `index` of `atlas`: the radiance into mip 0, and each
+ * filtered layer into its own mip, as Godot writes a probe's layers (`sky.cpp:310-330`).
+ */
+export function bakeAtlasLayers(
+  gl: THREE.WebGLRenderer,
+  radiance: THREE.CubeTexture,
+  atlas: ReflectionAtlas,
+  index: number,
+  radianceFilter: SkyBake['radianceFilter']
+): void {
+  const { layout, target } = atlas;
+  if (index < 0 || index >= target.depth)
+    throw new Error(`expected an atlas layer from 0 to ${target.depth - 1}, got ${index}`);
+  const filter = radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(layout);
+  try {
+    drawOffscreen(gl, () => {
+      setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize: layout.borderSize });
+      draw(gl, radianceOctmapPass, target, index, 0);
+      const chain = downsampleChain(gl, radiance, filter);
+      try {
+        filterAtlasLayers(gl, chain, filter, atlas, index);
+      } finally {
+        chain.dispose();
+      }
+    });
+  } finally {
+    for (const pass of [radianceOctmapPass, downsamplePass, filter.pass]) releaseTextures(pass);
+  }
 }
 
 /**
@@ -144,6 +202,28 @@ function filterGroup(
       draw(gl, pass, cube, face, mip);
     }
   });
+}
+
+/** Draws layers 1 onwards of `atlas`'s layout into their mips of layer `index`. */
+function filterAtlasLayers(
+  gl: THREE.WebGLRenderer,
+  chain: THREE.WebGLRenderTarget,
+  filter: LayerFilter,
+  { layout, target }: ReflectionAtlas,
+  index: number
+): void {
+  const { pass, chainSizes } = filter;
+  setUniforms(pass, {
+    chain: chain.texture,
+    lastMip: chainSizes.length - 1,
+    borderSize: layout.borderSize,
+    face: OCTMAP_FACE,
+  });
+  for (let layer = 1; layer < layout.layerSizes.length; layer += 1) {
+    filter.selectLayer(layer);
+    setUniforms(pass, { faceSize: layout.layerSizes[layer] });
+    draw(gl, pass, target, index, layer);
+  }
 }
 
 /**
