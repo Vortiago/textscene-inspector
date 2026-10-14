@@ -120,4 +120,5 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 - **Approximated** Godot measures V from the image top and three from the bottom, so a non-integer `uv1_scale.y` or a non-zero `uv1_offset.y` shifts V differently.
 - **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
 - **Approximated** Triplanar tiling density is exact on a PlaneMesh only, since curved, CSG, GridMap, ArrayMesh and GLB geometry tile by their own UVs.
+- **Approximated** A ViewportTexture outside the albedo slot samples its target linear and clamped, with no UV transform, so it ignores `uv1_scale`, `uv1_offset`, `texture_repeat` and a nearest `texture_filter` (#770).
 - **Approximated** A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.
