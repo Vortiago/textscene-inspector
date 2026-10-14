@@ -18,17 +18,17 @@ A procedural gradient baked to a texture, here a radial white-to-transparent glo
 ## CanvasTexture
 <!-- compare: image=unit-sprite2d-canvastexture status=done fixture=unit-sprite2d-canvastexture.tscn -->
 
-A Texture2D that wraps an image with optional normal and specular maps. The sprite renders identically to the sibling that references the image directly, in both engines. A CanvasTexture is a 2D object: in a material slot its RID names no texture, so Godot and the previewer bind a white texture there, in any slot.
+A Texture2D that wraps an image with optional normal and specular maps. The sprite renders identically to the sibling that references the image directly, in both engines. A CanvasTexture is a 2D object. In a material slot its RID names no texture, so Godot and the previewer bind a white texture in any slot.
 
 ## AtlasTexture
 <!-- compare: image=unit-material-albedo-atlas-texture status=done fixture=unit-material-albedo-atlas-texture.tscn -->
 
-A Texture2D that windows a region of another texture. A 2D consumer draws the region. A material slot binds the whole sheet, as Godot does, because a material reads a texture by its RID and an AtlasTexture's RID is its sheet's (`atlas_texture.cpp:55-58`). The left quad names the top-left texel and draws all four. The right quad binds a CanvasTexture and draws white.
+A Texture2D that windows a region of another texture. A 2D consumer draws the region. A material slot binds the whole sheet, as Godot does. A material reads a texture by its RID, and an AtlasTexture's RID is its sheet's (`atlas_texture.cpp:55-58`). The left quad names the top-left texel and draws all four. The right quad binds a CanvasTexture and draws white.
 
 ## ImageTexture
 <!-- compare: image=unit-material-albedo-image-format status=done fixture=unit-material-albedo-image-format.tscn -->
 
-A texture whose pixels the scene or a `.tres` saves inline, as an `Image` sub-resource. The previewer decodes every uncompressed format Godot saves: the 8-bit, 16-bit, half and float formats, RGBA4444, RGB565 and RGBE9995. A float channel above 1 survives, as Godot's does. A colour slot reads RGB8 and RGBA8 as sRGB and every other format raw, as Godot does, so the Lum8 strip draws brighter than the RGB8 strip of the same bytes. The same rule holds for a NoiseTexture2D, which is Lum8 without a colour ramp, and a GradientTexture2D, which is a float format with `use_hdr`.
+A texture whose pixels the scene or a `.tres` saves inline, as an `Image` sub-resource. The previewer decodes every uncompressed format Godot saves: the 8-bit, 16-bit, half and float formats, RGBA4444, RGB565 and RGBE9995. A float channel above 1 survives, as Godot's does. A colour slot reads RGB8 and RGBA8 as sRGB and every other format raw, as Godot does. So the Lum8 strip draws brighter than the RGB8 strip of the same bytes. The same rule holds for a NoiseTexture2D, which is Lum8 without a colour ramp, and a GradientTexture2D, which is a float format with `use_hdr`.
 
 ## NoiseTexture2D
 

@@ -27,7 +27,7 @@ An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the previe
 ## Emission texture
 <!-- compare: image=unit-material-emission-add status=done fixture=unit-material-emission-add.tscn -->
 
-ADD emission with both a dark red colour and a texture. Godot emits `(emission + texture) * energy` (`material.cpp:1788`), and the previewer adds the texel to the colour the same way, so the blue texel reads magenta and the green one amber.
+ADD emission with both a dark red colour and a texture. Godot emits `(emission + texture) * energy` (`material.cpp:1788`). The previewer adds the texel to the colour too, so the blue texel reads magenta and the green one amber.
 
 ## Clearcoat
 <!-- compare: image=unit-material-clearcoat status=done fixture=unit-material-clearcoat.tscn -->
