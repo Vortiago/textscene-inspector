@@ -27,35 +27,52 @@ export function isTexturePath(path: string): boolean {
   return extension !== null && IMAGE_EXTENSIONS.includes(extension);
 }
 
-/** Create a THREE.Texture from binary data through a blob URL, which it revokes. */
+/** Create a THREE.Texture from binary data, with Godot's 2D import alpha-border pass. */
 export async function createTextureFromBuffer(
+  data: ArrayBuffer,
+  mimeType: string,
+  manager?: THREE.LoadingManager
+): Promise<THREE.Texture> {
+  const texture = await decodeImage(data, mimeType, manager);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  // Wrapping stays at three's clamp-to-edge default. One entry is cached
+  // per path and shared, and Godot gives it two opposite defaults:
+  // `BaseMaterial3D` tiles (`FLAG_USE_TEXTURE_REPEAT`) and a `CanvasItem`
+  // clamps. Each consumer states its own at bind time (ADR-0044).
+  return applyAlphaBorderFix(texture);
+}
+
+/**
+ * The RGBA8 pixels of image bytes, top row first, as Godot's layered importer reads its source:
+ * with no alpha-border pass, which only the 2D importer runs.
+ */
+export async function decodeImagePixels(
+  data: ArrayBuffer,
+  mimeType: string,
+  manager?: THREE.LoadingManager
+): Promise<ImagePixels> {
+  const texture = await decodeImage(data, mimeType, manager);
+  const pixels = readImagePixels(texture.image);
+  texture.dispose();
+  if (!pixels) throw new Error(`Failed to read the pixels of a decoded ${mimeType} image`);
+  return pixels;
+}
+
+/** Decodes image bytes through a blob URL, which it revokes. */
+async function decodeImage(
   data: ArrayBuffer,
   mimeType: string,
   manager?: THREE.LoadingManager
 ): Promise<THREE.Texture> {
   const blob = new Blob([data], { type: mimeType });
   const blobUrl = URL.createObjectURL(blob);
-
   try {
     const loader = new THREE.TextureLoader(manager);
-    const texture = await new Promise<THREE.Texture>((resolve, reject) => {
-      loader.load(
-        blobUrl,
-        (loadedTexture: THREE.Texture) => {
-          loadedTexture.colorSpace = THREE.SRGBColorSpace;
-          // Wrapping stays at three's clamp-to-edge default. One entry is cached
-          // per path and shared, and Godot gives it two opposite defaults:
-          // `BaseMaterial3D` tiles (`FLAG_USE_TEXTURE_REPEAT`) and a `CanvasItem`
-          // clamps. Each consumer states its own at bind time (ADR-0044).
-          resolve(loadedTexture);
-        },
-        undefined,
-        () => {
-          reject(new Error('Failed to decode texture'));
-        }
-      );
+    return await new Promise<THREE.Texture>((resolve, reject) => {
+      loader.load(blobUrl, resolve, undefined, () => {
+        reject(new Error('Failed to decode texture'));
+      });
     });
-    return applyAlphaBorderFix(texture);
   } finally {
     URL.revokeObjectURL(blobUrl);
   }

@@ -26,14 +26,8 @@ It exercises:
 - An external `sky_material` and sky ambient light
 - Material overrides on nodes inside the instanced glTF
 
-Geometry, framing, tree scale, the sky and the override materials match.
+Geometry, framing, tree scale, the sky, the fog, the ground and the override materials match.
 
-- **Approximated** The ground reads slightly paler and hazier than Godot's, with softer hill
-  shading.
-- **Approximated** The tree crowns draw as soft, blurred leaves where Godot's are crisp
-  cut-out leaves.
-- **Not drawn** The Control UI (a controls panel, a Back button and a speed gauge) shows in
-  Godot but not over the 3D view here.
 - **Needs runtime** The town has no vehicles. The game spawns them at runtime.
 
 ## Trailer truck

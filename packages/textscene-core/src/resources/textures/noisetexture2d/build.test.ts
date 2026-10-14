@@ -6,17 +6,11 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  bumpMapToNormalMap,
-  grayToRgba,
-  modulateWithGradient,
-  noiseImage,
-  noiseSampler,
-  noiseTextureFits,
-  noiseDataTexture,
-  seamlessNoiseImage,
-  seamlessSkirt,
-} from './build';
+import { noiseTextureFits, noiseDataTexture } from './build';
+import { bumpMapToNormalMap } from './normalMap';
+import { grayToRgba } from '../../noise/image/gradientModulation';
+import { noiseSampler } from '../../noise/image/noiseSampler';
+import { noiseImage, seamlessNoiseImage, seamlessSkirt } from '../../noise/image/noiseImage';
 import { decodeNoiseTexture2D } from './decode';
 import { noiseTexture2DPixels } from './pixels';
 import type { NoiseTexture2DData } from './types';
@@ -127,16 +121,6 @@ describe('seamlessNoiseImage', () => {
     // noise.h:106-107: `MAX(1, p_width * p_blend_skirt)`.
     const sample = noiseSampler(decodeFastNoiseLite({}));
     expect(seamlessNoiseImage(sample, 8, 8, false, true, 0)).toHaveLength(64);
-  });
-});
-
-describe('modulateWithGradient', () => {
-  it("maps each pixel's luminance through the ramp", () => {
-    // noise_texture_2d.cpp:183-198. A grayscale pixel's luminance is its own
-    // value, so 0 takes the ramp's first colour and 255 its last.
-    const rgba = modulateWithGradient(new Uint8Array([0, 255]), RAMP);
-    expect([...rgba.slice(0, 4)]).toEqual([0, 0, 0, 255]);
-    expect([...rgba.slice(4, 8)]).toEqual([255, 0, 0, 255]);
   });
 });
 

@@ -1,0 +1,61 @@
+; One variable: Sky.radiance_size = 0 (32), the smallest radiance Godot bakes. The radiance cube is
+; then 32 texels wide, so the mirror sphere (roughness 0) reflects a coarse sky, and the layers the
+; rough sphere (roughness 0.35) reflects are filtered from a 32-wide octmap and its short chain.
+; Every other sky golden bakes at the default 256, so none of them shows a regression in the
+; small-radiance bake.
+[gd_scene format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]
+sky_top_color = Color(0.9, 0.35, 0.1, 1)
+sky_horizon_color = Color(1, 0.8, 0.5, 1)
+sky_curve = 0.25
+ground_bottom_color = Color(0.05, 0.2, 0.08, 1)
+ground_horizon_color = Color(0.3, 0.45, 0.2, 1)
+ground_curve = 0.1
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_mat")
+radiance_size = 0
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+
+[sub_resource type="PlaneMesh" id="Plane_1"]
+size = Vector2(4.5, 2.5)
+
+[sub_resource type="SphereMesh" id="Sphere_1"]
+
+[sub_resource type="StandardMaterial3D" id="Mirror"]
+metallic = 1.0
+roughness = 0.0
+
+[sub_resource type="StandardMaterial3D" id="Rough"]
+metallic = 1.0
+roughness = 0.35
+
+[node name="SkyRadianceSize32" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, 0.433013, -0.75, 0, 0, 0)
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("Plane_1")
+
+[node name="MirrorBall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 1, 0)
+mesh = SubResource("Sphere_1")
+surface_material_override/0 = SubResource("Mirror")
+
+[node name="RoughBall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 1, 0)
+mesh = SubResource("Sphere_1")
+surface_material_override/0 = SubResource("Rough")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.94, 0.342, 0, -0.342, 0.94, 0, 2.2, 5)
+fov = 60.0

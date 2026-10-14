@@ -50,9 +50,12 @@ export const TILE_AND_TARGET_SCENES = [
   // upper right.
   { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', mode: '2d' },
 
-  // ViewportTexture: the only golden that samples through a render target. The
+  // ViewportTexture: one of two goldens that sample through a render target. The
   // offscreen pass tonemaps like Godot's: the shared environment applies inside
   // the target and again on the consuming quad (curve squared). The target's linear storage survives the
   // consumer's sRGB tag. Within 1% linear per sample of Godot 4.6.3.
   { name: 'sub-viewport-texture', file: 'unit-sub-viewport-texture.tscn' },
+  // A ViewportTexture on a `.glb` surface override: its `viewport_path` resolves from the GLB
+  // instance, and the target samples in the glTF's top-down V, so each face shows its own band.
+  { name: 'glb-viewport-texture', file: 'unit-glb-viewport-texture.tscn' },
 ];

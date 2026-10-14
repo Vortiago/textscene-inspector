@@ -1,5 +1,8 @@
 /** The size and the exact RGBA8 bytes of a decoded texture image. */
 
+import * as THREE from 'three';
+import { channelToByte } from '../../../utils/colorSpace';
+
 /** Dimensions of a decoded image, however it reports them. */
 export interface ImageSize {
   width: number;
@@ -35,13 +38,15 @@ export interface ImagePixels extends ImageSize {
 
 /**
  * Reads the RGBA8 bytes of a texture image: `image.data` for a `DataTexture`, else a WebGL2
- * readback of the decoded image. `undefined` means no pixels were readable.
+ * readback of the decoded image. `undefined` means no pixels were readable. A half-float
+ * `DataTexture` (`colourDataTexture`) reads as its values clamped to bytes.
  */
 export function readImagePixels(image: unknown): ImagePixels | undefined {
-  const raw = (image as { data?: Uint8Array | Uint8ClampedArray } | null)?.data;
+  const raw = (image as { data?: Uint8Array | Uint8ClampedArray | Uint16Array } | null)?.data;
   if (raw) {
     const size = imageSize(image);
-    return size ? { data: raw, ...size } : undefined;
+    if (!size) return undefined;
+    return { data: raw instanceof Uint16Array ? halfFloatsToBytes(raw) : raw, ...size };
   }
   const gl = readbackContext();
   return gl ? readPixelsThroughGl(gl, image) : undefined;
@@ -94,4 +99,10 @@ export function readPixelsThroughGl(gl: WebGL2RenderingContext, image: unknown):
     gl.deleteFramebuffer(framebuffer);
     gl.deleteTexture(texture);
   }
+}
+
+function halfFloatsToBytes(halves: Uint16Array): Uint8Array {
+  const bytes = new Uint8Array(halves.length);
+  for (let i = 0; i < halves.length; i++) bytes[i] = channelToByte(THREE.DataUtils.fromHalfFloat(halves[i]!));
+  return bytes;
 }

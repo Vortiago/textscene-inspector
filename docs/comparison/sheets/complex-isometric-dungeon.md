@@ -23,8 +23,7 @@ Draw order and the light pass match.
 
 ## Known limitations
 
-- **Needs runtime** The candle flames are smaller than Godot's, and a spark shows here only
-  (see Candle).
+- **Needs runtime** The candle sparks draw here and not in Godot (see Candle).
 - **Approximated** The coin stacks, the paw-print stains and the inner rings of the circles
   read softer and darker than Godot's.
 
@@ -36,11 +35,11 @@ difference has one owner. The wrappers in `scenes/isometric/previews/` only re-c
 ## Candle
 <!-- compare: image=complex-isometric-dungeon-candle status=limitation fixture=previews/candle_preview.tscn -->
 
-A wick, four CPUParticles2D emitters and two PointLight2D nodes. The wick and the light
-pools match.
+A wick, four CPUParticles2D emitters and two PointLight2D nodes. The wick, the flame and the
+light pools match.
 
-- **Needs runtime** Godot draws each emitter at its first instant and the previewer after one
-  lifetime, so a spark shows here only.
+- **Needs runtime** The previewer draws each emitter settled over one lifetime, so a spark
+  above the flame shows here and not in Godot's first frame.
 
 ## Internal shadow
 <!-- compare: image=complex-isometric-dungeon-internal-shadow status=done fixture=previews/internal_shadow_preview.tscn -->
@@ -51,4 +50,4 @@ One Polygon2D with a gradient texture and UVs outside 0 to 1. It matches Godot.
 <!-- compare: image=complex-isometric-dungeon-goblin status=done fixture=previews/goblin_preview.tscn -->
 
 A CharacterBody2D with an AnimatedSprite2D, a drop-shadow Sprite2D, a Camera2D and a hidden
-LightOccluder2D. The sprite, its frame and its drop shadow match.
+LightOccluder2D. The sprite, its frame and the drop shadow match Godot.

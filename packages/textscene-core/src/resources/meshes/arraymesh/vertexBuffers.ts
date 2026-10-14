@@ -5,7 +5,7 @@
  * three.js (V flip, triangle winding) live in `build.ts`.
  */
 
-import type { SurfaceAabb } from './surfaceFields.js';
+import type { SurfaceAabb, UvScale } from './surfaceFields.js';
 import type { SurfaceLayout } from './surfaceFormat.js';
 
 /**
@@ -57,56 +57,79 @@ export function decodePositions(
   return positions;
 }
 
+/** The UV sets of one surface, each undefined when the surface has none. */
+export interface UvSets {
+  uvs?: Float32Array;
+  uv2s?: Float32Array;
+}
+
 /**
- * UV1 from `attribute_data`, or undefined when the record is narrower than the
- * format implies: wrong UVs are worse than none. Compressed UV1 is 2×uint16 over
- * the unit range. A non-zero `uv_scale` is the divisor Godot normalised
- * out-of-range UVs by, so the value is re-expanded around 0.5.
+ * UV1 and UV2 from `attribute_data`, or none when the record is narrower than the format
+ * implies: wrong UVs are worse than none. A compressed UV is 2×uint16 over the unit range.
+ * A non-zero `uv_scale` holds the divisors Godot normalised out-of-range UVs by, so each set
+ * re-expands around 0.5 (`rendering_server.cpp:1556-1557`, `:1581-1582`).
  */
 export function decodeUVs(
   bytes: Uint8Array,
   vertexCount: number,
   layout: SurfaceLayout,
-  uvScale: [number, number] | undefined,
+  uvScale: UvScale | undefined,
   onMismatch: (actualStride: number) => void
-): Float32Array | undefined {
-  const { uvOffset } = layout;
-  if (uvOffset < 0 || vertexCount === 0 || bytes.byteLength === 0) return undefined;
+): UvSets {
+  if ((layout.uvOffset < 0 && layout.uv2Offset < 0) || vertexCount === 0 || bytes.byteLength === 0) return {};
 
   // Godot orders the record COLOR, UV1, UV2, CUSTOM0..3, so vertex colours put 4
   // RGBA8 bytes ahead of UV1 and a wider record (an unmodelled CUSTOM channel)
   // reads fine at its stride. A record too narrow or not dividing evenly puts
-  // UV1 somewhere else, so the UVs go.
-  const actualStride = bytes.byteLength / vertexCount;
-  if (!Number.isInteger(actualStride) || actualStride < layout.attributeStride) {
-    onMismatch(actualStride);
-    return undefined;
+  // the UVs somewhere else, so they go.
+  const attributeStride = bytes.byteLength / vertexCount;
+  if (!Number.isInteger(attributeStride) || attributeStride < layout.attributeStride) {
+    onMismatch(attributeStride);
+    return {};
   }
-  const attributeStride = actualStride;
+  const record = {
+    view: new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength),
+    attributeStride,
+    vertexCount,
+    compressed: layout.compressed,
+  };
+  // Godot re-expands when any component of the whole Vector4 is non-zero.
+  const scale = uvScale && uvScale.some((component) => component !== 0) ? uvScale : undefined;
+  return {
+    uvs: decodeUvSet(record, layout.uvOffset, scale && [scale[0], scale[1]]),
+    uv2s: decodeUvSet(record, layout.uv2Offset, scale && [scale[2], scale[3]]),
+  };
+}
 
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+interface AttributeRecords {
+  view: DataView;
+  attributeStride: number;
+  vertexCount: number;
+  compressed: boolean;
+}
+
+/** One UV set at `offset` in each record, re-expanded by `scale` when given. */
+function decodeUvSet(
+  { view, attributeStride, vertexCount, compressed }: AttributeRecords,
+  offset: number,
+  scale: readonly [number, number] | undefined
+): Float32Array | undefined {
+  if (offset < 0) return undefined;
   const out = new Float32Array(vertexCount * 2);
-
-  if (!layout.compressed) {
+  if (!compressed) {
     for (let i = 0; i < vertexCount; i++) {
-      const o = i * attributeStride + uvOffset;
+      const o = i * attributeStride + offset;
       out[i * 2] = view.getFloat32(o, true);
       out[i * 2 + 1] = view.getFloat32(o + 4, true);
     }
     return out;
   }
-
-  // A zero `uv_scale` means the stored value already is the UV. Otherwise Godot
-  // normalised UVs that left the unit range into the uint16 range against that
-  // divisor, so they re-expand around 0.5.
-  const [scaleU, scaleV] = uvScale ?? [0, 0];
-  const rescale = scaleU !== 0 || scaleV !== 0;
   for (let i = 0; i < vertexCount; i++) {
-    const o = i * attributeStride + uvOffset;
+    const o = i * attributeStride + offset;
     const u = view.getUint16(o, true) / 65535;
     const v = view.getUint16(o + 2, true) / 65535;
-    out[i * 2] = rescale ? (u - 0.5) * scaleU : u;
-    out[i * 2 + 1] = rescale ? (v - 0.5) * scaleV : v;
+    out[i * 2] = scale ? (u - 0.5) * scale[0] : u;
+    out[i * 2 + 1] = scale ? (v - 0.5) * scale[1] : v;
   }
   return out;
 }

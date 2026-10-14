@@ -25,3 +25,4 @@ Framing, platforms, props and the parallax layers match.
 
 - **Approximated** The project sets nearest texture filtering, but sprites, tiles and the
   parallax clouds draw smoothed here where Godot draws them pixel-sharp.
+- **Approximated** Each crab shows another pose than Godot's, for a cause not yet known.

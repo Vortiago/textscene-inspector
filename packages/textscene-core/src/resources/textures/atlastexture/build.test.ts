@@ -115,4 +115,22 @@ describe('rasterizeAtlasTexture — raw-pixel sheets', () => {
   it('carries the sheet as undecoded sRGB, the tag a loaded image gets', () => {
     expect(rasterizeAtlasTexture(sheet(2, 2), layout())?.colorSpace).toBe(THREE.SRGBColorSpace);
   });
+
+  it('keeps a half-float sheet in half floats, so a channel past 1 survives (edge case)', () => {
+    const two = THREE.DataUtils.toHalfFloat(2);
+    const halfSheet = new THREE.DataTexture(
+      new Uint16Array([two, 0, 0, two, 0, 0, 0, 0]),
+      2,
+      1,
+      THREE.RGBAFormat
+    );
+    halfSheet.type = THREE.HalfFloatType;
+    const crop = rasterizeAtlasTexture(
+      halfSheet,
+      layout({ width: 1, height: 1, source: { x: 0, y: 0, width: 1, height: 1 } })
+    );
+    expect(crop?.type).toBe(THREE.HalfFloatType);
+    expect(crop?.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+    expect(Array.from((crop?.image as { data: Uint16Array }).data)).toEqual([two, 0, 0, two]);
+  });
 });

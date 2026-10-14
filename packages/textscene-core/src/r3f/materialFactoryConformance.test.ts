@@ -185,7 +185,7 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the cube-to-paraboloid copy: shaders fixed at construction, only uniforms move, one instance per renderer',
   'packages/textscene-core/src/r3f/positionalShadow/atlasDepthPass.ts':
     'one depth material per light kind for the whole app, its program fixed at construction and never mutated',
-  'packages/textscene-core/src/r3f/fog/fogVolumePass.ts':
+  'packages/textscene-core/src/r3f/fog/volumetricFogPass.ts':
     'the fog volume passes: shaders fixed at construction, only uniforms move, and a `defines` change sets `needsUpdate`; one instance per renderer',
   'packages/textscene-core/src/r3f/fog/fogRadiancePass.ts':
     'the sky radiance bake: shaders fixed at construction, only uniforms move, and a new sky layout sets `needsUpdate`; one instance per renderer',
@@ -197,6 +197,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/resources/sky/build.ts':
     'built once per sky, consumed by a single cube render, disposed with the environment',
+  'packages/textscene-core/src/resources/sky/skyPass.ts':
+    'the sky layer bake passes: shaders fixed at construction, only uniforms move; one instance per pass for the whole app',
   'packages/textscene-core/src/resources/materials/standardmaterial3d/build.ts':
     'the imperative half of the resource pipeline: every texture is already resolved before it is called, so the material is constructed complete',
 };
@@ -258,7 +260,7 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'lends each caster, which is not React state, the atlas depth material for one shadow draw and gives its own back after it, so no mount ever sees the swap',
   'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
     'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
-  'packages/textscene-core/src/r3f/fog/fogVolumePass.ts':
+  'packages/textscene-core/src/r3f/fog/volumetricFogPass.ts':
     'swaps the slice quad between the four fog pass materials, each built with its shaders fixed at construction, so only uniforms and `needsUpdate`-flagged `defines` move',
   'packages/textscene-core/src/nodes/3d/decal/decalProjectionMaterials.ts':
     'moves a projection mesh, which is not React state, to the material built for its receiver’s new shading, each built with its program fixed, so a swap changes which material draws and never a program input of one',
@@ -268,6 +270,8 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'puts one of a surface’s two mounted materials on its mesh, each keyed by its own mount, so a swap changes which material draws and never a program input of one',
   'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':
     'the GLB slot writer: `cloneWithMaterials` gives each clone its own copy of the loader’s materials, and `forEachSurfaceMaterial` hands a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
+  'packages/textscene-core/src/resources/sky/skyPass.ts':
+    'swaps the bake quad between the sky layer passes, each built with its shaders fixed at construction, so only uniforms ever move',
 };
 
 /**

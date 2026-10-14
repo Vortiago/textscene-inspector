@@ -5,10 +5,12 @@
  * `Gradient.interpolation_color_space` is always sRGB, so OKLab differs mid-stop.
  */
 
+import { cubicInterpolatef, lerpf } from '../../../godot/math';
 import type { Color } from '../../../utils/colorParser';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
 import type { Gradient, GradientTexture2D } from './types';
-import { lerp } from '../../../godot/math.js';
+
+const f = Math.fround;
 
 /**
  * The normalised gradient offset at integer pixel `(x, y)`, mirroring Godot's
@@ -54,8 +56,9 @@ export function gradientOffsetAt(tex: GradientTexture2D, x: number, y: number): 
 
 /**
  * The gradient colour at normalised `offset`, mirroring Godot's
- * `Gradient::get_color_at_offset`: binary search for the bracketing stops,
- * clamp to the endpoints, then blend by the interpolation mode in sRGB space.
+ * `Gradient::get_color_at_offset` (`gradient.h:151-235`): binary search for the bracketing
+ * stops, clamp to the endpoints, then blend by the interpolation mode in sRGB space. Every
+ * step runs in float, as Godot's does, since a double lands 1/255 off on some bytes.
  */
 export function sampleGradientColor(gradient: Gradient, offset: number): Color {
   const stops = gradient.stops;
@@ -63,21 +66,22 @@ export function sampleGradientColor(gradient: Gradient, offset: number): Color {
   if (n === 0) return { r: 0, g: 0, b: 0, a: 1 };
   if (n === 1) return stops[0]!.color;
 
+  const at = f(offset);
   let low = 0;
   let high = n - 1;
   let middle = 0;
   while (low <= high) {
     middle = (low + high) >> 1;
     const stopOffset = stops[middle]!.offset;
-    if (stopOffset > offset) {
+    if (stopOffset > at) {
       high = middle - 1;
-    } else if (stopOffset < offset) {
+    } else if (stopOffset < at) {
       low = middle + 1;
     } else {
       return stops[middle]!.color;
     }
   }
-  if (stops[middle]!.offset > offset) middle--;
+  if (stops[middle]!.offset > at) middle--;
 
   const first = middle;
   const second = middle + 1;
@@ -86,7 +90,7 @@ export function sampleGradientColor(gradient: Gradient, offset: number): Color {
 
   const c1 = stops[first]!.color;
   const c2 = stops[second]!.color;
-  const weight = (offset - stops[first]!.offset) / (stops[second]!.offset - stops[first]!.offset);
+  const weight = f(f(at - stops[first]!.offset) / f(stops[second]!.offset - stops[first]!.offset));
 
   if (gradient.interpolationMode === GradientInterpolationMode.Constant) {
     return c1;
@@ -99,30 +103,17 @@ export function sampleGradientColor(gradient: Gradient, offset: number): Color {
     const c0 = stops[p0]!.color;
     const c3 = stops[p3]!.color;
     return {
-      r: cubicInterpolate(c1.r, c2.r, c0.r, c3.r, weight),
-      g: cubicInterpolate(c1.g, c2.g, c0.g, c3.g, weight),
-      b: cubicInterpolate(c1.b, c2.b, c0.b, c3.b, weight),
-      a: cubicInterpolate(c1.a, c2.a, c0.a, c3.a, weight),
+      r: cubicInterpolatef(c1.r, c2.r, c0.r, c3.r, weight),
+      g: cubicInterpolatef(c1.g, c2.g, c0.g, c3.g, weight),
+      b: cubicInterpolatef(c1.b, c2.b, c0.b, c3.b, weight),
+      a: cubicInterpolatef(c1.a, c2.a, c0.a, c3.a, weight),
     };
   }
   // Linear.
   return {
-    r: lerp(c1.r, c2.r, weight),
-    g: lerp(c1.g, c2.g, weight),
-    b: lerp(c1.b, c2.b, weight),
-    a: lerp(c1.a, c2.a, weight),
+    r: lerpf(c1.r, c2.r, weight),
+    g: lerpf(c1.g, c2.g, weight),
+    b: lerpf(c1.b, c2.b, weight),
+    a: lerpf(c1.a, c2.a, weight),
   };
-}
-
-/** Godot's `Math::cubic_interpolate` (Catmull-Rom): `from` to `to`, with the neighbours as tangents. */
-function cubicInterpolate(from: number, to: number, pre: number, post: number, weight: number): number {
-  const w2 = weight * weight;
-  const w3 = w2 * weight;
-  return (
-    0.5 *
-    (from * 2 +
-      (-pre + to) * weight +
-      (2 * pre - 5 * from + 4 * to - post) * w2 +
-      (-pre + 3 * from - 3 * to + post) * w3)
-  );
 }

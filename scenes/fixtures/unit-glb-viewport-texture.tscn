@@ -1,0 +1,75 @@
+[gd_scene format=3]
+
+; One variable: a `ViewportTexture` as the albedo of a `.glb` surface override. Godot resolves its
+; `viewport_path` from the GLB instance, its local scene, so the path climbs out with `..`. The
+; glTF's UVs keep Godot's top-down V, so each face shows the band its UVs name, as Godot draws it,
+; and a flipped target swaps the bands. The only other ViewportTexture golden draws on a Godot mesh
+; in the outer scene, so it shows neither.
+
+[ext_resource type="PackedScene" path="res://meshes/unit-cube.glb" id="1_glb"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_band"]
+size = Vector2(2, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_red"]
+shading_mode = 0
+albedo_color = Color(1, 0, 0, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_green"]
+shading_mode = 0
+albedo_color = Color(0, 1, 0, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_blue"]
+shading_mode = 0
+albedo_color = Color(0, 0, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_yellow"]
+shading_mode = 0
+albedo_color = Color(1, 1, 0, 1)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_bands"]
+viewport_path = NodePath("../SubViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_screen"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("ViewportTexture_bands")
+
+[node name="GlbViewportTexture" type="Node3D"]
+
+; Its own world, so the bands draw only into the target. The orthographic camera frames them
+; exactly: four bands of a quarter each, red at the top, then green, blue and yellow. The cube's
+; UVs name a quarter of V per row of faces.
+[node name="SubViewport" type="SubViewport" parent="."]
+own_world_3d = true
+size = Vector2i(64, 64)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="SubViewport"]
+projection = 1
+size = 2.0
+
+[node name="Red" type="MeshInstance3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, -2)
+mesh = SubResource("QuadMesh_band")
+surface_material_override/0 = SubResource("StandardMaterial3D_red")
+
+[node name="Green" type="MeshInstance3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, -2)
+mesh = SubResource("QuadMesh_band")
+surface_material_override/0 = SubResource("StandardMaterial3D_green")
+
+[node name="Blue" type="MeshInstance3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, -2)
+mesh = SubResource("QuadMesh_band")
+surface_material_override/0 = SubResource("StandardMaterial3D_blue")
+
+[node name="Yellow" type="MeshInstance3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.75, -2)
+mesh = SubResource("QuadMesh_band")
+surface_material_override/0 = SubResource("StandardMaterial3D_yellow")
+
+[node name="Cube" parent="." instance=ExtResource("1_glb")]
+
+[node name="Cube" parent="Cube" index="0"]
+surface_material_override/0 = SubResource("StandardMaterial3D_screen")

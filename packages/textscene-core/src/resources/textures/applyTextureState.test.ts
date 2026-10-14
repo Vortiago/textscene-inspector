@@ -14,6 +14,7 @@ import {
   type UVTransform,
 } from './applyTextureState';
 import { GODOT_ANISOTROPY_MAX } from './godotTextureFilter';
+import { UV2_CHANNEL } from '../meshes/uv2';
 
 function uv(sx: number, sy: number, ox = 0, oy = 0): UVTransform {
   return { scale: { x: sx, y: sy }, offset: { x: ox, y: oy } };
@@ -339,6 +340,31 @@ describe('applyTextureState', () => {
 
       expect(result).toBe(target.texture);
       expect(result.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+    });
+  });
+
+  describe('UV set', () => {
+    it('clones onto the UV set the binding samples', () => {
+      const texture = tiling();
+      const result = applyTextureState(texture, state({ channel: UV2_CHANNEL }));
+
+      expect(result).not.toBe(texture);
+      expect(result.channel).toBe(UV2_CHANNEL);
+      expect(texture.channel).toBe(0);
+    });
+
+    it('returns the original when it already samples that UV set', () => {
+      const texture = tiling();
+      texture.channel = UV2_CHANNEL;
+
+      expect(applyTextureState(texture, state({ channel: UV2_CHANNEL }))).toBe(texture);
+    });
+
+    it('reads an omitted UV set as the first, so a UV2 texture clones back (edge case)', () => {
+      const texture = tiling();
+      texture.channel = UV2_CHANNEL;
+
+      expect(applyTextureState(texture, state({})).channel).toBe(0);
     });
   });
 

@@ -8,6 +8,7 @@ import {
 } from './godotParallax';
 import type { ProgramShader } from '../materialProgramInputs';
 import type { Heightmap } from '../../resources/materials/standardmaterial3d/types';
+import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 
 const HEIGHTMAP: Heightmap = { scale: 3, isDeep: false, layers: [8, 32], flip: [1, -1], readsHeight: false };
 
@@ -79,6 +80,22 @@ describe('parallaxInjection', () => {
 
     expect(uniforms.godotHeightmapScale!.value).toBe(5);
     expect(uniforms.godotHeightmapFlip!.value).toEqual([1, 1]);
+  });
+
+  it('leaves a map on UV2 unshifted, as Godot shifts only base_uv', () => {
+    const material = new THREE.MeshStandardMaterial({ userData: heightmapUserData(HEIGHTMAP) });
+    material.emissiveMap = new THREE.Texture();
+    material.emissiveMap.channel = UV2_CHANNEL;
+    const shader: ProgramShader = {
+      vertexShader: THREE.ShaderLib.standard.vertexShader,
+      fragmentShader: THREE.ShaderLib.standard.fragmentShader,
+      uniforms: {},
+    };
+
+    parallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(material, shader);
+
+    expect(shader.fragmentShader).not.toContain('#define vEmissiveMapUv');
+    expect(shader.fragmentShader).toContain('#define vAoMapUv ( vAoMapUv + godotParallaxShift )');
   });
 
   it("leaves a shader without three's map anchor unshifted (error case)", () => {

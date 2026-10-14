@@ -40,6 +40,15 @@ export const LIGHTING_SCENES = [
   { name: 'volumetric-fog-spot-shadow-bias', file: 'unit-volumetric-fog-spot-shadow-bias.tscn' },
   // A colour background under thin volumetric fog. The header states why no other golden shows it.
   { name: 'volumetric-fog-color-background', file: 'unit-volumetric-fog-color-background.tscn' },
+  // A box FogVolume in the volumetric fog. The header states why no other golden shows it.
+  { name: 'fog-volume', file: 'unit-fog-volume.tscn' },
+  // A FogVolume whose density texture is an imported 3D texture. The header states why no other
+  // golden shows it.
+  { name: 'fog-volume-density-image', file: 'unit-fog-volume-density-image.tscn' },
+  // A FogVolume whose density texture is an ImageTexture3D saved as its own .tres. The header
+  // states why no other golden shows it.
+  { name: 'fog-volume-density-volume-tres', file: 'unit-fog-volume-density-volume-tres.tscn' },
+  { name: 'fog-volume-density-half-tres', file: 'unit-fog-volume-density-half-tres.tscn' },
   // Godot's editor preview sun and environment on a scene that declares neither
   // (ADR-0025). Godot's render of it is at
   // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing.
@@ -65,6 +74,9 @@ export const LIGHTING_SCENES = [
   // The procedural sky with Real-Time processing, which Godot bakes with its fast filter. The
   // metallic sphere reads layers 4 and 5, and the default sphere's ambient reads layer 6.
   { name: 'sky-realtime', file: 'unit-sky-realtime.tscn' },
+  // The procedural sky at radiance_size 32, the smallest: a mirror and a rough sphere read layers
+  // filtered from a 32-wide octmap and its short chain.
+  { name: 'sky-radiance-size-32', file: 'unit-sky-radiance-size-32.tscn' },
   // Locks the equirect V/U orientation, measured against Godot. The black grid
   // lines antialias.
   { name: 'sky-panorama', file: 'unit-sky-panorama.tscn' },

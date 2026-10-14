@@ -19,12 +19,14 @@ import { matchGlbTarget } from '../../r3f/internal/glb-scene-root/matchGlbTarget
 import {
   importExternalMaterials,
   importGltfNaming,
+  importLightmapUnwrap,
   importNodeLayers,
   importRootScale,
   parseImportFile,
   type ParsedImportFile,
 } from '../../parser/importParser';
-import { importSidecarPath } from '../../godot/index.js';
+import { importSidecarPath, unwrapCachePath } from '../../godot/index.js';
+import type { LightmapUvImport } from '../formats/glb/lightmapUv/lightmapUv';
 import { fileBaseName } from '../../godot/string.js';
 import type { DependencyGraph } from '../dependencyGraph';
 import * as logger from '../../logger';
@@ -86,6 +88,33 @@ async function readImportSidecar(
   dependencies.record({ busType: 'glb', key: path }, sidecar);
   const raw = await fileEventBus.tryLoad(sidecar, 'ImportSidecar');
   return typeof raw === 'string' ? parseImportFile(raw) : null;
+}
+
+/**
+ * The lightmap UV2 the sidecar asks for, with the asset's **Unwrap cache**, or undefined when it
+ * unwraps no mesh. Only then is the cache read: it is found by convention, and absent is ordinary.
+ */
+async function readLightmapUv(
+  path: string,
+  sidecar: ParsedImportFile | null,
+  fileEventBus: FileEventBus | undefined,
+  dependencies: DependencyGraph
+): Promise<LightmapUvImport | undefined> {
+  const unwrap = importLightmapUnwrap(sidecar);
+  if (!unwrap || !fileEventBus) return undefined;
+
+  const cachePath = unwrapCachePath(path);
+  dependencies.record({ busType: 'glb', key: path }, cachePath);
+  const cache = await fileEventBus.tryLoad(cachePath, 'UnwrapCache');
+  // The rebuilt meshes hold what they need, so the bus need not keep the bytes, unless a
+  // processor is also loading the file.
+  if (cache !== null && !fileEventBus.isLoading(cachePath)) fileEventBus.clearCache(cachePath);
+  return {
+    unwrap,
+    cache: cache instanceof ArrayBuffer ? cache : null,
+    rootScale: importRootScale(sidecar),
+    path,
+  };
 }
 
 /**
@@ -178,6 +207,7 @@ export function createGLBProcessor(
       const object = await createGLBMesh(bytes, {
         extensionRules,
         naming: { ...importGltfNaming(sidecar), fileName: fileBaseName(path) },
+        lightmapUv: await readLightmapUv(path, sidecar, fileEventBus, dependencies),
       });
       applyImportSidecar(object, path, sidecar);
       return object;

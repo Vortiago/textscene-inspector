@@ -17,6 +17,7 @@ import { abortProceduralBuilds, type JobRunner } from './textures/proceduralBuil
 import { pendingTextureWork, subscribeTextureWork } from './textures/textureWork';
 import {
   useProceduralTexture,
+  useProceduralTexture3D,
   useProceduralTexturePins,
   useProceduralTextures,
   type ProceduralSlot,
@@ -428,6 +429,41 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
 
     const [slot] = result.current as ProceduralSlot[];
     expect(slot?.texture).toBeInstanceOf(THREE.DataTexture);
+  });
+});
+
+/** A 4x3x2 NoiseTexture3D, and a NoiseTexture2D a Texture3D slot must not claim. */
+function noiseVolumeScene(): TscnInternalResource[] {
+  return [
+    ...noiseScene(1),
+    {
+      id: 'NoiseTexture3D_a',
+      type: 'NoiseTexture3D',
+      data: { noise: 'SubResource("FastNoiseLite_a")', width: '4', height: '3', depth: '2' },
+    },
+  ];
+}
+
+describe('useProceduralTexture3D', () => {
+  it('builds the NoiseTexture3D a SubResource reference names', async () => {
+    const { result } = renderHook(() =>
+      useProceduralTexture3D('SubResource("NoiseTexture3D_a")', noiseVolumeScene())
+    );
+    await flush();
+
+    expect(result.current.texture).toBeInstanceOf(THREE.Data3DTexture);
+  });
+
+  it('leaves a NoiseTexture2D unclaimed, since a Texture3D slot cannot draw it', () => {
+    const { result } = renderHook(() => useProceduralTexture3D(NOISE, noiseVolumeScene()));
+
+    expect(result.current).toEqual({ texture: null, claimed: false, building: false });
+  });
+
+  it('leaves a missing reference unclaimed (edge case)', () => {
+    const { result } = renderHook(() => useProceduralTexture3D(undefined, noiseVolumeScene()));
+
+    expect(result.current.claimed).toBe(false);
   });
 });
 

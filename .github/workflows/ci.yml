@@ -192,6 +192,11 @@ jobs:
           # The runner has no system Chrome, so the gate uses Playwright's bundled Chromium.
           SHOWCASE_CHANNEL: bundled
 
+      # The sky layer passes, which happy-dom cannot run, checked on the real shaders.
+      - run: pnpm test:gpu
+        env:
+          SHOWCASE_CHANNEL: bundled
+
   integration:
     name: Integration tests (${{ matrix.os }}, VS Code ${{ matrix.vscode }})
     runs-on: ${{ matrix.os }}

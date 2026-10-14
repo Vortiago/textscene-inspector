@@ -1,0 +1,69 @@
+[gd_scene format=3 uid="uid://unit_fog_volume_density_half_tres"]
+
+[ext_resource type="Texture3D" path="res://textures/fog-density-volume-half.tres" id="1_density"]
+
+; unit-fog-volume-density-volume-tres with an ImageTexture3D in the RHalf format: 8 slices of
+; 16x16 whose density runs from 0 to 2.5, written by Godot 4.6.3
+; (textures/fog-density-volume-half.tres). The variable is a float density past 1. Every other
+; density texture holds bytes, which stop at 1, so a regression in the float decode or the float
+; density stack shows nowhere else.
+
+[sub_resource type="FogMaterial" id="FogMaterial_1"]
+density = 3.0
+density_texture = ExtResource("1_density")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.05, 0.05, 0.15, 1)
+background_energy_multiplier = 1.0
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.05
+volumetric_fog_albedo = Color(0.6, 0.7, 0.9, 1)
+volumetric_fog_emission = Color(0, 0, 0, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_near"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_mid"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_far"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+albedo_color = Color(1, 0.3, 0.2, 1)
+metallic = 0.2
+roughness = 0.7
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="BoxNear" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -8)
+mesh = SubResource("BoxMesh_near")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="BoxMid" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -20)
+mesh = SubResource("BoxMesh_mid")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="BoxFar" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -40)
+mesh = SubResource("BoxMesh_far")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="Light" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+omni_range = 60.0
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 8)
+fov = 75.0
+
+[node name="FogVolume" type="FogVolume" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -5)
+size = Vector3(6, 4, 3)
+material = SubResource("FogMaterial_1")

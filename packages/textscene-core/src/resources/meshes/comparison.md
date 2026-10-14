@@ -7,7 +7,7 @@ renders_as: one merged THREE.BufferGeometry with a draw group per surface
 
 # ArrayMesh
 
-A baked mesh whose surfaces are base64 `PackedByteArray` blobs laid out by a `format` bitfield. The previewer decodes both the plain and the compressed layout and merges every triangle surface into one `BufferGeometry` with a draw group per surface.
+A baked mesh whose surfaces are base64 `PackedByteArray` blobs laid out by a `format` bitfield. The previewer decodes both the plain and the compressed layout and merges every triangle surface into one `BufferGeometry` with a draw group per surface. A surface's TEX_UV2 becomes the mesh's UV2, and a compressed UV2 re-expands by `uv_scale`'s z and w as in Godot (`rendering_server.cpp:1581-1582`).
 
 ## Linting
 

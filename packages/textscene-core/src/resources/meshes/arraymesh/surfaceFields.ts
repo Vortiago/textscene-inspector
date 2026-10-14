@@ -10,7 +10,7 @@ import { warn } from '../../../logger.js';
 import { parseGodotFloat } from '../../../godot/number.js';
 import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variantParser.js';
 import { parseGodotInt } from '../../../godot/int.js';
-import { decodeBase64Bytes } from '../../../godot/packedBytes.js';
+import { parsePackedByteArrayBody } from '../../../godot/packedBytes.js';
 import { unquoteString } from '../../../parser/utils.js';
 
 /** A surface's declared `AABB(px, py, pz, sx, sy, sz)`: a compressed surface's position scale. */
@@ -66,11 +66,14 @@ export function readAabb(block: string): SurfaceAabb | undefined {
   return { position: [n[0]!, n[1]!, n[2]!], size: [n[3]!, n[4]!, n[5]!] };
 }
 
-export function readUvScale(block: string): [number, number] | undefined {
-  // Only x and y are consulted. z/w scale UV2, which nothing decodes.
+/** `uv_scale`: x and y re-expand a compressed UV1, z and w a compressed UV2. */
+export function readUvScale(block: string): UvScale | undefined {
   const n = readFloatTuple(block, 'uv_scale', 'Vector4', 4);
-  return n ? [n[0]!, n[1]!] : undefined;
+  return n ? [n[0]!, n[1]!, n[2]!, n[3]!] : undefined;
 }
+
+/** A surface's `uv_scale` Vector4. */
+export type UvScale = readonly [number, number, number, number];
 
 const NAME_RE = dictStringField('name');
 
@@ -102,37 +105,14 @@ function byteArrayField(key: string): (text: string) => string | null {
 }
 
 /**
- * The bytes of a `"<key>": PackedByteArray(…)` field: the quoted base64 the writer emits, or the
- * list of bytes it emits for a file whose every byte array holds 64 bytes or fewer
- * (`resource_format_text.cpp:1724-1732`). A corrupt payload gives an empty buffer and a warning,
- * so the caller drops just this surface rather than the whole mesh.
+ * The bytes of a `"<key>": PackedByteArray(…)` field. A payload Godot cannot read gives an empty
+ * buffer and a warning, so the caller drops just this surface rather than the whole mesh.
  */
 export function readPackedBytes(block: string, key: string): Uint8Array {
-  const body = byteArrayField(key)(block)?.trim();
-  if (!body) return new Uint8Array(0);
-  return body.startsWith('"') ? base64Bytes(body, key) : listedBytes(body, key);
-}
-
-function base64Bytes(quoted: string, key: string): Uint8Array {
-  try {
-    return decodeBase64Bytes(quoted.slice(1, -1));
-  } catch {
-    warn(`[ArrayMesh] ${key} is not valid base64 — ignoring the payload`);
-    return new Uint8Array(0);
-  }
-}
-
-/** Each element as the `uint8_t` Godot stores (`variant_parser.cpp:650`). */
-function listedBytes(body: string, key: string): Uint8Array {
-  const elements = body.split(',');
-  const bytes = new Uint8Array(elements.length);
-  for (const [i, element] of elements.entries()) {
-    const stored = parseGodotInt(element, 'uint8');
-    if (stored === null || Number.isNaN(stored)) {
-      warn(`[ArrayMesh] ${key} holds "${element.trim()}", which is no byte — ignoring the payload`);
-      return new Uint8Array(0);
-    }
-    bytes[i] = stored;
-  }
-  return bytes;
+  const body = byteArrayField(key)(block);
+  if (body === null) return new Uint8Array(0);
+  const bytes = parsePackedByteArrayBody(body);
+  if (bytes) return bytes;
+  warn(`[ArrayMesh] ${key} holds no readable PackedByteArray, so its payload is ignored`);
+  return new Uint8Array(0);
 }

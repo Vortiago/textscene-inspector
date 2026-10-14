@@ -13,7 +13,7 @@ import {
 } from '../../resources/materials/standardmaterial3d/materialBag';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { materialProgramInputs } from '../materialProgramInputs';
-import { textureSlotsFromMaps, type MaterialTextureMaps } from './materialTextureMaps';
+import { resolvedTexturesFromMaps, type MaterialTextureMaps } from './materialTextureMaps';
 import type { MaterialAttach } from './swappedMaterials';
 import { FadedMaterials } from './FadedMaterials';
 import { bindHeightmap } from './godotParallax';
@@ -39,13 +39,14 @@ export function StandardMaterialSlot({
   aoMap,
   heightMap,
   anisotropyMap,
+  albedoTargetUv,
   attach,
 }: StandardMaterialSlotProps) {
   // A null `scalars` is the derivation's "no material" case: Godot's default 3D
   // surface, not a default-constructed StandardMaterial3D.
   const bags = standardMaterialBags(
     scalars,
-    textureSlotsFromMaps({
+    resolvedTexturesFromMaps({
       albedoMap,
       normalMap,
       roughnessMap,
@@ -54,6 +55,7 @@ export function StandardMaterialSlot({
       aoMap,
       heightMap,
       anisotropyMap,
+      albedoTargetUv,
     })
   );
 

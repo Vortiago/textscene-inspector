@@ -1,0 +1,37 @@
+[gd_scene load_steps=5 format=3]
+
+; One variable: the UV2 an instanced `.glb` gets from Godot's lightmap unwrap. `meshes/light_baking=2`
+; makes the importer unwrap the cube into `unit-glb-lightmap-uv2.glb.unwrap_cache`, and
+; `emission_on_uv2` draws the emission gradient through that UV2. Each face shows its own patch of
+; the gradient. Through UV1 every face shows the whole gradient, and with no UV2 the cube is flat.
+; No other scene draws a map through UV2, so none shows a wrong unwrap.
+
+[ext_resource type="PackedScene" uid="uid://cjcdt3w6vorv" path="res://meshes/unit-glb-lightmap-uv2.glb" id="1_glb"]
+
+[sub_resource type="Gradient" id="Gradient_uv2"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv2"]
+gradient = SubResource("Gradient_uv2")
+fill_to = Vector2(1, 1)
+
+; A black, rough, non-specular albedo leaves the emission as the only light the cube shows. MULTIPLY
+; draws the texture alone, where ADD would add the white emission colour to it.
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv2"]
+albedo_color = Color(0, 0, 0, 1)
+metallic_specular = 0.0
+emission_enabled = true
+emission = Color(1, 1, 1, 1)
+emission_energy_multiplier = 0.5
+emission_operator = 1
+emission_texture = SubResource("GradientTexture2D_uv2")
+emission_on_uv2 = true
+
+[node name="GlbLightmapUv2" type="Node3D"]
+
+[node name="Cube" parent="." instance=ExtResource("1_glb")]
+
+[node name="Cube" parent="Cube" index="0"]
+surface_material_override/0 = SubResource("StandardMaterial3D_uv2")

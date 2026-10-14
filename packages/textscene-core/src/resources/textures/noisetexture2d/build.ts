@@ -1,20 +1,13 @@
 /**
  * NoiseTexture2D build: the size ceilings, and the `THREE.DataTexture` around the
- * pixels `pixels.ts` computes over `noiseGenerator`, the JS port of
- * `thirdparty/misc/FastNoiseLite.h`.
+ * pixels `pixels.ts` computes.
  */
 
 import * as THREE from 'three';
 import { IMAGE_MAX_PIXELS } from '../../../godot/index.js';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import type { NoiseTexture2DData } from './types';
-import { seamlessSkirt } from './noiseImage';
-
-export { grayToRgba, modulateWithGradient } from './gradientModulation';
-export { noiseSampler } from './noiseGenerator';
-export type { NoiseSampler } from './noiseGenerator';
-export { noiseImage, seamlessNoiseImage, seamlessSkirt } from './noiseImage';
-export { bumpMapToNormalMap } from './normalMap';
+import { seamlessSource } from '../../noise/image/noiseImage';
 
 /**
  * Whether the previewer rasterises this texture. It refuses an axis past the WebGL ceiling it
@@ -29,9 +22,9 @@ export function noiseTextureFits({
 }: NoiseTexture2DData): boolean {
   if (width > MAX_TEXTURE_EXTENT || height > MAX_TEXTURE_EXTENT) return false;
   if (!seamless) return true;
-  const sourceWidth = width + seamlessSkirt(width, seamlessBlendSkirt);
-  const sourceHeight = height + seamlessSkirt(height, seamlessBlendSkirt);
-  return sourceWidth * sourceHeight <= IMAGE_MAX_PIXELS;
+  return (
+    seamlessSource(width, seamlessBlendSkirt) * seamlessSource(height, seamlessBlendSkirt) <= IMAGE_MAX_PIXELS
+  );
 }
 
 /** Bottom-up `pixels` as the texture Godot's import flags describe for `tex`. */

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
 import { readImagePixels, readPixelsThroughGl } from './imagePixels';
 
 /** A WebGL2 stand-in that records each call and reads back `texels`. */
@@ -89,6 +90,18 @@ describe('readImagePixels', () => {
     const data = new Uint8Array([1, 2, 3, 4]);
 
     expect(readImagePixels({ data, width: 1, height: 1 })).toEqual({ data, width: 1, height: 1 });
+  });
+
+  it('reads half floats as their values clamped to bytes (edge case)', () => {
+    const halves = new Uint16Array([0.5, 2, -1, 1].map((value) => THREE.DataUtils.toHalfFloat(value)));
+
+    expect(Array.from(readImagePixels({ data: halves, width: 1, height: 1 })!.data)).toEqual([
+      128, 255, 0, 255,
+    ]);
+  });
+
+  it('returns undefined for a DataTexture image without a size', () => {
+    expect(readImagePixels({ data: new Uint8Array(4), width: 0, height: 0 })).toBeUndefined();
   });
 
   it('returns undefined for a decoded image where no WebGL2 context exists (happy-dom)', () => {

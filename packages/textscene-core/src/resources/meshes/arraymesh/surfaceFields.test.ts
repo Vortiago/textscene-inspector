@@ -46,8 +46,8 @@ describe('readAabb', () => {
 });
 
 describe('readUvScale', () => {
-  it('reads the x and y of the Vector4', () => {
-    expect(readUvScale('{ "uv_scale": Vector4(8, 4, 0, 0) }')).toEqual([8, 4]);
+  it('reads all four components: UV1 scale in x and y, UV2 scale in z and w', () => {
+    expect(readUvScale('{ "uv_scale": Vector4(8, 4, 2, 6) }')).toEqual([8, 4, 2, 6]);
   });
 
   it('is undefined for another type under the key', () => {
@@ -55,7 +55,7 @@ describe('readUvScale', () => {
   });
 
   it('keeps a zero scale, which means the stored value is the UV', () => {
-    expect(readUvScale('{ "uv_scale": Vector4(0, 0, 0, 0) }')).toEqual([0, 0]);
+    expect(readUvScale('{ "uv_scale": Vector4(0, 0, 0, 0) }')).toEqual([0, 0, 0, 0]);
   });
 });
 
@@ -74,7 +74,9 @@ describe('readPackedBytes', () => {
 
   it('gives an empty buffer and a warning for a corrupt payload', () => {
     expect(readPackedBytes('{ "vertex_data": PackedByteArray("!!!") }', 'vertex_data')).toHaveLength(0);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('vertex_data is not valid base64'));
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('vertex_data holds no readable PackedByteArray')
+    );
   });
 
   it('gives an empty buffer for an absent key or an empty array', () => {
@@ -90,7 +92,15 @@ describe('readPackedBytes', () => {
 
   it('gives an empty buffer and a warning for a list element that is no number', () => {
     expect(readPackedBytes('{ "vertex_data": PackedByteArray(1, x) }', 'vertex_data')).toHaveLength(0);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('vertex_data holds "x"'));
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('vertex_data holds no readable PackedByteArray')
+    );
+  });
+
+  it('narrows a listed element as Godot does, so -1 stores 255 (edge case)', () => {
+    expect(Array.from(readPackedBytes('{ "vertex_data": PackedByteArray(-1, 256) }', 'vertex_data'))).toEqual(
+      [255, 0]
+    );
   });
 
   it('decodes every byte value exactly', () => {

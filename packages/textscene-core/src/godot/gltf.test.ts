@@ -3,12 +3,15 @@ import {
   GLB_BIN_CHUNK,
   GLB_JSON_CHUNK,
   GLB_MAGIC,
+  godotSurfacePrimitives,
+  gltfObjects,
   gltfRefusalMessage,
   isGltfJsonObject,
   isGltfPath,
   usesGodotSingleRoot,
   readGltfRequiredExtensions,
   requiredGltfExtensions,
+  targetCount,
   unsupportedRequiredGltfExtensions,
 } from './gltf';
 
@@ -222,5 +225,51 @@ describe('usesGodotSingleRoot', () => {
 
   it('is false when `extensionsUsed` is not an array', () => {
     expect(usesGodotSingleRoot({ extensionsUsed: 'GODOT_single_root' })).toBe(false);
+  });
+});
+
+describe('godotSurfacePrimitives', () => {
+  const target = { POSITION: 0 };
+
+  it('keeps every primitive when none has targets', () => {
+    expect(godotSurfacePrimitives([{}, {}, {}])).toEqual([0, 1, 2]);
+  });
+
+  it('drops a primitive whose target count differs from the first', () => {
+    expect(godotSurfacePrimitives([{ targets: [target] }, { targets: [] }, { targets: [target] }])).toEqual([
+      0, 2,
+    ]);
+  });
+
+  it('drops a later primitive with targets when the first has none (edge case)', () => {
+    expect(godotSurfacePrimitives([{}, { targets: [target] }, {}])).toEqual([0, 2]);
+  });
+});
+
+describe('targetCount', () => {
+  it('counts the targets', () => {
+    expect(targetCount({ targets: [{}, {}] })).toBe(2);
+  });
+
+  it('counts none for a primitive without them', () => {
+    expect(targetCount({})).toBe(0);
+  });
+
+  it('counts none for a targets value that is not an array (edge case)', () => {
+    expect(targetCount({ targets: 'two' })).toBe(0);
+  });
+});
+
+describe('gltfObjects', () => {
+  it('returns the objects of an array', () => {
+    expect(gltfObjects([{ name: 'Cube' }])).toEqual([{ name: 'Cube' }]);
+  });
+
+  it('reads an entry that is not an object as empty', () => {
+    expect(gltfObjects(['Cube', null])).toEqual([{}, {}]);
+  });
+
+  it('returns none for a value that is not an array (edge case)', () => {
+    expect(gltfObjects({ name: 'Cube' })).toEqual([]);
   });
 });

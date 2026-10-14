@@ -8,14 +8,7 @@ import type { LiveNode } from './liveNode.js';
 import { graftInstanceChildren, type InstanceScopes } from './graftInstanceChildren.js';
 import { rehomeOverride } from './rehomeOverride.js';
 import { layerRawOverride } from './layerRawOverride.js';
-
-/**
- * The render-only type `processors/createSceneProcessor.ts` emits for a
- * `.glb`/`.gltf` instance. The merge skips it: its instance children are GLB
- * overrides matched by name through `GlbInstanceProvider`, which a collapse
- * would discard. Keep in step with the literal at the synthesis site.
- */
-const GLB_SCENE_ROOT_TYPE = 'GLBSceneRoot';
+import { GLB_SCENE_ROOT_TYPE } from './glbSceneRoot.js';
 
 /**
  * The instance node's keys were written against the outer scope, the root's against the
@@ -40,6 +33,8 @@ export function mergeInstanceRoot(
 ): LiveNode | null {
   if (loadedScene.nodes.length !== 1) return null;
   const root = loadedScene.nodes[0]!;
+  // A GLB's instance children are overrides matched by name through `GlbInstanceProvider`,
+  // which a collapse would discard.
   if (root.type === GLB_SCENE_ROOT_TYPE) return null;
 
   const merged = mergeProperties(instanceNode, root, scopes);

@@ -29,8 +29,7 @@ export const MATERIAL_SCENES = [
   { name: 'grid-map-billboard', file: 'unit-grid-map-billboard.tscn' },
 
   // The noise rasterisation pipeline on a Sprite2D: seeded FastNoiseLite
-  // ridged fBm → normalise → seamless blend skirt → Gradient ramp. These three
-  // are the only scenes with a noise texture.
+  // ridged fBm → normalise → seamless blend skirt → Gradient ramp.
   { name: 'noisetexture2d', file: 'unit-noisetexture2d.tscn', mode: '2d' },
   // A noise texture past one upload band, so it reaches the GPU in bands. Its
   // baseline is three's whole upload, so a pass means the bands give its pixels.
@@ -39,6 +38,8 @@ export const MATERIAL_SCENES = [
   // and the NoColorSpace tagging show only when a lit material perturbs its
   // normals with the result.
   { name: 'noisetexture2d-normal', file: 'unit-noisetexture2d-normal.tscn' },
+  // The FastNoiseLite domain warp, which no other noise scene turns on.
+  { name: 'noisetexture2d-domain-warp', file: 'unit-noisetexture2d-domain-warp.tscn', mode: '2d' },
 
   // Sprite2D, Sprite3D and 3D physics bodies.
   { name: 'sprite2d', file: 'unit-sprite2d.tscn', mode: '2d' },
@@ -69,6 +70,9 @@ export const MATERIAL_SCENES = [
     name: 'glb-surface-material-override',
     file: 'unit-glb-surface-material-override.tscn',
   },
+  // An emission map drawn through the UV2 Godot's importer unwrapped into the `.glb`'s unwrap
+  // cache, the only scene that samples UV2. Each face shows its own patch of the gradient bands.
+  { name: 'glb-lightmap-uv2', file: 'unit-glb-lightmap-uv2.tscn' },
   // The one variable, carried by no other fixture: a node-level
   // `surface_material_override/N` over a baked mesh's surface material. Surface
   // 1 is overridden and surface 0 is not, so a leak onto every surface, a

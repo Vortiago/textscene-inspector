@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { buildSkyEnvironment, skyPanoramaTexture } from './build';
 import { decodeSky, decodeSkyMaterial } from './decode';
 import type { Sky } from './types';
+import { testRenderer } from '../../testing/recordingWebGL';
 
 /** A sky of `materialType` with every property at Godot's default. */
 function defaultSky(materialType: string): Sky {
@@ -35,31 +36,51 @@ describe('skyPanoramaTexture', () => {
   });
 });
 
-/** A renderer whose cube reads back the same radiance on every texel. */
-function uniformSkyRenderer(radiance: number): THREE.WebGLRenderer {
-  return {
-    readRenderTargetPixels: (...args: unknown[]) => {
-      (args[5] as Uint16Array).fill(THREE.DataUtils.toHalfFloat(radiance));
-    },
-  } as unknown as THREE.WebGLRenderer;
-}
-
 describe('buildSkyEnvironment layers', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("carries Godot's layers 1 to 7 of the sky's radiance", () => {
-    vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(() => {});
-    vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockReturnValue(
-      new THREE.WebGLRenderTarget(1, 1)
-    );
-    const sky = defaultSky('ProceduralSkyMaterial');
+  it("bakes the sky's layers without reading a pixel back", async () => {
+    const { renderer } = await testRenderer();
+    const readBack = vi.spyOn(renderer.getContext(), 'readPixels');
 
-    const env = buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [], asBackground: true });
+    const env = buildSkyEnvironment(renderer, {
+      sky: defaultSky('ProceduralSkyMaterial'),
+      lights: [],
+      asBackground: true,
+    });
 
-    expect([env!.layers.sharp, env!.layers.rough, env!.layers.last].map((g) => g.length)).toEqual([3, 3, 1]);
-    expect(THREE.DataUtils.fromHalfFloat(env!.layers.last[0]![2]![1]!)).toBeCloseTo(0.25, 3);
+    expect(env).not.toBeNull();
+    expect(readBack).not.toHaveBeenCalled();
+  });
+
+  it("draws each of Godot's layers 1 to 7 into a mip of its group's cube, on all six faces", async () => {
+    const { renderer } = await testRenderer();
+    const context = renderer.getContext();
+    // Each draw writes to the texture level attached last.
+    let attached: unknown[] = [];
+    const draws: unknown[][] = [];
+    vi.spyOn(context, 'framebufferTexture2D').mockImplementation((...args) => void (attached = args));
+    vi.spyOn(context, 'drawArrays').mockImplementation(() => void draws.push(attached));
+    vi.spyOn(context, 'drawElements').mockImplementation(() => void draws.push(attached));
+
+    const env = buildSkyEnvironment(renderer, {
+      sky: defaultSky('ProceduralSkyMaterial'),
+      lights: [],
+      asBackground: true,
+    });
+
+    const drawnFacesAndMips = (cube: THREE.WebGLCubeRenderTarget) => {
+      const handle = (renderer.properties.get(cube.texture) as { __webglTexture: unknown }).__webglTexture;
+      const drawn = draws
+        .filter(([, , , texture]) => texture === handle)
+        .map(([, , face, , level]) => `${(face as number) - context.TEXTURE_CUBE_MAP_POSITIVE_X}@${level}`);
+      return new Set(drawn).size;
+    };
+    expect([env!.layers.sharp, env!.layers.rough, env!.layers.last].map(drawnFacesAndMips)).toEqual([
+      18, 18, 6,
+    ]);
   });
 });
 
@@ -69,7 +90,8 @@ describe('buildSkyEnvironment radiance size', () => {
   });
 
   /** The face size of each cube the build renders, and of the cube the PMREM prefilters. */
-  function cubeSizes(radianceSize: number, asBackground = true) {
+  async function cubeSizes(radianceSize: number, asBackground = true) {
+    const { renderer } = await testRenderer();
     const rendered: number[] = [];
     vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(function (this: THREE.CubeCamera) {
       rendered.push(this.renderTarget.width);
@@ -84,24 +106,24 @@ describe('buildSkyEnvironment radiance size', () => {
       radianceFilter: 'importance-sample',
       radianceSize,
     };
-    const env = buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [], asBackground });
+    const env = buildSkyEnvironment(renderer, { sky, lights: [], asBackground });
     return { rendered, prefiltered, hasBackground: env!.background !== null };
   }
 
-  it('renders one cube for the background and the radiance at the default size', () => {
-    expect(cubeSizes(256)).toEqual({ rendered: [256], prefiltered: 256, hasBackground: true });
+  it('renders one cube for the background and the radiance at the default size', async () => {
+    expect(await cubeSizes(256)).toEqual({ rendered: [256], prefiltered: 256, hasBackground: true });
   });
 
-  it('renders the radiance at a smaller size on a cube of its own, so a mirror reads it as coarse as Godot', () => {
-    expect(cubeSizes(32)).toEqual({ rendered: [256, 32], prefiltered: 32, hasBackground: true });
+  it('renders the radiance at a smaller size on a cube of its own, so a mirror reads it as coarse as Godot', async () => {
+    expect(await cubeSizes(32)).toEqual({ rendered: [256, 32], prefiltered: 32, hasBackground: true });
   });
 
-  it('bakes a size above 256 at 256 (edge case)', () => {
-    expect(cubeSizes(1024)).toEqual({ rendered: [256], prefiltered: 256, hasBackground: true });
+  it('bakes a size above 256 at 256 (edge case)', async () => {
+    expect(await cubeSizes(1024)).toEqual({ rendered: [256], prefiltered: 256, hasBackground: true });
   });
 
-  it('renders only the radiance cube for a sky that is not the background', () => {
-    expect(cubeSizes(32, false)).toEqual({ rendered: [32], prefiltered: 32, hasBackground: false });
+  it('renders only the radiance cube for a sky that is not the background', async () => {
+    expect(await cubeSizes(32, false)).toEqual({ rendered: [32], prefiltered: 32, hasBackground: false });
   });
 });
 
@@ -115,7 +137,8 @@ describe('buildSkyEnvironment panorama wiring', () => {
    * panorama the sky shader read, taken during the render because the builder
    * frees it straight after. With `renders` false the render throws.
    */
-  function build(panorama: THREE.Texture, renders = true) {
+  async function build(panorama: THREE.Texture, renders = true) {
+    const { renderer } = await testRenderer();
     let sampled: THREE.Texture | null = null;
     vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation((_renderer, scene) => {
       const mesh = scene.children[0] as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
@@ -126,14 +149,14 @@ describe('buildSkyEnvironment panorama wiring', () => {
       new THREE.WebGLRenderTarget(1, 1)
     );
     const sky = defaultSky('PanoramaSkyMaterial');
-    const env = buildSkyEnvironment(uniformSkyRenderer(0), { sky, lights: [], panorama, asBackground: true });
+    const env = buildSkyEnvironment(renderer, { sky, lights: [], panorama, asBackground: true });
     return { env, sampled: sampled as THREE.Texture | null };
   }
 
-  it('samples the tiled panorama, not the shared entry', () => {
+  it('samples the tiled panorama, not the shared entry', async () => {
     // The clone's wrap and source are `skyPanoramaTexture`'s contract, tested above.
     const shared = new THREE.Texture();
-    const { env, sampled } = build(shared);
+    const { env, sampled } = await build(shared);
     expect(env).not.toBeNull();
     expect(sampled).not.toBe(shared);
     expect(sampled!.wrapS).toBe(THREE.RepeatWrapping);
@@ -142,7 +165,7 @@ describe('buildSkyEnvironment panorama wiring', () => {
   it.each([
     ['renders', true],
     ['fails to render', false],
-  ])('frees its clone once the cube is done, when the sky %s', (_label, renders) => {
+  ])('frees its clone once the cube is done, when the sky %s', async (_label, renders) => {
     const shared = new THREE.Texture();
     // The clone is made and freed inside the build, so a prototype spy is the
     // only place a test can see its disposal.
@@ -152,19 +175,19 @@ describe('buildSkyEnvironment panorama wiring', () => {
       disposedTextures.push(this);
       realDispose.call(this);
     });
-    const { env, sampled } = build(shared, renders);
+    const { env, sampled } = await build(shared, renders);
     expect(env === null).toBe(!renders);
     expect(sampled).not.toBe(shared);
     expect(disposedTextures).toContain(sampled);
     expect(disposedTextures).not.toContain(shared);
   });
 
-  it('never disposes a shared panorama that already repeats', () => {
+  it('never disposes a shared panorama that already repeats', async () => {
     const shared = new THREE.Texture();
     shared.wrapS = shared.wrapT = THREE.RepeatWrapping;
     const disposed = vi.fn();
     shared.addEventListener('dispose', disposed);
-    const { env, sampled } = build(shared);
+    const { env, sampled } = await build(shared);
     expect(sampled).toBe(shared);
     env!.dispose();
     expect(disposed).not.toHaveBeenCalled();

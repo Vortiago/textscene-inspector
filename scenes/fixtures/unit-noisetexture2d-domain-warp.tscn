@@ -1,0 +1,26 @@
+[gd_scene format=3 uid="uid://unitnoisetex2ddomainwarp"]
+
+; One variable: the FastNoiseLite domain warp, progressive with the reduced simplex warp, on a
+; 64x64 NoiseTexture2D. Every other noise scene leaves the warp off, so a regression in the warp
+; generator or its settings shows nowhere else. The 3D density texture shares this sampler.
+
+[sub_resource type="FastNoiseLite" id="Noise_1"]
+seed = 3
+frequency = 0.05
+domain_warp_enabled = true
+domain_warp_type = 1
+domain_warp_fractal_type = 1
+domain_warp_amplitude = 20
+domain_warp_frequency = 0.02
+
+[sub_resource type="NoiseTexture2D" id="Noise_tex"]
+width = 64
+height = 64
+noise = SubResource("Noise_1")
+
+[node name="Root" type="Node2D"]
+
+[node name="Sprite" type="Sprite2D" parent="."]
+position = Vector2(576, 324)
+scale = Vector2(8, 8)
+texture = SubResource("Noise_tex")
