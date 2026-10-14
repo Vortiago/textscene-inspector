@@ -7,9 +7,7 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { findSubResource, parseResourceReference } from '../../SubResourceResolver';
-import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
-import { resolveGradient } from '../gradienttexture2d/decode';
+import { resolveNoiseSources } from '../noiseSources';
 import {
   resolveProceduralSubResourceAsync,
   type ProceduralBuildPlan,
@@ -36,21 +34,11 @@ function plan(
   resources: readonly TscnInternalResource[]
 ): ProceduralBuildPlan<'noise-texture-2d'> | null {
   const decoded = decodeNoiseTexture2D(properties);
-  const noiseResource = decoded.noise
-    ? findSubResource(resources, parseResourceReference(decoded.noise)?.id ?? '')
-    : undefined;
-  // Only FastNoiseLite generates. Another Noise subclass would be its own slice
-  // behind the same `noise` slot.
-  if (!noiseResource || noiseResource.type !== 'FastNoiseLite') return null;
-  if (!noiseTextureFits(decoded)) return null;
+  const sources = resolveNoiseSources(decoded, resources);
+  if (!sources || !noiseTextureFits(decoded)) return null;
 
-  // The refs name sub-resources whose values the input already carries, and an
-  // id is no part of the pixels, so a renamed id keeps the same content key.
-  const input: NoiseTexture2DInput = {
-    tex: { ...decoded, noise: null, colorRamp: null },
-    noise: decodeFastNoiseLite(noiseResource.data),
-    colorRamp: decoded.colorRamp ? resolveGradient(decoded.colorRamp, resources) : null,
-  };
+  // The input carries the values the refs name, so a renamed id keeps the same content key.
+  const input: NoiseTexture2DInput = { tex: { ...decoded, noise: null, colorRamp: null }, ...sources };
   return {
     job: 'noise-texture-2d',
     input,

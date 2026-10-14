@@ -11,7 +11,7 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { GRADIENT_TEXTURE_MAX_SIZE, boolSlotValue } from '../../../godot/index.js';
-import { packedTupleNumbers, parsePackedFloat32Array, PACKED_COLOR_ARRAY } from '../../shapes/packedArray';
+import { parsePackedColorArray, parsePackedFloat32Array } from '../../shapes/packedArray';
 import {
   GradientFill,
   GradientInterpolationMode,
@@ -22,12 +22,12 @@ import {
 } from './types';
 
 /**
- * Parses a `PackedColorArray` slot into a `Color[]`, dropping a trailing partial
- * quadruple. It groups the output of `parsePackedColorArray`
- * (`resources/shapes/packedArray.ts`), and a distinct name keeps the two contracts apart.
+ * Parses a `PackedColorArray` slot into a `Color[]`, dropping a trailing partial quadruple. It
+ * groups the output of `parsePackedColorArray`, so each component is the float32 a `Color` stores
+ * (`core/math/color.h:42-45`).
  */
 export function parseColorStops(value: string): Color[] {
-  const nums = packedTupleNumbers(value, PACKED_COLOR_ARRAY);
+  const nums = parsePackedColorArray(value);
   const colors: Color[] = [];
   for (let i = 0; i + 3 < nums.length; i += 4) {
     colors.push({ r: nums[i]!, g: nums[i + 1]!, b: nums[i + 2]!, a: nums[i + 3]! });
@@ -47,7 +47,8 @@ export function decodeGradient(data: Record<string, string>): Gradient {
   const count = offsets ? Math.min(offsets.length, colors.length) : colors.length;
   const stops: GradientColorStop[] = [];
   for (let i = 0; i < count; i++) {
-    const offset = offsets ? offsets[i]! : count > 1 ? i / (count - 1) : 0;
+    // A `Point` stores its offset as a float (`gradient.h:55`).
+    const offset = Math.fround(offsets ? offsets[i]! : count > 1 ? i / (count - 1) : 0);
     stops.push({ offset, color: colors[i]! });
   }
   // Godot sorts points by offset before sampling. A stable sort keeps equal

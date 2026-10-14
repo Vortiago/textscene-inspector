@@ -28,8 +28,8 @@ vi.mock('./gradienttexture2d/build', async (importOriginal) => {
 });
 
 // `noiseImage` is the NoiseTexture2D pipeline's first typed array.
-vi.mock('./noisetexture2d/noiseImage', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./noisetexture2d/noiseImage')>();
+vi.mock('../noise/image/noiseImage', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../noise/image/noiseImage')>();
   return {
     ...actual,
     noiseImage: (...args: Parameters<typeof actual.noiseImage>) => {

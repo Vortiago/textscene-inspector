@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import { channelToByte } from '../../utils/colorSpace';
+
 /** Dimensions of a decoded image, however it reports them. */
 export interface ImageSize {
   width: number;
@@ -64,16 +67,24 @@ export interface ImagePixels extends ImageSize {
  * Reads the RGBA8 bytes of a texture image: `image.data` for a `DataTexture`, else `getImageData`
  * through `withImageCanvas`. `undefined` means no pixels were readable. Canvas 2D stores
  * premultiplied alpha, so the readback loses RGB precision at low alpha and all of it at alpha 0.
+ * A half-float `DataTexture` (`colourDataTexture`) reads as its values clamped to bytes.
  */
 export function readImagePixels(image: unknown): ImagePixels | undefined {
-  const raw = (image as { data?: Uint8Array | Uint8ClampedArray } | null)?.data;
+  const raw = (image as { data?: Uint8Array | Uint8ClampedArray | Uint16Array } | null)?.data;
   if (raw) {
     const size = imageSize(image);
-    return size ? { data: raw, ...size } : undefined;
+    if (!size) return undefined;
+    return { data: raw instanceof Uint16Array ? halfFloatsToBytes(raw) : raw, ...size };
   }
   return withImageCanvas(
     image,
     (ctx, { width, height }) => ({ data: ctx.getImageData(0, 0, width, height).data, width, height }),
     { willReadFrequently: true }
   );
+}
+
+function halfFloatsToBytes(halves: Uint16Array): Uint8Array {
+  const bytes = new Uint8Array(halves.length);
+  for (let i = 0; i < halves.length; i++) bytes[i] = channelToByte(THREE.DataUtils.fromHalfFloat(halves[i]!));
+  return bytes;
 }

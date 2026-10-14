@@ -32,6 +32,18 @@ describe('rasterizeGradientTexture2D', () => {
     expect(texture.minFilter).toBe(THREE.LinearFilter);
   });
 
+  it('keeps a use_hdr channel past 1 in a float texture', () => {
+    const tex: GradientTexture2D = { ...decodeGradientTexture2D({ width: '1', height: '1' }), useHdr: true };
+    const gradient: Gradient = {
+      interpolationMode: GradientInterpolationMode.Constant,
+      stops: [{ offset: 0, color: { r: 2, g: 0.5, b: 0, a: 1 } }],
+    };
+    const texture = rasterizeGradientTexture2D(tex, gradient);
+    expect(texture.type).toBe(THREE.HalfFloatType);
+    expect(texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+    expect(THREE.DataUtils.fromHalfFloat((texture.image.data as Uint16Array)[0]!)).toBe(2);
+  });
+
   it("puts Godot's TOP row at v = 1, matching a file-backed texture", () => {
     // WebGL's UNPACK_FLIP_Y does not apply to a typed-array DataTexture, so the
     // buffer carries the flip: v = 1 samples the last row, Godot's top row.

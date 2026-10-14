@@ -1,21 +1,19 @@
 /**
- * Resolves a Texture2D property that names an `AtlasTexture` into the cell as its
- * own texture. Inline (`resolveAtlasTextureRef`) and `.tres`
- * (`SubResourceResolver.resolveExtAtlasTexturePath`, `decodeExtAtlasTextureRef`)
- * forms decode to one `AtlasTextureReference`, so the crop and cache are form-agnostic.
+ * Resolves a Texture2D property that names an `AtlasTexture` into the cell as its own texture. A
+ * `.tres` AtlasTexture reads as a sub-resource of the file's own tables (`useTextResourceSlot`), so
+ * the inline and saved forms share one lookup, crop and cache.
  */
 
 import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
-import type { ParsedResource } from '../../../parser/parsedResource';
 import { parseResourceReference, findSubResource } from '../../SubResourceResolver';
 import { proceduralTexture, proceduralTextureKey } from '../proceduralTextureCache';
 import { imageSize } from '../../../r3f/controls/withImageCanvas';
 import { atlasTextureLayout, decodeAtlasTexture } from './decode';
 import { rasterizeAtlasTexture } from './build';
-import { ATLAS_TEXTURE_TYPE, type AtlasTextureData } from './types';
+import type { AtlasTextureData } from './types';
 
-/** An AtlasTexture reference, inline or `.tres`: its id (a sub-resource id or the file's path) and decoded properties. */
+/** An AtlasTexture reference: its sub-resource id and its decoded properties. */
 export interface AtlasTextureReference {
   id: string;
   texture: AtlasTextureData;
@@ -34,15 +32,6 @@ export function resolveAtlasTextureRef(
   const resource = findSubResource(internalResources, parsed.id);
   if (!resource || resource.type !== 'AtlasTexture') return null;
   return { id: parsed.id, texture: decodeAtlasTexture(resource.data) };
-}
-
-/**
- * The AtlasTexture reference a loaded `.tres` at `path` names, in the inline
- * form's shape, or null when the file's header names another type.
- */
-export function decodeExtAtlasTextureRef(path: string, tres: ParsedResource): AtlasTextureReference | null {
-  if (tres.resourceType !== ATLAS_TEXTURE_TYPE) return null;
-  return { id: path, texture: decodeAtlasTexture(tres.properties) };
 }
 
 /**

@@ -1,9 +1,10 @@
 /**
  * Asserts the `.import` parameter allowlist against the corpus (ADR-0028). The previewer's asset
  * re-import honours `nodes/root_scale`, `nodes/apply_root_scale`, `meshes/light_baking`,
- * `meshes/lightmap_texel_size` and, from `_subresources`, the `use_external` material remaps, the
- * `mesh_instance/layers` mask and the per-mesh `generate/lightmap_uv`. A vendored sidecar that
- * needs any other parameter would render wrong with nothing to say so, so this test fails instead.
+ * `meshes/lightmap_texel_size`, from `_subresources` the `use_external` material remaps, the
+ * `mesh_instance/layers` mask and the per-mesh `generate/lightmap_uv`, and a `3d_texture` slice
+ * grid. A vendored sidecar that needs any other parameter would render wrong with nothing to say
+ * so, so this test fails instead.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,6 +27,26 @@ const HONOURED = new Set([
   'meshes/light_baking',
   'meshes/lightmap_texel_size',
   '_subresources',
+]);
+
+/**
+ * The `3d_texture` importer's parameters, reviewed for that importer alone: a `texture` importer's
+ * mipmaps change how a 2D texture samples. The slice grid is how the previewer cuts the source
+ * image into slices. The storage is inert: the previewer reads the source image, and a fog density
+ * texture is sampled in a compute shader, so at mipmap 0 (`fog_material.cpp:161`).
+ */
+const TEXTURE_3D_PARAMS = new Set([
+  'slices/horizontal',
+  'slices/vertical',
+  'compress/mode',
+  'compress/high_quality',
+  'compress/lossy_quality',
+  'compress/uastc_level',
+  'compress/rdo_quality_loss',
+  'compress/hdr_compression',
+  'compress/channel_pack',
+  'mipmaps/generate',
+  'mipmaps/limit',
 ]);
 
 /**
@@ -131,7 +152,8 @@ function walk(dir, out = []) {
 function readSidecar(file) {
   const params = {};
   const subResources = [];
-  let inParams = false;
+  let importer = null;
+  let section = null;
   let openKey = null;
   let state = { inString: false, depth: 0 };
 
@@ -144,13 +166,15 @@ function readSidecar(file) {
       continue;
     }
     if (SECTION_LINE.test(line)) {
-      inParams = line === '[params]';
+      section = line;
       continue;
     }
-    if (!inParams || !line.includes('=')) continue;
+    if (!line.includes('=')) continue;
     const eq = line.indexOf('=');
     const key = line.slice(0, eq).trim();
     const value = line.slice(eq + 1).trim();
+    if (section === '[remap]' && key === 'importer') importer = value.replace(/^"(.*)"$/, '$1');
+    if (section !== '[params]') continue;
     params[key] = value.replace(/^"(.*)"$/, '$1');
     state = scanLine(value, { inString: false, depth: 0 });
     if (state.inString || state.depth > 0) {
@@ -158,7 +182,7 @@ function readSidecar(file) {
       if (key === '_subresources') subResources.push(value);
     }
   }
-  return { params, blocks: topLevelBlocks(subResources.join('\n')) };
+  return { importer, params, blocks: topLevelBlocks(subResources.join('\n')) };
 }
 
 const SECTION_LINE = /^\[[A-Za-z_][A-Za-z0-9_]*\]$/;
@@ -243,8 +267,10 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
     // into one of the sets above, with the reason, or honour it.
     const unknown = [];
     for (const file of sidecars) {
+      const isTexture3D = READ.get(file).importer === '3d_texture';
       for (const key of Object.keys(readParams(file))) {
         if (HONOURED.has(key) || INERT.has(key) || MUST_BE_DEFAULT.has(key)) continue;
+        if (isTexture3D && TEXTURE_3D_PARAMS.has(key)) continue;
         unknown.push(`${rel(file)}: ${key}`);
       }
     }

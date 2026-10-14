@@ -133,6 +133,11 @@ catalogs:
 overrides:
   '@vscode/test-web>playwright': ^1.63.0
 
+patchedDependencies:
+  fastnoise-lite@1.1.1:
+    hash: ixba4smauncpcw4rwdgn4b76aa
+    path: patches/fastnoise-lite@1.1.1.patch
+
 importers:
 
   .:
@@ -407,7 +412,7 @@ importers:
         version: 3.1.2(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(@types/three@0.186.0)(postprocessing@6.39.3(three@0.186.0))(react@19.3.0)(three@0.186.0)
       fastnoise-lite:
         specifier: 'catalog:'
-        version: 1.1.1
+        version: 1.1.1(patch_hash=ixba4smauncpcw4rwdgn4b76aa)
       postprocessing:
         specifier: 'catalog:'
         version: 6.39.3(three@0.186.0)
@@ -5710,7 +5715,7 @@ snapshots:
 
   fast-levenshtein@2.0.6: {}
 
-  fastnoise-lite@1.1.1: {}
+  fastnoise-lite@1.1.1(patch_hash=ixba4smauncpcw4rwdgn4b76aa): {}
 
   fdir@6.5.0(picomatch@4.0.7):
     optionalDependencies:

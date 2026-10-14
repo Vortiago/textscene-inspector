@@ -31,7 +31,7 @@ function settings(properties: Record<string, string>): FogSettings {
 
 const camera = new THREE.PerspectiveCamera(75, 1, 0.05, 400);
 
-const NO_OBJECTS = { lights: [], casters: [] };
+const NO_OBJECTS = { lights: [], casters: [], volumes: [] };
 
 function sun(intensity: number): THREE.DirectionalLight {
   const light = new THREE.DirectionalLight(0xffffff, intensity);
@@ -94,6 +94,7 @@ describe('prepareFog', () => {
     prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), passes(), {
       lights: [sun(Math.PI), lightOnly],
       casters: [],
+      volumes: [],
     });
 
     expect(fogUniforms.sunDirections[1]).toBe(1);

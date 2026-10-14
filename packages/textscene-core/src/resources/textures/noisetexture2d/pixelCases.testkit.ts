@@ -5,7 +5,8 @@
  */
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
-import { GradientInterpolationMode, type Gradient } from '../gradienttexture2d/types';
+import { decodeGradient } from '../gradienttexture2d/decode';
+import type { Gradient } from '../gradienttexture2d/types';
 import { decodeNoiseTexture2D } from './decode';
 import type { NoiseTexture2DData } from './types';
 
@@ -16,14 +17,10 @@ export interface NoisePixelCase {
   colorRamp: Gradient | null;
 }
 
-const RAMP: Gradient = {
-  stops: [
-    { offset: 0, color: { r: 0.1, g: 0.2, b: 0.8, a: 1 } },
-    { offset: 0.6, color: { r: 0.9, g: 0.5, b: 0.1, a: 0.5 } },
-    { offset: 1, color: { r: 1, g: 1, b: 1, a: 1 } },
-  ],
-  interpolationMode: GradientInterpolationMode.Linear,
-};
+const RAMP: Gradient = decodeGradient({
+  offsets: 'PackedFloat32Array(0, 0.6, 1)',
+  colors: 'PackedColorArray(0.1, 0.2, 0.8, 1, 0.9, 0.5, 0.1, 0.5, 1, 1, 1, 1)',
+});
 
 const NOISE = decodeFastNoiseLite({ seed: '7', frequency: '0.08', fractal_type: '2' });
 
@@ -63,7 +60,7 @@ export const PINNED_PIXEL_HASHES: Readonly<Record<string, string>> = {
   'seamless raw range': '599a0b00113d3ca75e688a1fb71142e3c3517e085a7955635e9445381c2ea4a9',
   'seamless minimum skirt': 'cc49240cd00fc2127562311c933a1d07d29b40df15e407fce25d8c3de297084a',
   'seamless skirt past half': 'e965753eab458f07f4a67da10b7c863d7c02039595d3c96a1ccff87a4559517b',
-  'colour ramp': '113437ef48faa8f585759ef6bcb1ac41698e54841c65f547188f9f0ac258120e',
+  'colour ramp': 'e22ddba9837fe70c5d9247d6f5397f06a8a7212d4fd4c746e7ebdf37eb417fbd',
   'normal map': '28e6f7bfec700912222420c7aa61a04d2f2f31168822730ccc2f1ead9d637050',
-  'normal map over a ramp': '4d23acc75732ce398ac6f3bc0665fa66ea89b979dd98a4d5a3545b7ddaedb4ff',
+  'normal map over a ramp': '20b2b5e68ecb159bad9e76cf7602aff9c00701552f0b8487c0732b746b40a8b2',
 };

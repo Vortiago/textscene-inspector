@@ -6,6 +6,7 @@
 
 import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
+import { FOG_VOLUME_SHAPE_NAMES, FogVolumeShape } from '../../../godot/fogVolume.js';
 import { v } from '../../../linter/validators/index.js';
 
 /**
@@ -56,13 +57,9 @@ validatorRegistry.registerAll('FogVolume', {
   // Fog::fog_volume_set_shape (servers/rendering/renderer_rd/environment/fog.cpp:97-105)
   // have no ERR_FAIL_INDEX, so an out-of-range value is stored and matches no
   // shape branch. The hint is editor-only.
-  shape: v.enumInt(
-    'shape',
-    0,
-    4,
-    { 0: 'ELLIPSOID', 1: 'CONE', 2: 'CYLINDER', 3: 'BOX', 4: 'WORLD' },
-    { hinted: 'fog_volume.cpp:47' }
-  ),
+  shape: v.enumInt('shape', FogVolumeShape.ELLIPSOID, FogVolumeShape.WORLD, FOG_VOLUME_SHAPE_NAMES, {
+    hinted: 'fog_volume.cpp:47',
+  }),
   // fog_volume.cpp:48, PROPERTY_HINT_RESOURCE_TYPE "FogMaterial,ShaderMaterial".
   // set_material (:99-106) assigns any Ref<Material>. The hint only filters the
   // editor's resource picker, so this is a format check, not a bound.

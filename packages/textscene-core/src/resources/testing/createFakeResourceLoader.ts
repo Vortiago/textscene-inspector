@@ -58,6 +58,7 @@ export interface FakeResourceLoader {
   readonly eventBus: ResourceEventBus;
   readonly metadata: MetadataStore;
   readonly textures: FakeProcessor<THREE.Texture>;
+  readonly textures3D: FakeProcessor<THREE.Data3DTexture>;
   readonly glbMeshes: FakeProcessor<THREE.Object3D>;
   readonly scenes: FakeProcessor<TscnScene>;
   readonly resources: FakeProcessor<ParsedResource>;
@@ -131,6 +132,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   const eventBus = new ResourceEventBus();
   const metadata = new MetadataStore();
   const textures = makeFakeProcessor<THREE.Texture>(eventBus, 'texture');
+  const textures3D = makeFakeProcessor<THREE.Data3DTexture>(eventBus, 'texture3d');
   const glbMeshes = makeFakeProcessor<THREE.Object3D>(eventBus, 'glb');
   const scenes = makeFakeProcessor<TscnScene>(eventBus, 'scene');
   const resources = makeFakeProcessor<ParsedResource>(eventBus, 'resource');
@@ -141,6 +143,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
 
   const byType: Record<ResourceType, FakeProcessor<unknown>> = {
     texture: textures,
+    texture3d: textures3D,
     glb: glbMeshes,
     scene: scenes,
     resource: resources,
@@ -222,6 +225,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     eventBus,
     metadata,
     textures,
+    textures3D,
     glbMeshes,
     scenes,
     resources,
