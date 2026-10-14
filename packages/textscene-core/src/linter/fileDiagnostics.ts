@@ -137,8 +137,12 @@ export function isFormatRuleName(ruleName: string): boolean {
   return ruleName.startsWith(FORMAT_RULE_PREFIX);
 }
 
-/** Every `ruleName` `Linter` stamps that no registered rule declares, except a validator's {@link formatRuleName}. */
-export const FILE_DIAGNOSTIC_NAMES: ReadonlySet<string> = new Set([
+const FILE_DIAGNOSTIC_NAMES: ReadonlySet<string> = new Set([
   STRICT_PARSER_RULE_NAME,
   ...Object.values(FILE_DIAGNOSTICS).map((d) => d.ruleName),
 ]);
+
+/** True for a `ruleName` `Linter` stamps that no registered rule declares. */
+export function isUndeclaredRuleName(ruleName: string): boolean {
+  return FILE_DIAGNOSTIC_NAMES.has(ruleName) || isFormatRuleName(ruleName);
+}

@@ -70,10 +70,7 @@ export interface ParseError {
   column: number;
   /** Machine-readable error code. */
   code: string;
-  /**
-   * The key of the property a **Validator** refused, as the file writes it. Set only by `propertyRefusal`, so
-   * `Linter.convertParseErrors` names the diagnostic after the property. Absent for a syntax or heading error.
-   */
+  /** The key of the property a **Validator** refused, as the file writes it. Absent for a syntax or heading error. */
   propertyKey?: string;
   /**
    * True when the refusal is about the key, not the value: an unrecognised leaf

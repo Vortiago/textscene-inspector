@@ -41,6 +41,16 @@ describe('a negative narrowed to a tier', () => {
     );
   });
 
+  it("accepts a warning narrowed to a validator's format:<key>, since a hinted bound warns", () => {
+    expectNoDiagnostic(HINTED_WARNING, { ruleName: 'format:zoom', severity: 'warning' });
+  });
+
+  it("refuses info narrowed to a validator's format:<key>, since a validator never reports it", () => {
+    expect(() =>
+      expectNoDiagnostic(HINTED_WARNING, { ruleName: 'format:drag_left_margin', severity: 'info' })
+    ).toThrow('a validator reports only error or warning');
+  });
+
   it("reads a file diagnostic's declared arm like a rule's", () => {
     expectNoDiagnostic(CLEAN, { ruleName: 'legacy-format-version', severity: 'info' });
   });

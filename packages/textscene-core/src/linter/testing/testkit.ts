@@ -187,11 +187,18 @@ function declaredTiers(ruleName: string): Severity[] {
 
 /**
  * Refuse a negative at a tier that nothing can report, since it cannot fail.
- * Only `error` goes without a rule name, because a format failure always errors
- * and a message substring cannot say whose tier applies.
+ * Only `error` goes without a rule name or with `strict-parser`, because a syntax
+ * error always errors and a message substring cannot say whose tier applies. A
+ * validator's `format:<key>` reaches `warning` too, where a hint bounds the value.
  */
 function expectTierReachable(ruleName: string | undefined, severity: Severity): void {
-  if (ruleName === undefined || ruleName === STRICT_PARSER_RULE_NAME || isFormatRuleName(ruleName)) {
+  if (ruleName !== undefined && isFormatRuleName(ruleName)) {
+    expect(['error', 'warning'], `a validator reports only error or warning, not ${severity}`).toContain(
+      severity
+    );
+    return;
+  }
+  if (ruleName === undefined || ruleName === STRICT_PARSER_RULE_NAME) {
     expect(
       severity,
       `only error is reachable without a declared arm; name the rule that reports ${severity}`
