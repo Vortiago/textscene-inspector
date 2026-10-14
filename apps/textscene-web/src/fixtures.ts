@@ -853,6 +853,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Label Settings Tres",
+    "file": "unit-label-label-settings-tres.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Label Settings",
     "file": "unit-label-label-settings.tscn",
     "category": "Other"
@@ -1588,6 +1593,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite3d Billboard Fixed Y",
+    "file": "unit-sprite3d-billboard-fixed-y.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite3d Blended Pass",
     "file": "unit-sprite3d-blended-pass.tscn",
     "category": "Other"
@@ -2285,6 +2295,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tile Map Layer Mixed Sources",
     "file": "unit-tile-map-layer-mixed-sources.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Texture Padding",
+    "file": "unit-tile-map-layer-texture-padding.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

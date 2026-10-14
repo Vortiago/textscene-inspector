@@ -457,7 +457,8 @@ export const TAB_ALIGNMENT_RIGHT = 2;
  * `TabBar::_update_cache` (`tab_bar.cpp:1196-1291`) with `offset` at 0: it is not
  * serialised (`tab_bar.h:106`), and nothing here scrolls it. `maxTabWidthPx > 0` truncates
  * a wider tab (`:1215-1223`) to `textBudgetPx = max(max(sizeTextless, maxTabWidthPx) - sizeTextless, 1)`.
- * The painter clips to that budget in place of Godot's `OVERRUN_TRIM_ELLIPSIS`.
+ * The painter places the close button from that budget but draws the whole title, with no
+ * `OVERRUN_TRIM_ELLIPSIS` trim (`comparison.md`).
  */
 export function computeTabBarDrawLayout(
   tabs: readonly TabLayoutInput[],

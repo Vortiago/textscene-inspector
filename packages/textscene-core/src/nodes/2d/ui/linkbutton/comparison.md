@@ -51,5 +51,5 @@ no substitution.
   and thickness from the vendored Open Sans metrics, because no scene font carries baked
   underline data.
 - **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs
-  keep left-to-right order for a right-to-left script or trailing punctuation, while the
-  label and its underline swap edges.
+  keep left-to-right order for a right-to-left script or trailing punctuation, though
+  `layout_direction = 3` swaps the label and its underline.

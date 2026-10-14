@@ -4,14 +4,14 @@ category: 2D
 status: unimplemented
 fixture: unit-open-xr-interaction-profile-editor.tscn
 # image: unit-open-xr-interaction-profile-editor
-renders_as: invisible transform-only fallback, editor-only UI that no exported game scene ever instantiates
+renders_as: nothing, editor-only UI that no exported game scene ever instantiates
 ---
 
 # OpenXRInteractionProfileEditor
 
 OpenXRInteractionProfileEditor is the editor's fallback tab for an OpenXR interaction
 profile, compiled only into editor builds. The previewer parses and validates it like
-any Control but does not draw it, so it renders as a transform-only fallback.
+any Control, and draws nothing for it.
 
 ## Linting
 

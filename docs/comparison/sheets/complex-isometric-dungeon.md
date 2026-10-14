@@ -17,15 +17,15 @@ jars, coins, doors, enemies, candles and lights.
 - Sprite2D props as PackedScene instances inside a `y_sort_enabled` subtree
 - Draw order and occlusion down the isometric depth
 - 61 Polygon2D nodes: soft shadows, floor decals and additive torch pools
-- A CanvasModulate over 23 PointLight2D nodes and 7 LightOccluder2D nodes
+- A CanvasModulate over 45 PointLight2D nodes and 8 LightOccluder2D nodes
 
 Draw order and the light pass match.
 
 ## Known limitations
 
 - **Needs runtime** The candle sparks draw here and not in Godot (see Candle).
-- **Approximated** A thin light seam shows between floor tiles, where Godot's tiles meet
-  without one.
+- **Approximated** The coin stacks, the paw-print stains and the inner rings of the circles
+  read softer and darker than Godot's.
 
 ## The pieces on their own
 

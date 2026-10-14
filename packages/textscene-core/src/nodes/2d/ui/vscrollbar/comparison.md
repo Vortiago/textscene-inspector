@@ -1,7 +1,7 @@
 ---
 type: VScrollBar
 category: 2D
-status: unreviewed
+status: done
 fixture: unit-v-scroll-bar.tscn
 image: unit-v-scroll-bar
 renders_as: a vertical track with a rectangular grabber

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reversedRows } from './reversedRows';
+import { isBottomUp, reversedRows } from './reversedRows';
 
 describe('reversedRows', () => {
   it('puts the last row first', () => {
@@ -30,5 +30,21 @@ describe('reversedRows', () => {
 
   it('gives an empty array for an empty image (error case)', () => {
     expect(reversedRows(new Uint8Array(0), 0, 0)).toHaveLength(0);
+  });
+});
+
+describe('isBottomUp', () => {
+  const pixels = { data: new Uint8Array(4), width: 1, height: 1 };
+
+  it('is true for a typed array that uploads without flipY', () => {
+    expect(isBottomUp({ flipY: false, image: pixels })).toBe(true);
+  });
+
+  it('is false for a typed array that uploads with flipY', () => {
+    expect(isBottomUp({ flipY: true, image: pixels })).toBe(false);
+  });
+
+  it('is false for a decoded image, which has no typed array (edge case)', () => {
+    expect(isBottomUp({ flipY: false, image: { width: 1, height: 1 } })).toBe(false);
   });
 });

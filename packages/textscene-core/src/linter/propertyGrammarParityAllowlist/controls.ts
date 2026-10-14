@@ -21,7 +21,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'text_direction',
     ],
     reason:
-      'Every key here changes the frozen frame and is not implemented yet: BiDi and locale are unread by a left-to-right shaper, and label_settings, the line window and the visible-character reveal each change what is on screen.',
+      'Every key here changes the frozen frame and is not implemented yet: BiDi and locale are unread by a left-to-right shaper.',
   },
 
   LineEdit: {

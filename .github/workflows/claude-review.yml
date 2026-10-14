@@ -66,7 +66,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "$PR_CONTEXT"
-          gh pr diff "$PR_NUMBER" > "$PR_CONTEXT/diff.patch"
+          # GitHub refuses the whole diff of a pull request over 300 files (HTTP 406). The
+          # files API pages up to 3000 files, each with its own patch, and gives none for a
+          # binary file.
+          if ! gh pr diff "$PR_NUMBER" > "$PR_CONTEXT/diff.patch"; then
+            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[] |
+              (.previous_filename // .filename) as $old |
+              "diff --git a/\($old) b/\(.filename)\n" +
+              "--- \(if .status == "added" then "/dev/null" else "a/\($old)" end)\n" +
+              "+++ \(if .status == "removed" then "/dev/null" else "b/\(.filename)" end)\n" +
+              "\(.patch // "Binary or oversized file, no patch")\n"
+            ' > "$PR_CONTEXT/diff.patch"
+          fi
           # JSON, not `gh pr view --comments`: off a terminal that prints the comments only, so
           # the description is lost and a pull request with no comment gives an empty file.
           gh pr view "$PR_NUMBER" --json title,body,comments,reviews --jq '

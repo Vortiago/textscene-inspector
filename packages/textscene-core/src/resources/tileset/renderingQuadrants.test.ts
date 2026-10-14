@@ -18,6 +18,7 @@ const SQUARE: TileSetModel = {
         margins: { x: 0, y: 0 },
         separation: { x: 0, y: 0 },
         textureRegionSize: { x: 16, y: 16 },
+        usesTexturePadding: false,
         tiles: new Map([
           ['0:0', { sizeInAtlas: { x: 1, y: 1 }, alternatives: new Map([[0, defaultTileData()]]) }],
         ]),

@@ -38,7 +38,6 @@ import {
   labelUnwrappedShape,
   labelVisibleLineRange,
   layoutLabelLines,
-  resolveNodeLabelSettings,
   windowLabelLines,
   type LabelLinePlacement,
 } from './nativeSolver';
@@ -59,10 +58,7 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayout
 export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LabelProperties>(solveNode);
   const themeResolved = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
-  const labelSettings = useMemo(
-    () => resolveNodeLabelSettings(props, solveNode.resources.internalResources),
-    [props, solveNode.resources.internalResources]
-  );
+  const labelSettings = solveNode.labelSettings;
   // A valid `label_settings` beats the theme outright: see its own doc.
   const textTheme = useMemo(
     () => labelEffectiveTextTheme(themeResolved, labelSettings),
@@ -75,8 +71,8 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // label.cpp:762-767,876-878: the outline draws over the fill at the same pen
   // position, so `<TextRun>` composites both in one pass. The shadow draws behind,
   // at its own offset, colour and outline size.
-  const outlineTheme = useMemo(() => labelOutlineTheme(solveNode, labelSettings), [solveNode, labelSettings]);
-  const shadowTheme = useMemo(() => labelShadowTheme(solveNode, labelSettings), [solveNode, labelSettings]);
+  const outlineTheme = useMemo(() => labelOutlineTheme(solveNode), [solveNode]);
+  const shadowTheme = useMemo(() => labelShadowTheme(solveNode), [solveNode]);
   const outlineColor = multiplyModulate(tint.own, outlineTheme.color);
   const shadowColor = multiplyModulate(tint.own, shadowTheme.color);
   const hasOutline = outlineTheme.size > 0 && outlineColor.a !== 0;

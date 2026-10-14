@@ -42,7 +42,8 @@ An emitter that authors no `preprocess` names no instant, so the previewer picks
 **one `lifetime`**, where a continuous emitter reaches steady state. It halves that
 for a `one_shot` burst, so the burst is caught mid-flight. This fixture's lifetime is
 `0.95 s`, and both images show that instant. The Godot image comes from
-`pnpm ref:godot … --particles 0.95`.
+`pnpm ref:godot … --particles 0.95`. Godot holds `speed_scale` at 1 through that advance,
+so the instant is the same at any `speed_scale`.
 
 ## emitting = false
 <!-- compare: image=unit-cpuparticles2d-not-emitting status=done fixture=unit-cpuparticles2d-not-emitting.tscn -->
@@ -133,7 +134,6 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-cpuparticles2d-properties` | `cpuparticles2d-nondeterministic-emission-shape` | info |
-|  | `cpuparticles2d-fract-delta-ignored` | info |
 |  | `cpuparticles2d-param-min-above-max` | warning |
 <!-- lint:end -->
 
@@ -149,11 +149,7 @@ and reads everything but `1` as `Index`.
   `preprocess` moment or else at the substituted window described above.
 - **Approximated** An emitter without `use_fixed_seed` takes a fixed constant seed, so its
   particles sit in plausible places where Godot randomises them on every run.
-- **Approximated** `speed_scale` applies only to the substituted window and never to a
-  preprocessed pose, since Godot forces it to 1 while preprocessing.
 - **Approximated** `split_scale`, `scale_curve_x` and `scale_curve_y` are not read, so a
   quad stretched on one axis draws square.
 - **Approximated** `emission_shape` POINTS, DIRECTED_POINTS and RING sample Godot's
   process-wide RNG, so they emit from the origin here and raise a warning.
-- **Approximated** `fract_delta` is ignored, so a particle can sit up to one frame
-  behind Godot's, and the linter warns on a scene that sets it explicitly.

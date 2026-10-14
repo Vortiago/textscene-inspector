@@ -322,49 +322,31 @@ describe('AnimatedSprite2D authored-frame reactivity', () => {
   });
 });
 
+/** A 64x64 top-down sheet, as the alpha-border pass leaves one: red is x and green is y. */
+function coordinateSheet(): THREE.DataTexture {
+  const data = new Uint8Array(64 * 64 * 4);
+  for (let i = 0; i < 64 * 64; i += 1) data.set([i % 64, Math.floor(i / 64), 0, 255], i * 4);
+  const texture = new THREE.DataTexture(data, 64, 64);
+  texture.flipY = true;
+  return texture;
+}
+
+/** The sheet coordinates a quad's crop starts at, from its top-left texel. */
+function cropOrigin(mesh: THREE.Mesh): number[] {
+  const data = ((mesh.material as THREE.MeshBasicMaterial).map!.image as { data: Uint8Array }).data;
+  return [data[0]!, data[1]!];
+}
+
 describe('AnimatedSprite2D AtlasTexture frames (sprite-sheet packing)', () => {
   // Each frame is a SubResource AtlasTexture over one 64×64 sheet: frame 0 is a
   // 16×16 cell at (0,0), frame 1 a 16×32 cell at (16,0). The shared Texture2D
   // resolver crops the cell, so the quad is sized from `image`, not a UV window.
-  // happy-dom has no 2D context, so a recording canvas stub asserts the crop.
   const ATLAS_ANIM =
     '[{"frames": [{"duration": 1.0, "texture": SubResource("Atlas_a")}, {"duration": 1.0, "texture": SubResource("Atlas_b")}], "loop": true, "name": &"spin", "speed": 5.0}]';
 
-  const drawCalls: number[][] = [];
-
-  /**
-   * Only the 2D context is faked, on the prototype: the R3F test renderer makes
-   * a canvas of its own and must keep its real context.
-   */
-  function stubCanvas2D() {
-    const ctx = {
-      imageSmoothingEnabled: true,
-      drawImage: (_image: unknown, ...args: number[]) => void drawCalls.push(args),
-    };
-    const proto = globalThis.HTMLCanvasElement.prototype;
-    const original = proto.getContext;
-    vi.spyOn(proto, 'getContext').mockImplementation(function (
-      this: HTMLCanvasElement,
-      type: string,
-      ...rest: unknown[]
-    ) {
-      return type === '2d'
-        ? (ctx as unknown as CanvasRenderingContext2D)
-        : (original as (...args: unknown[]) => unknown).call(this, type, ...rest);
-    } as typeof proto.getContext);
-  }
-
-  afterEach(() => {
-    drawCalls.length = 0;
-    vi.restoreAllMocks();
-  });
-
   async function render(frame: string) {
-    stubCanvas2D();
     const fake = createFakeResourceLoader();
-    const atlas = new THREE.Texture();
-    (atlas as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
-    fake.textures.seed('res://atlas.png', atlas);
+    fake.textures.seed('res://atlas.png', coordinateSheet());
     const node: TscnNode = {
       rawProperties: {},
       name: 'A',
@@ -406,7 +388,7 @@ describe('AnimatedSprite2D AtlasTexture frames (sprite-sheet packing)', () => {
     const geom = mesh.geometry as THREE.PlaneGeometry;
     expect(geom.parameters.width).toBe(16);
     expect(geom.parameters.height).toBe(16);
-    expect(drawCalls[0]).toEqual([0, 0, 16, 16, 0, 0, 16, 16]);
+    expect(cropOrigin(mesh)).toEqual([0, 0]);
 
     // The crop is the cell, so the quad samples all of it. A leftover UV window
     // here would show a sixteenth of the cell.
@@ -418,20 +400,18 @@ describe('AnimatedSprite2D AtlasTexture frames (sprite-sheet packing)', () => {
 
   it('sizes a differently-shaped cell (frame 1 = 16×32)', async () => {
     const r = await render('1');
-    const geom = (r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
+    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    const geom = mesh.geometry as THREE.PlaneGeometry;
     expect(geom.parameters.width).toBe(16);
     expect(geom.parameters.height).toBe(32);
-    expect(drawCalls[0]).toEqual([16, 0, 16, 32, 0, 0, 16, 32]);
+    expect(cropOrigin(mesh)).toEqual([16, 0]);
   });
 });
 
 describe('AnimatedSprite2D external .tres SpriteFrames', () => {
   // sprite_frames = ExtResource(".tres"): the frame ExtResource ids are scoped to
   // the .tres file, not the scene, so they resolve against the file's own ext section.
-  const tresDrawCalls: number[][] = [];
-
   afterEach(() => {
-    tresDrawCalls.length = 0;
     vi.restoreAllMocks();
   });
   const TRES = `[gd_resource type="SpriteFrames" format=3]
@@ -525,29 +505,9 @@ animations = [{
 "speed": 5.0
 }]
 `;
-    const ctx = {
-      imageSmoothingEnabled: true,
-      drawImage: (_image: unknown, ...args: number[]) => void tresDrawCalls.push(args),
-    };
-    const proto = globalThis.HTMLCanvasElement.prototype;
-    const original = proto.getContext;
-    vi.spyOn(proto, 'getContext').mockImplementation(function (
-      this: HTMLCanvasElement,
-      type: string,
-      ...rest: unknown[]
-    ) {
-      return type === '2d'
-        ? (ctx as unknown as CanvasRenderingContext2D)
-        : (original as (...args: unknown[]) => unknown).call(this, type, ...rest);
-    } as typeof proto.getContext);
 
     const fake = createFakeResourceLoader();
-    const sheetTexture = new THREE.Texture();
-    (sheetTexture as unknown as { image: { width: number; height: number } }).image = {
-      width: 64,
-      height: 64,
-    };
-    fake.textures.seed('res://sheet.png', sheetTexture);
+    fake.textures.seed('res://sheet.png', coordinateSheet());
     fake.resources.seed('res://anim_player.tres', parseTresFile(ATLAS_TRES));
     const node: TscnNode = {
       rawProperties: {},
@@ -570,9 +530,10 @@ animations = [{
       </ResourceLoaderProvider>
     );
 
-    const geom = (r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.PlaneGeometry;
+    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    const geom = mesh.geometry as THREE.PlaneGeometry;
     expect([geom.parameters.width, geom.parameters.height]).toEqual([20, 12]);
-    expect(tresDrawCalls[0]).toEqual([8, 40, 20, 12, 0, 0, 20, 12]);
+    expect(cropOrigin(mesh)).toEqual([8, 40]);
   });
 
   it('renders nothing (not the missing placeholder) while the .tres is still loading', async () => {

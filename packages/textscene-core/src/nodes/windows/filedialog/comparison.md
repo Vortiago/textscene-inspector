@@ -4,12 +4,12 @@ category: Other
 status: unimplemented
 fixture: unit-file-dialog.tscn
 # image: unit-file-dialog
-renders_as: invisible transform-only fallback
+renders_as: nothing yet, not implemented
 ---
 
 # FileDialog
 
-A preset dialog for choosing files or directories, built on ConfirmationDialog with filters and a per-dialog options family. The previewer parses and validates it but does not draw it, so it mounts as an invisible transform-only group (ADR-0008).
+A preset dialog for choosing files or directories, built on ConfirmationDialog with filters and a per-dialog options family. The previewer parses and validates it but does not draw it. The base `Node` mounts under `renderIntent: 'pending'` as an empty group, and its children still show (ADR-0045).
 
 ## Linting
 

@@ -144,4 +144,7 @@ export const GEOMETRY_SCENES = [
   // depth prepass cast, and a blended surface or one with no depth test casts nothing.
   { name: 'sprite3d-shadow', file: 'unit-sprite3d-shadow.tscn' },
   { name: 'label3d-shadow', file: 'unit-label3d-shadow.tscn' },
+  // A whole-node FIXED_Y billboard takes the camera's axes, so sprites off the screen centre
+  // face the camera's forward axis, and a turned parent leaves no trace.
+  { name: 'sprite3d-billboard-fixed-y', file: 'unit-sprite3d-billboard-fixed-y.tscn' },
 ];

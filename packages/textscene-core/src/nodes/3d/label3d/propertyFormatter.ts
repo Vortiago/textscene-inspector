@@ -60,8 +60,6 @@ function getBillboardModeName(mode: BillboardMode): string {
       return 'Enabled';
     case BillboardMode.BILLBOARD_FIXED_Y:
       return 'Y-Axis Only';
-    case BillboardMode.BILLBOARD_PARTICLES:
-      return 'Particles (Unsupported)';
     default:
       return 'Unknown';
   }

@@ -19,6 +19,7 @@ function defaultSource(): AtlasSourceModel {
     margins: { x: 0, y: 0 },
     separation: { x: 0, y: 0 },
     textureRegionSize: { x: 16, y: 16 },
+    usesTexturePadding: false,
     tiles: new Map(),
   };
 }

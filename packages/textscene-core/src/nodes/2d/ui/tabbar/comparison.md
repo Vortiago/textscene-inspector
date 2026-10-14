@@ -56,9 +56,6 @@ family (`title`/`tooltip`/`icon`/`disabled`), aligned to `tab_count` like Option
 
 ## Known limitations
 
-- **Approximated** The current tab draws in the unselected colour and StyleBox instead of
-  `font_selected_color` and `tab_selected`, though its position, width and underline are
-  exact.
 - **Approximated** Under `layout_direction = 3`, a tab title keeps left-to-right glyph
   order for a right-to-left script or trailing punctuation, while the tabs and their
   contents still mirror.

@@ -46,6 +46,7 @@ import {
 } from './nativeSolver';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/fonts/font/types';
+import { decodeLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import * as logger from '../../../../logger';
 
 const minSize = labelMinimumSize;
@@ -902,7 +903,7 @@ describe('labelEffectiveTextTheme', () => {
 
 describe('labelOutlineTheme', () => {
   it("defaults to Label's own theme (outline_size=0, font_outline_color opaque black) absent everything (happy path)", () => {
-    expect(labelOutlineTheme(node({}), null)).toEqual({ size: 0, color: { r: 0, g: 0, b: 0, a: 1 } });
+    expect(labelOutlineTheme(node({}))).toEqual({ size: 0, color: { r: 0, g: 0, b: 0, a: 1 } });
   });
 
   it('reads a node-local theme_override_constants/colors override (error path)', () => {
@@ -910,12 +911,11 @@ describe('labelOutlineTheme', () => {
       {},
       { constants: { outline_size: 3 }, colors: { font_outline_color: { r: 1, g: 0, b: 0, a: 1 } } }
     );
-    expect(labelOutlineTheme(n, null)).toEqual({ size: 3, color: { r: 1, g: 0, b: 0, a: 1 } });
+    expect(labelOutlineTheme(n)).toEqual({ size: 3, color: { r: 1, g: 0, b: 0, a: 1 } });
   });
 
   it('a valid label_settings wins OUTRIGHT over the node-local theme override (edge case)', () => {
-    const n = node({}, { constants: { outline_size: 3 } });
-    const settings = {
+    const labelSettings = {
       lineSpacing: 3,
       fontSize: 16,
       fontColor: { r: 1, g: 1, b: 1, a: 1 },
@@ -925,13 +925,14 @@ describe('labelOutlineTheme', () => {
       shadowColor: { r: 0, g: 0, b: 0, a: 0 },
       shadowOffset: { x: 1, y: 1 },
     };
-    expect(labelOutlineTheme(n, settings)).toEqual({ size: 5, color: { r: 0, g: 1, b: 0, a: 1 } });
+    const n = node({}, { constants: { outline_size: 3 }, labelSettings });
+    expect(labelOutlineTheme(n)).toEqual({ size: 5, color: { r: 0, g: 1, b: 0, a: 1 } });
   });
 });
 
 describe('labelShadowTheme', () => {
   it("defaults to Label's own theme (shadow_outline_size=1, transparent font_shadow_color, offset (1,1)) absent everything (happy path)", () => {
-    expect(labelShadowTheme(node({}), null)).toEqual({
+    expect(labelShadowTheme(node({}))).toEqual({
       size: 1,
       color: { r: 0, g: 0, b: 0, a: 0 },
       offset: { x: 1, y: 1 },
@@ -946,7 +947,7 @@ describe('labelShadowTheme', () => {
         colors: { font_shadow_color: { r: 0, g: 0, b: 0, a: 0.6 } },
       }
     );
-    expect(labelShadowTheme(n, null)).toEqual({
+    expect(labelShadowTheme(n)).toEqual({
       size: 2,
       color: { r: 0, g: 0, b: 0, a: 0.6 },
       offset: { x: 4, y: 5 },
@@ -954,8 +955,7 @@ describe('labelShadowTheme', () => {
   });
 
   it('a valid label_settings wins OUTRIGHT over the node-local theme override (edge case)', () => {
-    const n = node({}, { constants: { shadow_outline_size: 2 } });
-    const settings = {
+    const labelSettings = {
       lineSpacing: 3,
       fontSize: 16,
       fontColor: { r: 1, g: 1, b: 1, a: 1 },
@@ -965,7 +965,8 @@ describe('labelShadowTheme', () => {
       shadowColor: { r: 0, g: 0, b: 0, a: 0.9 },
       shadowOffset: { x: 3, y: 3 },
     };
-    expect(labelShadowTheme(n, settings)).toEqual({
+    const n = node({}, { constants: { shadow_outline_size: 2 }, labelSettings });
+    expect(labelShadowTheme(n)).toEqual({
       size: 7,
       color: { r: 0, g: 0, b: 0, a: 0.9 },
       offset: { x: 3, y: 3 },
@@ -991,10 +992,9 @@ describe('labelMinimumSize — lines_skipped / max_lines_visible / label_setting
   });
 
   it('label_settings.font_size overrides the theme font size outright, for empty text too', () => {
-    const settings = { id: '1', type: 'LabelSettings', data: { font_size: '32' } };
     const withSettings = node(
       { labelSettings: 'SubResource("1")' },
-      { resources: { internalResources: [settings as never], externalResources: [] } }
+      { labelSettings: decodeLabelSettings({ font_size: '32' }) }
     );
     // ascentPx = ceil(2189*32/2048) = 35, descentPx = ceil(600*32/2048) = 10.
     expect(minSize(withSettings, ctx()).y).toBe(45);

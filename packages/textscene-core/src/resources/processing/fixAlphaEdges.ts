@@ -76,34 +76,6 @@ export function fixAlphaEdges(data: Uint8Array, width: number, height: number): 
 }
 
 /**
- * Whether every below-threshold texel has an opaque texel within `MAX_RADIUS`.
- * In Godot an unreached texel keeps its RGB, but the premultiplied canvas store
- * has already zeroed it here, so it would turn black. When one exists, the
- * caller keeps the decoded texture.
- */
-export function everyTransparentTexelHasASource(
-  data: Uint8Array | Uint8ClampedArray,
-  width: number,
-  height: number
-): boolean {
-  // `opaqueCounts` reports "no below-threshold texel anywhere" as null, which is
-  // vacuously true here: nothing is stranded when nothing needs a source.
-  const opaque = opaqueCounts(data, width, height);
-  if (!opaque) return true;
-  for (let y = 0; y < height; y++) {
-    const fromY = Math.max(0, y - MAX_RADIUS);
-    const toY = Math.min(height - 1, y + MAX_RADIUS);
-    for (let x = 0; x < width; x++) {
-      if (data[(y * width + x) * 4 + 3]! >= ALPHA_THRESHOLD) continue;
-      const fromX = Math.max(0, x - MAX_RADIUS);
-      const toX = Math.min(width - 1, x + MAX_RADIUS);
-      if (boxSum(opaque, width, fromX, fromY, toX, toY) === 0) return false;
-    }
-  }
-  return true;
-}
-
-/**
  * Summed-area table of the at-or-above-threshold texels, one row and one column
  * of zeroes wider than the image so `boxSum` needs no bounds tests. `null` when
  * no texel is below the threshold, so the pass has nothing to rewrite.

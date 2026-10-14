@@ -1,7 +1,7 @@
 ---
 type: PathFollow3D
 category: 3D
-status: unreviewed
+status: limitation
 fixture: unit-pathfollow-3d.tscn
 image: unit-pathfollow-3d
 renders_as: a curve-positioned transform group
@@ -44,3 +44,5 @@ Strict parsing format-checks these `PathFollow3D` properties, plus 17 inherited 
 ## Known limitations
 
 - **Editor only** The follow-point gizmo draws only for the selected node.
+- **Approximated** Every `rotation_mode` except NONE turns the node to face along the curve in the same way, so Y, XY, XYZ and ORIENTED look alike.
+- **Approximated** The curve's per-point tilt is not applied, so a banked curve turns the node with no roll.

@@ -46,6 +46,10 @@ describe('parseSprite3D properties', () => {
     expect(parseSprite3D(HEADING, { billboard: '7' }).billboard).toBe(BillboardMode.BILLBOARD_DISABLED);
   });
 
+  it('keeps billboard DISABLED for PARTICLES, which SpriteBase3D refuses (sprite_3d.cpp:598)', () => {
+    expect(parseSprite3D(HEADING, { billboard: '3' }).billboard).toBe(BillboardMode.BILLBOARD_DISABLED);
+  });
+
   it('parses alpha_cut enum', () => {
     expect(parseSprite3D(HEADING, { alpha_cut: '1' }).alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_DISCARD);
     expect(parseSprite3D(HEADING, { alpha_cut: '2' }).alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS);

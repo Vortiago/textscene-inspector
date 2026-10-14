@@ -67,6 +67,8 @@ string against `true`, so an absent property or any other value silently resolve
 
 - **Approximated** Only a subset of BBCode tags is styled, and a tag outside it renders as
   plain text.
+- **Approximated** A `[b]` run shows a light box behind some letters, where the
+  synthesised bold glyphs overlap.
 - **Approximated** Fill alignment is not justified, so a filled paragraph keeps a ragged
   right edge instead of stretching to the box.
 - **Not drawn** `[p dir=]` and the right-to-left arms of `_draw_line`

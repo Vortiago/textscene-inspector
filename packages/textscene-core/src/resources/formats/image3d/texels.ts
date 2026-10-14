@@ -4,7 +4,7 @@
  * test runs it without a browser.
  */
 
-import type { ImagePixels } from '../../../r3f/controls/withImageCanvas';
+import type { ImagePixels } from '../image/imagePixels';
 import type { ImportSlices } from './importSlices';
 
 /** RGBA texels, slice after slice, each slice's rows from the top. */

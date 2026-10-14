@@ -27,7 +27,7 @@ Strict parsing format-checks the inherited set (15 inherited from Camera3D, 17 i
 | `valid-xrcamera3d-parent` | `xrcamera3d-parent-not-xrorigin3d` | warning |
 <!-- lint:end -->
 
-XRCamera3D has no `linterParser.ts` of its own, so strict parsing validates whatever Node3D and Camera3D declare. A malformed inherited `transform` is a strict error, while the lenient `parseNode3D` keeps rendering with the identity transform.
+XRCamera3D has no `linterParser.ts` of its own, so strict parsing validates whatever Node3D and Camera3D declare. A malformed inherited `transform` is a strict error, while the lenient `parseCamera3D`, through `parseNode3D`, keeps rendering with the identity transform.
 
 ## Known limitations
 

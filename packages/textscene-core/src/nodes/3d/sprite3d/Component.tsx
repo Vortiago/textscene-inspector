@@ -40,11 +40,8 @@ import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
 const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
 
 export function Sprite3D({ node, children }: NodeComponentProps) {
-  // Godot's billboard is a material-side effect on the sprite quad; the shared
-  // hook applies the same modes Label3D uses.
   const spriteRef = useRef<THREE.Object3D | null>(null);
   const properties = node.properties as Sprite3DProperties;
-  useBillboard(spriteRef, properties.billboard);
   const { externalResources, internalResources } = useSceneResources();
 
   const { position, rotation, scale } = useMemo(
@@ -53,8 +50,12 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   );
 
   // `sprite_3d.cpp:299` hands the flag to the same cached shader the billboard
-  // mode does; both are per-frame effects on the sprite quad itself.
+  // mode does. Both are per-frame effects on the sprite quad itself. Fixed size first:
+  // the billboard freezes the world matrix, so a scale set after it lands a frame late.
   useFixedSize(spriteRef, properties.fixed_size, scale);
+  // Godot's billboard is a material-side effect on the sprite quad. The shared
+  // hook applies the same modes Label3D uses.
+  useBillboard(spriteRef, properties.billboard);
 
   // `texture` may be an image file, or a procedural texture described entirely
   // inside the scene; `useTexture2D` resolves either and reports a reference it

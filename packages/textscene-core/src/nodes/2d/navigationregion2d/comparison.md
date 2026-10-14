@@ -1,7 +1,7 @@
 ---
 type: NavigationRegion2D
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-navigation-region-2d.tscn
 image: unit-navigation-region-2d
 visual: false

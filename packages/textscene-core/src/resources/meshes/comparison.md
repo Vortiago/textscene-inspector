@@ -25,6 +25,5 @@ The lenient parser never rejects a mesh property. An unreadable `subdivide_width
 
 - **Not drawn** A POINTS, LINES or strip surface is skipped, since only triangle surfaces are decoded.
 - **Approximated** Blend shapes, LODs and skins are ignored, so a skinned mesh renders in its rest pose.
-- **Approximated** A dropped surface renumbers the ones after it, so `surface_material_override/N` can land on a different surface than in Godot.
 - **Approximated** A compressed surface with a normal but no tangent is decoded by symmetry and is not measured against Godot.
 - **Approximated** A `.tres` whose every surface is undecodable is listed in the missing-resources panel even though the file is present.

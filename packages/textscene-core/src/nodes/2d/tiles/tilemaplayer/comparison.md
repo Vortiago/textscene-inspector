@@ -1,7 +1,7 @@
 ---
 type: TileMapLayer
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-tile-map-layer.tscn
 image: unit-tile-map-layer
 renders_as: batched textured tile quads
@@ -10,9 +10,12 @@ renders_as: batched textured tile quads
 # TileMapLayer
 
 TileMapLayer paints a grid of tiles from a TileSet atlas. The previewer decodes `tile_map_data` at
-parse time. It draws each rendering quadrant as a canvas item of its own. The quadrant's cells draw
+parse time. It draws each rendering quadrant as one or more canvas items, a new one at each change
+of tile material or `z_index`. The quadrant's cells draw
 in Godot's order, x then y (`tile_map_layer.cpp:306-311`), with each run of cells from one atlas
-source batched into one quad mesh.
+source batched into one quad mesh. Under `use_texture_padding` (the default), a tile samples
+only its own texels and repeats its edge texels outward, as Godot's padded atlas copy does.
+A filtered tile then shows no seam from its neighbour.
 
 A rendering quadrant is a `rendering_quadrant_size` square of cells, or one tile row of a
 y-sorted layer. Each quadrant takes its own lights, so a large layer is not held to 15
@@ -51,3 +54,10 @@ Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited 
 `enabled` falls back to `true` when absent or unparseable. `tile_set` passes through as
 the raw reference string, so a dangling reference draws no tiles. Malformed
 `tile_map_data` warns and drops every cell, leaving an empty layer.
+
+## Known limitations
+
+- **Approximated** Y-sort is computed once for the static scene, so a Y change driven by
+  an AnimationPlayer is not re-sorted.
+- **Resource gap** Scene-collection sources are skipped with a warning, and animated tiles
+  show their first frame.

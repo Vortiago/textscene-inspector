@@ -1,0 +1,55 @@
+[gd_scene load_steps=6 format=3]
+
+; Moves one variable: `use_texture_padding`. Each layer tiles the red and yellow quadrants of one
+; atlas whose neighbours are green and blue. Godot samples a padded tile from a copy of the atlas
+; with the tile's own edge repeated around it, so a linear filter never reads the neighbour. Left:
+; padded, linear. Middle: unpadded, linear, where Godot itself bleeds the neighbour into each seam.
+; Right: padded, nearest. No other golden draws an adjacent linear-filtered atlas neighbour.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_atlas"]
+
+[sub_resource type="TileSetAtlasSource" id="Source_padded"]
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_padded"]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("Source_padded")
+
+[sub_resource type="TileSetAtlasSource" id="Source_unpadded"]
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(64, 64)
+use_texture_padding = false
+0:0/0 = 0
+1:0/0 = 0
+0:1/0 = 0
+1:1/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_unpadded"]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("Source_unpadded")
+
+[node name="World" type="Node2D"]
+
+[node name="Padded" type="TileMapLayer" parent="."]
+position = Vector2(96, 64)
+scale = Vector2(2, 2)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 2, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 0)
+tile_set = SubResource("TileSet_padded")
+
+[node name="Unpadded" type="TileMapLayer" parent="."]
+position = Vector2(448, 64)
+scale = Vector2(2, 2)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 2, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 0)
+tile_set = SubResource("TileSet_unpadded")
+
+[node name="PaddedNearest" type="TileMapLayer" parent="."]
+position = Vector2(800, 64)
+scale = Vector2(2, 2)
+texture_filter = 1
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 2, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 0)
+tile_set = SubResource("TileSet_padded")

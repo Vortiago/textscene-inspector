@@ -4,12 +4,12 @@ category: Other
 status: unimplemented
 fixture: unit-popup-menu.tscn
 # image: unit-popup-menu
-renders_as: invisible transform-only fallback
+renders_as: nothing yet, not implemented
 ---
 
 # PopupMenu
 
-Godot's modal window for a list of options. The previewer parses and validates it, including the per-item `item_<index>/<leaf>` family, but does not draw it, so it mounts as an invisible transform-only group.
+Godot's modal window for a list of options. The previewer parses and validates it, including the per-item `item_<index>/<leaf>` family, but does not draw it. The base `Node` mounts under `renderIntent: 'pending'` as an empty group, and its children still show (ADR-0045).
 
 ## Linting
 
