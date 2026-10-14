@@ -1,7 +1,7 @@
 /**
  * Applies one Godot `Environment` to the scene, for an authored `WorldEnvironment` and for the
- * editor preview environment alike (ADR-0025): background, sky, flat ambient, tonemapping, depth
- * fog and volumetric fog.
+ * editor preview environment alike (ADR-0025): background, sky, flat ambient, tonemapping, glow,
+ * colour adjustments, depth fog and volumetric fog.
  * Each restores what it found on unmount, because the renderer and scene outlive an environment.
  */
 
@@ -41,9 +41,8 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
-  // Blending and glow both need linear HDR ahead of the tone curve, so the
-  // compositor owns the curve when either is live. The HDR pass is not free, so
-  // each is gated on the scene being able to show it.
+  // Glow, blending and the adjustments all run in the compositor's tone pass, so it owns the curve
+  // when any is live. Glow and blending are gated on the scene showing them: the HDR pass is not free.
   const glowParams = useMemo(() => glowParamsFor(settings), [settings]);
   // Null when a scan cannot decide: nothing could glow, or every pixel glows. One nullable value,
   // not a threshold and a flag, since a threshold of 0 means "everything blooms".
@@ -54,7 +53,8 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   const activeGlow = glowParams && (scanThreshold === null || hasBloomable) ? glowParams : null;
   const draws3D = useDraws3D();
   // One value decides the pass and the suppression, so they cannot disagree.
-  const composited = draws3D && (activeGlow || hasBlended) ? { glow: activeGlow } : null;
+  const composited =
+    draws3D && (activeGlow || hasBlended || settings.adjustments) ? { glow: activeGlow } : null;
   // One value decides the fog programs, the fogged colour background and the fog passes.
   const hasFog = draws3D && (!!settings.fog || !!settings.volumetricFog);
 
@@ -66,7 +66,13 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
         hasFog={hasFog}
         suppressToneMapping={!!composited}
       />
-      {composited && <ToneMapLayer glow={composited.glow} toneMapping={settings.toneMapping} />}
+      {composited && (
+        <ToneMapLayer
+          glow={composited.glow}
+          adjustments={settings.adjustments}
+          toneMapping={settings.toneMapping}
+        />
+      )}
       {hasFog && (
         <FogLayer
           depth={settings.fog}

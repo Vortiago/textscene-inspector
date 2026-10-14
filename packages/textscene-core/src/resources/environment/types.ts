@@ -147,14 +147,18 @@ export interface EnvironmentProperties {
   /** How far the glow map modulates the glow buffer, 0..1. Default 0.8. */
   glow_map_strength: number;
 
-  // Adjustments (parsed but warned in v1)
   adjustment_enabled: boolean;
   adjustment_brightness: number;
   adjustment_contrast: number;
   adjustment_saturation: number;
+}
 
-  // SSR (parsed but warned in v1)
-  ssr_enabled: boolean;
+/** The three scalars Godot's tonemap pass applies under `FLAG_USE_BCS`. */
+export interface EnvironmentAdjustments {
+  /** Linear: Godot converts the authored sRGB brightness on store. */
+  brightness: number;
+  contrast: number;
+  saturation: number;
 }
 
 /** `createEnvironmentSettings`'s output: one Environment as the render layer applies it. */
@@ -257,15 +261,8 @@ export interface EnvironmentSettings {
      */
     temporalReprojection: number | null;
   } | null;
-  adjustments: {
-    enabled: boolean;
-    brightness: number;
-    contrast: number;
-    saturation: number;
-  } | null;
-  ssr: {
-    enabled: boolean;
-  } | null;
+  /** The colour adjustments the tone-map pass applies after the curve, null when disabled. */
+  adjustments: EnvironmentAdjustments | null;
   /**
    * Glow post-process, null when disabled. The render layer that consumes it owns
    * tonemapping too: every blend mode but SOFTLIGHT composites into linear HDR before

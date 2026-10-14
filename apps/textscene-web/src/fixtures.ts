@@ -473,6 +473,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Environment Adjustments",
+    "file": "unit-environment-adjustments.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
     "category": "Other"

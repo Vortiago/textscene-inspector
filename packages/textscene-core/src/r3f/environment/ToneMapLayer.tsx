@@ -8,16 +8,18 @@ import { useEffect, useMemo } from 'react';
 import type { Effect } from 'postprocessing';
 import { EffectComposer } from '@react-three/postprocessing';
 import type { GlowParams } from '../../resources/environment/godotGlow';
-import type { EnvironmentSettings } from '../../resources/environment/types';
+import type { EnvironmentAdjustments, EnvironmentSettings } from '../../resources/environment/types';
 import { GodotToneMapEffect } from './GodotToneMapEffect';
 
 export interface ToneMapLayerProps {
   /** Null when the environment has no glow, or nothing in the scene can bloom. */
   glow: GlowParams | null;
+  /** Null when `adjustment_enabled` is false. */
+  adjustments: EnvironmentAdjustments | null;
   toneMapping: EnvironmentSettings['toneMapping'];
 }
 
-export function ToneMapLayer({ glow, toneMapping }: ToneMapLayerProps) {
+export function ToneMapLayer({ glow, adjustments, toneMapping }: ToneMapLayerProps) {
   const { mode, white, exposure, agxContrast } = toneMapping;
 
   // Typed as the base `Effect`: with the library's `declaration: true`, a class
@@ -28,12 +30,11 @@ export function ToneMapLayer({ glow, toneMapping }: ToneMapLayerProps) {
     () =>
       new GodotToneMapEffect({
         glow,
-        toneMapMode: mode,
-        toneMapWhite: white,
-        toneMapExposure: exposure,
-        toneMapAgxContrast: agxContrast,
+        adjustments,
+        toneMapping: { mode, white, agxContrast },
+        exposure,
       }) as Effect,
-    [glow, mode, white, exposure, agxContrast]
+    [glow, adjustments, mode, white, exposure, agxContrast]
   );
   useEffect(() => () => effect.dispose(), [effect]);
 
