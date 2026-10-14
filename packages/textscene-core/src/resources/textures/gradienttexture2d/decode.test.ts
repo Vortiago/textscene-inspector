@@ -12,11 +12,11 @@ import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types
 import { GRADIENT_TEXTURE_MAX_SIZE } from '../../../godot/index.js';
 
 describe('parseColorStops', () => {
-  it('groups the flat run into RGBA quadruples', () => {
+  it('groups the flat run into RGBA quadruples of the float32 a Color stores', () => {
     const colors = parseColorStops('PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)');
     expect(colors).toEqual([
       { r: 1, g: 1, b: 1, a: 1 },
-      { r: 1, g: 1, b: 1, a: 0.180392 },
+      { r: 1, g: 1, b: 1, a: Math.fround(0.180392) },
       { r: 1, g: 1, b: 1, a: 0 },
     ]);
   });
@@ -41,7 +41,7 @@ describe('parseColorStops', () => {
 });
 
 describe('decodeGradient', () => {
-  it('pairs offsets with colors into sorted stops (the coin gradient)', () => {
+  it('pairs offsets with colors into sorted float32 stops (the coin gradient)', () => {
     const gradient = decodeGradient({
       interpolation_mode: '2',
       offsets: 'PackedFloat32Array(0, 0.642276, 1)',
@@ -51,7 +51,7 @@ describe('decodeGradient', () => {
     expect(gradient.interpolationMode).toBe(GradientInterpolationMode.Cubic);
     expect(gradient.stops).toEqual([
       { offset: 0, color: { r: 1, g: 1, b: 1, a: 1 } },
-      { offset: 0.642276, color: { r: 1, g: 1, b: 1, a: 0.180392 } },
+      { offset: Math.fround(0.642276), color: { r: 1, g: 1, b: 1, a: Math.fround(0.180392) } },
       { offset: 1, color: { r: 1, g: 1, b: 1, a: 0 } },
     ]);
   });
@@ -157,7 +157,7 @@ describe('resolveGradient', () => {
   it('decodes the Gradient a SubResource reference names (happy path)', () => {
     const gradient = resolveGradient('SubResource("3")', [RAMP_RESOURCE]);
     expect(gradient?.stops).toHaveLength(2);
-    expect(gradient?.stops[0]!.color).toEqual({ r: 1, g: 0.6, b: 0.2, a: 1 });
+    expect(gradient?.stops[0]!.color).toEqual({ r: 1, g: Math.fround(0.6), b: Math.fround(0.2), a: 1 });
   });
 
   it('returns null when the reference names a different resource type (error path)', () => {

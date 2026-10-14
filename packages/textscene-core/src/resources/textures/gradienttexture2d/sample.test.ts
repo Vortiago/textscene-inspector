@@ -61,6 +61,42 @@ describe('sampleGradientColor', () => {
   });
 });
 
+// Godot 4.6.3 `Gradient.sample` over these stops, as the float32 bits of r, g, b and a.
+const fourStops = (interpolationMode: string): Gradient =>
+  decodeGradient({
+    interpolation_mode: interpolationMode,
+    offsets: 'PackedFloat32Array(0, 0.3, 0.7, 1)',
+    colors: 'PackedColorArray(0.1, 0.2, 0.8, 1, 0.9, 0.5, 0.1, 0.5, 0.33, 0.77, 0.21, 0.9, 1, 1, 1, 1)',
+  });
+
+function float32Hex(color: { r: number; g: number; b: number; a: number }): string {
+  return Buffer.from(new Float32Array([color.r, color.g, color.b, color.a]).buffer).toString('hex');
+}
+
+describe('sampleGradientColor in float, as Godot samples', () => {
+  it('matches Godot bit for bit between linear stops', () => {
+    const gradient = fourStops('0');
+    expect([0.1, 0.45, 0.83].map((offset) => float32Hex(sampleGradientColor(gradient, offset)))).toEqual([
+      'babbbb3e9a99993e1211113f5655553f',
+      '15ae2f3f85eb193fd7a3103e6666263f',
+      '2ace1e3f79a25e3fb7650d3f4b7e713f',
+    ]);
+  });
+
+  it('matches Godot bit for bit between cubic stops', () => {
+    const gradient = fourStops('2');
+    expect([0.1, 0.45, 0.83].map((offset) => float32Hex(sampleGradientColor(gradient, offset)))).toEqual([
+      '315fb73e86ca8e3e27a9163f1048563f',
+      'e06a3b3fb8ee1a3ff728553d67e6183f',
+      '61d8113fd07a623fb80b0c3fda32783f',
+    ]);
+  });
+
+  it('returns a stop colour as its float32 value (edge case)', () => {
+    expect(sampleGradientColor(fourStops('0'), 0.3).r).toBe(Math.fround(0.9));
+  });
+});
+
 describe('gradientOffsetAt', () => {
   it('radial: 0 at the fill origin, clamps to 1 at the far edge', () => {
     const tex = coinTexture(); // 64×64, from (0.5,0.5) to (0.5,0.01)
