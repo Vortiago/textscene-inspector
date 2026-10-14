@@ -11,7 +11,7 @@ renders_as: nothing yet, not implemented
 
 OpenXRBindingModifierEditor is editor-only UI for the OpenXR action-map inspector, which
 no exported game scene instantiates. The previewer parses and validates it like any
-Control but does not draw it, so it renders as a transform-only fallback.
+Control, and draws nothing for it.
 
 ## Linting
 

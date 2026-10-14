@@ -40,14 +40,11 @@ three blob-shadow decals. Every part sits where Godot puts it, and the shading m
   WebGL2 has no texture LOD bias, so `texture_mipmap_bias` is not applied.
 
 ## Tow truck
-<!-- compare: image=complex-truck-town-tow status=limitation fixture=demos/3d/truck_town/vehicles/tow_truck.tscn -->
+<!-- compare: image=complex-truck-town-tow status=done fixture=demos/3d/truck_town/vehicles/tow_truck.tscn -->
 
 A tow truck and the towed vehicle. One mesh mixes compressed and uncompressed surfaces.
 Every part sits where Godot puts it, and each blob shadow reaches the ground and never the
-bodywork (`Decal.cull_mask`). The shading matches.
-
-- **Resource gap** Five `surface_material_override/0` slots do not reach an ArrayMesh, so
-  the grey metal parts keep their own material.
+bodywork (`Decal.cull_mask`). The shading and the grey metal chain links match.
 
 ## Known limitations
 

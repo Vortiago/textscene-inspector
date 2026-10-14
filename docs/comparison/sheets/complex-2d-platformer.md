@@ -19,6 +19,8 @@ coins, rocks, mushrooms and crab enemies.
 - A multi-layer parallax background
 - A Camera2D framing the level
 
+Framing, the tiles, the trees and the parallax layers match.
+
 ## Known limitations
 
 - **Approximated** The coins and the crab enemies draw smoothed, where Godot draws them

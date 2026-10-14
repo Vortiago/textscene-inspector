@@ -49,8 +49,7 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 `anisotropy_flowmap` carries direction in R/G and strength in alpha. The image is repacked alpha to blue before it reaches `anisotropyMap`, and both engines band the mapped sphere.
 
 - **Approximated** The bright lobe lands on the other side of centre, and band edges step hard where Godot's blur.
-- **Approximated** A minified flowmap with zero-alpha texels turns its direction 90 degrees from the first mip level that mixes them.
-- **Approximated** A material loaded from a `.tres` gets its anisotropy scalars and no flowmap.
+- **Approximated** A hard seam runs down the large sphere, where Godot's surface is smooth.
 
 ## Ambient occlusion
 <!-- compare: image=unit-material-ao status=done fixture=unit-material-ao.tscn -->
@@ -79,7 +78,7 @@ Godot's refraction distorts the background, so the sphere reads bright. `refract
 - **Approximated** The screen-space distortion is not reproduced, and the surface is not dimmed by `1 - ref_amount`, so it reads brighter than Godot's.
 
 ## Height mapping
-<!-- compare: image=unit-material-heightmap status=unreviewed fixture=unit-material-heightmap.tscn -->
+<!-- compare: image=unit-material-heightmap status=done fixture=unit-material-heightmap.tscn -->
 
 Both engines shift every texture coordinate by the depth the heightmap reads, along the view direction in the surface's tangent frame. So the silhouette stays a smooth sphere. Deep parallax steps through Godot's layers, and the flips and the inverted texture follow Godot. Triplanar mapping turns height mapping off, and an unshaded material shifts its albedo too, as in Godot.
 
@@ -110,5 +109,5 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
 - **Approximated** Godot measures V from the image top and three from the bottom, so a non-integer `uv1_scale.y` or a non-zero `uv1_offset.y` shifts V differently.
 - **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
-- **Approximated** Triplanar tiling density is exact on planar meshes only, since curved and GLB geometry and a `.tres` material tile by their own UVs.
+- **Approximated** Triplanar tiling density is exact on a PlaneMesh only, since curved, CSG, GridMap, ArrayMesh and GLB geometry tile by their own UVs.
 - **Approximated** A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.

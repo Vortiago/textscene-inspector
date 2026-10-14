@@ -243,7 +243,7 @@ defect.
 - [NinePatchRect](../../packages/textscene-core/src/nodes/2d/ui/ninepatchrect/comparison.md): a 9-sliced textured quad in the control's rect
 - [Node2D](../../packages/textscene-core/src/nodes/base/node2d/comparison.md): a transform-only THREE.Group
 - [OpenXRBindingModifierEditor](../../packages/textscene-core/src/nodes/2d/ui/openxrbindingmodifiereditor/comparison.md): nothing yet, not implemented
-- [OpenXRInteractionProfileEditor](../../packages/textscene-core/src/nodes/2d/ui/openxrinteractionprofileeditor/comparison.md): invisible transform-only fallback, editor-only UI that no exported game scene ever instantiates
+- [OpenXRInteractionProfileEditor](../../packages/textscene-core/src/nodes/2d/ui/openxrinteractionprofileeditor/comparison.md): nothing, editor-only UI that no exported game scene ever instantiates
 - [OptionButton](../../packages/textscene-core/src/nodes/2d/ui/optionbutton/comparison.md): a collapsed dropdown box
 - [Panel](../../packages/textscene-core/src/nodes/2d/ui/panel/comparison.md): a StyleBox quad
 - [PanelContainer](../../packages/textscene-core/src/nodes/2d/ui/panelcontainer/comparison.md): a StyleBox panel around its child
@@ -295,17 +295,17 @@ defect.
 
 - [AcceptDialog](../../packages/textscene-core/src/nodes/windows/acceptdialog/comparison.md): nothing yet, not implemented
 - [AudioStreamPlayer](../../packages/textscene-core/src/nodes/audio/audiostreamplayer/comparison.md): nothing (a non-spatial audio node)
-- [ConfirmationDialog](../../packages/textscene-core/src/nodes/windows/confirmationdialog/comparison.md): invisible transform-only fallback
-- [FileDialog](../../packages/textscene-core/src/nodes/windows/filedialog/comparison.md): invisible transform-only fallback
+- [ConfirmationDialog](../../packages/textscene-core/src/nodes/windows/confirmationdialog/comparison.md): nothing yet, not implemented
+- [FileDialog](../../packages/textscene-core/src/nodes/windows/filedialog/comparison.md): nothing yet, not implemented
 - [HTTPRequest](../../packages/textscene-core/src/nodes/networking/httprequest/comparison.md): nothing (a transform-only group)
 - [MultiplayerSpawner](../../packages/textscene-core/src/nodes/networking/multiplayerspawner/comparison.md): nothing (a transform-only group)
 - [MultiplayerSynchronizer](../../packages/textscene-core/src/nodes/networking/multiplayersynchronizer/comparison.md): nothing (a transform-only group)
 - [Node](../../packages/textscene-core/src/nodes/node/comparison.md): nothing, a non-spatial base node
 - [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md): nothing yet, not implemented
-- [PopupMenu](../../packages/textscene-core/src/nodes/windows/popupmenu/comparison.md): invisible transform-only fallback
+- [PopupMenu](../../packages/textscene-core/src/nodes/windows/popupmenu/comparison.md): nothing yet, not implemented
 - [PopupPanel](../../packages/textscene-core/src/nodes/windows/popuppanel/comparison.md): nothing yet, not implemented
 - [ResourcePreloader](../../packages/textscene-core/src/nodes/resources/resourcepreloader/comparison.md): nothing (a transform-only group)
-- [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md): invisible transform-only fallback
+- [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md): nothing yet, not implemented
 - [ShaderGlobalsOverride](../../packages/textscene-core/src/nodes/rendering/shaderglobalsoverride/comparison.md): nothing yet, Godot re-shades every material that reads the overridden globals, the previewer does not
 - [StatusIndicator](../../packages/textscene-core/src/nodes/os/statusindicator/comparison.md): nothing (a transform-only group)
 - [Timer](../../packages/textscene-core/src/nodes/timers/timer/comparison.md): nothing (a countdown timer node)

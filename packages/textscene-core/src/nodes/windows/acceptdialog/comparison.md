@@ -9,7 +9,7 @@ renders_as: nothing yet, not implemented
 
 # AcceptDialog
 
-A base dialog with an OK button and a message, which ConfirmationDialog and FileDialog build on. The previewer parses and validates it but does not draw it, so it mounts as an invisible transform-only group (ADR-0008).
+A base dialog with an OK button and a message, which ConfirmationDialog and FileDialog build on. The previewer parses and validates it but does not draw it. The base `Node` mounts under `renderIntent: 'pending'` as an empty group, and its children still show (ADR-0045).
 
 ## Linting
 

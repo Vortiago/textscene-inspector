@@ -7,7 +7,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { createTextureFromBuffer, decodeImagePixels, getMimeType, isTexturePath } from './textureProcessing';
+import {
+  applyAlphaBorderFix,
+  createTextureFromBuffer,
+  decodeImagePixels,
+  getMimeType,
+  isTexturePath,
+} from './textureProcessing';
 
 const fakeLoader = vi.hoisted(() => ({
   mode: 'success' as 'success' | 'error',
@@ -112,6 +118,27 @@ describe('createTextureFromBuffer', () => {
     revokeSpy.mockRestore();
   });
 
+  describe('the alpha-border pass', () => {
+    /** A decoded image whose transparent texel has a partial-alpha neighbour to take RGB from. */
+    const softEdge = { data: new Uint8Array([255, 255, 255, 0, 10, 20, 30, 128]), width: 2, height: 1 };
+
+    afterEach(() => {
+      fakeLoader.image = null;
+    });
+
+    it('runs on a PNG with soft edges', async () => {
+      fakeLoader.image = softEdge;
+      const texture = await createTextureFromBuffer(data, 'image/png');
+      expect(Array.from((texture.image as { data: Uint8Array }).data).slice(0, 3)).toEqual([10, 20, 30]);
+    });
+
+    it('skips a JPEG, which has no alpha to fix', async () => {
+      fakeLoader.image = softEdge;
+      const texture = await createTextureFromBuffer(data, 'image/jpeg');
+      expect(texture.image).toBe(softEdge);
+    });
+  });
+
   it('resolves with a texture whose colorSpace is sRGB', async () => {
     const texture = await createTextureFromBuffer(data, 'image/png');
     expect(texture).toBeInstanceOf(THREE.Texture);
@@ -170,6 +197,78 @@ describe('createTextureFromBuffer', () => {
   });
 });
 
+describe('applyAlphaBorderFix', () => {
+  /** A one-row DataTexture of `[r, g, b, a]` texels, as a decoded sheet's bytes. */
+  function rowTexture(texels: number[][]): THREE.DataTexture {
+    return new THREE.DataTexture(new Uint8Array(texels.flat()), texels.length, 1);
+  }
+
+  const bytesOf = (texture: THREE.Texture) => Array.from((texture.image as { data: Uint8Array }).data);
+
+  it('rewrites the RGB behind alpha 0 on a texture with soft, partial-alpha edges', () => {
+    const fixed = applyAlphaBorderFix(
+      rowTexture([
+        [255, 255, 255, 0],
+        [10, 20, 30, 128],
+      ])
+    );
+
+    expect(bytesOf(fixed)).toEqual([10, 20, 30, 0, 10, 20, 30, 128]);
+  });
+
+  it("leaves the source texture's shared bytes as they were", () => {
+    const source = rowTexture([
+      [255, 255, 255, 0],
+      [10, 20, 30, 128],
+    ]);
+
+    applyAlphaBorderFix(source);
+
+    expect(bytesOf(source)).toEqual([255, 255, 255, 0, 10, 20, 30, 128]);
+  });
+
+  it('keeps the RGB of a transparent texel with no source within the radius', () => {
+    const fixed = applyAlphaBorderFix(
+      rowTexture([
+        [10, 20, 30, 255],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [7, 7, 7, 0],
+      ])
+    );
+
+    expect(bytesOf(fixed).slice(20, 24)).toEqual([7, 7, 7, 0]);
+  });
+
+  it('keeps the sampling of the texture it replaces', () => {
+    const source = rowTexture([
+      [255, 255, 255, 0],
+      [10, 20, 30, 128],
+    ]);
+    source.minFilter = THREE.LinearMipmapLinearFilter;
+    source.generateMipmaps = true;
+
+    const fixed = applyAlphaBorderFix(source);
+
+    expect(fixed.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+    expect(fixed.generateMipmaps).toBe(true);
+  });
+
+  it('returns the same texture when no texel needs rewriting', () => {
+    const texture = rowTexture([[1, 2, 3, 255]]);
+
+    expect(applyAlphaBorderFix(texture)).toBe(texture);
+  });
+
+  it('returns the same texture when its pixels cannot be read', () => {
+    const texture = new THREE.Texture();
+
+    expect(applyAlphaBorderFix(texture)).toBe(texture);
+  });
+});
+
 describe('decodeImagePixels', () => {
   const data = new Uint8Array([1, 2, 3, 4]).buffer;
 
@@ -195,7 +294,7 @@ describe('decodeImagePixels', () => {
     await expect(decodeImagePixels(data, 'image/png')).rejects.toThrow('Failed to decode texture');
   });
 
-  it('rejects an image whose pixels no canvas can read (edge case)', async () => {
+  it('rejects an image whose pixels cannot be read (edge case)', async () => {
     await expect(decodeImagePixels(data, 'image/png')).rejects.toThrow('Failed to read the pixels');
   });
 });

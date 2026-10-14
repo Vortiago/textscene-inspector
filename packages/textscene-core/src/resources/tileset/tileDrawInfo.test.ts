@@ -17,6 +17,7 @@ const source: AtlasSourceModel = {
   margins: { x: 4, y: 6 },
   separation: { x: 2, y: 3 },
   textureRegionSize: { x: 16, y: 16 },
+  usesTexturePadding: false,
   tiles: new Map(),
 };
 

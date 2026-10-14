@@ -1,7 +1,7 @@
 ---
 type: AnimatedSprite2D
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-animatedsprite2d.tscn
 image: unit-animatedsprite2d
 renders_as: a textured quad
@@ -50,3 +50,5 @@ with no warning. `centered` falls back to `true`, `flip_h` and `flip_v` to `fals
 
 - **Needs runtime** An `autoplay` clip does not run on its own, so the sprite shows its
   authored `frame` until it is selected and the transport plays it.
+- **Approximated** The scaled sprite's outline is a little sharper than Godot's, which
+  shows a slightly darker fringe along the curved edge.

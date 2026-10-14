@@ -109,9 +109,6 @@ renderer applies its own default. `theme_override_styles/*` is stored unparsed.
 - **Approximated** A Control set to SYSTEM_LOCALE, or to APPLICATION_LOCALE with no
   `internationalization/locale/test`, draws left-to-right, since the scene files hold no
   machine locale.
-- **Approximated** A Control inside a SubViewport does not inherit a right-to-left
-  direction from the Control above the viewport, so it draws left-to-right unless it
-  states one.
 - **Approximated** A Control below a `Window` inherits its direction from the Control
   above that Window, where Godot takes the Window's own `layout_direction`.
 - **Approximated** Text is always shaped left-to-right, so a `Label`, `Button` title or

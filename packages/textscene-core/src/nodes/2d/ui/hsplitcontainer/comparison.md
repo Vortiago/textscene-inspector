@@ -33,5 +33,7 @@ Strict parsing format-checks the inherited set (10 inherited from SplitContainer
 
 Neither parser reads `split_offset`, `collapsed` or `dragger_visibility` beyond its
 scalar type, and an out-of-range `dragger_visibility` behaves as VISIBLE on both sides.
-A malformed value leaves the property `undefined` and Godot's default applies.
+A malformed value leaves the property `undefined` and Godot's default applies. The lenient
+parser also reads the `split_offsets` array, and replays a `split_offset` scalar onto its
+first entry in file order. A malformed `split_offsets` is skipped.
 

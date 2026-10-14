@@ -4,12 +4,12 @@ category: Other
 status: unimplemented
 fixture: unit-script-create-dialog.tscn
 # image: unit-script-create-dialog
-renders_as: invisible transform-only fallback
+renders_as: nothing yet, not implemented
 ---
 
 # ScriptCreateDialog
 
-Godot's editor-only "Attach Node Script" popup, built on ConfirmationDialog. No shipped game scene carries it. The previewer parses and validates it but does not draw it, so it mounts as an invisible transform-only group (ADR-0008).
+Godot's editor-only "Attach Node Script" popup, built on ConfirmationDialog. No shipped game scene carries it. The previewer parses and validates it but does not draw it. The base `Node` mounts under `renderIntent: 'pending'` as an empty group, and its children still show (ADR-0045).
 
 ## Linting
 

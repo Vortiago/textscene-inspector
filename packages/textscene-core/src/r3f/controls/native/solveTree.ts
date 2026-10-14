@@ -8,6 +8,7 @@ import type { SceneScope, TscnNode } from '../../../parser/types';
 import type { ControlColor, ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
+import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
 import type { Vec2 } from './rect';
 import type { PaintRange } from '../../canvasPaintOrder';
 import type { StyleBoxFlatData } from './styleBoxFlat';
@@ -134,6 +135,12 @@ export interface SolveNode {
    * sets it, and `testing/solveNode.ts`'s `solveNode()` supplies `{}`.
    */
   fontOverrides: Readonly<Record<string, FontResource | null>>;
+  /**
+   * This node's own `label_settings` in its scope, or `null` when unset, unresolved, still
+   * loading or another resource type. Only a Label parses the property. Required, like
+   * `fontOverrides`.
+   */
+  labelSettings: LabelSettingsResource | null;
   /**
    * Resolved `theme`s of this node and its ancestor Controls, nearest first
    * (`scene/theme/theme_owner.cpp`'s `ThemeOwner::_get_next_owner_node`). A Control

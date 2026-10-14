@@ -91,6 +91,17 @@ describe('Label3D Parser', () => {
       expect(props.billboard).toBe(BillboardMode.BILLBOARD_FIXED_Y);
     });
 
+    // `Label3D::set_billboard_mode` refuses an index outside 0-2 (`label_3d.cpp:1001`), PARTICLES
+    // included, so the label keeps its default.
+    it.each(['3', '7', '-1'])('keeps billboard DISABLED for the refused mode %s', (mode) => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
+        text: '"Test"',
+        billboard: mode,
+      });
+
+      expect(props.billboard).toBe(BillboardMode.BILLBOARD_DISABLED);
+    });
+
     it('should parse modulate color', () => {
       const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
         text: '"Test"',

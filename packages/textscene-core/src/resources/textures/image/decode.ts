@@ -4,7 +4,7 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import type { ImageSize } from '../../../r3f/controls/withImageCanvas';
+import type { ImageSize } from '../../formats/image/imagePixels';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { literalText, parseGodotInt } from '../../../godot/index.js';
 import { parsePackedByteArrayBody } from '../../../godot/packedBytes.js';

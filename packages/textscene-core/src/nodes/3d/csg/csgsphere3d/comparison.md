@@ -1,7 +1,7 @@
 ---
 type: CSGSphere3D
 category: 3D
-status: unreviewed
+status: done
 fixture: unit-csg-sphere.tscn
 image: unit-csg-sphere
 renders_as: a solid sphere mesh

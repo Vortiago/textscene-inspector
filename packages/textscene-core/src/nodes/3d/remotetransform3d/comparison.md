@@ -35,4 +35,4 @@ Strict parsing format-checks these `RemoteTransform3D` properties, plus 17 inher
 
 ## Known limitations
 
-- **Approximated** The relay copies the transform once at load, so a static `use_global_coordinates`, a cross-instance path or a relay chain is not fully reproduced.
+- **Approximated** The target sits apart from Godot's when the relay is inside an instanced scene, drives its own ancestor, or the target's parent rotates or scales.
