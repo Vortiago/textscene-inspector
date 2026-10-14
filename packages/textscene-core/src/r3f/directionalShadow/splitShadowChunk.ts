@@ -68,19 +68,22 @@ const SOFT_SHADOW_BLOCK = `#if defined( SHADOWMAP_TYPE_PCF ) && defined( ${DIREC
  * start in world space, so it moves with the camera, and so does this. A blending light blends each
  * split over the whole split before it, from the camera for the first. The depth grows away from the
  * light, where Godot's reversed depth shrinks, so a blocker is a smaller depth.
+ * The penumbra measures a blocker from Godot's near plane, the range start, at depth `lightSide`
+ * (`directionalShadow.md`).
  */
 const GODOT_SUN_SOFT_SHADOW = `
 \t\t${SOFT_SHADOW_BLOCK}
 \t\tuniform sampler2D ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM};
 \t\tuniform vec4 ${SUN_SOFT_SHADOWS}[ NUM_SUN_LIGHT_SHADOWS ];
 \t\tuniform vec4 ${SUN_RANGE_BEGINS}[ NUM_SUN_LIGHT_SHADOWS ];
-\t\tfloat godotSunBlockerShadow( sampler2DShadow atlas, vec3 coord, vec2 texScale ) {
+\t\tconst float GODOT_SUN_PANCAKED = 1e-7;
+\t\tfloat godotSunBlockerShadow( sampler2DShadow atlas, vec3 coord, vec2 texScale, float lightSide ) {
 \t\t\tmat2 rotation = godotDiskRotation();
 \t\t\tfloat blockerSum = 0.0;
 \t\t\tfloat blockerCount = 0.0;
 \t\t\tfor ( int i = 0; i < GODOT_PENUMBRA_SHADOW_SAMPLES; i ++ ) {
 \t\t\t\tvec2 uv = coord.xy + ( rotation * GODOT_PENUMBRA_SHADOW_KERNEL[ i ] ) * texScale;
-\t\t\t\tfloat blocker = godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv );
+\t\t\t\tfloat blocker = max( godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv ), lightSide );
 \t\t\t\tif ( blocker < coord.z ) {
 \t\t\t\t\tblockerSum += blocker;
 \t\t\t\t\tblockerCount += 1.0;
@@ -88,7 +91,7 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\t\t}
 \t\t\tif ( blockerCount == 0.0 ) return 1.0;
 \t\t\tfloat blockerAverage = blockerSum / blockerCount;
-\t\t\ttexScale *= ( coord.z - blockerAverage ) / blockerAverage;
+\t\t\ttexScale *= ( coord.z - blockerAverage ) / max( blockerAverage - lightSide, GODOT_SUN_PANCAKED );
 \t\t\tfloat shadow = 0.0;
 \t\t\tfor ( int i = 0; i < GODOT_PENUMBRA_SHADOW_SAMPLES; i ++ ) {
 \t\t\t\tvec2 uv = coord.xy + ( rotation * GODOT_PENUMBRA_SHADOW_KERNEL[ i ] ) * texScale;
@@ -108,7 +111,8 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\t\tif ( ! ( inFrustum && coord.z <= 1.0 ) ) return 1.0;
 \t\t\tfloat testRadius = ( dot( light.xyz, position - cameraPosition ) - rangeBegin ) * light.w;
 \t\t\tvec2 texScale = uvScale * testRadius * sunLightShadow.shadowRadius;
-\t\t\treturn mix( 1.0, godotSunBlockerShadow( shadowMap, coord, texScale ), sunLightShadow.shadowIntensity );
+\t\t\tfloat lightSide = coord.z - length( vec3( matrix[ 0 ][ 2 ], matrix[ 1 ][ 2 ], matrix[ 2 ][ 2 ] ) ) * ( rangeBegin - dot( light.xyz, position ) );
+\t\t\treturn mix( 1.0, godotSunBlockerShadow( shadowMap, coord, texScale, lightSide ), sunLightShadow.shadowIntensity );
 \t\t}
 \t\tfloat godotSunSoftShadow( sampler2DShadow shadowMap, SunLightShadow sunLightShadow, int shadowIndex ) {
 \t\t\tint first = shadowIndex * SUN_LIGHT_CASCADES;

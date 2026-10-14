@@ -182,6 +182,12 @@ term. `godot/directionalSoftShadow.ts` holds these facts.
   `scene_forward_lights_inc.glsl:381-424`). The search radius grows with the receiver's distance
   from the box's light side, Godot's `range_begin` (`renderer_scene_cull.cpp:2327`, `:2349`).
 - The box's size in the atlas, Godot's `uv_scale`, is the length of the slot matrix's x and y rows.
+- Godot's penumbra divides by a blocker's distance from its near plane, the range start
+  (`scene_forward_lights_inc.glsl:407`). The caster reach moves this box's near plane further towards
+  the light, so the search finds the range start's depth, `lightSide`, through the slot matrix's z
+  row. A blocker nearer the light lies on that side in Godot, which pancakes it
+  (`scene_forward_clustered.glsl:679-682`), so the search raises it to `lightSide`. Godot divides by
+  zero for such a blocker. A floor of `1e-7` keeps the spread finite.
 - The fitter widens each split's box by the tangent of the angle times its depth
   (`renderer_scene_cull.cpp:2286-2299`), so a caster the search reaches is in the box.
 - The search reads the atlas's depth raw, from its colour attachment. The atlas pass of the

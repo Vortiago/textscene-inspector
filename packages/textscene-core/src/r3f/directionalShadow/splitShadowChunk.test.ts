@@ -384,7 +384,25 @@ describe('the soft split shadow', () => {
   it('reads blockers from the atlas colour and widens the penumbra by their distance', () => {
     // `scene_forward_lights_inc.glsl:393-405`, in a depth that grows away from the light.
     expect(chunk()).toContain(`godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv )`);
-    expect(chunk()).toContain('texScale *= ( coord.z - blockerAverage ) / blockerAverage;');
+    expect(chunk()).toContain(
+      'texScale *= ( coord.z - blockerAverage ) / max( blockerAverage - lightSide, GODOT_SUN_PANCAKED );'
+    );
+  });
+
+  it('measures a blocker’s distance from Godot’s light side, not from the moved near plane', () => {
+    // Godot's near plane is the range start (`renderer_scene_cull.cpp:2327-2349`). The caster reach
+    // moves this box's near plane further towards the light, so its depth 0 lies before that side.
+    expect(chunk()).toContain(
+      'float lightSide = coord.z - length( vec3( matrix[ 0 ][ 2 ], matrix[ 1 ][ 2 ], matrix[ 2 ][ 2 ] ) ) * ( rangeBegin - dot( light.xyz, position ) );'
+    );
+    expect(chunk()).toContain('godotSunBlockerShadow( shadowMap, coord, texScale, lightSide )');
+  });
+
+  it('flattens a blocker nearer the light than Godot’s light side onto it, as Godot’s pancaking does (edge case)', () => {
+    // `scene_forward_clustered.glsl:679-682`.
+    expect(chunk()).toContain(
+      `float blocker = max( godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv ), lightSide );`
+    );
   });
 
   it('keeps the receiver lit without a blocker (edge case)', () => {
