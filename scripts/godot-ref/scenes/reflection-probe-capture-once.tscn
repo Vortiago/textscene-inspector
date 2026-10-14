@@ -1,4 +1,4 @@
-; A floor lit only by ambient light, inside two overlapping ReflectionProbes set to update ONCE.
+; A floor and a glowing box inside two overlapping ReflectionProbes set to update ONCE.
 ; A probe under AMBIENT_ENVIRONMENT replaces the environment's ambient with its own capture, and an
 ; ONCE probe captures over several frames, one probe at a time. The pair calibrates the harness:
 ; a capture of the ONCE scene matches the ALWAYS scene, which captures every probe each frame.

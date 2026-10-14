@@ -707,14 +707,14 @@ func _render_3d(target: Node) -> void:
 	_advance_particles(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
-		_hide_2d(target)
+		_hide_2d()
 		_apply_preview_lighting(target)
 	# A refusal must not reach _place_camera: rendering nothing is the whole point.
 	if not _build_csg(target):
 		return
 	_place_camera(target)
 	await _converge()
-	await _capture_reflection_probes(target)
+	await _await_reflection_probe_captures(target)
 	var frame: Image = await _converged_frame()
 	frame.save_png(OUT)
 	_write_bounds(target)
@@ -895,8 +895,8 @@ func _freeze_game_logic(node: Node) -> void:
 # The editor keeps the edited scene under the 2D editor's viewport, which draws
 # no 3D (editor_node.cpp:8648-8652). Every CanvasItem and CanvasLayer draws on
 # that viewport's canvas, so the 3D editor view shows none of them.
-func _hide_2d(target: Node) -> void:
-	RenderingServer.viewport_set_disable_2d(target.get_viewport().get_viewport_rid(), true)
+func _hide_2d() -> void:
+	RenderingServer.viewport_set_disable_2d(get_viewport().get_viewport_rid(), true)
 
 # EDITOR-MODE PARTICLES. The pause above stops game logic, which is what the
 # Node3D editor does — except for one thing it does NOT do: particles keep
@@ -953,12 +953,12 @@ func _converge() -> void:
 
 # An UPDATE_ONCE ReflectionProbe renders its faces in one frame, then filters one
 # roughness layer per frame: at most roughness_layers frames in all on Forward+
-# (light_storage.cpp:1525,1661-1668), and 1 + 8 on Compatibility
-# (drivers/gles3/storage/light_storage.cpp:832-833,1026-1033). The scene renders
-# one such probe at a time (renderer_scene_cull.cpp:3739-3751).
+# (renderer_rd/storage_rd/light_storage.cpp:1525,1661-1668), and 1 + 8 on
+# Compatibility (drivers/gles3/storage/light_storage.cpp:832-833,1026-1033). The
+# scene renders one such probe at a time (renderer_scene_cull.cpp:3739-3751).
 const COMPATIBILITY_PROBE_FRAMES := 9
 
-func _capture_reflection_probes(target: Node) -> void:
+func _await_reflection_probe_captures(target: Node) -> void:
 	var layers: int = ProjectSettings.get_setting("rendering/reflections/sky_reflections/roughness_layers")
 	var probes := target.find_children("*", "ReflectionProbe", true, false) \
 		.filter(func(probe): return probe.update_mode == ReflectionProbe.UPDATE_ONCE)

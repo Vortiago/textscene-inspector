@@ -735,15 +735,17 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
    * An UPDATE_ONCE ReflectionProbe captures over several frames, and the scene renders one such
    * probe at a time (`renderer_scene_cull.cpp:3739-3751`), so six frames leave a probe empty. A
    * capture that waits them out shows what UPDATE_ALWAYS shows at once. The two filter the
-   * roughness layers differently (`light_storage.cpp:1655,1661`), so a few texels differ.
+   * roughness layers differently (`renderer_rd/storage_rd/light_storage.cpp:1655,1661`), so a few
+   * texels differ.
    */
   it('captures every ReflectionProbe that updates once before it saves the frame', async () => {
     const options = { camera: [0, 2.5, 6], lookAt: [0, 0.5, 0] };
     const once = await channelsOf('reflection-probe-capture-once.tscn', options);
     const always = await channelsOf('reflection-probe-capture-always.tscn', options);
 
-    const farOff = once.filter((value, i) => Math.abs(value - always[i]) > 4).length;
-    expect(farOff / once.length).toBeLessThan(0.01);
+    const colourChannels = (once.length / 4) * 3;
+    const farOff = once.filter((value, i) => i % 4 !== 3 && Math.abs(value - always[i]) > 4).length;
+    expect(farOff / colourChannels).toBeLessThan(0.01);
   }, 360_000);
 
   /**
