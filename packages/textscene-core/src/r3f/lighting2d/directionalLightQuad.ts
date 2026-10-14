@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import type { Color } from '../../nodes/base/node2d/types.js';
 import type { Light2DShadowFilter } from '../../nodes/2d/lights/shared/types.js';
 import { accumulationState } from './lightQuad.js';
-import { FULL_SCREEN_VERTEX } from './fullScreenQuad.js';
+import { FULL_SCREEN_VERTEX } from '../fullScreenPass.js';
 import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap.js';
 import { shadowPixelSize } from './shadowSampling.js';
 

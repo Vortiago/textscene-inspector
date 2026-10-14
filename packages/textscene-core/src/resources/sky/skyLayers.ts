@@ -7,6 +7,7 @@
  */
 
 import * as THREE from 'three';
+import { drawFullScreen } from '../../r3f/fullScreenPass.js';
 import { drawOffscreen } from '../../r3f/offscreen.js';
 import {
   SKY_ROUGHNESS_LAYERS_DEFAULT,
@@ -21,7 +22,7 @@ import {
   OCTMAP_FACE,
   RADIANCE_OCTMAP_FRAGMENT_SHADER,
 } from './skyLayerShaders.js';
-import { draw, releaseTextures, setUniforms, skyPass } from './skyPass.js';
+import { releaseTextures, setUniforms, skyPass } from './skyPass.js';
 import type { SkyBake } from './types.js';
 
 /** A group of layers shown as one cube: its first layer, and the face size of each layer from there. */
@@ -134,7 +135,7 @@ export function bakeAtlasLayers(
   try {
     drawOffscreen(gl, () => {
       setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize: layout.borderSize });
-      draw(gl, radianceOctmapPass, target, index, 0);
+      drawFullScreen(gl, radianceOctmapPass, target, index, 0);
       const chain = downsampleChain(gl, radiance, layout, filter.chainSizes);
       try {
         filterAtlasLayers(gl, chain, filter, atlas, index);
@@ -164,12 +165,12 @@ function downsampleChain(
   const mips = chainSizes.map(octmapTarget);
   try {
     setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize });
-    draw(gl, radianceOctmapPass, octmap);
+    drawFullScreen(gl, radianceOctmapPass, octmap);
     gl.initRenderTarget(chain);
     mips.forEach((target, mip) => {
       const source = mip === 0 ? octmap : mips[mip - 1]!;
       setUniforms(downsamplePass, { source: source.texture, size: target.width, borderSize });
-      draw(gl, downsamplePass, target);
+      drawFullScreen(gl, downsamplePass, target);
       gl.copyTextureToTexture(target.texture, chain.texture, null, null, 0, mip);
     });
     return chain;
@@ -200,7 +201,7 @@ function filterGroup(
     filter.selectLayer(firstLayer + mip);
     for (let face = 0; face < 6; face += 1) {
       setUniforms(pass, { face, faceSize });
-      draw(gl, pass, cube, face, mip);
+      drawFullScreen(gl, pass, cube, face, mip);
     }
   });
 }
@@ -223,7 +224,7 @@ function filterAtlasLayers(
   for (let layer = 1; layer < layout.layerSizes.length; layer += 1) {
     filter.selectLayer(layer);
     setUniforms(pass, { faceSize: layout.layerSizes[layer] });
-    draw(gl, pass, target, index, layer);
+    drawFullScreen(gl, pass, target, index, layer);
   }
 }
 

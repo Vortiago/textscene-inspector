@@ -21,7 +21,7 @@ import {
 } from '../../godot/volumetricFog.js';
 import type { EnvironmentSettings } from '../../resources/environment/types.js';
 import { directionalShadowAtlasDepth } from '../directionalShadow/shadowAtlas.js';
-import { FULL_SCREEN_VERTEX } from '../lighting2d/fullScreenQuad.js';
+import { drawFullScreen, fullScreenPass } from '../fullScreenPass.js';
 import { setGodotColorLinear } from '../godotColor.js';
 import { drawOffscreen } from '../offscreen.js';
 import { positionalShadowAtlasDepth } from '../positionalShadow/shadowAtlasTarget.js';
@@ -112,16 +112,7 @@ function sectionAt(camera: THREE.Camera, ndcZ: number): THREE.Vector3 {
 }
 
 function sliceMaterial(name: string, fragmentShader: string, uniforms: Record<string, THREE.IUniform>) {
-  return new THREE.ShaderMaterial({
-    name: `VolumetricFog.${name}`,
-    uniforms: { slice: { value: 0 }, ...uniforms },
-    vertexShader: FULL_SCREEN_VERTEX,
-    fragmentShader,
-    depthTest: false,
-    depthWrite: false,
-    blending: THREE.NoBlending,
-    toneMapped: false,
-  });
+  return fullScreenPass(`VolumetricFog.${name}`, fragmentShader, { slice: { value: 0 }, ...uniforms });
 }
 
 function volumeTarget(name: string): THREE.WebGL3DRenderTarget {
@@ -230,8 +221,6 @@ export class VolumetricFogPass {
   private readonly filtered = volumeTarget('VolumetricFogFiltered');
   /** The integrated fog of the view that rendered last, through the texture every fog program samples. */
   private readonly volume = volumeTarget('VolumetricFogVolume');
-  private readonly quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1));
-  private readonly quadCamera = new THREE.Camera();
   private readonly viewport = new THREE.Vector4();
   private readonly lights = new FogRowTexture(FOG_LIGHT_TEXELS);
   private readonly volumes = new FogRowTexture(FOG_VOLUME_TEXELS);
@@ -295,7 +284,6 @@ export class VolumetricFogPass {
 
   constructor() {
     this.volume.texture = fogUniforms.volume;
-    this.quad.frustumCulled = false;
   }
 
   /**
@@ -352,7 +340,6 @@ export class VolumetricFogPass {
     this.density.dispose();
     this.filtered.dispose();
     this.volume.dispose();
-    this.quad.geometry.dispose();
     this.lights.dispose();
     this.volumes.dispose();
     this.lightMaterial.dispose();
@@ -582,11 +569,9 @@ export class VolumetricFogPass {
     material: THREE.ShaderMaterial,
     grid: VolumetricFogGrid
   ): void {
-    this.quad.material = material;
     for (let slice = 0; slice < grid.depth; slice++) {
       material.uniforms['slice']!.value = slice;
-      renderer.setRenderTarget(target, slice);
-      renderer.render(this.quad, this.quadCamera);
+      drawFullScreen(renderer, material, target, slice);
     }
   }
 }
