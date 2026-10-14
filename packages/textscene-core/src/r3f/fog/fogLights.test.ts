@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { castingSun } from '../testing/castingSun';
+import { AtlasAreaShadow, type AreaShadowLight } from '../positionalShadow/atlasAreaShadow';
 import { AtlasOmniShadow } from '../positionalShadow/atlasOmniShadow';
 import { AtlasSpotShadow } from '../positionalShadow/atlasSpotShadow';
 import { holdPositionalShadowAtlas } from '../positionalShadow/shadowAtlasTarget';
 import { FOG_LIGHT_TEXELS, FogLightKind, FogLightRows, FogLightTexel } from './fogLights';
 import { fogLightUserData } from './fogLightDeclaration';
+import { areaLightUserData } from '../areaLight/areaLightFalloff';
 
 holdPositionalShadowAtlas({}, 4096);
 
@@ -45,6 +47,25 @@ function texel(rows: FogLightRows, row: number, texel: number): number[] {
 /** A vector's components to six places, so a negative zero matches a zero. */
 function expectDirection(actual: number[], expected: number[]): void {
   actual.forEach((component, axis) => expect(component).toBeCloseTo(expected[axis]!, 6));
+}
+
+/** A 2 by 1 area light 8 up, facing down, with a range of 6. */
+function area(): THREE.RectAreaLight {
+  const light = new THREE.RectAreaLight(0xffffff, Math.PI, 2, 1);
+  light.position.set(0, 8, 0);
+  light.rotation.x = -Math.PI / 2;
+  light.userData = areaLightUserData({ range: 6, attenuation: 1, specular: 1 });
+  return light;
+}
+
+/** `area()` casting through an atlas slot 512 texels a side, at x 1024 of the 4096 atlas. */
+function castingArea(): AreaShadowLight {
+  const light = area() as AreaShadowLight;
+  light.castShadow = true;
+  light.shadow = new AtlasAreaShadow();
+  light.shadow.place({ x: 1024, y: 0, size: 512, paraboloidStep: null });
+  light.shadow.bias = 0.1;
+  return light;
 }
 
 function omni(): THREE.PointLight {
@@ -113,6 +134,36 @@ describe('FogLightRows.pack', () => {
     expectDirection([x!, y!, z!], [0, 0, -1]);
     expect(cosAngle).toBeCloseTo(0.5, 6);
     expect(texel(rows, 0, 3)).toEqual([0.25, FogLightKind.SPOT, 0, 0]);
+  });
+
+  it('gives an area light its facing, rectangle, range, centre range and attenuation', () => {
+    const light = area();
+    light.userData = areaLightUserData({ range: 6, attenuation: 3, specular: 1 });
+
+    const rows = packed(placed(light));
+
+    expect(texel(rows, 0, FogLightTexel.POSITION)).toEqual([0, 5, -8, Math.fround(1 / 6)]);
+    // Godot hands the fog the attenuation less one (4.7.2 volumetric_fog_process.glsl:653).
+    expect(texel(rows, 0, FogLightTexel.COLOR)[3]).toBe(2);
+    const [x, y, z, inverseCentreRange] = texel(rows, 0, FogLightTexel.DIRECTION);
+    expectDirection([x!, y!, z!], [0, -1, 0]);
+    // 1 / (range + |area_size| / 2), 4.7.2 light_storage.cpp:1092.
+    expect(inverseCentreRange).toBeCloseTo(1 / (6 + Math.sqrt(5) / 2), 6);
+    expect(texel(rows, 0, FogLightTexel.CONE).slice(1, 3)).toEqual([FogLightKind.AREA, 0]);
+    expectDirection(texel(rows, 0, FogLightTexel.AREA_WIDTH).slice(0, 3), [2, 0, 0]);
+    expectDirection(texel(rows, 0, FogLightTexel.AREA_HEIGHT).slice(0, 3), [0, 0, -1]);
+  });
+
+  it('sizes the rectangle of a scaled area light without the scale, as Godot does (edge case)', () => {
+    const area = new THREE.RectAreaLight(0xffffff, Math.PI, 2, 1);
+    area.scale.set(3, 3, 3);
+    area.userData = areaLightUserData({ range: 6, attenuation: 1, specular: 1 });
+
+    const rows = packed(placed(area));
+
+    expect(rows.count).toBe(1);
+    expectDirection(texel(rows, 0, FogLightTexel.AREA_WIDTH).slice(0, 3), [2, 0, 0]);
+    expectDirection(texel(rows, 0, FogLightTexel.AREA_HEIGHT).slice(0, 3), [0, 1, 0]);
   });
 
   it('keeps a negative light negative, so the fog darkens', () => {
@@ -214,6 +265,35 @@ describe('FogLightRows.pack, for a light that casts', () => {
 
     expectDirection(landing(rows, new THREE.Vector3(0, 8, -2)), [0, 0, -2]);
     expect(texel(rows, 0, FogLightTexel.SHADOW_SPLITS)).toEqual([0.125, 0, 0.125, 0]);
+  });
+
+  it("puts a cell in an area light's own space, beside its paraboloid's slot", () => {
+    const rows = packed(placed(castingArea()));
+
+    // The light faces down its -Z, so a cell 2 below it lies 2 along its -Z.
+    expectDirection(landing(rows, new THREE.Vector3(0, 6, 0)), [0, 0, -2]);
+    expect(texel(rows, 0, FogLightTexel.SHADOW_SPLITS)).toEqual([0.25, 0, 0.125, 0.125]);
+  });
+
+  it('gives a casting area light its shadow opacity and depth bias from the positional atlas', () => {
+    const rows = packed(placed(castingArea()));
+
+    expect(texel(rows, 0, FogLightTexel.CONE).slice(2)).toEqual([1, Math.fround(0.1)]);
+    expect(rows.readsPositionalAtlas).toBe(true);
+  });
+
+  it("keeps a casting area light's rectangle beside its lookup", () => {
+    const rows = packed(placed(castingArea()));
+
+    expectDirection(texel(rows, 0, FogLightTexel.AREA_WIDTH).slice(0, 3), [2, 0, 0]);
+    expectDirection(texel(rows, 0, FogLightTexel.AREA_HEIGHT).slice(0, 3), [0, 0, -1]);
+  });
+
+  it('leaves an area light without a slot unshadowed (error case)', () => {
+    const light = castingArea();
+    light.shadow.place(null);
+
+    expect(texel(packed(placed(light)), 0, FogLightTexel.CONE)[2]).toBe(0);
   });
 
   it('leaves an omni light without a slot unshadowed (error case)', () => {

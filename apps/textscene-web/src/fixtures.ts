@@ -2243,6 +2243,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Area Light Distance Fade",
+    "file": "unit-area-light-distance-fade.tscn",
+    "category": "Unit - Lights"
+  },
+  {
+    "name": "Area Light Fog Shadow",
+    "file": "unit-area-light-fog-shadow.tscn",
+    "category": "Unit - Lights"
+  },
+  {
+    "name": "Area Light Fog",
+    "file": "unit-area-light-fog.tscn",
+    "category": "Unit - Lights"
+  },
+  {
     "name": "Area Light Modes",
     "file": "unit-area-light-modes.tscn",
     "category": "Unit - Lights"
