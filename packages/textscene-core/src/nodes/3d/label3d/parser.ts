@@ -5,9 +5,8 @@ import type { Label3DProperties } from './types';
 import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
-import { floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
+import { enumOr, floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
 import { ShadowCastingSetting } from '../../../godot/rendering';
-import { ruleInt } from '../../../godot/int.js';
 import { boolSlotValue } from '../../../godot/index.js';
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {
@@ -19,7 +18,14 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
     castShadow: parseOptionalInt(properties.cast_shadow) ?? ShadowCastingSetting.OFF,
     text: properties.text === undefined ? '' : unquoteString(properties.text),
     pixel_size: floatOr(properties.pixel_size, 0.005, 'pixel_size'),
-    billboard: parseBillboardMode(properties.billboard),
+    // The setter refuses an index outside 0-2, PARTICLES included (`label_3d.cpp:1001`), so the
+    // label keeps its DISABLED default.
+    billboard: enumOr(
+      properties.billboard,
+      BillboardMode.BILLBOARD_DISABLED,
+      [BillboardMode.BILLBOARD_DISABLED, BillboardMode.BILLBOARD_ENABLED, BillboardMode.BILLBOARD_FIXED_Y],
+      'billboard'
+    ),
     modulate: parseColor(properties.modulate),
     // `intOr`, not `floatOr`: label_3d.cpp declares both sizes Variant::INT with
     // an `int` setter, so Godot truncates the fraction, and the renderer sizes
@@ -60,17 +66,4 @@ function parseHorizontalAlignment(value: string | undefined): HorizontalAlignmen
   return num >= HorizontalAlignment.LEFT && num <= HorizontalAlignment.FILL
     ? (num as HorizontalAlignment)
     : HorizontalAlignment.CENTER;
-}
-
-function parseBillboardMode(value: string | undefined): BillboardMode {
-  // The setter refuses an index outside 0-2, PARTICLES included (`label_3d.cpp:1001`), so the
-  // label keeps its DISABLED default.
-  switch (ruleInt(value)) {
-    case 1:
-      return BillboardMode.BILLBOARD_ENABLED;
-    case 2:
-      return BillboardMode.BILLBOARD_FIXED_Y;
-    default:
-      return BillboardMode.BILLBOARD_DISABLED;
-  }
 }

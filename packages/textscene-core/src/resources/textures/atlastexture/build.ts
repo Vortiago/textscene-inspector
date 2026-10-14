@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { imageSize } from '../../formats/image/imagePixels';
+import { copySampling } from '../copySampling';
 import type { AtlasTextureLayout } from './types';
 
 /**
@@ -25,13 +26,13 @@ interface RawPixels {
 
 /** `sheet` as raw RGBA pixels, or null when its image is a drawable image source instead. */
 function rawPixels(sheet: THREE.Texture, atlas: { width: number; height: number }): RawPixels | null {
-  const data = (sheet.image as { data?: unknown } | null)?.data;
+  const data = (sheet.image as Partial<RawPixels> | null)?.data;
   if (!ArrayBuffer.isView(data)) return null;
   // A crop indexes 4 channels per texel only. Other formats go to the canvas path,
   // which declines in turn.
-  if ((data as RawPixels['data']).length !== atlas.width * atlas.height * 4) return null;
+  if (data.length !== atlas.width * atlas.height * 4) return null;
   return {
-    data: data as RawPixels['data'],
+    data,
     width: atlas.width,
     height: atlas.height,
     isBottomUp: !sheet.flipY,
@@ -64,7 +65,7 @@ export function rasterizeAtlasTexture(
   if (sw <= 0 || sh <= 0) return null;
 
   const raw = rawPixels(sheet, atlas);
-  if (raw) return withSheetSampling(cropRawPixels(raw, layout, left, top, sw, sh), sheet);
+  if (raw) return copySampling(cropRawPixels(raw, layout, left, top, sw, sh), sheet);
 
   const doc = globalThis.document;
   if (!doc) return null;
@@ -145,15 +146,4 @@ function cropRawPixels(
   texture.flipY = !raw.isBottomUp;
   texture.needsUpdate = true;
   return texture;
-}
-
-/**
- * A `DataTexture` defaults to nearest filtering with no mipmaps, which a canvas crop and a
- * loaded sheet never have, so the crop takes its sheet's sampling.
- */
-function withSheetSampling(crop: THREE.DataTexture, sheet: THREE.Texture): THREE.DataTexture {
-  crop.magFilter = sheet.magFilter;
-  crop.minFilter = sheet.minFilter;
-  crop.generateMipmaps = sheet.generateMipmaps;
-  return crop;
 }

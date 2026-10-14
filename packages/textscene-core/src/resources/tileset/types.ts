@@ -102,7 +102,7 @@ export function alternativeNoTransform(alternativeId: number): number {
 }
 
 /** A tile's pixel rect in the atlas image, frame 0 (`get_tile_texture_region`, `tile_set.cpp:5283-5296`). */
-export function atlasTileRegion(
+function atlasTileRegion(
   source: Pick<AtlasSourceModel, 'margins' | 'separation' | 'textureRegionSize'>,
   atlasCoords: Vec2i,
   sizeInAtlas: Vec2i

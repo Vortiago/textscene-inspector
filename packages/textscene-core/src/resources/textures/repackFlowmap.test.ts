@@ -1,11 +1,10 @@
 /**
  * The channel repack (Godot alpha strength to three.js blue). happy-dom has no WebGL2, so each
- * test injects a reader or asserts the unreadable case. The `material-anisotropy-flowmap` golden
+ * test repacks a DataTexture or asserts the unreadable case. The `material-anisotropy-flowmap` golden
  * covers the real readback.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { ImagePixels } from '../formats/image/imagePixels';
 import { repackAnisotropyFlowmap } from './repackFlowmap';
 
 /** A decoded-image-shaped object: dimensions but no raw `.data`. */
@@ -34,23 +33,6 @@ describe('repackAnisotropyFlowmap', () => {
     expect(out.colorSpace).toBe(THREE.NoColorSpace);
   });
 
-  it('repacks image-backed pixels the reader supplies (the real-asset path)', () => {
-    // Stands in for a decoded PNG read back by the browser: no `.data` on the texture image itself.
-    const texture = new THREE.Texture(imageLike());
-    const read = vi.fn((): ImagePixels => ({ data: new Uint8ClampedArray(SOURCE), width: 2, height: 1 }));
-
-    const out = repackAnisotropyFlowmap(texture, read)!;
-
-    expect(read).toHaveBeenCalledWith(texture.image);
-    // `repackAnisotropyFlowmap` returns `THREE.Texture | undefined`, but always a
-    // `DataTexture`, whose `.image` carries `data`, `width` and `height`.
-    const image = out.image as { data: Uint8Array; width: number; height: number };
-    expect(image.data).toBeInstanceOf(Uint8Array);
-    expect(Array.from(image.data)).toEqual([128, 128, 200, 200, 10, 20, 30, 30]);
-    expect(image.width).toBe(2);
-    expect(image.height).toBe(1);
-  });
-
   it('carries the source texture sampling settings onto the repacked texture', () => {
     const source = dataTexture();
     source.wrapS = THREE.RepeatWrapping;
@@ -71,29 +53,23 @@ describe('repackAnisotropyFlowmap', () => {
   it('takes mipmapping from the source rather than the DataTexture default', () => {
     // A loaded image asks for mipmaps, and a DataTexture defaults to
     // generateMipmaps=false, which samples level 0 at every distance.
-    const loaded = new THREE.Texture(imageLike());
+    const loaded = dataTexture();
     loaded.minFilter = THREE.LinearMipmapLinearFilter;
-    expect(loaded.generateMipmaps).toBe(true);
+    loaded.generateMipmaps = true;
 
-    const out = repackAnisotropyFlowmap(loaded, () => ({
-      data: new Uint8ClampedArray(SOURCE),
-      width: 2,
-      height: 1,
-    }))!;
+    const out = repackAnisotropyFlowmap(loaded)!;
 
     expect(out.generateMipmaps).toBe(true);
     expect(out.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+  });
 
-    // …and a source that does not want them still gets none.
-    const plain = dataTexture();
-    expect(plain.generateMipmaps).toBe(false);
-    expect(repackAnisotropyFlowmap(plain)!.generateMipmaps).toBe(false);
+  it('keeps a source without mipmaps free of them', () => {
+    expect(repackAnisotropyFlowmap(dataTexture())!.generateMipmaps).toBe(false);
   });
 
   it('returns undefined when no pixels can be read, so the caller wires no map', () => {
     const texture = new THREE.Texture(imageLike());
-    // Default reader under happy-dom: no WebGL2 context, nothing readable.
+    // happy-dom has no WebGL2 context, so a decoded image is unreadable.
     expect(repackAnisotropyFlowmap(texture)).toBeUndefined();
-    expect(repackAnisotropyFlowmap(texture, () => undefined)).toBeUndefined();
   });
 });

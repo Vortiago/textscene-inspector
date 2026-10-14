@@ -26,6 +26,7 @@ import {
   resolveExtTextResourcePath,
   resolveInstancePath,
   resolveTexture2DPath,
+  textResourcePath,
   unwrapCanvasTextureRef,
 } from '../../../resources/SubResourceResolver';
 import { useResourceLoader } from '../../../resources/useResource';
@@ -391,10 +392,9 @@ function buildForest(
   ): LabelSettingsResource | null {
     const ref = (node.properties as Partial<LabelProperties>).labelSettings;
     if (!ref) return null;
-    const parsed = parseResourceReference(ref);
-    if (parsed?.type !== 'ExtResource') return resolveLabelSettings(ref, int);
+    if (parseResourceReference(ref)?.type !== 'ExtResource') return resolveLabelSettings(ref, int);
 
-    const path = findExtResource(ext, parsed.id)?.path;
+    const path = textResourcePath(ref, ext);
     if (!path) return null;
     const cached = resourceCache.getCached(path);
     if (cached === undefined) {

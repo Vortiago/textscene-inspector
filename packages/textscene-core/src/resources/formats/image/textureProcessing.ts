@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { readImagePixels, type ImagePixels } from './imagePixels';
 import { fixAlphaEdges } from '../../processing/fixAlphaEdges';
+import { copySampling } from '../../textures/copySampling';
 import { IMAGE_EXTENSIONS } from './extensions';
 import { fileExtension } from '../../fileExtension';
 
@@ -27,7 +28,7 @@ export function isTexturePath(path: string): boolean {
   return extension !== null && IMAGE_EXTENSIONS.includes(extension);
 }
 
-/** Create a THREE.Texture from binary data, with Godot's 2D import alpha-border pass. */
+/** Create a THREE.Texture from binary data, with Godot's import alpha-border pass. */
 export async function createTextureFromBuffer(
   data: ArrayBuffer,
   mimeType: string,
@@ -39,7 +40,8 @@ export async function createTextureFromBuffer(
   // per path and shared, and Godot gives it two opposite defaults:
   // `BaseMaterial3D` tiles (`FLAG_USE_TEXTURE_REPEAT`) and a `CanvasItem`
   // clamps. Each consumer states its own at bind time (ADR-0044).
-  return applyAlphaBorderFix(texture);
+  // A JPEG has no alpha, so the pass would read the image back to change nothing.
+  return mimeType === 'image/jpeg' ? texture : applyAlphaBorderFix(texture);
 }
 
 /**
@@ -81,33 +83,25 @@ async function decodeImage(
 /**
  * Godot's import-time alpha-border pass (`fixAlphaEdges.ts`) on a decoded texture. It
  * returns the same texture when nothing needs rewriting, and otherwise a `DataTexture` of
- * the rewritten bytes, since a decoded image cannot be edited in place. `readPixels` is a
- * test seam, as happy-dom has no WebGL2: production passes one argument.
+ * the rewritten bytes, since a decoded image cannot be edited in place.
  */
-export function applyAlphaBorderFix(
-  texture: THREE.Texture,
-  readPixels: (image: unknown) => ImagePixels | undefined = readImagePixels
-): THREE.Texture {
-  const pixels = readPixels(texture.image);
+export function applyAlphaBorderFix(texture: THREE.Texture): THREE.Texture {
+  const pixels = readImagePixels(texture.image);
   if (!pixels) return texture;
 
-  // Copy rather than rewrite in place: a reader that hands back a texture's own
-  // buffer (a DataTexture already carries one) would otherwise have this pass
-  // mutate a cached resource, and the replacement below must own its pixels.
-  const data = new Uint8Array(pixels.data);
+  // A DataTexture's own buffer is a cached resource that other consumers share, so the pass
+  // edits a copy of it. A readback is already a fresh buffer.
+  const isOwnBuffer = pixels.data === (texture.image as { data?: unknown }).data;
+  const data =
+    isOwnBuffer || !(pixels.data instanceof Uint8Array) ? new Uint8Array(pixels.data) : pixels.data;
   if (!fixAlphaEdges(data, pixels.width, pixels.height)) return texture;
 
-  const fixed = new THREE.DataTexture(data, pixels.width, pixels.height, THREE.RGBAFormat);
+  const fixed = copySampling(
+    new THREE.DataTexture(data, pixels.width, pixels.height, THREE.RGBAFormat),
+    texture
+  );
   fixed.needsUpdate = true;
   fixed.colorSpace = texture.colorSpace;
-  fixed.wrapS = texture.wrapS;
-  fixed.wrapT = texture.wrapT;
-  fixed.magFilter = texture.magFilter;
-  fixed.minFilter = texture.minFilter;
-  // A DataTexture defaults to no mipmaps, so a mipmapped minFilter alone would
-  // leave every distance sampling level 0. Carry the decoded texture's intent.
-  fixed.generateMipmaps = texture.generateMipmaps;
-  fixed.anisotropy = texture.anisotropy;
   // The readback is top-row-first, the same orientation the decoded image
   // uploads in, so the loaded texture's own flip decides which way is up.
   fixed.flipY = texture.flipY;

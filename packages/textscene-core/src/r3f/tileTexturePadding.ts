@@ -7,17 +7,21 @@
 
 import * as THREE from 'three';
 import type { ProgramInjection } from './materialProgramInputs';
+import { applyEdits, type TextEdit } from './shaderPatch/chunkPatch';
 
 /** The per-vertex attribute that holds a tile's bounds, `tileGeometry.ts`'s `uvBounds`. */
 export const TILE_UV_BOUNDS_ATTRIBUTE = 'tileUvBounds';
 
-const MAP_SAMPLE = 'texture2D( map, vMapUv )';
-const CLAMPED_MAP_SAMPLE = 'texture2D( map, clamp( vMapUv, vTileUvBounds.xy, vTileUvBounds.zw ) )';
+/** `text` with each edit applied once, or a throw that names the shader whose text has moved. */
+function patched(text: string, edits: readonly TextEdit[], shader: string): string {
+  const result = applyEdits(text, edits);
+  if (result === null) throw new Error(`tile texture padding: expected each edited line once in ${shader}`);
+  return result;
+}
 
-/** `shader` with `include` followed by `addition`, or a throw that names the missing include. */
-function after(shader: string, include: string, addition: string): string {
-  if (!shader.includes(include)) throw new Error(`tile texture padding: expected ${include} in the program`);
-  return shader.replace(include, () => `${include}\n${addition}`);
+/** `include` followed by `addition`. */
+function after(include: string, addition: string): TextEdit {
+  return { three: include, godot: `${include}\n${addition}` };
 }
 
 /**
@@ -25,29 +29,39 @@ function after(shader: string, include: string, addition: string): string {
  * sample clamped. Inlined, since `#include` resolves after `onBeforeCompile`.
  */
 function clampedMapFragment(): string {
-  const chunk = THREE.ShaderChunk.map_fragment;
-  if (chunk.split(MAP_SAMPLE).length !== 2) {
-    throw new Error(`tile texture padding: expected one ${MAP_SAMPLE} in map_fragment`);
-  }
-  return chunk.replace(MAP_SAMPLE, () => CLAMPED_MAP_SAMPLE);
+  return patched(
+    THREE.ShaderChunk.map_fragment,
+    [
+      {
+        three: 'texture2D( map, vMapUv )',
+        godot: 'texture2D( map, clamp( vMapUv, vTileUvBounds.xy, vTileUvBounds.zw ) )',
+      },
+    ],
+    'map_fragment'
+  );
 }
 
 export const TILE_TEXTURE_PADDING: ProgramInjection = {
   cacheKey: 'tile-texture-padding',
   onBeforeCompile(shader) {
-    shader.vertexShader = after(
-      after(
-        shader.vertexShader,
-        '#include <uv_pars_vertex>',
-        `attribute vec4 ${TILE_UV_BOUNDS_ATTRIBUTE};\nvarying vec4 vTileUvBounds;`
-      ),
-      '#include <uv_vertex>',
-      `vTileUvBounds = ${TILE_UV_BOUNDS_ATTRIBUTE};`
+    shader.vertexShader = patched(
+      shader.vertexShader,
+      [
+        after(
+          '#include <uv_pars_vertex>',
+          `attribute vec4 ${TILE_UV_BOUNDS_ATTRIBUTE};\nvarying vec4 vTileUvBounds;`
+        ),
+        after('#include <uv_vertex>', `vTileUvBounds = ${TILE_UV_BOUNDS_ATTRIBUTE};`),
+      ],
+      'the vertex shader'
     );
-    shader.fragmentShader = after(
+    shader.fragmentShader = patched(
       shader.fragmentShader,
-      '#include <uv_pars_fragment>',
-      'varying vec4 vTileUvBounds;'
-    ).replace('#include <map_fragment>', clampedMapFragment);
+      [
+        after('#include <uv_pars_fragment>', 'varying vec4 vTileUvBounds;'),
+        { three: '#include <map_fragment>', godot: clampedMapFragment() },
+      ],
+      'the fragment shader'
+    );
   },
 };

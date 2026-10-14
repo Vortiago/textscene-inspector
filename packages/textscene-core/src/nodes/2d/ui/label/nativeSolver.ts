@@ -123,7 +123,8 @@ export interface LabelOutlineTheme {
 }
 
 /** `label.cpp:765-766`: `has_settings ? settings->get_outline_X() : theme_cache.font_outline_X`, the precedence `labelEffectiveTextTheme` states. */
-export function labelOutlineTheme(n: SolveNode, settings: SolveNode['labelSettings']): LabelOutlineTheme {
+export function labelOutlineTheme(n: SolveNode): LabelOutlineTheme {
+  const settings = n.labelSettings;
   if (settings) return { size: settings.outlineSize, color: settings.outlineColor };
   return {
     size: n.constants['outline_size'] ?? 0,
@@ -139,7 +140,8 @@ export interface LabelShadowTheme {
 }
 
 /** `label.cpp:762-767`: `has_settings ? settings->get_shadow_X() : theme_cache.font_shadow_X`, the precedence `labelEffectiveTextTheme` states. */
-export function labelShadowTheme(n: SolveNode, settings: SolveNode['labelSettings']): LabelShadowTheme {
+export function labelShadowTheme(n: SolveNode): LabelShadowTheme {
+  const settings = n.labelSettings;
   if (settings)
     return { size: settings.shadowSize, color: settings.shadowColor, offset: settings.shadowOffset };
   return {
@@ -281,10 +283,9 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, them
   const props = n.node.properties as LabelProperties;
   const text = labelPreShapeText(props.text ?? '', props.visibleCharacters, props.visibleCharactersBehavior);
   if (text.length === 0) return null;
-  const settings = n.labelSettings;
   const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(
     labelTextTheme(n, props, { theme }),
-    settings
+    n.labelSettings
   );
   const layout = shapeText(text, {
     fontSizePx,
@@ -324,9 +325,8 @@ function labelMinimumHeightPx(
  */
 export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LabelProperties;
-  const settings = n.labelSettings;
   const themeResolved = labelTextTheme(n, props, ctx);
-  const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(themeResolved, settings);
+  const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(themeResolved, n.labelSettings);
   const fontMetrics = resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY);
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
   // `props.visibleCharacters` is already resolved (label.cpp:1285-1327). CHARS_BEFORE_SHAPING
