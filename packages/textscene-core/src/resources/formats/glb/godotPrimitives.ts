@@ -23,12 +23,13 @@ export function godotPrimitives(parser: GLTFParser): GLTFLoaderPlugin {
     beforeRoot: async () => {
       const accessors = gltfObjects(parser.json['accessors']);
       for (const [mesh, json] of gltfObjects(parser.json['meshes']).entries()) {
-        const primitives = gltfObjects(json['primitives']);
+        // Godot reads every primitive before `add_surface` refuses one, so a refused one fails too.
+        const primitives = gltfObjects(json['primitives']).map((primitive, index) =>
+          readAsGodot(primitive, accessors, `${mesh} surface ${index}`)
+        );
         const kept = godotSurfacePrimitives(primitives);
         if (kept.length < primitives.length) logRefused(json, mesh);
-        json['primitives'] = kept.map((index) =>
-          readFanAsList(primitives[index]!, accessors, `${mesh} surface ${index}`)
-        );
+        json['primitives'] = kept.map((index) => primitives[index]!);
       }
     },
   };
@@ -46,7 +47,7 @@ function logRefused(mesh: GltfJsonObject, index: number): void {
  * (`gltf_document.cpp:1462`, `:1700-1714`). A list whose count is no multiple of three fails
  * Godot's whole import (`:1487`, `:1705`), so it fails the load too.
  */
-function readFanAsList(
+function readAsGodot(
   primitive: GltfJsonObject,
   accessors: readonly GltfJsonObject[],
   label: string

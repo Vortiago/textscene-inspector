@@ -76,6 +76,12 @@ describe('godotPrimitives: triangle fans', () => {
       'lists 4 triangle indices'
     );
   });
+
+  it('fails the load on a bad list in a surface Godot then refuses, as Godot reads it first', async () => {
+    const glb = primitivesGlb([{}, { targets: [{ POSITION: 2 }], indices: 1 }], [0, 1, 2, 3]);
+
+    await expect(surfaces(glb)).rejects.toThrow('mesh 0 surface 1 lists 4 triangle indices');
+  });
 });
 
 describe('godotPrimitives: refused surfaces', () => {
