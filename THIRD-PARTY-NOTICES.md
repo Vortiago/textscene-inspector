@@ -21,7 +21,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | File | Derived from |
 |---|---|
 | `packages/textscene-core/src/resources/sky/skyShaders.ts` | `scene/resources/3d/sky_material.cpp` |
-| `packages/textscene-core/src/resources/sky/fastFilter.ts` | `servers/rendering/renderer_rd/shaders/effects/octmap_filter.glsl` (the low-quality fast filter: its three frames, their weights and the eight taps of each) |
+| `packages/textscene-core/src/resources/sky/skyLayerShaders.ts` | `servers/rendering/renderer_rd/shaders/oct_inc.glsl` (the octahedral map), `.../effects/octmap_downsampler.glsl` (the downsample chain), `.../effects/octmap_roughness.glsl` (the GGX importance-sampled filter) and `.../effects/octmap_filter.glsl` (the low-quality fast filter: its three frames, their weights and the eight taps of each) |
 | `packages/textscene-core/src/r3f/areaLight/ltcIntegral.ts` | `servers/rendering/renderer_rd/shaders/area_lights_inc.glsl` (the edge fit, the horizon clip and the LTC integrals for diffuse and specular) |
 | `packages/textscene-core/src/r3f/areaLight/areaLightChunk.ts` | `servers/rendering/renderer_rd/shaders/scene_forward_lights_inc.glsl` (`light_process_area` and `get_omni_attenuation`) |
 | `packages/textscene-core/src/r3f/areaLight/areaTextureFetch.ts` | `servers/rendering/renderer_rd/shaders/area_lights_inc.glsl` (`fetch_ltc_lod` and the form-factor texture fetch) |
@@ -396,6 +396,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 `low_quality_coeffs`, the tap table of the fast sky filter, because a Real-Time sky's reflections
 and ambient light ARE that table's output. Godot vendors it as `thirdparty/misc/cubemap_coeffs.h`.
 It is by Activision Publishing and is licensed MIT, separately from Godot's own MIT licence above.
+`packages/textscene-core/src/resources/sky/skyLayerShaders.ts` ports Godot's `octmap_downsampler.glsl`
+and `octmap_filter.glsl`, which carry the same Activision notice.
 
 ```
 Copyright 2016 Activision Publishing, Inc.
