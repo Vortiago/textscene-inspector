@@ -6,6 +6,7 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { DETAIL_UV_NAMES, DetailUV } from '../../../godot/detailUv.js';
 import { textureChannelValidator } from './pbr.js';
 
 export const featureKeys: Record<string, PropertyValidator> = {
@@ -108,13 +109,9 @@ export const featureKeys: Record<string, PropertyValidator> = {
     { 0: 'MIX', 1: 'ADD', 2: 'SUB', 3: 'MUL' },
     { hinted: 'material.cpp:3712' }
   ),
-  detail_uv_layer: v.enumInt(
-    'detail_uv_layer',
-    0,
-    1,
-    { 0: 'UV1', 1: 'UV2' },
-    { hinted: 'material.cpp:3713' }
-  ),
+  detail_uv_layer: v.enumInt('detail_uv_layer', DetailUV.DETAIL_UV_1, DetailUV.DETAIL_UV_2, DETAIL_UV_NAMES, {
+    hinted: 'material.cpp:3713',
+  }),
   detail_albedo: v.resourceReference('detail_albedo'),
   detail_normal: v.resourceReference('detail_normal'),
 };

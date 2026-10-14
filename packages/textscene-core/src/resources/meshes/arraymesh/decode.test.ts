@@ -675,3 +675,67 @@ describe('non-triangle primitives', () => {
     expect(decodeArrayMeshTres(noPrimitive, 'res://mesh.tres').surfaces).toHaveLength(1);
   });
 });
+
+/**
+ * One quad with UV1 and UV2, saved by Godot 4.6.3 uncompressed, and compressed with a UV2 outside
+ * the unit range, which sets `uv_scale`. The expected arrays are its `surface_get_arrays()`.
+ */
+const UV2_QUAD_PLAIN_TRES = `[gd_resource type="ArrayMesh" format=4]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-1, -1, 0, 2, 2, 1e-05),
+"attribute_data": PackedByteArray("AAAAAAAAgD8AAAA+AACAPgAAgD8AAIA/AAAAPwAAgD4AAIA/AAAAAAAAAD8AAEA/AAAAAAAAAAAAAAA+AABAPw=="),
+"format": 34359742519,
+"index_count": 6,
+"index_data": PackedByteArray("AAABAAIAAAACAAMA"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAAAAAACAPwAAgL8AAAAAAACAPwAAgD8AAAAAAACAvwAAgD8AAAAA/3//f/9/AID/f/9//38AgP9//3//fwCA/3//f/9/AIA=")
+}]`;
+
+const UV2_QUAD_SCALED_TRES = `[gd_resource type="ArrayMesh" format=3]
+
+[resource]
+_surfaces = [{
+"aabb": AABB(-1, -1, 0, 2, 2, 1e-05),
+"attribute_data": PackedByteArray(255, 127, 255, 255, 255, 63, 84, 149, 255, 255, 255, 255, 255, 255, 84, 149, 255, 255, 255, 127, 255, 255, 255, 255, 255, 127, 255, 127, 255, 63, 255, 255),
+"format": 34896613431,
+"index_count": 6,
+"index_data": PackedByteArray(0, 0, 1, 0, 2, 0, 0, 0, 2, 0, 3, 0),
+"primitive": 3,
+"uv_scale": Vector4(2, 2, 4, 6),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(0, 0, 0, 0, 0, 0, 255, 191, 255, 255, 0, 0, 0, 0, 255, 191, 255, 255, 255, 255, 0, 0, 255, 191, 0, 0, 255, 255, 0, 0, 255, 191, 255, 127, 255, 127, 255, 127, 255, 127, 255, 127, 255, 127, 255, 127, 255, 127)
+}]`;
+
+describe('UV2', () => {
+  it('reads UV2 after UV1 in the attribute record', () => {
+    const surface = decodeArrayMeshTres(UV2_QUAD_PLAIN_TRES, 'res://q.tres').surfaces[0]!;
+
+    expect(Array.from(surface.uv2s!)).toEqual([0.125, 0.25, 0.5, 0.25, 0.5, 0.75, 0.125, 0.75]);
+  });
+
+  it("re-expands a compressed UV2 by uv_scale's z and w", () => {
+    const surface = decodeArrayMeshTres(UV2_QUAD_SCALED_TRES, 'res://q.tres').surfaces[0]!;
+
+    expect(Array.from(surface.uv2s!).map((v) => Number(v.toFixed(6)))).toEqual([
+      -1.000046, 0.499931, 2, 0.499931, 2, 3, -1.000046, 3,
+    ]);
+  });
+
+  it('re-expands UV1 too when only UV2 left the unit range, as Godot tests the whole uv_scale', () => {
+    const surface = decodeArrayMeshTres(UV2_QUAD_SCALED_TRES, 'res://q.tres').surfaces[0]!;
+
+    expect(Array.from(surface.uvs!).map((v) => Number(v.toFixed(6)))).toEqual([
+      -0.000015, 1, 1, 1, 1, -0.000015, -0.000015, -0.000015,
+    ]);
+  });
+
+  it('reads no UV2 for a surface without TEX_UV2 (edge case)', () => {
+    const surface = decodeArrayMeshTres(SAME_QUAD_UNCOMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
+
+    expect(surface.uv2s).toBeUndefined();
+  });
+});

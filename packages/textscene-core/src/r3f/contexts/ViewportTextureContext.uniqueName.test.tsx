@@ -15,9 +15,9 @@ import { useLocalScene } from '../useUniqueNames.js';
 import {
   ViewportTextureProvider,
   useViewportTexture,
-  usePublishViewportTexture,
   type ViewportTextureEntry,
 } from './ViewportTextureContext.js';
+import { ViewportTexturePublisher } from '../testing/ViewportTexturePublisher';
 
 function node(name: string, type: string, flagged = false): TscnNode {
   return {
@@ -55,17 +55,12 @@ const entry = (id: string): ViewportTextureEntry => ({
 const winner = entry('ui');
 const loser = entry('hud');
 
-function Publisher({ path, e }: { path: string; e: ViewportTextureEntry }) {
-  usePublishViewportTexture(path, e);
-  return null;
-}
-
 function wrapper({ children }: { children: ReactNode }) {
   return (
     <HierarchyProvider value={{ sceneGraph: graph, panelId: 'panel' }}>
       <ViewportTextureProvider>
-        <Publisher path="Root/Ui/View" e={winner} />
-        <Publisher path="Root/Hud/View" e={loser} />
+        <ViewportTexturePublisher path="Root/Ui/View" entry={winner} />
+        <ViewportTexturePublisher path="Root/Hud/View" entry={loser} />
         {children}
       </ViewportTextureProvider>
     </HierarchyProvider>

@@ -13,6 +13,7 @@ import { drawsInShadowPass, type PassMembership } from '../../../godot/shadowPas
 import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/textureChannel';
 import { DiffuseMode } from '../../../godot/diffuseMode';
 import { SpecularMode } from '../../../godot/specularMode';
+import { DetailUV } from '../../../godot/detailUv';
 import { clamp } from '../../../godot/math';
 import { emissionScalars } from './emission';
 import {
@@ -104,6 +105,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
   // `uv1_world_triplanar` only picks the space of a triplanar mapping (`material.cpp:1386-1421`).
   // Triplanar mapping overrides height mapping (`:1541`).
   const triplanar = boolOr(properties['uv1_triplanar'], false, CONTEXT);
+  const uv2Triplanar = boolOr(properties['uv2_triplanar'], false, CONTEXT);
 
   // `_update_shader` emits `ALPHA *= albedo.a * albedo_tex.a` only when
   // `transparency != TRANSPARENCY_DISABLED` (or shadow-to-opacity, pixel-alpha
@@ -161,6 +163,9 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     textureRepeat: boolOr(properties['texture_repeat'], true, CONTEXT),
     uv1Scale: vec2FromVector3(properties['uv1_scale'], { x: 1, y: 1 }),
     uv1Offset: vec2FromVector3(properties['uv1_offset'], { x: 0, y: 0 }),
+    ...uv2Transform(properties, uv2Triplanar),
+    uv2Triplanar,
+    uv2Slots: uv2Slots(properties),
     transparency,
     transparent: alphaPass,
     castsShadow,
@@ -318,6 +323,35 @@ function decodeTextureSlots(properties: Record<string, string>): TextureSlotRefe
     if (gate !== null && !boolOr(properties[gate], false, CONTEXT)) continue;
     slots[slot] = reference;
   }
+  return slots;
+}
+
+/**
+ * `uv2_scale` and `uv2_offset`, where Godot applies them: to UV2 under a UV2 detail layer
+ * (`material.cpp:1249-1256`), and to the projected position under UV2 triplanar mapping
+ * (:1439-1451). Elsewhere the shader reads UV2 as stored.
+ */
+function uv2Transform(
+  properties: Record<string, string>,
+  uv2Triplanar: boolean
+): { uv2Scale: MaterialVec2; uv2Offset: MaterialVec2 } {
+  const identity = { uv2Scale: { x: 1, y: 1 }, uv2Offset: { x: 0, y: 0 } };
+  const detailUv = intOr(properties['detail_uv_layer'], DetailUV.DETAIL_UV_1, CONTEXT);
+  if (!uv2Triplanar && detailUv !== DetailUV.DETAIL_UV_2) return identity;
+  return {
+    uv2Scale: vec2FromVector3(properties['uv2_scale'], identity.uv2Scale),
+    uv2Offset: vec2FromVector3(properties['uv2_offset'], identity.uv2Offset),
+  };
+}
+
+/**
+ * The slots that sample UV2: emission under `emission_on_uv2` (`material.cpp:1772-1776`) and
+ * AO under `ao_on_uv2` (:1942-1946).
+ */
+function uv2Slots(properties: Record<string, string>): TextureSlot[] {
+  const slots: TextureSlot[] = [];
+  if (boolOr(properties['emission_on_uv2'], false, CONTEXT)) slots.push('emission_texture');
+  if (boolOr(properties['ao_on_uv2'], false, CONTEXT)) slots.push('ao_texture');
   return slots;
 }
 

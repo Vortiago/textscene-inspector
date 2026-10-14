@@ -8,6 +8,7 @@ import { decodeArrayMeshTres } from '../../testing/decodeArrayMeshTres';
 import type { ArrayMeshData } from './types';
 import { buildArrayMeshGeometry } from './build';
 import { headlightsSurface, wallQuadSurfaces } from '../../testing/arrayMeshSurfaces';
+import { UV2_ATTRIBUTE } from '../uv2';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -105,6 +106,28 @@ describe('buildArrayMeshGeometry', () => {
     expect(uv.getY(0)).toBe(1); // written 0 → image top
     expect(uv.getY(3)).toBe(1); // unwritten 0 → same edge, not the opposite one
     expect(uv.getY(4)).toBe(1);
+  });
+
+  it("writes UV2 in Godot's top-down V, which the UV2 binding samples", () => {
+    const uv2 = buildArrayMeshGeometry({
+      surfaces: [triangle({ uv2s: new Float32Array([0, 0.25, 1, 0.5, 0.5, 1]) })],
+    }).getAttribute(UV2_ATTRIBUTE);
+
+    expect(Array.from(uv2.array)).toEqual([0, 0.25, 1, 0.5, 0.5, 1]);
+  });
+
+  it('gives a mesh without UV2 no UV2 attribute', () => {
+    const geometry = buildArrayMeshGeometry({ surfaces: [triangle()] });
+
+    expect(geometry.getAttribute(UV2_ATTRIBUTE)).toBeUndefined();
+  });
+
+  it('leaves a surface without UV2 at (0, 0), where Godot samples it (edge case)', () => {
+    const uv2 = buildArrayMeshGeometry({
+      surfaces: [triangle({ uv2s: new Float32Array([1, 1, 1, 1, 1, 1]) }), triangle()],
+    }).getAttribute(UV2_ATTRIBUTE);
+
+    expect(Array.from(uv2.array).slice(6)).toEqual([0, 0, 0, 0, 0, 0]);
   });
 
   it('adds one draw group per surface for per-surface materials', () => {

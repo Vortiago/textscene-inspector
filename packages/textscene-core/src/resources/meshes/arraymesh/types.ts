@@ -19,6 +19,8 @@ export interface ArrayMeshSurface {
   positions: Float32Array;
   /** UV1, `vertexCount × 2`, or undefined when the surface has no TEX_UV. */
   uvs?: Float32Array;
+  /** UV2, `vertexCount × 2`, or undefined when the surface has no TEX_UV2. */
+  uv2s?: Float32Array;
   /** Per-vertex normals `vertexCount × 3`, or undefined when the surface has none. */
   normals?: Float32Array;
   /** Triangle indices, width auto-detected (uint16 ≤ 65535 verts, else uint32). */

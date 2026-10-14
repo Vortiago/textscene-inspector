@@ -34,3 +34,11 @@ export const IMPORT_SIDECAR_SUFFIX = '.import';
 export function importSidecarPath(assetPath: string): string {
   return assetPath + IMPORT_SIDECAR_SUFFIX;
 }
+
+/** An **Unwrap cache**'s suffix: the importer reads it at the source path plus this (`resource_importer_scene.cpp:3249`). */
+export const UNWRAP_CACHE_SUFFIX = '.unwrap_cache';
+
+/** The **Unwrap cache** of the asset at `assetPath`. */
+export function unwrapCachePath(assetPath: string): string {
+  return assetPath + UNWRAP_CACHE_SUFFIX;
+}

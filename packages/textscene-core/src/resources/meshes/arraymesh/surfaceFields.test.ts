@@ -46,8 +46,8 @@ describe('readAabb', () => {
 });
 
 describe('readUvScale', () => {
-  it('reads the x and y of the Vector4', () => {
-    expect(readUvScale('{ "uv_scale": Vector4(8, 4, 0, 0) }')).toEqual([8, 4]);
+  it('reads all four components: UV1 scale in x and y, UV2 scale in z and w', () => {
+    expect(readUvScale('{ "uv_scale": Vector4(8, 4, 2, 6) }')).toEqual([8, 4, 2, 6]);
   });
 
   it('is undefined for another type under the key', () => {
@@ -55,7 +55,7 @@ describe('readUvScale', () => {
   });
 
   it('keeps a zero scale, which means the stored value is the UV', () => {
-    expect(readUvScale('{ "uv_scale": Vector4(0, 0, 0, 0) }')).toEqual([0, 0]);
+    expect(readUvScale('{ "uv_scale": Vector4(0, 0, 0, 0) }')).toEqual([0, 0, 0, 0]);
   });
 });
 
