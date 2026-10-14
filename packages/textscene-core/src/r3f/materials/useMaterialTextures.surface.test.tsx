@@ -4,7 +4,7 @@
  * `1 - v`.
  */
 import { describe, expect, it } from 'vitest';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types';
@@ -13,6 +13,8 @@ import { parseStandardMaterial3DScalars } from '../../resources/materials/standa
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 import { GLTF_SURFACE, useMaterialTextures, type TexturedSurface } from './SurfaceMaterialSlot';
+import { NodePathProvider } from '../contexts/NodePathContext';
+import { ViewportTextureProvider, useRegisterViewportTexture } from '../contexts/ViewportTextureContext';
 
 const GRADIENT: TscnInternalResource[] = [
   { id: 'Gradient_a', type: 'Gradient', data: { colors: 'PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)' } },
@@ -82,3 +84,72 @@ describe('useMaterialTextures on a glTF surface', () => {
     expect([map.channel, map.repeat.y, map.offset.y]).toEqual([UV2_CHANNEL, -1, 1]);
   });
 });
+
+const VIEWPORT: TscnInternalResource[] = [
+  { id: 'ViewportTexture_a', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
+];
+
+/** Publishes `texture` as the SubViewport's render target. */
+function Publisher({ texture }: { texture: THREE.Texture }) {
+  const register = useRegisterViewportTexture();
+  useEffect(() => register('Root/SubViewport', { texture, size: { x: 4, y: 4 } }), [register, texture]);
+  return null;
+}
+
+/** The maps a material whose albedo is the SubViewport's render target binds on `surface`. */
+function viewportMaps(properties: Record<string, string>, surface?: TexturedSurface) {
+  const target = new THREE.WebGLRenderTarget(4, 4).texture;
+  const scalars = parseStandardMaterial3DScalars({
+    albedo_texture: 'SubResource("ViewportTexture_a")',
+    ...properties,
+  });
+  const { loader } = createFakeResourceLoader();
+  const { result } = renderHook(
+    () => useMaterialTextures(scalars, { internalResources: VIEWPORT, externalResources: [] }, surface),
+    {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ResourceLoaderProvider loader={loader}>
+          <ViewportTextureProvider>
+            <Publisher texture={target} />
+            <NodePathProvider path="Root/Mesh">{children}</NodePathProvider>
+          </ViewportTextureProvider>
+        </ResourceLoaderProvider>
+      ),
+    }
+  );
+  return { maps: result.current.maps, target };
+}
+
+describe('useMaterialTextures with a render-target albedo', () => {
+  it('binds the shared target and hands its UV transform to the material', () => {
+    const { maps, target } = viewportMaps({ uv1_scale: 'Vector3(2, 3, 1)' });
+
+    expect(maps.albedoMap).toBe(target);
+    expect(maps.albedoTargetUv).toEqual({ scale: { x: 2, y: 3 }, offset: { x: 0, y: 0 } });
+  });
+
+  it("flips the target's V on a glTF surface, as for any other map", () => {
+    const { maps } = viewportMaps({}, GLTF_SURFACE);
+
+    expect(maps.albedoTargetUv).toEqual({ scale: { x: 1, y: -1 }, offset: { x: 0, y: 1 } });
+  });
+
+  it('hands no UV transform for a file albedo, which carries its own (edge case)', () => {
+    expect(fileAlbedoTargetUv()).toBeUndefined();
+  });
+});
+
+/** The render-target UV transform of a material whose albedo is a gradient, which none needs. */
+function fileAlbedoTargetUv() {
+  const scalars = parseStandardMaterial3DScalars({ albedo_texture: 'SubResource("GradientTexture2D_a")' });
+  const { loader } = createFakeResourceLoader();
+  const { result } = renderHook(
+    () => useMaterialTextures(scalars, { internalResources: GRADIENT, externalResources: [] }),
+    {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
+      ),
+    }
+  );
+  return result.current.maps.albedoTargetUv;
+}

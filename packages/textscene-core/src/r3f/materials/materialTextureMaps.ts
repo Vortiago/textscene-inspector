@@ -6,7 +6,8 @@
  */
 
 import type * as THREE from 'three';
-import type { ResolvedTextureSlots } from '../../resources/materials/standardmaterial3d/types';
+import type { ResolvedTextures } from '../../resources/materials/standardmaterial3d/types';
+import type { UVTransform } from '../../resources/textures/applyTextureState';
 
 export interface MaterialTextureMaps {
   albedoMap?: THREE.Texture;
@@ -19,11 +20,14 @@ export interface MaterialTextureMaps {
   heightMap?: THREE.Texture;
   /** Godot `anisotropy_flowmap` → three.js anisotropyMap (flowmap). */
   anisotropyMap?: THREE.Texture;
+  /** The UV transform a render-target `albedoMap` samples through, which the target cannot carry. */
+  albedoTargetUv?: UVTransform;
 }
 
-/** The resolved maps keyed by the Godot slot each one came from. */
-export function textureSlotsFromMaps(maps: MaterialTextureMaps): ResolvedTextureSlots {
+/** The resolved maps keyed by the Godot slot each one came from, with a render-target albedo's UV. */
+export function textureSlotsFromMaps(maps: MaterialTextureMaps): ResolvedTextures {
   return {
+    albedoTargetUv: maps.albedoTargetUv,
     albedo_texture: maps.albedoMap ?? null,
     normal_texture: maps.normalMap ?? null,
     roughness_texture: maps.roughnessMap ?? null,

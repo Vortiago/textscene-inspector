@@ -36,13 +36,9 @@ import {
   opaquePrepassUserData,
   type OpaquePrepass,
 } from '../../../r3f/materials/opaquePrepass';
+import { renderTargetMapInjection, renderTargetMapUserData } from '../../../r3f/materials/renderTargetMap';
 import { resolveEmission } from './emission';
-import type {
-  MaterialBlendState,
-  ResolvedTextureSlots,
-  StandardMaterial3DScalars,
-  TextureSlot,
-} from './types';
+import type { MaterialBlendState, ResolvedTextures, StandardMaterial3DScalars, TextureSlot } from './types';
 
 // Godot's default COLOR buffer is white (`mesh_storage.cpp:86-97`). three declares it on
 // ShaderMaterial alone, so another class reads (0,0,0) and blacks out albedo. On the
@@ -256,7 +252,7 @@ export function castsShadowOf(material: THREE.Material): boolean {
  */
 export function standardMaterialBags(
   scalars: StandardMaterial3DScalars | null,
-  textures: ResolvedTextureSlots = {}
+  textures: ResolvedTextures = {}
 ): FadeVariants<StandardMaterialBag> {
   const bag = scalars ? classBag(scalars, textures) : noMaterialBag();
   const source = scalars ?? NO_MATERIAL_ALPHA;
@@ -286,8 +282,11 @@ function withSurfaceAlpha(
 }
 
 /** The class `scalars` need, and its props. */
-function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureSlots): StandardMaterialBag {
+function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures): StandardMaterialBag {
   const slot = (name: TextureSlot): THREE.Texture | null => textures[name] ?? null;
+  const { albedoTargetUv } = textures;
+  const targetMap = albedoTargetUv ? renderTargetMapInjection(scalars.textureRepeat) : undefined;
+  const userData = { ...surfaceUserData(scalars), ...renderTargetMapUserData(albedoTargetUv) };
   const { heightmap } = scalars;
   const heightmapTexture = heightmap ? slot('heightmap_texture') : null;
   const blend = materialBlendProps(scalars);
@@ -313,10 +312,10 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
         depthWrite: scalars.depthWrite,
         depthTest: scalars.depthTest,
         side: scalars.side,
-        userData: surfaceUserData(scalars),
+        userData,
         ...blend,
       },
-      injection: heightmap ? unshadedParallaxInjection(heightmap) : undefined,
+      injection: composeInjections([heightmap ? unshadedParallaxInjection(heightmap) : undefined, targetMap]),
       heightmapTexture,
     };
   }
@@ -349,7 +348,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     // pass-through in `resolveEmission` would splat every scalar onto the material.
     emissive: new THREE.Color().fromArray(emission.emissive),
     emissiveIntensity: emission.emissiveIntensity,
-    userData: surfaceUserData(scalars),
+    userData,
     ...blend,
   };
 
@@ -360,6 +359,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
+    targetMap,
   ]);
   if (!needsPhysicalMaterial(scalars)) {
     return { materialClass: 'standard', props: pbr, injection, heightmapTexture };

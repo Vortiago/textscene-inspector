@@ -291,8 +291,11 @@ export function useMaterialTextures(
       aoMap: aoDrawn,
       heightMap: heightDrawn,
       anisotropyMap,
+      albedoTargetUv: albedoMap?.isRenderTargetTexture ? textureStates?.uv1.uv : undefined,
     }),
     [
+      albedoMap,
+      textureStates,
       albedoDrawn,
       normalDrawn,
       roughnessDrawn,

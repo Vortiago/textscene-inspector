@@ -28,7 +28,8 @@ import { materialFromBag } from './build';
 import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/billboard';
 import { parseStandardMaterial3DScalars } from './scalars';
-import type { ResolvedTextureSlots } from './types';
+import type { ResolvedTextures } from './types';
+import { renderTargetMapUserData } from '../../../r3f/materials/renderTargetMap';
 import {
   DRAWS_LAMBERT_DIFFUSE,
   KEEPS_REFLECTION_UNOCCLUDED,
@@ -39,7 +40,7 @@ import {
   patchedFragment,
 } from '../../../r3f/testing/patchedFragment';
 
-function bag(properties: Record<string, string>, textures?: ResolvedTextureSlots) {
+function bag(properties: Record<string, string>, textures?: ResolvedTextures) {
   return standardMaterialBags(parseStandardMaterial3DScalars(properties), textures).unfaded;
 }
 
@@ -210,6 +211,46 @@ describe('standardMaterialBags — texture slots', () => {
 
     expect(derived.heightmapTexture).toBe(texture);
     expect(derived.injection?.cacheKey).toContain('godot-parallax');
+  });
+});
+
+describe('standardMaterialBags — render-target albedo', () => {
+  const target = new THREE.WebGLRenderTarget(4, 4).texture;
+  const FLIPPED_V = { scale: { x: 1, y: -1 }, offset: { x: 0, y: 1 } };
+
+  it.each([
+    ['a lit', {}],
+    ['an unshaded', { shading_mode: '0' }],
+  ])('samples a render-target albedo through its UV transform on %s material', (_kind, properties) => {
+    const derived = bag(properties, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
+
+    expect(derived.injection?.cacheKey).toContain('godot-target-map-uv');
+    expect(derived.props.userData).toMatchObject(renderTargetMapUserData(FLIPPED_V));
+  });
+
+  it("wraps a render-target albedo under Godot's default texture_repeat", () => {
+    expect(bag({}, { albedo_texture: target, albedoTargetUv: FLIPPED_V }).injection?.cacheKey).toContain(
+      'godot-target-map-repeat'
+    );
+  });
+
+  it('keeps a render-target albedo clamped under texture_repeat off', () => {
+    const derived = bag({ texture_repeat: 'false' }, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
+
+    expect(derived.injection?.cacheKey).not.toContain('godot-target-map-repeat');
+  });
+
+  it("wraps after the parallax shift, whose anchor the wrap's inlined chunk replaces", () => {
+    const derived = bag(
+      { heightmap_enabled: 'true' },
+      { albedo_texture: target, albedoTargetUv: FLIPPED_V, heightmap_texture: new THREE.Texture() }
+    );
+
+    expect(derived.injection?.cacheKey).toMatch(/godot-parallax.*godot-target-map-repeat/);
+  });
+
+  it('patches nothing for an albedo that carries its own transform', () => {
+    expect(bag({}, { albedo_texture: new THREE.Texture() }).injection).toBeUndefined();
   });
 });
 

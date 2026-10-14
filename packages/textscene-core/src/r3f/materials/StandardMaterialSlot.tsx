@@ -39,6 +39,7 @@ export function StandardMaterialSlot({
   aoMap,
   heightMap,
   anisotropyMap,
+  albedoTargetUv,
   attach,
 }: StandardMaterialSlotProps) {
   // A null `scalars` is the derivation's "no material" case: Godot's default 3D
@@ -54,6 +55,7 @@ export function StandardMaterialSlot({
       aoMap,
       heightMap,
       anisotropyMap,
+      albedoTargetUv,
     })
   );
 

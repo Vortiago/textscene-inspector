@@ -8,6 +8,7 @@
 import type * as THREE from 'three';
 import type { EmissionScalars } from './emission';
 import type { TextureChannel, TextureChannelMask } from '../../../godot/textureChannel';
+import type { UVTransform } from '../../textures/applyTextureState';
 
 /** Godot's height mapping of a surface. */
 export interface Heightmap {
@@ -99,6 +100,12 @@ export type TextureSlot = (typeof TEXTURE_SLOTS)[number];
  * Every one arrives already bound by `textureBinding.ts`.
  */
 export type ResolvedTextureSlots = Partial<Record<TextureSlot, THREE.Texture | null>>;
+
+/**
+ * The bound textures a material derives from: each slot's map, and the UV transform a
+ * render-target albedo samples through, which the shared target cannot carry.
+ */
+export type ResolvedTextures = ResolvedTextureSlots & { albedoTargetUv?: UVTransform };
 
 /**
  * A slot's raw reference (`ExtResource("1_x")`, `SubResource("NoiseTexture2D_y")`,
