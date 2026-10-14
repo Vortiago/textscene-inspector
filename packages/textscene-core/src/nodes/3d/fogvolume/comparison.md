@@ -1,15 +1,15 @@
 ---
 type: FogVolume
 category: 3D
-status: unimplemented
+status: unreviewed
 fixture: unit-fog-volume.tscn
-# image: unit-fog-volume
-renders_as: invisible transform-only fallback
+image: unit-fog-volume
+renders_as: density, scattering and emission added to the volumetric fog
 ---
 
 # FogVolume
 
-Adds a local region of volumetric fog to the world's fog effect, or removes fog from it with a negative-density `FogMaterial`. The previewer does not draw it yet, so the node is an invisible transform-only fallback and its children still show.
+A FogVolume adds a local region of fog to the Environment's volumetric fog. A negative-density `FogMaterial` removes fog instead. The previewer adds each volume's density, albedo and emission to the froxels its shape covers, as Godot's volume pass does. It draws nothing where the Environment's volumetric fog is off. A `FogMaterial` with a NoiseTexture3D `density_texture` shapes the density by its noise.
 
 ## Linting
 
@@ -29,8 +29,12 @@ Strict parsing format-checks these `FogVolume` properties, plus 1 inherited from
 | `valid-fogvolume-size` | `fogvolume-size-ignored-for-world-shape` | info |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. A `shape = ellipsoid` or a malformed `size = Vector3(-1, 2, 2)` parses with no warning and reaches no in-memory state.
+The lenient parser clamps each negative `size` component to 0, as `set_size` does. It keeps an out-of-range `shape`, which then has no surface, and the default size for a malformed one.
 
 ## Known limitations
 
-- **Not drawn** Godot fills the volume with fog, but here the region is empty.
+- **Shader missing** A volume whose material is a fog `ShaderMaterial` adds no fog, where Godot runs its fog shader.
+- **Resource gap** A `density_texture` that is not an inline NoiseTexture3D, such as an imported CompressedTexture3D, leaves the density even.
+- **Approximated** A NoiseTexture3D `density_texture` leaves the density even on first load until its build finishes, where Godot shapes the fog on its first frame.
+- **Approximated** A NoiseTexture3D's domain warp is not applied, so the density keeps its scale while the swirl does not match.
+- **Approximated** Past 2048 stacked slices of distinct density textures in one view, each further texture leaves its density even.

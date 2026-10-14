@@ -155,6 +155,9 @@ const UNDECLARED_RESOURCES: readonly string[] = [
   'StyleBoxFlat',
   'Texture',
   'Texture2D',
+  // `Texture3D` is an abstract tier with zero `ADD_PROPERTY` calls in 4.6.3
+  // (`texture.cpp:176-190`): listed as a record, not as work.
+  'Texture3D',
   'TorusMesh',
   'ViewportTexture',
   // The font and theme slices decode enough to draw (a `.tres` wrapper's fallbacks,
@@ -212,7 +215,7 @@ describe('own-validator coverage for resource slices', () => {
     // The ratchet, exact rather than a ceiling: a ceiling above the current length is
     // a free slot for the next unvalidated slice. Raising it records slices that draw
     // without validating, and the only correct edit afterwards is lowering it.
-    expect(UNDECLARED_RESOURCES.length).toBe(46);
+    expect(UNDECLARED_RESOURCES.length).toBe(47);
   });
 
   it('sweeps a population that cannot quietly empty', () => {

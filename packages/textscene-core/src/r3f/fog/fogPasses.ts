@@ -2,10 +2,10 @@
 
 import type * as THREE from 'three';
 import { FogRadiancePass } from './fogRadiancePass.js';
-import { FogVolumePass } from './fogVolumePass.js';
+import { VolumetricFogPass } from './volumetricFogPass.js';
 
 export interface FogPasses {
-  volume: FogVolumePass;
+  volume: VolumetricFogPass;
   radiance: FogRadiancePass;
 }
 
@@ -19,7 +19,7 @@ const shared = new WeakMap<THREE.WebGLRenderer, { passes: FogPasses; users: numb
  */
 export function acquireFogPasses(renderer: THREE.WebGLRenderer): { passes: FogPasses; release: () => void } {
   const entry = shared.get(renderer) ?? {
-    passes: { volume: new FogVolumePass(), radiance: new FogRadiancePass() },
+    passes: { volume: new VolumetricFogPass(), radiance: new FogRadiancePass() },
     users: 0,
   };
   shared.set(renderer, entry);

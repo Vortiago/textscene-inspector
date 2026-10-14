@@ -14,7 +14,8 @@ import { readShadowMaps } from '../shadowPass.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { finishFog, prepareFog, type DepthFog, type FogSettings } from './fogFrame.js';
 import { acquireFogPasses } from './fogPasses.js';
-import type { VolumetricFog } from './fogVolumePass.js';
+import { isFogVolume, type FogVolumeObject } from './fogVolumeObject.js';
+import type { VolumetricFog } from './volumetricFogPass.js';
 
 export interface FogLayerProps {
   depth: DepthFog | null;
@@ -30,8 +31,9 @@ function isMesh(object: THREE.Object3D): object is THREE.Mesh {
   return (object as THREE.Mesh).isMesh === true;
 }
 
-/** Depth fog reads no shadow, so it leaves the casters untracked. */
+/** Depth fog reads no shadow and draws no FogVolume, so it leaves both untracked. */
 const NO_CASTERS: readonly THREE.Mesh[] = [];
+const NO_VOLUMES: readonly FogVolumeObject[] = [];
 
 export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
   const gl = useThree((state) => state.gl);
@@ -59,12 +61,17 @@ export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
     const { passes, release } = acquireFogPasses(gl);
     const lights = new TrackedObjects(scene, isLight);
     const casters = new TrackedObjects(scene, isMesh);
+    const volumes = new TrackedObjects(scene, isFogVolume);
     // After the shadow pass, so the fog reads this render's shadow maps, and each light's distance
     // fade for this camera, which the scene's observers wrote before it.
     const stopPreparing = readShadowMaps(gl, (rendered, camera) => {
       if (rendered !== scene) return;
       const isVolumetric = settings.current.volumetric !== null;
-      const objects = { lights: lights.current(), casters: isVolumetric ? casters.current() : NO_CASTERS };
+      const objects = {
+        lights: lights.current(),
+        casters: isVolumetric ? casters.current() : NO_CASTERS,
+        volumes: isVolumetric ? volumes.current() : NO_VOLUMES,
+      };
       if (prepareFog(gl, scene, camera, settings.current, passes, objects)) invalidate();
     });
     const stopFinishing = observeSceneRenderEnd(scene, finishFog);
@@ -73,6 +80,7 @@ export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
       stopFinishing();
       lights.dispose();
       casters.dispose();
+      volumes.dispose();
       passes.volume.forget(scene);
       release();
     };

@@ -165,6 +165,8 @@ import '../resources/meshes/mesh/linterValidators.js';
 import '../resources/meshes/primitivemesh/linterValidators.js';
 import '../resources/meshes/multimesh/linterValidators.js';
 import '../resources/materials/material/linterValidators.js';
+import '../resources/materials/fogmaterial/linterValidators.js';
+import '../resources/textures/noisetexture3d/linterValidators.js';
 import '../resources/resource/linterValidators.js';
 import '../resources/styles/stylebox/linterValidators.js';
 import '../resources/shapes/shape2d/linterValidators.js';

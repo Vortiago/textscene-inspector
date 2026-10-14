@@ -15,6 +15,7 @@ import { beginTextureWork } from './textures/textureWork.js';
 import { useResourceLoader } from './useResource.js';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds.js';
 import { resolveProceduralTexture } from './textures/resolveProceduralTexture.js';
+import { resolveNoiseTexture3D } from './textures/noisetexture3d/resolveNoiseTexture.js';
 import { pinProceduralTexture, unpinProceduralTexture } from './textures/proceduralTextureCache.js';
 
 /** One slot's procedural texture. */
@@ -52,11 +53,37 @@ export function useProceduralTextures(
   refs: readonly (string | undefined)[],
   internalResources: readonly TscnInternalResource[]
 ): ProceduralSlot[] {
+  return useProceduralSlots(refs, internalResources, resolveProceduralTexture);
+}
+
+/**
+ * The `NoiseTexture3D` a `SubResource` ref names, held resident while the caller is mounted, for a
+ * Texture3D slot. Unclaimed for every other form.
+ */
+export function useProceduralTexture3D(
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[]
+): ProceduralSlot {
+  return useProceduralSlots([ref], internalResources, resolveNoiseTexture3D)[0] ?? UNCLAIMED;
+}
+
+/** Resolves a ref to the procedural texture of one kind of slot. Module-level, so a memo holds it. */
+type ProceduralResolver = (
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[]
+) => ProceduralTextureLookup | null;
+
+function useProceduralSlots(
+  refs: readonly (string | undefined)[],
+  internalResources: readonly TscnInternalResource[],
+  resolve: ProceduralResolver
+): ProceduralSlot[] {
   // Keyed on the refs' text: callers rebuild the array every render.
   const refsText = JSON.stringify(refs);
   const lookups = useMemo(
-    () => lookupAll(JSON.parse(refsText) as (string | null)[], internalResources),
-    [refsText, internalResources]
+    () =>
+      (JSON.parse(refsText) as (string | null)[]).map((ref) => resolve(ref ?? undefined, internalResources)),
+    [refsText, internalResources, resolve]
   );
   // Builds that finished after `lookups` read the cache. Scoped to those lookups: a new
   // read of the cache answers for itself, and an entry evicted since is never shown.
@@ -149,13 +176,6 @@ function landOne(
 ): Landed {
   const textures = new Map(prev.lookups === lookups ? prev.textures : []);
   return { lookups, textures: textures.set(key, texture) };
-}
-
-function lookupAll(
-  refs: readonly (string | null)[],
-  internalResources: readonly TscnInternalResource[]
-): (ProceduralTextureLookup | null)[] {
-  return refs.map((ref) => resolveProceduralTexture(ref ?? undefined, internalResources));
 }
 
 function isPendingBuild(

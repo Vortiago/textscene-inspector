@@ -4,12 +4,13 @@
  */
 import { describe, expect, it } from 'vitest';
 import { scalarGlslFunction } from '../testing/glslScalar';
-import { FOG_LIGHT_FRAGMENT } from './fogVolumeShaders';
+import { FOG_LIGHT_FRAGMENT } from './volumetricFogShaders';
 
 const fogShadow = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'fogShadow');
 const fogShadowFade = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'fogShadowFade');
 const fogShadowAttenuation = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'fogShadowAttenuation');
 const spotCellDepth = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'spotCellDepth');
+const skyRoughness = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'skyRoughness');
 
 describe('the fog shadow term', () => {
   it('darkens a cell a tenth of a unit behind the caster to 1/e', () => {
@@ -61,5 +62,19 @@ describe('the spot fog cell depth', () => {
 
   it('leaves a cell where it is with no bias (edge case)', () => {
     expect(spotCellDepth(0.5, 0)).toBe(0.5);
+  });
+});
+
+describe('the sky roughness the ambient reads the sky at', () => {
+  it('reads a clear froxel at mip 2 of 7', () => {
+    expect(skyRoughness(0)).toBeCloseTo(2 / 7, 6);
+  });
+
+  it('reads a denser froxel at a blurrier mip', () => {
+    expect(skyRoughness(0.05)).toBeCloseTo(2.25 / 7, 6);
+  });
+
+  it('stops at the coarsest mip (edge case)', () => {
+    expect(skyRoughness(4)).toBe(1);
   });
 });

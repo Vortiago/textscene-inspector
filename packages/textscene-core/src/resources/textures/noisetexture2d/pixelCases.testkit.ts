@@ -63,7 +63,7 @@ export const PINNED_PIXEL_HASHES: Readonly<Record<string, string>> = {
   'seamless raw range': '599a0b00113d3ca75e688a1fb71142e3c3517e085a7955635e9445381c2ea4a9',
   'seamless minimum skirt': 'cc49240cd00fc2127562311c933a1d07d29b40df15e407fce25d8c3de297084a',
   'seamless skirt past half': 'e965753eab458f07f4a67da10b7c863d7c02039595d3c96a1ccff87a4559517b',
-  'colour ramp': '113437ef48faa8f585759ef6bcb1ac41698e54841c65f547188f9f0ac258120e',
+  'colour ramp': '61504eec17c7c3905b99104d16f575479dfba1923d22d1b35510f7508164dd05',
   'normal map': '28e6f7bfec700912222420c7aa61a04d2f2f31168822730ccc2f1ead9d637050',
-  'normal map over a ramp': '4d23acc75732ce398ac6f3bc0665fa66ea89b979dd98a4d5a3545b7ddaedb4ff',
+  'normal map over a ramp': '20b2b5e68ecb159bad9e76cf7602aff9c00701552f0b8487c0732b746b40a8b2',
 };

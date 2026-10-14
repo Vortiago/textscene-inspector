@@ -10,9 +10,11 @@ import { createEnvironmentSettings } from '../../resources/environment/build';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { directionalShadowAtlasDepth } from '../directionalShadow/shadowAtlas';
 import { castingSun } from '../testing/castingSun';
-import { FogVolumePass } from './fogVolumePass';
+import { decodeFogMaterial } from '../../resources/materials/fogmaterial/decode';
+import { FogVolumeObject } from './fogVolumeObject';
+import { VolumetricFogPass } from './volumetricFogPass';
 
-type FogVolumeInputs = Parameters<FogVolumePass['prepare']>[3];
+type VolumetricFogInputs = Parameters<VolumetricFogPass['prepare']>[3];
 
 /** One light pass slice as it was drawn. */
 interface LightDraw {
@@ -85,7 +87,7 @@ class RecordingRenderer {
 /** A small grid, so each draw is two slices. */
 const PROJECT = { volumeSize: 4, volumeDepth: 2, useFilter: true, useLegacyBlending: false };
 
-function inputs(properties: Record<string, string> = {}): FogVolumeInputs {
+function inputs(properties: Record<string, string> = {}): VolumetricFogInputs {
   const environment = decodeEnvironment({ volumetric_fog_enabled: 'true', ...properties });
   return {
     fog: createEnvironmentSettings(environment, DEFAULT_CLEAR_COLOR).volumetricFog!,
@@ -94,6 +96,7 @@ function inputs(properties: Record<string, string> = {}): FogVolumeInputs {
     skyEnergy: 1,
     lights: [],
     casters: [],
+    volumes: [],
   };
 }
 
@@ -110,10 +113,10 @@ function moved(view: THREE.Camera): void {
 
 const CENTRE = new THREE.Vector3(0.5, 0.5, 0.5);
 
-describe('FogVolumePass.prepare', () => {
+describe('VolumetricFogPass.prepare', () => {
   it('samples each cell centre with no history on the first render', () => {
     const renderer = new RecordingRenderer();
-    new FogVolumePass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), inputs());
+    new VolumetricFogPass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), inputs());
 
     const { lightDraws } = renderer.take();
     expect(lightDraws).toHaveLength(PROJECT.volumeDepth);
@@ -123,7 +126,12 @@ describe('FogVolumePass.prepare', () => {
   it('draws no volume into a viewport with no area, as Godot draws no frame there', () => {
     const renderer = new RecordingRenderer(new THREE.Vector2(0, 0));
 
-    const isSettling = new FogVolumePass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), inputs());
+    const isSettling = new VolumetricFogPass().prepare(
+      renderer.asWebGL,
+      new THREE.Scene(),
+      camera(),
+      inputs()
+    );
 
     expect(isSettling).toBe(false);
     expect(renderer.take()).toEqual({ lightDraws: [], copies: 0 });
@@ -133,7 +141,12 @@ describe('FogVolumePass.prepare', () => {
     // 1x40 against a side of 4: the ratio is 1 / 20, so the grid's width truncates to 0.
     const renderer = new RecordingRenderer(new THREE.Vector2(1, 40));
 
-    const isSettling = new FogVolumePass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), inputs());
+    const isSettling = new VolumetricFogPass().prepare(
+      renderer.asWebGL,
+      new THREE.Scene(),
+      camera(),
+      inputs()
+    );
 
     expect(isSettling).toBe(false);
     expect(renderer.take()).toEqual({ lightDraws: [], copies: 0 });
@@ -141,7 +154,7 @@ describe('FogVolumePass.prepare', () => {
 
   it('draws the mean of the 16 jitters once the view holds still, as Godot converges', () => {
     const renderer = new RecordingRenderer();
-    const pass = new FogVolumePass();
+    const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
     const view = camera();
     const fog = inputs();
@@ -154,7 +167,7 @@ describe('FogVolumePass.prepare', () => {
 
   it('draws nothing more for a view that has converged', () => {
     const renderer = new RecordingRenderer();
-    const pass = new FogVolumePass();
+    const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
     const view = camera();
     const fog = inputs();
@@ -168,7 +181,7 @@ describe('FogVolumePass.prepare', () => {
 
   it('blends a moving view into its history at the reprojection amount, one jitter a frame', () => {
     const renderer = new RecordingRenderer();
-    const pass = new FogVolumePass();
+    const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
     const view = camera();
     const fog = inputs({ volumetric_fog_temporal_reprojection_amount: '0.6' });
@@ -187,7 +200,7 @@ describe('FogVolumePass.prepare', () => {
 
   it('samples the centres and keeps no history without temporal reprojection', () => {
     const renderer = new RecordingRenderer();
-    const pass = new FogVolumePass();
+    const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
     const view = camera();
     const fog = inputs({ volumetric_fog_temporal_reprojection_enabled: 'false' });
@@ -204,7 +217,7 @@ describe('FogVolumePass.prepare', () => {
 
   it('copies the volume of whichever scene renders next, without drawing it again', () => {
     const renderer = new RecordingRenderer();
-    const pass = new FogVolumePass();
+    const pass = new VolumetricFogPass();
     const first = new THREE.Scene();
     const second = new THREE.Scene();
     const view = camera();
@@ -219,7 +232,7 @@ describe('FogVolumePass.prepare', () => {
 
   it('keeps each camera its own history, so two still cameras on one scene both settle', () => {
     const renderer = new RecordingRenderer();
-    const pass = new FogVolumePass();
+    const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
     const main = camera();
     const other = camera();
@@ -238,7 +251,7 @@ describe('FogVolumePass.prepare', () => {
 
   it("frees every camera's volume and history when the scene is forgotten", () => {
     const renderer = new RecordingRenderer();
-    const pass = new FogVolumePass();
+    const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
     pass.prepare(renderer.asWebGL, scene, camera(), inputs());
     pass.prepare(renderer.asWebGL, scene, camera(), inputs());
@@ -252,7 +265,7 @@ describe('FogVolumePass.prepare', () => {
 
   it('draws again when the sky turns', () => {
     const renderer = new RecordingRenderer();
-    const pass = new FogVolumePass();
+    const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
     const view = camera();
     const toSky = new THREE.Matrix3();
@@ -269,7 +282,7 @@ describe('FogVolumePass.prepare', () => {
     const renderer = new RecordingRenderer();
     const view = new THREE.OrthographicCamera(-3, 3, 2, -2, 0.5, 50);
     view.updateMatrixWorld();
-    new FogVolumePass().prepare(renderer.asWebGL, new THREE.Scene(), view, inputs());
+    new VolumetricFogPass().prepare(renderer.asWebGL, new THREE.Scene(), view, inputs());
 
     const [draw] = renderer.take().lightDraws;
     expect(draw!.frustumBegin).toEqual(draw!.frustumEnd);
@@ -278,7 +291,7 @@ describe('FogVolumePass.prepare', () => {
 
   it('reads the directional atlas when a light shadows the fog', () => {
     const renderer = new RecordingRenderer();
-    new FogVolumePass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), {
+    new VolumetricFogPass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), {
       ...inputs(),
       lights: [castingSun()],
     });
@@ -288,7 +301,7 @@ describe('FogVolumePass.prepare', () => {
 
   it('reads no atlas when no light shadows the fog (edge case)', () => {
     const renderer = new RecordingRenderer();
-    new FogVolumePass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), {
+    new VolumetricFogPass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), {
       ...inputs(),
       lights: [new THREE.DirectionalLight()],
     });
@@ -298,7 +311,7 @@ describe('FogVolumePass.prepare', () => {
 
   it('draws a still view again when a caster of a shadowed light moves', () => {
     const renderer = new RecordingRenderer();
-    const pass = new FogVolumePass();
+    const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
     const view = camera();
     const box = Object.assign(new THREE.Mesh(), { castShadow: true });
@@ -313,9 +326,54 @@ describe('FogVolumePass.prepare', () => {
     expect(renderer.take().lightDraws).toHaveLength(PROJECT.volumeDepth);
   });
 
+  it('draws a still view again when a FogVolume moves', () => {
+    const renderer = new RecordingRenderer();
+    const pass = new VolumetricFogPass();
+    const scene = new THREE.Scene();
+    const view = camera();
+    const volume = new FogVolumeObject();
+    volume.position.z = -5;
+    volume.updateMatrixWorld();
+    const fog = { ...inputs(), volumes: [volume] };
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    renderer.take();
+
+    volume.position.y = 1;
+    volume.updateMatrixWorld();
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    expect(renderer.take().lightDraws).toHaveLength(PROJECT.volumeDepth);
+  });
+
+  it("draws a still view again when a FogVolume's density texture is replaced", () => {
+    const renderer = new RecordingRenderer();
+    const pass = new VolumetricFogPass();
+    const scene = new THREE.Scene();
+    const view = camera();
+    const material = decodeFogMaterial({});
+    const volume = new FogVolumeObject();
+    volume.position.z = -5;
+    volume.updateMatrixWorld();
+    volume.fill = {
+      kind: 'material',
+      material,
+      densityTexture: new THREE.Data3DTexture(new Uint8Array(8), 2, 2, 2),
+    };
+    const fog = { ...inputs(), volumes: [volume] };
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    renderer.take();
+
+    // Same size, so every row stays the same: only the stacked texels differ.
+    const texels = new Uint8Array(8).fill(255);
+    volume.fill = { kind: 'material', material, densityTexture: new THREE.Data3DTexture(texels, 2, 2, 2) };
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    expect(renderer.take().lightDraws).toHaveLength(PROJECT.volumeDepth);
+  });
+
   it('holds a still view when a mesh moves and no light shadows the fog (edge case)', () => {
     const renderer = new RecordingRenderer();
-    const pass = new FogVolumePass();
+    const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
     const view = camera();
     const box = Object.assign(new THREE.Mesh(), { castShadow: true });

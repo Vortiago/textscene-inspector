@@ -6,6 +6,7 @@
  */
 
 import {
+  VOLUMETRIC_FOG_MAX_SKY_LOD,
   VOLUMETRIC_FOG_SHADOW_FADE,
   VOLUMETRIC_FOG_SHADOW_OPACITY_MIN,
   VOLUMETRIC_FOG_TEMPORAL_JITTERS,
@@ -13,16 +14,19 @@ import {
 import { glslFloat } from '../../resources/environment/glslLiterals.js';
 import { HENYEY_GREENSTEIN_GLSL } from '../henyeyGreenstein.js';
 import { FogLightKind, FogLightTexel } from './fogLights.js';
+import { FOG_VOLUME_DENSITY_SCALE } from '../../godot/fogVolume.js';
+import { FOG_VOLUME_GLSL } from './fogVolumeShader.js';
 
 /** The offsets a still froxel samples and averages: Godot's 16 jitters, or its centre alone. */
 export const FOG_SAMPLE_OFFSETS_MAX = VOLUMETRIC_FOG_TEMPORAL_JITTERS.length;
 
 /**
- * Lights one froxel: each light's scatter (`.glsl:252-255`), under its shadow
- * (`.glsl:388-422,488-510,552-574`), and the ambient with its sky (`.glsl:430-445`), times the
- * albedo, plus the emission (`.glsl:681`). A moving camera's froxel
- * blends this frame's jitter into its reprojected history (`.glsl:311-335,683`). A still one
- * averages its sample offsets, the mean the history converges to. A clear cell scatters nothing (`.glsl:383`).
+ * Lights one froxel: the Environment's medium plus each FogVolume's (`.glsl:354-378`), each light's
+ * scatter (`.glsl:252-255`) under its shadow (`.glsl:388-422,488-510,552-574`), and the ambient with
+ * its sky (`.glsl:430-445`), times the scattering, plus the emission (`.glsl:681`). A moving
+ * camera's froxel blends this frame's jitter into its reprojected history (`.glsl:311-335,683`). A
+ * still one averages its sample offsets, the mean the history converges to. A clear cell scatters
+ * nothing (`.glsl:383`).
  */
 export const FOG_LIGHT_FRAGMENT = /* glsl */ `
 #include <common>
@@ -34,15 +38,14 @@ uniform vec2 frustumBegin;
 uniform vec2 frustumEnd;
 uniform float fogLength;
 uniform float detailSpread;
-uniform float density;
+uniform float baseDensity;
 uniform float litDensityMin;
-uniform vec3 scattering;
-uniform vec3 emission;
+uniform vec3 baseScattering;
+uniform vec3 baseEmission;
 uniform float phaseG;
 uniform vec3 ambientColor;
 uniform float ambientInject;
 uniform float skyContribution;
-uniform float skyRoughness;
 uniform float skyEnergy;
 uniform mat3 viewToSky;
 uniform highp sampler2D fogLights;
@@ -60,6 +63,7 @@ uniform float historyAmount;
 #endif
 
 ${HENYEY_GREENSTEIN_GLSL}
+${FOG_VOLUME_GLSL}
 // The falloff of omni and spot lights alike (.glsl:228-235).
 float omniAttenuation( float range, float inverseRange, float decay ) {
 	float nd = range * inverseRange;
@@ -194,16 +198,22 @@ vec3 lightsAt( vec3 view ) {
 	return total;
 }
 
+// .glsl:434: the radiance mip a froxel of this density reads, as a fraction of the coarsest.
+float skyRoughness( float density ) {
+	return min( ( 2.0 + density * ${glslFloat(VOLUMETRIC_FOG_MAX_SKY_LOD - 2)} ) / ${glslFloat(VOLUMETRIC_FOG_MAX_SKY_LOD)}, 1.0 );
+}
+
 // .glsl:430-445: the isotropic sample reads the sky straight up, the anisotropic one along the view.
-vec3 ambientAt( vec3 view ) {
+vec3 ambientAt( vec3 view, float density ) {
+	float roughness = skyRoughness( density );
 	vec3 isotropic = vec3( 0.0 );
 	vec3 anisotropic = vec3( 0.0 );
 	#ifdef ENVMAP_TYPE_CUBE_UV
 		if ( skyContribution > 0.0 ) {
-			isotropic = textureCubeUV( envMap, vec3( 0.0, 1.0, 0.0 ), skyRoughness ).rgb;
+			isotropic = textureCubeUV( envMap, vec3( 0.0, 1.0, 0.0 ), roughness ).rgb;
 			if ( phaseG != 0.0 ) {
 				vec3 scatter = viewToSky * normalize( view ) * sign( phaseG );
-				anisotropic = textureCubeUV( envMap, scatter, skyRoughness ).rgb;
+				anisotropic = textureCubeUV( envMap, scatter, roughness ).rgb;
 			}
 		}
 	#endif
@@ -211,13 +221,19 @@ vec3 ambientAt( vec3 view ) {
 	return mix( ambientColor, sky, skyContribution ) * ambientInject;
 }
 
-// The medium at a point of the froxel, as a fraction of its cell.
+// The medium at a point of the froxel, as a fraction of its cell (.glsl:354-378).
 vec4 froxelMedium( vec3 froxel, vec3 offset ) {
+	vec3 unit = ( froxel + offset ) / gridSize;
+	vec3 view = froxelView( unit );
+	vec3 fogUnit = vec3( unit.x, 1.0 - unit.y, pow( unit.z, detailSpread ) );
+	FogVolumeSums volumes = fogVolumesAt( view, froxel, gridSize, fogUnit );
+	float density = max( 0.0, baseDensity + volumes.densityUnits / ${glslFloat(FOG_VOLUME_DENSITY_SCALE)} );
+	vec3 scattering = unpackColor( volumes.scattering, SCATTERING_SCALE ) + baseScattering;
+	vec3 emission = unpackColor( volumes.emission, EMISSION_SCALE ) + baseEmission;
 	vec3 light = vec3( 0.0 );
 	if ( density > litDensityMin ) {
-		vec3 view = froxelView( ( froxel + offset ) / gridSize );
 		light = lightsAt( view );
-		if ( ambientInject > 0.0 ) light += ambientAt( view );
+		if ( ambientInject > 0.0 ) light += ambientAt( view, density );
 	}
 	return vec4( light * scattering + emission, density );
 }

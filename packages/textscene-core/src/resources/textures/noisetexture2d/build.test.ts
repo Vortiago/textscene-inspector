@@ -138,6 +138,13 @@ describe('modulateWithGradient', () => {
     expect([...rgba.slice(0, 4)]).toEqual([0, 0, 0, 255]);
     expect([...rgba.slice(4, 8)]).toEqual([255, 0, 0, 255]);
   });
+
+  it('reads the luminance in float and truncates each channel, as Godot measures', () => {
+    // Godot 4.6.3 ramps gray 87 to red 86 and gray 206 to red 205 (`color.h:106-108`,
+    // `image.cpp:3577-3580`). A rounded ramp keeps 87 and 206.
+    const rgba = modulateWithGradient(new Uint8Array([87, 206, 239]), RAMP);
+    expect([rgba[0], rgba[4], rgba[8]]).toEqual([86, 205, 239]);
+  });
 });
 
 describe('bumpMapToNormalMap', () => {

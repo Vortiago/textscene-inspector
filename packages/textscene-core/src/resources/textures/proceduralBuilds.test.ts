@@ -34,7 +34,7 @@ function scene(seed: string): TscnInternalResource[] {
   ];
 }
 
-const plan = (properties: Record<string, string>): ProceduralBuildPlan | null =>
+const plan = (properties: Record<string, string>): ProceduralBuildPlan<'noise-texture-2d'> | null =>
   properties.seed === 'declined'
     ? null
     : {

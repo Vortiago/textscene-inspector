@@ -375,6 +375,14 @@ _Avoid_: "fog volume", which names the FogVolume node.
 One cell of the volume that **volumetric fog** fills: a screen tile at one depth slice, shaped like a piece of the camera frustum.
 _Avoid_: "voxel", which names a cube in world space.
 
+**Fog volume**:
+A FogVolume node's shape, which adds the density, albedo and emission of its FogMaterial to every **froxel** it covers. A negative density removes fog.
+_Avoid_: "local fog", "fog area".
+
+**Density texture**:
+The 3D texture a FogMaterial multiplies a **fog volume**'s density by, sampled across the volume's size.
+_Avoid_: "fog texture", "noise volume".
+
 **Geometry instance**:
 A drawn 3D Node (a GeometryInstance3D) whose own render state, such as `transparency` and `cast_shadow`, applies to every surface it draws.
 _Avoid_: bare "instance", which names **PackedScene instancing**.

@@ -1,5 +1,5 @@
 /**
- * A decoded `FastNoiseLite` as a 2D sampler over `fastnoise-lite`, the official
+ * A decoded `FastNoiseLite` as a 2D or 3D sampler over `fastnoise-lite`, the official
  * JS port of `thirdparty/misc/FastNoiseLite.h`. Not hand-ported: these maps only
  * translate decoded enums into the port's string constants.
  */
@@ -49,13 +49,31 @@ const RETURN_TYPE: Record<CellularReturnType, string> = {
 /** A sampler over the configured generator, offset like `get_noise_2d`. */
 export type NoiseSampler = (x: number, y: number) => number;
 
+/** A sampler over the configured generator, offset like `get_noise_3d`. */
+export type NoiseSampler3D = (x: number, y: number, z: number) => number;
+
 /**
  * The generator a decoded `FastNoiseLite` describes, as a 2D sampler. `offset` is
  * added before generating, as `FastNoiseLite::get_noise_2d` does (fastnoise_lite.cpp:318-325).
+ */
+export function noiseSampler(data: FastNoiseLiteData): NoiseSampler {
+  const noise = configuredNoise(data);
+  const { x: ox, y: oy } = data.offset;
+  return (x, y) => noise.GetNoise(x + ox, y + oy);
+}
+
+/** {@link noiseSampler} in 3D, offset on every axis as `get_noise_3d` is (fastnoise_lite.cpp:331-338). */
+export function noiseSampler3D(data: FastNoiseLiteData): NoiseSampler3D {
+  const noise = configuredNoise(data);
+  const { x: ox, y: oy, z: oz } = data.offset;
+  return (x, y, z) => noise.GetNoise(x + ox, y + oy, z + oz);
+}
+
+/**
  * Every parameter is set, since the port's defaults are not Godot's (3 octaves
  * against 5, EuclideanSq against Euclidean). Set, it agrees with 4.6.3 to about 1e-7.
  */
-export function noiseSampler(data: FastNoiseLiteData): NoiseSampler {
+function configuredNoise(data: FastNoiseLiteData): FastNoiseLite {
   const noise = new FastNoiseLite();
   noise.SetSeed(data.seed);
   noise.SetFrequency(data.frequency);
@@ -69,7 +87,5 @@ export function noiseSampler(data: FastNoiseLiteData): NoiseSampler {
   noise.SetCellularDistanceFunction(DISTANCE_FUNCTION[data.cellularDistanceFunction]);
   noise.SetCellularReturnType(RETURN_TYPE[data.cellularReturnType]);
   noise.SetCellularJitter(data.cellularJitter);
-
-  const { x: ox, y: oy } = data.offset;
-  return (x, y) => noise.GetNoise(x + ox, y + oy);
+  return noise;
 }

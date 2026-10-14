@@ -1,8 +1,8 @@
 /**
- * Types for `fastnoise-lite` (1.1.1), which ships no `.d.ts`: only the surface the NoiseTexture2D
- * slice drives, so a green tsc never implies an undeclared member works. No domain warp: its
+ * Types for `fastnoise-lite` (1.1.1), which ships no `.d.ts`: only the surface the noise texture
+ * slices drive, so a green tsc never implies an undeclared member works. No domain warp: its
  * `DomainWrap` tests `instanceof Vector2`, a class the package does not export, and ignores a
- * plain `{x, y}` (verified on 1.1.1). So the slice decodes warp settings and never applies them.
+ * plain `{x, y}` (verified on 1.1.1). So the slices decode warp settings and never apply them.
  */
 
 declare module 'fastnoise-lite' {
@@ -53,7 +53,7 @@ declare module 'fastnoise-lite' {
     SetCellularReturnType(returnType: string): void;
     SetCellularJitter(jitter: number): void;
 
-    /** 2D noise in -1..1 at the given position, under the current settings. */
-    GetNoise(x: number, y: number): number;
+    /** 2D noise in -1..1 at the given position, or 3D noise with `z`, under the current settings. */
+    GetNoise(x: number, y: number, z?: number): number;
   }
 }

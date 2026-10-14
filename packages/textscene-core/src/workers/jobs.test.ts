@@ -8,6 +8,8 @@ import {
   NOISE_PIXEL_CASES,
   PINNED_PIXEL_HASHES,
 } from '../resources/textures/noisetexture2d/pixelCases.testkit';
+import { decodeFastNoiseLite } from '../resources/noise/fastnoiselite/decode';
+import { decodeNoiseTexture3D } from '../resources/textures/noisetexture3d/decode';
 import { isWorkerJobName, WORKER_JOBS } from './jobs';
 
 const [firstCase] = NOISE_PIXEL_CASES;
@@ -43,5 +45,27 @@ describe('isWorkerJobName', () => {
 
   it('refuses an inherited property name', () => {
     expect(isWorkerJobName('toString')).toBe(false);
+  });
+});
+
+describe('noise-texture-3d job', () => {
+  const job = WORKER_JOBS['noise-texture-3d'];
+  const input = {
+    tex: decodeNoiseTexture3D({ width: '4', height: '3', depth: '5' }),
+    noise: decodeFastNoiseLite({}),
+    colorRamp: null,
+  };
+
+  it('gives the texels Godot measures', () => {
+    expect(Array.from(job.run(input).texels.subarray(0, 4))).toEqual([29, 58, 80, 100]);
+  });
+
+  it('transfers exactly the texel buffer', () => {
+    const output = job.run(input);
+    expect(job.transfer(output)).toEqual([output.texels.buffer]);
+  });
+
+  it('takes an input that survives a structured clone unchanged', () => {
+    expect(structuredClone(input)).toEqual(input);
   });
 });

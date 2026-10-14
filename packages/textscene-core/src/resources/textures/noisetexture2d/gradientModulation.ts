@@ -3,25 +3,25 @@
  * straight across.
  */
 
-import { channelToByte } from '../../../utils/colorSpace';
+import { clamp } from '../../../godot/math.js';
 import type { Gradient } from '../gradienttexture2d/types';
 import { sampleGradientColor } from '../gradienttexture2d/sample';
 
 /**
- * `NoiseTexture2D::_modulate_with_gradient` (noise_texture_2d.cpp:183-198): each
- * pixel's luminance is its ramp offset. Godot's weights sum to 1, so a grayscale
- * byte maps straight to the 0..1 offset.
+ * `_modulate_with_gradient` of `NoiseTexture2D` and `NoiseTexture3D` (noise_texture_2d.cpp:183-198,
+ * noise_texture_3d.cpp:175-189): each pixel's luminance is its ramp offset, and the ramp's colour
+ * lands in an RGBA8 image.
  */
 export function modulateWithGradient(gray: Uint8Array, gradient: Gradient): Uint8Array {
-  // The offset is a byte / 255, 256 values, so the ramp is evaluated once per
+  // The offset comes from a byte, 256 values, so the ramp is evaluated once per
   // value, not per pixel with a binary search and an allocation each.
   const lut = new Uint8Array(256 * 4);
   for (let v = 0; v < 256; v++) {
-    const color = sampleGradientColor(gradient, v / 255);
-    lut[v * 4] = channelToByte(color.r);
-    lut[v * 4 + 1] = channelToByte(color.g);
-    lut[v * 4 + 2] = channelToByte(color.b);
-    lut[v * 4 + 3] = channelToByte(color.a);
+    const color = sampleGradientColor(gradient, grayLuminance(v));
+    lut[v * 4] = rgba8Channel(color.r);
+    lut[v * 4 + 1] = rgba8Channel(color.g);
+    lut[v * 4 + 2] = rgba8Channel(color.b);
+    lut[v * 4 + 3] = rgba8Channel(color.a);
   }
 
   const rgba = new Uint8Array(gray.length * 4);
@@ -45,4 +45,20 @@ export function grayToRgba(gray: Uint8Array): Uint8Array {
     rgba[i * 4 + 3] = 255;
   }
   return rgba;
+}
+
+const f = Math.fround;
+
+/**
+ * `Color::get_luminance` (color.h:106-108) of an L8 pixel, in Godot's float arithmetic. Its weights
+ * sum to 1 only in exact arithmetic, so some bytes land just under their own value.
+ */
+function grayLuminance(byte: number): number {
+  const l = f(byte / 255);
+  return f(f(f(f(0.2126) * l) + f(f(0.7152) * l)) + f(f(0.0722) * l));
+}
+
+/** An RGBA8 image truncates each channel as it stores it (`image.cpp:3577-3580`). */
+function rgba8Channel(channel: number): number {
+  return Math.trunc(clamp(channel * 255, 0, 255));
 }
