@@ -136,13 +136,9 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
     glow_hdr_luminance_cap: floatOr(properties.glow_hdr_luminance_cap, 12.0, 'glow_hdr_luminance_cap'),
     glow_map_strength: floatOr(properties.glow_map_strength, 0.8, 'glow_map_strength'),
 
-    // Adjustments
     adjustment_enabled: boolSlotValue(properties.adjustment_enabled) === true,
     adjustment_brightness: floatOr(properties.adjustment_brightness, 1.0, 'adjustment_brightness'),
     adjustment_contrast: floatOr(properties.adjustment_contrast, 1.0, 'adjustment_contrast'),
     adjustment_saturation: floatOr(properties.adjustment_saturation, 1.0, 'adjustment_saturation'),
-
-    // SSR
-    ssr_enabled: boolSlotValue(properties.ssr_enabled) === true,
   };
 }

@@ -30,7 +30,6 @@ describe('decodeEnvironment', () => {
     expect(result.adjustment_brightness).toBe(1.0);
     expect(result.adjustment_contrast).toBe(1.0);
     expect(result.adjustment_saturation).toBe(1.0);
-    expect(result.ssr_enabled).toBe(false);
   });
 
   it('should parse BG_COLOR mode with custom color', () => {
@@ -187,14 +186,6 @@ describe('decodeEnvironment', () => {
     expect(result.adjustment_brightness).toBe(1.05);
     expect(result.adjustment_contrast).toBe(1.1);
     expect(result.adjustment_saturation).toBe(1.2);
-  });
-
-  it('should parse SSR enabled flag', () => {
-    const result = decodeEnvironment({
-      ssr_enabled: 'true',
-    });
-
-    expect(result.ssr_enabled).toBe(true);
   });
 
   it('should parse background energy multiplier', () => {

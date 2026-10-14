@@ -1,8 +1,8 @@
 /**
- * Godot's sRGB transfer functions as GLSL, matching three's `sRGBTransferOETF`
- * and `sRGBTransferEOTF`. A light quad encodes `light_color` and the item side
- * decodes its fragment before multiplying the two, so both concatenate this one
- * text: a second copy that drifted would put a gamma error on every lit pixel.
+ * Godot's sRGB transfer functions as GLSL, matching `linear_to_srgb` and `srgb_to_linear` in
+ * `tonemap.glsl:235-243` and three's `sRGBTransferOETF` and `sRGBTransferEOTF`. The 2D light pass
+ * and the tone-map adjustments concatenate this one text: a second copy that drifted would put a
+ * gamma error on every pixel it touches.
  */
 
 /** Linear → sRGB, the OETF. */
@@ -12,7 +12,7 @@ vec3 godotToSrgb(vec3 c) {
 }
 `;
 
-/** sRGB → linear, the EOTF. Only the item side needs to go back. */
+/** sRGB → linear, the EOTF. */
 export const GODOT_TO_LINEAR_GLSL = /* glsl */ `
 vec3 godotToLinear(vec3 c) {
   return mix(c / 12.92, pow((max(c, vec3(0.0)) + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
