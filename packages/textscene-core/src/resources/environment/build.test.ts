@@ -27,7 +27,6 @@ describe('createEnvironmentSettings', () => {
     expect(settings.background.energyMultiplier).toBe(1.0);
     expect(settings.fog).toBeNull();
     expect(settings.adjustments).toBeNull();
-    expect(settings.ssr).toBeNull();
   });
 
   it('draws the clear colour, not background_color, under BG_CLEAR_COLOR', () => {
@@ -182,7 +181,7 @@ describe('createEnvironmentSettings', () => {
     expect(colored.ambient?.energy).toBe(0.5);
   });
 
-  it('should create settings with adjustments enabled', () => {
+  it('passes the contrast and saturation through unchanged', () => {
     const settings = createEnvironmentSettings(
       base({
         adjustment_enabled: true,
@@ -193,16 +192,33 @@ describe('createEnvironmentSettings', () => {
       DEFAULT_CLEAR_COLOR
     );
 
-    expect(settings.adjustments).not.toBeNull();
-    expect(settings.adjustments?.brightness).toBe(1.05);
     expect(settings.adjustments?.contrast).toBe(1.1);
     expect(settings.adjustments?.saturation).toBe(1.2);
   });
 
-  it('should create settings with SSR enabled', () => {
-    const settings = createEnvironmentSettings(base({ ssr_enabled: true }), DEFAULT_CLEAR_COLOR);
-    expect(settings.ssr).not.toBeNull();
-    expect(settings.ssr?.enabled).toBe(true);
+  it('converts the brightness from sRGB to linear, as environment_set_adjustment stores it', () => {
+    // `environment_storage.cpp:906`: the shader multiplies linear values by the stored brightness.
+    const settings = createEnvironmentSettings(
+      base({ adjustment_enabled: true, adjustment_brightness: 1.5 }),
+      DEFAULT_CLEAR_COLOR
+    );
+    expect(settings.adjustments?.brightness).toBeCloseTo(2.537155239, 9);
+  });
+
+  it('divides a brightness below the sRGB knee by 12.92 (edge case)', () => {
+    const settings = createEnvironmentSettings(
+      base({ adjustment_enabled: true, adjustment_brightness: 0.02 }),
+      DEFAULT_CLEAR_COLOR
+    );
+    expect(settings.adjustments?.brightness).toBeCloseTo(0.001547988, 9);
+  });
+
+  it('keeps a brightness of 0, which draws the frame black (edge case)', () => {
+    const settings = createEnvironmentSettings(
+      base({ adjustment_enabled: true, adjustment_brightness: 0 }),
+      DEFAULT_CLEAR_COLOR
+    );
+    expect(settings.adjustments?.brightness).toBe(0);
   });
 
   it('should create settings with all features enabled', () => {
@@ -215,7 +231,6 @@ describe('createEnvironmentSettings', () => {
         fog_light_color: { r: 0.9, g: 0.9, b: 1.0, a: 1 },
         adjustment_enabled: true,
         adjustment_brightness: 1.15,
-        ssr_enabled: true,
       }),
       DEFAULT_CLEAR_COLOR
     );
@@ -225,8 +240,7 @@ describe('createEnvironmentSettings', () => {
     expect(settings.background.energyMultiplier).toBe(1.5);
     expect(settings.fog?.density).toBe(0.002);
     expect(settings.fog?.color).toEqual({ r: 0.9, g: 0.9, b: 1.0, a: 1 });
-    expect(settings.adjustments?.brightness).toBe(1.15);
-    expect(settings.ssr).not.toBeNull();
+    expect(settings.adjustments?.brightness).toBeCloseTo(1.375824407, 9);
   });
 });
 

@@ -6,6 +6,7 @@
 
 import { BackgroundMode, type EnvironmentProperties, type EnvironmentSettings } from './types';
 import { scaledRgb, type Color } from '../../utils/colorParser';
+import { sRGBChannelToLinear } from '../../utils/colorSpace';
 import { GodotToneMapper } from './godotToneMapping';
 
 export type { EnvironmentSettings } from './types';
@@ -48,19 +49,7 @@ export function createEnvironmentSettings(
     fog: properties.fog_enabled ? depthFogFor(properties) : null,
     skyRotation: properties.sky_rotation,
     volumetricFog: properties.volumetric_fog_enabled ? volumetricFogFor(properties) : null,
-    adjustments: properties.adjustment_enabled
-      ? {
-          enabled: true,
-          brightness: properties.adjustment_brightness,
-          contrast: properties.adjustment_contrast,
-          saturation: properties.adjustment_saturation,
-        }
-      : null,
-    ssr: properties.ssr_enabled
-      ? {
-          enabled: true,
-        }
-      : null,
+    adjustments: properties.adjustment_enabled ? adjustmentsFor(properties) : null,
     glow: properties.glow_enabled
       ? {
           levels: glowLevelsFor(properties),
@@ -74,6 +63,18 @@ export function createEnvironmentSettings(
           luminanceCap: properties.glow_hdr_luminance_cap,
         }
       : null,
+  };
+}
+
+/**
+ * `environment_set_adjustment` stores the brightness converted from sRGB to linear
+ * (`environment_storage.cpp:906`), and the shader multiplies linear values by it.
+ */
+function adjustmentsFor(properties: EnvironmentProperties): NonNullable<EnvironmentSettings['adjustments']> {
+  return {
+    brightness: sRGBChannelToLinear(properties.adjustment_brightness),
+    contrast: properties.adjustment_contrast,
+    saturation: properties.adjustment_saturation,
   };
 }
 

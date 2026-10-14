@@ -2044,7 +2044,7 @@ tr:last-child td{border-bottom:0}
         <span class="status st-limitation">Limitation</span>
       </header>
       
-      <div class="prose intro"><p>The resource a <code>WorldEnvironment</code> holds: background and sky, ambient light, tone mapping, glow, depth fog and volumetric fog. The editor injects a preview Environment on a scene that declares none (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0025-preview-lighting-mirrors-the-godot-editor.md" target="_blank" rel="noopener">ADR-0025</a>). Each section drives one feature from its own fixture.</p></div>
+      <div class="prose intro"><p>The resource a <code>WorldEnvironment</code> holds: background and sky, ambient light, tone mapping, glow, colour adjustments, depth fog and volumetric fog. The editor injects a preview Environment on a scene that declares none (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0025-preview-lighting-mirrors-the-godot-editor.md" target="_blank" rel="noopener">ADR-0025</a>). Each section drives one feature from its own fixture.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>Background sky</h3><span class="status st-done">Done</span></div>
@@ -2117,6 +2117,23 @@ tr:last-child td{border-bottom:0}
 <ul><li><strong>Approximated</strong> The pyramid blurs with a 13-tap downsample and a 9-tap tent upsample rather than Godot's gaussian, so a bare glow buffer (REPLACE) differs slightly. A specular highlight's halo also spreads less.</li><li><strong>Approximated</strong> <code>glow_map</code> is not resolved, so a scene supplying one gets unmodulated glow.</li></ul></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Adjustments</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-environment-adjustments-godot.png" alt="Godot render of Adjustments">
+          <img class="img-ours" src="images/unit-environment-adjustments-ours.png" alt="Our render of Adjustments">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p><code>adjustment_enabled</code> with brightness 1.3, contrast 1.25 and saturation 0.5 over an unshaded box and a colour background. The whole frame, background included, is brighter, harder and greyer, as in Godot. The adjustments act after the tone curve and the glow under every tone mapper.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Depth fog</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
@@ -2173,7 +2190,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects. Every scalar goes through the shared <code>floatOr</code>, <code>intOr</code>, <code>enumOr</code> and <code>boolOr</code> decoders. Each logs the bad literal and falls back to Godot's default. An unreadable <code>glow_intensity</code> therefore renders as default glow rather than as no Environment at all. A depth-mode fog with no stored <code>fog_density</code> takes 1. <code>fog_depth_begin</code> and <code>fog_depth_end</code> drag each other along, so the begin never passes the end, as Godot's setters do.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> <code>tonemap_exposure</code> under the default LINEAR tonemapper is ignored, because three applies exposure only while a tone curve is active.</li></ul></div>
+<ul><li><strong>Approximated</strong> <code>tonemap_exposure</code> under LINEAR is ignored when no glow, blended surface or adjustment runs the tone-map pass: three applies exposure only under a tone curve.</li><li><strong>Shader missing</strong> <code>ssr_enabled</code> draws no screen-space reflections.</li><li><strong>Resource gap</strong> <code>adjustment_color_correction</code> is not applied, so a colour-correction texture leaves the frame unchanged.</li></ul></div>
     </article>
     <article class="sheet" data-type="FABRIK3D" hidden>
       <header class="sheet-head">
