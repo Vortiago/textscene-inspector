@@ -707,12 +707,14 @@ func _render_3d(target: Node) -> void:
 	_advance_particles(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
+		_hide_canvas_layers(target)
 		_apply_preview_lighting(target)
 	# A refusal must not reach _place_camera: rendering nothing is the whole point.
 	if not _build_csg(target):
 		return
 	_place_camera(target)
 	await _converge()
+	await _capture_reflection_probes(target)
 	var frame: Image = await _converged_frame()
 	frame.save_png(OUT)
 	_write_bounds(target)
@@ -890,6 +892,15 @@ func _freeze_game_logic(node: Node) -> void:
 	for child in node.get_children():
 		_freeze_game_logic(child)
 
+# The editor keeps the edited scene under the 2D editor's viewport
+# (editor_node.cpp:8648), and a CanvasLayer attaches to its own viewport
+# (canvas_layer.cpp:174-177), so the 3D editor viewport never draws one.
+func _hide_canvas_layers(node: Node) -> void:
+	if node is CanvasLayer:
+		(node as CanvasLayer).visible = false
+	for child in node.get_children():
+		_hide_canvas_layers(child)
+
 # EDITOR-MODE PARTICLES. The pause above stops game logic, which is what the
 # Node3D editor does — except for one thing it does NOT do: particles keep
 # running there. CPUParticles2D::_notification's ENTER_TREE arm is a bare
@@ -942,6 +953,23 @@ func _converge() -> void:
 	for _i in 6:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
+
+# An UPDATE_ONCE ReflectionProbe renders its faces in one frame, then filters one
+# roughness layer per frame until its mipmaps run out (light_storage.cpp:1661-1668),
+# capped at roughness_layers (:1525). The scene renders one such probe at a time
+# (renderer_scene_cull.cpp:3739-3751), so the editor shows each capture only later.
+func _capture_reflection_probes(node: Node) -> void:
+	var layers: int = ProjectSettings.get_setting("rendering/reflections/sky_reflections/roughness_layers")
+	for _frame in _count_once_probes(node) * layers:
+		await RenderingServer.frame_post_draw
+
+func _count_once_probes(node: Node) -> int:
+	var count := 0
+	if node is ReflectionProbe and (node as ReflectionProbe).update_mode == ReflectionProbe.UPDATE_ONCE:
+		count = 1
+	for child in node.get_children():
+		count += _count_once_probes(child)
+	return count
 
 # The frame to capture. Temporal volumetric fog mixes temporal_reprojection_amount
 # of a history that starts black (volumetric_fog_process.glsl:683, fog.cpp:482),

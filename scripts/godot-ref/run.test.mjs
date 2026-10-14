@@ -727,6 +727,55 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     expect(largestGap).toBeLessThanOrEqual(1);
   }, 360_000);
 
+  /**
+   * An UPDATE_ONCE ReflectionProbe captures over several frames, and the scene renders one such
+   * probe at a time (`renderer_scene_cull.cpp:3739-3751`), so six frames leave most probes empty.
+   * A capture that waits them out shows what UPDATE_ALWAYS shows at once. The two filter the
+   * roughness layers differently (`light_storage.cpp:1655,1661`), so they agree on average only.
+   */
+  it('captures every ReflectionProbe that updates once before it saves the frame', async () => {
+    const capture = async (variant) => {
+      const out = join(await scratchDir(), 'probe.png');
+      await renderReference({
+        scene: join(import.meta.dirname, 'scenes', `reflection-probe-capture-${variant}.tscn`),
+        out,
+        width: 160,
+        height: 120,
+        camera: [0, 2.5, 6],
+        lookAt: [0, 0.5, 0],
+      });
+      return PNG.sync.read(await readFile(out)).data;
+    };
+    const [once, always] = [await capture('once'), await capture('always')];
+
+    const meanGap = once.reduce((sum, value, i) => sum + Math.abs(value - always[i]), 0) / once.length;
+    expect(meanGap).toBeLessThanOrEqual(1);
+  }, 360_000);
+
+  /**
+   * The editor keeps the edited scene under its 2D viewport (`editor_node.cpp:8648`), and a
+   * CanvasLayer attaches to its own viewport (`canvas_layer.cpp:174-177`), so the 3D editor
+   * viewport never draws one. A running game draws it over the 3D frame.
+   */
+  it('draws no CanvasLayer over a 3D scene under the previews', async () => {
+    const centre = async (previews) => {
+      const out = join(await scratchDir(), 'overlay.png');
+      await renderReference({
+        scene: join(import.meta.dirname, 'scenes', 'canvas-layer-over-3d.tscn'),
+        out,
+        width: 160,
+        height: 120,
+        previews,
+      });
+      const [pixel] = probePixels(await readFile(out), [[80, 60]]);
+      return pixel.rgb;
+    };
+    const MAGENTA = [255, 0, 255];
+
+    expect(await centre(true)).not.toEqual(MAGENTA);
+    expect(await centre(false)).toEqual(MAGENTA);
+  }, 360_000);
+
   it('lights the scene only because of the previews — --no-previews is runtime semantics', async () => {
     const [lit, unlit] = [await render(true), await render(false)];
     // The same geometry and camera. With the previews the ground is lit. Without them it is the
