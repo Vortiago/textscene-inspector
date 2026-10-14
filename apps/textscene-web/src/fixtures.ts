@@ -3103,6 +3103,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Emission Add",
+    "file": "unit-material-emission-add.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Emission Hdr",
     "file": "unit-material-emission-hdr.tscn",
     "category": "Unit - Materials"

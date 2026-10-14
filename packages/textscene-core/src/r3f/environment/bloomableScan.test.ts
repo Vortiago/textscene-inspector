@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { emissionTextureAddUserData } from '../materials/emissionTextureAdd';
 import { sceneHasBloomableEmissive } from './bloomableScan';
 
 /**
@@ -30,6 +31,13 @@ describe('sceneHasBloomableEmissive', () => {
     // channel, where Rec.709 luminance would rank it the dimmest thing in the frame.
     const blue = emissiveMesh([0, 0, 1], 2.3);
     expect(sceneHasBloomableEmissive(sceneOf(blue), 1)).toBe(true);
+  });
+
+  it('counts an ADD emission texture at its energy, over a black colour', () => {
+    const textured = emissiveMesh([0, 0, 0], 2);
+    (textured.material as THREE.Material).userData = emissionTextureAddUserData(2);
+    expect(sceneHasBloomableEmissive(sceneOf(textured), 1)).toBe(true);
+    expect(sceneHasBloomableEmissive(sceneOf(emissiveMesh([0, 0, 0], 2)), 1)).toBe(false);
   });
 
   it('is false when peak times intensity only reaches the threshold', () => {

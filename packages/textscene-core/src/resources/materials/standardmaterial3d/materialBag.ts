@@ -17,6 +17,10 @@ import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../..
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
+import {
+  emissionTextureAddInjection,
+  emissionTextureAddUserData,
+} from '../../../r3f/materials/emissionTextureAdd';
 import { threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { lightModesInjection, lightModesUserData } from '../../../r3f/lightModes';
 import { SPECULAR_OCCLUSION_DISABLED, specularOcclusionUserData } from '../../../r3f/godotIndirectSpecular';
@@ -365,7 +369,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
     // pass-through in `resolveEmission` would splat every scalar onto the material.
     emissive: new THREE.Color().fromArray(emission.emissive),
     emissiveIntensity: emission.emissiveIntensity,
-    userData,
+    userData: { ...userData, ...emissionTextureAddUserData(emission.addedTextureEnergy) },
     ...blend,
   };
 
@@ -376,6 +380,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
+    emissionTextureAddInjection(emission.addedTextureEnergy),
     targetMap,
   ]);
   if (!needsPhysicalMaterial(scalars)) {

@@ -5,12 +5,19 @@
  */
 
 import type * as THREE from 'three';
+import { addedEmissionTextureEnergy } from '../materials/emissionTextureAdd';
 
+/**
+ * The colour's peak at its intensity, plus the most an ADD emission texture adds: a texel of 1 at
+ * its energy. An upper bound, as the scan only decides whether the bright pass runs.
+ */
 function isBloomable(material: THREE.Material, threshold: number): boolean {
   const standard = material as THREE.MeshStandardMaterial;
   const emissive = standard.emissive;
-  const intensity = standard.emissiveIntensity ?? 0;
-  return !!emissive && intensity > 0 && Math.max(emissive.r, emissive.g, emissive.b) * intensity > threshold;
+  if (!emissive) return false;
+  const colourPeak =
+    Math.max(emissive.r, emissive.g, emissive.b) * Math.max(0, standard.emissiveIntensity ?? 0);
+  return colourPeak + addedEmissionTextureEnergy(material) > threshold;
 }
 
 /**

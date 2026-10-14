@@ -10,6 +10,7 @@ import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
 import { heightmapSampledBy, patchedFragment } from '../../../r3f/testing/patchedFragment';
+import { addedEmissionTextureEnergy } from '../../../r3f/materials/emissionTextureAdd';
 
 function build(
   properties: Record<string, string>,
@@ -398,16 +399,35 @@ describe('the imperative adapter — texture slots', () => {
     expect(material.emissiveMap!.source).toBe(texture.source);
   });
 
-  it('gives an emission texture over Godot’s default black colour a white emissive', () => {
-    // `hint_default_black` means ADD over a black colour reduces to `tex * energy`,
-    // which three spells as a white emissive. Multiplying the black through would
-    // render nothing where Godot renders the whole texture.
+  it('adds an emission texture at its energy over Godot’s default black colour', () => {
+    // ADD is `(emission + tex) * energy` (`material.cpp:1788`), so a black colour leaves the
+    // texture's own term, which the program adds at the recorded energy.
     const material = build(
       { emission_enabled: 'true', emission_energy_multiplier: '2' },
       { emission_texture: loadedTexture() }
     );
-    expect(material.emissive.getHex()).toBe(0xffffff);
-    expect(material.emissiveIntensity).toBe(2);
+    expect(material.emissive.getHex()).toBe(0x000000);
+    expect(addedEmissionTextureEnergy(material)).toBe(2);
+  });
+
+  it('adds an emission texture to a lit colour, not multiplies it', () => {
+    const material = build(
+      { emission_enabled: 'true', emission: 'Color(1, 0, 0, 1)', emission_energy_multiplier: '3' },
+      { emission_texture: loadedTexture() }
+    );
+    expect(material.emissive.getHex()).toBe(0xff0000);
+    expect(material.emissiveIntensity).toBe(3);
+    expect(addedEmissionTextureEnergy(material)).toBe(3);
+    expect(patchedFragment(material)).toContain('totalEmissiveRadiance += emissiveColor.rgb');
+  });
+
+  it('multiplies an emission texture under MULTIPLY, adding nothing (edge case)', () => {
+    const material = build(
+      { emission_enabled: 'true', emission: 'Color(1, 0, 0, 1)', emission_operator: '1' },
+      { emission_texture: loadedTexture() }
+    );
+    expect(addedEmissionTextureEnergy(material)).toBe(0);
+    expect(patchedFragment(material)).not.toContain('godotEmissionTextureEnergy');
   });
 
   it('binds the heightmap texture for the parallax shift and moves no vertex', () => {

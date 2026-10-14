@@ -84,6 +84,9 @@ export const MATERIAL_SCENES = [
   // A wrapped albedo texture: an AtlasTexture binds its whole sheet, not its region, and a
   // CanvasTexture binds Godot's white default. A cropped sheet or a drawn diffuse shows at once.
   { name: 'material-albedo-atlas-texture', file: 'unit-material-albedo-atlas-texture.tscn' },
+  // ADD emission with a lit colour and a texture: each texel adds to the colour, so a multiply
+  // darkens the blue and green texels to black.
+  { name: 'material-emission-add', file: 'unit-material-emission-add.tscn' },
   // Decal `texture_albedo` as an inline GradientTexture2D. The albedo is all a
   // decal projects, so an unresolved slot leaves the floor bare.
   { name: 'decal-gradienttexture', file: 'unit-decal-gradienttexture.tscn' },
