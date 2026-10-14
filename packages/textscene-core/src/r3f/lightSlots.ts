@@ -1,14 +1,18 @@
 /**
- * The slots three's `WebGLLights` gives the lights `RE_Direct` shades, which a uniform array of
- * Godot terms reads by: directional lights, then sun lights, then point lights, then spot lights.
+ * The slots three's `WebGLLights` gives each light. A uniform array of Godot terms reads the lights
+ * `RE_Direct` shades by slot: directional lights, then sun lights, then point lights, then spot
+ * lights. Rect area lights have slots of their own.
  */
 
 import type * as THREE from 'three';
 import type { SceneLight } from './directionalShadow/lightLists.js';
 
 /** The kinds `RE_Direct` shades, in the order the array holds them. */
-const LIGHT_KINDS = ['directional', 'sun', 'point', 'spot'] as const;
-export type LightKind = (typeof LIGHT_KINDS)[number];
+const SHADED_LIGHT_KINDS = ['directional', 'sun', 'point', 'spot'] as const;
+export type ShadedLightKind = (typeof SHADED_LIGHT_KINDS)[number];
+
+/** The lights three gives a slot, by kind, each in slot order. */
+type SlottedLights = Record<ShadedLightKind, THREE.Light[]> & { area: THREE.RectAreaLight[] };
 
 /** The lights `RE_Direct` shades, as GLSL: the length of an array read by slot. */
 const SHADED_LIGHTS = 'NUM_DIR_LIGHTS + NUM_SUN_LIGHTS + NUM_POINT_LIGHTS + NUM_SPOT_LIGHTS';
@@ -46,13 +50,15 @@ export function slotArrayDeclaration(name: string): string {
 }
 
 /** The kind three's `WebGLLights` files the light under, which tests a sun before a directional light. */
-function kindOf(light: THREE.Light): LightKind | null {
+function kindOf(light: THREE.Light): keyof SlottedLights | null {
   const flags = light as THREE.Light & {
     isSunLight?: boolean;
     isDirectionalLight?: boolean;
     isPointLight?: boolean;
     isSpotLight?: boolean;
+    isRectAreaLight?: boolean;
   };
+  if (flags.isRectAreaLight) return 'area';
   if (flags.isSunLight) return 'sun';
   if (flags.isDirectionalLight) return 'directional';
   if (flags.isSpotLight) return 'spot';
@@ -78,25 +84,23 @@ export function renderedLights(lights: readonly SceneLight[], camera: THREE.Came
     .sort(shadowedAndTexturedFirst);
 }
 
-/** The lights `RE_Direct` shades through `camera`, by kind, each in slot order. */
-export function slottedLights(
-  lights: readonly SceneLight[],
-  camera: THREE.Camera
-): Record<LightKind, THREE.Light[]> {
-  const slotted: Record<LightKind, THREE.Light[]> = { directional: [], sun: [], point: [], spot: [] };
+/** The lights three gives a slot when it renders through `camera`, by kind, each in slot order. */
+export function slottedLights(lights: readonly SceneLight[], camera: THREE.Camera): SlottedLights {
+  const slotted: SlottedLights = { directional: [], sun: [], point: [], spot: [], area: [] };
   for (const light of renderedLights(lights, camera)) {
     const kind = kindOf(light);
-    if (kind) slotted[kind].push(light);
+    if (kind === 'area') slotted.area.push(light as THREE.RectAreaLight);
+    else if (kind) slotted[kind].push(light);
   }
   return slotted;
 }
 
-/** `valueOf` each light three gives a slot when it renders through `camera`, in slot order. */
+/** `valueOf` each light `RE_Direct` shades when it renders through `camera`, in slot order. */
 export function slotValues(
   lights: readonly SceneLight[],
   camera: THREE.Camera,
-  valueOf: (light: THREE.Light, kind: LightKind) => number
+  valueOf: (light: THREE.Light, kind: ShadedLightKind) => number
 ): number[] {
   const slotted = slottedLights(lights, camera);
-  return LIGHT_KINDS.flatMap((kind) => slotted[kind].map((light) => valueOf(light, kind)));
+  return SHADED_LIGHT_KINDS.flatMap((kind) => slotted[kind].map((light) => valueOf(light, kind)));
 }

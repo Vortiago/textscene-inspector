@@ -28,7 +28,16 @@ describe('slottedLights', () => {
       sun: [sun],
       point: [point],
       spot: [spot],
+      area: [],
     });
+  });
+
+  it('files a rect area light under the area kind, in slot order', () => {
+    const scene = new THREE.Scene();
+    const [plain, shadowed] = [new THREE.RectAreaLight(), new THREE.RectAreaLight()];
+    shadowed.castShadow = true;
+    scene.add(plain, shadowed);
+    expect(slottedLights(sceneLights(scene), camera).area).toEqual([shadowed, plain]);
   });
 
   it("puts a shadowed light first among its kind, as three's sort does", () => {

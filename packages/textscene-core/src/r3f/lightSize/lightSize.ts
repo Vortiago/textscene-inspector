@@ -8,7 +8,7 @@
 
 import type * as THREE from 'three';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
-import { slotValues, type LightKind } from '../lightSlots.js';
+import { slotValues, type ShadedLightKind } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
 import { declaredLightOf } from '../directionalShadow/splitSun.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
@@ -43,7 +43,7 @@ export function installLightSizeUniforms(): void {
  * shadows are on (`scene_forward_clustered.glsl:2617`), and a split sun takes the size of the light
  * it shades for. A light without a declaration, such as a GLB light, has no size.
  */
-function sizeOf(light: THREE.Light, kind: LightKind, drawsDirectionalSoftShadows: boolean): number {
+function sizeOf(light: THREE.Light, kind: ShadedLightKind, drawsDirectionalSoftShadows: boolean): number {
   const isDirectional = kind === 'directional' || kind === 'sun';
   if (isDirectional && !drawsDirectionalSoftShadows) return 0;
   const declared = declaredLightOf(light);

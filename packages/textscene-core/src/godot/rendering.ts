@@ -46,6 +46,12 @@ export const CANVAS_LAYER_MIN = -2147483648;
 export const CANVAS_LAYER_MAX = 2147483647;
 
 /**
+ * `CanvasLayer.layer`'s default (`canvas_layer.h:44`), so a default light (window 0..0) never
+ * lights a default HUD.
+ */
+export const DEFAULT_CANVAS_LAYER = 1;
+
+/**
  * `RenderingServer::MAX_2D_DIRECTIONAL_LIGHTS` (`servers/rendering/rendering_server.h:109`): the
  * DirectionalLight2Ds one viewport applies. `renderer_viewport.cpp:511` stops the list there.
  */

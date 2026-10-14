@@ -8,7 +8,7 @@
 
 import * as THREE from 'three';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
-import { renderedLights } from '../lightSlots.js';
+import { slottedLights } from '../lightSlots.js';
 import { LightUniformArrays, type LightArrays } from '../shaderPatch/lightUniformArrays.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
 import { writeAreaLightShadowUniforms } from './areaLightShadowUniforms.js';
@@ -67,15 +67,6 @@ export function installAreaLightUniforms(): void {
   arrays.install();
 }
 
-/** The rect area lights three gives a slot when it renders through `camera`, in slot order. */
-function slottedAreaLights(lights: readonly SceneLight[], camera: THREE.Camera): THREE.RectAreaLight[] {
-  return renderedLights(lights, camera).filter(isRectAreaLight);
-}
-
-function isRectAreaLight(light: THREE.Light): light is THREE.RectAreaLight {
-  return (light as THREE.RectAreaLight).isRectAreaLight === true;
-}
-
 /** An area light's local axes: it faces -Z, and its width runs along +X and its height along +Y. */
 export const AREA_LIGHT_AXES = {
   facing: new THREE.Vector3(0, 0, -1),
@@ -130,7 +121,7 @@ function writeLight(
  * as they were.
  */
 export function writeAreaLightUniforms(lights: readonly SceneLight[], camera: THREE.Camera): void {
-  const slotted = slottedAreaLights(lights, camera);
+  const slotted = slottedLights(lights, camera).area;
   arrays.write(slotted.length, (set) =>
     slotted.forEach((light, index) => writeLight(set, index, light, camera))
   );
