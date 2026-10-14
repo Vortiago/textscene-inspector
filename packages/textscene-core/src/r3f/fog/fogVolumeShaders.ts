@@ -168,18 +168,24 @@ float directionalShadow( int light, vec3 view ) {
 	return fogShadowFade( shadow, depth, fade.x, fade.y );
 }
 
+// .glsl:488-510 and 4.7.2 :674-690: a cell at local in the light's space, read from the
+// paraboloid in uvRect. The depth runs from the light over depthRange.
+float paraboloidShadow( vec3 local, vec4 uvRect, float bias, float depthRange ) {
+	vec3 direction = normalize( local );
+	direction.z = 1.0 + abs( direction.z );
+	vec2 uv = uvRect.xy + ( direction.xy / direction.z * 0.5 + 0.5 ) * uvRect.zw;
+	float cellDepth = ( length( local ) - bias ) / depthRange;
+	return fogShadow( cellDepth, atlasDepth( positionalShadowAtlas, uv ), depthRange );
+}
+
 // .glsl:488-510: the paraboloid the cell faces, in its slot. The depth runs from the light to its range.
 float omniShadow( int light, vec3 view, float bias, float depthRange ) {
 	vec3 local = ( shadowLookup( light, 0 ) * vec4( view, 1.0 ) ).xyz;
 	vec4 slot = lightTexel( light, ${FogLightTexel.SHADOW_SPLITS} );
 	vec2 flipOffset = slot.zw;
 	vec4 uvRect = vec4( slot.xy, vec2( max( flipOffset.x, flipOffset.y ) ) );
-	vec3 direction = normalize( local );
-	if ( direction.z >= 0.0 ) uvRect.xy += flipOffset;
-	direction.z = 1.0 + abs( direction.z );
-	vec2 uv = uvRect.xy + ( direction.xy / direction.z * 0.5 + 0.5 ) * uvRect.zw;
-	float cellDepth = ( length( local ) - bias ) / depthRange;
-	return fogShadow( cellDepth, atlasDepth( positionalShadowAtlas, uv ), depthRange );
+	if ( local.z >= 0.0 ) uvRect.xy += flipOffset;
+	return paraboloidShadow( local, uvRect, bias, depthRange );
 }
 
 // .glsl:566: Godot's fog subtracts the bias from its reversed depth before the divide. three's depth
@@ -198,16 +204,10 @@ float spotShadow( int light, vec3 view, float bias, float depthRange ) {
 }
 
 // 4.7.2 .glsl:671-691: the light's one paraboloid in its slot. The depth runs from the light over
-// its centre range, which the row's direction carries.
-float areaShadow( int light, vec3 view, float bias, float inverseCentreRange ) {
+// its centre range.
+float areaShadow( int light, vec3 view, float bias, float depthRange ) {
 	vec3 local = ( shadowLookup( light, 0 ) * vec4( view, 1.0 ) ).xyz;
-	vec4 uvRect = lightTexel( light, ${FogLightTexel.SHADOW_SPLITS} );
-	vec3 direction = normalize( local );
-	direction.z = 1.0 + abs( direction.z );
-	vec2 uv = uvRect.xy + ( direction.xy / direction.z * 0.5 + 0.5 ) * uvRect.zw;
-	float depthRange = 1.0 / inverseCentreRange;
-	float cellDepth = ( length( local ) - bias ) / depthRange;
-	return fogShadow( cellDepth, atlasDepth( positionalShadowAtlas, uv ), depthRange );
+	return paraboloidShadow( local, lightTexel( light, ${FogLightTexel.SHADOW_SPLITS} ), bias, depthRange );
 }
 
 // .glsl:425, :511 and :550-575
@@ -230,8 +230,11 @@ vec3 lightsAt( vec3 view ) {
 			vec3 width = lightTexel( i, ${FogLightTexel.AREA_WIDTH} ).xyz;
 			vec3 height = lightTexel( i, ${FogLightTexel.AREA_HEIGHT} ).xyz;
 			vec3 scatter = areaLightScatter( view, eye, position, color, direction, width, height );
-			float shadow = isShadowed ? fogShadowAttenuation( areaShadow( i, view, cone.w, direction.w ), cone.z ) : 1.0;
-			total += scatter * shadow;
+			// The row's direction carries one over the centre range (fogLights.ts).
+			if ( isShadowed && scatter != vec3( 0.0 ) ) {
+				scatter *= fogShadowAttenuation( areaShadow( i, view, cone.w, 1.0 / direction.w ), cone.z );
+			}
+			total += scatter;
 			continue;
 		}
 		vec3 toLight = position.xyz - view;

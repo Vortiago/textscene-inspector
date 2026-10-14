@@ -29,8 +29,8 @@ import { writeVec4 } from './writeVec4.js';
  * the kind, the shadow opacity and a positional light's depth bias. `SHADOW_MATRICES` starts four
  * matrices of four columns: a directional light's splits, or one positional light's lookup.
  * `SHADOW_SPLITS` holds a directional light's split ends, or an omni or area light's paraboloid
- * slot. An area light's width and height sit where a directional light's second split would, and
- * its direction carries its inverse centre range where a spot holds its cone cosine.
+ * slot. An area light's direction carries its inverse centre range where a spot holds its cone
+ * cosine.
  */
 export const FogLightTexel = {
   POSITION: 0,
@@ -38,11 +38,11 @@ export const FogLightTexel = {
   DIRECTION: 2,
   CONE: 3,
   SHADOW_MATRICES: 4,
-  AREA_WIDTH: 8,
-  AREA_HEIGHT: 9,
   SHADOW_SPLITS: 20,
   SHADOW_RANGES: 21,
   SHADOW_FADE: 22,
+  AREA_WIDTH: 23,
+  AREA_HEIGHT: 24,
 } as const;
 
 /** Where each value sits in the cone texel, as an index into the row. */
@@ -54,7 +54,7 @@ const Cone = {
 } as const;
 
 /** The texels in each row. */
-export const FOG_LIGHT_TEXELS = FogLightTexel.SHADOW_FADE + 1;
+export const FOG_LIGHT_TEXELS = FogLightTexel.AREA_HEIGHT + 1;
 
 const ROW_LENGTH = FOG_LIGHT_TEXELS * 4;
 
@@ -233,10 +233,14 @@ function writeOmniShadow(light: THREE.PointLight, camera: THREE.Camera): void {
   writePositionalShadow(shadow, lightPoseMatrix(light, worldToLight).invert(), camera);
 }
 
-/** An area light looks up from its own space into its one paraboloid's slot (`../positionalShadow/atlasAreaShadow.ts`). */
+/**
+ * An area light with a slot looks up from its own space into its one paraboloid's slot
+ * (`../positionalShadow/atlasAreaShadow.ts`).
+ */
 function writeAreaShadow(light: THREE.RectAreaLight, camera: THREE.Camera): void {
   if (!light.castShadow || !isAreaShadowLight(light)) return;
   const { shadow } = light;
+  if (shadow.slot === null) return;
   const rect = shadow.slotUvRect(paraboloidRect);
   writeTexel(FogLightTexel.SHADOW_SPLITS, rect.x, rect.y, rect.z, rect.w);
   writePositionalShadow(shadow, lightPoseMatrix(light, worldToLight).invert(), camera);
