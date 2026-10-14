@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { SKY_LAYER_GROUPS, type SkyLayers } from '../../resources/sky/skyLayers';
 import { SKY_LAYER_GROUP_NAMES, SkyLayerCubes, skyContribution, skyLayerSlots } from './skyLayerCubes';
@@ -53,6 +53,32 @@ describe('SkyLayerCubes', () => {
 
     expect(new Set([...firstCubes, ...secondCubes]).size).toBe(6);
     expect(sampledCubes(renderer)).toEqual(firstCubes);
+  });
+
+  it('uploads each group of layers as one cube, a mip each', async () => {
+    const { renderer } = await testRenderer();
+    const allocate = vi.spyOn(renderer.getContext() as WebGL2RenderingContext, 'texStorage2D');
+
+    new SkyLayerCubes(renderer, skyLayers(0.5)).show(1);
+
+    expect(allocate.mock.calls.map(([, levels, , width]) => [levels, width])).toEqual([
+      [3, 128],
+      [3, 32],
+      [1, 16],
+    ]);
+  });
+
+  it('filters between mips only in a cube that has them (edge case)', async () => {
+    const { renderer } = await testRenderer();
+    const context = renderer.getContext() as WebGL2RenderingContext;
+    const setParameter = vi.spyOn(context, 'texParameteri');
+
+    new SkyLayerCubes(renderer, skyLayers(0.5)).show(1);
+
+    const minFilters = setParameter.mock.calls
+      .filter(([, name]) => name === context.TEXTURE_MIN_FILTER)
+      .map(([, , filter]) => filter);
+    expect(minFilters).toEqual([context.LINEAR_MIPMAP_LINEAR, context.LINEAR_MIPMAP_LINEAR, context.LINEAR]);
   });
 
   it('uploads nothing after the first show while two skies take turns', async () => {

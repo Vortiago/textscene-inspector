@@ -121,7 +121,7 @@ export class SkyLayerCubes {
     skyContribution[0] = contribution;
     for (const group of SKY_LAYER_GROUP_NAMES) {
       const cube = this.handleOf(this.cubes[group]);
-      // A lost context clears the handle, so this uploads again after one.
+      // A restored context starts with no handle, so this uploads again after one.
       if (!cube.__webglTexture) this.renderer.initTexture(this.cubes[group]);
       this.handleOf(skyLayerSlots[group]).__webglTexture = cube.__webglTexture;
     }

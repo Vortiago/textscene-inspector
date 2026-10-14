@@ -4,7 +4,7 @@
  * texel writes, which shows what a material samples and what a render uploads.
  */
 
-import { vi } from 'vitest';
+import { onTestFinished, vi } from 'vitest';
 import type * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -41,12 +41,15 @@ export function RendererProbe({ onRenderer }: { onRenderer: (renderer: THREE.Web
   return null;
 }
 
-/** A recorded renderer of its own on a test root, for a test that needs no scene. */
+/** A recorded renderer on a test root of its own, unmounted when the test ends. */
 export async function testRenderer(): Promise<{
   renderer: THREE.WebGLRenderer;
   recording: TextureRecording;
 }> {
   let found: THREE.WebGLRenderer | undefined;
-  await ReactThreeTestRenderer.create(<RendererProbe onRenderer={(renderer) => (found = renderer)} />);
+  const root = await ReactThreeTestRenderer.create(
+    <RendererProbe onRenderer={(renderer) => (found = renderer)} />
+  );
+  onTestFinished(() => root.unmount());
   return { renderer: found!, recording: recordTextures(found!) };
 }

@@ -9,6 +9,7 @@ import { warningsOf } from './testing/logWarnings';
 import { functionBody } from './testing/glslSource';
 import {
   SKY_CONTRIBUTION_UNIFORM,
+  SKY_LAYER_GROUP_NAMES,
   SKY_LAYER_UNIFORMS,
   skyContribution,
   skyLayerSlots,
@@ -40,17 +41,14 @@ describe('installGodotSkyLighting', () => {
     );
   });
 
-  it.each(['sharp', 'rough', 'last'] as const)(
-    'gives every lit material the one shared %s layers cube',
-    (group) => {
-      installGodotSkyLighting();
-      const uniform = SKY_LAYER_UNIFORMS[group];
-      expect(THREE.ShaderLib.physical.uniforms[uniform]!.value).toBe(skyLayerSlots[group]);
-      expect(THREE.UniformsUtils.clone(THREE.ShaderLib.standard.uniforms)[uniform]!.value).toBe(
-        skyLayerSlots[group]
-      );
-    }
-  );
+  it.each(SKY_LAYER_GROUP_NAMES)('gives every lit material the one shared %s layers slot', (group) => {
+    installGodotSkyLighting();
+    const uniform = SKY_LAYER_UNIFORMS[group];
+    expect(THREE.ShaderLib.physical.uniforms[uniform]!.value).toBe(skyLayerSlots[group]);
+    expect(THREE.UniformsUtils.clone(THREE.ShaderLib.standard.uniforms)[uniform]!.value).toBe(
+      skyLayerSlots[group]
+    );
+  });
 
   it("gives every lit material the one shared sky's share of the ambient", () => {
     installGodotSkyLighting();

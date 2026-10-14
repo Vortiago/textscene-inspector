@@ -2,7 +2,7 @@
  * The sky bakes the lights the scene draws after they settle, and bakes again when they change.
  * The build itself needs a real GL context, so it is replaced by a spy on the lights it receives.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { createPortal } from '@react-three/fiber';
@@ -72,7 +72,10 @@ interface Mounted {
   update: (element: React.ReactNode) => Promise<void>;
 }
 
-/** Mounts `element` and runs the frame that bakes its sky, recording the textures from the start. */
+/**
+ * Mounts `element` until the test ends and runs the frame that bakes its sky, recording the textures
+ * from the start.
+ */
 async function mount(element: React.ReactNode): Promise<Mounted> {
   let gl: THREE.WebGLRenderer | undefined;
   const withProbe = (child: React.ReactNode) => (
@@ -82,6 +85,7 @@ async function mount(element: React.ReactNode): Promise<Mounted> {
     </>
   );
   const root = await ReactThreeTestRenderer.create(withProbe(element));
+  onTestFinished(() => root.unmount());
   recordTextures(gl!);
   await advance(root, 1);
   const scene = root.scene.instance as unknown as THREE.Scene;
