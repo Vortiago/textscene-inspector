@@ -75,3 +75,12 @@ export function parseColorToHex(value: string | undefined): number {
 export function formatColorRgba(color: Color): string {
   return `rgba(${(color.r * 255).toFixed(0)}, ${(color.g * 255).toFixed(0)}, ${(color.b * 255).toFixed(0)}, ${color.a.toFixed(2)})`;
 }
+
+/**
+ * Each sRGB channel times `energy`, alpha kept. Godot scales a background colour and a sky
+ * material's colours this way before any linear conversion (`render_forward_clustered.cpp:1999-2001`,
+ * `sky_material.cpp:41`).
+ */
+export function scaledRgb({ r, g, b, a }: Color, energy: number): Color {
+  return { r: r * energy, g: g * energy, b: b * energy, a };
+}

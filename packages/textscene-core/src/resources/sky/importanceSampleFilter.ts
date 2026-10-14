@@ -36,12 +36,13 @@ export function importanceSampleFilter(radianceSize: number): LayerFilter {
 }
 
 class ImportanceSampleFilter implements LayerFilter {
-  readonly chainSizes: readonly number[];
   /** Written only by `samplesOf`, the first time a layer bakes. They hold for every sky of the size. */
   private readonly samplesByLayer = new Map<number, Float64Array>();
 
-  constructor(readonly layout: SkyOctmapLayout) {
-    this.chainSizes = layout.downsampledSizes;
+  constructor(readonly layout: SkyOctmapLayout) {}
+
+  get chainSizes(): readonly number[] {
+    return this.layout.downsampledSizes;
   }
 
   /**

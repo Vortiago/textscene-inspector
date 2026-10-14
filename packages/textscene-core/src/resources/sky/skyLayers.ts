@@ -61,16 +61,16 @@ interface DownsampleStep {
   weights: Float32Array;
 }
 
-/** The cube texel each radiance octmap texel reads, for one cube size and one octmap layout. */
+/** The cube texel each radiance octmap texel reads, for one cube size and one octmap size. */
 interface BaseTexels {
   cubeSize: number;
-  layout: SkyOctmapLayout;
+  octmapSize: number;
   /** The face times the face's texel count, plus the texel, that each octmap texel reads. */
   texels: Int32Array;
 }
 
 /**
- * Written only by `baseTexelsOf`, on the first sky of a cube size and layout. 1.6 MB at 256, kept so
+ * Written only by `baseTexelsOf`, on the first sky of a cube size and octmap size. 1.6 MB at 256, kept so
  * a later sky builds its octmap without the 400,000 directions that place it.
  */
 let cachedBaseTexels: BaseTexels | null = null;
@@ -118,7 +118,7 @@ export function skyLayers(
   checkCube(radiance, size);
   const filter = radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(size);
   const mips: Octmap[] = [];
-  let source = baseOctmap(radiance, size * size, filter.layout, baseTexelsOf(size, filter.layout));
+  let source = baseOctmap(radiance, size * size, filter.layout.size, baseTexelsOf(size, filter.layout));
   for (const step of stepsOf(filter)) {
     source = downsample(source, step);
     mips.push(source);
@@ -154,8 +154,8 @@ function stepsOf(filter: LayerFilter): DownsampleStep[] {
 }
 
 function baseTexelsOf(cubeSize: number, layout: SkyOctmapLayout): Int32Array {
-  if (cachedBaseTexels?.cubeSize !== cubeSize || cachedBaseTexels.layout !== layout) {
-    cachedBaseTexels = { cubeSize, layout, texels: baseTexels(cubeSize, layout) };
+  if (cachedBaseTexels?.cubeSize !== cubeSize || cachedBaseTexels.octmapSize !== layout.size) {
+    cachedBaseTexels = { cubeSize, octmapSize: layout.size, texels: baseTexels(cubeSize, layout) };
   }
   return cachedBaseTexels.texels;
 }
@@ -196,10 +196,10 @@ function downsampleStep(size: number, padding: number): DownsampleStep {
 function baseOctmap(
   radiance: readonly Float32Array[],
   faceTexels: number,
-  layout: SkyOctmapLayout,
+  octmapSize: number,
   texels: Int32Array
 ): Octmap {
-  const octmap = blankOctmap(layout.size);
+  const octmap = blankOctmap(octmapSize);
   for (let i = 0; i < texels.length; i += 1) {
     const face = radiance[floor(texels[i]! / faceTexels)]!;
     const at = (texels[i]! % faceTexels) * 4;

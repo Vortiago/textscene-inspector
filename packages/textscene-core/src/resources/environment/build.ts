@@ -5,7 +5,7 @@
  */
 
 import { BackgroundMode, type EnvironmentProperties, type EnvironmentSettings } from './types';
-import type { Color } from '../../utils/colorParser';
+import { scaledRgb, type Color } from '../../utils/colorParser';
 import { GodotToneMapper } from './godotToneMapping';
 
 export type { EnvironmentSettings } from './types';
@@ -20,14 +20,6 @@ function whiteFor(properties: EnvironmentProperties): number {
   return properties.tonemap_mode === GodotToneMapper.AGX
     ? properties.tonemap_agx_white
     : properties.tonemap_white;
-}
-
-/**
- * A background colour as Godot clears to it: each sRGB channel times the energy, alpha kept
- * (`render_forward_clustered.cpp:1999-2001`).
- */
-function scaledRgb({ r, g, b, a }: Color, energy: number): Color {
-  return { r: r * energy, g: g * energy, b: b * energy, a };
 }
 
 /**

@@ -11,7 +11,7 @@ import {
   SKY_RADIANCE_SIZES,
   SKY_RADIANCE_SIZE_DEFAULT,
 } from '../../godot/skyReflection';
-import { enumOr, floatOr, parseOptionalInt } from '../../parser/valueParsers';
+import { floatOr, parseOptionalInt } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
 
 const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
@@ -33,7 +33,7 @@ export function skyMaterialRef(
 const PROCESS_MODES: readonly SkyProcessMode[] = ['automatic', 'quality', 'incremental', 'real-time'];
 
 /**
- * A `Sky`'s process mode and radiance size, for the linter. An invalid value reads as Godot's
+ * A `Sky`'s process mode and radiance size as Godot stores them. An invalid value reads as Godot's
  * default and logs nothing, as the Sky validators report it. `set_radiance_size` refuses an index
  * past the table (`sky.cpp:34`), so such a size stays at the default.
  */
@@ -50,31 +50,17 @@ function entryOr<T>(table: readonly T[], value: string | undefined, fallback: T)
   return (index === undefined ? undefined : table[index]) ?? fallback;
 }
 
-function processModeOf(data: Record<string, string>): SkyProcessMode {
-  return PROCESS_MODES[enumOr(data.process_mode, 0, indices(PROCESS_MODES), 'process_mode')]!;
-}
-
-function radianceSizeOf(data: Record<string, string>): number {
-  const defaultIndex = SKY_RADIANCE_SIZES.indexOf(SKY_RADIANCE_SIZE_DEFAULT);
-  return SKY_RADIANCE_SIZES[
-    enumOr(data.radiance_size, defaultIndex, indices(SKY_RADIANCE_SIZES), 'radiance_size')
-  ]!;
-}
-
-function indices(table: readonly unknown[]): number[] {
-  return table.map((_, index) => index);
-}
-
 /**
- * The `Sky` whose properties are `data`, drawing `material`. Godot bakes a real-time sky at
- * `REAL_TIME_SIZE` whatever its `radiance_size` (`sky.cpp:590-592`).
+ * The `Sky` whose properties are `data`, drawing `material`. An invalid value reads as
+ * `decodeSkyProcessing` reads it. Godot bakes a real-time sky at `REAL_TIME_RADIANCE_SIZE` whatever
+ * its `radiance_size` (`sky.cpp:590-592`).
  */
 export function decodeSky(data: Record<string, string>, material: SkyProperties): Sky {
-  const processMode = processModeOf(data);
+  const { processMode, radianceSize } = decodeSkyProcessing(data);
   return {
     material,
     radianceFilter: radianceFilter(processMode),
-    radianceSize: processMode === 'real-time' ? REAL_TIME_RADIANCE_SIZE : radianceSizeOf(data),
+    radianceSize: processMode === 'real-time' ? REAL_TIME_RADIANCE_SIZE : radianceSize,
   };
 }
 

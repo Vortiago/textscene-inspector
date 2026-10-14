@@ -90,7 +90,8 @@ export function buildSkyEnvironment(
 
   const radianceSize = Math.min(sky.radianceSize, LARGEST_RADIANCE_SIZE);
   const backgroundTarget = cubeTarget(BACKGROUND_SIZE);
-  const radianceTarget = radianceSize === BACKGROUND_SIZE ? backgroundTarget : cubeTarget(radianceSize);
+  const hasOwnRadianceCube = radianceSize !== BACKGROUND_SIZE;
+  const radianceTarget = hasOwnRadianceCube ? cubeTarget(radianceSize) : backgroundTarget;
   let pmrem: THREE.PMREMGenerator | null = null;
   let prefiltered: THREE.WebGLRenderTarget | null = null;
   let layers: SkyLayers;
@@ -99,7 +100,7 @@ export function buildSkyEnvironment(
     // The cube camera sits at the origin inside the unit box, so each face
     // samples the same directions Godot's `EYEDIR` covers.
     renderCube(gl, skyScene, backgroundTarget);
-    if (radianceTarget !== backgroundTarget) renderCube(gl, skyScene, radianceTarget);
+    if (hasOwnRadianceCube) renderCube(gl, skyScene, radianceTarget);
     layers = skyLayers(readCubeRadiance(gl, radianceTarget), radianceSize, sky.radianceFilter);
 
     pmrem = new THREE.PMREMGenerator(gl);
@@ -113,7 +114,7 @@ export function buildSkyEnvironment(
     // The sky scene renders once, so its mesh and panorama are freed here and
     // not held for the environment's lifetime. A radiance cube of its own
     // has served the PMREM and the layers by now.
-    if (radianceTarget !== backgroundTarget) radianceTarget.dispose();
+    if (hasOwnRadianceCube) radianceTarget.dispose();
     pmrem?.dispose();
     geometry.dispose();
     material.dispose();

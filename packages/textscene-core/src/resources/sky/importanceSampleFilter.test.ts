@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { importanceSampleFilter } from './importanceSampleFilter';
-
-const FILTER = importanceSampleFilter(256);
 import { blankOctmap, type Octmap } from './octmapImage';
 import type { OctDirection } from '../../godot/octmap';
+
+const FILTER = importanceSampleFilter(256);
 
 function chain(value: number): Octmap[] {
   return FILTER.chainSizes.map((size) => {
