@@ -2268,6 +2268,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Lights"
   },
   {
+    "name": "Area Light Texture",
+    "file": "unit-area-light-texture.tscn",
+    "category": "Unit - Lights"
+  },
+  {
     "name": "Area Light3d",
     "file": "unit-area-light3d.tscn",
     "category": "Unit - Lights"

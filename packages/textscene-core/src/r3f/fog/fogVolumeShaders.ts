@@ -97,10 +97,9 @@ vec3 froxelView( vec3 unit ) {
 	return vec3( ( unit.xy * 2.0 - 1.0 ) * halfExtents, - fogLength * depth );
 }
 
-// 4.7.2 volumetric_fog_process.glsl:620-695, without the shadow, which lightsAt applies, and the
-// area texture. Godot keeps the distance at 1 or more against flicker at froxels the light passes
-// through (:642-649).
-vec3 areaLightScatter( vec3 view, vec3 eye, vec4 position, vec4 color, vec4 facing, vec3 width, vec3 height ) {
+// 4.7.2 volumetric_fog_process.glsl:620-695, without the shadow, which lightsAt applies. Godot
+// keeps the distance at 1 or more against flicker at froxels the light passes through (:642-649).
+vec3 areaLightScatter( vec3 view, vec3 eye, vec4 position, vec4 color, vec4 facing, vec3 width, vec3 height, vec4 textureRect, float maxMipmap ) {
 	if ( dot( width, width ) <= 1e-4 || dot( height, height ) <= 1e-4 ) return vec3( 0.0 );
 	float widthLength = length( width );
 	float heightLength = length( height );
@@ -127,9 +126,10 @@ vec3 areaLightScatter( vec3 view, vec3 eye, vec4 position, vec4 color, vec4 faci
 	points[ 3 ] = position.xyz - halfWidth + halfHeight - view;
 	// ltc_evaluate_diff builds its basis from a fixed axis, not the view (area_lights_inc.glsl:348).
 	vec3 basisAxis = abs( lightDirection.z ) < 0.7 ? vec3( 0.0, 0.0, - 1.0 ) : vec3( 1.0, 0.0, 0.0 );
-	float diffuse = godotLtcIntegral( lightDirection, basisAxis, mat3( 1.0 ), points ) * ( 2.0 * PI );
+	vec3 textureColor;
+	float diffuse = godotLtcIntegral( lightDirection, basisAxis, mat3( 1.0 ), points, textureRect, maxMipmap, textureColor ) * ( 2.0 * PI );
 	float cosTheta = toLightLength > 1e-2 ? dot( lightDirection, eye ) : 0.0;
-	return color.rgb * attenuation * diffuse * inFront * henyey_greenstein( cosTheta, phaseG );
+	return color.rgb * textureColor * attenuation * diffuse * inFront * henyey_greenstein( cosTheta, phaseG );
 }
 
 // Godot reads an atlas's depth through a linear sampler that clamps at the edge (.glsl:417, :507,
@@ -227,9 +227,11 @@ vec3 lightsAt( vec3 view ) {
 			continue;
 		}
 		if ( kind == ${FogLightKind.AREA} ) {
-			vec3 width = lightTexel( i, ${FogLightTexel.AREA_WIDTH} ).xyz;
+			// The row's width carries the texture's highest mip (fogLights.ts).
+			vec4 width = lightTexel( i, ${FogLightTexel.AREA_WIDTH} );
 			vec3 height = lightTexel( i, ${FogLightTexel.AREA_HEIGHT} ).xyz;
-			vec3 scatter = areaLightScatter( view, eye, position, color, direction, width, height );
+			vec4 textureRect = lightTexel( i, ${FogLightTexel.AREA_TEXTURE} );
+			vec3 scatter = areaLightScatter( view, eye, position, color, direction, width.xyz, height, textureRect, width.w );
 			// The row's direction carries one over the centre range (fogLights.ts).
 			if ( isShadowed && scatter != vec3( 0.0 ) ) {
 				scatter *= fogShadowAttenuation( areaShadow( i, view, cone.w, 1.0 / direction.w ), cone.z );

@@ -12,6 +12,7 @@ import { grayToRgba, modulateWithGradient } from './gradientModulation';
 import { noiseSampler } from './noiseGenerator';
 import { noiseImage, seamlessNoiseImage } from './noiseImage';
 import { bumpMapToNormalMap } from './normalMap';
+import { reversedRows } from '../../../utils/reversedRows';
 
 /** Everything the pixels depend on, already decoded and resolved: a structured-clone value. */
 export interface NoiseTexture2DInput {
@@ -26,7 +27,7 @@ export interface NoiseTexture2DInput {
  * `RangeError`, which the caller owns.
  */
 export function noiseTexture2DPixels({ tex, noise, colorRamp }: NoiseTexture2DInput): Uint8Array {
-  return bottomUp(rgbaPixels(tex, noise, colorRamp), tex.width, tex.height);
+  return reversedRows(rgbaPixels(tex, noise, colorRamp), tex.width, tex.height);
 }
 
 /** The noise image, then the colour ramp, then the bump-to-normal pass, as top-down RGBA. */
@@ -53,14 +54,4 @@ function rgbaPixels(
       : bumpMapToNormalMap(gray, 1, width, height, tex.bumpStrength);
   }
   return colorRamp ? modulateWithGradient(gray, colorRamp) : grayToRgba(gray);
-}
-
-/** `rgba`'s rows in reverse order, the layout a typed-array `DataTexture` needs. */
-function bottomUp(rgba: Uint8Array, width: number, height: number): Uint8Array {
-  const flipped = new Uint8Array(rgba.length);
-  const rowBytes = width * 4;
-  for (let y = 0; y < height; y++) {
-    flipped.set(rgba.subarray(y * rowBytes, (y + 1) * rowBytes), (height - 1 - y) * rowBytes);
-  }
-  return flipped;
 }

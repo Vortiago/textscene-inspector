@@ -21,6 +21,7 @@ import {
   decodeExtAtlasTextureRef,
   resolveAtlasTexture,
   resolveAtlasTextureRef,
+  type AtlasTextureReference,
 } from './textures/atlastexture/resolveAtlasTexture.js';
 import { ATLAS_TEXTURE_TYPE } from './textures/atlastexture/types.js';
 import { decodeGradientTexture2D } from './textures/gradienttexture2d/decode.js';
@@ -39,6 +40,49 @@ export function useTexture2D(
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[]
 ): Texture2DResult {
+  const slot = useTexture2DSlot(ref, externalResources, internalResources);
+
+  // The crop is cache-owned and pinned while mounted, like the procedural texture. Keyed on the
+  // previewed scene's resources: its re-parse invalidates the crop, a `.tres` reload does not.
+  const { atlas, source } = slot;
+  const cropped = useMemo(
+    () => (atlas ? resolveAtlasTexture(atlas, source, internalResources) : null),
+    [atlas, source, internalResources]
+  );
+  useProceduralTexturePins(cropped ? [cropped.key] : []);
+
+  if (!atlas) return slot.result;
+  // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
+  // draws nothing and is no resource error.
+  return { texture: cropped?.texture ?? null, missing: slot.result.missing };
+}
+
+/**
+ * The texture Godot's `get_rid()` names, for a slot the rendering server reads by RID. An
+ * AtlasTexture names its whole sheet there (`scene/resources/atlas_texture.cpp:55-61`).
+ */
+export function useTexture2DRid(
+  ref: string | undefined,
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[]
+): Texture2DResult {
+  return useTexture2DSlot(ref, externalResources, internalResources).result;
+}
+
+interface Texture2DSlot {
+  /** The AtlasTexture the slot names, or null for any other form. */
+  atlas: AtlasTextureReference | null;
+  /** The image or procedural texture behind the slot: an AtlasTexture's sheet. */
+  source: THREE.Texture | null;
+  /** The slot's result with an AtlasTexture's sheet in its place. */
+  result: Texture2DResult;
+}
+
+function useTexture2DSlot(
+  ref: string | undefined,
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[]
+): Texture2DSlot {
   // An AtlasTexture windows the sheet it names, so the sheet's ref resolves below. Unwrapped before
   // the atlas lookup: a CanvasTexture may wrap an AtlasTexture, and the raw ref loses the window.
   const unwrapped = useMemo(() => unwrapCanvasTextureRef(ref, internalResources), [ref, internalResources]);
@@ -89,30 +133,15 @@ export function useTexture2D(
   const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
   const source = procedural.texture ?? loaded.value ?? null;
 
-  // The crop is cache-owned and pinned while mounted, like the procedural texture. Keyed on the
-  // previewed scene's resources: its re-parse invalidates the crop, a `.tres` reload does not.
-  const cropped = useMemo(
-    () => (atlas ? resolveAtlasTexture(atlas, source, internalResources) : null),
-    [atlas, source, internalResources]
-  );
-  useProceduralTexturePins(cropped ? [cropped.key] : []);
-
-  if (!ref) return { texture: null, missing: false };
+  if (!ref) return { atlas, source, result: { texture: null, missing: false } };
 
   if (extAtlasPath && !extAtlas) {
     // Missing only once `extAtlasFile` leaves 'pending': the file is absent or another type.
-    return { texture: null, missing: extAtlasFile.status !== 'pending' };
+    return { atlas, source, result: { texture: null, missing: extAtlasFile.status !== 'pending' } };
   }
 
   const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');
-  if (atlas) {
-    // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
-    // draws nothing and is no resource error.
-    return { texture: cropped?.texture ?? null, missing: sourceMissing };
-  }
-  if (procedural.claimed) return { texture: procedural.texture, missing: false };
-  if (!path) return { texture: null, missing: true };
-  return { texture: loaded.value ?? null, missing: loaded.status === 'unavailable' };
+  return { atlas, source, result: { texture: source, missing: sourceMissing } };
 }
 
 /** Pixel dimensions of a Texture2D slot, in the `Vec2` shape the rect solver uses. */
