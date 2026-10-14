@@ -6,8 +6,7 @@
 
 import * as THREE from 'three';
 import { DIRECTIONAL_SHADOW_SIZE_DEFAULT } from '../../godot/directionalShadow.js';
-import { AtlasColourTexture } from '../shadowFilter/atlasColourTexture.js';
-import { AtlasDepthTexture, atlasTargetOf } from '../shadowFilter/atlasDepthTexture.js';
+import { atlasTargetOf, createShadowAtlas } from '../shadowFilter/atlasDepthTexture.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 
 /** The uniform every lit material samples the atlas through. */
@@ -16,20 +15,14 @@ export const DIRECTIONAL_SHADOW_ATLAS_UNIFORM = 'directionalShadowAtlas';
 /** The uniform every lit material reads the atlas's raw depth through, from its colour. */
 export const DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM = 'directionalShadowAtlasColour';
 
-/**
- * The target as three builds a PCF shadow map (r186 `WebGLShadowMap.js:253-266`), the type
- * `TscnCanvas` asks for.
- */
+/** The atlas in the depth type `TscnCanvas` asks for. */
 function createAtlas(): THREE.WebGLRenderTarget {
-  const atlas = new THREE.WebGLRenderTarget(DIRECTIONAL_SHADOW_SIZE_DEFAULT, DIRECTIONAL_SHADOW_SIZE_DEFAULT);
-  atlas.texture = new AtlasColourTexture('DirectionalShadowAtlasColour', DIRECTIONAL_SHADOW_SIZE_DEFAULT);
-  atlas.depthTexture = new AtlasDepthTexture({
+  return createShadowAtlas({
     name: 'DirectionalShadowAtlas',
     size: DIRECTIONAL_SHADOW_SIZE_DEFAULT,
     type: THREE.UnsignedIntType,
     compare: THREE.LessEqualCompare,
   });
-  return atlas;
 }
 
 /**

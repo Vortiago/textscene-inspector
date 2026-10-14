@@ -9,8 +9,7 @@ import {
   POSITIONAL_SHADOW_ATLAS_DEPTH_BITS,
   type PositionalShadowSlot,
 } from '../../godot/positionalShadowAtlas.js';
-import { AtlasColourTexture } from '../shadowFilter/atlasColourTexture.js';
-import { AtlasDepthTexture, atlasTargetOf } from '../shadowFilter/atlasDepthTexture.js';
+import { atlasTargetOf, createShadowAtlas } from '../shadowFilter/atlasDepthTexture.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 import type { LightShadowInternals } from '../sharedAtlasShadow.js';
 
@@ -30,15 +29,12 @@ const DEPTH_TYPE =
  * a lookup reads as lit only where the receiver is strictly nearer than the caster: `Less` here.
  */
 function createAtlas(size: number): THREE.WebGLRenderTarget {
-  const atlas = new THREE.WebGLRenderTarget(size, size, { depthBuffer: true });
-  atlas.texture = new AtlasColourTexture('PositionalShadowAtlasColour', size);
-  atlas.depthTexture = new AtlasDepthTexture({
+  return createShadowAtlas({
     name: 'PositionalShadowAtlas',
     size,
     type: DEPTH_TYPE,
     compare: THREE.LessCompare,
   });
-  return atlas;
 }
 
 /** A side for the atlas before any viewport holds it. Any size serves: the first holder resizes it. */
