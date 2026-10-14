@@ -122,7 +122,9 @@ export function Decal({ node, children }: NodeComponentProps) {
     // Godot samples the decal through its clamped atlas: the blit uses REPEAT_DISABLED
     // (`copy_effects.cpp:592`) and fragments outside the box are discarded
     // (`scene_forward_clustered.glsl:1585-1587`). The consumer states clamp and never
-    // inherits a Repeat from the shared producer.
+    // inherits a Repeat from the shared producer. The blit copies any format into an RGBA8 atlas
+    // (`texture_storage.cpp:3163`) that the shader reads through its sRGB view
+    // (`render_forward_clustered.cpp:3213`), so a decal decodes sRGB whatever its source format.
     const projectionMap = applyTextureState(albedo, {
       repeat: false,
       colorSpace: THREE.SRGBColorSpace,

@@ -41,7 +41,7 @@ describe('rasterizeGradientTexture2D', () => {
     };
     const texture = rasterizeGradientTexture2D(tex, gradient);
     expect(texture.type).toBe(THREE.HalfFloatType);
-    expect(texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+    expect(texture.colorSpace).toBe(THREE.NoColorSpace);
     expect(THREE.DataUtils.fromHalfFloat((texture.image.data as Uint16Array)[0]!)).toBe(2);
   });
 

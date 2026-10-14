@@ -9,7 +9,7 @@ import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import type { NoiseTexture2DData } from './types';
 import type { NoiseTexture2DInput } from './pixels';
 import { seamlessSource } from '../../noise/image/noiseImage';
-import { recordGodotFormat } from '../sourceColorSpace';
+import { colourDataTexture } from '../colourDataTexture';
 
 /**
  * Whether the previewer rasterises this texture. It refuses an axis past the WebGL ceiling it
@@ -32,18 +32,14 @@ export function noiseTextureFits({
 /** Bottom-up `pixels`, computed from `input`, as the texture Godot builds from it. */
 export function noiseDataTexture(pixels: Uint8Array, input: NoiseTexture2DInput): THREE.DataTexture {
   const { tex } = input;
-  const texture = new THREE.DataTexture(pixels, tex.width, tex.height, THREE.RGBAFormat);
-  // A normal map carries directions, not colour, and sRGB would bend every normal.
-  // Godot marks the same distinction with its `srgb` import flag.
-  texture.colorSpace = tex.asNormalMap ? THREE.NoColorSpace : THREE.SRGBColorSpace;
-  texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearFilter;
+  const texture = colourDataTexture(pixels, tex.width, tex.height, imageFormat(input));
+  // A normal map carries directions, not colour, so it starts raw, as its normal slot reads it.
+  if (tex.asNormalMap) texture.colorSpace = THREE.NoColorSpace;
   // A seamless image tiles. A non-seamless one clamps like every other procedural texture.
   const wrap = tex.seamless ? THREE.RepeatWrapping : THREE.ClampToEdgeWrapping;
   texture.wrapS = wrap;
   texture.wrapT = wrap;
-  texture.needsUpdate = true;
-  return recordGodotFormat(texture, imageFormat(input));
+  return texture;
 }
 
 /**

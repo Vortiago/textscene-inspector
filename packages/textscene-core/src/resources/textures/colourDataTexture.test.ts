@@ -21,15 +21,21 @@ describe('colourDataTexture', () => {
     expect(texture.image.data).toEqual(new Uint8Array([10, 20, 30, 40]));
   });
 
-  it('uploads floats raw as linear half floats, so a channel past 1 survives', () => {
+  it('uploads floats as raw half floats, so a channel past 1 survives', () => {
     const texture = colourDataTexture(new Float32Array([2, 0.5, 0, 0.25]), 1, 1, 'RGBAFloat');
-    expect(texture).toMatchObject({ type: THREE.HalfFloatType, colorSpace: THREE.LinearSRGBColorSpace });
+    expect(texture).toMatchObject({ type: THREE.HalfFloatType, colorSpace: THREE.NoColorSpace });
     expect(halves(texture)).toEqual([2, 0.5, 0, 0.25]);
   });
 
   it('records the format, so a colour slot reads Lum8 bytes raw', () => {
     const texture = colourDataTexture(new Uint8Array([10, 10, 10, 255]), 1, 1, 'Lum8');
     expect(sourceColorSpace(texture)).toBe(THREE.NoColorSpace);
+  });
+
+  it('pins Lum8 bytes raw, so a colour map shares the texture', () => {
+    const texture = colourDataTexture(new Uint8Array([10, 10, 10, 255]), 1, 1, 'Lum8');
+    texture.colorSpace = THREE.SRGBColorSpace;
+    expect(texture.colorSpace).toBe(THREE.NoColorSpace);
   });
 
   it('keeps a negative float channel (edge case)', () => {

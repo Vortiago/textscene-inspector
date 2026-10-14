@@ -10,8 +10,7 @@ import { bindSlotTexture, materialTextureStates, releaseBoundTexture } from './t
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
 import { UV2_CHANNEL } from '../../meshes/uv2';
-import type { TscnInternalResource } from '../../../parser/types';
-import { resolveImageTexture } from '../../textures/imagetexture/resolveImageTexture';
+import { recordGodotFormat } from '../../textures/sourceColorSpace';
 
 /**
  * As the loader hands them out: one shared entry per path, tagged sRGB, at
@@ -210,24 +209,13 @@ describe('releaseBoundTexture', () => {
 });
 
 /** An ImageTexture of one texel saved in `format`, as the producer builds it. */
-function savedImage(format: string, bytes: string): THREE.Texture {
-  const resources: TscnInternalResource[] = [
-    {
-      id: 'Image_a',
-      type: 'Image',
-      data: {
-        data: `{\n"data": PackedByteArray(${bytes}),\n"format": "${format}",\n"height": 1,\n"mipmaps": false,\n"width": 1\n}`,
-      },
-    },
-    { id: 'ImageTexture_a', type: 'ImageTexture', data: { image: 'SubResource("Image_a")' } },
-  ];
-  return resolveImageTexture('SubResource("ImageTexture_a")', resources)!.texture;
+function savedImage(format: string): THREE.Texture {
+  return recordGodotFormat(new THREE.Texture(), format);
 }
 
-const LUM8 = () => savedImage('Lum8', '128');
-const RGB8 = () => savedImage('RGB8', '128, 128, 128');
-/** 0.5 as a little-endian float. */
-const R_FLOAT = () => savedImage('RFloat', '0, 0, 0, 63');
+const LUM8 = () => savedImage('Lum8');
+const RGB8 = () => savedImage('RGB8');
+const R_FLOAT = () => savedImage('RFloat');
 
 /**
  * A `source_color` sampler reads the sRGB view only when the texture has one
