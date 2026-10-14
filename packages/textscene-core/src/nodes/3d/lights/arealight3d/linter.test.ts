@@ -1,6 +1,6 @@
 /**
- * AreaLight3D linting. The slice declares no semantic rule: the `light_energy`
- * band is the inherited Light3D validator's bound (light_3d.cpp:389).
+ * AreaLight3D linting: strict validators and the projector configuration warning. The
+ * `light_energy` band is the inherited Light3D validator's bound (light_3d.cpp:389).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -9,10 +9,13 @@ import {
   node,
   lint,
   expectClean,
+  expectDiagnostic,
+  expectNoDiagnostic,
   expectNoErrors,
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
+import './linter';
 import { errorsOf, warningsOf } from '../../../../linter/testing/tierLists';
 
 /** The textures an `area_texture` accept case references, so the reference resolves. */
@@ -127,8 +130,36 @@ describe('AreaLight3D Linter', () => {
     });
 
     it('should handle shadow_enabled = true without errors', () => {
-      // RectAreaLight casts no shadows. shadow_enabled is validated as a boolean only.
       expectNoErrors(scene(node('AreaLight3D', { shadow_enabled: true })));
+    });
+  });
+
+  // 4.7.2 light_3d.cpp:774-776. The inspector hides `light_projector` on an area light
+  // (:345-346), but Godot still loads one a hand-written scene sets.
+  describe('projector on an area light', () => {
+    const rule = { ruleName: 'arealight3d-projector-unsupported' };
+
+    it('warns when light_projector is set', () => {
+      expectDiagnostic(scene(node('AreaLight3D', { light_projector: 'ExtResource("1_proj")' })), {
+        ...rule,
+        severity: 'warning',
+      });
+    });
+
+    it('warns when light_projector is set with shadows on (edge case)', () => {
+      expectDiagnostic(
+        scene(node('AreaLight3D', { light_projector: 'ExtResource("1_proj")', shadow_enabled: true })),
+        { ...rule, severity: 'warning' }
+      );
+    });
+
+    it('does not warn when light_projector is absent', () => {
+      expectNoDiagnostic(scene(node('AreaLight3D', { area_size: 'Vector2(2, 1)' })), rule);
+    });
+
+    it('does not warn when light_projector is malformed (error case)', () => {
+      // The format validator already errors on it, and Godot sets no projector from a value its reader rejects.
+      expectNoDiagnostic(scene(node('AreaLight3D', { light_projector: 'not-a-reference' })), rule);
     });
   });
 });
