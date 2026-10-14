@@ -1,7 +1,8 @@
 /**
  * A spot light's shadow that three draws straight into the light's slot of the positional shadow
- * atlas, as Godot does (`render_forward_clustered.cpp:2712-2718`). The light shines down its own -Z,
- * where SpotLight3D puts its target. `positionalShadow.md` beside this file has the design.
+ * atlas, as Godot does (`render_forward_clustered.cpp:2712-2718`). three never draws it by itself:
+ * the shadow pass's atlas step does (`atlasDepthPass.ts`). The light shines down its own -Z, where
+ * SpotLight3D puts its target. `positionalShadow.md` beside this file has the design.
  */
 
 import * as THREE from 'three';
@@ -10,26 +11,32 @@ import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js'
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { readLightPose } from './lightPose.js';
 import { positionalShadowAtlas } from './shadowAtlasTarget.js';
+import { readIntensityThroughSlot, type SlottedShadow } from './slotOpacity.js';
 
 /** three exports no `SpotLightShadow` class, so it comes from a spot light's own shadow. */
 const ThreeSpotLightShadow = new THREE.SpotLight().shadow.constructor as new () => SpotLightShadow &
   LightShadowInternals;
 
-export class AtlasSpotShadow extends ThreeSpotLightShadow {
+export class AtlasSpotShadow extends ThreeSpotLightShadow implements SlottedShadow {
+  /** The light's slot in the atlas of the viewport that renders now, or null for none. */
+  slot: PositionalShadowSlot | null = null;
+  opacity = 1;
   /** The slot's rectangle in units of the slot, as three gives a viewport (`WebGLShadowMap.js:345-350`). */
   private readonly slotRect = new THREE.Vector4(0, 0, 1, 1);
 
   constructor() {
     super();
+    this.autoUpdate = false;
     this.map = positionalShadowAtlas();
   }
 
   /**
    * Draws into `slot` of the atlas. `mapSize` is the slot, and the frame extents are the atlas over
    * the slot. So three asks for the atlas's own size, and never resizes it
-   * (`WebGLShadowMap.js:172-176`, `:281-285`). A null slot leaves the shadow as it is.
+   * (`WebGLShadowMap.js:172-176`, `:281-285`). A null slot draws nothing, and leaves the rest of the shadow as it is.
    */
   place(slot: PositionalShadowSlot | null): void {
+    this.slot = slot;
     if (slot === null) return;
     this.map = positionalShadowAtlas();
     const atlasSize = this.map.width;
@@ -52,8 +59,17 @@ export class AtlasSpotShadow extends ThreeSpotLightShadow {
     confineShadowScissor(this, this.slotRect);
   }
 
+  /** Copies `source`, and stays undrawn by three's own pass. */
+  override copy(source: SpotLightShadow): this {
+    super.copy(source);
+    this.autoUpdate = false;
+    return this;
+  }
+
   /** Lets go of the atlas, which other shadows share. */
   override dispose(): void {
     this.map = null;
   }
 }
+
+readIntensityThroughSlot(AtlasSpotShadow);

@@ -50,6 +50,12 @@ describe('the directional shadow atlas', () => {
     expect([depth.minFilter, depth.magFilter]).toEqual([THREE.LinearFilter, THREE.LinearFilter]);
   });
 
+  it('holds the depth in its colour too, for the blocker search', () => {
+    const colour = atlasModule.directionalShadowAtlasColour();
+    expect(atlasModule.holdDirectionalShadowAtlas(aShadow()).texture).toBe(colour);
+    expect([colour.format, colour.type]).toEqual([THREE.RGFormat, THREE.UnsignedByteType]);
+  });
+
   it('keeps one depth texture through a material’s uniform clone', () => {
     const uniforms = { atlas: { value: atlasModule.directionalShadowAtlasDepth() } };
     expect(THREE.UniformsUtils.clone(uniforms).atlas!.value).toBe(atlasModule.directionalShadowAtlasDepth());

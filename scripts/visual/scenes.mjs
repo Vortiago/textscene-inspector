@@ -2,7 +2,8 @@
  * The golden-scene manifest: WebGL-canvas scenes only, with no 2D DOM overlay, so the image depends
  * on the renderer alone. A resource load must resolve from local fixtures and settle (`arraymesh`,
  * `decal`). `file` is the fixture filename exactly as in apps/textscene-web/src/fixtures.ts. An
- * entry may set `mode: '2d'`, `collisions: true`, `navigation: true` or `select: <node path>`.
+ * entry may set `mode: '2d'`, `collisions: true`, `navigation: true`, `select: <node path>` or
+ * `settleTimeout: <ms>`, each screenshot's limit where one frame outlasts Playwright's default.
  */
 
 import { GEOMETRY_SCENES } from './scenes/geometry.mjs';
@@ -16,8 +17,7 @@ import { TILE_AND_TARGET_SCENES } from './scenes/targets.mjs';
 
 /**
  * Not in the set until fixed: unit-label3d.tscn, whose labels render near invisible after
- * auto-framing (pixel_size 0.005 is about 0.08 world units tall). unit-area-light3d.tscn stays out:
- * its ground lies beyond `area_range`, so only the preview sun draws it. unit-animation-player*.tscn
+ * auto-framing (pixel_size 0.005 is about 0.08 world units tall). unit-animation-player*.tscn
  * stays out: the fixtures exist to be played, and playback never reaches a byte-stable frame.
  */
 export const GOLDEN_SCENES = [

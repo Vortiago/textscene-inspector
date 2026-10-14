@@ -15,6 +15,7 @@ import {
   texelPaddedRadius,
   type DirectionalShadowSlice,
 } from '../../godot/directionalShadow.js';
+import { softShadowExpand } from '../../godot/directionalSoftShadow.js';
 import type { DirectionalShadowDeclaration } from './declaration.js';
 
 /** A camera with a depth range, whose world and projection matrices are current. */
@@ -57,6 +58,11 @@ export interface DirectionalShadowBox {
   bias: number;
   /** The declared normal bias in world units, for this box's texel size. */
   normalBias: number;
+  /**
+   * Godot's `range_begin` (`renderer_scene_cull.cpp:2327`, `:2349`): the box's light side along the
+   * light's +Z, in world units, unmoved by the caster reach. The blocker search measures from it.
+   */
+  rangeBegin: number;
 }
 
 /** The light's axes, as three's `lookAt` builds them. +Z points back towards the light. */
@@ -143,15 +149,16 @@ function fitBox(
   const centreX = axes.x.dot(centre);
   const centreY = axes.y.dot(centre);
   const centreZ = axes.z.dot(centre);
-  const step = directionalShadowSnapStep(radius, shadowMapSize);
-  const xMin = snapped(centreX - radius, step);
-  const xMax = snapped(centreX + radius, step);
-  const yMin = snapped(centreY - radius, step);
-  const yMax = snapped(centreY + radius, step);
   // `renderer_scene_cull.cpp:2284` and `:2327`: the far side sits one radius past the centre,
   // the near side one radius plus the pancake towards the light.
   const zFar = centreZ - radius;
   const zNear = centreZ + radius + declaration.pancakeSize;
+  const halfWidth = radius + softShadowExpand(declaration.softShadowAngle, zNear - zFar);
+  const step = directionalShadowSnapStep(halfWidth, shadowMapSize);
+  const xMin = snapped(centreX - halfWidth, step);
+  const xMax = snapped(centreX + halfWidth, step);
+  const yMin = snapped(centreY - halfWidth, step);
+  const yMax = snapped(centreY + halfWidth, step);
   const zNearCovered = reach === null ? zNear : Math.max(zNear, reach);
 
   const eyeX = axes.x.dot(input.lightPosition);
@@ -169,6 +176,7 @@ function fitBox(
     // `renderer_scene_cull.cpp:2348` spends the bias over Godot's own depth range.
     bias: declaration.depthBias * ((zNear - zFar) / (far - near)),
     normalBias: declaration.normalBias * directionalShadowTexelSize(radius, shadowMapSize),
+    rangeBegin: zNear,
   };
   return isFiniteBox(box) ? box : null;
 }
@@ -183,7 +191,8 @@ function isFiniteBox(box: DirectionalShadowBox): boolean {
     Number.isFinite(box.near) &&
     Number.isFinite(box.far) &&
     Number.isFinite(box.bias) &&
-    Number.isFinite(box.normalBias)
+    Number.isFinite(box.normalBias) &&
+    Number.isFinite(box.rangeBegin)
   );
 }
 

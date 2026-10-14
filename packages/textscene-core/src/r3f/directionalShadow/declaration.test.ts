@@ -9,6 +9,8 @@ const DECLARATION = {
   depthBias: -0.002,
   normalBias: 2,
   filterRadius: 2,
+  softShadowAngle: 0,
+  drawsSoftShadow: false,
   splitCount: 4,
   splitOffsets: [0.1, 0.2, 0.5],
   blendSplits: false,

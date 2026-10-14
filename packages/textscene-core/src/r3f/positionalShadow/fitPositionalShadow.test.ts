@@ -7,7 +7,7 @@ import { AtlasSpotShadow } from './atlasSpotShadow';
 import { fitPositionalShadow } from './fitPositionalShadow';
 import { positionalShadowAtlas } from './shadowAtlasTarget';
 
-const declaration = { normalBias: 1, softShadowScale: 2 };
+const declaration = { normalBias: 1, softShadowRadius: 2 };
 
 const spotSlot = (size: number): PositionalShadowSlot => ({ x: 0, y: 0, size, paraboloidStep: null });
 const omniSlot = (size: number): PositionalShadowSlot => ({ x: 0, y: 0, size, paraboloidStep: [1, 0] });
@@ -26,12 +26,18 @@ describe('fitPositionalShadow', () => {
     expect(light.shadow.intensity).toBe(1);
   });
 
-  it('gives both lookups Godot’s soft_shadow_scale, which each spreads in its own units', () => {
+  it('gives both lookups the soft shadow radius, which each spreads in its own units', () => {
     const [omniLight, spotLight] = [omni(), spot()];
     fitPositionalShadow(omniLight, omniSlot(256), declaration);
     fitPositionalShadow(spotLight, spotSlot(512), declaration);
     expect(omniLight.shadow.radius).toBe(2);
     expect(spotLight.shadow.radius).toBe(2);
+  });
+
+  it('gives a light that searches for blockers its negative radius (edge case)', () => {
+    const light = spot();
+    fitPositionalShadow(light, spotSlot(512), { normalBias: 1, softShadowRadius: -0.5 });
+    expect(light.shadow.radius).toBe(-0.5);
   });
 
   it('draws a spot light into its slot of the atlas', () => {
@@ -74,7 +80,22 @@ describe('fitPositionalShadow', () => {
     fitPositionalShadow(light, null, declaration);
     fitPositionalShadow(light, spotSlot(1024), declaration);
     expect(light.shadow.intensity).toBe(1);
-    expect(light.shadow.autoUpdate).toBe(true);
+    expect(light.shadow.slot).toEqual(spotSlot(1024));
+  });
+
+  it('keeps the shadow opacity the light’s component set', () => {
+    const light = spot();
+    light.shadow.intensity = 0.3;
+    fitPositionalShadow(light, spotSlot(512), declaration);
+    expect(light.shadow.intensity).toBe(0.3);
+  });
+
+  it('gives the shadow opacity back once a light without a slot holds one again (edge case)', () => {
+    const light = omni();
+    light.shadow.intensity = 0.3;
+    fitPositionalShadow(light, null, declaration);
+    fitPositionalShadow(light, omniSlot(512), declaration);
+    expect(light.shadow.intensity).toBe(0.3);
   });
 
   it('frees an omni cube of another size (edge case)', () => {

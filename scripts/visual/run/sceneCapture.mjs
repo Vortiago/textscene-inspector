@@ -76,7 +76,7 @@ export async function captureScene(pages, baseUrl, scene) {
     await page.mouse.move(0, 0);
   }
 
-  const result = await settleCanvas(page, canvas);
+  const result = await settleCanvas(page, canvas, { screenshotTimeout: scene.settleTimeout });
   if (!result.buffer) return result;
   if (errors.length > 0) {
     // A console error in a settled, plausible capture is still a broken render: pixels cannot see a

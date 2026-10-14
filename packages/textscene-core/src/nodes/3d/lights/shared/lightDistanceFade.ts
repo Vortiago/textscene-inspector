@@ -1,7 +1,8 @@
 /**
- * An omni or spot light's distance fade: Godot scales the light's energy and its shadow's opacity
- * by the distance from each render's camera (`storage_rd/light_storage.cpp:840-863`), so the fade
- * applies before each render of the scene, through whichever camera renders it.
+ * A positional light's distance fade: Godot scales the light's energy and its shadow's opacity by
+ * the distance from each render's camera (`storage_rd/light_storage.cpp:840-863`, and 4.7.2
+ * `:1013-1028` for an area light), so the fade applies before each render of the scene, through
+ * whichever camera renders it.
  */
 
 import { useEffect, useMemo, type RefObject } from 'react';
@@ -10,6 +11,9 @@ import { useThree } from '@react-three/fiber';
 import { LIGHT_DISTANCE_FADE_DEFAULT, distanceFade } from '../../../../godot/distanceFade';
 import { cameraDistance, observeSceneCamera } from '../../../../r3f/sceneRenderCamera';
 import type { PositionalLightProperties } from './types';
+
+/** A light whose energy and shadow opacity the fade scales. */
+type FadedLight = THREE.Light & { shadow: { intensity: number } };
 
 interface LightDistanceFade {
   begin: number;
@@ -35,7 +39,7 @@ interface UnfadedLight {
 
 /** Writes `light`'s faded intensity and shadow intensity for a render through `camera`. */
 function fadeLight(
-  light: THREE.PointLight | THREE.SpotLight,
+  light: FadedLight,
   fade: LightDistanceFade,
   unfaded: UnfadedLight,
   camera: THREE.Camera
@@ -50,7 +54,7 @@ function fadeLight(
  * on, and restores `unfaded` when the fade ends.
  */
 export function useLightDistanceFade(
-  lightRef: RefObject<THREE.PointLight | THREE.SpotLight | null>,
+  lightRef: RefObject<FadedLight | null>,
   properties: PositionalLightProperties,
   { intensity, shadowOpacity }: UnfadedLight
 ): void {

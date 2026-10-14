@@ -56,6 +56,25 @@ describe('DirectionalLight3D Parser', () => {
       expect(result.directional_shadow_fade_start).toBe(0.5);
     });
 
+    it('parses light_angular_distance', () => {
+      const result = parseDirectionalLight3D(heading('DirectionalLight3D', { name: 'Sun' }), {
+        light_angular_distance: '2.5',
+      });
+      expect(result.light_angular_distance).toBe(2.5);
+    });
+
+    it('leaves light_angular_distance unset when it is absent (edge case)', () => {
+      const result = parseDirectionalLight3D(heading('DirectionalLight3D', { name: 'Sun' }), {});
+      expect(result.light_angular_distance).toBeUndefined();
+    });
+
+    it('leaves an unparseable light_angular_distance unset (error case)', () => {
+      const result = parseDirectionalLight3D(heading('DirectionalLight3D', { name: 'Sun' }), {
+        light_angular_distance: 'wide',
+      });
+      expect(result.light_angular_distance).toBeUndefined();
+    });
+
     it('should parse shadow_enabled as false when not "true"', () => {
       const h = heading('DirectionalLight3D', { name: 'Sun', parent: '.' });
 

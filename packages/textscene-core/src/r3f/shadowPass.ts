@@ -1,17 +1,25 @@
 /**
  * The renderer's shadow pass. three r186 has no hook between its shadow pass and its draw
  * (`WebGLRenderer.js:1737-1752`), so the pass runs three's pass, then Godot's copy of each omni cube
- * into its two paraboloids (`render_forward_clustered.cpp:2722-2738`), then each reader of the maps,
- * and last records the framebuffer height.
+ * into its two paraboloids (`render_forward_clustered.cpp:2722-2738`), then each spot light and split
+ * sun, then each area light's paraboloid (`atlasDepthPass.ts`), then each reader of the maps, and
+ * last records the framebuffer height.
  */
 
 import * as THREE from 'three';
 import { AtlasOmniShadow } from './positionalShadow/atlasOmniShadow.js';
+import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow.js';
+import { isAreaShadowLight, type AreaShadowLight } from './positionalShadow/atlasAreaShadow.js';
+import {
+  drawAreaShadows,
+  drawProjectedShadows,
+  type ProjectedShadowLight,
+  type ThreeShadowPass,
+} from './positionalShadow/atlasDepthPass.js';
+import { DirectionalSplitShadow } from './directionalShadow/splitShadow.js';
 import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
 import { drawOffscreen } from './offscreen.js';
-
-type ShadowPass = THREE.WebGLShadowMap['render'];
 
 /**
  * Reads the maps a render's shadow pass has just drawn, for `scene`, the object that render draws,
@@ -33,10 +41,10 @@ interface OmniLight extends THREE.PointLight {
 }
 
 /**
- * A shared empty answer, so a pass with nothing to copy allocates nothing. A pass that copies builds
- * its own list, not a shared one: each copy is a render, which runs this pass again inside it.
+ * A shared empty answer, so a pass with nothing to copy or draw allocates nothing. A pass that copies
+ * builds its own list, not a shared one: each copy is a render, which runs this pass again inside it.
  */
-const NO_LIGHTS: readonly OmniLight[] = [];
+const NO_LIGHTS: readonly never[] = [];
 
 /** Wraps `renderer`'s shadow pass once. A second call changes nothing. */
 export function installShadowPass(renderer: THREE.WebGLRenderer): void {
@@ -62,12 +70,17 @@ function readersOf(renderer: THREE.WebGLRenderer): Set<ShadowMapReader> {
   if (existing) return existing;
   const readers = new Set<ShadowMapReader>();
   shadowMap[READERS] = readers;
-  const threePass: ShadowPass = shadowMap.render.bind(shadowMap);
+  const threePass: ThreeShadowPass = { shadowMap, draw: shadowMap.render.bind(shadowMap) };
   const copy = new OmniShadowCopy();
   shadowMap.render = (lights, scene, camera) => {
-    const copied = lightsToCopy(shadowMap, lights);
-    threePass(lights, scene, camera);
+    const draws = passDraws(shadowMap);
+    const copied = draws ? collected(lights, needsCopy) : NO_LIGHTS;
+    const projected = draws ? collected(lights, isProjectedShadowLight) : NO_LIGHTS;
+    const areas = draws ? collected(lights, isSlottedAreaLight) : NO_LIGHTS;
+    threePass.draw(lights, scene, camera);
     copyOmniShadows(renderer, copy, copied);
+    drawProjectedShadows(threePass, projected, scene, camera);
+    drawAreaShadows(threePass, areas, scene, camera);
     for (const read of readers) read(scene, camera);
     // Last: each copy and each reader's render records its own target's height.
     writeFramebufferHeight(renderer);
@@ -91,21 +104,45 @@ function copyOmniShadows(
 }
 
 /**
- * The omni lights with a slot whose cube three's pass is about to draw, read before the pass, which
- * clears `needsUpdate` (`WebGLShadowMap.js:95`, `:170`, `:370`).
+ * Whether three's pass draws anything this time, read before the pass, which clears `needsUpdate`
+ * (`WebGLShadowMap.js:95`, `:170`, `:370`).
  */
-function lightsToCopy(shadowMap: THREE.WebGLShadowMap, lights: readonly THREE.Light[]): readonly OmniLight[] {
-  if (!shadowMap.enabled || (!shadowMap.autoUpdate && !shadowMap.needsUpdate)) return NO_LIGHTS;
-  let copied: OmniLight[] | null = null;
-  for (const light of lights) {
-    if (needsCopy(light)) (copied ??= []).push(light);
-  }
-  return copied ?? NO_LIGHTS;
+function passDraws(shadowMap: THREE.WebGLShadowMap): boolean {
+  return shadowMap.enabled && (shadowMap.autoUpdate || shadowMap.needsUpdate);
 }
 
+/** The lights of one kind, without an array while there is none. */
+function collected<Kind extends THREE.Light>(
+  lights: readonly THREE.Light[],
+  isKind: (light: THREE.Light) => light is Kind
+): readonly Kind[] {
+  let kind: Kind[] | null = null;
+  for (const light of lights) {
+    if (isKind(light)) (kind ??= []).push(light);
+  }
+  return kind ?? NO_LIGHTS;
+}
+
+/** An omni light with a slot whose cube three's pass is about to draw. */
 function needsCopy(light: THREE.Light): light is OmniLight {
   const { shadow } = light as THREE.Light & { shadow?: unknown };
   return (
     shadow instanceof AtlasOmniShadow && shadow.slot !== null && (shadow.autoUpdate || shadow.needsUpdate)
   );
+}
+
+/**
+ * A split sun, or a spot light that holds a slot. three's pass never draws one by itself
+ * (`splitShadow.ts`, `atlasSpotShadow.ts`).
+ */
+function isProjectedShadowLight(light: THREE.Light): light is ProjectedShadowLight {
+  const { shadow } = light as { shadow?: unknown };
+  return (
+    shadow instanceof DirectionalSplitShadow || (shadow instanceof AtlasSpotShadow && shadow.slot !== null)
+  );
+}
+
+/** An area light that holds a slot. three's pass never draws one by itself (`atlasAreaShadow.ts`). */
+function isSlottedAreaLight(light: THREE.Light): light is AreaShadowLight {
+  return isAreaShadowLight(light) && light.shadow.slot !== null;
 }

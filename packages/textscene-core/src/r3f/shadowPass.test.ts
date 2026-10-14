@@ -12,6 +12,10 @@ import { framebufferHeight } from './shadowFilter/framebufferRows';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy';
 import { installShadowPass, readShadowMaps } from './shadowPass';
 import { holdPositionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
+import { AtlasAreaShadow, type AreaShadowLight } from './positionalShadow/atlasAreaShadow';
+import { AtlasDepthMaterial, ParaboloidDepthMaterial } from './positionalShadow/atlasDepthMaterials';
+import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow';
+import { SplitSunLight } from './directionalShadow/splitSun';
 
 holdPositionalShadowAtlas({}, 4096);
 
@@ -38,6 +42,22 @@ function omniLight(hasSlot = true): THREE.PointLight {
   shadow.slot = hasSlot ? { x: 0, y: 0, size: 512, paraboloidStep: [1, 0] } : null;
   light.shadow = shadow;
   light.updateMatrixWorld();
+  return light;
+}
+
+/** An area light that holds a slot in the atlas, or none. */
+function areaLight(hasSlot = true): AreaShadowLight {
+  const light = new THREE.RectAreaLight() as AreaShadowLight;
+  light.shadow = new AtlasAreaShadow();
+  light.shadow.place(hasSlot ? { x: 0, y: 0, size: 512, paraboloidStep: null } : null);
+  return light;
+}
+
+/** A spot light that holds a slot in the atlas, or none. */
+function spotLight(hasSlot = true): THREE.SpotLight {
+  const light = new THREE.SpotLight();
+  light.shadow = new AtlasSpotShadow();
+  (light.shadow as AtlasSpotShadow).place(hasSlot ? { x: 512, y: 0, size: 512, paraboloidStep: null } : null);
   return light;
 }
 
@@ -79,6 +99,106 @@ describe('installShadowPass', () => {
     runPass(renderer, [omniLight()]);
     expect(copy).not.toHaveBeenCalled();
     copy.mockRestore();
+  });
+
+  it('draws each area light that holds a slot with three’s pass again, after the omni copies', () => {
+    const order: string[] = [];
+    const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => order.push('copy'));
+    const { renderer, threePass } = fakeRenderer();
+    threePass.mockImplementation((lights: THREE.Light[]) =>
+      order.push(lights.length === 1 ? 'area' : 'three')
+    );
+    installShadowPass(renderer);
+    const [held, unheld] = [areaLight(), areaLight(false)];
+    runPass(renderer, [omniLight(), held, unheld]);
+    expect(order).toEqual(['three', 'copy', 'area']);
+    expect(threePass.mock.calls[1]![0]).toEqual([held]);
+    copy.mockRestore();
+  });
+
+  it('draws each spot light that holds a slot with three’s pass again, before the area lights', () => {
+    const { renderer, threePass } = fakeRenderer();
+    installShadowPass(renderer);
+    const [held, unheld, area] = [spotLight(), spotLight(false), areaLight()];
+    runPass(renderer, [held, unheld, area]);
+    expect(threePass.mock.calls.map(([lights]) => lights)).toEqual([[held, unheld, area], [held], [area]]);
+  });
+
+  it('draws each split sun with the spot lights in one pass again, before the area lights', () => {
+    const { renderer, threePass } = fakeRenderer();
+    installShadowPass(renderer);
+    const [spot, sun, area] = [spotLight(), new SplitSunLight(), areaLight()];
+    runPass(renderer, [sun, spot, area]);
+    expect(threePass.mock.calls.map(([lights]) => lights)).toEqual([[sun, spot, area], [sun, spot], [area]]);
+    expect(sun.shadow.needsUpdate).toBe(true);
+  });
+
+  it('draws a split sun’s casters with the atlas’s depth, which writes the colour (edge case)', () => {
+    const { renderer, threePass } = fakeRenderer();
+    const scene = new THREE.Scene();
+    const caster = new THREE.Mesh();
+    caster.castShadow = true;
+    scene.add(caster);
+    const worn: unknown[] = [];
+    threePass.mockImplementation(() => worn.push(caster.customDepthMaterial));
+    installShadowPass(renderer);
+    renderer.shadowMap.render([new SplitSunLight()], scene, new THREE.PerspectiveCamera());
+    expect(worn[1]).toBeInstanceOf(AtlasDepthMaterial);
+  });
+
+  it('draws a spot light’s casters with the atlas’s depth, which writes the colour (edge case)', () => {
+    const { renderer, threePass } = fakeRenderer();
+    const scene = new THREE.Scene();
+    const caster = new THREE.Mesh();
+    caster.castShadow = true;
+    scene.add(caster);
+    const worn: unknown[] = [];
+    threePass.mockImplementation(() => worn.push(caster.customDepthMaterial));
+    installShadowPass(renderer);
+    renderer.shadowMap.render([spotLight()], scene, new THREE.PerspectiveCamera());
+    expect(worn[0]).toBeUndefined();
+    expect(worn[1]).toBeInstanceOf(AtlasDepthMaterial);
+    expect(caster.customDepthMaterial).toBeUndefined();
+  });
+
+  it('asks three’s pass to draw the area light, which three’s first call left alone', () => {
+    const { renderer, threePass } = fakeRenderer();
+    renderer.shadowMap.autoUpdate = false;
+    renderer.shadowMap.needsUpdate = true;
+    const light = areaLight();
+    const asked: boolean[] = [];
+    threePass.mockImplementation(() => {
+      asked.push(renderer.shadowMap.needsUpdate && light.shadow.needsUpdate);
+      renderer.shadowMap.needsUpdate = false;
+    });
+    installShadowPass(renderer);
+    runPass(renderer, [light]);
+    expect(asked).toEqual([false, true]);
+  });
+
+  it('draws the casters with the paraboloid’s depth, and gives each its own back (edge case)', () => {
+    const { renderer, threePass } = fakeRenderer();
+    const scene = new THREE.Scene();
+    const [caster, ownDepth, plain] = [new THREE.Mesh(), new THREE.MeshDepthMaterial(), new THREE.Mesh()];
+    caster.castShadow = plain.castShadow = true;
+    caster.customDepthMaterial = ownDepth;
+    scene.add(caster, plain);
+    const worn: unknown[] = [];
+    threePass.mockImplementation(() => worn.push(caster.customDepthMaterial, plain.customDepthMaterial));
+    installShadowPass(renderer);
+    renderer.shadowMap.render([areaLight()], scene, new THREE.PerspectiveCamera());
+    expect(worn.slice(0, 2)).toEqual([ownDepth, undefined]);
+    expect(worn.slice(2).map((depth) => depth instanceof ParaboloidDepthMaterial)).toEqual([true, true]);
+    expect(caster.customDepthMaterial).toBe(ownDepth);
+    expect(plain.customDepthMaterial).toBeUndefined();
+  });
+
+  it('draws no area light when three’s pass draws nothing (edge case)', () => {
+    const { renderer, threePass } = fakeRenderer();
+    renderer.shadowMap.autoUpdate = false;
+    installShadowPass(renderer);
+    runPass(renderer, [areaLight()]);
+    expect(threePass).toHaveBeenCalledOnce();
   });
 
   it('wraps a renderer’s pass once, however often it is installed (error case)', () => {

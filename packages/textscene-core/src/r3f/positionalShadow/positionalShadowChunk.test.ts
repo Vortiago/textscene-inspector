@@ -11,13 +11,21 @@ import {
   positionalShadowChunks,
   type PositionalShadowChunks,
 } from './positionalShadowChunk';
-import { POSITIONAL_SHADOW_ATLAS_UNIFORM, positionalShadowAtlasDepth } from './shadowAtlasTarget';
+import {
+  POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM,
+  POSITIONAL_SHADOW_ATLAS_UNIFORM,
+  positionalShadowAtlasColour,
+  positionalShadowAtlasDepth,
+} from './shadowAtlasTarget';
+import { AREA_LIGHT_SHADOWS } from '../areaLight/areaLightShadowUniforms';
+import { preprocessorBranch } from '../testing/glslSource';
 import { warningsOf } from '../testing/logWarnings';
 import { FRAMEBUFFER_HEIGHT_UNIFORM } from '../shadowFilter/framebufferRows';
 import { SOFT_SHADOW_FILTER, softShadowFilterChunk } from '../shadowFilter/softShadowFilter';
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk';
 import { installDirectionalShadowFade } from '../directionalShadow/shadowFade';
 import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasChunk';
+import { LIT_SHADERS } from '../testing/litShaders';
 
 const threeChunks: PositionalShadowChunks = {
   shadowmap_vertex: THREE.ShaderChunk.shadowmap_vertex,
@@ -25,13 +33,16 @@ const threeChunks: PositionalShadowChunks = {
   lights_fragment_begin: THREE.ShaderChunk.lights_fragment_begin,
   shadowmask_pars_fragment: THREE.ShaderChunk.shadowmask_pars_fragment,
 };
-const LIT_SHADERS = ['lambert', 'phong', 'standard', 'physical', 'toon', 'shadow'] as const;
 
 const occurrences = (text: string, part: string) => text.split(part).length - 1;
 
 afterEach(() => {
   Object.assign(THREE.ShaderChunk, threeChunks);
-  const installed = [POSITIONAL_SHADOW_ATLAS_UNIFORM, FRAMEBUFFER_HEIGHT_UNIFORM];
+  const installed = [
+    POSITIONAL_SHADOW_ATLAS_UNIFORM,
+    POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM,
+    FRAMEBUFFER_HEIGHT_UNIFORM,
+  ];
   for (const uniforms of [
     ...Object.values(THREE.ShaderLib).map((shader) => shader.uniforms),
     THREE.UniformsLib.lights as Record<string, THREE.IUniform>,
@@ -73,6 +84,18 @@ describe('positionalShadowChunks', () => {
     }
     expect(lights).toContain('godotOmniLocalNormal( pointShadowMatrix[ i ], normal )');
     expect(lights).toContain('godotSpotShadowCoord( vSpotLightCoord[ i ], spotLightMatrix[ i ],');
+  });
+
+  it('looks up each area light’s shadow through the atlas, for the area light chunk to call', () => {
+    const { shadowmap_pars_fragment: pars } = positionalShadowChunks(threeChunks)!;
+    const area = preprocessorBranch(pars, '#if NUM_RECT_AREA_LIGHTS > 0');
+    expect(area).toContain('float godotAreaShadow(');
+    expect(area).toContain(
+      '#define GODOT_AREA_SHADOW( index ) godotAreaShadow( index, geometryPosition, geometryNormal )'
+    );
+    expect(pars).toContain(
+      '#if NUM_SPOT_LIGHT_SHADOWS > 0 || NUM_POINT_LIGHT_SHADOWS > 0 || NUM_RECT_AREA_LIGHTS > 0'
+    );
   });
 
   it('reads both shadow matrices in the fragment stage at the vertex stage’s precision', () => {
@@ -120,6 +143,13 @@ describe('installGodotPositionalShadow', () => {
     const merged = THREE.UniformsUtils.merge([THREE.UniformsLib.lights]);
     expect(merged[POSITIONAL_SHADOW_ATLAS_UNIFORM]!.value).toBe(positionalShadowAtlasDepth());
     expect(THREE.ShaderLib.basic.uniforms[POSITIONAL_SHADOW_ATLAS_UNIFORM]).toBeUndefined();
+  });
+
+  it('gives every lit built-in material the atlas colour and the area lights’ shadow terms', () => {
+    installGodotPositionalShadow();
+    const uniforms = THREE.ShaderLib.physical.uniforms;
+    expect(uniforms[POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM]!.value).toBe(positionalShadowAtlasColour());
+    expect(uniforms[AREA_LIGHT_SHADOWS]!.value).toBeInstanceOf(Float32Array);
   });
 
   it('follows Godot’s soft shadow filter, which the install puts in first', () => {

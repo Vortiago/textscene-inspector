@@ -33,10 +33,8 @@ const LIGHT3D_LINTER_ONLY_KEYS = [
 const LIGHT3D_RENDER_GAP_KEYS = [
   // Projects a texture through the light; nothing here samples it.
   'light_projector',
-  // Soft-shadow radius and sun angular diameter: one PARAM_SIZE under two names
-  // (light_3d.cpp:394 and :395). It defaults to 0 (light_3d.cpp:478), the hard
-  // shadows already drawn, so the gap opens only once a scene sets it.
-  'light_size',
+  // The sun angular diameter, PARAM_SIZE under its directional name
+  // (light_3d.cpp:395), which only DirectionalLight3D's parser reads.
   'light_angular_distance',
   // Which render layers cast into this light's shadow, distinct from
   // light_cull_mask's "what this light illuminates".

@@ -31,6 +31,8 @@ function declaring(overrides: Partial<DirectionalShadowDeclaration> = {}): Direc
     depthBias: -0.0003,
     normalBias: 2,
     filterRadius: 2,
+    softShadowAngle: 0,
+    drawsSoftShadow: false,
     splitCount: 4,
     splitOffsets: [0.1, 0.2, 0.5],
     blendSplits: false,
@@ -226,6 +228,34 @@ describe('fitDirectionalShadowSplits', () => {
     // Godot blends its last split against a slot it never set up. Here it does not blend.
     expect(slots[1]![3]).toBe(NO_BLEND);
     expect(slots[2]![3]).toBe(NO_BLEND);
+  });
+
+  it('writes each split’s range start, moved away from the light by its bias in world units', () => {
+    const { boxes, rangeBegins } = fit(fitInput());
+    boxes.forEach((box, split) => {
+      expect(rangeBegins[split]).toBeCloseTo(box.rangeBegin + box.bias * (box.far - box.near), 12);
+    });
+  });
+
+  it('moves each range start in proportion to the declared bias', () => {
+    const shiftFor = (depthBias: number) => {
+      const { boxes, rangeBegins } = fit(fitInput(declaring({ depthBias })));
+      return rangeBegins[0]! - boxes[0]!.rangeBegin;
+    };
+    expect(shiftFor(-0.006)).toBeLessThan(0);
+    expect(shiftFor(-0.006)).toBeCloseTo(2 * shiftFor(-0.003), 9);
+  });
+
+  it('keeps the range start of a light with no bias (edge case)', () => {
+    const { boxes, rangeBegins } = fit(fitInput(declaring({ depthBias: 0 })));
+    expect(rangeBegins[0]).toBe(boxes[0]!.rangeBegin);
+  });
+
+  it('repeats the last split’s range start past it (edge case)', () => {
+    const { rangeBegins } = fit(fitInput(declaring({ splitCount: 2 })));
+    expect(rangeBegins).toHaveLength(4);
+    expect(rangeBegins[2]).toBe(rangeBegins[1]);
+    expect(rangeBegins[3]).toBe(rangeBegins[1]);
   });
 
   it('answers null when a split gets no finite box (error case)', () => {

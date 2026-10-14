@@ -1,22 +1,27 @@
 /**
  * Gives a declared omni or spot light the shadow that draws into the positional shadow atlas, in
- * place of the one three built with the light.
+ * place of the one three built with the light. An area light's component gives it its own.
  */
 
 import * as THREE from 'three';
 import { AtlasOmniShadow } from './atlasOmniShadow.js';
 import { AtlasSpotShadow } from './atlasSpotShadow.js';
+import { isAreaShadowLight, type AreaShadowLight } from './atlasAreaShadow.js';
+import type { PositionalLight } from './viewportShadowAtlas.js';
 
-/** An omni or spot light whose shadow draws into the atlas. */
+/** An omni, spot or area light whose shadow draws into the atlas. */
 export type AtlasLight =
-  (THREE.PointLight & { shadow: AtlasOmniShadow }) | (THREE.SpotLight & { shadow: AtlasSpotShadow });
+  | (THREE.PointLight & { shadow: AtlasOmniShadow })
+  | (THREE.SpotLight & { shadow: AtlasSpotShadow })
+  | AreaShadowLight;
 
 /**
  * The light, its shadow replaced once. The new shadow copies what the light's component set on the
  * old one (`LightShadow.copy`), and react-three-fiber sets each later change on the light's current
  * shadow. The old shadow frees the map three built for it.
  */
-export function adoptAtlasShadow(light: THREE.PointLight | THREE.SpotLight): AtlasLight {
+export function adoptAtlasShadow(light: PositionalLight): AtlasLight {
+  if (isAreaShadowLight(light)) return light;
   if (light instanceof THREE.SpotLight) {
     if (!(light.shadow instanceof AtlasSpotShadow))
       light.shadow = replaced(light.shadow, new AtlasSpotShadow());

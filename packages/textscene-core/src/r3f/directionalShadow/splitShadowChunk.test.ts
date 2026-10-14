@@ -11,7 +11,11 @@ import { SOFT_SHADOW_FILTER, softShadowFilterChunk } from '../shadowFilter/softS
 import { FRAMEBUFFER_HEIGHT_UNIFORM, framebufferHeight } from '../shadowFilter/framebufferRows';
 import { godotSplitShadowChunk, installGodotSplitShadow } from './splitShadowChunk';
 import { NO_BLEND, type SplitSlot } from './fitDirectionalShadowSplits';
+import { DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM } from './shadowAtlas';
+import { SUN_SOFT_SHADOWS, SUN_RANGE_BEGINS } from './sunSoftShadow';
 import { GLSL_BUILT_INS } from '../testing/glslScalar';
+import { withoutBlock } from '../testing/glslSource';
+import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch';
 import { warningsOf } from '../testing/logWarnings';
 
 const CHUNK = 'shadowmap_pars_fragment';
@@ -46,9 +50,9 @@ interface Lookup {
   samples: Sample[];
 }
 
-/** The statements of the patched `getSunShadow`, between its opening and closing braces. */
-function lookupBody(chunk: string): string {
-  const signature = chunk.indexOf('float getSunShadow(');
+/** The statements of the patched split selection, between its opening and closing braces. */
+function lookupBody(chunk: string, name = 'godotSunSplitShadow'): string {
+  const signature = chunk.indexOf(`float ${name}(`);
   const open = chunk.indexOf(') {', signature) + ') {'.length;
   const close = chunk.indexOf('\n\t\t}', open);
   return chunk.slice(open, close);
@@ -83,6 +87,55 @@ function runLookup(slots: SplitSlot[], depth: number, shadowBySlot = [0, 0, 0, 0
   ) as (...args: unknown[]) => number;
   const { smoothstep, mix } = GLSL_BUILT_INS;
   const shadow = run(smoothstep, mix, sampleSplit, 4, 0, { w: depth }, cascade, null, null);
+  return { shadow, samples };
+}
+
+/**
+ * Runs the soft lookup at `depth` over `slots`, as `runLookup` runs the split selection. Each slot's
+ * soft split shadows at `shadowBySlot[slot]`.
+ */
+function runSoftLookup(slots: SplitSlot[], depth: number, shadowBySlot = [0, 0, 0, 0]): Lookup {
+  const samples: Sample[] = [];
+  const sampleSplit = (_map: unknown, _shadow: unknown, slot: number) => {
+    samples.push({ slot, radiusScale: 1 });
+    return shadowBySlot[slot]!;
+  };
+  const body = lookupBody(godotSplitShadowChunk(threeChunk)!, 'godotSunSoftShadow').replace(
+    /\b(?:int|float|bool|vec4)\s+(?=\w+\s*=)/g,
+    'let '
+  );
+  const cascade = slots.map(([x, y, z, w]) => ({ x, y, z, w }));
+  const run = new Function(
+    'smoothstep',
+    'mix',
+    'max',
+    'godotSunSoftSplit',
+    'SUN_LIGHT_CASCADES',
+    'shadowIndex',
+    'vSunShadowWorldPosition',
+    'sunShadowCascade',
+    'godotSunSoftShadows',
+    'godotSunRangeBegins',
+    'shadowMap',
+    'sunLightShadow',
+    body
+  ) as (...args: unknown[]) => number;
+  const { smoothstep, mix, max } = GLSL_BUILT_INS;
+  const light = [{ x: 0, y: 1, z: 0, w: 0.5 }];
+  const shadow = run(
+    smoothstep,
+    mix,
+    max,
+    sampleSplit,
+    4,
+    0,
+    { w: depth },
+    cascade,
+    light,
+    [[0, 0, 0, 0]],
+    null,
+    null
+  );
   return { shadow, samples };
 }
 
@@ -262,6 +315,105 @@ describe('the patched split lookup', () => {
   });
 });
 
+describe('the soft split lookup', () => {
+  // `scene_forward_clustered.glsl:2310-2398`, the branch with soft shadows.
+  const slotsOf = (samples: Sample[]) => samples.map(({ slot }) => slot);
+
+  it('takes the first split whose far end lies past the fragment', () => {
+    expect(slotsOf(runSoftLookup(fourSplits(), 15).samples)).toEqual([1]);
+  });
+
+  it('blends the first split into the second over the whole first split, from the camera', () => {
+    const { shadow, samples } = runSoftLookup(fourSplits([9, 18, 45]), 5, [0, 1, 1, 1]);
+    expect(slotsOf(samples)).toEqual([0, 1]);
+    // smoothstep(0, 10, 5)
+    expect(shadow).toBeCloseTo(0.5, 12);
+  });
+
+  it('blends a later split in from the far end of the split two before it', () => {
+    const { shadow, samples } = runSoftLookup(fourSplits([9, 18, 45]), 15, [0, 0, 1, 1]);
+    expect(slotsOf(samples)).toEqual([1, 2]);
+    // smoothstep(10, 20, 15)
+    expect(shadow).toBeCloseTo(0.5, 12);
+  });
+
+  it('takes the last slot past every far end (edge case)', () => {
+    expect(slotsOf(runSoftLookup(fourSplits(), 500).samples)).toEqual([3]);
+  });
+
+  it('reads a nan depth as the last split (error case)', () => {
+    expect(slotsOf(runSoftLookup(fourSplits(), Number.NaN).samples)).toEqual([3]);
+  });
+});
+
+describe('the soft split shadow', () => {
+  const chunk = () => godotSplitShadowChunk(threeChunk)!;
+
+  it('compiles no search without Godot’s directional soft shadows, so binds no atlas colour (edge case)', () => {
+    const compiled = withoutBlock(
+      godotSplitShadowChunk(threeChunk)!,
+      `#if defined( SHADOWMAP_TYPE_PCF ) && defined( ${DIRECTIONAL_SOFT_SHADOWS} )`
+    );
+    expect(compiled).not.toContain(DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM);
+    expect(compiled).not.toContain('godotSunSoftShadow(');
+    expect(compiled).toContain('return godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex );');
+  });
+
+  it('replaces the PCF for a sun with an angle', () => {
+    expect(chunk()).toContain(
+      'if ( godotSunSoftShadows[ shadowIndex ].w > 0.0 ) return godotSunSoftShadow( shadowMap, sunLightShadow, shadowIndex );'
+    );
+  });
+
+  it('spreads the search by the distance from the range start, the angle and the blur', () => {
+    // `scene_forward_clustered.glsl:2321-2326`: the receiver's position along the light is in view space.
+    expect(chunk()).toContain(
+      'float testRadius = ( dot( light.xyz, position - cameraPosition ) - rangeBegin ) * light.w;'
+    );
+    expect(chunk()).toContain('vec2 texScale = uvScale * testRadius * sunLightShadow.shadowRadius;');
+  });
+
+  it('reads the box’s size in the atlas off the slot’s matrix, and the range start by slot', () => {
+    // `light_storage.cpp:727-731`; `splitShadow.test.ts` pins the matrix's scale.
+    expect(chunk()).toContain(
+      'vec2 uvScale = vec2( godotRowLength( matrix, 0 ), godotRowLength( matrix, 1 ) );'
+    );
+    expect(chunk()).toContain(
+      'return length( vec3( matrix[ 0 ][ row ], matrix[ 1 ][ row ], matrix[ 2 ][ row ] ) );'
+    );
+    expect(chunk()).toContain(`${SUN_RANGE_BEGINS}[ shadowIndex ][ split ]`);
+  });
+
+  it('reads blockers from the atlas colour and widens the penumbra by their distance', () => {
+    // `scene_forward_lights_inc.glsl:393-405`, in a depth that grows away from the light.
+    expect(chunk()).toContain(`godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv )`);
+    expect(chunk()).toContain('texScale *= ( coord.z - blockerAverage ) / ( blockerAverage - lightSide );');
+  });
+
+  it('measures a blocker’s distance from Godot’s light side, not from the moved near plane', () => {
+    // Godot's near plane is the range start (`renderer_scene_cull.cpp:2327-2349`). The caster reach
+    // moves this box's near plane further towards the light, so its depth 0 lies before that side.
+    expect(chunk()).toContain(
+      'float lightSide = coord.z - godotRowLength( matrix, 2 ) * ( rangeBegin - dot( light.xyz, position ) );'
+    );
+    expect(chunk()).toContain('godotSunBlockerShadow( shadowMap, coord, texScale, lightSide )');
+  });
+
+  it('flattens a blocker nearer the light than Godot’s light side to Godot’s pancake depth (edge case)', () => {
+    // Godot clamps the depth to 0.9999 of its range, so the blocker sits 1e-4 of that range past its
+    // light side, and `1 - lightSide` is that range in this box's depth.
+    // `scene_forward_clustered.glsl:679-682`.
+    expect(chunk()).toContain(
+      `float blocker = max( godotRawDepth( ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM}, uv ), pancaked );`
+    );
+    expect(chunk()).toContain('float pancaked = lightSide + GODOT_SUN_PANCAKE * ( 1.0 - lightSide );');
+  });
+
+  it('keeps the receiver lit without a blocker (edge case)', () => {
+    expect(chunk()).toContain('if ( blockerCount == 0.0 ) return 1.0;');
+  });
+});
+
 /** three's chunk with the soft shadow filter and the split lookup in. */
 function installedChunk(): string | null {
   return godotSplitShadowChunk(softShadowFilterChunk(threeChunk)!);
@@ -276,6 +428,12 @@ describe('installGodotSplitShadow', () => {
   it('gives every lit built-in material the framebuffer height the filter reads', () => {
     installGodotSplitShadow();
     expect(THREE.ShaderLib.standard.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(framebufferHeight);
+  });
+
+  it('gives every lit built-in material the arrays the soft shadow reads', () => {
+    installGodotSplitShadow();
+    for (const name of [SUN_SOFT_SHADOWS, SUN_RANGE_BEGINS])
+      expect(THREE.ShaderLib.standard.uniforms[name]!.value).toBeInstanceOf(Float32Array);
   });
 
   it('patches the chunk once, and warns nothing, when called twice (edge case)', () => {

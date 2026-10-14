@@ -9,6 +9,8 @@ import {
 } from './areaLightFalloff';
 import { litUniformArray } from '../testing/litUniformArray';
 import { sceneLights } from '../directionalShadow/lightLists';
+import { AREA_LIGHT_SHADOWS, installAreaLightShadowUniforms } from './areaLightShadowUniforms';
+import { AtlasAreaShadow, type AreaShadowLight } from '../positionalShadow/atlasAreaShadow';
 
 /** An area light shining down, as AreaLight3D's basis puts its -Z at -Y. */
 function downLight(range = 5, attenuation = 1, specular = 1): THREE.RectAreaLight {
@@ -80,6 +82,32 @@ describe('writeAreaLightUniforms', () => {
     expect(x).toBeCloseTo(0, 6);
     expect(y).toBeCloseTo(-1, 6);
     expect(z).toBeCloseTo(0, 6);
+  });
+
+  it('puts each light that casts a shadow first, as three sorts its lights (edge case)', () => {
+    const scene = new THREE.Scene();
+    const casting = downLight(2);
+    casting.castShadow = true;
+    scene.add(downLight(1), casting, downLight(3));
+
+    write(scene);
+
+    expect([0, 1, 2].map((index) => at(uniforms().falloffs, index)[0])).toEqual([2, 1, 3]);
+  });
+
+  it("writes each light's shadow terms at the same index (edge case)", () => {
+    const scene = new THREE.Scene();
+    const casting = downLight(2) as AreaShadowLight;
+    casting.castShadow = true;
+    casting.shadow = new AtlasAreaShadow();
+    casting.shadow.place({ x: 0, y: 0, size: 512, paraboloidStep: null });
+    casting.shadow.intensity = 0.5;
+    scene.add(downLight(1), casting);
+
+    write(scene);
+
+    installAreaLightShadowUniforms();
+    expect(litUniformArray(AREA_LIGHT_SHADOWS)[0]).toBe(0.5);
   });
 
   it('gives a hidden light no index, as three gives it no slot (edge case)', () => {

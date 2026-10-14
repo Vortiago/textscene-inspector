@@ -14,12 +14,12 @@ import {
 import { godotSplitShadowChunk, installGodotSplitShadow } from './splitShadowChunk';
 import { FRAMEBUFFER_HEIGHT_UNIFORM } from '../shadowFilter/framebufferRows';
 import { softShadowFilterChunk } from '../shadowFilter/softShadowFilter';
+import { LIT_SHADERS } from '../testing/litShaders';
 
 const PARS = 'shadowmap_pars_fragment';
 const LIGHTS = 'lights_fragment_begin';
 const threePars = THREE.ShaderChunk[PARS];
 const threeLights = THREE.ShaderChunk[LIGHTS];
-const LIT_SHADERS = ['lambert', 'phong', 'standard', 'physical', 'toon', 'shadow'] as const;
 
 const occurrences = (text: string, part: string) => text.split(part).length - 1;
 

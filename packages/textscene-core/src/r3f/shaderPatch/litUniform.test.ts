@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installLitUniform, installedUniformValue } from './litUniform';
+import { LIT_SHADERS } from '../testing/litShaders';
 
 const UNIFORM = 'litUniformTest';
-const LIT_SHADERS = ['lambert', 'phong', 'standard', 'physical', 'toon', 'shadow'] as const;
 
 afterEach(() => {
   for (const shader of Object.values(THREE.ShaderLib)) delete shader.uniforms[UNIFORM];

@@ -75,6 +75,9 @@ export const GEOMETRY_SCENES = [
   // Four spheres under one AreaLight3D, in the default, toon, specular-disabled
   // and clearcoat light modes. area-light-normalize draws only matte plates.
   { name: 'area-light-modes', file: 'unit-area-light-modes.tscn' },
+  // An AreaLight3D's shadow: the box's paraboloid shadow on the ground. The
+  // other area light goldens set no shadow.
+  { name: 'area-light-shadow', file: 'unit-area-light3d.tscn' },
   // A clearcoat sphere beside a bare one, under an omni light and a sky. The
   // coat dims only the sky's light beneath it. No other golden coats a sphere
   // under a punctual light or a sky.
