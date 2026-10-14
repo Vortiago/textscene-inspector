@@ -120,7 +120,7 @@ function useTexture2DSlot(
   const atlasResources = slot.internalResources;
 
   if (!ref) return { atlas, atlasResources, source, result: { texture: null, missing: false } };
-  // A `.tres` still loading names nothing yet.
+  // Nothing to resolve: a `.tres` still loading or proved absent, or a wrapper with no texture.
   if (!slot.ref) return { atlas, atlasResources, source, result: { texture: null, missing: slot.missing } };
 
   const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');

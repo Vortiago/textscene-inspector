@@ -46,7 +46,7 @@ interface FloatLayout {
 }
 
 /**
- * Each format with more than 8 bits a channel, unpacked as `Image::_get_color_at_ofs` unpacks it
+ * Each uncompressed format that is not one byte a channel, unpacked as `Image::_get_color_at_ofs` unpacks it
  * (`core/io/image.cpp:3382-3406`, `:3451-3525`) and as the rendering device samples it
  * (`renderer_rd/storage_rd/texture_storage.cpp:1899-1996`, `:2326-2382`): a missing colour
  * channel reads 0 and a missing alpha 1.

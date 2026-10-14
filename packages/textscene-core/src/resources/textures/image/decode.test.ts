@@ -1,7 +1,7 @@
 /** An `Image` sub-resource as Godot 4.6.3 writes it, decoded to RGBA8. */
 import { describe, expect, it } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
-import { decodeImageRef } from './decode';
+import { decodeImageRef, imageRefSize } from './decode';
 
 function image(format: string, width: number, height: number, bytes: string): TscnInternalResource {
   return {
@@ -74,5 +74,28 @@ describe('decodeImageRef', () => {
     expect(decodeImage(image('RGB8', 2, 1, '1, 2, 3'))).toBeNull();
     expect(decodeImage(image('RHalf', 2, 1, '0, 60'))).toBeNull();
     expect(decodeImage({ id: 'Image_a', type: 'Image', data: {} })).toBeNull();
+  });
+});
+
+describe('imageRefSize', () => {
+  it("reads an image's size", () => {
+    expect(imageRefSize('SubResource("Image_a")', [image('RGBA8', 3, 2, '')])).toEqual({
+      width: 3,
+      height: 2,
+    });
+  });
+
+  it('sizes an image in a format this does not decode, as Godot does (edge case)', () => {
+    expect(imageRefSize('SubResource("Image_a")', [image('DXT1 RGB8', 4, 4, '')])).toEqual({
+      width: 4,
+      height: 4,
+    });
+  });
+
+  it('gives nothing for a reference to another type or an image without its keys (error path)', () => {
+    expect(
+      imageRefSize('SubResource("Image_a")', [{ ...image('RGB8', 1, 1, ''), type: 'Gradient' }])
+    ).toBeNull();
+    expect(imageRefSize('SubResource("Image_a")', [{ id: 'Image_a', type: 'Image', data: {} }])).toBeNull();
   });
 });

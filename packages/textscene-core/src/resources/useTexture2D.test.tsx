@@ -410,6 +410,20 @@ describe('inlineTexture2DSize', () => {
     expect(inlineTexture2DSize('SubResource("NoiseTexture2D_a")', noise)).toEqual({ x: 48, y: 24 });
   });
 
+  it("reports an inline ImageTexture's size as its image's", () => {
+    const saved: TscnInternalResource[] = [
+      {
+        id: 'Image_a',
+        type: 'Image',
+        data: { data: '{\n"data": PackedByteArray(),\n"format": "RGBAHalf",\n"height": 6,\n"width": 10\n}' },
+      },
+      { id: 'ImageTexture_a', type: 'ImageTexture', data: { image: 'SubResource("Image_a")' } },
+      { id: 'ImageTexture_empty', type: 'ImageTexture', data: {} },
+    ];
+    expect(inlineTexture2DSize('SubResource("ImageTexture_a")', saved)).toEqual({ x: 10, y: 6 });
+    expect(inlineTexture2DSize('SubResource("ImageTexture_empty")', saved)).toBeNull();
+  });
+
   it("reports an inline GradientTexture2D's declared pixel size", () => {
     expect(inlineTexture2DSize('SubResource("GradientTexture2D_a")', resources)).toEqual({
       x: 160,
