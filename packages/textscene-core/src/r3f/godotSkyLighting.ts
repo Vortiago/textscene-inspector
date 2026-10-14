@@ -1,7 +1,7 @@
 /**
  * How the sky lights a surface in Godot: its ambient light and its reflection. Both read Godot's
- * radiance layers, which `<SkyLayer>` shows in three shared cubes (`sky/skyLayersMap.ts`), and a
- * mirror reflection reads the radiance itself, mip 0 of three's PMREM
+ * radiance layers, which `<SkyLayer>` shows through three shared slots (`sky/skyLayerCubes.ts`),
+ * and a mirror reflection reads the radiance itself, mip 0 of three's PMREM
  * (`scene_forward_clustered.glsl:1704-1756`).
  */
 
@@ -10,10 +10,11 @@ import { installLitUniform } from './shaderPatch/litUniform.js';
 import { glslFloat } from '../resources/environment/glslLiterals.js';
 import {
   SKY_CONTRIBUTION_UNIFORM,
+  SKY_LAYER_GROUP_NAMES,
   SKY_LAYER_UNIFORMS,
   skyContribution,
-  skyLayerMaps,
-} from './sky/skyLayersMap.js';
+  skyLayerSlots,
+} from './sky/skyLayerCubes.js';
 import { SKY_LAYER_GROUPS, type SkyLayerGroup } from '../resources/sky/skyLayers.js';
 
 type SkyChunk = 'lights_fragment_maps' | 'envmap_physical_pars_fragment';
@@ -141,10 +142,10 @@ const SKY_LIGHTING_EDITS: readonly ChunkEdit<SkyChunk>[] = [
 export const SKY_LIGHTING_MARK = GODOT_IBL_RADIANCE;
 
 /**
- * Replaces three's chunks and gives the layer cubes and the sky's share to every built-in lit material and to
- * `UniformsLib.lights`, for every program compiled after the call. A three release that rewrites a
- * replaced line keeps all its chunks, and `godotSkyLighting.test.ts` fails on that release. A
- * second call changes nothing.
+ * Replaces three's chunks and gives the layer slots and the sky's share to every built-in lit
+ * material and to `UniformsLib.lights`, for every program compiled after the call. A three release
+ * that rewrites a replaced line keeps all its chunks, and `godotSkyLighting.test.ts` fails on that
+ * release. A second call changes nothing.
  */
 export function installGodotSkyLighting(): void {
   const isPatched = installChunkPatch({
@@ -155,8 +156,8 @@ export function installGodotSkyLighting(): void {
       'lights_fragment_maps or envmap_physical_pars_fragment lacks a line the sky lighting patch replaces',
   });
   if (!isPatched) return;
-  for (const group of ['sharp', 'rough', 'last'] as const) {
-    installLitUniform(SKY_LAYER_UNIFORMS[group], skyLayerMaps[group]);
+  for (const group of SKY_LAYER_GROUP_NAMES) {
+    installLitUniform(SKY_LAYER_UNIFORMS[group], skyLayerSlots[group]);
   }
   installLitUniform(SKY_CONTRIBUTION_UNIFORM, skyContribution);
 }
