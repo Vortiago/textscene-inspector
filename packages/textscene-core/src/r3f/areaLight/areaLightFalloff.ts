@@ -36,7 +36,8 @@ export function areaLightUserData(falloff: AreaLightFalloff): Record<string, unk
   return { [FALLOFF_KEY]: falloff };
 }
 
-function readFalloff(light: THREE.RectAreaLight): AreaLightFalloff | undefined {
+/** The falloff `areaLightUserData` declared, or undefined for a light that declared none. */
+export function readAreaLightFalloff(light: THREE.RectAreaLight): AreaLightFalloff | undefined {
   return light.userData[FALLOFF_KEY] as AreaLightFalloff | undefined;
 }
 
@@ -48,14 +49,11 @@ const arrays = new LightUniformArrays({
   [AREA_LIGHT_TEXTURE_MIPMAPS]: 1,
 });
 
-/** An empty rectangle marks a light without a texture (4.7.2 `light_storage.cpp:1132-1141`). */
-const NO_TEXTURE_RECT = [0, 0, 0, 0] as const;
-
 /** Where the light's texture lies in the atlas, and the highest mip the shader reads. */
 function writeTexture(set: LightArrays<AreaLightUniform>, index: number, light: THREE.RectAreaLight): void {
-  const placement = areaTexturePlacement(light);
-  set[AREA_LIGHT_TEXTURE_RECTS].set(placement?.rect ?? NO_TEXTURE_RECT, index * 4);
-  set[AREA_LIGHT_TEXTURE_MIPMAPS][index] = placement?.maxMipmap ?? 0;
+  const { rect, maxMipmap } = areaTexturePlacement(light);
+  set[AREA_LIGHT_TEXTURE_RECTS].set(rect, index * 4);
+  set[AREA_LIGHT_TEXTURE_MIPMAPS][index] = maxMipmap;
 }
 
 /** Gives the arrays to every built-in lit material. */
@@ -81,6 +79,26 @@ function isRectAreaLight(light: THREE.Light): light is THREE.RectAreaLight {
   return (light as THREE.RectAreaLight).isRectAreaLight === true;
 }
 
+/** An area light's local axes: it faces -Z, and its width runs along +X and its height along +Y. */
+export const AREA_LIGHT_AXES = {
+  facing: new THREE.Vector3(0, 0, -1),
+  width: new THREE.Vector3(1, 0, 0),
+  height: new THREE.Vector3(0, 1, 0),
+} as const;
+
+/** Writes `light`'s `local` axis into `target` as a unit direction in `camera`'s view space. */
+export function areaLightViewAxis(
+  target: THREE.Vector3,
+  local: THREE.Vector3,
+  light: THREE.RectAreaLight,
+  camera: THREE.Camera
+): THREE.Vector3 {
+  return target
+    .copy(local)
+    .transformDirection(light.matrixWorld)
+    .transformDirection(camera.matrixWorldInverse);
+}
+
 const scratchFacing = new THREE.Vector3();
 
 /**
@@ -96,13 +114,12 @@ function writeLight(
   camera: THREE.Camera
 ) {
   const offset = index * 3;
-  scratchFacing
-    .set(0, 0, -1)
-    .transformDirection(light.matrixWorld)
-    .transformDirection(camera.matrixWorldInverse)
-    .toArray(set[AREA_LIGHT_FACINGS], offset);
+  areaLightViewAxis(scratchFacing, AREA_LIGHT_AXES.facing, light, camera).toArray(
+    set[AREA_LIGHT_FACINGS],
+    offset
+  );
   writeTexture(set, index, light);
-  const falloff = readFalloff(light);
+  const falloff = readAreaLightFalloff(light);
   if (!falloff) return;
   const falloffs = set[AREA_LIGHT_FALLOFFS];
   falloffs[offset] = Math.max(0.001, falloff.range);

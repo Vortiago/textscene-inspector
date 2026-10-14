@@ -74,10 +74,15 @@ let placements = new Map<THREE.Texture, AreaTexturePlacement>();
 /** Whether a texture joined since the last build. Godot leaves a texture that leaves in place until then. */
 let isDirty = true;
 
+/** The one atlas, an empty one until a texture joins it. Its identity never changes. */
+export function areaLightAtlasTexture(): THREE.Texture {
+  if (atlasTexture.mipmaps.length === 0) atlasTexture.hold(buildAreaLightAtlas([]));
+  return atlasTexture;
+}
+
 /** Gives the atlas to every built-in lit material. */
 export function installAreaLightAtlas(): void {
-  if (atlasTexture.mipmaps.length === 0) atlasTexture.hold(buildAreaLightAtlas([]));
-  installLitUniform(AREA_LIGHT_ATLAS_UNIFORM, atlasTexture);
+  installLitUniform(AREA_LIGHT_ATLAS_UNIFORM, areaLightAtlasTexture());
 }
 
 /** Puts `texture` in the atlas for one more holder (`texture_add_to_area_light_atlas`). */
@@ -106,13 +111,17 @@ export function areaTextureUserData(texture: THREE.Texture | null): Record<strin
   return { [TEXTURE_KEY]: texture };
 }
 
+/** An empty rectangle marks a light without a texture (4.7.2 `light_storage.cpp:1132-1141`). */
+export const NO_AREA_TEXTURE: AreaTexturePlacement = { rect: [0, 0, 0, 0], maxMipmap: 0 };
+
 /**
- * Where `light`'s texture lies in the atlas, or undefined for a light without one or a texture
- * the atlas does not hold, which Godot's light buffer marks with an empty rectangle.
+ * Where `light`'s texture lies in the atlas, or `NO_AREA_TEXTURE` for a light without one or a
+ * texture the atlas does not hold.
  */
-export function areaTexturePlacement(light: THREE.Object3D): AreaTexturePlacement | undefined {
+export function areaTexturePlacement(light: THREE.Object3D): AreaTexturePlacement {
   const texture = light.userData[TEXTURE_KEY] as THREE.Texture | null | undefined;
-  return texture && heldTextures.has(texture) ? placements.get(texture) : undefined;
+  const placement = texture && heldTextures.has(texture) ? placements.get(texture) : undefined;
+  return placement ?? NO_AREA_TEXTURE;
 }
 
 /** A texture's sRGB bytes with the top row first, as Godot's image holds it. */

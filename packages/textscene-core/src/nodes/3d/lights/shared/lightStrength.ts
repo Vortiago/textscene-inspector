@@ -1,6 +1,6 @@
 /**
- * A light's three intensity, shadow intensity and specular amount, from its Godot energy, sign,
- * shadow opacity and `light_specular`.
+ * A light's three intensity, shadow intensity, specular amount and fog energy, from its Godot
+ * energy, sign, shadow opacity, `light_specular` and `light_volumetric_fog_energy`.
  */
 
 import {
@@ -8,6 +8,7 @@ import {
   LIGHT_SHADOW_OPACITY_DEFAULT,
   LIGHT_SPECULAR_DEFAULT,
 } from '../../../../godot/light';
+import { LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT } from '../../../../godot/volumetricFog';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import type { BaseLightProperties } from './types';
 
@@ -42,4 +43,9 @@ export function directionalLightSpecularAmount(
   properties: Pick<BaseLightProperties, 'light_specular'>
 ): number {
   return properties.light_specular ?? DIRECTIONAL_LIGHT_SPECULAR_DEFAULT;
+}
+
+/** How strongly the light scatters into volumetric fog: its `light_volumetric_fog_energy`. */
+export function lightFogEnergy(properties: Pick<BaseLightProperties, 'light_volumetric_fog_energy'>): number {
+  return properties.light_volumetric_fog_energy ?? LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT;
 }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
+  NO_AREA_TEXTURE,
   areaTexturePlacement,
   areaTextureUserData,
   holdAreaTexture,
@@ -87,13 +88,13 @@ describe('the area light atlas', () => {
     hold(dataTexture(64, () => [0, 0, 0, 255]));
     updateAreaLightAtlas();
 
-    expect(areaTexturePlacement(lightShowing(texture))).toBeDefined();
+    expect(areaTexturePlacement(lightShowing(texture))).not.toEqual(NO_AREA_TEXTURE);
   });
 
   it('places nothing for a light without a texture (edge case)', () => {
     updateAreaLightAtlas();
 
-    expect(areaTexturePlacement(new THREE.RectAreaLight())).toBeUndefined();
+    expect(areaTexturePlacement(new THREE.RectAreaLight())).toEqual(NO_AREA_TEXTURE);
   });
 
   it('places nothing for a texture whose pixels cannot be read (error case)', () => {
@@ -101,6 +102,6 @@ describe('the area light atlas', () => {
 
     updateAreaLightAtlas();
 
-    expect(areaTexturePlacement(lightShowing(texture))).toBeUndefined();
+    expect(areaTexturePlacement(lightShowing(texture))).toEqual(NO_AREA_TEXTURE);
   });
 });

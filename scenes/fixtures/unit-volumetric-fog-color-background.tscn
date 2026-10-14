@@ -3,7 +3,7 @@
 ; A colour background under thin volumetric fog, with no light in the fog. Godot draws a fogged
 ; colour background through a sky pass that converts the colour to linear twice. So the background
 ; is far darker than the same colour without fog. No other golden shows a colour background through
-; fog this thin. Temporal reprojection is off: Godot's reference captures its history mid-blend.
+; fog this thin. Temporal reprojection is off, as the background is the variable, not the history.
 ; An unshaded box gives the capture a second colour. The zero-energy sun keeps the editor's preview
 ; sun out (ADR-0025).
 

@@ -75,6 +75,8 @@ export const GEOMETRY_SCENES = [
   // Four spheres under one AreaLight3D, in the default, toon, specular-disabled
   // and clearcoat light modes. area-light-normalize draws only matte plates.
   { name: 'area-light-modes', file: 'unit-area-light-modes.tscn' },
+  // Two equal area lights, one half way through its camera distance fade.
+  { name: 'area-light-distance-fade', file: 'unit-area-light-distance-fade.tscn' },
   // An AreaLight3D's shadow: the box's paraboloid shadow on the ground. The
   // other area light goldens set no shadow.
   { name: 'area-light-shadow', file: 'unit-area-light3d.tscn' },
