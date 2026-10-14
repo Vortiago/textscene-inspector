@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import type { SceneLight } from './lightLists.js';
 import { readDirectionalShadowDeclaration, type DirectionalShadowDeclaration } from './declaration.js';
 import { SPLIT_SLOTS } from './splitShadow.js';
-import { SplitSunLight, declaredLightOf } from './splitSun.js';
+import { declaredLightOf, isSplitSun } from './splitSun.js';
 import { slottedLights } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
 
@@ -67,9 +67,7 @@ export function writeSunSoftShadowUniforms(
   camera: THREE.Camera,
   drawsSoftShadows: boolean
 ): void {
-  const suns = slottedLights(lights, camera).sun.filter(
-    (light): light is SplitSunLight => light instanceof SplitSunLight
-  );
+  const suns = slottedLights(lights, camera).sun.filter(isSplitSun);
   arrays.write(suns.length, (set) => {
     suns.forEach((sun, index) => {
       const angle = drawsSoftShadows ? (declarationOf(sun)?.softShadowAngle ?? 0) : 0;

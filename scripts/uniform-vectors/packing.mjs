@@ -6,69 +6,44 @@
 
 const COLUMNS = 4;
 
-/** Each WebGL 2 non-sampler uniform type, as `getActiveUniform` reports it. */
-export const UNIFORM_SHAPES = {
-  FLOAT: 0x1406,
-  FLOAT_VEC2: 0x8b50,
-  FLOAT_VEC3: 0x8b51,
-  FLOAT_VEC4: 0x8b52,
-  INT: 0x1404,
-  INT_VEC2: 0x8b53,
-  INT_VEC3: 0x8b54,
-  INT_VEC4: 0x8b55,
-  UNSIGNED_INT: 0x1405,
-  UNSIGNED_INT_VEC2: 0x8dc6,
-  UNSIGNED_INT_VEC3: 0x8dc7,
-  UNSIGNED_INT_VEC4: 0x8dc8,
-  BOOL: 0x8b56,
-  BOOL_VEC2: 0x8b57,
-  BOOL_VEC3: 0x8b58,
-  BOOL_VEC4: 0x8b59,
-  FLOAT_MAT2: 0x8b5a,
-  FLOAT_MAT3: 0x8b5b,
-  FLOAT_MAT4: 0x8b5c,
-  FLOAT_MAT2x3: 0x8b65,
-  FLOAT_MAT2x4: 0x8b66,
-  FLOAT_MAT3x2: 0x8b67,
-  FLOAT_MAT3x4: 0x8b68,
-  FLOAT_MAT4x2: 0x8b69,
-  FLOAT_MAT4x3: 0x8b6a,
+/**
+ * Each WebGL 2 non-sampler uniform type, as `getActiveUniform` reports it, and `[columns, rows]` of
+ * one element, as ANGLE's `GetTypePackingComponentsPerRow` and `GetTypePackingRows` give them
+ * (`compiler/translator/VariablePacker.cpp`). A non-square matrix takes the space of the square
+ * one of its larger side, and a mat2 takes two full rows.
+ */
+const TYPES = {
+  FLOAT: [0x1406, 1, 1],
+  FLOAT_VEC2: [0x8b50, 2, 1],
+  FLOAT_VEC3: [0x8b51, 3, 1],
+  FLOAT_VEC4: [0x8b52, 4, 1],
+  INT: [0x1404, 1, 1],
+  INT_VEC2: [0x8b53, 2, 1],
+  INT_VEC3: [0x8b54, 3, 1],
+  INT_VEC4: [0x8b55, 4, 1],
+  UNSIGNED_INT: [0x1405, 1, 1],
+  UNSIGNED_INT_VEC2: [0x8dc6, 2, 1],
+  UNSIGNED_INT_VEC3: [0x8dc7, 3, 1],
+  UNSIGNED_INT_VEC4: [0x8dc8, 4, 1],
+  BOOL: [0x8b56, 1, 1],
+  BOOL_VEC2: [0x8b57, 2, 1],
+  BOOL_VEC3: [0x8b58, 3, 1],
+  BOOL_VEC4: [0x8b59, 4, 1],
+  FLOAT_MAT2: [0x8b5a, 4, 2],
+  FLOAT_MAT3: [0x8b5b, 3, 3],
+  FLOAT_MAT4: [0x8b5c, 4, 4],
+  FLOAT_MAT2x3: [0x8b65, 3, 3],
+  FLOAT_MAT2x4: [0x8b66, 4, 4],
+  FLOAT_MAT3x2: [0x8b67, 3, 3],
+  FLOAT_MAT3x4: [0x8b68, 4, 4],
+  FLOAT_MAT4x2: [0x8b69, 4, 4],
+  FLOAT_MAT4x3: [0x8b6a, 4, 4],
 };
 
-const S = UNIFORM_SHAPES;
+/** Each type's code by its name. */
+export const UNIFORM_SHAPES = Object.fromEntries(Object.entries(TYPES).map(([name, [code]]) => [name, code]));
 
-/**
- * `[columns, rows]` of one element, as ANGLE's `GetTypePackingComponentsPerRow` and
- * `GetTypePackingRows` give them (`compiler/translator/VariablePacker.cpp`). A non-square matrix
- * takes the space of the square one of its larger side, and a mat2 takes two full rows.
- */
-const SHAPES = new Map([
-  [S.FLOAT, [1, 1]],
-  [S.INT, [1, 1]],
-  [S.UNSIGNED_INT, [1, 1]],
-  [S.BOOL, [1, 1]],
-  [S.FLOAT_VEC2, [2, 1]],
-  [S.INT_VEC2, [2, 1]],
-  [S.UNSIGNED_INT_VEC2, [2, 1]],
-  [S.BOOL_VEC2, [2, 1]],
-  [S.FLOAT_VEC3, [3, 1]],
-  [S.INT_VEC3, [3, 1]],
-  [S.UNSIGNED_INT_VEC3, [3, 1]],
-  [S.BOOL_VEC3, [3, 1]],
-  [S.FLOAT_VEC4, [4, 1]],
-  [S.INT_VEC4, [4, 1]],
-  [S.UNSIGNED_INT_VEC4, [4, 1]],
-  [S.BOOL_VEC4, [4, 1]],
-  [S.FLOAT_MAT2, [4, 2]],
-  [S.FLOAT_MAT3, [3, 3]],
-  [S.FLOAT_MAT4, [4, 4]],
-  [S.FLOAT_MAT2x3, [3, 3]],
-  [S.FLOAT_MAT2x4, [4, 4]],
-  [S.FLOAT_MAT3x2, [3, 3]],
-  [S.FLOAT_MAT3x4, [4, 4]],
-  [S.FLOAT_MAT4x2, [4, 4]],
-  [S.FLOAT_MAT4x3, [4, 4]],
-]);
+const SHAPES = new Map(Object.values(TYPES).map(([code, columns, rows]) => [code, [columns, rows]]));
 
 /** `{ columns, rows, size }` of a whole uniform, array elements included. */
 function footprint({ type, size }) {

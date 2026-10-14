@@ -5,7 +5,8 @@
  */
 
 import type * as THREE from 'three';
-import { DirectionalSplitShadow, SPLIT_SLOTS } from './splitShadow.js';
+import { SPLIT_SLOTS } from './splitShadow.js';
+import { isSplitSun } from './splitSun.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
 
 export const SUN_SHADOW_ROWS = 'godotSunShadowRows';
@@ -13,8 +14,9 @@ export const SUN_SHADOW_ROWS = 'godotSunShadowRows';
 /** The rows of one slot matrix that the lookup reads. */
 export const SLOT_MATRIX_ROWS = 3;
 
-const ROW_FLOATS = 4;
-const SLOT_FLOATS = SLOT_MATRIX_ROWS * ROW_FLOATS;
+/** `Matrix4.elements` holds four columns of four floats. */
+const MATRIX_SIZE = 4;
+const SLOT_FLOATS = SLOT_MATRIX_ROWS * MATRIX_SIZE;
 
 /** One slot's rows per slot of each sun shadow. Written only by `writeSunShadowRows`. */
 const arrays = new LightUniformArrays({ [SUN_SHADOW_ROWS]: SPLIT_SLOTS * SLOT_FLOATS });
@@ -25,38 +27,31 @@ export function installSunShadowRows(): void {
 }
 
 /**
- * Writes the rows of each sun shadow among `lights`, in their order. Pass the lights of three's
+ * Writes the rows of each split sun among `lights`, in their order. Pass the lights of three's
  * shadow pass, after it has updated the slot matrices: three lists every sun shadow in that order
- * (r186 `WebGLLights.js:289-325`).
+ * (r186 `WebGLLights.js:289-325`). It runs on every pass, so it allocates no list of suns.
  */
 export function writeSunShadowRows(lights: readonly THREE.Light[]): void {
-  const shadows = sunShadowsOf(lights);
-  if (shadows.length === 0) return;
-  arrays.write(shadows.length, (set) => {
-    const rows = set[SUN_SHADOW_ROWS];
-    shadows.forEach((shadow, index) => {
+  const sunCount = lights.reduce((count, light) => (isSplitSun(light) ? count + 1 : count), 0);
+  if (sunCount === 0) return;
+  arrays.write(sunCount, (set) => {
+    let offset = 0;
+    for (const light of lights) {
+      if (!isSplitSun(light)) continue;
       for (let slot = 0; slot < SPLIT_SLOTS; slot++) {
-        writeSlotRows(shadow.getMatrix(slot), rows, (index * SPLIT_SLOTS + slot) * SLOT_FLOATS);
+        writeSlotRows(light.shadow.getMatrix(slot), set[SUN_SHADOW_ROWS], offset);
+        offset += SLOT_FLOATS;
       }
-    });
+    }
   });
-}
-
-function sunShadowsOf(lights: readonly THREE.Light[]): DirectionalSplitShadow[] {
-  const shadows: DirectionalSplitShadow[] = [];
-  for (const light of lights) {
-    const { isSunLight, shadow } = light as THREE.Light & { isSunLight?: boolean; shadow?: unknown };
-    if (isSunLight && shadow instanceof DirectionalSplitShadow) shadows.push(shadow);
-  }
-  return shadows;
 }
 
 /** `Matrix4.elements` is column-major, so row `r` is elements `r`, `r + 4`, `r + 8` and `r + 12`. */
 function writeSlotRows(matrix: THREE.Matrix4, rows: Float32Array, offset: number): void {
   const { elements } = matrix;
   for (let row = 0; row < SLOT_MATRIX_ROWS; row++) {
-    for (let column = 0; column < ROW_FLOATS; column++) {
-      rows[offset + row * ROW_FLOATS + column] = elements[column * 4 + row]!;
+    for (let column = 0; column < MATRIX_SIZE; column++) {
+      rows[offset + row * MATRIX_SIZE + column] = elements[column * MATRIX_SIZE + row]!;
     }
   }
 }

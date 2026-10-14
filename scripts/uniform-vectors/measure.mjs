@@ -15,14 +15,13 @@ import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import {
   assertPortFree,
   ensureWebBuilt,
-  findCanvas,
-  gotoFixture,
   killPreviewGroup,
   settleCanvas,
   startPreview,
-  VIEWPORT,
   waitForServer,
+  warmUpGLContext,
 } from '../visual/previewServer.mjs';
+import { openFixture } from '../e2e/openFixture.mjs';
 import { measuredScene } from './scenes.mjs';
 import { isSampler, packedVectors } from './packing.mjs';
 
@@ -36,11 +35,11 @@ const PORT = Number(process.env.UNIFORM_VECTORS_PORT) || 4321;
 const START_FIXTURE = 'unit-empty-scene.tscn';
 
 const CASES = [
-  { label: '1', suns: 1, soft: false },
-  { label: '8', suns: 8, soft: false },
-  { label: '9', suns: 9, soft: false },
-  { label: '1, soft', suns: 1, soft: true },
-  { label: '8, soft', suns: 8, soft: true },
+  { suns: 1, soft: false },
+  { suns: 8, soft: false },
+  { suns: 9, soft: false },
+  { suns: 1, soft: true },
+  { suns: 8, soft: true },
 ];
 
 /** Records the sources of every program the page links, before the app's first draw. */
@@ -103,13 +102,12 @@ function fragmentUniforms(since) {
 
 /** The highest packed vector count of the lit programs `scene` compiles, and their sun shadows. */
 async function measure(browser, baseUrl, scene) {
-  const context = await browser.newContext({ viewport: VIEWPORT });
+  const { context, page, canvas } = await openFixture(browser, baseUrl, {
+    fixture: START_FIXTURE,
+    label: 'uniform vectors',
+    initScripts: [[recordLinkedPrograms]],
+  });
   try {
-    await context.addInitScript(recordLinkedPrograms);
-    const page = await context.newPage();
-    await gotoFixture(page, baseUrl, START_FIXTURE);
-    const { canvas, reason } = await findCanvas(page);
-    if (!canvas) throw new Error(reason);
     const since = await page.evaluate(() => window.__linkedPrograms.length);
     await page
       .getByTestId('upload-tscn-input')
@@ -118,11 +116,10 @@ async function measure(browser, baseUrl, scene) {
     if (!settled.buffer) throw new Error(settled.reason);
     const programs = await page.evaluate(fragmentUniforms, since);
     if (programs.length === 0) throw new Error('the scene compiled no lit program');
-    const vectors = programs.map(({ uniforms }) =>
-      packedVectors(uniforms.filter(({ type }) => !isSampler(type)))
-    );
     return {
-      vectors: Math.max(...vectors),
+      vectors: Math.max(
+        ...programs.map(({ uniforms }) => packedVectors(uniforms.filter(({ type }) => !isSampler(type))))
+      ),
       sunShadows: Math.max(...programs.map(({ sunShadows }) => sunShadows)),
       limit: programs[0].limit,
     };
@@ -139,17 +136,19 @@ async function main() {
   try {
     await waitForServer(`${baseUrl}/`);
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+    await warmUpGLContext(browser);
     console.log(
       '| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with five maps, clearcoat, a sky and fog |'
     );
     console.log('| --- | --- | --- |');
-    let limit = 0;
-    for (const { label, suns, soft } of CASES) {
+    let limit;
+    for (const { suns, soft } of CASES) {
       const standard = await measure(browser, baseUrl, measuredScene({ suns, soft, physical: false }));
       const physical = await measure(browser, baseUrl, measuredScene({ suns, soft, physical: true }));
-      limit = standard.limit;
-      const shadows = standard.sunShadows === suns ? '' : ` (${standard.sunShadows} sun shadows drawn)`;
-      console.log(`| ${label}${shadows} | ${standard.vectors} | ${physical.vectors} |`);
+      limit ??= standard.limit;
+      const label = `${suns}${soft ? ', soft' : ''}`;
+      const drawn = standard.sunShadows === suns ? '' : ` (${standard.sunShadows} sun shadows drawn)`;
+      console.log(`| ${label}${drawn} | ${standard.vectors} | ${physical.vectors} |`);
     }
     console.log(`\nThis Chromium reports MAX_FRAGMENT_UNIFORM_VECTORS = ${limit}. WebGL 2 guarantees 224.`);
   } finally {
