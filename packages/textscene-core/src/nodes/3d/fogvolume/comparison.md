@@ -39,5 +39,4 @@ The lenient parser clamps each negative `size` component to 0, as `set_size` doe
 - **Resource gap** An ImageTexture3D saved in a block-compressed image format (#736) or an integer format leaves the density even.
 - **Approximated** An imported 3D texture reads its source image, so its density differs slightly from Godot's Lossy or VRAM-compressed copy.
 - **Approximated** A NoiseTexture3D `density_texture` leaves the density even on first load until its build finishes, where Godot shapes the fog on its first frame.
-- **Approximated** A NoiseTexture3D's domain warp is not applied, so the density keeps its scale while the swirl does not match.
 - **Approximated** Past 2048 stacked slices of distinct density textures in one view, each further texture leaves its density even.

@@ -1,8 +1,8 @@
 /**
  * Types for `fastnoise-lite` (1.1.1), which ships no `.d.ts`: only the surface the noise texture
- * slices drive, so a green tsc never implies an undeclared member works. No domain warp: its
- * `DomainWrap` tests `instanceof Vector2`, a class the package does not export, and ignores a
- * plain `{x, y}` (verified on 1.1.1). So the slices decode warp settings and never apply them.
+ * slices drive, so a green tsc never implies an undeclared member works. `DomainWrap` ignores a
+ * plain `{x, y}`, as it tests `instanceof Vector2`, so `patches/fastnoise-lite@1.1.1.patch`
+ * exports `Vector2` and `Vector3`.
  */
 
 declare module 'fastnoise-lite' {
@@ -24,6 +24,13 @@ declare module 'fastnoise-lite' {
       FBm: string;
       Ridged: string;
       PingPong: string;
+      DomainWarpProgressive: string;
+      DomainWarpIndependent: string;
+    };
+    static readonly DomainWarpType: {
+      OpenSimplex2: string;
+      OpenSimplex2Reduced: string;
+      BasicGrid: string;
     };
     static readonly CellularDistanceFunction: {
       Euclidean: string;
@@ -52,8 +59,26 @@ declare module 'fastnoise-lite' {
     SetCellularDistanceFunction(fn: string): void;
     SetCellularReturnType(returnType: string): void;
     SetCellularJitter(jitter: number): void;
+    SetDomainWarpType(domainWarpType: string): void;
+    SetDomainWarpAmp(amplitude: number): void;
 
     /** 2D noise in -1..1 at the given position, or 3D noise with `z`, under the current settings. */
     GetNoise(x: number, y: number, z?: number): number;
+
+    /** Moves `coord` in place under the current domain warp settings. */
+    DomainWrap(coord: Vector2 | Vector3): void;
+  }
+
+  export class Vector2 {
+    constructor(x: number, y: number);
+    x: number;
+    y: number;
+  }
+
+  export class Vector3 {
+    constructor(x: number, y: number, z: number);
+    x: number;
+    y: number;
+    z: number;
   }
 }

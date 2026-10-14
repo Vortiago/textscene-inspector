@@ -37,9 +37,6 @@ function rgbaPixels(
   colorRamp: Gradient | null
 ): Uint8Array {
   const { width, height } = tex;
-  // Domain warp is not applied (`fastnoise_lite.cpp:318-325`): the JS port's
-  // `DomainWrap` checks `instanceof Vector2` against a class it does not export,
-  // so a plain `{x, y}` comes back unchanged (1.1.1). The field renders unwarped.
   const sample = noiseSampler(noise);
 
   const gray = tex.seamless

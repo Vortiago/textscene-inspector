@@ -1,0 +1,10 @@
+diff --git a/FastNoiseLite.js b/FastNoiseLite.js
+index a6f68fd4f001738aa3d5b268b0d38327d36d5530..c399733b07959c86b45c8b5d1123168cf663f262 100644
+--- a/FastNoiseLite.js
++++ b/FastNoiseLite.js
+@@ -3205,3 +3205,5 @@ class Vector3 {
+         this.z = z;
+     }
+ }
++
++export { Vector2, Vector3 };

@@ -23,3 +23,66 @@ describe('3D FastNoiseLite parity with Godot 4.6.3', () => {
     expect(sample(50, 60, 7)).toBeCloseTo(-0.43862861394882, 6);
   });
 });
+
+describe('3D FastNoiseLite domain warp parity with Godot 4.6.3', () => {
+  // `get_noise_3d` warps the offset position through a second generator before sampling
+  // A progressive warp agrees with Godot to 5 digits, where an unwarped sample agrees to 6.
+  // (fastnoise_lite.cpp:331-338).
+  const warped = (properties: Record<string, string>) =>
+    noiseSampler3D(
+      decodeFastNoiseLite({
+        seed: '3',
+        frequency: '0.04',
+        offset: 'Vector3(5, -2, 1)',
+        domain_warp_enabled: 'true',
+        domain_warp_fractal_octaves: '4',
+        domain_warp_fractal_lacunarity: '2.5',
+        domain_warp_fractal_gain: '0.4',
+        ...properties,
+      })
+    );
+
+  it('warps with a single simplex warp', () => {
+    const sample = warped({
+      domain_warp_type: '0',
+      domain_warp_fractal_type: '0',
+      domain_warp_amplitude: '30',
+      domain_warp_frequency: '0.05',
+    });
+    expect(sample(3, 7, 5)).toBeCloseTo(0.18936803936958, 5);
+    expect(sample(40, 12, 9)).toBeCloseTo(0.00436255149543, 5);
+  });
+
+  it('warps progressively with the reduced simplex warp', () => {
+    const sample = warped({
+      domain_warp_type: '1',
+      domain_warp_fractal_type: '1',
+      domain_warp_amplitude: '20',
+      domain_warp_frequency: '0.02',
+    });
+    expect(sample(3, 7, 5)).toBeCloseTo(0.12932956218719, 5);
+    expect(sample(40, 12, 9)).toBeCloseTo(-0.27685889601707, 5);
+  });
+
+  it('warps independently with the basic grid warp', () => {
+    const sample = warped({
+      domain_warp_type: '2',
+      domain_warp_fractal_type: '2',
+      domain_warp_amplitude: '10',
+      domain_warp_frequency: '0.1',
+    });
+    expect(sample(3, 7, 5)).toBeCloseTo(0.08378794789314, 5);
+    expect(sample(40, 12, 9)).toBeCloseTo(0.07185348123312, 5);
+  });
+
+  it('warps progressively with the full simplex warp', () => {
+    const sample = warped({
+      domain_warp_type: '0',
+      domain_warp_fractal_type: '1',
+      domain_warp_amplitude: '30',
+      domain_warp_frequency: '0.05',
+    });
+    expect(sample(3, 7, 5)).toBeCloseTo(0.25953862071037, 5);
+    expect(sample(40, 12, 9)).toBeCloseTo(-0.08196060359478, 5);
+  });
+});
