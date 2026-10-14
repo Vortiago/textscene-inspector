@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://unitsprite2dnoisetextres"]
+
+[ext_resource type="Texture2D" path="res://textures/noise-texture-2d.tres" id="1_texture"]
+
+; One variable: a Sprite2D whose texture is a NoiseTexture2D saved as its own .tres
+; (textures/noise-texture-2d.tres, 64x64, written by Godot 4.6.3), whose noise ref resolves in the
+; file's own tables.
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.85, 0.85, 0.8, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="SavedNoise" type="Sprite2D" parent="."]
+position = Vector2(576, 324)
+scale = Vector2(4, 4)
+texture = ExtResource("1_texture")

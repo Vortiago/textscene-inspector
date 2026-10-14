@@ -14,9 +14,10 @@ import { worldToSky } from '../sky/skyRotation.js';
 import { visibleInTree } from '../visibleInTree.js';
 import type { FogPasses } from './fogPasses.js';
 import { shineDirection } from './fogLights.js';
+import type { FogVolumeObject } from './fogVolumeObject.js';
 import { skyRadiance } from './fogSky.js';
 import { FOG_SUN_MAX, fogUniforms } from './fogUniforms.js';
-import type { VolumetricFog } from './fogVolumePass.js';
+import type { VolumetricFog } from './volumetricFogPass.js';
 import { writeVec4 } from './writeVec4.js';
 
 export type DepthFog = NonNullable<EnvironmentSettings['fog']>;
@@ -29,10 +30,11 @@ export interface FogSettings {
   skyEnergy: number;
 }
 
-/** The objects of a scene the fog reads: its lights, and the meshes that may cast their shadows. */
+/** The objects of a scene the fog reads: its lights, the meshes that may cast their shadows, and its FogVolumes. */
 export interface FogObjects {
   lights: readonly THREE.Light[];
   casters: readonly THREE.Mesh[];
+  volumes: readonly FogVolumeObject[];
 }
 
 /** World to sky space for the render being prepared. */
@@ -54,7 +56,7 @@ export function prepareFog(
   camera: THREE.Camera,
   settings: FogSettings,
   passes: FogPasses,
-  { lights, casters }: FogObjects
+  { lights, casters, volumes }: FogObjects
 ): boolean {
   fogUniforms.skyRotation.set(worldToSky(scene.environmentRotation, toSky).elements);
   writeDepthFog(settings.depth, camera);
@@ -70,6 +72,7 @@ export function prepareFog(
     skyEnergy: settings.skyEnergy,
     lights,
     casters,
+    volumes,
   });
 }
 

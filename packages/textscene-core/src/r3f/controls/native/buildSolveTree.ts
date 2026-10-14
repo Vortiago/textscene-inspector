@@ -23,7 +23,7 @@ import {
   findExtResource,
   findSubResource,
   parseResourceReference,
-  resolveExtAtlasTexturePath,
+  resolveExtTextResourcePath,
   resolveInstancePath,
   resolveTexture2DPath,
   unwrapCanvasTextureRef,
@@ -31,7 +31,7 @@ import {
 import { useResourceLoader } from '../../../resources/useResource';
 import { useCacheVersion } from '../../../resources/useCacheVersion';
 import type { ResourceType } from '../../../resources/ResourceEventBus';
-import { extResourceAtlasTextureSize, inlineTexture2DSize } from '../../../resources/useTexture2D';
+import { extResourceTexture2DSize, inlineTexture2DSize } from '../../../resources/useTexture2D';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import { resolveInlineFontResource } from '../../../resources/fonts/font/decode';
@@ -418,20 +418,18 @@ function buildForest(
     const inline = inlineTexture2DSize(ref, int);
     if (inline) return inline;
 
-    // An AtlasTexture in its own `.tres` loads on the resource bus, not the
-    // texture one: the file is a region in text, not pixels.
+    // A texture in its own `.tres` loads on the resource bus, not the texture
+    // one: the file is text, not pixels.
     const unwrapped = unwrapCanvasTextureRef(ref, int);
-    const atlasTresPath = resolveExtAtlasTexturePath(unwrapped, ext);
-    if (atlasTresPath) {
-      const cachedTres = resourceCache.getCached(atlasTresPath);
+    const tresPath = resolveExtTextResourcePath(unwrapped, ext);
+    if (tresPath) {
+      const cachedTres = resourceCache.getCached(tresPath);
       if (cachedTres === undefined) {
-        pendingResourceFiles.add(atlasTresPath);
+        pendingResourceFiles.add(tresPath);
         return null;
       }
       if (cachedTres === null) return null;
-      // The sheet's size matters only for a region axis that rounds to zero, and
-      // `inlineTexture2DSize` never fetches it either.
-      return extResourceAtlasTextureSize(cachedTres, null);
+      return extResourceTexture2DSize(cachedTres);
     }
 
     // `resolveTexture2DPath`, as the painters use: it unwraps a `SubResource(...)`

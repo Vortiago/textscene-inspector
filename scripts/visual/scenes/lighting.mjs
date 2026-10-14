@@ -40,6 +40,15 @@ export const LIGHTING_SCENES = [
   { name: 'volumetric-fog-spot-shadow-bias', file: 'unit-volumetric-fog-spot-shadow-bias.tscn' },
   // A colour background under thin volumetric fog. The header states why no other golden shows it.
   { name: 'volumetric-fog-color-background', file: 'unit-volumetric-fog-color-background.tscn' },
+  // A box FogVolume in the volumetric fog. The header states why no other golden shows it.
+  { name: 'fog-volume', file: 'unit-fog-volume.tscn' },
+  // A FogVolume whose density texture is an imported 3D texture. The header states why no other
+  // golden shows it.
+  { name: 'fog-volume-density-image', file: 'unit-fog-volume-density-image.tscn' },
+  // A FogVolume whose density texture is an ImageTexture3D saved as its own .tres. The header
+  // states why no other golden shows it.
+  { name: 'fog-volume-density-volume-tres', file: 'unit-fog-volume-density-volume-tres.tscn' },
+  { name: 'fog-volume-density-half-tres', file: 'unit-fog-volume-density-half-tres.tscn' },
   // Godot's editor preview sun and environment on a scene that declares neither
   // (ADR-0025). Godot's render of it is at
   // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing.

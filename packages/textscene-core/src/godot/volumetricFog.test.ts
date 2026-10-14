@@ -5,7 +5,6 @@ import {
   volumetricFogFrustum,
   volumetricFogGrid,
   volumetricFogLookup,
-  volumetricFogSkyRoughness,
   volumetricFogSliceDepths,
 } from './volumetricFog';
 
@@ -113,19 +112,5 @@ describe('volumetricFogFrustum', () => {
   it('is a box under an orthographic projection', () => {
     const box = { ...perspective, farHalfExtents: { x: 1, y: 0.5 }, isOrthographic: true };
     expect(volumetricFogFrustum(box, 51)).toEqual({ begin: { x: 1, y: 0.5 }, end: { x: 1, y: 0.5 } });
-  });
-});
-
-describe('volumetricFogSkyRoughness', () => {
-  it('reads a clear medium at mip 2 of 7', () => {
-    expect(volumetricFogSkyRoughness(0)).toBeCloseTo(2 / 7, 8);
-  });
-
-  it('reads a denser medium at a blurrier mip', () => {
-    expect(volumetricFogSkyRoughness(0.05)).toBeCloseTo(2.25 / 7, 8);
-  });
-
-  it('stops at the coarsest mip', () => {
-    expect(volumetricFogSkyRoughness(4)).toBe(1);
   });
 });

@@ -12,10 +12,11 @@ import type { AtlasTextureLayout } from './types';
 /**
  * The `{data, width, height}` a `DataTexture` carries. It is copied row by row:
  * a premultiplied canvas would zero the RGB behind alpha 0 that
- * `applyAlphaBorderFix` preserves.
+ * `applyAlphaBorderFix` preserves. A `Uint16Array` holds the half floats
+ * `colourDataTexture` uploads for a float image.
  */
 interface RawPixels {
-  data: Uint8Array | Uint8ClampedArray;
+  data: Uint8Array | Uint8ClampedArray | Uint16Array;
   width: number;
   height: number;
 }
@@ -25,10 +26,10 @@ function rawPixels(image: unknown, atlas: { width: number; height: number }): Ra
   const candidate = image as Partial<RawPixels> | null;
   const data = candidate?.data;
   if (!ArrayBuffer.isView(data)) return null;
-  // A crop indexes 4 bytes per texel only. Other formats go to the canvas path,
+  // A crop indexes 4 channels per texel only. Other formats go to the canvas path,
   // which declines in turn.
   if (data.length !== atlas.width * atlas.height * 4) return null;
-  return { data: data as Uint8Array, width: atlas.width, height: atlas.height };
+  return { data: data as RawPixels['data'], width: atlas.width, height: atlas.height };
 }
 
 /**
@@ -88,9 +89,10 @@ export function rasterizeAtlasTexture(image: unknown, layout: AtlasTextureLayout
 }
 
 /**
- * The same blit over raw RGBA bytes: the destination starts fully transparent
- * (a fresh `Uint8Array` is zeroed), so the margin the region does not cover
- * needs no separate clear.
+ * The same blit over raw RGBA texels, in the sheet's own texel type: the
+ * destination starts fully transparent (a fresh typed array is zeroed, and a
+ * zero half float is 0), so the margin the region does not cover needs no
+ * separate clear.
  */
 function cropRawPixels(
   raw: RawPixels,
@@ -100,7 +102,9 @@ function cropRawPixels(
   sw: number,
   sh: number
 ): THREE.DataTexture {
-  const out = new Uint8Array(layout.width * layout.height * 4);
+  const isHalfFloat = raw.data instanceof Uint16Array;
+  const texelCount = layout.width * layout.height * 4;
+  const out = isHalfFloat ? new Uint16Array(texelCount) : new Uint8Array(texelCount);
   const destX = layout.dest.x + (left - layout.source.x);
   const destY = layout.dest.y + (top - layout.source.y);
 
@@ -120,7 +124,9 @@ function cropRawPixels(
   }
 
   const texture = new THREE.DataTexture(out, layout.width, layout.height, THREE.RGBAFormat);
-  texture.colorSpace = THREE.SRGBColorSpace;
+  // The sheet's own tags, as `colourDataTexture` sets them: floats read raw, bytes as sRGB.
+  texture.type = isHalfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType;
+  texture.colorSpace = isHalfFloat ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace;
   // Row 0 is the sheet's row 0, and a DataTexture uploads unflipped, so the crop
   // lines up with its sheet.
   texture.flipY = false;

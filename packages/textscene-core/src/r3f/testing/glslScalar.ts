@@ -9,11 +9,13 @@ import { functionBody } from './glslSource';
 export const GLSL_BUILT_INS = {
   abs: Math.abs,
   exp: Math.exp,
+  exp2: (x: number) => 2 ** x,
   log: Math.log,
   max: Math.max,
   min: Math.min,
   pow: Math.pow,
   sqrt: Math.sqrt,
+  trunc: Math.trunc,
   clamp: (x: number, low: number, high: number) => Math.min(Math.max(x, low), high),
   mix: (a: number, b: number, t: number) => a + (b - a) * t,
   smoothstep: (edge0: number, edge1: number, x: number) => {

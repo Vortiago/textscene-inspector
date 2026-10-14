@@ -6,12 +6,12 @@ renders_as: a THREE.DataTexture / CanvasTexture
 
 # Texture2D (sub-resource textures)
 
-A material's texture slot can point at a SubResource Texture2D rather than an imported image. GradientTexture2D, CanvasTexture, AtlasTexture and NoiseTexture2D are all rasterised or windowed on the client and reach every consumer as a `THREE.Texture`.
+A material's texture slot can point at a Texture2D that the scene or a `.tres` describes. The previewer rasterises or windows a GradientTexture2D, CanvasTexture, AtlasTexture, NoiseTexture2D or saved ImageTexture on the client. Each reaches every consumer as a `THREE.Texture`.
 
 ## GradientTexture2D
 <!-- compare: image=unit-coin-glow status=limitation fixture=unit-coin-glow.tscn -->
 
-A procedural gradient baked to a texture, here a radial white-to-transparent glow. The falloff and placement match Godot.
+A procedural gradient baked to a texture, here a radial white-to-transparent glow. The falloff and placement match Godot. With `use_hdr`, a channel above 1 survives, as in Godot's float image.
 
 - **Approximated** The additive glow reads a touch whiter where Godot's is a warmer gold.
 
@@ -23,6 +23,10 @@ A Texture2D that wraps an image with optional normal and specular maps. The spri
 ## NoiseTexture2D
 
 A field baked from a FastNoiseLite, most often as a normal map. A `seamless` bake wraps its opposite edges and tiles. A plain one clamps, so UVs past the tile smear its edge texels. Under a StandardMaterial3D both tile, because `texture_repeat` defaults on (`material.cpp:4005`) and the sampler hint adds `repeat_enable` (`material.cpp:760-765`).
+
+## ImageTexture
+
+A texture whose pixels the scene or a `.tres` saves inline, as an `Image` sub-resource. The previewer decodes every uncompressed format Godot saves: the 8-bit, 16-bit, half and float formats, RGBA4444, RGB565 and RGBE9995. A float channel above 1 survives, as Godot's does.
 
 ## Linting
 
@@ -40,6 +44,6 @@ The lenient parser never rejects a texture property. An unreadable value falls b
 
 - **Approximated** An AtlasTexture's `margin` is not applied, so a trimmed-atlas layout sits off by the margin.
 - **Approximated** An AtlasTexture's `filter_clip` is not applied, so a filtered cell edge can bleed one texel from its neighbour.
-- **Approximated** A NoiseTexture2D's domain warp is decoded but not applied, so the palette and scale match while the swirl does not.
 - **Approximated** A NoiseTexture2D slot draws empty on first load until its build finishes, where Godot waits and draws the texture on its first frame.
+- **Resource gap** An ImageTexture saved in a block-compressed image format (#736) or an integer format draws no texture.
 - **Not drawn** A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.

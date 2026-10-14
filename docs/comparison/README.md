@@ -85,7 +85,7 @@ reproduced:
 - [Decal](../../packages/textscene-core/src/nodes/3d/decal/comparison.md): a texture projected onto the surfaces its box intersects
 - [DirectionalLight3D](../../packages/textscene-core/src/nodes/3d/lights/directionallight3d/comparison.md): a THREE.DirectionalLight
 - [FABRIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/fabrik3d/comparison.md): nothing yet, Godot drags its chain onto the target each frame, the previewer does not
-- [FogVolume](../../packages/textscene-core/src/nodes/3d/fogvolume/comparison.md): invisible transform-only fallback
+- [FogVolume](../../packages/textscene-core/src/nodes/3d/fogvolume/comparison.md): density, scattering and emission added to the volumetric fog
 - [Generic6DOFJoint3D](../../packages/textscene-core/src/nodes/physics/3d/generic6dofjoint3d/comparison.md): nothing (a transform-only group)
 - [GeometryInstance3D](../../packages/textscene-core/src/nodes/3d/geometryinstance3d/comparison.md): a transform-only group
 - [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md): nothing yet, Godot draws a particle cloud, the previewer does not

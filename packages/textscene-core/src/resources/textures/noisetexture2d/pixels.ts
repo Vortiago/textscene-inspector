@@ -8,9 +8,9 @@
 import type { Gradient } from '../gradienttexture2d/types';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import type { NoiseTexture2DData } from './types';
-import { grayToRgba, modulateWithGradient } from './gradientModulation';
-import { noiseSampler } from './noiseGenerator';
-import { noiseImage, seamlessNoiseImage } from './noiseImage';
+import { grayToRgba, modulateWithGradient } from '../../noise/image/gradientModulation';
+import { noiseSampler } from '../../noise/image/noiseSampler';
+import { noiseImage, seamlessNoiseImage } from '../../noise/image/noiseImage';
 import { bumpMapToNormalMap } from './normalMap';
 import { reversedRows } from '../../../utils/reversedRows';
 
@@ -37,9 +37,6 @@ function rgbaPixels(
   colorRamp: Gradient | null
 ): Uint8Array {
   const { width, height } = tex;
-  // Domain warp is not applied (`fastnoise_lite.cpp:318-325`): the JS port's
-  // `DomainWrap` checks `instanceof Vector2` against a class it does not export,
-  // so a plain `{x, y}` comes back unchanged (1.1.1). The field renders unwarped.
   const sample = noiseSampler(noise);
 
   const gray = tex.seamless

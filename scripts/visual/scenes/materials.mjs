@@ -29,8 +29,7 @@ export const MATERIAL_SCENES = [
   { name: 'grid-map-billboard', file: 'unit-grid-map-billboard.tscn' },
 
   // The noise rasterisation pipeline on a Sprite2D: seeded FastNoiseLite
-  // ridged fBm → normalise → seamless blend skirt → Gradient ramp. These three
-  // are the only scenes with a noise texture.
+  // ridged fBm → normalise → seamless blend skirt → Gradient ramp.
   { name: 'noisetexture2d', file: 'unit-noisetexture2d.tscn', mode: '2d' },
   // A noise texture past one upload band, so it reaches the GPU in bands. Its
   // baseline is three's whole upload, so a pass means the bands give its pixels.
@@ -39,6 +38,8 @@ export const MATERIAL_SCENES = [
   // and the NoColorSpace tagging show only when a lit material perturbs its
   // normals with the result.
   { name: 'noisetexture2d-normal', file: 'unit-noisetexture2d-normal.tscn' },
+  // The FastNoiseLite domain warp, which no other noise scene turns on.
+  { name: 'noisetexture2d-domain-warp', file: 'unit-noisetexture2d-domain-warp.tscn', mode: '2d' },
 
   // Sprite2D, Sprite3D and 3D physics bodies.
   { name: 'sprite2d', file: 'unit-sprite2d.tscn', mode: '2d' },

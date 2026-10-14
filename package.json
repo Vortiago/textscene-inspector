@@ -122,6 +122,9 @@
   "pnpm": {
     "overrides": {
       "@vscode/test-web>playwright": "$playwright"
+    },
+    "patchedDependencies": {
+      "fastnoise-lite@1.1.1": "patches/fastnoise-lite@1.1.1.patch"
     }
   },
   "packageManager": "pnpm@9.15.4",
