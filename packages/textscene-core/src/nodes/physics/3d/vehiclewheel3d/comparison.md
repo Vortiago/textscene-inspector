@@ -1,7 +1,7 @@
 ---
 type: VehicleWheel3D
 category: 3D
-status: unreviewed
+status: done
 fixture: unit-physics-vehicle.tscn
 image: unit-physics-vehicle
 renders_as: a transform group with a selection-gated wheel gizmo

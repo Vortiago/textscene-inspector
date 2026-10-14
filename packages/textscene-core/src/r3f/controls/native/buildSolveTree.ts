@@ -39,6 +39,12 @@ import type { FontCacheReader, FontResource } from '../../../resources/fonts/fon
 import { resolveInlineThemeResource } from '../../../resources/styles/theme/decode';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import {
+  labelSettingsFromResource,
+  resolveLabelSettings,
+} from '../../../resources/styles/labelsettings/decode';
+import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
+import type { LabelProperties } from '../../../nodes/2d/ui/label/types';
+import {
   mergeThemedRecord,
   themeResolutionScope,
   type ThemeResolutionScope,
@@ -371,6 +377,31 @@ function buildForest(
     const sub = findSubResource(int, parsed.id);
     if (!sub || sub.type !== 'Theme') return null;
     return resolveInlineThemeResource(sub.data, ext, int, fontCache, pendingFonts);
+  }
+
+  /**
+   * A Label's own `label_settings` (`label.cpp:1121-1133`). An ExtResource `.tres` loads on the
+   * resource bus, and a SubResource decodes inline. Null until a `.tres` arrives, as Godot draws
+   * from the theme until the property holds a resource.
+   */
+  function resolveOwnLabelSettings(
+    node: TscnNode,
+    ext: readonly TscnExternalResource[],
+    int: readonly TscnInternalResource[]
+  ): LabelSettingsResource | null {
+    const ref = (node.properties as Partial<LabelProperties>).labelSettings;
+    if (!ref) return null;
+    const parsed = parseResourceReference(ref);
+    if (parsed?.type !== 'ExtResource') return resolveLabelSettings(ref, int);
+
+    const path = findExtResource(ext, parsed.id)?.path;
+    if (!path) return null;
+    const cached = resourceCache.getCached(path);
+    if (cached === undefined) {
+      pendingResourceFiles.add(path);
+      return null;
+    }
+    return cached && labelSettingsFromResource(cached);
   }
 
   /**
@@ -739,6 +770,11 @@ function buildForest(
           textureSize: texture.size,
           textureSlots: texture.slots,
           fontOverrides: resolveFontOverrides(
+            collapsed,
+            ownScope.externalResources,
+            ownScope.internalResources
+          ),
+          labelSettings: resolveOwnLabelSettings(
             collapsed,
             ownScope.externalResources,
             ownScope.internalResources

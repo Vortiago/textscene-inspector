@@ -25,6 +25,12 @@ export const TILE_AND_TARGET_SCENES = [
   // Godot draws them in cell order, not grouped by source. Verified against Godot 4.6.3.
   { name: 'tile-map-layer-mixed-sources', file: 'unit-tile-map-layer-mixed-sources.tscn', mode: '2d' },
   // A tile's own TileData. Each scene moves one property, and its header says why.
+  // `use_texture_padding` on and off, under linear and nearest filtering. Verified against Godot 4.6.3.
+  {
+    name: 'tile-map-layer-texture-padding',
+    file: 'unit-tile-map-layer-texture-padding.tscn',
+    mode: '2d',
+  },
   { name: 'tile-map-layer-tile-modulate', file: 'unit-tile-map-layer-tile-modulate.tscn', mode: '2d' },
   { name: 'tile-map-layer-tile-material', file: 'unit-tile-map-layer-tile-material.tscn', mode: '2d' },
   { name: 'tile-map-layer-tile-z-index', file: 'unit-tile-map-layer-tile-z-index.tscn', mode: '2d' },

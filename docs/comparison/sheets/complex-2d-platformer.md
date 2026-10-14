@@ -19,9 +19,9 @@ coins, rocks, mushrooms and crab enemies.
 - A multi-layer parallax background
 - A Camera2D framing the level
 
+Framing, platforms, props and the parallax layers match.
+
 ## Known limitations
 
-- **Approximated** A platform underside and its vines show along the top edge, where Godot
-  shows sky, for a cause not yet known.
-- **Approximated** The lower-right platform stops short of the right edge, and its tree
-  crown is cut, for a cause not yet known.
+- **Approximated** The project sets nearest texture filtering, but sprites, tiles and the
+  parallax clouds draw smoothed here where Godot draws them pixel-sharp.

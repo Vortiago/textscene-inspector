@@ -31,8 +31,6 @@ import {
   type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
-import type { TscnInternalResource } from '../../../../parser/types';
-import { resolveLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import type { ControlColor } from '../control/types';
 import type { LabelProperties } from './types';
 
@@ -78,14 +76,6 @@ export function labelTextTheme(
   return resolveTextTheme(n, props, LABEL_THEME_KEYS, defaults);
 }
 
-/** This node's own `label_settings`, resolved in its own scope. An unset ref, an ExtResource (not modelled, see `comparison.md`) or an unresolved id gives null: no settings. */
-export function resolveNodeLabelSettings(
-  props: LabelProperties,
-  internalResources: readonly TscnInternalResource[]
-) {
-  return props.labelSettings ? resolveLabelSettings(props.labelSettings, internalResources) : null;
-}
-
 export interface LabelEffectiveTextTheme {
   fontSizePx: number;
   color: ControlColor;
@@ -100,7 +90,7 @@ export interface LabelEffectiveTextTheme {
  */
 export function labelEffectiveTextTheme(
   themeResolved: ResolvedTextTheme,
-  settings: ReturnType<typeof resolveNodeLabelSettings>
+  settings: SolveNode['labelSettings']
 ): LabelEffectiveTextTheme {
   if (!settings) {
     return {
@@ -133,10 +123,7 @@ export interface LabelOutlineTheme {
 }
 
 /** `label.cpp:765-766`: `has_settings ? settings->get_outline_X() : theme_cache.font_outline_X`, the precedence `labelEffectiveTextTheme` states. */
-export function labelOutlineTheme(
-  n: SolveNode,
-  settings: ReturnType<typeof resolveNodeLabelSettings>
-): LabelOutlineTheme {
+export function labelOutlineTheme(n: SolveNode, settings: SolveNode['labelSettings']): LabelOutlineTheme {
   if (settings) return { size: settings.outlineSize, color: settings.outlineColor };
   return {
     size: n.constants['outline_size'] ?? 0,
@@ -152,10 +139,7 @@ export interface LabelShadowTheme {
 }
 
 /** `label.cpp:762-767`: `has_settings ? settings->get_shadow_X() : theme_cache.font_shadow_X`, the precedence `labelEffectiveTextTheme` states. */
-export function labelShadowTheme(
-  n: SolveNode,
-  settings: ReturnType<typeof resolveNodeLabelSettings>
-): LabelShadowTheme {
+export function labelShadowTheme(n: SolveNode, settings: SolveNode['labelSettings']): LabelShadowTheme {
   if (settings)
     return { size: settings.shadowSize, color: settings.shadowColor, offset: settings.shadowOffset };
   return {
@@ -297,7 +281,7 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, them
   const props = n.node.properties as LabelProperties;
   const text = labelPreShapeText(props.text ?? '', props.visibleCharacters, props.visibleCharactersBehavior);
   if (text.length === 0) return null;
-  const settings = resolveNodeLabelSettings(props, n.resources.internalResources);
+  const settings = n.labelSettings;
   const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(
     labelTextTheme(n, props, { theme }),
     settings
@@ -340,7 +324,7 @@ function labelMinimumHeightPx(
  */
 export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LabelProperties;
-  const settings = resolveNodeLabelSettings(props, n.resources.internalResources);
+  const settings = n.labelSettings;
   const themeResolved = labelTextTheme(n, props, ctx);
   const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(themeResolved, settings);
   const fontMetrics = resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY);

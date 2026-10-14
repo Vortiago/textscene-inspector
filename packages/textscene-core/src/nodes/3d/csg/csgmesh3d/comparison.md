@@ -1,7 +1,7 @@
 ---
 type: CSGMesh3D
 category: 3D
-status: unreviewed
+status: limitation
 fixture: unit-csg-mesh.tscn
 image: unit-csg-mesh
 renders_as: a solid built from an arbitrary Mesh resource
@@ -33,3 +33,7 @@ Strict parsing format-checks these `CSGMesh3D` properties, plus 1 inherited from
 <!-- lint:end -->
 
 The lenient parser copies `mesh` through only when present. An absent one leaves the node with no solid, which is Godot's empty brush and not an error. `flip_faces` warns then falls back to `false` when unparseable. Neither side rejects a non-manifold `mesh` such as PlaneMesh, since Godot excludes those only in its property hint.
+
+## Known limitations
+
+- **Approximated** The thin lit band along the capsule's shaded flank reads fainter than in Godot.

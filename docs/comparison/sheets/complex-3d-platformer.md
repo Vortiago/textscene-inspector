@@ -25,6 +25,9 @@ Framing, terrain, props and shadow shapes match.
 ## Known limitations
 
 - **Shader missing** The previewer does not run the custom `sky` shader over a
-  `CompressedCubemap`, so smooth metal reflects black and the coins read grey, not gold.
-- **Resource gap** The ReflectionProbe nodes have no effect, so recesses are lighter and the
-  coin halos look faint.
+  `CompressedCubemap`, so the sky draws a pale grey-blue where Godot's is a deep blue.
+- **Not drawn** The ReflectionProbe nodes have no effect on reflections or ambient light.
+- **Approximated** Every surface out of the sun reads near black in Godot, where the
+  previewer lights it with the flat ambient colour.
+- **Not drawn** The touch-screen CanvasLayer UI (a joystick and the JUMP and SHOOT buttons)
+  shows in Godot but not over the 3D view here.

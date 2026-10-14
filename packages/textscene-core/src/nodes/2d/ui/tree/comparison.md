@@ -58,8 +58,6 @@ item-less Tree draws. A script creates the rows and cells, so they never reach t
 
 ## Known limitations
 
-- **Not drawn** Godot draws the rows, columns and fold arrows, but the previewer draws
-  nothing for this node.
 - **Approximated** Column titles get no right-to-left shaping, which never shows because no
   title is serialised and the header cells are blank.
 - **Needs runtime** The right-to-left arms of `get_column_at_position` (`tree.cpp:6426`),

@@ -1,8 +1,8 @@
 /** The image slice's texture decode, which `processors/createTextureProcessor.ts` calls. */
 
 import * as THREE from 'three';
-import { readImagePixels, type ImagePixels } from '../../../r3f/controls/withImageCanvas';
-import { everyTransparentTexelHasASource, fixAlphaEdges } from '../../processing/fixAlphaEdges';
+import { readImagePixels, type ImagePixels } from './imagePixels';
+import { fixAlphaEdges } from '../../processing/fixAlphaEdges';
 import { IMAGE_EXTENSIONS } from './extensions';
 import { fileExtension } from '../../fileExtension';
 
@@ -62,24 +62,10 @@ export async function createTextureFromBuffer(
 }
 
 /**
- * Whether every texel is fully transparent or fully opaque, the one case the readback
- * carries losslessly. The 2D canvas store is premultiplied 8-bit, so un-premultiplying
- * a partial alpha amplifies lost low bits. It is also the case the alpha-border pass
- * exists for: a paletted sprite whose transparent texels keep a key colour.
- */
-function hasOnlyBinaryAlpha(data: Uint8Array | Uint8ClampedArray): boolean {
-  for (let i = 3; i < data.length; i += 4) {
-    const alpha = data[i]!;
-    if (alpha !== 0 && alpha !== 255) return false;
-  }
-  return true;
-}
-
-/**
  * Godot's import-time alpha-border pass (`fixAlphaEdges.ts`) on a decoded texture. It
- * returns the same texture when nothing needs rewriting, and otherwise a `DataTexture`,
- * since a premultiplied canvas zeroes the RGB written behind alpha 0. `readPixels` is a
- * test seam, as happy-dom cannot rasterize: production passes one argument.
+ * returns the same texture when nothing needs rewriting, and otherwise a `DataTexture` of
+ * the rewritten bytes, since a decoded image cannot be edited in place. `readPixels` is a
+ * test seam, as happy-dom has no WebGL2: production passes one argument.
  */
 export function applyAlphaBorderFix(
   texture: THREE.Texture,
@@ -87,16 +73,6 @@ export function applyAlphaBorderFix(
 ): THREE.Texture {
   const pixels = readPixels(texture.image);
   if (!pixels) return texture;
-
-  // A DataTexture replaces the whole image, not only the texels this pass rewrites,
-  // so on partial alpha the lossy round trip corrupts more than the pass repairs.
-  // On a radial light falloff, measured against Godot, it is a large net loss.
-  if (!hasOnlyBinaryAlpha(pixels.data)) return texture;
-
-  // A transparent texel with no opaque neighbour keeps its RGB in Godot, but the
-  // premultiplied store zeroed it here. Substituting is faithful only when the pass
-  // rewrites every transparent texel.
-  if (!everyTransparentTexelHasASource(pixels.data, pixels.width, pixels.height)) return texture;
 
   // Copy rather than rewrite in place: a reader that hands back a texture's own
   // buffer (a DataTexture already carries one) would otherwise have this pass

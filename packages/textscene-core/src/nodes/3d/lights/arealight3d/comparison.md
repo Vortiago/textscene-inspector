@@ -10,12 +10,12 @@ renders_as: a THREE.RectAreaLight shaded as Godot 4.7.2's area light
 Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: `light_energy` spread over `area_size`, faded by `area_range` and `area_attenuation`, with `light_specular` on the highlight. `area_texture` colours the light. It shades each material in its `diffuse_mode` and `specular_mode`, and a clearcoat dims the light beneath it. With `distance_fade_enabled`, the light fades by Godot's smoothstep over the distance from the rendering camera. In volumetric fog, it scatters `light_volumetric_fog_energy` times its light into the medium, under its shadow. The reference images come from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.
 
 ## Energy over the rectangle
-<!-- compare: image=unit-area-light-normalize status=unreviewed fixture=unit-area-light-normalize.tscn -->
+<!-- compare: image=unit-area-light-normalize status=done fixture=unit-area-light-normalize.tscn -->
 
 A 1×1 panel and a 4×0.05 strip at the same energy, over matte plates. `area_normalize_energy` divides each light's colour by its area, so both plates receive the same total light.
 
 ## Texture
-<!-- compare: image=unit-area-light-texture status=unreviewed fixture=unit-area-light-texture.tscn -->
+<!-- compare: image=unit-area-light-texture status=done fixture=unit-area-light-texture.tscn -->
 
 The 1×1 panel of the energy scene with a red-to-blue gradient as its `area_texture`. The plate below the panel turns purple: at that distance the light reads a blurred mip of the texture, which mixes the two colours. A surface closer to the panel reads a sharper mip and shows the red and the blue apart.
 

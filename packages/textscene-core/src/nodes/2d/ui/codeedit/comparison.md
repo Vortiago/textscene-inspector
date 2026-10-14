@@ -55,17 +55,17 @@ Strict parsing format-checks these `CodeEdit` properties, plus 47 inherited from
 <!-- lint:end -->
 
 `linterParser.ts` format-checks every one of CodeEdit's own members. The registered
-lenient parser reads the render path's gutter, fold and indent members:
-`gutters_draw_line_numbers`, `gutters_zero_pad_line_numbers`,
+lenient parser reads the members the picture needs: `gutters_draw_line_numbers`, `gutters_zero_pad_line_numbers`,
 `gutters_line_numbers_min_digits`, `gutters_draw_bookmarks`,
 `gutters_draw_breakpoints_gutter`, `gutters_draw_executing_lines`,
-`gutters_draw_fold_gutter`, `line_folding` and `indent_size`. It also reads every property
-TextEdit's parser reads.
+`gutters_draw_fold_gutter`, `line_folding`, `indent_size`, `line_length_guidelines`,
+`delimiter_comments` and `delimiter_strings`. It also reads every property TextEdit's
+parser reads.
 
 A malformed boolean reads as `false`, and a malformed integer reads as unset.
-`line_folding` is parsed but does not change what this slice draws: its doc in
-`types.ts` gives the reason. `indent_size` widens every tab stop (see the doc of
-`indentSize`). The strict linter format-checks the delimiter, completion and brace-pair
+`line_folding` gates the fold-gutter arrows: with it off, the gutter draws none. The two
+delimiter arrays decide which lines can fold. `indent_size` widens every tab stop (see
+the doc of `indentSize`). The strict linter format-checks the completion and brace-pair
 members, and this parser never reads them, because none of them changes the picture.
 
 ## Known limitations

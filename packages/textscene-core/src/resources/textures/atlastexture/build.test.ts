@@ -1,16 +1,19 @@
 /**
- * `rasterizeAtlasTexture` over a raw-pixel sheet, a `DataTexture`'s
- * `{ data, width, height }`. `applyAlphaBorderFix` (`resources/formats/image/textureProcessing.ts`)
- * makes one from a pixel-art sheet, and every procedural texture is one.
- * `drawImage` rejects it, and a premultiplied canvas zeroes RGB behind alpha 0.
+ * `rasterizeAtlasTexture` over a raw-pixel sheet, a `DataTexture`. `applyAlphaBorderFix`
+ * (`resources/formats/image/textureProcessing.ts`) makes a top-down one with `flipY` from a
+ * decoded image, and every procedural texture is a bottom-up one without it. `drawImage`
+ * rejects both, and a premultiplied canvas zeroes RGB behind alpha 0.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { rasterizeAtlasTexture } from './build';
 import type { AtlasTextureLayout } from './types';
 
-/** A `w`x`h` RGBA sheet whose red channel is the texel index, fully opaque. */
-function sheet(w: number, h: number): { data: Uint8Array; width: number; height: number } {
+/**
+ * A `w`x`h` top-down RGBA sheet with `flipY`, as `applyAlphaBorderFix` makes, whose red channel
+ * is the texel index in its own row order, fully opaque.
+ */
+function sheet(w: number, h: number, flipY = true): THREE.DataTexture {
   const data = new Uint8Array(w * h * 4);
   for (let i = 0; i < w * h; i += 1) {
     data[i * 4] = i;
@@ -18,8 +21,13 @@ function sheet(w: number, h: number): { data: Uint8Array; width: number; height:
     data[i * 4 + 2] = 0;
     data[i * 4 + 3] = 255;
   }
-  return { data, width: w, height: h };
+  const texture = new THREE.DataTexture(data, w, h, THREE.RGBAFormat);
+  texture.flipY = flipY;
+  return texture;
 }
+
+/** The same sheet bottom-up without `flipY`, as a procedural texture is. */
+const bottomUpSheet = (w: number, h: number) => sheet(w, h, false);
 
 function layout(over: Partial<AtlasTextureLayout> = {}): AtlasTextureLayout {
   return { width: 2, height: 2, source: { x: 0, y: 0, width: 2, height: 2 }, dest: { x: 0, y: 0 }, ...over };
@@ -75,6 +83,33 @@ describe('rasterizeAtlasTexture — raw-pixel sheets', () => {
     expect(
       rasterizeAtlasTexture(sheet(2, 2), layout({ source: { x: 8, y: 8, width: 2, height: 2 } }))
     ).toBeNull();
+  });
+
+  it("keeps a top-down sheet's orientation and its flipY", () => {
+    expect(rasterizeAtlasTexture(sheet(4, 4), layout())?.flipY).toBe(true);
+  });
+
+  it('cuts the region in Godot rows out of a bottom-up sheet, keeping it bottom-up', () => {
+    // Raw row 0 is the bottom row, so Godot rows 2 and 3 are raw rows 1 and 0: 6, 7 and 2, 3.
+    // The crop stores its bottom row, Godot row 3, first.
+    const texture = rasterizeAtlasTexture(
+      bottomUpSheet(4, 4),
+      layout({ source: { x: 2, y: 2, width: 2, height: 2 } })
+    );
+    expect(bytes(texture).filter((_, i) => i % 4 === 0)).toEqual([2, 3, 6, 7]);
+    expect(texture?.flipY).toBe(false);
+  });
+
+  it('places a bottom-up crop at its Godot destination row', () => {
+    // A 1x1 region at Godot (1, 0) of a 2x2 box: the top-right texel, stored last bottom-up.
+    const texture = rasterizeAtlasTexture(
+      bottomUpSheet(2, 2),
+      layout({ source: { x: 0, y: 0, width: 1, height: 1 }, dest: { x: 1, y: 0 } })
+    );
+    const alpha = bytes(texture).filter((_, i) => i % 4 === 3);
+    expect(alpha).toEqual([0, 0, 0, 255]);
+    // Godot row 0 of a 2-row bottom-up sheet is raw row 1, whose first texel is index 2.
+    expect(bytes(texture)[12]).toBe(2);
   });
 
   it('carries the sheet as undecoded sRGB, the tag a loaded image gets', () => {

@@ -10,7 +10,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import { parseResourceReference, findSubResource } from '../../SubResourceResolver';
 import { proceduralTexture, proceduralTextureKey } from '../proceduralTextureCache';
-import { imageSize } from '../../../r3f/controls/withImageCanvas';
+import { imageSize } from '../../formats/image/imagePixels';
 import { atlasTextureLayout, decodeAtlasTexture } from './decode';
 import { rasterizeAtlasTexture } from './build';
 import { ATLAS_TEXTURE_TYPE, type AtlasTextureData } from './types';
@@ -71,8 +71,6 @@ export function resolveAtlasTexture(
   if (!layout) return null;
 
   const cacheId = `${atlas.id}@${sheet.uuid}`;
-  const texture = proceduralTexture(internalResources, cacheId, () =>
-    rasterizeAtlasTexture(sheet.image, layout)
-  );
+  const texture = proceduralTexture(internalResources, cacheId, () => rasterizeAtlasTexture(sheet, layout));
   return texture ? { texture, key: proceduralTextureKey(internalResources, cacheId) } : null;
 }

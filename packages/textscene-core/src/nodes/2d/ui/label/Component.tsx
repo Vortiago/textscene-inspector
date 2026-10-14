@@ -38,7 +38,6 @@ import {
   labelUnwrappedShape,
   labelVisibleLineRange,
   layoutLabelLines,
-  resolveNodeLabelSettings,
   windowLabelLines,
   type LabelLinePlacement,
 } from './nativeSolver';
@@ -59,10 +58,7 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayout
 export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LabelProperties>(solveNode);
   const themeResolved = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
-  const labelSettings = useMemo(
-    () => resolveNodeLabelSettings(props, solveNode.resources.internalResources),
-    [props, solveNode.resources.internalResources]
-  );
+  const labelSettings = solveNode.labelSettings;
   // A valid `label_settings` beats the theme outright: see its own doc.
   const textTheme = useMemo(
     () => labelEffectiveTextTheme(themeResolved, labelSettings),

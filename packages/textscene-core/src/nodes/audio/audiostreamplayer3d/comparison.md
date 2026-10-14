@@ -1,7 +1,7 @@
 ---
 type: AudioStreamPlayer3D
 category: 3D
-status: unreviewed
+status: done
 fixture: unit-audio-stream-player.tscn
 image: unit-audio-stream-player
 renders_as: a selection-gated speaker gizmo

@@ -1,0 +1,6 @@
+[gd_resource type="LabelSettings" format=3 uid="uid://unit_label_label_settings_tres"]
+
+[resource]
+font_size = 32
+font_color = Color(1, 0, 0, 1)
+line_spacing = 10.0

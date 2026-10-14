@@ -1,7 +1,7 @@
 ---
 type: Marker3D
 category: 3D
-status: unreviewed
+status: done
 fixture: unit-marker-3d.tscn
 image: unit-marker-3d
 visual: false

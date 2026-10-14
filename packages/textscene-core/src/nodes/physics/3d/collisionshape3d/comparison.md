@@ -1,7 +1,7 @@
 ---
 type: CollisionShape3D
 category: 3D
-status: unreviewed
+status: done
 fixture: unit-rigidbody3d.tscn
 image: unit-rigidbody3d
 renders_as: a toggle-gated collision wireframe

@@ -1,7 +1,7 @@
 ---
 type: DirectionalLight3D
 category: 3D
-status: unreviewed
+status: limitation
 fixture: unit-directional-light-3d.tscn
 image: unit-directional-light-3d
 renders_as: a THREE.DirectionalLight
@@ -50,6 +50,5 @@ Godot draws the first eight visible directional lights in the scene and stops. A
 
 ## Known limitations
 
-- **Approximated** A shadow's near edge has more contrast than in Godot, where the bright sky ambient washes it out.
 - **Approximated** A caster more than one view diameter towards the sun casts no shadow, where Godot still draws it.
 - **Approximated** The editor camera's clip planes follow the framing, so the shadow's splits and fade can end nearer or further than in Godot's editor.

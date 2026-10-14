@@ -1,7 +1,7 @@
 ---
 type: Polygon2D
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-polygon2d.tscn
 image: unit-polygon2d
 renders_as: a filled, optionally textured mesh
@@ -52,7 +52,4 @@ empty, which is Godot's own size-mismatch branch.
 
 ## Known limitations
 
-- **Approximated** `vertex_colors` interpolate in linear space where Godot interpolates
-  the authored sRGB values, so a gradient's middle reads slightly differently while the
-  corners are exact.
 - **Approximated** `antialiased` is ignored, so edges are marginally harder.

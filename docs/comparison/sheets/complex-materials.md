@@ -32,19 +32,11 @@ show the same whole scene from real Godot and from this previewer.
   `?camera=` deep link), so the framing matches by construction rather than from
   two independent fit-to-bounds passes.
 
-## Divergences
+The layout, every Label3D caption, the plain PBR spheres and their colours match. The
+emissive spheres bloom on both sides, with Godot's cyan-green halo and cyan-white cores.
 
-The two frames agree closely. Both render through the same authored Camera3D, so
-the layout, zoom and every Label3D caption line up. The plain PBR spheres (red,
-chrome-grey with its matching specular, copper/brown) read the same. The bright
-emissive materials bloom on both sides. Godot's editor environment runs a glow
-pass, and the previewer reproduces it with an HDR bloom driven by the
-environment's `glow_*` values. The emission-row sphere throws its cyan-green halo,
-the pale glass sphere glows lavender, and the emission cores tonemap toward a
-bright cyan-white wash. The previewer converts emission from sRGB to linear
-exactly once, so the emissive sphere reads Godot's cyan-white.
+## Known limitations
 
-The remaining difference is minor. The previewer's single-pass additive bloom
-spreads a little brighter and wider than Godot's default SOFTLIGHT glow, so the
-halos are a little stronger. The previewer does not apply `glow_blend_mode`.
-The spheres, their colours and the bloom pattern all match.
+- **Approximated** The glow blurs with a 13-tap kernel, not Godot's gaussian, so the emission
+  halos spread less wide than Godot's.
+- **Approximated** The chrome sphere's sun highlight reads smaller and softer than Godot's.

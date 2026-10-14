@@ -40,5 +40,5 @@ negative `motion_mirroring` component is clamped to `0`, as `set_mirroring` does
 
 - **Needs runtime** `motion_scale` and `motion_offset` move the layer only while a
   Camera2D is current, so a still frame shows the authored pose, as in Godot.
-- **Approximated** Picking a mirrored copy selects the ParallaxLayer, not the copied
-  child.
+- **Approximated** Picking a mirrored copy, other than the last, selects the
+  ParallaxLayer, not the copied child.

@@ -45,7 +45,7 @@ const FLOWMAP = 'res://textures/flowmap.png';
 
 /**
  * Not claimed: `uv1_triplanar` density needs the mesh size, which only the node component
- * has. The `.tres` path fetches no `anisotropy_flowmap`. `normal_enabled` gates the fetch
+ * has. `normal_enabled` gates the fetch
  * on the `.tres` path only, as the node component resolves its own texture slots.
  */
 const CASES: ParityCase[] = [
@@ -294,8 +294,8 @@ const EVERY_SLOT_TRANSFORMED: ParityCase = {
 };
 
 /**
- * Outside CASES: the `.tres` path fetches no flowmap (its alpha→blue repack lives in the
- * node layer), so only the reactive pass-through can be checked.
+ * Outside CASES: the flowmap's alpha→blue repack reads the pixels, so only the
+ * reactive pass-through is checked.
  */
 const ANISOTROPIC: ParityCase = {
   name: 'anisotropy with a flowmap',

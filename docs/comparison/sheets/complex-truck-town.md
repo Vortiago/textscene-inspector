@@ -28,8 +28,12 @@ It exercises:
 
 Geometry, framing, tree scale, the sky and the override materials match.
 
-- **Approximated** The ground is much brighter and more yellow than Godot's. The cause is
-  not known. Fog and AgX are the candidates.
+- **Approximated** The ground reads slightly paler and hazier than Godot's, with softer hill
+  shading.
+- **Approximated** The tree crowns draw as soft, blurred leaves where Godot's are crisp
+  cut-out leaves.
+- **Not drawn** The Control UI (a controls panel, a Back button and a speed gauge) shows in
+  Godot but not over the 3D view here.
 - **Needs runtime** The town has no vehicles. The game spawns them at runtime.
 
 ## Trailer truck
@@ -42,14 +46,11 @@ three blob-shadow decals. Every part sits where Godot puts it, and the shading m
   WebGL2 has no texture LOD bias, so `texture_mipmap_bias` is not applied.
 
 ## Tow truck
-<!-- compare: image=complex-truck-town-tow status=limitation fixture=demos/3d/truck_town/vehicles/tow_truck.tscn -->
+<!-- compare: image=complex-truck-town-tow status=done fixture=demos/3d/truck_town/vehicles/tow_truck.tscn -->
 
 A tow truck and the towed vehicle. One mesh mixes compressed and uncompressed surfaces.
 Every part sits where Godot puts it, and each blob shadow reaches the ground and never the
-bodywork (`Decal.cull_mask`). The shading matches.
-
-- **Resource gap** Five `surface_material_override/0` slots do not reach an ArrayMesh, so
-  the grey metal parts keep their own material.
+bodywork (`Decal.cull_mask`). The shading and the grey metal chain links match.
 
 ## Known limitations
 

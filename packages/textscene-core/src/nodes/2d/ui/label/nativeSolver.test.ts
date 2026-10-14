@@ -46,6 +46,7 @@ import {
 } from './nativeSolver';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/fonts/font/types';
+import { decodeLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import * as logger from '../../../../logger';
 
 const minSize = labelMinimumSize;
@@ -991,10 +992,9 @@ describe('labelMinimumSize — lines_skipped / max_lines_visible / label_setting
   });
 
   it('label_settings.font_size overrides the theme font size outright, for empty text too', () => {
-    const settings = { id: '1', type: 'LabelSettings', data: { font_size: '32' } };
     const withSettings = node(
       { labelSettings: 'SubResource("1")' },
-      { resources: { internalResources: [settings as never], externalResources: [] } }
+      { labelSettings: decodeLabelSettings({ font_size: '32' }) }
     );
     // ascentPx = ceil(2189*32/2048) = 35, descentPx = ceil(600*32/2048) = 10.
     expect(minSize(withSettings, ctx()).y).toBe(45);

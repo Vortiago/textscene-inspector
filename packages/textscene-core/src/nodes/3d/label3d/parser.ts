@@ -63,11 +63,14 @@ function parseHorizontalAlignment(value: string | undefined): HorizontalAlignmen
 }
 
 function parseBillboardMode(value: string | undefined): BillboardMode {
-  const num = ruleInt(value);
-  if (num === null) return BillboardMode.BILLBOARD_DISABLED; // Godot default
-
-  if (num === 0) return BillboardMode.BILLBOARD_DISABLED;
-  if (num === 2) return BillboardMode.BILLBOARD_FIXED_Y;
-
-  return BillboardMode.BILLBOARD_ENABLED; // 1, and any other value
+  // The setter refuses an index outside 0-2, PARTICLES included (`label_3d.cpp:1001`), so the
+  // label keeps its DISABLED default.
+  switch (ruleInt(value)) {
+    case 1:
+      return BillboardMode.BILLBOARD_ENABLED;
+    case 2:
+      return BillboardMode.BILLBOARD_FIXED_Y;
+    default:
+      return BillboardMode.BILLBOARD_DISABLED;
+  }
 }
