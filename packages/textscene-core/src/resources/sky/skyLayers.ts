@@ -82,21 +82,14 @@ export function bakeSkyLayers(
   const filter = layerFilter(bake.radianceFilter, skyOctmapLayout(bake.radianceSize));
   const layers = byGroup((group) => layerCube(SKY_LAYER_GROUPS[group]));
   try {
-    drawOffscreen(gl, () => {
-      const chain = downsampleChain(gl, radiance, filter.layout, filter.chainSizes);
-      try {
-        for (const group of SKY_LAYER_GROUP_NAMES)
-          filterGroup(gl, chain, filter, SKY_LAYER_GROUPS[group], layers[group]);
-      } finally {
-        chain.dispose();
-      }
+    bakeFromChain(gl, radiance, filter.layout, filter, (chain) => {
+      for (const group of SKY_LAYER_GROUP_NAMES)
+        filterGroup(gl, chain, filter, SKY_LAYER_GROUPS[group], layers[group]);
     });
     return layers;
   } catch (error) {
     disposeSkyLayers(layers);
     throw error;
-  } finally {
-    releasePasses(filter);
   }
 }
 
@@ -137,13 +130,29 @@ export function bakeAtlasLayers(
   if (index < 0 || index >= target.depth)
     throw new Error(`expected an atlas layer from 0 to ${target.depth - 1}, got ${index}`);
   const filter = layerFilter(radianceFilter, layout);
+  bakeFromChain(gl, radiance, layout, filter, (chain) => {
+    setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize: layout.borderSize });
+    drawFullScreen(gl, radianceOctmapPass, target, index, 0);
+    filterAtlasLayers(gl, chain, filter, atlas, index);
+  });
+}
+
+/**
+ * The bake both of Godot's layer sets share: `drawLayers` draws from the downsample chain of
+ * `radiance`, laid out as `layout`, into targets of its own, and leaves the renderer as it found it.
+ */
+function bakeFromChain(
+  gl: THREE.WebGLRenderer,
+  radiance: THREE.CubeTexture,
+  layout: SkyOctmapLayout,
+  filter: LayerFilter,
+  drawLayers: (chain: THREE.WebGLRenderTarget) => void
+): void {
   try {
     drawOffscreen(gl, () => {
-      setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize: layout.borderSize });
-      drawFullScreen(gl, radianceOctmapPass, target, index, 0);
       const chain = downsampleChain(gl, radiance, layout, filter.chainSizes);
       try {
-        filterAtlasLayers(gl, chain, filter, atlas, index);
+        drawLayers(chain);
       } finally {
         chain.dispose();
       }

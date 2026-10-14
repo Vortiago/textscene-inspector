@@ -23,6 +23,10 @@ describe('fullScreenPass', () => {
     expect([pass.depthTest, pass.depthWrite, pass.toneMapped]).toEqual([false, false, false]);
   });
 
+  it('hands the fragment shader the target uv as vUv', () => {
+    expect(fullScreenPass('Copy', FRAGMENT, {}).vertexShader).toContain('vUv = position.xy + 0.5;');
+  });
+
   it('keeps the uniform objects it is given, so a caller can hold one (edge case)', () => {
     const source = { value: null };
 

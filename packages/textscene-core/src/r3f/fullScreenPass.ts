@@ -5,9 +5,14 @@
 
 import * as THREE from 'three';
 
-/** Maps the unit plane onto NDC. A shader that needs the NDC position repeats `position.xy * 2.0`. */
+/**
+ * Maps the unit plane onto NDC, and hands the fragment shader the target's uv, 0 to 1, as `vUv`.
+ * A shader that needs the NDC position repeats `position.xy * 2.0`.
+ */
 export const FULL_SCREEN_VERTEX = /* glsl */ `
+varying vec2 vUv;
 void main() {
+  vUv = position.xy + 0.5;
   gl_Position = vec4(position.xy * 2.0, 0.0, 1.0);
 }
 `;
