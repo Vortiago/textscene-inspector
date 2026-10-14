@@ -36,5 +36,5 @@ export function rasterizeGradientTexture2D(tex: GradientTexture2D, gradient: Gra
       data[i + 3] = store(color.a);
     }
   }
-  return colourDataTexture(data, width, height);
+  return colourDataTexture(data, width, height, tex.useHdr ? 'RGBAFloat' : 'RGBA8');
 }

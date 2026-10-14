@@ -78,6 +78,9 @@ export const MATERIAL_SCENES = [
   // 1 is overridden and surface 0 is not, so a leak onto every surface, a
   // dropped override and a wrong index give three different images.
   { name: 'arraymesh-surface-override', file: 'unit-arraymesh-surface-override.tscn' },
+  // The saved format of an albedo ImageTexture: the same greys as Lum8, which has no sRGB view and
+  // reads raw, over RGB8, which reads as sRGB. A format read the wrong way darkens or lifts a strip.
+  { name: 'material-albedo-image-format', file: 'unit-material-albedo-image-format.tscn' },
   // Decal `texture_albedo` as an inline GradientTexture2D. The albedo is all a
   // decal projects, so an unresolved slot leaves the floor bare.
   { name: 'decal-gradienttexture', file: 'unit-decal-gradienttexture.tscn' },

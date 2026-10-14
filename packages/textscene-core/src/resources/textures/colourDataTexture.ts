@@ -5,16 +5,18 @@
 
 import * as THREE from 'three';
 import { toHalfFloatTexels } from './halfFloatTexels';
+import { recordGodotFormat } from './sourceColorSpace';
 
 /**
- * Bytes upload tagged sRGB, as Godot's RGBA8 has an sRGB view. Floats have none, so Godot reads
- * them raw (`texture_storage.cpp:754`, `material_storage.cpp:1073`): they upload as raw half
- * floats tagged linear, which can pass 1. The 2D canvas retags either `NoColorSpace`.
+ * `format` is the `Image::format_names` entry Godot holds the texels in, which decides whether a
+ * colour slot reads them as sRGB (`sourceColorSpace`). Bytes upload tagged sRGB. Floats upload as
+ * raw half floats tagged linear, which can pass 1. The 2D canvas retags either `NoColorSpace`.
  */
 export function colourDataTexture(
   texels: Uint8Array | Float32Array,
   width: number,
-  height: number
+  height: number,
+  format: string
 ): THREE.DataTexture {
   const isFloat = texels instanceof Float32Array;
   const data = isFloat ? toHalfFloatTexels(texels) : texels;
@@ -24,5 +26,5 @@ export function colourDataTexture(
   texture.magFilter = THREE.LinearFilter;
   texture.minFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
-  return texture;
+  return recordGodotFormat(texture, format);
 }

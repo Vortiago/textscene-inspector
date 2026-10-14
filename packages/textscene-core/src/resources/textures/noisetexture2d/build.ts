@@ -7,7 +7,9 @@ import * as THREE from 'three';
 import { IMAGE_MAX_PIXELS } from '../../../godot/index.js';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import type { NoiseTexture2DData } from './types';
+import type { NoiseTexture2DInput } from './pixels';
 import { seamlessSource } from '../../noise/image/noiseImage';
+import { recordGodotFormat } from '../sourceColorSpace';
 
 /**
  * Whether the previewer rasterises this texture. It refuses an axis past the WebGL ceiling it
@@ -27,8 +29,9 @@ export function noiseTextureFits({
   );
 }
 
-/** Bottom-up `pixels` as the texture Godot's import flags describe for `tex`. */
-export function noiseDataTexture(pixels: Uint8Array, tex: NoiseTexture2DData): THREE.DataTexture {
+/** Bottom-up `pixels`, computed from `input`, as the texture Godot builds from it. */
+export function noiseDataTexture(pixels: Uint8Array, input: NoiseTexture2DInput): THREE.DataTexture {
+  const { tex } = input;
   const texture = new THREE.DataTexture(pixels, tex.width, tex.height, THREE.RGBAFormat);
   // A normal map carries directions, not colour, and sRGB would bend every normal.
   // Godot marks the same distinction with its `srgb` import flag.
@@ -40,5 +43,13 @@ export function noiseDataTexture(pixels: Uint8Array, tex: NoiseTexture2DData): T
   texture.wrapS = wrap;
   texture.wrapT = wrap;
   texture.needsUpdate = true;
-  return texture;
+  return recordGodotFormat(texture, imageFormat(input));
+}
+
+/**
+ * The format of Godot's image: L8 from the noise (`noise.cpp:134`, `:157`), RGBA8 once the colour
+ * ramp (`noise_texture_2d.cpp:187`) or the bump pass (`image.cpp:4127`) rewrites it.
+ */
+function imageFormat({ tex, colorRamp }: NoiseTexture2DInput): string {
+  return colorRamp || tex.asNormalMap ? 'RGBA8' : 'Lum8';
 }

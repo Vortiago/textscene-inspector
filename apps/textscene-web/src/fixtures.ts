@@ -3043,6 +3043,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "Material Albedo Image Format",
+    "file": "unit-material-albedo-image-format.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Anisotropy Flowmap",
     "file": "unit-material-anisotropy-flowmap.tscn",
     "category": "Unit - Materials"

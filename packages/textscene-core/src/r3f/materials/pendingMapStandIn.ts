@@ -41,7 +41,7 @@ export function pendingMapStandIn(slot: TextureSlot): THREE.DataTexture {
   const existing = standIns.get(slot);
   if (existing) return existing;
   const standIn = new THREE.DataTexture(new Uint8Array([...NEUTRAL_TEXEL[slot], 255]), 1, 1);
-  standIn.colorSpace = slotColorSpace(slot);
+  standIn.colorSpace = slotColorSpace(slot, standIn);
   standIn.needsUpdate = true;
   standIns.set(slot, standIn);
   return standIn;

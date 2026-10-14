@@ -1,8 +1,9 @@
 # Texture slot colour spaces
 
 `textureBinding.ts` gives each StandardMaterial3D texture slot the colour space
-its Godot sampler reads in. The colour space is a property of the slot, never of
-the image, so it overrides the loader's `SRGBColorSpace` tag.
+its Godot sampler reads in. The slot and the texture's format decide it
+together, so it overrides the producer's tag. A `source_color` slot reads sRGB
+only when the texture has an sRGB view. Every other slot reads raw.
 
 ## Why a `source_color` sampler reads sRGB
 
@@ -14,6 +15,26 @@ A `source_color` sampler reads the sRGB GPU view through this chain:
    (`servers/rendering/renderer_rd/storage_rd/material_storage.cpp:1067,1073`).
 4. `p_use_linear_color` is true for every 3D material
    (`servers/rendering/renderer_rd/forward_clustered/scene_shader_forward_clustered.cpp:595`).
+
+## Which textures have an sRGB view
+
+A sampler reads the sRGB view only when the texture has one:
+`rd_texture = (srgb && tex->rd_texture_srgb.is_valid()) ? tex->rd_texture_srgb : tex->rd_texture`
+(`servers/rendering/renderer_rd/storage_rd/material_storage.cpp:1073`). The
+rendering device makes that view only for a format with an sRGB variant
+(`texture_storage.cpp:895-902`): RGB8, RGBA8 and the block formats with one.
+`formatHasSrgbView` in `godot/texture.ts` lists them.
+
+Each producer records the format Godot holds its image in
+(`recordGodotFormat`), and `sourceColorSpace` reads it:
+
+| Producer | Format |
+| --- | --- |
+| ImageTexture | the saved `Image` format |
+| NoiseTexture2D | L8, or RGBA8 with a `color_ramp` or `as_normal_map` |
+| GradientTexture2D | RGBA8, or RGBAFloat with `use_hdr` |
+| AtlasTexture | its atlas's format |
+| an image file | none recorded, read as sRGB |
 
 ## The samplers of BaseMaterial3D
 
@@ -47,5 +68,5 @@ Every other sampler carries `hint_default_white`, `hint_default_black`,
 | :1165 | `texture_backlight` | |
 | :1172 | `texture_heightmap` | `hint_default_black` |
 
-`SLOT_COLOR_SPACE` is exhaustive over `TextureSlot`, so a new slot fails to
-compile until someone reads Godot's shader for it.
+`SLOT_READS_SOURCE_COLOR` is exhaustive over `TextureSlot`, so a new slot fails
+to compile until someone reads Godot's shader for it.

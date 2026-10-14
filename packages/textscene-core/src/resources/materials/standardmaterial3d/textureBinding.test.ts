@@ -10,6 +10,8 @@ import { bindSlotTexture, materialTextureStates, releaseBoundTexture } from './t
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
 import { UV2_CHANNEL } from '../../meshes/uv2';
+import type { TscnInternalResource } from '../../../parser/types';
+import { resolveImageTexture } from '../../textures/imagetexture/resolveImageTexture';
 
 /**
  * As the loader hands them out: one shared entry per path, tagged sRGB, at
@@ -204,5 +206,52 @@ describe('releaseBoundTexture', () => {
   it('tolerates an empty slot', () => {
     expect(() => releaseBoundTexture(undefined)).not.toThrow();
     expect(() => releaseBoundTexture(null)).not.toThrow();
+  });
+});
+
+/** An ImageTexture of one texel saved in `format`, as the producer builds it. */
+function savedImage(format: string, bytes: string): THREE.Texture {
+  const resources: TscnInternalResource[] = [
+    {
+      id: 'Image_a',
+      type: 'Image',
+      data: {
+        data: `{\n"data": PackedByteArray(${bytes}),\n"format": "${format}",\n"height": 1,\n"mipmaps": false,\n"width": 1\n}`,
+      },
+    },
+    { id: 'ImageTexture_a', type: 'ImageTexture', data: { image: 'SubResource("Image_a")' } },
+  ];
+  return resolveImageTexture('SubResource("ImageTexture_a")', resources)!.texture;
+}
+
+const LUM8 = () => savedImage('Lum8', '128');
+const RGB8 = () => savedImage('RGB8', '128, 128, 128');
+/** 0.5 as a little-endian float. */
+const R_FLOAT = () => savedImage('RFloat', '0, 0, 0, 63');
+
+/**
+ * A `source_color` sampler reads the sRGB view only when the texture has one
+ * (`material_storage.cpp:1073`). L8 and the float formats have none, so Godot reads their bytes raw.
+ */
+describe('bindSlotTexture — the saved format of a colour slot texture', () => {
+  it('binds a Lum8 albedo raw', () => {
+    expect(bindSlotTexture(LUM8(), 'albedo_texture', DEFAULTS).colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('binds an RGB8 albedo as sRGB', () => {
+    expect(bindSlotTexture(RGB8(), 'albedo_texture', DEFAULTS).colorSpace).toBe(THREE.SRGBColorSpace);
+  });
+
+  it('binds a Lum8 emission raw', () => {
+    expect(bindSlotTexture(LUM8(), 'emission_texture', DEFAULTS).colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('binds a float albedo raw, which three uploads without its sRGB warning (edge case)', () => {
+    // three warns for an sRGB tag on anything but RGBA bytes (`WebGLTextures.js:2441-2451`).
+    expect(bindSlotTexture(R_FLOAT(), 'albedo_texture', DEFAULTS).colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it.each([LUM8, RGB8, R_FLOAT])('keeps a normal map raw whatever its format (%#)', (texture) => {
+    expect(bindSlotTexture(texture(), 'normal_texture', DEFAULTS).colorSpace).toBe(THREE.NoColorSpace);
   });
 });
