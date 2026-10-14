@@ -8,6 +8,12 @@ import { holdPositionalShadowAtlas } from '../positionalShadow/shadowAtlasTarget
 import { FOG_LIGHT_TEXELS, FogLightKind, FogLightRows, FogLightTexel } from './fogLights';
 import { fogLightUserData } from './fogLightDeclaration';
 import { areaLightUserData } from '../areaLight/areaLightFalloff';
+import {
+  areaTextureUserData,
+  holdAreaTexture,
+  releaseAreaTexture,
+  updateAreaLightAtlas,
+} from '../areaLight/areaLightAtlas';
 
 holdPositionalShadowAtlas({}, 4096);
 
@@ -152,6 +158,26 @@ describe('FogLightRows.pack', () => {
     expect(texel(rows, 0, FogLightTexel.CONE).slice(1, 3)).toEqual([FogLightKind.AREA, 0]);
     expectDirection(texel(rows, 0, FogLightTexel.AREA_WIDTH).slice(0, 3), [2, 0, 0]);
     expectDirection(texel(rows, 0, FogLightTexel.AREA_HEIGHT).slice(0, 3), [0, 0, -1]);
+  });
+
+  it("gives a textured area light its texture's place in the atlas and its highest mip", () => {
+    const texture = new THREE.DataTexture(new Uint8Array(64 * 64 * 4).fill(255), 64, 64);
+    holdAreaTexture(texture);
+    updateAreaLightAtlas();
+    const light = area();
+    Object.assign(light.userData, areaTextureUserData(texture));
+
+    const rows = packed(placed(light));
+    releaseAreaTexture(texture);
+
+    expect(texel(rows, 0, FogLightTexel.AREA_TEXTURE)).toEqual([0, 0, 0.25, 0.25]);
+    expect(texel(rows, 0, FogLightTexel.AREA_WIDTH)[3]).toBe(5);
+  });
+
+  it('gives an untextured area light an empty texture rectangle (edge case)', () => {
+    const rows = packed(placed(area()));
+
+    expect(texel(rows, 0, FogLightTexel.AREA_TEXTURE)).toEqual([0, 0, 0, 0]);
   });
 
   it('sizes the rectangle of a scaled area light without the scale, as Godot does (edge case)', () => {

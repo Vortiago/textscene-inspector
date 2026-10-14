@@ -4,6 +4,8 @@
  * Each viewport owns one atlas (`servers/rendering/renderer_viewport.cpp:961`).
  */
 
+import { nextPowerOfTwo } from './powerOfTwo.js';
+
 /**
  * The root viewport's atlas side: `rendering/lights_and_shadows/positional_shadow/atlas_size`
  * defaults to 4096 (`scene/main/scene_tree.cpp:2130`, applied at `:2138`). A `.tscn` does not record
@@ -68,18 +70,6 @@ export function viewportPositionalShadowAtlas(
   });
   const isServerSize = size !== undefined && Number.isFinite(size) && size >= 0;
   return { size: isServerSize ? size : VIEWPORT_POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT, quadrantShadows };
-}
-
-/**
- * `next_power_of_2` (`core/typedefs.h:179-192`) on a `uint32_t`: zero stays zero, and a fraction
- * truncates first.
- */
-function nextPowerOfTwo(value: number): number {
-  const whole = Math.trunc(value);
-  if (whole <= 0) return 0;
-  let power = 1;
-  while (power < whole) power *= 2;
-  return power;
 }
 
 /**

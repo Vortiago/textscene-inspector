@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AreaLight3D } from './Component';
 import type { TscnNode } from '../../../../parser/types';
@@ -11,6 +11,14 @@ import { fireSceneRenderFrom } from '../../../../r3f/testing/fireSceneRender';
 import { readFogLightDeclaration } from '../../../../r3f/fog/fogLightDeclaration';
 import { AtlasAreaShadow, type AreaShadowLight } from '../../../../r3f/positionalShadow/atlasAreaShadow';
 import { readPositionalShadowDeclaration } from '../../../../r3f/positionalShadow/declaration';
+import { SceneStack } from '../../../../r3f/testing/SceneStack';
+import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
+import type { TscnInternalResource } from '../../../../parser/types';
+import {
+  NO_AREA_TEXTURE,
+  areaTexturePlacement,
+  updateAreaLightAtlas,
+} from '../../../../r3f/areaLight/areaLightAtlas';
 
 function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
   const props: AreaLight3DProperties = {
@@ -35,7 +43,42 @@ function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
   };
 }
 
-function areaShadowOf(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>): AtlasAreaShadow {
+/** A red-to-blue GradientTexture2D at Godot's default 64×64. */
+const GRADIENT_RESOURCES: TscnInternalResource[] = [
+  { id: 'Gradient_1', type: 'Gradient', data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)' } },
+  { id: 'GradientTexture2D_1', type: 'GradientTexture2D', data: { gradient: 'SubResource("Gradient_1")' } },
+];
+
+type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
+/** Renderers whose lights may still hold a texture in the shared atlas, unmounted after each test. */
+const gradientRenderers: Renderer[] = [];
+
+afterEach(async () => {
+  for (const renderer of gradientRenderers.splice(0)) await renderer.unmount();
+  updateAreaLightAtlas();
+});
+
+async function createWithGradient(node: TscnNode): Promise<Renderer> {
+  const renderer = await ReactThreeTestRenderer.create(
+    <SceneStack
+      loader={createFakeResourceLoader().loader}
+      scene={{ internalResources: GRADIENT_RESOURCES, externalResources: [] }}
+    >
+      <AreaLight3D node={node} />
+    </SceneStack>
+  );
+  gradientRenderers.push(renderer);
+  return renderer;
+}
+
+/** Where the light pass finds the rendered light's texture in the atlas. */
+function placementOf(renderer: Renderer) {
+  updateAreaLightAtlas();
+  return areaTexturePlacement(instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight')));
+}
+
+function areaShadowOf(renderer: Renderer): AtlasAreaShadow {
   return instanceAs<AreaShadowLight>(renderer.scene.findByType('RectAreaLight')).shadow;
 }
 
@@ -167,6 +210,32 @@ describe('<AreaLight3D>', () => {
     // smoothstep(0, 1, 1 - (12 - 10) / 4) is 0.5, and the shadow is past 6 + 4.
     expect(light.intensity).toBeCloseTo(0.5 * LIGHT_INTENSITY_SCALE, 6);
     expect(areaShadowOf(renderer).opacity).toBe(0);
+  });
+
+  it('puts its area_texture in the area light atlas', async () => {
+    const renderer = await createWithGradient(
+      makeNode({ area_texture: 'SubResource("GradientTexture2D_1")' })
+    );
+
+    expect(placementOf(renderer)).toEqual({ rect: [0, 0, 0.25, 0.25], maxMipmap: 5 });
+  });
+
+  it('takes its texture out of the atlas when it unmounts (edge case)', async () => {
+    const renderer = await createWithGradient(
+      makeNode({ area_texture: 'SubResource("GradientTexture2D_1")' })
+    );
+    const light = instanceAs<THREE.RectAreaLight>(renderer.scene.findByType('RectAreaLight'));
+
+    await renderer.unmount();
+    updateAreaLightAtlas();
+
+    expect(areaTexturePlacement(light)).toEqual(NO_AREA_TEXTURE);
+  });
+
+  it('lights untextured when area_texture names nothing the scene holds (error case)', async () => {
+    const renderer = await createWithGradient(makeNode({ area_texture: 'SubResource("Missing")' }));
+
+    expect(placementOf(renderer)).toEqual(NO_AREA_TEXTURE);
   });
 
   it('subtracts light when light_negative is on', async () => {

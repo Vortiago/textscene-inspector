@@ -26,6 +26,8 @@ import { setGodotColorLinear } from '../godotColor.js';
 import { drawOffscreen } from '../offscreen.js';
 import { positionalShadowAtlasDepth } from '../positionalShadow/shadowAtlasTarget.js';
 import { drawWithUncomparedDepth } from '../shadowFilter/uncomparedDepth.js';
+import { areaLightAtlasTexture } from '../areaLight/areaLightAtlas.js';
+import { AREA_LIGHT_ATLAS_UNIFORM } from '../areaLight/areaTextureFetch.js';
 import { CasterPose } from './casterPose.js';
 import { FOG_LIGHT_TEXELS, FogLightRows } from './fogLights.js';
 import { FogDensityAtlas } from './fogDensityAtlas.js';
@@ -258,6 +260,7 @@ export class VolumetricFogPass {
     fogDensityTexturesSize: { value: new THREE.Vector3(1, 1, 1) },
     directionalShadowAtlas: { value: null },
     positionalShadowAtlas: { value: null },
+    [AREA_LIGHT_ATLAS_UNIFORM]: { value: areaLightAtlasTexture() },
     sampleOffsets: { value: Array.from({ length: FOG_SAMPLE_OFFSETS_MAX }, () => new THREE.Vector3()) },
     sampleCount: { value: 1 },
     history: { value: null },

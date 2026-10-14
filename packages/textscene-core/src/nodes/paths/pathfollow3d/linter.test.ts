@@ -10,6 +10,7 @@ import {
   expectDiagnostic,
   expectNoDiagnostic,
   expectNoErrors,
+  expectNoFormatErrors,
 } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
@@ -61,7 +62,7 @@ describe('PathFollow3D Linter', () => {
 
       it('should reject non-numeric progress', () => {
         expectDiagnostic(pathScene({ progress: '"invalid"' }), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:progress',
           contains: ['progress', 'must be a number'],
         });
       });
@@ -121,12 +122,12 @@ describe('PathFollow3D Linter', () => {
       });
 
       it('should accept ROTATION_ORIENTED (4)', () => {
-        expectNoErrors(pathScene({ rotation_mode: 4 }), { ruleName: 'strict-parser' });
+        expectNoFormatErrors(pathScene({ rotation_mode: 4 }));
       });
 
       it('should reject invalid rotation_mode value (5)', () => {
         expectDiagnostic(pathScene({ rotation_mode: 5 }), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:rotation_mode',
           contains: ['rotation_mode', '0-4'],
         });
       });

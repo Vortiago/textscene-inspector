@@ -273,7 +273,7 @@ describe('AudioStreamPlayer2D Linter', () => {
     describe('max_distance bands', () => {
       it('errors at or below the setter floor', () => {
         expectDiagnostic(withStream({ max_distance: 0 }), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:max_distance',
           severity: 'error',
           contains: ['max_distance', 'greater than 0'],
         });
@@ -281,7 +281,7 @@ describe('AudioStreamPlayer2D Linter', () => {
 
       it('warns between the setter floor and the hint floor', () => {
         expectDiagnostic(withStream({ max_distance: 0.5 }), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:max_distance',
           severity: 'warning',
           contains: ['max_distance', '1'],
         });
@@ -308,7 +308,7 @@ describe('AudioStreamPlayer2D Linter', () => {
     describe('pitch_scale bands', () => {
       it('errors at or below the setter floor', () => {
         expectDiagnostic(withStream({ pitch_scale: 0 }), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:pitch_scale',
           severity: 'error',
           contains: ['pitch_scale', 'greater than 0'],
         });
@@ -316,7 +316,7 @@ describe('AudioStreamPlayer2D Linter', () => {
 
       it('warns between the setter floor and the hint floor', () => {
         expectDiagnostic(withStream({ pitch_scale: 0.005 }), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:pitch_scale',
           severity: 'warning',
           contains: ['pitch_scale', '0.01'],
         });
@@ -400,9 +400,9 @@ describe('AudioStreamPlayer2D Linter', () => {
       // Three warnings, all three the validators' own hint bands; attenuation
       // has no hint band (EXP_EASING) and stays silent.
       expect(diagnostics.map((d) => d.ruleName).sort()).toEqual([
-        'strict-parser',
-        'strict-parser',
-        'strict-parser',
+        'format:max_distance',
+        'format:pitch_scale',
+        'format:volume_db',
       ]);
       expect(diagnostics).toBeAllAtTier('warning');
     });

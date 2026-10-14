@@ -12,6 +12,7 @@ import './index.js'; // trigger all validator + rule registrations
 const HINTED_WARNING = scene(node('Camera2D', { drag_left_margin: 1.5 }));
 /** set_zoom refuses a near-zero component with ERR_FAIL_COND (camera_2d.cpp:103-105), so it errors. */
 const ENFORCED_ERROR = scene(node('Camera2D', { zoom: 'Vector2(0, 1)' }));
+const IN_HINT = scene(node('Camera2D', { drag_left_margin: 0.5 }));
 const CLEAN = scene(node('Node2D'));
 
 describe('a negative narrowed to a tier', () => {
@@ -39,6 +40,20 @@ describe('a negative narrowed to a tier', () => {
     expect(() => expectNoDiagnostic(HINTED_WARNING, { prop: 'zoom', severity: 'warning' })).toThrow(
       'name the rule'
     );
+  });
+
+  it("accepts a warning narrowed to a validator's format:<key>, since a hinted bound warns", () => {
+    expectNoDiagnostic(IN_HINT, { ruleName: 'format:drag_left_margin', severity: 'warning' });
+  });
+
+  it("refuses info narrowed to a validator's format:<key>, since a validator never reports it", () => {
+    expect(() =>
+      expectNoDiagnostic(HINTED_WARNING, { ruleName: 'format:drag_left_margin', severity: 'info' })
+    ).toThrow('a format check reports only error or warning');
+  });
+
+  it('accepts a warning narrowed to strict-parser, since a heading Godot drops warns', () => {
+    expectNoDiagnostic(CLEAN, { ruleName: 'strict-parser', severity: 'warning' });
   });
 
   it("reads a file diagnostic's declared arm like a rule's", () => {

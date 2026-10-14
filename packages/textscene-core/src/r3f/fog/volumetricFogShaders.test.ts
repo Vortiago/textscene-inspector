@@ -78,3 +78,16 @@ describe('the sky roughness the ambient reads the sky at', () => {
     expect(skyRoughness(4)).toBe(1);
   });
 });
+
+describe("the fog's area light scatter", () => {
+  it("colours the light by its texture where the fog's integral sees it", () => {
+    expect(FOG_LIGHT_FRAGMENT).toContain(
+      'godotLtcIntegral( lightDirection, basisAxis, mat3( 1.0 ), points, textureRect, maxMipmap, textureColor )'
+    );
+    expect(FOG_LIGHT_FRAGMENT).toContain('color.rgb * textureColor * attenuation');
+  });
+
+  it('samples the area light atlas', () => {
+    expect(FOG_LIGHT_FRAGMENT).toContain('uniform sampler2D godotAreaLightAtlas;');
+  });
+});

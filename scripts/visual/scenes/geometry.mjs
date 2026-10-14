@@ -80,6 +80,9 @@ export const GEOMETRY_SCENES = [
   // An AreaLight3D's shadow: the box's paraboloid shadow on the ground. The
   // other area light goldens set no shadow.
   { name: 'area-light-shadow', file: 'unit-area-light3d.tscn' },
+  // The normalize scene's panel with a red-to-blue area_texture. The other area light goldens
+  // set no texture, so they draw the flat light_color.
+  { name: 'area-light-texture', file: 'unit-area-light-texture.tscn' },
   // A clearcoat sphere beside a bare one, under an omni light and a sky. The
   // coat dims only the sky's light beneath it. No other golden coats a sphere
   // under a punctual light or a sky.

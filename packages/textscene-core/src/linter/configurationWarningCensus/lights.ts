@@ -16,6 +16,27 @@ export const lightWarnings: Readonly<Record<string, readonly WarningRow[]>> = {
     },
   ],
 
+  AreaLight3D: [
+    {
+      at: 'light_3d.cpp:775',
+      source: '4.7.2',
+      says: 'projector texture is not supported for area lights',
+      verdict: { rule: 'arealight3d-projector-unsupported' },
+    },
+    {
+      at: 'light_3d.cpp:778',
+      source: '4.7.2',
+      says: 'textured area lights are not drawn by the Compatibility renderer',
+      verdict: { declined: 'runtime-only', because: 'OS::get_current_rendering_method(), light_3d.cpp:777' },
+    },
+    {
+      at: 'light_3d.cpp:782',
+      source: '4.7.2',
+      says: 'area light shadows do not work in the Compatibility renderer',
+      verdict: { declined: 'runtime-only', because: 'OS::get_current_rendering_method(), light_3d.cpp:781' },
+    },
+  ],
+
   LightOccluder2D: [
     {
       at: 'light_occluder_2d.cpp:270',

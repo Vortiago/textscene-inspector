@@ -13,6 +13,8 @@ import { castingSun } from '../testing/castingSun';
 import { decodeFogMaterial } from '../../resources/materials/fogmaterial/decode';
 import { FogVolumeObject } from './fogVolumeObject';
 import { VolumetricFogPass } from './volumetricFogPass';
+import { areaLightAtlasTexture } from '../areaLight/areaLightAtlas';
+import { AREA_LIGHT_ATLAS_UNIFORM } from '../areaLight/areaTextureFetch';
 
 type VolumetricFogInputs = Parameters<VolumetricFogPass['prepare']>[3];
 
@@ -24,6 +26,7 @@ interface LightDraw {
   frustumBegin: THREE.Vector2;
   frustumEnd: THREE.Vector2;
   directionalShadowAtlas: THREE.Texture | null;
+  areaLightAtlas: THREE.Texture | null;
 }
 
 /** A renderer that records each draw instead of drawing it. */
@@ -62,6 +65,7 @@ class RecordingRenderer {
       frustumBegin: (uniforms['frustumBegin']!.value as THREE.Vector2).clone(),
       frustumEnd: (uniforms['frustumEnd']!.value as THREE.Vector2).clone(),
       directionalShadowAtlas: uniforms['directionalShadowAtlas']!.value as THREE.Texture | null,
+      areaLightAtlas: uniforms[AREA_LIGHT_ATLAS_UNIFORM]!.value as THREE.Texture | null,
     });
   }
 
@@ -121,6 +125,13 @@ describe('VolumetricFogPass.prepare', () => {
     const { lightDraws } = renderer.take();
     expect(lightDraws).toHaveLength(PROJECT.volumeDepth);
     expect(lightDraws[0]).toMatchObject({ sampleCount: 1, firstOffset: CENTRE, historyAmount: 0 });
+  });
+
+  it("binds the area light atlas, which an area light's texture colours the fog through", () => {
+    const renderer = new RecordingRenderer();
+    new VolumetricFogPass().prepare(renderer.asWebGL, new THREE.Scene(), camera(), inputs());
+
+    expect(renderer.take().lightDraws[0]!.areaLightAtlas).toBe(areaLightAtlasTexture());
   });
 
   it('draws no volume into a viewport with no area, as Godot draws no frame there', () => {

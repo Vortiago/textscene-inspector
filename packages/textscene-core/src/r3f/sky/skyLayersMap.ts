@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { sharedTexture } from '../sharedTexture.js';
 import { SKY_LAYER_GROUPS, type SkyLayers } from '../../resources/sky/skyLayers.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 
@@ -20,12 +21,10 @@ export const SKY_LAYER_UNIFORMS: Record<keyof SkyLayers, string> = {
 export const SKY_CONTRIBUTION_UNIFORM = 'godotSkyContribution';
 
 /**
- * `cloneUniforms` clones a texture for each material (three r186 `UniformsUtils.js:28-39`), and a
- * clone would hold the layers it was cloned with. So a clone of this texture is the texture itself.
  * Black layers of `faceSizes` fill it until a sky shows its own: three allocates the cube at those
  * sizes on its first upload, and later layers have the same sizes.
  */
-class SkyLayerTexture extends THREE.CubeTexture {
+class SkyLayerTexture extends sharedTexture(THREE.CubeTexture) {
   constructor(faceSizes: readonly number[]) {
     super();
     this.type = THREE.HalfFloatType;
@@ -37,10 +36,6 @@ class SkyLayerTexture extends THREE.CubeTexture {
       this,
       faceSizes.map((size) => Array.from({ length: 6 }, () => new Uint16Array(size * size * 4)))
     );
-  }
-
-  override clone(): this {
-    return this;
   }
 }
 

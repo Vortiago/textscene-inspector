@@ -21,6 +21,7 @@ import { installShadowPass } from './shadowPass.js';
 import { activeShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas.js';
 import { observeSceneCamera } from './sceneRenderCamera.js';
 import { writeAreaLightUniforms } from './areaLight/areaLightFalloff.js';
+import { updateAreaLightAtlas } from './areaLight/areaLightAtlas.js';
 import { writeLightSpecularUniforms } from './lightSpecular/lightSpecular.js';
 import { writeLightSizeUniforms } from './lightSize/lightSize.js';
 import { defineSoftShadowSearch, releaseSoftShadowSearch } from './shadowFilter/softShadowSearch.js';
@@ -32,7 +33,8 @@ import {
 } from './directionalShadow/sunSoftShadow.js';
 
 /**
- * One render's light pass, the directional fit first. The directional fit changes no omni, spot or
+ * One render's light pass, the directional fit first. The area light atlas rebuilds before the area
+ * lights write where their textures lie. The directional fit changes no omni, spot or
  * area light, so their part of the pass reads the same walk. It hangs a sun under a declared
  * directional light and hides that light, so the soft shadow terms, the specular amounts and the light
  * sizes read a second walk.
@@ -46,6 +48,7 @@ function prepareSceneLights(
   const lights = sceneLights(scene);
   fitSceneDirectionalShadows(scene, camera, lights);
   fitScenePositionalShadows(lights, camera, positionalAtlas, tickMsec);
+  updateAreaLightAtlas();
   writeAreaLightUniforms(lights, camera);
   const shadedLights = sceneLights(scene);
   const drawsSoftShadows = drawsDirectionalSoftShadows(shadedLights, camera);

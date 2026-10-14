@@ -381,7 +381,7 @@ tr:last-child td{border-bottom:0}
         <span class="status st-unreviewed">Unreviewed</span>
       </header>
       
-      <div class="prose intro"><p>Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: <code>light_energy</code> spread over <code>area_size</code>, faded by <code>area_range</code> and <code>area_attenuation</code>, with <code>light_specular</code> on the highlight. It shades each material in its <code>diffuse_mode</code> and <code>specular_mode</code>, and a clearcoat dims the light beneath it. With <code>distance_fade_enabled</code>, the light fades by Godot's smoothstep over the distance from the rendering camera. In volumetric fog, it scatters <code>light_volumetric_fog_energy</code> times its light into the medium, under its shadow. The reference images come from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.</p></div>
+      <div class="prose intro"><p>Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: <code>light_energy</code> spread over <code>area_size</code>, faded by <code>area_range</code> and <code>area_attenuation</code>, with <code>light_specular</code> on the highlight. <code>area_texture</code> colours the light. It shades each material in its <code>diffuse_mode</code> and <code>specular_mode</code>, and a clearcoat dims the light beneath it. With <code>distance_fade_enabled</code>, the light fades by Godot's smoothstep over the distance from the rendering camera. In volumetric fog, it scatters <code>light_volumetric_fog_energy</code> times its light into the medium, under its shadow. The reference images come from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>Energy over the rectangle</h3><span class="status st-unreviewed">Unreviewed</span></div>
@@ -399,6 +399,24 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>A 1×1 panel and a 4×0.05 strip at the same energy, over matte plates. <code>area_normalize_energy</code> divides each light's colour by its area, so both plates receive the same total light.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Texture</h3><span class="status st-unreviewed">Unreviewed</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-area-light-texture-godot.png" alt="Godot render of Texture">
+          <img class="img-ours" src="images/unit-area-light-texture-ours.png" alt="Our render of Texture">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>The 1×1 panel of the energy scene with a red-to-blue gradient as its <code>area_texture</code>. The plate below the panel turns purple: at that distance the light reads a blurred mip of the texture, which mixes the two colours. A surface closer to the panel reads a sharper mip and shows the red and the blue apart.</p>
+<p>An <code>AtlasTexture</code> as the <code>area_texture</code> colours the light with its whole sheet, not its region, as Godot does. Godot reads the texture by its RID, which is the sheet's.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Shadow</h3><span class="status st-done">Done</span></div>
@@ -419,10 +437,8 @@ tr:last-child td{border-bottom:0}
       </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks these <code>AreaLight3D</code> properties, plus 27 inherited from Light3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>area_attenuation</code></td><td>float</td><td></td></tr><tr><td><code>area_normalize_energy</code></td><td>true or false</td><td></td></tr><tr><td><code>area_range</code></td><td>float &gt;= 0</td><td>warning below</td></tr><tr><td><code>area_size</code></td><td>Vector2(x, y), each &gt;= 0</td><td></td></tr><tr><td><code>area_texture</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr></tbody></table></div>
-<div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-light3d-scale</code> (type-family match)</td><td><code>light3d-non-unit-scale</code></td><td>warning</td></tr></tbody></table></div>
-<p>The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: <code>area_range</code> to <code>5.0</code>, <code>area_attenuation</code> to <code>1.0</code>, <code>area_size</code> to <code>Vector2(1, 1)</code>, <code>area_normalize_energy</code> to <code>true</code>, <code>light_size</code> to <code>0.5</code>.</p>
-<h3>Known limitations</h3>
-<ul><li><strong>Shader missing</strong> <code>area_texture</code> is not drawn, so the light emits its flat <code>light_color</code>.</li></ul></div>
+<div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-arealight3d-properties</code></td><td><code>arealight3d-projector-unsupported</code></td><td>warning</td></tr><tr><td><code>valid-light3d-scale</code> (type-family match)</td><td><code>light3d-non-unit-scale</code></td><td>warning</td></tr></tbody></table></div>
+<p>The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: <code>area_range</code> to <code>5.0</code>, <code>area_attenuation</code> to <code>1.0</code>, <code>area_size</code> to <code>Vector2(1, 1)</code>, <code>area_normalize_energy</code> to <code>true</code>, <code>light_size</code> to <code>0.5</code>.</p></div>
     </article>
     <article class="sheet" data-type="ArrayMesh" hidden>
       <header class="sheet-head">

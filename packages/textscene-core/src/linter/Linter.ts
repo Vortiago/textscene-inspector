@@ -25,7 +25,7 @@ import {
 import { ruleRegistry } from './RuleRegistry.js';
 import { StrictTscnParser } from './StrictTscnParser.js';
 import { isLegacyFormat, readHeaderFormat } from './headerFormat.js';
-import { FILE_DIAGNOSTICS, STRICT_PARSER_RULE_NAME } from './fileDiagnostics.js';
+import { FILE_DIAGNOSTICS, STRICT_PARSER_RULE_NAME, formatRuleName } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
 import { headingLocation } from './sourceLocation.js';
 
@@ -183,7 +183,8 @@ export class Linter {
    * Parse errors as diagnostics. The owner is the section the scanning loop was inside ({@link ParseError.nodeName}),
    * so a refused property value names the node that wrote it. A `[sub_resource]` body is named by its `id=`, since
    * several shapes of one type sit side by side. `<unknown>` is the true owner of a malformed heading, the `format=`
-   * header and a `.tres`'s `[resource]` body, which no id identifies.
+   * header and a `.tres`'s `[resource]` body, which no id identifies. A validator's refusal is named after its property,
+   * and an error no property owns is `strict-parser`.
    */
   private convertParseErrors(errors: ParseError[]): Diagnostic[] {
     return errors.map((error) => ({
@@ -191,7 +192,7 @@ export class Linter {
       message: error.message,
       nodeName: error.nodeName ?? '<unknown>',
       nodeType: error.nodeType ?? '<unknown>',
-      ruleName: STRICT_PARSER_RULE_NAME,
+      ruleName: error.propertyKey === undefined ? STRICT_PARSER_RULE_NAME : formatRuleName(error.propertyKey),
       location: {
         line: error.line,
         column: error.column,

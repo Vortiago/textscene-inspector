@@ -106,8 +106,8 @@ describe('CharacterBody2D Linter', () => {
         // Named, because the reject scenes carry no `with`: GROUNDED is the
         // default, so the inert-key warning stands beside the range one.
         invalid: [
-          { value: 4.0, contains: ['radians'], ruleName: 'strict-parser' },
-          { value: -0.1, ruleName: 'strict-parser' },
+          { value: 4.0, contains: ['radians'], ruleName: 'format:wall_min_slide_angle' },
+          { value: -0.1, ruleName: 'format:wall_min_slide_angle' },
         ],
       },
       {

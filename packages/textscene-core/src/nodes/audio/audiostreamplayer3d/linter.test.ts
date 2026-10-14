@@ -234,13 +234,13 @@ describe('AudioStreamPlayer3D Linter', () => {
               contains: ['emission_angle_filter_attenuation_db', 'between -80 and 0'],
               // Pinned to the validator: the emission-filter-not-enabled rule
               // names the same property and also warns on this scene.
-              ruleName: 'strict-parser',
+              ruleName: 'format:emission_angle_filter_attenuation_db',
               severity: 'warning',
             },
             {
               value: 0.1,
               contains: ['emission_angle_filter_attenuation_db', 'between -80 and 0'],
-              ruleName: 'strict-parser',
+              ruleName: 'format:emission_angle_filter_attenuation_db',
               severity: 'warning',
             },
             {
@@ -331,7 +331,7 @@ describe('AudioStreamPlayer3D Linter', () => {
     describe('pitch_scale bands', () => {
       it('errors at or below the setter floor', () => {
         expectDiagnostic(withStream({ pitch_scale: 0 }), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:pitch_scale',
           severity: 'error',
           contains: ['pitch_scale', 'greater than 0'],
         });
@@ -339,7 +339,7 @@ describe('AudioStreamPlayer3D Linter', () => {
 
       it('warns between the setter floor and the hint floor', () => {
         expectDiagnostic(withStream({ pitch_scale: 0.005 }), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:pitch_scale',
           severity: 'warning',
           contains: ['pitch_scale', '0.01'],
         });
@@ -431,12 +431,12 @@ describe('AudioStreamPlayer3D Linter', () => {
       const diagnostics = lint(
         withStream({ volume_db: -90, pitch_scale: 0.005, emission_angle_degrees: 45.0 })
       );
-      // volume_db's and pitch_scale's warnings are their validators', so both
-      // arrive as `strict-parser`.
+      // volume_db's and pitch_scale's warnings are their validators', so each
+      // arrives named after its property.
       expect(diagnostics.map((d) => d.ruleName).sort()).toEqual([
         'audiostreamplayer3d-emission-angle-not-enabled',
-        'strict-parser',
-        'strict-parser',
+        'format:pitch_scale',
+        'format:volume_db',
       ]);
       expect(errorsOf(diagnostics)).toEqual([]);
     });

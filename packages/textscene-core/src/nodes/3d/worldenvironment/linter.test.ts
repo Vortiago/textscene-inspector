@@ -588,7 +588,7 @@ camera_attributes = ExtResource("cam_ext")
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 camera_attributes = invalid_format
 `,
-        { ruleName: 'strict-parser', severity: 'error', contains: ['resource reference'] }
+        { ruleName: 'format:camera_attributes', severity: 'error', contains: ['resource reference'] }
       );
     });
 
@@ -609,7 +609,7 @@ environment =
 [node name="Real" type="WorldEnvironment" parent="."]
 environment = SubResource("env_1")
 `;
-      expectDiagnostic(content, { ruleName: 'strict-parser', severity: 'error' });
+      expectDiagnostic(content, { ruleName: 'format:environment', severity: 'error' });
       expectNoDiagnostic(content, { ruleName: 'dangling-resource-reference' });
       expectNoDiagnostic(content, { ruleName: 'single-worldenvironment' });
       expectDiagnostic(content, {

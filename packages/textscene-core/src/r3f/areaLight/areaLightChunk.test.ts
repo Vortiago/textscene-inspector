@@ -71,7 +71,7 @@ describe('installGodotAreaLight', () => {
       /vec3 ltcLight = light \* lightDistance \* lightDistance;\s*light \*= shadow;\s*ltcLight \*= shadow;/
     );
     expect(patchedChunk('lights_fragment_begin')).toContain(
-      'rectAreaLightFalloffs[ i ], receiveShadow ? GODOT_AREA_SHADOW( UNROLLED_LOOP_INDEX ) : 1.0, geometryPosition,'
+      'rectAreaLightTextureMipmaps[ i ], receiveShadow ? GODOT_AREA_SHADOW( UNROLLED_LOOP_INDEX ) : 1.0, geometryPosition,'
     );
   });
 
@@ -96,17 +96,70 @@ describe('installGodotAreaLight', () => {
 
   it("reads the specular lobe at Godot's limited roughness", () => {
     expect(areaLightBody()).toContain(
-      'godotLtcSpecular( geometryNormal, geometryViewDir, material.godotRoughness, points, ltcFresnel );'
+      'godotLtcSpecular( geometryNormal, geometryViewDir, material.godotRoughness, points, textureRect, textureMipmaps, ltcFresnel, specularTexture );'
+    );
+  });
+
+  it("hands each light its texture's rectangle and mips, by the light's index", () => {
+    expect(patchedChunk('lights_fragment_begin')).toContain(
+      'rectAreaLightTextureRects[ i ], rectAreaLightTextureMipmaps[ i ],'
+    );
+    expect(patchedChunk('lights_pars_begin')).toContain(
+      'uniform vec4 rectAreaLightTextureRects[ NUM_RECT_AREA_LIGHTS ];'
+    );
+  });
+
+  it("colours the diffuse by the light's texture where the diffuse integral sees it", () => {
+    const area = areaLightBody();
+
+    expect(area).toContain(
+      'godotLtcIntegral( geometryNormal, geometryViewDir, mat3( 1.0 ), points, diffuseTextureRect, textureMipmaps, diffuseTexture );'
+    );
+    expect(area).toContain('reflectedLight.directDiffuse += diffuse * diffuseTexture * ltcLight');
+  });
+
+  it("skips the diffuse integral's fetch for a toon diffuse, which reads its own (edge case)", () => {
+    const toon = preprocessorBranch(areaLightBody(), '#if defined( GODOT_DIFFUSE_TOON )');
+
+    expect(toon).toContain('vec4 diffuseTextureRect = vec4( 0.0 );');
+  });
+
+  it("colours the specular by the light's texture where the lobe sees it", () => {
+    expect(areaLightBody()).toContain('specular * specularTexture * fresnel * ltcLight');
+  });
+
+  it("colours the toon diffuse by the texture at the light's closest point", () => {
+    const toon = preprocessorBranch(areaLightBody(), '#ifdef GODOT_DIFFUSE_TOON');
+
+    expect(toon).toContain(
+      'vec2 closestUv = ( closest.xy + vec2( halfWidthLength, halfHeightLength ) ) / vec2( widthLength, heightLength );'
+    );
+    expect(toon).toContain('light * isotropicTexture * area');
+  });
+
+  it("colours the toon specular by the specular's texture", () => {
+    const toon = preprocessorBranch(areaLightBody(), '#if defined( GODOT_SPECULAR_TOON )');
+
+    expect(toon).toContain('intensity * specularTexture * light');
+  });
+
+  it("colours the clearcoat's specular by the texture its lobe sees", () => {
+    expect(preprocessorBranch(areaLightBody(), '#ifdef USE_CLEARCOAT')).toContain(
+      'clearcoatSpecular * clearcoatTexture * clearcoatFresnel * ltcLight'
     );
   });
 
   it("draws a toon diffuse from the light's front and back integrals over its solid angle", () => {
     const toon = preprocessorBranch(areaLightBody(), '#ifdef GODOT_DIFFUSE_TOON');
 
-    expect(toon).toContain('godotLtcIntegral( - geometryNormal, geometryViewDir, mat3( 1.0 ), points );');
+    expect(toon).toContain(
+      'godotLtcIntegral( - geometryNormal, geometryViewDir, mat3( 1.0 ), points, vec4( 0.0 ), textureMipmaps, backTexture );'
+    );
     expect(toon).toContain('( diffuse - backDiffuse ) / solidAngleOverPi');
     expect(toon).toContain('godotDiffuseNL( NdotL, 0.0, 0.0, material.godotRoughness )');
-    expect(toon).toContain('light * area * clearcoatAttenuation * material.diffuseContribution');
+    expect(toon).toContain(
+      'light * isotropicTexture * area * clearcoatAttenuation * material.diffuseContribution'
+    );
   });
 
   it("writes a toon specular into the light's diffuse, as Godot does", () => {
@@ -132,7 +185,9 @@ describe('installGodotAreaLight', () => {
     expect(preprocessorBranch(area, '#ifdef USE_CLEARCOAT')).toContain(
       'clearcoatAttenuation = 1.0 - clearcoatFresnel * material.clearcoat;'
     );
-    expect(area).toContain('reflectedLight.directDiffuse += diffuse * ltcLight * clearcoatAttenuation');
+    expect(area).toContain(
+      'reflectedLight.directDiffuse += diffuse * diffuseTexture * ltcLight * clearcoatAttenuation'
+    );
     expect(area).toContain('specularAmount * clearcoatAttenuation;');
   });
 

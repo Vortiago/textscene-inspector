@@ -24,7 +24,7 @@ describe('Node2D Linter', () => {
 
     it('should detect invalid position format - too few values', () => {
       expectDiagnostic(scene(node('Node2D', { position: 'Vector2(100)' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:position',
         severity: 'error',
         contains: ['position', '2 numbers'],
       });
@@ -32,7 +32,7 @@ describe('Node2D Linter', () => {
 
     it('should detect invalid position format - too many values', () => {
       expectDiagnostic(scene(node('Node2D', { position: 'Vector2(100, 50, 25)' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:position',
         severity: 'error',
         contains: ['position'],
       });
@@ -40,7 +40,7 @@ describe('Node2D Linter', () => {
 
     it('should detect invalid position format - wrong type', () => {
       expectDiagnostic(scene(node('Node2D', { position: 'Vector3(100, 50, 0)' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:position',
         severity: 'error',
         contains: ['position'],
       });
@@ -66,7 +66,7 @@ describe('Node2D Linter', () => {
 
     it('should detect invalid rotation format', () => {
       expectDiagnostic(scene(node('Node2D', { rotation: '"ninety degrees"' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:rotation',
         severity: 'error',
         contains: ['rotation', 'number'],
       });
@@ -82,7 +82,7 @@ describe('Node2D Linter', () => {
 
     it('should detect invalid rotation_degrees format', () => {
       expectDiagnostic(scene(node('Node2D', { rotation_degrees: 'Vector2(90, 0)' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:rotation_degrees',
         severity: 'error',
         contains: ['rotation_degrees'],
       });
@@ -112,7 +112,7 @@ describe('Node2D Linter', () => {
 
     it('should detect zero scale value on x-axis', () => {
       expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(0, 1)' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:scale',
         severity: 'error',
         contains: ['scale', 'non-zero', 'rendering issues'],
       });
@@ -120,7 +120,7 @@ describe('Node2D Linter', () => {
 
     it('should detect zero scale value on y-axis', () => {
       expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(1, 0)' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:scale',
         severity: 'error',
         contains: ['scale', 'non-zero'],
       });
@@ -128,7 +128,7 @@ describe('Node2D Linter', () => {
 
     it('should detect zero scale on both axes', () => {
       expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(0, 0)' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:scale',
         severity: 'error',
         contains: ['scale', 'non-zero'],
       });
@@ -148,7 +148,7 @@ describe('Node2D Linter', () => {
       // node_2d.cpp:194-198's is_zero_approx uses CMP_EPSILON (1e-5), not exact
       // zero; a value strictly smaller gets substituted just like exact 0 does.
       expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(0.000001, 1)' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:scale',
         severity: 'error',
         contains: ['scale', 'non-zero'],
       });
@@ -164,7 +164,7 @@ describe('Node2D Linter', () => {
 
     it('names the non-finite component as a number when the OTHER one is zero', () => {
       const diagnostic = expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(inf, 0)' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:scale',
         severity: 'error',
         contains: ['scale', 'non-zero'],
       });
@@ -173,7 +173,7 @@ describe('Node2D Linter', () => {
 
     it('should detect invalid scale format', () => {
       expectDiagnostic(scene(node('Node2D', { scale: 'Vector2(1)' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:scale',
         severity: 'error',
         contains: ['scale', '2 numbers'],
       });
@@ -199,7 +199,7 @@ describe('Node2D Linter', () => {
 
     it('should detect invalid skew format', () => {
       expectDiagnostic(scene(node('Node2D', { skew: '"slanted"' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:skew',
         severity: 'error',
         contains: ['skew', 'number'],
       });
@@ -218,12 +218,12 @@ describe('Node2D Linter', () => {
       // set_skew (node_2d.cpp:178-185) is a bare assignment with no clamp,
       // unlike set_scale below it, so the hint governs the inspector alone.
       expectDiagnostic(scene(node('Node2D', { skew: 1.6 })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:skew',
         severity: 'warning',
         contains: ['skew', '89.9 degrees'],
       });
       expectDiagnostic(scene(node('Node2D', { skew: -1.6 })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:skew',
         severity: 'warning',
         contains: ['skew', '89.9 degrees'],
       });
@@ -249,7 +249,7 @@ describe('Node2D Linter', () => {
 
     it('should detect invalid transform format - too few values', () => {
       expectDiagnostic(scene(node('Node2D', { transform: 'Transform2D(1, 0, 0, 1)' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:transform',
         severity: 'error',
         contains: ['transform', '6 numbers'],
       });
@@ -259,7 +259,7 @@ describe('Node2D Linter', () => {
       expectDiagnostic(
         scene(node('Node2D', { transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)' })),
         {
-          ruleName: 'strict-parser',
+          ruleName: 'format:transform',
           severity: 'error',
           contains: ['transform'],
         }
@@ -286,7 +286,7 @@ describe('Node2D Linter', () => {
 
     it('warns that a float z_index is truncated', () => {
       expectDiagnostic(scene(node('Node2D', { z_index: 10.5 })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:z_index',
         severity: 'warning',
         contains: ['z_index', 'integer slot', 'stores 10'],
       });
@@ -294,7 +294,7 @@ describe('Node2D Linter', () => {
 
     it('should detect invalid z_index format - string', () => {
       expectDiagnostic(scene(node('Node2D', { z_index: '"ten"' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:z_index',
         severity: 'error',
         contains: ['z_index'],
       });
@@ -310,7 +310,7 @@ describe('Node2D Linter', () => {
 
     it('should detect invalid z_as_relative format', () => {
       expectDiagnostic(scene(node('Node2D', { z_as_relative: 1 })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:z_as_relative',
         severity: 'warning',
         contains: ['z_as_relative', 'converts'],
       });
@@ -328,7 +328,7 @@ describe('Node2D Linter', () => {
 
     it('should detect invalid y_sort_enabled format', () => {
       expectDiagnostic(scene(node('Node2D', { y_sort_enabled: 'yes' })), {
-        ruleName: 'strict-parser',
+        ruleName: 'format:y_sort_enabled',
         severity: 'error',
         contains: ['y_sort_enabled', 'boolean'],
       });
@@ -465,7 +465,7 @@ describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
 
   it('still requires an integer format', () => {
     expectDiagnostic(scene(node('Node2D', { light_mask: 'not-a-number' })), {
-      ruleName: 'strict-parser',
+      ruleName: 'format:light_mask',
       severity: 'error',
       contains: ['light_mask'],
     });

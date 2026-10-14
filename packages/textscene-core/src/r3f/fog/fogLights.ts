@@ -2,8 +2,8 @@
  * The lights the volumetric fog scatters, packed as Godot's light buffers hold them for the fog
  * pass (`storage_rd/light_storage.cpp:636-760,840-1029`, 4.7.2 `:1054-1094` for the area light):
  * view-space positions and directions, a colour already times the light's energy and its fog
- * energy, each shadow's lookup from view space, and an area light's rectangle. One row of texels
- * per light.
+ * energy, each shadow's lookup from view space, and an area light's rectangle and texture. One row
+ * of texels per light.
  */
 
 import * as THREE from 'three';
@@ -23,6 +23,7 @@ import { visibleInTree } from '../visibleInTree.js';
 import { readFogLightDeclaration } from './fogLightDeclaration.js';
 import { AREA_LIGHT_AXES, areaLightViewAxis, readAreaLightFalloff } from '../areaLight/areaLightFalloff.js';
 import { RowBuffer } from './packedRows.js';
+import { areaTexturePlacement } from '../areaLight/areaLightAtlas.js';
 import { writeVec4 } from './writeVec4.js';
 
 /**
@@ -31,7 +32,7 @@ import { writeVec4 } from './writeVec4.js';
  * matrices of four columns: a directional light's splits, or one positional light's lookup.
  * `SHADOW_SPLITS` holds a directional light's split ends, or an omni or area light's paraboloid
  * slot. An area light's direction carries its inverse centre range where a spot holds its cone
- * cosine.
+ * cosine, and its width carries its texture's highest mip beside the texture's atlas rectangle.
  */
 export const FogLightTexel = {
   POSITION: 0,
@@ -44,6 +45,7 @@ export const FogLightTexel = {
   SHADOW_FADE: 22,
   AREA_WIDTH: 23,
   AREA_HEIGHT: 24,
+  AREA_TEXTURE: 25,
 } as const;
 
 /** Where each value sits in the cone texel, as an index into the row. */
@@ -55,7 +57,7 @@ const Cone = {
 } as const;
 
 /** The texels in each row. */
-export const FOG_LIGHT_TEXELS = FogLightTexel.AREA_HEIGHT + 1;
+export const FOG_LIGHT_TEXELS = FogLightTexel.AREA_TEXTURE + 1;
 
 const ROW_LENGTH = FOG_LIGHT_TEXELS * 4;
 
@@ -154,8 +156,8 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
 }
 
 /**
- * An area light's range, attenuation, facing, rectangle and shadow, as 4.7.2 packs them
- * (`light_storage.cpp:1059-1094`, `:1150-1210`). Its rectangle ignores the node's scale, as Godot's does. A
+ * An area light's range, attenuation, facing, rectangle, texture and shadow, as 4.7.2 packs them
+ * (`light_storage.cpp:1059-1094`, `:1132-1141`, `:1150-1210`). Its rectangle ignores the node's scale, as Godot's does. A
  * light without a falloff, such as a GLB light, is left out.
  */
 function writeArea(light: THREE.RectAreaLight, camera: THREE.Camera): boolean {
@@ -168,7 +170,9 @@ function writeArea(light: THREE.RectAreaLight, camera: THREE.Camera): boolean {
   row[FogLightTexel.COLOR * 4 + 3] = falloff.attenuation - 1;
   const inverseCentreRange = 1 / (range + Math.hypot(light.width, light.height) / 2);
   writeViewAxis(FogLightTexel.DIRECTION, light, AREA_LIGHT_AXES.facing, 1, camera, inverseCentreRange);
-  writeViewAxis(FogLightTexel.AREA_WIDTH, light, AREA_LIGHT_AXES.width, light.width, camera);
+  const { rect, maxMipmap } = areaTexturePlacement(light);
+  writeTexel(FogLightTexel.AREA_TEXTURE, ...rect);
+  writeViewAxis(FogLightTexel.AREA_WIDTH, light, AREA_LIGHT_AXES.width, light.width, camera, maxMipmap);
   writeViewAxis(FogLightTexel.AREA_HEIGHT, light, AREA_LIGHT_AXES.height, light.height, camera);
   writeAreaShadow(light, camera);
   return true;

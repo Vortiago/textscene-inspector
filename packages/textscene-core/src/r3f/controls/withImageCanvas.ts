@@ -52,7 +52,10 @@ export function withImageCanvas<T>(
   }
 }
 
-/** RGBA8 pixels of a decoded image, first row = top row. */
+/**
+ * RGBA8 pixels of an image, in its own row order: top row first for a decoded image, and bottom
+ * row first for a typed-array `DataTexture` that uploads without `flipY` (`utils/reversedRows.ts`).
+ */
 export interface ImagePixels extends ImageSize {
   data: Uint8Array | Uint8ClampedArray;
 }

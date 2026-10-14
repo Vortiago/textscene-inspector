@@ -91,7 +91,7 @@ _Avoid_: "error" for a diagnostic of unknown severity, "issue".
 
 **Validator** (format check):
 A per-property format or range check that judges one property's value alone during strict parsing and inherits down the node base-type chain.
-Its **Severity** comes from what the engine does (`linter/validators/v/grounding.ts`).
+Its **Severity** comes from what the engine does (`linter/validators/v/grounding.ts`), and its **Diagnostic** is named `format:<property>`, with the key as the file writes it.
 _Avoid_: "validator" for a **Value decoder**.
 
 **Format-only validator**:
@@ -382,6 +382,11 @@ _Avoid_: "local fog", "fog area".
 **Density texture**:
 The 3D texture a FogMaterial multiplies a **fog volume**'s density by, sampled across the volume's size.
 _Avoid_: "fog texture", "noise volume".
+
+**Area light atlas** (`r3f/areaLight/areaLightAtlas.ts`, `atlasLayout.ts`, `atlasMipmaps.ts`):
+The one texture that holds the `area_texture` of every AreaLight3D, each in a cell with a border and a chain of blurred mips, as Godot 4.7.2 builds it.
+A surface reads the mip its distance to the light asks for, so a far surface sees the texture's average colour.
+_Avoid_: "projector atlas", which names the omni and spot lights' `light_projector` textures.
 
 **Geometry instance**:
 A drawn 3D Node (a GeometryInstance3D) whose own render state, such as `transparency` and `cast_shadow`, applies to every surface it draws.
