@@ -148,7 +148,19 @@ function unnamedNodeName(node: GltfJsonObject, namingVersion: number): string {
  * `nodes` gives none.
  */
 export function gltfNodeNames(json: unknown, options: GltfNamingOptions): GltfNodeName[] {
-  if (!isGltfJsonObject(json)) return [];
+  return importNames(json, options).nodes;
+}
+
+/**
+ * Each mesh's name by glTF index, `<scene>_<mesh>` made unique (`gltf_document.cpp:1434`). It is
+ * also the mesh's import id, which keys its `_subresources` settings (`resource_importer_scene.cpp:2625`).
+ */
+export function gltfMeshNames(json: unknown, options: GltfNamingOptions): string[] {
+  return importNames(json, options).meshes;
+}
+
+function importNames(json: unknown, options: GltfNamingOptions): { nodes: GltfNodeName[]; meshes: string[] } {
+  if (!isGltfJsonObject(json)) return { nodes: [], meshes: [] };
   const { namingVersion, importAsSkeletonBones, fileName } = options;
   const names = new UniqueNames();
   // `_parse_scenes` reserves the name before it reads anything (`gltf_document.cpp:528`).
@@ -180,12 +192,15 @@ export function gltfNodeNames(json: unknown, options: GltfNamingOptions): GltfNo
     return names.take(namingVersion === 0 ? names.take(unnamed) : unnamed);
   });
   // `_parse_meshes` names each mesh before `_create_skeletons` names a bone (`gltf_document.cpp:1434`).
-  for (const mesh of objects(json['meshes'])) names.take(`${sceneName}_${text(mesh['name']) || 'mesh'}`);
+  const meshes = objects(json['meshes']).map((mesh) =>
+    names.take(`${sceneName}_${text(mesh['name']) || 'mesh'}`)
+  );
   const bonesByNode = boneNames(nodeObjects, skeletons, names.used, namingVersion);
 
-  return sceneNames.map((name, i): GltfNodeName => {
+  const nodeNames = sceneNames.map((name, i): GltfNodeName => {
     if (name === null) return { name: validateNodeName(bonesByNode.get(i)!), role: 'bone' };
     const { mesh, skin } = nodes[i]!;
     return { name, role: mesh >= 0 && skin >= 0 ? 'skinnedMesh' : 'node' };
   });
+  return { nodes: nodeNames, meshes };
 }

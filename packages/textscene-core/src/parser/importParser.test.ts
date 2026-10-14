@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   importExternalMaterials,
   importGltfNaming,
+  importLightmapUnwrap,
   importNodeLayers,
   importRootScale,
   parseImportFile,
@@ -304,5 +305,50 @@ describe('importGltfNaming', () => {
   it('takes the default version for one that is not an integer', () => {
     const parsed = parseImportFile('[params]\n\ngltf/naming_version="two"\n');
     expect(importGltfNaming(parsed).namingVersion).toBe(2);
+  });
+});
+
+describe('importLightmapUnwrap', () => {
+  const sidecar = (params: string) => parseImportFile(`[params]\n\n${params}\n`);
+  const meshSetting = (lightmapUv: number) =>
+    `_subresources={\n"meshes": {\n"Scene_Rock": {\n"generate/lightmap_uv": ${lightmapUv}\n}\n}\n}`;
+
+  it("unwraps every mesh at Static Lightmaps, at the sidecar's texel size", () => {
+    const unwrap = importLightmapUnwrap(sidecar('meshes/light_baking=2\nmeshes/lightmap_texel_size=0.5'));
+
+    expect(unwrap?.texelSize).toBe(0.5);
+    expect(unwrap?.unwraps('Scene_Rock')).toBe(true);
+  });
+
+  it('unwraps nothing at the default bake mode, Static', () => {
+    expect(importLightmapUnwrap(sidecar('meshes/lightmap_texel_size=0.5'))).toBeNull();
+  });
+
+  it('unwraps nothing without a sidecar', () => {
+    expect(importLightmapUnwrap(null)).toBeNull();
+  });
+
+  it('skips a mesh whose generate/lightmap_uv is Disable', () => {
+    const unwrap = importLightmapUnwrap(sidecar(`meshes/light_baking=2\n${meshSetting(2)}`));
+
+    expect(unwrap?.unwraps('Scene_Rock')).toBe(false);
+    expect(unwrap?.unwraps('Scene_Tree')).toBe(true);
+  });
+
+  it('unwraps only a mesh whose generate/lightmap_uv is Enable, at another bake mode', () => {
+    const unwrap = importLightmapUnwrap(sidecar(`meshes/light_baking=1\n${meshSetting(1)}`));
+
+    expect(unwrap?.unwraps('Scene_Rock')).toBe(true);
+    expect(unwrap?.unwraps('Scene_Tree')).toBe(false);
+  });
+
+  it("takes Godot's default texel size of 0.2, rounded to a float", () => {
+    expect(importLightmapUnwrap(sidecar('meshes/light_baking=2'))?.texelSize).toBe(Math.fround(0.2));
+  });
+
+  it('raises a texel size below 0.001 to 0.001 (edge case)', () => {
+    const unwrap = importLightmapUnwrap(sidecar('meshes/light_baking=2\nmeshes/lightmap_texel_size=0'));
+
+    expect(unwrap?.texelSize).toBe(Math.fround(0.001));
   });
 });

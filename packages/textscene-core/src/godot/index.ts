@@ -254,6 +254,8 @@ export {
   GODOT_TEXT_RESOURCE_EXTENSIONS,
   IMPORT_SIDECAR_SUFFIX,
   importSidecarPath,
+  UNWRAP_CACHE_SUFFIX,
+  unwrapCachePath,
   isGodotTextResourcePath,
 } from './resourceFormats.js';
 export { boolSlotValue, boolLiteralAsNumber } from './variantBool.js';

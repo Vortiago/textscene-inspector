@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { gltfNodeNames, type GltfNamingOptions, type GltfNodeRole } from './gltfNodeNames';
+import { gltfMeshNames, gltfNodeNames, type GltfNamingOptions, type GltfNodeRole } from './gltfNodeNames';
 
 const CURRENT: GltfNamingOptions = { namingVersion: 2, importAsSkeletonBones: false, fileName: 'robot' };
 const GODOT_4_0: GltfNamingOptions = { ...CURRENT, namingVersion: 0 };
@@ -201,5 +201,29 @@ describe('gltfNodeNames: malformed documents', () => {
 
   it('ignores a child index past the last node', () => {
     expect(names({ nodes: [{ name: 'Root', children: [5] }] })).toEqual(['Root']);
+  });
+});
+
+describe('gltfMeshNames', () => {
+  const scene = { scenes: [{ name: 'Scene', nodes: [0] }], scene: 0 };
+
+  it("names a mesh after the file and the glTF mesh, as godot_ball's sidecar keys it", () => {
+    const json = {
+      ...scene,
+      nodes: [{ name: 'OBJ_GodotBall', mesh: 0 }],
+      meshes: [{ name: 'MSH_GodotBall' }],
+    };
+
+    expect(gltfMeshNames(json, { ...CURRENT, fileName: 'godot_ball' })).toEqual(['godot_ball_MSH_GodotBall']);
+  });
+
+  it('numbers a mesh name a node already took', () => {
+    const json = { ...scene, nodes: [{ name: 'robot_Arm', mesh: 0 }], meshes: [{ name: 'Arm' }] };
+
+    expect(gltfMeshNames(json, CURRENT)).toEqual(['robot_Arm2']);
+  });
+
+  it('names an unnamed mesh mesh (edge case)', () => {
+    expect(gltfMeshNames({ ...scene, nodes: [], meshes: [{}] }, CURRENT)).toEqual(['robot_mesh']);
   });
 });
