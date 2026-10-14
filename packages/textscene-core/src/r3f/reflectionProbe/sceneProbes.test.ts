@@ -148,6 +148,19 @@ describe('SceneProbes rendering', () => {
     expect(uploads).not.toHaveBeenCalled();
   });
 
+  it('uploads the rows of a second probe, which need a taller texture (edge case)', async () => {
+    const { renderer, facesDrawn, settle } = await sceneWith(probeObject({}, [0]), probeObject({}, [1]));
+    settle();
+    facesDrawn();
+    const uploads = vi.spyOn(renderer, 'initTexture');
+
+    facesDrawn();
+
+    const rows = uploads.mock.calls.at(-1)![0] as THREE.DataTexture;
+    expect(rows.image.height).toBe(2);
+    expect(rows.version).toBeGreaterThan(0);
+  });
+
   it('stops showing a probe once it hides (edge case)', async () => {
     const hidden = probeObject();
     const { scene, facesDrawn, settle } = await sceneWith(probeObject(), hidden);

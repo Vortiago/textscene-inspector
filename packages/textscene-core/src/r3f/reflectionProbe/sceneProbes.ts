@@ -263,10 +263,12 @@ export class SceneProbes {
   }
 }
 
-/** A texture of `rows`, a probe's row of texels per line. */
+/** A texture of `rows`, a probe's row of texels per line, marked for its first upload. */
 function rowsTexture(rows: Float32Array): THREE.DataTexture {
   const height = rows.length / (PROBE_ROW_TEXELS * 4);
-  return new THREE.DataTexture(rows, PROBE_ROW_TEXELS, height, THREE.RGBAFormat, THREE.FloatType);
+  const texture = new THREE.DataTexture(rows, PROBE_ROW_TEXELS, height, THREE.RGBAFormat, THREE.FloatType);
+  texture.needsUpdate = true;
+  return texture;
 }
 
 function sameProbes(a: readonly ReflectionProbeObject[], b: readonly ReflectionProbeObject[]): boolean {
