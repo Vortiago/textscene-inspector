@@ -20,15 +20,13 @@ vi.mock('../../../logger.js', async (importOriginal) => {
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import {
-  ViewportTextureProvider,
-  useRegisterViewportTexture,
-} from '../../../r3f/contexts/ViewportTextureContext';
+import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
 import {
   ViewportPassProvider,
   useRegisterViewportPass,
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { isViewportTextureRef, useViewportTextureSlot } from './useViewportTextureSlot';
+import { ViewportTexturePublisher } from '../../../r3f/testing/ViewportTexturePublisher';
 
 const viewportTexture: TscnInternalResource = {
   id: 'ViewportTexture_1',
@@ -43,16 +41,6 @@ const atlasTexture: TscnInternalResource = {
 };
 
 const RESOURCES = [viewportTexture, atlasTexture];
-
-/** Publishes `texture` at `path` for as long as it is mounted. */
-function Publisher({ path, texture }: { path: string; texture: THREE.Texture }) {
-  const registerViewportTexture = useRegisterViewportTexture();
-  useEffect(
-    () => registerViewportTexture(path, { texture, size: { x: 256, y: 256 } }),
-    [registerViewportTexture, path, texture]
-  );
-  return null;
-}
 
 function Consumer({
   slotRef,
@@ -72,7 +60,9 @@ function mount(slotRef: string | undefined, consumerPath: string | null, publish
   const consumer = <Consumer slotRef={slotRef} onResolve={(r) => seen.push(r)} />;
   render(
     <ViewportTextureProvider>
-      {publishAt ? <Publisher path={publishAt} texture={texture} /> : null}
+      {publishAt ? (
+        <ViewportTexturePublisher path={publishAt} entry={{ texture: texture, size: { x: 256, y: 256 } }} />
+      ) : null}
       {consumerPath === null ? consumer : <NodePathProvider path={consumerPath}>{consumer}</NodePathProvider>}
     </ViewportTextureProvider>
   );
@@ -188,7 +178,12 @@ describe('useViewportTextureSlot', () => {
         <ViewportTextureProvider>
           <ViewportPassProvider>
             <CyclicRegistration />
-            {publish ? <Publisher path="Root/SubViewport" texture={texture} /> : null}
+            {publish ? (
+              <ViewportTexturePublisher
+                path="Root/SubViewport"
+                entry={{ texture: texture, size: { x: 256, y: 256 } }}
+              />
+            ) : null}
             <NodePathProvider path={consumerPath}>
               <Consumer slotRef={slotRef} onResolve={(r) => seen.push(r)} />
             </NodePathProvider>

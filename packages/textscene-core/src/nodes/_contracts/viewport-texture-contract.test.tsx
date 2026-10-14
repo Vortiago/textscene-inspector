@@ -6,29 +6,21 @@
  */
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
-import { useEffect } from 'react';
 import * as THREE from 'three';
 
 import {
   ViewportTextureProvider,
-  useRegisterViewportTexture,
   useViewportTexture,
   type ViewportTextureEntry,
 } from '../../r3f/contexts/ViewportTextureContext';
 import { resolveViewportTexturePath } from '../../r3f/viewportTexturePath';
+import { ViewportTexturePublisher } from '../../r3f/testing/ViewportTexturePublisher';
 
 function entry(): ViewportTextureEntry {
   return {
     texture: new THREE.Texture(),
     size: { x: 256, y: 256 },
   };
-}
-
-/** Publishes `value` at `path` for as long as it is mounted. */
-function Publisher({ path, value }: { path: string; value: ViewportTextureEntry }) {
-  const registerViewportTexture = useRegisterViewportTexture();
-  useEffect(() => registerViewportTexture(path, value), [registerViewportTexture, path, value]);
-  return null;
 }
 
 function Consumer({
@@ -49,7 +41,7 @@ describe('ViewportTextureRegistry contract', () => {
     const seen: (ViewportTextureEntry | null)[] = [];
     render(
       <ViewportTextureProvider>
-        <Publisher path="Root/SubViewport" value={value} />
+        <ViewportTexturePublisher path="Root/SubViewport" entry={value} />
         <Consumer path="Root/SubViewport" onResolve={(e) => seen.push(e)} />
       </ViewportTextureProvider>
     );
@@ -61,7 +53,7 @@ describe('ViewportTextureRegistry contract', () => {
     const seen: (ViewportTextureEntry | null)[] = [];
     render(
       <ViewportTextureProvider>
-        <Publisher path="V" value={value} />
+        <ViewportTexturePublisher path="V" entry={value} />
         <Consumer path="V" onResolve={(e) => seen.push(e)} />
       </ViewportTextureProvider>
     );
@@ -84,7 +76,7 @@ describe('ViewportTextureRegistry contract', () => {
     const seen: (ViewportTextureEntry | null)[] = [];
     const { rerender } = render(
       <ViewportTextureProvider>
-        <Publisher path="V" value={entry()} />
+        <ViewportTexturePublisher path="V" entry={entry()} />
         <Consumer path="V" onResolve={(e) => seen.push(e)} />
       </ViewportTextureProvider>
     );

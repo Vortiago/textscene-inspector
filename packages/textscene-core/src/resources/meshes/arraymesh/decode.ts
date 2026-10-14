@@ -123,7 +123,7 @@ function decodeSurfaces(
     }
     // Normals: octahedral pairs in the region following the positions.
     const normals = decodeNormals(vertexData, vertexCount, layout);
-    const uvs = decodeUVs(
+    const { uvs, uv2s } = decodeUVs(
       readPackedBytes(block, 'attribute_data'),
       vertexCount,
       layout,
@@ -151,6 +151,7 @@ function decodeSurfaces(
       indexCount: indices.length,
       positions,
       uvs,
+      uv2s,
       normals,
       indices,
       ...readMaterial(block),

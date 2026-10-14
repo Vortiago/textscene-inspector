@@ -564,3 +564,38 @@ describe('decodeStandardMaterial3D — corpus materials', () => {
     expect(data.triplanar).toBe(false);
   });
 });
+
+describe('decodeStandardMaterial3D — UV2', () => {
+  const UV2_TILING = { uv2_scale: 'Vector3(4, 2, 1)', uv2_offset: 'Vector3(0.5, 0.25, 0)' };
+
+  it('reads uv2_scale and uv2_offset under a UV2 detail layer', () => {
+    const data = decodeStandardMaterial3D({ ...UV2_TILING, detail_uv_layer: '1' });
+
+    expect(data.uv2Scale).toEqual({ x: 4, y: 2 });
+    expect(data.uv2Offset).toEqual({ x: 0.5, y: 0.25 });
+  });
+
+  it('reads uv2_scale and uv2_offset under UV2 triplanar mapping', () => {
+    const data = decodeStandardMaterial3D({ ...UV2_TILING, uv2_triplanar: 'true' });
+
+    expect(data.uv2Triplanar).toBe(true);
+    expect(data.uv2Scale).toEqual({ x: 4, y: 2 });
+  });
+
+  it('reads the UV2 transform as identity elsewhere, as Godot never applies it there', () => {
+    const data = decodeStandardMaterial3D({ ...UV2_TILING, emission_on_uv2: 'true' });
+
+    expect(data.uv2Scale).toEqual({ x: 1, y: 1 });
+    expect(data.uv2Offset).toEqual({ x: 0, y: 0 });
+  });
+
+  it('lists the slots that sample UV2', () => {
+    const data = decodeStandardMaterial3D({ ao_on_uv2: 'true', emission_on_uv2: 'true' });
+
+    expect(data.uv2Slots).toEqual(['emission_texture', 'ao_texture']);
+  });
+
+  it('lists no slot by default (edge case)', () => {
+    expect(decodeStandardMaterial3D({}).uv2Slots).toEqual([]);
+  });
+});

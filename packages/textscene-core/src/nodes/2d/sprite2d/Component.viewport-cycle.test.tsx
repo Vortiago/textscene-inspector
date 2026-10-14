@@ -25,15 +25,13 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import {
-  ViewportTextureProvider,
-  useRegisterViewportTexture,
-} from '../../../r3f/contexts/ViewportTextureContext';
+import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
 import {
   ViewportPassProvider,
   useRegisterViewportPass,
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import { ViewportTexturePublisher } from '../../../r3f/testing/ViewportTexturePublisher';
 
 const heading = { type: 'node', attributes: { type: 'Sprite2D', name: 'ViewportSprite' } };
 
@@ -53,13 +51,6 @@ function spriteNode(): TscnNode {
   };
 }
 
-/** Publishes an entry at `path`, so the test can prove a cyclic target's stale texture is never sampled. */
-function Publisher({ path, texture }: { path: string; texture: THREE.Texture }) {
-  const register = useRegisterViewportTexture();
-  useEffect(() => register(path, { texture, size: { x: 64, y: 64 } }), [register, path, texture]);
-  return null;
-}
-
 /** Registers `Root/SubViewport` into a two-node cycle with `Root/Other`. */
 function CyclicRegistration() {
   const register = useRegisterViewportPass();
@@ -77,7 +68,10 @@ async function renderCyclicSprite() {
         <ViewportTextureProvider>
           <ViewportPassProvider>
             <CyclicRegistration />
-            <Publisher path="Root/SubViewport" texture={publishedTexture} />
+            <ViewportTexturePublisher
+              path="Root/SubViewport"
+              entry={{ texture: publishedTexture, size: { x: 64, y: 64 } }}
+            />
             <NodePathProvider path="Root/ViewportSprite">
               <Sprite2D node={spriteNode()} />
             </NodePathProvider>

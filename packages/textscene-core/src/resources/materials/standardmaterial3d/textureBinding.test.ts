@@ -6,9 +6,10 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { bindSlotTexture, materialTextureState, releaseBoundTexture } from './textureBinding';
+import { bindSlotTexture, materialTextureStates, releaseBoundTexture } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
+import { UV2_CHANNEL } from '../../meshes/uv2';
 
 /**
  * As the loader hands them out: one shared entry per path, tagged sRGB, at
@@ -21,7 +22,7 @@ function loaded(): THREE.Texture {
   return texture;
 }
 
-const DEFAULTS = materialTextureState(parseStandardMaterial3DScalars({}));
+const DEFAULTS = materialTextureStates(parseStandardMaterial3DScalars({}));
 
 /**
  * Godot's `source_color` samplers, and only those:
@@ -110,19 +111,66 @@ describe('bindSlotTexture — colour space per Godot texture slot', () => {
     // (`material.cpp:4005`), so the sampler loses `repeat_enable` and the clamped
     // arrival is exactly what the slot wants: shared, not cloned.
     const procedural = new THREE.Texture();
-    const noRepeat = materialTextureState(parseStandardMaterial3DScalars({ texture_repeat: 'false' }));
+    const noRepeat = materialTextureStates(parseStandardMaterial3DScalars({ texture_repeat: 'false' }));
     expect(bindSlotTexture(procedural, 'normal_texture', noRepeat)).toBe(procedural);
   });
 
   it('carries the material state and the colour space in ONE clone', () => {
     const shared = loaded();
     const scalars = parseStandardMaterial3DScalars({ uv1_scale: 'Vector3(3, 2, 1)' });
-    const bound = bindSlotTexture(shared, 'roughness_texture', materialTextureState(scalars));
+    const bound = bindSlotTexture(shared, 'roughness_texture', materialTextureStates(scalars));
 
     expect(bound.repeat.x).toBe(3);
     expect(bound.colorSpace).toBe(THREE.NoColorSpace);
     expect(bound.source).toBe(shared.source);
     expect(shared.repeat.x).toBe(1);
+  });
+});
+
+describe('bindSlotTexture — UV set per slot', () => {
+  const UV2_EMISSION = materialTextureStates(
+    parseStandardMaterial3DScalars({
+      emission_on_uv2: 'true',
+      detail_uv_layer: '1',
+      uv1_scale: 'Vector3(3, 3, 1)',
+      uv2_scale: 'Vector3(2, 2, 1)',
+    })
+  );
+
+  it('binds the emission map to UV2 under emission_on_uv2, with the UV2 transform', () => {
+    const bound = bindSlotTexture(loaded(), 'emission_texture', UV2_EMISSION);
+
+    expect(bound.channel).toBe(UV2_CHANNEL);
+    expect(bound.repeat.x).toBe(2);
+  });
+
+  it("samples UV2 in Godot's top-down V, as every UV2 attribute keeps it", () => {
+    const bound = bindSlotTexture(loaded(), 'emission_texture', UV2_EMISSION);
+
+    expect([bound.repeat.y, bound.offset.y]).toEqual([-2, 1]);
+  });
+
+  it('binds the AO map to UV2 under ao_on_uv2', () => {
+    const state = materialTextureStates(parseStandardMaterial3DScalars({ ao_on_uv2: 'true' }));
+
+    expect(bindSlotTexture(loaded(), 'ao_texture', state).channel).toBe(UV2_CHANNEL);
+  });
+
+  it('keeps every other slot on UV1 and its transform', () => {
+    const bound = bindSlotTexture(loaded(), 'albedo_texture', UV2_EMISSION);
+
+    expect(bound.channel).toBe(0);
+    expect(bound.repeat.x).toBe(3);
+  });
+
+  it('samples the first UV set under UV2 triplanar, as UV1 triplanar does (edge case)', () => {
+    const state = materialTextureStates(
+      parseStandardMaterial3DScalars({ emission_on_uv2: 'true', uv2_triplanar: 'true' })
+    );
+
+    const bound = bindSlotTexture(loaded(), 'emission_texture', state);
+
+    expect([bound.channel, bound.repeat.y, bound.offset.y]).toEqual([0, 1, 0]);
   });
 });
 

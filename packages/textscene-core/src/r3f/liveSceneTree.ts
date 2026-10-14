@@ -11,7 +11,7 @@ import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
-import { GLB_SCENE_ROOT_TYPE } from './internal/glb-scene-root/Component.js';
+import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { joinPath } from '../utils/nodePath.js';
 import { nodePathNames } from '../godot/nodePath.js';

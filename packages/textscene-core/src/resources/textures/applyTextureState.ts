@@ -1,5 +1,5 @@
 /**
- * Per-slot texture state (UV transform, filter, wrapping, colour space), applied
+ * Per-slot texture state (UV set and transform, filter, wrapping, colour space), applied
  * by cloning only when the binding diverges from the shared source. Not a
  * resource slice (ADR-0031): it decodes nothing. In production only
  * `standardmaterial3d/textureBinding.ts` and the panorama sky (`sky/build.ts`)
@@ -25,8 +25,10 @@ export interface UVTransform {
  * It applies at material build: `createTextureFromBuffer` knows no material or slot.
  */
 export interface MaterialTextureState {
-  /** Godot `uv1_scale` / `uv1_offset`. Omitted means no tiling transform. */
+  /** The UV set's scale and offset. Omitted means no tiling transform. */
   uv?: UVTransform;
+  /** three's UV channel the slot samples, `UV2_CHANNEL` for Godot's UV2. Omitted means UV1. */
+  channel?: number;
   /** Godot `BaseMaterial3D.texture_filter` ordinal. Omitted means its default. */
   filter?: number;
   /**
@@ -92,7 +94,10 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   const filterDiverges = state.filter !== undefined && !textureFilterMatches(texture, filterState);
   // A texture whose tag already matches the sampler is shared untouched.
   const colorSpaceDiverges = texture.colorSpace !== state.colorSpace;
-  if (!uvDiverges && !filterDiverges && !wrapDiverges && !colorSpaceDiverges) return texture;
+  const channel = state.channel ?? 0;
+  const channelDiverges = texture.channel !== channel;
+  if (!uvDiverges && !filterDiverges && !wrapDiverges && !colorSpaceDiverges && !channelDiverges)
+    return texture;
 
   // One clone, however many reasons. `clone()` shares `source`, so the image
   // bytes are not duplicated.
@@ -101,9 +106,10 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
     cloned.repeat.set(state.uv!.scale.x, state.uv!.scale.y);
     cloned.offset.set(state.uv!.offset.x, state.uv!.offset.y);
   }
-  // Every clone carries the wanted wrapping, whatever the reason it was made.
+  // Every clone carries the wanted wrapping and UV set, whatever the reason it was made.
   cloned.wrapS = wrapping;
   cloned.wrapT = wrapping;
+  cloned.channel = channel;
   if (filterDiverges) applyTextureFilterState(cloned, filterState);
   // Pinned, not assigned: R3F reasserts `SRGBColorSpace` every commit. The sRGB
   // case wants what R3F reasserts, so it needs no pin.

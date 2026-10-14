@@ -9,6 +9,8 @@ import { TscnParser } from '../parser/TscnParser.js';
 import type { TscnScene } from '../parser/types.js';
 import type { LiveTreeContext } from './liveSceneTree.js';
 import { claimOwnerOf, localSceneClaims, localSceneOf, ownerClaims } from './uniqueNameOwner.js';
+import { synthesiseGLBScene } from '../resources/processors/createSceneProcessor.js';
+import * as THREE from 'three';
 
 const main = new TscnParser().parse(`[gd_scene format=3]
 [ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
@@ -154,6 +156,46 @@ describe('localSceneOf', () => {
 
   it('is the innermost instance for a node inside nested instances', () => {
     expect(localRoot('Root/HudInstance/Widget/Face')).toBe('Root/HudInstance/Widget');
+  });
+});
+
+/**
+ * A `.glb` instance is one node in Godot, its own local scene, whose imported nodes it owns. This
+ * tree renders the GLB root one segment below the instance node.
+ */
+describe('localSceneOf a GLB instance', () => {
+  const host = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://model.glb" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Model" parent="." instance=ExtResource("1")]
+
+[node name="Viewport" type="SubViewport" parent="Model"]
+`);
+  const glb = new THREE.Group();
+  const body = new THREE.Mesh();
+  body.name = 'body';
+  glb.add(body);
+  const glbScene = synthesiseGLBScene('res://model.glb');
+  const glbCtx: LiveTreeContext = {
+    externalResources: host.externalResources,
+    internalResources: [],
+    sceneCache: { getCached: (p) => (p === 'res://model.glb' ? glbScene : undefined) },
+    glbCache: { getCached: (p) => (p === 'res://model.glb' ? glb : undefined) },
+  };
+  const localRoot = (path: string) => localSceneOf(path, host.nodes, glbCtx).path;
+
+  it('is the instance node for the GLB root', () => {
+    expect(localRoot('Root/Model/model')).toBe('Root/Model');
+  });
+
+  it('is the instance node for a node inside the GLB', () => {
+    expect(localRoot('Root/Model/model/body')).toBe('Root/Model');
+  });
+
+  it('is the outer root for a node the outer file adds under the GLB instance (edge case)', () => {
+    expect(localRoot('Root/Model/Viewport')).toBe('Root');
   });
 });
 

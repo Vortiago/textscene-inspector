@@ -14,8 +14,11 @@ import { HEIGHTMAP_DEFAULTS, type Heightmap } from '../../resources/materials/st
 const PARS_ANCHOR = '#include <clipping_planes_pars_fragment>';
 const MAP_ANCHOR = '#include <map_fragment>';
 
-/** three's texture coordinates that Godot's `base_uv` stands for: all but the lightmap's. */
-const SHIFTED_UVS = [
+/**
+ * three's texture coordinates that Godot's `base_uv` can stand for: all but the lightmap's. Each
+ * is `v<Map>Uv`, the coordinate of the material's `<map>`.
+ */
+const MAP_UVS = [
   'vMapUv',
   'vAlphaMapUv',
   'vAoMapUv',
@@ -114,12 +117,26 @@ vec2 godotParallax( const in vec2 uv ) {
 }`;
 
 /**
- * The shift, then each coordinate redefined to carry it, before the first map is read. A macro
- * never expands inside itself, so each reads its own varying.
+ * The shift, then each UV1 coordinate of `material` redefined to carry it, before the first map is
+ * read. A macro never expands inside itself, so each reads its own varying.
  */
-const PARALLAX_SHIFT = `vec2 godotParallaxShift = godotParallax( vGodotHeightmapUv ) - vGodotHeightmapUv;
-${SHIFTED_UVS.map((uv) => `#define ${uv} ( ${uv} + godotParallaxShift )`).join('\n')}
+function parallaxShift(material: Material): string {
+  const shifted = MAP_UVS.filter((uv) => readsUv1(material, uv));
+  return `vec2 godotParallaxShift = godotParallax( vGodotHeightmapUv ) - vGodotHeightmapUv;
+${shifted.map((uv) => `#define ${uv} ( ${uv} + godotParallaxShift )`).join('\n')}
 ${MAP_ANCHOR}`;
+}
+
+/**
+ * Whether the map behind coordinate `uv` reads UV1. Godot shifts `base_uv2` only under a UV2
+ * detail layer (`material.cpp:1604-1607`), which no map here draws. three keys each map's UV
+ * channel into the program, so a rebind to another channel compiles this again.
+ */
+function readsUv1(material: Material, uv: string): boolean {
+  const mapName = uv.charAt(1).toLowerCase() + uv.slice(2, -'Uv'.length);
+  const map = (material as unknown as Record<string, unknown>)[mapName];
+  return !(map instanceof THREE.Texture) || map.channel === 0;
+}
 
 /** Where a material records its height mapping. */
 const HEIGHTMAP_KEY = 'godotHeightmap';
@@ -236,7 +253,7 @@ const GODOT_PARALLAX: ProgramInjection = {
       .replace('#include <uv_vertex>', HEIGHTMAP_UV);
     shader.fragmentShader = shader.fragmentShader
       .replace(PARS_ANCHOR, PARALLAX_PARS)
-      .replace(MAP_ANCHOR, PARALLAX_SHIFT);
+      .replace(MAP_ANCHOR, parallaxShift(this));
   },
 };
 

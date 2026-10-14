@@ -8,6 +8,7 @@
 import type * as THREE from 'three';
 import type { EmissionScalars } from './emission';
 import type { TextureChannel, TextureChannelMask } from '../../../godot/textureChannel';
+import type { UVTransform } from '../../textures/applyTextureState';
 
 /** Godot's height mapping of a surface. */
 export interface Heightmap {
@@ -101,6 +102,12 @@ export type TextureSlot = (typeof TEXTURE_SLOTS)[number];
 export type ResolvedTextureSlots = Partial<Record<TextureSlot, THREE.Texture | null>>;
 
 /**
+ * The bound textures a material derives from: each slot's map, and the UV transform a
+ * render-target albedo samples through, which the shared target cannot carry.
+ */
+export type ResolvedTextures = ResolvedTextureSlots & { albedoTargetUv?: UVTransform };
+
+/**
  * A slot's raw reference (`ExtResource("1_x")`, `SubResource("NoiseTexture2D_y")`,
  * a bare `res://` path), present only when the slot's feature gate is on. Decode
  * stops at the string: the inline path resolves it against the scene's tables,
@@ -149,6 +156,14 @@ export interface StandardMaterial3DData {
   textureRepeat: boolean;
   uv1Scale: MaterialVec2;
   uv1Offset: MaterialVec2;
+  /** `uv2_scale`, identity where Godot never applies it (see `decode.ts`). */
+  uv2Scale: MaterialVec2;
+  /** `uv2_offset`, identity where Godot never applies it. */
+  uv2Offset: MaterialVec2;
+  /** `uv2_triplanar`: triplanar mapping of the second UV set. */
+  uv2Triplanar: boolean;
+  /** The slots that sample UV2 (`emission_on_uv2`, `ao_on_uv2`). */
+  uv2Slots: readonly TextureSlot[];
   /** The authored `transparency` mode. */
   transparency: Transparency;
   /**
@@ -280,6 +295,10 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   textureRepeat: boolean;
   uv1Scale: MaterialVec2;
   uv1Offset: MaterialVec2;
+  uv2Scale: MaterialVec2;
+  uv2Offset: MaterialVec2;
+  uv2Triplanar: boolean;
+  uv2Slots: readonly TextureSlot[];
   transparent: boolean;
   castsShadow: boolean;
   alphaTest: number;

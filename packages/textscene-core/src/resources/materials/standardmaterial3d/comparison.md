@@ -19,11 +19,11 @@ A `metallic = 1.0`, `roughness = 0.1` sphere reflects the preview sky. Both engi
 ## Emission
 <!-- compare: image=unit-material-emissive status=done fixture=unit-material-emissive.tscn -->
 
-An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the preview environment blooms it. `emission_operator` is honoured, including MULTIPLY with no texture, which emits nothing.
+An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the preview environment blooms it. `emission_operator` is honoured, including MULTIPLY with no texture, which emits nothing. `emission_on_uv2` samples the mesh's UV2, and the `glb-lightmap-uv2` golden draws it through a GLB's unwrapped UV2.
 
 - **Approximated** ADD with both a lit colour and a texture is applied as a multiply, so the surface reads darker and more tinted.
-- **Approximated** `emission_on_uv2` samples through UV1, since no mesh here carries a second UV set.
 - **Approximated** `emission_intensity` is ignored. `emission_energy_multiplier` alone drives the strength.
+- **Approximated** A PrimitiveMesh with `add_uv2` gets no UV2 here, so `emission_on_uv2` on one samples the map's top-left texel, where Godot reads the generated UV2.
 
 ## Clearcoat
 <!-- compare: image=unit-material-clearcoat status=done fixture=unit-material-clearcoat.tscn -->
@@ -56,9 +56,9 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 ## Ambient occlusion
 <!-- compare: image=unit-material-ao status=done fixture=unit-material-ao.tscn -->
 
-The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. `ao_texture_channel` picks the map channel.
+The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. `ao_texture_channel` picks the map channel, and `ao_on_uv2` samples the mesh's UV2.
 
-- **Approximated** `ao_on_uv2` samples through UV1, since no mesh here carries a second UV set.
+- **Approximated** A PrimitiveMesh with `add_uv2` gets no UV2 here, so `ao_on_uv2` on one samples the map's top-left texel, where Godot reads the generated UV2.
 
 ## Diffuse mode
 <!-- compare: image=unit-material-diffuse-mode status=done fixture=unit-material-diffuse-mode.tscn -->
@@ -87,7 +87,7 @@ Both engines shift every texture coordinate by the depth the heightmap reads, al
 ## Texture filter
 <!-- compare: image=unit-material-texture-filter status=done fixture=unit-material-texture-filter.tscn -->
 
-`texture_filter` picks the sampler every texture slot reads through, and `texture_repeat` rides the same helper. Godot's repeat default is on while three's is clamp, so the applier states Repeat at bind time. An unauthored material tiles a clamped arrival on a source-shared clone.
+`texture_filter` picks the sampler every texture slot reads through, and `texture_repeat` rides the same helper. Godot's repeat default is on while three's is clamp, so the applier states Repeat at bind time. An unauthored material tiles a clamped arrival on a source-shared clone. A ViewportTexture albedo samples through the same filter, repeat and UV transform in the material's program, because its render target is shared and never cloned.
 
 - **Approximated** Nearest sampling with anisotropy takes the property but not the anisotropy, since three skips it under `NearestFilter`.
 - **Approximated** `texture_mipmap_bias` is not applied. WebGL2 has no per-texture LOD bias.

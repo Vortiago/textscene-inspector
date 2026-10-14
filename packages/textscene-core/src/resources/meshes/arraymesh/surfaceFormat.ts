@@ -49,6 +49,8 @@ export interface SurfaceLayout {
   attributeStride: number;
   /** Byte offset of UV1 within one attribute record, or -1 when the surface has none. */
   uvOffset: number;
+  /** Byte offset of UV2 within one attribute record, or -1 when the surface has none. */
+  uv2Offset: number;
 }
 
 export function surfaceLayout(format: number): SurfaceLayout {
@@ -75,5 +77,6 @@ export function surfaceLayout(format: number): SurfaceLayout {
     normalStride,
     attributeStride: (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) + (hasUV2 ? uvBytes : 0),
     uvOffset: hasUV ? (hasColor ? COLOR_BYTES : 0) : -1,
+    uv2Offset: hasUV2 ? (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) : -1,
   };
 }

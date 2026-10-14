@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
 import { useResource } from '../../../resources/useResource.js';
-import { GLB_SCENE_ROOT_TYPE } from '../../internal/glb-scene-root/Component.js';
+import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot.js';
 import { glbSceneRootChildren } from '../../internal/glb-scene-root/glbHierarchy.js';
 
 export function useGlbChildren(node: TscnNode): readonly TscnNode[] | null {
