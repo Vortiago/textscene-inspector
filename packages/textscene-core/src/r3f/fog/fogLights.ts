@@ -15,6 +15,7 @@ import {
 } from '../../godot/volumetricFog.js';
 import { DIRECTIONAL_SHADOW_MAX_SPLITS } from '../../godot/directionalShadow.js';
 import { splitSunOf } from '../directionalShadow/splitSun.js';
+import { isAreaShadowLight } from '../positionalShadow/atlasAreaShadow.js';
 import { AtlasOmniShadow } from '../positionalShadow/atlasOmniShadow.js';
 import { AtlasSpotShadow } from '../positionalShadow/atlasSpotShadow.js';
 import { lightPoseMatrix } from '../positionalShadow/lightPose.js';
@@ -27,9 +28,9 @@ import { writeVec4 } from './writeVec4.js';
  * Where each value sits in a light's row, in texels of four floats. `CONE` holds the cone exponent,
  * the kind, the shadow opacity and a positional light's depth bias. `SHADOW_MATRICES` starts four
  * matrices of four columns: a directional light's splits, or one positional light's lookup.
- * `SHADOW_SPLITS` holds a directional light's split ends, or an omni light's paraboloid slot. An
- * area light casts no shadow in the fog, so its width and height sit where a lookup would, and its
- * direction carries its inverse centre range where a spot holds its cone cosine.
+ * `SHADOW_SPLITS` holds a directional light's split ends, or an omni or area light's paraboloid
+ * slot. An area light's width and height sit where a directional light's second split would, and
+ * its direction carries its inverse centre range where a spot holds its cone cosine.
  */
 export const FogLightTexel = {
   POSITION: 0,
@@ -37,8 +38,8 @@ export const FogLightTexel = {
   DIRECTION: 2,
   CONE: 3,
   SHADOW_MATRICES: 4,
-  AREA_WIDTH: 4,
-  AREA_HEIGHT: 5,
+  AREA_WIDTH: 8,
+  AREA_HEIGHT: 9,
   SHADOW_SPLITS: 20,
   SHADOW_RANGES: 21,
   SHADOW_FADE: 22,
@@ -167,8 +168,8 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
 }
 
 /**
- * An area light's range, attenuation, facing and rectangle, as 4.7.2 packs them
- * (`light_storage.cpp:1059-1094`). Its rectangle ignores the node's scale, as Godot's does. A
+ * An area light's range, attenuation, facing, rectangle and shadow, as 4.7.2 packs them
+ * (`light_storage.cpp:1059-1094`, `:1150-1210`). Its rectangle ignores the node's scale, as Godot's does. A
  * light without a falloff, such as a GLB light, is left out.
  */
 function writeArea(light: THREE.RectAreaLight, camera: THREE.Camera): boolean {
@@ -183,6 +184,7 @@ function writeArea(light: THREE.RectAreaLight, camera: THREE.Camera): boolean {
   writeViewAxis(FogLightTexel.DIRECTION, light, AREA_LIGHT_AXES.facing, 1, camera, inverseCentreRange);
   writeViewAxis(FogLightTexel.AREA_WIDTH, light, AREA_LIGHT_AXES.width, light.width, camera);
   writeViewAxis(FogLightTexel.AREA_HEIGHT, light, AREA_LIGHT_AXES.height, light.height, camera);
+  writeAreaShadow(light, camera);
   return true;
 }
 
@@ -227,6 +229,15 @@ function writeOmniShadow(light: THREE.PointLight, camera: THREE.Camera): void {
   if (!light.castShadow || !(shadow instanceof AtlasOmniShadow)) return;
   const rect = shadow.paraboloidRect(paraboloidRect);
   if (!rect) return;
+  writeTexel(FogLightTexel.SHADOW_SPLITS, rect.x, rect.y, rect.z, rect.w);
+  writePositionalShadow(shadow, lightPoseMatrix(light, worldToLight).invert(), camera);
+}
+
+/** An area light looks up from its own space into its one paraboloid's slot (`../positionalShadow/atlasAreaShadow.ts`). */
+function writeAreaShadow(light: THREE.RectAreaLight, camera: THREE.Camera): void {
+  if (!light.castShadow || !isAreaShadowLight(light)) return;
+  const { shadow } = light;
+  const rect = shadow.slotUvRect(paraboloidRect);
   writeTexel(FogLightTexel.SHADOW_SPLITS, rect.x, rect.y, rect.z, rect.w);
   writePositionalShadow(shadow, lightPoseMatrix(light, worldToLight).invert(), camera);
 }

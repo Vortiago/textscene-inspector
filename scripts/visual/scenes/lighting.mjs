@@ -31,6 +31,9 @@ export const LIGHTING_SCENES = [
   // An area light's scatter in volumetric fog, from Godot 4.7.2. The header states why no other
   // golden shows it.
   { name: 'area-light-fog', file: 'unit-area-light-fog.tscn' },
+  // An area light's shadow in volumetric fog, from Godot 4.7.2. The header states why no other
+  // golden shows it.
+  { name: 'area-light-fog-shadow', file: 'unit-area-light-fog-shadow.tscn' },
   // A directional shadow in the volumetric fog. The header states why no other golden shows it.
   { name: 'volumetric-fog-shadow', file: 'unit-volumetric-fog-shadow.tscn' },
   // The spot shadow bias in the volumetric fog. The header states why no other golden shows it.

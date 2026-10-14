@@ -20,10 +20,11 @@ export const FOG_SAMPLE_OFFSETS_MAX = VOLUMETRIC_FOG_TEMPORAL_JITTERS.length;
 
 /**
  * Lights one froxel: each light's scatter (`.glsl:252-255`, an area light's from 4.7.2), under its
- * shadow (`.glsl:388-422,488-510,552-574`), and the ambient with its sky (`.glsl:430-445`), times the
- * albedo, plus the emission (`.glsl:681`). A moving camera's froxel
+ * shadow (`.glsl:388-422,488-510,552-574`, 4.7.2 `:671-691`), and the ambient with its sky
+ * (`.glsl:430-445`), times the albedo, plus the emission (`.glsl:681`). A moving camera's froxel
  * blends this frame's jitter into its reprojected history (`.glsl:311-335,683`). A still one
- * averages its sample offsets, the mean the history converges to. A clear cell scatters nothing (`.glsl:383`).
+ * averages its sample offsets, the mean the history converges to. A clear cell scatters nothing
+ * (`.glsl:383`).
  */
 export const FOG_LIGHT_FRAGMENT = /* glsl */ `
 #include <common>
@@ -96,8 +97,9 @@ vec3 froxelView( vec3 unit ) {
 	return vec3( ( unit.xy * 2.0 - 1.0 ) * halfExtents, - fogLength * depth );
 }
 
-// 4.7.2 volumetric_fog_process.glsl:620-695, without the shadow and the area texture. Godot keeps
-// the distance at 1 or more against flicker at froxels the light passes through (:642-649).
+// 4.7.2 volumetric_fog_process.glsl:620-695, without the shadow, which lightsAt applies, and the
+// area texture. Godot keeps the distance at 1 or more against flicker at froxels the light passes
+// through (:642-649).
 vec3 areaLightScatter( vec3 view, vec3 eye, vec4 position, vec4 color, vec4 facing, vec3 width, vec3 height ) {
 	if ( dot( width, width ) <= 1e-4 || dot( height, height ) <= 1e-4 ) return vec3( 0.0 );
 	float widthLength = length( width );
@@ -195,6 +197,19 @@ float spotShadow( int light, vec3 view, float bias, float depthRange ) {
 	return fogShadow( coord.z, atlasDepth( positionalShadowAtlas, coord.xy ), depthRange );
 }
 
+// 4.7.2 .glsl:671-691: the light's one paraboloid in its slot. The depth runs from the light over
+// its centre range, which the row's direction carries.
+float areaShadow( int light, vec3 view, float bias, float inverseCentreRange ) {
+	vec3 local = ( shadowLookup( light, 0 ) * vec4( view, 1.0 ) ).xyz;
+	vec4 uvRect = lightTexel( light, ${FogLightTexel.SHADOW_SPLITS} );
+	vec3 direction = normalize( local );
+	direction.z = 1.0 + abs( direction.z );
+	vec2 uv = uvRect.xy + ( direction.xy / direction.z * 0.5 + 0.5 ) * uvRect.zw;
+	float depthRange = 1.0 / inverseCentreRange;
+	float cellDepth = ( length( local ) - bias ) / depthRange;
+	return fogShadow( cellDepth, atlasDepth( positionalShadowAtlas, uv ), depthRange );
+}
+
 // .glsl:425, :511 and :550-575
 vec3 lightsAt( vec3 view ) {
 	vec3 eye = normalize( view );
@@ -214,7 +229,9 @@ vec3 lightsAt( vec3 view ) {
 		if ( kind == ${FogLightKind.AREA} ) {
 			vec3 width = lightTexel( i, ${FogLightTexel.AREA_WIDTH} ).xyz;
 			vec3 height = lightTexel( i, ${FogLightTexel.AREA_HEIGHT} ).xyz;
-			total += areaLightScatter( view, eye, position, color, direction, width, height );
+			vec3 scatter = areaLightScatter( view, eye, position, color, direction, width, height );
+			float shadow = isShadowed ? fogShadowAttenuation( areaShadow( i, view, cone.w, direction.w ), cone.z ) : 1.0;
+			total += scatter * shadow;
 			continue;
 		}
 		vec3 toLight = position.xyz - view;

@@ -2248,6 +2248,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Lights"
   },
   {
+    "name": "Area Light Fog Shadow",
+    "file": "unit-area-light-fog-shadow.tscn",
+    "category": "Unit - Lights"
+  },
+  {
     "name": "Area Light Fog",
     "file": "unit-area-light-fog.tscn",
     "category": "Unit - Lights"
