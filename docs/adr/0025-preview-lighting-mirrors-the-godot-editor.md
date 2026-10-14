@@ -62,8 +62,9 @@ is in frame).
 then `scene.environment`, which drives reflections. Godot's `reflection_source` defaults to
 the background. The core bakes Godot's radiance layers, 1 to 7, as Godot does: a chain of
 downsamples to an octmap 10 texels wide, then a GGX filter per layer, or the fast filter for a
-real-time sky. Three small shared cubes hold them. The diffuse light reads the last layer, and a
-reflection reads the baked layers. A mirror reflection reads layer 0, the radiance itself, as mip 0
+real-time sky. Each sky keeps them in three small cubes of its own, and every lit material samples
+the cubes of the sky its scene shows. The diffuse light reads the last layer, and a reflection
+reads the baked layers. A mirror reflection reads layer 0, the radiance itself, as mip 0
 of three's PMREM. The PMREM blurs a layer differently from Godot's chain, and spherical harmonics of
 order 2 cannot hold the last layer's sharper terms. Godot's own DFG table weighs every reflection. A `HemisphereLight` approximation is
 rejected: it is diffuse-only, so each metallic or smooth material stays visibly wrong.

@@ -1,10 +1,9 @@
 /**
- * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its roughest layers
- * and its share of the ambient to every lit material before each render of the scene
- * (`skyLayersMap.ts`). Godot's sky
- * shader draws the discs of the first four DirectionalLights that are not Light Only as
- * `LIGHT0..3`. The lights are read from the rendered three.js scene, where an instanced
- * or GLB light has its real world transform.
+ * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its baked layers and
+ * its share of the ambient to every lit material before each render of the scene
+ * (`skyLayerCubes.ts`). Godot's sky shader draws the discs of the first four DirectionalLights that
+ * are not Light Only as `LIGHT0..3`. The lights are read from the rendered three.js scene, where an
+ * instanced or GLB light has its real world transform.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -18,7 +17,7 @@ import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { skyLightEnergy } from './skyLight';
 import { skyEuler } from './skyRotation';
 import type { Vector3 } from '../../parser/vectors';
-import { showSkyLayers } from './skyLayersMap';
+import { SkyLayerCubes } from './skyLayerCubes';
 import { observeSceneCamera } from '../sceneRenderCamera';
 
 export interface SkyLayerProps {
@@ -104,10 +103,9 @@ export function SkyLayer({
     scene.environment = built.environment;
     scene.environmentIntensity = intensity;
     scene.environmentRotation.copy(skyRotation);
+    const layerCubes = new SkyLayerCubes(built.layers);
     // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
-    const stopShowingLayers = observeSceneCamera(scene, () =>
-      showSkyLayers(built.layers, contributionRef.current)
-    );
+    const stopShowingLayers = observeSceneCamera(scene, () => layerCubes.show(gl, contributionRef.current));
     if (asBackground) {
       scene.background = built.background;
       scene.backgroundIntensity = backgroundIntensity;
@@ -124,6 +122,7 @@ export function SkyLayer({
         scene.backgroundIntensity = previousBackgroundIntensity;
         scene.backgroundRotation.copy(previousBackgroundRotation);
       }
+      layerCubes.dispose();
       built.dispose();
     };
   }, [

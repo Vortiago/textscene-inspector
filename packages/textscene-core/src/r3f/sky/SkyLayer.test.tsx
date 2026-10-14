@@ -5,12 +5,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { createPortal } from '@react-three/fiber';
 import type { SkyEnvironment, SkyEnvironmentInput } from '../../resources/sky/build';
 import type { Sky } from '../../resources/sky/types';
 import { SkyLayer } from './SkyLayer';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
-import { showSkyLayers, skyContribution, skyLayerMaps } from './skyLayersMap';
+import { skyContribution, skyLayerSlots } from './skyLayerCubes';
+import {
+  boundHandle,
+  recordTextures,
+  RendererProbe,
+  type TextureRecording,
+} from '../../testing/recordingWebGL';
 import type { SkyLayers } from '../../resources/sky/skyLayers';
 
 const bakes = vi.hoisted((): SkyEnvironmentInput[] => []);
@@ -63,11 +70,45 @@ function skyEnvironment(layers: SkyLayers): SkyEnvironment {
 const blankFaces = () => Array.from({ length: 6 }, () => new Uint16Array(4));
 const skyLayers = (): SkyLayers => ({ sharp: [blankFaces()], rough: [blankFaces()], last: [blankFaces()] });
 
-/** The first face of the shared last-layer cube after the scene's next render starts. */
-function layersAfterRender(renderer: Renderer): unknown {
-  const { onBeforeRender } = renderer.scene.instance as unknown as THREE.Scene;
-  (onBeforeRender as () => void)();
-  return (skyLayerMaps.last.image as THREE.DataTexture[])[0]!.image.data;
+interface Mounted {
+  root: Renderer;
+  gl: THREE.WebGLRenderer;
+  recording: TextureRecording;
+  /** Renders `element` in place of the mounted one, as the same tree. */
+  update: (element: React.ReactNode) => Promise<void>;
+}
+
+/** Mounts `element` and runs the frame that bakes its sky, recording the textures from the start. */
+async function mount(element: React.ReactNode): Promise<Mounted> {
+  let gl: THREE.WebGLRenderer | undefined;
+  const withProbe = (child: React.ReactNode) => (
+    <>
+      <RendererProbe onRenderer={(renderer) => (gl = renderer)} />
+      {child}
+    </>
+  );
+  const root = await ReactThreeTestRenderer.create(withProbe(element));
+  const recording = recordTextures(gl!);
+  await advance(root, 1);
+  return { root, gl: gl!, recording, update: (next) => root.update(withProbe(next)) };
+}
+
+const rootScene = (root: Renderer) => root.scene.instance as unknown as THREE.Scene;
+
+/** Starts a render of `scene`, and gives the last-layer cube every lit material samples in it. */
+function sampledInRender(gl: THREE.WebGLRenderer, scene: THREE.Scene): unknown {
+  (scene.onBeforeRender as () => void)();
+  return boundHandle(gl, skyLayerSlots.last);
+}
+
+/** A sky in the root scene, and one in a scene of its own, as a sub-viewport renders it. */
+function TwoSkies({ subScene }: { subScene: THREE.Scene }) {
+  return (
+    <>
+      <SkyLayer sky={SKY} rotation={NO_ROTATION} />
+      {createPortal(<SkyLayer sky={SKY} rotation={NO_ROTATION} />, subScene)}
+    </>
+  );
 }
 
 describe('SkyLayer', () => {
@@ -153,74 +194,97 @@ describe('SkyLayer', () => {
     expect(lastBake()?.lights[0]?.energy).toBeCloseTo(3);
   });
 
-  it("shows the sky's layers in the shared cube before each render of its scene", async () => {
-    const layers = skyLayers();
-    built.next = skyEnvironment(layers);
-    const renderer = await ReactThreeTestRenderer.create(<Scene lights={1} />);
-    await advance(renderer, 1);
+  it("points the lit materials at its sky's cubes before each render of its scene", async () => {
+    built.next = skyEnvironment(skyLayers());
+    const { root, gl } = await mount(<Scene lights={1} />);
 
-    expect(layersAfterRender(renderer)).toBe(layers.last[0]![0]);
+    expect(sampledInRender(gl, rootScene(root))).toBeDefined();
+  });
+
+  it("samples each scene's own sky in each scene's render", async () => {
+    built.next = skyEnvironment(skyLayers());
+    const subScene = new THREE.Scene();
+    const { root, gl } = await mount(<TwoSkies subScene={subScene} />);
+
+    const [main, sub, mainAgain] = [rootScene(root), subScene, rootScene(root)].map((scene) =>
+      sampledInRender(gl, scene)
+    );
+
+    expect(sub).not.toBe(main);
+    expect(mainAgain).toBe(main);
+  });
+
+  it('uploads no layers after the first frame while two scenes with skies render in turn', async () => {
+    built.next = skyEnvironment(skyLayers());
+    const subScene = new THREE.Scene();
+    const { root, gl, recording } = await mount(<TwoSkies subScene={subScene} />);
+    const renderBoth = () => [rootScene(root), subScene].forEach((scene) => sampledInRender(gl, scene));
+    renderBoth();
+    const firstFrameUploads = recording.uploads();
+
+    for (let frame = 0; frame < 3; frame++) renderBoth();
+
+    expect(recording.uploads()).toBe(firstFrameUploads);
   });
 
   it('shows its share of the ambient with its layers', async () => {
     built.next = skyEnvironment(skyLayers());
-    const renderer = await ReactThreeTestRenderer.create(
-      <SkyLayer sky={SKY} rotation={NO_ROTATION} contribution={0.25} />
-    );
-    await advance(renderer, 1);
+    const { root, gl } = await mount(<SkyLayer sky={SKY} rotation={NO_ROTATION} contribution={0.25} />);
 
-    layersAfterRender(renderer);
+    sampledInRender(gl, rootScene(root));
 
     expect(skyContribution[0]).toBe(0.25);
   });
 
   it('shows a new share of the ambient without a new bake', async () => {
     built.next = skyEnvironment(skyLayers());
-    const renderer = await ReactThreeTestRenderer.create(
+    const { root, gl, update } = await mount(
       <SkyLayer sky={SKY} rotation={NO_ROTATION} contribution={0.25} />
     );
-    await advance(renderer, 1);
     const bakeCount = bakes.length;
 
-    await renderer.update(<SkyLayer sky={SKY} rotation={NO_ROTATION} contribution={0.5} />);
-    layersAfterRender(renderer);
+    await update(<SkyLayer sky={SKY} rotation={NO_ROTATION} contribution={0.5} />);
+    sampledInRender(gl, rootScene(root));
 
     expect([bakes.length, skyContribution[0]]).toEqual([bakeCount, 0.5]);
   });
 
   it("keeps the scene's other render observers running, as the visibility cull is", async () => {
     built.next = skyEnvironment(skyLayers());
-    const renderer = await ReactThreeTestRenderer.create(<Scene lights={1} />);
-    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    const { root, gl } = await mount(<Scene lights={1} />);
     const observer = vi.fn();
-    const stopObserving = observeSceneCamera(scene, observer);
-    await advance(renderer, 1);
+    const stopObserving = observeSceneCamera(rootScene(root), observer);
 
-    layersAfterRender(renderer);
+    sampledInRender(gl, rootScene(root));
     stopObserving();
 
     expect(observer).toHaveBeenCalled();
   });
 
+  it('frees its cubes when it unmounts', async () => {
+    built.next = skyEnvironment(skyLayers());
+    const { root, gl, update } = await mount(<Scene lights={1} />);
+    const before = gl.info.memory.textures;
+    sampledInRender(gl, rootScene(root));
+
+    await update(<directionalLight />);
+
+    expect(gl.info.memory.textures).toBe(before);
+  });
+
   it('stops showing its layers when it unmounts', async () => {
-    const layers = skyLayers();
-    built.next = skyEnvironment(layers);
-    const renderer = await ReactThreeTestRenderer.create(<Scene lights={1} />);
-    await advance(renderer, 1);
+    built.next = skyEnvironment(skyLayers());
+    const { root, gl, update } = await mount(<Scene lights={1} />);
+    sampledInRender(gl, rootScene(root));
 
-    await renderer.update(<directionalLight />);
-    const other = skyLayers();
-    showSkyLayers(other, 1);
+    await update(<directionalLight />);
 
-    expect(layersAfterRender(renderer)).toBe(other.last[0]![0]);
+    expect(sampledInRender(gl, rootScene(root))).toBeUndefined();
   });
 
   it('shows no layers when the sky cannot render (error case)', async () => {
-    const other = skyLayers();
-    showSkyLayers(other, 1);
-    const renderer = await ReactThreeTestRenderer.create(<Scene lights={1} />);
-    await advance(renderer, 1);
+    const { root, gl } = await mount(<Scene lights={1} />);
 
-    expect(layersAfterRender(renderer)).toBe(other.last[0]![0]);
+    expect(sampledInRender(gl, rootScene(root))).toBeUndefined();
   });
 });

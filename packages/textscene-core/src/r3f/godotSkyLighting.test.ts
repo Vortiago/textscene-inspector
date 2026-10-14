@@ -11,8 +11,8 @@ import {
   SKY_CONTRIBUTION_UNIFORM,
   SKY_LAYER_UNIFORMS,
   skyContribution,
-  skyLayerMaps,
-} from './sky/skyLayersMap';
+  skyLayerSlots,
+} from './sky/skyLayerCubes';
 
 const CHUNKS = ['lights_fragment_maps', 'envmap_physical_pars_fragment'] as const;
 const threeChunks = Object.fromEntries(CHUNKS.map((name) => [name, THREE.ShaderChunk[name]]));
@@ -45,9 +45,9 @@ describe('installGodotSkyLighting', () => {
     (group) => {
       installGodotSkyLighting();
       const uniform = SKY_LAYER_UNIFORMS[group];
-      expect(THREE.ShaderLib.physical.uniforms[uniform]!.value).toBe(skyLayerMaps[group]);
+      expect(THREE.ShaderLib.physical.uniforms[uniform]!.value).toBe(skyLayerSlots[group]);
       expect(THREE.UniformsUtils.clone(THREE.ShaderLib.standard.uniforms)[uniform]!.value).toBe(
-        skyLayerMaps[group]
+        skyLayerSlots[group]
       );
     }
   );
