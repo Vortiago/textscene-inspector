@@ -64,13 +64,13 @@ describe('VehicleBody3D Linter', () => {
         {
           prop: 'engine_force',
           valid: [0, 40.0, -25.5],
-          invalid: [{ value: 'fast', ruleName: 'strict-parser' }],
+          invalid: [{ value: 'fast', ruleName: 'format:engine_force' }],
         },
         { prop: 'brake', valid: [0, 25.0], invalid: [{ value: 'hard' }] },
         {
           prop: 'steering',
           valid: [0, -0.4, 0.4],
-          invalid: [{ value: 'left', ruleName: 'strict-parser' }],
+          invalid: [{ value: 'left', ruleName: 'format:steering' }],
         },
         { prop: 'mass', valid: [40.0, 0.5], invalid: [{ value: '0' }, { value: '-1' }] },
         { prop: 'center_of_mass_mode', valid: [0, 1], invalid: [{ value: '5' }] },

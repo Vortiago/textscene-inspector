@@ -98,7 +98,7 @@ describe('Window size below the viewport floor', () => {
   it('reports the negative component once, as the validator error, with no warning beside it', () => {
     const diagnostics = lint(windowScene({ size: 'Vector2i(-3, 400)' }));
     expect(diagnostics).toBeAllAtTier('error');
-    expect(diagnostics.map((d) => d.ruleName)).toEqual(['strict-parser']);
+    expect(diagnostics.map((d) => d.ruleName)).toEqual(['format:size']);
     expect(diagnostics[0]?.message).toContain('size');
   });
 

@@ -91,7 +91,7 @@ _Avoid_: "error" for a diagnostic of unknown severity, "issue".
 
 **Validator** (format check):
 A per-property format or range check that judges one property's value alone during strict parsing and inherits down the node base-type chain.
-Its **Severity** comes from what the engine does (`linter/validators/v/grounding.ts`).
+Its **Severity** comes from what the engine does (`linter/validators/v/grounding.ts`), and its **Diagnostic** is named `format:<property>`, with the key as the file writes it.
 _Avoid_: "validator" for a **Value decoder**.
 
 **Format-only validator**:

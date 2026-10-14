@@ -70,6 +70,8 @@ export interface ParseError {
   column: number;
   /** Machine-readable error code. */
   code: string;
+  /** The key of the property a **Validator** refused, as the file writes it. Absent for a syntax or heading error. */
+  propertyKey?: string;
   /**
    * True when the refusal is about the key, not the value: an unrecognised leaf
    * name, a shape `_set` cannot resolve, a negative index. Every value fails it,

@@ -418,7 +418,7 @@ physics_material_override = ExtResource("ext_mat_1")
           })
         )
       );
-      // One strict-parser error, mass <= 0 (rigid_body_2d.cpp:318). linear_damp
+      // One validator error, mass <= 0 (rigid_body_2d.cpp:318). linear_damp
       // = -1 is legal in 2D (:425 rejects only < -1), and collision_layer = -5
       // says nothing at all: it is a 32-bit pattern the checkbox grid renders.
       const errors = errorsOf(diagnostics);

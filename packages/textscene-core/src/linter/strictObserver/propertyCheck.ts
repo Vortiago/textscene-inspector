@@ -38,11 +38,12 @@ export function propertyRefusal({
 
   const found = validator(lookupKey, lookupValue, line);
   if (!found) return null;
-  const error =
+  const keyed: ParseError = { ...found, propertyKey: key };
+  const error: ParseError =
     lookupKey === key
-      ? found
+      ? keyed
       : {
-          ...found,
+          ...keyed,
           // The validator's `propertyError` anchors the column on the key it was handed. The rebase
           // lands it on the value after the key as written.
           column: found.column - lookupKey.length + key.length,

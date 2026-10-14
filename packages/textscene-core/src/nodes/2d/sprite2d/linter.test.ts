@@ -115,8 +115,8 @@ describe('Sprite2D Linter', () => {
         // the validator on any index above 0. Naming the phase pins each case to
         // the diagnostic it is about.
         invalid: [
-          { value: -1, ruleName: 'strict-parser', contains: ['frame', 'non-negative'] },
-          { value: 1.5, ruleName: 'strict-parser', contains: ['frame'] },
+          { value: -1, ruleName: 'format:frame', contains: ['frame', 'non-negative'] },
+          { value: 1.5, ruleName: 'format:frame', contains: ['frame'] },
         ],
       },
       {

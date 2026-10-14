@@ -55,17 +55,19 @@ never reads a large directory such as `/tmp`.
   {
     "file": "scenes/broken.tscn",
     "line": 4,
-    "column": 10,
+    "column": 12,
     "severity": "error",
-    "rule": "strict-parser",
-    "message": "Invalid Transform3D",
-    "nodeType": "<unknown>",
-    "nodeName": "<unknown>"
+    "rule": "format:transform",
+    "message": "Property 'transform' must be Transform3D with 12 numbers like Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0), got: \"Transform3D(invalid, values, here)\"",
+    "nodeType": "Node3D",
+    "nodeName": "Root"
   }
   ```
 
-  `line` and `column` are `null` for a finding about the whole file, such as
-  `file-read-error`.
+  `rule` names the check. A refused property value names its property as
+  `format:<property>`, such as `format:transform`. A syntax error is
+  `strict-parser`. `line` and `column` are `null` for a finding about the
+  whole file, such as `file-read-error`.
 - `github`: GitHub Actions annotations on the diff. It is the default when
   `$GITHUB_ACTIONS=true`.
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { takeRecordedTiers } from './titleTier';
-import { errorsOf, infosOf, reportsOf, warningsOf } from './tierLists';
+import { errorsOf, formatErrorsOf, infosOf, reportsOf, warningsOf } from './tierLists';
 import type { Diagnostic, Severity } from '../types';
 
 function diagnostic(severity: Severity, ruleName: string): Diagnostic {
@@ -9,6 +9,7 @@ function diagnostic(severity: Severity, ruleName: string): Diagnostic {
 
 const parserError = diagnostic('error', 'strict-parser');
 const parserWarning = diagnostic('warning', 'strict-parser');
+const validatorError = diagnostic('error', 'format:position');
 const ruleError = diagnostic('error', 'some-rule');
 const ruleWarning = diagnostic('warning', 'some-rule');
 const all = [parserError, parserWarning, ruleError, ruleWarning];
@@ -24,8 +25,8 @@ describe('errorsOf, warningsOf and infosOf', () => {
     ]);
   });
 
-  it('narrow to one rule when given its name', () => {
-    expect(errorsOf(all, 'strict-parser')).toEqual([parserError]);
+  it("formatErrorsOf keeps the format checks' errors, a syntax error's and a validator's", () => {
+    expect(formatErrorsOf([...all, validatorError])).toEqual([parserError, validatorError]);
   });
 
   it('return an empty list when nothing is at the tier', () => {

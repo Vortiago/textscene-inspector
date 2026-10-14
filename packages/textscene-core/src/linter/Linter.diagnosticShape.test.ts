@@ -10,7 +10,7 @@ import './index.js';
 
 const DIAGNOSTIC_KEYS = ['location', 'message', 'nodeName', 'nodeType', 'ruleName', 'severity'];
 
-/** One source per diagnostic `Linter` stamps itself, plus a rule and a validator. */
+/** One source per diagnostic `Linter` stamps itself, plus a rule, a syntax error and a validator. */
 const SOURCES: Record<string, string> = {
   'legacy-format-version': '[gd_scene format=2]\n\n[node name="Root" type="Node2D"]\n',
   'unresolved-parent-path': scene(
@@ -24,7 +24,8 @@ const SOURCES: Record<string, string> = {
     node('Node2D', {}, { name: 'B', parent: '' })
   ),
   'collisionobject2d-needs-collision-shape': scene(node('StaticBody2D', {}, { name: 'Root' })),
-  'strict-parser': scene(node('Node2D', { position: 'Vector2(nope)' }, { name: 'Root' })),
+  'strict-parser': scene('[node name="Root" type="Node2D"]\nfoo bar'),
+  'format:position': scene(node('Node2D', { position: 'Vector2(nope)' }, { name: 'Root' })),
   // A rule that hand-builds its diagnostic rather than taking one from an arm:
   // its `nodeName` came off the typed property bag, which carries no `name`
   // (the heading's attribute is not a property), so every report named `undefined`.

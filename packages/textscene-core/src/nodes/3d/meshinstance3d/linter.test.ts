@@ -42,7 +42,7 @@ describe('MeshInstance3D Linter', () => {
         expect(diagnostics).toHaveLength(1);
         expect(diagnostics[0]).toBeAtTier('warning');
         expect(diagnostics[0]).toMatchObject({
-          ruleName: 'strict-parser',
+          ruleName: 'format:cast_shadow',
         });
         expect(diagnostics[0]!.message).toContain('cast_shadow');
         expect(diagnostics[0]!.message).toContain('0-3');
@@ -146,7 +146,7 @@ describe('MeshInstance3D Linter', () => {
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]).toBeAtTier('error');
       expect(diagnostics[0]).toMatchObject({
-        ruleName: 'strict-parser',
+        ruleName: 'format:transform',
       });
       expect(diagnostics[0]!.message).toContain('transform');
     });
