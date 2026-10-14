@@ -14,6 +14,7 @@ import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
+import { editorHelperUserData } from '../../../r3f/editorHelpers';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree';
 import { useResourceLoader } from '../../../resources/useResource';
 import { useTexture2D } from '../../../resources/useTexture2D';
@@ -46,6 +47,7 @@ export function Decal({ node, children }: NodeComponentProps) {
   // Godot's editor outlines the projector box but its runtime, which the reference renders, draws
   // none, so the wireframe is selection-gated (ADR-0018), as for Marker3D and Path3D.
   const gizmoVisible = useGizmoVisible();
+  const helperUserData = useMemo(editorHelperUserData, []);
 
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
@@ -216,7 +218,7 @@ export function Decal({ node, children }: NodeComponentProps) {
   return (
     <Node3D node={node}>
       {gizmoVisible && (
-        <group scale={[size.x, size.y, size.z]}>
+        <group scale={[size.x, size.y, size.z]} userData={helperUserData}>
           <lineSegments userData={{ cullMask: properties.cull_mask }}>
             <primitive object={boxEdges} attach="geometry" />
             <lineBasicMaterial key={BOX_EDGES_MATERIAL.key} {...BOX_EDGES_MATERIAL.props} />

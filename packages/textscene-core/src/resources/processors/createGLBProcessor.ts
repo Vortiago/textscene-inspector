@@ -200,7 +200,8 @@ export function createGLBProcessor(
     fileEventBus,
     eventBus,
     resourceType: 'glb',
-    shouldProcess: (path, data) => isGltfPath(path) && data instanceof ArrayBuffer,
+    readsFile: isGltfPath,
+    shouldProcess: (_path, data) => data instanceof ArrayBuffer,
     process: async (path, data) => {
       const bytes = await glbBytes(path, data as ArrayBuffer, fileEventBus, dependencies);
       const sidecar = await readImportSidecar(path, fileEventBus, dependencies);

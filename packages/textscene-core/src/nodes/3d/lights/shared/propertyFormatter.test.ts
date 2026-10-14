@@ -11,6 +11,7 @@ describe('Base Light Property Formatter', () => {
   describe('formatBaseLightSection', () => {
     it('should format basic light properties', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 0.5, 0, 1)',
         light_energy: 2.5,
         shadow_enabled: false,
@@ -26,6 +27,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should format light properties with default values', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: false,
@@ -39,6 +41,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should include additional items when provided', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: false,
@@ -58,6 +61,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should format fractional energy values correctly', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 0.75,
         shadow_enabled: false,
@@ -70,6 +74,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should format large energy values correctly', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 100.5,
         shadow_enabled: false,
@@ -82,6 +87,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should surface light_negative, light_specular and volumetric fog energy when present', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: false,
@@ -100,6 +106,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should omit the optional light items when absent', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: false,
@@ -117,6 +124,7 @@ describe('Base Light Property Formatter', () => {
   describe('formatBaseShadowSection', () => {
     it('should format shadow disabled', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: false,
@@ -131,6 +139,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should format shadow enabled', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
@@ -143,6 +152,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should include shadow_bias when present', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
@@ -157,6 +167,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should include shadow_blur when present', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
@@ -171,6 +182,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should include both bias and blur when present', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
@@ -188,6 +200,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should include additional items after base items', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
@@ -204,6 +217,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should format very small bias values correctly', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
@@ -217,6 +231,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should format negative bias values correctly', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
@@ -232,6 +247,7 @@ describe('Base Light Property Formatter', () => {
   describe('formatShadowSectionWithNormalBias', () => {
     it('should include normal bias when present', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
@@ -248,6 +264,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should include all shadow properties with normal bias', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
@@ -267,6 +284,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should not include normal bias when undefined', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
@@ -281,6 +299,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should include additional items after normal bias', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
@@ -297,6 +316,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should format fractional normal bias correctly', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,
@@ -311,6 +331,7 @@ describe('Base Light Property Formatter', () => {
 
     it('should format negative normal bias correctly', () => {
       const properties = {
+        layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
         shadow_enabled: true,

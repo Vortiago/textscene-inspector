@@ -35,6 +35,7 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
     fileEventBus,
     eventBus,
     resourceType,
+    readsFile,
     shouldProcess,
     process,
     addressesSubResources = false,
@@ -101,6 +102,10 @@ export function createResourceProcessor<T>(config: ResourceProcessorConfig<T>): 
               `"${subResourceId}" inside ${filePath}`
           )
         );
+        return;
+      }
+      if (readsFile && !readsFile(filePath)) {
+        fail(path, new Error(`${resourceType} processor does not read ${filePath}`));
         return;
       }
 

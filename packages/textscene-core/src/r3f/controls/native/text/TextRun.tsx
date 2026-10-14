@@ -10,6 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { visualLayersUserData } from '../../../visualLayers';
 import * as THREE from 'three';
 import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
 import { getAtlasTexture, useIsAtlasDecoded } from './atlasTexture';
@@ -204,6 +205,8 @@ export interface TextRunProps {
    * surface (Label3D only). Omitted, the run casts nothing and draws in every pass.
    */
   shadow?: ShadowCastingEffects;
+  /** The `layers` of the Label3D the run draws for, which a ReflectionProbe's `cull_mask` tests. */
+  layers?: number;
   /**
    * Tags the mesh `tscnFrameExcluded`, which `frameSceneBounds.ts` skips. Label3D
    * only (`LabelGlyphs.tsx`): its glyphs mount asynchronously and could grow the
@@ -320,6 +323,7 @@ export function TextRun({
   textureFilter = 'linear',
   blends,
   shadow,
+  layers,
   frameExcluded,
   outlineColor,
   outlineWidthPx = 0,
@@ -392,6 +396,14 @@ export function TextRun({
     const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
     return new THREE.Color(r, g, b);
   }, [tint.r, tint.g, tint.b]);
+  // Memoised, as R3F assigns a new `userData` object on each render and drops what it held.
+  const userData = useMemo(
+    () => ({
+      ...(frameExcluded && { tscnFrameExcluded: true }),
+      ...(layers !== undefined && visualLayersUserData(layers)),
+    }),
+    [frameExcluded, layers]
+  );
 
   return (
     <>
@@ -403,7 +415,7 @@ export function TextRun({
         // A faded run's materials go on through the swap alone, which the fade owns.
         material={alphaPassMaterial ? undefined : material}
         renderOrder={renderOrder}
-        userData={frameExcluded ? { tscnFrameExcluded: true } : undefined}
+        userData={userData}
         castShadow={shadow?.castShadow}
         onBeforeRender={shadow?.onBeforeRender}
         onAfterRender={shadow?.onAfterRender}

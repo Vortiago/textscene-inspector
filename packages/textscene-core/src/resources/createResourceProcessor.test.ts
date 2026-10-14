@@ -1,6 +1,6 @@
 /**
  * `createResourceProcessor`, the factory behind every processor, in both fetch
- * modes: FileEventBus-driven (`shouldProcess` and `process`) and direct (`loadDirectly`).
+ * modes: FileEventBus-driven (`readsFile`, `shouldProcess` and `process`) and direct (`loadDirectly`).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createResourceProcessor, type ResourceProcessor } from './createResourceProcessor';
@@ -104,27 +104,84 @@ describe('createResourceProcessor', () => {
       expect(fileEventBus.isCached('res://a.txt')).toBe(false);
     });
 
-    it('shouldProcess gating: a non-matching arrival is left for another processor (no process, no emission, still inflight)', async () => {
+    it('shouldProcess gating: fails its own request for bytes it refuses, so no consumer waits forever', async () => {
       // ArrayBuffer data fails this processor's `typeof data === 'string'` gate.
       provider.files.set('res://a.bin', new ArrayBuffer(4));
-      const loadedHandler = vi.fn();
       const failedHandler = vi.fn();
-      eventBus.on('resource', 'loaded', loadedHandler);
-      eventBus.on('resource', 'failed', failedHandler);
+      eventBus.on<Error>('resource', 'failed', failedHandler);
 
       processor.request('res://a.bin');
       await flush();
 
       expect(processSpy).not.toHaveBeenCalled();
-      expect(loadedHandler).not.toHaveBeenCalled();
-      expect(failedHandler).not.toHaveBeenCalled();
-      // The request stays in flight: a sibling processor on the same FileEventBus
-      // handles data this one rejects.
-      expect(processor.isLoading('res://a.bin')).toBe(true);
-      expect(processor.isCached('res://a.bin')).toBe(false);
-      // This processor did not consume the bytes, so it must not drop them
-      // from under the sibling processor that will.
+      expect(failedHandler).toHaveBeenCalledWith('res://a.bin', expect.any(Error));
+      expect(String(failedHandler.mock.calls[0]![1])).toContain(
+        'resource processor does not read res://a.bin'
+      );
+      expect(processor.isLoading('res://a.bin')).toBe(false);
+    });
+
+    it('shouldProcess gating: leaves the bytes it refuses for a sibling processor on the same bus', async () => {
+      provider.files.set('res://a.bin', new ArrayBuffer(4));
+
+      processor.request('res://a.bin');
+      await flush();
+
       expect(fileEventBus.isCached('res://a.bin')).toBe(true);
+    });
+
+    it('shouldProcess gating: ignores refused bytes it never asked for (edge case)', async () => {
+      provider.files.set('res://a.bin', new ArrayBuffer(4));
+      const failedHandler = vi.fn();
+      eventBus.on('resource', 'failed', failedHandler);
+
+      fileEventBus.request('res://a.bin');
+      await flush();
+
+      expect(failedHandler).not.toHaveBeenCalled();
+      expect(processor.isCached('res://a.bin')).toBe(false);
+    });
+
+    describe('readsFile gating', () => {
+      let reader: ResourceProcessor<string>;
+      const failedHandler = vi.fn();
+
+      beforeEach(() => {
+        failedHandler.mockClear();
+        eventBus.on<Error>('resource', 'failed', failedHandler);
+        reader = createResourceProcessor<string>({
+          fileEventBus,
+          eventBus,
+          resourceType: 'resource',
+          readsFile: (filePath) => filePath.endsWith('.txt'),
+          process: processSpy as (path: string, data: FileData) => Promise<string>,
+        });
+      });
+
+      it('reads a file it accepts', async () => {
+        provider.files.set('res://a.txt', 'bytes');
+        reader.request('res://a.txt');
+        await flush();
+
+        expect(reader.getCached('res://a.txt')).toBe('processed:bytes');
+      });
+
+      it('fails a file it refuses without fetching it (error case)', () => {
+        reader.request('res://sky.hdr');
+
+        expect(provider.loadResource).not.toHaveBeenCalled();
+        expect(String(failedHandler.mock.calls[0]![1])).toContain(
+          'resource processor does not read res://sky.hdr'
+        );
+        expect(reader.isLoading('res://sky.hdr')).toBe(false);
+      });
+
+      it("asks about a sub-resource's owning file (edge case)", () => {
+        reader.request('res://sky.hdr::Image_1');
+
+        expect(provider.loadResource).not.toHaveBeenCalled();
+        expect(failedHandler).toHaveBeenCalledWith('res://sky.hdr::Image_1', expect.any(Error));
+      });
     });
 
     it('a failure is cached and a repeat request re-emits its reason WITHOUT re-hitting the provider', async () => {

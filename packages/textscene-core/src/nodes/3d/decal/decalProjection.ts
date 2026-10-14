@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { DecalGeometry } from 'three/examples/jsm/geometries/DecalGeometry.js';
 import type { Vector3 } from '../../../parser/vectors';
-import { visualLayersOf } from '../../../r3f/visualLayers';
+import { isInMask } from '../../../r3f/visualLayers';
 import { bakeDecalFadeAttribute, type DecalGeometricFade } from './decalFade';
 import { DECAL_DEFAULT_CULL_MASK } from './parser';
 
@@ -59,7 +59,7 @@ function isReceiverMesh(obj: THREE.Object3D, cullMask: number): obj is THREE.Mes
     // `renderer_scene_cull.cpp` and the per-fragment `continue //not masked` guard in
     // `scene_forward_clustered.glsl`. A vehicle's blob-shadow decal then darkens the ground
     // without painting the vehicle black.
-    (cullMask & visualLayersOf(obj)) !== 0
+    isInMask(obj, cullMask)
   );
 }
 

@@ -10,6 +10,10 @@ describe('parseGeometryInstance3D', () => {
     expect(parseGeometryInstance3D(HEADING, {}).name).toBe('Geometry');
   });
 
+  it('reads the VisualInstance3D layers', () => {
+    expect(parseGeometryInstance3D(HEADING, { layers: '2' }).layers).toBe(2);
+  });
+
   it('reads transparency', () => {
     expect(parseGeometryInstance3D(HEADING, { transparency: '0.25' }).transparency).toBe(0.25);
   });

@@ -233,8 +233,8 @@ interface MeshShellProps {
   scale: [number, number, number];
   /** `cast_shadow`, with the per-surface draw hooks: billboard, shadow pass, SHADOWS_ONLY. */
   shadow: ShadowCastingEffects;
-  /** `layers`: the VisualInstance3D render mask a Decal's `cull_mask` filters on. */
-  godotLayers: number | undefined;
+  /** `layers`: the VisualInstance3D render mask a Decal's and a ReflectionProbe's masks test. */
+  godotLayers: number;
   /** The dispatched scene-tree subtree parented under this MeshInstance3D. */
   subtree: ReactNode;
   /** `material_overlay`'s second draw of this same surface, if the node has one. */
@@ -276,7 +276,7 @@ function MeshShell({
       onBeforeShadow={shadow.onBeforeShadow}
       onAfterShadow={shadow.onAfterShadow}
       receiveShadow
-      // Godot's `layers`, for `Decal.cull_mask`. Set on every branch, placeholders
+      // Godot's `layers`, for the decal and probe masks. Set on every branch, placeholders
       // included, so a decal's receiver test never depends on load order.
       userData={visualLayersUserData(godotLayers)}
     >

@@ -18,7 +18,12 @@ export interface ResourceProcessorConfig<T> {
   fileEventBus?: FileEventBus;
   eventBus: ResourceEventBus;
   resourceType: ResourceType;
-  /** Whether this processor handles the given path/data. */
+  /**
+   * Whether this processor reads the file at `filePath`, asked before any fetch, so a file no
+   * processor reads is never fetched. A refusal fails the request.
+   */
+  readsFile?: (filePath: string) => boolean;
+  /** Whether this processor reads the bytes that arrived for a file. A refusal fails its requests. */
   shouldProcess?: (path: string, data: FileData) => boolean;
   /** Raw data into the final resource (file-event-bus mode). */
   process?: (path: string, data: FileData) => Promise<T>;

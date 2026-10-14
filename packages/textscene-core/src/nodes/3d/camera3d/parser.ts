@@ -9,6 +9,7 @@ import { parseNode3D } from '../../base/node3d/parser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import { ruleInt } from '../../../godot/int.js';
 import { boolSlotValue } from '../../../godot/index.js';
+import { GODOT_EDITOR_LAYERS_MASK } from '../../../godot/visualLayers.js';
 
 export function parseCamera3D(
   heading: ParsedHeading,
@@ -28,9 +29,7 @@ export function parseCamera3D(
     v_offset: floatOr(properties.v_offset, 0.0, 'v_offset'),
     frustum_offset: vec2Or(properties.frustum_offset, { x: 0, y: 0 }, 'frustum_offset'),
     current: boolSlotValue(properties.current) === true,
-    // class_camera3d.html: default 1048575, the 20 editor-visible layers of
-    // the 32 the mask actually holds.
-    cull_mask: intOr(properties.cull_mask, 1048575, 'cull_mask', 'uint32'),
+    cull_mask: intOr(properties.cull_mask, GODOT_EDITOR_LAYERS_MASK, 'cull_mask', 'uint32'),
     doppler_tracking: intOr(properties.doppler_tracking, 0, 'doppler_tracking'),
   };
 }

@@ -11,6 +11,7 @@ import { SceneShadowFitter } from '../../../../r3f/SceneShadowFitter';
 function makeNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
   const props: SpotLight3DProperties = {
     name: 'Torch',
+    layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
     shadow_enabled: false,

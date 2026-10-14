@@ -57,7 +57,6 @@ export function parseMeshInstance3D(
 
   assignIfDefined(meshInstance3DProps, 'giMode', parseOptionalInt(properties.gi_mode));
   assignIfDefined(meshInstance3DProps, 'giLightmapScale', parseOptionalInt(properties.gi_lightmap_scale));
-  assignIfDefined(meshInstance3DProps, 'layers', parseOptionalInt(properties.layers, 'uint32'));
 
   if (properties.skeleton) {
     meshInstance3DProps.skeleton = properties.skeleton;

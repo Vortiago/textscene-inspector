@@ -368,6 +368,14 @@ _Avoid_: "mip" for a layer, "PMREM" for Godot's layers.
 Godot's tap-table filter that bakes the **Radiance layers** of a sky in Real-Time process mode, in place of GGX importance sampling.
 _Avoid_: "real-time filter", "low-quality filter".
 
+**Reflection probe capture** (`r3f/reflectionProbe/`):
+The six 90-degree renders of the scene from a ReflectionProbe's `origin_offset`, with its `cull_mask` and its `interior` rule, that the previewer bakes into **Radiance layers** as Godot does.
+_Avoid_: "probe cubemap", "probe bake".
+
+**Reflection atlas** (`resources/sky/skyLayers.ts`):
+The array texture that holds every **Reflection probe capture**, one layer per probe, each with its **Radiance layers** as mips.
+_Avoid_: "probe texture", "cube array".
+
 **Depth fog**:
 The Environment's `fog_*` fog, which fades a surface towards the fog colour with its distance from the camera.
 _Avoid_: "screen-space fog". Bare "fog" where **volumetric fog** is on too.

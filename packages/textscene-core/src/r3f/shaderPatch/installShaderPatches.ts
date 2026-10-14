@@ -14,6 +14,7 @@ import { installGodotLightFunction } from '../godotLightFunction.js';
 import { installGodotLightSpecular } from '../lightSpecular/lightSpecularChunk.js';
 import { installGodotLightSize } from '../lightSize/lightSizeChunk.js';
 import { installGodotSkyLighting } from '../godotSkyLighting.js';
+import { installGodotReflectionProbes } from '../reflectionProbe/probeShaderChunk.js';
 import { installDirectionalShadowFade } from '../directionalShadow/shadowFade.js';
 import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasChunk.js';
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk.js';
@@ -29,6 +30,7 @@ export function installShaderPatches(): void {
   installGodotSkyLighting();
   installGodotAreaLight();
   installGodotClearcoat();
+  installGodotReflectionProbes();
   installGodotSplitShadow();
   installDirectionalShadowAtlas();
   installDirectionalShadowFade();

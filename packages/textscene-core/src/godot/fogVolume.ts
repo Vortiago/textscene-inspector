@@ -6,6 +6,7 @@
 import { enumNamesByValue } from './enumNames.js';
 import { clamp } from './math.js';
 import type { HalfExtents, VolumetricFogGrid } from './volumetricFog.js';
+import type { Xyz } from './xyz.js';
 
 /** `RS::FogVolumeShape` (`servers/rendering_server.h`), the values `FogVolume.shape` stores. */
 export enum FogVolumeShape {
@@ -29,13 +30,6 @@ export const FOG_VOLUME_DEFAULT_SHAPE = FogVolumeShape.BOX;
  * A volume adds `int(density * 1024)`, so a density under 1/1024 adds nothing.
  */
 export const FOG_VOLUME_DENSITY_SCALE = 1024;
-
-/** A point, a size or a froxel: three components, as Godot's `Vector3` and `Vector3i` hold them. */
-export interface Xyz {
-  x: number;
-  y: number;
-  z: number;
-}
 
 /** `size.maxf(0)`: the setter clamps each component (`scene/3d/fog_volume.cpp:78`). */
 export function fogVolumeSize({ x, y, z }: Xyz): Xyz {

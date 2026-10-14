@@ -169,13 +169,13 @@ describe('#175 optional scalars — fall to undefined on garbage, never NaN', ()
     expect(parseDirectionalLight3D(h, { shadow_normal_bias: 'abc' }).shadow_normal_bias).toBeUndefined();
   });
 
-  it('meshinstance converted int/float fields: garbage stays undefined, never NaN', () => {
-    // giLightmapScale and layers read through parseOptionalInt, which drops truthy garbage
-    // to undefined.
+  it('meshinstance converted int/float fields: garbage falls back, never NaN', () => {
+    // giLightmapScale reads through parseOptionalInt, which drops truthy garbage to undefined.
+    // Layers falls back to Godot's default.
     const h = heading('MeshInstance3D', { name: 'Mesh', parent: '.' });
     const result = parseMeshInstance3D(h, { gi_lightmap_scale: 'garbage', layers: 'garbage' });
     expect(result.giLightmapScale).toBeUndefined();
-    expect(result.layers).toBeUndefined();
+    expect(result.layers).toBe(1);
   });
 
   it('camera3d frustum_offset: garbage falls back to {0,0} — never NaN (vec2Or path)', () => {

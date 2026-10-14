@@ -1,5 +1,7 @@
 /**
- * A texture that every material samples as one object, whatever three clones.
+ * A texture that every material samples as one object, whatever three clones, and the GL handle it
+ * shows: a slot takes another texture's handle, as three's `XREstimatedLight.js:62-70` does, so a
+ * switch uploads nothing.
  */
 
 import type * as THREE from 'three';
@@ -20,4 +22,24 @@ export function sharedTexture<T extends TextureClass>(Base: T) {
     }
   }
   return SharedTexture;
+}
+
+/** The part of three's per-renderer state of a texture that holds its GL handle. */
+interface TextureHandle {
+  __webglTexture?: WebGLTexture;
+}
+
+function handleOf(renderer: THREE.WebGLRenderer, texture: THREE.Texture): TextureHandle {
+  return renderer.properties.get(texture) as TextureHandle;
+}
+
+/** Points `slot` at `texture`'s GL handle on `renderer`. */
+export function showInSlot(renderer: THREE.WebGLRenderer, slot: THREE.Texture, texture: THREE.Texture): void {
+  handleOf(renderer, slot).__webglTexture = handleOf(renderer, texture).__webglTexture;
+}
+
+/** Takes `slot` off `texture` before it is freed: binding a deleted texture is an error. */
+export function leaveSlot(renderer: THREE.WebGLRenderer, slot: THREE.Texture, texture: THREE.Texture): void {
+  const shown = handleOf(renderer, slot);
+  if (shown.__webglTexture === handleOf(renderer, texture).__webglTexture) delete shown.__webglTexture;
 }
