@@ -6,15 +6,15 @@
  */
 
 import * as THREE from 'three';
-import { imageSize } from '../../formats/image/imagePixels';
+import { imageSize, readImagePixels, type ImagePixels } from '../../formats/image/imagePixels';
 import { copySampling } from '../copySampling';
+import { isBottomUp } from '../../../utils/reversedRows';
 import type { AtlasTextureLayout } from './types';
 
 /**
- * The `{data, width, height}` a `DataTexture` carries. It is copied row by row:
- * a premultiplied canvas would zero the RGB behind alpha 0 that
- * `applyAlphaBorderFix` preserves. A `Uint16Array` holds the half floats
- * `colourDataTexture` uploads for a float image.
+ * A sheet's RGBA texels, copied row by row: a premultiplied canvas would zero the RGB behind
+ * alpha 0 that Godot keeps. A `Uint16Array` holds the half floats `colourDataTexture` uploads
+ * for a float image.
  */
 interface RawPixels {
   data: Uint8Array | Uint8ClampedArray | Uint16Array;
@@ -24,25 +24,38 @@ interface RawPixels {
   isBottomUp: boolean;
 }
 
-/** `sheet` as raw RGBA pixels, or null when its image is a drawable image source instead. */
+/**
+ * Written only by `decodedPixels`. One readback serves every AtlasTexture cut from a decoded
+ * sheet, and an entry goes with its image.
+ */
+const decodedSheetPixels = new WeakMap<object, ImagePixels | null>();
+
+/** A decoded image's bytes, top row first, read once per image. Null when they cannot be read. */
+function decodedPixels(image: object): ImagePixels | null {
+  let pixels = decodedSheetPixels.get(image);
+  if (pixels === undefined) {
+    pixels = readImagePixels(image) ?? null;
+    decodedSheetPixels.set(image, pixels);
+  }
+  return pixels;
+}
+
+/** `sheet`'s texels, or null when they cannot be read or are not 4 channels per texel. */
 function rawPixels(sheet: THREE.Texture, atlas: { width: number; height: number }): RawPixels | null {
-  const data = (sheet.image as Partial<RawPixels> | null)?.data;
-  if (!ArrayBuffer.isView(data)) return null;
-  // A crop indexes 4 channels per texel only. Other formats go to the canvas path,
-  // which declines in turn.
-  if (data.length !== atlas.width * atlas.height * 4) return null;
-  return {
-    data,
-    width: atlas.width,
-    height: atlas.height,
-    isBottomUp: !sheet.flipY,
-  };
+  const image = sheet.image as Partial<RawPixels> | null;
+  if (!image) return null;
+  const own = image.data;
+  const pixels = ArrayBuffer.isView(own)
+    ? { data: own, isBottomUp: isBottomUp(sheet) }
+    : { data: decodedPixels(image)?.data, isBottomUp: false };
+  if (pixels.data?.length !== atlas.width * atlas.height * 4) return null;
+  return { data: pixels.data, width: atlas.width, height: atlas.height, isBottomUp: pixels.isBottomUp };
 }
 
 /**
- * The crop `layout` describes, as a whole-texel blit with smoothing off, or null:
- * an undecoded image, a region that misses the atlas, or no 2D canvas. Null never
- * means "draw the sheet": a whole sprite sheet is the failure this prevents.
+ * The crop `layout` describes, as a whole-texel blit, or null: an undecoded or unreadable
+ * image, or a region that misses the atlas. Null never means "draw the sheet": a whole
+ * sprite sheet is the failure this prevents.
  */
 export function rasterizeAtlasTexture(
   sheet: THREE.Texture,
@@ -65,38 +78,7 @@ export function rasterizeAtlasTexture(
   if (sw <= 0 || sh <= 0) return null;
 
   const raw = rawPixels(sheet, atlas);
-  if (raw) return copySampling(cropRawPixels(raw, layout, left, top, sw, sh), sheet);
-
-  const doc = globalThis.document;
-  if (!doc) return null;
-  try {
-    const canvas = doc.createElement('canvas');
-    canvas.width = layout.width;
-    canvas.height = layout.height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(
-      image as CanvasImageSource,
-      left,
-      top,
-      sw,
-      sh,
-      layout.dest.x + (left - layout.source.x),
-      layout.dest.y + (top - layout.source.y),
-      sw,
-      sh
-    );
-
-    const texture = new THREE.CanvasTexture(canvas);
-    // The tag `createTextureFromBuffer` puts on a loaded image: these are the
-    // sheet's sRGB bytes, and a consumer that needs another retags its own clone.
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.needsUpdate = true;
-    return texture;
-  } catch {
-    return null; // A tainted canvas or an unsupported image source.
-  }
+  return raw && copySampling(cropRawPixels(raw, layout, left, top, sw, sh), sheet);
 }
 
 /**

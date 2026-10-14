@@ -21,3 +21,11 @@ export function reversedRows<Source extends Pixels>(
   }
   return reversed as ReversedPixels<Source>;
 }
+
+/**
+ * Whether `texture`'s pixels run bottom-up: a typed array that uploads without `flipY`. A typed
+ * array with `flipY`, such as `applyAlphaBorderFix`'s readback of a decoded image, runs top-down.
+ */
+export function isBottomUp(texture: { flipY: boolean; image: unknown }): boolean {
+  return !texture.flipY && ArrayBuffer.isView((texture.image as { data?: unknown } | null)?.data);
+}

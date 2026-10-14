@@ -1,8 +1,8 @@
 /**
  * `rasterizeAtlasTexture` over a raw-pixel sheet, a `DataTexture`. `applyAlphaBorderFix`
  * (`resources/formats/image/textureProcessing.ts`) makes a top-down one with `flipY` from a
- * decoded image, and every procedural texture is a bottom-up one without it. `drawImage`
- * rejects both, and a premultiplied canvas zeroes RGB behind alpha 0.
+ * decoded image, and every procedural texture is a bottom-up one without it.
+ * `build.decoded.test.ts` covers a sheet that stays a decoded image.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

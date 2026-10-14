@@ -231,8 +231,7 @@ describe('useTexture2D — reference forms', () => {
   // A CanvasTexture's `diffuse_texture` can be an AtlasTexture. The atlas resolve against the
   // outer ref finds no atlas and hands back the whole sheet, so the unwrap runs first.
   it('crops an AtlasTexture that is reached through a CanvasTexture', () => {
-    const sheet = new THREE.Texture();
-    sheet.image = { width: 128, height: 128 };
+    const sheet = new THREE.DataTexture(new Uint8Array(128 * 128 * 4), 128, 128);
     const externalResources: TscnExternalResource[] = [
       { id: '1', type: 'Texture2D', path: 'res://sheet.png' },
     ];
@@ -257,6 +256,7 @@ describe('useTexture2D — reference forms', () => {
     expect(result.current.missing).toBe(false);
     // The whole sheet coming back unchanged is the failure this pins.
     expect(result.current.texture).not.toBe(sheet);
+    expect((result.current.texture?.image as { width: number } | undefined)?.width).toBe(64);
   });
 
   it('reports a reference it cannot resolve as missing', () => {
@@ -579,38 +579,19 @@ describe('useTexture2D — inline AtlasTexture', () => {
     },
   ];
 
-  function sheet(): THREE.Texture {
-    const texture = new THREE.Texture();
-    (texture as unknown as { image: { width: number; height: number } }).image = {
-      width: 128,
-      height: 128,
-    };
+  /** A 128x128 top-down sheet, as the alpha-border pass leaves one: red is x and green is y. */
+  function sheet(): THREE.DataTexture {
+    const data = new Uint8Array(128 * 128 * 4);
+    for (let i = 0; i < 128 * 128; i += 1) data.set([i % 128, Math.floor(i / 128), 0, 255], i * 4);
+    const texture = new THREE.DataTexture(data, 128, 128);
+    texture.flipY = true;
     return texture;
   }
 
-  /**
-   * happy-dom has no 2D context, so a fake on the prototype records the crop. Replacing
-   * `createElement` would break every other element, the R3F renderer's canvas included.
-   */
-  function stubCanvas() {
-    const calls: number[][] = [];
-    const cut = { canvas: null as HTMLCanvasElement | null };
-    const ctx = {
-      imageSmoothingEnabled: true,
-      drawImage: (_image: unknown, ...args: number[]) => void calls.push(args),
-    };
-    const proto = globalThis.HTMLCanvasElement.prototype;
-    const original = proto.getContext;
-    vi.spyOn(proto, 'getContext').mockImplementation(function (
-      this: HTMLCanvasElement,
-      type: string,
-      ...rest: unknown[]
-    ) {
-      if (type !== '2d') return (original as (...args: unknown[]) => unknown).call(this, type, ...rest);
-      cut.canvas = this;
-      return ctx as unknown as CanvasRenderingContext2D;
-    } as typeof proto.getContext);
-    return { calls, cut };
+  /** The crop's size and its top-left texel's red and green, the sheet coordinates it came from. */
+  function cropOf(texture: THREE.Texture | null) {
+    const image = texture?.image as { data: Uint8Array; width: number; height: number };
+    return { size: [image.width, image.height], topLeft: [image.data[0], image.data[1]] };
   }
 
   function withLoader(seeded?: { path: string; texture: THREE.Texture }) {
@@ -626,21 +607,16 @@ describe('useTexture2D — inline AtlasTexture', () => {
   });
 
   it('crops the sheet to the region, at the region size', () => {
-    const { calls, cut } = stubCanvas();
     const { result } = renderHook(
       () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
       { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet() }) }
     );
 
-    expect(result.current.texture).toBeInstanceOf(THREE.CanvasTexture);
-    expect(result.current.texture!.image).toBe(cut.canvas);
-    expect([cut.canvas!.width, cut.canvas!.height]).toEqual([64, 64]);
-    expect(calls[0]).toEqual([32, 32, 64, 64, 0, 0, 64, 64]);
+    expect(cropOf(result.current.texture)).toEqual({ size: [64, 64], topLeft: [32, 32] });
     expect(result.current.missing).toBe(false);
   });
 
   it('shares ONE crop between consumers of the same cell', () => {
-    stubCanvas();
     const wrapper = withLoader({ path: 'res://sheet.png', texture: sheet() });
     const first = renderHook(
       () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
@@ -651,11 +627,11 @@ describe('useTexture2D — inline AtlasTexture', () => {
       { wrapper }
     );
 
+    expect(first.result.current.texture).not.toBeNull();
     expect(second.result.current.texture).toBe(first.result.current.texture);
   });
 
   it('shows nothing — not a placeholder — while the sheet is still loading', () => {
-    stubCanvas();
     const { result } = renderHook(
       () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
       { wrapper: withLoader() }
@@ -666,7 +642,6 @@ describe('useTexture2D — inline AtlasTexture', () => {
   });
 
   it('reports an unresolvable or absent sheet as missing', () => {
-    stubCanvas();
     const wrapper = withLoader();
     const unknown = renderHook(
       () => useTexture2D('SubResource("AtlasTexture_unknownsheet")', externalResources, resources),
@@ -682,7 +657,6 @@ describe('useTexture2D — inline AtlasTexture', () => {
   });
 
   it("gives a slot read by RID the AtlasTexture's whole sheet, uncropped", () => {
-    const { calls } = stubCanvas();
     const whole = sheet();
     const { result } = renderHook(
       () => useTexture2DRid('SubResource("AtlasTexture_cell")', externalResources, resources),
@@ -690,7 +664,6 @@ describe('useTexture2D — inline AtlasTexture', () => {
     );
 
     expect(result.current).toEqual({ texture: whole, missing: false });
-    expect(calls).toEqual([]);
   });
 
   it('gives a slot read by RID a plain image as it is (edge case)', () => {
@@ -734,35 +707,19 @@ atlas = ExtResource("1_tk63f")
 region = Rect2(32, 32, 64, 64)
 `);
 
-  function sheet(): THREE.Texture {
-    const texture = new THREE.Texture();
-    (texture as unknown as { image: { width: number; height: number } }).image = {
-      width: 128,
-      height: 128,
-    };
+  /** A 128x128 top-down sheet, as the alpha-border pass leaves one: red is x and green is y. */
+  function sheet(): THREE.DataTexture {
+    const data = new Uint8Array(128 * 128 * 4);
+    for (let i = 0; i < 128 * 128; i += 1) data.set([i % 128, Math.floor(i / 128), 0, 255], i * 4);
+    const texture = new THREE.DataTexture(data, 128, 128);
+    texture.flipY = true;
     return texture;
   }
 
-  /** The inline block's fake: it records the crop the canvas 2D path draws. */
-  function stubCanvas() {
-    const calls: number[][] = [];
-    const cut = { canvas: null as HTMLCanvasElement | null };
-    const ctx = {
-      imageSmoothingEnabled: true,
-      drawImage: (_image: unknown, ...args: number[]) => void calls.push(args),
-    };
-    const proto = globalThis.HTMLCanvasElement.prototype;
-    const original = proto.getContext;
-    vi.spyOn(proto, 'getContext').mockImplementation(function (
-      this: HTMLCanvasElement,
-      type: string,
-      ...rest: unknown[]
-    ) {
-      if (type !== '2d') return (original as (...args: unknown[]) => unknown).call(this, type, ...rest);
-      cut.canvas = this;
-      return ctx as unknown as CanvasRenderingContext2D;
-    } as typeof proto.getContext);
-    return { calls, cut };
+  /** The crop's size and its top-left texel's red and green, the sheet coordinates it came from. */
+  function cropOf(texture: THREE.Texture | null) {
+    const image = texture?.image as { data: Uint8Array; width: number; height: number };
+    return { size: [image.width, image.height], topLeft: [image.data[0], image.data[1]] };
   }
 
   function withLoader() {
@@ -780,7 +737,6 @@ region = Rect2(32, 32, 64, 64)
   });
 
   it('crops the sheet to the region, at the region size', () => {
-    const { calls, cut } = stubCanvas();
     const { fake, Wrapper } = withLoader();
     fake.resources.seed('res://icons/keyboard_arrow_left.tres', atlasTres);
     fake.textures.seed('res://sheet.png', sheet());
@@ -789,15 +745,11 @@ region = Rect2(32, 32, 64, 64)
       wrapper: Wrapper,
     });
 
-    expect(result.current.texture).toBeInstanceOf(THREE.CanvasTexture);
-    expect(result.current.texture!.image).toBe(cut.canvas);
-    expect([cut.canvas!.width, cut.canvas!.height]).toEqual([64, 64]);
-    expect(calls[0]).toEqual([32, 32, 64, 64, 0, 0, 64, 64]);
+    expect(cropOf(result.current.texture)).toEqual({ size: [64, 64], topLeft: [32, 32] });
     expect(result.current.missing).toBe(false);
   });
 
   it('shows nothing — not missing — while the .tres itself is still loading', () => {
-    stubCanvas();
     // Nothing seeded: the resource-bus request stays pending.
     const { Wrapper } = withLoader();
 
@@ -810,7 +762,6 @@ region = Rect2(32, 32, 64, 64)
   });
 
   it('reports a missing .tres file as missing', () => {
-    stubCanvas();
     const { fake, Wrapper } = withLoader();
     fake.resources.seed('res://icons/keyboard_arrow_left.tres', null);
 
@@ -823,7 +774,6 @@ region = Rect2(32, 32, 64, 64)
   });
 
   it('reports a .tres whose own header names a different resource type as missing', () => {
-    stubCanvas();
     const { fake, Wrapper } = withLoader();
     fake.resources.seed('res://icons/keyboard_arrow_left.tres', {
       resourceType: 'StyleBoxFlat',
@@ -843,7 +793,6 @@ region = Rect2(32, 32, 64, 64)
   it('leaves an ExtResource declared some OTHER type to the ordinary image pipeline', () => {
     // The outer reference never reads as an atlas .tres, so it fails as any unloadable Texture2D
     // path does.
-    stubCanvas();
     const { Wrapper } = withLoader();
     const otherType: TscnExternalResource[] = [{ id: '1_box', type: 'StyleBoxFlat', path: 'res://box.tres' }];
 
@@ -855,7 +804,6 @@ region = Rect2(32, 32, 64, 64)
   });
 
   it('reports a .tres AtlasTexture that names no atlas as missing, not a crash', () => {
-    stubCanvas();
     const { fake, Wrapper } = withLoader();
     fake.resources.seed(
       'res://icons/keyboard_arrow_left.tres',
