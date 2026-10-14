@@ -112,6 +112,19 @@ describe('rasterizeAtlasTexture — raw-pixel sheets', () => {
     expect(bytes(texture)[12]).toBe(2);
   });
 
+  it("samples as its sheet does, not with a DataTexture's nearest, mip-free default", () => {
+    const linear = sheet(4, 4);
+    linear.magFilter = THREE.LinearFilter;
+    linear.minFilter = THREE.LinearMipmapLinearFilter;
+    linear.generateMipmaps = true;
+
+    const crop = rasterizeAtlasTexture(linear, layout())!;
+
+    expect(crop.magFilter).toBe(THREE.LinearFilter);
+    expect(crop.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+    expect(crop.generateMipmaps).toBe(true);
+  });
+
   it('carries the sheet as undecoded sRGB, the tag a loaded image gets', () => {
     expect(rasterizeAtlasTexture(sheet(2, 2), layout())?.colorSpace).toBe(THREE.SRGBColorSpace);
   });

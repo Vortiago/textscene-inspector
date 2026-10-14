@@ -64,7 +64,7 @@ export function rasterizeAtlasTexture(
   if (sw <= 0 || sh <= 0) return null;
 
   const raw = rawPixels(sheet, atlas);
-  if (raw) return cropRawPixels(raw, layout, left, top, sw, sh);
+  if (raw) return withSheetSampling(cropRawPixels(raw, layout, left, top, sw, sh), sheet);
 
   const doc = globalThis.document;
   if (!doc) return null;
@@ -145,4 +145,15 @@ function cropRawPixels(
   texture.flipY = !raw.isBottomUp;
   texture.needsUpdate = true;
   return texture;
+}
+
+/**
+ * A `DataTexture` defaults to nearest filtering with no mipmaps, which a canvas crop and a
+ * loaded sheet never have, so the crop takes its sheet's sampling.
+ */
+function withSheetSampling(crop: THREE.DataTexture, sheet: THREE.Texture): THREE.DataTexture {
+  crop.magFilter = sheet.magFilter;
+  crop.minFilter = sheet.minFilter;
+  crop.generateMipmaps = sheet.generateMipmaps;
+  return crop;
 }
