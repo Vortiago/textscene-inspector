@@ -6,7 +6,7 @@
 
 import type * as THREE from 'three';
 import type { GLTF, GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
-import { gltfObjects } from '../../../../godot/gltf';
+import { GLTF_MODE_TRIANGLE_FAN, GLTF_MODE_TRIANGLES, gltfObjects } from '../../../../godot/gltf';
 import { gltfMeshNames, type GltfNamingOptions } from '../../../../godot/gltfNodeNames';
 import {
   IDENTITY_BASIS,
@@ -32,11 +32,6 @@ export interface LightmapUvImport {
   /** The asset's path, which log lines name. */
   path: string;
 }
-
-/** `TRIANGLES`, the mode a glTF primitive without one has. */
-const TRIANGLES = 4;
-/** `TRIANGLE_FAN`, which Godot imports as a triangle list (`gltf_document.cpp:1462`). */
-const TRIANGLE_FAN = 6;
 
 /** Gives each mesh under `root` that Godot unwraps its cached UV2. `gltf` is the loaded file. */
 export async function applyLightmapUv(
@@ -88,12 +83,26 @@ function firstMeshNodes(
 ): Map<number, THREE.Object3D> {
   const firstNodes = new Map<number, THREE.Object3D>();
   root.traverse((object) => {
-    const { meshes, nodes } = associations.get(object) ?? {};
-    if (meshes !== undefined && nodes !== undefined && !firstNodes.has(meshes))
-      firstNodes.set(meshes, object);
+    const { meshes } = associations.get(object) ?? {};
+    if (meshes === undefined || firstNodes.has(meshes)) return;
+    const node = meshNode(object, associations);
+    if (node) firstNodes.set(meshes, node);
   });
   for (const [mesh, node] of firstNodes) if (node === root) firstNodes.delete(mesh);
   return firstNodes;
+}
+
+/**
+ * The node that holds a mesh object: the object itself, or its parent when the glTF node also
+ * holds a camera or a light, which GLTFLoader groups with the mesh.
+ */
+function meshNode(
+  object: THREE.Object3D,
+  associations: ReadonlyMap<unknown, GLTFReference>
+): THREE.Object3D | null {
+  if (associations.get(object)?.nodes !== undefined) return object;
+  const parent = object.parent;
+  return parent && associations.get(parent)?.nodes !== undefined ? parent : null;
 }
 
 /**
@@ -108,17 +117,26 @@ async function unwrappableSurfaces(
   path: string
 ): Promise<THREE.BufferGeometry[] | null> {
   const primitives = gltfObjects(gltfObjects(gltf.parser.json['meshes'])[mesh]?.['primitives']);
-  if (primitives.some((primitive) => primitive['targets'] !== undefined)) return null;
-  const modes = primitives.map((primitive) => primitive['mode'] ?? TRIANGLES);
-  if (modes.includes(TRIANGLE_FAN)) {
+  if (hasBlendShapes(primitives[0])) return null;
+  const modes = primitives.map((primitive) => primitive['mode'] ?? GLTF_MODE_TRIANGLES);
+  if (modes.includes(GLTF_MODE_TRIANGLE_FAN)) {
     logger.info(`[GLBProcessor] ${path}: mesh '${meshId}' has a triangle fan, so it keeps the GLB's own UV2`);
     return null;
   }
-  if (modes.some((mode) => mode !== TRIANGLES)) return null;
+  if (modes.some((mode) => mode !== GLTF_MODE_TRIANGLES)) return null;
 
   const object = (await gltf.parser.getDependency('mesh', mesh)) as THREE.Object3D;
   const drawn = (object as THREE.Mesh).isMesh ? [object] : object.children;
   return drawn.map((primitive) => (primitive as THREE.Mesh).geometry);
+}
+
+/**
+ * The importer adds a blend shape per target of the first primitive only, so an empty or absent
+ * `targets` there gives the mesh none (`gltf_document.cpp:1784-1799`).
+ */
+function hasBlendShapes(primitive: Record<string, unknown> | undefined): boolean {
+  const targets = primitive?.['targets'];
+  return Array.isArray(targets) && targets.length > 0;
 }
 
 /**
@@ -202,5 +220,7 @@ function replaceSurfaces(
     else dropped.push(surface);
   });
   for (const surface of dropped) surface.removeFromParent();
+  // GLTFLoader shares one geometry between meshes with the same accessors, so keep one still drawn.
+  root.traverse((object) => replaced.delete((object as THREE.Mesh).geometry));
   for (const geometry of replaced) geometry.dispose();
 }

@@ -1,7 +1,6 @@
 /**
- * A GLB of one mesh with two triangle primitives: the first has normals, the last has none, as
- * Godot's importer drops from an unwrapped mesh. Its unwrap cache maps the lit triangle to a
- * layout of the test's choosing.
+ * A GLB whose mesh `Lit` has one triangle primitive with normals, and an unwrap cache that maps it
+ * to a layout of the test's choosing. The options add what a test needs around it.
  */
 
 import * as THREE from 'three';
@@ -15,7 +14,18 @@ const BARE = [5, 0, 0, 6, 0, 0, 5, 1, 0];
 /** The lit triangle's UV2 in the cache, output vertex `v` at `2v`. */
 export const LIT_UV2 = [0.25, 0.25, 0.75, 0.25, 0.25, 0.75];
 
-export function litAndBareGlb(): ArrayBuffer {
+export interface LitGlb {
+  /** Adds a last primitive without normals, which Godot's importer drops from an unwrapped mesh. */
+  bareSurface?: boolean;
+  /** Puts a KHR_lights_punctual light on the mesh's node, which GLTFLoader then groups. */
+  nodeLight?: boolean;
+  /** Gives the lit primitive an empty `targets` array. */
+  emptyTargets?: boolean;
+  /** Adds a mesh `Twin` on its own node, over the lit primitive's accessors. */
+  twinMesh?: boolean;
+}
+
+export function litGlb({ bareSurface, nodeLight, emptyTargets, twinMesh }: LitGlb = {}): ArrayBuffer {
   const floats = new Float32Array([...LIT, ...NORMALS, ...BARE]);
   const view = (index: number) => ({ buffer: 0, byteOffset: index * 36, byteLength: 36 });
   const accessor = (index: number, positions?: number[]) => ({
@@ -30,16 +40,21 @@ export function litAndBareGlb(): ArrayBuffer {
         }
       : {}),
   });
+  const lit = { attributes: { POSITION: 0, NORMAL: 1 }, ...(emptyTargets ? { targets: [] } : {}) };
+  const lightsExtension = 'KHR_lights_punctual';
   const json = {
     asset: { version: '2.0' },
+    ...(nodeLight ? { extensionsUsed: [lightsExtension] } : {}),
+    ...(nodeLight ? { extensions: { [lightsExtension]: { lights: [{ type: 'point' }] } } } : {}),
     scene: 0,
-    scenes: [{ nodes: [0] }],
-    nodes: [{ name: 'Mix', mesh: 0 }],
+    scenes: [{ nodes: twinMesh ? [0, 1] : [0] }],
+    nodes: [
+      { name: 'Lit', mesh: 0, ...(nodeLight ? { extensions: { [lightsExtension]: { light: 0 } } } : {}) },
+      ...(twinMesh ? [{ name: 'Twin', mesh: 1 }] : []),
+    ],
     meshes: [
-      {
-        name: 'Mix',
-        primitives: [{ attributes: { POSITION: 0, NORMAL: 1 } }, { attributes: { POSITION: 2 } }],
-      },
+      { name: 'Lit', primitives: bareSurface ? [lit, { attributes: { POSITION: 2 } }] : [lit] },
+      ...(twinMesh ? [{ name: 'Twin', primitives: [{ attributes: { POSITION: 0, NORMAL: 1 } }] }] : []),
     ],
     accessors: [accessor(0, LIT), accessor(1), accessor(2, BARE)],
     bufferViews: [view(0), view(1), view(2)],
@@ -49,7 +64,7 @@ export function litAndBareGlb(): ArrayBuffer {
 }
 
 /** A cache whose one entry is keyed on the lit primitive's input at `texelSize`. */
-export function litAndBareCache(texelSize: number): ArrayBuffer {
+export function litCache(texelSize: number): ArrayBuffer {
   const lit = new THREE.BufferGeometry();
   lit.setAttribute('position', new THREE.Float32BufferAttribute(LIT, 3));
   lit.setAttribute('normal', new THREE.Float32BufferAttribute(NORMALS, 3));

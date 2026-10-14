@@ -4,7 +4,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { IDENTITY_BASIS, gltfNodeBasis, rowScaledBasis, transformChainScale } from './importerBasis';
+import {
+  IDENTITY_BASIS,
+  gltfNodeBasis,
+  rowScaledBasis,
+  transformChainScale,
+  unwrapSpace,
+} from './importerBasis';
 
 function float32(bits: number): number {
   const view = new DataView(new ArrayBuffer(4));
@@ -52,5 +58,31 @@ describe('transformChainScale', () => {
 
   it('measures an empty chain at 1 (edge case)', () => {
     expect(transformChainScale([])).toEqual([1, 1, 1]);
+  });
+});
+
+describe('unwrapSpace', () => {
+  it('scales each position by the axis scale', () => {
+    const xyz = Float32Array.from([1, 2, 3]);
+
+    unwrapSpace([2, 3, 4]).transformPositions(xyz);
+
+    expect(Array.from(xyz)).toEqual([2, 6, 12]);
+  });
+
+  it('turns a normal by the inverse scale, normalised', () => {
+    const xyz = Float32Array.from([1, 1, 0]);
+
+    unwrapSpace([1, 2, 1]).transformNormals(xyz);
+
+    expect(Array.from(xyz)).toEqual([Math.fround(2 / Math.sqrt(5)), Math.fround(1 / Math.sqrt(5)), 0]);
+  });
+
+  it('writes a -0 position as +0, as the zero origin is added (edge case)', () => {
+    const xyz = Float32Array.from([-0, 1, 1]);
+
+    unwrapSpace([1, 1, 1]).transformPositions(xyz);
+
+    expect(Object.is(xyz[0], 0)).toBe(true);
   });
 });

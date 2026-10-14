@@ -6,6 +6,7 @@
 
 import type * as THREE from 'three';
 import { unwrapSpace } from '../../../../godot/importerBasis';
+import { UNWRAP_SHORTEST_EDGE_SQUARED } from '../../../../godot/sceneImport';
 import { md5Hex } from './md5';
 
 /** Where the importer has put the mesh by the time it unwraps. */
@@ -25,9 +26,6 @@ export interface UnwrapInput {
   /** The geometry vertex of each input vertex, within its surface. */
   vertexSource: Int32Array;
 }
-
-/** `eps`, which `importer_mesh.cpp:1102` takes from `xatlas.h`, as a float. */
-const SHORTEST_EDGE_SQUARED = Math.fround(1.1920929e-7);
 
 const f = Math.fround;
 
@@ -132,9 +130,9 @@ function gathered(
 
 function hasShortEdge(positions: Float32Array, a: number, b: number, c: number): boolean {
   return (
-    lengthSquared(positions, a, b) < SHORTEST_EDGE_SQUARED ||
-    lengthSquared(positions, b, c) < SHORTEST_EDGE_SQUARED ||
-    lengthSquared(positions, c, a) < SHORTEST_EDGE_SQUARED
+    lengthSquared(positions, a, b) < UNWRAP_SHORTEST_EDGE_SQUARED ||
+    lengthSquared(positions, b, c) < UNWRAP_SHORTEST_EDGE_SQUARED ||
+    lengthSquared(positions, c, a) < UNWRAP_SHORTEST_EDGE_SQUARED
   );
 }
 

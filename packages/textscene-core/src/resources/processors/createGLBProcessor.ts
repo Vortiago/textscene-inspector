@@ -106,8 +106,9 @@ async function readLightmapUv(
   const cachePath = unwrapCachePath(path);
   dependencies.record({ busType: 'glb', key: path }, cachePath);
   const cache = await fileEventBus.tryLoad(cachePath, 'UnwrapCache');
-  // The rebuilt meshes hold what they need, so the bus need not keep the bytes.
-  if (cache !== null) fileEventBus.clearCache(cachePath);
+  // The rebuilt meshes hold what they need, so the bus need not keep the bytes, unless a
+  // processor is also loading the file.
+  if (cache !== null && !fileEventBus.isLoading(cachePath)) fileEventBus.clearCache(cachePath);
   return {
     unwrap,
     cache: cache instanceof ArrayBuffer ? cache : null,

@@ -14,7 +14,7 @@ import { demoBytes } from '../formats/glb/lightmapUv/testing/globalIllumination'
 import { orderedCornerDigest } from '../formats/glb/lightmapUv/testing/godotCorners';
 import { isMesh } from '../../r3f/testing/threeNarrow';
 import { triangleGlb } from '../formats/glb/testing/triangleGlb';
-import { LIT_UV2, litAndBareCache, litAndBareGlb } from '../formats/glb/lightmapUv/testing/litAndBareGlb';
+import { LIT_UV2, litCache, litGlb, type LitGlb } from '../formats/glb/lightmapUv/testing/litGlb';
 import * as logger from '../../logger';
 
 const CUBE_PATH = 'res://cube.glb';
@@ -137,16 +137,45 @@ describe('createGLBProcessor: lightmap UV2 from the unwrap cache', () => {
   });
 
   it("drops a last surface without normals, which Godot's unwrapped mesh lacks", async () => {
-    const path = 'res://mix.glb';
+    const surfaces = await loadLit({ bareSurface: true });
 
-    const surfaces = await loadSurfaces(path, {
-      [path]: litAndBareGlb(),
-      [`${path}.import`]: STATIC_LIGHTMAPS,
-      [`${path}.unwrap_cache`]: litAndBareCache(Math.fround(0.2)),
-    });
+    expect(surfaces.map(uv2)).toEqual([LIT_UV2]);
+  });
 
-    expect(surfaces.map((surface) => Array.from(surface.geometry.getAttribute('uv1').array))).toEqual([
-      LIT_UV2,
-    ]);
+  it('finds a mesh whose node also holds a light, which GLTFLoader groups with it', async () => {
+    const surfaces = await loadLit({ nodeLight: true });
+
+    expect(surfaces.map(uv2)).toEqual([LIT_UV2]);
+  });
+
+  it('unwraps a mesh whose targets are empty, as they give Godot no blend shape (edge case)', async () => {
+    const surfaces = await loadLit({ emptyTargets: true });
+
+    expect(surfaces.map(uv2)).toEqual([LIT_UV2]);
+  });
+
+  it('keeps a geometry another mesh still draws when it replaces it', async () => {
+    const dispose = vi.spyOn(THREE.BufferGeometry.prototype, 'dispose');
+    const twinOff = `_subresources={\n"meshes": {\n"lit_Twin": {\n"generate/lightmap_uv": 2\n}\n}\n}`;
+
+    const [lit, twin] = await loadLit({ twinMesh: true }, `meshes/light_baking=2\n${twinOff}`);
+
+    expect(uv2(lit!)).toEqual(LIT_UV2);
+    expect(dispose.mock.contexts).not.toContain(twin!.geometry);
   });
 });
+
+/** Every surface of `res://lit.glb`, built with `options` and imported by `params`. */
+function loadLit(options: LitGlb, params = 'meshes/light_baking=2'): Promise<THREE.Mesh[]> {
+  const path = 'res://lit.glb';
+  return loadSurfaces(path, {
+    [path]: litGlb(options),
+    [`${path}.import`]: sidecar(params),
+    [`${path}.unwrap_cache`]: litCache(Math.fround(0.2)),
+  });
+}
+
+function uv2(surface: THREE.Mesh): number[] | undefined {
+  const attribute = surface.geometry.getAttribute('uv1');
+  return attribute && Array.from(attribute.array);
+}

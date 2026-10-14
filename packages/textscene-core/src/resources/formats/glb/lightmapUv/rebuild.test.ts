@@ -62,6 +62,18 @@ describe('rebuildSurfaces', () => {
     );
   });
 
+  it('keeps a normalised attribute at its stored integers', () => {
+    const surface = quad();
+    surface.setAttribute('color', new THREE.Uint8BufferAttribute(Array<number>(12).fill(255), 3, true));
+    const [rebuilt] = rebuildSurfaces(
+      [surface],
+      unwrapInput([surface], UNIT_SCALE, DEMO_TEXEL_SIZE)!,
+      QUAD_ENTRY
+    );
+
+    expect(Array.from(rebuilt!.getAttribute('color').array)).toEqual(Array<number>(12).fill(255));
+  });
+
   it('refuses an entry whose triangle names a vertex past the input (edge case)', () => {
     const surface = quad();
     const corrupt = { ...QUAD_ENTRY, sourceVertices: Int32Array.from([0, 1, 2, 7]) };

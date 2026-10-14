@@ -34,6 +34,12 @@ export function isGltfJsonObject(value: unknown): value is GltfJsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** `TRIANGLES`, the mode a glTF primitive without one has. */
+export const GLTF_MODE_TRIANGLES = 4;
+
+/** `TRIANGLE_FAN`, which Godot imports as a triangle list (`gltf_document.cpp:1462`). */
+export const GLTF_MODE_TRIANGLE_FAN = 6;
+
 /** The entries of a glTF array property: an entry that is not an object reads as empty, and a non-array as none. */
 export function gltfObjects(value: unknown): GltfJsonObject[] {
   return Array.isArray(value) ? value.map((entry) => (isGltfJsonObject(entry) ? entry : {})) : [];

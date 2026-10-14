@@ -1,11 +1,7 @@
 /**
- * Parses the `<asset>.unwrap_cache` file Godot's scene importer writes beside a source asset it
- * unwraps for lightmaps. The format is `xatlas_mesh_lightmap_unwrap_callback`'s
- * (`modules/xatlas_unwrap/register_types.cpp:57-108`, `:181-219`), filed by
- * `resource_importer_scene.cpp:3257-3266`: little-endian 32-bit words, an entry count, then each
- * entry as a 16-byte MD5 of the unwrap input, the size hint, and the unwrapped mesh. Every word
- * sits at a multiple of 4 bytes, so an entry's arrays are views into `bytes`, which read in the
- * platform's byte order: little-endian on every browser and Node target.
+ * Parses the **Unwrap cache**, in `xatlas_mesh_lightmap_unwrap_callback`'s format
+ * (`modules/xatlas_unwrap/register_types.cpp:57-108`, `:181-219`) as filed by
+ * `resource_importer_scene.cpp:3257-3266`.
  */
 
 import { hexBytes } from './md5';
@@ -25,7 +21,11 @@ const HASH_WORDS = 4;
 /** The size hint's two words, which the previewer does not read. */
 const SIZE_HINT_WORDS = 2;
 
-/** The cache's entries in file order. Throws when an entry runs past the end of `bytes`. */
+/**
+ * The entries in file order, from little-endian words: a count, then per entry its input's MD5, the
+ * size hint and the mesh. Each array is a view into `bytes`, word-aligned and little-endian on every
+ * target. Throws when an entry runs past the end of `bytes`.
+ */
 export function parseUnwrapCache(bytes: ArrayBuffer): UnwrapCacheEntry[] {
   const view = new DataView(bytes);
   const entryCount = view.getInt32(0, true);

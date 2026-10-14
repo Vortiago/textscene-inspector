@@ -104,7 +104,7 @@ function surfaceGeometry(
   return geometry;
 }
 
-/** The attribute's values at `vertices`, in its own component type. */
+/** The attribute's stored values at `vertices`, in its own component type. */
 function gathered(
   attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
   vertices: readonly number[]
@@ -114,8 +114,23 @@ function gathered(
   const values = new ArrayType(vertices.length * itemSize);
   vertices.forEach((vertex, slot) => {
     for (let component = 0; component < itemSize; component++) {
-      values[slot * itemSize + component] = attribute.getComponent(vertex, component);
+      values[slot * itemSize + component] = storedComponent(attribute, vertex, component);
     }
   });
   return new THREE.BufferAttribute(values, itemSize, attribute.normalized);
+}
+
+/**
+ * The component as its array stores it. `getComponent` denormalises a normalised attribute, and
+ * its 0 to 1 value written back to an integer array truncates a colour or skin weight to 0 or 1.
+ */
+function storedComponent(
+  attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+  vertex: number,
+  component: number
+): number {
+  if ('isInterleavedBufferAttribute' in attribute) {
+    return attribute.data.array[vertex * attribute.data.stride + attribute.offset + component]!;
+  }
+  return attribute.array[vertex * attribute.itemSize + component]!;
 }

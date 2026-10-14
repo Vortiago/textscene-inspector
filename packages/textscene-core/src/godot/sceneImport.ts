@@ -29,3 +29,9 @@ export function unwrapTexelSize(option: number): number {
   const texelSize = Math.fround(option);
   return Math.fround(0.001 > texelSize ? 0.001 : texelSize);
 }
+
+/**
+ * The squared edge length below which the unwrap drops a triangle: `eps`, which
+ * `importer_mesh.cpp:1102` takes from `xatlas.h`, as a float.
+ */
+export const UNWRAP_SHORTEST_EDGE_SQUARED = Math.fround(1.1920929e-7);
