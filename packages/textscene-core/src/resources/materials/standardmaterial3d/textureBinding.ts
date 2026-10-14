@@ -14,6 +14,7 @@ import {
 } from '../../textures/applyTextureState';
 import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../textures/godotTextureFilter';
 import { UV2_CHANNEL } from '../../meshes/uv2';
+import { bottomUpV } from '../../../godot/uv';
 import type { StandardMaterial3DScalars, TextureSlot } from './types';
 
 /**
@@ -62,15 +63,22 @@ export function materialTextureStates(scalars: StandardMaterial3DScalars): Mater
     filter: scalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT ? undefined : scalars.textureFilter,
     repeat: scalars.textureRepeat,
   };
+  const uv2 = { ...sampler, uv: { scale: scalars.uv2Scale, offset: scalars.uv2Offset } };
   return {
     uv1: { ...sampler, uv: { scale: scalars.uv1Scale, offset: scalars.uv1Offset } },
-    uv2: {
-      ...sampler,
-      uv: { scale: scalars.uv2Scale, offset: scalars.uv2Offset },
-      // A triplanar mapping reads no UV2. three draws it through the first UV set, as for UV1.
-      channel: scalars.uv2Triplanar ? undefined : UV2_CHANNEL,
-    },
+    // A triplanar mapping reads no UV2. three draws it through the first UV set, as for UV1.
+    // Every UV2 attribute keeps Godot's top-down V, so a mesh without one samples the top-left.
+    uv2: scalars.uv2Triplanar ? uv2 : topDownV({ ...uv2, channel: UV2_CHANNEL }),
     uv2Slots: scalars.uv2Slots,
+  };
+}
+
+/** A state that samples `1 - (v * scale + offset)`, Godot's top-down V on a bottom-up upload. */
+export function topDownV(state: UVSetState): UVSetState {
+  const { scale, offset } = state.uv;
+  return {
+    ...state,
+    uv: { scale: { x: scale.x, y: -scale.y }, offset: { x: offset.x, y: bottomUpV(offset.y) } },
   };
 }
 

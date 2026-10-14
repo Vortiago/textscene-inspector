@@ -28,12 +28,12 @@ import {
   bindSlotTexture,
   materialTextureStates,
   releaseBoundTexture,
+  topDownV,
   type MaterialTextureStates,
   type UVSetState,
 } from '../../resources/materials/standardmaterial3d/textureBinding';
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
 import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
-import { bottomUpV } from '../../godot/uv';
 import { materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource, MaterialSource } from './materialSource';
@@ -399,7 +399,8 @@ function surfaceTextureStates(
   surface: TexturedSurface | undefined
 ): MaterialTextureStates {
   const states = materialTextureStates(scalars);
-  if (surface === GLTF_SURFACE) return { ...states, uv1: topDownV(states.uv1), uv2: topDownV(states.uv2) };
+  if (surface === GLTF_SURFACE)
+    return { ...states, uv1: topDownV(states.uv1), uv2: gltfUv2(scalars, states.uv2) };
   if (!surface) return states;
   return {
     ...states,
@@ -408,13 +409,9 @@ function surfaceTextureStates(
   };
 }
 
-/** A state that samples `1 - (v * scale + offset)`, Godot's V on a bottom-up upload. */
-function topDownV(state: UVSetState): UVSetState {
-  const { scale, offset } = state.uv;
-  return {
-    ...state,
-    uv: { scale: { x: scale.x, y: -scale.y }, offset: { x: offset.x, y: bottomUpV(offset.y) } },
-  };
+/** A triplanar UV2 reads the glTF's first UV set, as UV1 does. Any other UV2 is top-down already. */
+function gltfUv2(scalars: StandardMaterial3DScalars, uv2: UVSetState): UVSetState {
+  return scalars.uv2Triplanar ? topDownV(uv2) : uv2;
 }
 
 /**

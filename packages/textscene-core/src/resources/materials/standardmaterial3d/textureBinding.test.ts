@@ -144,6 +144,12 @@ describe('bindSlotTexture — UV set per slot', () => {
     expect(bound.repeat.x).toBe(2);
   });
 
+  it("samples UV2 in Godot's top-down V, as every UV2 attribute keeps it", () => {
+    const bound = bindSlotTexture(loaded(), 'emission_texture', UV2_EMISSION);
+
+    expect([bound.repeat.y, bound.offset.y]).toEqual([-2, 1]);
+  });
+
   it('binds the AO map to UV2 under ao_on_uv2', () => {
     const state = materialTextureStates(parseStandardMaterial3DScalars({ ao_on_uv2: 'true' }));
 
@@ -162,7 +168,9 @@ describe('bindSlotTexture — UV set per slot', () => {
       parseStandardMaterial3DScalars({ emission_on_uv2: 'true', uv2_triplanar: 'true' })
     );
 
-    expect(bindSlotTexture(loaded(), 'emission_texture', state).channel).toBe(0);
+    const bound = bindSlotTexture(loaded(), 'emission_texture', state);
+
+    expect([bound.channel, bound.repeat.y, bound.offset.y]).toEqual([0, 1, 0]);
   });
 });
 

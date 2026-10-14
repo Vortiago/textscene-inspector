@@ -1,6 +1,7 @@
 /**
  * The surface a material's textures draw on: a glTF surface keeps Godot's top-down V in its UVs,
- * while every bound texture uploads bottom-up, so its maps sample `1 - v`.
+ * as every UV2 attribute does, while every bound texture uploads bottom-up, so those maps sample
+ * `1 - v`.
  */
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
@@ -57,15 +58,27 @@ describe('useMaterialTextures on a glTF surface', () => {
     expect([map.repeat.x, map.offset.x, map.repeat.y, map.offset.y]).toEqual([2, 0.25, -3, 0.25]);
   });
 
-  it('flips a UV2 map too, whose cached UV2 keeps the top-down V', () => {
+  it('flips a UV2 map once, whose cached UV2 keeps the top-down V', () => {
     const map = emissionMap({ emission_on_uv2: 'true' }, GLTF_SURFACE);
 
     expect([map.channel, map.repeat.y, map.offset.y]).toEqual([UV2_CHANNEL, -1, 1]);
+  });
+
+  it("flips a triplanar UV2 map, which reads the glTF's first UV set", () => {
+    const map = emissionMap({ emission_on_uv2: 'true', uv2_triplanar: 'true' }, GLTF_SURFACE);
+
+    expect([map.channel, map.repeat.y, map.offset.y]).toEqual([0, -1, 1]);
   });
 
   it("keeps a Godot mesh's map unflipped, as its UVs are bottom-up (edge case)", () => {
     const map = emissionMap({});
 
     expect([map.repeat.y, map.offset.y]).toEqual([1, 0]);
+  });
+
+  it("flips a Godot mesh's UV2 map, as its UV2 keeps the top-down V", () => {
+    const map = emissionMap({ emission_on_uv2: 'true' });
+
+    expect([map.channel, map.repeat.y, map.offset.y]).toEqual([UV2_CHANNEL, -1, 1]);
   });
 });

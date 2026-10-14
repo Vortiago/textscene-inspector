@@ -23,6 +23,7 @@ An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the previe
 
 - **Approximated** ADD with both a lit colour and a texture is applied as a multiply, so the surface reads darker and more tinted.
 - **Approximated** `emission_intensity` is ignored. `emission_energy_multiplier` alone drives the strength.
+- **Approximated** A PrimitiveMesh with `add_uv2` gets no UV2 here, so `emission_on_uv2` on one samples the map's top-left texel, where Godot reads the generated UV2.
 
 ## Clearcoat
 <!-- compare: image=unit-material-clearcoat status=done fixture=unit-material-clearcoat.tscn -->
@@ -56,6 +57,8 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 <!-- compare: image=unit-material-ao status=done fixture=unit-material-ao.tscn -->
 
 The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. `ao_texture_channel` picks the map channel, and `ao_on_uv2` samples the mesh's UV2.
+
+- **Approximated** A PrimitiveMesh with `add_uv2` gets no UV2 here, so `ao_on_uv2` on one samples the map's top-left texel, where Godot reads the generated UV2.
 
 ## Diffuse mode
 <!-- compare: image=unit-material-diffuse-mode status=done fixture=unit-material-diffuse-mode.tscn -->
