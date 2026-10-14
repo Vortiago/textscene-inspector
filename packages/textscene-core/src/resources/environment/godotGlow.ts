@@ -7,7 +7,7 @@
 
 import { clamp } from '../../godot/math.js';
 import type { EnvironmentSettings } from './types';
-import { glslFloat } from './glslLiterals';
+import { glslFloat } from '../../utils/glslLiterals';
 
 /** Godot `Environment.GlowBlendMode`. */
 export const GlowBlendMode = {

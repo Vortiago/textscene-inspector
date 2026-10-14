@@ -4,7 +4,13 @@
  * the renderer and scene it applies to outlive it, and the r3f layer owns them.
  */
 
-import { BackgroundMode, type EnvironmentProperties, type EnvironmentSettings } from './types';
+import {
+  BackgroundMode,
+  type DepthFog,
+  type EnvironmentProperties,
+  type EnvironmentSettings,
+  type VolumetricFog,
+} from './types';
 import { scaledRgb, type Color } from '../../utils/colorParser';
 import { sRGBChannelToLinear } from '../../utils/colorSpace';
 import { GodotToneMapper } from './godotToneMapping';
@@ -78,7 +84,7 @@ function adjustmentsFor(properties: EnvironmentProperties): NonNullable<Environm
   };
 }
 
-function depthFogFor(properties: EnvironmentProperties): NonNullable<EnvironmentSettings['fog']> {
+function depthFogFor(properties: EnvironmentProperties): DepthFog {
   return {
     mode: properties.fog_mode,
     color: properties.fog_light_color,
@@ -95,9 +101,7 @@ function depthFogFor(properties: EnvironmentProperties): NonNullable<Environment
   };
 }
 
-function volumetricFogFor(
-  properties: EnvironmentProperties
-): NonNullable<EnvironmentSettings['volumetricFog']> {
+function volumetricFogFor(properties: EnvironmentProperties): VolumetricFog {
   return {
     density: properties.volumetric_fog_density,
     albedo: properties.volumetric_fog_albedo,

@@ -15,7 +15,7 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
-import { glslFloat } from './glslLiterals';
+import { glslFloat } from '../../utils/glslLiterals';
 import { DEFAULT_AGX_CONTRAST } from './types';
 
 /** Godot `ToneMapper`. */

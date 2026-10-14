@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   cubicInterpolatef,
+  degToRad,
   lerpColor,
   lerpf,
   CMP_EPSILON,
@@ -17,6 +18,20 @@ import {
   smoothstep,
   snapped,
 } from './math.js';
+
+describe('degToRad', () => {
+  it('turns degrees into radians', () => {
+    expect(degToRad(180)).toBe(Math.PI);
+  });
+
+  it('multiplies by PI / 180 as Godot does, which rounds differently from (d * PI) / 180', () => {
+    expect(degToRad(3)).toBe(3 * (Math.PI / 180));
+  });
+
+  it('keeps a non-finite value non-finite (edge case)', () => {
+    expect(degToRad(Number.POSITIVE_INFINITY)).toBe(Number.POSITIVE_INFINITY);
+  });
+});
 
 describe('CMP_EPSILON', () => {
   it('is math_defs.h:50, not the 1e-6 a private copy stood in with', () => {

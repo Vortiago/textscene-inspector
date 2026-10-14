@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass.js';
 import { drawOffscreen } from '../offscreen.js';
 import { bindRadiance } from './fogSky.js';

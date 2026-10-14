@@ -9,7 +9,7 @@ import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
 import { brightPassGlsl, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
 import { compositeGlsl, type CompositeOptions } from '../../resources/environment/godotCompositor';
-import { glslFloat } from '../../resources/environment/glslLiterals';
+import { glslFloat } from '../../utils/glslLiterals';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass';
 import { drawOffscreen } from '../offscreen';
 

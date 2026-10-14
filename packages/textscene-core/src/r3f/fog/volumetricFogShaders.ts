@@ -11,7 +11,7 @@ import {
   VOLUMETRIC_FOG_TEMPORAL_JITTERS,
 } from '../../godot/volumetricFog.js';
 import { MAX_ROUGHNESS_LOD } from '../../godot/skyReflection.js';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 import { HENYEY_GREENSTEIN_GLSL } from '../henyeyGreenstein.js';
 import { FogLightKind, FogLightTexel } from './fogLights.js';
 import { FOG_VOLUME_DENSITY_SCALE } from '../../godot/fogVolume.js';

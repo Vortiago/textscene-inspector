@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { renderedDepthFogRange } from '../../godot/depthFog.js';
 import type { VolumetricFogProjectSettings } from '../../godot/volumetricFog.js';
-import type { EnvironmentSettings } from '../../resources/environment/types.js';
+import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
 import { setGodotColorLinear } from '../godotColor.js';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
 import { skyLightEnergy } from '../sky/skyLight.js';
@@ -18,10 +18,7 @@ import { shineDirection } from './fogLights.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
 import { skyRadiance } from './fogSky.js';
 import { FOG_SUN_MAX, fogUniforms } from './fogUniforms.js';
-import type { VolumetricFog } from './volumetricFogPass.js';
 import { writeVec4 } from './writeVec4.js';
-
-export type DepthFog = NonNullable<EnvironmentSettings['fog']>;
 
 export interface FogSettings {
   depth: DepthFog | null;

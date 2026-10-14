@@ -7,7 +7,7 @@
 
 import { ReflectionProbeAmbientMode } from '../../godot/reflectionProbe.js';
 import { MAX_ROUGHNESS_LOD } from '../../godot/skyReflection.js';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 import { OCTMAP_GLSL } from '../../resources/sky/skyLayerShaders.js';
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { installLitUniform } from '../shaderPatch/litUniform.js';

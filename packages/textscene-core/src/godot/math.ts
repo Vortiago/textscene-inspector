@@ -104,14 +104,14 @@ export function cubicInterpolatef(
 }
 
 /**
- * `Math::deg_to_rad` (`core/math/math_funcs.h`): `p_y * (Math_PI / 180.0)`.
+ * `Math::deg_to_rad` (`core/math/math_funcs.h:321-323`): `p_y * (PI / 180.0)`.
  *
  * Godot serialises several rotations in degrees (`Node2D.rotation_degrees`,
  * every `*_degrees` particle parameter) and converts on the way in, so the
  * conversion is an engine fact rather than a rendering convenience.
  */
 export function degToRad(degrees: number): number {
-  return (degrees * Math.PI) / 180;
+  return degrees * (Math.PI / 180);
 }
 
 /**

@@ -41,7 +41,7 @@ import {
   FAST_FILTER_SUPER_TAPS_PER_FRAME,
   MOST_LAYER_SAMPLES,
 } from '../../godot/skyReflection.js';
-import { glslFloat } from '../environment/glslLiterals.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 
 /** `oct_inc.glsl:2-41`. `borderSize` is 1 minus twice the padding in UV. */
 export const OCTMAP_GLSL = /* glsl */ `

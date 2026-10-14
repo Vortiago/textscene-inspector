@@ -1,6 +1,6 @@
 /**
- * Numbers as GLSL literals, for the tone-curve and glow shader builders, which bake
- * Godot values in as constants rather than uniforms.
+ * Numbers as GLSL literals, for the shader builders that bake Godot values in as constants
+ * rather than uniforms.
  */
 
 /**

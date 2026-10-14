@@ -19,7 +19,7 @@ import {
   type VolumetricFogGrid,
   type VolumetricFogProjectSettings,
 } from '../../godot/volumetricFog.js';
-import type { EnvironmentSettings } from '../../resources/environment/types.js';
+import type { VolumetricFog } from '../../resources/environment/types.js';
 import { directionalShadowAtlasDepth } from '../directionalShadow/shadowAtlas.js';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass.js';
 import { setGodotColorLinear } from '../godotColor.js';
@@ -43,8 +43,6 @@ import {
   FOG_LIGHT_FRAGMENT,
   FOG_SAMPLE_OFFSETS_MAX,
 } from './volumetricFogShaders.js';
-
-export type VolumetricFog = NonNullable<EnvironmentSettings['volumetricFog']>;
 
 interface VolumetricFogInputs {
   fog: VolumetricFog;
