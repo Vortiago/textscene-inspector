@@ -7,7 +7,7 @@ import type * as THREE from 'three';
 import type { ReflectionProbeAmbientMode } from '../../godot/reflectionProbe.js';
 import type { Xyz } from '../../godot/xyz.js';
 import type { Color } from '../../utils/colorParser.js';
-import { sRGBChannelToLinear } from '../../utils/colorSpace.js';
+import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
 
 /** What the shader reads of one probe. */
 export interface DrawnProbe {
@@ -44,7 +44,7 @@ function probeTexels(probe: DrawnProbe): number[] {
   const matrixRow = (row: number) => [m[row]!, m[4 + row]!, m[8 + row]!, m[12 + row]!];
   const { size, originOffset, ambientColor: colour, ambientColorEnergy: energy, reflectionMask } = probe;
   // Godot stores the ambient colour in linear, times its energy (`light_storage.cpp:1817-1822`).
-  const ambient = [colour.r, colour.g, colour.b].map((channel) => sRGBChannelToLinear(channel) * energy);
+  const ambient = sRGBToLinearRGB(colour.r, colour.g, colour.b).map((channel) => channel * energy);
   const texels = [
     matrixRow(0),
     matrixRow(1),

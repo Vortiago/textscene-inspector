@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../godot/visualLayers.js';
 import { sharedTexture } from '../sharedTexture.js';
-import { installedUniformValue } from '../shaderPatch/litUniform.js';
+import { installedOr } from '../shaderPatch/litUniform.js';
 
 export const REFLECTION_PROBE_UNIFORMS = {
   atlas: 'godotReflectionAtlas',
@@ -25,38 +25,27 @@ export const REFLECTION_PROBE_UNIFORMS = {
 class AtlasSlot extends sharedTexture(THREE.DataArrayTexture) {}
 class RowsSlot extends sharedTexture(THREE.DataTexture) {}
 
-/** After a dev server reloads this module, each is the one the earlier evaluation installed. */
-function installed<T>(name: string, isInstalled: (value: unknown) => value is T, make: () => T): T {
-  const value = installedUniformValue(name);
-  return isInstalled(value) ? value : make();
-}
-
-export const atlasSlot = installed(
+// After a dev server reloads this module, each value below is the one the earlier evaluation installed.
+export const atlasSlot = installedOr(
   REFLECTION_PROBE_UNIFORMS.atlas,
-  (value): value is THREE.DataArrayTexture => value instanceof THREE.DataArrayTexture,
+  THREE.DataArrayTexture,
   () => new AtlasSlot()
 );
 
-export const rowsSlot = installed(
-  REFLECTION_PROBE_UNIFORMS.rows,
-  (value): value is THREE.DataTexture => value instanceof THREE.DataTexture,
-  () => new RowsSlot()
-);
+export const rowsSlot = installedOr(REFLECTION_PROBE_UNIFORMS.rows, THREE.DataTexture, () => new RowsSlot());
 
 /**
  * The shown probes' count, the atlas's border size and its last layer. Arrays, not scalars: three
  * caches a scalar uniform by its value (r186 `WebGLUniforms.js:163-173`), and `cloneUniforms` keeps a
  * typed array by reference, so every material reads these buffers.
  */
-export const shownProbes = installed(
+export const shownProbes = installedOr(
   REFLECTION_PROBE_UNIFORMS.probes,
-  (value): value is Float32Array => value instanceof Float32Array,
+  Float32Array,
   () => new Float32Array(4)
 );
 
 /** The layers of the instance being drawn, Godot's default between draws. */
-export const instanceLayers = installed(
-  REFLECTION_PROBE_UNIFORMS.instanceLayers,
-  (value): value is Uint32Array => value instanceof Uint32Array,
-  () => Uint32Array.of(GODOT_DEFAULT_VISUAL_LAYERS)
+export const instanceLayers = installedOr(REFLECTION_PROBE_UNIFORMS.instanceLayers, Uint32Array, () =>
+  Uint32Array.of(GODOT_DEFAULT_VISUAL_LAYERS)
 );

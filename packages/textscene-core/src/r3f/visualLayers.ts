@@ -32,6 +32,11 @@ export function visualLayersOf(object: THREE.Object3D): number {
   return typeof layers === 'number' ? layers : GODOT_DEFAULT_VISUAL_LAYERS;
 }
 
+/** Whether `mask` admits `object`: Godot's test, that the mask and the instance's layers share a bit. */
+export function isInMask(object: THREE.Object3D, mask: number): boolean {
+  return (mask & visualLayersOf(object)) !== 0;
+}
+
 /** Sets the mask of one object built outside JSX, such as a GLB's mesh. */
 export function setVisualLayers(object: THREE.Object3D, layers: number): void {
   object.userData[VISUAL_LAYERS_KEY] = layers;

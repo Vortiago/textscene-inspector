@@ -77,7 +77,7 @@ export function bakeSkyLayers(
   const layers = byGroup((group) => layerCube(SKY_LAYER_GROUPS[group]));
   try {
     drawOffscreen(gl, () => {
-      const chain = downsampleChain(gl, radiance, filter);
+      const chain = downsampleChain(gl, radiance, filter.layout, filter.chainSizes);
       try {
         for (const group of SKY_LAYER_GROUP_NAMES)
           filterGroup(gl, chain, filter, SKY_LAYER_GROUPS[group], layers[group]);
@@ -135,7 +135,7 @@ export function bakeAtlasLayers(
     drawOffscreen(gl, () => {
       setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize: layout.borderSize });
       draw(gl, radianceOctmapPass, target, index, 0);
-      const chain = downsampleChain(gl, radiance, filter);
+      const chain = downsampleChain(gl, radiance, layout, filter.chainSizes);
       try {
         filterAtlasLayers(gl, chain, filter, atlas, index);
       } finally {
@@ -148,14 +148,15 @@ export function bakeAtlasLayers(
 }
 
 /**
- * The radiance drawn into Godot's octmap, then shrunk to each mip of `filter`'s chain. Each mip draws
- * into a target of its own, as a pass cannot read the texture it draws into, and is copied into
- * its level of the chain.
+ * The radiance drawn into Godot's octmap as `layout` lays it out, then shrunk to each mip of
+ * `chainSizes`. Each mip draws into a target of its own, as a pass cannot read the texture it draws
+ * into, and is copied into its level of the chain.
  */
 function downsampleChain(
   gl: THREE.WebGLRenderer,
   radiance: THREE.CubeTexture,
-  { layout, chainSizes }: LayerFilter
+  layout: SkyOctmapLayout,
+  chainSizes: readonly number[]
 ): THREE.WebGLRenderTarget {
   const { borderSize } = layout;
   const chain = chainTarget(chainSizes[0]!);

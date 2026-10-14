@@ -13,7 +13,6 @@ import {
   reflectionProbeOrder,
   ReflectionProbeUpdateMode,
 } from '../../godot/reflectionProbe.js';
-import type { SkyOctmapLayout } from '../../godot/skyReflection.js';
 import {
   bakeAtlasLayers,
   createReflectionAtlas,
@@ -23,18 +22,14 @@ import { compareTreeOrder } from '../contexts/TreeOrderContext.js';
 import { SCAN_FRAMES_AFTER_SETTLE } from '../environment/useLatchedSceneScan.js';
 import { drawOffscreen } from '../offscreen.js';
 import { observeSceneCamera, observeSceneCull, observeSceneRenderEnd } from '../sceneRenderCamera.js';
+import { leaveSlot, showInSlot } from '../sharedTexture.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { visibleInTree } from '../visibleInTree.js';
-import { captureCameras, probeCaptureOf } from './captureCameras.js';
+import { captureCameras, probeCaptureOf, probeFrame } from './captureCameras.js';
 import { stageCapture } from './captureStage.js';
 import { PROBE_ROW_TEXELS, probeRows, type DrawnProbe } from './probeRows.js';
 import { atlasSlot, rowsSlot, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
-
-/** The part of three's per-renderer state of a texture that holds its GL handle. */
-interface TextureHandle {
-  __webglTexture?: WebGLTexture;
-}
 
 /** What a probe's capture shows: changed, it captures again. */
 interface Capture {
@@ -42,11 +37,6 @@ interface Capture {
   probe: ReflectionProbeObject['probe'];
   matrixWorld: THREE.Matrix4;
 }
-
-/** Scratch for one probe's frame, overwritten by each. */
-const position = new THREE.Vector3();
-const rotation = new THREE.Quaternion();
-const scale = new THREE.Vector3();
 
 export class SceneProbes {
   private readonly probes: TrackedObjects<ReflectionProbeObject>;
@@ -58,17 +48,25 @@ export class SceneProbes {
   });
   /** Made by `update` for the probes it holds, null before the first. */
   private atlas: ReflectionAtlas | null = null;
+  /** What the atlas was made for: changed, it is made again. */
+  private atlasProbeCount = 0;
+  private atlasHasRealTimeProbe = false;
   /** The capture each probe holds in the atlas, written by `capture` and cleared with the atlas. */
   private readonly captures = new Map<ReflectionProbeObject, Capture>();
   /** The rows of the drawn probes, made again when their count changes. */
-  private rows = new THREE.DataTexture(probeRows([]), PROBE_ROW_TEXELS, 1, THREE.RGBAFormat, THREE.FloatType);
-  private drawnCount = 0;
+  private rows = rowsTexture(probeRows([]));
+  /** The probes the rows hold, written only by `pack`. */
+  private packed: readonly ReflectionProbeObject[] = [];
   /** Frames since the scene last had a resource on its way. */
   private settledFrames = 0;
   /** Whether content arrived since the probes last captured, so each captures again once it settles. */
   private hasNewContent = true;
   /** What the captures saw of the environment, which a sky that bakes later changes. */
-  private environment: readonly unknown[] = [];
+  private seen: { environment: unknown; background: unknown; clearColor: number } = {
+    environment: undefined,
+    background: undefined,
+    clearColor: -1,
+  };
   private readonly stopObserving: (() => void)[];
   /** The lights whose shadows a capture without shadows hid, put back once the render ends. */
   private readonly hiddenShadows: { shadow: THREE.LightShadow; intensity: number }[] = [];
@@ -103,7 +101,8 @@ export class SceneProbes {
     this.forgetStaleCaptures(clearColor);
     const stale = probes.findIndex((probe, layer) => !this.isCaptured(probe, layer));
     if (stale !== -1) this.capture(probes[stale]!, stale, atlas, clearColor);
-    this.pack(probes.filter((probe) => this.captures.has(probe)));
+    const captured = probes.filter((probe) => this.captures.has(probe));
+    if (stale !== -1 || !sameProbes(captured, this.packed)) this.pack(captured);
     return stale !== -1;
   }
 
@@ -121,30 +120,41 @@ export class SceneProbes {
     const hasRealTimeProbe = probes.some(
       ({ probe }) => probe.updateMode === ReflectionProbeUpdateMode.ALWAYS
     );
-    const layout = reflectionAtlasLayout(hasRealTimeProbe);
     if (
       this.atlas &&
-      this.atlas.target.depth === Math.max(probes.length, 1) &&
-      sameLayout(this.atlas.layout, layout)
+      this.atlasProbeCount === probes.length &&
+      this.atlasHasRealTimeProbe === hasRealTimeProbe
     )
       return this.atlas;
     this.leaveSlots();
     this.atlas?.target.dispose();
     this.captures.clear();
-    this.atlas = createReflectionAtlas(layout, probes.length);
+    this.packed = [];
+    this.atlas = createReflectionAtlas(reflectionAtlasLayout(hasRealTimeProbe), probes.length);
+    this.atlasProbeCount = probes.length;
+    this.atlasHasRealTimeProbe = hasRealTimeProbe;
     return this.atlas;
   }
 
   /** Drops every capture once new content settles, or once the environment the captures saw changes. */
   private forgetStaleCaptures(clearColor: THREE.Color): void {
-    const environment = [this.scene.environment, this.scene.background, clearColor.getHex()];
-    const hasNewEnvironment = environment.some((value, index) => value !== this.environment[index]);
+    const { environment, background } = this.scene;
+    const { seen } = this;
+    const hasNewEnvironment =
+      environment !== seen.environment ||
+      background !== seen.background ||
+      clearColor.getHex() !== seen.clearColor;
     if (!this.hasNewContent && !hasNewEnvironment) return;
-    this.environment = environment;
+    this.seen = { environment, background, clearColor: clearColor.getHex() };
     this.hasNewContent = false;
     this.captures.clear();
   }
 
+  /**
+   * Whether `object`'s capture still shows what it would capture now. A probe that updates ALWAYS
+   * captures again only then too, where Godot captures it every frame, so a node that moves under
+   * it is not reflected until the scene's content changes.
+   */
   private isCaptured(object: ReflectionProbeObject, layer: number): boolean {
     const capture = this.captures.get(object);
     return (
@@ -166,11 +176,7 @@ export class SceneProbes {
     const capture = { isInterior: probe.interior, hasShadows: probe.enableShadows };
     const farPlanes = captureFarPlanes(probe.size, probe.originOffset, probe.maxDistance);
     const cameras = captureCameras(object.matrixWorld, probe.originOffset, farPlanes, capture);
-    const restore = stageCapture(this.scene, {
-      cullMask: probe.cullMask,
-      isInterior: probe.interior,
-      clearColor,
-    });
+    const restore = stageCapture(this.scene, probe, clearColor);
     try {
       drawOffscreen(this.renderer, () => {
         this.renderer.autoClear = true;
@@ -188,49 +194,39 @@ export class SceneProbes {
     this.captures.set(object, { layer, probe, matrixWorld: object.matrixWorld.clone() });
   }
 
-  /** Writes the rows of `probes` in Godot's order, and uploads them when they change. */
+  /** Writes the rows of `probes` in Godot's order, and uploads them. */
   private pack(probes: readonly ReflectionProbeObject[]): void {
-    const drawn = reflectionProbeOrder(probes.map((object) => this.drawnProbe(object)));
-    const rows = probeRows(drawn);
-    this.drawnCount = drawn.length;
+    const rows = probeRows(reflectionProbeOrder(probes.map((object) => this.drawnProbe(object))));
+    this.packed = probes;
     const current = this.rows.image.data as Float32Array;
-    if (current.length === rows.length && current.every((value, index) => value === rows[index])) return;
-    if (current.length !== rows.length) {
+    if (current.length === rows.length) {
+      current.set(rows);
+      this.rows.needsUpdate = true;
+    } else {
       this.leaveSlots();
       this.rows.dispose();
-      this.rows = new THREE.DataTexture(
-        rows,
-        PROBE_ROW_TEXELS,
-        rows.length / (PROBE_ROW_TEXELS * 4),
-        THREE.RGBAFormat,
-        THREE.FloatType
-      );
-    } else {
-      current.set(rows);
+      this.rows = rowsTexture(rows);
     }
-    this.rows.needsUpdate = true;
     this.renderer.initTexture(this.rows);
   }
 
   private drawnProbe(object: ReflectionProbeObject): DrawnProbe {
-    const { probe } = object;
-    object.matrixWorld.decompose(position, rotation, scale);
-    const worldToLocal = new THREE.Matrix4().compose(position, rotation, scale.set(1, 1, 1)).invert();
-    return { ...probe, worldToLocal, atlasLayer: this.captures.get(object)!.layer };
+    const worldToLocal = probeFrame(object.matrixWorld).invert();
+    return { ...object.probe, worldToLocal, atlasLayer: this.captures.get(object)!.layer };
   }
 
   /** Points every lit material at this scene's probes for a render, or at none for a capture's. */
   private show(camera: THREE.Camera): void {
     const { atlas } = this;
-    if (!atlas || this.drawnCount === 0 || probeCaptureOf(camera)) {
+    if (!atlas || this.packed.length === 0 || probeCaptureOf(camera)) {
       shownProbes[0] = 0;
       return;
     }
-    shownProbes[0] = this.drawnCount;
+    shownProbes[0] = this.packed.length;
     shownProbes[1] = atlas.layout.borderSize;
     shownProbes[2] = atlas.layout.layerSizes.length - 1;
-    this.handleOf(atlasSlot).__webglTexture = this.handleOf(atlas.target.texture).__webglTexture;
-    this.handleOf(rowsSlot).__webglTexture = this.handleOf(this.rows).__webglTexture;
+    showInSlot(this.renderer, atlasSlot, atlas.target.texture);
+    showInSlot(this.renderer, rowsSlot, this.rows);
   }
 
   /** Hides each light's shadow from a capture without shadows. */
@@ -251,23 +247,19 @@ export class SceneProbes {
     this.hiddenShadows.length = 0;
   }
 
-  /** Leaves no slot on this scene's textures before they are freed: binding a deleted texture is an error. */
+  /** Leaves no slot on this scene's textures before they are freed. */
   private leaveSlots(): void {
-    const owned = [this.atlas?.target.texture, this.rows].map((texture) =>
-      texture ? this.handleOf(texture).__webglTexture : undefined
-    );
-    for (const slot of [atlasSlot, rowsSlot]) {
-      const handle = this.handleOf(slot);
-      if (handle.__webglTexture !== undefined && owned.includes(handle.__webglTexture))
-        delete handle.__webglTexture;
-    }
-  }
-
-  private handleOf(texture: THREE.Texture): TextureHandle {
-    return this.renderer.properties.get(texture) as TextureHandle;
+    if (this.atlas) leaveSlot(this.renderer, atlasSlot, this.atlas.target.texture);
+    leaveSlot(this.renderer, rowsSlot, this.rows);
   }
 }
 
-function sameLayout(a: SkyOctmapLayout, b: SkyOctmapLayout): boolean {
-  return a.size === b.size && a.layerSizes.length === b.layerSizes.length;
+/** A texture of `rows`, a probe's row of texels per line. */
+function rowsTexture(rows: Float32Array): THREE.DataTexture {
+  const height = rows.length / (PROBE_ROW_TEXELS * 4);
+  return new THREE.DataTexture(rows, PROBE_ROW_TEXELS, height, THREE.RGBAFormat, THREE.FloatType);
+}
+
+function sameProbes(a: readonly ReflectionProbeObject[], b: readonly ReflectionProbeObject[]): boolean {
+  return a.length === b.length && a.every((probe, index) => probe === b[index]);
 }

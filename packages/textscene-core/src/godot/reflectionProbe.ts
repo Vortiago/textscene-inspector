@@ -4,8 +4,14 @@
  */
 
 import { sign } from './math.js';
-import { storedReal } from './real.js';
-import type { SkyOctmapLayout } from './skyReflection.js';
+import { storedReal, storedXyz } from './real.js';
+import {
+  halvingSizes,
+  paddedOctmap,
+  SKY_ROUGHNESS_LAYERS_DEFAULT,
+  type SkyOctmapLayout,
+} from './skyReflection.js';
+import { GODOT_EDITOR_LAYERS_MASK } from './visualLayers.js';
 import type { Xyz } from './xyz.js';
 
 /** `ReflectionProbe::UpdateMode` (`scene/3d/reflection_probe.h:39-42`). */
@@ -33,8 +39,7 @@ export const REFLECTION_PROBE_DEFAULTS = {
   size: { x: 20, y: 20, z: 20 },
   originOffset: { x: 0, y: 0, z: 0 },
   ambientColorEnergy: 1,
-  /** `(1 << 20) - 1`, the 20 layers the editor shows, for `cull_mask` and `reflection_mask`. */
-  layerMask: (1 << 20) - 1,
+  layerMask: GODOT_EDITOR_LAYERS_MASK,
 } as const;
 
 /** `set_max_distance` clamps to this (`reflection_probe.cpp:81`). */
@@ -47,7 +52,7 @@ export const CAPTURE_NEAR = 0.01;
 const FACE_MARGIN = 0.01;
 
 /** The six capture faces' view directions, in Godot's face order (`renderer_scene_cull.cpp:3670-3677`). */
-const FACE_NORMALS: readonly Xyz[] = [
+export const FACE_NORMALS: readonly Xyz[] = [
   { x: 1, y: 0, z: 0 },
   { x: -1, y: 0, z: 0 },
   { x: 0, y: 1, z: 0 },
@@ -83,20 +88,14 @@ export const REFLECTION_ATLAS_SIZE = 256;
  */
 export const REFLECTION_ATLAS_COUNT = 64;
 
-/**
- * The layer a fully rough reflection and a probe's ambient read: the sky's roughness layers less
- * one (`render_forward_clustered.cpp:4998`), past the last layer of an atlas with seven.
- */
-export const MAX_ROUGHNESS_LOD = 7;
-
 /** An atlas that holds an update-always probe has this many layers (`light_storage.cpp:1514`). */
 const REAL_TIME_ATLAS_LAYERS = 7;
 
 /**
  * `MIN(roughness_layers, get_image_required_mipmaps(256, 256) + 1)` (`light_storage.cpp:1525`): the
- * sky's default eight layers, as a 256-wide image has nine mips.
+ * sky's default layers, as a 256-wide image has nine mips.
  */
-const ATLAS_LAYERS = 8;
+const ATLAS_LAYERS = SKY_ROUGHNESS_LAYERS_DEFAULT;
 
 /**
  * The layout of the reflection atlas's octmaps (`light_storage.cpp:1524-1532`): the capture, twice
@@ -107,15 +106,12 @@ const ATLAS_LAYERS = 8;
  */
 export function reflectionAtlasLayout(hasRealTimeProbe: boolean): SkyOctmapLayout {
   const layers = hasRealTimeProbe ? REAL_TIME_ATLAS_LAYERS : ATLAS_LAYERS;
-  const paddingPixels = 2 ** (layers - 1);
-  const size = REFLECTION_ATLAS_SIZE * 2 + paddingPixels * 2;
-  const mipSizes = (first: number, count: number) =>
-    Array.from({ length: count }, (_, mip) => Math.max(1, first >> mip));
+  const { size, borderSize } = paddedOctmap(REFLECTION_ATLAS_SIZE, 2 ** (layers - 1));
   return {
     size,
-    borderSize: 1 - (paddingPixels * 2) / size,
-    layerSizes: mipSizes(size, layers),
-    downsampledSizes: mipSizes(size >> 1, layers - 1),
+    borderSize,
+    layerSizes: halvingSizes(size, layers),
+    downsampledSizes: halvingSizes(size >> 1, layers - 1),
   };
 }
 
@@ -142,7 +138,7 @@ export function loadedOriginOffset(lines: Iterable<readonly ['size' | 'origin_of
   let size: Xyz = REFLECTION_PROBE_DEFAULTS.size;
   let offset: Xyz = REFLECTION_PROBE_DEFAULTS.originOffset;
   for (const [key, value] of lines) {
-    const stored = { x: storedReal(value.x), y: storedReal(value.y), z: storedReal(value.z) };
+    const stored = storedXyz(value);
     if (key === 'size') size = stored;
     else offset = stored;
     offset = clampedOffset(offset, size, key === 'size');

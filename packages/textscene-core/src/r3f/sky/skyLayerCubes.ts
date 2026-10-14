@@ -6,9 +6,9 @@
  */
 
 import * as THREE from 'three';
-import { sharedTexture } from '../sharedTexture.js';
+import { leaveSlot, sharedTexture, showInSlot } from '../sharedTexture.js';
 import { SKY_LAYER_GROUP_NAMES, byGroup, type SkyLayers } from '../../resources/sky/skyLayers.js';
-import { installedUniformValue } from '../shaderPatch/litUniform.js';
+import { installedOr, installedUniformValue } from '../shaderPatch/litUniform.js';
 
 /** The uniform every lit material samples each group of layers through, a mip each. */
 export const SKY_LAYER_UNIFORMS: Record<keyof SkyLayers, string> = {
@@ -32,10 +32,9 @@ class SkyLayerSlot extends sharedTexture(THREE.CubeTexture) {}
  * reloads this module, it is the slot the earlier evaluation installed, which every program compiled
  * since samples.
  */
-export const skyLayerSlots = byGroup((group) => {
-  const installed = installedUniformValue(SKY_LAYER_UNIFORMS[group]);
-  return installed instanceof THREE.CubeTexture ? installed : new SkyLayerSlot();
-});
+export const skyLayerSlots = byGroup((group) =>
+  installedOr(SKY_LAYER_UNIFORMS[group], THREE.CubeTexture, () => new SkyLayerSlot())
+);
 
 const installedContribution = installedUniformValue(SKY_CONTRIBUTION_UNIFORM);
 
@@ -46,11 +45,6 @@ const installedContribution = installedUniformValue(SKY_CONTRIBUTION_UNIFORM);
  */
 export const skyContribution =
   installedContribution instanceof Float32Array ? installedContribution : Float32Array.of(1);
-
-/** The part of three's per-renderer state of a texture that holds its GL handle. */
-interface TextureHandle {
-  __webglTexture?: WebGLTexture;
-}
 
 /**
  * A sky's baked layers on one renderer, in cubes of its own as Godot keeps a radiance texture per sky
@@ -66,28 +60,17 @@ export class SkyLayerCubes {
   /**
    * Points every lit material at these cubes for the renders that follow, and puts `contribution`,
    * the sky's share of the ambient, in `skyContribution`. Each material holds a uniform of its own
-   * (three r186 `UniformsUtils.js:24`), all on the one slot, so the slot takes the cube's handle, as
-   * three's `XREstimatedLight.js:62-70` does: the switch uploads nothing.
+   * (three r186 `UniformsUtils.js:24`), all on the one slot, so the slot takes the cube's handle.
    */
   show(contribution: number): void {
     skyContribution[0] = contribution;
-    for (const group of SKY_LAYER_GROUP_NAMES) {
-      this.handleOf(skyLayerSlots[group]).__webglTexture = this.handleOf(
-        this.cubes[group].texture
-      ).__webglTexture;
-    }
+    for (const group of SKY_LAYER_GROUP_NAMES)
+      showInSlot(this.renderer, skyLayerSlots[group], this.cubes[group].texture);
   }
 
-  /** Leaves no slot on these cubes before they are freed: binding a deleted texture is an error. */
+  /** Leaves no slot on these cubes before they are freed. */
   hide(): void {
-    for (const group of SKY_LAYER_GROUP_NAMES) {
-      const slot = this.handleOf(skyLayerSlots[group]);
-      if (slot.__webglTexture === this.handleOf(this.cubes[group].texture).__webglTexture)
-        delete slot.__webglTexture;
-    }
-  }
-
-  private handleOf(texture: THREE.Texture): TextureHandle {
-    return this.renderer.properties.get(texture) as TextureHandle;
+    for (const group of SKY_LAYER_GROUP_NAMES)
+      leaveSlot(this.renderer, skyLayerSlots[group], this.cubes[group].texture);
   }
 }

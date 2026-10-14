@@ -21,7 +21,8 @@ export function createTextureProcessor(
     fileEventBus,
     eventBus,
     resourceType: 'texture',
-    shouldProcess: (path, data) => isTexturePath(path) && data instanceof ArrayBuffer,
+    readsFile: isTexturePath,
+    shouldProcess: (_path, data) => data instanceof ArrayBuffer,
     process: async (path, data) => {
       const mimeType = getMimeType(path);
       return createTextureFromBuffer(data as ArrayBuffer, mimeType, eventBus.getThreeManager());

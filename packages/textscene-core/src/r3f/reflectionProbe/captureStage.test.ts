@@ -28,7 +28,7 @@ describe('stageCapture', () => {
     const shown = meshOnLayers(3);
     scene.add(hidden, shown);
 
-    const restore = stageCapture(scene, { cullMask: 1, isInterior: false, clearColor: CLEAR });
+    const restore = stageCapture(scene, { cullMask: 1, interior: false }, CLEAR);
     const during = [hidden.visible, shown.visible];
     restore();
 
@@ -42,7 +42,7 @@ describe('stageCapture', () => {
     setVisualLayers(light, 4);
     scene.add(light);
 
-    const restore = stageCapture(scene, { cullMask: 1, isInterior: false, clearColor: CLEAR });
+    const restore = stageCapture(scene, { cullMask: 1, interior: false }, CLEAR);
     const during = light.visible;
     restore();
 
@@ -52,7 +52,7 @@ describe('stageCapture', () => {
   it("keeps the environment's ambient whatever the cull mask, as it is no instance (edge case)", () => {
     const { scene, ambient } = litScene();
 
-    stageCapture(scene, { cullMask: 0, isInterior: false, clearColor: CLEAR });
+    stageCapture(scene, { cullMask: 0, interior: false }, CLEAR);
 
     expect([ambient.visible, ambient.intensity]).toEqual([true, 0.6]);
   });
@@ -60,7 +60,7 @@ describe('stageCapture', () => {
   it('drops the environment of an interior capture: its sky, its ambient and its background', () => {
     const { scene, background, ambient } = litScene();
 
-    const restore = stageCapture(scene, { cullMask: 1, isInterior: true, clearColor: CLEAR });
+    const restore = stageCapture(scene, { cullMask: 1, interior: true }, CLEAR);
     const during = [scene.environmentIntensity, ambient.intensity, scene.background];
     restore();
 
@@ -71,7 +71,7 @@ describe('stageCapture', () => {
   it('leaves the environment of an exterior capture (edge case)', () => {
     const { scene, background } = litScene();
 
-    stageCapture(scene, { cullMask: 1, isInterior: false, clearColor: CLEAR });
+    stageCapture(scene, { cullMask: 1, interior: false }, CLEAR);
 
     expect([scene.environmentIntensity, scene.background]).toEqual([2, background]);
   });

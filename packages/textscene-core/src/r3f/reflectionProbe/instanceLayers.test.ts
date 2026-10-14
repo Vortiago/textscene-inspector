@@ -1,12 +1,17 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { restoreInstanceLayers, showInstanceLayers } from './instanceLayers';
-import { instanceLayers } from './probeSlots';
+import { instanceLayers, shownProbes } from './probeSlots';
 import { setVisualLayers } from '../visualLayers';
 import { testRenderer } from '../../testing/recordingWebGL';
 
+beforeEach(() => {
+  shownProbes[0] = 1;
+});
+
 afterEach(() => {
   restoreInstanceLayers();
+  shownProbes[0] = 0;
   vi.restoreAllMocks();
 });
 
@@ -34,6 +39,17 @@ describe('showInstanceLayers', () => {
     const set = vi.spyOn(renderer, 'setRenderTarget');
 
     showInstanceLayers(renderer, new THREE.Mesh());
+
+    expect(instanceLayers[0]).toBe(1);
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it('leaves them alone in a render that shows no probe (edge case)', async () => {
+    const { renderer } = await testRenderer();
+    shownProbes[0] = 0;
+    const set = vi.spyOn(renderer, 'setRenderTarget');
+
+    showInstanceLayers(renderer, meshOnLayers(4));
 
     expect(instanceLayers[0]).toBe(1);
     expect(set).not.toHaveBeenCalled();

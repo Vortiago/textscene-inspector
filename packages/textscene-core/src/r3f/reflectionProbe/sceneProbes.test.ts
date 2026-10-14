@@ -122,6 +122,32 @@ describe('SceneProbes rendering', () => {
     expect(Array.from(shownProbes.subarray(0, 3))).toEqual([1, expect.closeTo(0.8, 6), 6]);
   });
 
+  it('uploads the rows when a capture changes them, not every frame', async () => {
+    const { renderer, facesDrawn, settle } = await sceneWith(probeObject());
+    settle();
+    facesDrawn();
+    const uploads = vi.spyOn(renderer, 'initTexture');
+
+    facesDrawn();
+    facesDrawn();
+
+    expect(uploads).not.toHaveBeenCalled();
+  });
+
+  it('stops showing a probe once it hides (edge case)', async () => {
+    const hidden = probeObject();
+    const { scene, facesDrawn, settle } = await sceneWith(probeObject(), hidden);
+    settle();
+    facesDrawn();
+    facesDrawn();
+
+    hidden.visible = false;
+    facesDrawn();
+    fireSceneRender(scene, new THREE.PerspectiveCamera());
+
+    expect(shownProbes[0]).toBe(1);
+  });
+
   it('shows no probe to a capture, as Godot captures without them (edge case)', async () => {
     const { scene, facesDrawn, settle } = await sceneWith(probeObject());
     settle();

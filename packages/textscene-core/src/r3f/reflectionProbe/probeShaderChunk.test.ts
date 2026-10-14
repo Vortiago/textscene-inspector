@@ -80,7 +80,7 @@ describe('installGodotReflectionProbes', () => {
 
     expect(gather).toContain('for ( int index = probeCount - 1; index >= 0; index -- )');
     expect(gather).toContain(
-      `( godotProbeMask( index ) & ${REFLECTION_PROBE_UNIFORMS.instanceLayers}[ 0 ] ) == 0u`
+      `( godotProbeMask( flags ) & ${REFLECTION_PROBE_UNIFORMS.instanceLayers}[ 0 ] ) == 0u`
     );
   });
 

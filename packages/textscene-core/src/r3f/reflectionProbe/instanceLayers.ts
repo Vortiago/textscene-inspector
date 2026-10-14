@@ -7,13 +7,17 @@
 import type * as THREE from 'three';
 import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../godot/visualLayers.js';
 import { visualLayersOf } from '../visualLayers.js';
-import { instanceLayers } from './probeSlots.js';
+import { instanceLayers, shownProbes } from './probeSlots.js';
 
 /** Written only by `showInstanceLayers`, and cleared by `restoreInstanceLayers` after the draw. */
 let shownOn: THREE.WebGLRenderer | null = null;
 
-/** Shows `object`'s layers to the draw about to run. Most instances keep the default, which changes nothing. */
+/**
+ * Shows `object`'s layers to the draw about to run. Most instances keep the default, and a render
+ * that shows no probe reads no layers, so either changes nothing.
+ */
 export function showInstanceLayers(renderer: THREE.WebGLRenderer, object: THREE.Object3D): void {
+  if (shownProbes[0] === 0) return;
   const layers = visualLayersOf(object);
   if (layers === GODOT_DEFAULT_VISUAL_LAYERS) return;
   instanceLayers[0] = layers;

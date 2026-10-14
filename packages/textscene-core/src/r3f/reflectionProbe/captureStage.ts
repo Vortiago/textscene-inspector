@@ -4,20 +4,21 @@
  * (`render_forward_clustered.cpp:1819-1821`), which clears to the default clear colour instead.
  */
 
-import * as THREE from 'three';
-import { visualLayersOf } from '../visualLayers.js';
+import type * as THREE from 'three';
+import type { ReflectionProbeProperties } from '../../nodes/3d/reflectionprobe/types.js';
+import { isInMask } from '../visualLayers.js';
 
-export interface CaptureStage {
-  cullMask: number;
-  isInterior: boolean;
-  /** The project's default clear colour, which an interior capture clears to. */
-  clearColor: THREE.Color;
-}
-
-/** Stages `scene` for a capture, and answers the call that puts it back. */
-export function stageCapture(scene: THREE.Scene, stage: CaptureStage): () => void {
-  const restores = [hideCulled(scene, stage.cullMask)];
-  if (stage.isInterior) restores.push(dropEnvironment(scene, stage.clearColor));
+/**
+ * Stages `scene` for a capture of `probe`, and answers the call that puts it back. An interior
+ * capture clears to `clearColor`, the project's default clear colour.
+ */
+export function stageCapture(
+  scene: THREE.Scene,
+  probe: Pick<ReflectionProbeProperties, 'cullMask' | 'interior'>,
+  clearColor: THREE.Color
+): () => void {
+  const restores = [hideCulled(scene, probe.cullMask)];
+  if (probe.interior) restores.push(dropEnvironment(scene, clearColor));
   return () => {
     for (const restore of restores.reverse()) restore();
   };
@@ -41,7 +42,7 @@ function isInstance(object: THREE.Object3D): boolean {
 function hideCulled(scene: THREE.Scene, cullMask: number): () => void {
   const hidden: THREE.Object3D[] = [];
   scene.traverseVisible((object) => {
-    if (isInstance(object) && (visualLayersOf(object) & cullMask) === 0) hidden.push(object);
+    if (isInstance(object) && !isInMask(object, cullMask)) hidden.push(object);
   });
   for (const object of hidden) object.visible = false;
   return () => {

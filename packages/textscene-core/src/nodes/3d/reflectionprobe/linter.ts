@@ -9,7 +9,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
 import { loadedOriginOffset } from '../../../godot/reflectionProbe.js';
-import { formatReal, storedReal } from '../../../godot/real.js';
+import { formatReal, storedXyz } from '../../../godot/real.js';
 import type { Vector3 } from '../../../parser/vectors.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
@@ -79,7 +79,7 @@ function replayOriginOffset(rawProps: Record<string, string>): { written: Vector
   const written = lines.find(([key]) => key === 'origin_offset')?.[1];
   if (!written) return null;
   return {
-    written: { x: storedReal(written.x), y: storedReal(written.y), z: storedReal(written.z) },
+    written: storedXyz(written),
     loaded: loadedOriginOffset(lines),
   };
 }

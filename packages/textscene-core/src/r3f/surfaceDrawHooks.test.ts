@@ -4,7 +4,7 @@ import { applyShadowCasting, rangedShadowCastingEffects, shadowCastingEffects } 
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
 import type { ProgramShader } from './materialProgramInputs';
 import { drawsAsOneBatch } from './surfaceDrawHooks';
-import { instanceLayers } from './reflectionProbe/probeSlots';
+import { instanceLayers, shownProbes } from './reflectionProbe/probeSlots';
 import { setVisualLayers } from './visualLayers';
 import { testRenderer } from '../testing/recordingWebGL';
 import { billboardOf } from '../resources/materials/standardmaterial3d/materialBag';
@@ -303,8 +303,9 @@ describe('surfaceDrawHooks — identity', () => {
 });
 
 describe('surfaceDrawHooks — instance layers', () => {
-  it("shows the instance's layers to its colour draw, and the default after it", async () => {
+  it("shows the instance's layers to its colour draw in a render with probes, and the default after it", async () => {
     const { renderer } = await testRenderer();
+    shownProbes[0] = 1;
     const mesh = surfacesMesh();
     setVisualLayers(mesh, 4);
     const args = [
@@ -319,6 +320,7 @@ describe('surfaceDrawHooks — instance layers', () => {
     mesh.onBeforeRender(...args);
     const shown = instanceLayers[0];
     mesh.onAfterRender(...args);
+    shownProbes[0] = 0;
 
     expect([shown, instanceLayers[0]]).toEqual([4, 1]);
   });

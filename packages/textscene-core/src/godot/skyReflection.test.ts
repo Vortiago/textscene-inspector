@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { reflectionAtlasLayout } from './reflectionProbe';
-import { MOST_LAYER_SAMPLES, layerSamples, skyOctmapLayout } from './skyReflection';
+import {
+  MOST_LAYER_SAMPLES,
+  halvingSizes,
+  layerSamples,
+  paddedOctmap,
+  skyOctmapLayout,
+} from './skyReflection';
 
 describe('skyOctmapLayout', () => {
   it('pads the default 256 sky to 640 texels with 64 on each side', () => {
@@ -16,6 +22,30 @@ describe('skyOctmapLayout', () => {
 
   it('ends the downsampled chain at 10 texels at the smallest radiance size (edge case)', () => {
     expect(skyOctmapLayout(32).downsampledSizes).toEqual([40, 20, 10]);
+  });
+});
+
+describe('paddedOctmap', () => {
+  it('doubles the capture and pads it on each side', () => {
+    expect(paddedOctmap(256, 64)).toEqual({ size: 640, borderSize: 0.8 });
+  });
+
+  it('fills the whole octmap with no padding (edge case)', () => {
+    expect(paddedOctmap(16, 0)).toEqual({ size: 32, borderSize: 1 });
+  });
+});
+
+describe('halvingSizes', () => {
+  it('halves each width from the first', () => {
+    expect(halvingSizes(640, 4)).toEqual([640, 320, 160, 80]);
+  });
+
+  it('stops at one texel (edge case)', () => {
+    expect(halvingSizes(4, 5)).toEqual([4, 2, 1, 1, 1]);
+  });
+
+  it('gives no width for no mips (edge case)', () => {
+    expect(halvingSizes(640, 0)).toEqual([]);
   });
 });
 
@@ -45,6 +75,10 @@ describe('layerSamples', () => {
     expect(smoother).toHaveLength(64);
     expect(mean(smoother, cosine)).toBeGreaterThan(mean(samples, cosine));
     expect(mean(smoother, lod)).toBeLessThan(mean(samples, lod));
+  });
+
+  it('refuses a layer the layout does not have', () => {
+    expect(() => layerSamples(skyOctmapLayout(256), 8)).toThrow('expected a layer from 0 to 7, got 8');
   });
 });
 

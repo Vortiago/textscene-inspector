@@ -1,6 +1,6 @@
 /**
  * `createResourceProcessor`, the factory behind every processor, in both fetch
- * modes: FileEventBus-driven (`shouldProcess` and `process`) and direct (`loadDirectly`).
+ * modes: FileEventBus-driven (`readsFile`, `shouldProcess` and `process`) and direct (`loadDirectly`).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createResourceProcessor, type ResourceProcessor } from './createResourceProcessor';
@@ -140,6 +140,48 @@ describe('createResourceProcessor', () => {
 
       expect(failedHandler).not.toHaveBeenCalled();
       expect(processor.isCached('res://a.bin')).toBe(false);
+    });
+
+    describe('readsFile gating', () => {
+      let reader: ResourceProcessor<string>;
+      const failedHandler = vi.fn();
+
+      beforeEach(() => {
+        failedHandler.mockClear();
+        eventBus.on<Error>('resource', 'failed', failedHandler);
+        reader = createResourceProcessor<string>({
+          fileEventBus,
+          eventBus,
+          resourceType: 'resource',
+          readsFile: (filePath) => filePath.endsWith('.txt'),
+          process: processSpy as (path: string, data: FileData) => Promise<string>,
+        });
+      });
+
+      it('reads a file it accepts', async () => {
+        provider.files.set('res://a.txt', 'bytes');
+        reader.request('res://a.txt');
+        await flush();
+
+        expect(reader.getCached('res://a.txt')).toBe('processed:bytes');
+      });
+
+      it('fails a file it refuses without fetching it (error case)', () => {
+        reader.request('res://sky.hdr');
+
+        expect(provider.loadResource).not.toHaveBeenCalled();
+        expect(String(failedHandler.mock.calls[0]![1])).toContain(
+          'resource processor does not read res://sky.hdr'
+        );
+        expect(reader.isLoading('res://sky.hdr')).toBe(false);
+      });
+
+      it("asks about a sub-resource's owning file (edge case)", () => {
+        reader.request('res://sky.hdr::Image_1');
+
+        expect(provider.loadResource).not.toHaveBeenCalled();
+        expect(failedHandler).toHaveBeenCalledWith('res://sky.hdr::Image_1', expect.any(Error));
+      });
     });
 
     it('a failure is cached and a repeat request re-emits its reason WITHOUT re-hitting the provider', async () => {

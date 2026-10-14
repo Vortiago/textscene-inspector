@@ -5,7 +5,8 @@
  * by how far inside the box the fragment lies. The smallest box claims a fragment first.
  */
 
-import { MAX_ROUGHNESS_LOD, ReflectionProbeAmbientMode } from '../../godot/reflectionProbe.js';
+import { ReflectionProbeAmbientMode } from '../../godot/reflectionProbe.js';
+import { MAX_ROUGHNESS_LOD } from '../../godot/skyReflection.js';
 import { glslFloat } from '../../resources/environment/glslLiterals.js';
 import { OCTMAP_GLSL } from '../../resources/sky/skyLayerShaders.js';
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
@@ -31,9 +32,8 @@ vec4 godotProbeTexel( int index, int texel ) {
 	return texelFetch( ${rows}, ivec2( texel, index ), 0 );
 }
 
-uint godotProbeMask( int index ) {
-	vec2 halves = godotProbeTexel( index, 6 ).xy;
-	return uint( halves.x ) | ( uint( halves.y ) << 16u );
+uint godotProbeMask( vec4 flags ) {
+	return uint( flags.x ) | ( uint( flags.y ) << 16u );
 }
 
 float godotProbeAxisBlend( float position, float extent, float blendDistance ) {
@@ -51,7 +51,7 @@ vec3 godotProbeAtlasRead( vec3 direction, float layer, float lod ) {
 	return textureLod( ${atlas}, vec3( uv, layer ), min( lod, shown.z ) ).rgb;
 }
 
-void godotReflectionProbe( int index, vec3 position, vec3 reflectVec, vec3 normal, float roughness, inout vec4 reflection, inout vec4 ambient ) {
+void godotReflectionProbe( int index, vec4 flags, vec3 position, vec3 reflectVec, vec3 normal, float roughness, inout vec4 reflection, inout vec4 ambient ) {
 	vec4 toLocalX = godotProbeTexel( index, 0 );
 	vec4 toLocalY = godotProbeTexel( index, 1 );
 	vec4 toLocalZ = godotProbeTexel( index, 2 );
@@ -65,7 +65,6 @@ void godotReflectionProbe( int index, vec3 position, vec3 reflectVec, vec3 norma
 		blend *= blend;
 	}
 	vec4 offset = godotProbeTexel( index, 4 );
-	vec4 flags = godotProbeTexel( index, 6 );
 	if ( offset.w > 0.0 && reflection.a < 1.0 ) {
 		vec3 localReflect = vec3( dot( toLocalX.xyz, reflectVec ), dot( toLocalY.xyz, reflectVec ), dot( toLocalZ.xyz, reflectVec ) );
 		if ( flags.z > 0.5 ) {
@@ -100,9 +99,10 @@ void godotGatherReflectionProbes( vec3 viewPosition, vec3 normal, vec3 viewDir, 
 	vec3 worldReflect = ( vec4( reflectVec, 0.0 ) * viewMatrix ).xyz;
 	vec3 worldNormal = ( vec4( normal, 0.0 ) * viewMatrix ).xyz;
 	for ( int index = probeCount - 1; index >= 0; index -- ) {
-		if ( ( godotProbeMask( index ) & ${layers}[ 0 ] ) == 0u ) continue;
+		vec4 flags = godotProbeTexel( index, 6 );
+		if ( ( godotProbeMask( flags ) & ${layers}[ 0 ] ) == 0u ) continue;
 		if ( reflection.a >= 1.0 && ambient.a >= 1.0 ) break;
-		godotReflectionProbe( index, worldPosition, worldReflect, worldNormal, roughness, reflection, ambient );
+		godotReflectionProbe( index, flags, worldPosition, worldReflect, worldNormal, roughness, reflection, ambient );
 	}
 }
 `;

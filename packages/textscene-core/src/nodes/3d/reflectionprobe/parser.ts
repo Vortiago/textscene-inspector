@@ -11,6 +11,7 @@ import {
   ReflectionProbeUpdateMode,
 } from '../../../godot/reflectionProbe';
 import type { Xyz } from '../../../godot/xyz';
+import { clamp } from '../../../godot/math';
 import type { ParsedHeading } from '../../../parser/utils';
 import { boolOr, enumOr, floatOr, intOr, vec3Or } from '../../../parser/valueParsers';
 import { colorOr } from '../../../utils/colorParser';
@@ -82,7 +83,7 @@ function parseBox(properties: Record<string, string>): { size: Xyz; originOffset
 /** `set_max_distance` clamps to `[0, 262144]` (`reflection_probe.cpp:81`). */
 function parseMaxDistance(value: string | undefined): number {
   const distance = floatOr(value, REFLECTION_PROBE_DEFAULTS.maxDistance, 'ReflectionProbe max_distance');
-  return Math.min(Math.max(distance, 0), REFLECTION_PROBE_MAX_DISTANCE);
+  return clamp(distance, 0, REFLECTION_PROBE_MAX_DISTANCE);
 }
 
 /** The setters take a `uint32_t` (`reflection_probe.h:117-120`). */

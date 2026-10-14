@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import { CAPTURE_NEAR } from '../../godot/reflectionProbe.js';
+import { CAPTURE_NEAR, FACE_NORMALS } from '../../godot/reflectionProbe.js';
 import type { Xyz } from '../../godot/xyz.js';
 
 /** What a capture's renders draw differently from the scene's own. */
@@ -16,16 +16,16 @@ export interface ProbeCapture {
 }
 
 /**
- * Each face's view direction and up, in Godot's face order. They match three's cube cameras, so a
- * face lands in its own face of a cube render target.
+ * Each face's up, beside its view direction in `FACE_NORMALS`. They match three's cube cameras, so
+ * a face lands in its own face of a cube render target.
  */
-const FACES: readonly { normal: THREE.Vector3; up: THREE.Vector3 }[] = [
-  { normal: new THREE.Vector3(1, 0, 0), up: new THREE.Vector3(0, -1, 0) },
-  { normal: new THREE.Vector3(-1, 0, 0), up: new THREE.Vector3(0, -1, 0) },
-  { normal: new THREE.Vector3(0, 1, 0), up: new THREE.Vector3(0, 0, 1) },
-  { normal: new THREE.Vector3(0, -1, 0), up: new THREE.Vector3(0, 0, -1) },
-  { normal: new THREE.Vector3(0, 0, 1), up: new THREE.Vector3(0, -1, 0) },
-  { normal: new THREE.Vector3(0, 0, -1), up: new THREE.Vector3(0, -1, 0) },
+const FACE_UPS: readonly THREE.Vector3[] = [
+  new THREE.Vector3(0, -1, 0),
+  new THREE.Vector3(0, -1, 0),
+  new THREE.Vector3(0, 0, 1),
+  new THREE.Vector3(0, 0, -1),
+  new THREE.Vector3(0, -1, 0),
+  new THREE.Vector3(0, -1, 0),
 ];
 
 /** Written only by `captureCameras`. A camera leaves it once it is collected. */
@@ -36,17 +36,22 @@ export function probeCaptureOf(camera: THREE.Camera): ProbeCapture | undefined {
   return captures.get(camera);
 }
 
-/** Scratch for one face's pose, overwritten by each. */
+/** Scratch for one frame or one face's pose, overwritten by each. */
 const eye = new THREE.Vector3();
 const target = new THREE.Vector3();
 const position = new THREE.Vector3();
 const rotation = new THREE.Quaternion();
 const scale = new THREE.Vector3();
 
+/** The probe's frame: its world transform without the scale, which the probe disables (`reflection_probe.cpp:304-308`). */
+export function probeFrame(probeWorld: THREE.Matrix4): THREE.Matrix4 {
+  probeWorld.decompose(position, rotation, scale);
+  return new THREE.Matrix4().compose(position, rotation, scale.set(1, 1, 1));
+}
+
 /**
- * The cameras of a capture from `originOffset` in the probe's frame `probeWorld`, each 90 degrees
- * square from Godot's near plane to its own far plane. The probe disables its scale
- * (`reflection_probe.cpp:304-308`), so the frame drops it.
+ * The cameras of a capture from `originOffset` in the probe's frame, each 90 degrees square from
+ * Godot's near plane to its own far plane.
  */
 export function captureCameras(
   probeWorld: THREE.Matrix4,
@@ -54,12 +59,12 @@ export function captureCameras(
   farPlanes: readonly number[],
   capture: ProbeCapture
 ): THREE.PerspectiveCamera[] {
-  probeWorld.decompose(position, rotation, scale);
-  const frame = new THREE.Matrix4().compose(position, rotation, scale.set(1, 1, 1));
+  const frame = probeFrame(probeWorld);
   eye.set(originOffset.x, originOffset.y, originOffset.z);
-  return FACES.map(({ normal, up }, face) => {
+  return FACE_NORMALS.map((normal, face) => {
     const camera = new THREE.PerspectiveCamera(90, 1, CAPTURE_NEAR, farPlanes[face]);
-    const local = new THREE.Matrix4().lookAt(eye, target.addVectors(eye, normal), up).setPosition(eye);
+    target.set(eye.x + normal.x, eye.y + normal.y, eye.z + normal.z);
+    const local = new THREE.Matrix4().lookAt(eye, target, FACE_UPS[face]!).setPosition(eye);
     camera.matrixWorld.multiplyMatrices(frame, local);
     camera.matrixWorld.decompose(camera.position, camera.quaternion, camera.scale);
     camera.matrixWorldInverse.copy(camera.matrixWorld).invert();

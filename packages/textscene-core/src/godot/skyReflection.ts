@@ -38,6 +38,9 @@ export const FAST_FILTER_SUPER_TAPS_PER_FRAME = 2;
  */
 export const SKY_ROUGHNESS_LAYERS_DEFAULT = 8;
 
+/** The blurriest radiance layer, the default layers less one (`render_forward_clustered.cpp:4998`). */
+export const MAX_ROUGHNESS_LOD = SKY_ROUGHNESS_LAYERS_DEFAULT - 1;
+
 /**
  * The default of `rendering/reflections/sky_reflections/ggx_samples`
  * (`servers/rendering/rendering_server.cpp:3730`), under the filter's cap of 64.
@@ -65,14 +68,30 @@ export interface SkyOctmapLayout {
 export function skyOctmapLayout(radianceSize: number): SkyOctmapLayout {
   // `get_image_required_mipmaps` + 1 counts the mips down to 1x1, and Godot drops two.
   const mipmaps = Math.log2(radianceSize) + 1 - 2;
-  const paddingPixels = 2 ** (mipmaps - 1);
-  const size = radianceSize * 2 + paddingPixels * 2;
+  const { size, borderSize } = paddedOctmap(radianceSize, 2 ** (mipmaps - 1));
   return {
     size,
-    borderSize: 1 - (paddingPixels * 2) / size,
+    borderSize,
     layerSizes: Array.from({ length: SKY_ROUGHNESS_LAYERS_DEFAULT }, () => size),
-    downsampledSizes: Array.from({ length: mipmaps - 1 }, (_, mip) => Math.max(1, (size / 2) >> mip)),
+    downsampledSizes: halvingSizes(size >> 1, mipmaps - 1),
   };
+}
+
+/**
+ * The octmap of a capture `captureSize` wide: twice as wide, to match a cube's texel density, in a
+ * border of `paddingPixels` on each side, which `oct_inc.glsl`'s `border_size` leaves out in UV.
+ */
+export function paddedOctmap(
+  captureSize: number,
+  paddingPixels: number
+): { size: number; borderSize: number } {
+  const size = captureSize * 2 + paddingPixels * 2;
+  return { size, borderSize: 1 - (paddingPixels * 2) / size };
+}
+
+/** `count` mip widths from `first`, each half the one before and at least one texel. */
+export function halvingSizes(first: number, count: number): number[] {
+  return Array.from({ length: count }, (_, mip) => Math.max(1, first >> mip));
 }
 
 export interface LayerSample {
