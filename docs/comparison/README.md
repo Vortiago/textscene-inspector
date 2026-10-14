@@ -52,6 +52,15 @@ reproduced:
 - **Relay chains** resolve in document (pre-order) order. A feedback loop is not
   iterated to a fixed point.
 
+## Why a 2D background reads 77 here and 76 in Godot
+
+Both sides clear a 2D scene to `default_clear_color`, 0.3 grey. The Godot images
+read 76 there, and the previewer reads 77. The value is 76.5 in 8 bits, so the
+driver's rounding decides the byte. `pnpm ref:godot` renders on Vulkan through
+lavapipe, which gives 76, and `--rendering-driver opengl3` gives 77. The
+previewer clears through WebGL, which gives 77. This 1/255 gap is not a parity
+defect.
+
 ## 3D
 
 - [AimModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/aimmodifier3d/comparison.md): nothing yet, Godot rotates a bone toward its target, the previewer does not
