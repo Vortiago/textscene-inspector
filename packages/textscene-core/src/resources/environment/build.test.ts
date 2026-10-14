@@ -181,7 +181,7 @@ describe('createEnvironmentSettings', () => {
     expect(colored.ambient?.energy).toBe(0.5);
   });
 
-  it('should create settings with adjustments enabled', () => {
+  it('passes the contrast and saturation through unchanged', () => {
     const settings = createEnvironmentSettings(
       base({
         adjustment_enabled: true,

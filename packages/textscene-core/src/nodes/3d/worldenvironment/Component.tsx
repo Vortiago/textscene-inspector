@@ -1,8 +1,8 @@
 /**
  * <WorldEnvironment> applies the scene's Environment: background, sky, ambient, tonemapping, fog,
- * glow and the colour adjustments, but not SSR. `useResolvedEnvironment` follows the reference chain. The
- * application lives in `<EnvironmentLayer>`, shared with the editor preview environment (ADR-0025)
- * so the two cannot drift. The node draws no geometry, and its children still render.
+ * glow and the colour adjustments, but not SSR. `useResolvedEnvironment` follows the reference
+ * chain. The application lives in `<EnvironmentLayer>`, shared with the editor preview environment
+ * (ADR-0025) so the two cannot drift. The node draws no geometry, and its children still render.
  */
 
 import type { WorldEnvironmentProperties } from './types';

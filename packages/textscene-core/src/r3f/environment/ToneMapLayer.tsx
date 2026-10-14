@@ -8,13 +8,13 @@ import { useEffect, useMemo } from 'react';
 import type { Effect } from 'postprocessing';
 import { EffectComposer } from '@react-three/postprocessing';
 import type { GlowParams } from '../../resources/environment/godotGlow';
-import type { EnvironmentSettings } from '../../resources/environment/types';
+import type { EnvironmentAdjustments, EnvironmentSettings } from '../../resources/environment/types';
 import { GodotToneMapEffect } from './GodotToneMapEffect';
 
 export interface ToneMapLayerProps {
   /** Null when the environment has no glow, or nothing in the scene can bloom. */
   glow: GlowParams | null;
-  adjustments: EnvironmentSettings['adjustments'];
+  adjustments: EnvironmentAdjustments | null;
   toneMapping: EnvironmentSettings['toneMapping'];
 }
 

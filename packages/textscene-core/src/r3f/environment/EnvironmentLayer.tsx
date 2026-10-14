@@ -41,9 +41,8 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
-  // Blending and glow both need linear HDR ahead of the tone curve, and the adjustments act on the
-  // whole tonemapped frame, so the compositor owns the curve when any is live. The HDR pass is not
-  // free, so glow and blending are gated on the scene being able to show them.
+  // Glow, blending and the adjustments all run in the compositor's tone pass, so it owns the curve
+  // when any is live. Glow and blending are gated on the scene showing them: the HDR pass is not free.
   const glowParams = useMemo(() => glowParamsFor(settings), [settings]);
   // Null when a scan cannot decide: nothing could glow, or every pixel glows. One nullable value,
   // not a threshold and a flag, since a threshold of 0 means "everything blooms".

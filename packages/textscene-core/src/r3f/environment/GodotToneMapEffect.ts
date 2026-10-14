@@ -1,7 +1,8 @@
 /**
  * Godot's tonemap pass as one effect: the tone curve, plus the glow gather and blend under
- * `FLAG_USE_GLOW` and the colour adjustments under `FLAG_USE_BCS`, as in `tonemap.glsl`. One shader lets SOFTLIGHT composite after the curve, with
- * the glow buffer tonemapped, and every other mode before it, which a fixed pass order cannot express.
+ * `FLAG_USE_GLOW` and the colour adjustments under `FLAG_USE_BCS`, as in `tonemap.glsl`. One shader
+ * lets SOFTLIGHT composite after the curve, with the glow buffer tonemapped, and every other mode
+ * before it, which a fixed pass order cannot express.
  */
 
 import { BlendFunction, Effect } from 'postprocessing';
@@ -62,11 +63,11 @@ export class GodotToneMapEffect extends Effect {
 
     super(
       'GodotToneMapEffect',
-      compositeGlsl(
+      compositeGlsl({
         glow,
-        { mode: toneMapMode, white: toneMapWhite, agxContrast: toneMapAgxContrast },
-        adjustments
-      ),
+        toneMapping: { mode: toneMapMode, white: toneMapWhite, agxContrast: toneMapAgxContrast },
+        adjustments,
+      }),
       {
         // The effect writes the finished frame, glow and curve applied, so the composer must not
         // blend it into the scene again.

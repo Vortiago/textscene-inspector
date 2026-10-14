@@ -12,13 +12,18 @@
 import { blendGlsl, blendsAfterToneMapping, type GlowParams } from './godotGlow';
 import { glslFloat } from './glslLiterals';
 import { resolvedWhite, toneMappingEffectGlsl } from './godotToneMapping';
-import type { EnvironmentAdjustments } from './types';
+import type { EnvironmentAdjustments, EnvironmentSettings } from './types';
 import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/srgbTransfer';
 
-interface CompositeToneMapping {
-  mode: number;
-  white: number;
+export type CompositeToneMapping = Pick<EnvironmentSettings['toneMapping'], 'mode' | 'white'> & {
   agxContrast?: number;
+};
+
+/** One field per `tonemap.glsl` flag group. A null clears that flag. */
+export interface CompositeOptions {
+  glow: GlowParams | null;
+  toneMapping: CompositeToneMapping;
+  adjustments: EnvironmentAdjustments | null;
 }
 
 /**
@@ -27,11 +32,7 @@ interface CompositeToneMapping {
  * bright pass already exposed the glow, so the curve runs at exposure 1.0. A null `glow` clears
  * `FLAG_USE_GLOW`, and a null `adjustments` clears `FLAG_USE_BCS`.
  */
-export function compositeGlsl(
-  glow: GlowParams | null,
-  toneMapping: CompositeToneMapping,
-  adjustments: EnvironmentAdjustments | null
-): string {
+export function compositeGlsl({ glow, toneMapping, adjustments }: CompositeOptions): string {
   return /* glsl */ `
 uniform float godotExposure;
 ${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
