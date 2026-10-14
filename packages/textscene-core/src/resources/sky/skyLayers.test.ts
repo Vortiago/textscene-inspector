@@ -1,14 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { SKY_LAYER_GROUPS, readCubeRadiance, skyLayers, type SkyLayers } from './skyLayers';
-import type { RadianceFilter } from './types';
+import { REAL_TIME_RADIANCE_SIZE } from '../../godot/skyReflection';
+import type { SkyBake } from './types';
 
-/** Godot's smallest radiance size, so the importance-sample filter bakes a layout Godot uses. */
-const SIZE = 32;
+/** Godot's smallest radiance size, the cheapest bake of a layout Godot uses. */
+const IMPORTANCE_SAMPLE: SkyBake = { radianceFilter: 'importance-sample', radianceSize: 32 };
+const FAST: SkyBake = { radianceFilter: 'fast', radianceSize: REAL_TIME_RADIANCE_SIZE };
 
-/** Six RGBA faces, each filled with the radiance `radiance` gives its index. */
-function cube(radiance: (face: number) => number): Float32Array[] {
-  return Array.from({ length: 6 }, (_, face) => new Float32Array(SIZE * SIZE * 4).fill(radiance(face)));
+/** Six RGBA faces `size` wide, each filled with the radiance `radiance` gives its index. */
+function cube(size: number, radiance: (face: number) => number): Float32Array[] {
+  return Array.from({ length: 6 }, (_, face) => new Float32Array(size * size * 4).fill(radiance(face)));
+}
+
+/** The +Y face lit, every other face dark, on a cube `size` wide. */
+function litUpCube(size: number): Float32Array[] {
+  return cube(size, (f) => (f === 2 ? 1 : 0));
 }
 
 const [LAST_SIZE] = SKY_LAYER_GROUPS.last.faceSizes;
@@ -26,17 +33,13 @@ function centreOf(faces: readonly Uint16Array[], face: number): number {
   return THREE.DataUtils.fromHalfFloat(faces[face]![((size / 2) * size + size / 2) * 4]!);
 }
 
-/** The +Y face lit, every other face dark. */
-const LIT_UP = cube((f) => (f === 2 ? 1 : 0));
-
-describe.each<RadianceFilter>(['importance-sample', 'fast'])('skyLayers with the %s filter', (filter) => {
+describe.each([IMPORTANCE_SAMPLE, FAST])('skyLayers with the $radianceFilter filter', (bake) => {
   // Baked once: a bake takes about a second here, and no test changes what it returns.
   const uniform = skyLayers(
-    cube(() => 0.5),
-    SIZE,
-    filter
+    cube(bake.radianceSize, () => 0.5),
+    bake
   );
-  const litUp = skyLayers(LIT_UP, SIZE, filter);
+  const litUp = skyLayers(litUpCube(bake.radianceSize), bake);
 
   it('bakes each group at its face sizes, as a mip chain', () => {
     for (const group of ['sharp', 'rough', 'last'] as const) {
@@ -58,9 +61,8 @@ describe.each<RadianceFilter>(['importance-sample', 'fast'])('skyLayers with the
 
   it.each([0, 1, 2, 3, 4, 5])('lights the side cube face %i faces more than its opposite', (face) => {
     const layers = skyLayers(
-      cube((f) => (f === face ? 1 : 0)),
-      SIZE,
-      filter
+      cube(bake.radianceSize, (f) => (f === face ? 1 : 0)),
+      bake
     );
     expect(ambientAt(layers, face, CENTRE, CENTRE)).toBeGreaterThan(0.4);
     expect(ambientAt(layers, face ^ 1, CENTRE, CENTRE)).toBeLessThan(0.05);
@@ -83,27 +85,27 @@ describe.each<RadianceFilter>(['importance-sample', 'fast'])('skyLayers with the
 
 describe('skyLayers', () => {
   it('refuses a cube without six faces', () => {
-    expect(() => skyLayers(cube(() => 1).slice(1), SIZE, 'importance-sample')).toThrow(
+    expect(() => skyLayers(cube(32, () => 1).slice(1), IMPORTANCE_SAMPLE)).toThrow(
       'expected 6 cube faces, got 5'
     );
   });
 
   it('refuses a face whose length is not the face size squared in RGBA', () => {
-    const faces = cube(() => 1);
+    const faces = cube(32, () => 1);
     faces[3] = new Float32Array(4);
-    expect(() => skyLayers(faces, SIZE, 'importance-sample')).toThrow(
-      `expected 6 RGBA faces of ${SIZE}x${SIZE}, got face 3 with 4 values`
+    expect(() => skyLayers(faces, IMPORTANCE_SAMPLE)).toThrow(
+      'expected 6 RGBA faces of 32x32, got face 3 with 4 values'
     );
   });
 
   it('reads layer 6 for the last layer of a real-time sky, the roughest it has', () => {
-    const layers = skyLayers(LIT_UP, SIZE, 'fast');
+    const layers = skyLayers(litUpCube(FAST.radianceSize), FAST);
     expect(centreOf(layers.last[0]!, 2)).toBeCloseTo(centreOf(layers.rough.at(-1)!, 2), 2);
   });
 
   it('keeps a lit face brighter in the ambient of a real-time sky, as layer 6 is sharper than 7', () => {
-    expect(ambientAt(skyLayers(LIT_UP, SIZE, 'fast'), 2, CENTRE, CENTRE)).toBeGreaterThan(
-      ambientAt(skyLayers(LIT_UP, SIZE, 'importance-sample'), 2, CENTRE, CENTRE)
+    expect(ambientAt(skyLayers(litUpCube(FAST.radianceSize), FAST), 2, CENTRE, CENTRE)).toBeGreaterThan(
+      ambientAt(skyLayers(litUpCube(IMPORTANCE_SAMPLE.radianceSize), IMPORTANCE_SAMPLE), 2, CENTRE, CENTRE)
     );
   });
 });

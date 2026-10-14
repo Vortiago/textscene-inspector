@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import type { Sky } from './types';
+import type { Sky, SkyBake } from './types';
 import { warn } from '../../logger';
 import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
@@ -32,12 +32,13 @@ const LARGEST_RADIANCE_SIZE = 256;
  * Godot's sky ambient is the sky's own radiance: it lights surfaces and is what
  * they reflect (`Environment.reflection_source` defaults to the background).
  * So a cube render at the radiance size feeds the PMREM-prefiltered
- * `scene.environment` and Godot's layers 1 to 7 of it, and `scene.background`
- * when the size is the background's.
+ * `scene.environment` and Godot's layers 1 to 7 of it. A sky that paints the
+ * background renders a cube for `scene.background` too, the same cube when the
+ * sizes match.
  */
 export interface SkyEnvironment {
-  /** Sharp cubemap for `scene.background`. */
-  background: THREE.Texture;
+  /** Sharp cubemap for `scene.background`, or null for a sky that does not paint it. */
+  background: THREE.Texture | null;
   /** PMREM-prefiltered radiance for `scene.environment`, whose mip 0 a mirror reflects. */
   environment: THREE.Texture;
   /** Godot's layers 1 to 7, which its ambient and its reflections read. */
@@ -49,6 +50,8 @@ export interface SkyEnvironmentInput {
   sky: Sky;
   lights: readonly SkyLight[];
   panorama?: THREE.Texture | null;
+  /** Whether the sky paints the background, which then needs a cube of its own size. */
+  asBackground: boolean;
 }
 
 /**
@@ -72,7 +75,7 @@ export function skyPanoramaTexture(panorama?: THREE.Texture | null): THREE.Textu
  */
 export function buildSkyEnvironment(
   gl: THREE.WebGLRenderer,
-  { sky, lights, panorama }: SkyEnvironmentInput
+  { sky, lights, panorama, asBackground }: SkyEnvironmentInput
 ): SkyEnvironment | null {
   const tiledPanorama = skyPanoramaTexture(panorama);
   const geometry = new THREE.BoxGeometry(2, 2, 2);
@@ -88,10 +91,13 @@ export function buildSkyEnvironment(
   const skyScene = new THREE.Scene();
   skyScene.add(new THREE.Mesh(geometry, material));
 
-  const radianceSize = Math.min(sky.radianceSize, LARGEST_RADIANCE_SIZE);
-  const backgroundTarget = cubeTarget(BACKGROUND_SIZE);
-  const hasOwnRadianceCube = radianceSize !== BACKGROUND_SIZE;
-  const radianceTarget = hasOwnRadianceCube ? cubeTarget(radianceSize) : backgroundTarget;
+  const bake = cappedBake(sky);
+  const backgroundTarget = asBackground ? cubeTarget(BACKGROUND_SIZE) : null;
+  const radianceTarget =
+    backgroundTarget && bake.radianceSize === BACKGROUND_SIZE
+      ? backgroundTarget
+      : cubeTarget(bake.radianceSize);
+  const hasOwnRadianceCube = radianceTarget !== backgroundTarget;
   let pmrem: THREE.PMREMGenerator | null = null;
   let prefiltered: THREE.WebGLRenderTarget | null = null;
   let layers: SkyLayers;
@@ -99,15 +105,15 @@ export function buildSkyEnvironment(
   try {
     // The cube camera sits at the origin inside the unit box, so each face
     // samples the same directions Godot's `EYEDIR` covers.
-    renderCube(gl, skyScene, backgroundTarget);
+    if (backgroundTarget) renderCube(gl, skyScene, backgroundTarget);
     if (hasOwnRadianceCube) renderCube(gl, skyScene, radianceTarget);
-    layers = skyLayers(readCubeRadiance(gl, radianceTarget), radianceSize, sky.radianceFilter);
+    layers = skyLayers(readCubeRadiance(gl, radianceTarget), bake);
 
     pmrem = new THREE.PMREMGenerator(gl);
     prefiltered = pmrem.fromCubemap(radianceTarget.texture);
   } catch (error) {
     warn('[Sky] could not render the sky environment', error);
-    backgroundTarget.dispose();
+    backgroundTarget?.dispose();
     prefiltered?.dispose();
     return null;
   } finally {
@@ -122,13 +128,22 @@ export function buildSkyEnvironment(
   }
 
   return {
-    background: backgroundTarget.texture,
+    background: backgroundTarget?.texture ?? null,
     environment: prefiltered.texture,
     layers,
     dispose: () => {
-      backgroundTarget.dispose();
+      backgroundTarget?.dispose();
       prefiltered.dispose();
     },
+  };
+}
+
+/** The bake the previewer runs: an importance-sampled sky above `LARGEST_RADIANCE_SIZE` bakes at it. */
+function cappedBake(bake: SkyBake): SkyBake {
+  if (bake.radianceFilter === 'fast') return bake;
+  return {
+    radianceFilter: 'importance-sample',
+    radianceSize: Math.min(bake.radianceSize, LARGEST_RADIANCE_SIZE),
   };
 }
 

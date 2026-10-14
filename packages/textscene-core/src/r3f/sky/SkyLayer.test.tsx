@@ -94,6 +94,18 @@ describe('SkyLayer', () => {
     expect(lastBake()?.lights).toHaveLength(1);
   });
 
+  it.each([true, false])(
+    'bakes the background only when the sky paints it (asBackground %s)',
+    async (asBackground) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <SkyLayer sky={SKY} rotation={NO_ROTATION} asBackground={asBackground} />
+      );
+      await advance(renderer, 1);
+
+      expect(lastBake()?.asBackground).toBe(asBackground);
+    }
+  );
+
   it('does not bake again while the lights stay the same', async () => {
     const renderer = await ReactThreeTestRenderer.create(<Scene lights={1} />);
     await advance(renderer, 3);

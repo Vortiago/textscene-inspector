@@ -17,7 +17,7 @@ import { fastFilter } from './fastFilter.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
 import type { LayerFilter } from './layerFilter.js';
 import { addBilinear, blankOctmap, type Octmap } from './octmapImage.js';
-import type { RadianceFilter } from './types.js';
+import type { SkyBake } from './types.js';
 
 /**
  * Bound once, not read from `Math` per call: a global lookup inside a VM context, where the
@@ -100,17 +100,14 @@ function fromHalfFloats(half: Uint16Array): Float32Array {
 }
 
 /**
- * Godot's baked layers of the sky `radiance` holds, a cube of RGBA faces `size` wide, through
- * `radianceFilter`. The cube stands for Godot's radiance octmap of the same size, which is twice as
+ * Godot's baked layers of the sky `radiance` holds, a cube of RGBA faces as wide as the bake's
+ * radiance size. The cube stands for Godot's radiance octmap of the same size, which is twice as
  * wide to match a cube's texel density (`sky.cpp:1553-1554`).
  */
-export function skyLayers(
-  radiance: readonly Float32Array[],
-  size: number,
-  radianceFilter: RadianceFilter
-): SkyLayers {
+export function skyLayers(radiance: readonly Float32Array[], bake: SkyBake): SkyLayers {
+  const size = bake.radianceSize;
   checkCube(radiance, size);
-  const filter = radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(size);
+  const filter = bake.radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(size);
   const mips: Octmap[] = [];
   let source = baseOctmap(radiance, size * size, filter.layout.size, baseTexelsOf(size, filter.layout));
   for (const step of stepsOf(filter)) {

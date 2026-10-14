@@ -4,6 +4,7 @@
  * shader-uniform conversions happen on upload, in `build.ts`.
  */
 
+import type { REAL_TIME_RADIANCE_SIZE } from '../../godot/skyReflection';
 import type { Color } from '../../utils/colorParser';
 
 export interface ProceduralSkyProperties {
@@ -56,15 +57,13 @@ export interface SkyProcessing {
 }
 
 /**
- * The filter Godot bakes a sky's rough radiance layers with: GGX importance sampling, or the fast
- * filter of a real-time sky.
+ * How Godot bakes a sky's radiance layers: GGX importance sampling, or the fast filter. The fast
+ * filter comes only with a real-time sky, which Godot bakes at `REAL_TIME_RADIANCE_SIZE` whatever
+ * its `radiance_size` (`sky.cpp:590-592`).
  */
-export type RadianceFilter = 'importance-sample' | 'fast';
+export type SkyBake =
+  | { radianceFilter: 'fast'; radianceSize: typeof REAL_TIME_RADIANCE_SIZE }
+  | { radianceFilter: 'importance-sample'; radianceSize: number };
 
 /** A Godot `Sky` as the renderer draws it: its material, and how its radiance layers bake. */
-export interface Sky {
-  material: SkyProperties;
-  radianceFilter: RadianceFilter;
-  /** The size Godot bakes the radiance at: 256 for a real-time sky, else `radiance_size`'s. */
-  radianceSize: number;
-}
+export type Sky = { material: SkyProperties } & SkyBake;

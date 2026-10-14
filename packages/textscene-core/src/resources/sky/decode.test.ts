@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { decodeSky, decodeSkyMaterial, decodeSkyProcessing, skyMaterialRef } from './decode';
 import { warningsOf } from '../../r3f/testing/logWarnings';
+import type { SkyBake } from './types';
 
 describe('decodeSkyMaterial — ProceduralSkyMaterial', () => {
   it('applies Godot’s constructor defaults for a bare material', () => {
@@ -187,5 +188,13 @@ describe('decodeSky — the size a Sky’s radiance bakes at', () => {
 
   it('keeps 256 for an index the setter refuses (error case)', () => {
     expect(decodeSky({ radiance_size: '9' }, material).radianceSize).toBe(256);
+  });
+
+  it('admits the fast filter only at the real-time size', () => {
+    // A type contract, held by `type-check:tests`: no Sky reaches the fast filter at another size.
+    // @ts-expect-error: Godot bakes a real-time sky at REAL_TIME_RADIANCE_SIZE alone.
+    const fastAt32: SkyBake = { radianceFilter: 'fast', radianceSize: 32 };
+    const importanceAt32: SkyBake = { radianceFilter: 'importance-sample', radianceSize: 32 };
+    expect(fastAt32.radianceSize).toBe(importanceAt32.radianceSize);
   });
 });

@@ -56,7 +56,7 @@ describe('buildSkyEnvironment layers', () => {
     );
     const sky = defaultSky('ProceduralSkyMaterial');
 
-    const env = buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [] });
+    const env = buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [], asBackground: true });
 
     expect([env!.layers.sharp, env!.layers.rough, env!.layers.last].map((g) => g.length)).toEqual([3, 3, 1]);
     expect(THREE.DataUtils.fromHalfFloat(env!.layers.last[0]![2]![1]!)).toBeCloseTo(0.25, 3);
@@ -69,7 +69,7 @@ describe('buildSkyEnvironment radiance size', () => {
   });
 
   /** The face size of each cube the build renders, and of the cube the PMREM prefilters. */
-  function cubeSizes(radianceSize: number) {
+  function cubeSizes(radianceSize: number, asBackground = true) {
     const rendered: number[] = [];
     vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(function (this: THREE.CubeCamera) {
       rendered.push(this.renderTarget.width);
@@ -84,20 +84,24 @@ describe('buildSkyEnvironment radiance size', () => {
       radianceFilter: 'importance-sample',
       radianceSize,
     };
-    buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [] });
-    return { rendered, prefiltered };
+    const env = buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [], asBackground });
+    return { rendered, prefiltered, hasBackground: env!.background !== null };
   }
 
   it('renders one cube for the background and the radiance at the default size', () => {
-    expect(cubeSizes(256)).toEqual({ rendered: [256], prefiltered: 256 });
+    expect(cubeSizes(256)).toEqual({ rendered: [256], prefiltered: 256, hasBackground: true });
   });
 
   it('renders the radiance at a smaller size on a cube of its own, so a mirror reads it as coarse as Godot', () => {
-    expect(cubeSizes(32)).toEqual({ rendered: [256, 32], prefiltered: 32 });
+    expect(cubeSizes(32)).toEqual({ rendered: [256, 32], prefiltered: 32, hasBackground: true });
   });
 
   it('bakes a size above 256 at 256 (edge case)', () => {
-    expect(cubeSizes(1024)).toEqual({ rendered: [256], prefiltered: 256 });
+    expect(cubeSizes(1024)).toEqual({ rendered: [256], prefiltered: 256, hasBackground: true });
+  });
+
+  it('renders only the radiance cube for a sky that is not the background', () => {
+    expect(cubeSizes(32, false)).toEqual({ rendered: [32], prefiltered: 32, hasBackground: false });
   });
 });
 
@@ -122,7 +126,7 @@ describe('buildSkyEnvironment panorama wiring', () => {
       new THREE.WebGLRenderTarget(1, 1)
     );
     const sky = defaultSky('PanoramaSkyMaterial');
-    const env = buildSkyEnvironment(uniformSkyRenderer(0), { sky, lights: [], panorama });
+    const env = buildSkyEnvironment(uniformSkyRenderer(0), { sky, lights: [], panorama, asBackground: true });
     return { env, sampled: sampled as THREE.Texture | null };
   }
 

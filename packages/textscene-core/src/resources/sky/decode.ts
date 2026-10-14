@@ -5,7 +5,7 @@
  */
 
 import type { Color } from '../../utils/colorParser';
-import type { RadianceFilter, Sky, SkyProcessMode, SkyProcessing, SkyProperties } from './types';
+import type { Sky, SkyBake, SkyProcessMode, SkyProcessing, SkyProperties } from './types';
 import {
   REAL_TIME_RADIANCE_SIZE,
   SKY_RADIANCE_SIZES,
@@ -52,25 +52,21 @@ function entryOr<T>(table: readonly T[], value: string | undefined, fallback: T)
 
 /**
  * The `Sky` whose properties are `data`, drawing `material`. An invalid value reads as
- * `decodeSkyProcessing` reads it. Godot bakes a real-time sky at `REAL_TIME_RADIANCE_SIZE` whatever
- * its `radiance_size` (`sky.cpp:590-592`).
+ * `decodeSkyProcessing` reads it.
  */
 export function decodeSky(data: Record<string, string>, material: SkyProperties): Sky {
-  const { processMode, radianceSize } = decodeSkyProcessing(data);
-  return {
-    material,
-    radianceFilter: radianceFilter(processMode),
-    radianceSize: processMode === 'real-time' ? REAL_TIME_RADIANCE_SIZE : radianceSize,
-  };
+  return { material, ...skyBake(decodeSkyProcessing(data)) };
 }
 
 /**
- * The filter Godot bakes a sky's layers with (`sky.cpp:1335-1344`). Automatic picks real-time
- * only for a shader that reads `TIME` or `POSITION` (`sky.cpp:1001-1004`), and no built-in sky
- * material does (`scene/resources/3d/sky_material.cpp`), so only Real-Time takes the fast filter.
+ * How Godot bakes the layers (`sky.cpp:1335-1344`). Automatic picks real-time only for a shader
+ * that reads `TIME` or `POSITION` (`sky.cpp:1001-1004`), and no built-in sky material does
+ * (`scene/resources/3d/sky_material.cpp`), so only Real-Time takes the fast filter.
  */
-function radianceFilter(processMode: SkyProcessMode): RadianceFilter {
-  return processMode === 'real-time' ? 'fast' : 'importance-sample';
+function skyBake({ processMode, radianceSize }: SkyProcessing): SkyBake {
+  return processMode === 'real-time'
+    ? { radianceFilter: 'fast', radianceSize: REAL_TIME_RADIANCE_SIZE }
+    : { radianceFilter: 'importance-sample', radianceSize };
 }
 
 export function decodeSkyMaterial(type: string, data: Record<string, string>): SkyProperties | null {
