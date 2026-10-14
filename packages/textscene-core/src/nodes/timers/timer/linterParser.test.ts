@@ -35,7 +35,7 @@ describe('Timer strict validators', () => {
   // loads into Godot and the inspector still excludes it.
   it('warns between the refused wait_time floor and the hinted one', () => {
     expectDiagnostic(scene(node('Timer', { wait_time: 0.0005 })), {
-      ruleName: 'strict-parser',
+      ruleName: 'format:wait_time',
       severity: 'warning',
       contains: ['wait_time', '0.001'],
     });

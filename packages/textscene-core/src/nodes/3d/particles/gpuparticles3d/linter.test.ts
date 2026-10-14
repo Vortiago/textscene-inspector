@@ -9,8 +9,8 @@ import {
   lint,
   expectClean,
   expectDiagnostic,
+  expectNoFormatErrors,
   expectNoDiagnostic,
-  expectNoErrors,
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
 import './linterParser';
@@ -258,7 +258,7 @@ draw_pass_1 = SubResource("mesh_1")
         // with no mesh. `gpuparticles3d-no-draw-pass-mesh` still warns: that is the
         // semantic rule, not the format check.
         expectNoDiagnostic(createTestScene('draw_pass_1 = null'), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:draw_pass_1',
         });
       });
     });
@@ -267,7 +267,7 @@ draw_pass_1 = SubResource("mesh_1")
       it('should accept valid NodePath format', () => {
         // The missing target is an info from the semantic rule, never a format error.
         expectNoDiagnostic(createTestScene('sub_emitter = NodePath("SubEmitter")'), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:sub_emitter',
         });
       });
 
@@ -706,10 +706,8 @@ interp_to_end = 0.3
 
 describe('GPUParticles3D Linter — the tokenizer float grammar', () => {
   it('accepts a trailing-dot visibility_aabb component', () => {
-    // Isolate the strict-parser format check (a bare node also trips the
+    // Isolate the format checks (a bare node also trips the
     // unrelated process_material semantic requirement).
-    expectNoErrors(scene(node('GPUParticles3D', { visibility_aabb: 'AABB(0.5, 0, 0, 10., 10, 10)' })), {
-      ruleName: 'strict-parser',
-    });
+    expectNoFormatErrors(scene(node('GPUParticles3D', { visibility_aabb: 'AABB(0.5, 0, 0, 10., 10, 10)' })));
   });
 });

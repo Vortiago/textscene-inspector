@@ -118,16 +118,35 @@ export const FILE_DIAGNOSTICS = {
   },
 } as const satisfies Record<string, RuleArm>;
 
-/**
- * `strict-parser`, the name Phase 1 stamps on every validator's `ParseError`.
- *
- * Not a row above: its severity and message come from the validator that
- * produced the error, and its authority is that validator's own `grounding`.
- */
+/** `strict-parser`, the name Phase 1 stamps on a syntax error and a heading error, which no property owns. */
 export const STRICT_PARSER_RULE_NAME = 'strict-parser';
 
-/** Every `ruleName` `Linter` stamps that no registered rule declares. */
-export const FILE_DIAGNOSTIC_NAMES: ReadonlySet<string> = new Set([
-  STRICT_PARSER_RULE_NAME,
-  ...Object.values(FILE_DIAGNOSTICS).map((d) => d.ruleName),
-]);
+const FORMAT_RULE_PREFIX = 'format:';
+
+/**
+ * `format:<key>`, the name of a validator's diagnostic about the property written as `key`. Not a row above: its
+ * severity and message come from the validator that produced the error, and its authority is that validator's own
+ * `grounding`.
+ */
+export function formatRuleName(key: string): string {
+  return `${FORMAT_RULE_PREFIX}${key}`;
+}
+
+/** True for a name {@link formatRuleName} builds. */
+function isFormatRuleName(ruleName: string): boolean {
+  return ruleName.startsWith(FORMAT_RULE_PREFIX);
+}
+
+/** True for a name a format check reports: `strict-parser`, or a validator's `format:<key>`. */
+export function isFormatCheckName(ruleName: string): boolean {
+  return ruleName === STRICT_PARSER_RULE_NAME || isFormatRuleName(ruleName);
+}
+
+const FILE_DIAGNOSTIC_NAMES: ReadonlySet<string> = new Set(
+  Object.values(FILE_DIAGNOSTICS).map((d) => d.ruleName)
+);
+
+/** True for a `ruleName` `Linter` stamps that no registered rule declares. */
+export function isUndeclaredRuleName(ruleName: string): boolean {
+  return FILE_DIAGNOSTIC_NAMES.has(ruleName) || isFormatCheckName(ruleName);
+}

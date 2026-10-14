@@ -9,6 +9,7 @@ import {
   expectDiagnostic,
   expectNoDiagnostic,
   expectNoErrors,
+  expectNoFormatErrors,
   runPropertyValidation,
 } from '../../../linter/testing/testkit';
 import './linterParser';
@@ -38,14 +39,14 @@ describe('Skeleton3D Linter', () => {
 
       it('should reject motion_scale of 0', () => {
         expectDiagnostic(scene(node('Skeleton3D', { motion_scale: 0 })), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:motion_scale',
           contains: ['motion_scale', 'greater than 0'],
         });
       });
 
       it('should reject negative motion_scale', () => {
         expectDiagnostic(scene(node('Skeleton3D', { motion_scale: '-1.0' })), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:motion_scale',
           contains: ['motion_scale'],
         });
       });
@@ -55,7 +56,7 @@ describe('Skeleton3D Linter', () => {
       // a band Godot keeps as authored and the inspector excludes.
       it('warns between the substituted floor and the hinted one', () => {
         expectDiagnostic(scene(node('Skeleton3D', { motion_scale: '0.0005' })), {
-          ruleName: 'strict-parser',
+          ruleName: 'format:motion_scale',
           severity: 'warning',
           contains: ['motion_scale', '0.001'],
         });
@@ -70,15 +71,11 @@ describe('Skeleton3D Linter', () => {
       });
 
       it('should accept very small positive motion_scale', () => {
-        expectNoErrors(scene(node('Skeleton3D', { motion_scale: '0.001' })), {
-          ruleName: 'strict-parser',
-        });
+        expectNoFormatErrors(scene(node('Skeleton3D', { motion_scale: '0.001' })));
       });
 
       it('should accept large motion_scale', () => {
-        expectNoErrors(scene(node('Skeleton3D', { motion_scale: '100.0' })), {
-          ruleName: 'strict-parser',
-        });
+        expectNoFormatErrors(scene(node('Skeleton3D', { motion_scale: '100.0' })));
       });
     });
 
@@ -90,7 +87,7 @@ describe('Skeleton3D Linter', () => {
         // has to name itself or the two are interchangeable here.
         invalid: [
           { value: 'yes', contains: ['true or false'] },
-          { value: 1, ruleName: 'strict-parser', contains: ['this slot converts'] },
+          { value: 1, ruleName: 'format:show_rest_only', contains: ['this slot converts'] },
         ],
       },
       {
@@ -111,21 +108,17 @@ describe('Skeleton3D Linter', () => {
 
     describe('bone properties validation', () => {
       it('should accept valid bone position (Vector3)', () => {
-        expectNoErrors(scene(node('Skeleton3D', { 'bones/0/position': 'Vector3(0, 1.5, 0)' })), {
-          ruleName: 'strict-parser',
-        });
+        expectNoFormatErrors(scene(node('Skeleton3D', { 'bones/0/position': 'Vector3(0, 1.5, 0)' })));
       });
 
       it('should accept valid bone rotation (Quaternion)', () => {
-        expectNoErrors(scene(node('Skeleton3D', { 'bones/1/rotation': 'Quaternion(0, 0.707, 0, 0.707)' })), {
-          ruleName: 'strict-parser',
-        });
+        expectNoFormatErrors(
+          scene(node('Skeleton3D', { 'bones/1/rotation': 'Quaternion(0, 0.707, 0, 0.707)' }))
+        );
       });
 
       it('should accept valid bone scale (Vector3)', () => {
-        expectNoErrors(scene(node('Skeleton3D', { 'bones/2/scale': 'Vector3(1, 1, 1)' })), {
-          ruleName: 'strict-parser',
-        });
+        expectNoFormatErrors(scene(node('Skeleton3D', { 'bones/2/scale': 'Vector3(1, 1, 1)' })));
       });
 
       it('should reject invalid bone position format', () => {
@@ -147,16 +140,12 @@ describe('Skeleton3D Linter', () => {
       // SKIPS a character it cannot use (ustring.cpp:2280-2293), so `x` names
       // bone 0 and Godot applies the write.
       it('should accept a bone index to_int resolves out of non-numeric text', () => {
-        expectNoErrors(scene(node('Skeleton3D', { 'bones/x/position': 'Vector3(0, 0, 0)' })), {
-          ruleName: 'strict-parser',
-        });
+        expectNoFormatErrors(scene(node('Skeleton3D', { 'bones/x/position': 'Vector3(0, 0, 0)' })));
       });
 
       // An empty segment is bone 0 too: `"".to_int()` returns 0 (ustring.cpp:2304-2305).
       it('should accept an empty bone index, which to_int reads as bone 0', () => {
-        expectNoErrors(scene(node('Skeleton3D', { 'bones//position': 'Vector3(0, 0, 0)' })), {
-          ruleName: 'strict-parser',
-        });
+        expectNoFormatErrors(scene(node('Skeleton3D', { 'bones//position': 'Vector3(0, 0, 0)' })));
       });
 
       // `uint32_t which` (:82) holds -1 as 4294967295, which
@@ -253,9 +242,7 @@ describe('Skeleton3D Linter', () => {
       // tier. The ceiling is `bones.size() - 1`, sibling state no per-property validator can see.
       describe('bone parent (skeleton_3d.cpp:721, :722)', () => {
         it('accepts the -1 root sentinel and a real parent index', () => {
-          expectNoErrors(scene(node('Skeleton3D', { 'bones/0/parent': '-1', 'bones/1/parent': '0' })), {
-            ruleName: 'strict-parser',
-          });
+          expectNoFormatErrors(scene(node('Skeleton3D', { 'bones/0/parent': '-1', 'bones/1/parent': '0' })));
         });
 
         it('rejects a parent below the -1 sentinel', () => {
@@ -320,7 +307,7 @@ describe('Skeleton3D Linter', () => {
         // skeleton_3d.cpp:85 (`name`, through add_bone), :92, :94, :96. No format check is claimed
         // for these, only that the key is recognised.
         it('accepts the leaves written beside the pose components', () => {
-          expectNoErrors(
+          expectNoFormatErrors(
             scene(
               node('Skeleton3D', {
                 'bones/0/name': '"Root"',
@@ -328,22 +315,20 @@ describe('Skeleton3D Linter', () => {
                 'bones/0/rest': 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
                 'bones/0/enabled': 'true',
               })
-            ),
-            { ruleName: 'strict-parser' }
+            )
           );
         });
 
         // skeleton_3d.cpp:107, behind `#ifndef DISABLE_DEPRECATED` (:106).
         // A default build leaves that undefined, so the 3.x pose format loads.
         it('accepts the 3.x pose and bound_children arms', () => {
-          expectNoErrors(
+          expectNoFormatErrors(
             scene(
               node('Skeleton3D', {
                 'bones/0/pose': 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
                 'bones/0/bound_children': '[]',
               })
-            ),
-            { ruleName: 'strict-parser' }
+            )
           );
         });
 
@@ -352,26 +337,20 @@ describe('Skeleton3D Linter', () => {
         // (:105), so the key is never part of the leaf name. `_get_property_list` writes this shape
         // (:204).
         it('accepts a bone_meta key below the leaf', () => {
-          expectNoErrors(scene(node('Skeleton3D', { 'bones/0/bone_meta/custom_tag': '"spine"' })), {
-            ruleName: 'strict-parser',
-          });
+          expectNoFormatErrors(scene(node('Skeleton3D', { 'bones/0/bone_meta/custom_tag': '"spine"' })));
         });
 
         // Slice 3 of `bones/0/bone_meta` is empty, and `set_bone_meta` (skeleton_3d.cpp:686) guards
         // only the bone index, never the key, so the write lands under an empty meta name.
         it('accepts bone_meta with no key below it', () => {
-          expectNoErrors(scene(node('Skeleton3D', { 'bones/0/bone_meta': '"spine"' })), {
-            ruleName: 'strict-parser',
-          });
+          expectNoFormatErrors(scene(node('Skeleton3D', { 'bones/0/bone_meta': '"spine"' })));
         });
 
         // Nothing reads past slice 2 on the other arms, so a trailing segment
         // is ignored rather than refused: `set_bone_pose_position` still gets
         // this Vector3 (skeleton_3d.cpp:99).
         it('accepts a trailing segment the dispatch never reads', () => {
-          expectNoErrors(scene(node('Skeleton3D', { 'bones/0/position/ignored': 'Vector3(0, 1, 0)' })), {
-            ruleName: 'strict-parser',
-          });
+          expectNoFormatErrors(scene(node('Skeleton3D', { 'bones/0/position/ignored': 'Vector3(0, 1, 0)' })));
         });
       });
 
@@ -382,7 +361,7 @@ describe('Skeleton3D Linter', () => {
       });
 
       it('should accept multiple bone properties', () => {
-        expectNoErrors(
+        expectNoFormatErrors(
           scene(
             node('Skeleton3D', {
               'bones/0/position': 'Vector3(0, 1.5, 0)',
@@ -390,8 +369,7 @@ describe('Skeleton3D Linter', () => {
               'bones/0/scale': 'Vector3(1, 1, 1)',
               'bones/1/position': 'Vector3(0, 3.0, 0)',
             })
-          ),
-          { ruleName: 'strict-parser' }
+          )
         );
       });
     });
@@ -652,7 +630,7 @@ describe('Skeleton3D Linter', () => {
     });
 
     it('should handle complex bone hierarchy', () => {
-      expectNoErrors(
+      expectNoFormatErrors(
         scene(
           node(
             'Skeleton3D',
@@ -668,8 +646,7 @@ describe('Skeleton3D Linter', () => {
             { name: 'ComplexSkeleton' }
           ),
           node('MeshInstance3D', { skeleton: 'NodePath("..")' }, { name: 'Mesh', parent: '.' })
-        ),
-        { ruleName: 'strict-parser' }
+        )
       );
     });
 
@@ -703,7 +680,7 @@ describe('Skeleton3D Linter', () => {
     });
 
     it('should handle scientific notation in bone transforms', () => {
-      expectNoErrors(
+      expectNoFormatErrors(
         scene(
           node(
             'Skeleton3D',
@@ -713,8 +690,7 @@ describe('Skeleton3D Linter', () => {
             },
             { name: 'ScientificBones' }
           )
-        ),
-        { ruleName: 'strict-parser' }
+        )
       );
     });
   });
@@ -722,8 +698,6 @@ describe('Skeleton3D Linter', () => {
 
 describe('Skeleton3D Linter — the tokenizer float grammar', () => {
   it('accepts a trailing-dot bone rotation component', () => {
-    expectNoErrors(scene(node('Skeleton3D', { 'bones/0/rotation': 'Quaternion(0.5, 0, 0, 1.)' })), {
-      ruleName: 'strict-parser',
-    });
+    expectNoFormatErrors(scene(node('Skeleton3D', { 'bones/0/rotation': 'Quaternion(0.5, 0, 0, 1.)' })));
   });
 });

@@ -19,7 +19,7 @@ const CLEAN_TSCN = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 `;
 
-// Invalid Transform3D triggers an error-severity diagnostic from the strict parser.
+// An invalid Transform3D triggers an error-severity diagnostic from the transform validator.
 const ERROR_TSCN = `[gd_scene format=3]
 
 [node name="Root" type="Node3D"]
@@ -86,7 +86,7 @@ describe('lintFile', () => {
     expect(result.hasErrors).toBe(true);
     expect(result.stdoutLines[0]).toBe(errorPath);
     expect(result.stdoutLines.join('\n')).toContain('error');
-    expect(result.stdoutLines.join('\n')).toContain('(strict-parser)');
+    expect(result.stdoutLines.join('\n')).toContain('(format:transform)');
     expect(result.stdoutLines[result.stdoutLines.length - 1]).toBe('');
     expect(result.stderrLines).toEqual([]);
   });
@@ -183,7 +183,7 @@ describe('lintFileDiagnostics', () => {
     const result = await lintFileDiagnostics(errorPath);
 
     expect(result.readError).toBeUndefined();
-    expect(result.diagnostics.some((d) => d.severity === 'error' && d.ruleName === 'strict-parser')).toBe(
+    expect(result.diagnostics.some((d) => d.severity === 'error' && d.ruleName === 'format:transform')).toBe(
       true
     );
   });

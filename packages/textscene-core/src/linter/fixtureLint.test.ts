@@ -12,7 +12,7 @@ import { parseHeading } from '../parser/utils.js';
 import { providerForRoot } from '../resources/diskProject.js';
 import { findProjectRoot, parentDir, projectFileIn } from '../resources/resPath.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
-import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
+import { isUndeclaredRuleName } from './fileDiagnostics.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
 import { errorsOf } from './testing/tierLists';
@@ -237,7 +237,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
           misplaced.push(`${file}: ${d.ruleName} carries no line`);
           continue;
         }
-        if (FILE_DIAGNOSTIC_NAMES.has(d.ruleName)) continue;
+        if (isUndeclaredRuleName(d.ruleName)) continue;
         checkedRuleDiagnostics++;
         const heading = parseHeading(text[line - 1] ?? '');
         if (heading?.type !== 'node' || (heading.attributes.name ?? '') !== d.nodeName) {
