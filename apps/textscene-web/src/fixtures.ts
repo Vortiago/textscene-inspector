@@ -538,6 +538,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glb Viewport Texture",
+    "file": "unit-glb-viewport-texture.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glow Agx",
     "file": "unit-glow-agx.tscn",
     "category": "Other"
