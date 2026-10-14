@@ -1,8 +1,8 @@
 /**
  * Godot 4.7.2's integral of a rectangle light under a linearly transformed cosine, and its solid
  * angle (`area_lights_inc.glsl:6-11,25-94,137-341`), in GLSL for three's lit programs. It reads
- * three's `ltc_1` and `ltc_2` samplers, which `ltcTextures.ts` fills with Godot's tables. It leaves
- * out the texture fetch of an `area_texture`.
+ * three's `ltc_1` and `ltc_2` samplers, which `ltcTextures.ts` fills with Godot's tables, and the
+ * light's `area_texture` through `areaTextureFetch.ts`.
  */
 
 /*
@@ -17,6 +17,7 @@
 
 import { LTC_SIZE } from '../../godot/ltc.js';
 import { glslFloat } from '../../resources/environment/glslLiterals.js';
+import { AREA_TEXTURE_FETCH } from './areaTextureFetch.js';
 
 /**
  * Each function keeps Godot's operations in Godot's order, so a pixel matches. The clip keeps
@@ -31,7 +32,7 @@ float godotAcosApprox( const in float value ) {
 }
 
 // Hill and Heitz's fit of the cosine distribution's integral over the arc from one point to another.
-float godotEdgeIntegral( const in vec3 from, const in vec3 to ) {
+vec3 godotEdgeVector( const in vec3 from, const in vec3 to ) {
 	float x = dot( from, to );
 	float y = abs( x );
 	float a = 5.42031 + ( 3.12829 + 0.0902326 * y ) * y;
@@ -40,9 +41,14 @@ float godotEdgeIntegral( const in vec3 from, const in vec3 to ) {
 	if ( x < 0.0 ) {
 		thetaSinTheta = PI * inversesqrt( 1.0 - x * x ) - thetaSinTheta;
 	}
-	return ( thetaSinTheta * cross( from, to ) ).y;
+	return thetaSinTheta * cross( from, to );
 }
 
+float godotEdgeIntegral( const in vec3 from, const in vec3 to ) {
+	return godotEdgeVector( from, to ).y;
+}
+
+${AREA_TEXTURE_FETCH}
 // An edge whose ends lie opposite on the sphere splits at the point closest to the fragment.
 float godotIntegrateEdge( const in vec3 projected0, const in vec3 projected1, const in vec3 p0, const in vec3 p1 ) {
 	if ( dot( projected0, projected1 ) < - 1.0 + 0.00001 ) {
@@ -145,8 +151,11 @@ float godotQuadSolidAngle( const in vec3 L[ 4 ] ) {
 	return clamp( angleSum - PI2, 0.0, PI2 );
 }
 
-// The rectangle's corners, relative to the fragment, under the cosine that mInv transforms.
-float godotLtcIntegral( const in vec3 normal, const in vec3 viewDir, const in mat3 mInv, const in vec3 points[ 4 ] ) {
+// The rectangle's corners, relative to the fragment, under the cosine that mInv transforms, and
+// the light's texture where the integral sees it: white for a light without one, or where the
+// rectangle lies below the horizon.
+float godotLtcIntegral( const in vec3 normal, const in vec3 viewDir, const in mat3 mInv, const in vec3 points[ 4 ], const in vec4 textureRect, const in float maxMipmap, out vec3 textureColor ) {
+	textureColor = vec3( 1.0 );
 	vec3 z = - normalize( viewDir - normal * dot( viewDir, normal ) );
 	vec3 x = cross( normal, z );
 	mat3 toCosine = mInv * transpose( mat3( x, normal, z ) );
@@ -157,9 +166,11 @@ float godotLtcIntegral( const in vec3 normal, const in vec3 viewDir, const in ma
 	L[ 2 ] = toCosine * points[ 2 ];
 	L[ 3 ] = toCosine * points[ 3 ];
 	L[ 4 ] = L[ 0 ];
+	vec3 unclipped[ 4 ] = vec3[ 4 ]( L[ 0 ], L[ 1 ], L[ 2 ], L[ 3 ] );
 
 	int vertexCount = godotClipQuadToHorizon( L );
 	if ( vertexCount == 0 ) return 0.0;
+	if ( textureRect != vec4( 0.0 ) ) textureColor = godotAreaTextureColor( textureRect, maxMipmap, unclipped );
 
 	vec3 projected[ 5 ];
 	projected[ 0 ] = normalize( L[ 0 ] );
@@ -182,7 +193,7 @@ float godotLtcIntegral( const in vec3 normal, const in vec3 viewDir, const in ma
 }
 
 // The GGX lobe as Godot's fit transforms it, at the texel centre for roughness and view angle.
-float godotLtcSpecular( const in vec3 normal, const in vec3 viewDir, const in float roughness, const in vec3 points[ 4 ], out vec2 fresnel ) {
+float godotLtcSpecular( const in vec3 normal, const in vec3 viewDir, const in float roughness, const in vec3 points[ 4 ], const in vec4 textureRect, const in float maxMipmap, out vec2 fresnel, out vec3 textureColor ) {
 	float theta = godotAcosApprox( dot( normal, viewDir ) );
 	vec2 lutPosition = vec2( max( roughness, 0.02 ), theta / ( 0.5 * PI ) );
 	vec2 lutUv = lutPosition * ${glslFloat((LTC_SIZE - 1) / LTC_SIZE)} + vec2( ${glslFloat(0.5 / LTC_SIZE)} );
@@ -195,6 +206,6 @@ float godotLtcSpecular( const in vec3 normal, const in vec3 viewDir, const in fl
 		vec3( - eFresnel.x * scale, abcd.y * scale, 0.0 )
 	);
 	fresnel = eFresnel.yz;
-	return godotLtcIntegral( normal, viewDir, mInv, points );
+	return godotLtcIntegral( normal, viewDir, mInv, points, textureRect, maxMipmap, textureColor );
 }
 `;

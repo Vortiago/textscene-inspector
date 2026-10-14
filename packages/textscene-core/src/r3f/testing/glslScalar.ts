@@ -9,6 +9,7 @@ import { functionBody } from './glslSource';
 export const GLSL_BUILT_INS = {
   abs: Math.abs,
   exp: Math.exp,
+  log: Math.log,
   max: Math.max,
   min: Math.min,
   pow: Math.pow,

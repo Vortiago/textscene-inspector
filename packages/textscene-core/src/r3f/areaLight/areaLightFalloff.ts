@@ -1,19 +1,26 @@
 /**
- * Each area light's Godot terms that three's `RectAreaLight` struct lacks, in two uniform arrays
- * that every lit program reads by the light's index: the view-space direction the light shines in,
- * and its range, attenuation and specular amount. The scene's light pass
- * (`SceneShadowFitter.tsx`) writes them before each render, in the order three gives its rect area
- * lights their slots.
+ * Each area light's Godot terms that three's `RectAreaLight` struct lacks, in uniform arrays that
+ * every lit program reads by the light's index: the view-space direction the light shines in, its
+ * range, attenuation and specular amount, and where its `area_texture` lies in the atlas. The
+ * scene's light pass (`SceneShadowFitter.tsx`) writes them before each render, in the order three
+ * gives its rect area lights their slots, after it brings the atlas up to date.
  */
 
 import * as THREE from 'three';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
 import { LightUniformArrays, type LightArrays } from '../shaderPatch/lightUniformArrays.js';
 import { writeAreaLightShadowUniforms } from './areaLightShadowUniforms.js';
+import { areaTexturePlacement, updateAreaLightAtlas } from './areaLightAtlas.js';
 
 export const AREA_LIGHT_FACINGS = 'rectAreaLightFacings';
 export const AREA_LIGHT_FALLOFFS = 'rectAreaLightFalloffs';
-type AreaLightUniform = typeof AREA_LIGHT_FACINGS | typeof AREA_LIGHT_FALLOFFS;
+export const AREA_LIGHT_TEXTURE_RECTS = 'rectAreaLightTextureRects';
+export const AREA_LIGHT_TEXTURE_MIPMAPS = 'rectAreaLightTextureMipmaps';
+type AreaLightUniform =
+  | typeof AREA_LIGHT_FACINGS
+  | typeof AREA_LIGHT_FALLOFFS
+  | typeof AREA_LIGHT_TEXTURE_RECTS
+  | typeof AREA_LIGHT_TEXTURE_MIPMAPS;
 
 /** An AreaLight3D's `area_range`, `area_attenuation` and `light_specular`. */
 export interface AreaLightFalloff {
@@ -33,10 +40,23 @@ function readFalloff(light: THREE.RectAreaLight): AreaLightFalloff | undefined {
   return light.userData[FALLOFF_KEY] as AreaLightFalloff | undefined;
 }
 
-/**
- * Three floats per light in each array. Written only by `writeAreaLightUniforms`.
- */
-const arrays = new LightUniformArrays({ [AREA_LIGHT_FACINGS]: 3, [AREA_LIGHT_FALLOFFS]: 3 });
+/** Written only by `writeAreaLightUniforms`. */
+const arrays = new LightUniformArrays({
+  [AREA_LIGHT_FACINGS]: 3,
+  [AREA_LIGHT_FALLOFFS]: 3,
+  [AREA_LIGHT_TEXTURE_RECTS]: 4,
+  [AREA_LIGHT_TEXTURE_MIPMAPS]: 1,
+});
+
+/** An empty rectangle marks a light without a texture (4.7.2 `light_storage.cpp:1132-1141`). */
+const NO_TEXTURE_RECT = [0, 0, 0, 0] as const;
+
+/** Where the light's texture lies in the atlas, and the highest mip the shader reads. */
+function writeTexture(set: LightArrays<AreaLightUniform>, index: number, light: THREE.RectAreaLight): void {
+  const placement = areaTexturePlacement(light);
+  set[AREA_LIGHT_TEXTURE_RECTS].set(placement?.rect ?? NO_TEXTURE_RECT, index * 4);
+  set[AREA_LIGHT_TEXTURE_MIPMAPS][index] = placement?.maxMipmap ?? 0;
+}
 
 /** Gives the arrays to every built-in lit material. */
 export function installAreaLightUniforms(): void {
@@ -65,7 +85,8 @@ const scratchFacing = new THREE.Vector3();
 
 /**
  * Godot's direction (4.7.2: `light_storage.cpp:1068`), the radius it inverts into `inv_radius`
- * (`:1060-1061`) and its `specular_amount` (`:1056`), at `index` of `set`. The direction needs no
+ * (`:1060-1061`), its `specular_amount` (`:1056`) and its texture's place in the atlas
+ * (`:1132-1141`), at `index` of `set`. The direction needs no
  * falloff, so a light without one still faces its own way.
  */
 function writeLight(
@@ -80,6 +101,7 @@ function writeLight(
     .transformDirection(light.matrixWorld)
     .transformDirection(camera.matrixWorldInverse)
     .toArray(set[AREA_LIGHT_FACINGS], offset);
+  writeTexture(set, index, light);
   const falloff = readFalloff(light);
   if (!falloff) return;
   const falloffs = set[AREA_LIGHT_FALLOFFS];
@@ -94,6 +116,7 @@ function writeLight(
  * as they were.
  */
 export function writeAreaLightUniforms(lights: readonly SceneLight[], camera: THREE.Camera): void {
+  updateAreaLightAtlas();
   const slotted = slottedAreaLights(lights, camera);
   arrays.write(slotted.length, (set) =>
     slotted.forEach((light, index) => writeLight(set, index, light, camera))

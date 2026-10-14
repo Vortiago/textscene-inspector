@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import {
   AREA_LIGHT_FACINGS,
   AREA_LIGHT_FALLOFFS,
+  AREA_LIGHT_TEXTURE_MIPMAPS,
+  AREA_LIGHT_TEXTURE_RECTS,
   areaLightUserData,
   installAreaLightUniforms,
   writeAreaLightUniforms,
@@ -11,6 +13,7 @@ import { litUniformArray } from '../testing/litUniformArray';
 import { sceneLights } from '../directionalShadow/lightLists';
 import { AREA_LIGHT_SHADOWS, installAreaLightShadowUniforms } from './areaLightShadowUniforms';
 import { AtlasAreaShadow, type AreaShadowLight } from '../positionalShadow/atlasAreaShadow';
+import { areaTextureUserData, holdAreaTexture, releaseAreaTexture } from './areaLightAtlas';
 
 /** An area light shining down, as AreaLight3D's basis puts its -Z at -Y. */
 function downLight(range = 5, attenuation = 1, specular = 1): THREE.RectAreaLight {
@@ -138,6 +141,32 @@ describe('writeAreaLightUniforms', () => {
     write(scene);
 
     expect(at(uniforms().falloffs, count - 1)[0]).toBe(count);
+  });
+
+  it("writes where a textured light's texture lies in the atlas, and its highest mip", () => {
+    const texture = new THREE.DataTexture(new Uint8Array(64 * 64 * 4).fill(255), 64, 64);
+    holdAreaTexture(texture);
+    const light = downLight();
+    Object.assign(light.userData, areaTextureUserData(texture));
+    const scene = new THREE.Scene();
+    scene.add(light);
+
+    write(scene);
+    releaseAreaTexture(texture);
+
+    installAreaLightUniforms();
+    expect([...litUniformArray(AREA_LIGHT_TEXTURE_RECTS).subarray(0, 4)]).toEqual([0, 0, 0.25, 0.25]);
+    expect(litUniformArray(AREA_LIGHT_TEXTURE_MIPMAPS)[0]).toBe(5);
+  });
+
+  it('writes no texture rectangle for a light without a texture (edge case)', () => {
+    const scene = new THREE.Scene();
+    scene.add(downLight());
+
+    write(scene);
+
+    installAreaLightUniforms();
+    expect([...litUniformArray(AREA_LIGHT_TEXTURE_RECTS).subarray(0, 4)]).toEqual([0, 0, 0, 0]);
   });
 
   it('writes nothing for a light without falloff, and keeps its index (error case)', () => {
