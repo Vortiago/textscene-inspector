@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { DIRECTIONAL_SHADOW_SIZE_DEFAULT } from '../../godot/directionalShadow.js';
-import { atlasTargetOf, createShadowAtlas } from '../shadowFilter/atlasDepthTexture.js';
+import { atlasTargetOf, createShadowAtlas } from '../shadowFilter/atlasTarget.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 
 /** The uniform every lit material samples the atlas through. */

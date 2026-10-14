@@ -166,7 +166,7 @@ export function materialConstructorLines(source: string): number[] {
  */
 const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/r3f/fullScreenPass.ts':
-    'the full-screen passes of the sky bake and the fog: shaders fixed at construction, only uniforms move, and a `defines` change sets `needsUpdate`; one instance per pass, owned by its caller',
+    'one material per call, its shaders fixed at construction and owned by the caller that draws it; callers move only uniforms, and the one `defines` change, the volumetric fog integrate depth, sets `needsUpdate`',
   'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
     'the depth prepass base, cloned per surface and never drawn itself, and the sentinel, which writes nothing; neither is ever mutated',
   'packages/textscene-core/src/nodes/3d/decal/decalProjectionMaterials.ts':

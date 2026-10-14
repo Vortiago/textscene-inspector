@@ -18,7 +18,7 @@ import { visibleInTree } from '../visibleInTree.js';
 import type { FogDensityAtlas } from './fogDensityAtlas.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
 import { RowBuffer } from './packedRows.js';
-import { writeVec4 } from './writeVec4.js';
+import { writeVec4 } from '../writeVec4.js';
 
 /**
  * Where each value sits in a volume's row, in texels of four floats. `TO_LOCAL` starts three rows

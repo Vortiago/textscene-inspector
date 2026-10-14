@@ -111,37 +111,38 @@ export function toneMappingShaderChunk(
   white: number,
   agxContrast = DEFAULT_AGX_CONTRAST
 ): string {
-  const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
   return /* glsl */ `
 uniform float toneMappingExposure;
-const float godotToneMapWhite = ${glslFloat(toneMappingWhiteParam(mode, white))};
 
 vec3 CustomToneMapping(vec3 color) {
   color *= toneMappingExposure;
-${body}
+${curveGlsl(mode, white, agxContrast)}
 }
 `;
 }
 
 /**
  * The same curve as the final pass after bloom, since bloom reads pre-tonemap HDR and
- * three cannot tonemap in-material then. It bakes the white in, as
- * `toneMappingShaderChunk` does. Every mode gets a body: LINEAR is the curve that applies exposure and nothing
- * else, so no consumer supplies a fifth.
+ * three cannot tonemap in-material then. Every mode gets a body: LINEAR is the curve that
+ * applies exposure and nothing else, so no consumer supplies a fifth.
  */
 export function toneMappingEffectGlsl(
   mode: number,
   white: number,
   agxContrast = DEFAULT_AGX_CONTRAST
 ): string {
-  const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
   return /* glsl */ `
 vec3 godotToneMap(vec3 color, float exposure) {
-  const float godotToneMapWhite = ${glslFloat(toneMappingWhiteParam(mode, white))};
   color *= exposure;
-${body}
+${curveGlsl(mode, white, agxContrast)}
 }
 `;
+}
+
+/** The mode's curve on an exposed `color`, with the white it reads baked in, so both paths draw alike. */
+function curveGlsl(mode: number, white: number, agxContrast: number): string {
+  const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
+  return `  const float godotToneMapWhite = ${glslFloat(toneMappingWhiteParam(mode, white))};\n${body}`;
 }
 
 /**

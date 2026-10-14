@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { LIGHT_SHADOW_NORMAL_BIAS_DEFAULT } from './light';
 import {
-  POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
   positionalLightBounds,
   positionalShadowNear,
   positionalShadowNormalBias,
@@ -24,10 +24,7 @@ describe('positionalShadowNear', () => {
 
 describe('positionalShadowNormalBias', () => {
   it('is the default bias times ten texels of the largest root slot', () => {
-    expect(positionalShadowNormalBias(POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT, 1024)).toBeCloseTo(
-      10 / 1024,
-      12
-    );
+    expect(positionalShadowNormalBias(LIGHT_SHADOW_NORMAL_BIAS_DEFAULT, 1024)).toBeCloseTo(10 / 1024, 12);
   });
 
   it('doubles when the slot halves', () => {

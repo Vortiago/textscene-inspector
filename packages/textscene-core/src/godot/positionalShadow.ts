@@ -7,12 +7,6 @@
 import { degToRad } from './math.js';
 import { SOFT_LOW_QUALITY_RADIUS } from './softShadowScale.js';
 
-/** `Light3D()` sets `PARAM_SHADOW_NORMAL_BIAS` to 1 (`scene/3d/light_3d.cpp:491`). */
-export const POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT = 1;
-
-/** `Light3D()` sets `PARAM_SIZE` to 0 (`scene/3d/light_3d.cpp:478`). AreaLight3D sets its own. */
-export const LIGHT_SIZE_DEFAULT = 0;
-
 /** The near plane Godot renders an omni or spot shadow from (`renderer_scene_cull.cpp:2442`, `:2531`). */
 const SHADOW_Z_NEAR = 0.025;
 

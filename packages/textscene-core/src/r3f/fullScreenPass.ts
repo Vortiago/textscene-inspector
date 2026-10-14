@@ -41,6 +41,22 @@ export function fullScreenPass(
   });
 }
 
+/**
+ * A pass whose `fragmentShader` writes every texel's depth through `gl_FragDepth`, which always
+ * passes, so the target takes the pass's depth as it takes its colour.
+ */
+export function fullScreenDepthPass(
+  name: string,
+  fragmentShader: string,
+  uniforms: Record<string, THREE.IUniform>
+): THREE.ShaderMaterial {
+  const pass = fullScreenPass(name, fragmentShader, uniforms);
+  pass.depthTest = true;
+  pass.depthFunc = THREE.AlwaysDepth;
+  pass.depthWrite = true;
+  return pass;
+}
+
 /** Draws `pass` into `layer` (a cube face or a 3D slice) and `mip` of `target`. */
 export function drawFullScreen(
   renderer: THREE.WebGLRenderer,

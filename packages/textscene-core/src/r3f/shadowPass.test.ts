@@ -78,12 +78,11 @@ describe('installShadowPass', () => {
     copy.mockRestore();
   });
 
-  it('restores the render target the draw goes to, and records its height', () => {
+  it('records the height of the target the draw goes to, after the copies', () => {
     const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => {});
     const { renderer } = fakeRenderer();
     installShadowPass(renderer);
     runPass(renderer, [omniLight()]);
-    expect(renderer.setRenderTarget).toHaveBeenLastCalledWith(renderer.getRenderTarget(), 0, 0);
     expect(framebufferHeight[0]).toBe(48);
     copy.mockRestore();
   });

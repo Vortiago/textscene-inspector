@@ -3,8 +3,8 @@ import * as THREE from 'three';
 import { sceneLights } from './directionalShadow/lightLists';
 import { SplitSunLight } from './directionalShadow/splitSun';
 import {
+  isPositionalKind,
   LIGHT_SLOT_LOOPS,
-  renderedLights,
   slotArrayDeclaration,
   slottedLights,
   slotValues,
@@ -46,6 +46,13 @@ describe('slottedLights', () => {
     shadowed.castShadow = true;
     scene.add(plain, shadowed);
     expect(slottedLights(sceneLights(scene), camera).point).toEqual([shadowed, plain]);
+  });
+
+  it('keeps tree order among the lights of a kind that rank alike', () => {
+    const scene = new THREE.Scene();
+    const [first, second] = [new THREE.SpotLight(), new THREE.SpotLight()];
+    scene.add(first, second);
+    expect(slottedLights(sceneLights(scene), camera).spot).toEqual([first, second]);
   });
 
   it('gives a hidden light no slot (edge case)', () => {
@@ -116,31 +123,9 @@ describe('LIGHT_SLOT_LOOPS', () => {
   });
 });
 
-describe('renderedLights', () => {
-  it('keeps the lights of every kind, a rect area light among them', () => {
-    const scene = new THREE.Scene();
-    const [area, point] = [new THREE.RectAreaLight(), new THREE.PointLight()];
-    scene.add(area, point);
-    expect(renderedLights(sceneLights(scene), camera)).toEqual([area, point]);
-  });
-
-  it('puts a shadowed light first, keeping tree order among the rest', () => {
-    const scene = new THREE.Scene();
-    const [first, second, shadowed] = [
-      new THREE.RectAreaLight(),
-      new THREE.PointLight(),
-      new THREE.SpotLight(),
-    ];
-    shadowed.castShadow = true;
-    scene.add(first, second, shadowed);
-    expect(renderedLights(sceneLights(scene), camera)).toEqual([shadowed, first, second]);
-  });
-
-  it('leaves out a light on a layer the camera does not see (edge case)', () => {
-    const scene = new THREE.Scene();
-    const light = new THREE.RectAreaLight();
-    light.layers.set(5);
-    scene.add(light);
-    expect(renderedLights(sceneLights(scene), camera)).toEqual([]);
+describe('isPositionalKind', () => {
+  it('answers true for the point and spot kinds only', () => {
+    const kinds = ['directional', 'sun', 'point', 'spot'] as const;
+    expect(kinds.filter(isPositionalKind)).toEqual(['point', 'spot']);
   });
 });

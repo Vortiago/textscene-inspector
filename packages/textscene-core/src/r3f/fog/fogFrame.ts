@@ -18,7 +18,7 @@ import { shineDirection } from './fogLights.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
 import { skyRadiance } from './fogSky.js';
 import { FOG_SUN_MAX, fogUniforms } from './fogUniforms.js';
-import { writeVec4 } from './writeVec4.js';
+import { writeVec4 } from '../writeVec4.js';
 
 export interface FogSettings {
   depth: DepthFog | null;

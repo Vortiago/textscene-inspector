@@ -24,7 +24,7 @@ import { readFogLightDeclaration } from './fogLightDeclaration.js';
 import { AREA_LIGHT_AXES, areaLightViewAxis, readAreaLightFalloff } from '../areaLight/areaLightFalloff.js';
 import { RowBuffer } from './packedRows.js';
 import { areaTexturePlacement } from '../areaLight/areaLightAtlas.js';
-import { writeVec4 } from './writeVec4.js';
+import { writeVec4 } from '../writeVec4.js';
 
 /**
  * Where each value sits in a light's row, in texels of four floats. `CONE` holds the cone exponent,

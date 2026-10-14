@@ -13,7 +13,7 @@ import {
 } from './lightStrength';
 import { lightSpecularUserData } from '../../../../r3f/lightSpecular/lightSpecular';
 import { lightSizeUserData } from '../../../../r3f/lightSize/lightSize';
-import { LIGHT_SIZE_DEFAULT } from '../../../../godot/positionalShadow';
+import { LIGHT_SIZE_DEFAULT } from '../../../../godot/light';
 import { usePositionalShadowUserData } from './positionalShadowDeclaration';
 import type { PositionalLightProperties } from './types';
 

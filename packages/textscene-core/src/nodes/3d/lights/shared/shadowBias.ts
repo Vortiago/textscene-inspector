@@ -3,13 +3,13 @@
  * normalised depth. An omni or spot light's keeps Godot's unit, which the patched lookup reads.
  */
 
-import { LIGHT_SHADOW_BIAS_DEFAULT, SPOT_LIGHT_SHADOW_BIAS_DEFAULT } from '../../../../godot/light';
-import { SHADOW_BLUR_DEFAULT } from '../../../../godot/softShadowScale';
 import {
+  LIGHT_SHADOW_BIAS_DEFAULT,
   LIGHT_SIZE_DEFAULT,
-  positionalSoftShadow,
-  spotShadowDepthBias,
-} from '../../../../godot/positionalShadow';
+  SPOT_LIGHT_SHADOW_BIAS_DEFAULT,
+} from '../../../../godot/light';
+import { SHADOW_BLUR_DEFAULT } from '../../../../godot/softShadowScale';
+import { positionalSoftShadow, spotShadowDepthBias } from '../../../../godot/positionalShadow';
 import type { PositionalLightProperties } from './types';
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { drawFullScreen, FULL_SCREEN_VERTEX, fullScreenPass } from './fullScreenPass';
+import { drawFullScreen, FULL_SCREEN_VERTEX, fullScreenDepthPass, fullScreenPass } from './fullScreenPass';
 import { testRenderer } from '../testing/recordingWebGL';
 
 const FRAGMENT = 'void main() { gl_FragColor = vec4(1.0); }';
@@ -31,6 +31,24 @@ describe('fullScreenPass', () => {
     const source = { value: null };
 
     expect(fullScreenPass('Copy', FRAGMENT, { source }).uniforms['source']).toBe(source);
+  });
+});
+
+describe('fullScreenDepthPass', () => {
+  it('writes the depth its fragment shader gives every texel, whatever the target holds', () => {
+    const pass = fullScreenDepthPass('Copy', FRAGMENT, {});
+
+    expect([pass.depthTest, pass.depthFunc, pass.depthWrite]).toEqual([true, THREE.AlwaysDepth, true]);
+  });
+
+  it('overwrites the colour as a full-screen pass does', () => {
+    const pass = fullScreenDepthPass('Copy', FRAGMENT, {});
+
+    expect([pass.vertexShader, pass.blending, pass.toneMapped]).toEqual([
+      FULL_SCREEN_VERTEX,
+      THREE.NoBlending,
+      false,
+    ]);
   });
 });
 

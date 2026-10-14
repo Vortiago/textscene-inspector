@@ -7,7 +7,12 @@
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
-import { LIGHT_SLOT_LOOPS, LIGHTS_PARS_ANCHOR, slotArrayDeclaration } from '../lightSlots.js';
+import {
+  isPositionalKind,
+  LIGHT_SLOT_LOOPS,
+  LIGHTS_PARS_ANCHOR,
+  slotArrayDeclaration,
+} from '../lightSlots.js';
 import { installLightSizeUniforms, LIGHT_SIZES } from './lightSize.js';
 
 type LightSizeChunk = 'lights_pars_begin' | 'lights_fragment_begin';
@@ -24,19 +29,17 @@ float godotSizeOffsetAt( const in float size, const in float lightDistance ) {
 }
 `;
 
-/** The positional kinds, whose offset grows as the fragment nears the light. */
-const isPositional = (light: string) => light === 'pointLight' || light === 'spotLight';
-
 const LIGHT_SIZE_EDITS: readonly ChunkEdit<LightSizeChunk>[] = [
   {
     chunk: 'lights_pars_begin',
     three: LIGHTS_PARS_ANCHOR,
     godot: `${SIZE_DECLARATIONS}${LIGHTS_PARS_ANCHOR}`,
   },
-  ...LIGHT_SLOT_LOOPS.map(({ three, light, slot }) => ({
+  ...LIGHT_SLOT_LOOPS.map(({ kind, three, light, slot }) => ({
     chunk: 'lights_fragment_begin' as const,
     three,
-    godot: isPositional(light)
+    // A positional light's offset grows as the fragment nears it.
+    godot: isPositionalKind(kind)
       ? `${three}
 		godotSizeOffset = godotSizeOffsetAt( ${LIGHT_SIZES}[ ${slot} ], length( ${light}.position - geometryPosition ) );`
       : `${three}

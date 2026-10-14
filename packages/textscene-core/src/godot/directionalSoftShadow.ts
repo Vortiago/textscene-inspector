@@ -6,7 +6,7 @@
  */
 
 import { degToRad } from './math.js';
-import { LIGHT_SIZE_DEFAULT } from './positionalShadow.js';
+import { LIGHT_SIZE_DEFAULT } from './light.js';
 
 /** `light_angular_distance` sets `PARAM_SIZE`, so its default is that of `light_size`. */
 export const LIGHT_ANGULAR_DISTANCE_DEFAULT = LIGHT_SIZE_DEFAULT;

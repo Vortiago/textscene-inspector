@@ -19,7 +19,6 @@ import {
 import { DirectionalSplitShadow } from './directionalShadow/splitShadow.js';
 import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
-import { drawOffscreen } from './offscreen.js';
 
 /**
  * Reads the maps a render's shadow pass has just drawn, for `scene`, the object that render draws,
@@ -88,19 +87,16 @@ function readersOf(renderer: THREE.WebGLRenderer): Set<ShadowMapReader> {
   return readers;
 }
 
-/** Copies each light's cube into the atlas, and leaves the render target as it found it. */
+/** Copies each light's cube into the atlas. Each copy leaves the render target as it found it. */
 function copyOmniShadows(
   renderer: THREE.WebGLRenderer,
   copy: OmniShadowCopy,
   lights: readonly OmniLight[]
 ): void {
-  if (lights.length === 0) return;
-  drawOffscreen(renderer, () => {
-    for (const light of lights) {
-      copy.copy(renderer, light, light.shadow.slot!);
-      light.shadow.writeLookupMatrix(light);
-    }
-  });
+  for (const light of lights) {
+    copy.copy(renderer, light, light.shadow.slot!);
+    light.shadow.writeLookupMatrix(light);
+  }
 }
 
 /**

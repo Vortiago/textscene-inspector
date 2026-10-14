@@ -5,6 +5,7 @@
  * Constants are `editor_settings.cpp` defaults and `node_3d_editor_plugin.cpp` speeds.
  */
 import * as THREE from 'three';
+import { degToRad } from '../godot/math.js';
 import { clampWheelNotches, wheelNotches, type WheelEventLike } from './pointerGesture.js';
 
 /** `editors/3d/navigation_feel/orbit_sensitivity`. */
@@ -121,10 +122,6 @@ export interface FreelookKeys {
 const AXIS_X = new THREE.Vector3(1, 0, 0);
 const AXIS_Y = new THREE.Vector3(0, 1, 0);
 
-function degreesToRadians(degrees: number): number {
-  return (degrees * Math.PI) / 180;
-}
-
 function clampPitch(xRot: number): number {
   return THREE.MathUtils.clamp(xRot, -X_ROT_LIMIT, X_ROT_LIMIT);
 }
@@ -176,7 +173,7 @@ export function cursorFromCamera(position: THREE.Vector3, target: THREE.Vector3)
  * accumulates without a wrap or a clamp, as in Godot.
  */
 export function orbitCursor(cursor: EditorCursor, dx: number, dy: number): EditorCursor {
-  const radiansPerPixel = degreesToRadians(ORBIT_DEGREES_PER_PIXEL);
+  const radiansPerPixel = degToRad(ORBIT_DEGREES_PER_PIXEL);
   return {
     ...cursor,
     xRot: clampPitch(cursor.xRot + dy * radiansPerPixel),
@@ -247,7 +244,7 @@ export function resolveWheelMode(mods: NavModifiers): 'pan' | 'zoom' {
  * then moves the focus point by how far the eye would have moved.
  */
 export function freelookCursor(cursor: EditorCursor, dx: number, dy: number): EditorCursor {
-  const radiansPerPixel = degreesToRadians(FREELOOK_DEGREES_PER_PIXEL);
+  const radiansPerPixel = degToRad(FREELOOK_DEGREES_PER_PIXEL);
   const rotated: EditorCursor = {
     ...cursor,
     xRot: clampPitch(cursor.xRot + dy * radiansPerPixel),
@@ -296,5 +293,5 @@ export function viewSnapCursor(cursor: EditorCursor, view: GodotViewAngle): Edit
  * point. Zoom therefore works in orthographic mode, where moving the eye changes nothing.
  */
 export function orthographicHeight(distance: number, fovDegrees: number): number {
-  return 2 * distance * Math.tan(degreesToRadians(fovDegrees) / 2);
+  return 2 * distance * Math.tan(degToRad(fovDegrees) / 2);
 }

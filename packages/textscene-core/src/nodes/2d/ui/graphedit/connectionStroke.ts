@@ -10,15 +10,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { lerpColor } from '../../../../godot/math';
+import { lerpColor, type Rgba } from '../../../../godot/math';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
-
-export interface StrokeRGBA {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
 
 export interface GeometryBuffers {
   positions: number[];
@@ -45,9 +38,9 @@ const RINGS_PER_POINT = 6;
 export function connectionStrokeGeometry(
   points: readonly Vec2[],
   lineWidth: number,
-  fromColor: StrokeRGBA,
-  toColor: StrokeRGBA,
-  rimColor: StrokeRGBA
+  fromColor: Rgba,
+  toColor: Rgba,
+  rimColor: Rgba
 ): GeometryBuffers {
   const n = points.length;
   if (n < 2) return { positions: [], indices: [], colors: [] };
@@ -58,7 +51,7 @@ export function connectionStrokeGeometry(
   const outerEdge = halfWidth;
   const ringOffsets = [-outerEdge, -rimEdge, -coreEdge, coreEdge, rimEdge, outerEdge];
 
-  const rimTransparent: StrokeRGBA = { ...rimColor, a: 0 };
+  const rimTransparent: Rgba = { ...rimColor, a: 0 };
 
   const lengths: number[] = [0];
   for (let i = 1; i < n; i++) {
@@ -88,14 +81,7 @@ export function connectionStrokeGeometry(
     const ny = tx;
 
     const core = lerpColor(fromColor, toColor, lengths[i]! / total);
-    const ringColors: readonly StrokeRGBA[] = [
-      rimTransparent,
-      rimColor,
-      core,
-      core,
-      rimColor,
-      rimTransparent,
-    ];
+    const ringColors: readonly Rgba[] = [rimTransparent, rimColor, core, core, rimColor, rimTransparent];
 
     for (let k = 0; k < RINGS_PER_POINT; k++) {
       const off = ringOffsets[k]!;

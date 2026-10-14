@@ -7,7 +7,8 @@
 
 import * as THREE from 'three';
 import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
-import { drawFullScreen, fullScreenPass } from '../fullScreenPass.js';
+import { drawFullScreen, fullScreenDepthPass } from '../fullScreenPass.js';
+import { drawOffscreen } from '../offscreen.js';
 import { PACK_ATLAS_DEPTH } from './atlasDepthMaterials.js';
 import { lightPoseMatrix } from './lightPose.js';
 import { positionalShadowAtlas } from './shadowAtlasTarget.js';
@@ -94,8 +95,8 @@ export class OmniShadowCopy {
   /**
    * Writes the cube three rendered for `light` into both of its slots. Godot passes the cube camera's
    * near plane and the range as the far one (`render_forward_clustered.cpp:2732-2734`), which three's
-   * shadow camera holds after its pass (`WebGLShadowMap.js:302-308`). The caller restores the render
-   * target.
+   * shadow camera holds after its pass (`WebGLShadowMap.js:302-308`). It leaves the render target
+   * as it found it.
    */
   copy(renderer: THREE.WebGLRenderer, light: THREE.PointLight, slot: PositionalShadowSlot): void {
     const cube = light.shadow.map;
@@ -108,10 +109,12 @@ export class OmniShadowCopy {
     uniforms.texelSize!.value = 1 / slot.size;
     // `setFromMatrix4` keeps the pose's rotation and drops its translation.
     (uniforms.lightToWorld!.value as THREE.Matrix3).setFromMatrix4(lightPoseMatrix(light, scratchLightPose));
-    for (let paraboloid = 0; paraboloid < PARABOLOID_SIGNS.length; paraboloid++) {
-      uniforms.paraboloidSign!.value = PARABOLOID_SIGNS[paraboloid];
-      this.drawInto(renderer, slot, paraboloid);
-    }
+    drawOffscreen(renderer, () => {
+      for (let paraboloid = 0; paraboloid < PARABOLOID_SIGNS.length; paraboloid++) {
+        uniforms.paraboloidSign!.value = PARABOLOID_SIGNS[paraboloid];
+        this.drawInto(renderer, slot, paraboloid);
+      }
+    });
   }
 
   dispose(): void {
@@ -131,22 +134,19 @@ export class OmniShadowCopy {
     atlas.viewport.set(x, y, slot.size, slot.size);
     atlas.scissor.set(x, y, slot.size, slot.size);
     atlas.scissorTest = true;
-    const { autoClear } = renderer;
     const { autoReset } = renderer.info;
-    renderer.autoClear = false;
     renderer.info.autoReset = false;
     try {
       drawFullScreen(renderer, this.material, atlas);
     } finally {
-      renderer.autoClear = autoClear;
       renderer.info.autoReset = autoReset;
     }
   }
 }
 
-/** The copy writes every texel's depth through `gl_FragDepth`, as `cube_to_dp.glsl` does, so it always passes. */
+/** The copy writes every texel's depth through `gl_FragDepth`, as `cube_to_dp.glsl` does. */
 function copyPass(): THREE.ShaderMaterial {
-  const pass = fullScreenPass('OmniShadowCopy', FRAGMENT, {
+  return fullScreenDepthPass('OmniShadowCopy', FRAGMENT, {
     cube: { value: null },
     faceSize: { value: 1 },
     zNear: { value: 0 },
@@ -155,8 +155,4 @@ function copyPass(): THREE.ShaderMaterial {
     paraboloidSign: { value: -1 },
     lightToWorld: { value: new THREE.Matrix3() },
   });
-  pass.depthTest = true;
-  pass.depthFunc = THREE.AlwaysDepth;
-  pass.depthWrite = true;
-  return pass;
 }
