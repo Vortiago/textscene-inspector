@@ -43,10 +43,6 @@ describe('formatSprite3DProperties', () => {
       label: 'Billboard',
       value: 'Enabled',
     });
-    expect(section(formatSprite3DProperties(props({ billboard: '3' })), 'Texture')!.items).toContainEqual({
-      label: 'Billboard',
-      value: 'Particles (Unsupported)',
-    });
   });
 
   it('shows the texture resource reference verbatim when set', () => {

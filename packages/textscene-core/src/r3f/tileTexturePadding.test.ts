@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { TILE_TEXTURE_PADDING, TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
+import { installCanvasSrgbMultiply } from './canvasSrgbMultiply';
 
 function compiledBasic() {
   const shader = {
@@ -31,10 +32,9 @@ describe('TILE_TEXTURE_PADDING', () => {
   });
 
   it('keeps the sRGB multiply the 2D canvas patches into the map chunk (edge)', () => {
-    const before = THREE.ShaderChunk.map_fragment.replace('vMapUv', 'X');
+    installCanvasSrgbMultiply();
     const { fragmentShader } = compiledBasic();
-    const tail = before.slice(before.indexOf('X') + 1);
-    expect(fragmentShader).toContain(tail.trim().split('\n')[0]!.trim());
+    expect(fragmentShader).toContain('#ifdef CANVAS_SRGB_MULTIPLY');
   });
 
   it('names its program apart from an unclamped one', () => {

@@ -53,13 +53,13 @@ export function readImagePixels(image: unknown): ImagePixels | undefined {
 }
 
 /**
- * Written only by `readbackContext`. One context serves every readback, and a lost one is
- * replaced on the next read. `null` once no context can exist (no DOM, or no WebGL2).
+ * Written only by `readbackContext`. One context serves every readback. A lost one, or a
+ * `getContext` that failed, is retried on the next read, since a browser refuses a context
+ * only while it is at its limit.
  */
-let sharedReadbackContext: WebGL2RenderingContext | null | undefined;
+let sharedReadbackContext: WebGL2RenderingContext | null = null;
 
 function readbackContext(): WebGL2RenderingContext | null {
-  if (sharedReadbackContext === null) return null;
   if (sharedReadbackContext && !sharedReadbackContext.isContextLost()) return sharedReadbackContext;
   const canvas = globalThis.document?.createElement('canvas');
   sharedReadbackContext = canvas?.getContext('webgl2') ?? null;
@@ -75,6 +75,7 @@ function readbackContext(): WebGL2RenderingContext | null {
 export function readPixelsThroughGl(gl: WebGL2RenderingContext, image: unknown): ImagePixels | undefined {
   const size = imageSize(image);
   if (!size) return undefined;
+  clearErrors(gl);
   const texture = gl.createTexture();
   const framebuffer = gl.createFramebuffer();
   try {
@@ -99,6 +100,16 @@ export function readPixelsThroughGl(gl: WebGL2RenderingContext, image: unknown):
     gl.deleteFramebuffer(framebuffer);
     gl.deleteTexture(texture);
   }
+}
+
+/**
+ * WebGL keeps at most one flag per error code, so this many reads clear every flag. The context
+ * is shared, so an error an earlier read left behind would otherwise fail the next one.
+ */
+const MAX_ERROR_FLAGS = 8;
+
+function clearErrors(gl: WebGL2RenderingContext): void {
+  for (let i = 0; i < MAX_ERROR_FLAGS && gl.getError() !== gl.NO_ERROR; i++);
 }
 
 function halfFloatsToBytes(halves: Uint16Array): Uint8Array {

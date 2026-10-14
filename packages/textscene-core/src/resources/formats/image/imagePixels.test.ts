@@ -3,8 +3,9 @@ import * as THREE from 'three';
 import { readImagePixels, readPixelsThroughGl } from './imagePixels';
 
 /** A WebGL2 stand-in that records each call and reads back `texels`. */
-function fakeGl(texels: number[], { complete = true, error = 0 } = {}) {
+function fakeGl(texels: number[], { complete = true, error = 0, staleErrors = 0 } = {}) {
   const calls: string[] = [];
+  let pendingStaleErrors = staleErrors;
   const unpack = new Map<number, unknown>();
   const gl = {
     TEXTURE_2D: 1,
@@ -27,7 +28,11 @@ function fakeGl(texels: number[], { complete = true, error = 0 } = {}) {
     texImage2D: () => calls.push(`texImage2D premultiply=${String(unpack.get(11))}`),
     framebufferTexture2D: () => calls.push('framebufferTexture2D'),
     checkFramebufferStatus: () => (complete ? 8 : 9),
-    getError: () => error,
+    getError: () => {
+      if (pendingStaleErrors === 0) return error;
+      pendingStaleErrors -= 1;
+      return 1282;
+    },
     readPixels: (_x: number, _y: number, _w: number, _h: number, _f: number, _t: number, out: Uint8Array) =>
       out.set(texels),
     deleteTexture: () => calls.push('deleteTexture'),
@@ -68,6 +73,13 @@ describe('readPixelsThroughGl', () => {
     const { gl } = fakeGl([0, 0, 0, 0, 0, 0, 0, 0], { error: 1281 });
 
     expect(readPixelsThroughGl(gl, image)).toBeUndefined();
+  });
+
+  it('reads an image although an earlier read left an error on the shared context', () => {
+    const texels = [1, 2, 3, 4, 5, 6, 7, 8];
+    const { gl } = fakeGl(texels, { staleErrors: 2 });
+
+    expect(readPixelsThroughGl(gl, image)?.data).toEqual(new Uint8Array(texels));
   });
 
   it('deletes its texture and framebuffer after the read', () => {
