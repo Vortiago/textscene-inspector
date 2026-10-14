@@ -3273,6 +3273,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Texture Emission",
+    "file": "unit-sub-viewport-texture-emission.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Texture",
     "file": "unit-sub-viewport-texture.tscn",
     "category": "Unit - Viewports"

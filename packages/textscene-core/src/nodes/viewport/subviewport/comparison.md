@@ -38,7 +38,7 @@ Strict and lenient parsing diverge only on out-of-range enums. The lenient parse
 - **Approximated** `msaa_3d`, `use_debanding` and `canvas_item_default_texture_filter` do not affect the target, which renders at `size` with linear filtering.
 - **Approximated** Selection highlights and gizmos leak into a shared-world target, because that target is a render of the main scene.
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.
-- **Not drawn** A `TextureRect` draws nothing for a `ViewportTexture`, which only `albedo_texture` and `Sprite2D.texture` accept.
+- **Not drawn** A `TextureRect` draws nothing for a `ViewportTexture`, which only a material's texture slots and `Sprite2D.texture` accept.
 - **Approximated** `use_hdr_2d` is not read, so an HDR canvas composites differently.
 - **Needs runtime** A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D.
 - **Shader missing** A sub-viewport's 2D content draws unlit, so its own Light2D and LightOccluder2D nodes have no effect.

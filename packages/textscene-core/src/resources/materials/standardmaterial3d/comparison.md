@@ -29,6 +29,11 @@ An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the previe
 
 ADD emission with both a dark red colour and a texture. Godot emits `(emission + texture) * energy` (`material.cpp:1788`). The previewer adds the texel to the colour too, so the blue texel reads magenta and the green one amber.
 
+## ViewportTexture in another slot
+<!-- compare: image=unit-sub-viewport-texture-emission status=done fixture=unit-sub-viewport-texture-emission.tscn -->
+
+A SubViewport's target in the emission slot, over a black albedo. A material binds every slot by RID, so the target glows as it draws through the albedo in `unit-sub-viewport-texture`. A target in a pass cycle draws the missing-texture material from any slot.
+
 ## Clearcoat
 <!-- compare: image=unit-material-clearcoat status=done fixture=unit-material-clearcoat.tscn -->
 

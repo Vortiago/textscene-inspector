@@ -88,7 +88,7 @@ export function useMaterialTextures(
   // `normal_enabled` reaches no shader at all.
   const references = scalars?.textureSlots;
 
-  const slotTextures: Readonly<Record<TextureSlot, Texture2DResult>> = {
+  const slotTextures: Readonly<Record<TextureSlot, SlotTexture>> = {
     albedo_texture: useSlotTexture(references, resourceTables, 'albedo_texture'),
     normal_texture: useSlotTexture(references, resourceTables, 'normal_texture'),
     roughness_texture: useSlotTexture(references, resourceTables, 'roughness_texture'),
@@ -105,15 +105,8 @@ export function useMaterialTextures(
     [scalars, surface]
   );
 
-  // A ViewportTexture albedo names a `<SubViewport>`, not a texture resource: it resolves
-  // through the live registry and arrives after first paint.
-  const { texture: viewportAlbedo, cyclic: viewportCyclic } = useViewportTextureSlot(
-    references?.albedo_texture,
-    resourceTables.internalResources
-  );
-
   const albedoMap = useTransformedTexture(
-    viewportAlbedo ?? slotTextures.albedo_texture.texture,
+    slotTextures.albedo_texture.texture,
     textureStates,
     'albedo_texture'
   );
@@ -193,7 +186,9 @@ export function useMaterialTextures(
       ? pendingMapStandIn('anisotropy_flowmap')
       : undefined);
 
-  const isUnresolvable = TEXTURE_SLOTS.some((slot) => slotTextures[slot].missing);
+  const isUnresolvable = TEXTURE_SLOTS.some(
+    (slot) => slotTextures[slot].missing || slotTextures[slot].cyclic
+  );
 
   const maps = useMemo(
     (): MaterialTextureMaps => ({
@@ -220,7 +215,7 @@ export function useMaterialTextures(
     ]
   );
 
-  return { maps, isUnresolved: isUnresolvable || viewportCyclic };
+  return { maps, isUnresolved: isUnresolvable };
 }
 
 export interface SurfaceMaterialSlotProps {
@@ -252,21 +247,30 @@ export function useMaterialScalars(material: MaterialResource | null): StandardM
   return useMemo(() => (resource ? parseStandardMaterial3DScalars(resource.data) : null), [resource]);
 }
 
+interface SlotTexture extends Texture2DResult {
+  /** The slot names a ViewportTexture whose target sits in a pass cycle, so it is never written. */
+  cyclic: boolean;
+}
+
 /**
  * One slot's texture, through every form a Texture2D slot takes, null while it arrives. A material
  * binds a texture by its RID: an AtlasTexture's RID is its whole sheet
- * (`scene/resources/atlas_texture.cpp:55-58`), and a CanvasTexture's names no texture.
+ * (`scene/resources/atlas_texture.cpp:55-58`), a CanvasTexture's names no texture, and a
+ * ViewportTexture's names its viewport's target, which arrives through the live registry.
  */
 function useSlotTexture(
   references: TextureSlotReferences | undefined,
   { externalResources, internalResources }: MaterialTables,
   slot: TextureSlot
-): Texture2DResult {
+): SlotTexture {
   const ref = textureSlotReference(references, slot);
-  // `useViewportTextureSlot` resolves a ViewportTexture, which names a node.
-  const resourceRef = isViewportTextureRef(ref, internalResources) ? undefined : ref;
-  const result = useTexture2DRid(resourceRef, externalResources, internalResources);
-  return result.namesTexture ? result : { ...result, texture: defaultWhiteTexture() };
+  const isViewport = isViewportTextureRef(ref, internalResources);
+  const viewport = useViewportTextureSlot(isViewport ? ref : undefined, internalResources);
+  const result = useTexture2DRid(isViewport ? undefined : ref, externalResources, internalResources);
+  if (isViewport)
+    return { texture: viewport.texture, missing: false, isArriving: false, cyclic: viewport.cyclic };
+  const texture = result.namesTexture ? result.texture : defaultWhiteTexture();
+  return { texture, missing: result.missing, isArriving: result.isArriving, cyclic: false };
 }
 
 function textureSlotReference(
