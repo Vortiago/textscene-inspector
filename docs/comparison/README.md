@@ -138,7 +138,7 @@ defect.
 - [PhysicalBoneSimulator3D](../../packages/textscene-core/src/nodes/3d/skeleton/physicalbonesimulator3d/comparison.md): nothing yet, Godot drives its ragdoll through the physics server, the previewer does not
 - [PinJoint3D](../../packages/textscene-core/src/nodes/physics/3d/pinjoint3d/comparison.md): nothing (a transform-only group)
 - [RayCast3D](../../packages/textscene-core/src/nodes/physics/3d/raycast3d/comparison.md): nothing (a transform-only group)
-- [ReflectionProbe](../../packages/textscene-core/src/nodes/3d/reflectionprobe/comparison.md): invisible transform-only fallback
+- [ReflectionProbe](../../packages/textscene-core/src/nodes/3d/reflectionprobe/comparison.md): a capture of the scene, baked into an atlas layer that lit surfaces in its box read
 - [RemoteTransform3D](../../packages/textscene-core/src/nodes/3d/remotetransform3d/comparison.md): nothing (a transform-only group that drives its target)
 - [RetargetModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/retargetmodifier3d/comparison.md): nothing yet, Godot retargets poses onto child skeletons, the previewer does not
 - [RigidBody3D](../../packages/textscene-core/src/nodes/physics/3d/rigidbody3d/comparison.md): an invisible transform-only group
