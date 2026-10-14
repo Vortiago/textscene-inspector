@@ -12,8 +12,7 @@ import { FRAMEBUFFER_HEIGHT_UNIFORM, framebufferHeight } from '../shadowFilter/f
 import { godotSplitShadowChunk, installGodotSplitShadow } from './splitShadowChunk';
 import { NO_BLEND, type SplitSlot } from './fitDirectionalShadowSplits';
 import { DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM } from './shadowAtlas';
-import { SUN_SOFT_SHADOWS, SUN_RANGE_BEGINS } from './sunSoftShadow';
-import { SUN_SHADOW_ROWS } from './sunShadowRows';
+import { SUN_RANGE_BEGINS, SUN_SHADOW_ROWS, SUN_SOFT_SHADOWS } from './sunShadowUniforms';
 import { GLSL_BUILT_INS } from '../testing/glslScalar';
 import { withoutBlock } from '../testing/glslSource';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch';

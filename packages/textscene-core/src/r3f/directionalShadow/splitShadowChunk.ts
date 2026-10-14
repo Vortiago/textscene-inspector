@@ -13,9 +13,14 @@ import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
 import { SPLIT_SLOTS } from './splitShadow.js';
 import { NO_BLEND } from './fitDirectionalShadowSplits.js';
 import { DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM } from './shadowAtlas.js';
-import { installSunSoftShadowUniforms, SUN_RANGE_BEGINS, SUN_SOFT_SHADOWS } from './sunSoftShadow.js';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch.js';
-import { installSunShadowRows, SLOT_MATRIX_ROWS, SUN_SHADOW_ROWS } from './sunShadowRows.js';
+import {
+  installSunShadowUniforms,
+  SLOT_MATRIX_ROWS,
+  SUN_RANGE_BEGINS,
+  SUN_SHADOW_ROWS,
+  SUN_SOFT_SHADOWS,
+} from './sunShadowUniforms.js';
 
 const CHUNK = 'shadowmap_pars_fragment';
 
@@ -269,6 +274,5 @@ export function installGodotSplitShadow(): void {
     missing: `${CHUNK} has no sun shadow lookup to replace`,
   });
   if (!isPatched) return;
-  installSunShadowRows();
-  installSunSoftShadowUniforms();
+  installSunShadowUniforms();
 }

@@ -1,6 +1,6 @@
 /**
  * The scene-level light pass before each render of a scene: it fits every declared shadow and writes
- * the area lights' uniforms, the sun shadows' soft shadow terms, every light's specular amount and
+ * the area lights' uniforms, the sun shadows' soft shadow angles, every light's specular amount and
  * size, and the blocker searches every lit material compiles. Godot fits a directional shadow to
  * whichever camera renders, and gives an omni or spot light its slot in the atlas of the viewport
  * that renders it. So the pass rides `scene.onBeforeRender`: the main view, a SubViewport pass and a
@@ -29,14 +29,14 @@ import { searchesPositionalBlockers } from './positionalShadow/softShadowRadius.
 import {
   drawsDirectionalSoftShadows,
   searchesDirectionalBlockers,
-  writeSunSoftShadowUniforms,
+  setSunSoftShadowAngles,
 } from './directionalShadow/sunSoftShadow.js';
 
 /**
  * One render's light pass, the directional fit first. The area light atlas rebuilds before the area
  * lights write where their textures lie. The directional fit changes no omni, spot or
  * area light, so their part of the pass reads the same walk. It hangs a sun under a declared
- * directional light and hides that light, so the soft shadow terms, the specular amounts and the light
+ * directional light and hides that light, so the soft shadow angles, the specular amounts and the light
  * sizes read a second walk.
  */
 function prepareSceneLights(
@@ -52,7 +52,7 @@ function prepareSceneLights(
   writeAreaLightUniforms(lights, camera);
   const shadedLights = sceneLights(scene);
   const drawsSoftShadows = drawsDirectionalSoftShadows(shadedLights, camera);
-  writeSunSoftShadowUniforms(shadedLights, camera, drawsSoftShadows);
+  setSunSoftShadowAngles(shadedLights, drawsSoftShadows);
   writeLightSpecularUniforms(shadedLights, camera);
   writeLightSizeUniforms(shadedLights, camera, drawsSoftShadows);
   defineSoftShadowSearch(scene, {

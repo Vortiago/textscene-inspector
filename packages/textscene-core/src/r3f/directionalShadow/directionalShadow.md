@@ -221,7 +221,7 @@ shades through three parts, whatever its split count:
   and repeats the last split's matrix.
 - `splitShadowChunk.ts`, which replaces three's cascade walk in `shadowmap_pars_fragment` with
   Godot's split lookup and PCF, and gives every sun four slots. It reads each slot's matrix as the
-  three rows `sunShadowRows.ts` writes, in place of three's `mat4` (Fragment uniforms).
+  three rows `sunShadowUniforms.ts` writes, in place of three's `mat4` (Fragment uniforms).
   `installShaderPatches` installs it when a canvas is created, before any program compiles.
 
 `fitDirectionalShadowSplits.ts` holds the maths. It fits one box per split through
@@ -344,7 +344,7 @@ fade, a shadowed sun takes about 20 vectors, whatever its split count.
 
 three declares each slot's matrix as a `mat4`, which takes four vectors. The fourth row of every
 slot matrix is (0, 0, 0, 1): it is a bias times an orthographic projection times a view. So the
-patch declares three vec4 rows per slot in its place, and `sunShadowRows.ts` writes them from the
+patch declares three vec4 rows per slot in its place, and `sunShadowUniforms.ts` writes them from the
 slot matrices after each shadow pass. That saves four vectors per sun.
 
 The shadow list holds at most eight lights, so a program samples at most eight sun shadows.
