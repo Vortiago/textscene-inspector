@@ -1,9 +1,13 @@
 [gd_scene format=3 uid="uid://unitdecalatlastex"]
 
-; One variable: a Decal `texture_albedo` wrapped in an AtlasTexture. A decal takes the texture's
-; RID (`scene/3d/decal.cpp:46`), and an AtlasTexture's RID is its whole sheet
-; (`atlas_texture.cpp:55-58`), so the decal projects all four quadrants, not the red one its region
-; names. No other decal scene wraps its texture.
+; One variable: a Decal `texture_albedo` wrapped in an AtlasTexture or a CanvasTexture. A decal
+; takes the texture's RID (`scene/3d/decal.cpp:46`). An AtlasTexture's RID is its whole sheet
+; (`atlas_texture.cpp:55-58`), so the near decal projects all four quadrants, not the red one its
+; region names. The decal atlas refuses a CanvasTexture's RID (`texture_storage.cpp:2941`), so the
+; far decal projects nothing. It sits farther from the camera on purpose: Godot sorts decals near
+; first and skips an untextured one without adding its cluster box (`texture_storage.cpp:3420`,
+; `:3485`), so every decal sorted after it reads the wrong decal's data. No other decal scene wraps
+; its texture.
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
 size = Vector2(8, 8)
@@ -24,12 +28,20 @@ image = SubResource("Image_sheet")
 atlas = SubResource("ImageTexture_sheet")
 region = Rect2(0, 0, 8, 8)
 
+[sub_resource type="CanvasTexture" id="CanvasTexture_sheet"]
+diffuse_texture = SubResource("ImageTexture_sheet")
+
 [node name="Scene" type="Node3D"]
 
 [node name="Floor" type="MeshInstance3D" parent="."]
 mesh = SubResource("PlaneMesh_floor")
 
 [node name="AtlasDecal" type="Decal" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.5)
 texture_albedo = SubResource("AtlasTexture_cell")
+size = Vector3(3, 3, 3)
+
+[node name="CanvasDecal" type="Decal" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -2.5)
+texture_albedo = SubResource("CanvasTexture_sheet")
 size = Vector3(3, 3, 3)
