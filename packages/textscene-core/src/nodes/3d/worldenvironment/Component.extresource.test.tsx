@@ -1,8 +1,8 @@
 /**
  * An Environment, a Sky or a sky material can each live in a standalone `.tres`, and Godot treats
  * that form as it treats the inline one. The seam under test is the resolver hook, not the rendered
- * sky, because the question is whether the reference is followed. A resolved `SkyProperties` is
- * `SkyLayer`'s business.
+ * sky, because the question is whether the reference is followed. A resolved `Sky` is `SkyLayer`'s
+ * business.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -72,7 +72,7 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
       { 'res://town/sky_day.tres': SKY_MATERIAL_TRES }
     );
     expect(resolved?.sky).not.toBeNull();
-    expect(resolved?.sky?.kind).toBe('procedural');
+    expect(resolved?.sky?.material.kind).toBe('procedural');
   });
 
   it('follows a Sky held in an ExtResource, and its material in that file', async () => {
@@ -93,7 +93,7 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
         },
       }
     );
-    expect(resolved?.sky?.kind).toBe('procedural');
+    expect(resolved?.sky?.material.kind).toBe('procedural');
   });
 
   it('reads a .tres SubResource from that file, never the scene id it shares', async () => {
@@ -140,7 +140,21 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
       [],
       {}
     );
-    expect(resolved?.sky?.kind).toBe('procedural');
+    expect(resolved?.sky?.material.kind).toBe('procedural');
+  });
+
+  it('bakes a Real-Time Sky with the fast filter', async () => {
+    const resolved = await resolve(
+      'SubResource("Environment_1")',
+      [
+        ENVIRONMENT_WITH_SKY,
+        { id: 'Sky_1', type: 'Sky', data: { sky_material: 'SubResource("Mat_1")', process_mode: '3' } },
+        PROCEDURAL_MATERIAL,
+      ],
+      [],
+      {}
+    );
+    expect(resolved?.sky?.radianceFilter).toBe('fast');
   });
 
   it('resolves the environment even while its sky .tres is still loading', async () => {

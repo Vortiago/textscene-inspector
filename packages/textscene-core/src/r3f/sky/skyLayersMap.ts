@@ -1,23 +1,20 @@
 /**
- * What every lit program reads of the sky (`../godotSkyLighting.ts`): Godot's baked layers in two
- * cubes, one holding the rough layers a mip each and the other the last layer, which the ambient
- * reads, and the sky's share of the ambient. Each scene with a sky shows its own before each of
- * its renders, so a main view and a sub-viewport with its own sky each light by their own.
+ * What every lit program reads of the sky (`../godotSkyLighting.ts`): Godot's baked layers in three
+ * cubes, each holding a group of layers a mip each, and the sky's share of the ambient. Each scene
+ * with a sky shows its own before each of its renders, so a main view and a sub-viewport with its
+ * own sky each light by their own.
  */
 
 import * as THREE from 'three';
-import {
-  LAST_LAYER_FACE_SIZE,
-  ROUGH_LAYER_FACE_SIZES,
-  type SkyLayers,
-} from '../../resources/sky/skyLayers.js';
+import { SKY_LAYER_GROUPS, type SkyLayers } from '../../resources/sky/skyLayers.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 
-/** The uniform every lit material samples the rough layers through, a mip each. */
-export const SKY_ROUGH_LAYERS_UNIFORM = 'godotSkyRoughLayersMap';
-
-/** The uniform every lit material samples the last layer through. */
-export const SKY_LAST_LAYER_UNIFORM = 'godotSkyLastLayerMap';
+/** The uniform every lit material samples each group of layers through, a mip each. */
+export const SKY_LAYER_UNIFORMS: Record<keyof SkyLayers, string> = {
+  sharp: 'godotSkySharpLayersMap',
+  rough: 'godotSkyRoughLayersMap',
+  last: 'godotSkyLastLayerMap',
+};
 
 /** The one-element array uniform every lit material reads the sky's share of the ambient from. */
 export const SKY_CONTRIBUTION_UNIFORM = 'godotSkyContribution';
@@ -84,11 +81,16 @@ function installedCube(uniform: string): THREE.CubeTexture | null {
   return installed instanceof THREE.CubeTexture ? installed : null;
 }
 
-export const skyRoughLayersMap: THREE.CubeTexture =
-  installedCube(SKY_ROUGH_LAYERS_UNIFORM) ?? new SkyLayerTexture(ROUGH_LAYER_FACE_SIZES);
+/** The cube each group of layers shows in. */
+export const skyLayerMaps = {
+  sharp: layerCube('sharp'),
+  rough: layerCube('rough'),
+  last: layerCube('last'),
+} as const satisfies Record<keyof SkyLayers, THREE.CubeTexture>;
 
-export const skyLastLayerMap: THREE.CubeTexture =
-  installedCube(SKY_LAST_LAYER_UNIFORM) ?? new SkyLayerTexture([LAST_LAYER_FACE_SIZE]);
+function layerCube(group: keyof SkyLayers): THREE.CubeTexture {
+  return installedCube(SKY_LAYER_UNIFORMS[group]) ?? new SkyLayerTexture(SKY_LAYER_GROUPS[group].faceSizes);
+}
 
 const installedContribution = installedUniformValue(SKY_CONTRIBUTION_UNIFORM);
 
@@ -112,6 +114,7 @@ export function showSkyLayers(layers: SkyLayers, contribution: number): void {
   skyContribution[0] = contribution;
   if (layers === shownLayers) return;
   shownLayers = layers;
-  showLayers(skyRoughLayersMap, layers.rough);
-  showLayers(skyLastLayerMap, [layers.last]);
+  showLayers(skyLayerMaps.sharp, layers.sharp);
+  showLayers(skyLayerMaps.rough, layers.rough);
+  showLayers(skyLayerMaps.last, layers.last);
 }

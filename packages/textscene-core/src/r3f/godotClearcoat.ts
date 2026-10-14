@@ -60,14 +60,14 @@ const DIRECT_CLEARCOAT = /* glsl */ `clearcoatSpecularDirect += irradiance * god
 /**
  * Godot's reflection on the coat (`scene_forward_clustered.glsl:1768-1795`): about the coat's
  * normal, dimmed below the surface's horizon, from radiance layer mix( 0.001, 0.1, sqrt( roughness ) )
- * times the last layer's index. That layer is below 1, so the PMREM alone holds it, read at the
- * roughness whose square root is that fraction.
+ * times the last layer's index, read at the roughness whose square root is that fraction. That layer
+ * is below 1, so it blends the radiance with layer 1.
  */
 const CLEARCOAT_RADIANCE = /* glsl */ `vec3 godotClearcoatRadiance( const in vec3 viewDir, const in vec3 clearcoatNormal, const in vec3 normal, const in float roughness ) {
 
 		float horizon;
 		vec3 reflectVec = godotReflection( viewDir, clearcoatNormal, normal, roughness, horizon );
-		return godotPmremLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * envMapIntensity * horizon * horizon;
+		return godotSkyLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * horizon * horizon;
 
 	}
 

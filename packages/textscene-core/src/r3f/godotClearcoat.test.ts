@@ -92,13 +92,13 @@ describe('installGodotClearcoat', () => {
     ).toContain('godotReflection( viewDir, clearcoatNormal, normal, roughness, horizon );');
   });
 
-  it("reads the coat's reflection from the PMREM alone, as its layer is below the first baked one", () => {
+  it("reads the coat's reflection from the radiance and layer 1, as its layer is below 1", () => {
     installWithItsPrerequisites();
 
     expect(
       functionBody(THREE.ShaderChunk.envmap_physical_pars_fragment, 'vec3 godotClearcoatRadiance')
     ).toContain(
-      'godotPmremLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * envMapIntensity * horizon * horizon'
+      'godotSkyLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * horizon * horizon'
     );
   });
 

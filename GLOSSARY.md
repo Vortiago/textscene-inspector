@@ -103,6 +103,10 @@ _Avoid_: `formatOnly` on a refusal of a value the setter receives.
 A per-node-type check on the parsed scene for a condition no single property settles, matched to its exact node type with no base-type inheritance.
 _Avoid_: bare "rule" for a **Validator**.
 
+**Resource rule** (`linter/ResourceRuleRegistry.ts`):
+A per-resource-type check on one `[sub_resource]` or `.tres` body, for a condition Godot reports when it loads that resource, whatever holds it. It reports once per section, on the line of the property it names, and declares its **Rule arm**s in `emits` as a **Lint rule** does.
+_Avoid_: a **Lint rule** on each node that holds the resource.
+
 **Raw view** (`RawNode`, `RawScene` in `parser/types.ts`):
 A node or scene with `rawProperties` and no `properties`, which is what a **Lint rule** receives. Both parsers publish the same `rawProperties`, so a helper typed on the view reads the same values from either tree.
 _Avoid_: reading `properties` in a rule, or casting it to a string map.
@@ -113,7 +117,7 @@ Only the linter reads them, so only the strict parser's `StrictScene` carries th
 _Avoid_: putting a linter-only field on `TscnScene`.
 
 **Rule arm** (`linter/ruleArms.ts`):
-One diagnostic a **Lint rule** can report, declared with its rule name, its **Severity** and the `EmitGrounding` that fixes that severity.
+One diagnostic a **Lint rule** or a **Resource rule** can report, declared with its rule name, its **Severity** and the `EmitGrounding` that fixes that severity.
 A rule reports only through its arms (`reportArm`, `armDiagnostic`), and `armEmits` derives its `emits` from them.
 _Avoid_: a hand-written diagnostic object in a rule.
 
@@ -350,6 +354,14 @@ _Avoid_: "override", "fallback".
 **Sky ambient**:
 The illumination a sky background gives the scene, which in Godot is a radiance map that both lights and reflects, unlike the flat `AMBIENT_SOURCE_COLOR`.
 _Avoid_: "ambient light" alone for the sky case. "IBL" in user-facing text.
+
+**Radiance layer**:
+One of the blurred copies of a sky's radiance that Godot bakes, each for a wider roughness, which rough reflections and the **Sky ambient** read.
+_Avoid_: "mip" for a layer, "PMREM" for Godot's layers.
+
+**Fast filter**:
+Godot's tap-table filter that bakes the **Radiance layers** of a sky in Real-Time process mode, in place of GGX importance sampling.
+_Avoid_: "real-time filter", "low-quality filter".
 
 **Depth fog**:
 The Environment's `fog_*` fog, which fades a surface towards the fog colour with its distance from the camera.

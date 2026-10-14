@@ -68,6 +68,7 @@ const core = await loadCoreLinter();
 const baseTypes = await loadClassBaseTypes();
 const registries = {
   ruleRegistry: core.ruleRegistry,
+  resourceRuleRegistry: core.resourceRuleRegistry,
   validatorRegistry: core.validatorRegistry,
   baseTypes,
 };

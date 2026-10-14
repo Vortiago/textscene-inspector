@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { buildSkyEnvironment, skyPanoramaTexture } from './build';
-import { decodeSkyMaterial } from './decode';
+import { decodeSky, decodeSkyMaterial } from './decode';
+import type { Sky } from './types';
+
+/** A sky of `materialType` with every property at Godot's default. */
+function defaultSky(materialType: string): Sky {
+  return decodeSky({}, decodeSkyMaterial(materialType, {})!);
+}
 
 describe('skyPanoramaTexture', () => {
   it('tiles a clamped panorama on a source-shared clone', () => {
@@ -43,17 +49,59 @@ describe('buildSkyEnvironment layers', () => {
     vi.restoreAllMocks();
   });
 
-  it("carries Godot's roughest layers of the sky's radiance", () => {
+  it("carries Godot's layers 1 to 7 of the sky's radiance", () => {
     vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(() => {});
     vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockReturnValue(
       new THREE.WebGLRenderTarget(1, 1)
     );
-    const sky = decodeSkyMaterial('ProceduralSkyMaterial', {})!;
+    const sky = defaultSky('ProceduralSkyMaterial');
 
-    const env = buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [] });
+    const env = buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [], asBackground: true });
 
-    expect(env!.layers.rough).toHaveLength(3);
-    expect(THREE.DataUtils.fromHalfFloat(env!.layers.last[2]![1]!)).toBeCloseTo(0.25, 3);
+    expect([env!.layers.sharp, env!.layers.rough, env!.layers.last].map((g) => g.length)).toEqual([3, 3, 1]);
+    expect(THREE.DataUtils.fromHalfFloat(env!.layers.last[0]![2]![1]!)).toBeCloseTo(0.25, 3);
+  });
+});
+
+describe('buildSkyEnvironment radiance size', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** The face size of each cube the build renders, and of the cube the PMREM prefilters. */
+  function cubeSizes(radianceSize: number, asBackground = true) {
+    const rendered: number[] = [];
+    vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(function (this: THREE.CubeCamera) {
+      rendered.push(this.renderTarget.width);
+    });
+    let prefiltered = 0;
+    vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockImplementation((cubemap) => {
+      prefiltered = (cubemap.image as { width: number }[])[0]!.width;
+      return new THREE.WebGLRenderTarget(1, 1);
+    });
+    const sky: Sky = {
+      material: decodeSkyMaterial('ProceduralSkyMaterial', {})!,
+      radianceFilter: 'importance-sample',
+      radianceSize,
+    };
+    const env = buildSkyEnvironment(uniformSkyRenderer(0.25), { sky, lights: [], asBackground });
+    return { rendered, prefiltered, hasBackground: env!.background !== null };
+  }
+
+  it('renders one cube for the background and the radiance at the default size', () => {
+    expect(cubeSizes(256)).toEqual({ rendered: [256], prefiltered: 256, hasBackground: true });
+  });
+
+  it('renders the radiance at a smaller size on a cube of its own, so a mirror reads it as coarse as Godot', () => {
+    expect(cubeSizes(32)).toEqual({ rendered: [256, 32], prefiltered: 32, hasBackground: true });
+  });
+
+  it('bakes a size above 256 at 256 (edge case)', () => {
+    expect(cubeSizes(1024)).toEqual({ rendered: [256], prefiltered: 256, hasBackground: true });
+  });
+
+  it('renders only the radiance cube for a sky that is not the background', () => {
+    expect(cubeSizes(32, false)).toEqual({ rendered: [32], prefiltered: 32, hasBackground: false });
   });
 });
 
@@ -77,8 +125,8 @@ describe('buildSkyEnvironment panorama wiring', () => {
     vi.spyOn(THREE.PMREMGenerator.prototype, 'fromCubemap').mockReturnValue(
       new THREE.WebGLRenderTarget(1, 1)
     );
-    const sky = decodeSkyMaterial('PanoramaSkyMaterial', {})!;
-    const env = buildSkyEnvironment(uniformSkyRenderer(0), { sky, lights: [], panorama });
+    const sky = defaultSky('PanoramaSkyMaterial');
+    const env = buildSkyEnvironment(uniformSkyRenderer(0), { sky, lights: [], panorama, asBackground: true });
     return { env, sampled: sampled as THREE.Texture | null };
   }
 

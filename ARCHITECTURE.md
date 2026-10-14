@@ -58,7 +58,8 @@ flowchart LR
 registered component.
 
 **Lint.** The strict parser reports each syntax and format error with its line, and the
-`Linter` runs the semantic rules. This path imports no React and no three.js, so the CLI and
+`Linter` runs the semantic rules: a lint rule on each node of its type, and a resource rule on each
+resource section of its type. This path imports no React and no three.js, so the CLI and
 the VS Code extension host bundle it alone.
 
 **Language features.** `languageFeatures/` (`createLanguageDocument`) parses the text through

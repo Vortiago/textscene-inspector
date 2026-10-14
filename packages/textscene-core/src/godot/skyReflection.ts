@@ -1,13 +1,47 @@
 /**
- * How Godot lays out and filters a sky's radiance layers in high-quality mode, the mode of every
- * sky whose shader reads no `TIME` (`servers/rendering/renderer_rd/environment/sky.cpp`). Godot's
- * sky ambient reads the last layer (`scene_forward_clustered.glsl:1744-1756`).
+ * How Godot lays out and filters a sky's radiance layers (`servers/rendering/renderer_rd/environment/sky.cpp`):
+ * by GGX importance sampling in the high-quality modes, and by the fast filter in real-time mode.
+ * Godot's sky ambient reads the last layer (`scene_forward_clustered.glsl:1744-1756`).
  */
 
 import { octToVec3WithBorder, type OctDirection } from './octmap.js';
 
+/** The size each `Sky::RadianceSize` names, by its value (`scene/resources/sky.cpp:37-39`). */
+export const SKY_RADIANCE_SIZES: readonly number[] = [32, 64, 128, 256, 512, 1024, 2048];
+
 /** RADIANCE_SIZE_256, the default of `Sky.radiance_size` (`scene/resources/sky.h:61`). */
 export const SKY_RADIANCE_SIZE_DEFAULT = 256;
+
+/** `Sky::REAL_TIME_SIZE` (`sky.h:248`): a real-time sky bakes at this size whatever its `radiance_size`. */
+export const REAL_TIME_RADIANCE_SIZE = 256;
+
+/** `Sky::REAL_TIME_ROUGHNESS_LAYERS` (`sky.h:249`): a real-time sky has layers 0 to 6. */
+export const REAL_TIME_ROUGHNESS_LAYERS = 7;
+
+/**
+ * The width of each mip of the copy the fast filter reads: 160 with five mips, whatever the
+ * radiance size (`sky.cpp:341-343`).
+ */
+export const FAST_FILTER_CHAIN_SIZES: readonly number[] = [160, 80, 40, 20, 10];
+
+/**
+ * 1 / sqrt(3): a fast-filter frame weighs nothing where its axis is no nearer the direction than the
+ * others (`octmap_filter.glsl:97-98`).
+ */
+export const FAST_FILTER_FRAME_LOWER_BOUND = 0.57735;
+
+/** Each fast-filter frame's up axis, and the two other axes that weigh it (`octmap_filter.glsl:95-112`). */
+export const FAST_FILTER_FRAMES: readonly { up: OctDirection; others: readonly [number, number] }[] = [
+  { up: [1, 0, 0], others: [1, 2] },
+  { up: [0, 1, 0], others: [0, 2] },
+  { up: [0, 0, 1], others: [0, 1] },
+];
+
+/** NUM_TAPS / 4 with the low-quality table's eight taps a frame (`octmap_filter.glsl:42-46`, `:155`). */
+export const FAST_FILTER_SUPER_TAPS_PER_FRAME = 2;
+
+/** The sub-taps of each super-tap, one per `vec4` lane of the table (`octmap_filter.glsl:62`). */
+export const FAST_FILTER_SUB_TAPS = 4;
 
 /**
  * The default of `rendering/reflections/sky_reflections/roughness_layers`
