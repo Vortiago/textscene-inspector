@@ -1,6 +1,6 @@
 /**
  * Decoding a loaded standalone AtlasTexture `.tres`. `SubResourceResolver.test.ts`
- * covers `resolveExtAtlasTexturePath`, and `useTexture2D.test.tsx` covers
+ * covers `resolveExtTextResourcePath`, and `useTexture2D.test.tsx` covers
  * `resolveAtlasTextureRef` and `resolveAtlasTexture`.
  */
 import { describe, expect, it } from 'vitest';

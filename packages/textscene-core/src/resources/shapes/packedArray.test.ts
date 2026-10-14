@@ -8,6 +8,7 @@ import {
   parsePackedVector2Array,
   parsePackedVector3Array,
   parsePackedInt32Arrays,
+  parsePackedByteArray,
   parsePackedFloat32Array,
   fanTriangulate,
 } from './packedArray';
@@ -188,5 +189,27 @@ describe('parsePackedInt32Arrays — the bare inner-array spelling', () => {
 
   it('refuses a bare element the tokenizer cannot read', () => {
     expect(() => parsePackedInt32Arrays('[[0, oops, 2]]')).toThrow();
+  });
+});
+
+describe('parsePackedByteArray', () => {
+  it('reads the element list Godot writes for a file of short byte arrays', () => {
+    expect([...parsePackedByteArray('PackedByteArray(63, 0, 255)')]).toEqual([63, 0, 255]);
+  });
+
+  it('reads the base64 body Godot writes once a byte array passes 64 bytes', () => {
+    expect([...parsePackedByteArray('PackedByteArray("PwD/")')]).toEqual([63, 0, 255]);
+  });
+
+  it('narrows an element as (uint8_t) does: -1 stores 255 (edge case)', () => {
+    expect([...parsePackedByteArray('PackedByteArray(-1, 256)')]).toEqual([255, 0]);
+  });
+
+  it('reads an empty array', () => {
+    expect(parsePackedByteArray('PackedByteArray()')).toHaveLength(0);
+  });
+
+  it('throws on an element Godot cannot read', () => {
+    expect(() => parsePackedByteArray('PackedByteArray(1, x)')).toThrow('PackedByteArray');
   });
 });

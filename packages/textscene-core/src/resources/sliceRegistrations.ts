@@ -59,6 +59,7 @@ import './textures/atlastexture/index.js';
 import './textures/viewporttexture/index.js';
 import './textures/noisetexture2d/index.js';
 import './textures/noisetexture3d/index.js';
+import './textures/imagetexture3d/index.js';
 
 // Noise
 import './noise/fastnoiselite/index.js';

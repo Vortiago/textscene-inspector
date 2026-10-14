@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://unitsprite2dimagetextres"]
+
+[ext_resource type="Texture2D" path="res://textures/image-texture.tres" id="1_texture"]
+
+; One variable: a Sprite2D whose texture is an ImageTexture saved as its own .tres, an 8x8 RGB8
+; Image written by Godot 4.6.3 (textures/image-texture.tres). Every other Sprite2D texture is an
+; image file or a generated texture, so a regression in the saved Image decode shows nowhere else.
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.85, 0.85, 0.8, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="SavedImage" type="Sprite2D" parent="."]
+position = Vector2(576, 324)
+scale = Vector2(8, 8)
+texture = ExtResource("1_texture")

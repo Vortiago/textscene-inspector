@@ -1,6 +1,6 @@
 /**
- * The one resolver for a Texture2D slot: an image path or `ExtResource`, a `CanvasTexture`, an
- * `AtlasTexture` inline or as a `.tres`, or an inline `GradientTexture2D` or `NoiseTexture2D`.
+ * The one resolver for a Texture2D slot: an image path or `ExtResource`, a `CanvasTexture`, or an
+ * `AtlasTexture`, `GradientTexture2D` or `NoiseTexture2D`, inline or saved as its own `.tres`.
  * Wrappers peel to a fixed point, and the texture's size is Godot's size for the slot.
  * `resolveTexture2DPath` suits only a caller that wants a file path. `inlineTexture2DSize` sits
  * here so the size cannot drift.
@@ -11,7 +11,7 @@ import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import type { ParsedResource } from '../parser/parsedResource.js';
 import {
-  resolveExtAtlasTexturePath,
+  resolveExtTextResourcePath,
   resolveExtResourcePath,
   resolveSubResourceRef,
   unwrapCanvasTextureRef,
@@ -25,6 +25,8 @@ import {
 } from './textures/atlastexture/resolveAtlasTexture.js';
 import { ATLAS_TEXTURE_TYPE } from './textures/atlastexture/types.js';
 import { decodeGradientTexture2D } from './textures/gradienttexture2d/decode.js';
+import { decodeNoiseTexture2D } from './textures/noisetexture2d/decode.js';
+import { textResourceTexture } from './textures/textResourceTexture.js';
 import { useProceduralTexture, useProceduralTexturePins } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
 
@@ -91,53 +93,55 @@ function useTexture2DSlot(
     [unwrapped, internalResources]
   );
 
-  // An AtlasTexture `.tres`, known from the ExtResource's `type=` before any fetch. It loads on the
-  // `resource` bus, since the image bus cannot decode text.
-  const extAtlasPath = useMemo(
-    () => (inlineAtlas ? null : resolveExtAtlasTexturePath(unwrapped, externalResources)),
+  // A `.tres`, which loads on the `resource` bus, since the image bus cannot decode text. Its own
+  // header says what it holds: an AtlasTexture, or a texture its own tables describe.
+  const textResourcePath = useMemo(
+    () => (inlineAtlas ? null : resolveExtTextResourcePath(unwrapped, externalResources)),
     [inlineAtlas, unwrapped, externalResources]
   );
-  const extAtlasFile = useResource<ParsedResource>(extAtlasPath ?? '', 'resource');
+  const textResourceFile = useResource<ParsedResource>(textResourcePath ?? '', 'resource');
   const extAtlas = useMemo(
     () =>
-      extAtlasPath && extAtlasFile.value ? decodeExtAtlasTextureRef(extAtlasPath, extAtlasFile.value) : null,
-    [extAtlasPath, extAtlasFile.value]
+      textResourcePath && textResourceFile.value
+        ? decodeExtAtlasTextureRef(textResourcePath, textResourceFile.value)
+        : null,
+    [textResourcePath, textResourceFile.value]
   );
+  const saved =
+    textResourcePath && textResourceFile.value ? textResourceTexture(textResourceFile.value) : null;
 
   const atlas = inlineAtlas ?? extAtlas;
-  // A `.tres` file's ids are its own, so its `atlas` ref resolves against its own resource tables.
-  const externalResourcesForAtlas =
-    extAtlas && extAtlasFile.value ? extAtlasFile.value.extResources : externalResources;
-  const internalResourcesForAtlas =
-    extAtlas && extAtlasFile.value ? extAtlasFile.value.subResources : internalResources;
+  // A `.tres` file's ids are its own, so its refs resolve against its own resource tables.
+  const externalResourcesForSource = saved?.externalResources ?? externalResources;
+  const internalResourcesForSource = saved?.internalResources ?? internalResources;
 
   // The sheet is an ordinary Texture2D slot, so it gets the same unwrap. A `.tres` still loading
   // names nothing yet.
   const sourceRef = useMemo(() => {
-    if (extAtlasPath && !extAtlas) return undefined;
-    if (atlas) return unwrapCanvasTextureRef(atlas.texture.atlas, internalResourcesForAtlas);
-    return unwrapped;
-  }, [extAtlasPath, extAtlas, atlas, internalResourcesForAtlas, unwrapped]);
+    if (textResourcePath && !textResourceFile.value) return undefined;
+    if (atlas) return unwrapCanvasTextureRef(atlas.texture.atlas, internalResourcesForSource);
+    return saved?.ref ?? unwrapped;
+  }, [textResourcePath, textResourceFile.value, atlas, internalResourcesForSource, saved, unwrapped]);
 
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
   // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook
   // pins it while mounted and never disposes it.
-  const procedural = useProceduralTexture(sourceRef, internalResourcesForAtlas);
+  const procedural = useProceduralTexture(sourceRef, internalResourcesForSource);
 
   // `resolveExtResourcePath`, not `resolveTexture2DPath`: `sourceRef` is already
   // at its fixed point, so that resolver's own peel could only return it again.
   const path = useMemo(
-    () => (procedural.claimed ? null : resolveExtResourcePath(sourceRef, externalResourcesForAtlas)),
-    [procedural.claimed, sourceRef, externalResourcesForAtlas]
+    () => (procedural.claimed ? null : resolveExtResourcePath(sourceRef, externalResourcesForSource)),
+    [procedural.claimed, sourceRef, externalResourcesForSource]
   );
   const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
   const source = procedural.texture ?? loaded.value ?? null;
 
   if (!ref) return { atlas, source, result: { texture: null, missing: false } };
 
-  if (extAtlasPath && !extAtlas) {
-    // Missing only once `extAtlasFile` leaves 'pending': the file is absent or another type.
-    return { atlas, source, result: { texture: null, missing: extAtlasFile.status !== 'pending' } };
+  if (textResourcePath && !textResourceFile.value) {
+    // Missing only once the file leaves 'pending': it is absent.
+    return { atlas, source, result: { texture: null, missing: textResourceFile.status !== 'pending' } };
   }
 
   const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');
@@ -153,7 +157,7 @@ export interface Texture2DSize {
 /**
  * The pixel size of a Texture2D slot that the scene states, for a Control's minimum-size solve,
  * which runs outside React. Null for a form only the loader can size: an image, a wrapper of one,
- * or an AtlasTexture `.tres` (see `extResourceAtlasTextureSize`).
+ * or a `.tres` (see `extResourceTexture2DSize`).
  */
 export function inlineTexture2DSize(
   ref: string | undefined,
@@ -169,24 +173,34 @@ export function inlineTexture2DSize(
     return layout ? { x: layout.width, y: layout.height } : null;
   }
 
+  // The declared size: neither getter consults the texture's source
+  // (`scene/resources/gradient_texture.cpp`, `modules/noise/noise_texture_2d.cpp:378-384`), and
+  // building one here mints a cache entry no consumer pins, open to eviction.
   const resource = resolveSubResourceRef(unwrapped, internalResources);
-  if (resource?.type !== 'GradientTexture2D') return null;
-  // The declared size: Godot's getters (`scene/resources/gradient_texture.cpp`) never consult
-  // `gradient`, and rasterising here mints a cache entry no consumer pins, open to eviction.
-  const { width, height } = decodeGradientTexture2D(resource.data);
-  return { x: width, y: height };
+  if (resource?.type === 'GradientTexture2D') {
+    const { width, height } = decodeGradientTexture2D(resource.data);
+    return { x: width, y: height };
+  }
+  if (resource?.type === 'NoiseTexture2D') {
+    const { width, height } = decodeNoiseTexture2D(resource.data);
+    return { x: width, y: height };
+  }
+  return null;
 }
 
 /**
- * The pixel size of an `ExtResource(AtlasTexture)` slot from its parsed `.tres`, for a caller with
- * a synchronous cache instead of hooks. `sheetSize` answers a zero region axis, and null leaves it
- * unanswered. Null for a `.tres` of another type, like `decodeExtAtlasTextureRef`.
+ * The pixel size of an `ExtResource` slot from its parsed `.tres`, for a caller with a synchronous
+ * cache instead of hooks. `sheetSize` answers an AtlasTexture's zero region axis, and null leaves
+ * it unanswered. Null for a `.tres` that holds no texture the scene could state inline.
  */
-export function extResourceAtlasTextureSize(
+export function extResourceTexture2DSize(
   tres: ParsedResource,
   sheetSize: { width: number; height: number } | null
 ): Texture2DSize | null {
-  if (tres.resourceType !== ATLAS_TEXTURE_TYPE) return null;
-  const layout = atlasTextureLayout(decodeAtlasTexture(tres.properties), sheetSize);
-  return layout ? { x: layout.width, y: layout.height } : null;
+  if (tres.resourceType === ATLAS_TEXTURE_TYPE) {
+    const layout = atlasTextureLayout(decodeAtlasTexture(tres.properties), sheetSize);
+    return layout ? { x: layout.width, y: layout.height } : null;
+  }
+  const saved = textResourceTexture(tres);
+  return inlineTexture2DSize(saved.ref, saved.internalResources);
 }

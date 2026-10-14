@@ -9,7 +9,7 @@ renders_as: density, scattering and emission added to the volumetric fog
 
 # FogVolume
 
-A FogVolume adds a local region of fog to the Environment's volumetric fog. A negative-density `FogMaterial` removes fog instead. The previewer adds each volume's density, albedo and emission to the froxels its shape covers, as Godot's volume pass does. It draws nothing where the Environment's volumetric fog is off. A `FogMaterial` `density_texture` shapes the density by its red channel: an inline NoiseTexture3D, or an image its import sidecar imports as a 3D texture.
+A FogVolume adds a local region of fog to the Environment's volumetric fog. A negative-density `FogMaterial` removes fog instead. The previewer adds each volume's density, albedo and emission to the froxels its shape covers, as Godot's volume pass does. It draws nothing where the Environment's volumetric fog is off. A `FogMaterial` `density_texture` shapes the density by its red channel: a NoiseTexture3D or an ImageTexture3D, inline or saved as its own `.tres`, or an image its import sidecar imports as a 3D texture.
 
 ## Linting
 
@@ -34,7 +34,7 @@ The lenient parser clamps each negative `size` component to 0, as `set_size` doe
 ## Known limitations
 
 - **Shader missing** A volume whose material is a fog `ShaderMaterial` adds no fog, where Godot runs its fog shader.
-- **Resource gap** A `density_texture` saved as its own `.tres`, such as a NoiseTexture3D or an ImageTexture3D, leaves the density even.
+- **Resource gap** An ImageTexture3D saved in a float, half, 16-bit or block-compressed image format leaves the density even. The 8-bit formats draw.
 - **Approximated** An imported 3D texture reads its source image, where Godot's default Lossy and its VRAM compression store an approximation of it, so the density differs slightly from Godot's.
 - **Approximated** A NoiseTexture3D `density_texture` leaves the density even on first load until its build finishes, where Godot shapes the fog on its first frame.
 - **Approximated** A NoiseTexture3D's domain warp is not applied, so the density keeps its scale while the swirl does not match.

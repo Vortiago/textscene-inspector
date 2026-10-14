@@ -1,7 +1,7 @@
 /**
  * Resolves a Texture2D property that names an `AtlasTexture` into the cell as its
  * own texture. Inline (`resolveAtlasTextureRef`) and `.tres`
- * (`SubResourceResolver.resolveExtAtlasTexturePath`, `decodeExtAtlasTextureRef`)
+ * (`SubResourceResolver.resolveExtTextResourcePath`, `decodeExtAtlasTextureRef`)
  * forms decode to one `AtlasTextureReference`, so the crop and cache are form-agnostic.
  */
 

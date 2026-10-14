@@ -508,6 +508,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fog Volume Density Noise Tres",
+    "file": "unit-fog-volume-density-noise-tres.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Fog Volume Density Volume Tres",
+    "file": "unit-fog-volume-density-volume-tres.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Fog Volume",
     "file": "unit-fog-volume.tscn",
     "category": "Other"
@@ -2183,8 +2193,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Sprite2d Imagetexture Tres",
+    "file": "unit-sprite2d-imagetexture-tres.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Sprite2d Magnified",
     "file": "unit-sprite2d-magnified.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Noisetexture Tres",
+    "file": "unit-sprite2d-noisetexture-tres.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
