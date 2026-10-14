@@ -7,6 +7,7 @@
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
+import { MAX_ROUGHNESS_LOD } from '../godot/skyReflection.js';
 import { glslFloat } from '../resources/environment/glslLiterals.js';
 import {
   SKY_CONTRIBUTION_UNIFORM,
@@ -57,7 +58,7 @@ const GODOT_SKY_LAYER = /* glsl */ `vec3 godotSkyLayer( const in vec3 reflectVec
 
 		#ifdef ENVMAP_TYPE_CUBE_UV
 
-			float layer = sqrt( roughness ) * ${glslFloat(last.firstLayer)};
+			float layer = sqrt( roughness ) * ${glslFloat(MAX_ROUGHNESS_LOD)};
 			vec3 radiance = textureCubeUV( envMap, reflectVec, 0.0 ).rgb;
 			vec3 sharpLayer = textureLod( ${SKY_LAYER_UNIFORMS.sharp}, reflectVec, clamp( layer - ${SHARP.first}, 0.0, ${SHARP.lastMip} ) ).rgb;
 			vec3 roughLayer = textureLod( ${SKY_LAYER_UNIFORMS.rough}, reflectVec, clamp( layer - ${ROUGH.first}, 0.0, ${ROUGH.lastMip} ) ).rgb;

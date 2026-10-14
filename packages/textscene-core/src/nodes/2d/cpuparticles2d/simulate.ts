@@ -38,6 +38,7 @@ import type { Gradient } from '../../../resources/textures/gradienttexture2d/typ
 // The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from './godotRng';
+import { degToRad, lerp } from '../../../godot/math.js';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
@@ -643,14 +644,6 @@ function sampleParam(curves: ParticleCurves, param: CPUParticles2DParam, tv: num
 function lerpParam(props: CPUParticles2DProperties, param: CPUParticles2DParam, seedRef: SeedRef): number {
   const slot = props.params[param]!;
   return lerp(slot.min, slot.max, randFromSeed(seedRef));
-}
-
-function lerp(from: number, to: number, weight: number): number {
-  return from + (to - from) * weight;
-}
-
-function degToRad(degrees: number): number {
-  return (degrees * Math.PI) / 180;
 }
 
 function multiplyColor(a: Color, b: Color): Color {

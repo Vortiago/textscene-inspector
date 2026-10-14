@@ -4,7 +4,7 @@
  */
 
 import { sign } from './math.js';
-import { storedReal, storedXyz } from './real.js';
+import { storedReal, storedVector3 } from './real.js';
 import {
   halvingSizes,
   paddedOctmap,
@@ -12,7 +12,7 @@ import {
   type SkyOctmapLayout,
 } from './skyReflection.js';
 import { GODOT_EDITOR_LAYERS_MASK } from './visualLayers.js';
-import type { Xyz } from './xyz.js';
+import type { Vector3 } from './vector.js';
 
 /** `ReflectionProbe::UpdateMode` (`scene/3d/reflection_probe.h:39-42`). */
 export enum ReflectionProbeUpdateMode {
@@ -53,7 +53,7 @@ export const CAPTURE_NEAR = 0.01;
 const FACE_MARGIN = 0.01;
 
 /** The six capture faces' view directions, in Godot's face order (`renderer_scene_cull.cpp:3670-3677`). */
-export const FACE_NORMALS: readonly Xyz[] = [
+export const FACE_NORMALS: readonly Vector3[] = [
   { x: 1, y: 0, z: 0 },
   { x: -1, y: 0, z: 0 },
   { x: 0, y: 1, z: 0 },
@@ -62,7 +62,7 @@ export const FACE_NORMALS: readonly Xyz[] = [
   { x: 0, y: 0, z: -1 },
 ];
 
-function dot(a: Xyz, b: Xyz): number {
+function dot(a: Vector3, b: Vector3): number {
   return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
@@ -71,7 +71,7 @@ function dot(a: Xyz, b: Xyz): number {
  * at least `maxDistance`. Godot keeps one distance across the loop, so a face never sees less far
  * than the faces before it (`renderer_scene_cull.cpp:3688-3694`).
  */
-export function captureFarPlanes(size: Xyz, originOffset: Xyz, maxDistance: number): number[] {
+export function captureFarPlanes(size: Vector3, originOffset: Vector3, maxDistance: number): number[] {
   let far = maxDistance;
   return FACE_NORMALS.map((normal) => {
     const edge = { x: (normal.x * size.x) / 2, y: (normal.y * size.y) / 2, z: (normal.z * size.z) / 2 };
@@ -125,7 +125,7 @@ export function reflectionAtlasLayout(hasRealTimeProbe: boolean): SkyOctmapLayou
  * equal boxes. So the first of two equal boxes in the tree wins. Past 16 probes Godot introsorts
  * (`sort_array.h:51`), which leaves equal boxes in no set order, so this keeps the tree order.
  */
-export function reflectionProbeOrder<Probe extends { size: Xyz }>(probes: readonly Probe[]): Probe[] {
+export function reflectionProbeOrder<Probe extends { size: Vector3 }>(probes: readonly Probe[]): Probe[] {
   const diagonal = ({ size }: Probe) => Math.hypot(size.x, size.y, size.z);
   return [...probes].reverse().sort((a, b) => diagonal(b) - diagonal(a));
 }
@@ -135,11 +135,11 @@ export function reflectionProbeOrder<Probe extends { size: Xyz }>(probes: readon
  * order. Each setter clamps each axis to `half_size - 0.01`, and only `set_size` floors `half_size`
  * at 0.01 (`reflection_probe.cpp:99-136`). An offset listed before `size` meets the default size.
  */
-export function loadedOriginOffset(lines: Iterable<readonly ['size' | 'origin_offset', Xyz]>): Xyz {
-  let size: Xyz = REFLECTION_PROBE_DEFAULTS.size;
-  let offset: Xyz = REFLECTION_PROBE_DEFAULTS.originOffset;
+export function loadedOriginOffset(lines: Iterable<readonly ['size' | 'origin_offset', Vector3]>): Vector3 {
+  let size: Vector3 = REFLECTION_PROBE_DEFAULTS.size;
+  let offset: Vector3 = REFLECTION_PROBE_DEFAULTS.originOffset;
   for (const [key, value] of lines) {
-    const stored = storedXyz(value);
+    const stored = storedVector3(value);
     if (key === 'size') size = stored;
     else offset = stored;
     offset = clampedOffset(offset, size, key === 'size');
@@ -147,8 +147,8 @@ export function loadedOriginOffset(lines: Iterable<readonly ['size' | 'origin_of
   return offset;
 }
 
-function clampedOffset(offset: Xyz, size: Xyz, floorsHalfSize: boolean): Xyz {
-  const clampAxis = (axis: keyof Xyz): number => {
+function clampedOffset(offset: Vector3, size: Vector3, floorsHalfSize: boolean): Vector3 {
+  const clampAxis = (axis: keyof Vector3): number => {
     let halfSize = storedReal(size[axis] / 2);
     if (floorsHalfSize && halfSize < FACE_MARGIN) halfSize = storedReal(FACE_MARGIN);
     const limit = halfSize - FACE_MARGIN;

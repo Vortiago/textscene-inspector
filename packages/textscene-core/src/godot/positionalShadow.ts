@@ -4,6 +4,7 @@
  * soft shadow.
  */
 
+import { degToRad } from './math.js';
 import { SOFT_LOW_QUALITY_RADIUS } from './softShadowScale.js';
 
 /** `Light3D()` sets `PARAM_SHADOW_NORMAL_BIAS` to 1 (`scene/3d/light_3d.cpp:491`). */
@@ -70,7 +71,7 @@ interface LightBounds {
  * than a hemisphere. `spotAngle` is in degrees and is null for an omni light.
  */
 export function positionalLightBounds(range: number, spotAngle: number | null): LightBounds {
-  const angle = spotAngle === null ? null : (spotAngle * Math.PI) / 180;
+  const angle = spotAngle === null ? null : degToRad(spotAngle);
   if (angle === null || angle > Math.PI * 0.5) {
     return { min: [-range, -range, -range], max: [range, range, range] };
   }

@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { renderedDepthFogRange } from '../../godot/depthFog.js';
 import type { VolumetricFogProjectSettings } from '../../godot/volumetricFog.js';
 import type { EnvironmentSettings } from '../../resources/environment/types.js';
+import { setGodotColorLinear } from '../godotColor.js';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
 import { skyLightEnergy } from '../sky/skyLight.js';
 import { worldToSky } from '../sky/skyRotation.js';
@@ -97,9 +98,7 @@ function writeDepthFog(fog: DepthFog | null, camera: THREE.Camera): void {
     fogUniforms.depthColor[3] = 0;
     return;
   }
-  const color = depthColor
-    .setRGB(fog.color.r, fog.color.g, fog.color.b, THREE.SRGBColorSpace)
-    .multiplyScalar(fog.lightEnergy);
+  const color = setGodotColorLinear(depthColor, fog.color).multiplyScalar(fog.lightEnergy);
   const { near, far } = camera as THREE.PerspectiveCamera;
   const range = renderedDepthFogRange({ begin: fog.depthBegin, end: fog.depthEnd }, far);
   writeVec4(fogUniforms.depthColor, 0, color.r, color.g, color.b, 1);

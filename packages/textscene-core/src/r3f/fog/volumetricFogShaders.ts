@@ -6,11 +6,11 @@
  */
 
 import {
-  VOLUMETRIC_FOG_MAX_SKY_LOD,
   VOLUMETRIC_FOG_SHADOW_FADE,
   VOLUMETRIC_FOG_SHADOW_OPACITY_MIN,
   VOLUMETRIC_FOG_TEMPORAL_JITTERS,
 } from '../../godot/volumetricFog.js';
+import { MAX_ROUGHNESS_LOD } from '../../godot/skyReflection.js';
 import { glslFloat } from '../../resources/environment/glslLiterals.js';
 import { HENYEY_GREENSTEIN_GLSL } from '../henyeyGreenstein.js';
 import { FogLightKind, FogLightTexel } from './fogLights.js';
@@ -261,9 +261,10 @@ vec3 lightsAt( vec3 view ) {
 	return total;
 }
 
-// .glsl:434: the radiance mip a froxel of this density reads, as a fraction of the coarsest.
+// .glsl:434: the radiance mip a froxel of this density reads, as a fraction of the coarsest,
+// \`MAX_SKY_LOD\` (\`environment/fog.cpp:304\`). A denser froxel reads a blurrier sky.
 float skyRoughness( float density ) {
-	return min( ( 2.0 + density * ${glslFloat(VOLUMETRIC_FOG_MAX_SKY_LOD - 2)} ) / ${glslFloat(VOLUMETRIC_FOG_MAX_SKY_LOD)}, 1.0 );
+	return min( ( 2.0 + density * ${glslFloat(MAX_ROUGHNESS_LOD - 2)} ) / ${glslFloat(MAX_ROUGHNESS_LOD)}, 1.0 );
 }
 
 // .glsl:430-445: the isotropic sample reads the sky straight up, the anisotropic one along the view.

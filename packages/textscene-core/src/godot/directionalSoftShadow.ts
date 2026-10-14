@@ -5,19 +5,18 @@
  * `servers/rendering/renderer_scene_cull.cpp:2286-2299`).
  */
 
-/** `Light3D()` sets `PARAM_SIZE`, which `light_angular_distance` sets, to 0 (`scene/3d/light_3d.cpp:478`). */
-export const LIGHT_ANGULAR_DISTANCE_DEFAULT = 0;
+import { degToRad } from './math.js';
+import { LIGHT_SIZE_DEFAULT } from './positionalShadow.js';
 
-function radians(degrees: number): number {
-  return (degrees * Math.PI) / 180;
-}
+/** `light_angular_distance` sets `PARAM_SIZE`, so its default is that of `light_size`. */
+export const LIGHT_ANGULAR_DISTANCE_DEFAULT = LIGHT_SIZE_DEFAULT;
 
 /**
  * `softshadow_angle`: the tangent of the angular distance, or zero for none
  * (`light_storage.cpp:676-689`, `:698`).
  */
 export function softShadowAngle(angularDistance: number): number {
-  return angularDistance > 0 ? Math.tan(radians(angularDistance)) : 0;
+  return angularDistance > 0 ? Math.tan(degToRad(angularDistance)) : 0;
 }
 
 /** What turns on Godot's directional soft shadows for every directional light (`light_storage.cpp:680-686`). */
@@ -44,7 +43,7 @@ export function drawsDirectionalSoftShadow({
 
 /** The light's `size`: the cosine offset its angular distance adds to N.L (`light_storage.cpp:670`). */
 export function directionalLightSize(angularDistance: number): number {
-  return 1 - Math.cos(radians(angularDistance));
+  return 1 - Math.cos(degToRad(angularDistance));
 }
 
 /**

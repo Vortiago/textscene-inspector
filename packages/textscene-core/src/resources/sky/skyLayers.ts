@@ -9,11 +9,7 @@
 import * as THREE from 'three';
 import { drawFullScreen } from '../../r3f/fullScreenPass.js';
 import { drawOffscreen } from '../../r3f/offscreen.js';
-import {
-  SKY_ROUGHNESS_LAYERS_DEFAULT,
-  skyOctmapLayout,
-  type SkyOctmapLayout,
-} from '../../godot/skyReflection.js';
+import { MAX_ROUGHNESS_LOD, skyOctmapLayout, type SkyOctmapLayout } from '../../godot/skyReflection.js';
 import { fastFilter } from './fastFilter.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
 import type { LayerFilter } from './layerFilter.js';
@@ -41,7 +37,7 @@ export const SKY_LAYER_GROUPS = {
   sharp: { firstLayer: 1, faceSizes: [128, 64, 32] },
   rough: { firstLayer: 4, faceSizes: [32, 16, 8] },
   /** The layer the ambient reads, smooth enough that linear filtering between texels 6 degrees apart follows it. */
-  last: { firstLayer: SKY_ROUGHNESS_LAYERS_DEFAULT - 1, faceSizes: [16] },
+  last: { firstLayer: MAX_ROUGHNESS_LOD, faceSizes: [16] },
 } as const satisfies Record<string, SkyLayerGroup>;
 
 /** Godot's layers 1 to 7 of a sky, a cube per group with a mip per layer. */

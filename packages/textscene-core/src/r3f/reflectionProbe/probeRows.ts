@@ -5,7 +5,7 @@
 
 import type * as THREE from 'three';
 import type { ReflectionProbeAmbientMode } from '../../godot/reflectionProbe.js';
-import type { Xyz } from '../../godot/xyz.js';
+import type { Vector3 } from '../../godot/vector.js';
 import type { Color } from '../../utils/colorParser.js';
 import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
 
@@ -13,9 +13,9 @@ import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
 export interface DrawnProbe {
   /** The inverse of the probe's world transform, its scale dropped as Godot's probe disables it. */
   worldToLocal: THREE.Matrix4;
-  size: Xyz;
+  size: Vector3;
   blendDistance: number;
-  originOffset: Xyz;
+  originOffset: Vector3;
   intensity: number;
   ambientMode: ReflectionProbeAmbientMode;
   ambientColor: Color;

@@ -6,7 +6,7 @@
 import { enumNamesByValue } from './enumNames.js';
 import { clamp } from './math.js';
 import type { HalfExtents, VolumetricFogGrid } from './volumetricFog.js';
-import type { Xyz } from './xyz.js';
+import type { Vector3 } from './vector.js';
 
 /** `RS::FogVolumeShape` (`servers/rendering_server.h`), the values `FogVolume.shape` stores. */
 export enum FogVolumeShape {
@@ -32,7 +32,7 @@ export const FOG_VOLUME_DEFAULT_SHAPE = FogVolumeShape.BOX;
 export const FOG_VOLUME_DENSITY_SCALE = 1024;
 
 /** `size.maxf(0)`: the setter clamps each component (`scene/3d/fog_volume.cpp:78`). */
-export function fogVolumeSize({ x, y, z }: Xyz): Xyz {
+export function fogVolumeSize({ x, y, z }: Vector3): Vector3 {
   return { x: Math.max(0, x), y: Math.max(0, y), z: Math.max(0, z) };
 }
 
@@ -48,8 +48,8 @@ export interface FogVolumeFrame {
 
 /** The cells a volume's pass covers, from `min` to before `max`, with rows counted from the top. */
 export interface FroxelRange {
-  min: Xyz;
-  max: Xyz;
+  min: Vector3;
+  max: Vector3;
 }
 
 /** A point clamped in front of the camera, so a corner behind it maps to the first slice. */
@@ -59,7 +59,10 @@ const VIEW_DEPTH_MAX = -0.01;
  * The cell holding the view-space point `view`, with rows counted from the top, clamped to the grid
  * and one past it (`fog.cpp:551-567`). The sections spread linearly in depth here, unlike the slices.
  */
-export function fogVolumeFroxel(view: Xyz, { grid, begin, end, length, detailSpread }: FogVolumeFrame): Xyz {
+export function fogVolumeFroxel(
+  view: Vector3,
+  { grid, begin, end, length, detailSpread }: FogVolumeFrame
+): Vector3 {
   const depth = -Math.min(view.z, VIEW_DEPTH_MAX) / length;
   const x = view.x / (2 * (begin.x * (1 - depth) + end.x * depth)) + 0.5;
   const y = -view.y / (2 * (begin.y * (1 - depth) + end.y * depth)) + 0.5;
@@ -77,7 +80,7 @@ export function fogVolumeFroxel(view: Xyz, { grid, begin, end, length, detailSpr
  * whole screen up to that cell.
  */
 export function fogVolumeFroxelRange(
-  corners: readonly Xyz[],
+  corners: readonly Vector3[],
   { isCameraInside, grid }: { isCameraInside: boolean; grid: VolumetricFogGrid }
 ): FroxelRange {
   const farthest = Math.max(1, ...corners.map((corner) => corner.z));
@@ -102,8 +105,8 @@ export function fogVolumeFroxelRange(
  * screen (`fog.cpp:701-707`).
  */
 export function isCameraNearFogVolume(
-  camera: Xyz,
-  corners: readonly Xyz[],
+  camera: Vector3,
+  corners: readonly Vector3[],
   nearCornerDistance: number
 ): boolean {
   return (['x', 'y', 'z'] as const).every((axis) => {

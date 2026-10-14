@@ -59,6 +59,24 @@ export function lerp(from: number, to: number, weight: number): number {
   return from + (to - from) * weight;
 }
 
+/** A colour's four channels, as `Color` holds them. */
+export interface Rgba {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
+
+/** `Color::lerp` (`core/math/color.h:110-117`): {@link lerp} on each channel, alpha included. */
+export function lerpColor(from: Rgba, to: Rgba, weight: number): Rgba {
+  return {
+    r: lerp(from.r, to.r, weight),
+    g: lerp(from.g, to.g, weight),
+    b: lerp(from.b, to.b, weight),
+    a: lerp(from.a, to.a, weight),
+  };
+}
+
 /** The float overload of `Math::lerp` (`core/math/math_funcs.h:339-341`). */
 export function lerpf(from: number, to: number, weight: number): number {
   return f(from + f(f(to - from) * weight));

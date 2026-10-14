@@ -119,24 +119,24 @@ function writeRow(
   const { x, y, z } = isWorld
     ? { x: view.grid.width * 2, y: view.grid.height * 2, z: view.grid.depth * 2 }
     : volume.size;
-  writeTexel(FogVolumeTexel.SHAPE, x, y, z, volume.shape);
-  writeTexel(FogVolumeTexel.FROXEL_MIN, range.min.x, range.min.y, range.min.z);
-  writeTexel(FogVolumeTexel.FROXEL_MAX, range.max.x, range.max.y, range.max.z);
+  writeVec4(row, FogVolumeTexel.SHAPE, x, y, z, volume.shape);
+  writeVec4(row, FogVolumeTexel.FROXEL_MIN, range.min.x, range.min.y, range.min.z);
+  writeVec4(row, FogVolumeTexel.FROXEL_MAX, range.max.x, range.max.y, range.max.z);
   if (fill.kind === 'default') {
-    writeTexel(FogVolumeTexel.MATERIAL, 1, 0, 0, FogVolumeKind.DEFAULT);
-    writeTexel(FogVolumeTexel.ALBEDO, 1, 1, 1);
+    writeVec4(row, FogVolumeTexel.MATERIAL, 1, 0, 0, FogVolumeKind.DEFAULT);
+    writeVec4(row, FogVolumeTexel.ALBEDO, 1, 1, 1);
     return true;
   }
   const { density, heightFalloff, edgeFade, albedo, emission } = fill.material;
-  writeTexel(FogVolumeTexel.MATERIAL, density, heightFalloff, edgeFade, FogVolumeKind.MATERIAL);
+  writeVec4(row, FogVolumeTexel.MATERIAL, density, heightFalloff, edgeFade, FogVolumeKind.MATERIAL);
   // `source_color` turns both colours linear (`fog_material.cpp:152-153`).
   setGodotColorLinear(color, albedo);
-  writeTexel(FogVolumeTexel.ALBEDO, color.r, color.g, color.b);
+  writeVec4(row, FogVolumeTexel.ALBEDO, color.r, color.g, color.b);
   setGodotColorLinear(color, emission);
-  writeTexel(FogVolumeTexel.EMISSION, color.r, color.g, color.b);
+  writeVec4(row, FogVolumeTexel.EMISSION, color.r, color.g, color.b);
   const region = fill.densityTexture && atlas.regionOf(fill.densityTexture);
   if (region)
-    writeTexel(FogVolumeTexel.DENSITY_TEXTURE, region.width, region.height, region.depth, region.zStart);
+    writeVec4(row, FogVolumeTexel.DENSITY_TEXTURE, region.width, region.height, region.depth, region.zStart);
   return true;
 }
 
@@ -148,7 +148,8 @@ function writeTransforms(volume: FogVolumeObject, camera: THREE.Camera): void {
   viewToLocal.copy(volume.matrixWorld).invert().multiply(camera.matrixWorld);
   const local = viewToLocal.elements;
   for (let axis = 0; axis < 3; axis++) {
-    writeTexel(
+    writeVec4(
+      row,
       FogVolumeTexel.TO_LOCAL + axis,
       local[axis]!,
       local[axis + 4]!,
@@ -157,7 +158,8 @@ function writeTransforms(volume: FogVolumeObject, camera: THREE.Camera): void {
     );
   }
   const world = camera.matrixWorld.elements;
-  writeTexel(
+  writeVec4(
+    row,
     FogVolumeTexel.HEIGHT,
     world[1]!,
     world[5]!,
@@ -190,8 +192,4 @@ function coveredFroxels(volume: FogVolumeObject, camera: THREE.Camera, view: Fog
 
 function wholeGrid({ grid }: FogVolumeView): FroxelRange {
   return { min: { x: 0, y: 0, z: 0 }, max: { x: grid.width, y: grid.height, z: grid.depth } };
-}
-
-function writeTexel(texel: number, x: number, y: number, z: number, w = 0): void {
-  writeVec4(row, texel, x, y, z, w);
 }

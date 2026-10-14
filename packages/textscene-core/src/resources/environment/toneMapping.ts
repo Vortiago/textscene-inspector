@@ -5,13 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { glslFloat } from './glslLiterals';
-import {
-  GodotToneMapper,
-  hasGodotCurve,
-  toneMappingShaderChunk,
-  toneMappingWhiteParam,
-} from './godotToneMapping';
+import { GodotToneMapper, hasGodotCurve, toneMappingShaderChunk } from './godotToneMapping';
 
 /** The subset of `THREE.WebGLRenderer` this module touches. */
 export interface ToneMappedRenderer {
@@ -64,14 +58,10 @@ export function applyToneMapping(
 
   if (custom) {
     keyProgramsOnToneMappingChunk();
-    // The white normalisation is a constant per environment, so it is baked
-    // into the chunk rather than plumbed through as a uniform every material
-    // would have to declare.
-    THREE.ShaderChunk[TONEMAP_CHUNK] = toneMappingShaderChunk(settings.mode, settings.agxContrast).replace(
-      'uniform float godotToneMapWhite;',
-      `const float godotToneMapWhite = ${glslFloat(
-        toneMappingWhiteParam(settings.mode, settings.white ?? 1)
-      )};`
+    THREE.ShaderChunk[TONEMAP_CHUNK] = toneMappingShaderChunk(
+      settings.mode,
+      settings.white ?? 1,
+      settings.agxContrast
     );
   }
 

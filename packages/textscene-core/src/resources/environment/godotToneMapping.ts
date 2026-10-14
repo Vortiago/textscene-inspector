@@ -103,13 +103,18 @@ export function toneMappingWhiteParam(mode: number, white: number): number {
  * The GLSL body for `CustomToneMapping`, per mode. three calls this after its
  * own `toneMappingExposure` is in scope but does NOT apply it for the custom
  * hook, so each curve multiplies it in first, which is also where Godot puts
- * `tonemap_exposure`.
+ * `tonemap_exposure`. The white is a constant per environment, so it is baked in
+ * rather than a uniform every material would have to declare.
  */
-export function toneMappingShaderChunk(mode: number, agxContrast = DEFAULT_AGX_CONTRAST): string {
+export function toneMappingShaderChunk(
+  mode: number,
+  white: number,
+  agxContrast = DEFAULT_AGX_CONTRAST
+): string {
   const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
   return /* glsl */ `
 uniform float toneMappingExposure;
-uniform float godotToneMapWhite;
+const float godotToneMapWhite = ${glslFloat(toneMappingWhiteParam(mode, white))};
 
 vec3 CustomToneMapping(vec3 color) {
   color *= toneMappingExposure;
@@ -120,8 +125,8 @@ ${body}
 
 /**
  * The same curve as the final pass after bloom, since bloom reads pre-tonemap HDR and
- * three cannot tonemap in-material then. It bakes the white in, as `toneMapping.ts`
- * does. Every mode gets a body: LINEAR is the curve that applies exposure and nothing
+ * three cannot tonemap in-material then. It bakes the white in, as
+ * `toneMappingShaderChunk` does. Every mode gets a body: LINEAR is the curve that applies exposure and nothing
  * else, so no consumer supplies a fifth.
  */
 export function toneMappingEffectGlsl(
@@ -130,10 +135,9 @@ export function toneMappingEffectGlsl(
   agxContrast = DEFAULT_AGX_CONTRAST
 ): string {
   const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
-  const bakedWhite = glslFloat(toneMappingWhiteParam(mode, white));
   return /* glsl */ `
 vec3 godotToneMap(vec3 color, float exposure) {
-  const float godotToneMapWhite = ${bakedWhite};
+  const float godotToneMapWhite = ${glslFloat(toneMappingWhiteParam(mode, white))};
   color *= exposure;
 ${body}
 }

@@ -10,6 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { lerpColor } from '../../../../godot/math';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 
 export interface StrokeRGBA {
@@ -34,15 +35,6 @@ const RIM_BAND_PX = 1.5;
  * ribbon clamps its inner ring.
  */
 const RINGS_PER_POINT = 6;
-
-function lerpColor(a: StrokeRGBA, b: StrokeRGBA, t: number): StrokeRGBA {
-  return {
-    r: a.r + (b.r - a.r) * t,
-    g: a.g + (b.g - a.g) * t,
-    b: a.b + (b.b - a.b) * t,
-    a: a.a + (b.a - a.a) * t,
-  };
-}
 
 /**
  * `points` in Godot px (+Y down), in the destination space. The Y flip into three space
