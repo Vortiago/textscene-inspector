@@ -90,6 +90,9 @@ export const MATERIAL_SCENES = [
   // Decal `texture_albedo` as an inline GradientTexture2D. The albedo is all a
   // decal projects, so an unresolved slot leaves the floor bare.
   { name: 'decal-gradienttexture', file: 'unit-decal-gradienttexture.tscn' },
+  // Decal `texture_albedo` as an AtlasTexture: a decal takes the texture's RID, so it projects the
+  // whole sheet. A cropped region projects one red square.
+  { name: 'decal-atlas-texture', file: 'unit-decal-atlas-texture.tscn' },
   // The one MeshInstance3D material from an external `.tres`, and the one
   // roughness map with contrast: a glossy cap and a rough one meet at a hard
   // seam. If the map fails to arrive, both caps go matte. Other roughness

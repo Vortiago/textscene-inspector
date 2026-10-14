@@ -3,8 +3,8 @@
 ; One variable: the albedo texture wrapped in an AtlasTexture or a CanvasTexture. A material binds a
 ; texture by its RID, and an AtlasTexture's RID is its whole atlas (`atlas_texture.cpp:55-58`), so
 ; the left quad draws all four texels of the sheet, not the top-left one its region names. The right
-; quad binds a CanvasTexture's diffuse texture. No other albedo texture is wrapped, so no other
-; scene shows a wrapper in a material slot.
+; quad binds a CanvasTexture, whose RID names no texture, so it draws Godot's white default. No other
+; albedo texture is wrapped, so no other scene shows a wrapper in a material slot.
 
 [sub_resource type="Image" id="Image_sheet"]
 data = {

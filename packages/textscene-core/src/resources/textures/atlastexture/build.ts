@@ -125,7 +125,7 @@ function cropRawPixels(
   }
 
   const texture = new THREE.DataTexture(out, layout.width, layout.height, THREE.RGBAFormat);
-  // The sheet's own tags, as `colourDataTexture` sets them: floats read raw, bytes as sRGB.
+  // Floats read raw and bytes as sRGB until `copyGodotFormat` records the sheet's format.
   texture.type = isHalfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType;
   texture.colorSpace = isHalfFloat ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace;
   texture.flipY = !raw.isBottomUp;

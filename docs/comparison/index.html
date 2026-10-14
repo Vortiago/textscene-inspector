@@ -1905,15 +1905,18 @@ tr:last-child td{border-bottom:0}
         <span class="renders">renders as a texture projected onto the surfaces its box intersects</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_decal.html" target="_blank" rel="noopener" title="Godot class reference for Decal">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/3d/decal.h" target="_blank" rel="noopener" title="Godot engine source for Decal">source ↗</a>
-        <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-decal.tscn" target="_blank" rel="noopener" title="Open unit-decal.tscn in the previewer"><code>unit-decal.tscn</code> ↗</a>
+        
         <span class="status st-limitation">Limitation</span>
       </header>
-      <div class="status-note st-limitation"></div>
       
-      <div class="compare">
+      <div class="prose intro"><p>Godot's texture projector: it casts <code>texture_albedo</code> down the node's local -Y axis onto the surfaces inside its <code>size</code> box, blended onto the lit surface.</p></div>
+      
+      <section class="prop">
+        <div class="prop-head"><h3>Projection</h3><span class="status st-limitation">Limitation</span></div>
+        <div class="compare">
         <div class="stage">
-          <img class="img-godot" src="images/unit-decal-godot.png" alt="Godot render of Decal">
-          <img class="img-ours" src="images/unit-decal-ours.png" alt="Our render of Decal">
+          <img class="img-godot" src="images/unit-decal-godot.png" alt="Godot render of Projection">
+          <img class="img-ours" src="images/unit-decal-ours.png" alt="Our render of Projection">
           <div class="handle"></div>
           <span class="tag g">Godot 4.6.3</span>
           <span class="tag o">Ours</span>
@@ -1923,8 +1926,25 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>Godot's texture projector: it casts <code>texture_albedo</code> down the node's local -Y axis onto the surfaces inside its <code>size</code> box, blended onto the lit surface. The previewer bakes the same projection onto each mesh the box overlaps and shades it with the scene's lights, honouring <code>cull_mask</code> and the three fades. The projection samples its texture clamped, as Godot samples the decal atlas: the blit disables repeat (<code>copy_effects.cpp:592</code>), and fragments outside the box are discarded (<code>scene_forward_clustered.glsl:1585-1587</code>).</p>
-<h3>Linting</h3>
+        <div class="prose"><p>The previewer bakes the same projection onto each mesh the box overlaps and shades it with the scene's lights, honouring <code>cull_mask</code> and the three fades. The projection samples its texture clamped, as Godot samples the decal atlas: the blit disables repeat (<code>copy_effects.cpp:592</code>), and fragments outside the box are discarded (<code>scene_forward_clustered.glsl:1585-1587</code>).</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Texture wrappers</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-decal-atlas-texture-godot.png" alt="Godot render of Texture wrappers">
+          <img class="img-ours" src="images/unit-decal-atlas-texture-ours.png" alt="Our render of Texture wrappers">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A decal takes its texture's RID (<code>scene/3d/decal.cpp:46</code>), as a material slot does. An AtlasTexture's RID is its whole sheet, so the decal projects all four quadrants, not the red region. The decal atlas refuses a CanvasTexture's RID (<code>texture_storage.cpp:2941</code>), so such a decal projects nothing.</p></div>
+      </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks these <code>Decal</code> properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>albedo_mix</code></td><td>float 0-1</td><td>warning</td></tr><tr><td><code>cull_mask</code></td><td>32-bit layer mask (layers 1-32)</td><td></td></tr><tr><td><code>distance_fade_begin</code></td><td>float &gt;= 0</td><td>warning below</td></tr><tr><td><code>distance_fade_enabled</code></td><td>true or false</td><td></td></tr><tr><td><code>distance_fade_length</code></td><td>float &gt;= 0</td><td>warning below</td></tr><tr><td><code>emission_energy</code></td><td>float &gt;= 0</td><td>warning below</td></tr><tr><td><code>lower_fade</code></td><td>float &gt;= 0</td><td>error below</td></tr><tr><td><code>modulate</code></td><td>Color(r, g, b, a), or the colour string or int it converts</td><td></td></tr><tr><td><code>normal_fade</code></td><td>float 0-0.999</td><td>warning</td></tr><tr><td><code>size</code></td><td>Vector3(x, y, z), each float &gt;= 0.001</td><td>error below</td></tr><tr><td><code>sorting_offset</code></td><td>float</td><td></td></tr><tr><td><code>texture_albedo</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>texture_emission</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>texture_normal</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>texture_orm</code></td><td>null, SubResource(&quot;id&quot;), ExtResource(&quot;id&quot;) or Resource(&quot;path&quot;)</td><td></td></tr><tr><td><code>upper_fade</code></td><td>float &gt;= 0</td><td>error below</td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-decal-resources</code></td><td><code>decal-requires-texture</code></td><td>warning</td></tr><tr><td></td><td><code>decal-normal-orm-without-albedo</code></td><td>warning</td></tr><tr><td></td><td><code>decal-empty-cull-mask</code></td><td>warning</td></tr></tbody></table></div>

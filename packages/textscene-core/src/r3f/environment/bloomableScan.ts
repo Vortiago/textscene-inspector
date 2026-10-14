@@ -4,12 +4,13 @@
  * diffuse-only brightness does not. The threshold is in material space (`unexposedBrightPassThreshold`).
  */
 
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { addedEmissionTextureEnergy } from '../materials/emissionTextureAdd';
 
 /**
  * The colour's peak at its intensity, plus the most an ADD emission texture adds: a texel of 1 at
- * its energy. An upper bound, as the scan only decides whether the bright pass runs.
+ * its energy. A float emission map has no such ceiling, so any emission over it counts. An upper
+ * bound, as the scan only decides whether the bright pass runs.
  */
 function isBloomable(material: THREE.Material, threshold: number): boolean {
   const standard = material as THREE.MeshStandardMaterial;
@@ -17,7 +18,14 @@ function isBloomable(material: THREE.Material, threshold: number): boolean {
   if (!emissive) return false;
   const colourPeak =
     Math.max(emissive.r, emissive.g, emissive.b) * Math.max(0, standard.emissiveIntensity ?? 0);
-  return colourPeak + addedEmissionTextureEnergy(material) > threshold;
+  const emission = colourPeak + addedEmissionTextureEnergy(material);
+  return emission > threshold || (emission > 0 && hasFloatEmissiveMap(standard));
+}
+
+/** A float emission map, such as an HDR GradientTexture2D, can hold a texel above 1. */
+function hasFloatEmissiveMap(material: THREE.MeshStandardMaterial): boolean {
+  const type = material.emissiveMap?.type;
+  return type === THREE.HalfFloatType || type === THREE.FloatType;
 }
 
 /**

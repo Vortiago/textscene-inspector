@@ -403,6 +403,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Atlas Texture",
+    "file": "unit-decal-atlas-texture.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal Cull Mask",
     "file": "unit-decal-cull-mask.tscn",
     "category": "Other"

@@ -40,6 +40,28 @@ describe('sceneHasBloomableEmissive', () => {
     expect(sceneHasBloomableEmissive(sceneOf(emissiveMesh([0, 0, 0], 2)), 1)).toBe(false);
   });
 
+  it('counts a float emission map past its energy, as its texels can pass 1', () => {
+    const textured = emissiveMesh([0, 0, 0], 0.5);
+    const material = textured.material as THREE.MeshStandardMaterial;
+    material.userData = emissionTextureAddUserData(0.5);
+    material.emissiveMap = new THREE.DataTexture(
+      new Uint16Array(4),
+      1,
+      1,
+      THREE.RGBAFormat,
+      THREE.HalfFloatType
+    );
+    expect(sceneHasBloomableEmissive(sceneOf(textured), 1)).toBe(true);
+  });
+
+  it('bounds an 8-bit emission map at its energy (edge case)', () => {
+    const textured = emissiveMesh([0, 0, 0], 0.5);
+    const material = textured.material as THREE.MeshStandardMaterial;
+    material.userData = emissionTextureAddUserData(0.5);
+    material.emissiveMap = new THREE.DataTexture(new Uint8Array(4), 1, 1);
+    expect(sceneHasBloomableEmissive(sceneOf(textured), 1)).toBe(false);
+  });
+
   it('is false when peak times intensity only reaches the threshold', () => {
     // The bright pass uses a smoothstep starting AT the threshold, so a pixel
     // exactly on it contributes nothing.
