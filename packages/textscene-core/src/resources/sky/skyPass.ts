@@ -1,6 +1,6 @@
 /**
- * A pass of the sky bake: a shader drawn as one triangle over a render target, each fragment working
- * out its own texel as Godot's compute passes do from the invocation ID.
+ * A pass of the sky bake: a shader drawn as one quad over a render target, each fragment working out
+ * its own texel as Godot's compute passes do from the invocation ID.
  */
 
 import * as THREE from 'three';

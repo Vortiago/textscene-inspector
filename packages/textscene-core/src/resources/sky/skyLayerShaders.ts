@@ -1,7 +1,7 @@
 /**
  * The GPU passes that bake a sky's roughness layers, ported to GLSL ES from Godot 4.6.3's
  * `servers/rendering/renderer_rd/shaders/oct_inc.glsl` and `shaders/effects/octmap_downsampler.glsl`,
- * `octmap_roughness.glsl` and `octmap_filter.glsl`. Each pass draws one triangle over its target and
+ * `octmap_roughness.glsl` and `octmap_filter.glsl`. Each pass draws one quad over its target and
  * works out its texel from `gl_FragCoord`, as Godot's compute passes do from the invocation ID.
  *
  * Portions ported from Godot Engine, used under the MIT licence:

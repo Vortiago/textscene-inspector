@@ -31,8 +31,8 @@ const fastFilterPass = skyPass(FAST_FILTER_FRAGMENT_SHADER, [
   'weight',
 ]);
 
-/** Godot lays out a real-time sky at `REAL_TIME_SIZE` (`sky.h:248`), and its chain is 160 wide. */
 export const fastFilter: LayerFilter = {
+  /** Godot lays out a real-time sky at `REAL_TIME_SIZE` (`sky.h:248`), and its chain is 160 wide. */
   layout: skyOctmapLayout(REAL_TIME_RADIANCE_SIZE),
   chainSizes: FAST_FILTER_CHAIN_SIZES,
   pass: fastFilterPass,

@@ -100,9 +100,9 @@ function downsampleChain(
   { layout, chainSizes }: LayerFilter
 ): THREE.WebGLRenderTarget {
   const { borderSize } = layout;
-  const chain = octmapTarget(chainSizes[0]!, true);
-  const octmap = octmapTarget(layout.size, false);
-  const mips = chainSizes.map((size) => octmapTarget(size, false));
+  const chain = chainTarget(chainSizes[0]!);
+  const octmap = octmapTarget(layout.size);
+  const mips = chainSizes.map(octmapTarget);
   try {
     setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize });
     draw(gl, radianceOctmapPass, octmap);
@@ -146,30 +146,42 @@ function filterGroup(
   });
 }
 
+/**
+ * Half-float targets with no depth. Each clamps to its edge, as Godot's samplers for the sky's
+ * octmaps do (`copy_effects.cpp:1155`, `:1366`).
+ */
+const TARGET_OPTIONS: THREE.RenderTargetOptions = {
+  type: THREE.HalfFloatType,
+  depthBuffer: false,
+  generateMipmaps: false,
+  minFilter: THREE.LinearFilter,
+};
+
+const MIPMAPPED_TARGET_OPTIONS: THREE.RenderTargetOptions = {
+  ...TARGET_OPTIONS,
+  minFilter: THREE.LinearMipmapLinearFilter,
+};
+
 /** A cube for `group`, a mip per layer when it has more than one. */
 function layerCube({ faceSizes }: SkyLayerGroup): THREE.WebGLCubeRenderTarget {
-  return withMips(new THREE.WebGLCubeRenderTarget(faceSizes[0]!, layerTargetOptions(faceSizes.length > 1)));
+  const size = faceSizes[0]!;
+  if (faceSizes.length === 1) return new THREE.WebGLCubeRenderTarget(size, TARGET_OPTIONS);
+  return withMips(new THREE.WebGLCubeRenderTarget(size, MIPMAPPED_TARGET_OPTIONS));
 }
 
-/** An octmap `size` wide that clamps to its edge, as Godot's samplers for it do (`copy_effects.cpp:1155`, `:1366`). */
-function octmapTarget(size: number, hasMips: boolean): THREE.WebGLRenderTarget {
-  const target = new THREE.WebGLRenderTarget(size, size, layerTargetOptions(hasMips));
-  return hasMips ? withMips(target) : target;
+/** An octmap `size` wide, drawn at one level. */
+function octmapTarget(size: number): THREE.WebGLRenderTarget {
+  return new THREE.WebGLRenderTarget(size, size, TARGET_OPTIONS);
 }
 
-function layerTargetOptions(hasMips: boolean): THREE.RenderTargetOptions {
-  return {
-    type: THREE.HalfFloatType,
-    depthBuffer: false,
-    generateMipmaps: false,
-    minFilter: hasMips ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter,
-  };
+/** The chain's octmap, `size` wide at its first mip, which a filter reads between mips. */
+function chainTarget(size: number): THREE.WebGLRenderTarget {
+  return withMips(new THREE.WebGLRenderTarget(size, size, MIPMAPPED_TARGET_OPTIONS));
 }
 
-/** `target` with a level for each mip, when it filters between them. */
+/** `target` with a level for each mip, as it filters between them. */
 function withMips<T extends THREE.WebGLRenderTarget>(target: T): T {
-  if (target.texture.minFilter === THREE.LinearMipmapLinearFilter)
-    target.texture.mipmaps = fullMipChain(target.width);
+  target.texture.mipmaps = fullMipChain(target.width);
   return target;
 }
 

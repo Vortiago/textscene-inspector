@@ -271,7 +271,7 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':
     'the GLB slot writer: `cloneWithMaterials` gives each clone its own copy of the loader’s materials, and `forEachSurfaceMaterial` hands a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
   'packages/textscene-core/src/resources/sky/skyPass.ts':
-    'swaps the bake triangle between the sky layer passes, each built with its shaders fixed at construction, so only uniforms ever move',
+    'swaps the bake quad between the sky layer passes, each built with its shaders fixed at construction, so only uniforms ever move',
 };
 
 /**
