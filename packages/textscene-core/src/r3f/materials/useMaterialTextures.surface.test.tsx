@@ -4,7 +4,7 @@
  * `1 - v`.
  */
 import { describe, expect, it } from 'vitest';
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types';
@@ -15,7 +15,8 @@ import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 import { GLTF_SURFACE, useMaterialTextures, type TexturedSurface } from './SurfaceMaterialSlot';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import type { MaterialTextureMaps } from './materialTextureMaps';
-import { ViewportTextureProvider, useRegisterViewportTexture } from '../contexts/ViewportTextureContext';
+import { ViewportTextureProvider } from '../contexts/ViewportTextureContext';
+import { ViewportTexturePublisher } from '../testing/ViewportTexturePublisher';
 
 const GRADIENT: TscnInternalResource[] = [
   { id: 'Gradient_a', type: 'Gradient', data: { colors: 'PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)' } },
@@ -100,20 +101,13 @@ const VIEWPORT: TscnInternalResource[] = [
   { id: 'ViewportTexture_a', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
 ];
 
-/** Publishes `texture` as the SubViewport's render target. */
-function Publisher({ texture }: { texture: THREE.Texture }) {
-  const register = useRegisterViewportTexture();
-  useEffect(() => register('Root/SubViewport', { texture, size: { x: 4, y: 4 } }), [register, texture]);
-  return null;
-}
-
 /** The maps a material whose albedo is the SubViewport's render target binds on `surface`. */
 function viewportMaps(properties: Record<string, string>, surface?: TexturedSurface) {
   const target = new THREE.WebGLRenderTarget(4, 4).texture;
   const albedo = { albedo_texture: 'SubResource("ViewportTexture_a")' };
   const maps = materialMaps({ ...albedo, ...properties }, VIEWPORT, surface, (children) => (
     <ViewportTextureProvider>
-      <Publisher texture={target} />
+      <ViewportTexturePublisher path="Root/SubViewport" entry={{ texture: target, size: { x: 4, y: 4 } }} />
       <NodePathProvider path="Root/Mesh">{children}</NodePathProvider>
     </ViewportTextureProvider>
   ));

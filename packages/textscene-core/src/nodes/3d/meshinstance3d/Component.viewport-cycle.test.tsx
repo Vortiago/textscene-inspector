@@ -22,10 +22,7 @@ vi.mock('../../../logger.js', async (importOriginal) => {
 
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import {
-  ViewportTextureProvider,
-  useRegisterViewportTexture,
-} from '../../../r3f/contexts/ViewportTextureContext';
+import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
 import {
   ViewportPassProvider,
   useRegisterViewportPass,
@@ -36,6 +33,7 @@ import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { ViewportTexturePublisher } from '../../../r3f/testing/ViewportTexturePublisher';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 
@@ -64,13 +62,6 @@ const INTERNAL_RESOURCES: TscnInternalResource[] = [
   },
 ];
 
-/** Publishes an entry at `path`, so the test proves a cyclic target's texture is never sampled. */
-function Publisher({ path, texture }: { path: string; texture: THREE.Texture }) {
-  const register = useRegisterViewportTexture();
-  useEffect(() => register(path, { texture, size: { x: 64, y: 64 } }), [register, path, texture]);
-  return null;
-}
-
 /** Registers `Root/SubViewport` into a two-node cycle with `Root/Other`. */
 function CyclicRegistration() {
   const register = useRegisterViewportPass();
@@ -86,7 +77,10 @@ async function renderCyclicMesh() {
       <ViewportTextureProvider>
         <ViewportPassProvider>
           <CyclicRegistration />
-          <Publisher path="Root/SubViewport" texture={publishedTexture} />
+          <ViewportTexturePublisher
+            path="Root/SubViewport"
+            entry={{ texture: publishedTexture, size: { x: 64, y: 64 } }}
+          />
           <NodePathProvider path="Root/Mesh1">
             <MeshInstance3D node={meshNode()} />
           </NodePathProvider>

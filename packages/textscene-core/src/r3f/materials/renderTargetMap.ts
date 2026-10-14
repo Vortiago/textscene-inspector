@@ -2,7 +2,9 @@
  * The sampler state of a render-target albedo map, applied in the material's program. A render
  * target never clones (`applyTextureState.ts`), and every reader shares its transform, its
  * wrapping and its filter, so the UV transform a slot needs, a glTF surface's V flip included,
- * and Godot's repeat and filter ride on the material instead.
+ * and Godot's repeat and filter ride on the material instead. The target itself stays linear and
+ * clamped, as Sprite2D and SubViewportContainer sample it, so the hand-written sample costs only
+ * the materials that ask for another sampler.
  */
 
 import * as THREE from 'three';
