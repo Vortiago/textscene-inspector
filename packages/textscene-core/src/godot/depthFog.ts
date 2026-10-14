@@ -4,6 +4,8 @@
  * `renderer_rd/shaders/forward_clustered/`, and `sky.glsl` is `renderer_rd/shaders/environment/`.
  */
 
+import { MAX_ROUGHNESS_LOD } from './skyReflection.js';
+
 export const FogMode = {
   EXPONENTIAL: 0,
   DEPTH: 1,
@@ -61,9 +63,6 @@ export const FOG_SUN_SCATTER_MIN = 0.001;
 
 /** The exponent that narrows the sun's glow in the fog (`scene_forward_clustered.glsl:1132`). */
 export const FOG_SUN_SCATTER_EXPONENT = 8;
-
-/** The blurriest radiance mip, for the default 8 `roughness_layers` (`MAX_ROUGHNESS_LOD`). */
-export const MAX_ROUGHNESS_LOD = 7;
 
 /**
  * The radiance mips the aerial perspective spans, as roughness: from the second mip at the far plane

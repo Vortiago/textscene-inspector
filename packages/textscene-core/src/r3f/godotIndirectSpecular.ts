@@ -56,10 +56,11 @@ const OCCLUSION_DISABLED_DEFINE = 'GODOT_SPECULAR_OCCLUSION_DISABLED';
 /**
  * Godot's occlusion of a reflection by the luminance of the ambient light, after the AO map
  * (`scene_forward_clustered.glsl:2119-2162`): a dim ambient dims a rough or dielectric reflection,
- * and a smooth metal keeps more of it. Godot's ambient is three's irradiance over PI.
+ * and a smooth metal keeps more of it, with or without a sky, as a ReflectionProbe reflects without
+ * one. Godot's ambient is three's irradiance over PI.
  */
 const GODOT_SPECULAR_OCCLUSION = /* glsl */ `
-#if defined( USE_ENVMAP ) && defined( STANDARD ) && ! defined( ${OCCLUSION_DISABLED_DEFINE} )
+#if defined( STANDARD ) && ! defined( ${OCCLUSION_DISABLED_DEFINE} )
 
 	#ifdef USE_AOMAP
 		float godotAmbientOcclusion = ambientOcclusion;

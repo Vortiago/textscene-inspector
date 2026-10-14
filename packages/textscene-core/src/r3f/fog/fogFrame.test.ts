@@ -6,7 +6,7 @@ import { VOLUMETRIC_FOG_DEFAULTS } from '../../godot/volumetricFog';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { skyLightUserData } from '../sky/skyLight';
-import { finishFog, prepareFog, type FogSettings } from './fogFrame';
+import { captureFog, finishFog, prepareFog, type FogSettings } from './fogFrame';
 import type { FogPasses } from './fogPasses';
 import { fogUniforms } from './fogUniforms';
 
@@ -159,5 +159,22 @@ describe('finishFog', () => {
 
     expect(fogUniforms.depthColor[3]).toBe(0);
     expect(fogUniforms.volumeLookup[0]).toBe(0);
+  });
+});
+
+describe('captureFog', () => {
+  const foggy = () => settings({ fog_enabled: 'true', volumetric_fog_enabled: 'true' });
+
+  it("keeps an exterior capture's depth fog and drops its volumetric fog", () => {
+    const fog = captureFog(foggy(), false);
+
+    expect([fog.depth, fog.volumetric]).toEqual([foggy().depth, null]);
+    expect(fog.depth).not.toBeNull();
+  });
+
+  it('drops both fogs from an interior capture, which draws without the environment', () => {
+    const fog = captureFog(foggy(), true);
+
+    expect([fog.depth, fog.volumetric]).toEqual([null, null]);
   });
 });

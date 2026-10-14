@@ -2,6 +2,9 @@
 
 /** Properties every light type has. */
 export interface BaseLightProperties {
+  /** `layers`, the VisualInstance3D render mask a ReflectionProbe's `cull_mask` tests. */
+  layers: number;
+
   /** Godot Color. */
   light_color: string;
 

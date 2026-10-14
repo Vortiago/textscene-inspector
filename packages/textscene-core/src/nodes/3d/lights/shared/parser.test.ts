@@ -22,6 +22,11 @@ describe('Base Light Parser', () => {
       expect(result.light_volumetric_fog_energy).toBeUndefined();
     });
 
+    it('reads the VisualInstance3D layers, which a ReflectionProbe cull_mask tests', () => {
+      expect(parseBaseLightProperties({ layers: '2' }).layers).toBe(2);
+      expect(parseBaseLightProperties({}).layers).toBe(1);
+    });
+
     it('should parse all base light properties', () => {
       const properties = {
         light_color: 'Color(1, 0.5, 0, 1)',

@@ -53,3 +53,9 @@ export function installLitUniform(name: string, value: unknown): void {
 export function installedUniformValue(name: string): unknown {
   return THREE.ShaderLib.standard.uniforms[name]?.value;
 }
+
+/** The value installed under `name` when it is a `type`, as after a reload, or else `make`'s. */
+export function installedOr<T>(name: string, type: abstract new (...args: never[]) => T, make: () => T): T {
+  const value = installedUniformValue(name);
+  return value instanceof type ? value : make();
+}

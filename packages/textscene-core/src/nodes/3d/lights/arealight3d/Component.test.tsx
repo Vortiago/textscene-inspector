@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { visualLayersOf } from '../../../../r3f/visualLayers';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AreaLight3D } from './Component';
 import type { TscnNode } from '../../../../parser/types';
@@ -23,6 +24,7 @@ import {
 function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
   const props: AreaLight3DProperties = {
     name: 'Area',
+    layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
     light_specular: 1,
@@ -276,5 +278,12 @@ describe('<AreaLight3D>', () => {
     expect(group.instance.position.x).toBe(3);
     expect(group.instance.position.y).toBe(4);
     expect(group.instance.position.z).toBe(5);
+  });
+});
+
+describe('<AreaLight3D> render layers', () => {
+  it("carries the node's layers, which a ReflectionProbe cull_mask tests", async () => {
+    const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode({ layers: 2 })} />);
+    expect(visualLayersOf(renderer.scene.findByType('RectAreaLight').instance)).toBe(2);
   });
 });

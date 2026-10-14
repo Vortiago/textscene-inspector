@@ -6,6 +6,7 @@
 
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
+import { editorHelperUserData } from '../editorHelpers';
 import { materialProgramInputs } from '../materialProgramInputs';
 
 /** Render order for selection-gated gizmos, above ordinary scene content. */
@@ -35,6 +36,8 @@ export function GizmoLine({ positions, colors, color }: GizmoLineProps) {
     return g;
   }, [positions, colors]);
   useEffect(() => () => geometry.dispose(), [geometry]);
+  // Memoised, as R3F assigns a new `userData` object on each render.
+  const helperUserData = useMemo(editorHelperUserData, []);
 
   // `vertexColors` is a program input (`WebGLPrograms.js:308`), and a gizmo that
   // gains or loses its colour attribute would otherwise keep the first program.
@@ -50,7 +53,7 @@ export function GizmoLine({ positions, colors, color }: GizmoLineProps) {
   });
 
   return (
-    <group renderOrder={GIZMO_GROUP_ORDER}>
+    <group renderOrder={GIZMO_GROUP_ORDER} userData={helperUserData}>
       <lineSegments renderOrder={GIZMO_RENDER_ORDER}>
         <primitive object={geometry} attach="geometry" />
         <lineBasicMaterial key={program.key} {...program.props} />

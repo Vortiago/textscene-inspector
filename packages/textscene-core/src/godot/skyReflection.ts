@@ -38,6 +38,9 @@ export const FAST_FILTER_SUPER_TAPS_PER_FRAME = 2;
  */
 export const SKY_ROUGHNESS_LAYERS_DEFAULT = 8;
 
+/** The blurriest radiance layer, the default layers less one (`render_forward_clustered.cpp:4998`). */
+export const MAX_ROUGHNESS_LOD = SKY_ROUGHNESS_LAYERS_DEFAULT - 1;
+
 /**
  * The default of `rendering/reflections/sky_reflections/ggx_samples`
  * (`servers/rendering/rendering_server.cpp:3730`), under the filter's cap of 64.
@@ -52,24 +55,43 @@ export interface SkyOctmapLayout {
   size: number;
   /** The width inside the padding, in UV: `oct_inc.glsl`'s `border_size`. */
   borderSize: number;
+  /** The width of each roughness layer's octmap, from layer 0, which the radiance fills. */
+  layerSizes: number[];
   /** The width of each mip of the half-size radiance copy the roughness filter reads. */
   downsampledSizes: number[];
 }
 
 /**
- * The layout of the octmap array the radiance layers live in (`sky.cpp:1545-1559`), and of its
- * half-size copy with one mip fewer (`sky.cpp:338-343`).
+ * The layout of the octmap array the radiance layers live in, a layer as wide as the radiance's
+ * octmap (`sky.cpp:1545-1559`), and of its half-size copy with one mip fewer (`sky.cpp:338-343`).
  */
 export function skyOctmapLayout(radianceSize: number): SkyOctmapLayout {
   // `get_image_required_mipmaps` + 1 counts the mips down to 1x1, and Godot drops two.
   const mipmaps = Math.log2(radianceSize) + 1 - 2;
-  const paddingPixels = 2 ** (mipmaps - 1);
-  const size = radianceSize * 2 + paddingPixels * 2;
+  const { size, borderSize } = paddedOctmap(radianceSize, 2 ** (mipmaps - 1));
   return {
     size,
-    borderSize: 1 - (paddingPixels * 2) / size,
-    downsampledSizes: Array.from({ length: mipmaps - 1 }, (_, mip) => Math.max(1, (size / 2) >> mip)),
+    borderSize,
+    layerSizes: Array.from({ length: SKY_ROUGHNESS_LAYERS_DEFAULT }, () => size),
+    downsampledSizes: halvingSizes(size >> 1, mipmaps - 1),
   };
+}
+
+/**
+ * The octmap of a capture `captureSize` wide: twice as wide, to match a cube's texel density, in a
+ * border of `paddingPixels` on each side, which `oct_inc.glsl`'s `border_size` leaves out in UV.
+ */
+export function paddedOctmap(
+  captureSize: number,
+  paddingPixels: number
+): { size: number; borderSize: number } {
+  const size = captureSize * 2 + paddingPixels * 2;
+  return { size, borderSize: 1 - (paddingPixels * 2) / size };
+}
+
+/** `count` mip widths from `first`, each half the one before and at least one texel. */
+export function halvingSizes(first: number, count: number): number[] {
+  return Array.from({ length: count }, (_, mip) => Math.max(1, first >> mip));
 }
 
 export interface LayerSample {
@@ -80,16 +102,21 @@ export interface LayerSample {
 }
 
 /**
- * The GGX samples that filter radiance layer `layer`, at the roughness `layer / 7` that `sky.cpp:473`
- * passes and `copy_effects.cpp:1357-1358` squares. Only the samples above
- * the horizon survive (`octmap_roughness.glsl:32-60`), and the filter weighs each by its cosine.
- * Layer 0 copies the radiance and takes no samples.
+ * The GGX samples that filter radiance layer `layer`, at the roughness `layer` over the last layer's
+ * index that `sky.cpp:473-475` passes and `copy_effects.cpp:1357-1358` squares. Each sample's mip
+ * follows from the texel size of the layer it fills (`octmap_roughness.glsl:30`). Only the samples
+ * above the horizon survive (`:32-60`), and the filter weighs each by its cosine. Layer 0 copies the
+ * radiance and takes no samples.
  */
 export function layerSamples(layout: SkyOctmapLayout, layer: number): LayerSample[] {
-  const roughness = (layer / (SKY_ROUGHNESS_LAYERS_DEFAULT - 1)) ** 2;
+  const { layerSizes } = layout;
+  const layerSize = layerSizes[layer];
+  if (layerSize === undefined)
+    throw new Error(`expected a layer from 0 to ${layerSizes.length - 1}, got ${layer}`);
+  const roughness = (layer / (layerSizes.length - 1)) ** 2;
   const total = sampleTotal(roughness);
   const roughness4 = roughness ** 4;
-  const solidAngleTexel = (4 * Math.PI) / (layout.size * layout.size);
+  const solidAngleTexel = (4 * Math.PI) / (layerSize * layerSize);
 
   const f = Math.fround;
   const samples: LayerSample[] = [];

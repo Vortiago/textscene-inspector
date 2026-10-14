@@ -1,22 +1,11 @@
 /**
- * The `VisualInstance3D` tier, the two leaves with their own surface-level
- * asymmetries, the undrawn GeometryInstance3D leaves, and the concrete lights.
+ * The 3D visuals with their own surface-level asymmetries, the undrawn
+ * GeometryInstance3D leaves, and the concrete lights.
  */
 
 import type { AsymmetryEntry } from './types.js';
 
 export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
-  // Registered on the base and delivered to every 3D visual by the base-walk.
-  VisualInstance3D: {
-    linterOnly: [
-      // `layers` selects which Camera3D cull masks see the object. The previewer
-      // has one camera and no cull masks, so no parser reads it.
-      'layers',
-    ],
-    reason:
-      'Render layers are validated for format but unused: the previewer has one camera and no cull-mask filtering, so no parser reads them.',
-  },
-
   Decal: {
     linterOnly: [
       // Godot serialises `sorting_offset` for a Decal (Decal::_validate_property
@@ -26,6 +15,16 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     ],
     reason:
       'sorting_offset is a real serialised Decal property, so the linter checks its format, but it only tunes transparency sort order and the renderer has nothing to do with it.',
+  },
+
+  ReflectionProbe: {
+    linterOnly: [
+      // reflection_probe.cpp:90-92: the LOD threshold of the meshes the capture draws. The
+      // previewer draws no mesh LODs, as with GeometryInstance3D.lod_bias.
+      'mesh_lod_threshold',
+    ],
+    reason:
+      'mesh_lod_threshold picks the mesh LOD a capture draws, and the previewer draws every mesh at full detail.',
   },
 
   MeshInstance3D: {

@@ -8,8 +8,12 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
-import { sign } from '../../../godot/math.js';
-import { formatReal, storedReal } from '../../../godot/real.js';
+import {
+  loadedOriginOffset,
+  REFLECTION_PROBE_DEFAULTS,
+  ReflectionProbeAmbientMode,
+} from '../../../godot/reflectionProbe.js';
+import { formatReal, storedXyz } from '../../../godot/real.js';
 import type { Vector3 } from '../../../parser/vectors.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
@@ -26,11 +30,6 @@ const arms = {
   },
 } as const satisfies RuleArms<string>;
 
-/** reflection_probe.h:44-48 enum AmbientMode; AMBIENT_COLOR is the last value. */
-const AMBIENT_COLOR = 2;
-/** reflection_probe.h:60, `AmbientMode ambient_mode = AMBIENT_ENVIRONMENT;` (1): the default for an absent key. */
-const AMBIENT_MODE_DEFAULT = 1;
-
 // `_validate_property` (reflection_probe.cpp:203-212) only sets PROPERTY_USAGE_NO_EDITOR,
 // which equals PROPERTY_USAGE_STORAGE (object.h:132), so the keys still serialise. The
 // class doc's prose is no basis (ADR-0032).
@@ -42,8 +41,8 @@ function checkAmbientMode(node: RuleContext['node'], props: Record<string, strin
   // switch at scene_forward_lights_inc.glsl:977, in the `renderer_rd` backend of Forward+
   // and Mobile.
   const modeRaw = props.ambient_mode;
-  const mode = ruleInt(modeRaw, AMBIENT_MODE_DEFAULT);
-  if (mode === AMBIENT_COLOR) return [];
+  const mode = ruleInt(modeRaw, REFLECTION_PROBE_DEFAULTS.ambientMode);
+  if (mode === ReflectionProbeAmbientMode.COLOR) return [];
 
   const diagnostics: Diagnostic[] = [];
   for (const key of AMBIENT_ONLY_KEYS) {
@@ -58,60 +57,30 @@ function checkAmbientMode(node: RuleContext['node'], props: Record<string, strin
   return diagnostics;
 }
 
-/** reflection_probe.h:55, `Vector3 size = Vector3(20, 20, 20);`. */
-const DEFAULT_SIZE: Vector3 = { x: 20, y: 20, z: 20 };
-/** The margin both setters keep between `origin_offset` and the probe's face. */
-const FACE_MARGIN = 0.01;
 const AXES = ['x', 'y', 'z'] as const;
 
 const formatVector3 = (v: Vector3): string =>
   `Vector3(${AXES.map((axis) => formatReal(v[axis])).join(', ')})`;
 const sameReal = (a: number, b: number): boolean => a === b || (Number.isNaN(a) && Number.isNaN(b));
-const storedVector3 = (v: Vector3): Vector3 => ({
-  x: storedReal(v.x),
-  y: storedReal(v.y),
-  z: storedReal(v.z),
-});
-
-/**
- * One setter's clamp of each `origin_offset` axis to `half_size - 0.01` against `size`
- * (reflection_probe.cpp:102-110, :126-131). Only `set_size` floors `half_size` at 0.01.
- */
-function clampOffset(offset: Vector3, size: Vector3, floorHalfSize: boolean): Vector3 {
-  const clampAxis = (axis: (typeof AXES)[number]): number => {
-    let halfSize = storedReal(size[axis] / 2);
-    if (floorHalfSize && halfSize < FACE_MARGIN) halfSize = storedReal(FACE_MARGIN);
-    const limit = halfSize - FACE_MARGIN;
-    const component = offset[axis];
-    return limit < Math.abs(component) ? storedReal(sign(component) * limit) : component;
-  };
-  return { x: clampAxis('x'), y: clampAxis('y'), z: clampAxis('z') };
-}
 
 /**
  * The file's `origin_offset` and the one Godot holds after it applies the `size` and
- * `origin_offset` lines in order, or `null` when the offset is absent or either line is
- * malformed. An offset listed before `size` meets the default size first.
+ * `origin_offset` lines in order, or `null` when the offset is absent or either line is malformed.
  */
 function replayOriginOffset(rawProps: Record<string, string>): { written: Vector3; loaded: Vector3 } | null {
-  let size = DEFAULT_SIZE;
-  let written: Vector3 | null = null;
-  let offset: Vector3 = { x: 0, y: 0, z: 0 };
-
+  const lines: ['size' | 'origin_offset', Vector3][] = [];
   for (const [key, raw] of Object.entries(rawProps)) {
     if (key !== 'size' && key !== 'origin_offset') continue;
     const value = matchVector3(raw);
     if (!value) return null;
-    const stored = storedVector3(value);
-    if (key === 'size') {
-      size = stored;
-    } else {
-      written = stored;
-      offset = stored;
-    }
-    offset = clampOffset(offset, size, key === 'size');
+    lines.push([key, value]);
   }
-  return written ? { written, loaded: offset } : null;
+  const written = lines.find(([key]) => key === 'origin_offset')?.[1];
+  if (!written) return null;
+  return {
+    written: storedXyz(written),
+    loaded: loadedOriginOffset(lines),
+  };
 }
 
 function checkOriginOffset(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
