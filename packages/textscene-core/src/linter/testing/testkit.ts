@@ -6,10 +6,10 @@
 
 import { describe, it, expect } from 'vitest';
 import { Linter } from '../Linter.js';
-import { FILE_DIAGNOSTICS, STRICT_PARSER_RULE_NAME, isFormatRuleName } from '../fileDiagnostics.js';
+import { FILE_DIAGNOSTICS, isFormatCheckName } from '../fileDiagnostics.js';
 import { declaredArms } from './declaredArms.js';
 import { recordTier } from './titleTier.js';
-import { errorsOf } from './tierLists.js';
+import { formatErrorsOf } from './tierLists.js';
 import type { Diagnostic, Severity } from '../types.js';
 
 /** A property value: rendered verbatim if a string, else `String(value)`. */
@@ -187,18 +187,18 @@ function declaredTiers(ruleName: string): Severity[] {
 
 /**
  * Refuse a negative at a tier that nothing can report, since it cannot fail.
- * Only `error` goes without a rule name or with `strict-parser`, because a syntax
- * error always errors and a message substring cannot say whose tier applies. A
- * validator's `format:<key>` reaches `warning` too, where a hint bounds the value.
+ * Only `error` goes without a rule name, because a message substring cannot say
+ * whose tier applies. A validator's `format:<key>` reaches `warning` where a hint
+ * bounds the value, and `strict-parser` reaches it on a heading Godot drops.
  */
 function expectTierReachable(ruleName: string | undefined, severity: Severity): void {
-  if (ruleName !== undefined && isFormatRuleName(ruleName)) {
-    expect(['error', 'warning'], `a validator reports only error or warning, not ${severity}`).toContain(
+  if (ruleName !== undefined && isFormatCheckName(ruleName)) {
+    expect(['error', 'warning'], `a format check reports only error or warning, not ${severity}`).toContain(
       severity
     );
     return;
   }
-  if (ruleName === undefined || ruleName === STRICT_PARSER_RULE_NAME) {
+  if (ruleName === undefined) {
     expect(
       severity,
       `only error is reachable without a declared arm; name the rule that reports ${severity}`
@@ -243,7 +243,7 @@ export function expectNoErrors(content: string, where: DiagnosticExpectation = {
 export function expectNoFormatErrors(content: string): void {
   const diagnostics = lint(content);
   expectEveryHeadingPlaced(diagnostics);
-  expect(errorsOf(diagnostics, 'format').map(describe1)).toEqual([]);
+  expect(formatErrorsOf(diagnostics).map(describe1)).toEqual([]);
 }
 
 /** Assert at least one diagnostic of the given severity is present. */

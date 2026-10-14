@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { lint, node, scene, subResource } from './testing/testkit.js';
-import { errorsOf, warningsOf } from './testing/tierLists.js';
+import { formatErrorsOf, warningsOf } from './testing/tierLists.js';
 import './index.js';
 
 function ruleNames(content: string): string[] {
@@ -69,6 +69,6 @@ describe("the format checks' selector", () => {
   it('finds a validator refusal, so a filter on it never matches nothing', () => {
     const content = scene(node('Node2D', { position: 'Vector2(nope)' }, { name: 'Root' }));
 
-    expect(errorsOf(lint(content), 'format')).toHaveLength(1);
+    expect(formatErrorsOf(lint(content))).toHaveLength(1);
   });
 });

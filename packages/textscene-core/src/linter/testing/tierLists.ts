@@ -5,27 +5,20 @@
  */
 
 import { expect } from 'vitest';
-import { STRICT_PARSER_RULE_NAME, isFormatRuleName } from '../fileDiagnostics.js';
+import { isFormatCheckName } from '../fileDiagnostics.js';
 import type { Diagnostic, Severity } from '../types.js';
 import { recordTier } from './titleTier.js';
 
-/** The rule names the format checks report: `strict-parser` for a syntax error, `format:<key>` for a validator's. */
-function isFormatCheck(d: Diagnostic): boolean {
-  return d.ruleName === STRICT_PARSER_RULE_NAME || isFormatRuleName(d.ruleName);
-}
-
 /**
- * The diagnostics at `tier`, narrowed to the format checks' when asked. Any other
- * rule goes through `reportsOf`, which checks its tier instead of filtering on it.
- * A non-empty list records its tier for the title check, and an empty one records
- * nothing, since a test asserts an empty list to say the tier is absent.
+ * The diagnostics at `tier` that `kept` keeps. Any other rule goes through
+ * `reportsOf`, which checks its tier instead of filtering on it. A non-empty
+ * list records its tier for the title check, and an empty one records nothing,
+ * since a test asserts an empty list to say the tier is absent.
  */
 const atTier =
-  (tier: Severity) =>
-  (diagnostics: readonly Diagnostic[], checks?: 'format'): Diagnostic[] => {
-    const found = diagnostics.filter(
-      (d) => d.severity === tier && (checks === undefined || isFormatCheck(d))
-    );
+  (tier: Severity, kept: (d: Diagnostic) => boolean = () => true) =>
+  (diagnostics: readonly Diagnostic[]): Diagnostic[] => {
+    const found = diagnostics.filter((d) => d.severity === tier && kept(d));
     if (found.length > 0) recordTier(tier);
     return found;
   };
@@ -33,6 +26,8 @@ const atTier =
 export const errorsOf = atTier('error');
 export const warningsOf = atTier('warning');
 export const infosOf = atTier('info');
+/** The format checks' errors: a syntax or heading error's, and a validator's. */
+export const formatErrorsOf = atTier('error', (d) => isFormatCheckName(d.ruleName));
 
 /**
  * `ruleName`'s diagnostics, after it asserts that each one is at `tier`.

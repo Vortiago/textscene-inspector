@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
-import { errorsOf } from '../../../linter/testing/tierLists';
+import { formatErrorsOf } from '../../../linter/testing/tierLists';
 // Phase-1 errors only: the references below are format cases, and a declared id is not the question.
 import './linterParser';
 
@@ -25,7 +25,7 @@ points = PackedVector2Array(411.081, 529.648, 500.884, 379.034, 568.766, 526.113
 width = 30.0
 default_color = Color(1, 1, 1, 0.752941)
 `;
-    expect(errorsOf(linter.lint(content), 'format')).toEqual([]);
+    expect(formatErrorsOf(linter.lint(content))).toEqual([]);
   });
 
   it('passes a witnessed textured, gradient-skinned Line2D form (scenes/demos/2d/polygons_lines)', () => {
@@ -41,45 +41,45 @@ antialiased = true
 begin_cap_mode = 1
 end_cap_mode = 2
 `;
-    expect(errorsOf(linter.lint(content), 'format')).toEqual([]);
+    expect(formatErrorsOf(linter.lint(content))).toEqual([]);
   });
 
   it('accepts PackedVector2Array(…), the only spelling get_points (line_2d.cpp:122-124) ever produces (get_points returns Vector<Vector2> directly, not a TypedArray)', () => {
     const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\npoints = PackedVector2Array(0, 0, 1, 0, 1, 1)\n`;
-    expect(errorsOf(linter.lint(content), 'format')).toEqual([]);
+    expect(formatErrorsOf(linter.lint(content))).toEqual([]);
   });
 
   it('rejects a malformed points literal', () => {
     const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\npoints = "not-a-vector-array"\n`;
-    const errors = errorsOf(linter.lint(content), 'format');
+    const errors = formatErrorsOf(linter.lint(content));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('points');
   });
 
   it('rejects a non-boolean antialiased', () => {
     const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\nantialiased = sometimes\n`;
-    const errors = errorsOf(linter.lint(content), 'format');
+    const errors = formatErrorsOf(linter.lint(content));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('antialiased');
   });
 
   it('rejects a malformed gradient resource reference', () => {
     const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\ngradient = "not-a-resource"\n`;
-    const errors = errorsOf(linter.lint(content), 'format');
+    const errors = formatErrorsOf(linter.lint(content));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('gradient');
   });
 
   it('rejects a malformed texture resource reference', () => {
     const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\ntexture = "not-a-resource"\n`;
-    const errors = errorsOf(linter.lint(content), 'format');
+    const errors = formatErrorsOf(linter.lint(content));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('texture');
   });
 
   it('rejects a malformed width_curve resource reference', () => {
     const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\nwidth_curve = "not-a-resource"\n`;
-    const errors = errorsOf(linter.lint(content), 'format');
+    const errors = formatErrorsOf(linter.lint(content));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('width_curve');
   });
@@ -89,17 +89,17 @@ end_cap_mode = 2
     (prop) => {
       it(`accepts SubResource(id) (resourceRef, godot/resourceRef.ts)`, () => {
         const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = SubResource("7")\n`;
-        expect(errorsOf(linter.lint(content), 'format')).toEqual([]);
+        expect(formatErrorsOf(linter.lint(content))).toEqual([]);
       });
 
       it(`accepts ExtResource(id), the other spelling Godot's own writer produces`, () => {
         const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = ExtResource("7")\n`;
-        expect(errorsOf(linter.lint(content), 'format')).toEqual([]);
+        expect(formatErrorsOf(linter.lint(content))).toEqual([]);
       });
 
       it('accepts internal whitespace padding around the id', () => {
         const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = SubResource( "7" )\n`;
-        expect(errorsOf(linter.lint(content), 'format')).toEqual([]);
+        expect(formatErrorsOf(linter.lint(content))).toEqual([]);
       });
     }
   );
@@ -110,7 +110,7 @@ end_cap_mode = 2
 [node name="L" type="Line2D"]
 default_color = Color(1, 0, 0)
 `;
-    const errors = errorsOf(linter.lint(content), 'format');
+    const errors = formatErrorsOf(linter.lint(content));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('default_color');
   });
@@ -121,7 +121,7 @@ default_color = Color(1, 0, 0)
 [node name="L" type="Line2D"]
 width = wide
 `;
-    const errors = errorsOf(linter.lint(content), 'format');
+    const errors = formatErrorsOf(linter.lint(content));
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0]!.message).toContain('width');
   });
@@ -170,7 +170,7 @@ width = wide
     ] as const)('%s enum bound (%s)', (prop, cite) => {
       it(`accepts 2, the top BIND_ENUM_CONSTANT the ${cite} hint's 3-label list names`, () => {
         const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = 2\n`;
-        expect(errorsOf(linter.lint(content), 'format')).toEqual([]);
+        expect(formatErrorsOf(linter.lint(content))).toEqual([]);
       });
 
       it('warns (not errors) at 3, the first value past the hint — the setter assigns unconditionally', () => {

@@ -133,16 +133,20 @@ export function formatRuleName(key: string): string {
 }
 
 /** True for a name {@link formatRuleName} builds. */
-export function isFormatRuleName(ruleName: string): boolean {
+function isFormatRuleName(ruleName: string): boolean {
   return ruleName.startsWith(FORMAT_RULE_PREFIX);
 }
 
-const FILE_DIAGNOSTIC_NAMES: ReadonlySet<string> = new Set([
-  STRICT_PARSER_RULE_NAME,
-  ...Object.values(FILE_DIAGNOSTICS).map((d) => d.ruleName),
-]);
+/** True for a name a format check reports: `strict-parser`, or a validator's `format:<key>`. */
+export function isFormatCheckName(ruleName: string): boolean {
+  return ruleName === STRICT_PARSER_RULE_NAME || isFormatRuleName(ruleName);
+}
+
+const FILE_DIAGNOSTIC_NAMES: ReadonlySet<string> = new Set(
+  Object.values(FILE_DIAGNOSTICS).map((d) => d.ruleName)
+);
 
 /** True for a `ruleName` `Linter` stamps that no registered rule declares. */
 export function isUndeclaredRuleName(ruleName: string): boolean {
-  return FILE_DIAGNOSTIC_NAMES.has(ruleName) || isFormatRuleName(ruleName);
+  return FILE_DIAGNOSTIC_NAMES.has(ruleName) || isFormatCheckName(ruleName);
 }
