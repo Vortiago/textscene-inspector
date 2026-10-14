@@ -197,6 +197,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/resources/sky/build.ts':
     'built once per sky, consumed by a single cube render, disposed with the environment',
+  'packages/textscene-core/src/resources/sky/skyPass.ts':
+    'the sky layer bake passes: shaders fixed at construction, only uniforms move; one instance per pass for the whole app',
   'packages/textscene-core/src/resources/materials/standardmaterial3d/build.ts':
     'the imperative half of the resource pipeline: every texture is already resolved before it is called, so the material is constructed complete',
 };
@@ -268,6 +270,8 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'puts one of a surface’s two mounted materials on its mesh, each keyed by its own mount, so a swap changes which material draws and never a program input of one',
   'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':
     'the GLB slot writer: `cloneWithMaterials` gives each clone its own copy of the loader’s materials, and `forEachSurfaceMaterial` hands a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
+  'packages/textscene-core/src/resources/sky/skyPass.ts':
+    'swaps the bake quad between the sky layer passes, each built with its shaders fixed at construction, so only uniforms ever move',
 };
 
 /**

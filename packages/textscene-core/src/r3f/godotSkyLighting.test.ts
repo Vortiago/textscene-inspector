@@ -9,11 +9,11 @@ import { warningsOf } from './testing/logWarnings';
 import { functionBody } from './testing/glslSource';
 import {
   SKY_CONTRIBUTION_UNIFORM,
-  SKY_LAYER_GROUP_NAMES,
   SKY_LAYER_UNIFORMS,
   skyContribution,
   skyLayerSlots,
 } from './sky/skyLayerCubes';
+import { SKY_LAYER_GROUP_NAMES } from '../resources/sky/skyLayers';
 
 const CHUNKS = ['lights_fragment_maps', 'envmap_physical_pars_fragment'] as const;
 const threeChunks = Object.fromEntries(CHUNKS.map((name) => [name, THREE.ShaderChunk[name]]));

@@ -60,9 +60,9 @@ is in frame).
 
 **Ambient is an IBL, because in Godot it is one.** The sky cube feeds `PMREMGenerator` and
 then `scene.environment`, which drives reflections. Godot's `reflection_source` defaults to
-the background. The core bakes Godot's radiance layers, 1 to 7, as Godot does: a chain of
-downsamples to an octmap 10 texels wide, then a GGX filter per layer, or the fast filter for a
-real-time sky. Each sky keeps them in three small cubes of its own, and every lit material samples
+the background. The core bakes Godot's radiance layers, 1 to 7, on the GPU as Godot does: a
+chain of downsamples to an octmap 10 texels wide, then a GGX filter per layer, or the fast filter
+for a real-time sky. Each sky keeps them in three small cubes of its own, and every lit material samples
 the cubes of the sky its scene shows. The diffuse light reads the last layer, and a reflection
 reads the baked layers. A mirror reflection reads layer 0, the radiance itself, as mip 0
 of three's PMREM. The PMREM blurs a layer differently from Godot's chain, and spherical harmonics of

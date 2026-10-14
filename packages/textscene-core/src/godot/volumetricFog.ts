@@ -6,6 +6,7 @@
  */
 
 import { clamp } from './math.js';
+import { SKY_ROUGHNESS_LAYERS_DEFAULT } from './skyReflection.js';
 
 /** `Environment::set_volumetric_fog_detail_spread` clamps into this range (`environment.cpp:982`). */
 const DETAIL_SPREAD_MIN = 0.5;
@@ -180,9 +181,6 @@ export const LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT = 1;
 
 /** `spot_angle_attenuation`'s default (`scene/3d/light_3d.cpp:481`). */
 export const SPOT_ANGLE_ATTENUATION_DEFAULT = 1;
-
-/** `rendering/reflections/sky_reflections/roughness_layers` (`rendering_server.cpp:3727`). */
-const SKY_ROUGHNESS_LAYERS_DEFAULT = 8;
 
 /**
  * The coarsest radiance mip, `MAX_SKY_LOD` (`environment/fog.cpp:304`). The ambient inject reads

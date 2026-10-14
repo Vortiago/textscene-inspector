@@ -5,9 +5,10 @@
  */
 
 import { onTestFinished, vi } from 'vitest';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type { GLProps } from '@react-three/fiber';
 
 /** The context calls that write texels into a texture. */
 const TEXEL_WRITES = ['texImage2D', 'texSubImage2D', 'texStorage2D'] as const;
@@ -42,14 +43,34 @@ export function RendererProbe({ onRenderer }: { onRenderer: (renderer: THREE.Web
 }
 
 /** A recorded renderer on a test root of its own, unmounted when the test ends. */
-export async function testRenderer(): Promise<{
-  renderer: THREE.WebGLRenderer;
-  recording: TextureRecording;
-}> {
+export async function testRenderer(): Promise<RecordedRenderer> {
   let found: THREE.WebGLRenderer | undefined;
   const root = await ReactThreeTestRenderer.create(
-    <RendererProbe onRenderer={(renderer) => (found = renderer)} />
+    <RendererProbe onRenderer={(renderer) => (found = renderer)} />,
+    { gl: withRenderTargets }
   );
   onTestFinished(() => root.unmount());
   return { renderer: found!, recording: recordTextures(found!) };
+}
+
+/**
+ * A root's renderer whose stand-in context gives each framebuffer and renderbuffer a handle of its
+ * own, as three keys its framebuffer state by them, so a render into a target runs. three makes its
+ * scratch framebuffer as it builds the renderer, so the context gives handles from the start.
+ */
+export const withRenderTargets: GLProps = ({ canvas }) => {
+  const element = canvas as HTMLCanvasElement;
+  const getContext = element.getContext.bind(element) as (id: string) => WebGL2RenderingContext;
+  element.getContext = ((id: string) => {
+    const context = getContext(id);
+    context.createFramebuffer = () => ({}) as WebGLFramebuffer;
+    context.createRenderbuffer = () => ({}) as WebGLRenderbuffer;
+    return context;
+  }) as HTMLCanvasElement['getContext'];
+  return new THREE.WebGLRenderer({ canvas: element });
+};
+
+interface RecordedRenderer {
+  renderer: THREE.WebGLRenderer;
+  recording: TextureRecording;
 }

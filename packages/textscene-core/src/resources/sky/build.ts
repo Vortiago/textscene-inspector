@@ -12,7 +12,7 @@ import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
 import { applyTextureState } from '../textures/applyTextureState';
 import { releaseBoundTexture } from '../materials/standardmaterial3d/textureBinding';
-import { readCubeRadiance, skyLayers, type SkyLayers } from './skyLayers';
+import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
 
 export type { SkyLight } from './skyUniforms';
 
@@ -43,6 +43,7 @@ export interface SkyEnvironment {
   environment: THREE.Texture;
   /** Godot's layers 1 to 7, which its ambient and its reflections read. */
   layers: SkyLayers;
+  /** Frees the background, the environment and the layers. */
   dispose: () => void;
 }
 
@@ -100,14 +101,14 @@ export function buildSkyEnvironment(
   const hasOwnRadianceCube = radianceTarget !== backgroundTarget;
   let pmrem: THREE.PMREMGenerator | null = null;
   let prefiltered: THREE.WebGLRenderTarget | null = null;
-  let layers: SkyLayers;
+  let layers: SkyLayers | null = null;
 
   try {
     // The cube camera sits at the origin inside the unit box, so each face
     // samples the same directions Godot's `EYEDIR` covers.
     if (backgroundTarget) renderCube(gl, skyScene, backgroundTarget);
     if (hasOwnRadianceCube) renderCube(gl, skyScene, radianceTarget);
-    layers = skyLayers(readCubeRadiance(gl, radianceTarget), bake);
+    layers = bakeSkyLayers(gl, radianceTarget.texture, bake);
 
     pmrem = new THREE.PMREMGenerator(gl);
     prefiltered = pmrem.fromCubemap(radianceTarget.texture);
@@ -115,6 +116,7 @@ export function buildSkyEnvironment(
     warn('[Sky] could not render the sky environment', error);
     backgroundTarget?.dispose();
     prefiltered?.dispose();
+    if (layers) disposeSkyLayers(layers);
     return null;
   } finally {
     // The sky scene renders once, so its mesh and panorama are freed here and
@@ -134,6 +136,7 @@ export function buildSkyEnvironment(
     dispose: () => {
       backgroundTarget?.dispose();
       prefiltered.dispose();
+      disposeSkyLayers(layers);
     },
   };
 }
