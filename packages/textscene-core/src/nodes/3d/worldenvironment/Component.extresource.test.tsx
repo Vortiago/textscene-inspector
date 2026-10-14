@@ -129,6 +129,25 @@ describe('useResolvedEnvironment — references held in an external .tres', () =
     expect(resolved!.settings).toBeTruthy();
   });
 
+  it('hands back the Environment .tres pools, where its glow_map sub-resource lives', async () => {
+    const gradient = { id: 'Gradient_1', type: 'GradientTexture2D', data: {} };
+    const resolved = await resolve(
+      'ExtResource("1_env")',
+      [],
+      [{ id: '1_env', path: 'res://glow_env.tres', type: 'Environment' }],
+      {
+        'res://glow_env.tres': {
+          resourceType: 'Environment',
+          properties: { glow_enabled: 'true', glow_map: 'SubResource("Gradient_1")' },
+          extResources: [],
+          subResources: [gradient],
+        },
+      }
+    );
+    expect(resolved?.settings.glow?.map).toBe('SubResource("Gradient_1")');
+    expect(resolved?.resources.internalResources.map((r) => r.id)).toEqual(['Gradient_1']);
+  });
+
   it('still resolves the inline SubResource chain every other corpus scene uses', async () => {
     const resolved = await resolve(
       'SubResource("Environment_1")',

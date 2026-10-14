@@ -16,12 +16,12 @@ export const SCAN_FRAMES_AFTER_SETTLE = 10;
 
 /**
  * Re-runs a scene predicate every frame while the scene loads and for a few frames after, then
- * stops. Loaded content (a texture that makes a material emissive, a GLB, a Label3D's glyphs)
+ * stops. Loaded content (a GLB's blended material, a Label3D's glyphs)
  * counts. An overlay a later click adds does not, so selecting a node never switches the pipeline.
  * It latches because mounting the composer flips `gl.toneMapping`, which recompiles every
- * tone-mapped material. A null predicate skips the scan.
+ * tone-mapped material.
  */
-export function useLatchedSceneScan(scan: ((scene: THREE.Object3D) => boolean) | null): boolean {
+export function useLatchedSceneScan(scan: (scene: THREE.Object3D) => boolean): boolean {
   const scene = useThree((s) => s.scene);
   const loader = useResourceLoader();
   const hierarchy = useOptionalHierarchy();
@@ -48,7 +48,7 @@ export function useLatchedSceneScan(scan: ((scene: THREE.Object3D) => boolean) |
   }, [scene, rootKey, scan, loader]);
 
   useFrame(() => {
-    if (latched.current || scan === null || framesLeft.current <= 0) return;
+    if (latched.current || framesLeft.current <= 0) return;
     framesLeft.current -= 1;
     if (!scan(scene)) return;
     latched.current = true;

@@ -74,6 +74,27 @@ describe('compositeGlsl — the glow gather', () => {
   });
 });
 
+describe('compositeGlsl — the glow map', () => {
+  const MAP = { glow_map: 'SubResource("Gradient_1")' };
+
+  it('scales the gathered glow by the map, mixed in by glow_map_strength (tonemap.glsl:886)', () => {
+    const glsl = composite(glowOn({ ...MAP, glow_map_strength: '0.6' }));
+    expect(glsl).toContain('uniform sampler2D godotGlowMap;');
+    expect(glsl).toContain('glow = mix(glow, texture2D(godotGlowMap, uv).rgb * glow, 0.6);');
+  });
+
+  it('applies the map before the SOFTLIGHT tone curve too (tonemap.glsl:908)', () => {
+    const glsl = body(glowOn({ ...MAP, glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
+    const mapAt = glsl.indexOf('godotGlowMap');
+    expect(mapAt).toBeGreaterThan(-1);
+    expect(mapAt).toBeLessThan(glsl.indexOf('godotToneMap(glow'));
+  });
+
+  it('declares no map sampler without a map', () => {
+    expect(composite(glowOn())).not.toContain('godotGlowMap');
+  });
+});
+
 describe('compositeGlsl — exposure', () => {
   // `tonemap.glsl` runs `color.rgb *= exposure` on the scene once before the blend;
   // the bright pass already exposed the glow. Every glow fixture leaves

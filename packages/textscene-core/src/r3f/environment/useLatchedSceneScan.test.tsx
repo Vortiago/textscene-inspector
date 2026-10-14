@@ -10,13 +10,13 @@ import { SCAN_FRAMES_AFTER_SETTLE, useLatchedSceneScan } from './useLatchedScene
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
-/** A predicate the test flips, standing in for a material that turns emissive when its texture loads. */
+/** A predicate the test flips, standing in for a material that turns blended when its texture loads. */
 function switchablePredicate() {
   const state = { holds: false };
   return { state, scan: () => state.holds };
 }
 
-async function mount(scan: (() => boolean) | null, loader = new ResourceLoader()) {
+async function mount(scan: () => boolean, loader = new ResourceLoader()) {
   const seen = { found: false };
   function Probe() {
     seen.found = useLatchedSceneScan(scan);
@@ -95,12 +95,5 @@ describe('useLatchedSceneScan', () => {
     await advance(renderer, 3);
 
     expect(seen.found).toBe(true);
-  });
-
-  it('never finds anything with a null predicate', async () => {
-    const { renderer, seen } = await mount(null);
-    await advance(renderer, 3);
-
-    expect(seen.found).toBe(false);
   });
 });

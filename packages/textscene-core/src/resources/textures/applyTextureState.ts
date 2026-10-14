@@ -2,8 +2,8 @@
  * Per-slot texture state (UV set and transform, filter, wrapping, colour space), applied
  * by cloning only when the binding diverges from the shared source. Not a
  * resource slice (ADR-0031): it decodes nothing. In production only
- * `standardmaterial3d/textureBinding.ts` and the panorama sky (`sky/build.ts`)
- * call it, and each decides the state its sampler needs.
+ * `standardmaterial3d/textureBinding.ts`, the panorama sky (`sky/build.ts`) and the
+ * glow map (`GodotToneMapEffect.ts`) call it, and each decides the state its sampler needs.
  */
 
 import * as THREE from 'three';

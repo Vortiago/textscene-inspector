@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { NO_RESOURCES, useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { decodeEnvironment } from '../../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../../resources/environment/build';
@@ -18,6 +18,8 @@ export interface ResolvedEnvironment {
   settings: EnvironmentSettings;
   /** Null while a sky `.tres` is loading, and for an environment with no sky. */
   sky: Sky | null;
+  /** The pools the Environment's own references, such as `glow_map`, resolve in. */
+  resources: SceneResources;
 }
 
 /**
@@ -50,7 +52,10 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Reso
   const clearColor = useProjectClearColorSrgb();
 
   return useMemo(
-    () => (envProps ? { settings: createEnvironmentSettings(envProps, clearColor), sky } : null),
-    [envProps, clearColor, sky]
+    () =>
+      envProps && environment
+        ? { settings: createEnvironmentSettings(envProps, clearColor), sky, resources: environment.resources }
+        : null,
+    [envProps, environment, clearColor, sky]
   );
 }

@@ -10,18 +10,13 @@ import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { BackgroundMode, type EnvironmentSettings } from '../../resources/environment/types';
 import { applyToneMapping } from '../../resources/environment/toneMapping';
-import {
-  unexposedBrightPassThreshold,
-  glowNeedsEveryPixel,
-  glowParamsFor,
-} from '../../resources/environment/godotGlow';
 import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
-import { sceneHasBloomableEmissive } from './bloomableScan';
 import { sceneHasBlendedSurface } from './alphaPassScan';
 import { useLatchedSceneScan } from './useLatchedSceneScan';
+import { compositorPassFor } from './compositorPass';
 import { SkyLayer } from '../sky/SkyLayer';
 import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
@@ -41,20 +36,14 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
-  // Glow, blending and the adjustments all run in the compositor's tone pass, so it owns the curve
-  // when any is live. Glow and blending are gated on the scene showing them: the HDR pass is not free.
-  const glowParams = useMemo(() => glowParamsFor(settings), [settings]);
-  // Null when a scan cannot decide: nothing could glow, or every pixel glows. One nullable value,
-  // not a threshold and a flag, since a threshold of 0 means "everything blooms".
-  const scanThreshold =
-    glowParams && !glowNeedsEveryPixel(glowParams) ? unexposedBrightPassThreshold(glowParams) : null;
-  const hasBloomable = useSceneHasBloomableEmissive(scanThreshold);
   const hasBlended = useSceneHasBlendedSurface();
-  const activeGlow = glowParams && (scanThreshold === null || hasBloomable) ? glowParams : null;
   const draws3D = useDraws3D();
-  // One value decides the pass and the suppression, so they cannot disagree.
-  const composited =
-    draws3D && (activeGlow || hasBlended || settings.adjustments) ? { glow: activeGlow } : null;
+  // One value decides the pass and the suppression, so they cannot disagree. Memoised, since a new
+  // glow object rebuilds the compositor's effect.
+  const composited = useMemo(
+    () => (draws3D ? compositorPassFor(settings, hasBlended) : null),
+    [draws3D, settings, hasBlended]
+  );
   // One value decides the fog programs, the fogged colour background and the fog passes.
   const hasFog = draws3D && (!!settings.fog || !!settings.volumetricFog);
 
@@ -101,17 +90,6 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
         />
       )}
     </>
-  );
-}
-
-/** A null threshold means no glow, or one that catches every pixel: nothing to scan for. */
-function useSceneHasBloomableEmissive(threshold: number | null): boolean {
-  return useLatchedSceneScan(
-    useMemo(
-      () =>
-        threshold === null ? null : (scene: THREE.Object3D) => sceneHasBloomableEmissive(scene, threshold),
-      [threshold]
-    )
   );
 }
 
