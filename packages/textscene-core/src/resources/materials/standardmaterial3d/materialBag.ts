@@ -36,7 +36,12 @@ import {
   opaquePrepassUserData,
   type OpaquePrepass,
 } from '../../../r3f/materials/opaquePrepass';
-import { renderTargetMapInjection, renderTargetMapUserData } from '../../../r3f/materials/renderTargetMap';
+import {
+  renderTargetMapInjection,
+  renderTargetMapUserData,
+  type TargetMapSampler,
+} from '../../../r3f/materials/renderTargetMap';
+import { godotTextureFilterState } from '../../textures/godotTextureFilter';
 import { resolveEmission } from './emission';
 import type { MaterialBlendState, ResolvedTextures, StandardMaterial3DScalars, TextureSlot } from './types';
 
@@ -281,12 +286,24 @@ function withSurfaceAlpha(
   return { ...bag, props, injection: composeInjections([bag.injection, injection]) };
 }
 
+/** How the albedo samples when it is a render target, which carries no sampler state of its own. */
+function targetMapSampler(
+  { textureRepeat, textureFilter }: StandardMaterial3DScalars,
+  { albedoTargetUv }: ResolvedTextures
+): TargetMapSampler | undefined {
+  if (!albedoTargetUv) return undefined;
+  const isNearest = godotTextureFilterState(textureFilter).magFilter === THREE.NearestFilter;
+  return { uv: albedoTargetUv, repeats: textureRepeat, isNearest };
+}
+
 /** The class `scalars` need, and its props. */
 function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures): StandardMaterialBag {
   const slot = (name: TextureSlot): THREE.Texture | null => textures[name] ?? null;
-  const { albedoTargetUv } = textures;
-  const targetMap = albedoTargetUv ? renderTargetMapInjection(scalars.textureRepeat) : undefined;
-  const userData = { ...surfaceUserData(scalars), ...renderTargetMapUserData(albedoTargetUv) };
+  const userData = {
+    ...surfaceUserData(scalars),
+    ...renderTargetMapUserData(targetMapSampler(scalars, textures)),
+  };
+  const targetMap = renderTargetMapInjection(userData);
   const { heightmap } = scalars;
   const heightmapTexture = heightmap ? slot('heightmap_texture') : null;
   const blend = materialBlendProps(scalars);

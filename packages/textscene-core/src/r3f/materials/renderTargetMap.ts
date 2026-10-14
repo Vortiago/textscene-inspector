@@ -1,24 +1,33 @@
 /**
  * The sampler state of a render-target albedo map, applied in the material's program. A render
- * target never clones (`applyTextureState.ts`), and every reader shares its transform and its
- * wrapping, so the UV transform a slot needs, a glTF surface's V flip included, and Godot's
- * repeat ride on the material instead.
+ * target never clones (`applyTextureState.ts`), and every reader shares its transform, its
+ * wrapping and its filter, so the UV transform a slot needs, a glTF surface's V flip included,
+ * and Godot's repeat and filter ride on the material instead.
  */
 
 import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
-import { composeInjections, type ProgramInjection } from '../materialProgramInputs';
+import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 import type { UVTransform } from '../../resources/textures/applyTextureState';
 import { recordedOn } from './recordedOnMaterial';
 
-/** Where a material records the transform its render-target map samples through. */
-const TARGET_MAP_UV_KEY = 'godotTargetMapUv';
+/** How a material samples its render-target albedo: Godot's sampler state for the slot. */
+export interface TargetMapSampler {
+  uv: UVTransform;
+  /** `texture_repeat`: whether a UV outside 0..1 wraps or clamps. */
+  repeats: boolean;
+  /** Whether `texture_filter` reads the nearest texel. */
+  isNearest: boolean;
+}
+
+/** Where a material records its render-target albedo sampler. */
+const TARGET_MAP_KEY = 'godotTargetMap';
 
 const IDENTITY_UV: UVTransform = { scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
 
-/** The `userData` that gives a render-target albedo map `uv`, none for undefined. */
-export function renderTargetMapUserData(uv: UVTransform | undefined): Record<string, unknown> {
-  return uv ? { [TARGET_MAP_UV_KEY]: uv } : {};
+/** The `userData` that gives a material its render-target albedo sampler, none for undefined. */
+export function renderTargetMapUserData(sampler: TargetMapSampler | undefined): Record<string, unknown> {
+  return sampler ? { [TARGET_MAP_KEY]: sampler } : {};
 }
 
 /**
@@ -30,7 +39,8 @@ function targetMapTransform(material: Material): IUniform<THREE.Matrix3> {
   let built: UVTransform | undefined;
   return {
     get value() {
-      const uv = recordedOn(material, TARGET_MAP_UV_KEY, IDENTITY_UV);
+      const uv =
+        recordedOn<TargetMapSampler | undefined>(material, TARGET_MAP_KEY, undefined)?.uv ?? IDENTITY_UV;
       if (uv !== built) {
         matrix.setUvTransform(uv.offset.x, uv.offset.y, uv.scale.x, uv.scale.y, 0, 0, 0);
         built = uv;
@@ -64,47 +74,67 @@ const MAP = '#include <map_fragment>';
 const MAP_SAMPLE = 'texture2D( map, vMapUv )';
 
 /**
- * Bilinear filtering by hand, with each texel index wrapped, as a repeating linear sampler reads
- * the target. The target is linear and has no mipmaps (`offscreenViewport.ts`), so the four texels
- * are all the hardware would read.
+ * Godot's sampler by hand: each texel index wrapped or clamped, then the nearest texel or a
+ * bilinear blend of four. The target is linear and has no mipmaps (`offscreenViewport.ts`), so
+ * those four texels are all the hardware would read.
  */
-const REPEAT_SAMPLE_PARS = /* glsl */ `${MAP_PARS}
+const SAMPLE_PARS = /* glsl */ `${MAP_PARS}
 #ifdef USE_MAP
+ivec2 godotTargetMapTexel( const in vec2 texel, const in vec2 size ) {
+	#ifdef GODOT_TARGET_MAP_WRAPS
+		return ivec2( mod( texel, size ) );
+	#else
+		return ivec2( clamp( texel, vec2( 0.0 ), size - 1.0 ) );
+	#endif
+}
 vec4 godotTargetMapSample( const in vec2 uv ) {
 	vec2 size = vec2( textureSize( map, 0 ) );
-	vec2 texel = uv * size - 0.5;
-	vec2 corner = floor( texel );
-	vec2 weight = texel - corner;
-	ivec2 near = ivec2( mod( corner, size ) );
-	ivec2 far = ivec2( mod( corner + 1.0, size ) );
-	return mix(
-		mix( texelFetch( map, near, 0 ), texelFetch( map, ivec2( far.x, near.y ), 0 ), weight.x ),
-		mix( texelFetch( map, ivec2( near.x, far.y ), 0 ), texelFetch( map, far, 0 ), weight.x ),
-		weight.y
-	);
+	#ifdef GODOT_TARGET_MAP_NEAREST
+		return texelFetch( map, godotTargetMapTexel( floor( uv * size ), size ), 0 );
+	#else
+		vec2 texel = uv * size - 0.5;
+		vec2 corner = floor( texel );
+		vec2 weight = texel - corner;
+		ivec2 near = godotTargetMapTexel( corner, size );
+		ivec2 far = godotTargetMapTexel( corner + 1.0, size );
+		return mix(
+			mix( texelFetch( map, near, 0 ), texelFetch( map, ivec2( far.x, near.y ), 0 ), weight.x ),
+			mix( texelFetch( map, ivec2( near.x, far.y ), 0 ), texelFetch( map, far, 0 ), weight.x ),
+			weight.y
+		);
+	#endif
 }
 #endif`;
 
 /**
- * three's map chunk inlined, as `onBeforeCompile` sees only the `#include`, with the wrapped
- * sample in place of the hardware one. Read at each compile, so it holds the chunk as the shader
- * patches leave it. It replaces the include, so it runs after any patch that anchors on it.
+ * three's map chunk inlined, as `onBeforeCompile` sees only the `#include`, with Godot's sample in
+ * place of the hardware one. Read at each compile, so it holds the chunk as the shader patches
+ * leave it. It replaces the include, so it runs after any patch that anchors on it.
  */
-const TARGET_MAP_REPEAT: ProgramInjection = {
-  cacheKey: 'godot-target-map-repeat',
+const TARGET_MAP_SAMPLE: ProgramInjection = {
+  cacheKey: 'godot-target-map-sample',
   onBeforeCompile(shader) {
     const mapFragment = THREE.ShaderChunk.map_fragment.replace(MAP_SAMPLE, 'godotTargetMapSample( vMapUv )');
-    shader.fragmentShader = shader.fragmentShader
-      .replace(MAP_PARS, REPEAT_SAMPLE_PARS)
-      .replace(MAP, mapFragment);
+    shader.fragmentShader = shader.fragmentShader.replace(MAP_PARS, SAMPLE_PARS).replace(MAP, mapFragment);
   },
 };
 
+const WRAPS = defining('GODOT_TARGET_MAP_WRAPS');
+const NEAREST = defining('GODOT_TARGET_MAP_NEAREST');
+
 /**
- * What a material whose albedo is a render target compiles with: its UV transform, and the wrap
- * Godot's `texture_repeat` sampler gives, where three's target clamps. Last among a material's
- * injections, as the repeat replaces the map chunk's include.
+ * What a material whose `userData` records a render-target albedo compiles with, none for one that
+ * records none. A linear clamped sampler is three's own, so only the transform patches it. Last
+ * among a material's injections, as the sample replaces the map chunk's include.
  */
-export function renderTargetMapInjection(repeats: boolean): ProgramInjection {
-  return repeats ? composeInjections([TARGET_MAP_UV, TARGET_MAP_REPEAT])! : TARGET_MAP_UV;
+export function renderTargetMapInjection(userData: Record<string, unknown>): ProgramInjection | undefined {
+  const sampler = userData[TARGET_MAP_KEY] as TargetMapSampler | undefined;
+  if (!sampler) return undefined;
+  if (!sampler.repeats && !sampler.isNearest) return TARGET_MAP_UV;
+  return composeInjections([
+    TARGET_MAP_UV,
+    sampler.repeats ? WRAPS : undefined,
+    sampler.isNearest ? NEAREST : undefined,
+    TARGET_MAP_SAMPLE,
+  ]);
 }

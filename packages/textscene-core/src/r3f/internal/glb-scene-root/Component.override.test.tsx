@@ -13,7 +13,7 @@ import { NodeDispatcher } from '../../NodeDispatcher';
 import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import { GLB_SCENE_ROOT_TYPE } from './Component';
+import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
 import { initGlbModules } from '../../../resources/processing/glbProcessing';
 
 // Register node-type components (Node3D / OmniLight3D / GLBSceneRoot / …).

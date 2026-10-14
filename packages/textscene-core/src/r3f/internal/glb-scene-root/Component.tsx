@@ -35,9 +35,6 @@ import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
 import { forEachSurfaceMaterial, importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
 import { boolSlotValue } from '../../../godot/index.js';
 
-/** Reserved for a synthesised GLB root: no `.tscn` declares it, and the linter never sees it. */
-export const GLB_SCENE_ROOT_TYPE = 'GLBSceneRoot';
-
 interface GLBSceneRootProperties {
   /** The ExtResource's `res://` path to the .glb or .gltf file, verbatim. */
   glbPath: string;

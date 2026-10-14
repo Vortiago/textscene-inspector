@@ -225,28 +225,45 @@ describe('standardMaterialBags — render-target albedo', () => {
     const derived = bag(properties, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
 
     expect(derived.injection?.cacheKey).toContain('godot-target-map-uv');
-    expect(derived.props.userData).toMatchObject(renderTargetMapUserData(FLIPPED_V));
+    expect(derived.props.userData).toMatchObject(
+      renderTargetMapUserData({ uv: FLIPPED_V, repeats: true, isNearest: false })
+    );
   });
 
   it("wraps a render-target albedo under Godot's default texture_repeat", () => {
     expect(bag({}, { albedo_texture: target, albedoTargetUv: FLIPPED_V }).injection?.cacheKey).toContain(
-      'godot-target-map-repeat'
+      'godot_target_map_wraps'
     );
   });
 
   it('keeps a render-target albedo clamped under texture_repeat off', () => {
     const derived = bag({ texture_repeat: 'false' }, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
 
-    expect(derived.injection?.cacheKey).not.toContain('godot-target-map-repeat');
+    expect(derived.injection?.cacheKey).not.toContain('godot_target_map_wraps');
   });
 
-  it("wraps after the parallax shift, whose anchor the wrap's inlined chunk replaces", () => {
+  it.each(['0', '2', '4'])(
+    'reads the nearest texel of a render-target albedo under texture_filter %s',
+    (filter) => {
+      const derived = bag({ texture_filter: filter }, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
+
+      expect(derived.injection?.cacheKey).toContain('godot_target_map_nearest');
+    }
+  );
+
+  it('filters a render-target albedo linearly under a linear texture_filter', () => {
+    const derived = bag({ texture_filter: '5' }, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
+
+    expect(derived.injection?.cacheKey).not.toContain('godot_target_map_nearest');
+  });
+
+  it("samples after the parallax shift, whose anchor the sample's inlined chunk replaces", () => {
     const derived = bag(
       { heightmap_enabled: 'true' },
       { albedo_texture: target, albedoTargetUv: FLIPPED_V, heightmap_texture: new THREE.Texture() }
     );
 
-    expect(derived.injection?.cacheKey).toMatch(/godot-parallax.*godot-target-map-repeat/);
+    expect(derived.injection?.cacheKey).toMatch(/godot-parallax.*godot-target-map-sample/);
   });
 
   it('patches nothing for an albedo that carries its own transform', () => {

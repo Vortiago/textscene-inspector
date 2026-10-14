@@ -17,7 +17,7 @@ import {
 } from '../utils/uniqueNames.js';
 import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
 import { scopeOf, type LiveNode } from '../resources/liveNode.js';
-import { GLB_SCENE_ROOT_TYPE } from './internal/glb-scene-root/Component.js';
+import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 
 export interface ClaimOwner {
   /** Live path of the node this owner's root renders at. */
@@ -100,7 +100,7 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
     const scope = scopeOf(match, found.group.scope);
     const subRoots = cachedSubRoots(match, scope, ctx);
     // In Godot a GLB root is its instance node, which owns the imported nodes. This tree renders
-    // the GLB root one segment below the instance, at `parentPath`.
+    // the GLB root one segment below the instance, so the owner's path is the instance's, `parentPath`.
     const isGlbRoot = found.rootOf !== undefined && match.type === GLB_SCENE_ROOT_TYPE;
     const contentOwner: ClaimOwner = found.rootOf
       ? { path: isGlbRoot ? parentPath : livePath, roots: found.rootOf, parent: owner }

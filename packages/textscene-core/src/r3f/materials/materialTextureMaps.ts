@@ -25,7 +25,7 @@ export interface MaterialTextureMaps {
 }
 
 /** The resolved maps keyed by the Godot slot each one came from, with a render-target albedo's UV. */
-export function textureSlotsFromMaps(maps: MaterialTextureMaps): ResolvedTextures {
+export function resolvedTexturesFromMaps(maps: MaterialTextureMaps): ResolvedTextures {
   return {
     albedoTargetUv: maps.albedoTargetUv,
     albedo_texture: maps.albedoMap ?? null,

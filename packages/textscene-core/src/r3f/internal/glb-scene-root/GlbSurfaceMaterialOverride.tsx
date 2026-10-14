@@ -11,7 +11,7 @@ import {
   standardMaterialBags,
 } from '../../../resources/materials/standardmaterial3d/materialBag.js';
 import { materialFromBag } from '../../../resources/materials/standardmaterial3d/build.js';
-import { textureSlotsFromMaps } from '../../materials/materialTextureMaps.js';
+import { resolvedTexturesFromMaps } from '../../materials/materialTextureMaps.js';
 import { forEachSurfaceMaterial } from '../../../resources/formats/glb/glbProcessing.js';
 import {
   GLTF_SURFACE,
@@ -53,7 +53,7 @@ export function GlbSurfaceMaterialOverride({
   const isAbsent = loaded.status === 'absent';
   // No bags while unresolved, so a late map leaves the placeholder material as it is.
   const bags = useMemo(
-    () => (isUnresolved ? null : standardMaterialBags(scalars, textureSlotsFromMaps(maps))),
+    () => (isUnresolved ? null : standardMaterialBags(scalars, resolvedTexturesFromMaps(maps))),
     [isUnresolved, scalars, maps]
   );
   const material = useMemo(() => {
