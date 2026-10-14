@@ -3,6 +3,7 @@
  * covers. Paths are under `servers/rendering/renderer_rd/environment/`.
  */
 
+import { enumNamesByValue } from './enumNames.js';
 import { clamp } from './math.js';
 import type { HalfExtents, VolumetricFogGrid } from './volumetricFog.js';
 
@@ -16,6 +17,9 @@ export enum FogVolumeShape {
   WORLD = 4,
 }
 
+/** Each shape's name by the integer a `.tscn` stores, as a validator names it. */
+export const FOG_VOLUME_SHAPE_NAMES = enumNamesByValue(FogVolumeShape);
+
 /** `FogVolume`'s defaults (`scene/3d/fog_volume.h:40-42`). */
 export const FOG_VOLUME_DEFAULT_SIZE = { x: 2, y: 2, z: 2 } as const;
 export const FOG_VOLUME_DEFAULT_SHAPE = FogVolumeShape.BOX;
@@ -26,10 +30,16 @@ export const FOG_VOLUME_DEFAULT_SHAPE = FogVolumeShape.BOX;
  */
 export const FOG_VOLUME_DENSITY_SCALE = 1024;
 
-export interface Vector3 {
+/** A point, a size or a froxel: three components, as Godot's `Vector3` and `Vector3i` hold them. */
+export interface Xyz {
   x: number;
   y: number;
   z: number;
+}
+
+/** `size.maxf(0)`: the setter clamps each component (`scene/3d/fog_volume.cpp:78`). */
+export function fogVolumeSize({ x, y, z }: Xyz): Xyz {
+  return { x: Math.max(0, x), y: Math.max(0, y), z: Math.max(0, z) };
 }
 
 /** The volumetric fog of one view, as a volume's corners find their cells in it. */
@@ -44,8 +54,8 @@ export interface FogVolumeFrame {
 
 /** The cells a volume's pass covers, from `min` to before `max`, with rows counted from the top. */
 export interface FroxelRange {
-  min: Vector3;
-  max: Vector3;
+  min: Xyz;
+  max: Xyz;
 }
 
 /** A point clamped in front of the camera, so a corner behind it maps to the first slice. */
@@ -55,10 +65,7 @@ const VIEW_DEPTH_MAX = -0.01;
  * The cell holding the view-space point `view`, with rows counted from the top, clamped to the grid
  * and one past it (`fog.cpp:551-567`). The sections spread linearly in depth here, unlike the slices.
  */
-export function fogVolumeFroxel(
-  view: Vector3,
-  { grid, begin, end, length, detailSpread }: FogVolumeFrame
-): Vector3 {
+export function fogVolumeFroxel(view: Xyz, { grid, begin, end, length, detailSpread }: FogVolumeFrame): Xyz {
   const depth = -Math.min(view.z, VIEW_DEPTH_MAX) / length;
   const x = view.x / (2 * (begin.x * (1 - depth) + end.x * depth)) + 0.5;
   const y = -view.y / (2 * (begin.y * (1 - depth) + end.y * depth)) + 0.5;
@@ -76,7 +83,7 @@ export function fogVolumeFroxel(
  * whole screen up to that cell.
  */
 export function fogVolumeFroxelRange(
-  corners: readonly Vector3[],
+  corners: readonly Xyz[],
   { isCameraInside, grid }: { isCameraInside: boolean; grid: VolumetricFogGrid }
 ): FroxelRange {
   const farthest = Math.max(1, ...corners.map((corner) => corner.z));
@@ -101,8 +108,8 @@ export function fogVolumeFroxelRange(
  * screen (`fog.cpp:701-707`).
  */
 export function isCameraNearFogVolume(
-  camera: Vector3,
-  corners: readonly Vector3[],
+  camera: Xyz,
+  corners: readonly Xyz[],
   nearCornerDistance: number
 ): boolean {
   return (['x', 'y', 'z'] as const).every((axis) => {

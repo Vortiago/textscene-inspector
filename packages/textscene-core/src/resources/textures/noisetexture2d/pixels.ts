@@ -8,9 +8,9 @@
 import type { Gradient } from '../gradienttexture2d/types';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import type { NoiseTexture2DData } from './types';
-import { grayToRgba, modulateWithGradient } from './gradientModulation';
-import { noiseSampler } from './noiseGenerator';
-import { noiseImage, seamlessNoiseImage } from './noiseImage';
+import { grayToRgba, modulateWithGradient } from '../../noise/image/gradientModulation';
+import { noiseSampler } from '../../noise/image/noiseSampler';
+import { noiseImage, seamlessNoiseImage } from '../../noise/image/noiseImage';
 import { bumpMapToNormalMap } from './normalMap';
 
 /** Everything the pixels depend on, already decoded and resolved: a structured-clone value. */

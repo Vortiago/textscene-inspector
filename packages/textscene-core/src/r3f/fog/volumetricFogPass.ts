@@ -22,6 +22,7 @@ import {
 import type { EnvironmentSettings } from '../../resources/environment/types.js';
 import { directionalShadowAtlasDepth } from '../directionalShadow/shadowAtlas.js';
 import { FULL_SCREEN_VERTEX } from '../lighting2d/fullScreenQuad.js';
+import { setGodotColorLinear } from '../godotColor.js';
 import { drawOffscreen } from '../offscreen.js';
 import { positionalShadowAtlasDepth } from '../positionalShadow/shadowAtlasTarget.js';
 import { drawWithUncomparedDepth } from '../shadowFilter/uncomparedDepth.js';
@@ -91,9 +92,16 @@ function fogVolumeView(camera: THREE.Camera, fog: VolumetricFog, grid: Volumetri
   };
 }
 
-/** The built density texture of a FogMaterial volume, as a list of none or one. */
-function densityTextureOf({ fill }: FogVolumeObject): THREE.Data3DTexture[] {
-  return fill.kind === 'material' && fill.densityTexture ? [fill.densityTexture] : [];
+/** Written by `densityTexturesOf`, overwritten by each render. */
+const densityTextures: THREE.Data3DTexture[] = [];
+
+/** The built density textures of the FogMaterial volumes, in a list each render reuses. */
+function densityTexturesOf(volumes: readonly FogVolumeObject[]): THREE.Data3DTexture[] {
+  densityTextures.length = 0;
+  for (const { fill } of volumes) {
+    if (fill.kind === 'material' && fill.densityTexture) densityTextures.push(fill.densityTexture);
+  }
+  return densityTextures;
 }
 
 /** The view-space corner of the frustum at the clip-space depth `ndcZ`. */
@@ -123,11 +131,6 @@ function volumeTarget(name: string): THREE.WebGL3DRenderTarget {
   });
   target.texture.name = name;
   return target;
-}
-
-/** Writes Godot's sRGB `color` into `target` as linear, with no allocation per draw. */
-function setLinear(target: THREE.Color, { r, g, b }: { r: number; g: number; b: number }): THREE.Color {
-  return target.setRGB(r, g, b, THREE.SRGBColorSpace);
 }
 
 function resize(target: THREE.WebGL3DRenderTarget, { width, height, depth }: VolumetricFogGrid): void {
@@ -189,8 +192,8 @@ class ViewVolume {
   readonly key = new VolumeKey();
   readonly lights = new FogLightRows();
   readonly volumes = new FogVolumeRows();
-  /** The density atlas's version at the last draw. */
-  densityVersion = -1;
+  /** The view's own, so views of scenes with other density textures never restack each other's. */
+  readonly densityAtlas = new FogDensityAtlas();
   readonly casters = new CasterPose();
   /** The camera's world matrix at the last draw, which the next reprojects from. */
   readonly previousCamera = new THREE.Matrix4();
@@ -205,6 +208,7 @@ class ViewVolume {
   dispose(): void {
     this.integrated.dispose();
     this.history.dispose();
+    this.densityAtlas.dispose();
   }
 }
 
@@ -229,7 +233,6 @@ export class VolumetricFogPass {
   private readonly viewport = new THREE.Vector4();
   private readonly lights = new FogRowTexture(FOG_LIGHT_TEXELS);
   private readonly volumes = new FogRowTexture(FOG_VOLUME_TEXELS);
-  private readonly densityAtlas = new FogDensityAtlas();
   private readonly lightMaterial = sliceMaterial('Light', FOG_LIGHT_FRAGMENT, {
     gridSize: { value: new THREE.Vector3() },
     frustumBegin: { value: new THREE.Vector2() },
@@ -311,12 +314,10 @@ export class VolumetricFogPass {
     const sky = skyRadiance(scene);
     const hasLightsChanged = state.lights.pack(inputs.lights, camera);
     if (hasLightsChanged) this.lights.invalidate(state.lights);
-    this.densityAtlas.update(inputs.volumes.flatMap(densityTextureOf));
+    const hasDensityChanged = state.densityAtlas.update(densityTexturesOf(inputs.volumes));
     const view = fogVolumeView(camera, inputs.fog, grid);
-    const haveVolumesChanged = state.volumes.pack(inputs.volumes, camera, view, this.densityAtlas);
+    const haveVolumesChanged = state.volumes.pack(inputs.volumes, camera, view, state.densityAtlas);
     if (haveVolumesChanged) this.volumes.invalidate(state.volumes);
-    const hasDensityChanged = state.densityVersion !== this.densityAtlas.version;
-    state.densityVersion = this.densityAtlas.version;
     const haveShadowsMoved = state.lights.readsShadowAtlas && state.casters.update(inputs.casters);
     const hasViewChanged = state.key.update(camera, this.viewport, inputs, sky);
     const hasChanged =
@@ -351,7 +352,6 @@ export class VolumetricFogPass {
     this.quad.geometry.dispose();
     this.lights.dispose();
     this.volumes.dispose();
-    this.densityAtlas.dispose();
     this.lightMaterial.dispose();
     this.filterMaterial.dispose();
     this.integrateMaterial.dispose();
@@ -445,16 +445,17 @@ export class VolumetricFogPass {
    */
   private writeMedium({ fog }: VolumetricFogInputs): void {
     const uniforms = this.lightMaterial.uniforms;
-    const density = fog.density;
     uniforms['fogLength']!.value = fog.length;
     uniforms['detailSpread']!.value = fog.detailSpread;
-    uniforms['baseDensity']!.value = density;
-    setLinear(uniforms['baseScattering']!.value as THREE.Color, fog.albedo).multiplyScalar(density);
-    setLinear(uniforms['baseEmission']!.value as THREE.Color, fog.emission).multiplyScalar(
-      fog.emissionEnergy * density
+    uniforms['baseDensity']!.value = fog.density;
+    setGodotColorLinear(uniforms['baseScattering']!.value as THREE.Color, fog.albedo).multiplyScalar(
+      fog.density
+    );
+    setGodotColorLinear(uniforms['baseEmission']!.value as THREE.Color, fog.emission).multiplyScalar(
+      fog.emissionEnergy * fog.density
     );
     uniforms['phaseG']!.value = fog.anisotropy;
-    setLinear(uniforms['ambientColor']!.value as THREE.Color, fog.ambient.color);
+    setGodotColorLinear(uniforms['ambientColor']!.value as THREE.Color, fog.ambient.color);
     uniforms['ambientInject']!.value = fog.ambient.inject;
     uniforms['skyContribution']!.value = fog.ambient.skyContribution;
   }
@@ -480,13 +481,13 @@ export class VolumetricFogPass {
     this.lightMaterial.uniforms['skyEnergy']!.value = energy;
   }
 
-  private writeRows({ lights, volumes }: ViewVolume): void {
+  private writeRows({ lights, volumes, densityAtlas }: ViewVolume): void {
     const uniforms = this.lightMaterial.uniforms;
     uniforms['fogLights']!.value = this.lights.hold(lights);
     uniforms['lightCount']!.value = lights.count;
     uniforms['fogVolumes']!.value = this.volumes.hold(volumes);
     uniforms['fogVolumeCount']!.value = volumes.count;
-    const { texture } = this.densityAtlas;
+    const { texture } = densityAtlas;
     uniforms['fogDensityTextures']!.value = texture;
     const { width, height, depth } = texture.image;
     (uniforms['fogDensityTexturesSize']!.value as THREE.Vector3).set(width, height, depth);

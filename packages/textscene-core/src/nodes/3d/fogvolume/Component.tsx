@@ -4,13 +4,18 @@
  * where the Environment's volumetric fog is off, as in Godot.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
-import { useThree } from '@react-three/fiber';
+import { extend } from '@react-three/fiber';
+import { fogVolumeSize } from '../../../godot/fogVolume';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { Vector3 } from '../../../parser/vectors';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { FogVolumeObject, type FogVolumeFill } from '../../../r3f/fog/fogVolumeObject';
+import {
+  DEFAULT_FOG_VOLUME_FILL,
+  FogVolumeObject,
+  type FogVolumeFill,
+} from '../../../r3f/fog/fogVolumeObject';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { decodeFogMaterial } from '../../../resources/materials/fogmaterial/decode';
@@ -19,7 +24,8 @@ import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { Node3D } from '../../base/node3d/Component';
 import type { FogVolumeProperties } from './types';
 
-const DEFAULT_FILL: FogVolumeFill = { kind: 'default' };
+/** An element, not a `<primitive>`: it carries no material, and R3F sets its fields as props. */
+const FogVolumeElement = extend(FogVolumeObject);
 const NO_RESOURCES: readonly TscnInternalResource[] = [];
 
 /**
@@ -31,7 +37,7 @@ function fillOf(material: { type: string; data: Record<string, string> } | null)
     return { kind: 'material', material: decodeFogMaterial(material.data), densityTexture: null };
   }
   if (material?.type === 'ShaderMaterial') return { kind: 'shader' };
-  return DEFAULT_FILL;
+  return DEFAULT_FOG_VOLUME_FILL;
 }
 
 /** `fill` with the FogMaterial's density texture, once built. */
@@ -42,8 +48,6 @@ function withDensityTexture(fill: FogVolumeFill, texture: THREE.Texture | null):
 
 export function FogVolume({ node, children }: NodeComponentProps) {
   const properties = node.properties as FogVolumeProperties;
-  const invalidate = useThree((state) => state.invalidate);
-  const volume = useMemo(() => new FogVolumeObject(), []);
   const { scoped } = useResourceResolution(properties.material, useSceneResources());
   const materialFill = useMemo(() => fillOf(scoped?.resource ?? null), [scoped]);
   const densityTextureRef = materialFill.kind === 'material' ? materialFill.material.densityTexture : null;
@@ -60,19 +64,12 @@ export function FogVolume({ node, children }: NodeComponentProps) {
     y: v[1] ?? 0,
     z: v[2] ?? 0,
   }));
-  const size = animatedSize ?? properties.size;
-
-  useEffect(() => {
-    // `size.maxf(0)` clamps an animated size as it does an authored one (`fog_volume.cpp:78`).
-    volume.size.set(Math.max(0, size.x), Math.max(0, size.y), Math.max(0, size.z));
-    volume.shape = properties.shape;
-    volume.fill = fill;
-    invalidate();
-  }, [volume, size, properties.shape, fill, invalidate]);
+  // An animated size clamps as an authored one does.
+  const size = animatedSize ? fogVolumeSize(animatedSize) : properties.size;
 
   return (
     <Node3D node={node}>
-      <primitive object={volume} />
+      <FogVolumeElement size={[size.x, size.y, size.z]} shape={properties.shape} fill={fill} />
       {children}
     </Node3D>
   );

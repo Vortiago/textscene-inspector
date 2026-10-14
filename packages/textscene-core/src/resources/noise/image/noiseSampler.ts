@@ -11,7 +11,7 @@ import {
   NoiseFractalType,
   NoiseType,
   type FastNoiseLiteData,
-} from '../../noise/fastnoiselite/types';
+} from '../fastnoiselite/types';
 
 const NOISE_TYPE: Record<NoiseType, string> = {
   [NoiseType.SIMPLEX]: FastNoiseLite.NoiseType.OpenSimplex2,

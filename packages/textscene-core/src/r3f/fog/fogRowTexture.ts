@@ -4,12 +4,7 @@
  */
 
 import * as THREE from 'three';
-
-/** Rows of `width` texels, `count` of them, then unused space. */
-export interface PackedRows {
-  readonly data: Float32Array;
-  readonly count: number;
-}
+import type { PackedRows } from './packedRows.js';
 
 export class FogRowTexture {
   texture: THREE.DataTexture;
@@ -25,12 +20,15 @@ export class FogRowTexture {
     if (this.uploaded === rows) this.uploaded = null;
   }
 
-  /** The texture holding `rows`. A new row count needs a texture of another height. */
+  /**
+   * The texture holding `rows` in its first rows. It only grows, and doubles, so a count that
+   * changes as the camera culls a volume reallocates nothing. The shader reads only `count` rows.
+   */
   hold(rows: PackedRows): THREE.DataTexture {
-    const height = Math.max(1, rows.count);
-    if (this.texture.image.height !== height) {
+    const height = this.texture.image.height;
+    if (height < rows.count) {
       this.texture.dispose();
-      this.texture = rowTexture(this.width, height);
+      this.texture = rowTexture(this.width, Math.max(rows.count, height * 2));
       this.uploaded = null;
     }
     if (this.uploaded !== rows) {

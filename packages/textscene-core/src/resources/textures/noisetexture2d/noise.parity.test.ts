@@ -5,7 +5,7 @@
  * is set, since upstream's defaults differ (3 octaves, EuclideanSq).
  */
 import { describe, expect, it } from 'vitest';
-import { noiseSampler } from './build';
+import { noiseSampler } from '../../noise/image/noiseSampler';
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
 
 describe('FastNoiseLite parity with Godot 4.6.3', () => {

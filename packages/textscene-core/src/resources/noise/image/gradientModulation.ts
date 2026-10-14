@@ -4,8 +4,8 @@
  */
 
 import { clamp } from '../../../godot/math.js';
-import type { Gradient } from '../gradienttexture2d/types';
-import { sampleGradientColor } from '../gradienttexture2d/sample';
+import type { Gradient } from '../../textures/gradienttexture2d/types';
+import { sampleGradientColor } from '../../textures/gradienttexture2d/sample';
 
 /**
  * `_modulate_with_gradient` of `NoiseTexture2D` and `NoiseTexture3D` (noise_texture_2d.cpp:183-198,
@@ -13,17 +13,7 @@ import { sampleGradientColor } from '../gradienttexture2d/sample';
  * lands in an RGBA8 image.
  */
 export function modulateWithGradient(gray: Uint8Array, gradient: Gradient): Uint8Array {
-  // The offset comes from a byte, 256 values, so the ramp is evaluated once per
-  // value, not per pixel with a binary search and an allocation each.
-  const lut = new Uint8Array(256 * 4);
-  for (let v = 0; v < 256; v++) {
-    const color = sampleGradientColor(gradient, grayLuminance(v));
-    lut[v * 4] = rgba8Channel(color.r);
-    lut[v * 4 + 1] = rgba8Channel(color.g);
-    lut[v * 4 + 2] = rgba8Channel(color.b);
-    lut[v * 4 + 3] = rgba8Channel(color.a);
-  }
-
+  const lut = rampLut(gradient);
   const rgba = new Uint8Array(gray.length * 4);
   for (let i = 0; i < gray.length; i++) {
     const entry = gray[i]! * 4;
@@ -33,6 +23,28 @@ export function modulateWithGradient(gray: Uint8Array, gradient: Gradient): Uint
     rgba[i * 4 + 3] = lut[entry + 3]!;
   }
   return rgba;
+}
+
+/** The red channel of `modulateWithGradient`, without the other three. */
+export function modulateRedWithGradient(gray: Uint8Array, gradient: Gradient): Uint8Array {
+  const lut = rampLut(gradient);
+  return gray.map((byte) => lut[byte * 4]!);
+}
+
+/**
+ * The ramp's RGBA8 colour for each of the 256 bytes a pixel can hold, so the ramp is evaluated
+ * once per value, not per pixel with a binary search and an allocation each.
+ */
+function rampLut(gradient: Gradient): Uint8Array {
+  const lut = new Uint8Array(256 * 4);
+  for (let v = 0; v < 256; v++) {
+    const color = sampleGradientColor(gradient, grayLuminance(v));
+    lut[v * 4] = rgba8Channel(color.r);
+    lut[v * 4 + 1] = rgba8Channel(color.g);
+    lut[v * 4 + 2] = rgba8Channel(color.b);
+    lut[v * 4 + 3] = rgba8Channel(color.a);
+  }
+  return lut;
 }
 
 /** A grayscale field as opaque RGBA, for the path with no `color_ramp`. */

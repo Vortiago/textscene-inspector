@@ -21,6 +21,8 @@ export type FogVolumeFill =
   | { kind: 'material'; material: FogMaterialData; densityTexture: THREE.Data3DTexture | null }
   | { kind: 'shader' };
 
+export const DEFAULT_FOG_VOLUME_FILL: FogVolumeFill = { kind: 'default' };
+
 export class FogVolumeObject extends THREE.Object3D {
   readonly isFogVolume = true;
   readonly size = new THREE.Vector3(
@@ -29,7 +31,7 @@ export class FogVolumeObject extends THREE.Object3D {
     FOG_VOLUME_DEFAULT_SIZE.z
   );
   shape: FogVolumeShape | number = FOG_VOLUME_DEFAULT_SHAPE;
-  fill: FogVolumeFill = { kind: 'default' };
+  fill: FogVolumeFill = DEFAULT_FOG_VOLUME_FILL;
 }
 
 export function isFogVolume(object: THREE.Object3D): object is FogVolumeObject {

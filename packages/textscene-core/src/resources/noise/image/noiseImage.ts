@@ -5,7 +5,7 @@
 
 import { smoothstep } from '../../../godot/math.js';
 import { alphaBlend, clamp8 } from './noiseBytes';
-import type { NoiseSampler, NoiseSampler3D } from './noiseGenerator';
+import type { NoiseSampler, NoiseSampler3D } from './noiseSampler';
 
 /**
  * `Noise::_get_image` (noise.cpp:81-163) for one slice, row 0 at the top. With `normalize`, the
@@ -19,7 +19,7 @@ export function noiseImage(
   invert: boolean,
   normalize: boolean
 ): Uint8Array {
-  return noiseVolume((x, y) => sample(x, y), width, height, 1, invert, normalize);
+  return noiseVolume(sample, width, height, 1, invert, normalize);
 }
 
 /**
@@ -82,6 +82,11 @@ export function seamlessSkirt(size: number, blendSkirt: number): number {
   return Math.max(1, Math.trunc(size * blendSkirt));
 }
 
+/** The size of `_get_seamless_image`'s source on one axis: the output and its skirt. */
+export function seamlessSource(size: number, blendSkirt: number): number {
+  return size + seamlessSkirt(size, blendSkirt);
+}
+
 /**
  * `Noise::_get_seamless_image` and `_generate_seamless_image` (noise.cpp:33-51,
  * noise.h:84-200), grayscale: generate a skirt larger, swap quadrants, and blend
@@ -98,10 +103,14 @@ export function seamlessNoiseImage(
 ): Uint8Array {
   // Godot generates a second source slice for the depth skirt. In 2D both slices hold the same
   // field, so their min/max is one slice's, and the result is the first slice.
-  const srcWidth = width + seamlessSkirt(width, blendSkirt);
-  const srcHeight = height + seamlessSkirt(height, blendSkirt);
   return blendSliceSeams(
-    noiseImage(sample, srcWidth, srcHeight, invert, normalize),
+    noiseImage(
+      sample,
+      seamlessSource(width, blendSkirt),
+      seamlessSource(height, blendSkirt),
+      invert,
+      normalize
+    ),
     width,
     height,
     blendSkirt
@@ -123,11 +132,16 @@ export function seamlessNoiseVolume(
   normalize: boolean,
   blendSkirt: number
 ): Uint8Array {
-  const srcWidth = width + seamlessSkirt(width, blendSkirt);
-  const srcHeight = height + seamlessSkirt(height, blendSkirt);
-  const srcDepth = depth + seamlessSkirt(depth, blendSkirt);
-  const src = noiseVolume(sample, srcWidth, srcHeight, srcDepth, invert, normalize);
-  const sliceLength = srcWidth * srcHeight;
+  const srcDepth = seamlessSource(depth, blendSkirt);
+  const sliceLength = seamlessSource(width, blendSkirt) * seamlessSource(height, blendSkirt);
+  const src = noiseVolume(
+    sample,
+    seamlessSource(width, blendSkirt),
+    seamlessSource(height, blendSkirt),
+    srcDepth,
+    invert,
+    normalize
+  );
   const slices = Array.from({ length: srcDepth }, (_, z) =>
     blendSliceSeams(src.subarray(z * sliceLength, (z + 1) * sliceLength), width, height, blendSkirt)
   );
@@ -176,8 +190,8 @@ function seamAlpha(step: number, skirt: number): number {
 function blendSliceSeams(src: Uint8Array, width: number, height: number, blendSkirt: number): Uint8Array {
   const skirtWidth = seamlessSkirt(width, blendSkirt);
   const skirtHeight = seamlessSkirt(height, blendSkirt);
-  const srcWidth = width + skirtWidth;
-  const srcHeight = height + skirtHeight;
+  const srcWidth = seamlessSource(width, blendSkirt);
+  const srcHeight = seamlessSource(height, blendSkirt);
 
   const halfWidth = Math.trunc(width * 0.5);
   const halfHeight = Math.trunc(height * 0.5);

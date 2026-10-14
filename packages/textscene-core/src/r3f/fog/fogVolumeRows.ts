@@ -13,9 +13,11 @@ import {
   type FogVolumeFrame,
   type FroxelRange,
 } from '../../godot/fogVolume.js';
+import { setGodotColorLinear } from '../godotColor.js';
 import { visibleInTree } from '../visibleInTree.js';
 import type { FogDensityAtlas } from './fogDensityAtlas.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
+import { RowBuffer } from './packedRows.js';
 import { writeVec4 } from './writeVec4.js';
 
 /**
@@ -71,10 +73,10 @@ const worldCorners = UNIT_CORNERS.map(() => new THREE.Vector3());
 const viewCorner = new THREE.Vector3();
 
 /** The rows of every visible volume the fog draws, rewritten in place by each `pack`. */
-export class FogVolumeRows {
-  /** The rows, `count` of them, then unused space. */
-  data = new Float32Array(ROW_LENGTH);
-  count = 0;
+export class FogVolumeRows extends RowBuffer {
+  constructor() {
+    super(ROW_LENGTH);
+  }
 
   /**
    * Packs `volumes` as `camera` sees them in `view`'s fog, with their density textures' regions in
@@ -89,28 +91,11 @@ export class FogVolumeRows {
     frustum.setFromProjectionMatrix(
       viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
     );
-    let count = 0;
-    let hasChanged = false;
+    this.begin();
     for (const volume of volumes) {
-      if (!visibleInTree(volume) || !writeRow(volume, camera, view, atlas)) continue;
-      this.reserve(count + 1);
-      const start = count * ROW_LENGTH;
-      for (let i = 0; i < ROW_LENGTH; i++) {
-        if (this.data[start + i] !== row[i]) hasChanged = true;
-        this.data[start + i] = row[i]!;
-      }
-      count++;
+      if (visibleInTree(volume) && writeRow(volume, camera, view, atlas)) this.append(row);
     }
-    hasChanged ||= count !== this.count;
-    this.count = count;
-    return hasChanged;
-  }
-
-  private reserve(rows: number): void {
-    if (this.data.length >= rows * ROW_LENGTH) return;
-    const grown = new Float32Array(rows * 2 * ROW_LENGTH);
-    grown.set(this.data);
-    this.data = grown;
+    return this.finish();
   }
 }
 
@@ -145,9 +130,9 @@ function writeRow(
   const { density, heightFalloff, edgeFade, albedo, emission } = fill.material;
   writeTexel(FogVolumeTexel.MATERIAL, density, heightFalloff, edgeFade, FogVolumeKind.MATERIAL);
   // `source_color` turns both colours linear (`fog_material.cpp:152-153`).
-  color.setRGB(albedo.r, albedo.g, albedo.b, THREE.SRGBColorSpace);
+  setGodotColorLinear(color, albedo);
   writeTexel(FogVolumeTexel.ALBEDO, color.r, color.g, color.b);
-  color.setRGB(emission.r, emission.g, emission.b, THREE.SRGBColorSpace);
+  setGodotColorLinear(color, emission);
   writeTexel(FogVolumeTexel.EMISSION, color.r, color.g, color.b);
   const region = fill.densityTexture && atlas.regionOf(fill.densityTexture);
   if (region)
@@ -183,9 +168,7 @@ function writeTransforms(volume: FogVolumeObject, camera: THREE.Camera): void {
 
 /** The world box around the volume's corners, which Godot culls its instance by. */
 function worldBounds(volume: FogVolumeObject): THREE.Box3 {
-  bounds.makeEmpty();
-  for (const corner of worldCornersOf(volume)) bounds.expandByPoint(corner);
-  return bounds;
+  return bounds.setFromPoints(worldCornersOf(volume));
 }
 
 function worldCornersOf(volume: FogVolumeObject): THREE.Vector3[] {

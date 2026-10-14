@@ -6,9 +6,9 @@
 
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import type { Gradient } from '../gradienttexture2d/types';
-import { modulateWithGradient } from '../noisetexture2d/gradientModulation';
-import { noiseSampler3D } from '../noisetexture2d/noiseGenerator';
-import { noiseVolume, seamlessNoiseVolume } from '../noisetexture2d/noiseImage';
+import { modulateRedWithGradient } from '../../noise/image/gradientModulation';
+import { noiseSampler3D } from '../../noise/image/noiseSampler';
+import { noiseVolume, seamlessNoiseVolume } from '../../noise/image/noiseImage';
 import type { NoiseTexture3DData } from './types';
 
 /** Everything the texels depend on, already decoded and resolved: a structured-clone value. */
@@ -30,9 +30,5 @@ export function noiseTexture3DTexels({ tex, noise, colorRamp }: NoiseTexture3DIn
   const gray = tex.seamless
     ? seamlessNoiseVolume(sample, width, height, depth, invert, normalize, tex.seamlessBlendSkirt)
     : noiseVolume(sample, width, height, depth, invert, normalize);
-  return colorRamp ? redChannel(modulateWithGradient(gray, colorRamp)) : gray;
-}
-
-function redChannel(rgba: Uint8Array): Uint8Array {
-  return rgba.filter((_, i) => i % 4 === 0);
+  return colorRamp ? modulateRedWithGradient(gray, colorRamp) : gray;
 }

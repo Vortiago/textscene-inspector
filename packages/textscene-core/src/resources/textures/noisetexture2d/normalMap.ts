@@ -3,7 +3,7 @@
  * run when `as_normal_map` is set.
  */
 
-import { clamp8 } from './noiseBytes';
+import { clamp8 } from '../../noise/image/noiseBytes';
 
 /**
  * `Image::bump_map_to_normal_map` (core/io/image.cpp:4083-4128). Godot keeps only

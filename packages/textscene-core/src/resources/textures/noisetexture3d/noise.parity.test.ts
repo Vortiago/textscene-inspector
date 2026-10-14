@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
-import { noiseSampler3D } from '../noisetexture2d/noiseGenerator';
+import { noiseSampler3D } from '../../noise/image/noiseSampler';
 
 describe('3D FastNoiseLite parity with Godot 4.6.3', () => {
   it('matches the engine for a resource that authors nothing', () => {

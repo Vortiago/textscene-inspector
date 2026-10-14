@@ -7,8 +7,15 @@ import * as THREE from 'three';
 import { MAX_3D_TEXTURE_EXTENT } from '../webglLimits';
 import { FogDensityAtlas } from './fogDensityAtlas';
 
-function volume(width: number, height: number, depth: number, fill = 0): THREE.Data3DTexture {
-  return new THREE.Data3DTexture(new Uint8Array(width * height * depth).fill(fill), width, height, depth);
+/** A single-channel texture, as a NoiseTexture3D builds one. */
+function redTexture(texels: Uint8Array, width: number, height: number, depth: number): THREE.Data3DTexture {
+  const texture = new THREE.Data3DTexture(texels, width, height, depth);
+  texture.format = THREE.RedFormat;
+  return texture;
+}
+
+function volume(width: number, height: number, depth: number): THREE.Data3DTexture {
+  return redTexture(new Uint8Array(width * height * depth), width, height, depth);
 }
 
 describe('FogDensityAtlas.update', () => {
@@ -24,7 +31,7 @@ describe('FogDensityAtlas.update', () => {
 
   it('copies each row of a texture into its region', () => {
     const atlas = new FogDensityAtlas();
-    const narrow = new THREE.Data3DTexture(new Uint8Array([1, 2, 3, 4]), 2, 2, 1);
+    const narrow = redTexture(new Uint8Array([1, 2, 3, 4]), 2, 2, 1);
     atlas.update([volume(3, 2, 1), narrow]);
     const data = atlas.texture.image.data as Uint8Array;
     // The second slice starts at 3 x 2 texels, and its rows are 3 texels apart.
@@ -46,12 +53,21 @@ describe('FogDensityAtlas.update', () => {
     expect(atlas.update([])).toBe(true);
   });
 
-  it('counts each new stack in its version', () => {
+  it('keeps its stack when the same textures arrive in another order', () => {
     const atlas = new FogDensityAtlas();
-    const textures = [volume(2, 2, 2)];
-    atlas.update(textures);
-    atlas.update(textures);
-    expect(atlas.version).toBe(1);
+    const first = volume(2, 2, 2);
+    const second = volume(2, 2, 2);
+    atlas.update([first, second]);
+    const stacked = atlas.texture;
+    expect(atlas.update([second, first, second])).toBe(false);
+    expect(atlas.texture).toBe(stacked);
+  });
+
+  it('copies only the red channel of an RGBA texture', () => {
+    const atlas = new FogDensityAtlas();
+    const rgba = new THREE.Data3DTexture(new Uint8Array([9, 1, 1, 1, 7, 1, 1, 1]), 2, 1, 1);
+    atlas.update([rgba]);
+    expect(Array.from(atlas.texture.image.data as Uint8Array)).toEqual([9, 7]);
   });
 
   it('leaves out a texture past the 3D texture ceiling, which samples as no texture (edge case)', () => {
