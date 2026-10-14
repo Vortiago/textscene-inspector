@@ -14,8 +14,15 @@ import {
 } from './utils';
 import * as logger from '../logger';
 import { boolSlotValue } from '../godot/index.js';
-import { DEFAULT_GLTF_NAMING_VERSION, type GltfNamingOptions } from '../godot/gltfNodeNames.js';
+import { DEFAULT_GLTF_NAMING_VERSION, type GltfNamingOptions } from '../godot/gltfImportNames.js';
 import { parseOptionalInt } from './valueParsers.js';
+import {
+  DEFAULT_LIGHT_BAKE_MODE,
+  DEFAULT_LIGHTMAP_TEXEL_SIZE,
+  LightBakeMode,
+  MeshOverride,
+  unwrapTexelSize,
+} from '../godot/sceneImport.js';
 
 /** A `key=value` line, tolerating surrounding whitespace and a trailing comment-free tail. */
 const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/]*)=(.*)$/;
@@ -31,8 +38,9 @@ export interface ParsedImportFile {
   /**
    * The `[params]` block: a string literal's decoded text, as `VariantParser` reads it back
    * (`resource_importer.cpp:76`), and any other value as written. The typed readers cover only
-   * `nodes/root_scale`, `nodes/apply_root_scale`, the glTF naming options, and the `_subresources`
-   * material remaps and mesh layers. The rest is GLTFLoader's work or a bake concern with no visual effect.
+   * `nodes/root_scale`, `nodes/apply_root_scale`, the glTF naming options, the lightmap unwrap
+   * options, and the `_subresources` material remaps, mesh layers and mesh lightmap overrides. The
+   * rest is GLTFLoader's work or a bake concern with no visual effect.
    */
   params: Record<string, string>;
 }
@@ -182,6 +190,49 @@ export function importNodeLayers(parsed: ParsedImportFile | null): ReadonlyMap<s
     masks.set(key.startsWith('PATH:') ? key.slice('PATH:'.length) : key, mask);
   }
   return masks;
+}
+
+/** Which meshes of an asset Godot's importer unwraps for lightmaps, and at what texel size. */
+export interface LightmapUnwrap {
+  texelSize: number;
+  /** Whether the mesh of this import id, `<scene>_<mesh>` for a glTF, is unwrapped. */
+  unwraps(meshId: string): boolean;
+}
+
+/**
+ * The asset's lightmap unwrap, or null when no mesh can be unwrapped. A mesh is unwrapped at
+ * `meshes/light_baking` Static Lightmaps, and its `_subresources` `generate/lightmap_uv`
+ * overrides that either way (`resource_importer_scene.cpp:2622`, `:2649-2655`).
+ */
+export function importLightmapUnwrap(parsed: ParsedImportFile | null): LightmapUnwrap | null {
+  if (!parsed) return null;
+  const overrides = meshLightmapOverrides(parsed);
+  const bakesAll =
+    (parseOptionalInt(parsed.params['meshes/light_baking']) ?? DEFAULT_LIGHT_BAKE_MODE) ===
+    LightBakeMode.StaticLightmaps;
+  if (!bakesAll && ![...overrides.values()].includes(MeshOverride.Enable)) return null;
+
+  const texelOption = Number(parsed.params['meshes/lightmap_texel_size'] ?? DEFAULT_LIGHTMAP_TEXEL_SIZE);
+  return {
+    texelSize: unwrapTexelSize(texelOption),
+    unwraps: (meshId) => {
+      const override = overrides.get(meshId);
+      if (override === MeshOverride.Enable) return true;
+      if (override === MeshOverride.Disable) return false;
+      return bakesAll;
+    },
+  };
+}
+
+/** Each mesh's `generate/lightmap_uv`, by import id. */
+function meshLightmapOverrides(parsed: ParsedImportFile): ReadonlyMap<string, number> {
+  const overrides = new Map<string, number>();
+  for (const [meshId, settings] of Object.entries(subResourceCategory(parsed, 'meshes') ?? {})) {
+    if (typeof settings !== 'object' || settings === null) continue;
+    const override = (settings as Record<string, unknown>)['generate/lightmap_uv'];
+    if (typeof override === 'number') overrides.set(meshId, override);
+  }
+  return overrides;
 }
 
 /**

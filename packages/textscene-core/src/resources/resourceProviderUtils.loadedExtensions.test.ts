@@ -29,6 +29,6 @@ describe('LOADED_FILE_EXTENSIONS', () => {
 
   it('lists each extension once, dotted and lowercase', () => {
     expect(new Set(LOADED_FILE_EXTENSIONS).size).toBe(LOADED_FILE_EXTENSIONS.length);
-    for (const extension of LOADED_FILE_EXTENSIONS) expect(extension).toMatch(/^\.[a-z0-9]+$/);
+    for (const extension of LOADED_FILE_EXTENSIONS) expect(extension).toMatch(/^\.[a-z0-9_]+$/);
   });
 });

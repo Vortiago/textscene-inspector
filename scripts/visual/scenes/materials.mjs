@@ -70,6 +70,9 @@ export const MATERIAL_SCENES = [
     name: 'glb-surface-material-override',
     file: 'unit-glb-surface-material-override.tscn',
   },
+  // An emission map drawn through the UV2 Godot's importer unwrapped into the `.glb`'s unwrap
+  // cache, the only scene that samples UV2. Each face shows its own patch of the gradient bands.
+  { name: 'glb-lightmap-uv2', file: 'unit-glb-lightmap-uv2.tscn' },
   // The one variable, carried by no other fixture: a node-level
   // `surface_material_override/N` over a baked mesh's surface material. Surface
   // 1 is overridden and surface 0 is not, so a leak onto every surface, a

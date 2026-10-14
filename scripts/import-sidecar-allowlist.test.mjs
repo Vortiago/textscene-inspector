@@ -1,7 +1,8 @@
 /**
  * Asserts the `.import` parameter allowlist against the corpus (ADR-0028). The previewer's asset
- * re-import honours `nodes/root_scale`, `nodes/apply_root_scale`, from `_subresources` the
- * `use_external` material remaps and the `mesh_instance/layers` mask, and a `3d_texture` slice
+ * re-import honours `nodes/root_scale`, `nodes/apply_root_scale`, `meshes/light_baking`,
+ * `meshes/lightmap_texel_size`, from `_subresources` the `use_external` material remaps, the
+ * `mesh_instance/layers` mask and the per-mesh `generate/lightmap_uv`, and a `3d_texture` slice
  * grid. A vendored sidecar that needs any other parameter would render wrong with nothing to say
  * so, so this test fails instead.
  */
@@ -16,9 +17,17 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'games']);
 
 /**
  * The parameters the previewer honours. `_subresources` is honoured only in part (its material
- * remaps and its per-node layer mask), so each non-empty block is still named below.
+ * remaps, its per-node layer mask and its per-mesh lightmap UV2 override), so each non-empty block
+ * is still named below. The two lightmap parameters choose the meshes that take their UV2 from
+ * the asset's unwrap cache.
  */
-const HONOURED = new Set(['nodes/root_scale', 'nodes/apply_root_scale', '_subresources']);
+const HONOURED = new Set([
+  'nodes/root_scale',
+  'nodes/apply_root_scale',
+  'meshes/light_baking',
+  'meshes/lightmap_texel_size',
+  '_subresources',
+]);
 
 /**
  * The `3d_texture` importer's parameters, reviewed for that importer alone: a `texture` importer's
@@ -42,7 +51,7 @@ const TEXTURE_3D_PARAMS = new Set([
 
 /**
  * Inert at any value, so they need no per-file check. Each is a bake or performance concern with
- * no preview equivalent (LODs, shadow meshes, lightmap UV2, compression, light baking), something
+ * no preview equivalent (LODs, shadow meshes, compression), something
  * three's GLTFLoader already does (tangents, named skins, surface dedup), or a change to how Godot
  * names or files things (name suffixes, material extraction, glTF naming, clip bookkeeping).
  */
@@ -58,8 +67,6 @@ const INERT = new Set([
   'meshes/ensure_tangents',
   'meshes/generate_lods',
   'meshes/create_shadow_meshes',
-  'meshes/light_baking',
-  'meshes/lightmap_texel_size',
   'meshes/force_disable_compression',
   'skins/use_named_skins',
   'animation/import',
@@ -77,7 +84,7 @@ const INERT = new Set([
   'generate_tangents',
   'generate_lods',
   'generate_shadow_mesh',
-  'generate_lightmap_uv2',
+  // The texel size of an unwrap the default below keeps off.
   'generate_lightmap_uv2_texel_size',
   'force_disable_mesh_compression',
 ]);
@@ -85,7 +92,8 @@ const INERT = new Set([
 /**
  * Parameters that would change the picture and that the previewer does not read, so their
  * default is asserted corpus-wide. `scale_mesh` and `offset_mesh` are wavefront_obj's root scale,
- * out of scope while every OBJ in the corpus is identity (ADR-0028).
+ * and `generate_lightmap_uv2` its unwrap, out of scope while every OBJ in the corpus keeps them
+ * off (ADR-0028).
  */
 const MUST_BE_DEFAULT = new Map([
   ['nodes/root_type', ''],
@@ -93,6 +101,7 @@ const MUST_BE_DEFAULT = new Map([
   ['import_script/path', ''],
   ['scale_mesh', 'Vector3(1, 1, 1)'],
   ['offset_mesh', 'Vector3(0, 0, 0)'],
+  ['generate_lightmap_uv2', 'false'],
 ]);
 
 /**
@@ -103,7 +112,9 @@ const MUST_BE_DEFAULT = new Map([
 const KNOWN_SUBRESOURCE_OVERRIDES = {
   'scenes/demos/3d/material_testers/models/godot_ball.glb.import': {
     blocks: ['meshes'],
-    note: 'lods/shadow/lightmap off + save_to_file. Bake concerns only — inert here.',
+    note:
+      'generate/lightmap_uv Default, honoured: at light_baking=1 the mesh takes no UV2. ' +
+      'lods/shadow off and save_to_file are bake concerns, inert here.',
   },
   'scenes/demos/3d/platformer/player/player.glb.import': {
     blocks: ['animations', 'materials'],

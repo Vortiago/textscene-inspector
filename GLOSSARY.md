@@ -32,6 +32,11 @@ The `.import` file Godot writes beside a source asset to record its importer and
 No scene references it, so a missing one is an ordinary outcome and not a **Missing resource**.
 _Avoid_: "import file" for the asset itself.
 
+**Unwrap cache**:
+The `.unwrap_cache` file Godot's importer writes beside a source asset it unwraps for lightmaps: each mesh's UV2 layout, keyed by the MD5 of the mesh as the unwrap received it.
+Like an **Import sidecar**, no scene references it, and a missing one is an ordinary outcome.
+_Avoid_: "lightmap cache", which suggests the baked lightmap.
+
 **Project settings**:
 `project.godot` at a project's `res://` root, read under the names `ProjectSettings.get_setting()` uses.
 Only settings the previewer honours get a typed reader, and a scene without the file renders at Godot's defaults.

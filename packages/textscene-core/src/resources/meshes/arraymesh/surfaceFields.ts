@@ -66,11 +66,14 @@ export function readAabb(block: string): SurfaceAabb | undefined {
   return { position: [n[0]!, n[1]!, n[2]!], size: [n[3]!, n[4]!, n[5]!] };
 }
 
-export function readUvScale(block: string): [number, number] | undefined {
-  // Only x and y are consulted. z/w scale UV2, which nothing decodes.
+/** `uv_scale`: x and y re-expand a compressed UV1, z and w a compressed UV2. */
+export function readUvScale(block: string): UvScale | undefined {
   const n = readFloatTuple(block, 'uv_scale', 'Vector4', 4);
-  return n ? [n[0]!, n[1]!] : undefined;
+  return n ? [n[0]!, n[1]!, n[2]!, n[3]!] : undefined;
 }
+
+/** A surface's `uv_scale` Vector4. */
+export type UvScale = readonly [number, number, number, number];
 
 const NAME_RE = dictStringField('name');
 
