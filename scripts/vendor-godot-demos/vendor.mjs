@@ -24,6 +24,7 @@ import { fetchShallow } from '../vendor-git.mjs';
 import { copyPruned, isPruned } from '../vendor-prune.mjs';
 import { applyLocalChanges } from './applyLocalChanges.mjs';
 import { reachableFiles } from './reachableFiles.mjs';
+import { withLock } from './withLock.mjs';
 
 const SOURCE = {
   url: 'https://github.com/godotengine/godot-demo-projects',
@@ -39,6 +40,7 @@ const ISOMETRIC_PROJECT = '2d/isometric';
 const ISOMETRIC_OWN_DIR = 'previews';
 const CORPORA = [DEMOS, ISOMETRIC];
 const KEY_FILE = '.vendor-key';
+const LOCK_FILE = join(REPO_ROOT, 'scenes/.vendor-godot-demos.lock');
 
 /** The files and folders that decide the corpora. A change to one of them fetches again. */
 const RECIPE = [
@@ -57,15 +59,26 @@ Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur
 Per-demo asset licences vary (often CC-BY). Each project keeps its own README.md for attribution.`;
 
 /**
- * Vendors both corpora, unless each already holds the current recipe's output. When the fetch
- * fails, it keeps corpora from an older recipe and throws only when there are none.
+ * Vendors both corpora, unless each already holds the current recipe's output. One process
+ * vendors at a time, and a waiting one finds the corpora current. When the fetch fails, it keeps
+ * corpora from an older recipe and throws only when there are none.
  */
 export function ensureGodotDemos() {
   const key = recipeKey();
-  if (CORPORA.every((corpus) => holdsKey(corpus, key))) {
+  if (isCurrent(key)) {
     console.log(`[vendor-godot-demos] up to date @ ${SHORT_COMMIT}`);
     return;
   }
+  withLock(LOCK_FILE, () => {
+    if (!isCurrent(key)) vendor(key);
+  });
+}
+
+function isCurrent(key) {
+  return CORPORA.every((corpus) => holdsKey(corpus, key));
+}
+
+function vendor(key) {
   const work = mkdtempSync(join(tmpdir(), 'vendor-godot-demos-'));
   try {
     const checkout = join(work, 'godot-demo-projects');

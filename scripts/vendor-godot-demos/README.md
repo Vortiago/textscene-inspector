@@ -10,8 +10,10 @@ at commit `419eae0c39be0234d5454ee491b16d938fa12d65` and writes two gitignored c
 
 `pnpm install`, the unit tests (`vitest.config.ts`), `generate:fixtures`, `copy-fixtures` and
 `lint:scenes:only` run it. A `.vendor-key` file in each corpus holds a hash of the recipe: the
-files that `RECIPE` in `vendor.mjs` lists. When the hash matches, the script fetches nothing. CI
-caches both corpora under the hash that `node scripts/vendor-godot-demos.mjs --key` prints.
+files that `RECIPE` in `vendor.mjs` lists. When the hash matches, the script fetches nothing. A
+lock file lets one process vendor at a time, so a second process waits and then finds the corpora
+current. CI caches both corpora under the hash that `node scripts/vendor-godot-demos.mjs --key`
+prints.
 
 `scripts/vendor-prune.mjs` removes the editor artefacts, the source art and each import sidecar the
 previewer does not read (ADR-0028).
@@ -23,14 +25,12 @@ The script applies these to the checkout before the prune:
 - `text-resources/` holds the Godot text copy of 38 binary resources (`.res`, `.mesh`, `.scn`).
   Each copy replaces the binary file of the same stem, because the previewer reads no binary
   resource (issue #110).
-- `local-changes.patch` edits 39 upstream files:
+- `local-changes.patch` edits 17 upstream files:
   - 15 scenes and resources point their `ext_resource` paths at the text copies.
   - `3d/decals/decal.tscn` animates `Decal:size`, not the Godot 3 `Decal:extents`, with doubled
     keyframe values (ADR-0017).
   - `3d/truck_town/town/town_scene.tscn` gets a `PreviewCamera`, which frames the town for the
     comparison harness. The truck makes its own camera current at runtime.
-  - 22 glTF and GLB sidecars get the three keys that a Godot 4.6 re-import writes. Each key is
-    inert in the previewer (`scripts/import-sidecar-allowlist.test.mjs`).
 
 ## Change a local change
 

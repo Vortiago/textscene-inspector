@@ -10,24 +10,6 @@ index 67c36bd..c0387c9 100644
  [ext_resource type="Texture2D" uid="uid://duf88ucnma25" path="res://map.png" id="2_nxfkp"]
  [ext_resource type="PackedScene" uid="uid://dtk37bqfg52j2" path="res://character.tscn" id="4_n6iop"]
  
-diff --git a/3d/antialiasing/polyhaven/dutch_ship_medium_1k.gltf.import b/3d/antialiasing/polyhaven/dutch_ship_medium_1k.gltf.import
-index 7fda1d8..0fe03b2 100644
---- a/3d/antialiasing/polyhaven/dutch_ship_medium_1k.gltf.import
-+++ b/3d/antialiasing/polyhaven/dutch_ship_medium_1k.gltf.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/dutch_ship_medium_1k.gltf-9a8c4d23ef33512c7c0
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
 diff --git a/3d/decals/decal.tscn b/3d/decals/decal.tscn
 index 0b31e1e..cd519f3 100644
 --- a/3d/decals/decal.tscn
@@ -58,24 +40,6 @@ index 0b31e1e..cd519f3 100644
  }
  
  [sub_resource type="AnimationLibrary" id="AnimationLibrary_kqdmn"]
-diff --git a/3d/global_illumination/cube.glb.import b/3d/global_illumination/cube.glb.import
-index 04f85ba..a807cc6 100644
---- a/3d/global_illumination/cube.glb.import
-+++ b/3d/global_illumination/cube.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/cube.glb-ec927bc01951d93b2130ba52799eca7c.scn
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
 diff --git a/3d/global_illumination/test.tscn b/3d/global_illumination/test.tscn
 index 7fe1571..9f6b5aa 100644
 --- a/3d/global_illumination/test.tscn
@@ -89,42 +53,6 @@ index 7fe1571..9f6b5aa 100644
  [ext_resource type="LightmapGIData" uid="uid://c7ltminhf5o56" path="res://zdm2_all.lmbake" id="4_7vqwx"]
  [ext_resource type="Script" uid="uid://d0vtx6du7ef8k" path="res://test.gd" id="5"]
  [ext_resource type="LightmapGIData" uid="uid://xmpb2se1j30h" path="res://zdm2_indirect.lmbake" id="5_14bmd"]
-diff --git a/3d/global_illumination/zdm2.glb.import b/3d/global_illumination/zdm2.glb.import
-index b69ad5d..3ac9472 100644
---- a/3d/global_illumination/zdm2.glb.import
-+++ b/3d/global_illumination/zdm2.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/zdm2.glb-c2f26c366324e083db1b83c037b80fc6.scn
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
-diff --git a/3d/graphics_settings/polyhaven/dutch_ship_medium_1k.gltf.import b/3d/graphics_settings/polyhaven/dutch_ship_medium_1k.gltf.import
-index fdf4d79..66ee818 100644
---- a/3d/graphics_settings/polyhaven/dutch_ship_medium_1k.gltf.import
-+++ b/3d/graphics_settings/polyhaven/dutch_ship_medium_1k.gltf.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/dutch_ship_medium_1k.gltf-9a8c4d23ef33512c7c0
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
 diff --git a/3d/kinematic_character/cubelib.tres b/3d/kinematic_character/cubelib.tres
 index 657ce4f..143d976 100644
 --- a/3d/kinematic_character/cubelib.tres
@@ -150,42 +78,6 @@ index fc807d2..c9c22ad 100644
  [ext_resource type="PackedScene" uid="uid://calpgva0s5aa5" path="res://models/mushroom.glb" id="5"]
  [ext_resource type="Texture2D" uid="uid://3dlfqtj6co1p" path="res://models/white_wood.png" id="5_wmkfk"]
  
-diff --git a/3d/kinematic_character/models/cube.glb.import b/3d/kinematic_character/models/cube.glb.import
-index 3f781ff..22e3554 100644
---- a/3d/kinematic_character/models/cube.glb.import
-+++ b/3d/kinematic_character/models/cube.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/cube.glb-c6bf6ebacd621473d1ca4ff4a368b9dc.scn
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
-diff --git a/3d/kinematic_character/models/mushroom.glb.import b/3d/kinematic_character/models/mushroom.glb.import
-index 4d1d7d8..85e4b1a 100644
---- a/3d/kinematic_character/models/mushroom.glb.import
-+++ b/3d/kinematic_character/models/mushroom.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/mushroom.glb-32cf35844b7be6455c0c736b26eb7163
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
 diff --git a/3d/kinematic_character/player/cubio.tscn b/3d/kinematic_character/player/cubio.tscn
 index f4c066f..79154cb 100644
 --- a/3d/kinematic_character/player/cubio.tscn
@@ -212,42 +104,6 @@ index 85e91b9..7655a3c 100644
  [ext_resource type="Material" uid="uid://bpvrto0kurosn" path="res://test_materials/blue.tres" id="5"]
  [ext_resource type="Material" uid="uid://dklcnm71gfm7x" path="res://test_materials/white.tres" id="6"]
  [ext_resource type="Material" uid="uid://dvexhp8y6xh6l" path="res://test_materials/gray.tres" id="7"]
-diff --git a/3d/material_testers/models/godot_ball.glb.import b/3d/material_testers/models/godot_ball.glb.import
-index 52ff8ab..43685bc 100644
---- a/3d/material_testers/models/godot_ball.glb.import
-+++ b/3d/material_testers/models/godot_ball.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/godot_ball.glb-1d29a1e2bd7edd355fb9eaf990a784
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -52,3 +54,4 @@ _subresources={
- }
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
-diff --git a/3d/material_testers/models/test_bed/test_bed.glb.import b/3d/material_testers/models/test_bed/test_bed.glb.import
-index 2b94b73..bac8a4b 100644
---- a/3d/material_testers/models/test_bed/test_bed.glb.import
-+++ b/3d/material_testers/models/test_bed/test_bed.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/test_bed.glb-1dd9b9600e1c429fe8be7609006ad0c1
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
 diff --git a/3d/navigation/navmesh.tscn b/3d/navigation/navmesh.tscn
 index 904d106..ef0ac64 100644
 --- a/3d/navigation/navmesh.tscn
@@ -261,78 +117,6 @@ index 904d106..ef0ac64 100644
  [ext_resource type="ArrayMesh" uid="uid://de1kdsj5t35yc" path="res://models/level_mesh/level_mesh.obj" id="3_bu7c5"]
  [ext_resource type="Script" uid="uid://mofakaghtwsi" path="res://character.gd" id="4_u7d3d"]
  [ext_resource type="ArrayMesh" uid="uid://blcjyl0t4y0hc" path="res://models/robot/robot.obj" id="5_17f0w"]
-diff --git a/3d/occlusion_culling_mesh_lod/room.glb.import b/3d/occlusion_culling_mesh_lod/room.glb.import
-index 0de71a1..4e74d11 100644
---- a/3d/occlusion_culling_mesh_lod/room.glb.import
-+++ b/3d/occlusion_culling_mesh_lod/room.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/room.glb-80432416ed16d717e78c80d413b8774e.scn
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
-diff --git a/3d/physical_light_camera_units/living_room.glb.import b/3d/physical_light_camera_units/living_room.glb.import
-index 2649ec3..be97209 100644
---- a/3d/physical_light_camera_units/living_room.glb.import
-+++ b/3d/physical_light_camera_units/living_room.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/living_room.glb-e9e76bdaf4212fbe5bd6be0e778b8
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
-diff --git a/3d/platformer/enemy/enemy.glb.import b/3d/platformer/enemy/enemy.glb.import
-index 3451db8..805c2c3 100644
---- a/3d/platformer/enemy/enemy.glb.import
-+++ b/3d/platformer/enemy/enemy.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/enemy.glb-d895c1723b6b5633e6a9ea1829adeaa2.sc
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
-diff --git a/3d/platformer/player/player.glb.import b/3d/platformer/player/player.glb.import
-index 640f0c9..42aecbc 100644
---- a/3d/platformer/player/player.glb.import
-+++ b/3d/platformer/player/player.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/player.glb-d5e59c3624fa2635da7ea043f9526ccc.s
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -10335,3 +10337,4 @@ _subresources={
- }
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
 diff --git a/3d/platformer/stage/stage.tscn b/3d/platformer/stage/stage.tscn
 index 1a89b29..758fb82 100644
 --- a/3d/platformer/stage/stage.tscn
@@ -428,24 +212,6 @@ index 86e5745..5b8b34c 100644
  
  [resource]
  item/0/name = "CeilingCorner"
-diff --git a/3d/ragdoll_physics/characters/mannequiny.glb.import b/3d/ragdoll_physics/characters/mannequiny.glb.import
-index 1e14634..d7b34ea 100644
---- a/3d/ragdoll_physics/characters/mannequiny.glb.import
-+++ b/3d/ragdoll_physics/characters/mannequiny.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/mannequiny.glb-c63c284f6fd6b41bb34b1c5bea848e
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -58,3 +60,4 @@ _subresources={
- }
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
 diff --git a/3d/rigidbody_character/cube_rigidbody.tscn b/3d/rigidbody_character/cube_rigidbody.tscn
 index 628e856..ef06c88 100644
 --- a/3d/rigidbody_character/cube_rigidbody.tscn
@@ -484,114 +250,6 @@ index e486a46..ce295ed 100644
  [ext_resource type="PackedScene" uid="uid://ieyca5ld5mq6" path="res://models/mushroom.glb" id="5"]
  [ext_resource type="Script" uid="uid://b0k758e0u133q" path="res://level.gd" id="6"]
  [ext_resource type="Texture2D" uid="uid://dd862j3cyjndh" path="res://models/white_wood.png" id="6_slp5m"]
-diff --git a/3d/rigidbody_character/models/cube.glb.import b/3d/rigidbody_character/models/cube.glb.import
-index d061871..faef8c0 100644
---- a/3d/rigidbody_character/models/cube.glb.import
-+++ b/3d/rigidbody_character/models/cube.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/cube.glb-c6bf6ebacd621473d1ca4ff4a368b9dc.scn
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
-diff --git a/3d/rigidbody_character/models/mushroom.glb.import b/3d/rigidbody_character/models/mushroom.glb.import
-index b4157f2..f2fb94c 100644
---- a/3d/rigidbody_character/models/mushroom.glb.import
-+++ b/3d/rigidbody_character/models/mushroom.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/mushroom.glb-32cf35844b7be6455c0c736b26eb7163
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
-diff --git a/3d/squash_the_creeps/art/mob.glb.import b/3d/squash_the_creeps/art/mob.glb.import
-index 2ea8c3f..acae0e3 100644
---- a/3d/squash_the_creeps/art/mob.glb.import
-+++ b/3d/squash_the_creeps/art/mob.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/mob.glb-3afb43c03b9d1598b6af5154e2543eac.scn"
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
-diff --git a/3d/squash_the_creeps/art/player.glb.import b/3d/squash_the_creeps/art/player.glb.import
-index 5407848..bcf8b57 100644
---- a/3d/squash_the_creeps/art/player.glb.import
-+++ b/3d/squash_the_creeps/art/player.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/player.glb-08dcfb373480a049995065542e37637b.s
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
-diff --git a/3d/truck_town/town/lamp/scene.gltf.import b/3d/truck_town/town/lamp/scene.gltf.import
-index c85af74..6be54be 100644
---- a/3d/truck_town/town/lamp/scene.gltf.import
-+++ b/3d/truck_town/town/lamp/scene.gltf.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/scene.gltf-ca413aea139663971d12e80cbdfee213.s
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=true
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -46,3 +48,4 @@ _subresources={
- }
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
-diff --git a/3d/truck_town/town/model/town_model.gltf.import b/3d/truck_town/town/model/town_model.gltf.import
-index f551bd9..0434013 100644
---- a/3d/truck_town/town/model/town_model.gltf.import
-+++ b/3d/truck_town/town/model/town_model.gltf.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/town_model.gltf-49bac3ffe9fdc768d5dacfe949b37
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
 diff --git a/3d/truck_town/town/town_scene.tscn b/3d/truck_town/town/town_scene.tscn
 index 4d26b2a..4af9680 100644
 --- a/3d/truck_town/town/town_scene.tscn
@@ -613,24 +271,6 @@ index 4d26b2a..4af9680 100644
  [node name="Lamps" type="Node3D" parent="." unique_id=1215593960]
  
  [node name="Lamp" parent="Lamps" unique_id=197257794 instance=ExtResource("3_clgdk")]
-diff --git a/3d/truck_town/town/tree/scene.gltf.import b/3d/truck_town/town/tree/scene.gltf.import
-index f6c02d6..95faeca 100644
---- a/3d/truck_town/town/tree/scene.gltf.import
-+++ b/3d/truck_town/town/tree/scene.gltf.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/scene.gltf-2a536687e37863f621843b6bd6123332.s
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=true
- nodes/root_scale=0.00999999999999999
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
 diff --git a/3d/truck_town/vehicles/car_base.tscn b/3d/truck_town/vehicles/car_base.tscn
 index 5c01a00..a6ed9c9 100644
 --- a/3d/truck_town/vehicles/car_base.tscn
@@ -646,24 +286,6 @@ index 5c01a00..a6ed9c9 100644
  [ext_resource type="Script" uid="uid://bpgd2w0obg3tl" path="res://vehicles/follow_camera.gd" id="4_6igu8"]
  [ext_resource type="AudioStream" uid="uid://2ukhlukq60ge" path="res://vehicles/engine.wav" id="5_m8g7o"]
  [ext_resource type="AudioStream" uid="uid://bwmbj0hptxpp2" path="res://vehicles/impact_1.wav" id="6_kq567"]
-diff --git a/3d/truck_town/vehicles/meshes/meshes.glb.import b/3d/truck_town/vehicles/meshes/meshes.glb.import
-index 7919da1..4f66176 100644
---- a/3d/truck_town/vehicles/meshes/meshes.glb.import
-+++ b/3d/truck_town/vehicles/meshes/meshes.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/meshes.glb-030ff425937f3e98d423cb5cef7ede3d.s
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
 diff --git a/3d/truck_town/vehicles/tow_truck.tscn b/3d/truck_town/vehicles/tow_truck.tscn
 index 8f3a6ae..63e211c 100644
 --- a/3d/truck_town/vehicles/tow_truck.tscn
@@ -697,21 +319,3 @@ index a049f1f..88910f4 100644
  [ext_resource type="Script" uid="uid://bpgd2w0obg3tl" path="res://vehicles/follow_camera.gd" id="4_4yhuf"]
  [ext_resource type="AudioStream" uid="uid://bfd8r5hjgtmof" path="res://vehicles/honk_3.wav" id="5_qe823"]
  [ext_resource type="AudioStream" uid="uid://bwmbj0hptxpp2" path="res://vehicles/impact_1.wav" id="6_n54jl"]
-diff --git a/viewport/3d_in_2d/robot.glb.import b/viewport/3d_in_2d/robot.glb.import
-index 678f8f7..c038b2c 100644
---- a/viewport/3d_in_2d/robot.glb.import
-+++ b/viewport/3d_in_2d/robot.glb.import
-@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/robot.glb-151a68d8c91703e14c4b30b12be2b76e.sc
- nodes/root_type=""
- nodes/root_name=""
- nodes/root_script=null
-+mesh_library/use_node_names_as_mesh_names=false
-+array_mesh/deduplicate_surfaces=true
- nodes/apply_root_scale=false
- nodes/root_scale=1.0
- nodes/import_as_skeleton_bones=false
-@@ -40,3 +42,4 @@ materials/extract_path=""
- _subresources={}
- gltf/naming_version=2
- gltf/embedded_image_handling=1
-+gltf/texture_map_mode=0
