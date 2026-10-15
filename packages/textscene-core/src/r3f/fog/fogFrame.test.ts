@@ -90,7 +90,7 @@ describe('prepareFog', () => {
 
   it('writes each sun for the surfaces and for the sky apart', () => {
     const lightOnly = sun(2);
-    lightOnly.userData = skyLightUserData({ drawsInSky: false, energy: 2 / Math.PI });
+    lightOnly.userData = skyLightUserData({ drawsInSky: false, energy: 2 / Math.PI, size: 0 });
     prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), passes(), {
       lights: [sun(Math.PI), lightOnly],
       casters: [],

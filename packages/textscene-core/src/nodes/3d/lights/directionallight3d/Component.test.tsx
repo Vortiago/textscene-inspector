@@ -7,7 +7,7 @@ import type { DirectionalLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { readDirectionalShadowDeclaration } from '../../../../r3f/directionalShadow/declaration';
-import { skyLightEnergy } from '../../../../r3f/sky/skyLight';
+import { skyLightEnergy, skyLightSize } from '../../../../r3f/sky/skyLight';
 
 function makeNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {
@@ -225,6 +225,15 @@ describe('<DirectionalLight3D> sky mode', () => {
     const light = await renderLight({ light_energy: 2 });
     expect(light.intensity).toBeCloseTo(2 * LIGHT_INTENSITY_SCALE);
     expect(skyLightEnergy(light)).toBe(2);
+  });
+
+  it('draws a point sun in the sky by default', async () => {
+    expect(skyLightSize(await renderLight({}))).toBe(0);
+  });
+
+  it('draws its sun disc at its angular distance, in radians', async () => {
+    // `sky.cpp:1096-1097`: LIGHT_PARAM_SIZE through `deg_to_rad`.
+    expect(skyLightSize(await renderLight({ light_angular_distance: 90 }))).toBeCloseTo(Math.PI / 2, 12);
   });
 
   it('lights no surface and casts no shadow when it lights only the sky (edge case)', async () => {

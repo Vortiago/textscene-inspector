@@ -1533,6 +1533,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sky Sun Angular Distance",
+    "file": "unit-sky-sun-angular-distance.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Slider Joint 3d",
     "file": "unit-slider-joint-3d.tscn",
     "category": "Other"
