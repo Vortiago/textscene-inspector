@@ -23,6 +23,7 @@ import type { MaterialAttach } from '../../../r3f/materials/swappedMaterials';
 import { FadedMaterials } from '../../../r3f/materials/FadedMaterials';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
+import { sourceColorSpace } from '../../../resources/textures/sourceColorSpace';
 import {
   applyTextureFilterState,
   godotTextureFilterState,
@@ -72,14 +73,14 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   const wrap = spriteWrapMode(sourceTexture ?? undefined, properties);
   const textureFilter = properties.texture_filter;
   // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture with its
-  // sampler state. SRGBColorSpace: Godot's 3D pipeline decodes sRGB in hardware before filtering
-  // (`canvas2DTextureDecode.ts`), so the clone keeps the cache entry's colour space, not the 2D
-  // canvas's `NoColorSpace` retag.
+  // sampler state. The sprite's material samples `texture_albedo` (`sprite_3d.cpp:306`), a
+  // `source_color` sampler, so the clone reads as an albedo does, not as the 2D canvas's retag.
   const samplerClone = useMemo(() => {
-    const cloned = spriteSamplerClone(sourceTexture ?? undefined, wrap, THREE.SRGBColorSpace);
+    if (!sourceTexture) return undefined;
+    const cloned = spriteSamplerClone(sourceTexture, wrap, sourceColorSpace(sourceTexture));
     // Sprite3D's texture is a node property, not a material slot, so the node's
     // own `texture_filter` (`material.cpp:3055`) lands on this clone.
-    if (cloned) applyTextureFilterState(cloned, godotTextureFilterState(textureFilter));
+    applyTextureFilterState(cloned, godotTextureFilterState(textureFilter));
     return cloned;
   }, [sourceTexture, wrap, textureFilter]);
   // The clone is this component's, never the loader's cached entry: `useUploadedClone`
