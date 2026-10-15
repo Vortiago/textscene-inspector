@@ -37,6 +37,14 @@ export class SplitSunLight extends THREE.Light {
 }
 
 /**
+ * Whether three gives `light` a sun shadow with this repository's slots. Every sun shadow array a
+ * lookup reads is indexed in three's order of these lights.
+ */
+export function isSplitSun(light: THREE.Light): light is SplitSunLight {
+  return light instanceof SplitSunLight;
+}
+
+/**
  * Each light's split sun. Written only by `attachSplitSun` and `releaseSplitSun`, so the fitter
  * finds a sun without a search of the light's children on every render.
  */
@@ -53,7 +61,7 @@ export function splitSunOf(light: THREE.DirectionalLight): SplitSunLight | null 
  * a split sun off its light.
  */
 export function declaredLightOf(light: THREE.Light): THREE.Object3D | null {
-  return light instanceof SplitSunLight ? light.parent : light;
+  return isSplitSun(light) ? light.parent : light;
 }
 
 /** The light's split sun, attached on the first call. The declared light stops shading then. */
