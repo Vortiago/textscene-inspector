@@ -1,0 +1,23 @@
+; One variable: a PanoramaSkyMaterial saved as its own .tres, whose panorama is a GradientTexture2D
+; sub-resource of that file. The texture resolves in the material file's pools, not the scene's or
+; the Environment's. Every other panorama sky is inline, so a regression in that route, a black or
+; missing sky, shows nowhere else.
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Material" path="res://unit-sky-panorama-tres.tres" id="1_sky"]
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = ExtResource("1_sky")
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+
+[node name="SkyPanoramaTres" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Camera" type="Camera3D" parent="."]
+fov = 90.0

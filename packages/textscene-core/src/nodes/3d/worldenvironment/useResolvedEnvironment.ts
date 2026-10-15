@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { NO_RESOURCES, useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { decodeEnvironment } from '../../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../../resources/environment/build';
@@ -18,6 +18,10 @@ export interface ResolvedEnvironment {
   settings: EnvironmentSettings;
   /** Null while a sky `.tres` is loading, and for an environment with no sky. */
   sky: Sky | null;
+  /** The pools the Environment's own references, such as `glow_map`, resolve in. */
+  resources: SceneResources;
+  /** The pools the sky material's references, such as a panorama, resolve in. */
+  skyResources: SceneResources;
 }
 
 /**
@@ -39,7 +43,9 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Reso
   // whatever shape the chain takes.
   const skyResource = useSubOrExtResource(envProps?.sky, environment?.resources ?? NO_RESOURCES);
   const materialRef = skyMaterialRef(skyResource?.resource.type, skyResource?.resource.data);
-  const material = useSubOrExtResource(materialRef, skyResource?.resources ?? NO_RESOURCES)?.resource;
+  const scopedMaterial = useSubOrExtResource(materialRef, skyResource?.resources ?? NO_RESOURCES);
+  const material = scopedMaterial?.resource;
+  const skyResources = scopedMaterial?.resources ?? NO_RESOURCES;
 
   const skyData = skyResource?.resource.data;
   const sky = useMemo(() => {
@@ -48,9 +54,16 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Reso
   }, [material, skyData]);
 
   const clearColor = useProjectClearColorSrgb();
+  // Apart from the sky, so a sky `.tres` that loads later keeps `settings`, and with it the
+  // compositor's effect.
+  const settings = useMemo(
+    () => (envProps ? createEnvironmentSettings(envProps, clearColor) : null),
+    [envProps, clearColor]
+  );
 
   return useMemo(
-    () => (envProps ? { settings: createEnvironmentSettings(envProps, clearColor), sky } : null),
-    [envProps, clearColor, sky]
+    () =>
+      settings && environment ? { settings, sky, resources: environment.resources, skyResources } : null,
+    [settings, environment, sky, skyResources]
   );
 }

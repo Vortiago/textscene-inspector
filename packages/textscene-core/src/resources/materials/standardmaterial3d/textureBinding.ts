@@ -8,7 +8,6 @@
 import * as THREE from 'three';
 import {
   applyTextureState,
-  isMaterialOwnedTexture,
   type MaterialTextureState,
   type UVTransform,
 } from '../../textures/applyTextureState';
@@ -97,13 +96,4 @@ export function bindSlotTexture(
 ): THREE.Texture {
   const material = states.uv2Slots.includes(slot) ? states.uv2 : states.uv1;
   return applyTextureState(texture, { ...material, colorSpace: slotColorSpace(slot, texture) });
-}
-
-/**
- * Release a texture a binding produced: a dispose on a clone this module made, and a
- * no-op on a shared cache entry, which the loader owns. Symmetric with `bindSlotTexture`,
- * so a caller never learns how ownership is recorded.
- */
-export function releaseBoundTexture(texture: THREE.Texture | null | undefined): void {
-  if (texture && isMaterialOwnedTexture(texture)) texture.dispose();
 }

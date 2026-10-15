@@ -14,6 +14,7 @@ import { observeSceneCamera } from '../sceneRenderCamera';
 import { skyContribution, skyLayerSlots } from './skyLayerCubes';
 import { boundHandle, recordTextures, RendererProbe, withRenderTargets } from '../../testing/recordingWebGL';
 import type { SkyLayers } from '../../resources/sky/skyLayers';
+import { NO_RESOURCES } from '../SceneResourcesContext';
 
 const bakes = vi.hoisted((): SkyEnvironmentInput[] => []);
 /** What the next bake returns on its renderer: null, as a headless renderer gives, unless a test sets it. */
@@ -37,7 +38,7 @@ const SKY: Sky = {
 function Scene({ lights }: { lights: number }) {
   return (
     <>
-      <SkyLayer sky={SKY} rotation={NO_ROTATION} />
+      <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
       {Array.from({ length: lights }, (_, i) => (
         <directionalLight key={i} position={[i + 1, 2, 3]} />
       ))}
@@ -108,8 +109,8 @@ function sampledInRender(gl: THREE.WebGLRenderer, scene: THREE.Scene): unknown {
 function TwoSkies({ subScene }: { subScene: THREE.Scene }) {
   return (
     <>
-      <SkyLayer sky={SKY} rotation={NO_ROTATION} />
-      {createPortal(<SkyLayer sky={SKY} rotation={NO_ROTATION} />, subScene)}
+      <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+      {createPortal(<SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />, subScene)}
     </>
   );
 }
@@ -142,7 +143,7 @@ describe('SkyLayer', () => {
     'bakes the background only when the sky paints it (asBackground %s)',
     async (asBackground) => {
       const renderer = await ReactThreeTestRenderer.create(
-        <SkyLayer sky={SKY} rotation={NO_ROTATION} asBackground={asBackground} />
+        <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} asBackground={asBackground} />
       );
       await advance(renderer, 1);
 
@@ -160,7 +161,7 @@ describe('SkyLayer', () => {
   it('leaves out a light that declares it draws nothing in the sky', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} rotation={NO_ROTATION} />
+        <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
         <directionalLight position={[1, 2, 3]} />
         <directionalLight
           position={[3, 2, 1]}
@@ -176,7 +177,7 @@ describe('SkyLayer', () => {
   it('draws a light at its declared energy, though it lights no surface (edge case)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} rotation={NO_ROTATION} />
+        <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
         <directionalLight intensity={0} userData={skyLightUserData({ drawsInSky: true, energy: 2 })} />
       </>
     );
@@ -188,7 +189,7 @@ describe('SkyLayer', () => {
   it('draws a light that declares nothing at its intensity over the scale (error case)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
-        <SkyLayer sky={SKY} rotation={NO_ROTATION} />
+        <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
         <directionalLight intensity={Math.PI * 3} />
       </>
     );
@@ -217,7 +218,9 @@ describe('SkyLayer', () => {
 
   it('shows its share of the ambient with its layers', async () => {
     built.next = skyEnvironment();
-    const { scene, gl } = await mount(<SkyLayer sky={SKY} rotation={NO_ROTATION} contribution={0.25} />);
+    const { scene, gl } = await mount(
+      <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} contribution={0.25} />
+    );
 
     sampledInRender(gl, scene);
 
@@ -227,11 +230,11 @@ describe('SkyLayer', () => {
   it('shows a new share of the ambient without a new bake', async () => {
     built.next = skyEnvironment();
     const { scene, gl, update } = await mount(
-      <SkyLayer sky={SKY} rotation={NO_ROTATION} contribution={0.25} />
+      <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} contribution={0.25} />
     );
     const bakeCount = bakes.length;
 
-    await update(<SkyLayer sky={SKY} rotation={NO_ROTATION} contribution={0.5} />);
+    await update(<SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} contribution={0.5} />);
     sampledInRender(gl, scene);
 
     expect([bakes.length, skyContribution[0]]).toEqual([bakeCount, 0.5]);

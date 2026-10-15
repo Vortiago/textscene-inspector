@@ -293,6 +293,21 @@ describe('decodeEnvironment', () => {
   });
 });
 
+describe('decodeEnvironment — the glow map', () => {
+  it('keeps the glow_map reference for the render layer to resolve', () => {
+    const result = decodeEnvironment({ glow_map: 'SubResource("Gradient_1")' });
+    expect(result.glow_map).toBe('SubResource("Gradient_1")');
+  });
+
+  it('has no glow map when the property is absent', () => {
+    expect(decodeEnvironment({}).glow_map).toBeUndefined();
+  });
+
+  it("takes Godot's default glow_map_strength of 0.8 when none is stored (edge case)", () => {
+    expect(decodeEnvironment({}).glow_map_strength).toBeCloseTo(0.8, 6);
+  });
+});
+
 describe('decodeEnvironment — AgX carries its own white', () => {
   it('defaults tonemap_agx_white to Blender’s 16.29, not tonemap_white’s 1.0', () => {
     // `Environment::tonemap_agx_white = 16.29`: an order of magnitude above the

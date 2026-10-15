@@ -28,13 +28,13 @@ import {
 import {
   bindSlotTexture,
   materialTextureStates,
-  releaseBoundTexture,
   topDownV,
   type MaterialTextureStates,
   type UVSetState,
 } from '../../resources/materials/standardmaterial3d/textureBinding';
 import { UV2_CHANNEL } from '../../resources/meshes/uv2';
 import { repackAnisotropyFlowmap } from '../../resources/textures/repackFlowmap';
+import { releaseBoundTexture } from '../../resources/textures/applyTextureState';
 import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
 import { materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { defaultWhiteTexture } from './defaultWhiteTexture';

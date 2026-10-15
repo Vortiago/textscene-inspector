@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { bindSlotTexture, materialTextureStates, releaseBoundTexture } from './textureBinding';
+import { bindSlotTexture, materialTextureStates } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
 import { UV2_CHANNEL } from '../../meshes/uv2';
@@ -172,39 +172,6 @@ describe('bindSlotTexture — UV set per slot', () => {
     const bound = bindSlotTexture(loaded(), 'emission_texture', state);
 
     expect([bound.channel, bound.repeat.y, bound.offset.y]).toEqual([0, 1, 0]);
-  });
-});
-
-describe('releaseBoundTexture', () => {
-  it('disposes a clone the binding made', () => {
-    const bound = bindSlotTexture(loaded(), 'ao_texture', DEFAULTS);
-    let disposed = false;
-    bound.addEventListener('dispose', () => {
-      disposed = true;
-    });
-
-    releaseBoundTexture(bound);
-
-    expect(disposed).toBe(true);
-  });
-
-  it('leaves the loader’s shared entry alone', () => {
-    const shared = loaded();
-    let disposed = false;
-    shared.addEventListener('dispose', () => {
-      disposed = true;
-    });
-
-    // A default albedo binding clones to tile. Releasing that clone must leave
-    // the loader's shared entry alive for every other consumer.
-    releaseBoundTexture(bindSlotTexture(shared, 'albedo_texture', DEFAULTS));
-
-    expect(disposed).toBe(false);
-  });
-
-  it('tolerates an empty slot', () => {
-    expect(() => releaseBoundTexture(undefined)).not.toThrow();
-    expect(() => releaseBoundTexture(null)).not.toThrow();
   });
 });
 

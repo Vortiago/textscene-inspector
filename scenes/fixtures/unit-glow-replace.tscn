@@ -2,8 +2,7 @@
 
 ; REPLACE blend: the frame becomes the glow buffer. Only what passed the bright pass survives,
 ; so this is the one fixture that shows the pyramid alone, with no scene colour to mask a wrong
-; falloff. REPLACE rewrites every pixel even where the glow buffer is black, so the composer
-; mount cannot be decided from "is anything bright" alone.
+; falloff. REPLACE rewrites every pixel, even where the glow buffer is black.
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_lit"]
 sky_top_color = Color(0.35, 0.4, 0.5, 1)

@@ -7,7 +7,10 @@
 import type * as THREE from 'three';
 import { isBlended } from '../materials/surfaceAlphaPatch';
 
-/** Explicit stack for `sceneHasBloomableEmissive`'s reasons: `traverse` cannot stop early. */
+/**
+ * An explicit stack, not `Object3D.traverse`, which cannot stop early: the scan runs every frame
+ * while a scene loads. Children push in reverse so popping yields preorder.
+ */
 export function sceneHasBlendedSurface(scene: THREE.Object3D): boolean {
   const stack: THREE.Object3D[] = [scene];
   while (stack.length > 0) {

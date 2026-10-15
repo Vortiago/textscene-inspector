@@ -593,6 +593,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glow Map",
+    "file": "unit-glow-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glow Mix",
     "file": "unit-glow-mix.tscn",
     "category": "Other"
@@ -610,6 +615,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Glow Softlight",
     "file": "unit-glow-softlight.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glow Specular",
+    "file": "unit-glow-specular.tscn",
     "category": "Other"
   },
   {
@@ -1480,6 +1490,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sky Energy",
     "file": "unit-sky-energy.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Panorama Tres",
+    "file": "unit-sky-panorama-tres.tscn",
     "category": "Other"
   },
   {

@@ -135,6 +135,7 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
     glow_hdr_scale: floatOr(properties.glow_hdr_scale, 2.0, 'glow_hdr_scale'),
     glow_hdr_luminance_cap: floatOr(properties.glow_hdr_luminance_cap, 12.0, 'glow_hdr_luminance_cap'),
     glow_map_strength: floatOr(properties.glow_map_strength, 0.8, 'glow_map_strength'),
+    glow_map: properties.glow_map,
 
     adjustment_enabled: boolSlotValue(properties.adjustment_enabled) === true,
     adjustment_brightness: floatOr(properties.adjustment_brightness, 1.0, 'adjustment_brightness'),
