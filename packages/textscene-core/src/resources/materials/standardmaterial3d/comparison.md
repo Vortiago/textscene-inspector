@@ -46,7 +46,7 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 
 `anisotropy` stretches the specular highlight along one direction. Both engines show a brushed-metal streak.
 
-- **Approximated** three derives the tangent frame per pixel from the UVs, not from the mesh's tangents (#772), so the streak reads faceted and turned from Godot's ring.
+- **Approximated** three derives the tangent frame per pixel from the UVs, not from the mesh's tangents, so the streak reads faceted and turned from Godot's ring.
 
 ## Anisotropy flowmap
 
@@ -54,7 +54,7 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 
 `anisotropy_flowmap` carries direction in R/G and strength in alpha. The image is repacked alpha to blue before it reaches `anisotropyMap`, and both engines band the mapped sphere.
 
-- **Approximated** The bright lobe lands on the other side of centre, and band edges step hard where Godot's blur. The tangent frame comes from the UVs, not the mesh (#772), and the glow blooms the misplaced lobe.
+- **Approximated** The bright lobe lands on the other side of centre, and band edges step hard where Godot's blur. The tangent frame comes from the UVs, not the mesh, and the glow blooms the misplaced lobe.
 - **Approximated** A hard seam runs down the large sphere, where Godot's surface is smooth.
 
 ## Ambient occlusion

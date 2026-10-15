@@ -161,7 +161,6 @@ export function Decal({ node, children }: NodeComponentProps) {
       }
       materialsRef.current = null;
       materials.dispose();
-      // Only a bind-time clone is this projection's to free; a shared cache entry is not.
       releaseBoundTexture(projectionMap);
     };
     // `size` is the authored Vector3 (stable identity) unless an

@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import {
   applyTextureState,
   isBindingOwnedTexture,
+  releaseBoundTexture,
   type MaterialTextureState,
   type UVTransform,
 } from './applyTextureState';
@@ -369,12 +370,46 @@ describe('applyTextureState', () => {
   });
 
   describe('clone tagging', () => {
-    it('tags clones so the owning material can dispose them', () => {
+    it('tags clones so their binder can dispose them', () => {
       const original = new THREE.Texture();
       const clone = applyTextureState(original, state({ filter: 0 }));
 
       expect(isBindingOwnedTexture(clone)).toBe(true);
       expect(isBindingOwnedTexture(original)).toBe(false);
     });
+  });
+});
+
+describe('releaseBoundTexture', () => {
+  function disposals(texture: THREE.Texture): { count: number } {
+    const seen = { count: 0 };
+    texture.addEventListener('dispose', () => {
+      seen.count += 1;
+    });
+    return seen;
+  }
+
+  it('disposes a clone applyTextureState made', () => {
+    const clone = applyTextureState(new THREE.Texture(), state({ filter: 0 }));
+    const seen = disposals(clone);
+
+    releaseBoundTexture(clone);
+
+    expect(seen.count).toBe(1);
+  });
+
+  it('leaves the loader’s shared entry alone', () => {
+    const shared = new THREE.Texture();
+    const seen = disposals(shared);
+
+    releaseBoundTexture(applyTextureState(shared, state({ filter: 0 })));
+    releaseBoundTexture(shared);
+
+    expect(seen.count).toBe(0);
+  });
+
+  it('tolerates an empty slot (edge case)', () => {
+    expect(() => releaseBoundTexture(undefined)).not.toThrow();
+    expect(() => releaseBoundTexture(null)).not.toThrow();
   });
 });

@@ -10,8 +10,7 @@ import type { Sky, SkyBake } from './types';
 import { warn } from '../../logger';
 import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
-import { applyTextureState } from '../textures/applyTextureState';
-import { releaseBoundTexture } from '../textures/applyTextureState';
+import { applyTextureState, releaseBoundTexture } from '../textures/applyTextureState';
 import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
 
 export type { SkyLight } from './skyUniforms';

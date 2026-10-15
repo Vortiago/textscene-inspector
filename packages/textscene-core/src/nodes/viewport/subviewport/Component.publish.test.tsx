@@ -274,10 +274,13 @@ mesh = SubResource("1")
   it('shared world: the offscreen pass applies the environment curve the compositor suspends', async () => {
     const { renderer, gl } = await renderScene(scene3D());
     const restore = installToneCurve(gl(), { mode: GodotToneMapper.FILMIC, exposure: 1 });
-    gl().toneMapping = THREE.NoToneMapping;
-    expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.CustomToneMapping);
-    expect(gl().toneMapping).toBe(THREE.NoToneMapping);
-    restore();
+    try {
+      gl().toneMapping = THREE.NoToneMapping;
+      expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.CustomToneMapping);
+      expect(gl().toneMapping).toBe(THREE.NoToneMapping);
+    } finally {
+      restore();
+    }
   });
 
   /**
