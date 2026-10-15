@@ -1,8 +1,7 @@
-# Writes the block-compressed images that core's textures/image/decode.test.ts reads from
-# textures/image/godotSaved/, and the golden scene unit-sprite2d-block-compressed.tscn, through
-# Godot 4.6.3. Each `<case>.tres` is an ImageTexture as Godot saves it, and `<case>.rgba8.tres`
-# is what `Image.decompress()` gives for it after the texture swizzle (`texture_storage.cpp:1997-2076`, `:2246-2261`).
-#
+# Writes core's textures/image/godotSaved/ test images and the unit-sprite2d-block-compressed
+# golden through Godot 4.6.3. Each `<case>.tres` is an ImageTexture as Godot saves it, and
+# `<case>.rgba8.tres` is its `Image.decompress()` output after the texture swizzle
+# (`texture_storage.cpp:1997-2076`, `:2246-2261`). Usage:
 #   godot --headless --path <any project> --script save_block_images.gd -- <godotSaved folder> <scenes/fixtures>
 extends SceneTree
 
@@ -62,7 +61,8 @@ func with_three_colour_block(dxt1: Image) -> Image:
 		bytes[i] = block[i]
 	return reformatted(dxt1, Image.FORMAT_DXT1, bytes)
 
-# A DXT5 block whose alpha is in its six-value mode (alpha0 40 below alpha1 200), indices 0 to 7.
+# A DXT5 block whose first alpha endpoint, 40, is below the second, 200, so its indices 0 to 7
+# read four values between them, then 0 and 255.
 func six_value_alpha_block() -> Image:
 	var indices := 0
 	for texel in 16:

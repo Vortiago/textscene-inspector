@@ -1,7 +1,7 @@
 /** An `Image` sub-resource as Godot 4.6.3 writes it, decoded to RGBA8. */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../../logger';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -16,6 +16,10 @@ function image(format: string, width: number, height: number, bytes: string): Ts
     },
   };
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function decodeImage(resource: TscnInternalResource) {
   return decodeImageRef('SubResource("Image_a")', [resource]);
@@ -69,7 +73,6 @@ describe('decodeImageRef', () => {
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     expect(decodeImage(image('R16Int', 1, 1, '1, 0'))).toBeNull();
     expect(warn).toHaveBeenCalledWith('[Image] the R16Int format is not decoded, so its image draws nothing');
-    warn.mockRestore();
   });
 
   it('draws nothing for block data one block short, which Godot refuses (error path)', () => {
@@ -95,6 +98,7 @@ function decodeGodotSaved(name: string) {
 
 describe('decodeImageRef on a block-compressed image', () => {
   it.each([
+    // The first block of the DXT1 image is in its three-colour mode, whose index 3 reads opaque black.
     ['DXT1', 'DXT1 RGB8'],
     ['DXT3', 'DXT3 RGBA8'],
     ['DXT5', 'DXT5 RGBA8'],
@@ -107,8 +111,10 @@ describe('decodeImageRef on a block-compressed image', () => {
   });
 
   it.each([
-    ['a DXT1 block in its three-colour mode, whose index 3 reads opaque black', 'DXT1'],
-    ['a DXT5 alpha block in its six-value mode', 'DXT5SixValueAlpha'],
+    [
+      'a DXT5 alpha block whose first endpoint is below the second, so it holds 0 and 255',
+      'DXT5SixValueAlpha',
+    ],
     ['an image whose size is not a multiple of the block, cropped', 'DXT5Cropped'],
     ['an image with mipmaps, at its top level', 'DXT5Mipmapped'],
   ])('decodes %s (edge case)', (_case, name) => {
