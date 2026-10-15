@@ -4,24 +4,24 @@
  * value equal to the project colour, so an absent key means that translucent teal.
  */
 
-import type { Color } from '../../../utils/colorParser';
 import { colorOr } from '../../../utils/colorParser';
 import { v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import type { Rgba } from '../../../godot/math.js';
 
 /**
  * ProjectSettings `debug/shapes/collision/shape_color` (class_projectsettings.html),
  * read by scene/3d/physics/collision_shape_3d.cpp `_get_default_debug_color()`
  * through `SceneTree::get_debug_collisions_color()`.
  */
-export const DEFAULT_COLLISION_DEBUG_COLOR: Color = Object.freeze({
+export const DEFAULT_COLLISION_DEBUG_COLOR: Rgba = Object.freeze({
   r: 0,
   g: 0.6,
   b: 0.7,
   a: 0.42,
 });
 
-export function parseDebugColor(raw: string | undefined): Color {
+export function parseDebugColor(raw: string | undefined): Rgba {
   return colorOr(raw, DEFAULT_COLLISION_DEBUG_COLOR);
 }
 

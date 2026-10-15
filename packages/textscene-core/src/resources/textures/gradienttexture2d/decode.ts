@@ -5,7 +5,6 @@
  * No THREE.
  */
 
-import type { Color } from '../../../utils/colorParser';
 import { enumOr, settableIntOr, vec2Or, type SetterRange } from '../../../parser/valueParsers';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -20,15 +19,16 @@ import {
   type GradientColorStop,
   type GradientTexture2D,
 } from './types';
+import type { Rgba } from '../../../godot/math.js';
 
 /**
  * Parses a `PackedColorArray` slot into a `Color[]`, dropping a trailing partial quadruple. It
  * groups the output of `parsePackedColorArray`, so each component is the float32 a `Color` stores
  * (`core/math/color.h:42-45`).
  */
-export function parseColorStops(value: string): Color[] {
+export function parseColorStops(value: string): Rgba[] {
   const nums = parsePackedColorArray(value);
-  const colors: Color[] = [];
+  const colors: Rgba[] = [];
   for (let i = 0; i + 3 < nums.length; i += 4) {
     colors.push({ r: nums[i]!, g: nums[i + 1]!, b: nums[i + 2]!, a: nums[i + 3]! });
   }
@@ -124,7 +124,7 @@ export function decodeGradientTexture2D(data: Record<string, string>): GradientT
   };
 }
 
-function safeColors(value: string): Color[] {
+function safeColors(value: string): Rgba[] {
   try {
     return parseColorStops(value);
   } catch {

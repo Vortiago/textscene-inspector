@@ -18,7 +18,7 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { multiplyModulate, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -36,7 +36,6 @@ import {
   RESIZER_SE_ICON,
   RESIZER_SE_ICON_SIZE,
 } from '../graphelement/graphIcons';
-import type { ControlColor } from '../control/types';
 import {
   GRAPH_NODE_TITLE_DEFAULT_COLOR,
   GRAPH_NODE_TITLE_VARIATION,
@@ -45,6 +44,7 @@ import {
   graphNodeTitleTextMin,
 } from './nativeSolver';
 import type { GraphNodeProperties } from './types';
+import type { Rgba } from '../../../../godot/math';
 
 interface ImageLike {
   width?: number;
@@ -52,7 +52,7 @@ interface ImageLike {
 }
 
 /** Composes `own` (raw sRGB) with a widget's base colour, then converts the result to linear. */
-function useTintedColor(own: RGBA, base: ControlColor): { color: THREE.Color; opacity: number } {
+function useTintedColor(own: Rgba, base: Rgba): { color: THREE.Color; opacity: number } {
   const combined = useMemo(() => multiplyModulate(own, base), [own, base]);
   const color = useGodotLinearColor(combined);
   return { color, opacity: combined.a };
@@ -61,8 +61,8 @@ function useTintedColor(own: RGBA, base: ControlColor): { color: THREE.Color; op
 interface PortProps {
   solveNode: SolveNode;
   iconRef: string | undefined;
-  slotColor: ControlColor;
-  tintOwn: RGBA;
+  slotColor: Rgba;
+  tintOwn: Rgba;
   /** Row centre, Godot px, local to the node's own top-left. */
   x: number;
   y: number;

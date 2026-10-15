@@ -6,14 +6,15 @@
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
-import { colorOr, type Color } from '../../../utils/colorParser';
+import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import type { LabelSettingsResource } from './types';
+import type { Rgba } from '../../../godot/math';
 
 /** `label_settings.h:59,62`: both colour fields' default. */
-const DEFAULT_WHITE: Color = { r: 1, g: 1, b: 1, a: 1 };
+const DEFAULT_WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 /** `label_settings.h:65`: transparent, so a Label draws no shadow until this is set. */
-const DEFAULT_TRANSPARENT: Color = { r: 0, g: 0, b: 0, a: 0 };
+const DEFAULT_TRANSPARENT: Rgba = { r: 0, g: 0, b: 0, a: 0 };
 /** `Font::DEFAULT_FONT_SIZE` (`core/io/resource.h`'s font default, mirrored at `label_settings.h:58`). */
 const DEFAULT_FONT_SIZE = 16;
 const CONTEXT = 'LabelSettings';

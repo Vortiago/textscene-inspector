@@ -22,7 +22,6 @@ import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
-import type { ControlColor } from '../control/types';
 import {
   resolveTitleFontTheme,
   shapeTitleText,
@@ -39,9 +38,10 @@ import {
   graphFrameTitleTextMin,
 } from './nativeSolver';
 import type { GraphFrameProperties } from './types';
+import type { Rgba } from '../../../../godot/math';
 
 /** `Color::lightened` (`core/math/color.cpp`): moves each channel toward white by `amount`. */
-function lightened(c: ControlColor, amount: number): ControlColor {
+function lightened(c: Rgba, amount: number): Rgba {
   return { r: c.r + (1 - c.r) * amount, g: c.g + (1 - c.g) * amount, b: c.b + (1 - c.b) * amount, a: c.a };
 }
 
@@ -51,7 +51,7 @@ function lightened(c: ControlColor, amount: number): ControlColor {
  * `border_color` keeps the untinted border when selected, else
  * `tint_color.lightened(0.3)` (`:114-119`). A texture panel is modulated (`:120-124`).
  */
-function tintedPanel(base: ResolvedStyleBox, tintColor: ControlColor, selected: boolean): ResolvedStyleBox {
+function tintedPanel(base: ResolvedStyleBox, tintColor: Rgba, selected: boolean): ResolvedStyleBox {
   if (isStyleBoxTexture(base)) {
     return { ...base, texture: { ...base.texture, modulateColor: tintColor } };
   }

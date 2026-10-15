@@ -8,11 +8,11 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { NinePatchRectProperties } from './types';
+import type { Vector2 } from '../../../../godot/vector';
 
-export const ninePatchRectMinimumSize: MinimumSizeFn = (n): Vec2 => {
+export const ninePatchRectMinimumSize: MinimumSizeFn = (n): Vector2 => {
   const props = n.node.properties as NinePatchRectProperties;
   const left = props.patchMarginLeft ?? 0;
   const top = props.patchMarginTop ?? 0;

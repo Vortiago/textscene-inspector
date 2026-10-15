@@ -6,9 +6,9 @@
  */
 
 import { mapToLocalPx } from './tilePlacement';
-import type { Color } from '../../utils/colorParser';
 import type { DrawableCell } from './drawableCell';
 import { tileDrawInfo, type AtlasSourceModel, type TileGrid } from './types';
+import type { Rgba } from '../../godot/math';
 
 interface TileGeometryArrays {
   positions: Float32Array;
@@ -122,7 +122,7 @@ function writeCornerUvBounds(
 }
 
 /** One colour on each of a quad's four corners, from `offset`, with no array per corner. */
-function writeCornerColors(colors: Float32Array, offset: number, { r, g, b, a }: Color): void {
+function writeCornerColors(colors: Float32Array, offset: number, { r, g, b, a }: Rgba): void {
   for (let k = offset; k < offset + 16; k += 4) {
     colors[k] = r;
     colors[k + 1] = g;

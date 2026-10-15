@@ -32,22 +32,22 @@ import {
 import { DEFAULT_CONTENT_MARGIN } from '../../../../r3f/controls/godotDefaultTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
-import type { ControlColor } from '../control/types';
 import type { ResolvedConnection } from './connectionEndpoints';
 import type { MinimapTransform, GraphScrollBounds, MinimapElement } from './minimap';
 import { minimapCameraRect, minimapNodeRect } from './minimap';
+import type { Rgba } from '../../../../godot/math';
 
 /** `draw_polyline_colors(points, colors, 0.5, lines_antialiased)` (`graph_edit.cpp:1611`). */
 const MINIMAP_LINE_WIDTH = 0.5;
 
 /** `GraphEditMinimap`'s `resizer_color` (`default_theme.cpp:1350`). */
-const RESIZER_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 0.85 };
+const RESIZER_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.85 };
 
 function flatBox(
-  bgColor: ControlColor,
+  bgColor: Rgba,
   cornerRadius: number,
   borderWidth: number,
-  borderColor: ControlColor
+  borderColor: Rgba
 ): StyleBoxFlatData {
   return makeFlatStyleBox(bgColor, { cornerRadius, borderWidth, borderColor });
 }
@@ -60,7 +60,7 @@ interface MinimapConnectionsProps {
   /** `connection_lines_antialiased` (`graph_edit.h:254`, default true), whose only engine reader is this draw. */
   antialiased: boolean;
   /** The minimap opacity, folded onto the inherited tint. */
-  lineTint: ControlColor;
+  lineTint: Rgba;
   renderOrder: number;
 }
 

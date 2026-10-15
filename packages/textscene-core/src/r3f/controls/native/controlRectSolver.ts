@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2, Vec2 } from './rect';
+import type { Rect2 } from './rect';
 import {
   controlLayoutOrder,
   controlProps,
@@ -27,10 +27,11 @@ import {
 } from './solverRegistry';
 import type { SealedHandoff } from './solveHandoff';
 import { resolveControlLayout, type ControlLayoutOrder } from '../controlAnchors.js';
+import type { Vector2 } from '../../../godot/vector.js';
 
 export interface SolvedControl {
   rect: Rect2;
-  minSize: Vec2;
+  minSize: Vector2;
   /**
    * The **solve handoff** this node's `ContainerLayoutFn` sealed for its children,
    * such as a split's dragger position, or `undefined`. Only the producing slice's
@@ -84,7 +85,12 @@ const GROW_DIRECTION_BOTH = 2;
  * the combined minimum. `GROW_DIRECTION_END`, the default (`control.h:209-210`),
  * keeps the position. `BEGIN` shifts back by the whole shortfall, and `BOTH` by half.
  */
-function floorAtMinimumSize(rect: Rect2, minSize: Vec2, growHorizontal: number, growVertical: number): Rect2 {
+function floorAtMinimumSize(
+  rect: Rect2,
+  minSize: Vector2,
+  growHorizontal: number,
+  growVertical: number
+): Rect2 {
   let { x, y, w, h } = rect;
 
   if (minSize.x > w) {
@@ -156,7 +162,7 @@ function normalizeContainerLayoutResult(result: ReadonlyMap<string, Rect2> | Con
  * `max(get_minimum_size(), custom_minimum_size)`. `get_minimum_size()` is the
  * registered type's own contribution (`(0, 0)` for an unregistered/leaf type).
  */
-export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
+export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
   const typeFn = controlSolverRegistry.minimumSize(n.node.type);
   const typeMin = typeFn ? typeFn(sortableView(n), ctx) : { x: 0, y: 0 };
   const custom = controlProps(n).customMinimumSize ?? { x: 0, y: 0 };
@@ -169,7 +175,7 @@ export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
  * `:541`), `Control`'s first, so the node has no children and only a name. Its
  * theme stays, and `custom_minimum_size` is folded in one level up (`control.cpp:1744-1758`).
  */
-function presetTimeMinimumSize(n: SolveNode, ctx: SolveContext): Vec2 {
+function presetTimeMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
   const typeFn = controlSolverRegistry.minimumSize(n.node.type);
   if (!typeFn) return { x: 0, y: 0 };
   // Unparsed, so each `MinimumSizeFn` reads `undefined` and falls back to its own
@@ -194,7 +200,7 @@ export function createSolveContext(
   measureText: TextMeasurer | null = null,
   tentativeRect?: (n: SolveNode) => Rect2 | undefined
 ): SolveContext {
-  const cache = new Map<string, Vec2>();
+  const cache = new Map<string, Vector2>();
   const ctx: SolveContext = {
     theme,
     measureText,
@@ -226,7 +232,7 @@ function hasSizeDependentMinimum(roots: readonly SolveNode[]): boolean {
 
 // --- Phase 2: top-down rect assignment ---------------------------------------
 
-function record(n: SolveNode, rect: Rect2, minSize: Vec2, out: Map<string, SolvedControl>): void {
+function record(n: SolveNode, rect: Rect2, minSize: Vector2, out: Map<string, SolvedControl>): void {
   out.set(n.path, { rect, minSize });
 }
 
@@ -238,7 +244,7 @@ function solveFree(
   n: SolveNode,
   parentRect: Rect2,
   /** `parentRect`'s top-left in viewport coordinates, for `canvasBoundaryRect`. */
-  origin: Vec2,
+  origin: Vector2,
   viewport: Rect2,
   ctx: SolveContext,
   out: Map<string, SolvedControl>
@@ -271,7 +277,7 @@ function dispatchChildren(
   n: SolveNode,
   rect: Rect2,
   /** `n`'s own top-left in viewport coordinates, for `canvasBoundaryRect`. */
-  origin: Vec2,
+  origin: Vector2,
   viewport: Rect2,
   ctx: SolveContext,
   out: Map<string, SolvedControl>
@@ -358,7 +364,7 @@ export function solveControlTree(
 ): ReadonlyMap<string, SolvedControl> {
   // A root's rect is stated relative to the viewport, so the viewport's own
   // top-left is where the absolute walk starts.
-  const rootOrigin: Vec2 = { x: viewport.x, y: viewport.y };
+  const rootOrigin: Vector2 = { x: viewport.x, y: viewport.y };
   const out = new Map<string, SolvedControl>();
   for (const root of roots) {
     solveFree(root, viewport, rootOrigin, viewport, ctx, out);

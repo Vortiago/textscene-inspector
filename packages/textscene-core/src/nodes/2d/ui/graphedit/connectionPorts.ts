@@ -18,14 +18,15 @@ import {
 import type { TextMeasurer } from '../../../../r3f/controls/native/solverRegistry.js';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree.js';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme.js';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect.js';
-import type { ControlColor } from '../control/types.js';
+import type { Rect2 } from '../../../../r3f/controls/native/rect.js';
 import { graphNodeDrawRows, graphNodeStyles } from '../graphnode/nativeSolver.js';
 import type { GraphNodeProperties } from '../graphnode/types.js';
+import type { Vector2 } from '../../../../godot/vector.js';
+import type { Rgba } from '../../../../godot/math.js';
 
 interface GraphNodePort {
-  pos: Vec2;
-  color: ControlColor;
+  pos: Vector2;
+  color: Rgba;
 }
 
 interface GraphNodePorts {
@@ -43,7 +44,7 @@ interface GraphNodePorts {
  */
 export function graphNodePorts(
   child: SolveNode,
-  outerSize: Vec2,
+  outerSize: Vector2,
   theme: NativeTheme,
   measureText: TextMeasurer | null
 ): GraphNodePorts | null {

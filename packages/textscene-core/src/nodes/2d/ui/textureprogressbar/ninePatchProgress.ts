@@ -8,8 +8,8 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { FillMode } from './types';
+import type { Vector2 } from '../../../../godot/vector';
 
 export interface NinePatchMargin {
   left: number;
@@ -19,10 +19,10 @@ export interface NinePatchMargin {
 }
 
 interface NinePatchStretchedDraw {
-  srcOffset: Vec2;
-  srcSize: Vec2;
-  dstOffset: Vec2;
-  dstSize: Vec2;
+  srcOffset: Vector2;
+  srcSize: Vector2;
+  dstOffset: Vector2;
+  dstSize: Vector2;
   margin: NinePatchMargin;
 }
 
@@ -33,12 +33,12 @@ interface NinePatchStretchedDraw {
  * so the `default` arms (`:346`, `:313-317,411-415`) are kept for fidelity but never run.
  */
 export function drawNinePatchStretched(
-  textureSize: Vec2,
+  textureSize: Vector2,
   stretchMargin: NinePatchMargin,
   fillMode: number | undefined,
   ratio: number,
-  controlSize: Vec2,
-  progressOffset: Vec2 | null
+  controlSize: Vector2,
+  progressOffset: Vector2 | null
 ): NinePatchStretchedDraw {
   let topleft = { x: stretchMargin.left, y: stretchMargin.top };
   let bottomright = { x: stretchMargin.right, y: stretchMargin.bottom };

@@ -24,11 +24,11 @@ import {
   TEXTURE_SLOTS,
   Transparency,
   type Heightmap,
-  type MaterialVec2,
   type StandardMaterial3DData,
   type TextureSlot,
   type TextureSlotReferences,
 } from './types';
+import type { Vector2 } from '../../../godot/vector';
 
 const CONTEXT = 'StandardMaterial3D';
 
@@ -334,7 +334,7 @@ function decodeTextureSlots(properties: Record<string, string>): TextureSlotRefe
 function uv2Transform(
   properties: Record<string, string>,
   uv2Triplanar: boolean
-): { uv2Scale: MaterialVec2; uv2Offset: MaterialVec2 } {
+): { uv2Scale: Vector2; uv2Offset: Vector2 } {
   const identity = { uv2Scale: { x: 1, y: 1 }, uv2Offset: { x: 0, y: 0 } };
   const detailUv = intOr(properties['detail_uv_layer'], DetailUV.DETAIL_UV_1, CONTEXT);
   if (!uv2Triplanar && detailUv !== DetailUV.DETAIL_UV_2) return identity;
@@ -359,7 +359,7 @@ function uv2Slots(properties: Record<string, string>): TextureSlot[] {
  * Godot writes UV transforms as `Vector3`, and only x and y reach a 2D UV. It wraps the
  * throwing `parseVector3`, so the float grammar, scientific notation included, is shared.
  */
-function vec2FromVector3(raw: string | undefined, fallback: MaterialVec2): MaterialVec2 {
+function vec2FromVector3(raw: string | undefined, fallback: Vector2): Vector2 {
   if (!raw) return fallback;
   try {
     const { x, y } = parseVector3(raw);

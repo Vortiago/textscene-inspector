@@ -30,7 +30,6 @@ import {
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import type { ControlColor } from '../control/types';
 import {
   BUTTON_DEFAULT_FONT_COLOR,
   BUTTON_THEME_FONT_KEY,
@@ -38,13 +37,14 @@ import {
   buttonIconColor,
 } from '../button/nativeSolver';
 import type { MenuButtonProperties } from './types';
+import type { Rgba } from '../../../../godot/math';
 
 // Re-exported for Component.tsx. MenuButton registers no `icon_*_color`, so `Theme::get_color`'s
 // ancestor fallback gives it Button's icon colours.
 export { buttonIconColor };
 
 /** `Color(1, 1, 1, 0.3)`: MenuButton's own disabled font colour (`default_theme.cpp:268`), not Button's `control_font_disabled_color` = `Color(0.875, 0.875, 0.875, 0.5)` (`:161`). */
-export const MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 0.3 };
+export const MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.3 };
 
 /** MenuButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else MenuButton's literal. */
 export function menuButtonTextTheme(

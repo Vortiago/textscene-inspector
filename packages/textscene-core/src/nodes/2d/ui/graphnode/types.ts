@@ -1,16 +1,16 @@
-import type { ControlColor } from '../control/types';
 import type { GraphElementProperties } from '../graphelement/types';
+import type { Rgba } from '../../../../godot/math';
 
 /** `GraphNode::Slot` (`graph_node.h:41-52`), the class-default every leaf starts from. */
 export interface GraphNodeSlot {
   leftEnabled: boolean;
   leftType: number;
-  leftColor: ControlColor;
+  leftColor: Rgba;
   /** Resource-ref token (`ExtResource(...)`/`SubResource(...)`), or absent for the default null icon. */
   leftIcon?: string;
   rightEnabled: boolean;
   rightType: number;
-  rightColor: ControlColor;
+  rightColor: Rgba;
   rightIcon?: string;
   drawStylebox: boolean;
 }

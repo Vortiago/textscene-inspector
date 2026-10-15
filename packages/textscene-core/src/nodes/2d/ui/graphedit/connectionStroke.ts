@@ -11,7 +11,7 @@
  */
 
 import { lerpColor, type Rgba } from '../../../../godot/math';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Vector2 } from '../../../../godot/vector';
 
 export interface GeometryBuffers {
   positions: number[];
@@ -36,7 +36,7 @@ const RINGS_PER_POINT = 6;
  * (`graph_edit.cpp:1705-1707`) by cumulative length, and the rim stays `connection_rim_color`.
  */
 export function connectionStrokeGeometry(
-  points: readonly Vec2[],
+  points: readonly Vector2[],
   lineWidth: number,
   fromColor: Rgba,
   toColor: Rgba,

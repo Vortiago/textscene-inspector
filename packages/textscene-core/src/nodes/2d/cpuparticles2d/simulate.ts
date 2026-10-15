@@ -31,7 +31,6 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Color, Vector2 } from '../../base/node2d/types';
 import type { Curve } from '../../../resources/curves/curve/types';
 import { sampleCurve } from '../../../resources/curves/curve/sample';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
@@ -51,6 +50,8 @@ import {
   CPUParticles2DParam,
   type CPUParticles2DProperties,
 } from './types';
+import type { Rgba } from '../../../godot/math.js';
+import type { Vector2 } from '../../../godot/vector.js';
 
 /** A particle's `Transform2D`, which the process loop writes in place, as Godot's `Particle`. */
 type ParticleTransform = { -readonly [K in keyof Transform2DColumns]: number };
@@ -89,7 +90,7 @@ export interface RenderedParticle {
   /** Item-local `Transform2D` mapping the texture quad's local corners. */
   transform: Transform2DColumns;
   /** Godot's `p.color`: sRGB, alpha included, curve, ramp and hue applied. */
-  color: Color;
+  color: Rgba;
   /**
    * Godot's `p.custom[2]`, reaching the canvas shader as `INSTANCE_CUSTOM.z`:
    * `anim_offset + age × anim_speed`. A `CanvasItemMaterial` with
@@ -105,7 +106,7 @@ export interface RenderedParticle {
 /** Godot's private `Particle` struct, only the fields the process loop reads. */
 interface Particle {
   transform: ParticleTransform;
-  color: Color;
+  color: Rgba;
   custom: [number, number, number, number];
   rotation: number;
   velocity: Vector2;
@@ -114,10 +115,10 @@ interface Particle {
   scaleRand: number;
   hueRotRand: number;
   animOffsetRand: number;
-  startColorRand: Color;
+  startColorRand: Rgba;
   time: number;
   lifetime: number;
-  baseColor: Color;
+  baseColor: Rgba;
   seed: number;
 }
 
@@ -646,7 +647,7 @@ function lerpParam(props: CPUParticles2DProperties, param: CPUParticles2DParam, 
   return lerp(slot.min, slot.max, randFromSeed(seedRef));
 }
 
-function multiplyColor(a: Color, b: Color): Color {
+function multiplyColor(a: Rgba, b: Rgba): Rgba {
   return { r: a.r * b.r, g: a.g * b.g, b: a.b * b.b, a: a.a * b.a };
 }
 
@@ -654,7 +655,7 @@ function multiplyColor(a: Color, b: Color): Color {
  * Godot's YIQ-style hue rotation: three constant bases blended by cos/sin of the
  * angle, then applied with `Basis::xform_inv`, the transpose.
  */
-function rotateHue(color: Color, angle: number): Color {
+function rotateHue(color: Rgba, angle: number): Rgba {
   const c = Math.cos(angle);
   const s = Math.sin(angle);
 

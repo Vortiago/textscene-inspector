@@ -11,17 +11,13 @@ import { decodeCapsuleShape2D } from '../../../../resources/shapes/capsuleshape2
 import type * as THREE from 'three';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { warn } from '../../../../logger';
+import type { Vector2 } from '../../../../godot/vector';
 
 const CIRCLE_SEGMENTS = 32;
 const CAPSULE_CAP_SEGMENTS = 16;
 
-interface Point2D {
-  x: number;
-  y: number;
-}
-
 /** Godot-local (x, y) to three-local (x, -y), matching Sprite2D/Polygon2D's Y-negation. */
-function toThreeLocal(points: Point2D[]): Float32Array {
+function toThreeLocal(points: Vector2[]): Float32Array {
   const out = new Float32Array(points.length * 3);
   for (let i = 0; i < points.length; i++) {
     out[i * 3] = points[i]!.x;
@@ -32,7 +28,7 @@ function toThreeLocal(points: Point2D[]): Float32Array {
 }
 
 /** Closed polygon vertices to line-segment pairs (v0,v1),(v1,v2),…,(vN-1,v0) for `<lineSegments>`. */
-function loopToSegments(points: Point2D[]): Float32Array {
+function loopToSegments(points: Vector2[]): Float32Array {
   const vertices = toThreeLocal(points);
   const n = points.length;
   const out = new Float32Array(n * 2 * 3);
@@ -44,7 +40,7 @@ function loopToSegments(points: Point2D[]): Float32Array {
   return out;
 }
 
-function rectanglePoints(size: { x: number; y: number }): Point2D[] {
+function rectanglePoints(size: Vector2): Vector2[] {
   const hw = size.x / 2;
   const hh = size.y / 2;
   return [
@@ -55,8 +51,8 @@ function rectanglePoints(size: { x: number; y: number }): Point2D[] {
   ];
 }
 
-function circlePoints(radius: number): Point2D[] {
-  const points: Point2D[] = [];
+function circlePoints(radius: number): Vector2[] {
+  const points: Vector2[] = [];
   for (let i = 0; i < CIRCLE_SEGMENTS; i++) {
     const t = (i / CIRCLE_SEGMENTS) * Math.PI * 2;
     points.push({ x: radius * Math.cos(t), y: radius * Math.sin(t) });
@@ -68,9 +64,9 @@ function circlePoints(radius: number): Point2D[] {
  * Vertical capsule: two semicircle caps joined by straight sides. Exported so a test can
  * assert the point sequence, which a rendered `<lineSegments>` buffer does not expose.
  */
-export function capsulePoints(radius: number, height: number): Point2D[] {
+export function capsulePoints(radius: number, height: number): Vector2[] {
   const halfHeight = Math.max(0, height / 2 - radius);
-  const points: Point2D[] = [];
+  const points: Vector2[] = [];
 
   // Right side, bottom to top.
   points.push({ x: radius, y: -halfHeight });
@@ -105,7 +101,7 @@ export function CollisionGizmo2D({
   /** The node's `debug_color`, already resolved to a three colour. */
   color: THREE.Color;
 }) {
-  const points = useMemo((): Point2D[] => {
+  const points = useMemo((): Vector2[] => {
     switch (shape.type) {
       case 'RectangleShape2D':
         return rectanglePoints(decodeRectangleShape2D(shape.data).size);

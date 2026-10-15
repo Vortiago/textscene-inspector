@@ -13,10 +13,10 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver';
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, boolOr } from '../../../parser/valueParsers';
-import type { ControlColor } from '../../../nodes/2d/ui/control/types';
+import type { Rgba } from '../../../godot/math';
 
 export interface StyleBoxLineData {
-  color: ControlColor;
+  color: Rgba;
   /** `style_box_line.h:36`, default `1`. */
   thickness: number;
   /** `style_box_line.h:37`, default `false`, independent of the owning widget's orientation. */
@@ -35,7 +35,7 @@ export interface StyleBoxLineData {
 const CONTEXT = 'StyleBoxLine';
 
 /** `style_box_line.h:34`: a bare `Color color;`, default-constructed opaque black. */
-const DEFAULT_LINE_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 1 };
+const DEFAULT_LINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 
 /** `style_box.cpp:143`'s sentinel: "ask `get_style_margin`" (also `parseStyleBox.ts`'s `CONTENT_MARGIN_UNSET`). */
 const CONTENT_MARGIN_UNSET = -1;

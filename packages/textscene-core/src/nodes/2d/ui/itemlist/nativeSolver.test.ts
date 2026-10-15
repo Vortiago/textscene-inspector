@@ -12,7 +12,6 @@ import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/ope
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { ItemListProperties } from './types';
 import {
   ICON_MODE_LEFT,
@@ -40,6 +39,7 @@ import {
   packItemListRows,
   shapeItemListText,
 } from './nativeSolver';
+import type { Vector2 } from '../../../../godot/vector';
 
 function node(props: Partial<ItemListProperties> = {}): SolveNode {
   return {
@@ -219,7 +219,7 @@ describe('itemContentMinSize / itemMinimumSize', () => {
 });
 
 describe('packItemListRows', () => {
-  const FOUR_ITEMS: Vec2[] = [
+  const FOUR_ITEMS: Vector2[] = [
     { x: 20, y: 10 },
     { x: 20, y: 10 },
     { x: 20, y: 10 },

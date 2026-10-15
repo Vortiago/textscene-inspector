@@ -19,7 +19,6 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveButtonDrawState,
   pickButtonStyleBox,
@@ -31,6 +30,7 @@ import {
 } from '../../../../r3f/controls/native/buttonBase';
 import { buttonIconColor, menuButtonLabelShape, menuButtonTextTheme } from './nativeSolver';
 import type { MenuButtonProperties } from './types';
+import type { Vector2 } from '../../../../godot/vector';
 
 interface IconImageLike {
   width?: number;
@@ -61,7 +61,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
   const { texture: iconSource } = useTexture2D(props.icon, externalResources, internalResources);
   const iconTexture = useCanvas2DTexture(iconSource);
 
-  const iconNaturalSize: Vec2 | null = useMemo(() => {
+  const iconNaturalSize: Vector2 | null = useMemo(() => {
     if (!props.icon || !iconTexture) return null;
     const image = iconTexture.image as IconImageLike | undefined;
     const w = image?.width ?? 0;

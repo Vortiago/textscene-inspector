@@ -4,7 +4,7 @@
  * `SyntaxHighlighter`. Every field is an `ADD_PROPERTY` (`:604-611`).
  */
 
-import type { Color } from '../../../utils/colorParser';
+import type { Rgba } from '../../../godot/math';
 
 /**
  * One `color_regions` entry: a delimiter pair a region spans, across lines
@@ -14,20 +14,20 @@ import type { Color } from '../../../utils/colorParser';
 export interface CodeHighlighterColorRegion {
   startKey: string;
   endKey: string;
-  color: Color;
+  color: Rgba;
   lineOnly: boolean;
 }
 
 export interface CodeHighlighterData {
-  keywordColors: ReadonlyMap<string, Color>;
-  memberKeywordColors: ReadonlyMap<string, Color>;
+  keywordColors: ReadonlyMap<string, Rgba>;
+  memberKeywordColors: ReadonlyMap<string, Rgba>;
   /**
    * Sorted by `add_color_region`'s own insertion rule (`syntax_highlighter.cpp:490-516`):
    * longest `startKey` first, so `"""` is tried before `"`.
    */
   colorRegions: readonly CodeHighlighterColorRegion[];
-  numberColor: Color;
-  symbolColor: Color;
-  functionColor: Color;
-  memberVariableColor: Color;
+  numberColor: Rgba;
+  symbolColor: Rgba;
+  functionColor: Rgba;
+  memberVariableColor: Rgba;
 }

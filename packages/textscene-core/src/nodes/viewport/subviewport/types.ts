@@ -5,7 +5,7 @@
  */
 
 import type { NodeProperties } from '../../node/types';
-import type { Vector2 } from '../../base/node2d/types';
+import type { Vector2 } from '../../../godot/vector';
 
 /** `SubViewport.UpdateMode`: when the target is re-rendered. */
 export const UPDATE_MODE_DISABLED = 0;

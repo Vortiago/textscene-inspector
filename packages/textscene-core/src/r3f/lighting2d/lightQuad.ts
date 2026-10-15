@@ -10,7 +10,6 @@
  */
 
 import * as THREE from 'three';
-import type { Color } from '../../nodes/base/node2d/types.js';
 import { canvasItemFacing } from '../canvasItemFacing.js';
 import {
   FRAGMENT,
@@ -22,6 +21,7 @@ import {
   VERTEX,
 } from './lightQuadShaders.js';
 import { shadowSamplingParameters, type ShadowSampling } from './shadowSampling.js';
+import type { Rgba } from '../../godot/math.js';
 
 export {
   createShadowPolarTexture,
@@ -77,13 +77,13 @@ type LightQuadStencil = Partial<THREE.ShaderMaterialParameters>;
  * adds nothing, and Godot's default (`light_2d.h:58`) is exactly that. A filtered penumbra keeps
  * `S.rgb · s · (1 − s)`.
  */
-export function shadowColorContributes(shadowColor: Color, filter: number): boolean {
+export function shadowColorContributes(shadowColor: Rgba, filter: number): boolean {
   if (shadowColor.a > 0) return true;
   return filter !== SHADOW_FILTER_NONE && (shadowColor.r !== 0 || shadowColor.g !== 0 || shadowColor.b !== 0);
 }
 
 /** The colour with its rgb zeroed: a quad of it carries only its alpha, the factor MIX scales by. */
-export function alphaOnly(color: Color): Color {
+export function alphaOnly(color: Rgba): Rgba {
   return { r: 0, g: 0, b: 0, a: color.a };
 }
 
@@ -104,7 +104,7 @@ type ShadowColorQuadOptions = {
   | {
       readonly shadow?: undefined;
       /** `Light2D.shadow_color`: this quad's entire output. */
-      readonly shadowColor: Color;
+      readonly shadowColor: Rgba;
       /** The stencil test that confines it to where the volumes stamped. */
       readonly stencil?: LightQuadStencil;
     }
@@ -142,7 +142,7 @@ export function createShadowColorQuadMaterial(options: ShadowColorQuadOptions): 
 interface LightQuadOptions {
   readonly cookie: THREE.Texture;
   /** `Light2D.color`. */
-  readonly color: Color;
+  readonly color: Rgba;
   /** `Light2D.energy`. */
   readonly energy: number;
   readonly blendMode: number;

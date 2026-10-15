@@ -17,7 +17,6 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   AutowrapMode,
   clampAutowrapMode,
@@ -47,7 +46,6 @@ import {
   resolveNodeFontMetrics,
   resolveNodeFontSizePx,
 } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import type { ControlColor } from '../control/types';
 import type { RichTextLabelProperties } from './types';
 import {
   IMAGE_OBJECT_CHAR,
@@ -59,6 +57,8 @@ import {
   type ParsedImageRegion,
   type ParsedImgTag,
 } from './bbcode';
+import type { Vector2 } from '../../../../godot/vector';
+import type { Rgba } from '../../../../godot/math';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color`, not Label's `font_size` and `font_color`. */
 export const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
@@ -75,7 +75,7 @@ export const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
 export const RICH_TEXT_LABEL_THEME_FONT_KEY = 'normal_font';
 
 /** `default_theme.cpp:1205`: `theme->set_color("default_color", "RichTextLabel", Color(1, 1, 1))`, a call separate from Label's. */
-export const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
+export const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** `rich_text_label.h:557`: `TextServer::AutowrapMode autowrap_mode = TextServer::AUTOWRAP_WORD_SMART;`, unlike Label's OFF (`label.h`). */
 export const RICH_TEXT_LABEL_DEFAULT_AUTOWRAP = AutowrapMode.WORD_SMART;
@@ -105,8 +105,8 @@ export function imageSizePx(
   widthPx: number,
   heightPx: number,
   region: ParsedImageRegion | undefined,
-  naturalSize?: Vec2 | null
-): Vec2 | null {
+  naturalSize?: Vector2 | null
+): Vector2 | null {
   const hasRegion = region !== undefined && region.w > 0 && region.h > 0; // Rect2::has_area().
   if (widthPx > 0) {
     if (heightPx > 0) return { x: widthPx, y: heightPx };
@@ -214,7 +214,7 @@ export function imageBaselineOffsetPx(
  */
 interface ResolvedImageRun {
   spec: ParsedImgTag;
-  sizePx: Vec2;
+  sizePx: Vector2;
 }
 
 /**
@@ -332,7 +332,7 @@ interface StyledTextRun {
   italic: boolean;
   /** `[u]` open on the tag stack (`rich_text_label.cpp:4677`'s `push_underline`), drawn by `underlineRectPx`. */
   underline: boolean;
-  color: ControlColor;
+  color: Rgba;
   /** This run's font size, px (`resolveRunFontSizePx`): `normal_font_size` for a plain run. */
   fontSizePx: number;
   /**
@@ -397,7 +397,7 @@ function resolveRunFontSizePx(
 export function styledTextRuns(
   n: SolveNode,
   props: RichTextLabelProperties,
-  defaultColor: ControlColor,
+  defaultColor: Rgba,
   normalFontSizePx: number,
   builtInDefaultPx: number,
   boxWidthPx?: number
@@ -522,7 +522,7 @@ interface RichTextRunPlacement {
   bold: boolean;
   italic: boolean;
   underline: boolean;
-  color: ControlColor;
+  color: Rgba;
   /** The run's font size, px, for its glyphs. The baseline is the line's: `layout.baselineOffsetPx`. */
   fontSizePx: number;
   /** A single-line layout of only this run's glyphs from the line, `glyph.x` already line-relative. */

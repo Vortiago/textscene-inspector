@@ -3,8 +3,8 @@
  * decodes the two that CSS can express: `StyleBoxFlat` and `StyleBoxEmpty`.
  */
 
-import type { Color } from '../../../utils/colorParser';
-import type { Vector2 } from '../../../parser/vectors';
+import type { Rgba } from '../../../godot/math';
+import type { Vector2 } from '../../../godot/vector';
 
 /** Godot's four `Side`s (SIDE_LEFT…SIDE_BOTTOM), as border widths or margins. */
 export interface StyleBoxSides {
@@ -25,12 +25,12 @@ interface StyleBoxCorners {
 export interface StyleBoxFlatData {
   kind: 'flat';
   /** The interior fill. Painted only when `drawCenter` is on. */
-  bgColor: Color;
+  bgColor: Rgba;
   /** `false` paints the border alone, leaving the interior transparent. */
   drawCenter: boolean;
   cornerRadius: StyleBoxCorners;
   borderWidth: StyleBoxSides;
-  borderColor: Color;
+  borderColor: Rgba;
   /**
    * The margins content sits inside, with `StyleBox::get_margin`'s rule already
    * applied: a side left negative (the −1 default) reports the side's border
@@ -39,7 +39,7 @@ export interface StyleBoxFlatData {
   contentMargin: StyleBoxSides;
   /** Godot draws the drop shadow only from 1 pixel up. */
   shadowSize: number;
-  shadowColor: Color;
+  shadowColor: Rgba;
   shadowOffset: Vector2;
 }
 

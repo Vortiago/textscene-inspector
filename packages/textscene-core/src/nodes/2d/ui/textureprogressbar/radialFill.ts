@@ -8,8 +8,8 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { FillMode } from './types';
+import type { Vector2 } from '../../../../godot/vector';
 
 /** `Math::fposmodp` (`core/math/math_funcs.h:296-302`): `fmod`, folded non-negative. */
 function fposmodp(x: number, y: number): number {
@@ -38,7 +38,7 @@ export function normalizeRadialInitialAngle(radialInitialAngle: number | undefin
 }
 
 /** `get_relative_center` (`:245-256`). `null` mirrors `progress.is_null()` (`:246-248`, and the same guard in `unit_val_to_uv`, `:181-183`). */
-export function radialRelativeCenter(textureSize: Vec2, radialCenterOffset: Vec2): Vec2 {
+export function radialRelativeCenter(textureSize: Vector2, radialCenterOffset: Vector2): Vector2 {
   if (textureSize.x <= 0 || textureSize.y <= 0) return { x: 0, y: 0 };
   const px = textureSize.x / 2 + radialCenterOffset.x;
   const py = textureSize.y / 2 + radialCenterOffset.y;
@@ -53,7 +53,7 @@ export function radialRelativeCenter(textureSize: Vec2, radialCenterOffset: Vec2
  * against the unit square, with the source's single mutable `dir`. A later edge branch's gate reads
  * what an earlier branch wrote, so independent per-axis clamps would fire different edges.
  */
-export function unitValToUv(val: number, center: Vec2): Vec2 {
+export function unitValToUv(val: number, center: Vector2): Vector2 {
   let v = val;
   if (v < 0) v += 1;
   if (v > 1) v -= 1;
@@ -120,9 +120,9 @@ export function radialFillGeometry(
   mode: number,
   val: number,
   radInitAngleDegrees: number,
-  center: Vec2,
-  size: Vec2,
-  offset: Vec2
+  center: Vector2,
+  size: Vector2,
+  offset: Vector2
 ): RadialFillGeometry | null {
   const direction = mode === FillMode.COUNTER_CLOCKWISE ? -1 : 1;
   const start =
@@ -139,8 +139,8 @@ export function radialFillGeometry(
   }
   angles.push(to);
 
-  const uvs: Vec2[] = [];
-  const points: Vec2[] = [];
+  const uvs: Vector2[] = [];
+  const points: Vector2[] = [];
   for (const f of angles) {
     const uv = unitValToUv(f, center);
     // `Vector<Point2>::has`: exact per-component equality, not approximate.

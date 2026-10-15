@@ -10,13 +10,14 @@
  */
 
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
   scrollBarGrabberGeometry,
   scrollBarGrabberRect,
   scrollBarMinimumSize,
 } from '../shared/scrollBarSolver';
 import type { GraphScrollBounds } from './minimap';
+import type { Vector2 } from '../../../../godot/vector';
 
 export interface GraphEditScrollBar {
   visible: boolean;
@@ -43,9 +44,9 @@ function ratioOf(value: number, min: number, max: number): number {
  * branch, `max - min <= page` (`:499,509`), never holds.
  */
 export function graphEditScrollBars(
-  graphEditSize: Vec2,
+  graphEditSize: Vector2,
   bounds: GraphScrollBounds,
-  scrollOffset: Vec2,
+  scrollOffset: Vector2,
   theme: NativeTheme
 ): GraphEditScrollBars {
   const hMin = scrollBarMinimumSize(false, theme);

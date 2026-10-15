@@ -10,9 +10,10 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { Vector2 } from '../../../../godot/vector';
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
@@ -32,7 +33,7 @@ function grabberMinAlong(vertical: boolean, theme: NativeTheme): number {
  * The default theme sets all six `increment`/`decrement` icons to an empty `ImageTexture` on both
  * bars (`default_theme.cpp:557-562,572-577`), so `native/themeIcons.ts` vendors none.
  */
-export function scrollBarMinimumSize(vertical: boolean, theme: NativeTheme): Vec2 {
+export function scrollBarMinimumSize(vertical: boolean, theme: NativeTheme): Vector2 {
   const track = contentMarginSize(trackStyleBox(vertical, theme));
   const grabber = grabberMinAlong(vertical, theme);
   if (vertical) {
@@ -90,7 +91,7 @@ export function scrollBarGrabberGeometry(
  * `Control::_size_changed` mirrors a standalone bar whole (`control.cpp:1785-1787`). The highlighted
  * states and `scroll_focus` need interaction, so a still frame never draws them.
  */
-export function scrollBarTrackRect(size: Vec2): Rect2 {
+export function scrollBarTrackRect(size: Vector2): Rect2 {
   return { x: 0, y: 0, w: size.x, h: size.y };
 }
 
@@ -102,7 +103,7 @@ export function scrollBarTrackRect(size: Vec2): Rect2 {
  */
 export function scrollBarGrabberRect(
   vertical: boolean,
-  size: Vec2,
+  size: Vector2,
   grabber: ScrollBarGrabberGeometry
 ): Rect2 {
   if (vertical) {

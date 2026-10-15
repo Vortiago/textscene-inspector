@@ -31,9 +31,10 @@ import {
   LINE_EDIT_DEFAULT_FONT_COLOR,
   LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
 } from '../lineedit/nativeSolver';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
-import type { ControlColor } from '../control/types';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SpinBoxProperties } from './types';
+import type { Vector2 } from '../../../../godot/vector';
+import type { Rgba } from '../../../../godot/math';
 
 /** `Range`'s default `step` (`scene/gui/range.h:42`). SpinBox's constructor never calls `set_step` (`spin_box.cpp:723-740`), so this is what an unauthored `step` resolves to. */
 const SPIN_BOX_STEP_DEFAULT = 1;
@@ -50,7 +51,7 @@ const SPIN_BOX_FIELD_BUTTONS_SEPARATION = 2;
  * Vendored icons are never rescaled by the project theme scale (`CHECKBOX_ICON_NATURAL_SIZE`
  * in `checkbox/nativeSolver.ts`).
  */
-export const SPIN_BOX_ARROW_ICON_SIZE: Vec2 = { x: 16, y: 8 };
+export const SPIN_BOX_ARROW_ICON_SIZE: Vector2 = { x: 16, y: 8 };
 
 /** `up`/`down`: `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, SpinBox, up_icon, "up")` (and `down`, `spin_box.cpp:690,694`). The hover, pressed and disabled variants and the deprecated `updown` are never drawn, as in `Component.tsx`. */
 type SpinBoxIconName = 'up' | 'down';
@@ -67,7 +68,7 @@ export const spinBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => 
 };
 
 /** This icon's resolved size: themed if `SolveNode.textureSlots` resolved it, else the vendored default. */
-export function spinBoxIconSize(n: Pick<SolveNode, 'textureSlots'>, name: SpinBoxIconName): Vec2 {
+export function spinBoxIconSize(n: Pick<SolveNode, 'textureSlots'>, name: SpinBoxIconName): Vector2 {
   return n.textureSlots[name] ?? SPIN_BOX_ARROW_ICON_SIZE;
 }
 
@@ -112,7 +113,7 @@ interface SpinBoxLayout {
  * get_size();` truncates toward zero, so `rectSize` is truncated once. `rtl` (`SolveNode.rtl`)
  * puts the buttons block at x 0 and the separator directly after it (`:403,409`).
  */
-export function spinBoxLayout(rectSize: Vec2, widestIconWidth: number, rtl = false): SpinBoxLayout {
+export function spinBoxLayout(rectSize: Vector2, widestIconWidth: number, rtl = false): SpinBoxLayout {
   const w = Math.trunc(rectSize.x);
   const h = Math.trunc(rectSize.y);
   const blockWidth = spinBoxButtonsBlockWidth(widestIconWidth);
@@ -215,7 +216,7 @@ export function spinBoxDownButtonState(props: SpinBoxProperties, resolvedValue: 
 }
 
 /** `up_icon_modulate`/`up_disabled_icon_modulate` (`default_theme.cpp:634,637`). The icon asset is the same either way (`:616-619`), and only the modulate differs. */
-const SPIN_BOX_UP_ICON_COLOR: Record<SpinBoxButtonState, ControlColor> = {
+const SPIN_BOX_UP_ICON_COLOR: Record<SpinBoxButtonState, Rgba> = {
   normal: { r: 0.875, g: 0.875, b: 0.875, a: 1 },
   disabled: { r: 0.875, g: 0.875, b: 0.875, a: 0.5 },
 };
@@ -232,7 +233,7 @@ export function spinBoxIconColor(
   colors: SolveNode['colors'],
   direction: 'up' | 'down',
   state: SpinBoxButtonState
-): ControlColor {
+): Rgba {
   const key = SPIN_BOX_ICON_COLOR_KEYS[direction][state];
   const defaults = direction === 'up' ? SPIN_BOX_UP_ICON_COLOR : SPIN_BOX_DOWN_ICON_COLOR;
   return colors[key] ?? defaults[state];
@@ -252,7 +253,7 @@ interface SpinBoxFieldTextTheme {
   fontSizePx: number;
   fontMetrics: FontMetrics;
   /** `control_font_color`/`control_font_disabled_color` (LineEdit's `font_color`/`font_uneditable_color` defaults). No ancestor-theme colour walk exists (`textTheme.ts`), so the field draws only this colour. */
-  color: ControlColor;
+  color: Rgba;
 }
 
 /** The field's font (face + size, ancestor-walked) and colour (override-less default), for `editable` state. */

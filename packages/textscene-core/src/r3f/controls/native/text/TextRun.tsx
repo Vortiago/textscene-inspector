@@ -27,12 +27,12 @@ import type { TextLayoutResult } from './textLayout';
 import { hexCodeBoxRects } from './hexCodeBox';
 import { CanvasItemGroup } from '../../../components/CanvasItemGroup';
 import { ControlQuad } from '../controlQuad';
-import type { Color } from '../../../../nodes/base/node2d/types';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
 import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
+import type { Rgba } from '../../../../godot/math';
 
 // Geometry is in Godot pixels, +Y down, with Y negated once per vertex into three's
 // Y-up space. Each line's top is a multiple of `layout.linePitchPx`, and its baseline
@@ -157,7 +157,7 @@ export interface TextRunProps {
   /** Must match the `fontSizePx` the layout was shaped at (atlas-bake-size geometry scales by `fontSizePx / 42`). */
   fontSizePx: number;
   /** Godot colour, sRGB. `.a` is opacity, and `.r/.g/.b` are converted to linear for the shader. */
-  tint: Color;
+  tint: Rgba;
   /** Synthesised-italic shear. The default 0 draws upright. */
   skew?: number;
   /** Synthesised-bold embolden, forwarded to the material. The default 0 is the baked weight. */
@@ -167,7 +167,7 @@ export interface TextRunProps {
    * outline's opacity, apart from `tint.a`. Omitted, no outline. Atlas runs
    * only: a canvas raster has no distance field to threshold again.
    */
-  outlineColor?: Color;
+  outlineColor?: Rgba;
   /** Screen px the outline's threshold expands past the glyph edge. 0 or an absent `outlineColor` draws no outline. */
   outlineWidthPx?: number;
   /**
@@ -228,7 +228,7 @@ interface BuiltTextRun {
 
 /** What both painters' materials read, apart from the blend. */
 interface TextRunLook {
-  tint: Color;
+  tint: Rgba;
   clippingPlanes: readonly THREE.Plane[] | undefined;
   depthTest: boolean | undefined;
   side: THREE.Side | undefined;
@@ -247,7 +247,7 @@ function buildTextRun(
   distanceBias: number,
   strokeWidthPx: number,
   textureFilter: 'nearest' | 'linear',
-  outlineColor: Color | undefined,
+  outlineColor: Rgba | undefined,
   outlineWidthPx: number
 ): BuiltTextRun {
   const { tint, clippingPlanes, depthTest, side } = look;

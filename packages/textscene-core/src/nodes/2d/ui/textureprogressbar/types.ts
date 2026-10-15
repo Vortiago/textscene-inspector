@@ -1,5 +1,6 @@
-import type { ControlProperties, ControlColor } from '../control/types';
+import type { ControlProperties } from '../control/types';
 import type { RangeProperties } from '../shared/range';
+import type { Rgba } from '../../../../godot/math';
 
 /** `TextureProgressBar::FillMode` (`texture_progress_bar.h:48-58`). */
 export const FillMode = {
@@ -38,7 +39,7 @@ export interface TextureProgressBarProperties extends ControlProperties, RangePr
   textureProgressOffset?: { x: number; y: number };
   /** Raw `texture_under` ref. */
   textureUnder?: string;
-  tintOver?: ControlColor;
-  tintProgress?: ControlColor;
-  tintUnder?: ControlColor;
+  tintOver?: Rgba;
+  tintProgress?: Rgba;
+  tintUnder?: Rgba;
 }

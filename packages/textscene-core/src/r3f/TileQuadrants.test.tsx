@@ -26,12 +26,13 @@ import {
 import { CanvasItemKeyProvider } from './components/CanvasItemGroup';
 import { canvasRenderOrder } from './canvasPaintOrder';
 import { CanvasModulateContext } from './canvasModulate';
-import { WHITE_MODULATE, type RGBA } from './canvasItemModulate';
+import { WHITE_MODULATE } from './canvasItemModulate';
 import {
   CanvasItemBlendMode,
   CanvasItemLightMode,
   type CanvasItemMaterialProperties,
 } from '../resources/materials/canvasitemmaterial/types';
+import type { Rgba } from '../godot/math';
 
 function canvasItemMaterial(overrides: Partial<CanvasItemMaterialProperties>): CanvasItemMaterialProperties {
   return { ...decodeCanvasItemMaterial({}), ...overrides };
@@ -94,7 +95,7 @@ const layerKey = (zFinal: number) => canvasRenderOrder({ layerRank: 0, zFinal, s
 interface Layer {
   zFinal?: number;
   material?: CanvasItemMaterialProperties | null;
-  canvasModulate?: RGBA;
+  canvasModulate?: Rgba;
 }
 
 function render(

@@ -1,5 +1,5 @@
-import type { ControlColor } from '../control/types';
 import type { GraphElementProperties } from '../graphelement/types';
+import type { Rgba } from '../../../../godot/math';
 
 export interface GraphFrameProperties extends GraphElementProperties {
   /** `title`: `graph_frame.cpp:192`. Default `""` (`graph_frame.h:51`, `String title;`). */
@@ -13,5 +13,5 @@ export interface GraphFrameProperties extends GraphElementProperties {
   /** `tint_color_enabled`: `graph_frame.cpp:197`. Default `false` (`graph_frame.h:60`). */
   tintColorEnabled?: boolean;
   /** `tint_color`: `graph_frame.cpp:198`. Default `Color(0.3, 0.3, 0.3, 0.75)` (`graph_frame.h:61`). */
-  tintColor?: ControlColor;
+  tintColor?: Rgba;
 }

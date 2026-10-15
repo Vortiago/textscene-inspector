@@ -7,8 +7,9 @@
 
 import * as THREE from 'three';
 import type { SkyProperties } from './types';
-import { scaledRgb, type Color } from '../../utils/colorParser';
+import { scaledRgb } from '../../utils/colorParser';
 import { godotColorToLinear } from '../../r3f/godotColor';
+import type { Rgba } from '../../godot/math';
 
 /** A directional light as Godot's sky shader sees it. */
 export interface SkyLight {
@@ -30,7 +31,7 @@ type SkyUniforms = Record<string, { value: unknown }>;
  * (`sky_material.cpp:41`, `material_storage.cpp:459`), so an energy above 1 brightens by more
  * than its factor.
  */
-function scaledColor(color: Color, energy: number): THREE.Color {
+function scaledColor(color: Rgba, energy: number): THREE.Color {
   return godotColorToLinear(scaledRgb(color, energy));
 }
 

@@ -4,9 +4,5 @@
  * `Rect2` to a three.js position (`[rect.x, -rect.y, 0]`). Pure data: no React, no THREE.
  */
 
-import type { Vector2 } from '../../../godot/vector';
-
-export type Vec2 = Vector2;
-
 /** A Control's rect in Godot pixels, +Y down. */
 export type { Rect2 } from '../../../godot/rect2';

@@ -5,6 +5,7 @@
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';
+export type { Vector2 } from '../../../godot/vector';
 
 registerResourceSlice({
   slice: 'curve2d',
@@ -14,4 +15,4 @@ registerResourceSlice({
 });
 
 export { decodeCurve2D, resolveCurve2D, tessellateCurve2D } from './decode';
-export type { Curve2DControlPoint, Curve2DSample, Curve2DSampler, Vec2 } from './types';
+export type { Curve2DControlPoint, Curve2DSample, Curve2DSampler } from './types';

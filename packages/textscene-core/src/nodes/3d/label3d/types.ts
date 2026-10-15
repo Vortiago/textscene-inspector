@@ -1,8 +1,8 @@
 /** Label3D node data and its enums. */
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
-import type { Color } from '../../../utils/colorParser';
 import { BillboardMode } from '../../../godot/billboard';
+import type { Rgba } from '../../../godot/math';
 
 /** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
 export { BillboardMode };
@@ -20,13 +20,13 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
   billboard: BillboardMode;
 
   /** Text tint (default white). */
-  modulate: Color;
+  modulate: Rgba;
 
   /** Outline thickness in pixels (default 12). */
   outline_size: number;
 
   /** Outline colour (default black). */
-  outline_modulate: Color;
+  outline_modulate: Rgba;
 
   /** Visible from behind (Godot default true → THREE.DoubleSide). */
   double_sided: boolean;

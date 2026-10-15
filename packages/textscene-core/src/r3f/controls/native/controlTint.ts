@@ -7,13 +7,13 @@
 
 import { useMemo } from 'react';
 import type * as THREE from 'three';
-import type { ControlColor } from '../../../nodes/2d/ui/control/types';
-import { useParentModulate, WHITE_MODULATE, multiplyModulate, type RGBA } from '../../canvasItemModulate';
+import { useParentModulate, WHITE_MODULATE, multiplyModulate } from '../../canvasItemModulate';
 import { useGodotLinearColor } from '../../godotColor';
 import { controlProps, type SolveNode } from './solveTree';
+import type { Rgba } from '../../../godot/math';
 
 /** `ControlColor` is structurally an `RGBA`, so an absent one is the only case. */
-function toRGBA(c: ControlColor | undefined): RGBA {
+function toRGBA(c: Rgba | undefined): Rgba {
   return c ?? WHITE_MODULATE;
 }
 
@@ -25,10 +25,7 @@ function toRGBA(c: ControlColor | undefined): RGBA {
 // The node's own pixels start from this value too: `_cull_canvas_item` folds
 // `ci->modulate` into the inherited colour, then draws at that × `ci->self_modulate`
 // (`servers/rendering/renderer_canvas_cull.cpp`).
-export function useInheritedModulate(
-  modulate: ControlColor | undefined,
-  skippedAncestors: ControlColor | undefined
-): RGBA {
+export function useInheritedModulate(modulate: Rgba | undefined, skippedAncestors: Rgba | undefined): Rgba {
   const parent = useParentModulate();
   const own = toRGBA(modulate);
   // The skipped Node2D ancestors sit between the context value and this node,
@@ -43,7 +40,7 @@ export function useInheritedModulate(
  */
 export interface ControlOwnTint {
   /** The own-pixel product, still sRGB, for a widget composing further base colours. */
-  own: RGBA;
+  own: Rgba;
   /** Linear space. */
   color: THREE.Color;
   opacity: number;
@@ -56,7 +53,7 @@ export interface ControlOwnTint {
  */
 // An argument, not a context read: the walker runs this above the provider it
 // publishes, where the context holds the parent's value without this `modulate`.
-export function useControlOwnTint(inherited: RGBA, solveNode: SolveNode): ControlOwnTint {
+export function useControlOwnTint(inherited: Rgba, solveNode: SolveNode): ControlOwnTint {
   const selfModulate = toRGBA(controlProps(solveNode).selfModulate);
   const own = useMemo(() => multiplyModulate(inherited, selfModulate), [inherited, selfModulate]);
   const color = useGodotLinearColor(own);

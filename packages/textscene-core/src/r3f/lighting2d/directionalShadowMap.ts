@@ -21,7 +21,7 @@ import {
   type Quad2,
   type ShadowCasterEdges,
 } from './shadowVolumes';
-import type { Vector2 } from '../../nodes/base/node2d/types.js';
+import type { Vector2 } from '../../godot/vector.js';
 
 /** What the map is built from, all in the previewer's 2D world space (Y up). */
 export interface DirectionalShadowView {

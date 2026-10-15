@@ -19,9 +19,10 @@ import {
   DEFAULT_CLEAR_COLOR,
 } from '../godot/index.js';
 import { unquoteLiteral } from './utils.js';
-import { colorOr, type Color } from '../utils/colorParser.js';
+import { colorOr } from '../utils/colorParser.js';
 import { parseOptionalInt } from './valueParsers.js';
 import { VOLUMETRIC_FOG_DEFAULTS, type VolumetricFogProjectSettings } from '../godot/volumetricFog.js';
+import type { Rgba } from '../godot/math.js';
 
 /**
  * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,
@@ -137,7 +138,7 @@ export function projectViewportSize(settings: ProjectSettings | null): ProjectVi
  * `rendering/environment/defaults/default_clear_color`, sRGB, which every opaque viewport clears to
  * (`renderer_viewport.cpp:371,751`), or Godot's default for an absent or malformed value.
  */
-export function projectClearColor(settings: ProjectSettings | null): Color {
+export function projectClearColor(settings: ProjectSettings | null): Rgba {
   return colorOr(settings?.['rendering/environment/defaults/default_clear_color'], DEFAULT_CLEAR_COLOR);
 }
 

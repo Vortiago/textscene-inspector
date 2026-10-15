@@ -16,12 +16,13 @@ import {
 import { LitCanvasItemPixels } from './components/LitCanvasItemPixels';
 import { CanvasItemGroup, useCanvasItemKey } from './components/CanvasItemGroup';
 import { useCanvasItemMaterialFile } from './components/canvasItemMaterialContext';
-import { multiplyModulate, type RGBA } from './canvasItemModulate';
+import { multiplyModulate } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
 import { useGodotLinearColor } from './godotColor';
 import { canvasKeyAtZ } from './canvasPaintOrder';
 import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement';
 import { TileSourceMesh } from './TileSourceMesh';
+import type { Rgba } from '../godot/math';
 
 interface TileLayerItem {
   model: TileSetModel;
@@ -29,7 +30,7 @@ interface TileLayerItem {
    * The layer's own-pixel modulate in sRGB, before the canvas tint: each item's material decides
    * whether the canvas tint reaches it.
    */
-  selfTint: RGBA;
+  selfTint: Rgba;
   /** The layer's material, which a tile with no material of its own draws with. */
   material: CanvasItemMaterialProperties | null;
   lightMask: number | undefined;

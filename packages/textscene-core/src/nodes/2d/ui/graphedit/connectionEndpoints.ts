@@ -13,18 +13,19 @@
 import type { TextMeasurer } from '../../../../r3f/controls/native/solverRegistry.js';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree.js';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme.js';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect.js';
-import type { ControlColor } from '../control/types.js';
+import type { Rect2 } from '../../../../r3f/controls/native/rect.js';
 import type { GraphElementProperties } from '../graphelement/types.js';
 import { graphNodePorts } from './connectionPorts.js';
 import type { GraphEditProperties } from './types.js';
+import type { Vector2 } from '../../../../godot/vector.js';
+import type { Rgba } from '../../../../godot/math.js';
 
 interface ResolvedConnectionEndpoint {
   /** In GraphEdit's local space, the frame `rect` is drawn in. */
-  pos: Vec2;
+  pos: Vector2;
   /** `conn->_cache.<from|to>_pos * zoom` (`graph_edit.cpp:1872-1873`) before the scroll subtraction: the minimap's frame. */
-  graphPos: Vec2;
-  color: ControlColor;
+  graphPos: Vector2;
+  color: Rgba;
 }
 
 export interface ResolvedConnection {
@@ -35,11 +36,11 @@ export interface ResolvedConnection {
 // `connections_layer->set_position(-scroll_offset)` (`graph_edit.cpp:454`) translates and never
 // scales, so a zoomed point reaches GraphEdit's local space by subtracting the unscaled `scroll_offset`.
 function endpoint(
-  portLocal: Vec2,
-  positionOffset: Vec2,
+  portLocal: Vector2,
+  positionOffset: Vector2,
   zoom: number,
-  scrollOffset: Vec2,
-  color: ControlColor
+  scrollOffset: Vector2,
+  color: Rgba
 ): ResolvedConnectionEndpoint {
   const graphPos = { x: (portLocal.x + positionOffset.x) * zoom, y: (portLocal.y + positionOffset.y) * zoom };
   return { pos: { x: graphPos.x - scrollOffset.x, y: graphPos.y - scrollOffset.y }, graphPos, color };

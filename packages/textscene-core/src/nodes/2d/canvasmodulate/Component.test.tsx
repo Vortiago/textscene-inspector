@@ -4,9 +4,10 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { CanvasModulate } from './Component';
 import { parseCanvasModulate } from './parser';
-import { Modulate2DContext, useParentModulate, type RGBA } from '../../../r3f/canvasItemModulate';
+import { Modulate2DContext, useParentModulate } from '../../../r3f/canvasItemModulate';
 import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../../../r3f/canvasPaintOrder';
+import type { Rgba } from '../../../godot/math';
 
 /** The world canvas's rank, derived: only a rank's order is meaningful, not its value. */
 const WORLD_RANK = layerRankOf(layerRanks([]), 0);
@@ -50,8 +51,8 @@ function cmGroup(renderer: Awaited<ReturnType<typeof renderCM>>) {
   };
 }
 
-function readModulate(renderer: Awaited<ReturnType<typeof renderCM>>): RGBA {
-  return renderer.scene.findByProps({ name: 'modulate-reader' }).instance.userData.modulate as RGBA;
+function readModulate(renderer: Awaited<ReturnType<typeof renderCM>>): Rgba {
+  return renderer.scene.findByProps({ name: 'modulate-reader' }).instance.userData.modulate as Rgba;
 }
 
 describe('<CanvasModulate>', () => {

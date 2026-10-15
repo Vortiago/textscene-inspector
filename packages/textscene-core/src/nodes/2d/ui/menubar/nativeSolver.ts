@@ -11,7 +11,6 @@
  */
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
@@ -27,6 +26,7 @@ import { unquoteString } from '../../../../parser/utils';
 import type { TscnNode } from '../../../../parser/types';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
 import type { MenuBarProperties } from './types';
+import type { Vector2 } from '../../../../godot/vector';
 
 /** `SceneStringName(font)`, MenuBar's own theme font key (`menu_bar.cpp:748`). */
 const MENU_BAR_THEME_FONT_KEY = 'font';
@@ -39,7 +39,7 @@ export interface MenuBarTitle {
   name: string;
   layout: TextLayoutResult;
   /** `text_buf->get_size() + style->get_minimum_size()` (`menu_bar.cpp:433,417`). */
-  size: Vec2;
+  size: Vector2;
 }
 
 /** `MenuBar::_get_popups` (`menu_bar.cpp:585-594`): direct `PopupMenu` children, in scene order. */
@@ -66,7 +66,7 @@ function menuBarTitles(
   n: ShareNode,
   fontSizePx: number,
   fontMetrics: FontMetrics,
-  marginSize: Vec2
+  marginSize: Vector2
 ): MenuBarTitle[] {
   return popupChildren(n).map((child) => {
     const layout = shapeText(menuTitleText(child), {

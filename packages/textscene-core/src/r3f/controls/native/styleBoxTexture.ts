@@ -14,8 +14,8 @@ import type { SceneScope, TscnExternalResource, TscnInternalResource } from '../
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver';
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, boolOr, parseOptionalRect2, type Rect2Value } from '../../../parser/valueParsers';
-import type { ControlColor } from '../../../nodes/2d/ui/control/types';
 import { NINE_PATCH_STRETCH, type NinePatchAxisMode } from './ninePatchGeometry';
+import type { Rgba } from '../../../godot/math';
 
 export interface StyleBoxTextureData {
   /**
@@ -46,11 +46,11 @@ export interface StyleBoxTextureData {
   /** `draw_center`, default `true`. */
   drawCenter: boolean;
   /** `modulate_color`, default `Color(1, 1, 1, 1)`. */
-  modulateColor: ControlColor;
+  modulateColor: Rgba;
 }
 
 const CONTEXT = 'StyleBoxTexture';
-const DEFAULT_MODULATE: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
+const DEFAULT_MODULATE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** `style_box.cpp:143`'s sentinel: "ask `get_style_margin`" (also `parseStyleBox.ts`'s `CONTENT_MARGIN_UNSET`). */
 const CONTENT_MARGIN_UNSET = -1;

@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../../parser/types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -23,6 +23,7 @@ import {
   type FoldableContainerTitleMetrics,
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import type { Vector2 } from '../../../../godot/vector';
 
 const MARGIN = 8; // content_margin 4, both sides.
 const FONT_HEIGHT = 23;
@@ -53,7 +54,7 @@ function ctx(): SolveContext {
   return {
     theme: nativeTheme(1),
     measureText,
-    combinedMinimumSize: (n) => (n.node.properties as { minSize?: Vec2 }).minSize ?? { x: 0, y: 0 },
+    combinedMinimumSize: (n) => (n.node.properties as { minSize?: Vector2 }).minSize ?? { x: 0, y: 0 },
   };
 }
 
@@ -76,7 +77,7 @@ describe('foldableContainerMinimumSize', () => {
 
   it('folded ignores children entirely — title_minimum_size IS the whole size', () => {
     const child = node({}, []);
-    (child.node.properties as unknown as { minSize: Vec2 }).minSize = { x: 500, y: 500 };
+    (child.node.properties as unknown as { minSize: Vector2 }).minSize = { x: 500, y: 500 };
     expect(minSize(node({ folded: true }, [child]), ctx())).toEqual({ x: MARGIN + ARROW, y: MARGIN + ARROW });
   });
 
@@ -114,7 +115,7 @@ describe('foldableContainerMinimumSize', () => {
 
   it("unfolded sizes to the widest visible child's combined minimum size, plus the panel margin", () => {
     const child = node({});
-    (child.node.properties as unknown as { minSize: Vec2 }).minSize = { x: 200, y: 40 };
+    (child.node.properties as unknown as { minSize: Vector2 }).minSize = { x: 200, y: 40 };
     const result = minSize(node({ folded: false }, [child]), ctx());
     expect(result.x).toBe(200 + MARGIN);
     expect(result.y).toBe(40 + MARGIN + (MARGIN + ARROW)); // no title text: title height = margin + arrow
@@ -122,7 +123,7 @@ describe('foldableContainerMinimumSize', () => {
 
   it('skips a hidden child when aggregating the unfolded minimum size', () => {
     const child = node({ visible: false });
-    (child.node.properties as unknown as { minSize: Vec2 }).minSize = { x: 999, y: 999 };
+    (child.node.properties as unknown as { minSize: Vector2 }).minSize = { x: 999, y: 999 };
     const result = minSize(node({ folded: false }, [child]), ctx());
     // No visible child contributes: width floors to the (empty) title bar's own, MARGIN + ARROW.
     expect(result.x).toBe(MARGIN + ARROW);

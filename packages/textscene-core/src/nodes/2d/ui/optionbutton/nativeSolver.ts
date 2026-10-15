@@ -26,7 +26,7 @@ import {
   tintColor,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -35,8 +35,9 @@ import {
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
-import type { ControlColor } from '../control/types';
 import type { OptionButtonProperties } from './types';
+import type { Vector2 } from '../../../../godot/vector';
+import type { Rgba } from '../../../../godot/math';
 
 // Re-exported so Component.tsx imports the shared Button pieces under one name.
 export { pickButtonStyleBox, resolveButtonDrawState, tintColor };
@@ -50,9 +51,9 @@ export const OPTION_BUTTON_THEME_FONT_KEY = 'font';
 // Theme font colours
 
 /** `control_font_color` (`default_theme.cpp:101`), OptionButton's `font_color` default (`:240`). */
-export const OPTION_BUTTON_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+export const OPTION_BUTTON_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 /** `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`:106`), OptionButton's `font_disabled_color` default (`:245`). */
-export const OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = {
+export const OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = {
   r: 0.875,
   g: 0.875,
   b: 0.875,
@@ -100,7 +101,7 @@ export function resolveOptionButtonSelectedText(props: OptionButtonProperties): 
 // Arrow
 
 /** `option_button_arrow.svg`'s authored size (`native/themeIcons.ts`), 12x12, never run through `_fit_icon_size`. */
-export const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vec2 = { x: 12, y: 12 };
+export const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vector2 = { x: 12, y: 12 };
 
 /** `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, OptionButton, arrow_icon, "arrow")` (`option_button.cpp:620`), the one themeable icon slot. */
 export const optionButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
@@ -115,7 +116,7 @@ export const optionButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}
  * (`option_button.cpp:62,131-133`), never through `_fit_icon_size` or `icon_max_width`, so a themed arrow
  * changes the reserved width and the draw position. The vendored size is the fallback.
  */
-export function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>): Vec2 {
+export function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 {
   return n.textureSlots.arrow ?? OPTION_BUTTON_ARROW_NATURAL_SIZE;
 }
 
@@ -173,16 +174,16 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
 
 interface OptionButtonContentInput {
   /** The control's own solved rect size, Godot px. */
-  rectSize: Vec2;
+  rectSize: Vector2;
   /** The current draw-state StyleBox's content margins. */
   styleMargin: { left: number; top: number; right: number; bottom: number };
-  arrowSize: Vec2;
+  arrowSize: Vector2;
   /** `arrow_margin` theme constant, measured from the full rect edge, not the content-margin edge. */
   arrowMargin: number;
   /** `h_separation` theme constant, clamped to >= 0, part of the arrow's internal-margin reservation. */
   hSeparation: number;
   /** The selected item's shaped natural size, `(0, 0)` with no selection. */
-  textNaturalSize: Vec2;
+  textNaturalSize: Vector2;
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the arrow to the left edge and the label against the right margin. */
   rtl: boolean;
 }
@@ -191,7 +192,7 @@ interface OptionButtonContentLayout {
   /** Local to the control's top-left, Godot px. */
   arrowRect: Rect2;
   /** The text box's top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there (`buildGlyphQuadArrays`). Always returned: the caller decides whether text draws. */
-  textOffset: Vec2;
+  textOffset: Vector2;
 }
 
 /**
@@ -215,7 +216,7 @@ export function layoutOptionButtonContent(input: OptionButtonContentInput): Opti
   const drawableWidth = rectSize.x - styleMargin.left - styleMargin.right - reserved;
   // Under `rtl` the reservation moves to SIDE_LEFT and the constructor's `HORIZONTAL_ALIGNMENT_LEFT`
   // (`:654`) swaps to RIGHT (`button.cpp:271-275`), so only that arm reads `h_separation`.
-  const textOffset: Vec2 = {
+  const textOffset: Vector2 = {
     x: rtl
       ? styleMargin.left +
         reserved +

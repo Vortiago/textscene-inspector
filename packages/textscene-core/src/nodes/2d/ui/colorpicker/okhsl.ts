@@ -9,7 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { ControlColor } from '../control/types';
+import type { Rgba } from '../../../../godot/math';
 
 interface Lab {
   L: number;
@@ -289,7 +289,7 @@ function getCs(L: number, a_: number, b_: number): Cs {
 }
 
 /** `Color::from_ok_hsl` and `Color::set_ok_hsl` (`core/math/color.cpp:236-247`) through `okhsl_to_srgb` (`ok_color.h:484-540`), each component clamped to 0..1 as `Color(...).clamp()` does. */
-export function okhslToSrgb(h: number, s: number, l: number): ControlColor {
+export function okhslToSrgb(h: number, s: number, l: number): Rgba {
   if (l === 1) return { r: 1, g: 1, b: 1, a: 1 };
   if (l === 0) return { r: 0, g: 0, b: 0, a: 1 };
 
@@ -337,7 +337,7 @@ interface Okhsl {
  * `srgb_to_okhsl` (`ok_color.h:542-593`) in one call. Each value is clamped
  * to 0..1, and NaN becomes 0, as each getter does.
  */
-export function srgbToOkhsl(color: Pick<ControlColor, 'r' | 'g' | 'b'>): Okhsl {
+export function srgbToOkhsl(color: Pick<Rgba, 'r' | 'g' | 'b'>): Okhsl {
   if (color.r === 0 && color.g === 0 && color.b === 0) return { h: 0, s: 0, l: 0 };
 
   const lab = linearSrgbToOklab({

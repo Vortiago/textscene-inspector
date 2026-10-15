@@ -10,16 +10,16 @@ import { parseResourceReference, findSubResource } from '../../../resources/SubR
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, boolOr } from '../../../parser/valueParsers';
 import { parseVector2 } from '../../../parser/vectors';
-import type { Vec2 } from './rect';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import { parseStyleBoxLine, type StyleBoxLineData } from './styleBoxLine';
 import { parseStyleBoxTexture, type StyleBoxTextureData } from './styleBoxTexture';
+import type { Vector2 } from '../../../godot/vector';
 
 // An absent StyleBoxFlat key takes Godot's default (`native/styleBoxFlat.ts` cites each field).
 const DEFAULT_BG_COLOR = { r: 0.6, g: 0.6, b: 0.6, a: 1 }; // style_box_flat.h:38
 const DEFAULT_BORDER_COLOR = { r: 0.8, g: 0.8, b: 0.8, a: 1 }; // style_box_flat.h:40
 const DEFAULT_SHADOW_COLOR = { r: 0, g: 0, b: 0, a: 0.6 }; // style_box_flat.h:39
-const ZERO_VECTOR2: Vec2 = { x: 0, y: 0 }; // `skew`/`shadow_offset` (style_box_flat.h:48,53)
+const ZERO_VECTOR2: Vector2 = { x: 0, y: 0 }; // `skew`/`shadow_offset` (style_box_flat.h:48,53)
 const TRANSPARENT = { r: 0, g: 0, b: 0, a: 0 };
 
 const CONTEXT = 'StyleBoxFlat';
@@ -35,7 +35,7 @@ const CORNER_DETAIL_MIN = 1;
 const CORNER_DETAIL_MAX = 20;
 
 /** A `Vector2(x, y)` property, or `fallback` when absent or ungrammatical. */
-function vector2Or(raw: string | undefined, fallback: Vec2): Vec2 {
+function vector2Or(raw: string | undefined, fallback: Vector2): Vector2 {
   if (raw === undefined) return fallback;
   try {
     return parseVector2(raw);

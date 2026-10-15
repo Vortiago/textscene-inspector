@@ -8,11 +8,12 @@
 // project with no theme scale, as the `scenes/fixtures/` scenes resolve to.
 
 import { nativeTheme } from '../nativeTheme';
-import { WHITE_MODULATE, type RGBA } from '../../../canvasItemModulate';
+import { WHITE_MODULATE } from '../../../canvasItemModulate';
 import { godotColorToLinear } from '../../../godotColor';
 import type { NativeControlComponentProps } from '../../ControlComponentRegistry';
 import type { ControlOwnTint } from '../controlTint';
 import type { Rect2 } from '../rect';
+import type { Rgba } from '../../../../godot/math';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
@@ -20,7 +21,7 @@ const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
  * A composed own-pixel tint at an sRGB value, as the walker hands a painter.
  * `own` is already `modulate × self_modulate`, so a test states the product.
  */
-export function painterTint(own: RGBA = WHITE_MODULATE): ControlOwnTint {
+export function painterTint(own: Rgba = WHITE_MODULATE): ControlOwnTint {
   return { own, color: godotColorToLinear(own), opacity: own.a };
 }
 

@@ -11,11 +11,11 @@
  */
 
 import * as THREE from 'three';
-import type { Color } from '../../nodes/base/node2d/types.js';
 import { SHADOW_MAP_BINS } from './shadowPolarMap.js';
 // Type-only, so the pair of modules never form a runtime cycle: the filter
 // constants are declared beside the quads that branch on them.
 import type { SHADOW_FILTER_PCF5, SHADOW_FILTER_PCF13 } from './lightQuad.js';
+import type { Rgba } from '../../godot/math.js';
 
 /**
  * `rasterizer_canvas_gles3.cpp:182`:
@@ -43,7 +43,7 @@ export interface ShadowSampling {
    * mechanism splits the two terms between two quads. The tint quad carries the
    * colour itself, filtered or not.
    */
-  readonly shadowColor: Color;
+  readonly shadowColor: Rgba;
 }
 
 /**

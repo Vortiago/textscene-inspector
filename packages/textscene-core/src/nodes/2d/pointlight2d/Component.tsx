@@ -13,7 +13,6 @@ import { applyTextureState, releaseBoundTexture } from '../../../resources/textu
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { PointLight2DProperties } from './types';
-import type { Color } from '../../base/node2d/types';
 import {
   updateShadowPolarTexture,
   shadowColorContributes,
@@ -33,6 +32,7 @@ import { useShadowLightPose } from '../../../r3f/lighting2d/shadowLightPose';
 import { litQuadRenderOrder, ShadowVolumeMask } from '../../../r3f/lighting2d/ShadowVolumeMask';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { useLightQuadMaterials, type LightQuadMaterials } from './useLightQuadMaterials';
+import type { Rgba } from '../../../godot/math';
 
 /** The quads a light draws besides its lit quad, each only when its material exists. */
 const OPTIONAL_ROLES = [
@@ -186,13 +186,13 @@ function QuadMesh({
   casters,
 }: {
   texture: THREE.Texture;
-  color: Color;
+  color: Rgba;
   energy: number;
   scale: number;
   offset: { x: number; y: number };
   blendMode: number;
   /** `Light2D.shadow_color`: what this light contributes where it is blocked. */
-  shadowColor: Color;
+  shadowColor: Rgba;
   /** `Light2D.shadow_filter`: NONE picks the stencil, PCF5/PCF13 the polar map. */
   shadowFilter: number;
   /** `Light2D.shadow_filter_smooth`: how wide the PCF taps spread the boundary. */

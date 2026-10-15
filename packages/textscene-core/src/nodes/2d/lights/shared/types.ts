@@ -1,6 +1,7 @@
 /** The Light2D property shape PointLight2D and DirectionalLight2D share. */
 
-import type { Node2DProperties, Color } from '../../../base/node2d/types';
+import type { Node2DProperties } from '../../../base/node2d/types';
+import type { Rgba } from '../../../../godot/math';
 
 /** `Light2D.BlendMode`: ADD, SUB, MIX. */
 export type Light2DBlendMode = 0 | 1 | 2;
@@ -10,7 +11,7 @@ export type Light2DShadowFilter = 0 | 1 | 2;
 
 export interface Light2DProperties extends Node2DProperties {
   enabled: boolean;
-  color: Color;
+  color: Rgba;
   energy: number;
   blend_mode: Light2DBlendMode;
   /**
@@ -46,7 +47,7 @@ export interface Light2DProperties extends Node2DProperties {
    * `Light2D.shadow_color`, default transparent black, so a shadowed pixel reads
    * back the unlit surface exactly rather than darkened.
    */
-  shadow_color: Color;
+  shadow_color: Rgba;
   /**
    * `Light2D.shadow_filter`: how the shadow boundary is sampled. NONE is a hard
    * `step()`. PCF5 and PCF13 spread it over `shadow_filter_smooth` texels.

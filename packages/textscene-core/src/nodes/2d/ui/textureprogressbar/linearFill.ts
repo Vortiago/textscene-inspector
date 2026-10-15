@@ -9,14 +9,15 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import { FillMode } from './types';
+import type { Vector2 } from '../../../../godot/vector';
 
 interface LinearProgressDraw {
   /** Where the cropped region draws, control-local Godot px (`progress_offset` folded in). */
-  offset: Vec2;
+  offset: Vector2;
   /** The drawn (== cropped) size. */
-  size: Vec2;
+  size: Vector2;
   /** The texture-pixel-space crop window. */
   region: Rect2;
 }
@@ -25,8 +26,8 @@ interface LinearProgressDraw {
 export function linearProgressDraw(
   mode: number | undefined,
   ratio: number,
-  textureSize: Vec2,
-  progressOffset: Vec2
+  textureSize: Vector2,
+  progressOffset: Vector2
 ): LinearProgressDraw | null {
   const s = textureSize;
   switch (mode) {

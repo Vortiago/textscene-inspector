@@ -12,7 +12,7 @@
 
 import { boolSlotValue } from '../../../godot/index.js';
 import type { ProjectSettings } from '../../../parser/projectSettingsParser.js';
-import type { Vec2 } from './rect';
+import type { Vector2 } from '../../../godot/vector.js';
 
 /** `gui/common/snap_controls_to_pixels`, addressed the way Godot addresses it. */
 export const SNAP_CONTROLS_TO_PIXELS_SETTING = 'gui/common/snap_controls_to_pixels';
@@ -44,9 +44,9 @@ export function snapControlsToPixelsEnabled(settings: ProjectSettings | null): b
 export interface ControlDrawTransform {
   /** Radians, Godot's `data.rotation`. */
   rotation: number;
-  scale: Vec2;
+  scale: Vector2;
   /** `Control::get_combined_pivot_offset()`: `pivot_offset + pivot_offset_ratio * size`. */
-  pivot: Vec2;
+  pivot: Vector2;
 }
 
 /**
@@ -55,7 +55,7 @@ export interface ControlDrawTransform {
  * With zero skew the basis columns are `(cos r, sin r) * scale.x` and
  * `(-sin r, cos r) * scale.y`. Zero for an unrotated, unscaled Control.
  */
-export function internalTransformTranslation(transform: ControlDrawTransform): Vec2 {
+export function internalTransformTranslation(transform: ControlDrawTransform): Vector2 {
   const { rotation, scale, pivot } = transform;
   const cos = Math.cos(rotation);
   const sin = Math.sin(rotation);
@@ -70,10 +70,10 @@ export function internalTransformTranslation(transform: ControlDrawTransform): V
  * snapped sum less the internal part: `floor(position + 0.5)` for an identity basis.
  */
 export function snappedControlOrigin(
-  position: Vec2,
+  position: Vector2,
   transform: ControlDrawTransform,
   snapEnabled: boolean
-): Vec2 {
+): Vector2 {
   // `is_inside_tree()` holds for all that renders. A non-finite rotation fails the
   // `<` and does not snap, as in Godot.
   if (!snapEnabled || !(Math.abs(Math.sin(transform.rotation * 4)) < SNAP_ROTATION_EPSILON)) {

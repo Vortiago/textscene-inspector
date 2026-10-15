@@ -9,6 +9,7 @@ import type * as THREE from 'three';
 import type { EmissionScalars } from './emission';
 import type { TextureChannel, TextureChannelMask } from '../../../godot/textureChannel';
 import type { UVTransform } from '../../textures/applyTextureState';
+import type { Vector2 } from '../../../godot/vector';
 
 /** Godot's height mapping of a surface. */
 export interface Heightmap {
@@ -32,10 +33,6 @@ export const HEIGHTMAP_DEFAULTS: Heightmap = {
   flip: [1, 1],
   readsHeight: false,
 };
-
-// One Color declaration repo-wide, re-exported here because this slice's
-// consumers (sky, environment, preview lighting) import it from this module.
-export type { Color } from '../../../utils/colorParser';
 
 /** Godot `BaseMaterial3D.Transparency`. */
 export enum Transparency {
@@ -115,12 +112,6 @@ export type ResolvedTextures = ResolvedTextureSlots & { albedoTargetUv?: UVTrans
  */
 export type TextureSlotReferences = Readonly<Partial<Record<TextureSlot, string>>>;
 
-/** `uv1_scale` / `uv1_offset` / `normal_scale`, reduced to the two axes UVs use. */
-export interface MaterialVec2 {
-  x: number;
-  y: number;
-}
-
 /**
  * The decoded material: Godot's own semantics, no renderer types. One decode
  * feeds both arrival paths (inline `[sub_resource]` text and an external
@@ -154,12 +145,12 @@ export interface StandardMaterial3DData {
   textureFilter: number;
   /** `texture_repeat` (default true): whether a UV outside 0..1 tiles or clamps. */
   textureRepeat: boolean;
-  uv1Scale: MaterialVec2;
-  uv1Offset: MaterialVec2;
+  uv1Scale: Vector2;
+  uv1Offset: Vector2;
   /** `uv2_scale`, identity where Godot never applies it (see `decode.ts`). */
-  uv2Scale: MaterialVec2;
+  uv2Scale: Vector2;
   /** `uv2_offset`, identity where Godot never applies it. */
-  uv2Offset: MaterialVec2;
+  uv2Offset: Vector2;
   /** `uv2_triplanar`: triplanar mapping of the second UV set. */
   uv2Triplanar: boolean;
   /** The slots that sample UV2 (`emission_on_uv2`, `ao_on_uv2`). */
@@ -225,7 +216,7 @@ export interface StandardMaterial3DData {
   /** `ao_texture_channel`: the AO map channel the shader reads. */
   aoTextureChannel: TextureChannel;
   /** `normal_scale`, as the uniform XY pair three's `normalScale` wants. */
-  normalScale: MaterialVec2;
+  normalScale: Vector2;
   /** `uv1_triplanar`: triplanar mapping of the first UV set. */
   triplanar: boolean;
   /** `clearcoat` strength (0..1), gated on `clearcoat_enabled`. */
@@ -293,10 +284,10 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   emissionOperator: number;
   textureFilter: number;
   textureRepeat: boolean;
-  uv1Scale: MaterialVec2;
-  uv1Offset: MaterialVec2;
-  uv2Scale: MaterialVec2;
-  uv2Offset: MaterialVec2;
+  uv1Scale: Vector2;
+  uv1Offset: Vector2;
+  uv2Scale: Vector2;
+  uv2Offset: Vector2;
   uv2Triplanar: boolean;
   uv2Slots: readonly TextureSlot[];
   transparent: boolean;
@@ -319,7 +310,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   aoTextureChannelMask: TextureChannelMask;
   side: THREE.Side;
   cullModeExplicit: boolean;
-  normalScale: MaterialVec2;
+  normalScale: Vector2;
   triplanar: boolean;
   clearcoat: number;
   clearcoatRoughness: number;

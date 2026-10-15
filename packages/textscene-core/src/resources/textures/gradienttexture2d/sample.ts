@@ -6,9 +6,9 @@
  */
 
 import { cubicInterpolatef, lerpf } from '../../../godot/math';
-import type { Color } from '../../../utils/colorParser';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
 import type { Gradient, GradientTexture2D } from './types';
+import type { Rgba } from '../../../godot/math';
 
 const f = Math.fround;
 
@@ -60,7 +60,7 @@ export function gradientOffsetAt(tex: GradientTexture2D, x: number, y: number): 
  * stops, clamp to the endpoints, then blend by the interpolation mode in sRGB space. Every
  * step runs in float, as Godot's does, since a double lands 1/255 off on some bytes.
  */
-export function sampleGradientColor(gradient: Gradient, offset: number): Color {
+export function sampleGradientColor(gradient: Gradient, offset: number): Rgba {
   const stops = gradient.stops;
   const n = stops.length;
   if (n === 0) return { r: 0, g: 0, b: 0, a: 1 };

@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { TscnNode } from '../../../../parser/types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type {
   MinimumSizeFn,
   TextureSlotRequest,
@@ -18,6 +18,7 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { TextureRectDraw } from '../texturerect/nativeSolver';
 import type { TextureButtonProperties } from './types';
+import type { Vector2 } from '../../../../godot/vector';
 
 /** The keys `textureButtonTextureSlots`/`textureButtonMinimumSize` share for `SolveNode.textureSlots`. */
 export const TEXTURE_NORMAL_KEY = 'texture_normal';
@@ -106,8 +107,8 @@ const STRETCH_KEEP_ASPECT_COVERED = 6;
  * `region` stays `undefined` there, as in `texturerect/nativeSolver.ts`.
  */
 export function textureButtonDraw(
-  rectSize: Vec2,
-  textureSize: Vec2,
+  rectSize: Vector2,
+  textureSize: Vector2,
   stretchMode: number | undefined
 ): TextureRectDraw {
   const noDraw: TextureRectDraw = {

@@ -5,12 +5,13 @@
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
-import type { Color, Node2DProperties } from './types';
+import type { Node2DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
+import type { Rgba } from '../../../godot/math';
 
 const radToDeg = (rad: number) => ((rad * 180) / Math.PI).toFixed(2);
 
-function isWhite(color: Color): boolean {
+function isWhite(color: Rgba): boolean {
   return color.r === 1 && color.g === 1 && color.b === 1 && color.a === 1;
 }
 

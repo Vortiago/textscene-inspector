@@ -6,15 +6,15 @@
  */
 
 import type { CSSProperties } from 'react';
-import type { Color } from '../../../utils/colorParser';
 import type { StyleBoxData } from './types';
 import { channelToByte } from '../../../utils/colorSpace';
+import type { Rgba } from '../../../godot/math';
 
 /**
  * A decoded Color as CSS `rgba()`, clamped to 0..1 like `parseColorToHex`. Godot
  * allows overbright Control colours, and CSS drops an out-of-range declaration.
  */
-export function controlColorToCss(c: Color): string {
+export function controlColorToCss(c: Rgba): string {
   const alpha = Math.max(0, Math.min(1, c.a));
   return `rgba(${channelToByte(c.r)}, ${channelToByte(c.g)}, ${channelToByte(c.b)}, ${alpha})`;
 }

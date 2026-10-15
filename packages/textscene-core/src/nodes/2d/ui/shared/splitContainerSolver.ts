@@ -9,7 +9,7 @@
  */
 
 import type { TscnNode } from '../../../../parser/types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import { defineChannel } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
@@ -21,6 +21,7 @@ import type {
 import type { ControlProperties } from '../control/types';
 import { splitOffsetsOf, type SplitContainerProperties } from './splitContainer';
 import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from './fitChildInRect';
+import type { Vector2 } from '../../../../godot/vector';
 
 /** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`). */
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
@@ -33,7 +34,7 @@ const DRAGGER_HIDDEN_COLLAPSED = 2;
 
 /** One child's inputs to the split solve: its combined minimum size and the `Control` fields the offset formula and `fit_child_in_rect` read. */
 export interface SplitChildInput {
-  minSize: Vec2;
+  minSize: Vector2;
   hSizeFlags: number;
   vSizeFlags: number;
   stretchRatio: number;
@@ -286,8 +287,8 @@ export function resortSplitContainer(
 export function splitContainerMinimumSize(
   vertical: boolean,
   separation: number,
-  childMinSizes: readonly Vec2[]
-): Vec2 {
+  childMinSizes: readonly Vector2[]
+): Vector2 {
   let mainAxis = 0;
   let crossAxis = 0;
 
@@ -339,7 +340,7 @@ export function splitGrabberThemeKey(nativeType: string, vertical: boolean): str
 }
 
 /** `hsplitter.svg`/`vsplitter.svg`'s authored size (`native/themeIcons.ts`): 8px along the split axis, 48px across it. */
-function splitGrabberVendoredSize(vertical: boolean): Vec2 {
+function splitGrabberVendoredSize(vertical: boolean): Vector2 {
   return vertical ? { x: 48, y: 8 } : { x: 8, y: 48 };
 }
 
@@ -347,8 +348,8 @@ function splitGrabberVendoredSize(vertical: boolean): Vec2 {
 export function splitGrabberIconSize(
   nativeType: string,
   vertical: boolean,
-  textureSlots: Readonly<Record<string, Vec2 | null>>
-): Vec2 {
+  textureSlots: Readonly<Record<string, Vector2 | null>>
+): Vector2 {
   return textureSlots[splitGrabberThemeKey(nativeType, vertical)] ?? splitGrabberVendoredSize(vertical);
 }
 
@@ -379,7 +380,7 @@ export const splitContainerTextureSlots: TextureSlotsFn = (node, themedIcons = {
   return themed ? [{ key, ref: themed.ref, scope: themed.resources }] : [];
 };
 
-function toChildInput(node: SolveNode, minSize: Vec2): SplitChildInput {
+function toChildInput(node: SolveNode, minSize: Vector2): SplitChildInput {
   const props = node.node.properties as ControlProperties;
   return {
     minSize,
@@ -500,7 +501,7 @@ export function splitGrabberIconRect(
   containerSize: { width: number; height: number },
   draggerPos: number,
   separation: number,
-  iconSize: Vec2
+  iconSize: Vector2
 ): Rect2 {
   const barRect: Rect2 = vertical
     ? { x: 0, y: draggerPos, w: containerSize.width, h: separation }

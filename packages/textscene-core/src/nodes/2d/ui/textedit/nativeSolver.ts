@@ -33,11 +33,11 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
-import type { Color } from '../../../../utils/colorParser';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { CodeHighlighterColorSpan } from '../../../../resources/styles/codehighlighter/highlight';
-import type { ControlColor } from '../control/types';
 import type { TextEditProperties } from './types';
+import type { Vector2 } from '../../../../godot/vector';
+import type { Rgba } from '../../../../godot/math';
 
 /** `SceneStringName(font)` = `"font"`: `default_theme.cpp:460` (TextEdit), `:501` (CodeEdit). */
 export const TEXT_EDIT_THEME_FONT_KEY = 'font';
@@ -80,17 +80,17 @@ export function pickTextEditStyleBox(
 }
 
 /** `control_font_color` = `Color(0.875, 0.875, 0.875)` (`default_theme.cpp:101`): the `font_color` default of TextEdit and CodeEdit (`:466`, `:512`). */
-const TEXT_EDIT_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+const TEXT_EDIT_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 
 /** `control_font_disabled_color` = `control_font_color * Color(1,1,1,0.5)` (`:106`): TextEdit's `font_readonly_color` default (`:468`). CodeEdit computes the same value inline (`:513`). */
-const TEXT_EDIT_DEFAULT_READONLY_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+const TEXT_EDIT_DEFAULT_READONLY_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
 
 const TEXT_EDIT_THEME_KEYS: Record<TextEditStyleState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
   read_only: { sizeKey: 'font_size', colorKey: 'font_readonly_color' },
 };
 
-const TEXT_EDIT_DEFAULT_COLORS: Record<TextEditStyleState, ControlColor> = {
+const TEXT_EDIT_DEFAULT_COLORS: Record<TextEditStyleState, Rgba> = {
   normal: TEXT_EDIT_DEFAULT_FONT_COLOR,
   read_only: TEXT_EDIT_DEFAULT_READONLY_COLOR,
 };
@@ -184,7 +184,7 @@ export function textEditContentSize(
   gutterBandWidthPx: number,
   minimapWidthPx: number,
   drawMinimap: boolean | undefined
-): Vec2 {
+): Vector2 {
   let maxRowWidthPx = 0;
   let totalRows = 0;
   for (const { layout } of lineLayouts) {
@@ -236,7 +236,7 @@ export function textEditMinimumSizeWith(
   styleBox: StyleBoxFlatData,
   gutterBandWidthPx: number,
   tabSize?: number
-): Vec2 {
+): Vector2 {
   const styleMin = contentMarginSize(styleBox);
   const state = resolveTextEditStyleState(props.editable);
   const { fontSizePx } = textEditTextTheme(n, props, state, ctx);
@@ -446,7 +446,7 @@ export function textEditRowStartIndices(lineText: string, rows: readonly TextLin
   return starts;
 }
 
-function colorAt(spans: readonly CodeHighlighterColorSpan[], index: number, fallback: Color): Color {
+function colorAt(spans: readonly CodeHighlighterColorSpan[], index: number, fallback: Rgba): Rgba {
   for (const span of spans) {
     if (index >= span.startIndex && index < span.endIndex) return span.color;
   }
@@ -461,18 +461,18 @@ function colorAt(spans: readonly CodeHighlighterColorSpan[], index: number, fall
 export function textEditGlyphColorAt(
   spans: readonly CodeHighlighterColorSpan[] | undefined,
   lineIndex: number,
-  fallback: Color
-): Color {
+  fallback: Rgba
+): Rgba {
   return spans ? colorAt(spans, lineIndex, fallback) : fallback;
 }
 
-function sameColor(a: Color, b: Color): boolean {
+function sameColor(a: Rgba, b: Rgba): boolean {
   return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a;
 }
 
 interface TextEditGlyphColorRun {
   glyphs: GlyphPlacement[];
-  color: Color;
+  color: Rgba;
 }
 
 /**
@@ -484,7 +484,7 @@ export function textEditRowColorRuns(
   rowGlyphs: readonly GlyphPlacement[],
   rowStartIndex: number,
   spans: readonly CodeHighlighterColorSpan[] | undefined,
-  fallbackColor: Color
+  fallbackColor: Rgba
 ): TextEditGlyphColorRun[] {
   if (rowGlyphs.length === 0) return [{ glyphs: [], color: fallbackColor }];
   const runs: TextEditGlyphColorRun[] = [];

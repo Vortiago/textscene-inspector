@@ -1,7 +1,7 @@
 /** NavigationAgent3D type definitions. */
 
 import type { NodeProperties } from '../../node/types';
-import type { Vector3 } from '../../../parser/vectors';
+import type { Vector3 } from '../../../godot/vector';
 
 export interface NavigationAgent3DProperties extends NodeProperties {
   /** Agent radius used for avoidance. Godot default is 0.5. */

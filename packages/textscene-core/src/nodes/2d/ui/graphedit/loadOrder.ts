@@ -13,7 +13,7 @@
 import { parseOptionalFloat, parseOptionalVector2 } from '../../../../parser/valueParsers';
 // The min branch is tested first, so the inverted range this replay builds returns the MAX.
 import { clamp } from '../../../../godot/math';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Vector2 } from '../../../../godot/vector';
 
 /**
  * `zoom_step`'s own member default (`graph_edit.h:227`), the only input to the
@@ -35,7 +35,7 @@ const ZERO_SCROLL_BOUNDS = { x: 0, y: 0 };
 
 interface GraphEditLoadState {
   /** `scroll_offset` as stored, or undefined where the file never ran the setter. */
-  scrollOffset: Vec2 | undefined;
+  scrollOffset: Vector2 | undefined;
   /** `zoom` as stored, or undefined where neither it nor a bound was written. */
   zoom: number | undefined;
   /** `zoom_minus_button->is_disabled()`. */
@@ -46,16 +46,16 @@ interface GraphEditLoadState {
 
 interface ReplayState {
   offsets: [number, number, number, number];
-  customMinimum: Vec2;
+  customMinimum: Vector2;
   zoom: number;
   zoomMin: number;
   zoomMax: number;
   zoomTouched: boolean;
   minusDisabled: boolean;
   plusDisabled: boolean;
-  scrollMin: Vec2;
-  scrollMax: Vec2;
-  scrollOffset: Vec2 | undefined;
+  scrollMin: Vector2;
+  scrollMax: Vector2;
+  scrollOffset: Vector2 | undefined;
 }
 
 /**
@@ -63,7 +63,7 @@ interface ReplayState {
  * parent rect is empty there (`:687-689`), so each `anchor_*` adds zero and the offsets span the
  * size, floored by `custom_minimum_size` (`:1744-1750`).
  */
-function sizeOf(state: ReplayState): Vec2 {
+function sizeOf(state: ReplayState): Vector2 {
   return {
     x: Math.max(state.offsets[2] - state.offsets[0], state.customMinimum.x),
     y: Math.max(state.offsets[3] - state.offsets[1], state.customMinimum.y),

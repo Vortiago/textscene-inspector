@@ -9,7 +9,7 @@ import { warn } from '../../logger';
 import { indexedKeyRegex, ruleInt, boolSlotValue, stringToInt } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { intOr, vec2iOr } from '../../parser/valueParsers';
-import { parseColorOrUndefined, type Color } from '../../utils/colorParser';
+import { parseColorOrUndefined } from '../../utils/colorParser';
 import { canvasItemMaterialOf } from '../materials/canvasitemmaterial/decode';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 // Aliased: `TileSetSourceData` has a `findSubResource` key of its own, which the adapters fill.
@@ -25,8 +25,9 @@ import type {
   AtlasTileModel,
   TileMaterial,
   TileSetModel,
-  Vec2i,
 } from './types';
+import type { Rgba } from '../../godot/math.js';
+import type { Vector2 } from '../../godot/vector.js';
 
 /** Context-independent view of a TileSet resource and its surroundings. */
 interface TileSetSourceData {
@@ -310,13 +311,13 @@ function decodeTileData(
   };
 }
 
-function tileModulate(value: string, key: string): Color {
+function tileModulate(value: string, key: string): Rgba {
   const color = parseColorOrUndefined(value);
   if (color) return color;
   warn(`[TileSet] ${key}: invalid Color "${value}" — using white`);
   return defaultTileData().modulate;
 }
 
-function tileSetVec2i(value: string | undefined, fallback: Vec2i, key: string): Vec2i {
+function tileSetVec2i(value: string | undefined, fallback: Vector2, key: string): Vector2 {
   return vec2iOr(value, fallback, `[TileSet] ${key}`);
 }

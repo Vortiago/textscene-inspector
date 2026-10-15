@@ -7,10 +7,10 @@
 
 import * as THREE from 'three';
 import { DecalGeometry } from 'three/examples/jsm/geometries/DecalGeometry.js';
-import type { Vector3 } from '../../../parser/vectors';
 import { isInMask } from '../../../r3f/visualLayers';
 import { bakeDecalFadeAttribute, type DecalGeometricFade } from './decalFade';
 import { DECAL_DEFAULT_CULL_MASK } from './parser';
+import type { Vector3 } from '../../../godot/vector.js';
 
 /**
  * The projector orientation in the decal's local frame. Godot projects along local -Y, and

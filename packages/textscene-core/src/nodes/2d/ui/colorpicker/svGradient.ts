@@ -8,8 +8,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
-import type { ControlColor } from '../control/types';
 import { hsvToRgb } from './nativeSolver';
+import type { Rgba } from '../../../../godot/math';
 
 export interface QuadGeometry {
   /** x,y,z triples from the rect's top-left, in Godot px. The caller flips +Y down, as for `styleBoxFlatGeometry`. */
@@ -19,11 +19,7 @@ export interface QuadGeometry {
   colors: number[];
 }
 
-function quad(
-  w: number,
-  h: number,
-  corners: readonly [ControlColor, ControlColor, ControlColor, ControlColor]
-): QuadGeometry {
+function quad(w: number, h: number, corners: readonly [Rgba, Rgba, Rgba, Rgba]): QuadGeometry {
   // Corners run top-left, top-right, bottom-right, bottom-left, as the `points` of
   // `ColorPickerShape::draw_sv_square` do (`color_picker_shape.cpp:233-238`).
   const positions = [0, 0, 0, w, 0, 0, w, -h, 0, 0, -h, 0];
@@ -33,8 +29,8 @@ function quad(
   return { positions, indices, colors };
 }
 
-const WHITE: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
-const BLACK: ControlColor = { r: 0, g: 0, b: 0, a: 1 };
+const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+const BLACK: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 
 /**
  * The first `draw_polygon` of `ColorPickerShape::draw_sv_square`
@@ -66,7 +62,7 @@ export function svSquareHueLayer(w: number, h: number, hue: number): QuadGeometr
  * channel-slider draw of `color_mode.cpp` and `color_picker.cpp`. One quad
  * spans each pair of stops, and the colour varies along x only.
  */
-export function horizontalStripGeometry(w: number, h: number, stops: readonly ControlColor[]): QuadGeometry {
+export function horizontalStripGeometry(w: number, h: number, stops: readonly Rgba[]): QuadGeometry {
   const positions: number[] = [];
   const colors: number[] = [];
   const indices: number[] = [];
@@ -90,7 +86,7 @@ export function horizontalStripGeometry(w: number, h: number, stops: readonly Co
  * and RGB mode uses `_SRGB` (`:113`). The caller's GPU lerp then runs on linear
  * values with no sRGB decode.
  */
-export function linearizeStops(stops: readonly ControlColor[]): ControlColor[] {
+export function linearizeStops(stops: readonly Rgba[]): Rgba[] {
   return stops.map((c) => ({
     r: sRGBChannelToLinear(c.r),
     g: sRGBChannelToLinear(c.g),

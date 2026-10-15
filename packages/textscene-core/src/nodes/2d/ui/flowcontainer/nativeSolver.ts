@@ -13,7 +13,7 @@
 import { isZeroApprox } from '../../../../godot/math';
 import type { ControlProperties } from '../control/types';
 import type { FlowContainerProperties } from './types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import {
@@ -30,6 +30,7 @@ import {
   hasFlag,
   isSortableControl,
 } from '../shared/fitChildInRect';
+import type { Vector2 } from '../../../../godot/vector';
 
 // FlowContainer::AlignmentMode (flow_container.h:39-43).
 const ALIGNMENT_BEGIN = 0;
@@ -80,7 +81,7 @@ function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation', theme:
 
 interface ChildMsc {
   /** Combined minimum size, truncated to `Size2i` (`:72`). */
-  msc: Vec2;
+  msc: Vector2;
   /** The child's size flags on the main axis have `SIZE_EXPAND`. */
   mainExpand: boolean;
   stretchRatio: number;
@@ -115,7 +116,7 @@ function computeLines(
   let lineLength = 0;
   let lineStretchRatioTotal = 0;
   let childrenInCurrentLine = 0;
-  let lastMsc: Vec2 | null = null;
+  let lastMsc: Vector2 | null = null;
 
   const pushLine = (isFilled: boolean) => {
     lines.push({
@@ -175,7 +176,7 @@ function computeLines(
 }
 
 function buildChildMscs(
-  entries: readonly { node: SolveNode; minSize: Vec2 }[],
+  entries: readonly { node: SolveNode; minSize: Vector2 }[],
   vertical: boolean
 ): ChildMsc[] {
   return entries.map(({ node, minSize }) => ({

@@ -9,8 +9,8 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
 import { isEqualApprox } from '../../../godot/index.js';
-import type { Vector3 } from '../../../parser/vectors.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
+import type { Vector3 } from '../../../godot/vector.js';
 
 const arms = {
   startEqualsEnd: groundedArm('navigationlink3d-start-position-equals-end-position', {

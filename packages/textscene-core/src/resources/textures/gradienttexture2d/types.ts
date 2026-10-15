@@ -4,7 +4,7 @@
  * and linter paths can import it.
  */
 
-import type { Color } from '../../../utils/colorParser';
+import type { Rgba } from '../../../godot/math';
 
 /** `Gradient.interpolation_mode`: how colour blends between stops. */
 export enum GradientInterpolationMode {
@@ -30,7 +30,7 @@ export enum GradientRepeat {
 /** One `(offset, color)` stop of a Gradient, offset in 0..1. */
 export interface GradientColorStop {
   offset: number;
-  color: Color;
+  color: Rgba;
 }
 
 export interface Gradient {

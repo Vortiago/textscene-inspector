@@ -4,7 +4,6 @@
  * properties, so a wrong default looks like a wrong shader.
  */
 
-import type { Color } from '../../utils/colorParser';
 import type { Sky, SkyBake, SkyProcessMode, SkyProcessing, SkyProperties } from './types';
 import {
   REAL_TIME_RADIANCE_SIZE,
@@ -13,8 +12,9 @@ import {
 } from '../../godot/skyReflection';
 import { floatOr, parseOptionalInt } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
+import type { Rgba } from '../../godot/math';
 
-const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
+const rgb = (r: number, g: number, b: number): Rgba => ({ r, g, b, a: 1 });
 
 /**
  * The `sky_material` a `Sky` points at, `SubResource("…")` or `ExtResource("…")`

@@ -24,7 +24,6 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { useUndecodedTexture } from '../../../../r3f/undecodedTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import type { ControlColor } from '../control/types';
 import { lineEditDisplayText } from './displayText';
 import { LINE_EDIT_CLEAR_ICON, LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import {
@@ -41,12 +40,13 @@ import {
   EXPAND_MODE_ORIGINAL_SIZE,
 } from './nativeSolver';
 import type { LineEditProperties } from './types';
+import type { Rgba } from '../../../../godot/math';
 
 const HORIZONTAL_ALIGNMENT_LEFT = 0;
 const DEFAULT_CARET_WIDTH_PX = 1;
 
 /** `Color(1, 1, 1, !is_editable() ? .5*.9 : .9)`: `right_icon`'s draw-time tint (`line_edit.cpp:1443`), never the clear button's. */
-function rightIconLocalColor(editable: boolean): ControlColor {
+function rightIconLocalColor(editable: boolean): Rgba {
   return { r: 1, g: 1, b: 1, a: editable ? 0.9 : 0.5 * 0.9 };
 }
 
@@ -156,7 +156,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const activeIconTexture =
     activeIcon === 'clear' ? clearIconTexture : activeIcon === 'right' ? rightIconTexture : null;
 
-  const iconLocalColor: ControlColor =
+  const iconLocalColor: Rgba =
     activeIcon === 'clear'
       ? (solveNode.colors['clear_button_color'] ?? LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR)
       : rightIconLocalColor(editable);

@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Vector2 } from '../../../../godot/vector';
 
 // Two constants, not one: lines take a major every 10 minor steps and dots every 5 (`:55-56`).
 const GRID_MINOR_STEPS_PER_MAJOR_LINE = 10;
@@ -31,8 +31,8 @@ interface GridExtent {
 
 /** `graph_edit.cpp:1896-1900`: `offset = scroll_offset / zoom`, `size = get_size() / zoom`, both floored per axis before the loop bounds. */
 function computeExtent(
-  rectSize: Vec2,
-  scrollOffset: Vec2,
+  rectSize: Vector2,
+  scrollOffset: Vector2,
   zoom: number,
   snappingDistance: number
 ): GridExtent {
@@ -60,8 +60,8 @@ export interface GridLine {
 
 /** `GRID_PATTERN_LINES` branch (`:1903-1929`). */
 export function computeGridLines(
-  rectSize: Vec2,
-  scrollOffset: Vec2,
+  rectSize: Vector2,
+  scrollOffset: Vector2,
   zoom: number,
   snappingDistance: number
 ): GridLine[] {
@@ -92,8 +92,8 @@ interface GridDots {
 
 /** `GRID_PATTERN_DOTS` branch's cell positions (`:1930-1962`), colour/alpha left to the caller. */
 export function computeGridDots(
-  rectSize: Vec2,
-  scrollOffset: Vec2,
+  rectSize: Vector2,
+  scrollOffset: Vector2,
   zoom: number,
   snappingDistance: number
 ): GridDots {

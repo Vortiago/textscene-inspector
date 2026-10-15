@@ -3,9 +3,9 @@
  * `VSeparator`: each subclass constructor fixes `orientation`, which is never serialised.
  */
 
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { SeparatorOrientation } from './styleBoxLine';
+import type { Vector2 } from '../../../../godot/vector';
 
 /**
  * `Size2 ms(3, 3)` with the cross axis replaced by the `separation` constant (`separator.cpp:34-39`).
@@ -14,7 +14,7 @@ import type { SeparatorOrientation } from './styleBoxLine';
  * a distinct constant that shares BoxContainer's literal `4`.
  */
 export function separatorMinimumSize(orientation: SeparatorOrientation): MinimumSizeFn {
-  return (n, ctx): Vec2 => {
+  return (n, ctx): Vector2 => {
     const separation = n.constants.separation ?? ctx.theme.separation;
     return orientation === 'vertical' ? { x: separation, y: 3 } : { x: 3, y: separation };
   };

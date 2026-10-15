@@ -8,11 +8,12 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseColor } from '../../../utils/colorParser';
-import { parseVector3, type Vector3 } from '../../../parser/vectors';
+import { parseVector3 } from '../../../parser/vectors';
 import { boolOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { warn } from '../../../logger';
 import { GODOT_EDITOR_LAYERS_MASK } from '../../../godot/visualLayers.js';
 import type { DecalProperties } from './types';
+import type { Vector3 } from '../../../godot/vector.js';
 
 /** Godot Decal default box size. */
 const DEFAULT_SIZE: Vector3 = { x: 2, y: 2, z: 2 };

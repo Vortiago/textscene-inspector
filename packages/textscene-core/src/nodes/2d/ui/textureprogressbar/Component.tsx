@@ -30,13 +30,13 @@ import {
 } from './radialFill';
 import { normalizeTextureProgressBarFillMode } from './nativeSolver';
 import { TexturedFillMesh } from './TexturedFillMesh';
-import type { ControlColor } from '../control/types';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { FillMode, type TextureProgressBarProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
+import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/vector';
 
-const WHITE: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
-const ZERO: Vec2 = { x: 0, y: 0 };
+const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+const ZERO: Vector2 = { x: 0, y: 0 };
 
 const FILTER: Record<'nearest' | 'linear', THREE.MagnificationTextureFilter> = {
   nearest: THREE.NearestFilter,
@@ -48,7 +48,7 @@ interface ImageLike {
   height?: number;
 }
 
-function naturalSize(texture: THREE.Texture | null): Vec2 | null {
+function naturalSize(texture: THREE.Texture | null): Vector2 | null {
   const image = texture?.image as ImageLike | undefined;
   const w = image?.width ?? 0;
   const h = image?.height ?? 0;
@@ -83,7 +83,7 @@ function useLayerTexture(
 function useCroppedTexture(
   texture: THREE.Texture | null,
   region: { x: number; y: number; w: number; h: number } | undefined,
-  textureSize: Vec2 | null
+  textureSize: Vector2 | null
 ): THREE.Texture | null {
   // Keyed on the numbers: the caller builds `region` and `textureSize` afresh each
   // render, and a clone per render would upload the texture again each time.
@@ -113,7 +113,7 @@ function useCroppedTexture(
 /** `region`'s UV window in `textureSize`, as repeat x, repeat y, offset x, offset y. */
 function cropWindow(
   region: { x: number; y: number; w: number; h: number },
-  textureSize: Vec2
+  textureSize: Vector2
 ): [number, number, number, number] {
   return [
     region.w / textureSize.x,
@@ -156,7 +156,7 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
     }),
     [stretchMarginLeft, stretchMarginTop, stretchMarginRight, stretchMarginBottom]
   );
-  const controlSize: Vec2 = useMemo(() => ({ x: rect.w, y: rect.h }), [rect.w, rect.h]);
+  const controlSize: Vector2 = useMemo(() => ({ x: rect.w, y: rect.h }), [rect.w, rect.h]);
 
   // `tint_under`/`tint_progress`/`tint_over` (raw sRGB) multiply into `tint.own` before the one
   // sRGB-to-linear conversion, as Button's icon does (`buttonBase.ts`).

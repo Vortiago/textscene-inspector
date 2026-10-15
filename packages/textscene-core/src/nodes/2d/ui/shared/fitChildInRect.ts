@@ -9,10 +9,11 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import { isTopLevelItem } from '../../../../r3f/canvasPaintOrder';
 import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ControlProperties } from '../control/types';
+import type { Vector2 } from '../../../../godot/vector';
 
 /** `Control::SizeFlags` (`scene/gui/control.h:64-69`). */
 export const SIZE_FILL = 1;
@@ -30,7 +31,7 @@ export const hasFlag = (flags: number, bit: number): boolean => (flags & bit) !=
  */
 export function fitChildInRect(
   rect: Rect2,
-  minSize: Vec2,
+  minSize: Vector2,
   hFlags: number,
   vFlags: number,
   rtl: boolean

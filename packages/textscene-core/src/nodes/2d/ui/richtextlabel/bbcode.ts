@@ -4,9 +4,9 @@
  * `[b]`/`[i]`/`[u]`/`[color]`/`[img]`. An unrecognised tag is literal text.
  */
 
-import type { ControlColor } from '../control/types';
 import { godotNamedColor } from '../../../../utils/godotNamedColor';
 import { stringToFloat, stringToInt } from '../../../../godot/string';
+import type { Rgba } from '../../../../godot/math';
 
 /** One currently-open BBCode tag. `value` is the `[name=value]` payload, if the tag carries one. */
 interface OpenBBCodeTag {
@@ -52,7 +52,7 @@ export interface ParsedImgTag {
   widthInPercent: boolean;
   heightInPercent: boolean;
   /** `Color::from_string(color_option->value, Color(1,1,1))` (`:6034-6038`): opaque white by default, not the paragraph's `default_color`. */
-  color: ControlColor;
+  color: Rgba;
   /** `region=` (`:6032-6039`), present only when it has area (`Rect2::has_area()`, both `w`/`h` > 0). */
   region?: ParsedImageRegion;
   /** `pad=true` (`:6087-6089`, `bbcode_options` form only). */
@@ -527,7 +527,7 @@ function hexByte(hex: string, i: number): number {
  * (`:372-390`): an optional `#`, then 3 or 4 digits over 15, or 6 or 8 over
  * 255. Alpha defaults to 1. `undefined` means "not hex", so the caller falls through.
  */
-function parseHtmlHex(value: string): ControlColor | undefined {
+function parseHtmlHex(value: string): Rgba | undefined {
   const body = value.startsWith('#') ? value.slice(1) : value;
   if (!/^[0-9a-fA-F]+$/.test(body)) return undefined;
 
@@ -561,6 +561,6 @@ function parseHtmlHex(value: string): ControlColor | undefined {
  * `core/math/color_names.inc` (`utils/godotNamedColor.ts`), then `fallback`.
  * A `Color(r, g, b, a)` literal is not a colour here.
  */
-export function resolveBBColor(value: string, fallback: ControlColor): ControlColor {
+export function resolveBBColor(value: string, fallback: Rgba): Rgba {
   return parseHtmlHex(value) ?? godotNamedColor(value) ?? fallback;
 }

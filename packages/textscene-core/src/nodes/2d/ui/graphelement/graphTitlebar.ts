@@ -10,7 +10,6 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { ControlColor } from '../control/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -27,13 +26,14 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { layoutLabelLines, LABEL_LINE_SPACING_PX, LABEL_PARAGRAPH_SEPARATOR } from '../label/nativeSolver';
+import type { Rgba } from '../../../../godot/math';
 
 /** `title_label`'s real Godot class: both variations are declared `set_type_variation("Label")`. */
 const TITLE_LABEL_NATIVE_TYPE = 'Label';
 
 interface TitlebarFontTheme {
   fontSizePx: number;
-  color: ControlColor;
+  color: Rgba;
   fontMetrics: FontMetrics;
 }
 
@@ -50,7 +50,7 @@ export function resolveTitleFontTheme(
   n: SolveNode,
   typeVariation: string,
   builtInDefaultSizePx: number,
-  defaultColor: ControlColor
+  defaultColor: Rgba
 ): TitlebarFontTheme {
   const scope = themeResolutionScope(TITLE_LABEL_NATIVE_TYPE, typeVariation, n.themeChain, n.projectTheme);
   const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined, builtInDefaultSizePx);

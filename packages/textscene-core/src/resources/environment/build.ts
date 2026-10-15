@@ -11,9 +11,10 @@ import {
   type EnvironmentSettings,
   type VolumetricFog,
 } from './types';
-import { scaledRgb, type Color } from '../../utils/colorParser';
+import { scaledRgb } from '../../utils/colorParser';
 import { sRGBChannelToLinear } from '../../utils/colorSpace';
 import { GodotToneMapper } from './godotToneMapping';
+import type { Rgba } from '../../godot/math';
 
 /**
  * The white the tonemapper gets, as `Environment::_update_tonemap` (`scene/resources/environment.cpp`)
@@ -33,7 +34,7 @@ function whiteFor(properties: EnvironmentProperties): number {
  */
 export function createEnvironmentSettings(
   properties: EnvironmentProperties,
-  clearColor: Color
+  clearColor: Rgba
 ): EnvironmentSettings {
   const backgroundColor =
     properties.background_mode === BackgroundMode.BG_CLEAR_COLOR ? clearColor : properties.background_color;
@@ -147,7 +148,7 @@ const AMBIENT_SOURCE_SKY = 3;
  */
 function ambientFor(
   properties: EnvironmentProperties,
-  backgroundColor: Color
+  backgroundColor: Rgba
 ): {
   ambient: EnvironmentSettings['ambient'];
   skyAmbient: EnvironmentSettings['skyAmbient'];

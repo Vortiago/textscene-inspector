@@ -11,7 +11,7 @@
  */
 
 import type { ControlProperties } from '../control/types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import { defineChannel } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
@@ -22,6 +22,7 @@ import type {
 import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from '../shared/fitChildInRect';
 import { scrollBarGrabberGeometry, scrollBarMinimumSize } from '../shared/scrollBarSolver';
 import type { ScrollContainerProperties } from './types';
+import type { Vector2 } from '../../../../godot/vector';
 
 /** `ScrollContainer::ScrollMode` (`scroll_container.h:44-50`). */
 const ScrollMode = {
@@ -86,7 +87,7 @@ function vScrollThickness(ctx: SolveContext): number {
 
 /** `ScrollContainer::get_minimum_size`'s own child loop (`scroll_container.cpp:44-52`):
  * the componentwise max of every visible child's combined minimum size. */
-function largestChildMinSize(n: SolveNode, ctx: SolveContext): Vec2 {
+function largestChildMinSize(n: SolveNode, ctx: SolveContext): Vector2 {
   let x = 0;
   let y = 0;
   for (const child of n.children) {
@@ -173,12 +174,12 @@ interface ScrollContainerHints {
 
 interface ScrollContainerLayout {
   /** The content viewport's size after scrollbar-strip reservation (`_reposition_children`'s own `size`). */
-  contentSize: Vec2;
+  contentSize: Vector2;
   /**
    * Each axis' authored scroll offset as its `Range` settles it, never the raw property. The
    * grabber ratio and the child position both read this pair, so they always agree.
    */
-  scroll: Vec2;
+  scroll: Vector2;
   horizontal: ScrollBarPlacement;
   vertical: ScrollBarPlacement;
   /** `_update_scroll_hints` (`scroll_container.cpp:606-658`): the edge fades, drawn over the content and under the scrollbars (both are `INTERNAL_MODE_BACK` children added before the bars, `:905-915`). */
@@ -193,10 +194,10 @@ interface ScrollContainerLayout {
 function scrollContainerHints(
   mode: number,
   rtl: boolean,
-  size: Vec2,
-  innerSize: Vec2,
-  largest: Vec2,
-  scroll: Vec2
+  size: Vector2,
+  innerSize: Vector2,
+  largest: Vector2,
+  scroll: Vector2
 ): ScrollContainerHints {
   // `tile_scroll_hint` only picks `STRETCH_TILE` over `STRETCH_SCALE` (`:751-752`). Both icons are
   // gradients uniform along the tiled axis and texture-sized on the other, so the modes match.
@@ -313,7 +314,7 @@ export function scrollContainerScrollBars(
   const hReserved = hVisible || hMode === ScrollMode.RESERVE;
   const vReserved = vVisible || vMode === ScrollMode.RESERVE;
 
-  const contentSize: Vec2 = {
+  const contentSize: Vector2 = {
     x: innerW - (vReserved ? vThickness + SCROLLBAR_SEPARATION : 0),
     y: innerH - (hReserved ? hThickness + SCROLLBAR_SEPARATION : 0),
   };
@@ -339,7 +340,7 @@ export function scrollContainerScrollBars(
     h: rect.h - margins.top - margins.bottom - (hVisible ? hThickness : 0),
   };
 
-  const scroll: Vec2 = {
+  const scroll: Vector2 = {
     x: settledScrollValue(p.scrollHorizontal ?? 0, largest.x, hRect.w),
     y: settledScrollValue(p.scrollVertical ?? 0, largest.y, vRect.h),
   };

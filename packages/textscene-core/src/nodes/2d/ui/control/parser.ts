@@ -2,7 +2,7 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { unquoteStringName } from '../../../../parser/utils';
-import type { ControlProperties, ControlColor } from './types';
+import type { ControlProperties } from './types';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
 import {
   intOr,
@@ -12,11 +12,12 @@ import {
 } from '../../../../parser/valueParsers';
 import { LAYOUT_DIRECTION_INHERITED } from '../../../../godot/index.js';
 import { boolSlotValue } from '../../../../godot/index.js';
+import type { Rgba } from '../../../../godot/math.js';
 
 /** Collect `theme_override_<category>/<name> = value` into the five typed maps. */
 function parseThemeOverrides(properties: Record<string, string>): Partial<ControlProperties> {
   const constants: Record<string, number> = {};
-  const colors: Record<string, ControlColor> = {};
+  const colors: Record<string, Rgba> = {};
   const fontSizes: Record<string, number> = {};
   const styles: Record<string, string> = {};
   const icons: Record<string, string> = {};

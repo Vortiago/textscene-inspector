@@ -14,7 +14,6 @@
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
-import type { RGBA } from '../canvasItemModulate.js';
 import { ShadowCasterStage } from './ShadowCasterStage.js';
 import { CanvasLightSequenceProvider } from './useLightSequence.js';
 import { planLightLists, type LightListPlan, type PassMeshRole } from './itemLightList.js';
@@ -26,6 +25,7 @@ import { useLightAccumulationPass, type AccumulationList, type PassMesh } from '
 import { capItemLights, type CappedItem } from './itemLightCap.js';
 import type { Rect2 } from '../../godot/rect2.js';
 import { useGameViewportRect } from '../gameViewportRect.js';
+import type { Rgba } from '../../godot/math.js';
 
 export { useCanvasLighting2D, type CanvasLighting2D } from './lightPassContext.js';
 export {
@@ -40,7 +40,7 @@ interface CanvasLighting2DProviderProps {
    * The canvas tint, where `S` starts for an ordinary item. It is the `canvasModulateColor(nodes)`
    * the dispatcher publishes to the items, so the seed and the tint they divide out agree.
    */
-  canvasModulate: RGBA;
+  canvasModulate: Rgba;
   children: ReactNode;
 }
 

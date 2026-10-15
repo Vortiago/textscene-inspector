@@ -1,7 +1,8 @@
 /** The legacy TileMap (Godot ≤4.2) property shape: a multi-layer tile node with per-layer data. */
 
-import type { Color, Node2DProperties } from '../../../base/node2d/types';
+import type { Node2DProperties } from '../../../base/node2d/types';
 import type { PlacedCell } from '../shared/tileData';
+import type { Rgba } from '../../../../godot/math';
 
 export interface TileMapLayerData {
   /** Layer display name (`layer_N/name`); an unnamed layer answers to `LayerN`. */
@@ -15,7 +16,7 @@ export interface TileMapLayerData {
   /** The layer's `layer_N/y_sort_origin`, added to each row's sort Y. */
   ySortOrigin: number;
   /** Per-layer tint (`layer_N/modulate`); multiplies onto the layer's pixels. */
-  modulate?: Color;
+  modulate?: Rgba;
   /** Cells decoded from `layer_N/tile_data`; null = undecodable (degrade). */
   cells: PlacedCell[] | null;
 }

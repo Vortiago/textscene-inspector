@@ -13,22 +13,22 @@ import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { CANVAS_SRGB_DEFINES } from '../../../../r3f/canvasSrgbMultiply';
-import { multiplyModulate, type RGBA } from '../../../../r3f/canvasItemModulate';
-import type { ControlColor } from '../control/types';
+import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { connectionControlPoints, tessellateConnectionLine } from './connectionCurve';
 import { connectionStrokeGeometry } from './connectionStroke';
 import type { ResolvedConnection } from './connectionEndpoints';
+import type { Rgba } from '../../../../godot/math';
 
 interface ConnectionLineProps {
   connection: ResolvedConnection;
   curvature: number;
   lineWidth: number;
-  rimColor: ControlColor;
-  tintOwn: RGBA;
+  rimColor: Rgba;
+  tintOwn: Rgba;
   renderOrder: number;
 }
 
-function toStrokeColor(c: ControlColor): RGBA {
+function toStrokeColor(c: Rgba): Rgba {
   return { r: c.r, g: c.g, b: c.b, a: c.a };
 }
 

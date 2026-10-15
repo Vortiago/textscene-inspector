@@ -1,8 +1,6 @@
 /** Base Control (Godot 2D UI) property definitions. */
 import type { Rgba } from '../../../../godot/math';
 
-export type ControlColor = Rgba;
-
 /** The layout and theme-override properties of every Control. Each Control type extends it. */
 export interface ControlProperties {
   name: string;
@@ -44,9 +42,9 @@ export interface ControlProperties {
    * CanvasItem tint of this node and its CanvasItem children. Default
    * `Color(1, 1, 1, 1)`: absent means no tint.
    */
-  modulate?: ControlColor;
+  modulate?: Rgba;
   /** CanvasItem tint of this node only, not its children. */
-  selfModulate?: ControlColor;
+  selfModulate?: Rgba;
 
   /** Rotation about the pivot, in radians. The inspector shows degrees. */
   rotation?: number;
@@ -96,7 +94,7 @@ export interface ControlProperties {
   /** `theme_override_constants/<name>` to a number, for example separation. */
   themeOverrideConstants?: Record<string, number>;
   /** `theme_override_colors/<name>` to a colour, for example font_color. */
-  themeOverrideColors?: Record<string, ControlColor>;
+  themeOverrideColors?: Record<string, Rgba>;
   /** `theme_override_font_sizes/<name>` to a number. */
   themeOverrideFontSizes?: Record<string, number>;
   /** `theme_override_styles/<name>` to a resource reference, for example a StyleBox. */

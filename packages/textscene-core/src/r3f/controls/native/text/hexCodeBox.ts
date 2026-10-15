@@ -8,8 +8,8 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { Vec2 } from '../rect';
 import { round as godotRound } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/vector';
 
 // Pure geometry in `shaped_text_draw`'s pen-relative space: `(0, 0)` is the glyph's
 // advance-box origin on the baseline, and the box extends up and right from it
@@ -37,7 +37,7 @@ function hexCodeBoxCells(
  * reserves. The `+ 1` makes it one cell wider than the drawn frame, the gap
  * Godot leaves between one hex box and the next.
  */
-export function hexCodeBoxAdvanceSize(fontSizePx: number, codepoint: number): Vec2 {
+export function hexCodeBoxAdvanceSize(fontSizePx: number, codepoint: number): Vector2 {
   const { byteWidth, spacer, cellPx } = hexCodeBoxCells(fontSizePx, codepoint);
   return { x: (4 + 3 * byteWidth + spacer + 1) * cellPx, y: 15 * cellPx };
 }

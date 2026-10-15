@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -25,9 +25,10 @@ import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/n
 import { GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { isMinimapEnabled } from './minimap';
 import type { GraphEditProperties } from './types';
+import type { Vector2 } from '../../../../godot/vector';
 
 /** `menu_panel->set_position(Vector2(10, 10))` (`graph_edit.cpp:3232`): unscaled. */
-export const GRAPH_EDIT_MENU_POSITION: Vec2 = { x: 10, y: 10 };
+export const GRAPH_EDIT_MENU_POSITION: Vector2 = { x: 10, y: 10 };
 
 /** `zoom_label->set_custom_minimum_size(Size2(48, 0) * base_scale)` (`graph_edit.cpp:836`). */
 const ZOOM_LABEL_MIN_WIDTH = 48;
@@ -74,7 +75,7 @@ export interface GraphEditToolbar {
 /** The two text measurements the row's minimum size depends on, at the toolbar's own font. */
 export interface ToolbarTextMetrics {
   /** One shaped run's size: `TextParagraph::get_size` as every caller here consumes it. */
-  measure: (text: string) => Vec2;
+  measure: (text: string) => Vector2;
   /** `font->get_height(font_size)`: `Label`'s and `LineEdit`'s own minimum-height floor. */
   fontHeightPx: number;
 }
@@ -120,7 +121,7 @@ export function graphEditMenuPanelStyleBox(theme: NativeTheme): StyleBoxFlatData
  * empty text, plus `flat_button_normal`'s content margins, which
  * `default_theme.cpp:360-362` copies verbatim off `button_normal`.
  */
-function toolbarButtonMinSize(theme: NativeTheme): Vec2 {
+function toolbarButtonMinSize(theme: NativeTheme): Vector2 {
   const margin = 2 * theme.contentMargin;
   return { x: margin + GRAPH_EDIT_ICON_SIZE, y: margin + GRAPH_EDIT_ICON_SIZE };
 }
@@ -131,7 +132,7 @@ function toolbarButtonMinSize(theme: NativeTheme): Vec2 {
  * (`line_edit.cpp:2443-2477`). No per-node theme override reaches the
  * SpinBox's internal field, so the plain theme boxes are the whole input.
  */
-function toolbarSpinBoxMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics): Vec2 {
+function toolbarSpinBoxMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics): Vector2 {
   const normal = contentMarginSize(theme.widgets.lineEdit.normal);
   const readOnly = contentMarginSize(theme.widgets.lineEdit.readOnly);
   const styleMin = { x: Math.max(normal.x, readOnly.x), y: Math.max(normal.y, readOnly.y) };
@@ -146,7 +147,7 @@ function toolbarSpinBoxMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics):
 }
 
 /** `zoom_label`'s minimum size: `Label::get_minimum_size` (`label.cpp:973-997`) over an empty stylebox, floored by its own `custom_minimum_size`. */
-function zoomLabelMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics, zoom: number): Vec2 {
+function zoomLabelMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics, zoom: number): Vector2 {
   const text = metrics.measure(zoomLabelText(zoom));
   return {
     x: Math.max(text.x, ZOOM_LABEL_MIN_WIDTH * theme.scale),

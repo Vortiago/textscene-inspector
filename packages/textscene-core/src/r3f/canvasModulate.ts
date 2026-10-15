@@ -7,15 +7,16 @@
 
 import { createContext, useContext, useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
-import { WHITE_MODULATE, type RGBA } from './canvasItemModulate.js';
+import { WHITE_MODULATE } from './canvasItemModulate.js';
 import { CANVAS_MODULATE_FLOOR } from './lighting2d/canvasItemLighting.js';
 import {
   CanvasItemLightMode,
   type CanvasItemMaterialProperties,
 } from '../resources/materials/canvasitemmaterial/types.js';
+import type { Rgba } from '../godot/math.js';
 
 interface CanvasModulateLike {
-  color?: RGBA;
+  color?: Rgba;
   visible?: boolean;
 }
 
@@ -24,8 +25,8 @@ interface CanvasModulateLike {
  * CanvasModulate. A CanvasModulate inside an instanced sub-scene is not found,
  * though Godot applies it.
  */
-export function canvasModulateColor(nodes: readonly TscnNode[]): RGBA {
-  let found: RGBA | null = null;
+export function canvasModulateColor(nodes: readonly TscnNode[]): Rgba {
+  let found: Rgba | null = null;
 
   const walk = (node: TscnNode, visible: boolean): void => {
     const props = node.properties as CanvasModulateLike;
@@ -46,11 +47,11 @@ export function canvasModulateColor(nodes: readonly TscnNode[]): RGBA {
  * item in the base pass, under the light-mode guard (`canvas.glsl`:
  * `#elif !defined(MODE_UNSHADED) color *= canvas_modulation;`).
  */
-export const CanvasModulateContext = createContext<RGBA>(WHITE_MODULATE);
+export const CanvasModulateContext = createContext<Rgba>(WHITE_MODULATE);
 CanvasModulateContext.displayName = 'CanvasModulateContext';
 
 /** The canvas tint in force, ungated by any item's light mode. */
-export function useCanvasModulate(): RGBA {
+export function useCanvasModulate(): Rgba {
   return useContext(CanvasModulateContext);
 }
 
@@ -58,7 +59,7 @@ export function useCanvasModulate(): RGBA {
  * The canvas tint this item multiplies into its own pixels, or white for an
  * `Unshaded` or `LightOnly` item, which Godot's guard excludes together.
  */
-export function useCanvasModulateFor(material: CanvasItemMaterialProperties | null): RGBA {
+export function useCanvasModulateFor(material: CanvasItemMaterialProperties | null): Rgba {
   const canvasModulate = useContext(CanvasModulateContext);
   const shaded = (material?.lightMode ?? CanvasItemLightMode.NORMAL) === CanvasItemLightMode.NORMAL;
   return useMemo(
@@ -72,7 +73,7 @@ export function useCanvasModulateFor(material: CanvasItemMaterialProperties | nu
  * back out to recover albedo (`lighting2d/canvasItemLighting`), and a black night
  * tint would swallow every light. The accumulator carries the true tint.
  */
-function floorCanvasModulate(color: RGBA): RGBA {
+function floorCanvasModulate(color: Rgba): Rgba {
   const { r, g, b } = color;
   if (r >= CANVAS_MODULATE_FLOOR && g >= CANVAS_MODULATE_FLOOR && b >= CANVAS_MODULATE_FLOOR) {
     return color;

@@ -5,14 +5,8 @@
  * precedes shading, lighting and blending.
  */
 
+import type { Rgba } from '../../../godot/math';
 import { unitByte } from '../../../godot/unitByte';
-
-interface QuantizableColor {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
 
 /**
  * `unitByte` on all four channels. Never apply it to the inherited tint:
@@ -20,7 +14,7 @@ interface QuantizableColor {
  * the tint is a separate float multiply. Only Polygon2D fills pass this cast
  * (`vertexColorQuantize.md`).
  */
-export function quantizeVertexColor(color: QuantizableColor): QuantizableColor {
+export function quantizeVertexColor(color: Rgba): Rgba {
   return {
     r: unitByte(color.r),
     g: unitByte(color.g),

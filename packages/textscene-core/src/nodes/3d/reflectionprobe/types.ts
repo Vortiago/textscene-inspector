@@ -6,8 +6,8 @@
 
 import type { ReflectionProbeAmbientMode, ReflectionProbeUpdateMode } from '../../../godot/reflectionProbe';
 import type { Vector3 } from '../../../godot/vector';
-import type { Color } from '../../../utils/colorParser';
 import type { Node3DProperties } from '../../base/node3d/types';
+import type { Rgba } from '../../../godot/math';
 
 export interface ReflectionProbeProperties extends Node3DProperties {
   updateMode: ReflectionProbeUpdateMode;
@@ -27,6 +27,6 @@ export interface ReflectionProbeProperties extends Node3DProperties {
   reflectionMask: number;
   ambientMode: ReflectionProbeAmbientMode;
   /** As written, in sRGB. */
-  ambientColor: Color;
+  ambientColor: Rgba;
   ambientColorEnergy: number;
 }

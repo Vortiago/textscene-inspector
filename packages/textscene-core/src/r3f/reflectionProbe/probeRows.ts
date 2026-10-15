@@ -6,8 +6,8 @@
 import type * as THREE from 'three';
 import type { ReflectionProbeAmbientMode } from '../../godot/reflectionProbe.js';
 import type { Vector3 } from '../../godot/vector.js';
-import type { Color } from '../../utils/colorParser.js';
 import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
+import type { Rgba } from '../../godot/math.js';
 
 /** What the shader reads of one probe. */
 export interface DrawnProbe {
@@ -18,7 +18,7 @@ export interface DrawnProbe {
   originOffset: Vector3;
   intensity: number;
   ambientMode: ReflectionProbeAmbientMode;
-  ambientColor: Color;
+  ambientColor: Rgba;
   ambientColorEnergy: number;
   reflectionMask: number;
   boxProjection: boolean;

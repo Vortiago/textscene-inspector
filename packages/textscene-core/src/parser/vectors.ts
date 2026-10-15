@@ -11,8 +11,6 @@ import { slotComponents } from '../godot/int.js';
 
 import type { Vector2, Vector3 } from '../godot/vector.js';
 
-export type { Vector2, Vector3 };
-
 const VECTOR2_RE = slotTupleRegex('Vector2', 2);
 const VECTOR3_RE = slotTupleRegex('Vector3', 3);
 

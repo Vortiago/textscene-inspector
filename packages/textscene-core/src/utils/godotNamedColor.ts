@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Color } from './colorParser';
+import type { Rgba } from '../godot/math';
 
 /**
  * The raw table: normalised name → `0xRRGGBBAA`. Keys drop underscores, as `find_named_color`
@@ -179,7 +179,7 @@ function normalizeColorName(name: string): string {
  * `undefined` on a miss so each caller applies the default its own
  * `Color::from_string` call site passes.
  */
-export function godotNamedColor(name: string): Color | undefined {
+export function godotNamedColor(name: string): Rgba | undefined {
   const packed = GODOT_NAMED_COLORS[normalizeColorName(name)];
   if (packed === undefined) return undefined;
   return {

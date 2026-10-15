@@ -11,7 +11,6 @@
 import * as THREE from 'three';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
-import type { Color } from '../../../../nodes/base/node2d/types';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import { injectProgram, type ProgramInjection } from '../../../materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../materials/godotAlphaHash';
@@ -21,6 +20,7 @@ import {
   type OpaquePrepass,
 } from '../../../materials/opaquePrepass';
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
+import type { Rgba } from '../../../../godot/math';
 
 /** Fixed raster supersampling factor: canvas text has no distance field to stay crisp when magnified, so this trades memory and fill rate for sharpness at typical zoom. */
 export const CANVAS_TEXT_SUPERSAMPLE = 3;
@@ -117,7 +117,7 @@ export function buildCanvasTextQuadArrays(canvasLayout: CanvasTextCanvasLayout):
  * canvas fill colours are sRGB, and the `SRGBColorSpace` texture gets three's
  * decode. The material's `opacity` applies `tint.a` once.
  */
-function opaqueCssColor(tint: Pick<Color, 'r' | 'g' | 'b'>): string {
+function opaqueCssColor(tint: Pick<Rgba, 'r' | 'g' | 'b'>): string {
   const clamp255 = (c: number) => Math.max(0, Math.min(255, Math.round(c * 255)));
   return `rgb(${clamp255(tint.r)}, ${clamp255(tint.g)}, ${clamp255(tint.b)})`;
 }
@@ -133,7 +133,7 @@ function opaqueCssColor(tint: Pick<Color, 'r' | 'g' | 'b'>): string {
 export function paintSceneFontCanvas(
   layout: TextLayoutResult,
   fontSizePx: number,
-  tint: Color,
+  tint: Rgba,
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
   strokeWidthPx = 0
