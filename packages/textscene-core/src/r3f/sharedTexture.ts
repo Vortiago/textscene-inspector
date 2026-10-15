@@ -1,9 +1,10 @@
 /**
  * A texture that every material samples as one object, whatever three clones, and the GL handle it
  * shows: a slot takes another texture's handle, as three's `XREstimatedLight.js:62-70` does, so a
- * switch uploads nothing.
+ * switch uploads nothing. A texture every renderer uploads is freed from each when a canvas unmounts.
  */
 
+import { useEffect } from 'react';
 import type * as THREE from 'three';
 
 // A mixin's constructor must take `...args: any[]` (TypeScript error 2545).
@@ -42,4 +43,32 @@ export function showInSlot(renderer: THREE.WebGLRenderer, slot: THREE.Texture, t
 export function leaveSlot(renderer: THREE.WebGLRenderer, slot: THREE.Texture, texture: THREE.Texture): void {
   const shown = handleOf(renderer, slot);
   if (shown.__webglTexture === handleOf(renderer, texture).__webglTexture) delete shown.__webglTexture;
+}
+
+/**
+ * Written only by `releasedOnUnmount`, and never cleared. three leaves a dispose listener that closes
+ * over each renderer that uploads a texture (r186 `WebGLTextures.js:719`), so a texture that outlives
+ * its canvas keeps that renderer reachable. These stay shared, not per renderer like a pass, as a
+ * uniform getter and three's `UniformsLib` read them with no renderer at hand.
+ */
+const releasedTextures = new Set<THREE.Texture>();
+
+/** `texture`, which each canvas that unmounts frees from every renderer. */
+export function releasedOnUnmount<T extends THREE.Texture>(texture: T): T {
+  releasedTextures.add(texture);
+  return texture;
+}
+
+/**
+ * Frees each `releasedOnUnmount` texture when the canvas it sits in unmounts. A dispose reaches
+ * every renderer, so a live canvas uploads the texture again at its next draw.
+ */
+export function SharedTextureRelease(): null {
+  useEffect(
+    () => () => {
+      for (const texture of releasedTextures) texture.dispose();
+    },
+    []
+  );
+  return null;
 }

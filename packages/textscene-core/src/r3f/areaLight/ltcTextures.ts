@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { toHalfFloatTexels } from '../../resources/textures/halfFloatTexels.js';
 import { LTC_SIZE, ltcTables } from '../../godot/rendering/lights/ltc.js';
-import { sharedTexture } from '../sharedTextures.js';
+import { releasedOnUnmount } from '../sharedTexture.js';
 
 /** The four textures three reads off `UniformsLib`, which its own type does not declare. */
 interface LtcUniformsLib {
@@ -35,7 +35,7 @@ function ltcTexture(data: Float32Array | Uint16Array, type: THREE.TextureDataTyp
     THREE.LinearFilter
   );
   texture.needsUpdate = true;
-  return sharedTexture(texture);
+  return releasedOnUnmount(texture);
 }
 
 /** Godot's tables as three's four textures. Written only by `installLtcTextures`, once. */

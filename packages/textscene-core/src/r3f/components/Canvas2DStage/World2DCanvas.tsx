@@ -6,7 +6,7 @@
 
 import { Canvas } from '@react-three/fiber';
 import { installShaderPatches } from '../../shaderPatch/installShaderPatches.js';
-import { SharedTextureRelease } from '../../sharedTextures.js';
+import { SharedTextureRelease } from '../../sharedTexture.js';
 import { World2DContents, type World2DCanvasProps } from './World2DContents.js';
 
 export function World2DCanvas(props: World2DCanvasProps) {

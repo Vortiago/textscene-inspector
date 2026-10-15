@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { SharedTextureRelease, sharedTexture } from './sharedTextures';
+import { SharedTextureRelease, releasedOnUnmount } from './sharedTexture';
 import { RendererProbe, recordTextures, withRenderTargets } from '../testing/recordingWebGL';
 import { defaultWhiteTexture } from './materials/defaultWhiteTexture';
 import { pendingMapStandIn } from './materials/pendingMapStandIn';
@@ -47,7 +47,7 @@ describe('SharedTextureRelease', () => {
   });
 
   it('lets a live canvas upload a shared texture again at its next draw (edge case)', async () => {
-    const texture = sharedTexture(new THREE.DataTexture(new Uint8Array(4), 1, 1));
+    const texture = releasedOnUnmount(new THREE.DataTexture(new Uint8Array(4), 1, 1));
     texture.needsUpdate = true;
     const closing = await canvas();
     const live = await canvas();
@@ -64,7 +64,7 @@ describe('SharedTextureRelease', () => {
   });
 
   it('releases a shared texture no renderer uploaded (edge case)', async () => {
-    const texture = sharedTexture(new THREE.DataTexture(new Uint8Array(4), 1, 1));
+    const texture = releasedOnUnmount(new THREE.DataTexture(new Uint8Array(4), 1, 1));
     const { unmount } = await canvas();
 
     await expect(unmount()).resolves.toBeUndefined();

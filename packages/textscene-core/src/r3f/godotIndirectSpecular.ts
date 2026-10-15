@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { DFG_SIZE, dfgHalfFloats } from '../godot/rendering/materials/dfg.js';
 import { applyChunkEdits, installChunkPatch, type ChunkEdit, type Chunks } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
+import { releasedOnUnmount } from './sharedTexture.js';
 import { defining, type ProgramInjection } from './materialProgramInputs.js';
 import { recordedOn } from './materials/recordedOnMaterial.js';
 
@@ -133,7 +134,7 @@ function dfgTexture(): THREE.DataTexture {
   texture.magFilter = THREE.LinearFilter;
   texture.minFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
-  return texture;
+  return releasedOnUnmount(texture);
 }
 
 /**

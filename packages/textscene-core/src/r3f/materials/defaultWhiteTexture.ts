@@ -4,14 +4,14 @@
  */
 
 import * as THREE from 'three';
-import { sharedTexture } from '../sharedTextures';
+import { releasedOnUnmount } from '../sharedTexture';
 
 /** Written once, on the first request. Every such slot shares it. */
 let white: THREE.DataTexture | undefined;
 
 export function defaultWhiteTexture(): THREE.DataTexture {
   if (white) return white;
-  white = sharedTexture(new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1));
+  white = releasedOnUnmount(new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1));
   white.needsUpdate = true;
   return white;
 }
