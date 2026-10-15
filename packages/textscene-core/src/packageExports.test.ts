@@ -12,8 +12,8 @@ import { stripComments } from '@textscene/dev-kit';
 import { repoPath, walkSources } from './r3f/testing/sourceScan';
 
 const coreSrc = dirname(fileURLToPath(import.meta.url));
-const coreRoot = resolve(coreSrc, '..');
-const repoRoot = resolve(coreRoot, '../..');
+
+const repoRoot = resolve(coreSrc, '../../..');
 const godotDir = resolve(coreSrc, 'godot');
 
 /** The specifier of an `… from '…'` clause or a dynamic `import('…')`. */
@@ -55,10 +55,9 @@ function importsGodotBarrel(file: string, source: string): boolean {
   );
 }
 
+/** The names `source`, its comments stripped, imports from exactly `specifier`. */
 function namesImported(source: string, specifier: string): string[] {
-  return [...stripComments(source).matchAll(braceImportRe(specifier))].flatMap((match) =>
-    listedNames(match[1]!)
-  );
+  return [...source.matchAll(braceImportRe(specifier))].flatMap((match) => listedNames(match[1]!));
 }
 
 function barrelNames(barrel: string): string[] {
@@ -66,11 +65,14 @@ function barrelNames(barrel: string): string[] {
   return [...stripComments(source).matchAll(REEXPORT_RE)].flatMap((match) => listedNames(match[1]!)).sort();
 }
 
-/** Every source file outside core that may import it, tests included: a test there goes through the package. */
+/**
+ * The comment-stripped text of every source file outside core that may import it, tests included: a
+ * test there goes through the package.
+ */
 const outsideCore = walkSources(
-  [resolve(repoRoot, 'apps'), resolve(repoRoot, 'packages'), resolve(repoRoot, 'scripts')],
-  (name, path) => /\.(tsx?|m?js)$/.test(name) && !path.startsWith(`${coreRoot}/`)
-);
+  ['apps', 'packages/textscene-dev-kit', 'scripts'].map((dir) => resolve(repoRoot, dir)),
+  (name) => /\.(tsx?|m?js)$/.test(name)
+).map(({ source }) => stripComments(source));
 
 describe('core imports each engine fact from its own file', () => {
   it('recognises every spelling of a godot barrel import, before trusting its silence', () => {
@@ -105,7 +107,7 @@ describe('a package barrel re-exports only what a package outside core imports',
     ['godot/index.ts', '@textscene/core/godot'],
     ['index.ts', '@textscene/core'],
   ])('%s re-exports exactly the names imported through %s', (barrel, specifier) => {
-    const imported = new Set(outsideCore.flatMap(({ source }) => namesImported(source, specifier)));
+    const imported = new Set(outsideCore.flatMap((source) => namesImported(source, specifier)));
     expect(imported.size).toBeGreaterThan(0);
     expect(barrelNames(barrel)).toEqual([...imported].sort());
   });

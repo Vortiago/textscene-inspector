@@ -6,7 +6,7 @@
 import { enumNamesByValue } from '../../classdb/enumNames.js';
 
 /** `DirectionalLight3D::SkyMode` (`scene/3d/light_3d.h:172-176`). */
-const DirectionalLightSkyMode = {
+export const DirectionalLightSkyMode = {
   LIGHT_AND_SKY: 0,
   LIGHT_ONLY: 1,
   SKY_ONLY: 2,

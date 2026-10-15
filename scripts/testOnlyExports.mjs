@@ -15,7 +15,15 @@ const IMPORTER_RE = /\.(tsx?|m?js)$/;
 const TEST_RE = /\.(test|spec|testkit)\.(tsx?|m?js)$|(^|\/)testing\//;
 
 /** Never walked: generated output, installed packages and a downloaded VS Code are nobody's source. */
-const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'out', 'build', 'coverage', '.vscode-test']);
+const SKIPPED_DIRECTORIES = new Set([
+  'node_modules',
+  'dist',
+  'out',
+  'build',
+  'coverage',
+  '.git',
+  '.vscode-test',
+]);
 const DYNAMIC_IMPORT_RE = /\bimport\s*\(/;
 
 /** A test, a test kit or a file under `testing/` is a test file. Its imports prove nothing. */

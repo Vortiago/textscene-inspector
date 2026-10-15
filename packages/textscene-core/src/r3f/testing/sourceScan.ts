@@ -18,7 +18,15 @@ export interface SourceFile {
  * `.vscode-test` is a downloaded, gitignored VS Code, so walking it makes every
  * corpus depend on whether the machine has run the extension gate.
  */
-const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'build', 'coverage', '.git', '.vscode-test']);
+const SKIPPED_DIRECTORIES = new Set([
+  'node_modules',
+  'dist',
+  'out',
+  'build',
+  'coverage',
+  '.git',
+  '.vscode-test',
+]);
 
 const REPO_ROOT = repoRoot();
 

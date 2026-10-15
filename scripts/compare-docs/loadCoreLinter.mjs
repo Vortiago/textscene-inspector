@@ -8,13 +8,6 @@
  */
 
 import { registerHooks } from 'node:module';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const DIST = join(here, '../../packages/textscene-core/dist');
-const LINTER_ENTRY = join(DIST, 'linter/index.js');
-const PARSER_ENTRY = join(DIST, 'parser/TscnParser.js');
 
 // `registerHooks` arrived in Node 22.15/23.5. `engines` requires >=24 but is
 // advisory, so this names the requirement instead of `is not a function`.
@@ -54,8 +47,8 @@ export async function loadCoreLinter() {
     return { validatorRegistry, ruleRegistry, resourceRuleRegistry, registeredTypes };
   } catch (err) {
     throw new Error(
-      `Could not load the built linter at ${LINTER_ENTRY}.\n` +
-        `Run \`pnpm --filter @textscene/core build\` first.\n` +
+      'Could not load the built linter.\n' +
+        'Run `pnpm --filter @textscene/core build` first.\n' +
         `Underlying error: ${err.message}`,
       { cause: err }
     );
@@ -75,8 +68,8 @@ export async function loadCoreParser() {
     return { nodeRegistry };
   } catch (err) {
     throw new Error(
-      `Could not load the built parser at ${PARSER_ENTRY}.\n` +
-        `Run \`pnpm --filter @textscene/core build\` first.\n` +
+      'Could not load the built parser.\n' +
+        'Run `pnpm --filter @textscene/core build` first.\n' +
         `Underlying error: ${err.message}`,
       { cause: err }
     );

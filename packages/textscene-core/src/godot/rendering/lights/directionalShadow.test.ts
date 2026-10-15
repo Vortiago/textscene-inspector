@@ -21,12 +21,7 @@ import {
   sharesDirectionalShadowAtlas,
   texelPaddedRadius,
 } from './directionalShadow.js';
-import { DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT } from './directionalLightSkyMode.js';
-
-/** `DirectionalLight3D::SkyMode` values a scene stores (`scene/3d/light_3d.h:172-176`). */
-const LIGHT_AND_SKY = 0;
-const LIGHT_ONLY = 1;
-const SKY_ONLY = 2;
+import { DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT, DirectionalLightSkyMode } from './directionalLightSkyMode.js';
 
 describe('directionalShadowSlice', () => {
   it('pulls the far end in to the shadow max distance for a perspective camera', () => {
@@ -223,15 +218,15 @@ describe('directionalShadowBlendStart', () => {
 describe('sharesDirectionalShadowAtlas', () => {
   it('shares the atlas for a shadowed light that lights the scene and the sky', () => {
     expect(sharesDirectionalShadowAtlas(true, DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT)).toBe(true);
-    expect(sharesDirectionalShadowAtlas(true, LIGHT_ONLY)).toBe(true);
+    expect(sharesDirectionalShadowAtlas(true, DirectionalLightSkyMode.LIGHT_ONLY)).toBe(true);
   });
 
   it('leaves out a light that lights only the sky (edge case)', () => {
-    expect(sharesDirectionalShadowAtlas(true, SKY_ONLY)).toBe(false);
+    expect(sharesDirectionalShadowAtlas(true, DirectionalLightSkyMode.SKY_ONLY)).toBe(false);
   });
 
   it('leaves out a light whose shadow is off', () => {
-    expect(sharesDirectionalShadowAtlas(false, LIGHT_AND_SKY)).toBe(false);
+    expect(sharesDirectionalShadowAtlas(false, DirectionalLightSkyMode.LIGHT_AND_SKY)).toBe(false);
   });
 
   it('shares the atlas for an unknown sky mode, as only Sky Only is left out (error case)', () => {
