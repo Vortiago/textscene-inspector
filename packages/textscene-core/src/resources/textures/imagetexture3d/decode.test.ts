@@ -17,6 +17,8 @@ const RESOURCES: TscnInternalResource[] = [
   image('Image_a', 'Lum8', '63'),
   image('Image_b', 'Lum8', '127'),
   image('Image_half', 'RHalf', '0, 64'),
+  // One DXT5 block: alpha endpoints 40 and 200 with index 0 at the texel, over white.
+  image('Image_dxt5', 'DXT5 RGBA8', '40, 200, 136, 198, 250, 136, 198, 250, 255, 255, 0, 0, 0, 0, 0, 0'),
   { id: 'Texture', type: 'ImageTexture', data: {} },
 ];
 
@@ -37,6 +39,12 @@ describe('decodeImageTexture3D', () => {
   it('keeps the raw floats of a float format', () => {
     expect(decodeImageTexture3D(images('Image_half'), RESOURCES)!.texels).toEqual(
       new Float32Array([2, 0, 0, 1])
+    );
+  });
+
+  it('decodes a block-compressed slice to RGBA8, cropped to its texel', () => {
+    expect(decodeImageTexture3D(images('Image_dxt5'), RESOURCES)!.texels).toEqual(
+      new Uint8Array([255, 255, 255, 40])
     );
   });
 
