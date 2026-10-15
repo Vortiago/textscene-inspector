@@ -1,6 +1,6 @@
 /**
  * The resource slots whose `PROPERTY_HINT_RESOURCE_TYPE` hint excludes a class with a `-` prefix,
- * derived from Godot 4.6.3.stable.fedora.7d41c59c4's ClassDB captures.
+ * and each nearer declaration of such a slot, derived from Godot 4.6.3.stable.fedora.7d41c59c4's ClassDB captures.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
  *
  * Each entry is class → property → hint string, under the class that declares the property. A

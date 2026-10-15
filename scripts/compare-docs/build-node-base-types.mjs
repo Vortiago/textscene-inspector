@@ -9,6 +9,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { HINT_RESOURCE_TYPE } from './formatOnlyCorpus.data.mjs';
 
 const here = import.meta.dirname;
 export const CATALOG = join(here, 'node-catalog.json');
@@ -25,9 +26,6 @@ export const OUT = godotModule('nodeBaseTypes.generated.ts');
 export const RESOURCE_OUT = godotModule('resourceBaseTypes.generated.ts');
 export const PROPERTIES_OUT = godotModule('classProperties.generated.ts');
 export const EXCLUSIONS_OUT = godotModule('resourceTypeExclusions.generated.ts');
-
-/** `PROPERTY_HINT_RESOURCE_TYPE` (`object.h:68`). */
-const HINT_RESOURCE_TYPE = 17;
 
 /**
  * Refuses to write a table a walk cannot leave. Every consumer (`descendsFrom`, `baseChain`,
@@ -205,40 +203,38 @@ function excludesAClass(row) {
   );
 }
 
-/**
- * Refuses a class that declares an excluding slot of an ancestor again. The linter walks the
- * exclusion table alone, so it would read the ancestor's hint for the nearer declaration.
- */
-function assertNotRedeclared(exclusions, properties, bases) {
-  for (const [className, rows] of Object.entries(properties)) {
-    const seen = new Set([className]);
-    for (let at = bases[className]; at !== undefined && !seen.has(at); at = bases[at]) {
-      seen.add(at);
-      for (const { name } of rows) {
-        if (Object.hasOwn(exclusions[at] ?? {}, name)) {
-          throw new Error(`${className} declares ${name} again, below the excluding hint of ${at}`);
-        }
-      }
-    }
+/** Whether `className` declares `name` again below an ancestor whose slot of that name excludes a class. */
+function redeclaresExcludingSlot(className, name, excludingByClass, bases) {
+  for (let at = bases[className]; at !== undefined; at = bases[at]) {
+    if (excludingByClass.get(at)?.has(name)) return true;
   }
+  return false;
 }
 
 /**
- * Class → property → hint string, for each resource slot whose hint excludes a class, under the
- * class that declares it. The full property table is too large for the linter's bundles, and
- * the linter needs only these rows.
+ * Class → property → hint string, for each resource slot whose hint excludes a class and for each
+ * nearer declaration of such a slot, under the class that declares it. The linter walks this
+ * table alone, so a nearer row must be here for its hint to win. The full property table is too
+ * large for the linter's bundles.
  *
  * @param properties - class → own rows, the node and resource captures merged.
- * @param bases - class → immediate base, over both hierarchies.
+ * @param bases - class → immediate base over both hierarchies, acyclic.
  */
 export function deriveResourceTypeExclusions(properties, bases) {
+  const excludingByClass = new Map(
+    Object.entries(properties).map(([className, rows]) => [
+      className,
+      new Set(rows.filter(excludesAClass).map((row) => row.name)),
+    ])
+  );
   const exclusions = {};
   for (const className of Object.keys(properties).sort((a, b) => a.localeCompare(b))) {
-    const excluding = properties[className].filter(excludesAClass);
-    if (excluding.length === 0) continue;
-    exclusions[className] = Object.fromEntries(excluding.map((row) => [row.name, row.hint_string]));
+    const kept = properties[className].filter(
+      (row) => excludesAClass(row) || redeclaresExcludingSlot(className, row.name, excludingByClass, bases)
+    );
+    if (kept.length > 0)
+      exclusions[className] = Object.fromEntries(kept.map((row) => [row.name, row.hint_string]));
   }
-  assertNotRedeclared(exclusions, properties, bases);
   return exclusions;
 }
 
@@ -259,7 +255,7 @@ export function renderExclusionsModule(exclusions, version) {
     .join('\n');
   return `/**
  * The resource slots whose \`PROPERTY_HINT_RESOURCE_TYPE\` hint excludes a class with a \`-\` prefix,
- * derived from Godot ${version}'s ClassDB captures.
+ * and each nearer declaration of such a slot, derived from Godot ${version}'s ClassDB captures.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
  *
  * Each entry is class → property → hint string, under the class that declares the property. A
@@ -272,6 +268,11 @@ ${classes}
 `;
 }
 
+/** `resource-bases.json`, refused when cyclic. Flattened, so unlike the node side no chain shape rules a cycle out. */
+function readResourceBases() {
+  return assertAcyclic(JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')), 'resource-bases.json');
+}
+
 /** The exclusion module the committed artifact must equal. */
 export function renderFromExclusionCaptures() {
   const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
@@ -279,7 +280,7 @@ export function renderFromExclusionCaptures() {
     ...JSON.parse(readFileSync(NODE_PROPERTIES, 'utf8')),
     ...JSON.parse(readFileSync(RESOURCE_PROPERTIES, 'utf8')),
   };
-  const bases = { ...deriveBaseTypes(catalog.nodes), ...JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')) };
+  const bases = { ...deriveBaseTypes(catalog.nodes), ...readResourceBases() };
   return renderExclusionsModule(
     deriveResourceTypeExclusions(properties, bases),
     catalog.godotVersion ?? 'unknown'
@@ -308,9 +309,7 @@ export function renderFromCatalog() {
  */
 export function renderFromResourceBases() {
   const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
-  // Flattened, so unlike the node side no chain shape rules a cycle out. It is asserted here.
-  const bases = assertAcyclic(JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')), 'resource-bases.json');
-  return renderResourceModule(bases, catalog.godotVersion ?? 'unknown');
+  return renderResourceModule(readResourceBases(), catalog.godotVersion ?? 'unknown');
 }
 
 // Only write when run as a CLI, so the test can import the derivation.

@@ -44,7 +44,7 @@ const PACKED_VECTOR3_ARRAY = 36;
 const PACKED_COLOR_ARRAY = 37;
 
 /** `PropertyHint` (`object.h:50-96`), numbered as the capture stores it. */
-const HINT_RESOURCE_TYPE = 17;
+export const HINT_RESOURCE_TYPE = 17;
 const HINT_TYPE_STRING = 23;
 const HINT_ARRAY_TYPE = 31;
 

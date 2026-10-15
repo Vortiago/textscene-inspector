@@ -27,8 +27,10 @@ export interface ClassProperty {
   readonly declaredBy: string;
 }
 
+const PROPERTY_TABLES = [NODE_CLASS_PROPERTIES, RESOURCE_CLASS_PROPERTIES, UNCATALOGUED_PROPERTIES];
+
 function ownRows(className: string): readonly ClassPropertyRow[] | undefined {
-  for (const table of [NODE_CLASS_PROPERTIES, RESOURCE_CLASS_PROPERTIES, UNCATALOGUED_PROPERTIES]) {
+  for (const table of PROPERTY_TABLES) {
     if (Object.hasOwn(table, className)) return table[className];
   }
   return undefined;

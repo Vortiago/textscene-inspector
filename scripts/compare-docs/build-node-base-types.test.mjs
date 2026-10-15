@@ -37,14 +37,15 @@ describe('deriveResourceTypeExclusions', () => {
     });
   });
 
-  it('refuses a subclass that declares an excluding slot again, which a walk of this table would misread', () => {
+  it('keeps a nearer declaration of an excluding slot, so its hint wins the walk', () => {
     const properties = {
       Light3D: [row('light_projector', 17, 'Texture2D,-AtlasTexture')],
-      OmniLight3D: [row('light_projector', 17, 'Texture2D')],
+      OmniLight3D: [row('light_projector', 17, 'Texture2D'), row('omni_range', 3, '')],
     };
-    expect(() => deriveResourceTypeExclusions(properties, { OmniLight3D: 'Light3D' })).toThrow(
-      /OmniLight3D declares light_projector again/
-    );
+    expect(deriveResourceTypeExclusions(properties, { OmniLight3D: 'Light3D' })).toEqual({
+      Light3D: { light_projector: 'Texture2D,-AtlasTexture' },
+      OmniLight3D: { light_projector: 'Texture2D' },
+    });
   });
 });
 

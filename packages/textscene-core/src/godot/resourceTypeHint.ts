@@ -35,17 +35,36 @@ export interface ExcludingHint {
   readonly excluded: readonly string[];
 }
 
-/** `Object.hasOwn`, as the `.tscn` chooses both names. */
-function ownHintString(className: string, property: string): string | undefined {
+/** The resource hints `className` declares itself, generated and hand rows alike. */
+function ownResourceHints(className: string): readonly (readonly [property: string, hintString: string])[] {
   if (Object.hasOwn(RESOURCE_TYPE_EXCLUSIONS, className)) {
-    const slots = RESOURCE_TYPE_EXCLUSIONS[className]!;
-    if (Object.hasOwn(slots, property)) return slots[property];
+    return Object.entries(RESOURCE_TYPE_EXCLUSIONS[className]!);
   }
-  if (!Object.hasOwn(UNCATALOGUED_PROPERTIES, className)) return undefined;
-  const row = UNCATALOGUED_PROPERTIES[className]!.find(
-    ([name, , hint]) => name === property && hint === PROPERTY_HINT.RESOURCE_TYPE
+  if (!Object.hasOwn(UNCATALOGUED_PROPERTIES, className)) return [];
+  return UNCATALOGUED_PROPERTIES[className]!.filter(([, , hint]) => hint === PROPERTY_HINT.RESOURCE_TYPE).map(
+    ([property, , , hintString]) => [property, hintString] as const
   );
-  return row?.[3];
+}
+
+/** Written only by `excludingSlots`, once per class name. Never cleared: the tables are constant. */
+const excludingSlotsByClass = new Map<string, ReadonlyMap<string, ExcludingHint>>();
+
+/** Every slot of `className` whose nearest declaration excludes a class, keyed by property. */
+function excludingSlots(className: string): ReadonlyMap<string, ExcludingHint> {
+  const cached = excludingSlotsByClass.get(className);
+  if (cached) return cached;
+  const slots = new Map<string, ExcludingHint>();
+  const declared = new Set<string>();
+  for (const declaredBy of [className, ...classBaseChain(className)]) {
+    for (const [property, hintString] of ownResourceHints(declaredBy)) {
+      if (declared.has(property)) continue;
+      declared.add(property);
+      const { excluded } = resourceTypeHint(hintString);
+      if (excluded.length > 0) slots.set(property, { declaredBy, hintString, excluded });
+    }
+  }
+  excludingSlotsByClass.set(className, slots);
+  return slots;
 }
 
 /**
@@ -53,11 +72,5 @@ function ownHintString(className: string, property: string): string | undefined 
  * nearest ancestor that declares it. Undefined for any other property.
  */
 export function excludingHint(className: string, property: string): ExcludingHint | undefined {
-  for (const declaredBy of [className, ...classBaseChain(className)]) {
-    const hintString = ownHintString(declaredBy, property);
-    if (hintString === undefined) continue;
-    const { excluded } = resourceTypeHint(hintString);
-    return excluded.length > 0 ? { declaredBy, hintString, excluded } : undefined;
-  }
-  return undefined;
+  return excludingSlots(className).get(property);
 }

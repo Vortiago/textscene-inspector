@@ -15,10 +15,10 @@ import { excludingHint } from '../godot/resourceTypeHint.js';
 
 function sweep(scene: RawScene, owner: RawNode, lines: SourceLines, into: Diagnostic[]): void {
   for (const [key, value] of Object.entries(owner.rawProperties)) {
-    const slot = resolveResourceSlot(scene, value);
-    if (slot.kind !== 'resolved') continue;
     const hint = excludingHint(owner.type, key);
-    if (!hint?.excluded.includes(slot.type)) continue;
+    if (!hint) continue;
+    const slot = resolveResourceSlot(scene, value);
+    if (slot.kind !== 'resolved' || !hint.excluded.includes(slot.type)) continue;
     into.push(
       armDiagnostic(
         FILE_DIAGNOSTICS.resourceTypeExcludedByHint,
