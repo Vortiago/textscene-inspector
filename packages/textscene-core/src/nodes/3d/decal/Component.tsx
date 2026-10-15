@@ -18,7 +18,7 @@ import { editorHelperUserData } from '../../../r3f/editorHelpers';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree';
 import { useResourceLoader } from '../../../resources/useResource';
 import { useTexture2D } from '../../../resources/useTexture2D';
-import { applyTextureState, isMaterialOwnedTexture } from '../../../resources/textures/applyTextureState';
+import { applyTextureState, releaseBoundTexture } from '../../../resources/textures/applyTextureState';
 import type { Color } from '../../../utils/colorParser';
 import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
@@ -161,8 +161,7 @@ export function Decal({ node, children }: NodeComponentProps) {
       }
       materialsRef.current = null;
       materials.dispose();
-      // Only a bind-time clone is this projection's to free; a shared cache entry is not.
-      if (isMaterialOwnedTexture(projectionMap)) projectionMap.dispose();
+      releaseBoundTexture(projectionMap);
     };
     // `size` is the authored Vector3 (stable identity) unless an
     // AnimationPlayer is driving it, in which case a size keyframe rebuilds the

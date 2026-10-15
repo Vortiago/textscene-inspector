@@ -7,9 +7,15 @@
 
 import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
-import { brightPassGlsl, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
+import {
+  brightPassGlsl,
+  glowLevelSize,
+  samplesGlowMap,
+  type GlowParams,
+} from '../../resources/environment/godotGlow';
 import { compositeGlsl, type CompositeOptions } from '../../resources/environment/godotCompositor';
 import { glslFloat } from '../../resources/environment/glslLiterals';
+import { applyTextureState } from '../../resources/textures/applyTextureState';
 
 export interface GodotToneMapOptions extends CompositeOptions {
   /**
@@ -37,6 +43,7 @@ export class GodotToneMapEffect extends Effect {
     const uniforms = new Map<string, THREE.Uniform>([['godotExposure', new THREE.Uniform(exposure)]]);
     // Only the glow arm of the shader reads it.
     if (glow) uniforms.set('godotGlowBuffer', new THREE.Uniform(null));
+    if (glow && samplesGlowMap(glow)) uniforms.set('godotGlowMap', new THREE.Uniform(WHITE_GLOW_MAP));
 
     super('GodotToneMapEffect', compositeGlsl(composite), {
       // The effect writes the finished frame, glow and curve applied, so the composer must not
@@ -46,6 +53,15 @@ export class GodotToneMapEffect extends Effect {
     });
 
     this.pyramid = glow ? new GlowPyramid(glow) : null;
+  }
+
+  /**
+   * Samples `map` as the glow map, or white while it loads, which leaves the glow unscaled. The
+   * caller owns `map`. A no-op when the composite samples no map.
+   */
+  setGlowMap(map: THREE.Texture | null): void {
+    const uniform = this.uniforms.get('godotGlowMap');
+    if (uniform) uniform.value = map ?? WHITE_GLOW_MAP;
   }
 
   override setSize(width: number, height: number): void {
@@ -63,6 +79,19 @@ export class GodotToneMapEffect extends Effect {
     super.dispose();
   }
 }
+
+/**
+ * The view of `glowMap` Godot samples: the raw texels, through the texture's non-sRGB view
+ * (`renderer_scene_render_rd.cpp:707`), clamped (`tone_mapper.cpp:177`). A clone when the shared
+ * texture diverges, which the caller frees with `releaseBoundTexture`.
+ */
+export function glowMapView(glowMap: THREE.Texture): THREE.Texture {
+  return applyTextureState(glowMap, { colorSpace: THREE.NoColorSpace, repeat: false });
+}
+
+/** Shared by every effect and never disposed: one texel. */
+const WHITE_GLOW_MAP = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+WHITE_GLOW_MAP.needsUpdate = true;
 
 /**
  * The glow buffers and passes, owned as `BloomEffect` owns its own. Not a `BloomEffect`: Godot

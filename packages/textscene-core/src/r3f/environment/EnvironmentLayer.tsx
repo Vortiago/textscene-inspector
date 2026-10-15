@@ -9,20 +9,16 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { BackgroundMode, type EnvironmentSettings } from '../../resources/environment/types';
-import { applyToneMapping } from '../../resources/environment/toneMapping';
-import {
-  unexposedBrightPassThreshold,
-  glowNeedsEveryPixel,
-  glowParamsFor,
-} from '../../resources/environment/godotGlow';
+import { applyToneMapping, installToneCurve } from '../../resources/environment/toneMapping';
 import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
-import { sceneHasBloomableEmissive } from './bloomableScan';
 import { sceneHasBlendedSurface } from './alphaPassScan';
 import { useLatchedSceneScan } from './useLatchedSceneScan';
+import { compositorPassFor } from './compositorPass';
 import { SkyLayer } from '../sky/SkyLayer';
+import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
 import { clearColorCube } from './colorBackground';
@@ -31,9 +27,13 @@ export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
   /** The resolved sky, or null when there is none to render. */
   sky: Sky | null;
+  /** The pools the Environment's own references, such as `glow_map`, resolve in. */
+  resources: SceneResources;
+  /** The pools the sky material's references, such as a panorama, resolve in. */
+  skyResources: SceneResources;
 }
 
-export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
+export function EnvironmentLayer({ settings, sky, resources, skyResources }: EnvironmentLayerProps) {
   // Godot draws the sky as the background under BG_SKY and takes ambient from
   // it whenever the source resolves to a cubemap. The two are independent: a
   // sky can light the scene without being shown (AMBIENT_SOURCE_SKY over a
@@ -41,20 +41,14 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
-  // Glow, blending and the adjustments all run in the compositor's tone pass, so it owns the curve
-  // when any is live. Glow and blending are gated on the scene showing them: the HDR pass is not free.
-  const glowParams = useMemo(() => glowParamsFor(settings), [settings]);
-  // Null when a scan cannot decide: nothing could glow, or every pixel glows. One nullable value,
-  // not a threshold and a flag, since a threshold of 0 means "everything blooms".
-  const scanThreshold =
-    glowParams && !glowNeedsEveryPixel(glowParams) ? unexposedBrightPassThreshold(glowParams) : null;
-  const hasBloomable = useSceneHasBloomableEmissive(scanThreshold);
   const hasBlended = useSceneHasBlendedSurface();
-  const activeGlow = glowParams && (scanThreshold === null || hasBloomable) ? glowParams : null;
   const draws3D = useDraws3D();
-  // One value decides the pass and the suppression, so they cannot disagree.
-  const composited =
-    draws3D && (activeGlow || hasBlended || settings.adjustments) ? { glow: activeGlow } : null;
+  // One value decides the pass and the suppression, so they cannot disagree. Memoised, since a new
+  // glow object rebuilds the compositor's effect.
+  const composited = useMemo(
+    () => (draws3D ? compositorPassFor(settings, hasBlended) : null),
+    [draws3D, settings, hasBlended]
+  );
   // One value decides the fog programs, the fogged colour background and the fog passes.
   const hasFog = draws3D && (!!settings.fog || !!settings.volumetricFog);
 
@@ -71,6 +65,7 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
           glow={composited.glow}
           adjustments={settings.adjustments}
           toneMapping={settings.toneMapping}
+          resources={resources}
         />
       )}
       {hasFog && (
@@ -89,6 +84,7 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
           // Godot reflects the sky at `background_energy_multiplier` whatever the ambient source.
           intensity={skyAmbient ? skyAmbient.energy : 0}
           contribution={skyAmbient ? skyAmbient.contribution : 1}
+          resources={skyResources}
         />
       )}
       {flatAmbient && flatAmbient.energy > 0 && (
@@ -101,17 +97,6 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
         />
       )}
     </>
-  );
-}
-
-/** A null threshold means no glow, or one that catches every pixel: nothing to scan for. */
-function useSceneHasBloomableEmissive(threshold: number | null): boolean {
-  return useLatchedSceneScan(
-    useMemo(
-      () =>
-        threshold === null ? null : (scene: THREE.Object3D) => sceneHasBloomableEmissive(scene, threshold),
-      [threshold]
-    )
   );
 }
 
@@ -150,7 +135,8 @@ interface EnvironmentApplierProps {
   hasFog: boolean;
   /**
    * The composer forces `NoToneMapping` while mounted and `GodotToneMapEffect` applies the curve,
-   * so the in-material tonemap is not applied here.
+   * so the renderer's mapping is not set here. The curve still installs for a `SubViewport` pass,
+   * which renders the shared world without the composer.
    */
   suppressToneMapping: boolean;
 }
@@ -193,17 +179,15 @@ function EnvironmentApplier({ settings, hasSky, hasFog, suppressToneMapping }: E
     agxContrast: toneMapAgxContrast,
   } = settings.toneMapping;
   useEffect(() => {
-    if (suppressToneMapping) return undefined;
-    return applyToneMapping(
-      gl,
-      {
-        mode: toneMapMode,
-        exposure: toneMapExposure,
-        white: toneMapWhite,
-        agxContrast: toneMapAgxContrast,
-      },
-      scene
-    );
+    const toneMapping = {
+      mode: toneMapMode,
+      exposure: toneMapExposure,
+      white: toneMapWhite,
+      agxContrast: toneMapAgxContrast,
+    };
+    return suppressToneMapping
+      ? installToneCurve(gl, toneMapping, scene)
+      : applyToneMapping(gl, toneMapping, scene);
   }, [gl, scene, toneMapMode, toneMapExposure, toneMapWhite, toneMapAgxContrast, suppressToneMapping]);
 
   return null;

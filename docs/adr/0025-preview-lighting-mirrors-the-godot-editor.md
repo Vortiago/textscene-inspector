@@ -114,6 +114,7 @@ the sky IBL must land together.
   `LIGHT0..3`), so sky generation reads the same live-tree query as the yield rule. One
   query has two consumers.
 - A compositor pass reproduces the glow that the preview environment enables. It ports
-  Godot's own bright pass, weighted mip pyramid and blend modes. The pass mounts only
-  when the scene has content that can bloom, so a scene with nothing bright pays nothing
-  and renders the same either way, as in Godot.
+  Godot's own bright pass, weighted mip pyramid and blend modes. The pass mounts whenever
+  the environment enables glow, as Godot runs its glow chain on that flag alone
+  (`renderer_scene_render_rd.cpp:575`). The bright pass then picks the pixels, so a lit
+  specular highlight blooms as much as an emissive surface.

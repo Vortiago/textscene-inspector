@@ -12,7 +12,7 @@ import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { Sky } from '../../resources/sky/types';
 import { useTexture2D } from '../../resources/useTexture2D';
-import { useSceneResources } from '../SceneResourcesContext';
+import type { SceneResources } from '../SceneResourcesContext';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { skyLightEnergy } from './skyLight';
 import { skyEuler } from './skyRotation';
@@ -46,6 +46,8 @@ export interface SkyLayerProps {
   backgroundIntensity?: number;
   /** `sky_rotation`, which turns the background and the light the sky gives. */
   rotation: Vector3;
+  /** The pools the sky material's references, such as a panorama, resolve in. */
+  resources: SceneResources;
 }
 
 /** Godot's sky shader has four light slots. The other lights do not reach it. */
@@ -58,10 +60,10 @@ export function SkyLayer({
   asBackground = true,
   backgroundIntensity = 1,
   rotation,
+  resources,
 }: SkyLayerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
-  const { externalResources, internalResources } = useSceneResources();
 
   // `useTexture2D`, not the path-only resolver: a PanoramaSkyMaterial's
   // equirectangular texture may be an inline procedural one (a
@@ -70,8 +72,8 @@ export function SkyLayer({
   const panorama =
     useTexture2D(
       sky.material.kind === 'panorama' ? sky.material.panorama : undefined,
-      externalResources,
-      internalResources
+      resources.externalResources,
+      resources.internalResources
     ).texture ?? null;
   const lightsKey = useSkyLightsKey(scene);
   const contextRestores = useContextRestores(gl);
