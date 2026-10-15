@@ -12,20 +12,23 @@ import { stripComments } from '@textscene/dev-kit';
 import { repoPath, walkSources } from './r3f/testing/sourceScan';
 
 const coreSrc = dirname(fileURLToPath(import.meta.url));
-
 const repoRoot = resolve(coreSrc, '../../..');
 const godotDir = resolve(coreSrc, 'godot');
 
-/** The specifier of an `… from '…'` clause or a dynamic `import('…')`. */
-const SPECIFIER_RE = /\bfrom\s*['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+/** The specifier of an `… from '…'` clause, a side-effect `import '…'` or a dynamic `import('…')`. */
+const SPECIFIER_RE =
+  /\bfrom\s*['"]([^'"]+)['"]|\bimport\s*['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
 /** A braced `export { … } from '…'` block of a barrel, `export type` included. */
 const REEXPORT_RE = /\bexport\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"][^'"]+['"]/g;
 
-/** A braced `import { … } from 'specifier'`, its list spanning lines or not. */
+/** A braced `import { … } from 'specifier'` or `export { … } from 'specifier'`, its list spanning lines or not. */
 function braceImportRe(specifier: string): RegExp {
   const quoted = specifier.replaceAll('/', '\\/');
-  return new RegExp(String.raw`\bimport\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"]${quoted}['"]`, 'g');
+  return new RegExp(
+    String.raw`\b(?:import|export)\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"]${quoted}['"]`,
+    'g'
+  );
 }
 
 /** The names a braced list binds: `type X` reads as `X`, and `X as Y` as the exported `X`. */
@@ -51,11 +54,11 @@ function namesGodotBarrel(file: string, spec: string): boolean {
 
 function importsGodotBarrel(file: string, source: string): boolean {
   return [...stripComments(source).matchAll(SPECIFIER_RE)].some((match) =>
-    namesGodotBarrel(file, (match[1] ?? match[2])!)
+    namesGodotBarrel(file, (match[1] ?? match[2] ?? match[3])!)
   );
 }
 
-/** The names `source`, its comments stripped, imports from exactly `specifier`. */
+/** The names `source`, its comments stripped, imports or re-exports from exactly `specifier`. */
 function namesImported(source: string, specifier: string): string[] {
   return [...source.matchAll(braceImportRe(specifier))].flatMap((match) => listedNames(match[1]!));
 }
@@ -80,6 +83,7 @@ describe('core imports each engine fact from its own file', () => {
     expect(importsGodotBarrel(file, "import {\n  a,\n} from '../../../godot/index.js';")).toBe(true);
     expect(importsGodotBarrel(file, "import { a } from '../../../godot';")).toBe(true);
     expect(importsGodotBarrel(file, "const m = await import('../../../godot/index');")).toBe(true);
+    expect(importsGodotBarrel(file, "import '../../../godot/index.js';")).toBe(true);
     expect(importsGodotBarrel(file, "import { a } from '../../../godot/math/math.js';")).toBe(false);
     expect(importsGodotBarrel(file, "// import { a } from '../../../godot';")).toBe(false);
   });
@@ -101,6 +105,10 @@ describe('a package barrel re-exports only what a package outside core imports',
       "import {\n  type A,\n  b as c,\n} from '@textscene/core/godot';\nimport { d } from '@textscene/core';";
     expect(namesImported(source, '@textscene/core/godot')).toEqual(['A', 'b']);
     expect(namesImported(source, '@textscene/core')).toEqual(['d']);
+  });
+
+  it('reads a name an outside file re-exports from the package (edge case)', () => {
+    expect(namesImported("export { e as f } from '@textscene/core';", '@textscene/core')).toEqual(['e']);
   });
 
   it.each([

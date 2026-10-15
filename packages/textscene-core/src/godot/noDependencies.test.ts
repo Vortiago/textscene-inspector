@@ -78,9 +78,9 @@ describe('src/godot is a dependency-free leaf', () => {
     const violations: string[] = [];
     for (const name of sourceFiles()) {
       for (const spec of specifiersIn(readFileSync(resolve(here, name), 'utf8'))) {
-        // Only a specifier inside this directory tree is legal: `index.ts` re-exports `./math/math.js`,
-        // and a group file reaches another as `../math/math.js`. Resolved rather than
-        // pattern-matched, so `../../logger.js` is caught however many hops it takes.
+        // Only a specifier inside this directory tree is legal: `index.ts` re-exports
+        // `./project/project.js`, and a group file reaches another as `../math/math.js`. Resolved
+        // rather than pattern-matched, so `../../logger.js` is caught however many hops it takes.
         const resolved = resolve(dirname(resolve(here, name)), spec);
         if (!spec.startsWith('.') || relative(here, resolved).startsWith('..')) {
           violations.push(`${name} imports '${spec}'`);

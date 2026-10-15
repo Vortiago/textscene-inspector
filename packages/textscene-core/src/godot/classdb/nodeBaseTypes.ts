@@ -9,7 +9,8 @@ import { CATALOG_BASE_TYPES } from './nodeBaseTypes.generated.js';
 
 /**
  * Types Godot 4.6.3's ClassDB does not enumerate, each with its reason. An entry for a catalogued type
- * would shadow the engine's answer, which `linter/baseChainCompleteness.test.ts` rejects.
+ * that names another base would shadow the engine's answer, which `linter/baseChainCompleteness.test.ts`
+ * rejects.
  */
 const UNCATALOGUED: Readonly<Record<string, string>> = {
   // Added after the pinned build: the current class reference lists it under Light3D's "Inherited

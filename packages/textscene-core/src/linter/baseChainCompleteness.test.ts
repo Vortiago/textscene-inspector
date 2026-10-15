@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { NODE_BASE_TYPES, isCatalogedType } from '../godot/classdb/nodeBaseTypes.js';
+import { NODE_BASE_TYPES } from '../godot/classdb/nodeBaseTypes.js';
 import { CLASS_BASE_TYPES } from '../godot/classdb/classBaseTypes.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its validators
@@ -118,7 +118,7 @@ describe('NODE_BASE_TYPES covers every registered node type', () => {
    */
   it('registers no type the catalog and the exception list both fail to name', () => {
     const unknown = registered
-      .filter((type) => !isCatalogedType(type))
+      .filter((type) => type !== 'Node' && !Object.hasOwn(NODE_BASE_TYPES, type))
       .map(
         (type) =>
           `${type} is registered but is neither in node-catalog.json nor in UNCATALOGUED — a typo, or a type newer than the catalog's Godot`

@@ -19,6 +19,7 @@ import {
   CURSOR_SHAPES,
   LAYOUT_DIRECTION_MAX,
   LAYOUT_DIRECTION_NAMES,
+  LayoutDirection,
 } from '../../../../godot/scene/control.js';
 import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
 
@@ -225,9 +226,13 @@ validatorRegistry.registerAll(
     // control.cpp:3539, ERR_FAIL_INDEX(p_direction, LAYOUT_DIRECTION_MAX). The early return at
     // :3536 compares with data.layout_dir, which holds only values that passed this guard, so it
     // never catches an out-of-range write.
-    layout_direction: v.enumInt('layout_direction', 0, LAYOUT_DIRECTION_MAX - 1, LAYOUT_DIRECTION_NAMES, {
-      enforced: 'control.cpp:3539',
-    }),
+    layout_direction: v.enumInt(
+      'layout_direction',
+      LayoutDirection.INHERITED,
+      LAYOUT_DIRECTION_MAX - 1,
+      LAYOUT_DIRECTION_NAMES,
+      { enforced: 'control.cpp:3539' }
+    ),
     // Variant::OBJECT with PROPERTY_HINT_NODE_TYPE (control.cpp:4307): the writer stores
     // `get_path_to(n)`, a NodePath (packed_scene.cpp:884-891). `null` loads too: NIL converts to
     // OBJECT (variant.cpp:543-545), and the setter stores an empty ObjectID (control.cpp:2022-2027).
