@@ -9,7 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import './nodes/index';
 import { nodeComponentRegistry } from './NodeComponentRegistry';
 import { SceneResourcesProvider } from './SceneResourcesContext';
-import { RootEnvironmentScope } from './environment/WorldEnvironmentScope';
+import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope';
 import { TscnParser } from '../parser/TscnParser';
 import type { TscnNode } from '../parser/types';
 
@@ -34,11 +34,11 @@ describe('node component subtree conformance', () => {
 
       const renderer = await ReactThreeTestRenderer.create(
         <SceneResourcesProvider internalResources={[]}>
-          <RootEnvironmentScope>
+          <WorldEnvironmentScope world="root">
             <Component node={parseBareNode(type)}>
               <group name="__probe__" />
             </Component>
-          </RootEnvironmentScope>
+          </WorldEnvironmentScope>
         </SceneResourcesProvider>
       );
       const survived = renderer.scene

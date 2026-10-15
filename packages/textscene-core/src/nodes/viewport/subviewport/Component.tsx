@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
-import { ViewportEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
+import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
@@ -27,7 +27,6 @@ import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import {
   applyOrthoFrame,
-  createOffscreenTarget,
   godotCanvasPosition,
   renderToOffscreenTarget,
   orthoFrameForCamera2D,
@@ -37,7 +36,7 @@ import {
   viewportAspect,
   viewportMsaaSamples,
 } from './offscreenViewport';
-import { useDeviceSampleCount } from '../../../r3f/deviceSampleCount';
+import { useOffscreenTarget } from './useOffscreenTarget';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
@@ -114,13 +113,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
 
   // Carries the storage and the tonemap contracts: Godot tonemaps a
   // sub-viewport's render into its target as it tonemaps the main view's.
-  const samples = useDeviceSampleCount(viewportMsaaSamples(properties, kind));
-  const target = useMemo(
-    () => createOffscreenTarget(width, height, node.name, { samples }),
-    [width, height, node.name, samples]
-  );
-
-  useEffect(() => () => target.dispose(), [target]);
+  const target = useOffscreenTarget(width, height, node.name, viewportMsaaSamples(properties, kind));
   // A 3D portal renders its lights only through this pass, so it fits them itself and draws its
   // own depth prepass. An inline pass renders the parent scene, which its own canvas serves, and a
   // 2D portal holds no 3D surface.
@@ -230,9 +223,9 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   return createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
       <WorldRootProvider value={portalScene}>
-        <ViewportEnvironmentScope>
+        <WorldEnvironmentScope world="subViewport">
           <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
-        </ViewportEnvironmentScope>
+        </WorldEnvironmentScope>
       </WorldRootProvider>
     </CanvasWorkspaceProvider>,
     portalScene

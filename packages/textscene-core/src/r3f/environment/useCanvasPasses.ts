@@ -1,6 +1,7 @@
 /**
- * The compositor's tone pass for one canvas: whether it mounts, with what glow and how many samples.
- * The pass needs a real 3D GL context, so a 2D canvas, test-renderer and a headless DOM get none.
+ * The passes one environment draws on the canvas: whether the 3D passes run at all, and the
+ * compositor's tone pass with its glow and samples. The 3D passes need a real GL context, so a 2D
+ * canvas, test-renderer and a headless DOM get none.
  */
 
 import { useMemo } from 'react';
@@ -12,27 +13,38 @@ import { useDeviceSampleCount } from '../deviceSampleCount';
 import { sceneHasBlendedSurface } from './alphaPassScan';
 import { useLatchedSceneScan } from './useLatchedSceneScan';
 import { compositorPassFor, type CompositorPass } from './compositorPass';
+import { useWorldKind } from './WorldKindContext';
 
-/** Null when nothing needs the pass. A null `settings` is a root with no Environment. */
-export function useCompositorPass(settings: EnvironmentSettings | null): CompositorPass | null {
+export interface CanvasPasses {
+  /**
+   * Whether the tone-map compositor and the volumetric fog can draw. Godot composites canvas items
+   * after `_render_buffers_post_process_and_tonemap`, so a 2D canvas gets neither, and every canvas
+   * item there blends.
+   */
+  draws3D: boolean;
+  /** Null when nothing needs the pass, and in a sub-viewport's world, whose pass draws no compositor. */
+  compositor: CompositorPass | null;
+}
+
+/** A null `settings` is a root with no Environment. */
+export function useCanvasPasses(settings: EnvironmentSettings | null): CanvasPasses {
   const hasBlended = useLatchedSceneScan(sceneHasBlendedSurface);
   const draws3D = useDraws3D();
-  // The composer's scene buffer is half float (`EffectComposer`'s `frameBufferType`).
+  const isRootWorld = useWorldKind() === 'root';
+  // The root viewport's samples: the compositor draws only the root's world. The composer's scene
+  // buffer is half float (`EffectComposer`'s `frameBufferType`).
   const msaa3D = useDeviceSampleCount(useProjectSettings().msaaSamples.msaa3D, 'RGBA16F');
   // Memoised, since a new glow object rebuilds the compositor's effect.
   return useMemo(
-    () => (draws3D ? compositorPassFor(settings, hasBlended, msaa3D) : null),
-    [draws3D, settings, hasBlended, msaa3D]
+    () => ({
+      draws3D,
+      compositor: draws3D && isRootWorld ? compositorPassFor(settings, hasBlended, msaa3D) : null,
+    }),
+    [draws3D, isRootWorld, settings, hasBlended, msaa3D]
   );
 }
 
-/**
- * Whether this canvas draws the 3D passes: the tone-map compositor and the volumetric fog. Both need
- * a real GL context, which test-renderer and a headless DOM lack. Godot composites canvas items
- * after `_render_buffers_post_process_and_tonemap`, so a 2D canvas gets neither, and every canvas
- * item there blends.
- */
-export function useDraws3D(): boolean {
+function useDraws3D(): boolean {
   const gl = useThree((s) => s.gl);
   const glReady = useMemo(() => hasRealGlContext(gl), [gl]);
   const is2D = useCanvasWorkspace() === '2d';

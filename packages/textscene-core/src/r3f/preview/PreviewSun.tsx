@@ -1,7 +1,6 @@
 /**
- * `<PreviewSun>`: Godot's editor preview sun, mounted only while the scene has no
- * DirectionalLight3D of its own (ADR-0025). The yield reads the live tree, so a light
- * inside an instanced sub-scene counts, as in Godot's editor.
+ * `<PreviewSun>`: Godot's editor preview sun. The root world mounts it only while the scene has no
+ * DirectionalLight3D of its own (ADR-0025, `WorldEnvironmentScope.tsx`).
  */
 
 import { useMemo } from 'react';
@@ -16,7 +15,6 @@ import {
   PREVIEW_SUN_SHADOW_MAX_DISTANCE,
   previewSunDirection,
 } from './godotPreviewLighting';
-import { usePreviewYield } from './usePreviewYield';
 
 /**
  * Where the preview sun stands. It has no scene node, so nothing is anchored to
@@ -37,16 +35,12 @@ const PREVIEW_SUN_SHADOW = directionalShadowUserData(
   })
 );
 
-export function PreviewSun() {
-  return usePreviewYield().sun ? <PreviewSunLight /> : null;
-}
-
 /**
  * Godot's preview sun: a white, energy-1.0 DirectionalLight3D with shadows on.
  * It declares its shadow as an authored `<DirectionalLight3D>` does, and the same fitter fits it.
  * So a scene does not visibly change character the moment it gains its own sun.
  */
-function PreviewSunLight() {
+export function PreviewSun() {
   const target = useMemo(() => new THREE.Object3D(), []);
   // A tuple, not a Vector3: R3F assigns an object-valued `position` straight
   // onto the instance, and `Object3D.position` has no setter.

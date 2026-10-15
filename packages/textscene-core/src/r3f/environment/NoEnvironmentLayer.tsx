@@ -10,7 +10,7 @@ import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { ProjectClearColor } from '../ProjectClearColor';
 import { ToneMapLayer } from './ToneMapLayer';
-import { useCompositorPass } from './useCompositorPass';
+import { useCanvasPasses } from './useCanvasPasses';
 
 /**
  * The tonemap pass's own defaults (`tone_mapper.h:177-180`), not an Environment's. They equal the
@@ -24,14 +24,14 @@ const NO_ENVIRONMENT_TONE_MAPPING: EnvironmentSettings['toneMapping'] = {
 };
 
 export function NoEnvironmentLayer() {
-  const composited = useCompositorPass(null);
+  const { compositor } = useCanvasPasses(null);
   return (
     <>
       <ProjectClearColor />
-      {composited && (
+      {compositor && (
         <ToneMapLayer
           glow={null}
-          samples={composited.samples}
+          samples={compositor.samples}
           adjustments={null}
           toneMapping={NO_ENVIRONMENT_TONE_MAPPING}
           resources={NO_RESOURCES}

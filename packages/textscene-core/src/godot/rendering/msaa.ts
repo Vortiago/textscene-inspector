@@ -4,8 +4,24 @@
  * (`servers/rendering/rendering_server.cpp:3773-3774`).
  */
 
-/** The samples per pixel of MSAA_2X, MSAA_4X and MSAA_8X (`texture_storage.cpp:3607-3612`). */
-const MULTISAMPLED_COUNTS = [2, 4, 8] as const;
+/**
+ * `Viewport.MSAA` in enum order (`scene/main/viewport.h:119-125`), each mode with its samples per
+ * pixel (`texture_storage.cpp:3607-3612`).
+ */
+const VIEWPORT_MSAA = [
+  { label: 'DISABLED', samples: 0 },
+  { label: '2X', samples: 2 },
+  { label: '4X', samples: 4 },
+  { label: '8X', samples: 8 },
+] as const;
+
+/** Every `Viewport.MSAA` value, 0 to `MSAA_MAX - 1`. */
+export const MSAA_MODES: readonly number[] = VIEWPORT_MSAA.map((_, mode) => mode);
+
+/** The `Viewport.MSAA` constant names without their `MSAA_` prefix, by value. */
+export const MSAA_LABELS: Readonly<Record<number, string>> = Object.fromEntries(
+  VIEWPORT_MSAA.map(({ label }, mode) => [mode, label])
+);
 
 /**
  * The samples a render target takes for `mode`: 0, three's "no multisampled buffer", for
@@ -13,7 +29,7 @@ const MULTISAMPLED_COUNTS = [2, 4, 8] as const;
  * (`ERR_FAIL_INDEX`, `viewport.cpp:3748`, `:3763`) and the viewport keeps its default.
  */
 export function msaaSampleCount(mode: number): number {
-  return MULTISAMPLED_COUNTS[mode - 1] ?? 0;
+  return VIEWPORT_MSAA[mode]?.samples ?? 0;
 }
 
 /**
