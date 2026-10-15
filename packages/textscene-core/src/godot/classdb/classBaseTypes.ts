@@ -21,7 +21,8 @@ function classBaseOf(className: string): string | undefined {
 /**
  * The first answer `visit` gives for `className` or an ancestor, nearest first, over both
  * hierarchies, or `undefined`. The one walk over the table. It builds no chain, so a per-key lookup
- * stops at the first hop that answers. A hop bound guards against a malformed table.
+ * stops at the first hop that answers. `undefined` from `visit` means no answer: any other value,
+ * `false` and `null` included, ends the walk. A hop bound guards against a malformed table.
  */
 export function findInClassChain<T>(
   className: string,
@@ -44,11 +45,16 @@ export function descendsFromClass(className: string, ancestor: string): boolean 
   return findInClassChain(className, (type) => type === ancestor || undefined) ?? false;
 }
 
-/** Every ancestor of `className`, nearest first, over both hierarchies. */
+/** `className`, then each ancestor nearest first, over both hierarchies. A repeated class ends it. */
+function classAndBaseChain(className: string): string[] {
+  const chain = new Set<string>();
+  findInClassChain(className, (type) => (chain.has(type) ? true : void chain.add(type)));
+  return [...chain];
+}
+
+/** Every ancestor of `className`, nearest first, over both hierarchies. Cycle-safe and hop-bounded. */
 export function classBaseChain(className: string): readonly string[] {
-  const chain: string[] = [];
-  findInClassChain(className, (type) => void chain.push(type));
-  return chain.slice(1);
+  return classAndBaseChain(className).slice(1);
 }
 
 /**
@@ -70,7 +76,7 @@ function rootBaseOf(className: string): string | undefined {
  * each ancestor through `Object`, nearest first. A class neither table knows yields only its name.
  */
 export function classInheritanceChain(className: string): readonly string[] {
-  const chain = [className, ...classBaseChain(className)];
+  const chain = classAndBaseChain(className);
   for (let base = rootBaseOf(chain.at(-1)!); base !== undefined; base = rootBaseOf(base)) chain.push(base);
   return chain;
 }
