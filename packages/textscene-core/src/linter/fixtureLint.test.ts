@@ -63,6 +63,16 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'the NoMesh node is deliberately meshless, to pin that Godot renders nothing rather than crashing or showing a placeholder',
   },
+  'unit-area-light-atlas-texture.tscn': {
+    rules: ['resource-type-excluded-by-hint'],
+    reason:
+      'named for it: the AtlasTexture on area_texture is the class the hint excludes, which is the advisory',
+  },
+  'unit-decal-atlas-texture.tscn': {
+    rules: ['resource-type-excluded-by-hint'],
+    reason:
+      'the AtlasTexture and CanvasTexture on texture_albedo are the classes the hint excludes; the fixture measures what Godot draws for them',
+  },
   'unit-animation-tree-stateless.tscn': {
     rules: ['animationtree-inactive'],
     reason: 'named for it: the tree is inactive on purpose, which is the advisory',

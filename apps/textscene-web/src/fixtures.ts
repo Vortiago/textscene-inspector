@@ -538,6 +538,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fog Volume Shader Material",
+    "file": "unit-fog-volume-shader-material.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Fog Volume",
     "file": "unit-fog-volume.tscn",
     "category": "Other"
@@ -2323,6 +2328,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Sprite2d Block Compressed",
+    "file": "unit-sprite2d-block-compressed.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Sprite2d Canvastexture",
     "file": "unit-sprite2d-canvastexture.tscn",
     "category": "Unit - 2D Canvas"
@@ -2416,6 +2426,11 @@ export const fixtures: Fixture[] = [
     "name": "Tile Map",
     "file": "unit-tile-map.tscn",
     "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Area Light Atlas Texture",
+    "file": "unit-area-light-atlas-texture.tscn",
+    "category": "Unit - Lights"
   },
   {
     "name": "Area Light Distance Fade",

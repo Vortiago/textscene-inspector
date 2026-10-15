@@ -2,10 +2,12 @@
  * <FogVolume> puts a fog volume into its scene for the volumetric fog to draw: its shape, its size
  * and what fills it, at the node's transform.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { FogVolumeShape } from '../../../godot/rendering/environment/fogVolume';
+import { setLogAdapter, type LogAdapter } from '../../../logger';
+import { parseShaderFile } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import { FogVolumeObject } from '../../../r3f/fog/fogVolumeObject';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -20,7 +22,33 @@ const FOG_MATERIAL: TscnInternalResource = {
   type: 'FogMaterial',
   data: { density: '-2' },
 };
-const SHADER_MATERIAL: TscnInternalResource = { id: 'ShaderMaterial_1', type: 'ShaderMaterial', data: {} };
+const FOG_SHADER: TscnInternalResource = {
+  id: 'Shader_fog',
+  type: 'Shader',
+  data: { code: '"shader_type fog;\nvoid fog() { DENSITY = 0.5; }"' },
+};
+const SPATIAL_SHADER: TscnInternalResource = {
+  id: 'Shader_spatial',
+  type: 'Shader',
+  data: { code: '"shader_type spatial;\nvoid fragment() {}"' },
+};
+const EMPTY_SHADER: TscnInternalResource = { id: 'Shader_empty', type: 'Shader', data: {} };
+const FOG_VISUAL_SHADER: TscnInternalResource = {
+  id: 'VisualShader_fog',
+  type: 'VisualShader',
+  data: { mode: '4' },
+};
+const SPATIAL_VISUAL_SHADER: TscnInternalResource = {
+  id: 'VisualShader_spatial',
+  type: 'VisualShader',
+  data: {},
+};
+/** A ShaderMaterial with `shader` as its shader reference, or none. */
+function shaderMaterial(id: string, shader?: string): TscnInternalResource {
+  return { id, type: 'ShaderMaterial', data: shader ? { shader } : {} };
+}
+const SHADER_MATERIAL = shaderMaterial('ShaderMaterial_1');
+const FOG_SHADER_MATERIAL = shaderMaterial('ShaderMaterial_fog', 'SubResource("Shader_fog")');
 const NOISE: TscnInternalResource = { id: 'FastNoiseLite_1', type: 'FastNoiseLite', data: {} };
 const NOISE_TEXTURE: TscnInternalResource = {
   id: 'NoiseTexture3D_1',
@@ -37,10 +65,38 @@ const IMAGE_MATERIAL: TscnInternalResource = {
   type: 'FogMaterial',
   data: { density_texture: 'ExtResource("1_density")' },
 };
-const RESOURCES = [FOG_MATERIAL, SHADER_MATERIAL, NOISE, NOISE_TEXTURE, TEXTURED_MATERIAL, IMAGE_MATERIAL];
+const RESOURCES = [
+  FOG_MATERIAL,
+  SHADER_MATERIAL,
+  NOISE,
+  NOISE_TEXTURE,
+  TEXTURED_MATERIAL,
+  IMAGE_MATERIAL,
+  FOG_SHADER,
+  SPATIAL_SHADER,
+  FOG_SHADER_MATERIAL,
+  shaderMaterial('ShaderMaterial_spatial', 'SubResource("Shader_spatial")'),
+  shaderMaterial('ShaderMaterial_file', 'ExtResource("2_shader")'),
+  shaderMaterial('ShaderMaterial_tres', 'ExtResource("3_shader")'),
+  shaderMaterial('ShaderMaterial_spatial_file', 'ExtResource("4_shader")'),
+  shaderMaterial('ShaderMaterial_unloaded', 'ExtResource("5_shader")'),
+  EMPTY_SHADER,
+  shaderMaterial('ShaderMaterial_empty', 'SubResource("Shader_empty")'),
+  FOG_VISUAL_SHADER,
+  shaderMaterial('ShaderMaterial_visual_fog', 'SubResource("VisualShader_fog")'),
+  SPATIAL_VISUAL_SHADER,
+  shaderMaterial('ShaderMaterial_visual_spatial', 'SubResource("VisualShader_spatial")'),
+];
 const IMAGE_PATH = 'res://fog/density.png';
+const SPATIAL_SHADER_PATH = 'res://fog/spatial.tres';
+const FOG_SHADER_FILE_PATH = 'res://fog/wisps.gdshader';
+const SPATIAL_SHADER_FILE_PATH = 'res://fog/spatial.gdshader';
 const EXTERNAL_RESOURCES: TscnExternalResource[] = [
   { id: '1_density', type: 'CompressedTexture3D', path: IMAGE_PATH },
+  { id: '2_shader', type: 'Shader', path: FOG_SHADER_FILE_PATH },
+  { id: '3_shader', type: 'Shader', path: SPATIAL_SHADER_PATH },
+  { id: '4_shader', type: 'Shader', path: SPATIAL_SHADER_FILE_PATH },
+  { id: '5_shader', type: 'Shader', path: 'res://fog/unloaded.gdshader' },
 ];
 /** The imported 3D texture the loader holds for `IMAGE_PATH`. */
 const IMPORTED = new THREE.Data3DTexture(new Uint8Array(32), 2, 2, 2);
@@ -56,12 +112,23 @@ function fogVolumeNode(props: Record<string, string>): TscnNode {
 }
 
 /** The fog volume a FogVolume node with `props` puts into its scene. */
-async function mountedVolume(props: Record<string, string>): Promise<FogVolumeObject> {
+async function mountedVolume(
+  props: Record<string, string>,
+  resources: TscnInternalResource[] = RESOURCES
+): Promise<FogVolumeObject> {
   const fake = createFakeResourceLoader();
   fake.textures3D.seed(IMAGE_PATH, IMPORTED);
+  fake.resources.seed(SPATIAL_SHADER_PATH, {
+    resourceType: 'Shader',
+    properties: SPATIAL_SHADER.data,
+    extResources: [],
+    subResources: [],
+  });
+  fake.resources.seed(FOG_SHADER_FILE_PATH, parseShaderFile('shader_type fog;\nvoid fog() {}\n'));
+  fake.resources.seed(SPATIAL_SHADER_FILE_PATH, parseShaderFile('shader_type spatial;\n'));
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider internalResources={RESOURCES} externalResources={EXTERNAL_RESOURCES}>
+      <SceneResourcesProvider internalResources={resources} externalResources={EXTERNAL_RESOURCES}>
         <NodePathProvider path="Fog">
           <FogVolume node={fogVolumeNode(props)} />
         </NodePathProvider>
@@ -109,12 +176,88 @@ describe('<FogVolume>', () => {
     expect((await mountedVolume({})).fill).toEqual({ kind: 'default' });
   });
 
-  it('marks a ShaderMaterial fill as a fog shader the previewer does not run (edge case)', async () => {
-    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_1")' });
+  it('marks a fog ShaderMaterial fill as a fog shader the previewer does not run', async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_fog")' });
     expect(volume.fill).toEqual({ kind: 'shader' });
+  });
+
+  it("fills a volume with a ShaderMaterial whose .tres shader is spatial with Godot's default fog", async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_tres")' });
+    expect(volume.fill).toEqual({ kind: 'default' });
+  });
+
+  it('marks a ShaderMaterial whose .gdshader is a fog shader as a fog shader', async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_file")' });
+    expect(volume.fill).toEqual({ kind: 'shader' });
+  });
+
+  it("fills a volume with a ShaderMaterial whose .gdshader is spatial with Godot's default fog", async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_spatial_file")' });
+    expect(volume.fill).toEqual({ kind: 'default' });
+  });
+
+  it('marks a ShaderMaterial whose shader has not loaded as a fog shader (edge case)', async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_unloaded")' });
+    expect(volume.fill).toEqual({ kind: 'shader' });
+  });
+
+  it("fills a volume with a ShaderMaterial without a shader with Godot's default fog (edge case)", async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_1")' });
+    expect(volume.fill).toEqual({ kind: 'default' });
+  });
+
+  it("fills a volume with a spatial ShaderMaterial with Godot's default fog (error case)", async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_spatial")' });
+    expect(volume.fill).toEqual({ kind: 'default' });
+  });
+
+  it("fills a volume with a ShaderMaterial whose shader has no code with Godot's default fog (edge case)", async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_empty")' });
+    expect(volume.fill).toEqual({ kind: 'default' });
+  });
+
+  it('marks a ShaderMaterial whose VisualShader runs in fog mode as a fog shader', async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_visual_fog")' });
+    expect(volume.fill).toEqual({ kind: 'shader' });
+  });
+
+  it("fills a volume with a ShaderMaterial whose VisualShader is spatial with Godot's default fog (edge case)", async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_visual_spatial")' });
+    expect(volume.fill).toEqual({ kind: 'default' });
   });
 
   it("fills the volume with Godot's default fog when its material is missing (error case)", async () => {
     expect((await mountedVolume({ material: 'SubResource("Missing")' })).fill).toEqual({ kind: 'default' });
+  });
+});
+
+describe('<FogVolume> with a shader it does not run', () => {
+  afterEach(() => setLogAdapter(null));
+
+  /** The `[FogVolume]` messages the logger receives at info level while `run` runs. */
+  async function fogVolumeInfoMessages(run: () => Promise<unknown>): Promise<string[]> {
+    const info = vi.fn();
+    const adapter: LogAdapter = { trace: vi.fn(), debug: vi.fn(), info, warn: vi.fn(), error: vi.fn() };
+    setLogAdapter(adapter);
+    await run();
+    return info.mock.calls
+      .map(([message]) => String(message))
+      .filter((message) => message.startsWith('[FogVolume]'));
+  }
+
+  it('logs once that it adds no fog for a fog shader', async () => {
+    // A copy of the material, which the logger has not seen in an earlier test.
+    const resources = [{ ...FOG_SHADER_MATERIAL }, FOG_SHADER];
+    const props = { material: 'SubResource("ShaderMaterial_fog")' };
+    const messages = await fogVolumeInfoMessages(async () => {
+      await mountedVolume(props, resources);
+      await mountedVolume(props, resources);
+    });
+    expect(messages).toHaveLength(1);
+  });
+
+  it('logs nothing for a spatial shader, which Godot also fills with its default fog (edge case)', async () => {
+    const props = { material: 'SubResource("ShaderMaterial_spatial")' };
+    expect(await fogVolumeInfoMessages(() => mountedVolume(props))).toEqual([]);
   });
 });

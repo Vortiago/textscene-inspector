@@ -1,0 +1,24 @@
+; AreaLight3D whose area_texture is an AtlasTexture, a class the slot's hint excludes. The linter
+; warns on it (resource-type-excluded-by-hint): Godot's editor never offers the class, and the
+; setter keeps it with a debug warning, because the light reads the whole atlas sheet.
+[gd_scene load_steps=4 format=3]
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_sheet"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_cell"]
+atlas = SubResource("GradientTexture2D_sheet")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(6, 6)
+
+[node name="Root" type="Node3D"]
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="Area" type="AreaLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 2, 0)
+area_size = Vector2(2, 1)
+area_texture = SubResource("AtlasTexture_cell")

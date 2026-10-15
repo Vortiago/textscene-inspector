@@ -10,12 +10,31 @@ import {
   splitTopLevel,
   STRING_LITERAL_RE,
   STRING_LITERAL_SOURCE,
+  stringLiteral,
   stringLiteralBodies,
   stringToFloat,
   stringToInt,
   stripEdges,
   validateFilename,
 } from './string.js';
+
+describe('stringLiteral', () => {
+  it('quotes the text', () => {
+    expect(stringLiteral('shader_type fog;')).toBe('"shader_type fog;"');
+  });
+
+  it('escapes a quote and a backslash, as Godot writes them', () => {
+    expect(stringLiteral('a "b" \\ c')).toBe('"a \\"b\\" \\\\ c"');
+  });
+
+  it('keeps a newline as it is (edge case)', () => {
+    expect(stringLiteral('a\nb')).toBe('"a\nb"');
+  });
+
+  it('quotes empty text (edge case)', () => {
+    expect(stringLiteral('')).toBe('""');
+  });
+});
 
 describe('literalText', () => {
   it.each([

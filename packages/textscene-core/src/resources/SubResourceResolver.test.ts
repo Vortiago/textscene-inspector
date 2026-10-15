@@ -252,10 +252,15 @@ describe('textResourcePath', () => {
   const resources = [
     { id: '1', type: 'ArrayMesh', path: 'res://rock.tres' },
     { id: '2', type: 'ArrayMesh', path: 'res://rock.res' },
+    { id: '3', type: 'Shader', path: 'res://fog.gdshader' },
   ];
 
   it('names the .tres an ExtResource loads', () => {
     expect(textResourcePath('ExtResource("1")', resources)).toBe('res://rock.tres');
+  });
+
+  it('names the .gdshader an ExtResource loads', () => {
+    expect(textResourcePath('ExtResource("3")', resources)).toBe('res://fog.gdshader');
   });
 
   it('names nothing for a binary .res, an undeclared id or no reference (error path)', () => {
