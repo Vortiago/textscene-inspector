@@ -1,7 +1,7 @@
 /** Label3D node data. */
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
-import type { BillboardMode } from '../../../godot/scene/billboard';
+import type { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import type { HorizontalAlignment, Rgba } from '../../../godot/math/math';
 import type { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import type { TextureFilter } from '../../../godot/rendering/materials/textureFilter';

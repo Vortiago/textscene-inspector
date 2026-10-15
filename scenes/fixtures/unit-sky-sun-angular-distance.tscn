@@ -1,0 +1,29 @@
+; Moves DirectionalLight3D.light_angular_distance in the sky. Godot's sky reads it as the sun
+; disc's size (`sky.cpp:1096-1097`), so this 3 degree sun, 3.5 degrees above the horizon in front
+; of the editor camera, draws a wide solid disc. Every other sky scene draws its sun at the
+; default 0 or out of view, so a sky that ignores the angular distance looks right there. Here
+; it draws a point sun with only the soft falloff.
+[gd_scene load_steps=4 format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]
+sky_top_color = Color(0.1, 0.2, 0.5, 1)
+sky_horizon_color = Color(0.5, 0.6, 0.75, 1)
+sun_angle_max = 8.0
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_mat")
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+
+[node name="SkySunAngularDistance" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.877583, 0.029268, -0.478531, 0, 0.998135, 0.061049, 0.479426, 0.053575, -0.875946, 0, 0, 0)
+light_color = Color(1, 0.85, 0.6, 1)
+light_angular_distance = 3.0
+

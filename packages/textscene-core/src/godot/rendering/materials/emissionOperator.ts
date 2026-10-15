@@ -13,6 +13,3 @@ export const EmissionOperator = {
 
 /** Each operator's name by the integer a `.tscn` stores, as a validator names it. */
 export const EMISSION_OPERATOR_NAMES = enumNamesByValue(EmissionOperator);
-
-/** The operator a material stores no `emission_operator` for (`material.h:610`). */
-export const EMISSION_OPERATOR_DEFAULT = EmissionOperator.ADD;

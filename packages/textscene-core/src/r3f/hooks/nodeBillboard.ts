@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { BillboardMode } from '../../godot/scene/billboard';
+import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { billboardWorldMatrix } from '../surfaceBillboard';
 
 /** Scratch, overwritten by every call: this runs on every rendered frame. */

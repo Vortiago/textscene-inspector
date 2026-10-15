@@ -7,9 +7,8 @@
  */
 
 import * as THREE from 'three';
+import { LIGHT_3D_DEFAULTS, SPOT_LIGHT_3D_DEFAULTS } from '../../godot/scene/light.js';
 import {
-  LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT,
-  SPOT_ANGLE_ATTENUATION_DEFAULT,
   VOLUMETRIC_FOG_LIGHT_ENERGY_MIN,
   VOLUMETRIC_FOG_SHADOW_OPACITY_MIN,
 } from '../../godot/rendering/environment/volumetricFog.js';
@@ -124,7 +123,7 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
   const kind = fogLightKind(light);
   if (kind === null) return false;
   const declaration = readFogLightDeclaration(light);
-  const fogEnergy = declaration?.energy ?? LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT;
+  const fogEnergy = declaration?.energy ?? LIGHT_3D_DEFAULTS.volumetricFogEnergy;
   if (fogEnergy <= VOLUMETRIC_FOG_LIGHT_ENERGY_MIN) return false;
   row.fill(0);
   const energy = light.intensity * fogEnergy;
@@ -150,7 +149,7 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
   const travel = targetDirection(spot, camera);
   writeVec4(row, FogLightTexel.DIRECTION, travel.x, travel.y, travel.z, Math.cos(spot.angle));
   // The cone exponent is the inverse of `spot_angle_attenuation` (`light_storage.cpp:914`).
-  row[Cone.EXPONENT] = 1 / (declaration?.spotAngleAttenuation ?? SPOT_ANGLE_ATTENUATION_DEFAULT);
+  row[Cone.EXPONENT] = 1 / (declaration?.spotAngleAttenuation ?? SPOT_LIGHT_3D_DEFAULTS.spotAngleAttenuation);
   writeSpotShadow(spot, camera);
   return true;
 }

@@ -42,7 +42,7 @@ describe('directionalShadowDeclaration', () => {
       maxDistance: 100,
       pancakeSize: 20,
       fadeStart: 0.8,
-      depthBias: directionalShadowBias(undefined, 2),
+      depthBias: directionalShadowBias(0.1, 2),
       normalBias: 2,
       filterRadius: 2,
       softShadowAngle: 0,

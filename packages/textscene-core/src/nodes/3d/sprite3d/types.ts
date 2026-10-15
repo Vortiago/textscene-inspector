@@ -5,7 +5,7 @@
  */
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
-import type { BillboardMode } from '../../../godot/scene/billboard';
+import type { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import type { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import type { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 import type { Vector3Axis } from '../../../godot/math/vector3Axis';

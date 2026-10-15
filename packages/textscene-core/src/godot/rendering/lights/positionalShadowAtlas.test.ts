@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   PositionalShadowAtlas,
-  ROOT_POSITIONAL_SHADOW_ATLAS,
   omniShadowCubeSize,
-  viewportPositionalShadowAtlas,
   type PositionalShadowRequest,
 } from './positionalShadowAtlas';
+import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../../scene/viewport';
 
 const spot = (owner: string, coverage = 1): PositionalShadowRequest<string> => ({
   owner,
@@ -38,29 +37,6 @@ const slotSizeOf = (atlas: PositionalShadowAtlas<string>, owner: string) => atla
 const REALLOC_TOLERANCE_MSEC = 500;
 
 const names = (prefix: string, count: number) => Array.from({ length: count }, (_, i) => `${prefix}${i}`);
-
-describe('viewportPositionalShadowAtlas', () => {
-  it('reads the authored size and quadrant subdivisions', () => {
-    expect(viewportPositionalShadowAtlas(4096, [1, 2, 3, 6])).toEqual({
-      size: 4096,
-      quadrantShadows: [1, 4, 16, 1024],
-    });
-  });
-
-  it('keeps the Viewport defaults where the scene authors nothing (edge case)', () => {
-    expect(viewportPositionalShadowAtlas(undefined, [])).toEqual({
-      size: 2048,
-      quadrantShadows: [4, 4, 16, 64],
-    });
-  });
-
-  it('keeps the default for a value the setter refuses (error case)', () => {
-    expect(viewportPositionalShadowAtlas(-1, [7, -1, 2.5, undefined])).toEqual({
-      size: 2048,
-      quadrantShadows: [4, 4, 16, 64],
-    });
-  });
-});
 
 describe('PositionalShadowAtlas, quadrant subdivision', () => {
   /** The slot side a lone full-screen spot light takes when the atlas's only quadrant holds `shadows`. */

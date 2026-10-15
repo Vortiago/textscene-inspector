@@ -6,7 +6,7 @@ import { type Sprite3DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 export function formatSprite3DProperties(properties: Sprite3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];

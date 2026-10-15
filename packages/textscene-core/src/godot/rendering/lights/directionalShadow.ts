@@ -1,6 +1,6 @@
 /**
  * A DirectionalLight3D's shadow, as the renderer sets it up: the camera slice it covers, the
- * splits of that slice, and the defaults that shape them.
+ * splits of that slice, and where it sits in the shadow atlas.
  * `RendererSceneCull::_light_instance_setup_directional_shadow` reads the viewing camera and never
  * the light's position.
  */
@@ -8,26 +8,11 @@
 import { enumNamesByValue } from '../../classdb/enumNames.js';
 import { directionalLightLightsSurfaces } from './directionalLightSkyMode.js';
 
-/** `DirectionalLight3D()` sets `PARAM_SHADOW_MAX_DISTANCE` to 100 (`scene/3d/light_3d.cpp:600`). */
-export const DIRECTIONAL_SHADOW_MAX_DISTANCE_DEFAULT = 100;
-
-/** `DirectionalLight3D()` sets `PARAM_SHADOW_FADE_START` to 0.8 (`scene/3d/light_3d.cpp:601`). */
-export const DIRECTIONAL_SHADOW_FADE_START_DEFAULT = 0.8;
-
 /**
  * `servers/rendering/renderer_scene_render.h:48`: the forward renderers draw at most this many
  * directional lights (`scene_forward_clustered.glsl:2282` loops `i < 8`).
  */
 export const MAX_DIRECTIONAL_LIGHTS = 8;
-
-/** `Light3D()` sets `PARAM_SHADOW_PANCAKE_SIZE` to 20 (`scene/3d/light_3d.cpp:487`). */
-export const DIRECTIONAL_SHADOW_PANCAKE_SIZE_DEFAULT = 20;
-
-/**
- * `DirectionalLight3D()` sets `PARAM_SHADOW_NORMAL_BIAS` to 2 (`scene/3d/light_3d.cpp:603`), in texels
- * of the shadow map.
- */
-export const DIRECTIONAL_SHADOW_NORMAL_BIAS_DEFAULT = 2;
 
 /**
  * `rendering/lights_and_shadows/directional_shadow/size` defaults to 4096
@@ -101,23 +86,8 @@ export const DirectionalShadowMode = {
   PARALLEL_4_SPLITS: 2,
 } as const;
 
-/**
- * `DirectionalLight3D()` sets four splits (`scene/3d/light_3d.cpp:606`), and so does the editor's
- * preview sun (`editor/scene/3d/node_3d_editor_plugin.cpp:10383`).
- */
-export const DIRECTIONAL_SHADOW_MODE_DEFAULT = DirectionalShadowMode.PARALLEL_4_SPLITS;
-
 /** The shadow mode names, for a diagnostic that reports the legal values. */
 export const DIRECTIONAL_SHADOW_MODE_NAMES = enumNamesByValue(DirectionalShadowMode);
-
-/**
- * `Light3D()` sets `PARAM_SHADOW_SPLIT_1_OFFSET` to `PARAM_SHADOW_SPLIT_3_OFFSET` to these fractions
- * of the shadowed range (`scene/3d/light_3d.cpp:483-485`).
- */
-export const DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT: readonly [number, number, number] = [0.1, 0.2, 0.5];
-
-/** `DirectionalLight3D()` leaves split blending off (`scene/3d/light_3d.cpp:607`). */
-export const DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT = false;
 
 /**
  * The most splits one light draws. The shader holds one far end per split in a vec4

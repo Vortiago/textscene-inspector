@@ -6,7 +6,7 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../godot/scene/billboard.js';
+import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../godot/rendering/materials/billboardMode.js';
 
 export const renderKeys: Record<string, PropertyValidator> = {
   billboard_mode: v.enumInt(

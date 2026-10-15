@@ -16,11 +16,14 @@ interface SkyLightDeclaration {
    * light has zero three intensity, so the sky cannot recover this from the light.
    */
   energy: number;
+  /** The sun disc's angular size in radians, Godot's `LIGHTn_SIZE`. */
+  size: number;
 }
 
 const declaration = userDataDeclaration<SkyLightDeclaration>(
   'skyLight',
-  ({ drawsInSky, energy }) => typeof drawsInSky === 'boolean' && typeof energy === 'number'
+  ({ drawsInSky, energy, size }) =>
+    typeof drawsInSky === 'boolean' && typeof energy === 'number' && typeof size === 'number'
 );
 
 /** The `userData` entry that declares a light's part in the sky, to merge into its `userData`. */
@@ -34,4 +37,9 @@ export function skyLightEnergy(light: THREE.DirectionalLight): number | null {
   const sky = declaration.read(light);
   if (!sky) return light.intensity / LIGHT_INTENSITY_SCALE;
   return sky.drawsInSky ? sky.energy : null;
+}
+
+/** The sun disc size the sky reads from `light`. A light that declares none is a point sun. */
+export function skyLightSize(light: THREE.DirectionalLight): number {
+  return declaration.read(light)?.size ?? 0;
 }

@@ -165,7 +165,7 @@ describe('SkyLayer', () => {
         <directionalLight position={[1, 2, 3]} />
         <directionalLight
           position={[3, 2, 1]}
-          userData={skyLightUserData({ drawsInSky: false, energy: 1 })}
+          userData={skyLightUserData({ drawsInSky: false, energy: 1, size: 0 })}
         />
       </>
     );
@@ -178,12 +178,27 @@ describe('SkyLayer', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <>
         <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
-        <directionalLight intensity={0} userData={skyLightUserData({ drawsInSky: true, energy: 2 })} />
+        <directionalLight
+          intensity={0}
+          userData={skyLightUserData({ drawsInSky: true, energy: 2, size: 0 })}
+        />
       </>
     );
     await advance(renderer, 1);
 
     expect(lastBake()?.lights[0]?.energy).toBe(2);
+  });
+
+  it('draws a light’s sun disc at its declared size', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <>
+        <SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+        <directionalLight userData={skyLightUserData({ drawsInSky: true, energy: 1, size: 0.25 })} />
+      </>
+    );
+    await advance(renderer, 1);
+
+    expect(lastBake()?.lights[0]?.size).toBe(0.25);
   });
 
   it('draws a light that declares nothing at its intensity over the scale (error case)', async () => {
