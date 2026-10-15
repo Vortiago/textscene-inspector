@@ -5,7 +5,7 @@
 
 import { userDataDeclaration } from '../userDataDeclaration.js';
 
-export interface FogLightDeclaration {
+interface FogLightDeclaration {
   /** `light_volumetric_fog_energy`: how strongly the medium scatters this light. */
   energy: number;
   /** `spot_angle_attenuation`, for a spot light only. */

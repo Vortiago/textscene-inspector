@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { lerp } from '../../../../godot/math';
+import { lerpColor } from '../../../../godot/math';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { ControlColor } from '../control/types';
 import { connectionControlPoints, tessellateConnectionLine } from './connectionCurve';
@@ -21,16 +21,6 @@ import { minimapConvertFromGraph, type GraphScrollBounds, type MinimapTransform 
 export interface MinimapConnectionLine {
   points: Vec2[];
   colors: ControlColor[];
-}
-
-/** `Color::lerp`: component-wise, alpha included. */
-function lerpColor(from: ControlColor, to: ControlColor, weight: number): ControlColor {
-  return {
-    r: lerp(from.r, to.r, weight),
-    g: lerp(from.g, to.g, weight),
-    b: lerp(from.b, to.b, weight),
-    a: lerp(from.a, to.a, weight),
-  };
 }
 
 function distance(a: Vec2, b: Vec2): number {

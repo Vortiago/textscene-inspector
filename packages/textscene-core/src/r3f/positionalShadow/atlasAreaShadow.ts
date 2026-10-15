@@ -16,7 +16,7 @@ import {
 import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { lightPoseMatrix, readLightPose } from './lightPose.js';
-import { positionalShadowAtlas } from './shadowAtlasTarget.js';
+import { drawIntoAtlasSlot, positionalShadowAtlas } from './shadowAtlasTarget.js';
 import { readIntensityThroughSlot, type SlottedShadow } from './slotOpacity.js';
 
 /**
@@ -96,20 +96,11 @@ export class AtlasAreaShadow extends AreaShadowBase implements SlottedShadow {
     this._frustum = new AreaShadowVolume();
   }
 
-  /**
-   * Draws into `slot` of the atlas from the next shadow pass on, or into nothing for null. `mapSize`
-   * is the slot and the frame extents are the atlas over the slot, as for a spot light
-   * (`atlasSpotShadow.ts`).
-   */
+  /** Draws into `slot` of the atlas from the next shadow pass on, or into nothing for null. */
   place(slot: PositionalShadowSlot | null): void {
     this.slot = slot;
     if (slot === null) return;
-    this.map = positionalShadowAtlas();
-    const atlasSize = this.map.width;
-    this.mapSize.set(slot.size, slot.size);
-    this._frameExtents.set(atlasSize / slot.size, atlasSize / slot.size);
-    this.slotRect.set(slot.x / slot.size, slot.y / slot.size, 1, 1);
-    this._viewports[0]!.copy(this.slotRect);
+    drawIntoAtlasSlot(this, slot, this.slotRect);
   }
 
   /**

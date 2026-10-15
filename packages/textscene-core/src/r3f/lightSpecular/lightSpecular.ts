@@ -7,7 +7,8 @@
 
 import type * as THREE from 'three';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
-import { LIGHT_KINDS, slottedLights, type LightKind } from '../lightSlots.js';
+import { declaredLightOf } from '../directionalShadow/splitSun.js';
+import { slotValues } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
 
@@ -41,14 +42,13 @@ export function installLightSpecularUniforms(): void {
  * (`directionalShadow/splitSun.ts`), so it takes that light's. A light without one, such as a GLB
  * light, keeps three's full specular.
  */
-function specularAmountOf(light: THREE.Light, kind: LightKind): number {
-  const declarer = kind === 'sun' ? light.parent : light;
-  return (declarer && declaration.read(declarer)?.amount) ?? 1;
+function specularAmountOf(light: THREE.Light): number {
+  const declared = declaredLightOf(light);
+  return (declared && declaration.read(declared)?.amount) ?? 1;
 }
 
 /** Writes the specular amount of each slotted light among `lights`, for a render through `camera`. */
 export function writeLightSpecularUniforms(lights: readonly SceneLight[], camera: THREE.Camera): void {
-  const slotted = slottedLights(lights, camera);
-  const ordered = LIGHT_KINDS.flatMap((kind) => slotted[kind].map((light) => specularAmountOf(light, kind)));
+  const ordered = slotValues(lights, camera, specularAmountOf);
   arrays.write(ordered.length, (set) => set[LIGHT_SPECULARS].set(ordered));
 }

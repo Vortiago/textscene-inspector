@@ -36,7 +36,7 @@ describe('installGodotLightSpecular', () => {
   it("sets each loop's amount from its kind's slots, past the kinds before it", () => {
     const loops = patchedLoops();
 
-    expect(loops).toContain(`godotSpecularAmount = ${LIGHT_SPECULARS}[ 0 + UNROLLED_LOOP_INDEX ];`);
+    expect(loops).toContain(`godotSpecularAmount = ${LIGHT_SPECULARS}[ UNROLLED_LOOP_INDEX ];`);
     expect(loops).toContain(
       `godotSpecularAmount = ${LIGHT_SPECULARS}[ NUM_DIR_LIGHTS + UNROLLED_LOOP_INDEX ];`
     );

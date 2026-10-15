@@ -22,9 +22,6 @@ export { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX };
 /** The world canvas's layer, which is where everything outside a CanvasLayer draws. */
 export const WORLD_CANVAS_LAYER = 0;
 
-/** `CanvasLayer.layer`'s Godot default, which is why a default light (window 0..0) never lights a default HUD. */
-export const DEFAULT_CANVAS_LAYER = 1;
-
 /**
  * `_cull_canvas_item` (`servers/rendering/renderer_canvas_cull.cpp` lines 816-820 on master) clamps
  * only a `z_relative` sum, and `_attach_canvas_item_for_draw` (line 564) stores it as `z_final`. The

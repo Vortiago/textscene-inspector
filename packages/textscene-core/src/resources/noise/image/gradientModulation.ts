@@ -3,9 +3,9 @@
  * straight across.
  */
 
-import { clamp } from '../../../godot/math.js';
 import type { Gradient } from '../../textures/gradienttexture2d/types';
 import { sampleGradientColor } from '../../textures/gradienttexture2d/sample';
+import { clamp8 } from './noiseBytes.js';
 
 /**
  * `_modulate_with_gradient` of `NoiseTexture2D` and `NoiseTexture3D` (noise_texture_2d.cpp:183-198,
@@ -72,5 +72,5 @@ function grayLuminance(byte: number): number {
 
 /** An RGBA8 image truncates each channel as it stores it (`image.cpp:3577-3580`). */
 function rgba8Channel(channel: number): number {
-  return Math.trunc(clamp(channel * 255, 0, 255));
+  return clamp8(channel * 255);
 }

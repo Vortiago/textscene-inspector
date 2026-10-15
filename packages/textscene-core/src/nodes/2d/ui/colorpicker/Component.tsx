@@ -22,7 +22,7 @@ import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { CANVAS_SRGB_DEFINES } from '../../../../r3f/canvasSrgbMultiply';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { godotColorToLinear, useGodotLinearColor } from '../../../../r3f/godotColor';
 import { parseColor } from '../../../../utils/colorParser';
 import { AlphaCheckerboardQuad } from '../shared/AlphaCheckerboardQuad';
 import {
@@ -329,7 +329,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
   // `up_icon_modulate` and `down_icon_modulate` default to `control_font_color` (`default_theme.cpp:634,638`).
   const spinArrowColor = useMemo(
-    () => srgbToLinearColor(multiplyModulate(tint.own, CONTROL_FONT_COLOR)),
+    () => godotColorToLinear(multiplyModulate(tint.own, CONTROL_FONT_COLOR)),
     [tint.own]
   );
 
@@ -736,7 +736,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                   <ControlQuad
                     width={sliderBox.w}
                     height={sliderBox.h}
-                    color={srgbToLinearColor(multiplyModulate(tint.own, row.overlay.base))}
+                    color={godotColorToLinear(multiplyModulate(tint.own, row.overlay.base))}
                     opacity={tint.opacity}
                     renderOrder={renderOrder}
                   />
@@ -952,10 +952,4 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
       )}
     </CanvasItemGroup>
   );
-}
-
-/** The conversion of `useGodotLinearColor`, for a colour inside a `.map()` callback, where a hook cannot run. */
-function srgbToLinearColor(c: ControlColor): THREE.Color {
-  const toLinear = (v: number) => (v < 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
-  return new THREE.Color(toLinear(c.r), toLinear(c.g), toLinear(c.b));
 }

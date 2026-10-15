@@ -9,7 +9,7 @@ import {
   SOFT_LOW_SHADOW_SAMPLES,
   vogelDisk,
 } from '../../godot/softShadowKernel.js';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 import {
   applyChunkEdits,
   installChunkPatch,

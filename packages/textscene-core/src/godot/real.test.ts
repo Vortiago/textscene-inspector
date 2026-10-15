@@ -1,6 +1,6 @@
 /** The `real_t` storage facts: a single-precision round, and the text that names it. */
 import { describe, it, expect } from 'vitest';
-import { formatReal, storedReal, storedXyz } from './real.js';
+import { formatReal, storedReal, storedVector3 } from './real.js';
 
 describe('storedReal', () => {
   it('rounds to the nearest single-precision value', () => {
@@ -37,20 +37,24 @@ describe('formatReal', () => {
   });
 });
 
-describe('storedXyz', () => {
+describe('storedVector3', () => {
   it('rounds each component to single precision', () => {
-    expect(storedXyz({ x: 0.99, y: 0.3, z: 2 })).toEqual({ x: storedReal(0.99), y: storedReal(0.3), z: 2 });
+    expect(storedVector3({ x: 0.99, y: 0.3, z: 2 })).toEqual({
+      x: storedReal(0.99),
+      y: storedReal(0.3),
+      z: 2,
+    });
   });
 
   it('keeps the non-finite components', () => {
-    const stored = storedXyz({ x: Infinity, y: -Infinity, z: NaN });
+    const stored = storedVector3({ x: Infinity, y: -Infinity, z: NaN });
 
     expect([stored.x, stored.y, stored.z]).toEqual([Infinity, -Infinity, NaN]);
   });
 
   it('leaves the given vector unchanged (edge case)', () => {
     const value = { x: 0.99, y: 0, z: 0 };
-    storedXyz(value);
+    storedVector3(value);
 
     expect(value.x).toBe(0.99);
   });

@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { sharedTexture } from '../sharedTexture.js';
+import { userDataDeclaration } from '../userDataDeclaration.js';
 import {
   buildAreaLightAtlas,
   type AreaLightAtlas,
@@ -106,11 +107,14 @@ export function releaseAreaTexture(texture: THREE.Texture): void {
   placements.delete(texture);
 }
 
-const TEXTURE_KEY = 'godotAreaTexture';
+const textureDeclaration = userDataDeclaration<THREE.Texture>(
+  'godotAreaTexture',
+  (candidate) => (candidate as Partial<THREE.Texture>).isTexture === true
+);
 
 /** The `userData` through which a `RectAreaLight` carries its `area_texture` to the light pass. */
 export function areaTextureUserData(texture: THREE.Texture | null): Record<string, unknown> {
-  return { [TEXTURE_KEY]: texture };
+  return texture ? textureDeclaration.userData(texture) : {};
 }
 
 /** An empty rectangle marks a light without a texture (4.7.2 `light_storage.cpp:1132-1141`). */
@@ -121,7 +125,7 @@ export const NO_AREA_TEXTURE: AreaTexturePlacement = { rect: [0, 0, 0, 0], maxMi
  * texture the atlas does not hold.
  */
 export function areaTexturePlacement(light: THREE.Object3D): AreaTexturePlacement {
-  const texture = light.userData[TEXTURE_KEY] as THREE.Texture | null | undefined;
+  const texture = textureDeclaration.read(light);
   return (texture && placements.get(texture)) ?? NO_AREA_TEXTURE;
 }
 

@@ -2,7 +2,8 @@
 
 import { primitiveSolid, type CsgGeometryBuilder } from '../../../../r3f/csg/csgRegistration';
 import { transform3DToMatrix } from '../../../../r3f/nodeTreeTransforms';
-import { tessellateCurve3D, type Vec3 } from '../../../../resources/curves/curve3d/index.js';
+import type { Vector3 } from '../../../../godot/vector.js';
+import { tessellateCurve3D } from '../../../../resources/curves/curve3d/index.js';
 import type { Transform3D } from '../../../base/node3d/types';
 import { buildCsgPolygonGeometry, PolygonMode, type CsgPolygonPathPlan } from './polygonGeometry';
 import type { CSGPolygon3DProperties } from './types';
@@ -48,7 +49,7 @@ export const csgPolygon3DGeometry: CsgGeometryBuilder = (properties) => {
  * Full precision, deliberately: rounding would collide two nearby handles, positions or
  * basis rows into one key and serve the wrong solid, where a long key only costs bytes.
  */
-const vec3Key = (v: Vec3): string => `${v.x},${v.y},${v.z}`;
+const vec3Key = (v: Vector3): string => `${v.x},${v.y},${v.z}`;
 
 function transformKey(t: Transform3D | null): string {
   return t ? [t.basis_x, t.basis_y, t.basis_z, t.origin].map(vec3Key).join(',') : '';
