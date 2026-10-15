@@ -4,6 +4,7 @@
  */
 
 import * as THREE from 'three';
+import { perRenderer } from './perRenderer.js';
 
 /**
  * Maps the unit plane onto NDC, and hands the fragment shader the target's uv, 0 to 1, as `vUv`.
@@ -17,11 +18,15 @@ void main() {
 }
 `;
 
-/** The one quad every pass draws, shared since a draw only lends it the pass's material. */
-const quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1));
-// The quad ignores every matrix, so its bounds say nothing about where it lands.
-quad.frustumCulled = false;
 const quadCamera = new THREE.Camera();
+
+/** The quad a renderer draws every pass with. */
+const quadFor = perRenderer(() => {
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1));
+  // The quad ignores every matrix, so its bounds say nothing about where it lands.
+  quad.frustumCulled = false;
+  return quad;
+});
 
 /** A pass that overwrites its target with `fragmentShader`, reading `uniforms`. */
 export function fullScreenPass(
@@ -68,6 +73,7 @@ export function drawFullScreen(
   layer = 0,
   mip = 0
 ): void {
+  const quad = quadFor(renderer);
   quad.material = pass;
   renderer.setRenderTarget(target, layer, mip);
   renderer.render(quad, quadCamera);

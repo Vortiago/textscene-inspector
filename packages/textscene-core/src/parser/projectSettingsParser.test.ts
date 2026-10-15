@@ -17,7 +17,7 @@ import {
   projectThemeScale,
   projectClearColor,
   projectTransparentBackground,
-  projectMsaaSamples,
+  projectMsaaModes,
   projectViewportSize,
   projectVolumetricFogSettings,
 } from './projectSettingsParser';
@@ -216,32 +216,30 @@ describe('projectTransparentBackground', () => {
   });
 });
 
-describe('projectMsaaSamples', () => {
-  it("reads the root viewport's 2D and 3D modes as sample counts", () => {
+describe('projectMsaaModes', () => {
+  it("reads the root viewport's 2D and 3D modes", () => {
     // `demos/2d/particles` sets msaa_2d=2, and most 3D demos set msaa_3d=2: 4X.
     expect(
-      projectMsaaSamples({
+      projectMsaaModes({
         'rendering/anti_aliasing/quality/msaa_2d': '1',
         'rendering/anti_aliasing/quality/msaa_3d': '2',
       })
-    ).toEqual({ msaa2D: 2, msaa3D: 4 });
+    ).toEqual({ msaa2D: 1, msaa3D: 2 });
   });
 
-  it('draws no multisampled buffer with no project', () => {
-    expect(projectMsaaSamples(null)).toEqual({ msaa2D: 0, msaa3D: 0 });
+  it('keeps Disabled with no project', () => {
+    expect(projectMsaaModes(null)).toEqual({ msaa2D: 0, msaa3D: 0 });
   });
 
-  it('keeps Disabled for a mode the setter refuses or a value that is no integer', () => {
-    expect(
-      projectMsaaSamples({
-        'rendering/anti_aliasing/quality/msaa_2d': '4',
-        'rendering/anti_aliasing/quality/msaa_3d': 'high',
-      })
-    ).toEqual({ msaa2D: 0, msaa3D: 0 });
+  it('keeps Disabled for a value that is no integer (error path)', () => {
+    expect(projectMsaaModes({ 'rendering/anti_aliasing/quality/msaa_3d': 'high' })).toEqual({
+      msaa2D: 0,
+      msaa3D: 0,
+    });
   });
 
   it('ignores a feature-tagged override, which the desktop editor does not take', () => {
-    expect(projectMsaaSamples({ 'rendering/anti_aliasing/quality/msaa_3d.web': '2' })).toEqual({
+    expect(projectMsaaModes({ 'rendering/anti_aliasing/quality/msaa_3d.web': '2' })).toEqual({
       msaa2D: 0,
       msaa3D: 0,
     });

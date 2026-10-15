@@ -7,6 +7,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { boolOr, enumOr, parseOptionalInt, vec2iOr } from '../../../parser/valueParsers';
 import { parseNode } from '../../node/parser';
+import { MSAA_DISABLED, MSAA_MODES } from '../../../godot/rendering/msaa';
 import {
   CLEAR_MODE_ALWAYS,
   CLEAR_MODE_NEVER,
@@ -28,9 +29,6 @@ const UPDATE_MODES = [
 ] as const;
 
 const CLEAR_MODES = [CLEAR_MODE_ALWAYS, CLEAR_MODE_NEVER, CLEAR_MODE_ONCE] as const;
-
-/** `Viewport.MSAA`: DISABLED, 2X, 4X, 8X. */
-const MSAA_MODES = [0, 1, 2, 3] as const;
 
 /** `Viewport.DefaultCanvasItemTextureFilter`: NEAREST, LINEAR and the mipmap variants. */
 const TEXTURE_FILTERS = [0, 1, 2, 3] as const;
@@ -66,8 +64,8 @@ export function parseSubViewport(
       CLEAR_MODES,
       context
     ),
-    msaa_2d: enumOr(properties.msaa_2d, 0, MSAA_MODES, context),
-    msaa_3d: enumOr(properties.msaa_3d, 0, MSAA_MODES, context),
+    msaa_2d: enumOr(properties.msaa_2d, MSAA_DISABLED, MSAA_MODES, context),
+    msaa_3d: enumOr(properties.msaa_3d, MSAA_DISABLED, MSAA_MODES, context),
     use_debanding: boolOr(properties.use_debanding, false, context),
     audio_listener_enable_2d: boolOr(properties.audio_listener_enable_2d, false, context),
     canvas_item_default_texture_filter: enumOr(

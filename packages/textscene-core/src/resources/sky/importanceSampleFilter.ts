@@ -3,14 +3,13 @@
 import { layerSamples, type SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection.js';
 import { LAYER_FILTER_UNIFORMS, type LayerFilter } from './layerFilter.js';
 import { IMPORTANCE_SAMPLE_FRAGMENT_SHADER } from './skyLayerShaders.js';
-import { setUniforms, skyPass } from './skyPass.js';
+import { skyPass } from './skyPass.js';
+import { perRenderer } from '../../r3f/perRenderer.js';
 
-/** One pass for every layout, as each filter would otherwise compile it again. */
-const importanceSamplePass = skyPass(IMPORTANCE_SAMPLE_FRAGMENT_SHADER, [
-  ...LAYER_FILTER_UNIFORMS,
-  'samples',
-  'sampleCount',
-]);
+/** One pass per renderer for every layout, as each filter would otherwise compile it again. */
+const importanceSamplePassFor = perRenderer(() =>
+  skyPass(IMPORTANCE_SAMPLE_FRAGMENT_SHADER, [...LAYER_FILTER_UNIFORMS, 'samples', 'sampleCount'])
+);
 
 /** Written only by `importanceSampleFilter`, on the first bake of a layout. */
 const filtersByLayout = new Map<string, LayerFilter>();
@@ -21,15 +20,18 @@ export function importanceSampleFilter(layout: SkyOctmapLayout): LayerFilter {
   let filter = filtersByLayout.get(key);
   if (filter) return filter;
   const lastLayer = layout.layerSizes.length - 1;
-  const samplesByLayer = layout.layerSizes.map((_, layer) => packedSamples(layout, layer));
+  const uniformsByLayer = layout.layerSizes.map((_, layer) => {
+    const samples = packedSamples(layout, layer);
+    return { samples, sampleCount: samples.length / 4 };
+  });
   filter = {
     layout,
     chainSizes: layout.downsampledSizes,
-    pass: importanceSamplePass,
-    selectLayer(layer) {
-      const samples = samplesByLayer[layer];
-      if (!samples) throw new Error(`expected a layer from 0 to ${lastLayer}, got ${layer}`);
-      setUniforms(importanceSamplePass, { samples, sampleCount: samples.length / 4 });
+    passFor: importanceSamplePassFor,
+    layerUniforms(layer) {
+      const uniforms = uniformsByLayer[layer];
+      if (!uniforms) throw new Error(`expected a layer from 0 to ${lastLayer}, got ${layer}`);
+      return uniforms;
     },
   };
   filtersByLayout.set(key, filter);

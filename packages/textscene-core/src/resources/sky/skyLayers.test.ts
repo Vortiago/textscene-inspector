@@ -24,6 +24,18 @@ function radianceCube(renderer: THREE.WebGLRenderer): THREE.CubeTexture {
   return target.texture;
 }
 
+/** The materials `renderer` draws with while `bake` runs, each read at its draw as the quad is reused. */
+function passesDrawnBy(renderer: THREE.WebGLRenderer, bake: () => void): Set<THREE.Material> {
+  const passes = new Set<THREE.Material>();
+  const render = renderer.render.bind(renderer);
+  vi.spyOn(renderer, 'render').mockImplementation((drawn, camera) => {
+    passes.add((drawn as THREE.Mesh).material as THREE.Material);
+    render(drawn, camera);
+  });
+  bake();
+  return passes;
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -59,11 +71,22 @@ describe('bakeSkyLayers', () => {
 
   it('filters each of the layers 1 to 7 of a real-time sky with the fast filter (edge case)', async () => {
     const { renderer } = await testRenderer();
-    const selected = vi.spyOn(fastFilter, 'selectLayer');
+    const selected = vi.spyOn(fastFilter, 'layerUniforms');
 
     bakeSkyLayers(renderer, radianceCube(renderer), FAST);
 
     expect(selected.mock.calls.map(([layer]) => layer)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it('draws with passes of its own on each renderer (edge case)', async () => {
+    const { renderer: first } = await testRenderer();
+    const { renderer: second } = await testRenderer();
+
+    const firstPasses = passesDrawnBy(first, () => bakeSkyLayers(first, radianceCube(first), FAST));
+    const secondPasses = passesDrawnBy(second, () => bakeSkyLayers(second, radianceCube(second), FAST));
+
+    expect(firstPasses.size).toBe(3);
+    expect([...firstPasses].filter((pass) => secondPasses.has(pass))).toEqual([]);
   });
 
   it('leaves the renderer on the target it had', async () => {
@@ -143,7 +166,7 @@ describe('bakeAtlasLayers', () => {
   it("filters an update-always probe's layers 1 to 6 with the fast filter", async () => {
     const { renderer } = await testRenderer();
     const atlas = createReflectionAtlas(reflectionAtlasLayout(true), 1);
-    const selected = vi.spyOn(fastFilter, 'selectLayer');
+    const selected = vi.spyOn(fastFilter, 'layerUniforms');
 
     bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 0, 'fast');
 

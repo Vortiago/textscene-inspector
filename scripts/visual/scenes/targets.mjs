@@ -67,9 +67,10 @@ export const TILE_AND_TARGET_SCENES = [
   { name: 'sub-viewport-own-world-glow', file: 'unit-sub-viewport-own-world-glow.tscn' },
   { name: 'sub-viewport-own-world-tonemap', file: 'unit-sub-viewport-own-world-tonemap.tscn' },
   // MSAA, each from the setting that turns it on: the root viewport's msaa_3d and msaa_2d, from a
-  // Fixture project's project.godot, and a SubViewport's own msaa_3d. The headers state why no
-  // other golden shows them.
+  // Fixture project's project.godot, and a SubViewport's own msaa_3d and msaa_2d. The headers state
+  // why no other golden shows them.
   { name: 'msaa-3d', file: 'msaa-3d/unit-msaa-3d.tscn' },
   { name: 'msaa-2d', file: 'msaa-2d/unit-msaa-2d.tscn', mode: '2d' },
   { name: 'sub-viewport-msaa', file: 'unit-sub-viewport-msaa.tscn', mode: '2d' },
+  { name: 'sub-viewport-control-msaa', file: 'unit-sub-viewport-control-msaa.tscn', mode: '2d' },
 ];

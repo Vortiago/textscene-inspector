@@ -8,6 +8,7 @@ import {
   pinProceduralTexture,
   proceduralTexture,
   proceduralTextureKey,
+  releaseProceduralTextures,
   unpinProceduralTexture,
 } from './proceduralTextureCache';
 
@@ -181,6 +182,31 @@ describe('clearProceduralTextures', () => {
     clearProceduralTextures();
     proceduralTexture(resources, 'a', rasterize);
     expect(rasterize).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('releaseProceduralTextures', () => {
+  it('frees each cached texture from every renderer (happy path)', () => {
+    const texture = fakeTexture();
+    proceduralTexture(scene(), 'Gradient_a', () => texture);
+
+    releaseProceduralTextures();
+
+    expect(texture.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps each texture cached, so the next canvas reuses it (edge case)', () => {
+    const resources = scene();
+    const texture = fakeTexture();
+    proceduralTexture(resources, 'Gradient_a', () => texture);
+
+    releaseProceduralTextures();
+
+    expect(proceduralTexture(resources, 'Gradient_a', fakeTexture)).toBe(texture);
+  });
+
+  it('frees nothing from an empty cache (edge case)', () => {
+    expect(() => releaseProceduralTextures()).not.toThrow();
   });
 });
 

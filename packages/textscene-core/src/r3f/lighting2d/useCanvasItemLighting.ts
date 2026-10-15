@@ -19,6 +19,7 @@ import {
   type CanvasItemLightingUniforms,
 } from './canvasItemLighting.js';
 import { placementId } from './itemLightList.js';
+import { releasedOnUnmount } from '../sharedTexture.js';
 import { useCanvasLayerIndex, useEffectiveZ } from './canvasItemPlacement.js';
 
 export type { CanvasItemLightingProps };
@@ -31,7 +32,7 @@ const EMPTY_LIGHT_BUFFER: THREE.DataTexture = (() => {
   const texture = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
   texture.colorSpace = THREE.NoColorSpace;
   texture.needsUpdate = true;
-  return texture;
+  return releasedOnUnmount(texture);
 })();
 
 function createUniforms(resolution: THREE.Vector2): CanvasItemLightingUniforms {
