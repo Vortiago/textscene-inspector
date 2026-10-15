@@ -1,7 +1,8 @@
 /** Sprite3D property formatter: formats sprite properties for the details panel. */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
-import { AlphaCutMode, AxisMode, BillboardMode, type Sprite3DProperties } from './types';
+import { VECTOR3_AXIS_NAMES } from '../../../godot/math/vector3Axis';
+import { AlphaCutMode, BillboardMode, type Sprite3DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 
@@ -14,7 +15,7 @@ export function formatSprite3DProperties(properties: Sprite3DProperties): Proper
     { label: 'Billboard', value: billboardName(properties.billboard) },
   ];
   if (properties.billboard === BillboardMode.BILLBOARD_FIXED_Y) {
-    textureItems.push({ label: 'Axis', value: axisName(properties.axis) });
+    textureItems.push({ label: 'Axis', value: VECTOR3_AXIS_NAMES[properties.axis] ?? 'Unknown' });
   }
   sections.push({ title: 'Texture', items: textureItems });
 
@@ -86,19 +87,6 @@ function alphaCutName(mode: AlphaCutMode): string {
       return 'Opaque Prepass';
     case AlphaCutMode.ALPHA_CUT_HASH:
       return 'Alpha Hash';
-    default:
-      return 'Unknown';
-  }
-}
-
-function axisName(axis: AxisMode): string {
-  switch (axis) {
-    case AxisMode.AXIS_X:
-      return 'X';
-    case AxisMode.AXIS_Y:
-      return 'Y';
-    case AxisMode.AXIS_Z:
-      return 'Z';
     default:
       return 'Unknown';
   }

@@ -13,12 +13,8 @@ import {
   HEIGHT_FOG_DENSITY_MIN,
 } from '../../godot/rendering/environment/depthFog.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
-import {
-  FOG_RADIANCE_BANDS,
-  FOG_RADIANCE_BAND_HEIGHT,
-  FOG_SUN_MAX,
-  FOG_UNIFORM as U,
-} from './fogUniforms.js';
+import { FOG_RADIANCE_BANDS, FOG_RADIANCE_BAND_HEIGHT, FOG_UNIFORM as U } from './fogUniforms.js';
+import { MAX_DIRECTIONAL_LIGHTS } from '../../godot/rendering/lights/directionalShadow.js';
 
 /** The chunk a shader includes for the fog's uniforms and functions. */
 export const GODOT_FOG_PARS_CHUNK = 'godot_fog_pars_fragment';
@@ -34,9 +30,9 @@ uniform vec4 ${U.depthColor};
 uniform vec4 ${U.depthShape};
 uniform vec4 ${U.depthLayer};
 uniform vec4 ${U.depthSky};
-uniform vec4 ${U.sunDirections}[ ${FOG_SUN_MAX} ];
-uniform vec4 ${U.sunSurfaceColors}[ ${FOG_SUN_MAX} ];
-uniform vec4 ${U.sunSkyColors}[ ${FOG_SUN_MAX} ];
+uniform vec4 ${U.sunDirections}[ ${MAX_DIRECTIONAL_LIGHTS} ];
+uniform vec4 ${U.sunSurfaceColors}[ ${MAX_DIRECTIONAL_LIGHTS} ];
+uniform vec4 ${U.sunSkyColors}[ ${MAX_DIRECTIONAL_LIGHTS} ];
 uniform mat3 ${U.skyRotation};
 uniform sampler2D ${U.radiance};
 
@@ -78,7 +74,7 @@ float fogSunAmount( vec3 direction, int i ) {
 // Each surface light's glow towards it (scene_forward_clustered.glsl:1126-1136).
 vec3 fogSurfaceSunScatter( vec3 worldDirection ) {
 	vec3 scatter = vec3( 0.0 );
-	for ( int i = 0; i < ${FOG_SUN_MAX}; i ++ ) scatter += ${U.sunSurfaceColors}[ i ].rgb * fogSunAmount( worldDirection, i );
+	for ( int i = 0; i < ${MAX_DIRECTIONAL_LIGHTS}; i ++ ) scatter += ${U.sunSurfaceColors}[ i ].rgb * fogSunAmount( worldDirection, i );
 	return scatter * ${U.depthSky}.y;
 }
 
@@ -86,7 +82,7 @@ vec3 fogSurfaceSunScatter( vec3 worldDirection ) {
 vec3 fogSkySunScatter( vec3 skyDirection ) {
 	vec3 scatter = vec3( 0.0 );
 	int lights = 0;
-	for ( int i = 0; i < ${FOG_SUN_MAX}; i ++ ) {
+	for ( int i = 0; i < ${MAX_DIRECTIONAL_LIGHTS}; i ++ ) {
 		if ( ${U.sunSkyColors}[ i ].a == 0.0 ) continue;
 		if ( lights == ${FOG_SKY_SUN_MAX} ) break;
 		lights ++;

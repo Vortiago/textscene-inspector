@@ -14,7 +14,7 @@ import { indexedFamilyValidator } from '../../../../linter/validators/indexedFam
 import { v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
+import { VECTOR3_AXIS_NAMES, Vector3Axis } from '../../../../godot/math/vector3Axis.js';
 import { declaredLeafResolver } from '../../../../godot/index.js';
 
 /** ConvertTransformModifier3D::TransformMode (convert_transform_modifier_3d.h:39-43). */
@@ -43,7 +43,9 @@ function transformGroup(
       hinted: modeCite,
     }),
     // PROPERTY_HINT_ENUM "X,Y,Z", the same static_cast-and-assign shape.
-    [`${group}/axis`]: v.enumInt(`${group}/axis`, 0, 2, VECTOR3_AXIS, { hinted: axisCite }),
+    [`${group}/axis`]: v.enumInt(`${group}/axis`, Vector3Axis.X, Vector3Axis.Z, VECTOR3_AXIS_NAMES, {
+      hinted: axisCite,
+    }),
     // PROPERTY_HINT_RANGE, with the hint picked from the sibling transform_mode (:133-140, :146-153).
     // HINT_POSITION (:33) opens both ends, so no bound holds under every mode, and linter.ts owns the
     // conditional one. The setter has no is_finite guard, so inf and nan load.

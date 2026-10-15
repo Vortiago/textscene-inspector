@@ -6,7 +6,7 @@
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
 import { BillboardMode } from '../../../godot/scene/billboard';
-import { AxisMode } from '../../../godot/math/vector3Axis';
+import { Vector3Axis } from '../../../godot/math/vector3Axis';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
 
@@ -51,9 +51,6 @@ export enum TextureFilterMode {
   TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC = 5,
 }
 
-/** `Vector3::Axis`, the axis the quad's normal points along. */
-export { AxisMode };
-
 /**
  * Rect2 (Godot rect resource): a rectangle in 2D space with float coords.
  */
@@ -75,7 +72,7 @@ export interface Sprite3DProperties extends GeometryInstance3DProperties {
   alpha_cut: AlphaCutMode;
 
   /** Axis used when billboard is FIXED_Y (default: Y_AXIS). */
-  axis: AxisMode;
+  axis: Vector3Axis;
 
   /** Size of one texture pixel in 3D world units (default: 0.01). */
   pixel_size: number;

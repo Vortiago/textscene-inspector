@@ -43,17 +43,6 @@ export const ITEM_CHECKABLE_TYPE = {
 } as const;
 
 /**
- * `Vector3::Axis` declaration order (vector3.h:57-61), a core enum with no
- * node slice to hoist onto. Annotated, not `as const`: a runtime axis number
- * indexes it to label a diagnostic, and `as const` keys refuse a `number`.
- */
-export const VECTOR3_AXIS: Readonly<Record<number, string>> = {
-  0: 'X',
-  1: 'Y',
-  2: 'Z',
-};
-
-/**
  * `VisibleOnScreenEnabler2D::EnableMode` and `VisibleOnScreenEnabler3D::EnableMode`,
  * two C++ enums with identical constants (`visible_on_screen_notifier_2d.h:85-89`,
  * `visible_on_screen_notifier_3d.h:65-69`) in the hint order "Inherit,Always,When Paused".

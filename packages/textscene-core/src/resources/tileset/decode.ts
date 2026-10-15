@@ -18,7 +18,8 @@ import {
   parseResourceReference,
   resolveExtResourcePath,
 } from '../SubResourceResolver';
-import { defaultTileData, TILE_SHAPE_HEXAGON, TILE_SHAPE_SQUARE } from './types';
+import { defaultTileData } from './types';
+import { TileLayout, TileOffsetAxis, TileShape } from '../../godot/scene/tileSet';
 import type {
   AlternativeTileModel,
   AtlasSourceModel,
@@ -77,15 +78,23 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     sources.set(sourceId, resolveAtlasSource(sub.data, data, tileMaterial));
   }
 
-  const shape = intEnumOr(data.properties.tile_shape, 0, 'tile_shape');
-  if (shape < TILE_SHAPE_SQUARE || shape > TILE_SHAPE_HEXAGON) {
+  const shape = intEnumOr(data.properties.tile_shape, TileShape.TILE_SHAPE_SQUARE, 'tile_shape');
+  if (shape < TileShape.TILE_SHAPE_SQUARE || shape > TileShape.TILE_SHAPE_HEXAGON) {
     warn(`[TileSet] unknown tile_shape ${shape} — cells will place on a square grid`);
   }
 
   return {
     shape,
-    layout: intEnumOr(data.properties.tile_layout, 0, 'tile_layout') as TileSetModel['layout'],
-    offsetAxis: intEnumOr(data.properties.tile_offset_axis, 0, 'tile_offset_axis') as 0 | 1,
+    layout: intEnumOr(
+      data.properties.tile_layout,
+      TileLayout.TILE_LAYOUT_STACKED,
+      'tile_layout'
+    ) as TileLayout,
+    offsetAxis: intEnumOr(
+      data.properties.tile_offset_axis,
+      TileOffsetAxis.TILE_OFFSET_AXIS_HORIZONTAL,
+      'tile_offset_axis'
+    ) as TileOffsetAxis,
     tileSize: tileSetVec2i(data.properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
     sources,
   };

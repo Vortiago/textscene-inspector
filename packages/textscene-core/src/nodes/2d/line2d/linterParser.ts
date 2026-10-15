@@ -8,6 +8,7 @@
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { LINE_JOINT_MODE_NAMES, LineJointMode } from '../../../godot/scene/line2d.js';
 
 validatorRegistry.registerAll('Line2D', {
   // line_2d.cpp:394 (PACKED_VECTOR2_ARRAY, no hint). get_points
@@ -43,17 +44,11 @@ validatorRegistry.registerAll('Line2D', {
     { hinted: 'line_2d.cpp:402' }
   ),
   closed: v.boolean('closed'),
-  // line_2d.cpp:404, ENUM "Sharp,Bevel,Round" (LineJointMode: SHARP 0, BEVEL 1,
-  // ROUND 2, no MAX sentinel, but 3 real values match the 3 labels).
-  // set_joint_mode (line_2d.cpp:208-211) assigns unconditionally, no
-  // ERR_FAIL_INDEX, so out of range is a warning (ADR-0032).
-  joint_mode: v.enumInt(
-    'joint_mode',
-    0,
-    2,
-    { 0: 'SHARP', 1: 'BEVEL', 2: 'ROUND' },
-    { hinted: 'line_2d.cpp:404' }
-  ),
+  // line_2d.cpp:404, ENUM "Sharp,Bevel,Round". set_joint_mode (line_2d.cpp:208-211)
+  // assigns unconditionally, no ERR_FAIL_INDEX, so out of range is a warning (ADR-0032).
+  joint_mode: v.enumInt('joint_mode', LineJointMode.SHARP, LineJointMode.ROUND, LINE_JOINT_MODE_NAMES, {
+    hinted: 'line_2d.cpp:404',
+  }),
   // line_2d.cpp:405, ENUM "None,Box,Round" (LineCapMode: NONE 0, BOX 1, ROUND
   // 2, line_2d.h:46-49, 3 constants match the 3 labels). set_begin_cap_mode
   // (line_2d.cpp:217-220) assigns unconditionally: hinted, not enforced.

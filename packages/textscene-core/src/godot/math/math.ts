@@ -192,6 +192,21 @@ export function snapped(value: number, step: number): number {
   return step !== 0 ? Math.floor(value / step + 0.5) * step : value;
 }
 
+/** `Math::posmod` (`core/math/math_funcs.h:313-320`): the remainder, folded to the divisor's sign. */
+export function posmod(x: number, y: number): number {
+  const value = x % y;
+  return (value < 0 && y > 0) || (value > 0 && y < 0) ? value + y : value;
+}
+
+/**
+ * `Math::fposmodp` (`core/math/math_funcs.h:296-303`): `fmod`, folded non-negative. Adding 0 turns
+ * a negative zero positive, as Godot's `value += 0.0` does.
+ */
+export function fposmodp(x: number, y: number): number {
+  const value = x % y;
+  return (value < 0 ? value + y : value) + 0;
+}
+
 /** `HorizontalAlignment` (`core/math/math_defs.h:80-85`). */
 export const HORIZONTAL_ALIGNMENT_LEFT = 0;
 export const HORIZONTAL_ALIGNMENT_CENTER = 1;

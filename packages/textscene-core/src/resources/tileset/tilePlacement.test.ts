@@ -5,7 +5,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as logger from '../../logger';
 import { mapToLocalPx } from './tilePlacement';
-import { TILE_SHAPE_ISOMETRIC, TILE_SHAPE_SQUARE, type TileGrid } from './types';
+import type { TileGrid } from './types';
+import { TileShape } from '../../godot/scene/tileSet';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -16,14 +17,14 @@ afterEach(() => {
 });
 
 const squareGrid: TileGrid = {
-  shape: TILE_SHAPE_SQUARE,
+  shape: TileShape.TILE_SHAPE_SQUARE,
   layout: 0,
   offsetAxis: 0,
   tileSize: { x: 16, y: 16 },
 };
 
 function isoGrid(layout: TileGrid['layout'], offsetAxis: 0 | 1 = 0): TileGrid {
-  return { shape: TILE_SHAPE_ISOMETRIC, layout, offsetAxis, tileSize: { x: 128, y: 64 } };
+  return { shape: TileShape.TILE_SHAPE_ISOMETRIC, layout, offsetAxis, tileSize: { x: 128, y: 64 } };
 }
 
 describe('mapToLocalPx — square', () => {

@@ -15,7 +15,7 @@ import { v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_AXIS } from '../skeletonmodifier3d/linterParser.js';
-import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
+import { VECTOR3_AXIS_NAMES, Vector3Axis } from '../../../../godot/math/vector3Axis.js';
 import { declaredLeafResolver } from '../../../../godot/index.js';
 
 /**
@@ -32,9 +32,15 @@ const AIM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // aim_modifier_3d.cpp:92, Variant::BOOL, no hint.
   use_euler: v.boolean('use_euler'),
   // aim_modifier_3d.cpp:93, Variant::INT, PROPERTY_HINT_ENUM "X,Y,Z", values 0-2.
-  primary_rotation_axis: v.enumInt('primary_rotation_axis', 0, 2, VECTOR3_AXIS, {
-    hinted: 'aim_modifier_3d.cpp:93',
-  }),
+  primary_rotation_axis: v.enumInt(
+    'primary_rotation_axis',
+    Vector3Axis.X,
+    Vector3Axis.Z,
+    VECTOR3_AXIS_NAMES,
+    {
+      hinted: 'aim_modifier_3d.cpp:93',
+    }
+  ),
   // aim_modifier_3d.cpp:94, Variant::BOOL, PROPERTY_HINT_NONE.
   use_secondary_rotation: v.boolean('use_secondary_rotation'),
   // aim_modifier_3d.cpp:95, Variant::BOOL, no hint.

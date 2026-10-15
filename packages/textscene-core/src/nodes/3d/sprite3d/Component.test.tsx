@@ -15,7 +15,8 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { Sprite3DProperties } from './types';
-import { AlphaCutMode, AxisMode, BillboardMode, AlphaAntiAliasing, TextureFilterMode } from './types';
+import { Vector3Axis } from '../../../godot/math/vector3Axis';
+import { AlphaCutMode, BillboardMode, AlphaAntiAliasing, TextureFilterMode } from './types';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
 import { DROPS_ALBEDO_ALPHA, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
@@ -55,7 +56,7 @@ function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
     alpha_antialiasing_edge: 0.0,
     texture_filter: TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
     alpha_cut: AlphaCutMode.ALPHA_CUT_DISABLED,
-    axis: AxisMode.AXIS_Z,
+    axis: Vector3Axis.Z,
     pixel_size: 0.01,
     hframes: 1,
     vframes: 1,
@@ -158,7 +159,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
   it('lays the quad on the plane its axis faces', async () => {
     const tex = makeTexture(32, 32);
     const renderer = await render({
-      node: makeNode({ texture: 'ExtResource("1_tex")', axis: AxisMode.AXIS_Y }),
+      node: makeNode({ texture: 'ExtResource("1_tex")', axis: Vector3Axis.Y }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });

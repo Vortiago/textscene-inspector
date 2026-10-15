@@ -1,7 +1,7 @@
 /**
  * The TileSet data model shared by the tile node slices, this slice's decode and the placement
- * and geometry math, free of React and THREE. It carries `tileDrawInfo` and the enum constants
- * beside the shapes, since a consumer holding the types needs them to read the data.
+ * and geometry math, free of React and THREE. It carries `tileDrawInfo` beside the shapes, since a
+ * consumer holding the types needs it to read the data.
  */
 
 import type { CanvasItemMaterialProperties } from '../materials/canvasitemmaterial/types';
@@ -12,22 +12,14 @@ import {
   TILE_TRANSFORM_FLIP_H,
   TILE_TRANSFORM_FLIP_V,
   TILE_TRANSFORM_TRANSPOSE,
+  type TileLayout,
+  type TileOffsetAxis,
+  type TileShape,
 } from '../../godot/scene/tileSet';
-
-/** TileSet.tile_shape: square, isometric, half-offset square and hexagon all render. */
-export const TILE_SHAPE_SQUARE = 0;
-export const TILE_SHAPE_ISOMETRIC = 1;
-export const TILE_SHAPE_HALF_OFFSET_SQUARE = 2;
-export const TILE_SHAPE_HEXAGON = 3;
-
-/** TileSet.tile_layout (half-offset shapes): STACKED .. DIAMOND_DOWN. */
-type TileLayout = 0 | 1 | 2 | 3 | 4 | 5;
-/** TileSet.tile_offset_axis: 0 = horizontal, 1 = vertical. */
-type TileOffsetAxis = 0 | 1;
 
 /** The grid surface of a TileSet that placement math needs. */
 export interface TileGrid {
-  shape: number;
+  shape: TileShape;
   layout: TileLayout;
   offsetAxis: TileOffsetAxis;
   tileSize: Vector2;

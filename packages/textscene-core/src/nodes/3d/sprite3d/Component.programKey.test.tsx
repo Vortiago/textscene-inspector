@@ -13,12 +13,12 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import type { TscnNode } from '../../../parser/types';
 import {
   AlphaCutMode,
-  AxisMode,
   BillboardMode,
   type Sprite3DProperties,
   AlphaAntiAliasing,
   TextureFilterMode,
 } from './types';
+import { Vector3Axis } from '../../../godot/math/vector3Axis';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
@@ -43,7 +43,7 @@ function makeNode(overrides: Partial<Sprite3DProperties>): TscnNode {
     alpha_antialiasing_edge: 0.0,
     texture_filter: TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
     alpha_cut: AlphaCutMode.ALPHA_CUT_DISABLED,
-    axis: AxisMode.AXIS_Y,
+    axis: Vector3Axis.Y,
     pixel_size: 0.01,
     hframes: 1,
     vframes: 1,
