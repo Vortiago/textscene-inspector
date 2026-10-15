@@ -10,7 +10,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { hiddenOrUnknowableInTree } from '../../../../linter/parentType.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 const arms = {
   unsupportedExpandMode: groundedArm('aspectratiocontainer-unsupported-texturerect-expand-mode', {

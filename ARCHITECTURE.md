@@ -36,8 +36,9 @@ Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vit
 
 `godot/` groups its files by the engine area they port, named for that area's directory in Godot's
 source. A rendering fact sits under `rendering/` even when its setter lives in `scene/`. A test
-sits beside its file. The root keeps `index.ts`,
-the package's `./godot` export, and `noDependencies.test.ts`.
+sits beside its file. Core imports each fact from its file under a group. The root keeps
+`noDependencies.test.ts` and `index.ts`, the package's `./godot` export, which re-exports only what
+a package outside core imports.
 
 | `godot/` group | Ports from Godot's |
 | --- | --- |
@@ -243,6 +244,8 @@ A test or a script fails when one of these rules breaks.
 | The language-feature engine and the `tscn-lsp` server import no React or three.js | `languageFeatures/reactFree.test.ts`, an ESLint `no-restricted-imports` rule, `apps/textscene-lsp/src/reactFree.test.ts` |
 | `godot/` imports nothing | `noDependencies.test.ts` |
 | Every slice is wired into its barrels | `barrelCompleteness`, `parserBarrelCompleteness` |
+| Core imports each engine fact from its file, and `godot/index.ts` and the root `index.ts` re-export only what a package outside core imports | `packageExports.test.ts` |
+| No value export exists for tests alone. An entry point's export counts only when the apps, the dev kit or the scripts import it | `scripts/testOnlyExports.test.mjs` |
 | Every registered type has a Godot base chain | `baseChainCompleteness.test.ts` |
 | A rule reports only through its declared arms, and derives `emits` from them | the ESLint rule-arm guard, `ruleCoverage.emits.test.ts`, `ruleArms.test.ts` |
 | A resource slice has the slice shape | `resourceSliceConformance`, `resourceSliceIsolation` |

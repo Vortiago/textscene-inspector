@@ -7,7 +7,7 @@
 import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { CMP_EPSILON } from '../../../../godot/index.js';
+import { CMP_EPSILON } from '../../../../godot/math/math.js';
 
 // gpu_particles_2d.cpp:964 hints 3 labels, and BIND_ENUM_CONSTANT binds all 3
 // (:972-974). CPUParticles2D's DrawOrder has only 2 (cpu_particles_2d.h:43-45),

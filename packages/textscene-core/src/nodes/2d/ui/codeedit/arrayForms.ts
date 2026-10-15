@@ -3,8 +3,7 @@
  * and `linter.ts` (the delimiter-collision rule). They must agree: a form the rule cannot parse
  * finds no start keys and never fires, and nothing reports it.
  */
-
-import { packedArrayForms, stringArrayBodies } from '../../../../godot/index.js';
+import { packedArrayForms, stringArrayBodies } from '../../../../godot/variant/variantParser.js';
 import { unquoteString } from '../../../../parser/utils.js';
 
 /**

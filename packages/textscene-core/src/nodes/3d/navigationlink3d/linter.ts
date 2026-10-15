@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
-import { isEqualApprox } from '../../../godot/index.js';
+import { isEqualApprox } from '../../../godot/math/math.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { Vector3 } from '../../../godot/math/vector.js';
 

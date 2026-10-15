@@ -11,14 +11,18 @@ import { accepts, hintedBitField, v, propertyError } from '../../../../linter/va
 import { THEME_OVERRIDE_VALIDATORS } from '../../../../linter/validators/themeOverrides.js';
 import {
   arrayLiteralBody,
+  nodePathLiteral,
+  TYPED_WRAPPER_RE,
+} from '../../../../godot/variant/variantParser.js';
+import {
   CURSOR_MAX,
   CURSOR_SHAPES,
-  dropTrailingComma,
-  nodePathLiteral,
-  splitTopLevel,
-  TYPED_WRAPPER_RE,
-} from '../../../../godot/index.js';
-import { GrowDirection } from '../../../../godot/scene/control.js';
+  GrowDirection,
+  LAYOUT_DIRECTION_MAX,
+  LAYOUT_DIRECTION_NAMES,
+  LayoutDirection,
+} from '../../../../godot/scene/control.js';
+import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
 
 /**
  * The four `accessibility_*_nodes` properties (control.cpp:4313-4316) have `TypedArray<NodePath>`
@@ -228,14 +232,14 @@ validatorRegistry.registerAll(
 
     clip_contents: v.boolean('clip_contents'),
     localize_numeral_system: v.boolean('localize_numeral_system'),
-    // control.cpp:3539, ERR_FAIL_INDEX(p_direction, LAYOUT_DIRECTION_MAX = 5) (control.h:154-160).
-    // The early return at :3536 compares with data.layout_dir, which holds only values
-    // that passed this guard, so it never catches an out-of-range write.
+    // control.cpp:3539, ERR_FAIL_INDEX(p_direction, LAYOUT_DIRECTION_MAX). The early return at
+    // :3536 compares with data.layout_dir, which holds only values that passed this guard, so it
+    // never catches an out-of-range write.
     layout_direction: v.enumInt(
       'layout_direction',
-      0,
-      4,
-      { 0: 'INHERITED', 1: 'APPLICATION_LOCALE', 2: 'LTR', 3: 'RTL', 4: 'SYSTEM_LOCALE' },
+      LayoutDirection.INHERITED,
+      LAYOUT_DIRECTION_MAX - 1,
+      LAYOUT_DIRECTION_NAMES,
       { enforced: 'control.cpp:3539' }
     ),
     // Variant::OBJECT with PROPERTY_HINT_NODE_TYPE (control.cpp:4307): the writer stores

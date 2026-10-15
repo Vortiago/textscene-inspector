@@ -22,7 +22,7 @@ describe('hasChildOfType', () => {
   });
 
   it('counts a subclass, as the engine cast does', () => {
-    // `cast_to<SubViewport>` accepts a subclass, and `descendsFrom` is reflexive.
+    // `cast_to<SubViewport>` accepts a subclass, and `descendsFromClass` is reflexive.
     expect(hasChildOfType(node('Container', [node('SubViewport')]), ['Viewport'])).toBe(true);
   });
 
@@ -49,26 +49,26 @@ describe('hasChildOfType', () => {
 });
 
 describe('the one direct-child type test', () => {
-  /** `children.some((child) => … descendsFrom(child.type …` in any spacing. */
-  const SOME_COPY = /children\s*\.\s*some\(\s*\(?(\w+)\)?\s*=>[^;]*?descendsFrom\(\s*\1\.type/;
-  /** `for (const child of node.children)` with `descendsFrom(child.type …` in its body. */
+  /** `children.some((child) => … descendsFromClass(child.type …` in any spacing. */
+  const SOME_COPY = /children\s*\.\s*some\(\s*\(?(\w+)\)?\s*=>[^;]*?descendsFromClass\(\s*\1\.type/;
+  /** `for (const child of node.children)` with `descendsFromClass(child.type …` in its body. */
   const LOOP_COPY =
-    /for\s*\(\s*const\s+(\w+)\s+of\s+[\w.?]*children\s*\)[\s\S]{0,600}?descendsFrom\(\s*\1\.type/;
+    /for\s*\(\s*const\s+(\w+)\s+of\s+[\w.?]*children\s*\)[\s\S]{0,600}?descendsFromClass\(\s*\1\.type/;
   const isHandRolled = (source: string) => SOME_COPY.test(source) || LOOP_COPY.test(source);
 
   it('detects a hand-rolled copy in the `.some` and the loop spelling', () => {
     expect(
       isHandRolled(
-        '!node.children.some((child) => isTypeOpaque(child) || descendsFrom(child.type, wheelType))'
+        '!node.children.some((child) => isTypeOpaque(child) || descendsFromClass(child.type, wheelType))'
       )
     ).toBe(true);
     expect(
-      isHandRolled("if (children.some((c) =>\n  descendsFrom(c.type, 'Joint2D'))) return 'present';")
+      isHandRolled("if (children.some((c) =>\n  descendsFromClass(c.type, 'Joint2D'))) return 'present';")
     ).toBe(true);
     const loop = [
       'for (const child of node.children) {',
       '  if (isTypeUnknowable(child)) continue;',
-      "  if (descendsFrom(child.type, 'XRCamera3D')) return 'satisfied';",
+      "  if (descendsFromClass(child.type, 'XRCamera3D')) return 'satisfied';",
       '}',
     ].join('\n');
     expect(isHandRolled(loop)).toBe(true);

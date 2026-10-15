@@ -9,7 +9,8 @@ import type { SpriteFramesAnimation, SpriteFramesData } from './types';
 import { dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
 import { matchedFloat } from '../../../godot/variant/number.js';
 import { SPRITE_FRAME_MINIMUM_DURATION } from '../../../godot/scene/spriteFramesResource.js';
-import { boolSlotValue, keyedResourceRefReader, resourceRef } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import { keyedResourceRefReader, resourceRef } from '../../../godot/variant/resourceRef.js';
 import { ANIMATION_DICT_DEPTH, splitFramesArray, splitTopLevelDicts } from './frameSplit.js';
 import { unquoteLiteral } from '../../../parser/utils.js';
 

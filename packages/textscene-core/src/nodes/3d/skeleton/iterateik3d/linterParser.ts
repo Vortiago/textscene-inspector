@@ -13,7 +13,7 @@ import { indexedFamilyValidator } from '../../../../linter/validators/indexedFam
 import { accepts, v } from '../../../../linter/validators/v.js';
 import { settingCount } from '../shared/settingCount.js';
 import { ROTATION_AXIS, SECONDARY_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/index.js';
+import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
 import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 /**

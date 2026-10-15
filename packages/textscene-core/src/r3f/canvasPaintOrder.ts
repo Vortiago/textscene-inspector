@@ -10,7 +10,7 @@
  */
 
 import type { TscnNode } from '../parser/types';
-import { descendsFrom } from '../godot/classdb/nodeBaseTypes';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes';
 import { DEFAULT_CANVAS_LAYER } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import {
@@ -114,7 +114,7 @@ export function layerRankOf(declared: readonly number[], layer: number): number 
  * counts. `controls/canvasBoundary.driftguard.test.ts` holds the Control walk to it.
  */
 export function isCanvasLayerType(type: string): boolean {
-  return descendsFrom(type, 'CanvasLayer');
+  return descendsFromClass(type, 'CanvasLayer');
 }
 
 /** The `layer` a canvas-layer node declares, or Godot's own default of 1. */
@@ -175,7 +175,7 @@ export function paintRangeSize(node: TscnNode): number {
  * an item nests under it or parents at the canvas.
  */
 function isCanvasItem(node: TscnNode): boolean {
-  return descendsFrom(node.type, 'CanvasItem');
+  return descendsFromClass(node.type, 'CanvasItem');
 }
 
 /**

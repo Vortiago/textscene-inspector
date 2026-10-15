@@ -1,5 +1,7 @@
 /** Control's own enums, as the engine declares them. */
 
+import { enumNamesByValue } from '../classdb/enumNames.js';
+
 /**
  * `Control::CURSOR_ARROW` (`scene/gui/control.h:101`), the first `CursorShape` and the field's
  * initial value (`control.h:245`). Exported alone, as SubViewportContainer's warning tests
@@ -48,13 +50,19 @@ export enum GrowDirection {
 }
 
 /** `Control::LayoutDirection` (`scene/gui/control.h:155-160`). */
-export const LAYOUT_DIRECTION_INHERITED = 0;
-export const LAYOUT_DIRECTION_APPLICATION_LOCALE = 1;
-export const LAYOUT_DIRECTION_LTR = 2;
-export const LAYOUT_DIRECTION_RTL = 3;
-export const LAYOUT_DIRECTION_SYSTEM_LOCALE = 4;
+export const LayoutDirection = {
+  INHERITED: 0,
+  APPLICATION_LOCALE: 1,
+  LTR: 2,
+  RTL: 3,
+  SYSTEM_LOCALE: 4,
+} as const;
+
 /** The count sentinel `set_layout_direction`'s `ERR_FAIL_INDEX` bounds against (`control.cpp:3539`). */
 export const LAYOUT_DIRECTION_MAX = 5;
+
+/** The direction names Godot binds (`control.cpp:4405-4409`), for a diagnostic that reports the legal values. */
+export const LAYOUT_DIRECTION_NAMES = enumNamesByValue(LayoutDirection);
 
 /**
  * What `Control::is_layout_rtl()` reads besides the `layout_direction` chain: the project
@@ -92,13 +100,13 @@ export function resolveLayoutRtl(
   env: LayoutDirectionEnv
 ): boolean {
   switch (layoutDirection) {
-    case LAYOUT_DIRECTION_APPLICATION_LOCALE:
+    case LayoutDirection.APPLICATION_LOCALE:
       return env.forceRtl || env.applicationLocaleRtl;
-    case LAYOUT_DIRECTION_SYSTEM_LOCALE:
+    case LayoutDirection.SYSTEM_LOCALE:
       return env.forceRtl || env.systemLocaleRtl;
-    case LAYOUT_DIRECTION_LTR:
+    case LayoutDirection.LTR:
       return false;
-    case LAYOUT_DIRECTION_RTL:
+    case LayoutDirection.RTL:
       return true;
     default:
       // INHERITED, and every value the setter's ERR_FAIL_INDEX refused. No

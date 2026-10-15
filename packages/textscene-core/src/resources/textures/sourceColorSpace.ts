@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import { formatHasSrgbView } from '../../godot/index.js';
+import { formatHasSrgbView } from '../../godot/rendering/texture.js';
 import { pinNoColorSpace } from './applyTextureState';
 
 /** The `Image::format_names` entry. In `userData`, so every `clone()` carries it. */

@@ -159,8 +159,9 @@ an arm with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its 
 
 - `packages/textscene-core/src/godot/` holds engine facts and imports nothing. Look there
   before you declare an engine constant or regex in a slice. Put a new one there, in the group
-  for the engine area it ports (ARCHITECTURE.md lists them). A group has no `index.ts`. Only the
-  root `index.ts` re-exports.
+  for the engine area it ports (ARCHITECTURE.md lists them). A group has no `index.ts`. Import a
+  fact from its file. `godot/index.ts` serves only the `./godot` package export, so it re-exports
+  only what a package outside core imports.
 - A Godot enum lives in `godot/` once. When its member names are the labels a validator prints,
   its label table is `enumNamesByValue(<Enum>)`.
 - Web tests run under happy-dom, so never assert rendered geometry. Read a `.module.css`

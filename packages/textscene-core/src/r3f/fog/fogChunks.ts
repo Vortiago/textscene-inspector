@@ -12,9 +12,9 @@ import {
   FogMode,
   HEIGHT_FOG_DENSITY_MIN,
 } from '../../godot/rendering/environment/depthFog.js';
+import { MAX_DIRECTIONAL_LIGHTS } from '../../godot/rendering/lights/directionalShadow.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
 import { FOG_RADIANCE_BANDS, FOG_RADIANCE_BAND_HEIGHT, FOG_UNIFORM as U } from './fogUniforms.js';
-import { MAX_DIRECTIONAL_LIGHTS } from '../../godot/rendering/lights/directionalShadow.js';
 
 /** The chunk a shader includes for the fog's uniforms and functions. */
 export const GODOT_FOG_PARS_CHUNK = 'godot_fog_pars_fragment';

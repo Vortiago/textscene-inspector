@@ -15,7 +15,7 @@ import { v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { VECTOR3_AXIS_NAMES, Vector3Axis } from '../../../../godot/math/vector3Axis.js';
-import { declaredLeafResolver } from '../../../../godot/index.js';
+import { declaredLeafResolver } from '../../../../godot/classdb/indexedKey.js';
 
 /** ConvertTransformModifier3D::TransformMode (convert_transform_modifier_3d.h:39-43). */
 const TRANSFORM_MODE = { 0: 'Position', 1: 'Rotation', 2: 'Scale' };

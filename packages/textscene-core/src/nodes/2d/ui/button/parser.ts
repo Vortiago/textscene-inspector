@@ -4,7 +4,7 @@ import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { ButtonProperties } from './types';
 import { parseControl } from '../control/parser';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 export function parseButton(heading: ParsedHeading, properties: Record<string, string>): ButtonProperties {
   const result: ButtonProperties = { ...parseControl(heading, properties) };

@@ -8,15 +8,11 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import { unquoteLiteral } from '../../../parser/utils';
 import { findSubResource } from '../../../resources/SubResourceResolver';
-import {
-  ARRAY_LITERAL_RE,
-  arrayLiteralBody,
-  boolSlotValue,
-  dropTrailingComma,
-  ruleInt,
-  splitTopLevel,
-  subResourceRefAnywhere,
-} from '../../../godot/index.js';
+import { ARRAY_LITERAL_RE, arrayLiteralBody } from '../../../godot/variant/variantParser.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
+import { ruleInt } from '../../../godot/variant/int.js';
+import { subResourceRefAnywhere } from '../../../godot/variant/resourceRef.js';
 
 /** One node of a resolved AnimationTree. */
 export type AnimNode =

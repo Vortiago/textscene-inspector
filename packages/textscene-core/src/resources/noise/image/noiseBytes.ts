@@ -1,4 +1,4 @@
-import { clamp } from '../../../godot/index.js';
+import { clamp } from '../../../godot/math/math.js';
 
 /**
  * The scalar arithmetic Godot's noise image layer does, in the integer forms it

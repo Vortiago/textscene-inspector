@@ -5,7 +5,7 @@
 
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { unquoteString } from '../../../parser/utils';
-import { stringArrayBodies } from '../../../godot/index.js';
+import { stringArrayBodies } from '../../../godot/variant/variantParser.js';
 import { findExtResource, findSubResource, parseResourceReference } from '../../SubResourceResolver';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { FontCacheReader, FontLoaderFn, FontResource } from './types';

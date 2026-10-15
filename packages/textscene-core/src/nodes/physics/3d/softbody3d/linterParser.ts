@@ -12,7 +12,7 @@ import { indexedFamilyValidator } from '../../../../linter/validators/indexedFam
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
-import { packedArrayLiteral } from '../../../../godot/index.js';
+import { packedArrayLiteral } from '../../../../godot/variant/variantParser.js';
 
 /** soft_body_3d.cpp:395: PROPERTY_HINT_ENUM "Remove,KeepActive"; soft_body_3d.cpp:397-398 BIND_ENUM_CONSTANT x2. */
 const DISABLE_MODE = { 0: 'REMOVE', 1: 'KEEP_ACTIVE' };

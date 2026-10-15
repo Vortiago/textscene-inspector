@@ -3,7 +3,7 @@
 import { type ParsedHeading } from '../../../../parser/utils';
 import type { MenuBarProperties } from './types';
 import { parseControl } from '../control/parser';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 export function parseMenuBar(heading: ParsedHeading, properties: Record<string, string>): MenuBarProperties {
   const result: MenuBarProperties = { ...parseControl(heading, properties) };

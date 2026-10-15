@@ -17,7 +17,10 @@ import { TextureFilter, TEXTURE_FILTER_NAMES } from '../../../../godot/rendering
 import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../../godot/scene/billboard.js';
 import { relabelEnumNames } from '../../../../godot/classdb/enumNames.js';
 import { Vector3Axis, VECTOR3_AXIS_NAMES } from '../../../../godot/math/vector3Axis.js';
-import { MATERIAL_RENDER_PRIORITY_MIN, MATERIAL_RENDER_PRIORITY_MAX } from '../../../../godot/index.js';
+import {
+  MATERIAL_RENDER_PRIORITY_MIN,
+  MATERIAL_RENDER_PRIORITY_MAX,
+} from '../../../../godot/rendering/rendering.js';
 
 const AXIS_NAMES = relabelEnumNames(VECTOR3_AXIS_NAMES, (axis) => `${axis}_AXIS`);
 

@@ -8,8 +8,8 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
 import { firstNodeOfType } from '../../../linter/linterUtils.js';
 import { searchAncestors } from '../../../linter/parentType.js';
-import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
-import { boolSlotValue } from '../../../godot/index.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { parseResourceReference } from '../../../resources/SubResourceResolver.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { RawNode, RawScene } from '../../../parser/types.js';
@@ -74,7 +74,7 @@ function worldOf(scene: RawScene, node: RawNode): WorldKey {
 
 /** The world `ancestor` sets for its subtree, or undefined when it passes its parent's through. */
 function viewportWorld(ancestor: RawNode): RawNode | string | undefined {
-  if (!descendsFrom(ancestor.type, 'Viewport')) return undefined;
+  if (!descendsFromClass(ancestor.type, 'Viewport')) return undefined;
   if (boolSlotValue(ancestor.rawProperties.own_world_3d) === true) return ancestor;
   return resourceRefId(heldResource(ancestor.rawProperties.world_3d));
 }

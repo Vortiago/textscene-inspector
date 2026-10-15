@@ -19,7 +19,7 @@ import { hasChildOfType } from '../childType.js';
 const NO_WHEELS_AT = 'vehicle_body_3d.cpp:731';
 
 /**
- * `rigidBodyLinterRule` reaches this type through `descendsFrom` with the shared body
+ * `rigidBodyLinterRule` reaches this type through `descendsFromClass` with the shared body
  * set and the per-axis scale warning, so no `vehiclebody3d-scaled-transform` repeats
  * rigid_body_3d.cpp:667 here. `collisionObjectLinterRule` supplies the no-shape warning.
  */

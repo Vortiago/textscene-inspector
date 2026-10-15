@@ -15,7 +15,7 @@ import {
   bezierRefusalProblem,
   readBezierData,
 } from '../../../resources/curves/shared/bezierData.js';
-import { subResourceRefAnywhere } from '../../../godot/index.js';
+import { subResourceRefAnywhere } from '../../../godot/variant/resourceRef.js';
 
 const arms = {
   missingCurve: groundedArm('path2d-missing-curve', {

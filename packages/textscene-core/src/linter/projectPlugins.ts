@@ -12,12 +12,8 @@ import {
   projectDataDirectoryPath,
   projectExtensionListPath,
 } from '../parser/projectSettingsParser.js';
-import {
-  GDEXTENSION_FILE_EXTENSION,
-  PROJECT_FILE_PATH,
-  extensionListEntries,
-  extensionListPath,
-} from '../godot/index.js';
+import { GDEXTENSION_FILE_EXTENSION } from '../godot/project/editorScan.js';
+import { PROJECT_FILE_PATH, extensionListEntries, extensionListPath } from '../godot/project/project.js';
 import { StampedReads, loadOrNull, stampOf } from './stampedReads.js';
 
 /**

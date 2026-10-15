@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
@@ -31,7 +31,7 @@ const softBody3DValidationRule: LintRule = {
     name: 'valid-softbody3d-mesh',
     description: "Warns when a SoftBody3D has no mesh set, matching Godot's own configuration warning",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SoftBody3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'SoftBody3D'),
     emits: armEmits(arms),
   },
   check: checkSoftBody3D,

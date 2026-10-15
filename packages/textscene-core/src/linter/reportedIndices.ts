@@ -2,8 +2,8 @@
  * The indices of an indexed family that one diagnostic names: which, how many, and how spelled, and
  * the error that refuses a negative one.
  */
-
-import { IS_VALID_INT_RE, stringToInt, visitIndexedKeys, type IndexParse } from '../godot/index.js';
+import { IS_VALID_INT_RE, stringToInt } from '../godot/string/string.js';
+import { visitIndexedKeys, type IndexParse } from '../godot/classdb/indexedKey.js';
 import type { ParseError } from './types.js';
 import { keyShapeError } from './validators/propertyError.js';
 

@@ -33,7 +33,7 @@
  */
 
 import type { Curve, CurvePoint } from './types';
-import { CMP_EPSILON, bezierInterpolate } from '../../../godot/index.js';
+import { CMP_EPSILON, bezierInterpolate } from '../../../godot/math/math.js';
 
 /**
  * `Curve::sample`: the value at `offset`. An out-of-range offset clamps to the first

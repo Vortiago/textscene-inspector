@@ -35,7 +35,7 @@ const PADDED_ARRAY_LITERAL_RE = new RegExp(`^${WS}\\[([\\s\\S]*)\\]${WS}$`);
  * (variant_parser.cpp:2341-2344), that is when the `ADD_PROPERTY` carries `PROPERTY_HINT_ARRAY_TYPE`. So which spelling a
  * validator accepts is a per-property fact its call site states.
  */
-export const TYPED_OR_BARE_ARRAY_RE = /^(?:\[[\s\S]*\]|Array\[[^[\]]+\]\(\[[\s\S]*\]\))$/;
+const TYPED_OR_BARE_ARRAY_RE = /^(?:\[[\s\S]*\]|Array\[[^[\]]+\]\(\[[\s\S]*\]\))$/;
 
 /** A typed `Array[T]([…])` wrapper alone; `[1]` is the element type `T`. */
 export const TYPED_WRAPPER_RE = /^Array\[([^[\]]+)\]\(\[[\s\S]*\]\)$/;
@@ -170,9 +170,6 @@ const NIL_LITERAL_RE = /^\s*(?:null|nil)\s*$/;
  * slot also takes a bare string, which is {@link nodePathLiteral}'s question. No `g` flag, so `.test()` is stateless.
  */
 export const NODE_PATH_LITERAL_RE = new RegExp(`^${NODE_PATH_BODY}$`);
-
-/** The first `NodePath("…")` literal anywhere in a value. */
-export const NODE_PATH_LITERAL_ANYWHERE_RE = new RegExp(NODE_PATH_BODY);
 
 /** A whole value that is one plain quoted string, capturing the body. */
 const QUOTED_STRING_RE = /^"([^"]*)"$/;

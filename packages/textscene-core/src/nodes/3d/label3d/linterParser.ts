@@ -21,7 +21,10 @@ import {
   VERTICAL_ALIGNMENT_TOP,
 } from '../../../godot/math/math.js';
 import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../godot/scene/billboard.js';
-import { MATERIAL_RENDER_PRIORITY_MIN, MATERIAL_RENDER_PRIORITY_MAX } from '../../../godot/index.js';
+import {
+  MATERIAL_RENDER_PRIORITY_MIN,
+  MATERIAL_RENDER_PRIORITY_MAX,
+} from '../../../godot/rendering/rendering.js';
 import {
   AutowrapMode,
   AUTOWRAP_MODE_NAMES,

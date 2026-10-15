@@ -14,7 +14,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
-import { ARRAY_LITERAL_RE } from '../../../godot/index.js';
+import { ARRAY_LITERAL_RE } from '../../../godot/variant/variantParser.js';
 
 const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 const METHOD_CALL_MODE = { 0: 'DEFERRED', 1: 'IMMEDIATE' };

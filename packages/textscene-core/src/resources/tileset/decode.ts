@@ -6,7 +6,10 @@
  */
 
 import { warn } from '../../logger';
-import { indexedKeyRegex, ruleInt, boolSlotValue, stringToInt } from '../../godot/index.js';
+import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
+import { ruleInt } from '../../godot/variant/int.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
+import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { intOr, vec2iOr } from '../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../utils/colorParser';

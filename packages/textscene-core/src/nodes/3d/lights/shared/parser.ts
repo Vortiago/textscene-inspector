@@ -2,7 +2,7 @@
 
 import type { BaseLightProperties, BaseLightWithNormalBias, PositionalLightProperties } from './types';
 import { floatOr, parseOptionalBool, parseOptionalFloat } from '../../../../parser/valueParsers';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { parseVisualLayers } from '../../visualinstance3d/parser';
 
 /** The colour, energy and shadow properties every light type shares. */

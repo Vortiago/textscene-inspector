@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 
 const arms = {
@@ -71,7 +71,7 @@ const itemListValidationRule: LintRule = {
     name: 'valid-itemlist-properties',
     description: "Validates ItemList's dynamic item_<N>/… indices stay within item_count",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'ItemList'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'ItemList'),
     emits: armEmits(arms),
   },
   check: checkItemList,

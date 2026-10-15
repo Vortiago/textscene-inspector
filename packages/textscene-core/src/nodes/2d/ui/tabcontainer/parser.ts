@@ -2,7 +2,8 @@
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
-import { boolSlotValue, indexedElements } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
+import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { parseControl } from '../control/parser';
 import type { TabContainerProperties, TabContainerTabOverride } from './types';
 

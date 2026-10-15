@@ -7,7 +7,9 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
-import { DEFAULT_ANIMATION_NAME, literalText, ruleInt } from '../../../godot/index.js';
+import { DEFAULT_ANIMATION_NAME } from '../../../godot/scene/animation.js';
+import { literalText } from '../../../godot/string/string.js';
+import { ruleInt } from '../../../godot/variant/int.js';
 
 const arms = {
   missingSpriteFrames: groundedArm('animatedsprite2d-requires-spriteframes', {

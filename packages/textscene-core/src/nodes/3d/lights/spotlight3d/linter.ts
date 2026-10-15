@@ -7,7 +7,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { projectorArm, projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 /** `Light3D::set_param` default for `PARAM_SPOT_ANGLE` (light_3d.cpp:480). */
 const DEFAULT_SPOT_ANGLE = 45;

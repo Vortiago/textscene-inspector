@@ -9,7 +9,7 @@ import { BackgroundMode } from './types';
 import { TONEMAP_AGX_CONTRAST_DEFAULT } from '../../godot/rendering/environment/toneMapping.js';
 import { enumOr, floatOr, intOr, parseOptionalFloat, vec3Or } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
-import { boolSlotValue } from '../../godot/index.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import { volumetricFogDetailSpread } from '../../godot/rendering/environment/volumetricFog.js';
 import {
   FogMode,

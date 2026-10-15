@@ -10,7 +10,7 @@ import {
   findSubResource,
   parseResourceReference,
 } from '../resources/SubResourceResolver.js';
-import { isNilLiteral } from '../godot/index.js';
+import { isNilLiteral } from '../godot/variant/variantParser.js';
 import type { RawScene } from '../parser/types.js';
 
 /**

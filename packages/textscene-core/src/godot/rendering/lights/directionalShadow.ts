@@ -5,6 +5,7 @@
  * the light's position.
  */
 
+import { enumNamesByValue } from '../../classdb/enumNames.js';
 import { directionalLightLightsSurfaces } from './directionalLightSkyMode.js';
 
 /** `DirectionalLight3D()` sets `PARAM_SHADOW_MAX_DISTANCE` to 100 (`scene/3d/light_3d.cpp:600`). */
@@ -105,6 +106,9 @@ export const DirectionalShadowMode = {
  * preview sun (`editor/scene/3d/node_3d_editor_plugin.cpp:10383`).
  */
 export const DIRECTIONAL_SHADOW_MODE_DEFAULT = DirectionalShadowMode.PARALLEL_4_SPLITS;
+
+/** The shadow mode names, for a diagnostic that reports the legal values. */
+export const DIRECTIONAL_SHADOW_MODE_NAMES = enumNamesByValue(DirectionalShadowMode);
 
 /**
  * `Light3D()` sets `PARAM_SHADOW_SPLIT_1_OFFSET` to `PARAM_SHADOW_SPLIT_3_OFFSET` to these fractions

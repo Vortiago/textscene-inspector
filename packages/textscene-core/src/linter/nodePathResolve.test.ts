@@ -188,7 +188,7 @@ describe('resolveNodePath', () => {
 
     // An `instance=` heading declares a PackedScene, never a class, so
     // `StrictTscnParser` puts the `ExtResource("…")` literal in `type`. Handing
-    // that to `descendsFrom` reports a Godot-valid target as the wrong type.
+    // that to `descendsFromClass` reports a Godot-valid target as the wrong type.
     it('declines a path that lands ON an instance, whose class is in another file', () => {
       const tree = node('Root', [node('Pistol', [], { instance: 'ExtResource("8")' })]);
       const scene = sceneOf(tree);

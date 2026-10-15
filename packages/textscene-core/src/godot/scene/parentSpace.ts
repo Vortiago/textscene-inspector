@@ -5,15 +5,15 @@
  * through it. CanvasItem casts at `canvas_item.cpp:311-314` and does the same (`:565-571`).
  */
 
-import { descendsFrom } from '../classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../classdb/classBaseTypes.js';
 
 /** A class family whose parent link carries a transform and visibility. */
 export type SpaceFamily = 'Node3D' | 'CanvasItem';
 
 /** The family `nodeType` belongs to, or `null` for a class that carries neither, such as `Node`. */
 export function spaceFamilyOf(nodeType: string): SpaceFamily | null {
-  if (descendsFrom(nodeType, 'Node3D')) return 'Node3D';
-  if (descendsFrom(nodeType, 'CanvasItem')) return 'CanvasItem';
+  if (descendsFromClass(nodeType, 'Node3D')) return 'Node3D';
+  if (descendsFromClass(nodeType, 'CanvasItem')) return 'CanvasItem';
   return null;
 }
 

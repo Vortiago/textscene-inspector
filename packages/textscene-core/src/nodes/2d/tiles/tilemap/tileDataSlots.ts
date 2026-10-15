@@ -8,12 +8,10 @@ import { accepts, propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
-import {
-  boolLiteralAsNumber,
-  packedArrayLiteral,
-  parseGodotFloat,
-  ruleInt,
-} from '../../../../godot/index.js';
+import { boolLiteralAsNumber } from '../../../../godot/variant/variantBool.js';
+import { packedArrayLiteral } from '../../../../godot/variant/variantParser.js';
+import { parseGodotFloat } from '../../../../godot/variant/number.js';
+import { ruleInt } from '../../../../godot/variant/int.js';
 import { replayPositions } from '../../../../godot/scene/propertyReplay.js';
 
 /** `format` initialises to TILE_MAP_DATA_FORMAT_3, which is 2 (tile_map.h:64). */

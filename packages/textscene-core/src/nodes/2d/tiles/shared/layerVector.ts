@@ -3,8 +3,7 @@
  * The renderer and the linter share it, so both count the gap layers the
  * engine fills.
  */
-
-import { indexedElements } from '../../../../godot/index.js';
+import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 
 /**
  * The leaves `register_property` declares (tile_map.cpp:1030-1039). Only these

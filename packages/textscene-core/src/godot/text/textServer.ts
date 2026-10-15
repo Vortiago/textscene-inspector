@@ -6,7 +6,7 @@
  * The fallback server answers `false` for every locale (`text_server_fb.cpp:190-192`): without the advanced module a
  * project is left-to-right throughout.
  */
-export const RTL_LANGUAGE_CODES = ['ar', 'dv', 'he', 'fa', 'ff', 'ku', 'ur'] as const;
+const RTL_LANGUAGE_CODES = ['ar', 'dv', 'he', 'fa', 'ff', 'ku', 'ur'] as const;
 
 /**
  * `TS->is_locale_right_to_left(locale)` (`text_server_adv.cpp:534-541`): the language subtag alone decides it, so `he_IL`
