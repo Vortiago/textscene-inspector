@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { EDITOR_CAMERA_FOV, editorCameraDirection, editorCameraPosition } from './godotEditorCamera';
+import { radToDeg } from '../godot/math/math.js';
 
 describe('editorCameraDirection', () => {
   it('places the camera in +X +Y +Z, as Godot’s comment says', () => {
@@ -16,7 +17,7 @@ describe('editorCameraDirection', () => {
 
   it('looks down at 28.65 degrees — asin(sin(0.5)) in degrees', () => {
     // x_rot = 0.5 rad tilts the +Z step up by sin(0.5) = 0.4794.
-    const elevation = Math.asin(editorCameraDirection().y) * (180 / Math.PI);
+    const elevation = radToDeg(Math.asin(editorCameraDirection().y));
     expect(elevation).toBeCloseTo(28.6479, 3);
   });
 
@@ -24,7 +25,7 @@ describe('editorCameraDirection', () => {
     // The azimuth is what actually differs from an isometric-ish (1, k, 1):
     // Godot presents more of the scene's front face than its corner.
     const dir = editorCameraDirection();
-    const azimuth = Math.atan2(dir.x, dir.z) * (180 / Math.PI);
+    const azimuth = radToDeg(Math.atan2(dir.x, dir.z));
     expect(azimuth).toBeCloseTo(28.6479, 3);
     expect(azimuth).not.toBeCloseTo(45, 0);
   });

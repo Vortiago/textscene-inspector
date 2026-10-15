@@ -13,6 +13,7 @@ import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
 import { LIGHT_SIZES, installLightSizeUniforms } from './lightSize/lightSize';
 import { litUniformArray } from './testing/litUniformArray';
+import { degToRad } from '../godot/math/math.js';
 
 import './nodes/index';
 
@@ -74,7 +75,7 @@ shadow_enabled = true
 light_angular_distance = 5.0
 `);
     const [size] = sizesAfterRender(renderer, 1);
-    expect(size).toBeCloseTo(1 - Math.cos((5 * Math.PI) / 180), 7);
+    expect(size).toBeCloseTo(1 - Math.cos(degToRad(5)), 7);
   });
 
   it('writes zero for a directional light whose shadow is off, as no soft shadow is drawn (edge case)', async () => {

@@ -114,6 +114,11 @@ export function degToRad(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
 
+/** `Math::rad_to_deg` (`core/math/math_funcs.h:329-331`): `p_y * (180.0 / PI)`. */
+export function radToDeg(radians: number): number {
+  return radians * (180 / Math.PI);
+}
+
 /**
  * `SIGN` (typedefs.h:123-126): `m_v > 0 ? +1 : (m_v < 0 ? -1 : 0)`. Not `Math.sign`: `SIGN(nan)` is 0,
  * and Godot writes and reloads `nan`, so it reaches determinants of serialised transforms. The zero

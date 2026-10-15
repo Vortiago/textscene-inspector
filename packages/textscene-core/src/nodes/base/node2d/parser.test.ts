@@ -20,6 +20,13 @@ describe('parseNode2D', () => {
     );
   });
 
+  it('reads rotation_degrees as Godot rounds it, p_y * (PI / 180)', () => {
+    // 0.05235987755982988 is what (3 * PI) / 180 gives; Godot's expression gives ...89.
+    expect(parseNode2D(heading('Node2D', { name: 'N' }), { rotation_degrees: '3' }).rotation).toBe(
+      0.05235987755982989
+    );
+  });
+
   it('applies Godot defaults (pos 0, rot 0, scale 1, z_as_relative true)', () => {
     const p = parseNode2D(heading('Node2D', { name: 'N' }), {});
     expect(p.position).toEqual({ x: 0, y: 0 });

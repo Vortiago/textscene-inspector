@@ -15,6 +15,7 @@ import { decodeSky, decodeSkyMaterial } from '../../resources/sky/decode';
 import type { ProceduralSkyProperties, Sky } from '../../resources/sky/types';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import type { Rgba } from '../../godot/math/math';
+import { degToRad } from '../../godot/math/math.js';
 
 /** The node types the editor counts, one independent counter each. */
 export const PREVIEW_SUN_YIELD_TYPE = 'DirectionalLight3D';
@@ -74,8 +75,8 @@ export function previewYield(sceneNodeTypes: Iterable<string>, toggles: PreviewT
  */
 export function previewSunDirection(): THREE.Vector3 {
   const euler = new THREE.Euler(
-    THREE.MathUtils.degToRad(PREVIEW_SUN_ALTITUDE_DEG),
-    THREE.MathUtils.degToRad(PREVIEW_SUN_AZIMUTH_DEG),
+    degToRad(PREVIEW_SUN_ALTITUDE_DEG),
+    degToRad(PREVIEW_SUN_AZIMUTH_DEG),
     0,
     'YXZ'
   );

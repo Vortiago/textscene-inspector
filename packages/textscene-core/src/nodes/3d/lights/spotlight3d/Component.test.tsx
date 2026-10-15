@@ -73,6 +73,13 @@ describe('<SpotLight3D>', () => {
     expect(instanceAs<THREE.SpotLight>(light).angle).toBeCloseTo(Math.PI / 2, 5);
   });
 
+  it('converts spot_angle as Godot rounds it, p_y * (PI / 180)', async () => {
+    // 0.05235987755982988 is what (3 * PI) / 180 gives; Godot's expression gives ...89.
+    const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode({ spot_angle: 3 })} />);
+    const light = renderer.scene.findByType('SpotLight');
+    expect(instanceAs<THREE.SpotLight>(light).angle).toBe(0.05235987755982989);
+  });
+
   it('maps spot_range to distance', async () => {
     const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode({ spot_range: 25 })} />);
     const light = renderer.scene.findByType('SpotLight');

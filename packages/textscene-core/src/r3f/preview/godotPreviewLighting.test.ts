@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { BackgroundMode } from '../../resources/environment/types';
 import { previewEnvironment, previewSunDirection, previewYield } from './godotPreviewLighting';
 import type { ProceduralSkyProperties } from '../../resources/sky/types';
+import { radToDeg } from '../../godot/math/math.js';
 
 /**
  * `Node3DEditor::_node_added` keeps two independent counters, by node type only:
@@ -83,7 +84,7 @@ describe('previewSunDirection', () => {
   it('sits at the documented 60 degrees above the horizon', () => {
     // "These default rotations place the preview sun at an angular altitude of
     // 60 degrees", in _load_default_preview_settings.
-    const altitude = Math.asin(-previewSunDirection().y) * (180 / Math.PI);
+    const altitude = radToDeg(Math.asin(-previewSunDirection().y));
     expect(altitude).toBeCloseTo(60, 4);
   });
 
