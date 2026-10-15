@@ -27,6 +27,7 @@ write('tiles/editor.tscn', extResource('tiles/set.tres'));
 write('player/player.tscn', extResource('main.tscn') + extResource('player/player.gd'));
 write('player/player.gd', 'extends Node2D\n');
 write('project.godot', '[application]\n');
+write('broken.tscn', extResource('gone.png'));
 
 describe('reachableFiles', () => {
   it('follows ext_resource paths through scenes and resources, with their sidecars', () => {
@@ -47,7 +48,6 @@ describe('reachableFiles', () => {
   });
 
   it('names the referencing file when a path reaches no file', () => {
-    write('broken.tscn', extResource('gone.png'));
     expect(() => reachableFiles(root, 'broken.tscn')).toThrow(
       'broken.tscn references res://gone.png, which is not in the checkout'
     );

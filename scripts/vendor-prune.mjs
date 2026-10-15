@@ -4,7 +4,7 @@
  * copy keeps both corpora stripped the same way.
  */
 
-import { cpSync, existsSync, readFileSync } from 'node:fs';
+import { cpSync, existsSync, readFileSync, statSync } from 'node:fs';
 import { basename } from 'node:path';
 
 /**
@@ -21,7 +21,7 @@ export function copyPruned(src, dest) {
     recursive: true,
     filter: (path) => {
       if (isPruned(path)) return false;
-      files++;
+      if (statSync(path).isFile()) files++;
       return true;
     },
   });

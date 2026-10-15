@@ -48,6 +48,7 @@ const RECIPE = [
   'scripts/vendor-godot-demos/local-changes.patch',
   'scripts/vendor-godot-demos/text-resources',
   'scripts/vendor-prune.mjs',
+  'scripts/vendor-git.mjs',
 ];
 
 const LICENCE = `License: code is MIT, Copyright (c) 2014-present Godot Engine contributors,
@@ -55,7 +56,10 @@ Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur
 (https://github.com/godotengine/godot-demo-projects/blob/master/LICENSE.md).
 Per-demo asset licences vary (often CC-BY). Each project keeps its own README.md for attribution.`;
 
-/** Vendors both corpora, unless each already holds the current recipe's output. */
+/**
+ * Vendors both corpora, unless each already holds the current recipe's output. When the fetch
+ * fails, it keeps corpora from an older recipe and throws only when there are none.
+ */
 export function ensureGodotDemos() {
   const key = recipeKey();
   if (CORPORA.every((corpus) => holdsKey(corpus, key))) {
@@ -65,7 +69,14 @@ export function ensureGodotDemos() {
   const work = mkdtempSync(join(tmpdir(), 'vendor-godot-demos-'));
   try {
     const checkout = join(work, 'godot-demo-projects');
-    fetchCheckout(checkout);
+    try {
+      fetchCheckout(checkout);
+    } catch (e) {
+      // Offline, an older recipe's corpora beat none: the install and the tests still run.
+      if (!CORPORA.every((corpus) => existsSync(join(corpus, KEY_FILE)))) throw e;
+      console.warn(`[vendor-godot-demos] ${e.message}\n  Kept the corpora of an older recipe.`);
+      return;
+    }
     applyLocalChanges(import.meta.dirname, checkout);
     const demoFiles = vendorDemos(checkout);
     const isometricFiles = vendorIsometric(join(checkout, ISOMETRIC_PROJECT));
@@ -82,7 +93,11 @@ export function ensureGodotDemos() {
 export function recipeKey() {
   const hash = createHash('sha256');
   for (const file of RECIPE.flatMap(recipeFiles).sort()) {
-    hash.update(file).update(readFileSync(join(REPO_ROOT, file)));
+    // A NUL after each part keeps one path and its bytes from reading as another pair.
+    hash
+      .update(`${file}\0`)
+      .update(readFileSync(join(REPO_ROOT, file)))
+      .update('\0');
   }
   return hash.digest('hex');
 }
@@ -102,7 +117,7 @@ function holdsKey(corpus, key) {
 }
 
 function fetchCheckout(checkout) {
-  process.stdout.write(`[vendor-godot-demos] fetching ${SOURCE.url} @ ${SHORT_COMMIT} … `);
+  console.log(`[vendor-godot-demos] fetching ${SOURCE.url} @ ${SHORT_COMMIT}`);
   try {
     fetchShallow(SOURCE.url, SOURCE.commit, checkout);
   } catch (e) {
@@ -111,7 +126,6 @@ function fetchCheckout(checkout) {
       { cause: e }
     );
   }
-  console.log('done');
 }
 
 /** Copies each demo project, pruned, into a wiped scenes/demos/, and returns the file count. */

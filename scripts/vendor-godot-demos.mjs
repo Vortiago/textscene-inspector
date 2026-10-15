@@ -11,10 +11,12 @@
 
 import { ensureGodotDemos, recipeKey } from './vendor-godot-demos/vendor.mjs';
 
+const args = process.argv.slice(2);
 try {
-  if (process.argv[2] === '--key') console.log(recipeKey());
-  else ensureGodotDemos();
+  if (args.length === 1 && args[0] === '--key') console.log(recipeKey());
+  else if (args.length === 0) ensureGodotDemos();
+  else throw new Error(`expected no argument or --key, got ${args.join(' ')}`);
 } catch (e) {
-  console.error(`\n[vendor-godot-demos] ${e.message}`);
+  console.error(`[vendor-godot-demos] ${e.message}`);
   process.exitCode = 1;
 }

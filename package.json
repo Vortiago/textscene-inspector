@@ -22,7 +22,7 @@
     "format:check": "prettier --cache --check .",
     "lint:tscn": "node apps/textscene-linter/bin/tscn-lint.js",
     "lint:scenes": "pnpm build:linter && pnpm lint:scenes:only",
-    "lint:scenes:only": "pnpm vendor:demos && node apps/textscene-linter/bin/tscn-lint.js scenes/demos scenes/isometric",
+    "lint:scenes:only": "node scripts/vendor-godot-demos.mjs && node apps/textscene-linter/bin/tscn-lint.js scenes/demos scenes/isometric",
     "type-check": "pnpm -r type-check",
     "type-check:all": "pnpm --filter \"./packages/*\" build && pnpm -r type-check",
     "type-check:tests": "pnpm -r type-check:tests",
