@@ -1,21 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import type { ReactNode } from 'react';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useThree } from '@react-three/fiber';
 import { useDeviceSampleCount, type ColourStorage } from './deviceSampleCount';
 
 const RGBA8 = 0x8058;
 const RGBA16F = 0x881a;
 const DEPTH_COMPONENT24 = 0x81a6;
 
-type FakeContext = object;
-
 /** A WebGL2 context that lists `counts` per renderbuffer format, lost while `lost.current`. */
 function contextWith(
   counts: Record<number, number[]>,
   queries: number[] = [],
   lost = { current: false }
-): FakeContext {
+): object {
   return {
     RENDERBUFFER: 0x8d41,
     SAMPLES: 0x80a9,
@@ -30,25 +27,20 @@ function contextWith(
   };
 }
 
-/** Hands the canvas's renderer `context` before its children render. */
-function OnContext({ context, children }: { context: FakeContext; children: ReactNode }) {
-  const gl = useThree((state) => state.gl);
-  gl.getContext = () => context as WebGL2RenderingContext;
-  return children;
-}
-
 /** The samples `useDeviceSampleCount` gives for `requested` on a canvas over `context`. */
-async function sampleCount(context: FakeContext, requested: number, storage?: ColourStorage) {
+async function sampleCount(context: object, requested: number, storage?: ColourStorage) {
   let seen: number | null = null;
   function Probe() {
     seen = useDeviceSampleCount(requested, storage);
     return null;
   }
-  await ReactThreeTestRenderer.create(
-    <OnContext context={context}>
-      <Probe />
-    </OnContext>
-  );
+  await ReactThreeTestRenderer.create(<Probe />, {
+    gl: (defaults) => {
+      const gl = new THREE.WebGLRenderer(defaults);
+      gl.getContext = () => context as WebGL2RenderingContext;
+      return gl;
+    },
+  });
   return seen;
 }
 

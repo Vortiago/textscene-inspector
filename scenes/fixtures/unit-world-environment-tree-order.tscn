@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://unitworldenvorder"]
+
+; Two WorldEnvironments: an instanced one with a red background, then an authored one with a
+; blue background. Godot applies the first in tree order (world_environment.cpp:77-83,
+; scene_tree.cpp:1568-1581), so the view is red, although the instanced one loads after the
+; authored one. Every other golden holds one WorldEnvironment, so only this one shows which wins.
+
+[ext_resource type="PackedScene" path="res://unit-world-environment-tree-order-child.tscn" id="1_red"]
+
+[sub_resource type="Environment" id="Environment_blue"]
+background_mode = 1
+background_color = Color(0.1, 0.1, 0.6, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_grey"]
+shading_mode = 0
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="RedInstance" parent="." instance=ExtResource("1_red")]
+
+[node name="BlueEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_blue")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_grey")

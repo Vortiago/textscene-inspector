@@ -1903,6 +1903,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "World Environment Tree Order Child",
+    "file": "unit-world-environment-tree-order-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "World Environment Tree Order",
+    "file": "unit-world-environment-tree-order.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Xr Anchor 3d",
     "file": "unit-xr-anchor-3d.tscn",
     "category": "Other"
