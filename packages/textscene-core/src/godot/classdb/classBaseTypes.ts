@@ -20,8 +20,8 @@ function classBaseOf(className: string): string | undefined {
 
 /**
  * The first answer `visit` gives for `className` or an ancestor, nearest first, over both
- * hierarchies, or `undefined`. The one walk over the table: it allocates nothing, so a per-key
- * lookup can use it. A hop bound guards against a malformed table.
+ * hierarchies, or `undefined`. The one walk over the table. It builds no chain, so a per-key lookup
+ * stops at the first hop that answers. A hop bound guards against a malformed table.
  */
 export function findInClassChain<T>(
   className: string,
@@ -44,18 +44,11 @@ export function descendsFromClass(className: string, ancestor: string): boolean 
   return findInClassChain(className, (type) => type === ancestor || undefined) ?? false;
 }
 
-/** Every ancestor of `className`, nearest first, over both hierarchies. A cycle truncates the chain. */
+/** Every ancestor of `className`, nearest first, over both hierarchies. */
 export function classBaseChain(className: string): readonly string[] {
   const chain: string[] = [];
-  const seen = new Set<string>();
-  findInClassChain(className, (type) => {
-    if (seen.has(type)) return true;
-    // The first visit is `className` itself, which the chain leaves out.
-    if (seen.size > 0) chain.push(type);
-    seen.add(type);
-    return undefined;
-  });
-  return chain;
+  findInClassChain(className, (type) => void chain.push(type));
+  return chain.slice(1);
 }
 
 /**

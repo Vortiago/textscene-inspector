@@ -35,7 +35,8 @@ export function isCatalogedType(nodeType: string): boolean {
 /**
  * How many hops a base-chain walk takes before giving up: the deepest catalogued chain is 7
  * (`OpenXRInteractionProfileEditor` → … → `Node`), and 32 never binds yet stops a malformed table.
- * Exported, as `ValidatorRegistry` walks the merged class table with the same bound.
+ * Exported, as `findInClassChain` and `ValidatorRegistry` walk the merged class table with the same
+ * bound.
  */
 export const MAX_BASE_CHAIN_HOPS = 32;
 
