@@ -35,27 +35,33 @@ export interface ExcludingHint {
   readonly excluded: readonly string[];
 }
 
-/** The resource hints `className` declares itself, generated and hand rows alike. */
+/** The resource hint of each slot `className` declares itself, `''` for another hint. */
 function ownResourceHints(className: string): readonly (readonly [property: string, hintString: string])[] {
   if (Object.hasOwn(RESOURCE_TYPE_EXCLUSIONS, className)) {
     return Object.entries(RESOURCE_TYPE_EXCLUSIONS[className]!);
   }
   if (!Object.hasOwn(UNCATALOGUED_PROPERTIES, className)) return [];
-  return UNCATALOGUED_PROPERTIES[className]!.filter(([, , hint]) => hint === PROPERTY_HINT.RESOURCE_TYPE).map(
-    ([property, , , hintString]) => [property, hintString] as const
+  // Every row, as the generated table holds a nearer declaration under another hint as `''`.
+  return UNCATALOGUED_PROPERTIES[className]!.map(
+    ([property, , hint, hintString]) =>
+      [property, hint === PROPERTY_HINT.RESOURCE_TYPE ? hintString : ''] as const
   );
 }
 
-/** Written only by `excludingSlots`, once per class name. Never cleared: the tables are constant. */
+/**
+ * Written only by `excludingSlots`, once per class with a base. Never cleared: the tables are
+ * constant. A class with no base is never cached, so a type a scene invents cannot grow it.
+ */
 const excludingSlotsByClass = new Map<string, ReadonlyMap<string, ExcludingHint>>();
 
 /** Every slot of `className` whose nearest declaration excludes a class, keyed by property. */
 function excludingSlots(className: string): ReadonlyMap<string, ExcludingHint> {
   const cached = excludingSlotsByClass.get(className);
   if (cached) return cached;
+  const bases = classBaseChain(className);
   const slots = new Map<string, ExcludingHint>();
   const declared = new Set<string>();
-  for (const declaredBy of [className, ...classBaseChain(className)]) {
+  for (const declaredBy of [className, ...bases]) {
     for (const [property, hintString] of ownResourceHints(declaredBy)) {
       if (declared.has(property)) continue;
       declared.add(property);
@@ -63,7 +69,7 @@ function excludingSlots(className: string): ReadonlyMap<string, ExcludingHint> {
       if (excluded.length > 0) slots.set(property, { declaredBy, hintString, excluded });
     }
   }
-  excludingSlotsByClass.set(className, slots);
+  if (bases.length > 0) excludingSlotsByClass.set(className, slots);
   return slots;
 }
 

@@ -203,6 +203,11 @@ function excludesAClass(row) {
   );
 }
 
+/** A row's resource hint string, or `''` for another hint, which excludes nothing. */
+function resourceHintOf(row) {
+  return row.hint === HINT_RESOURCE_TYPE ? row.hint_string : '';
+}
+
 /** Whether `className` declares `name` again below an ancestor whose slot of that name excludes a class. */
 function redeclaresExcludingSlot(className, name, excludingByClass, bases) {
   for (let at = bases[className]; at !== undefined; at = bases[at]) {
@@ -233,7 +238,7 @@ export function deriveResourceTypeExclusions(properties, bases) {
       (row) => excludesAClass(row) || redeclaresExcludingSlot(className, row.name, excludingByClass, bases)
     );
     if (kept.length > 0)
-      exclusions[className] = Object.fromEntries(kept.map((row) => [row.name, row.hint_string]));
+      exclusions[className] = Object.fromEntries(kept.map((row) => [row.name, resourceHintOf(row)]));
   }
   return exclusions;
 }

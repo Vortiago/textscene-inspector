@@ -47,6 +47,16 @@ describe('deriveResourceTypeExclusions', () => {
       OmniLight3D: { light_projector: 'Texture2D' },
     });
   });
+
+  it('writes no hint string for a nearer declaration under another hint', () => {
+    const properties = {
+      Light3D: [row('light_projector', 17, 'Texture2D,-AtlasTexture')],
+      OmniLight3D: [row('light_projector', 1, '-10,10')],
+    };
+    expect(deriveResourceTypeExclusions(properties, { OmniLight3D: 'Light3D' }).OmniLight3D).toEqual({
+      light_projector: '',
+    });
+  });
 });
 
 describe('deriveBaseTypes', () => {
