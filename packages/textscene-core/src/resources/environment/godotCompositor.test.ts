@@ -344,7 +344,11 @@ describe('compositeProgram — the uniforms it returns', () => {
 
   it('adds the glow buffer with a glow and the glow map with a map', () => {
     expect(Object.keys(program(glowOn()).uniforms)).toEqual(['godotExposure', GLOW_BUFFER_UNIFORM]);
-    expect(Object.keys(program(glowOn(GLOW_MAP)).uniforms)).toEqual([GLOW_BUFFER_UNIFORM, GLOW_MAP_UNIFORM]);
+    expect(Object.keys(program(glowOn(GLOW_MAP)).uniforms)).toEqual([
+      'godotExposure',
+      GLOW_BUFFER_UNIFORM,
+      GLOW_MAP_UNIFORM,
+    ]);
   });
 
   it('starts the exposure at the authored value and each texture unbound', () => {
