@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   applyTextureState,
-  isMaterialOwnedTexture,
+  isBindingOwnedTexture,
   type MaterialTextureState,
   type UVTransform,
 } from './applyTextureState';
@@ -373,8 +373,8 @@ describe('applyTextureState', () => {
       const original = new THREE.Texture();
       const clone = applyTextureState(original, state({ filter: 0 }));
 
-      expect(isMaterialOwnedTexture(clone)).toBe(true);
-      expect(isMaterialOwnedTexture(original)).toBe(false);
+      expect(isBindingOwnedTexture(clone)).toBe(true);
+      expect(isBindingOwnedTexture(original)).toBe(false);
     });
   });
 });

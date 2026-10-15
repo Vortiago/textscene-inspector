@@ -18,7 +18,7 @@ import { sceneHasBlendedSurface } from './alphaPassScan';
 import { useLatchedSceneScan } from './useLatchedSceneScan';
 import { compositorPassFor } from './compositorPass';
 import { SkyLayer } from '../sky/SkyLayer';
-import { NO_RESOURCES, SceneResourcesProvider, type SceneResources } from '../SceneResourcesContext';
+import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
 import { clearColorCube } from './colorBackground';
@@ -27,15 +27,13 @@ export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
   /** The resolved sky, or null when there is none to render. */
   sky: Sky | null;
-  /**
-   * The pools the sky material's references, such as a panorama, resolve in. They shadow the
-   * Environment's, so a material `.tres` reads its own sub-resources. Absent for the preview sky,
-   * which holds no reference.
-   */
-  skyResources?: SceneResources;
+  /** The pools the Environment's own references, such as `glow_map`, resolve in. */
+  resources: SceneResources;
+  /** The pools the sky material's references, such as a panorama, resolve in. */
+  skyResources: SceneResources;
 }
 
-export function EnvironmentLayer({ settings, sky, skyResources = NO_RESOURCES }: EnvironmentLayerProps) {
+export function EnvironmentLayer({ settings, sky, resources, skyResources }: EnvironmentLayerProps) {
   // Godot draws the sky as the background under BG_SKY and takes ambient from
   // it whenever the source resolves to a cubemap. The two are independent: a
   // sky can light the scene without being shown (AMBIENT_SOURCE_SKY over a
@@ -67,6 +65,7 @@ export function EnvironmentLayer({ settings, sky, skyResources = NO_RESOURCES }:
           glow={composited.glow}
           adjustments={settings.adjustments}
           toneMapping={settings.toneMapping}
+          resources={resources}
         />
       )}
       {hasFog && (
@@ -77,20 +76,16 @@ export function EnvironmentLayer({ settings, sky, skyResources = NO_RESOURCES }:
         />
       )}
       {sky && (showsSky || skyAmbient) && (
-        <SceneResourcesProvider
-          internalResources={skyResources.internalResources}
-          externalResources={skyResources.externalResources}
-        >
-          <SkyLayer
-            sky={sky}
-            asBackground={showsSky}
-            backgroundIntensity={settings.background.energyMultiplier}
-            rotation={settings.skyRotation}
-            // Godot reflects the sky at `background_energy_multiplier` whatever the ambient source.
-            intensity={skyAmbient ? skyAmbient.energy : 0}
-            contribution={skyAmbient ? skyAmbient.contribution : 1}
-          />
-        </SceneResourcesProvider>
+        <SkyLayer
+          sky={sky}
+          asBackground={showsSky}
+          backgroundIntensity={settings.background.energyMultiplier}
+          rotation={settings.skyRotation}
+          // Godot reflects the sky at `background_energy_multiplier` whatever the ambient source.
+          intensity={skyAmbient ? skyAmbient.energy : 0}
+          contribution={skyAmbient ? skyAmbient.contribution : 1}
+          resources={skyResources}
+        />
       )}
       {flatAmbient && flatAmbient.energy > 0 && (
         // `* LIGHT_INTENSITY_SCALE`: Godot adds `ambient_light * albedo` with no 1/PI, while three

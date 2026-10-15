@@ -54,17 +54,16 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Reso
   }, [material, skyData]);
 
   const clearColor = useProjectClearColorSrgb();
+  // Apart from the sky, so a sky `.tres` that loads later keeps `settings`, and with it the
+  // compositor's effect.
+  const settings = useMemo(
+    () => (envProps ? createEnvironmentSettings(envProps, clearColor) : null),
+    [envProps, clearColor]
+  );
 
   return useMemo(
     () =>
-      envProps && environment
-        ? {
-            settings: createEnvironmentSettings(envProps, clearColor),
-            sky,
-            resources: environment.resources,
-            skyResources,
-          }
-        : null,
-    [envProps, environment, clearColor, sky, skyResources]
+      settings && environment ? { settings, sky, resources: environment.resources, skyResources } : null,
+    [settings, environment, sky, skyResources]
   );
 }

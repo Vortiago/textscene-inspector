@@ -6,7 +6,8 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { bindSlotTexture, materialTextureStates, releaseBoundTexture } from './textureBinding';
+import { bindSlotTexture, materialTextureStates } from './textureBinding';
+import { releaseBoundTexture } from '../../textures/applyTextureState';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
 import { UV2_CHANNEL } from '../../meshes/uv2';

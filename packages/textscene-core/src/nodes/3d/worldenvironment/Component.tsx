@@ -8,7 +8,6 @@
 import type { WorldEnvironmentProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { EnvironmentLayer } from '../../../r3f/environment/EnvironmentLayer';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { useResolvedEnvironment } from './useResolvedEnvironment';
 
 export function WorldEnvironment({ node, children }: NodeComponentProps) {
@@ -18,17 +17,12 @@ export function WorldEnvironment({ node, children }: NodeComponentProps) {
   return (
     <group name={node.name}>
       {resolved && (
-        // The Environment's pools, so a `.tres` Environment reads its own sub-resources.
-        <SceneResourcesProvider
-          internalResources={resolved.resources.internalResources}
-          externalResources={resolved.resources.externalResources}
-        >
-          <EnvironmentLayer
-            settings={resolved.settings}
-            sky={resolved.sky}
-            skyResources={resolved.skyResources}
-          />
-        </SceneResourcesProvider>
+        <EnvironmentLayer
+          settings={resolved.settings}
+          sky={resolved.sky}
+          resources={resolved.resources}
+          skyResources={resolved.skyResources}
+        />
       )}
       {children}
     </group>

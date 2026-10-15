@@ -12,8 +12,8 @@ import { applyTextureFilterState, godotTextureFilterState, textureFilterMatches 
 /** Below this, a UV transform is indistinguishable from identity. */
 const IDENTITY_EPSILON = 1e-6;
 
-/** Marks a texture this module cloned, so its owning material may dispose it. */
-const MATERIAL_OWNED = 'textsceneClonedForMaterial';
+/** Marks a texture this module cloned, so its binder may dispose it. */
+const BINDING_OWNED = 'textsceneClonedForBinding';
 
 export interface UVTransform {
   scale: { x: number; y: number };
@@ -115,17 +115,25 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   // case wants what R3F reasserts, so it needs no pin.
   if (state.colorSpace === THREE.NoColorSpace) pinNoColorSpace(cloned);
   else cloned.colorSpace = state.colorSpace;
-  cloned.userData[MATERIAL_OWNED] = true;
+  cloned.userData[BINDING_OWNED] = true;
   cloned.needsUpdate = true;
   return cloned;
 }
 
 /**
- * Whether a texture belongs to the material holding it, not the loader's cache,
- * so that disposing the material disposes it too.
+ * Whether a texture is a clone `applyTextureState` made for its binder, not the loader's cache
+ * entry, so that the binder disposes it.
  */
-export function isMaterialOwnedTexture(texture: THREE.Texture): boolean {
-  return texture.userData[MATERIAL_OWNED] === true;
+export function isBindingOwnedTexture(texture: THREE.Texture): boolean {
+  return texture.userData[BINDING_OWNED] === true;
+}
+
+/**
+ * Release a texture `applyTextureState` returned: a dispose on a clone it made, and a no-op on a
+ * shared cache entry, which the loader owns.
+ */
+export function releaseBoundTexture(texture: THREE.Texture | null | undefined): void {
+  if (texture && isBindingOwnedTexture(texture)) texture.dispose();
 }
 
 function isIdentity(uv: UVTransform): boolean {

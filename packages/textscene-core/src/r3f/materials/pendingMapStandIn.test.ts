@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { TEXTURE_SLOTS, type TextureSlot } from '../../resources/materials/standardmaterial3d/types';
-import { isMaterialOwnedTexture } from '../../resources/textures/applyTextureState';
+import { isBindingOwnedTexture } from '../../resources/textures/applyTextureState';
 import { pendingMapStandIn } from './pendingMapStandIn';
 
 function texel(slot: TextureSlot): number[] {
@@ -41,6 +41,6 @@ describe('pendingMapStandIn', () => {
   });
 
   it('is never released with a material, since every slot shares it', () => {
-    for (const slot of TEXTURE_SLOTS) expect(isMaterialOwnedTexture(pendingMapStandIn(slot))).toBe(false);
+    for (const slot of TEXTURE_SLOTS) expect(isBindingOwnedTexture(pendingMapStandIn(slot))).toBe(false);
   });
 });

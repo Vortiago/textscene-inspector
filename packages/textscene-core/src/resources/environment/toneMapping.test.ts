@@ -213,6 +213,10 @@ describe('applyToneMapping', () => {
 });
 
 describe('installToneCurve', () => {
+  afterEach(() => {
+    THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
+  });
+
   it('installs the curve and the exposure but leaves the renderer\u2019s mapping to the compositor', () => {
     const gl = fakeRenderer();
     const before = THREE.ShaderChunk.tonemapping_pars_fragment;
@@ -227,6 +231,10 @@ describe('installToneCurve', () => {
 });
 
 describe('worldToneMapping', () => {
+  afterEach(() => {
+    THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
+  });
+
   it('answers the installed curve while the compositor holds the renderer at NoToneMapping', () => {
     const gl = fakeRenderer();
     const restore = installToneCurve(gl, { mode: 2, exposure: 1 });
@@ -247,7 +255,6 @@ describe('worldToneMapping', () => {
     gl.toneMapping = THREE.ReinhardToneMapping;
     installToneCurve(gl, { mode: 2, exposure: 1 })();
     expect(worldToneMapping(gl)).toBe(THREE.ReinhardToneMapping);
-    THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
   });
 });
 

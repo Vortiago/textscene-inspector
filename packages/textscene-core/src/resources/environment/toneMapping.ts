@@ -56,24 +56,20 @@ export function applyToneMapping(
 ): () => void {
   const previousMapping = gl.toneMapping;
   const mapping = toneMappingFor(settings.mode);
-  const restoreCurve = installToneCurve(gl, settings, scene);
-
-  const changed = mapping !== previousMapping;
-  if (changed) {
-    gl.toneMapping = mapping;
-    markMaterialsDirty(scene);
-  }
+  const restoreCurve = swapToneCurve(gl, settings);
+  if (mapping !== previousMapping) gl.toneMapping = mapping;
+  const changed = mapping !== previousMapping || mapping === THREE.CustomToneMapping;
+  if (changed) markMaterialsDirty(scene);
 
   return () => {
     restoreCurve();
-    if (gl.toneMapping === previousMapping) return;
-    gl.toneMapping = previousMapping;
-    markMaterialsDirty(scene);
+    if (gl.toneMapping !== previousMapping) gl.toneMapping = previousMapping;
+    if (changed) markMaterialsDirty(scene);
   };
 }
 
 /**
- * Written only by `installToneCurve`, and restored by its undo. The mapping the shared world
+ * Written only by `swapToneCurve`, and restored by its undo. The mapping the shared world
  * tonemaps with, kept apart from `gl.toneMapping`, which the glow compositor holds at
  * `NoToneMapping` while its own pass applies the curve.
  */
@@ -97,15 +93,25 @@ export function installToneCurve(
   settings: ToneMappingSettings,
   scene?: THREE.Object3D
 ): () => void {
+  const custom = toneMappingFor(settings.mode) === THREE.CustomToneMapping;
+  const restoreCurve = swapToneCurve(gl, settings);
+  if (custom) markMaterialsDirty(scene);
+  return () => {
+    restoreCurve();
+    if (custom) markMaterialsDirty(scene);
+  };
+}
+
+/** The chunk, exposure and world-mapping half of both installs, with no material marked. */
+function swapToneCurve(gl: ToneMappedRenderer, settings: ToneMappingSettings): () => void {
   const previousExposure = gl.toneMappingExposure;
   const previousChunk = THREE.ShaderChunk[TONEMAP_CHUNK];
   const previousWorldMapping = worldToneMappings.get(gl);
 
   const mapping = toneMappingFor(settings.mode);
   const exposure = settings.exposure ?? 1;
-  const custom = mapping === THREE.CustomToneMapping;
 
-  if (custom) {
+  if (mapping === THREE.CustomToneMapping) {
     keyProgramsOnToneMappingChunk();
     // The white normalisation is a constant per environment, so it is baked
     // into the chunk rather than plumbed through as a uniform every material
@@ -116,7 +122,6 @@ export function installToneCurve(
         toneMappingWhiteParam(settings.mode, settings.white ?? 1)
       )};`
     );
-    markMaterialsDirty(scene);
   }
   if (exposure !== previousExposure) gl.toneMappingExposure = exposure;
   worldToneMappings.set(gl, mapping);
@@ -126,7 +131,6 @@ export function installToneCurve(
     if (gl.toneMappingExposure !== previousExposure) gl.toneMappingExposure = previousExposure;
     if (previousWorldMapping === undefined) worldToneMappings.delete(gl);
     else worldToneMappings.set(gl, previousWorldMapping);
-    if (custom) markMaterialsDirty(scene);
   };
 }
 

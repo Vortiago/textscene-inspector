@@ -5,13 +5,15 @@
  */
 
 import { useEffect, useMemo } from 'react';
+import * as THREE from 'three';
 import type { Effect } from 'postprocessing';
 import { EffectComposer } from '@react-three/postprocessing';
-import type { GlowParams } from '../../resources/environment/godotGlow';
+import { samplesGlowMap, type GlowParams } from '../../resources/environment/godotGlow';
 import type { EnvironmentAdjustments, EnvironmentSettings } from '../../resources/environment/types';
 import { useTexture2D } from '../../resources/useTexture2D';
-import { useSceneResources } from '../SceneResourcesContext';
-import { GodotToneMapEffect } from './GodotToneMapEffect';
+import { releaseBoundTexture } from '../../resources/textures/applyTextureState';
+import type { SceneResources } from '../SceneResourcesContext';
+import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
 
 export interface ToneMapLayerProps {
   /** Null when the environment has no glow. */
@@ -19,12 +21,13 @@ export interface ToneMapLayerProps {
   /** Null when `adjustment_enabled` is false. */
   adjustments: EnvironmentAdjustments | null;
   toneMapping: EnvironmentSettings['toneMapping'];
+  /** The pools `glow_map` resolves in: those of the Environment that names it. */
+  resources: SceneResources;
 }
 
-export function ToneMapLayer({ glow, adjustments, toneMapping }: ToneMapLayerProps) {
+export function ToneMapLayer({ glow, adjustments, toneMapping, resources }: ToneMapLayerProps) {
   const { mode, white, exposure, agxContrast } = toneMapping;
-  const { externalResources, internalResources } = useSceneResources();
-  const glowMap = useTexture2D(glow?.map, externalResources, internalResources).texture;
+  const glowMap = useGlowMap(glow, resources);
 
   // Typed as the base `Effect`: with the library's `declaration: true`, a class
   // extending postprocessing's `Effect` does not carry its inherited members
@@ -37,11 +40,12 @@ export function ToneMapLayer({ glow, adjustments, toneMapping }: ToneMapLayerPro
         adjustments,
         toneMapping: { mode, white, agxContrast },
         exposure,
-        glowMap,
       }) as Effect,
-    [glow, adjustments, mode, white, exposure, agxContrast, glowMap]
+    [glow, adjustments, mode, white, exposure, agxContrast]
   );
   useEffect(() => () => effect.dispose(), [effect]);
+  // A uniform, not an effect rebuild: the map's arrival changes no shader.
+  useEffect(() => (effect as GodotToneMapEffect).setGlowMap(glowMap), [effect, glowMap]);
 
   // No multisampling: Godot's `msaa_3d` defaults to Disabled (`rendering_server.cpp:3774`), and a
   // resolve here would average edges in linear HDR, before the tone curve.
@@ -50,4 +54,16 @@ export function ToneMapLayer({ glow, adjustments, toneMapping }: ToneMapLayerPro
       <primitive object={effect} dispose={null} />
     </EffectComposer>
   );
+}
+
+/**
+ * The glow map's sampled view, or null while it loads and when the composite samples no map, so
+ * an unsampled map never loads.
+ */
+function useGlowMap(glow: GlowParams | null, resources: SceneResources): THREE.Texture | null {
+  const ref = glow && samplesGlowMap(glow) ? glow.map : undefined;
+  const loaded = useTexture2D(ref, resources.externalResources, resources.internalResources).texture;
+  const view = useMemo(() => (loaded ? glowMapView(loaded) : null), [loaded]);
+  useEffect(() => () => releaseBoundTexture(view), [view]);
+  return view;
 }
