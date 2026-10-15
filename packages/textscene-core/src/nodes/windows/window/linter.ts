@@ -8,7 +8,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { matchVector2i } from '../../../linter/validators/index.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
-import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { parseGodotFloat } from '../../../godot/variant/number.js';
 import { formatReal, storedReal } from '../../../godot/math/real.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
@@ -165,7 +165,7 @@ const windowValidationRule: LintRule = {
     name: 'valid-window-properties',
     description: "Validates Window's size, size limits and content scale factor against each other",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Window'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'Window'),
     emits: armEmits(arms),
   },
   check: checkWindow,

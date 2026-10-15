@@ -5,7 +5,7 @@
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
@@ -29,7 +29,7 @@ const TOGGLE_MODE_ON_BY_DEFAULT = new Set([
 ]);
 
 function isButton(nodeType: string): boolean {
-  return descendsFrom(nodeType, 'BaseButton');
+  return descendsFromClass(nodeType, 'BaseButton');
 }
 
 function checkButtonGroup(context: RuleContext): Diagnostic[] {

@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { parentTypeVerdict, verdictParent } from '../parentType.js';
-import { descendsFrom } from '../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 import { isZeroApprox } from '../../godot/math/math.js';
 import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
@@ -106,7 +106,11 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
 
     // collision_polygon_2d.cpp:252-254: `one_way_collision && Object::cast_to<Area2D>(get_parent())`.
     // No 3D equivalent: CollisionPolygon3D has no one_way_collision property.
-    if (boolSlotValue(rawProps.one_way_collision) === true && parent && descendsFrom(parent.type, 'Area2D')) {
+    if (
+      boolSlotValue(rawProps.one_way_collision) === true &&
+      parent &&
+      descendsFromClass(parent.type, 'Area2D')
+    ) {
       report(
         arms.oneWayIgnored,
         `${type} '${node.name}' has 'one_way_collision' set, but its parent '${parent.name}' is an Area2D. The One Way Collision property will be ignored when the collision object is an Area2D.`

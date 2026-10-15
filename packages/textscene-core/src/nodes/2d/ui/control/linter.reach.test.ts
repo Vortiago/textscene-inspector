@@ -6,13 +6,15 @@
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import '../../../../parser/TscnParser.js';
 import '../../../../linter/index.js';
 
 describe('control-tooltip-ignored-by-mouse-filter reach', () => {
   it('runs on every concrete registered Control descendant', () => {
-    const heirs = nodeRegistry.getAllTypeNames().filter((t) => t === 'Control' || descendsFrom(t, 'Control'));
+    const heirs = nodeRegistry
+      .getAllTypeNames()
+      .filter((t) => t === 'Control' || descendsFromClass(t, 'Control'));
 
     // Pinned, so a new registered Control subclass fails here and "every" cannot change unseen.
     expect(heirs.length).toBe(61);

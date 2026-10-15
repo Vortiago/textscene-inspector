@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { MAX_BASE_CHAIN_HOPS, NODE_BASE_TYPES, descendsFrom, isCatalogedType } from './nodeBaseTypes.js';
+import { MAX_BASE_CHAIN_HOPS, NODE_BASE_TYPES, isCatalogedType } from './nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
 
 /** Hops from `type` to its root, walking the raw table. */
@@ -35,37 +35,6 @@ describe('NODE_BASE_TYPES', () => {
   });
 });
 
-describe('descendsFrom', () => {
-  it('walks every hop, not just the declared parent', () => {
-    expect(descendsFrom('Sprite2D', 'Node2D')).toBe(true);
-    expect(descendsFrom('Sprite2D', 'CanvasItem')).toBe(true);
-    expect(descendsFrom('Sprite2D', 'Node')).toBe(true);
-  });
-
-  it('counts a type as its own ancestor, the way ClassDB `is_class` does', () => {
-    expect(descendsFrom('Node2D', 'Node2D')).toBe(true);
-  });
-
-  it('is false for an unrelated ancestor', () => {
-    // The name heuristic this replaced claimed the opposite for both.
-    expect(descendsFrom('Sprite2D', 'Node3D')).toBe(false);
-    expect(descendsFrom('NavigationAgent3D', 'Node3D')).toBe(false);
-  });
-
-  it('is false for a class this build never heard of', () => {
-    expect(descendsFrom('SomeGDExtensionNode', 'Node')).toBe(false);
-  });
-
-  it('reads a prototype-named type as unknown, not as Object.prototype', () => {
-    // The type name comes from the `.tscn`. Bare indexing answers `constructor`
-    // with a function and `__proto__` with the prototype, either of which puts a
-    // non-string into the walk's `string | undefined`.
-    expect(descendsFrom('__proto__', 'Node')).toBe(false);
-    expect(descendsFrom('constructor', 'Node')).toBe(false);
-    expect(descendsFrom('toString', 'Node')).toBe(false);
-  });
-});
-
 describe('isCatalogedType', () => {
   it('separates "known, not a subclass" from "class this build cannot see"', () => {
     expect(isCatalogedType('Sprite2D')).toBe(true);
@@ -88,7 +57,7 @@ describe('isCatalogedType', () => {
 describe('MAX_BASE_CHAIN_HOPS', () => {
   it('clears the deepest chain either catalog states, with slack', () => {
     // The bound only stops a malformed table from spinning; a chain reaching it
-    // would be silently truncated instead, which is the failure `descendsFrom`
+    // would be silently truncated instead, which is the failure `descendsFromClass`
     // cannot report.
     const deepest = (table: Readonly<Record<string, string>>): number =>
       Math.max(...Object.keys(table).map((type) => depth(table, type)));

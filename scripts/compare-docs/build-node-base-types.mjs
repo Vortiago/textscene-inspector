@@ -27,7 +27,7 @@ export const RESOURCE_OUT = classdbModule('resourceBaseTypes.generated.ts');
 export const PROPERTIES_OUT = classdbModule('classProperties.generated.ts');
 
 /**
- * Refuses to write a table a walk cannot leave. Every consumer (`descendsFrom`, `classBaseChain`,
+ * Refuses to write a table a walk cannot leave. Every consumer (`descendsFromClass`, `classBaseChain`,
  * `ValidatorRegistry`, the gallery's coverage) bounds its own walk, so a cycle hangs none of them
  * but truncates a class's ancestry: the "zero inherited validation" this file prevents.
  */

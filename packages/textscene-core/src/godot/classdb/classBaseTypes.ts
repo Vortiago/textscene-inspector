@@ -38,8 +38,10 @@ export function findInClassChain<T>(
 }
 
 /**
- * Whether `className` descends from or equals `ancestor`, over both hierarchies. `descendsFrom`
- * answers false for every resource, so an `[ext_resource type="…"]` heading needs this.
+ * Whether `className` descends from or equals `ancestor` in Godot's class tree, a node or a resource.
+ * `RuleRegistry` matches `applicableNodeTypes` by exact name, so a rule for an inherited
+ * `get_configuration_warnings` pairs `applicableNodeTypeMatcher` with this. A name test such as
+ * `endsWith('3D')` is wrong for `NavigationAgent3D` (base `Node`) and for `GridMap` and `Decal`.
  */
 export function descendsFromClass(className: string, ancestor: string): boolean {
   return findInClassChain(className, (type) => type === ancestor || undefined) ?? false;

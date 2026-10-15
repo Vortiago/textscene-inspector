@@ -135,3 +135,34 @@ describe('classInheritanceChain', () => {
     expect(classInheritanceChain('__proto__')).toEqual(['__proto__']);
   });
 });
+
+describe('descendsFromClass over the node tree', () => {
+  it('walks every hop, not just the declared parent', () => {
+    expect(descendsFromClass('Sprite2D', 'Node2D')).toBe(true);
+    expect(descendsFromClass('Sprite2D', 'CanvasItem')).toBe(true);
+    expect(descendsFromClass('Sprite2D', 'Node')).toBe(true);
+  });
+
+  it('counts a type as its own ancestor, the way ClassDB `is_class` does', () => {
+    expect(descendsFromClass('Node2D', 'Node2D')).toBe(true);
+  });
+
+  it('is false for an unrelated ancestor', () => {
+    // The name heuristic this replaced claimed the opposite for both.
+    expect(descendsFromClass('Sprite2D', 'Node3D')).toBe(false);
+    expect(descendsFromClass('NavigationAgent3D', 'Node3D')).toBe(false);
+  });
+
+  it('is false for a class this build never heard of', () => {
+    expect(descendsFromClass('SomeGDExtensionNode', 'Node')).toBe(false);
+  });
+
+  it('reads a prototype-named type as unknown, not as Object.prototype', () => {
+    // The type name comes from the `.tscn`. Bare indexing answers `constructor`
+    // with a function and `__proto__` with the prototype, either of which puts a
+    // non-string into the walk's `string | undefined`.
+    expect(descendsFromClass('__proto__', 'Node')).toBe(false);
+    expect(descendsFromClass('constructor', 'Node')).toBe(false);
+    expect(descendsFromClass('toString', 'Node')).toBe(false);
+  });
+});

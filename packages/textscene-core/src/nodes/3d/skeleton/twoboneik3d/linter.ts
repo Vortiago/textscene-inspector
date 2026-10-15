@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { listIndices, listWrittenIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { indexedElements, indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
@@ -156,7 +156,7 @@ const twoBoneIK3DValidationRule: LintRule = {
     description:
       "Validates TwoBoneIK3D's settings/<i>/… indices against setting_count and its pole direction vector against pole_direction",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'TwoBoneIK3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'TwoBoneIK3D'),
     emits: armEmits(arms),
   },
   check: checkTwoBoneIK3D,

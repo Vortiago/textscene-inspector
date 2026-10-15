@@ -25,7 +25,7 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
 
 /**
  * Whether Godot's ClassDB knows this class name. `Node` is the terminal, with no entry of its own.
- * `descendsFrom` returns false both for a known non-subclass and for an unknown class, and a rule
+ * `descendsFromClass` returns false both for a known non-subclass and for an unknown class, and a rule
  * that conflates them judges the hierarchy of a GDExtension it cannot see.
  */
 export function isCatalogedType(nodeType: string): boolean {
@@ -39,28 +39,3 @@ export function isCatalogedType(nodeType: string): boolean {
  * bound.
  */
 export const MAX_BASE_CHAIN_HOPS = 32;
-
-/**
- * The declared base of `nodeType`, or `undefined`. `Object.hasOwn`, as the `.tscn` chooses the key:
- * bare indexing answers a function for `type="constructor"` or `type="__proto__"`.
- */
-function baseTypeOf(nodeType: string): string | undefined {
-  return Object.hasOwn(NODE_BASE_TYPES, nodeType) ? NODE_BASE_TYPES[nodeType] : undefined;
-}
-
-/**
- * Whether `nodeType` descends from or equals `ancestor` in Godot's class tree. `RuleRegistry` matches
- * `applicableNodeTypes` by exact name, so a rule for an inherited `get_configuration_warnings` pairs
- * `applicableNodeTypeMatcher` with this. A name test such as `endsWith('3D')` is wrong for
- * `NavigationAgent3D` (base `Node`) and for `GridMap`, `Decal`, `ReflectionProbe` and `VoxelGI`.
- */
-export function descendsFrom(nodeType: string, ancestor: string): boolean {
-  // A hop counter, not a visited Set, which allocates on every call. The table is acyclic by
-  // construction, and the bound only stops a malformed hand-built table.
-  let current: string | undefined = nodeType;
-  for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
-    if (current === ancestor) return true;
-    current = baseTypeOf(current);
-  }
-  return false;
-}
