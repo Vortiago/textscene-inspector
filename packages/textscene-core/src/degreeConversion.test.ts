@@ -1,5 +1,5 @@
 /**
- * Every degree-radian conversion in `src/` goes through `degToRad` and `radToDeg`
+ * Every degree-radian conversion in `src/` and the repository's `scripts/` goes through `degToRad` and `radToDeg`
  * (`godot/math/math.ts`), which round as Godot's `Math::deg_to_rad` and `Math::rad_to_deg` do. A
  * hand-rolled `(d * Math.PI) / 180` rounds differently, and so can three's own helpers, so neither
  * may come back.
@@ -11,6 +11,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const srcDir = dirname(fileURLToPath(import.meta.url));
+const scriptsDir = resolve(srcDir, '../../../scripts');
 
 /** The one file that defines the conversions, so it holds the factors. */
 const DEFINITION_FILE = 'godot/math/math.ts';
@@ -18,14 +19,14 @@ const DEFINITION_FILE = 'godot/math/math.ts';
 const HAND_ROLLED_CONVERSION =
   /MathUtils\.(?:degToRad|radToDeg|DEG2RAD|RAD2DEG)|\bDEG2RAD\b|\bRAD2DEG\b|Math\.PI\s*\)?\s*\/\s*180\b|\b180\s*\/\s*Math\.PI|\*\s*180\s*\)\s*\/\s*Math\.PI|\*\s*\(?\s*Math\.PI\s*\/\s*180\b|\)\s*\*\s*\(?\s*180\b|\/\s*180\s*\)?\s*\*\s*Math\.PI/;
 
-/** Every `.ts` and `.tsx` file under `src/`, relative to it, `node_modules` excluded. */
-function sourceFiles(dir: string = srcDir, prefix = ''): string[] {
+/** Every `.ts`, `.tsx`, `.js` and `.mjs` file under `dir`, relative to it, `node_modules` excluded. */
+function sourceFiles(dir: string, prefix = ''): string[] {
   const found: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const name = `${prefix}${entry.name}`;
     if (entry.isDirectory()) {
       if (entry.name !== 'node_modules') found.push(...sourceFiles(resolve(dir, entry.name), `${name}/`));
-    } else if (/\.tsx?$/.test(entry.name)) found.push(name);
+    } else if (/\.(?:tsx?|m?js)$/.test(entry.name)) found.push(name);
   }
   return found.sort();
 }
@@ -35,9 +36,19 @@ function linesWithHandRolledConversion(source: string): number[] {
   return lines.flatMap((line, index) => (HAND_ROLLED_CONVERSION.test(line) ? [index + 1] : []));
 }
 
+/** Each scanned file as `root/relative/path`, so an offender names its tree. */
+function scannedFiles(): { label: string; path: string }[] {
+  return [
+    ...sourceFiles(srcDir).map((file) => ({ label: `src/${file}`, path: resolve(srcDir, file) })),
+    ...sourceFiles(scriptsDir).map((file) => ({ label: `scripts/${file}`, path: resolve(scriptsDir, file) })),
+  ];
+}
+
 describe('degree conversions', () => {
-  it('finds the source files, so the sweep cannot pass vacuously', () => {
-    expect(sourceFiles()).toContain(DEFINITION_FILE);
+  it('finds the source and script files, so the sweep cannot pass vacuously', () => {
+    const labels = scannedFiles().map(({ label }) => label);
+    expect(labels).toContain(`src/${DEFINITION_FILE}`);
+    expect(labels).toContain('scripts/distFreshness.mjs');
   });
 
   it.each([
@@ -57,12 +68,10 @@ describe('degree conversions', () => {
   });
 
   it('converts through degToRad and radToDeg in every file', () => {
-    const offenders = sourceFiles()
-      .filter((file) => file !== DEFINITION_FILE && file !== 'degreeConversion.test.ts')
-      .flatMap((file) =>
-        linesWithHandRolledConversion(readFileSync(resolve(srcDir, file), 'utf8')).map(
-          (line) => `${file}:${line}`
-        )
+    const offenders = scannedFiles()
+      .filter(({ label }) => label !== `src/${DEFINITION_FILE}` && label !== 'src/degreeConversion.test.ts')
+      .flatMap(({ label, path }) =>
+        linesWithHandRolledConversion(readFileSync(path, 'utf8')).map((line) => `${label}:${line}`)
       );
     expect(offenders).toEqual([]);
   });
