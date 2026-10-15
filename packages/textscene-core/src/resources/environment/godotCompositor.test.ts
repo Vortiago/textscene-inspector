@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { compositeProgram, EXPOSURE_UNIFORM, GLOW_BUFFER_UNIFORM, GLOW_MAP_UNIFORM } from './godotCompositor';
+import { compositeProgram, GLOW_BUFFER_UNIFORM, GLOW_MAP_UNIFORM } from './godotCompositor';
 import { decodeEnvironment } from './decode';
 import { createEnvironmentSettings } from './build';
 import { glowParamsFor, type GlowParams } from './godotGlow';
@@ -343,17 +343,13 @@ describe('compositeProgram — the uniforms it returns', () => {
   });
 
   it('adds the glow buffer with a glow and the glow map with a map', () => {
-    expect(Object.keys(program(glowOn()).uniforms)).toEqual([EXPOSURE_UNIFORM, GLOW_BUFFER_UNIFORM]);
-    expect(Object.keys(program(glowOn(GLOW_MAP)).uniforms)).toEqual([
-      EXPOSURE_UNIFORM,
-      GLOW_BUFFER_UNIFORM,
-      GLOW_MAP_UNIFORM,
-    ]);
+    expect(Object.keys(program(glowOn()).uniforms)).toEqual(['godotExposure', GLOW_BUFFER_UNIFORM]);
+    expect(Object.keys(program(glowOn(GLOW_MAP)).uniforms)).toEqual([GLOW_BUFFER_UNIFORM, GLOW_MAP_UNIFORM]);
   });
 
   it('starts the exposure at the authored value and each texture unbound', () => {
     const { uniforms } = program(glowOn(GLOW_MAP), 2.5);
-    expect(uniforms[EXPOSURE_UNIFORM]).toBe(2.5);
+    expect(uniforms['godotExposure']).toBe(2.5);
     expect(uniforms[GLOW_BUFFER_UNIFORM]).toBeNull();
     expect(uniforms[GLOW_MAP_UNIFORM]).toBeNull();
   });
