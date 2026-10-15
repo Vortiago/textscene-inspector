@@ -41,7 +41,7 @@ export interface MaterialTextureState {
   repeat?: boolean;
 }
 
-export interface TextureState extends MaterialTextureState {
+interface TextureState extends MaterialTextureState {
   /**
    * The sampler reads a copy with its own mip chain, whatever the import gives, as Godot's decal
    * atlas does (`texture_storage.cpp:3169-3226`). Omitted means the import's chain.

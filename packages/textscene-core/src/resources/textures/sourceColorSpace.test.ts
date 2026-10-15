@@ -36,6 +36,13 @@ describe('copyGodotFormat', () => {
     expect(sourceColorSpace(copyGodotFormat(new THREE.Texture(), source))).toBe(THREE.NoColorSpace);
   });
 
+  it('pins again a clone copied onto itself, which a producer then tags sRGB', () => {
+    const clone = recordGodotFormat(new THREE.Texture(), 'Lum8').clone();
+    copyGodotFormat(clone, clone);
+    clone.colorSpace = THREE.SRGBColorSpace;
+    expect(clone.colorSpace).toBe(THREE.NoColorSpace);
+  });
+
   it('leaves the target unrecorded when the source has no format (edge case)', () => {
     const target = copyGodotFormat(new THREE.Texture(), new THREE.Texture());
     expect(sourceColorSpace(target)).toBe(THREE.SRGBColorSpace);

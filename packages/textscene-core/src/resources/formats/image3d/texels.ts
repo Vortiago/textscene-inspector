@@ -5,7 +5,7 @@
  */
 
 import type { ImagePixels } from '../image/imagePixels';
-import type { ImportSlices } from './importSlices';
+import type { ImportSlices } from '../../../godot/import/texture3DImport';
 
 /** RGBA texels, slice after slice, each slice's rows from the top. */
 export interface Texture3DTexels<Texels extends Uint8Array | Float32Array = Uint8Array> {

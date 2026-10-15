@@ -15,13 +15,10 @@ import {
   isTexturePath,
   type ImageImport,
 } from './textureProcessing';
+import { readImagePixels } from './imagePixels';
 import { sourceColorSpace } from '../../textures/sourceColorSpace';
 import type { ImageSourceFormat } from '../../../godot/import/imageSourceFormat';
-import {
-  DEFAULT_TEXTURE_IMPORT,
-  TextureCompressMode,
-  type TextureImportOptions,
-} from '../../../godot/import/textureImport';
+import { DEFAULT_TEXTURE_IMPORT, type TextureImportOptions } from '../../../godot/import/textureImport';
 
 /** An image in `source` format under its import sidecar's `options`, the rest at their defaults. */
 function imported(
@@ -63,6 +60,11 @@ vi.mock('three', async (importOriginal) => {
   }
 
   return { ...actual, TextureLoader: FakeTextureLoader };
+});
+
+vi.mock('./imagePixels', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./imagePixels')>();
+  return { ...actual, readImagePixels: vi.fn(actual.readImagePixels) };
 });
 
 describe('getMimeType', () => {
@@ -349,7 +351,7 @@ describe('createTextureFromBuffer: the import texel passes', () => {
 
   it('keeps only red and green of a normal map VRAM compressed to RGTC', async () => {
     const { texture } = await importedRow([[200, 100, 50, 128]], 'RGBA8', {
-      mode: TextureCompressMode.VramCompressed,
+      mode: 'VramCompressed',
       normalMap: true,
       fixAlphaBorder: false,
     });
@@ -358,7 +360,7 @@ describe('createTextureFromBuffer: the import texel passes', () => {
 
   it('keeps every channel of a normal map compressed at high quality, to BPTC (edge case)', async () => {
     const { texture, decoded } = await importedRow([[200, 100, 50, 255]], 'RGB8', {
-      mode: TextureCompressMode.VramCompressed,
+      mode: 'VramCompressed',
       highQuality: true,
       normalMap: true,
     });
@@ -389,7 +391,7 @@ describe('createTextureFromBuffer: the import texel passes', () => {
 describe('importDecodedImage', () => {
   /** The `userData` key `recordGodotFormat` writes. */
   const GODOT_FORMAT = 'textsceneGodotFormat';
-  const vram = { mode: TextureCompressMode.VramCompressed, fixAlphaBorder: false };
+  const vram = { mode: 'VramCompressed', fixAlphaBorder: false } as const;
 
   /** A texture of raw RGBA8 `texels` in one row. */
   const rgbaTexture = (texels: number[]) =>
@@ -426,6 +428,18 @@ describe('importDecodedImage', () => {
   it('records DXT5 for a VRAM-compressed RGBA8 image with a translucent texel', () => {
     const texture = importDecodedImage(rgbaTexture([9, 9, 9, 255, 9, 9, 9, 128]), imported('RGBA8', vram));
     expect(texture.userData[GODOT_FORMAT]).toBe('DXT5 RGBA8');
+  });
+
+  it('reads the pixels once when a texel pass has read them before the format check', () => {
+    vi.mocked(readImagePixels).mockClear();
+    const texture = importDecodedImage(
+      rgbaTexture([9, 9, 9, 255, 9, 9, 9, 128]),
+      imported('RGBA8', { mode: 'VramCompressed' })
+    );
+    expect([texture.userData[GODOT_FORMAT], vi.mocked(readImagePixels).mock.calls.length]).toEqual([
+      'DXT5 RGBA8',
+      1,
+    ]);
   });
 
   it('records DXT5 for a VRAM-compressed RGBA8 image whose pixels cannot be read (edge case)', () => {

@@ -24,9 +24,6 @@ const OUTSIDE_CORE = ['apps', 'packages/textscene-dev-kit', 'scripts'].map((dir)
 
 /** The value exports kept although only tests import them, each with the reason a test needs it. */
 const KEPT = [
-  // Godot's `compress/mode` enum. Production compares it inside its own module, and a sidecar
-  // stores the bare number, so only a test names a mode from outside.
-  'godot/import/textureImport.ts#TextureCompressMode',
   // `@react-three/test-renderer` cannot wrap a real `<Canvas>`, so a scene test mounts its contents.
   'r3f/TscnCanvas.tsx#TscnSceneContents',
   // The builds and the cache are module state, so each test starts from the one reset that aborts

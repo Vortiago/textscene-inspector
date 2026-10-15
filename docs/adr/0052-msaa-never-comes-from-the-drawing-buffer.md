@@ -29,6 +29,8 @@ target at the count Godot would draw on this device (`r3f/deviceSampleCount.ts`)
   colour (`renderer_viewport.cpp:371`), and a compositor for `msaa_3d` with Godot's default LINEAR
   curve (`tone_mapper.h:177`). The 3D canvas is `flat`, so three adds no curve of its own.
 - A SubViewport's `msaa_3d` or `msaa_2d` sets its own target's samples.
+- The compositor draws only the root world, because it draws to the canvas. A WorldEnvironment in
+  a SubViewport's own world mounts none, and its tone curve stays off the shared renderer.
 
 ## Consequences
 

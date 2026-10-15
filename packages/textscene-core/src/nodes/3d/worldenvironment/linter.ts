@@ -7,9 +7,12 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
 import { firstNodeOfType } from '../../../linter/linterUtils.js';
+import { searchAncestors } from '../../../linter/parentType.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { parseResourceReference } from '../../../resources/SubResourceResolver.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
-import type { RawNode } from '../../../parser/types.js';
+import type { RawNode, RawScene } from '../../../parser/types.js';
 
 const arms = {
   requiresEnvironment: groundedArm('worldenvironment-requires-environment', {
@@ -53,6 +56,29 @@ function resourceRefId(held: string | undefined): string | undefined {
   return parsed ? `${parsed.type}:${parsed.id}` : held;
 }
 
+/** A world behind an instanced ancestor, which may be a viewport with its own world. */
+const UNKNOWABLE_WORLD = Symbol('unknowable world');
+
+/**
+ * Which World3D a node joins, as `find_world_3d` resolves it (viewport.cpp:4670-4681): null for the
+ * root's, a viewport for its own world, and a resource id for an assigned `world_3d`, which every
+ * viewport naming that resource shares.
+ */
+type WorldKey = RawNode | string | null | typeof UNKNOWABLE_WORLD;
+
+function worldOf(scene: RawScene, node: RawNode): WorldKey {
+  const search = searchAncestors(scene, node, viewportWorld);
+  if (search.kind === 'found') return search.value;
+  return search.kind === 'unknowable' ? UNKNOWABLE_WORLD : null;
+}
+
+/** The world `ancestor` sets for its subtree, or undefined when it passes its parent's through. */
+function viewportWorld(ancestor: RawNode): RawNode | string | undefined {
+  if (!descendsFromClass(ancestor.type, 'Viewport')) return undefined;
+  if (boolSlotValue(ancestor.rawProperties.own_world_3d) === true) return ancestor;
+  return resourceRefId(heldResource(ancestor.rawProperties.world_3d));
+}
+
 function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
@@ -76,16 +102,21 @@ function checkWorldEnvironment(context: RuleContext): Diagnostic[] {
   }
 
   // world_environment.cpp:195-205 warns when `<slot>.is_valid()` and the world holds another node's
-  // resource, taken from `get_first_node_in_group` (:75-105). The group sorts in tree order
+  // resource, taken from `get_first_node_in_group` (:75-105). The group key carries the World3D
+  // scenario id (:41-52), so each world has its own group. The group sorts in tree order
   // (scene_tree.cpp:333-347 with node.h:132-134), so the winner is the first WorldEnvironment in
-  // the file whose slot is valid, since `add_to_group` is gated on that slot's `is_valid()`.
+  // the file in the same world whose slot is valid, since `add_to_group` is gated on `is_valid()`.
+  // A WorldEnvironment behind `instance=` can be the real first and is invisible here.
+  const world = worldOf(scene, node);
+  if (world === UNKNOWABLE_WORLD) return diagnostics;
   for (const key of FIRST_WINS_SLOTS) {
     const held = heldResource(rawProps[key]);
     if (held === undefined) continue;
-    // A WorldEnvironment behind `instance=` can be the real first and is invisible here. The group
-    // key also carries the World3D scenario id, so a SubViewport with `own_world_3d` has its own
-    // group. That scoping is not modelled.
-    const first = firstNodeOfType(scene.nodes, 'WorldEnvironment', (n) => declaresSlot(n, key));
+    const first = firstNodeOfType(
+      scene.nodes,
+      'WorldEnvironment',
+      (n) => declaresSlot(n, key) && worldOf(scene, n) === world
+    );
     if (node === first) continue;
     const winningId = first ? resourceRefId(heldResource(first.rawProperties[key])) : undefined;
     // `!=` on a `Ref` is instance identity: two nodes naming one `ExtResource` share an instance,

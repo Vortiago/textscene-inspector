@@ -582,8 +582,64 @@ const gdColor = (c) => `Color(${c[0]}, ${c[1]}, ${c[2]})`;
  * escaped, so a path containing a quote, backslash or newline produces valid
  * GDScript instead of a syntax error that never compiles the bootstrap.
  */
-const gdString = (s) =>
+export const gdString = (s) =>
   `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\t/g, '\\t')}"`;
+
+/** Godot's editor preview sun and sky, added only where the scene has none of its own. */
+export const PREVIEW_LIGHTING_GD = `# Node3DEditor::_node_added — two INDEPENDENT presence checks, by node type,
+# with no regard for visibility.
+func _contains(node: Node, want_light: bool) -> bool:
+	if want_light:
+		if node is DirectionalLight3D:
+			return true
+	elif node is WorldEnvironment:
+		return true
+	for child in node.get_children():
+		if _contains(child, want_light):
+			return true
+	return false
+
+func _apply_preview_lighting(target: Node) -> void:
+	if not _contains(target, true):
+		var sun := DirectionalLight3D.new()
+		sun.light_color = Color(1, 1, 1)
+		sun.light_energy = 1.0
+		sun.shadow_enabled = true
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+		sun.directional_shadow_max_distance = 100.0
+		sun.transform = Transform3D(
+			Basis.from_euler(Vector3(deg_to_rad(${PREVIEW_SUN_ALTITUDE_DEG}), deg_to_rad(${PREVIEW_SUN_AZIMUTH_DEG}), 0.0)),
+			Vector3.ZERO
+		)
+		add_child(sun)
+
+	if not _contains(target, false):
+		var sky_material := ProceduralSkyMaterial.new()
+		var sky_top := ${gdColor(PREVIEW_SKY_TOP)}
+		var ground_bottom := ${gdColor(PREVIEW_GROUND_BOTTOM)}
+		# Node3DEditor::_preview_settings_changed derives the horizon from the
+		# two authored colours, then pushes it halfway to its own luminance.
+		var hz: Color = sky_top.lerp(ground_bottom, 0.5)
+		var hz_lum: float = hz.get_luminance() * 3.333
+		hz = hz.lerp(Color(hz_lum, hz_lum, hz_lum), 0.5)
+		sky_material.sky_top_color = sky_top
+		sky_material.sky_horizon_color = hz
+		sky_material.ground_bottom_color = ground_bottom
+		sky_material.ground_horizon_color = hz
+		sky_material.energy_multiplier = 1.0
+
+		var sky := Sky.new()
+		sky.sky_material = sky_material
+
+		var env := Environment.new()
+		env.background_mode = Environment.BG_SKY
+		env.sky = sky
+		env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+		env.glow_enabled = true
+
+		var world_env := WorldEnvironment.new()
+		world_env.environment = env
+		add_child(world_env)`;
 
 /**
  * The bootstrap scene's script: it instantiates the target scene, picks its 2D or 3D path and
@@ -1066,60 +1122,7 @@ func _build_csg(node: Node) -> bool:
 			return false
 	return true
 
-# Node3DEditor::_node_added — two INDEPENDENT presence checks, by node type,
-# with no regard for visibility.
-func _contains(node: Node, want_light: bool) -> bool:
-	if want_light:
-		if node is DirectionalLight3D:
-			return true
-	elif node is WorldEnvironment:
-		return true
-	for child in node.get_children():
-		if _contains(child, want_light):
-			return true
-	return false
-
-func _apply_preview_lighting(target: Node) -> void:
-	if not _contains(target, true):
-		var sun := DirectionalLight3D.new()
-		sun.light_color = Color(1, 1, 1)
-		sun.light_energy = 1.0
-		sun.shadow_enabled = true
-		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-		sun.directional_shadow_max_distance = 100.0
-		sun.transform = Transform3D(
-			Basis.from_euler(Vector3(deg_to_rad(${PREVIEW_SUN_ALTITUDE_DEG}), deg_to_rad(${PREVIEW_SUN_AZIMUTH_DEG}), 0.0)),
-			Vector3.ZERO
-		)
-		add_child(sun)
-
-	if not _contains(target, false):
-		var sky_material := ProceduralSkyMaterial.new()
-		var sky_top := ${gdColor(PREVIEW_SKY_TOP)}
-		var ground_bottom := ${gdColor(PREVIEW_GROUND_BOTTOM)}
-		# Node3DEditor::_preview_settings_changed derives the horizon from the
-		# two authored colours, then pushes it halfway to its own luminance.
-		var hz: Color = sky_top.lerp(ground_bottom, 0.5)
-		var hz_lum: float = hz.get_luminance() * 3.333
-		hz = hz.lerp(Color(hz_lum, hz_lum, hz_lum), 0.5)
-		sky_material.sky_top_color = sky_top
-		sky_material.sky_horizon_color = hz
-		sky_material.ground_bottom_color = ground_bottom
-		sky_material.ground_horizon_color = hz
-		sky_material.energy_multiplier = 1.0
-
-		var sky := Sky.new()
-		sky.sky_material = sky_material
-
-		var env := Environment.new()
-		env.background_mode = Environment.BG_SKY
-		env.sky = sky
-		env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-		env.glow_enabled = true
-
-		var world_env := WorldEnvironment.new()
-		world_env.environment = env
-		add_child(world_env)
+${PREVIEW_LIGHTING_GD}
 
 func _place_camera(target: Node) -> void:
 ${
