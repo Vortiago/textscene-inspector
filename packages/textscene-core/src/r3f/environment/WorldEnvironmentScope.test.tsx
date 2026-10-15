@@ -8,11 +8,14 @@ import type { ReactNode } from 'react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { NO_RESOURCES } from '../SceneResourcesContext';
+import { TreeOrderProvider, type TreeOrder } from '../contexts/TreeOrderContext';
 import type { EnvironmentLayerProps } from './EnvironmentLayer';
 import {
   RootEnvironmentScope,
   ViewportEnvironmentScope,
   usePublishEnvironment,
+  NO_ENVIRONMENT,
+  PENDING_ENVIRONMENT,
   type EnvironmentResolution,
 } from './WorldEnvironmentScope';
 
@@ -46,12 +49,43 @@ function resolved(name: string): EnvironmentResolution {
   };
 }
 
-const PENDING: EnvironmentResolution = { status: 'pending' };
-const NONE: EnvironmentResolution = { status: 'none' };
-
 function Publisher({ resolution }: { resolution: EnvironmentResolution }) {
   usePublishEnvironment(resolution);
   return null;
+}
+
+/** Publishes as a WorldEnvironment does: from the node itself, whose children mount first. */
+function PublishingNode({
+  resolution,
+  children,
+}: {
+  resolution: EnvironmentResolution;
+  children?: ReactNode;
+}) {
+  usePublishEnvironment(resolution);
+  return children;
+}
+
+/** A WorldEnvironment at `order` in the tree, with `children` below it. */
+function PublisherAt({
+  order,
+  resolution,
+  children,
+}: {
+  order: TreeOrder;
+  resolution: EnvironmentResolution;
+  children?: ReactNode;
+}) {
+  return (
+    <TreeOrderProvider order={order}>
+      <PublishingNode resolution={resolution}>{children}</PublishingNode>
+    </TreeOrderProvider>
+  );
+}
+
+function appliedName(renderer: Renderer): unknown {
+  const layer = renderer.scene.find((node) => node.props.name === 'EnvironmentLayer');
+  return layer.props.userData.settings.name;
 }
 
 function inRoot(children: ReactNode, showPreviewEnvironment = true) {
@@ -78,12 +112,14 @@ describe('<RootEnvironmentScope>', () => {
   });
 
   it('draws with no Environment for a WorldEnvironment whose Environment is missing', async () => {
-    const renderer = await ReactThreeTestRenderer.create(inRoot(<Publisher resolution={NONE} />));
+    const renderer = await ReactThreeTestRenderer.create(inRoot(<Publisher resolution={NO_ENVIRONMENT} />));
     expect(mountedLayers(renderer)).toEqual(['NoEnvironmentLayer']);
   });
 
   it('draws nothing while the Environment loads', async () => {
-    const renderer = await ReactThreeTestRenderer.create(inRoot(<Publisher resolution={PENDING} />));
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(<Publisher resolution={PENDING_ENVIRONMENT} />)
+    );
     expect(mountedLayers(renderer)).toEqual([]);
   });
 
@@ -91,7 +127,7 @@ describe('<RootEnvironmentScope>', () => {
     const renderer = await ReactThreeTestRenderer.create(
       inRoot(
         <>
-          <Publisher resolution={NONE} />
+          <Publisher resolution={NO_ENVIRONMENT} />
           <Publisher resolution={resolved('second')} />
         </>
       )
@@ -121,10 +157,47 @@ describe('<RootEnvironmentScope>', () => {
           <Publisher resolution={resolved('second')} />
         </>
       );
-    const renderer = await ReactThreeTestRenderer.create(tree(PENDING));
+    const renderer = await ReactThreeTestRenderer.create(tree(PENDING_ENVIRONMENT));
     await renderer.update(tree(resolved('first')));
     const layer = renderer.scene.find((node) => node.props.name === 'EnvironmentLayer');
     expect(layer.props.userData.settings).toEqual({ name: 'first' });
+  });
+
+  it('puts an ancestor WorldEnvironment ahead of its descendant, as tree order does', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(
+        <PublisherAt order={[0]} resolution={resolved('ancestor')}>
+          <PublisherAt order={[0, 0]} resolution={resolved('descendant')} />
+        </PublisherAt>
+      )
+    );
+    expect(appliedName(renderer)).toBe('ancestor');
+  });
+
+  it('gives a WorldEnvironment that mounts late its place in tree order', async () => {
+    const tree = (hasEarlier: boolean) =>
+      inRoot(
+        <>
+          {hasEarlier && <PublisherAt order={[0]} resolution={resolved('earlier')} />}
+          <PublisherAt order={[1]} resolution={resolved('later')} />
+        </>
+      );
+    const renderer = await ReactThreeTestRenderer.create(tree(false));
+    await renderer.update(tree(true));
+    expect(appliedName(renderer)).toBe('earlier');
+  });
+
+  it('follows a WorldEnvironment that moves ahead in the tree without remounting', async () => {
+    const tree = (aOrder: TreeOrder, bOrder: TreeOrder) =>
+      inRoot(
+        <>
+          <PublisherAt key="a" order={aOrder} resolution={resolved('a')} />
+          <PublisherAt key="b" order={bOrder} resolution={resolved('b')} />
+        </>
+      );
+    const renderer = await ReactThreeTestRenderer.create(tree([0], [1]));
+    await renderer.update(tree([1], [0]));
+    expect(appliedName(renderer)).toBe('b');
   });
 
   it('returns to the preview when the WorldEnvironment leaves', async () => {
@@ -147,7 +220,7 @@ describe('<ViewportEnvironmentScope>', () => {
   it('adds no layer for a missing Environment, so the pass keeps its own clear colour', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ViewportEnvironmentScope>
-        <Publisher resolution={NONE} />
+        <Publisher resolution={NO_ENVIRONMENT} />
       </ViewportEnvironmentScope>
     );
     expect(mountedLayers(renderer)).toEqual([]);
@@ -168,7 +241,7 @@ describe('<ViewportEnvironmentScope>', () => {
 describe('usePublishEnvironment', () => {
   it('refuses a WorldEnvironment outside any world', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    await expect(ReactThreeTestRenderer.create(<Publisher resolution={NONE} />)).rejects.toThrow(
+    await expect(ReactThreeTestRenderer.create(<Publisher resolution={NO_ENVIRONMENT} />)).rejects.toThrow(
       /expected a world environment scope/
     );
   });

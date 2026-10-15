@@ -10,17 +10,19 @@ import { useResourceResolution, useSubOrExtResource } from '../../../resources/u
 import { decodeEnvironment } from '../../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../../resources/environment/build';
 import { useProjectClearColorSrgb } from '../../../r3f/useProjectClearColor';
-import type { EnvironmentResolution } from '../../../r3f/environment/WorldEnvironmentScope';
+import {
+  NO_ENVIRONMENT,
+  PENDING_ENVIRONMENT,
+  type EnvironmentResolution,
+} from '../../../r3f/environment/WorldEnvironmentScope';
 import { decodeSky, decodeSkyMaterial, skyMaterialRef } from '../../../resources/sky/decode';
-
-const PENDING: EnvironmentResolution = { status: 'pending' };
-const NONE: EnvironmentResolution = { status: 'none' };
 
 /**
  * A hook, not a pure function, because the external form loads through the resource pipeline.
  * The resolution is `pending` only while the Environment itself loads. The inline case resolves on
- * the first render, so an all-inline scene resolves in one pass. Each level applies as it resolves (**Progressive fill-in**). Each level's references
- * resolve in the pools of the level that holds them, so a `.tres` reads its own sub-resources.
+ * the first render, so an all-inline scene resolves in one pass. Each level applies as it resolves
+ * (**Progressive fill-in**). Each level's references resolve in the pools of the level that holds
+ * them, so a `.tres` reads its own sub-resources.
  */
 export function useResolvedEnvironment(environmentRef: string | undefined): EnvironmentResolution {
   const { scoped: environment, status } = useResourceResolution(environmentRef, useSceneResources());
@@ -54,8 +56,8 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Envi
   );
 
   return useMemo((): EnvironmentResolution => {
-    if (status === 'pending') return PENDING;
-    if (!settings || !environment) return NONE;
+    if (status === 'pending') return PENDING_ENVIRONMENT;
+    if (!settings || !environment) return NO_ENVIRONMENT;
     return {
       status: 'resolved',
       environment: { settings, sky, resources: environment.resources, skyResources },
