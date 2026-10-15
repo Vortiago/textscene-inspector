@@ -17,7 +17,8 @@ import { HoverHighlight } from './components/HoverHighlight.js';
 import { InternalTextLabel } from './internalTextLabel.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
 import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls.js';
-import { PreviewLighting } from './preview/PreviewLighting.js';
+import { PreviewSun } from './preview/PreviewSun.js';
+import { RootEnvironmentScope } from './environment/WorldEnvironmentScope.js';
 import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
@@ -44,31 +45,33 @@ export function TscnSceneContents() {
 
   return (
     <TiledUploadDriver>
-      {/* Godot's editor preview sun and environment, each mounted only while the
-          scene has no DirectionalLight3D or WorldEnvironment of its own (ADR-0025).
-          Godot adds neither at runtime. This previewer takes the editor's rule. */}
-      <PreviewLighting />
-      {isEmpty && <EmptySceneIndicator />}
-      {!isEmpty && <ContentGroundGrid />}
-      {nodes && rootScene && (
-        <SceneResourcesProvider
-          internalResources={rootScene.internalResources}
-          externalResources={rootScene.externalResources}
-        >
-          <NodeDispatcher nodes={nodes} />
-        </SceneResourcesProvider>
-      )}
-      <ControlRasterLayer
-        nodes={nodes ?? []}
-        internalResources={rootScene?.internalResources ?? []}
-        externalResources={rootScene?.externalResources ?? []}
-      />
-      <ViewportPassOrchestrator />
-      <SceneShadowFitter />
-      <SceneDepthPrepass />
-      <SelectionHighlight />
-      <HoverHighlight />
-      <ScreenshotBridge />
+      {/* The root world's Environment, and Godot's editor preview sun and environment, each
+          preview mounted only while the scene has no DirectionalLight3D or WorldEnvironment of
+          its own (ADR-0025). Godot adds neither at runtime. This previewer takes the editor's rule. */}
+      <RootEnvironmentScope>
+        <PreviewSun />
+        {isEmpty && <EmptySceneIndicator />}
+        {!isEmpty && <ContentGroundGrid />}
+        {nodes && rootScene && (
+          <SceneResourcesProvider
+            internalResources={rootScene.internalResources}
+            externalResources={rootScene.externalResources}
+          >
+            <NodeDispatcher nodes={nodes} />
+          </SceneResourcesProvider>
+        )}
+        <ControlRasterLayer
+          nodes={nodes ?? []}
+          internalResources={rootScene?.internalResources ?? []}
+          externalResources={rootScene?.externalResources ?? []}
+        />
+        <ViewportPassOrchestrator />
+        <SceneShadowFitter />
+        <SceneDepthPrepass />
+        <SelectionHighlight />
+        <HoverHighlight />
+        <ScreenshotBridge />
+      </RootEnvironmentScope>
     </TiledUploadDriver>
   );
 }

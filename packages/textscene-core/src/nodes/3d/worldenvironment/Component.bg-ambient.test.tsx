@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { WorldEnvironment } from './Component';
+import { RootEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { TscnParser } from '../../../parser/TscnParser';
 import { instanceAs } from '../testing/reactThreeTestInstance';
@@ -25,7 +26,9 @@ async function ambientLights(environmentBody: string) {
       internalResources={scene.internalResources}
       externalResources={scene.externalResources}
     >
-      <WorldEnvironment node={scene.nodes[0]!.children[0]!} />
+      <RootEnvironmentScope>
+        <WorldEnvironment node={scene.nodes[0]!.children[0]!} />
+      </RootEnvironmentScope>
     </SceneResourcesProvider>
   );
   return renderer.scene.findAllByType('AmbientLight').map((l) => instanceAs<THREE.AmbientLight>(l));

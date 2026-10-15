@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { NodeDispatcher } from './NodeDispatcher';
+import { RootEnvironmentScope } from './environment/WorldEnvironmentScope';
 import type { CanvasWorkspace } from './contexts/CanvasWorkspaceContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
@@ -30,7 +31,9 @@ async function renderWorld(tscn: string, options: RenderOptions = {}): Promise<T
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace={options.workspace ?? '3d'} loader={fake.loader} scene={parsed}>
       <HiddenSeeder paths={options.hiddenPaths ?? []} />
-      <NodeDispatcher nodes={parsed.nodes} />
+      <RootEnvironmentScope>
+        <NodeDispatcher nodes={parsed.nodes} />
+      </RootEnvironmentScope>
     </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
@@ -61,7 +64,9 @@ async function mountRerenderable(tscn: string) {
   const fake = createFakeResourceLoader();
   const tree = (nodes: typeof parsed.nodes) => (
     <SceneStack workspace="3d" loader={fake.loader} scene={parsed}>
-      <NodeDispatcher nodes={nodes} />
+      <RootEnvironmentScope>
+        <NodeDispatcher nodes={nodes} />
+      </RootEnvironmentScope>
     </SceneStack>
   );
   const renderer = await ReactThreeTestRenderer.create(tree(parsed.nodes));

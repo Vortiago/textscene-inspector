@@ -12,6 +12,10 @@ import { ProjectClearColor } from '../ProjectClearColor';
 import { ToneMapLayer } from './ToneMapLayer';
 import { useCompositorPass } from './useCompositorPass';
 
+/**
+ * The tonemap pass's own defaults (`tone_mapper.h:177-180`), not an Environment's. They equal the
+ * Environment defaults (`environment.h:115-117`) only by chance, so neither is read from the other.
+ */
 const NO_ENVIRONMENT_TONE_MAPPING: EnvironmentSettings['toneMapping'] = {
   mode: GodotToneMapper.LINEAR,
   exposure: 1,

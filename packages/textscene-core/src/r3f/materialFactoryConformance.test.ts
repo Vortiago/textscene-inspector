@@ -148,7 +148,7 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the light pass quad: its callers hand it the accumulator seed, with fixed shaders and one uniform, or a directional light material, memoised on every input and disposed on replacement',
   'packages/textscene-core/src/r3f/parentSpaceScope.tsx':
     'mounts the world root, a bare Object3D that R3F adds as a child and never routes to a material slot',
-  'packages/textscene-core/src/r3f/preview/PreviewLighting.tsx':
+  'packages/textscene-core/src/r3f/preview/PreviewSun.tsx':
     "mounts the preview sun's aim target — an empty Object3D, added as a child",
 };
 

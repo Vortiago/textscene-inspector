@@ -25,9 +25,9 @@ target at the count Godot would draw on this device (`r3f/deviceSampleCount.ts`)
 - The root viewport's `msaa_2d` draws the 2D canvas through a multisampled RGBA8 target that stores
   sRGB-encoded values, so items blend as they blend on the drawing buffer
   (`Canvas2DStage/canvasMsaaFrame.ts`).
-- A 3D root with no Environment mounts `NoEnvironmentLayer`: the project's clear colour
-  (`renderer_viewport.cpp:371`), and a compositor for `msaa_3d` with Godot's default LINEAR curve
-  (`tone_mapper.h:177`). The 3D canvas is `flat`, so three adds no curve of its own.
+- A 3D root with no valid Environment (ADR-0025) mounts `NoEnvironmentLayer`: the project's clear
+  colour (`renderer_viewport.cpp:371`), and a compositor for `msaa_3d` with Godot's default LINEAR
+  curve (`tone_mapper.h:177`). The 3D canvas is `flat`, so three adds no curve of its own.
 - A SubViewport's `msaa_3d` or `msaa_2d` sets its own target's samples.
 
 ## Consequences

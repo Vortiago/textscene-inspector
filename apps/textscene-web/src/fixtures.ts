@@ -1883,6 +1883,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "World Environment Missing",
+    "file": "unit-world-environment-missing.tscn",
+    "category": "Other"
+  },
+  {
     "name": "World Environment No Fog",
     "file": "unit-world-environment-no-fog.tscn",
     "category": "Other"

@@ -15,6 +15,9 @@ import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
 import { TscnParser } from '../../parser/TscnParser';
 import { SOFT_LOW_QUALITY_RADIUS } from '../../godot/rendering/lights/softShadowScale';
+import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
+import type { ParsedResource } from '../../parser/parsedResource';
 
 import '../nodes/index';
 
@@ -23,19 +26,27 @@ vi.mock('../environment/NoEnvironmentLayer', () => ({
   NoEnvironmentLayer: () => <group name="NoEnvironmentLayer" />,
 }));
 
-async function render(sceneText: string, viewport?: { sun?: boolean; environment?: boolean }) {
+interface RenderOptions {
+  sun?: boolean;
+  environment?: boolean;
+  /** The `.tres` files the loader holds. A file seeded `null` failed to load, and any other loads forever. */
+  files?: Record<string, ParsedResource | null>;
+}
+
+async function render(sceneText: string, { sun = true, environment = true, files = {} }: RenderOptions = {}) {
   const graph = createSceneGraphFromTscnScene(new TscnParser().parse(sceneText));
+  const fake = createFakeResourceLoader();
+  for (const [path, parsed] of Object.entries(files)) fake.resources.seed(path, parsed);
   return ReactThreeTestRenderer.create(
-    <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
-      <SelectionProvider>
-        <ViewportModeProvider
-          initialShowPreviewSun={viewport?.sun ?? true}
-          initialShowPreviewEnvironment={viewport?.environment ?? true}
-        >
-          <TscnSceneContents />
-        </ViewportModeProvider>
-      </SelectionProvider>
-    </HierarchyProvider>
+    <ResourceLoaderProvider loader={fake.loader}>
+      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
+        <SelectionProvider>
+          <ViewportModeProvider initialShowPreviewSun={sun} initialShowPreviewEnvironment={environment}>
+            <TscnSceneContents />
+          </ViewportModeProvider>
+        </SelectionProvider>
+      </HierarchyProvider>
+    </ResourceLoaderProvider>
   );
 }
 
@@ -124,8 +135,7 @@ describe('preview environment yielding', () => {
     expect(noEnvironmentCount(await render(scene(WORLD_ENV), { environment: false }))).toBe(1);
   });
 
-  it('mounts none while a named Environment is still loading', async () => {
-    const loading = `[gd_scene format=3]
+  const NAMED_ENV = `[gd_scene format=3]
 
 [ext_resource type="Environment" path="res://env.tres" id="1_env"]
 
@@ -134,7 +144,13 @@ describe('preview environment yielding', () => {
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = ExtResource("1_env")
 `;
-    expect(noEnvironmentCount(await render(loading, { environment: false }))).toBe(0);
+
+  it('mounts none while a named Environment is still loading', async () => {
+    expect(noEnvironmentCount(await render(NAMED_ENV))).toBe(0);
+  });
+
+  it('mounts it for a named Environment whose .tres fails to load', async () => {
+    expect(noEnvironmentCount(await render(NAMED_ENV, { files: { 'res://env.tres': null } }))).toBe(1);
   });
 
   // The preview environment applies itself through a GPU render the headless
