@@ -126,9 +126,12 @@ export function Decal({ node, children }: NodeComponentProps) {
     // inherits a Repeat from the shared producer. The blit copies any format into an RGBA8 atlas
     // (`texture_storage.cpp:3163`) that the shader reads through its sRGB view
     // (`render_forward_clustered.cpp:3213`), so a decal decodes sRGB whatever its source format.
+    // The atlas blits its own mip chain, sampled at the `decals/filter` default of Linear Mipmap
+    // (`rendering_server.cpp:3804`), so a decal mipmaps even when its import has none.
     const projectionMap = applyTextureState(albedo, {
       repeat: false,
       colorSpace: THREE.SRGBColorSpace,
+      buildsMipChain: true,
     });
 
     const projection: DecalProjectionLook = { map: projectionMap, color, opacity };

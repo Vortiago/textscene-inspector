@@ -43,6 +43,11 @@ export interface MaterialTextureState {
 
 export interface TextureState extends MaterialTextureState {
   /**
+   * The sampler reads a copy with its own mip chain, whatever the import gives, as Godot's decal
+   * atlas does (`texture_storage.cpp:3169-3226`). Omitted means the import's chain.
+   */
+  buildsMipChain?: boolean;
+  /**
    * The colour space this binding samples in. Required: only the binding knows
    * what the sampler needs, whatever the producer tagged.
    */
@@ -88,9 +93,11 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   // the binding wants stays shared.
   const wrapping = state.repeat === false ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   const wrapDiverges = texture.wrapS !== wrapping || texture.wrapT !== wrapping;
-  // Only an authored filter diverges. Otherwise a GradientTexture2D, which has no
+  const mipChainDiverges = state.buildsMipChain === true && !texture.generateMipmaps;
+  // Otherwise only an authored filter diverges, or a GradientTexture2D, which has no
   // mipmaps, would clone per material and slot for a filter nobody asked for.
-  const filterDiverges = state.filter !== undefined && !textureFilterMatches(texture, filterState);
+  const filterDiverges =
+    mipChainDiverges || (state.filter !== undefined && !textureFilterMatches(texture, filterState));
   // A texture whose tag already matches the sampler is shared untouched.
   const colorSpaceDiverges = texture.colorSpace !== state.colorSpace;
   const channel = state.channel ?? 0;
@@ -109,6 +116,7 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   cloned.wrapS = wrapping;
   cloned.wrapT = wrapping;
   cloned.channel = channel;
+  if (mipChainDiverges) cloned.generateMipmaps = true;
   if (filterDiverges) applyTextureFilterState(cloned, filterState);
   // Pinned, not assigned: R3F reasserts `SRGBColorSpace` every commit. The sRGB
   // case wants what R3F reasserts, so it needs no pin.
