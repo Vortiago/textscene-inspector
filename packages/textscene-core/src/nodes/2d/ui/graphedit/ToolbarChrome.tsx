@@ -30,11 +30,10 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
 import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
 /** The `font_color` of `Label` (`default_theme.cpp:384`): opaque white, where other controls use grey. */
 const LABEL_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-/** `control_font_color` (`default_theme.cpp:101`): the `font_color` of `LineEdit` (`:422`) and both SpinBox arrow modulates (`:634,638`). */
-const CONTROL_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 
 /**
  * `DRAW_DISABLED` swaps in `icon_disabled_color` (`button.cpp:321-329`), `Color(1, 1, 1, 0.4)` for

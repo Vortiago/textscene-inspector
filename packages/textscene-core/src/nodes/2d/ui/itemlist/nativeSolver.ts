@@ -44,6 +44,7 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
 
 // --- Enum literals ------------------------------------------------------
 
@@ -56,8 +57,8 @@ export const ICON_MODE_LEFT = 1;
 /** ItemList's own theme font key: `SceneStringName(font)` (`default_theme.cpp:951`). */
 export const ITEM_LIST_THEME_FONT_KEY = 'font';
 
-/** `control_font_lower_color` (`default_theme.cpp:103`): ItemList's own `font_color` default (`:954`). */
-const ITEM_LIST_DEFAULT_FONT_COLOR: Rgba = { r: 0.65, g: 0.65, b: 0.65, a: 1 };
+/** ItemList's own `font_color` default (`default_theme.cpp:954`). */
+const ITEM_LIST_DEFAULT_FONT_COLOR = CONTROL_FONT_LOWER_COLOR;
 
 const ITEM_LIST_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 

@@ -44,6 +44,12 @@ import {
   HORIZONTAL_ALIGNMENT_RIGHT,
   type Rgba,
 } from '../../../../godot/math/math';
+import {
+  CONTROL_FONT_COLOR,
+  CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_HOVER_COLOR,
+  CONTROL_FONT_PLACEHOLDER_COLOR,
+} from '../../../../godot/scene/theme';
 
 /**
  * LineEdit's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:419`). This
@@ -92,20 +98,20 @@ const LINE_EDIT_THEME_KEYS: Record<LineEditTextState, TextThemeKeys> = {
   placeholder: { sizeKey: 'font_size', colorKey: 'font_placeholder_color' },
 };
 
-/** `control_font_color` = `Color(0.875, 0.875, 0.875)` (`default_theme.cpp:101`), LineEdit's own `font_color` default (`:422`). */
-export const LINE_EDIT_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+/** LineEdit's own `font_color` default (`default_theme.cpp:422`). */
+export const LINE_EDIT_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 
-/** `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`:106`): LineEdit's `font_uneditable_color` default (`:424`). */
-export const LINE_EDIT_DEFAULT_UNEDITABLE_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+/** LineEdit's `font_uneditable_color` default (`default_theme.cpp:424`). */
+export const LINE_EDIT_DEFAULT_UNEDITABLE_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
-/** `control_font_placeholder_color = Color(control_font_color.rgb, 0.6)` (`:107`): LineEdit's `font_placeholder_color` default (`:425`). */
-const LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.6 };
+/** LineEdit's `font_placeholder_color` default (`default_theme.cpp:425`). */
+const LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR = CONTROL_FONT_PLACEHOLDER_COLOR;
 
 /** `control_font_color`, LineEdit's `clear_button_color` default too (`default_theme.cpp:429`). */
 export const LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR: Rgba = LINE_EDIT_DEFAULT_FONT_COLOR;
 
-/** `control_font_hover_color = Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`): LineEdit's `caret_color` default (`:427`). */
-export const LINE_EDIT_DEFAULT_CARET_COLOR: Rgba = { r: 0.95, g: 0.95, b: 0.95, a: 1 };
+/** LineEdit's `caret_color` default (`default_theme.cpp:427`). */
+export const LINE_EDIT_DEFAULT_CARET_COLOR = CONTROL_FONT_HOVER_COLOR;
 
 const LINE_EDIT_DEFAULT_COLORS: Record<LineEditTextState, Rgba> = {
   normal: LINE_EDIT_DEFAULT_FONT_COLOR,

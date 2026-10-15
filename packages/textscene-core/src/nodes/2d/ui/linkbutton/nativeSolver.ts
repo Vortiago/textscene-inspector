@@ -30,6 +30,7 @@ import {
 } from '../../../../r3f/controls/native/text/openSansMetrics';
 import type { LinkButtonProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 
 /** `SceneStringName(font)`, registered for "LinkButton" at `default_theme.cpp:200`. */
 export const LINKBUTTON_THEME_FONT_KEY = 'font';
@@ -49,10 +50,10 @@ export function resolveLinkButtonDrawState(props: LinkButtonProperties): LinkBut
   return 'normal';
 }
 
-/** `control_font_color` (`default_theme.cpp:101`), LinkButton's `font_color` default (`:203`). */
-const LINKBUTTON_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
-/** `control_font_pressed_color = Color(1, 1, 1)` (`:108`), LinkButton's `font_pressed_color` default (`:204`). */
-const LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+/** LinkButton's `font_color` default (`default_theme.cpp:203`). */
+const LINKBUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
+/** LinkButton's `font_pressed_color` default (`default_theme.cpp:204`). */
+const LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
 /**
  * Neither LinkButton's `default_theme.cpp` block (`:196-210`) nor an ancestor in its `scene/theme/theme_db.cpp`
  * type chain registers `font_disabled_color`, so `ThemeOwner::get_theme_item_in_types` falls through to

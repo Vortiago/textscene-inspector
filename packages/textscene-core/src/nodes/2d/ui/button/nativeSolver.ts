@@ -41,6 +41,7 @@ import {
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { OverrunBehavior } from '../../../../r3f/controls/native/text/textOverrun';
 import type { ButtonProperties } from './types';
+import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
 
 /**
  * Button's theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:152`). Only
@@ -58,14 +59,11 @@ export const BUTTON_THEME_KEYS: Record<ButtonDrawState, TextThemeKeys> = {
   disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
 };
 
-/** `control_font_color` = `Color(0.875, 0.875, 0.875)` (`default_theme.cpp:101`), Button's own `font_color` default (`:156`). */
-export const BUTTON_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+/** Button's own `font_color` default (`default_theme.cpp:156`). */
+export const BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 
-/**
- * `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`default_theme.cpp:106`),
- * Button's `font_disabled_color` default (`:161`).
- */
-const BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+/** Button's `font_disabled_color` default (`default_theme.cpp:161`). */
+const BUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
 /** `icon_normal_color` / `icon_disabled_color` theme_override_colors keys (`default_theme.cpp:164,169`). */
 const BUTTON_ICON_COLOR_KEYS: Record<ButtonDrawState, string> = {

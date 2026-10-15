@@ -35,6 +35,11 @@ import type { TabBarProperties, TabBarTabProperties } from './types';
 import { TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
+import {
+  CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_HOVER_COLOR,
+  CONTROL_FONT_LOW_COLOR,
+} from '../../../../godot/scene/theme';
 
 export type TabDrawState = 'selected' | 'unselected' | 'disabled';
 
@@ -187,12 +192,12 @@ const TAB_BAR_FONT_COLOR_KEYS: Record<TabDrawState, string> = {
   disabled: 'font_disabled_color',
 };
 
-/** `control_font_hover_color` = `Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`), the `font_selected_color` default (`:1044`). */
-const TAB_BAR_SELECTED_FONT_COLOR: Rgba = { r: 0.95, g: 0.95, b: 0.95, a: 1 };
-/** `control_font_low_color` = `Color(0.7, 0.7, 0.7)` (`default_theme.cpp:103`), the `font_unselected_color` default (`:1046`). */
-const TAB_BAR_UNSELECTED_FONT_COLOR: Rgba = { r: 0.7, g: 0.7, b: 0.7, a: 1 };
-/** `control_font_disabled_color = control_font_color * Color(1,1,1,0.5)` (`default_theme.cpp:106`), the `font_disabled_color` default (`:1047`). */
-const TAB_BAR_DISABLED_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+/** TabBar's `font_selected_color` default (`default_theme.cpp:1044`). */
+const TAB_BAR_SELECTED_FONT_COLOR = CONTROL_FONT_HOVER_COLOR;
+/** TabBar's `font_unselected_color` default (`default_theme.cpp:1046`). */
+const TAB_BAR_UNSELECTED_FONT_COLOR = CONTROL_FONT_LOW_COLOR;
+/** TabBar's `font_disabled_color` default (`default_theme.cpp:1047`). */
+const TAB_BAR_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
 const TAB_BAR_FONT_DEFAULTS: Record<TabDrawState, Rgba> = {
   selected: TAB_BAR_SELECTED_FONT_COLOR,

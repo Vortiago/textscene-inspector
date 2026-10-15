@@ -31,6 +31,7 @@ import { isEqualApprox, rect2Intersection } from '../../../../godot/index.js';
 import type { ProgressBarProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector.js';
 import type { Rgba } from '../../../../godot/math/math.js';
+import { CONTROL_FONT_HOVER_COLOR } from '../../../../godot/scene/theme.js';
 
 /**
  * `default_theme.cpp:440-441`: `make_flat_stylebox(color, 2, 2, 2, 2, 6)`, not
@@ -103,8 +104,8 @@ const PROGRESS_BAR_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey:
 /** `SceneStringName(font)` = `"font"` (`default_theme.cpp:283`: `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT, ProgressBar, font)`). */
 export const PROGRESS_BAR_THEME_FONT_KEY = 'font';
 
-/** ProgressBar's `font_color` default (`:446`) is `control_font_hover_color` = `Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`). */
-const PROGRESS_BAR_DEFAULT_FONT_COLOR: Rgba = { r: 0.95, g: 0.95, b: 0.95, a: 1 };
+/** ProgressBar's `font_color` default (`default_theme.cpp:446`). */
+const PROGRESS_BAR_DEFAULT_FONT_COLOR = CONTROL_FONT_HOVER_COLOR;
 
 /** `default_theme.cpp:447`: `font_outline_color` default `Color(0, 0, 0)`. */
 const PROGRESS_BAR_DEFAULT_OUTLINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
