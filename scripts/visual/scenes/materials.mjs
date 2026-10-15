@@ -78,9 +78,21 @@ export const MATERIAL_SCENES = [
   // 1 is overridden and surface 0 is not, so a leak onto every surface, a
   // dropped override and a wrong index give three different images.
   { name: 'arraymesh-surface-override', file: 'unit-arraymesh-surface-override.tscn' },
+  // The saved format of an albedo ImageTexture: the same greys as Lum8, which has no sRGB view and
+  // reads raw, over RGB8, which reads as sRGB. A format read the wrong way darkens or lifts a strip.
+  { name: 'material-albedo-image-format', file: 'unit-material-albedo-image-format.tscn' },
+  // A wrapped albedo texture: an AtlasTexture binds its whole sheet, not its region, and a
+  // CanvasTexture binds Godot's white default. A cropped sheet or a drawn diffuse shows at once.
+  { name: 'material-albedo-atlas-texture', file: 'unit-material-albedo-atlas-texture.tscn' },
+  // ADD emission with a lit colour and a texture: each texel adds to the colour, so a multiply
+  // darkens the blue and green texels to black.
+  { name: 'material-emission-add', file: 'unit-material-emission-add.tscn' },
   // Decal `texture_albedo` as an inline GradientTexture2D. The albedo is all a
   // decal projects, so an unresolved slot leaves the floor bare.
   { name: 'decal-gradienttexture', file: 'unit-decal-gradienttexture.tscn' },
+  // Decal `texture_albedo` as an AtlasTexture: a decal takes the texture's RID, so it projects the
+  // whole sheet. A cropped region projects one red square.
+  { name: 'decal-atlas-texture', file: 'unit-decal-atlas-texture.tscn' },
   // The one MeshInstance3D material from an external `.tres`, and the one
   // roughness map with contrast: a glossy cap and a rough one meet at a hard
   // seam. If the map fails to arrive, both caps go matte. Other roughness

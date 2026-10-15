@@ -31,6 +31,7 @@ function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMateri
     specular: data.specular,
     emissive: data.emission.emissive,
     emissiveIntensity: data.emission.emissiveIntensity,
+    emissionEnergy: data.emission.emissionEnergy,
     emissionOperator: data.emissionOperator,
     textureFilter: data.textureFilter,
     textureRepeat: data.textureRepeat,

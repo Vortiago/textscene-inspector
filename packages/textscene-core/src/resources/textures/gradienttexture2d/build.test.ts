@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { rasterizeGradientTexture2D } from './build';
 import { decodeGradientTexture2D } from './decode';
 import { gradientOf } from './gradient.testkit';
+import { sourceColorSpace } from '../sourceColorSpace';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
 import type { Gradient, GradientTexture2D } from './types';
 
@@ -41,8 +42,18 @@ describe('rasterizeGradientTexture2D', () => {
     };
     const texture = rasterizeGradientTexture2D(tex, gradient);
     expect(texture.type).toBe(THREE.HalfFloatType);
-    expect(texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+    expect(texture.colorSpace).toBe(THREE.NoColorSpace);
     expect(THREE.DataUtils.fromHalfFloat((texture.image.data as Uint16Array)[0]!)).toBe(2);
+  });
+
+  it('gives an RGBA8 texture an sRGB view (gradient_texture.cpp:239-270)', () => {
+    const texture = rasterizeGradientTexture2D(coinTexture(), coinGradient());
+    expect(sourceColorSpace(texture)).toBe(THREE.SRGBColorSpace);
+  });
+
+  it('gives a use_hdr texture none, as Godot stores it RGBAF', () => {
+    const tex: GradientTexture2D = { ...coinTexture(), useHdr: true };
+    expect(sourceColorSpace(rasterizeGradientTexture2D(tex, coinGradient()))).toBe(THREE.NoColorSpace);
   });
 
   it("puts Godot's TOP row at v = 1, matching a file-backed texture", () => {

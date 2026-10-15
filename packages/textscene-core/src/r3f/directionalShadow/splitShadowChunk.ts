@@ -13,12 +13,26 @@ import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
 import { SPLIT_SLOTS } from './splitShadow.js';
 import { NO_BLEND } from './fitDirectionalShadowSplits.js';
 import { DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM } from './shadowAtlas.js';
-import { installSunSoftShadowUniforms, SUN_RANGE_BEGINS, SUN_SOFT_SHADOWS } from './sunSoftShadow.js';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch.js';
+import {
+  installSunShadowUniforms,
+  SLOT_MATRIX_ROWS,
+  SUN_RANGE_BEGINS,
+  SUN_SHADOW_ROWS,
+  SUN_SOFT_SHADOWS,
+} from './sunShadowUniforms.js';
 
 const CHUNK = 'shadowmap_pars_fragment';
 
 const THREE_SLOT_COUNT = '#define SUN_LIGHT_CASCADES 2';
+
+/**
+ * three's slot matrices take four vectors each. The rows the patch declares take three, which keeps
+ * eight shadowed suns under the 224 fragment uniform vectors WebGL 2 guarantees
+ * (`directionalShadow.md`, Fragment uniforms).
+ */
+const THREE_SLOT_MATRICES = 'uniform mat4 sunShadowMatrix[ NUM_SUN_LIGHT_SHADOWS * SUN_LIGHT_CASCADES ];';
+const GODOT_SLOT_ROWS = `uniform vec4 ${SUN_SHADOW_ROWS}[ NUM_SUN_LIGHT_SHADOWS * SUN_LIGHT_CASCADES * ${SLOT_MATRIX_ROWS} ];`;
 
 /** Where three's `getSunShadow` starts, and the line that closes its `#if` block. */
 const THREE_LOOKUP_START = '\t\tfloat getSunShadow(';
@@ -34,6 +48,21 @@ const SPLIT_LOOKUP = 'getSunShadowSplit(';
 const BLENDS_ABOVE = (NO_BLEND / 2).toExponential();
 
 /**
+ * A slot's world-to-atlas matrix, read from its rows. Its fourth row is always (0, 0, 0, 1)
+ * (`splitShadow.ts`), so a coordinate's w is 1. A row's length is the slot's scale along that axis.
+ */
+const GODOT_SLOT_MATRIX = `
+\t\tvec4 godotSunShadowCoord( int slot, vec3 position ) {
+\t\t\tint row = slot * ${SLOT_MATRIX_ROWS};
+\t\t\tvec4 point = vec4( position, 1.0 );
+\t\t\treturn vec4( dot( ${SUN_SHADOW_ROWS}[ row ], point ), dot( ${SUN_SHADOW_ROWS}[ row + 1 ], point ), dot( ${SUN_SHADOW_ROWS}[ row + 2 ], point ), 1.0 );
+\t\t}
+\t\tfloat godotSunShadowScale( int slot, int row ) {
+\t\t\treturn length( ${SUN_SHADOW_ROWS}[ slot * ${SLOT_MATRIX_ROWS} + row ].xyz );
+\t\t}
+`;
+
+/**
  * Godot's PCF of one split (`:2443`). Its pixel size is the atlas texel times `soft_shadow_scale`
  * times the split's blur factor, and `shadowMapSize` is the whole atlas
  * (`WebGLLights.js:305`, `splitShadow.ts`). It keeps three's test that leaves a receiver outside
@@ -43,7 +72,7 @@ const BLENDS_ABOVE = (NO_BLEND / 2).toExponential();
 const GODOT_SUN_PCF = `
 \t\tfloat godotSunShadow( sampler2DShadow atlas, vec2 atlasSize, float shadowIntensity, float shadowBias, float softShadowScale, vec4 shadowCoord ) {
 
-\t\t\tvec3 coord = shadowCoord.xyz / shadowCoord.w;
+\t\t\tvec3 coord = shadowCoord.xyz;
 \t\t\tcoord.z += shadowBias;
 
 \t\t\tbool inFrustum = coord.x >= 0.0 && coord.x <= 1.0 && coord.y >= 0.0 && coord.y <= 1.0;
@@ -70,9 +99,6 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\tuniform vec4 ${SUN_SOFT_SHADOWS}[ NUM_SUN_LIGHT_SHADOWS ];
 \t\tuniform vec4 ${SUN_RANGE_BEGINS}[ NUM_SUN_LIGHT_SHADOWS ];
 \t\tconst float GODOT_SUN_PANCAKE = 1e-4;
-\t\tfloat godotRowLength( mat4 matrix, int row ) {
-\t\t\treturn length( vec3( matrix[ 0 ][ row ], matrix[ 1 ][ row ], matrix[ 2 ][ row ] ) );
-\t\t}
 \t\tfloat godotSunBlockerShadow( sampler2DShadow atlas, vec3 coord, vec2 texScale, float lightSide ) {
 \t\t\tmat2 rotation = godotDiskRotation();
 \t\t\tfloat blockerSum = 0.0;
@@ -98,17 +124,15 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\t}
 \t\tfloat godotSunSoftSplit( sampler2DShadow shadowMap, SunLightShadow sunLightShadow, int slot, vec4 light, float rangeBegin ) {
 \t\t\tvec4 split = sunShadowCascade[ slot ];
-\t\t\tmat4 matrix = sunShadowMatrix[ slot ];
-\t\t\tvec2 uvScale = vec2( godotRowLength( matrix, 0 ), godotRowLength( matrix, 1 ) );
+\t\t\tvec2 uvScale = vec2( godotSunShadowScale( slot, 0 ), godotSunShadowScale( slot, 1 ) );
 \t\t\tvec3 position = vSunShadowWorldPosition.xyz + vSunShadowWorldNormal * split.z;
-\t\t\tvec4 shadowCoord = matrix * vec4( position, 1.0 );
-\t\t\tvec3 coord = shadowCoord.xyz / shadowCoord.w;
+\t\t\tvec3 coord = godotSunShadowCoord( slot, position ).xyz;
 \t\t\tcoord.z += split.y;
 \t\t\tbool inFrustum = coord.x >= 0.0 && coord.x <= 1.0 && coord.y >= 0.0 && coord.y <= 1.0;
 \t\t\tif ( ! ( inFrustum && coord.z <= 1.0 ) ) return 1.0;
 \t\t\tfloat testRadius = ( dot( light.xyz, position - cameraPosition ) - rangeBegin ) * light.w;
 \t\t\tvec2 texScale = uvScale * testRadius * sunLightShadow.shadowRadius;
-\t\t\tfloat lightSide = coord.z - godotRowLength( matrix, 2 ) * ( rangeBegin - dot( light.xyz, position ) );
+\t\t\tfloat lightSide = coord.z - godotSunShadowScale( slot, 2 ) * ( rangeBegin - dot( light.xyz, position ) );
 \t\t\treturn mix( 1.0, godotSunBlockerShadow( shadowMap, coord, texScale, lightSide ), sunLightShadow.shadowIntensity );
 \t\t}
 \t\tfloat godotSunSoftShadow( sampler2DShadow shadowMap, SunLightShadow sunLightShadow, int shadowIndex ) {
@@ -142,7 +166,7 @@ const GODOT_SUN_SOFT_SHADOW = `
  * by the first split's far end over its own (`:2422-2443`). A blending split mixes in the next one
  * (`:2445-2478`), sampled only inside the band, where its weight is above zero.
  */
-const GODOT_LOOKUP = `${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOKUP}
+const GODOT_LOOKUP = `${GODOT_SLOT_MATRIX}${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOKUP}
 \t\t\t#if defined( SHADOWMAP_TYPE_PCF )
 \t\t\t\tsampler2DShadow shadowMap,
 \t\t\t#else
@@ -154,7 +178,7 @@ const GODOT_LOOKUP = `${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOKUP}
 \t\t) {
 
 \t\t\tvec4 split = sunShadowCascade[ slot ];
-\t\t\tvec4 shadowWorldPosition = vec4( vSunShadowWorldPosition.xyz + vSunShadowWorldNormal * split.z, 1.0 );
+\t\t\tvec3 shadowWorldPosition = vSunShadowWorldPosition.xyz + vSunShadowWorldNormal * split.z;
 
 \t\t\t#if defined( SHADOWMAP_TYPE_PCF )
 \t\t\t\treturn godotSunShadow(
@@ -166,7 +190,7 @@ const GODOT_LOOKUP = `${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOKUP}
 \t\t\t\tsunLightShadow.shadowIntensity,
 \t\t\t\tsplit.y,
 \t\t\t\tsunLightShadow.shadowRadius * radiusScale,
-\t\t\t\tsunShadowMatrix[ slot ] * shadowWorldPosition
+\t\t\t\tgodotSunShadowCoord( slot, shadowWorldPosition )
 \t\t\t);
 
 \t\t}
@@ -226,21 +250,20 @@ ${GODOT_SUN_SOFT_SHADOW}
 /** The chunk with Godot's split lookup, or null when three's chunk no longer has the parts it replaces. */
 function godotSplitShadowChunk(chunk: string): string | null {
   const start = chunk.indexOf(THREE_LOOKUP_START);
-  if (start < 0 || !chunk.includes(THREE_SLOT_COUNT)) return null;
+  if (start < 0 || !chunk.includes(THREE_SLOT_COUNT) || !chunk.includes(THREE_SLOT_MATRICES)) return null;
   const end = chunk.indexOf(LOOKUP_BLOCK_END, start);
   if (end < 0) return null;
-  return (chunk.slice(0, start) + GODOT_LOOKUP + chunk.slice(end)).replace(
-    THREE_SLOT_COUNT,
-    `#define SUN_LIGHT_CASCADES ${SPLIT_SLOTS}`
-  );
+  return (chunk.slice(0, start) + GODOT_LOOKUP + chunk.slice(end))
+    .replace(THREE_SLOT_COUNT, `#define SUN_LIGHT_CASCADES ${SPLIT_SLOTS}`)
+    .replace(THREE_SLOT_MATRICES, GODOT_SLOT_ROWS);
 }
 
 /**
  * Installs the soft shadow filter, then replaces three's chunk, for every program compiled after the
- * call, and gives the soft shadow's arrays to every built-in lit material. A three release that
- * rewrites the lookup keeps its own chunk, and `splitShadowChunk.test.ts` fails on that release. A
- * second call changes nothing. The patch touches only the sun block, so it composes with the fade
- * in `shadowFade.ts` in either install order.
+ * call, and gives the slot rows and the soft shadow's arrays to every built-in lit material. A three
+ * release that rewrites the lookup keeps its own chunk, and `splitShadowChunk.test.ts` fails on that
+ * release. A second call changes nothing. The patch touches only the sun block, so it composes with
+ * the fade in `shadowFade.ts` in either install order.
  */
 export function installGodotSplitShadow(): void {
   if (!installSoftShadowFilter()) return;
@@ -250,5 +273,6 @@ export function installGodotSplitShadow(): void {
     apply: onChunk(CHUNK, godotSplitShadowChunk),
     missing: `${CHUNK} has no sun shadow lookup to replace`,
   });
-  if (isPatched) installSunSoftShadowUniforms();
+  if (!isPatched) return;
+  installSunShadowUniforms();
 }

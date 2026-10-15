@@ -42,15 +42,22 @@ export function patchedShader(
 }
 
 export function patchedFragment(material: THREE.Material): string {
+  return patchedProgram(material).fragmentShader;
+}
+
+/** The uniforms `material`'s `onBeforeCompile` adds. */
+export function patchedUniforms(material: THREE.Material): ProgramShader['uniforms'] {
+  return patchedProgram(material).uniforms;
+}
+
+function patchedProgram(material: THREE.Material): ProgramShader {
   const fragmentShader = FRAGMENT_SHADER_OF_TYPE[material.type];
   if (fragmentShader === undefined) {
     throw new Error(`expected a mesh basic, standard or physical material, got ${material.type}`);
   }
-  return patchedShader(
-    (shader) =>
-      material.onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, undefined as never),
-    fragmentShader
-  );
+  const shader: ProgramShader = { vertexShader: '', fragmentShader, uniforms: {} };
+  material.onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, undefined as never);
+  return shader;
 }
 
 /** The texture `material`'s parallax samples, or null when it compiles no parallax. */

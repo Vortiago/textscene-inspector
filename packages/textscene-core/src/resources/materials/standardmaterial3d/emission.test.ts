@@ -56,6 +56,12 @@ describe('emissionScalars', () => {
   it('never yields a negative intensity', () => {
     expect(emissionScalars({ r: 1, g: 1, b: 1, a: 1 }, -5).emissiveIntensity).toBe(0);
   });
+
+  it('keeps the energy for an ADD texture, floored at zero', () => {
+    expect(emissionScalars({ r: 2, g: 0, b: 0, a: 1 }, 3).emissionEnergy).toBe(3);
+    expect(emissionScalars(undefined, -5).emissionEnergy).toBe(0);
+    expect(emissionScalars(undefined, 3, false).emissionEnergy).toBe(0);
+  });
 });
 
 describe('resolveEmission', () => {
@@ -68,17 +74,21 @@ describe('resolveEmission', () => {
     expect(r.emissiveIntensity).toBeCloseTo(2, 6);
   });
 
-  it('ADD with a texture and a black colour becomes a white emissive', () => {
-    // Godot computes `(0 + tex) * energy`; three spells that as white × energy.
-    // Multiplying the authored black through would render nothing at all.
-    const r = resolveEmission(black, EmissionOperator.ADD, true);
-    expect(r.emissive).toEqual([1, 1, 1]);
-    expect(r.emissiveIntensity).toBeCloseTo(2, 6);
-  });
-
-  it('ADD with a texture and a lit colour falls back to multiplying (documented gap)', () => {
+  it('ADD with a texture adds the texel at the energy, as `(emission + tex) * energy`', () => {
     const r = resolveEmission(red, EmissionOperator.ADD, true);
     expect(r.emissive).toEqual(red.emissive);
+    expect(r.emissiveIntensity).toBeCloseTo(2, 6);
+    expect(r.addedTextureEnergy).toBe(2);
+  });
+
+  it('ADD with a texture and a black colour adds the texel alone (edge case)', () => {
+    const r = resolveEmission(black, EmissionOperator.ADD, true);
+    expect(r.emissive).toEqual([0, 0, 0]);
+    expect(r.addedTextureEnergy).toBe(2);
+  });
+
+  it('ADD without a texture adds nothing', () => {
+    expect(resolveEmission(red, EmissionOperator.ADD, false).addedTextureEnergy).toBeNull();
   });
 
   it('MULTIPLY without a texture is no emission at all', () => {
@@ -89,13 +99,14 @@ describe('resolveEmission', () => {
     expect(r.emissiveIntensity).toBe(0);
   });
 
-  it('MULTIPLY with a texture passes the colour through unchanged', () => {
+  it('MULTIPLY with a texture passes the colour through for three to multiply', () => {
     const r = resolveEmission(red, EmissionOperator.MULTIPLY, true);
     expect(r.emissive).toEqual(red.emissive);
     expect(r.emissiveIntensity).toBeCloseTo(2, 6);
+    expect(r.addedTextureEnergy).toBeNull();
   });
 
   it('defaults to ADD when no operator is given', () => {
-    expect(resolveEmission(black, undefined, true).emissive).toEqual([1, 1, 1]);
+    expect(resolveEmission(black, undefined, true).addedTextureEnergy).toBe(2);
   });
 });

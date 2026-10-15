@@ -43,6 +43,6 @@ function plan(
     job: 'noise-texture-2d',
     input,
     contentKey: `NoiseTexture2D:${JSON.stringify(input)}`,
-    wrap: ({ pixels }) => noiseDataTexture(pixels, decoded),
+    wrap: ({ pixels }) => noiseDataTexture(pixels, input),
   };
 }

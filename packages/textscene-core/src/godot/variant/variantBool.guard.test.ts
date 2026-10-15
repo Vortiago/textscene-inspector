@@ -10,7 +10,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const src = resolve(dirname(fileURLToPath(import.meta.url)), '..'); // .../src
+const src = resolve(dirname(fileURLToPath(import.meta.url)), '../..'); // .../src
 
 /**
  * Files whose comparison is about a value that is not a boolean slot, the one case a raw comparison is right. Each is a
