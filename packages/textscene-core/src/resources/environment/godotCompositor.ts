@@ -19,7 +19,7 @@ import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/
 export type CompositeToneMapping = Pick<EnvironmentSettings['toneMapping'], 'mode' | 'white'> &
   Partial<Pick<EnvironmentSettings['toneMapping'], 'agxContrast'>>;
 
-/** The names the effect binds each frame; the compositor owns every other name. */
+/** The uniform names the shader declares. The effect binds the glow buffer each frame and the glow map on request. */
 export const EXPOSURE_UNIFORM = 'godotExposure';
 export const GLOW_BUFFER_UNIFORM = 'godotGlowBuffer';
 export const GLOW_MAP_UNIFORM = 'godotGlowMap';
