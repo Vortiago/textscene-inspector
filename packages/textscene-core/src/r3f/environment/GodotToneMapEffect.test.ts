@@ -74,7 +74,6 @@ describe('GodotToneMapEffect.setGlowMap', () => {
   it('binds no map when the environment names none (edge case)', () => {
     const effect = effectWith({});
     effect.setGlowMap(srgbTexture());
-    effect.clearGlowMap();
     expect(effect.uniforms.has(GLOW_MAP_UNIFORM)).toBe(false);
   });
 });

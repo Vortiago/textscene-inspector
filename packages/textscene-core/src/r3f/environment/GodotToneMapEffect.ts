@@ -16,6 +16,7 @@ import {
 } from '../../resources/environment/godotCompositor';
 import { applyTextureState } from '../../resources/textures/applyTextureState';
 import { glslFloat } from '../../utils/glslLiterals';
+import { defaultWhiteTexture } from '../materials/defaultWhiteTexture';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass';
 import { drawOffscreen } from '../offscreen';
 
@@ -44,7 +45,7 @@ export class GodotToneMapEffect extends Effect {
 
   /** Samples white, which leaves the glow unscaled: the state while the map loads. */
   clearGlowMap(): void {
-    this.setGlowMap(WHITE_GLOW_MAP);
+    this.setGlowMap(defaultWhiteTexture());
   }
 
   override setSize(width: number, height: number): void {
@@ -71,10 +72,6 @@ export class GodotToneMapEffect extends Effect {
 export function glowMapView(glowMap: THREE.Texture): THREE.Texture {
   return applyTextureState(glowMap, { colorSpace: THREE.NoColorSpace, repeat: false });
 }
-
-/** Shared by every effect and never disposed: one texel. */
-const WHITE_GLOW_MAP = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
-WHITE_GLOW_MAP.needsUpdate = true;
 
 /**
  * The glow buffers and passes, owned as `BloomEffect` owns its own. Not a `BloomEffect`: Godot

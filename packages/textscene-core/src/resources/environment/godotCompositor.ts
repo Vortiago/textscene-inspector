@@ -19,9 +19,10 @@ import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/
 export type CompositeToneMapping = Pick<EnvironmentSettings['toneMapping'], 'mode' | 'white'> &
   Partial<Pick<EnvironmentSettings['toneMapping'], 'agxContrast'>>;
 
-/** The effect binds the glow buffer each frame and the glow map on request; exposure is fixed at construction. */
 const EXPOSURE_UNIFORM = 'godotExposure';
+/** Bound by the effect each frame, from the glow pyramid. */
 export const GLOW_BUFFER_UNIFORM = 'godotGlowBuffer';
+/** Bound by the effect when the environment names a glow map. */
 export const GLOW_MAP_UNIFORM = 'godotGlowMap';
 
 /** One field per `tonemap.glsl` flag group. A null clears that flag. */
@@ -66,10 +67,12 @@ export function compositeProgram({
     ...(glow && { [GLOW_BUFFER_UNIFORM]: { glslType: 'sampler2D', value: null } }),
     ...(glow && samplesGlowMap(glow) && { [GLOW_MAP_UNIFORM]: { glslType: 'sampler2D', value: null } }),
   };
+  // SCREEN normalises against the floored white, not the authored one
+  // (`renderer_scene_render_rd.cpp`: `tonemap.white = environment_get_white(...)`).
   const fragmentShader = /* glsl */ `
 ${declarationsGlsl(declarations)}
 ${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
-${glow ? glowDefinitionsGlsl(glow, toneMapping) : ''}
+${glow ? blendGlsl(glow, resolvedWhite(toneMapping.mode, toneMapping.white)) : ''}
 ${adjustments ? GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL : ''}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
 ${glow ? glowAndToneMapGlsl(glow) : TONE_MAP_ONLY_GLSL}
@@ -88,16 +91,6 @@ function declarationsGlsl(declarations: Record<string, UniformDeclaration>): str
   return Object.entries(declarations)
     .map(([name, { glslType }]) => `uniform ${glslType} ${name};`)
     .join('\n');
-}
-
-/**
- * SCREEN normalises against the floored white, not the authored one
- * (`renderer_scene_render_rd.cpp`: `tonemap.white = environment_get_white(...)`).
- * Godot's comment in `apply_glow`: "white cannot be smaller than the maximum output value".
- */
-function glowDefinitionsGlsl(glow: GlowParams, toneMapping: CompositeToneMapping): string {
-  return /* glsl */ `
-${blendGlsl(glow, resolvedWhite(toneMapping.mode, toneMapping.white))}`;
 }
 
 /**
