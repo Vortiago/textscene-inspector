@@ -1,0 +1,13 @@
+[gd_resource type="ImageTexture" format=3]
+
+[sub_resource type="Image" id="Image_4psjh"]
+data = {
+"data": PackedByteArray(255, 255, 255, 40, 255, 255, 255, 200, 255, 255, 255, 72, 255, 255, 255, 104, 255, 255, 255, 136, 255, 255, 255, 168, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 255, 40, 255, 255, 255, 200, 255, 255, 255, 72, 255, 255, 255, 104, 255, 255, 255, 136, 255, 255, 255, 168, 255, 255, 255, 0, 255, 255, 255, 255),
+"format": "RGBA8",
+"height": 4,
+"mipmaps": false,
+"width": 4
+}
+
+[resource]
+image = SubResource("Image_4psjh")
