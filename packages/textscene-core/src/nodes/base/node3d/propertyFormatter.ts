@@ -7,6 +7,8 @@ import type { Node3DProperties } from './types';
 import { radToDeg } from '../../../godot/math/math.js';
 import { decomposeTransform3D } from '../../../utils/transform';
 
+const formatDegrees = (radians: number) => radToDeg(radians).toFixed(2);
+
 export function formatNode3DProperties(properties: Node3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
 
@@ -22,8 +24,6 @@ export function formatNode3DProperties(properties: Node3DProperties): PropertySe
       ],
     });
 
-    // Convert radians to degrees for readability
-    const formatDegrees = (radians: number) => radToDeg(radians).toFixed(2);
     sections.push({
       title: 'Rotation (degrees)',
       items: [

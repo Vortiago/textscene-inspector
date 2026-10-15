@@ -10,6 +10,7 @@
  */
 
 import { bezierInterpolate } from '../../../../godot/index.js';
+import { degToRad } from '../../../../godot/math/math.js';
 import type { Vector2 } from '../../../../godot/math/vector.js';
 
 /** `MAX_CONNECTION_LINE_CURVE_TESSELATION_STAGES` (`graph_edit.cpp:54`). */
@@ -74,7 +75,7 @@ function bakeSegment(
   const na = normalized({ x: mid.x - beg.x, y: mid.y - beg.y });
   const nb = normalized({ x: fin.x - mid.x, y: fin.y - mid.y });
   const dp = na.x * nb.x + na.y * nb.y;
-  if (dp < Math.cos((toleranceDeg * Math.PI) / 180)) {
+  if (dp < Math.cos(degToRad(toleranceDeg))) {
     bake.set(mp, mid);
   }
 
