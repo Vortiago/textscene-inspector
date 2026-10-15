@@ -4,12 +4,6 @@
  * Godot's sky ambient reads the last layer (`scene_forward_clustered.glsl:1744-1756`).
  */
 
-/** The size each `Sky::RadianceSize` names, by its value (`scene/resources/sky.cpp:37-39`). */
-export const SKY_RADIANCE_SIZES: readonly number[] = [32, 64, 128, 256, 512, 1024, 2048];
-
-/** RADIANCE_SIZE_256, the default of `Sky.radiance_size` (`scene/resources/sky.h:61`). */
-export const SKY_RADIANCE_SIZE_DEFAULT = 256;
-
 /** `Sky::REAL_TIME_SIZE` (`sky.h:248`): a real-time sky bakes at this size whatever its `radiance_size`. */
 export const REAL_TIME_RADIANCE_SIZE = 256;
 

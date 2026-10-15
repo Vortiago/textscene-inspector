@@ -3,12 +3,7 @@
  * normalised depth. An omni or spot light's keeps Godot's unit, which the patched lookup reads.
  */
 
-import {
-  LIGHT_SHADOW_BIAS_DEFAULT,
-  LIGHT_SIZE_DEFAULT,
-  SPOT_LIGHT_SHADOW_BIAS_DEFAULT,
-} from '../../../../godot/scene/light';
-import { SHADOW_BLUR_DEFAULT } from '../../../../godot/rendering/lights/softShadowScale';
+import { LIGHT_3D_DEFAULTS, SPOT_LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 import {
   positionalSoftShadow,
   spotShadowDepthBias,
@@ -21,8 +16,8 @@ import type { PositionalLightProperties } from './types';
  * and `scene_forward_clustered.glsl:2304` spends it inside that range, so in
  * normalised depth the range cancels.
  */
-export function directionalShadowBias(shadowBias: number | undefined, softShadowScale: number): number {
-  return -((shadowBias ?? LIGHT_SHADOW_BIAS_DEFAULT) / 100) * softShadowScale;
+export function directionalShadowBias(shadowBias: number, softShadowScale: number): number {
+  return -(shadowBias / 100) * softShadowScale;
 }
 
 /**
@@ -31,7 +26,7 @@ export function directionalShadowBias(shadowBias: number | undefined, softShadow
  * distance to the light (`scene_forward_lights_inc.glsl:594`, `positionalShadowLookup.ts`).
  */
 export function omniShadowBias(shadowBias: number | undefined): number {
-  return shadowBias ?? LIGHT_SHADOW_BIAS_DEFAULT;
+  return shadowBias ?? LIGHT_3D_DEFAULTS.shadowBias;
 }
 
 /** The properties a spot light's depth bias reads. */
@@ -40,8 +35,8 @@ type SpotBiasProperties = Pick<PositionalLightProperties, 'shadow_bias' | 'shado
 /** In Godot's reversed clip depth, for the spot lookup Godot's shader runs (`positionalShadowLookup.ts`). */
 export function spotShadowBias({ shadow_bias, shadow_blur, light_size }: SpotBiasProperties): number {
   const { scale } = positionalSoftShadow(
-    light_size ?? LIGHT_SIZE_DEFAULT,
-    shadow_blur ?? SHADOW_BLUR_DEFAULT
+    light_size ?? SPOT_LIGHT_3D_DEFAULTS.size,
+    shadow_blur ?? SPOT_LIGHT_3D_DEFAULTS.shadowBlur
   );
-  return spotShadowDepthBias(shadow_bias ?? SPOT_LIGHT_SHADOW_BIAS_DEFAULT, scale);
+  return spotShadowDepthBias(shadow_bias ?? SPOT_LIGHT_3D_DEFAULTS.shadowBias, scale);
 }

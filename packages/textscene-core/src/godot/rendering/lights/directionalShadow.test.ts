@@ -4,7 +4,6 @@ import {
   MAX_DIRECTIONAL_LIGHTS,
   blendsSplits,
   directionalShadowBlendStart,
-  DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
   directionalShadowFade,
   directionalLightsDrawn,
   directionalShadowLightRect,
@@ -21,7 +20,7 @@ import {
   sharesDirectionalShadowAtlas,
   texelPaddedRadius,
 } from './directionalShadow.js';
-import { DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT, DirectionalLightSkyMode } from './directionalLightSkyMode.js';
+import { DirectionalLightSkyMode } from './directionalLightSkyMode.js';
 
 describe('directionalShadowSlice', () => {
   it('pulls the far end in to the shadow max distance for a perspective camera', () => {
@@ -217,7 +216,7 @@ describe('directionalShadowBlendStart', () => {
 
 describe('sharesDirectionalShadowAtlas', () => {
   it('shares the atlas for a shadowed light that lights the scene and the sky', () => {
-    expect(sharesDirectionalShadowAtlas(true, DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT)).toBe(true);
+    expect(sharesDirectionalShadowAtlas(true, DirectionalLightSkyMode.LIGHT_AND_SKY)).toBe(true);
     expect(sharesDirectionalShadowAtlas(true, DirectionalLightSkyMode.LIGHT_ONLY)).toBe(true);
   });
 
@@ -360,7 +359,7 @@ describe('directionalShadowSplitAtlasRect', () => {
 
 describe('directionalShadowFade', () => {
   it('fades from the fade start of the slice to its far end', () => {
-    const fade = directionalShadowFade(80, DIRECTIONAL_SHADOW_FADE_START_DEFAULT);
+    const fade = directionalShadowFade(80, 0.8);
     expect(fade.from).toBeCloseTo(64, 12);
     expect(fade.to).toBe(80);
   });

@@ -23,6 +23,11 @@ An equirectangular image wrapped onto the sky. The coloured calibration bands an
 
 An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the sphere and ground it lights match Godot's.
 
+## Sun disc size
+<!-- compare: image=unit-sky-sun-angular-distance status=done fixture=unit-sky-sun-angular-distance.tscn -->
+
+A DirectionalLight3D's `light_angular_distance` sets the size of its sun disc in the sky, as Godot passes it to the sky shader in radians. This 3 degree sun draws a solid disc with a glow around it, as in Godot. A light with no angular distance draws a point sun.
+
 ## Radiance size 32
 <!-- compare: image=unit-sky-radiance-size-32 status=done fixture=unit-sky-radiance-size-32.tscn -->
 

@@ -5,7 +5,7 @@
  */
 
 import { clamp } from '../math/math.js';
-import { unitByte } from '../variant/unitByte.js';
+import { unitByte } from './unitByte.js';
 
 /**
  * `FADE_ALPHA_PASS_THRESHOLD` (`render_forward_clustered.cpp:47`): a geometry instance whose fade

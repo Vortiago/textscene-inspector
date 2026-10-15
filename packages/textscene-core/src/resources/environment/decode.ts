@@ -11,12 +11,12 @@ import { enumOr, floatOr, intOr, parseOptionalFloat, vec3Or } from '../../parser
 import { colorOr } from '../../utils/colorParser';
 import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import { volumetricFogDetailSpread } from '../../godot/rendering/environment/volumetricFog.js';
+import { FogMode } from '../../godot/rendering/environment/depthFog.js';
 import {
-  FogMode,
   depthFogDensityDefault,
   depthFogRange,
-} from '../../godot/rendering/environment/depthFog.js';
-import { GLOW_BLEND_MODE_DEFAULT } from '../../godot/rendering/environment/glow.js';
+  GLOW_BLEND_MODE_DEFAULT,
+} from '../../godot/scene/environment.js';
 
 /** `Environment`'s constructor weights, finest mip first. */
 const DEFAULT_GLOW_LEVELS = [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0];

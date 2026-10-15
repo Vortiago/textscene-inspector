@@ -12,7 +12,7 @@ import { SceneShadowFitter } from './SceneShadowFitter';
 import { positionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
 import { positionalShadowUserData } from './positionalShadow/declaration';
 import { renderWithShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas';
-import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../godot/rendering/lights/positionalShadowAtlas';
+import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../godot/scene/viewport';
 import { TscnSceneContents } from './TscnCanvas';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera';
 import { HierarchyProvider } from './contexts/HierarchyContext';

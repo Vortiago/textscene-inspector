@@ -13,6 +13,3 @@ export const GlowBlendMode = {
 
 /** Each blend mode's name by the integer a `.tscn` stores, as a validator names it. */
 export const GLOW_BLEND_MODE_NAMES = enumNamesByValue(GlowBlendMode);
-
-/** The blend a scene stores no `glow_blend_mode` for (`scene/resources/environment.h:172`). */
-export const GLOW_BLEND_MODE_DEFAULT = GlowBlendMode.SCREEN;

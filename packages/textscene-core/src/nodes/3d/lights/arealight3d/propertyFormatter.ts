@@ -7,9 +7,7 @@ import { formatBaseLightSection, formatShadowSectionWithNormalBias } from '../sh
 
 export function formatAreaLight3DProperties(properties: AreaLight3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
-  // The parser already reads area_size with parseVector2, so the inspector and
-  // the render path show the same numbers.
-  const { x: w, y: h } = properties.area_size ?? { x: 1, y: 1 };
+  const { x: w, y: h } = properties.area_size;
 
   const areaLightItems: PropertySection['items'] = [{ label: 'Size', value: `${w} × ${h}` }];
 

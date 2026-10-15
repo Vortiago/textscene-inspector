@@ -5,6 +5,7 @@ import type { OmniLight3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
 import { parsePositionalLightProperties } from '../shared/parser';
 import { floatOr, parseOptionalInt } from '../../../../parser/valueParsers';
+import { LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 
 export function parseOmniLight3D(
   heading: ParsedHeading,
@@ -16,8 +17,8 @@ export function parseOmniLight3D(
   return {
     ...node3dProps,
     ...baseLightProps,
-    omni_range: floatOr(properties.omni_range, 5.0, 'omni_range'),
-    omni_attenuation: floatOr(properties.omni_attenuation, 1.0, 'omni_attenuation'),
+    omni_range: floatOr(properties.omni_range, LIGHT_3D_DEFAULTS.range, 'omni_range'),
+    omni_attenuation: floatOr(properties.omni_attenuation, LIGHT_3D_DEFAULTS.attenuation, 'omni_attenuation'),
     omni_shadow_mode: parseOptionalInt(properties.omni_shadow_mode),
   };
 }

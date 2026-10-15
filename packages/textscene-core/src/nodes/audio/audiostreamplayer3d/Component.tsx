@@ -15,7 +15,7 @@ import { useGizmoVisible } from '../../3d/lights/shared/lightHelpers';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { degToRad } from '../../../godot/math/math.js';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 
 /** Editor-only gizmo colour: yellow, to match the light helpers. */

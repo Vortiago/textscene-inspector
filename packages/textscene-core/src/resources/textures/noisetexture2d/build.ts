@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import { IMAGE_MAX_PIXELS } from '../../../godot/rendering/texture.js';
+import { IMAGE_MAX_PIXELS } from '../../../godot/project/image.js';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import type { NoiseTexture2DData } from './types';
 import type { NoiseTexture2DInput } from './pixels';

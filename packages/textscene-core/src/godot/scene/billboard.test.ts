@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BillboardMode, labelBillboardAabb, spriteBillboardAabb } from './billboard';
+import { labelBillboardAabb, spriteBillboardAabb } from './billboard';
+import { BillboardMode } from '../rendering/materials/billboardMode';
 import type { Aabb } from '../math/aabb';
 
 /** A label box 3 wide and 1 high, left of the origin by 1 and below it by 0.25. */

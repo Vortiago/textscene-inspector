@@ -12,7 +12,7 @@ import { labelProperties } from './testing/labelProperties';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 const Label3D = registeredComponent('Label3D');
 

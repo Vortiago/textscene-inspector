@@ -6,9 +6,6 @@
 
 import { smoothstep } from '../math/math.js';
 
-/** `Light3D`'s distance fade defaults (`scene/3d/light_3d.h:79-81`). */
-export const LIGHT_DISTANCE_FADE_DEFAULT = { begin: 40, shadow: 50, length: 10 } as const;
-
 /**
  * The fade at `distance`. Godot drops the instance past `begin + length` before the smoothstep,
  * which makes `length = 0` a hard cut at `begin`, not a division by zero.

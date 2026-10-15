@@ -11,8 +11,8 @@ import type { DirectionalLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
+import { DIRECTIONAL_LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 import {
-  DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
   directionalLightDrawsInSky,
   directionalLightLightsSurfaces,
 } from '../../../../godot/rendering/lights/directionalLightSkyMode';
@@ -30,10 +30,8 @@ import {
 } from '../shared/lightStrength';
 import { lightSpecularUserData } from '../../../../r3f/lightSpecular/lightSpecular';
 import { lightSizeUserData } from '../../../../r3f/lightSize/lightSize';
-import {
-  directionalLightSize,
-  LIGHT_ANGULAR_DISTANCE_DEFAULT,
-} from '../../../../godot/rendering/lights/directionalSoftShadow';
+import { directionalLightSize } from '../../../../godot/rendering/lights/directionalSoftShadow';
+import { degToRad } from '../../../../godot/math/math';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 
 export function DirectionalLight3D({ node, children }: NodeComponentProps) {
@@ -44,19 +42,23 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
     [properties]
   );
   const color = parseColorToHex(properties.light_color);
-  const skyMode = properties.sky_mode ?? DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT;
+  const skyMode = properties.sky_mode ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.skyMode;
   // A Sky Only light lights no surface. It keeps its energy for the sky, which reads it from `userData`.
   const intensity = directionalLightLightsSurfaces(skyMode) ? lightIntensity(properties) : 0;
   const skyEnergy = signedLightEnergy(properties);
   const shadow = useMemo(() => directionalShadowDeclaration(properties), [properties]);
   const fogEnergy = lightFogEnergy(properties);
   const specularAmount = directionalLightSpecularAmount(properties);
-  const size = directionalLightSize(properties.light_angular_distance ?? LIGHT_ANGULAR_DISTANCE_DEFAULT);
+  const angularDistance = properties.light_angular_distance ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.size;
+  const size = directionalLightSize(angularDistance);
+  // `sky.cpp:1096-1097`: the sky reads LIGHT_PARAM_SIZE as an angle in radians.
+  const skySize = degToRad(angularDistance);
   const userData = useMemo(
     () => ({
       ...skyLightUserData({
         drawsInSky: directionalLightDrawsInSky(skyMode),
         energy: skyEnergy,
+        size: skySize,
       }),
       ...directionalShadowUserData(shadow),
       ...fogLightUserData({ energy: fogEnergy }),
@@ -64,7 +66,7 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
       ...lightSizeUserData(size),
       ...visualLayersUserData(properties.layers),
     }),
-    [skyMode, skyEnergy, shadow, fogEnergy, specularAmount, size, properties.layers]
+    [skyMode, skyEnergy, skySize, shadow, fogEnergy, specularAmount, size, properties.layers]
   );
 
   return (

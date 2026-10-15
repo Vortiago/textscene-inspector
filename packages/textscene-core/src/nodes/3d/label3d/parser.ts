@@ -14,7 +14,7 @@ import {
   type HorizontalAlignment,
 } from '../../../godot/math/math';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {

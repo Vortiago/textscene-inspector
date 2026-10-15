@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { BillboardMode } from '../godot/scene/billboard';
+import { BillboardMode } from '../godot/rendering/materials/billboardMode';
 import {
   billboardOf,
   castsShadowOf,

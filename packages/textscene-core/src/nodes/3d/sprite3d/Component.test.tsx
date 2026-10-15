@@ -27,7 +27,7 @@ import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
 import { recordGodotFormat } from '../../../resources/textures/sourceColorSpace';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 const Sprite3D = registeredComponent('Sprite3D');

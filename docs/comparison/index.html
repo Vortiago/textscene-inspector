@@ -5696,6 +5696,23 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>An atmospheric-scattering sky. The grey-blue gradient, the horizon band, and the sphere and ground it lights match Godot's.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Sun disc size</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-sky-sun-angular-distance-godot.png" alt="Godot render of Sun disc size">
+          <img class="img-ours" src="images/unit-sky-sun-angular-distance-ours.png" alt="Our render of Sun disc size">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A DirectionalLight3D's <code>light_angular_distance</code> sets the size of its sun disc in the sky, as Godot passes it to the sky shader in radians. This 3 degree sun draws a solid disc with a glow around it, as in Godot. A light with no angular distance draws a point sun.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Radiance size 32</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">

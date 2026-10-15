@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { useLayoutEffect, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { BillboardMode } from '../../godot/scene/billboard';
+import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { useBillboard } from './useBillboard';
 
 type Mounted = { object: THREE.Object3D; camera: THREE.Camera };

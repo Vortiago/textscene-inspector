@@ -17,8 +17,8 @@ export interface SkyLight {
   direction: THREE.Vector3;
   color: THREE.Color;
   energy: number;
-  /** Angular radius in radians (`light_angular_distance`), 0 for a point sun. */
-  angularRadius: number;
+  /** The sun disc's angular size in radians, Godot's `LIGHTn_SIZE`. 0 is a point sun. */
+  size: number;
 }
 
 /** Godot's sky shader has four light slots, written out longhand. */
@@ -97,7 +97,7 @@ export function skyUniforms(
       };
       uniforms[`LIGHT${i}_COLOR`] = { value: light ? light.color.clone() : new THREE.Color(1, 1, 1) };
       uniforms[`LIGHT${i}_ENERGY`] = { value: light?.energy ?? 0 };
-      uniforms[`LIGHT${i}_SIZE`] = { value: light?.angularRadius ?? 0 };
+      uniforms[`LIGHT${i}_SIZE`] = { value: light?.size ?? 0 };
     }
   }
 

@@ -11,9 +11,9 @@ export interface SpotLight3DProperties extends Node3DProperties, PositionalLight
   /** Cone angle in degrees */
   spot_angle: number;
 
-  /** The distance falloff exponent (Godot default 1). */
+  /** The distance falloff exponent. */
   spot_attenuation: number;
 
-  /** The inverse of the cone's falloff exponent (Godot default 1). */
+  /** The inverse of the cone's falloff exponent. */
   spot_angle_attenuation: number;
 }

@@ -22,7 +22,7 @@ import {
   renderWithShadowAtlas,
   ViewportShadowAtlas,
 } from '../../../r3f/positionalShadow/viewportShadowAtlas';
-import { viewportPositionalShadowAtlas } from '../../../godot/rendering/lights/positionalShadowAtlas';
+import { viewportPositionalShadowAtlas } from '../../../godot/scene/viewport';
 import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import {
