@@ -8,9 +8,10 @@ import * as THREE from 'three';
 import type { FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { createGLBMesh, forEachSurfaceMaterial, tagImportMaterial } from '../formats/glb/glbProcessing';
+import { createGLBMesh, tagImportMaterial } from '../formats/glb/glbProcessing';
+import { forEachSurfaceMaterial } from '../formats/glb/surfaceMaterials';
 import { isGltfPath } from '../../godot/import/gltf';
-import { gltfResourcePath, selfContainedGlb } from '../formats/glb/gltfResources';
+import { gltfResourcePath, selfContainedGlb, type SelfContainedGlb } from '../formats/glb/gltfResources';
 import { applyRootScale } from '../formats/glb/rootScale';
 import { stampMeshInstanceLayers } from '../formats/glb/meshInstances';
 import type { GltfExtensionRules } from '../formats/glb/types';
@@ -22,13 +23,21 @@ import {
   importLightmapUnwrap,
   importNodeLayers,
   importRootScale,
-  parseImportFile,
+  importTextureOptions,
   type ParsedImportFile,
 } from '../../parser/importParser';
-import { importSidecarPath, unwrapCachePath } from '../../godot/index.js';
+import { unwrapCachePath } from '../../godot/index.js';
+import {
+  gltfImageFiles,
+  gltfImageSourceFormat,
+  type GltfImageDefinition,
+} from '../../godot/import/gltfImageFiles.js';
+import type { GltfImageImport } from '../formats/glb/imageImport';
+import type { ImageImport } from '../formats/image/textureProcessing';
+import { readImportSidecar } from './readImportSidecar';
 import type { LightmapUvImport } from '../formats/glb/lightmapUv/lightmapUv';
 import { fileBaseName } from '../../godot/string/string.js';
-import type { DependencyGraph } from '../dependencyGraph';
+import type { Dependent, DependencyGraph } from '../dependencyGraph';
 import * as logger from '../../logger';
 
 /**
@@ -45,6 +54,11 @@ function disposeGLBMesh(mesh: THREE.Object3D): void {
   });
 }
 
+/** The glTF at `path` as the reader of every file its load reads. */
+function glbReader(path: string): Dependent {
+  return { busType: 'glb', key: path };
+}
+
 /**
  * The glTF at `path` as a GLB that carries its external buffers and images: each is read
  * through the byte layer and recorded, so editing it reloads the glTF.
@@ -54,13 +68,13 @@ function glbBytes(
   data: ArrayBuffer,
   fileEventBus: FileEventBus | undefined,
   dependencies: DependencyGraph
-): Promise<ArrayBuffer> {
+): Promise<SelfContainedGlb> {
   return selfContainedGlb(data, async (uri) => {
     const resourcePath = gltfResourcePath(path, uri);
     if (resourcePath === null) {
       throw new Error(`glTF ${path} needs ${uri}, which climbs above res://`);
     }
-    dependencies.record({ busType: 'glb', key: path }, resourcePath);
+    dependencies.record(glbReader(path), resourcePath);
     const bytes = await fileEventBus?.tryLoad(resourcePath, 'GltfResource');
     if (!(bytes instanceof ArrayBuffer)) {
       throw new Error(`glTF ${path} needs ${resourcePath}, which did not load as bytes`);
@@ -69,25 +83,6 @@ function glbBytes(
     if (!fileEventBus!.isLoading(resourcePath)) fileEventBus!.clearCache(resourcePath);
     return bytes;
   });
-}
-
-/**
- * The asset's **Import sidecar** (ADR-0028), or null when it has none. A sidecar is found by
- * convention (`scene.gltf.import`), so `tryLoad`: absent means import defaults, not a
- * **Missing resource**.
- */
-async function readImportSidecar(
-  path: string,
-  fileEventBus: FileEventBus | undefined,
-  dependencies: DependencyGraph
-): Promise<ParsedImportFile | null> {
-  if (!fileEventBus) return null;
-
-  const sidecar = importSidecarPath(path);
-  // Recorded before the read, so a sidecar created, edited or deleted later reloads the asset.
-  dependencies.record({ busType: 'glb', key: path }, sidecar);
-  const raw = await fileEventBus.tryLoad(sidecar, 'ImportSidecar');
-  return typeof raw === 'string' ? parseImportFile(raw) : null;
 }
 
 /**
@@ -104,7 +99,7 @@ async function readLightmapUv(
   if (!unwrap || !fileEventBus) return undefined;
 
   const cachePath = unwrapCachePath(path);
-  dependencies.record({ busType: 'glb', key: path }, cachePath);
+  dependencies.record(glbReader(path), cachePath);
   const cache = await fileEventBus.tryLoad(cachePath, 'UnwrapCache');
   // The rebuilt meshes hold what they need, so the bus need not keep the bytes, unless a
   // processor is also loading the file.
@@ -114,6 +109,36 @@ async function readLightmapUv(
     cache: cache instanceof ArrayBuffer ? cache : null,
     rootScale: importRootScale(sidecar),
     path,
+  };
+}
+
+/**
+ * How Godot imports each image of the glTF at `path`: its bytes' source format under the sidecar of
+ * the file it loads. An external image loads through its own import (`gltf_document.cpp:2356-2363`).
+ * An embedded one imports as the file Godot extracts it to, with mipmaps (`:2251-2255`). Each sidecar
+ * read is recorded, so an edit to it reloads the asset. Null when no loader header names a format.
+ */
+function importedImages(
+  path: string,
+  images: GltfImageDefinition[],
+  fileEventBus: FileEventBus | undefined,
+  dependencies: DependencyGraph
+): GltfImageImport {
+  const files = gltfImageFiles(path, images);
+  return async (index, bytes, mimeType): Promise<ImageImport | null> => {
+    const source = gltfImageSourceFormat(bytes, mimeType);
+    const file = files[index];
+    if (source === null || file === undefined) return null;
+    // A URI above res:// names no project file, so Godot extracts the image (`gltf_document.cpp:2203`).
+    const externalPath = file.uri === null ? null : gltfResourcePath(path, file.uri);
+    const sidecar = await readImportSidecar(
+      externalPath ?? file.extracted,
+      glbReader(path),
+      fileEventBus,
+      dependencies
+    );
+    const options = importTextureOptions(sidecar);
+    return { source, options: externalPath === null ? { ...options, mipmaps: true } : options };
   };
 }
 
@@ -203,12 +228,13 @@ export function createGLBProcessor(
     readsFile: isGltfPath,
     shouldProcess: (_path, data) => data instanceof ArrayBuffer,
     process: async (path, data) => {
-      const bytes = await glbBytes(path, data as ArrayBuffer, fileEventBus, dependencies);
-      const sidecar = await readImportSidecar(path, fileEventBus, dependencies);
-      const object = await createGLBMesh(bytes, {
+      const { glb, images } = await glbBytes(path, data as ArrayBuffer, fileEventBus, dependencies);
+      const sidecar = await readImportSidecar(path, glbReader(path), fileEventBus, dependencies);
+      const object = await createGLBMesh(glb, {
         extensionRules,
         naming: { ...importGltfNaming(sidecar), fileName: fileBaseName(path) },
         lightmapUv: await readLightmapUv(path, sidecar, fileEventBus, dependencies),
+        imageImport: importedImages(path, images, fileEventBus, dependencies),
       });
       applyImportSidecar(object, path, sidecar);
       return object;

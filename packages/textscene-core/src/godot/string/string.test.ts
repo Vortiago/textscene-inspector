@@ -12,6 +12,7 @@ import {
   stringToFloat,
   stringToInt,
   stripEdges,
+  validateFilename,
 } from './string.js';
 
 describe('literalText', () => {
@@ -429,5 +430,19 @@ describe('fileBaseName', () => {
 
   it('keeps a name with no extension, after a backslash too', () => {
     expect(fileBaseName('C:\\models\\robot')).toBe('robot');
+  });
+});
+
+describe('validateFilename', () => {
+  it('replaces each character a file name may not hold with an underscore', () => {
+    expect(validateFilename('a:b/c\\d?e*f"g|h%i<j>k')).toBe('a_b_c_d_e_f_g_h_i_j_k');
+  });
+
+  it('strips the edges first', () => {
+    expect(validateFilename('  albedo \t')).toBe('albedo');
+  });
+
+  it('keeps a name that is already valid', () => {
+    expect(validateFilename('grey_albedo.001')).toBe('grey_albedo.001');
   });
 });

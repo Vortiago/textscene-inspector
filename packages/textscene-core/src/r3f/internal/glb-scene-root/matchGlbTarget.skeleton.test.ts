@@ -13,7 +13,7 @@ import { godotNodeName } from '../../../resources/formats/glb/nodeNames';
 import { flattenGlbObjects } from './glbHierarchy';
 import { matchGlbTarget } from './matchGlbTarget';
 
-const GODOT_4_4 = { naming: { ...NO_SIDECAR.naming, namingVersion: 1 } };
+const GODOT_4_4 = { ...NO_SIDECAR, naming: { ...NO_SIDECAR.naming, namingVersion: 1 } };
 
 /** The joint Hand holds the mesh Sword. */
 const SWORD = nodesGlb(
@@ -82,7 +82,7 @@ describe('matchGlbTarget in a skeleton', () => {
         skins: [{ joints: [0] }],
       }
     );
-    const options = { naming: { ...NO_SIDECAR.naming, importAsSkeletonBones: true } };
+    const options = { ...NO_SIDECAR, naming: { ...NO_SIDECAR.naming, importAsSkeletonBones: true } };
     expect((await match(glb, 'Skeleton3D/Body', options))?.name).toBe('Body');
   });
 

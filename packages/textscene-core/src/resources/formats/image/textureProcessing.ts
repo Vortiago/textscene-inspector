@@ -1,11 +1,28 @@
 /** The image slice's texture decode, which `processors/createTextureProcessor.ts` calls. */
 
 import * as THREE from 'three';
-import { readImagePixels, type ImagePixels } from './imagePixels';
+import { imageSize, readImagePixels, type ImagePixels } from './imagePixels';
 import { fixAlphaEdges } from '../../processing/fixAlphaEdges';
+import {
+  invertGreen,
+  invertGreyscaleGreen,
+  keepRedGreen,
+  premultiplyAlpha,
+} from '../../processing/importTexelPasses';
 import { copySampling } from '../../textures/copySampling';
+import { dropMipChain } from '../../textures/godotTextureFilter';
+import { recordGodotFormat } from '../../textures/sourceColorSpace';
 import { IMAGE_EXTENSIONS } from './extensions';
 import { fileExtension } from '../../fileExtension';
+import type { ImageSourceFormat } from '../../../godot/import/imageSourceFormat.js';
+import {
+  hasTranslucentTexel,
+  holdsRedGreenOnly,
+  textureImportFormat,
+  type TextureImportOptions,
+} from '../../../godot/import/textureImport.js';
+
+const SVG_MIME_TYPE = 'image/svg+xml';
 
 export function getMimeType(path: string): string {
   switch (fileExtension(path)) {
@@ -15,7 +32,7 @@ export function getMimeType(path: string): string {
     case '.jpeg':
       return 'image/jpeg';
     case '.svg':
-      return 'image/svg+xml';
+      return SVG_MIME_TYPE;
     case '.webp':
       return 'image/webp';
     default:
@@ -28,21 +45,95 @@ export function isTexturePath(path: string): boolean {
   return extension !== null && IMAGE_EXTENSIONS.includes(extension);
 }
 
-/** Create a THREE.Texture from binary data, with Godot's import alpha-border pass. */
+/**
+ * How Godot imports an image file: the format its loader reads it in, null when no header names
+ * one, and the options of its import sidecar.
+ */
+export interface ImageImport {
+  source: ImageSourceFormat | null;
+  options: TextureImportOptions;
+}
+
+/** A pass over RGBA8 bytes, top row first, that returns whether any byte changed. */
+type TexelPass = (data: Uint8Array, width: number, height: number) => boolean;
+
+/**
+ * Create a THREE.Texture from image bytes as Godot's texture importer builds it: an SVG rasterised
+ * at its import scale, then the import of the decoded image.
+ */
 export async function createTextureFromBuffer(
   data: ArrayBuffer,
   mimeType: string,
+  imported: ImageImport,
   manager?: THREE.LoadingManager
 ): Promise<THREE.Texture> {
-  const texture = await decodeImage(data, mimeType, manager);
+  const decoded = await decodeImage(data, mimeType, manager);
+  const texture = mimeType === SVG_MIME_TYPE ? rasterisedAt(decoded, imported.options.svgScale) : decoded;
   texture.colorSpace = THREE.SRGBColorSpace;
   // Wrapping stays at three's clamp-to-edge default. One entry is cached
   // per path and shared, and Godot gives it two opposite defaults:
   // `BaseMaterial3D` tiles (`FLAG_USE_TEXTURE_REPEAT`) and a `CanvasItem`
   // clamps. Each consumer states its own at bind time (ADR-0044).
-  // A JPEG has no alpha, so the pass would read the image back to change nothing.
-  return mimeType === 'image/jpeg' ? texture : applyAlphaBorderFix(texture);
+  return importDecodedImage(texture, imported);
 }
+
+/**
+ * A decoded image as Godot's texture importer stores it: the texel passes its sidecar asks for, its
+ * mip chain, and the format a colour slot reads it through. The caller hands over `texture`: it
+ * gets it back when no pass changes a byte, and it is disposed otherwise.
+ */
+export function importDecodedImage(texture: THREE.Texture, imported: ImageImport): THREE.Texture {
+  const result = applyTexelPasses(texture, texelPassesFor(imported));
+  if (!imported.options.mipmaps) dropMipChain(result);
+  if (imported.source === null) return result;
+  const format = textureImportFormat(imported.source, imported.options, () => isTranslucent(result));
+  return recordGodotFormat(result, format);
+}
+
+/** Whether a texel of `texture` uses alpha. One whose pixels cannot be read counts as translucent. */
+function isTranslucent(texture: THREE.Texture): boolean {
+  const pixels = readImagePixels(texture.image);
+  return pixels === undefined || hasTranslucentTexel(pixels.data);
+}
+
+/**
+ * The passes in the importer's order (`resource_importer_texture.cpp:861-874`), then the channels a
+ * compression to RGTC drops. The alpha-border pass and the premultiply return on any format but
+ * RGBA8 (`core/io/image.cpp:4225`, `:4247`). A source no header names reads as RGBA8.
+ */
+function texelPassesFor({ source, options }: ImageImport): TexelPass[] {
+  const isRgba8 = source === null || source === 'RGBA8';
+  const isGreyscale = source === 'Lum8' || source === 'LumAlpha8';
+  const passes: TexelPass[] = [];
+  if (options.fixAlphaBorder && isRgba8) passes.push(fixAlphaEdges);
+  if (options.premultAlpha && isRgba8) passes.push(premultiplyAlpha);
+  if (options.invertNormalY) passes.push(isGreyscale ? invertGreyscaleGreen : invertGreen);
+  if (holdsRedGreenOnly(options)) passes.push(keepRedGreen);
+  return passes;
+}
+
+/**
+ * An SVG drawn at `scale` times its own size, rounded, as Godot's SVG loader rasterises it
+ * (`modules/svg/image_loader_svg.cpp:91-103`). The browser draws the vector at the canvas size.
+ * The decoded image at scale 1, or when no 2D canvas is available.
+ */
+function rasterisedAt(texture: THREE.Texture, scale: number): THREE.Texture {
+  const size = imageSize(texture.image);
+  if (scale === 1 || !size) return texture;
+  const canvas = globalThis.document?.createElement('canvas');
+  const context = canvas?.getContext('2d');
+  if (!canvas || !context) return texture;
+  canvas.width = Math.min(SVG_MAX_DIMENSION, Math.max(1, Math.round(size.width * scale)));
+  canvas.height = Math.min(SVG_MAX_DIMENSION, Math.max(1, Math.round(size.height * scale)));
+  context.drawImage(texture.image as CanvasImageSource, 0, 0, canvas.width, canvas.height);
+  const rasterised = copySampling(new THREE.CanvasTexture(canvas), texture);
+  rasterised.flipY = texture.flipY;
+  texture.dispose();
+  return rasterised;
+}
+
+/** `max_dimension` in `image_loader_svg.cpp:94`. */
+const SVG_MAX_DIMENSION = 16384;
 
 /**
  * The RGBA8 pixels of image bytes, top row first, as Godot's layered importer reads its source:
@@ -81,29 +172,33 @@ async function decodeImage(
 }
 
 /**
- * Godot's import-time alpha-border pass (`fixAlphaEdges.ts`) on a decoded texture. It
- * returns the same texture when nothing needs rewriting, and otherwise a `DataTexture` of
- * the rewritten bytes, since a decoded image cannot be edited in place.
+ * Runs `passes` on a decoded texture's bytes. It returns the same texture when no pass changes a
+ * byte, and otherwise a `DataTexture` of the rewritten bytes, since a decoded image cannot be
+ * edited in place. It then disposes the decoded texture, which the caller hands over.
  */
-function applyAlphaBorderFix(texture: THREE.Texture): THREE.Texture {
+function applyTexelPasses(texture: THREE.Texture, passes: TexelPass[]): THREE.Texture {
+  if (passes.length === 0) return texture;
   const pixels = readImagePixels(texture.image);
   if (!pixels) return texture;
 
-  // A DataTexture's own buffer is a cached resource that other consumers share, so the pass
-  // edits a copy of it. A readback is already a fresh buffer.
+  // A DataTexture's own buffer is a cached resource that other consumers share, so the passes
+  // edit a copy of it. A readback is already a fresh buffer.
   const isOwnBuffer = pixels.data === (texture.image as { data?: unknown }).data;
   const data =
     isOwnBuffer || !(pixels.data instanceof Uint8Array) ? new Uint8Array(pixels.data) : pixels.data;
-  if (!fixAlphaEdges(data, pixels.width, pixels.height)) return texture;
+  let changed = false;
+  for (const pass of passes) changed = pass(data, pixels.width, pixels.height) || changed;
+  if (!changed) return texture;
 
-  const fixed = copySampling(
+  const rewritten = copySampling(
     new THREE.DataTexture(data, pixels.width, pixels.height, THREE.RGBAFormat),
     texture
   );
-  fixed.needsUpdate = true;
-  fixed.colorSpace = texture.colorSpace;
+  rewritten.needsUpdate = true;
+  rewritten.colorSpace = texture.colorSpace;
   // The readback is top-row-first, the same orientation the decoded image
   // uploads in, so the loaded texture's own flip decides which way is up.
-  fixed.flipY = texture.flipY;
-  return fixed;
+  rewritten.flipY = texture.flipY;
+  texture.dispose();
+  return rewritten;
 }

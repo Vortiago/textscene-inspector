@@ -256,8 +256,8 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'puts a GLB surface’s own material or its alpha-pass copy on the mesh, which is not React state, and the copy is built once from its source, so only its opacity moves',
   'packages/textscene-core/src/r3f/materials/swappedMaterials.ts':
     'puts one of a surface’s two mounted materials on its mesh, each keyed by its own mount, so a swap changes which material draws and never a program input of one',
-  'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':
-    'the GLB slot writer: `cloneWithMaterials` gives each clone its own copy of the loader’s materials, and `forEachSurfaceMaterial` hands a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
+  'packages/textscene-core/src/resources/formats/glb/surfaceMaterials.ts':
+    'the GLB slot writer: `forEachSurfaceMaterial` hands `cloneWithMaterials` and a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
 };
 
 /**

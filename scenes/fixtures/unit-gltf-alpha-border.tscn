@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: whether a glTF image takes its sidecar's texel passes. `leaf.png` is an opaque green
+; square inside transparent texels whose colour is magenta. Godot imports the image through the
+; texture importer, whose default alpha-border pass gives the transparent texels the green, so the
+; blended, linearly filtered edge fades green. Without the pass it fades through magenta. No other
+; golden moves with the pass, so none shows it.
+
+[ext_resource type="PackedScene" path="res://meshes/unit-gltf-alpha-border/quad.gltf" id="1_quad"]
+
+[node name="GltfAlphaBorder" type="Node3D"]
+
+[node name="Quad" parent="." instance=ExtResource("1_quad")]
