@@ -12,7 +12,7 @@ import {
 import { copySampling } from '../../textures/copySampling';
 import { dropMipChain } from '../../textures/godotTextureFilter';
 import { recordGodotFormat } from '../../textures/sourceColorSpace';
-import { IMAGE_EXTENSIONS } from './extensions';
+import { IMAGE_EXTENSIONS, SVG_MIME_TYPE, imageMimeType } from './extensions';
 import { fileExtension } from '../../fileExtension';
 import type { ImageSourceFormat } from '../../../godot/import/imageSourceFormat.js';
 import {
@@ -22,22 +22,9 @@ import {
   type TextureImportOptions,
 } from '../../../godot/import/textureImport.js';
 
-const SVG_MIME_TYPE = 'image/svg+xml';
-
+/** The MIME type of the image file `path` names, the generic binary type for no image format. */
 export function getMimeType(path: string): string {
-  switch (fileExtension(path)) {
-    case '.png':
-      return 'image/png';
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpeg';
-    case '.svg':
-      return SVG_MIME_TYPE;
-    case '.webp':
-      return 'image/webp';
-    default:
-      return 'application/octet-stream';
-  }
+  return imageMimeType(path) ?? 'application/octet-stream';
 }
 
 export function isTexturePath(path: string): boolean {
@@ -56,6 +43,13 @@ export interface ImageImport {
 
 /** A pass over RGBA8 bytes, top row first, that returns whether any byte changed. */
 type TexelPass = (data: Uint8Array, width: number, height: number) => boolean;
+
+/** A texture after the texel passes, and its RGBA8 bytes when a pass read them. */
+interface PassedTexture {
+  texture: THREE.Texture;
+  /** Undefined when no pass ran or the pixels could not be read. */
+  texels: Uint8Array | undefined;
+}
 
 /**
  * Create a THREE.Texture from image bytes as Godot's texture importer builds it: an SVG rasterised
@@ -83,17 +77,20 @@ export async function createTextureFromBuffer(
  * gets it back when no pass changes a byte, and it is disposed otherwise.
  */
 export function importDecodedImage(texture: THREE.Texture, imported: ImageImport): THREE.Texture {
-  const result = applyTexelPasses(texture, texelPassesFor(imported));
-  if (!imported.options.mipmaps) dropMipChain(result);
-  if (imported.source === null) return result;
-  const format = textureImportFormat(imported.source, imported.options, () => isTranslucent(result));
-  return recordGodotFormat(result, format);
+  const passed = applyTexelPasses(texture, texelPassesFor(imported));
+  if (!imported.options.mipmaps) dropMipChain(passed.texture);
+  if (imported.source === null) return passed.texture;
+  const format = textureImportFormat(imported.source, imported.options, () => isTranslucent(passed));
+  return recordGodotFormat(passed.texture, format);
 }
 
-/** Whether a texel of `texture` uses alpha. One whose pixels cannot be read counts as translucent. */
-function isTranslucent(texture: THREE.Texture): boolean {
-  const pixels = readImagePixels(texture.image);
-  return pixels === undefined || hasTranslucentTexel(pixels.data);
+/**
+ * Whether a texel uses alpha, read from the bytes the passes left, or read back when no pass read
+ * them. A texture whose pixels cannot be read counts as translucent.
+ */
+function isTranslucent({ texture, texels }: PassedTexture): boolean {
+  const bytes = texels ?? readImagePixels(texture.image)?.data;
+  return bytes === undefined || hasTranslucentTexel(bytes);
 }
 
 /**
@@ -176,10 +173,10 @@ async function decodeImage(
  * byte, and otherwise a `DataTexture` of the rewritten bytes, since a decoded image cannot be
  * edited in place. It then disposes the decoded texture, which the caller hands over.
  */
-function applyTexelPasses(texture: THREE.Texture, passes: TexelPass[]): THREE.Texture {
-  if (passes.length === 0) return texture;
+function applyTexelPasses(texture: THREE.Texture, passes: TexelPass[]): PassedTexture {
+  if (passes.length === 0) return { texture, texels: undefined };
   const pixels = readImagePixels(texture.image);
-  if (!pixels) return texture;
+  if (!pixels) return { texture, texels: undefined };
 
   // A DataTexture's own buffer is a cached resource that other consumers share, so the passes
   // edit a copy of it. A readback is already a fresh buffer.
@@ -188,7 +185,7 @@ function applyTexelPasses(texture: THREE.Texture, passes: TexelPass[]): THREE.Te
     isOwnBuffer || !(pixels.data instanceof Uint8Array) ? new Uint8Array(pixels.data) : pixels.data;
   let changed = false;
   for (const pass of passes) changed = pass(data, pixels.width, pixels.height) || changed;
-  if (!changed) return texture;
+  if (!changed) return { texture, texels: data };
 
   const rewritten = copySampling(
     new THREE.DataTexture(data, pixels.width, pixels.height, THREE.RGBAFormat),
@@ -200,5 +197,5 @@ function applyTexelPasses(texture: THREE.Texture, passes: TexelPass[]): THREE.Te
   // uploads in, so the loaded texture's own flip decides which way is up.
   rewritten.flipY = texture.flipY;
   texture.dispose();
-  return rewritten;
+  return { texture: rewritten, texels: data };
 }

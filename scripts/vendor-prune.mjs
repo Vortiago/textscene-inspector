@@ -9,9 +9,10 @@ import { basename } from 'node:path';
 
 /**
  * The importers whose sidecars the previewer reads (ADR-0028): a scene's re-import options, a
- * texture's format and mip chain, and a 3D texture's slices.
+ * texture's format and mip chain, and a 3D texture's slices. `import-sidecar-allowlist.test.mjs`
+ * asserts it against the importers core names.
  */
-const READ_IMPORTERS = new Set(['scene', 'wavefront_obj', 'texture', '3d_texture']);
+export const READ_IMPORTERS = new Set(['scene', 'wavefront_obj', 'texture', '3d_texture']);
 
 export function isPruned(path) {
   const name = basename(path);
@@ -28,6 +29,21 @@ export function isPruned(path) {
 function isReadSidecar(path) {
   const asset = path.slice(0, -'.import'.length);
   if (!existsSync(asset) || isPruned(asset)) return false;
-  const importer = /^importer="([^"]*)"/m.exec(readFileSync(path, 'utf8'))?.[1];
-  return READ_IMPORTERS.has(importer);
+  return READ_IMPORTERS.has(sidecarImporter(readFileSync(path, 'utf8')));
+}
+
+const SECTION_LINE = /^\[([A-Za-z_][A-Za-z0-9_]*)\]$/;
+const IMPORTER_LINE = /^importer="([^"]*)"$/;
+
+/** The `[remap] importer=` a sidecar's text names, or null when it names none. */
+export function sidecarImporter(text) {
+  let section = null;
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    const heading = SECTION_LINE.exec(line);
+    if (heading) section = heading[1];
+    const importer = section === 'remap' ? IMPORTER_LINE.exec(line) : null;
+    if (importer) return importer[1];
+  }
+  return null;
 }

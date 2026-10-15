@@ -1,0 +1,60 @@
+; One variable: an own-world SubViewport whose Environment enables glow, which needs the
+; compositor. Only the root world mounts the compositor: a portal store shares the root's state, so
+; a sub-viewport compositor draws the portal scene through the root camera onto the canvas. Every
+; other glow golden has one world, and no other own-world golden has an Environment.
+
+[gd_scene format=3]
+
+[sub_resource type="Environment" id="Env_root"]
+background_mode = 1
+background_color = Color(0.15, 0.15, 0.25, 1)
+
+[sub_resource type="Environment" id="Env_viewport"]
+background_mode = 1
+background_color = Color(0.3, 0.3, 0.05, 1)
+glow_enabled = true
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_root"]
+shading_mode = 0
+albedo_color = Color(0.8, 0.15, 0.1, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.6
+height = 1.2
+
+[sub_resource type="StandardMaterial3D" id="Mat_viewport"]
+shading_mode = 0
+albedo_color = Color(0.1, 0.8, 0.2, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_root")
+
+; The root world draws only this red box on the blue-grey background.
+[node name="RootBox" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.8, 0, 0)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Mat_root")
+
+; Nothing consumes the target, so a green sphere or the olive background in the frame is the
+; viewport's world drawn where the root's belongs.
+[node name="Viewport" type="SubViewport" parent="."]
+own_world_3d = true
+size = Vector2i(256, 256)
+render_target_update_mode = 4
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Viewport"]
+environment = SubResource("Env_viewport")
+
+[node name="Camera3D" type="Camera3D" parent="Viewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0, 3)
+current = true
+
+[node name="ViewportSphere" type="MeshInstance3D" parent="Viewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_viewport")

@@ -6,6 +6,7 @@
  */
 
 import { PROJECT_FILE_NAME } from '../godot/project/project.js';
+import { pathJoin } from '../godot/string/string.js';
 
 export const RES_SCHEME = 'res://';
 
@@ -60,8 +61,7 @@ export function isWithinRoot(root: string, candidate: string, pathCase: PathCase
 
 /** `relative` under `dir`, with one separator between them. */
 function joinUnder(dir: string, relative: string): string {
-  const root = forwardSlashes(dir);
-  return root.endsWith('/') ? `${root}${relative}` : `${root}/${relative}`;
+  return pathJoin(forwardSlashes(dir), relative);
 }
 
 /**

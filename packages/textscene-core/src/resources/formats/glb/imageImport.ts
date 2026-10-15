@@ -8,7 +8,7 @@ import type { GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoad
 import { importDecodedImage, type ImageImport } from '../image/textureProcessing';
 import { gltfObjects } from '../../../godot/import/gltf';
 import { copyGodotFormat } from '../../textures/sourceColorSpace';
-import { dropMipChain } from '../../textures/godotTextureFilter';
+import { dropMipChain, hasDroppedMipChain } from '../../textures/godotTextureFilter';
 import { forEachSurfaceMaterial } from './surfaceMaterials';
 
 /**
@@ -54,17 +54,8 @@ async function importedImage(
   const bytes = new Uint8Array((await parser.getDependency('bufferView', image.bufferView)) as ArrayBuffer);
   const mimeType = typeof image.mimeType === 'string' ? image.mimeType : undefined;
   const imageImported = await imageImport(sourceIndex, bytes, mimeType);
-  if (!imageImported) return texture;
-  const result = importDecodedImage(texture, imageImported);
-  if (!imageImported.options.mipmaps) result.userData[HAS_NO_MIP_CHAIN] = true;
-  return result;
+  return imageImported ? importDecodedImage(texture, imageImported) : texture;
 }
-
-/**
- * Marks an imported texture with no mip chain, since the loader then sets its sampler's mipmaps.
- * `userData` survives the loader's clones.
- */
-const HAS_NO_MIP_CHAIN = 'textsceneHasNoMipChain';
 
 /**
  * Writes again on each texture under `root` what the loader overwrites after the import. A clone
@@ -77,7 +68,7 @@ export function restoreImportedSampling(root: THREE.Object3D): void {
     for (const value of Object.values(material)) {
       if ((value as THREE.Texture | null)?.isTexture !== true) continue;
       copyGodotFormat(value, value);
-      if (value.userData[HAS_NO_MIP_CHAIN] === true) dropMipChain(value);
+      if (hasDroppedMipChain(value)) dropMipChain(value);
     }
   });
 }

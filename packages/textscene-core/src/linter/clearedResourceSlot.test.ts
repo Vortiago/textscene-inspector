@@ -233,6 +233,9 @@ const SLOTS: Slot[] = [
       prop: 'compositor',
       expected: ['warning worldenvironment-requires-environment'],
     },
+    // A viewport's `world_3d` decides which first-wins group a WorldEnvironment under it joins.
+    // A cleared one passes the parent's world through (viewport.cpp:4674-4677), as an absent one does.
+    { type: 'SubViewport', prop: 'world_3d', expected: [] },
   ]),
   ...at('nodes/animation/animationtree/linter.ts', [
     { type: 'AnimationTree', prop: 'tree_root', expected: ['warning animationtree-missing-tree-root'] },

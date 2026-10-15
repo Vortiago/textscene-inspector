@@ -61,8 +61,8 @@ The lenient parser never rejects a texture property. An unreadable value falls b
 - **Approximated** An AtlasTexture's `margin` is not applied, so a trimmed-atlas layout sits off by the margin.
 - **Approximated** An AtlasTexture's `filter_clip` is not applied, so a filtered cell edge can bleed one texel from its neighbour.
 - **Approximated** A NoiseTexture2D slot draws empty on first load until its build finishes, where Godot waits and draws the texture on its first frame.
-- **Approximated** A VRAM-compressed or lossy image file draws its source texels, without the compression error Godot's import adds (#786).
+- **Approximated** A VRAM-compressed or lossy image file draws its source texels, without the compression error Godot's import adds.
 - **Approximated** A file with no sidecar reads as a fresh import, not as the editor re-imports a texture it sees in 3D.
-- **Approximated** The GPU builds an image file's mip chain, where Godot averages the bytes on the CPU (`core/io/image.cpp:2146-2175`, #787).
-- **Resource gap** An ImageTexture saved in a block-compressed image format (#736) or an integer format draws no texture.
+- **Approximated** The GPU builds an image file's mip chain, where Godot averages the bytes on the CPU (`core/io/image.cpp:2146-2175`).
+- **Resource gap** An ImageTexture saved in a block-compressed image format or an integer format draws no texture.
 - **Not drawn** A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.

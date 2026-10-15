@@ -10,10 +10,10 @@ import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import type { DependencyGraph } from '../dependencyGraph';
 import { decodeImagePixels, getMimeType, isTexturePath } from '../formats/image/textureProcessing';
-import { importSlicesOf } from '../formats/image3d/importSlices';
 import { sliceImage } from '../formats/image3d/texels';
 import { dataTexture3D } from '../textures/dataTexture3D';
 import { readImportSidecar } from './readImportSidecar';
+import { importTexture3DSlices } from '../../parser/importParser';
 
 export function createTexture3DProcessor(
   fileEventBus: FileEventBus | undefined,
@@ -28,7 +28,7 @@ export function createTexture3DProcessor(
       fileEventBus,
       dependencies
     );
-    const slices = importSlicesOf(sidecar);
+    const slices = importTexture3DSlices(sidecar);
     if (!slices) throw new Error(`${path} has no sidecar that imports it as a 3D texture`);
     return slices;
   };

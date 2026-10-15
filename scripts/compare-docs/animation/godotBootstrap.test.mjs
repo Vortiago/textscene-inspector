@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { PREVIEW_LIGHTING_GD } from '../../godot-ref/bootstrap.mjs';
+import { PREVIEW_LIGHTING_GD } from '../../godot-ref/run.mjs';
 import { godotBootstrap, godotBootstrap2D } from './godotBootstrap.mjs';
 
 const script3D = godotBootstrap('res://x.tscn', '/tmp/frames');

@@ -3365,6 +3365,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Own World Glow",
+    "file": "unit-sub-viewport-own-world-glow.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Own World Tonemap",
+    "file": "unit-sub-viewport-own-world-tonemap.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Own World",
     "file": "unit-sub-viewport-own-world.tscn",
     "category": "Unit - Viewports"
