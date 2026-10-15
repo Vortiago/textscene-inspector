@@ -6,6 +6,7 @@
  */
 
 import type { ControlProperties } from '../../nodes/2d/ui/control/types.js';
+import { GrowDirection } from '../../godot/scene/control.js';
 
 /**
  * `Control::LayoutPreset` (0..15) → `[left, top, right, bottom]` anchors, from the
@@ -145,10 +146,7 @@ function orphanSizeCache(state: ControlLayoutState, min: { x: number; y: number 
   };
 }
 
-/** `Control::GrowDirection` (`control.h:59-62`). */
-const GROW_DIRECTION_BEGIN = 0;
-const GROW_DIRECTION_END = 1;
-const GROW_DIRECTION_BOTH = 2;
+const { GROW_DIRECTION_BEGIN, GROW_DIRECTION_END, GROW_DIRECTION_BOTH } = GrowDirection;
 
 /**
  * `Control::LayoutPreset` (0..15) → implied `grow_horizontal`, from the first `switch`

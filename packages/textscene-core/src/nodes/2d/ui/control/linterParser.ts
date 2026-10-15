@@ -18,6 +18,7 @@ import {
   splitTopLevel,
   TYPED_WRAPPER_RE,
 } from '../../../../godot/index.js';
+import { GrowDirection } from '../../../../godot/scene/control.js';
 
 /**
  * The four `accessibility_*_nodes` properties (control.cpp:4313-4316) have `TypedArray<NodePath>`
@@ -112,10 +113,18 @@ validatorRegistry.registerAll(
     offset_bottom: v.float('offset_bottom'),
     // control.cpp:4261, ENUM "Left,Right,Both". set_h_grow_direction:
     // `ERR_FAIL_INDEX((int)p_direction, 3)` (control.cpp:861).
-    grow_horizontal: v.int('grow_horizontal', { min: 0, max: 2, enforced: 'control.cpp:861' }),
+    grow_horizontal: v.int('grow_horizontal', {
+      min: GrowDirection.GROW_DIRECTION_BEGIN,
+      max: GrowDirection.GROW_DIRECTION_BOTH,
+      enforced: 'control.cpp:861',
+    }),
     // control.cpp:4262, ENUM "Top,Bottom,Both". set_v_grow_direction:
     // `ERR_FAIL_INDEX((int)p_direction, 3)` (control.cpp:878).
-    grow_vertical: v.int('grow_vertical', { min: 0, max: 2, enforced: 'control.cpp:878' }),
+    grow_vertical: v.int('grow_vertical', {
+      min: GrowDirection.GROW_DIRECTION_BEGIN,
+      max: GrowDirection.GROW_DIRECTION_BOTH,
+      enforced: 'control.cpp:878',
+    }),
     rotation: v.float('rotation'),
     scale: v.vector2('scale'),
     pivot_offset: v.vector2('pivot_offset'),
