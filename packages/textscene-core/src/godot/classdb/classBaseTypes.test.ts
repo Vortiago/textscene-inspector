@@ -58,12 +58,22 @@ describe('CLASS_BASE_TYPES', () => {
 
 describe('classBaseChain', () => {
   it('walks a node chain and a resource chain alike, nearest first', () => {
-    expect(classBaseChain('MeshInstance3D')[0]).toBe('GeometryInstance3D');
-    expect(classBaseChain('BoxMesh')[0]).toBe('PrimitiveMesh');
+    expect(classBaseChain('Sprite2D')).toEqual(['Node2D', 'CanvasItem', 'Node']);
+    expect(classBaseChain('BoxMesh')).toEqual(['PrimitiveMesh', 'Mesh', 'Resource']);
+  });
+
+  it('gives a table terminal no ancestors', () => {
+    expect(classBaseChain('Node')).toEqual([]);
+    expect(classBaseChain('Resource')).toEqual([]);
   });
 
   it('gives an unknown class no ancestors', () => {
     expect(classBaseChain('NotAClass')).toEqual([]);
+  });
+
+  it('reads no key off Object.prototype for a type name a .tscn chose', () => {
+    expect(classBaseChain('__proto__')).toEqual([]);
+    expect(classBaseChain('constructor')).toEqual([]);
   });
 });
 
@@ -90,7 +100,15 @@ describe('classInheritanceChain', () => {
     ]);
   });
 
+  it('continues past a table terminal and past RefCounted to Object', () => {
+    expect(classInheritanceChain('Node')).toEqual(['Node', 'Object']);
+    expect(classInheritanceChain('Resource')).toEqual(['Resource', 'RefCounted', 'Object']);
+    expect(classInheritanceChain('RefCounted')).toEqual(['RefCounted', 'Object']);
+    expect(classInheritanceChain('Object')).toEqual(['Object']);
+  });
+
   it('is only the name for a class neither hierarchy knows (edge case)', () => {
     expect(classInheritanceChain('constructor')).toEqual(['constructor']);
+    expect(classInheritanceChain('__proto__')).toEqual(['__proto__']);
   });
 });

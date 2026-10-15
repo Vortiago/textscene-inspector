@@ -6,7 +6,7 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { classBaseChain, classInheritanceChain } from '../../godot/classdb/classBaseTypes.js';
+import { classInheritanceChain } from '../../godot/classdb/classBaseTypes.js';
 import { validatorRegistry } from '../ValidatorRegistry.js';
 import { ASYMMETRY_ALLOWLIST } from './propertyGrammarParityAllowlist.js';
 import {
@@ -19,9 +19,9 @@ import {
 
 /** Validator keys registered directly for a node type or any of its ancestors. */
 export function getFullValidatorKeys(nodeType: string): Set<string> {
-  const result = new Set(validatorRegistry.getOwnKeys(nodeType));
-  for (const base of classBaseChain(nodeType)) {
-    for (const k of validatorRegistry.getOwnKeys(base)) result.add(k);
+  const result = new Set<string>();
+  for (const type of classInheritanceChain(nodeType)) {
+    for (const k of validatorRegistry.getOwnKeys(type)) result.add(k);
   }
   return result;
 }

@@ -1,7 +1,7 @@
 /**
- * Every class → base hop the linter resolves a property against, the node and resource
- * hierarchies in one table, so a Resource's validators sit on the class that declares them
- * (`BaseMaterial3D`). The hierarchies are disjoint under `Object`, and a test asserts it, since
+ * Every class → base hop in one table, the node and resource hierarchies together, and the walks
+ * over it: the linter resolves a validator, the theme lookup a type and the language features a
+ * property through them. The hierarchies are disjoint under `Object`, and a test asserts it, since
  * a spread keeps the last of a colliding pair.
  */
 
@@ -46,13 +46,18 @@ export function classBaseChain(className: string): readonly string[] {
 }
 
 /**
- * The classes the tables end on, with the ancestry above them (`node.h:51`, `resource.h:54`,
- * `ref_counted.h:37`). The tables stop at `Node` and `Resource`, so `Object` has no entry there.
+ * The hops above the classes the tables end on (`node.h:51`, `resource.h:54`, `ref_counted.h:37`).
+ * The tables stop at `Node` and `Resource`, so `RefCounted` and `Object` have no entry there.
  */
-const TERMINAL_ANCESTRY: Readonly<Record<string, readonly string[]>> = {
-  Node: ['Object'],
-  Resource: ['RefCounted', 'Object'],
+const ROOT_BASE_TYPES: Readonly<Record<string, string>> = {
+  Node: 'Object',
+  Resource: 'RefCounted',
+  RefCounted: 'Object',
 };
+
+function rootBaseOf(className: string): string | undefined {
+  return Object.hasOwn(ROOT_BASE_TYPES, className) ? ROOT_BASE_TYPES[className] : undefined;
+}
 
 /**
  * `ClassDB::get_inheritance_chain_nocheck` (`core/object/class_db.cpp:333-354`): `className`, then
@@ -60,6 +65,6 @@ const TERMINAL_ANCESTRY: Readonly<Record<string, readonly string[]>> = {
  */
 export function classInheritanceChain(className: string): readonly string[] {
   const chain = [className, ...classBaseChain(className)];
-  const terminal = chain.at(-1)!;
-  return Object.hasOwn(TERMINAL_ANCESTRY, terminal) ? [...chain, ...TERMINAL_ANCESTRY[terminal]!] : chain;
+  for (let base = rootBaseOf(chain.at(-1)!); base !== undefined; base = rootBaseOf(base)) chain.push(base);
+  return chain;
 }
