@@ -4,6 +4,8 @@
  * (`servers/rendering/rendering_server.cpp:3773-3774`).
  */
 
+export const MSAA_DISABLED = 0;
+
 /** The samples per pixel of MSAA_2X, MSAA_4X and MSAA_8X (`texture_storage.cpp:3607-3612`). */
 const MULTISAMPLED_COUNTS = [2, 4, 8] as const;
 

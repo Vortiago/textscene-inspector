@@ -35,9 +35,9 @@ import {
   selectViewportCamera,
   selectViewportCamera2D,
   viewportAspect,
-  viewportMsaaSamples,
+  viewportMsaaMode,
 } from './offscreenViewport';
-import { useDeviceSampleCount } from '../../../r3f/deviceSampleCount';
+import { useMultisampledTarget } from '../../../r3f/multisampledTarget';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
@@ -114,13 +114,11 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
 
   // Carries the storage and the tonemap contracts: Godot tonemaps a
   // sub-viewport's render into its target as it tonemaps the main view's.
-  const samples = useDeviceSampleCount(viewportMsaaSamples(properties, kind));
-  const target = useMemo(
-    () => createOffscreenTarget(width, height, node.name, { samples }),
-    [width, height, node.name, samples]
+  const createTarget = useCallback(
+    () => createOffscreenTarget(width, height, node.name),
+    [width, height, node.name]
   );
-
-  useEffect(() => () => target.dispose(), [target]);
+  const target = useMultisampledTarget(viewportMsaaMode(properties, kind), createTarget);
   // A 3D portal renders its lights only through this pass, so it fits them itself and draws its
   // own depth prepass. An inline pass renders the parent scene, which its own canvas serves, and a
   // 2D portal holds no 3D surface.

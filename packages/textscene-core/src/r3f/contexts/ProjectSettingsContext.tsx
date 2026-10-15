@@ -10,13 +10,13 @@ import {
   parseProjectSettings,
   projectThemeScale,
   projectViewportSize,
-  projectMsaaSamples,
+  projectMsaaModes,
   DEFAULT_THEME_SCALE,
   DEFAULT_VIEWPORT_WIDTH,
   DEFAULT_VIEWPORT_HEIGHT,
   type ProjectSettings,
   type ProjectViewportSize,
-  type MsaaSamples,
+  type MsaaModes,
 } from '../../parser/projectSettingsParser.js';
 import { PROJECT_FILE_PATH } from '../../godot/project/project.js';
 import type { FileEventBus } from '../../resources/FileEventBus.js';
@@ -31,7 +31,7 @@ export interface ProjectSettingsValue {
   /** `display/window/size/viewport_*`, or Godot's 1152x648 without a project. */
   viewportSize: ProjectViewportSize;
   /** The root viewport's `rendering/anti_aliasing/quality/msaa_*`, or no MSAA without a project. */
-  msaaSamples: MsaaSamples;
+  msaaModes: MsaaModes;
 }
 
 const DEFAULT_VALUE: ProjectSettingsValue = {
@@ -41,7 +41,7 @@ const DEFAULT_VALUE: ProjectSettingsValue = {
     width: DEFAULT_VIEWPORT_WIDTH,
     height: DEFAULT_VIEWPORT_HEIGHT,
   },
-  msaaSamples: projectMsaaSamples(null),
+  msaaModes: projectMsaaModes(null),
 };
 
 const ProjectSettingsContext = createContext<ProjectSettingsValue>(DEFAULT_VALUE);
@@ -111,7 +111,7 @@ export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsP
       settings,
       themeScale: projectThemeScale(settings),
       viewportSize: projectViewportSize(settings),
-      msaaSamples: projectMsaaSamples(settings),
+      msaaModes: projectMsaaModes(settings),
     }),
     [settings]
   );

@@ -18,7 +18,10 @@ after creation.
 ## Decision
 
 Both canvases create their context with `antialias: false`. Each MSAA path draws into a render
-target at the count Godot would draw on this device (`r3f/deviceSampleCount.ts`):
+target at the count Godot would draw on this device (`r3f/multisampledTarget.ts`). Godot keeps the
+counts that the colour and the depth attachments both support, for the format each really has
+(`rendering_device_driver_vulkan.cpp:1999`). So the module takes the colour storage from the target's
+own texture, as three allocates it:
 
 - The root viewport's `msaa_3d` multisamples the compositor's scene buffer, so it resolves in linear
   HDR before `GodotToneMapEffect` applies the curve. The compositor mounts for MSAA alone.

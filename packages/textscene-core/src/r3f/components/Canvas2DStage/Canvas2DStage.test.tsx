@@ -51,7 +51,7 @@ vi.mock('../../contexts/ProjectSettingsContext', async (importOriginal) => {
       settings: null,
       themeScale: 1,
       viewportSize: projectViewport.size,
-      msaaSamples: { msaa2D: 0, msaa3D: 0 },
+      msaaModes: { msaa2D: 0, msaa3D: 0 },
     }),
   };
 });

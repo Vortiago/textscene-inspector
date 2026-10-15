@@ -26,9 +26,9 @@ import {
   createOffscreenTarget,
   orthoFrameForSize,
   renderToOffscreenTarget,
-  viewportMsaaSamples,
+  viewportMsaaMode,
 } from './offscreenViewport.js';
-import { useDeviceSampleCount } from '../../../r3f/deviceSampleCount.js';
+import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
 import { viewportTargetSize } from './targetSize.js';
@@ -57,16 +57,10 @@ export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
  * once: a 0.5 grey ColorRect reaches it as rgb(162), not a pre-tonemapped rgb(196).
  * Hence sRGB storage and no pre-tonemap flag, the opposite of the 3D/2D pass.
  */
-function createRasterTarget(
-  width: number,
-  height: number,
-  name: string,
-  samples: number
-): THREE.WebGLRenderTarget {
+function createRasterTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
   return createOffscreenTarget(width, height, name, {
     colorSpace: THREE.SRGBColorSpace,
     preTonemapped: false,
-    samples,
   });
 }
 
@@ -86,13 +80,15 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     return scene;
   }, [node.name]);
 
-  // Controls are canvas items, so the 2D buffer's mode applies.
-  const samples = useDeviceSampleCount(viewportMsaaSamples(node.properties as SubViewportProperties, '2d'));
-  const target = useMemo(
-    () => createRasterTarget(width, height, node.name, samples),
-    [width, height, node.name, samples]
+  const createTarget = useCallback(
+    () => createRasterTarget(width, height, node.name),
+    [width, height, node.name]
   );
-  useEffect(() => () => target.dispose(), [target]);
+  // Controls are canvas items, so the 2D buffer's mode applies.
+  const target = useMultisampledTarget(
+    viewportMsaaMode(node.properties as SubViewportProperties, '2d'),
+    createTarget
+  );
 
   const camera = useMemo(() => new THREE.OrthographicCamera(), []);
   useEffect(() => {

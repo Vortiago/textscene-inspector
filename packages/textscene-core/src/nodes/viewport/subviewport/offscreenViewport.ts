@@ -6,7 +6,6 @@
 
 import * as THREE from 'three';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
-import { msaaSampleCount } from '../../../godot/rendering/msaa';
 import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
@@ -21,14 +20,10 @@ export function createOffscreenTarget(
   width: number,
   height: number,
   name: string,
-  options: { colorSpace?: THREE.ColorSpace; preTonemapped?: boolean; samples?: number } = {}
+  options: { colorSpace?: THREE.ColorSpace; preTonemapped?: boolean } = {}
 ): THREE.WebGLRenderTarget {
-  const { colorSpace = THREE.LinearSRGBColorSpace, preTonemapped = true, samples = 0 } = options;
-  const target = new THREE.WebGLRenderTarget(width, height, {
-    depthBuffer: true,
-    stencilBuffer: false,
-    samples,
-  });
+  const { colorSpace = THREE.LinearSRGBColorSpace, preTonemapped = true } = options;
+  const target = new THREE.WebGLRenderTarget(width, height, { depthBuffer: true, stencilBuffer: false });
   // An sRGB tag would stack a shader encode on three's SRGB8 hardware encode
   // and darken every sample.
   target.texture.colorSpace = colorSpace;
@@ -44,14 +39,14 @@ export function createOffscreenTarget(
 }
 
 /**
- * The samples a sub-viewport's pass takes: `msaa_3d` for the 3D world it draws, `msaa_2d` for its
+ * The MSAA mode a sub-viewport's pass takes: `msaa_3d` for the 3D world it draws, `msaa_2d` for its
  * canvas items. Godot keeps one mode per buffer (`renderer_viewport.cpp:1354-1370`).
  */
-export function viewportMsaaSamples(
+export function viewportMsaaMode(
   modes: Pick<SubViewportProperties, 'msaa_2d' | 'msaa_3d'>,
   kind: '2d' | '3d'
 ): number {
-  return msaaSampleCount(kind === '3d' ? modes.msaa_3d : modes.msaa_2d);
+  return kind === '3d' ? modes.msaa_3d : modes.msaa_2d;
 }
 
 /**

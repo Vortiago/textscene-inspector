@@ -4,8 +4,17 @@
  * pass, so it owns the tone curve when any is live.
  */
 
+import * as THREE from 'three';
 import { glowParamsFor, type GlowParams } from '../../resources/environment/godotGlow';
 import type { EnvironmentSettings } from '../../resources/environment/types';
+import type { TargetTexture } from '../multisampledTarget';
+
+/** The scene buffer's texture: half float, which postprocessing builds at the composer's `frameBufferType`. */
+export const SCENE_BUFFER: TargetTexture = {
+  type: THREE.HalfFloatType,
+  colorSpace: THREE.NoColorSpace,
+  internalFormat: null,
+};
 
 export interface CompositorPass {
   /** Null when the environment has no glow. */

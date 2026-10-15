@@ -12,6 +12,7 @@ import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
 export interface CanvasMsaaFrame {
   /** Draws `scene` through the target and copies the result to the target bound before. */
   render(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void;
+  /** Disposes the copy pass. The caller owns the target. */
   dispose(): void;
 }
 
@@ -22,8 +23,8 @@ void main() {
   gl_FragColor = texelFetch(frame, ivec2(gl_FragCoord.xy), 0);
 }`;
 
-export function createCanvasMsaaFrame(samples: number): CanvasMsaaFrame {
-  const target = createFrameTarget(samples);
+/** The frame that draws through `target`, a multisampled target that `createFrameTarget` built. */
+export function createCanvasMsaaFrame(target: THREE.WebGLRenderTarget): CanvasMsaaFrame {
   const copy = fullScreenPass('Canvas2D::msaaCopy', COPY_FRAGMENT, { frame: { value: target.texture } });
   const drawingBuffer = new THREE.Vector2();
 
@@ -39,7 +40,6 @@ export function createCanvasMsaaFrame(samples: number): CanvasMsaaFrame {
       drawFullScreen(gl, copy, previous);
     },
     dispose() {
-      target.dispose();
       copy.dispose();
     },
   };
@@ -51,8 +51,8 @@ export function createCanvasMsaaFrame(samples: number): CanvasMsaaFrame {
  * would hold and items blend in the same space. The default sRGB format, SRGB8_ALPHA8, would blend
  * in linear.
  */
-function createFrameTarget(samples: number): THREE.WebGLRenderTarget {
-  const target = new THREE.WebGLRenderTarget(1, 1, { samples, depthBuffer: true, stencilBuffer: false });
+export function createFrameTarget(): THREE.WebGLRenderTarget {
+  const target = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: true, stencilBuffer: false });
   target.texture.colorSpace = THREE.SRGBColorSpace;
   target.texture.internalFormat = 'RGBA8';
   target.texture.minFilter = THREE.NearestFilter;

@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { createCanvasMsaaFrame } from './canvasMsaaFrame';
+import { createCanvasMsaaFrame, createFrameTarget } from './canvasMsaaFrame';
 
 type Target = THREE.WebGLRenderTarget | null;
 
@@ -28,10 +28,16 @@ function recordingRenderer(width: number, height: number) {
 const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera();
 
+function multisampledFrameTarget(samples: number): THREE.WebGLRenderTarget {
+  const target = createFrameTarget();
+  target.samples = samples;
+  return target;
+}
+
 describe('createCanvasMsaaFrame', () => {
-  it('draws the world into a target with the samples msaa_2d asks for', () => {
+  it('draws the world into the multisampled target at the drawing buffer size', () => {
     const { gl, draws } = recordingRenderer(640, 360);
-    const frame = createCanvasMsaaFrame(4);
+    const frame = createCanvasMsaaFrame(multisampledFrameTarget(4));
 
     frame.render(gl, scene, camera);
 
@@ -41,7 +47,7 @@ describe('createCanvasMsaaFrame', () => {
 
   it('stores sRGB-encoded values in RGBA8, so items blend in the space the drawing buffer blends in', () => {
     const { gl, draws } = recordingRenderer(64, 64);
-    const frame = createCanvasMsaaFrame(2);
+    const frame = createCanvasMsaaFrame(multisampledFrameTarget(2));
 
     frame.render(gl, scene, camera);
 
@@ -53,7 +59,7 @@ describe('createCanvasMsaaFrame', () => {
 
   it('copies the resolved frame to the drawing buffer after the world draws', () => {
     const { gl, draws } = recordingRenderer(64, 64);
-    const frame = createCanvasMsaaFrame(2);
+    const frame = createCanvasMsaaFrame(multisampledFrameTarget(2));
 
     frame.render(gl, scene, camera);
 
@@ -64,7 +70,7 @@ describe('createCanvasMsaaFrame', () => {
   });
 
   it('follows the drawing buffer when the canvas resizes (edge case)', () => {
-    const frame = createCanvasMsaaFrame(4);
+    const frame = createCanvasMsaaFrame(multisampledFrameTarget(4));
     frame.render(recordingRenderer(64, 64).gl, scene, camera);
     const resized = recordingRenderer(128, 32);
 
