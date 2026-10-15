@@ -4,12 +4,13 @@ import {
   installSunShadowUniforms,
   SLOT_MATRIX_ROWS,
   SUN_RANGE_BEGINS,
+  SUN_SHADOW_FADES,
   SUN_SHADOW_ROWS,
   SUN_SOFT_SHADOWS,
   writeSunShadowUniforms,
 } from './sunShadowUniforms';
 import { SplitSunLight } from './splitSun';
-import { SPLIT_SLOTS } from './splitShadow';
+import { NO_SHADOW_FADE, SPLIT_SLOTS } from './splitShadow';
 import { litUniformArray } from '../testing/litUniformArray';
 
 /** Floats one slot takes: three vec4 rows. */
@@ -24,6 +25,13 @@ function sunWithSlotMatrices(base = 0): SplitSunLight {
       .getMatrix(slot)
       .set(slot + 1, 0, 0, base + 0.5, 0, slot + 2, 0, base + 0.25, 0, 0, slot + 3, base + 0.125, 0, 0, 0, 1);
   }
+  return sun;
+}
+
+/** A split sun that fades from `from` to `to`. */
+function fadingSun(from: number, to: number): SplitSunLight {
+  const sun = new SplitSunLight();
+  sun.shadow.fade = { from, to };
   return sun;
 }
 
@@ -79,6 +87,19 @@ describe('writeSunShadowUniforms', () => {
     expect([...rangeBegins.subarray(0, 8)]).toEqual([0, 1, 2, 3, 40, 41, 42, 43]);
   });
 
+  it("writes each sun's fade, in the same order as the rows", () => {
+    const fades = written([new THREE.SpotLight(), fadingSun(64, 80), fadingSun(40, 50)], SUN_SHADOW_FADES);
+    expect([...fades.subarray(0, 4)]).toEqual([64, 80, 40, 50]);
+  });
+
+  it('writes no fade for a sun no fit has placed (edge case)', () => {
+    written([fadingSun(64, 80)], SUN_SHADOW_FADES);
+    const unplaced = new SplitSunLight();
+    expect(unplaced.shadow.fade).toBe(NO_SHADOW_FADE);
+    const fades = written([unplaced], SUN_SHADOW_FADES);
+    expect([...fades.subarray(0, 2)]).toEqual([0, 0]);
+  });
+
   it('writes nothing for a render without a sun shadow (error case)', () => {
     writtenRows([sunWithSlotMatrices(10)]);
     const rows = writtenRows([new THREE.PointLight()]);
@@ -87,7 +108,7 @@ describe('writeSunShadowUniforms', () => {
 });
 
 describe('installSunShadowUniforms', () => {
-  it.each([SUN_SHADOW_ROWS, SUN_SOFT_SHADOWS, SUN_RANGE_BEGINS])(
+  it.each([SUN_SHADOW_ROWS, SUN_SOFT_SHADOWS, SUN_RANGE_BEGINS, SUN_SHADOW_FADES])(
     'gives every lit built-in material %s',
     (name) => {
       installSunShadowUniforms();
