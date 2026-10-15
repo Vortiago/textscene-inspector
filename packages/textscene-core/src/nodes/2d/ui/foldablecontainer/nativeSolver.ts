@@ -27,7 +27,6 @@ import { STYLE_FILL } from '../../../../r3f/controls/godotDefaultTheme';
 import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
-  AutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
@@ -38,6 +37,7 @@ import { TITLE_POSITION_BOTTOM, TITLE_POSITION_TOP } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `SceneStringName(font)` and `"font_size"`: the theme font keys of FoldableContainer (`foldable_container.cpp:568-569`). */
 const FOLDABLE_CONTAINER_THEME_FONT_KEY = 'font';
@@ -221,7 +221,7 @@ function foldableContainerTitleMetrics(
       ? shapeText(title, {
           fontSizePx,
           boxWidthPx: 0,
-          autowrapMode: AutowrapMode.OFF,
+          autowrapMode: AutowrapMode.AUTOWRAP_OFF,
           lineSpacingPx: 0,
           fontMetrics,
         })

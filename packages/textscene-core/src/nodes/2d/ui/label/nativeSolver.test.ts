@@ -16,7 +16,6 @@ import { makeBoxContainerLayout, makeBoxContainerMinimumSize } from '../shared/b
 import type { LabelProperties } from './types';
 import {
   shapeText,
-  AutowrapMode,
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
@@ -42,6 +41,7 @@ import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/contro
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { resolveLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import * as logger from '../../../../logger';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 // text_server.h:90-96 numbers VisibleCharactersBehavior from VC_CHARS_BEFORE_SHAPING = 0.
 const VC_CHARS_AFTER_SHAPING = 1;
@@ -190,7 +190,7 @@ describe('labelMinimumSize — autowrap ON reports the WRAPPED height once a pri
     const full = shapeText('AB AB', {
       fontSizePx: 16,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     }).widthPx;
     // The discriminating band: trunc(box) < full <= box. Vacuous if `full`
@@ -413,7 +413,7 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
   const FONT_SIZE = 16;
   const PITCH = 26; // getFontLinePitchPx(OPEN_SANS_METRICS, 16)
 
-  function layoutFor(text: string, boxWidthPx = 0, autowrapMode = AutowrapMode.OFF) {
+  function layoutFor(text: string, boxWidthPx = 0, autowrapMode = AutowrapMode.AUTOWRAP_OFF) {
     return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode, lineSpacingPx: 3 });
   }
 
@@ -530,7 +530,7 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
     const layout = shapeText('Wave rift', {
       fontSizePx: FONT_SIZE,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     });
     return { ...layout, lines: layout.lines.map((l) => ({ ...l, widthPx })), widthPx };
@@ -625,7 +625,7 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
       const layout = shapeText('A B C\nD', {
         fontSizePx: FONT_SIZE,
         boxWidthPx: 0,
-        autowrapMode: AutowrapMode.OFF,
+        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
         lineSpacingPx: 3,
       });
       const placements = layoutLabelLines(layout, boxWidthPx, 200, 3, undefined);
@@ -696,7 +696,7 @@ describe('labelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:
     const raw = shapeText('Master volume', {
       fontSizePx: 16,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     }).widthPx;
     // Godot 4.6.3: `ThemeDB.fallback_font.get_string_size("Master volume", HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x`
@@ -1029,7 +1029,7 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
     const layout = shapeText('Wave rift', {
       fontSizePx: FONT_SIZE,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     });
     return { ...layout, lines: layout.lines.map((l) => ({ ...l, widthPx })), widthPx };

@@ -14,11 +14,7 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapedTextSizeWidthPx, soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  OverrunBehavior,
-  overrunFlagsForBehavior,
-  trimLineToWidth,
-} from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
@@ -35,6 +31,7 @@ import {
 } from './nativeSolver';
 import { FOLDABLE_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { TITLE_POSITION_TOP, type FoldableContainerProperties } from './types';
+import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 const ARROW_ICON_URL: Record<FoldableContainerArrow, string> = {
   expanded: FOLDABLE_CONTAINER_ICONS.expandedArrow,
@@ -102,7 +99,7 @@ export function FoldableContainer({
   // `text_buf->set_width(title_text_width)` (`foldable_container.cpp:307`) sets the trim
   // `TextParagraph::draw` applies, so the drawn title is the trimmed shape.
   const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.titleTextOverrunBehavior ?? OverrunBehavior.NO_TRIMMING),
+    () => overrunFlagsForBehavior(props.titleTextOverrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
     [props.titleTextOverrunBehavior]
   );
   const trimmedLayout = useMemo(() => {

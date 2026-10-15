@@ -6,7 +6,7 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { CONTAINER_ALIGNMENT } from '../../../../godot/scene/container.js';
+import { ContainerAlignment, CONTAINER_ALIGNMENT_NAMES } from '../../../../godot/scene/container.js';
 import { v } from '../../../../linter/validators/index.js';
 
 // aspect_ratio_container.cpp:189, PROPERTY_HINT_ENUM "Width Controls
@@ -29,18 +29,24 @@ validatorRegistry.registerAll('AspectRatioContainer', {
   ratio: v.float('ratio', { min: 0.001, hinted: 'aspect_ratio_container.cpp:188' }),
   // aspect_ratio_container.cpp:189. set_stretch_mode
   // (aspect_ratio_container.cpp:56-62) assigns unconditionally, no ERR_FAIL.
-  stretch_mode: v.enumInt('stretch_mode', 0, 3, STRETCH_MODE, {
-    hinted: 'aspect_ratio_container.cpp:189',
-  }),
+  stretch_mode: v.enumInt('stretch_mode', 0, 3, STRETCH_MODE, { hinted: 'aspect_ratio_container.cpp:189' }),
   // aspect_ratio_container.cpp:192, PROPERTY_HINT_ENUM "Begin,Center,End", the same
   // AlignmentMode values as BoxContainer's (aspect_ratio_container.h:50-54).
   // set_alignment_horizontal (aspect_ratio_container.cpp:64-70) assigns unconditionally.
-  alignment_horizontal: v.enumInt('alignment_horizontal', 0, 2, CONTAINER_ALIGNMENT, {
-    hinted: 'aspect_ratio_container.cpp:192',
-  }),
+  alignment_horizontal: v.enumInt(
+    'alignment_horizontal',
+    ContainerAlignment.ALIGNMENT_BEGIN,
+    ContainerAlignment.ALIGNMENT_END,
+    CONTAINER_ALIGNMENT_NAMES,
+    { hinted: 'aspect_ratio_container.cpp:192' }
+  ),
   // aspect_ratio_container.cpp:193. set_alignment_vertical
   // (aspect_ratio_container.cpp:72-78) assigns unconditionally, no ERR_FAIL.
-  alignment_vertical: v.enumInt('alignment_vertical', 0, 2, CONTAINER_ALIGNMENT, {
-    hinted: 'aspect_ratio_container.cpp:193',
-  }),
+  alignment_vertical: v.enumInt(
+    'alignment_vertical',
+    ContainerAlignment.ALIGNMENT_BEGIN,
+    ContainerAlignment.ALIGNMENT_END,
+    CONTAINER_ALIGNMENT_NAMES,
+    { hinted: 'aspect_ratio_container.cpp:193' }
+  ),
 });

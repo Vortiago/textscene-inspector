@@ -7,9 +7,10 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TextRun, type TextRunProps } from './TextRun';
-import { shapeText, AutowrapMode } from './textLayout';
+import { shapeText } from './textLayout';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
@@ -17,7 +18,7 @@ function layoutFor(text: string, uppercase = false) {
   return shapeText(text, {
     fontSizePx: 16,
     boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     uppercase,
     lineSpacingPx: 3,
   });
@@ -89,7 +90,7 @@ describe('<TextRun>', () => {
     const layout = shapeText('A', {
       fontSizePx: 16,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
       preserveControl: true,
     });
@@ -119,7 +120,7 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
     return shapeText(text, {
       fontSizePx: 16,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       fontMetrics: CANVAS_METRICS,
       lineSpacingPx: 3,
     });

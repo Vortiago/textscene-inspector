@@ -37,9 +37,7 @@ const AIM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
     Vector3Axis.X,
     Vector3Axis.Z,
     VECTOR3_AXIS_NAMES,
-    {
-      hinted: 'aim_modifier_3d.cpp:93',
-    }
+    { hinted: 'aim_modifier_3d.cpp:93' }
   ),
   // aim_modifier_3d.cpp:94, Variant::BOOL, PROPERTY_HINT_NONE.
   use_secondary_rotation: v.boolean('use_secondary_rotation'),

@@ -9,9 +9,12 @@ import '../basebutton/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import {
-  OVERRUN_BEHAVIOR,
-  STRUCTURED_TEXT_PARSER,
-  TEXT_DIRECTION,
+  OverrunBehavior,
+  OVERRUN_BEHAVIOR_NAMES,
+  StructuredTextParser,
+  STRUCTURED_TEXT_PARSER_NAMES,
+  TextDirection,
+  TEXT_DIRECTION_NAMES,
 } from '../../../../godot/text/textServerEnums.js';
 
 const UNDERLINE_MODE = {
@@ -42,26 +45,40 @@ validatorRegistry.registerAll('LinkButton', {
   // link_button.cpp:349: PROPERTY_HINT_ENUM, 7 entries, TextServer::OverrunBehavior 0 .. 6
   // (servers/text/text_server.h:123-130). set_text_overrun_behavior (link_button.cpp:70-77) assigns
   // unconditionally.
-  text_overrun_behavior: v.enumInt('text_overrun_behavior', 0, 6, OVERRUN_BEHAVIOR, {
-    hinted: 'link_button.cpp:349',
-  }),
+  text_overrun_behavior: v.enumInt(
+    'text_overrun_behavior',
+    OverrunBehavior.OVERRUN_NO_TRIMMING,
+    OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE,
+    OVERRUN_BEHAVIOR_NAMES,
+    { hinted: 'link_button.cpp:349' }
+  ),
   // link_button.cpp:353: PROPERTY_HINT_ENUM "Auto,Left-to-Right,Right-to-Left,Inherited". set_text_direction
   // (link_button.cpp:128-135) enforces `ERR_FAIL_COND((int)p_text_direction < -1 || (int)p_text_direction > 3)`,
   // as Button does (button.cpp:637), so -1 is legal although the hint does not name it.
-  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
-    hinted: 'link_button.cpp:353',
-    enforced: 'link_button.cpp:129',
-    enforcedMin: { at: -1 },
-  }),
+  text_direction: v.enumInt(
+    'text_direction',
+    TextDirection.TEXT_DIRECTION_AUTO,
+    TextDirection.TEXT_DIRECTION_INHERITED,
+    TEXT_DIRECTION_NAMES,
+    {
+      hinted: 'link_button.cpp:353',
+      enforced: 'link_button.cpp:129',
+      enforcedMin: { at: -1 },
+    }
+  ),
   // link_button.cpp:354: PROPERTY_HINT_LOCALE_ID. set_language (link_button.cpp:141-151) assigns unconditionally.
   language: v.quotedString('language'),
   // link_button.cpp:355: PROPERTY_HINT_ENUM "Default,URI,File,Email,List,None,Custom" over STRUCTURED_TEXT_*
   // 0 .. 6 (servers/text/text_server.cpp:681-687, text_server.h:214-222). The hint labels index 5 "None",
   // but the constant is STRUCTURED_TEXT_GDSCRIPT. set_structured_text_bidi_override
   // (link_button.cpp:83-89) assigns unconditionally.
-  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
-    hinted: 'link_button.cpp:355',
-  }),
+  structured_text_bidi_override: v.enumInt(
+    'structured_text_bidi_override',
+    StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
+    StructuredTextParser.STRUCTURED_TEXT_CUSTOM,
+    STRUCTURED_TEXT_PARSER_NAMES,
+    { hinted: 'link_button.cpp:355' }
+  ),
   // link_button.cpp:356: an ARRAY with no hint, so never written wrapped.
   // set_structured_text_bidi_override_options (link_button.cpp:118-122) assigns straight through, so
   // only the literal shape is checked.

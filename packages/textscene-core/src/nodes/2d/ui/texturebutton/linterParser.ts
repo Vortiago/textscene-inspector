@@ -6,7 +6,7 @@
 
 import '../basebutton/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { TEXTURE_STRETCH_MODE } from '../../../../godot/scene/textureStretch.js';
+import { TextureStretchMode, TEXTURE_STRETCH_MODE_NAMES } from '../../../../godot/scene/textureStretch.js';
 
 import { v } from '../../../../linter/validators/index.js';
 
@@ -26,7 +26,13 @@ validatorRegistry.registerAll('TextureButton', {
   // texture_button.cpp:383-390: set_stretch_mode has no ERR_FAIL_INDEX, unlike
   // TextureProgressBar's set_fill_mode. The 7-label PROPERTY_HINT_ENUM at :282 only
   // hints the range, so out of range warns.
-  stretch_mode: v.enumInt('stretch_mode', 0, 6, TEXTURE_STRETCH_MODE, { hinted: 'texture_button.cpp:282' }),
+  stretch_mode: v.enumInt(
+    'stretch_mode',
+    TextureStretchMode.STRETCH_SCALE,
+    TextureStretchMode.STRETCH_KEEP_ASPECT_COVERED,
+    TEXTURE_STRETCH_MODE_NAMES,
+    { hinted: 'texture_button.cpp:282' }
+  ),
   // texture_button.cpp:311-317: set_click_mask assigns straight through. ADD_PROPERTY
   // at :280 is PROPERTY_HINT_RESOURCE_TYPE "BitMap", which restricts the editor's
   // resource picker, not the engine. Format-only.

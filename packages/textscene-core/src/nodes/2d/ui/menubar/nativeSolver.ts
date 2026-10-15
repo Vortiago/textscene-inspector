@@ -15,7 +15,6 @@ import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetri
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
 import {
-  AutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
@@ -27,6 +26,7 @@ import type { TscnNode } from '../../../../parser/types';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
 import type { MenuBarProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `SceneStringName(font)`, MenuBar's own theme font key (`menu_bar.cpp:748`). */
 const MENU_BAR_THEME_FONT_KEY = 'font';
@@ -72,7 +72,7 @@ function menuBarTitles(
     const layout = shapeText(menuTitleText(child), {
       fontSizePx,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 0,
       fontMetrics,
     });

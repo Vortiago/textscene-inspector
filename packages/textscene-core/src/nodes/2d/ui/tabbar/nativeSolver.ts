@@ -20,11 +20,7 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  AutowrapMode,
-  shapeText,
-  shapedTextSizeWidthPx,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import {
   resolveNodeFontMetrics,
   resolveNodeFontSizePx,
@@ -40,6 +36,7 @@ import {
   CONTROL_FONT_HOVER_COLOR,
   CONTROL_FONT_LOW_COLOR,
 } from '../../../../godot/scene/theme';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 export type TabDrawState = 'selected' | 'unselected' | 'disabled';
 
@@ -325,7 +322,7 @@ export function shapeTabLabel(
   return shapeText(text, {
     fontSizePx,
     boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx: 0,
     fontMetrics,
   });

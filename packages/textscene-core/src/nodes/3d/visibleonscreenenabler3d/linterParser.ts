@@ -7,7 +7,7 @@
 import '../visibleonscreennotifier3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { ENABLE_MODE } from '../../../godot/scene/visibleOnScreen.js';
+import { EnableMode, ENABLE_MODE_NAMES } from '../../../godot/scene/visibleOnScreen.js';
 
 // The whole own surface is the two `ADD_PROPERTY` calls at
 // visible_on_screen_notifier_3d.cpp:198-199. The class binds no `PropertyListHelper`, no
@@ -18,9 +18,13 @@ validatorRegistry.registerAll('VisibleOnScreenEnabler3D', {
   // "Inherit,Always,When Paused", values 0-2. set_enable_mode (:114-119) is a
   // bare `enable_mode = p_mode` with no ERR_FAIL_INDEX, so an out-of-enum value
   // loads and is only outside what the inspector dropdown offers: a warning.
-  enable_mode: v.enumInt('enable_mode', 0, 2, ENABLE_MODE, {
-    hinted: 'visible_on_screen_notifier_3d.cpp:198',
-  }),
+  enable_mode: v.enumInt(
+    'enable_mode',
+    EnableMode.ENABLE_MODE_INHERIT,
+    EnableMode.ENABLE_MODE_WHEN_PAUSED,
+    ENABLE_MODE_NAMES,
+    { hinted: 'visible_on_screen_notifier_3d.cpp:198' }
+  ),
   // visible_on_screen_notifier_3d.cpp:199, Variant::NODE_PATH, no hint. The setter stores the path
   // before it resolves it. An empty path affects nothing, and an unresolvable one errors at runtime,
   // not on load, so format is the only checkable constraint.

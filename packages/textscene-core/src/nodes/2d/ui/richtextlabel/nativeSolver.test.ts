@@ -8,11 +8,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import {
-  shapeText,
-  AutowrapMode,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontResource } from '../../../../resources/fonts/font/types';
@@ -40,6 +36,7 @@ import { getFontGlyphAdvancePx } from '../../../../r3f/controls/native/text/font
 import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment } from './bbcode';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
@@ -907,7 +904,7 @@ describe('layoutRichTextRuns', () => {
   const FONT_SIZE = 16;
   const BLACK = { r: 0, g: 0, b: 0, a: 1 };
 
-  function shape(text: string, boxWidthPx = 0, autowrapMode = AutowrapMode.OFF): TextLayoutResult {
+  function shape(text: string, boxWidthPx = 0, autowrapMode = AutowrapMode.AUTOWRAP_OFF): TextLayoutResult {
     return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode, lineSpacingPx: 0 });
   }
 
@@ -916,7 +913,7 @@ describe('layoutRichTextRuns', () => {
     text: string,
     runs: Parameters<typeof fontSizePxAtFromRuns>[0],
     boxWidthPx = 0,
-    autowrapMode = AutowrapMode.OFF
+    autowrapMode = AutowrapMode.AUTOWRAP_OFF
   ): TextLayoutResult {
     return shapeText(text, {
       fontSizePx: FONT_SIZE,
@@ -972,7 +969,7 @@ describe('layoutRichTextRuns', () => {
   it('a single run whose text WRAPS across two lines produces one placement per line, same style on both', () => {
     const runs = [textRun({ text: 'AAAA BBBB', bold: true, fontSizePx: FONT_SIZE })];
     // Narrow enough that 'AAAA' and 'BBBB' land on separate lines (see textLayout.test.ts's own break-point fixtures for this shape).
-    const layout = shape('AAAA BBBB', 60, AutowrapMode.WORD);
+    const layout = shape('AAAA BBBB', 60, AutowrapMode.AUTOWRAP_WORD);
     expect(layout.lines.length).toBeGreaterThan(1);
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements).toHaveLength(layout.lines.length);
@@ -985,7 +982,7 @@ describe('layoutRichTextRuns', () => {
       textRun({ text: 'AAAA ', bold: true, fontSizePx: FONT_SIZE }),
       textRun({ text: 'BBBB', fontSizePx: FONT_SIZE }),
     ];
-    const layout = shape('AAAA BBBB', 60, AutowrapMode.WORD);
+    const layout = shape('AAAA BBBB', 60, AutowrapMode.AUTOWRAP_WORD);
     const placements = layoutRichTextRuns(runs, layout);
     // Every placement's glyphs come from exactly one of the two runs.
     for (const p of placements) {
@@ -1034,7 +1031,7 @@ describe('layoutRichTextRuns', () => {
     // 'AAAA' at 18 wraps onto its own line, 'BBBB' at 16 onto the next
     // (same break-point shape as the wrap fixtures above).
     const runs = [textRun({ text: 'AAAA ', fontSizePx: 18 }), textRun({ text: 'BBBB', fontSizePx: 16 })];
-    const layout = shapeMixed('AAAA BBBB', runs, 60, AutowrapMode.WORD);
+    const layout = shapeMixed('AAAA BBBB', runs, 60, AutowrapMode.AUTOWRAP_WORD);
     expect(layout.lines).toHaveLength(2);
 
     // ceil(2189*18/2048)=20, ceil(600*18/2048)=6; ceil(2189*16/2048)=18, ceil(600*16/2048)=5.
@@ -1116,7 +1113,7 @@ describe('layoutRichTextRuns', () => {
       text: string,
       runs: Parameters<typeof fontSizePxAtFromRuns>[0],
       boxWidthPx = 0,
-      autowrapMode = AutowrapMode.OFF
+      autowrapMode = AutowrapMode.AUTOWRAP_OFF
     ): TextLayoutResult {
       return shapeText(text, {
         fontSizePx: FONT_SIZE,
@@ -1209,10 +1206,10 @@ describe('layoutRichTextRuns', () => {
           textRun({ text: ' Bye', fontSizePx: FONT_SIZE }),
         ];
         const text = `Hi ${IMAGE_OBJECT_CHAR} Bye`;
-        const fitsBeside = shapeWithImages(text, runs, 130, AutowrapMode.WORD);
+        const fitsBeside = shapeWithImages(text, runs, 130, AutowrapMode.AUTOWRAP_WORD);
         expect(fitsBeside.lines.map((l) => l.text)).toEqual([`Hi ${IMAGE_OBJECT_CHAR}`, 'Bye']);
 
-        const ownLine = shapeWithImages(text, runs, 110, AutowrapMode.WORD);
+        const ownLine = shapeWithImages(text, runs, 110, AutowrapMode.AUTOWRAP_WORD);
         expect(ownLine.lines.map((l) => l.text)).toEqual(['Hi', IMAGE_OBJECT_CHAR, 'Bye']);
 
         const placements = layoutRichTextRuns(runs, ownLine);
@@ -1368,7 +1365,7 @@ describe('RichTextLabel paragraph alignment', () => {
     const layout = shapeText(text, {
       fontSizePx: 16,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 0,
     });
     return { runs, layout };

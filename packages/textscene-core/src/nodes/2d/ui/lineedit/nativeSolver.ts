@@ -18,11 +18,7 @@ import type {
 import type { SolveNode, ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import {
-  shapeText,
-  shapedTextSizeWidthPx,
-  AutowrapMode,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -50,6 +46,7 @@ import {
   CONTROL_FONT_HOVER_COLOR,
   CONTROL_FONT_PLACEHOLDER_COLOR,
 } from '../../../../godot/scene/theme';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /**
  * LineEdit's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:419`). This
@@ -107,8 +104,8 @@ export const LINE_EDIT_DEFAULT_UNEDITABLE_COLOR = CONTROL_FONT_DISABLED_COLOR;
 /** LineEdit's `font_placeholder_color` default (`default_theme.cpp:425`). */
 const LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR = CONTROL_FONT_PLACEHOLDER_COLOR;
 
-/** `control_font_color`, LineEdit's `clear_button_color` default too (`default_theme.cpp:429`). */
-export const LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR: Rgba = LINE_EDIT_DEFAULT_FONT_COLOR;
+/** LineEdit's `clear_button_color` default (`default_theme.cpp:429`). */
+export const LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR = CONTROL_FONT_COLOR;
 
 /** LineEdit's `caret_color` default (`default_theme.cpp:427`). */
 export const LINE_EDIT_DEFAULT_CARET_COLOR = CONTROL_FONT_HOVER_COLOR;
@@ -233,7 +230,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
           shapeText(displayed, {
             fontSizePx,
             boxWidthPx: 0,
-            autowrapMode: AutowrapMode.OFF,
+            autowrapMode: AutowrapMode.AUTOWRAP_OFF,
             lineSpacingPx: 0,
             fontMetrics,
             preserveControl: props.drawControlChars,

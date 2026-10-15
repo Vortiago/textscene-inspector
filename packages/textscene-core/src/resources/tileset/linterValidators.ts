@@ -48,9 +48,7 @@ validatorRegistry.registerAll(
       TileOffsetAxis.TILE_OFFSET_AXIS_HORIZONTAL,
       TileOffsetAxis.TILE_OFFSET_AXIS_VERTICAL,
       TILE_OFFSET_AXIS_NAMES,
-      {
-        hinted: 'tile_set.cpp:4268',
-      }
+      { hinted: 'tile_set.cpp:4268' }
     ),
     // tile_set.cpp:4269, VECTOR2I with no range hint. set_tile_size opens
     // `ERR_FAIL_COND(p_size.x < 1 || p_size.y < 1)` (:392), so a zero or negative

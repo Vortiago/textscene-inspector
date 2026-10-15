@@ -14,11 +14,7 @@ import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import {
-  shapeText,
-  AutowrapMode,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
@@ -41,6 +37,7 @@ import {
 } from './nativeSolver';
 import type { LineEditProperties } from './types';
 import { HORIZONTAL_ALIGNMENT_LEFT, type Rgba } from '../../../../godot/math/math';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const DEFAULT_CARET_WIDTH_PX = 1;
 
@@ -78,7 +75,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         ? shapeText(text, {
             fontSizePx,
             boxWidthPx: 0,
-            autowrapMode: AutowrapMode.OFF,
+            autowrapMode: AutowrapMode.AUTOWRAP_OFF,
             lineSpacingPx: 0,
             fontMetrics,
             preserveControl: props.drawControlChars,

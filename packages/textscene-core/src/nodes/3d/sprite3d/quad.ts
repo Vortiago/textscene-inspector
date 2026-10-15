@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import type { Aabb } from '../../../godot/math/aabb';
 import { spriteBillboardAabb } from '../../../godot/scene/billboard';
 import { Vector3Axis } from '../../../godot/math/vector3Axis';
-import { type Sprite3DProperties } from './types';
+import type { Sprite3DProperties } from './types';
 
 /** The quad's size in world units: the frame's pixels times `pixel_size`. */
 interface QuadSize {

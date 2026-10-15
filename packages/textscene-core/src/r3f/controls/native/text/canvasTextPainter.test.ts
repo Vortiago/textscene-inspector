@@ -5,8 +5,9 @@ import {
   buildCanvasTextQuadArrays,
   createCanvasTextMaterial,
 } from './canvasTextPainter';
-import { shapeText, AutowrapMode } from './textLayout';
+import { shapeText } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const CANVAS_METRICS = createRuntimeFontMetrics({
   scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
@@ -18,7 +19,7 @@ function layoutFor(text: string, lineSpacingPx = 3) {
   return shapeText(text, {
     fontSizePx: 16,
     boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     fontMetrics: CANVAS_METRICS,
     lineSpacingPx,
   });

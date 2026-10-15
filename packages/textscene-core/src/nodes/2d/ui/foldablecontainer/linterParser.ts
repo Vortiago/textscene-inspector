@@ -9,8 +9,12 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { TEXT_DIRECTION } from '../../../../godot/text/textServerEnums.js';
-import { HORIZONTAL_ALIGNMENT } from '../../../../godot/math/math.js';
+import { TextDirection, TEXT_DIRECTION_NAMES } from '../../../../godot/text/textServerEnums.js';
+import {
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_NAMES,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+} from '../../../../godot/math/math.js';
 
 validatorRegistry.registerAll('FoldableContainer', {
   // foldable_container.cpp:558, PROPERTY_HINT_NONE. set_folded
@@ -22,9 +26,15 @@ validatorRegistry.registerAll('FoldableContainer', {
   // foldable_container.cpp:560, PROPERTY_HINT_ENUM "Left,Center,Right" (0-2). set_title_alignment:
   // `ERR_FAIL_INDEX((int)p_alignment, 3)` (foldable_container.cpp:128) refuses FILL. Button's
   // `alignment` stops at RIGHT on the hint tier only: its setter (button.cpp:737-741) assigns FILL.
-  title_alignment: v.enumInt('title_alignment', 0, 2, HORIZONTAL_ALIGNMENT, {
-    enforced: 'foldable_container.cpp:128',
-  }),
+  title_alignment: v.enumInt(
+    'title_alignment',
+    HORIZONTAL_ALIGNMENT_LEFT,
+    HORIZONTAL_ALIGNMENT_RIGHT,
+    HORIZONTAL_ALIGNMENT_NAMES,
+    {
+      enforced: 'foldable_container.cpp:128',
+    }
+  ),
   // foldable_container.cpp:561, PROPERTY_HINT_ENUM "Top,Bottom" (0-1). set_title_position:
   // `ERR_FAIL_INDEX(p_title_position, POSITION_MAX)`, POSITION_MAX=2 (foldable_container.h:42-46,
   // foldable_container.cpp:184).
@@ -58,12 +68,16 @@ validatorRegistry.registerAll('FoldableContainer', {
   // foldable_container.cpp:563, PROPERTY_HINT_RESOURCE_TYPE "FoldableGroup". set_foldable_group
   // (foldable_container.cpp:88-107) has no ERR_FAIL, so this checks the reference's shape only.
   foldable_group: v.resourceReference('foldable_group'),
-  // foldable_container.cpp:566, PROPERTY_HINT_ENUM of the TEXT_DIRECTION table (0-3).
+  // foldable_container.cpp:566, PROPERTY_HINT_ENUM of the TEXT_DIRECTION_NAMES table (0-3).
   // `ERR_FAIL_INDEX(int(p_text_direction), 4)` (foldable_container.cpp:156) refuses -1 too,
   // where Button's `text_direction` accepts it (button.cpp:637).
-  title_text_direction: v.enumInt('title_text_direction', 0, 3, TEXT_DIRECTION, {
-    enforced: 'foldable_container.cpp:156',
-  }),
+  title_text_direction: v.enumInt(
+    'title_text_direction',
+    TextDirection.TEXT_DIRECTION_AUTO,
+    TextDirection.TEXT_DIRECTION_INHERITED,
+    TEXT_DIRECTION_NAMES,
+    { enforced: 'foldable_container.cpp:156' }
+  ),
   // foldable_container.cpp:567, PROPERTY_HINT_LOCALE_ID. set_language
   // (foldable_container.cpp:141-149) assigns any locale string.
   language: v.quotedString('language'),

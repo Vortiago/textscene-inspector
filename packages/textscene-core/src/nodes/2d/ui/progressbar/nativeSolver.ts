@@ -25,13 +25,14 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { AutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
+import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveRangeValue, type RangeProperties, type RangeValueOrder } from '../shared/range';
 import { isEqualApprox, rect2Intersection } from '../../../../godot/index.js';
 import type { ProgressBarProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector.js';
 import type { Rgba } from '../../../../godot/math/math.js';
 import { CONTROL_FONT_HOVER_COLOR } from '../../../../godot/scene/theme.js';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /**
  * `default_theme.cpp:440-441`: `make_flat_stylebox(color, 2, 2, 2, 2, 6)`, not
@@ -158,7 +159,7 @@ const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
     const layout = shapeText('100%', {
       fontSizePx,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 0,
       fontMetrics,
     });

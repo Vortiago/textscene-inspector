@@ -23,7 +23,7 @@ const squareGrid: TileGrid = {
   tileSize: { x: 16, y: 16 },
 };
 
-function isoGrid(layout: TileGrid['layout'], offsetAxis: 0 | 1 = 0): TileGrid {
+function isoGrid(layout: TileGrid['layout'], offsetAxis: TileGrid['offsetAxis'] = 0): TileGrid {
   return { shape: TileShape.TILE_SHAPE_ISOMETRIC, layout, offsetAxis, tileSize: { x: 128, y: 64 } };
 }
 
@@ -72,8 +72,8 @@ describe('mapToLocalPx — vertical offset axis', () => {
 });
 
 describe('mapToLocalPx — hexagon (the hexagonal_map demo: vertical axis, 110×94)', () => {
-  function hexGrid(layout: TileGrid['layout'], offsetAxis: 0 | 1): TileGrid {
-    return { shape: 3, layout, offsetAxis, tileSize: { x: 110, y: 94 } };
+  function hexGrid(layout: TileGrid['layout'], offsetAxis: TileGrid['offsetAxis']): TileGrid {
+    return { shape: TileShape.TILE_SHAPE_HEXAGON, layout, offsetAxis, tileSize: { x: 110, y: 94 } };
   }
 
   it('STACKED, vertical axis: odd columns offset half a tile, x compressed to 0.75', () => {
@@ -120,8 +120,8 @@ describe('mapToLocalPx — hexagon (the hexagonal_map demo: vertical axis, 110×
 });
 
 describe('mapToLocalPx — half-offset square (staggered, ratio 1.0)', () => {
-  function halfGrid(layout: TileGrid['layout'], offsetAxis: 0 | 1): TileGrid {
-    return { shape: 2, layout, offsetAxis, tileSize: { x: 16, y: 16 } };
+  function halfGrid(layout: TileGrid['layout'], offsetAxis: TileGrid['offsetAxis']): TileGrid {
+    return { shape: TileShape.TILE_SHAPE_HALF_OFFSET_SQUARE, layout, offsetAxis, tileSize: { x: 16, y: 16 } };
   }
 
   it('STACKED, horizontal axis: odd rows offset half a tile, no overlap compression', () => {

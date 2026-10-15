@@ -13,7 +13,7 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import { AutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
+import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { CODE_EDIT_FOLD_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { ControlQuad as FoldQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -48,6 +48,7 @@ import {
   CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR,
 } from './nativeSolver';
 import type { CodeEditProperties } from './types';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 export function CodeEdit(props: NativeControlComponentProps) {
   const { solveNode, tint, rect, renderOrder, theme, measureText } = props;
@@ -239,7 +240,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
           const layout = shapeText(text, {
             fontSizePx,
             boxWidthPx: 0,
-            autowrapMode: AutowrapMode.OFF,
+            autowrapMode: AutowrapMode.AUTOWRAP_OFF,
             lineSpacingPx: 0,
             fontMetrics,
           });

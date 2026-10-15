@@ -82,9 +82,7 @@ export const postProcessKeys: Record<string, PropertyValidator> = {
 
   adjustment_enabled: v.boolean('adjustment_enabled'),
   // environment.cpp:1565 ("0.0,2.0,0.01,or_greater")
-  adjustment_brightness: v.nonNegativeFloat('adjustment_brightness', {
-    hinted: 'environment.cpp:1565',
-  }),
+  adjustment_brightness: v.nonNegativeFloat('adjustment_brightness', { hinted: 'environment.cpp:1565' }),
   // environment.cpp:1566-1567 open both ends (`or_less,or_greater`), so negative
   // contrast and saturation are legal inversions and there is no bound to check.
   adjustment_contrast: v.float('adjustment_contrast'),

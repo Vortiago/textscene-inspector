@@ -5,26 +5,35 @@
 // without this line just the full barrel ever registers it.
 import '../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { BASE_MATERIAL_ALPHA_ANTIALIASING } from '../../../godot/rendering/materials/alphaAntialiasing.js';
-import { LABEL_SPRITE_ALPHA_CUT } from '../../../godot/rendering/materials/alphaCut.js';
-import { BASE_MATERIAL_TEXTURE_FILTER } from '../../../godot/rendering/materials/textureFilter.js';
+import {
+  AlphaAntiAliasing,
+  ALPHA_ANTIALIASING_NAMES,
+} from '../../../godot/rendering/materials/alphaAntialiasing.js';
+import { AlphaCutMode, ALPHA_CUT_NAMES } from '../../../godot/rendering/materials/alphaCut.js';
+import { TextureFilter, TEXTURE_FILTER_NAMES } from '../../../godot/rendering/materials/textureFilter.js';
 import { hintedBitField, maskedBitField, v } from '../../../linter/validators/index.js';
-import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../godot/math/math.js';
+import {
+  HORIZONTAL_ALIGNMENT_FILL,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_NAMES,
+  VERTICAL_ALIGNMENT_BOTTOM,
+  VERTICAL_ALIGNMENT_NAMES,
+  VERTICAL_ALIGNMENT_TOP,
+} from '../../../godot/math/math.js';
+import { BillboardMode, SPRITE_BILLBOARD_MODE_NAMES } from '../../../godot/scene/billboard.js';
 import { MATERIAL_RENDER_PRIORITY_MIN, MATERIAL_RENDER_PRIORITY_MAX } from '../../../godot/index.js';
 import {
-  AUTOWRAP_MODE,
+  AutowrapMode,
+  AUTOWRAP_MODE_NAMES,
   BREAK_TRIM_HINTED_BITS,
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
   JUSTIFICATION_HINTED_BITS,
-  STRUCTURED_TEXT_PARSER,
-  TEXT_DIRECTION,
+  StructuredTextParser,
+  STRUCTURED_TEXT_PARSER_NAMES,
+  TextDirection,
+  TEXT_DIRECTION_NAMES,
 } from '../../../godot/text/textServerEnums.js';
-
-const BILLBOARD = { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y' };
-// `VerticalAlignment` (core/math/math_defs.h:87-92). label_3d.cpp:157 hints
-// "Top,Center,Bottom", but set_vertical_alignment:692-693 `ERR_FAIL_INDEX((int)p_alignment, 4)`
-// permits FILL too, which the inspector does not offer, like text_direction's -1 below.
 
 validatorRegistry.registerAll('Label3D', {
   text: v.quotedString('text'),
@@ -32,7 +41,13 @@ validatorRegistry.registerAll('Label3D', {
   // set_pixel_size:956 only compares before assigning, so both ends warn.
   pixel_size: v.float('pixel_size', { min: 0.0001, max: 128, hinted: 'label_3d.cpp:131' }),
   // set_billboard_mode:1001, ERR_FAIL_INDEX(p_mode, 3): the setter refuses.
-  billboard: v.enumInt('billboard', 0, 2, BILLBOARD, { enforced: 'label_3d.cpp:1001' }),
+  billboard: v.enumInt(
+    'billboard',
+    BillboardMode.BILLBOARD_DISABLED,
+    BillboardMode.BILLBOARD_FIXED_Y,
+    SPRITE_BILLBOARD_MODE_NAMES,
+    { enforced: 'label_3d.cpp:1001' }
+  ),
   modulate: v.color('modulate'),
   // label_3d.cpp:155 hints "0,127,1,suffix:px", closed at both ends.
   // set_outline_size:873-880 is a bare assignment, so both ends warn. `v.int`,
@@ -52,9 +67,15 @@ validatorRegistry.registerAll('Label3D', {
   line_spacing: v.float('line_spacing'),
   // set_horizontal_alignment:678, ERR_FAIL_INDEX((int)p_alignment, 4): the
   // setter refuses.
-  horizontal_alignment: v.enumInt('horizontal_alignment', 0, 3, HORIZONTAL_ALIGNMENT, {
-    enforced: 'label_3d.cpp:678',
-  }),
+  horizontal_alignment: v.enumInt(
+    'horizontal_alignment',
+    HORIZONTAL_ALIGNMENT_LEFT,
+    HORIZONTAL_ALIGNMENT_FILL,
+    HORIZONTAL_ALIGNMENT_NAMES,
+    {
+      enforced: 'label_3d.cpp:678',
+    }
+  ),
   no_depth_test: v.boolean('no_depth_test'),
   // label_3d.cpp:146, PROPERTY_HINT_RANGE built from
   // RS::MATERIAL_RENDER_PRIORITY_MIN/MAX. set_render_priority:766 opens with
@@ -116,43 +137,75 @@ validatorRegistry.registerAll('Label3D', {
   }),
   // label_3d.cpp:143 hints 3 labels (0-2); set_alpha_antialiasing:1058-1063
   // is a bare assignment (no ERR_FAIL), so out-of-hint is a warning.
-  alpha_antialiasing_mode: v.enumInt('alpha_antialiasing_mode', 0, 2, BASE_MATERIAL_ALPHA_ANTIALIASING, {
-    hinted: 'label_3d.cpp:143',
-  }),
+  alpha_antialiasing_mode: v.enumInt(
+    'alpha_antialiasing_mode',
+    AlphaAntiAliasing.OFF,
+    AlphaAntiAliasing.ALPHA_TO_COVERAGE_AND_TO_ONE,
+    ALPHA_ANTIALIASING_NAMES,
+    { hinted: 'label_3d.cpp:143' }
+  ),
   // label_3d.cpp:168: PROPERTY_HINT_ENUM, 7 labels. set_structured_text_bidi_override
   // (label_3d.cpp:729-735) assigns unconditionally, no ERR_FAIL.
-  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
-    hinted: 'label_3d.cpp:168',
-  }),
+  structured_text_bidi_override: v.enumInt(
+    'structured_text_bidi_override',
+    StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
+    StructuredTextParser.STRUCTURED_TEXT_CUSTOM,
+    STRUCTURED_TEXT_PARSER_NAMES,
+    { hinted: 'label_3d.cpp:168' }
+  ),
   // label_3d.cpp:160: PROPERTY_HINT_ENUM "Off,Arbitrary,Word,Word (Smart)",
   // the whole 4-value AutowrapMode enum. set_autowrap_mode:906-912 assigns
   // unconditionally, no ERR_FAIL.
-  autowrap_mode: v.enumInt('autowrap_mode', 0, 3, AUTOWRAP_MODE, { hinted: 'label_3d.cpp:160' }),
+  autowrap_mode: v.enumInt(
+    'autowrap_mode',
+    AutowrapMode.AUTOWRAP_OFF,
+    AutowrapMode.AUTOWRAP_WORD_SMART,
+    AUTOWRAP_MODE_NAMES,
+    { hinted: 'label_3d.cpp:160' }
+  ),
   // label_3d.cpp:145 hints 6 labels (0-5); set_texture_filter:1021-1026 is a
   // bare assignment (no ERR_FAIL), so out-of-hint is a warning.
-  texture_filter: v.enumInt('texture_filter', 0, 5, BASE_MATERIAL_TEXTURE_FILTER, {
-    hinted: 'label_3d.cpp:145',
-  }),
+  texture_filter: v.enumInt(
+    'texture_filter',
+    TextureFilter.NEAREST,
+    TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC,
+    TEXTURE_FILTER_NAMES,
+    { hinted: 'label_3d.cpp:145' }
+  ),
   // set_alpha_cut_mode:1013, ERR_FAIL_INDEX(p_mode, ALPHA_CUT_MAX): the setter
   // refuses.
-  alpha_cut: v.enumInt('alpha_cut', 0, 3, LABEL_SPRITE_ALPHA_CUT, { enforced: 'label_3d.cpp:1013' }),
+  alpha_cut: v.enumInt('alpha_cut', AlphaCutMode.DISABLED, AlphaCutMode.HASH, ALPHA_CUT_NAMES, {
+    enforced: 'label_3d.cpp:1013',
+  }),
   // Two tiers, both reachable: label_3d.cpp:157 hints "Top,Center,Bottom" and
   // set_vertical_alignment:693 refuses only at ERR_FAIL_INDEX((int)…, 4), so
   // FILL loads and warns while 4 and up error.
-  vertical_alignment: v.enumInt('vertical_alignment', 0, 2, VERTICAL_ALIGNMENT, {
-    hinted: 'label_3d.cpp:157',
-    enforced: 'label_3d.cpp:693',
-    enforcedMax: { at: 3 },
-  }),
+  vertical_alignment: v.enumInt(
+    'vertical_alignment',
+    VERTICAL_ALIGNMENT_TOP,
+    VERTICAL_ALIGNMENT_BOTTOM,
+    VERTICAL_ALIGNMENT_NAMES,
+    {
+      hinted: 'label_3d.cpp:157',
+      enforced: 'label_3d.cpp:693',
+      enforcedMax: { at: 3 },
+    }
+  ),
   // set_text_direction:705, `ERR_FAIL_COND((int)p_text_direction < -1 ||
   // (int)p_text_direction > 3)`, is enforced. -1 is a legacy spelling with no
   // named constant, so it is legal but unlabelled, as in Label.
-  text_direction: v.enumInt('text_direction', 0, 2, TEXT_DIRECTION, {
-    hinted: 'label_3d.cpp:166',
-    enforced: 'label_3d.cpp:705',
-    enforcedMin: { at: -1 },
-    enforcedMax: { at: 3 },
-  }),
+  text_direction: v.enumInt(
+    'text_direction',
+    TextDirection.TEXT_DIRECTION_AUTO,
+    TextDirection.TEXT_DIRECTION_RTL,
+    TEXT_DIRECTION_NAMES,
+    {
+      hinted: 'label_3d.cpp:166',
+      enforced: 'label_3d.cpp:705',
+      enforcedMin: { at: -1 },
+      enforcedMax: { at: 3 },
+    }
+  ),
   // set_autowrap_trim_flags:920 stores `p_flags & TextServer::BREAK_TRIM_MASK`,
   // so bits outside the mask are dropped. label_3d.cpp:161 hints only the two
   // edge-space bits, so BREAK_TRIM_INDENT is kept but not offered by the inspector.

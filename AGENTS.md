@@ -161,6 +161,8 @@ an arm with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its 
   before you declare an engine constant or regex in a slice. Put a new one there, in the group
   for the engine area it ports (ARCHITECTURE.md lists them). A group has no `index.ts`. Only the
   root `index.ts` re-exports.
+- A Godot enum lives in `godot/` once. When its member names are the labels a validator prints,
+  its label table is `enumNamesByValue(<Enum>)`.
 - Web tests run under happy-dom, so never assert rendered geometry. Read a `.module.css`
   source through `import.meta.dirname`, never `process.cwd()`.
 - `useResource.ts` clones a cached Object3D per consumer. Assert identity only for textures

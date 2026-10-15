@@ -71,7 +71,7 @@ export interface Sprite3DProperties extends GeometryInstance3DProperties {
   /** Alpha-cut mode (default: DISABLED). */
   alpha_cut: AlphaCutMode;
 
-  /** Axis used when billboard is FIXED_Y (default: Y_AXIS). */
+  /** The axis the sprite faces (default: Z, `sprite_3d.h:77`). */
   axis: Vector3Axis;
 
   /** Size of one texture pixel in 3D world units (default: 0.01). */

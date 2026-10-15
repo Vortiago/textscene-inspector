@@ -5,7 +5,7 @@
 
 import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { SPACE_OVERRIDE } from '../../../../godot/scene/area.js';
+import { SpaceOverride, SPACE_OVERRIDE_NAMES } from '../../../../godot/scene/area.js';
 import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('Area3D', {
@@ -13,9 +13,13 @@ validatorRegistry.registerAll('Area3D', {
   monitorable: v.boolean('monitorable'),
   // area_3d.cpp:778 "Disabled,Combine,Combine-Replace,Replace,Replace-Combine".
   // The setters (:35-38 etc) are bare assignments, so out-of-range warns.
-  gravity_space_override: v.enumInt('gravity_space_override', 0, 4, SPACE_OVERRIDE, {
-    hinted: 'area_3d.cpp:778',
-  }),
+  gravity_space_override: v.enumInt(
+    'gravity_space_override',
+    SpaceOverride.DISABLED,
+    SpaceOverride.REPLACE_COMBINE,
+    SPACE_OVERRIDE_NAMES,
+    { hinted: 'area_3d.cpp:778' }
+  ),
   gravity_point: v.boolean('gravity_point'),
   gravity_point_center: v.vector3('gravity_point_center'),
   // area_3d.cpp:780, PROPERTY_HINT_RANGE "0,1024,0.001,or_greater,exp,suffix:m":
@@ -29,9 +33,13 @@ validatorRegistry.registerAll('Area3D', {
   gravity_direction: v.vector3('gravity_direction'),
   gravity: v.float('gravity'),
   // area_3d.cpp:786. The setter (:89-92) is a bare assignment, so out-of-range warns.
-  linear_damp_space_override: v.enumInt('linear_damp_space_override', 0, 4, SPACE_OVERRIDE, {
-    hinted: 'area_3d.cpp:786',
-  }),
+  linear_damp_space_override: v.enumInt(
+    'linear_damp_space_override',
+    SpaceOverride.DISABLED,
+    SpaceOverride.REPLACE_COMBINE,
+    SPACE_OVERRIDE_NAMES,
+    { hinted: 'area_3d.cpp:786' }
+  ),
   // area_3d.cpp:787, PROPERTY_HINT_RANGE "0,100,0.001,or_greater". The setter
   // (:107-110) is a bare assignment, so out-of-range warns.
   linear_damp: v.float('linear_damp', {
@@ -40,9 +48,13 @@ validatorRegistry.registerAll('Area3D', {
     hinted: 'area_3d.cpp:787',
   }),
   // area_3d.cpp:790. The setter (:98-101) is a bare assignment, so out-of-range warns.
-  angular_damp_space_override: v.enumInt('angular_damp_space_override', 0, 4, SPACE_OVERRIDE, {
-    hinted: 'area_3d.cpp:790',
-  }),
+  angular_damp_space_override: v.enumInt(
+    'angular_damp_space_override',
+    SpaceOverride.DISABLED,
+    SpaceOverride.REPLACE_COMBINE,
+    SPACE_OVERRIDE_NAMES,
+    { hinted: 'area_3d.cpp:790' }
+  ),
   // area_3d.cpp:791, PROPERTY_HINT_RANGE "0,100,0.001,or_greater". The setter
   // (:116-119) is a bare assignment, so out-of-range warns.
   angular_damp: v.float('angular_damp', {

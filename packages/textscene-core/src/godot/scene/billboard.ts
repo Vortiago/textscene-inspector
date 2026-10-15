@@ -16,6 +16,12 @@ export enum BillboardMode {
 }
 
 /**
+ * The billboard modes a SpriteBase3D accepts, by the names a validator prints. Its hint names 3
+ * (`sprite_3d.cpp:685`), and `set_billboard_mode` refuses PARTICLES (`sprite_3d.cpp:597-598`).
+ */
+export const SPRITE_BILLBOARD_MODE_NAMES = { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y' } as const;
+
+/**
  * A Label3D's AABB under its billboard mode (`label_3d.cpp:624-642`). ENABLED grows the line box
  * to a cube about the origin, and FIXED_Y to a prism about the Y axis that keeps its height.
  */

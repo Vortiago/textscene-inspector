@@ -29,15 +29,10 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import {
-  OverrunBehavior,
-  overrunFlagsForBehavior,
-  trimLineToWidth,
-} from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   shapeText,
   shapedTextSizeWidthPx,
-  AutowrapMode,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
@@ -45,6 +40,7 @@ import type { ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
+import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 // --- Enum literals ------------------------------------------------------
 
@@ -201,11 +197,13 @@ function adjustToMaxSize(size: Vector2, maxSize: Vector2): Rect2 {
 /**
  * `_shape_text` (`item_list.cpp:37-55`): TOP icon mode with `max_text_lines > 0`
  * wraps at word, grapheme and mandatory breaks; else one line. The text engine
- * has only `AutowrapMode.WORD`, so an unbreakable word overflows its column where
+ * has only `AutowrapMode.AUTOWRAP_WORD`, so an unbreakable word overflows its column where
  * Godot breaks it mid-word (`comparison.md`).
  */
 function itemListAutowrapMode(iconMode: number, maxTextLines: number): AutowrapMode {
-  return iconMode === ICON_MODE_TOP && maxTextLines > 0 ? AutowrapMode.WORD : AutowrapMode.OFF;
+  return iconMode === ICON_MODE_TOP && maxTextLines > 0
+    ? AutowrapMode.AUTOWRAP_WORD
+    : AutowrapMode.AUTOWRAP_OFF;
 }
 
 /**
@@ -245,7 +243,9 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
     lineSpacingPx: itemListLineSeparationForShaping(input),
     fontMetrics: input.fontMetrics,
   });
-  const overrunFlags = overrunFlagsForBehavior(input.overrunBehavior ?? OverrunBehavior.TRIM_ELLIPSIS);
+  const overrunFlags = overrunFlagsForBehavior(
+    input.overrunBehavior ?? OverrunBehavior.OVERRUN_TRIM_ELLIPSIS
+  );
   if (!overrunFlags.trim || widthPx <= 0) return layout;
 
   const trimmedLines = layout.lines.map((line) =>

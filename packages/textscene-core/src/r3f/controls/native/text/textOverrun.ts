@@ -11,17 +11,7 @@
 import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
 import { getFontGlyphAdvancePx, type FontMetrics } from './fontMetrics';
 import { isWhitespace, type GlyphPlacement, type TextLineLayout } from './textLayout';
-
-/** `TextServer::OverrunBehavior` (`servers/text/text_server.h:123-131`). */
-export enum OverrunBehavior {
-  NO_TRIMMING = 0,
-  TRIM_CHAR = 1,
-  TRIM_WORD = 2,
-  TRIM_ELLIPSIS = 3,
-  TRIM_WORD_ELLIPSIS = 4,
-  TRIM_ELLIPSIS_FORCE = 5,
-  TRIM_WORD_ELLIPSIS_FORCE = 6,
-}
+import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 /**
  * The `TextServer::TextOverrunFlag` bits an `OverrunBehavior` reaches (`text_server.cpp:2399-2432`),
@@ -47,7 +37,7 @@ const NO_TRIM_FLAGS: OverrunTrimFlags = {
 /** `TextServer::get_overrun_flags_from_behavior` (`text_server.cpp:2399-2432`). */
 export function overrunFlagsForBehavior(behavior: OverrunBehavior): OverrunTrimFlags {
   switch (behavior) {
-    case OverrunBehavior.TRIM_WORD_ELLIPSIS_FORCE:
+    case OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE:
       return {
         trim: true,
         trimWordOnly: true,
@@ -55,7 +45,7 @@ export function overrunFlagsForBehavior(behavior: OverrunBehavior): OverrunTrimF
         enforceEllipsis: true,
         justificationAware: false,
       };
-    case OverrunBehavior.TRIM_ELLIPSIS_FORCE:
+    case OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE:
       return {
         trim: true,
         trimWordOnly: false,
@@ -63,7 +53,7 @@ export function overrunFlagsForBehavior(behavior: OverrunBehavior): OverrunTrimF
         enforceEllipsis: true,
         justificationAware: false,
       };
-    case OverrunBehavior.TRIM_WORD_ELLIPSIS:
+    case OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS:
       return {
         trim: true,
         trimWordOnly: true,
@@ -71,7 +61,7 @@ export function overrunFlagsForBehavior(behavior: OverrunBehavior): OverrunTrimF
         enforceEllipsis: false,
         justificationAware: false,
       };
-    case OverrunBehavior.TRIM_ELLIPSIS:
+    case OverrunBehavior.OVERRUN_TRIM_ELLIPSIS:
       return {
         trim: true,
         trimWordOnly: false,
@@ -79,7 +69,7 @@ export function overrunFlagsForBehavior(behavior: OverrunBehavior): OverrunTrimF
         enforceEllipsis: false,
         justificationAware: false,
       };
-    case OverrunBehavior.TRIM_WORD:
+    case OverrunBehavior.OVERRUN_TRIM_WORD:
       return {
         trim: true,
         trimWordOnly: true,
@@ -87,7 +77,7 @@ export function overrunFlagsForBehavior(behavior: OverrunBehavior): OverrunTrimF
         enforceEllipsis: false,
         justificationAware: false,
       };
-    case OverrunBehavior.TRIM_CHAR:
+    case OverrunBehavior.OVERRUN_TRIM_CHAR:
       return {
         trim: true,
         trimWordOnly: false,
@@ -95,7 +85,7 @@ export function overrunFlagsForBehavior(behavior: OverrunBehavior): OverrunTrimF
         enforceEllipsis: false,
         justificationAware: false,
       };
-    case OverrunBehavior.NO_TRIMMING:
+    case OverrunBehavior.OVERRUN_NO_TRIMMING:
     default:
       return NO_TRIM_FLAGS;
   }

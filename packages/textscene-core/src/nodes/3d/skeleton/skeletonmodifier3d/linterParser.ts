@@ -13,7 +13,7 @@ import { v } from '../../../../linter/validators/index.js';
 /*
  * The enum label tables below are SkeletonModifier3D's own: its header declares them, and its
  * `get_hint_*()` helpers build the hint strings the subclasses pass to `PROPERTY_HINT_ENUM`. Every
- * descendant already imports this module. `Vector3::Axis` is core's, in `godot/math/vector3Axis.ts`.
+ * descendant already imports this module.
  */
 
 /** `SkeletonModifier3D::BoneAxis` declaration order (skeleton_modifier_3d.h:45-50). */
