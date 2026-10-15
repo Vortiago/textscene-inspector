@@ -22,6 +22,7 @@ import { unquoteLiteral } from './utils.js';
 import { colorOr, type Color } from '../utils/colorParser.js';
 import { parseOptionalInt } from './valueParsers.js';
 import { VOLUMETRIC_FOG_DEFAULTS, type VolumetricFogProjectSettings } from '../godot/volumetricFog.js';
+import { msaaSampleCount } from '../godot/msaa.js';
 
 /**
  * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,
@@ -163,6 +164,25 @@ export function projectVolumetricFogSettings(settings: ProjectSettings | null): 
       'rendering/environment/fog/use_legacy_blending',
       VOLUMETRIC_FOG_DEFAULTS.useLegacyBlending
     ),
+  };
+}
+
+/** The samples per pixel of a viewport's 2D and 3D buffers, 0 where it does not multisample. */
+export interface MsaaSamples {
+  msaa2D: number;
+  msaa3D: number;
+}
+
+/**
+ * `rendering/anti_aliasing/quality/msaa_2d` and `msaa_3d`, which the root viewport takes
+ * (`scene/main/scene_tree.cpp:2079-2083`) and the editor's 3D view too
+ * (`node_3d_editor_plugin.cpp:3166-3167`). Both default to Disabled.
+ */
+export function projectMsaaSamples(settings: ProjectSettings | null): MsaaSamples {
+  const samples = (key: string): number => msaaSampleCount(parseOptionalInt(settings?.[key]) ?? 0);
+  return {
+    msaa2D: samples('rendering/anti_aliasing/quality/msaa_2d'),
+    msaa3D: samples('rendering/anti_aliasing/quality/msaa_3d'),
   };
 }
 

@@ -15,29 +15,42 @@ function settingsOf(properties: Record<string, string>) {
 }
 
 const NOTHING_BLENDED = false;
+const NO_MSAA = 0;
 
 describe('compositorPassFor', () => {
   it('carries glow when the environment enables it, with nothing emissive in the scene', () => {
-    const pass = compositorPassFor(settingsOf({ glow_enabled: 'true' }), NOTHING_BLENDED);
+    const pass = compositorPassFor(settingsOf({ glow_enabled: 'true' }), NOTHING_BLENDED, NO_MSAA);
     expect(pass?.glow).not.toBeNull();
   });
 
   it('mounts no pass when glow is disabled and nothing else needs one', () => {
-    expect(compositorPassFor(settingsOf({ glow_enabled: 'false' }), NOTHING_BLENDED)).toBeNull();
+    expect(compositorPassFor(settingsOf({ glow_enabled: 'false' }), NOTHING_BLENDED, NO_MSAA)).toBeNull();
   });
 
   it('mounts a pass without glow for a blended surface', () => {
-    const pass = compositorPassFor(settingsOf({ glow_enabled: 'false' }), true);
-    expect(pass).toEqual({ glow: null });
+    const pass = compositorPassFor(settingsOf({ glow_enabled: 'false' }), true, NO_MSAA);
+    expect(pass).toEqual({ glow: null, samples: 0 });
   });
 
   it('mounts a pass without glow for the adjustments alone', () => {
-    const pass = compositorPassFor(settingsOf({ adjustment_enabled: 'true' }), NOTHING_BLENDED);
-    expect(pass).toEqual({ glow: null });
+    const pass = compositorPassFor(settingsOf({ adjustment_enabled: 'true' }), NOTHING_BLENDED, NO_MSAA);
+    expect(pass).toEqual({ glow: null, samples: 0 });
+  });
+
+  it('mounts a multisampled pass without glow for MSAA alone', () => {
+    // Godot resolves the multisampled 3D buffer before the tonemap pass reads it.
+    const pass = compositorPassFor(settingsOf({ glow_enabled: 'false' }), NOTHING_BLENDED, 4);
+    expect(pass).toEqual({ glow: null, samples: 4 });
+  });
+
+  it('multisamples a pass that glow mounts', () => {
+    expect(compositorPassFor(settingsOf({ glow_enabled: 'true' }), NOTHING_BLENDED, 2)?.samples).toBe(2);
   });
 
   it('mounts no pass for an enabled glow whose every level weight is zero', () => {
     const levels = Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((level) => [`glow_levels/${level}`, '0.0']));
-    expect(compositorPassFor(settingsOf({ glow_enabled: 'true', ...levels }), NOTHING_BLENDED)).toBeNull();
+    expect(
+      compositorPassFor(settingsOf({ glow_enabled: 'true', ...levels }), NOTHING_BLENDED, NO_MSAA)
+    ).toBeNull();
   });
 });

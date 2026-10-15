@@ -1,0 +1,94 @@
+/**
+ * The 2D canvas's multisampled frame. Godot draws a root viewport whose `msaa_2d` is on into a
+ * multisampled buffer at the mode's sample count (`texture_storage.cpp:3604-3613`). A drawing buffer
+ * cannot multisample at a chosen count, so the world draws into a multisampled target, which three
+ * resolves, and the frame copies to the drawing buffer unchanged.
+ */
+
+import * as THREE from 'three';
+
+export interface CanvasMsaaFrame {
+  /** Draws `scene` through the target and copies the result to the target bound before. */
+  render(gl: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void;
+  dispose(): void;
+}
+
+/** Each texel to the pixel under it, so the copy neither filters nor converts. */
+const COPY_VERTEX = /* glsl */ `
+in vec3 position;
+void main() {
+  gl_Position = vec4(position.xy, 0.0, 1.0);
+}`;
+const COPY_FRAGMENT = /* glsl */ `
+precision highp float;
+uniform sampler2D frame;
+out vec4 color;
+void main() {
+  color = texelFetch(frame, ivec2(gl_FragCoord.xy), 0);
+}`;
+
+export function createCanvasMsaaFrame(samples: number): CanvasMsaaFrame {
+  const target = createFrameTarget(samples);
+  const copy = createCopyPass(target.texture);
+  const drawingBuffer = new THREE.Vector2();
+
+  return {
+    render(gl, scene, camera) {
+      gl.getDrawingBufferSize(drawingBuffer);
+      if (target.width !== drawingBuffer.x || target.height !== drawingBuffer.y) {
+        target.setSize(drawingBuffer.x, drawingBuffer.y);
+      }
+      const previous = gl.getRenderTarget();
+      gl.setRenderTarget(target);
+      gl.render(scene, camera);
+      gl.setRenderTarget(previous);
+      gl.render(copy.scene, copy.camera);
+    },
+    dispose() {
+      target.dispose();
+      copy.dispose();
+    },
+  };
+}
+
+/**
+ * RGBA8 storage under an sRGB tag. With `isXRRenderTarget`, three encodes each fragment to the tag's
+ * space (`WebGLPrograms.js:213`), so the target holds what the drawing buffer would hold and items
+ * blend in the same space. The default sRGB format, SRGB8_ALPHA8, would blend in linear.
+ */
+function createFrameTarget(samples: number): THREE.WebGLRenderTarget {
+  const target = new THREE.WebGLRenderTarget(1, 1, { samples, depthBuffer: true, stencilBuffer: false });
+  target.texture.colorSpace = THREE.SRGBColorSpace;
+  target.texture.internalFormat = 'RGBA8';
+  target.texture.minFilter = THREE.NearestFilter;
+  target.texture.magFilter = THREE.NearestFilter;
+  target.texture.generateMipmaps = false;
+  target.texture.name = 'Canvas2D::msaaFrame';
+  // Not declared by @types/three: three sets it on plain render targets the same way (`XRManager.js`).
+  (target as THREE.WebGLRenderTarget & { isXRRenderTarget: boolean }).isXRRenderTarget = true;
+  return target;
+}
+
+function createCopyPass(frame: THREE.Texture) {
+  const material = new THREE.RawShaderMaterial({
+    glslVersion: THREE.GLSL3,
+    vertexShader: COPY_VERTEX,
+    fragmentShader: COPY_FRAGMENT,
+    uniforms: { frame: { value: frame } },
+    blending: THREE.NoBlending,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
+  quad.frustumCulled = false;
+  const scene = new THREE.Scene();
+  scene.add(quad);
+  return {
+    scene,
+    camera: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1),
+    dispose() {
+      quad.geometry.dispose();
+      material.dispose();
+    },
+  };
+}

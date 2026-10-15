@@ -1928,6 +1928,24 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Msaa 2d",
+    "file": "msaa-2d/unit-msaa-2d.tscn",
+    "category": "Other",
+    "root": "msaa-2d"
+  },
+  {
+    "name": "Msaa 3d",
+    "file": "msaa-3d/unit-msaa-3d.tscn",
+    "category": "Other",
+    "root": "msaa-3d"
+  },
+  {
+    "name": "Subviewport Snap Off",
+    "file": "subviewport-snap-off/unit-subviewport-snap-off.tscn",
+    "category": "Other",
+    "root": "subviewport-snap-off"
+  },
+  {
     "name": "Animation Empty Library",
     "file": "edge-animation-empty-library.tscn",
     "category": "Edge Cases"
@@ -2081,6 +2099,12 @@ export const fixtures: Fixture[] = [
     "name": "World Environment Unsupported",
     "file": "edge-world-environment-unsupported.tscn",
     "category": "Edge Cases"
+  },
+  {
+    "name": "Gltf Unsupported Required Extension",
+    "file": "gltf-unsupported-required-extension/edge-gltf-unsupported-required-extension.tscn",
+    "category": "Edge Cases",
+    "root": "gltf-unsupported-required-extension"
   },
   {
     "name": "Dodge Player",
@@ -2873,6 +2897,24 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Layout Direction Force",
+    "file": "layout-direction-force-rtl/unit-control-layout-direction-force.tscn",
+    "category": "Unit - 2D UI Controls",
+    "root": "layout-direction-force-rtl"
+  },
+  {
+    "name": "Control Layout Direction Locale",
+    "file": "layout-direction-locale-rtl/unit-control-layout-direction-locale.tscn",
+    "category": "Unit - 2D UI Controls",
+    "root": "layout-direction-locale-rtl"
+  },
+  {
+    "name": "Control Layout Direction Root",
+    "file": "layout-direction-root-rtl/unit-control-layout-direction-root.tscn",
+    "category": "Unit - 2D UI Controls",
+    "root": "layout-direction-root-rtl"
+  },
+  {
     "name": "Camera Basic",
     "file": "unit-camera-basic.tscn",
     "category": "Unit - Basic Nodes"
@@ -3260,6 +3302,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Inherited Rtl",
     "file": "unit-sub-viewport-inherited-rtl.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Msaa",
+    "file": "unit-sub-viewport-msaa.tscn",
     "category": "Unit - Viewports"
   },
   {

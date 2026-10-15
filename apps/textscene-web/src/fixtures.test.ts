@@ -70,9 +70,21 @@ function committedScenesOnDisk(): string[] {
   });
   return [
     ...scenesFlat(join(scenesRoot, 'fixtures')),
+    ...fixtureProjectScenes(),
     ...scenesDeep(join(scenesRoot, 'isometric'), ''),
     ...demos,
   ];
+}
+
+/**
+ * The scenes of each **Fixture project**, a scenes/fixtures subdirectory with its own
+ * project.godot, spelled `<project>/<scene>.tscn`.
+ */
+function fixtureProjectScenes(): string[] {
+  const fixturesDir = join(scenesRoot, 'fixtures');
+  return readdirSync(fixturesDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(join(fixturesDir, entry.name, 'project.godot')))
+    .flatMap((entry) => scenesDeep(join(fixturesDir, entry.name), entry.name));
 }
 
 /** Committed scenes absent from a manifest. */

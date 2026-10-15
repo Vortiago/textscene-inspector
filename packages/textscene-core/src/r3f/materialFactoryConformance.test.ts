@@ -183,6 +183,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the accumulator seed quad: fixed shaders, one uniform, one instance per accumulator',
   'packages/textscene-core/src/r3f/positionalShadow/omniShadowCopy.ts':
     'the cube-to-paraboloid copy: shaders fixed at construction, only uniforms move, one instance per renderer',
+  'packages/textscene-core/src/r3f/components/Canvas2DStage/canvasMsaaFrame.ts':
+    'the 2D multisampled frame copy: shaders fixed at construction, one uniform that never changes, disposed with the frame',
   'packages/textscene-core/src/r3f/positionalShadow/atlasDepthPass.ts':
     'one depth material per light kind for the whole app, its program fixed at construction and never mutated',
   'packages/textscene-core/src/r3f/fog/volumetricFogPass.ts':
@@ -287,6 +289,8 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the screen quad: its pass materials have their shaders fixed at construction, and it is disposed with the effect',
   'packages/textscene-core/src/r3f/positionalShadow/omniShadowCopy.ts':
     'the copy quad: its material has its shaders fixed at construction, and only its uniforms move',
+  'packages/textscene-core/src/r3f/components/Canvas2DStage/canvasMsaaFrame.ts':
+    'the frame copy quad: its material has its shaders fixed at construction, and quad and material are built and disposed together',
   'packages/textscene-core/src/r3f/fog/fogRadiancePass.ts':
     'the radiance bake quad: its material has its shaders fixed at construction, and quad and material are built and disposed together',
   'packages/textscene-core/src/resources/sky/build.ts':

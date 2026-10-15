@@ -35,6 +35,7 @@ import {
   selectViewportCamera2D,
   viewportAspect,
 } from './offscreenViewport';
+import { useViewportSampleCount } from './useViewportSampleCount';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
@@ -111,7 +112,11 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
 
   // Carries the storage and the tonemap contracts: Godot tonemaps a
   // sub-viewport's render into its target as it tonemaps the main view's.
-  const target = useMemo(() => createOffscreenTarget(width, height, node.name), [width, height, node.name]);
+  const samples = useViewportSampleCount(properties, kind);
+  const target = useMemo(
+    () => createOffscreenTarget(width, height, node.name, { samples }),
+    [width, height, node.name, samples]
+  );
 
   useEffect(() => () => target.dispose(), [target]);
   // A 3D portal renders its lights only through this pass, so it fits them itself and draws its

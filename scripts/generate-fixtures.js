@@ -117,6 +117,14 @@ const fixtureFiles = readdirSync(fixturesDir)
   .filter((f) => f.endsWith('.tscn'))
   .sort();
 
+// A Fixture project is the exception: a subdirectory with its own project.godot,
+// whose res:// root is that subdirectory, so its project settings reach no other
+// fixture.
+const fixtureProjects = readdirSync(fixturesDir, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && existsSync(join(fixturesDir, entry.name, 'project.godot')))
+  .map((entry) => entry.name)
+  .sort();
+
 // Every ld-58 scene at any depth is selectable. `file` is the res://-relative
 // path with forward slashes, which matches the closure copy-fixtures mirrors
 // under public/fixtures/.
@@ -289,6 +297,19 @@ const fixtures = [
     file,
     category: detectCategory(file),
   })),
+  ...fixtureProjects.flatMap((root) =>
+    walkTscn(join(fixturesDir, root))
+      .sort()
+      .map((rel) => {
+        const basename = rel.split('/').pop();
+        return {
+          name: generateName(basename),
+          file: `${root}/${rel}`,
+          category: detectCategory(basename),
+          root,
+        };
+      })
+  ),
   ...isometricFiles.map((file) => ({
     name: generateName(file.split('/').pop().replace(/_/g, '-')),
     file,

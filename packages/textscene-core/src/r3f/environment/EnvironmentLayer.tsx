@@ -14,6 +14,8 @@ import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
+import { useProjectSettings } from '../contexts/ProjectSettingsContext';
+import { deviceSampleCount } from '../deviceSampleCount';
 import { sceneHasBlendedSurface } from './alphaPassScan';
 import { useLatchedSceneScan } from './useLatchedSceneScan';
 import { compositorPassFor } from './compositorPass';
@@ -43,11 +45,12 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
   const flatAmbient = settings.ambient;
   const hasBlended = useSceneHasBlendedSurface();
   const draws3D = useDraws3D();
+  const msaa3D = useDeviceMsaa3D();
   // One value decides the pass and the suppression, so they cannot disagree. Memoised, since a new
   // glow object rebuilds the compositor's effect.
   const composited = useMemo(
-    () => (draws3D ? compositorPassFor(settings, hasBlended) : null),
-    [draws3D, settings, hasBlended]
+    () => (draws3D ? compositorPassFor(settings, hasBlended, msaa3D) : null),
+    [draws3D, settings, hasBlended, msaa3D]
   );
   // One value decides the fog programs, the fogged colour background and the fog passes.
   const hasFog = draws3D && (!!settings.fog || !!settings.volumetricFog);
@@ -63,6 +66,7 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
       {composited && (
         <ToneMapLayer
           glow={composited.glow}
+          samples={composited.samples}
           adjustments={settings.adjustments}
           toneMapping={settings.toneMapping}
           resources={resources}
@@ -98,6 +102,13 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
       )}
     </>
   );
+}
+
+/** The samples the project's `msaa_3d` draws on this device. */
+function useDeviceMsaa3D(): number {
+  const gl = useThree((s) => s.gl);
+  const { msaa3D } = useProjectSettings().msaaSamples;
+  return useMemo(() => deviceSampleCount(gl, msaa3D), [gl, msaa3D]);
 }
 
 /** Whether the live scene draws anything through the blend equation. */

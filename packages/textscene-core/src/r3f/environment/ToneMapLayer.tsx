@@ -18,6 +18,8 @@ import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
 export interface ToneMapLayerProps {
   /** Null when the environment has no glow. */
   glow: GlowParams | null;
+  /** The scene buffer's samples per pixel, resolved before the tone curve, as Godot resolves it. */
+  samples: number;
   /** Null when `adjustment_enabled` is false. */
   adjustments: EnvironmentAdjustments | null;
   toneMapping: EnvironmentSettings['toneMapping'];
@@ -25,7 +27,7 @@ export interface ToneMapLayerProps {
   resources: SceneResources;
 }
 
-export function ToneMapLayer({ glow, adjustments, toneMapping, resources }: ToneMapLayerProps) {
+export function ToneMapLayer({ glow, samples, adjustments, toneMapping, resources }: ToneMapLayerProps) {
   const { mode, white, exposure, agxContrast } = toneMapping;
   const glowMap = useGlowMap(glow, resources);
 
@@ -47,10 +49,8 @@ export function ToneMapLayer({ glow, adjustments, toneMapping, resources }: Tone
   // A uniform, not an effect rebuild: the map's arrival changes no shader.
   useEffect(() => (effect as GodotToneMapEffect).setGlowMap(glowMap), [effect, glowMap]);
 
-  // No multisampling: Godot's `msaa_3d` defaults to Disabled (`rendering_server.cpp:3774`), and a
-  // resolve here would average edges in linear HDR, before the tone curve.
   return (
-    <EffectComposer multisampling={0}>
+    <EffectComposer multisampling={samples}>
       <primitive object={effect} dispose={null} />
     </EffectComposer>
   );

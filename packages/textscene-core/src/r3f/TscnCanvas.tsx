@@ -246,10 +246,13 @@ export function TscnCanvas() {
           A Control-only SubViewport sampled by a 3D scene draws through this
           renderer, so its ScrollContainer clips only because the flag is set here
           as well as on the 2D world canvas. */}
+      {/* `antialias: false`: Godot's `msaa_3d` defaults to Disabled (`rendering_server.cpp:3774`).
+          A project that turns it on gets the compositor's multisampled buffer, which resolves
+          before the tone curve as Godot's does. */}
       <Canvas
         camera={{ position: editorCameraPosition(), fov: EDITOR_CAMERA_FOV }}
         shadows="percentage"
-        gl={{ localClippingEnabled: true }}
+        gl={{ localClippingEnabled: true, antialias: false }}
         onCreated={installShaderPatches}
       >
         <TscnSceneContents />

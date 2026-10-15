@@ -51,6 +51,14 @@ function ShadowMapProbe({ seen }: { seen: { type: THREE.ShadowMapType; enabled: 
   return null;
 }
 
+describe('<TscnCanvas> multisampling', () => {
+  it("asks for a drawing buffer with no multisampling, as Godot's msaa_3d defaults to Disabled", () => {
+    // rendering_server.cpp:3774. A project that turns MSAA on gets it from the compositor's
+    // multisampled buffer, never from the drawing buffer.
+    expect(CANVAS_TAG).toMatch(/antialias:\s*false/);
+  });
+});
+
 describe('<TscnCanvas> shadows', () => {
   it('asks the <Canvas> for the percentage preset', () => {
     expect(CANVAS_TAG).not.toBe('');
