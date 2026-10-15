@@ -329,8 +329,17 @@ describe('compositeProgram — the uniforms it returns', () => {
     return compositeProgram({ glow, toneMapping: FILMIC, adjustments: null, exposure });
   }
 
+  it.each([
+    ['an indented declaration', '  uniform float a;', ['a']],
+    ['an array declaration', 'uniform vec3 b[4];', ['b']],
+  ])('finds %s', (_label, line, names) => {
+    expect(declaredUniforms(line)).toEqual(names);
+  });
+
   function declaredUniforms(fragmentShader: string): string[] {
-    return [...fragmentShader.matchAll(/^uniform \w+ (\w+);$/gm)].map((match) => match[1]!);
+    return [...fragmentShader.matchAll(/^\s*uniform\s+\w+\s+(\w+)(?:\[\w+\])?\s*;/gm)].map(
+      (match) => match[1]!
+    );
   }
 
   it.each([

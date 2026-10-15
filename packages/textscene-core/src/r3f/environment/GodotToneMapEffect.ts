@@ -32,17 +32,19 @@ export class GodotToneMapEffect extends Effect {
       uniforms: new Map(Object.entries(uniforms).map(([name, value]) => [name, new THREE.Uniform(value)])),
     });
 
-    this.setGlowMap(null);
+    this.clearGlowMap();
     this.pyramid = options.glow ? new GlowPyramid(options.glow) : null;
   }
 
-  /**
-   * Samples `map` as the glow map, or white while it loads, which leaves the glow unscaled. The
-   * caller owns `map`. A no-op when the composite samples no map.
-   */
-  setGlowMap(map: THREE.Texture | null): void {
+  /** Samples `map` as the glow map. The caller owns `map`. A no-op when the composite samples no map. */
+  setGlowMap(map: THREE.Texture): void {
     const uniform = this.uniforms.get(GLOW_MAP_UNIFORM);
-    if (uniform) uniform.value = map ?? WHITE_GLOW_MAP;
+    if (uniform) uniform.value = map;
+  }
+
+  /** Samples white, which leaves the glow unscaled: the state while the map loads. */
+  clearGlowMap(): void {
+    this.setGlowMap(WHITE_GLOW_MAP);
   }
 
   override setSize(width: number, height: number): void {

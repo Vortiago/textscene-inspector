@@ -56,10 +56,17 @@ describe('GodotToneMapEffect.setGlowMap', () => {
     expect(sampledMap(effect)).toBe(map);
   });
 
-  it('samples white while the map loads, which leaves the glow unscaled', () => {
+  it('samples white after clearGlowMap, which leaves the glow unscaled', () => {
     const effect = effectWith(MAP);
-    effect.setGlowMap(null);
+    effect.setGlowMap(srgbTexture());
+    effect.clearGlowMap();
     expect(Array.from((sampledMap(effect) as THREE.DataTexture).image.data as Uint8Array)).toEqual([
+      255, 255, 255, 255,
+    ]);
+  });
+
+  it('samples white from construction, before any map arrives', () => {
+    expect(Array.from((sampledMap(effectWith(MAP)) as THREE.DataTexture).image.data as Uint8Array)).toEqual([
       255, 255, 255, 255,
     ]);
   });
@@ -67,6 +74,7 @@ describe('GodotToneMapEffect.setGlowMap', () => {
   it('binds no map when the environment names none (edge case)', () => {
     const effect = effectWith({});
     effect.setGlowMap(srgbTexture());
+    effect.clearGlowMap();
     expect(effect.uniforms.has(GLOW_MAP_UNIFORM)).toBe(false);
   });
 });
