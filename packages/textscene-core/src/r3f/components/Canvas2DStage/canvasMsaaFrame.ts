@@ -17,11 +17,31 @@ void main() {
 }`;
 
 /**
- * One copy pass for every frame, which each frame points at its own texture before it draws. A
- * pass per frame would go with the frame's `dispose`, which `setSize` calls on every resize, and
- * recompile its shader.
+ * One copy pass per renderer, written only by `copyPassFor`. A pass per frame would go with each
+ * resize, since `setSize` calls `dispose`, and recompile. A module-wide pass would keep every
+ * renderer that drew it, through three's dispose listener. An entry goes with its renderer.
  */
-const copyPass = fullScreenPass('Canvas2D::msaaCopy', COPY_FRAGMENT, { frame: { value: null } });
+const copyPasses = new WeakMap<THREE.WebGLRenderer, THREE.ShaderMaterial>();
+
+function copyPassFor(gl: THREE.WebGLRenderer): THREE.ShaderMaterial {
+  const cached = copyPasses.get(gl);
+  if (cached) return cached;
+  const pass = fullScreenPass('Canvas2D::msaaCopy', COPY_FRAGMENT, { frame: { value: null } });
+  copyPasses.set(gl, pass);
+  return pass;
+}
+
+/** Copies `frame` through `gl`'s pass, which holds no frame once the draw ends. */
+function copyToTarget(
+  gl: THREE.WebGLRenderer,
+  frame: CanvasMsaaFrame,
+  target: THREE.WebGLRenderTarget | null
+): void {
+  const pass = copyPassFor(gl);
+  pass.uniforms.frame!.value = frame.texture;
+  drawFullScreen(gl, pass, target);
+  pass.uniforms.frame!.value = null;
+}
 
 /**
  * RGBA8 storage under an sRGB tag. Taking output like the drawing buffer, three encodes each
@@ -52,7 +72,6 @@ export class CanvasMsaaFrame extends THREE.WebGLRenderTarget {
     const previous = gl.getRenderTarget();
     gl.setRenderTarget(this);
     gl.render(scene, camera);
-    copyPass.uniforms.frame!.value = this.texture;
-    drawFullScreen(gl, copyPass, previous);
+    copyToTarget(gl, this, previous);
   }
 }

@@ -8,9 +8,15 @@ import { CanvasMsaaFrame } from './canvasMsaaFrame';
 
 type Target = THREE.WebGLRenderTarget | null;
 
-/** A renderer that records each draw and the target bound for it. */
+/** The texture a copy pass samples, read at its draw: the pass holds none after it. */
+function sampledFrame(drawn: THREE.Object3D): THREE.Texture | undefined {
+  const material = (drawn as THREE.Mesh).material as THREE.ShaderMaterial | undefined;
+  return material?.uniforms?.frame?.value;
+}
+
+/** A renderer that records each draw, the target bound for it and the frame a copy samples. */
 function recordingRenderer(width: number, height: number) {
-  const draws: { drawn: THREE.Object3D; target: Target }[] = [];
+  const draws: { drawn: THREE.Object3D; target: Target; sampled: THREE.Texture | undefined }[] = [];
   let bound: Target = null;
   const gl = {
     getDrawingBufferSize: (out: THREE.Vector2) => out.set(width, height),
@@ -19,7 +25,7 @@ function recordingRenderer(width: number, height: number) {
       bound = target;
     },
     render: (drawn: THREE.Object3D) => {
-      draws.push({ drawn, target: bound });
+      draws.push({ drawn, target: bound, sampled: sampledFrame(drawn) });
     },
   };
   return { gl: gl as unknown as THREE.WebGLRenderer, draws };
@@ -69,17 +75,26 @@ describe('CanvasMsaaFrame', () => {
     frame.dispose();
   });
 
-  it('copies its own texture when another frame copied before it (edge case)', () => {
-    const other = multisampledFrame(4);
-    other.render(recordingRenderer(64, 64).gl, scene, camera);
+  it('copies its own texture when another frame on the renderer copied before it (edge case)', () => {
     const { gl, draws } = recordingRenderer(64, 64);
     const frame = multisampledFrame(4);
+    const other = multisampledFrame(4);
+    other.render(gl, scene, camera);
 
     frame.render(gl, scene, camera);
 
-    const copy = (draws[1]!.drawn as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(copy.uniforms.frame!.value).toBe(frame.texture);
+    expect(draws[3]!.sampled).toBe(frame.texture);
     other.dispose();
+    frame.dispose();
+  });
+
+  it('keeps no frame in the copy pass once the copy has drawn (edge case)', () => {
+    const { gl, draws } = recordingRenderer(64, 64);
+    const frame = multisampledFrame(2);
+
+    frame.render(gl, scene, camera);
+
+    expect(sampledFrame(draws[1]!.drawn)).toBeNull();
     frame.dispose();
   });
 
