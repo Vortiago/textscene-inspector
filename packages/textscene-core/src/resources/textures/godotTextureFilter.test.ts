@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import {
   GODOT_TEXTURE_FILTER_DEFAULT,
   applyTextureFilterState,
+  dropMipChain,
   godotTextureFilterState,
   textureFilterMatches,
 } from './godotTextureFilter';
@@ -131,5 +132,27 @@ describe('a texture with no mipmaps', () => {
 
     expect(texture.generateMipmaps).toBe(true);
     expect(texture.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+  });
+});
+
+describe('dropMipChain', () => {
+  it('stops a mipmapped texture generating mipmaps and samples its base level', () => {
+    const texture = new THREE.Texture();
+    dropMipChain(texture);
+    expect([texture.generateMipmaps, texture.minFilter]).toEqual([false, THREE.LinearFilter]);
+  });
+
+  it('keeps a nearest mip filter nearest within the level', () => {
+    const texture = new THREE.Texture();
+    texture.minFilter = THREE.NearestMipmapLinearFilter;
+    dropMipChain(texture);
+    expect(texture.minFilter).toBe(THREE.NearestFilter);
+  });
+
+  it('leaves a filter with no mip lookup as it is (edge case)', () => {
+    const texture = new THREE.Texture();
+    texture.minFilter = THREE.NearestFilter;
+    dropMipChain(texture);
+    expect(texture.minFilter).toBe(THREE.NearestFilter);
   });
 });

@@ -15,7 +15,7 @@ import {
 import * as logger from '../logger';
 import { boolSlotValue } from '../godot/index.js';
 import { DEFAULT_GLTF_NAMING_VERSION, type GltfNamingOptions } from '../godot/import/gltfImportNames.js';
-import { parseOptionalInt } from './valueParsers.js';
+import { parseOptionalFloat, parseOptionalInt } from './valueParsers.js';
 import {
   DEFAULT_LIGHT_BAKE_MODE,
   DEFAULT_LIGHTMAP_TEXEL_SIZE,
@@ -23,6 +23,12 @@ import {
   MeshOverride,
   unwrapTexelSize,
 } from '../godot/import/sceneImport.js';
+import {
+  DEFAULT_TEXTURE_IMPORT,
+  TEXTURE_IMPORTER,
+  TextureNormalMapMode,
+  type TextureImportOptions,
+} from '../godot/import/textureImport.js';
 
 /** A `key=value` line, tolerating surrounding whitespace and a trailing comment-free tail. */
 const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/]*)=(.*)$/;
@@ -39,8 +45,8 @@ export interface ParsedImportFile {
    * The `[params]` block: a string literal's decoded text, as `VariantParser` reads it back
    * (`resource_importer.cpp:76`), and any other value as written. The typed readers cover only
    * `nodes/root_scale`, `nodes/apply_root_scale`, the glTF naming options, the lightmap unwrap
-   * options, and the `_subresources` material remaps, mesh layers and mesh lightmap overrides. The
-   * rest is GLTFLoader's work or a bake concern with no visual effect.
+   * options, the `_subresources` material remaps, mesh layers and mesh lightmap overrides, and a
+   * texture's compression. The rest is GLTFLoader's work or a bake concern with no visual effect.
    */
   params: Record<string, string>;
 }
@@ -133,6 +139,27 @@ export function importRootScale(parsed: ParsedImportFile | null): { scale: numbe
   // `bool apply_root = p_options["nodes/apply_root_scale"]`
   // (`resource_importer_scene.cpp:3154-3157`) booleanizes the Variant, so `0` is false.
   return { scale, bake: boolSlotValue(parsed!.params['nodes/apply_root_scale']) !== false };
+}
+
+/**
+ * The options a `texture` importer sidecar names that change the imported texture: its texels, its
+ * format and its mip chain. A sidecar of another importer, or none, reads as the importer's
+ * defaults, and so does a parameter it omits or cannot read.
+ */
+export function importTextureOptions(parsed: ParsedImportFile | null): TextureImportOptions {
+  if (parsed?.importer !== TEXTURE_IMPORTER) return DEFAULT_TEXTURE_IMPORT;
+  const { params } = parsed;
+  const flag = (key: string, fallback: boolean): boolean => boolSlotValue(params[key]) ?? fallback;
+  return {
+    mode: parseOptionalInt(params['compress/mode']) ?? DEFAULT_TEXTURE_IMPORT.mode,
+    highQuality: flag('compress/high_quality', DEFAULT_TEXTURE_IMPORT.highQuality),
+    normalMap: parseOptionalInt(params['compress/normal_map']) === TextureNormalMapMode.Enable,
+    mipmaps: flag('mipmaps/generate', DEFAULT_TEXTURE_IMPORT.mipmaps),
+    fixAlphaBorder: flag('process/fix_alpha_border', DEFAULT_TEXTURE_IMPORT.fixAlphaBorder),
+    premultAlpha: flag('process/premult_alpha', DEFAULT_TEXTURE_IMPORT.premultAlpha),
+    invertNormalY: flag('process/normal_map_invert_y', DEFAULT_TEXTURE_IMPORT.invertNormalY),
+    svgScale: parseOptionalFloat(params['svg/scale']) ?? DEFAULT_TEXTURE_IMPORT.svgScale,
+  };
 }
 
 /**

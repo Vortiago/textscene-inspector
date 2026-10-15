@@ -8,6 +8,9 @@ export const MATERIAL_SCENES = [
   { name: 'material-diffuse-mode', file: 'unit-material-diffuse-mode.tscn' },
   { name: 'material-specular-mode', file: 'unit-material-specular-mode.tscn' },
   { name: 'material-normal-map', file: 'unit-material-normal-map.tscn' },
+  // A normal map with blue 0: Godot rebuilds blue from red and green, so the flat texel shades as the
+  // bare plane. A read of the stored blue turns that half dark.
+  { name: 'material-normal-map-blue', file: 'unit-material-normal-map-blue.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
@@ -81,6 +84,10 @@ export const MATERIAL_SCENES = [
   // The saved format of an albedo ImageTexture: the same greys as Lum8, which has no sRGB view and
   // reads raw, over RGB8, which reads as sRGB. A format read the wrong way darkens or lifts a strip.
   { name: 'material-albedo-image-format', file: 'unit-material-albedo-image-format.tscn' },
+  // The import format of an albedo image file: a greyscale PNG with no sidecar imports as Lum8 and
+  // reads raw, the same PNG VRAM compressed reads as sRGB, as does an RGB PNG, and an RGB PNG imported
+  // as an RGTC normal map reads red and green raw with blue 0. A wrong read shifts a strip.
+  { name: 'material-albedo-image-import', file: 'unit-material-albedo-image-import.tscn' },
   // A wrapped albedo texture: an AtlasTexture binds its whole sheet, not its region, and a
   // CanvasTexture binds Godot's white default. A cropped sheet or a drawn diffuse shows at once.
   { name: 'material-albedo-atlas-texture', file: 'unit-material-albedo-atlas-texture.tscn' },

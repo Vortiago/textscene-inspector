@@ -14,6 +14,9 @@ const CORE = resolve(findRepoRoot(), 'packages/textscene-core');
 
 /** The value exports kept although only tests import them, each with the reason a test needs it. */
 const KEPT = [
+  // Godot's `compress/mode` enum. Production compares it inside its own module, and a sidecar
+  // stores the bare number, so only a test names a mode from outside.
+  'godot/import/textureImport.ts#TextureCompressMode',
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',

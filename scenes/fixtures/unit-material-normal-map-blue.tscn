@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+; One variable: the blue of a normal map. Both texels hold blue 0, the left one a flat normal and the
+; right one a normal tilted 45 degrees towards +X. Godot ignores blue and rebuilds it from red and
+; green (`scene_forward_clustered.glsl:1437-1438`), so the left half shades as the bare plane. The
+; other normal map goldens hold a blue that matches their red and green, so none shows this read.
+
+[ext_resource type="Texture2D" path="res://textures/normal-blue-zero.png" id="1_normal"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_plane"]
+size = Vector2(4, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_normal"]
+albedo_color = Color(0.4, 0.4, 0.4, 1)
+normal_enabled = true
+normal_texture = ExtResource("1_normal")
+texture_filter = 0
+
+[node name="NormalMapBlue" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+projection = 1
+size = 3.0
+
+[node name="Plane" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_plane")
+surface_material_override/0 = SubResource("StandardMaterial3D_normal")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.5, 0, 0.866025, 0, 1, 0, -0.866025, 0, 0.5, 0, 0, 0)

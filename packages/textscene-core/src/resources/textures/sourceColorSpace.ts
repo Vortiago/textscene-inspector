@@ -30,7 +30,7 @@ export function copyGodotFormat<T extends THREE.Texture>(target: T, source: THRE
 /**
  * The colour space a `source_color` sampler reads `texture` in: its sRGB view, or its raw view when
  * its format has none (`material_storage.cpp:1073`). A texture with no recorded format, an image
- * file, reads sRGB.
+ * whose headers name none, reads sRGB.
  */
 export function sourceColorSpace(texture: THREE.Texture): THREE.ColorSpace {
   const format = recordedGodotFormat(texture);

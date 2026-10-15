@@ -9,8 +9,10 @@ import {
   importLightmapUnwrap,
   importNodeLayers,
   importRootScale,
+  importTextureOptions,
   parseImportFile,
 } from './importParser';
+import { DEFAULT_TEXTURE_IMPORT, TextureCompressMode } from '../godot/import/textureImport';
 
 const TREE_IMPORT = `[remap]
 
@@ -350,5 +352,51 @@ describe('importLightmapUnwrap', () => {
     const unwrap = importLightmapUnwrap(sidecar('meshes/light_baking=2\nmeshes/lightmap_texel_size=0'));
 
     expect(unwrap?.texelSize).toBe(Math.fround(0.001));
+  });
+});
+
+const textureSidecar = (...params: string[]): string =>
+  ['[remap]', '', 'importer="texture"', '', '[params]', '', ...params].join('\n');
+
+describe('importTextureOptions', () => {
+  it('reads every option a texture sidecar names that changes the texture', () => {
+    const sidecar = textureSidecar(
+      'compress/mode=2',
+      'compress/high_quality=true',
+      'compress/normal_map=1',
+      'mipmaps/generate=true',
+      'process/fix_alpha_border=false',
+      'process/premult_alpha=true',
+      'process/normal_map_invert_y=true',
+      'svg/scale=2.5'
+    );
+    expect(importTextureOptions(parseImportFile(sidecar))).toEqual({
+      mode: TextureCompressMode.VramCompressed,
+      highQuality: true,
+      normalMap: true,
+      mipmaps: true,
+      fixAlphaBorder: false,
+      premultAlpha: true,
+      invertNormalY: true,
+      svgScale: 2.5,
+    });
+  });
+
+  it('reads no sidecar, or one of another importer, as the Detect preset', () => {
+    const scene = textureSidecar('mipmaps/generate=true').replace('"texture"', '"scene"');
+    expect([importTextureOptions(null), importTextureOptions(parseImportFile(scene))]).toEqual([
+      DEFAULT_TEXTURE_IMPORT,
+      DEFAULT_TEXTURE_IMPORT,
+    ]);
+  });
+
+  it('reads an omitted or unreadable parameter at its default (edge case)', () => {
+    const sidecar = textureSidecar(
+      'compress/mode="two"',
+      'compress/normal_map=2',
+      'mipmaps/generate=maybe',
+      'svg/scale="big"'
+    );
+    expect(importTextureOptions(parseImportFile(sidecar))).toEqual(DEFAULT_TEXTURE_IMPORT);
   });
 });

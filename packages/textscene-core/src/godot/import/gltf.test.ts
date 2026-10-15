@@ -3,6 +3,7 @@ import {
   GLB_BIN_CHUNK,
   GLB_JSON_CHUNK,
   GLB_MAGIC,
+  dataUriMimeType,
   godotSurfacePrimitives,
   gltfObjects,
   gltfRefusalMessage,
@@ -271,5 +272,24 @@ describe('gltfObjects', () => {
 
   it('returns none for a value that is not an array (edge case)', () => {
     expect(gltfObjects({ name: 'Cube' })).toEqual([]);
+  });
+});
+
+describe('dataUriMimeType', () => {
+  it('reads the MIME type between data: and ;base64', () => {
+    expect(dataUriMimeType('data:image/jpeg;base64,/9g=')).toBe('image/jpeg');
+  });
+
+  it('gives undefined for a URI that is no data URI, or names no ;base64', () => {
+    expect([
+      dataUriMimeType('textures/crate.png'),
+      dataUriMimeType(undefined),
+      dataUriMimeType('data:image/png,raw'),
+      dataUriMimeType('data:image/png;charset=utf-8,raw'),
+    ]).toEqual([undefined, undefined, undefined, undefined]);
+  });
+
+  it('gives an empty type for a data URI with nothing before ;base64', () => {
+    expect(dataUriMimeType('data:;base64,AAAA')).toBe('');
   });
 });
