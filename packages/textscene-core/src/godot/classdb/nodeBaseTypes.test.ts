@@ -5,7 +5,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { MAX_BASE_CHAIN_HOPS, NODE_BASE_TYPES, isCatalogedType } from './nodeBaseTypes.js';
+import { NODE_BASE_TYPES, isCatalogedType } from './nodeBaseTypes.js';
+import { MAX_BASE_CHAIN_HOPS } from './classBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
 
 /** Hops from `type` to its root, walking the raw table. */

@@ -49,7 +49,7 @@ function catalogChain(typeName, fallback = []) {
 }
 
 /** Whether Godot's ancestry for `typeName` passes through `ancestor`. */
-export function descendsFromClass(typeName, ancestor) {
+export function descendsFrom(typeName, ancestor) {
   return catalogChain(typeName).includes(ancestor);
 }
 

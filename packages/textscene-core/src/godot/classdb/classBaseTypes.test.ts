@@ -38,7 +38,7 @@ describe('CLASS_BASE_TYPES', () => {
     expect(CLASS_BASE_TYPES.Node).toBeUndefined();
   });
 
-  it('walks the merged table, which the node-only walk cannot', () => {
+  it('reaches a resource ancestor', () => {
     expect(descendsFromClass('StandardMaterial3D', 'Material')).toBe(true);
     expect(descendsFromClass('ShaderMaterial', 'Material')).toBe(true);
     expect(descendsFromClass('Material', 'Material')).toBe(true);

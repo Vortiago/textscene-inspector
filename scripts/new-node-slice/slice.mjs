@@ -6,7 +6,7 @@
 import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { descendsFromClass, parentLinterParser, parentParser } from './ancestry.mjs';
+import { descendsFrom, parentLinterParser, parentParser } from './ancestry.mjs';
 import { BASES, GEOMETRY_INSTANCE_BASE } from './bases.mjs';
 import { checkChain } from './catalogChecks.mjs';
 import { CORE_SRC, REPO_ROOT, fail } from './paths.mjs';
@@ -23,7 +23,7 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
   // linterParser.ts. True for both `transform-only` and `pending`, so it names the reuse.
   const reusesBaseParser = intent !== 'draws';
   const base =
-    baseKey === 'node3d' && descendsFromClass(typeName, 'GeometryInstance3D')
+    baseKey === 'node3d' && descendsFrom(typeName, 'GeometryInstance3D')
       ? GEOMETRY_INSTANCE_BASE
       : BASES[baseKey];
   const lower = typeName.toLowerCase();

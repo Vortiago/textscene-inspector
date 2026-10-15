@@ -31,11 +31,3 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
 export function isCatalogedType(nodeType: string): boolean {
   return nodeType === 'Node' || Object.hasOwn(NODE_BASE_TYPES, nodeType);
 }
-
-/**
- * How many hops a base-chain walk takes before giving up: the deepest catalogued chain is 7
- * (`OpenXRInteractionProfileEditor` → … → `Node`), and 32 never binds yet stops a malformed table.
- * Exported, as `findInClassChain` and `ValidatorRegistry` walk the merged class table with the same
- * bound.
- */
-export const MAX_BASE_CHAIN_HOPS = 32;
