@@ -35,4 +35,4 @@ The screenshot renders one frame of the canvas's loop, because a pass that owns 
 what the canvas shows.
 
 A multisampled SubViewport target resolves after three's inline tone curve, where Godot resolves
-before it. The difference shows only on an edge between a bright and a dark surface.
+before it (#773). The difference shows only on an edge between a bright and a dark surface.
