@@ -93,7 +93,7 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends bubblewrap socat
 
       - id: claude
-        uses: anthropics/claude-code-action@6c690188da61cf16ee7debb28383ba67f02abb4c # v1.0.242
+        uses: anthropics/claude-code-action@1d6de8cb0c237e7c15e9e1bdf973826ebae490cc # v1.0.248
         env:
           # Strips every credential from a subprocess. Claude runs none, so this guards a
           # later change that hands it a command.
