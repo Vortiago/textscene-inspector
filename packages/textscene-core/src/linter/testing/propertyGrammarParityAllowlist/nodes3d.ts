@@ -50,13 +50,11 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Placement relative to the node origin.
       'offset',
       'vertical_alignment',
-      // Material behaviour: lighting response and the alpha antialiasing pair.
+      // Material behaviour: lighting response.
       'shaded',
-      'alpha_antialiasing_mode',
-      'alpha_antialiasing_edge',
     ],
     reason:
-      'double_sided and alpha_hash_scale are the own properties both parsed and validated; everything else Label3D declares is a real render input the previewer does not read, so the whole set is a render gap rather than deliberate scope.',
+      'double_sided, alpha_hash_scale and the alpha antialiasing pair are the own properties both parsed and validated; everything else Label3D declares is a real render input the previewer does not read, so the whole set is a render gap rather than deliberate scope.',
   },
 
   // Navigation regions draw a translucent navmesh overlay here, mirroring the

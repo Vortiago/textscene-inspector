@@ -392,6 +392,9 @@ function useOwnedMaterial<M extends THREE.Material | null>(
       blend?.alphaHashScale,
       blend?.opaquePrepass,
       blend?.blending,
+      blend?.antialiasing?.mode,
+      blend?.antialiasing?.scissorThreshold,
+      blend?.antialiasing?.edge,
       blend?.injection,
     ]
   );

@@ -14,8 +14,8 @@ import type { TscnNode } from '../../parser/types';
 import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';
 import type { Camera3DProperties } from '../../nodes/3d/camera3d/types';
 import { ProjectionMode, KeepAspectMode } from '../../nodes/3d/camera3d/types';
-import type { Label3DProperties } from '../../nodes/3d/label3d/types';
-import { AlphaCutMode, BillboardMode, TextureFilter } from '../../nodes/3d/label3d/types';
+import { BillboardMode } from '../../nodes/3d/label3d/types';
+import { labelProperties } from '../../nodes/3d/label3d/testing/labelProperties';
 import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
 import { depthSideOf, drawsColour } from '../testing/threePasses';
 import { subResource } from '../../testing/subResource';
@@ -23,7 +23,6 @@ import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/ty
 import '../../nodes/3d/meshinstance3d/index.r3f';
 import '../../nodes/3d/label3d/index.r3f';
 import { registeredComponent } from '../testing/registeredComponent';
-import { HORIZONTAL_ALIGNMENT_CENTER } from '../../godot/math/math';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 const Label3D = registeredComponent('Label3D');
@@ -357,28 +356,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
   });
 
   it('audit slot 93a — Label3D billboard=ENABLED → group.userData.billboardMode set + useFrame copies camera.quaternion', async () => {
-    const props: Label3DProperties = {
-      ...GEOMETRY_INSTANCE_DEFAULTS,
-      name: 'L',
-      text: 'Hello',
-      pixel_size: 0.01,
-      billboard: BillboardMode.BILLBOARD_ENABLED,
-      modulate: { r: 1, g: 1, b: 1, a: 1 },
-      outline_size: 0,
-      outline_modulate: { r: 0, g: 0, b: 0, a: 1 },
-      double_sided: true,
-      font_size: 32,
-      line_spacing: 0,
-      horizontal_alignment: HORIZONTAL_ALIGNMENT_CENTER,
-      no_depth_test: false,
-      render_priority: 0,
-      outline_render_priority: -1,
-      alpha_cut: AlphaCutMode.DISABLED,
-      alpha_scissor_threshold: 0.5,
-      alpha_hash_scale: 1,
-      fixed_size: false,
-      texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
-    };
+    const props = labelProperties({ text: 'Hello', billboard: BillboardMode.BILLBOARD_ENABLED });
     const node: TscnNode = { rawProperties: {}, name: 'L', type: 'Label3D', children: [], properties: props };
 
     const renderer = await ReactThreeTestRenderer.create(
@@ -410,34 +388,16 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
   });
 
   it('audit slot 93a — Label3D billboard=DISABLED → useFrame leaves rotation untouched', async () => {
-    const props: Label3DProperties = {
-      ...GEOMETRY_INSTANCE_DEFAULTS,
-      name: 'L',
+    const props = labelProperties({
       text: 'Hello',
-      pixel_size: 0.01,
       billboard: BillboardMode.BILLBOARD_DISABLED,
-      modulate: { r: 1, g: 1, b: 1, a: 1 },
-      outline_size: 0,
-      outline_modulate: { r: 0, g: 0, b: 0, a: 1 },
-      double_sided: true,
-      font_size: 32,
-      line_spacing: 0,
-      horizontal_alignment: HORIZONTAL_ALIGNMENT_CENTER,
-      no_depth_test: false,
-      render_priority: 0,
-      outline_render_priority: -1,
-      alpha_cut: AlphaCutMode.DISABLED,
-      alpha_scissor_threshold: 0.5,
-      alpha_hash_scale: 1,
-      fixed_size: false,
-      texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
       transform: {
         basis_x: { x: 1, y: 0, z: 0 },
         basis_y: { x: 0, y: 1, z: 0 },
         basis_z: { x: 0, y: 0, z: 1 },
         origin: { x: 0, y: 0, z: 0 },
       },
-    };
+    });
     const node: TscnNode = { rawProperties: {}, name: 'L', type: 'Label3D', children: [], properties: props };
 
     const renderer = await ReactThreeTestRenderer.create(

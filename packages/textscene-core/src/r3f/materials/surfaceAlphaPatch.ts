@@ -23,8 +23,8 @@ interface SurfaceBlend {
   blending?: THREE.Blending;
 }
 
-const ALPHA_TEST_CHUNK = '#include <alphatest_fragment>';
-const ALPHA_HASH_CHUNK = '#include <alphahash_fragment>';
+export const ALPHA_TEST_CHUNK = '#include <alphatest_fragment>';
+export const ALPHA_HASH_CHUNK = '#include <alphahash_fragment>';
 
 function rewriteFragment(shader: ProgramShader, chunk: string, replacement: string): void {
   shader.fragmentShader = shader.fragmentShader.replace(chunk, replacement);

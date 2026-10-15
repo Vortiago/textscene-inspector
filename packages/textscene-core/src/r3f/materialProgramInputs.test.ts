@@ -8,9 +8,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
 import {
+  alphaAntialiasingUserData,
+  coverOneSampleTarget,
+  GODOT_ALPHA_ANTIALIASING,
+} from './materials/godotAlphaAntialiasing';
+import { AlphaAntiAliasing, scissorAntialiasing } from '../godot/rendering/materials/alphaAntialiasing';
+import {
   composeInjections,
   injectProgram,
   materialProgramInputs,
+  stateInjectionKey,
   type MaterialProgramBag,
   type ProgramInjection,
 } from './materialProgramInputs';
@@ -24,6 +31,8 @@ function keyOf<P extends object, M extends readonly object[] = []>(
 ): string {
   return materialProgramInputs<P, M>({ props, merge }).key;
 }
+
+const SCISSOR_CUT = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0.3);
 
 describe('materialProgramInputs', () => {
   const texture = (colorSpace: THREE.ColorSpace = THREE.SRGBColorSpace): THREE.Texture => {
@@ -401,6 +410,18 @@ describe('injectProgram', () => {
     expect(material.onBeforeCompile).toBe(GODOT_ALPHA_HASH.onBeforeCompile);
   });
 
+  it("adds Godot's edge ramp to a material that records alpha antialiasing", () => {
+    const material = new THREE.MeshBasicMaterial({ userData: alphaAntialiasingUserData(SCISSOR_CUT) });
+    injectProgram(material, undefined);
+    expect(material.onBeforeCompile).toBe(GODOT_ALPHA_ANTIALIASING.onBeforeCompile);
+  });
+
+  it('gives an antialiased material the draw hook that reads the target samples', () => {
+    const material = new THREE.MeshBasicMaterial({ userData: alphaAntialiasingUserData(SCISSOR_CUT) });
+    injectProgram(material, undefined);
+    expect(material.onBeforeRender).toBe(coverOneSampleTarget);
+  });
+
   it('leaves an unhashed material with no injection unpatched (error case)', () => {
     const material = new THREE.MeshBasicMaterial();
     injectProgram(material, undefined);
@@ -476,5 +497,47 @@ describe("materialProgramInputs with Godot's alpha hash", () => {
   it('adds no hash to a material whose merge turns it off (edge case)', () => {
     const program = materialProgramInputs({ props: { alphaHash: true }, merge: [{ alphaHash: false }] });
     expect(program.props.onBeforeCompile).toBeUndefined();
+  });
+});
+
+describe("materialProgramInputs with Godot's alpha antialiasing", () => {
+  it("patches a material that records alpha antialiasing with Godot's edge ramp", () => {
+    const program = materialProgramInputs({ props: { userData: alphaAntialiasingUserData(SCISSOR_CUT) } });
+    expect(program.props.onBeforeCompile).toBe(GODOT_ALPHA_ANTIALIASING.onBeforeCompile);
+    expect(program.key).toContain(`inject:${GODOT_ALPHA_ANTIALIASING.cacheKey}`);
+  });
+
+  it('mounts the draw hook that reads the target samples', () => {
+    const program = materialProgramInputs({ props: { userData: alphaAntialiasingUserData(SCISSOR_CUT) } });
+    expect(program.props.onBeforeRender).toBe(coverOneSampleTarget);
+  });
+
+  it('ramps after the hash, which a hashed cutout runs first', () => {
+    const program = materialProgramInputs({
+      props: { alphaHash: true, userData: alphaAntialiasingUserData(SCISSOR_CUT) },
+    });
+    expect(program.key).toContain(`${GODOT_ALPHA_HASH.cacheKey}+${GODOT_ALPHA_ANTIALIASING.cacheKey}`);
+  });
+
+  it('adds no ramp to a material whose userData records none (edge case)', () => {
+    const program = materialProgramInputs({ props: { userData: {} } });
+    expect(program.props.onBeforeCompile).toBeUndefined();
+    expect(program.props.onBeforeRender).toBeUndefined();
+  });
+});
+
+describe('stateInjectionKey', () => {
+  it("keys a hashed, antialiased material by both of Godot's patches", () => {
+    const material = new THREE.MeshBasicMaterial({
+      alphaHash: true,
+      userData: alphaAntialiasingUserData(SCISSOR_CUT),
+    });
+    expect(stateInjectionKey(material)).toBe(
+      `${GODOT_ALPHA_HASH.cacheKey}+${GODOT_ALPHA_ANTIALIASING.cacheKey}`
+    );
+  });
+
+  it('keys a material with no such state as empty (edge case)', () => {
+    expect(stateInjectionKey(new THREE.MeshBasicMaterial())).toBe('');
   });
 });

@@ -8,39 +8,21 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import type { Label3DProperties } from './types';
-import { AlphaCutMode, BillboardMode, TextureFilter } from './types';
+import { BillboardMode } from './types';
+import { labelProperties } from './testing/labelProperties';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
-import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
-import { HORIZONTAL_ALIGNMENT_CENTER } from '../../../godot/math/math';
 
 const Label3D = registeredComponent('Label3D');
 
 function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
-  const properties: Label3DProperties = {
-    ...GEOMETRY_INSTANCE_DEFAULTS,
+  const properties = labelProperties({
     name: 'Label',
     text: 'Hello',
-    pixel_size: 0.01,
     billboard: BillboardMode.BILLBOARD_ENABLED,
-    modulate: { r: 1, g: 1, b: 1, a: 1 },
-    outline_size: 0,
-    outline_modulate: { r: 0, g: 0, b: 0, a: 1 },
-    double_sided: true,
-    font_size: 32,
-    line_spacing: 0,
-    horizontal_alignment: HORIZONTAL_ALIGNMENT_CENTER,
-    no_depth_test: false,
-    render_priority: 0,
-    outline_render_priority: -1,
-    alpha_cut: AlphaCutMode.DISABLED,
-    alpha_scissor_threshold: 0.5,
-    alpha_hash_scale: 1,
-    fixed_size: false,
-    texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     ...overrides,
-  };
+  });
   return { rawProperties: {}, name: properties.name ?? 'Label', type: 'Label3D', children: [], properties };
 }
 

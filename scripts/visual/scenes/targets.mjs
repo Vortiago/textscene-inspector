@@ -72,5 +72,9 @@ export const TILE_AND_TARGET_SCENES = [
   { name: 'msaa-3d', file: 'msaa-3d/unit-msaa-3d.tscn' },
   { name: 'msaa-2d', file: 'msaa-2d/unit-msaa-2d.tscn', mode: '2d' },
   { name: 'sub-viewport-msaa', file: 'unit-sub-viewport-msaa.tscn', mode: '2d' },
+  // Alpha antialiasing's three modes on a scissor cut: under msaa_3d 2X, from its own Fixture project,
+  // and at one sample, where the coverage is all or none.
+  { name: 'alpha-antialiasing', file: 'alpha-antialiasing/unit-alpha-antialiasing.tscn' },
+  { name: 'alpha-antialiasing-one-sample', file: 'unit-alpha-antialiasing-one-sample.tscn' },
   { name: 'sub-viewport-control-msaa', file: 'unit-sub-viewport-control-msaa.tscn', mode: '2d' },
 ];
