@@ -10,7 +10,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
-import { HINT_RESOURCE_TYPE } from './formatOnlyCorpus.data.mjs';
+import { PROPERTY_HINT } from '../../packages/textscene-core/src/godot/classdb/propertyHint.ts';
+import { resourceTypeHint } from '../../packages/textscene-core/src/godot/classdb/resourceTypeHint.ts';
 
 const here = import.meta.dirname;
 export const CATALOG = join(here, 'node-catalog.json');
@@ -194,19 +195,14 @@ ${renderPropertyTable('NODE_CLASS_PROPERTIES', nodeProperties)}
 ${renderPropertyTable('RESOURCE_CLASS_PROPERTIES', resourceProperties)}`;
 }
 
-/**
- * Whether a resource hint excludes a class: a part after a `-`, read as `resourceTypeHint` in
- * core reads it (`editor_resource_picker.cpp:827-833`).
- */
+/** Whether a resource hint excludes a class. */
 function excludesAClass(row) {
-  return (
-    row.hint === HINT_RESOURCE_TYPE && row.hint_string.split(',').some((part) => part.trim().startsWith('-'))
-  );
+  return row.hint === PROPERTY_HINT.RESOURCE_TYPE && resourceTypeHint(row.hint_string).excluded.length > 0;
 }
 
 /** A row's resource hint string, or `''` for another hint, which excludes nothing. */
 function resourceHintOf(row) {
-  return row.hint === HINT_RESOURCE_TYPE ? row.hint_string : '';
+  return row.hint === PROPERTY_HINT.RESOURCE_TYPE ? row.hint_string : '';
 }
 
 /** Whether `className` declares `name` again below an ancestor whose slot of that name excludes a class. */

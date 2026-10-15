@@ -11,7 +11,7 @@ import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
 import { resolveResourceSlot } from './resourceChecker.js';
 import { propertyLocation } from './sourceLocation.js';
-import { excludingHint } from '../godot/classdb/resourceTypeHint.js';
+import { excludingHint } from '../godot/classdb/excludingHint.js';
 
 function sweep(scene: RawScene, owner: RawNode, lines: SourceLines, into: Diagnostic[]): void {
   for (const [key, value] of Object.entries(owner.rawProperties)) {

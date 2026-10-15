@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { applicableEntries, corpusRefusals } from './formatOnlyCorpus.mjs';
-import { FORMAT_ONLY_CORPUS, HINT_RESOURCE_TYPE, SETTER_TYPES } from './formatOnlyCorpus.data.mjs';
+import { FORMAT_ONLY_CORPUS, SETTER_TYPES } from './formatOnlyCorpus.data.mjs';
 import { ENGINE_CITE_RE } from '../../packages/textscene-core/src/linter/testing/engineCite.ts';
 
 const TYPE_STRING = 4;
@@ -14,6 +14,7 @@ const TYPE_ARRAY = 28;
 const HINT_ARRAY_TYPE = 31;
 
 const TYPE_OBJECT = 24;
+const HINT_RESOURCE_TYPE = 17;
 
 const CORPUS = [
   { type: TYPE_STRING, literal: '"a"', cite: 'variant_parser.cpp:276', stores: 'as-written' },
