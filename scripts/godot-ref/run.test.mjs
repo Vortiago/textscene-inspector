@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { PNG } from 'pngjs';
+import { degToRad } from '../../packages/textscene-core/src/godot/math/math.ts';
 import {
   CANVAS_2D_CAPTURE,
   CANVAS_CAPTURE,
@@ -97,7 +98,7 @@ describe('editor-camera constants mirror the previewer', () => {
 
     frameSceneBounds(scene, camera, null);
 
-    const fitDistance = 1 / Math.tan(((EDITOR_FOV / 2) * Math.PI) / 180);
+    const fitDistance = 1 / Math.tan(degToRad(EDITOR_FOV / 2));
     expect(camera.position.length()).toBeCloseTo(fitDistance * FRAME_MARGIN, 6);
   });
 
@@ -623,7 +624,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     // The same derivation `_place_camera` performs, from the emitted bounds.
     const b = JSON.parse(await readFile(boundsOut, 'utf8'));
     const span = Math.max(...b.size);
-    const distance = (span / 2 / Math.tan((EDITOR_FOV * Math.PI) / 180 / 2)) * FRAME_MARGIN;
+    const distance = (span / 2 / Math.tan(degToRad(EDITOR_FOV / 2))) * FRAME_MARGIN;
     const focus = b.position.map((p, i) => p + b.size[i] / 2);
     const derived = join(dir, 'derived.png');
     await renderReference({

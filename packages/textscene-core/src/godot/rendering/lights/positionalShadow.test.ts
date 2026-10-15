@@ -60,7 +60,7 @@ describe('positionalLightBounds', () => {
   });
 
   it('is the cone along -Z for a spot light', () => {
-    const { min, max } = positionalLightBounds(10, 30);
+    const { min, max } = positionalLightBounds(10, Math.PI / 6);
     expect(min[0]).toBeCloseTo(-5, 12);
     expect(min[2]).toBe(-10);
     expect(max[1]).toBeCloseTo(5, 12);
@@ -68,7 +68,7 @@ describe('positionalLightBounds', () => {
   });
 
   it('is the whole cube for a spot light wider than a hemisphere (edge case)', () => {
-    expect(positionalLightBounds(2, 100)).toEqual({ min: [-2, -2, -2], max: [2, 2, 2] });
+    expect(positionalLightBounds(2, 1.8)).toEqual({ min: [-2, -2, -2], max: [2, 2, 2] });
   });
 
   it('carries a non-finite angle into the box (error case)', () => {

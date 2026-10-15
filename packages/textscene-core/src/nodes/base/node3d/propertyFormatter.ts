@@ -4,7 +4,7 @@
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Node3DProperties } from './types';
-import { decomposeTransform3D } from '../../../utils/transform';
+import { decomposeTransform3D, formatDegrees } from '../../../utils/transform';
 
 export function formatNode3DProperties(properties: Node3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -21,14 +21,12 @@ export function formatNode3DProperties(properties: Node3DProperties): PropertySe
       ],
     });
 
-    // Convert radians to degrees for readability
-    const radToDeg = (rad: number) => ((rad * 180) / Math.PI).toFixed(2);
     sections.push({
       title: 'Rotation (degrees)',
       items: [
-        { label: 'X', value: radToDeg(rotation.x) },
-        { label: 'Y', value: radToDeg(rotation.y) },
-        { label: 'Z', value: radToDeg(rotation.z) },
+        { label: 'X', value: formatDegrees(rotation.x) },
+        { label: 'Y', value: formatDegrees(rotation.y) },
+        { label: 'Z', value: formatDegrees(rotation.z) },
       ],
     });
 

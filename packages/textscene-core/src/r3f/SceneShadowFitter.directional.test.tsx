@@ -16,6 +16,7 @@ import { SelectionProvider } from './contexts/SelectionContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
+import { degToRad } from '../godot/math/math.js';
 
 import './nodes/index';
 
@@ -121,7 +122,7 @@ light_angular_distance = 5.0
     );
     renderThrough(renderer, cameraAt(0));
     const shadow = splitSunOf(onlyDirectionalLight(renderer))!.shadow;
-    expect(shadow.softShadowAngle).toBeCloseTo(Math.tan((5 * Math.PI) / 180), 6);
+    expect(shadow.softShadowAngle).toBeCloseTo(Math.tan(degToRad(5)), 6);
     expect(shadow.rangeBegins.toArray().some((rangeBegin) => rangeBegin !== 0)).toBe(true);
   });
 

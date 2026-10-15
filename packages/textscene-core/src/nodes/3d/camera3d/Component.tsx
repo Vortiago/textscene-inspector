@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import type { Camera3DProperties } from './types';
 import { KeepAspectMode, ProjectionMode } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { getFovy } from '../../../godot/math/projection.js';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useGizmoVisible } from '../lights/shared/lightHelpers';
@@ -67,7 +68,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
   // convert (Godot's get_fovy).
   const perspectiveFov =
     properties.keep_aspect === KeepAspectMode.KEEP_WIDTH
-      ? (2 * Math.atan(Math.tan((properties.fov * Math.PI) / 180 / 2) / DEFAULT_ASPECT) * 180) / Math.PI
+      ? getFovy(properties.fov, 1 / DEFAULT_ASPECT)
       : properties.fov;
   return (
     <PerspectiveCamera3D
