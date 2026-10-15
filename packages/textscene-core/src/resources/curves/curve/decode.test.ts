@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveCurve } from './decode';
+import { resolveOnlySubResource } from '../../../testing/subResource';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
 import { sampleCurve } from './sample';
 import { CurveTangentMode, EMPTY_CURVE, type Curve } from './types';
@@ -16,7 +17,7 @@ const CANDLE_SPARKLE = {
 
 /** The Curve a sub-resource with this body decodes to. */
 function decode(data: Record<string, string>): Curve {
-  return resolveCurve('SubResource("c")', [{ id: 'c', type: 'Curve', data }])!;
+  return resolveOnlySubResource('Curve', data, resolveCurve)!;
 }
 
 describe('the Curve body resolveCurve decodes', () => {

@@ -37,7 +37,13 @@ import { lineEditDisplayText } from './displayText';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import type { Rgba } from '../../../../godot/math/math';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_FILL,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+  type Rgba,
+} from '../../../../godot/math/math';
 
 /**
  * LineEdit's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:419`). This
@@ -274,11 +280,6 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 // Draw-time layout: the content rect for clipping and the text pen offset.
-
-const HORIZONTAL_ALIGNMENT_LEFT = 0;
-const HORIZONTAL_ALIGNMENT_CENTER = 1;
-const HORIZONTAL_ALIGNMENT_RIGHT = 2;
-const HORIZONTAL_ALIGNMENT_FILL = 3;
 
 interface LineEditContentInput {
   /** This Control's own solved rect size, Godot px. */

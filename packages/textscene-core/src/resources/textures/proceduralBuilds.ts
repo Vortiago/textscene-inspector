@@ -14,7 +14,7 @@ import { allocationLabel, findTypedSubResource } from './resolveProceduralSubRes
 import {
   cachedProceduralTexture,
   cacheProceduralTexture,
-  onProceduralTexturesReset,
+  clearProceduralTextures,
 } from './proceduralTextureCache';
 import { beginTextureWork } from './textureWork';
 
@@ -52,10 +52,15 @@ interface Build {
  */
 const builds = new Map<string, Build>();
 
-onProceduralTexturesReset(() => {
+/**
+ * Aborts every build in flight and drops every cached texture. Only tests call it, to start from
+ * an empty cache: the one reset, owned beside both, so no test resets half of it.
+ */
+export function resetProceduralTextures(): void {
   for (const build of builds.values()) build.controller.abort();
   builds.clear();
-});
+  clearProceduralTextures();
+}
 
 /**
  * Resolves `ref` as an inline `[sub_resource]` of `typeName`. Null for every other

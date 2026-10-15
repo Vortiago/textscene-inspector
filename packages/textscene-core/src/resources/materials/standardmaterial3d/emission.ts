@@ -7,12 +7,7 @@
 
 import { sRGBToLinearRGB } from '../../../utils/colorSpace';
 import type { Rgba } from '../../../godot/math/math';
-
-/** Godot `BaseMaterial3D.EmissionOperator`. */
-const EmissionOperator = {
-  ADD: 0,
-  MULTIPLY: 1,
-} as const;
+import { EmissionOperator } from '../../../godot/rendering/materials/emissionOperator';
 
 export interface EmissionScalars {
   /**

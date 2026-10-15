@@ -8,7 +8,8 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 // Side-effect import: registers every Control slice's native painter.
-import { controlComponentRegistry } from '../index';
+import '../index';
+import { controlComponentRegistry } from '../ControlComponentRegistry';
 import type { TscnNode } from '../../../parser/types';
 import { parseWithChild } from '../testing/probeScene';
 import { joinPath } from '../../../utils/nodePath';

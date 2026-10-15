@@ -5,9 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { decodeSpriteFrames } from './decode';
 import type { SpriteFramesAnimation } from './types';
-
-/** `SPRITE_FRAME_MINIMUM_DURATION` (`scene/resources/sprite_frames.h:35`). */
-const SPRITE_FRAME_MINIMUM_DURATION = 0.01;
+import { SPRITE_FRAME_MINIMUM_DURATION } from '../../../godot/scene/spriteFramesResource.js';
 
 /** The animations a SpriteFrames with this `animations` value decodes to, empty for none. */
 function animationsOf(animations: string): Map<string, SpriteFramesAnimation> {

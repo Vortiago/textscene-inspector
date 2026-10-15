@@ -4,7 +4,7 @@
  * 0.189 scale and zeroes the baked translation (1.11, -9.73, -9.73), so the mesh sits at the
  * ceiling_lamp origin beside its OmniLight3D.
  */
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../../../parser/types';
@@ -14,7 +14,6 @@ import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
-import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 
 // Register node-type components (Node3D / OmniLight3D / GLBSceneRoot / …).
 import '../../nodes/index';
@@ -22,11 +21,6 @@ import '../../nodes/index';
 import '../../../nodes/node/index';
 import '../../../nodes/base/node3d/index';
 import '../../../nodes/3d/lights/omnilight3d/index';
-
-// GLBSceneRoot clones through cloneWithMaterials, which needs the lazy GLB module cache.
-beforeAll(async () => {
-  await loadGlbModules();
-});
 
 const GLB_PATH = 'res://assets/ceiling_lamp.glb';
 const LAMP_TSCN = 'res://assets/ceiling_lamp.tscn';

@@ -8,6 +8,7 @@
 import type { SpriteFramesAnimation, SpriteFramesData } from './types';
 import { dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
 import { matchedFloat } from '../../../godot/variant/number.js';
+import { SPRITE_FRAME_MINIMUM_DURATION } from '../../../godot/scene/spriteFramesResource.js';
 import { boolSlotValue, keyedResourceRefReader, resourceRef } from '../../../godot/index.js';
 import { ANIMATION_DICT_DEPTH, splitFramesArray, splitTopLevelDicts } from './frameSplit.js';
 import { unquoteLiteral } from '../../../parser/utils.js';
@@ -33,9 +34,6 @@ const ANIMATION_KEYS_RE = ['name', 'speed', 'loop', 'frames'].map((key) => new R
 
 /** The `"name"` value: one string literal, escapes and all, with an optional `&` or `@` sigil. */
 const NAME_RE = dictStringField('name');
-
-/** `SPRITE_FRAME_MINIMUM_DURATION` (`scene/resources/sprite_frames.h:35`). */
-const SPRITE_FRAME_MINIMUM_DURATION = 0.01;
 
 /**
  * A `SpriteFrames` section's animations, or null when it declares none: to every

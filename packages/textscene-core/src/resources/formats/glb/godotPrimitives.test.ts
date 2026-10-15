@@ -1,7 +1,6 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import { createGLBMesh } from './glbProcessing';
-import { loadGlbModules } from './testing/loadGlbModules';
 import { binChunk, glbOfChunks, jsonChunk } from './testing/triangleGlb';
 import { isMesh } from '../../../r3f/testing/threeNarrow';
 
@@ -48,10 +47,6 @@ async function surfaces(glb: ArrayBuffer): Promise<THREE.Mesh[]> {
   });
   return found;
 }
-
-beforeAll(async () => {
-  await loadGlbModules();
-});
 
 describe('godotPrimitives: triangle fans', () => {
   it("reads an indexed fan's indices as a triangle list, as Godot does", async () => {

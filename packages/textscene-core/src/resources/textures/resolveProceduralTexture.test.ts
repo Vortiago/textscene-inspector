@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { TscnInternalResource } from '../../parser/types';
 import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
-import { resetProceduralTextures } from './proceduralTextureCache';
+import { resetProceduralTextures } from './proceduralBuilds';
 import { resolveProceduralTexture } from './resolveProceduralTexture';
 
 const RESOURCES: TscnInternalResource[] = [

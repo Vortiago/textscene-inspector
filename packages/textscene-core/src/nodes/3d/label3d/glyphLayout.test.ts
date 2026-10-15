@@ -7,7 +7,7 @@ import {
   OPEN_SANS_ATLAS_INFO,
 } from '../../../r3f/controls/native/text/openSansAtlas';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
-import { renderedGlyphQuads } from '../../../r3f/controls/native/text/TextRun.testkit';
+import { buildGlyphQuadArrays } from '../../../r3f/controls/native/text/glyphQuads';
 import { label3DAabb, layoutLabel3DLines, outlineRadiusPx, outlineStrokeWidthPx } from './glyphLayout';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment } from './types';
@@ -144,19 +144,19 @@ describe('label3DAabb (the line boxes label_3d.cpp:600-606 expands its AABB over
 /**
  * Label3D has no golden image (`scripts/visual/scenes.mjs` excludes its blank
  * fixture), so this pins the composed ink position: the placement Y of
- * `layoutLabel3DLines` plus the quad top `<TextRun>` draws. Only the sum
+ * `layoutLabel3DLines` plus the quad top `<TextRun>` draws (`buildGlyphQuadArrays`). Only the sum
  * is observable, so either half may move while the sum holds.
  */
 describe('layoutLabel3DLines + <TextRun> (the composed ink position — Label3D has no golden)', () => {
-  async function composedTopY(text: string, lineSpacingPx: number, lineIndex: number): Promise<number> {
+  function composedTopY(text: string, lineSpacingPx: number, lineIndex: number): number {
     const layout = shape(text, lineSpacingPx);
     const placement = layoutLabel3DLines(layout, HorizontalAlignment.CENTER, lineSpacingPx)[lineIndex]!;
-    const quads = await renderedGlyphQuads(soloLineLayout(placement.line, layout), FONT_SIZE);
+    const quads = buildGlyphQuadArrays(soloLineLayout(placement.line, layout), FONT_SIZE, 0);
     // Vertex order per quad is TL, TR, BL, BR; TL's y is float index 1.
     return -placement.y + quads.positions[1]!;
   }
 
-  it("a single line's first glyph lands at three-local y = 11.880952... (the worked example above)", async () => {
+  it("a single line's first glyph lands at three-local y = 11.880952... (the worked example above)", () => {
     // At font_size 32: ascent ceil(2189*32/2048) = 35 and descent ceil(600*32/2048)
     // = 10, so the group sits at +22.5 (`rect.ts` negates once). 'H' in `openSansAtlas.ts`
     // has yoffset 13, base 45 and bake fontSize 42, so the quad top is
@@ -164,19 +164,19 @@ describe('layoutLabel3DLines + <TextRun> (the composed ink position — Label3D 
     const contentHeightPx = 45;
     const scale = FONT_SIZE / OPEN_SANS_ATLAS_INFO.fontSize;
     const quadTopBelowBoxTop = 35 - (OPEN_SANS_ATLAS_INFO.base - OPEN_SANS_ATLAS_GLYPHS.H!.yoffset) * scale;
-    expect(await composedTopY('Hi', 0, 0)).toBeCloseTo(contentHeightPx / 2 - quadTopBelowBoxTop, 5);
-    expect(await composedTopY('Hi', 0, 0)).toBeCloseTo(11.88095238, 5);
+    expect(composedTopY('Hi', 0, 0)).toBeCloseTo(contentHeightPx / 2 - quadTopBelowBoxTop, 5);
+    expect(composedTopY('Hi', 0, 0)).toBeCloseTo(11.88095238, 5);
   });
 
-  it('a three-line block steps by exactly one linePitchPx per line, composed', async () => {
-    expect(await composedTopY('A\nB\nC', 0, 0)).toBeCloseTo(56.88095238, 5);
-    expect(await composedTopY('A\nB\nC', 0, 1)).toBeCloseTo(11.88095238, 5);
-    expect(await composedTopY('A\nB\nC', 0, 2)).toBeCloseTo(-33.11904762, 5);
+  it('a three-line block steps by exactly one linePitchPx per line, composed', () => {
+    expect(composedTopY('A\nB\nC', 0, 0)).toBeCloseTo(56.88095238, 5);
+    expect(composedTopY('A\nB\nC', 0, 1)).toBeCloseTo(11.88095238, 5);
+    expect(composedTopY('A\nB\nC', 0, 2)).toBeCloseTo(-33.11904762, 5);
   });
 
-  it('line_spacing widens the composed step by exactly the spacing', async () => {
-    expect(await composedTopY('A\nB', 5, 0)).toBeCloseTo(36.88095238, 5);
-    expect(await composedTopY('A\nB', 5, 1)).toBeCloseTo(-13.11904762, 5);
+  it('line_spacing widens the composed step by exactly the spacing', () => {
+    expect(composedTopY('A\nB', 5, 0)).toBeCloseTo(36.88095238, 5);
+    expect(composedTopY('A\nB', 5, 1)).toBeCloseTo(-13.11904762, 5);
   });
 });
 

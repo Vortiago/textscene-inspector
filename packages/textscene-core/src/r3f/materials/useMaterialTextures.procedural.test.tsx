@@ -11,7 +11,7 @@ import type { ResourceLoader } from '../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import { resetProceduralTextures } from '../../resources/textures/proceduralTextureCache';
+import { resetProceduralTextures } from '../../resources/textures/proceduralBuilds';
 import { fakeJobRunner } from '../../workers/fakeJobRunner.testkit';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import { useMaterialTextures } from './SurfaceMaterialSlot';

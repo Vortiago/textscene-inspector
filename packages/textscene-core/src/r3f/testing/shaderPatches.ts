@@ -3,11 +3,15 @@
  * itself, so a test reads the chunks a canvas compiles with and never rebuilds the install order.
  */
 
+import { afterEach, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { installShaderPatches } from '../shaderPatch/installShaderPatches';
 import { warningsOf } from './logWarnings';
 
 export type ShaderChunks = typeof THREE.ShaderChunk;
+
+/** The soft shadow filter's own function, which marks a chunk that holds the filter. */
+export const FILTER_PCF = 'float godotPcf(';
 
 type Uniforms = Record<string, unknown>;
 
@@ -40,6 +44,15 @@ export function snapshotShaderGlobals(): () => void {
     replaceContents(uniformsLib, library);
     for (const [group, uniforms] of groups) replaceContents(group, uniforms);
   };
+}
+
+/** Puts every global a patch install writes back after each test of the calling file. */
+export function restoreShaderGlobalsAfterEach(): void {
+  let restore = (): void => {};
+  beforeEach(() => {
+    restore = snapshotShaderGlobals();
+  });
+  afterEach(() => restore());
 }
 
 /**

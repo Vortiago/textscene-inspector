@@ -24,10 +24,12 @@ import {
   pickButtonStyleBox,
   tintColor,
   layoutButtonContent,
+} from '../../../../r3f/controls/native/buttonBase';
+import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
   VERTICAL_ALIGNMENT_CENTER,
-} from '../../../../r3f/controls/native/buttonBase';
+} from '../../../../godot/math/math';
 import { buttonIconColor, menuButtonLabelShape, menuButtonTextTheme } from './nativeSolver';
 import type { MenuButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';

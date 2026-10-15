@@ -5,11 +5,11 @@
 import { describe, it, expect } from 'vitest';
 import { tileDrawInfo, type AtlasSourceModel } from './types';
 import { drawableCellOf } from './testing/drawableCellOf';
-
-/** `TileSetAtlasSource`'s transform bits in an alternative id (`tile_set.h:629-631`). */
-const TILE_TRANSFORM_FLIP_H = 1 << 12;
-const TILE_TRANSFORM_FLIP_V = 1 << 13;
-const TILE_TRANSFORM_TRANSPOSE = 1 << 14;
+import {
+  TILE_TRANSFORM_FLIP_H,
+  TILE_TRANSFORM_FLIP_V,
+  TILE_TRANSFORM_TRANSPOSE,
+} from '../../godot/scene/tileSet';
 
 const source: AtlasSourceModel = {
   texturePath: 'res://t.png',

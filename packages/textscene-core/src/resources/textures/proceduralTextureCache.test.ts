@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types';
 import {
-  resetProceduralTextures,
+  clearProceduralTextures,
   cachedProceduralTexture,
   cacheProceduralTexture,
   pinProceduralTexture,
@@ -30,7 +30,7 @@ function scene(): TscnInternalResource[] {
 // Every test starts from an empty cache. Pin counts survive `clear()` by
 // design (they track mounted consumers), so a test that pins also unpins.
 beforeEach(() => {
-  resetProceduralTextures();
+  clearProceduralTextures();
 });
 
 describe('proceduralTextureKey', () => {
@@ -145,7 +145,7 @@ describe('pinProceduralTexture', () => {
   });
 });
 
-describe('resetProceduralTextures', () => {
+describe('clearProceduralTextures', () => {
   it('disposes every unpinned entry (happy path)', () => {
     const resources = scene();
     const a = fakeTexture();
@@ -153,7 +153,7 @@ describe('resetProceduralTextures', () => {
     proceduralTexture(resources, 'a', () => a);
     proceduralTexture(resources, 'b', () => b);
 
-    resetProceduralTextures();
+    clearProceduralTextures();
 
     expect(a.dispose).toHaveBeenCalledTimes(1);
     expect(b.dispose).toHaveBeenCalledTimes(1);
@@ -166,7 +166,7 @@ describe('resetProceduralTextures', () => {
     const key = proceduralTextureKey(resources, 'pinned');
     pinProceduralTexture(key);
 
-    resetProceduralTextures();
+    clearProceduralTextures();
     // A mounted consumer is still sampling it, so clearing must not free it.
     expect(pinned.dispose).not.toHaveBeenCalled();
 
@@ -178,7 +178,7 @@ describe('resetProceduralTextures', () => {
     const resources = scene();
     const rasterize = vi.fn(() => fakeTexture());
     proceduralTexture(resources, 'a', rasterize);
-    resetProceduralTextures();
+    clearProceduralTextures();
     proceduralTexture(resources, 'a', rasterize);
     expect(rasterize).toHaveBeenCalledTimes(2);
   });

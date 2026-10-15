@@ -8,6 +8,11 @@ import type { CanvasItemMaterialProperties } from '../materials/canvasitemmateri
 import type { DrawableCell } from './drawableCell';
 import type { Rgba } from '../../godot/math/math';
 import type { Vector2 } from '../../godot/math/vector';
+import {
+  TILE_TRANSFORM_FLIP_H,
+  TILE_TRANSFORM_FLIP_V,
+  TILE_TRANSFORM_TRANSPOSE,
+} from '../../godot/scene/tileSet';
 
 /** TileSet.tile_shape: square, isometric, half-offset square and hexagon all render. */
 export const TILE_SHAPE_SQUARE = 0;
@@ -83,13 +88,6 @@ export interface AlternativeTileModel extends TileOrientation {
   ySortOrigin: number;
 }
 
-/**
- * Godot TileSetAtlasSource alternative-id transform bits: a cell painted with
- * a flip/rotate carries these bits directly in its alternative_tile value.
- */
-const TILE_TRANSFORM_FLIP_H = 0x1000;
-const TILE_TRANSFORM_FLIP_V = 0x2000;
-const TILE_TRANSFORM_TRANSPOSE = 0x4000;
 const TILE_TRANSFORM_MASK = TILE_TRANSFORM_FLIP_H | TILE_TRANSFORM_FLIP_V | TILE_TRANSFORM_TRANSPOSE;
 
 /** The authored alternative a cell's id names, its transform bits cleared (`tile_set.cpp:5320-5322`). */

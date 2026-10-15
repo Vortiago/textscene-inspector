@@ -10,7 +10,7 @@ import type { TscnInternalResource } from '../../parser/types';
 import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import { resolveGradientTexture2D } from './gradienttexture2d/resolveGradientTexture';
 import { resolveNoiseTexture2D } from './noisetexture2d/resolveNoiseTexture';
-import { resetProceduralTextures } from './proceduralTextureCache';
+import { resetProceduralTextures } from './proceduralBuilds';
 
 /** What each mocked rasteriser throws, or null to run the real one. */
 const failure = vi.hoisted(() => ({ error: null as Error | null }));

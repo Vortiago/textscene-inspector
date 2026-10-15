@@ -2,7 +2,7 @@
  * A GLBSceneRoot row shows the loaded GLB's THREE.Object3D hierarchy as
  * expandable child rows, and is not flagged "Not implemented".
  */
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
@@ -14,7 +14,6 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 
 function named<T extends THREE.Object3D>(o: T, name: string): T {
   o.name = name;
@@ -59,11 +58,6 @@ function glbGraph() {
     internalResources: [],
   });
 }
-
-// `cloneWithMaterials` needs the lazy GLB module cache initialised first.
-beforeAll(async () => {
-  await loadGlbModules();
-});
 
 describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
   it('shows the GLB row with children and never flags it "Not implemented"', () => {

@@ -16,7 +16,7 @@ import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, boolOr, parseOptionalRect2, type Rect2Value } from '../../../parser/valueParsers';
 import { AxisStretchMode, axisStretchModeOf, type NinePatchAxisMode } from './ninePatchGeometry';
 import type { Rgba } from '../../../godot/math/math';
-import { CONTENT_MARGIN_UNSET } from '../../../resources/styles/stylebox/decode';
+import { contentMarginOr, expandMarginOf } from '../../../resources/styles/stylebox/decode';
 
 export interface StyleBoxTextureData {
   /**
@@ -53,11 +53,6 @@ export interface StyleBoxTextureData {
 const CONTEXT = 'StyleBoxTexture';
 const DEFAULT_MODULATE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
-function contentMarginOr(raw: string | undefined, textureMarginSide: number): number {
-  const parsed = floatOr(raw, CONTENT_MARGIN_UNSET, CONTEXT);
-  return parsed < 0 ? textureMarginSide : parsed;
-}
-
 /**
  * Resolves a StyleBox-slot ref to a `StyleBoxTextureData`, or `null` for an
  * absent or malformed ref, a non-SubResource form, an unknown id, or a
@@ -87,17 +82,12 @@ export function parseStyleBoxTexture(
     resources: { externalResources, internalResources },
     margin,
     contentMargin: {
-      left: contentMarginOr(data.content_margin_left, margin.left),
-      top: contentMarginOr(data.content_margin_top, margin.top),
-      right: contentMarginOr(data.content_margin_right, margin.right),
-      bottom: contentMarginOr(data.content_margin_bottom, margin.bottom),
+      left: contentMarginOr(data.content_margin_left, margin.left, CONTEXT),
+      top: contentMarginOr(data.content_margin_top, margin.top, CONTEXT),
+      right: contentMarginOr(data.content_margin_right, margin.right, CONTEXT),
+      bottom: contentMarginOr(data.content_margin_bottom, margin.bottom, CONTEXT),
     },
-    expandMargin: {
-      left: floatOr(data.expand_margin_left, 0, CONTEXT),
-      top: floatOr(data.expand_margin_top, 0, CONTEXT),
-      right: floatOr(data.expand_margin_right, 0, CONTEXT),
-      bottom: floatOr(data.expand_margin_bottom, 0, CONTEXT),
-    },
+    expandMargin: expandMarginOf(data, CONTEXT),
     regionRect: parseOptionalRect2(data.region_rect, `${CONTEXT} region_rect`),
     axisStretchHorizontal: axisStretchModeOf(
       intOr(data.axis_stretch_horizontal, AxisStretchMode.STRETCH, CONTEXT)

@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { nearestGroupOrder, paintBucket, paintSequence } from '../../../../r3f/testing/paintOrder';
+import { isInZBucket, nearestGroupOrder, worldCanvasKey } from '../../../../r3f/testing/paintOrder';
 import { WHOLE_CANVAS_RANGE, type PaintRange } from '../../../../r3f/canvasPaintOrder';
 import { PaintRangeProvider } from '../../../../r3f/contexts/PaintOrderContext';
 import { parseTileMap } from './parser';
@@ -73,12 +73,12 @@ describe('TileMap render parity', () => {
     // and forwards `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so a
     // layer is a canvas item in its own right: its key rides its group, which
     // is what three reads a drawn object's position from.
-    const zBucket = (o: THREE.Object3D) => paintBucket(nearestGroupOrder(o));
     expect(nearestGroupOrder(layer0!)).toBeLessThan(nearestGroupOrder(layer1!));
     // …and `layer_1/z_index = 1` puts that layer a whole z bucket up, which is
     // what lets it interleave with the TileMap's siblings rather than only with
     // the other layers. A rank shared across one canvas item cannot express it.
-    expect(zBucket(layer1!)).toBe(zBucket(layer0!) + 1);
+    expect(isInZBucket(nearestGroupOrder(layer0!), 0)).toBe(true);
+    expect(isInZBucket(nearestGroupOrder(layer1!), 1)).toBe(true);
   });
 
   it('keeps every layer inside a paint range too small to give each its own value', async () => {
@@ -93,13 +93,13 @@ describe('TileMap render parity', () => {
       range
     );
 
-    const sequences = r.scene
-      .findAllByType('Mesh')
-      .map((m) => paintSequence(nearestGroupOrder(m.instance as THREE.Object3D)));
-    expect(sequences).toHaveLength(3);
-    for (const sequence of sequences) {
-      expect(sequence).toBeGreaterThanOrEqual(range.base);
-      expect(sequence).toBeLessThan(range.base + range.size);
+    const keys = r.scene.findAllByType('Mesh').map((m) => nearestGroupOrder(m.instance as THREE.Object3D));
+    expect(keys).toHaveLength(3);
+    const first = worldCanvasKey(0, range.base);
+    const pastLast = worldCanvasKey(0, range.base + range.size);
+    for (const key of keys) {
+      expect(key).toBeGreaterThanOrEqual(first);
+      expect(key).toBeLessThan(pastLast);
     }
   });
 

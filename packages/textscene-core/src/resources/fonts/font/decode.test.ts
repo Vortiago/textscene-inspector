@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { decodeFont, resolveInlineFontResource } from './decode';
+import { resolveOnlySubResource } from '../../../testing/subResource';
 import type { FontLoaderFn, FontResource } from './types';
 
 /** A loader that resolves nothing, for cases with no Font-valued property to recurse into. */
@@ -15,12 +16,8 @@ const FONT_A: FontResource = {
 
 /** The `fontNames` an inline SystemFont with this `font_names` value resolves to. */
 function fontNamesOf(fontNames: string): string[] {
-  const font = resolveInlineFontResource(
-    'SubResource("system")',
-    [],
-    [{ id: 'system', type: 'SystemFont', data: { font_names: fontNames } }],
-    { getCached: () => undefined },
-    new Set()
+  const font = resolveOnlySubResource('SystemFont', { font_names: fontNames }, (ref, internalResources) =>
+    resolveInlineFontResource(ref, [], internalResources, { getCached: () => undefined }, new Set())
   );
   if (font?.kind !== 'system') throw new Error(`expected a SystemFont, got ${font?.kind ?? 'null'}`);
   return font.fontNames;

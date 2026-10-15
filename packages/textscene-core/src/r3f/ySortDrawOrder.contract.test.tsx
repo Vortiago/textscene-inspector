@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { paintBucket } from './testing/paintOrder';
+import { isInZBucket } from './testing/paintOrder';
 import { NodeDispatcher } from './NodeDispatcher';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
@@ -170,9 +170,10 @@ ${poly('Inner', 'Floor/Wrap', 0)}
     expect(z.get('Inner')).toBeDefined();
     // Inner is one z-index bucket in front of the z_index 0 container it hangs
     // under, not two…
-    expect(paintBucket(z.get('Inner')!)).toBe(paintBucket(z.get('Floor')!) + 1);
+    expect(isInZBucket(z.get('Floor')!, 0)).toBe(true);
+    expect(isInZBucket(z.get('Inner')!, 1)).toBe(true);
     // …and it shares Ref's bucket (both z_index = 1), differing only in sequence.
-    expect(paintBucket(z.get('Inner')!)).toBe(paintBucket(z.get('Ref')!));
+    expect(isInZBucket(z.get('Ref')!, 1)).toBe(true);
   });
 
   it('RED: a leaf CanvasItem sitting directly in a tree-order slot lands between the y-sort subtrees', async () => {

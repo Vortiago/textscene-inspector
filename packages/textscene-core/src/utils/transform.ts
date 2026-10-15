@@ -5,6 +5,7 @@
 import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
 import { warn } from '../logger';
 import { slotTupleRegex, matchedFloat, allFinite } from '../godot/variant/number.js';
+import { identityTransform3D } from '../godot/math/transform3d.js';
 
 const TRANSFORM3D_RE = slotTupleRegex('Transform3D', 12);
 const CALL_PREFIX = 'Transform3D(';
@@ -172,15 +173,6 @@ export function decomposeTransform3D(transform: Transform3D): DecomposedTransfor
     position,
     rotation: { x: rx, y: ry, z: rz },
     scale: { x: sx, y: sy, z: sz },
-  };
-}
-
-function identityTransform3D(): Transform3D {
-  return {
-    basis_x: { x: 1, y: 0, z: 0 },
-    basis_y: { x: 0, y: 1, z: 0 },
-    basis_z: { x: 0, y: 0, z: 1 },
-    origin: { x: 0, y: 0, z: 0 },
   };
 }
 

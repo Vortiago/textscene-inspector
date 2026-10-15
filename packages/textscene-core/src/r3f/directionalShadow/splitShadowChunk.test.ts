@@ -5,7 +5,7 @@
  */
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { FRAMEBUFFER_HEIGHT_UNIFORM } from '../shadowFilter/framebufferRows';
 import { installedFramebufferHeight } from '../shadowFilter/framebufferRows.testkit';
@@ -17,7 +17,7 @@ import { GLSL_BUILT_INS } from '../testing/glslScalar';
 import { withoutBlock } from '../testing/glslSource';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch';
 import { warningsOf } from '../testing/logWarnings';
-import { installedShaderChunks, snapshotShaderGlobals } from '../testing/shaderPatches';
+import { installedShaderChunks, FILTER_PCF, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
 const CHUNK = 'shadowmap_pars_fragment';
 const threeChunk = THREE.ShaderChunk[CHUNK];
@@ -25,16 +25,10 @@ const threeChunk = THREE.ShaderChunk[CHUNK];
 const THREE_CASCADE_WALK = 'for ( int i = SUN_LIGHT_CASCADES - 1; i >= 0; i -- )';
 const THREE_SLOT_MATRICES = 'uniform mat4 sunShadowMatrix[ NUM_SUN_LIGHT_SHADOWS * SUN_LIGHT_CASCADES ];';
 
-/** The soft shadow filter's own function, which the install puts in first. */
-const FILTER_PCF = 'float godotPcf(';
 /** The per-split lookup, which marks a chunk that holds the patch. */
 const SPLIT_LOOKUP = 'float getSunShadowSplit(';
 
-let restoreShaderGlobals: () => void;
-beforeEach(() => {
-  restoreShaderGlobals = snapshotShaderGlobals();
-});
-afterEach(() => restoreShaderGlobals());
+restoreShaderGlobalsAfterEach();
 
 /** The shadow chunk a canvas compiles with. */
 const installedChunk = () => installedShaderChunks()[CHUNK];

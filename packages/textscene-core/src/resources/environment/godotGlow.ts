@@ -6,17 +6,9 @@
  */
 
 import { clamp } from '../../godot/math/math.js';
+import { GlowBlendMode } from '../../godot/rendering/environment/glow.js';
 import type { EnvironmentSettings } from './types';
 import { glslFloat } from '../../utils/glslLiterals';
-
-/** Godot `Environment.GlowBlendMode`. */
-const GlowBlendMode = {
-  ADDITIVE: 0,
-  SCREEN: 1,
-  SOFTLIGHT: 2,
-  REPLACE: 3,
-  MIX: 4,
-} as const;
 
 export interface GlowParams {
   /**

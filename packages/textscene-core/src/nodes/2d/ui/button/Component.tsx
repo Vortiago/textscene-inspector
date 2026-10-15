@@ -35,10 +35,12 @@ import {
   layoutButtonContent,
   buttonTextAlignShiftPx,
   swapAlignmentSide,
+} from '../../../../r3f/controls/native/buttonBase';
+import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
   VERTICAL_ALIGNMENT_CENTER,
-} from '../../../../r3f/controls/native/buttonBase';
+} from '../../../../godot/math/math';
 import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
 import type { ButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';

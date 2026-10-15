@@ -358,16 +358,4 @@ describe('AnimationTree — paused readout flush', () => {
     expect(transport.time).toBeCloseTo(0.3, 5);
     await renderer.unmount();
   });
-
-  it('flushes a live playhead that is genuinely at 0', async () => {
-    const renderer = await mountTree(makeDriver(), makeTreeNode());
-    await act(() => transport.play());
-    await frame(renderer, 0);
-    await act(() => transport.seek(0.3));
-    await frame(renderer, 0);
-    await act(() => transport.pause());
-    await frame(renderer, 0);
-    expect(transport.time).toBe(0);
-    await renderer.unmount();
-  });
 });

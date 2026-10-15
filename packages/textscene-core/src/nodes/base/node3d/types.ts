@@ -1,20 +1,8 @@
 /** Node3D type definitions. */
 
-/**
- * A 3D transform, written `Transform3D(basis_x.xyz, basis_y.xyz, basis_z.xyz, origin.xyz)`.
- * Godot stores Basis as `Vector3 rows[3]`: basis_x, basis_y and basis_z are the rows of the 3×3
- * matrix, not the columns (utils/transform.ts has the convention), and origin is the fourth column.
- */
-export interface Transform3D {
-  /** Basis X vector (right) */
-  basis_x: { x: number; y: number; z: number };
-  /** Basis Y vector (up) */
-  basis_y: { x: number; y: number; z: number };
-  /** Basis Z vector (forward) */
-  basis_z: { x: number; y: number; z: number };
-  /** Position/translation */
-  origin: { x: number; y: number; z: number };
-}
+import type { Transform3D } from '../../../godot/math/transform3d.js';
+
+export type { Transform3D };
 
 /**
  * Decomposed transform properties

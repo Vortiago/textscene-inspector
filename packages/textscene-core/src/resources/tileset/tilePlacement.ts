@@ -31,7 +31,7 @@ function overlapRatio(shape: number): number {
   return 1; // half-offset square: staggered, no overlap
 }
 
-export function mapToLocalPx(grid: TileGrid, cell: Vector2): { x: number; y: number } {
+export function mapToLocalPx(grid: TileGrid, cell: Vector2): Vector2 {
   let x = cell.x;
   let y = cell.y;
 

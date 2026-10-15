@@ -28,7 +28,7 @@ const SOURCE_ROOTS = ['../nodes/2d', '../nodes/base', '../r3f'].map((dir) => joi
  * and `nodes/2d/ui/*`. Both take the same key on the same wrapper group.
  */
 function painterSources(): SourceFile[] {
-  return walkSources(SOURCE_ROOTS, (name) => name.endsWith('.tsx') && isProductionSource(name));
+  return walkSources(SOURCE_ROOTS, (name, path) => name.endsWith('.tsx') && isProductionSource(name, path));
 }
 
 /** Opt-out marker for a group that provably cannot reset a canvas item's key. */

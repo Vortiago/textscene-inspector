@@ -13,7 +13,7 @@ import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
-import { type JobRunner } from './textures/proceduralBuilds';
+import { resetProceduralTextures, type JobRunner } from './textures/proceduralBuilds';
 import { pendingTextureWork, subscribeTextureWork } from './textures/textureWork';
 import {
   useProceduralTexture,
@@ -21,7 +21,7 @@ import {
   useProceduralTexturePins,
   type ProceduralSlot,
 } from './useProceduralTexture';
-import { resetProceduralTextures, proceduralTextureKey } from './textures/proceduralTextureCache';
+import { proceduralTextureKey } from './textures/proceduralTextureCache';
 
 /** The cache exposes no pin counter, so the two entry points are wrapped, calling through. */
 const traffic = vi.hoisted(() => ({ pinned: [] as string[], unpinned: [] as string[] }));

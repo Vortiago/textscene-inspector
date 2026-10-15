@@ -45,6 +45,11 @@ export function styleBoxLineBox(line: StyleBoxLineData): StyleBoxLineBox {
   return { ...neutralStyleBox(line.margin), styleBoxKind: 'line', line };
 }
 
+/** Wraps a `StyleBoxTextureData` in the shape a resolved override has. */
+function styleBoxTextureBox(texture: StyleBoxTextureData): StyleBoxTextureBox {
+  return { ...neutralStyleBox(texture.contentMargin), styleBoxKind: 'texture', texture };
+}
+
 /**
  * `null`, never a throw, means "no override": an absent, non-SubResource or
  * unknown ref, or a resource that is not a StyleBox. A StyleBoxEmpty is not
@@ -64,11 +69,11 @@ export function parseStyleBox(
 
   if (resource.type === 'StyleBoxLine') {
     const line = parseStyleBoxLine(ref, internalResources);
-    return line && { ...neutralStyleBox(line.margin), styleBoxKind: 'line', line };
+    return line && styleBoxLineBox(line);
   }
   if (resource.type === 'StyleBoxTexture') {
     const texture = parseStyleBoxTexture(ref, externalResources, internalResources);
-    return texture && { ...neutralStyleBox(texture.contentMargin), styleBoxKind: 'texture', texture };
+    return texture && styleBoxTextureBox(texture);
   }
   return decodeStyleBox(resource.type, resource.data);
 }

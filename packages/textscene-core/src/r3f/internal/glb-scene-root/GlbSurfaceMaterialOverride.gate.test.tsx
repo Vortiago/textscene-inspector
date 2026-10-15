@@ -5,10 +5,9 @@
  * previewer cannot build still occupies the slot and draws the default shader.
  */
 
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 import { GLBSceneRoot } from './Component';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
 import { GlbInstanceProvider } from './GlbInstanceContext';
@@ -76,10 +75,6 @@ async function bodyMaterial(ref: string): Promise<THREE.MeshStandardMaterial> {
     .find((m) => m.name === 'body')!;
   return body.material as THREE.MeshStandardMaterial;
 }
-
-beforeAll(async () => {
-  await loadGlbModules();
-});
 
 describe('surface_material_override/0 on a GLB override node', () => {
   it('leaves the GLB material in place when the reference is not a Material', async () => {

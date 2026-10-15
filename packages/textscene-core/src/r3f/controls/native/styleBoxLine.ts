@@ -14,7 +14,7 @@ import { parseResourceReference, findSubResource } from '../../../resources/SubR
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, boolOr } from '../../../parser/valueParsers';
 import type { Rgba } from '../../../godot/math/math';
-import { CONTENT_MARGIN_UNSET } from '../../../resources/styles/stylebox/decode';
+import { contentMarginOr } from '../../../resources/styles/stylebox/decode';
 
 export interface StyleBoxLineData {
   color: Rgba;
@@ -47,12 +47,6 @@ function styleMargin(side: Side, vertical: boolean, thickness: number): number {
   return side === 'top' || side === 'bottom' ? half : 0;
 }
 
-/** `StyleBox::get_margin` (`style_box.cpp:78-86`): the authored value, or `get_style_margin` when unset. */
-function marginOr(raw: string | undefined, side: Side, vertical: boolean, thickness: number): number {
-  const parsed = floatOr(raw, CONTENT_MARGIN_UNSET, CONTEXT);
-  return parsed < 0 ? styleMargin(side, vertical, thickness) : parsed;
-}
-
 /**
  * Resolves a StyleBox-slot ref to a `StyleBoxLineData`, or `null` for an absent
  * or malformed ref, a non-SubResource form, an unknown id, or a resource that
@@ -79,10 +73,14 @@ export function parseStyleBoxLine(
     growBegin: floatOr(data.grow_begin, 1, CONTEXT),
     growEnd: floatOr(data.grow_end, 1, CONTEXT),
     margin: {
-      left: marginOr(data.content_margin_left, 'left', vertical, thickness),
-      top: marginOr(data.content_margin_top, 'top', vertical, thickness),
-      right: marginOr(data.content_margin_right, 'right', vertical, thickness),
-      bottom: marginOr(data.content_margin_bottom, 'bottom', vertical, thickness),
+      left: contentMarginOr(data.content_margin_left, styleMargin('left', vertical, thickness), CONTEXT),
+      top: contentMarginOr(data.content_margin_top, styleMargin('top', vertical, thickness), CONTEXT),
+      right: contentMarginOr(data.content_margin_right, styleMargin('right', vertical, thickness), CONTEXT),
+      bottom: contentMarginOr(
+        data.content_margin_bottom,
+        styleMargin('bottom', vertical, thickness),
+        CONTEXT
+      ),
     },
   };
 }

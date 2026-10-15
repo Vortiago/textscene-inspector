@@ -1,13 +1,14 @@
 /** LabelSettings decode against Godot 4.6.3: `scene/resources/label_settings.h:54-65`. */
 import { describe, expect, it } from 'vitest';
 import { labelSettingsFromResource, resolveLabelSettings } from './decode';
+import { resolveOnlySubResource } from '../../../testing/subResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { LabelSettingsResource } from './types';
 
 /** The LabelSettings a sub-resource with this body decodes to. */
 function decode(data: Record<string, string>): LabelSettingsResource {
-  return resolveLabelSettings('SubResource("settings")', [{ id: 'settings', type: 'LabelSettings', data }])!;
+  return resolveOnlySubResource('LabelSettings', data, resolveLabelSettings)!;
 }
 
 describe('the LabelSettings body resolveLabelSettings decodes', () => {

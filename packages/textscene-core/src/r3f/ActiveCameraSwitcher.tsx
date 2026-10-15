@@ -1,7 +1,3 @@
-/**
- * Makes the Camera3D the user picks with "Use This Camera" the active render camera of the 3D
- * canvas, and "Reset" returns to the default orbit camera.
- */
 import { useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
@@ -15,13 +11,11 @@ import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js
 type CameraLike = THREE.Camera & {
   isPerspectiveCamera?: boolean;
   isOrthographicCamera?: boolean;
-  aspect?: number;
-  updateProjectionMatrix?: () => void;
 };
 
 /**
- * Makes the Camera3D the user picks with "Use This Camera" the active render
- * camera. "Reset" returns to the default orbit camera.
+ * Makes the Camera3D the user picks with "Use This Camera" the active render camera of the 3D
+ * canvas, and "Reset" returns to the default orbit camera.
  */
 export function ActiveCameraSwitcher() {
   const control = useOptionalViewportActions();
@@ -59,8 +53,8 @@ export function ActiveCameraSwitcher() {
     // Matched to the live canvas: a node camera mounts with a placeholder 16/9
     // aspect, and R3F re-syncs it only on a resize, which a fixed-size headless
     // canvas never fires. It runs on every re-render, outside the activation gate.
-    const persp = target as THREE.PerspectiveCamera | null;
-    if (persp?.isPerspectiveCamera && size.height > 0) {
+    const persp = target as THREE.PerspectiveCamera;
+    if (persp.isPerspectiveCamera && size.height > 0) {
       const aspect = size.width / size.height;
       if (persp.aspect !== aspect) {
         persp.aspect = aspect;

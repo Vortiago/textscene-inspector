@@ -3,7 +3,7 @@
  * NodeDispatcher → InstancedNode → GLBSceneRoot path. A broken `joinPath` of the instance node
  * and the GLB root's basename leaves the Animation tab empty on selection.
  */
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../../../parser/types';
@@ -18,15 +18,9 @@ import {
 } from '../../contexts/AnimationTransportContext';
 import { useOptionalSelection, type SelectionContextValue } from '../../contexts/SelectionContext';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
-import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 
 // Register node-type components (Node3D / GLBSceneRoot / …).
 import '../../nodes/index';
-
-// GLBSceneRoot clones through cloneWithMaterials, which needs the lazy GLB module cache.
-beforeAll(async () => {
-  await loadGlbModules();
-});
 
 const GLB_PATH = 'res://player.glb';
 

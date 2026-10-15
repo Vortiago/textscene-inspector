@@ -104,9 +104,10 @@ export class ValidatorRegistry {
   }
 
   /**
-   * @internal Like {@link ValidatorRegistry.typesWithRegistrations}, this lists the registry without naming a type, which
-   * is `registryPopulation.ts`'s job alone. Types declaring a removal are not a subset of `registeredTypes('declaring')`:
-   * `HBoxContainer` only takes `vertical` away and registers no validator, so a scan of the validator map misses it.
+   * @internal Like {@link ValidatorRegistry.typesWithRegistrations}, this lists the registry without naming a type,
+   * which is the job of `linter/registryPopulation.ts` and `linter/testing/registryPopulation.ts` alone. Types
+   * declaring a removal are not a subset of `registeredTypes('declaring')`: `HBoxContainer` only takes `vertical`
+   * away and registers no validator, so a scan of the validator map misses it.
    */
   getTypesWithRemovals(): string[] {
     return [...this.unavailable.keys()];
@@ -159,8 +160,8 @@ export class ValidatorRegistry {
   /**
    * Node types that have validators registered.
    *
-   * @internal `registryPopulation.ts` is the only caller: listing the registry without naming a type is its job alone,
-   * so no guard assembles the roots-only population by hand.
+   * @internal `linter/registryPopulation.ts` and `linter/testing/registryPopulation.ts` are the only callers: listing
+   * the registry without naming a type is their job alone, so no guard assembles the roots-only population by hand.
    */
   typesWithRegistrations(): string[] {
     return [...this.validators.keys()];

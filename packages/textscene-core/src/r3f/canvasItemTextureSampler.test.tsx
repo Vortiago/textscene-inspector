@@ -7,7 +7,12 @@
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { TextureSampler2DContext, useInheritedTextureSampler } from './canvasItemTextureSampler';
+import {
+  ROOT_TEXTURE_SAMPLER,
+  TextureSampler2DContext,
+  useInheritedTextureSampler,
+  type CanvasItemTextureSampler,
+} from './canvasItemTextureSampler';
 
 const PARENT_NODE = 0; // TEXTURE_FILTER_PARENT_NODE and TEXTURE_REPEAT_PARENT_NODE, canvas_item.h:52-69
 const NEAREST = 1; // TEXTURE_FILTER_NEAREST
@@ -15,16 +20,11 @@ const LINEAR = 2; // TEXTURE_FILTER_LINEAR
 const REPEAT_ENABLED = 2; // TEXTURE_REPEAT_ENABLED
 const REPEAT_MIRROR = 3; // TEXTURE_REPEAT_MIRROR
 
-interface Sampler {
-  filter: number | undefined;
-  repeat: number | undefined;
-}
-
 function resolveUnder(
-  ambient: Sampler,
+  ambient: CanvasItemTextureSampler,
   ownFilter: number | undefined,
   ownRepeat: number | undefined
-): Sampler {
+): CanvasItemTextureSampler {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <TextureSampler2DContext.Provider value={ambient}>{children}</TextureSampler2DContext.Provider>
   );
@@ -49,19 +49,19 @@ describe('useInheritedTextureSampler', () => {
 
   it('relays what a PARENT_NODE ancestor resolved, never resetting to undefined', () => {
     // A PARENT_NODE node takes its parent's cache (`parent_item->texture_filter_cache`).
-    const root = { filter: undefined, repeat: undefined };
-    const grandparent = resolveUnder(root, NEAREST, undefined);
+    const grandparent = resolveUnder(ROOT_TEXTURE_SAMPLER, NEAREST, undefined);
     const middle = resolveUnder(grandparent, PARENT_NODE, PARENT_NODE);
     expect(resolveUnder(middle, PARENT_NODE, PARENT_NODE).filter).toBe(NEAREST);
   });
 
   it('resolves to undefined when no ancestor names a value, the cue for the viewport default', () => {
-    const root = { filter: undefined, repeat: undefined };
-    expect(resolveUnder(root, PARENT_NODE, PARENT_NODE)).toEqual(root);
+    expect(resolveUnder(ROOT_TEXTURE_SAMPLER, PARENT_NODE, PARENT_NODE)).toEqual(ROOT_TEXTURE_SAMPLER);
   });
 
   it('resolves filter and repeat independently', () => {
-    const root = { filter: undefined, repeat: undefined };
-    expect(resolveUnder(root, NEAREST, PARENT_NODE)).toEqual({ filter: NEAREST, repeat: undefined });
+    expect(resolveUnder(ROOT_TEXTURE_SAMPLER, NEAREST, PARENT_NODE)).toEqual({
+      filter: NEAREST,
+      repeat: undefined,
+    });
   });
 });

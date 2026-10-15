@@ -85,19 +85,7 @@ export function unpinProceduralTexture(key: string): void {
   cache.unpin(key);
 }
 
-/** Written only by `onProceduralTexturesReset`, at module load. Run by `resetProceduralTextures`. */
-const resetHooks: (() => void)[] = [];
-
-/** Runs `forget` on every reset, for state kept beside the cache: the builds in flight. */
-export function onProceduralTexturesReset(forget: () => void): void {
-  resetHooks.push(forget);
-}
-
-/**
- * Forgets every build in flight and drops every entry, disposing each. Only tests call it, to
- * start from an empty cache: the one reset kept for them, owned here so no test resets half of it.
- */
-export function resetProceduralTextures(): void {
-  for (const forget of resetHooks) forget();
+/** Drops every entry, disposing each now or, while pinned, at its last unpin. */
+export function clearProceduralTextures(): void {
   cache.clear();
 }

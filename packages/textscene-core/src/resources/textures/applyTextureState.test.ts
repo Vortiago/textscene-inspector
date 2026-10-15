@@ -14,9 +14,7 @@ import {
   type UVTransform,
 } from './applyTextureState';
 import { UV2_CHANNEL } from '../meshes/uv2';
-
-/** The anisotropy ceiling the previewer pins: `anisotropic_filtering_level` 4, so `1 << 4`. */
-const GODOT_ANISOTROPY_MAX = 16;
+import { godotTextureFilterState } from './godotTextureFilter';
 
 function uv(sx: number, sy: number, ox = 0, oy = 0): UVTransform {
   return { scale: { x: sx, y: sy }, offset: { x: ox, y: oy } };
@@ -263,7 +261,7 @@ describe('applyTextureState', () => {
 
       expect(nearest).not.toBe(anisotropic);
       expect(nearest.magFilter).toBe(THREE.NearestFilter);
-      expect(anisotropic.anisotropy).toBe(GODOT_ANISOTROPY_MAX);
+      expect(anisotropic.anisotropy).toBe(godotTextureFilterState(5).anisotropy);
       expect(shared.magFilter).toBe(THREE.LinearFilter);
       expect(shared.anisotropy).toBe(1);
     });

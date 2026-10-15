@@ -7,10 +7,6 @@
 import { describe, expect, it } from 'vitest';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-  VERTICAL_ALIGNMENT_CENTER,
   fitIconSize,
   layoutButtonContent,
   pickButtonStyleBox,
@@ -18,10 +14,14 @@ import {
   tintColor,
   type ButtonContentInput,
 } from './buttonBase';
-
-// `VerticalAlignment`, core/math/math_defs.h:87-92.
-const VERTICAL_ALIGNMENT_TOP = 0;
-const VERTICAL_ALIGNMENT_BOTTOM = 2;
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+  VERTICAL_ALIGNMENT_CENTER,
+  VERTICAL_ALIGNMENT_TOP,
+  VERTICAL_ALIGNMENT_BOTTOM,
+} from '../../../godot/math/math';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };

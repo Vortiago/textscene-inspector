@@ -15,12 +15,14 @@ import {
   walkSources,
   type SourceFile,
 } from '../../testing/sourceScan';
-import { isSealedHandoff } from './solveHandoff.testkit';
+import type { Channel } from './solveHandoff';
 import { createSolveContext, solveControlTree } from './controlRectSolver';
 import { nativeTheme } from './nativeTheme';
 import { solveNode } from './testing/solveNode';
 import type { SolveNode } from './solveTree';
 import type { TscnNode } from '../../../parser/types';
+import { scrollContainerLayoutChannel } from '../../../nodes/2d/ui/scrollcontainer/nativeSolver';
+import { splitContainerBoundaryChannel } from '../../../nodes/2d/ui/shared/splitContainerSolver';
 // Side-effect import: registers every Control slice's solvers and painters.
 import '../index';
 
@@ -145,7 +147,19 @@ function containerTree(type: string): SolveNode[] {
 const VIEWPORT = { x: 0, y: 0, w: 300, h: 300 };
 
 /** Every type whose registered `ContainerLayoutFn` seals a channel value. */
-const CHANNEL_TYPES = ['ScrollContainer', 'HSplitContainer', 'VSplitContainer', 'SplitContainer'];
+/** Each producing type and the channel its painter opens `meta` through. */
+const CHANNEL_OF: Record<string, Channel<object>> = {
+  ScrollContainer: scrollContainerLayoutChannel,
+  HSplitContainer: splitContainerBoundaryChannel,
+  VSplitContainer: splitContainerBoundaryChannel,
+  SplitContainer: splitContainerBoundaryChannel,
+};
+const CHANNEL_TYPES = Object.keys(CHANNEL_OF);
+
+/** Whether a registered channel opens `meta`: every payload is an object, so `undefined` means foreign. */
+function opensThroughAChannel(meta: unknown): boolean {
+  return Object.values(CHANNEL_OF).some((channel) => channel.open(meta) !== undefined);
+}
 
 describe('solve handoff conformance', () => {
   it('reads every 2D-UI solver and painter, so a new slice cannot escape unnoticed', () => {
@@ -183,7 +197,7 @@ describe('solve handoff conformance', () => {
     for (const type of CHANNEL_TYPES) {
       const solved = solveControlTree(containerTree(type), VIEWPORT, createSolveContext(nativeTheme(1)));
       for (const [path, entry] of solved) {
-        if (entry.meta !== undefined && !isSealedHandoff(entry.meta)) unsealed.push(`${type} ${path}`);
+        if (entry.meta !== undefined && !opensThroughAChannel(entry.meta)) unsealed.push(`${type} ${path}`);
       }
     }
     expect(unsealed, `a raw value on \`meta\` opens against nothing: ${unsealed.join(', ')}`).toEqual([]);
@@ -192,7 +206,7 @@ describe('solve handoff conformance', () => {
   it('attaches a channel value unconditionally, so a painter never falls back in production', () => {
     for (const type of CHANNEL_TYPES) {
       const solved = solveControlTree(containerTree(type), VIEWPORT, createSolveContext(nativeTheme(1)));
-      expect(isSealedHandoff(solved.get('Root')?.meta), `${type} sealed nothing`).toBe(true);
+      expect(CHANNEL_OF[type]?.open(solved.get('Root')?.meta), `${type} sealed nothing`).toBeDefined();
     }
   });
 

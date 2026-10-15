@@ -25,11 +25,7 @@ import {
   type EditorCursor,
   type GodotViewAngle,
 } from './godotEditorCursor';
-
-/** `Node3DEditorViewport::Cursor()`'s opening pose (`node_3d_editor_plugin.h:422-426`). */
-const EDITOR_CAMERA_X_ROT = 0.5;
-const EDITOR_CAMERA_Y_ROT = -0.5;
-const EDITOR_CAMERA_DISTANCE = 4;
+import { clampWheelNotches } from './pointerGesture';
 
 /** `editors/3d/navigation_feel/orbit_sensitivity` (`editor_settings.cpp:948`). */
 const ORBIT_DEGREES_PER_PIXEL = 0.25;
@@ -46,9 +42,6 @@ const FREELOOK_SPRINT_MULTIPLIER = 3.0;
 /** `ZOOM_FREELOOK_MIN` and `ZOOM_FREELOOK_MULTIPLIER` (`node_3d_editor_plugin.cpp:119-120`). */
 const ZOOM_DISTANCE_MIN = 0.01;
 const WHEEL_ZOOM_MULTIPLIER = 1.08;
-
-/** The previewer's cap on the notches one wheel event is worth (`pointerGesture.ts`). */
-const WHEEL_MAX_NOTCHES = 4;
 
 const ORIGIN = new THREE.Vector3();
 const WIDE_RANGE = { near: 0.001, far: 100000 };
@@ -70,9 +63,12 @@ function cursorDirection(cursor: EditorCursor): THREE.Vector3 {
 describe('cursorFromCamera / cursorCameraPosition', () => {
   it('recovers Godot’s opening cursor from the camera the canvas opens with', () => {
     const cursor = editorCursor();
-    expect(cursor.xRot).toBeCloseTo(EDITOR_CAMERA_X_ROT, 6);
-    expect(cursor.yRot).toBeCloseTo(EDITOR_CAMERA_Y_ROT, 6);
-    expect(cursor.distance).toBeCloseTo(EDITOR_CAMERA_DISTANCE, 6);
+    const [x, y, z] = editorCameraPosition();
+    const distance = Math.hypot(x, y, z);
+    // `x_rot` is the eye's elevation, and `y_rot` its azimuth off +Z, negated.
+    expect(cursor.xRot).toBeCloseTo(Math.asin(y / distance), 6);
+    expect(cursor.yRot).toBeCloseTo(-Math.atan2(x, z), 6);
+    expect(cursor.distance).toBeCloseTo(distance, 6);
   });
 
   it('round-trips an arbitrary pose back to the same eye position', () => {
@@ -223,7 +219,7 @@ describe('wheelZoomScale', () => {
   });
 
   it('caps a single event so a kinetic fling cannot teleport the eye', () => {
-    const capped = WHEEL_ZOOM_MULTIPLIER ** WHEEL_MAX_NOTCHES;
+    const capped = WHEEL_ZOOM_MULTIPLIER ** clampWheelNotches(Number.POSITIVE_INFINITY);
     expect(wheelZoomScale({ deltaY: 100_000 })).toBeCloseTo(capped, 9);
     expect(wheelZoomScale({ deltaY: -100_000 })).toBeCloseTo(1 / capped, 9);
   });

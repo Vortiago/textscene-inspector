@@ -12,7 +12,7 @@ import '../../2d/remotetransform2d/index.r3f';
 import { TscnParser } from '../../../parser/TscnParser';
 import { uniqueNamePaths } from '../../../utils/uniqueNames';
 import { decomposeTransform3D } from '../../../utils/transform';
-import { identityTransform3D } from '../../../utils/transform.testkit';
+import { identityTransform3D } from '../../../godot/math/transform3d.js';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
 

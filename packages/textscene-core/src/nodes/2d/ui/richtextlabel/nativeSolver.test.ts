@@ -41,6 +41,15 @@ import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment } from './bbcode';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { Vector2 } from '../../../../godot/math/vector';
 
+const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+
+type StyledTextRun = ReturnType<typeof styledTextRuns>[number];
+
+/** A plain, white, left-aligned run of `text` at `fontSizePx`, with the fields a test cares about overridden. */
+function textRun(fields: Pick<StyledTextRun, 'text' | 'fontSizePx'> & Partial<StyledTextRun>): StyledTextRun {
+  return { bold: false, italic: false, underline: false, color: WHITE, alignment: 0, ...fields };
+}
+
 function node(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
   return {
     ...solveNode(),
@@ -321,7 +330,6 @@ describe('richTextLabelTextTheme', () => {
 });
 
 describe('styledTextRuns', () => {
-  const WHITE = { r: 1, g: 1, b: 1, a: 1 };
   // Distinct from the fallback (16), so a failure to isolate them shows as a
   // wrong number.
   const NORMAL = 18;
@@ -336,17 +344,7 @@ describe('styledTextRuns', () => {
         NORMAL,
         FALLBACK
       )
-    ).toEqual([
-      {
-        text: '[b]x[/b]',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: NORMAL,
-        alignment: 0,
-      },
-    ]);
+    ).toEqual([textRun({ text: '[b]x[/b]', fontSizePx: NORMAL })]);
   });
 
   it('bbcode disabled + empty text: no runs', () => {
@@ -373,42 +371,10 @@ describe('styledTextRuns', () => {
       FALLBACK
     );
     expect(runs).toEqual([
-      {
-        text: 'plain ',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: NORMAL,
-        alignment: 0,
-      },
-      {
-        text: 'bold',
-        bold: true,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: FALLBACK,
-        alignment: 0,
-      },
-      {
-        text: ' ',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: NORMAL,
-        alignment: 0,
-      },
-      {
-        text: 'italic',
-        bold: false,
-        italic: true,
-        underline: false,
-        color: WHITE,
-        fontSizePx: FALLBACK,
-        alignment: 0,
-      },
+      textRun({ text: 'plain ', fontSizePx: NORMAL }),
+      textRun({ text: 'bold', bold: true, fontSizePx: FALLBACK }),
+      textRun({ text: ' ', fontSizePx: NORMAL }),
+      textRun({ text: 'italic', italic: true, fontSizePx: FALLBACK }),
     ]);
   });
 
@@ -420,17 +386,7 @@ describe('styledTextRuns', () => {
       NORMAL,
       FALLBACK
     );
-    expect(runs).toEqual([
-      {
-        text: 'x',
-        bold: true,
-        italic: true,
-        underline: false,
-        color: WHITE,
-        fontSizePx: FALLBACK,
-        alignment: 0,
-      },
-    ]);
+    expect(runs).toEqual([textRun({ text: 'x', bold: true, italic: true, fontSizePx: FALLBACK })]);
   });
 
   it('bbcode enabled: [u] sets the underline flag, independent of bold/italic/color, and does NOT change font size (rich_text_label.cpp:4677 push_underline)', () => {
@@ -445,42 +401,10 @@ describe('styledTextRuns', () => {
       FALLBACK
     );
     expect(runs).toEqual([
-      {
-        text: 'plain ',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: NORMAL,
-        alignment: 0,
-      },
-      {
-        text: 'underlined',
-        bold: false,
-        italic: false,
-        underline: true,
-        color: WHITE,
-        fontSizePx: NORMAL,
-        alignment: 0,
-      },
-      {
-        text: ' ',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: NORMAL,
-        alignment: 0,
-      },
-      {
-        text: 'bold and underlined',
-        bold: true,
-        italic: false,
-        underline: true,
-        color: WHITE,
-        fontSizePx: FALLBACK,
-        alignment: 0,
-      },
+      textRun({ text: 'plain ', fontSizePx: NORMAL }),
+      textRun({ text: 'underlined', underline: true, fontSizePx: NORMAL }),
+      textRun({ text: ' ', fontSizePx: NORMAL }),
+      textRun({ text: 'bold and underlined', bold: true, underline: true, fontSizePx: FALLBACK }),
     ]);
   });
 
@@ -493,15 +417,11 @@ describe('styledTextRuns', () => {
       FALLBACK
     );
     expect(runs).toEqual([
-      {
+      textRun({
         text: 'x',
-        bold: false,
-        italic: false,
-        underline: false,
         color: { r: 0xe0 / 255, g: 0xa0 / 255, b: 0x30 / 255, a: 1 },
         fontSizePx: NORMAL,
-        alignment: 0,
-      },
+      }),
     ]);
   });
 
@@ -525,17 +445,7 @@ describe('styledTextRuns', () => {
       NORMAL,
       FALLBACK
     );
-    expect(runs).toEqual([
-      {
-        text: 'x',
-        bold: false,
-        italic: true,
-        underline: false,
-        color: WHITE,
-        fontSizePx: FALLBACK,
-        alignment: 0,
-      },
-    ]);
+    expect(runs).toEqual([textRun({ text: 'x', italic: true, fontSizePx: FALLBACK })]);
   });
 
   describe('per-run font size (scene/theme/default_theme.cpp:1199-1202, rich_text_label.cpp:3244-3290)', () => {
@@ -830,8 +740,6 @@ describe('styledTextRuns', () => {
 });
 
 describe('styledTextRuns [img] size (rich_text_label.cpp:4120-4155 _get_image_size, all six branches)', () => {
-  const WHITE = { r: 1, g: 1, b: 1, a: 1 };
-
   /** The size `styledTextRuns` resolves for one `[img<options>]a.png` run, or null where it drops the run. */
   function imageRunSize(options: string, naturalSize?: Vector2): Vector2 | null {
     const n = node({}, naturalSize ? { textureSlots: { 'a.png': naturalSize } } : {});
@@ -948,24 +856,8 @@ describe('imageObjectFontMetrics — exact-advance round-trip through the SHARED
 describe('fontSizePxAtFromRuns', () => {
   it("maps each character index to its OWN run's fontSizePx, in concatenation order", () => {
     const runs = [
-      {
-        text: 'ab',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: { r: 1, g: 1, b: 1, a: 1 },
-        fontSizePx: 18,
-        alignment: 0,
-      },
-      {
-        text: 'CD',
-        bold: true,
-        italic: false,
-        underline: false,
-        color: { r: 1, g: 1, b: 1, a: 1 },
-        fontSizePx: 16,
-        alignment: 0,
-      },
+      textRun({ text: 'ab', color: { r: 1, g: 1, b: 1, a: 1 }, fontSizePx: 18 }),
+      textRun({ text: 'CD', bold: true, color: { r: 1, g: 1, b: 1, a: 1 }, fontSizePx: 16 }),
     ];
     const sizeAt = fontSizePxAtFromRuns(runs);
     expect(sizeAt(0)).toBe(18);
@@ -975,17 +867,7 @@ describe('fontSizePxAtFromRuns', () => {
   });
 
   it("an out-of-range index (shapeText's own trailing terminator glyph) falls back to the LAST run's size rather than throwing", () => {
-    const runs = [
-      {
-        text: 'a',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: { r: 1, g: 1, b: 1, a: 1 },
-        fontSizePx: 18,
-        alignment: 0,
-      },
-    ];
+    const runs = [textRun({ text: 'a', color: { r: 1, g: 1, b: 1, a: 1 }, fontSizePx: 18 })];
     expect(fontSizePxAtFromRuns(runs)(1)).toBe(18);
   });
 
@@ -1023,7 +905,6 @@ describe('RICH_TEXT_LABEL_UNDERLINE_ALPHA', () => {
 
 describe('layoutRichTextRuns', () => {
   const FONT_SIZE = 16;
-  const WHITE = { r: 1, g: 1, b: 1, a: 1 };
   const BLACK = { r: 0, g: 0, b: 0, a: 1 };
 
   function shape(text: string, boxWidthPx = 0, autowrapMode = AutowrapMode.OFF): TextLayoutResult {
@@ -1051,17 +932,7 @@ describe('layoutRichTextRuns', () => {
   });
 
   it('a single run spanning one whole (unwrapped) line produces exactly one placement carrying every glyph', () => {
-    const runs = [
-      {
-        text: 'AB',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: FONT_SIZE,
-        alignment: 0,
-      },
-    ];
+    const runs = [textRun({ text: 'AB', fontSizePx: FONT_SIZE })];
     const layout = shape('AB');
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements).toHaveLength(1);
@@ -1073,24 +944,8 @@ describe('layoutRichTextRuns', () => {
 
   it('two runs on the same unwrapped line produce two placements, each carrying only its own glyphs, in source order', () => {
     const runs = [
-      {
-        text: 'plain',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: FONT_SIZE,
-        alignment: 0,
-      },
-      {
-        text: 'BOLD',
-        bold: true,
-        italic: false,
-        underline: false,
-        color: BLACK,
-        fontSizePx: FONT_SIZE,
-        alignment: 0,
-      },
+      textRun({ text: 'plain', fontSizePx: FONT_SIZE }),
+      textRun({ text: 'BOLD', bold: true, color: BLACK, fontSizePx: FONT_SIZE }),
     ];
     const layout = shape('plainBOLD');
     const placements = layoutRichTextRuns(runs, layout);
@@ -1104,24 +959,8 @@ describe('layoutRichTextRuns', () => {
 
   it('carries the underline flag through per placement, independent of bold/color', () => {
     const runs = [
-      {
-        text: 'plain',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: FONT_SIZE,
-        alignment: 0,
-      },
-      {
-        text: 'ULINE',
-        bold: false,
-        italic: false,
-        underline: true,
-        color: WHITE,
-        fontSizePx: FONT_SIZE,
-        alignment: 0,
-      },
+      textRun({ text: 'plain', fontSizePx: FONT_SIZE }),
+      textRun({ text: 'ULINE', underline: true, fontSizePx: FONT_SIZE }),
     ];
     const layout = shape('plainULINE');
     const placements = layoutRichTextRuns(runs, layout);
@@ -1131,17 +970,7 @@ describe('layoutRichTextRuns', () => {
   });
 
   it('a single run whose text WRAPS across two lines produces one placement per line, same style on both', () => {
-    const runs = [
-      {
-        text: 'AAAA BBBB',
-        bold: true,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: FONT_SIZE,
-        alignment: 0,
-      },
-    ];
+    const runs = [textRun({ text: 'AAAA BBBB', bold: true, fontSizePx: FONT_SIZE })];
     // Narrow enough that 'AAAA' and 'BBBB' land on separate lines (see textLayout.test.ts's own break-point fixtures for this shape).
     const layout = shape('AAAA BBBB', 60, AutowrapMode.WORD);
     expect(layout.lines.length).toBeGreaterThan(1);
@@ -1153,24 +982,8 @@ describe('layoutRichTextRuns', () => {
 
   it('a style change exactly at a wrap boundary keeps each line single-run (no spurious split within a line)', () => {
     const runs = [
-      {
-        text: 'AAAA ',
-        bold: true,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: FONT_SIZE,
-        alignment: 0,
-      },
-      {
-        text: 'BBBB',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: FONT_SIZE,
-        alignment: 0,
-      },
+      textRun({ text: 'AAAA ', bold: true, fontSizePx: FONT_SIZE }),
+      textRun({ text: 'BBBB', fontSizePx: FONT_SIZE }),
     ];
     const layout = shape('AAAA BBBB', 60, AutowrapMode.WORD);
     const placements = layoutRichTextRuns(runs, layout);
@@ -1183,24 +996,8 @@ describe('layoutRichTextRuns', () => {
 
   it("carries each run's OWN fontSizePx through to its placement, independent of the OTHER run's size", () => {
     const runs = [
-      {
-        text: 'plain',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: 18,
-        alignment: 0,
-      },
-      {
-        text: 'BOLD',
-        bold: true,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: 16,
-        alignment: 0,
-      },
+      textRun({ text: 'plain', fontSizePx: 18 }),
+      textRun({ text: 'BOLD', bold: true, fontSizePx: 16 }),
     ];
     const layout = shape('plainBOLD');
     const placements = layoutRichTextRuns(runs, layout);
@@ -1209,17 +1006,7 @@ describe('layoutRichTextRuns', () => {
   });
 
   it("(regression) each placement echoes the PARENT layout's fontMetrics/linePitchPx — TextRun.tsx dispatches paint by layout.fontMetrics.kind, so an omitted value here would silently force every run onto the atlas path", () => {
-    const runs = [
-      {
-        text: 'AB',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: FONT_SIZE,
-        alignment: 0,
-      },
-    ];
+    const runs = [textRun({ text: 'AB', fontSizePx: FONT_SIZE })];
     const layout = shape('AB');
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements[0]!.layout.fontMetrics).toBe(layout.fontMetrics);
@@ -1232,24 +1019,8 @@ describe('layoutRichTextRuns', () => {
     // over the line's glyphs, and `rich_text_label.cpp:1055`'s `off.y += l_ascent`
     // applies once per line, so both runs share one baseline.
     const runs = [
-      {
-        text: 'plain',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: 18,
-        alignment: 0,
-      },
-      {
-        text: 'BOLD',
-        bold: true,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: 16,
-        alignment: 0,
-      },
+      textRun({ text: 'plain', fontSizePx: 18 }),
+      textRun({ text: 'BOLD', bold: true, fontSizePx: 16 }),
     ];
     const layout = shape('plainBOLD');
     const placements = layoutRichTextRuns(runs, layout);
@@ -1262,26 +1033,7 @@ describe('layoutRichTextRuns', () => {
   it("steps each line's own top by THAT line's ascent+descent, not one paragraph-wide pitch — a line carrying an 18px run is 26 tall where a 16px-only line is 23", () => {
     // 'AAAA' at 18 wraps onto its own line, 'BBBB' at 16 onto the next
     // (same break-point shape as the wrap fixtures above).
-    const runs = [
-      {
-        text: 'AAAA ',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: 18,
-        alignment: 0,
-      },
-      {
-        text: 'BBBB',
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: 16,
-        alignment: 0,
-      },
-    ];
+    const runs = [textRun({ text: 'AAAA ', fontSizePx: 18 }), textRun({ text: 'BBBB', fontSizePx: 16 })];
     const layout = shapeMixed('AAAA BBBB', runs, 60, AutowrapMode.WORD);
     expect(layout.lines).toHaveLength(2);
 
@@ -1311,17 +1063,7 @@ describe('layoutRichTextRuns', () => {
     const BOX_WIDTH_PX = 201.5;
 
     function offsetAt(alignment: number): number {
-      const runs = [
-        {
-          text: TEXT,
-          bold: false,
-          italic: false,
-          underline: false,
-          color: WHITE,
-          fontSizePx: FONT_SIZE,
-          alignment,
-        },
-      ];
+      const runs = [textRun({ text: TEXT, fontSizePx: FONT_SIZE, alignment })];
       const layout = shape(TEXT);
       expect(layout.lines[0]!.widthPx).toBe(91.03125);
       const placements = layoutRichTextRuns(runs, layout, {
@@ -1344,25 +1086,12 @@ describe('layoutRichTextRuns', () => {
     const CENTER_CENTER: ParsedImageAlignment = { imagePoint: 'center', textPoint: 'center' };
     /** A bottom-aligned 100px box: a line's top lands at 100 minus its ascent plus descent. */
     const BOTTOM_OF_100 = { boxWidthPx: 0, boxHeightPx: 100, verticalAlignment: 2 };
-    const TEXT_RUN = {
-      text: 'hi',
-      bold: false,
-      italic: false,
-      underline: false,
-      color: WHITE,
-      fontSizePx: FONT_SIZE,
-      alignment: 0,
-    };
+    const TEXT_RUN = textRun({ text: 'hi', fontSizePx: FONT_SIZE });
 
     function imageRun(widthPx: number, heightPx: number, alignment: ParsedImageAlignment = CENTER_CENTER) {
-      return {
+      return textRun({
         text: IMAGE_OBJECT_CHAR,
-        bold: false,
-        italic: false,
-        underline: false,
-        color: WHITE,
         fontSizePx: widthPx, // carries the width: imageObjectFontMetrics.
-        alignment: 0,
         image: {
           spec: {
             path: 'a.png',
@@ -1379,7 +1108,7 @@ describe('layoutRichTextRuns', () => {
           },
           sizePx: { x: widthPx, y: heightPx },
         },
-      };
+      });
     }
 
     /** `shape`, decorated so an image placeholder shapes at the image width, as Component.tsx does. */
@@ -1448,18 +1177,7 @@ describe('layoutRichTextRuns', () => {
     });
 
     it("a small (10px) centered image on a line with 16px text does not grow the line — it fits entirely within the text's own ascent/descent", () => {
-      const runs = [
-        {
-          text: 'hi',
-          bold: false,
-          italic: false,
-          underline: false,
-          color: WHITE,
-          fontSizePx: FONT_SIZE,
-          alignment: 0,
-        },
-        imageRun(10, 10),
-      ];
+      const runs = [textRun({ text: 'hi', fontSizePx: FONT_SIZE }), imageRun(10, 10)];
       const text = `hi${IMAGE_OBJECT_CHAR}`;
       const layout = shapeWithImages(text, runs);
       // ascentPx=18, descentPx=5 at 16px (getFontAscentPx(OPEN_SANS,16), fontMetrics.ts's own formula).
@@ -1469,18 +1187,7 @@ describe('layoutRichTextRuns', () => {
     });
 
     it("a large (40px) centered image on a 16px text line GROWS the line beyond the text's own ascent/descent", () => {
-      const runs = [
-        {
-          text: 'hi',
-          bold: false,
-          italic: false,
-          underline: false,
-          color: WHITE,
-          fontSizePx: FONT_SIZE,
-          alignment: 0,
-        },
-        imageRun(40, 40),
-      ];
+      const runs = [textRun({ text: 'hi', fontSizePx: FONT_SIZE }), imageRun(40, 40)];
       const layout = shapeWithImages(`hi${IMAGE_OBJECT_CHAR}`, runs);
       // yOffset = (-18+5)/2 - 20 = -26.5; ascent = max(18, 26.5) = 26.5; descent = max(5, -26.5+40) = 13.5.
       const placements = layoutRichTextRuns(runs, layout, BOTTOM_OF_100);
@@ -1497,25 +1204,9 @@ describe('layoutRichTextRuns', () => {
         'a THIRD line — the transition is driven entirely by the DECORATED width (an unresolved run would use the average-glyph fallback, ~9px, and never force it)',
       () => {
         const runs = [
-          {
-            text: 'Hi ',
-            bold: false,
-            italic: false,
-            underline: false,
-            color: WHITE,
-            fontSizePx: FONT_SIZE,
-            alignment: 0,
-          },
+          textRun({ text: 'Hi ', fontSizePx: FONT_SIZE }),
           imageRun(100, 10),
-          {
-            text: ' Bye',
-            bold: false,
-            italic: false,
-            underline: false,
-            color: WHITE,
-            fontSizePx: FONT_SIZE,
-            alignment: 0,
-          },
+          textRun({ text: ' Bye', fontSizePx: FONT_SIZE }),
         ];
         const text = `Hi ${IMAGE_OBJECT_CHAR} Bye`;
         const fitsBeside = shapeWithImages(text, runs, 130, AutowrapMode.WORD);
@@ -1533,28 +1224,10 @@ describe('layoutRichTextRuns', () => {
 });
 
 describe('richTextUnderlineMetrics', () => {
-  const WHITE = { r: 1, g: 1, b: 1, a: 1 };
-
   it("is the MAX over EVERY run in the paragraph, not the underlined run's own size — a line's shaped substring inherits the paragraph's upos/uthk verbatim (text_server_adv.cpp:5310-5311), unlike ascent/descent, which ARE recomputed per line", () => {
     const runs = [
-      {
-        text: 'big',
-        bold: true,
-        italic: false,
-        underline: false,
-        color: WHITE,
-        fontSizePx: 18,
-        alignment: 0,
-      },
-      {
-        text: 'small',
-        bold: false,
-        italic: false,
-        underline: true,
-        color: WHITE,
-        fontSizePx: 16,
-        alignment: 0,
-      },
+      textRun({ text: 'big', bold: true, fontSizePx: 18 }),
+      textRun({ text: 'small', underline: true, fontSizePx: 16 }),
     ];
     // -(-100 - 50/2)*18/2048 and 50*18/2048: the 18px run's, though the 16px
     // run carries [u]. The -thickness/2 term is FreeType's top-edge-to-centre
@@ -1662,8 +1335,6 @@ describe('richTextLabelMinimumSize — the shaped extent is ceiled (text_server_
  */
 describe('RichTextLabel paragraph alignment', () => {
   describe('styledTextRuns alignment, _find_alignment (rich_text_label.cpp:3492-3505)', () => {
-    const WHITE = { r: 1, g: 1, b: 1, a: 1 };
-
     function alignmentOf(text: string, horizontalAlignment: number | undefined): number {
       const props = { text, bbcodeEnabled: true, horizontalAlignment } as RichTextLabelProperties;
       return styledTextRuns(node({}), props, WHITE, 16, 16)[0]!.alignment;
@@ -1693,17 +1364,7 @@ describe('RichTextLabel paragraph alignment', () => {
 
   /** One 16px run of `text` at `alignment`, shaped unwrapped. */
   function singleRun(text: string, alignment: number) {
-    const runs = [
-      {
-        text,
-        bold: false,
-        italic: false,
-        underline: false,
-        color: { r: 1, g: 1, b: 1, a: 1 },
-        fontSizePx: 16,
-        alignment,
-      },
-    ];
+    const runs = [textRun({ text, fontSizePx: 16, alignment })];
     const layout = shapeText(text, {
       fontSizePx: 16,
       boxWidthPx: 0,

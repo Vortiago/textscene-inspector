@@ -10,12 +10,9 @@ import type { TscnInternalResource } from '../../parser/types';
 import { NOISE_PIXEL_CASES } from './noisetexture2d/pixelCases.testkit';
 import type { WorkerJobOutput } from '../../workers/jobs';
 import { fakeJobRunner as fakeRunner } from '../../workers/fakeJobRunner.testkit';
+import { pinProceduralTexture, unpinProceduralTexture } from './proceduralTextureCache';
 import {
   resetProceduralTextures,
-  pinProceduralTexture,
-  unpinProceduralTexture,
-} from './proceduralTextureCache';
-import {
   resolveProceduralSubResourceAsync,
   type ProceduralBuildPlan,
   type ProceduralTextureLookup,

@@ -5,7 +5,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { cloneWithMaterials, createGLBMesh, disposeClonedMaterials } from './glbProcessing';
 // Statically, so the identity check below is immune to the `vi.resetModules()` calls in
@@ -41,28 +41,13 @@ function findRepoAsset(relative: string): string {
   throw new Error(`Asset not found walking up from ${process.cwd()}: ${relative}`);
 }
 
-// cloneWithMaterials needs the lazily imported SkeletonUtils, which a first createGLBMesh loads.
-beforeAll(async () => {
-  await createGLBMesh(triangleGlb(), NO_SIDECAR);
-});
-
-describe('the lazily loaded glTF modules', () => {
-  it('lets cloneWithMaterials clone once a first mesh is built', async () => {
+describe('the lazily loaded GLTFLoader', () => {
+  it('lets a fresh module clone before it builds any mesh', async () => {
     vi.resetModules();
     const fresh = await import('./glbProcessing');
-    const mesh = await fresh.createGLBMesh(triangleGlb(), NO_SIDECAR);
+    const mesh = new THREE.Object3D();
 
     expect(fresh.cloneWithMaterials(mesh)).not.toBe(mesh);
-  });
-
-  it('cloneWithMaterials throws a clear error when no mesh has been built', async () => {
-    // A fresh module instance has an empty lazy cache, so the guard must fire.
-    vi.resetModules();
-    const fresh = await import('./glbProcessing');
-
-    expect(() => fresh.cloneWithMaterials(new THREE.Object3D())).toThrow(
-      /cloneWithMaterials called before createGLBMesh/
-    );
   });
 
   it('does not cache a failed module load: the next mesh retries and succeeds', async () => {
@@ -443,10 +428,9 @@ describe('disposeClonedMaterials', () => {
 });
 
 describe('processing/ re-export shim', () => {
-  it('serves the one module instance, so the lazy module cache stays shared', () => {
+  it('serves the one module instance, so the lazy GLTFLoader cache stays shared', () => {
     // `useResource` and the r3f GLB hooks import the shim path. A second instance
-    // would give them an empty lazy module cache and make `cloneWithMaterials`
-    // throw its not-initialised guard in production.
+    // would load GLTFLoader a second time.
     expect(processingShim.cloneWithMaterials).toBe(cloneWithMaterials);
     expect(processingShim.disposeClonedMaterials).toBe(disposeClonedMaterials);
   });

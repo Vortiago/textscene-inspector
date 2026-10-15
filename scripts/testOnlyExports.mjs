@@ -11,6 +11,7 @@ import { join, posix, relative } from 'node:path';
 
 const SOURCE_RE = /\.tsx?$/;
 const TEST_RE = /\.(test|spec|testkit)\.tsx?$|(^|\/)testing\//;
+const DYNAMIC_IMPORT_RE = /\bimport\s*\(/;
 
 /** A test, a test kit or a file under `testing/` is a test file. Its imports prove nothing. */
 export function isTestFile(path) {
@@ -46,14 +47,6 @@ function resolveSpecifier(files, fromPath, specifier) {
   return candidates.find((candidate) => files.has(candidate));
 }
 
-function hasExportModifier(node) {
-  return ts.getModifiers?.(node)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) ?? false;
-}
-
-function hasDefaultModifier(node) {
-  return ts.getModifiers?.(node)?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) ?? false;
-}
-
 function isTypeDeclaration(statement) {
   return ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement);
 }
@@ -81,9 +74,15 @@ function parseModule(files, path, text) {
   );
 
   const visitDynamic = (node) => {
-    if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
-      const [arg] = node.arguments;
-      const target = arg && ts.isStringLiteral(arg) && resolveSpecifier(files, path, arg.text);
+    const thenImport = dynamicImportOfThen(node);
+    if (thenImport) {
+      const target = resolveDynamic(files, path, thenImport.call);
+      if (target) for (const name of thenImport.names) record.uses.push([target, name]);
+      for (const arg of node.arguments) ts.forEachChild(arg, visitDynamic);
+      return;
+    }
+    if (isDynamicImport(node)) {
+      const target = resolveDynamic(files, path, node);
       if (target) record.uses.push([target, '*']);
     }
     if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
@@ -130,14 +129,52 @@ function parseModule(files, path, text) {
       }
     } else if (ts.isExportAssignment(statement)) {
       record.own.set('default', false);
-    } else if (hasExportModifier(statement)) {
+    } else if (hasModifier(statement, ts.SyntaxKind.ExportKeyword)) {
       const isType = isTypeDeclaration(statement);
-      if (hasDefaultModifier(statement)) record.own.set('default', isType);
+      if (hasModifier(statement, ts.SyntaxKind.DefaultKeyword)) record.own.set('default', isType);
       else for (const name of declaredNames(statement)) record.own.set(name, isType);
     }
   }
-  visitDynamic(source);
+  // Only a file that writes `import(` holds a dynamic import or an import type to walk for.
+  if (DYNAMIC_IMPORT_RE.test(text)) visitDynamic(source);
   return record;
+}
+
+function isDynamicImport(node) {
+  return ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword;
+}
+
+function resolveDynamic(files, path, call) {
+  const [arg] = call.arguments;
+  return arg && ts.isStringLiteral(arg) && resolveSpecifier(files, path, arg.text);
+}
+
+/**
+ * For `import('./x').then((m) => … m.A …)`, the import call and the names the callback reads.
+ * A callback that uses `m` in any other way reads the whole module, written `*`.
+ */
+function dynamicImportOfThen(node) {
+  if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) return undefined;
+  const { expression: call, name } = node.expression;
+  if (name.text !== 'then' || !isDynamicImport(call)) return undefined;
+  const [callback] = node.arguments;
+  const param = callback && ts.isFunctionLike(callback) && callback.parameters[0]?.name;
+  if (!param || !ts.isIdentifier(param)) return { call, names: ['*'] };
+  const names = new Set();
+  let isWhole = false;
+  const visit = (child) => {
+    if (ts.isPropertyAccessExpression(child) && ts.isIdentifier(child.expression)) {
+      if (child.expression.text === param.text) return void names.add(child.name.text);
+    }
+    if (ts.isIdentifier(child) && child.text === param.text && child !== param) isWhole = true;
+    ts.forEachChild(child, visit);
+  };
+  ts.forEachChild(callback, visit);
+  return { call, names: isWhole ? ['*'] : [...names] };
+}
+
+function hasModifier(node, kind) {
+  return ts.getModifiers(node)?.some((m) => m.kind === kind) ?? false;
 }
 
 function qualifierHead(qualifier) {
@@ -178,10 +215,13 @@ function allExports(modules, path, seen) {
  * imports. A type export is left out: a type that names an export's argument or result is part of
  * that interface, and the declaration emitter needs it exported (TS4023). An entry point's exports
  * are the package interface, so they count as imported, as does everything an entry point
- * forwards. A whole-module use (`import *`, `import()`) imports every export of that module.
+ * forwards. A whole-module use (`import *`, a bare `import()`) imports every export of that module.
  */
 export function testOnlyExports(files, entryPoints) {
-  const modules = new Map([...files].map(([path, text]) => [path, parseModule(files, path, text)]));
+  // A test file's imports prove nothing, so only production files are parsed. `files` still
+  // holds every path, so a specifier resolves to a test file as it does to any other.
+  const production = [...files].filter(([path]) => !isTestFile(path));
+  const modules = new Map(production.map(([path, text]) => [path, parseModule(files, path, text)]));
   const imported = new Set();
   // Every hop counts, so a barrel's forwarding name is imported when an importer goes through it.
   const markImported = (file, name) => {
@@ -194,7 +234,6 @@ export function testOnlyExports(files, entryPoints) {
 
   for (const entry of entryPoints) markImported(entry, '*');
   for (const [path, record] of modules) {
-    if (isTestFile(path)) continue;
     for (const [file, name] of record.uses) {
       if (file !== path) markImported(file, name);
     }
@@ -202,7 +241,6 @@ export function testOnlyExports(files, entryPoints) {
 
   const unimported = [];
   for (const [path, record] of modules) {
-    if (isTestFile(path)) continue;
     for (const name of [...record.own.keys(), ...record.aliases.keys()]) {
       const id = `${path}#${name}`;
       const isType = record.own.get(name) ?? isTypeOnly(path, name);

@@ -15,6 +15,7 @@ import {
   depthFogDensityDefault,
   depthFogRange,
 } from '../../godot/rendering/environment/depthFog.js';
+import { GLOW_BLEND_MODE_DEFAULT } from '../../godot/rendering/environment/glow.js';
 
 /** `Environment`'s constructor weights, finest mip first. */
 const DEFAULT_GLOW_LEVELS = [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0];
@@ -131,7 +132,7 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
     glow_strength: floatOr(properties.glow_strength, 1.0, 'glow_strength'),
     glow_mix: floatOr(properties.glow_mix, 0.05, 'glow_mix'),
     glow_bloom: floatOr(properties.glow_bloom, 0.0, 'glow_bloom'),
-    glow_blend_mode: intOr(properties.glow_blend_mode, 1, 'glow_blend_mode'),
+    glow_blend_mode: intOr(properties.glow_blend_mode, GLOW_BLEND_MODE_DEFAULT, 'glow_blend_mode'),
     glow_hdr_threshold: floatOr(properties.glow_hdr_threshold, 1.0, 'glow_hdr_threshold'),
     glow_hdr_scale: floatOr(properties.glow_hdr_scale, 2.0, 'glow_hdr_scale'),
     glow_hdr_luminance_cap: floatOr(properties.glow_hdr_luminance_cap, 12.0, 'glow_hdr_luminance_cap'),

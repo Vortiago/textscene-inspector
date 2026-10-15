@@ -20,12 +20,12 @@ import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat'
 import {
   buttonTextAlignShiftPx,
   centredTextTopPx,
-  HORIZONTAL_ALIGNMENT_RIGHT,
   pickButtonStyleBox,
   resolveButtonDrawState,
   tintColor,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
+import { HORIZONTAL_ALIGNMENT_RIGHT, type Rgba } from '../../../../godot/math/math';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveTextTheme,
@@ -37,7 +37,6 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { OptionButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import type { Rgba } from '../../../../godot/math/math';
 
 // Re-exported so Component.tsx imports the shared Button pieces under one name.
 export { pickButtonStyleBox, resolveButtonDrawState, tintColor };

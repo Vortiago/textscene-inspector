@@ -7,8 +7,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { applyToneMapping, installToneCurve, worldToneMapping } from './toneMapping';
 import type { ToneMappedRenderer } from './toneMapping';
-import { GodotToneMapper, toneMappingEffectGlsl, toneMappingShaderChunk } from './godotToneMapping';
-import { bakedToneMapWhite } from './godotToneMapping.testkit';
+import { toneMappingEffectGlsl, toneMappingShaderChunk } from './godotToneMapping';
+import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 
 const ORIGINAL_CHUNK = THREE.ShaderChunk.tonemapping_pars_fragment;
 
@@ -52,36 +52,6 @@ describe('the mapping applyToneMapping installs', () => {
 });
 
 describe('Godot\u2019s curves', () => {
-  it('normalises FILMIC so white maps to 1.0', () => {
-    // The whole reason three's Cineon rendered 13% dark: Godot divides by the
-    // curve at white, and at the default white of 1.0 that is a 1.73x lift.
-    expect(bakedToneMapWhite(2, 1)).toBeCloseTo(0.5784, 4);
-  });
-
-  it('gives REINHARDT the squared white the shader expects', () => {
-    expect(bakedToneMapWhite(1, 3)).toBe(9);
-  });
-
-  it('normalises ACES at its own exposure bias of 1.8', () => {
-    // By hand at white = 1, x = 1.8, as the rows of Godot's ACES matrices sum to 1:
-    //   num = 1.8 * (1.8 + 0.0245786) - 0.000090537            = 3.284140
-    //   den = 1.8 * (0.983729 * 1.8 + 0.432951) + 0.238081     = 4.204674
-    //   num / den                                              = 0.781071
-    expect(bakedToneMapWhite(3, 1)).toBeCloseTo(0.781071, 5);
-  });
-
-  it('has no white parameter for LINEAR, which does not normalise', () => {
-    expect(bakedToneMapWhite(0, 4)).toBe(1);
-  });
-
-  it('gives AGX its high-clip white, floored at Godot’s 2.0', () => {
-    // AgX does not divide by the curve at white; white is the shoulder's
-    // high-clip point, and Godot's environment_get_white floors it at 2.0. So a
-    // default white of 1 becomes 2, and a larger white passes through.
-    expect(bakedToneMapWhite(4, 1)).toBe(2);
-    expect(bakedToneMapWhite(4, 5)).toBe(5);
-  });
-
   it('emits a compilable CustomToneMapping body that consumes the exposure', () => {
     const chunk = toneMappingShaderChunk(2, 1);
     expect(chunk).toMatch(/vec3 CustomToneMapping\(vec3 color\)/);
@@ -244,7 +214,7 @@ describe('worldToneMapping', () => {
   it('answers LINEAR as NoToneMapping, whatever the renderer holds', () => {
     const gl = fakeRenderer();
     gl.toneMapping = THREE.CustomToneMapping;
-    const restore = installToneCurve(gl, { mode: GodotToneMapper.LINEAR, exposure: 1 });
+    const restore = installToneCurve(gl, { mode: ToneMapper.LINEAR, exposure: 1 });
     expect(worldToneMapping(gl)).toBe(THREE.NoToneMapping);
     restore();
   });
@@ -261,7 +231,7 @@ describe('applyToneMapping program keys', () => {
   // three reuses a compiled program whose key is equal, so a new curve reaches a material that
   // has compiled only when the key changes with the curve. FILMIC then AGX is the editor preview
   // environment yielding to a WorldEnvironment that an instanced sub-scene brings in.
-  const { FILMIC, AGX } = GodotToneMapper;
+  const { FILMIC, AGX } = ToneMapper;
 
   afterEach(() => {
     THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;

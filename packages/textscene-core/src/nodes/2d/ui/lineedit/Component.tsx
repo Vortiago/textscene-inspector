@@ -40,9 +40,8 @@ import {
   EXPAND_MODE_ORIGINAL_SIZE,
 } from './nativeSolver';
 import type { LineEditProperties } from './types';
-import type { Rgba } from '../../../../godot/math/math';
+import { HORIZONTAL_ALIGNMENT_LEFT, type Rgba } from '../../../../godot/math/math';
 
-const HORIZONTAL_ALIGNMENT_LEFT = 0;
 const DEFAULT_CARET_WIDTH_PX = 1;
 
 /** `Color(1, 1, 1, !is_editable() ? .5*.9 : .9)`: `right_icon`'s draw-time tint (`line_edit.cpp:1443`), never the clear button's. */

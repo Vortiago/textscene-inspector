@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { WorkerJobRunner } from '../../../workers/WorkerJobRunner';
-import { resetProceduralTextures } from '../proceduralTextureCache';
+import { resetProceduralTextures } from '../proceduralBuilds';
 import { resolveNoiseTexture2D } from './resolveNoiseTexture';
 
 const ICE = `[gd_resource type="StandardMaterial3D" format=3]

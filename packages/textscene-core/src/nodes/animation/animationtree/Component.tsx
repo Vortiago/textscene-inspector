@@ -23,21 +23,8 @@ import { snapshotPose, restoreSnapshot } from '../../../r3f/animation/poseSnapsh
 import { resolveTreeRoot } from './treeResources';
 import { evaluateTree } from './evaluateTree';
 import { resolveAnimPlayerPath } from './resolveAnimPlayer';
+import { dominantActionTime, dominantClip } from './dominantClip';
 import type { AnimationTreeProperties } from './types';
-
-/**
- * The dominant clip's live playhead, the `liveTime` for `stepPlayback`. `null` means no live
- * playhead to flush, never a fabricated `0`: a blend program can name a clip the driver lacks, so
- * `dominant` is set but `actions` has no entry. A `0` there would snap the paused readout to zero
- * on the next playing-to-paused edge.
- */
-function dominantActionTime(
-  dominant: { clip: string } | null,
-  actions: ReadonlyMap<string, AnimationAction>
-): number | null {
-  if (!dominant) return null;
-  return actions.get(dominant.clip)?.time ?? null;
-}
 
 export function AnimationTree({ node, children }: NodeComponentProps) {
   const properties = node.properties as AnimationTreeProperties;
@@ -71,16 +58,8 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
   // transport (ADR-0012): drive only while this is the selected, active node.
   const isActive = properties.active && nodePath !== null && nodePath === selectedNodePath;
 
-  // Godot's Animation panel has no clip picker for an AnimationTree, so the dominant clip is the
-  // single read-only transport entry, and the Animation tab and scrubber appear while selected.
-  const dominant = useMemo(
-    () =>
-      program.reduce<(typeof program)[number] | null>(
-        (best, c) => (best === null || c.weight > best.weight ? c : best),
-        null
-      ),
-    [program]
-  );
+  // The Animation tab and scrubber show the dominant clip while selected.
+  const dominant = useMemo(() => dominantClip(program), [program]);
   // Scrubber length = the longest active clip (a blend can mix clips of
   // different lengths; clamping to the dominant's would cut seeks short).
   // Memoised: the transport re-renders this component every frame while playing

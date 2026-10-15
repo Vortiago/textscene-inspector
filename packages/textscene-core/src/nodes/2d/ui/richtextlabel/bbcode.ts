@@ -4,7 +4,7 @@
  * `[b]`/`[i]`/`[u]`/`[color]`/`[img]`. An unrecognised tag is literal text.
  */
 
-import { godotNamedColor } from '../../../../utils/godotNamedColor';
+import { namedColor } from '../../../../godot/variant/color.js';
 import { stringToFloat, stringToInt } from '../../../../godot/string/string';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -558,9 +558,9 @@ function parseHtmlHex(value: string): Rgba | undefined {
 /**
  * Resolves a `[color=value]` payload as `Color::from_string` (`rich_text_
  * label.cpp:6149`, `color.cpp:450-456`): hex, then the named colours of
- * `core/math/color_names.inc` (`utils/godotNamedColor.ts`), then `fallback`.
+ * `core/math/color_names.inc` (`godot/variant/color.ts`), then `fallback`.
  * A `Color(r, g, b, a)` literal is not a colour here.
  */
 export function resolveBBColor(value: string, fallback: Rgba): Rgba {
-  return parseHtmlHex(value) ?? godotNamedColor(value) ?? fallback;
+  return parseHtmlHex(value) ?? namedColor(value) ?? fallback;
 }

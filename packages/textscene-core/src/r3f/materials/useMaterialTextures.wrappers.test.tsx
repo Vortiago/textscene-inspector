@@ -12,7 +12,7 @@ import { parseTresFile } from '../../parser/parsedResource';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import { resetProceduralTextures } from '../../resources/textures/proceduralTextureCache';
+import { resetProceduralTextures } from '../../resources/textures/proceduralBuilds';
 import { defaultWhiteTexture } from './defaultWhiteTexture';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import { useMaterialTextures } from './SurfaceMaterialSlot';

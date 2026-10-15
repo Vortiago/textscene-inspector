@@ -2,27 +2,20 @@
  * The filter is checked against the installed three's shadow chunk, so a release that rewrites the
  * sun block it precedes fails here and not in a golden.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from '../../godot/rendering/lights/softShadowKernel';
 import { FRAMEBUFFER_HEIGHT_UNIFORM } from './framebufferRows';
 import { installedFramebufferHeight } from './framebufferRows.testkit';
 import { installSoftShadowFilter } from './softShadowFilter';
+import { occurrences } from '../testing/glslSource';
 import { warningsOf } from '../testing/logWarnings';
-import { installedShaderChunks, snapshotShaderGlobals } from '../testing/shaderPatches';
+import { installedShaderChunks, FILTER_PCF, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
 const CHUNK = 'shadowmap_pars_fragment';
 const threeChunk = THREE.ShaderChunk[CHUNK];
-/** The filter's own function, which marks a chunk that holds the filter. */
-const FILTER_PCF = 'float godotPcf(';
 
-const occurrences = (text: string, part: string) => text.split(part).length - 1;
-
-let restoreShaderGlobals: () => void;
-beforeEach(() => {
-  restoreShaderGlobals = snapshotShaderGlobals();
-});
-afterEach(() => restoreShaderGlobals());
+restoreShaderGlobalsAfterEach();
 
 /** The shadow chunk a canvas compiles with. */
 const installedChunk = () => installedShaderChunks()[CHUNK];

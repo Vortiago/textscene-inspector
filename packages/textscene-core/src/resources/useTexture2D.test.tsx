@@ -16,8 +16,7 @@ import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import type { ResourceLoader } from './ResourceLoader';
 import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
-import { type JobRunner } from './textures/proceduralBuilds';
-import { resetProceduralTextures } from './textures/proceduralTextureCache';
+import { resetProceduralTextures, type JobRunner } from './textures/proceduralBuilds';
 import { SceneStack } from '../r3f/testing/SceneStack';
 
 import '../r3f/nodes/index';

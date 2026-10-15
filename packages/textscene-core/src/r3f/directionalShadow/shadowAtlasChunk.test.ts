@@ -2,7 +2,7 @@
  * The patch is checked against the installed three's chunks, so a release that rewrites a sun
  * shadow sampler fails here and not in a golden.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installDirectionalShadowAtlas } from './shadowAtlasChunk';
 import {
@@ -13,9 +13,10 @@ import {
 } from './shadowAtlas';
 import { installGodotSplitShadow } from './splitShadowChunk';
 import { installDirectionalShadowFade } from './shadowFade';
+import { occurrences } from '../testing/glslSource';
 import { warningsOf } from '../testing/logWarnings';
 import { LIT_SHADERS } from '../testing/litShaders';
-import { installedShaderChunks, snapshotShaderGlobals } from '../testing/shaderPatches';
+import { installedShaderChunks, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
 const PARS = 'shadowmap_pars_fragment';
 const LIGHTS = 'lights_fragment_begin';
@@ -27,13 +28,7 @@ const threeChunks = {
 };
 const ATLAS_ARGUMENT = `getSunShadow( ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM},`;
 
-const occurrences = (text: string, part: string) => text.split(part).length - 1;
-
-let restoreShaderGlobals: () => void;
-beforeEach(() => {
-  restoreShaderGlobals = snapshotShaderGlobals();
-});
-afterEach(() => restoreShaderGlobals());
+restoreShaderGlobalsAfterEach();
 
 /** The three chunks after the atlas and the other directional patches, in the given order. */
 function installedInOrder(order: 'atlas first' | 'atlas last'): string[] {

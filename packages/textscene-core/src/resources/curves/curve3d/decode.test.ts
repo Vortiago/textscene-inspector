@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveCurve3D, tessellateCurve3D } from './decode';
+import { resolveOnlySubResource } from '../../../testing/subResource';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
 
 /** The control points a Curve3D sub-resource with this body decodes to. */
 function decode(data: Record<string, string>) {
-  return resolveCurve3D('SubResource("c")', [{ id: 'c', type: 'Curve3D', data }]);
+  return resolveOnlySubResource('Curve3D', data, resolveCurve3D);
 }
 
 /** A Curve3D body whose `_data` holds `points` as written and `tilts`, plus any other properties. */

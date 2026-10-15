@@ -11,7 +11,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlLayoutOrder, painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
+import { multiplyModulate, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
@@ -32,10 +32,8 @@ import { normalizeTextureProgressBarFillMode } from './nativeSolver';
 import { TexturedFillMesh } from './TexturedFillMesh';
 import { FillMode, type TextureProgressBarProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
-import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
 
-const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 const ZERO: Vector2 = { x: 0, y: 0 };
 
 const FILTER: Record<'nearest' | 'linear', THREE.MagnificationTextureFilter> = {
@@ -161,15 +159,15 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   // `tint_under`/`tint_progress`/`tint_over` (raw sRGB) multiply into `tint.own` before the one
   // sRGB-to-linear conversion, as Button's icon does (`buttonBase.ts`).
   const underColorSrgb = useMemo(
-    () => multiplyModulate(props.tintUnder ?? WHITE, tint.own),
+    () => multiplyModulate(props.tintUnder ?? WHITE_MODULATE, tint.own),
     [props.tintUnder, tint.own]
   );
   const progressColorSrgb = useMemo(
-    () => multiplyModulate(props.tintProgress ?? WHITE, tint.own),
+    () => multiplyModulate(props.tintProgress ?? WHITE_MODULATE, tint.own),
     [props.tintProgress, tint.own]
   );
   const overColorSrgb = useMemo(
-    () => multiplyModulate(props.tintOver ?? WHITE, tint.own),
+    () => multiplyModulate(props.tintOver ?? WHITE_MODULATE, tint.own),
     [props.tintOver, tint.own]
   );
   const underColor = useGodotLinearColor(underColorSrgb);

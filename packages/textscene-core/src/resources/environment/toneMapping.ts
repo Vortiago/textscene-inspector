@@ -5,7 +5,8 @@
  */
 
 import * as THREE from 'three';
-import { GodotToneMapper, hasGodotCurve, toneMappingShaderChunk } from './godotToneMapping';
+import { hasGodotCurve, toneMappingShaderChunk } from './godotToneMapping';
+import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 
 /** The subset of `THREE.WebGLRenderer` this module touches. */
 export interface ToneMappedRenderer {
@@ -33,7 +34,7 @@ const TONEMAP_CHUNK = 'tonemapping_pars_fragment';
  * dropped. Faithful at the 1.0 default.
  */
 function toneMappingFor(mode: number): THREE.ToneMapping {
-  if (mode === GodotToneMapper.LINEAR) return THREE.NoToneMapping;
+  if (mode === ToneMapper.LINEAR) return THREE.NoToneMapping;
   return hasGodotCurve(mode) ? THREE.CustomToneMapping : THREE.NoToneMapping;
 }
 

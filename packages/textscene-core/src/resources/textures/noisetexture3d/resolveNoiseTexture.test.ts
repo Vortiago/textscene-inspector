@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { WorkerJobRunner } from '../../../workers/WorkerJobRunner';
-import { resetProceduralTextures } from '../proceduralTextureCache';
+import { resetProceduralTextures } from '../proceduralBuilds';
 import { resolveNoiseTexture3D } from './resolveNoiseTexture';
 
 const FOG = `[gd_resource type="FogMaterial" format=3]

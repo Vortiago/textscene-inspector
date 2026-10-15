@@ -20,9 +20,9 @@ import {
   buttonTextAlignShiftPx,
   centredTextTopPx,
   fitIconSize,
-  HORIZONTAL_ALIGNMENT_RIGHT,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
+import { HORIZONTAL_ALIGNMENT_RIGHT, type Rgba } from '../../../../godot/math/math';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveTextTheme,
@@ -35,7 +35,6 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { CheckBoxProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import type { Rgba } from '../../../../godot/math/math';
 
 /**
  * CheckBox's theme font key, `SceneStringName(font)`, registered under CheckBox's own type

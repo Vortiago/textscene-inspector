@@ -9,33 +9,24 @@ import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
-import { FileEventBus } from '../../../resources/FileEventBus';
-import { ResourceLoader } from '../../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
 import { useBuildSolveTree } from './buildSolveTree';
 import type { SolveNode } from './solveTree';
 import { controlNode } from './testing/solveNode';
+import { themeResource } from './testing/themeResource';
 
-function theme(icons: Record<string, Record<string, string>>): ThemeResource {
-  return {
-    defaultFont: null,
-    defaultFontSize: undefined,
-    fonts: {},
-    fontSizes: {},
-    styles: {},
+/** A Theme that declares `icons`, in a theme-file scope of its own. */
+function iconTheme(icons: Record<string, Record<string, string>>): ThemeResource {
+  return themeResource({
     icons,
-    colors: {},
-    constants: {},
-    typeVariations: {},
-    properties: {},
     resources: {
       externalResources: [{ id: '1', path: 'res://icon.png', type: 'Texture2D' }],
       internalResources: [],
     },
-  };
+  });
 }
 
 function checkBox(overrides?: Record<string, string>): TscnNode {
@@ -76,7 +67,7 @@ function solvedLeaf(themes: readonly ThemeResource[], leaf: TscnNode): SolveNode
 describe('useBuildSolveTree icons', () => {
   it('lets a local theme_override_icons/<name> win over an ancestor Theme, in the node scope', () => {
     const leaf = solvedLeaf(
-      [theme({ CheckBox: { checked: 'ExtResource("1")' } })],
+      [iconTheme({ CheckBox: { checked: 'ExtResource("1")' } })],
       checkBox({ checked: 'SubResource("Local")' })
     );
     expect(leaf.icons.checked?.ref).toBe('SubResource("Local")');
@@ -84,20 +75,20 @@ describe('useBuildSolveTree icons', () => {
   });
 
   it("falls to the ancestor Theme without a local override, in that theme file's own scope", () => {
-    const ancestor = theme({ CheckBox: { checked: 'ExtResource("1")' } });
+    const ancestor = iconTheme({ CheckBox: { checked: 'ExtResource("1")' } });
     const leaf = solvedLeaf([ancestor], checkBox());
     expect(leaf.icons.checked?.ref).toBe('ExtResource("1")');
     expect(leaf.icons.checked?.resources).toBe(ancestor.resources);
   });
 
   it('lets the nearest ancestor Theme win over a farther one (theme_owner.cpp:236-245)', () => {
-    const farther = theme({ CheckBox: { checked: 'ExtResource("farther")' } });
-    const nearer = theme({ CheckBox: { checked: 'ExtResource("nearer")' } });
+    const farther = iconTheme({ CheckBox: { checked: 'ExtResource("farther")' } });
+    const nearer = iconTheme({ CheckBox: { checked: 'ExtResource("nearer")' } });
     expect(solvedLeaf([farther, nearer], checkBox()).icons.checked?.ref).toBe('ExtResource("nearer")');
   });
 
   it('leaves a name absent, not null, when nothing in the chain resolves it', () => {
-    const leaf = solvedLeaf([theme({ CheckBox: { unchecked: 'ExtResource("1")' } })], checkBox());
+    const leaf = solvedLeaf([iconTheme({ CheckBox: { unchecked: 'ExtResource("1")' } })], checkBox());
     expect(Object.hasOwn(leaf.icons, 'checked')).toBe(false);
   });
 
@@ -121,15 +112,7 @@ describe('useBuildSolveTree icons', () => {
         '',
       ].join('\n'),
     };
-    const provider: ResourceProvider = {
-      async loadResource(path: string) {
-        const content = files[path];
-        if (content === undefined) throw new Error(`Resource not found: ${path}`);
-        return content;
-      },
-    };
-    const loader = new ResourceLoader(new FileEventBus(provider));
-    loader.setProvider(provider);
+    const loader = loaderServing(files);
 
     const { result } = renderHook(() => useBuildSolveTree([checkBox()], [], []), {
       wrapper: ({ children }: { children: ReactNode }) => (

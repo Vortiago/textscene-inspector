@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
-import { resetProceduralTextures } from '../proceduralTextureCache';
+import { resetProceduralTextures } from '../proceduralBuilds';
 import { resolveImageTexture3D } from './resolveImageTexture3D';
 
 function image(id: string, format: string, bytes: string): TscnInternalResource {

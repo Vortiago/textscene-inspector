@@ -13,7 +13,7 @@ import {
 } from './types';
 import { scaledRgb } from '../../utils/colorParser';
 import { sRGBChannelToLinear } from '../../utils/colorSpace';
-import { GodotToneMapper } from './godotToneMapping';
+import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 import type { Rgba } from '../../godot/math/math';
 
 /**
@@ -23,9 +23,7 @@ import type { Rgba } from '../../godot/math/math';
  * The authored value: `resolvedWhite` applies the per-curve floors (`environment_get_white`).
  */
 function whiteFor(properties: EnvironmentProperties): number {
-  return properties.tonemap_mode === GodotToneMapper.AGX
-    ? properties.tonemap_agx_white
-    : properties.tonemap_white;
+  return properties.tonemap_mode === ToneMapper.AGX ? properties.tonemap_agx_white : properties.tonemap_white;
 }
 
 /**

@@ -10,9 +10,7 @@ import type { TscnNode } from '../../../parser/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
-
-/** The anisotropy ceiling the previewer pins: `anisotropic_filtering_level` 4, so `1 << 4`. */
-const GODOT_ANISOTROPY_MAX = 16;
+import { godotTextureFilterState } from '../../../resources/textures/godotTextureFilter';
 
 const Sprite3D = registeredComponent('Sprite3D');
 
@@ -202,10 +200,10 @@ describe('Sprite3D material-property parity', () => {
   });
 
   it('texture_filter LINEAR_..._ANISOTROPIC raises anisotropy', async () => {
-    // Row 5: the anisotropy ceiling.
+    // Row 5: the anisotropy ceiling the sampler table pins.
     const r = await render({ texture_filter: '5' });
     const map = (findMesh(r.scene).material as THREE.MeshBasicMaterial).map!;
     expect([map.magFilter, map.minFilter]).toEqual([THREE.LinearFilter, THREE.LinearMipmapLinearFilter]);
-    expect([map.generateMipmaps, map.anisotropy]).toEqual([true, GODOT_ANISOTROPY_MAX]);
+    expect([map.generateMipmaps, map.anisotropy]).toEqual([true, godotTextureFilterState(5).anisotropy]);
   });
 });

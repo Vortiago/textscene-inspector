@@ -7,17 +7,19 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { findRepoRoot } from './repoRoot.mjs';
 import { entryPointsOf, isTestFile, readSourceTree, testOnlyExports } from './testOnlyExports.mjs';
 
-const CORE = resolve(import.meta.dirname, '../packages/textscene-core');
+const CORE = resolve(findRepoRoot(), 'packages/textscene-core');
 
 /** The value exports kept although only tests import them, each with the reason a test needs it. */
 const KEPT = [
   // A three.js upgrade that adds a texture slot or renames its USE_ define fails these tests.
   'r3f/materialProgramInputs.ts#NOT_BOUND_TEXTURE_SLOTS',
   'r3f/materialProgramInputs.ts#TEXTURE_SLOT_GATES',
-  // The cache is module state, so each test starts from the one reset the cache owns.
-  'resources/textures/proceduralTextureCache.ts#resetProceduralTextures',
+  // The builds and the cache are module state, so each test starts from the one reset that aborts
+  // the builds in flight and clears the cache.
+  'resources/textures/proceduralBuilds.ts#resetProceduralTextures',
 ];
 
 function scan(files, entryPoints = []) {
@@ -90,10 +92,28 @@ describe('testOnlyExports', () => {
     expect(found).toEqual([]);
   });
 
-  it('counts a dynamic import as a use of every export', () => {
+  it('counts a bare dynamic import as a use of every export', () => {
     const found = scan({
       'lazy.ts': 'export function Panel() {}\nexport function Other() {}',
       'host.ts': "const lazy = () => import('./lazy.js');",
+    });
+
+    expect(found).toEqual([]);
+  });
+
+  it("counts only the names a dynamic import's callback reads", () => {
+    const found = scan({
+      'lazy.ts': 'export function Panel() {}\nexport function Other() {}',
+      'host.ts': "const lazy = () => import('./lazy.js').then((m) => ({ default: m.Panel }));",
+    });
+
+    expect(found).toEqual(['lazy.ts#Other']);
+  });
+
+  it('counts every export when the callback passes the module on (edge case)', () => {
+    const found = scan({
+      'lazy.ts': 'export function Panel() {}\nexport function Other() {}',
+      'host.ts': "const lazy = () => import('./lazy.js').then((m) => keep(m));",
     });
 
     expect(found).toEqual([]);

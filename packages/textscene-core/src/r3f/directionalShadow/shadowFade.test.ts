@@ -3,32 +3,49 @@
  * every lit material through one shared buffer. The chunks are read as installed on the installed
  * three, so a release that rewrites a line fails here, not in a golden.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { installDirectionalShadowFade, writeDirectionalShadowFades } from './shadowFade';
 import { installGodotSplitShadow } from './splitShadowChunk';
 import { DIRECTIONAL_SHADOW_ATLAS_UNIFORM } from './shadowAtlas';
 import { LIT_SHADERS } from '../testing/litShaders';
+import { occurrences } from '../testing/glslSource';
 import { warningsOf } from '../testing/logWarnings';
-import { installedShaderChunks, snapshotShaderGlobals } from '../testing/shaderPatches';
+import {
+  installedShaderChunks,
+  restoreShaderGlobalsAfterEach,
+  snapshotShaderGlobals,
+} from '../testing/shaderPatches';
 
 const PARS = 'shadowmap_pars_fragment';
 const LIGHTS = 'lights_fragment_begin';
 const threePars = THREE.ShaderChunk[PARS];
 const threeLights = THREE.ShaderChunk[LIGHTS];
-const FADE_UNIFORM = 'directionalShadowFade';
 
-const occurrences = (text: string, part: string) => text.split(part).length - 1;
+/**
+ * The uniform the install adds to every lit material, read off the install itself, so the chunk
+ * assertions below pin that the GLSL names the uniform the materials carry.
+ */
+function installedFadeUniform(): string {
+  const restore = snapshotShaderGlobals();
+  try {
+    const before = new Set(Object.keys(THREE.ShaderLib.standard.uniforms));
+    installDirectionalShadowFade();
+    const added = Object.keys(THREE.ShaderLib.standard.uniforms).filter((name) => !before.has(name));
+    if (added.length !== 1) throw new Error(`expected one uniform added, got [${added.join(', ')}]`);
+    return added[0]!;
+  } finally {
+    restore();
+  }
+}
+
+const FADE_UNIFORM = installedFadeUniform();
 
 function fadeBuffer(): Float32Array {
   return THREE.ShaderLib.standard.uniforms[FADE_UNIFORM]!.value as Float32Array;
 }
 
-let restoreShaderGlobals: () => void;
-beforeEach(() => {
-  restoreShaderGlobals = snapshotShaderGlobals();
-});
-afterEach(() => restoreShaderGlobals());
+restoreShaderGlobalsAfterEach();
 
 describe('the installed fade', () => {
   it('hooks onto lines the installed three holds exactly once', () => {

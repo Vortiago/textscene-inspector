@@ -1,6 +1,7 @@
 # Control clipping
 
-`controlClipping.tsx` holds the accumulated canvas clip for the native Control canvas.
+`controlClipping.tsx` holds the accumulated canvas clip for the native Control canvas, and
+`controlClipGeometry.ts` holds its rect maths and planes.
 
 ## Planes, not stencil
 

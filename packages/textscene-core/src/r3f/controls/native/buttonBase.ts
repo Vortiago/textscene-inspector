@@ -15,18 +15,16 @@ import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
 import { AutowrapMode, shapeText, type TextLayoutResult } from './text/textLayout';
 import type { Rect2 } from './rect';
-import type { Rgba } from '../../../godot/math/math';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+  VERTICAL_ALIGNMENT_BOTTOM,
+  VERTICAL_ALIGNMENT_CENTER,
+  VERTICAL_ALIGNMENT_TOP,
+  type Rgba,
+} from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
-
-// --- Godot alignment enums (scene/gui/control.h: HorizontalAlignment / VerticalAlignment) ---
-
-export const HORIZONTAL_ALIGNMENT_LEFT = 0;
-export const HORIZONTAL_ALIGNMENT_CENTER = 1;
-export const HORIZONTAL_ALIGNMENT_RIGHT = 2;
-
-const VERTICAL_ALIGNMENT_TOP = 0;
-export const VERTICAL_ALIGNMENT_CENTER = 1;
-const VERTICAL_ALIGNMENT_BOTTOM = 2;
 
 // --- Draw-state + StyleBox chrome ------------------------------------------
 

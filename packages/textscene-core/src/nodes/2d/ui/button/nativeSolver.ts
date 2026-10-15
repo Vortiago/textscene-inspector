@@ -14,15 +14,18 @@ import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  VERTICAL_ALIGNMENT_CENTER,
   fitIconSize,
   pickButtonStyleBox,
   resolveButtonDrawState,
   shapeButtonLabel,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  VERTICAL_ALIGNMENT_CENTER,
+  type Rgba,
+} from '../../../../godot/math/math';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -38,7 +41,6 @@ import {
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { OverrunBehavior } from '../../../../r3f/controls/native/text/textOverrun';
 import type { ButtonProperties } from './types';
-import type { Rgba } from '../../../../godot/math/math';
 
 /**
  * Button's theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:152`). Only

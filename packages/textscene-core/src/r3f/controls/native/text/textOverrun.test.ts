@@ -24,10 +24,8 @@ function line(text: string) {
   }).lines[0]!;
 }
 
-/** Godot's default ellipsis, `String::chr(0x2026)` (`label.cpp:294`). */
-const DEFAULT_ELLIPSIS_CHAR = '…';
-
-function trim(text: string, widthPx: number, flags: OverrunTrimFlags, ellipsisChar = DEFAULT_ELLIPSIS_CHAR) {
+/** Trims with Godot's default ellipsis unless `ellipsisChar` names another. */
+function trim(text: string, widthPx: number, flags: OverrunTrimFlags, ellipsisChar?: string) {
   return trimLineToWidth(line(text), widthPx, flags, {
     fontMetrics: OPEN_SANS_FONT_METRICS,
     fontSizePx: FONT_SIZE_PX,

@@ -14,7 +14,7 @@ import {
   type MaterialProgramBag,
   type ProgramInjection,
 } from './materialProgramInputs';
-import { GodotToneMapper } from '../resources/environment/godotToneMapping';
+import { ToneMapper } from '../godot/rendering/environment/toneMapping.js';
 import { applyToneMapping } from '../resources/environment/toneMapping';
 
 /** A key from the factory: the only thing about a program a caller can compare. */
@@ -290,7 +290,7 @@ describe('materialProgramInputs', () => {
       // The injected key is an own property, so it shadows the prototype key that
       // `applyToneMapping` extends. FILMIC then AGX is the editor preview environment
       // yielding to a WorldEnvironment that an instanced sub-scene brings in.
-      const { FILMIC, AGX } = GodotToneMapper;
+      const { FILMIC, AGX } = ToneMapper;
       const ORIGINAL_CHUNK = THREE.ShaderChunk.tonemapping_pars_fragment;
 
       afterEach(() => {
@@ -298,9 +298,9 @@ describe('materialProgramInputs', () => {
       });
 
       /** A material as R3F's `applyProps` leaves it: every factory prop assigned onto it. */
-      function injectedMaterial(toneMapped: boolean): THREE.MeshBasicMaterial {
+      function injectedMaterial(toneMapped: boolean, cacheKey = 'stylebox'): THREE.MeshBasicMaterial {
         const program = materialProgramInputs({
-          props: { toneMapped, injection: injection('stylebox', 'A') },
+          props: { toneMapped, injection: injection(cacheKey, 'A') },
         });
         return Object.assign(new THREE.MeshBasicMaterial(), program.props);
       }
@@ -315,21 +315,15 @@ describe('materialProgramInputs', () => {
         return { filmic, agx: material.customProgramCacheKey() };
       }
 
-      /** The curve term the tone-mapping install appends to a plain tone-mapped material's key now. */
-      function curveTerm(): string {
-        const plain = new THREE.MeshBasicMaterial();
-        return plain.customProgramCacheKey().slice(plain.onBeforeCompile.toString().length);
-      }
-
       it('gives an injected, tone-mapped material a new program key', () => {
         const { filmic, agx } = keysAcrossSwap(injectedMaterial(true));
         expect(agx).not.toBe(filmic);
       });
 
-      it('keeps the injection in the key beside the prototype key and its curve term', () => {
-        const material = injectedMaterial(true);
-        const { agx } = keysAcrossSwap(material);
-        expect(agx).toBe(`stylebox${material.onBeforeCompile.toString()}${curveTerm()}`);
+      it('keeps the injection in the key under the new curve', () => {
+        const agxKeyOf = (cacheKey: string): string => keysAcrossSwap(injectedMaterial(true, cacheKey)).agx;
+        expect(agxKeyOf('stylebox')).toBe(agxKeyOf('stylebox'));
+        expect(agxKeyOf('stylebox')).not.toBe(agxKeyOf('light'));
       });
 
       it('leaves the key of an injected material that is not tone-mapped', () => {

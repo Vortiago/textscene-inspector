@@ -4,7 +4,7 @@
  * (`MeshInstance3D::set_surface_override_material` takes a `Ref<Material>`).
  */
 import { parseTresFile } from '../../../parser/parsedResource';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../../../parser/types';
@@ -13,15 +13,10 @@ import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
-import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 import { tagImportMaterial } from '../../../resources/formats/glb/glbProcessing';
 
 import '../../nodes/index';
 import { MAGENTA } from '../../../nodes/3d/meshinstance3d/testing/magenta';
-
-beforeAll(async () => {
-  await loadGlbModules();
-});
 
 const GLB_PATH = 'res://assets/town.glb';
 const TRES_PATH = 'res://assets/road.tres';

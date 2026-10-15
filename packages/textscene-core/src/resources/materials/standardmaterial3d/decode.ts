@@ -14,6 +14,7 @@ import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/rendering/mater
 import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
 import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
 import { DetailUV } from '../../../godot/rendering/materials/detailUv';
+import { EMISSION_OPERATOR_DEFAULT } from '../../../godot/rendering/materials/emissionOperator';
 import { clamp } from '../../../godot/math/math';
 import { emissionScalars } from './emission';
 import {
@@ -158,7 +159,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     // `material.cpp:2160-2163`: the setter checks no range.
     specular: floatOr(properties['metallic_specular'], 0.5, CONTEXT),
     emission,
-    emissionOperator: intOr(properties['emission_operator'], 0, CONTEXT),
+    emissionOperator: intOr(properties['emission_operator'], EMISSION_OPERATOR_DEFAULT, CONTEXT),
     textureFilter: intOr(properties['texture_filter'], TEXTURE_FILTER_DEFAULT, CONTEXT),
     textureRepeat: boolOr(properties['texture_repeat'], true, CONTEXT),
     uv1Scale: vec2FromVector3(properties['uv1_scale'], { x: 1, y: 1 }),

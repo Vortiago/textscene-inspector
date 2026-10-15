@@ -10,6 +10,7 @@ import { boolOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import { warn } from '../../../logger';
 import type { Line2DProperties } from './types';
+import { LineJointMode } from '../../../godot/scene/line2d.js';
 
 export function parseLine2D(heading: ParsedHeading, properties: Record<string, string>): Line2DProperties {
   const base = parseNode2D(heading, properties);
@@ -31,9 +32,8 @@ export function parseLine2D(heading: ParsedHeading, properties: Record<string, s
       ? parseColor(properties.default_color)
       : { r: 1, g: 1, b: 1, a: 1 },
     closed: boolOr(properties.closed, false, base.name || 'Line2D'),
-    // class_line2d.html: joint_mode 0 (LINE_JOINT_SHARP), sharp_limit 2.0,
-    // round_precision 8.
-    jointMode: intOr(properties.joint_mode, 0),
+    // class_line2d.html: sharp_limit 2.0, round_precision 8.
+    jointMode: intOr(properties.joint_mode, LineJointMode.SHARP),
     sharpLimit: floatOr(properties.sharp_limit, 2, base.name || 'Line2D'),
     roundPrecision: intOr(properties.round_precision, 8),
   };

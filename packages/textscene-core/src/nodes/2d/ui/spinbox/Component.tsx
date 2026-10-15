@@ -38,8 +38,7 @@ import {
   spinBoxWidestButtonIconWidth,
 } from './nativeSolver';
 import type { SpinBoxProperties } from './types';
-
-const HORIZONTAL_ALIGNMENT_LEFT = 0;
+import { HORIZONTAL_ALIGNMENT_LEFT } from '../../../../godot/math/math';
 
 export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<SpinBoxProperties>(solveNode);

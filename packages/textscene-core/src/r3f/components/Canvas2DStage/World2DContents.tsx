@@ -8,6 +8,7 @@ import { lazy, useLayoutEffect, useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import type { OrthographicCamera } from 'three';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 import { CanvasWorkspaceProvider } from '../../contexts/CanvasWorkspaceContext.js';
 import { SceneResourcesProvider } from '../../SceneResourcesContext.js';
 import { NodeDispatcher } from '../../NodeDispatcher.js';
@@ -32,12 +33,12 @@ export interface World2DCanvasProps {
   nodes: readonly TscnNode[];
   internalResources: readonly TscnInternalResource[];
   externalResources: readonly TscnExternalResource[];
-  pan: { x: number; y: number };
+  pan: Vector2;
   zoom: number;
 }
 
 /** Keeps the ortho camera glued to the stage's pan/zoom transform. */
-function CameraRig({ pan, zoom }: { pan: { x: number; y: number }; zoom: number }) {
+function CameraRig({ pan, zoom }: { pan: Vector2; zoom: number }) {
   const camera = useThree((s) => s.camera) as OrthographicCamera;
   const size = useThree((s) => s.size);
   const { x: panX, y: panY } = pan;

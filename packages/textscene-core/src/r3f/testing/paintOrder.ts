@@ -5,7 +5,8 @@
  * Every 2D canvas material skips depth writes, so this comparator decides what covers what.
  */
 import type * as THREE from 'three';
-import { WHOLE_CANVAS_RANGE } from '../canvasPaintOrder';
+import { canvasRenderOrder, layerRankOf, layerRanks } from '../canvasPaintOrder';
+import { WORLD_CANVAS_LAYER } from '../lighting2d/canvasItemPlacement';
 
 /**
  * The `groupOrder` three sorts this object by: the nearest `Group` ancestor's
@@ -20,15 +21,15 @@ export function nearestGroupOrder(object: THREE.Object3D): number {
   return 0;
 }
 
-/** The whole canvas range holds one bucket's sequences, so its size is the bucket stride of a key. */
-const SEQUENCE_STRIDE = WHOLE_CANVAS_RANGE.size;
+/** The world canvas's rank in a scene that declares no `CanvasLayer`. */
+const WORLD_LAYER_RANK = layerRankOf(layerRanks([]), WORLD_CANVAS_LAYER);
 
-/** The `(layer, z_final)` bucket of a packed canvas key: two keys in one bucket differ only in sequence. */
-export function paintBucket(order: number): number {
-  return Math.floor(order / SEQUENCE_STRIDE);
+/** The packed key of a world canvas item in a scene that declares no `CanvasLayer`. */
+export function worldCanvasKey(zFinal: number, sequence: number): number {
+  return canvasRenderOrder({ layerRank: WORLD_LAYER_RANK, zFinal, sequence });
 }
 
-/** The sequence of a packed canvas key, inside its bucket. */
-export function paintSequence(order: number): number {
-  return order % SEQUENCE_STRIDE;
+/** Whether the packed `key` lies in the world canvas's `zFinal` bucket, at any sequence. */
+export function isInZBucket(key: number, zFinal: number): boolean {
+  return key >= worldCanvasKey(zFinal, 0) && key < worldCanvasKey(zFinal + 1, 0);
 }

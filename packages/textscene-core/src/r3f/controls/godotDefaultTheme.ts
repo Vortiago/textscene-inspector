@@ -5,20 +5,14 @@
  * `scaledGodotTheme`.
  */
 
+import type { Rgba } from '../../godot/math/math';
+
 // --- Text (default_font_size) ---
 
 /** `default_font_size` = 16 (px). */
 export const DEFAULT_FONT_SIZE = 16;
 
 // --- StyleBoxFlat fills (button / dropdown / panel chrome), by draw state ---
-
-/** A `Color` as `default_theme.cpp` writes it: linear-ish 0..1 channels. */
-export interface ThemeFill {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
 
 /**
  * The default flat-stylebox fill per draw state, the one transcription the canvas
@@ -39,7 +33,7 @@ export const STYLE_FILL = {
   popup: { r: 0.25, g: 0.25, b: 0.25, a: 1 },
   /** `style_progress_color`. */
   progress: { r: 1, g: 1, b: 1, a: 0.4 },
-} as const satisfies Record<string, ThemeFill>;
+} as const satisfies Record<string, Rgba>;
 
 // --- Flat-stylebox geometry (make_flat_stylebox defaults) ---
 

@@ -3,7 +3,7 @@
  * The chunks are read as installed on the installed three, so a release that rewrites an edited line
  * fails here, not in a golden.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotPositionalShadow } from './positionalShadowChunk';
 import {
@@ -13,13 +13,13 @@ import {
   positionalShadowAtlasDepth,
 } from './shadowAtlasTarget';
 import { AREA_LIGHT_SHADOWS } from '../areaLight/areaLightShadowUniforms';
-import { preprocessorBranch } from '../testing/glslSource';
+import { occurrences, preprocessorBranch } from '../testing/glslSource';
 import { warningsOf } from '../testing/logWarnings';
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk';
 import { installDirectionalShadowFade } from '../directionalShadow/shadowFade';
 import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasChunk';
 import { LIT_SHADERS } from '../testing/litShaders';
-import { installedShaderChunks, snapshotShaderGlobals } from '../testing/shaderPatches';
+import { installedShaderChunks, FILTER_PCF, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
 const PATCHED_CHUNKS = [
   'shadowmap_vertex',
@@ -38,16 +38,8 @@ function currentChunks(): Record<PatchedChunk, string> {
 }
 
 const threeChunks = currentChunks();
-/** The soft shadow filter's own function, which the install puts in first. */
-const FILTER_PCF = 'float godotPcf(';
 
-const occurrences = (text: string, part: string) => text.split(part).length - 1;
-
-let restoreShaderGlobals: () => void;
-beforeEach(() => {
-  restoreShaderGlobals = snapshotShaderGlobals();
-});
-afterEach(() => restoreShaderGlobals());
+restoreShaderGlobalsAfterEach();
 
 describe('the installed positional shadow chunks', () => {
   it('replaces every omni and spot sampler with one atlas sampler', () => {

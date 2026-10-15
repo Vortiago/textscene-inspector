@@ -13,15 +13,18 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  VERTICAL_ALIGNMENT_CENTER,
   fitIconSize,
   pickButtonStyleBox,
   resolveButtonDrawState,
   shapeButtonLabel,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  VERTICAL_ALIGNMENT_CENTER,
+  type Rgba,
+} from '../../../../godot/math/math';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -37,7 +40,6 @@ import {
   buttonIconColor,
 } from '../button/nativeSolver';
 import type { MenuButtonProperties } from './types';
-import type { Rgba } from '../../../../godot/math/math';
 
 // Re-exported for Component.tsx. MenuButton registers no `icon_*_color`, so `Theme::get_color`'s
 // ancestor fallback gives it Button's icon colours.

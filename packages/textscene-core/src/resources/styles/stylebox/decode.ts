@@ -5,8 +5,7 @@
 
 import { clamp } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
-import { boolOr, floatOr } from '../../../parser/valueParsers';
-import { parseVector2 } from '../../../parser/vectors';
+import { boolOr, floatOr, vec2Or } from '../../../parser/valueParsers';
 import type { StyleBoxFlatData } from '../../../r3f/controls/native/styleBoxFlat';
 import { colorOr } from '../../../utils/colorParser';
 
@@ -20,7 +19,7 @@ const TRANSPARENT = { r: 0, g: 0, b: 0, a: 0 };
 const CONTEXT = 'StyleBoxFlat';
 
 /** `content_margin_<side>`'s `-1` sentinel (`style_box.cpp:143`): "ask the stylebox's own style margin". */
-export const CONTENT_MARGIN_UNSET = -1;
+const CONTENT_MARGIN_UNSET = -1;
 
 /** `StyleBoxFlat::set_aa_size`'s clamp range (`style_box_flat.cpp`), applied to every authored `aa_size`. */
 const AA_SIZE_MIN = 0.01;
@@ -29,22 +28,26 @@ const AA_SIZE_MAX = 10;
 const CORNER_DETAIL_MIN = 1;
 const CORNER_DETAIL_MAX = 20;
 
-/** A `Vector2(x, y)` property, or `fallback` when absent or ungrammatical. */
-function vector2Or(raw: string | undefined, fallback: Vector2): Vector2 {
-  if (raw === undefined) return fallback;
-  try {
-    return parseVector2(raw);
-  } catch {
-    return fallback;
-  }
+/**
+ * `StyleBox::get_margin` (`style_box.cpp:78-86`): the authored `content_margin_<side>`, or, when it
+ * is negative (unset), the subclass's `get_style_margin(side)`, which the caller passes as `styleMargin`.
+ */
+export function contentMarginOr(raw: string | undefined, styleMargin: number, context: string): number {
+  const parsed = floatOr(raw, CONTENT_MARGIN_UNSET, context);
+  return parsed < 0 ? styleMargin : parsed;
 }
 
-function contentMarginOr(raw: string | undefined, borderWidth: number): number {
-  // style_box.cpp::get_margin: content_margin[side] < 0 (default -1) reads
-  // through get_style_margin(side), which StyleBoxFlat overrides
-  // (style_box_flat.cpp::get_style_margin) to return border_width[side].
-  const parsed = floatOr(raw, CONTENT_MARGIN_UNSET, CONTEXT);
-  return parsed < 0 ? borderWidth : parsed;
+/** The base `StyleBox`'s `expand_margin_<side>`, each zero by default. */
+export function expandMarginOf(
+  data: Record<string, string>,
+  context: string
+): StyleBoxFlatData['expandMargin'] {
+  return {
+    left: floatOr(data.expand_margin_left, 0, context),
+    top: floatOr(data.expand_margin_top, 0, context),
+    right: floatOr(data.expand_margin_right, 0, context),
+    bottom: floatOr(data.expand_margin_bottom, 0, context),
+  };
 }
 
 /**
@@ -78,23 +81,14 @@ export function neutralStyleBox(contentMargin: StyleBoxFlatData['contentMargin']
  * Its `expand_margin_*` is a base `StyleBox` property, so it is kept.
  */
 function decodeEmpty(data: Record<string, string>): StyleBoxFlatData {
-  const contentMargin = (raw: string | undefined): number => {
-    const parsed = floatOr(raw, CONTENT_MARGIN_UNSET, CONTEXT);
-    return parsed < 0 ? 0 : parsed;
-  };
   return {
     ...neutralStyleBox({
-      left: contentMargin(data.content_margin_left),
-      top: contentMargin(data.content_margin_top),
-      right: contentMargin(data.content_margin_right),
-      bottom: contentMargin(data.content_margin_bottom),
+      left: contentMarginOr(data.content_margin_left, 0, CONTEXT),
+      top: contentMarginOr(data.content_margin_top, 0, CONTEXT),
+      right: contentMarginOr(data.content_margin_right, 0, CONTEXT),
+      bottom: contentMarginOr(data.content_margin_bottom, 0, CONTEXT),
     }),
-    expandMargin: {
-      left: floatOr(data.expand_margin_left, 0, CONTEXT),
-      top: floatOr(data.expand_margin_top, 0, CONTEXT),
-      right: floatOr(data.expand_margin_right, 0, CONTEXT),
-      bottom: floatOr(data.expand_margin_bottom, 0, CONTEXT),
-    },
+    expandMargin: expandMarginOf(data, CONTEXT),
   };
 }
 
@@ -123,17 +117,13 @@ function decodeFlat(data: Record<string, string>): StyleBoxFlatData {
       bottomRight: floatOr(data.corner_radius_bottom_right, 0, CONTEXT),
       bottomLeft: floatOr(data.corner_radius_bottom_left, 0, CONTEXT),
     },
-    expandMargin: {
-      left: floatOr(data.expand_margin_left, 0, CONTEXT),
-      top: floatOr(data.expand_margin_top, 0, CONTEXT),
-      right: floatOr(data.expand_margin_right, 0, CONTEXT),
-      bottom: floatOr(data.expand_margin_bottom, 0, CONTEXT),
-    },
+    expandMargin: expandMarginOf(data, CONTEXT),
+    // `StyleBoxFlat::get_style_margin` returns `border_width[side]` (`style_box_flat.cpp`).
     contentMargin: {
-      left: contentMarginOr(data.content_margin_left, borderWidth.left),
-      top: contentMarginOr(data.content_margin_top, borderWidth.top),
-      right: contentMarginOr(data.content_margin_right, borderWidth.right),
-      bottom: contentMarginOr(data.content_margin_bottom, borderWidth.bottom),
+      left: contentMarginOr(data.content_margin_left, borderWidth.left, CONTEXT),
+      top: contentMarginOr(data.content_margin_top, borderWidth.top, CONTEXT),
+      right: contentMarginOr(data.content_margin_right, borderWidth.right, CONTEXT),
+      bottom: contentMarginOr(data.content_margin_bottom, borderWidth.bottom, CONTEXT),
     },
     drawCenter: boolOr(data.draw_center, true, CONTEXT),
     borderBlend: boolOr(data.border_blend, false, CONTEXT),
@@ -144,12 +134,12 @@ function decodeFlat(data: Record<string, string>): StyleBoxFlatData {
     cornerDetail: Math.round(
       clamp(floatOr(data.corner_detail, 8, CONTEXT), CORNER_DETAIL_MIN, CORNER_DETAIL_MAX)
     ),
-    skew: vector2Or(data.skew, ZERO_VECTOR2),
+    skew: vec2Or(data.skew, ZERO_VECTOR2, `${CONTEXT} skew`),
     shadowColor: colorOr(data.shadow_color, DEFAULT_SHADOW_COLOR),
     // `set_shadow_size` takes an int and the property is INT-typed
     // (`style_box_flat.cpp:727`), so a fractional authored value truncates
     // rather than growing the ring by a fraction.
     shadowSize: Math.trunc(floatOr(data.shadow_size, 0, CONTEXT)),
-    shadowOffset: vector2Or(data.shadow_offset, ZERO_VECTOR2),
+    shadowOffset: vec2Or(data.shadow_offset, ZERO_VECTOR2, `${CONTEXT} shadow_offset`),
   };
 }

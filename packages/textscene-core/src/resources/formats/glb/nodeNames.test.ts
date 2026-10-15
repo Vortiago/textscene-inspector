@@ -1,7 +1,6 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import { cloneWithMaterials, createGLBMesh } from './glbProcessing';
-import { loadGlbModules } from './testing/loadGlbModules';
 import { nodesGlb } from './testing/nodesGlb';
 import { godotNodeName, godotNodeRole } from './nodeNames';
 import { NO_SIDECAR } from './testing/noSidecar';
@@ -11,10 +10,6 @@ function byName(root: THREE.Object3D, name: string): THREE.Object3D {
   if (!object) throw new Error(`expected an object named ${name}, got none`);
   return object;
 }
-
-beforeAll(async () => {
-  await loadGlbModules();
-});
 
 describe('godotNodeName', () => {
   it('gives the name Godot imports a node under, where three spells it otherwise', async () => {
