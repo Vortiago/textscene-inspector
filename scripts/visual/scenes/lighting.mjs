@@ -17,6 +17,8 @@ export const LIGHTING_SCENES = [
   { name: 'glow-normalized', file: 'unit-glow-normalized.tscn' },
   { name: 'glow-agx', file: 'unit-glow-agx.tscn' },
   { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
+  // `tonemap_exposure` under LINEAR with no compositor: three draws the curve per material.
+  { name: 'environment-linear-exposure', file: 'unit-environment-linear-exposure.tscn' },
   { name: 'glow-specular', file: 'unit-glow-specular.tscn' },
   { name: 'glow-map', file: 'unit-glow-map.tscn' },
   // A 4x4 checkerboard on two quads carries far more edge than a

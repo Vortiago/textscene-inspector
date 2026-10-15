@@ -22,7 +22,7 @@ import {
   ViewportPassOrchestrator,
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { SubViewport } from './Component';
-import { installToneCurve } from '../../../resources/environment/toneMapping';
+import { installToneMapping } from '../../../resources/environment/toneMapping';
 import { ToneMapper } from '../../../godot/rendering/environment/toneMapping.js';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
@@ -267,7 +267,7 @@ mesh = SubResource("1")
    */
   it('shared world: the offscreen pass applies the environment curve the compositor suspends', async () => {
     const { renderer, gl } = await renderScene(scene3D());
-    const restore = installToneCurve(gl(), { mode: ToneMapper.FILMIC, exposure: 1 });
+    const restore = installToneMapping(gl(), { mode: ToneMapper.FILMIC, exposure: 1 }, 'compositor');
     try {
       gl().toneMapping = THREE.NoToneMapping;
       expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.CustomToneMapping);

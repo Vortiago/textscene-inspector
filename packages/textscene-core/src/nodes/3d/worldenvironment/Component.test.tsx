@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { WorldEnvironment } from './Component';
 import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
@@ -50,10 +50,10 @@ describe('<WorldEnvironment>', () => {
     });
     const renderer = await render(node, [resource]);
     const scene = instanceAs<THREE.Scene>(renderer.scene);
-    const bg = scene.background as { getHexString(): string } | null;
-    expect(bg).not.toBeNull();
-    // Godot Color is sRGB and three.js stores linear, so compare the sRGB hex.
-    expect(bg!.getHexString()).toBe('3366cc'); // (0.2,0.4,0.8) → 8-bit sRGB
+    // A cube of the linear colour, so the tone curve reaches it. Compared as the sRGB hex.
+    const texel = ((scene.background as THREE.CubeTexture).image as THREE.DataTexture[])[0]!.image
+      .data as Float32Array;
+    expect(new THREE.Color().fromArray(texel).getHexString()).toBe('3366cc'); // (0.2,0.4,0.8) → 8-bit sRGB
   });
 
   it('leaves the scene without fog in a canvas with no GL context, which the fog passes need', async () => {

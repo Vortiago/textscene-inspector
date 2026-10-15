@@ -140,7 +140,7 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'passes its caller props through to a `<group>`, typed as R3F group props, which carry no material',
   'packages/textscene-core/src/r3f/controls/native/text/TextRun.tsx':
     'one material per built text run, replaced and disposed together with the run geometry it was built with',
-  'packages/textscene-core/src/r3f/environment/ToneMapLayer.tsx':
+  'packages/textscene-core/src/r3f/environment/Compositor.tsx':
     'mounts a postprocessing `Effect` — an EventDispatcher, neither material nor Object3D, collected by the composer',
   'packages/textscene-core/src/r3f/internal/glb-scene-root/Component.tsx':
     'mounts the per-consumer GLB Object3D clone; the surfaces inside it keep the materials the loader gave them',

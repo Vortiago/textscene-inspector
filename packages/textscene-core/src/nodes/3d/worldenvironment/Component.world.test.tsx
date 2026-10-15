@@ -33,13 +33,12 @@ describe('WorldEnvironment (assertions 81–87)', () => {
     expect(instanceAs<THREE.Scene>(renderer.scene).background).not.toBeNull();
   });
 
-  it('#82 background_mode COLOR → scene.background is a THREE.Color', async () => {
+  it('#82 background_mode COLOR → scene.background is a cube the tone curve reaches', async () => {
     const renderer = await render(makeNode(), [
       subResource('Environment', 'Env', { background_mode: '1', background_color: 'Color(1, 0, 0, 1)' }),
     ]);
-    const bg = instanceAs<THREE.Scene>(renderer.scene).background as { isColor?: boolean } | null;
-    expect(bg).not.toBeNull();
-    expect(bg!.isColor).toBe(true);
+    const bg = instanceAs<THREE.Scene>(renderer.scene).background as THREE.CubeTexture | null;
+    expect(bg?.isCubeTexture).toBe(true);
   });
 
   it('#83 background_color → scene.background reflects RGB values (sRGB)', async () => {
@@ -51,8 +50,9 @@ describe('WorldEnvironment (assertions 81–87)', () => {
         background_color: 'Color(0.25, 0.5, 0.75, 1)',
       }),
     ]);
-    const bg = instanceAs<THREE.Scene>(renderer.scene).background as { getHexString(): string };
-    expect(bg.getHexString()).toBe('4080bf'); // (0.25,0.5,0.75) → 8-bit sRGB
+    const bg = instanceAs<THREE.Scene>(renderer.scene).background as THREE.CubeTexture;
+    const texel = (bg.image as THREE.DataTexture[])[0]!.image.data as Float32Array;
+    expect(new THREE.Color().fromArray(texel).getHexString()).toBe('4080bf'); // (0.25,0.5,0.75) → 8-bit sRGB
   });
 
   it('#84 ambient_light_color (COLOR source) → ambient light color matches', async () => {

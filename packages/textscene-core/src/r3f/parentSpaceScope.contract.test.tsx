@@ -225,7 +225,7 @@ background_color = Color(1, 0, 0, 1)
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Env")
 `);
-    expect((root as THREE.Scene).background).toBeInstanceOf(THREE.Color);
+    expect((root as THREE.Scene).background).toBeInstanceOf(THREE.CubeTexture);
   });
 
   it('leaves nothing behind when the escaped subtree unmounts', async () => {

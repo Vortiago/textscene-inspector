@@ -488,6 +488,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Environment Linear Exposure",
+    "file": "unit-environment-linear-exposure.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
     "category": "Other"
@@ -3418,6 +3423,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Own World",
     "file": "unit-sub-viewport-own-world.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Shared World Exposure",
+    "file": "unit-sub-viewport-shared-world-exposure.tscn",
     "category": "Unit - Viewports"
   },
   {

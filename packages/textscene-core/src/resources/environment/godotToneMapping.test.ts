@@ -4,27 +4,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { hasGodotCurve, toneMappingEffectGlsl, toneMappingShaderChunk } from './godotToneMapping';
+import { toneMappingEffectGlsl, toneMappingShaderChunk } from './godotToneMapping';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
-
-describe('hasGodotCurve', () => {
-  it('claims the four modes ported from Godot’s shader', () => {
-    expect(hasGodotCurve(ToneMapper.REINHARDT)).toBe(true);
-    expect(hasGodotCurve(ToneMapper.FILMIC)).toBe(true);
-    expect(hasGodotCurve(ToneMapper.ACES)).toBe(true);
-    expect(hasGodotCurve(ToneMapper.AGX)).toBe(true);
-  });
-
-  it('does not claim LINEAR — "no tone mapping" needs no curve', () => {
-    expect(hasGodotCurve(ToneMapper.LINEAR)).toBe(false);
-  });
-
-  it('does not claim a mode outside the enum (error path)', () => {
-    expect(hasGodotCurve(5)).toBe(false);
-    expect(hasGodotCurve(-1)).toBe(false);
-    expect(hasGodotCurve(Number.NaN)).toBe(false);
-  });
-});
 
 describe('toneMappingShaderChunk — the per-material CustomToneMapping hook', () => {
   it('declares three’s hook and the exposure uniform it reads', () => {

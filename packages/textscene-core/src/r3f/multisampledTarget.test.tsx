@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useMultisampledTarget, useSampleCount } from './multisampledTarget';
 import { MSAA_DISABLED } from '../godot/rendering/msaa';
-import { SCENE_BUFFER_TYPE } from './environment/compositorPass';
+import { SCENE_BUFFER_TYPE } from './environment/useCompositorPass';
 
 const RGBA8 = 0x8058;
 const SRGB8_ALPHA8 = 0x8c43;
