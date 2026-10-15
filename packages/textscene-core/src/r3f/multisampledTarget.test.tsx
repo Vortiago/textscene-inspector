@@ -4,7 +4,6 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useMultisampledTarget, useSampleCount } from './multisampledTarget';
 import { MSAA_DISABLED } from '../godot/rendering/msaa';
 import { SCENE_BUFFER_TYPE } from './environment/compositorPass';
-import { takeOutputLikeDrawingBuffer } from './outputTarget';
 
 const RGBA8 = 0x8058;
 const SRGB8_ALPHA8 = 0x8c43;
@@ -51,13 +50,14 @@ async function onCanvas<T>(context: object, read: () => T): Promise<T> {
     seen = read();
     return null;
   }
-  await ReactThreeTestRenderer.create(<Probe />, {
+  const renderer = await ReactThreeTestRenderer.create(<Probe />, {
     gl: (defaults) => {
       const gl = new THREE.WebGLRenderer(defaults);
       gl.getContext = () => context as WebGL2RenderingContext;
       return gl;
     },
   });
+  await renderer.unmount();
   return seen as T;
 }
 
@@ -89,15 +89,6 @@ describe('useMultisampledTarget', () => {
       return target;
     };
     expect(await targetSamples(contextWith(SPLIT_DEVICE), MSAA_8X, pinned)).toBe(8);
-  });
-
-  it('stores an sRGB tag linear in a target that takes output like the drawing buffer', async () => {
-    const likeDrawingBuffer = () => {
-      const target = srgbTarget();
-      takeOutputLikeDrawingBuffer(target);
-      return target;
-    };
-    expect(await targetSamples(contextWith(SPLIT_DEVICE), MSAA_8X, likeDrawingBuffer)).toBe(8);
   });
 
   it('falls to the closest lower count that colour and depth share', async () => {
@@ -139,5 +130,11 @@ describe('useSampleCount', () => {
 
   it('draws one sample per pixel on a device without multisampled targets (error path)', async () => {
     expect(await onCanvas({}, () => useSampleCount(MSAA_8X, SCENE_BUFFER_TYPE))).toBe(0);
+  });
+
+  it('draws one sample per pixel at MSAA_DISABLED (edge case)', async () => {
+    expect(
+      await onCanvas(contextWith(SPLIT_DEVICE), () => useSampleCount(MSAA_DISABLED, SCENE_BUFFER_TYPE))
+    ).toBe(0);
   });
 });

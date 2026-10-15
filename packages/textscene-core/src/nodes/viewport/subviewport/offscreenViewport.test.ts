@@ -438,4 +438,8 @@ describe('viewportMsaaMode', () => {
   it('takes msaa_2d for a pass that draws canvas items', () => {
     expect(viewportMsaaMode(modes, '2d')).toBe(1);
   });
+
+  it('keeps Disabled at the defaults (edge case)', () => {
+    expect(viewportMsaaMode({ msaa_2d: 0, msaa_3d: 0 }, '3d')).toBe(0);
+  });
 });
