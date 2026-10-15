@@ -6638,7 +6638,24 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A scene names a PNG, JPEG, WebP or SVG file by path. Godot imports it as its <code>.import</code> sidecar says. A colour slot reads it through the format Godot imports it in, which comes from the file's own header and the sidecar's <code>compress/mode</code>. A greyscale PNG or JPEG imports as Lum8 or LumAlpha8 unless the sidecar asks for VRAM or Basis Universal compression, so it reads raw. The top strip is a greyscale PNG with no sidecar, the second is the same PNG VRAM compressed, and the third is an RGB PNG. The bottom strip is that RGB PNG imported as a VRAM compressed normal map. So it is RGTC, which keeps red and green raw and samples blue as 0. The sidecar also decides the mip chain, the alpha-border pass, the alpha premultiply, the normal map's green and an SVG's scale. A glTF image follows the sidecar of the file Godot imports it as. <code>standardmaterial3d/textureBinding.md</code> has the rules and their cites.</p></div>
+        <div class="prose"><p>A scene names a PNG, JPEG, WebP or SVG file by path. Godot imports it as its <code>.import</code> sidecar says. A colour slot reads it through the format Godot imports it in, which comes from the file's own header and the sidecar's <code>compress/mode</code>. A greyscale PNG or JPEG imports as Lum8 or LumAlpha8 unless the sidecar asks for VRAM or Basis Universal compression, so it reads raw. The top strip is a greyscale PNG with no sidecar, the second is the same PNG VRAM compressed, and the third is an RGB PNG. The bottom strip is that RGB PNG imported as a VRAM compressed normal map. So it is RGTC, which keeps red and green raw and samples blue as 0. The sidecar also decides the mip chain, the alpha-border pass, the alpha premultiply, the normal map's green and an SVG's scale. <code>standardmaterial3d/textureBinding.md</code> has the rules and their cites.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>glTF image</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-gltf-alpha-border-godot.png" alt="Godot render of glTF image">
+          <img class="img-ours" src="images/unit-gltf-alpha-border-ours.png" alt="Our render of glTF image">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>Godot imports a glTF image through the same texture importer, as the file it extracts the image to. That file's sidecar decides its texels and its format. The quad's image is a green square inside transparent magenta texels. The default alpha-border pass turns them green, so the blended edge fades green, not magenta.</p></div>
       </section><div class="prose"><h3>NoiseTexture2D</h3>
 <p>A field baked from a FastNoiseLite, most often as a normal map. A <code>seamless</code> bake wraps its opposite edges and tiles. A plain one clamps, so UVs past the tile smear its edge texels. Under a StandardMaterial3D both tile, because <code>texture_repeat</code> defaults on (<code>material.cpp:4005</code>) and the sampler hint adds <code>repeat_enable</code> (<code>material.cpp:760-765</code>).</p>
 <h3>Linting</h3>
