@@ -26,7 +26,7 @@ describe('degToRad', () => {
   });
 
   it('multiplies by PI / 180 as Godot does, which rounds differently from (d * PI) / 180', () => {
-    expect(degToRad(3)).toBe(3 * (Math.PI / 180));
+    expect(degToRad(3)).toBe(0.05235987755982989);
   });
 
   it('keeps a non-finite value non-finite (edge case)', () => {

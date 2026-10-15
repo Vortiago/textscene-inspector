@@ -42,7 +42,7 @@ describe('Camera3D projection parity', () => {
   });
 
   it('perspective fov with KEEP_WIDTH rounds as Projection::get_fovy does', async () => {
-    // (2 * atan(tan((31 * PI) / 180 / 2) / aspect) * 180) / PI gives ...277; Godot's expression gives ...273.
+    // Dividing by the aspect and multiplying by 180 last gives ...277; Godot's expression gives ...273.
     const r = await ReactThreeTestRenderer.create(
       <Camera3D node={makeNode({ fov: 31, keep_aspect: KeepAspectMode.KEEP_WIDTH })} />
     );

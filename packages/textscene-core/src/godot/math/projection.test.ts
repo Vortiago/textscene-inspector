@@ -6,7 +6,7 @@ describe('getFovy', () => {
     expect(getFovy(90, 9 / 16)).toBeCloseTo(58.7155, 3);
   });
 
-  it('rounds as Projection::get_fovy does, not as (2 * atan(tan(..) / aspect) * 180) / PI', () => {
+  it('rounds as Projection::get_fovy does, not as a divide-by-aspect form that multiplies by 180 last', () => {
     expect(getFovy(31, 1 / (16 / 9))).toBe(17.732799010746273);
   });
 

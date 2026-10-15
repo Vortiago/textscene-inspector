@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { SkyProperties } from './types';
 import { scaledRgb } from '../../utils/colorParser';
 import { godotColorToLinear } from '../../r3f/godotColor';
-import type { Rgba } from '../../godot/math/math';
+import { degToRad, type Rgba } from '../../godot/math/math';
 
 /** A directional light as Godot's sky shader sees it. */
 export interface SkyLight {
@@ -57,7 +57,7 @@ export function skyUniforms(
           value: scaledColor(sky.ground_horizon_color, sky.ground_energy_multiplier),
         },
         inv_ground_curve: { value: 0.6 / sky.ground_curve },
-        sun_angle_max: { value: Math.cos(THREE.MathUtils.degToRad(sky.sun_angle_max)) },
+        sun_angle_max: { value: Math.cos(degToRad(sky.sun_angle_max)) },
         inv_sun_curve: { value: 1.6 / Math.pow(sky.sun_curve, 1.4) },
         exposure: { value: sky.energy_multiplier },
       });

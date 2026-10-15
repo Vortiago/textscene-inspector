@@ -9,6 +9,7 @@ import ReactThreeTestRenderer, { act } from '@react-three/test-renderer';
 import { useThree, type RootState } from '@react-three/fiber';
 import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls';
 import { editorCameraPosition } from './godotEditorCamera';
+import { degToRad } from '../godot/math/math.js';
 
 let getState: (() => RootState) | null = null;
 
@@ -439,8 +440,7 @@ describe('<GodotEditorControls> keyboard', () => {
     expect(ortho.position.distanceTo(position)).toBeLessThan(1e-6);
     expect(controls.isOrthographic).toBe(true);
     // The frustum is sized to what the perspective camera saw at the focus point.
-    const expectedHeight =
-      2 * position.distanceTo(controls.target) * Math.tan(((perspective.fov / 2) * Math.PI) / 180);
+    const expectedHeight = 2 * position.distanceTo(controls.target) * Math.tan(degToRad(perspective.fov / 2));
     expect(ortho.top - ortho.bottom).toBeCloseTo(expectedHeight, 6);
 
     await pressKey('Numpad5');
