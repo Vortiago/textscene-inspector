@@ -5,7 +5,7 @@
  */
 import type { ReactElement, ReactNode } from 'react';
 
-export type ProviderWrapper = (children: ReactNode) => ReactElement;
+type ProviderWrapper = (children: ReactNode) => ReactElement;
 
 /**
  * @param providers - In outer-to-inner order: the first entry is the outermost

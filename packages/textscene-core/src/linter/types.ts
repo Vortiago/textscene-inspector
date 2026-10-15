@@ -147,7 +147,7 @@ export interface RuleContext {
  * A typed category, not free text, as `DeclineCategory` is
  * (`configurationWarningCoverage.test.ts`), so a reader can sort the claims.
  */
-export type OutsideEngineScope =
+type OutsideEngineScope =
   /**
    * Names a node path or a clip name the file itself never declares. The
    * engine loads the file and the reference resolves to nothing; a resource id

@@ -12,5 +12,3 @@ controlComponentRegistry.register({
   typeName: 'GridContainer',
   Component: GridContainer,
 });
-
-export { GridContainer };

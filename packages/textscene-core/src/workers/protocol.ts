@@ -10,7 +10,7 @@ export interface WorkerJobRequest {
 }
 
 /** An error crosses as its name and message: a structured clone keeps no class. */
-export interface WorkerJobError {
+interface WorkerJobError {
   name: string;
   message: string;
 }

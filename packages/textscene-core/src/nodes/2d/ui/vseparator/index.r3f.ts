@@ -10,5 +10,3 @@ import { vSeparatorMinimumSize } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'VSeparator', Component: VSeparator });
 controlSolverRegistry.registerMinimumSize('VSeparator', vSeparatorMinimumSize);
-
-export { VSeparator };

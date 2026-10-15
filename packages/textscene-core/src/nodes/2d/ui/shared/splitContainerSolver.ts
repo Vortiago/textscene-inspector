@@ -9,7 +9,7 @@
  */
 
 import type { TscnNode } from '../../../../parser/types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import { defineChannel } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
@@ -21,6 +21,7 @@ import type {
 import type { ControlProperties } from '../control/types';
 import { splitOffsetsOf, type SplitContainerProperties } from './splitContainer';
 import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from './fitChildInRect';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`). */
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
@@ -28,12 +29,12 @@ const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 const DEFAULT_STRETCH_RATIO = 1;
 
 /** `SplitContainer::DraggerVisibility` (`split_container.h`). */
-export const DRAGGER_VISIBLE = 0;
+const DRAGGER_VISIBLE = 0;
 const DRAGGER_HIDDEN_COLLAPSED = 2;
 
 /** One child's inputs to the split solve: its combined minimum size and the `Control` fields the offset formula and `fit_child_in_rect` read. */
 export interface SplitChildInput {
-  minSize: Vec2;
+  minSize: Vector2;
   hSizeFlags: number;
   vSizeFlags: number;
   stretchRatio: number;
@@ -65,7 +66,7 @@ function godotClamp(x: number, lo: number, hi: number): number {
  * among `SIZE_EXPAND` children, retries without a child whose share falls below its minimum
  * (`:570-596`) and carries the sub-pixel remainder forward a pixel at a time (`:589-593`).
  */
-export function computeDefaultDraggerPositions(
+function computeDefaultDraggerPositions(
   size: number,
   separation: number,
   children: readonly SplitAxisChild[]
@@ -138,7 +139,7 @@ export function computeDefaultDraggerPositions(
  * to `index` raises the low bound and each child past it lowers the high bound, and the
  * separations on each side are charged to the same ends.
  */
-export function splitDraggerValidRange(
+function splitDraggerValidRange(
   index: number,
   size: number,
   separation: number,
@@ -208,7 +209,7 @@ export function computeSplitDraggerPositions(
 }
 
 /** A `SplitChildInput`'s split-axis subset. `makeSplitContainerLayout` shares it, so the axis-selection rule has one implementation. */
-export function toSplitAxisChild(vertical: boolean, c: SplitChildInput): SplitAxisChild {
+function toSplitAxisChild(vertical: boolean, c: SplitChildInput): SplitAxisChild {
   const flags = vertical ? c.vSizeFlags : c.hSizeFlags;
   return {
     minSize: vertical ? c.minSize.y : c.minSize.x,
@@ -223,7 +224,7 @@ export function toSplitAxisChild(vertical: boolean, c: SplitChildInput): SplitAx
  * `offsets` is the authored `split_offsets`. The RTL arm reads the children back from the
  * opposite end (`:741-744`) against the inverted positions.
  */
-export function resortSplitContainer(
+function resortSplitContainer(
   vertical: boolean,
   containerSize: { width: number; height: number },
   separation: number,
@@ -283,11 +284,11 @@ export function resortSplitContainer(
  * child's minimum plus one separation per dragger, added only with two or more children
  * (`:827-829`), since a lone child fits the whole rect. The cross axis is the largest child.
  */
-export function splitContainerMinimumSize(
+function splitContainerMinimumSize(
   vertical: boolean,
   separation: number,
-  childMinSizes: readonly Vec2[]
-): Vec2 {
+  childMinSizes: readonly Vector2[]
+): Vector2 {
   let mainAxis = 0;
   let crossAxis = 0;
 
@@ -307,7 +308,7 @@ export function splitContainerMinimumSize(
 }
 
 /** The `NativeTheme.widgets.splitContainer` fields `resolveSplitSeparation` reads. */
-export interface SplitSeparationTheme {
+interface SplitSeparationTheme {
   separation: number;
   grabberExtent: number;
 }
@@ -339,7 +340,7 @@ export function splitGrabberThemeKey(nativeType: string, vertical: boolean): str
 }
 
 /** `hsplitter.svg`/`vsplitter.svg`'s authored size (`native/themeIcons.ts`): 8px along the split axis, 48px across it. */
-export function splitGrabberVendoredSize(vertical: boolean): Vec2 {
+function splitGrabberVendoredSize(vertical: boolean): Vector2 {
   return vertical ? { x: 48, y: 8 } : { x: 8, y: 48 };
 }
 
@@ -347,8 +348,8 @@ export function splitGrabberVendoredSize(vertical: boolean): Vec2 {
 export function splitGrabberIconSize(
   nativeType: string,
   vertical: boolean,
-  textureSlots: Readonly<Record<string, Vec2 | null>>
-): Vec2 {
+  textureSlots: Readonly<Record<string, Vector2 | null>>
+): Vector2 {
   return textureSlots[splitGrabberThemeKey(nativeType, vertical)] ?? splitGrabberVendoredSize(vertical);
 }
 
@@ -379,7 +380,7 @@ export const splitContainerTextureSlots: TextureSlotsFn = (node, themedIcons = {
   return themed ? [{ key, ref: themed.ref, scope: themed.resources }] : [];
 };
 
-function toChildInput(node: SolveNode, minSize: Vec2): SplitChildInput {
+function toChildInput(node: SolveNode, minSize: Vector2): SplitChildInput {
   const props = node.node.properties as ControlProperties;
   return {
     minSize,
@@ -394,7 +395,7 @@ function toChildInput(node: SolveNode, minSize: Vec2): SplitChildInput {
  * each sortable child's recursive `combined_minimum_size` (`ctx.combinedMinimumSize`). Without
  * it a painter can read only `custom_minimum_size`.
  */
-export interface SplitContainerBoundary {
+interface SplitContainerBoundary {
   /** One entry per dragger: this container's local-space position where each separation band starts (under a horizontal RTL, already inverted, so a painter draws each grabber straight at it). Empty with fewer than two sortable children. */
   draggerPositions: readonly number[];
 }
@@ -463,7 +464,7 @@ export function makeSplitContainerMinimumSize(vertical: boolean): MinimumSizeFn 
 // The grabber is the only chrome a SplitContainer draws.
 
 /** The `NativeTheme.widgets.splitContainer` fields the grabber-visibility test reads. */
-export interface SplitGrabberTheme {
+interface SplitGrabberTheme {
   /** `default_theme.cpp:1264-1266`. `isSplitGrabberVisible` gates on it. */
   autohide: boolean;
 }
@@ -500,7 +501,7 @@ export function splitGrabberIconRect(
   containerSize: { width: number; height: number },
   draggerPos: number,
   separation: number,
-  iconSize: Vec2
+  iconSize: Vector2
 ): Rect2 {
   const barRect: Rect2 = vertical
     ? { x: 0, y: draggerPos, w: containerSize.width, h: separation }

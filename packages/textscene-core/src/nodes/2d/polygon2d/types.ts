@@ -1,6 +1,8 @@
 /** The Polygon2D property shape: a filled 2D polygon on Node2D. */
 
-import type { Color, Node2DProperties, Vector2 } from '../../base/node2d/types';
+import type { Node2DProperties } from '../../base/node2d/types';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 export interface Polygon2DProperties extends Node2DProperties {
   /**
@@ -9,7 +11,7 @@ export interface Polygon2DProperties extends Node2DProperties {
    */
   polygon: Float32Array;
   /** Flat fill color (Godot `color`, sRGB; default white). Multiplies with modulate. */
-  color: Color;
+  color: Rgba;
   /** Pixel offset added to every polygon vertex (default 0,0). */
   offset: Vector2;
   /**

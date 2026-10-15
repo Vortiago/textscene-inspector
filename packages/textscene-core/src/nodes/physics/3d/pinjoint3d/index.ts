@@ -15,5 +15,3 @@ const pinJoint3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(pinJoint3DRegistration);
-
-export { pinJoint3DRegistration };

@@ -17,7 +17,7 @@ import {
   type AnimationTransport,
   type PlayerRegistration,
 } from '../contexts/AnimationTransportContext';
-import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
 import { WorldBoxHelper } from './WorldBoxHelper';
 import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';
 import { SelectSeeder } from '../testing/SelectSeeder';

@@ -15,5 +15,3 @@ const gPUParticlesCollisionHeightField3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(gPUParticlesCollisionHeightField3DRegistration);
-
-export { gPUParticlesCollisionHeightField3DRegistration };

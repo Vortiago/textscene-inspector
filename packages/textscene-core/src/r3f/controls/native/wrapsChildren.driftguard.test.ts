@@ -6,7 +6,8 @@
 
 import { describe, expect, it } from 'vitest';
 // Side-effect import: registers every Control slice's native painter.
-import { controlComponentRegistry } from '../index';
+import '../index';
+import { controlComponentRegistry } from '../ControlComponentRegistry';
 
 /**
  * `CanvasLayer` and its subclass `ParallaxBackground` (`parallax_background.h:34`) publish a draw-order

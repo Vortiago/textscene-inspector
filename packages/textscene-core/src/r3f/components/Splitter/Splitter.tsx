@@ -7,7 +7,7 @@
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import styles from './Splitter.module.css';
 
-export interface SplitterProps {
+interface SplitterProps {
   width: number;
   setWidth: (w: number) => void;
   min?: number;

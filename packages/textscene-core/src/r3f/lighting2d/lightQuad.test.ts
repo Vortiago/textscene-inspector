@@ -9,14 +9,14 @@ import * as THREE from 'three';
 import {
   createLightQuadMaterial,
   createShadowColorQuadMaterial,
-  createShadowPolarTexture,
-  shadowPixelSize,
+  updateShadowPolarTexture,
   Light2DBlendMode,
   SHADOW_FILTER_PCF5,
   SHADOW_FILTER_PCF13,
   type ShadowSampling,
 } from './lightQuad';
 import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
+import { shadowPixelSize } from './shadowSampling';
 
 const WARM = { r: 1, g: 0.75, b: 0.35, a: 1 };
 
@@ -142,9 +142,9 @@ describe('shadowPixelSize', () => {
   });
 });
 
-describe('createShadowPolarTexture', () => {
+describe('updateShadowPolarTexture', () => {
   it('carries the atlas state Godot samples the map with', () => {
-    const texture = createShadowPolarTexture(new Float32Array(SHADOW_MAP_BINS));
+    const texture = updateShadowPolarTexture(null, new Float32Array(SHADOW_MAP_BINS));
     // LINEAR is what rounds each PCF step's corner; REPEAT is what lets a tap
     // cross the seam between the last bin and the first.
     expect(texture.minFilter).toBe(THREE.LinearFilter);
@@ -159,12 +159,26 @@ describe('createShadowPolarTexture', () => {
   it('round-trips the far sentinel and an occluder distance through half-float', () => {
     const bins = new Float32Array(SHADOW_MAP_BINS).fill(SHADOW_MAP_FAR);
     bins[7] = 176 / 1593;
-    const texture = createShadowPolarTexture(bins);
+    const texture = updateShadowPolarTexture(null, bins);
     const data = texture.image.data as Uint16Array;
     expect(THREE.DataUtils.fromHalfFloat(data[0]!)).toBe(1);
     // Half-float relative precision is 2^-11, which at z_far 1593 is under a
     // tenth of a pixel of occluder distance.
     expect(THREE.DataUtils.fromHalfFloat(data[7]!)).toBeCloseTo(176 / 1593, 4);
+  });
+
+  it('refills a texture of the same size in place, so the materials keep it', () => {
+    const texture = updateShadowPolarTexture(null, new Float32Array(SHADOW_MAP_BINS));
+    const bins = new Float32Array(SHADOW_MAP_BINS).fill(SHADOW_MAP_FAR);
+    expect(updateShadowPolarTexture(texture, bins)).toBe(texture);
+    expect(THREE.DataUtils.fromHalfFloat((texture.image.data as Uint16Array)[0]!)).toBe(1);
+  });
+
+  it('makes a fresh texture for bins of another size (edge case)', () => {
+    const texture = updateShadowPolarTexture(null, new Float32Array(8));
+    const next = updateShadowPolarTexture(texture, new Float32Array(SHADOW_MAP_BINS));
+    expect(next).not.toBe(texture);
+    expect(next.image.width).toBe(SHADOW_MAP_BINS);
   });
 });
 

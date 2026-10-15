@@ -11,5 +11,3 @@ controlComponentRegistry.register({
   typeName: 'VSplitContainer',
   Component: VSplitContainer,
 });
-
-export { VSplitContainer };

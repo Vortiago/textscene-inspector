@@ -84,5 +84,3 @@ const splineIK3DPathRule: LintRule = {
 };
 
 ruleRegistry.register(splineIK3DPathRule);
-
-export { splineIK3DPathRule };

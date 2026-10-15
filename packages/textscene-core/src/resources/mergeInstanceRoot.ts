@@ -1,7 +1,7 @@
 /**
  * Instance root merge (ADR-0013): an instance Node becomes the single-root
  * `.tscn` it instances. The tree, the viewport `NodeDispatcher` and
- * `resolveLiveNode` all apply it, so node paths agree, which the
+ * `resolveLiveEntry` all apply it, so node paths agree, which the
  * selection-driven Animation tab needs (ADR-0012).
  */
 import type { LiveNode } from './liveNode.js';

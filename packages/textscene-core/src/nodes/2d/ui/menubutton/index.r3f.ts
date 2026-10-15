@@ -10,5 +10,3 @@ import { menuButtonMinimumSize } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'MenuButton', Component: MenuButton });
 controlSolverRegistry.registerMinimumSize('MenuButton', menuButtonMinimumSize);
-
-export { MenuButton };

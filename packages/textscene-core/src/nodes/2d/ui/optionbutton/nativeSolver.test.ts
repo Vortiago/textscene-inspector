@@ -18,9 +18,7 @@ import {
   optionButtonTextTheme,
   resolveOptionButtonSelectedText,
   layoutOptionButtonContent,
-  OPTION_BUTTON_DEFAULT_FONT_COLOR,
-  OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR,
-  OPTION_BUTTON_ARROW_NATURAL_SIZE,
+  optionButtonArrowSize,
   OPTION_BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -53,9 +51,17 @@ function ctx(withMeasurer = true): SolveContext {
   };
 }
 
-describe('OPTION_BUTTON_ARROW_NATURAL_SIZE', () => {
-  it("is 12x12 — option_button_arrow.svg's own authored size, never clamped by icon_max_width", () => {
-    expect(OPTION_BUTTON_ARROW_NATURAL_SIZE).toEqual({ x: 12, y: 12 });
+describe('optionButtonArrowSize', () => {
+  it("is option_button_arrow.svg's own authored 12x12 when no arrow is themed", () => {
+    expect(optionButtonArrowSize({ textureSlots: {} })).toEqual({ x: 12, y: 12 });
+  });
+
+  it('is a themed arrow at its own size, never clamped by icon_max_width', () => {
+    expect(optionButtonArrowSize({ textureSlots: { arrow: { x: 40, y: 30 } } })).toEqual({ x: 40, y: 30 });
+  });
+
+  it('ignores a themed texture in another slot (edge case)', () => {
+    expect(optionButtonArrowSize({ textureSlots: { icon: { x: 40, y: 30 } } })).toEqual({ x: 12, y: 12 });
   });
 });
 
@@ -145,16 +151,21 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
 
 describe('optionButtonTextTheme', () => {
   it('resolves control_font_color for the normal state', () => {
+    // default_theme.cpp:101,240: control_font_color.
     expect(optionButtonTextTheme(node({}), {} as OptionButtonProperties, 'normal', ctx())).toEqual({
       fontSizePx: 16,
-      color: OPTION_BUTTON_DEFAULT_FONT_COLOR,
+      color: { r: 0.875, g: 0.875, b: 0.875, a: 1 },
     });
   });
 
   it('resolves control_font_disabled_color for the disabled state', () => {
-    expect(optionButtonTextTheme(node({}), {} as OptionButtonProperties, 'disabled', ctx()).color).toEqual(
-      OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR
-    );
+    // default_theme.cpp:106,245: control_font_disabled_color.
+    expect(optionButtonTextTheme(node({}), {} as OptionButtonProperties, 'disabled', ctx()).color).toEqual({
+      r: 0.875,
+      g: 0.875,
+      b: 0.875,
+      a: 0.5,
+    });
   });
 
   it('a theme_override_colors/font_color override wins over the default', () => {
@@ -191,7 +202,7 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
 
   it('the arrow sits at (rect.w - arrowSize.w - arrowMargin), NOT the content-margin edge', () => {
     const { arrowRect } = layoutOptionButtonContent(BASE);
-    // Content margins are 8 by 4 (default_theme.cpp:212-215, `OPTION_BUTTON_CONTENT_MARGIN_X/Y`), but
+    // Content margins are 8 by 4 (default_theme.cpp:212-215), but
     // `arrow_margin` (`:249`, round(4*scale)) counts from the full rect edge: `pnpm ref:godot
     // scenes/fixtures/unit-optionbutton.tscn --mode 2d` puts the chevron at 150 - 12 - 4 = 134, not 150 - 12 - 8.
     // Probe: fill at (649,y) = 46 and background at (651,y) = 76, so the box ends flush; chevron ink at (641,y).

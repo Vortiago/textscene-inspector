@@ -4,12 +4,7 @@
  * the elevation and azimuth are pinned to hand-computed values too.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  EDITOR_CAMERA_DISTANCE,
-  EDITOR_CAMERA_FOV,
-  editorCameraDirection,
-  editorCameraPosition,
-} from './godotEditorCamera';
+import { EDITOR_CAMERA_FOV, editorCameraDirection, editorCameraPosition } from './godotEditorCamera';
 
 describe('editorCameraDirection', () => {
   it('places the camera in +X +Y +Z, as Godot’s comment says', () => {
@@ -41,8 +36,9 @@ describe('editorCameraDirection', () => {
 
 describe('editorCameraPosition', () => {
   it('orbits the origin at Godot’s distance of 4', () => {
+    // `Node3DEditorViewport::Cursor()`'s `distance` (`node_3d_editor_plugin.h:426`).
     const [x, y, z] = editorCameraPosition();
-    expect(Math.hypot(x, y, z)).toBeCloseTo(EDITOR_CAMERA_DISTANCE, 6);
+    expect(Math.hypot(x, y, z)).toBeCloseTo(4, 6);
   });
 
   it('matches the hand-computed cursor position', () => {

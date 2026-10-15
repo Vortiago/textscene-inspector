@@ -22,7 +22,7 @@ import { GLB_SCENE_ROOT_TYPE } from '../glbSceneRoot';
  */
 const SCENE_HEADER = /^(?:[ \t]*(?:;[^\r\n]*)?\r?\n)*[ \t]*\[gd_scene/;
 
-export interface SceneProcessorOptions {
+interface SceneProcessorOptions {
   eventBus: ResourceEventBus;
   /**
    * An ExtResource id ("scene1") or `res://` path to a path and its registered type

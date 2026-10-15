@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { bandRows, TiledUploadQueue, type UploadRenderer } from './TiledUploadQueue';
+import { TiledUploadQueue, type UploadRenderer } from './TiledUploadQueue';
 
 interface Copy {
   destination: THREE.Texture;
@@ -58,13 +58,29 @@ function dataTexture(width: number, height: number): THREE.DataTexture {
   return texture;
 }
 
-describe('bandRows', () => {
+describe('TiledUploadQueue band size', () => {
+  /** The rows of the first band the queue writes for a texture `width` pixels wide. */
+  function firstBandRows(width: number, height: number): number {
+    const { renderer, copies, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now);
+    void queue.enqueue(dataTexture(width, height));
+    queue.tick(0);
+    return copies[0]!.toRow - copies[0]!.fromRow;
+  }
+
   it('gives a 4096-wide texture 128 rows, about 2 MiB a band', () => {
-    expect(bandRows(4096)).toBe(128);
+    expect(firstBandRows(4096, 512)).toBe(128);
   });
 
   it('gives at least one row to a texture wider than a band', () => {
-    expect(bandRows(1 << 20)).toBe(1);
+    expect(firstBandRows(1 << 20, 2)).toBe(1);
+  });
+
+  it('tiles only a texture taller than one band', () => {
+    const { renderer, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now);
+    expect(queue.needsTiling(dataTexture(4096, 128))).toBe(false);
+    expect(queue.needsTiling(dataTexture(4096, 129))).toBe(true);
   });
 });
 

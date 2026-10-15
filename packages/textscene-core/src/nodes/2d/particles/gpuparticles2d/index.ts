@@ -12,5 +12,3 @@ const gPUParticles2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(gPUParticles2DRegistration);
-
-export { gPUParticles2DRegistration };

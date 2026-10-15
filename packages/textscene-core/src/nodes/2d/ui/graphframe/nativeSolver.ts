@@ -10,8 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { ControlColor } from '../control/types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { DEFAULT_CONTENT_MARGIN } from '../../../../r3f/controls/godotDefaultTheme';
@@ -24,6 +23,8 @@ import {
 import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
 import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '../graphelement/graphTitlebar';
 import type { GraphFrameProperties } from './types';
+import type { Rgba } from '../../../../godot/math/math';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 
@@ -31,7 +32,7 @@ const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 export const GRAPH_FRAME_TITLE_VARIATION = 'GraphFrameTitleLabel';
 
 /** `default_theme.cpp:849`: `GraphFrameTitleLabel`'s own `font_color`, opaque white. */
-export const GRAPH_FRAME_TITLE_DEFAULT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
+export const GRAPH_FRAME_TITLE_DEFAULT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /**
  * `default_theme.cpp:848`: `theme->set_font_size(font_size, "GraphFrameTitleLabel", 22)`,
@@ -40,11 +41,11 @@ export const GRAPH_FRAME_TITLE_DEFAULT_COLOR: ControlColor = { r: 1, g: 1, b: 1,
 export const GRAPH_FRAME_TITLE_FONT_SIZE_PX = 22;
 
 /** `control_font_color`: `default_theme.cpp:841`, `GraphFrame`'s own `resizer_color`. */
-export const GRAPH_FRAME_RESIZER_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+export const GRAPH_FRAME_RESIZER_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 
 function flatBox(
-  bgColor: ControlColor,
-  borderColor: ControlColor,
+  bgColor: Rgba,
+  borderColor: Rgba,
   borderWidth: number,
   margin: { left: number; top: number; right: number; bottom: number },
   expandTop: number,
@@ -136,7 +137,7 @@ function vFlagsOf(n: SolveNode): number {
   return (n.node.properties as GraphFrameProperties).sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;
 }
 
-export function graphFrameTitleTextMin(n: SolveNode, _theme: NativeTheme): Vec2 {
+export function graphFrameTitleTextMin(n: SolveNode, _theme: NativeTheme): Vector2 {
   const props = n.node.properties as GraphFrameProperties;
   const fontTheme = resolveTitleFontTheme(
     n,
@@ -149,7 +150,7 @@ export function graphFrameTitleTextMin(n: SolveNode, _theme: NativeTheme): Vec2 
 
 // --- get_minimum_size ---------------------------------------------------------
 
-export const graphFrameMinimumSize: MinimumSizeFn = (n, ctx) => {
+const graphFrameMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { panel, titlebar } = graphFrameStyles(n, ctx.theme);
   const textMin = graphFrameTitleTextMin(n, ctx.theme);
 
@@ -174,7 +175,7 @@ controlSolverRegistry.registerMinimumSize('GraphFrame', graphFrameMinimumSize);
 
 // --- _resort -------------------------------------------------------------------
 
-export const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const { panel, titlebar } = graphFrameStyles(n, ctx.theme);
   const textMin = graphFrameTitleTextMin(n, ctx.theme);
   const titlebarBand = titlebarGeometry(contentRect.w, textMin.y, titlebar);

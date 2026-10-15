@@ -12,5 +12,3 @@ const visualInstance3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(visualInstance3DRegistration);
-
-export { visualInstance3DRegistration };

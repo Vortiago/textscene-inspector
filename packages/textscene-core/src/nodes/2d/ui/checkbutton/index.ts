@@ -9,5 +9,3 @@ const checkButtonRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(checkButtonRegistration);
-
-export { checkButtonRegistration };

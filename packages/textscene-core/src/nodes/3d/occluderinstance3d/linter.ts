@@ -64,5 +64,3 @@ const occluderInstance3DConfigurationWarningsRule: LintRule = {
 };
 
 ruleRegistry.register(occluderInstance3DConfigurationWarningsRule);
-
-export { occluderInstance3DConfigurationWarningsRule };

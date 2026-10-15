@@ -77,7 +77,7 @@ export function slotWidth(max?: number | null): IntWidth {
  * double it came from, which the truncation check needs. `badIntElement` has
  * the same shape for an array element.
  */
-export interface IntSlotRead {
+interface IntSlotRead {
   /** The tokenizer's double, or `null` for text outside the grammar. */
   readonly asFloat: number | null;
   /** The integer stored: `null` unreadable, `NaN` read but unstorable. */

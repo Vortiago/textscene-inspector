@@ -9,5 +9,3 @@ import { GraphFrame } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'GraphFrame', Component: GraphFrame });
-
-export { GraphFrame };

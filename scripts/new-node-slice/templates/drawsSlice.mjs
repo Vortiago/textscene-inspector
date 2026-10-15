@@ -114,8 +114,6 @@ const ${camel}Registration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(${camel}Registration);
-
-export { ${camel}Registration };
 `
   );
   files.set(
@@ -127,7 +125,7 @@ nodeComponentRegistry.register({
   typeName: '${typeName}',
   Component: ${typeName},
 ${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}});
-${base.geometryInstanceDrawer ? '' : `\nexport { ${typeName} };\n`}`
+`
   );
   // It imports `./index` itself, so it proves the slice's own self-registration and nothing
   // about the aggregation barrels, which `parserBarrelCompleteness` checks.

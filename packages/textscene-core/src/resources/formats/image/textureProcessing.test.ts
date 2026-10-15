@@ -165,6 +165,42 @@ describe('createTextureFromBuffer', () => {
       const texture = await createTextureFromBuffer(data, 'image/jpeg', imported('RGB8'));
       expect(texture.image).toBe(softEdge);
     });
+
+    /** The PNG texture a decoded image of one row of `[r, g, b, a]` texels yields. */
+    function decodeRow(texels: number[][]): Promise<THREE.Texture> {
+      fakeLoader.image = { data: new Uint8Array(texels.flat()), width: texels.length, height: 1 };
+      return createTextureFromBuffer(data, 'image/png', imported('RGBA8'));
+    }
+
+    const bytesOf = (texture: THREE.Texture) => Array.from((texture.image as { data: Uint8Array }).data);
+
+    it('rewrites the RGB behind alpha 0 on an image with soft, partial-alpha edges', async () => {
+      const fixed = await decodeRow([
+        [255, 255, 255, 0],
+        [10, 20, 30, 128],
+      ]);
+      expect(bytesOf(fixed)).toEqual([10, 20, 30, 0, 10, 20, 30, 128]);
+    });
+
+    it("leaves the decoded image's shared bytes as they were", async () => {
+      await decodeRow([
+        [255, 255, 255, 0],
+        [10, 20, 30, 128],
+      ]);
+      expect(Array.from(fakeLoader.image!.data)).toEqual([255, 255, 255, 0, 10, 20, 30, 128]);
+    });
+
+    it('keeps the RGB of a transparent texel with no source within the radius', async () => {
+      const fixed = await decodeRow([
+        [10, 20, 30, 255],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [7, 7, 7, 0],
+      ]);
+      expect(bytesOf(fixed).slice(20, 24)).toEqual([7, 7, 7, 0]);
+    });
   });
 
   it('resolves with a texture whose colorSpace is sRGB', async () => {

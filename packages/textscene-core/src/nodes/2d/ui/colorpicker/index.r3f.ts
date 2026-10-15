@@ -10,5 +10,3 @@ import { colorPickerMinimumSize } from './nativeSolver';
 controlSolverRegistry.registerMinimumSize('ColorPicker', colorPickerMinimumSize);
 
 controlComponentRegistry.register({ typeName: 'ColorPicker', Component: ColorPicker });
-
-export { ColorPicker };

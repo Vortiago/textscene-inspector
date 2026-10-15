@@ -5,5 +5,3 @@ import { SplitContainer } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'SplitContainer', Component: SplitContainer });
-
-export { SplitContainer };

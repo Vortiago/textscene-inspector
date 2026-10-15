@@ -1,7 +1,7 @@
 /**
  * `parentTypeVerdict`'s three ways of not knowing, a union so a rule chooses
  * between them. A wrong `unknowable` announces a defect in a scene the linter
- * cannot see into. `visibleInTreeVerdict` is tested in `parentType.visibility.test.ts`
+ * cannot see into. `hiddenOrUnknowableInTree` is tested in `parentType.visibility.test.ts`
  * and `parentType.canvasItemVisibility.test.ts`.
  */
 

@@ -13,11 +13,11 @@ export interface WorkerJob<Input, Output> {
   transfer(output: Output): Transferable[];
 }
 
-export interface PixelsOutput {
+interface PixelsOutput {
   pixels: Uint8Array;
 }
 
-export interface TexelsOutput {
+interface TexelsOutput {
   texels: Uint8Array;
 }
 

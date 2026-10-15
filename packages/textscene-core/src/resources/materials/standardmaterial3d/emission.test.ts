@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sRGBChannelToLinear as linear } from '../../../utils/colorSpace';
-import { EmissionOperator, emissionScalars, resolveEmission } from './emission';
+import { emissionScalars, resolveEmission } from './emission';
+import { EmissionOperator } from '../../../godot/rendering/materials/emissionOperator';
 
 describe('emissionScalars', () => {
   it('is fully off when emission is disabled', () => {

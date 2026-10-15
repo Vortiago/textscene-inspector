@@ -33,5 +33,3 @@ const directionalLight2DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(directionalLight2DValidationRule);
-
-export { directionalLight2DValidationRule };

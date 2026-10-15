@@ -14,5 +14,3 @@ const openXRRenderModelManagerRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(openXRRenderModelManagerRegistration);
-
-export { openXRRenderModelManagerRegistration };

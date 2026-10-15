@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { TscnNode } from '../../../../parser/types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type {
   MinimumSizeFn,
   TextureSlotRequest,
@@ -18,11 +18,12 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { TextureRectDraw } from '../texturerect/nativeSolver';
 import type { TextureButtonProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** The keys `textureButtonTextureSlots`/`textureButtonMinimumSize` share for `SolveNode.textureSlots`. */
-export const TEXTURE_NORMAL_KEY = 'texture_normal';
-export const TEXTURE_PRESSED_KEY = 'texture_pressed';
-export const TEXTURE_HOVER_KEY = 'texture_hover';
+const TEXTURE_NORMAL_KEY = 'texture_normal';
+const TEXTURE_PRESSED_KEY = 'texture_pressed';
+const TEXTURE_HOVER_KEY = 'texture_hover';
 
 /**
  * The Texture2D slots for `buildSolveTree.ts`: `get_minimum_size`'s three Texture2D reads
@@ -43,7 +44,7 @@ export const textureButtonTextureSlots: TextureSlotsFn = (node: TscnNode) => {
  * sees it: `disabled` wins, else `pressing = status.pressed` (`button_pressed`), and
  * `DRAW_HOVER`/`DRAW_HOVER_PRESSED` never fire.
  */
-export type TextureButtonDrawState = 'normal' | 'pressed' | 'disabled';
+type TextureButtonDrawState = 'normal' | 'pressed' | 'disabled';
 
 export function resolveTextureButtonDrawState(props: TextureButtonProperties): TextureButtonDrawState {
   if (props.disabled) return 'disabled';
@@ -106,8 +107,8 @@ const STRETCH_KEEP_ASPECT_COVERED = 6;
  * `region` stays `undefined` there, as in `texturerect/nativeSolver.ts`.
  */
 export function textureButtonDraw(
-  rectSize: Vec2,
-  textureSize: Vec2,
+  rectSize: Vector2,
+  textureSize: Vector2,
   stretchMode: number | undefined
 ): TextureRectDraw {
   const noDraw: TextureRectDraw = {

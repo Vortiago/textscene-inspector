@@ -11,7 +11,7 @@ import { resolveExtTextResourcePath } from './SubResourceResolver.js';
 import { textResourceTexture } from './textures/textResourceTexture.js';
 import { useResource } from './useResource.js';
 
-export interface TextureSlotResources {
+interface TextureSlotResources {
   /** Undefined while a `.tres` loads or once it proves absent: it names nothing yet. */
   ref: string | undefined;
   externalResources: readonly TscnExternalResource[];

@@ -2,7 +2,6 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import { directionalShadowUserData, type DirectionalShadowDeclaration } from './declaration';
 import {
-  directionalShadowCasters,
   fitSceneDirectionalShadows,
   releaseSceneLights,
   sceneSplitsHold,
@@ -450,59 +449,50 @@ function readDeclaredMaxDistance(light: THREE.DirectionalLight): number {
   return (light.userData.directionalShadow as DirectionalShadowDeclaration).maxDistance;
 }
 
-describe('directionalShadowCasters', () => {
+describe('the shadow casters a render fades', () => {
   function caster(): THREE.DirectionalLight {
     const light = new THREE.DirectionalLight();
     light.castShadow = true;
     return light;
   }
 
-  it('lists casters in scene pre-order, as three indexes their shadows', () => {
+  /** The fades one render writes for `scene`, beside a declared light so that it writes them. */
+  function fadesOf(scene: THREE.Scene): Parameters<typeof writeDirectionalShadowFades>[0] {
+    addDeclaredLight(scene);
+    fitted(scene);
+    return writtenFades.mock.lastCall![0];
+  }
+
+  it('writes an unfaded entry for each casting directional light, nested ones too', () => {
     const scene = new THREE.Scene();
-    const [first, nested, last] = [caster(), caster(), caster()];
     const group = new THREE.Group();
-    group.add(nested);
-    scene.add(first, group, last);
-    expect(directionalShadowCasters(sceneLights(scene), viewingCamera())).toEqual({
-      directional: [first, nested, last],
-      sun: [],
-    });
+    group.add(caster());
+    scene.add(caster(), group, caster());
+    expect(fadesOf(scene).directional).toEqual([null, null, null]);
   });
 
-  it('lists a split sun apart from the directional lights', () => {
+  it('writes a declared light’s split sun apart from the directional lights', () => {
     const scene = new THREE.Scene();
-    const directional = caster();
-    const sun = new SplitSunLight();
-    scene.add(sun, directional);
-    expect(directionalShadowCasters(sceneLights(scene), viewingCamera())).toEqual({
-      directional: [directional],
-      sun: [sun],
-    });
+    scene.add(caster());
+    const { directional, sun } = fadesOf(scene);
+    expect(directional).toEqual([null]);
+    expect(sun).toEqual([{ from: expect.closeTo(64, 12), to: 80 }]);
   });
 
   it('skips a light three draws no shadow for: non-casting, hidden, or on another layer', () => {
     const scene = new THREE.Scene();
-    const nonCasting = new THREE.DirectionalLight();
     const hidden = caster();
     hidden.visible = false;
     const otherLayer = caster();
     otherLayer.layers.set(5);
-    const drawn = caster();
-    scene.add(nonCasting, hidden, otherLayer, drawn);
-    expect(directionalShadowCasters(sceneLights(scene), viewingCamera()).directional).toEqual([drawn]);
+    scene.add(new THREE.DirectionalLight(), hidden, otherLayer, caster());
+    expect(fadesOf(scene).directional).toEqual([null]);
   });
 
-  it('lists the sun under a declared light the layer test hides (edge case)', () => {
-    const scene = new THREE.Scene();
-    const hiddenParent = caster();
-    hiddenParent.layers.disableAll();
-    const sun = new SplitSunLight();
-    hiddenParent.add(sun);
-    scene.add(hiddenParent);
-    expect(directionalShadowCasters(sceneLights(scene), viewingCamera())).toEqual({
-      directional: [],
-      sun: [sun],
-    });
+  it('writes the sun under a declared light the layer test hides, and not the light (edge case)', () => {
+    const { directional, sun } = fadesOf(new THREE.Scene());
+    expect(directional).toEqual([]);
+    expect(sun).toHaveLength(1);
   });
 
   it('skips every light under a hidden parent (edge case)', () => {
@@ -511,10 +501,9 @@ describe('directionalShadowCasters', () => {
     parent.visible = false;
     parent.add(caster(), new SplitSunLight());
     scene.add(parent);
-    expect(directionalShadowCasters(sceneLights(scene), viewingCamera())).toEqual({
-      directional: [],
-      sun: [],
-    });
+    const { directional, sun } = fadesOf(scene);
+    expect(directional).toEqual([]);
+    expect(sun).toHaveLength(1);
   });
 });
 

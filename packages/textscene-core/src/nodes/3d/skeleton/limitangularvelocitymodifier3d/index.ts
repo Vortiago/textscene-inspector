@@ -13,5 +13,3 @@ const limitAngularVelocityModifier3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(limitAngularVelocityModifier3DRegistration);
-
-export { limitAngularVelocityModifier3DRegistration };

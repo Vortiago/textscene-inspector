@@ -178,5 +178,3 @@ const controlRule: LintRule = {
 };
 
 ruleRegistry.register(controlRule);
-
-export { controlRule };

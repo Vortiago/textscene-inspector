@@ -19,9 +19,6 @@ import {
   layoutCheckButtonContent,
   checkButtonMarginX,
   checkButtonMarginY,
-  CHECKBUTTON_DEFAULT_FONT_COLOR,
-  CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR,
-  CHECKBUTTON_DEFAULT_DISABLED_FONT_COLOR,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -67,21 +64,33 @@ describe('resolveCheckButtonDrawState', () => {
 
 describe('checkButtonTextTheme', () => {
   it('resolves control_font_color for the normal state', () => {
-    expect(checkButtonTextTheme(node({}), {} as CheckButtonProperties, 'normal', ctx()).color).toEqual(
-      CHECKBUTTON_DEFAULT_FONT_COLOR
-    );
+    // default_theme.cpp:101,340: control_font_color.
+    expect(checkButtonTextTheme(node({}), {} as CheckButtonProperties, 'normal', ctx()).color).toEqual({
+      r: 0.875,
+      g: 0.875,
+      b: 0.875,
+      a: 1,
+    });
   });
 
   it('resolves control_font_pressed_color (opaque white) for the pressed state', () => {
-    expect(checkButtonTextTheme(node({}), {} as CheckButtonProperties, 'pressed', ctx()).color).toEqual(
-      CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR
-    );
+    // default_theme.cpp:108,341: control_font_pressed_color.
+    expect(checkButtonTextTheme(node({}), {} as CheckButtonProperties, 'pressed', ctx()).color).toEqual({
+      r: 1,
+      g: 1,
+      b: 1,
+      a: 1,
+    });
   });
 
   it('resolves control_font_disabled_color (alpha 0.5) for the disabled state', () => {
-    expect(checkButtonTextTheme(node({}), {} as CheckButtonProperties, 'disabled', ctx()).color).toEqual(
-      CHECKBUTTON_DEFAULT_DISABLED_FONT_COLOR
-    );
+    // default_theme.cpp:106,345: control_font_disabled_color.
+    expect(checkButtonTextTheme(node({}), {} as CheckButtonProperties, 'disabled', ctx()).color).toEqual({
+      r: 0.875,
+      g: 0.875,
+      b: 0.875,
+      a: 0.5,
+    });
   });
 
   it('a theme_override_colors/font_color override wins over the default', () => {

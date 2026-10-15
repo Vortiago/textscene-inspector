@@ -9,5 +9,3 @@ const textureButtonRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(textureButtonRegistration);
-
-export { textureButtonRegistration };

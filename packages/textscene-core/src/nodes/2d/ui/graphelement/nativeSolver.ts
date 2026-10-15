@@ -35,7 +35,7 @@ function vFlagsOf(n: SolveNode): number {
  * child's combined minimum size: hidden children included
  * (`SortableVisibilityMode::IGNORE`, `:62`).
  */
-export const graphElementMinimumSize: MinimumSizeFn = (n, ctx) => {
+const graphElementMinimumSize: MinimumSizeFn = (n, ctx) => {
   let width = 0;
   let height = 0;
   for (const child of n.children) {
@@ -53,7 +53,7 @@ controlSolverRegistry.registerMinimumSize('GraphElement', graphElementMinimumSiz
  * node's own full rect, with no chrome and no margin. `graph_element.cpp` calls `is_layout_rtl()`
  * nowhere, but the container's flag still reaches a child through `fit_child_in_rect`.
  */
-export const graphElementLayout: ContainerLayoutFn = (n, children, contentRect) => {
+const graphElementLayout: ContainerLayoutFn = (n, children, contentRect) => {
   const rects = new Map<string, Rect2>();
   for (const { node: child, minSize } of children) {
     if (!isSortableControl(child)) continue;

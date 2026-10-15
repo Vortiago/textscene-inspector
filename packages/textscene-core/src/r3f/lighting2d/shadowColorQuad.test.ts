@@ -14,7 +14,7 @@ import {
   SHADOW_FILTER_PCF5,
   SHADOW_FILTER_PCF13,
 } from './lightQuad';
-import { litQuadStencilProps, shadowColorQuadStencilProps, shadowStencilRef } from './ShadowVolumeMask';
+import { litQuadStencilProps, shadowColorQuadStencilProps } from './ShadowVolumeMask';
 
 const BLUE = { r: 0.15, g: 0.35, b: 1, a: 1 };
 
@@ -88,7 +88,7 @@ describe('shadowColorQuadStencilProps', () => {
 
     // Same ref, opposite test: together they partition the light's rect, so the pair is a `mix`,
     // not a double count or a gap.
-    expect(shadowed.stencilRef).toBe(shadowStencilRef(ordinal));
+    expect(shadowed.stencilRef).toBe(lit.stencilRef);
     expect(lit.stencilFunc).toBe(THREE.NotEqualStencilFunc);
     expect(shadowed.stencilFunc).toBe(THREE.EqualStencilFunc);
   });

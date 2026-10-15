@@ -69,5 +69,3 @@ const buttonGroupRule: LintRule = {
 };
 
 ruleRegistry.register(buttonGroupRule);
-
-export { buttonGroupRule };

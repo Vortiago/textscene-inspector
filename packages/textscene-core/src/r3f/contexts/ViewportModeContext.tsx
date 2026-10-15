@@ -22,7 +22,7 @@ export const SHOW_GRID_STORAGE_KEY = 'tsi.showGrid';
  */
 export const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
 
-export interface ViewportModeValue {
+interface ViewportModeValue {
   mode: ViewportMode;
   setMode: (mode: ViewportMode) => void;
   /** The CollisionShape3D gizmos, off by default like Godot's "Visible Collision Shapes". */

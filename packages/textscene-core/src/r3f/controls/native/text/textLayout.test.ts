@@ -347,8 +347,8 @@ describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the sha
       lineSpacingPx: 3,
     });
     expect(layout.fontMetrics?.kind).toBe('atlas');
-    // ceil(2189 * 16/2048) = 18 -- OPEN_SANS_METRICS.ascent's own value, same
-    // arithmetic openSansMetrics.ts's getAscentPx documents.
+    // ceil(2189 * 16/2048) = 18, from OPEN_SANS_METRICS.ascent through the arithmetic
+    // of `getFontAscentPx` in fontMetrics.ts.
     expect(layout.baselineOffsetPx).toBe(18);
   });
 

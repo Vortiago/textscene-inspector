@@ -48,7 +48,7 @@ export interface CsgPlan {
 }
 
 /** What the plan needs to know about one CSG type. */
-export interface CsgPlanShape {
+interface CsgPlanShape {
   /** False for a grouping node like CSGCombiner3D, which has no solid of its own. */
   hasGeometry: boolean;
   /** Stable string over the properties the geometry builder reads. */

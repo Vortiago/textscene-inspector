@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../parser/types';
-import type { Transform3D } from '../../nodes/base/node3d/types';
+import type { Transform3D } from '../../godot/math/transform3d';
 import { NodeDispatcher } from '../NodeDispatcher';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';

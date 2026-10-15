@@ -11,5 +11,3 @@ nodeComponentRegistry.register({
   container: true,
   renderIntent: 'transform-only',
 });
-
-export { AnimationPlayer };

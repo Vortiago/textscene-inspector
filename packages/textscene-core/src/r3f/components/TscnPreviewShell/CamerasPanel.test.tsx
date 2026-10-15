@@ -9,7 +9,7 @@ import { CamerasPanel } from './CamerasPanel';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { ViewportActionsProvider, useViewportActions } from '../../contexts/ViewportActionsContext';
 import { ViewportModeProvider, useViewportMode } from '../../contexts/ViewportModeContext';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { TscnParser } from '../../../parser/TscnParser';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { ResourceEventBus } from '../../../resources/ResourceEventBus';

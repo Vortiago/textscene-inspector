@@ -7,14 +7,12 @@ import { COLOR_RE } from '../parser/vectors';
 import { matchedFloat, allFinite } from '../godot/variant/number.js';
 import type { Rgba } from '../godot/math/math.js';
 
-export type Color = Rgba;
-
 /**
  * A `Color(r, g, b, a)` literal, channels below 0 and above 1 included. Undefined when absent or
  * malformed, for a caller that skips a bad colour rather than substitute white. The shared
  * `COLOR_RE` keeps the parse and every guard on one grammar.
  */
-export function parseColorOrUndefined(value: string | undefined): Color | undefined {
+export function parseColorOrUndefined(value: string | undefined): Rgba | undefined {
   if (!value) return undefined;
 
   const match = value.match(COLOR_RE);
@@ -40,12 +38,12 @@ export function parseColorOrUndefined(value: string | undefined): Color | undefi
  * A Color, or `fallback` when absent or malformed: the colour member of the `floatOr`, `intOr`,
  * `boolOr`, `enumOr` and `vec2Or` decoder family, so a field with a default reads uniformly.
  */
-export function colorOr(value: string | undefined, fallback: Color): Color {
+export function colorOr(value: string | undefined, fallback: Rgba): Rgba {
   return parseColorOrUndefined(value) ?? fallback;
 }
 
 /** A Color, or opaque white when absent or malformed. */
-export function parseColor(value: string | undefined): Color {
+export function parseColor(value: string | undefined): Rgba {
   return colorOr(value, { r: 1, g: 1, b: 1, a: 1 });
 }
 
@@ -69,7 +67,7 @@ export function parseColorToHex(value: string | undefined): number {
  * formatters (Node2D, Sprite3D, Label3D, Decal, …) so the modulate display
  * stays consistent across slices.
  */
-export function formatColorRgba(color: Color): string {
+export function formatColorRgba(color: Rgba): string {
   return `rgba(${(color.r * 255).toFixed(0)}, ${(color.g * 255).toFixed(0)}, ${(color.b * 255).toFixed(0)}, ${color.a.toFixed(2)})`;
 }
 
@@ -78,6 +76,6 @@ export function formatColorRgba(color: Color): string {
  * material's colours this way before any linear conversion (`render_forward_clustered.cpp:1999-2001`,
  * `sky_material.cpp:41`).
  */
-export function scaledRgb({ r, g, b, a }: Color, energy: number): Color {
+export function scaledRgb({ r, g, b, a }: Rgba, energy: number): Rgba {
   return { r: r * energy, g: g * energy, b: b * energy, a };
 }

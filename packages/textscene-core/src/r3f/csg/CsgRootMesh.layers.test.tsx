@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { TscnParser } from '../../parser/TscnParser';
-import { clearEvaluationCache } from './csgEvaluationCache';
 import '../nodes/index';
 import { NodeTree } from '../testing/NodeTree';
 import { settleCsgEvaluation } from './testing/settleCsgEvaluation';
@@ -28,7 +27,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
 
 describe('<CsgRootMesh> render layers', () => {
   it("carries the root's layers, not a contributor's, as Godot draws only the root", async () => {
-    clearEvaluationCache();
     const parsed = new TscnParser().parse(COMBINED);
     const root = parsed.nodes[0]!.children[0]!;
     const renderer = await ReactThreeTestRenderer.create(

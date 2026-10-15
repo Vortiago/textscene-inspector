@@ -41,7 +41,7 @@ function themeSearchOrder(
  * always appended, whatever the variation walk finds. `NODE_BASE_TYPES`
  * stands in for `ThemeDB::get_native_type_dependencies`: theme items live at `Control` or below.
  */
-export function buildThemeTypeChain(
+function buildThemeTypeChain(
   nativeType: string,
   typeVariation: string | undefined,
   ancestorThemes: readonly ThemeResource[],

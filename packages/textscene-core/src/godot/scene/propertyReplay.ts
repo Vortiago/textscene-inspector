@@ -10,7 +10,7 @@
  * another property's value sees only the lines above it: on 4.6.3 a Sprite2D body of `frame = 3`
  * then `hframes = 4` fires `set_frame`'s `ERR_FAIL_INDEX` against a grid of 1 and loads frame 0.
  */
-export interface ReplayPosition {
+interface ReplayPosition {
   /** The key's value, when it is listed above `subject`. */
   applied: string | undefined;
   /** The key is listed below `subject`, so its value is not in effect yet. */

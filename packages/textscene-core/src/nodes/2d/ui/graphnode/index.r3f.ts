@@ -9,5 +9,3 @@ import { GraphNode } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'GraphNode', Component: GraphNode });
-
-export { GraphNode };

@@ -25,7 +25,7 @@ type AreaLightUniform =
   | typeof AREA_LIGHT_TEXTURE_MIPMAPS;
 
 /** An AreaLight3D's `area_range`, `area_attenuation` and `light_specular`. */
-export interface AreaLightFalloff {
+interface AreaLightFalloff {
   range: number;
   attenuation: number;
   specular: number;

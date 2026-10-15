@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, renderHook } from '@testing-library/react';
 import { HierarchyProvider, useHierarchy } from './HierarchyContext';
-import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
 
 describe('HierarchyContext', () => {
   it('exposes the provided sceneGraph and panelId', () => {

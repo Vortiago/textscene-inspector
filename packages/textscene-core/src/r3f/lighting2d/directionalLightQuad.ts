@@ -11,13 +11,13 @@
  */
 
 import * as THREE from 'three';
-import type { Color } from '../../nodes/base/node2d/types.js';
 import type { Light2DShadowFilter } from '../../nodes/2d/lights/shared/types.js';
 import { accumulationState } from './lightQuad.js';
 import { FULL_SCREEN_VERTEX } from '../fullScreenPass.js';
 import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap.js';
 import { shadowPixelSize } from './shadowSampling.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
+import type { Rgba } from '../../godot/math/math.js';
 
 /** The depth an empty bin compares as: past any fragment, so `step` leaves it lit. */
 const EMPTY_BIN_DEPTH = '1e30';
@@ -33,7 +33,7 @@ export interface DirectionalShadowSampling {
   /** The quad's NDC position to the map's `(u, depth)`: the view and `shadow.directional_xform` composed. */
   readonly ndcToShadow: THREE.Matrix3;
   /** `Light2D.shadow_color`, which replaces the light where the shadow falls. */
-  readonly shadowColor: Color;
+  readonly shadowColor: Rgba;
 }
 
 const SHADOW_VERTEX = /* glsl */ `
@@ -134,7 +134,7 @@ void main() {
 
 interface DirectionalLightQuadOptions {
   /** `Light2D.color`, in Godot's sRGB canvas space. */
-  readonly color: Color;
+  readonly color: Rgba;
   /** `Light2D.energy`. */
   readonly energy: number;
   readonly blendMode: number;

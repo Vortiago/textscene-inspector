@@ -6,7 +6,6 @@
 
 import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
-import type { Color } from '../../base/node2d/types';
 import {
   alphaOnly,
   createLightQuadMaterial,
@@ -15,14 +14,15 @@ import {
   type ShadowSampling,
 } from '../../../r3f/lighting2d/lightQuad';
 import { litQuadStencilProps, shadowColorQuadStencilProps } from '../../../r3f/lighting2d/ShadowVolumeMask';
+import type { Rgba } from '../../../godot/math/math';
 
 interface LightQuadMaterialOptions {
   readonly cookie: THREE.Texture;
-  readonly color: Color;
+  readonly color: Rgba;
   readonly energy: number;
   readonly blendMode: number;
   /** `Light2D.shadow_color`. */
-  readonly shadowColor: Color;
+  readonly shadowColor: Rgba;
   /** Whether the light casts with a `shadow_color` that contributes. */
   readonly tintsShadow: boolean;
   /** Whether the light casts on this canvas. */

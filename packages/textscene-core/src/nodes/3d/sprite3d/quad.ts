@@ -9,7 +9,7 @@ import { spriteBillboardAabb } from '../../../godot/scene/billboard';
 import { AxisMode, type Sprite3DProperties } from './types';
 
 /** The quad's size in world units: the frame's pixels times `pixel_size`. */
-export interface QuadSize {
+interface QuadSize {
   width: number;
   height: number;
 }

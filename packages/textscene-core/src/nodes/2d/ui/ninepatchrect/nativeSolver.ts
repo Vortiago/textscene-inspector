@@ -8,11 +8,11 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { NinePatchRectProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
 
-export const ninePatchRectMinimumSize: MinimumSizeFn = (n): Vec2 => {
+export const ninePatchRectMinimumSize: MinimumSizeFn = (n): Vector2 => {
   const props = n.node.properties as NinePatchRectProperties;
   const left = props.patchMarginLeft ?? 0;
   const top = props.patchMarginTop ?? 0;
@@ -25,7 +25,7 @@ const TEXTURE_FILTER_NEAREST = 1;
 const TEXTURE_FILTER_NEAREST_WITH_MIPMAPS = 3;
 const TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC = 5;
 
-export type NinePatchRectFilter = 'nearest' | 'linear';
+type NinePatchRectFilter = 'nearest' | 'linear';
 
 /**
  * `CanvasItem::TextureFilter` (`scene/main/canvas_item.h:52-60`) as three.js filters: the mapping of

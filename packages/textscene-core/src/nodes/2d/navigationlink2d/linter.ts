@@ -90,5 +90,3 @@ const navigationLink2DEndpointsRule: LintRule = {
 };
 
 ruleRegistry.register(navigationLink2DEndpointsRule);
-
-export { navigationLink2DEndpointsRule };

@@ -69,5 +69,3 @@ const lookAtModifier3DAxisRule: LintRule = {
 };
 
 ruleRegistry.register(lookAtModifier3DAxisRule);
-
-export { lookAtModifier3DAxisRule };

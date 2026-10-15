@@ -13,5 +13,3 @@ const xRCamera3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(xRCamera3DRegistration);
-
-export { xRCamera3DRegistration };

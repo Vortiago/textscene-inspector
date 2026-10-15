@@ -14,7 +14,7 @@ import type { CsgGeometryContext } from '../csg/csgRegistration';
  */
 export type CsgSubtreeStatus = 'pending' | 'ready' | 'failed';
 
-export interface CsgSubtreeValue {
+interface CsgSubtreeValue {
   status: CsgSubtreeStatus;
   /** Node paths whose solids this root has taken over. */
   absorbedPaths: ReadonlySet<string>;
@@ -30,7 +30,7 @@ export interface CsgSubtreeValue {
 const CsgSubtreeContext = createContext<CsgSubtreeValue | null>(null);
 CsgSubtreeContext.displayName = 'CsgSubtreeContext';
 
-export interface CsgSubtreeProviderProps {
+interface CsgSubtreeProviderProps {
   /** Null re-publishes "outside a CSG root", which is what a node with no plan passes on. */
   value: CsgSubtreeValue | null;
   children: ReactNode;

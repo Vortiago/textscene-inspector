@@ -6,5 +6,3 @@ nodeComponentRegistry.register({
   Component: CPUParticles2D,
   canvasItem: true,
 });
-
-export { CPUParticles2D };

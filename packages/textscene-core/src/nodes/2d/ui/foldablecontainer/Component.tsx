@@ -19,12 +19,12 @@ import {
   overrunFlagsForBehavior,
   trimLineToWidth,
 } from '../../../../r3f/controls/native/text/textOverrun';
+import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
   HORIZONTAL_ALIGNMENT_RIGHT,
-  tintColor,
-} from '../../../../r3f/controls/native/buttonBase';
+} from '../../../../godot/math/math';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {

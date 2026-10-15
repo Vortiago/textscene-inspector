@@ -18,9 +18,6 @@ import {
   linkButtonUnderlineSpacing,
   linkButtonUnderlineGeometry,
   linkButtonTextPlacement,
-  LINKBUTTON_DEFAULT_FONT_COLOR,
-  LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR,
-  LINKBUTTON_DEFAULT_DISABLED_FONT_COLOR,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -61,22 +58,33 @@ describe('resolveLinkButtonDrawState', () => {
 
 describe('linkButtonTextTheme', () => {
   it('resolves control_font_color for the normal state', () => {
-    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'normal', ctx()).color).toEqual(
-      LINKBUTTON_DEFAULT_FONT_COLOR
-    );
+    // default_theme.cpp:101,203: control_font_color.
+    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'normal', ctx()).color).toEqual({
+      r: 0.875,
+      g: 0.875,
+      b: 0.875,
+      a: 1,
+    });
   });
 
   it('resolves control_font_pressed_color (opaque white) for the pressed state', () => {
-    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'pressed', ctx()).color).toEqual(
-      LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR
-    );
+    // default_theme.cpp:108,204: control_font_pressed_color.
+    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'pressed', ctx()).color).toEqual({
+      r: 1,
+      g: 1,
+      b: 1,
+      a: 1,
+    });
   });
 
   it('resolves OPAQUE BLACK for the disabled state — no font_disabled_color anywhere in its ClassDB chain', () => {
-    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'disabled', ctx()).color).toEqual(
-      LINKBUTTON_DEFAULT_DISABLED_FONT_COLOR
-    );
-    expect(LINKBUTTON_DEFAULT_DISABLED_FONT_COLOR).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+    // default_theme.cpp:196-210 sets no font_disabled_color, so the fallback is Color(), opaque black.
+    expect(linkButtonTextTheme(node({}), {} as LinkButtonProperties, 'disabled', ctx()).color).toEqual({
+      r: 0,
+      g: 0,
+      b: 0,
+      a: 1,
+    });
   });
 
   it('a theme_override_colors/font_color override wins over the default', () => {

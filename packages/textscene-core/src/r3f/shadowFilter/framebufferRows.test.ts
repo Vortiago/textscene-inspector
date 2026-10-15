@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   FRAMEBUFFER_HEIGHT_UNIFORM,
-  framebufferHeight,
   installFramebufferHeightUniform,
   writeFramebufferHeight,
 } from './framebufferRows';
+import { installedFramebufferHeight } from './framebufferRows.testkit';
 import { LIT_SHADERS } from '../testing/litShaders';
 
 afterEach(() => {
@@ -27,35 +27,39 @@ function rendererDrawingInto(
 describe('writeFramebufferHeight', () => {
   it('records the canvas’s drawing buffer for a render to the canvas', () => {
     writeFramebufferHeight(rendererDrawingInto(null));
-    expect(framebufferHeight[0]).toBe(756);
+    expect(installedFramebufferHeight()[0]).toBe(756);
   });
 
   it('records a render target’s own height for a render into it', () => {
     writeFramebufferHeight(rendererDrawingInto(new THREE.WebGLRenderTarget(64, 32)));
-    expect(framebufferHeight[0]).toBe(32);
+    expect(installedFramebufferHeight()[0]).toBe(32);
   });
 
   it('shares one buffer through a material’s uniform clone (edge case)', () => {
-    const cloned = THREE.UniformsUtils.clone({ height: { value: framebufferHeight } });
-    expect(cloned.height!.value).toBe(framebufferHeight);
+    const height = installedFramebufferHeight();
+    const cloned = THREE.UniformsUtils.clone({ height: { value: height } });
+    expect(cloned.height!.value).toBe(height);
   });
 
   it('writes the buffer an earlier evaluation gave the lit materials (error case)', async () => {
-    THREE.ShaderLib.standard.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM] = { value: framebufferHeight };
+    const height = installedFramebufferHeight();
     vi.resetModules();
     const reloaded = await import('./framebufferRows');
-    expect(reloaded.framebufferHeight).toBe(framebufferHeight);
+    reloaded.writeFramebufferHeight(rendererDrawingInto(null, 300));
+    expect(height[0]).toBe(300);
   });
 });
 
 describe('installFramebufferHeightUniform', () => {
   it('gives every lit built-in material and three’s light uniforms the one buffer', () => {
     installFramebufferHeightUniform();
+    const height = THREE.ShaderLib.standard.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]!.value;
+    expect(height).toBeInstanceOf(Float32Array);
     for (const name of LIT_SHADERS) {
-      expect(THREE.ShaderLib[name]!.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(framebufferHeight);
+      expect(THREE.ShaderLib[name]!.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(height);
     }
     const merged = THREE.UniformsUtils.merge([THREE.UniformsLib.lights]);
-    expect(merged[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(framebufferHeight);
+    expect(merged[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(height);
   });
 
   it('leaves an unlit material alone (edge case)', () => {

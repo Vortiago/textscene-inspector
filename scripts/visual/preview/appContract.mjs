@@ -25,7 +25,7 @@ export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
 export const VIEWPORT = { width: 1280, height: 800 };
 
 /**
- * The 2D capture frame: Godot's project viewport (`CANVAS_2D_WIDTH/HEIGHT` in `viewport2d.ts`),
+ * The 2D capture frame: Godot's default project viewport (`DEFAULT_VIEWPORT_*` in `projectSettingsParser.ts`),
  * the rectangle a Control anchors to. Godot renders it through a SubViewport of this size, and
  * ours clips the stage's frame at zoom 1, so a 2D pair compares pixel for pixel.
  */

@@ -47,7 +47,7 @@ function hasTransform(node: TscnNode): boolean {
   return 'transform' in node.properties && node.properties.transform !== undefined;
 }
 
-export interface TreeNodeProps {
+interface TreeNodeProps {
   node: TscnNode;
   parentPath: string;
   depth: number;

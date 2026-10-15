@@ -10,6 +10,5 @@ const csgSphere3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(csgSphere3DRegistration);
 
-export { csgSphere3DRegistration };
 export * from './parser';
 export * from './types';

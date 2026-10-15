@@ -5,7 +5,7 @@
  */
 import { warn } from '../logger.js';
 
-export interface TypeRegistry<T> {
+interface TypeRegistry<T> {
   register(typeName: string, value: T): void;
   /** Remove one registration (test teardown for probe types); true if it existed. */
   unregister(typeName: string): boolean;

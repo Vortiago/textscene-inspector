@@ -46,5 +46,3 @@ const cpuParticles3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(cpuParticles3DValidationRule);
-
-export { cpuParticles3DValidationRule };

@@ -152,7 +152,3 @@ validatorRegistry.registerAll('ChainIK3D', {
   // `end_bone/direction` and `joints/<j>/bone` reach this dispatcher, which reads the leaf itself.
   'settings/*': settingsFamily,
 });
-
-// Exported for `settingsFamilySeam.test.ts`, which checks every leaf a base declares across every
-// descendant. It derives the list from this table, so a new leaf joins the check.
-export { SETTING_LEAVES as CHAIN_IK_SETTING_LEAVES };

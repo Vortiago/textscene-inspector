@@ -22,7 +22,7 @@ import { readyMaterial, useMaterial } from '../../materials/useMaterial.js';
 import type { MaterialSource } from '../../materials/materialSource.js';
 import { registerFadedCopyBuilders, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
 
-export interface GlbSurfaceMaterialOverrideProps {
+interface GlbSurfaceMaterialOverrideProps {
   /** The GLB-internal object whose surface materials are being replaced. */
   target: THREE.Object3D;
   /** Where the override material lives, already resolved. */

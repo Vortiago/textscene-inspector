@@ -69,10 +69,9 @@ export interface ShadowPolarLight {
 /**
  * `canvas.glsl:821-843`'s `tex_ofs`, a box mapping and not an angle, for a
  * light-local direction (Y up). Runs 0 → 1 once round, wrapping at (1, 1), and
- * is 0 for a zero-length direction. The bin walk, the shader's quadrant block
- * and the tests read this one formula.
+ * is 0 for a zero-length direction. The bin walk reads this one formula.
  */
-export function shadowMapCoord(x: number, yUp: number): number {
+function shadowMapCoord(x: number, yUp: number): number {
   const y = 0 - yUp;
   const length = Math.hypot(x, y);
   if (!(length > 0)) return 0;

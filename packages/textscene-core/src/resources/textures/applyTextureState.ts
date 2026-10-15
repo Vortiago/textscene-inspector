@@ -131,7 +131,7 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
  * Whether a texture is a clone `applyTextureState` made for its binder, not the loader's cache
  * entry, so that the binder disposes it.
  */
-export function isBindingOwnedTexture(texture: THREE.Texture): boolean {
+function isBindingOwnedTexture(texture: THREE.Texture): boolean {
   return texture.userData[BINDING_OWNED] === true;
 }
 

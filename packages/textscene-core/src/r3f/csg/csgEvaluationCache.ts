@@ -23,8 +23,3 @@ export function getCachedEvaluation(key: string): CsgEvaluation | undefined {
 export function setCachedEvaluation(key: string, evaluation: CsgEvaluation): void {
   cache.set(key, evaluation);
 }
-
-/** Test seam, and the hook HMR needs so a stale evaluation cannot outlive an edit. */
-export function clearEvaluationCache(): void {
-  cache.clear();
-}

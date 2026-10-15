@@ -14,12 +14,3 @@ registerResourceSlice({
   typeNames: [...FONT_SUB_RESOURCE_TYPES],
   busType: 'font',
 });
-
-export type {
-  FontCacheReader,
-  FontFileResource,
-  FontLoaderFn,
-  FontResource,
-  FontVariationResource,
-  SystemFontResource,
-} from './types';

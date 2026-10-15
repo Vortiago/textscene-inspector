@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { graphEditToolbar, GRAPH_EDIT_MENU_POSITION, zoomLabelText } from './toolbar';
+import { graphEditToolbar, zoomLabelText } from './toolbar';
 import type { ToolbarTextMetrics } from './toolbar';
 import type { GraphEditProperties } from './types';
 
@@ -105,7 +105,6 @@ describe('graphEditToolbar geometry (PanelContainer + HBoxContainer at scale 1)'
   const bar = graphEditToolbar(props({ showZoomLabel: true }), theme, metrics)!;
 
   it("sits at the constructor's own hardcoded (10, 10) (graph_edit.cpp:3232)", () => {
-    expect(GRAPH_EDIT_MENU_POSITION).toEqual({ x: 10, y: 10 });
     expect(bar.panelRect.x).toBe(10);
     expect(bar.panelRect.y).toBe(10);
   });

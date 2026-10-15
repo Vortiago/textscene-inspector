@@ -10,11 +10,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { colorOr, parseColorOrUndefined, type Color } from '../../../utils/colorParser';
+import { colorOr, parseColorOrUndefined } from '../../../utils/colorParser';
 import { unquoteString } from '../../../parser/utils';
 import type { CodeHighlighterColorRegion, CodeHighlighterData } from './types';
+import type { Rgba } from '../../../godot/math/math';
 
-const DEFAULT_COLOR: Color = { r: 0, g: 0, b: 0, a: 1 };
+const DEFAULT_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 
 const DICT_WRAPPER_RE = /^\s*\{([\s\S]*)\}\s*$/;
 
@@ -74,13 +75,13 @@ function splitKeyValue(entry: string): [rawKey: string, rawValue: string] | null
  * for the `String;Color` shape. A value that fails `COLOR_RE` drops that entry,
  * not the map: the strict parser already owns grammar errors.
  */
-function decodeColorDictionary(raw: string | undefined): Array<[string, Color]> {
+function decodeColorDictionary(raw: string | undefined): Array<[string, Rgba]> {
   if (!raw) return [];
   const wrapper = DICT_WRAPPER_RE.exec(raw);
   if (!wrapper) return [];
   const body = wrapper[1]!.trim();
   if (body === '') return [];
-  const pairs: Array<[string, Color]> = [];
+  const pairs: Array<[string, Rgba]> = [];
   for (const entry of splitTopLevelEntries(body)) {
     const split = splitKeyValue(entry);
     if (!split) continue;
@@ -92,7 +93,7 @@ function decodeColorDictionary(raw: string | undefined): Array<[string, Color]> 
   return pairs;
 }
 
-function colorEquals(a: Color, b: Color): boolean {
+function colorEquals(a: Rgba, b: Rgba): boolean {
   return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a;
 }
 
@@ -100,7 +101,7 @@ function colorEquals(a: Color, b: Color): boolean {
  * `CodeHighlighter::add_keyword_color` and `add_member_keyword_color` add
  * unconditionally: a keyword gets no validation, unlike a color region's keys.
  */
-function decodeKeywordColors(raw: string | undefined): ReadonlyMap<string, Color> {
+function decodeKeywordColors(raw: string | undefined): ReadonlyMap<string, Rgba> {
   return new Map(decodeColorDictionary(raw));
 }
 
@@ -127,7 +128,7 @@ function addColorRegion(
   regions: CodeHighlighterColorRegion[],
   startKey: string,
   endKey: string,
-  color: Color
+  color: Rgba
 ): void {
   if (startKey === '') return;
   for (const ch of startKey) if (!isSymbolChar(ch)) return;

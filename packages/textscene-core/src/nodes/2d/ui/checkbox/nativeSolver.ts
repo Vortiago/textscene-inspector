@@ -20,10 +20,10 @@ import {
   buttonTextAlignShiftPx,
   centredTextTopPx,
   fitIconSize,
-  HORIZONTAL_ALIGNMENT_RIGHT,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import { HORIZONTAL_ALIGNMENT_RIGHT, type Rgba } from '../../../../godot/math/math';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -33,8 +33,8 @@ import {
 import type { CheckBoxIcons } from '../../../../r3f/controls/native/themeIcons';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
-import type { ControlColor } from '../control/types';
 import type { CheckBoxProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /**
  * CheckBox's theme font key, `SceneStringName(font)`, registered under CheckBox's own type
@@ -53,7 +53,7 @@ export { fitIconSize, tintColor };
  * wins first. Measured with `pnpm ref:godot --mode 2d`: a checked row's label reads (255,255,255),
  * `font_pressed_color`, not the 0.875 grey of `DRAW_NORMAL`.
  */
-export type CheckBoxDrawState = 'normal' | 'pressed' | 'disabled';
+type CheckBoxDrawState = 'normal' | 'pressed' | 'disabled';
 
 export function resolveCheckBoxDrawState(props: CheckBoxProperties): CheckBoxDrawState {
   if (props.disabled) return 'disabled';
@@ -62,11 +62,11 @@ export function resolveCheckBoxDrawState(props: CheckBoxProperties): CheckBoxDra
 }
 
 /** `control_font_color` (`default_theme.cpp:101`), CheckBox's own `font_color` default (`:300`). */
-export const CHECKBOX_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+const CHECKBOX_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 /** `control_font_pressed_color = Color(1, 1, 1)` (`:108`), CheckBox's own `font_pressed_color` default (`:301`). */
-export const CHECKBOX_DEFAULT_PRESSED_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
+const CHECKBOX_DEFAULT_PRESSED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 /** `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`:106`), CheckBox's own `font_disabled_color` default (`:305`). */
-export const CHECKBOX_DEFAULT_DISABLED_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+const CHECKBOX_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
 
 const CHECKBOX_THEME_KEYS: Record<CheckBoxDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
@@ -93,7 +93,7 @@ export function checkBoxTextTheme(
   return resolveTextTheme(n, props, CHECKBOX_THEME_KEYS[state], defaults);
 }
 
-export type CheckBoxIconKey = keyof CheckBoxIcons;
+type CheckBoxIconKey = keyof CheckBoxIcons;
 
 /**
  * `NOTIFICATION_DRAW` (`check_box.cpp:112-131`): a valid `button_group` swaps in the `radio_*`
@@ -113,7 +113,7 @@ export function resolveCheckBoxIconKey(props: CheckBoxProperties): CheckBoxIconK
 }
 
 /** Every vendored icon shares this authored size (`native/themeIcons.ts`: `checked.svg` et al, 16x16). */
-export const CHECKBOX_ICON_NATURAL_SIZE: Vec2 = { x: 16, y: 16 };
+const CHECKBOX_ICON_NATURAL_SIZE: Vector2 = { x: 16, y: 16 };
 
 /**
  * Each `CheckBoxIconKey` to the Theme item name Godot registers it under (`check_box.cpp:157-164`),
@@ -150,7 +150,7 @@ export const checkBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) =>
  * A slot no theme touched falls back to the vendored default's size, since the default theme
  * registers all 8 (`default_theme.cpp:288-295`).
  */
-export function checkBoxIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>): Vec2 {
+export function checkBoxIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 {
   let w = 0;
   let h = 0;
   for (const name of CHECK_BOX_ICON_THEME_NAMES) {
@@ -216,27 +216,27 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   return { x: width, y: height };
 };
 
-export interface CheckBoxContentInput {
+interface CheckBoxContentInput {
   /** The control's own solved rect size, Godot px. */
-  rectSize: Vec2;
+  rectSize: Vector2;
   /** `cbx_empty`'s uniform content margin, `theme.contentMargin` on all four sides. Every state shares this `StyleBoxEmpty` (`default_theme.cpp:276-277`), so nothing is drawn. */
   margin: number;
   /** The check icon's size, already fitted with `fitIconSize` and rounded. */
-  iconSize: Vec2;
+  iconSize: Vector2;
   checkVOffset: number;
   hSeparation: number;
   hasText: boolean;
   /** The shaped text's natural (unwrapped) size, ignored when `hasText` is false. */
-  textNaturalSize: Vec2;
+  textNaturalSize: Vector2;
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the check to the right edge and the label against it. */
   rtl: boolean;
 }
 
-export interface CheckBoxContentLayout {
+interface CheckBoxContentLayout {
   /** Local to the control's own top-left, Godot px. */
   iconRect: Rect2;
   /** The text paragraph's box top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there. `null` when there is no text. */
-  textOffset: Vec2 | null;
+  textOffset: Vector2 | null;
 }
 
 /**
@@ -254,7 +254,7 @@ export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxCont
     h: iconSize.y,
   };
 
-  let textOffset: Vec2 | null = null;
+  let textOffset: Vector2 | null = null;
   if (hasText) {
     const reserved = iconSize.x + hSeparation;
     const customElementHeight = rectSize.y - 2 * margin;

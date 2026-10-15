@@ -44,5 +44,3 @@ const parallaxLayerParentRule: LintRule = {
 };
 
 ruleRegistry.register(parallaxLayerParentRule);
-
-export { parallaxLayerParentRule };

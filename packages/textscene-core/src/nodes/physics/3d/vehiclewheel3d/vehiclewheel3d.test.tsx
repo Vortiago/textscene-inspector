@@ -16,7 +16,7 @@ import { TscnParser } from '../../../../parser/TscnParser';
 import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
 import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
 import type { TscnNode } from '../../../../parser/types';
-import type { Transform3D } from '../../../base/node3d/types';
+import type { Transform3D } from '../../../../godot/math/transform3d';
 import type { VehicleWheel3DProperties } from './types';
 
 /** A wheel with an identity basis at (0.573678, 0.115169, 1.10416). */

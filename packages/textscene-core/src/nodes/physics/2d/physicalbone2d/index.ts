@@ -15,5 +15,3 @@ const physicalBone2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(physicalBone2DRegistration);
-
-export { physicalBone2DRegistration };

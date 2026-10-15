@@ -9,8 +9,8 @@ import {
   TILE_SHAPE_HEXAGON,
   TILE_SHAPE_ISOMETRIC,
   type TileGrid,
-  type Vec2i,
 } from './types';
+import type { Vector2 } from '../../godot/math/vector';
 
 /** Godot's Math::posmod: posmod(-1, 2) === 1. */
 function posmod(a: number, b: number): number {
@@ -31,7 +31,7 @@ function overlapRatio(shape: number): number {
   return 1; // half-offset square: staggered, no overlap
 }
 
-export function mapToLocalPx(grid: TileGrid, cell: Vec2i): { x: number; y: number } {
+export function mapToLocalPx(grid: TileGrid, cell: Vector2): Vector2 {
   let x = cell.x;
   let y = cell.y;
 

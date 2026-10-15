@@ -9,5 +9,3 @@ const menuBarRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(menuBarRegistration);
-
-export { menuBarRegistration };

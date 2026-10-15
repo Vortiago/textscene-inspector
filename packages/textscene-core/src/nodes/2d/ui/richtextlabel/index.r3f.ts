@@ -16,5 +16,3 @@ controlSolverRegistry.registerTextureSlots('RichTextLabel', richTextLabelTexture
 // this control's width, which only a completed pass knows: it reads
 // `SolveContext.tentativeRect`, as Label does.
 controlSolverRegistry.registerSizeDependentMinimum('RichTextLabel');
-
-export { RichTextLabel };

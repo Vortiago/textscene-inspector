@@ -12,7 +12,6 @@ const node2DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(node2DRegistration);
 
-export { node2DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

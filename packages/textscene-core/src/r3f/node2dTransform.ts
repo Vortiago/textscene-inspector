@@ -14,7 +14,7 @@ import { transform2DFromParts, type Transform2DColumns } from '../godot/math/tra
 // F is its own inverse, so `F·M1·F · F·M2·F = F·(M1·M2)·F` composes through any
 // nesting with no global flip group: Godot `(100, 50)` sits at three.js `(100, -50)`.
 // Draw order is `renderOrder`, not depth (`canvasPaintOrder.ts`).
-export interface Node2DGroupProps {
+interface Node2DGroupProps {
   position: Vec3Tuple;
   rotation: Vec3Tuple;
   scale: Vec3Tuple;

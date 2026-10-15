@@ -13,5 +13,3 @@ const voxelGIRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(voxelGIRegistration);
-
-export { voxelGIRegistration };

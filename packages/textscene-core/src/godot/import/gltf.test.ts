@@ -5,7 +5,6 @@ import {
   GLB_MAGIC,
   godotSurfacePrimitives,
   gltfObjects,
-  gltfTextureImage,
   gltfRefusalMessage,
   isGltfJsonObject,
   isGltfPath,
@@ -272,24 +271,5 @@ describe('gltfObjects', () => {
 
   it('returns none for a value that is not an array (edge case)', () => {
     expect(gltfObjects({ name: 'Cube' })).toEqual([]);
-  });
-});
-
-describe('gltfTextureImage', () => {
-  it('reads the base source of a texture with no image extension', () => {
-    expect(gltfTextureImage({ source: 2 })).toBe(2);
-  });
-
-  it('reads the EXT_texture_webp source over the base source', () => {
-    expect(gltfTextureImage({ source: 0, extensions: { EXT_texture_webp: { source: 1 } } })).toBe(1);
-  });
-
-  it('reads the KHR_texture_basisu source first, as Godot registers that extension first', () => {
-    const extensions = { EXT_texture_webp: { source: 1 }, KHR_texture_basisu: { source: 2 } };
-    expect(gltfTextureImage({ source: 0, extensions })).toBe(2);
-  });
-
-  it('reads no image from a texture with no source (edge case)', () => {
-    expect(gltfTextureImage({})).toBeUndefined();
   });
 });

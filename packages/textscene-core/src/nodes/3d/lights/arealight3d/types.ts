@@ -2,7 +2,7 @@
 
 import type { Node3DProperties } from '../../../base/node3d/types';
 import type { PositionalLightProperties } from '../shared/types';
-import type { Vector2 } from '../../../../parser/vectors';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** AreaLight3D properties: Light3D plus the rectangle. */
 export interface AreaLight3DProperties extends Node3DProperties, PositionalLightProperties {

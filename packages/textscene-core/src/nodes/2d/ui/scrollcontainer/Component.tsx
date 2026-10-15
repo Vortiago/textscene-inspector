@@ -18,7 +18,6 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import { SCROLL_HINT_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { type RGBA } from '../../../../r3f/canvasItemModulate';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   scrollContainerScrollBars,
@@ -26,6 +25,7 @@ import {
   type ScrollBarPlacement,
   type ScrollHintPlacement,
 } from './nativeSolver';
+import type { Rgba } from '../../../../godot/math/math';
 
 /**
  * `scroll_hint_vertical_color` and `scroll_hint_horizontal_color`: `Color(0, 0, 0)`
@@ -105,7 +105,7 @@ interface ScrollBarChromeProps {
   track: StyleBoxFlatData;
   grabber: StyleBoxFlatData;
   /** Raw sRGB, which `<StyleBoxQuad>` composes into `track` and `grabber`. */
-  color: RGBA;
+  color: Rgba;
   /**
    * `subtreeChromeRenderOrder`, the last descendant's key. The bars are
    * `INTERNAL_MODE_BACK` children (`scene/gui/scroll_container.cpp:919,924`) that

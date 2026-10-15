@@ -4,8 +4,10 @@
  * writes only the few properties it changed.
  */
 
-import type { Node2DProperties, Color, Vector2 } from '../../base/node2d/types';
+import type { Node2DProperties } from '../../base/node2d/types';
 import { CPU_PARTICLES_PARAMS, type CpuParticlesParam } from '../../../godot/scene/cpuParticles';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /** Godot `CPUParticles2D.EmissionShape`. */
 export enum CPUParticles2DEmissionShape {
@@ -135,7 +137,7 @@ export interface CPUParticles2DProperties extends Node2DProperties {
   /** Indexed by `CPUParticles2DParam`. Always `CPU_PARTICLES_2D_PARAM_COUNT` long. */
   params: ParticleParam[];
 
-  color: Color;
+  color: Rgba;
   /** Raw `SubResource("id")` reference to a `Gradient` sampled over particle age. */
   color_ramp?: string;
   /** Raw `SubResource("id")` reference to a `Gradient` sampled once at birth. */

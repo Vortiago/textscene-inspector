@@ -6,5 +6,3 @@ import { makeNavigationObstacleLinterRule } from '../../../linter/physics/naviga
 const navigationObstacle3DCarveRule = makeNavigationObstacleLinterRule('3D');
 
 ruleRegistry.register(navigationObstacle3DCarveRule);
-
-export { navigationObstacle3DCarveRule };

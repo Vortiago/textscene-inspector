@@ -5,4 +5,3 @@ import { registerGenericResourceSlice } from '../../sliceRegistration';
 registerGenericResourceSlice('boxshape3d', ['BoxShape3D']);
 
 export { decodeBoxShape3D } from './decode';
-export type { BoxShape3DProperties } from './types';

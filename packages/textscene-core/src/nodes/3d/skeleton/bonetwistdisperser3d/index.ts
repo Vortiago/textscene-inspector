@@ -13,5 +13,3 @@ const boneTwistDisperser3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(boneTwistDisperser3DRegistration);
-
-export { boneTwistDisperser3DRegistration };

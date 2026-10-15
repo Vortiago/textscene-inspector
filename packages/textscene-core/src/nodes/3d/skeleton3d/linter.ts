@@ -118,5 +118,3 @@ const skeleton3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(skeleton3DValidationRule);
-
-export { skeleton3DValidationRule };

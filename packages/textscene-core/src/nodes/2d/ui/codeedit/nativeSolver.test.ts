@@ -4,27 +4,31 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  codeEditLineNumberDigits,
   codeEditLineNumberText,
   codeEditLineNumberGutterXPx,
   codeEditLineNumberTextXPx,
   codeEditGutterCellTextTopPx,
   codeEditGutterBand,
-  CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT,
   codeEditGuidelines,
 } from './nativeSolver';
 import type { CodeEditProperties } from './types';
 
-describe('codeEditLineNumberDigits', () => {
+describe('codeEditGutterBand line-number digits', () => {
   // code_edit.cpp:3875: MAX(line_numbers_min_digits, std::log10(lc) + 1).
-  it('floors at the min-digits default (3) for a small line count', () => {
-    expect(codeEditLineNumberDigits(1, undefined)).toBe(CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT);
+  function digits(lineCount: number, gutterLineNumbersMinDigits?: number): number {
+    const props = { gutterLineNumbersMinDigits } as CodeEditProperties;
+    return codeEditGutterBand(props, 24, 8, lineCount).lineNumberDigits;
+  }
+
+  it('floors at the min-digits default for a small line count', () => {
+    // code_edit.h:114 defaults line_numbers_min_digits to 3.
+    expect(digits(1)).toBe(3);
   });
   it('grows past the default once the line count needs more digits', () => {
-    expect(codeEditLineNumberDigits(10000, undefined)).toBe(5);
+    expect(digits(10000)).toBe(5);
   });
   it('honours an explicit gutters_line_numbers_min_digits override', () => {
-    expect(codeEditLineNumberDigits(1, 1)).toBe(1);
+    expect(digits(1, 1)).toBe(1);
   });
 });
 
@@ -85,7 +89,7 @@ describe('codeEditGutterBand', () => {
       charWidth0Px,
       1
     );
-    expect(band.lineNumberWidthPx).toBe((CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT + 1) * charWidth0Px);
+    expect(band.lineNumberWidthPx).toBe((3 + 1) * charWidth0Px);
   });
 
   it('the fold gutter costs row height / 1.2', () => {

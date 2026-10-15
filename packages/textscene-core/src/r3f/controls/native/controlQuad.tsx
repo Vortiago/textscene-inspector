@@ -13,7 +13,7 @@ import { materialProgramInputs } from '../../materialProgramInputs';
 import type { MaterialAttach } from '../../materials/swappedMaterials';
 import { FadedMaterials } from '../../materials/FadedMaterials';
 
-export interface ControlQuadProps {
+interface ControlQuadProps {
   width: number;
   height: number;
   color: THREE.Color;

@@ -14,7 +14,6 @@ const audioStreamPlayer3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(audioStreamPlayer3DRegistration);
 
-export { audioStreamPlayer3DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

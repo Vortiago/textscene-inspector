@@ -35,5 +35,3 @@ const omniLight3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(omniLight3DValidationRule);
-
-export { omniLight3DValidationRule };

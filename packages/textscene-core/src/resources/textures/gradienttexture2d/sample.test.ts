@@ -2,13 +2,14 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { gradientOffsetAt, sampleGradientColor } from './sample';
 import { rasterizeGradientTexture2D } from './build';
-import { decodeGradient, decodeGradientTexture2D } from './decode';
+import { decodeGradientTexture2D } from './decode';
+import { gradientOf } from './gradient.testkit';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
 import type { Gradient, GradientTexture2D } from './types';
 
 // A radial white-to-transparent falloff, cubic-interpolated.
 const coinGradient = (): Gradient =>
-  decodeGradient({
+  gradientOf({
     interpolation_mode: '2',
     offsets: 'PackedFloat32Array(0, 0.642276, 1)',
     colors: 'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)',
@@ -63,7 +64,7 @@ describe('sampleGradientColor', () => {
 
 // Godot 4.6.3 `Gradient.sample` over these stops, as the float32 bits of r, g, b and a.
 const fourStops = (interpolationMode: string): Gradient =>
-  decodeGradient({
+  gradientOf({
     interpolation_mode: interpolationMode,
     offsets: 'PackedFloat32Array(0, 0.3, 0.7, 1)',
     colors: 'PackedColorArray(0.1, 0.2, 0.8, 1, 0.9, 0.5, 0.1, 0.5, 0.33, 0.77, 0.21, 0.9, 1, 1, 1, 1)',

@@ -11,7 +11,7 @@ import { CachedFailure, type CacheEntry } from './resourceProcessorTypes';
 import { resourceFilePath } from './subResourcePath';
 import * as logger from '../logger';
 
-export interface LoadLaneContext<T> {
+interface LoadLaneContext<T> {
   cache: LRUCache<CacheEntry<T>>;
   /**
    * Per-path flight identity, owned by the factory. See its declaration there
@@ -26,7 +26,7 @@ export interface LoadLaneContext<T> {
   dispose?: (resource: T) => void;
 }
 
-export interface LoadLane<T> {
+interface LoadLane<T> {
   /**
    * Shared finish-lane used by both the FileEventBus arrival handler and
    * the direct-load path. Centralising it keeps cache/inflight/event

@@ -112,5 +112,3 @@ const geometryInstance3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(geometryInstance3DValidationRule);
-
-export { geometryInstance3DValidationRule };

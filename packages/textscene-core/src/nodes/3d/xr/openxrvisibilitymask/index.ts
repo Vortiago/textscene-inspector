@@ -13,5 +13,3 @@ const openXRVisibilityMaskRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(openXRVisibilityMaskRegistration);
-
-export { openXRVisibilityMaskRegistration };

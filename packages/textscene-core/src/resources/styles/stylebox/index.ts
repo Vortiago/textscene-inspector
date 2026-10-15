@@ -1,7 +1,7 @@
 /**
- * `StyleBox` resource slice entry point (ADR-0031): the routing claim and the
- * decode surface. THREE-free and React-free. It claims only the two types it
- * decodes, and lets an external `.tres` box load on the `resource` slot.
+ * `StyleBox` resource slice entry point (ADR-0031): the routing claim. THREE-free
+ * and React-free. It claims `StyleBoxFlat` and `StyleBoxEmpty`, and lets an
+ * external `.tres` box load on the `resource` slot.
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';
@@ -12,12 +12,3 @@ registerResourceSlice({
   typeNames: ['StyleBoxFlat', 'StyleBoxEmpty'],
   busType: 'resource',
 });
-
-export { decodeStyleBox } from './decode';
-export type {
-  StyleBoxCorners,
-  StyleBoxData,
-  StyleBoxEmptyData,
-  StyleBoxFlatData,
-  StyleBoxSides,
-} from './types';

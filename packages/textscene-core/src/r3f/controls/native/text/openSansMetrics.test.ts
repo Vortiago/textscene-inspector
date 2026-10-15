@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { OPEN_SANS_METRICS, getKerningAdjustmentUnits, getLinePitchPx } from './openSansMetrics';
+import { OPEN_SANS_METRICS, getKerningAdjustmentUnits } from './openSansMetrics';
+import { getFontLinePitchPx } from './fontMetrics';
 import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
 
 describe('OPEN_SANS_METRICS', () => {
@@ -25,7 +26,7 @@ describe('OPEN_SANS_METRICS', () => {
     // (modules/text_server_adv/text_server_adv.cpp:1515-1516): ceil(17.10) + ceil(4.69) = 18 + 5.
     // Label's `line_spacing` is `Math::round(3 * scale)` = 3 (scene/theme/default_theme.cpp:392).
     // 26 px matches Godot's measured line bands. A raw float sum gives 24.79, which rounds to 25.
-    expect(getLinePitchPx(16)).toBe(26);
+    expect(getFontLinePitchPx(OPEN_SANS_METRICS, 16, 3)).toBe(26);
   });
 
   it("spot-checks glyph advances against values hand-computed from the vendored font's own hmtx table", () => {

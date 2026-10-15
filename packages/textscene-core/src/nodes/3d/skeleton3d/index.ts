@@ -13,5 +13,3 @@ const skeleton3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(skeleton3DRegistration);
-
-export { skeleton3DRegistration };

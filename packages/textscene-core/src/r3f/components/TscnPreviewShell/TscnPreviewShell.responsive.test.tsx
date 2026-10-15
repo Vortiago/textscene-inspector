@@ -16,8 +16,12 @@ vi.mock('../../TscnCanvas', () => ({
 
 import { extractMediaBlock, mediaQueries, stripMediaBlocks } from '../../testing/cssSource';
 import { TscnPreviewShell } from './TscnPreviewShell';
-import { COMPACT_LAYOUT_QUERY, NARROW_LAYOUT_QUERY } from './narrowLayout';
+import { COMPACT_LAYOUT_QUERY } from './narrowLayout';
 import styles from './TscnPreviewShell.module.css';
+
+// The dock becomes a bottom sheet under the viewport. A short panel keeps the side dock, since a
+// sheet under a viewport less than 500px tall leaves neither one usable (ADR-0048).
+const NARROW_LAYOUT_QUERY = '(max-width: 768px) and (min-height: 501px)';
 
 const MINIMAL_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -53,7 +57,7 @@ afterEach(() => {
 });
 
 describe('<TscnPreviewShell> narrow layout: the stylesheet', () => {
-  it('keys every width-bounded @media block on the queries narrowLayout.ts exports', () => {
+  it('keys every width-bounded @media block on the compact and the narrow query', () => {
     const widthQueries = mediaQueries(CSS_SOURCE).filter((q) => q.includes('width'));
     expect(widthQueries.sort()).toEqual([COMPACT_LAYOUT_QUERY, NARROW_LAYOUT_QUERY].sort());
   });

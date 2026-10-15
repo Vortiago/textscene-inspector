@@ -12,5 +12,3 @@ const parallax2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(parallax2DRegistration);
-
-export { parallax2DRegistration };

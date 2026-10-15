@@ -24,9 +24,8 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SceneScope } from '../../../../parser/types';
-import type { ControlColor } from '../control/types';
 import {
   ICON_MODE_LEFT,
   ICON_MODE_TOP,
@@ -54,15 +53,17 @@ import {
   shapeItemListText,
 } from './nativeSolver';
 import type { ItemListItem, ItemListProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** Pass 1: this row's own icon/text size contribution: what `packItemListRows` needs, before rects exist. */
 interface RowContent {
   item: ItemListItem;
   disabled: boolean;
   hasIcon: boolean;
-  iconSize: Vec2;
+  iconSize: Vector2;
   hasText: boolean;
-  textSize: Vec2;
+  textSize: Vector2;
   textLayout: TextLayoutResult | null;
 }
 
@@ -71,7 +72,7 @@ interface RowGeometry {
   item: ItemListItem;
   disabled: boolean;
   hasIcon: boolean;
-  iconNaturalSize: Vec2 | null;
+  iconNaturalSize: Vector2 | null;
   fixedIconSizeSet: boolean;
   iconDraw: ReturnType<typeof itemIconDraw>;
   textLayout: TextLayoutResult | null;
@@ -84,13 +85,13 @@ interface RowGeometry {
   textWidthPx: number;
   iconMode: number;
   rect: Rect2;
-  textColor: ControlColor;
+  textColor: Rgba;
 }
 
 interface ItemListRowProps {
   geometry: RowGeometry;
-  origin: Vec2;
-  tint: ControlColor;
+  origin: Vector2;
+  tint: Rgba;
   renderOrder: number;
   clippingPlanes: readonly THREE.Plane[];
   fontSizePx: number;
@@ -313,15 +314,15 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // `base_ofs = theme_cache.panel_style->get_offset()` (`item_list.cpp:1429`):
   // `StyleBox::get_offset()` is `Point2(get_margin(LEFT), get_margin(TOP))`
   // (`style_box.cpp:87-89`), never `contentMarginSize`'s summed pair.
-  const origin: Vec2 = { x: panelBox.contentMargin.left, y: panelBox.contentMargin.top };
+  const origin: Vector2 = { x: panelBox.contentMargin.left, y: panelBox.contentMargin.top };
 
   const rowGeometries: RowGeometry[] = useMemo(
     () =>
       rows.map((r, index) => {
         const packedRect = packed.items[index]!.rect;
         // Both centring passes read `rect_cache.SIZE` (`item_list.cpp:1553,1556,1649`),
-        // never its position, and a `Rect2` satisfies `Vec2` structurally.
-        const packedSize: Vec2 = { x: packedRect.w, y: packedRect.h };
+        // never its position, and a `Rect2` satisfies `Vector2` structurally.
+        const packedSize: Vector2 = { x: packedRect.w, y: packedRect.h };
         const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
         const iconDraw = itemIconDraw(
           r.hasIcon,

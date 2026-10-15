@@ -17,12 +17,12 @@ function verticalOf(props: SplitContainerProperties): boolean {
   return props.vertical ?? false;
 }
 
-export const splitContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const splitContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const vertical = verticalOf(n.node.properties as SplitContainerProperties);
   return makeSplitContainerLayout(vertical)(n, children, contentRect, ctx);
 };
 
-export const splitContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
+const splitContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const vertical = verticalOf(n.node.properties as SplitContainerProperties);
   return makeSplitContainerMinimumSize(vertical)(n, ctx);
 };

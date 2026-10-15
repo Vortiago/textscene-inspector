@@ -15,5 +15,3 @@ const collisionPolygon3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(collisionPolygon3DRegistration);
-
-export { collisionPolygon3DRegistration };

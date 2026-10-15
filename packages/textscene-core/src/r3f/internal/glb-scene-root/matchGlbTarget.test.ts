@@ -7,7 +7,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { matchGlbTarget } from './matchGlbTarget';
 import { flattenGlbObjects } from './glbHierarchy';
-import { buildTestGlbGraph } from './testGraph';
+import { buildTestGlbGraph } from './glbGraph.testkit';
 import * as logger from '../../../logger';
 
 describe('matchGlbTarget', () => {

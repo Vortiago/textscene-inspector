@@ -14,7 +14,6 @@ const decalRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(decalRegistration);
 
-export { decalRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

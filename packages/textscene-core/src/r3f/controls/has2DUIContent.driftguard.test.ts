@@ -4,7 +4,8 @@
  * "switch to 2D" hint.
  */
 import { describe, it, expect } from 'vitest';
-import { controlComponentRegistry } from './index'; // The barrel registers every slice.
+import './index'; // The barrel registers every slice.
+import { controlComponentRegistry } from './ControlComponentRegistry';
 import { TWO_D_UI_TYPES } from './has2DUIContent';
 
 describe('has2DUIContent ↔ ControlComponentRegistry drift guard', () => {

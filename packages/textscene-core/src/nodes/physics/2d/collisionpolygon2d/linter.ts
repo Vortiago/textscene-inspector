@@ -6,5 +6,3 @@ import { makeCollisionPolygonLinterRule } from '../../../../linter/physics/colli
 const collisionPolygon2DValidationRule = makeCollisionPolygonLinterRule('2D');
 
 ruleRegistry.register(collisionPolygon2DValidationRule);
-
-export { collisionPolygon2DValidationRule };

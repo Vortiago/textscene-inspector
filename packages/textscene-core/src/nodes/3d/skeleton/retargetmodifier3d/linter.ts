@@ -51,5 +51,3 @@ const retargetModifier3DChildSkeletonRule: LintRule = {
 };
 
 ruleRegistry.register(retargetModifier3DChildSkeletonRule);
-
-export { retargetModifier3DChildSkeletonRule };

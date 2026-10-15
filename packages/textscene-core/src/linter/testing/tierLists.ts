@@ -5,7 +5,7 @@
  */
 
 import { expect } from 'vitest';
-import { isFormatCheckName } from '../fileDiagnostics.js';
+import { isFormatCheckName } from './ruleNames.js';
 import type { Diagnostic, Severity } from '../types.js';
 import { recordTier } from './titleTier.js';
 

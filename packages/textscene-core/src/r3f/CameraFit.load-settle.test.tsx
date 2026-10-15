@@ -12,14 +12,14 @@ import { HierarchyProvider } from './contexts/HierarchyContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
-import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 
 vi.mock('./frameSceneBounds.js', () => ({
   frameSceneBounds: vi.fn(),
 }));
 
 import { frameSceneBounds } from './frameSceneBounds.js';
-import { CameraFit } from './TscnCanvas';
+import { CameraFit } from './CameraFit';
 
 const frameSceneBoundsMock = frameSceneBounds as ReturnType<typeof vi.fn>;
 

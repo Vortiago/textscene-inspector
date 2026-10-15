@@ -9,7 +9,7 @@ import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
 import { glowParamsFor } from '../../resources/environment/godotGlow';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../resources/environment/build';
-import { GodotToneMapper } from '../../resources/environment/godotToneMapping';
+import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 
 function effectWith(properties: Record<string, string>) {
@@ -20,7 +20,7 @@ function effectWith(properties: Record<string, string>) {
   return new GodotToneMapEffect({
     glow: glowParamsFor(settings),
     adjustments: null,
-    toneMapping: { mode: GodotToneMapper.FILMIC, white: 1 },
+    toneMapping: { mode: ToneMapper.FILMIC, white: 1 },
     exposure: 1,
   });
 }

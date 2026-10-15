@@ -4,5 +4,3 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { Panel } from './Component';
 
 controlComponentRegistry.register({ typeName: 'Panel', Component: Panel });
-
-export { Panel };

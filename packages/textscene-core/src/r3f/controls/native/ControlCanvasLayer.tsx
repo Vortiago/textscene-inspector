@@ -17,7 +17,7 @@ import { declaredCanvasLayers, layerRanks } from '../../canvasPaintOrder';
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { measureText } from './text/measurer';
 
-export interface ControlCanvasLayerProps {
+interface ControlCanvasLayerProps {
   nodes: readonly TscnNode[];
 }
 

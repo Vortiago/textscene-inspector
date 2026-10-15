@@ -4,12 +4,12 @@
  * `[b]`/`[i]`/`[u]`/`[color]`/`[img]`. An unrecognised tag is literal text.
  */
 
-import type { ControlColor } from '../control/types';
-import { godotNamedColor } from '../../../../utils/godotNamedColor';
+import { namedColor } from '../../../../godot/variant/color.js';
 import { stringToFloat, stringToInt } from '../../../../godot/string/string';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** One currently-open BBCode tag. `value` is the `[name=value]` payload, if the tag carries one. */
-export interface OpenBBCodeTag {
+interface OpenBBCodeTag {
   /** Lowercased tag name, such as `'b'` or `'color'`. */
   name: string;
   /** The `=value` portion, verbatim; absent for a bare `[name]` or the space-attribute form. */
@@ -20,7 +20,7 @@ export interface OpenBBCodeTag {
 export const IMAGE_OBJECT_CHAR = '\ufffc';
 
 /** A run of plain (tag-stripped) text plus every tag open at that point, outermost first. */
-export interface BBCodeRun {
+interface BBCodeRun {
   text: string;
   tags: readonly OpenBBCodeTag[];
   /** Set only on the single-U+FFFC run for an `[img]` (`rich_text_label.cpp:6145`'s `add_image`), never alongside real text. */
@@ -52,7 +52,7 @@ export interface ParsedImgTag {
   widthInPercent: boolean;
   heightInPercent: boolean;
   /** `Color::from_string(color_option->value, Color(1,1,1))` (`:6034-6038`): opaque white by default, not the paragraph's `default_color`. */
-  color: ControlColor;
+  color: Rgba;
   /** `region=` (`:6032-6039`), present only when it has area (`Rect2::has_area()`, both `w`/`h` > 0). */
   region?: ParsedImageRegion;
   /** `pad=true` (`:6087-6089`, `bbcode_options` form only). */
@@ -322,7 +322,7 @@ function parseSizeValue(value: string): { amount: number; inPercent: boolean } {
  * The first unquoted piece's `=value` is `bbcode_value`, and later pieces are
  * `bbcode_options` (`:5357-5382`).
  */
-export function parseImgTag(content: string, path: string): ParsedImgTag {
+function parseImgTag(content: string, path: string): ParsedImgTag {
   const splitBlock = splitUnquoted(content, ' ');
   const first = splitBlock[0] ?? content;
   const options = new Map<string, string>();
@@ -527,7 +527,7 @@ function hexByte(hex: string, i: number): number {
  * (`:372-390`): an optional `#`, then 3 or 4 digits over 15, or 6 or 8 over
  * 255. Alpha defaults to 1. `undefined` means "not hex", so the caller falls through.
  */
-function parseHtmlHex(value: string): ControlColor | undefined {
+function parseHtmlHex(value: string): Rgba | undefined {
   const body = value.startsWith('#') ? value.slice(1) : value;
   if (!/^[0-9a-fA-F]+$/.test(body)) return undefined;
 
@@ -558,9 +558,9 @@ function parseHtmlHex(value: string): ControlColor | undefined {
 /**
  * Resolves a `[color=value]` payload as `Color::from_string` (`rich_text_
  * label.cpp:6149`, `color.cpp:450-456`): hex, then the named colours of
- * `core/math/color_names.inc` (`utils/godotNamedColor.ts`), then `fallback`.
+ * `core/math/color_names.inc` (`godot/variant/color.ts`), then `fallback`.
  * A `Color(r, g, b, a)` literal is not a colour here.
  */
-export function resolveBBColor(value: string, fallback: ControlColor): ControlColor {
-  return parseHtmlHex(value) ?? godotNamedColor(value) ?? fallback;
+export function resolveBBColor(value: string, fallback: Rgba): Rgba {
+  return parseHtmlHex(value) ?? namedColor(value) ?? fallback;
 }

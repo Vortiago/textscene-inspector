@@ -12,16 +12,3 @@ registerResourceSlice({
   typeNames: ['TileSet'],
   busType: 'resource',
 });
-
-export type {
-  AlternativeTileModel,
-  AtlasSourceModel,
-  AtlasTileModel,
-  TileDrawInfo,
-  TileGrid,
-  TileLayout,
-  TileOffsetAxis,
-  TileOrientation,
-  TileSetModel,
-  Vec2i,
-} from './types';

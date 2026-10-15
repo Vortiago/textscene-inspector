@@ -15,5 +15,3 @@ const navigationLink3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(navigationLink3DRegistration);
-
-export { navigationLink3DRegistration };

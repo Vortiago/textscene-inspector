@@ -10,6 +10,5 @@ const hSplitContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(hSplitContainerRegistration);
 
-export { hSplitContainerRegistration };
 export * from './parser';
 export * from './types';

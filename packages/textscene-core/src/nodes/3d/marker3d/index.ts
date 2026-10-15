@@ -13,6 +13,5 @@ const marker3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(marker3DRegistration);
 
-export { marker3DRegistration };
 export * from './parser';
 export * from './types';

@@ -10,7 +10,7 @@ import { parseGodotFloat, TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.j
 import { makeFloatTupleRegex } from './floatTupleValidator.js';
 import { FLOAT_PATTERN_SOURCE } from '../../godot/variant/number.js';
 import { v } from './v.js';
-import { withFiniteGuard, withNanGuard } from './v/grounding.js';
+import { maybeFinite, maybeNan } from './v/grounding.js';
 import { expectWarning } from '../testing/validatorCheck.js';
 
 const NON_FINITE = ['inf', '-inf', 'inf_neg', 'nan'];
@@ -131,7 +131,7 @@ describe('a property whose setter guards is_finite', () => {
     // in silence, so the guard passes by asking a smaller population.
     const inner = v.int('bits');
     inner.leaves = [v.float('leaf')];
-    const guarded = withFiniteGuard(inner, 'bits', 'x.cpp:1');
+    const guarded = maybeFinite('bits', { finite: 'x.cpp:1' }, inner);
     expect(guarded.intSlot).toEqual(inner.intSlot);
     expect(guarded.leaves).toEqual(inner.leaves);
   });
@@ -304,7 +304,7 @@ describe('a PACKED array element', () => {
 /**
  * The NaN-only tier, beside the finite one. `AudioStreamPlayer::set_volume_db`
  * opens with `ERR_FAIL_COND_MSG(Math::is_nan(p_volume), …)` (audio_stream_player.cpp:70)
- * and stores `inf` and `-inf` unaltered, so `withFiniteGuard` cannot stand in,
+ * and stores `inf` and `-inf` unaltered, so the finite guard cannot stand in,
  * and no range bound catches NaN.
  */
 describe('a property whose setter guards is_nan alone', () => {
@@ -343,7 +343,7 @@ describe('a property whose setter guards is_nan alone', () => {
   it('keeps the tags a registry sweep selects and recurses on', () => {
     const inner = v.int('bits');
     inner.leaves = [v.float('leaf')];
-    const wrapped = withNanGuard(inner, 'bits', 'x.cpp:1');
+    const wrapped = maybeNan('bits', { nan: 'x.cpp:1' }, inner);
     expect(wrapped.intSlot).toEqual(inner.intSlot);
     expect(wrapped.leaves).toEqual(inner.leaves);
   });

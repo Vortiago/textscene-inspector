@@ -1,4 +1,4 @@
-import type { Vector2, Vector3 } from '../../../parser/vectors';
+import type { Vector2, Vector3 } from '../../../godot/math/vector';
 
 export interface PlaneMeshProperties {
   size: Vector2;

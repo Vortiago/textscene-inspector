@@ -13,5 +13,3 @@ const hFlowContainerRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(hFlowContainerRegistration);
-
-export { hFlowContainerRegistration };

@@ -6,13 +6,11 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CSG_BOUNDS_PROXY } from './CsgPrimitive';
 import './csgbox3d/index.r3f';
 import './csgsphere3d/index.r3f';
 import { parseCSGBox3D } from './csgbox3d/parser';
 import { heading } from '../../../parser/testing/parserKit';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { clearEvaluationCache } from '../../../r3f/csg/csgEvaluationCache';
 import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnNode } from '../../../parser/types';
 import type { CSGBox3DProperties } from './csgbox3d/types';
@@ -51,7 +49,6 @@ async function loneBoxMaterial(properties: Record<string, string>): Promise<THRE
 }
 
 async function subtractionMaterial(rootProperties: string, holeProperties = ''): Promise<THREE.Material> {
-  clearEvaluationCache();
   const scene = new TscnParser().parse(
     `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n\n` +
       `[node name="Block" type="CSGBox3D" parent="."]\nsize = Vector3(2, 2, 2)\n${rootProperties}\n\n` +
@@ -69,7 +66,7 @@ async function subtractionMaterial(rootProperties: string, holeProperties = ''):
   const evaluated = renderer.scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
-    .find((m) => m.userData?.tscnBoundsProxy !== CSG_BOUNDS_PROXY.tscnBoundsProxy);
+    .find((m) => m.userData?.tscnBoundsProxy !== true);
   return evaluated!.material as THREE.Material;
 }
 

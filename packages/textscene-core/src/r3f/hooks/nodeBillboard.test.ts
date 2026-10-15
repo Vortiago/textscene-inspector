@@ -1,7 +1,9 @@
+/** `applyBillboard` against Godot's billboard shader basis, on a node built with no renderer. */
+
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { BillboardMode } from '../../godot/scene/billboard';
-import { applyBillboard } from './useBillboard';
+import { applyBillboard } from './nodeBillboard';
 
 /** A camera at `position` whose rotation is `rotation`, with its world matrix current. */
 function cameraAt(position: [number, number, number], rotation: [number, number, number]): THREE.Camera {
@@ -102,5 +104,14 @@ describe('applyBillboard', () => {
 
     expect(object.matrixWorldAutoUpdate).toBe(true);
     expect(object.rotation.y).toBe(1);
+  });
+
+  it('billboards a node with no parent from its own matrix (edge case)', () => {
+    const object = new THREE.Object3D();
+    object.position.set(5, 6, 7);
+
+    applyBillboard(object, cameraAt([0, 0, 10], [0, 0.4, 0]), BillboardMode.BILLBOARD_ENABLED);
+
+    expectClose(new THREE.Vector3().setFromMatrixPosition(object.matrixWorld), [5, 6, 7]);
   });
 });

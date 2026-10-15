@@ -7,5 +7,3 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { Container } from './Component';
 
 controlComponentRegistry.register({ typeName: 'Container', Component: Container });
-
-export { Container };

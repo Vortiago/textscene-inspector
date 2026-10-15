@@ -8,5 +8,3 @@ nodeComponentRegistry.register({
   Component: ParallaxLayer,
   canvasItem: true,
 });
-
-export { ParallaxLayer };

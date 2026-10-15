@@ -8,5 +8,3 @@ nodeComponentRegistry.register({
   Component: CollisionShape2D,
   canvasItem: true,
 });
-
-export { CollisionShape2D };

@@ -12,5 +12,3 @@ const springBoneCollision3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(springBoneCollision3DRegistration);
-
-export { springBoneCollision3DRegistration };

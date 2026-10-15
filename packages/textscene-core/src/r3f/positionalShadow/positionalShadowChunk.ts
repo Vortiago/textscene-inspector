@@ -34,7 +34,7 @@ const OMNI_SHADOW = (shadow: string, localNormal: string) =>
  * Each edit, in the order the chunks are read. Each `three` text occurs once in its chunk, as three's
  * build holds it: without blank lines or comments.
  */
-export const POSITIONAL_SHADOW_EDITS: readonly ChunkEdit<PositionalChunkName>[] = [
+const POSITIONAL_SHADOW_EDITS: readonly ChunkEdit<PositionalChunkName>[] = [
   {
     chunk: 'shadowmap_vertex',
     three: `			shadowWorldPosition = worldPosition + vec4( shadowWorldNormal * pointLightShadows[ i ].shadowNormalBias, 0 );
@@ -127,13 +127,13 @@ ${OMNI_LOOKUP}`,
   },
 ];
 
-export type PositionalShadowChunks = Chunks<PositionalChunkName>;
+type PositionalShadowChunks = Chunks<PositionalChunkName>;
 
 /**
  * The chunks with every edit applied, or null when an edit's text is missing from its chunk or
  * occurs more than once.
  */
-export function positionalShadowChunks(chunks: PositionalShadowChunks): PositionalShadowChunks | null {
+function positionalShadowChunks(chunks: PositionalShadowChunks): PositionalShadowChunks | null {
   return applyChunkEdits(chunks, POSITIONAL_SHADOW_EDITS);
 }
 

@@ -10,5 +10,3 @@ import './nativeSolver';
 // `wrapsChildren`: `set_clip_contents(true)` (`graph_edit.cpp:3342`) opens a clip scope,
 // which reaches the subtree only as React children.
 controlComponentRegistry.register({ typeName: 'GraphEdit', Component: GraphEdit, wrapsChildren: true });
-
-export { GraphEdit };

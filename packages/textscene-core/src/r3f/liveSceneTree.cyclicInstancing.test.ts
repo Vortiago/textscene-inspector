@@ -8,11 +8,11 @@ import {
   collapseLiveNode,
   collectLiveNodes,
   liveChildGroups,
-  resolveLiveNode,
   type CachedSceneSource,
   type LiveTreeContext,
   type SceneScope,
 } from './liveSceneTree';
+import { liveNodeAt } from './liveSceneTree.testkit';
 import type { TscnExternalResource, TscnNode, TscnScene } from '../parser/types';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../nodes/node/index';
@@ -219,12 +219,12 @@ describe('collapseLiveNode and instancedScenePaths', () => {
   });
 });
 
-describe('resolveLiveNode over cyclic instancing', () => {
+describe('resolveLiveEntry over cyclic instancing', () => {
   it('resolves the stopped instance itself', () => {
-    expect(resolveLiveNode('Root/A/B', SELF_ROOTS, SELF_CTX)?.instance).toBe('ExtResource("1")');
+    expect(liveNodeAt('Root/A/B', SELF_ROOTS, SELF_CTX)?.instance).toBe('ExtResource("1")');
   });
 
   it('returns null below the stopped instance', () => {
-    expect(resolveLiveNode('Root/A/B/A', SELF_ROOTS, SELF_CTX)).toBeNull();
+    expect(liveNodeAt('Root/A/B/A', SELF_ROOTS, SELF_CTX)).toBeNull();
   });
 });

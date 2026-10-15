@@ -19,7 +19,8 @@ import { godotColorToLinear } from '../../../r3f/godotColor';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import type { Line2DProperties } from './types';
-import { jointWedge, LINE_JOINT_SHARP, type JointOptions } from './lineJoints';
+import { jointWedge, type JointOptions } from './lineJoints';
+import { LineJointMode } from '../../../godot/scene/line2d.js';
 
 export function Line2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Line2DProperties;
@@ -103,7 +104,7 @@ function LineMesh({
  * segment and a joint wedge at every interior corner. Godot has no "no joint"
  * mode, so the wedge always fills the pie-slice gap between butt-capped quads.
  */
-export function buildLineGeometry(
+function buildLineGeometry(
   points: Float32Array,
   width: number,
   closed: boolean,
@@ -144,7 +145,7 @@ export function buildLineGeometry(
 
 /** Godot's own joint defaults, for callers that do not carry the properties. */
 const DEFAULT_JOINTS: JointOptions = {
-  jointMode: LINE_JOINT_SHARP,
+  jointMode: LineJointMode.SHARP,
   sharpLimit: 2,
   roundPrecision: 8,
 };

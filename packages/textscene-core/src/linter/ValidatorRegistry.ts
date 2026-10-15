@@ -6,15 +6,13 @@
  */
 
 import { CLASS_BASE_TYPES } from '../godot/classdb/classBaseTypes.js';
-import { MAX_BASE_CHAIN_HOPS } from '../godot/classdb/nodeBaseTypes.js';
 import type { PropertyValidator, ValidatorFn } from './propertyValidator.js';
 import { buildWildcardIndex, type WildcardEntry } from './wildcardIndex.js';
 import type { Removal } from './unavailableKey.js';
 import { resolveDeclaration, type RegistryTables } from './validatorResolution.js';
 import { refuseOverlap, unavailableKeysOf } from './removalKeys.js';
 
-export type { PropertyValidator, ValidatorFn } from './propertyValidator.js';
-export type { Removal } from './unavailableKey.js';
+export type { PropertyValidator } from './propertyValidator.js';
 
 /** One part of a type's validator table: property key to validator. */
 type ValidatorGroup = Readonly<Record<string, PropertyValidator>>;
@@ -100,18 +98,16 @@ export class ValidatorRegistry {
     Object.assign(this.unavailable.get(nodeType)!, removals);
   }
 
-  /** Every removal declared directly on `nodeType`, for the grounding guard. */
-  getOwnRemovals(nodeType: string): Record<string, Removal> {
-    return this.unavailable.get(nodeType) ?? {};
-  }
-
   /**
-   * @internal Like {@link ValidatorRegistry.typesWithRegistrations}, this lists the registry without naming a type, which
-   * is `registryPopulation.ts`'s job alone. Types declaring a removal are not a subset of `registeredTypes('declaring')`:
-   * `HBoxContainer` only takes `vertical` away and registers no validator, so a scan of the validator map misses it.
+   * Every type that declares a removal, with the keys it removes directly.
+   *
+   * @internal Like {@link ValidatorRegistry.typesWithRegistrations}, this lists the registry without naming a type,
+   * which is the job of `linter/registryPopulation.ts` and `linter/testing/registryPopulation.ts` alone. Types
+   * declaring a removal are not a subset of `registeredTypes('declaring')`: `HBoxContainer` only takes `vertical`
+   * away and registers no validator, so a scan of the validator map misses it.
    */
-  getTypesWithRemovals(): string[] {
-    return [...this.unavailable.keys()];
+  removedKeysByType(): ReadonlyMap<string, readonly string[]> {
+    return new Map([...this.unavailable].map(([nodeType, removals]) => [nodeType, Object.keys(removals)]));
   }
 
   /**
@@ -145,24 +141,10 @@ export class ValidatorRegistry {
   }
 
   /**
-   * The chain `findValidator` walks above `nodeType`, nearest first. A guard about inheritance asks this rather than
-   * import a table that may not be the walk's own: a node-only table misses `QuadMesh` shadowing `PlaneMesh`.
-   */
-  baseChainOf(nodeType: string): string[] {
-    const chain: string[] = [];
-    let type: string | undefined = this.baseOf(nodeType);
-    for (let hops = 0; type !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
-      chain.push(type);
-      type = this.baseOf(type);
-    }
-    return chain;
-  }
-
-  /**
    * Node types that have validators registered.
    *
-   * @internal `registryPopulation.ts` is the only caller: listing the registry without naming a type is its job alone,
-   * so no guard assembles the roots-only population by hand.
+   * @internal `linter/registryPopulation.ts` and `linter/testing/registryPopulation.ts` are the only callers: listing
+   * the registry without naming a type is their job alone, so no guard assembles the roots-only population by hand.
    */
   typesWithRegistrations(): string[] {
     return [...this.validators.keys()];

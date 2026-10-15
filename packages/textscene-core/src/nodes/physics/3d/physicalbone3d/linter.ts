@@ -87,5 +87,3 @@ const physicalBone3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(physicalBone3DValidationRule);
-
-export { physicalBone3DValidationRule };

@@ -12,7 +12,6 @@ const directionalLight2DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(directionalLight2DRegistration);
 
-export { directionalLight2DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

@@ -12,5 +12,3 @@ const staticBody3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(staticBody3DRegistration);
-
-export { staticBody3DRegistration };

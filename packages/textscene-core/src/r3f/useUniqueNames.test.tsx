@@ -6,13 +6,13 @@
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { createSceneGraphFromTscnScene } from '../core/SceneGraph.js';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit.js';
 import { TscnParser } from '../parser/TscnParser.js';
 import type { TscnNode } from '../parser/types.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
-import { useLocalScene, useUniqueNameClaims, useUniqueNamePaths } from './useUniqueNames.js';
+import { useLocalScene, useUniqueNamePaths } from './useUniqueNames.js';
 
 function node(name: string, flagged = false, children: TscnNode[] = []): TscnNode {
   return {
@@ -31,21 +31,6 @@ const graph = createSceneGraphFromTscnScene({
 function wrapper({ children }: { children: ReactNode }) {
   return <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>{children}</HierarchyProvider>;
 }
-
-describe('useUniqueNameClaims', () => {
-  it('hands two hook instances over one scene the same table object', () => {
-    const a = renderHook(() => useUniqueNameClaims(), { wrapper });
-    const b = renderHook(() => useUniqueNameClaims(), { wrapper });
-    expect(a.result.current).toBeDefined();
-    expect(a.result.current!.has('%Hud')).toBe(true);
-    expect(b.result.current).toBe(a.result.current);
-  });
-
-  it('is undefined outside a hierarchy', () => {
-    const { result } = renderHook(() => useUniqueNameClaims());
-    expect(result.current).toBeUndefined();
-  });
-});
 
 describe('useUniqueNamePaths', () => {
   function graphWithHud(): ReturnType<typeof createSceneGraphFromTscnScene> {

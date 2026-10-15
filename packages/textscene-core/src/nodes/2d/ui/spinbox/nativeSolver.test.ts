@@ -13,12 +13,10 @@ import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/
 import type { SpinBoxProperties } from './types';
 import {
   spinBoxButtonsBlockWidth,
-  spinBoxFieldButtonsSeparation,
   spinBoxLayout,
   rangeStepDecimals,
   formatGodotNumber,
   spinBoxDisplayText,
-  spinBoxFullyDisabled,
   spinBoxUpButtonState,
   spinBoxDownButtonState,
   spinBoxIconColor,
@@ -66,12 +64,6 @@ describe('spinBoxWidestButtonIconWidth (spin_box.cpp:411-424, restricted to up/d
 
   it('widens to a themed icon wider than the vendored default', () => {
     expect(spinBoxWidestButtonIconWidth({ textureSlots: { down: { x: 30, y: 8 } } })).toBe(30);
-  });
-});
-
-describe('spinBoxFieldButtonsSeparation', () => {
-  it('is field_and_buttons_separation(2), unscaled — default_theme.cpp:647 sets it as a bare literal (happy path)', () => {
-    expect(spinBoxFieldButtonsSeparation()).toBe(2);
   });
 });
 
@@ -160,10 +152,9 @@ describe('spinBoxDisplayText', () => {
   });
 });
 
-describe('spinBoxFullyDisabled / spinBoxUpButtonState / spinBoxDownButtonState', () => {
+describe('spinBoxUpButtonState / spinBoxDownButtonState', () => {
   it('disables both buttons together when not editable (happy path)', () => {
     const props: SpinBoxProperties = { name: 'S', editable: false, minValue: 0, maxValue: 10 };
-    expect(spinBoxFullyDisabled(props)).toBe(true);
     expect(spinBoxUpButtonState(props, 5)).toBe('disabled');
     expect(spinBoxDownButtonState(props, 5)).toBe('disabled');
   });

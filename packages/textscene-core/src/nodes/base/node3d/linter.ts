@@ -87,4 +87,3 @@ const node3DValidationRule: LintRule = {
 ruleRegistry.register(node3DValidationRule);
 
 // Export for testing
-export { node3DValidationRule };

@@ -15,5 +15,3 @@ const pinJoint2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(pinJoint2DRegistration);
-
-export { pinJoint2DRegistration };

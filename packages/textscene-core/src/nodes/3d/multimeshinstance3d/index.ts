@@ -15,5 +15,3 @@ const multiMeshInstance3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(multiMeshInstance3DRegistration);
-
-export { multiMeshInstance3DRegistration };

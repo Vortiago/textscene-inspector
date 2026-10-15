@@ -26,7 +26,7 @@ export interface FontFileResource {
  * `SystemFont`: no file. `font_names` are OS family names (`"sans-serif"`, …) resolved at
  * runtime, which this previewer cannot load bytes for.
  */
-export interface SystemFontResource {
+interface SystemFontResource {
   kind: 'system';
   fontNames: string[];
   properties: Record<string, string>;

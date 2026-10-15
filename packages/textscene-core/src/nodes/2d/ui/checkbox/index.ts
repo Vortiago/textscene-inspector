@@ -10,6 +10,5 @@ const checkBoxRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(checkBoxRegistration);
 
-export { checkBoxRegistration };
 export * from './parser';
 export * from './types';

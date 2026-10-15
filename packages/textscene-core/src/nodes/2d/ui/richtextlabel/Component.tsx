@@ -9,7 +9,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { multiplyModulate, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -36,6 +36,7 @@ import {
 } from './nativeSolver';
 import type { RichTextLabelProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
+import type { Rgba } from '../../../../godot/math/math';
 
 interface ImageLike {
   width?: number;
@@ -54,7 +55,7 @@ function RichTextImage({
   renderOrder,
 }: {
   placement: RichTextImagePlacement;
-  tint: RGBA;
+  tint: Rgba;
   resources: SolveNode['resources'];
   renderOrder: number;
 }) {

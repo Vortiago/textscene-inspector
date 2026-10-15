@@ -23,7 +23,7 @@ import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
 import { clearColorCube } from './colorBackground';
 
-export interface EnvironmentLayerProps {
+interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
   /** The resolved sky, or null when there is none to render. */
   sky: Sky | null;

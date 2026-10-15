@@ -8,7 +8,7 @@
 import type * as THREE from 'three';
 import type { CsgFaceSoup } from '../smoothNormals';
 
-export interface SweepFaceBuffer {
+interface SweepFaceBuffer {
   putTri(
     p: [THREE.Vector3, THREE.Vector3, THREE.Vector3],
     u: [THREE.Vector2, THREE.Vector2, THREE.Vector2],

@@ -13,5 +13,3 @@ const confirmationDialogRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(confirmationDialogRegistration);
-
-export { confirmationDialogRegistration };

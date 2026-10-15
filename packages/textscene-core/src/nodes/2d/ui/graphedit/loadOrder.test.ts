@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  resolveGraphEditLoadState,
-  GRAPH_EDIT_DEFAULT_ZOOM_MAX,
-  GRAPH_EDIT_DEFAULT_ZOOM_MIN,
-} from './loadOrder';
+import { resolveGraphEditLoadState } from './loadOrder';
 
 /** The rect `offset_left = 8 … offset_bottom = 328` gives, as `Control::_size_changed` computes it out of tree. */
 const SIZED_400_320 = {
@@ -112,14 +108,13 @@ describe('resolveGraphEditLoadState — scroll_offset', () => {
 });
 
 describe('resolveGraphEditLoadState — zoom', () => {
-  it('starts from the constructor bounds of 1/1.2^8 and 1.2^4 (graph_edit.cpp:3175-3177)', () => {
-    expect(GRAPH_EDIT_DEFAULT_ZOOM_MIN).toBeCloseTo(0.232568, 6);
-    expect(GRAPH_EDIT_DEFAULT_ZOOM_MAX).toBeCloseTo(2.0736, 5);
-  });
+  // graph_edit.cpp:3175-3177: zoom_max = 1.2f^4 and zoom_min = 1 / 1.2f^8, each stored in a float.
+  const CONSTRUCTOR_ZOOM_MAX = 2.0736002922058105;
+  const CONSTRUCTOR_ZOOM_MIN = 0.2325679510831833;
 
   it('clamps an authored zoom against the CONSTRUCTOR bounds when the file states none (graph_edit.cpp:2434, :3175-3177)', () => {
     const state = resolveGraphEditLoadState({ zoom: '10.0' });
-    expect(state.zoom).toBe(GRAPH_EDIT_DEFAULT_ZOOM_MAX);
+    expect(state.zoom).toBe(CONSTRUCTOR_ZOOM_MAX);
     expect(state.zoomPlusDisabled).toBe(true);
     expect(state.zoomMinusDisabled).toBe(false);
   });
@@ -156,12 +151,12 @@ describe('resolveGraphEditLoadState — zoom', () => {
 
   it('refuses a max below the current min (graph_edit.cpp:2495)', () => {
     const state = resolveGraphEditLoadState({ zoom_max: '0.1', zoom: '10.0' });
-    expect(state.zoom).toBe(GRAPH_EDIT_DEFAULT_ZOOM_MAX);
+    expect(state.zoom).toBe(CONSTRUCTOR_ZOOM_MAX);
   });
 
   it('parks zoom on the constructor min when the file drives it below', () => {
     const state = resolveGraphEditLoadState({ zoom: '0.01' });
-    expect(state.zoom).toBe(GRAPH_EDIT_DEFAULT_ZOOM_MIN);
+    expect(state.zoom).toBe(CONSTRUCTOR_ZOOM_MIN);
     expect(state.zoomMinusDisabled).toBe(true);
   });
 

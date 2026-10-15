@@ -1,25 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import type { TscnNode } from '../../parser/types';
-import { has2DUIContent } from './has2DUIContent';
+import { is2DUIType } from './has2DUIContent';
 
-function node(type: string, children: TscnNode[] = []): TscnNode {
-  return { name: type, type, children, properties: {} } as TscnNode;
-}
-
-describe('has2DUIContent', () => {
-  it('detects a top-level Control node', () => {
-    expect(has2DUIContent([node('Control')])).toBe(true);
+describe('is2DUIType', () => {
+  it('claims a Control', () => {
+    expect(is2DUIType('Control')).toBe(true);
   });
 
-  it('detects 2D UI nested under 3D nodes (mixed scene)', () => {
-    expect(has2DUIContent([node('Node3D', [node('CanvasLayer', [node('Button')])])])).toBe(true);
+  it('claims a Control subclass the previewer may not draw', () => {
+    expect(is2DUIType('Button')).toBe(true);
   });
 
-  it('returns false for a pure-3D tree', () => {
-    expect(has2DUIContent([node('Node3D', [node('MeshInstance3D'), node('Camera3D')])])).toBe(false);
+  it('claims a CanvasLayer, which derives from Node but roots a 2D UI subtree', () => {
+    expect(is2DUIType('CanvasLayer')).toBe(true);
   });
 
-  it('returns false for an empty tree', () => {
-    expect(has2DUIContent([])).toBe(false);
+  it('leaves a 3D type alone', () => {
+    expect(is2DUIType('MeshInstance3D')).toBe(false);
+  });
+
+  it('leaves an unknown type alone', () => {
+    expect(is2DUIType('NotAGodotClass')).toBe(false);
   });
 });

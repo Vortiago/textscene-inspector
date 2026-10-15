@@ -17,6 +17,5 @@ const vehicleWheel3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(vehicleWheel3DRegistration);
 
-export { vehicleWheel3DRegistration };
 export * from './parser';
 export * from './types';

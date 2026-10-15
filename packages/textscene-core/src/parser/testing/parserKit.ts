@@ -11,7 +11,8 @@ import { fileURLToPath } from 'node:url';
 import type { ParsedHeading } from '../utils';
 import type { TscnNode, TscnScene } from '../types';
 import { parseNodeWithRegistry, type PropertySection } from '../../core/NodeRegistry';
-import type { Node3DProperties, Transform3D } from '../../nodes/base/node3d/types';
+import type { Node3DProperties } from '../../nodes/base/node3d/types';
+import type { Transform3D } from '../../godot/math/transform3d';
 
 /**
  * Build a `[node ...]` ParsedHeading for the given node type. `name` defaults

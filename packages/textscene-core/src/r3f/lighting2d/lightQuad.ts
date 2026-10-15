@@ -10,7 +10,6 @@
  */
 
 import * as THREE from 'three';
-import type { Color } from '../../nodes/base/node2d/types.js';
 import { canvasItemFacing } from '../canvasItemFacing.js';
 import {
   FRAGMENT,
@@ -22,13 +21,9 @@ import {
   VERTEX,
 } from './lightQuadShaders.js';
 import { shadowSamplingParameters, type ShadowSampling } from './shadowSampling.js';
+import type { Rgba } from '../../godot/math/math.js';
 
-export {
-  createShadowPolarTexture,
-  shadowPixelSize,
-  updateShadowPolarTexture,
-  type ShadowSampling,
-} from './shadowSampling.js';
+export { updateShadowPolarTexture, type ShadowSampling } from './shadowSampling.js';
 
 /** Godot `Light2D.BlendMode`. */
 export enum Light2DBlendMode {
@@ -69,7 +64,7 @@ export function accumulationState(blendMode: number): Partial<THREE.ShaderMateri
  * Stencil state for a light quad, spread verbatim onto the material.
  * `litQuadStencilProps` for a shadowed light, empty for one that casts nothing.
  */
-export type LightQuadStencil = Partial<THREE.ShaderMaterialParameters>;
+type LightQuadStencil = Partial<THREE.ShaderMaterialParameters>;
 
 /**
  * Whether a `shadow_color` puts anything into the accumulator. Its term is `S.rgb · s` under the
@@ -77,13 +72,13 @@ export type LightQuadStencil = Partial<THREE.ShaderMaterialParameters>;
  * adds nothing, and Godot's default (`light_2d.h:58`) is exactly that. A filtered penumbra keeps
  * `S.rgb · s · (1 − s)`.
  */
-export function shadowColorContributes(shadowColor: Color, filter: number): boolean {
+export function shadowColorContributes(shadowColor: Rgba, filter: number): boolean {
   if (shadowColor.a > 0) return true;
   return filter !== SHADOW_FILTER_NONE && (shadowColor.r !== 0 || shadowColor.g !== 0 || shadowColor.b !== 0);
 }
 
 /** The colour with its rgb zeroed: a quad of it carries only its alpha, the factor MIX scales by. */
-export function alphaOnly(color: Color): Color {
+export function alphaOnly(color: Rgba): Rgba {
   return { r: 0, g: 0, b: 0, a: color.a };
 }
 
@@ -92,7 +87,7 @@ export function alphaOnly(color: Color): Color {
  * `ShadowSampling`, which the cookie quad reads too, so both quads provably use one value. An
  * unfiltered light has no sampling and names the colour directly.
  */
-export type ShadowColorQuadOptions = {
+type ShadowColorQuadOptions = {
   readonly cookie: THREE.Texture;
   readonly blendMode: number;
 } & (
@@ -104,7 +99,7 @@ export type ShadowColorQuadOptions = {
   | {
       readonly shadow?: undefined;
       /** `Light2D.shadow_color`: this quad's entire output. */
-      readonly shadowColor: Color;
+      readonly shadowColor: Rgba;
       /** The stencil test that confines it to where the volumes stamped. */
       readonly stencil?: LightQuadStencil;
     }
@@ -139,10 +134,10 @@ export function createShadowColorQuadMaterial(options: ShadowColorQuadOptions): 
 }
 
 /** The cookie quad: one light's albedo-multiplied term. */
-export interface LightQuadOptions {
+interface LightQuadOptions {
   readonly cookie: THREE.Texture;
   /** `Light2D.color`. */
-  readonly color: Color;
+  readonly color: Rgba;
   /** `Light2D.energy`. */
   readonly energy: number;
   readonly blendMode: number;

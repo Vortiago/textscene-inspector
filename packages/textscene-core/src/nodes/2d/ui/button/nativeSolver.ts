@@ -14,15 +14,18 @@ import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  VERTICAL_ALIGNMENT_CENTER,
   fitIconSize,
   pickButtonStyleBox,
   resolveButtonDrawState,
   shapeButtonLabel,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  VERTICAL_ALIGNMENT_CENTER,
+  type Rgba,
+} from '../../../../godot/math/math';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -37,7 +40,6 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { OverrunBehavior } from '../../../../r3f/controls/native/text/textOverrun';
-import type { ControlColor } from '../control/types';
 import type { ButtonProperties } from './types';
 
 /**
@@ -57,14 +59,13 @@ export const BUTTON_THEME_KEYS: Record<ButtonDrawState, TextThemeKeys> = {
 };
 
 /** `control_font_color` = `Color(0.875, 0.875, 0.875)` (`default_theme.cpp:101`), Button's own `font_color` default (`:156`). */
-export const BUTTON_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+export const BUTTON_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 
 /**
  * `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`default_theme.cpp:106`),
- * Button's `font_disabled_color` default (`:161`). The numeric twin of `godotDefaultTheme.ts`'s
- * `CONTROL_FONT_DISABLED_COLOR` (`rgba(223, 223, 223, 0.5)`).
+ * Button's `font_disabled_color` default (`:161`).
  */
-export const BUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+const BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
 
 /** `icon_normal_color` / `icon_disabled_color` theme_override_colors keys (`default_theme.cpp:164,169`). */
 const BUTTON_ICON_COLOR_KEYS: Record<ButtonDrawState, string> = {
@@ -77,13 +78,13 @@ const BUTTON_ICON_COLOR_KEYS: Record<ButtonDrawState, string> = {
  * (`default_theme.cpp:164`) and `icon_disabled_color = Color(1, 1, 1, 0.4)` (`:169`). No other
  * builtin widget sets either key.
  */
-const BUTTON_ICON_MODULATE: Record<ButtonDrawState, ControlColor> = {
+const BUTTON_ICON_MODULATE: Record<ButtonDrawState, Rgba> = {
   normal: { r: 1, g: 1, b: 1, a: 1 },
   disabled: { r: 1, g: 1, b: 1, a: 0.4 },
 };
 
 /** Resolves this Button's icon modulate colour for `state`: `n.colors` (a local override or the ancestor Theme chain) wins, else the default-theme literal. */
-export function buttonIconColor(colors: SolveNode['colors'], state: ButtonDrawState): ControlColor {
+export function buttonIconColor(colors: SolveNode['colors'], state: ButtonDrawState): Rgba {
   return colors[BUTTON_ICON_COLOR_KEYS[state]] ?? BUTTON_ICON_MODULATE[state];
 }
 
@@ -118,7 +119,7 @@ export function buttonLabelShape(
   const state = resolveButtonDrawState(props.disabled);
   const { fontSizePx } = buttonTextTheme(n, props, state, { theme });
   const mode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
-  // Not `ctx.measureText`: its `Vec2` drops the layout the painter needs, and its readiness
+  // Not `ctx.measureText`: its `Vector2` drops the layout the painter needs, and its readiness
   // gate belongs to the solver. The painter shapes unconditionally.
   return shapeButtonLabel(
     text,

@@ -16,5 +16,3 @@ controlComponentRegistry.register({
 });
 controlSolverRegistry.registerMinimumSize('ScrollContainer', scrollContainerMinimumSize);
 controlSolverRegistry.registerContainerLayout('ScrollContainer', scrollContainerLayout);
-
-export { ScrollContainer };

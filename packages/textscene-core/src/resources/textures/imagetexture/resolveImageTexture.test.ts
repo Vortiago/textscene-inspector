@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
-import { clearProceduralTextureCache } from '../proceduralTextureCache';
+import { resetProceduralTextures } from '../proceduralBuilds';
 import { resolveImageTexture } from './resolveImageTexture';
 
 /** A 1x2 RGB8 image: a red top row over a blue bottom row. */
@@ -19,7 +19,7 @@ const RESOURCES: TscnInternalResource[] = [
 ];
 
 afterEach(() => {
-  clearProceduralTextureCache();
+  resetProceduralTextures();
 });
 
 describe('resolveImageTexture', () => {

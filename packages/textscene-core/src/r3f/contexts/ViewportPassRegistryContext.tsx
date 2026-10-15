@@ -26,7 +26,7 @@ export interface ViewportPass {
 }
 
 /** Publishes a pass at `path` and returns the cleanup. */
-export type RegisterViewportPass = (path: string, pass: ViewportPass) => () => void;
+type RegisterViewportPass = (path: string, pass: ViewportPass) => () => void;
 
 interface PassRegistryState {
   passes: ReadonlyMap<string, ViewportPass>;

@@ -42,7 +42,7 @@ function anchoredRect(
  * then forces each child to scale 1 and rotation 0 (`ControlCanvasWalker.tsx:210-216`). Exact at the
  * default `zoom = 1`. `Component.tsx` has the matching gap.
  */
-export const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const props = n.node.properties as GraphEditProperties;
   const zoom = props.zoom ?? 1;
   const scrollOffset = props.scrollOffset ?? { x: 0, y: 0 };

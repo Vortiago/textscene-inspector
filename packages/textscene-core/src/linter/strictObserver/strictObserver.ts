@@ -14,7 +14,7 @@ import { rootHeadingCounter } from './rootHeading.js';
 import { sectionLines } from './sectionLines.js';
 import { nodeOwnerOf, sectionOwnerOf, type SectionOwner } from './sectionOwner.js';
 
-export interface StrictObserver {
+interface StrictObserver {
   observer: ParseObserver;
   /** Filled while the scan runs. */
   errors: ParseError[];

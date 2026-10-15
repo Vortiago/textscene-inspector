@@ -1,6 +1,6 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { createGLBMesh, initGlbModules } from './glbProcessing';
+import { createGLBMesh } from './glbProcessing';
 import { nodesGlb } from './testing/nodesGlb';
 import { isMeshInstance, meshInstanceSurfaces } from './meshInstances';
 import { NO_SIDECAR } from './testing/noSidecar';
@@ -10,10 +10,6 @@ function byName(root: THREE.Object3D, name: string): THREE.Object3D {
   if (!object) throw new Error(`expected an object named ${name}, got none`);
   return object;
 }
-
-beforeAll(async () => {
-  await initGlbModules();
-});
 
 describe('isMeshInstance', () => {
   it('marks a node with a one-primitive mesh, which is the Mesh itself', async () => {

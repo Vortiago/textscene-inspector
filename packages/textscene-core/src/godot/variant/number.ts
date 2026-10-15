@@ -21,14 +21,6 @@ export const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`
 export const INT_TOKEN_RE = /^-?\d+$/;
 
 /**
- * The anchored form, for a whole string that must be one finite number. Here, because
- * `godotLiteralGrammar.guard` refuses a scalar grammar outside this directory. The header's
- * `format=` reads it, a Variant number into an `int` (`resource_format_text.cpp:1140`).
- * `1e999` still overflows, so a caller that must not see an infinity tests the result.
- */
-export const FLOAT_RE = new RegExp(`^${FLOAT_PATTERN_SOURCE}$`);
-
-/**
  * The anchored regex for a fixed-arity composite in the finite grammar, one capture per
  * component. A hand-rolled `(-?[\d.eE+-]+)` accepts `e+-.`, so `godotLiteralGrammar.guard.test.ts`
  * keeps composite grammars here and in the linter's `makeFloatTupleRegex`. `Vector2i(2e1, 0)`

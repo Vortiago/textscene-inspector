@@ -76,5 +76,3 @@ const labelAutowrapRule: LintRule = {
 };
 
 ruleRegistry.register(labelAutowrapRule);
-
-export { labelAutowrapRule };

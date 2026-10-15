@@ -4,13 +4,12 @@
  * embedded image imports as the file Godot extracts it to. happy-dom decodes no image, so the
  * texture decode is faked.
  */
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
 import { DependencyGraph } from '../dependencyGraph';
-import { initGlbModules } from '../formats/glb/glbProcessing';
 import { forEachSurfaceMaterial } from '../formats/glb/surfaceMaterials';
 import { png } from '../formats/image/testing/imageBytes';
 
@@ -102,10 +101,6 @@ function colourMapSpaces(root: THREE.Object3D): THREE.ColorSpace[] {
 }
 
 describe('createGLBProcessor: the import format of a glTF image', () => {
-  beforeAll(async () => {
-    await initGlbModules();
-  });
-
   it('reads an embedded greyscale image raw when its extracted file has no sidecar', async () => {
     const gltf = texturedGltf({ name: 'albedo', uri: pngDataUri(png(0)) });
     const root = await harness({ [GLTF_PATH]: gltf }).load();
@@ -148,10 +143,6 @@ describe('createGLBProcessor: the import format of a glTF image', () => {
 });
 
 describe('createGLBProcessor: the texels of a glTF image', () => {
-  beforeAll(async () => {
-    await initGlbModules();
-  });
-
   afterEach(() => {
     decoded.image = null;
   });

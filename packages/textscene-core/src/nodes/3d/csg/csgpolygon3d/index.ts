@@ -12,6 +12,5 @@ const cSGPolygon3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(cSGPolygon3DRegistration);
 
-export { cSGPolygon3DRegistration };
 export * from './parser';
 export * from './types';

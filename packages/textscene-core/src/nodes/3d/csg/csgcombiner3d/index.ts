@@ -11,5 +11,3 @@ const cSGCombiner3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(cSGCombiner3DRegistration);
-
-export { cSGCombiner3DRegistration };

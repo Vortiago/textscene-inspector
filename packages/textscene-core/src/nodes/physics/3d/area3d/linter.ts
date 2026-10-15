@@ -6,5 +6,3 @@ import { makeAreaLinterRule } from '../../../../linter/physics/areaLinterRule.js
 const area3DValidationRule = makeAreaLinterRule('3D');
 
 ruleRegistry.register(area3DValidationRule);
-
-export { area3DValidationRule };

@@ -7,9 +7,12 @@
 import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
-import { multiplayerSpawnerSpawnPathRule } from './linter';
+import { ruleRegistry } from '../../../linter/RuleRegistry';
+import './linter';
 import { reportsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
+
+const multiplayerSpawnerSpawnPathRule = ruleRegistry.getRule('valid-multiplayerspawner-spawn-path')!;
 
 const RULE = 'multiplayerspawner-spawn-path-dangling';
 
