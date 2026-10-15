@@ -251,7 +251,8 @@ function filterAtlasLayers(
     face: OCTMAP_FACE,
   });
   for (let layer = 1; layer < layout.layerSizes.length; layer += 1) {
-    setUniforms(pass, { ...filter.layerUniforms(layer), faceSize: layout.layerSizes[layer] });
+    setUniforms(pass, filter.layerUniforms(layer));
+    setUniforms(pass, { faceSize: layout.layerSizes[layer] });
     drawFullScreen(gl, pass, target, index, layer);
   }
 }

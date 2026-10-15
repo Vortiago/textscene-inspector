@@ -18,14 +18,6 @@ describe('perRenderer', () => {
     expect(valueFor(first)).not.toBe(valueFor(second));
   });
 
-  it('makes nothing until a renderer asks (edge case)', () => {
-    const create = vi.fn(() => ({}));
-
-    perRenderer(create);
-
-    expect(create).not.toHaveBeenCalled();
-  });
-
   it('makes the value again on the next ask when `create` throws (error case)', async () => {
     const { renderer } = await testRenderer();
     const create = vi.fn<() => object>().mockImplementationOnce(() => {

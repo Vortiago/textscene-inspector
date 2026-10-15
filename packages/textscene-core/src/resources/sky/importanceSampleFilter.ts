@@ -20,15 +20,18 @@ export function importanceSampleFilter(layout: SkyOctmapLayout): LayerFilter {
   let filter = filtersByLayout.get(key);
   if (filter) return filter;
   const lastLayer = layout.layerSizes.length - 1;
-  const samplesByLayer = layout.layerSizes.map((_, layer) => packedSamples(layout, layer));
+  const uniformsByLayer = layout.layerSizes.map((_, layer) => {
+    const samples = packedSamples(layout, layer);
+    return { samples, sampleCount: samples.length / 4 };
+  });
   filter = {
     layout,
     chainSizes: layout.downsampledSizes,
     passFor: importanceSamplePassFor,
     layerUniforms(layer) {
-      const samples = samplesByLayer[layer];
-      if (!samples) throw new Error(`expected a layer from 0 to ${lastLayer}, got ${layer}`);
-      return { samples, sampleCount: samples.length / 4 };
+      const uniforms = uniformsByLayer[layer];
+      if (!uniforms) throw new Error(`expected a layer from 0 to ${lastLayer}, got ${layer}`);
+      return uniforms;
     },
   };
   filtersByLayout.set(key, filter);
