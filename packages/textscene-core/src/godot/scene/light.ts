@@ -6,8 +6,9 @@
 import { DirectionalLightSkyMode } from '../rendering/lights/directionalLightSkyMode.js';
 import { DirectionalShadowMode } from '../rendering/lights/directionalShadow.js';
 
-/** `Light3D(LightType)` (`scene/3d/light_3d.cpp:473-491`) and its field initialisers (`light_3d.h:79-81`). */
+/** `Light3D(LightType)` (`scene/3d/light_3d.cpp:468-491`) and its field initialisers (`light_3d.h:79-81`). */
 export const LIGHT_3D_DEFAULTS = {
+  color: 'Color(1, 1, 1, 1)', // :468
   energy: 1, // :473
   volumetricFogEnergy: 1, // :475
   specular: 0.5, // :476

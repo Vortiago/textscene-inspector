@@ -10,8 +10,9 @@ import { DirectionalLightSkyMode } from '../rendering/lights/directionalLightSky
 
 describe('LIGHT_3D_DEFAULTS', () => {
   it('holds what Light3D() sets for every light type', () => {
-    // `light_3d.cpp:473-491` and `light_3d.h:79-81`.
+    // `light_3d.cpp:468-491` and `light_3d.h:79-81`.
     expect(LIGHT_3D_DEFAULTS).toEqual({
+      color: 'Color(1, 1, 1, 1)',
       energy: 1,
       volumetricFogEnergy: 1,
       specular: 0.5,
