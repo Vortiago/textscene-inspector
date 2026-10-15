@@ -20,11 +20,16 @@ const REPO_ROOT = resolve(import.meta.dirname, '..');
  * A URL, such as the GitHub API fetch in `godotLinks.mjs`, can never be the checkout.
  */
 const ENGINE_DIRS = 'scene|core|doc|modules|servers|main|platform|editor';
+/**
+ * A path into core's own scene group, such as `godot/scene/control.ts`, ends at one module, while a
+ * checkout path goes on into an engine directory or names a `.cpp` or `.h` file.
+ */
+const OWN_MODULE = '(?![\\\\/]\\w+(?:\\.(?:ts|js))?(?![\\w.\\\\/]))';
 const CHECKOUT_RE = new RegExp(
   [
     'godot-4\\.\\d+(\\.\\d+)?(-stable)?\\b',
     '[\\\\/]repos[\\\\/]godot',
-    `\\bgodot[\\\\/](?:${ENGINE_DIRS})\\b`,
+    `\\bgodot[\\\\/](?:${ENGINE_DIRS})\\b${OWN_MODULE}`,
     `['"]godot['"]\\s*,\\s*['"](?:${ENGINE_DIRS})['"]`,
   ].join('|')
 );
