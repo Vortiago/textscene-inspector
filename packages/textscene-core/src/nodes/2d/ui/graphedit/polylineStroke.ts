@@ -11,9 +11,9 @@
  */
 
 import { isEqualApprox, isZeroApprox } from '../../../../godot/index.js';
-import { clamp } from '../../../../godot/math';
+import { clamp, type Rgba } from '../../../../godot/math';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
-import type { GeometryBuffers, StrokeRGBA } from './connectionStroke';
+import type { GeometryBuffers } from './connectionStroke';
 
 /** `FEATHER_SIZE` (`renderer_canvas_cull.cpp:45`). */
 export const POLYLINE_FEATHER_SIZE = 1.25;
@@ -79,7 +79,7 @@ function edgeOffsetClamped(dir: Vec2, previous: Vec2): Vec2 {
 /** One `PRIMITIVE_TRIANGLE_STRIP` polygon, as Godot fills its two parallel arrays. */
 interface Strip {
   points: Vec2[];
-  colors: StrokeRGBA[];
+  colors: Rgba[];
 }
 
 function emptyStrip(size: number): Strip {
@@ -89,7 +89,7 @@ function emptyStrip(size: number): Strip {
   };
 }
 
-function transparent(color: StrokeRGBA): StrokeRGBA {
+function transparent(color: Rgba): Rgba {
   return { r: color.r, g: color.g, b: color.b, a: 0 };
 }
 
@@ -101,7 +101,7 @@ function transparent(color: StrokeRGBA): StrokeRGBA {
  */
 export function polylineStrokeGeometry(
   points: readonly Vec2[],
-  colors: readonly StrokeRGBA[],
+  colors: readonly Rgba[],
   width: number,
   antialiased: boolean
 ): GeometryBuffers {
@@ -131,7 +131,7 @@ export function polylineStrokeGeometry(
   const right = antialiased ? emptyStrip(stripSize + (loop ? 0 : 5)) : null;
 
   let previousDir: Vec2 = { x: 0, y: 0 };
-  let color: StrokeRGBA = { r: 1, g: 1, b: 1, a: 1 };
+  let color: Rgba = { r: 1, g: 1, b: 1, a: 1 };
   for (let i = 0; i < pointCount; i++) {
     const isFirst = i === 0;
     const isLast = i === pointCount - 1;

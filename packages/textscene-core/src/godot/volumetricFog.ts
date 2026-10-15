@@ -6,7 +6,6 @@
  */
 
 import { clamp } from './math.js';
-import { SKY_ROUGHNESS_LAYERS_DEFAULT } from './skyReflection.js';
 
 /** `Environment::set_volumetric_fog_detail_spread` clamps into this range (`environment.cpp:982`). */
 const DETAIL_SPREAD_MIN = 0.5;
@@ -76,7 +75,7 @@ export function volumetricFogSliceDepths({
 }
 
 /** How a surface finds its depth in the volume: the inverses of the slice mapping's two terms. */
-export interface VolumetricFogLookup {
+interface VolumetricFogLookup {
   inverseLength: number;
   inverseSpread: number;
 }
@@ -181,9 +180,3 @@ export const LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT = 1;
 
 /** `spot_angle_attenuation`'s default (`scene/3d/light_3d.cpp:481`). */
 export const SPOT_ANGLE_ATTENUATION_DEFAULT = 1;
-
-/**
- * The coarsest radiance mip, `MAX_SKY_LOD` (`environment/fog.cpp:304`). The ambient inject reads
- * the sky at mip `2 + density * (MAX_SKY_LOD - 2)`, so a denser froxel reads a blurrier sky (`.glsl:434`).
- */
-export const VOLUMETRIC_FOG_MAX_SKY_LOD = SKY_ROUGHNESS_LAYERS_DEFAULT - 1;

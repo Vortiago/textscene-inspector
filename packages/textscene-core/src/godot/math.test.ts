@@ -7,6 +7,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   cubicInterpolatef,
+  degToRad,
+  lerpColor,
   lerpf,
   CMP_EPSILON,
   bezierInterpolate,
@@ -16,6 +18,20 @@ import {
   smoothstep,
   snapped,
 } from './math.js';
+
+describe('degToRad', () => {
+  it('turns degrees into radians', () => {
+    expect(degToRad(180)).toBe(Math.PI);
+  });
+
+  it('multiplies by PI / 180 as Godot does, which rounds differently from (d * PI) / 180', () => {
+    expect(degToRad(3)).toBe(3 * (Math.PI / 180));
+  });
+
+  it('keeps a non-finite value non-finite (edge case)', () => {
+    expect(degToRad(Number.POSITIVE_INFINITY)).toBe(Number.POSITIVE_INFINITY);
+  });
+});
 
 describe('CMP_EPSILON', () => {
   it('is math_defs.h:50, not the 1e-6 a private copy stood in with', () => {
@@ -174,5 +190,27 @@ describe('cubicInterpolatef', () => {
 
   it('follows a straight line when the neighbours continue it (edge case)', () => {
     expect(cubicInterpolatef(1, 2, 0, 3, 0.5)).toBe(1.5);
+  });
+});
+
+describe('lerpColor', () => {
+  const black = { r: 0, g: 0, b: 0, a: 0 };
+  const white = { r: 1, g: 1, b: 1, a: 1 };
+
+  it('blends each channel, alpha included', () => {
+    expect(lerpColor(black, { r: 1, g: 0.5, b: 0.25, a: 1 }, 0.5)).toEqual({
+      r: 0.5,
+      g: 0.25,
+      b: 0.125,
+      a: 0.5,
+    });
+  });
+
+  it('answers the start at weight 0 and the end at weight 1', () => {
+    expect([lerpColor(black, white, 0), lerpColor(black, white, 1)]).toEqual([black, white]);
+  });
+
+  it('extrapolates past the end, as Godot does not clamp the weight (edge case)', () => {
+    expect(lerpColor(black, white, 2)).toEqual({ r: 2, g: 2, b: 2, a: 2 });
   });
 });

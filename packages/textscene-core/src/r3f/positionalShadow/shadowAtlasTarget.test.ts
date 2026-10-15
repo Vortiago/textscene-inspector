@@ -3,6 +3,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import type { LightShadowInternals } from '../sharedAtlasShadow';
 
 type AtlasTarget = typeof import('./shadowAtlasTarget');
 
@@ -84,6 +85,39 @@ describe('holdPositionalShadowAtlas', () => {
   it('keeps a side of one texel for a viewport whose atlas has none (error case)', () => {
     target.holdPositionalShadowAtlas({}, 0);
     expect(target.positionalShadowAtlas().width).toBe(1);
+  });
+});
+
+describe('drawIntoAtlasSlot', () => {
+  const slot = { x: 1024, y: 512, size: 512, paraboloidStep: null };
+
+  function aSpotShadow(): THREE.LightShadow & LightShadowInternals {
+    return new THREE.SpotLight().shadow as unknown as THREE.LightShadow & LightShadowInternals;
+  }
+
+  it('points the shadow at the atlas, with the slot as its map size', () => {
+    target.holdPositionalShadowAtlas({}, 2048);
+    const shadow = aSpotShadow();
+    target.drawIntoAtlasSlot(shadow, slot, new THREE.Vector4());
+    expect([shadow.map, shadow.mapSize.toArray()]).toEqual([target.positionalShadowAtlas(), [512, 512]]);
+  });
+
+  it('writes the slot rectangle, in slots, into the rect and the viewport', () => {
+    target.holdPositionalShadowAtlas({}, 2048);
+    const shadow = aSpotShadow();
+    const slotRect = new THREE.Vector4();
+    target.drawIntoAtlasSlot(shadow, slot, slotRect);
+    expect([slotRect.toArray(), shadow._viewports[0]!.toArray()]).toEqual([
+      [2, 1, 1, 1],
+      [2, 1, 1, 1],
+    ]);
+  });
+
+  it('sets the frame extents to the atlas over the slot, so three never resizes it (edge case)', () => {
+    target.holdPositionalShadowAtlas({}, 2048);
+    const shadow = aSpotShadow();
+    target.drawIntoAtlasSlot(shadow, slot, new THREE.Vector4());
+    expect(shadow._frameExtents.toArray()).toEqual([4, 4]);
   });
 });
 

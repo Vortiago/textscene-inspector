@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { SPLIT_SLOTS } from './splitShadow.js';
 import { isSplitSun, type SplitSunLight } from './splitSun.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
+import { writeVec4 } from '../writeVec4.js';
 
 export const SUN_SHADOW_ROWS = 'godotSunShadowRows';
 export const SUN_SOFT_SHADOWS = 'godotSunSoftShadows';
@@ -53,7 +54,7 @@ export function writeSunShadowUniforms(lights: readonly THREE.Light[]): void {
     for (const light of lights) {
       if (!isSplitSun(light)) continue;
       writeSunRows(light, set[SUN_SHADOW_ROWS], index * SUN_ROW_FLOATS);
-      writeSoftShadow(light, set[SUN_SOFT_SHADOWS], index * SOFT_SHADOW_FLOATS);
+      writeSoftShadow(light, set[SUN_SOFT_SHADOWS], index);
       light.shadow.rangeBegins.toArray(set[SUN_RANGE_BEGINS], index * SPLIT_SLOTS);
       index++;
     }
@@ -77,7 +78,7 @@ function writeSlotRows(matrix: THREE.Matrix4, rows: Float32Array, offset: number
 }
 
 /** The fitter places the sun at the light's offset from its target (`followDeclaredLight`). */
-function writeSoftShadow(sun: SplitSunLight, softShadows: Float32Array, offset: number): void {
-  scratchDirection.setFromMatrixPosition(sun.matrixWorld).normalize().toArray(softShadows, offset);
-  softShadows[offset + 3] = sun.shadow.softShadowAngle;
+function writeSoftShadow(sun: SplitSunLight, softShadows: Float32Array, index: number): void {
+  const { x, y, z } = scratchDirection.setFromMatrixPosition(sun.matrixWorld).normalize();
+  writeVec4(softShadows, index, x, y, z, sun.shadow.softShadowAngle);
 }

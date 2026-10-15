@@ -5,13 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { glslFloat } from './glslLiterals';
-import {
-  GodotToneMapper,
-  hasGodotCurve,
-  toneMappingShaderChunk,
-  toneMappingWhiteParam,
-} from './godotToneMapping';
+import { GodotToneMapper, hasGodotCurve, toneMappingShaderChunk } from './godotToneMapping';
 
 /** The subset of `THREE.WebGLRenderer` this module touches. */
 export interface ToneMappedRenderer {
@@ -19,7 +13,7 @@ export interface ToneMappedRenderer {
   toneMappingExposure: number;
 }
 
-export interface ToneMappingSettings {
+interface ToneMappingSettings {
   /** Godot `tonemap_mode`: 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
   mode: number;
   /** Godot `tonemap_exposure`, default 1.0. */
@@ -113,14 +107,10 @@ function swapToneCurve(gl: ToneMappedRenderer, settings: ToneMappingSettings): (
 
   if (mapping === THREE.CustomToneMapping) {
     keyProgramsOnToneMappingChunk();
-    // The white normalisation is a constant per environment, so it is baked
-    // into the chunk rather than plumbed through as a uniform every material
-    // would have to declare.
-    THREE.ShaderChunk[TONEMAP_CHUNK] = toneMappingShaderChunk(settings.mode, settings.agxContrast).replace(
-      'uniform float godotToneMapWhite;',
-      `const float godotToneMapWhite = ${glslFloat(
-        toneMappingWhiteParam(settings.mode, settings.white ?? 1)
-      )};`
+    THREE.ShaderChunk[TONEMAP_CHUNK] = toneMappingShaderChunk(
+      settings.mode,
+      settings.white ?? 1,
+      settings.agxContrast
     );
   }
   if (exposure !== previousExposure) gl.toneMappingExposure = exposure;

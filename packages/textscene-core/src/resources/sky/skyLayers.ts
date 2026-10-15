@@ -7,12 +7,9 @@
  */
 
 import * as THREE from 'three';
+import { drawFullScreen } from '../../r3f/fullScreenPass.js';
 import { drawOffscreen } from '../../r3f/offscreen.js';
-import {
-  SKY_ROUGHNESS_LAYERS_DEFAULT,
-  skyOctmapLayout,
-  type SkyOctmapLayout,
-} from '../../godot/skyReflection.js';
+import { MAX_ROUGHNESS_LOD, skyOctmapLayout, type SkyOctmapLayout } from '../../godot/skyReflection.js';
 import { fastFilter } from './fastFilter.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
 import type { LayerFilter } from './layerFilter.js';
@@ -21,7 +18,7 @@ import {
   OCTMAP_FACE,
   RADIANCE_OCTMAP_FRAGMENT_SHADER,
 } from './skyLayerShaders.js';
-import { draw, releaseTextures, setUniforms, skyPass } from './skyPass.js';
+import { releaseTextures, setUniforms, skyPass } from './skyPass.js';
 import type { SkyBake } from './types.js';
 
 /** A group of layers shown as one cube: its first layer, and the face size of each layer from there. */
@@ -40,7 +37,7 @@ export const SKY_LAYER_GROUPS = {
   sharp: { firstLayer: 1, faceSizes: [128, 64, 32] },
   rough: { firstLayer: 4, faceSizes: [32, 16, 8] },
   /** The layer the ambient reads, smooth enough that linear filtering between texels 6 degrees apart follows it. */
-  last: { firstLayer: SKY_ROUGHNESS_LAYERS_DEFAULT - 1, faceSizes: [16] },
+  last: { firstLayer: MAX_ROUGHNESS_LOD, faceSizes: [16] },
 } as const satisfies Record<string, SkyLayerGroup>;
 
 /** Godot's layers 1 to 7 of a sky, a cube per group with a mip per layer. */
@@ -61,6 +58,16 @@ export function byGroup<T>(make: (group: keyof SkyLayers) => T): Record<keyof Sk
 const radianceOctmapPass = skyPass(RADIANCE_OCTMAP_FRAGMENT_SHADER, ['radiance', 'size', 'borderSize']);
 const downsamplePass = skyPass(DOWNSAMPLE_FRAGMENT_SHADER, ['source', 'size', 'borderSize']);
 
+/** Godot's fast filter, or its importance-sampling filter for an octmap laid out as `layout`. */
+function layerFilter(radianceFilter: SkyBake['radianceFilter'], layout: SkyOctmapLayout): LayerFilter {
+  return radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(layout);
+}
+
+/** Lets go of the textures a bake set on the passes, as the passes outlive it. */
+function releasePasses(filter: LayerFilter): void {
+  for (const pass of [radianceOctmapPass, downsamplePass, filter.pass]) releaseTextures(pass);
+}
+
 /**
  * Godot's baked layers of the sky in `radiance`, a cube as wide as the bake's radiance size. The
  * cube stands for Godot's radiance octmap of the same size, which is twice as wide to match a cube's
@@ -72,25 +79,17 @@ export function bakeSkyLayers(
   radiance: THREE.CubeTexture,
   bake: SkyBake
 ): SkyLayers {
-  const filter =
-    bake.radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(skyOctmapLayout(bake.radianceSize));
+  const filter = layerFilter(bake.radianceFilter, skyOctmapLayout(bake.radianceSize));
   const layers = byGroup((group) => layerCube(SKY_LAYER_GROUPS[group]));
   try {
-    drawOffscreen(gl, () => {
-      const chain = downsampleChain(gl, radiance, filter.layout, filter.chainSizes);
-      try {
-        for (const group of SKY_LAYER_GROUP_NAMES)
-          filterGroup(gl, chain, filter, SKY_LAYER_GROUPS[group], layers[group]);
-      } finally {
-        chain.dispose();
-      }
+    bakeFromChain(gl, radiance, filter.layout, filter, (chain) => {
+      for (const group of SKY_LAYER_GROUP_NAMES)
+        filterGroup(gl, chain, filter, SKY_LAYER_GROUPS[group], layers[group]);
     });
     return layers;
   } catch (error) {
     disposeSkyLayers(layers);
     throw error;
-  } finally {
-    for (const pass of [radianceOctmapPass, downsamplePass, filter.pass]) releaseTextures(pass);
   }
 }
 
@@ -130,20 +129,36 @@ export function bakeAtlasLayers(
   const { layout, target } = atlas;
   if (index < 0 || index >= target.depth)
     throw new Error(`expected an atlas layer from 0 to ${target.depth - 1}, got ${index}`);
-  const filter = radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(layout);
+  const filter = layerFilter(radianceFilter, layout);
+  bakeFromChain(gl, radiance, layout, filter, (chain) => {
+    setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize: layout.borderSize });
+    drawFullScreen(gl, radianceOctmapPass, target, index, 0);
+    filterAtlasLayers(gl, chain, filter, atlas, index);
+  });
+}
+
+/**
+ * The bake both of Godot's layer sets share: `drawLayers` draws from the downsample chain of
+ * `radiance`, laid out as `layout`, into targets of its own, and leaves the renderer as it found it.
+ */
+function bakeFromChain(
+  gl: THREE.WebGLRenderer,
+  radiance: THREE.CubeTexture,
+  layout: SkyOctmapLayout,
+  filter: LayerFilter,
+  drawLayers: (chain: THREE.WebGLRenderTarget) => void
+): void {
   try {
     drawOffscreen(gl, () => {
-      setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize: layout.borderSize });
-      draw(gl, radianceOctmapPass, target, index, 0);
       const chain = downsampleChain(gl, radiance, layout, filter.chainSizes);
       try {
-        filterAtlasLayers(gl, chain, filter, atlas, index);
+        drawLayers(chain);
       } finally {
         chain.dispose();
       }
     });
   } finally {
-    for (const pass of [radianceOctmapPass, downsamplePass, filter.pass]) releaseTextures(pass);
+    releasePasses(filter);
   }
 }
 
@@ -164,12 +179,12 @@ function downsampleChain(
   const mips = chainSizes.map(octmapTarget);
   try {
     setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize });
-    draw(gl, radianceOctmapPass, octmap);
+    drawFullScreen(gl, radianceOctmapPass, octmap);
     gl.initRenderTarget(chain);
     mips.forEach((target, mip) => {
       const source = mip === 0 ? octmap : mips[mip - 1]!;
       setUniforms(downsamplePass, { source: source.texture, size: target.width, borderSize });
-      draw(gl, downsamplePass, target);
+      drawFullScreen(gl, downsamplePass, target);
       gl.copyTextureToTexture(target.texture, chain.texture, null, null, 0, mip);
     });
     return chain;
@@ -200,7 +215,7 @@ function filterGroup(
     filter.selectLayer(firstLayer + mip);
     for (let face = 0; face < 6; face += 1) {
       setUniforms(pass, { face, faceSize });
-      draw(gl, pass, cube, face, mip);
+      drawFullScreen(gl, pass, cube, face, mip);
     }
   });
 }
@@ -223,7 +238,7 @@ function filterAtlasLayers(
   for (let layer = 1; layer < layout.layerSizes.length; layer += 1) {
     filter.selectLayer(layer);
     setUniforms(pass, { faceSize: layout.layerSizes[layer] });
-    draw(gl, pass, target, index, layer);
+    drawFullScreen(gl, pass, target, index, layer);
   }
 }
 

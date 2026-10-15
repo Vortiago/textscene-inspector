@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { CAPTURE_NEAR, FACE_NORMALS } from '../../godot/reflectionProbe.js';
-import type { Xyz } from '../../godot/xyz.js';
+import type { Vector3 } from '../../godot/vector.js';
 
 /** What a capture's renders draw differently from the scene's own. */
 export interface ProbeCapture {
@@ -55,7 +55,7 @@ export function probeFrame(probeWorld: THREE.Matrix4): THREE.Matrix4 {
  */
 export function captureCameras(
   probeWorld: THREE.Matrix4,
-  originOffset: Xyz,
+  originOffset: Vector3,
   farPlanes: readonly number[],
   capture: ProbeCapture
 ): THREE.PerspectiveCamera[] {

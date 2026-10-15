@@ -7,7 +7,8 @@
 import * as THREE from 'three';
 import { renderedDepthFogRange } from '../../godot/depthFog.js';
 import type { VolumetricFogProjectSettings } from '../../godot/volumetricFog.js';
-import type { EnvironmentSettings } from '../../resources/environment/types.js';
+import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
+import { setGodotColorLinear } from '../godotColor.js';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
 import { skyLightEnergy } from '../sky/skyLight.js';
 import { worldToSky } from '../sky/skyRotation.js';
@@ -17,10 +18,7 @@ import { shineDirection } from './fogLights.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
 import { skyRadiance } from './fogSky.js';
 import { FOG_SUN_MAX, fogUniforms } from './fogUniforms.js';
-import type { VolumetricFog } from './volumetricFogPass.js';
-import { writeVec4 } from './writeVec4.js';
-
-export type DepthFog = NonNullable<EnvironmentSettings['fog']>;
+import { writeVec4 } from '../writeVec4.js';
 
 export interface FogSettings {
   depth: DepthFog | null;
@@ -40,7 +38,7 @@ export function captureFog(settings: FogSettings, isInterior: boolean): FogSetti
 }
 
 /** The objects of a scene the fog reads: its lights, the meshes that may cast their shadows, and its FogVolumes. */
-export interface FogObjects {
+interface FogObjects {
   lights: readonly THREE.Light[];
   casters: readonly THREE.Mesh[];
   volumes: readonly FogVolumeObject[];
@@ -97,9 +95,7 @@ function writeDepthFog(fog: DepthFog | null, camera: THREE.Camera): void {
     fogUniforms.depthColor[3] = 0;
     return;
   }
-  const color = depthColor
-    .setRGB(fog.color.r, fog.color.g, fog.color.b, THREE.SRGBColorSpace)
-    .multiplyScalar(fog.lightEnergy);
+  const color = setGodotColorLinear(depthColor, fog.color).multiplyScalar(fog.lightEnergy);
   const { near, far } = camera as THREE.PerspectiveCamera;
   const range = renderedDepthFogRange({ begin: fog.depthBegin, end: fog.depthEnd }, far);
   writeVec4(fogUniforms.depthColor, 0, color.r, color.g, color.b, 1);

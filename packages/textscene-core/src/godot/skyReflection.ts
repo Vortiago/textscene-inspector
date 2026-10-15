@@ -94,7 +94,7 @@ export function halvingSizes(first: number, count: number): number[] {
   return Array.from({ length: count }, (_, mip) => Math.max(1, first >> mip));
 }
 
-export interface LayerSample {
+interface LayerSample {
   /** The sample's direction in the frame whose +Z is the texel's direction. */
   direction: readonly [number, number, number];
   /** The mip of the half-size copy it reads. */

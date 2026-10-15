@@ -40,7 +40,7 @@ function base64OrNull(base64: string): Uint8Array | null {
  * preallocated array, not `Uint8Array.from` with a mapper: that calls the mapper per character,
  * over 20 times slower on a 4 MB payload.
  */
-export function decodeBase64Bytes(base64: string): Uint8Array {
+export function decodeBase64Bytes(base64: string): Uint8Array<ArrayBuffer> {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);

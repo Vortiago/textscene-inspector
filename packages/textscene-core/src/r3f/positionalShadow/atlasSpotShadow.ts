@@ -10,7 +10,7 @@ import type { SpotLightShadow } from 'three/src/lights/SpotLightShadow.js';
 import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { readLightPose } from './lightPose.js';
-import { positionalShadowAtlas } from './shadowAtlasTarget.js';
+import { drawIntoAtlasSlot, positionalShadowAtlas } from './shadowAtlasTarget.js';
 import { readIntensityThroughSlot, type SlottedShadow } from './slotOpacity.js';
 
 /** three exports no `SpotLightShadow` class, so it comes from a spot light's own shadow. */
@@ -30,20 +30,11 @@ export class AtlasSpotShadow extends ThreeSpotLightShadow implements SlottedShad
     this.map = positionalShadowAtlas();
   }
 
-  /**
-   * Draws into `slot` of the atlas. `mapSize` is the slot, and the frame extents are the atlas over
-   * the slot. So three asks for the atlas's own size, and never resizes it
-   * (`WebGLShadowMap.js:172-176`, `:281-285`). A null slot draws nothing, and leaves the rest of the shadow as it is.
-   */
+  /** Draws into `slot` of the atlas. A null slot draws nothing, and leaves the rest of the shadow as it is. */
   place(slot: PositionalShadowSlot | null): void {
     this.slot = slot;
     if (slot === null) return;
-    this.map = positionalShadowAtlas();
-    const atlasSize = this.map.width;
-    this.mapSize.set(slot.size, slot.size);
-    this._frameExtents.set(atlasSize / slot.size, atlasSize / slot.size);
-    this.slotRect.set(slot.x / slot.size, slot.y / slot.size, 1, 1);
-    this._viewports[0]!.copy(this.slotRect);
+    drawIntoAtlasSlot(this, slot, this.slotRect);
   }
 
   /**

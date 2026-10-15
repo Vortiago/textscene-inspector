@@ -9,16 +9,9 @@
 import { slotTupleRegex, allFinite } from '../godot/number.js';
 import { slotComponents } from '../godot/int.js';
 
-export interface Vector2 {
-  x: number;
-  y: number;
-}
+import type { Vector2, Vector3 } from '../godot/vector.js';
 
-export interface Vector3 {
-  x: number;
-  y: number;
-  z: number;
-}
+export type { Vector2, Vector3 };
 
 const VECTOR2_RE = slotTupleRegex('Vector2', 2);
 const VECTOR3_RE = slotTupleRegex('Vector3', 3);

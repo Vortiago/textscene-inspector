@@ -59,6 +59,24 @@ export function lerp(from: number, to: number, weight: number): number {
   return from + (to - from) * weight;
 }
 
+/** A colour's four channels, as `Color` holds them. */
+export interface Rgba {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
+
+/** `Color::lerp` (`core/math/color.h:110-117`): {@link lerp} on each channel, alpha included. */
+export function lerpColor(from: Rgba, to: Rgba, weight: number): Rgba {
+  return {
+    r: lerp(from.r, to.r, weight),
+    g: lerp(from.g, to.g, weight),
+    b: lerp(from.b, to.b, weight),
+    a: lerp(from.a, to.a, weight),
+  };
+}
+
 /** The float overload of `Math::lerp` (`core/math/math_funcs.h:339-341`). */
 export function lerpf(from: number, to: number, weight: number): number {
   return f(from + f(f(to - from) * weight));
@@ -86,14 +104,14 @@ export function cubicInterpolatef(
 }
 
 /**
- * `Math::deg_to_rad` (`core/math/math_funcs.h`): `p_y * (Math_PI / 180.0)`.
+ * `Math::deg_to_rad` (`core/math/math_funcs.h:321-323`): `p_y * (PI / 180.0)`.
  *
  * Godot serialises several rotations in degrees (`Node2D.rotation_degrees`,
  * every `*_degrees` particle parameter) and converts on the way in, so the
  * conversion is an engine fact rather than a rendering convenience.
  */
 export function degToRad(degrees: number): number {
-  return (degrees * Math.PI) / 180;
+  return degrees * (Math.PI / 180);
 }
 
 /**
