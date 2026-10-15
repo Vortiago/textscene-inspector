@@ -1,16 +1,10 @@
 /** Node2D: the base of Godot's 2D (CanvasItem) world hierarchy. */
 
-export interface Vector2 {
-  x: number;
-  y: number;
-}
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
-export interface Color {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
+export type { Vector2 };
+export type Color = Rgba;
 
 /** The decomposed 2D local transform (pixels, radians; Godot +Y-down space). */
 export interface Node2DLocalTransform {

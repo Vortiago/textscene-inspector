@@ -85,7 +85,7 @@ export async function loadCoreParser() {
  * `BaseMaterial3D`. The linter barrel does not re-export it.
  */
 export async function loadClassBaseTypes() {
-  const mod = await import(pathToFileURL(join(DIST, 'godot/classBaseTypes.js')).href);
+  const mod = await import(pathToFileURL(join(DIST, 'godot/classdb/classBaseTypes.js')).href);
   return mod.CLASS_BASE_TYPES;
 }
 

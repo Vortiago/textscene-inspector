@@ -73,7 +73,7 @@ describe('labeler.yml', () => {
     [`${slice}/linterParser.ts`, 'linter'],
     [`${slice}/index.linter.ts`, 'linter'],
     ['apps/textscene-linter/src/cli.ts', 'linter'],
-    [`${core}/godot/nodeBaseTypes.ts`, 'core'],
+    [`${core}/godot/classdb/nodeBaseTypes.ts`, 'core'],
     [`${core}/core/NodeRegistry.ts`, 'core'],
     [`${slice}/index.ts`, 'core'],
     [`${slice}/propertyFormatter.ts`, 'core'],
@@ -98,7 +98,7 @@ describe('labeler.yml', () => {
   });
 
   it('gives a pull request one label per area it touches', () => {
-    expect(labelsFor([`${slice}/Component.tsx`, `${core}/godot/nodeBaseTypes.ts`])).toEqual([
+    expect(labelsFor([`${slice}/Component.tsx`, `${core}/godot/classdb/nodeBaseTypes.ts`])).toEqual([
       'core',
       'renderer',
     ]);

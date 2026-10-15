@@ -6,7 +6,7 @@
  */
 
 import type { Transform3D } from '../../nodes/base/node3d/types';
-import { ShadowCastingSetting } from '../../godot/rendering';
+import { ShadowCastingSetting } from '../../godot/rendering/rendering';
 
 /** Godot's `RS::ShadowCastingSetting`, shared with every GeometryInstance3D. */
 export { ShadowCastingSetting };

@@ -1,12 +1,12 @@
 /**
  * Whether a parsed node starts clear of its parent's transform and visibility, by the rule in
- * `godot/parentSpace.ts`. The mounted scene and the passes that run before anything mounts ask it
+ * `godot/scene/parentSpace.ts`. The mounted scene and the passes that run before anything mounts ask it
  * alike, so both break the chain at the same node.
  */
 
 import type { TscnNode } from '../parser/types.js';
 import { isTypeUnknowable } from '../parser/typeUnknowable.js';
-import { escapesParentSpace, type SpaceFamily } from '../godot/parentSpace.js';
+import { escapesParentSpace, type SpaceFamily } from '../godot/scene/parentSpace.js';
 
 /**
  * A node whose class this file cannot know stays with its parent. An `instance=` node takes the

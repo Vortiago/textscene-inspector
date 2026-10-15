@@ -7,7 +7,7 @@
 
 import type * as THREE from 'three';
 import type { EmissionScalars } from './emission';
-import type { TextureChannel, TextureChannelMask } from '../../../godot/textureChannel';
+import type { TextureChannel, TextureChannelMask } from '../../../godot/rendering/materials/textureChannel';
 import type { UVTransform } from '../../textures/applyTextureState';
 
 /** Godot's height mapping of a surface. */

@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { rasterizeAtlasTexture } from './build';
+import { recordGodotFormat, sourceColorSpace } from '../sourceColorSpace';
 import type { AtlasTextureLayout } from './types';
 
 /**
@@ -127,6 +128,11 @@ describe('rasterizeAtlasTexture — raw-pixel sheets', () => {
 
   it('carries the sheet as undecoded sRGB, the tag a loaded image gets', () => {
     expect(rasterizeAtlasTexture(sheet(2, 2), layout())?.colorSpace).toBe(THREE.SRGBColorSpace);
+  });
+
+  it("reads as its sheet's format does in a colour slot, as Godot binds the atlas's own texture (atlas_texture.cpp:55-58)", () => {
+    const lum8Sheet = recordGodotFormat(bottomUpSheet(2, 2), 'Lum8');
+    expect(sourceColorSpace(rasterizeAtlasTexture(lum8Sheet, layout())!)).toBe(THREE.NoColorSpace);
   });
 
   it('keeps a half-float sheet in half floats, so a channel past 1 survives (edge case)', () => {

@@ -12,7 +12,7 @@ import {
   expectNoDiagnostic,
   expectNoErrors,
 } from '../../../../linter/testing/testkit';
-import { CURSOR_MAX, CURSOR_SHAPES } from '../../../../godot/control';
+import { CURSOR_MAX, CURSOR_SHAPES } from '../../../../godot/scene/control';
 import './linterParser';
 import './linter';
 

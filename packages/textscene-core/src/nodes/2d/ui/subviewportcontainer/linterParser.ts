@@ -1,6 +1,6 @@
 /**
  * SubViewportContainer strict validators, format only, so every failure is an error. Control's
- * validators reach this type through the base-type chain (`godot/nodeBaseTypes.ts`).
+ * validators reach this type through the base-type chain (`godot/classdb/nodeBaseTypes.ts`).
  */
 
 // The base chain. Registration happens on import, so a test that loads only this slice resolves an

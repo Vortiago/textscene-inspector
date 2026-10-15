@@ -1,7 +1,7 @@
 /**
  * RichTextLabel's strict validators: the members doc/classes/RichTextLabel.xml
  * lists without `overrides=`, grouped as rich_text_label.cpp's ADD_GROUP calls
- * (rich_text_label.cpp:7754-7796). `godot/deprecated.ts` maps `bbcode_text`
+ * (rich_text_label.cpp:7754-7796). `godot/classdb/deprecated.ts` maps `bbcode_text`
  * (rich_text_label.cpp:7562-7568) to `text`.
  */
 

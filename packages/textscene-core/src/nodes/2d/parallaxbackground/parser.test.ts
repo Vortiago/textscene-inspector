@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { parseParallaxBackground } from './parser';
-import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/transform2d';
+import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/math/transform2d';
 
 describe('parseParallaxBackground', () => {
   it('parses the scroll surface and the CanvasLayer placement (happy path)', () => {

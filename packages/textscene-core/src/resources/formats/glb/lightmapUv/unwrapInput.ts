@@ -5,8 +5,8 @@
  */
 
 import type * as THREE from 'three';
-import { unwrapSpace } from '../../../../godot/importerBasis';
-import { UNWRAP_SHORTEST_EDGE_SQUARED } from '../../../../godot/sceneImport';
+import { unwrapSpace } from '../../../../godot/import/importerBasis';
+import { UNWRAP_SHORTEST_EDGE_SQUARED } from '../../../../godot/import/sceneImport';
 import { md5Hex } from './md5';
 
 /** Where the importer has put the mesh by the time it unwraps. */

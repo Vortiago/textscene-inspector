@@ -10,7 +10,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 // `_set` (sprite_3d.cpp:1494-1500, `#ifndef DISABLE_DEPRECATED`) forwards a legacy `frames` key to
-// `set_sprite_frames`, and no `_get` branch writes it back. `godot/deprecatedTable.ts` maps it
+// `set_sprite_frames`, and no `_get` branch writes it back. `godot/classdb/deprecatedTable.ts` maps it
 // to `sprite_frames`, so a scene with the old spelling is checked by that validator.
 validatorRegistry.registerAll('AnimatedSprite3D', {
   // sprite_3d.cpp:1539, ADD_PROPERTY(Variant::OBJECT, "sprite_frames",

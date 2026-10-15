@@ -14,7 +14,7 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
-import { nextPowerOfTwo } from '../../godot/powerOfTwo.js';
+import { nextPowerOfTwo } from '../../godot/math/powerOfTwo.js';
 import { AREA_LIGHT_ATLAS_MIPMAPS, areaTextureMipmaps, type PlacedTexture } from './atlasMipmaps.js';
 
 /** A texture's sRGB RGBA8 pixels, first row the top row. */

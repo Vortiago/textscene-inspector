@@ -5,7 +5,7 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseOptionalInt } from '../../../parser/valueParsers';
-import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../../godot/visualLayers';
+import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../../godot/scene/visualLayers';
 import { parseNode3D } from '../../base/node3d/parser';
 import type { VisualInstance3DProperties } from './types';
 

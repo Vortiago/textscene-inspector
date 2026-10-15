@@ -72,7 +72,7 @@ describe('only parentType.ts holds a raw parent', () => {
       'parser/TscnParser.ts',
       'r3f/NodeDispatcher.tsx',
       'resources/mergeInstanceRoot.ts',
-      'godot/math.ts',
+      'godot/math/math.ts',
     ]) {
       expect(scanned).toContain(known);
     }

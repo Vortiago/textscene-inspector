@@ -5,7 +5,7 @@
  * override names joins the node's scope, under a fresh id where the node's file holds that id.
  */
 
-import { renameResourceRefs, type ResourceRef } from '../godot/resourceRef.js';
+import { renameResourceRefs, type ResourceRef } from '../godot/variant/resourceRef.js';
 import type { SceneScope, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { findExtResource, findSubResource } from './SubResourceResolver.js';
 

@@ -403,6 +403,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Atlas Texture",
+    "file": "unit-decal-atlas-texture.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal Cull Mask",
     "file": "unit-decal-cull-mask.tscn",
     "category": "Other"
@@ -3073,6 +3078,16 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "Material Albedo Atlas Texture",
+    "file": "unit-material-albedo-atlas-texture.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Albedo Image Format",
+    "file": "unit-material-albedo-image-format.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Anisotropy Flowmap",
     "file": "unit-material-anisotropy-flowmap.tscn",
     "category": "Unit - Materials"
@@ -3105,6 +3120,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Diffuse Mode",
     "file": "unit-material-diffuse-mode.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Emission Add",
+    "file": "unit-material-emission-add.tscn",
     "category": "Unit - Materials"
   },
   {
@@ -3265,6 +3285,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Own World",
     "file": "unit-sub-viewport-own-world.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Texture Emission",
+    "file": "unit-sub-viewport-texture-emission.tscn",
     "category": "Unit - Viewports"
   },
   {

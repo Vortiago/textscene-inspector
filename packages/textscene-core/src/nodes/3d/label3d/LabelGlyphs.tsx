@@ -23,7 +23,7 @@ import type { CanvasTextBlend } from '../../../r3f/controls/native/text/canvasTe
 import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
-import { labelBillboardAabb } from '../../../godot/billboard';
+import { labelBillboardAabb } from '../../../godot/scene/billboard';
 import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
 import { AlphaCutMode, TextureFilter, type Label3DProperties } from './types';
 

@@ -42,15 +42,7 @@ export function useProceduralTexture(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): ProceduralSlot {
-  return useProceduralTextures([ref], internalResources)[0]!;
-}
-
-/** {@link useProceduralTexture} for several slots at once, one result per ref, in order. */
-export function useProceduralTextures(
-  refs: readonly (string | undefined)[],
-  internalResources: readonly TscnInternalResource[]
-): ProceduralSlot[] {
-  return useProceduralSlots(refs, internalResources, resolveProceduralTexture);
+  return useProceduralSlots([ref], internalResources, resolveProceduralTexture)[0]!;
 }
 
 /** {@link useProceduralTexture} for a Texture3D slot, which `useTexture3D` reads through. */

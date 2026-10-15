@@ -14,17 +14,17 @@ import {
   DIRECTIONAL_SHADOW_SPLIT_OFFSETS_DEFAULT,
   directionalShadowSplitCount,
   sharesDirectionalShadowAtlas,
-} from '../../../../godot/directionalShadow';
+} from '../../../../godot/rendering/lights/directionalShadow';
 import {
   DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
   directionalLightLightsSurfaces,
-} from '../../../../godot/directionalLightSkyMode';
-import { SHADOW_BLUR_DEFAULT, softShadowScale } from '../../../../godot/softShadowScale';
+} from '../../../../godot/rendering/lights/directionalLightSkyMode';
+import { SHADOW_BLUR_DEFAULT, softShadowScale } from '../../../../godot/rendering/lights/softShadowScale';
 import {
   LIGHT_ANGULAR_DISTANCE_DEFAULT,
   drawsDirectionalSoftShadow,
   softShadowAngle,
-} from '../../../../godot/directionalSoftShadow';
+} from '../../../../godot/rendering/lights/directionalSoftShadow';
 import type { DirectionalShadowDeclaration } from '../../../../r3f/directionalShadow/declaration';
 import { directionalShadowBias } from '../shared/shadowBias';
 import type { DirectionalLight3DProperties } from './types';

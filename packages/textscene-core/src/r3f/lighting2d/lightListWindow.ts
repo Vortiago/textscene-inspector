@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import { rect2Merge, type Rect2 } from '../../godot/rect2.js';
+import { rect2Merge, type Rect2 } from '../../godot/math/rect2.js';
 
 /**
  * The union of the windows of `placementIds`, or null when one has none: an item the cap never

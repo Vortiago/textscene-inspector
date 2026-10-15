@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../godot/visualLayers.js';
+import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../godot/scene/visualLayers.js';
 import { sharedTexture } from '../sharedTexture.js';
 import { installedOr } from '../shaderPatch/litUniform.js';
 

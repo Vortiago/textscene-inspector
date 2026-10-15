@@ -18,8 +18,8 @@ import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 import { positionalShadowUserData } from '../../../../r3f/positionalShadow/declaration';
 import { AtlasAreaShadow, type AreaShadowLight } from '../../../../r3f/positionalShadow/atlasAreaShadow';
-import { AREA_LIGHT_SHADOW_BIAS_DEFAULT } from '../../../../godot/areaLightShadow';
-import { areaShadowDeclaration } from './areaLightShadow';
+import { AREA_LIGHT_SHADOW_BIAS_DEFAULT } from '../../../../godot/rendering/lights/areaLightShadow';
+import { positionalShadowDeclaration } from '../shared/positionalShadowDeclaration';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useTexture2DRid } from '../../../../resources/useTexture2D';
 import {
@@ -71,7 +71,9 @@ function useAreaLightUserData(properties: AreaLight3DProperties): Record<string,
     () => ({
       ...areaLightUserData({ range: area_range, attenuation: area_attenuation, specular: light_specular }),
       ...areaTextureUserData(texture),
-      ...positionalShadowUserData(areaShadowDeclaration({ light_size, shadow_blur, shadow_normal_bias })),
+      ...positionalShadowUserData(
+        positionalShadowDeclaration({ light_size, shadow_blur, shadow_normal_bias })
+      ),
       ...fogLightUserData({ energy: fogEnergy }),
       ...visualLayersUserData(layers),
     }),

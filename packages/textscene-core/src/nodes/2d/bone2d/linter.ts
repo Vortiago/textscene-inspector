@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
 import { knownParent, searchAncestors } from '../../../linter/parentType.js';
 import { tupleComponent } from '../../../linter/validators/commonValidators.js';
 import { makeFloatTupleRegex } from '../../../linter/validators/floatTupleValidator.js';

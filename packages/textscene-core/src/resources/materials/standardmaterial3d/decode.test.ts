@@ -15,7 +15,7 @@ describe('decodeStandardMaterial3D — defaults', () => {
     expect(data.alpha).toBe(1);
     expect(data.metallic).toBe(0);
     expect(data.roughness).toBe(1);
-    expect(data.emission).toEqual({ emissive: [0, 0, 0], emissiveIntensity: 0 });
+    expect(data.emission).toEqual({ emissive: [0, 0, 0], emissiveIntensity: 0, emissionEnergy: 0 });
     expect(data.emissionOperator).toBe(0);
     // TEXTURE_FILTER_LINEAR_WITH_MIPMAPS, which is three's default state too.
     expect(data.textureFilter).toBe(3);

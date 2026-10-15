@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../../parser/testing/parserKit';
-import { GPU_PARTICLES_DEFAULT_VISIBILITY_AABB } from '../../../../godot/gpuParticles';
+import { GPU_PARTICLES_DEFAULT_VISIBILITY_AABB } from '../../../../godot/scene/gpuParticles';
 import type { TscnNode } from '../../../../parser/types';
 import { parseGPUParticles3D } from './parser';
 import { useGPUParticles3DAabb } from './ownAabb';

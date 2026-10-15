@@ -22,6 +22,8 @@ export interface EmissionScalars {
    */
   emissive: [number, number, number];
   emissiveIntensity: number;
+  /** `emission_energy_multiplier`, floored at zero: the strength of an ADD texture's own term. */
+  emissionEnergy: number;
 }
 
 /**
@@ -30,7 +32,7 @@ export interface EmissionScalars {
  * in the component.
  */
 export function emissionScalars(color: Color | undefined, energy: number, enabled = true): EmissionScalars {
-  if (!enabled) return { emissive: [0, 0, 0], emissiveIntensity: 0 };
+  if (!enabled) return { emissive: [0, 0, 0], emissiveIntensity: 0, emissionEnergy: 0 };
   // Convert before taking the peak, as sRGB→linear is not linear: for `Color(2, 0.5, 0)`
   // the other order gives `(2, 0.102, 0)` against Godot's `(4.954, 0.214, 0)`.
   const linear = color ? sRGBToLinearRGB(color.r, color.g, color.b) : null;
@@ -45,32 +47,36 @@ export function emissionScalars(color: Color | undefined, energy: number, enable
       ? [Math.max(0, linear[0] / peak), Math.max(0, linear[1] / peak), Math.max(0, linear[2] / peak)]
       : [0, 0, 0],
     emissiveIntensity: Math.max(0, energy * peak),
+    emissionEnergy: Math.max(0, energy),
   };
 }
 
+/** The emission a three material draws: three's colour and intensity, and an ADD texture's term. */
+export interface ResolvedEmission {
+  emissive: [number, number, number];
+  emissiveIntensity: number;
+  /**
+   * The energy an ADD texture's texel adds at, as `(emission.rgb + emission_tex) * emission_energy`
+   * (`scene/resources/material.cpp:1788`). Null when the texture multiplies or there is none.
+   */
+  addedTextureEnergy: number | null;
+}
+
 /**
- * The colour and texture combined the way `emission_operator` says. `hint_default_black`
- * on the sampler decides three of the five cases.
+ * The colour and texture combined the way `emission_operator` says. `hint_default_black` on the
+ * sampler zeroes MULTIPLY without a texture (`material.cpp:1066`, `:1792`).
  */
 export function resolveEmission(
-  scalars: EmissionScalars,
+  { emissive, emissiveIntensity, emissionEnergy }: EmissionScalars,
   operator: number | undefined,
   hasEmissiveMap: boolean
-): EmissionScalars {
-  const { emissive, emissiveIntensity } = scalars;
+): ResolvedEmission {
   // With a texture this is three's own `emissive * tex * intensity`. Without one it is
   // `emission * 0 * energy`, a Godot content trap reproduced: no emission at all.
   if (operator === EmissionOperator.MULTIPLY) {
-    return hasEmissiveMap ? { emissive, emissiveIntensity } : { emissive: [0, 0, 0], emissiveIntensity: 0 };
+    return hasEmissiveMap
+      ? { emissive, emissiveIntensity, addedTextureEnergy: null }
+      : { emissive: [0, 0, 0], emissiveIntensity: 0, addedTextureEnergy: null };
   }
-  const colourIsBlack = emissive[0] === 0 && emissive[1] === 0 && emissive[2] === 0;
-  // `(0 + tex) * energy` is a white emissive in three. Godot's `emission` defaults to
-  // black, so a material with only an emission texture omits the colour.
-  if (hasEmissiveMap && colourIsBlack) {
-    return { emissive: [1, 1, 1], emissiveIntensity };
-  }
-  // ADD without a texture is `emission * energy`. With a texture and a non-black colour
-  // this is a parity limitation: three's multiply-only chain cannot express the sum,
-  // so the material reads darker and more tinted than Godot's.
-  return { emissive, emissiveIntensity };
+  return { emissive, emissiveIntensity, addedTextureEnergy: hasEmissiveMap ? emissionEnergy : null };
 }

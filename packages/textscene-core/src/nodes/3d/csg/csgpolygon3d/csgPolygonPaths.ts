@@ -10,7 +10,7 @@ import type { CSGPolygon3DProperties } from './types.js';
 import type { Path3DProperties } from '../../../../nodes/paths/path3d/types.js';
 import { joinPath } from '../../../../utils/nodePath.js';
 import { uniqueNamePaths } from '../../../../utils/uniqueNames.js';
-import { resolveNodePathLiteral, unclaimedUniqueNames } from '../../../../godot/nodePath.js';
+import { resolveNodePathLiteral, unclaimedUniqueNames } from '../../../../godot/string/nodePath.js';
 import { resolveCurve3D } from '../../../../resources/curves/curve3d/index.js';
 import { globalMatrix3D, matrixToTransform3D } from '../../../../r3f/nodeTreeTransforms.js';
 import { warn } from '../../../../logger.js';

@@ -23,6 +23,7 @@ import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { recordGodotFormat } from '../../../resources/textures/sourceColorSpace';
 
 const Sprite3D = registeredComponent('Sprite3D');
 
@@ -115,6 +116,26 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     const mesh = findMesh(renderer.scene);
     const mat = mesh.material as THREE.MeshBasicMaterial;
     expect(mat.map).toBeInstanceOf(THREE.Texture);
+  });
+
+  it('decodes an image file as sRGB, as its material samples `texture_albedo` (sprite_3d.cpp:306)', async () => {
+    const renderer = await render({
+      node: makeNode({ texture: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeTexture(8, 8) }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.map?.colorSpace).toBe(THREE.SRGBColorSpace);
+  });
+
+  it('reads a Lum8 texture raw, as a format with no sRGB view (material_storage.cpp:1073)', async () => {
+    const renderer = await render({
+      node: makeNode({ texture: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: recordGodotFormat(makeTexture(8, 8), 'Lum8') }],
+    });
+    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    expect(mat.map?.colorSpace).toBe(THREE.NoColorSpace);
   });
 
   it('renders a magenta placeholder when the texture is missing', async () => {

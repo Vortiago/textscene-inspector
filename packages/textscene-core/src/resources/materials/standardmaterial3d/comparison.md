@@ -22,9 +22,18 @@ A `metallic = 1.0`, `roughness = 0.1` sphere reflects the preview sky. Both engi
 
 An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the preview environment blooms it. `emission_operator` is honoured, including MULTIPLY with no texture, which emits nothing. `emission_on_uv2` samples the mesh's UV2, and the `glb-lightmap-uv2` golden draws it through a GLB's unwrapped UV2.
 
-- **Approximated** ADD with both a lit colour and a texture is applied as a multiply, so the surface reads darker and more tinted.
 - **Approximated** `emission_intensity` is ignored. `emission_energy_multiplier` alone drives the strength.
 - **Approximated** A PrimitiveMesh with `add_uv2` gets no UV2 here, so `emission_on_uv2` on one samples the map's top-left texel, where Godot reads the generated UV2.
+
+## Emission texture
+<!-- compare: image=unit-material-emission-add status=done fixture=unit-material-emission-add.tscn -->
+
+ADD emission with both a dark red colour and a texture. Godot emits `(emission + texture) * energy` (`material.cpp:1788`). The previewer adds the texel to the colour too, so the blue texel reads magenta and the green one amber.
+
+## ViewportTexture in another slot
+<!-- compare: image=unit-sub-viewport-texture-emission status=done fixture=unit-sub-viewport-texture-emission.tscn -->
+
+A SubViewport's target in the emission slot, over a black albedo. A material binds every slot by RID, so the target glows as it draws through the albedo in `unit-sub-viewport-texture`. A target in a pass cycle draws the missing-texture material from any slot.
 
 ## Clearcoat
 
@@ -122,4 +131,5 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 - **Approximated** Godot measures V from the image top and three from the bottom, so a non-integer `uv1_scale.y` or a non-zero `uv1_offset.y` shifts V differently.
 - **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
 - **Approximated** Triplanar tiling density is exact on a PlaneMesh only, since curved, CSG, GridMap, ArrayMesh and GLB geometry tile by their own UVs.
+- **Approximated** A ViewportTexture outside the albedo slot ignores `uv1_scale`, `uv1_offset`, `texture_repeat` and a nearest `texture_filter`, as it samples its target clamped (#770).
 - **Approximated** A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.

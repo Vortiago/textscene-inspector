@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseGodotFloat, TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
 import { makeFloatTupleRegex } from './floatTupleValidator.js';
-import { FLOAT_PATTERN_SOURCE } from '../../godot/number.js';
+import { FLOAT_PATTERN_SOURCE } from '../../godot/variant/number.js';
 import { v } from './v.js';
 import { withFiniteGuard, withNanGuard } from './v/grounding.js';
 import { expectWarning } from '../testing/validatorCheck.js';

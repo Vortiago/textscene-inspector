@@ -15,7 +15,7 @@ import {
   directionalShadowSplitTextureSize,
   type DirectionalShadowAtlasRect,
   type DirectionalShadowFade,
-} from '../../godot/directionalShadow.js';
+} from '../../godot/rendering/lights/directionalShadow.js';
 import {
   directionalShadowBoxFitter,
   viewSlice,

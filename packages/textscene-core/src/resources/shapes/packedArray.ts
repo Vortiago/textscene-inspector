@@ -13,7 +13,7 @@ import {
   parseGodotInt,
   splitTopLevel,
 } from '../../godot/index.js';
-import { arrayLiteralBody } from '../../godot/variantParser.js';
+import { arrayLiteralBody } from '../../godot/variant/variantParser.js';
 
 /**
  * A packed array of fixed-size tuples, named once: its type, the three spellings its slot

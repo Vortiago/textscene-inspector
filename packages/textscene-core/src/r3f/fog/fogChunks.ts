@@ -11,8 +11,8 @@ import {
   FOG_SUN_SCATTER_MIN,
   FogMode,
   HEIGHT_FOG_DENSITY_MIN,
-} from '../../godot/depthFog.js';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
+} from '../../godot/rendering/environment/depthFog.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 import {
   FOG_RADIANCE_BANDS,
   FOG_RADIANCE_BAND_HEIGHT,

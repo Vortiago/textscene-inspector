@@ -6,7 +6,7 @@
  */
 
 import type * as THREE from 'three';
-import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
+import type { PositionalShadowSlot } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 
 /** A shadow that holds a slot of the atlas, or none. */
 export interface SlottedShadow extends THREE.LightShadow {

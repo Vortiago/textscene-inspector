@@ -4,7 +4,7 @@
  */
 
 import { parseOptionalAabb } from '../../../parser/valueParsers.js';
-import { EMPTY_AABB, isEmptyAabb, mergeAabb, type Aabb } from '../../../godot/aabb.js';
+import { EMPTY_AABB, isEmptyAabb, mergeAabb, type Aabb } from '../../../godot/math/aabb.js';
 import { iterateSurfaceBlocks, readAabb } from './surfaceFields.js';
 
 /** The box of the ArrayMesh whose properties are `properties`. A mesh with no surfaces is `AABB()`. */

@@ -5,7 +5,7 @@ import * as logger from '../../../logger';
 import { parseLabel3D } from './parser';
 import { BillboardMode } from './types';
 import { heading } from '../../../parser/testing/parserKit';
-import { ShadowCastingSetting } from '../../../godot/rendering';
+import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {

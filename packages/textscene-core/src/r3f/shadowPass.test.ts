@@ -16,6 +16,12 @@ import { AtlasAreaShadow, type AreaShadowLight } from './positionalShadow/atlasA
 import { AtlasDepthMaterial, ParaboloidDepthMaterial } from './positionalShadow/atlasDepthMaterials';
 import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow';
 import { SplitSunLight } from './directionalShadow/splitSun';
+import {
+  installSunShadowUniforms,
+  SLOT_MATRIX_ROWS,
+  SUN_SHADOW_ROWS,
+} from './directionalShadow/sunShadowUniforms';
+import { litUniformArray } from './testing/litUniformArray';
 
 holdPositionalShadowAtlas({}, 4096);
 
@@ -78,12 +84,11 @@ describe('installShadowPass', () => {
     copy.mockRestore();
   });
 
-  it('restores the render target the draw goes to, and records its height', () => {
+  it('records the height of the target the draw goes to, after the copies', () => {
     const copy = vi.spyOn(OmniShadowCopy.prototype, 'copy').mockImplementation(() => {});
     const { renderer } = fakeRenderer();
     installShadowPass(renderer);
     runPass(renderer, [omniLight()]);
-    expect(renderer.setRenderTarget).toHaveBeenLastCalledWith(renderer.getRenderTarget(), 0, 0);
     expect(framebufferHeight[0]).toBe(48);
     copy.mockRestore();
   });
@@ -271,6 +276,40 @@ describe('readShadowMaps', () => {
 function threeSource(path: string): string {
   return readFileSync(createRequire(import.meta.url).resolve(`three/src/${path}`), 'utf8');
 }
+
+describe('the sun shadow rows', () => {
+  /** A split sun whose first slot matrix moves by `x`. */
+  function sunAt(x: number): SplitSunLight {
+    const sun = new SplitSunLight();
+    sun.shadow.getMatrix(0).makeTranslation(x, 0, 0);
+    return sun;
+  }
+
+  const firstSlotRows = () => {
+    installSunShadowUniforms();
+    return [...litUniformArray(SUN_SHADOW_ROWS).subarray(0, SLOT_MATRIX_ROWS * 4)];
+  };
+
+  it('holds each split sun’s slot matrices after the pass', () => {
+    const { renderer } = fakeRenderer();
+    installShadowPass(renderer);
+    runPass(renderer, [sunAt(3)]);
+    expect(firstSlotRows()).toEqual([1, 0, 0, 3, 0, 1, 0, 0, 0, 0, 1, 0]);
+  });
+
+  it('holds the rendered scene’s suns after a reader renders another scene (edge case)', () => {
+    const { renderer } = fakeRenderer();
+    const readerSun = sunAt(7);
+    let isReading = false;
+    readShadowMaps(renderer, () => {
+      if (isReading) return;
+      isReading = true;
+      runPass(renderer, [readerSun]);
+    });
+    runPass(renderer, [sunAt(3)]);
+    expect(firstSlotRows()[3]).toBe(3);
+  });
+});
 
 describe('three’s renderer, as the pass relies on it', () => {
   it('uploads the lights after the shadow pass, so the copy and the lookup matrices land first', () => {

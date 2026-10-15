@@ -7,10 +7,10 @@
  */
 
 import { warn } from '../../../logger.js';
-import { parseGodotFloat } from '../../../godot/number.js';
-import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variantParser.js';
-import { parseGodotInt } from '../../../godot/int.js';
-import { parsePackedByteArrayBody } from '../../../godot/packedBytes.js';
+import { parseGodotFloat } from '../../../godot/variant/number.js';
+import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
+import { parseGodotInt } from '../../../godot/variant/int.js';
+import { parsePackedByteArrayBody } from '../../../godot/variant/packedBytes.js';
 import { unquoteString } from '../../../parser/utils.js';
 
 /** A surface's declared `AABB(px, py, pz, sx, sy, sz)`: a compressed surface's position scale. */

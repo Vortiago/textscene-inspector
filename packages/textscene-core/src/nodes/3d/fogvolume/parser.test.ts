@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FogVolumeShape } from '../../../godot/fogVolume';
+import { FogVolumeShape } from '../../../godot/rendering/environment/fogVolume';
 import { heading } from '../../../parser/testing/parserKit';
 import { TscnParser } from '../../../parser/TscnParser';
 import { parseFogVolume } from './parser';

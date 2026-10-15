@@ -316,7 +316,7 @@ describe('useTexture2D — a NoiseTexture2D that builds as a job', () => {
       wrapper: Wrapper,
     });
 
-    expect(result.current).toEqual({ texture: null, missing: false });
+    expect(result.current).toEqual({ texture: null, missing: false, isArriving: true });
     expect(requested).toEqual([]);
   });
 
@@ -346,7 +346,7 @@ describe('useTexture2D — a NoiseTexture2D that builds as a job', () => {
       { wrapper: Wrapper }
     );
 
-    expect(result.current).toEqual({ texture: null, missing: false });
+    expect(result.current).toEqual({ texture: null, missing: false, isArriving: true });
   });
 });
 
@@ -577,6 +577,12 @@ describe('useTexture2D — inline AtlasTexture', () => {
       type: 'AtlasTexture',
       data: { atlas: 'ExtResource("404")', region: 'Rect2(0, 0, 8, 8)' },
     },
+    { id: 'CanvasTexture_sheet', type: 'CanvasTexture', data: { diffuse_texture: 'ExtResource("1_sheet")' } },
+    {
+      id: 'AtlasTexture_canvas',
+      type: 'AtlasTexture',
+      data: { atlas: 'SubResource("CanvasTexture_sheet")', region: 'Rect2(0, 0, 8, 8)' },
+    },
   ];
 
   /** A 128x128 top-down sheet, as the alpha-border pass leaves one: red is x and green is y. */
@@ -663,7 +669,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
       { wrapper: withLoader({ path: 'res://sheet.png', texture: whole }) }
     );
 
-    expect(result.current).toEqual({ texture: whole, missing: false });
+    expect(result.current).toEqual({ texture: whole, missing: false, isArriving: false, namesTexture: true });
   });
 
   it('gives a slot read by RID a plain image as it is (edge case)', () => {
@@ -675,7 +681,7 @@ describe('useTexture2D — inline AtlasTexture', () => {
       }
     );
 
-    expect(result.current).toEqual({ texture: image, missing: false });
+    expect(result.current).toEqual({ texture: image, missing: false, isArriving: false, namesTexture: true });
   });
 
   it('reports an unresolvable sheet behind a slot read by RID as missing (error case)', () => {
@@ -684,8 +690,25 @@ describe('useTexture2D — inline AtlasTexture', () => {
       { wrapper: withLoader() }
     );
 
-    expect(result.current).toEqual({ texture: null, missing: true });
+    expect(result.current).toEqual({ texture: null, missing: true, isArriving: false, namesTexture: true });
   });
+
+  it.each(['CanvasTexture_sheet', 'AtlasTexture_canvas'])(
+    'gives a slot read by RID no texture for %s, whose RID names a CanvasTexture',
+    (id) => {
+      const { result } = renderHook(
+        () => useTexture2DRid(`SubResource("${id}")`, externalResources, resources),
+        { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet() }) }
+      );
+
+      expect(result.current).toEqual({
+        texture: null,
+        missing: false,
+        isArriving: false,
+        namesTexture: false,
+      });
+    }
+  );
 });
 
 /**
@@ -888,7 +911,7 @@ noise = SubResource("FastNoiseLite_huop3")
     const { result } = renderHook(() => useTexture2D('ExtResource("1_tex")', externalResources, []), {
       wrapper: Wrapper,
     });
-    expect(result.current).toEqual({ texture: null, missing: false });
+    expect(result.current).toEqual({ texture: null, missing: false, isArriving: true });
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
@@ -916,7 +939,7 @@ viewport_path = NodePath("SubViewport")
       wrapper: Wrapper,
     });
 
-    expect(result.current).toEqual({ texture: null, missing: true });
+    expect(result.current).toEqual({ texture: null, missing: true, isArriving: false });
   });
 });
 

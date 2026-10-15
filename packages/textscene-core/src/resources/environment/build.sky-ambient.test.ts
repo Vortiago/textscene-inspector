@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { createEnvironmentSettings } from './build';
 import { decodeEnvironment } from './decode';
 import { BackgroundMode, type EnvironmentProperties } from './types';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 
 const base = (overrides: Partial<EnvironmentProperties> = {}): EnvironmentProperties => ({
   ...decodeEnvironment({}),

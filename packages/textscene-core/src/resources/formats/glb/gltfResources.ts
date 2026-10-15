@@ -8,7 +8,8 @@
 
 import { fileExtension } from '../../fileExtension';
 import { normalizeRelativePath, RES_SCHEME } from '../../resPath';
-import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../godot/gltf';
+import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../godot/import/gltf';
+import { decodeBase64Bytes } from '../../../godot/variant/packedBytes';
 
 /** The parts of a glTF document this packs; every other member passes through untouched. */
 export interface GltfJson {
@@ -70,7 +71,7 @@ const padded = (length: number): number => Math.ceil(length / ALIGNMENT) * ALIGN
 function dataUriBytes(uri: string): Uint8Array {
   const comma = uri.indexOf(',');
   const payload = uri.slice(comma + 1);
-  if (uri.slice(0, comma).endsWith(';base64')) return Uint8Array.from(atob(payload), (c) => c.charCodeAt(0));
+  if (uri.slice(0, comma).endsWith(';base64')) return decodeBase64Bytes(payload);
   return new TextEncoder().encode(decodeURIComponent(payload));
 }
 

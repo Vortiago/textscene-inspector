@@ -4,7 +4,7 @@ import { FileEventBus } from '../../resources/FileEventBus';
 import { ResourceLoader } from '../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
-import { PROJECT_FILE_PATH } from '../../godot/project.js';
+import { PROJECT_FILE_PATH } from '../../godot/project/project.js';
 import { ProjectSettingsProvider } from '../contexts/ProjectSettingsContext';
 
 /** Wraps `children` under a project whose `project.godot` is `project`, or under no project for null. */

@@ -6,7 +6,7 @@
  */
 
 import type { PropertyValidator } from './propertyValidator.js';
-import { MAX_BASE_CHAIN_HOPS } from '../godot/nodeBaseTypes.js';
+import { MAX_BASE_CHAIN_HOPS } from '../godot/classdb/nodeBaseTypes.js';
 import { unavailableValidator, type Removal } from './unavailableKey.js';
 import {
   matchesIndexedKey,

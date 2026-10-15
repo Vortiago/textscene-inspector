@@ -31,6 +31,7 @@ function build(
   return colourDataTexture(
     reversedRows(pixels.data, pixels.width, pixels.height),
     pixels.width,
-    pixels.height
+    pixels.height,
+    pixels.format
   );
 }

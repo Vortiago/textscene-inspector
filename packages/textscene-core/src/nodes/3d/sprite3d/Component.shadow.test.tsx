@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { castMaterialsOf, castsFrom, castsSunShadowFrom } from '../../../r3f/testing/threePasses';
-import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../../../godot/opaquePrepass';
+import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../../../godot/rendering/opaquePrepass';
 import { spriteMesh } from './testing/spriteMesh';
 
 const DISCARD = { alpha_cut: '1' };

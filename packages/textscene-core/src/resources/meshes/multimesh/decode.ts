@@ -6,9 +6,9 @@
  */
 
 import { parseOptionalAabb, parseOptionalInt } from '../../../parser/valueParsers.js';
-import { boolSlotValue } from '../../../godot/variantBool.js';
-import { holdsResource } from '../../../godot/geometryBase.js';
-import { isEmptyAabb, EMPTY_AABB, type Aabb } from '../../../godot/aabb.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import { holdsResource } from '../../../godot/scene/geometryBase.js';
+import { isEmptyAabb, EMPTY_AABB, type Aabb } from '../../../godot/math/aabb.js';
 import {
   parsePackedColorArray,
   parsePackedFloat32Array,

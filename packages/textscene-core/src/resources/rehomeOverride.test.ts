@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { rehomeOverride } from './rehomeOverride';
 import { findExtResource, findSubResource } from './SubResourceResolver';
 import { extResourcePathOf } from './testing/extResourcePathOf';
-import { resourceRef } from '../godot/resourceRef';
+import { resourceRef } from '../godot/variant/resourceRef';
 import type { SceneScope } from '../parser/types';
 
 const outer: SceneScope = {

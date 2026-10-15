@@ -3,10 +3,9 @@
  * themselves, by the Node2D `diag(1,-1,1)` convention.
  */
 
-export interface Vec2 {
-  x: number;
-  y: number;
-}
+import type { Vector2 } from '../../../godot/math/vector';
+
+export type Vec2 = Vector2;
 
 export interface Curve2DControlPoint {
   /** In-tangent handle, relative to `position`. */

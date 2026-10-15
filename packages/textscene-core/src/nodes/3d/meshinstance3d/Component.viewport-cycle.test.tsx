@@ -48,19 +48,21 @@ function meshNode(): TscnNode {
   return { rawProperties: {}, name: 'Mesh1', type: 'MeshInstance3D', children: [], properties: props };
 }
 
-const INTERNAL_RESOURCES: TscnInternalResource[] = [
-  { id: 'box', type: 'BoxMesh', data: {} },
-  {
-    id: 'mat',
-    type: 'StandardMaterial3D',
-    data: { albedo_texture: 'SubResource("ViewportTexture_1")' } as Record<string, string>,
-  },
-  {
-    id: 'ViewportTexture_1',
-    type: 'ViewportTexture',
-    data: { viewport_path: 'NodePath("SubViewport")' },
-  },
-];
+const ALBEDO_TARGET = { albedo_texture: 'SubResource("ViewportTexture_1")' };
+
+function resources(material: Record<string, string>): TscnInternalResource[] {
+  return [
+    { id: 'box', type: 'BoxMesh', data: {} },
+    { id: 'mat', type: 'StandardMaterial3D', data: material },
+    VIEWPORT_TEXTURE,
+  ];
+}
+
+const VIEWPORT_TEXTURE: TscnInternalResource = {
+  id: 'ViewportTexture_1',
+  type: 'ViewportTexture',
+  data: { viewport_path: 'NodePath("SubViewport")' },
+};
 
 /** Registers `Root/SubViewport` into a two-node cycle with `Root/Other`. */
 function CyclicRegistration() {
@@ -70,10 +72,10 @@ function CyclicRegistration() {
   return null;
 }
 
-async function renderCyclicMesh() {
+async function renderCyclicMesh(material: Record<string, string> = ALBEDO_TARGET) {
   const publishedTexture = new THREE.Texture();
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneResourcesProvider internalResources={INTERNAL_RESOURCES}>
+    <SceneResourcesProvider internalResources={resources(material)}>
       <ViewportTextureProvider>
         <ViewportPassProvider>
           <CyclicRegistration />
@@ -91,6 +93,13 @@ async function renderCyclicMesh() {
   return { renderer, publishedTexture };
 }
 
+function magentaMaterial(renderer: Awaited<ReturnType<typeof renderCyclicMesh>>['renderer']) {
+  return renderer.scene.findAllByType('MeshStandardMaterial').find((m) => {
+    const color = materialInstanceAs<THREE.MeshStandardMaterial>(m).color;
+    return color.r > 0.9 && color.g < 0.1 && color.b > 0.9;
+  });
+}
+
 describe('<MeshInstance3D> ViewportTexture albedo cycle fallback', () => {
   it("never samples the cyclic target's published-but-unwritten texture", async () => {
     const { renderer, publishedTexture } = await renderCyclicMesh();
@@ -104,12 +113,15 @@ describe('<MeshInstance3D> ViewportTexture albedo cycle fallback', () => {
 
   it('renders the magenta missing-texture placeholder instead', async () => {
     const { renderer } = await renderCyclicMesh();
-    const materials = renderer.scene.findAllByType('MeshStandardMaterial');
-    const magenta = materials.find((m) => {
-      const color = materialInstanceAs<THREE.MeshStandardMaterial>(m).color;
-      return color.r > 0.9 && color.g < 0.1 && color.b > 0.9;
+    expect(magentaMaterial(renderer)).toBeDefined();
+  });
+
+  it('renders the placeholder for a cyclic target in another slot too', async () => {
+    const { renderer } = await renderCyclicMesh({
+      emission_enabled: 'true',
+      emission_texture: 'SubResource("ViewportTexture_1")',
     });
-    expect(magenta).toBeDefined();
+    expect(magentaMaterial(renderer)).toBeDefined();
   });
 
   it('logs a warning naming the consuming MeshInstance3D node path', async () => {

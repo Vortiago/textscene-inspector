@@ -1,11 +1,7 @@
 /** Base Control (Godot 2D UI) property definitions. */
+import type { Rgba } from '../../../../godot/math/math';
 
-export interface ControlColor {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
+export type ControlColor = Rgba;
 
 /** The layout and theme-override properties of every Control. Each Control type extends it. */
 export interface ControlProperties {

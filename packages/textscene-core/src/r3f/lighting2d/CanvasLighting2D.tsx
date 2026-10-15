@@ -24,7 +24,7 @@ import { useAccumulationTargets } from './lightAccumulationTargets.js';
 import { createSeedMaterial, LightAccumulatorSeed } from './lightSeedQuad.js';
 import { useLightAccumulationPass, type AccumulationList, type PassMesh } from './lightAccumulationPass.js';
 import { capItemLights, type CappedItem } from './itemLightCap.js';
-import type { Rect2 } from '../../godot/rect2.js';
+import type { Rect2 } from '../../godot/math/rect2.js';
 import { useGameViewportRect } from '../gameViewportRect.js';
 
 export { useCanvasLighting2D, type CanvasLighting2D, type CanvasLightSlot } from './lightPassContext.js';

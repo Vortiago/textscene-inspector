@@ -8,7 +8,7 @@
 
 import type * as THREE from 'three';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
-import { LIGHT_KINDS, slottedLights, type LightKind } from '../lightSlots.js';
+import { isPositionalKind, slotValues, type ShadedLightKind } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
 import { declaredLightOf } from '../directionalShadow/splitSun.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
@@ -43,9 +43,8 @@ export function installLightSizeUniforms(): void {
  * shadows are on (`scene_forward_clustered.glsl:2617`), and a split sun takes the size of the light
  * it shades for. A light without a declaration, such as a GLB light, has no size.
  */
-function sizeOf(light: THREE.Light, kind: LightKind, drawsDirectionalSoftShadows: boolean): number {
-  const isDirectional = kind === 'directional' || kind === 'sun';
-  if (isDirectional && !drawsDirectionalSoftShadows) return 0;
+function sizeOf(light: THREE.Light, kind: ShadedLightKind, drawsDirectionalSoftShadows: boolean): number {
+  if (!isPositionalKind(kind) && !drawsDirectionalSoftShadows) return 0;
   const declared = declaredLightOf(light);
   if (!declared) return 0;
   return declaration.read(declared)?.size ?? 0;
@@ -60,9 +59,8 @@ export function writeLightSizeUniforms(
   camera: THREE.Camera,
   drawsDirectionalSoftShadows: boolean
 ): void {
-  const slotted = slottedLights(lights, camera);
-  const ordered = LIGHT_KINDS.flatMap((kind) =>
-    slotted[kind].map((light) => sizeOf(light, kind, drawsDirectionalSoftShadows))
+  const ordered = slotValues(lights, camera, (light, kind) =>
+    sizeOf(light, kind, drawsDirectionalSoftShadows)
   );
   arrays.write(ordered.length, (set) => set[LIGHT_SIZES].set(ordered));
 }

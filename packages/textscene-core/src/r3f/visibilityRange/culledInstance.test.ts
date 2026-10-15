@@ -6,8 +6,8 @@ import {
   GEOMETRY_INSTANCE_DEFAULTS,
   type GeometryInstance3DProperties,
 } from '../../nodes/3d/geometryinstance3d/types';
-import { NO_VISIBILITY_RANGE } from '../../godot/visibilityRange';
-import { EMPTY_AABB, type Aabb } from '../../godot/aabb';
+import { NO_VISIBILITY_RANGE } from '../../godot/rendering/visibilityRange';
+import { EMPTY_AABB, type Aabb } from '../../godot/math/aabb';
 
 const UNIT_BOX: Aabb = { position: { x: -0.5, y: -0.5, z: -0.5 }, size: { x: 1, y: 1, z: 1 } };
 const PLACE = { path: 'Root/Box', parentPath: null, order: [0] };

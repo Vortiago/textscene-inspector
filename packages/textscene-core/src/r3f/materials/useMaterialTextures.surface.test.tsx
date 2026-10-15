@@ -103,9 +103,13 @@ const VIEWPORT: TscnInternalResource[] = [
 
 /** The maps a material whose albedo is the SubViewport's render target binds on `surface`. */
 function viewportMaps(properties: Record<string, string>, surface?: TexturedSurface) {
+  return targetMaps({ albedo_texture: 'SubResource("ViewportTexture_a")', ...properties }, surface);
+}
+
+/** The maps a material with `properties`, which name the SubViewport's render target, binds. */
+function targetMaps(properties: Record<string, string>, surface?: TexturedSurface) {
   const target = new THREE.WebGLRenderTarget(4, 4).texture;
-  const albedo = { albedo_texture: 'SubResource("ViewportTexture_a")' };
-  const maps = materialMaps({ ...albedo, ...properties }, VIEWPORT, surface, (children) => (
+  const maps = materialMaps(properties, VIEWPORT, surface, (children) => (
     <ViewportTextureProvider>
       <ViewportTexturePublisher path="Root/SubViewport" entry={{ texture: target, size: { x: 4, y: 4 } }} />
       <NodePathProvider path="Root/Mesh">{children}</NodePathProvider>
@@ -130,6 +134,36 @@ describe('useMaterialTextures with a render-target albedo', () => {
 
   it('hands no UV transform for a file albedo, which carries its own (edge case)', () => {
     const maps = materialMaps({ albedo_texture: 'SubResource("GradientTexture2D_a")' }, GRADIENT);
+
+    expect(maps.albedoTargetUv).toBeUndefined();
+  });
+});
+
+describe('useMaterialTextures with a render target in another slot', () => {
+  it('binds the shared target in an emission slot, as Godot binds any slot by RID', () => {
+    const { maps, target } = targetMaps({
+      emission_enabled: 'true',
+      emission_texture: 'SubResource("ViewportTexture_a")',
+    });
+
+    expect(maps.emissiveMap).toBe(target);
+  });
+
+  it('binds the shared target in a normal slot', () => {
+    const { maps, target } = targetMaps({
+      normal_enabled: 'true',
+      normal_texture: 'SubResource("ViewportTexture_a")',
+    });
+
+    expect(maps.normalMap).toBe(target);
+  });
+
+  it('hands the albedo UV transform to no other slot (edge case)', () => {
+    const { maps } = targetMaps({
+      emission_enabled: 'true',
+      emission_texture: 'SubResource("ViewportTexture_a")',
+      uv1_scale: 'Vector3(2, 3, 1)',
+    });
 
     expect(maps.albedoTargetUv).toBeUndefined();
   });

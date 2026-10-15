@@ -5,8 +5,8 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseOptionalAabb, parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
-import { isEmptyAabb, type Aabb } from '../../../godot/aabb';
-import type { VisibilityRange } from '../../../godot/visibilityRange';
+import { isEmptyAabb, type Aabb } from '../../../godot/math/aabb';
+import type { VisibilityRange } from '../../../godot/rendering/visibilityRange';
 import { parseVisualInstance3D } from '../visualinstance3d/parser';
 import { GEOMETRY_INSTANCE_DEFAULTS, type GeometryInstance3DProperties } from './types';
 

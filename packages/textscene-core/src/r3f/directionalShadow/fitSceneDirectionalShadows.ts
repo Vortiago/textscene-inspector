@@ -7,7 +7,10 @@
  */
 
 import * as THREE from 'three';
-import type { DirectionalShadowAtlasRect, DirectionalShadowFade } from '../../godot/directionalShadow.js';
+import type {
+  DirectionalShadowAtlasRect,
+  DirectionalShadowFade,
+} from '../../godot/rendering/lights/directionalShadow.js';
 import type { DirectionalShadowDeclaration } from './declaration.js';
 import { dropLight, isDropped, restoreDroppedLight } from './droppedLight.js';
 import { isViewingCamera, type DirectionalShadowBox, type ViewingCamera } from './fitDirectionalShadowBox.js';
@@ -24,11 +27,13 @@ import { writeDirectionalShadowFades, type ShadowFades } from './shadowFade.js';
 import {
   attachSplitSun,
   followDeclaredLight,
+  isSplitSun,
   releaseSplitSun,
   splitSunOf,
-  SplitSunLight,
+  type SplitSunLight,
 } from './splitSun.js';
 import { NO_SHADOW_FADE, SPLIT_CAMERA_UP } from './splitShadow.js';
+import { slottedLights } from '../lightSlots.js';
 
 /** A declared light and its share of Godot's directional shadow atlas for this render. */
 interface SharingLight {
@@ -104,7 +109,7 @@ export function fitSceneDirectionalShadows(
 }
 
 function sunFade(light: THREE.Light): DirectionalShadowFade | null {
-  return light instanceof SplitSunLight ? light.shadow.fade : null;
+  return isSplitSun(light) ? light.shadow.fade : null;
 }
 
 function sunsOf(declared: readonly DeclaredDirectionalLight[]): SplitSunLight[] {
@@ -138,8 +143,7 @@ export interface DirectionalShadowCasters {
 
 /**
  * The casting directional and sun lights this render draws, in three's shadow uniform order:
- * visible pre-order where the camera's layers include the light (r186 `WebGLRenderer.js:1860-1888`),
- * casters first (`WebGLLights.js:245`, a stable sort), sun and directional apart (`:289-356`). A
+ * the casters among the lights in their slot order (`lightSlots.ts`), sun and directional apart. A
  * declared light that draws splits or that the fitter dropped fails the layer test, so only a split
  * sun counts for it.
  */
@@ -147,14 +151,12 @@ export function directionalShadowCasters(
   lights: readonly SceneLight[],
   camera: THREE.Camera
 ): DirectionalShadowCasters {
-  const casters: DirectionalShadowCasters = { directional: [], sun: [] };
-  for (const { light: object, isVisible } of lights) {
-    const light = object as THREE.Light & { isSunLight?: boolean; isDirectionalLight?: boolean };
-    if (!isVisible || !light.castShadow || !light.layers.test(camera.layers)) continue;
-    if (light.isSunLight) casters.sun.push(light);
-    else if (light.isDirectionalLight) casters.directional.push(light as THREE.DirectionalLight);
-  }
-  return casters;
+  const { directional, sun } = slottedLights(lights, camera);
+  const castsShadow = (light: THREE.Light) => light.castShadow;
+  return {
+    directional: directional.filter(castsShadow) as THREE.DirectionalLight[],
+    sun: sun.filter(castsShadow),
+  };
 }
 
 /**

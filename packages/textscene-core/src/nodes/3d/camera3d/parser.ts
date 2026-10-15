@@ -7,9 +7,9 @@ import type { Camera3DProperties } from './types';
 import { ProjectionMode, KeepAspectMode } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
-import { ruleInt } from '../../../godot/int.js';
+import { ruleInt } from '../../../godot/variant/int.js';
 import { boolSlotValue } from '../../../godot/index.js';
-import { GODOT_EDITOR_LAYERS_MASK } from '../../../godot/visualLayers.js';
+import { GODOT_EDITOR_LAYERS_MASK } from '../../../godot/scene/visualLayers.js';
 
 export function parseCamera3D(
   heading: ParsedHeading,

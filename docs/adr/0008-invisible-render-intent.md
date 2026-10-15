@@ -94,7 +94,7 @@ omission.
 > So a Node3D under a plain `Node` (Timer, AnimationPlayer, an organising `Node`) takes nothing from
 > the Node3D above that `Node`.
 >
-> - `godot/parentSpace.ts` states the rule: a child escapes a parent in the Node3D or CanvasItem
+> - `godot/scene/parentSpace.ts` states the rule: a child escapes a parent in the Node3D or CanvasItem
 >   family when it is not of that family. `<ParentSpaceScope>` moves such a child's three object
 >   to the nearest world root, outside every ancestor group, because three hides a whole subtree
 >   below one invisible object. That is the viewport's, or a CanvasLayer's, since a canvas root

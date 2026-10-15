@@ -3,13 +3,13 @@
 import {
   FAST_FILTER_COEFFICIENTS,
   type FastFilterCoefficients,
-} from '../../godot/skyFastFilterCoefficients.js';
+} from '../../godot/rendering/environment/skyFastFilterCoefficients.js';
 import {
   FAST_FILTER_CHAIN_SIZES,
   REAL_TIME_RADIANCE_SIZE,
   REAL_TIME_ROUGHNESS_LAYERS,
   skyOctmapLayout,
-} from '../../godot/skyReflection.js';
+} from '../../godot/rendering/environment/skyReflection.js';
 import { LAYER_FILTER_UNIFORMS, type LayerFilter } from './layerFilter.js';
 import { FAST_FILTER_FRAGMENT_SHADER } from './skyLayerShaders.js';
 import { setUniforms, skyPass } from './skyPass.js';
