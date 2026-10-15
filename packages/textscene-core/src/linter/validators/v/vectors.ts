@@ -7,7 +7,7 @@
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
 import { ruleInt, tupleComponent } from '../commonValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
+import { slotComponents, slotComponentsAltered } from '../../../godot/variant/int.js';
 import { convertedSpelling, markIntSlot, truncatedComponent } from '../intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
 import {
@@ -18,7 +18,7 @@ import {
   createVector2iValidator,
   createVector3Validator,
 } from '../vectorValidators.js';
-import { compositeTypeName, isConvertedSpelling } from '../../../godot/variantConversion.js';
+import { compositeTypeName, isConvertedSpelling } from '../../../godot/variant/variantConversion.js';
 import { INT_TOKEN_RE, isColorString, STRING_LITERAL_RE } from '../../../godot/index.js';
 import { unquoteString } from '../../../parser/utils.js';
 import { formatCode, numericRange, valueCode } from './codes.js';

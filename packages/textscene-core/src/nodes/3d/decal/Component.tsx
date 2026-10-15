@@ -17,13 +17,13 @@ import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { editorHelperUserData } from '../../../r3f/editorHelpers';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree';
 import { useResourceLoader } from '../../../resources/useResource';
-import { useTexture2D } from '../../../resources/useTexture2D';
+import { useTexture2DRid } from '../../../resources/useTexture2D';
 import { applyTextureState, releaseBoundTexture } from '../../../resources/textures/applyTextureState';
 import type { Color } from '../../../utils/colorParser';
 import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
 import type { DecalGeometricFade } from './decalFade';
-import { distanceFade } from '../../../godot/distanceFade';
+import { distanceFade } from '../../../godot/rendering/distanceFade';
 import { cameraDistance, observeSceneCamera } from '../../../r3f/sceneRenderCamera';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { DecalProjectionMaterials, type DecalProjectionLook } from './decalProjectionMaterials';
@@ -32,6 +32,7 @@ import {
   collectDecalReceivers,
   computeDecalBoxWorldAABB,
 } from './decalProjection';
+import { clamp } from '../../../godot/math/math';
 
 /** Wireframe colour for the (selection-gated) projection-box gizmo. */
 const BOX_COLOR = '#ff9d3b';
@@ -68,11 +69,11 @@ export function Decal({ node, children }: NodeComponentProps) {
   }, []);
   useEffect(() => () => boxEdges.dispose(), [boxEdges]);
 
-  // `useTexture2D`, not the path-only resolver: `texture_albedo` may name an inline procedural
-  // texture with no file to load. The projection material samples it as `map` through the clamp
-  // bind in the effect below: a cache entry that already clamps is reused untouched, and only a
-  // bind-time clone is disposed with the material, so the shared entry stays valid for others.
-  const { texture: albedoTexture } = useTexture2D(
+  // By RID, as `Decal::set_texture` passes it (`scene/3d/decal.cpp:46`): an AtlasTexture projects
+  // its whole sheet, and a CanvasTexture, a RID the decal atlas refuses (`texture_storage.cpp:2941`),
+  // projects nothing. The projection material samples it as `map` through the clamp bind below: a
+  // cache entry that already clamps is reused untouched, and only a bind-time clone is disposed.
+  const { texture: albedoTexture } = useTexture2DRid(
     properties.texture_albedo,
     externalResources,
     internalResources
@@ -100,7 +101,7 @@ export function Decal({ node, children }: NodeComponentProps) {
   const color = useGodotLinearColor(modulate);
   // albedo_mix scales how strongly the projected albedo replaces the surface;
   // fold it with modulate alpha into the projection's opacity.
-  const opacity = clamp01(properties.albedo_mix * modulate.a);
+  const opacity = clamp(properties.albedo_mix * modulate.a, 0, 1);
 
   // Build the projection imperatively, through the group ref, not React state: walk the live
   // scene for meshes the box touches and bake a `DecalGeometry` mesh onto each in the decal's
@@ -122,7 +123,9 @@ export function Decal({ node, children }: NodeComponentProps) {
     // Godot samples the decal through its clamped atlas: the blit uses REPEAT_DISABLED
     // (`copy_effects.cpp:592`) and fragments outside the box are discarded
     // (`scene_forward_clustered.glsl:1585-1587`). The consumer states clamp and never
-    // inherits a Repeat from the shared producer.
+    // inherits a Repeat from the shared producer. The blit copies any format into an RGBA8 atlas
+    // (`texture_storage.cpp:3163`) that the shader reads through its sRGB view
+    // (`render_forward_clustered.cpp:3213`), so a decal decodes sRGB whatever its source format.
     const projectionMap = applyTextureState(albedo, {
       repeat: false,
       colorSpace: THREE.SRGBColorSpace,
@@ -241,8 +244,4 @@ function showFaded(
 ): void {
   materials.setOpacity(opacity * fade);
   group.visible = fade > 0;
-}
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
 }

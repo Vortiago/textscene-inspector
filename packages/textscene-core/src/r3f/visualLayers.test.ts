@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { GODOT_DEFAULT_VISUAL_LAYERS } from '../godot/visualLayers';
+import { GODOT_DEFAULT_VISUAL_LAYERS } from '../godot/scene/visualLayers';
 import { isInMask, setVisualLayers, visualLayersOf, visualLayersUserData } from './visualLayers';
 
 describe('visualLayersUserData', () => {

@@ -10,7 +10,7 @@ import {
   directionalLightsDrawn,
   directionalShadowLightRect,
   type DirectionalShadowAtlasRect,
-} from '../../godot/directionalShadow.js';
+} from '../../godot/rendering/lights/directionalShadow.js';
 import { readDirectionalShadowDeclaration, type DirectionalShadowDeclaration } from './declaration.js';
 
 /** A light in the scene, and whether three's render reaches it: it and every ancestor are visible. */

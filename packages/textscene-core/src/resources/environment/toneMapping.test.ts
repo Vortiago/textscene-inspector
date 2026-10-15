@@ -78,7 +78,7 @@ describe('Godot\u2019s curves', () => {
   });
 
   it('emits a compilable CustomToneMapping body that consumes the exposure', () => {
-    const chunk = toneMappingShaderChunk(2);
+    const chunk = toneMappingShaderChunk(2, 1);
     expect(chunk).toMatch(/vec3 CustomToneMapping\(vec3 color\)/);
     // three applies toneMappingExposure for its built-in curves only. A custom one
     // that forgets it ignores tonemap_exposure.
@@ -86,7 +86,7 @@ describe('Godot\u2019s curves', () => {
   });
 
   it('emits an AGX body carrying Godot’s allenwp curve and matrices', () => {
-    const chunk = toneMappingShaderChunk(4);
+    const chunk = toneMappingShaderChunk(4, 1);
     expect(chunk).toMatch(/vec3 CustomToneMapping\(vec3 color\)/);
     expect(chunk).toMatch(/color \*= toneMappingExposure/);
     // Load-bearing AgX constants: the inset matrix's leading coefficient and the

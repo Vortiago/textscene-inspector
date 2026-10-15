@@ -9,7 +9,7 @@ import { FileEventBus } from '../../resources/FileEventBus';
 import { ResourceLoader } from '../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import type { ResourceProvider } from '../../resources/ResourceProvider';
-import { PROJECT_FILE_PATH } from '../../godot/project.js';
+import { PROJECT_FILE_PATH } from '../../godot/project/project.js';
 import { ProjectSettingsProvider, useProjectSettings } from './ProjectSettingsContext';
 
 function Probe() {

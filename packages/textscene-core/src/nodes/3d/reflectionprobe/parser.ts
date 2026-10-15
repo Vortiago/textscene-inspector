@@ -9,9 +9,9 @@ import {
   REFLECTION_PROBE_MAX_DISTANCE,
   ReflectionProbeAmbientMode,
   ReflectionProbeUpdateMode,
-} from '../../../godot/reflectionProbe';
-import type { Xyz } from '../../../godot/xyz';
-import { clamp } from '../../../godot/math';
+} from '../../../godot/rendering/environment/reflectionProbe';
+import type { Vector3 } from '../../../godot/math/vector';
+import { clamp } from '../../../godot/math/math';
 import type { ParsedHeading } from '../../../parser/utils';
 import { boolOr, enumOr, floatOr, intOr, vec3Or } from '../../../parser/valueParsers';
 import { colorOr } from '../../../utils/colorParser';
@@ -66,7 +66,7 @@ export function parseReflectionProbe(
 }
 
 /** The size, and the origin offset its setters clamp against each size line in turn. */
-function parseBox(properties: Record<string, string>): { size: Xyz; originOffset: Xyz } {
+function parseBox(properties: Record<string, string>): { size: Vector3; originOffset: Vector3 } {
   const size = vec3Or(properties.size, REFLECTION_PROBE_DEFAULTS.size, 'ReflectionProbe size');
   const originOffset = vec3Or(
     properties.origin_offset,

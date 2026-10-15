@@ -7,8 +7,8 @@
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
 import type { Color } from '../../../utils/colorParser';
 import type { Vector2 } from '../../../parser/vectors';
-import { BillboardMode } from '../../../godot/billboard';
-import { AxisMode } from '../../../godot/vector3Axis';
+import { BillboardMode } from '../../../godot/scene/billboard';
+import { AxisMode } from '../../../godot/math/vector3Axis';
 
 /** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
 export { BillboardMode };

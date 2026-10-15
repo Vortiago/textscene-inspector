@@ -6,7 +6,7 @@
 
 import { armEmits, type RuleArms } from '../../linter/ruleArms.js';
 import { resourceRuleRegistry, type ResourceRule } from '../../linter/ResourceRuleRegistry.js';
-import { REAL_TIME_RADIANCE_SIZE } from '../../godot/skyReflection.js';
+import { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection.js';
 import { decodeSkyProcessing } from './decode.js';
 
 const arms = {

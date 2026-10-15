@@ -3,16 +3,17 @@
  * normalised depth. An omni or spot light's keeps Godot's unit, which the patched lookup reads.
  */
 
-import { SHADOW_BLUR_DEFAULT } from '../../../../godot/softShadowScale';
 import {
+  LIGHT_SHADOW_BIAS_DEFAULT,
   LIGHT_SIZE_DEFAULT,
+  SPOT_LIGHT_SHADOW_BIAS_DEFAULT,
+} from '../../../../godot/scene/light';
+import { SHADOW_BLUR_DEFAULT } from '../../../../godot/rendering/lights/softShadowScale';
+import {
   positionalSoftShadow,
   spotShadowDepthBias,
-} from '../../../../godot/positionalShadow';
+} from '../../../../godot/rendering/lights/positionalShadow';
 import type { PositionalLightProperties } from './types';
-
-/** `scene/3d/light_3d.cpp:490` (Light3D) and `:681` (SpotLight3D). */
-const GODOT_SHADOW_BIAS_DEFAULT = { DIRECTIONAL: 0.1, OMNI: 0.1, SPOT: 0.03 } as const;
 
 /**
  * Exact: `light_storage.cpp:723` sends `shadow_bias / 100 * bias_scale` times `soft_shadow_scale`,
@@ -21,7 +22,7 @@ const GODOT_SHADOW_BIAS_DEFAULT = { DIRECTIONAL: 0.1, OMNI: 0.1, SPOT: 0.03 } as
  * normalised depth the range cancels.
  */
 export function directionalShadowBias(shadowBias: number | undefined, softShadowScale: number): number {
-  return -((shadowBias ?? GODOT_SHADOW_BIAS_DEFAULT.DIRECTIONAL) / 100) * softShadowScale;
+  return -((shadowBias ?? LIGHT_SHADOW_BIAS_DEFAULT) / 100) * softShadowScale;
 }
 
 /**
@@ -30,7 +31,7 @@ export function directionalShadowBias(shadowBias: number | undefined, softShadow
  * distance to the light (`scene_forward_lights_inc.glsl:594`, `positionalShadowLookup.ts`).
  */
 export function omniShadowBias(shadowBias: number | undefined): number {
-  return shadowBias ?? GODOT_SHADOW_BIAS_DEFAULT.OMNI;
+  return shadowBias ?? LIGHT_SHADOW_BIAS_DEFAULT;
 }
 
 /** The properties a spot light's depth bias reads. */
@@ -42,5 +43,5 @@ export function spotShadowBias({ shadow_bias, shadow_blur, light_size }: SpotBia
     light_size ?? LIGHT_SIZE_DEFAULT,
     shadow_blur ?? SHADOW_BLUR_DEFAULT
   );
-  return spotShadowDepthBias(shadow_bias ?? GODOT_SHADOW_BIAS_DEFAULT.SPOT, scale);
+  return spotShadowDepthBias(shadow_bias ?? SPOT_LIGHT_SHADOW_BIAS_DEFAULT, scale);
 }

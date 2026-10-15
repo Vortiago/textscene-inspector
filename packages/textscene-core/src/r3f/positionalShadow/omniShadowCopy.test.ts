@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas';
+import type { PositionalShadowSlot } from '../../godot/rendering/lights/positionalShadowAtlas';
 import { AtlasOmniShadow } from './atlasOmniShadow';
 import { OmniShadowCopy } from './omniShadowCopy';
 import { holdPositionalShadowAtlas, positionalShadowAtlas } from './shadowAtlasTarget';
@@ -31,6 +31,9 @@ function recordingRenderer(): { renderer: THREE.WebGLRenderer; draws: Draw[] } {
     setRenderTarget: (next: THREE.WebGLRenderTarget | null) => {
       target = next;
     },
+    getRenderTarget: () => target,
+    getActiveCubeFace: () => 0,
+    getActiveMipmapLevel: () => 0,
     render: (quad: THREE.Mesh) => {
       const material = quad.material as THREE.ShaderMaterial;
       draws.push({
@@ -100,6 +103,14 @@ describe('OmniShadowCopy.copy', () => {
     new OmniShadowCopy().copy(renderer, renderedLight(), pair);
     expect(draws.every((draw) => !draw.autoClear && !draw.autoReset)).toBe(true);
     expect([renderer.autoClear, renderer.info.autoReset]).toEqual([true, true]);
+  });
+
+  it('leaves the render target as it found it', () => {
+    const { renderer } = recordingRenderer();
+    const before = new THREE.WebGLRenderTarget(4, 4);
+    renderer.setRenderTarget(before);
+    new OmniShadowCopy().copy(renderer, renderedLight(), pair);
+    expect(renderer.getRenderTarget()).toBe(before);
   });
 
   it('writes the depth into the atlas colour too, for the blocker search', () => {

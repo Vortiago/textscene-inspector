@@ -5,8 +5,8 @@
  * slice supplies the painter and rect, so this checks the whole pinned catalog.
  */
 import { describe, expect, it } from 'vitest';
-import { CATALOG_BASE_TYPES } from '../../godot/nodeBaseTypes.generated';
-import { descendsFrom } from '../../godot/nodeBaseTypes';
+import { CATALOG_BASE_TYPES } from '../../godot/classdb/nodeBaseTypes.generated';
+import { descendsFrom } from '../../godot/classdb/nodeBaseTypes';
 import { isCanvasLayerType } from '../canvasPaintOrder';
 import { controlSolverRegistry } from './native/solverRegistry';
 import { TWO_D_UI_TYPES } from './has2DUIContent';

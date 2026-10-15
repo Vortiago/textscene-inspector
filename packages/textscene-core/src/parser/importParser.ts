@@ -14,7 +14,7 @@ import {
 } from './utils';
 import * as logger from '../logger';
 import { boolSlotValue } from '../godot/index.js';
-import { DEFAULT_GLTF_NAMING_VERSION, type GltfNamingOptions } from '../godot/gltfImportNames.js';
+import { DEFAULT_GLTF_NAMING_VERSION, type GltfNamingOptions } from '../godot/import/gltfImportNames.js';
 import { parseOptionalInt } from './valueParsers.js';
 import {
   DEFAULT_LIGHT_BAKE_MODE,
@@ -22,7 +22,7 @@ import {
   LightBakeMode,
   MeshOverride,
   unwrapTexelSize,
-} from '../godot/sceneImport.js';
+} from '../godot/import/sceneImport.js';
 
 /** A `key=value` line, tolerating surrounding whitespace and a trailing comment-free tail. */
 const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/]*)=(.*)$/;

@@ -6,8 +6,8 @@
  */
 
 import * as THREE from 'three';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
-import { FULL_SCREEN_VERTEX } from '../lighting2d/fullScreenQuad.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
+import { drawFullScreen, fullScreenPass } from '../fullScreenPass.js';
 import { drawOffscreen } from '../offscreen.js';
 import { bindRadiance } from './fogSky.js';
 import {
@@ -48,24 +48,15 @@ export class FogRadiancePass {
     FOG_RADIANCE_BAND_HEIGHT * FOG_RADIANCE_BANDS,
     { depthBuffer: false, stencilBuffer: false }
   );
-  private readonly material = new THREE.ShaderMaterial({
-    name: 'FogRadiance',
-    uniforms: { envMap: { value: null }, energy: { value: 1 } },
-    vertexShader: FULL_SCREEN_VERTEX,
-    fragmentShader: RADIANCE_FRAGMENT,
-    depthTest: false,
-    depthWrite: false,
-    blending: THREE.NoBlending,
-    toneMapped: false,
+  private readonly material = fullScreenPass('FogRadiance', RADIANCE_FRAGMENT, {
+    envMap: { value: null },
+    energy: { value: 1 },
   });
-  private readonly quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.material);
-  private readonly quadCamera = new THREE.Camera();
   /** What the atlas holds, undefined before the first bake. */
   private baked: { radiance: THREE.Texture | null; energy: number } | undefined;
 
   constructor() {
     this.target.texture = fogUniforms.radiance;
-    this.quad.frustumCulled = false;
   }
 
   /** Bakes `radiance` times `energy` unless the atlas already holds them. Null bakes black. */
@@ -74,15 +65,11 @@ export class FogRadiancePass {
     this.baked = { radiance, energy };
     bindRadiance(this.material, radiance);
     this.material.uniforms['energy']!.value = energy;
-    drawOffscreen(renderer, () => {
-      renderer.setRenderTarget(this.target);
-      renderer.render(this.quad, this.quadCamera);
-    });
+    drawOffscreen(renderer, () => drawFullScreen(renderer, this.material, this.target));
   }
 
   dispose(): void {
     this.target.dispose();
     this.material.dispose();
-    this.quad.geometry.dispose();
   }
 }

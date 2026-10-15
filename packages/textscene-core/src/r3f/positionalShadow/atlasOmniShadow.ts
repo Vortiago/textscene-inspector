@@ -7,7 +7,10 @@
 
 import * as THREE from 'three';
 import type { PointLightShadow } from 'three/src/lights/PointLightShadow.js';
-import { omniShadowCubeSize, type PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
+import {
+  omniShadowCubeSize,
+  type PositionalShadowSlot,
+} from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { lightPoseMatrix } from './lightPose.js';
 import { positionalShadowAtlas } from './shadowAtlasTarget.js';
 import { readIntensityThroughSlot, type SlottedShadow } from './slotOpacity.js';

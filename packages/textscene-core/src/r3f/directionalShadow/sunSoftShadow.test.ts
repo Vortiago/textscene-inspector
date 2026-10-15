@@ -1,17 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  SUN_SOFT_SHADOWS,
-  SUN_RANGE_BEGINS,
   drawsDirectionalSoftShadows,
-  installSunSoftShadowUniforms,
   searchesDirectionalBlockers,
-  writeSunSoftShadowUniforms,
+  setSunSoftShadowAngles,
 } from './sunSoftShadow';
 import { directionalShadowUserData, type DirectionalShadowDeclaration } from './declaration';
-import { attachSplitSun } from './splitSun';
+import { attachSplitSun, splitSunOf } from './splitSun';
 import { sceneLights } from './lightLists';
-import { litUniformArray } from '../testing/litUniformArray';
 
 const DECLARATION: DirectionalShadowDeclaration = {
   maxDistance: 100,
@@ -28,51 +24,45 @@ const DECLARATION: DirectionalShadowDeclaration = {
   sharesAtlas: true,
 };
 
-/** A declared light with its split sun, pointed from below towards the light at +Y. */
+/** A declared light with its split sun. */
 function sunLight(declaration: Partial<DirectionalShadowDeclaration> = {}): THREE.DirectionalLight {
   const light = new THREE.DirectionalLight();
   light.userData = directionalShadowUserData({ ...DECLARATION, ...declaration });
-  const sun = attachSplitSun(light);
-  sun.matrixWorld.makeTranslation(0, 10, 0);
-  sun.shadow.rangeBegins.set(40, 41, 42, 43);
+  attachSplitSun(light);
   return light;
 }
 
 const camera = new THREE.PerspectiveCamera();
 
-function written(
-  scene: THREE.Scene,
-  drawsSoftShadows: boolean
-): { shadows: number[]; rangeBegins: number[] } {
-  writeSunSoftShadowUniforms(sceneLights(scene), camera, drawsSoftShadows);
-  installSunSoftShadowUniforms();
-  return {
-    shadows: [...litUniformArray(SUN_SOFT_SHADOWS).subarray(0, 4)],
-    rangeBegins: [...litUniformArray(SUN_RANGE_BEGINS).subarray(0, 4)],
-  };
+/** The angle `setSunSoftShadowAngles` gives the sun of `light`, the only light of `scene`. */
+function angleSet(scene: THREE.Scene, light: THREE.DirectionalLight, drawsSoftShadows: boolean): number {
+  setSunSoftShadowAngles(sceneLights(scene), drawsSoftShadows);
+  return splitSunOf(light)!.shadow.softShadowAngle;
 }
 
-describe('writeSunSoftShadowUniforms', () => {
-  it("writes the direction towards the light, the angle and each slot's range start of a sun's shadow", () => {
-    const scene = new THREE.Scene();
-    scene.add(sunLight());
-    const { shadows, rangeBegins } = written(scene, true);
-    expect(shadows).toEqual([0, 1, 0, 0.5]);
-    expect(rangeBegins).toEqual([40, 41, 42, 43]);
-  });
+function sceneWith(light: THREE.DirectionalLight): THREE.Scene {
+  return new THREE.Scene().add(light);
+}
 
-  it('writes no angle while no light turns the soft shadows on (edge case)', () => {
-    const scene = new THREE.Scene();
-    scene.add(sunLight());
-    expect(written(scene, false).shadows[3]).toBe(0);
-  });
-
-  it('writes no angle for a sun whose light lost its declaration (error case)', () => {
-    const scene = new THREE.Scene();
+describe('setSunSoftShadowAngles', () => {
+  it("sets each sun shadow's angle from its light's declaration", () => {
     const light = sunLight();
+    expect(angleSet(sceneWith(light), light, true)).toBe(0.5);
+  });
+
+  it('sets no angle while no light turns the soft shadows on (edge case)', () => {
+    const light = sunLight();
+    const scene = sceneWith(light);
+    angleSet(scene, light, true);
+    expect(angleSet(scene, light, false)).toBe(0);
+  });
+
+  it('sets no angle for a sun whose light lost its declaration (error case)', () => {
+    const light = sunLight();
+    const scene = sceneWith(light);
+    angleSet(scene, light, true);
     light.userData = {};
-    scene.add(light);
-    expect(written(scene, true).shadows[3]).toBe(0);
+    expect(angleSet(scene, light, true)).toBe(0);
   });
 });
 

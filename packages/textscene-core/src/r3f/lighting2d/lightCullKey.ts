@@ -9,7 +9,7 @@
  */
 
 import { LIGHT_2D_RANGE_DEFAULTS } from '../../nodes/2d/lights/shared/types.js';
-import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering.js';
+import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering/rendering.js';
 
 /** Everything a light contributes to the cull test, the rects aside. */
 export interface LightCullKey {

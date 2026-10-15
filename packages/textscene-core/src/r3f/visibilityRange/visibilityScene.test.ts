@@ -13,7 +13,7 @@ import {
   hasVisibilityRange,
   VisibilityRangeFadeMode,
   type VisibilityRange,
-} from '../../godot/visibilityRange';
+} from '../../godot/rendering/visibilityRange';
 
 /** A camera on +Z at `distance` from the origin, looking at it, or away from it. */
 function cameraAt(distance: number, isLookingAway = false): THREE.PerspectiveCamera {

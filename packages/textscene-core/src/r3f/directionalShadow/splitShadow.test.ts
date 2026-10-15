@@ -16,7 +16,7 @@ import { splitSunOf } from './splitSun';
 import {
   directionalShadowSplitAtlasRect,
   type DirectionalShadowAtlasRect,
-} from '../../godot/directionalShadow';
+} from '../../godot/rendering/lights/directionalShadow';
 
 const ATLAS_SIZE = 4096;
 const WHOLE_ATLAS = { x: 0, y: 0, width: ATLAS_SIZE, height: ATLAS_SIZE };
@@ -259,6 +259,17 @@ describe('DirectionalSplitShadow.updateMatrices', () => {
       expect(landsIn(shadow.getMatrix(0), corner, SECOND_OF_TWO)).toBe(true);
     }
   });
+
+  it.each([1, 2, 4])(
+    'keeps (0, 0, 0, 1) as the fourth row of every slot matrix with %i splits, so the lookup reads three rows',
+    (splitCount) => {
+      const shadow = fittedShadow(viewingCamera(), splitCount);
+      for (let slot = 0; slot < SPLIT_SLOTS; slot++) {
+        const { elements } = shadow.getMatrix(slot);
+        expect([elements[3], elements[7], elements[11], elements[15]]).toEqual([0, 0, 0, 1]);
+      }
+    }
+  );
 
   it('repeats the last split’s matrix in the undrawn slots (edge case)', () => {
     const shadow = fittedShadow(viewingCamera(), 2);

@@ -45,7 +45,7 @@ export function meshInstanceNode(
     ...overrides,
   };
   if (materialOverride) properties.materialOverride = materialOverride;
-  // The cull reads the raw `mesh` for the instance's geometry base (`godot/geometryBase.ts`).
+  // The cull reads the raw `mesh` for the instance's geometry base (`godot/scene/geometryBase.ts`).
   return { rawProperties: { mesh }, name: 'Mesh', type: 'MeshInstance3D', children: [], properties };
 }
 

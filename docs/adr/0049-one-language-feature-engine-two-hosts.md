@@ -25,7 +25,7 @@ property tables, hints and deprecated aliases, and the copies would drift.
   `documentSymbols`, `declarationRangeAt`, `resPathAt` and `resPathOccurrences`. Every result is
   host-neutral with zero-based ranges, the convention LSP and the VS Code API share, so a host
   adapts no position. A host maps each result to its own types and adds no feature logic.
-- The language-feature engine reads a resource reference through `godot/resourceRef.ts`, as the
+- The language-feature engine reads a resource reference through `godot/variant/resourceRef.ts`, as the
   linter and the renderer do. So the old integer form `ExtResource(1)` resolves in every host.
 - The language-feature engine reads the same `godot/` ClassDB captures, base-type tables and
   deprecated-alias table as the linter. `pnpm nodes:base-types` generates the per-class property

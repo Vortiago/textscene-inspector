@@ -7,7 +7,7 @@
 
 import type { Diagnostic, LintRule, RuleContext } from '../types.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
-import { descendsFrom } from '../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../godot/classdb/nodeBaseTypes.js';
 import { collisionShapeTypesPhrase, hasCollisionShapeChild } from './hasCollisionShapeChild.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';

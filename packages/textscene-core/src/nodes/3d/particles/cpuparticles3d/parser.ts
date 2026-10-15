@@ -1,7 +1,7 @@
 /** The render parse of a CPUParticles3D: its instance state and what its box reads. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
-import { holdsResource } from '../../../../godot/geometryBase';
+import { holdsResource } from '../../../../godot/scene/geometryBase';
 import { parseBox, parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import type { CPUParticles3DProperties } from './types';
 

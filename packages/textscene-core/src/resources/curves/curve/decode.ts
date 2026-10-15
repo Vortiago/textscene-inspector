@@ -8,9 +8,9 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
-import { slotTupleRegex, parseGodotFloat, allFinite } from '../../../godot/number.js';
-import { ruleInt, slotComponents } from '../../../godot/int.js';
-import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
+import { slotTupleRegex, parseGodotFloat, allFinite } from '../../../godot/variant/number.js';
+import { ruleInt, slotComponents } from '../../../godot/variant/int.js';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
 import { resizePoints } from './pointCount';
 
 /**

@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { DecalProjectionMaterials } from './decalProjectionMaterials';
 import { lightModesUserData } from '../../../r3f/lightModes';
 import { specularOcclusionUserData } from '../../../r3f/godotIndirectSpecular';
-import { DiffuseMode } from '../../../godot/diffuseMode';
-import { SpecularMode } from '../../../godot/specularMode';
+import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
+import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
 import {
   DRAWS_LAMBERT_DIFFUSE,
   DRAWS_TOON_SPECULAR,

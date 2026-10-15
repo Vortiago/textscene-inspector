@@ -4,12 +4,9 @@
  */
 
 import { useMemo } from 'react';
-import {
-  LIGHT_SIZE_DEFAULT,
-  POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
-  positionalSoftShadow,
-} from '../../../../godot/positionalShadow';
-import { SHADOW_BLUR_DEFAULT } from '../../../../godot/softShadowScale';
+import { LIGHT_SHADOW_NORMAL_BIAS_DEFAULT, LIGHT_SIZE_DEFAULT } from '../../../../godot/scene/light';
+import { positionalSoftShadow } from '../../../../godot/rendering/lights/positionalShadow';
+import { SHADOW_BLUR_DEFAULT } from '../../../../godot/rendering/lights/softShadowScale';
 import {
   positionalShadowUserData,
   type PositionalShadowDeclaration,
@@ -31,7 +28,7 @@ export function positionalShadowDeclaration(
     properties.shadow_blur ?? SHADOW_BLUR_DEFAULT
   );
   return {
-    normalBias: properties.shadow_normal_bias ?? POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
+    normalBias: properties.shadow_normal_bias ?? LIGHT_SHADOW_NORMAL_BIAS_DEFAULT,
     softShadowRadius: softShadowRadius(softShadow),
   };
 }

@@ -8,7 +8,9 @@
 
 import * as THREE from 'three';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
+import { slottedLights } from '../lightSlots.js';
 import { LightUniformArrays, type LightArrays } from '../shaderPatch/lightUniformArrays.js';
+import { userDataDeclaration } from '../userDataDeclaration.js';
 import { writeAreaLightShadowUniforms } from './areaLightShadowUniforms.js';
 import { areaTexturePlacement } from './areaLightAtlas.js';
 
@@ -29,16 +31,20 @@ export interface AreaLightFalloff {
   specular: number;
 }
 
-const FALLOFF_KEY = 'godotAreaLightFalloff';
+const falloffDeclaration = userDataDeclaration<AreaLightFalloff>(
+  'godotAreaLightFalloff',
+  ({ range, attenuation, specular }) =>
+    typeof range === 'number' && typeof attenuation === 'number' && typeof specular === 'number'
+);
 
 /** The `userData` through which a `RectAreaLight` carries its falloff to the writer. */
 export function areaLightUserData(falloff: AreaLightFalloff): Record<string, unknown> {
-  return { [FALLOFF_KEY]: falloff };
+  return falloffDeclaration.userData(falloff);
 }
 
-/** The falloff `areaLightUserData` declared, or undefined for a light that declared none. */
-export function readAreaLightFalloff(light: THREE.RectAreaLight): AreaLightFalloff | undefined {
-  return light.userData[FALLOFF_KEY] as AreaLightFalloff | undefined;
+/** The falloff `areaLightUserData` declared, or null for a light that declared none. */
+export function readAreaLightFalloff(light: THREE.RectAreaLight): AreaLightFalloff | null {
+  return falloffDeclaration.read(light);
 }
 
 /** Written only by `writeAreaLightUniforms`. */
@@ -59,24 +65,6 @@ function writeTexture(set: LightArrays<AreaLightUniform>, index: number, light: 
 /** Gives the arrays to every built-in lit material. */
 export function installAreaLightUniforms(): void {
   arrays.install();
-}
-
-/**
- * The rect area lights three gives a slot when it renders through `camera`: visible, on a layer the
- * camera sees, in tree order (r186 `WebGLRenderer.js:1860-1882`). three's stable sort then moves each
- * light that casts a shadow ahead of the rest (`WebGLLights.js:153-157`, `:245`). A rect area light
- * has no map.
- */
-function slottedAreaLights(lights: readonly SceneLight[], camera: THREE.Camera): THREE.RectAreaLight[] {
-  const slotted: THREE.RectAreaLight[] = [];
-  for (const { light, isVisible } of lights) {
-    if (isVisible && isRectAreaLight(light) && light.layers.test(camera.layers)) slotted.push(light);
-  }
-  return slotted.sort((a, b) => Number(b.castShadow) - Number(a.castShadow));
-}
-
-function isRectAreaLight(light: THREE.Light): light is THREE.RectAreaLight {
-  return (light as THREE.RectAreaLight).isRectAreaLight === true;
 }
 
 /** An area light's local axes: it faces -Z, and its width runs along +X and its height along +Y. */
@@ -133,7 +121,7 @@ function writeLight(
  * as they were.
  */
 export function writeAreaLightUniforms(lights: readonly SceneLight[], camera: THREE.Camera): void {
-  const slotted = slottedAreaLights(lights, camera);
+  const slotted = slottedLights(lights, camera).area;
   arrays.write(slotted.length, (set) =>
     slotted.forEach((light, index) => writeLight(set, index, light, camera))
   );

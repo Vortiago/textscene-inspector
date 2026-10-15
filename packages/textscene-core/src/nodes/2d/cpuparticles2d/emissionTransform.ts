@@ -7,7 +7,7 @@
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import { TRANSFORM2D_IDENTITY, type Transform2DColumns } from '../../../godot/transform2d.js';
+import { TRANSFORM2D_IDENTITY, type Transform2DColumns } from '../../../godot/math/transform2d.js';
 import { transform2DFromThreeMatrix } from '../../../r3f/node2dTransform';
 
 /** Do two transforms place the emitter identically? */

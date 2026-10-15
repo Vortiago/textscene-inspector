@@ -6,8 +6,8 @@
 
 import type { Material } from 'three';
 import { composeInjections, defining, type ProgramInjection } from './materialProgramInputs.js';
-import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../godot/diffuseMode.js';
-import { SPECULAR_MODE_NAMES, SpecularMode } from '../godot/specularMode.js';
+import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../godot/rendering/materials/diffuseMode.js';
+import { SPECULAR_MODE_NAMES, SpecularMode } from '../godot/rendering/materials/specularMode.js';
 import { recordedOn } from './materials/recordedOnMaterial.js';
 
 /** The render modes of Godot's light function that a surface draws with. */

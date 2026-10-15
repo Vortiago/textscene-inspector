@@ -7,7 +7,7 @@
 
 import type { ParsedHeading } from '../../parser/utils.js';
 import { SCENE_ROOT_PATH, getAncestorPaths, joinPath } from '../../utils/nodePath.js';
-import { resolveParentPath } from '../../godot/nodePath.js';
+import { resolveParentPath } from '../../godot/string/nodePath.js';
 
 export interface InstancedPaths {
   /** Records a `[node]` heading, in scan order. */

@@ -7,7 +7,7 @@
  */
 
 import { extractNodePathInner } from '../animationplayer/animationResolver';
-import { resolveRelativePath } from '../../../godot/nodePath';
+import { resolveRelativePath } from '../../../godot/string/nodePath';
 
 export function resolveAnimPlayerPath(
   treeNodePath: string,

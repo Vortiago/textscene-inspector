@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { imageSize, readImagePixels, type ImagePixels } from '../../formats/image/imagePixels';
 import { copySampling } from '../copySampling';
+import { copyGodotFormat } from '../sourceColorSpace';
 import { isBottomUp } from '../../../utils/reversedRows';
 import type { AtlasTextureLayout } from './types';
 
@@ -78,7 +79,9 @@ export function rasterizeAtlasTexture(
   if (sw <= 0 || sh <= 0) return null;
 
   const raw = rawPixels(sheet, atlas);
-  return raw && copySampling(cropRawPixels(raw, layout, left, top, sw, sh), sheet);
+  if (!raw) return null;
+  // A material binds the atlas's own texture (`atlas_texture.cpp:55-58`), so the crop reads as it.
+  return copyGodotFormat(copySampling(cropRawPixels(raw, layout, left, top, sw, sh), sheet), sheet);
 }
 
 /**
@@ -122,7 +125,7 @@ function cropRawPixels(
   }
 
   const texture = new THREE.DataTexture(out, layout.width, layout.height, THREE.RGBAFormat);
-  // The sheet's own tags, as `colourDataTexture` sets them: floats read raw, bytes as sRGB.
+  // Floats read raw and bytes as sRGB until `copyGodotFormat` records the sheet's format.
   texture.type = isHalfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType;
   texture.colorSpace = isHalfFloat ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace;
   texture.flipY = !raw.isBottomUp;

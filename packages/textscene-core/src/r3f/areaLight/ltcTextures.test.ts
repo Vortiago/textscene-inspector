@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { ltcTables } from '../../godot/ltc';
+import { ltcTables } from '../../godot/rendering/lights/ltc';
 import { installLtcTextures } from './ltcTextures';
 
 function installed(name: 'LTC_FLOAT_1' | 'LTC_FLOAT_2' | 'LTC_HALF_1' | 'LTC_HALF_2'): THREE.DataTexture {

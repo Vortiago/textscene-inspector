@@ -13,7 +13,7 @@ import '../animationmixer/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
 import { ARRAY_LITERAL_RE } from '../../../godot/index.js';
 
 const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };

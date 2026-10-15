@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { parseStandardMaterial3DScalars } from './scalars';
-import { DiffuseMode } from '../../../godot/diffuseMode';
+import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
 
 describe('parseStandardMaterial3DScalars: diffuse_mode', () => {
   it('defaults to Burley', () => {

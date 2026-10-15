@@ -5,8 +5,9 @@
  * the MIT licence (see THIRD-PARTY-NOTICES.md). Pure, so the arithmetic is testable.
  */
 
+import { clamp } from '../../godot/math/math.js';
 import type { EnvironmentSettings } from './types';
-import { glslFloat } from './glslLiterals';
+import { glslFloat } from '../../utils/glslLiterals';
 
 /** Godot `Environment.GlowBlendMode`. */
 export const GlowBlendMode = {
@@ -117,10 +118,10 @@ export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null 
     maxLevel,
     hdrThreshold: Math.max(0, glow.hdrThreshold),
     hdrScale: Math.max(0, glow.hdrScale),
-    bloom: clamp01(glow.bloom),
+    bloom: clamp(glow.bloom, 0, 1),
     luminanceCap: Math.max(0, glow.luminanceCap),
     strength: Math.max(0, glow.strength),
-    intensity: blendMode === GlowBlendMode.MIX ? clamp01(glow.mix) : glow.intensity,
+    intensity: blendMode === GlowBlendMode.MIX ? clamp(glow.mix, 0, 1) : glow.intensity,
     blendMode,
     exposure: settings.toneMapping.exposure,
     map: glow.map,
@@ -185,10 +186,6 @@ vec3 godotGlowBlend(vec3 color, vec3 glow) {
 ${body(params, white)}
 }
 `;
-}
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
 }
 
 /**

@@ -10,7 +10,7 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { godotConePenumbra } from '../../../../r3f/godotLightAttenuation';
-import { positionalShadowNear } from '../../../../godot/positionalShadow';
+import { positionalShadowNear } from '../../../../godot/rendering/lights/positionalShadow';
 import { spotShadowBias } from '../shared/shadowBias';
 import { LightWithTarget } from '../shared/lightShared';
 import { SpotLightGizmo } from '../shared/lightHelpers';

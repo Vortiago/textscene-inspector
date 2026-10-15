@@ -6,7 +6,7 @@
 
 import type * as THREE from 'three';
 import type { GLTF, GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
-import { GLTF_MODE_TRIANGLES, gltfObjects, targetCount } from '../../../../godot/gltf';
+import { GLTF_MODE_TRIANGLES, gltfObjects, targetCount } from '../../../../godot/import/gltf';
 import { meshSurfaces } from '../godotPrimitives';
 import {
   IDENTITY_BASIS,
@@ -15,7 +15,7 @@ import {
   transformChainScale,
   type Basis32,
   type GltfNodeTransform,
-} from '../../../../godot/importerBasis';
+} from '../../../../godot/import/importerBasis';
 import type { LightmapUnwrap } from '../../../../parser/importParser';
 import type { RootScale } from '../types';
 import { parseUnwrapCache, type UnwrapCacheEntry } from './unwrapCache';

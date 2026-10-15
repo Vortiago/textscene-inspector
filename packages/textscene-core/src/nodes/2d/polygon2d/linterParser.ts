@@ -14,7 +14,7 @@ import {
   splitTopLevel,
   variantShape,
 } from '../../../godot/index.js';
-import { arrayLiteralBody } from '../../../godot/variantParser.js';
+import { arrayLiteralBody } from '../../../godot/variant/variantParser.js';
 import { markIntSlot } from '../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
 

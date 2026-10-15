@@ -64,6 +64,30 @@ export const CHECKOUT_CONTROLS = [
     hit: false,
     body: "const tree = 'https://api.github.com/repos/godotengine/godot/git/trees/master';",
   },
+  // Core's own `godot/scene/` group shares the engine directory's name.
+  {
+    file: 'scratch/own-module.ts',
+    hit: false,
+    body: "import { CURSOR_MAX } from '../godot/scene/control.js'; // see `godot/scene/csg.test.ts`",
+  },
+  { file: 'scratch/own-group.md', hit: false, body: 'A new node fact goes in `godot/scene/`.' },
+  { file: 'scratch/engine-dir.ts', hit: true, body: "const gltf = '/home/dev/godot/modules/gltf';" },
+  {
+    file: 'scratch/sibling-dir.ts',
+    hit: true,
+    body: "readFileSync('../godot/scene/3d/light_3d.cpp')",
+  },
+  {
+    file: 'scratch/sibling-file.ts',
+    hit: true,
+    body: "readFileSync('../godot/scene/register_scene_types.cpp')",
+  },
+  { file: 'scratch/bare-dir.ts', hit: true, body: "const scene = resolve(HOME, 'godot/scene');" },
+  {
+    file: 'scratch/compat-file.ts',
+    hit: true,
+    body: "readFileSync('../godot/scene/register_scene_types.compat.inc')",
+  },
 ];
 
 /**

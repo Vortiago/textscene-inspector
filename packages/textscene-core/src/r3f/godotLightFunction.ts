@@ -8,8 +8,8 @@
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 import { LIGHT_SIZE_MARK } from './lightSize/lightSizeChunk.js';
 import { LIGHT_SPECULAR_MARK } from './lightSpecular/lightSpecularChunk.js';
-import { ROUGHNESS_LIMITER_AMOUNT, ROUGHNESS_LIMITER_LIMIT } from '../godot/roughnessLimiter.js';
-import { glslFloat } from '../resources/environment/glslLiterals.js';
+import { ROUGHNESS_LIMITER_AMOUNT, ROUGHNESS_LIMITER_LIMIT } from '../godot/rendering/roughnessLimiter.js';
+import { glslFloat } from '../utils/glslLiterals.js';
 
 const CHUNK = 'lights_physical_pars_fragment';
 const SETUP_CHUNK = 'lights_physical_fragment';

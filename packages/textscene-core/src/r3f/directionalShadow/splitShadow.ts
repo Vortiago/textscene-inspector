@@ -12,7 +12,7 @@ import {
   directionalShadowSplitAtlasRect,
   type DirectionalShadowAtlasRect,
   type DirectionalShadowFade,
-} from '../../godot/directionalShadow.js';
+} from '../../godot/rendering/lights/directionalShadow.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { holdDirectionalShadowAtlas, releaseDirectionalShadowAtlas } from './shadowAtlas.js';
 
@@ -67,13 +67,19 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
   readonly _cascadeData: THREE.Vector4[] = [];
 
   /**
-   * Each slot's range start, which the blocker search measures from (`sunSoftShadow.ts`), in the
+   * Each slot's range start, which the blocker search measures from (`sunShadowUniforms.ts`), in the
    * layout `fitDirectionalShadowSplits.ts` documents. The fitter writes it with `_cascadeData`.
    */
   readonly rangeBegins = new THREE.Vector4();
 
   /** The fade over the far end of the last split, which the fitter writes with the slots. */
   fade: DirectionalShadowFade = NO_SHADOW_FADE;
+
+  /**
+   * The light's soft shadow angle while the render draws directional soft shadows, else 0, so the
+   * lookup takes the PCF. The light pass writes it before each render (`sunSoftShadow.ts`).
+   */
+  softShadowAngle = 0;
 
   /** One camera per slot. The fitter places each drawn one before every render. */
   private readonly splitCameras: THREE.OrthographicCamera[] = [];
@@ -200,7 +206,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
     return false;
   }
 
-  /** The world-to-atlas matrix of `slot`, read by `WebGLLights.js:314`. */
+  /** The world-to-atlas matrix of `slot`, which `sunShadowUniforms.ts` hands the lookup as rows. */
   getMatrix(slot = 0): THREE.Matrix4 {
     return this.splitMatrices[slot]!;
   }

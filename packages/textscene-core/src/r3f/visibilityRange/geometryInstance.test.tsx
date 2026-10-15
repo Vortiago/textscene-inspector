@@ -7,7 +7,7 @@ import type { NodeComponentProps } from '../NodeComponentRegistry';
 import { manualCameraAt, renderScene } from '../testing/renderScene';
 import { drawsColour } from '../testing/threePasses';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
-import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/visibilityRange';
+import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/rendering/visibilityRange';
 import { useGeometryInstance, withGeometryInstance } from './geometryInstance';
 import { boxPlacement } from './placements';
 

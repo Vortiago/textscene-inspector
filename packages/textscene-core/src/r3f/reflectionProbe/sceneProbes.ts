@@ -12,7 +12,7 @@ import {
   reflectionAtlasLayout,
   reflectionProbeOrder,
   ReflectionProbeUpdateMode,
-} from '../../godot/reflectionProbe.js';
+} from '../../godot/rendering/environment/reflectionProbe.js';
 import {
   bakeAtlasLayers,
   createReflectionAtlas,

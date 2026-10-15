@@ -5,9 +5,9 @@
  * by how far inside the box the fragment lies. The smallest box claims a fragment first.
  */
 
-import { ReflectionProbeAmbientMode } from '../../godot/reflectionProbe.js';
-import { MAX_ROUGHNESS_LOD } from '../../godot/skyReflection.js';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
+import { ReflectionProbeAmbientMode } from '../../godot/rendering/environment/reflectionProbe.js';
+import { MAX_ROUGHNESS_LOD } from '../../godot/rendering/environment/skyReflection.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 import { OCTMAP_GLSL } from '../../resources/sky/skyLayerShaders.js';
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { installLitUniform } from '../shaderPatch/litUniform.js';

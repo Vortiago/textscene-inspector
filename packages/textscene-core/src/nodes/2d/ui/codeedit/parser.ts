@@ -5,7 +5,7 @@
 
 import { type ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
-import { ruleInt } from '../../../../godot/int.js';
+import { ruleInt } from '../../../../godot/variant/int.js';
 import { arrayBody, INT_ARRAY_FORMS, parsePackedStringArray } from './arrayForms.js';
 import { parseTextEdit } from '../textedit/parser';
 import type { CodeEditProperties } from './types';

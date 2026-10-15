@@ -8,8 +8,8 @@
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v, layerBitmask } from '../../../linter/validators/index.js';
-import { SHADOW_CASTING_SETTING_NAMES } from '../../../godot/rendering.js';
-import { VISIBILITY_RANGE_FADE_MODE_NAMES } from '../../../godot/visibilityRange.js';
+import { SHADOW_CASTING_SETTING_NAMES } from '../../../godot/rendering/rendering.js';
+import { VISIBILITY_RANGE_FADE_MODE_NAMES } from '../../../godot/rendering/visibilityRange.js';
 
 validatorRegistry.registerAll('ImporterMeshInstance3D', {
   // importer_mesh_instance_3d.cpp:164, PROPERTY_HINT_RESOURCE_TYPE "ImporterMesh".

@@ -4,7 +4,7 @@
  * under it write any GLB a test needs.
  */
 
-import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../../godot/gltf';
+import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../../godot/import/gltf';
 
 /** One float32 VEC3 per vertex, and one per instance for the instancing extension. */
 const TRIANGLE = [0, 0, 0, 1, 0, 0, 0, 1, 0];

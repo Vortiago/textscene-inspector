@@ -16,7 +16,7 @@ import {
   CANVAS_ITEM_Z_MAX,
   CANVAS_LAYER_MIN,
   CANVAS_LAYER_MAX,
-} from '../../../../godot/rendering.js';
+} from '../../../../godot/rendering/rendering.js';
 
 validatorRegistry.registerAll('Light2D', {
   enabled: v.boolean('enabled'),

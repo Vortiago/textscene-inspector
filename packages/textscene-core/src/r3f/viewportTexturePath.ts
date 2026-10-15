@@ -5,7 +5,7 @@
  */
 
 import { parseNodePathLiteral } from '../parser/valueParsers.js';
-import { resolveRelativePath } from '../godot/nodePath.js';
+import { resolveRelativePath } from '../godot/string/nodePath.js';
 
 /**
  * `NodePath("FogOfWar/CombinedViewport")` to `'FogOfWar/CombinedViewport'`. Null, for

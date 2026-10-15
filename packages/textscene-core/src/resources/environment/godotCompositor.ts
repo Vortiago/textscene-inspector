@@ -10,10 +10,10 @@
  */
 
 import { blendGlsl, blendsAfterToneMapping, samplesGlowMap, type GlowParams } from './godotGlow';
-import { glslFloat } from './glslLiterals';
+import { glslFloat } from '../../utils/glslLiterals';
 import { resolvedWhite, toneMappingEffectGlsl } from './godotToneMapping';
 import type { EnvironmentAdjustments, EnvironmentSettings } from './types';
-import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/srgbTransfer';
+import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer';
 
 export type CompositeToneMapping = Pick<EnvironmentSettings['toneMapping'], 'mode' | 'white'> &
   Partial<Pick<EnvironmentSettings['toneMapping'], 'agxContrast'>>;

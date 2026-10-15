@@ -11,7 +11,7 @@ import { join, resolve } from 'node:path';
 import { TscnParser } from '../parser/TscnParser';
 import { extResourcePathOf } from '../resources/testing/extResourcePathOf';
 import { findSubResource } from '../resources/SubResourceResolver';
-import { resourceRef } from '../godot/resourceRef';
+import { resourceRef } from '../godot/variant/resourceRef';
 import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree';
 import type { SceneScope } from '../parser/types';
 import { scopeOf, type LiveNode } from '../resources/liveNode';

@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { godotBlendState } from './blendState';
 import { decodeStandardMaterial3D } from './decode';
-import { textureChannelMask } from '../../../godot/textureChannel';
+import { textureChannelMask } from '../../../godot/rendering/materials/textureChannel';
 import { CullMode, type StandardMaterial3DData, type StandardMaterial3DScalars } from './types';
 
 /**
@@ -31,6 +31,7 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     specular: data.specular,
     emissive: data.emission.emissive,
     emissiveIntensity: data.emission.emissiveIntensity,
+    emissionEnergy: data.emission.emissionEnergy,
     emissionOperator: data.emissionOperator,
     textureFilter: data.textureFilter,
     textureRepeat: data.textureRepeat,
