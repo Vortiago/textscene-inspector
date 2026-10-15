@@ -22,7 +22,7 @@ import {
   VOLUMETRIC_FOG_DEFAULTS,
   type VolumetricFogProjectSettings,
 } from '../godot/rendering/environment/volumetricFog.js';
-import { msaaSampleCount } from '../godot/rendering/msaa.js';
+import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
 import type { Rgba } from '../godot/math/math.js';
 
 /**
@@ -168,8 +168,8 @@ export function projectVolumetricFogSettings(settings: ProjectSettings | null): 
   };
 }
 
-/** The samples per pixel of a viewport's 2D and 3D buffers, 0 where it does not multisample. */
-export interface MsaaSamples {
+/** The `Viewport.MSAA` modes of a viewport's 2D and 3D buffers. */
+export interface MsaaModes {
   msaa2D: number;
   msaa3D: number;
 }
@@ -179,11 +179,11 @@ export interface MsaaSamples {
  * (`scene/main/scene_tree.cpp:2079-2083`) and the editor's 3D view too
  * (`node_3d_editor_plugin.cpp:3166-3167`). Both default to Disabled.
  */
-export function projectMsaaSamples(settings: ProjectSettings | null): MsaaSamples {
-  const samples = (key: string): number => msaaSampleCount(parseOptionalInt(settings?.[key]) ?? 0);
+export function projectMsaaModes(settings: ProjectSettings | null): MsaaModes {
+  const mode = (key: string): number => parseOptionalInt(settings?.[key]) ?? MSAA_DISABLED;
   return {
-    msaa2D: samples('rendering/anti_aliasing/quality/msaa_2d'),
-    msaa3D: samples('rendering/anti_aliasing/quality/msaa_3d'),
+    msaa2D: mode('rendering/anti_aliasing/quality/msaa_2d'),
+    msaa3D: mode('rendering/anti_aliasing/quality/msaa_3d'),
   };
 }
 

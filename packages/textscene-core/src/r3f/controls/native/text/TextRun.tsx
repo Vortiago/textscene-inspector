@@ -130,7 +130,7 @@ export interface TextRunProps {
 
 /**
  * One built run: its geometry, and on the canvas path the per-instance texture this component
- * disposes. The shared atlas texture is never disposed. `paint` builds a material for the run,
+ * disposes. Each canvas that unmounts releases the shared atlas. `paint` builds a material for the run,
  * one for each pass a GeometryInstance3D's fade can draw it in.
  */
 interface BuiltTextRun {

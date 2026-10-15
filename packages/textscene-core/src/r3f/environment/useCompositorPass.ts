@@ -8,17 +8,16 @@ import { useThree } from '@react-three/fiber';
 import type { EnvironmentSettings } from '../../resources/environment/types';
 import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
-import { useDeviceSampleCount } from '../deviceSampleCount';
+import { useSampleCount } from '../multisampledTarget';
 import { sceneHasBlendedSurface } from './alphaPassScan';
 import { useLatchedSceneScan } from './useLatchedSceneScan';
-import { compositorPassFor, type CompositorPass } from './compositorPass';
+import { compositorPassFor, SCENE_BUFFER_TYPE, type CompositorPass } from './compositorPass';
 
 /** Null when nothing needs the pass. A null `settings` is a root with no Environment. */
 export function useCompositorPass(settings: EnvironmentSettings | null): CompositorPass | null {
   const hasBlended = useLatchedSceneScan(sceneHasBlendedSurface);
   const draws3D = useDraws3D();
-  // The composer's scene buffer is half float (`EffectComposer`'s `frameBufferType`).
-  const msaa3D = useDeviceSampleCount(useProjectSettings().msaaSamples.msaa3D, 'RGBA16F');
+  const msaa3D = useSampleCount(useProjectSettings().msaaModes.msaa3D, SCENE_BUFFER_TYPE);
   // Memoised, since a new glow object rebuilds the compositor's effect.
   return useMemo(
     () => (draws3D ? compositorPassFor(settings, hasBlended, msaa3D) : null),

@@ -1,0 +1,41 @@
+; A Control-only SubViewport's own msaa_2d at 4X. Its Controls rasterise into an sRGB target, the
+; one target whose colour storage is SRGB8_ALPHA8, so only this golden draws a multisampled target
+; at that storage. Every other golden's sub-viewports draw the 3D world or 2D items into RGBA8, or
+; leave MSAA Disabled. Two opaque ColorRects, rotated so no edge runs along a pixel row, leave
+; nothing but the edge ramp to measure.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 500.0
+offset_bottom = 380.0
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(400, 300)
+msaa_2d = 2
+render_target_update_mode = 4
+
+[node name="Card" type="ColorRect" parent="Booth/SubViewport"]
+offset_left = 120.0
+offset_top = 60.0
+offset_right = 280.0
+offset_bottom = 240.0
+rotation = 0.35
+pivot_offset = Vector2(80, 90)
+color = Color(0.95, 0.85, 0.2, 1)
+
+[node name="Bar" type="ColorRect" parent="Booth/SubViewport"]
+offset_left = 40.0
+offset_top = 140.0
+offset_right = 360.0
+offset_bottom = 160.0
+rotation = -0.2
+pivot_offset = Vector2(160, 10)
+color = Color(0.1, 0.4, 0.9, 1)
