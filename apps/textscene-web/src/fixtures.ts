@@ -538,6 +538,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fog Volume Shader Material",
+    "file": "unit-fog-volume-shader-material.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Fog Volume",
     "file": "unit-fog-volume.tscn",
     "category": "Other"

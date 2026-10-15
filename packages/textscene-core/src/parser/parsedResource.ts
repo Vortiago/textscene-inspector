@@ -1,9 +1,10 @@
 /**
- * Parses a whole `.tres`: a `.tscn` without `[node]` sections, with a `[gd_resource]`
- * header and one `[resource]` body. Rides TscnParserCore. Values stay raw strings for
- * consumers such as the TileSet resolver to decode.
+ * Parses a whole resource file into its property bag. A `.tres` is a `.tscn` without `[node]`
+ * sections, with a `[gd_resource]` header and one `[resource]` body. Rides TscnParserCore. Values
+ * stay raw strings for consumers such as the TileSet resolver to decode.
  */
 
+import { stringLiteral } from '../godot/string/string.js';
 import { TscnParserCore } from './TscnParserCore.js';
 import type { TscnExternalResource, TscnInternalResource } from './types.js';
 
@@ -30,5 +31,15 @@ export function parseTresFile(content: string): ParsedResource {
     properties: scene.mainResource?.data ?? {},
     extResources: scene.externalResources,
     subResources: scene.internalResources,
+  };
+}
+
+/** A `.gdshader` file as the Shader resource Godot loads from it, its text the code. */
+export function parseShaderFile(content: string): ParsedResource {
+  return {
+    resourceType: 'Shader',
+    properties: { code: stringLiteral(content) },
+    extResources: [],
+    subResources: [],
   };
 }

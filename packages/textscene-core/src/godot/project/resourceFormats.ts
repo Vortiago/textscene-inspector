@@ -25,6 +25,12 @@ export function isGodotTextResourcePath(path: string): boolean {
 }
 
 /**
+ * The extension of a shader saved as its own file, which Godot loads as a `Shader` whose code is the
+ * file's text (`ResourceFormatLoaderShader`, shader.cpp:308-338).
+ */
+export const GODOT_SHADER_EXTENSION = '.gdshader';
+
+/**
  * An **Import sidecar**'s suffix. The importer opens an asset's sidecar at the asset path plus this
  * (`FileAccess::open(p_path + ".import", …)`, resource_importer.cpp:45), so the pair is a plain suffix.
  */
