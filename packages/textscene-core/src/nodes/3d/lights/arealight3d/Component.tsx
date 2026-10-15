@@ -18,7 +18,7 @@ import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 import { positionalShadowUserData } from '../../../../r3f/positionalShadow/declaration';
 import { AtlasAreaShadow, type AreaShadowLight } from '../../../../r3f/positionalShadow/atlasAreaShadow';
-import { AREA_LIGHT_SHADOW_BIAS_DEFAULT } from '../../../../godot/rendering/lights/areaLightShadow';
+import { AREA_LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 import { positionalShadowDeclaration } from '../shared/positionalShadowDeclaration';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useTexture2DRid } from '../../../../resources/useTexture2D';
@@ -119,7 +119,7 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
           object={shadow}
           attach="shadow"
           intensity={shadowOpacity}
-          bias={properties.shadow_bias ?? AREA_LIGHT_SHADOW_BIAS_DEFAULT}
+          bias={properties.shadow_bias ?? AREA_LIGHT_3D_DEFAULTS.shadowBias}
           range={properties.area_range}
           size={[properties.area_size.x, properties.area_size.y]}
         />

@@ -83,6 +83,8 @@ export const LIGHTING_SCENES = [
   // they also pin that both previews yield.
   { name: 'sky-procedural', file: 'unit-sky-procedural.tscn' },
   { name: 'sky-physical', file: 'unit-sky-physical.tscn' },
+  // A 3 degree sun in the procedural sky, which Godot draws as a disc of that angular size.
+  { name: 'sky-sun-angular-distance', file: 'unit-sky-sun-angular-distance.tscn' },
   // The procedural sky at sky_energy_multiplier 2, which Godot applies before the linear conversion.
   { name: 'sky-energy', file: 'unit-sky-energy.tscn' },
   // The procedural sky with Real-Time processing, which Godot bakes with its fast filter. The

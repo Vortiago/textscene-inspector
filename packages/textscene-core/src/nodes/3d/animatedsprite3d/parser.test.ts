@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { Vector3Axis } from '../../../godot/math/vector3Axis';
 import { parseAnimatedSprite3D } from './parser';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 function parse(properties: Record<string, string>) {
   return parseAnimatedSprite3D(heading('AnimatedSprite3D', { name: 'Coin' }), properties);

@@ -8,7 +8,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseSprite3D } from './parser';
 import { Vector3Axis } from '../../../godot/math/vector3Axis';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 const HEADING: ParsedHeading = {
   type: 'node',

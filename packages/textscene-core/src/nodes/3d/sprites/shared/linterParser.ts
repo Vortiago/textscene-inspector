@@ -14,7 +14,7 @@ import {
 } from '../../../../godot/rendering/materials/alphaAntialiasing.js';
 import { AlphaCutMode, ALPHA_CUT_NAMES } from '../../../../godot/rendering/materials/alphaCut.js';
 import { TextureFilter, TEXTURE_FILTER_NAMES } from '../../../../godot/rendering/materials/textureFilter.js';
-import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../../godot/scene/billboard.js';
+import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../../godot/rendering/materials/billboardMode.js';
 import { relabelEnumNames } from '../../../../godot/classdb/enumNames.js';
 import { Vector3Axis, VECTOR3_AXIS_NAMES } from '../../../../godot/math/vector3Axis.js';
 import {

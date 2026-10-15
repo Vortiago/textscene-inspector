@@ -27,7 +27,7 @@ import {
 } from '../../../r3f/materials/opaquePrepass';
 import { materialFromBag } from './build';
 import { standardMaterial } from './testing/standardMaterial';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextures } from './types';
 import { renderTargetMapUserData } from '../../../r3f/materials/renderTargetMap';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatHasSrgbView } from './texture';
+import { formatHasSrgbView } from './srgbView';
 
 /** The formats `TextureStorage::_texture_2d_update` gives an sRGB format (`texture_storage.cpp:1874-2325`). */
 const WITH_VIEW = [

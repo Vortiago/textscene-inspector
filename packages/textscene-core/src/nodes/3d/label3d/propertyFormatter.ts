@@ -4,7 +4,7 @@ import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Label3DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 export function formatLabel3DProperties(properties: Label3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];

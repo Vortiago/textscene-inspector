@@ -174,9 +174,3 @@ export const VOLUMETRIC_FOG_SHADOW_OPACITY_MIN = 0.001;
 
 /** A light whose `light_volumetric_fog_energy` is at or below this leaves the fog dark (`.glsl:385`). */
 export const VOLUMETRIC_FOG_LIGHT_ENERGY_MIN = 0.001;
-
-/** `light_volumetric_fog_energy`'s default (`scene/3d/light_3d.cpp:475`). */
-export const LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT = 1;
-
-/** `spot_angle_attenuation`'s default (`scene/3d/light_3d.cpp:481`). */
-export const SPOT_ANGLE_ATTENUATION_DEFAULT = 1;

@@ -8,11 +8,8 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { matchVector3 } from '../../../linter/validators/vectorValidators.js';
-import {
-  loadedOriginOffset,
-  REFLECTION_PROBE_DEFAULTS,
-  ReflectionProbeAmbientMode,
-} from '../../../godot/rendering/environment/reflectionProbe.js';
+import { loadedOriginOffset, REFLECTION_PROBE_DEFAULTS } from '../../../godot/scene/reflectionProbe.js';
+import { ReflectionProbeAmbientMode } from '../../../godot/rendering/environment/reflectionProbe.js';
 import { formatReal, storedVector3 } from '../../../godot/math/real.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { Vector3 } from '../../../godot/math/vector.js';

@@ -8,7 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rgba } from '../math/math.js';
+import type { Rgba } from './math.js';
 
 /**
  * `named_colors[]` (`color_names.inc:49-196`): normalised name to `0xRRGGBBAA`. Keys drop the

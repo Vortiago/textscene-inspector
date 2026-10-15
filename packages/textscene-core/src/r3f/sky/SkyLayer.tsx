@@ -14,7 +14,7 @@ import type { Sky } from '../../resources/sky/types';
 import { useTexture2D } from '../../resources/useTexture2D';
 import type { SceneResources } from '../SceneResourcesContext';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
-import { skyLightEnergy } from './skyLight';
+import { skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
 import { SkyLayerCubes } from './skyLayerCubes';
 import { observeSceneCamera } from '../sceneRenderCamera';
@@ -181,9 +181,7 @@ function useSkyLightsKey(scene: THREE.Scene): string | null {
 
 function skyLightsKey(lights: readonly SkyLight[]): string {
   return lights
-    .map(({ direction: d, color: c, energy, angularRadius }) =>
-      [d.x, d.y, d.z, c.r, c.g, c.b, energy, angularRadius].join(',')
-    )
+    .map(({ direction: d, color: c, energy, size }) => [d.x, d.y, d.z, c.r, c.g, c.b, energy, size].join(','))
     .join(';');
 }
 
@@ -219,9 +217,7 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
       // `sky.cpp` sets `sky_light_data.energy` from LIGHT_PARAM_ENERGY with no PI,
       // unlike the scene shader.
       energy,
-      // `light_angular_distance` defaults to 0: a point sun with only the soft
-      // falloff `sun_curve` gives it.
-      angularRadius: 0,
+      size: skyLightSize(light),
     });
   });
 

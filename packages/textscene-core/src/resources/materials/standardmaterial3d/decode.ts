@@ -14,7 +14,7 @@ import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/rendering/mater
 import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
 import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
 import { DetailUV } from '../../../godot/rendering/materials/detailUv';
-import { EMISSION_OPERATOR_DEFAULT } from '../../../godot/rendering/materials/emissionOperator';
+import { EMISSION_OPERATOR_DEFAULT } from '../../../godot/scene/baseMaterial3D';
 import { clamp } from '../../../godot/math/math';
 import {
   hashAntialiasing,

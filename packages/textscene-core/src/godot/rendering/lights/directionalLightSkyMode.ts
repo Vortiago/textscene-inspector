@@ -15,9 +15,6 @@ export const DirectionalLightSkyMode = {
 /** The sky mode names, for a diagnostic that reports the legal values. */
 export const DIRECTIONAL_LIGHT_SKY_MODE_NAMES = enumNamesByValue(DirectionalLightSkyMode);
 
-/** `DirectionalLight3D()` lights both the scene and the sky (`scene/3d/light_3d.cpp:608`). */
-export const DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT = DirectionalLightSkyMode.LIGHT_AND_SKY;
-
 /** `light_storage.cpp:632`: the scene shader skips a Sky Only light, so it lights no surface. */
 export function directionalLightLightsSurfaces(skyMode: number): boolean {
   return skyMode !== DirectionalLightSkyMode.SKY_ONLY;

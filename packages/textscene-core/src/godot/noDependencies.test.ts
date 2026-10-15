@@ -89,4 +89,15 @@ describe('src/godot is a dependency-free leaf', () => {
     }
     expect(violations, "src/godot must import nothing — see this file's docblock for why").toEqual([]);
   });
+
+  it('keeps rendering/ from importing scene/, as a class default sits under scene/', () => {
+    const violations = sourceFiles()
+      .filter((name) => name.startsWith('rendering/'))
+      .flatMap((name) =>
+        specifiersIn(readFileSync(resolve(here, name), 'utf8'))
+          .filter((spec) => relative(here, resolve(dirname(resolve(here, name)), spec)).startsWith('scene/'))
+          .map((spec) => `${name} imports '${spec}'`)
+      );
+    expect(violations).toEqual([]);
+  });
 });
