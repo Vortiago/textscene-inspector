@@ -12,9 +12,9 @@ import { installedFramebufferHeight } from '../shadowFilter/framebufferRows.test
 import { installGodotSplitShadow } from './splitShadowChunk';
 import { NO_BLEND, type SplitSlot } from './fitDirectionalShadowSplits';
 import { DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM } from './shadowAtlas';
-import { SUN_RANGE_BEGINS, SUN_SHADOW_ROWS, SUN_SOFT_SHADOWS } from './sunShadowUniforms';
+import { SUN_RANGE_BEGINS, SUN_SHADOW_FADES, SUN_SHADOW_ROWS, SUN_SOFT_SHADOWS } from './sunShadowUniforms';
 import { GLSL_BUILT_INS } from '../testing/glslScalar';
-import { withoutBlock } from '../testing/glslSource';
+import { functionBody, withoutBlock } from '../testing/glslSource';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch';
 import { warningsOf } from '../testing/logWarnings';
 import { installedShaderChunks, FILTER_PCF, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
@@ -372,12 +372,14 @@ describe('the soft split shadow', () => {
     );
     expect(compiled).not.toContain(DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM);
     expect(compiled).not.toContain('godotSunSoftShadow(');
-    expect(compiled).toContain('return godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex );');
+    expect(compiled).toContain(
+      'return mix( godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex ), 1.0, fadeOut );'
+    );
   });
 
   it('replaces the PCF for a sun with an angle', () => {
     expect(chunk()).toContain(
-      'if ( godotSunSoftShadows[ shadowIndex ].w > 0.0 ) return godotSunSoftShadow( shadowMap, sunLightShadow, shadowIndex );'
+      'if ( godotSunSoftShadows[ shadowIndex ].w > 0.0 ) return mix( godotSunSoftShadow( shadowMap, sunLightShadow, shadowIndex ), 1.0, fadeOut );'
     );
   });
 
@@ -429,6 +431,74 @@ describe('the soft split shadow', () => {
 
   it('keeps the receiver lit without a blocker (edge case)', () => {
     expect(chunk()).toContain('if ( blockerCount == 0.0 ) return 1.0;');
+  });
+});
+
+/**
+ * How far the patched lookup fades shadow `shadowIndex` out at `depth`, from 0 (shadowed) to 1
+ * (unshadowed), given each sun's fade as `[from, to]`.
+ */
+function runFadeOut(fades: [number, number][], shadowIndex: number, depth: number): number {
+  const body = functionBody(installedChunk(), 'float godotSunShadowFadeOut').replace(/\bvec2\s+/g, 'let ');
+  const run = new Function(
+    'smoothstep',
+    SUN_SHADOW_FADES,
+    'shadowIndex',
+    'vSunShadowWorldPosition',
+    body
+  ) as (...args: unknown[]) => number;
+  const vectors = fades.map(([x, y]) => ({ x, y }));
+  return run(GLSL_BUILT_INS.smoothstep, vectors, shadowIndex, { w: depth });
+}
+
+describe('the sun shadow fade', () => {
+  it('fades the shadow out across its fade by the view depth (`scene_forward_clustered.glsl:2491`)', () => {
+    expect([56, 64, 72, 80, 90].map((depth) => runFadeOut([[64, 80]], 0, depth))).toEqual([0, 0, 0.5, 1, 1]);
+  });
+
+  it("reads each sun's own fade", () => {
+    expect(
+      runFadeOut(
+        [
+          [64, 80],
+          [10, 20],
+        ],
+        1,
+        15
+      )
+    ).toBe(0.5);
+  });
+
+  it('fades nothing for a fade whose ends do not ascend (edge case)', () => {
+    expect(runFadeOut([[0, 0]], 0, 100)).toBe(0);
+  });
+
+  it('declares one fade per sun shadow', () => {
+    expect(installedChunk()).toContain(`uniform vec2 ${SUN_SHADOW_FADES}[ NUM_SUN_LIGHT_SHADOWS ];`);
+  });
+
+  it('mixes the split shadow towards unshadowed by the fade', () => {
+    expect(functionBody(installedChunk(), 'float getSunShadow')).toContain(
+      'return mix( godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex ), 1.0, fadeOut );'
+    );
+  });
+
+  it('samples nothing past the fade (edge case)', () => {
+    expect(functionBody(installedChunk(), 'float getSunShadow')).toContain(
+      'if ( fadeOut >= 1.0 ) return 1.0;'
+    );
+  });
+
+  it('fades a ShadowMaterial receiver, whose shadow mask reads the same sun lookup', () => {
+    const chunks = installedShaderChunks();
+    const shadowShader = THREE.ShaderLib.shadow.fragmentShader.replace(
+      /#include <(\w+)>/g,
+      (_include, name: string) => chunks[name as keyof typeof chunks] as string
+    );
+    expect(shadowShader).toContain('getShadowMask()');
+    expect(functionBody(shadowShader, 'float getSunShadow')).toContain(
+      'godotSunShadowFadeOut( shadowIndex )'
+    );
   });
 });
 

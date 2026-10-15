@@ -1,8 +1,9 @@
 /**
  * The terms of every sun shadow that the patched lookup reads beyond three's own (`splitShadowChunk.ts`),
  * in three's order of its sun shadows. Per sun: three rows of each slot's world-to-atlas matrix, the
- * direction towards the light with the soft shadow angle, and each slot's range start. The fourth row
- * of a slot matrix is always (0, 0, 0, 1), so three rows hold it in three vectors where `mat4` takes four.
+ * direction towards the light with the soft shadow angle, each slot's range start, and the fade. The
+ * fourth row of a slot matrix is always (0, 0, 0, 1), so three rows hold it in three vectors where
+ * `mat4` takes four.
  */
 
 import * as THREE from 'three';
@@ -14,6 +15,7 @@ import { writeVec4 } from '../writeVec4.js';
 export const SUN_SHADOW_ROWS = 'godotSunShadowRows';
 export const SUN_SOFT_SHADOWS = 'godotSunSoftShadows';
 export const SUN_RANGE_BEGINS = 'godotSunRangeBegins';
+export const SUN_SHADOW_FADES = 'godotSunShadowFades';
 
 /** The rows of one slot matrix that the lookup reads. */
 export const SLOT_MATRIX_ROWS = 3;
@@ -26,11 +28,15 @@ const SUN_ROW_FLOATS = SPLIT_SLOTS * SLOT_FLOATS;
 /** One vec4: the direction towards the light, and the angle. */
 const SOFT_SHADOW_FLOATS = 4;
 
+/** One vec2: the camera depths the fade runs between. */
+const FADE_FLOATS = 2;
+
 /** Each array's floats per sun shadow. Written only by `writeSunShadowUniforms`. */
 const arrays = new LightUniformArrays({
   [SUN_SHADOW_ROWS]: SUN_ROW_FLOATS,
   [SUN_SOFT_SHADOWS]: SOFT_SHADOW_FLOATS,
   [SUN_RANGE_BEGINS]: SPLIT_SLOTS,
+  [SUN_SHADOW_FADES]: FADE_FLOATS,
 });
 
 /** Scratch for the writer, which runs on every shadow pass. */
@@ -56,6 +62,7 @@ export function writeSunShadowUniforms(lights: readonly THREE.Light[]): void {
       writeSunRows(light, set[SUN_SHADOW_ROWS], index * SUN_ROW_FLOATS);
       writeSoftShadow(light, set[SUN_SOFT_SHADOWS], index);
       light.shadow.rangeBegins.toArray(set[SUN_RANGE_BEGINS], index * SPLIT_SLOTS);
+      writeFade(light, set[SUN_SHADOW_FADES], index);
       index++;
     }
   });
@@ -81,4 +88,10 @@ function writeSlotRows(matrix: THREE.Matrix4, rows: Float32Array, offset: number
 function writeSoftShadow(sun: SplitSunLight, softShadows: Float32Array, index: number): void {
   const { x, y, z } = scratchDirection.setFromMatrixPosition(sun.matrixWorld).normalize();
   writeVec4(softShadows, index, x, y, z, sun.shadow.softShadowAngle);
+}
+
+/** A sun no fit has placed holds `NO_SHADOW_FADE`, whose ends do not ascend, so it fades nothing. */
+function writeFade(sun: SplitSunLight, fades: Float32Array, index: number): void {
+  fades[index * FADE_FLOATS] = sun.shadow.fade.from;
+  fades[index * FADE_FLOATS + 1] = sun.shadow.fade.to;
 }
