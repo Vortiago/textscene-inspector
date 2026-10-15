@@ -19,5 +19,5 @@ export function registeredTypes(
 ): readonly string[] {
   const declaring = registry.typesWithRegistrations();
   if (scope === 'declaring') return declaring;
-  return [...new Set([...declaring, ...registry.getTypesWithRemovals()])];
+  return [...new Set([...declaring, ...registry.removedKeysByType().keys()])];
 }

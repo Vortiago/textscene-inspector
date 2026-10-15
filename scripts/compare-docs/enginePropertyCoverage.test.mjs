@@ -8,6 +8,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { classBaseChain } from '../../packages/textscene-core/src/godot/classdb/classBaseTypes.ts';
 import { requireFreshDist } from '../distFreshness.mjs';
 import { loadCoreLinter, loadCoreParser } from './loadCoreLinter.mjs';
 import { keyMatcher, unvalidatedByClass } from './registryKeys.mjs';
@@ -78,9 +79,7 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
   });
 
   it('scopes to the classes this repo claims, named rather than only derived', () => {
-    const covered = coveredClasses(nodeRegistry, registeredTypes('declaring'), (cls) =>
-      validatorRegistry.baseChainOf(cls)
-    );
+    const covered = coveredClasses(nodeRegistry, registeredTypes('declaring'), classBaseChain);
     // Named, since the scope derives from the registry this ledger audits:
     // deregistering a class shrinks the count instead of failing it.
     for (const cls of [
@@ -106,9 +105,7 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
   });
 
   it('the unvalidated-property ledger has not grown', () => {
-    const covered = coveredClasses(nodeRegistry, registeredTypes('declaring'), (cls) =>
-      validatorRegistry.baseChainOf(cls)
-    );
+    const covered = coveredClasses(nodeRegistry, registeredTypes('declaring'), classBaseChain);
 
     // Not a filter on `usage == 2`: that is STORAGE without EDITOR, hidden from the
     // inspector but serialised, as `SpringBoneCollision3D.bone` is, and validated.

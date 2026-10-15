@@ -218,7 +218,7 @@ describe('the classification guard bites', () => {
     // does, and a walk over declarations alone would never look at it.
     const validator = validatorRegistry.declarationFor('HBoxContainer', 'vertical');
     expect(validatorRegistry.getOwnKeys('HBoxContainer')).not.toContain('vertical');
-    expect(Object.keys(validatorRegistry.getOwnRemovals('HBoxContainer'))).toContain('vertical');
+    expect(registeredKeys()).toContainEqual({ nodeType: 'HBoxContainer', key: 'vertical', kind: 'removal' });
     expect(validator?.grounding).toEqual({ kind: 'enforced', cite: 'box_container.cpp:312' });
     expect(unclassified(validator!)).toBe(false);
   });

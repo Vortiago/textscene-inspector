@@ -123,6 +123,16 @@ describe('a particle past its own lifetime (cpu_particles_2d.cpp:971)', () => {
     expect(pose.length).toBeGreaterThan(0);
     expect(pose.length).toBeLessThan(32);
   });
+
+  it('advances a particle exactly at its lifetime one more step before it expires', () => {
+    // Seed 4242's lifetime draw is 0.5929864645004272, so this randomness halves the lifetime
+    // to exactly 0.5 s. Six steps of 1/8 s check it at age 0.5 and leave it at 0.625.
+    const atLifetime = { ...burst, amount: '1', fixed_fps: '8', preprocess: '0.75' };
+    const pose = simulateFrozenPose(
+      input({ props: props({ ...atLifetime, lifetime_randomness: '0.8431895665969956' }) })
+    );
+    expect(pose.map((p) => p.age)).toEqual([0.625]);
+  });
 });
 
 // Godot integrates `p.transform[2] += p.velocity * local_delta` for every

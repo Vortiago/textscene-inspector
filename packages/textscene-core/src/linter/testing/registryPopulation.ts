@@ -79,8 +79,8 @@ export function registeredKeys(registry: ValidatorRegistry = validatorRegistry):
       out.push({ nodeType, key, kind: 'declaration' });
     }
   }
-  for (const nodeType of registry.getTypesWithRemovals()) {
-    for (const key of Object.keys(registry.getOwnRemovals(nodeType))) {
+  for (const [nodeType, keys] of registry.removedKeysByType()) {
+    for (const key of keys) {
       out.push({ nodeType, key, kind: 'removal' });
     }
   }

@@ -5,9 +5,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
 import { NODE_BASE_TYPES } from '../godot/classdb/nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/classdb/resourceBaseTypes.generated.js';
-import { validatorRegistry } from './ValidatorRegistry.js';
 import './index.js'; // trigger all validator registrations
 import { registeredTypes } from './registryPopulation.js';
 
@@ -71,7 +71,7 @@ describe('NODE_BASE_TYPES', () => {
     // belongs to is read from the tables, never from a hand-kept list, which a
     // new registration would fail rather than be checked by.
     for (const type of registeredTypes('declaring')) {
-      const root = validatorRegistry.baseChainOf(type).at(-1) ?? type;
+      const root = classBaseChain(type).at(-1) ?? type;
       expect([root, type], `${type} reaches no root`).toContain(
         type in RESOURCE_BASE_TYPES_GENERATED || type === 'Resource' ? 'Resource' : 'Node'
       );

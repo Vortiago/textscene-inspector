@@ -1,6 +1,6 @@
 /**
  * How `findValidator` resolves a key: the base-class walk over an injected base-type map (empty by default, the real
- * NODE_BASE_TYPES in the singleton), the indexed-wildcard routing that mirrors `PropertyListHelper`, and the members it
+ * CLASS_BASE_TYPES in the singleton), the indexed-wildcard routing that mirrors `PropertyListHelper`, and the members it
  * refuses to resolve. Each case builds its own scratch registry. The guards on the live singleton are the siblings
  * `ValidatorRegistry.unavailableKeys.test.ts` and `ValidatorRegistry.shadowCopies.test.ts`.
  */

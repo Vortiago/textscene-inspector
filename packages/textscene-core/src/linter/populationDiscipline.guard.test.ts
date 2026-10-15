@@ -2,7 +2,7 @@
  * Enumerating what the registry holds belongs to the two halves of `registryPopulation.ts`,
  * the types production reads and the keys and validators under `testing/`: a population
  * assembled by hand reaches the roots only. Point lookups on a named type
- * (`findValidator`, `getOwnKeys`, `baseChainOf`) are unrestricted. The enumerator is
+ * (`findValidator`, `getOwnKeys`, `getUnavailableKeys`) are unrestricted. The enumerator is
  * `@internal` by convention only, and a recomposition through `registeredTypes` compiles.
  */
 
@@ -59,7 +59,7 @@ const namesBothHalves = ({ body }: { body: string }): boolean =>
 /** Every identifier any arm below asks about. */
 const TELLS = [
   'typesWithRegistrations',
-  'getTypesWithRemovals',
+  'removedKeysByType',
   'registeredTypes',
   'declarationFor',
   'getOwnKeys',
@@ -97,7 +97,7 @@ describe('enumerating the registry belongs to one module', () => {
     }
   });
 
-  it.each(['typesWithRegistrations', 'getTypesWithRemovals'])(
+  it.each(['typesWithRegistrations', 'removedKeysByType'])(
     'keeps the %s enumerator inside the files that define the seam',
     (enumerator) => {
       // Both doors: a discipline enforced on one of two equivalent enumerators

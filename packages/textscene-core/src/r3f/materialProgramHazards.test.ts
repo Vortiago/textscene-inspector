@@ -6,8 +6,9 @@
  */
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { NOT_BOUND_TEXTURE_SLOTS, TEXTURE_SLOT_GATES } from './materialProgramInputs';
+import { materialProgramInputs } from './materialProgramInputs';
 
 const resolve = createRequire(import.meta.url).resolve;
 
@@ -34,15 +35,19 @@ function names(source: string, pattern: RegExp): string[] {
   return [...new Set([...source.matchAll(pattern)].map((match) => match[1]!))].sort();
 }
 
-/** Every `material.<field>` `getParameters()` reads while deciding a program's identity. */
-function bakedMaterialFields(): string[] {
-  const source = section(
+/** The `getParameters()` source, where every presence term and feature boolean is read. */
+function getParametersSource(): string {
+  return section(
     threeSource('renderers/webgl/WebGLPrograms.js'),
     'WebGLPrograms.getParameters',
     /function getParameters\(/,
     /\n\tfunction getProgramCacheKey\(/
   );
-  return names(source, /material\.([A-Za-z0-9_]+)/g);
+}
+
+/** Every `material.<field>` `getParameters()` reads while deciding a program's identity. */
+function bakedMaterialFields(): string[] {
+  return names(getParametersSource(), /material\.([A-Za-z0-9_]+)/g);
 }
 
 /**
@@ -69,6 +74,48 @@ function versionBumpingAccessors(): string[] {
     ...new Set(setters.filter(([, , body]) => /this\.version\s*\+\+/.test(body!)).map(([, name]) => name!)),
   ].sort();
 }
+
+/** Every field a three material constructs as `null`: the texture slots, whatever their name. */
+function nullDefaultFields(): Set<string> {
+  const fields = new Set<string>();
+  for (const Constructor of Object.values(THREE)) {
+    if (typeof Constructor !== 'function' || !(Constructor.prototype instanceof THREE.Material)) continue;
+    const material = new (Constructor as new () => THREE.Material)();
+    for (const [field, value] of Object.entries(material)) if (value === null) fields.add(field);
+  }
+  return fields;
+}
+
+/** Every `!! material.<slot>` presence term three bakes and `setProgram` does not re-check. */
+function bakedTextureSlots(): string[] {
+  const textures = nullDefaultFields();
+  return names(getParametersSource(), /!!\s*material\.([A-Za-z0-9_]+)/g).filter(
+    (field) => textures.has(field) && !RECHECKED_PARAMETERS.includes(field)
+  );
+}
+
+/** Every `material.<feature> > 0` boolean crossed, so a slot gated on any feature can key. */
+function everyFeatureActive(): Record<string, number> {
+  const features = names(getParametersSource(), /material\.([A-Za-z0-9_]+)\s*>\s*0/g);
+  return Object.fromEntries(features.map((feature) => [feature, 1]));
+}
+
+/** Whether binding `slot` moves the program key of a material with every feature active. */
+function keysSlot(slot: string): boolean {
+  const features = everyFeatureActive();
+  const bare = materialProgramInputs({ props: features }).key;
+  return materialProgramInputs({ props: { ...features, [slot]: new THREE.Texture() } }).key !== bare;
+}
+
+/**
+ * A texture slot three bakes that `materialProgramInputs` declines to key, and why.
+ * The upgrade guard requires every baked slot to key or be here, so a slot cannot
+ * go missing by omission.
+ */
+const DECLINED_TEXTURE_SLOTS: Readonly<Record<string, string>> = {
+  bumpMap:
+    'Godot binds no bump slot; three reads the term as `!!bumpMap && wireframe === false` (`:132`), so modelling it would key `wireframe` for a slot nothing can fill',
+};
 
 /** three 0.186.0, `WebGLPrograms.js:56-400`. Every field the program's identity is decided from. */
 const BAKED_MATERIAL_FIELDS = [
@@ -224,21 +271,26 @@ describe('material program hazards, against three itself', () => {
     expect(actual, `${drift(expected, actual)} — ${hint}`).toEqual(expected);
   });
 
-  it('gives every texture slot three bakes an owner in the factory', () => {
-    // A slot three reads that `materialProgramInputs.ts` neither keys nor
-    // declines misses a program input the first time anything binds it.
-    const slots = bakedMaterialFields().filter(
-      (field) => /Map$/.test(field) && !RECHECKED_PARAMETERS.includes(field)
-    );
-    const unowned = slots.filter(
-      (slot) => TEXTURE_SLOT_GATES[slot] === undefined && NOT_BOUND_TEXTURE_SLOTS[slot] === undefined
-    );
+  it('keys every texture slot three bakes, or declines it', () => {
+    // A slot three reads that `materialProgramInputs` neither keys nor declines
+    // misses a program input the first time anything binds it.
+    const slots = bakedTextureSlots();
+    const unowned = slots.filter((slot) => DECLINED_TEXTURE_SLOTS[slot] === undefined && !keysSlot(slot));
 
     expect(slots.length).toBeGreaterThanOrEqual(20);
     expect(
       unowned,
-      `three bakes these slots and the factory neither keys nor declines them — add each to TEXTURE_SLOT_GATES with the feature it is gated on, or to NOT_BOUND_TEXTURE_SLOTS with the reason: ${unowned.join(', ')}`
+      `three bakes these slots and the factory neither keys nor declines them: add each to TEXTURE_SLOT_GATES in materialProgramInputs.ts with the feature it is gated on, or to DECLINED_TEXTURE_SLOTS here with the reason: ${unowned.join(', ')}`
     ).toEqual([]);
+  });
+
+  it('keys no slot it declines, and declines only slots three bakes', () => {
+    const slots = bakedTextureSlots();
+    const stale = Object.keys(DECLINED_TEXTURE_SLOTS).filter(
+      (slot) => !slots.includes(slot) || keysSlot(slot)
+    );
+
+    expect(stale, `remove these from DECLINED_TEXTURE_SLOTS: ${stale.join(', ')}`).toEqual([]);
   });
 
   it('fails loudly when an anchor moves, rather than matching the rest of the file', () => {

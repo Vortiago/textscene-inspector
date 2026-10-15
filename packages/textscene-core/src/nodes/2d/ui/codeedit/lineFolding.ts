@@ -51,11 +51,14 @@ export function buildFoldContext(
   };
 }
 
-/** `TextEdit::get_indent_level` (`text_edit.cpp:4145-4161`): tabs count as `tab_size`, and the last character is never counted. */
+/**
+ * `TextEdit::get_indent_level` (`text_edit.cpp:4145-4161`): tabs count as `tab_size`. Godot never
+ * counts the last character, which changes only an all-blank line, and `canFoldLine` never passes one.
+ */
 function getIndentLevel(line: string, tabSize: number): number {
   let tabs = 0;
   let spaces = 0;
-  for (let i = 0; i < line.length - 1; i++) {
+  for (let i = 0; i < line.length; i++) {
     if (line[i] === '\t') tabs++;
     else if (line[i] === ' ') spaces++;
     else break;

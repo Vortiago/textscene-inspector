@@ -14,9 +14,6 @@ const CORE = resolve(findRepoRoot(), 'packages/textscene-core');
 
 /** The value exports kept although only tests import them, each with the reason a test needs it. */
 const KEPT = [
-  // A three.js upgrade that adds a texture slot or renames its USE_ define fails these tests.
-  'r3f/materialProgramInputs.ts#NOT_BOUND_TEXTURE_SLOTS',
-  'r3f/materialProgramInputs.ts#TEXTURE_SLOT_GATES',
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',
