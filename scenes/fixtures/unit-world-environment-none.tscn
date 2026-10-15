@@ -1,0 +1,40 @@
+[gd_scene format=3 uid="uid://unitworldenvnone"]
+
+; A WorldEnvironment that names no Environment, so the root draws with none: Godot clears it to the
+; project clear colour (renderer_viewport.cpp:371) and tonemaps it LINEAR (tone_mapper.h:177). Every
+; other 3D golden draws through an Environment, the authored one or the editor preview's, so only
+; this one shows a bare root. Unshaded greys at 0.25, 0.5 and 0.75 read back unchanged under LINEAR,
+; and any other curve moves each one.
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_dark"]
+shading_mode = 0
+albedo_color = Color(0.25, 0.25, 0.25, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_mid"]
+shading_mode = 0
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_light"]
+shading_mode = 0
+albedo_color = Color(0.75, 0.75, 0.75, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+
+[node name="Dark" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.4, 0, 0)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_dark")
+
+[node name="Mid" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_mid")
+
+[node name="Light" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 0, 0)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_light")

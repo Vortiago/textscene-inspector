@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { fixtures, getFixturesByCategory } from './fixtures';
 import { DEMO_CATEGORY_LABELS } from '../../../scripts/generate-fixtures/demoCategories.mjs';
+import { fixtureProjects } from '../../../scripts/generate-fixtures/fixtureProjects.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const scenesRoot = join(__dirname, '../../../scenes');
@@ -70,9 +71,19 @@ function committedScenesOnDisk(): string[] {
   });
   return [
     ...scenesFlat(join(scenesRoot, 'fixtures')),
+    ...fixtureProjectScenes(),
     ...scenesDeep(join(scenesRoot, 'isometric'), ''),
     ...demos,
   ];
+}
+
+/**
+ * The scenes of each **Fixture project**, a scenes/fixtures subdirectory with its own
+ * project.godot, spelled `<project>/<scene>.tscn`.
+ */
+function fixtureProjectScenes(): string[] {
+  const fixturesDir = join(scenesRoot, 'fixtures');
+  return fixtureProjects(fixturesDir).flatMap((name) => scenesDeep(join(fixturesDir, name), name));
 }
 
 /** Committed scenes absent from a manifest. */

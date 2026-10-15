@@ -5,40 +5,32 @@
  */
 
 import { useMemo } from 'react';
-import { NO_RESOURCES, useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
-import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
+import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { useResourceResolution, useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { decodeEnvironment } from '../../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../../resources/environment/build';
 import { useProjectClearColorSrgb } from '../../../r3f/useProjectClearColor';
-import type { EnvironmentSettings } from '../../../resources/environment/types';
+import type { EnvironmentResolution } from '../../../r3f/environment/WorldEnvironmentScope';
 import { decodeSky, decodeSkyMaterial, skyMaterialRef } from '../../../resources/sky/decode';
-import type { Sky } from '../../../resources/sky/types';
 
-export interface ResolvedEnvironment {
-  settings: EnvironmentSettings;
-  /** Null while a sky `.tres` is loading, and for an environment with no sky. */
-  sky: Sky | null;
-  /** The pools the Environment's own references, such as `glow_map`, resolve in. */
-  resources: SceneResources;
-  /** The pools the sky material's references, such as a panorama, resolve in. */
-  skyResources: SceneResources;
-}
+const PENDING: EnvironmentResolution = { status: 'pending' };
+const NONE: EnvironmentResolution = { status: 'none' };
 
 /**
  * A hook, not a pure function, because the external form loads through the resource pipeline.
- * `useSubOrExtResource` returns the inline case on the first render, so an all-inline scene resolves
- * in one pass. Each level applies as it resolves (**Progressive fill-in**). Each level's references
+ * The resolution is `pending` only while the Environment itself loads. The inline case resolves on
+ * the first render, so an all-inline scene resolves in one pass. Each level applies as it resolves (**Progressive fill-in**). Each level's references
  * resolve in the pools of the level that holds them, so a `.tres` reads its own sub-resources.
  */
-export function useResolvedEnvironment(environmentRef: string | undefined): ResolvedEnvironment | null {
-  const environment = useSubOrExtResource(environmentRef, useSceneResources());
+export function useResolvedEnvironment(environmentRef: string | undefined): EnvironmentResolution {
+  const { scoped: environment, status } = useResourceResolution(environmentRef, useSceneResources());
   const envProps = useMemo(
     () =>
       environment?.resource.type === 'Environment' ? decodeEnvironment(environment.resource.data) : null,
     [environment]
   );
 
-  // Hooks run unconditionally with `undefined` when the level above did not resolve;
+  // Hooks run unconditionally with `undefined` when the level above did not resolve.
   // `useSubOrExtResource` short-circuits that to "nothing", so rules of hooks holds
   // whatever shape the chain takes.
   const skyResource = useSubOrExtResource(envProps?.sky, environment?.resources ?? NO_RESOURCES);
@@ -61,9 +53,12 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Reso
     [envProps, clearColor]
   );
 
-  return useMemo(
-    () =>
-      settings && environment ? { settings, sky, resources: environment.resources, skyResources } : null,
-    [settings, environment, sky, skyResources]
-  );
+  return useMemo((): EnvironmentResolution => {
+    if (status === 'pending') return PENDING;
+    if (!settings || !environment) return NONE;
+    return {
+      status: 'resolved',
+      environment: { settings, sky, resources: environment.resources, skyResources },
+    };
+  }, [status, settings, environment, sky, skyResources]);
 }

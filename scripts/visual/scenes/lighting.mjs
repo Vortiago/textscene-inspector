@@ -27,6 +27,10 @@ export const LIGHTING_SCENES = [
   // sphere. A normal map, or a missing displacementMap, reads as a flat ball.
   { name: 'material-heightmap', file: 'unit-material-heightmap.tscn' },
   { name: 'world-environment', file: 'unit-world-environment-basic.tscn' },
+  // A WorldEnvironment that names no Environment: the root tonemaps LINEAR, as Godot's does.
+  { name: 'world-environment-none', file: 'unit-world-environment-none.tscn' },
+  // A WorldEnvironment whose Environment .tres is missing draws as one that names none.
+  { name: 'world-environment-missing', file: 'unit-world-environment-missing.tscn' },
   // Exponential depth fog over boxes at three distances. The header states why no other golden
   // shows it.
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },

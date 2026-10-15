@@ -1,15 +1,11 @@
 /**
- * `<PreviewLighting>`: Godot's editor preview sun and environment, each mounted
- * only while the scene supplies none (ADR-0025). It reads the live tree, so a
- * node inside an instanced sub-scene counts, as in Godot's editor.
+ * `<PreviewSun>`: Godot's editor preview sun, mounted only while the scene has no
+ * DirectionalLight3D of its own (ADR-0025). The yield reads the live tree, so a light
+ * inside an instanced sub-scene counts, as in Godot's editor.
  */
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { useViewportMode } from '../contexts/ViewportModeContext';
-import { useLiveSceneNodes } from '../useLiveSceneTree';
-import { EnvironmentLayer } from '../environment/EnvironmentLayer';
-import { NO_RESOURCES } from '../SceneResourcesContext';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { DirectionalShadowMode } from '../../godot/rendering/lights/directionalShadow';
 import { directionalShadowUserData } from '../directionalShadow/declaration';
@@ -18,11 +14,9 @@ import {
   PREVIEW_SUN_COLOR,
   PREVIEW_SUN_ENERGY,
   PREVIEW_SUN_SHADOW_MAX_DISTANCE,
-  YIELDS_A_PREVIEW,
-  previewEnvironment,
   previewSunDirection,
-  previewYield,
 } from './godotPreviewLighting';
+import { usePreviewYield } from './usePreviewYield';
 
 /**
  * Where the preview sun stands. It has no scene node, so nothing is anchored to
@@ -43,25 +37,8 @@ const PREVIEW_SUN_SHADOW = directionalShadowUserData(
   })
 );
 
-export function PreviewLighting() {
-  const { showPreviewSun, showPreviewEnvironment } = useViewportMode();
-  const yielding = useLiveSceneNodes(YIELDS_A_PREVIEW);
-
-  const decision = useMemo(
-    () =>
-      previewYield(
-        yielding.map((entry) => entry.node.type),
-        { sun: showPreviewSun, environment: showPreviewEnvironment }
-      ),
-    [yielding, showPreviewSun, showPreviewEnvironment]
-  );
-
-  return (
-    <>
-      {decision.sun && <PreviewSun />}
-      {decision.environment && <PreviewEnvironment />}
-    </>
-  );
+export function PreviewSun() {
+  return usePreviewYield().sun ? <PreviewSunLight /> : null;
 }
 
 /**
@@ -69,7 +46,7 @@ export function PreviewLighting() {
  * It declares its shadow as an authored `<DirectionalLight3D>` does, and the same fitter fits it.
  * So a scene does not visibly change character the moment it gains its own sun.
  */
-function PreviewSun() {
+function PreviewSunLight() {
   const target = useMemo(() => new THREE.Object3D(), []);
   // A tuple, not a Vector3: R3F assigns an object-valued `position` straight
   // onto the instance, and `Object3D.position` has no setter.
@@ -90,14 +67,5 @@ function PreviewSun() {
         userData={PREVIEW_SUN_SHADOW}
       />
     </>
-  );
-}
-
-/** Godot's preview environment, applied through the same layer an authored one uses. */
-function PreviewEnvironment() {
-  const { settings, sky } = useMemo(() => previewEnvironment(), []);
-  // The preview environment and its sky hold no references.
-  return (
-    <EnvironmentLayer settings={settings} sky={sky} resources={NO_RESOURCES} skyResources={NO_RESOURCES} />
   );
 }

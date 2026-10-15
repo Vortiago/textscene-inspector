@@ -15,8 +15,9 @@ export function World2DCanvas(props: World2DCanvasProps) {
       camera={{ position: [0, 0, 1000], near: 0.1, far: 4000 }}
       // Without `localClippingEnabled`, three ignores ScrollContainer's clip planes
       // (`r3f/controls/native/controlClipping.tsx`). This canvas has no stencil buffer.
-      // `antialias: false`: scene/main/viewport.h:309 `msaa_2d = MSAA_DISABLED`.
-      // Soft edges are authored geometry (style_box_flat.cpp:555-629), and MSAA ramps them twice.
+      // `antialias: false`: scene/main/viewport.h:309 `msaa_2d = MSAA_DISABLED`. Soft edges are
+      // authored geometry (style_box_flat.cpp:555-629), and MSAA ramps them twice. A project that
+      // turns `msaa_2d` on gets `<CanvasMsaa>`'s target, at the mode's own sample count.
       gl={{ alpha: true, localClippingEnabled: true, antialias: false }}
       onCreated={installShaderPatches}
       // Godot composites canvas items after `_render_buffers_post_process_and_tonemap`,

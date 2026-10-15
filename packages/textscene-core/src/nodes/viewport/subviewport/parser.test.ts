@@ -91,6 +91,21 @@ describe('parseSubViewport', () => {
     });
   });
 
+  describe('multisampling', () => {
+    it('parses msaa_2d, the mode of the 2D buffer', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), { msaa_2d: '3' });
+      expect(result.msaa_2d).toBe(3);
+    });
+
+    it('defaults msaa_2d to Disabled (viewport.h:309)', () => {
+      expect(parseSubViewport(heading('SubViewport', { name: 'V' }), {}).msaa_2d).toBe(0);
+    });
+
+    it('falls back to Disabled for an msaa_2d past MSAA_8X (edge case)', () => {
+      expect(parseSubViewport(heading('SubViewport', { name: 'V' }), { msaa_2d: '4' }).msaa_2d).toBe(0);
+    });
+  });
+
   describe('remaining Viewport properties the corpus authors', () => {
     it('parses them all', () => {
       const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {
