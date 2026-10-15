@@ -3,12 +3,25 @@
 import * as THREE from 'three';
 import { imageSize, readImagePixels, type ImagePixels } from './imagePixels';
 import { fixAlphaEdges } from '../../processing/fixAlphaEdges';
-import { invertGreen, keepRedGreen, premultiplyAlpha } from '../../processing/importTexelPasses';
+import {
+  invertGreen,
+  invertGreyscaleGreen,
+  keepRedGreen,
+  premultiplyAlpha,
+} from '../../processing/importTexelPasses';
 import { copySampling } from '../../textures/copySampling';
+import { dropMipChain } from '../../textures/godotTextureFilter';
+import { recordGodotFormat } from '../../textures/sourceColorSpace';
 import { IMAGE_EXTENSIONS } from './extensions';
 import { fileExtension } from '../../fileExtension';
 import type { ImageSourceFormat } from '../../../godot/import/imageSourceFormat.js';
-import { holdsRedGreenOnly, type TextureImportOptions } from '../../../godot/import/textureImport.js';
+import {
+  holdsRedGreenOnly,
+  textureImportFormat,
+  type TextureImportOptions,
+} from '../../../godot/import/textureImport.js';
+
+const SVG_MIME_TYPE = 'image/svg+xml';
 
 export function getMimeType(path: string): string {
   switch (fileExtension(path)) {
@@ -18,7 +31,7 @@ export function getMimeType(path: string): string {
     case '.jpeg':
       return 'image/jpeg';
     case '.svg':
-      return 'image/svg+xml';
+      return SVG_MIME_TYPE;
     case '.webp':
       return 'image/webp';
     default:
@@ -45,7 +58,7 @@ type TexelPass = (data: Uint8Array, width: number, height: number) => boolean;
 
 /**
  * Create a THREE.Texture from image bytes as Godot's texture importer builds it: an SVG rasterised
- * at its import scale, then the texel passes its sidecar asks for.
+ * at its import scale, then the import of the decoded image.
  */
 export async function createTextureFromBuffer(
   data: ArrayBuffer,
@@ -60,7 +73,19 @@ export async function createTextureFromBuffer(
   // per path and shared, and Godot gives it two opposite defaults:
   // `BaseMaterial3D` tiles (`FLAG_USE_TEXTURE_REPEAT`) and a `CanvasItem`
   // clamps. Each consumer states its own at bind time (ADR-0044).
-  return applyTexelPasses(texture, importTexelPasses(imported));
+  return importDecodedImage(texture, imported);
+}
+
+/**
+ * A decoded image as Godot's texture importer stores it: the texel passes its sidecar asks for, its
+ * mip chain, and the format a colour slot reads it through. The caller owns `texture`, which it
+ * gets back when no pass changes a byte.
+ */
+export function importDecodedImage(texture: THREE.Texture, imported: ImageImport): THREE.Texture {
+  const result = applyTexelPasses(texture, texelPassesFor(imported));
+  if (!imported.options.mipmaps) dropMipChain(result);
+  if (imported.source === null) return result;
+  return recordGodotFormat(result, textureImportFormat(imported.source, imported.options));
 }
 
 /**
@@ -68,18 +93,16 @@ export async function createTextureFromBuffer(
  * compression to RGTC drops. The alpha-border pass and the premultiply return on any format but
  * RGBA8 (`core/io/image.cpp:4225`, `:4247`). A source no header names reads as RGBA8.
  */
-function importTexelPasses({ source, options }: ImageImport): TexelPass[] {
+function texelPassesFor({ source, options }: ImageImport): TexelPass[] {
   const isRgba8 = source === null || source === 'RGBA8';
   const isGreyscale = source === 'Lum8' || source === 'LumAlpha8';
   const passes: TexelPass[] = [];
   if (options.fixAlphaBorder && isRgba8) passes.push(fixAlphaEdges);
   if (options.premultAlpha && isRgba8) passes.push(premultiplyAlpha);
-  if (options.invertNormalY) passes.push((texels) => invertGreen(texels, isGreyscale));
+  if (options.invertNormalY) passes.push(isGreyscale ? invertGreyscaleGreen : invertGreen);
   if (holdsRedGreenOnly(options)) passes.push(keepRedGreen);
   return passes;
 }
-
-const SVG_MIME_TYPE = 'image/svg+xml';
 
 /**
  * An SVG drawn at `scale` times its own size, rounded, as Godot's SVG loader rasterises it

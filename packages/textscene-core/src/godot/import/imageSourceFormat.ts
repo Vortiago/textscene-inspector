@@ -57,7 +57,7 @@ function pngSourceFormat(bytes: Uint8Array): ImageSourceFormat | null {
 function hasTransparencyChunk(bytes: Uint8Array): boolean {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   for (let offset = PNG_FIRST_CHUNK_OFFSET; offset + 8 <= bytes.length;) {
-    const type = String.fromCharCode(...bytes.subarray(offset + 4, offset + 8));
+    const type = fourCharacterCode(bytes, offset + 4);
     if (type === 'tRNS') return true;
     if (type === 'IDAT') return false;
     offset += PNG_CHUNK_OVERHEAD + view.getUint32(offset);
@@ -107,11 +107,10 @@ const VP8L_ALPHA_BIT = 28;
  */
 function webpSourceFormat(bytes: Uint8Array): ImageSourceFormat | null {
   if (bytes.length < WEBP_CHUNK_BODY_OFFSET + VP8L_HEADER_BYTES) return null;
-  const ascii = (from: number) => String.fromCharCode(...bytes.subarray(from, from + 4));
-  if (ascii(0) !== 'RIFF' || ascii(8) !== 'WEBP') return null;
+  if (fourCharacterCode(bytes, 0) !== 'RIFF' || fourCharacterCode(bytes, 8) !== 'WEBP') return null;
 
   const body = WEBP_CHUNK_BODY_OFFSET;
-  switch (ascii(WEBP_CHUNK_OFFSET)) {
+  switch (fourCharacterCode(bytes, WEBP_CHUNK_OFFSET)) {
     case 'VP8 ':
       return 'RGB8';
     case 'VP8L': {
@@ -123,4 +122,9 @@ function webpSourceFormat(bytes: Uint8Array): ImageSourceFormat | null {
     default:
       return null;
   }
+}
+
+/** The four ASCII bytes at `offset`, as a PNG chunk type or a RIFF tag spells them. */
+function fourCharacterCode(bytes: Uint8Array, offset: number): string {
+  return String.fromCharCode(...bytes.subarray(offset, offset + 4));
 }

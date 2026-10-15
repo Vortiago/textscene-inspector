@@ -1,9 +1,8 @@
 /**
  * Factory for creating texture processors, the image slice's loader-facing
  * adapter (`resources/formats/image/`, ADR-0031). Stays here because the
- * `ResourceLoader` constructs it alongside its peer factories. It records on each
- * texture the texels, the format and the mip chain Godot's importer gives it, from the image's
- * **Import sidecar**.
+ * `ResourceLoader` constructs it alongside its peer factories. It hands the slice the image's
+ * **Import sidecar**, which decides the texels, the format and the mip chain.
  */
 
 import * as THREE from 'three';
@@ -12,12 +11,9 @@ import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import type { DependencyGraph } from '../dependencyGraph';
 import { createTextureFromBuffer, getMimeType, isTexturePath } from '../formats/image/textureProcessing';
-import { recordGodotFormat } from '../textures/sourceColorSpace';
-import { dropMipChain } from '../textures/godotTextureFilter';
 import { readImportSidecar } from './readImportSidecar';
 import { importTextureOptions } from '../../parser/importParser';
 import { imageSourceFormat } from '../../godot/import/imageSourceFormat.js';
-import { textureImportFormat } from '../../godot/import/textureImport.js';
 
 export function createTextureProcessor(
   fileEventBus: FileEventBus | undefined,
@@ -41,15 +37,12 @@ export function createTextureProcessor(
         fileEventBus,
         dependencies
       );
-      const options = importTextureOptions(sidecar);
-      const texture = await createTextureFromBuffer(
+      return createTextureFromBuffer(
         bytes,
         mimeType,
-        { source, options },
+        { source, options: importTextureOptions(sidecar) },
         eventBus.getThreeManager()
       );
-      if (!options.mipmaps) dropMipChain(texture);
-      return source === null ? texture : recordGodotFormat(texture, textureImportFormat(source, options));
     },
     dispose: (texture) => texture.dispose(),
   });

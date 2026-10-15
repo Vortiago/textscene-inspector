@@ -85,8 +85,9 @@ JPEG reads raw in a colour slot at modes 0, 1 and 3, and sRGB at modes 2 and 4.
 
 A glTF image with a `uri` imports as that file, under its own sidecar. Godot extracts an embedded
 image to `<base name>_<image name>.<png|jpg>` beside the glTF
-(`modules/gltf/gltf_document.cpp:2209-2210`, `:2321-2333`), and that file's sidecar decides
-(`godot/import/gltfImageFiles.ts`).
+(`modules/gltf/gltf_document.cpp:2209-2210`, `:2321-2333`). That file's sidecar decides its texels
+and its import format as it does for any image file (`godot/import/gltfImageFiles.ts`,
+`resources/formats/glb/imageImport.ts`).
 
 ## The samplers of BaseMaterial3D
 

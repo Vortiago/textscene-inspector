@@ -10,21 +10,22 @@ import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createTextureProcessor } from './createTextureProcessor';
-import { createTextureFromBuffer } from '../formats/image/textureProcessing';
+import { createTextureFromBuffer, importDecodedImage } from '../formats/image/textureProcessing';
 import { DependencyGraph } from '../dependencyGraph';
 import { sourceColorSpace } from '../textures/sourceColorSpace';
 import { arrayBufferOf, png, vp8l, webp } from '../formats/image/testing/imageBytes';
 
 vi.mock('../formats/image/textureProcessing', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../formats/image/textureProcessing')>();
-  return {
-    ...actual,
-    // Real `getMimeType` / `isTexturePath`. Only the decode is faked.
-    createTextureFromBuffer: vi.fn(async () => new THREE.Texture()),
-  };
+  // Real `getMimeType` / `isTexturePath`. Only the decode is faked.
+  return { ...actual, createTextureFromBuffer: vi.fn() };
 });
 
 const decode = vi.mocked(createTextureFromBuffer);
+
+/** The real import of a blank decoded image, so the sidecar's mip chain and format still land. */
+const decodeBlank: typeof createTextureFromBuffer = async (_data, _mimeType, imported) =>
+  importDecodedImage(new THREE.Texture(), imported);
 
 /** The settle window for the byte bus → processor round trip. */
 const flush = (ms = 20): Promise<unknown> => new Promise((r) => setTimeout(r, ms));
@@ -58,7 +59,7 @@ function harness(files: Record<string, ArrayBuffer | string>) {
 describe('createTextureProcessor', () => {
   beforeEach(() => {
     decode.mockClear();
-    decode.mockImplementation(async () => new THREE.Texture());
+    decode.mockImplementation(decodeBlank);
   });
 
   it('decodes an image file and publishes it on the texture slot', async () => {
@@ -179,7 +180,7 @@ const GREY_PNG = arrayBufferOf(png(0));
 
 describe('createTextureProcessor: the import format of an image file', () => {
   beforeEach(() => {
-    decode.mockImplementation(async () => new THREE.Texture());
+    decode.mockImplementation(decodeBlank);
   });
 
   it('reads a greyscale PNG with no sidecar raw, as a fresh lossless import does', async () => {
@@ -260,7 +261,7 @@ async function loadedTexture(files: Record<string, ArrayBuffer | string>): Promi
 
 describe('createTextureProcessor: the mip chain of an image file', () => {
   beforeEach(() => {
-    decode.mockImplementation(async () => new THREE.Texture());
+    decode.mockImplementation(decodeBlank);
   });
 
   it('gives an image with no sidecar no mip chain, as the Detect preset imports it', async () => {

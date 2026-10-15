@@ -125,11 +125,10 @@ function glbChunks(glb: ArrayBuffer): GlbChunks {
   return { json: JSON.parse(text) as GltfJson, bin };
 }
 
-/** The JSON document of a text glTF or a GLB container. */
-export function gltfJsonOf(data: ArrayBuffer): GltfJson {
-  return isGlbContainer(data)
-    ? glbChunks(data).json
-    : (JSON.parse(new TextDecoder().decode(data)) as GltfJson);
+/** The JSON document of a text glTF or a GLB container, and the GLB's binary chunk. */
+function gltfDocument(data: ArrayBuffer): GlbChunks {
+  if (isGlbContainer(data)) return glbChunks(data);
+  return { json: JSON.parse(new TextDecoder().decode(data)) as GltfJson, bin: new Uint8Array() };
 }
 
 /** Whether a buffer or an image names its bytes by `uri`, which the glTF loader would fetch. */
@@ -137,14 +136,22 @@ function namesUri(json: GltfJson): boolean {
   return [...(json.buffers ?? []), ...(json.images ?? [])].some((entry) => entry.uri !== undefined);
 }
 
+/** A glTF as a GLB that carries every buffer and image, and the images its own document names. */
+export interface SelfContainedGlb {
+  glb: ArrayBuffer;
+  /** The `images` of the document as read, before packing replaces each `uri` with a buffer view. */
+  images: NonNullable<GltfJson['images']>;
+}
+
 /**
  * `data` as a GLB that carries every buffer and image it names: a text glTF packed, a GLB
  * that names a `uri` repacked, and any other GLB as it is. The glTF loader then fetches nothing.
  */
-export async function selfContainedGlb(data: ArrayBuffer, readUri: ReadUri): Promise<ArrayBuffer> {
-  if (!isGlbContainer(data)) return packGltfAsGlb(gltfJsonOf(data), readUri);
-  const { json, bin } = glbChunks(data);
-  return namesUri(json) ? packGltfAsGlb(json, readUri, bin) : data;
+export async function selfContainedGlb(data: ArrayBuffer, readUri: ReadUri): Promise<SelfContainedGlb> {
+  const { json, bin } = gltfDocument(data);
+  const images = json.images ?? [];
+  if (isGlbContainer(data) && !namesUri(json)) return { glb: data, images };
+  return { glb: await packGltfAsGlb(json, readUri, bin), images };
 }
 
 /**

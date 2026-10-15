@@ -11,9 +11,11 @@ import {
   createTextureFromBuffer,
   decodeImagePixels,
   getMimeType,
+  importDecodedImage,
   isTexturePath,
   type ImageImport,
 } from './textureProcessing';
+import { sourceColorSpace } from '../../textures/sourceColorSpace';
 import type { ImageSourceFormat } from '../../../godot/import/imageSourceFormat';
 import {
   DEFAULT_TEXTURE_IMPORT,
@@ -328,7 +330,7 @@ describe('createTextureFromBuffer: the import texel passes', () => {
   });
 
   it('keeps the sampling of the texture it replaces', async () => {
-    const { texture } = await importedRow([[1, 2, 3, 255]], 'RGB8', { invertNormalY: true });
+    const { texture } = await importedRow([[1, 2, 3, 255]], 'RGB8', { invertNormalY: true, mipmaps: true });
     expect([texture.minFilter, texture.generateMipmaps]).toEqual([THREE.LinearMipmapLinearFilter, true]);
   });
 
@@ -345,6 +347,28 @@ describe('createTextureFromBuffer: the import texel passes', () => {
       imported('RGBA8', { premultAlpha: true })
     );
     expect(texture.image).toBeNull();
+  });
+});
+
+describe('importDecodedImage', () => {
+  it('drops the mip chain of an import without mipmaps', () => {
+    const texture = importDecodedImage(new THREE.Texture(), imported('RGBA8'));
+    expect([texture.minFilter, texture.generateMipmaps]).toEqual([THREE.LinearFilter, false]);
+  });
+
+  it('keeps the mip chain of an import that generates mipmaps', () => {
+    const texture = importDecodedImage(new THREE.Texture(), imported('RGBA8', { mipmaps: true }));
+    expect(texture.generateMipmaps).toBe(true);
+  });
+
+  it('records the format a colour slot reads the import through', () => {
+    const texture = importDecodedImage(new THREE.Texture(), imported('Lum8'));
+    expect(sourceColorSpace(texture)).toBe(THREE.NoColorSpace);
+  });
+
+  it('records no format for an image whose header names none (edge case)', () => {
+    const texture = importDecodedImage(new THREE.Texture(), imported(null));
+    expect(sourceColorSpace(texture)).toBe(THREE.SRGBColorSpace);
   });
 });
 

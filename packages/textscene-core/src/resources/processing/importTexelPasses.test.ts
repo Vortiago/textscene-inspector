@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { invertGreen, keepRedGreen, premultiplyAlpha } from './importTexelPasses';
+import { invertGreen, invertGreyscaleGreen, keepRedGreen, premultiplyAlpha } from './importTexelPasses';
 
 describe('premultiplyAlpha', () => {
   it("rounds each colour channel times alpha as Godot's integer form does", () => {
@@ -23,20 +23,36 @@ describe('premultiplyAlpha', () => {
 describe('invertGreen', () => {
   it('flips green through float32, truncating as set_pixel does', () => {
     const data = new Uint8Array([10, 0, 30, 255, 10, 1, 30, 255, 10, 128, 30, 7]);
-    invertGreen(data, false);
+    invertGreen(data);
     expect([...data]).toEqual([10, 255, 30, 255, 10, 254, 30, 255, 10, 126, 30, 7]);
   });
 
-  it('stores the brightest channel in every channel of a greyscale image', () => {
-    const data = new Uint8Array([64, 64, 64, 255, 200, 200, 200, 255]);
-    invertGreen(data, true);
-    expect([...data]).toEqual([191, 191, 191, 255, 200, 200, 200, 255]);
+  it('reports no change on an empty image (edge case)', () => {
+    expect(invertGreen(new Uint8Array(0))).toBe(false);
   });
 
   it('keeps alpha (edge case)', () => {
     const data = new Uint8Array([0, 0, 0, 3]);
-    invertGreen(data, false);
+    invertGreen(data);
     expect(data[3]).toBe(3);
+  });
+});
+
+describe('invertGreyscaleGreen', () => {
+  it('stores the brightest channel in every channel of a greyscale image', () => {
+    const data = new Uint8Array([64, 64, 64, 255, 200, 200, 200, 255]);
+    invertGreyscaleGreen(data);
+    expect([...data]).toEqual([191, 191, 191, 255, 200, 200, 200, 255]);
+  });
+
+  it('reports no change on a texel already at its inverse (edge case)', () => {
+    expect(invertGreyscaleGreen(new Uint8Array([200, 200, 200, 255]))).toBe(false);
+  });
+
+  it('keeps alpha (edge case)', () => {
+    const data = new Uint8Array([64, 64, 64, 9]);
+    invertGreyscaleGreen(data);
+    expect(data[3]).toBe(9);
   });
 });
 

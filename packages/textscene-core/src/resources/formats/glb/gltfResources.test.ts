@@ -178,7 +178,7 @@ describe('selfContainedGlb', () => {
       binChunk(positions()),
     ]);
 
-    const { json: packed, bin } = unpack(await selfContainedGlb(glb, readUri));
+    const { json: packed, bin } = unpack((await selfContainedGlb(glb, readUri)).glb);
 
     expect(read).toEqual(['https://attacker.example/beacon.png']);
     expect(packed.buffers).toEqual([{ byteLength: 8 }]);
@@ -200,7 +200,7 @@ describe('selfContainedGlb', () => {
       binChunk(positions()),
     ]);
 
-    const { json: packed, bin } = unpack(await selfContainedGlb(glb, readUri));
+    const { json: packed, bin } = unpack((await selfContainedGlb(glb, readUri)).glb);
 
     expect(packed.bufferViews).toEqual([
       { buffer: 0, byteOffset: 0, byteLength: 4 },
@@ -216,8 +216,22 @@ describe('selfContainedGlb', () => {
       binChunk(positions()),
     ]);
 
-    expect(await selfContainedGlb(glb, readUri)).toBe(glb);
+    expect((await selfContainedGlb(glb, readUri)).glb).toBe(glb);
     expect(read).toEqual([]);
+  });
+
+  it('returns the images the document names, before packing replaces their URIs', async () => {
+    const { readUri } = reader({ 'wood.png': bytes(0x89, 0x50) });
+    const gltf = { asset: { version: '2.0' }, images: [{ uri: 'wood.png', name: 'Wood' }] };
+
+    const { images } = await selfContainedGlb(new TextEncoder().encode(JSON.stringify(gltf)).buffer, readUri);
+
+    expect(images).toEqual([{ uri: 'wood.png', name: 'Wood' }]);
+  });
+
+  it('returns no images for a document that names none (edge case)', async () => {
+    const glb = glbOfChunks([jsonChunk({ asset: { version: '2.0' } })]);
+    expect((await selfContainedGlb(glb, reader({}).readUri)).images).toEqual([]);
   });
 
   it('reads the last JSON chunk, the one the glTF loader reads', async () => {
@@ -227,7 +241,7 @@ describe('selfContainedGlb', () => {
       jsonChunk({ asset: { version: '2.0' }, images: [{ uri: 'beacon.png' }] }),
     ]);
 
-    const { json: packed } = unpack(await selfContainedGlb(glb, readUri));
+    const { json: packed } = unpack((await selfContainedGlb(glb, readUri)).glb);
 
     expect(read).toEqual(['beacon.png']);
     expect(packed.images).toEqual([{ bufferView: 0, mimeType: 'image/png' }]);
@@ -238,7 +252,7 @@ describe('selfContainedGlb', () => {
     const gltf = { asset: { version: '2.0' }, buffers: [{ uri: 'scene.bin', byteLength: 4 }] };
 
     const { json: packed } = unpack(
-      await selfContainedGlb(new TextEncoder().encode(JSON.stringify(gltf)).buffer, readUri)
+      (await selfContainedGlb(new TextEncoder().encode(JSON.stringify(gltf)).buffer, readUri)).glb
     );
 
     expect(packed.buffers).toEqual([{ byteLength: 4 }]);

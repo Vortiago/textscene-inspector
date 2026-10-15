@@ -22,21 +22,31 @@ export function premultiplyAlpha(data: Uint8Array): boolean {
 
 /**
  * `_invert_y_channel` (`resource_importer_texture.cpp:657-671`): green becomes `1 - green` through
- * `get_pixel` and `set_pixel`, in float32, truncated to a byte (`core/io/image.cpp:3555-3580`). A
- * greyscale image stores the brightest channel, `Color::get_v`, so every channel takes it.
+ * `get_pixel` and `set_pixel`, in float32, truncated to a byte (`core/io/image.cpp:3555-3580`).
  */
-export function invertGreen(data: Uint8Array, isGreyscale: boolean): boolean {
+export function invertGreen(data: Uint8Array): boolean {
+  let changed = false;
+  for (let i = 0; i < data.length; i += 4)
+    changed = writeChannel(data, i + 1, invertedGreen(data, i)) || changed;
+  return changed;
+}
+
+/**
+ * `invertGreen` on a greyscale image, which stores the brightest channel, `Color::get_v`, so every
+ * channel takes it.
+ */
+export function invertGreyscaleGreen(data: Uint8Array): boolean {
   let changed = false;
   for (let i = 0; i < data.length; i += 4) {
-    const green = Math.fround(1 - channelOf(data[i + 1]!));
-    if (!isGreyscale) {
-      changed = writeChannel(data, i + 1, green) || changed;
-      continue;
-    }
-    const brightest = Math.max(channelOf(data[i]!), green, channelOf(data[i + 2]!));
+    const brightest = Math.max(channelOf(data[i]!), invertedGreen(data, i), channelOf(data[i + 2]!));
     for (let c = i; c < i + 3; c++) changed = writeChannel(data, c, brightest) || changed;
   }
   return changed;
+}
+
+/** `1 - green` of the texel at `index`, in float32. */
+function invertedGreen(data: Uint8Array, index: number): number {
+  return Math.fround(1 - channelOf(data[index + 1]!));
 }
 
 /**

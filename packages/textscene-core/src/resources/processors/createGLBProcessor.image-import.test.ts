@@ -1,9 +1,10 @@
 /**
- * A glTF image reaches a colour slot through its sRGB view only when the format Godot imports it
- * in has one. An embedded image imports as the file Godot extracts it to, so that file's sidecar
- * decides. happy-dom decodes no image, so the texture decode is faked.
+ * A glTF image imports as the file Godot loads it from, so that file's sidecar decides its texels
+ * and its format: a colour slot reads it through its sRGB view only when that format has one. An
+ * embedded image imports as the file Godot extracts it to. happy-dom decodes no image, so the
+ * texture decode is faked.
  */
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
@@ -13,13 +14,20 @@ import { initGlbModules } from '../formats/glb/glbProcessing';
 import { forEachSurfaceMaterial } from '../formats/glb/surfaceMaterials';
 import { png } from '../formats/image/testing/imageBytes';
 
+/** The RGBA8 texels every image decodes to, top row first. Null decodes to an empty texture. */
+const decoded = vi.hoisted(() => ({
+  image: null as { data: Uint8Array; width: number; height: number } | null,
+}));
+
 vi.mock('three', async (importOriginal) => {
   const actual = await importOriginal<typeof import('three')>();
 
-  /** Decodes every image to an empty texture at once. */
+  /** Decodes every image at once, to `decoded.image`. */
   class FakeTextureLoader {
     load(_url: string, onLoad: (texture: InstanceType<typeof actual.Texture>) => void): void {
-      onLoad(new actual.Texture());
+      const texture = new actual.Texture();
+      if (decoded.image) texture.image = { ...decoded.image, data: decoded.image.data.slice() };
+      onLoad(texture);
     }
   }
 
@@ -66,11 +74,12 @@ function texturedGltf(image: { uri: string; name?: string }): ArrayBuffer {
   return new TextEncoder().encode(JSON.stringify(gltf)).buffer as ArrayBuffer;
 }
 
-const textureSidecar = (mode: number): string =>
-  `[remap]\n\nimporter="texture"\n\n[params]\n\ncompress/mode=${mode}\n`;
+const textureSidecar = (mode: number, params = ''): string =>
+  `[remap]\n\nimporter="texture"\n\n[params]\n\ncompress/mode=${mode}\n${params}`;
 
 function harness(files: Record<string, ArrayBuffer | string>) {
-  const fileEventBus = new FileEventBus({ loadResource: vi.fn(async (path: string) => files[path] ?? null) });
+  const loadResource = vi.fn(async (path: string) => files[path] ?? null);
+  const fileEventBus = new FileEventBus({ loadResource });
   const eventBus = new ResourceEventBus();
   const dependencies = new DependencyGraph();
   const processor = createGLBProcessor(fileEventBus, eventBus, dependencies);
@@ -79,7 +88,7 @@ function harness(files: Record<string, ArrayBuffer | string>) {
     processor.request(GLTF_PATH);
     return loaded;
   };
-  return { load, dependencies };
+  return { load, dependencies, loadResource };
 }
 
 /** The colour spaces of the base colour and emissive maps of the asset's one material. */
@@ -135,5 +144,67 @@ describe('createGLBProcessor: the import format of a glTF image', () => {
     const { load, dependencies } = harness({ [GLTF_PATH]: gltf });
     await load();
     expect(dependencies.release(`${EXTRACTED_PATH}.import`)).toEqual([{ busType: 'glb', key: GLTF_PATH }]);
+  });
+});
+
+describe('createGLBProcessor: the texels of a glTF image', () => {
+  beforeAll(async () => {
+    await initGlbModules();
+  });
+
+  afterEach(() => {
+    decoded.image = null;
+  });
+
+  /** An embedded RGBA PNG whose two texels decode to `texels`. */
+  async function loadTexels(texels: number[][], files: Record<string, string> = {}): Promise<THREE.Texture> {
+    decoded.image = { data: new Uint8Array(texels.flat()), width: texels.length, height: 1 };
+    const gltf = texturedGltf({ name: 'albedo', uri: pngDataUri(png(6)) });
+    const root = await harness({ [GLTF_PATH]: gltf, ...files }).load();
+    let map: THREE.Texture | null = null;
+    forEachSurfaceMaterial(root, (material) => (map ??= (material as THREE.MeshStandardMaterial).map));
+    return map!;
+  }
+
+  const bytesOf = (texture: THREE.Texture) => Array.from((texture.image as { data: Uint8Array }).data);
+
+  it('gives a transparent texel its opaque neighbour colour, as the default alpha-border pass does', async () => {
+    const map = await loadTexels([
+      [200, 100, 50, 255],
+      [0, 0, 0, 0],
+    ]);
+    expect(bytesOf(map)).toEqual([200, 100, 50, 255, 200, 100, 50, 0]);
+  });
+
+  it("runs the passes the extracted file's sidecar asks for", async () => {
+    const map = await loadTexels([[10, 0, 30, 255]], {
+      [`${EXTRACTED_PATH}.import`]: textureSidecar(0, 'process/normal_map_invert_y=true\n'),
+    });
+    expect(bytesOf(map)).toEqual([10, 255, 30, 255]);
+  });
+
+  it('keeps the mip chain the glTF importer asks for, whatever the sidecar says', async () => {
+    const map = await loadTexels([[10, 0, 30, 0]], {
+      [`${EXTRACTED_PATH}.import`]: textureSidecar(0, 'mipmaps/generate=false\n'),
+    });
+    expect(map.generateMipmaps).toBe(true);
+  });
+
+  it('imports an image once, however many textures sample it (edge case)', async () => {
+    decoded.image = { data: new Uint8Array([0, 0, 0, 0]), width: 1, height: 1 };
+    const json = JSON.parse(
+      new TextDecoder().decode(texturedGltf({ name: 'albedo', uri: pngDataUri(png(6)) }))
+    ) as Record<string, unknown>;
+    // A second texture of the same image under its own sampler, which the loader caches apart.
+    Object.assign(json, {
+      samplers: [{ magFilter: 9728 }],
+      textures: [{ source: 0 }, { source: 0, sampler: 0 }],
+    });
+    (json['materials'] as { emissiveTexture: { index: number } }[])[0]!.emissiveTexture.index = 1;
+    const gltf = new TextEncoder().encode(JSON.stringify(json)).buffer as ArrayBuffer;
+    const { load, loadResource } = harness({ [GLTF_PATH]: gltf });
+    await load();
+    const sidecarReads = loadResource.mock.calls.filter(([path]) => path === `${EXTRACTED_PATH}.import`);
+    expect(sidecarReads).toHaveLength(1);
   });
 });

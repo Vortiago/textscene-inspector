@@ -11,7 +11,7 @@ import {
   applyTextureState,
   isBindingOwnedTexture,
   releaseBoundTexture,
-  type MaterialTextureState,
+  type TextureState,
   type UVTransform,
 } from './applyTextureState';
 import { dropMipChain, GODOT_ANISOTROPY_MAX } from './godotTextureFilter';
@@ -26,7 +26,7 @@ function uv(sx: number, sy: number, ox = 0, oy = 0): UVTransform {
  * UV, filter or wrapping isolates that reason alone. The colour-space cases
  * below name theirs.
  */
-function state(material: MaterialTextureState = {}) {
+function state(material: Omit<TextureState, 'colorSpace'> = {}): TextureState {
   return { ...material, colorSpace: THREE.NoColorSpace };
 }
 

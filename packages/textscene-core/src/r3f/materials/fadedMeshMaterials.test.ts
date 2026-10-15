@@ -8,6 +8,7 @@ import {
   opaquePrepassOf,
   opaquePrepassUserData,
 } from './opaquePrepass';
+import { REBUILDS_NORMAL_MAP_BLUE, patchedFragment } from '../testing/patchedFragment';
 
 /** A fade whose alpha is 39/255: inside the alpha pass. */
 const MARGIN_FADE = 0.15625;
@@ -228,5 +229,29 @@ describe('FadedMeshMaterials.dispose', () => {
     faded.dispose();
 
     expect(mesh.material).toBe(override);
+  });
+});
+
+describe('FadedMeshMaterials: the normal map read of an import', () => {
+  function normalMapped(): THREE.MeshStandardMaterial {
+    return new THREE.MeshStandardMaterial({ normalMap: new THREE.Texture() });
+  }
+
+  it("keeps Godot's normal map read on the alpha-pass copy", () => {
+    const mesh = meshOf(normalMapped());
+    new FadedMeshMaterials(mesh).applyFade(MARGIN_FADE);
+    expect(patchedFragment(mesh.material as THREE.Material)).toContain(REBUILDS_NORMAL_MAP_BLUE);
+  });
+
+  it("keeps Godot's normal map read on the own-pass copy", () => {
+    const mesh = meshOf(normalMapped());
+    new FadedMeshMaterials(mesh).applyFade(NEAR_FULL_FADE);
+    expect(patchedFragment(mesh.material as THREE.Material)).toContain(REBUILDS_NORMAL_MAP_BLUE);
+  });
+
+  it('adds no read to a copy without a normal map (edge case)', () => {
+    const mesh = meshOf(new THREE.MeshStandardMaterial());
+    new FadedMeshMaterials(mesh).applyFade(NEAR_FULL_FADE);
+    expect(patchedFragment(mesh.material as THREE.Material)).not.toContain(REBUILDS_NORMAL_MAP_BLUE);
   });
 });

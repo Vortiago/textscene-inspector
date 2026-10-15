@@ -12,14 +12,13 @@ import { tagMeshInstances } from './meshInstances';
 import { tagGodotNodeNames } from './nodeNames';
 import { gltfImportNames, type GltfNamingOptions } from '../../../godot/import/gltfImportNames';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
-import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
-import { injectProgram } from '../../../r3f/materialProgramInputs';
+import { withImportedNormalMapRead } from '../../../r3f/materials/godotNormalMap';
 import type { GltfExtensionRules } from './types';
 import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
 import { usesGodotSingleRoot } from '../../../godot/import/gltf';
 import { applyLightmapUv, type LightmapUvImport } from './lightmapUv/lightmapUv';
 import { godotPrimitives } from './godotPrimitives';
-import { recordGltfImageFormats, type GltfImageFormat } from './imageFormats';
+import { importingImages, type GltfImageImport } from './imageImport';
 import { forEachSurfaceMaterial } from './surfaceMaterials';
 
 interface GlbModules {
@@ -116,8 +115,8 @@ export interface GlbLoadOptions {
   naming: GltfNamingOptions;
   /** The lightmap UV2 to give the meshes Godot unwraps, absent when the sidecar unwraps none. */
   lightmapUv?: LightmapUvImport;
-  /** The format Godot imports each image in. */
-  imageFormat: GltfImageFormat;
+  /** How Godot imports each image. */
+  imageImport: GltfImageImport;
 }
 
 /**
@@ -126,17 +125,17 @@ export interface GlbLoadOptions {
  */
 export async function createGLBMesh(
   data: ArrayBuffer,
-  { extensionRules = 'godot-importer', naming, lightmapUv, imageFormat }: GlbLoadOptions
+  { extensionRules = 'godot-importer', naming, lightmapUv, imageImport }: GlbLoadOptions
 ): Promise<THREE.Object3D> {
   const { GLTFLoader } = await initGlbModules();
   const loader = withExtensionRules(new GLTFLoader(inMemoryOnlyManager()), extensionRules)
     .register(decodeImagesInImageElements)
+    .register(importingImages(imageImport))
     .register(godotPrimitives);
   const gltf = await loader.parseAsync(data, '');
   const root = await godotSceneRoot(gltf);
   const names = gltfImportNames(gltf.parser.json, naming);
   if (lightmapUv) await applyLightmapUv(gltf, root, lightmapUv, names.meshes);
-  await recordGltfImageFormats(gltf.parser, root, imageFormat);
   // GLTFLoader returns embedded clips on `gltf.animations`. The root's `.animations`
   // is where GLBSceneRoot plays them from and where `cloneWithMaterials` copies them.
   root.animations = gltf.animations;
@@ -174,16 +173,6 @@ function importBlendAsDepthPrepass(object: THREE.Object3D): void {
 }
 
 /**
- * Godot imports a glTF material as a StandardMaterial3D (`gltf_document.cpp:2939-2940`), so its
- * normal map rebuilds blue from red and green. A clone carries no `onBeforeCompile`, so each clone
- * takes the patch.
- */
-function withGodotNormalMapRead(material: THREE.Material): THREE.Material {
-  if ((material as THREE.MeshStandardMaterial).normalMap) injectProgram(material, GODOT_NORMAL_MAP_READ);
-  return material;
-}
-
-/**
  * Clone an Object3D and its materials, since an Object3D has one parent. Requires an
  * awaited `initGlbModules()`, which a successful `createGLBMesh` always did before a
  * consumer holds a clone.
@@ -202,7 +191,7 @@ export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
 
   // SkeletonUtils shares material references, so clone every slot the sidecar writer
   // can reach, and a per-instance material change stays in its instance.
-  forEachSurfaceMaterial(cloned, (material, assign) => assign(withGodotNormalMapRead(material.clone())));
+  forEachSurfaceMaterial(cloned, (material, assign) => assign(withImportedNormalMapRead(material.clone())));
 
   cloned.traverse((node) => {
     if (node instanceof THREE.Mesh) {
