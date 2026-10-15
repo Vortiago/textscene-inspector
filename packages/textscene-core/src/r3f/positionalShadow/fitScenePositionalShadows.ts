@@ -99,7 +99,7 @@ function lightVolume(light: PositionalLight): THREE.Box3 {
 
 function localBounds(light: PositionalLight): ReturnType<typeof positionalLightBounds> {
   if (isAreaShadowLight(light)) return light.shadow.bounds();
-  const spotAngle = isSpotLight(light) ? THREE.MathUtils.radToDeg(light.angle) : null;
+  const spotAngle = isSpotLight(light) ? light.angle : null;
   return positionalLightBounds(light.distance, spotAngle);
 }
 

@@ -38,6 +38,7 @@ import { extrusionCounts } from './extrusionCounts';
 import { emptyGeometry, facingMatrix, PATH_UP, signedArea, toPoints, warnOnce } from './polygonSweepFrames';
 import { MIN_POLYGON_VERTICES, PathRotation, PolygonMode, type CsgPolygonSpec } from './polygonSweepSpec';
 import { sweepFaceBuffer } from './sweepFaceBuffer';
+import { degToRad } from '../../../../godot/math/math.js';
 
 export { PolygonMode } from './polygonSweepSpec';
 export type { CsgPolygonPathPlan, CsgPolygonSpec } from './polygonSweepSpec';
@@ -84,7 +85,7 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
   let uStep = 1 / extrusions;
   if (spec.pathUDistance > 0) uStep *= curveLength / spec.pathUDistance;
   const vStep = 1 / shapeSides;
-  const spinStep = THREE.MathUtils.degToRad(spec.spinDegrees / spec.spinSides);
+  const spinStep = degToRad(spec.spinDegrees / spec.spinSides);
   let extrusionStep = 1 / extrusions;
   if (mode === PolygonMode.PATH) {
     if (spec.pathJoined) extrusionStep = 1 / (extrusions - 1);
@@ -150,7 +151,7 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
   if (endCount > 0) emitCap(currentXform, false);
 
   // --- Extrusion walls ---
-  const angleSimplifyDot = Math.cos(THREE.MathUtils.degToRad(spec.pathSimplifyAngle));
+  const angleSimplifyDot = Math.cos(degToRad(spec.pathSimplifyAngle));
   let previousSimplifyDir = new THREE.Vector3();
   let facesCombined = 0;
 

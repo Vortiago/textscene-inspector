@@ -4,7 +4,6 @@
  * soft shadow.
  */
 
-import { degToRad } from '../../math/math.js';
 import { SOFT_LOW_QUALITY_RADIUS } from './softShadowScale.js';
 
 /** The near plane Godot renders an omni or spot shadow from (`renderer_scene_cull.cpp:2442`, `:2531`). */
@@ -62,13 +61,13 @@ interface LightBounds {
  * The box the cull tests against the camera frustum to decide whether a light takes part in the
  * render (`light_storage.cpp:428-455`, `renderer_scene_cull.cpp:2853-2856`): a cube of the range
  * around an omni light, and a spot light's cone along its -Z, or the cube once the cone opens wider
- * than a hemisphere. `spotAngle` is in degrees and is null for an omni light.
+ * than a hemisphere. `spotAngle` is in radians, the form the light holds after Godot's
+ * `deg_to_rad` (`light_storage.cpp:435`), and is null for an omni light.
  */
 export function positionalLightBounds(range: number, spotAngle: number | null): LightBounds {
-  const angle = spotAngle === null ? null : degToRad(spotAngle);
-  if (angle === null || angle > Math.PI * 0.5) {
+  if (spotAngle === null || spotAngle > Math.PI * 0.5) {
     return { min: [-range, -range, -range], max: [range, range, range] };
   }
-  const size = Math.sin(angle) * range;
+  const size = Math.sin(spotAngle) * range;
   return { min: [-size, -size, -range], max: [size, size, 0] };
 }

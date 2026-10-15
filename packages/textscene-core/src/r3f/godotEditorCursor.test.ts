@@ -26,6 +26,7 @@ import {
   type GodotViewAngle,
 } from './godotEditorCursor';
 import { clampWheelNotches } from './pointerGesture';
+import { degToRad } from '../godot/math/math.js';
 
 /** `editors/3d/navigation_feel/orbit_sensitivity` (`editor_settings.cpp:948`). */
 const ORBIT_DEGREES_PER_PIXEL = 0.25;
@@ -94,7 +95,7 @@ describe('cursorFromCamera / cursorCameraPosition', () => {
 
 describe('orbitCursor', () => {
   it('accumulates yaw and pitch at Godot’s orbit sensitivity', () => {
-    const perPixel = (ORBIT_DEGREES_PER_PIXEL * Math.PI) / 180;
+    const perPixel = degToRad(ORBIT_DEGREES_PER_PIXEL);
     const orbited = orbitCursor(orbitCursor(cursorAt(0, 0), 10, 4), 10, 4);
     expect(orbited.yRot).toBeCloseTo(20 * perPixel, 9);
     expect(orbited.xRot).toBeCloseTo(8 * perPixel, 9);
@@ -346,7 +347,7 @@ describe('viewSnapCursor', () => {
 describe('orthographicHeight', () => {
   it('matches what the perspective camera sees at the focus point', () => {
     const distance = 4;
-    const expected = 2 * distance * Math.tan(((EDITOR_CAMERA_FOV / 2) * Math.PI) / 180);
+    const expected = 2 * distance * Math.tan(degToRad(EDITOR_CAMERA_FOV / 2));
     expect(orthographicHeight(distance, EDITOR_CAMERA_FOV)).toBeCloseTo(expected, 9);
   });
 

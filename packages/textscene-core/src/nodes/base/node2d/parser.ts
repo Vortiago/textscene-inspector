@@ -9,6 +9,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseColor } from '../../../utils/colorParser';
 import { floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
 import { slotTupleRegex, matchedFloat, allFinite } from '../../../godot/variant/number.js';
+import { degToRad } from '../../../godot/math/math.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties } from './types';
 import { boolSlotValue } from '../../../godot/index.js';
@@ -38,7 +39,7 @@ export function parseNode2D(heading: ParsedHeading, properties: Record<string, s
     if (properties.scale) scale = vec2Or(properties.scale, scale, name || 'Node2D');
     if (properties.rotation !== undefined) rotation = floatOr(properties.rotation, 0);
     else if (properties.rotation_degrees !== undefined)
-      rotation = (floatOr(properties.rotation_degrees, 0) * Math.PI) / 180;
+      rotation = degToRad(floatOr(properties.rotation_degrees, 0));
     skew = floatOr(properties.skew, 0);
   }
 

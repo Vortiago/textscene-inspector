@@ -97,3 +97,12 @@ export async function loadRadianEpsilon() {
   const mod = await import(pathToFileURL(join(DIST, 'linter/validators/v/floats.js')).href);
   return mod.RADIAN_ROUNDTRIP_EPSILON;
 }
+
+/**
+ * `degToRad`, the Godot-rounding degree conversion. Read from the built module,
+ * not retyped, so a script converts as the previewer does.
+ */
+export async function loadDegToRad() {
+  const mod = await import(pathToFileURL(join(DIST, 'godot/math/math.js')).href);
+  return mod.degToRad;
+}

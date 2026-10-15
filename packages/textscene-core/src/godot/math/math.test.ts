@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import {
   cubicInterpolatef,
   degToRad,
+  radToDeg,
   lerpColor,
   lerpf,
   CMP_EPSILON,
@@ -25,11 +26,25 @@ describe('degToRad', () => {
   });
 
   it('multiplies by PI / 180 as Godot does, which rounds differently from (d * PI) / 180', () => {
-    expect(degToRad(3)).toBe(3 * (Math.PI / 180));
+    expect(degToRad(3)).toBe(0.05235987755982989);
   });
 
   it('keeps a non-finite value non-finite (edge case)', () => {
     expect(degToRad(Number.POSITIVE_INFINITY)).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+describe('radToDeg', () => {
+  it('turns radians into degrees', () => {
+    expect(radToDeg(Math.PI)).toBe(180);
+  });
+
+  it('multiplies by 180 / PI as Godot does, which rounds differently from (r * 180) / PI', () => {
+    expect(radToDeg(0.1)).toBe(5.729577951308233);
+  });
+
+  it('keeps a non-finite value non-finite (edge case)', () => {
+    expect(radToDeg(Number.NEGATIVE_INFINITY)).toBe(Number.NEGATIVE_INFINITY);
   });
 });
 
