@@ -8,15 +8,13 @@ import { useEffect, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { createCanvasMsaaFrame } from './canvasMsaaFrame.js';
-import { deviceSampleCount } from '../../deviceSampleCount.js';
+import { useDeviceSampleCount } from '../../deviceSampleCount.js';
 
 /** A positive priority stops R3F's own render, and runs after every pass at priority 0 or below. */
 const OWNS_THE_RENDER = 1;
 
 export function CanvasMsaa() {
-  const gl = useThree((state) => state.gl);
-  const { msaa2D } = useProjectSettings().msaaSamples;
-  const samples = useMemo(() => deviceSampleCount(gl, msaa2D), [gl, msaa2D]);
+  const samples = useDeviceSampleCount(useProjectSettings().msaaSamples.msaa2D);
   return samples > 0 ? <MultisampledRender samples={samples} /> : null;
 }
 

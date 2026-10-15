@@ -8,7 +8,7 @@ import { useThree } from '@react-three/fiber';
 import type { EnvironmentSettings } from '../../resources/environment/types';
 import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
-import { deviceSampleCount } from '../deviceSampleCount';
+import { useDeviceSampleCount } from '../deviceSampleCount';
 import { sceneHasBlendedSurface } from './alphaPassScan';
 import { useLatchedSceneScan } from './useLatchedSceneScan';
 import { compositorPassFor, type CompositorPass } from './compositorPass';
@@ -17,7 +17,7 @@ import { compositorPassFor, type CompositorPass } from './compositorPass';
 export function useCompositorPass(settings: EnvironmentSettings | null): CompositorPass | null {
   const hasBlended = useLatchedSceneScan(sceneHasBlendedSurface);
   const draws3D = useDraws3D();
-  const msaa3D = useDeviceMsaa3D();
+  const msaa3D = useDeviceSampleCount(useProjectSettings().msaaSamples.msaa3D);
   // Memoised, since a new glow object rebuilds the compositor's effect.
   return useMemo(
     () => (draws3D ? compositorPassFor(settings, hasBlended, msaa3D) : null),
@@ -36,13 +36,6 @@ export function useDraws3D(): boolean {
   const glReady = useMemo(() => hasRealGlContext(gl), [gl]);
   const is2D = useCanvasWorkspace() === '2d';
   return glReady && !is2D;
-}
-
-/** The samples the project's `msaa_3d` draws on this device. */
-function useDeviceMsaa3D(): number {
-  const gl = useThree((s) => s.gl);
-  const { msaa3D } = useProjectSettings().msaaSamples;
-  return useMemo(() => deviceSampleCount(gl, msaa3D), [gl, msaa3D]);
 }
 
 function hasRealGlContext(gl: { getContext?: () => unknown }): boolean {

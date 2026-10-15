@@ -21,7 +21,6 @@ import {
   PREVIEW_SUN_ENERGY,
   PREVIEW_SUN_SHADOW_MAX_DISTANCE,
   YIELDS_A_PREVIEW,
-  drawsWithoutEnvironment,
   previewEnvironment,
   previewSunDirection,
   previewYield,
@@ -50,20 +49,20 @@ export function PreviewLighting() {
   const { showPreviewSun, showPreviewEnvironment } = useViewportMode();
   const yielding = useLiveSceneNodes(YIELDS_A_PREVIEW);
 
-  const { decision, withoutEnvironment } = useMemo(() => {
-    const types = yielding.map((entry) => entry.node.type);
-    const toggles = { sun: showPreviewSun, environment: showPreviewEnvironment };
-    return {
-      decision: previewYield(types, toggles),
-      withoutEnvironment: drawsWithoutEnvironment(types, toggles),
-    };
-  }, [yielding, showPreviewSun, showPreviewEnvironment]);
+  const decision = useMemo(
+    () =>
+      previewYield(
+        yielding.map((entry) => entry.node.type),
+        { sun: showPreviewSun, environment: showPreviewEnvironment }
+      ),
+    [yielding, showPreviewSun, showPreviewEnvironment]
+  );
 
   return (
     <>
       {decision.sun && <PreviewSun />}
       {decision.environment && <PreviewEnvironment />}
-      {withoutEnvironment && <NoEnvironmentLayer />}
+      {decision.withoutEnvironment && <NoEnvironmentLayer />}
     </>
   );
 }

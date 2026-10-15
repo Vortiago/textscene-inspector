@@ -6,7 +6,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 import type { ReactNode } from 'react';
@@ -29,6 +28,7 @@ import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
 import '../../../r3f/nodes/index';
+import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 
 /** A SubViewport with every default and no children, as the conformance guard builds one. */
 const bareSubViewport = new TscnParser().parse(
@@ -38,12 +38,6 @@ const bareSubViewport = new TscnParser().parse(
 /** Reports whatever is published at `path` on every render. */
 function Probe({ path, seen }: { path: string; seen: (ViewportTextureEntry | null)[] }) {
   seen.push(useViewportTexture(path));
-  return null;
-}
-
-/** Captures the canvas renderer so a test can observe the offscreen pass. */
-function GlSpy({ captured }: { captured: { current: THREE.WebGLRenderer | null } }) {
-  captured.current = useThree((state) => state.gl);
   return null;
 }
 
@@ -126,7 +120,7 @@ async function renderScene(source: string, workspace: '2d' | '3d' = '3d', viewpo
         <ViewportPassProvider>
           {nodes}
           <Probe path={viewportPath} seen={seen} />
-          <GlSpy captured={capturedGl} />
+          <CaptureRenderer captured={capturedGl} />
           <ViewportPassOrchestrator />
         </ViewportPassProvider>
       </ViewportTextureProvider>

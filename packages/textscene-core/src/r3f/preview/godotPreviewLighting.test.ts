@@ -10,7 +10,6 @@ import {
   previewEnvironment,
   previewSunDirection,
   previewYield,
-  drawsWithoutEnvironment,
 } from './godotPreviewLighting';
 import type { ProceduralSkyProperties } from '../../resources/sky/types';
 
@@ -24,13 +23,14 @@ describe('previewYield', () => {
   const on = { sun: true, environment: true };
 
   it('gives an empty scene both previews', () => {
-    expect(previewYield([], on)).toEqual({ sun: true, environment: true });
+    expect(previewYield([], on)).toEqual({ sun: true, environment: true, withoutEnvironment: false });
   });
 
   it('drops only the sun when the scene has a DirectionalLight3D', () => {
     expect(previewYield(['Node3D', 'DirectionalLight3D'], on)).toEqual({
       sun: false,
       environment: true,
+      withoutEnvironment: false,
     });
   });
 
@@ -38,6 +38,7 @@ describe('previewYield', () => {
     expect(previewYield(['WorldEnvironment', 'MeshInstance3D'], on)).toEqual({
       sun: true,
       environment: false,
+      withoutEnvironment: false,
     });
   });
 
@@ -45,6 +46,7 @@ describe('previewYield', () => {
     expect(previewYield(['DirectionalLight3D', 'WorldEnvironment'], on)).toEqual({
       sun: false,
       environment: false,
+      withoutEnvironment: false,
     });
   });
 
@@ -65,25 +67,29 @@ describe('previewYield', () => {
     expect(previewYield([], { sun: false, environment: true })).toEqual({
       sun: false,
       environment: true,
+      withoutEnvironment: false,
     });
     expect(previewYield([], { sun: true, environment: false })).toEqual({
       sun: true,
       environment: false,
+      withoutEnvironment: true,
     });
   });
 });
 
-describe('drawsWithoutEnvironment', () => {
-  it('is false while the preview environment is on', () => {
-    expect(drawsWithoutEnvironment(['MeshInstance3D'], { sun: true, environment: true })).toBe(false);
+describe('previewYield without an Environment', () => {
+  it('reports no Environment when the user turns the preview off and the scene brings none', () => {
+    expect(previewYield(['MeshInstance3D'], { sun: true, environment: false }).withoutEnvironment).toBe(true);
   });
 
-  it('is true when the user turns the preview environment off and the scene brings none', () => {
-    expect(drawsWithoutEnvironment(['MeshInstance3D'], { sun: true, environment: false })).toBe(true);
+  it('reports an Environment while the preview environment is on', () => {
+    expect(previewYield(['MeshInstance3D'], { sun: true, environment: true }).withoutEnvironment).toBe(false);
   });
 
-  it('is false when the scene brings a WorldEnvironment, which draws in its place', () => {
-    expect(drawsWithoutEnvironment(['WorldEnvironment'], { sun: true, environment: false })).toBe(false);
+  it('reports an Environment when the scene brings a WorldEnvironment, which draws in its place', () => {
+    expect(previewYield(['WorldEnvironment'], { sun: true, environment: false }).withoutEnvironment).toBe(
+      false
+    );
   });
 });
 

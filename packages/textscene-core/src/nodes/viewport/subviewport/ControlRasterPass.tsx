@@ -26,9 +26,10 @@ import {
   createOffscreenTarget,
   orthoFrameForSize,
   renderToOffscreenTarget,
+  viewportMsaaSamples,
 } from './offscreenViewport.js';
+import { useDeviceSampleCount } from '../../../r3f/deviceSampleCount.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
-import { useViewportSampleCount } from './useViewportSampleCount.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
 import { viewportTargetSize } from './targetSize.js';
 import type { SubViewportProperties } from './types.js';
@@ -86,7 +87,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   }, [node.name]);
 
   // Controls are canvas items, so the 2D buffer's mode applies.
-  const samples = useViewportSampleCount(node.properties as SubViewportProperties, '2d');
+  const samples = useDeviceSampleCount(viewportMsaaSamples(node.properties as SubViewportProperties, '2d'));
   const target = useMemo(
     () => createRasterTarget(width, height, node.name, samples),
     [width, height, node.name, samples]

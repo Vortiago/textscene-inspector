@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { drawFullScreen, fullScreenPass } from '../../fullScreenPass';
+import { takeOutputLikeDrawingBuffer } from '../../outputTarget';
 
 export interface CanvasMsaaFrame {
   /** Draws `scene` through the target and copies the result to the target bound before. */
@@ -45,9 +46,10 @@ export function createCanvasMsaaFrame(samples: number): CanvasMsaaFrame {
 }
 
 /**
- * RGBA8 storage under an sRGB tag. With `isXRRenderTarget`, three encodes each fragment to the tag's
- * space (`WebGLPrograms.js:213`), so the target holds what the drawing buffer would hold and items
- * blend in the same space. The default sRGB format, SRGB8_ALPHA8, would blend in linear.
+ * RGBA8 storage under an sRGB tag. Taking output like the drawing buffer, three encodes each
+ * fragment to the tag's space (`WebGLPrograms.js:213`), so the target holds what the drawing buffer
+ * would hold and items blend in the same space. The default sRGB format, SRGB8_ALPHA8, would blend
+ * in linear.
  */
 function createFrameTarget(samples: number): THREE.WebGLRenderTarget {
   const target = new THREE.WebGLRenderTarget(1, 1, { samples, depthBuffer: true, stencilBuffer: false });
@@ -57,7 +59,6 @@ function createFrameTarget(samples: number): THREE.WebGLRenderTarget {
   target.texture.magFilter = THREE.NearestFilter;
   target.texture.generateMipmaps = false;
   target.texture.name = 'Canvas2D::msaaFrame';
-  // Not declared by @types/three: three sets it on plain render targets the same way (`XRManager.js`).
-  (target as THREE.WebGLRenderTarget & { isXRRenderTarget: boolean }).isXRRenderTarget = true;
+  takeOutputLikeDrawingBuffer(target);
   return target;
 }

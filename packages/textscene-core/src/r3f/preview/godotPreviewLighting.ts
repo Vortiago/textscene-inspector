@@ -48,11 +48,16 @@ export interface PreviewToggles {
   environment: boolean;
 }
 
+export interface PreviewYield extends PreviewToggles {
+  /** The user turned the preview environment off and no WorldEnvironment draws in its place. */
+  withoutEnvironment: boolean;
+}
+
 /**
  * Which previews to mount. Mirrors `_node_added`: by node type only, so a hidden
  * `DirectionalLight3D` with zero energy still takes the preview sun away.
  */
-export function previewYield(sceneNodeTypes: Iterable<string>, toggles: PreviewToggles): PreviewToggles {
+export function previewYield(sceneNodeTypes: Iterable<string>, toggles: PreviewToggles): PreviewYield {
   let hasDirectionalLight = false;
   let hasWorldEnvironment = false;
 
@@ -64,17 +69,8 @@ export function previewYield(sceneNodeTypes: Iterable<string>, toggles: PreviewT
   return {
     sun: toggles.sun && !hasDirectionalLight,
     environment: toggles.environment && !hasWorldEnvironment,
+    withoutEnvironment: !toggles.environment && !hasWorldEnvironment,
   };
-}
-
-/**
- * Whether the root draws with no Environment: the user turned the preview environment off and the
- * scene brings no WorldEnvironment to draw in its place.
- */
-export function drawsWithoutEnvironment(sceneNodeTypes: Iterable<string>, toggles: PreviewToggles): boolean {
-  if (toggles.environment) return false;
-  for (const type of sceneNodeTypes) if (type === PREVIEW_ENVIRONMENT_YIELD_TYPE) return false;
-  return true;
 }
 
 /**

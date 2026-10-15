@@ -6,6 +6,7 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { DEMO_CATEGORY_LABELS } from './generate-fixtures/demoCategories.mjs';
+import { fixtureProjects } from './generate-fixtures/fixtureProjects.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -117,13 +118,8 @@ const fixtureFiles = readdirSync(fixturesDir)
   .filter((f) => f.endsWith('.tscn'))
   .sort();
 
-// A Fixture project is the exception: a subdirectory with its own project.godot,
-// whose res:// root is that subdirectory, so its project settings reach no other
-// fixture.
-const fixtureProjects = readdirSync(fixturesDir, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory() && existsSync(join(fixturesDir, entry.name, 'project.godot')))
-  .map((entry) => entry.name)
-  .sort();
+// A Fixture project is the exception: its scenes are listed under its own root.
+const fixtureProjectDirs = fixtureProjects(fixturesDir);
 
 // Every ld-58 scene at any depth is selectable. `file` is the res://-relative
 // path with forward slashes, which matches the closure copy-fixtures mirrors
@@ -297,7 +293,7 @@ const fixtures = [
     file,
     category: detectCategory(file),
   })),
-  ...fixtureProjects.flatMap((root) =>
+  ...fixtureProjectDirs.flatMap((root) =>
     walkTscn(join(fixturesDir, root))
       .sort()
       .map((rel) => {

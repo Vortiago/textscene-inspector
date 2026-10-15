@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import type { Vector2 } from '../../base/node2d/types';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
 import { msaaSampleCount } from '../../../godot/rendering/msaa';
+import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
 import type { SubViewportProperties } from './types';
 
 /**
@@ -37,13 +38,8 @@ export function createOffscreenTarget(
   target.texture.minFilter = THREE.LinearFilter;
   target.texture.magFilter = THREE.LinearFilter;
   target.texture.generateMipmaps = false;
-  if (preTonemapped) {
-    // `WebGLPrograms.js` tonemaps a target only when `isXRRenderTarget`, and then
-    // takes the output space from `texture.colorSpace`. Without it the target
-    // missed a curve (0.60-0.65x under FILMIC). Not declared by @types/three:
-    // three sets it on plain render targets the same way (`XRManager.js`).
-    (target as THREE.WebGLRenderTarget & { isXRRenderTarget: boolean }).isXRRenderTarget = true;
-  }
+  // Without it the target misses a curve (0.60-0.65x under FILMIC).
+  if (preTonemapped) takeOutputLikeDrawingBuffer(target);
   return target;
 }
 

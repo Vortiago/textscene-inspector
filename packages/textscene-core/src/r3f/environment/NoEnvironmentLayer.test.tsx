@@ -2,15 +2,9 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useThree } from '@react-three/fiber';
 import { NoEnvironmentLayer } from './NoEnvironmentLayer';
 import { withProject } from '../testing/ProjectFixture';
-
-/** Hands out the canvas's renderer, which the test renderer does not expose. */
-function CaptureRenderer({ captured }: { captured: { current: THREE.WebGLRenderer | null } }) {
-  captured.current = useThree((state) => state.gl);
-  return null;
-}
+import { CaptureRenderer } from '../testing/CaptureRenderer';
 
 describe('<NoEnvironmentLayer>', () => {
   it("clears to Godot's default sRGB 0.3 grey, opaque, where no Environment draws a background", async () => {
