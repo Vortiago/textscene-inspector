@@ -1,7 +1,8 @@
 /**
  * `BaseMaterial3D.blend_mode` → three.js blending state. `_update_shader` in
  * `scene/resources/material.cpp` emits `render_mode blend_*`, which
- * `scene_shader_forward_clustered.cpp` maps to a `BlendMode`, whose attachment `godot/` holds.
+ * `scene_shader_forward_clustered.cpp` maps to a `BlendMode`. `godot/rendering/materials/blendMode.ts`
+ * holds the attachment of each `BlendMode`.
  */
 
 import * as THREE from 'three';
@@ -38,6 +39,7 @@ const THREE_FACTOR: Readonly<Record<GodotBlendFactor, THREE.BlendingDstFactor>> 
  * consumers assert on (`WebGLState.setBlending`, non-premultiplied; `blendState.test.ts`).
  * SUB is not `SubtractiveBlending` (`FUNC_ADD` with `ZERO/ONE_MINUS_SRC_COLOR`), and
  * PREMULT_ALPHA is not `premultipliedAlpha`, which premultiplies a premultiplied source again.
+ * Every Godot mode gives alpha its own factors, so no colour-only `gl.blendFunc` reading fits one.
  */
 const PRESETS: Readonly<Partial<Record<BlendMode, THREE.Blending>>> = {
   // `blendFuncSeparate(SRC_ALPHA, ONE_MINUS_SRC_ALPHA, ONE, ONE_MINUS_SRC_ALPHA)`, `FUNC_ADD`.

@@ -74,4 +74,4 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 - **Approximated** Godot draws the glyphs softer, and an `outline_size = 8` outline as a faint grey halo, where here it is a crisp black ring.
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
-- **Approximated** `ALPHA_HASH` keeps about the share of pixels Godot keeps, but not the same pixels. The hash is Godot's (`scene_forward_aa_inc.glsl:12-39`), and its `fract(1e4 * sin())` rounds differently on each GPU.
+- **Approximated** `ALPHA_HASH` keeps about the share of pixels Godot keeps, but not the same pixels. The hash is Godot's (`scene_forward_aa_inc.glsl:3-39`), and its `fract(1e4 * sin())` rounds differently on each GPU.

@@ -2,8 +2,7 @@
 
 /**
  * `BaseMaterial3D::BlendMode` (`scene/resources/material.h:227-233`), as the integers a `.tscn`
- * stores for `blend_mode`. The default is MIX (`material.h:601`). `CanvasItemMaterial` uses the
- * same values.
+ * stores for `blend_mode`. The default is MIX (`material.h:601`).
  */
 export enum BlendMode {
   MIX = 0,
@@ -22,12 +21,12 @@ export type GodotBlendFactor =
 
 /** One `RD::PipelineColorBlendState::Attachment`, in Godot's vocabulary. */
 export interface GodotBlendAttachment {
-  colorOp: GodotBlendOp;
-  srcColor: GodotBlendFactor;
-  dstColor: GodotBlendFactor;
-  alphaOp: GodotBlendOp;
-  srcAlpha: GodotBlendFactor;
-  dstAlpha: GodotBlendFactor;
+  readonly colorOp: GodotBlendOp;
+  readonly srcColor: GodotBlendFactor;
+  readonly dstColor: GodotBlendFactor;
+  readonly alphaOp: GodotBlendOp;
+  readonly srcAlpha: GodotBlendFactor;
+  readonly dstAlpha: GodotBlendFactor;
 }
 
 /**
