@@ -6,7 +6,7 @@
  * `resourceTypeExclusions.generated.ts` runs this parse under plain `node`.
  */
 
-export interface ResourceTypeHint {
+interface ResourceTypeHint {
   /** The classes the slot accepts, each with its subclasses. */
   readonly bases: readonly string[];
   /** The exact class names the slot refuses, though a base admits them. */

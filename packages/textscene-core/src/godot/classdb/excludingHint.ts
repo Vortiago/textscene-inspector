@@ -10,7 +10,7 @@ import { RESOURCE_TYPE_EXCLUSIONS } from './resourceTypeExclusions.generated.js'
 import { UNCATALOGUED_PROPERTIES } from './uncataloguedProperties.js';
 
 /** A resource slot's hint that excludes a class, with the class that declares the slot. */
-export interface ExcludingHint {
+interface ExcludingHint {
   readonly declaredBy: string;
   readonly hintString: string;
   readonly excluded: readonly string[];

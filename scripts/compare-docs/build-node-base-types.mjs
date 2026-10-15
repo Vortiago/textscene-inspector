@@ -98,7 +98,7 @@ function renderEntries(table) {
  * @param version - the catalog's Godot version, quoted in the header so a
  *   reader can tell which engine the ancestry came from.
  */
-export function renderModule(table, version) {
+function renderModule(table, version) {
   const entries = renderEntries(table);
   return `/**
  * Node-type → base-type table, derived from Godot ${version}'s ClassDB.
@@ -125,7 +125,7 @@ ${entries}
  * @param table - `resource-bases.json`, class → immediate base.
  * @param version - the engine both captures came from.
  */
-export function renderResourceModule(table, version) {
+function renderResourceModule(table, version) {
   return `/**
  * Resource-type → base-type table, derived from Godot ${version}'s ClassDB.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
@@ -178,7 +178,7 @@ function renderPropertyTable(name, properties) {
  * @param resourceProperties - `resource-properties.json`, class → own rows.
  * @param version - the catalog's Godot version.
  */
-export function renderPropertiesModule(nodeProperties, resourceProperties, version) {
+function renderPropertiesModule(nodeProperties, resourceProperties, version) {
   return `/**
  * ClassDB property rows, derived from Godot ${version}'s ClassDB captures.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
@@ -246,7 +246,7 @@ export function deriveResourceTypeExclusions(properties, bases) {
  * @param exclusions - output of {@link deriveResourceTypeExclusions}.
  * @param version - the catalog's Godot version.
  */
-export function renderExclusionsModule(exclusions, version) {
+function renderExclusionsModule(exclusions, version) {
   const classes = Object.entries(exclusions)
     .map(([className, slots]) => {
       const rows = Object.entries(slots)
