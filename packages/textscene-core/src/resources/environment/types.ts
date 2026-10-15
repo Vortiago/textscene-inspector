@@ -163,6 +163,57 @@ export interface EnvironmentAdjustments {
   saturation: number;
 }
 
+/** Depth fog (Godot `fog_enabled`), apart from the volumetric fog. */
+export interface DepthFog {
+  /** 0 EXPONENTIAL, 1 DEPTH. */
+  mode: number;
+  /** sRGB, not yet times `lightEnergy`. */
+  color: Color;
+  lightEnergy: number;
+  sunScatter: number;
+  density: number;
+  aerialPerspective: number;
+  skyAffect: number;
+  height: number;
+  heightDensity: number;
+  depthCurve: number;
+  depthBegin: number;
+  /** 0 or below ends the fog at the camera's far plane. */
+  depthEnd: number;
+}
+
+/**
+ * Volumetric fog: a medium in a froxel volume in front of the camera, lit by
+ * the lights and the ambient, which every surface and the background sample. Colours stay in
+ * Godot space: the consumer converts sRGB to linear.
+ */
+export interface VolumetricFog {
+  density: number;
+  albedo: Color;
+  emission: Color;
+  emissionEnergy: number;
+  /** The Henyey-Greenstein `g` of every light the medium scatters. */
+  anisotropy: number;
+  length: number;
+  detailSpread: number;
+  /**
+   * The ambient the medium scatters, read whatever the ambient source (`fog.cpp:1067-1076`).
+   * `inject` already carries `ambient_light_energy`.
+   */
+  ambient: {
+    inject: number;
+    color: Color;
+    /** The sky's share of the injected ambient, against `color`. */
+    skyContribution: number;
+  };
+  skyAffect: number;
+  /**
+   * The share of the last frame each frame keeps while the cells jitter, or null to sample each
+   * cell at its centre with no history.
+   */
+  temporalReprojection: number | null;
+}
+
 /** `createEnvironmentSettings`'s output: one Environment as the render layer applies it. */
 export interface EnvironmentSettings {
   background: {
@@ -212,57 +263,12 @@ export interface EnvironmentSettings {
     /** `tonemap_agx_contrast`, carried whatever the mode. Only AgX reads it. */
     agxContrast: number;
   };
-  /** Depth fog (Godot `fog_enabled`), apart from the volumetric fog below. */
-  fog: {
-    /** 0 EXPONENTIAL, 1 DEPTH. */
-    mode: number;
-    /** sRGB, not yet times `lightEnergy`. */
-    color: Color;
-    lightEnergy: number;
-    sunScatter: number;
-    density: number;
-    aerialPerspective: number;
-    skyAffect: number;
-    height: number;
-    heightDensity: number;
-    depthCurve: number;
-    depthBegin: number;
-    /** 0 or below ends the fog at the camera's far plane. */
-    depthEnd: number;
-  } | null;
+  /** Null when disabled. */
+  fog: DepthFog | null;
   /** The sky's Euler rotation in radians, YXZ order: the background, its light and the fog read it. */
   skyRotation: Vector3;
-  /**
-   * Volumetric fog, null when disabled: a medium in a froxel volume in front of the camera, lit by
-   * the lights and the ambient, which every surface and the background sample. Colours stay in
-   * Godot space: the consumer converts sRGB to linear.
-   */
-  volumetricFog: {
-    density: number;
-    albedo: Color;
-    emission: Color;
-    emissionEnergy: number;
-    /** The Henyey-Greenstein `g` of every light the medium scatters. */
-    anisotropy: number;
-    length: number;
-    detailSpread: number;
-    /**
-     * The ambient the medium scatters, read whatever the ambient source (`fog.cpp:1067-1076`).
-     * `inject` already carries `ambient_light_energy`.
-     */
-    ambient: {
-      inject: number;
-      color: Color;
-      /** The sky's share of the injected ambient, against `color`. */
-      skyContribution: number;
-    };
-    skyAffect: number;
-    /**
-     * The share of the last frame each frame keeps while the cells jitter, or null to sample each
-     * cell at its centre with no history.
-     */
-    temporalReprojection: number | null;
-  } | null;
+  /** Null when disabled. */
+  volumetricFog: VolumetricFog | null;
   /** The colour adjustments the tone-map pass applies after the curve, null when disabled. */
   adjustments: EnvironmentAdjustments | null;
   /**

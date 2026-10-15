@@ -5,7 +5,7 @@
  */
 
 import type { TscnNode } from '../../parser/types';
-import { descendsFrom } from '../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../godot/classdb/nodeBaseTypes.js';
 
 /**
  * What this previewer can draw: a hand-kept mirror of ControlComponentRegistry,

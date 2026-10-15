@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { applyShadowCasting, shadowCastingEffects } from './shadowCasting';
 import { castsFrom, depthSideOf, drawsColour } from './testing/threePasses';
-import { ShadowCastingSetting } from '../godot/rendering';
+import { ShadowCastingSetting } from '../godot/rendering/rendering';
 
 /** A mesh with one surface of `materialSide`, carrying the hooks of `value`. */
 function meshCasting(value: number | undefined, materialSide: THREE.Side): THREE.Mesh {

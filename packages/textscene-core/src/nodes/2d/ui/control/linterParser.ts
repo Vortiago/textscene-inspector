@@ -1,6 +1,6 @@
 /**
  * Base Control strict validators. Registered once under `'Control'`, they reach every
- * Control subclass through the ValidatorRegistry base-walk (godot/nodeBaseTypes.ts).
+ * Control subclass through the ValidatorRegistry base-walk (godot/classdb/nodeBaseTypes.ts).
  * They reject malformed literals, and cite each value Godot reads but refuses or alters.
  */
 
@@ -212,7 +212,7 @@ validatorRegistry.registerAll(
     ),
     mouse_force_pass_scroll_events: v.boolean('mouse_force_pass_scroll_events'),
     // control.cpp:2877, ERR_FAIL_INDEX(int(p_shape), CURSOR_MAX). The table lives in
-    // `godot/control.ts` because SubViewportContainer's rule reads it too.
+    // `godot/scene/control.ts` because SubViewportContainer's rule reads it too.
     mouse_default_cursor_shape: v.enumInt('mouse_default_cursor_shape', 0, CURSOR_MAX - 1, CURSOR_SHAPES, {
       enforced: 'control.cpp:2877',
     }),

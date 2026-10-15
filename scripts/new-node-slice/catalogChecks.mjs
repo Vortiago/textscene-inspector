@@ -65,10 +65,13 @@ export function checkChain(typeName) {
     fail(
       `${typeName} is not in scripts/compare-docs/node-catalog.json, so NODE_BASE_TYPES ` +
         `has no base for it and every inherited validator would silently skip the type. ` +
-        `Check the spelling, or add it to UNCATALOGUED in godot/nodeBaseTypes.ts with a reason.`
+        `Check the spelling, or add it to UNCATALOGUED in godot/classdb/nodeBaseTypes.ts with a reason.`
     );
   }
   const parent = entry.chain?.[0];
   if (!parent) fail(`${typeName} has no parent in the catalog, so nothing can be inherited from.`);
-  return { parent, note: `${typeName} → ${parent} (derived, already in godot/nodeBaseTypes.generated.ts)` };
+  return {
+    parent,
+    note: `${typeName} → ${parent} (derived, already in godot/classdb/nodeBaseTypes.generated.ts)`,
+  };
 }

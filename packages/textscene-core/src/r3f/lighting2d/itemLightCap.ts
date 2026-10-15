@@ -15,7 +15,7 @@ import {
   type ItemPlacement,
 } from './itemLightList.js';
 import type { PassMesh } from './lightAccumulationPass.js';
-import { rect2Intersects, rect2Merge, type Rect2 } from '../../godot/rect2.js';
+import { rect2Intersects, rect2Merge, type Rect2 } from '../../godot/math/rect2.js';
 
 /** A lit item as the cap sees it. */
 export interface CappedItem {

@@ -1,7 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { draw, releaseTextures, setUniforms, skyPass } from './skyPass';
-import { testRenderer } from '../../testing/recordingWebGL';
+import { releaseTextures, setUniforms, skyPass } from './skyPass';
 
 const FRAGMENT = 'void main() { gl_FragColor = vec4(1.0); }';
 
@@ -75,42 +74,5 @@ describe('releaseTextures', () => {
     releaseTextures(pass);
 
     expect(pass.uniforms.chain!.value).toBeNull();
-  });
-});
-
-describe('draw', () => {
-  it('draws the pass into the target', async () => {
-    const { renderer } = await testRenderer();
-    const pass = skyPass(FRAGMENT, []);
-    const target = new THREE.WebGLRenderTarget(4, 4);
-    const rendered = vi.spyOn(renderer, 'render');
-
-    draw(renderer, pass, target);
-
-    const [scene] = rendered.mock.calls[0]!;
-    expect([renderer.getRenderTarget(), (scene.children[0] as THREE.Mesh).material]).toEqual([target, pass]);
-  });
-
-  it('draws into the cube face and the mip it names (edge case)', async () => {
-    const { renderer } = await testRenderer();
-    const target = new THREE.WebGLCubeRenderTarget(4);
-    target.texture.mipmaps = [{}, {}, {}] as unknown as THREE.Texture['mipmaps'];
-
-    draw(renderer, skyPass(FRAGMENT, []), target, 3, 1);
-
-    expect([renderer.getActiveCubeFace(), renderer.getActiveMipmapLevel()]).toEqual([3, 1]);
-  });
-
-  it('draws the pass it is given, never the one drawn before (error case)', async () => {
-    const { renderer } = await testRenderer();
-    const target = new THREE.WebGLRenderTarget(4, 4);
-    const second = skyPass(FRAGMENT, []);
-    draw(renderer, skyPass(FRAGMENT, []), target);
-    const rendered = vi.spyOn(renderer, 'render');
-
-    draw(renderer, second, target);
-
-    const [scene] = rendered.mock.calls[0]!;
-    expect((scene.children[0] as THREE.Mesh).material).toBe(second);
   });
 });

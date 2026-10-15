@@ -1,6 +1,6 @@
 /**
  * A surface's material state in the two passes its geometry instance's fade can draw it in:
- * unfaded, and the alpha pass a fade below the threshold forces (`godot/fadeAlpha.ts`). The
+ * unfaded, and the alpha pass a fade below the threshold forces (`godot/rendering/fadeAlpha.ts`). The
  * scene cull picks one of the two materials per render (`swappedMaterials.ts`).
  */
 

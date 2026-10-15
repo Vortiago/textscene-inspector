@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { directionalShadowDeclaration } from './shadowDeclaration';
 import { directionalShadowBias } from '../shared/shadowBias';
-import { DirectionalShadowMode } from '../../../../godot/directionalShadow';
-import { DirectionalLightSkyMode } from '../../../../godot/directionalLightSkyMode';
+import { DirectionalShadowMode } from '../../../../godot/rendering/lights/directionalShadow';
+import { DirectionalLightSkyMode } from '../../../../godot/rendering/lights/directionalLightSkyMode';
 
 describe('directionalShadowDeclaration', () => {
   it('declares the authored shadow properties', () => {

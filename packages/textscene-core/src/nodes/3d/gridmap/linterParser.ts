@@ -9,7 +9,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, layerBitmask, propertyError, v } from '../../../linter/validators/index.js';
 import { ARRAY_LITERAL_RE, resourceRef } from '../../../godot/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
 import {
   markIntSlot,

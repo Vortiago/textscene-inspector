@@ -5,7 +5,7 @@
  */
 
 import type * as THREE from 'three';
-import { isEqualApprox } from '../../../../godot/math';
+import { isEqualApprox } from '../../../../godot/math/math';
 import type { CsgGeometryBuilder, CsgGeometryContext, CsgSolid } from '../../../../r3f/csg/csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';

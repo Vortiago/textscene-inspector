@@ -16,8 +16,8 @@ import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
 import { lightModesUserData } from '../../../r3f/lightModes';
 import { disablesSpecularOcclusion } from '../../../r3f/godotIndirectSpecular';
-import { DiffuseMode } from '../../../godot/diffuseMode';
-import { SpecularMode } from '../../../godot/specularMode';
+import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
+import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
 import {
   DRAWN_OPAQUE_PREPASS,
   FADED_OPAQUE_PREPASS,
@@ -26,7 +26,7 @@ import {
 } from '../../../r3f/materials/opaquePrepass';
 import { materialFromBag } from './build';
 import { standardMaterial } from './testing/standardMaterial';
-import { BillboardMode } from '../../../godot/billboard';
+import { BillboardMode } from '../../../godot/scene/billboard';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextures } from './types';
 import { renderTargetMapUserData } from '../../../r3f/materials/renderTargetMap';

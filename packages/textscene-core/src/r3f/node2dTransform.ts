@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import type { Node2DLocalTransform } from '../nodes/base/node2d/types';
 import type { Vec3Tuple } from './nodeTransform';
-import { transform2DFromParts, type Transform2DColumns } from '../godot/transform2d.js';
+import { transform2DFromParts, type Transform2DColumns } from '../godot/math/transform2d.js';
 
 // F is its own inverse, so `F·M1·F · F·M2·F = F·(M1·M2)·F` composes through any
 // nesting with no global flip group: Godot `(100, 50)` sits at three.js `(100, -50)`.

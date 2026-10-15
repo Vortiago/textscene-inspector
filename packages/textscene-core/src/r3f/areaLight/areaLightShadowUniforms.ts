@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { isAreaShadowLight } from '../positionalShadow/atlasAreaShadow.js';
 import { LightUniformArrays, type LightArrays } from '../shaderPatch/lightUniformArrays.js';
+import { writeVec4 } from '../writeVec4.js';
 
 export const AREA_LIGHT_SHADOW_MATRICES = 'rectAreaLightShadowMatrices';
 export const AREA_LIGHT_SHADOW_RECTS = 'rectAreaLightShadowRects';
@@ -53,7 +54,7 @@ function writeLight(
   const { shadow } = light;
   shadow.viewToLight(light, camera, scratchMatrix).toArray(set[AREA_LIGHT_SHADOW_MATRICES], index * 16);
   shadow.slotUvRect(scratchRect).toArray(set[AREA_LIGHT_SHADOW_RECTS], index * 4);
-  terms.set([shadow.intensity, shadow.normalBias, shadow.bias, shadow.depthScale()], index * 4);
+  writeVec4(terms, index, shadow.intensity, shadow.normalBias, shadow.bias, shadow.depthScale());
   set[AREA_LIGHT_SOFT_SHADOW_RADII][index] = shadow.radius;
 }
 

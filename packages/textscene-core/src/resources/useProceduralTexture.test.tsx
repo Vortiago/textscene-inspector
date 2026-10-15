@@ -19,7 +19,6 @@ import {
   useProceduralTexture,
   useProceduralTexture3D,
   useProceduralTexturePins,
-  useProceduralTextures,
   type ProceduralSlot,
 } from './useProceduralTexture';
 import { clearProceduralTextureCache, proceduralTextureKey } from './textures/proceduralTextureCache';
@@ -254,13 +253,16 @@ function withRunner(runner: JobRunner, strictMode = false) {
 function renderSlots(runner: JobRunner, resources: TscnInternalResource[], strictMode = false) {
   const { loader, wrapper } = withRunner(runner, strictMode);
   const hook = renderHook(
-    ({ scene }: { scene: TscnInternalResource[] }) => useProceduralTextures([NOISE, GRADIENT], scene),
+    ({ scene }: { scene: TscnInternalResource[] }) => [
+      useProceduralTexture(NOISE, scene),
+      useProceduralTexture(GRADIENT, scene),
+    ],
     { initialProps: { scene: resources }, wrapper }
   );
   return { ...hook, loader };
 }
 
-describe('useProceduralTextures with a NoiseTexture2D', () => {
+describe('useProceduralTexture with a NoiseTexture2D', () => {
   it('claims the slot and draws nothing in it until the build lands', () => {
     const { runner } = fakeJobRunner();
     const { result } = renderSlots(runner, noiseScene(1));
@@ -296,7 +298,7 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
     let isShown = false;
     renderHook(
       () => {
-        const slots = useProceduralTextures([NOISE], noiseScene(1));
+        const slots = [useProceduralTexture(NOISE, noiseScene(1))];
         useLayoutEffect(() => {
           isShown = slots[0]?.texture instanceof THREE.DataTexture;
         });
@@ -406,7 +408,7 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
     const caught: unknown[] = [];
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     function Consumer(): null {
-      useProceduralTextures([NOISE], noiseScene(1));
+      useProceduralTexture(NOISE, noiseScene(1));
       return null;
     }
     render(
@@ -424,7 +426,7 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
   });
 
   it('builds in-thread outside a loader provider', async () => {
-    const { result } = renderHook(() => useProceduralTextures([NOISE], noiseScene(1)));
+    const { result } = renderHook(() => [useProceduralTexture(NOISE, noiseScene(1))]);
     await flush();
 
     const [slot] = result.current as ProceduralSlot[];

@@ -6,17 +6,18 @@
  */
 
 import {
-  VOLUMETRIC_FOG_MAX_SKY_LOD,
   VOLUMETRIC_FOG_SHADOW_FADE,
   VOLUMETRIC_FOG_SHADOW_OPACITY_MIN,
   VOLUMETRIC_FOG_TEMPORAL_JITTERS,
-} from '../../godot/volumetricFog.js';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
+} from '../../godot/rendering/environment/volumetricFog.js';
+import { MAX_ROUGHNESS_LOD } from '../../godot/rendering/environment/skyReflection.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 import { HENYEY_GREENSTEIN_GLSL } from '../henyeyGreenstein.js';
 import { FogLightKind, FogLightTexel } from './fogLights.js';
-import { FOG_VOLUME_DENSITY_SCALE } from '../../godot/fogVolume.js';
+import { FOG_VOLUME_DENSITY_SCALE } from '../../godot/rendering/environment/fogVolume.js';
 import { FOG_VOLUME_GLSL } from './fogVolumeShader.js';
 import { LTC_INTEGRAL } from '../areaLight/ltcIntegral.js';
+import { PARABOLOID_UV_GLSL } from '../positionalShadow/paraboloidUv.js';
 
 /** The offsets a still froxel samples and averages: Godot's 16 jitters, or its centre alone. */
 export const FOG_SAMPLE_OFFSETS_MAX = VOLUMETRIC_FOG_TEMPORAL_JITTERS.length;
@@ -171,12 +172,11 @@ float directionalShadow( int light, vec3 view ) {
 	return fogShadowFade( shadow, depth, fade.x, fade.y );
 }
 
+${PARABOLOID_UV_GLSL}
 // .glsl:488-510 and 4.7.2 :674-690: a cell at local in the light's space, read from the
 // paraboloid in uvRect. The depth runs from the light over depthRange.
-float paraboloidShadow( vec3 local, vec4 uvRect, float bias, float depthRange ) {
-	vec3 direction = normalize( local );
-	direction.z = 1.0 + abs( direction.z );
-	vec2 uv = uvRect.xy + ( direction.xy / direction.z * 0.5 + 0.5 ) * uvRect.zw;
+float paraboloidShadow( vec3 local, vec4 uvRect, vec2 flipOffset, float bias, float depthRange ) {
+	vec2 uv = godotParaboloidUv( normalize( local ), uvRect, flipOffset );
 	float cellDepth = ( length( local ) - bias ) / depthRange;
 	return fogShadow( cellDepth, atlasDepth( positionalShadowAtlas, uv ), depthRange );
 }
@@ -187,8 +187,7 @@ float omniShadow( int light, vec3 view, float bias, float depthRange ) {
 	vec4 slot = lightTexel( light, ${FogLightTexel.SHADOW_SPLITS} );
 	vec2 flipOffset = slot.zw;
 	vec4 uvRect = vec4( slot.xy, vec2( max( flipOffset.x, flipOffset.y ) ) );
-	if ( local.z >= 0.0 ) uvRect.xy += flipOffset;
-	return paraboloidShadow( local, uvRect, bias, depthRange );
+	return paraboloidShadow( local, uvRect, flipOffset, bias, depthRange );
 }
 
 // .glsl:566: Godot's fog subtracts the bias from its reversed depth before the divide. three's depth
@@ -210,7 +209,7 @@ float spotShadow( int light, vec3 view, float bias, float depthRange ) {
 // its centre range.
 float areaShadow( int light, vec3 view, float bias, float depthRange ) {
 	vec3 local = ( shadowLookup( light, 0 ) * vec4( view, 1.0 ) ).xyz;
-	return paraboloidShadow( local, lightTexel( light, ${FogLightTexel.SHADOW_SPLITS} ), bias, depthRange );
+	return paraboloidShadow( local, lightTexel( light, ${FogLightTexel.SHADOW_SPLITS} ), vec2( 0.0 ), bias, depthRange );
 }
 
 // .glsl:425, :511 and :550-575
@@ -261,9 +260,10 @@ vec3 lightsAt( vec3 view ) {
 	return total;
 }
 
-// .glsl:434: the radiance mip a froxel of this density reads, as a fraction of the coarsest.
+// .glsl:434: the radiance mip a froxel of this density reads, as a fraction of the coarsest,
+// \`MAX_SKY_LOD\` (\`environment/fog.cpp:304\`). A denser froxel reads a blurrier sky.
 float skyRoughness( float density ) {
-	return min( ( 2.0 + density * ${glslFloat(VOLUMETRIC_FOG_MAX_SKY_LOD - 2)} ) / ${glslFloat(VOLUMETRIC_FOG_MAX_SKY_LOD)}, 1.0 );
+	return min( ( 2.0 + density * ${glslFloat(MAX_ROUGHNESS_LOD - 2)} ) / ${glslFloat(MAX_ROUGHNESS_LOD)}, 1.0 );
 }
 
 // .glsl:430-445: the isotropic sample reads the sky straight up, the anisotropic one along the view.

@@ -7,8 +7,8 @@ import {
   lightModesUserData,
   type LightModes,
 } from './lightModes';
-import { DiffuseMode } from '../godot/diffuseMode';
-import { SpecularMode } from '../godot/specularMode';
+import { DiffuseMode } from '../godot/rendering/materials/diffuseMode';
+import { SpecularMode } from '../godot/rendering/materials/specularMode';
 import { patchedShader } from './testing/patchedFragment';
 
 const BURLEY_GGX: LightModes = {

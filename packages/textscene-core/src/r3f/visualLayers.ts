@@ -6,7 +6,7 @@
  */
 
 import type * as THREE from 'three';
-import { GODOT_DEFAULT_VISUAL_LAYERS } from '../godot/visualLayers.js';
+import { GODOT_DEFAULT_VISUAL_LAYERS } from '../godot/scene/visualLayers.js';
 
 /**
  * The `userData` key the mask travels under, not `THREE.Object3D.layers`: that is

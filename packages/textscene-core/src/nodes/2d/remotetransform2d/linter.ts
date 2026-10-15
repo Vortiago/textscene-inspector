@@ -10,7 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
 
 const arms = {
   invalidRemotePath: groundedArm('remotetransform2d-invalid-remote-path', { kind: 'configuration-warning' }),

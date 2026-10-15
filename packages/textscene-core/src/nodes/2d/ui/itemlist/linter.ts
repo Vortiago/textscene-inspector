@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 
 const arms = {

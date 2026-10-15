@@ -4,8 +4,8 @@
  * (`renderer_rd/shaders/environment/volumetric_fog.glsl`, cited as `volume.glsl:N`).
  */
 
-import { FOG_VOLUME_DENSITY_SCALE, FogVolumeShape } from '../../godot/fogVolume.js';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
+import { FOG_VOLUME_DENSITY_SCALE, FogVolumeShape } from '../../godot/rendering/environment/fogVolume.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 import { FogVolumeKind, FogVolumeTexel } from './fogVolumeRows.js';
 
 /**

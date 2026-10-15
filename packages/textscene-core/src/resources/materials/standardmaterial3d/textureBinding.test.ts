@@ -10,6 +10,7 @@ import { bindSlotTexture, materialTextureStates } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
 import { UV2_CHANNEL } from '../../meshes/uv2';
+import { recordGodotFormat } from '../../textures/sourceColorSpace';
 
 /**
  * As the loader hands them out: one shared entry per path, tagged sRGB, at
@@ -171,5 +172,41 @@ describe('bindSlotTexture — UV set per slot', () => {
     const bound = bindSlotTexture(loaded(), 'emission_texture', state);
 
     expect([bound.channel, bound.repeat.y, bound.offset.y]).toEqual([0, 1, 0]);
+  });
+});
+
+/** An ImageTexture of one texel saved in `format`, as the producer builds it. */
+function savedImage(format: string): THREE.Texture {
+  return recordGodotFormat(new THREE.Texture(), format);
+}
+
+const LUM8 = () => savedImage('Lum8');
+const RGB8 = () => savedImage('RGB8');
+const R_FLOAT = () => savedImage('RFloat');
+
+/**
+ * A `source_color` sampler reads the sRGB view only when the texture has one
+ * (`material_storage.cpp:1073`). L8 and the float formats have none, so Godot reads their bytes raw.
+ */
+describe('bindSlotTexture — the saved format of a colour slot texture', () => {
+  it('binds a Lum8 albedo raw', () => {
+    expect(bindSlotTexture(LUM8(), 'albedo_texture', DEFAULTS).colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('binds an RGB8 albedo as sRGB', () => {
+    expect(bindSlotTexture(RGB8(), 'albedo_texture', DEFAULTS).colorSpace).toBe(THREE.SRGBColorSpace);
+  });
+
+  it('binds a Lum8 emission raw', () => {
+    expect(bindSlotTexture(LUM8(), 'emission_texture', DEFAULTS).colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('binds a float albedo raw, which three uploads without its sRGB warning (edge case)', () => {
+    // three warns for an sRGB tag on anything but RGBA bytes (`WebGLTextures.js:2441-2451`).
+    expect(bindSlotTexture(R_FLOAT(), 'albedo_texture', DEFAULTS).colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it.each([LUM8, RGB8, R_FLOAT])('keeps a normal map raw whatever its format (%#)', (texture) => {
+    expect(bindSlotTexture(texture(), 'normal_texture', DEFAULTS).colorSpace).toBe(THREE.NoColorSpace);
   });
 });

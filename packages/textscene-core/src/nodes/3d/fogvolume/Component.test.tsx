@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { FogVolumeShape } from '../../../godot/fogVolume';
+import { FogVolumeShape } from '../../../godot/rendering/environment/fogVolume';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import { FogVolumeObject } from '../../../r3f/fog/fogVolumeObject';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';

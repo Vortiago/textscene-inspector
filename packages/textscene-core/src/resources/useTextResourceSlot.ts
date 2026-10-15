@@ -16,8 +16,8 @@ export interface TextureSlotResources {
   ref: string | undefined;
   externalResources: readonly TscnExternalResource[];
   internalResources: readonly TscnInternalResource[];
-  /** True once a named `.tres` leaves `pending` without loading. */
-  missing: boolean;
+  /** `missing` once a named `.tres` leaves `pending` without loading. */
+  status: 'ready' | 'loading' | 'missing';
 }
 
 /** The file loads on the `resource` bus, since the image buses decode no text. */
@@ -28,9 +28,10 @@ export function useTextResourceSlot(
 ): TextureSlotResources {
   const path = useMemo(() => resolveExtTextResourcePath(ref, externalResources), [ref, externalResources]);
   const file = useResource<ParsedResource>(path ?? '', 'resource');
-  if (!path) return { ref, externalResources, internalResources, missing: false };
+  if (!path) return { ref, externalResources, internalResources, status: 'ready' };
   if (!file.value) {
-    return { ref: undefined, externalResources, internalResources, missing: file.status !== 'pending' };
+    const status = file.status === 'pending' ? 'loading' : 'missing';
+    return { ref: undefined, externalResources, internalResources, status };
   }
-  return { ...textResourceTexture(file.value), missing: false };
+  return { ...textResourceTexture(file.value), status: 'ready' };
 }

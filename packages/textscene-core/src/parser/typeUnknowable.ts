@@ -5,7 +5,7 @@
  */
 
 import type { RawNode } from './types.js';
-import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
+import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/scene/packedScene.js';
 
 /**
  * True when the node comes from a scene neither parser opens, so its `type` is not

@@ -4,7 +4,7 @@
  * shader-uniform conversions happen on upload, in `build.ts`.
  */
 
-import type { REAL_TIME_RADIANCE_SIZE } from '../../godot/skyReflection';
+import type { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection';
 import type { Color } from '../../utils/colorParser';
 
 export interface ProceduralSkyProperties {

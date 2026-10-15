@@ -5,7 +5,7 @@
  */
 
 import { isTypeOpaque } from './parentType.js';
-import { descendsFrom } from '../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../godot/classdb/nodeBaseTypes.js';
 import type { RawNode } from '../parser/types.js';
 
 /**

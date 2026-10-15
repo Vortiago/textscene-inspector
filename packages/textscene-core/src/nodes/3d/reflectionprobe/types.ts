@@ -4,8 +4,11 @@
  * ambient light.
  */
 
-import type { ReflectionProbeAmbientMode, ReflectionProbeUpdateMode } from '../../../godot/reflectionProbe';
-import type { Xyz } from '../../../godot/xyz';
+import type {
+  ReflectionProbeAmbientMode,
+  ReflectionProbeUpdateMode,
+} from '../../../godot/rendering/environment/reflectionProbe';
+import type { Vector3 } from '../../../godot/math/vector';
 import type { Color } from '../../../utils/colorParser';
 import type { Node3DProperties } from '../../base/node3d/types';
 
@@ -15,9 +18,9 @@ export interface ReflectionProbeProperties extends Node3DProperties {
   blendDistance: number;
   maxDistance: number;
   /** The full size of the box in local units. */
-  size: Xyz;
+  size: Vector3;
   /** The capture's origin in the box, as Godot holds it after its setters clamp it. */
-  originOffset: Xyz;
+  originOffset: Vector3;
   boxProjection: boolean;
   interior: boolean;
   enableShadows: boolean;

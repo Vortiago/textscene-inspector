@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { listIndices, listWrittenIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';

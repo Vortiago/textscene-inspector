@@ -1,8 +1,8 @@
 /** Shared basis-column-scale helpers for the physics linter-rule factories. */
 
 import { transform3DBasis } from '../transformBasis.js';
-import { basisGetScale, basisGetScaleAbs } from '../../godot/basis.js';
-import { basisDeterminant } from '../../godot/math.js';
+import { basisGetScale, basisGetScaleAbs } from '../../godot/math/basis.js';
+import { basisDeterminant } from '../../godot/math/math.js';
 
 /**
  * Basis-column magnitudes of a `Transform3D(...)` literal, or null when it does

@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
+import { CLASS_BASE_TYPES } from '../godot/classdb/classBaseTypes.js';
 import { everyValidator } from './registryPopulation.js';
 import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
 import type { IntWidth } from '../godot/index.js';

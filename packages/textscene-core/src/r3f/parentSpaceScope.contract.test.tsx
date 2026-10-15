@@ -1,5 +1,5 @@
 /**
- * A node escapes a parent whose transform and visibility do not reach it (`godot/parentSpace.ts`):
+ * A node escapes a parent whose transform and visibility do not reach it (`godot/scene/parentSpace.ts`):
  * a Node3D composes both only through a Node3D parent (`node_3d.cpp:150`, `:656-660`,
  * `:1132-1143`), and a CanvasItem only through a CanvasItem parent (`canvas_item.cpp:309-348`).
  */

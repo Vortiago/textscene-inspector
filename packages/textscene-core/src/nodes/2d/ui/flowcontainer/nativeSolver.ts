@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { isZeroApprox } from '../../../../godot/math';
+import { isZeroApprox } from '../../../../godot/math/math';
 import type { ControlProperties } from '../control/types';
 import type { FlowContainerProperties } from './types';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';

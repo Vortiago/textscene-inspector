@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { snapped } from '../../godot/math.js';
+import { snapped } from '../../godot/math/math.js';
 import {
   directionalShadowSlice,
   directionalShadowSnapStep,
@@ -14,8 +14,8 @@ import {
   pancakesCasters,
   texelPaddedRadius,
   type DirectionalShadowSlice,
-} from '../../godot/directionalShadow.js';
-import { softShadowExpand } from '../../godot/directionalSoftShadow.js';
+} from '../../godot/rendering/lights/directionalShadow.js';
+import { softShadowExpand } from '../../godot/rendering/lights/directionalSoftShadow.js';
 import type { DirectionalShadowDeclaration } from './declaration.js';
 
 /** A camera with a depth range, whose world and projection matrices are current. */

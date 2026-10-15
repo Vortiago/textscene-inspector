@@ -8,7 +8,7 @@
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { RefObject } from 'react';
-import { BillboardMode } from '../../godot/billboard';
+import { BillboardMode } from '../../godot/scene/billboard';
 import { billboardWorldMatrix } from '../surfaceBillboard';
 
 export function useBillboard(ref: RefObject<THREE.Object3D | null>, mode: number | undefined): void {

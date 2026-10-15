@@ -1,0 +1,43 @@
+; One variable: a `ViewportTexture` in a material slot other than the albedo, here the emission
+; texture over a black albedo. A material binds every slot by RID, so the target glows through the
+; emission slot as it draws through the albedo in `unit-sub-viewport-texture`, the only other
+; golden that consumes a ViewportTexture in a material.
+
+[gd_scene format=3]
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(2, 2)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+resource_local_to_scene = true
+albedo_color = Color(0, 0, 0, 1)
+emission_enabled = true
+emission = Color(0, 0, 0, 1)
+emission_texture = SubResource("ViewportTexture_1")
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.5
+height = 1.0
+
+[node name="Root" type="Node3D"]
+
+; 3D content, as in `unit-sub-viewport-texture`. No light reaches the black albedo, so the
+; quad shows the emission alone.
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(256, 256)
+render_target_update_mode = 4
+
+[node name="Subject" type="MeshInstance3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4)
+mesh = SubResource("SphereMesh_1")
+
+[node name="Camera3D" type="Camera3D" parent="SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
+fov = 75.0
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("StandardMaterial3D_1")

@@ -4,7 +4,7 @@
  * merge both call it, so both answer alike what an override does to a node.
  */
 
-import { canonicalisePropertyBag } from '../godot/deprecated.js';
+import { canonicalisePropertyBag } from '../godot/classdb/deprecated.js';
 import type { TscnNode } from '../parser/types.js';
 import type { ParsedHeading } from '../parser/utils.js';
 import { nodeRegistry, type NodeTypeRegistration } from '../core/NodeRegistry.js';

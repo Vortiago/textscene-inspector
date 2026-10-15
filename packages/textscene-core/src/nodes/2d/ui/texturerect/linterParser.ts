@@ -22,7 +22,7 @@ const EXPAND_MODE = {
 };
 
 // The deprecated `_set` (texture_rect.cpp:171-173) maps Godot 3's `expand`/`ignore_texture_size`
-// to EXPAND_IGNORE_SIZE when true and drops them otherwise. `godot/deprecated.ts` resolves both
+// to EXPAND_IGNORE_SIZE when true and drops them otherwise. `godot/classdb/deprecated.ts` resolves both
 // into `expand_mode`, and neither refuses anything, so neither gets a validator.
 validatorRegistry.registerAll('TextureRect', {
   // texture_rect.cpp:207-215: set_expand_mode has no ERR_FAIL_INDEX, unlike

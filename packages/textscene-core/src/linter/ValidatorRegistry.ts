@@ -5,8 +5,8 @@
  * `validatorResolution.ts`, and the removal rules are in `removalKeys.ts`.
  */
 
-import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
-import { MAX_BASE_CHAIN_HOPS } from '../godot/nodeBaseTypes.js';
+import { CLASS_BASE_TYPES } from '../godot/classdb/classBaseTypes.js';
+import { MAX_BASE_CHAIN_HOPS } from '../godot/classdb/nodeBaseTypes.js';
 import type { PropertyValidator, ValidatorFn } from './propertyValidator.js';
 import { buildWildcardIndex, type WildcardEntry } from './wildcardIndex.js';
 import type { Removal } from './unavailableKey.js';

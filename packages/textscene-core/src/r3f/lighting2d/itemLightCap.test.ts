@@ -6,13 +6,13 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering';
+import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering';
 import { DEFAULT_LIGHT_CULL_KEY } from './lightCullKey';
 import type { CanvasLightDeclaration, ItemPlacement } from './itemLightList';
 import type { PassMesh } from './lightAccumulationPass';
 import { capItemLights, type CappedItem } from './itemLightCap';
 import { placementId } from './itemLightList';
-import type { Rect2 } from '../../godot/rect2';
+import type { Rect2 } from '../../godot/math/rect2';
 
 const CAP = MAX_LIGHTS_PER_ITEM - 1;
 

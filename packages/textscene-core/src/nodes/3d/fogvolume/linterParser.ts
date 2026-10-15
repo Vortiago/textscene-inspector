@@ -6,7 +6,7 @@
 
 import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { FOG_VOLUME_SHAPE_NAMES, FogVolumeShape } from '../../../godot/fogVolume.js';
+import { FOG_VOLUME_SHAPE_NAMES, FogVolumeShape } from '../../../godot/rendering/environment/fogVolume.js';
 import { v } from '../../../linter/validators/index.js';
 
 /**
@@ -50,7 +50,7 @@ sizeValidator.tiers = { min: 'warning' };
 // fog_volume.cpp:46-48 is the only ADD_PROPERTY site, with no PropertyListHelper,
 // ADD_ARRAY_COUNT or other property-list route. `_validate_property` only
 // hides `size`. The deprecated `_set`/`_get` pair (fog_volume.cpp:56-70) maps
-// Godot 3 `extents`, which `godot/deprecated.ts` resolves to the doubled `size`.
+// Godot 3 `extents`, which `godot/classdb/deprecated.ts` resolves to the doubled `size`.
 validatorRegistry.registerAll('FogVolume', {
   size: sizeValidator,
   // fog_volume.cpp:47, PROPERTY_HINT_ENUM with 5 values. set_shape (:87-93) and

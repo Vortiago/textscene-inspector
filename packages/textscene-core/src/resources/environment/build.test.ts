@@ -9,7 +9,7 @@ import { createEnvironmentSettings } from './build';
 import { decodeEnvironment } from './decode';
 import { BackgroundMode } from './types';
 import type { EnvironmentProperties } from './types';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 
 function base(over: Partial<EnvironmentProperties> = {}): EnvironmentProperties {
   return { ...decodeEnvironment({}), background_mode: BackgroundMode.BG_COLOR, ...over };

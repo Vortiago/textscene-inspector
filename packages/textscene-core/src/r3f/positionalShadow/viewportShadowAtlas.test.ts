@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {
   ROOT_POSITIONAL_SHADOW_ATLAS,
   viewportPositionalShadowAtlas,
-} from '../../godot/positionalShadowAtlas';
+} from '../../godot/rendering/lights/positionalShadowAtlas';
 import { activeShadowAtlas, renderWithShadowAtlas, ViewportShadowAtlas } from './viewportShadowAtlas';
 
 const rootAtlas = () => new ViewportShadowAtlas(ROOT_POSITIONAL_SHADOW_ATLAS);

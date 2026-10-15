@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { Vec2 } from '../rect';
-import { round as godotRound } from '../../../../godot/math';
+import { round as godotRound } from '../../../../godot/math/math';
 
 // Pure geometry in `shaped_text_draw`'s pen-relative space: `(0, 0)` is the glyph's
 // advance-box origin on the baseline, and the box extends up and right from it

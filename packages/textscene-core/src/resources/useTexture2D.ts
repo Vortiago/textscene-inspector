@@ -34,6 +34,8 @@ export interface Texture2DResult {
   texture: THREE.Texture | null;
   /** True when the reference names something this renderer cannot resolve. */
   missing: boolean;
+  /** True while the texture, or a file or build it waits on, is still on its way. */
+  isArriving: boolean;
 }
 
 export function useTexture2D(
@@ -55,7 +57,16 @@ export function useTexture2D(
   if (!atlas) return slot.result;
   // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
   // draws nothing and is no resource error.
-  return { texture: cropped?.texture ?? null, missing: slot.result.missing };
+  return { ...slot.result, texture: cropped?.texture ?? null };
+}
+
+export interface Texture2DRidResult extends Texture2DResult {
+  /**
+   * False when the RID names a CanvasTexture, a canvas object no texture owner holds
+   * (`scene/main/canvas_item.cpp:1919-1921`). A sampler bound to it reads Godot's white default
+   * (`material_storage.cpp:1094-1096`).
+   */
+  namesTexture: boolean;
 }
 
 /**
@@ -66,9 +77,14 @@ export function useTexture2DRid(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[]
-): Texture2DResult {
-  return useTexture2DSlot(ref, externalResources, internalResources).result;
+): Texture2DRidResult {
+  const { result, namesCanvasTexture } = useTexture2DSlot(ref, externalResources, internalResources);
+  return namesCanvasTexture ? CANVAS_TEXTURE_RID : { ...result, namesTexture: true };
 }
+
+const NOTHING: Texture2DResult = { texture: null, missing: false, isArriving: false };
+
+const CANVAS_TEXTURE_RID: Texture2DRidResult = { ...NOTHING, namesTexture: false };
 
 interface Texture2DSlot {
   /** The AtlasTexture the slot names, or null for any other form. */
@@ -79,6 +95,8 @@ interface Texture2DSlot {
   source: THREE.Texture | null;
   /** The slot's result with an AtlasTexture's sheet in its place. */
   result: Texture2DResult;
+  /** The slot, its `.tres` or its AtlasTexture's sheet is a CanvasTexture, which this peeled. */
+  namesCanvasTexture: boolean;
 }
 
 function useTexture2DSlot(
@@ -118,13 +136,31 @@ function useTexture2DSlot(
   const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
   const source = procedural.texture ?? loaded.value ?? null;
   const atlasResources = slot.internalResources;
+  // The peel returns any other reference as it is, so a changed reference names a CanvasTexture.
+  const atlasSheet = atlas?.texture.atlas;
+  const namesCanvasTexture =
+    isPeeled(ref, unwrapped) || isPeeled(slot.ref, slotRef) || isPeeled(atlasSheet, sourceRef);
+  const peeled = { atlas, atlasResources, source, namesCanvasTexture };
 
-  if (!ref) return { atlas, atlasResources, source, result: { texture: null, missing: false } };
+  if (!ref) return { ...peeled, result: NOTHING };
   // Nothing to resolve: a `.tres` still loading or proved absent, or a wrapper with no texture.
-  if (!slot.ref) return { atlas, atlasResources, source, result: { texture: null, missing: slot.missing } };
+  if (!slot.ref) {
+    const result = {
+      texture: null,
+      missing: slot.status === 'missing',
+      isArriving: slot.status === 'loading',
+    };
+    return { ...peeled, result };
+  }
 
   const sourceMissing = !procedural.claimed && (!path || loaded.status === 'unavailable');
-  return { atlas, atlasResources, source, result: { texture: source, missing: sourceMissing } };
+  const isArriving = procedural.claimed ? procedural.building : loaded.status === 'pending' && path !== null;
+  return { ...peeled, result: { texture: source, missing: sourceMissing, isArriving } };
+}
+
+/** An empty reference peels to undefined too, but names nothing to peel. */
+function isPeeled(ref: string | null | undefined, peeled: string | undefined): boolean {
+  return !!ref && ref !== peeled;
 }
 
 /** Pixel dimensions of a Texture2D slot, in the `Vec2` shape the rect solver uses. */

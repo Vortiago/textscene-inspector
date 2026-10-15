@@ -5,8 +5,12 @@
  */
 
 import * as THREE from 'three';
-import { acyclicParents, cullVisibility, type VisibilityCullInstance } from '../../godot/visibilityCull';
-import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/visibilityRange';
+import {
+  acyclicParents,
+  cullVisibility,
+  type VisibilityCullInstance,
+} from '../../godot/rendering/visibilityCull';
+import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/rendering/visibilityRange';
 import { observeSceneCull } from '../sceneRenderCamera';
 import { sceneSplitsHold } from '../directionalShadow/fitSceneDirectionalShadows';
 import { compareTreeOrder, type TreeOrder } from '../contexts/TreeOrderContext';
@@ -37,7 +41,7 @@ export interface VisibilityInstance {
    * an instance it cannot measure.
    */
   readonly isPlaced: boolean;
-  /** Whether the scene cull indexes it (`godot/visibilityCull.ts`). Read only while it is placed. */
+  /** Whether the scene cull indexes it (`godot/rendering/visibilityCull.ts`). Read only while it is placed. */
   readonly isIndexed: boolean;
   /** Writes its world AABB, while it is placed. The scene's world matrices are current when the cull calls it. */
   worldBox(target: THREE.Box3): void;

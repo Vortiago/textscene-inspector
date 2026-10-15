@@ -9,7 +9,7 @@
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { joinPath } from '../utils/nodePath.js';
-import { UNIQUE_NODE_PREFIX } from '../godot/nodePath.js';
+import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
 import {
   cachedUniqueNameClaims,
   cachedUniqueNameOwnership,

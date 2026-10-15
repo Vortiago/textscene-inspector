@@ -12,7 +12,7 @@ import { ARRAY_MESH_TYPES, decodeArrayMesh } from '../meshes/arraymesh/decode';
 import { buildArrayMeshGeometry } from '../meshes/arraymesh/build';
 import type { SectionLoaderFn } from '../resourceSection';
 import { arrayMeshAabb } from '../meshes/arraymesh/meshAabb';
-import type { Aabb } from '../../godot/aabb';
+import type { Aabb } from '../../godot/math/aabb';
 
 /** Decoded ArrayMesh: merged geometry plus one material path per surface (group). */
 export interface ArrayMeshResource {

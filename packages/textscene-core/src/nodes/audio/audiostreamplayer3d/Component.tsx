@@ -14,7 +14,7 @@ import { AttenuationModel } from './types';
 import { useGizmoVisible } from '../../3d/lights/shared/lightHelpers';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
-import { BillboardMode } from '../../../godot/billboard';
+import { BillboardMode } from '../../../godot/scene/billboard';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 
 /** Editor-only gizmo colour: yellow, to match the light helpers. */

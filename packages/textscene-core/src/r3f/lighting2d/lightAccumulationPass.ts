@@ -10,7 +10,7 @@ import type { Camera } from '@react-three/fiber';
 import { LIGHT_PASS_LAYER } from './lightPassLayers.js';
 import { drawsInPass, type LightListEntry, type PassKind, type PassMeshRole } from './itemLightList.js';
 import { listWindow, windowScissor } from './lightListWindow.js';
-import type { Rect2 } from '../../godot/rect2.js';
+import type { Rect2 } from '../../godot/math/rect2.js';
 
 /** One light mesh the pass shows or hides per list. */
 export interface PassMesh {

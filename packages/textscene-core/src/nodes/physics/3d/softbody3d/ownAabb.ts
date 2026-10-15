@@ -6,7 +6,7 @@
  */
 
 import type { TscnNode } from '../../../../parser/types';
-import type { Aabb } from '../../../../godot/aabb';
+import type { Aabb } from '../../../../godot/math/aabb';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useMeshAabb } from '../../../3d/meshinstance3d/meshAabb';
 import type { MeshInstance3DProperties } from '../../../3d/meshinstance3d/types';

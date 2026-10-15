@@ -1,8 +1,8 @@
-/** The node path of each node's visibility parent (`godot/visibilityParent.ts`), down the tree. */
+/** The node path of each node's visibility parent (`godot/scene/visibilityParent.ts`), down the tree. */
 
 import { createContext, useContext, type ReactNode } from 'react';
-import { spaceFamilyOf } from '../../godot/parentSpace';
-import { visibilityParentOf } from '../../godot/visibilityParent';
+import { spaceFamilyOf } from '../../godot/scene/parentSpace';
+import { visibilityParentOf } from '../../godot/scene/visibilityParent';
 import type { TscnNode } from '../../parser/types';
 import type { Node3DProperties } from '../../nodes/base/node3d/types';
 import { useUniqueNamePaths } from '../useUniqueNames';

@@ -8,8 +8,8 @@ import { instanceLayers, shownProbes } from './reflectionProbe/probeSlots';
 import { setVisualLayers } from './visualLayers';
 import { testRenderer } from '../testing/recordingWebGL';
 import { billboardOf } from '../resources/materials/standardmaterial3d/materialBag';
-import { ShadowCastingSetting } from '../godot/rendering';
-import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/opaquePrepass';
+import { ShadowCastingSetting } from '../godot/rendering/rendering';
+import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/rendering/opaquePrepass';
 import { standardMaterial as material } from '../resources/materials/standardmaterial3d/testing/standardMaterial';
 import {
   castsFrom,
