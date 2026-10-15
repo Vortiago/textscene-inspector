@@ -39,8 +39,11 @@ function copyToTarget(
 ): void {
   const pass = copyPassFor(gl);
   pass.uniforms.frame!.value = frame.texture;
-  drawFullScreen(gl, pass, target);
-  pass.uniforms.frame!.value = null;
+  try {
+    drawFullScreen(gl, pass, target);
+  } finally {
+    pass.uniforms.frame!.value = null;
+  }
 }
 
 /**

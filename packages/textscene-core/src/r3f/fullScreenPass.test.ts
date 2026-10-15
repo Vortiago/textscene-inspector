@@ -91,7 +91,7 @@ describe('drawFullScreen', () => {
     expect(drawn).toEqual([first, second]);
   });
 
-  it('draws each renderer on a quad of its own, which goes with that renderer (edge case)', async () => {
+  it('draws each renderer on a quad of its own (edge case)', async () => {
     const drawnQuads = await Promise.all([quadDrawnBy(), quadDrawnBy()]);
 
     expect(drawnQuads[0]).not.toBe(drawnQuads[1]);

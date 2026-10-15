@@ -112,6 +112,21 @@ describe('CanvasMsaaFrame', () => {
     frame.dispose();
   });
 
+  it('keeps no frame in the copy pass when the copy throws (error path)', () => {
+    const { gl } = recordingRenderer(64, 64);
+    const copied: THREE.Object3D[] = [];
+    gl.render = (drawn: THREE.Object3D) => {
+      if (drawn === scene) return;
+      copied.push(drawn);
+      throw new Error('lost context');
+    };
+    const frame = multisampledFrame(4);
+
+    expect(() => frame.render(gl, scene, camera)).toThrow('lost context');
+    expect(sampledFrame(copied[0]!)).toBeNull();
+    frame.dispose();
+  });
+
   it('follows the drawing buffer when the canvas resizes (edge case)', () => {
     const frame = multisampledFrame(4);
     frame.render(recordingRenderer(64, 64).gl, scene, camera);
