@@ -14,7 +14,7 @@ function patched(material: THREE.Material): ProgramShader {
     fragmentShader: THREE.ShaderLib.standard.fragmentShader,
     uniforms: {},
   };
-  emissionTextureAddInjection(0)!.onBeforeCompile.call(material, shader, undefined as never);
+  emissionTextureAddInjection(0)!.onBeforeCompile.call(material, shader);
   return shader;
 }
 

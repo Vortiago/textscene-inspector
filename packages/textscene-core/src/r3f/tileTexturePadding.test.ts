@@ -13,7 +13,7 @@ function compiledBasic() {
     fragmentShader: THREE.ShaderLib.basic.fragmentShader,
     uniforms: {},
   };
-  TILE_TEXTURE_PADDING.onBeforeCompile.call(new THREE.MeshBasicMaterial(), shader, undefined as never);
+  TILE_TEXTURE_PADDING.onBeforeCompile.call(new THREE.MeshBasicMaterial(), shader);
   return shader;
 }
 

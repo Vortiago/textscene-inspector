@@ -113,7 +113,7 @@ describe('surfaceDrawHooks — shadow pass billboard', () => {
 /** The object-space uniform of `material` once it compiles Godot's hash. */
 function hashObjectSpace(material: THREE.Material): THREE.Matrix4 {
   const shader: ProgramShader = { ...THREE.ShaderLib.standard, uniforms: {} };
-  GODOT_ALPHA_HASH.onBeforeCompile.call(material, shader, undefined as never);
+  GODOT_ALPHA_HASH.onBeforeCompile.call(material, shader);
   return shader.uniforms.godotObjectFromModel!.value as THREE.Matrix4;
 }
 

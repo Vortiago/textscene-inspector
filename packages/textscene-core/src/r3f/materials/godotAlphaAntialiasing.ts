@@ -13,10 +13,9 @@ import {
 } from '../../godot/rendering/materials/alphaAntialiasing';
 import { alphaToCoverageBlendState } from '../../resources/materials/standardmaterial3d/blendState';
 import type { MaterialBlendState } from '../../resources/materials/standardmaterial3d/types';
+import { ALPHA_HASH_CHUNK, ALPHA_TEST_CHUNK } from './surfaceAlphaPatch';
 
 const ALPHA_TEST_PARS_CHUNK = '#include <alphatest_pars_fragment>';
-const ALPHA_TEST_CHUNK = '#include <alphatest_fragment>';
-const ALPHA_HASH_CHUNK = '#include <alphahash_fragment>';
 
 /**
  * `calc_mip_level` and `compute_alpha_antialiasing_edge` (`scene_forward_aa_inc.glsl:45-56`), the
@@ -67,11 +66,19 @@ const SCISSOR_CUT = /* glsl */ `if ( diffuseColor.a < godotAlphaScissorThreshold
 /** Where a material records its alpha antialiasing. */
 const ALPHA_ANTIALIASING_KEY = 'godotAlphaAntialiasing';
 
-/** The `userData` that gives a material its alpha antialiasing: nothing for none. */
+/** Where a material records how many of Godot's albedo texels one texel of its map holds. */
+const ALBEDO_TEXTURE_SCALE_KEY = 'godotAlbedoTextureScale';
+
+/**
+ * The `userData` that gives a material its alpha antialiasing: nothing for none. `albedoTextureScale`
+ * converts the map's size into the `albedo_texture_size` Godot's mip term reads, for a map drawn at
+ * another resolution than Godot's texture.
+ */
 export function alphaAntialiasingUserData(
-  cut: AlphaAntialiasingCut | null
-): Record<string, AlphaAntialiasingCut> {
-  return cut ? { [ALPHA_ANTIALIASING_KEY]: cut } : {};
+  cut: AlphaAntialiasingCut | null,
+  albedoTextureScale = 1
+): Record<string, AlphaAntialiasingCut | number> {
+  return cut ? { [ALPHA_ANTIALIASING_KEY]: cut, [ALBEDO_TEXTURE_SCALE_KEY]: albedoTextureScale } : {};
 }
 
 /** The alpha antialiasing a material, or the props it is built from, records, or null for none. */
@@ -87,23 +94,34 @@ export function alphaAntialiasingProps(
   return { alphaToCoverage: true, ...alphaToCoverageBlendState(cut.mode) };
 }
 
+/** Each context's `antialias` attribute, fixed for the context's life. Collected with it. */
+const canvasAntialias = new WeakMap<WebGLRenderingContext | WebGL2RenderingContext, boolean>();
+
 /** Whether the renderer draws into a target with more than one sample per pixel. */
 function drawsMultisampled(renderer: THREE.WebGLRenderer): boolean {
   const target = renderer.getRenderTarget();
   if (target) return target.samples > 0;
-  return renderer.getContext().getContextAttributes()?.antialias === true;
+  const context = renderer.getContext();
+  let antialias = canvasAntialias.get(context);
+  if (antialias === undefined) {
+    antialias = context.getContextAttributes()?.antialias === true;
+    canvasAntialias.set(context, antialias);
+  }
+  return antialias;
+}
+
+/** The uniforms of one antialiased material's program. */
+interface EdgeUniforms extends Record<string, THREE.IUniform> {
+  godotSingleSampleCoverage: THREE.IUniform<number>;
 }
 
 /**
- * Each antialiased material's uniforms, read at upload, so a re-parsed edge, a texture that lands
- * later or a target with other samples needs no recompile. Collected with its material.
+ * Each antialiased material's uniforms. The getters read at upload, so a re-parsed edge or a texture
+ * that lands later needs no recompile. Collected with its material.
  */
-const edgeUniforms = new WeakMap<THREE.Material, Record<string, THREE.IUniform>>();
+const edgeUniforms = new WeakMap<THREE.Material, EdgeUniforms>();
 
-function edgeUniformsOf(
-  material: THREE.Material & { map?: THREE.Texture | null },
-  renderer: THREE.WebGLRenderer
-) {
+function edgeUniformsOf(material: THREE.Material & { map?: THREE.Texture | null }): EdgeUniforms {
   let uniforms = edgeUniforms.get(material);
   if (!uniforms) {
     const textureSize = new THREE.Vector2();
@@ -121,20 +139,27 @@ function edgeUniformsOf(
       godotAlbedoTextureSize: {
         get value() {
           const image = material.map?.image as { width?: number; height?: number } | undefined;
-          return textureSize.set(image?.width ?? 0, image?.height ?? 0);
+          const scale = recordedOn(material, ALBEDO_TEXTURE_SCALE_KEY, 1);
+          return textureSize.set(image?.width ?? 0, image?.height ?? 0).multiplyScalar(scale);
         },
       },
-      // A depth or shadow copy turns no alpha to coverage on, so it never emulates it.
-      godotSingleSampleCoverage: {
-        get value() {
-          if (!material.alphaToCoverage || drawsMultisampled(renderer)) return 0;
-          return alphaAntialiasingOf(material)?.mode ?? 0;
-        },
-      },
+      godotSingleSampleCoverage: { value: 0 },
     };
     edgeUniforms.set(material, uniforms);
   }
   return uniforms;
+}
+
+/**
+ * What every material that records alpha antialiasing runs before each draw: the coverage
+ * `SINGLE_SAMPLE_COVERAGE` emulates, for the target three draws into now. A depth or shadow copy
+ * turns no alpha to coverage on, so it never emulates it.
+ */
+export function coverOneSampleTarget(this: THREE.Material, renderer: THREE.WebGLRenderer): void {
+  const coversOneSample = this.alphaToCoverage && !drawsMultisampled(renderer);
+  edgeUniformsOf(this).godotSingleSampleCoverage.value = coversOneSample
+    ? (alphaAntialiasingOf(this)?.mode ?? 0)
+    : 0;
 }
 
 /**
@@ -144,9 +169,9 @@ function edgeUniformsOf(
  */
 export const GODOT_ALPHA_ANTIALIASING: ProgramInjection = {
   cacheKey: 'godot-alpha-antialiasing',
-  onBeforeCompile(shader, renderer) {
+  onBeforeCompile(shader) {
     if (!shader.fragmentShader.includes(ALPHA_TEST_CHUNK)) return;
-    Object.assign(shader.uniforms, edgeUniformsOf(this, renderer));
+    Object.assign(shader.uniforms, edgeUniformsOf(this));
     shader.fragmentShader = shader.fragmentShader
       .replace(ALPHA_TEST_PARS_CHUNK, `${ALPHA_TEST_PARS_CHUNK}\n${EDGE_FUNCTIONS}`)
       .replace(ALPHA_TEST_CHUNK, SCISSOR_CUT)

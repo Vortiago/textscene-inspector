@@ -17,7 +17,7 @@ function patched(material: THREE.Material): ProgramShader {
     fragmentShader: THREE.ShaderLib.basic.fragmentShader,
     uniforms: {},
   };
-  renderTargetMapInjection(material.userData)!.onBeforeCompile.call(material, shader, undefined as never);
+  renderTargetMapInjection(material.userData)!.onBeforeCompile.call(material, shader);
   return shader;
 }
 

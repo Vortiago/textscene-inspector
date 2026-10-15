@@ -141,7 +141,12 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
       );
   const scissorThreshold = clamp(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT), 0, 1);
   const alphaAntialiasing = decodeAlphaAntialiasing(properties, transparency, scissorThreshold);
-  const alphaFlags = shaderAlphaFlags(properties, transparency, refractionEnabled, alphaAntialiasing);
+  const alphaFlags = shaderAlphaFlags(
+    properties,
+    transparency,
+    refractionEnabled,
+    alphaAntialiasing !== null
+  );
   const membership = alphaPassMembership(alphaFlags, {
     blendMode,
     refractionEnabled,
@@ -195,7 +200,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     depthInAlphaPass,
     readsAlbedoAlpha,
     // `scene_forward_clustered.glsl:1413-1415`.
-    opaqueAfterCut: alphaFlags.usesAlphaClip && !alphaAntialiasing,
+    opaqueAfterCut: alphaFlags.usesAlphaClip && !alphaFlags.usesAlphaAntialiasing,
     depthTest,
     blendMode,
     cullMode: enumOr(properties['cull_mode'], CullMode.BACK, CULL_MODES, `${CONTEXT}.cull_mode`),
@@ -257,7 +262,7 @@ function shaderAlphaFlags(
   properties: Record<string, string>,
   transparency: Transparency,
   refractionEnabled: boolean,
-  alphaAntialiasing: AlphaAntialiasingCut | null
+  usesAlphaAntialiasing: boolean
 ): ShaderAlphaFlags {
   const proximityFade = boolOr(properties['proximity_fade_enabled'], false, CONTEXT);
   const distanceFadeMode = intOr(properties['distance_fade_mode'], 0, CONTEXT);
@@ -274,8 +279,6 @@ function shaderAlphaFlags(
   // The two cutout modes discard instead of blending, so they stay opaque.
   const usesAlphaClip =
     transparency === Transparency.ALPHA_SCISSOR || transparency === Transparency.ALPHA_HASH;
-  // `ALPHA_ANTIALIASING_EDGE` re-admits the cutout to the alpha pass (alpha-to-coverage).
-  const usesAlphaAntialiasing = alphaAntialiasing !== null;
   // `depth_prepass_alpha` is emitted for ALPHA_DEPTH_PRE_PASS alone (`material.cpp:898`).
   const usesDepthPrepassAlpha = transparency === Transparency.ALPHA_DEPTH_PRE_PASS;
   return { usesAlpha, usesAlphaClip, usesAlphaAntialiasing, usesDepthPrepassAlpha, proximityFade };

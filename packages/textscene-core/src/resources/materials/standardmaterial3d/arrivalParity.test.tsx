@@ -604,7 +604,7 @@ function patchedProgram(...hooks: (CompileHook | undefined)[]): string[] | null 
   if (patches.length === 0) return null;
   const material = new THREE.MeshStandardMaterial();
   const shader: ProgramShader = { ...THREE.ShaderLib.standard, uniforms: {} };
-  for (const patch of patches) patch.call(material, shader, undefined as never);
+  for (const patch of patches) patch.call(material, shader);
   return [shader.vertexShader, shader.fragmentShader];
 }
 
@@ -658,6 +658,7 @@ describe('StandardMaterial3D arrival parity', () => {
         // program factory's output. The hooks are compared by the program they patch.
         const {
           onBeforeCompile,
+          onBeforeRender: _drawHook,
           customProgramCacheKey: _cacheKey,
           attach: _attach,
           ...mounted

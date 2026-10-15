@@ -4,8 +4,10 @@ import {
   alphaAntialiasingOf,
   alphaAntialiasingProps,
   alphaAntialiasingUserData,
+  coverOneSampleTarget,
   GODOT_ALPHA_ANTIALIASING,
 } from './godotAlphaAntialiasing';
+import { functionBody } from '../testing/glslSource';
 import type { ProgramShader } from '../materialProgramInputs';
 import {
   AlphaAntiAliasing,
@@ -38,11 +40,10 @@ const MULTISAMPLED_TARGET = new THREE.WebGLRenderTarget(4, 4, { samples: 2 });
 
 function compiled(
   material: THREE.Material,
-  program: { vertexShader: string; fragmentShader: string } = THREE.ShaderLib.basic,
-  renderer = rendererDrawingInto(SINGLE_SAMPLE_TARGET)
+  program: { vertexShader: string; fragmentShader: string } = THREE.ShaderLib.basic
 ): ProgramShader {
   const shader: ProgramShader = { ...program, uniforms: {} };
-  GODOT_ALPHA_ANTIALIASING.onBeforeCompile.call(material, shader, renderer);
+  GODOT_ALPHA_ANTIALIASING.onBeforeCompile.call(material, shader);
   return shader;
 }
 
@@ -54,16 +55,11 @@ function antialiased(cut = SCISSOR_CUT, map: THREE.Texture | null = null): THREE
   });
 }
 
-/** The statements of `main` in order, one string, so a test reads which cut runs first. */
-function mainBody(fragmentShader: string): string {
-  return fragmentShader.slice(fragmentShader.indexOf('void main()'));
-}
-
 describe.each(Object.entries(ANTIALIASED_PROGRAMS))(
   'GODOT_ALPHA_ANTIALIASING on the %s program',
   (_n, program) => {
     it('cuts at the scissor, hashes, ramps the edge, covers one sample, then runs three’s cut', () => {
-      const main = mainBody(compiled(antialiased(), program).fragmentShader);
+      const main = functionBody(compiled(antialiased(), program).fragmentShader, 'main');
       const order = [
         'diffuseColor.a < godotAlphaScissorThreshold',
         '#include <alphahash_fragment>',
@@ -106,6 +102,16 @@ describe('GODOT_ALPHA_ANTIALIASING.onBeforeCompile', () => {
     expect((uniforms.godotAlbedoTextureSize!.value as THREE.Vector2).toArray()).toEqual([64, 32]);
   });
 
+  it("scales the texture's size into Godot's texels, for a map drawn at another resolution", () => {
+    const map = new THREE.Texture({ width: 96, height: 48 });
+    const material = new THREE.MeshBasicMaterial({
+      map,
+      userData: alphaAntialiasingUserData(SCISSOR_CUT, 1 / 3),
+    });
+    const { uniforms } = compiled(material);
+    expect((uniforms.godotAlbedoTextureSize!.value as THREE.Vector2).toArray()).toEqual([32, 16]);
+  });
+
   it("gives a size of zero with no albedo texture, the uniform's default (edge case)", () => {
     const { uniforms } = compiled(antialiased());
     expect((uniforms.godotAlbedoTextureSize!.value as THREE.Vector2).toArray()).toEqual([0, 0]);
@@ -118,8 +124,11 @@ describe('GODOT_ALPHA_ANTIALIASING.onBeforeCompile', () => {
 });
 
 describe('godotSingleSampleCoverage', () => {
-  const coverageOf = (material: THREE.Material, renderer: THREE.WebGLRenderer) =>
-    compiled(material, THREE.ShaderLib.basic, renderer).uniforms.godotSingleSampleCoverage!.value;
+  function coverageOf(material: THREE.Material, renderer: THREE.WebGLRenderer): unknown {
+    const { uniforms } = compiled(material);
+    coverOneSampleTarget.call(material, renderer);
+    return uniforms.godotSingleSampleCoverage!.value;
+  }
 
   it('emulates alpha to coverage on a target with one sample, which WebGL skips', () => {
     expect(coverageOf(antialiased(), rendererDrawingInto(SINGLE_SAMPLE_TARGET))).toBe(

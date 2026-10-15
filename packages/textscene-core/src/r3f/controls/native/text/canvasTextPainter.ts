@@ -269,7 +269,8 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
   material.userData = {
     ...alphaHashScaleUserData(alphaHashScale),
     ...opaquePrepassUserData(opaquePrepass),
-    ...alphaAntialiasingUserData(antialiasing),
+    // Godot caches a Label3D glyph at its font size, one texel per font pixel (`label_3d.cpp:345-350`).
+    ...alphaAntialiasingUserData(antialiasing, 1 / CANVAS_TEXT_SUPERSAMPLE),
   };
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...CANVAS_SRGB_DEFINES };

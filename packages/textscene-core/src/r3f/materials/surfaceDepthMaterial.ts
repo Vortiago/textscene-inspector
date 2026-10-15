@@ -5,9 +5,13 @@
  */
 
 import * as THREE from 'three';
-import { composeInjections, injectProgram, type ProgramInjection } from '../materialProgramInputs';
+import {
+  composeInjections,
+  injectProgram,
+  stateInjectionKey,
+  type ProgramInjection,
+} from '../materialProgramInputs';
 import { renderTargetMapInjection } from './renderTargetMap';
-import { alphaAntialiasingOf } from './godotAlphaAntialiasing';
 
 /** The material state a depth draw of a surface reads. */
 type DepthSurface = THREE.Material & {
@@ -81,8 +85,7 @@ function copiesOf(surface: THREE.Material): Map<DepthMaterial, DepthMaterial> {
 export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, alphaTest: number): void {
   const source = surface as DepthSurface;
   const recompiles =
-    depth.alphaHash !== surface.alphaHash ||
-    !alphaAntialiasingOf(depth) !== !alphaAntialiasingOf(surface) ||
+    stateInjectionKey(depth) !== stateInjectionKey(surface) ||
     depth.vertexColors !== surface.vertexColors ||
     !depth.map !== !source.map ||
     !depth.alphaMap !== !source.alphaMap ||

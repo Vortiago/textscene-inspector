@@ -6,7 +6,11 @@
  */
 import * as THREE from 'three';
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
-import { alphaAntialiasingOf, GODOT_ALPHA_ANTIALIASING } from './materials/godotAlphaAntialiasing';
+import {
+  alphaAntialiasingOf,
+  coverOneSampleTarget,
+  GODOT_ALPHA_ANTIALIASING,
+} from './materials/godotAlphaAntialiasing';
 
 /** The subset of three's `onBeforeCompile` argument an injection may touch. */
 export interface ProgramShader {
@@ -24,11 +28,7 @@ export interface ProgramInjection {
   /** Distinguishes this patched program from an unpatched one. */
   readonly cacheKey: string;
   /** three calls it as a method of the material it compiles, with itself (`WebGLRenderer.js:2248`). */
-  readonly onBeforeCompile: (
-    this: THREE.Material,
-    shader: ProgramShader,
-    renderer: THREE.WebGLRenderer
-  ) => void;
+  readonly onBeforeCompile: (this: THREE.Material, shader: ProgramShader) => void;
 }
 
 /**
@@ -40,6 +40,7 @@ export interface ProgramInjection {
 export interface MaterialProgramBag {
   key?: never;
   onBeforeCompile?: never;
+  onBeforeRender?: never;
   customProgramCacheKey?: never;
   injection?: ProgramInjection;
 }
@@ -50,6 +51,7 @@ export interface MaterialProgramBag {
  */
 export interface InjectedProps {
   onBeforeCompile?: ProgramInjection['onBeforeCompile'];
+  onBeforeRender?: THREE.Material['onBeforeRender'];
   customProgramCacheKey?: () => string;
 }
 
@@ -158,8 +160,8 @@ export function materialProgramInputs<
     injections.push((bag as MaterialProgramBag).injection);
     Object.assign(merged, bag);
   }
-  if (merged.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
-  if (recordsAlphaAntialiasing(merged.userData)) injections.push(GODOT_ALPHA_ANTIALIASING);
+  injections.push(...stateInjections(merged));
+  if (recordsAlphaAntialiasing(merged.userData)) merged.onBeforeRender = coverOneSampleTarget;
 
   const composed = composeInjections(injections);
   if (composed) {
@@ -187,14 +189,24 @@ export function materialProgramInputs<
  * injections' own, so the patched program never serves an unpatched material.
  */
 export function injectProgram(material: THREE.Material, injection: ProgramInjection | undefined): void {
-  const composed = composeInjections([
-    injection,
-    material.alphaHash ? GODOT_ALPHA_HASH : undefined,
-    recordsAlphaAntialiasing(material.userData) ? GODOT_ALPHA_ANTIALIASING : undefined,
-  ]);
+  if (recordsAlphaAntialiasing(material.userData)) material.onBeforeRender = coverOneSampleTarget;
+  const composed = composeInjections([injection, ...stateInjections(material)]);
   if (!composed) return;
   material.onBeforeCompile = composed.onBeforeCompile;
   material.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
+}
+
+/** The injections a material's own state turns on: Godot's hash, then its edge ramp. */
+function stateInjections(state: { alphaHash?: unknown; userData?: unknown }): ProgramInjection[] {
+  const injections: ProgramInjection[] = [];
+  if (state.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
+  if (recordsAlphaAntialiasing(state.userData)) injections.push(GODOT_ALPHA_ANTIALIASING);
+  return injections;
+}
+
+/** The cache key of the injections a material's own state turns on, empty for none. */
+export function stateInjectionKey(material: THREE.Material): string {
+  return composeInjections(stateInjections(material))?.cacheKey ?? '';
 }
 
 /** Whether a material's `userData` records the alpha antialiasing whose edge ramp it compiles with. */
@@ -245,9 +257,9 @@ function composedPair(first: ProgramInjection, second: ProgramInjection): Progra
     // A method, so each part reads the material three compiles.
     composed = {
       cacheKey: `${first.cacheKey}+${second.cacheKey}`,
-      onBeforeCompile(shader, renderer) {
-        first.onBeforeCompile.call(this, shader, renderer);
-        second.onBeforeCompile.call(this, shader, renderer);
+      onBeforeCompile(shader) {
+        first.onBeforeCompile.call(this, shader);
+        second.onBeforeCompile.call(this, shader);
       },
     };
     pairs.set(second, composed);

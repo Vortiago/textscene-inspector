@@ -11,7 +11,7 @@ const RED = textureChannelMask(TextureChannel.TEXTURE_CHANNEL_RED);
 /** The shader `GODOT_AMBIENT_OCCLUSION` leaves for `material`. */
 function patchedFor(material: THREE.Material, fragmentShader: string): ProgramShader {
   const shader: ProgramShader = { vertexShader: '', fragmentShader, uniforms: {} };
-  GODOT_AMBIENT_OCCLUSION.onBeforeCompile.call(material, shader, undefined as never);
+  GODOT_AMBIENT_OCCLUSION.onBeforeCompile.call(material, shader);
   return shader;
 }
 

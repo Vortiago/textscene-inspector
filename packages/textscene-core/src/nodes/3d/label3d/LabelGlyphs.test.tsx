@@ -7,7 +7,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
-import { alphaAntialiasingOf } from '../../../r3f/materials/godotAlphaAntialiasing';
+import {
+  alphaAntialiasingOf,
+  alphaAntialiasingUserData,
+} from '../../../r3f/materials/godotAlphaAntialiasing';
 import { AlphaAntiAliasing, scissorAntialiasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
@@ -355,6 +358,19 @@ describe('<LabelGlyphs>', () => {
       expect(alphaAntialiasingOf(material!)).toEqual(
         scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.25, 0.5)
       );
+    });
+
+    it("measures the edge's mip level in Godot's glyph texels, one per font pixel", async () => {
+      // `label_3d.cpp:345-350` caches the glyph at its font size; the raster supersamples it.
+      const cut = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0);
+      const renderer = await render(
+        labelProperties({
+          alpha_cut: AlphaCutMode.DISCARD,
+          alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
+        })
+      );
+      const [material] = materials(renderer);
+      expect(material!.userData).toMatchObject(alphaAntialiasingUserData(cut, 1 / CANVAS_TEXT_SUPERSAMPLE));
     });
 
     it('HASH under ALPHA_TO_COVERAGE_AND_TO_ONE overwrites the colour with the coverage blend', async () => {
