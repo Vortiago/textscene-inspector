@@ -6142,6 +6142,24 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>A SubViewport's target in the emission slot, over a black albedo. A material binds every slot by RID, so the target glows as it draws through the albedo in <code>unit-sub-viewport-texture</code>. A target in a pass cycle draws the missing-texture material from any slot.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Normal map</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-material-normal-map-blue-godot.png" alt="Godot render of Normal map">
+          <img class="img-ours" src="images/unit-material-normal-map-blue-ours.png" alt="Our render of Normal map">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p><code>normal_texture</code> reads red and green only. Both engines rebuild blue as <code>sqrt(max(0, 1 - dot(xy, xy)))</code> (<code>scene_forward_clustered.glsl:1437-1438</code>), so a map with blue 0 shades its flat texel as the bare plane and its tilted texel brighter. An RGTC import stores no blue, so this read is the only one that shades it.</p>
+<ul><li><strong>Approximated</strong> The tilted texel shades 8/255 darker than Godot's under Lambert diffuse with specular off, while the flat texel matches exactly. The blue it rebuilds is not the cause, since a map with a matching blue shades the same.</li></ul></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Clearcoat</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
@@ -6604,6 +6622,23 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>A texture whose pixels the scene or a <code>.tres</code> saves inline, as an <code>Image</code> sub-resource. The previewer decodes every uncompressed format Godot saves: the 8-bit, 16-bit, half and float formats, RGBA4444, RGB565 and RGBE9995. A float channel above 1 survives, as Godot's does. A colour slot reads RGB8 and RGBA8 as sRGB and every other format raw, as Godot does. So the Lum8 strip draws brighter than the RGB8 strip of the same bytes. The same rule holds for a NoiseTexture2D, which is Lum8 without a colour ramp, and a GradientTexture2D, which is a float format with <code>use_hdr</code>.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Image file</h3><span class="status st-limitation">Limitation</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-material-albedo-image-import-godot.png" alt="Godot render of Image file">
+          <img class="img-ours" src="images/unit-material-albedo-image-import-ours.png" alt="Our render of Image file">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A PNG, JPEG, WebP or SVG file that a scene names by path, imported as its <code>.import</code> sidecar says. A colour slot reads it through the format Godot imports it in, which comes from the file's own header and the sidecar's <code>compress/mode</code>. A greyscale PNG or JPEG imports as Lum8 or LumAlpha8 unless the sidecar asks for VRAM or Basis Universal compression, so it reads raw. The top strip is a greyscale PNG with no sidecar, the second is the same PNG VRAM compressed, and the third is an RGB PNG. The bottom strip is that RGB PNG imported as a VRAM compressed normal map, so RGTC, which keeps red and green raw and samples blue as 0. The sidecar also decides the mip chain, the alpha-border pass, the alpha premultiply, the normal map's green and an SVG's scale. A glTF image follows the sidecar of the file Godot imports it as. <code>standardmaterial3d/textureBinding.md</code> has the rules and their cites.</p></div>
       </section><div class="prose"><h3>NoiseTexture2D</h3>
 <p>A field baked from a FastNoiseLite, most often as a normal map. A <code>seamless</code> bake wraps its opposite edges and tiles. A plain one clamps, so UVs past the tile smear its edge texels. Under a StandardMaterial3D both tile, because <code>texture_repeat</code> defaults on (<code>material.cpp:4005</code>) and the sampler hint adds <code>repeat_enable</code> (<code>material.cpp:760-765</code>).</p>
 <h3>Linting</h3>
@@ -6611,7 +6646,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects a texture property. An unreadable value falls back to Godot's default through the shared value decoders. A reference it cannot resolve leaves the slot empty, so the consumer renders untextured.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> An AtlasTexture's <code>margin</code> is not applied, so a trimmed-atlas layout sits off by the margin.</li><li><strong>Approximated</strong> An AtlasTexture's <code>filter_clip</code> is not applied, so a filtered cell edge can bleed one texel from its neighbour.</li><li><strong>Approximated</strong> A NoiseTexture2D slot draws empty on first load until its build finishes, where Godot waits and draws the texture on its first frame.</li><li><strong>Resource gap</strong> An ImageTexture saved in a block-compressed image format (#736) or an integer format draws no texture.</li><li><strong>Not drawn</strong> A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.</li></ul></div>
+<ul><li><strong>Approximated</strong> An AtlasTexture's <code>margin</code> is not applied, so a trimmed-atlas layout sits off by the margin.</li><li><strong>Approximated</strong> An AtlasTexture's <code>filter_clip</code> is not applied, so a filtered cell edge can bleed one texel from its neighbour.</li><li><strong>Approximated</strong> A NoiseTexture2D slot draws empty on first load until its build finishes, where Godot waits and draws the texture on its first frame.</li><li><strong>Approximated</strong> A VRAM-compressed or lossy image file draws its source texels, without the block or WebP compression error Godot's import adds (#786). The DXT1 strip is up to 12/255 off on a channel.</li><li><strong>Approximated</strong> The previewer does not predict the re-imports the editor starts when it first sees a texture in 3D or as a normal map (<code>detect_3d/compress_to</code>, <code>compress/normal_map</code> Detect). A greyscale file with no sidecar reads raw, as a fresh import does.</li><li><strong>Approximated</strong> The GPU builds a mipmapped image file's mip chain, where Godot's importer averages the bytes on the CPU and renormalises a normal map's levels (<code>core/io/image.cpp:2146-2175</code>), so a minified texture can differ (#787).</li><li><strong>Resource gap</strong> An ImageTexture saved in a block-compressed image format (#736) or an integer format draws no texture.</li><li><strong>Not drawn</strong> A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.</li></ul></div>
     </article>
     <article class="sheet" data-type="TextureButton" hidden>
       <header class="sheet-head">

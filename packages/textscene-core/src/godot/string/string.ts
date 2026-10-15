@@ -229,3 +229,11 @@ export function fileBaseName(path: string): string {
   const dot = file.lastIndexOf('.');
   return dot < 0 ? file : file.slice(0, dot);
 }
+
+/** The characters `String::validate_filename` replaces (`ustring.cpp:4927`). */
+const INVALID_FILENAME_CHARACTERS = /[:/\\?*"|%<>]/g;
+
+/** `String::validate_filename` (`ustring.cpp:4947-4953`): stripped edges, each invalid character an underscore. */
+export function validateFilename(name: string): string {
+  return stripEdges(name).replace(INVALID_FILENAME_CHARACTERS, '_');
+}

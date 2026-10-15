@@ -34,12 +34,57 @@ Each producer records the format Godot holds its image in
 | NoiseTexture2D | L8, or RGBA8 with a `color_ramp` or `as_normal_map` |
 | GradientTexture2D | RGBA8, or RGBAFloat with `use_hdr` |
 | AtlasTexture | its atlas's format |
-| an image file | none recorded, read as sRGB |
+| an image file | its import format, from the source format and the import sidecar |
+| a glTF image | the import format of the file Godot imports it as |
 
-An image file records no format, so a colour slot reads it sRGB. That matches Godot for an RGB or
-RGBA file and for a VRAM-compressed import. Godot loads a greyscale PNG or JPEG as L8 or LA8
-(`drivers/png/png_driver_common.cpp:84-87`), and a lossless import keeps that format, so Godot
-reads it raw. The previewer reads no texture `.import` sidecar yet, so it reads that file sRGB.
+## How Godot imports an image file
+
+Godot loads an image file in its source format (`godot/import/imageSourceFormat.ts`):
+
+- PNG: colour type 0 is L8, and type 4, or type 0 with a `tRNS` chunk, is LA8, at any bit depth.
+  A colour or paletted PNG is RGB8 or RGBA8 (`drivers/png/png_driver_common.cpp:66-93`).
+- JPEG: one component is L8, and three are RGB8
+  (`modules/jpg/image_loader_libjpeg_turbo.cpp:58-65`).
+- WebP: RGB8, or RGBA8 when the file has alpha (`modules/webp/webp_common.cpp:135-175`).
+- SVG: RGBA8, rasterised at `svg/scale` times its own size, rounded
+  (`modules/svg/image_loader_svg.cpp:91-103`, `:130`).
+
+The texture importer then reads the image's `.import` sidecar (`importTextureOptions`). A missing
+sidecar reads as the Detect preset's defaults (`editor/import/resource_importer_texture.cpp:234-262`).
+The previewer does not predict the editor's later re-imports of a texture it first sees in 3D
+(`detect_3d/compress_to`) or as a normal map (`compress/normal_map` Detect).
+
+The importer rewrites the texels in this order (`:861-874`):
+
+1. `process/fix_alpha_border`, on by default, gives each nearly transparent texel the colour of the
+   nearest opaque one. It runs only on RGBA8 (`core/io/image.cpp:4247`).
+2. `process/premult_alpha` multiplies the colour by alpha. It runs only on RGBA8 (`:4220-4240`).
+3. `process/normal_map_invert_y` inverts green (`resource_importer_texture.cpp:657-671`).
+
+`mipmaps/generate`, off by default, decides whether the texture has a mip chain. A texture without
+one samples its base level under every `texture_filter`. Godot forces it on for every glTF image it
+imports (`modules/gltf/gltf_document.cpp:2251-2255`), as three's glTF loader does.
+
+`compress/mode` then gives the import format (`godot/import/textureImport.ts`):
+
+| `compress/mode` | Import format |
+| --- | --- |
+| 0 Lossless, 1 Lossy, 3 VRAM Uncompressed | the source format |
+| 2 VRAM Compressed | DXT1 RGB8 for L8 and RGB8, DXT5 RGBA8 for LA8 and RGBA8, BPTC_RGBA with `compress/high_quality` |
+| 4 Basis Universal | BPTC_RGBA |
+
+A normal map (`compress/normal_map` Enable) uses only RG (`core/io/image.cpp:3732-3734`). So mode 4,
+and mode 2 without `compress/high_quality`, give RGTC RedGreen8 instead. A shader samples it as
+red, green, blue 0 and alpha 1, raw in every slot. The VRAM block is in
+`resource_importer_texture.cpp:934-947`, the S3TC formats in
+`modules/etcpak/image_compress_etcpak.cpp:60-78`, and the Basis Universal formats in
+`modules/basis_universal/image_compress_basisu.cpp:321-324` and `:356-393`. So a greyscale PNG or
+JPEG reads raw in a colour slot at modes 0, 1 and 3, and sRGB at modes 2 and 4.
+
+A glTF image with a `uri` imports as that file, under its own sidecar. Godot extracts an embedded
+image to `<base name>_<image name>.<png|jpg>` beside the glTF
+(`modules/gltf/gltf_document.cpp:2209-2210`, `:2321-2333`), and that file's sidecar decides
+(`godot/import/gltfImageFiles.ts`).
 
 ## The samplers of BaseMaterial3D
 

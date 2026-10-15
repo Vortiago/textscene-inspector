@@ -3088,6 +3088,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Albedo Image Import",
+    "file": "unit-material-albedo-image-import.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Anisotropy Flowmap",
     "file": "unit-material-anisotropy-flowmap.tscn",
     "category": "Unit - Materials"
@@ -3150,6 +3155,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Metallic",
     "file": "unit-material-metallic.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Normal Map Blue",
+    "file": "unit-material-normal-map-blue.tscn",
     "category": "Unit - Materials"
   },
   {

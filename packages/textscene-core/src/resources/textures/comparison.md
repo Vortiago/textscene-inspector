@@ -30,6 +30,11 @@ A Texture2D that windows a region of another texture. A 2D consumer draws the re
 
 A texture whose pixels the scene or a `.tres` saves inline, as an `Image` sub-resource. The previewer decodes every uncompressed format Godot saves: the 8-bit, 16-bit, half and float formats, RGBA4444, RGB565 and RGBE9995. A float channel above 1 survives, as Godot's does. A colour slot reads RGB8 and RGBA8 as sRGB and every other format raw, as Godot does. So the Lum8 strip draws brighter than the RGB8 strip of the same bytes. The same rule holds for a NoiseTexture2D, which is Lum8 without a colour ramp, and a GradientTexture2D, which is a float format with `use_hdr`.
 
+## Image file
+<!-- compare: image=unit-material-albedo-image-import status=limitation fixture=unit-material-albedo-image-import.tscn -->
+
+A PNG, JPEG, WebP or SVG file that a scene names by path, imported as its `.import` sidecar says. A colour slot reads it through the format Godot imports it in, which comes from the file's own header and the sidecar's `compress/mode`. A greyscale PNG or JPEG imports as Lum8 or LumAlpha8 unless the sidecar asks for VRAM or Basis Universal compression, so it reads raw. The top strip is a greyscale PNG with no sidecar, the second is the same PNG VRAM compressed, and the third is an RGB PNG. The bottom strip is that RGB PNG imported as a VRAM compressed normal map, so RGTC, which keeps red and green raw and samples blue as 0. The sidecar also decides the mip chain, the alpha-border pass, the alpha premultiply, the normal map's green and an SVG's scale. A glTF image follows the sidecar of the file Godot imports it as. `standardmaterial3d/textureBinding.md` has the rules and their cites.
+
 ## NoiseTexture2D
 
 A field baked from a FastNoiseLite, most often as a normal map. A `seamless` bake wraps its opposite edges and tiles. A plain one clamps, so UVs past the tile smear its edge texels. Under a StandardMaterial3D both tile, because `texture_repeat` defaults on (`material.cpp:4005`) and the sampler hint adds `repeat_enable` (`material.cpp:760-765`).
@@ -51,5 +56,8 @@ The lenient parser never rejects a texture property. An unreadable value falls b
 - **Approximated** An AtlasTexture's `margin` is not applied, so a trimmed-atlas layout sits off by the margin.
 - **Approximated** An AtlasTexture's `filter_clip` is not applied, so a filtered cell edge can bleed one texel from its neighbour.
 - **Approximated** A NoiseTexture2D slot draws empty on first load until its build finishes, where Godot waits and draws the texture on its first frame.
+- **Approximated** A VRAM-compressed or lossy image file draws its source texels, without the block or WebP compression error Godot's import adds (#786). The DXT1 strip is up to 12/255 off on a channel.
+- **Approximated** The previewer does not predict the re-imports the editor starts when it first sees a texture in 3D or as a normal map (`detect_3d/compress_to`, `compress/normal_map` Detect). A greyscale file with no sidecar reads raw, as a fresh import does.
+- **Approximated** The GPU builds a mipmapped image file's mip chain, where Godot's importer averages the bytes on the CPU and renormalises a normal map's levels (`core/io/image.cpp:2146-2175`), so a minified texture can differ (#787).
 - **Resource gap** An ImageTexture saved in a block-compressed image format (#736) or an integer format draws no texture.
 - **Not drawn** A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.

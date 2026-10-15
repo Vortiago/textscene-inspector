@@ -1,0 +1,63 @@
+[gd_scene format=3]
+
+; One variable: the import format of an albedo image file. All four strips hold the greys 64, 128,
+; 192 and 255. The top PNG is greyscale with no sidecar, so Godot imports it lossless as Lum8, which
+; has no sRGB view, and samples the bytes raw (`material_storage.cpp:1073`). The second one is the
+; same PNG with a VRAM Compressed sidecar, which has an sRGB view. The third one is an RGB PNG. The
+; bottom one is that RGB PNG imported as a VRAM Compressed normal map, so RGTC: red and green raw,
+; blue 0. No other golden binds an image file whose import format changes its colour slot read.
+
+[ext_resource type="Texture2D" path="res://textures/grey-steps.png" id="1_lossless"]
+[ext_resource type="Texture2D" path="res://textures/grey-steps-vram.png" id="2_vram"]
+[ext_resource type="Texture2D" path="res://textures/grey-steps-rgb.png" id="3_rgb"]
+[ext_resource type="Texture2D" path="res://textures/grey-steps-rgtc.png" id="4_rgtc"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_strip"]
+size = Vector2(4, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lossless"]
+shading_mode = 0
+albedo_texture = ExtResource("1_lossless")
+texture_filter = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vram"]
+shading_mode = 0
+albedo_texture = ExtResource("2_vram")
+texture_filter = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rgb"]
+shading_mode = 0
+albedo_texture = ExtResource("3_rgb")
+texture_filter = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rgtc"]
+shading_mode = 0
+albedo_texture = ExtResource("4_rgtc")
+texture_filter = 0
+
+[node name="AlbedoImageImport" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+projection = 1
+size = 5.0
+
+[node name="GreyLossless" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+mesh = SubResource("QuadMesh_strip")
+surface_material_override/0 = SubResource("StandardMaterial3D_lossless")
+
+[node name="GreyVram" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("QuadMesh_strip")
+surface_material_override/0 = SubResource("StandardMaterial3D_vram")
+
+[node name="Rgb" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.6, 0)
+mesh = SubResource("QuadMesh_strip")
+surface_material_override/0 = SubResource("StandardMaterial3D_rgb")
+
+[node name="Rgtc" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.8, 0)
+mesh = SubResource("QuadMesh_strip")
+surface_material_override/0 = SubResource("StandardMaterial3D_rgtc")

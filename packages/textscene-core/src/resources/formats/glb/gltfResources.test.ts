@@ -133,6 +133,14 @@ describe('packGltfAsGlb', () => {
     expect(read).toEqual([]);
   });
 
+  it('gives a data URI image the MIME type its URI names', async () => {
+    const json: GltfJson = { asset: { version: '2.0' }, images: [{ uri: 'data:image/jpeg;base64,/9g=' }] };
+
+    const { json: packed } = unpack(await packGltfAsGlb(json, reader({}).readUri));
+
+    expect(packed.images).toEqual([{ bufferView: 0, mimeType: 'image/jpeg' }]);
+  });
+
   it('keeps an image that already lives in a buffer view as it is', async () => {
     const { readUri } = reader({ 'scene.bin': bytes(1, 2, 3, 4) });
     const json: GltfJson = {

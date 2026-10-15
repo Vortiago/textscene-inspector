@@ -17,6 +17,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createTextureFromBuffer } from '../../../resources/formats/image/textureProcessing';
+import { DEFAULT_TEXTURE_IMPORT } from '../../../godot/import/textureImport';
 import { buildMaterial } from '../../../resources/materials/standardmaterial3d/buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
 import type { ParsedHeading } from '../../../parser/utils';
@@ -68,7 +69,10 @@ async function canvasMap(entry: THREE.Texture): Promise<THREE.Texture> {
 
 describe('one loader texture, two consumers', () => {
   it('clamps on the canvas, tiles on a default material, and never mutates the entry', async () => {
-    const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png');
+    const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png', {
+      source: 'RGBA8',
+      options: DEFAULT_TEXTURE_IMPORT,
+    });
     // Set after the decode so the alpha-border pass has no pixels to read.
     (entry as unknown as { image: { width: number; height: number } }).image = {
       width: 64,

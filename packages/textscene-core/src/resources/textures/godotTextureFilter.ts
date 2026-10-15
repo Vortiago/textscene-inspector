@@ -120,6 +120,12 @@ const WITHOUT_MIPMAPS: Partial<Record<THREE.MinificationTextureFilter, THREE.Min
   [THREE.LinearMipmapNearestFilter]: THREE.LinearFilter,
 };
 
+/** Removes the mip chain of a texture the caller owns, for an image Godot imports without one. */
+export function dropMipChain(texture: THREE.Texture): void {
+  texture.generateMipmaps = false;
+  texture.minFilter = WITHOUT_MIPMAPS[texture.minFilter] ?? texture.minFilter;
+}
+
 /**
  * Writes the sampler state onto a texture the caller owns. A `*_WITH_MIPMAPS`
  * filter creates no mip chain: a procedural texture never calls `generate_mipmaps`

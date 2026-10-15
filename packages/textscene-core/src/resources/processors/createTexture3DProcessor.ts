@@ -13,8 +13,7 @@ import { decodeImagePixels, getMimeType, isTexturePath } from '../formats/image/
 import { importSlicesOf } from '../formats/image3d/importSlices';
 import { sliceImage } from '../formats/image3d/texels';
 import { dataTexture3D } from '../textures/dataTexture3D';
-import { parseImportFile } from '../../parser/importParser';
-import { importSidecarPath } from '../../godot/index.js';
+import { readImportSidecar } from './readImportSidecar';
 
 export function createTexture3DProcessor(
   fileEventBus: FileEventBus | undefined,
@@ -23,11 +22,13 @@ export function createTexture3DProcessor(
 ): ResourceProcessor<THREE.Data3DTexture> {
   /** The slices the sidecar names, read first so a missing one costs no decode. */
   const slicesOf = async (path: string) => {
-    const sidecar = importSidecarPath(path);
-    // Recorded before the read, so a sidecar created, edited or deleted later reloads the texture.
-    dependencies.record({ busType: 'texture3d', key: path }, sidecar);
-    const raw = await fileEventBus?.tryLoad(sidecar, 'ImportSidecar');
-    const slices = importSlicesOf(typeof raw === 'string' ? parseImportFile(raw) : null);
+    const sidecar = await readImportSidecar(
+      path,
+      { busType: 'texture3d', key: path },
+      fileEventBus,
+      dependencies
+    );
+    const slices = importSlicesOf(sidecar);
     if (!slices) throw new Error(`${path} has no sidecar that imports it as a 3D texture`);
     return slices;
   };

@@ -17,6 +17,8 @@ import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GL
 import { usesGodotSingleRoot } from '../../../godot/import/gltf';
 import { applyLightmapUv, type LightmapUvImport } from './lightmapUv/lightmapUv';
 import { godotPrimitives } from './godotPrimitives';
+import { recordGltfImageFormats, type GltfImageFormat } from './imageFormats';
+import { forEachSurfaceMaterial } from './surfaceMaterials';
 
 interface GlbModules {
   GLTFLoader: (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
@@ -50,51 +52,6 @@ export function initGlbModules(): Promise<GlbModules> {
 }
 
 // Synchronous helpers, with no addons, safe in the initial bundle.
-
-/**
- * A material slot visitor: the material, the setter that replaces it in place, and a reader
- * for what the slot holds later, after other writers may have replaced it.
- */
-type SurfaceVisitor = (
-  material: THREE.Material,
-  assign: (replacement: THREE.Material) => void,
-  read: () => THREE.Material | undefined
-) => void;
-
-/**
- * One node's material slot or slots, the one place that owns the array-or-single branch.
- * Gated on the slot, not on `isMesh`, because a glTF's non-triangle primitives arrive as
- * `Points`/`Line` with a material the importer's per-surface rules reach too.
- */
-function visitNodeMaterials(node: THREE.Object3D, visit: SurfaceVisitor): void {
-  const holder = node as THREE.Mesh;
-  const slot = holder.material as THREE.Material | THREE.Material[] | undefined;
-  if (!slot) return;
-  if (Array.isArray(slot)) {
-    slot.forEach((material, index) => {
-      visit(
-        material,
-        (replacement) => {
-          slot[index] = replacement;
-        },
-        () => slot[index]
-      );
-    });
-  } else {
-    visit(
-      slot,
-      (replacement) => {
-        holder.material = replacement;
-      },
-      () => holder.material as THREE.Material
-    );
-  }
-}
-
-/** Visit every surface material under `object`, with the setter for its own slot. */
-export function forEachSurfaceMaterial(object: THREE.Object3D, visit: SurfaceVisitor): void {
-  object.traverse((node) => visitNodeMaterials(node, visit));
-}
 
 /**
  * The `.tres` an **Import sidecar** remaps a surface's material to. The GLB processor writes
@@ -157,6 +114,8 @@ export interface GlbLoadOptions {
   naming: GltfNamingOptions;
   /** The lightmap UV2 to give the meshes Godot unwraps, absent when the sidecar unwraps none. */
   lightmapUv?: LightmapUvImport;
+  /** The format Godot imports each image in. */
+  imageFormat: GltfImageFormat;
 }
 
 /**
@@ -165,7 +124,7 @@ export interface GlbLoadOptions {
  */
 export async function createGLBMesh(
   data: ArrayBuffer,
-  { extensionRules = 'godot-importer', naming, lightmapUv }: GlbLoadOptions
+  { extensionRules = 'godot-importer', naming, lightmapUv, imageFormat }: GlbLoadOptions
 ): Promise<THREE.Object3D> {
   const { GLTFLoader } = await initGlbModules();
   const loader = withExtensionRules(new GLTFLoader(inMemoryOnlyManager()), extensionRules)
@@ -175,6 +134,7 @@ export async function createGLBMesh(
   const root = await godotSceneRoot(gltf);
   const names = gltfImportNames(gltf.parser.json, naming);
   if (lightmapUv) await applyLightmapUv(gltf, root, lightmapUv, names.meshes);
+  await recordGltfImageFormats(gltf.parser, root, imageFormat);
   // GLTFLoader returns embedded clips on `gltf.animations`. The root's `.animations`
   // is where GLBSceneRoot plays them from and where `cloneWithMaterials` copies them.
   root.animations = gltf.animations;

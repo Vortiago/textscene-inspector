@@ -184,3 +184,25 @@ export function isGltfPath(path: string): boolean {
   const lower = path.toLowerCase();
   return GLTF_EXTENSIONS.some((extension) => lower.endsWith(extension));
 }
+
+/** A data URI's MIME type, from between `data:` and `;base64` (`gltf_document.cpp:2344-2348`). */
+export function dataUriMimeType(uri: string | undefined): string | undefined {
+  if (!uri?.startsWith('data:') || !uri.includes(';')) return undefined;
+  return uri.slice('data:'.length, uri.indexOf(';base64'));
+}
+
+/** The texture extensions that name an image, in the order `register_types.cpp:134-135` registers them. */
+const IMAGE_SOURCE_EXTENSIONS = ['KHR_texture_basisu', 'EXT_texture_webp'];
+
+/**
+ * The image a glTF texture samples (`gltf_document.cpp:2463-2481`): the first image extension's
+ * `source`, else the texture's own. Undefined when it names none.
+ */
+export function gltfTextureImage(texture: GltfJsonObject): number | undefined {
+  const extensions = isGltfJsonObject(texture.extensions) ? texture.extensions : {};
+  for (const name of IMAGE_SOURCE_EXTENSIONS) {
+    const extension = extensions[name];
+    if (isGltfJsonObject(extension) && typeof extension.source === 'number') return extension.source;
+  }
+  return typeof texture.source === 'number' ? texture.source : undefined;
+}

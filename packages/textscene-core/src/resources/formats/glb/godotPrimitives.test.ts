@@ -3,8 +3,9 @@ import type * as THREE from 'three';
 import { createGLBMesh, initGlbModules } from './glbProcessing';
 import { binChunk, glbOfChunks, jsonChunk } from './testing/triangleGlb';
 import { isMesh } from '../../../r3f/testing/threeNarrow';
+import { NO_SIDECAR } from './testing/noSidecar';
 
-const NAMING = { naming: { namingVersion: 2, importAsSkeletonBones: false, fileName: 'fan' } };
+const NAMING = { ...NO_SIDECAR, naming: { namingVersion: 2, importAsSkeletonBones: false, fileName: 'fan' } };
 
 /** Six vertices around a hub, as float32 xyz. */
 const DISC = [0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, -1, 1, 0, -1, 0, 0];

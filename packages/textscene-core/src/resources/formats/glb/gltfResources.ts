@@ -8,7 +8,7 @@
 
 import { fileExtension } from '../../fileExtension';
 import { normalizeRelativePath, RES_SCHEME } from '../../resPath';
-import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../godot/import/gltf';
+import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC, dataUriMimeType } from '../../../godot/import/gltf';
 import { decodeBase64Bytes } from '../../../godot/variant/packedBytes';
 
 /** The parts of a glTF document this packs; every other member passes through untouched. */
@@ -125,6 +125,13 @@ function glbChunks(glb: ArrayBuffer): GlbChunks {
   return { json: JSON.parse(text) as GltfJson, bin };
 }
 
+/** The JSON document of a text glTF or a GLB container. */
+export function gltfJsonOf(data: ArrayBuffer): GltfJson {
+  return isGlbContainer(data)
+    ? glbChunks(data).json
+    : (JSON.parse(new TextDecoder().decode(data)) as GltfJson);
+}
+
 /** Whether a buffer or an image names its bytes by `uri`, which the glTF loader would fetch. */
 function namesUri(json: GltfJson): boolean {
   return [...(json.buffers ?? []), ...(json.images ?? [])].some((entry) => entry.uri !== undefined);
@@ -135,10 +142,7 @@ function namesUri(json: GltfJson): boolean {
  * that names a `uri` repacked, and any other GLB as it is. The glTF loader then fetches nothing.
  */
 export async function selfContainedGlb(data: ArrayBuffer, readUri: ReadUri): Promise<ArrayBuffer> {
-  if (!isGlbContainer(data)) {
-    const json = JSON.parse(new TextDecoder().decode(data)) as GltfJson;
-    return packGltfAsGlb(json, readUri);
-  }
+  if (!isGlbContainer(data)) return packGltfAsGlb(gltfJsonOf(data), readUri);
   const { json, bin } = glbChunks(data);
   return namesUri(json) ? packGltfAsGlb(json, readUri, bin) : data;
 }
@@ -176,7 +180,8 @@ export async function packGltfAsGlb(
     const { uri, ...rest } = image;
     const bytes = await read(uri);
     bufferViews.push({ buffer: 0, byteOffset: chunk.append(bytes), byteLength: bytes.byteLength });
-    const mimeType = rest.mimeType ?? IMAGE_MIME_TYPES[fileExtension(uri.split('?')[0]!) ?? ''];
+    const mimeType =
+      rest.mimeType ?? dataUriMimeType(uri) ?? IMAGE_MIME_TYPES[fileExtension(uri.split('?')[0]!) ?? ''];
     images.push({ ...rest, bufferView: bufferViews.length - 1, ...(mimeType && { mimeType }) });
   }
   const packed: GltfJson = { ...json, buffers: [{ byteLength: chunk.length }], bufferViews };

@@ -35,6 +35,14 @@ ADD emission with both a dark red colour and a texture. Godot emits `(emission +
 
 A SubViewport's target in the emission slot, over a black albedo. A material binds every slot by RID, so the target glows as it draws through the albedo in `unit-sub-viewport-texture`. A target in a pass cycle draws the missing-texture material from any slot.
 
+## Normal map
+
+<!-- compare: image=unit-material-normal-map-blue status=done fixture=unit-material-normal-map-blue.tscn -->
+
+`normal_texture` reads red and green only. Both engines rebuild blue as `sqrt(max(0, 1 - dot(xy, xy)))` (`scene_forward_clustered.glsl:1437-1438`), so a map with blue 0 shades its flat texel as the bare plane and its tilted texel brighter. An RGTC import stores no blue, so this read is the only one that shades it.
+
+- **Approximated** The tilted texel shades 8/255 darker than Godot's under Lambert diffuse with specular off, while the flat texel matches exactly. The blue it rebuilds is not the cause, since a map with a matching blue shades the same.
+
 ## Clearcoat
 
 <!-- compare: image=unit-material-clearcoat status=done fixture=unit-material-clearcoat.tscn -->
