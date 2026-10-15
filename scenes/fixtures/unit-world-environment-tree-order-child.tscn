@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://unitworldenvorderchild"]
+
+; The sub-scene of unit-world-environment-tree-order.tscn: a WorldEnvironment with a red background.
+
+[sub_resource type="Environment" id="Environment_red"]
+background_mode = 1
+background_color = Color(0.6, 0.1, 0.1, 1)
+
+[node name="RedEnvironment" type="WorldEnvironment"]
+environment = SubResource("Environment_red")

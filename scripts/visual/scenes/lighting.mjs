@@ -31,6 +31,8 @@ export const LIGHTING_SCENES = [
   { name: 'world-environment-none', file: 'unit-world-environment-none.tscn' },
   // A WorldEnvironment whose Environment .tres is missing draws as one that names none.
   { name: 'world-environment-missing', file: 'unit-world-environment-missing.tscn' },
+  // Two WorldEnvironments: the first in tree order applies, though it loads from a sub-scene last.
+  { name: 'world-environment-tree-order', file: 'unit-world-environment-tree-order.tscn' },
   // Exponential depth fog over boxes at three distances. The header states why no other golden
   // shows it.
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
