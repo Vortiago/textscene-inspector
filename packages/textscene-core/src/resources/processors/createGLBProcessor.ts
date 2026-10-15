@@ -114,8 +114,8 @@ async function readLightmapUv(
 
 /**
  * How Godot imports each image of the glTF at `path`: its bytes' source format under the sidecar of
- * the file it imports as, with the mipmaps the glTF importer asks for (`gltf_document.cpp:2251-2255`).
- * An external image is its own file, and an embedded one the file Godot extracts it to. Each sidecar
+ * the file it loads. An external image loads through its own import (`gltf_document.cpp:2356-2363`).
+ * An embedded one imports as the file Godot extracts it to, with mipmaps (`:2251-2255`). Each sidecar
  * read is recorded, so an edit to it reloads the asset. Null when no loader header names a format.
  */
 function importedImages(
@@ -130,9 +130,15 @@ function importedImages(
     const file = files[index];
     if (source === null || file === undefined) return null;
     // A URI above res:// names no project file, so Godot extracts the image (`gltf_document.cpp:2203`).
-    const imagePath = (file.uri === null ? null : gltfResourcePath(path, file.uri)) ?? file.extracted;
-    const sidecar = await readImportSidecar(imagePath, glbReader(path), fileEventBus, dependencies);
-    return { source, options: { ...importTextureOptions(sidecar), mipmaps: true } };
+    const externalPath = file.uri === null ? null : gltfResourcePath(path, file.uri);
+    const sidecar = await readImportSidecar(
+      externalPath ?? file.extracted,
+      glbReader(path),
+      fileEventBus,
+      dependencies
+    );
+    const options = importTextureOptions(sidecar);
+    return { source, options: externalPath === null ? { ...options, mipmaps: true } : options };
   };
 }
 

@@ -20,7 +20,7 @@ import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GL
 import { usesGodotSingleRoot } from '../../../godot/import/gltf';
 import { applyLightmapUv, type LightmapUvImport } from './lightmapUv/lightmapUv';
 import { godotPrimitives } from './godotPrimitives';
-import { importingImages, type GltfImageImport } from './imageImport';
+import { importingImages, restoreImportedSampling, type GltfImageImport } from './imageImport';
 import { forEachSurfaceMaterial } from './surfaceMaterials';
 
 type GLTFLoaderClass = (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
@@ -123,6 +123,7 @@ export async function createGLBMesh(
     .register(godotPrimitives);
   const gltf = await loader.parseAsync(data, '');
   const root = await godotSceneRoot(gltf);
+  restoreImportedSampling(root);
   const names = gltfImportNames(gltf.parser.json, naming);
   if (lightmapUv) await applyLightmapUv(gltf, root, lightmapUv, names.meshes);
   // GLTFLoader returns embedded clips on `gltf.animations`. The root's `.animations`

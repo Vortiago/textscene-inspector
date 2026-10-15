@@ -94,8 +94,10 @@ export function holdsRedGreenOnly({ mode, highQuality, normalMap }: TextureImpor
 }
 
 /**
- * S3TC by the channels the source uses (`resource_importer_texture.cpp:934-947`,
+ * S3TC by the channels the header declares (`resource_importer_texture.cpp:934-947`,
  * `image_compress_etcpak.cpp:60-78`): L and RGB to DXT1, LA and RGBA to DXT5, both with an sRGB view.
+ * Godot reads the channels from the texels (`core/io/image.cpp:3728-3795`), so an opaque RGBA image is
+ * DXT1 there. Both formats sample the same.
  */
 function s3tcFormat(source: ImageSourceFormat): string {
   return source === 'LumAlpha8' || source === 'RGBA8' ? 'DXT5 RGBA8' : 'DXT1 RGB8';

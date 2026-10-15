@@ -134,6 +134,20 @@ describe('createGLBProcessor: the import format of a glTF image', () => {
     ]);
   });
 
+  it('reads a greyscale image raw through a second texture, which clones it (edge case)', async () => {
+    const json = JSON.parse(
+      new TextDecoder().decode(texturedGltf({ name: 'albedo', uri: pngDataUri(png(0)) }))
+    ) as Record<string, unknown>;
+    Object.assign(json, {
+      samplers: [{ magFilter: 9728 }],
+      textures: [{ source: 0 }, { source: 0, sampler: 0 }],
+    });
+    (json['materials'] as { emissiveTexture: { index: number } }[])[0]!.emissiveTexture.index = 1;
+    const gltf = new TextEncoder().encode(JSON.stringify(json)).buffer as ArrayBuffer;
+    const root = await harness({ [GLTF_PATH]: gltf }).load();
+    expect(colourMapSpaces(root)).toEqual([THREE.NoColorSpace, THREE.NoColorSpace]);
+  });
+
   it("records the extracted file's sidecar, so an edit to it reloads the asset", async () => {
     const gltf = texturedGltf({ name: 'albedo', uri: pngDataUri(png(0)) });
     const { load, dependencies } = harness({ [GLTF_PATH]: gltf });
@@ -174,7 +188,33 @@ describe('createGLBProcessor: the texels of a glTF image', () => {
     expect(bytesOf(map)).toEqual([10, 255, 30, 255]);
   });
 
-  it('keeps the mip chain the glTF importer asks for, whatever the sidecar says', async () => {
+  /** The base colour map of a glTF that names the external RGBA PNG at `EXTERNAL_PATH`. */
+  async function loadExternalMap(files: Record<string, string> = {}): Promise<THREE.Texture> {
+    decoded.image = { data: new Uint8Array([10, 20, 30, 255]), width: 1, height: 1 };
+    const gltf = texturedGltf({ uri: 'textures/grey.png' });
+    const root = await harness({
+      [GLTF_PATH]: gltf,
+      [EXTERNAL_PATH]: png(6).slice().buffer,
+      ...files,
+    }).load();
+    let map: THREE.Texture | null = null;
+    forEachSurfaceMaterial(root, (material) => (map ??= (material as THREE.MeshStandardMaterial).map));
+    return map!;
+  }
+
+  it("samples an external image with no sidecar at its base level, as the file's own import has no mipmaps", async () => {
+    const map = await loadExternalMap();
+    expect([map.minFilter, map.generateMipmaps]).toEqual([THREE.LinearFilter, false]);
+  });
+
+  it('keeps the mip chain of an external image whose own sidecar generates mipmaps', async () => {
+    const map = await loadExternalMap({
+      [`${EXTERNAL_PATH}.import`]: textureSidecar(0, 'mipmaps/generate=true\n'),
+    });
+    expect(map.generateMipmaps).toBe(true);
+  });
+
+  it('keeps the mip chain Godot gives an extracted image, whatever its sidecar says', async () => {
     const map = await loadTexels([[10, 0, 30, 0]], {
       [`${EXTRACTED_PATH}.import`]: textureSidecar(0, 'mipmaps/generate=false\n'),
     });

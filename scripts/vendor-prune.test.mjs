@@ -43,6 +43,10 @@ describe('isPruned', () => {
     expect(isPruned(sidecarOf('beep.wav', 'RIFF', 'wav'))).toBe(true);
   });
 
+  it('prunes a scene sidecar whose asset the prune drops', () => {
+    expect(isPruned(sidecarOf('tree.blend', 'BLENDER', 'scene'))).toBe(true);
+  });
+
   it('prunes a sidecar whose asset is missing (edge case)', () => {
     const orphan = join(root, 'gone.png.import');
     writeFileSync(orphan, '[remap]\n\nimporter="texture"\n');

@@ -1,12 +1,15 @@
 /**
- * Imports each image of a glTF as Godot's texture importer imports the file it extracts the image
- * to: the texel passes, the mip chain and the format its sidecar asks for.
+ * Imports each image of a glTF as Godot's texture importer imports the file it loads the image
+ * from: the texel passes, the mip chain and the format its sidecar asks for.
  */
 
 import type * as THREE from 'three';
 import type { GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
 import { importDecodedImage, type ImageImport } from '../image/textureProcessing';
 import { gltfObjects } from '../../../godot/import/gltf';
+import { copyGodotFormat } from '../../textures/sourceColorSpace';
+import { dropMipChain } from '../../textures/godotTextureFilter';
+import { forEachSurfaceMaterial } from './surfaceMaterials';
 
 /**
  * How Godot imports glTF image `index`, from its `bytes` and the `mimeType` the glTF names. Null
@@ -51,5 +54,30 @@ async function importedImage(
   const bytes = new Uint8Array((await parser.getDependency('bufferView', image.bufferView)) as ArrayBuffer);
   const mimeType = typeof image.mimeType === 'string' ? image.mimeType : undefined;
   const imageImported = await imageImport(sourceIndex, bytes, mimeType);
-  return imageImported ? importDecodedImage(texture, imageImported) : texture;
+  if (!imageImported) return texture;
+  const result = importDecodedImage(texture, imageImported);
+  if (!imageImported.options.mipmaps) result.userData[HAS_NO_MIP_CHAIN] = true;
+  return result;
+}
+
+/**
+ * Marks an imported texture with no mip chain, since the loader then sets its sampler's mipmaps.
+ * `userData` survives the loader's clones.
+ */
+const HAS_NO_MIP_CHAIN = 'textsceneHasNoMipChain';
+
+/**
+ * Writes again on each texture under `root` what the loader overwrites after the import. A clone
+ * drops the colour-space pin of a format with no sRGB view: a repeat image source, a `texCoord`
+ * above 0 and `KHR_texture_transform` each clone, and the loader then tags a colour map sRGB. The
+ * sampler also turns mipmaps back on for an import with no mip chain.
+ */
+export function restoreImportedSampling(root: THREE.Object3D): void {
+  forEachSurfaceMaterial(root, (material) => {
+    for (const value of Object.values(material)) {
+      if ((value as THREE.Texture | null)?.isTexture !== true) continue;
+      copyGodotFormat(value, value);
+      if (value.userData[HAS_NO_MIP_CHAIN] === true) dropMipChain(value);
+    }
+  });
 }

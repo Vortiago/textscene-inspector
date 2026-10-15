@@ -21,10 +21,13 @@ export function isPruned(path) {
   return /\.(psd|xcf|blend|blend1)$/.test(name);
 }
 
-/** Whether the previewer reads the sidecar at `path`. One beside no asset describes nothing. */
+/**
+ * Whether the previewer reads the sidecar at `path`. One beside no asset, or beside an asset the
+ * prune drops, such as a `.blend`, describes nothing.
+ */
 function isReadSidecar(path) {
   const asset = path.slice(0, -'.import'.length);
-  if (!existsSync(asset)) return false;
+  if (!existsSync(asset) || isPruned(asset)) return false;
   const importer = /^importer="([^"]*)"/m.exec(readFileSync(path, 'utf8'))?.[1];
   return READ_IMPORTERS.has(importer);
 }

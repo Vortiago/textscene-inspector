@@ -63,7 +63,8 @@ The importer rewrites the texels in this order (`:861-874`):
 
 `mipmaps/generate`, off by default, decides whether the texture has a mip chain. A texture without
 one samples its base level under every `texture_filter`. Godot forces it on for every glTF image it
-imports (`modules/gltf/gltf_document.cpp:2251-2255`), as three's glTF loader does. A Decal reads
+extracts (`modules/gltf/gltf_document.cpp:2251-2255`). An external glTF image keeps its own
+sidecar's (`:2356-2363`). A Decal reads
 its copy in the decal atlas, which builds its own mip chain (`texture_storage.cpp:3169-3226`), so a
 decal mipmaps whatever the import says.
 

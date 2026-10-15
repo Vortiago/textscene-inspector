@@ -185,8 +185,12 @@ export function isGltfPath(path: string): boolean {
   return GLTF_EXTENSIONS.some((extension) => lower.endsWith(extension));
 }
 
-/** A data URI's MIME type, from between `data:` and `;base64` (`gltf_document.cpp:2344-2348`). */
+/**
+ * A data URI's MIME type, from between `data:` and `;base64` (`gltf_document.cpp:2344-2348`).
+ * Undefined with no `;base64`, where Godot's `substr` takes a negative length and gives nothing.
+ */
 export function dataUriMimeType(uri: string | undefined): string | undefined {
   if (!uri?.startsWith('data:') || !uri.includes(';')) return undefined;
-  return uri.slice('data:'.length, uri.indexOf(';base64'));
+  const end = uri.indexOf(';base64');
+  return end < 0 ? undefined : uri.slice('data:'.length, end);
 }
