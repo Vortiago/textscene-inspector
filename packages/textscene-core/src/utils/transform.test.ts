@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { parseTransform3D, decomposeTransform3D, parseOptionalTransform } from './transform';
-import { identityTransform3D } from '../godot/math/transform3d.js';
-import type { Transform3D } from '../nodes/base/node3d/types';
+import { identityTransform3D, type Transform3D } from '../godot/math/transform3d.js';
 
 describe('transform utils', () => {
   describe('parseTransform3D', () => {

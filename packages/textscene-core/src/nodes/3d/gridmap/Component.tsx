@@ -18,7 +18,7 @@ import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/useOneSurf
 import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
 import { surfaceBillboard } from '../../../resources/materials/standardmaterial3d/materialBag';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
-import type { Transform3D } from '../../base/node3d/types';
+import type { Transform3D } from '../../../godot/math/transform3d';
 import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';

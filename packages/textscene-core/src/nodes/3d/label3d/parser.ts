@@ -2,12 +2,18 @@
 
 import { type ParsedHeading, unquoteString } from '../../../parser/utils';
 import type { Label3DProperties } from './types';
-import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
+import { AlphaCutMode, BillboardMode, TextureFilter } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
 import { enumOr, floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 import { boolSlotValue } from '../../../godot/index.js';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_FILL,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  type HorizontalAlignment,
+} from '../../../godot/math/math';
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {
   const baseProps = parseGeometryInstance3D(heading, properties);
@@ -62,8 +68,8 @@ function parseTextureFilter(value: string | undefined): TextureFilter {
 }
 
 function parseHorizontalAlignment(value: string | undefined): HorizontalAlignment {
-  const num = intOr(value, HorizontalAlignment.CENTER, 'horizontal_alignment');
-  return num >= HorizontalAlignment.LEFT && num <= HorizontalAlignment.FILL
+  const num = intOr(value, HORIZONTAL_ALIGNMENT_CENTER, 'horizontal_alignment');
+  return num >= HORIZONTAL_ALIGNMENT_LEFT && num <= HORIZONTAL_ALIGNMENT_FILL
     ? (num as HorizontalAlignment)
-    : HorizontalAlignment.CENTER;
+    : HORIZONTAL_ALIGNMENT_CENTER;
 }

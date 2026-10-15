@@ -192,6 +192,11 @@ export const HORIZONTAL_ALIGNMENT_LEFT = 0;
 export const HORIZONTAL_ALIGNMENT_CENTER = 1;
 export const HORIZONTAL_ALIGNMENT_RIGHT = 2;
 export const HORIZONTAL_ALIGNMENT_FILL = 3;
+export type HorizontalAlignment =
+  | typeof HORIZONTAL_ALIGNMENT_LEFT
+  | typeof HORIZONTAL_ALIGNMENT_CENTER
+  | typeof HORIZONTAL_ALIGNMENT_RIGHT
+  | typeof HORIZONTAL_ALIGNMENT_FILL;
 
 /** `VerticalAlignment` (`core/math/math_defs.h:87-92`). */
 export const VERTICAL_ALIGNMENT_TOP = 0;

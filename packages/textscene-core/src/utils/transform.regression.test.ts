@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { parseTransform3D, decomposeTransform3D } from './transform';
-import type { Transform3D } from '../nodes/base/node3d/types';
+import type { Transform3D } from '../godot/math/transform3d';
 
 describe('row-major basis regression: 401f8f5 assertions vs current code', () => {
   describe('ShortWall transform (the known smoking gun)', () => {

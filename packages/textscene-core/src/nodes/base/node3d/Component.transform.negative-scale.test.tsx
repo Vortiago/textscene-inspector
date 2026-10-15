@@ -9,7 +9,8 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Node3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
-import type { Node3DProperties, Transform3D } from './types';
+import type { Node3DProperties } from './types';
+import type { Transform3D } from '../../../godot/math/transform3d';
 
 function makeNode(properties: Node3DProperties): TscnNode {
   return { rawProperties: {}, name: properties.name ?? 'TestNode', type: 'Node3D', children: [], properties };

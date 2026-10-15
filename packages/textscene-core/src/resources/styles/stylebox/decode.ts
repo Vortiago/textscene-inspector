@@ -17,6 +17,7 @@ const ZERO_VECTOR2: Vector2 = { x: 0, y: 0 }; // `skew`/`shadow_offset` (style_b
 const TRANSPARENT = { r: 0, g: 0, b: 0, a: 0 };
 
 const CONTEXT = 'StyleBoxFlat';
+const EMPTY_CONTEXT = 'StyleBoxEmpty';
 
 /** `content_margin_<side>`'s `-1` sentinel (`style_box.cpp:143`): "ask the stylebox's own style margin". */
 const CONTENT_MARGIN_UNSET = -1;
@@ -83,12 +84,12 @@ export function neutralStyleBox(contentMargin: StyleBoxFlatData['contentMargin']
 function decodeEmpty(data: Record<string, string>): StyleBoxFlatData {
   return {
     ...neutralStyleBox({
-      left: contentMarginOr(data.content_margin_left, 0, CONTEXT),
-      top: contentMarginOr(data.content_margin_top, 0, CONTEXT),
-      right: contentMarginOr(data.content_margin_right, 0, CONTEXT),
-      bottom: contentMarginOr(data.content_margin_bottom, 0, CONTEXT),
+      left: contentMarginOr(data.content_margin_left, 0, EMPTY_CONTEXT),
+      top: contentMarginOr(data.content_margin_top, 0, EMPTY_CONTEXT),
+      right: contentMarginOr(data.content_margin_right, 0, EMPTY_CONTEXT),
+      bottom: contentMarginOr(data.content_margin_bottom, 0, EMPTY_CONTEXT),
     }),
-    expandMargin: expandMarginOf(data, CONTEXT),
+    expandMargin: expandMarginOf(data, EMPTY_CONTEXT),
   };
 }
 

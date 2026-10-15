@@ -214,7 +214,6 @@ function bakeAtlas(ttfBuffer) {
 
 function renderMetricsModule(metrics) {
   return `${GENERATED_HEADER}
-
 /**
  * Font-wide scalar metrics for OpenSans_SemiBold, in font design units
  * (\`unitsPerEm\` = ${metrics.unitsPerEm}), read via \`fontkit\` from the vendored
@@ -372,7 +371,6 @@ export function getUnderlineThicknessPx(fontSizePx: number): number {
   const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
   return OPEN_SANS_METRICS.underlineThickness * scale;
 }
-
 `;
 }
 

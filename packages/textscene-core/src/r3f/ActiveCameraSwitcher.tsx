@@ -1,3 +1,4 @@
+/** Switches the 3D canvas between the default orbit camera and a scene Camera3D. */
 import { useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';

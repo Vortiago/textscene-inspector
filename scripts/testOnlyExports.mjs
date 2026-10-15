@@ -229,8 +229,12 @@ export function testOnlyExports(files, entryPoints) {
     for (const [owner, own] of resolveExport(modules, file, name, seen)) imported.add(`${owner}#${own}`);
     for (const hop of seen) imported.add(hop);
   };
-  const isTypeOnly = (path, name) =>
-    resolveExport(modules, path, name).every(([owner, own]) => modules.get(owner).own.get(own));
+  // A name that reaches no parsed declaration, such as one forwarded from a test kit, is a value:
+  // `every` over nothing would call it a type and hide it.
+  const isTypeOnly = (path, name) => {
+    const owners = resolveExport(modules, path, name);
+    return owners.length > 0 && owners.every(([owner, own]) => modules.get(owner).own.get(own));
+  };
 
   for (const entry of entryPoints) markImported(entry, '*');
   for (const [path, record] of modules) {

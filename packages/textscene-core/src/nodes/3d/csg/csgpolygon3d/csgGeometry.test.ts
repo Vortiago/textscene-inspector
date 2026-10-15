@@ -7,8 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Curve3DControlPoint } from '../../../../resources/curves/curve3d/index.js';
-import { identityTransform3D } from '../../../../godot/math/transform3d.js';
-import type { Transform3D } from '../../../base/node3d/types';
+import { identityTransform3D, type Transform3D } from '../../../../godot/math/transform3d.js';
 import { csgPolygon3DGeometry, csgPolygon3DGeometryKey } from './csgGeometry';
 import { PathIntervalType, PathRotation, PolygonMode } from './polygonSweepSpec';
 import type { CSGPolygon3DProperties } from './types';

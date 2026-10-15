@@ -14,6 +14,7 @@ import { resolveDeclaration, type RegistryTables } from './validatorResolution.j
 import { refuseOverlap, unavailableKeysOf } from './removalKeys.js';
 
 export type { PropertyValidator } from './propertyValidator.js';
+
 /** One part of a type's validator table: property key to validator. */
 type ValidatorGroup = Readonly<Record<string, PropertyValidator>>;
 

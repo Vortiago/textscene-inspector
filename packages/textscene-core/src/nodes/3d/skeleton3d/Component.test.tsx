@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Node3D } from '../../base/node3d/Component';
-import type { Node3DProperties, Transform3D } from '../../base/node3d/types';
+import type { Node3DProperties } from '../../base/node3d/types';
+import type { Transform3D } from '../../../godot/math/transform3d';
 import type { TscnNode } from '../../../parser/types';
 
 function makeNode(properties: Node3DProperties): TscnNode {

@@ -2,8 +2,6 @@
 
 import type { Transform3D } from '../../../godot/math/transform3d.js';
 
-export type { Transform3D };
-
 /**
  * Decomposed transform properties
  */

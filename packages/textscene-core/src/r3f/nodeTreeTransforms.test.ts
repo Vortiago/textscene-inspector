@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../parser/types.js';
-import type { Transform3D } from '../nodes/base/node3d/types.js';
+import type { Transform3D } from '../godot/math/transform3d.js';
 import { identityTransform3D } from '../godot/math/transform3d.js';
 import { globalMatrix3D } from './nodeTreeTransforms.js';
 

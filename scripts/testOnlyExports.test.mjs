@@ -128,6 +128,16 @@ describe('testOnlyExports', () => {
     expect(found).toEqual(['a.ts#inner']);
   });
 
+  it('reports a production re-export of a test kit that only tests import (edge case)', () => {
+    const found = scan({
+      'a.ts': "export { helper } from './testing/kit';",
+      'testing/kit.ts': 'export function helper() {}',
+      'a.test.ts': "import { helper } from './a';",
+    });
+
+    expect(found).toEqual(['a.ts#helper']);
+  });
+
   it('leaves type exports out', () => {
     const found = scan({ 'a.ts': 'export interface Shape {}\nexport type Id = string;' });
 

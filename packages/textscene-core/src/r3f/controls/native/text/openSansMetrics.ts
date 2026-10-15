@@ -7,7 +7,6 @@
 // licence OFL-1.1). Re-run the bake script to regenerate; its `--check` mode
 // fails if this file has drifted from the vendored font.
 
-
 /**
  * Font-wide scalar metrics for OpenSans_SemiBold, in font design units
  * (`unitsPerEm` = 2048), read via `fontkit` from the vendored
@@ -165,4 +164,3 @@ export function getUnderlineThicknessPx(fontSizePx: number): number {
   const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
   return OPEN_SANS_METRICS.underlineThickness * scale;
 }
-

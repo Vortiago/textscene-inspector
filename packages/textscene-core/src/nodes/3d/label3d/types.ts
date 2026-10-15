@@ -2,7 +2,7 @@
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
 import { BillboardMode } from '../../../godot/scene/billboard';
-import type { Rgba } from '../../../godot/math/math';
+import type { HorizontalAlignment, Rgba } from '../../../godot/math/math';
 
 /** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
 export { BillboardMode };
@@ -84,12 +84,4 @@ export enum AlphaCutMode {
   DISCARD = 1,
   OPAQUE_PREPASS = 2,
   HASH = 3,
-}
-
-/** Godot's `HorizontalAlignment` enum, as it appears in `.tscn` files. */
-export enum HorizontalAlignment {
-  LEFT = 0,
-  CENTER = 1,
-  RIGHT = 2,
-  FILL = 3,
 }
