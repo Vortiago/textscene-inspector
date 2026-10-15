@@ -3,8 +3,8 @@
  * light: where it draws, its normal bias and its PCF kernel.
  */
 
-import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
-import { positionalShadowNormalBias } from '../../godot/positionalShadow.js';
+import type { PositionalShadowSlot } from '../../godot/rendering/lights/positionalShadowAtlas.js';
+import { positionalShadowNormalBias } from '../../godot/rendering/lights/positionalShadow.js';
 import type { AtlasLight } from './adoptAtlasShadow.js';
 import type { PositionalShadowDeclaration } from './declaration.js';
 

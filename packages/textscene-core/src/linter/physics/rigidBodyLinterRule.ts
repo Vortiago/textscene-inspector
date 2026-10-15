@@ -7,10 +7,10 @@ import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { descendsFrom } from '../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../godot/classdb/nodeBaseTypes.js';
 import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
 import { VECTOR2_REGEX } from '../validators/vectorValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../godot/int.js';
+import { slotComponents, slotComponentsAltered } from '../../godot/variant/int.js';
 import { ruleInt, tupleComponent } from '../validators/commonValidators.js';
 import { boolSlotValue } from '../../godot/index.js';
 

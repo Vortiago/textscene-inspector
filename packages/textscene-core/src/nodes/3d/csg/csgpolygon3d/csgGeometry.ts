@@ -2,7 +2,7 @@
 
 import { primitiveSolid, type CsgGeometryBuilder } from '../../../../r3f/csg/csgRegistration';
 import { transform3DToMatrix } from '../../../../r3f/nodeTreeTransforms';
-import type { Vector3 } from '../../../../godot/vector.js';
+import type { Vector3 } from '../../../../godot/math/vector.js';
 import { tessellateCurve3D } from '../../../../resources/curves/curve3d/index.js';
 import type { Transform3D } from '../../../base/node3d/types';
 import { buildCsgPolygonGeometry, PolygonMode, type CsgPolygonPathPlan } from './polygonGeometry';

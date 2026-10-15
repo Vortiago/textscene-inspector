@@ -3,7 +3,7 @@
  * themselves, by the Node2D `diag(1,-1,1)` convention.
  */
 
-import type { Vector2 } from '../../../godot/vector';
+import type { Vector2 } from '../../../godot/math/vector';
 
 export type Vec2 = Vector2;
 

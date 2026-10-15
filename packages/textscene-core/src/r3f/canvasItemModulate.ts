@@ -8,7 +8,7 @@
 import { createContext, useContext, useMemo } from 'react';
 import type * as THREE from 'three';
 import { useGodotLinearColor } from './godotColor';
-import type { Rgba } from '../godot/math';
+import type { Rgba } from '../godot/math/math';
 
 export type RGBA = Rgba;
 

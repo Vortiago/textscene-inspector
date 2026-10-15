@@ -1,6 +1,6 @@
 /** GGX importance sampling of a sky's or a reflection atlas's layers (`octmap_roughness.glsl:62-84`), Godot's default filter. */
 
-import { layerSamples, type SkyOctmapLayout } from '../../godot/skyReflection.js';
+import { layerSamples, type SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection.js';
 import { LAYER_FILTER_UNIFORMS, type LayerFilter } from './layerFilter.js';
 import { IMPORTANCE_SAMPLE_FRAGMENT_SHADER } from './skyLayerShaders.js';
 import { setUniforms, skyPass } from './skyPass.js';

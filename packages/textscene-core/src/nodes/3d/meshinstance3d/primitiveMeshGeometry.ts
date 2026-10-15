@@ -8,7 +8,7 @@
 import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
 import { parseOptionalAabb } from '../../../parser/valueParsers';
-import { EMPTY_AABB, isEmptyAabb, type Aabb } from '../../../godot/aabb';
+import { EMPTY_AABB, isEmptyAabb, type Aabb } from '../../../godot/math/aabb';
 import { decodeBoxMesh } from '../../../resources/meshes/boxmesh/decode';
 import { buildBoxMeshGeometry } from '../../../resources/meshes/boxmesh/build';
 import { decodeSphereMesh } from '../../../resources/meshes/spheremesh/decode';

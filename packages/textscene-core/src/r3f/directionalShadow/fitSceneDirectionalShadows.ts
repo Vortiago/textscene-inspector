@@ -7,7 +7,10 @@
  */
 
 import * as THREE from 'three';
-import type { DirectionalShadowAtlasRect, DirectionalShadowFade } from '../../godot/directionalShadow.js';
+import type {
+  DirectionalShadowAtlasRect,
+  DirectionalShadowFade,
+} from '../../godot/rendering/lights/directionalShadow.js';
 import type { DirectionalShadowDeclaration } from './declaration.js';
 import { dropLight, isDropped, restoreDroppedLight } from './droppedLight.js';
 import { isViewingCamera, type DirectionalShadowBox, type ViewingCamera } from './fitDirectionalShadowBox.js';

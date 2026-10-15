@@ -9,7 +9,7 @@ import { installGodotLightFunction } from '../godotLightFunction';
 import { installGodotLightSpecular } from '../lightSpecular/lightSpecularChunk';
 import { installGodotLightSize } from '../lightSize/lightSizeChunk';
 import { installGodotLightAttenuation } from '../godotLightAttenuation';
-import { ltcTables } from '../../godot/ltc';
+import { ltcTables } from '../../godot/rendering/lights/ltc';
 import { warningsOf } from '../testing/logWarnings';
 import { functionBody, preprocessorBranch } from '../testing/glslSource';
 import type { AreaLightChunkName } from './areaLightChunk';

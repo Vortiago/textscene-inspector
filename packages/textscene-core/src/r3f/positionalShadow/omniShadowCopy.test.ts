@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas';
+import type { PositionalShadowSlot } from '../../godot/rendering/lights/positionalShadowAtlas';
 import { AtlasOmniShadow } from './atlasOmniShadow';
 import { OmniShadowCopy } from './omniShadowCopy';
 import { holdPositionalShadowAtlas, positionalShadowAtlas } from './shadowAtlasTarget';

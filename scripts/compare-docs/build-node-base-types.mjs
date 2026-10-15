@@ -1,7 +1,7 @@
 /**
  * Derives the Node and Resource class → base-type tables and the ClassDB property tables from
  * the committed engine captures (`pnpm nodes:base-types` writes
- * packages/textscene-core/src/godot/{node,resource}BaseTypes.generated.ts and
+ * packages/textscene-core/src/godot/classdb/{node,resource}BaseTypes.generated.ts and
  * classProperties.generated.ts). It never runs Godot: CI has no engine, and the test beside it
  * re-derives every output to prove it current.
  */
@@ -16,9 +16,9 @@ export const RESOURCE_BASES = join(here, 'resource-bases.json');
 export const NODE_PROPERTIES = join(here, 'node-properties.json');
 export const RESOURCE_PROPERTIES = join(here, 'resource-properties.json');
 
-/** `src/godot/<name>` in the core package. */
+/** `src/godot/classdb/<name>` in the core package. */
 function godotModule(name) {
-  return join(here, '..', '..', 'packages', 'textscene-core', 'src', 'godot', name);
+  return join(here, '..', '..', 'packages', 'textscene-core', 'src', 'godot', 'classdb', name);
 }
 
 export const OUT = godotModule('nodeBaseTypes.generated.ts');

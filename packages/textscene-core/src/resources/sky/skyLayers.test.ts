@@ -9,7 +9,7 @@ import {
   createReflectionAtlas,
   disposeSkyLayers,
 } from './skyLayers';
-import { reflectionAtlasLayout } from '../../godot/reflectionProbe';
+import { reflectionAtlasLayout } from '../../godot/rendering/environment/reflectionProbe';
 import { fastFilter } from './fastFilter';
 import { testRenderer } from '../../testing/recordingWebGL';
 import type { SkyBake } from './types';

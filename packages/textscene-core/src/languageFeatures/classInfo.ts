@@ -5,14 +5,14 @@
  * the generated base-type tables, never by hand.
  */
 
-import { classBaseChain } from '../godot/classBaseTypes.js';
-import { NODE_BASE_TYPES, isCatalogedType } from '../godot/nodeBaseTypes.js';
-import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/resourceBaseTypes.generated.js';
+import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
+import { NODE_BASE_TYPES, isCatalogedType } from '../godot/classdb/nodeBaseTypes.js';
+import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/classdb/resourceBaseTypes.generated.js';
 import {
   NODE_CLASS_PROPERTIES,
   RESOURCE_CLASS_PROPERTIES,
   type ClassPropertyRow,
-} from '../godot/classProperties.generated.js';
+} from '../godot/classdb/classProperties.generated.js';
 import type { PropertyLocation } from './document.js';
 
 /** One serialised property, with the class nearest the queried type that declares it. */

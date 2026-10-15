@@ -8,8 +8,8 @@
 import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { shape, v } from '../../../linter/validators/index.js';
-import { SHADOW_CASTING_SETTING_NAMES } from '../../../godot/rendering.js';
-import { VISIBILITY_RANGE_FADE_MODE_NAMES } from '../../../godot/visibilityRange.js';
+import { SHADOW_CASTING_SETTING_NAMES } from '../../../godot/rendering/rendering.js';
+import { VISIBILITY_RANGE_FADE_MODE_NAMES } from '../../../godot/rendering/visibilityRange.js';
 
 const GI_MODE = { 0: 'DISABLED', 1: 'STATIC', 2: 'DYNAMIC' };
 

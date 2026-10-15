@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { lerpColor, type Rgba } from '../../../../godot/math';
+import { lerpColor, type Rgba } from '../../../../godot/math/math';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 
 export interface GeometryBuffers {

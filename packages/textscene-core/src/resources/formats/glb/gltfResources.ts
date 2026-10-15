@@ -8,8 +8,8 @@
 
 import { fileExtension } from '../../fileExtension';
 import { normalizeRelativePath, RES_SCHEME } from '../../resPath';
-import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../godot/gltf';
-import { decodeBase64Bytes } from '../../../godot/packedBytes';
+import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../godot/import/gltf';
+import { decodeBase64Bytes } from '../../../godot/variant/packedBytes';
 
 /** The parts of a glTF document this packs; every other member passes through untouched. */
 export interface GltfJson {

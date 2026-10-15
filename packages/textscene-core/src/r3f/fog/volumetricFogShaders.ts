@@ -9,12 +9,12 @@ import {
   VOLUMETRIC_FOG_SHADOW_FADE,
   VOLUMETRIC_FOG_SHADOW_OPACITY_MIN,
   VOLUMETRIC_FOG_TEMPORAL_JITTERS,
-} from '../../godot/volumetricFog.js';
-import { MAX_ROUGHNESS_LOD } from '../../godot/skyReflection.js';
+} from '../../godot/rendering/environment/volumetricFog.js';
+import { MAX_ROUGHNESS_LOD } from '../../godot/rendering/environment/skyReflection.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
 import { HENYEY_GREENSTEIN_GLSL } from '../henyeyGreenstein.js';
 import { FogLightKind, FogLightTexel } from './fogLights.js';
-import { FOG_VOLUME_DENSITY_SCALE } from '../../godot/fogVolume.js';
+import { FOG_VOLUME_DENSITY_SCALE } from '../../godot/rendering/environment/fogVolume.js';
 import { FOG_VOLUME_GLSL } from './fogVolumeShader.js';
 import { LTC_INTEGRAL } from '../areaLight/ltcIntegral.js';
 import { PARABOLOID_UV_GLSL } from '../positionalShadow/paraboloidUv.js';

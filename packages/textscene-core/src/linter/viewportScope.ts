@@ -3,7 +3,7 @@
  * about competing cameras must compare scopes, never the whole scene.
  */
 
-import { descendsFrom } from '../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../godot/classdb/nodeBaseTypes.js';
 import { searchAncestors } from './parentType.js';
 import type { RawNode, RawScene } from '../parser/types.js';
 

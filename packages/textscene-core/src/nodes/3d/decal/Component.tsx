@@ -23,7 +23,7 @@ import type { Color } from '../../../utils/colorParser';
 import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
 import type { DecalGeometricFade } from './decalFade';
-import { distanceFade } from '../../../godot/distanceFade';
+import { distanceFade } from '../../../godot/rendering/distanceFade';
 import { cameraDistance, observeSceneCamera } from '../../../r3f/sceneRenderCamera';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { DecalProjectionMaterials, type DecalProjectionLook } from './decalProjectionMaterials';
@@ -32,7 +32,7 @@ import {
   collectDecalReceivers,
   computeDecalBoxWorldAABB,
 } from './decalProjection';
-import { clamp } from '../../../godot/math';
+import { clamp } from '../../../godot/math/math';
 
 /** Wireframe colour for the (selection-gated) projection-box gizmo. */
 const BOX_COLOR = '#ff9d3b';

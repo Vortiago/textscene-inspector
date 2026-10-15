@@ -8,7 +8,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseColor } from '../../../utils/colorParser';
 import { floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
-import { slotTupleRegex, matchedFloat, allFinite } from '../../../godot/number.js';
+import { slotTupleRegex, matchedFloat, allFinite } from '../../../godot/variant/number.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties, Vector2 } from './types';
 import { boolSlotValue } from '../../../godot/index.js';

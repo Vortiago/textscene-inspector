@@ -5,9 +5,9 @@
  * file's own headings, so it states what Godot does rather than a guess.
  */
 
-import { canonicalPropertyName, isDeprecatedPropertyName } from '../godot/deprecated.js';
-import { variantTypeName } from '../godot/variantType.js';
-import { classBaseChain } from '../godot/classBaseTypes.js';
+import { canonicalPropertyName, isDeprecatedPropertyName } from '../godot/classdb/deprecated.js';
+import { variantTypeName } from '../godot/variant/variantType.js';
+import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
 import { findClassProperty, isKnownClass, slotProperty, type ClassProperty } from './classInfo.js';
 import { classDocsUrl, propertyDocsUrl } from './docs.js';
 import type { DocumentSection, LanguageDocument, PropertyLocation, PropertySlot } from './document.js';

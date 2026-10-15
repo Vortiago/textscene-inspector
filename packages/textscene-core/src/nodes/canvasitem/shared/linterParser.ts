@@ -12,8 +12,8 @@ import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask } from '../../../linter/validators/layerBitmask.js';
 import { shape, v } from '../../../linter/validators/index.js';
-import { CLIP_CHILDREN_MODES } from '../../../godot/canvasItem.js';
-import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../../godot/rendering.js';
+import { CLIP_CHILDREN_MODES } from '../../../godot/scene/canvasItem.js';
+import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../../godot/rendering/rendering.js';
 
 // scene/main/canvas_item.cpp:1486, and BIND_ENUM_CONSTANT at :1510-1516.
 const TEXTURE_FILTER = {

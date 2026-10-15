@@ -95,7 +95,7 @@ function rangeForDiagnostic(diagnostic: TscnLintDiagnostic, document: DocumentLi
 /**
  * The `tscn` language claims `.tres` as well, so the languageId arm already
  * covers both; the filename arm is the fallback for a document whose
- * association a user has overridden, and it asks `godot/resourceFormats` so the
+ * association a user has overridden, and it asks `godot/project/resourceFormats` so the
  * editor and the CLI walk answer the same question.
  */
 function isTscnDocument(document: vscode.TextDocument): boolean {

@@ -16,7 +16,7 @@ import {
   stringLiteralBodies,
   type IntWidth,
 } from '../../../godot/index.js';
-import { compositeSpellings } from '../../../godot/variantConversion.js';
+import { compositeSpellings } from '../../../godot/variant/variantConversion.js';
 import type { ParseError } from '../../types.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
@@ -169,7 +169,7 @@ function firstBadArrayElement(body: string, elementCall: RegExp, groupSize: numb
     }
     const call = elementCall.exec(trimmed);
     // The arity is the slot's own: `elementCall` carries only same-arity
-    // conversions (`godot/variantConversion.ts`), so `[Vector2i(0, 0)]` is the
+    // conversions (`godot/variant/variantConversion.ts`), so `[Vector2i(0, 0)]` is the
     // verbatim read `Variant::operator Vector2()` performs (`variant.cpp:1751-1756`),
     // while `[Vector3(0, 0, 0)]` stays an offender.
     if (!call || splitTopLevel(call[1]!).length !== groupSize) return trimmed;

@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import type * as THREE from 'three';
 import { extend } from '@react-three/fiber';
-import { fogVolumeSize } from '../../../godot/fogVolume';
+import { fogVolumeSize } from '../../../godot/rendering/environment/fogVolume';
 import type { Vector3 } from '../../../parser/vectors';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import {

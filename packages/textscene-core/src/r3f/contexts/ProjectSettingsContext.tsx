@@ -16,7 +16,7 @@ import {
   type ProjectSettings,
   type ProjectViewportSize,
 } from '../../parser/projectSettingsParser.js';
-import { PROJECT_FILE_PATH } from '../../godot/project.js';
+import { PROJECT_FILE_PATH } from '../../godot/project/project.js';
 import type { FileEventBus } from '../../resources/FileEventBus.js';
 import { useResourceLoader } from '../../resources/useResource.js';
 import * as logger from '../../logger.js';

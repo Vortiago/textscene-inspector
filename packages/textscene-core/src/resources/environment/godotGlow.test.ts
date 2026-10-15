@@ -10,7 +10,7 @@ import {
   glowParamsFor,
   samplesGlowMap,
 } from './godotGlow';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 
 function settings(properties: Record<string, string>) {
   return createEnvironmentSettings(decodeEnvironment(properties), DEFAULT_CLEAR_COLOR);

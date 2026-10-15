@@ -6,8 +6,8 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../../../godot/diffuseMode.js';
-import { SPECULAR_MODE_NAMES, SpecularMode } from '../../../godot/specularMode.js';
+import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../../../godot/rendering/materials/diffuseMode.js';
+import { SPECULAR_MODE_NAMES, SpecularMode } from '../../../godot/rendering/materials/specularMode.js';
 
 export const surfaceKeys: Record<string, PropertyValidator> = {
   transparency: v.enumInt(

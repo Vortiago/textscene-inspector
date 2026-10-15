@@ -15,7 +15,7 @@ import {
 import { decomposeTransform2D } from '../../../base/node2d/parser';
 import type { CanvasLayerProperties } from './types';
 import { boolSlotValue } from '../../../../godot/index.js';
-import { transform2DFromParts, type Transform2DColumns } from '../../../../godot/transform2d.js';
+import { transform2DFromParts, type Transform2DColumns } from '../../../../godot/math/transform2d.js';
 
 /**
  * The layer's canvas transform, shared with every CanvasLayer subclass. `_bind_methods` registers

@@ -8,9 +8,9 @@ import { warn } from '../logger';
 // These wrap the canonical leaf scanners. One-off structured literals (StyleBox shapes)
 // stay in their slice.
 import { parseVector2, parseVector3, type Vector2, type Vector3 } from './vectors';
-import { slotTupleRegex, parseGodotFloat, allFinite } from '../godot/number.js';
-import { slotComponents, storedFromFloat, storedVector2i, type IntWidth } from '../godot/int.js';
-import type { Aabb } from '../godot/aabb.js';
+import { slotTupleRegex, parseGodotFloat, allFinite } from '../godot/variant/number.js';
+import { slotComponents, storedFromFloat, storedVector2i, type IntWidth } from '../godot/variant/int.js';
+import type { Aabb } from '../godot/math/aabb.js';
 
 import { nodePathLiteral, stringToInt, boolSlotValue } from '../godot/index.js';
 

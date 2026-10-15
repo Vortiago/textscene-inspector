@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { CSG_MERGE_TOLERANCE } from '../../../godot/csg';
+import { CSG_MERGE_TOLERANCE } from '../../../godot/scene/csg';
 import { applyCsgNormals, type CsgFaceSoup } from './smoothNormals';
 
 /** Build a soup from triangles given as flat vertex triples. */

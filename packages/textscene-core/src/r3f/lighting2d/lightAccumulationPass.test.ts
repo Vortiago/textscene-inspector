@@ -15,7 +15,7 @@ import {
 import { createSeedMaterial } from './lightSeedQuad';
 import { LIGHT_PASS_LAYER } from './lightPassLayers';
 import type { LightListEntry, PassMeshRole } from './itemLightList';
-import type { Rect2 } from '../../godot/rect2';
+import type { Rect2 } from '../../godot/math/rect2';
 
 interface Draw {
   readonly target: THREE.WebGLRenderTarget | null;

@@ -17,7 +17,7 @@ export {
   sign,
   smoothstep,
   snapped,
-} from './math.js';
+} from './math/math.js';
 export {
   TRANSFORM2D_IDENTITY,
   type Transform2DColumns,
@@ -27,15 +27,15 @@ export {
   transform2DGetScale,
   transform2DHasZeroSkew,
   transform2DIsConformal,
-} from './transform2d.js';
-export { type Rect2, rect2Intersection, rect2Intersects, rect2Merge } from './rect2.js';
+} from './math/transform2d.js';
+export { type Rect2, rect2Intersection, rect2Intersects, rect2Merge } from './math/rect2.js';
 export {
   type BasisComponents,
   basisGetScale,
   basisGetScaleAbs,
   basisHasUnitScale,
   basisIsOrthonormal,
-} from './basis.js';
+} from './math/basis.js';
 export {
   type IndexParse,
   type LeafResolver,
@@ -44,7 +44,7 @@ export {
   indexedElements,
   indexedKeyRegex,
   visitIndexedKeys,
-} from './indexedKey.js';
+} from './classdb/indexedKey.js';
 export {
   IS_VALID_INT_RE,
   literalText,
@@ -58,7 +58,7 @@ export {
   stringToFloat,
   stringToInt,
   stripEdges,
-} from './string.js';
+} from './string/string.js';
 export {
   MATERIAL_RENDER_PRIORITY_MIN,
   MATERIAL_RENDER_PRIORITY_MAX,
@@ -68,15 +68,15 @@ export {
   CANVAS_LAYER_MAX,
   DEFAULT_CLEAR_COLOR,
   ShadowCastingSetting,
-} from './rendering.js';
+} from './rendering/rendering.js';
 export {
   CPU_PARTICLES_PARAMS,
   type CpuParticlesParam,
   type CrossedParamRange,
   crossedParamRanges,
-} from './cpuParticles.js';
-export { formatReal, storedReal } from './real.js';
-export { BillboardMode } from './billboard.js';
+} from './scene/cpuParticles.js';
+export { formatReal, storedReal } from './math/real.js';
+export { BillboardMode } from './scene/billboard.js';
 export {
   GODOT_GLTF_EXTENSIONS,
   gltfRefusalMessage,
@@ -84,28 +84,28 @@ export {
   readGltfRequiredExtensions,
   requiredGltfExtensions,
   unsupportedRequiredGltfExtensions,
-} from './gltf.js';
+} from './import/gltf.js';
 export {
   PROJECT_FILE_NAME,
   PROJECT_FILE_PATH,
   extensionListEntries,
   extensionListPath,
   dataDirectoryPath,
-} from './project.js';
+} from './project/project.js';
 export {
   GDEXTENSION_FILE_EXTENSION,
   SCAN_STOP_FILES,
   isScannedDirectoryName,
   isScannedPath,
-} from './editorScan.js';
+} from './project/editorScan.js';
 export {
   DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
   DirectionalLightSkyMode,
   directionalLightDrawsInSky,
   directionalLightLightsSurfaces,
-} from './directionalLightSkyMode.js';
-export { fadeAlpha, forcesAlphaPass } from './fadeAlpha.js';
-export { unitByte } from './unitByte.js';
+} from './rendering/lights/directionalLightSkyMode.js';
+export { fadeAlpha, forcesAlphaPass } from './rendering/fadeAlpha.js';
+export { unitByte } from './variant/unitByte.js';
 export {
   DIRECTIONAL_SHADOW_BLEND_SPLITS_DEFAULT,
   DIRECTIONAL_SHADOW_FADE_START_DEFAULT,
@@ -138,9 +138,17 @@ export {
   pancakesCasters,
   sharesDirectionalShadowAtlas,
   texelPaddedRadius,
-} from './directionalShadow.js';
-export { SHADOW_BLUR_DEFAULT, SOFT_LOW_QUALITY_RADIUS, softShadowScale } from './softShadowScale.js';
-export { SOFT_LOW_PENUMBRA_SAMPLES, SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from './softShadowKernel.js';
+} from './rendering/lights/directionalShadow.js';
+export {
+  SHADOW_BLUR_DEFAULT,
+  SOFT_LOW_QUALITY_RADIUS,
+  softShadowScale,
+} from './rendering/lights/softShadowScale.js';
+export {
+  SOFT_LOW_PENUMBRA_SAMPLES,
+  SOFT_LOW_SHADOW_SAMPLES,
+  vogelDisk,
+} from './rendering/lights/softShadowKernel.js';
 export {
   POSITIONAL_SHADOW_ATLAS_DEPTH_BITS,
   POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT,
@@ -156,8 +164,8 @@ export {
   type PositionalShadowAtlasSettings,
   type PositionalShadowRequest,
   type PositionalShadowSlot,
-} from './positionalShadowAtlas.js';
-export { LIGHT_SHADOW_NORMAL_BIAS_DEFAULT, LIGHT_SIZE_DEFAULT } from './light.js';
+} from './rendering/lights/positionalShadowAtlas.js';
+export { LIGHT_SHADOW_NORMAL_BIAS_DEFAULT, LIGHT_SIZE_DEFAULT } from './scene/light.js';
 export {
   positionalLightBounds,
   positionalShadowNear,
@@ -165,10 +173,10 @@ export {
   positionalSoftShadow,
   spotShadowDepthBias,
   type PositionalSoftShadow,
-} from './positionalShadow.js';
-export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
-export { VIEWPORT_MIN_SIZE } from './viewport.js';
-export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
+} from './rendering/lights/positionalShadow.js';
+export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './rendering/texture.js';
+export { VIEWPORT_MIN_SIZE } from './rendering/viewport.js';
+export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './scene/canvasItem.js';
 export {
   CURSOR_ARROW,
   CURSOR_MAX,
@@ -182,9 +190,9 @@ export {
   LTR_LAYOUT_ENV,
   resolveLayoutRtl,
   type LayoutDirectionEnv,
-} from './control.js';
-export { isLocaleRightToLeft, RTL_LANGUAGE_CODES } from './textServer.js';
-export { isColorString } from './color.js';
+} from './scene/control.js';
+export { isLocaleRightToLeft, RTL_LANGUAGE_CODES } from './text/textServer.js';
+export { isColorString } from './variant/color.js';
 export {
   allFinite,
   FLOAT_PATTERN_SOURCE,
@@ -193,7 +201,7 @@ export {
   TSCN_FLOAT_RE,
   slotTupleRegex,
   parseGodotFloat,
-} from './number.js';
+} from './variant/number.js';
 export {
   INT32_MAX,
   type IntWidth,
@@ -207,9 +215,9 @@ export {
   toInt16,
   toInt32,
   toUint32,
-} from './int.js';
-export { DEFAULT_ANIMATION_NAME } from './animation.js';
-export { canonicalPropertyName, isDeprecatedPropertyName } from './deprecated.js';
+} from './variant/int.js';
+export { DEFAULT_ANIMATION_NAME } from './scene/animation.js';
+export { canonicalPropertyName, isDeprecatedPropertyName } from './classdb/deprecated.js';
 export {
   ARRAY_LITERAL_RE,
   NODE_PATH_LITERAL_RE,
@@ -226,7 +234,7 @@ export {
   packedArrayLiteral,
   nodePathLiteral,
   arrayLiteralBody,
-} from './variantParser.js';
+} from './variant/variantParser.js';
 export {
   EXT_RESOURCE_CALL_ANYWHERE_RE,
   extResourceIdsIn,
@@ -236,8 +244,8 @@ export {
   isPathResourceLiteral,
   resourceRef,
   subResourceRefAnywhere,
-} from './resourceRef.js';
-export { dictPackedField } from './packedArrayFields.js';
+} from './variant/resourceRef.js';
+export { dictPackedField } from './variant/packedArrayFields.js';
 export {
   MAX_BASE_CHAIN_HOPS,
   NODE_BASE_TYPES,
@@ -245,10 +253,10 @@ export {
   baseChain,
   descendsFrom,
   isCatalogedType,
-} from './nodeBaseTypes.js';
-export { CLASS_BASE_TYPES, descendsFromClass } from './classBaseTypes.js';
-export { INSTANCE_PLACEHOLDER_TYPE } from './packedScene.js';
-export { nodePathNames } from './nodePath.js';
+} from './classdb/nodeBaseTypes.js';
+export { CLASS_BASE_TYPES, descendsFromClass } from './classdb/classBaseTypes.js';
+export { INSTANCE_PLACEHOLDER_TYPE } from './scene/packedScene.js';
+export { nodePathNames } from './string/nodePath.js';
 export {
   GODOT_TEXT_RESOURCE_EXTENSIONS,
   IMPORT_SIDECAR_SUFFIX,
@@ -256,8 +264,8 @@ export {
   UNWRAP_CACHE_SUFFIX,
   unwrapCachePath,
   isGodotTextResourcePath,
-} from './resourceFormats.js';
-export { boolSlotValue, boolLiteralAsNumber } from './variantBool.js';
+} from './project/resourceFormats.js';
+export { boolSlotValue, boolLiteralAsNumber } from './variant/variantBool.js';
 export {
   packedArrayBody,
   packedArrayForms,
@@ -265,4 +273,4 @@ export {
   STRING_ARRAY_FORMS,
   stringArrayBodies,
   type PackedArrayBody,
-} from './variantParser.js';
+} from './variant/variantParser.js';

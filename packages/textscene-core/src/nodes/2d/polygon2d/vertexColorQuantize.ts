@@ -5,7 +5,7 @@
  * precedes shading, lighting and blending.
  */
 
-import { unitByte } from '../../../godot/unitByte';
+import { unitByte } from '../../../godot/variant/unitByte';
 
 export interface QuantizableColor {
   r: number;

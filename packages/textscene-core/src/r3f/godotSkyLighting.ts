@@ -7,7 +7,7 @@
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
-import { MAX_ROUGHNESS_LOD } from '../godot/skyReflection.js';
+import { MAX_ROUGHNESS_LOD } from '../godot/rendering/environment/skyReflection.js';
 import { glslFloat } from '../utils/glslLiterals.js';
 import {
   SKY_CONTRIBUTION_UNIFORM,

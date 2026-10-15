@@ -6,7 +6,7 @@
 
 import type { ControlColor } from '../control/types';
 import { godotNamedColor } from '../../../../utils/godotNamedColor';
-import { stringToFloat, stringToInt } from '../../../../godot/string';
+import { stringToFloat, stringToInt } from '../../../../godot/string/string';
 
 /** One currently-open BBCode tag. `value` is the `[name=value]` payload, if the tag carries one. */
 export interface OpenBBCodeTag {

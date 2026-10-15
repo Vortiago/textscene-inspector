@@ -24,12 +24,12 @@ import {
   castsSunShadowFrom,
   drawsColour,
 } from '../../../r3f/testing/threePasses';
-import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../../../godot/opaquePrepass';
+import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../../../godot/rendering/opaquePrepass';
 import {
   NO_VISIBILITY_RANGE,
   VisibilityRangeFadeMode,
   type VisibilityRange,
-} from '../../../godot/visibilityRange';
+} from '../../../godot/rendering/visibilityRange';
 
 const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
 vi.mock('../../../r3f/controls/native/text/sceneFontLoader', () => ({
