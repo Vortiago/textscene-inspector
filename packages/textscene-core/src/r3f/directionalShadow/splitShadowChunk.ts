@@ -4,8 +4,9 @@
  * blends into the next over its last tenth, and narrows a far split's filter
  * (`scene_forward_clustered.glsl:2403-2478`, the branch without soft shadows). It samples each split
  * through `sample_directional_pcf_shadow` (`:2443`, `:2477`). A sun with an angular distance takes
- * the branch with soft shadows instead (`:2310-2398`). `fitDirectionalShadowSplits.ts` lays out the
- * per-slot values the lookup reads.
+ * the branch with soft shadows instead (`:2310-2398`). Either shadow then fades out across the far end
+ * of the last split (`:2491`). `fitDirectionalShadowSplits.ts` lays out the per-slot values the lookup
+ * reads.
  */
 
 import { installChunkPatch, onChunk } from '../shaderPatch/chunkPatch.js';
@@ -18,6 +19,7 @@ import {
   installSunShadowUniforms,
   SLOT_MATRIX_ROWS,
   SUN_RANGE_BEGINS,
+  SUN_SHADOW_FADES,
   SUN_SHADOW_ROWS,
   SUN_SOFT_SHADOWS,
 } from './sunShadowUniforms.js';
@@ -160,11 +162,25 @@ const GODOT_SUN_SOFT_SHADOW = `
 `;
 
 /**
+ * How far a sun's shadow fades out at the fragment's view depth, from 0 to 1 (`:2491`), between the
+ * camera depths `sunShadowUniforms.ts` writes per sun. A fade whose ends do not ascend is no fade:
+ * that covers a sun no fit has placed, and keeps `smoothstep` defined.
+ */
+const GODOT_SUN_FADE = `
+\t\tuniform vec2 ${SUN_SHADOW_FADES}[ NUM_SUN_LIGHT_SHADOWS ];
+\t\tfloat godotSunShadowFadeOut( int shadowIndex ) {
+\t\t\tvec2 fade = ${SUN_SHADOW_FADES}[ shadowIndex ];
+\t\t\treturn fade.y > fade.x ? smoothstep( fade.x, fade.y, vSunShadowWorldPosition.w ) : 0.0;
+\t\t}
+`;
+
+/**
  * The replacement. `getSunShadow` takes the soft shadow for a sun with an angle, and the split
- * selection otherwise. The split is the first whose far end lies past the fragment's depth, and slot 3
- * takes everything beyond slot 2 (`:2408-2440`). Without blending, a split's filter radius scales
- * by the first split's far end over its own (`:2422-2443`). A blending split mixes in the next one
- * (`:2445-2478`), sampled only inside the band, where its weight is above zero.
+ * selection otherwise, and fades either out. A fragment past the fade samples nothing. The split is
+ * the first whose far end lies past the fragment's depth, and slot 3 takes everything beyond slot 2
+ * (`:2408-2440`). Without blending, a split's filter radius scales by the first split's far end over
+ * its own (`:2422-2443`). A blending split mixes in the next one (`:2445-2478`), sampled only inside
+ * the band, where its weight is above zero.
  */
 const GODOT_LOOKUP = `${GODOT_SLOT_MATRIX}${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOKUP}
 \t\t\t#if defined( SHADOWMAP_TYPE_PCF )
@@ -229,6 +245,7 @@ const GODOT_LOOKUP = `${GODOT_SLOT_MATRIX}${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOK
 
 \t\t}
 ${GODOT_SUN_SOFT_SHADOW}
+${GODOT_SUN_FADE}
 \t\tfloat getSunShadow(
 \t\t\t#if defined( SHADOWMAP_TYPE_PCF )
 \t\t\t\tsampler2DShadow shadowMap,
@@ -239,10 +256,12 @@ ${GODOT_SUN_SOFT_SHADOW}
 \t\t\tint shadowIndex
 \t\t) {
 
+\t\t\tfloat fadeOut = godotSunShadowFadeOut( shadowIndex );
+\t\t\tif ( fadeOut >= 1.0 ) return 1.0;
 \t\t\t${SOFT_SHADOW_BLOCK}
-\t\t\t\tif ( ${SUN_SOFT_SHADOWS}[ shadowIndex ].w > 0.0 ) return godotSunSoftShadow( shadowMap, sunLightShadow, shadowIndex );
+\t\t\t\tif ( ${SUN_SOFT_SHADOWS}[ shadowIndex ].w > 0.0 ) return mix( godotSunSoftShadow( shadowMap, sunLightShadow, shadowIndex ), 1.0, fadeOut );
 \t\t\t#endif
-\t\t\treturn godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex );
+\t\t\treturn mix( godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex ), 1.0, fadeOut );
 
 \t\t}
 `;
@@ -260,10 +279,9 @@ function godotSplitShadowChunk(chunk: string): string | null {
 
 /**
  * Installs the soft shadow filter, then replaces three's chunk, for every program compiled after the
- * call, and gives the slot rows and the soft shadow's arrays to every built-in lit material. A three
- * release that rewrites the lookup keeps its own chunk, and `splitShadowChunk.test.ts` fails on that
- * release. A second call changes nothing. The patch touches only the sun block, so it composes with
- * the fade in `shadowFade.ts` in either install order.
+ * call, and gives the arrays the lookup reads to every built-in lit material. A three release that
+ * rewrites the lookup keeps its own chunk, and `splitShadowChunk.test.ts` fails on that release. A
+ * second call changes nothing.
  */
 export function installGodotSplitShadow(): void {
   if (!installSoftShadowFilter()) return;
