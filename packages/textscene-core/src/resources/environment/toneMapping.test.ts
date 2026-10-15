@@ -5,7 +5,13 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { applyToneMapping, toneMappingFor, toneMappingProgramKey } from './toneMapping';
+import {
+  applyToneMapping,
+  installToneCurve,
+  toneMappingFor,
+  toneMappingProgramKey,
+  worldToneMapping,
+} from './toneMapping';
 import type { ToneMappedRenderer } from './toneMapping';
 import {
   GodotToneMapper,
@@ -203,6 +209,52 @@ describe('applyToneMapping', () => {
     });
     applyToneMapping(gl, { mode: 0, exposure: 1 });
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('installToneCurve', () => {
+  afterEach(() => {
+    THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
+  });
+
+  it('installs the curve and the exposure but leaves the renderer\u2019s mapping to the compositor', () => {
+    const gl = fakeRenderer();
+    const before = THREE.ShaderChunk.tonemapping_pars_fragment;
+    const restore = installToneCurve(gl, { mode: 2, exposure: 1.5 });
+    expect(gl.toneMapping).toBe(THREE.NoToneMapping);
+    expect(gl.toneMappingExposure).toBe(1.5);
+    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(/exposure_bias/);
+    restore();
+    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toBe(before);
+    expect(gl.toneMappingExposure).toBe(1);
+  });
+});
+
+describe('worldToneMapping', () => {
+  afterEach(() => {
+    THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
+  });
+
+  it('answers the installed curve while the compositor holds the renderer at NoToneMapping', () => {
+    const gl = fakeRenderer();
+    const restore = installToneCurve(gl, { mode: 2, exposure: 1 });
+    expect(worldToneMapping(gl)).toBe(THREE.CustomToneMapping);
+    restore();
+  });
+
+  it('answers LINEAR as NoToneMapping, whatever the renderer holds', () => {
+    const gl = fakeRenderer();
+    gl.toneMapping = THREE.CustomToneMapping;
+    const restore = installToneCurve(gl, { mode: GodotToneMapper.LINEAR, exposure: 1 });
+    expect(worldToneMapping(gl)).toBe(THREE.NoToneMapping);
+    restore();
+  });
+
+  it('falls back to the renderer\u2019s mapping once the curve is restored', () => {
+    const gl = fakeRenderer();
+    gl.toneMapping = THREE.ReinhardToneMapping;
+    installToneCurve(gl, { mode: 2, exposure: 1 })();
+    expect(worldToneMapping(gl)).toBe(THREE.ReinhardToneMapping);
   });
 });
 

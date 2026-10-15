@@ -42,6 +42,7 @@ import type { SubViewportProperties } from './types';
 import { viewportTargetSize } from './targetSize';
 import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
+import { worldToneMapping } from '../../../resources/environment/toneMapping';
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -169,10 +170,10 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
         clearColor,
         transparentBg,
         // Godot tonemaps through the environment `find_world_3d()` resolves. A
-        // shared world's curve is the renderer's current one. An own world has no
-        // Environment, so LINEAR. Canvas items draw after the 3D tonemap pass, so
-        // a 2D canvas gets none.
-        toneMapping: properties.own_world_3d || kind === '2d' ? THREE.NoToneMapping : undefined,
+        // shared world's curve is the environment's, which the glow compositor keeps
+        // off the renderer. An own world has no Environment, so LINEAR. Canvas items
+        // draw after the 3D tonemap pass, so a 2D canvas gets none.
+        toneMapping: properties.own_world_3d || kind === '2d' ? THREE.NoToneMapping : worldToneMapping(gl),
         // `applyProps` stamps `SRGBColorSpace` on a texture bound to an albedo
         // `map`. With `isXRRenderTarget`, three reads this pass's output space
         // from that tag, so the stamp would add an sRGB OETF (1.5-6.5x too bright).

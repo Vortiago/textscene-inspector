@@ -1,0 +1,71 @@
+/**
+ * The glow map as the composite samples it: Godot binds the texture's non-sRGB view, clamped
+ * (`renderer_scene_render_rd.cpp:707`, `tone_mapper.cpp:177`).
+ */
+
+import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
+import { glowParamsFor } from '../../resources/environment/godotGlow';
+import { decodeEnvironment } from '../../resources/environment/decode';
+import { createEnvironmentSettings } from '../../resources/environment/build';
+import { GodotToneMapper } from '../../resources/environment/godotToneMapping';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+
+function effectWith(properties: Record<string, string>) {
+  const settings = createEnvironmentSettings(
+    decodeEnvironment({ glow_enabled: 'true', ...properties }),
+    DEFAULT_CLEAR_COLOR
+  );
+  return new GodotToneMapEffect({
+    glow: glowParamsFor(settings),
+    adjustments: null,
+    toneMapping: { mode: GodotToneMapper.FILMIC, white: 1 },
+    exposure: 1,
+  });
+}
+
+function srgbTexture(): THREE.Texture {
+  const texture = new THREE.DataTexture(new Uint8Array([255, 0, 0, 255]), 1, 1);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function sampledMap(effect: GodotToneMapEffect): THREE.Texture {
+  return effect.uniforms.get('godotGlowMap')!.value as THREE.Texture;
+}
+
+const MAP = { glow_map: 'SubResource("Gradient_1")' };
+
+describe('glowMapView', () => {
+  it('samples the raw texels, clamped, without touching the shared texture', () => {
+    const shared = srgbTexture();
+    const view = glowMapView(shared);
+    expect(view.colorSpace).toBe(THREE.NoColorSpace);
+    expect(view.wrapS).toBe(THREE.ClampToEdgeWrapping);
+    expect(shared.colorSpace).toBe(THREE.SRGBColorSpace);
+  });
+});
+
+describe('GodotToneMapEffect.setGlowMap', () => {
+  it('samples the map it is given', () => {
+    const effect = effectWith(MAP);
+    const map = srgbTexture();
+    effect.setGlowMap(map);
+    expect(sampledMap(effect)).toBe(map);
+  });
+
+  it('samples white while the map loads, which leaves the glow unscaled', () => {
+    const effect = effectWith(MAP);
+    effect.setGlowMap(null);
+    expect(Array.from((sampledMap(effect) as THREE.DataTexture).image.data as Uint8Array)).toEqual([
+      255, 255, 255, 255,
+    ]);
+  });
+
+  it('binds no map when the environment names none (edge case)', () => {
+    const effect = effectWith({});
+    effect.setGlowMap(srgbTexture());
+    expect(effect.uniforms.has('godotGlowMap')).toBe(false);
+  });
+});

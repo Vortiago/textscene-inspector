@@ -57,6 +57,10 @@ export interface GlowParams {
    * one value, and the composite must not apply it to the glow a second time.
    */
   exposure: number;
+  /** The `glow_map` reference the composite samples, resolved by the render layer. */
+  map: string | undefined;
+  /** Zero without a map, as Godot sets it (`renderer_scene_render_rd.cpp:705-710`). */
+  mapStrength: number;
 }
 
 /**
@@ -120,23 +124,17 @@ export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null 
     intensity: blendMode === GlowBlendMode.MIX ? clamp(glow.mix, 0, 1) : glow.intensity,
     blendMode,
     exposure: settings.toneMapping.exposure,
+    map: glow.map,
+    mapStrength: glow.map ? glow.mapStrength : 0,
   };
 }
 
-/**
- * Whether this glow changes the frame everywhere, so a consumer cannot skip it when
- * nothing in the scene is bright enough to bloom.
- */
-export function glowNeedsEveryPixel(params: GlowParams): boolean {
-  return (
-    // `glow_bloom` floors the bright-pass feedback, so every pixel enters the buffer.
-    params.bloom > 0 ||
-    // REPLACE and MIX rewrite every pixel even when the glow buffer is black.
-    params.blendMode === GlowBlendMode.REPLACE ||
-    params.blendMode === GlowBlendMode.MIX ||
-    // Below 1 it catches lit surfaces, and the emissive scan reads only emission.
-    params.hdrThreshold < 1
-  );
+/** Godot skips the map at or below this strength (`tonemap.glsl:885`). */
+const GLOW_MAP_EPSILON = 0.001;
+
+/** Whether the composite scales the glow by `glow_map`. */
+export function samplesGlowMap(params: GlowParams): boolean {
+  return params.mapStrength > GLOW_MAP_EPSILON;
 }
 
 /**
@@ -146,15 +144,6 @@ export function glowNeedsEveryPixel(params: GlowParams): boolean {
  */
 export function blendsAfterToneMapping(params: GlowParams): boolean {
   return params.blendMode === GlowBlendMode.SOFTLIGHT;
-}
-
-/**
- * `glow_hdr_threshold` restated for unexposed colour. The bright pass multiplies by
- * `glow_exposure` before the comparison, so code that inspects colour upstream of it
- * needs this bar, or it disagrees with the shader about what blooms.
- */
-export function unexposedBrightPassThreshold(params: GlowParams): number {
-  return params.hdrThreshold / Math.max(params.exposure, GLSL_EPSILON);
 }
 
 /**

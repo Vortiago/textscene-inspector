@@ -49,14 +49,63 @@ export function applyToneMapping(
   scene?: THREE.Object3D
 ): () => void {
   const previousMapping = gl.toneMapping;
+  const mapping = toneMappingFor(settings.mode);
+  const restoreCurve = swapToneCurve(gl, settings);
+  if (mapping !== previousMapping) gl.toneMapping = mapping;
+  const changed = mapping !== previousMapping || mapping === THREE.CustomToneMapping;
+  if (changed) markMaterialsDirty(scene);
+
+  return () => {
+    restoreCurve();
+    if (gl.toneMapping !== previousMapping) gl.toneMapping = previousMapping;
+    if (changed) markMaterialsDirty(scene);
+  };
+}
+
+/**
+ * Written only by `swapToneCurve`, and restored by its undo. The mapping the shared world
+ * tonemaps with, kept apart from `gl.toneMapping`, which the glow compositor holds at
+ * `NoToneMapping` while its own pass applies the curve.
+ */
+const worldToneMappings = new WeakMap<ToneMappedRenderer, THREE.ToneMapping>();
+
+/**
+ * The mapping a pass that renders the shared world without the compositor applies: a
+ * `SubViewport` target, which Godot tonemaps with the environment of its `find_world_3d()`.
+ * The renderer's own mapping when no environment has installed a curve.
+ */
+export function worldToneMapping(gl: ToneMappedRenderer): THREE.ToneMapping {
+  return worldToneMappings.get(gl) ?? gl.toneMapping;
+}
+
+/**
+ * Installs the environment's curve and exposure, and records its mapping for
+ * `worldToneMapping`, but leaves `gl.toneMapping` to its owner. Returns the undo.
+ */
+export function installToneCurve(
+  gl: ToneMappedRenderer,
+  settings: ToneMappingSettings,
+  scene?: THREE.Object3D
+): () => void {
+  const custom = toneMappingFor(settings.mode) === THREE.CustomToneMapping;
+  const restoreCurve = swapToneCurve(gl, settings);
+  if (custom) markMaterialsDirty(scene);
+  return () => {
+    restoreCurve();
+    if (custom) markMaterialsDirty(scene);
+  };
+}
+
+/** The chunk, exposure and world-mapping half of both installs, with no material marked. */
+function swapToneCurve(gl: ToneMappedRenderer, settings: ToneMappingSettings): () => void {
   const previousExposure = gl.toneMappingExposure;
   const previousChunk = THREE.ShaderChunk[TONEMAP_CHUNK];
+  const previousWorldMapping = worldToneMappings.get(gl);
 
   const mapping = toneMappingFor(settings.mode);
   const exposure = settings.exposure ?? 1;
-  const custom = mapping === THREE.CustomToneMapping;
 
-  if (custom) {
+  if (mapping === THREE.CustomToneMapping) {
     keyProgramsOnToneMappingChunk();
     THREE.ShaderChunk[TONEMAP_CHUNK] = toneMappingShaderChunk(
       settings.mode,
@@ -64,17 +113,14 @@ export function applyToneMapping(
       settings.agxContrast
     );
   }
-
-  const changed = mapping !== previousMapping || custom;
-  if (mapping !== previousMapping) gl.toneMapping = mapping;
   if (exposure !== previousExposure) gl.toneMappingExposure = exposure;
-  if (changed) markMaterialsDirty(scene);
+  worldToneMappings.set(gl, mapping);
 
   return () => {
     THREE.ShaderChunk[TONEMAP_CHUNK] = previousChunk;
-    if (gl.toneMapping !== previousMapping) gl.toneMapping = previousMapping;
     if (gl.toneMappingExposure !== previousExposure) gl.toneMappingExposure = previousExposure;
-    if (changed) markMaterialsDirty(scene);
+    if (previousWorldMapping === undefined) worldToneMappings.delete(gl);
+    else worldToneMappings.set(gl, previousWorldMapping);
   };
 }
 

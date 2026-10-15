@@ -67,6 +67,8 @@ export function createEnvironmentSettings(
           hdrThreshold: properties.glow_hdr_threshold,
           hdrScale: properties.glow_hdr_scale,
           luminanceCap: properties.glow_hdr_luminance_cap,
+          map: properties.glow_map,
+          mapStrength: properties.glow_map_strength,
         }
       : null,
   };
