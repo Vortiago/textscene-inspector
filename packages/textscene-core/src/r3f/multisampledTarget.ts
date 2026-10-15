@@ -20,10 +20,10 @@ type ColourStorage = THREE.PixelFormatGPU;
  * The target `create` builds, multisampled at the count the device draws for `mode` on that target's
  * storage. `create` is stable while the target stays valid. The hook owns the target and disposes it.
  */
-export function useMultisampledTarget(
+export function useMultisampledTarget<Target extends THREE.WebGLRenderTarget>(
   mode: number,
-  create: () => THREE.WebGLRenderTarget
-): THREE.WebGLRenderTarget {
+  create: () => Target
+): Target {
   const gl = useThree((state) => state.gl);
   const target = useMemo(() => {
     const built = create();
@@ -46,7 +46,7 @@ export function useSampleCount(mode: number, type: THREE.TextureDataType): numbe
 /**
  * Three's `getInternalFormat` for an RGBA texture (`WebGLTextures.js:129`). A target that takes output
  * like the drawing buffer stores an 8-bit sRGB tag linear (`:2120`), so such a target is linear or
- * pins its format, as `canvasMsaaFrame.ts` pins RGBA8.
+ * pins its format, as `CanvasMsaaFrame` pins RGBA8.
  */
 function colourStorage(texture: TargetTexture): ColourStorage {
   if (texture.internalFormat !== null) return texture.internalFormat;

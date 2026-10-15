@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { createCanvasMsaaFrame, createFrameTarget } from './canvasMsaaFrame';
+import { CanvasMsaaFrame } from './canvasMsaaFrame';
 
 type Target = THREE.WebGLRenderTarget | null;
 
@@ -28,26 +28,28 @@ function recordingRenderer(width: number, height: number) {
 const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera();
 
-function multisampledFrameTarget(samples: number): THREE.WebGLRenderTarget {
-  const target = createFrameTarget();
-  target.samples = samples;
-  return target;
+/** A frame at `samples`, as `useMultisampledTarget` sets them. */
+function multisampledFrame(samples: number): CanvasMsaaFrame {
+  const frame = new CanvasMsaaFrame();
+  frame.samples = samples;
+  return frame;
 }
 
-describe('createCanvasMsaaFrame', () => {
-  it('draws the world into the multisampled target at the drawing buffer size', () => {
+describe('CanvasMsaaFrame', () => {
+  it('draws the world into itself at the drawing buffer size', () => {
     const { gl, draws } = recordingRenderer(640, 360);
-    const frame = createCanvasMsaaFrame(multisampledFrameTarget(4));
+    const frame = multisampledFrame(4);
 
     frame.render(gl, scene, camera);
 
-    expect(draws[0]).toMatchObject({ drawn: scene, target: { samples: 4, width: 640, height: 360 } });
+    expect(draws[0]).toMatchObject({ drawn: scene, target: frame });
+    expect(frame).toMatchObject({ samples: 4, width: 640, height: 360 });
     frame.dispose();
   });
 
   it('stores sRGB-encoded values in RGBA8, so items blend in the space the drawing buffer blends in', () => {
     const { gl, draws } = recordingRenderer(64, 64);
-    const frame = createCanvasMsaaFrame(multisampledFrameTarget(2));
+    const frame = multisampledFrame(2);
 
     frame.render(gl, scene, camera);
 
@@ -59,7 +61,7 @@ describe('createCanvasMsaaFrame', () => {
 
   it('copies the resolved frame to the drawing buffer after the world draws', () => {
     const { gl, draws } = recordingRenderer(64, 64);
-    const frame = createCanvasMsaaFrame(multisampledFrameTarget(2));
+    const frame = multisampledFrame(2);
 
     frame.render(gl, scene, camera);
 
@@ -70,7 +72,7 @@ describe('createCanvasMsaaFrame', () => {
   });
 
   it('follows the drawing buffer when the canvas resizes (edge case)', () => {
-    const frame = createCanvasMsaaFrame(multisampledFrameTarget(4));
+    const frame = multisampledFrame(4);
     frame.render(recordingRenderer(64, 64).gl, scene, camera);
     const resized = recordingRenderer(128, 32);
 
