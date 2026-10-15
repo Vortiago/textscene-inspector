@@ -6,6 +6,7 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { DEMO_CATEGORY_LABELS } from './generate-fixtures/demoCategories.mjs';
+import { fixtureProjects } from './generate-fixtures/fixtureProjects.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -116,6 +117,9 @@ const fixturesDir = join(rootDir, 'scenes/fixtures');
 const fixtureFiles = readdirSync(fixturesDir)
   .filter((f) => f.endsWith('.tscn'))
   .sort();
+
+// A Fixture project is the exception: its scenes are listed under its own root.
+const fixtureProjectDirs = fixtureProjects(fixturesDir);
 
 // Every ld-58 scene at any depth is selectable. `file` is the res://-relative
 // path with forward slashes, which matches the closure copy-fixtures mirrors
@@ -289,6 +293,19 @@ const fixtures = [
     file,
     category: detectCategory(file),
   })),
+  ...fixtureProjectDirs.flatMap((root) =>
+    walkTscn(join(fixturesDir, root))
+      .sort()
+      .map((rel) => {
+        const basename = rel.split('/').pop();
+        return {
+          name: generateName(basename),
+          file: `${root}/${rel}`,
+          category: detectCategory(basename),
+          root,
+        };
+      })
+  ),
   ...isometricFiles.map((file) => ({
     name: generateName(file.split('/').pop().replace(/_/g, '-')),
     file,

@@ -1,0 +1,42 @@
+[gd_scene format=3 uid="uid://unitworldenvmissing"]
+
+; A WorldEnvironment whose Environment .tres does not exist. Godot loads no Environment, so the node
+; never joins the world's group (world_environment.cpp:40-41) and the root draws with none, as in
+; unit-world-environment-none.tscn. Every other golden's reference resolves, so only this one shows
+; a reference that never loads. The two goldens draw the same pixels.
+
+[ext_resource type="Environment" path="res://missing_environment.tres" id="1_env"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_dark"]
+shading_mode = 0
+albedo_color = Color(0.25, 0.25, 0.25, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_mid"]
+shading_mode = 0
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_light"]
+shading_mode = 0
+albedo_color = Color(0.75, 0.75, 0.75, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("1_env")
+
+[node name="Dark" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.4, 0, 0)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_dark")
+
+[node name="Mid" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_mid")
+
+[node name="Light" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 0, 0)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_light")

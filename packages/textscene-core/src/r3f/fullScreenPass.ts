@@ -57,11 +57,14 @@ export function fullScreenDepthPass(
   return pass;
 }
 
-/** Draws `pass` into `layer` (a cube face or a 3D slice) and `mip` of `target`. */
+/**
+ * Draws `pass` into `layer` (a cube face or a 3D slice) and `mip` of `target`. A null `target` is
+ * the drawing buffer.
+ */
 export function drawFullScreen(
   renderer: THREE.WebGLRenderer,
   pass: THREE.ShaderMaterial,
-  target: THREE.WebGLRenderTarget,
+  target: THREE.WebGLRenderTarget | null,
   layer = 0,
   mip = 0
 ): void {

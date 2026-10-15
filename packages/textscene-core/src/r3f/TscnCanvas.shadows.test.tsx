@@ -51,6 +51,22 @@ function ShadowMapProbe({ seen }: { seen: { type: THREE.ShadowMapType; enabled: 
   return null;
 }
 
+describe('<TscnCanvas> multisampling', () => {
+  it("asks for a drawing buffer with no multisampling, as Godot's msaa_3d defaults to Disabled", () => {
+    // rendering_server.cpp:3774. A project that turns MSAA on gets it from the compositor's
+    // multisampled buffer, never from the drawing buffer.
+    expect(CANVAS_TAG).toMatch(/antialias:\s*false/);
+  });
+});
+
+describe('<TscnCanvas> tone mapping', () => {
+  it('asks for no tone curve of its own, as Godot draws a root with no Environment linear', () => {
+    // tone_mapper.h:177 defaults to LINEAR, and only an Environment changes it
+    // (renderer_scene_render_rd.cpp:724-731). R3F applies ACES unless the canvas is `flat`.
+    expect(CANVAS_TAG).toMatch(/\sflat[\s>]/);
+  });
+});
+
 describe('<TscnCanvas> shadows', () => {
   it('asks the <Canvas> for the percentage preset', () => {
     expect(CANVAS_TAG).not.toBe('');

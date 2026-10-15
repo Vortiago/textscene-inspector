@@ -353,13 +353,13 @@ uploads the scene, links each lit program's fragment shader again with a vertex 
 declares its outputs, and packs its active non-sampler uniforms by A.7, as ANGLE's
 `VariablePacker` does. It prints the highest of the lit programs each scene compiles:
 
-| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with five maps, clearcoat, a sky and fog |
-| ------------- | ---------------------- | --------------------------------------------------------------- |
-| 1             | 33                     | 59                                                              |
-| 8             | 173                    | 199                                                             |
-| 9 (8 sun shadows drawn) | 173 | 199 |
-| 1, soft       | 35                     | 61                                                              |
-| 8, soft       | 189                    | 215                                                             |
+| Shadowed suns           | `MeshStandardMaterial` | `MeshPhysicalMaterial` with five maps, clearcoat, a sky and fog |
+| ----------------------- | ---------------------- | --------------------------------------------------------------- |
+| 1                       | 33                     | 59                                                              |
+| 8                       | 173                    | 199                                                             |
+| 9 (8 sun shadows drawn) | 173                    | 199                                                             |
+| 1, soft                 | 35                     | 61                                                              |
+| 8, soft                 | 189                    | 215                                                             |
 
 A scene without a light draws the preview sun, so it counts as one sun. The ninth sun leaves the
 shadow list. Every case fits the 224 vectors WebGL 2 guarantees. The harness's SwiftShader
