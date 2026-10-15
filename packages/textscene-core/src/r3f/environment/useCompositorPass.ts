@@ -17,7 +17,8 @@ import { compositorPassFor, type CompositorPass } from './compositorPass';
 export function useCompositorPass(settings: EnvironmentSettings | null): CompositorPass | null {
   const hasBlended = useLatchedSceneScan(sceneHasBlendedSurface);
   const draws3D = useDraws3D();
-  const msaa3D = useDeviceSampleCount(useProjectSettings().msaaSamples.msaa3D);
+  // The composer's scene buffer is half float (`EffectComposer`'s `frameBufferType`).
+  const msaa3D = useDeviceSampleCount(useProjectSettings().msaaSamples.msaa3D, 'RGBA16F');
   // Memoised, since a new glow object rebuilds the compositor's effect.
   return useMemo(
     () => (draws3D ? compositorPassFor(settings, hasBlended, msaa3D) : null),
@@ -43,6 +44,7 @@ function hasRealGlContext(gl: { getContext?: () => unknown }): boolean {
     const ctx = gl.getContext?.() as { getContextAttributes?: () => unknown } | null;
     return !!ctx && typeof ctx.getContextAttributes === 'function' && !!ctx.getContextAttributes();
   } catch {
+    // A mock renderer's `getContext` can throw, and a canvas with no context draws no 3D passes.
     return false;
   }
 }
