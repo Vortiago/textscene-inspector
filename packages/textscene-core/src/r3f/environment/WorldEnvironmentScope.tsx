@@ -10,6 +10,7 @@ import { EnvironmentLayer, type EnvironmentLayerProps } from './EnvironmentLayer
 import { NoEnvironmentLayer } from './NoEnvironmentLayer';
 import { PreviewEnvironment } from '../preview/PreviewEnvironment';
 import { usePreviewYield } from '../preview/usePreviewYield';
+import { compareTreeOrder, useTreeOrder, type TreeOrder } from '../contexts/TreeOrderContext';
 
 /**
  * What a WorldEnvironment's `environment` resolves to. `none` is no reference, a `.tres` that
@@ -18,15 +19,18 @@ import { usePreviewYield } from '../preview/usePreviewYield';
 export type EnvironmentResolution =
   { status: 'pending' } | { status: 'none' } | { status: 'resolved'; environment: EnvironmentLayerProps };
 
-const NONE: EnvironmentResolution = { status: 'none' };
+/** The one `pending` and `none` value, so an unchanged resolution publishes nothing. */
+export const PENDING_ENVIRONMENT: EnvironmentResolution = { status: 'pending' };
+export const NO_ENVIRONMENT: EnvironmentResolution = { status: 'none' };
 
 interface Publication {
   key: object;
+  order: TreeOrder;
   resolution: EnvironmentResolution;
 }
 
 interface Publisher {
-  publish(key: object, resolution: EnvironmentResolution): void;
+  publish(publication: Publication): void;
   withdraw(key: object): void;
 }
 
@@ -34,19 +38,22 @@ const PublisherContext = createContext<Publisher | null>(null);
 const PublicationsContext = createContext<readonly Publication[]>([]);
 
 /**
- * The publications of one world, in mount order: the tree order Godot's group keeps. A changed
- * resolution keeps its place, so the first WorldEnvironment stays first while its `.tres` loads.
+ * The publications of one world, in tree order: Godot's group sorts its nodes so, an ancestor
+ * first (`scene_tree.cpp:1568-1581`). React's mount order differs for a sub-scene that loads late
+ * and for a child, whose effects run before its parent's.
  */
 function WorldEnvironmentRegistry({ children }: { children: ReactNode }) {
   const [publications, setPublications] = useState<readonly Publication[]>([]);
   const publisher = useMemo(
     (): Publisher => ({
-      publish: (key, resolution) =>
+      publish: (publication) =>
         setPublications((current) => {
-          const index = current.findIndex((entry) => entry.key === key);
-          if (index < 0) return [...current, { key, resolution }];
-          if (current[index]!.resolution === resolution) return current;
-          return current.map((entry, i) => (i === index ? { key, resolution } : entry));
+          const previous = current.find((entry) => entry.key === publication.key);
+          if (previous && isSamePublication(previous, publication)) return current;
+          const next = previous
+            ? current.map((entry) => (entry === previous ? publication : entry))
+            : [...current, publication];
+          return next.sort((a, b) => compareTreeOrder(a.order, b.order));
         }),
       withdraw: (key) => setPublications((current) => current.filter((entry) => entry.key !== key)),
     }),
@@ -64,8 +71,13 @@ export function usePublishEnvironment(resolution: EnvironmentResolution): void {
   const publisher = useContext(PublisherContext);
   if (!publisher) throw new Error('expected a world environment scope above a WorldEnvironment, found none');
   const [key] = useState(() => ({}));
+  const order = useTreeOrder();
   useLayoutEffect(() => () => publisher.withdraw(key), [publisher, key]);
-  useLayoutEffect(() => publisher.publish(key, resolution), [publisher, key, resolution]);
+  useLayoutEffect(() => publisher.publish({ key, order, resolution }), [publisher, key, order, resolution]);
+}
+
+function isSamePublication(a: Publication, b: Publication): boolean {
+  return a.resolution === b.resolution && compareTreeOrder(a.order, b.order) === 0;
 }
 
 /** The world's Environment: null with no WorldEnvironment, `none` when none holds a valid one. */
@@ -73,7 +85,7 @@ function useWorldEnvironment(): EnvironmentResolution | null {
   const publications = useContext(PublicationsContext);
   return useMemo(() => {
     if (publications.length === 0) return null;
-    return publications.find((entry) => entry.resolution.status !== 'none')?.resolution ?? NONE;
+    return publications.find((entry) => entry.resolution.status !== 'none')?.resolution ?? NO_ENVIRONMENT;
   }, [publications]);
 }
 
@@ -97,8 +109,8 @@ function RootEnvironment() {
 }
 
 /**
- * A sub-viewport's portal world. Its pass sets its own clear colour and tonemap, so only a resolved
- * Environment adds a layer here, and a missing one leaves the root's clear colour alone.
+ * A sub-viewport's portal world. Its pass sets its own clear colour, so only a resolved Environment
+ * adds a layer here, and a missing one leaves the root's clear colour alone.
  */
 export function ViewportEnvironmentScope({ children }: { children: ReactNode }) {
   return (
