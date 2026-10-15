@@ -1,0 +1,41 @@
+[gd_scene format=3]
+
+; One variable: ADD emission with both a lit colour and a texture. Godot emits
+; `(emission.rgb + emission_tex) * emission_energy` (`material.cpp:1788`), so each texel adds to the
+; dark red colour: blue reads magenta, green reads amber, and black reads the red alone. A multiply
+; would draw the blue and green texels black. The other emission scenes give a texture a black
+; colour, or MULTIPLY, or no texture, so none shows the sum.
+
+[sub_resource type="Image" id="Image_texels"]
+data = {
+"data": PackedByteArray(0, 0, 96, 0, 96, 0, 0, 0, 0, 48, 48, 48),
+"format": "RGB8",
+"height": 2,
+"mipmaps": false,
+"width": 2
+}
+
+[sub_resource type="ImageTexture" id="ImageTexture_texels"]
+image = SubResource("Image_texels")
+
+[sub_resource type="QuadMesh" id="QuadMesh_square"]
+size = Vector2(2, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_add"]
+albedo_color = Color(0, 0, 0, 1)
+metallic_specular = 0.0
+emission_enabled = true
+emission = Color(0.5, 0, 0, 1)
+emission_texture = SubResource("ImageTexture_texels")
+texture_filter = 0
+
+[node name="EmissionAdd" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+projection = 1
+size = 3.0
+
+[node name="Square" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_square")
+surface_material_override/0 = SubResource("StandardMaterial3D_add")

@@ -63,7 +63,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // the canvas filter blends undecoded sRGB bytes (`canvas2DTextureDecode.ts`),
   // and QuadMesh multiplies the filtered sample in sRGB through `useCanvasSrgbDefines`.
   const samplerClone = useMemo(
-    () => spriteSamplerClone(sourceTexture ?? undefined, 'clamp', THREE.NoColorSpace),
+    () => (sourceTexture ? spriteSamplerClone(sourceTexture, 'clamp', THREE.NoColorSpace) : undefined),
     [sourceTexture]
   );
   // One clone per texture, not per frame: `useUploadedClone` uploads a large one in

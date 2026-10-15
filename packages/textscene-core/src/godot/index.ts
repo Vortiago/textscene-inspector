@@ -174,7 +174,7 @@ export {
   spotShadowDepthBias,
   type PositionalSoftShadow,
 } from './rendering/lights/positionalShadow.js';
-export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './rendering/texture.js';
+export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS, formatHasSrgbView } from './rendering/texture.js';
 export { VIEWPORT_MIN_SIZE } from './rendering/viewport.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './scene/canvasItem.js';
 export {

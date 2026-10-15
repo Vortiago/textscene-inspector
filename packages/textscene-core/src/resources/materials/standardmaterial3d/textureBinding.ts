@@ -12,30 +12,34 @@ import {
   type UVTransform,
 } from '../../textures/applyTextureState';
 import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../textures/godotTextureFilter';
+import { sourceColorSpace } from '../../textures/sourceColorSpace';
 import { UV2_CHANNEL } from '../../meshes/uv2';
 import { bottomUpV } from '../../../godot/math/uv';
 import type { StandardMaterial3DScalars, TextureSlot } from './types';
 
 /**
- * The colour space each slot's sampler reads in: a property of the slot, never the image, so it
- * overrides the loader's tag. Only `source_color` samplers read sRGB: albedo (`scene/resources/material.cpp:969`),
- * emission (:1066) and detail albedo (:1137). Exhaustive, so a new slot fails to compile until someone
- * reads Godot's shader. `textureBinding.md` has the shader chain and every sampler.
+ * Whether each slot's sampler carries `source_color`, which reads a texture's sRGB view: albedo
+ * (`scene/resources/material.cpp:969`), emission (:1066) and detail albedo (:1137). Every other
+ * sampler reads raw. Exhaustive, so a new slot fails to compile until someone reads Godot's
+ * shader. `textureBinding.md` has the shader chain and every sampler.
  */
-const SLOT_COLOR_SPACE: Readonly<Record<TextureSlot, THREE.ColorSpace>> = {
-  albedo_texture: THREE.SRGBColorSpace,
-  emission_texture: THREE.SRGBColorSpace,
-  normal_texture: THREE.NoColorSpace,
-  roughness_texture: THREE.NoColorSpace,
-  metallic_texture: THREE.NoColorSpace,
-  ao_texture: THREE.NoColorSpace,
-  heightmap_texture: THREE.NoColorSpace,
-  anisotropy_flowmap: THREE.NoColorSpace,
+const SLOT_READS_SOURCE_COLOR: Readonly<Record<TextureSlot, boolean>> = {
+  albedo_texture: true,
+  emission_texture: true,
+  normal_texture: false,
+  roughness_texture: false,
+  metallic_texture: false,
+  ao_texture: false,
+  heightmap_texture: false,
+  anisotropy_flowmap: false,
 };
 
-/** The colour space `slot`'s sampler reads in, whatever texture it binds. */
-export function slotColorSpace(slot: TextureSlot): THREE.ColorSpace {
-  return SLOT_COLOR_SPACE[slot];
+/**
+ * The colour space `slot`'s sampler reads `texture` in. It overrides the producer's tag: sRGB only
+ * for a `source_color` slot and a texture whose format has an sRGB view.
+ */
+export function slotColorSpace(slot: TextureSlot, texture: THREE.Texture): THREE.ColorSpace {
+  return SLOT_READS_SOURCE_COLOR[slot] ? sourceColorSpace(texture) : THREE.NoColorSpace;
 }
 
 /** The texture state of the slots that sample one UV set, whose transform is always known. */
@@ -91,5 +95,5 @@ export function bindSlotTexture(
   states: MaterialTextureStates
 ): THREE.Texture {
   const material = states.uv2Slots.includes(slot) ? states.uv2 : states.uv1;
-  return applyTextureState(texture, { ...material, colorSpace: slotColorSpace(slot) });
+  return applyTextureState(texture, { ...material, colorSpace: slotColorSpace(slot, texture) });
 }

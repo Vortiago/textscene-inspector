@@ -158,7 +158,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   // GPU texture. NoColorSpace: the 2D canvas's filter blends undecoded sRGB bytes
   // (`canvas2DTextureDecode.ts`), and `useCanvasSrgbDefines` multiplies the sample in sRGB.
   const composedTexture = useMemo(
-    () => spriteSamplerClone(frameTexture ?? undefined, 'clamp', THREE.NoColorSpace),
+    () => (frameTexture ? spriteSamplerClone(frameTexture, 'clamp', THREE.NoColorSpace) : undefined),
     [frameTexture]
   );
   const displayedTexture = useUploadedClone(composedTexture ?? null);
