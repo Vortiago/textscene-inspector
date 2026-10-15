@@ -3,14 +3,13 @@
 import { layerSamples, type SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection.js';
 import { LAYER_FILTER_UNIFORMS, type LayerFilter } from './layerFilter.js';
 import { IMPORTANCE_SAMPLE_FRAGMENT_SHADER } from './skyLayerShaders.js';
-import { setUniforms, skyPass } from './skyPass.js';
+import { skyPass } from './skyPass.js';
+import { perRenderer } from '../../r3f/perRenderer.js';
 
-/** One pass for every layout, as each filter would otherwise compile it again. */
-const importanceSamplePass = skyPass(IMPORTANCE_SAMPLE_FRAGMENT_SHADER, [
-  ...LAYER_FILTER_UNIFORMS,
-  'samples',
-  'sampleCount',
-]);
+/** One pass per renderer for every layout, as each filter would otherwise compile it again. */
+const importanceSamplePassFor = perRenderer(() =>
+  skyPass(IMPORTANCE_SAMPLE_FRAGMENT_SHADER, [...LAYER_FILTER_UNIFORMS, 'samples', 'sampleCount'])
+);
 
 /** Written only by `importanceSampleFilter`, on the first bake of a layout. */
 const filtersByLayout = new Map<string, LayerFilter>();
@@ -25,11 +24,11 @@ export function importanceSampleFilter(layout: SkyOctmapLayout): LayerFilter {
   filter = {
     layout,
     chainSizes: layout.downsampledSizes,
-    pass: importanceSamplePass,
-    selectLayer(layer) {
+    passFor: importanceSamplePassFor,
+    layerUniforms(layer) {
       const samples = samplesByLayer[layer];
       if (!samples) throw new Error(`expected a layer from 0 to ${lastLayer}, got ${layer}`);
-      setUniforms(importanceSamplePass, { samples, sampleCount: samples.length / 4 });
+      return { samples, sampleCount: samples.length / 4 };
     },
   };
   filtersByLayout.set(key, filter);

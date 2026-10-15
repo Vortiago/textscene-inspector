@@ -4,6 +4,7 @@
  */
 
 import * as THREE from 'three';
+import { perRenderer } from './perRenderer.js';
 
 /**
  * Maps the unit plane onto NDC, and hands the fragment shader the target's uv, 0 to 1, as `vUv`.
@@ -17,23 +18,15 @@ void main() {
 }
 `;
 
-/**
- * The quad each renderer draws every pass with, written only by `quadFor`. One per renderer, not one
- * for the page: three leaves a dispose listener on a drawn geometry and material that closes over the
- * renderer, so a shared quad would keep every renderer alive. An entry goes with its renderer.
- */
-const quads = new WeakMap<THREE.WebGLRenderer, THREE.Mesh>();
 const quadCamera = new THREE.Camera();
 
-function quadFor(renderer: THREE.WebGLRenderer): THREE.Mesh {
-  const cached = quads.get(renderer);
-  if (cached) return cached;
+/** The quad a renderer draws every pass with. */
+const quadFor = perRenderer(() => {
   const quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1));
   // The quad ignores every matrix, so its bounds say nothing about where it lands.
   quad.frustumCulled = false;
-  quads.set(renderer, quad);
   return quad;
-}
+});
 
 /** A pass that overwrites its target with `fragmentShader`, reading `uniforms`. */
 export function fullScreenPass(

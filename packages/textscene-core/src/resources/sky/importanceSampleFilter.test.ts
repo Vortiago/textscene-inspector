@@ -14,23 +14,22 @@ describe('importanceSampleFilter', () => {
     const filter = importanceSampleFilter(skyOctmapLayout(256));
     const [first] = layerSamples(skyOctmapLayout(256), 3);
 
-    filter.selectLayer(3);
+    const { samples, sampleCount } = filter.layerUniforms(3);
 
-    const { samples, sampleCount } = filter.pass.uniforms;
-    expect(sampleCount!.value).toBe(layerSamples(skyOctmapLayout(256), 3).length);
-    expect(Array.from((samples!.value as Float32Array).slice(0, 4))).toEqual(
+    expect(sampleCount).toBe(layerSamples(skyOctmapLayout(256), 3).length);
+    expect(Array.from((samples as Float32Array).slice(0, 4))).toEqual(
       Array.from(Float32Array.from([...first!.direction, first!.lod]))
     );
   });
 
   it('refuses a layer past the last (error case)', () => {
-    expect(() => importanceSampleFilter(skyOctmapLayout(256)).selectLayer(8)).toThrow(
+    expect(() => importanceSampleFilter(skyOctmapLayout(256)).layerUniforms(8)).toThrow(
       'expected a layer from 0 to 7, got 8'
     );
   });
 
   it("refuses a layer past a seven-layer atlas's last (error case)", () => {
-    expect(() => importanceSampleFilter(reflectionAtlasLayout(true)).selectLayer(7)).toThrow(
+    expect(() => importanceSampleFilter(reflectionAtlasLayout(true)).layerUniforms(7)).toThrow(
       'expected a layer from 0 to 6, got 7'
     );
   });
@@ -56,9 +55,8 @@ describe('importanceSampleFilter', () => {
 
   it("reads a smaller sky's samples from sharper mips, as its texels cover more of the sphere", () => {
     const lodOf = (radianceSize: number) => {
-      const filter = importanceSampleFilter(skyOctmapLayout(radianceSize));
-      filter.selectLayer(3);
-      return (filter.pass.uniforms.samples!.value as Float32Array)[3]!;
+      const { samples } = importanceSampleFilter(skyOctmapLayout(radianceSize)).layerUniforms(3);
+      return (samples as Float32Array)[3]!;
     };
 
     expect(lodOf(32)).toBeLessThan(lodOf(256));

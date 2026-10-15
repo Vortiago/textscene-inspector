@@ -8,10 +8,10 @@ export interface LayerFilter {
   readonly layout: SkyOctmapLayout;
   /** The width of each mip of the chain it reads, downsampled from the radiance. */
   readonly chainSizes: readonly number[];
-  /** The pass that draws a layer. */
-  readonly pass: THREE.ShaderMaterial;
-  /** Sets the uniforms of `pass` that differ from layer to layer. */
-  selectLayer(layer: number): void;
+  /** The pass that draws a layer on `renderer`. */
+  passFor(renderer: THREE.WebGLRenderer): THREE.ShaderMaterial;
+  /** The uniforms of the pass that differ from layer to layer. */
+  layerUniforms(layer: number): Record<string, unknown>;
 }
 
 /** The uniforms of the filter passes that `skyLayers` sets, for the chain and the texel. */

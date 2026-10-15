@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { drawFullScreen } from '../../r3f/fullScreenPass.js';
 import { drawOffscreen } from '../../r3f/offscreen.js';
+import { perRenderer } from '../../r3f/perRenderer.js';
 import {
   MAX_ROUGHNESS_LOD,
   skyOctmapLayout,
@@ -58,18 +59,23 @@ export function byGroup<T>(make: (group: keyof SkyLayers) => T): Record<keyof Sk
   >;
 }
 
-/** Made once, as each bake would otherwise compile them again. */
-const radianceOctmapPass = skyPass(RADIANCE_OCTMAP_FRAGMENT_SHADER, ['radiance', 'size', 'borderSize']);
-const downsamplePass = skyPass(DOWNSAMPLE_FRAGMENT_SHADER, ['source', 'size', 'borderSize']);
+/** Made once per renderer, as each bake would otherwise compile them again. */
+const radianceOctmapPassFor = perRenderer(() =>
+  skyPass(RADIANCE_OCTMAP_FRAGMENT_SHADER, ['radiance', 'size', 'borderSize'])
+);
+const downsamplePassFor = perRenderer(() =>
+  skyPass(DOWNSAMPLE_FRAGMENT_SHADER, ['source', 'size', 'borderSize'])
+);
 
 /** Godot's fast filter, or its importance-sampling filter for an octmap laid out as `layout`. */
 function layerFilter(radianceFilter: SkyBake['radianceFilter'], layout: SkyOctmapLayout): LayerFilter {
   return radianceFilter === 'fast' ? fastFilter : importanceSampleFilter(layout);
 }
 
-/** Lets go of the textures a bake set on the passes, as the passes outlive it. */
-function releasePasses(filter: LayerFilter): void {
-  for (const pass of [radianceOctmapPass, downsamplePass, filter.pass]) releaseTextures(pass);
+/** Lets go of the textures a bake set on `gl`'s passes, as the passes outlive it. */
+function releasePasses(gl: THREE.WebGLRenderer, filter: LayerFilter): void {
+  for (const passFor of [radianceOctmapPassFor, downsamplePassFor, filter.passFor])
+    releaseTextures(passFor(gl));
 }
 
 /**
@@ -135,6 +141,7 @@ export function bakeAtlasLayers(
     throw new Error(`expected an atlas layer from 0 to ${target.depth - 1}, got ${index}`);
   const filter = layerFilter(radianceFilter, layout);
   bakeFromChain(gl, radiance, layout, filter, (chain) => {
+    const radianceOctmapPass = radianceOctmapPassFor(gl);
     setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize: layout.borderSize });
     drawFullScreen(gl, radianceOctmapPass, target, index, 0);
     filterAtlasLayers(gl, chain, filter, atlas, index);
@@ -162,7 +169,7 @@ function bakeFromChain(
       }
     });
   } finally {
-    releasePasses(filter);
+    releasePasses(gl, filter);
   }
 }
 
@@ -181,6 +188,8 @@ function downsampleChain(
   const chain = chainTarget(chainSizes[0]!);
   const octmap = octmapTarget(layout.size);
   const mips = chainSizes.map(octmapTarget);
+  const radianceOctmapPass = radianceOctmapPassFor(gl);
+  const downsamplePass = downsamplePassFor(gl);
   try {
     setUniforms(radianceOctmapPass, { radiance, size: layout.size, borderSize });
     drawFullScreen(gl, radianceOctmapPass, octmap);
@@ -209,14 +218,15 @@ function filterGroup(
   { firstLayer, faceSizes }: SkyLayerGroup,
   cube: THREE.WebGLCubeRenderTarget
 ): void {
-  const { pass, layout, chainSizes } = filter;
+  const { layout, chainSizes } = filter;
+  const pass = filter.passFor(gl);
   setUniforms(pass, {
     chain: chain.texture,
     lastMip: chainSizes.length - 1,
     borderSize: layout.borderSize,
   });
   faceSizes.forEach((faceSize, mip) => {
-    filter.selectLayer(firstLayer + mip);
+    setUniforms(pass, filter.layerUniforms(firstLayer + mip));
     for (let face = 0; face < 6; face += 1) {
       setUniforms(pass, { face, faceSize });
       drawFullScreen(gl, pass, cube, face, mip);
@@ -232,7 +242,8 @@ function filterAtlasLayers(
   { layout, target }: ReflectionAtlas,
   index: number
 ): void {
-  const { pass, chainSizes } = filter;
+  const { chainSizes } = filter;
+  const pass = filter.passFor(gl);
   setUniforms(pass, {
     chain: chain.texture,
     lastMip: chainSizes.length - 1,
@@ -240,8 +251,7 @@ function filterAtlasLayers(
     face: OCTMAP_FACE,
   });
   for (let layer = 1; layer < layout.layerSizes.length; layer += 1) {
-    filter.selectLayer(layer);
-    setUniforms(pass, { faceSize: layout.layerSizes[layer] });
+    setUniforms(pass, { ...filter.layerUniforms(layer), faceSize: layout.layerSizes[layer] });
     drawFullScreen(gl, pass, target, index, layer);
   }
 }

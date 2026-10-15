@@ -3,7 +3,7 @@ import { FAST_FILTER_COEFFICIENTS } from '../../godot/rendering/environment/skyF
 import { FAST_FILTER_CHAIN_SIZES } from '../../godot/rendering/environment/skyReflection';
 import { fastFilter } from './fastFilter';
 
-const tapWeights = () => fastFilter.pass.uniforms.weight!.value as Float32Array;
+const tapWeights = (layer: number) => fastFilter.layerUniforms(layer).weight as Float32Array;
 
 describe('fastFilter', () => {
   it("reads Godot's 160-wide chain", () => {
@@ -11,23 +11,16 @@ describe('fastFilter', () => {
   });
 
   it("gives layer n the table's level n - 1, flattened as the shader reads it", () => {
-    fastFilter.selectLayer(2);
-
-    expect(Array.from(tapWeights())).toEqual(
+    expect(Array.from(tapWeights(2))).toEqual(
       Array.from(Float32Array.from(FAST_FILTER_COEFFICIENTS[1]!.weight.flat()))
     );
   });
 
   it('gives a layer past the last of a real-time sky the last level (edge case)', () => {
-    fastFilter.selectLayer(6);
-    const last = tapWeights();
-
-    fastFilter.selectLayer(7);
-
-    expect(tapWeights()).toBe(last);
+    expect(tapWeights(7)).toBe(tapWeights(6));
   });
 
   it('refuses layer 0, which is the radiance itself (error case)', () => {
-    expect(() => fastFilter.selectLayer(0)).toThrow("expected a level of the fast filter's table, got -1");
+    expect(() => fastFilter.layerUniforms(0)).toThrow("expected a level of the fast filter's table, got -1");
   });
 });
