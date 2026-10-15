@@ -9,10 +9,13 @@ import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import {
-  AUTOWRAP_MODE,
-  STRUCTURED_TEXT_PARSER,
-  TEXT_DIRECTION,
-} from '../../../../linter/validators/textServerEnums.js';
+  AutowrapMode,
+  AUTOWRAP_MODE_NAMES,
+  StructuredTextParser,
+  STRUCTURED_TEXT_PARSER_NAMES,
+  TextDirection,
+  TEXT_DIRECTION_NAMES,
+} from '../../../../godot/text/textServerEnums.js';
 
 validatorRegistry.registerAll('TextEdit', {
   // Text & behaviour (ungrouped run, text_edit.cpp:7545-7561).
@@ -58,7 +61,13 @@ validatorRegistry.registerAll('TextEdit', {
   // TextServer::AutowrapMode starts at AUTOWRAP_OFF=0 (servers/text/text_server.h:98-102,
   // BIND_ENUM_CONSTANT text_server.cpp:574-577), and set_autowrap_mode has no CLAMP or ERR_FAIL
   // (text_edit.cpp:6354-6360), so 0 warns rather than errors.
-  autowrap_mode: v.enumInt('autowrap_mode', 1, 3, AUTOWRAP_MODE, { hinted: 'text_edit.cpp:7559' }),
+  autowrap_mode: v.enumInt(
+    'autowrap_mode',
+    AutowrapMode.AUTOWRAP_ARBITRARY,
+    AutowrapMode.AUTOWRAP_WORD_SMART,
+    AUTOWRAP_MODE_NAMES,
+    { hinted: 'text_edit.cpp:7559' }
+  ),
   // text_edit.cpp:7560
   indent_wrapped_lines: v.boolean('indent_wrapped_lines'),
   // text_edit.cpp:7561
@@ -143,19 +152,29 @@ validatorRegistry.registerAll('TextEdit', {
   // "Auto,Left-to-Right,Right-to-Left,Inherited", AUTO=0 to INHERITED=3 (scene/gui/control.cpp:4415-4418,
   // control.h:166-171, as in servers/text/text_server.h:66-71). set_text_direction (text_edit.cpp:3724)
   // refuses below -1 or above 3. -1 is a legacy inherited spelling with no constant, outside the hint.
-  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
-    hinted: 'text_edit.cpp:7605',
-    enforced: 'text_edit.cpp:3724',
-    enforcedMin: { at: -1 },
-  }),
+  text_direction: v.enumInt(
+    'text_direction',
+    TextDirection.TEXT_DIRECTION_AUTO,
+    TextDirection.TEXT_DIRECTION_INHERITED,
+    TEXT_DIRECTION_NAMES,
+    {
+      hinted: 'text_edit.cpp:7605',
+      enforced: 'text_edit.cpp:3724',
+      enforcedMin: { at: -1 },
+    }
+  ),
   // text_edit.cpp:7606: Variant::STRING, PROPERTY_HINT_LOCALE_ID.
   language: v.quotedString('language'),
   // text_edit.cpp:7607: PROPERTY_HINT_ENUM "Default,URI,File,Email,List,None,Custom",
   // STRUCTURED_TEXT_DEFAULT=0 .. STRUCTURED_TEXT_CUSTOM=6 (servers/text/text_server.cpp:681-687,
   // text_server.h:214-222). set_structured_text_bidi_override (text_edit.cpp:3778-3786) has no ERR_FAIL.
-  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
-    hinted: 'text_edit.cpp:7607',
-  }),
+  structured_text_bidi_override: v.enumInt(
+    'structured_text_bidi_override',
+    StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
+    StructuredTextParser.STRUCTURED_TEXT_CUSTOM,
+    STRUCTURED_TEXT_PARSER_NAMES,
+    { hinted: 'text_edit.cpp:7607' }
+  ),
   // text_edit.cpp:7608: Variant::ARRAY with no hint, so never written wrapped.
   // The contents are opaque parser-specific arguments with no fixed arity or
   // element type; set_structured_text_bidi_override_options (text_edit.cpp:3793-3803)

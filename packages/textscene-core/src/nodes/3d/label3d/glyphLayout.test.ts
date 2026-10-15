@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AutowrapMode, shapeText } from '../../../r3f/controls/native/text/textLayout';
+import { shapeText } from '../../../r3f/controls/native/text/textLayout';
 import { OPEN_SANS_METRICS } from '../../../r3f/controls/native/text/openSansMetrics';
 import { getFontLinePitchPx } from '../../../r3f/controls/native/text/fontMetrics';
 import {
@@ -17,6 +17,7 @@ import {
   HORIZONTAL_ALIGNMENT_RIGHT,
   type HorizontalAlignment,
 } from '../../../godot/math/math';
+import { AutowrapMode } from '../../../godot/text/textServerEnums';
 
 const FONT_SIZE = 32;
 
@@ -24,7 +25,7 @@ function shape(text: string, lineSpacingPx = 0) {
   return shapeText(text, {
     fontSizePx: FONT_SIZE,
     boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx,
   });
 }

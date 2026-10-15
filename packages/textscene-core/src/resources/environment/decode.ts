@@ -5,7 +5,8 @@
  */
 
 import type { EnvironmentProperties } from './types';
-import { BackgroundMode, DEFAULT_AGX_CONTRAST } from './types';
+import { BackgroundMode } from './types';
+import { TONEMAP_AGX_CONTRAST_DEFAULT } from '../../godot/rendering/environment/toneMapping.js';
 import { enumOr, floatOr, intOr, parseOptionalFloat, vec3Or } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
 import { boolSlotValue } from '../../godot/variant/variantBool.js';
@@ -57,7 +58,7 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
     tonemap_agx_white: floatOr(properties.tonemap_agx_white, 16.29, 'tonemap_agx_white'),
     tonemap_agx_contrast: floatOr(
       properties.tonemap_agx_contrast,
-      DEFAULT_AGX_CONTRAST,
+      TONEMAP_AGX_CONTRAST_DEFAULT,
       'tonemap_agx_contrast'
     ),
     tonemap_exposure: floatOr(properties.tonemap_exposure, 1.0, 'tonemap_exposure'),

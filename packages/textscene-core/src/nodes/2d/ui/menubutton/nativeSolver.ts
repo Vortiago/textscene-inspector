@@ -45,7 +45,7 @@ import type { MenuButtonProperties } from './types';
 // ancestor fallback gives it Button's icon colours.
 export { buttonIconColor };
 
-/** `Color(1, 1, 1, 0.3)`: MenuButton's own disabled font colour (`default_theme.cpp:268`), not Button's `control_font_disabled_color` = `Color(0.875, 0.875, 0.875, 0.5)` (`:161`). */
+/** `Color(1, 1, 1, 0.3)`: MenuButton's own disabled font colour (`default_theme.cpp:268`), not Button's `control_font_disabled_color` (`:161`). */
 const MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.3 };
 
 /** MenuButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else MenuButton's literal. */

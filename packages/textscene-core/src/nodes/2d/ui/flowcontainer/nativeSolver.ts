@@ -31,11 +31,7 @@ import {
   isSortableControl,
 } from '../shared/fitChildInRect';
 import type { Vector2 } from '../../../../godot/math/vector';
-
-// FlowContainer::AlignmentMode (flow_container.h:39-43).
-const ALIGNMENT_BEGIN = 0;
-const ALIGNMENT_CENTER = 1;
-const ALIGNMENT_END = 2;
+import { ContainerAlignment } from '../../../../godot/scene/container';
 
 // FlowContainer::LastWrapAlignmentMode (flow_container.h:44-49).
 const LAST_WRAP_ALIGNMENT_INHERIT = 0;
@@ -247,7 +243,7 @@ function alignmentOffset(
   const isNotFirstLineAndNotFilled = currentLineIdx !== 0 && !lineData.isFilled;
 
   switch (alignment) {
-    case ALIGNMENT_BEGIN:
+    case ContainerAlignment.ALIGNMENT_BEGIN:
       if (lastWrapAlignment !== LAST_WRAP_ALIGNMENT_INHERIT && isNotFirstLineAndNotFilled) {
         if (lastWrapAlignment === LAST_WRAP_ALIGNMENT_END) {
           return lineData.stretchAvail - priorStretchAvail;
@@ -257,7 +253,7 @@ function alignmentOffset(
         }
       }
       return 0;
-    case ALIGNMENT_CENTER:
+    case ContainerAlignment.ALIGNMENT_CENTER:
       if (
         lastWrapAlignment !== LAST_WRAP_ALIGNMENT_INHERIT &&
         lastWrapAlignment !== LAST_WRAP_ALIGNMENT_CENTER &&
@@ -268,7 +264,7 @@ function alignmentOffset(
           : Math.trunc(priorStretchAvail * 0.5);
       }
       return Math.trunc(lineData.stretchAvail * 0.5);
-    case ALIGNMENT_END:
+    case ContainerAlignment.ALIGNMENT_END:
       if (
         lastWrapAlignment !== LAST_WRAP_ALIGNMENT_INHERIT &&
         lastWrapAlignment !== LAST_WRAP_ALIGNMENT_END &&
@@ -294,7 +290,7 @@ const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) =
   const vertical = orientationOf(n);
   const hSep = separationOf(n, 'h_separation', ctx.theme);
   const vSep = separationOf(n, 'v_separation', ctx.theme);
-  const alignment = props(n).alignment ?? ALIGNMENT_BEGIN;
+  const alignment = props(n).alignment ?? ContainerAlignment.ALIGNMENT_BEGIN;
   const lastWrapAlignment = props(n).lastWrapAlignment ?? LAST_WRAP_ALIGNMENT_INHERIT;
   const reverseFill = props(n).reverseFill === true;
   const rtl = n.rtl;

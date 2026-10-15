@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { enumNamesByValue } from './enumNames';
+import { enumNamesByValue, relabelEnumNames } from './enumNames';
 
 enum Shade {
   DARK = 0,
@@ -17,5 +17,18 @@ describe('enumNamesByValue', () => {
 
   it('gives an empty map for an enum with no numeric member', () => {
     expect(enumNamesByValue({})).toEqual({});
+  });
+});
+
+describe('relabelEnumNames', () => {
+  it('turns each name by the label function and keeps its integer', () => {
+    expect(relabelEnumNames(enumNamesByValue(Shade), (name) => `${name}_SHADE`)).toEqual({
+      0: 'DARK_SHADE',
+      2: 'LIGHT_SHADE',
+    });
+  });
+
+  it('gives an empty map for an empty table', () => {
+    expect(relabelEnumNames({}, (name) => name)).toEqual({});
   });
 });

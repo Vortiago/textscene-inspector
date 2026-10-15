@@ -9,14 +9,24 @@ import '../basebutton/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { maskedBitField, v } from '../../../../linter/validators/index.js';
 import {
-  AUTOWRAP_MODE,
+  AutowrapMode,
+  AUTOWRAP_MODE_NAMES,
   BREAK_TRIM_HINTED_BITS,
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
-  OVERRUN_BEHAVIOR,
-  TEXT_DIRECTION,
-} from '../../../../linter/validators/textServerEnums.js';
-import { HORIZONTAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
+  OverrunBehavior,
+  OVERRUN_BEHAVIOR_NAMES,
+  TextDirection,
+  TEXT_DIRECTION_NAMES,
+} from '../../../../godot/text/textServerEnums.js';
+import {
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_NAMES,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+  VERTICAL_ALIGNMENT_BOTTOM,
+  VERTICAL_ALIGNMENT_NAMES,
+  VERTICAL_ALIGNMENT_TOP,
+} from '../../../../godot/math/math.js';
 
 validatorRegistry.registerAll('Button', {
   // button.cpp:809, PROPERTY_HINT_MULTILINE_TEXT, no length bound.
@@ -27,17 +37,33 @@ validatorRegistry.registerAll('Button', {
   flat: v.boolean('flat'),
   // button.cpp:814, PROPERTY_HINT_ENUM "Left,Center,Right": 3 of the 4 HorizontalAlignment
   // constants. set_text_alignment (button.cpp:737-741) bare-assigns, so FILL warns.
-  alignment: v.enumInt('alignment', 0, 2, HORIZONTAL_ALIGNMENT, { hinted: 'button.cpp:814' }),
+  alignment: v.enumInt(
+    'alignment',
+    HORIZONTAL_ALIGNMENT_LEFT,
+    HORIZONTAL_ALIGNMENT_RIGHT,
+    HORIZONTAL_ALIGNMENT_NAMES,
+    { hinted: 'button.cpp:814' }
+  ),
   // button.cpp:815, PROPERTY_HINT_ENUM with 7 entries: TextServer::OverrunBehavior 0-6
   // (servers/text/text_server.h:124-130). set_text_overrun_behavior
   // (button.cpp:574-585) assigns unconditionally, no ERR_FAIL.
-  text_overrun_behavior: v.enumInt('text_overrun_behavior', 0, 6, OVERRUN_BEHAVIOR, {
-    hinted: 'button.cpp:815',
-  }),
+  text_overrun_behavior: v.enumInt(
+    'text_overrun_behavior',
+    OverrunBehavior.OVERRUN_NO_TRIMMING,
+    OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE,
+    OVERRUN_BEHAVIOR_NAMES,
+    { hinted: 'button.cpp:815' }
+  ),
   // button.cpp:816, PROPERTY_HINT_ENUM "Off,Arbitrary,Word,Word (Smart)", so
   // Button offers the whole enum and the bound is the hint's own width.
   // set_autowrap_mode (button.cpp:610-615) assigns unconditionally.
-  autowrap_mode: v.enumInt('autowrap_mode', 0, 3, AUTOWRAP_MODE, { hinted: 'button.cpp:816' }),
+  autowrap_mode: v.enumInt(
+    'autowrap_mode',
+    AutowrapMode.AUTOWRAP_OFF,
+    AutowrapMode.AUTOWRAP_WORD_SMART,
+    AUTOWRAP_MODE_NAMES,
+    { hinted: 'button.cpp:816' }
+  ),
   // set_autowrap_trim_flags (button.cpp:625) stores `p_flags & BREAK_TRIM_MASK`, so a
   // bit outside the mask is dropped. button.cpp:817 hints only the two edge-space bits,
   // so BREAK_TRIM_INDENT is kept but the inspector does not offer it.
@@ -51,21 +77,20 @@ validatorRegistry.registerAll('Button', {
   // button.cpp:821, PROPERTY_HINT_ENUM "Left,Center,Right". set_icon_alignment
   // (button.cpp:749-756) bare-assigns, so FILL warns rather than erroring, the
   // same as `alignment` above.
-  icon_alignment: v.enumInt('icon_alignment', 0, 2, HORIZONTAL_ALIGNMENT, {
-    hinted: 'button.cpp:821',
-  }),
+  icon_alignment: v.enumInt(
+    'icon_alignment',
+    HORIZONTAL_ALIGNMENT_LEFT,
+    HORIZONTAL_ALIGNMENT_RIGHT,
+    HORIZONTAL_ALIGNMENT_NAMES,
+    { hinted: 'button.cpp:821' }
+  ),
   // button.cpp:822, PROPERTY_HINT_ENUM "Top,Center,Bottom": 3 of the 4 VerticalAlignment
   // constants. set_vertical_icon_alignment (button.cpp:759-770) bare-assigns, so FILL warns.
   vertical_icon_alignment: v.enumInt(
     'vertical_icon_alignment',
-    0,
-    2,
-    {
-      0: 'VERTICAL_ALIGNMENT_TOP',
-      1: 'VERTICAL_ALIGNMENT_CENTER',
-      2: 'VERTICAL_ALIGNMENT_BOTTOM',
-      3: 'VERTICAL_ALIGNMENT_FILL',
-    },
+    VERTICAL_ALIGNMENT_TOP,
+    VERTICAL_ALIGNMENT_BOTTOM,
+    VERTICAL_ALIGNMENT_NAMES,
     { hinted: 'button.cpp:822' }
   ),
   // button.cpp:823
@@ -73,11 +98,17 @@ validatorRegistry.registerAll('Button', {
   // button.cpp:826, PROPERTY_HINT_ENUM over Control::TextDirection 0-3 (scene/gui/control.h:166-171).
   // set_text_direction (button.cpp:637) refuses below -1 or above 3. -1 is a legacy
   // inherited spelling with no named constant: engine-legal, so the enforced floor is -1.
-  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
-    hinted: 'button.cpp:826',
-    enforced: 'button.cpp:637',
-    enforcedMin: { at: -1 },
-  }),
+  text_direction: v.enumInt(
+    'text_direction',
+    TextDirection.TEXT_DIRECTION_AUTO,
+    TextDirection.TEXT_DIRECTION_INHERITED,
+    TEXT_DIRECTION_NAMES,
+    {
+      hinted: 'button.cpp:826',
+      enforced: 'button.cpp:637',
+      enforcedMin: { at: -1 },
+    }
+  ),
   // button.cpp:827, PROPERTY_HINT_LOCALE_ID: any locale string parses.
   language: v.quotedString('language'),
 });

@@ -18,7 +18,6 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  AutowrapMode,
   clampAutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
@@ -59,6 +58,7 @@ import {
 } from './bbcode';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color`, not Label's `font_size` and `font_color`. */
 const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
@@ -78,7 +78,7 @@ export const RICH_TEXT_LABEL_THEME_FONT_KEY = 'normal_font';
 const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** `rich_text_label.h:557`: `TextServer::AutowrapMode autowrap_mode = TextServer::AUTOWRAP_WORD_SMART;`, unlike Label's OFF (`label.h`). */
-export const RICH_TEXT_LABEL_DEFAULT_AUTOWRAP = AutowrapMode.WORD_SMART;
+export const RICH_TEXT_LABEL_DEFAULT_AUTOWRAP = AutowrapMode.AUTOWRAP_WORD_SMART;
 
 /** Resolves this node's font size and colour: overrides, then the ancestor Theme chain, then RichTextLabel's white. */
 export function richTextLabelTextTheme(
@@ -265,7 +265,7 @@ export function richTextTabStopsPx(
 export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as RichTextLabelProperties;
   const autowrapMode = clampAutowrapMode(props.autowrapMode, RICH_TEXT_LABEL_DEFAULT_AUTOWRAP);
-  const wraps = autowrapMode !== AutowrapMode.OFF;
+  const wraps = autowrapMode !== AutowrapMode.AUTOWRAP_OFF;
 
   if (!props.fitContent) {
     return wraps ? { x: 1, y: 0 } : { x: 0, y: 0 };
@@ -297,7 +297,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const layout = shapeText(text, {
     fontSizePx,
     boxWidthPx: wrapWidthPx ?? 0,
-    autowrapMode: wrapWidthPx === undefined ? AutowrapMode.OFF : autowrapMode,
+    autowrapMode: wrapWidthPx === undefined ? AutowrapMode.AUTOWRAP_OFF : autowrapMode,
     lineSpacingPx: 0,
     fontSizePxAt: fontSizePxAtFromRuns(runs),
     // An `[img]` placeholder shapes at the image width, as in `Component.tsx`,

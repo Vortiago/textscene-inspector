@@ -4,8 +4,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { buildGlyphQuadArrays } from './glyphQuads';
-import { shapeText, AutowrapMode } from './textLayout';
+import { shapeText } from './textLayout';
 import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const SCALE = 16 / OPEN_SANS_ATLAS_INFO.fontSize;
 
@@ -13,7 +14,7 @@ function layoutFor(text: string, uppercase = false) {
   return shapeText(text, {
     fontSizePx: 16,
     boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     uppercase,
     lineSpacingPx: 3,
   });
@@ -105,7 +106,7 @@ describe('buildGlyphQuadArrays', () => {
     const layout = shapeText('A\nA', {
       fontSizePx: 16,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     });
     const arrays = buildGlyphQuadArrays(layout, 16, 0);

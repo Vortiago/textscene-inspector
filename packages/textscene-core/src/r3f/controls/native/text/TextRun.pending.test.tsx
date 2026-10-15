@@ -5,6 +5,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { deferTextureDecodes } from './atlasTexture.testkit';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
@@ -15,7 +16,7 @@ const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 async function freshTextModules() {
   vi.resetModules();
   const decode = deferTextureDecodes();
-  const [{ TextRun }, { shapeText, AutowrapMode }, { ResourceLoader }, { ResourceLoaderContext }, runtime] =
+  const [{ TextRun }, { shapeText }, { ResourceLoader }, { ResourceLoaderContext }, runtime] =
     await Promise.all([
       import('./TextRun'),
       import('./textLayout'),
@@ -28,7 +29,7 @@ async function freshTextModules() {
     const layout = shapeText('AB', {
       fontSizePx: 16,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
       fontMetrics,
     });

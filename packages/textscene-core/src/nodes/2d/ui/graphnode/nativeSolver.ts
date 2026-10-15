@@ -27,6 +27,7 @@ import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 const ZERO_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
@@ -34,8 +35,8 @@ const ZERO_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
 /** `graph_node.cpp` theme type variation for its internal title Label: `graph_node.cpp:1328`. */
 export const GRAPH_NODE_TITLE_VARIATION = 'GraphNodeTitleLabel';
 
-/** `control_font_color`: `default_theme.cpp:819`, `GraphNodeTitleLabel`'s own `font_color`. */
-export const GRAPH_NODE_TITLE_DEFAULT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+/** `GraphNodeTitleLabel`'s own `font_color` (`default_theme.cpp:819`). */
+export const GRAPH_NODE_TITLE_DEFAULT_COLOR = CONTROL_FONT_COLOR;
 
 /** `Color::lightened` (`core/math/color.cpp`): moves each channel toward white by `amount`. */
 function lightened(c: Rgba, amount: number): Rgba {

@@ -10,9 +10,9 @@ import {
 import { DRAWN_OPAQUE_PREPASS, FADED_OPAQUE_PREPASS, NO_OPAQUE_PREPASS } from './opaquePrepass';
 import type { SurfaceAlphaSource } from './surfaceAlphaPatch';
 import { alphaCutSurface } from '../godotAlphaCut';
-import { AlphaCutMode } from '../../nodes/3d/sprite3d/types';
 import { AlphaAntiAliasing } from '../../godot/rendering/materials/alphaAntialiasing';
 import { DROPS_ALBEDO_ALPHA, patchedShader } from '../testing/patchedFragment';
+import { AlphaCutMode } from '../../godot/rendering/materials/alphaCut';
 
 const READS_ALBEDO: SurfaceAlphaSource = { readsAlbedoAlpha: true, opaqueAfterCut: false };
 const CUT: SurfaceAlphaSource = { readsAlbedoAlpha: true, opaqueAfterCut: true };
@@ -62,7 +62,7 @@ const NO_ANTIALIASING = { mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF, edge: 
 /** A Sprite3D discard cut at 0.5, with or without FLAG_TRANSPARENT. */
 function discardCut(transparentFlag: boolean) {
   return alphaCutSurface({
-    mode: AlphaCutMode.ALPHA_CUT_DISCARD,
+    mode: AlphaCutMode.DISCARD,
     scissorThreshold: 0.5,
     transparentFlag,
     antialiasing: NO_ANTIALIASING,
@@ -118,7 +118,7 @@ describe('cutFadeVariants', () => {
 
 describe('cutOpaquePrepasses', () => {
   const prepassCut = alphaCutSurface({
-    mode: AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS,
+    mode: AlphaCutMode.OPAQUE_PREPASS,
     scissorThreshold: 0.5,
     transparentFlag: true,
     antialiasing: NO_ANTIALIASING,

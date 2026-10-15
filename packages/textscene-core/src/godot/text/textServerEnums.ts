@@ -1,36 +1,40 @@
 /**
- * TextServer enums (`servers/text/text_server.h`) that Godot re-binds on many
- * classes with no common ancestor, so only the label tables are shared. Each
- * slice keeps its bound: TextEdit's hint offers `"Arbitrary:1,Word:2,Word (Smart):3"`
- * while Button's offers `"Off,Arbitrary,Word,Word (Smart)"`.
+ * TextServer enums (`servers/text/text_server.h`) that Godot re-binds on many classes with no
+ * common ancestor, so each slice keeps its own bound: TextEdit's hint offers
+ * `"Arbitrary:1,Word:2,Word (Smart):3"` while Button's offers `"Off,Arbitrary,Word,Word (Smart)"`.
  */
+
+import { enumNamesByValue } from '../classdb/enumNames.js';
 
 /**
  * `TextServer::AutowrapMode`: AUTOWRAP_OFF=0 … AUTOWRAP_WORD_SMART=3
  * (servers/text/text_server.h:99-102, BIND_ENUM_CONSTANT text_server.cpp:574-577).
  */
-export const AUTOWRAP_MODE = {
-  0: 'AUTOWRAP_OFF',
-  1: 'AUTOWRAP_ARBITRARY',
-  2: 'AUTOWRAP_WORD',
-  3: 'AUTOWRAP_WORD_SMART',
-} as const;
+export enum AutowrapMode {
+  AUTOWRAP_OFF = 0,
+  AUTOWRAP_ARBITRARY = 1,
+  AUTOWRAP_WORD = 2,
+  AUTOWRAP_WORD_SMART = 3,
+}
+
+export const AUTOWRAP_MODE_NAMES = enumNamesByValue(AutowrapMode);
 
 /**
  * `TextServer::OverrunBehavior`: OVERRUN_NO_TRIMMING=0 …
  * OVERRUN_TRIM_WORD_ELLIPSIS_FORCE=6 (servers/text/text_server.h:123-130).
- * `FoldableContainer` keeps a narrower local table, since its hint stops at
- * OVERRUN_TRIM_WORD_ELLIPSIS (4).
+ * `FoldableContainer`'s hint stops at OVERRUN_TRIM_WORD_ELLIPSIS (4).
  */
-export const OVERRUN_BEHAVIOR = {
-  0: 'OVERRUN_NO_TRIMMING',
-  1: 'OVERRUN_TRIM_CHAR',
-  2: 'OVERRUN_TRIM_WORD',
-  3: 'OVERRUN_TRIM_ELLIPSIS',
-  4: 'OVERRUN_TRIM_WORD_ELLIPSIS',
-  5: 'OVERRUN_TRIM_ELLIPSIS_FORCE',
-  6: 'OVERRUN_TRIM_WORD_ELLIPSIS_FORCE',
-};
+export enum OverrunBehavior {
+  OVERRUN_NO_TRIMMING = 0,
+  OVERRUN_TRIM_CHAR = 1,
+  OVERRUN_TRIM_WORD = 2,
+  OVERRUN_TRIM_ELLIPSIS = 3,
+  OVERRUN_TRIM_WORD_ELLIPSIS = 4,
+  OVERRUN_TRIM_ELLIPSIS_FORCE = 5,
+  OVERRUN_TRIM_WORD_ELLIPSIS_FORCE = 6,
+}
+
+export const OVERRUN_BEHAVIOR_NAMES = enumNamesByValue(OverrunBehavior);
 
 /**
  * The `TextServer::JustificationFlag` bits a `justification_flags` hint offers,
@@ -75,12 +79,14 @@ export const BREAK_TRIM_HINTED_BITS = 64 | 128;
  * TEXT_DIRECTION_AUTO=0 … TEXT_DIRECTION_INHERITED=3 (scene/gui/control.h:166-171,
  * BIND_ENUM_CONSTANT control.cpp:4415-4418).
  */
-export const TEXT_DIRECTION = {
-  0: 'TEXT_DIRECTION_AUTO',
-  1: 'TEXT_DIRECTION_LTR',
-  2: 'TEXT_DIRECTION_RTL',
-  3: 'TEXT_DIRECTION_INHERITED',
-} as const;
+export enum TextDirection {
+  TEXT_DIRECTION_AUTO = 0,
+  TEXT_DIRECTION_LTR = 1,
+  TEXT_DIRECTION_RTL = 2,
+  TEXT_DIRECTION_INHERITED = 3,
+}
+
+export const TEXT_DIRECTION_NAMES = enumNamesByValue(TextDirection);
 
 /**
  * `TextServer::StructuredTextParser`: STRUCTURED_TEXT_DEFAULT=0 …
@@ -88,12 +94,14 @@ export const TEXT_DIRECTION = {
  * labels index 5 "None", but the labels follow the enum, so a diagnostic names
  * STRUCTURED_TEXT_GDSCRIPT, as the engine does.
  */
-export const STRUCTURED_TEXT_PARSER = {
-  0: 'STRUCTURED_TEXT_DEFAULT',
-  1: 'STRUCTURED_TEXT_URI',
-  2: 'STRUCTURED_TEXT_FILE',
-  3: 'STRUCTURED_TEXT_EMAIL',
-  4: 'STRUCTURED_TEXT_LIST',
-  5: 'STRUCTURED_TEXT_GDSCRIPT',
-  6: 'STRUCTURED_TEXT_CUSTOM',
-} as const;
+export enum StructuredTextParser {
+  STRUCTURED_TEXT_DEFAULT = 0,
+  STRUCTURED_TEXT_URI = 1,
+  STRUCTURED_TEXT_FILE = 2,
+  STRUCTURED_TEXT_EMAIL = 3,
+  STRUCTURED_TEXT_LIST = 4,
+  STRUCTURED_TEXT_GDSCRIPT = 5,
+  STRUCTURED_TEXT_CUSTOM = 6,
+}
+
+export const STRUCTURED_TEXT_PARSER_NAMES = enumNamesByValue(StructuredTextParser);

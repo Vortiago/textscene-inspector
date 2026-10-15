@@ -5,8 +5,8 @@
  * `renderer_scene_render_rd.cpp:724-731`).
  */
 
-import { DEFAULT_AGX_CONTRAST, type EnvironmentSettings } from '../../resources/environment/types';
-import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
+import type { EnvironmentSettings } from '../../resources/environment/types';
+import { TONEMAP_AGX_CONTRAST_DEFAULT, ToneMapper } from '../../godot/rendering/environment/toneMapping';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { ProjectClearColor } from '../ProjectClearColor';
 import { ToneMapLayer } from './ToneMapLayer';
@@ -20,7 +20,7 @@ const NO_ENVIRONMENT_TONE_MAPPING: EnvironmentSettings['toneMapping'] = {
   mode: ToneMapper.LINEAR,
   exposure: 1,
   white: 1,
-  agxContrast: DEFAULT_AGX_CONTRAST,
+  agxContrast: TONEMAP_AGX_CONTRAST_DEFAULT,
 };
 
 export function NoEnvironmentLayer() {

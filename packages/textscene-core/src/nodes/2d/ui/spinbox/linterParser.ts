@@ -7,7 +7,11 @@
 import '../range/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { HORIZONTAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
+import {
+  HORIZONTAL_ALIGNMENT_FILL,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_NAMES,
+} from '../../../../godot/math/math.js';
 
 // `exp_edit` keeps Range's validator. SpinBox::_validate_property (spin_box.cpp:647-650) sets its
 // usage to PROPERTY_USAGE_NONE, which hides it and stops the saver, but `Range::set_exp_ratio`
@@ -17,7 +21,13 @@ validatorRegistry.registerAll('SpinBox', {
   // spin_box.cpp:673: ADD_PROPERTY(PropertyInfo(Variant::INT, "alignment", PROPERTY_HINT_ENUM,
   // "Left,Center,Right,Fill"), ...). set_horizontal_alignment (:542-544) forwards to LineEdit's,
   // which is `ERR_FAIL_INDEX((int)p_alignment, 4)` (line_edit.cpp:1072), so the range is enforced.
-  alignment: v.enumInt('alignment', 0, 3, HORIZONTAL_ALIGNMENT, { enforced: 'line_edit.cpp:1072' }),
+  alignment: v.enumInt(
+    'alignment',
+    HORIZONTAL_ALIGNMENT_LEFT,
+    HORIZONTAL_ALIGNMENT_FILL,
+    HORIZONTAL_ALIGNMENT_NAMES,
+    { enforced: 'line_edit.cpp:1072' }
+  ),
   // spin_box.cpp:674: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "editable"), …).
   // SpinBox::set_editable (:602-605) forwards to LineEdit::set_editable
   // (line_edit.cpp:2565-2570), a bare assignment with an early return only

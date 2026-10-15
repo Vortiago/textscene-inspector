@@ -12,15 +12,13 @@ import { VECTOR2_REGEX } from '../../../../linter/validators/index.js';
 import { ruleInt, tupleComponent } from '../../../../linter/validators/commonValidators.js';
 import { slotComponents } from '../../../../godot/variant/int.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums.js';
 
 const arms = {
   autowrapNeedsMinimumSize: groundedArm('label-autowrap-needs-custom-minimum-size', {
     kind: 'configuration-warning',
   }),
 } as const satisfies RuleArms<string>;
-
-// label.cpp:44/1435, TextServer::AutowrapMode: OFF=0, ARBITRARY=1, WORD=2, WORD_SMART=3.
-const AUTOWRAP_OFF = 0;
 
 /** True when `raw` is absent, or parses to exactly (0, 0): Godot's `Size2()`. */
 function isZeroOrAbsentSize(raw: string | undefined): boolean {
@@ -43,7 +41,7 @@ function checkLabelAutowrap(context: RuleContext): Diagnostic[] {
   const autowrapMode = ruleInt(autowrapRaw);
   // Finite: a non-finite reads as NaN, and `NaN !== AUTOWRAP_OFF` is true, so
   // a value off the number line would read as autowrap enabled.
-  if (autowrapMode === null || autowrapMode === AUTOWRAP_OFF) {
+  if (autowrapMode === null || autowrapMode === AutowrapMode.AUTOWRAP_OFF) {
     return [];
   }
 

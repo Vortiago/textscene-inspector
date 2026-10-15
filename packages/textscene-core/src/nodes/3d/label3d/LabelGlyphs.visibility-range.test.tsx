@@ -14,7 +14,6 @@ import LabelGlyphs from './LabelGlyphs';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { Label3DProperties } from './types';
-import { AlphaCutMode } from './types';
 import { labelProperties } from './testing/labelProperties';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
@@ -30,6 +29,7 @@ import {
   VisibilityRangeFadeMode,
   type VisibilityRange,
 } from '../../../godot/rendering/visibilityRange';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 
 const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
 vi.mock('../../../r3f/controls/native/text/sceneFontLoader', () => ({

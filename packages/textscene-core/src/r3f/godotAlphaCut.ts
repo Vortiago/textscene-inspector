@@ -5,6 +5,7 @@
  */
 
 import { drawsInShadowPass } from '../godot/rendering/shadowPass';
+import { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
 import type { SurfaceAlphaSource } from './materials/surfaceAlphaPatch';
 import {
   hashAntialiasing,
@@ -12,11 +13,6 @@ import {
   type AlphaAntiAliasing,
   type AlphaAntialiasingCut,
 } from '../godot/rendering/materials/alphaAntialiasing';
-
-/** The members `SpriteBase3D::AlphaCutMode` and `Label3D::AlphaCutMode` share; DISABLED is the `else`. */
-const ALPHA_CUT_DISCARD = 1;
-const ALPHA_CUT_OPAQUE_PREPASS = 2;
-const ALPHA_CUT_HASH = 3;
 
 /** Passed as `transparentFlag` by a node whose DrawFlags have no `FLAG_TRANSPARENT` member. */
 export const NO_TRANSPARENT_FLAG = 'no-transparent-flag';
@@ -105,22 +101,22 @@ function cutArm(
   // (`scene_forward_clustered.glsl:1413-1415`), so they land in the opaque list
   // (`scene_shader_forward_clustered.cpp:252`), which writes depth.
   switch (mode) {
-    case ALPHA_CUT_DISCARD: {
+    case AlphaCutMode.DISCARD: {
       const antialiasing = scissorAntialiasing(antialiasingMode, scissorThreshold, edge);
       if (antialiasing) return { ...ANTIALIASED_ARM, antialiasing };
       return { ...OPAQUE_ARM, alphaTest: scissorThreshold, opaqueAfterCut: true };
     }
-    case ALPHA_CUT_HASH: {
+    case AlphaCutMode.HASH: {
       const antialiasing = hashAntialiasing(antialiasingMode, edge);
       if (antialiasing) return { ...ANTIALIASED_ARM, alphaHash: true, antialiasing };
       return { ...OPAQUE_ARM, alphaHash: true, opaqueAfterCut: true };
     }
-    case ALPHA_CUT_OPAQUE_PREPASS:
+    case AlphaCutMode.OPAQUE_PREPASS:
       // Blended and uncut in colour. `get_material_for_2d` keeps DEPTH_DRAW_OPAQUE_ONLY, so only
       // the depth prepass writes depth.
       return { ...OPAQUE_ARM, depthPrepass: true, depthWrite: false, blended: true };
     default:
-      // `depth_draw_opaque` on a blended surface writes no depth (`material.cpp:800`).
+      // DISABLED. `depth_draw_opaque` on a blended surface writes no depth (`material.cpp:800`).
       return { ...OPAQUE_ARM, depthWrite: false, blended: true };
   }
 }

@@ -13,7 +13,7 @@
 import { multiplyModulate } from '../../canvasItemModulate';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
-import { AutowrapMode, shapeText, type TextLayoutResult } from './text/textLayout';
+import { shapeText, type TextLayoutResult } from './text/textLayout';
 import type { Rect2 } from './rect';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
@@ -25,6 +25,7 @@ import {
   type Rgba,
 } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
+import { AutowrapMode } from '../../../godot/text/textServerEnums';
 
 // --- Draw-state + StyleBox chrome ------------------------------------------
 
@@ -88,7 +89,7 @@ export function shapeButtonLabel(
   fontSizePx: number,
   fontMetrics: FontMetrics,
   boxWidthPx = 0,
-  autowrapMode: AutowrapMode = AutowrapMode.OFF,
+  autowrapMode: AutowrapMode = AutowrapMode.AUTOWRAP_OFF,
   autowrapTrimFlags?: number
 ): TextLayoutResult {
   return shapeText(text, {

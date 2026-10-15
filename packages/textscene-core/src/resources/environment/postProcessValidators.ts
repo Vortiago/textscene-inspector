@@ -8,22 +8,14 @@
 
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 import { v } from '../../linter/validators/index.js';
+import { GLOW_BLEND_MODE_NAMES, GlowBlendMode } from '../../godot/rendering/environment/glow.js';
+import { TONE_MAPPER_NAMES, ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 
 export const postProcessKeys: Record<string, PropertyValidator> = {
   // environment.cpp:1286, set_tonemapper (:202-206) bare-assigns.
-  tonemap_mode: v.enumInt(
-    'tonemap_mode',
-    0,
-    4,
-    {
-      0: 'LINEAR',
-      1: 'REINHARDT',
-      2: 'FILMIC',
-      3: 'ACES',
-      4: 'AGX',
-    },
-    { hinted: 'environment.cpp:1286' }
-  ),
+  tonemap_mode: v.enumInt('tonemap_mode', ToneMapper.LINEAR, ToneMapper.AGX, TONE_MAPPER_NAMES, {
+    hinted: 'environment.cpp:1286',
+  }),
   // environment.cpp:1288 hints "1,16,0.01,or_greater": the real floor is 1, not 0.
   tonemap_white: v.float('tonemap_white', {
     min: 1,
@@ -59,15 +51,9 @@ export const postProcessKeys: Record<string, PropertyValidator> = {
   // environment.cpp:1448, set_glow_blend_mode (:672-676) bare-assigns.
   glow_blend_mode: v.enumInt(
     'glow_blend_mode',
-    0,
-    4,
-    {
-      0: 'ADDITIVE',
-      1: 'SCREEN',
-      2: 'SOFTLIGHT',
-      3: 'REPLACE',
-      4: 'MIX',
-    },
+    GlowBlendMode.ADDITIVE,
+    GlowBlendMode.MIX,
+    GLOW_BLEND_MODE_NAMES,
     { hinted: 'environment.cpp:1448' }
   ),
   // environment.cpp:1449-1452, setters (:682, :691, :700, :709) bare-assign.
@@ -96,9 +82,7 @@ export const postProcessKeys: Record<string, PropertyValidator> = {
 
   adjustment_enabled: v.boolean('adjustment_enabled'),
   // environment.cpp:1565 ("0.0,2.0,0.01,or_greater")
-  adjustment_brightness: v.nonNegativeFloat('adjustment_brightness', {
-    hinted: 'environment.cpp:1565',
-  }),
+  adjustment_brightness: v.nonNegativeFloat('adjustment_brightness', { hinted: 'environment.cpp:1565' }),
   // environment.cpp:1566-1567 open both ends (`or_less,or_greater`), so negative
   // contrast and saturation are legal inversions and there is no bound to check.
   adjustment_contrast: v.float('adjustment_contrast'),
