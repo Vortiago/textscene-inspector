@@ -30,6 +30,11 @@ A Texture2D that windows a region of another texture. A 2D consumer draws the re
 
 A texture whose pixels the scene or a `.tres` saves inline, as an `Image` sub-resource. The previewer decodes every uncompressed format Godot saves: the 8-bit, 16-bit, half and float formats, RGBA4444, RGB565 and RGBE9995. A float channel above 1 survives, as Godot's does. A colour slot reads RGB8 and RGBA8 as sRGB and every other format raw, as Godot does. So the Lum8 strip draws brighter than the RGB8 strip of the same bytes. The same rule holds for a NoiseTexture2D, which is Lum8 without a colour ramp, and a GradientTexture2D, which is a float format with `use_hdr`.
 
+## Block-compressed Image
+<!-- compare: image=unit-sprite2d-block-compressed status=done fixture=unit-sprite2d-block-compressed.tscn -->
+
+An `Image` can also save the S3TC and RGTC blocks of a compressed texture. The previewer decodes DXT1, DXT3, DXT5, DXT5_RA_AS_RG, RGTC Red8 and RGTC RedGreen8 to RGBA8 as Godot's bcdec fallback does, then applies Godot's swizzle. So DXT1 draws opaque, RGTC draws blue 0, and DXT5_RA_AS_RG carries its alpha in green. Each sprite is one colour ramp in one format. The top-left block of the DXT1 sprite is in the three-colour mode, so its last texel draws black. A GPU that decodes the blocks itself can round an interpolated colour one step apart from bcdec.
+
 ## Image file
 <!-- compare: image=unit-material-albedo-image-import status=limitation fixture=unit-material-albedo-image-import.tscn -->
 
@@ -64,5 +69,5 @@ The lenient parser never rejects a texture property. An unreadable value falls b
 - **Approximated** A VRAM-compressed or lossy image file draws its source texels, without the compression error Godot's import adds.
 - **Approximated** A file with no sidecar reads as a fresh import, not as the editor re-imports a texture it sees in 3D.
 - **Approximated** The GPU builds an image file's mip chain, where Godot averages the bytes on the CPU (`core/io/image.cpp:2146-2175`).
-- **Resource gap** An ImageTexture saved in a block-compressed image format or an integer format draws no texture.
+- **Resource gap** An ImageTexture saved in a BPTC, ETC, EAC, ASTC or integer format draws no texture.
 - **Not drawn** A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.

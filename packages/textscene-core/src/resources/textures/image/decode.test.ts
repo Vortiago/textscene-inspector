@@ -1,5 +1,9 @@
 /** An `Image` sub-resource as Godot 4.6.3 writes it, decoded to RGBA8. */
-import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, expect, it, vi } from 'vitest';
+import * as logger from '../../../logger';
+import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { decodeImageRef, imageRefSize } from './decode';
 
@@ -61,9 +65,15 @@ describe('decodeImageRef', () => {
     expect(decodeImage(image(format, 1, 1, bytes))!.data).toEqual(new Float32Array(rgba));
   });
 
-  it('draws nothing for an integer or block-compressed format', () => {
+  it('draws nothing for an integer format, and says so (error path)', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     expect(decodeImage(image('R16Int', 1, 1, '1, 0'))).toBeNull();
-    expect(decodeImage(image('DXT1 RGB8', 4, 4, '0, 0, 0, 0, 0, 0, 0, 0'))).toBeNull();
+    expect(warn).toHaveBeenCalledWith('[Image] the R16Int format is not decoded, so its image draws nothing');
+    warn.mockRestore();
+  });
+
+  it('draws nothing for block data one block short, which Godot refuses (error path)', () => {
+    expect(decodeImage(image('DXT1 RGB8', 8, 4, '0, 0, 0, 0, 0, 0, 0, 0'))).toBeNull();
   });
 
   it('decodes nothing for a reference to another type', () => {
@@ -74,6 +84,35 @@ describe('decodeImageRef', () => {
     expect(decodeImage(image('RGB8', 2, 1, '1, 2, 3'))).toBeNull();
     expect(decodeImage(image('RHalf', 2, 1, '0, 60'))).toBeNull();
     expect(decodeImage({ id: 'Image_a', type: 'Image', data: {} })).toBeNull();
+  });
+});
+
+/** An ImageTexture `save_block_images.gd` wrote, its `Image` decoded. */
+function decodeGodotSaved(name: string) {
+  const saved = parseTresFile(readFileSync(join(import.meta.dirname, 'godotSaved', `${name}.tres`), 'utf8'));
+  return decodeImageRef(saved.properties.image, saved.subResources);
+}
+
+describe('decodeImageRef on a block-compressed image', () => {
+  it.each([
+    ['DXT1', 'DXT1 RGB8'],
+    ['DXT3', 'DXT3 RGBA8'],
+    ['DXT5', 'DXT5 RGBA8'],
+    ['DXT5RaAsRg', 'FORMAT_DXT5_RA_AS_RG'],
+    ['RgtcRed', 'RGTC Red8'],
+    ['RgtcRedGreen', 'RGTC RedGreen8'],
+  ])('decodes %s to the RGBA8 Godot samples, keeping the saved format', (name, format) => {
+    const rgba8 = decodeGodotSaved(`${name}.rgba8`)!;
+    expect(decodeGodotSaved(name)).toEqual({ ...rgba8, format });
+  });
+
+  it.each([
+    ['a DXT1 block in its three-colour mode, whose index 3 reads opaque black', 'DXT1'],
+    ['a DXT5 alpha block in its six-value mode', 'DXT5SixValueAlpha'],
+    ['an image whose size is not a multiple of the block, cropped', 'DXT5Cropped'],
+    ['an image with mipmaps, at its top level', 'DXT5Mipmapped'],
+  ])('decodes %s (edge case)', (_case, name) => {
+    expect(decodeGodotSaved(name)!.data).toEqual(decodeGodotSaved(`${name}.rgba8`)!.data);
   });
 });
 

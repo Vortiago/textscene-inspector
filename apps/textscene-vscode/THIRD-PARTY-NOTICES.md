@@ -454,6 +454,41 @@ limitations under the License.
 
 ---
 
+## bcdec block decoder
+
+<https://github.com/iOrange/bcdec>
+
+`packages/textscene-core/src/resources/textures/image/blocks/s3tc.ts` and
+`packages/textscene-core/src/resources/textures/image/blocks/rgtc.ts` port the S3TC and RGTC
+block decoders of bcdec, because Godot decodes a block-compressed `Image` with it when the GPU
+cannot (`modules/bcdec/image_decompress_bcdec.cpp`). Godot vendors it as
+`thirdparty/misc/bcdec.h`. It is by Sergii Kudlai and is licensed MIT, separately from Godot's
+own MIT licence above.
+
+```
+Copyright (c) 2022 Sergii Kudlai
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
 ## Godot demo projects (vendored test corpus)
 
 <https://github.com/godotengine/godot-demo-projects>

@@ -2328,6 +2328,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Sprite2d Block Compressed",
+    "file": "unit-sprite2d-block-compressed.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Sprite2d Canvastexture",
     "file": "unit-sprite2d-canvastexture.tscn",
     "category": "Unit - 2D Canvas"
