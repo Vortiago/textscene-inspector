@@ -1,7 +1,8 @@
-import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FLATTENED_CORPUS_ROOTS } from '../../../scripts/corpusRoots.mjs';
+import { ensureGodotDemos } from '../../../scripts/vendor-godot-demos/vendor.mjs';
 import { isPublicSiteBuild } from './siteEdition.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -21,6 +22,7 @@ if (isPublicSiteBuild()) {
 const MAX_DEPLOY_FILE_BYTES = 25 * 1024 * 1024;
 const skippedLargeFiles = [];
 
+ensureGodotDemos();
 mkdirSync(fixturesTarget, { recursive: true });
 
 /**
@@ -55,30 +57,19 @@ console.log('Mirrored scenes/fixtures/ to public/fixtures/ (res:// root)');
 // reference renderer and the sheet resolver too, so no root renders here alone.
 for (const root of FLATTENED_CORPUS_ROOTS) {
   const source = join(scenesRoot, root);
-  try {
-    if (statSync(source).isDirectory()) {
-      copyRecursive(source, fixturesTarget);
-      console.log(`Copied ${root} closure to public/fixtures/ (res:// mirrored)`);
-    }
-  } catch {
-    // A fresh clone has not vendored the corpus.
-  }
+  // The ld-58 corpus is optional, and a checkout without `pnpm vendor:ld58` lacks it.
+  if (!existsSync(source)) continue;
+  copyRecursive(source, fixturesTarget);
+  console.log(`Copied ${root} closure to public/fixtures/ (res:// mirrored)`);
 }
 
 // The godot-demo-projects corpora keep their demos/<top>/<project>/ structure,
 // not flattened: each project has its own res:// namespace, which the web provider
 // resolves against the fixture's `root` subtree.
-const demosSource = join(scenesRoot, 'demos');
 const demosTarget = join(fixturesTarget, 'demos');
-try {
-  if (statSync(demosSource).isDirectory()) {
-    mkdirSync(demosTarget, { recursive: true });
-    copyRecursive(demosSource, demosTarget);
-    console.log('Copied godot-demo-projects corpora to public/fixtures/demos/');
-  }
-} catch {
-  // No demos directory.
-}
+mkdirSync(demosTarget, { recursive: true });
+copyRecursive(join(scenesRoot, 'demos'), demosTarget);
+console.log('Copied godot-demo-projects corpora to public/fixtures/demos/');
 
 // The vendored games keep their own res:// namespace under public/fixtures/games/<dir>/,
 // as the demos do. Deploy only: `pnpm vendor:games` does not fill the local scene
@@ -91,18 +82,14 @@ if (!includeGames) {
   // A copy from an earlier deploy build goes, so turning the flag off takes effect.
   rmSync(gamesTarget, { recursive: true, force: true });
   console.log('Skipped vendored games (set VITE_INCLUDE_GAMES=1 to include them)');
+} else if (!existsSync(gamesSource)) {
+  // A deploy build runs `pnpm vendor:games` first, so this fires only when the flag is set
+  // without vendoring.
+  console.warn('VITE_INCLUDE_GAMES=1 but scenes/games/ is absent. Run `pnpm vendor:games`.');
 } else {
-  try {
-    if (statSync(gamesSource).isDirectory()) {
-      mkdirSync(gamesTarget, { recursive: true });
-      copyRecursive(gamesSource, gamesTarget);
-      console.log('Copied vendored Godot games to public/fixtures/games/');
-    }
-  } catch {
-    // A deploy build runs `pnpm vendor:games` first, so this fires only when the
-    // flag is set without vendoring.
-    console.warn('VITE_INCLUDE_GAMES=1 but scenes/games/ is absent — run `pnpm vendor:games`');
-  }
+  mkdirSync(gamesTarget, { recursive: true });
+  copyRecursive(gamesSource, gamesTarget);
+  console.log('Copied vendored Godot games to public/fixtures/games/');
 }
 
 if (skippedLargeFiles.length > 0) {

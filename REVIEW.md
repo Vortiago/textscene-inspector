@@ -17,7 +17,7 @@ A defect the change introduces and CI does not catch:
 ## What to skip
 
 - Anything CI checks: ESLint, Prettier, `tsc`, `type-check:tests`, the conformance guards, `lint:scenes` and the golden images.
-- Generated files, `pnpm-lock.yaml`, `scenes/demos` and `scenes/isometric`.
+- Generated files, `pnpm-lock.yaml` and `scripts/vendor-godot-demos/text-resources/`.
 - `.claude/rules/`, `.claude/skills/conventional-commits/` and `.claude/agents/ste-review.md`.
 - Style and naming, unless a name states something false.
 - Untouched code, unless the change makes it wrong.

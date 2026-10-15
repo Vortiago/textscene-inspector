@@ -1,9 +1,0 @@
-[gd_resource type="StandardMaterial3D" format=3 uid="uid://c4m1acbywech3"]
-
-[ext_resource type="Texture2D" uid="uid://hmm3ev6a0x7h" path="res://model/godot_battle_bot_colors.png" id="1"]
-
-[resource]
-resource_name = "battle_bot_colors"
-albedo_texture = ExtResource("1")
-metallic = 0.5
-roughness = 0.542695

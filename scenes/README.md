@@ -7,8 +7,8 @@ The `.tscn` corpora the tests and the previewers use.
 | `fixtures/` | This project's scenes and their resources. It is a `res://` root. |
 | `language-features/` | A Godot project in `project/` and the expected language-feature answers for it in `answers.json`. The VS Code suites and the `tscn-lsp` end-to-end test check the extension and the server against them. `missing.tscn` gets a lint warning on purpose. |
 | `upload-payloads/` | Files the `test-missing-*` fixtures cannot find, on purpose |
-| `isometric/` | A vendored dungeon corpus, with its own root (`scripts/corpusRoots.mjs`) |
-| `demos/<top>/<project>/` | Vendored Godot demo projects, each with its own `project.godot` |
+| `isometric/` | The dungeon demo, fetched and not committed, with its own root (`scripts/corpusRoots.mjs`). Only `previews/` is committed. |
+| `demos/<top>/<project>/` | Godot demo projects, fetched and not committed, each with its own `project.godot` |
 | `games/` | Community games, fetched on demand and not committed |
 
 ## The `fixtures/` root
@@ -42,6 +42,10 @@ For another fixture, add the `.tscn` to `scenes/fixtures/`, then check it:
 pnpm build:linter
 pnpm lint:tscn scenes/fixtures/<file>.tscn
 ```
+
+## The demo corpora
+
+`pnpm vendor:demos` fetches godot-demo-projects at a pinned commit into `demos/` and `isometric/`. Both are gitignored. `pnpm install`, the unit tests and the fixture scripts run it, and it fetches only when the pinned commit or a local change is new. [`scripts/vendor-godot-demos/README.md`](../scripts/vendor-godot-demos/README.md) lists the local changes and how to change one.
 
 ## The games corpus
 

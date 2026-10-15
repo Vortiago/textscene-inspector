@@ -1,10 +1,10 @@
 /**
- * The prune policy of the corpus vendor scripts (vendor-godot-demos.mjs, vendor-godot-games.mjs):
- * the Godot editor and source artefacts the previewer never reads. One copy keeps both corpora
- * stripped the same way.
+ * The prune policy of the corpus vendor scripts (vendor-godot-demos/vendor.mjs,
+ * vendor-godot-games.mjs): the Godot editor and source artefacts the previewer never reads. One
+ * copy keeps both corpora stripped the same way.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { cpSync, existsSync, readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 
 /**
@@ -13,6 +13,20 @@ import { basename } from 'node:path';
  * asserts it against the importers core names.
  */
 export const READ_IMPORTERS = new Set(['scene', 'wavefront_obj', 'texture', '3d_texture']);
+
+/** Copies the tree at `src` to `dest` without what the prune drops, and returns the file count. */
+export function copyPruned(src, dest) {
+  let files = 0;
+  cpSync(src, dest, {
+    recursive: true,
+    filter: (path) => {
+      if (isPruned(path)) return false;
+      files++;
+      return true;
+    },
+  });
+  return files;
+}
 
 export function isPruned(path) {
   const name = basename(path);
