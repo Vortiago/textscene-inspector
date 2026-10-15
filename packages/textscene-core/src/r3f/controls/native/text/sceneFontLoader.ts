@@ -16,6 +16,7 @@ import {
 import { resolveFontFileBytes } from './sceneFontResolution';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
+import { decodeBase64Bytes } from '../../../../godot/packedBytes';
 
 // happy-dom has neither `FontFace` nor a 2D canvas context, so under vitest the loader skips to the
 // bundled default before any DOM font API. The skip is deliberate, so it does not warn.
@@ -213,10 +214,7 @@ let bundledRegistration: Promise<CanvasFontMetrics | undefined> | undefined;
 let bundledMetrics: CanvasFontMetrics | undefined;
 
 function decodeBundledWoff2(): ArrayBuffer {
-  const binary = atob(OPEN_SANS_WOFF2_BASE64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes.buffer;
+  return decodeBase64Bytes(OPEN_SANS_WOFF2_BASE64).buffer;
 }
 
 async function registerBundledFont(): Promise<CanvasFontMetrics | undefined> {

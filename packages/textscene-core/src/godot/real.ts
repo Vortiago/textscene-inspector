@@ -3,7 +3,7 @@
  * so a `real_t` field, and every Vector, Rect2 and Transform component, holds single precision.
  */
 
-import type { Xyz } from './xyz.js';
+import type { Vector3 } from './vector.js';
 
 /** The value a `real_t` field holds after `value` is assigned to it. */
 export function storedReal(value: number): number {
@@ -11,7 +11,7 @@ export function storedReal(value: number): number {
 }
 
 /** The vector a `Vector3` field holds after `value` is assigned to it. */
-export function storedXyz(value: Xyz): Xyz {
+export function storedVector3(value: Vector3): Vector3 {
   return { x: storedReal(value.x), y: storedReal(value.y), z: storedReal(value.z) };
 }
 

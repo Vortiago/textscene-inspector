@@ -5,13 +5,6 @@
 
 import type * as THREE from 'three';
 
-/** Maps the unit plane onto NDC. A shader that needs the NDC position repeats `position.xy * 2.0`. */
-export const FULL_SCREEN_VERTEX = /* glsl */ `
-void main() {
-  gl_Position = vec4(position.xy * 2.0, 0.0, 1.0);
-}
-`;
-
 export function FullScreenQuad({
   meshRef,
   material,

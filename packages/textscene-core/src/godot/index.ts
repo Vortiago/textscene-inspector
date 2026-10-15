@@ -157,9 +157,8 @@ export {
   type PositionalShadowRequest,
   type PositionalShadowSlot,
 } from './positionalShadowAtlas.js';
+export { LIGHT_SHADOW_NORMAL_BIAS_DEFAULT, LIGHT_SIZE_DEFAULT } from './light.js';
 export {
-  LIGHT_SIZE_DEFAULT,
-  POSITIONAL_SHADOW_NORMAL_BIAS_DEFAULT,
   positionalLightBounds,
   positionalShadowNear,
   positionalShadowNormalBias,

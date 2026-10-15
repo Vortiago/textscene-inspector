@@ -23,9 +23,3 @@ export class AtlasDepthTexture extends sharedTexture(THREE.DepthTexture) {
     this.magFilter = THREE.LinearFilter;
   }
 }
-
-/** The render target `depth` belongs to, or null for anything else, such as an uninstalled uniform. */
-export function atlasTargetOf(depth: unknown): THREE.WebGLRenderTarget | null {
-  if (!(depth instanceof THREE.DepthTexture)) return null;
-  return depth.renderTarget instanceof THREE.WebGLRenderTarget ? depth.renderTarget : null;
-}

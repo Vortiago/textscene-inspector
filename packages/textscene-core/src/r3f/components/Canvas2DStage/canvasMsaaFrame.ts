@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { drawFullScreen, fullScreenPass } from '../../fullScreenPass';
 
 export interface CanvasMsaaFrame {
   /** Draws `scene` through the target and copies the result to the target bound before. */
@@ -14,22 +15,15 @@ export interface CanvasMsaaFrame {
 }
 
 /** Each texel to the pixel under it, so the copy neither filters nor converts. */
-const COPY_VERTEX = /* glsl */ `
-in vec3 position;
-void main() {
-  gl_Position = vec4(position.xy, 0.0, 1.0);
-}`;
 const COPY_FRAGMENT = /* glsl */ `
-precision highp float;
 uniform sampler2D frame;
-out vec4 color;
 void main() {
-  color = texelFetch(frame, ivec2(gl_FragCoord.xy), 0);
+  gl_FragColor = texelFetch(frame, ivec2(gl_FragCoord.xy), 0);
 }`;
 
 export function createCanvasMsaaFrame(samples: number): CanvasMsaaFrame {
   const target = createFrameTarget(samples);
-  const copy = createCopyPass(target.texture);
+  const copy = fullScreenPass('Canvas2D::msaaCopy', COPY_FRAGMENT, { frame: { value: target.texture } });
   const drawingBuffer = new THREE.Vector2();
 
   return {
@@ -41,8 +35,7 @@ export function createCanvasMsaaFrame(samples: number): CanvasMsaaFrame {
       const previous = gl.getRenderTarget();
       gl.setRenderTarget(target);
       gl.render(scene, camera);
-      gl.setRenderTarget(previous);
-      gl.render(copy.scene, copy.camera);
+      drawFullScreen(gl, copy, previous);
     },
     dispose() {
       target.dispose();
@@ -67,28 +60,4 @@ function createFrameTarget(samples: number): THREE.WebGLRenderTarget {
   // Not declared by @types/three: three sets it on plain render targets the same way (`XRManager.js`).
   (target as THREE.WebGLRenderTarget & { isXRRenderTarget: boolean }).isXRRenderTarget = true;
   return target;
-}
-
-function createCopyPass(frame: THREE.Texture) {
-  const material = new THREE.RawShaderMaterial({
-    glslVersion: THREE.GLSL3,
-    vertexShader: COPY_VERTEX,
-    fragmentShader: COPY_FRAGMENT,
-    uniforms: { frame: { value: frame } },
-    blending: THREE.NoBlending,
-    depthTest: false,
-    depthWrite: false,
-  });
-  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
-  quad.frustumCulled = false;
-  const scene = new THREE.Scene();
-  scene.add(quad);
-  return {
-    scene,
-    camera: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1),
-    dispose() {
-      quad.geometry.dispose();
-      material.dispose();
-    },
-  };
 }

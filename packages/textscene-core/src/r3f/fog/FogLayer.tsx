@@ -13,10 +13,10 @@ import { observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { readShadowMaps } from '../shadowPass.js';
 import { TrackedObjects } from '../trackedObjects.js';
 import { probeCaptureOf } from '../reflectionProbe/captureCameras.js';
-import { captureFog, finishFog, prepareFog, type DepthFog, type FogSettings } from './fogFrame.js';
+import { captureFog, finishFog, prepareFog, type FogSettings } from './fogFrame.js';
 import { acquireFogPasses } from './fogPasses.js';
 import { isFogVolume, type FogVolumeObject } from './fogVolumeObject.js';
-import type { VolumetricFog } from './volumetricFogPass.js';
+import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
 
 export interface FogLayerProps {
   depth: DepthFog | null;

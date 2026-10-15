@@ -32,6 +32,7 @@ import {
   collectDecalReceivers,
   computeDecalBoxWorldAABB,
 } from './decalProjection';
+import { clamp } from '../../../godot/math';
 
 /** Wireframe colour for the (selection-gated) projection-box gizmo. */
 const BOX_COLOR = '#ff9d3b';
@@ -100,7 +101,7 @@ export function Decal({ node, children }: NodeComponentProps) {
   const color = useGodotLinearColor(modulate);
   // albedo_mix scales how strongly the projected albedo replaces the surface;
   // fold it with modulate alpha into the projection's opacity.
-  const opacity = clamp01(properties.albedo_mix * modulate.a);
+  const opacity = clamp(properties.albedo_mix * modulate.a, 0, 1);
 
   // Build the projection imperatively, through the group ref, not React state: walk the live
   // scene for meshes the box touches and bake a `DecalGeometry` mesh onto each in the decal's
@@ -241,8 +242,4 @@ function showFaded(
 ): void {
   materials.setOpacity(opacity * fade);
   group.visible = fade > 0;
-}
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
 }

@@ -15,7 +15,7 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
-import { glslFloat } from './glslLiterals';
+import { glslFloat } from '../../utils/glslLiterals';
 import { DEFAULT_AGX_CONTRAST } from './types';
 
 /** Godot `ToneMapper`. */
@@ -103,41 +103,46 @@ export function toneMappingWhiteParam(mode: number, white: number): number {
  * The GLSL body for `CustomToneMapping`, per mode. three calls this after its
  * own `toneMappingExposure` is in scope but does NOT apply it for the custom
  * hook, so each curve multiplies it in first, which is also where Godot puts
- * `tonemap_exposure`.
+ * `tonemap_exposure`. The white is a constant per environment, so it is baked in
+ * rather than a uniform every material would have to declare.
  */
-export function toneMappingShaderChunk(mode: number, agxContrast = DEFAULT_AGX_CONTRAST): string {
-  const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
+export function toneMappingShaderChunk(
+  mode: number,
+  white: number,
+  agxContrast = DEFAULT_AGX_CONTRAST
+): string {
   return /* glsl */ `
 uniform float toneMappingExposure;
-uniform float godotToneMapWhite;
 
 vec3 CustomToneMapping(vec3 color) {
   color *= toneMappingExposure;
-${body}
+${curveGlsl(mode, white, agxContrast)}
 }
 `;
 }
 
 /**
  * The same curve as the final pass after bloom, since bloom reads pre-tonemap HDR and
- * three cannot tonemap in-material then. It bakes the white in, as `toneMapping.ts`
- * does. Every mode gets a body: LINEAR is the curve that applies exposure and nothing
- * else, so no consumer supplies a fifth.
+ * three cannot tonemap in-material then. Every mode gets a body: LINEAR is the curve that
+ * applies exposure and nothing else, so no consumer supplies a fifth.
  */
 export function toneMappingEffectGlsl(
   mode: number,
   white: number,
   agxContrast = DEFAULT_AGX_CONTRAST
 ): string {
-  const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
-  const bakedWhite = glslFloat(toneMappingWhiteParam(mode, white));
   return /* glsl */ `
 vec3 godotToneMap(vec3 color, float exposure) {
-  const float godotToneMapWhite = ${bakedWhite};
   color *= exposure;
-${body}
+${curveGlsl(mode, white, agxContrast)}
 }
 `;
+}
+
+/** The mode's curve on an exposed `color`, with the white it reads baked in, so both paths draw alike. */
+function curveGlsl(mode: number, white: number, agxContrast: number): string {
+  const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
+  return `  const float godotToneMapWhite = ${glslFloat(toneMappingWhiteParam(mode, white))};\n${body}`;
 }
 
 /**

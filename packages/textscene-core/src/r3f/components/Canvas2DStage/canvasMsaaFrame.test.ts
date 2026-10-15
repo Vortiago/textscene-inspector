@@ -10,7 +10,7 @@ type Target = THREE.WebGLRenderTarget | null;
 
 /** A renderer that records each draw and the target bound for it. */
 function recordingRenderer(width: number, height: number) {
-  const draws: { scene: THREE.Scene; target: Target }[] = [];
+  const draws: { drawn: THREE.Object3D; target: Target }[] = [];
   let bound: Target = null;
   const gl = {
     getDrawingBufferSize: (out: THREE.Vector2) => out.set(width, height),
@@ -18,8 +18,8 @@ function recordingRenderer(width: number, height: number) {
     setRenderTarget: (target: Target) => {
       bound = target;
     },
-    render: (scene: THREE.Scene) => {
-      draws.push({ scene, target: bound });
+    render: (drawn: THREE.Object3D) => {
+      draws.push({ drawn, target: bound });
     },
   };
   return { gl: gl as unknown as THREE.WebGLRenderer, draws };
@@ -35,7 +35,7 @@ describe('createCanvasMsaaFrame', () => {
 
     frame.render(gl, scene, camera);
 
-    expect(draws[0]).toMatchObject({ scene, target: { samples: 4, width: 640, height: 360 } });
+    expect(draws[0]).toMatchObject({ drawn: scene, target: { samples: 4, width: 640, height: 360 } });
     frame.dispose();
   });
 
@@ -58,7 +58,7 @@ describe('createCanvasMsaaFrame', () => {
     frame.render(gl, scene, camera);
 
     expect(draws).toHaveLength(2);
-    expect(draws[1]!.scene).not.toBe(scene);
+    expect(draws[1]!.drawn).not.toBe(scene);
     expect(draws[1]!.target).toBeNull();
     frame.dispose();
   });

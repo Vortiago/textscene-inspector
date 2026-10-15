@@ -5,10 +5,13 @@
  */
 
 import * as THREE from 'three';
-import { POSITIONAL_SHADOW_ATLAS_DEPTH_BITS } from '../../godot/positionalShadowAtlas.js';
-import { AtlasColourTexture } from '../shadowFilter/atlasColourTexture.js';
-import { AtlasDepthTexture, atlasTargetOf } from '../shadowFilter/atlasDepthTexture.js';
+import {
+  POSITIONAL_SHADOW_ATLAS_DEPTH_BITS,
+  type PositionalShadowSlot,
+} from '../../godot/positionalShadowAtlas.js';
+import { atlasTargetOf, createShadowAtlas } from '../shadowFilter/atlasTarget.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
+import type { LightShadowInternals } from '../sharedAtlasShadow.js';
 
 /** The uniform every lit material samples the atlas through. */
 export const POSITIONAL_SHADOW_ATLAS_UNIFORM = 'positionalShadowAtlas';
@@ -26,15 +29,12 @@ const DEPTH_TYPE =
  * a lookup reads as lit only where the receiver is strictly nearer than the caster: `Less` here.
  */
 function createAtlas(size: number): THREE.WebGLRenderTarget {
-  const atlas = new THREE.WebGLRenderTarget(size, size, { depthBuffer: true });
-  atlas.texture = new AtlasColourTexture('PositionalShadowAtlasColour', size);
-  atlas.depthTexture = new AtlasDepthTexture({
+  return createShadowAtlas({
     name: 'PositionalShadowAtlas',
     size,
     type: DEPTH_TYPE,
     compare: THREE.LessCompare,
   });
-  return atlas;
 }
 
 /** A side for the atlas before any viewport holds it. Any size serves: the first holder resizes it. */
@@ -89,4 +89,23 @@ export function releasePositionalShadowAtlas(holder: object): void {
 function fitToHolders(): void {
   const size = Math.max(UNHELD_SIZE, ...holders.values());
   if (atlas.width !== size) atlas.setSize(size, size);
+}
+
+/**
+ * Points `shadow` at `slot` of the atlas, and writes the slot's rectangle, in units of the slot as
+ * three gives a viewport, into `slotRect`. `mapSize` is the slot and the frame extents are the atlas
+ * over the slot, so three asks for the atlas's own size and never resizes it
+ * (`WebGLShadowMap.js:172-176`, `:281-285`, `:345-350`).
+ */
+export function drawIntoAtlasSlot(
+  shadow: THREE.LightShadow & LightShadowInternals,
+  slot: PositionalShadowSlot,
+  slotRect: THREE.Vector4
+): void {
+  shadow.map = positionalShadowAtlas();
+  const atlasSize = shadow.map.width;
+  shadow.mapSize.set(slot.size, slot.size);
+  shadow._frameExtents.set(atlasSize / slot.size, atlasSize / slot.size);
+  slotRect.set(slot.x / slot.size, slot.y / slot.size, 1, 1);
+  shadow._viewports[0]!.copy(slotRect);
 }

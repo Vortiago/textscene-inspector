@@ -16,7 +16,7 @@
  */
 
 import { LTC_SIZE } from '../../godot/ltc.js';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 import { AREA_TEXTURE_FETCH } from './areaTextureFetch.js';
 
 /**
