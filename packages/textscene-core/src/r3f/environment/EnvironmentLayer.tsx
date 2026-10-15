@@ -12,7 +12,7 @@ import { applyToneMapping, installToneCurve } from '../../resources/environment/
 import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
-import { useCanvasPasses } from './useCanvasPasses';
+import { useCompositorPass, useDraws3D } from './useCompositorPass';
 import { useWorldKind } from './WorldKindContext';
 import { SkyLayer } from '../sky/SkyLayer';
 import type { SceneResources } from '../SceneResourcesContext';
@@ -38,8 +38,12 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
-  // One value decides the pass and the suppression, so they cannot disagree.
-  const { draws3D, compositor } = useCanvasPasses(settings);
+  const draws3D = useDraws3D();
+  const pass = useCompositorPass(settings);
+  // One value decides the pass and the suppression, so they cannot disagree. Only the root world
+  // mounts the compositor: a portal store shares the root's internal state, so a sub-viewport
+  // world's compositor would draw the portal scene onto the canvas, not into the target.
+  const compositor = useWorldKind() === 'root' ? pass : null;
   // One value decides the fog programs, the fogged colour background and the fog passes.
   const hasFog = draws3D && (!!settings.fog || !!settings.volumetricFog);
 

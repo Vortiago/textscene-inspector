@@ -21,18 +21,14 @@ Both canvases create their context with `antialias: false`. Each MSAA path draws
 target at the count Godot would draw on this device (`r3f/deviceSampleCount.ts`):
 
 - The root viewport's `msaa_3d` multisamples the compositor's scene buffer, so it resolves in linear
-  HDR before `GodotToneMapEffect` applies the curve. The compositor mounts for MSAA alone, with no
-  glow, blended surface or adjustment.
-- The compositor draws only the root world, because it draws to the canvas. A WorldEnvironment in a
-  SubViewport's own world mounts none, and its tone curve stays off the shared renderer.
+  HDR before `GodotToneMapEffect` applies the curve. The compositor mounts for MSAA alone.
 - The root viewport's `msaa_2d` draws the 2D canvas through a multisampled RGBA8 target that stores
   sRGB-encoded values, so items blend as they blend on the drawing buffer
   (`Canvas2DStage/canvasMsaaFrame.ts`).
 - A 3D root with no valid Environment (ADR-0025) mounts `NoEnvironmentLayer`: the project's clear
   colour (`renderer_viewport.cpp:371`), and a compositor for `msaa_3d` with Godot's default LINEAR
   curve (`tone_mapper.h:177`). The 3D canvas is `flat`, so three adds no curve of its own.
-- A SubViewport's `msaa_3d` or `msaa_2d` sets its own target's samples, as Godot configures each
-  viewport's buffers from its own modes (`renderer_viewport.cpp:173`, `:278`, `:1362`).
+- A SubViewport's `msaa_3d` or `msaa_2d` sets its own target's samples.
 
 ## Consequences
 

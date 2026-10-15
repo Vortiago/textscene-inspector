@@ -5,15 +5,15 @@
  */
 
 import { useMemo } from 'react';
+import type * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { supportedSampleCount } from '../godot/rendering/msaa';
 
 /**
- * The colour storage of a multisampled target: RGBA8 for an 8-bit linear target, SRGB8_ALPHA8 for an
- * 8-bit target under an sRGB tag, RGBA16F for the compositor's half-float scene buffer. A device can
- * list different counts for each.
+ * The colour storage of a multisampled target: RGBA8 for an 8-bit target, RGBA16F for the
+ * compositor's half-float scene buffer. A device can list fewer counts for one than for the other.
  */
-export type ColourStorage = 'RGBA8' | 'SRGB8_ALPHA8' | 'RGBA16F';
+export type ColourStorage = 'RGBA8' | 'RGBA16F';
 
 /**
  * The counts colour and depth share, per context and colour storage. Written only by
@@ -22,17 +22,21 @@ export type ColourStorage = 'RGBA8' | 'SRGB8_ALPHA8' | 'RGBA16F';
  */
 const sharedCounts = new WeakMap<WebGL2RenderingContext, Map<ColourStorage, readonly number[]>>();
 
-/**
- * The samples the canvas's renderer draws for `requested`: 0, one sample per pixel, where the
- * context lists no counts, since WebGL 1 has no multisampled target.
- */
+/** 0, one sample per pixel, where the context lists no counts: WebGL 1 has no multisampled target. */
+function deviceSampleCount(
+  gl: THREE.WebGLRenderer,
+  requested: number,
+  storage: ColourStorage = 'RGBA8'
+): number {
+  const context = gl.getContext();
+  if (requested === 0 || !('getInternalformatParameter' in context)) return 0;
+  return supportedSampleCount(requested, sharedSampleCounts(context, storage));
+}
+
+/** `deviceSampleCount` for the canvas's own renderer. */
 export function useDeviceSampleCount(requested: number, storage: ColourStorage = 'RGBA8'): number {
   const gl = useThree((state) => state.gl);
-  return useMemo(() => {
-    const context = gl.getContext();
-    if (requested === 0 || !('getInternalformatParameter' in context)) return 0;
-    return supportedSampleCount(requested, sharedSampleCounts(context, storage));
-  }, [gl, requested, storage]);
+  return useMemo(() => deviceSampleCount(gl, requested, storage), [gl, requested, storage]);
 }
 
 function sharedSampleCounts(context: WebGL2RenderingContext, storage: ColourStorage): readonly number[] {

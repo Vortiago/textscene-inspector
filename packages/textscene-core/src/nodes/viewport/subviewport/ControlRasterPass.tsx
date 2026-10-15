@@ -23,11 +23,12 @@ import { measureText } from '../../../r3f/controls/native/text/measurer.js';
 import type { Rect2 } from '../../../r3f/controls/native/rect.js';
 import {
   applyOrthoFrame,
+  createOffscreenTarget,
   orthoFrameForSize,
   renderToOffscreenTarget,
   viewportMsaaSamples,
 } from './offscreenViewport.js';
-import { useOffscreenTarget } from './useOffscreenTarget.js';
+import { useDeviceSampleCount } from '../../../r3f/deviceSampleCount.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
 import { viewportTargetSize } from './targetSize.js';
@@ -50,11 +51,29 @@ export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
   );
 }
 
+/**
+ * Godot draws canvas items after the tonemap pass (`RendererViewport::_draw_viewport`),
+ * so the target holds sRGB values with no curve, and the consumer applies the curve
+ * once: a 0.5 grey ColorRect reaches it as rgb(162), not a pre-tonemapped rgb(196).
+ * Hence sRGB storage and no pre-tonemap flag, the opposite of the 3D/2D pass.
+ */
+function createRasterTarget(
+  width: number,
+  height: number,
+  name: string,
+  samples: number
+): THREE.WebGLRenderTarget {
+  return createOffscreenTarget(width, height, name, {
+    colorSpace: THREE.SRGBColorSpace,
+    preTonemapped: false,
+    samples,
+  });
+}
+
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const { path, node, inheritedRtl, internalResources, externalResources } = viewport;
 
-  const properties = node.properties as SubViewportProperties;
-  const { size, transparent_bg: transparentBg } = properties;
+  const { size, transparent_bg: transparentBg } = node.properties as SubViewportProperties;
   const { x: width, y: height } = viewportTargetSize(size, useViewportRect(path));
 
   const gl = useThree((state) => state.gl);
@@ -67,13 +86,13 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     return scene;
   }, [node.name]);
 
-  // Godot draws canvas items after the tonemap pass (`RendererViewport::_draw_viewport`), so the
-  // target holds sRGB values and the consumer applies the curve once: a 0.5 grey ColorRect reaches it
-  // as rgb(162), not rgb(196). Controls are canvas items, so the 2D buffer's mode applies.
-  const target = useOffscreenTarget(width, height, node.name, viewportMsaaSamples(properties, '2d'), {
-    colorSpace: THREE.SRGBColorSpace,
-    preTonemapped: false,
-  });
+  // Controls are canvas items, so the 2D buffer's mode applies.
+  const samples = useDeviceSampleCount(viewportMsaaSamples(node.properties as SubViewportProperties, '2d'));
+  const target = useMemo(
+    () => createRasterTarget(width, height, node.name, samples),
+    [width, height, node.name, samples]
+  );
+  useEffect(() => () => target.dispose(), [target]);
 
   const camera = useMemo(() => new THREE.OrthographicCamera(), []);
   useEffect(() => {

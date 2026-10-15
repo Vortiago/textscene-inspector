@@ -1,15 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MSAA_LABELS, MSAA_MODES, msaaSampleCount, supportedSampleCount } from './msaa';
-
-describe('Viewport.MSAA', () => {
-  it('holds the four modes below MSAA_MAX', () => {
-    expect(MSAA_MODES).toEqual([0, 1, 2, 3]);
-  });
-
-  it('names no value past MSAA_8X (edge case)', () => {
-    expect(MSAA_LABELS[4]).toBeUndefined();
-  });
-});
+import { msaaSampleCount, supportedSampleCount } from './msaa';
 
 describe('msaaSampleCount', () => {
   it('draws one sample, no multisampled buffer, for MSAA_DISABLED', () => {

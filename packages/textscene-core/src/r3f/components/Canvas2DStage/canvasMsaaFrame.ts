@@ -34,13 +34,8 @@ export function createCanvasMsaaFrame(samples: number): CanvasMsaaFrame {
         target.setSize(drawingBuffer.x, drawingBuffer.y);
       }
       const previous = gl.getRenderTarget();
-      // A renderer left on this target would draw the next frame into it.
-      try {
-        gl.setRenderTarget(target);
-        gl.render(scene, camera);
-      } finally {
-        gl.setRenderTarget(previous);
-      }
+      gl.setRenderTarget(target);
+      gl.render(scene, camera);
       drawFullScreen(gl, copy, previous);
     },
     dispose() {

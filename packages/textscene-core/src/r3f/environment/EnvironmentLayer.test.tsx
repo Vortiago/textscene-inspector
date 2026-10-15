@@ -12,7 +12,6 @@ import { createEnvironmentSettings } from '../../resources/environment/build';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { CaptureRenderer } from '../testing/CaptureRenderer';
-import { fakeWebGL2Context, rendererOver } from '../testing/fakeWebGL2Context';
 
 vi.mock('./ToneMapLayer', () => ({
   ToneMapLayer: () => <group name="ToneMapLayer" />,
@@ -20,6 +19,13 @@ vi.mock('./ToneMapLayer', () => ({
 
 const TONEMAP_CHUNK = 'tonemapping_pars_fragment';
 const FILMIC = '2';
+
+/** A renderer whose context reports attributes, so the 3D passes take it for a real GL context. */
+function rendererWithGlContext(defaults: THREE.WebGLRendererParameters): THREE.WebGLRenderer {
+  const gl = new THREE.WebGLRenderer(defaults);
+  gl.getContext = () => ({ getContextAttributes: () => ({}) }) as unknown as WebGL2RenderingContext;
+  return gl;
+}
 
 function settingsOf(properties: Record<string, string>) {
   return createEnvironmentSettings(decodeEnvironment(properties), DEFAULT_CLEAR_COLOR);
@@ -37,7 +43,7 @@ async function mountLayer(world: WorldKind, properties: Record<string, string>, 
         skyResources={NO_RESOURCES}
       />
     </WorldKindProvider>,
-    hasGlContext ? { gl: rendererOver(fakeWebGL2Context({})) } : undefined
+    hasGlContext ? { gl: rendererWithGlContext } : undefined
   );
   const compositors = renderer.scene.findAll((node) => node.props.name === 'ToneMapLayer').length;
   return { gl: captured.current!, compositors, unmount: () => renderer.unmount() };

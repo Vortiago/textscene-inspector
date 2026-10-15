@@ -9,8 +9,9 @@ import { createCanvasMsaaFrame } from './canvasMsaaFrame';
 type Target = THREE.WebGLRenderTarget | null;
 
 /** A renderer that records each draw and the target bound for it. */
-function recordingRenderer(width: number, height: number, bound: Target = null) {
+function recordingRenderer(width: number, height: number) {
   const draws: { drawn: THREE.Object3D; target: Target }[] = [];
+  let bound: Target = null;
   const gl = {
     getDrawingBufferSize: (out: THREE.Vector2) => out.set(width, height),
     getRenderTarget: () => bound,
@@ -21,7 +22,7 @@ function recordingRenderer(width: number, height: number, bound: Target = null) 
       draws.push({ drawn, target: bound });
     },
   };
-  return { gl: gl as unknown as THREE.WebGLRenderer, draws, bound: () => bound };
+  return { gl: gl as unknown as THREE.WebGLRenderer, draws };
 }
 
 const scene = new THREE.Scene();
@@ -60,20 +61,6 @@ describe('createCanvasMsaaFrame', () => {
     expect(draws[1]!.drawn).not.toBe(scene);
     expect(draws[1]!.target).toBeNull();
     frame.dispose();
-  });
-
-  it('rebinds the target bound before when the world draw throws (error path)', () => {
-    const previous = new THREE.WebGLRenderTarget(1, 1);
-    const recording = recordingRenderer(64, 64, previous);
-    recording.gl.render = () => {
-      throw new Error('draw failed');
-    };
-    const frame = createCanvasMsaaFrame(2);
-
-    expect(() => frame.render(recording.gl, scene, camera)).toThrow('draw failed');
-    expect(recording.bound()).toBe(previous);
-    frame.dispose();
-    previous.dispose();
   });
 
   it('follows the drawing buffer when the canvas resizes (edge case)', () => {
