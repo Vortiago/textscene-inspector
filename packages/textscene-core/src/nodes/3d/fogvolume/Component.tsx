@@ -66,7 +66,8 @@ function logFogShaderNotRun(material: TscnInternalResource): void {
 function useMaterialFill(scoped: ScopedResource | null): FogVolumeFill {
   const material = scoped?.resource ?? null;
   const shader = useResourceResolution(material?.data['shader'], scoped?.resources ?? NO_RESOURCES);
-  const isFogShader = hasFogShader(material, shader.scoped?.resource ?? null);
+  const shaderResource = shader.scoped?.resource ?? null;
+  const isFogShader = useMemo(() => hasFogShader(material, shaderResource), [material, shaderResource]);
   // A `.tres` shader still loading reads as a fog shader until its code arrives.
   const isShaderSettled = shader.status !== 'pending';
   useEffect(() => {

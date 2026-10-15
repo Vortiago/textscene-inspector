@@ -31,17 +31,12 @@ const SPATIAL_SHADER: TscnInternalResource = {
   type: 'Shader',
   data: { code: '"shader_type spatial;\nvoid fragment() {}"' },
 };
-const SHADER_MATERIAL: TscnInternalResource = { id: 'ShaderMaterial_1', type: 'ShaderMaterial', data: {} };
-const FOG_SHADER_MATERIAL: TscnInternalResource = {
-  id: 'ShaderMaterial_fog',
-  type: 'ShaderMaterial',
-  data: { shader: 'SubResource("Shader_fog")' },
-};
-const SPATIAL_SHADER_MATERIAL: TscnInternalResource = {
-  id: 'ShaderMaterial_spatial',
-  type: 'ShaderMaterial',
-  data: { shader: 'SubResource("Shader_spatial")' },
-};
+/** A ShaderMaterial with `shader` as its shader reference, or none. */
+function shaderMaterial(id: string, shader?: string): TscnInternalResource {
+  return { id, type: 'ShaderMaterial', data: shader ? { shader } : {} };
+}
+const SHADER_MATERIAL = shaderMaterial('ShaderMaterial_1');
+const FOG_SHADER_MATERIAL = shaderMaterial('ShaderMaterial_fog', 'SubResource("Shader_fog")');
 const NOISE: TscnInternalResource = { id: 'FastNoiseLite_1', type: 'FastNoiseLite', data: {} };
 const NOISE_TEXTURE: TscnInternalResource = {
   id: 'NoiseTexture3D_1',
@@ -58,29 +53,19 @@ const IMAGE_MATERIAL: TscnInternalResource = {
   type: 'FogMaterial',
   data: { density_texture: 'ExtResource("1_density")' },
 };
-const FILE_SHADER_MATERIAL: TscnInternalResource = {
-  id: 'ShaderMaterial_file',
-  type: 'ShaderMaterial',
-  data: { shader: 'ExtResource("2_shader")' },
-};
-const TRES_SHADER_MATERIAL: TscnInternalResource = {
-  id: 'ShaderMaterial_tres',
-  type: 'ShaderMaterial',
-  data: { shader: 'ExtResource("3_shader")' },
-};
 const RESOURCES = [
-  FILE_SHADER_MATERIAL,
-  TRES_SHADER_MATERIAL,
   FOG_MATERIAL,
-  FOG_SHADER,
-  SPATIAL_SHADER,
   SHADER_MATERIAL,
-  FOG_SHADER_MATERIAL,
-  SPATIAL_SHADER_MATERIAL,
   NOISE,
   NOISE_TEXTURE,
   TEXTURED_MATERIAL,
   IMAGE_MATERIAL,
+  FOG_SHADER,
+  SPATIAL_SHADER,
+  FOG_SHADER_MATERIAL,
+  shaderMaterial('ShaderMaterial_spatial', 'SubResource("Shader_spatial")'),
+  shaderMaterial('ShaderMaterial_file', 'ExtResource("2_shader")'),
+  shaderMaterial('ShaderMaterial_tres', 'ExtResource("3_shader")'),
 ];
 const IMAGE_PATH = 'res://fog/density.png';
 const SPATIAL_SHADER_PATH = 'res://fog/spatial.tres';
@@ -198,29 +183,30 @@ describe('<FogVolume>', () => {
 describe('<FogVolume> with a shader it does not run', () => {
   afterEach(() => setLogAdapter(null));
 
-  /** The messages the logger receives at info level while `run` runs. */
-  async function infoMessages(run: () => Promise<unknown>): Promise<string[]> {
+  /** The `[FogVolume]` messages the logger receives at info level while `run` runs. */
+  async function fogVolumeInfoMessages(run: () => Promise<unknown>): Promise<string[]> {
     const info = vi.fn();
     const adapter: LogAdapter = { trace: vi.fn(), debug: vi.fn(), info, warn: vi.fn(), error: vi.fn() };
     setLogAdapter(adapter);
     await run();
-    return info.mock.calls.map(([message]) => String(message));
+    return info.mock.calls
+      .map(([message]) => String(message))
+      .filter((message) => message.startsWith('[FogVolume]'));
   }
 
   it('logs once that it adds no fog for a fog shader', async () => {
+    // A copy of the material, which the logger has not seen in an earlier test.
     const resources = [{ ...FOG_SHADER_MATERIAL }, FOG_SHADER];
     const props = { material: 'SubResource("ShaderMaterial_fog")' };
-    const messages = await infoMessages(async () => {
+    const messages = await fogVolumeInfoMessages(async () => {
       await mountedVolume(props, resources);
       await mountedVolume(props, resources);
     });
-    expect(messages.filter((message) => message.startsWith('[FogVolume]'))).toHaveLength(1);
+    expect(messages).toHaveLength(1);
   });
 
   it('logs nothing for a spatial shader, which Godot also fills with its default fog (edge case)', async () => {
-    const resources = [{ ...SPATIAL_SHADER_MATERIAL }, SPATIAL_SHADER];
     const props = { material: 'SubResource("ShaderMaterial_spatial")' };
-    const messages = await infoMessages(() => mountedVolume(props, resources));
-    expect(messages.filter((message) => message.startsWith('[FogVolume]'))).toEqual([]);
+    expect(await fogVolumeInfoMessages(() => mountedVolume(props))).toEqual([]);
   });
 });
