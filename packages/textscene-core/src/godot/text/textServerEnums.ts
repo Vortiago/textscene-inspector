@@ -22,8 +22,7 @@ export const AUTOWRAP_MODE_NAMES = enumNamesByValue(AutowrapMode);
 /**
  * `TextServer::OverrunBehavior`: OVERRUN_NO_TRIMMING=0 …
  * OVERRUN_TRIM_WORD_ELLIPSIS_FORCE=6 (servers/text/text_server.h:123-130).
- * `FoldableContainer` keeps a narrower local table, since its hint stops at
- * OVERRUN_TRIM_WORD_ELLIPSIS (4).
+ * `FoldableContainer`'s hint stops at OVERRUN_TRIM_WORD_ELLIPSIS (4).
  */
 export enum OverrunBehavior {
   OVERRUN_NO_TRIMMING = 0,

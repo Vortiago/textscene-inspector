@@ -16,8 +16,8 @@ export enum BillboardMode {
 }
 
 /**
- * The billboard modes a SpriteBase3D accepts, by the names a validator prints. Its hint names 3
- * (`sprite_3d.cpp:685`), and `set_billboard_mode` refuses PARTICLES (`sprite_3d.cpp:597-598`).
+ * The billboard modes a SpriteBase3D or a Label3D accepts, by the names a validator prints. Each
+ * setter refuses PARTICLES: `sprite_3d.cpp:597-598` and `label_3d.cpp:1001`.
  */
 export const SPRITE_BILLBOARD_MODE_NAMES = { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y' } as const;
 

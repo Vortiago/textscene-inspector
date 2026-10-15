@@ -31,6 +31,7 @@ import {
 import type { LinkButtonProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
+import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 /** `SceneStringName(font)`, registered for "LinkButton" at `default_theme.cpp:200`. */
 export const LINKBUTTON_THEME_FONT_KEY = 'font';
@@ -159,8 +160,6 @@ export function linkButtonTextPlacement(
 
 // Minimum size
 
-const OVERRUN_NO_TRIMMING = 0;
-
 /**
  * LinkButton's shaped label, null for empty text: the solve-handoff share
  * (`r3f/controls/native/solveHandoff.ts`) of `linkButtonMinimumSize` and `Component.tsx`. The painter's
@@ -185,7 +184,8 @@ export const linkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const layout: TextLayoutResult | null = ctx.measureText ? linkButtonLabelShape(n, ctx.theme) : null;
 
   const width =
-    layout && (props.overrunBehavior ?? OVERRUN_NO_TRIMMING) === OVERRUN_NO_TRIMMING
+    layout &&
+    (props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING) === OverrunBehavior.OVERRUN_NO_TRIMMING
       ? shapedTextSizeWidthPx(layout.widthPx)
       : 0;
   const height = layout ? layout.heightPx : 0;

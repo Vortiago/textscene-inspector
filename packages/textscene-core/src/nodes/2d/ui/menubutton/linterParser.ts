@@ -26,7 +26,7 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // menu_button.cpp:216, PROPERTY_HINT_RESOURCE_TYPE "Texture2D". PopupMenu::set_item_icon
   // (popup_menu.cpp:2024) assigns.
   icon: v.resourceReference('icon'),
-  // menu_button.cpp:217, PROPERTY_HINT_ENUM "No,As Checkbox,As Radio Button": ITEM_CHECKABLE_TYPE_NAMES 0-2
+  // menu_button.cpp:217, PROPERTY_HINT_ENUM "No,As Checkbox,As Radio Button": ItemCheckableType 0-2
   // (popup_menu.h:65-67). PopupMenu::_set_item_checkable_type (popup_menu.cpp:62-73) switches over those
   // three with no default case, so an out-of-range write is silently dropped: enforced, not hinted.
   checkable: v.enumInt(
