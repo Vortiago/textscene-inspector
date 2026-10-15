@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { BillboardMode } from '../godot/billboard';
+import { BillboardMode } from '../godot/scene/billboard';
 import {
   billboardOf,
   castsShadowOf,
@@ -18,7 +18,7 @@ import { restoreInstanceLayers, showInstanceLayers } from './reflectionProbe/ins
 import { alignAlphaHash } from './materials/godotAlphaHash';
 import { opaquePrepassOf } from './materials/opaquePrepass';
 import { surfaceDepthMaterial, syncSurfaceDepth } from './materials/surfaceDepthMaterial';
-import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/opaquePrepass';
+import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/rendering/opaquePrepass';
 
 /** The four `Object3D` hooks, one prop each: the material factory guard rejects a spread. */
 export interface SurfaceDrawHooks {

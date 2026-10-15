@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 import type { RefObject } from 'react';
-import type { Aabb } from '../../godot/aabb';
+import type { Aabb } from '../../godot/math/aabb';
 import type { Transform3D } from '../../nodes/base/node3d/types';
 import { transform3DToMatrix } from '../nodeTreeTransforms';
 import { visibleInTree } from '../visibleInTree';

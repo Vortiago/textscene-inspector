@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../../parser/testing/parserKit';
-import { EMPTY_AABB } from '../../../../godot/aabb';
+import { EMPTY_AABB } from '../../../../godot/math/aabb';
 import type { TscnNode } from '../../../../parser/types';
 import { parseCPUParticles3D } from './parser';
 import { useCPUParticles3DAabb } from './ownAabb';

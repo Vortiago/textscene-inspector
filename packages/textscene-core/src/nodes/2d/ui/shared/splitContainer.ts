@@ -6,7 +6,7 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/index.js';
-import { ruleInt } from '../../../../godot/int.js';
+import { ruleInt } from '../../../../godot/variant/int.js';
 import type { ControlProperties } from '../control/types';
 import { parseControl } from '../control/parser';
 
@@ -26,7 +26,7 @@ export interface SplitContainerProperties extends ControlProperties {
   draggerVisibility?: number;
 }
 
-/** All three spellings a PACKED_INT32_ARRAY slot converts (`godot/variantParser.ts`). */
+/** All three spellings a PACKED_INT32_ARRAY slot converts (`godot/variant/variantParser.ts`). */
 const SPLIT_OFFSETS_FORMS = packedArrayForms('PackedInt32Array');
 
 /**

@@ -7,7 +7,7 @@
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';

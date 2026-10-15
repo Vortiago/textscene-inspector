@@ -7,8 +7,8 @@ import type { TscnInternalResource } from '../../../parser/types';
 import type { ImageSize } from '../../formats/image/imagePixels';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { literalText, parseGodotInt } from '../../../godot/index.js';
-import { parsePackedByteArrayBody } from '../../../godot/packedBytes.js';
-import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variantParser.js';
+import { parsePackedByteArrayBody } from '../../../godot/variant/packedBytes.js';
+import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
 import { warn } from '../../../logger';
 
 /** A channel no source byte fills: 0, or 255 for alpha. */

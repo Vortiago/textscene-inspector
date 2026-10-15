@@ -176,7 +176,7 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
 });
 
 describe('float-tuple validators speak the tokenizer float grammar', () => {
-  // FLOAT_PATTERN_SOURCE (godot/number.ts) is transcribed from `get_token`, so
+  // FLOAT_PATTERN_SOURCE (godot/variant/number.ts) is transcribed from `get_token`, so
   // linter and renderer accept what Godot loads: trailing-dot (5.) and every
   // exponent form, but not a leading `+` or `.`, which fail the load.
   it('v.vector2 accepts 5. / scientific', () => {

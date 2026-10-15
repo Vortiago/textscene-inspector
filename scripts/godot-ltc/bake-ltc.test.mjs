@@ -37,7 +37,7 @@ describe('ltcTexels', () => {
 
 describe('generatedProblem', () => {
   const committed = readFileSync(
-    join(REPO_ROOT, 'packages/textscene-core/src/godot/ltcTable.generated.ts'),
+    join(REPO_ROOT, 'packages/textscene-core/src/godot/rendering/lights/ltcTable.generated.ts'),
     'utf8'
   );
 

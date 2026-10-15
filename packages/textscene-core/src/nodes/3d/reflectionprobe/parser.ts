@@ -9,9 +9,9 @@ import {
   REFLECTION_PROBE_MAX_DISTANCE,
   ReflectionProbeAmbientMode,
   ReflectionProbeUpdateMode,
-} from '../../../godot/reflectionProbe';
-import type { Vector3 } from '../../../godot/vector';
-import { clamp } from '../../../godot/math';
+} from '../../../godot/rendering/environment/reflectionProbe';
+import type { Vector3 } from '../../../godot/math/vector';
+import { clamp } from '../../../godot/math/math';
 import type { ParsedHeading } from '../../../parser/utils';
 import { boolOr, enumOr, floatOr, intOr, vec3Or } from '../../../parser/valueParsers';
 import { colorOr } from '../../../utils/colorParser';

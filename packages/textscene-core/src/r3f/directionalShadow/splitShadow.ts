@@ -12,7 +12,7 @@ import {
   directionalShadowSplitAtlasRect,
   type DirectionalShadowAtlasRect,
   type DirectionalShadowFade,
-} from '../../godot/directionalShadow.js';
+} from '../../godot/rendering/lights/directionalShadow.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { holdDirectionalShadowAtlas, releaseDirectionalShadowAtlas } from './shadowAtlas.js';
 

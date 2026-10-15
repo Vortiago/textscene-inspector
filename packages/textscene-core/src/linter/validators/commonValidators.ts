@@ -17,8 +17,8 @@ import { boolLiteralAsNumber, boolSlotValue, parseGodotFloat, type IntWidth } fr
  * because that module imports nothing, so the renderer can read a value as
  * Godot does without pulling diagnostics into the webview bundle.
  */
-export { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE, parseGodotFloat } from '../../godot/number.js';
-export { parseGodotInt, ruleCount, ruleInt, storedFromFloat } from '../../godot/int.js';
+export { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE, parseGodotFloat } from '../../godot/variant/number.js';
+export { parseGodotInt, ruleCount, ruleInt, storedFromFloat } from '../../godot/variant/int.js';
 
 /**
  * One capture group of an already-matched float tuple, as a number. The regex

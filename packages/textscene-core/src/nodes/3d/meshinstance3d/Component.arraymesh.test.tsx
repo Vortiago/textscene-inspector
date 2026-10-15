@@ -19,7 +19,7 @@ import { headlightsSurface, wallQuadSurfaces } from '../../../resources/testing/
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { preloadResource } from '../../../resources/testing/preloadResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
-import { EMPTY_AABB } from '../../../godot/aabb';
+import { EMPTY_AABB } from '../../../godot/math/aabb';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
 

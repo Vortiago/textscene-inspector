@@ -13,7 +13,7 @@
 import type * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs.js';
 import { CanvasItemLightMode } from '../../resources/materials/canvasitemmaterial/types.js';
-import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/srgbTransfer.js';
+import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer.js';
 
 /**
  * The floor of the canvas modulate the CPU folds in and the shader divides by, so the divide-out

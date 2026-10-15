@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../../godot/positionalShadowAtlas';
+import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../../godot/rendering/lights/positionalShadowAtlas';
 import { sceneLights, type SceneLight } from '../directionalShadow/lightLists';
 import { positionalShadowUserData } from './declaration';
 import { fitScenePositionalShadows } from './fitScenePositionalShadows';

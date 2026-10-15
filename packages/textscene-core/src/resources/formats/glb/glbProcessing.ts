@@ -6,15 +6,15 @@
 
 import * as THREE from 'three';
 import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCasting';
-import { ShadowCastingSetting } from '../../../godot/rendering';
+import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 import { withExtensionRules } from './extensionRules';
 import { tagMeshInstances } from './meshInstances';
 import { tagGodotNodeNames } from './nodeNames';
-import { gltfImportNames, type GltfNamingOptions } from '../../../godot/gltfImportNames';
+import { gltfImportNames, type GltfNamingOptions } from '../../../godot/import/gltfImportNames';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
 import type { GltfExtensionRules } from './types';
 import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
-import { usesGodotSingleRoot } from '../../../godot/gltf';
+import { usesGodotSingleRoot } from '../../../godot/import/gltf';
 import { applyLightmapUv, type LightmapUvImport } from './lightmapUv/lightmapUv';
 import { godotPrimitives } from './godotPrimitives';
 

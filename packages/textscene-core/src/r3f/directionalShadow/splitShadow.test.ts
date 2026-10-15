@@ -16,7 +16,7 @@ import { splitSunOf } from './splitSun';
 import {
   directionalShadowSplitAtlasRect,
   type DirectionalShadowAtlasRect,
-} from '../../godot/directionalShadow';
+} from '../../godot/rendering/lights/directionalShadow';
 
 const ATLAS_SIZE = 4096;
 const WHOLE_ATLAS = { x: 0, y: 0, width: ATLAS_SIZE, height: ATLAS_SIZE };

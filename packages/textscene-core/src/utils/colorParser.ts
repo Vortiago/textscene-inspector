@@ -4,8 +4,8 @@
  */
 
 import { COLOR_RE } from '../parser/vectors';
-import { matchedFloat, allFinite } from '../godot/number.js';
-import type { Rgba } from '../godot/math.js';
+import { matchedFloat, allFinite } from '../godot/variant/number.js';
+import type { Rgba } from '../godot/math/math.js';
 
 export type Color = Rgba;
 

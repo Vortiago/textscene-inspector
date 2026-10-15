@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sameTransform2D } from './emissionTransform';
-import { TRANSFORM2D_IDENTITY } from '../../../godot/transform2d.js';
+import { TRANSFORM2D_IDENTITY } from '../../../godot/math/transform2d.js';
 
 describe('sameTransform2D', () => {
   it('is true for two equal transforms', () => {

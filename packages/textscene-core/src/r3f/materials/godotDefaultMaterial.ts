@@ -6,8 +6,8 @@
  */
 
 import * as THREE from 'three';
-import { DiffuseMode } from '../../godot/diffuseMode';
-import { SpecularMode } from '../../godot/specularMode';
+import { DiffuseMode } from '../../godot/rendering/materials/diffuseMode';
+import { SpecularMode } from '../../godot/rendering/materials/specularMode';
 import type { LightModes } from '../lightModes';
 
 // Per surface: `RenderForwardClustered::_geometry_instance_update` sends every

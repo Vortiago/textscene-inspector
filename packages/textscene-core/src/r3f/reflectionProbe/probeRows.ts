@@ -4,8 +4,8 @@
  */
 
 import type * as THREE from 'three';
-import type { ReflectionProbeAmbientMode } from '../../godot/reflectionProbe.js';
-import type { Vector3 } from '../../godot/vector.js';
+import type { ReflectionProbeAmbientMode } from '../../godot/rendering/environment/reflectionProbe.js';
+import type { Vector3 } from '../../godot/math/vector.js';
 import type { Color } from '../../utils/colorParser.js';
 import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
 

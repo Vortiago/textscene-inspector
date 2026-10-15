@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { billboardWorldMatrix } from './surfaceBillboard';
-import { BillboardMode } from '../godot/billboard';
+import { BillboardMode } from '../godot/scene/billboard';
 import type { SurfaceBillboard } from '../resources/materials/standardmaterial3d/materialBag';
 import { TEST_CAMERA } from './testing/threePasses';
 

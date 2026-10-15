@@ -15,7 +15,7 @@ import {
   NODE_PATH_LITERAL_RE,
   TYPED_WRAPPER_RE,
 } from '../../../godot/index.js';
-import { arrayLiteralBody } from '../../../godot/variantParser.js';
+import { arrayLiteralBody } from '../../../godot/variant/variantParser.js';
 import { unquoteString } from '../../../parser/utils.js';
 import { valueCode } from './codes.js';
 

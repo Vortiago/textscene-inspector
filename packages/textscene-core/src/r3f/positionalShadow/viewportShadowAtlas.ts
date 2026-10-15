@@ -11,7 +11,7 @@ import {
   type PositionalShadowAtlasSettings,
   type PositionalShadowRequest,
   type PositionalShadowSlot,
-} from '../../godot/positionalShadowAtlas.js';
+} from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { holdPositionalShadowAtlas, releasePositionalShadowAtlas } from './shadowAtlasTarget.js';
 import type { AreaShadowLight } from './atlasAreaShadow.js';
 

@@ -4,7 +4,7 @@
  * project root, since that needs a filesystem.
  */
 
-import { RES_PATH_BODY_SOURCE } from '../godot/string.js';
+import { RES_PATH_BODY_SOURCE } from '../godot/string/string.js';
 import type { LanguageDocument } from './document.js';
 import { lineRange, lineRangeContains } from './ranges.js';
 import { declarationOf, referenceAt } from './resourceRefs.js';

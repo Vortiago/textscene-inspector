@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { DIRECTIONAL_SHADOW_SIZE_DEFAULT } from '../../godot/directionalShadow.js';
+import { DIRECTIONAL_SHADOW_SIZE_DEFAULT } from '../../godot/rendering/lights/directionalShadow.js';
 import { atlasTargetOf, createShadowAtlas } from '../shadowFilter/atlasTarget.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 

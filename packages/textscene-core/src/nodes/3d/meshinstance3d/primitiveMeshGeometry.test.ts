@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_AABB } from '../../../godot/aabb';
+import { EMPTY_AABB } from '../../../godot/math/aabb';
 import { primitiveMeshAabb } from './primitiveMeshGeometry';
 
 describe('primitiveMeshAabb', () => {

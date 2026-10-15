@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { fadeAlpha, forcesAlphaPass } from '../../godot/fadeAlpha';
+import { fadeAlpha, forcesAlphaPass } from '../../godot/rendering/fadeAlpha';
 import { injectProgram } from '../materialProgramInputs';
 import type { MeshSurface } from '../../resources/formats/glb/meshInstances';
 import type { FadedSurface } from './swappedMaterials';

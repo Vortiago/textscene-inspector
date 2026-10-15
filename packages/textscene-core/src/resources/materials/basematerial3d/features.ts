@@ -6,7 +6,7 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { DETAIL_UV_NAMES, DetailUV } from '../../../godot/detailUv.js';
+import { DETAIL_UV_NAMES, DetailUV } from '../../../godot/rendering/materials/detailUv.js';
 import { textureChannelValidator } from './pbr.js';
 
 export const featureKeys: Record<string, PropertyValidator> = {

@@ -8,7 +8,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { LiveNode } from '../../../resources/liveNode';
 import { parseNode3D } from '../../../nodes/base/node3d/parser';
 import { useUniqueNamePaths } from '../../useUniqueNames';
-import { visibilityParentOf } from '../../../godot/visibilityParent';
+import { visibilityParentOf } from '../../../godot/scene/visibilityParent';
 import { useVisibilityParent } from '../../visibilityRange/VisibilityParentContext';
 
 /** The GLB root as Godot holds it: the node that instances the GLB, or the scene's root. */

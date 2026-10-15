@@ -18,7 +18,7 @@ import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 import { positionalShadowUserData } from '../../../../r3f/positionalShadow/declaration';
 import { AtlasAreaShadow, type AreaShadowLight } from '../../../../r3f/positionalShadow/atlasAreaShadow';
-import { AREA_LIGHT_SHADOW_BIAS_DEFAULT } from '../../../../godot/areaLightShadow';
+import { AREA_LIGHT_SHADOW_BIAS_DEFAULT } from '../../../../godot/rendering/lights/areaLightShadow';
 import { positionalShadowDeclaration } from '../shared/positionalShadowDeclaration';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useTexture2DRid } from '../../../../resources/useTexture2D';

@@ -5,7 +5,7 @@
  */
 
 import type { Node2DProperties, Color, Vector2 } from '../../base/node2d/types';
-import { CPU_PARTICLES_PARAMS, type CpuParticlesParam } from '../../../godot/cpuParticles';
+import { CPU_PARTICLES_PARAMS, type CpuParticlesParam } from '../../../godot/scene/cpuParticles';
 
 /** Godot `CPUParticles2D.EmissionShape`. */
 export enum CPUParticles2DEmissionShape {

@@ -2,7 +2,7 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalAabb } from '../../../../parser/valueParsers';
-import { GPU_PARTICLES_DEFAULT_VISIBILITY_AABB } from '../../../../godot/gpuParticles';
+import { GPU_PARTICLES_DEFAULT_VISIBILITY_AABB } from '../../../../godot/scene/gpuParticles';
 import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import type { GPUParticles3DProperties } from './types';
 

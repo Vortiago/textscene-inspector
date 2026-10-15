@@ -1,5 +1,5 @@
 /** The path an `ExtResource(…)` value names in a scope, for asserting which file's resource it resolves to. */
-import { resourceRef } from '../../godot/resourceRef';
+import { resourceRef } from '../../godot/variant/resourceRef';
 import type { SceneScope } from '../../parser/types';
 import { findExtResource } from '../SubResourceResolver';
 

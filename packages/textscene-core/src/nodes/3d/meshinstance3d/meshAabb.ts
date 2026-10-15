@@ -1,6 +1,6 @@
 /** The box the rendering server holds for the mesh a `mesh` reference names, as a hook. */
 
-import type { Aabb } from '../../../godot/aabb';
+import type { Aabb } from '../../../godot/math/aabb';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { arrayMeshAabb } from '../../../resources/meshes/arraymesh/meshAabb';

@@ -23,7 +23,7 @@ A sampler reads the sRGB view only when the texture has one:
 (`servers/rendering/renderer_rd/storage_rd/material_storage.cpp:1073`). The
 rendering device makes that view only for a format with an sRGB variant
 (`texture_storage.cpp:895-902`): RGB8, RGBA8 and the block formats with one.
-`formatHasSrgbView` in `godot/texture.ts` lists them.
+`formatHasSrgbView` in `godot/rendering/texture.ts` lists them.
 
 Each producer records the format Godot holds its image in
 (`recordGodotFormat`), and `sourceColorSpace` reads it:

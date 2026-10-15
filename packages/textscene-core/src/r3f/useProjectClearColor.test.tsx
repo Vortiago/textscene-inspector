@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
 import { useProjectClearColor, useProjectClearColorSrgb } from './useProjectClearColor';
-import { DEFAULT_CLEAR_COLOR } from '../godot/rendering';
+import { DEFAULT_CLEAR_COLOR } from '../godot/rendering/rendering';
 
 describe('useProjectClearColor', () => {
   it("is Godot's default sRGB 0.3 grey with no project setting", () => {

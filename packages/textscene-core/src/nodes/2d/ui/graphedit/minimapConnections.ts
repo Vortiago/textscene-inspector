@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { lerpColor } from '../../../../godot/math';
+import { lerpColor } from '../../../../godot/math/math';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { ControlColor } from '../control/types';
 import { connectionControlPoints, tessellateConnectionLine } from './connectionCurve';

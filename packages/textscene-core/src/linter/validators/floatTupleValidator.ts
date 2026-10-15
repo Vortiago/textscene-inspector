@@ -1,7 +1,11 @@
 /** Arity-driven validator for fixed-length float-tuple TSCN values. */
 
-import { compositeSpellings, compositeTypeName, isConvertedSpelling } from '../../godot/variantConversion.js';
-import { slotComponentsAltered } from '../../godot/int.js';
+import {
+  compositeSpellings,
+  compositeTypeName,
+  isConvertedSpelling,
+} from '../../godot/variant/variantConversion.js';
+import { slotComponentsAltered } from '../../godot/variant/int.js';
 import { truncatedComponent } from './intSlot.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
