@@ -458,8 +458,9 @@ limitations under the License.
 
 <https://github.com/iOrange/bcdec>
 
-`packages/textscene-core/src/resources/textures/image/blocks/s3tc.ts` and
-`packages/textscene-core/src/resources/textures/image/blocks/rgtc.ts` port the S3TC and RGTC
+`packages/textscene-core/src/resources/textures/image/blocks/s3tc.ts`,
+`packages/textscene-core/src/resources/textures/image/blocks/rgtc.ts` and
+`packages/textscene-core/src/resources/textures/image/blocks/channels.ts` port the S3TC and RGTC
 block decoders of bcdec, because Godot decodes a block-compressed `Image` with it when the GPU
 cannot (`modules/bcdec/image_decompress_bcdec.cpp`). Godot vendors it as
 `thirdparty/misc/bcdec.h`. It is by Sergii Kudlai and is licensed MIT, separately from Godot's

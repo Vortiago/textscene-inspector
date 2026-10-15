@@ -5,7 +5,7 @@
 ; and RGTC RedGreen8, magnified 15x. At an odd scale each texel centre falls on a pixel centre,
 ; where the linear filter reads that texel alone. Every other ImageTexture fixture saves an
 ; uncompressed format, so a block decode regression shows nowhere else.
-; textures/image/godotSaved/save_block_images.gd in core writes this scene.
+; scripts/godot-blocks/save_block_images.gd writes this scene.
 
 [sub_resource type="Image" id="Image_533vd"]
 data = {
@@ -79,38 +79,38 @@ data = {
 [sub_resource type="ImageTexture" id="ImageTexture_552c8"]
 image = SubResource("Image_475wh")
 
-[node name="Root" type="Node2D" unique_id=36382473]
+[node name="Root" type="Node2D" unique_id=2088322852]
 
-[node name="Backdrop" type="Polygon2D" parent="." unique_id=1302904156]
+[node name="Backdrop" type="Polygon2D" parent="." unique_id=1443196304]
 color = Color(0.85, 0.85, 0.8, 1)
 polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
 
-[node name="DXT1" type="Sprite2D" parent="." unique_id=2099998945]
+[node name="DXT1" type="Sprite2D" parent="." unique_id=491917870]
 position = Vector2(256, 184)
 scale = Vector2(15, 15)
 texture = SubResource("ImageTexture_ext2x")
 
-[node name="DXT3" type="Sprite2D" parent="." unique_id=1417367507]
+[node name="DXT3" type="Sprite2D" parent="." unique_id=1593999649]
 position = Vector2(576, 184)
 scale = Vector2(15, 15)
 texture = SubResource("ImageTexture_k0moo")
 
-[node name="DXT5" type="Sprite2D" parent="." unique_id=1179026900]
+[node name="DXT5" type="Sprite2D" parent="." unique_id=890836856]
 position = Vector2(896, 184)
 scale = Vector2(15, 15)
 texture = SubResource("ImageTexture_u6hwq")
 
-[node name="DXT5RaAsRg" type="Sprite2D" parent="." unique_id=199893795]
+[node name="DXT5RaAsRg" type="Sprite2D" parent="." unique_id=1010702078]
 position = Vector2(256, 464)
 scale = Vector2(15, 15)
 texture = SubResource("ImageTexture_nbh3h")
 
-[node name="RgtcRed" type="Sprite2D" parent="." unique_id=353390126]
+[node name="RgtcRed" type="Sprite2D" parent="." unique_id=1260947713]
 position = Vector2(576, 464)
 scale = Vector2(15, 15)
 texture = SubResource("ImageTexture_5djqg")
 
-[node name="RgtcRedGreen" type="Sprite2D" parent="." unique_id=192931335]
+[node name="RgtcRedGreen" type="Sprite2D" parent="." unique_id=1641736972]
 position = Vector2(896, 464)
 scale = Vector2(15, 15)
 texture = SubResource("ImageTexture_552c8")

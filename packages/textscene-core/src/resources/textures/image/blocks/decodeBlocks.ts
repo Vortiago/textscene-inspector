@@ -50,8 +50,10 @@ function copyVisibleTexels(
   top: number
 ): void {
   const rowBytes = Math.min(BLOCK_SIDE, width - left) * 4;
-  for (let row = 0; row < BLOCK_SIDE && top + row < height; row++) {
+  const rows = Math.min(BLOCK_SIDE, height - top);
+  for (let row = 0; row < rows; row++) {
     const from = row * BLOCK_SIDE * 4;
-    out.set(texels.subarray(from, from + rowBytes), ((top + row) * width + left) * 4);
+    const to = ((top + row) * width + left) * 4;
+    for (let i = 0; i < rowBytes; i++) out[to + i] = texels[from + i]!;
   }
 }

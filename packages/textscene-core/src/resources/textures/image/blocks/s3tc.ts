@@ -27,53 +27,93 @@
  */
 
 import type { BlockFormat } from './decodeBlocks';
-import { decodeInterpolatedChannel, fillChannels } from './rgtc';
+import { decodeInterpolatedChannel, swizzleRg01 } from './channels';
+
+/** Four RGBA8 entries, written by each `decodeColourBlock` call and read before it returns. */
+const colourPalette = new Uint8Array(16);
 
 /**
  * Writes the RGBA of the colour block at `offset`, as `bcdec__color_block` decodes it
  * (`bcdec.h:111-178`). A block whose first endpoint is not above the second holds three colours
- * and a transparent black, unless `isOpaque`, as DXT3 and DXT5 read every colour block.
+ * and black, unless `isAlwaysFourColours`, as DXT3 and DXT5 read every colour block.
  */
-function decodeColourBlock(bytes: Uint8Array, offset: number, texels: Uint8Array, isOpaque: boolean): void {
+function decodeColourBlock(
+  bytes: Uint8Array,
+  offset: number,
+  texels: Uint8Array,
+  isAlwaysFourColours: boolean
+): void {
   const first = readUint16(bytes, offset);
   const second = readUint16(bytes, offset + 2);
-  const palette = colourPalette(unpack565(first), unpack565(second), first > second || isOpaque);
+  writeExpanded(0, first);
+  writeExpanded(4, second);
+  if (first > second || isAlwaysFourColours) {
+    writeThird(8, first, second);
+    writeThird(12, second, first);
+  } else {
+    writeHalf(8, first, second);
+    // bcdec writes this entry transparent, but the DXT1 swizzle reads alpha as one
+    // (`texture_storage.cpp:2011`), and DXT3 and DXT5 never reach it.
+    writeEntry(12, 0, 0, 0);
+  }
   for (let texel = 0; texel < 16; texel++) {
-    const index = (bytes[offset + 4 + (texel >> 2)]! >> ((texel & 3) * 2)) & 3;
-    texels.set(palette[index]!, texel * 4);
+    const entry = ((bytes[offset + 4 + (texel >> 2)]! >> ((texel & 3) * 2)) & 3) * 4;
+    const at = texel * 4;
+    texels[at] = colourPalette[entry]!;
+    texels[at + 1] = colourPalette[entry + 1]!;
+    texels[at + 2] = colourPalette[entry + 2]!;
+    texels[at + 3] = colourPalette[entry + 3]!;
   }
 }
 
-type Rgb565 = readonly [red: number, green: number, blue: number];
-
-function unpack565(packed: number): Rgb565 {
-  return [(packed >> 11) & 0x1f, (packed >> 5) & 0x3f, packed & 0x1f];
+function writeExpanded(at: number, packed: number): void {
+  writeEntry(
+    at,
+    (red(packed) * 527 + 23) >> 6,
+    (green(packed) * 259 + 33) >> 6,
+    (blue(packed) * 527 + 23) >> 6
+  );
 }
 
 /**
- * The four RGBA8 entries of a colour block. bcdec's integer weights match a float interpolation
- * rounded to nearest; a GPU that decodes in hardware can round an interpolated entry 1/255 apart.
+ * Two thirds of `near` and one of `far`. bcdec's integer weights match a float interpolation
+ * rounded to nearest, where a GPU that decodes in hardware can round 1/255 apart.
  */
-function colourPalette(first: Rgb565, second: Rgb565, hasFourColours: boolean): number[][] {
-  const expand = ([r, g, b]: Rgb565) => [(r * 527 + 23) >> 6, (g * 259 + 33) >> 6, (b * 527 + 23) >> 6, 255];
-  if (hasFourColours) {
-    const third = ([r0, g0, b0]: Rgb565, [r1, g1, b1]: Rgb565) => [
-      ((2 * r0 + r1) * 351 + 61) >> 7,
-      ((2 * g0 + g1) * 2763 + 1039) >> 11,
-      ((2 * b0 + b1) * 351 + 61) >> 7,
-      255,
-    ];
-    return [expand(first), expand(second), third(first, second), third(second, first)];
-  }
-  const [r0, g0, b0] = first;
-  const [r1, g1, b1] = second;
-  const half = [
-    ((r0 + r1) * 1053 + 125) >> 8,
-    ((g0 + g1) * 4145 + 1019) >> 11,
-    ((b0 + b1) * 1053 + 125) >> 8,
-    255,
-  ];
-  return [expand(first), expand(second), half, [0, 0, 0, 0]];
+function writeThird(at: number, near: number, far: number): void {
+  writeEntry(
+    at,
+    ((2 * red(near) + red(far)) * 351 + 61) >> 7,
+    ((2 * green(near) + green(far)) * 2763 + 1039) >> 11,
+    ((2 * blue(near) + blue(far)) * 351 + 61) >> 7
+  );
+}
+
+function writeHalf(at: number, first: number, second: number): void {
+  writeEntry(
+    at,
+    ((red(first) + red(second)) * 1053 + 125) >> 8,
+    ((green(first) + green(second)) * 4145 + 1019) >> 11,
+    ((blue(first) + blue(second)) * 1053 + 125) >> 8
+  );
+}
+
+function writeEntry(at: number, r: number, g: number, b: number): void {
+  colourPalette[at] = r;
+  colourPalette[at + 1] = g;
+  colourPalette[at + 2] = b;
+  colourPalette[at + 3] = 255;
+}
+
+function red(packed565: number): number {
+  return (packed565 >> 11) & 0x1f;
+}
+
+function green(packed565: number): number {
+  return (packed565 >> 5) & 0x3f;
+}
+
+function blue(packed565: number): number {
+  return packed565 & 0x1f;
 }
 
 /** `bcdec__sharp_alpha_block` (`bcdec.h:180-195`): a 4-bit alpha per texel, row by row. */
@@ -88,10 +128,8 @@ function readUint16(bytes: Uint8Array, offset: number): number {
   return bytes[offset]! | (bytes[offset + 1]! << 8);
 }
 
-/** The swizzle reads alpha as one (`texture_storage.cpp:2011`), so a transparent entry draws black. */
 function decodeDxt1(bytes: Uint8Array, offset: number, texels: Uint8Array): void {
   decodeColourBlock(bytes, offset, texels, false);
-  fillChannels(texels, 3, 255);
 }
 
 function decodeDxt3(bytes: Uint8Array, offset: number, texels: Uint8Array): void {
@@ -107,8 +145,8 @@ function decodeDxt5(bytes: Uint8Array, offset: number, texels: Uint8Array): void
 /** A DXT5 block that carries red in red and green in alpha (`image_decompress_bcdec.cpp:297-299`). */
 function decodeDxt5RaAsRg(bytes: Uint8Array, offset: number, texels: Uint8Array): void {
   decodeDxt5(bytes, offset, texels);
-  for (let texel = 0; texel < 16; texel++) texels[texel * 4 + 1] = texels[texel * 4 + 3]!;
-  fillChannels(texels, 2, 0, 255);
+  for (let at = 0; at < texels.length; at += 4) texels[at + 1] = texels[at + 3]!;
+  swizzleRg01(texels);
 }
 
 export const S3TC_FORMATS: Readonly<Record<string, BlockFormat>> = {

@@ -1,9 +1,9 @@
-# Writes the block-compressed images that decode.test.ts reads, and the golden scene
-# unit-sprite2d-block-compressed.tscn, through Godot 4.6.3. Each `<case>.tres` is an ImageTexture as
-# Godot saves it, and `<case>.rgba8.tres` is what `Image.decompress()` gives for it after the
-# texture swizzle (`texture_storage.cpp:1997-2076`, `:2246-2261`).
+# Writes the block-compressed images that core's textures/image/decode.test.ts reads from
+# textures/image/godotSaved/, and the golden scene unit-sprite2d-block-compressed.tscn, through
+# Godot 4.6.3. Each `<case>.tres` is an ImageTexture as Godot saves it, and `<case>.rgba8.tres`
+# is what `Image.decompress()` gives for it after the texture swizzle (`texture_storage.cpp:1997-2076`, `:2246-2261`).
 #
-#   godot --headless --path <any project> --script save_block_images.gd -- <this folder> <scenes/fixtures>
+#   godot --headless --path <any project> --script save_block_images.gd -- <godotSaved folder> <scenes/fixtures>
 extends SceneTree
 
 const SIDE := 16
@@ -16,7 +16,7 @@ const GOLDEN_HEADER := """
 ; and RGTC RedGreen8, magnified 15x. At an odd scale each texel centre falls on a pixel centre,
 ; where the linear filter reads that texel alone. Every other ImageTexture fixture saves an
 ; uncompressed format, so a block decode regression shows nowhere else.
-; textures/image/godotSaved/save_block_images.gd in core writes this scene.
+; scripts/godot-blocks/save_block_images.gd writes this scene.
 """
 
 # A ramp each channel can tell apart: red runs with x, green with y, blue against both, alpha with x.

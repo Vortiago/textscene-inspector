@@ -19,6 +19,11 @@ const GODOT_COPYRIGHT = /Copyright \(c\) 2007-2014 Juan Linietsky, Ariel Manzur/
 /** The line every file ported from bcdec (`thirdparty/misc/bcdec.h` in Godot) carries. */
 const BCDEC_COPYRIGHT = /Copyright \(c\) 2022 Sergii Kudlai/;
 
+const COPYRIGHTS = [
+  ['Godot', GODOT_COPYRIGHT],
+  ['bcdec', BCDEC_COPYRIGHT],
+];
+
 /** Trees that can contain derived source. `node_modules` and build output excluded. */
 const SEARCH_ROOTS = ['packages', 'scripts', 'apps'];
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'out', '.git', 'baselines', 'public']);
@@ -63,26 +68,23 @@ describe('THIRD-PARTY-NOTICES.md', () => {
     expect(text).toContain('THE SOFTWARE IS PROVIDED "AS IS"');
   });
 
-  it('carries the bcdec copyright line', () => {
-    expect(readFileSync(NOTICES, 'utf8')).toMatch(BCDEC_COPYRIGHT);
+  it.each(COPYRIGHTS)('carries the %s copyright line', (_name, copyright) => {
+    expect(readFileSync(NOTICES, 'utf8')).toMatch(copyright);
   });
 
-  it.each([
-    ['Godot', GODOT_COPYRIGHT],
-    ['bcdec', BCDEC_COPYRIGHT],
-  ])('lists every source file that carries the %s copyright', (_name, copyright) => {
+  it.each(COPYRIGHTS)('lists every source file that carries the %s copyright', (_name, copyright) => {
     const text = readFileSync(NOTICES, 'utf8');
     const missing = derivedFiles(copyright).filter((file) => !text.includes(file));
     expect(missing, `add these to THIRD-PARTY-NOTICES.md: ${missing.join(', ')}`).toEqual([]);
   });
 
-  it.each([
-    ['Godot', GODOT_COPYRIGHT],
-    ['bcdec', BCDEC_COPYRIGHT],
-  ])('finds %s-derived files at all (the scan is not silently matching nothing)', (_name, copyright) => {
-    // Without this, a broken walk would make the listing assertion vacuously pass.
-    expect(derivedFiles(copyright).length).toBeGreaterThan(0);
-  });
+  it.each(COPYRIGHTS)(
+    'finds %s-derived files at all (the scan is not silently matching nothing)',
+    (_name, copyright) => {
+      // Without this, a broken walk would make the listing assertion vacuously pass.
+      expect(derivedFiles(copyright).length).toBeGreaterThan(0);
+    }
+  );
 
   it('is byte-identical to the copy shipped in the VSIX', () => {
     // `vsce package` picks up the copy beside the extension's package.json, since `.vscodeignore`

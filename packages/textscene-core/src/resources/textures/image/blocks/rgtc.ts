@@ -26,56 +26,18 @@
  */
 
 import type { BlockFormat } from './decodeBlocks';
-
-/**
- * Writes one channel of the block at `offset`, as `bcdec__smooth_alpha_block` decodes it
- * (`bcdec.h:197-238`): two endpoints, then a 3-bit index per texel into six values between them,
- * or into four and the ends 0 and 255 when the first endpoint is not above the second.
- */
-export function decodeInterpolatedChannel(
-  bytes: Uint8Array,
-  offset: number,
-  texels: Uint8Array,
-  channel: number
-): void {
-  const palette = channelPalette(bytes[offset]!, bytes[offset + 1]!);
-  let indices = 0;
-  for (let i = 5; i >= 0; i--) indices = indices * 256 + bytes[offset + 2 + i]!;
-  for (let texel = 0; texel < 16; texel++) {
-    texels[texel * 4 + channel] = palette[indices % 8]!;
-    indices = Math.floor(indices / 8);
-  }
-}
-
-function channelPalette(first: number, second: number): number[] {
-  const palette = [first, second];
-  if (first > second) {
-    for (let step = 1; step <= 6; step++)
-      palette.push(Math.floor(((7 - step) * first + step * second + 1) / 7));
-  } else {
-    for (let step = 1; step <= 4; step++)
-      palette.push(Math.floor(((5 - step) * first + step * second + 1) / 5));
-    palette.push(0, 255);
-  }
-  return palette;
-}
+import { decodeInterpolatedChannel, swizzleRg01 } from './channels';
 
 function decodeRgtcRed(bytes: Uint8Array, offset: number, texels: Uint8Array): void {
   decodeInterpolatedChannel(bytes, offset, texels, 0);
-  fillChannels(texels, 1, 0, 0, 255);
+  for (let at = 1; at < texels.length; at += 4) texels[at] = 0;
+  swizzleRg01(texels);
 }
 
 function decodeRgtcRedGreen(bytes: Uint8Array, offset: number, texels: Uint8Array): void {
   decodeInterpolatedChannel(bytes, offset, texels, 0);
   decodeInterpolatedChannel(bytes, offset + 8, texels, 1);
-  fillChannels(texels, 2, 0, 255);
-}
-
-/** Sets every channel from `first` to alpha to the values that follow it. */
-export function fillChannels(texels: Uint8Array, first: number, ...values: number[]): void {
-  for (let texel = 0; texel < 16; texel++) {
-    for (let i = 0; i < values.length; i++) texels[texel * 4 + first + i] = values[i]!;
-  }
+  swizzleRg01(texels);
 }
 
 export const RGTC_FORMATS: Readonly<Record<string, BlockFormat>> = {
