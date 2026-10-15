@@ -1883,6 +1883,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "World Environment None",
+    "file": "unit-world-environment-none.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Xr Anchor 3d",
     "file": "unit-xr-anchor-3d.tscn",
     "category": "Other"
