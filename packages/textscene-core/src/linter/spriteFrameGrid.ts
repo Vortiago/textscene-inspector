@@ -1,16 +1,16 @@
 /**
  * Diagnostics for a sprite sheet's frame keys, from the file-order replay in
- * `godot/spriteFrames.ts` that the render parsers also draw from. A refused
+ * `godot/scene/spriteFrames.ts` that the render parsers also draw from. A refused
  * write (ERR_FAIL_INDEX) is an error, and a write a later `hframes` re-maps is
  * a warning. A grid literal no int slot holds is phase 1's diagnostic.
  */
 
 import type { Diagnostic } from './types.js';
 import { reportArm, type RuleArms } from './ruleArms.js';
-import { replaySpriteFrames, type FrameWrite } from '../godot/spriteFrames.js';
+import { replaySpriteFrames, type FrameWrite } from '../godot/scene/spriteFrames.js';
 import type { RawNode } from '../parser/types.js';
 
-export { replaySpriteFrames } from '../godot/spriteFrames.js';
+export { replaySpriteFrames } from '../godot/scene/spriteFrames.js';
 
 /** Why the grid a write was judged against is smaller than the one the file ends up with. */
 function lateGridHint(key: string): string {

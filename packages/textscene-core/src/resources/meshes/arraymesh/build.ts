@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import type { ArrayMeshData } from './types.js';
-import { bottomUpV } from '../../../godot/uv.js';
+import { bottomUpV } from '../../../godot/math/uv.js';
 import { UV2_ATTRIBUTE } from '../uv2.js';
 
 export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometry {

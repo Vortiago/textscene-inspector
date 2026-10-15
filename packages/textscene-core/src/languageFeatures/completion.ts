@@ -5,9 +5,9 @@
  * a `res://` path completes through the host's listing when one is supplied.
  */
 
-import { isDeprecatedPropertyName } from '../godot/deprecated.js';
-import { VARIANT_TYPE, variantTypeName } from '../godot/variantType.js';
-import { classBaseChain } from '../godot/classBaseTypes.js';
+import { isDeprecatedPropertyName } from '../godot/classdb/deprecated.js';
+import { VARIANT_TYPE, variantTypeName } from '../godot/variant/variantType.js';
+import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
 import {
   classProperties,
   nodeClassNames,

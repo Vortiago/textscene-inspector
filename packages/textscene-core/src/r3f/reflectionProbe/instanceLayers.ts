@@ -5,7 +5,7 @@
  */
 
 import type * as THREE from 'three';
-import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../godot/visualLayers.js';
+import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../godot/scene/visualLayers.js';
 import { visualLayersOf } from '../visualLayers.js';
 import { instanceLayers, shownProbes } from './probeSlots.js';
 

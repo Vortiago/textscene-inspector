@@ -8,7 +8,7 @@ import {
   FOG_VOLUME_DEFAULT_SHAPE,
   FOG_VOLUME_DEFAULT_SIZE,
   type FogVolumeShape,
-} from '../../godot/fogVolume.js';
+} from '../../godot/rendering/environment/fogVolume.js';
 import type { FogMaterialData } from '../../resources/materials/fogmaterial/types.js';
 
 /**

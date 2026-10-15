@@ -11,7 +11,7 @@ import { useLiveSceneNodes } from '../useLiveSceneTree';
 import { EnvironmentLayer } from '../environment/EnvironmentLayer';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
-import { DirectionalShadowMode } from '../../godot/directionalShadow';
+import { DirectionalShadowMode } from '../../godot/rendering/lights/directionalShadow';
 import { directionalShadowUserData } from '../directionalShadow/declaration';
 import { directionalShadowDeclaration } from '../../nodes/3d/lights/directionallight3d/shadowDeclaration';
 import {

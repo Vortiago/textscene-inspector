@@ -8,14 +8,14 @@
  */
 
 import { climbAncestors, type ParentLookup } from '../../../linter/parentType.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
 import { VECTOR2_REGEX } from '../../../linter/validators/vectorValidators.js';
 import {
   TSCN_FLOAT_RE,
   parseGodotFloat,
   tupleComponent,
 } from '../../../linter/validators/commonValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
+import { slotComponents, slotComponentsAltered } from '../../../godot/variant/int.js';
 import {
   TRANSFORM2D_IDENTITY,
   boolSlotValue,

@@ -7,7 +7,7 @@
 
 import { isUnderInstance, sceneUniqueClaims } from './linterUtils.js';
 import { isTypeUnknowable, parentIdentity } from './parentType.js';
-import { UNIQUE_NODE_PREFIX, nodePathWalkNames } from '../godot/nodePath.js';
+import { UNIQUE_NODE_PREFIX, nodePathWalkNames } from '../godot/string/nodePath.js';
 import type { RawNode, RawScene } from '../parser/types.js';
 
 /**

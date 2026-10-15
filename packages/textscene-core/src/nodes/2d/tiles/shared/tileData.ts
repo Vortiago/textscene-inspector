@@ -7,8 +7,8 @@
 
 import { warn } from '../../../../logger';
 import { ARRAY_LITERAL_RE, packedArrayLiteral } from '../../../../godot/index.js';
-import { parseGodotInt } from '../../../../godot/int.js';
-import { decodeBase64Bytes } from '../../../../godot/packedBytes.js';
+import { parseGodotInt } from '../../../../godot/variant/int.js';
+import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes.js';
 
 export interface Vec2i {
   x: number;

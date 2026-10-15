@@ -7,8 +7,8 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { parentTypeVerdict, verdictParent } from '../parentType.js';
-import { descendsFrom } from '../../godot/nodeBaseTypes.js';
-import { isZeroApprox } from '../../godot/math.js';
+import { descendsFrom } from '../../godot/classdb/nodeBaseTypes.js';
+import { isZeroApprox } from '../../godot/math/math.js';
 import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';

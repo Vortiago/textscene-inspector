@@ -1,14 +1,14 @@
 /**
  * Godot's Decal fade terms as pure maths over a baked projection. `upper_fade`, `lower_fade` and
  * `normal_fade` are per fragment in the engine and bake per vertex here. `distance_fade_*` is per
- * decal per frame on camera distance (`godot/distanceFade.ts`), folded into modulate alpha.
+ * decal per frame on camera distance (`godot/rendering/distanceFade.ts`), folded into modulate alpha.
  */
 
 import * as THREE from 'three';
 
 /**
  * GLSL `smoothstep`, which clamps, as the decal term uses it (`scene_forward_clustered.glsl:1593`).
- * Not `godot/math.ts`'s `Math::smoothstep`, which guards coincident edges with `is_equal_approx`
+ * Not `godot/math/math.ts`'s `Math::smoothstep`, which guards coincident edges with `is_equal_approx`
  * and answers 0 at the lower edge. GLSL leaves the `normal_fade = 1` case undefined (a division by
  * zero), so stepping to 1 at the edge is this previewer's choice.
  */

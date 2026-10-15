@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { decodeEnvironment } from './decode';
 import { createEnvironmentSettings } from './build';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 
 describe('Environment Godot parity', () => {
   it('ambient_light_color defaults to black (not white)', () => {

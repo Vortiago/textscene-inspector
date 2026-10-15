@@ -1,4 +1,4 @@
-import type { Aabb } from '../../../godot/aabb.js';
+import type { Aabb } from '../../../godot/math/aabb.js';
 
 /** Floats in one bounded transform: three basis rows, each with its origin component. */
 export const TRANSFORM_FLOATS = 12;

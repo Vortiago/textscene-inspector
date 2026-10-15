@@ -144,7 +144,7 @@ Godot's PCF kernel is a Vogel disk whose radius is `soft_shadow_scale` atlas tex
 without an angular size, `soft_shadow_scale` is `shadow_blur` times the quality radius
 (`light_storage.cpp:697-703`), which is 2 at the default Soft Low quality
 (`renderer_scene_render_rd.cpp:1204-1207`). So the default kernel reaches two texels. The fitter
-writes that radius to the light's `shadow.radius` before each render (`godot/softShadowScale.ts`),
+writes that radius to the light's `shadow.radius` before each render (`godot/rendering/lights/softShadowScale.ts`),
 and a split sun copies it.
 
 `splitShadowChunk.ts` replaces three's five-tap PCF with Godot's `sample_directional_pcf_shadow`
@@ -175,7 +175,7 @@ A light that lights surfaces, with a `light_angular_distance` above zero, a shad
 searches for blockers in place of the PCF (`scene_forward_clustered.glsl:2310-2398`), and lights a
 surface with its size term, `1 - cos` of the angle (`light_storage.cpp:670`,
 `scene_forward_clustered.glsl:2617`). Without the flag, the light keeps the PCF and no size term.
-`godot/directionalSoftShadow.ts` holds these facts.
+`godot/rendering/lights/directionalSoftShadow.ts` holds these facts.
 
 - The light pass defines `GODOT_USE_DIRECTIONAL_SOFT_SHADOWS` on every lit material while a light
   of any scene turns the flag on, drawn or not (`../shadowFilter/softShadowSearch.ts`). Only a

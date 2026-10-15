@@ -9,7 +9,11 @@
 import * as THREE from 'three';
 import { drawFullScreen } from '../../r3f/fullScreenPass.js';
 import { drawOffscreen } from '../../r3f/offscreen.js';
-import { MAX_ROUGHNESS_LOD, skyOctmapLayout, type SkyOctmapLayout } from '../../godot/skyReflection.js';
+import {
+  MAX_ROUGHNESS_LOD,
+  skyOctmapLayout,
+  type SkyOctmapLayout,
+} from '../../godot/rendering/environment/skyReflection.js';
 import { fastFilter } from './fastFilter.js';
 import { importanceSampleFilter } from './importanceSampleFilter.js';
 import type { LayerFilter } from './layerFilter.js';

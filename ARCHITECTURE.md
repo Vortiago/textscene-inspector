@@ -34,6 +34,27 @@ Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vit
 | `resources/` | The resource loader, and one slice per resource type |
 | `r3f/` | The renderer, the 2D canvas, the Control canvas, the preview shell |
 
+`godot/` groups its files by the engine area they port, named for that area's directory in Godot's
+source. A rendering fact sits under `rendering/` even when its setter lives in `scene/`. A test
+sits beside its file. The root keeps `index.ts`,
+the package's `./godot` export, and `noDependencies.test.ts`.
+
+| `godot/` group | Ports from Godot's |
+| --- | --- |
+| `math/` | `core/math`: vectors, bases, transforms, rectangles, AABBs |
+| `variant/` | `core/variant`: the Variant parser, types, conversions, colours, integers |
+| `string/` | `core/string`: strings, `StringName`, `NodePath` |
+| `classdb/` | `core/object`: ClassDB captures, base types, property hints, deprecated aliases |
+| `scene/` | `scene/`: `PackedScene`, nodes, animation, particles, CSG |
+| `project/` | `core/config`, `core/io` and `editor/`: `project.godot`, the editor scan, resource formats |
+| `import/` | `modules/gltf` and `editor/import`: glTF and scene import |
+| `text/` | `modules/text_server_adv` and `text_server_fb`: the text server |
+| `rendering/` | `servers/rendering`: viewport, textures, culling, fades, passes |
+| `rendering/materials/` | The material shaders: UVs, diffuse and specular modes, DFG |
+| `rendering/lights/` | Light shading and shadows: LTC, shadow atlases, soft-shadow kernels |
+| `rendering/environment/` | Fog, sky reflection, reflection probes |
+| `testing/` | Test helpers for the files above |
+
 ## The pipelines
 
 ```mermaid
@@ -130,7 +151,7 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
 
 - **Scene tree.** `TscnCanvas` mounts the R3F `<Canvas>`. Each node gets its own `<group>`.
 - **Parent space.** A node follows its parent's transform only where Godot does
-  (`godot/parentSpace.ts`). Any other node attaches to the world root (`ParentSpaceScope`).
+  (`godot/scene/parentSpace.ts`). Any other node attaches to the world root (`ParentSpaceScope`).
 - **3D and 2D.** `ViewportModeContext` picks `TscnCanvas` or `Canvas2DStage` (ADR-0006).
 - **2D draw order.** One sort key for every canvas item becomes `renderOrder`
   (`canvasPaintOrder.ts`, ADR-0036).

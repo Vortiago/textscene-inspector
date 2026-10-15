@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
 import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
 import { makeFloatTupleRegex } from './validators/floatTupleValidator.js';
-import { slotTupleRegex, variantTupleRegex } from '../godot/number.js';
+import { slotTupleRegex, variantTupleRegex } from '../godot/variant/number.js';
 
 /** Every composite Godot writes as `TypeName(a, b, …)`. */
 const COMPOSITES = [
@@ -77,7 +77,7 @@ function handRolledComposite(source: string): string | null {
  * Whoever imports the linter's tuple builder, derived, not listed: files build a tuple
  * regex under local names, and an import cannot be renamed out of. `VECTOR2_REGEX` and
  * `VECTOR3_REGEX` count, since they read the same captures. An `import`, not the bare
- * name, since `godot/number.ts` names the builder in a docblock.
+ * name, since `godot/variant/number.ts` names the builder in a docblock.
  */
 const IMPORTS_TUPLE_BUILDER = /import\s[^;]*\b(?:makeFloatTupleRegex|VECTOR2_REGEX|VECTOR3_REGEX)\b/;
 
@@ -173,7 +173,7 @@ const I_SLOT_CONSTANT = new RegExp(
   'g'
 );
 
-/** Where `alwaysFloatBranch` sits in each reader's argument list (`godot/intSlots.ts`). */
+/** Where `alwaysFloatBranch` sits in each reader's argument list (`godot/variant/intSlots.ts`). */
 const CONVERTED_ARG: Readonly<Record<string, number>> = { storedInt: 1, ruleInt: 3 };
 
 /**
@@ -333,7 +333,7 @@ describe('Godot composite literal grammar', () => {
     const builders = files
       .filter(({ bare }) => /\bslotTupleRegex\(\s*['"]Vector2i['"]/.test(bare))
       .map(({ rel }) => rel);
-    expect(builders).toEqual(['godot/intSlots.ts']);
+    expect(builders).toEqual(['godot/variant/intSlots.ts']);
   });
 
   it('reads a Dictionary field that holds a constructor call through dictCallField', () => {

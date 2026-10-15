@@ -11,7 +11,7 @@ import {
   specularOcclusionUserData,
 } from './godotIndirectSpecular';
 import { warningsOf } from './testing/logWarnings';
-import { DFG_SIZE } from '../godot/dfg';
+import { DFG_SIZE } from '../godot/rendering/materials/dfg';
 
 const CHUNKS = ['lights_physical_pars_fragment', 'lights_fragment_begin', 'aomap_fragment'] as const;
 const threeChunks = Object.fromEntries(CHUNKS.map((name) => [name, THREE.ShaderChunk[name]]));

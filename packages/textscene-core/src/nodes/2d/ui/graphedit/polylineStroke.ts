@@ -11,7 +11,7 @@
  */
 
 import { isEqualApprox, isZeroApprox } from '../../../../godot/index.js';
-import { clamp, type Rgba } from '../../../../godot/math';
+import { clamp, type Rgba } from '../../../../godot/math/math';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { GeometryBuffers } from './connectionStroke';
 

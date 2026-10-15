@@ -13,7 +13,7 @@ import {
 } from '../../textures/applyTextureState';
 import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../textures/godotTextureFilter';
 import { UV2_CHANNEL } from '../../meshes/uv2';
-import { bottomUpV } from '../../../godot/uv';
+import { bottomUpV } from '../../../godot/math/uv';
 import type { StandardMaterial3DScalars, TextureSlot } from './types';
 
 /**

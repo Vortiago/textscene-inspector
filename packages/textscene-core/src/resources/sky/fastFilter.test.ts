@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FAST_FILTER_COEFFICIENTS } from '../../godot/skyFastFilterCoefficients';
-import { FAST_FILTER_CHAIN_SIZES } from '../../godot/skyReflection';
+import { FAST_FILTER_COEFFICIENTS } from '../../godot/rendering/environment/skyFastFilterCoefficients';
+import { FAST_FILTER_CHAIN_SIZES } from '../../godot/rendering/environment/skyReflection';
 import { fastFilter } from './fastFilter';
 
 const tapWeights = () => fastFilter.pass.uniforms.weight!.value as Float32Array;

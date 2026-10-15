@@ -1,6 +1,6 @@
 /** Curve3D slice types. Godot 3D space is right-handed Y-up, as three.js is, so coordinates map directly. */
 
-import type { Vector3 } from '../../../godot/vector.js';
+import type { Vector3 } from '../../../godot/math/vector.js';
 
 export interface Curve3DControlPoint {
   /** In-tangent handle, relative to `position`. */

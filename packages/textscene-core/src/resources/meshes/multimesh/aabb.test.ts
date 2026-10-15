@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_AABB, type Aabb } from '../../../godot/aabb';
+import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 import { multiMeshAabb } from './aabb';
 import type { MultiMeshData } from './types';
 

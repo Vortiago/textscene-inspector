@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { sharedTexture } from '../sharedTexture.js';
-import { MAX_ROUGHNESS_LOD } from '../../godot/skyReflection.js';
+import { MAX_ROUGHNESS_LOD } from '../../godot/rendering/environment/skyReflection.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 
 /** The directional lights the sun scatter reads (`MAX_DIRECTIONAL_LIGHTS`, `light_storage.h:51`). */

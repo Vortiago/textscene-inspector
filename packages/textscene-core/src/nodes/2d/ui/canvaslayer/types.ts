@@ -1,6 +1,6 @@
 /** CanvasLayer properties: a passthrough layer hosting Control children, not a Control itself. */
 
-import type { Transform2DColumns } from '../../../../godot/transform2d.js';
+import type { Transform2DColumns } from '../../../../godot/math/transform2d.js';
 
 export interface CanvasLayerProperties {
   name: string;

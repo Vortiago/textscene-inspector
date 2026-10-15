@@ -9,12 +9,12 @@ import { parseColorOrUndefined } from '../../../utils/colorParser';
 import { sRGBToLinearRGB } from '../../../utils/colorSpace';
 import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { parseVector3 } from '../../../parser/vectors';
-import { drawsInShadowPass, type PassMembership } from '../../../godot/shadowPass';
-import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/textureChannel';
-import { DiffuseMode } from '../../../godot/diffuseMode';
-import { SpecularMode } from '../../../godot/specularMode';
-import { DetailUV } from '../../../godot/detailUv';
-import { clamp } from '../../../godot/math';
+import { drawsInShadowPass, type PassMembership } from '../../../godot/rendering/shadowPass';
+import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/rendering/materials/textureChannel';
+import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
+import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
+import { DetailUV } from '../../../godot/rendering/materials/detailUv';
+import { clamp } from '../../../godot/math/math';
 import { emissionScalars } from './emission';
 import {
   BlendMode,

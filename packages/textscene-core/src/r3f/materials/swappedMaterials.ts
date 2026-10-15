@@ -7,7 +7,7 @@
 
 import type * as THREE from 'three';
 import { createContext, useContext, useLayoutEffect, useMemo } from 'react';
-import { fadeAlpha, forcesAlphaPass } from '../../godot/fadeAlpha';
+import { fadeAlpha, forcesAlphaPass } from '../../godot/rendering/fadeAlpha';
 import type { FadePass, FadeVariants } from './fadeVariants';
 
 /** A surface whose draw state a geometry instance's fade sets. */

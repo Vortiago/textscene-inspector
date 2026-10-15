@@ -6,7 +6,7 @@ import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from 
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
 import { enumOr, floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
-import { ShadowCastingSetting } from '../../../godot/rendering';
+import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 import { boolSlotValue } from '../../../godot/index.js';
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {

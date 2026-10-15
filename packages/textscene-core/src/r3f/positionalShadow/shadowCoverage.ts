@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { CMP_EPSILON, isZeroApprox } from '../../godot/math.js';
+import { CMP_EPSILON, isZeroApprox } from '../../godot/math/math.js';
 import type { ViewingCamera } from '../directionalShadow/fitDirectionalShadowBox.js';
 
 /**

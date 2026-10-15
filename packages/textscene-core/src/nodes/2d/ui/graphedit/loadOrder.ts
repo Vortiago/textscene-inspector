@@ -12,7 +12,7 @@
 
 import { parseOptionalFloat, parseOptionalVector2 } from '../../../../parser/valueParsers';
 // The min branch is tested first, so the inverted range this replay builds returns the MAX.
-import { clamp } from '../../../../godot/math';
+import { clamp } from '../../../../godot/math/math';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 
 /**

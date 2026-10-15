@@ -35,7 +35,7 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     verdict: {
       declined: 'never-owned',
       because:
-        'A bare alias for `length`; `godot/deprecated.ts` resolves it before any lookup, so the strict parser validates it as `length` and no validator is registered under this spelling.',
+        'A bare alias for `length`; `godot/classdb/deprecated.ts` resolves it before any lookup, so the strict parser validates it as `length` and no validator is registered under this spelling.',
     },
   },
   {

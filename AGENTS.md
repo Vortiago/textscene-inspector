@@ -97,7 +97,7 @@ Scaffold a node type with `pnpm new:node <TypeName> <category-dir> --intent
 Never drop a registration to mark a type undrawn.
 
 The Godot parent comes from ClassDB (`pnpm nodes:base-types`), never by hand. A class the
-pinned ClassDB lacks goes in the `UNCATALOGUED` table of `godot/nodeBaseTypes.ts`, with the
+pinned ClassDB lacks goes in the `UNCATALOGUED` table of `godot/classdb/nodeBaseTypes.ts`, with the
 reason.
 
 A **Resource slice** (ADR-0031) lives in `packages/textscene-core/src/resources/<category>/<type>/`:
@@ -158,7 +158,9 @@ an arm with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its 
 ## Conventions
 
 - `packages/textscene-core/src/godot/` holds engine facts and imports nothing. Look there
-  before you declare an engine constant or regex in a slice. Put a new one there.
+  before you declare an engine constant or regex in a slice. Put a new one there, in the group
+  for the engine area it ports (ARCHITECTURE.md lists them). A group has no `index.ts`. Only the
+  root `index.ts` re-exports.
 - Web tests run under happy-dom, so never assert rendered geometry. Read a `.module.css`
   source through `import.meta.dirname`, never `process.cwd()`.
 - `useResource.ts` clones a cached Object3D per consumer. Assert identity only for textures

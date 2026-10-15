@@ -57,7 +57,7 @@ export type MaterialTables = Pick<MaterialResource, 'internalResources' | 'exter
 
 const NO_TABLES: MaterialTables = { internalResources: [], externalResources: [] };
 
-/** The glTF surface a GLB override draws on, whose UVs keep Godot's top-down V (`godot/uv.ts`). */
+/** The glTF surface a GLB override draws on, whose UVs keep Godot's top-down V (`godot/math/uv.ts`). */
 export const GLTF_SURFACE = 'gltf';
 
 /**

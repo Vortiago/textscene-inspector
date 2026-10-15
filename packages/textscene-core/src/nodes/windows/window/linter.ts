@@ -8,9 +8,9 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { matchVector2i } from '../../../linter/validators/index.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
-import { parseGodotFloat } from '../../../godot/number.js';
-import { formatReal, storedReal } from '../../../godot/real.js';
+import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
+import { parseGodotFloat } from '../../../godot/variant/number.js';
+import { formatReal, storedReal } from '../../../godot/math/real.js';
 import type { Vector2 as Size } from '../../../parser/vectors.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 

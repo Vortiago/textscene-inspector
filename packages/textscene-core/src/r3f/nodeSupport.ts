@@ -2,7 +2,7 @@
 
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { TWO_D_UI_TYPES } from './controls/has2DUIContent.js';
-import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
+import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/scene/packedScene.js';
 
 /**
  * The badge's answer for `type`: `'draws'`, `'transform-only'` for a component

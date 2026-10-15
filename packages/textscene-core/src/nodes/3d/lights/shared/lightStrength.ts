@@ -7,8 +7,8 @@ import {
   DIRECTIONAL_LIGHT_SPECULAR_DEFAULT,
   LIGHT_SHADOW_OPACITY_DEFAULT,
   LIGHT_SPECULAR_DEFAULT,
-} from '../../../../godot/light';
-import { LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT } from '../../../../godot/volumetricFog';
+} from '../../../../godot/scene/light';
+import { LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT } from '../../../../godot/rendering/environment/volumetricFog';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import type { BaseLightProperties } from './types';
 

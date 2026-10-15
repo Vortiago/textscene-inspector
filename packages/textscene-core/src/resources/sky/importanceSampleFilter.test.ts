@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { reflectionAtlasLayout } from '../../godot/reflectionProbe';
-import { layerSamples, skyOctmapLayout } from '../../godot/skyReflection';
+import { reflectionAtlasLayout } from '../../godot/rendering/environment/reflectionProbe';
+import { layerSamples, skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { importanceSampleFilter } from './importanceSampleFilter';
 
 describe('importanceSampleFilter', () => {

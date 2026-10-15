@@ -15,7 +15,7 @@
  * See THIRD-PARTY-NOTICES.md for the full notice.
  */
 
-import { LTC_SIZE } from '../../godot/ltc.js';
+import { LTC_SIZE } from '../../godot/rendering/lights/ltc.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
 import { AREA_TEXTURE_FETCH } from './areaTextureFetch.js';
 

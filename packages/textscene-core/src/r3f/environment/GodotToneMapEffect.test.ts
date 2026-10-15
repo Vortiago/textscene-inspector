@@ -10,7 +10,7 @@ import { glowParamsFor } from '../../resources/environment/godotGlow';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { GodotToneMapper } from '../../resources/environment/godotToneMapping';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 
 function effectWith(properties: Record<string, string>) {
   const settings = createEnvironmentSettings(

@@ -9,7 +9,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
-import { baseChain, NODE_BASE_TYPES } from '../../godot/nodeBaseTypes.js';
+import { baseChain, NODE_BASE_TYPES } from '../../godot/classdb/nodeBaseTypes.js';
 import { walk } from './ruleNameScrape.js';
 import {
   BASE_TYPE_TO_PARSER_SUBPATH,

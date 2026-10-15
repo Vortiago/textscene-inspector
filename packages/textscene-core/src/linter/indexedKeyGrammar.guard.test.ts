@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
 import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
-import { indexedKeyRegex } from '../godot/indexedKey.js';
+import { indexedKeyRegex } from '../godot/classdb/indexedKey.js';
 
 /**
  * A file that declares a phase-2 rule, by the one property a rule cannot be renamed or
@@ -115,7 +115,7 @@ const NAMES_A_PARSE = /'(?:to_int|is_valid_int)'/;
 /**
  * Reading an index with `Number` or `parseInt`, under either parse. Godot stores `to_int()` in an
  * `int` (`property_list_helper.cpp:57`): `Number('4294967296')` is 4294967296 where Godot stores
- * 0, and `Number('a-1')` is NaN where it reads -1. `stringToInt` (`godot/string.ts`) is the reader.
+ * 0, and `Number('a-1')` is NaN where it reads -1. `stringToInt` (`godot/string/string.ts`) is the reader.
  */
 const RAW_INDEX_READ = /\b(?:Number|parseInt)\(/;
 

@@ -1,8 +1,8 @@
 /** The fog uniforms one render writes, and the clear after it. */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
-import { VOLUMETRIC_FOG_DEFAULTS } from '../../godot/volumetricFog';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
+import { VOLUMETRIC_FOG_DEFAULTS } from '../../godot/rendering/environment/volumetricFog';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { skyLightUserData } from '../sky/skyLight';

@@ -8,8 +8,8 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import { parseValueArray } from './keyframeValues.js';
 import type { GodotKeyframeValue } from './keyframeValues.js';
-import { parseGodotFloat } from '../../../godot/number.js';
-import { boolSlotValue } from '../../../godot/variantBool.js';
+import { parseGodotFloat } from '../../../godot/variant/number.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { info, warn } from '../../../logger';
 import {
   EXT_RESOURCE_CALL_ANYWHERE_RE,
@@ -17,7 +17,7 @@ import {
   literalText,
   packedArrayCallAnywhere,
 } from '../../../godot/index.js';
-import { dictCallField, nodePathLiteral } from '../../../godot/variantParser.js';
+import { dictCallField, nodePathLiteral } from '../../../godot/variant/variantParser.js';
 import { findSubResource } from '../../../resources/SubResourceResolver.js';
 import type { AnimationLibraryRef } from './types';
 

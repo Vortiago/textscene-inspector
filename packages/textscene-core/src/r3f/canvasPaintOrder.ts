@@ -10,8 +10,8 @@
  */
 
 import type { TscnNode } from '../parser/types';
-import { descendsFrom } from '../godot/nodeBaseTypes';
-import { DEFAULT_CANVAS_LAYER } from '../godot/rendering';
+import { descendsFrom } from '../godot/classdb/nodeBaseTypes';
+import { DEFAULT_CANVAS_LAYER } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import {
   CANVAS_ITEM_Z_MAX,

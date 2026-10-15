@@ -9,7 +9,7 @@ import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor } from '../../../utils/colorParser';
 import { boolOr, enumOr, floatOr, intOr, parseOptionalRect2 } from '../../../parser/valueParsers';
 import { AlphaAntiAliasing, AlphaCutMode, TextureFilterMode, type Sprite3DProperties } from './types';
-import { frameCoords, replaySpriteFrames } from '../../../godot/spriteFrames.js';
+import { frameCoords, replaySpriteFrames } from '../../../godot/scene/spriteFrames.js';
 import { parseSpriteQuad } from './quadParser';
 
 export function parseSprite3D(
@@ -30,7 +30,7 @@ export function parseSprite3D(
     ]),
     // The grid and frame Godot holds after replaying the body in file order:
     // a count below 1 is refused, a refused `frame` stays 0, a later `hframes`
-    // re-maps one that landed (godot/spriteFrames.ts).
+    // re-maps one that landed (godot/scene/spriteFrames.ts).
     hframes: frames.hframes,
     vframes: frames.vframes,
     frame: frames.frame,

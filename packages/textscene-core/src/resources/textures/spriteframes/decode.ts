@@ -6,8 +6,8 @@
  */
 
 import type { SpriteFramesAnimation, SpriteFramesData } from './types';
-import { dictNumberField, dictStringField } from '../../../godot/variantParser.js';
-import { matchedFloat } from '../../../godot/number.js';
+import { dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
+import { matchedFloat } from '../../../godot/variant/number.js';
 import { boolSlotValue, keyedResourceRefReader, resourceRef } from '../../../godot/index.js';
 import { ANIMATION_DICT_DEPTH, splitFramesArray, splitTopLevelDicts } from './frameSplit.js';
 import { unquoteLiteral } from '../../../parser/utils.js';

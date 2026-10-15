@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { ReflectionProbeAmbientMode, ReflectionProbeUpdateMode } from '../../../godot/reflectionProbe';
+import {
+  ReflectionProbeAmbientMode,
+  ReflectionProbeUpdateMode,
+} from '../../../godot/rendering/environment/reflectionProbe';
 import { heading } from '../../../parser/testing/parserKit';
 import { TscnParser } from '../../../parser/TscnParser';
 import { parseReflectionProbe } from './parser';

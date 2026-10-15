@@ -5,7 +5,7 @@
  * accepts.
  */
 
-import { PROJECT_FILE_NAME } from '../godot/project.js';
+import { PROJECT_FILE_NAME } from '../godot/project/project.js';
 
 export const RES_SCHEME = 'res://';
 

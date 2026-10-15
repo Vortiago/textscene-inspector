@@ -4,7 +4,7 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import type { AreaLight3DProperties } from './types';
 import { parseNode3D } from '../../../base/node3d/parser';
 import { parsePositionalLightProperties } from '../shared/parser';
-import { AREA_LIGHT_SIZE_DEFAULT } from '../../../../godot/areaLightShadow';
+import { AREA_LIGHT_SIZE_DEFAULT } from '../../../../godot/rendering/lights/areaLightShadow';
 import { boolOr, floatOr, vec2Or } from '../../../../parser/valueParsers';
 
 export function parseAreaLight3D(

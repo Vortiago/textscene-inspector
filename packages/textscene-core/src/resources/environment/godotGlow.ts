@@ -5,7 +5,7 @@
  * the MIT licence (see THIRD-PARTY-NOTICES.md). Pure, so the arithmetic is testable.
  */
 
-import { clamp } from '../../godot/math.js';
+import { clamp } from '../../godot/math/math.js';
 import type { EnvironmentSettings } from './types';
 import { glslFloat } from '../../utils/glslLiterals';
 

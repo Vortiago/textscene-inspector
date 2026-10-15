@@ -4,7 +4,7 @@
  * table, so the webview bundle pulls in no linter.
  */
 
-import { descendsFrom } from '../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../godot/classdb/nodeBaseTypes.js';
 
 /** Camera3D and every type descending from it (XRCamera3D). */
 export function isCamera3DType(type: string): boolean {

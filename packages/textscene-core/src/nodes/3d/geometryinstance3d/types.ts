@@ -1,9 +1,9 @@
 /** The GeometryInstance3D properties every drawn leaf reads. */
 
-import { ShadowCastingSetting } from '../../../godot/rendering';
-import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../../godot/visualLayers';
-import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../../godot/visibilityRange';
-import type { Aabb } from '../../../godot/aabb';
+import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
+import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../../godot/scene/visualLayers';
+import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../../godot/rendering/visibilityRange';
+import type { Aabb } from '../../../godot/math/aabb';
 import type { VisualInstance3DProperties } from '../visualinstance3d/types';
 
 export interface GeometryInstance3DProperties extends VisualInstance3DProperties {

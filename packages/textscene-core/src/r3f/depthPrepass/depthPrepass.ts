@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/opaquePrepass';
+import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/rendering/opaquePrepass';
 import { opaquePrepassOf } from '../materials/opaquePrepass';
 import { surfaceDepthMaterial, syncSurfaceDepth } from '../materials/surfaceDepthMaterial';
 

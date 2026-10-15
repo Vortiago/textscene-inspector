@@ -10,11 +10,11 @@
  */
 
 import { createContext, useContext, type ReactNode } from 'react';
-import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../godot/rendering.js';
-import { clamp } from '../../godot/math.js';
+import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../godot/rendering/rendering.js';
+import { clamp } from '../../godot/math/math.js';
 
 /**
- * Re-exported, not re-typed: `godot/rendering.ts` owns the numbers, and the clamp below and the
+ * Re-exported, not re-typed: `godot/rendering/rendering.ts` owns the numbers, and the clamp below and the
  * linter's bounds must read one constant.
  */
 export { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX };

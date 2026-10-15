@@ -35,7 +35,7 @@ import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
-import { clamp } from '../../../godot/math';
+import { clamp } from '../../../godot/math/math';
 
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
 const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;

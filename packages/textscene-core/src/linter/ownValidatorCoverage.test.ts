@@ -8,8 +8,8 @@
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { baseChain, MAX_BASE_CHAIN_HOPS } from '../godot/nodeBaseTypes.js';
-import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/resourceBaseTypes.generated.js';
+import { baseChain, MAX_BASE_CHAIN_HOPS } from '../godot/classdb/nodeBaseTypes.js';
+import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/classdb/resourceBaseTypes.generated.js';
 import { resourceSliceRegistry } from '../resources/sliceRegistration.js';
 import '../resources/sliceRegistrations.js'; // side-effect: every resource slice claims its types
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser

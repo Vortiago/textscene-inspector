@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlColor, ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
-import { descendsFrom } from '../../../godot/nodeBaseTypes';
+import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/index.js';
 import { projectLayoutDirectionEnv } from '../../../parser/projectSettingsParser';
 import { joinPath } from '../../../utils/nodePath';
@@ -58,7 +58,7 @@ import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewport
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
 import type { SkippedAncestors, SolveNode, ThemedIconRef } from './solveTree';
-import { multiplyTransform2D } from '../../../godot/transform2d.js';
+import { multiplyTransform2D } from '../../../godot/math/transform2d.js';
 import { node2DLocalTransform } from '../../node2dTransform';
 import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
