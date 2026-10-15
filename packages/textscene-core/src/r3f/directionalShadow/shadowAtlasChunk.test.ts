@@ -12,7 +12,6 @@ import {
   directionalShadowAtlasDepth,
 } from './shadowAtlas';
 import { installGodotSplitShadow } from './splitShadowChunk';
-import { installDirectionalShadowFade } from './shadowFade';
 import { occurrences } from '../testing/glslSource';
 import { warningsOf } from '../testing/logWarnings';
 import { LIT_SHADERS } from '../testing/litShaders';
@@ -30,11 +29,10 @@ const ATLAS_ARGUMENT = `getSunShadow( ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM},`;
 
 restoreShaderGlobalsAfterEach();
 
-/** The three chunks after the atlas and the other directional patches, in the given order. */
+/** The three chunks after the atlas and the split lookup, in the given order. */
 function installedInOrder(order: 'atlas first' | 'atlas last'): string[] {
   if (order === 'atlas first') installDirectionalShadowAtlas();
   installGodotSplitShadow();
-  installDirectionalShadowFade();
   if (order === 'atlas last') installDirectionalShadowAtlas();
   return [THREE.ShaderChunk[PARS], THREE.ShaderChunk[LIGHTS], THREE.ShaderChunk[SHADOW_MASK]];
 }
@@ -59,11 +57,6 @@ describe('the installed sun shadow chunks', () => {
     const { [PARS]: pars, [LIGHTS]: lights } = installedShaderChunks();
     expect(pars).toContain('uniform sampler2DShadow directionalShadowMap[ NUM_DIR_LIGHT_SHADOWS ];');
     expect(lights).toContain('getShadow( directionalShadowMap[ i ]');
-  });
-
-  it('fade the atlas lookup', () => {
-    const { [LIGHTS]: lights } = installedShaderChunks();
-    expect(occurrences(lights, `mix( ${ATLAS_ARGUMENT}`)).toBe(1);
   });
 });
 
@@ -104,7 +97,7 @@ describe('installDirectionalShadowAtlas', () => {
     expect(THREE.ShaderChunk[LIGHTS]).toContain(ATLAS_ARGUMENT);
   });
 
-  it('composes with the split lookup and the fade in either install order', () => {
+  it('composes with the split lookup in either install order', () => {
     const atlasFirst = installedInOrder('atlas first');
     Object.assign(THREE.ShaderChunk, threeChunks);
     expect(installedInOrder('atlas last')).toEqual(atlasFirst);

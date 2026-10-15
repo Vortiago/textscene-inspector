@@ -79,8 +79,8 @@ const SOFT_SHADOW_FILTER = `	uniform float ${FRAMEBUFFER_HEIGHT_UNIFORM}[ 1 ];
 
 /**
  * The block goes inside `#ifdef USE_SHADOWMAP`, ahead of every shadow block, so every lookup that
- * calls it follows it. The anchor omits the slot count, which `splitShadowChunk.ts` rewrites, and
- * follows the line `shadowFade.ts` inserts after, so every install order gives the same chunk.
+ * calls it follows it. The anchor omits the slot count, which `splitShadowChunk.ts` rewrites, so
+ * every install order gives the same chunk.
  */
 const SUN_BLOCK_START = '\t#if NUM_SUN_LIGHT_SHADOWS > 0\n\t\t#define SUN_LIGHT_CASCADES';
 

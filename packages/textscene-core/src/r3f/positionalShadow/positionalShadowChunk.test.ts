@@ -16,7 +16,6 @@ import { AREA_LIGHT_SHADOWS } from '../areaLight/areaLightShadowUniforms';
 import { occurrences, preprocessorBranch } from '../testing/glslSource';
 import { warningsOf } from '../testing/logWarnings';
 import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk';
-import { installDirectionalShadowFade } from '../directionalShadow/shadowFade';
 import { installDirectionalShadowAtlas } from '../directionalShadow/shadowAtlasChunk';
 import { LIT_SHADERS } from '../testing/litShaders';
 import { installedShaderChunks, FILTER_PCF, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
@@ -150,7 +149,6 @@ describe('installGodotPositionalShadow', () => {
   it('composes with the directional patches, which `TscnCanvas` installs first', () => {
     installGodotSplitShadow();
     installDirectionalShadowAtlas();
-    installDirectionalShadowFade();
     const warnings = warningsOf(() => installGodotPositionalShadow());
     expect(warnings).toEqual([]);
     expect(THREE.ShaderChunk.lights_fragment_begin).toContain('godotSpotShadowCoord(');
