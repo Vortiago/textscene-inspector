@@ -8,7 +8,8 @@
 import { useEffect, useMemo, type RefObject } from 'react';
 import type * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
-import { LIGHT_DISTANCE_FADE_DEFAULT, distanceFade } from '../../../../godot/rendering/distanceFade';
+import { distanceFade } from '../../../../godot/rendering/distanceFade';
+import { LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 import { cameraDistance, observeSceneCamera } from '../../../../r3f/sceneRenderCamera';
 import type { PositionalLightProperties } from './types';
 
@@ -25,9 +26,9 @@ interface LightDistanceFade {
 function lightDistanceFade(properties: PositionalLightProperties): LightDistanceFade | null {
   if (properties.distance_fade_enabled !== true) return null;
   return {
-    begin: properties.distance_fade_begin ?? LIGHT_DISTANCE_FADE_DEFAULT.begin,
-    shadow: properties.distance_fade_shadow ?? LIGHT_DISTANCE_FADE_DEFAULT.shadow,
-    length: properties.distance_fade_length ?? LIGHT_DISTANCE_FADE_DEFAULT.length,
+    begin: properties.distance_fade_begin ?? LIGHT_3D_DEFAULTS.distanceFade.begin,
+    shadow: properties.distance_fade_shadow ?? LIGHT_3D_DEFAULTS.distanceFade.shadow,
+    length: properties.distance_fade_length ?? LIGHT_3D_DEFAULTS.distanceFade.length,
   };
 }
 

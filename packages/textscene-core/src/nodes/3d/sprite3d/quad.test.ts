@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
 import { AxisMode } from './types';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 const SIZE = { width: 2, height: 1 };
 

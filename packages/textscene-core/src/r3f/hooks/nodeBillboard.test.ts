@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { BillboardMode } from '../../godot/scene/billboard';
+import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { applyBillboard } from './nodeBillboard';
 
 /** A camera at `position` whose rotation is `rotation`, with its world matrix current. */

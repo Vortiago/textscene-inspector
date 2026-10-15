@@ -4,13 +4,14 @@ import type { BaseLightProperties, BaseLightWithNormalBias, PositionalLightPrope
 import { floatOr, parseOptionalBool, parseOptionalFloat } from '../../../../parser/valueParsers';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { parseVisualLayers } from '../../visualinstance3d/parser';
+import { LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 
 /** The colour, energy and shadow properties every light type shares. */
 function parseBaseLightProperties(properties: Record<string, string>): BaseLightProperties {
   return {
     layers: parseVisualLayers(properties),
-    light_color: properties.light_color || 'Color(1, 1, 1, 1)',
-    light_energy: floatOr(properties.light_energy, 1.0, 'light_energy'),
+    light_color: properties.light_color || LIGHT_3D_DEFAULTS.color,
+    light_energy: floatOr(properties.light_energy, LIGHT_3D_DEFAULTS.energy, 'light_energy'),
     light_negative: parseOptionalBool(properties.light_negative),
     light_specular: parseOptionalFloat(properties.light_specular),
     light_volumetric_fog_energy: parseOptionalFloat(properties.light_volumetric_fog_energy),

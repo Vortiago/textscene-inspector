@@ -35,23 +35,26 @@ Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vit
 | `r3f/` | The renderer, the 2D canvas, the Control canvas, the preview shell |
 
 `godot/` groups its files by the engine area they port, named for that area's directory in Godot's
-source. A rendering fact sits under `rendering/` even when its setter lives in `scene/`. A test
-sits beside its file. Core imports each fact from its file under a group. The root keeps
-`noDependencies.test.ts` and `index.ts`, the package's `./godot` export, which re-exports only what
-a package outside core imports.
+source, and a file's cites name its area. A file whose facts port from two areas splits into one
+file per area. A class default sits with its class: `scene/light.ts` holds every Light3D default,
+keyed by light type where the types differ. A rendering fact sits under `rendering/` even when its
+setter lives in `scene/`.
+
+A test sits beside its file. Core imports each fact from its file under a group. The root keeps `noDependencies.test.ts` and `index.ts`, the package's `./godot` export, which
+re-exports only what a package outside core imports.
 
 | `godot/` group | Ports from Godot's |
 | --- | --- |
-| `math/` | `core/math`: vectors, bases, transforms, rectangles, AABBs |
-| `variant/` | `core/variant`: the Variant parser, types, conversions, colours, integers |
+| `math/` | `core/math`: vectors, bases, transforms, rectangles, AABBs, colours |
+| `variant/` | `core/variant`: the Variant parser, types, conversions, integers |
 | `string/` | `core/string`: strings, `StringName`, `NodePath` |
 | `classdb/` | `core/object`: ClassDB captures, base types, property hints, deprecated aliases |
-| `scene/` | `scene/`: `PackedScene`, nodes, animation, particles, CSG |
-| `project/` | `core/config`, `core/io` and `editor/`: `project.godot`, the editor scan, resource formats |
+| `scene/` | `scene/`: `PackedScene`, nodes and their class defaults, animation, particles, CSG |
+| `project/` | `core/config`, `core/io` and `editor/`: `project.godot`, the editor scan, resource formats, `Image` |
 | `import/` | `modules/gltf` and `editor/import`: glTF and scene import |
 | `text/` | `modules/text_server_adv` and `text_server_fb`: the text server |
-| `rendering/` | `servers/rendering`: viewport, textures, culling, fades, passes |
-| `rendering/materials/` | The material shaders: UVs, diffuse and specular modes, DFG |
+| `rendering/` | `servers/rendering`: viewport, texture views, culling, fades, passes, byte quantisation |
+| `rendering/materials/` | The material shaders: UVs, diffuse, specular and billboard modes, DFG |
 | `rendering/lights/` | Light shading and shadows: LTC, shadow atlases, soft-shadow kernels |
 | `rendering/environment/` | Fog, sky reflection, reflection probes |
 | `testing/` | Test helpers for the files above |

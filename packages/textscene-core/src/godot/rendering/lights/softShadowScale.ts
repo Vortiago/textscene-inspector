@@ -5,8 +5,7 @@
  * area light's takes its size into account (`positionalSoftShadow`).
  */
 
-/** `Light3D()` sets `PARAM_SHADOW_BLUR` to 1 (`scene/3d/light_3d.cpp:489`). */
-export const SHADOW_BLUR_DEFAULT = 1;
+import { LIGHT_3D_DEFAULTS } from '../../scene/light.js';
 
 /**
  * The PCF quality radius at the default soft shadow filter quality, Soft Low
@@ -21,6 +20,6 @@ export const SOFT_LOW_QUALITY_RADIUS = 2;
  * distance takes `shadow_blur` alone, as its blocker search spreads it.
  */
 export function softShadowScale(shadowBlur: number | undefined, angularDistance: number): number {
-  const blur = shadowBlur ?? SHADOW_BLUR_DEFAULT;
+  const blur = shadowBlur ?? LIGHT_3D_DEFAULTS.shadowBlur;
   return angularDistance > 0 ? blur : blur * SOFT_LOW_QUALITY_RADIUS;
 }

@@ -6,10 +6,6 @@
  */
 
 import { degToRad } from '../../math/math.js';
-import { LIGHT_SIZE_DEFAULT } from '../../scene/light.js';
-
-/** `light_angular_distance` sets `PARAM_SIZE`, so its default is that of `light_size`. */
-export const LIGHT_ANGULAR_DISTANCE_DEFAULT = LIGHT_SIZE_DEFAULT;
 
 /**
  * `softshadow_angle`: the tangent of the angular distance, or zero for none

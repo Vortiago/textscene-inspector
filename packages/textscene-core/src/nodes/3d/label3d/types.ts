@@ -1,7 +1,7 @@
 /** Label3D node data and its enums. */
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import type { HorizontalAlignment, Rgba } from '../../../godot/math/math';
 
 /** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */

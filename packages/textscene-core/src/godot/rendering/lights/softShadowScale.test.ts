@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { SHADOW_BLUR_DEFAULT, SOFT_LOW_QUALITY_RADIUS, softShadowScale } from './softShadowScale';
+import { softShadowScale } from './softShadowScale';
 
 describe('softShadowScale', () => {
   it('is the default blur times the Soft Low quality radius', () => {
     // `light_3d.cpp:489` and `renderer_scene_render_rd.cpp:1207`: 1 * 2.
-    expect(softShadowScale(undefined, 0)).toBe(SHADOW_BLUR_DEFAULT * SOFT_LOW_QUALITY_RADIUS);
     expect(softShadowScale(undefined, 0)).toBe(2);
   });
 

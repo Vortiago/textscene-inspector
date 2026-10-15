@@ -6,7 +6,7 @@
  */
 
 import type { Rgba } from '../../../godot/math/math';
-import { unitByte } from '../../../godot/variant/unitByte';
+import { unitByte } from '../../../godot/rendering/unitByte';
 
 /**
  * `unitByte` on all four channels. Never apply it to the inherited tint:
