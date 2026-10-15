@@ -1,23 +1,25 @@
 /**
- * Every degree-radian conversion in `src/` and the repository's `scripts/` goes through `degToRad` and `radToDeg`
- * (`godot/math/math.ts`), which round as Godot's `Math::deg_to_rad` and `Math::rad_to_deg` do. A
- * hand-rolled `(d * Math.PI) / 180` rounds differently, and so can three's own helpers, so neither
- * may come back.
+ * Every degree-radian conversion in core's `src/`, each app's `src/` and the repository's `scripts/` goes
+ * through `degToRad` and `radToDeg` (`godot/math/math.ts`), which round as Godot's `Math::deg_to_rad` and
+ * `Math::rad_to_deg` do. A hand-rolled `(d * Math.PI) / 180`, or its half angle over 360, rounds
+ * differently, and so can three's own helpers, so neither may come back.
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const srcDir = dirname(fileURLToPath(import.meta.url));
-const scriptsDir = resolve(srcDir, '../../../scripts');
+const repoRoot = resolve(srcDir, '../../..');
+const scriptsDir = resolve(repoRoot, 'scripts');
+const appsDir = resolve(repoRoot, 'apps');
 
 /** The one file that defines the conversions, so it holds the factors. */
 const DEFINITION_FILE = 'godot/math/math.ts';
 
 const HAND_ROLLED_CONVERSION =
-  /MathUtils\.(?:degToRad|radToDeg|DEG2RAD|RAD2DEG)|\bDEG2RAD\b|\bRAD2DEG\b|Math\.PI\s*\)?\s*\/\s*180\b|\b180\s*\/\s*Math\.PI|\*\s*180\s*\)\s*\/\s*Math\.PI|\*\s*\(?\s*Math\.PI\s*\/\s*180\b|\)\s*\*\s*\(?\s*180\b|\/\s*180\s*\)?\s*\*\s*Math\.PI/;
+  /MathUtils\.(?:degToRad|radToDeg|DEG2RAD|RAD2DEG)|\bDEG2RAD\b|\bRAD2DEG\b|Math\.PI\s*\)?\s*\/\s*(?:180|360)\b|\b180\s*\/\s*Math\.PI|\*\s*180\s*\)\s*\/\s*Math\.PI|\*\s*\(?\s*Math\.PI\s*\/\s*(?:180|360)\b|\)\s*\*\s*\(?\s*180\b|\/\s*180\s*\)?\s*\*\s*Math\.PI/;
 
 /** Every `.ts`, `.tsx`, `.js` and `.mjs` file under `dir`, relative to it, `node_modules` excluded. */
 function sourceFiles(dir: string, prefix = ''): string[] {
@@ -36,19 +38,27 @@ function linesWithHandRolledConversion(source: string): number[] {
   return lines.flatMap((line, index) => (HAND_ROLLED_CONVERSION.test(line) ? [index + 1] : []));
 }
 
+/** The `src/` tree of each app under `apps/`, as `apps/<name>/src`. */
+function appSourceTrees(): { label: string; dir: string }[] {
+  return readdirSync(appsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(resolve(appsDir, entry.name, 'src')))
+    .map((entry) => ({ label: `apps/${entry.name}/src`, dir: resolve(appsDir, entry.name, 'src') }));
+}
+
 /** Each scanned file as `root/relative/path`, so an offender names its tree. */
 function scannedFiles(): { label: string; path: string }[] {
-  return [
-    ...sourceFiles(srcDir).map((file) => ({ label: `src/${file}`, path: resolve(srcDir, file) })),
-    ...sourceFiles(scriptsDir).map((file) => ({ label: `scripts/${file}`, path: resolve(scriptsDir, file) })),
-  ];
+  const trees = [{ label: 'src', dir: srcDir }, { label: 'scripts', dir: scriptsDir }, ...appSourceTrees()];
+  return trees.flatMap(({ label, dir }) =>
+    sourceFiles(dir).map((file) => ({ label: `${label}/${file}`, path: resolve(dir, file) }))
+  );
 }
 
 describe('degree conversions', () => {
-  it('finds the source and script files, so the sweep cannot pass vacuously', () => {
+  it('finds the source, script and app files, so the sweep cannot pass vacuously', () => {
     const labels = scannedFiles().map(({ label }) => label);
     expect(labels).toContain(`src/${DEFINITION_FILE}`);
     expect(labels).toContain('scripts/distFreshness.mjs');
+    expect(labels.some((label) => label.startsWith('apps/textscene-web/src/'))).toBe(true);
   });
 
   it.each([
@@ -56,6 +66,8 @@ describe('degree conversions', () => {
     'degrees * (Math.PI / 180)',
     'radians * (180 / Math.PI)',
     '(r * 180) / Math.PI',
+    '(fov * Math.PI) / 360',
+    'fov * (Math.PI / 360)',
     'THREE.MathUtils.degToRad(d)',
     'MathUtils.radToDeg(r)',
     'const DEG2RAD = 0.01;',

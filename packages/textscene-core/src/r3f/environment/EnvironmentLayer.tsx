@@ -1,7 +1,6 @@
 /**
- * Applies one Godot `Environment` to the scene, for an authored `WorldEnvironment` and for the
- * editor preview environment alike (ADR-0025): background, sky, flat ambient, tonemapping, glow,
- * colour adjustments, depth fog and volumetric fog.
+ * Applies one Godot `Environment` to its world, authored or the editor preview's (ADR-0025):
+ * background, sky, flat ambient, tonemapping, glow, colour adjustments, depth fog and volumetric fog.
  * Each restores what it found on unmount, because the renderer and scene outlive an environment.
  */
 
@@ -14,6 +13,7 @@ import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useCompositorPass, useDraws3D } from './useCompositorPass';
+import { useWorldKind } from './WorldKindContext';
 import { SkyLayer } from '../sky/SkyLayer';
 import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
@@ -39,8 +39,11 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
   const draws3D = useDraws3D();
-  // One value decides the pass and the suppression, so they cannot disagree.
-  const composited = useCompositorPass(settings);
+  const pass = useCompositorPass(settings);
+  // One value decides the pass and the suppression, so they cannot disagree. Only the root world
+  // mounts the compositor: a portal store shares the root's internal state, so a sub-viewport
+  // world's compositor would draw the portal scene onto the canvas, not into the target.
+  const compositor = useWorldKind() === 'root' ? pass : null;
   // One value decides the fog programs, the fogged colour background and the fog passes.
   const hasFog = draws3D && (!!settings.fog || !!settings.volumetricFog);
 
@@ -50,12 +53,12 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
         settings={settings}
         hasSky={!!sky}
         hasFog={hasFog}
-        suppressToneMapping={!!composited}
+        suppressToneMapping={!!compositor}
       />
-      {composited && (
+      {compositor && (
         <ToneMapLayer
-          glow={composited.glow}
-          samples={composited.samples}
+          glow={compositor.glow}
+          samples={compositor.samples}
           adjustments={settings.adjustments}
           toneMapping={settings.toneMapping}
           resources={resources}
@@ -101,8 +104,8 @@ interface EnvironmentApplierProps {
   hasFog: boolean;
   /**
    * The composer forces `NoToneMapping` while mounted and `GodotToneMapEffect` applies the curve,
-   * so the renderer's mapping is not set here. The curve still installs for a `SubViewport` pass,
-   * which renders the shared world without the composer.
+   * so the renderer's mapping is not set here. The curve still installs for a shared-world
+   * `SubViewport` pass, which renders the root world without the composer.
    */
   suppressToneMapping: boolean;
 }
@@ -144,7 +147,10 @@ function EnvironmentApplier({ settings, hasSky, hasFog, suppressToneMapping }: E
     white: toneMapWhite,
     agxContrast: toneMapAgxContrast,
   } = settings.toneMapping;
+  // `THREE.ShaderChunk` is module-global, so a sub-viewport's world installs no curve over the root's.
+  const tonesRenderer = useWorldKind() === 'root';
   useEffect(() => {
+    if (!tonesRenderer) return undefined;
     const toneMapping = {
       mode: toneMapMode,
       exposure: toneMapExposure,
@@ -154,7 +160,16 @@ function EnvironmentApplier({ settings, hasSky, hasFog, suppressToneMapping }: E
     return suppressToneMapping
       ? installToneCurve(gl, toneMapping, scene)
       : applyToneMapping(gl, toneMapping, scene);
-  }, [gl, scene, toneMapMode, toneMapExposure, toneMapWhite, toneMapAgxContrast, suppressToneMapping]);
+  }, [
+    gl,
+    scene,
+    tonesRenderer,
+    toneMapMode,
+    toneMapExposure,
+    toneMapWhite,
+    toneMapAgxContrast,
+    suppressToneMapping,
+  ]);
 
   return null;
 }

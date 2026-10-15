@@ -199,7 +199,8 @@ export class ResourceLoader {
     this.eventBus = new ResourceEventBus();
     this.metadata = new MetadataStore();
 
-    this.textures = createTextureProcessor(fileEventBus, this.eventBus);
+    // An image's **Import sidecar** decides the format its texture holds after import.
+    this.textures = createTextureProcessor(fileEventBus, this.eventBus, this.dependencies);
 
     // A GLB's **Import sidecar** can repoint a glTF material at an external `.tres`. The
     // processor tags the surface, and the scene root draws that `.tres` like any material.

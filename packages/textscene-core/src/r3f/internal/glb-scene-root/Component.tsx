@@ -32,7 +32,8 @@ import type { LiveNode } from '../../../resources/liveNode';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
-import { forEachSurfaceMaterial, importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
+import { importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
+import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials';
 import { boolSlotValue } from '../../../godot/index.js';
 
 interface GLBSceneRootProperties {

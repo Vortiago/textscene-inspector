@@ -175,12 +175,9 @@ const GODOT_SUN_FADE = `
 `;
 
 /**
- * The replacement. `getSunShadow` takes the soft shadow for a sun with an angle, and the split
- * selection otherwise, and fades either out. A fragment past the fade samples nothing. The split is
- * the first whose far end lies past the fragment's depth, and slot 3 takes everything beyond slot 2
- * (`:2408-2440`). Without blending, a split's filter radius scales by the first split's far end over
- * its own (`:2422-2443`). A blending split mixes in the next one (`:2445-2478`), sampled only inside
- * the band, where its weight is above zero.
+ * The replacement. `getSunShadow` takes the soft shadow for a sun with an angle, else the split
+ * lookup (`:2408-2478`), and fades either out, so a fragment past the fade samples nothing.
+ * `directionalShadow.md` (The split lookup) gives the split choice, filter radius and blend band.
  */
 const GODOT_LOOKUP = `${GODOT_SLOT_MATRIX}${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOKUP}
 \t\t\t#if defined( SHADOWMAP_TYPE_PCF )

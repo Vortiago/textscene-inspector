@@ -449,6 +449,79 @@ environment = ExtResource("env_1")
       );
     });
 
+    // The group key carries the World3D scenario id (world_environment.cpp:41), and
+    // `find_world_3d` stops at a viewport with its own world (viewport.cpp:4672-4673).
+    it('stays silent on a WorldEnvironment inside an own-world SubViewport', () => {
+      expectNoDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="Environment" id="env_1"]
+[sub_resource type="Environment" id="env_2"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment1" type="WorldEnvironment" parent="."]
+environment = SubResource("env_1")
+
+[node name="Viewport" type="SubViewport" parent="."]
+own_world_3d = true
+
+[node name="WorldEnvironment2" type="WorldEnvironment" parent="Viewport"]
+environment = SubResource("env_2")
+`,
+        { ruleName: 'single-worldenvironment' }
+      );
+    });
+
+    // Without its own world, a SubViewport resolves its parent's (viewport.cpp:4676-4677).
+    it('warns on a WorldEnvironment inside a SubViewport that shares the root world', () => {
+      expectDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="Environment" id="env_1"]
+[sub_resource type="Environment" id="env_2"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment1" type="WorldEnvironment" parent="."]
+environment = SubResource("env_1")
+
+[node name="Viewport" type="SubViewport" parent="."]
+
+[node name="WorldEnvironment2" type="WorldEnvironment" parent="Viewport"]
+environment = SubResource("env_2")
+`,
+        { ruleName: 'single-worldenvironment', prop: "'WorldEnvironment2'" }
+      );
+    });
+
+    // Two viewports naming one `world_3d` resource share its scenario (viewport.cpp:4674-4675).
+    it('warns on the second WorldEnvironment in two viewports that share one world_3d', () => {
+      expectDiagnostic(
+        `[gd_scene format=3]
+
+[sub_resource type="World3D" id="world_1"]
+[sub_resource type="Environment" id="env_1"]
+[sub_resource type="Environment" id="env_2"]
+
+[node name="Root" type="Node3D"]
+
+[node name="ViewportA" type="SubViewport" parent="."]
+world_3d = SubResource("world_1")
+
+[node name="WorldEnvironment1" type="WorldEnvironment" parent="ViewportA"]
+environment = SubResource("env_1")
+
+[node name="ViewportB" type="SubViewport" parent="."]
+world_3d = SubResource("world_1")
+
+[node name="WorldEnvironment2" type="WorldEnvironment" parent="ViewportB"]
+environment = SubResource("env_2")
+`,
+        { ruleName: 'single-worldenvironment', prop: "'WorldEnvironment2'" }
+      );
+    });
+
     it('should warn with correct count for three WorldEnvironment nodes', () => {
       expectDiagnostic(
         `[gd_scene format=3]

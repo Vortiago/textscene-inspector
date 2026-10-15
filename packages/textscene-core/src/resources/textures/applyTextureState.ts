@@ -43,6 +43,11 @@ export interface MaterialTextureState {
 
 interface TextureState extends MaterialTextureState {
   /**
+   * The sampler reads a copy with its own mip chain, whatever the import gives, as Godot's decal
+   * atlas does (`texture_storage.cpp:3169-3226`). Omitted means the import's chain.
+   */
+  buildsMipChain?: boolean;
+  /**
    * The colour space this binding samples in. Required: only the binding knows
    * what the sampler needs, whatever the producer tagged.
    */
@@ -91,12 +96,14 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   // Only an authored filter diverges. Otherwise a GradientTexture2D, which has no
   // mipmaps, would clone per material and slot for a filter nobody asked for.
   const filterDiverges = state.filter !== undefined && !textureFilterMatches(texture, filterState);
+  const mipChainDiverges = state.buildsMipChain === true && !texture.generateMipmaps;
   // A texture whose tag already matches the sampler is shared untouched.
   const colorSpaceDiverges = texture.colorSpace !== state.colorSpace;
   const channel = state.channel ?? 0;
   const channelDiverges = texture.channel !== channel;
-  if (!uvDiverges && !filterDiverges && !wrapDiverges && !colorSpaceDiverges && !channelDiverges)
-    return texture;
+  const diverges =
+    uvDiverges || filterDiverges || mipChainDiverges || wrapDiverges || colorSpaceDiverges || channelDiverges;
+  if (!diverges) return texture;
 
   // One clone, however many reasons. `clone()` shares `source`, so the image
   // bytes are not duplicated.
@@ -109,7 +116,8 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   cloned.wrapS = wrapping;
   cloned.wrapT = wrapping;
   cloned.channel = channel;
-  if (filterDiverges) applyTextureFilterState(cloned, filterState);
+  if (mipChainDiverges) cloned.generateMipmaps = true;
+  if (filterDiverges || mipChainDiverges) applyTextureFilterState(cloned, filterState);
   // Pinned, not assigned: R3F reasserts `SRGBColorSpace` every commit. The sRGB
   // case wants what R3F reasserts, so it needs no pin.
   if (state.colorSpace === THREE.NoColorSpace) pinNoColorSpace(cloned);

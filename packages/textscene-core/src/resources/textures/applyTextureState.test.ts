@@ -7,14 +7,11 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  applyTextureState,
-  releaseBoundTexture,
-  type MaterialTextureState,
-  type UVTransform,
-} from './applyTextureState';
+import { applyTextureState, releaseBoundTexture, type UVTransform } from './applyTextureState';
 import { UV2_CHANNEL } from '../meshes/uv2';
-import { godotTextureFilterState } from './godotTextureFilter';
+import { dropMipChain, godotTextureFilterState } from './godotTextureFilter';
+
+type TextureState = Parameters<typeof applyTextureState>[1];
 
 function uv(sx: number, sy: number, ox = 0, oy = 0): UVTransform {
   return { scale: { x: sx, y: sy }, offset: { x: ox, y: oy } };
@@ -25,7 +22,7 @@ function uv(sx: number, sy: number, ox = 0, oy = 0): UVTransform {
  * UV, filter or wrapping isolates that reason alone. The colour-space cases
  * below name theirs.
  */
-function state(material: MaterialTextureState = {}) {
+function state(material: Omit<TextureState, 'colorSpace'> = {}): TextureState {
   return { ...material, colorSpace: THREE.NoColorSpace };
 }
 
@@ -228,6 +225,36 @@ describe('applyTextureState', () => {
 
       expect(texture.magFilter).toBe(THREE.LinearFilter);
       expect(texture.anisotropy).toBe(1);
+    });
+  });
+
+  describe('a sampler that builds its own mip chain', () => {
+    function withoutMipChain(): THREE.Texture {
+      const texture = tiling();
+      dropMipChain(texture);
+      return texture;
+    }
+
+    it('clones an import without mipmaps onto a mip chain and the mipmap filter', () => {
+      const texture = withoutMipChain();
+      const result = applyTextureState(texture, state({ buildsMipChain: true }));
+
+      expect(result).not.toBe(texture);
+      expect(result.generateMipmaps).toBe(true);
+      expect(result.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+      expect(texture.generateMipmaps).toBe(false);
+    });
+
+    it('shares a texture that already has a mip chain', () => {
+      const texture = tiling();
+      expect(applyTextureState(texture, state({ buildsMipChain: true }))).toBe(texture);
+    });
+
+    it('keeps an authored filter without mipmaps on the rebuilt chain (edge case)', () => {
+      const result = applyTextureState(withoutMipChain(), state({ buildsMipChain: true, filter: 1 }));
+
+      expect(result.minFilter).toBe(THREE.LinearFilter);
+      expect(result.generateMipmaps).toBe(false);
     });
   });
 

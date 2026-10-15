@@ -2,14 +2,17 @@
  * Asserts the `.import` parameter allowlist against the corpus (ADR-0028). The previewer's asset
  * re-import honours `nodes/root_scale`, `nodes/apply_root_scale`, `meshes/light_baking`,
  * `meshes/lightmap_texel_size`, from `_subresources` the `use_external` material remaps, the
- * `mesh_instance/layers` mask and the per-mesh `generate/lightmap_uv`, and a `3d_texture` slice
- * grid. A vendored sidecar that needs any other parameter would render wrong with nothing to say
- * so, so this test fails instead.
+ * `mesh_instance/layers` mask and the per-mesh `generate/lightmap_uv`, a `3d_texture` slice grid,
+ * and a `texture` import's compression. A vendored sidecar that needs any other parameter would
+ * render wrong with nothing to say so, so this test fails instead.
  */
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
+import { READ_IMPORTERS, sidecarImporter } from './vendor-prune.mjs';
+import { TEXTURE_IMPORTER } from '../packages/textscene-core/src/godot/import/textureImport.ts';
+import { TEXTURE_3D_IMPORTER } from '../packages/textscene-core/src/godot/import/texture3DImport.ts';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const SCENES = join(REPO_ROOT, 'scenes');
@@ -47,6 +50,53 @@ const TEXTURE_3D_PARAMS = new Set([
   'compress/channel_pack',
   'mipmaps/generate',
   'mipmaps/limit',
+  'roughness/mode',
+  'roughness/src_normal',
+]);
+
+/**
+ * The `texture` importer's parameters, reviewed for that importer alone. The previewer honours the
+ * compression mode, the normal map flag, the mipmaps, the texel passes and the SVG scale
+ * (`standardmaterial3d/textureBinding.md`). The other storage keys are inert: the previewer reads
+ * the source image, not the compressed one, and the 3D detection is the editor's later re-import,
+ * which it does not predict. The roughness limiter rewrites only the mipmaps below the base level
+ * (`resource_importer_texture.cpp:415-417`), and the editor keys build an editor-only image (`:796-821`).
+ */
+const TEXTURE_PARAMS = new Set([
+  'compress/mode',
+  'compress/high_quality',
+  'compress/normal_map',
+  'compress/lossy_quality',
+  'compress/uastc_level',
+  'compress/rdo_quality_loss',
+  'compress/hdr_compression',
+  'mipmaps/generate',
+  'process/fix_alpha_border',
+  'process/premult_alpha',
+  'process/normal_map_invert_y',
+  'process/hdr_as_srgb',
+  'process/hdr_clamp_exposure',
+  'svg/scale',
+  'editor/scale_with_editor_scale',
+  'editor/convert_colors_with_editor_theme',
+  'detect_3d/compress_to',
+  'roughness/mode',
+  'roughness/src_normal',
+]);
+
+/**
+ * The `texture` importer's parameters that change the texels, the channels or the mip chain of an
+ * image, which the previewer does not read, so their default is asserted. A channel pack can
+ * compress to RGTC, which has no sRGB view (`core/io/image.cpp:3800-3806`).
+ */
+const TEXTURE_MUST_BE_DEFAULT = new Map([
+  ['compress/channel_pack', '0'],
+  ['mipmaps/limit', '-1'],
+  ['process/channel_remap/red', '0'],
+  ['process/channel_remap/green', '1'],
+  ['process/channel_remap/blue', '2'],
+  ['process/channel_remap/alpha', '3'],
+  ['process/size_limit', '0'],
 ]);
 
 /**
@@ -78,7 +128,6 @@ const INERT = new Set([
   'materials/extract_format',
   'materials/extract_path',
   'gltf/naming_version',
-  'gltf/embedded_image_handling',
   'gltf/texture_map_mode',
   // The wavefront_obj importer's parameters.
   'generate_tangents',
@@ -93,9 +142,11 @@ const INERT = new Set([
  * Parameters that would change the picture and that the previewer does not read, so their
  * default is asserted corpus-wide. `scale_mesh` and `offset_mesh` are wavefront_obj's root scale,
  * and `generate_lightmap_uv2` its unwrap, out of scope while every OBJ in the corpus keeps them
- * off (ADR-0028).
+ * off (ADR-0028). Extract Textures is the embedded image handling under which an embedded image
+ * imports as a file with a sidecar of its own.
  */
 const MUST_BE_DEFAULT = new Map([
+  ['gltf/embedded_image_handling', '1'],
   ['nodes/root_type', ''],
   ['nodes/root_script', 'null'],
   ['import_script/path', ''],
@@ -146,18 +197,19 @@ function walk(dir, out = []) {
 }
 
 /**
- * The `[params]` top-level keys and the non-empty `_subresources` blocks, in one string-aware
- * pass. It is independent of the production parser, so a bug there cannot make this pass.
+ * The importer, as the vendor prune reads it, then the `[params]` top-level keys and the non-empty
+ * `_subresources` blocks in one string-aware pass. It is independent of the production parser, so
+ * a bug there cannot make this pass.
  */
 function readSidecar(file) {
+  const text = readFileSync(file, 'utf8');
   const params = {};
   const subResources = [];
-  let importer = null;
   let section = null;
   let openKey = null;
   let state = { inString: false, depth: 0 };
 
-  for (const raw of readFileSync(file, 'utf8').split('\n')) {
+  for (const raw of text.split('\n')) {
     const line = raw.trim();
     if (openKey !== null) {
       if (openKey === '_subresources') subResources.push(line);
@@ -173,7 +225,6 @@ function readSidecar(file) {
     const eq = line.indexOf('=');
     const key = line.slice(0, eq).trim();
     const value = line.slice(eq + 1).trim();
-    if (section === '[remap]' && key === 'importer') importer = value.replace(/^"(.*)"$/, '$1');
     if (section !== '[params]') continue;
     params[key] = value.replace(/^"(.*)"$/, '$1');
     state = scanLine(value, { inString: false, depth: 0 });
@@ -182,7 +233,7 @@ function readSidecar(file) {
       if (key === '_subresources') subResources.push(value);
     }
   }
-  return { importer, params, blocks: topLevelBlocks(subResources.join('\n')) };
+  return { importer: sidecarImporter(text), params, blocks: topLevelBlocks(subResources.join('\n')) };
 }
 
 const SECTION_LINE = /^\[[A-Za-z_][A-Za-z0-9_]*\]$/;
@@ -238,6 +289,20 @@ function topLevelBlocks(text) {
   return blocks.sort();
 }
 
+/** Each parameter of a read sidecar that leaves its asserted default, as one line. */
+function defaultFindings(name, { importer, params }) {
+  const findings = [];
+  for (const [key, value] of Object.entries(params)) {
+    const expected =
+      MUST_BE_DEFAULT.get(key) ??
+      (importer === TEXTURE_IMPORTER ? TEXTURE_MUST_BE_DEFAULT.get(key) : undefined);
+    if (expected !== undefined && expected !== value) {
+      findings.push(`${name}: ${key}=${value} would change the render (want ${expected || '""'})`);
+    }
+  }
+  return findings;
+}
+
 const rel = (file) => relative(REPO_ROOT, file).split(sep).join('/');
 
 const sidecars = walk(SCENES);
@@ -262,15 +327,28 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
     expect(orphans.map(rel)).toEqual([]);
   });
 
+  it('keeps the sidecars of every importer core reads', () => {
+    expect(
+      [TEXTURE_IMPORTER, TEXTURE_3D_IMPORTER].filter((importer) => !READ_IMPORTERS.has(importer))
+    ).toEqual([]);
+  });
+
+  it('finds only the sidecars of an importer the vendor prune keeps', () => {
+    const unread = sidecars.filter((file) => !READ_IMPORTERS.has(READ.get(file).importer));
+    expect(unread.map(rel)).toEqual([]);
+  });
+
   it('uses no parameter this previewer has not reviewed', () => {
     // An unrecognised key comes from a Godot version or importer nobody has reviewed. Classify it
     // into one of the sets above, with the reason, or honour it.
     const unknown = [];
     for (const file of sidecars) {
-      const isTexture3D = READ.get(file).importer === '3d_texture';
+      const { importer } = READ.get(file);
       for (const key of Object.keys(readParams(file))) {
         if (HONOURED.has(key) || INERT.has(key) || MUST_BE_DEFAULT.has(key)) continue;
-        if (isTexture3D && TEXTURE_3D_PARAMS.has(key)) continue;
+        if (importer === TEXTURE_3D_IMPORTER && TEXTURE_3D_PARAMS.has(key)) continue;
+        if (importer === TEXTURE_IMPORTER && (TEXTURE_PARAMS.has(key) || TEXTURE_MUST_BE_DEFAULT.has(key)))
+          continue;
         unknown.push(`${rel(file)}: ${key}`);
       }
     }
@@ -278,16 +356,17 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
   });
 
   it('leaves every render-affecting parameter we do not read at its default', () => {
-    const findings = [];
-    for (const file of sidecars) {
-      for (const [key, value] of Object.entries(readParams(file))) {
-        const expected = MUST_BE_DEFAULT.get(key);
-        if (expected !== undefined && expected !== value) {
-          findings.push(`${rel(file)}: ${key}=${value} would change the render (want ${expected || '""'})`);
-        }
-      }
-    }
-    expect(findings).toEqual([]);
+    expect(sidecars.flatMap((file) => defaultFindings(rel(file), READ.get(file)))).toEqual([]);
+  });
+
+  it('flags a texture sidecar that changes the channels of its image', () => {
+    const remapped = {
+      importer: TEXTURE_IMPORTER,
+      params: { 'compress/mode': '0', 'process/channel_remap/red': '1' },
+    };
+    expect(defaultFindings('grey.png.import', remapped)).toEqual([
+      'grey.png.import: process/channel_remap/red=1 would change the render (want 0)',
+    ]);
   });
 
   it('carries only the _subresources blocks already accounted for', () => {

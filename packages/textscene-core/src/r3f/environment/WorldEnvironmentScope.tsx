@@ -1,15 +1,16 @@
 /**
  * The Environment each world draws with. Godot's World3D takes the Environment of the first
  * WorldEnvironment in its group, which only a node with a valid Environment joins
- * (`world_environment.cpp:40-41`, `:77-83`). Each WorldEnvironment publishes what its reference
- * resolves to, and one chooser per world applies the winner (ADR-0025).
+ * (`world_environment.cpp:40-41`, `:77-83`). One chooser per world applies it (ADR-0025).
  */
 
 import { createContext, useContext, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
 import { EnvironmentLayer, type EnvironmentLayerProps } from './EnvironmentLayer';
 import { NoEnvironmentLayer } from './NoEnvironmentLayer';
 import { PreviewEnvironment } from '../preview/PreviewEnvironment';
+import { PreviewSun } from '../preview/PreviewSun';
 import { usePreviewYield } from '../preview/usePreviewYield';
+import { WorldKindProvider, type WorldKind } from './WorldKindContext';
 import { compareTreeOrder, useTreeOrder, type TreeOrder } from '../contexts/TreeOrderContext';
 
 /**
@@ -38,11 +39,11 @@ const PublisherContext = createContext<Publisher | null>(null);
 const PublicationsContext = createContext<readonly Publication[]>([]);
 
 /**
- * The publications of one world, in tree order: Godot's group sorts its nodes so, an ancestor
- * first (`scene_tree.cpp:1568-1581`). React's mount order differs for a sub-scene that loads late
- * and for a child, whose effects run before its parent's.
+ * One viewport's world: the WorldEnvironments inside publish to it, and its chooser applies the
+ * winner. The publications sort in tree order, as Godot's group sorts its nodes, an ancestor first
+ * (`scene_tree.cpp:1568-1581`). React's mount order differs for a late sub-scene and for a child.
  */
-function WorldEnvironmentRegistry({ children }: { children: ReactNode }) {
+export function WorldEnvironmentScope({ world, children }: { world: WorldKind; children: ReactNode }) {
   const [publications, setPublications] = useState<readonly Publication[]>([]);
   const publisher = useMemo(
     (): Publisher => ({
@@ -60,9 +61,20 @@ function WorldEnvironmentRegistry({ children }: { children: ReactNode }) {
     []
   );
   return (
-    <PublisherContext.Provider value={publisher}>
-      <PublicationsContext.Provider value={publications}>{children}</PublicationsContext.Provider>
-    </PublisherContext.Provider>
+    <WorldKindProvider world={world}>
+      <PublisherContext.Provider value={publisher}>
+        <PublicationsContext.Provider value={publications}>
+          {world === 'root' ? (
+            <RootEnvironment>{children}</RootEnvironment>
+          ) : (
+            <>
+              <SubViewportEnvironment />
+              {children}
+            </>
+          )}
+        </PublicationsContext.Provider>
+      </PublisherContext.Provider>
+    </WorldKindProvider>
   );
 }
 
@@ -89,19 +101,30 @@ function useWorldEnvironment(): EnvironmentResolution | null {
   }, [publications]);
 }
 
-/** The root viewport's world, which falls back to the editor preview environment. */
-export function RootEnvironmentScope({ children }: { children: ReactNode }) {
+/**
+ * The root viewport's Environment, which falls back to the editor preview environment, and the
+ * editor preview sun after the scene, so the scene's own nodes come first. One yield serves both,
+ * since each walks the whole live tree.
+ */
+function RootEnvironment({ children }: { children: ReactNode }) {
+  const authored = useWorldEnvironment();
+  const preview = usePreviewYield();
   return (
-    <WorldEnvironmentRegistry>
-      <RootEnvironment />
+    <>
+      <RootEnvironmentLayer authored={authored} showsPreview={preview.environment} />
       {children}
-    </WorldEnvironmentRegistry>
+      {preview.sun && <PreviewSun />}
+    </>
   );
 }
 
-function RootEnvironment() {
-  const authored = useWorldEnvironment();
-  const showsPreview = usePreviewYield().environment;
+function RootEnvironmentLayer({
+  authored,
+  showsPreview,
+}: {
+  authored: EnvironmentResolution | null;
+  showsPreview: boolean;
+}) {
   if (authored?.status === 'resolved') return <EnvironmentLayer {...authored.environment} />;
   if (authored?.status === 'pending') return null;
   // A publication proves a WorldEnvironment node, which takes the preview away by type.
@@ -112,16 +135,7 @@ function RootEnvironment() {
  * A sub-viewport's portal world. Its pass sets its own clear colour, so only a resolved Environment
  * adds a layer here, and a missing one leaves the root's clear colour alone.
  */
-export function ViewportEnvironmentScope({ children }: { children: ReactNode }) {
-  return (
-    <WorldEnvironmentRegistry>
-      <ViewportEnvironment />
-      {children}
-    </WorldEnvironmentRegistry>
-  );
-}
-
-function ViewportEnvironment() {
+function SubViewportEnvironment() {
   const authored = useWorldEnvironment();
   return authored?.status === 'resolved' ? <EnvironmentLayer {...authored.environment} /> : null;
 }

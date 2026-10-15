@@ -37,6 +37,7 @@ import {
   DRAWS_TOON_SPECULAR,
   DROPS_ALBEDO_ALPHA,
   OCCLUDES_DIRECT_LIGHT,
+  REBUILDS_NORMAL_MAP_BLUE,
   WRITES_OPAQUE_AFTER_CUT,
   patchedFragment,
 } from '../../../r3f/testing/patchedFragment';
@@ -320,6 +321,26 @@ describe('standardMaterialBags — AO on direct light', () => {
     const fragment = patchedFragment(materialFromBag(bag({ ...AO, blend_mode: '1' }, { ao_texture: aoMap })));
     expect(fragment).toContain(OCCLUDES_DIRECT_LIGHT);
     expect(fragment).toContain(DROPS_ALBEDO_ALPHA);
+  });
+});
+
+describe('standardMaterialBags — the normal map read', () => {
+  const normalMap = new THREE.Texture();
+  const NORMAL = { normal_enabled: 'true' };
+
+  it('rebuilds the blue of a normal map from its red and green', () => {
+    expect(patchedFragment(materialFromBag(bag(NORMAL, { normal_texture: normalMap })))).toContain(
+      REBUILDS_NORMAL_MAP_BLUE
+    );
+  });
+
+  it('patches nothing on a surface with no normal map', () => {
+    expect(bag(NORMAL).injection).toBeUndefined();
+  });
+
+  it('rebuilds the blue on a physical surface too (edge case)', () => {
+    const physical = bag({ ...NORMAL, clearcoat_enabled: 'true' }, { normal_texture: normalMap });
+    expect(patchedFragment(materialFromBag(physical))).toContain(REBUILDS_NORMAL_MAP_BLUE);
   });
 });
 

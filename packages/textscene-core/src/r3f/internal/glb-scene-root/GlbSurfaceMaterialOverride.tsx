@@ -12,7 +12,7 @@ import {
 } from '../../../resources/materials/standardmaterial3d/materialBag.js';
 import { materialFromBag } from '../../../resources/materials/standardmaterial3d/build.js';
 import { resolvedTexturesFromMaps } from '../../materials/materialTextureMaps.js';
-import { forEachSurfaceMaterial } from '../../../resources/formats/glb/glbProcessing.js';
+import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials.js';
 import {
   GLTF_SURFACE,
   useMaterialScalars,

@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
+import { GLOW_MAP_UNIFORM } from '../../resources/environment/godotCompositor';
 import { glowParamsFor } from '../../resources/environment/godotGlow';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../resources/environment/build';
@@ -33,7 +34,7 @@ function srgbTexture(): THREE.Texture {
 }
 
 function sampledMap(effect: GodotToneMapEffect): THREE.Texture {
-  return effect.uniforms.get('godotGlowMap')!.value as THREE.Texture;
+  return effect.uniforms.get(GLOW_MAP_UNIFORM)!.value as THREE.Texture;
 }
 
 const MAP = { glow_map: 'SubResource("Gradient_1")' };
@@ -56,10 +57,17 @@ describe('GodotToneMapEffect.setGlowMap', () => {
     expect(sampledMap(effect)).toBe(map);
   });
 
-  it('samples white while the map loads, which leaves the glow unscaled', () => {
+  it('samples white after clearGlowMap, which leaves the glow unscaled', () => {
     const effect = effectWith(MAP);
-    effect.setGlowMap(null);
+    effect.setGlowMap(srgbTexture());
+    effect.clearGlowMap();
     expect(Array.from((sampledMap(effect) as THREE.DataTexture).image.data as Uint8Array)).toEqual([
+      255, 255, 255, 255,
+    ]);
+  });
+
+  it('samples white from construction, before any map arrives', () => {
+    expect(Array.from((sampledMap(effectWith(MAP)) as THREE.DataTexture).image.data as Uint8Array)).toEqual([
       255, 255, 255, 255,
     ]);
   });
@@ -67,6 +75,6 @@ describe('GodotToneMapEffect.setGlowMap', () => {
   it('binds no map when the environment names none (edge case)', () => {
     const effect = effectWith({});
     effect.setGlowMap(srgbTexture());
-    expect(effect.uniforms.has('godotGlowMap')).toBe(false);
+    expect(effect.uniforms.has(GLOW_MAP_UNIFORM)).toBe(false);
   });
 });

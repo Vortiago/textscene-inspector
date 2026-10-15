@@ -21,6 +21,7 @@ import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../..
 import { parseDecal } from './parser';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
+import { dropMipChain } from '../../../resources/textures/godotTextureFilter';
 
 const TEXTURE_PATH = 'res://textures/decal.png';
 const NODE_NAME = 'MyDecal';
@@ -182,6 +183,21 @@ describe('<Decal>', () => {
     });
     const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
     expect(map).toBe(entry);
+  });
+
+  it('mipmaps an import without a mip chain, as the decal atlas builds its own', async () => {
+    const producer = makeSrgbTexture(THREE.ClampToEdgeWrapping);
+    dropMipChain(producer);
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: producer }],
+      children: <Receiver />,
+    });
+    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
+    expect(map.generateMipmaps).toBe(true);
+    expect(map.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+    expect(producer.generateMipmaps).toBe(false);
   });
 
   it('samples a raw-tagged producer as sRGB, as Godot samples the albedo', async () => {

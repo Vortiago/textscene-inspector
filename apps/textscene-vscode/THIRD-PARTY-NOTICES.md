@@ -154,8 +154,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleAppearance.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s appearance pass) and `core/math/color.cpp` (the YIQ-style hue-rotation basis) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleBuffer.ts` | `scene/2d/cpu_particles_2d.cpp` (`_update_particle_data_buffer`, `SortLifetime`) |
 | `packages/textscene-core/src/godot/math/transform2d.ts` | `core/math/transform_2d.cpp` (`Transform2D::operator*`, `Transform2D::affine_inverse`, the `Transform2D(rot, scale, skew, pos)` constructor) |
-| `scripts/godot-ref/bootstrap.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`) |
-| `scripts/godot-ref/refConstants.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditorViewport::Cursor()`) |
+| `scripts/godot-ref/run.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`, `Node3DEditorViewport::Cursor()`) |
 | `packages/textscene-core/src/nodes/2d/ui/videostreamplayer/nativeSolver.ts` | `scene/gui/video_stream_player.cpp` (`VideoStreamPlayer::get_minimum_size`) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpickerbutton/Component.tsx` | `scene/gui/color_picker.cpp` (`ColorPickerButton::_notification`'s `NOTIFICATION_DRAW`: the swatch rect from the "normal" StyleBox's offset/minimum size, the unconditional checkerboard, and the overbright check) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/AlphaCheckerboardQuad.tsx` | `scene/gui/color_picker.cpp` (`draw_texture_rect(theme_cache.background_icon, r, true)`'s tile semantics, ported the same way `nodes/2d/ui/texturerect/Component.tsx`'s `STRETCH_TILE` branch already does) |

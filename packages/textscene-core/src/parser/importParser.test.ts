@@ -9,8 +9,11 @@ import {
   importLightmapUnwrap,
   importNodeLayers,
   importRootScale,
+  importTexture3DSlices,
+  importTextureOptions,
   parseImportFile,
 } from './importParser';
+import { DEFAULT_TEXTURE_IMPORT } from '../godot/import/textureImport';
 
 const TREE_IMPORT = `[remap]
 
@@ -350,5 +353,87 @@ describe('importLightmapUnwrap', () => {
     const unwrap = importLightmapUnwrap(sidecar('meshes/light_baking=2\nmeshes/lightmap_texel_size=0'));
 
     expect(unwrap?.texelSize).toBe(Math.fround(0.001));
+  });
+});
+
+const textureSidecar = (...params: string[]): string =>
+  ['[remap]', '', 'importer="texture"', '', '[params]', '', ...params].join('\n');
+
+describe('importTextureOptions', () => {
+  it('reads every option a texture sidecar names that changes the texture', () => {
+    const sidecar = textureSidecar(
+      'compress/mode=2',
+      'compress/high_quality=true',
+      'compress/normal_map=1',
+      'mipmaps/generate=true',
+      'process/fix_alpha_border=false',
+      'process/premult_alpha=true',
+      'process/normal_map_invert_y=true',
+      'svg/scale=2.5'
+    );
+    expect(importTextureOptions(parseImportFile(sidecar))).toEqual({
+      mode: 'VramCompressed',
+      highQuality: true,
+      normalMap: true,
+      mipmaps: true,
+      fixAlphaBorder: false,
+      premultAlpha: true,
+      invertNormalY: true,
+      svgScale: 2.5,
+    });
+  });
+
+  it('reads no sidecar, or one of another importer, as the Detect preset', () => {
+    const scene = textureSidecar('mipmaps/generate=true').replace('"texture"', '"scene"');
+    expect([importTextureOptions(null), importTextureOptions(parseImportFile(scene))]).toEqual([
+      DEFAULT_TEXTURE_IMPORT,
+      DEFAULT_TEXTURE_IMPORT,
+    ]);
+  });
+
+  it('reads an omitted or unreadable parameter at its default (edge case)', () => {
+    const sidecar = textureSidecar(
+      'compress/mode="two"',
+      'compress/normal_map=2',
+      'mipmaps/generate=maybe',
+      'svg/scale="big"'
+    );
+    expect(importTextureOptions(parseImportFile(sidecar))).toEqual(DEFAULT_TEXTURE_IMPORT);
+  });
+
+  it('reads a compression mode outside the enum at its default (edge case)', () => {
+    const modes = ['compress/mode=5', 'compress/mode=-1'].map(
+      (line) => importTextureOptions(parseImportFile(textureSidecar(line))).mode
+    );
+    expect(modes).toEqual([DEFAULT_TEXTURE_IMPORT.mode, DEFAULT_TEXTURE_IMPORT.mode]);
+  });
+});
+
+describe('importTexture3DSlices', () => {
+  const texture3DSidecar = (importer: string, ...params: string[]) =>
+    parseImportFile([`[remap]`, '', `importer="${importer}"`, '', '[params]', '', ...params].join('\n'));
+
+  it('reads the slices across and down a 3D texture sidecar', () => {
+    const sidecar = texture3DSidecar('3d_texture', 'slices/horizontal=4', 'slices/vertical=2');
+    expect(importTexture3DSlices(sidecar)).toEqual({ horizontal: 4, vertical: 2 });
+  });
+
+  it("takes the importer's 8 for a count the sidecar omits", () => {
+    const sidecar = texture3DSidecar('3d_texture', 'compress/mode=0');
+    expect(importTexture3DSlices(sidecar)).toEqual({ horizontal: 8, vertical: 8 });
+  });
+
+  it('imports nothing for a count Godot cannot read as a number (error case)', () => {
+    const sidecar = texture3DSidecar('3d_texture', 'slices/vertical="eight"');
+    expect(importTexture3DSlices(sidecar)).toBeNull();
+  });
+
+  it('imports no 3D texture without a sidecar, or under another importer', () => {
+    expect(importTexture3DSlices(null)).toBeNull();
+    expect(importTexture3DSlices(texture3DSidecar('texture', 'slices/horizontal=4'))).toBeNull();
+  });
+
+  it('imports nothing for a count of 0, which Godot divides by (edge case)', () => {
+    expect(importTexture3DSlices(texture3DSidecar('3d_texture', 'slices/horizontal=0'))).toBeNull();
   });
 });

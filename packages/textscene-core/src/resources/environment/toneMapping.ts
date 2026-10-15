@@ -39,10 +39,10 @@ function toneMappingFor(mode: number): THREE.ToneMapping {
 }
 
 /**
- * Applies a tonemapper and returns the undo, as the renderer and three's shader chunks
- * outlive an environment. `THREE.ShaderChunk` is module-global, so one environment applies
- * at a time: the web app mounts one shell, each VS Code webview is its own realm, and the
- * root world applies one Environment (`r3f/environment/WorldEnvironmentScope.tsx`).
+ * Applies a tonemapper and returns the undo, as the renderer and three's shader chunks outlive an
+ * environment. `THREE.ShaderChunk` is module-global, so one environment applies at a time: the web
+ * app mounts one shell, each VS Code webview is its own realm, and only the root world's Environment
+ * applies, never a sub-viewport's (`r3f/environment/EnvironmentLayer.tsx`).
  */
 export function applyToneMapping(
   gl: ToneMappedRenderer,

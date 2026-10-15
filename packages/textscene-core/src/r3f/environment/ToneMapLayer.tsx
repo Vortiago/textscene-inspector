@@ -52,7 +52,11 @@ export function ToneMapLayer({ glow, samples, adjustments, toneMapping, resource
   );
   useEffect(() => () => effect.dispose(), [effect]);
   // A uniform, not an effect rebuild: the map's arrival changes no shader.
-  useEffect(() => (effect as GodotToneMapEffect).setGlowMap(glowMap), [effect, glowMap]);
+  useEffect(() => {
+    const toneMap = effect as GodotToneMapEffect;
+    if (glowMap) toneMap.setGlowMap(glowMap);
+    else toneMap.clearGlowMap();
+  }, [effect, glowMap]);
 
   return (
     <EffectComposer multisampling={samples}>

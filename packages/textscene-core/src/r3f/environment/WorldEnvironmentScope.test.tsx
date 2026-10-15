@@ -11,8 +11,7 @@ import { NO_RESOURCES } from '../SceneResourcesContext';
 import { TreeOrderProvider, type TreeOrder } from '../contexts/TreeOrderContext';
 import type { EnvironmentLayerProps } from './EnvironmentLayer';
 import {
-  RootEnvironmentScope,
-  ViewportEnvironmentScope,
+  WorldEnvironmentScope,
   usePublishEnvironment,
   NO_ENVIRONMENT,
   PENDING_ENVIRONMENT,
@@ -29,6 +28,9 @@ vi.mock('./NoEnvironmentLayer', () => ({
 }));
 vi.mock('../preview/PreviewEnvironment', () => ({
   PreviewEnvironment: () => <group name="PreviewEnvironment" />,
+}));
+vi.mock('../preview/PreviewSun', () => ({
+  PreviewSun: () => <group name="PreviewSun" />,
 }));
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
@@ -88,15 +90,26 @@ function appliedName(renderer: Renderer): unknown {
   return layer.props.userData.settings.name;
 }
 
-function inRoot(children: ReactNode, showPreviewEnvironment = true) {
+function inRoot(children: ReactNode, showPreviewEnvironment = true, showPreviewSun = true) {
   return (
-    <ViewportModeProvider initialShowPreviewEnvironment={showPreviewEnvironment}>
-      <RootEnvironmentScope>{children}</RootEnvironmentScope>
+    <ViewportModeProvider
+      initialShowPreviewEnvironment={showPreviewEnvironment}
+      initialShowPreviewSun={showPreviewSun}
+    >
+      <WorldEnvironmentScope world="root">{children}</WorldEnvironmentScope>
     </ViewportModeProvider>
   );
 }
 
-describe('<RootEnvironmentScope>', () => {
+function inSubViewport(children: ReactNode) {
+  return <WorldEnvironmentScope world="subViewport">{children}</WorldEnvironmentScope>;
+}
+
+function previewSunCount(renderer: Renderer): number {
+  return renderer.scene.findAll((node) => node.props.name === 'PreviewSun').length;
+}
+
+describe('<WorldEnvironmentScope world="root">', () => {
   it('draws the preview environment for a world with no WorldEnvironment', async () => {
     expect(mountedLayers(await ReactThreeTestRenderer.create(inRoot(null)))).toEqual(['PreviewEnvironment']);
   });
@@ -207,32 +220,45 @@ describe('<RootEnvironmentScope>', () => {
   });
 });
 
-describe('<ViewportEnvironmentScope>', () => {
+describe('<WorldEnvironmentScope world="root"> preview sun', () => {
+  it('draws the preview sun for a scene with no DirectionalLight3D', async () => {
+    expect(previewSunCount(await ReactThreeTestRenderer.create(inRoot(null)))).toBe(1);
+  });
+
+  it('draws no preview sun when the user turns it off', async () => {
+    expect(previewSunCount(await ReactThreeTestRenderer.create(inRoot(null, true, false)))).toBe(0);
+  });
+
+  it('keeps the preview sun while the Environment loads (edge case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      inRoot(<Publisher resolution={PENDING_ENVIRONMENT} />)
+    );
+    expect(previewSunCount(renderer)).toBe(1);
+  });
+});
+
+describe('<WorldEnvironmentScope world="subViewport">', () => {
   it('draws a resolved Environment', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportEnvironmentScope>
-        <Publisher resolution={resolved('a')} />
-      </ViewportEnvironmentScope>
+      inSubViewport(<Publisher resolution={resolved('a')} />)
     );
     expect(mountedLayers(renderer)).toEqual(['EnvironmentLayer']);
   });
 
   it('adds no layer for a missing Environment, so the pass keeps its own clear colour', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportEnvironmentScope>
-        <Publisher resolution={NO_ENVIRONMENT} />
-      </ViewportEnvironmentScope>
+      inSubViewport(<Publisher resolution={NO_ENVIRONMENT} />)
     );
     expect(mountedLayers(renderer)).toEqual([]);
   });
 
+  it('draws no preview sun, which belongs to the root world', async () => {
+    expect(previewSunCount(await ReactThreeTestRenderer.create(inSubViewport(null)))).toBe(0);
+  });
+
   it('keeps its WorldEnvironment out of the root world', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      inRoot(
-        <ViewportEnvironmentScope>
-          <Publisher resolution={resolved('a')} />
-        </ViewportEnvironmentScope>
-      )
+      inRoot(inSubViewport(<Publisher resolution={resolved('a')} />))
     );
     expect(mountedLayers(renderer).sort()).toEqual(['EnvironmentLayer', 'PreviewEnvironment']);
   });

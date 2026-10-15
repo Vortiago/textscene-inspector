@@ -27,6 +27,7 @@ import {
 } from '../../../r3f/materials/emissionTextureAdd';
 import { threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { lightModesInjection, lightModesUserData } from '../../../r3f/lightModes';
+import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
 import { SPECULAR_OCCLUSION_DISABLED, specularOcclusionUserData } from '../../../r3f/godotIndirectSpecular';
 import {
   heightmapUserData,
@@ -384,6 +385,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
   const injection = composeInjections([
     lightModesInjection(scalars),
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
+    pbr.normalMap ? GODOT_NORMAL_MAP_READ : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
     emissionTextureAddInjection(emission.addedTextureEnergy),

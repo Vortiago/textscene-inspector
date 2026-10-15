@@ -2306,7 +2306,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-fogvolume-size</code></td><td><code>fogvolume-size-ignored-for-world-shape</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser clamps each negative <code>size</code> component to 0, as <code>set_size</code> does. It keeps an out-of-range <code>shape</code>, which then has no surface, and the default size for a malformed one.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Shader missing</strong> A volume whose material is a fog <code>ShaderMaterial</code> adds no fog, where Godot runs its fog shader.</li><li><strong>Resource gap</strong> An ImageTexture3D saved in a block-compressed image format (#736) or an integer format leaves the density even.</li><li><strong>Approximated</strong> An imported 3D texture reads its source image, so its density differs slightly from Godot's Lossy or VRAM-compressed copy.</li><li><strong>Approximated</strong> A NoiseTexture3D <code>density_texture</code> leaves the density even on first load until its build finishes, where Godot shapes the fog on its first frame.</li><li><strong>Approximated</strong> Past 2048 stacked slices of distinct density textures in one view, each further texture leaves its density even.</li></ul></div>
+<ul><li><strong>Shader missing</strong> A volume whose material is a fog <code>ShaderMaterial</code> adds no fog, where Godot runs its fog shader.</li><li><strong>Resource gap</strong> An ImageTexture3D saved in a block-compressed image format or an integer format leaves the density even.</li><li><strong>Approximated</strong> An imported 3D texture reads its source image, so its density differs slightly from Godot's Lossy or VRAM-compressed copy.</li><li><strong>Approximated</strong> A NoiseTexture3D <code>density_texture</code> leaves the density even on first load until its build finishes, where Godot shapes the fog on its first frame.</li><li><strong>Approximated</strong> Past 2048 stacked slices of distinct density textures in one view, each further texture leaves its density even.</li></ul></div>
     </article>
     <article class="sheet" data-type="FoldableContainer" hidden>
       <header class="sheet-head">
@@ -6142,6 +6142,24 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>A SubViewport's target in the emission slot, over a black albedo. A material binds every slot by RID, so the target glows as it draws through the albedo in <code>unit-sub-viewport-texture</code>. A target in a pass cycle draws the missing-texture material from any slot.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Normal map</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-material-normal-map-blue-godot.png" alt="Godot render of Normal map">
+          <img class="img-ours" src="images/unit-material-normal-map-blue-ours.png" alt="Our render of Normal map">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p><code>normal_texture</code> reads red and green only. Both engines rebuild blue from them (<code>scene_forward_clustered.glsl:1437-1438</code>). So a map with blue 0 shades its flat texel as the bare plane, and its tilted texel brighter. An RGTC import stores no blue, so this read is the only one that shades it. A glTF material reads its normal map the same way, as Godot imports it as a StandardMaterial3D.</p>
+<ul><li><strong>Approximated</strong> The tilted texel shades darker than Godot's, while the flat texel matches.</li></ul></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Clearcoat</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
@@ -6322,7 +6340,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects. Each field falls back to Godot's default through the shared value decoders, so a malformed <code>roughness</code> renders with default roughness. A texture reference it cannot resolve leaves the slot empty, and the mesh renders untextured.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.</li><li><strong>Approximated</strong> Under msaa_3d, <code>ALPHA_TO_COVERAGE_AND_TO_ONE</code> stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.</li><li><strong>Shader missing</strong> <code>proximity_fade_*</code> and <code>distance_fade_*</code> decide the pass but are not rendered, so the surface stays at full opacity.</li><li><strong>Approximated</strong> Godot measures V from the image top and three from the bottom, so a non-integer <code>uv1_scale.y</code> or a non-zero <code>uv1_offset.y</code> shifts V differently.</li><li><strong>Approximated</strong> Under <code>uv1_world_triplanar</code>, <code>uv1_offset</code> is in world units and is not converted.</li><li><strong>Approximated</strong> Triplanar tiling density is exact on a PlaneMesh only, since curved, CSG, GridMap, ArrayMesh and GLB geometry tile by their own UVs.</li><li><strong>Approximated</strong> A ViewportTexture outside the albedo slot ignores <code>uv1_scale</code>, <code>uv1_offset</code>, <code>texture_repeat</code> and a nearest <code>texture_filter</code>, as it samples its target clamped (#770).</li><li><strong>Approximated</strong> A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.</li></ul></div>
+<ul><li><strong>Approximated</strong> Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.</li><li><strong>Approximated</strong> Under msaa_3d, <code>ALPHA_TO_COVERAGE_AND_TO_ONE</code> stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.</li><li><strong>Shader missing</strong> <code>proximity_fade_*</code> and <code>distance_fade_*</code> decide the pass but are not rendered, so the surface stays at full opacity.</li><li><strong>Approximated</strong> Godot measures V from the image top and three from the bottom, so a non-integer <code>uv1_scale.y</code> or a non-zero <code>uv1_offset.y</code> shifts V differently.</li><li><strong>Approximated</strong> Under <code>uv1_world_triplanar</code>, <code>uv1_offset</code> is in world units and is not converted.</li><li><strong>Approximated</strong> Triplanar tiling density is exact on a PlaneMesh only, since curved, CSG, GridMap, ArrayMesh and GLB geometry tile by their own UVs.</li><li><strong>Approximated</strong> A ViewportTexture outside the albedo slot ignores <code>uv1_scale</code>, <code>uv1_offset</code>, <code>texture_repeat</code> and a nearest <code>texture_filter</code>, as it samples its target clamped.</li><li><strong>Approximated</strong> A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.</li></ul></div>
     </article>
     <article class="sheet" data-type="StaticBody2D" hidden>
       <header class="sheet-head">
@@ -6424,7 +6442,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>Strict and lenient parsing diverge only on out-of-range enums. The lenient parser warns and falls back to Godot's default (<code>render_target_update_mode</code> 2, <code>render_target_clear_mode</code> 0, <code>msaa_2d</code> 0, <code>msaa_3d</code> 0, <code>canvas_item_default_texture_filter</code> 1), while the strict parser reports an error. A <code>size</code> Godot cannot read at all falls back to <code>Vector2i(512, 512)</code>. A component below 2 is a strict error, because <code>Viewport::_set_size</code> raises it (<code>viewport.cpp:1120</code>).</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> A sub-viewport holding both 2D and 3D content shows its 3D half only, since the renderer draws one workspace at a time.</li><li><strong>Approximated</strong> <code>render_target_update_mode</code> and <code>render_target_clear_mode</code> do not gate the pass, so the target is re-rendered and cleared every frame.</li><li><strong>Approximated</strong> <code>use_debanding</code> and <code>canvas_item_default_texture_filter</code> do not affect the target, which renders at <code>size</code> with linear filtering.</li><li><strong>Approximated</strong> A shared-world target takes the environment's tone curve but not its glow or <code>adjustment_*</code>, which Godot also runs inside the target.</li><li><strong>Approximated</strong> A multisampled 3D target resolves after the tone curve, where Godot resolves in linear HDR before it (<code>render_forward_clustered.cpp:2402</code>, <code>:2514</code>).</li><li><strong>Approximated</strong> Selection highlights and gizmos leak into a shared-world target, because that target is a render of the main scene.</li><li><strong>Approximated</strong> A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.</li><li><strong>Not drawn</strong> A <code>TextureRect</code> draws nothing for a <code>ViewportTexture</code>, which only a material's texture slots and <code>Sprite2D.texture</code> accept.</li><li><strong>Approximated</strong> <code>use_hdr_2d</code> is not read, so an HDR canvas composites differently.</li><li><strong>Needs runtime</strong> A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D.</li><li><strong>Shader missing</strong> A sub-viewport's 2D content draws unlit, so its own Light2D and LightOccluder2D nodes have no effect.</li></ul></div>
+<ul><li><strong>Approximated</strong> A sub-viewport holding both 2D and 3D content shows its 3D half only, since the renderer draws one workspace at a time.</li><li><strong>Approximated</strong> <code>render_target_update_mode</code> and <code>render_target_clear_mode</code> do not gate the pass, so the target is re-rendered and cleared every frame.</li><li><strong>Approximated</strong> <code>use_debanding</code> and <code>canvas_item_default_texture_filter</code> do not affect the target, which renders at <code>size</code> with linear filtering.</li><li><strong>Approximated</strong> A shared-world target takes the environment's tone curve but not its glow or <code>adjustment_*</code>, which Godot also runs inside the target.</li><li><strong>Approximated</strong> An <code>own_world_3d</code> target's own Environment neither tonemaps nor glows it, where Godot tonemaps each viewport with its own world's Environment.</li><li><strong>Approximated</strong> A multisampled 3D target resolves after the tone curve, where Godot resolves in linear HDR before it (<code>render_forward_clustered.cpp:2402</code>, <code>:2514</code>).</li><li><strong>Approximated</strong> Selection highlights and gizmos leak into a shared-world target, because that target is a render of the main scene.</li><li><strong>Approximated</strong> A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.</li><li><strong>Not drawn</strong> A <code>TextureRect</code> draws nothing for a <code>ViewportTexture</code>, which only a material's texture slots and <code>Sprite2D.texture</code> accept.</li><li><strong>Approximated</strong> <code>use_hdr_2d</code> is not read, so an HDR canvas composites differently.</li><li><strong>Needs runtime</strong> A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D.</li><li><strong>Shader missing</strong> A sub-viewport's 2D content draws unlit, so its own Light2D and LightOccluder2D nodes have no effect.</li></ul></div>
     </article>
     <article class="sheet" data-type="SubViewportContainer" hidden>
       <header class="sheet-head">
@@ -6604,6 +6622,40 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>A texture whose pixels the scene or a <code>.tres</code> saves inline, as an <code>Image</code> sub-resource. The previewer decodes every uncompressed format Godot saves: the 8-bit, 16-bit, half and float formats, RGBA4444, RGB565 and RGBE9995. A float channel above 1 survives, as Godot's does. A colour slot reads RGB8 and RGBA8 as sRGB and every other format raw, as Godot does. So the Lum8 strip draws brighter than the RGB8 strip of the same bytes. The same rule holds for a NoiseTexture2D, which is Lum8 without a colour ramp, and a GradientTexture2D, which is a float format with <code>use_hdr</code>.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Image file</h3><span class="status st-limitation">Limitation</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-material-albedo-image-import-godot.png" alt="Godot render of Image file">
+          <img class="img-ours" src="images/unit-material-albedo-image-import-ours.png" alt="Our render of Image file">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A scene names a PNG, JPEG, WebP or SVG file by path. Godot imports it as its <code>.import</code> sidecar says. A colour slot reads it through the format Godot imports it in, which comes from the file's own header and the sidecar's <code>compress/mode</code>. A greyscale PNG or JPEG imports as Lum8 or LumAlpha8 unless the sidecar asks for VRAM or Basis Universal compression, so it reads raw. The top strip is a greyscale PNG with no sidecar, the second is the same PNG VRAM compressed, and the third is an RGB PNG. The bottom strip is that RGB PNG imported as a VRAM compressed normal map. So it is RGTC, which keeps red and green raw and samples blue as 0. The sidecar also decides the mip chain, the alpha-border pass, the alpha premultiply, the normal map's green and an SVG's scale. <code>standardmaterial3d/textureBinding.md</code> has the rules and their cites.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>glTF image</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-gltf-alpha-border-godot.png" alt="Godot render of glTF image">
+          <img class="img-ours" src="images/unit-gltf-alpha-border-ours.png" alt="Our render of glTF image">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>Godot imports a glTF image through the same texture importer, as the file it extracts the image to. That file's sidecar decides its texels and its format. The quad's image is a green square inside transparent magenta texels. The default alpha-border pass turns them green, so the blended edge fades green, not magenta.</p></div>
       </section><div class="prose"><h3>NoiseTexture2D</h3>
 <p>A field baked from a FastNoiseLite, most often as a normal map. A <code>seamless</code> bake wraps its opposite edges and tiles. A plain one clamps, so UVs past the tile smear its edge texels. Under a StandardMaterial3D both tile, because <code>texture_repeat</code> defaults on (<code>material.cpp:4005</code>) and the sampler hint adds <code>repeat_enable</code> (<code>material.cpp:760-765</code>).</p>
 <h3>Linting</h3>
@@ -6611,7 +6663,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects a texture property. An unreadable value falls back to Godot's default through the shared value decoders. A reference it cannot resolve leaves the slot empty, so the consumer renders untextured.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> An AtlasTexture's <code>margin</code> is not applied, so a trimmed-atlas layout sits off by the margin.</li><li><strong>Approximated</strong> An AtlasTexture's <code>filter_clip</code> is not applied, so a filtered cell edge can bleed one texel from its neighbour.</li><li><strong>Approximated</strong> A NoiseTexture2D slot draws empty on first load until its build finishes, where Godot waits and draws the texture on its first frame.</li><li><strong>Resource gap</strong> An ImageTexture saved in a block-compressed image format (#736) or an integer format draws no texture.</li><li><strong>Not drawn</strong> A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.</li></ul></div>
+<ul><li><strong>Approximated</strong> An AtlasTexture's <code>margin</code> is not applied, so a trimmed-atlas layout sits off by the margin.</li><li><strong>Approximated</strong> An AtlasTexture's <code>filter_clip</code> is not applied, so a filtered cell edge can bleed one texel from its neighbour.</li><li><strong>Approximated</strong> A NoiseTexture2D slot draws empty on first load until its build finishes, where Godot waits and draws the texture on its first frame.</li><li><strong>Approximated</strong> A VRAM-compressed or lossy image file draws its source texels, without the compression error Godot's import adds.</li><li><strong>Approximated</strong> A file with no sidecar reads as a fresh import, not as the editor re-imports a texture it sees in 3D.</li><li><strong>Approximated</strong> The GPU builds an image file's mip chain, where Godot averages the bytes on the CPU (<code>core/io/image.cpp:2146-2175</code>).</li><li><strong>Resource gap</strong> An ImageTexture saved in a block-compressed image format or an integer format draws no texture.</li><li><strong>Not drawn</strong> A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.</li></ul></div>
     </article>
     <article class="sheet" data-type="TextureButton" hidden>
       <header class="sheet-head">

@@ -16,6 +16,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
 import { createTextureFromBuffer } from '../../../resources/formats/image/textureProcessing';
+import { DEFAULT_TEXTURE_IMPORT } from '../../../godot/import/textureImport';
 import { CanvasLighting2DProvider } from '../../../r3f/lighting2d/CanvasLighting2D';
 import { LIGHT_PASS_LAYER } from '../../../r3f/lighting2d/lightPassLayers';
 
@@ -186,7 +187,10 @@ describe('PointLight2D Component', () => {
     // The light states clamp (ADR-0044), so a clamp-tagged loader cookie is shared
     // and reaches the sampler clamped. Godot's light texture clamps too, and a
     // Repeat producer would tile a cookie's edge texels past its quad.
-    const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png');
+    const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png', {
+      source: 'RGBA8',
+      options: DEFAULT_TEXTURE_IMPORT,
+    });
     const cookie = lightMaterial(await render(node(), entry)).uniforms.uCookie!.value as THREE.Texture;
     expect(cookie.wrapS).toBe(THREE.ClampToEdgeWrapping);
     expect(cookie.wrapT).toBe(THREE.ClampToEdgeWrapping);
@@ -219,7 +223,10 @@ describe('PointLight2D Component', () => {
     // The cookie borrows the entry when it already clamps, so the cleanup may free
     // only a bind-time clone. An unconditional dispose of the cookie would free the
     // cache entry every other consumer is still sampling.
-    const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png');
+    const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png', {
+      source: 'RGBA8',
+      options: DEFAULT_TEXTURE_IMPORT,
+    });
     let disposed = false;
     entry.addEventListener('dispose', () => {
       disposed = true;

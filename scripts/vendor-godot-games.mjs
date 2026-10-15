@@ -112,8 +112,9 @@ ${rows}
 
 - Vendored by \`scripts/vendor-godot-games.mjs\` (re-run to refresh; bump the
   pinned \`commit\` in the \`GAMES\` array to update a game). Godot editor
-  artifacts (\`*.import\`, \`.godot/\`, \`screenshots/\`) and source art
-  (\`*.psd\`, \`*.xcf\`, \`*.blend\`) are pruned; each game's \`LICENSE\` and
+  artifacts (\`.godot/\`, \`screenshots/\`, the \`*.import\` sidecars the
+  previewer does not read) and source art (\`*.psd\`, \`*.xcf\`, \`*.blend\`)
+  are pruned; each game's \`LICENSE\` and
   \`README.md\` are kept verbatim for attribution.
 - After running: \`pnpm generate:fixtures\`.
 `
