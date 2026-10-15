@@ -26,7 +26,7 @@ const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
  * `Math.round(5 * scale)`, so the bottom is `Math.round(theme.contentMargin * 1.25)`, which is 5
  * at the default scale.
  */
-export function treePanelStyleBox(theme: NativeTheme): StyleBoxFlatData {
+function treePanelStyleBox(theme: NativeTheme): StyleBoxFlatData {
   const m = theme.contentMargin;
   return {
     bgColor: TREE_PANEL_FILL,

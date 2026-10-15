@@ -60,11 +60,8 @@ function circlePoints(radius: number): Vector2[] {
   return points;
 }
 
-/**
- * Vertical capsule: two semicircle caps joined by straight sides. Exported so a test can
- * assert the point sequence, which a rendered `<lineSegments>` buffer does not expose.
- */
-export function capsulePoints(radius: number, height: number): Vector2[] {
+/** Vertical capsule: two semicircle caps joined by straight sides. */
+function capsulePoints(radius: number, height: number): Vector2[] {
   const halfHeight = Math.max(0, height / 2 - radius);
   const points: Vector2[] = [];
 

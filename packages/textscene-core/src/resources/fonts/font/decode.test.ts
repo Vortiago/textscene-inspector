@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { decodeFont, parsePackedStringArray, resolveInlineFontResource } from './decode';
+import { decodeFont, resolveInlineFontResource } from './decode';
 import type { FontLoaderFn, FontResource } from './types';
 
 /** A loader that resolves nothing, for cases with no Font-valued property to recurse into. */
@@ -13,29 +13,36 @@ const FONT_A: FontResource = {
   properties: {},
 };
 
-describe('parsePackedStringArray', () => {
+/** The `fontNames` an inline SystemFont with this `font_names` value resolves to. */
+function fontNamesOf(fontNames: string): string[] {
+  const font = resolveInlineFontResource(
+    'SubResource("system")',
+    [],
+    [{ id: 'system', type: 'SystemFont', data: { font_names: fontNames } }],
+    { getCached: () => undefined },
+    new Set()
+  );
+  if (font?.kind !== 'system') throw new Error(`expected a SystemFont, got ${font?.kind ?? 'null'}`);
+  return font.fontNames;
+}
+
+describe('the font_names a SystemFont reads', () => {
   it('reads each element as a String slot does', () => {
-    expect(parsePackedStringArray('PackedStringArray("sans-serif", "Noto Sans")')).toEqual([
-      'sans-serif',
-      'Noto Sans',
-    ]);
+    expect(fontNamesOf('PackedStringArray("sans-serif", "Noto Sans")')).toEqual(['sans-serif', 'Noto Sans']);
   });
 
   it('decodes the escapes the tokenizer decodes', () => {
-    expect(parsePackedStringArray('PackedStringArray("a\\nb", "say \\"hi\\"")')).toEqual([
-      'a\nb',
-      'say "hi"',
-    ]);
+    expect(fontNamesOf('PackedStringArray("a\\nb", "say \\"hi\\"")')).toEqual(['a\nb', 'say "hi"']);
   });
 
   it('reads nothing from an empty array or another value', () => {
-    expect(parsePackedStringArray('PackedStringArray()')).toEqual([]);
-    expect(parsePackedStringArray('"sans-serif"')).toEqual([]);
+    expect(fontNamesOf('PackedStringArray()')).toEqual([]);
+    expect(fontNamesOf('"sans-serif"')).toEqual([]);
   });
 
   it('reads the typed and the bare array, which the slot converts', () => {
-    expect(parsePackedStringArray('Array[String](["sans-serif"])')).toEqual(['sans-serif']);
-    expect(parsePackedStringArray('["sans-serif"]')).toEqual(['sans-serif']);
+    expect(fontNamesOf('Array[String](["sans-serif"])')).toEqual(['sans-serif']);
+    expect(fontNamesOf('["sans-serif"]')).toEqual(['sans-serif']);
   });
 });
 

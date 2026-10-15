@@ -29,7 +29,7 @@ export interface GodotBlendAttachment {
  * channel gets its own factors in all five, so no colour-only `gl.blendFunc` reading
  * expresses a mode.
  */
-export const GODOT_BLEND_ATTACHMENTS: Readonly<Record<BlendMode, GodotBlendAttachment>> = {
+const GODOT_BLEND_ATTACHMENTS: Readonly<Record<BlendMode, GodotBlendAttachment>> = {
   [BlendMode.MIX]: {
     colorOp: 'add',
     srcColor: 'src-alpha',

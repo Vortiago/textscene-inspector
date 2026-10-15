@@ -51,7 +51,7 @@ interface UniqueNameOwnership {
  * the same walk decides. `path` looks up in an authored tree's `nodeByPath` map, and `livePath`
  * in the composed render tree's.
  */
-export function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
+function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
   const claims = new Map<string, UniqueNameClaim>();
   const instanceClaims = new Map<string, UniqueNameClaim[]>();
   const ownedInsideInstances = new Set<string>();

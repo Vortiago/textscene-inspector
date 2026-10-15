@@ -29,7 +29,7 @@ const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 const DEFAULT_STRETCH_RATIO = 1;
 
 /** `SplitContainer::DraggerVisibility` (`split_container.h`). */
-export const DRAGGER_VISIBLE = 0;
+const DRAGGER_VISIBLE = 0;
 const DRAGGER_HIDDEN_COLLAPSED = 2;
 
 /** One child's inputs to the split solve: its combined minimum size and the `Control` fields the offset formula and `fit_child_in_rect` read. */
@@ -224,7 +224,7 @@ function toSplitAxisChild(vertical: boolean, c: SplitChildInput): SplitAxisChild
  * `offsets` is the authored `split_offsets`. The RTL arm reads the children back from the
  * opposite end (`:741-744`) against the inverted positions.
  */
-export function resortSplitContainer(
+function resortSplitContainer(
   vertical: boolean,
   containerSize: { width: number; height: number },
   separation: number,
@@ -284,7 +284,7 @@ export function resortSplitContainer(
  * child's minimum plus one separation per dragger, added only with two or more children
  * (`:827-829`), since a lone child fits the whole rect. The cross axis is the largest child.
  */
-export function splitContainerMinimumSize(
+function splitContainerMinimumSize(
   vertical: boolean,
   separation: number,
   childMinSizes: readonly Vector2[]

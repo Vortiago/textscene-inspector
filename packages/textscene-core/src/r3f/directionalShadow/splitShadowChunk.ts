@@ -224,7 +224,7 @@ ${GODOT_SUN_SOFT_SHADOW}
 `;
 
 /** The chunk with Godot's split lookup, or null when three's chunk no longer has the parts it replaces. */
-export function godotSplitShadowChunk(chunk: string): string | null {
+function godotSplitShadowChunk(chunk: string): string | null {
   const start = chunk.indexOf(THREE_LOOKUP_START);
   if (start < 0 || !chunk.includes(THREE_SLOT_COUNT)) return null;
   const end = chunk.indexOf(LOOKUP_BLOCK_END, start);

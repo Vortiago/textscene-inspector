@@ -8,7 +8,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { initGlbModules } from '../../../resources/processing/glbProcessing';
+import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 import { GLBSceneRoot } from './Component';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
 import { GlbInstanceProvider } from './GlbInstanceContext';
@@ -78,7 +78,7 @@ async function bodyMaterial(ref: string): Promise<THREE.MeshStandardMaterial> {
 }
 
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 describe('surface_material_override/0 on a GLB override node', () => {

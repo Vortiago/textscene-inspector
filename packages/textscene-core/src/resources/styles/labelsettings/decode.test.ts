@@ -1,12 +1,18 @@
 /** LabelSettings decode against Godot 4.6.3: `scene/resources/label_settings.h:54-65`. */
 import { describe, expect, it } from 'vitest';
-import { decodeLabelSettings, labelSettingsFromResource, resolveLabelSettings } from './decode';
+import { labelSettingsFromResource, resolveLabelSettings } from './decode';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { ParsedResource } from '../../../parser/parsedResource';
+import type { LabelSettingsResource } from './types';
 
-describe('decodeLabelSettings', () => {
+/** The LabelSettings a sub-resource with this body decodes to. */
+function decode(data: Record<string, string>): LabelSettingsResource {
+  return resolveLabelSettings('SubResource("settings")', [{ id: 'settings', type: 'LabelSettings', data }])!;
+}
+
+describe('the LabelSettings body resolveLabelSettings decodes', () => {
   it('reads every field at an authored value (happy path)', () => {
-    const result = decodeLabelSettings({
+    const result = decode({
       line_spacing: '5.5',
       font: 'ExtResource("1_font")',
       font_size: '24',
@@ -32,7 +38,7 @@ describe('decodeLabelSettings', () => {
 
   it('falls back to the class defaults absent every field (edge case)', () => {
     // label_settings.h:54,58-59,61-62,64-66.
-    const result = decodeLabelSettings({});
+    const result = decode({});
     expect(result).toEqual({
       lineSpacing: 3,
       font: undefined,
@@ -47,7 +53,7 @@ describe('decodeLabelSettings', () => {
   });
 
   it('falls back per-field on a malformed literal rather than refusing the whole resource (error path)', () => {
-    const result = decodeLabelSettings({ font_size: 'not-a-number', line_spacing: '5' });
+    const result = decode({ font_size: 'not-a-number', line_spacing: '5' });
     expect(result.fontSize).toBe(16);
     expect(result.lineSpacing).toBe(5);
   });

@@ -1,6 +1,6 @@
 /**
  * A resolved `StyleBoxLine` SubResource (`style_box_line.h`/`.cpp`) for any
- * Control's `theme_override_styles/*` slot, which `native/parseStyleBox.ts`
+ * Control's `theme_override_styles/*` slot, which `parseStyleBox.ts`
  * dispatches here.
  *
  * Portions ported from Godot Engine (MIT).
@@ -14,6 +14,7 @@ import { parseResourceReference, findSubResource } from '../../../resources/SubR
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, boolOr } from '../../../parser/valueParsers';
 import type { Rgba } from '../../../godot/math';
+import { CONTENT_MARGIN_UNSET } from '../../../resources/styles/stylebox/decode';
 
 export interface StyleBoxLineData {
   color: Rgba;
@@ -36,9 +37,6 @@ const CONTEXT = 'StyleBoxLine';
 
 /** `style_box_line.h:34`: a bare `Color color;`, default-constructed opaque black. */
 const DEFAULT_LINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
-
-/** `style_box.cpp:143`'s sentinel: "ask `get_style_margin`" (also `parseStyleBox.ts`'s `CONTENT_MARGIN_UNSET`). */
-const CONTENT_MARGIN_UNSET = -1;
 
 type Side = 'left' | 'top' | 'right' | 'bottom';
 

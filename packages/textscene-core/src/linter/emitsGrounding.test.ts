@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { WARNINGS } from './configurationWarningCensus.js';
+import { WARNINGS } from './testing/configurationWarningCensus.js';
 import { severityFixedBy, type EmitGrounding } from './types.js';
 import './index.js'; // side-effect: every slice registers its rules
 import { ENGINE_CITE_RE } from './testing/engineCite.js';

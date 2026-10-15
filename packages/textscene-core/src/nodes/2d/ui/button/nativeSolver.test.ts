@@ -18,7 +18,6 @@ import {
   buttonMinimumSize,
   buttonTextTheme,
   buttonIconColor,
-  BUTTON_DEFAULT_DISABLED_FONT_COLOR,
   BUTTON_DEFAULT_FONT_COLOR,
   BUTTON_THEME_FONT_KEY,
   buttonLabelShape,
@@ -265,11 +264,11 @@ describe('buttonTextTheme — font_color / font_disabled_color key mapping', () 
   });
 
   it('resolves control_font_disabled_color (control_font_color * Color(1,1,1,0.5)) for the disabled state', () => {
+    // default_theme.cpp:106,161: control_font_disabled_color, control_font_color at alpha 0.5.
     expect(buttonTextTheme(node({}), {} as ButtonProperties, 'disabled', ctx())).toEqual({
       fontSizePx: 16,
-      color: BUTTON_DEFAULT_DISABLED_FONT_COLOR,
+      color: { r: 0.875, g: 0.875, b: 0.875, a: 0.5 },
     });
-    expect(BUTTON_DEFAULT_DISABLED_FONT_COLOR).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.5 });
   });
 
   it('a theme_override_colors/font_disabled_color override wins over the default disabled color', () => {

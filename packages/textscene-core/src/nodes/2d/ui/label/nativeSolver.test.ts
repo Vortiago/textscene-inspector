@@ -25,9 +25,7 @@ import {
   labelMinimumSize,
   labelShapingWidthPx,
   labelUnwrappedShape,
-  LABEL_THEME_KEYS,
   LABEL_THEME_FONT_KEY,
-  LABEL_DEFAULT_FONT_COLOR,
   LABEL_LINE_SPACING_PX,
   labelTextTheme,
   layoutLabelLines,
@@ -39,15 +37,17 @@ import {
   labelOutlineTheme,
   labelShadowTheme,
   VC_CHARS_BEFORE_SHAPING,
-  VC_CHARS_AFTER_SHAPING,
-  VC_GLYPHS_AUTO,
-  VC_GLYPHS_LTR,
-  VC_GLYPHS_RTL,
 } from './nativeSolver';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/fonts/font/types';
-import { decodeLabelSettings } from '../../../../resources/styles/labelsettings/decode';
+import { resolveLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import * as logger from '../../../../logger';
+
+// text_server.h:90-96 numbers VisibleCharactersBehavior from VC_CHARS_BEFORE_SHAPING = 0.
+const VC_CHARS_AFTER_SHAPING = 1;
+const VC_GLYPHS_AUTO = 2;
+const VC_GLYPHS_LTR = 3;
+const VC_GLYPHS_RTL = 4;
 
 const minSize = labelMinimumSize;
 
@@ -383,24 +383,35 @@ describe("labelShapingWidthPx (label.cpp:581's `int width = get_size().width - s
   });
 });
 
-describe('labelTextTheme / LABEL_THEME_KEYS / LABEL_DEFAULT_FONT_COLOR', () => {
-  it('uses font_size/font_color as the override keys', () => {
-    expect(LABEL_THEME_KEYS).toEqual({ sizeKey: 'font_size', colorKey: 'font_color' });
+describe('labelTextTheme', () => {
+  it('reads the font_size and font_color overrides', () => {
+    const red = { r: 1, g: 0, b: 0, a: 1 };
+    const props = { name: 'L', themeOverrideFontSizes: { font_size: 20 } } as LabelProperties;
+    const resolved = labelTextTheme(node({}, { colors: { font_color: red } }), props, {
+      theme: nativeTheme(1),
+    });
+    expect(resolved).toEqual({ fontSizePx: 20, color: red });
   });
 
-  it("defaults to Label's own opaque-white font colour, not a gray control_font_color", () => {
-    expect(LABEL_DEFAULT_FONT_COLOR).toEqual({ r: 1, g: 1, b: 1, a: 1 });
-  });
-
-  it("resolves the theme's own default font size absent an override", () => {
+  it("resolves the theme's own default font size and Label's opaque white absent an override", () => {
+    // default_theme.cpp sets Label's font_color to Color(1, 1, 1), not the gray control_font_color.
     const resolved = labelTextTheme(node({}), { name: 'L' } as LabelProperties, { theme: nativeTheme(1) });
-    expect(resolved).toEqual({ fontSizePx: 16, color: LABEL_DEFAULT_FONT_COLOR });
+    expect(resolved).toEqual({ fontSizePx: 16, color: { r: 1, g: 1, b: 1, a: 1 } });
+  });
+
+  it("ignores RichTextLabel's normal_font_size and default_color keys (edge case)", () => {
+    const props = { name: 'L', themeOverrideFontSizes: { normal_font_size: 20 } } as LabelProperties;
+    const n = node({}, { colors: { default_color: { r: 1, g: 0, b: 0, a: 1 } } });
+    expect(labelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
+      fontSizePx: 16,
+      color: { r: 1, g: 1, b: 1, a: 1 },
+    });
   });
 });
 
 describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_rect x)', () => {
   const FONT_SIZE = 16;
-  const PITCH = 26; // getLinePitchPx(16)
+  const PITCH = 26; // getFontLinePitchPx(OPEN_SANS_METRICS, 16)
 
   function layoutFor(text: string, boxWidthPx = 0, autowrapMode = AutowrapMode.OFF) {
     return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode, lineSpacingPx: 3 });
@@ -994,7 +1005,11 @@ describe('labelMinimumSize — lines_skipped / max_lines_visible / label_setting
   it('label_settings.font_size overrides the theme font size outright, for empty text too', () => {
     const withSettings = node(
       { labelSettings: 'SubResource("1")' },
-      { labelSettings: decodeLabelSettings({ font_size: '32' }) }
+      {
+        labelSettings: resolveLabelSettings('SubResource("1")', [
+          { id: '1', type: 'LabelSettings', data: { font_size: '32' } },
+        ]),
+      }
     );
     // ascentPx = ceil(2189*32/2048) = 35, descentPx = ceil(600*32/2048) = 10.
     expect(minSize(withSettings, ctx()).y).toBe(45);

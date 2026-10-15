@@ -65,8 +65,6 @@ validatorRegistry.registerAll('BoneConstraint3D', {
   }),
 });
 
-export { SETTING_LEAVES as BONE_CONSTRAINT_SETTING_LEAVES };
-
 /**
  * A router for each of the seven leaves, for a subclass whose own `settings/` wildcard shadows this
  * one, since `findValidator` takes the nearest hop with no fall-through. Keys come from

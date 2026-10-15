@@ -13,14 +13,14 @@ import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
-import { initGlbModules } from '../../../resources/processing/glbProcessing';
+import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 import { tagImportMaterial } from '../../../resources/formats/glb/glbProcessing';
 
 import '../../nodes/index';
 import { MAGENTA } from '../../../nodes/3d/meshinstance3d/testing/magenta';
 
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 const GLB_PATH = 'res://assets/town.glb';

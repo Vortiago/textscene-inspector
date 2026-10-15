@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { baseChain } from '../../godot/nodeBaseTypes.js';
 import { validatorRegistry } from '../ValidatorRegistry.js';
-import { ASYMMETRY_ALLOWLIST } from '../propertyGrammarParityAllowlist.js';
+import { ASYMMETRY_ALLOWLIST } from './propertyGrammarParityAllowlist.js';
 import {
   extractNodeType,
   findSliceDirs,

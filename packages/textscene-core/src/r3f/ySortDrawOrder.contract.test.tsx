@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { PAINT_SEQUENCE_STRIDE } from './canvasPaintOrder';
+import { paintBucket } from './testing/paintOrder';
 import { NodeDispatcher } from './NodeDispatcher';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
@@ -62,15 +62,6 @@ async function paintOrderByName(tscn: string): Promise<Map<string, number>> {
   const map = new Map<string, number>();
   for (const o of namedObjects(root)) map.set(o.name, o.renderOrder);
   return map;
-}
-
-/**
- * The `(layer, z_final)` bucket a paint key falls in. Two items share a bucket
- * exactly when neither's z_index can put it in front of the other, whatever
- * the draw sequence says.
- */
-function paintBucket(order: number): number {
-  return Math.floor(order / PAINT_SEQUENCE_STRIDE);
 }
 
 describe('Y-sort draw order (issue #74) — authored contract', () => {

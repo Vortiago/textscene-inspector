@@ -34,7 +34,7 @@ function extractResourceRefs(value: string): string[] {
  * `PackedStringArray("a", "b")`, `Array[String](["a", "b"])` or `["a", "b"]` → `["a", "b"]`, each element decoded as
  * `unquoteString` decodes it, so `\n` is a newline and not the letter `n`. Empty for any other value.
  */
-export function parsePackedStringArray(value: string): string[] {
+function parsePackedStringArray(value: string): string[] {
   return stringArrayBodies(value)?.map(unquoteString) ?? [];
 }
 

@@ -5,10 +5,10 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CameraFit } from './TscnCanvas';
+import { CameraFit } from './CameraFit';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
-import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
 import * as frameSceneBoundsModule from './frameSceneBounds';
 

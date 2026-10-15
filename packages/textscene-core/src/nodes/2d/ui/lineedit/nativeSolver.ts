@@ -93,7 +93,7 @@ export const LINE_EDIT_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875
 export const LINE_EDIT_DEFAULT_UNEDITABLE_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
 
 /** `control_font_placeholder_color = Color(control_font_color.rgb, 0.6)` (`:107`): LineEdit's `font_placeholder_color` default (`:425`). */
-export const LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.6 };
+const LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.6 };
 
 /** `control_font_color`, LineEdit's `clear_button_color` default too (`default_theme.cpp:429`). */
 export const LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR: Rgba = LINE_EDIT_DEFAULT_FONT_COLOR;
@@ -123,8 +123,8 @@ export function lineEditTextTheme(
 
 /** `LineEdit::ExpandMode` (line_edit.cpp:3527 hint; `BIND_ENUM_CONSTANT` line_edit.cpp:3479-3481). */
 export const EXPAND_MODE_ORIGINAL_SIZE = 0;
-export const EXPAND_MODE_FIT_TO_TEXT = 1;
-export const EXPAND_MODE_FIT_TO_LINE_EDIT = 2;
+const EXPAND_MODE_FIT_TO_TEXT = 1;
+const EXPAND_MODE_FIT_TO_LINE_EDIT = 2;
 
 /** `caret_width` theme constant default (`default_theme.cpp:434`). */
 const DEFAULT_CARET_WIDTH = 1;

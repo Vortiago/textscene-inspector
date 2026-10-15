@@ -10,7 +10,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { ViewportActionsProvider, useViewportActions } from './contexts/ViewportActionsContext';
-import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 
 vi.mock('./frameSceneBounds.js', () => ({
   frameSceneBounds: vi.fn(),
@@ -20,7 +20,7 @@ import { frameSceneBounds } from './frameSceneBounds.js';
 
 // Exported from TscnCanvas for direct unit mounting: CameraFit needs
 // `useThree`, so it can only be exercised inside a test-renderer tree.
-import { CameraFit } from './TscnCanvas';
+import { CameraFit } from './CameraFit';
 import { SelectSeeder } from './testing/SelectSeeder';
 
 const frameSceneBoundsMock = frameSceneBounds as ReturnType<typeof vi.fn>;

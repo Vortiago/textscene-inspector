@@ -26,7 +26,7 @@ interface ControlClip {
 }
 
 /** No enclosing clipper: nothing is cut and there is no rect to intersect against. */
-export const NO_CONTROL_CLIP: ControlClip = { planes: [], rect: null };
+const NO_CONTROL_CLIP: ControlClip = { planes: [], rect: null };
 
 const ControlClipContext = createContext<ControlClip>(NO_CONTROL_CLIP);
 ControlClipContext.displayName = 'ControlClipContext';
@@ -48,7 +48,7 @@ export function useControlClipPlanes(): readonly THREE.Plane[] {
  * own planes it returns `inherited` itself, so a Provider re-renders no consumer.
  * Only the unquantized path accumulates: with a rect, the result is 4 planes.
  */
-export function withAdditionalClipPlanes(
+function withAdditionalClipPlanes(
   inherited: readonly THREE.Plane[],
   own: readonly THREE.Plane[]
 ): readonly THREE.Plane[] {
@@ -61,7 +61,7 @@ export function withAdditionalClipPlanes(
  * node-local rect need the group's `matrixWorld`. Planes from the absolute
  * canvas rect are already world planes.
  */
-export function localRectClipPlanes(rect: Rect2): THREE.Plane[] {
+function localRectClipPlanes(rect: Rect2): THREE.Plane[] {
   const left = rect.x;
   const right = rect.x + rect.w;
   const top = -rect.y;
@@ -86,7 +86,7 @@ const AXIS_ALIGNMENT_EPSILON = 1e-6;
  * rotates and the caller must use rotated planes. Like `Transform2D::xform(Rect2)`,
  * a negative scale flips an edge and the result is the corner-wise extent.
  */
-export function worldClipRect(rect: Rect2, matrixWorld: THREE.Matrix4): Rect2 | null {
+function worldClipRect(rect: Rect2, matrixWorld: THREE.Matrix4): Rect2 | null {
   const e = matrixWorld.elements;
   // Column-major: e[1] is the X basis's Y component, e[4] the Y basis's X one.
   if (Math.abs(e[1]!) > AXIS_ALIGNMENT_EPSILON || Math.abs(e[4]!) > AXIS_ALIGNMENT_EPSILON) {
@@ -106,7 +106,7 @@ export function worldClipRect(rect: Rect2, matrixWorld: THREE.Matrix4): Rect2 | 
  * Godot's whole-pixel clip rect (`renderer_canvas_cull.cpp:422-423`): position and
  * size round independently, so the far edge is `round(position) + round(size)`.
  */
-export function quantizeClipRect(rect: Rect2): Rect2 {
+function quantizeClipRect(rect: Rect2): Rect2 {
   return {
     x: godotRound(rect.x),
     y: godotRound(rect.y),

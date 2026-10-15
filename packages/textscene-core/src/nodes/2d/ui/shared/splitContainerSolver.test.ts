@@ -11,6 +11,7 @@ import type { TscnNode } from '../../../../parser/types';
 import { TscnParser } from '../../../../parser/TscnParser';
 import { fixturesDir } from '../../../../parser/testing/parserKit';
 import { joinPath } from '../../../../utils/nodePath';
+import type { Vector2 } from '../../../../godot/vector';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -23,13 +24,10 @@ import {
   splitContainerBoundaryChannel,
   makeSplitContainerMinimumSize,
   resolveSplitSeparation,
-  resortSplitContainer,
-  splitContainerMinimumSize,
   splitContainerTextureSlots,
   splitGrabberIconRect,
   splitGrabberIconSize,
   splitGrabberThemeKey,
-  DRAGGER_VISIBLE,
   type SplitAxisChild,
   type SplitChildInput,
 } from './splitContainerSolver';
@@ -246,20 +244,20 @@ describe('computeSplitDraggerPosition — CLAMP against synthetic custom_minimum
   });
 });
 
-describe('resortSplitContainer', () => {
+describe('makeSplitContainerLayout', () => {
   it('returns an empty array for zero children', () => {
-    expect(resortSplitContainer(false, { width: 400, height: 60 }, 12, [0], false, [])).toEqual([]);
+    expect(layoutRects(false, { width: 400, height: 60 }, 12, [0], false, [])).toEqual([]);
   });
 
   it('a lone child fits the WHOLE container rect, both axes', () => {
-    const rects = resortSplitContainer(false, { width: 400, height: 60 }, 12, [0], false, [
+    const rects = layoutRects(false, { width: 400, height: 60 }, 12, [0], false, [
       child({ minSize: { x: 10, y: 10 } }),
     ]);
     expect(rects).toEqual<Rect2[]>([{ x: 0, y: 0, w: 400, h: 60 }]);
   });
 
   it('HSplitContainer "Both" row: two FILL|EXPAND children, 400x60, sep 12', () => {
-    const rects = resortSplitContainer(false, { width: 400, height: 60 }, 12, [0], false, [
+    const rects = layoutRects(false, { width: 400, height: 60 }, 12, [0], false, [
       child({ hSizeFlags: EXPAND_FILL }),
       child({ hSizeFlags: EXPAND_FILL }),
     ]);
@@ -270,7 +268,7 @@ describe('resortSplitContainer', () => {
   });
 
   it('VSplitContainer "Both" column: two FILL|EXPAND children on the vertical axis, 120x300, sep 12', () => {
-    const rects = resortSplitContainer(true, { width: 120, height: 300 }, 12, [0], false, [
+    const rects = layoutRects(true, { width: 120, height: 300 }, 12, [0], false, [
       child({ vSizeFlags: EXPAND_FILL }),
       child({ vSizeFlags: EXPAND_FILL }),
     ]);
@@ -281,7 +279,7 @@ describe('resortSplitContainer', () => {
   });
 
   it('reading the wrong axis is a real bug the vertical fixture exists to catch: horizontal flags on a VSplitContainer take the "neither" branch', () => {
-    const rects = resortSplitContainer(true, { width: 120, height: 300 }, 12, [0], false, [
+    const rects = layoutRects(true, { width: 120, height: 300 }, 12, [0], false, [
       child({ hSizeFlags: EXPAND_FILL }), // claims nothing: VSplit reads vSizeFlags
       child({ hSizeFlags: EXPAND_FILL }),
     ]);
@@ -289,13 +287,13 @@ describe('resortSplitContainer', () => {
   });
 });
 
-describe('splitContainerMinimumSize', () => {
+describe('makeSplitContainerMinimumSize', () => {
   it('sums both children plus ONE separation on the main axis; cross axis is the largest (horizontal)', () => {
     const sizes = [
       { x: 50, y: 20 },
       { x: 80, y: 30 },
     ];
-    expect(splitContainerMinimumSize(false, 12, sizes)).toEqual({ x: 50 + 80 + 12, y: 30 });
+    expect(minimumSizeOf(false, 12, sizes)).toEqual({ x: 50 + 80 + 12, y: 30 });
   });
 
   it('sums both children plus ONE separation on the main axis; cross axis is the largest (vertical)', () => {
@@ -303,15 +301,15 @@ describe('splitContainerMinimumSize', () => {
       { x: 20, y: 50 },
       { x: 30, y: 80 },
     ];
-    expect(splitContainerMinimumSize(true, 12, sizes)).toEqual({ x: 30, y: 50 + 80 + 12 });
+    expect(minimumSizeOf(true, 12, sizes)).toEqual({ x: 30, y: 50 + 80 + 12 });
   });
 
   it('a single child needs no separation', () => {
-    expect(splitContainerMinimumSize(false, 99, [{ x: 40, y: 12 }])).toEqual({ x: 40, y: 12 });
+    expect(minimumSizeOf(false, 99, [{ x: 40, y: 12 }])).toEqual({ x: 40, y: 12 });
   });
 
   it('no children => zero', () => {
-    expect(splitContainerMinimumSize(false, 10, [])).toEqual({ x: 0, y: 0 });
+    expect(minimumSizeOf(false, 10, [])).toEqual({ x: 0, y: 0 });
   });
 });
 
@@ -365,10 +363,6 @@ describe('isSplitGrabberVisible', () => {
       false
     );
   });
-
-  it('DRAGGER_VISIBLE is the explicit default enum value', () => {
-    expect(DRAGGER_VISIBLE).toBe(0);
-  });
 });
 
 describe('splitGrabberIconRect', () => {
@@ -397,6 +391,60 @@ function solveNode(
   const constants =
     (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
   return { ...emptySolveNode(), path, node: tscnNode, children, constants };
+}
+
+/**
+ * Runs `makeSplitContainerLayout` on a container of `inputs`, with `separation` as its
+ * `theme_override_constants/separation`, and returns each child's rect in order.
+ */
+function layoutRects(
+  vertical: boolean,
+  size: { width: number; height: number },
+  separation: number,
+  splitOffsets: readonly number[],
+  collapsed: boolean,
+  inputs: readonly SplitChildInput[],
+  rtl = false
+): Rect2[] {
+  const children = inputs.map((input, i) => ({
+    node: solveNode(`Split/C${i}`, 'Control', {
+      sizeFlagsHorizontal: input.hSizeFlags,
+      sizeFlagsVertical: input.vSizeFlags,
+      sizeFlagsStretchRatio: input.stretchRatio,
+    }),
+    minSize: input.minSize,
+  }));
+  const container = {
+    ...solveNode(
+      'Split',
+      vertical ? 'VSplitContainer' : 'HSplitContainer',
+      { splitOffsets, collapsed, themeOverrideConstants: { separation } },
+      children.map(({ node }) => node)
+    ),
+    rtl,
+  };
+  const layout = makeSplitContainerLayout(vertical);
+  const contentRect: Rect2 = { x: 0, y: 0, w: size.width, h: size.height };
+  const result = layout(container, children, contentRect, createSolveContext(nativeTheme(1)));
+  const rects = 'rects' in result ? result.rects : result;
+  return children.map(({ node }) => rects.get(node.path)!);
+}
+
+/**
+ * Runs `makeSplitContainerMinimumSize` on a container whose children carry `childMinSizes` as
+ * their `custom_minimum_size`, with `separation` as its `theme_override_constants/separation`.
+ */
+function minimumSizeOf(vertical: boolean, separation: number, childMinSizes: readonly Vector2[]): Vector2 {
+  const children = childMinSizes.map((customMinimumSize, i) =>
+    solveNode(`Split/C${i}`, 'Control', { customMinimumSize })
+  );
+  const container = solveNode(
+    'Split',
+    vertical ? 'VSplitContainer' : 'HSplitContainer',
+    { themeOverrideConstants: { separation } },
+    children
+  );
+  return makeSplitContainerMinimumSize(vertical)(container, createSolveContext(nativeTheme(1)));
 }
 
 describe('splitGrabberThemeKey (SplitContainer::_get_grabber_icon, split_container.cpp:281-292)', () => {
@@ -696,10 +744,10 @@ describe('computeSplitDraggerPosition — (int) narrowing of size and minimums',
   });
 });
 
-describe('splitContainerMinimumSize — (int) accumulation', () => {
+describe('makeSplitContainerMinimumSize — (int) accumulation', () => {
   it('truncates each child minimum before summing the main axis', () => {
     // 10.9 -> 10, 20.9 -> 20, + separation 12 = 42. Summing raw gives 43.8.
-    const min = splitContainerMinimumSize(false, 12, [
+    const min = minimumSizeOf(false, 12, [
       { x: 10.9, y: 5.9 },
       { x: 20.9, y: 7.9 },
     ]);
@@ -707,7 +755,7 @@ describe('splitContainerMinimumSize — (int) accumulation', () => {
   });
 
   it('truncates the cross-axis maximum too', () => {
-    const min = splitContainerMinimumSize(false, 12, [
+    const min = minimumSizeOf(false, 12, [
       { x: 10.9, y: 5.9 },
       { x: 20.9, y: 7.9 },
     ]);
@@ -749,7 +797,7 @@ describe('computeSplitDraggerPosition under RTL', () => {
 
   it('is already axis-scoped: the `!vertical` guard belongs to the caller (split_container.cpp:703)', () => {
     // This function sees one axis, so a vertical caller passes `rtl && !vertical`.
-    // `resortSplitContainer` below enforces it.
+    // `makeSplitContainerLayout` below enforces it.
     const pos = computeSplitDraggerPosition(
       300,
       12,
@@ -763,12 +811,12 @@ describe('computeSplitDraggerPosition under RTL', () => {
   });
 });
 
-describe('resortSplitContainer under RTL', () => {
+describe('makeSplitContainerLayout under RTL', () => {
   it('gives the FIRST child the trailing band (split_container.cpp:738-751)', () => {
     // `start_pos = dragger_positions[0] + sep; end_pos = new_size[axis]` for
     // i == 0, then `start_pos = 0; end_pos = dragger_positions[0]` for i == 1,
     // with dragger_positions[0] = 400 - 254 - 12 = 134.
-    const rects = resortSplitContainer(
+    const rects = layoutRects(
       false,
       { width: 400, height: 60 },
       12,
@@ -784,7 +832,7 @@ describe('resortSplitContainer under RTL', () => {
   });
 
   it('a lone child still fits the whole rect, but through fit_child_in_rect’s RTL arm (split_container.cpp:714-719, container.cpp:99,109)', () => {
-    const rects = resortSplitContainer(
+    const rects = layoutRects(
       false,
       { width: 400, height: 60 },
       12,
@@ -798,7 +846,7 @@ describe('resortSplitContainer under RTL', () => {
   });
 
   it('leaves a VERTICAL split unmoved (split_container.cpp:738-741)', () => {
-    const rects = resortSplitContainer(
+    const rects = layoutRects(
       true,
       { width: 120, height: 300 },
       12,
@@ -864,7 +912,7 @@ describe('split_offsets — three children (split_container.cpp:517-618,621-707)
   const THREE = [EXPANDING, EXPANDING, EXPANDING];
 
   function rects(offsets: readonly number[], children = THREE, collapsed = false, rtl = false) {
-    return resortSplitContainer(false, { width: 300, height: 40 }, 12, offsets, collapsed, children, rtl);
+    return layoutRects(false, { width: 300, height: 40 }, 12, offsets, collapsed, children, rtl);
   }
 
   it('splits evenly at the default offsets', () => {
@@ -934,10 +982,10 @@ describe('split_offsets — three children (split_container.cpp:517-618,621-707)
   });
 });
 
-describe('splitContainerMinimumSize — one separation per dragger (split_container.cpp:827-829)', () => {
+describe('makeSplitContainerMinimumSize — one separation per dragger (split_container.cpp:827-829)', () => {
   it('adds sep * (children - 1), not a single separation', () => {
     expect(
-      splitContainerMinimumSize(false, 12, [
+      minimumSizeOf(false, 12, [
         { x: 20, y: 5 },
         { x: 30, y: 9 },
         { x: 40, y: 7 },

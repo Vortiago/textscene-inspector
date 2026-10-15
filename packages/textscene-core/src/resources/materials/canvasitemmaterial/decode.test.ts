@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { decodeCanvasItemMaterial } from './decode';
+import { canvasItemMaterialOf } from './decode';
 import { canvasItemBlendState } from './build';
 import { parseTresFile } from '../../../parser/parsedResource';
-import { CanvasItemBlendMode, CanvasItemLightMode } from './types';
+import { CanvasItemBlendMode, CanvasItemLightMode, type CanvasItemMaterialProperties } from './types';
 
-describe('decodeCanvasItemMaterial', () => {
+/** The CanvasItemMaterial a resource with this property bag draws as. */
+function decode(data: Record<string, string>): CanvasItemMaterialProperties {
+  return canvasItemMaterialOf({ type: 'CanvasItemMaterial', data })!;
+}
+
+describe('the CanvasItemMaterial canvasItemMaterialOf decodes', () => {
   it('defaults to MIX blending, NORMAL lighting and no particle animation', () => {
-    const m = decodeCanvasItemMaterial({});
+    const m = decode({});
     expect(m.blendMode).toBe(CanvasItemBlendMode.MIX);
     expect(m.lightMode).toBe(CanvasItemLightMode.NORMAL);
     expect(m.particlesAnimation).toBe(false);
@@ -18,13 +23,13 @@ describe('decodeCanvasItemMaterial', () => {
 
   it('reads the enums the isometric dungeon authors', () => {
     // A polygon can carry both at once: additive and unshaded.
-    const m = decodeCanvasItemMaterial({ blend_mode: '1', light_mode: '1' });
+    const m = decode({ blend_mode: '1', light_mode: '1' });
     expect(m.blendMode).toBe(CanvasItemBlendMode.ADD);
     expect(m.lightMode).toBe(CanvasItemLightMode.UNSHADED);
   });
 
   it('reads the particle-sheet fields', () => {
-    const m = decodeCanvasItemMaterial({
+    const m = decode({
       particles_animation: 'true',
       particles_anim_h_frames: '11',
       particles_anim_v_frames: '2',
@@ -37,9 +42,13 @@ describe('decodeCanvasItemMaterial', () => {
   });
 
   it('falls back to the default for an out-of-range or unparseable enum', () => {
-    expect(decodeCanvasItemMaterial({ blend_mode: '9' }).blendMode).toBe(CanvasItemBlendMode.MIX);
-    expect(decodeCanvasItemMaterial({ blend_mode: '-1' }).blendMode).toBe(CanvasItemBlendMode.MIX);
-    expect(decodeCanvasItemMaterial({ light_mode: 'nope' }).lightMode).toBe(CanvasItemLightMode.NORMAL);
+    expect(decode({ blend_mode: '9' }).blendMode).toBe(CanvasItemBlendMode.MIX);
+    expect(decode({ blend_mode: '-1' }).blendMode).toBe(CanvasItemBlendMode.MIX);
+    expect(decode({ light_mode: 'nope' }).lightMode).toBe(CanvasItemLightMode.NORMAL);
+  });
+
+  it('is null for a material of another type, which draws with no blend state of its own', () => {
+    expect(canvasItemMaterialOf({ type: 'ShaderMaterial', data: { blend_mode: '1' } })).toBeNull();
   });
 });
 
@@ -47,7 +56,7 @@ describe('decodeCanvasItemMaterial', () => {
  * An external `.tres` CanvasItemMaterial's `[resource]` body must decode identically to an
  * inline `[sub_resource]` property bag: one decode, two arrival paths (ADR-0031).
  */
-describe('decodeCanvasItemMaterial over a ParsedResource body', () => {
+describe('a CanvasItemMaterial over a ParsedResource body', () => {
   const TRES = `[gd_resource type="CanvasItemMaterial" format=3]
 
 [resource]
@@ -60,8 +69,8 @@ particles_anim_h_frames = 4
   it('decodes the [resource] body to the data the inline property bag yields', () => {
     const parsed = parseTresFile(TRES);
     expect(parsed.resourceType).toBe('CanvasItemMaterial');
-    expect(decodeCanvasItemMaterial(parsed.properties)).toEqual(
-      decodeCanvasItemMaterial({
+    expect(decode(parsed.properties)).toEqual(
+      decode({
         blend_mode: '1',
         light_mode: '1',
         particles_animation: 'true',
@@ -71,7 +80,7 @@ particles_anim_h_frames = 4
   });
 
   it('carries that body through to the additive blend state', () => {
-    const data = decodeCanvasItemMaterial(parseTresFile(TRES).properties);
+    const data = decode(parseTresFile(TRES).properties);
     const state = canvasItemBlendState(data.blendMode);
     expect(state.blending).toBe(THREE.CustomBlending);
     expect(state.blendSrc).toBe(THREE.SrcAlphaFactor);

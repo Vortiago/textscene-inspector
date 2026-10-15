@@ -20,13 +20,13 @@ import type { Vector2 } from '../../../../godot/vector';
  * height="4"`): the path draws to `y="16"`/`x="16"`, but the rasteriser clips to the canvas. Not
  * scaled by `default_theme_scale`, like every vendored icon's literal size.
  */
-export const SLIDER_TICK_CROSS_AXIS = 8;
+const SLIDER_TICK_CROSS_AXIS = 8;
 
 /**
  * `Slider::get_minimum_size()` (`slider.cpp:35-44`): `Size2i(ss.width, MAX(ss.height, rs.height))`
  * horizontally, `ss` the `slider` style and `rs` the `grabber` icon. The style's margins are equal
  * (`make_flat_stylebox(color, 4, 4, 4, 4, 4)`, `default_theme.cpp:579`), so both are
- * `sliderTrackThickness`. A themed `grabber` need not be square, so it is a `Vec2`.
+ * `sliderTrackThickness`. A themed `grabber` need not be square, so it is a `Vector2`.
  */
 export function sliderMinimumSize(vertical: boolean, theme: NativeTheme, grabber: Vector2): Vector2 {
   const track = theme.sliderTrackThickness;

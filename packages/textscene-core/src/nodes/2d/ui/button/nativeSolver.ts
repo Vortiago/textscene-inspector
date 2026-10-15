@@ -63,7 +63,7 @@ export const BUTTON_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a
  * `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`default_theme.cpp:106`),
  * Button's `font_disabled_color` default (`:161`).
  */
-export const BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+const BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
 
 /** `icon_normal_color` / `icon_disabled_color` theme_override_colors keys (`default_theme.cpp:164,169`). */
 const BUTTON_ICON_COLOR_KEYS: Record<ButtonDrawState, string> = {
@@ -117,7 +117,7 @@ export function buttonLabelShape(
   const state = resolveButtonDrawState(props.disabled);
   const { fontSizePx } = buttonTextTheme(n, props, state, { theme });
   const mode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
-  // Not `ctx.measureText`: its `Vec2` drops the layout the painter needs, and its readiness
+  // Not `ctx.measureText`: its `Vector2` drops the layout the painter needs, and its readiness
   // gate belongs to the solver. The painter shapes unconditionally.
   return shapeButtonLabel(
     text,

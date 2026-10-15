@@ -23,9 +23,9 @@ import type { Vector2 } from '../../../../godot/vector';
 const DEFAULT_ZOOM_STEP = Math.fround(1.2);
 
 /** `zoom_min = 1 / Math::pow(zoom_step, 8)` (`graph_edit.cpp:3175`), stored in a `float`. */
-export const GRAPH_EDIT_DEFAULT_ZOOM_MIN = Math.fround(1 / Math.fround(Math.pow(DEFAULT_ZOOM_STEP, 8)));
+const GRAPH_EDIT_DEFAULT_ZOOM_MIN = Math.fround(1 / Math.fround(Math.pow(DEFAULT_ZOOM_STEP, 8)));
 /** `zoom_max = 1 * Math::pow(zoom_step, 4)` (`graph_edit.cpp:3177`), stored in a `float`. */
-export const GRAPH_EDIT_DEFAULT_ZOOM_MAX = Math.fround(Math.pow(DEFAULT_ZOOM_STEP, 4));
+const GRAPH_EDIT_DEFAULT_ZOOM_MAX = Math.fround(Math.pow(DEFAULT_ZOOM_STEP, 4));
 
 /** `zoom`'s own member default (`graph_edit.h:226`). */
 const DEFAULT_ZOOM = 1;

@@ -20,7 +20,7 @@ const DEFAULT_FONT_SIZE = 16;
 const CONTEXT = 'LabelSettings';
 
 /** An absent or malformed field falls back to the class default, not a warning for the whole resource. */
-export function decodeLabelSettings(data: Record<string, string>): LabelSettingsResource {
+function decodeLabelSettings(data: Record<string, string>): LabelSettingsResource {
   return {
     lineSpacing: floatOr(data.line_spacing, 3, CONTEXT),
     font: data.font,

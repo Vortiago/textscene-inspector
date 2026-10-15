@@ -5,8 +5,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
-import { PAINT_SEQUENCE_STRIDE, WHOLE_CANVAS_RANGE, type PaintRange } from '../../../../r3f/canvasPaintOrder';
+import { nearestGroupOrder, paintBucket, paintSequence } from '../../../../r3f/testing/paintOrder';
+import { WHOLE_CANVAS_RANGE, type PaintRange } from '../../../../r3f/canvasPaintOrder';
 import { PaintRangeProvider } from '../../../../r3f/contexts/PaintOrderContext';
 import { parseTileMap } from './parser';
 import { TileMap } from './Component';
@@ -73,7 +73,7 @@ describe('TileMap render parity', () => {
     // and forwards `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so a
     // layer is a canvas item in its own right: its key rides its group, which
     // is what three reads a drawn object's position from.
-    const zBucket = (o: THREE.Object3D) => Math.floor(nearestGroupOrder(o) / PAINT_SEQUENCE_STRIDE);
+    const zBucket = (o: THREE.Object3D) => paintBucket(nearestGroupOrder(o));
     expect(nearestGroupOrder(layer0!)).toBeLessThan(nearestGroupOrder(layer1!));
     // …and `layer_1/z_index = 1` puts that layer a whole z bucket up, which is
     // what lets it interleave with the TileMap's siblings rather than only with
@@ -95,7 +95,7 @@ describe('TileMap render parity', () => {
 
     const sequences = r.scene
       .findAllByType('Mesh')
-      .map((m) => nearestGroupOrder(m.instance as THREE.Object3D) % PAINT_SEQUENCE_STRIDE);
+      .map((m) => paintSequence(nearestGroupOrder(m.instance as THREE.Object3D)));
     expect(sequences).toHaveLength(3);
     for (const sequence of sequences) {
       expect(sequence).toBeGreaterThanOrEqual(range.base);

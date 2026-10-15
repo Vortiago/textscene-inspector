@@ -61,7 +61,7 @@ import type { Vector2 } from '../../../../godot/vector';
 import type { Rgba } from '../../../../godot/math';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color`, not Label's `font_size` and `font_color`. */
-export const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
+const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
   sizeKey: 'normal_font_size',
   colorKey: 'default_color',
 };
@@ -75,7 +75,7 @@ export const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
 export const RICH_TEXT_LABEL_THEME_FONT_KEY = 'normal_font';
 
 /** `default_theme.cpp:1205`: `theme->set_color("default_color", "RichTextLabel", Color(1, 1, 1))`, a call separate from Label's. */
-export const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** `rich_text_label.h:557`: `TextServer::AutowrapMode autowrap_mode = TextServer::AUTOWRAP_WORD_SMART;`, unlike Label's OFF (`label.h`). */
 export const RICH_TEXT_LABEL_DEFAULT_AUTOWRAP = AutowrapMode.WORD_SMART;
@@ -101,7 +101,7 @@ export function richTextLabelTextTheme(
  * `null` means it cannot be sized yet, and the caller drops the run rather
  * than reserve a wrong box.
  */
-export function imageSizePx(
+function imageSizePx(
   widthPx: number,
   heightPx: number,
   region: ParsedImageRegion | undefined,
@@ -171,7 +171,7 @@ function resolveImageDimension(amount: number, inPercent: boolean, boxWidthPx: n
  * (`modules/text_server_adv/text_server_adv.cpp:5189-5254`). Returns the
  * image's top edge, baseline-relative and down-positive.
  */
-export function imageBaselineOffsetPx(
+function imageBaselineOffsetPx(
   textAscentPx: number,
   textDescentPx: number,
   imageHeightPx: number,
@@ -577,7 +577,7 @@ interface RichTextLineMetrics {
  * over its own fonts, and `rich_text_label.cpp:1055`/`:1589` step by them, so
  * mixed sizes make lines of different heights.
  */
-export function richTextLineMetrics(
+function richTextLineMetrics(
   styledRuns: readonly StyledTextRun[],
   layout: TextLayoutResult
 ): RichTextLineMetrics[] {
@@ -746,7 +746,7 @@ const ALIGNMENT_TAGS: ReadonlyMap<string, number> = new Map([
  * innermost alignment tag wins, else `horizontal_alignment` (`:7245-7258`).
  * `tags` is outermost-first, hence the reverse scan.
  */
-export function resolveParagraphAlignment(
+function resolveParagraphAlignment(
   tags: readonly { name: string }[],
   defaultAlignment: number | undefined
 ): number {
@@ -763,11 +763,7 @@ export function resolveParagraphAlignment(
  * and `:990` it lacks. An overflowing line hangs off the leading edge, clipped at `:8225`.
  * `lineWidthPx` is ceiled, as `:984` reads it.
  */
-export function richTextHorizontalOffsetPx(
-  lineWidthPx: number,
-  boxWidthPx: number,
-  alignment: number
-): number {
+function richTextHorizontalOffsetPx(lineWidthPx: number, boxWidthPx: number, alignment: number): number {
   // The RTL arms (`rich_text_label.cpp:987-1014`) follow `_find_direction` (`:599`,
   // `:3507-3525`), which the default `TEXT_DIRECTION_AUTO` (`rich_text_label.h:615`)
   // keeps from `layout_direction`. `comparison.md` records the gap.
@@ -800,7 +796,7 @@ interface RichTextVerticalOffsets {
  * The `text_rect.size.y > total_height` guard (`:1630`) keeps a taller paragraph
  * top-aligned, unlike Label. `vbegin`/`vsep` are floats (`:1628`), not Label's ints.
  */
-export function richTextVerticalOffsets(
+function richTextVerticalOffsets(
   contentHeightPx: number,
   boxHeightPx: number,
   alignment: number | undefined,

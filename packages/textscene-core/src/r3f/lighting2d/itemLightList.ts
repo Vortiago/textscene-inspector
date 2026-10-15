@@ -103,7 +103,7 @@ function itemTakesLight(light: CanvasLightDeclaration, ordinal: number, item: It
 }
 
 /** The lights on `item`'s list, in ordinal order. */
-export function itemLightList(
+function itemLightList(
   lights: ReadonlyMap<number, CanvasLightDeclaration>,
   item: ItemPlacement
 ): LightListEntry[] {

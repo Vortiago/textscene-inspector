@@ -5,7 +5,7 @@
  */
 
 import { useEffect } from 'react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AnimationTree } from './Component';
@@ -68,6 +68,11 @@ const RESOURCES: TscnInternalResource[] = [
     type: 'AnimationNodeAnimation',
     data: { animation: '&"right"' },
   },
+  {
+    id: 'ghost',
+    type: 'AnimationNodeAnimation',
+    data: { animation: '&"ghost"' },
+  },
   { id: 'blend', type: 'AnimationNodeBlend2', data: {} },
   { id: 'ts', type: 'AnimationNodeTimeScale', data: {} },
   {
@@ -78,6 +83,17 @@ const RESOURCES: TscnInternalResource[] = [
       'nodes/b/node': 'SubResource("right")',
       'nodes/mix/node': 'SubResource("blend")',
       node_connections: '[&"output", 0, &"mix", &"mix", 0, &"a", &"mix", 1, &"b"]',
+    },
+  },
+  // Blend2(in0='left', in1='ghost'): a clip the driver lacks, dominant past blend_amount 0.5.
+  {
+    id: 'tree_ghost',
+    type: 'AnimationNodeBlendTree',
+    data: {
+      'nodes/a/node': 'SubResource("left")',
+      'nodes/g/node': 'SubResource("ghost")',
+      'nodes/mix/node': 'SubResource("blend")',
+      node_connections: '[&"output", 0, &"mix", &"mix", 0, &"a", &"mix", 1, &"g"]',
     },
   },
   // A timescale variant feeding the 'right' clip, wired output -> scale -> right.
@@ -291,6 +307,67 @@ describe('AnimationTree — gating and restore', () => {
     await setSelection('Root/Elsewhere');
     await renderer.advanceFrames(1, 0);
     expect(moverX(driver.object)).toBeCloseTo(0);
+    await renderer.unmount();
+  });
+});
+
+// While playing, `reportTime` commits at most once per 100 ms of `Date.now`. A frozen clock lets
+// the first report through and throttles every later one, so only the pause flush moves the readout.
+describe('AnimationTree — paused readout flush', () => {
+  beforeEach(() => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** One frame, then the transport state the frame set, which `advanceFrames` leaves unflushed. */
+  async function frame(renderer: Awaited<ReturnType<typeof mountTree>>, delta: number) {
+    await renderer.advanceFrames(1, delta);
+    await ReactThreeTestRenderer.act(async () => {});
+  }
+
+  async function act(step: () => void) {
+    await ReactThreeTestRenderer.act(async () => step());
+  }
+
+  it("flushes the dominant clip's live playhead on the playing-to-paused edge", async () => {
+    const renderer = await mountTree(makeDriver(), makeTreeNode());
+    await act(() => transport.play());
+    await frame(renderer, 0.25);
+    await frame(renderer, 0.25);
+    expect(transport.time).toBeCloseTo(0.25, 5);
+    await act(() => transport.pause());
+    await frame(renderer, 0);
+    expect(transport.time).toBeCloseTo(0.5, 5);
+    await renderer.unmount();
+  });
+
+  it('keeps the paused readout when the dominant clip has no action, never a fabricated 0', async () => {
+    const renderer = await mountTree(
+      makeDriver(),
+      makeTreeNode({ tree_root: 'SubResource("tree_ghost")', parameters: { 'mix/blend_amount': '0.75' } })
+    );
+    await act(() => transport.play());
+    await frame(renderer, 0);
+    await act(() => transport.seek(0.3));
+    await frame(renderer, 0);
+    await act(() => transport.pause());
+    await frame(renderer, 0);
+    expect(transport.time).toBeCloseTo(0.3, 5);
+    await renderer.unmount();
+  });
+
+  it('flushes a live playhead that is genuinely at 0', async () => {
+    const renderer = await mountTree(makeDriver(), makeTreeNode());
+    await act(() => transport.play());
+    await frame(renderer, 0);
+    await act(() => transport.seek(0.3));
+    await frame(renderer, 0);
+    await act(() => transport.pause());
+    await frame(renderer, 0);
+    expect(transport.time).toBe(0);
     await renderer.unmount();
   });
 });

@@ -23,7 +23,7 @@ function compareQuadrants(a: Quadrant, b: Quadrant): number {
 }
 
 /** The cells of each rendering quadrant, in draw order, each sorted as Godot draws them. */
-export function renderingQuadrants(
+function renderingQuadrants(
   cells: readonly DrawableCell[],
   grid: TileGrid,
   quadrantSize: number

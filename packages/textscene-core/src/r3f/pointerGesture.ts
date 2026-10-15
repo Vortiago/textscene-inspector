@@ -82,7 +82,7 @@ const WHEEL_LINE_PIXELS = WHEEL_NOTCH_PIXELS / 3;
  * fractions of a notch; a kinetic fling or a coarse driver can deliver a
  * whole screenful in one event, which without a cap would teleport the view.
  */
-export const WHEEL_MAX_NOTCHES = 4;
+const WHEEL_MAX_NOTCHES = 4;
 
 /** The axes of a wheel event, in CSS pixels whatever `deltaMode` it used. */
 interface WheelDelta {

@@ -45,7 +45,7 @@ export function scrollBarMinimumSize(vertical: boolean, theme: NativeTheme): Vec
 }
 
 /** `ScrollBar::get_area_size` (`scroll_bar.cpp:491-513`): the grabber's travel along the bar. */
-export function scrollBarAreaSize(vertical: boolean, barLength: number, theme: NativeTheme): number {
+function scrollBarAreaSize(vertical: boolean, barLength: number, theme: NativeTheme): number {
   const track = contentMarginSize(trackStyleBox(vertical, theme));
   const trackAlong = vertical ? track.y : track.x;
   return barLength - trackAlong - grabberMinAlong(vertical, theme);

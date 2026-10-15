@@ -2,7 +2,6 @@
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import {
-  treePanelStyleBox,
   pickTreePanelStyleBox,
   pickTreeTitleButtonStyleBox,
   treeTitleButtonHeightPx,
@@ -13,27 +12,28 @@ import {
 
 const THEME = nativeTheme(1);
 
-describe('treePanelStyleBox', () => {
+const DEFAULT_PANEL = pickTreePanelStyleBox({}, THEME);
+
+describe('pickTreePanelStyleBox default panel', () => {
   // default_theme.cpp:860: make_flat_stylebox(style_normal_color, 4, 4, 4, 5).
   it('has a taller bottom margin than its other three sides', () => {
-    const box = treePanelStyleBox(THEME);
+    const box = DEFAULT_PANEL;
     expect(box.contentMargin.left).toBe(4);
     expect(box.contentMargin.top).toBe(4);
     expect(box.contentMargin.right).toBe(4);
     expect(box.contentMargin.bottom).toBe(5);
   });
   it('fills with style_normal_color (alpha 0.6)', () => {
-    expect(treePanelStyleBox(THEME).bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
+    expect(DEFAULT_PANEL.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
   });
 });
 
 describe('pickTreePanelStyleBox / pickTreeTitleButtonStyleBox', () => {
-  it('falls back to the computed defaults when no override is present', () => {
-    expect(pickTreePanelStyleBox({}, THEME)).toEqual(treePanelStyleBox(THEME));
+  it('falls back to the default title button stylebox when no override is present', () => {
     expect(pickTreeTitleButtonStyleBox({}, THEME)).toBe(THEME.widgets.button.pressed);
   });
   it('prefers a theme_override_styles override over the default', () => {
-    const override = treePanelStyleBox(THEME);
+    const override = { ...DEFAULT_PANEL, bgColor: { r: 1, g: 0, b: 0, a: 1 } };
     expect(pickTreePanelStyleBox({ panel: override }, THEME)).toBe(override);
   });
 });
@@ -50,7 +50,7 @@ describe('treeTitleButtonHeightPx', () => {
 
 describe('treeContentRect', () => {
   it("insets the rect by the panel stylebox's own margins", () => {
-    const box = treePanelStyleBox(THEME);
+    const box = DEFAULT_PANEL;
     const rect = treeContentRect({ x: 200, y: 100 }, box);
     expect(rect).toEqual({
       x: box.contentMargin.left,
@@ -60,7 +60,7 @@ describe('treeContentRect', () => {
     });
   });
   it('floors at zero extent rather than going negative for a rect smaller than the margins', () => {
-    const box = treePanelStyleBox(THEME);
+    const box = DEFAULT_PANEL;
     const rect = treeContentRect({ x: 1, y: 1 }, box);
     expect(rect.w).toBe(0);
     expect(rect.h).toBe(0);

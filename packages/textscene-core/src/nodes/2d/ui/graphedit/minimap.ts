@@ -32,7 +32,7 @@ const GRAPH_EDIT_MINIMAP_MIN_SIZE = 50;
 /** `const Vector2 minimap_size = Vector2(240, 160)` (`graph_edit.cpp:3326`). */
 const GRAPH_EDIT_MINIMAP_DEFAULT_SIZE: Vector2 = { x: 240, y: 160 };
 /** `const float minimap_opacity = 0.65` (`graph_edit.cpp:3327`). */
-export const GRAPH_EDIT_MINIMAP_DEFAULT_OPACITY = 0.65;
+const GRAPH_EDIT_MINIMAP_DEFAULT_OPACITY = 0.65;
 
 /**
  * `GraphEdit::is_minimap_enabled` (`:2808-2810`): `minimap_button->is_pressed()`.
@@ -83,7 +83,7 @@ export interface GraphScrollBounds {
  * default `Rect2`, so the graph origin is always inside (`core/math/rect2.h:165-180`). No visibility
  * test: a hidden GraphElement still widens it, unlike `_minimap_draw`'s own loops (`:1821,1844`).
  */
-export function graphScrollBounds(
+function graphScrollBounds(
   elements: readonly GraphElementBox[],
   zoom: number,
   graphEditSize: Vector2

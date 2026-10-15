@@ -32,7 +32,7 @@ const TONEMAP_CHUNK = 'tonemapping_pars_fragment';
  * inside a tone curve, so a `tonemap_exposure` authored under LINEAR is
  * dropped. Faithful at the 1.0 default.
  */
-export function toneMappingFor(mode: number): THREE.ToneMapping {
+function toneMappingFor(mode: number): THREE.ToneMapping {
   if (mode === GodotToneMapper.LINEAR) return THREE.NoToneMapping;
   return hasGodotCurve(mode) ? THREE.CustomToneMapping : THREE.NoToneMapping;
 }
@@ -130,7 +130,7 @@ function swapToneCurve(gl: ToneMappedRenderer, settings: ToneMappingSettings): (
  * the `renderer.toneMapping` enum (`WebGLPrograms.js:490`) and reads the chunk only at compile
  * (`WebGLProgram.js:775`), so without this term two curves share one program.
  */
-export function toneMappingProgramKey(material: Pick<THREE.Material, 'toneMapped'>): string {
+function toneMappingProgramKey(material: Pick<THREE.Material, 'toneMapped'>): string {
   if (!material.toneMapped) return '';
   return `,toneMappingChunk:${chunkId(THREE.ShaderChunk[TONEMAP_CHUNK])}`;
 }

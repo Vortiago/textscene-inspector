@@ -27,11 +27,8 @@ interface GlbModules {
 let glbModules: GlbModules | null = null;
 let initPromise: Promise<GlbModules> | null = null;
 
-/**
- * Load GLTFLoader and SkeletonUtils once, caching the promise. A test that calls
- * `cloneWithMaterials` directly awaits this first.
- */
-export function initGlbModules(): Promise<GlbModules> {
+/** Load GLTFLoader and SkeletonUtils once, caching the promise. */
+function initGlbModules(): Promise<GlbModules> {
   initPromise ??= Promise.all([
     import('three/addons/loaders/GLTFLoader.js'),
     import('three/addons/utils/SkeletonUtils.js'),
@@ -212,16 +209,13 @@ function importBlendAsDepthPrepass(object: THREE.Object3D): void {
 }
 
 /**
- * Clone an Object3D and its materials, since an Object3D has one parent. Requires an
- * awaited `initGlbModules()`, which a successful `createGLBMesh` always did before a
- * consumer holds a clone.
+ * Clone an Object3D and its materials, since an Object3D has one parent. Requires a
+ * successful `createGLBMesh` first, which a consumer holding a mesh to clone always has.
  */
 export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
   if (!glbModules) {
     throw new Error(
-      '[glbProcessing] cloneWithMaterials called before initGlbModules(). ' +
-        'Await initGlbModules() in a beforeAll/beforeEach in tests, or ensure ' +
-        'createGLBMesh has been called at least once before cloning.'
+      '[glbProcessing] cloneWithMaterials called before createGLBMesh loaded the glTF modules.'
     );
   }
   // SkeletonUtils, not `clone(true)`: a plain clone leaves a SkinnedMesh bound to the

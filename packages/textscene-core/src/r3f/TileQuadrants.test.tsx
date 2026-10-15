@@ -15,7 +15,7 @@ import type { CappedItem } from './lighting2d/itemLightCap';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import { drawableCells } from '../resources/tileset/drawableCell';
 import { parseTresFile } from '../parser/parsedResource';
-import { decodeCanvasItemMaterial } from '../resources/materials/canvasitemmaterial/decode';
+import { canvasItemMaterialOf } from '../resources/materials/canvasitemmaterial/decode';
 import {
   defaultTileData,
   type AlternativeTileModel,
@@ -35,7 +35,7 @@ import {
 import type { Rgba } from '../godot/math';
 
 function canvasItemMaterial(overrides: Partial<CanvasItemMaterialProperties>): CanvasItemMaterialProperties {
-  return { ...decodeCanvasItemMaterial({}), ...overrides };
+  return { ...canvasItemMaterialOf({ type: 'CanvasItemMaterial', data: {} })!, ...overrides };
 }
 
 const ADD = canvasItemMaterial({ blendMode: CanvasItemBlendMode.ADD });

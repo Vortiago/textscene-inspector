@@ -22,21 +22,13 @@ import * as resolveNodeFontMetricsModule from '../../../../r3f/controls/native/t
 import type { RichTextLabelProperties } from './types';
 import {
   richTextLabelMinimumSize,
-  RICH_TEXT_LABEL_THEME_KEYS,
-  RICH_TEXT_LABEL_DEFAULT_FONT_COLOR,
   RICH_TEXT_LABEL_THEME_FONT_KEY,
   richTextLabelTextTheme,
   styledTextRuns,
   fontSizePxAtFromRuns,
   layoutRichTextRuns,
-  resolveParagraphAlignment,
-  richTextHorizontalOffsetPx,
-  richTextVerticalOffsets,
-  richTextLineMetrics,
   richTextUnderlineMetrics,
   underlineRectPx,
-  imageSizePx,
-  imageBaselineOffsetPx,
   imageObjectFontMetrics,
   richTextLabelTextureSlots,
   BOLD_DISTANCE_BIAS,
@@ -45,8 +37,9 @@ import {
   richTextTabStopsPx,
 } from './nativeSolver';
 import { getFontGlyphAdvancePx } from '../../../../r3f/controls/native/text/fontMetrics';
-import { IMAGE_OBJECT_CHAR } from './bbcode';
+import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment } from './bbcode';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import type { Vector2 } from '../../../../godot/vector';
 
 function node(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
   return {
@@ -71,7 +64,7 @@ const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 // The shaped size of 'AB': `TS->shaped_text_get_size(...).x` ceils the pen
 // advance (`text_server_adv.cpp:7524-7537`), and every minimum size uses it.
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
-// getLinePitchPx(16, 0): ceil(2189*16/2048) + ceil(600*16/2048) + 0, not Label's 26:
+// getFontLinePitchPx(OPEN_SANS_METRICS, 16, 0): ceil(2189*16/2048) + ceil(600*16/2048) + 0, not Label's 26:
 // `default_theme.cpp:1217` sets `line_separation` 0, not Label's 3 (`:392`).
 const OWN_LINE_PITCH = 23;
 
@@ -278,20 +271,35 @@ describe(`richTextLabelMinimumSize — resolves this RichTextLabel's own PARAGRA
   });
 });
 
-describe('richTextLabelTextTheme / RICH_TEXT_LABEL_THEME_KEYS / RICH_TEXT_LABEL_DEFAULT_FONT_COLOR', () => {
-  it("uses normal_font_size/default_color as the override keys (RichTextLabel, unlike Label's font_size/font_color)", () => {
-    expect(RICH_TEXT_LABEL_THEME_KEYS).toEqual({ sizeKey: 'normal_font_size', colorKey: 'default_color' });
+describe('richTextLabelTextTheme', () => {
+  it('reads the normal_font_size and default_color overrides', () => {
+    const red = { r: 1, g: 0, b: 0, a: 1 };
+    const props = {
+      name: 'RTL',
+      themeOverrideFontSizes: { normal_font_size: 20 },
+    } as RichTextLabelProperties;
+    const n = node({}, { colors: { default_color: red } });
+    expect(richTextLabelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
+      fontSizePx: 20,
+      color: red,
+    });
   });
 
-  it("defaults to RichTextLabel's own opaque-white font colour (default_theme.cpp:1205)", () => {
-    expect(RICH_TEXT_LABEL_DEFAULT_FONT_COLOR).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+  it("ignores Label's font_size and font_color keys", () => {
+    const props = { name: 'RTL', themeOverrideFontSizes: { font_size: 20 } } as RichTextLabelProperties;
+    const n = node({}, { colors: { font_color: { r: 1, g: 0, b: 0, a: 1 } } });
+    expect(richTextLabelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
+      fontSizePx: 16,
+      color: { r: 1, g: 1, b: 1, a: 1 },
+    });
   });
 
-  it("resolves the theme's own default font size absent an override", () => {
+  it("resolves the theme's own default font size and RichTextLabel's opaque white absent an override", () => {
+    // default_theme.cpp:1205 sets RichTextLabel's default_color to Color(1, 1, 1).
     const resolved = richTextLabelTextTheme(node({}), { name: 'RTL' } as RichTextLabelProperties, {
       theme: nativeTheme(1),
     });
-    expect(resolved).toEqual({ fontSizePx: 16, color: RICH_TEXT_LABEL_DEFAULT_FONT_COLOR });
+    expect(resolved).toEqual({ fontSizePx: 16, color: { r: 1, g: 1, b: 1, a: 1 } });
   });
 
   it("(edge) walks the ancestor Theme chain for normal_font_size, same as every other widget's resolveTextTheme (Control::get_theme_font_size, control.cpp:3107-3129)", () => {
@@ -821,58 +829,63 @@ describe('styledTextRuns', () => {
   });
 });
 
-describe('imageSizePx (rich_text_label.cpp:4120-4155 _get_image_size, all six branches)', () => {
+describe('styledTextRuns [img] size (rich_text_label.cpp:4120-4155 _get_image_size, all six branches)', () => {
+  const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+
+  /** The size `styledTextRuns` resolves for one `[img<options>]a.png` run, or null where it drops the run. */
+  function imageRunSize(options: string, naturalSize?: Vector2): Vector2 | null {
+    const n = node({}, naturalSize ? { textureSlots: { 'a.png': naturalSize } } : {});
+    const props = { text: `[img${options}]a.png[/img]`, bbcodeEnabled: true } as RichTextLabelProperties;
+    return styledTextRuns(n, props, WHITE, 16, 16)[0]?.image?.sizePx ?? null;
+  }
+
   it('both dimensions given: returned verbatim', () => {
-    expect(imageSizePx(40, 20, undefined)).toEqual({ x: 40, y: 20 });
+    expect(imageRunSize('=40x20')).toEqual({ x: 40, y: 20 });
   });
 
   it("width + a region: height keeps the REGION's own aspect (:4130-4134, float arithmetic)", () => {
-    expect(imageSizePx(40, 0, { x: 0, y: 0, w: 80, h: 40 })).toEqual({ x: 40, y: 20 });
+    expect(imageRunSize('=40 region=0,0,80,40')).toEqual({ x: 40, y: 20 });
   });
 
   it("height + a region: width keeps the region's own aspect (:4137-4141)", () => {
-    expect(imageSizePx(0, 20, { x: 0, y: 0, w: 80, h: 40 })).toEqual({ x: 40, y: 20 });
+    expect(imageRunSize(' height=20 region=0,0,80,40')).toEqual({ x: 40, y: 20 });
   });
 
   it("region only, no dimension: the region's own size verbatim (:4147-4149)", () => {
-    expect(imageSizePx(0, 0, { x: 1, y: 2, w: 80, h: 40 })).toEqual({ x: 80, y: 40 });
+    expect(imageRunSize(' region=1,2,80,40')).toEqual({ x: 80, y: 40 });
   });
 
   it('a region with zero area (Rect2::has_area() false) is treated as no region at all', () => {
-    expect(imageSizePx(0, 0, { x: 0, y: 0, w: 0, h: 40 })).toBeNull();
-    expect(imageSizePx(40, 0, { x: 0, y: 0, w: 0, h: 40 })).toBeNull();
+    expect(imageRunSize(' region=0,0,0,40')).toBeNull();
+    expect(imageRunSize('=40 region=0,0,0,40')).toBeNull();
   });
 
   it("null when the size depends on the texture's own natural pixel size and naturalSize is not (yet) known — neither dimension nor a usable region (:4150-4154)", () => {
-    expect(imageSizePx(0, 0, undefined)).toBeNull();
+    expect(imageRunSize('')).toBeNull();
   });
 
   it("null for a lone width with no region and no naturalSize — the OTHER dimension needs the texture's natural size (:4126-4128)", () => {
-    expect(imageSizePx(40, 0, undefined)).toBeNull();
+    expect(imageRunSize('=40')).toBeNull();
   });
 
   it('null for a lone height with no region and no naturalSize (:4133-4135)', () => {
-    expect(imageSizePx(0, 40, undefined)).toBeNull();
+    expect(imageRunSize(' height=40')).toBeNull();
   });
 
   it("width + naturalSize, no region: height keeps the TEXTURE's own aspect (:4126-4128)", () => {
-    expect(imageSizePx(40, 0, undefined, { x: 80, y: 40 })).toEqual({ x: 40, y: 20 });
+    expect(imageRunSize('=40', { x: 80, y: 40 })).toEqual({ x: 40, y: 20 });
   });
 
   it("height + naturalSize, no region: width keeps the texture's own aspect (:4133-4135)", () => {
-    expect(imageSizePx(0, 20, undefined, { x: 80, y: 40 })).toEqual({ x: 40, y: 20 });
+    expect(imageRunSize(' height=20', { x: 80, y: 40 })).toEqual({ x: 40, y: 20 });
   });
 
   it("neither dimension nor a region, naturalSize known: the texture's own size verbatim (:4150-4154, p_image->get_size())", () => {
-    expect(imageSizePx(0, 0, undefined, { x: 64, y: 32 })).toEqual({ x: 64, y: 32 });
+    expect(imageRunSize('', { x: 64, y: 32 })).toEqual({ x: 64, y: 32 });
   });
 
   it('a region always wins over naturalSize, even when both are present (region reads BEFORE naturalSize is ever consulted)', () => {
-    expect(imageSizePx(0, 0, { x: 0, y: 0, w: 80, h: 40 }, { x: 999, y: 999 })).toEqual({ x: 80, y: 40 });
-  });
-
-  it('both dimensions given: naturalSize is never consulted, even when the ref never resolved', () => {
-    expect(imageSizePx(40, 20, undefined, null)).toEqual({ x: 40, y: 20 });
+    expect(imageRunSize(' region=0,0,80,40', { x: 999, y: 999 })).toEqual({ x: 80, y: 40 });
   });
 });
 
@@ -929,34 +942,6 @@ describe('imageObjectFontMetrics — exact-advance round-trip through the SHARED
   it('suppresses kerning on EITHER side of IMAGE_OBJECT_CHAR, even where the base metrics would have a real pair', () => {
     expect(decorated.getKerningAdjustmentUnits(IMAGE_OBJECT_CHAR, 'A')).toBe(0);
     expect(decorated.getKerningAdjustmentUnits('A', IMAGE_OBJECT_CHAR)).toBe(0);
-  });
-});
-
-describe('imageBaselineOffsetPx (TextServerAdvanced::_realign, text_server_adv.cpp:5189-5254, horizontal-orientation arm)', () => {
-  const CENTER_CENTER = { imagePoint: 'center', textPoint: 'center' } as const;
-
-  it("default alignment (center/center): the image's own vertical centre sits on the text box's own vertical centre", () => {
-    // y = (-ascent+descent)/2, then -= size.y/2 (CENTER_TO).
-    expect(imageBaselineOffsetPx(18, 5, 10, CENTER_CENTER)).toBe((-18 + 5) / 2 - 5);
-  });
-
-  it("top/top: the image's own top sits at the text's own ascent line (TOP_TO is a NOP, y = -ascent)", () => {
-    expect(imageBaselineOffsetPx(18, 5, 10, { imagePoint: 'top', textPoint: 'top' })).toBe(-18);
-  });
-
-  it("bottom/bottom: the image's own bottom sits at the text's own descent line (y = descent, then -= size.y)", () => {
-    expect(imageBaselineOffsetPx(18, 5, 10, { imagePoint: 'bottom', textPoint: 'bottom' })).toBe(5 - 10);
-  });
-
-  it("top/baseline: the image's own top sits ON the baseline (y = 0, TOP_TO NOP)", () => {
-    expect(imageBaselineOffsetPx(18, 5, 10, { imagePoint: 'top', textPoint: 'baseline' })).toBe(0);
-  });
-
-  it('an image-only line (no text glyphs): textAscentPx/textDescentPx are both 0, so a center/center image straddles the baseline exactly h/2 either side', () => {
-    const y = imageBaselineOffsetPx(0, 0, 10, CENTER_CENTER);
-    expect(y).toBe(-5);
-    expect(-y).toBe(10 - 10 / 2); // ascent contribution
-    expect(y + 10).toBe(5); // descent contribution
   });
 });
 
@@ -1301,15 +1286,18 @@ describe('layoutRichTextRuns', () => {
     expect(layout.lines).toHaveLength(2);
 
     // ceil(2189*18/2048)=20, ceil(600*18/2048)=6; ceil(2189*16/2048)=18, ceil(600*16/2048)=5.
-    expect(richTextLineMetrics(runs, layout)).toEqual([
-      { topPx: 0, ascentPx: 20, descentPx: 6, textAscentPx: 20, textDescentPx: 6 },
-      { topPx: 26, ascentPx: 18, descentPx: 5, textAscentPx: 18, textDescentPx: 5 },
-    ]);
-
     const placements = layoutRichTextRuns(runs, layout);
-    expect(placements.map((p) => p.lineTopPx)).toEqual([0, 26]);
+    expect(placements.map((p) => p.lineTopPx)).toEqual([0, 20 + 6]);
     expect(placements[0]!.layout.baselineOffsetPx).toBe(20);
     expect(placements[1]!.layout.baselineOffsetPx).toBe(18);
+
+    // Bottom-aligned in 100px, the block starts 100 - (26 + 23) down: the second line's descent is 5.
+    const bottom = layoutRichTextRuns(runs, layout, {
+      boxWidthPx: 0,
+      boxHeightPx: 100,
+      verticalAlignment: 2,
+    });
+    expect(bottom.map((p) => p.lineTopPx)).toEqual([51, 51 + 26]);
   });
 
   // `_draw_line` measures `text_buf->get_line_size(line).x` (`rich_text_label.cpp:984`,
@@ -1353,9 +1341,20 @@ describe('layoutRichTextRuns', () => {
     });
   });
   describe('[img]', () => {
-    const CENTER_CENTER = { imagePoint: 'center', textPoint: 'center' } as const;
+    const CENTER_CENTER: ParsedImageAlignment = { imagePoint: 'center', textPoint: 'center' };
+    /** A bottom-aligned 100px box: a line's top lands at 100 minus its ascent plus descent. */
+    const BOTTOM_OF_100 = { boxWidthPx: 0, boxHeightPx: 100, verticalAlignment: 2 };
+    const TEXT_RUN = {
+      text: 'hi',
+      bold: false,
+      italic: false,
+      underline: false,
+      color: WHITE,
+      fontSizePx: FONT_SIZE,
+      alignment: 0,
+    };
 
-    function imageRun(widthPx: number, heightPx: number, path = 'a.png') {
+    function imageRun(widthPx: number, heightPx: number, alignment: ParsedImageAlignment = CENTER_CENTER) {
       return {
         text: IMAGE_OBJECT_CHAR,
         bold: false,
@@ -1366,7 +1365,7 @@ describe('layoutRichTextRuns', () => {
         alignment: 0,
         image: {
           spec: {
-            path,
+            path: 'a.png',
             width: widthPx,
             height: heightPx,
             widthInPercent: false,
@@ -1376,7 +1375,7 @@ describe('layoutRichTextRuns', () => {
             pad: false,
             tooltip: '',
             altText: '',
-            alignment: CENTER_CENTER,
+            alignment,
           },
           sizePx: { x: widthPx, y: heightPx },
         },
@@ -1414,6 +1413,40 @@ describe('layoutRichTextRuns', () => {
       });
     });
 
+    it('an image-only line has no text ascent or descent, so a center/center image straddles the baseline h/2 either side', () => {
+      const runs = [imageRun(10, 10)];
+      const placements = layoutRichTextRuns(runs, shapeWithImages(IMAGE_OBJECT_CHAR, runs), BOTTOM_OF_100);
+      expect(placements[0]!.layout.baselineOffsetPx).toBe(5);
+      expect(placements[0]!.lineTopPx).toBe(100 - 10);
+    });
+
+    // TextServerAdvanced::_realign (text_server_adv.cpp:5189-5254, horizontal arm) against the
+    // 16px text's ascent 18 and descent 5: yPx is the line ascent plus the image's top offset.
+    describe('a 10px image beside 16px text, by InlineAlignment', () => {
+      function imageTop(alignment: ParsedImageAlignment): number {
+        const runs = [{ ...TEXT_RUN }, imageRun(10, 10, alignment)];
+        const placements = layoutRichTextRuns(runs, shapeWithImages(`hi${IMAGE_OBJECT_CHAR}`, runs));
+        return placements.find((p) => p.image)!.image!.yPx;
+      }
+
+      it("center/center: the image's own vertical centre sits on the text box's own vertical centre", () => {
+        // y = (-ascent+descent)/2, then -= size.y/2 (CENTER_TO).
+        expect(imageTop(CENTER_CENTER)).toBe(18 + ((-18 + 5) / 2 - 5));
+      });
+
+      it("top/top: the image's own top sits at the text's own ascent line (TOP_TO is a NOP, y = -ascent)", () => {
+        expect(imageTop({ imagePoint: 'top', textPoint: 'top' })).toBe(18 - 18);
+      });
+
+      it("bottom/bottom: the image's own bottom sits at the text's own descent line (y = descent, then -= size.y)", () => {
+        expect(imageTop({ imagePoint: 'bottom', textPoint: 'bottom' })).toBe(18 + (5 - 10));
+      });
+
+      it("top/baseline: the image's own top sits ON the baseline (y = 0, TOP_TO NOP)", () => {
+        expect(imageTop({ imagePoint: 'top', textPoint: 'baseline' })).toBe(18);
+      });
+    });
+
     it("a small (10px) centered image on a line with 16px text does not grow the line — it fits entirely within the text's own ascent/descent", () => {
       const runs = [
         {
@@ -1430,9 +1463,9 @@ describe('layoutRichTextRuns', () => {
       const text = `hi${IMAGE_OBJECT_CHAR}`;
       const layout = shapeWithImages(text, runs);
       // ascentPx=18, descentPx=5 at 16px (getFontAscentPx(OPEN_SANS,16), fontMetrics.ts's own formula).
-      expect(richTextLineMetrics(runs, layout)).toEqual([
-        { topPx: 0, ascentPx: 18, descentPx: 5, textAscentPx: 18, textDescentPx: 5 },
-      ]);
+      const placements = layoutRichTextRuns(runs, layout, BOTTOM_OF_100);
+      expect(placements[0]!.layout.baselineOffsetPx).toBe(18);
+      expect(placements[0]!.lineTopPx).toBe(100 - (18 + 5));
     });
 
     it("a large (40px) centered image on a 16px text line GROWS the line beyond the text's own ascent/descent", () => {
@@ -1449,12 +1482,10 @@ describe('layoutRichTextRuns', () => {
         imageRun(40, 40),
       ];
       const layout = shapeWithImages(`hi${IMAGE_OBJECT_CHAR}`, runs);
-      const metrics = richTextLineMetrics(runs, layout);
       // yOffset = (-18+5)/2 - 20 = -26.5; ascent = max(18, 26.5) = 26.5; descent = max(5, -26.5+40) = 13.5.
-      expect(metrics).toEqual([
-        { topPx: 0, ascentPx: 26.5, descentPx: 13.5, textAscentPx: 18, textDescentPx: 5 },
-      ]);
-      const placements = layoutRichTextRuns(runs, layout);
+      const placements = layoutRichTextRuns(runs, layout, BOTTOM_OF_100);
+      expect(placements[0]!.layout.baselineOffsetPx).toBe(26.5);
+      expect(placements[0]!.lineTopPx).toBe(100 - (26.5 + 13.5));
       const imagePlacement = placements.find((p) => p.image)!;
       expect(imagePlacement.image!.yPx).toBe(26.5 - 26.5); // ascentPx + yOffset
     });
@@ -1630,110 +1661,152 @@ describe('richTextLabelMinimumSize — the shaped extent is ceiled (text_server_
  * floors where Label truncates. Synthetic line widths keep this off font metrics.
  */
 describe('RichTextLabel paragraph alignment', () => {
-  describe('resolveParagraphAlignment (rich_text_label.cpp:3492-3505)', () => {
+  describe('styledTextRuns alignment, _find_alignment (rich_text_label.cpp:3492-3505)', () => {
+    const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+
+    function alignmentOf(text: string, horizontalAlignment: number | undefined): number {
+      const props = { text, bbcodeEnabled: true, horizontalAlignment } as RichTextLabelProperties;
+      return styledTextRuns(node({}), props, WHITE, 16, 16)[0]!.alignment;
+    }
+
     it('falls back to the node property when no paragraph tag is open', () => {
-      expect(resolveParagraphAlignment([], 2)).toBe(2);
+      expect(alignmentOf('x', 2)).toBe(2);
       // `default_alignment` is HORIZONTAL_ALIGNMENT_LEFT (`:580`).
-      expect(resolveParagraphAlignment([], undefined)).toBe(0);
+      expect(alignmentOf('x', undefined)).toBe(0);
     });
 
     it('takes the INNERMOST paragraph tag, overriding the property', () => {
       // `_find_alignment` walks OUTWARD from the item and returns the first
       // ITEM_PARAGRAPH it meets, so the last-opened tag wins.
-      expect(resolveParagraphAlignment([{ name: 'center' }], 2)).toBe(1);
-      expect(resolveParagraphAlignment([{ name: 'center' }, { name: 'right' }], 0)).toBe(2);
-      expect(resolveParagraphAlignment([{ name: 'right' }, { name: 'left' }], 1)).toBe(0);
-      expect(resolveParagraphAlignment([{ name: 'fill' }], 0)).toBe(3);
+      expect(alignmentOf('[center]x[/center]', 2)).toBe(1);
+      expect(alignmentOf('[center][right]x[/right][/center]', 0)).toBe(2);
+      expect(alignmentOf('[right][left]x[/left][/right]', 1)).toBe(0);
+      expect(alignmentOf('[fill]x[/fill]', 0)).toBe(3);
     });
 
     it('ignores a styling tag — only the four push_paragraph tags carry an alignment', () => {
       // `[b]`/`[u]`/`[color]` are `push_bold`/`push_underline`/`push_color`,
       // not `push_paragraph`, so none creates an ITEM_PARAGRAPH.
-      expect(resolveParagraphAlignment([{ name: 'b' }, { name: 'u' }, { name: 'color' }], 2)).toBe(2);
+      expect(alignmentOf('[b][u][color=red]x[/color][/u][/b]', 2)).toBe(2);
     });
   });
 
+  /** One 16px run of `text` at `alignment`, shaped unwrapped. */
+  function singleRun(text: string, alignment: number) {
+    const runs = [
+      {
+        text,
+        bold: false,
+        italic: false,
+        underline: false,
+        color: { r: 1, g: 1, b: 1, a: 1 },
+        fontSizePx: 16,
+        alignment,
+      },
+    ];
+    const layout = shapeText(text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.OFF,
+      lineSpacingPx: 0,
+    });
+    return { runs, layout };
+  }
+
   // In Godot, "Hello" in a 300x150 RichTextLabel inks x 1..38, 131..168 and 261..298
   // for LEFT, CENTER and RIGHT: `floor((300-40)/2)` and `300-40`.
-  describe('richTextHorizontalOffsetPx (rich_text_label.cpp:1000-1014)', () => {
+  describe('layoutRichTextRuns line offset (rich_text_label.cpp:1000-1014)', () => {
+    // "Threat level" at 16px shapes to a ceiled line width of 92 (`textLayout.test.ts`).
+    function offsetX(alignment: number, boxWidthPx: number): number {
+      const { runs, layout } = singleRun('Threat level', alignment);
+      return layoutRichTextRuns(runs, layout, { boxWidthPx, boxHeightPx: 0 })[0]!.lineOffsetXPx;
+    }
+
     it('leaves LEFT at the box origin', () => {
-      expect(richTextHorizontalOffsetPx(70, 200, 0)).toBe(0);
+      expect(offsetX(0, 200)).toBe(0);
     });
 
     it('floors half the slack for CENTER', () => {
       // `ofs.x += Math::floor((l_width - length) / 2.0)`: one floor, where
       // Label truncates twice.
-      expect(richTextHorizontalOffsetPx(70, 200, 1)).toBe(65);
-      expect(richTextHorizontalOffsetPx(70, 201, 1)).toBe(65);
-      expect(richTextHorizontalOffsetPx(70.5, 201, 1)).toBe(65);
-      expect(richTextHorizontalOffsetPx(70, 203, 1)).toBe(66);
+      expect(offsetX(1, 200)).toBe(54);
+      expect(offsetX(1, 201)).toBe(54);
+      expect(offsetX(1, 203)).toBe(55);
     });
 
     it('takes the whole slack for RIGHT', () => {
-      expect(richTextHorizontalOffsetPx(70, 200, 2)).toBe(130);
-      expect(richTextHorizontalOffsetPx(70.5, 200, 2)).toBe(129);
+      expect(offsetX(2, 200)).toBe(108);
     });
 
     it('leaves LEFT at the origin whatever the box width is', () => {
-      expect(richTextHorizontalOffsetPx(70, 0, 0)).toBe(0);
+      expect(offsetX(0, 0)).toBe(0);
     });
 
     it('CENTER keeps centring once the line OVERFLOWS its box (rich_text_label.cpp:1007-1010)', () => {
       // `_draw_line`'s arm is `off.x += Math::floor((width - length) / 2.0)`, with
       // no `length <= l_width` guard: that guard is `TextParagraph::draw`'s
       // (text_paragraph.cpp:1004), which RichTextLabel does not use.
-      expect(richTextHorizontalOffsetPx(287, 200, 1)).toBe(-44);
-      expect(richTextHorizontalOffsetPx(201, 200, 1)).toBe(-1);
+      expect(offsetX(1, 50)).toBe(-21);
+      expect(offsetX(1, 91)).toBe(-1);
     });
 
     it('hangs an OVERFLOWING line off the leading edge under CENTER and RIGHT alike', () => {
       // Neither arm of `_draw_line`'s switch guards on the line fitting.
-      expect(richTextHorizontalOffsetPx(300, 200, 1)).toBe(-50);
-      expect(richTextHorizontalOffsetPx(300, 200, 2)).toBe(-100);
+      expect(offsetX(1, 52)).toBe(-20);
+      expect(offsetX(2, 52)).toBe(-40);
     });
 
     it('still aligns a ZERO-width paragraph, which TextParagraph::draw would have skipped', () => {
       // `if (width > 0)` (text_paragraph.cpp:990) guards the other switch, so
       // CENTER and RIGHT pull the text off the leading edge. `RichTextLabel`
       // clips its contents (`:8225`), so a control this narrow shows none of it.
-      expect(richTextHorizontalOffsetPx(70, 0, 1)).toBe(-35);
-      expect(richTextHorizontalOffsetPx(70, 0, 2)).toBe(-70);
+      expect(offsetX(1, 0)).toBe(-46);
+      expect(offsetX(2, 0)).toBe(-92);
     });
 
     it('positions FILL like LEFT — justification is intra-line, not an origin shift', () => {
       // The LTR FILL arm of `:991`'s switch does nothing at all; only RTL
       // shifts. The intra-line stretch this slice does not do is a
       // `comparison.md` row.
-      expect(richTextHorizontalOffsetPx(70, 200, 3)).toBe(0);
+      expect(offsetX(3, 200)).toBe(0);
     });
   });
 
   // In the same label, TOP, CENTER and BOTTOM ink rows 6, 69 and 133: `vbegin` 63.5 and 127,
-  // and 63.5 + 6 = 69.5 draws on row 69, so these return floats and the line top floors once,
-  // downstream.
-  describe('richTextVerticalOffsets (rich_text_label.cpp:1619-1652)', () => {
+  // and 63.5 + 6 = 69.5 draws on row 69, so the offsets stay floats and each line top floors once.
+  describe('layoutRichTextRuns vertical alignment (rich_text_label.cpp:1619-1652)', () => {
+    /** The line tops of `text`'s 23px lines in a box `boxHeightPx` tall. */
+    function lineTops(text: string, verticalAlignment: number, boxHeightPx: number): number[] {
+      const { runs, layout } = singleRun(text, 0);
+      return layoutRichTextRuns(runs, layout, { boxWidthPx: 0, boxHeightPx, verticalAlignment }).map(
+        (p) => p.lineTopPx
+      );
+    }
+
     it('leaves TOP untouched', () => {
-      expect(richTextVerticalOffsets(100, 300, 0, 3)).toEqual({ vbeginPx: 0, vsepPx: 0 });
+      expect(lineTops('A\nB\nC', 0, 300)).toEqual([0, 23, 46]);
     });
 
-    it('halves the slack for CENTER and takes all of it for BOTTOM, without truncating', () => {
-      // `float vbegin = 0` (`:1628`), not Label's `int` pair, so a half pixel
-      // survives here.
-      expect(richTextVerticalOffsets(100, 300, 1, 3)).toEqual({ vbeginPx: 100, vsepPx: 0 });
-      expect(richTextVerticalOffsets(101, 300, 1, 3)).toEqual({ vbeginPx: 99.5, vsepPx: 0 });
-      expect(richTextVerticalOffsets(100, 300, 2, 3)).toEqual({ vbeginPx: 200, vsepPx: 0 });
+    it('halves the slack for CENTER and takes all of it for BOTTOM', () => {
+      // 300 - 3 * 23 = 231 of slack.
+      expect(lineTops('A\nB\nC', 1, 300)).toEqual([115, 138, 161]);
+      expect(lineTops('A\nB\nC', 2, 300)).toEqual([231, 254, 277]);
     });
 
-    it('spreads the slack between the gaps for FILL, and needs two lines to have a gap', () => {
-      expect(richTextVerticalOffsets(100, 300, 3, 3)).toEqual({ vbeginPx: 0, vsepPx: 100 });
-      expect(richTextVerticalOffsets(100, 300, 3, 1)).toEqual({ vbeginPx: 0, vsepPx: 0 });
+    it('spreads the slack between the gaps for FILL, without truncating the gap', () => {
+      // `float vsep` (`:1628`), not Label's `int`: 115.5 per gap puts the third line at 46 + 231.
+      expect(lineTops('A\nB\nC', 3, 300)).toEqual([0, 138, 277]);
+    });
+
+    it('needs two lines to have a FILL gap', () => {
+      expect(lineTops('A', 3, 300)).toEqual([0]);
     });
 
     it('stays TOP-aligned when the text is TALLER than its box, whatever the alignment', () => {
       // `:1630`'s `text_rect.size.y > total_height` guard. Label has none and
       // pulls its text upward here.
       for (const alignment of [1, 2, 3]) {
-        expect(richTextVerticalOffsets(400, 300, alignment, 3)).toEqual({ vbeginPx: 0, vsepPx: 0 });
+        expect(lineTops('A\nB\nC', alignment, 50)).toEqual([0, 23, 46]);
       }
     });
   });

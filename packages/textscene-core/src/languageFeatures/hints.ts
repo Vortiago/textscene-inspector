@@ -16,7 +16,7 @@ interface EnumEntry {
 }
 
 /** Whether the hint offers a fixed set of integer labels. Flags are a bitmask, so excluded. */
-export function isEnumHint(hint: number): boolean {
+function isEnumHint(hint: number): boolean {
   return hint === PROPERTY_HINT.ENUM || hint === PROPERTY_HINT.ENUM_SUGGESTION;
 }
 
@@ -25,7 +25,7 @@ export function isEnumHint(hint: number): boolean {
  * labels, so it yields nothing rather than one empty label. A label's `:value`
  * suffix overrides the index, as `PropertyHint`'s own syntax states.
  */
-export function enumEntries(hintString: string): readonly EnumEntry[] {
+function enumEntries(hintString: string): readonly EnumEntry[] {
   if (hintString.length === 0) return [];
   return hintString.split(',').map((raw, index) => {
     const colon = raw.indexOf(':');

@@ -50,16 +50,16 @@ export function resolveLinkButtonDrawState(props: LinkButtonProperties): LinkBut
 }
 
 /** `control_font_color` (`default_theme.cpp:101`), LinkButton's `font_color` default (`:203`). */
-export const LINKBUTTON_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+const LINKBUTTON_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 /** `control_font_pressed_color = Color(1, 1, 1)` (`:108`), LinkButton's `font_pressed_color` default (`:204`). */
-export const LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+const LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 /**
  * Neither LinkButton's `default_theme.cpp` block (`:196-210`) nor an ancestor in its `scene/theme/theme_db.cpp`
  * type chain registers `font_disabled_color`, so `ThemeOwner::get_theme_item_in_types` falls through to
  * the fallback theme's `get_theme_item(..., StringName())`: a default `Color()`, opaque black, not
  * `control_font_disabled_color`.
  */
-export const LINKBUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
+const LINKBUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 
 const LINKBUTTON_THEME_KEYS: Record<LinkButtonDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },

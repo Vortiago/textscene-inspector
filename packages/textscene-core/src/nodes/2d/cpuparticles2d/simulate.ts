@@ -67,7 +67,7 @@ const DEFAULT_PREVIEW_SEED = 0;
  * Ceiling on settle steps: `preprocess = 100000` would otherwise spin three
  * million iterations before the first paint. Real emitters need tens of steps.
  */
-export const MAX_SIM_STEPS = 4096;
+const MAX_SIM_STEPS = 4096;
 
 /** Godot's `Curve` slots, indexed by `CPUParticles2DParam`. Null where unset. */
 type ParticleCurves = ReadonlyArray<Curve | null>;
@@ -131,7 +131,7 @@ const MIN_LIFETIME = 0.01;
  * `_update_internal` spends both through one loop (`cpu_particles_2d.cpp:727-738`),
  * so `pnpm ref:godot --particles <seconds>` renders the same instant in Godot.
  */
-export function settleSeconds(props: CPUParticles2DProperties): number {
+function settleSeconds(props: CPUParticles2DProperties): number {
   if (props.preprocess > 0) return props.preprocess;
   const lifetime = Math.max(MIN_LIFETIME, props.lifetime);
   return props.one_shot ? lifetime * 0.5 : lifetime;
@@ -310,7 +310,7 @@ interface RestartStep {
  * @param time The cycle time after this step, wrapped mod `lifetime`.
  * @param restartTime `restartPhase * lifetime` for this particle.
  */
-export function restartStep(
+function restartStep(
   prevTime: number,
   time: number,
   restartTime: number,
@@ -348,7 +348,7 @@ export function restartStep(
  * `p.time > p.lifetime` (`cpu_particles_2d.cpp:971`): strict, so a particle
  * exactly at its lifetime gets one more advancing step before it dies.
  */
-export function particleExpired(time: number, lifetime: number): boolean {
+function particleExpired(time: number, lifetime: number): boolean {
   return time > lifetime;
 }
 

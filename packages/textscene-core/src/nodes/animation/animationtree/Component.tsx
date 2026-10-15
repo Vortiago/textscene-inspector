@@ -31,7 +31,7 @@ import type { AnimationTreeProperties } from './types';
  * `dominant` is set but `actions` has no entry. A `0` there would snap the paused readout to zero
  * on the next playing-to-paused edge.
  */
-export function dominantActionTime(
+function dominantActionTime(
   dominant: { clip: string } | null,
   actions: ReadonlyMap<string, AnimationAction>
 ): number | null {

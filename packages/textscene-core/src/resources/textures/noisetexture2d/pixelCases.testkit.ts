@@ -5,7 +5,7 @@
  */
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
-import { decodeGradient } from '../gradienttexture2d/decode';
+import { gradientOf } from '../gradienttexture2d/gradient.testkit';
 import type { Gradient } from '../gradienttexture2d/types';
 import { decodeNoiseTexture2D } from './decode';
 import type { NoiseTexture2DData } from './types';
@@ -17,7 +17,7 @@ export interface NoisePixelCase {
   colorRamp: Gradient | null;
 }
 
-const RAMP: Gradient = decodeGradient({
+const RAMP: Gradient = gradientOf({
   offsets: 'PackedFloat32Array(0, 0.6, 1)',
   colors: 'PackedColorArray(0.1, 0.2, 0.8, 1, 0.9, 0.5, 0.1, 0.5, 1, 1, 1, 1)',
 });

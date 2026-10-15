@@ -19,7 +19,8 @@ import {
 } from './testing/validatorClassification.js';
 import './index.js'; // side-effect: every slice registers its validators
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
-import { everyValidatorLabel, registeredKeys, registeredTypes } from './registryPopulation.js';
+import { registeredTypes } from './registryPopulation.js';
+import { everyValidatorLabel, registeredKeys } from './testing/registryPopulation.js';
 
 /**
  * Unclassified validators allowed, and it only shrinks: classify the validator instead. A `v` DSL validator is a `shape`

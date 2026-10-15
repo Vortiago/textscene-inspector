@@ -11,7 +11,11 @@ import type { WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import type { WorkerJobInput, WorkerJobName, WorkerJobOutput } from '../../workers/jobs';
 import { unlessAllocationFails } from './pixelAllocation';
 import { allocationLabel, findTypedSubResource } from './resolveProceduralSubResource';
-import { cachedProceduralTexture, cacheProceduralTexture } from './proceduralTextureCache';
+import {
+  cachedProceduralTexture,
+  cacheProceduralTexture,
+  onProceduralTexturesReset,
+} from './proceduralTextureCache';
 import { beginTextureWork } from './textureWork';
 
 export type JobRunner = Pick<WorkerJobRunner, 'run'>;
@@ -42,8 +46,16 @@ interface Build {
   controller: AbortController;
 }
 
-/** Written by `joinBuild`. An entry leaves when its build settles or its last holder aborts it. */
+/**
+ * Written by `joinBuild`. An entry leaves when its build settles, its last holder aborts it, or
+ * the cache resets.
+ */
 const builds = new Map<string, Build>();
+
+onProceduralTexturesReset(() => {
+  for (const build of builds.values()) build.controller.abort();
+  builds.clear();
+});
 
 /**
  * Resolves `ref` as an inline `[sub_resource]` of `typeName`. Null for every other
@@ -149,10 +161,4 @@ function startBuild(key: string, plan: ProceduralBuildPlan, label: string, runne
   };
   settled.then(finish, finish);
   return build;
-}
-
-/** Test seam: abort every build in flight and forget it. */
-export function abortProceduralBuilds(): void {
-  for (const build of builds.values()) build.controller.abort();
-  builds.clear();
 }

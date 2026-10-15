@@ -10,10 +10,6 @@ import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
-import {
-  CANVAS_TEXT_SUPERSAMPLE,
-  CANVAS_TEXT_VERTICAL_PAD_PX,
-} from '../../../r3f/controls/native/text/canvasTextPainter';
 import LabelGlyphs from './LabelGlyphs';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
@@ -22,6 +18,12 @@ import { AlphaCutMode, HorizontalAlignment, TextureFilter } from './types';
 import { labelProperties } from './testing/labelProperties';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
+
+/** The canvas text painter's raster supersampling factor. */
+const CANVAS_TEXT_SUPERSAMPLE = 3;
+
+/** The painter's fixed anti-aliasing pad on each vertical raster edge, CSS px. */
+const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
 
 // happy-dom has neither `FontFace` nor `document.fonts`, so the real bundled
 // registration can only ever answer `undefined` here (`sceneFontLoader.ts`'s

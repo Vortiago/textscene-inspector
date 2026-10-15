@@ -10,7 +10,9 @@ import * as THREE from 'three';
 import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
-import { GODOT_ANISOTROPY_MAX } from '../../textures/godotTextureFilter';
+
+/** The anisotropy ceiling the previewer pins: `anisotropic_filtering_level` 4, so `1 << 4`. */
+const GODOT_ANISOTROPY_MAX = 16;
 
 function build(
   properties: Record<string, string>,

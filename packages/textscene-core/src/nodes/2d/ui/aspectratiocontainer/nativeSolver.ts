@@ -53,7 +53,7 @@ function isUnsupportedTextureRect(child: SolveNode): boolean {
  * componentwise max of each visible child's combined minimum size. `ratio`,
  * `stretch_mode` and alignment play no part in it.
  */
-export const aspectRatioContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
+const aspectRatioContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   let maxW = 0;
   let maxH = 0;
   for (const child of n.children) {
@@ -73,7 +73,7 @@ controlSolverRegistry.registerMinimumSize('AspectRatioContainer', aspectRatioCon
  * (`:136-137`) and aligned (`:139-163`). `fit_child_in_rect` then applies the child's
  * own size flags, so a child without `SIZE_FILL` stays at its minimum.
  */
-export const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, contentRect, _ctx) => {
+const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, contentRect, _ctx) => {
   const p = props(n);
   const rtl = n.rtl;
   const ratio = p.ratio ?? 1.0;

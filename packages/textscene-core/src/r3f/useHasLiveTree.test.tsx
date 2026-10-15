@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { TscnParser } from '../parser/TscnParser';
-import { createSceneGraphFromTscnScene, type SceneGraph } from '../core/SceneGraph';
+import type { SceneGraph } from '../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { useHasLiveTree } from './useLiveSceneTree';
 

@@ -9,7 +9,9 @@ import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { ruleRegistry } from '../../../linter/RuleRegistry';
 import type { Diagnostic, RuleContext } from '../../../linter/types';
 import './linterParser';
-import { reflectionProbeValidationRule } from './linter';
+import './linter';
+
+const reflectionProbeValidationRule = ruleRegistry.getRule('valid-reflectionprobe-properties')!;
 
 /** Diagnostics the rule reports for a `[node type="ReflectionProbe"]` carrying `properties`. */
 function checkProbe(properties: string): Diagnostic[] {

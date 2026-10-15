@@ -321,7 +321,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       rows.map((r, index) => {
         const packedRect = packed.items[index]!.rect;
         // Both centring passes read `rect_cache.SIZE` (`item_list.cpp:1553,1556,1649`),
-        // never its position, and a `Rect2` satisfies `Vec2` structurally.
+        // never its position, and a `Rect2` satisfies `Vector2` structurally.
         const packedSize: Vector2 = { x: packedRect.w, y: packedRect.h };
         const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
         const iconDraw = itemIconDraw(

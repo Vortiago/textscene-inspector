@@ -116,5 +116,3 @@ const reflectionProbeValidationRule: LintRule = {
 };
 
 ruleRegistry.register(reflectionProbeValidationRule);
-
-export { reflectionProbeValidationRule };

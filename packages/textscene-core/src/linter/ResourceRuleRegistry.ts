@@ -35,7 +35,7 @@ export interface ResourceRule {
   check(data: Readonly<Record<string, string>>): ResourceFinding[];
 }
 
-export class ResourceRuleRegistry {
+class ResourceRuleRegistry {
   private rules = new Map<string, ResourceRule>();
 
   register(rule: ResourceRule): void {

@@ -70,7 +70,7 @@ const tabContainerChildVisibility: ChildVisibilityFn = (container, _child, index
 
 /** `TabContainer::TabPosition` (`tab_container.h`): 0 TOP, 1 BOTTOM. */
 export const TABS_POSITION_TOP = 0;
-export const TABS_POSITION_BOTTOM = 1;
+const TABS_POSITION_BOTTOM = 1;
 
 /** `default_theme.cpp:1223`: `theme->set_constant("side_margin", "TabContainer", round(8 * scale))`. */
 const SIDE_MARGIN_LITERAL = 8;
@@ -260,7 +260,7 @@ export function tabContentBand(containerRect: Rect2, headerHeight: number, tabsP
 }
 
 /** `TabContainer::get_minimum_size` (`:1027-1065`). */
-export const tabContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
+const tabContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as TabContainerProperties;
   const tabsVisible = props.tabsVisible ?? true;
   const alignment = props.tabAlignment ?? TAB_ALIGNMENT_LEFT;
@@ -310,7 +310,7 @@ controlSolverRegistry.registerChildVisibility('TabContainer', tabContainerChildV
 controlSolverRegistry.registerTextureSlots('TabContainer', tabContainerTextureSlots);
 
 /** `NOTIFICATION_SORT_CHILDREN`: `_update_margins` and `_repaint`. */
-export const tabContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const tabContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const props = n.node.properties as TabContainerProperties;
   const tabsVisible = props.tabsVisible ?? true;
   const tabsPosition = props.tabsPosition ?? TABS_POSITION_TOP;

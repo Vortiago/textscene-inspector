@@ -149,7 +149,7 @@ export async function selfContainedGlb(data: ArrayBuffer, readUri: ReadUri): Pro
  * GLB that `json` came from, which the first buffer names when it has no `uri`. The
  * input is not changed.
  */
-export async function packGltfAsGlb(
+async function packGltfAsGlb(
   json: GltfJson,
   readUri: ReadUri,
   glbBin: Uint8Array = new Uint8Array()

@@ -12,8 +12,8 @@ import { useGodotLinearColor } from '../../godotColor';
 import { controlProps, type SolveNode } from './solveTree';
 import type { Rgba } from '../../../godot/math';
 
-/** `ControlColor` is structurally an `RGBA`, so an absent one is the only case. */
-function toRGBA(c: Rgba | undefined): Rgba {
+/** An absent modulate is Godot's default, opaque white. */
+function modulateOrWhite(c: Rgba | undefined): Rgba {
   return c ?? WHITE_MODULATE;
 }
 
@@ -27,10 +27,10 @@ function toRGBA(c: Rgba | undefined): Rgba {
 // (`servers/rendering/renderer_canvas_cull.cpp`).
 export function useInheritedModulate(modulate: Rgba | undefined, skippedAncestors: Rgba | undefined): Rgba {
   const parent = useParentModulate();
-  const own = toRGBA(modulate);
+  const own = modulateOrWhite(modulate);
   // The skipped Node2D ancestors sit between the context value and this node,
   // so they fold in that order (`SolveNode.skippedAncestors`).
-  const skipped = toRGBA(skippedAncestors);
+  const skipped = modulateOrWhite(skippedAncestors);
   return useMemo(() => multiplyModulate(multiplyModulate(parent, skipped), own), [parent, skipped, own]);
 }
 
@@ -54,7 +54,7 @@ export interface ControlOwnTint {
 // An argument, not a context read: the walker runs this above the provider it
 // publishes, where the context holds the parent's value without this `modulate`.
 export function useControlOwnTint(inherited: Rgba, solveNode: SolveNode): ControlOwnTint {
-  const selfModulate = toRGBA(controlProps(solveNode).selfModulate);
+  const selfModulate = modulateOrWhite(controlProps(solveNode).selfModulate);
   const own = useMemo(() => multiplyModulate(inherited, selfModulate), [inherited, selfModulate]);
   const color = useGodotLinearColor(own);
   // Memoised as a whole: it is a prop, and painters memoise on it.

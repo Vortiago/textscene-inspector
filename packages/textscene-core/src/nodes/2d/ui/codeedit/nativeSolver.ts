@@ -28,7 +28,7 @@ import type { Rgba } from '../../../../godot/math';
 export const CODE_EDIT_LINE_NUMBER_COLOR: Rgba = { r: 0.67, g: 0.67, b: 0.67, a: 0.4 };
 
 /** `line_numbers_min_digits`'s own default (`code_edit.h:114`). */
-export const CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT = 3;
+const CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT = 3;
 
 /** `line_number_padding`'s default: a space, not zero (`code_edit.h:115`). */
 const SPACE_PAD = ' ';
@@ -39,7 +39,7 @@ const ZERO_PAD = '0';
  * transcribed with `Math.log10`'s float hazard at a power of ten, which `std::log10` shares, and not
  * replaced with `String(lc).length`.
  */
-export function codeEditLineNumberDigits(lineCount: number, minDigits: number | undefined): number {
+function codeEditLineNumberDigits(lineCount: number, minDigits: number | undefined): number {
   const min = minDigits ?? CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT;
   return Math.max(min, Math.floor(Math.log10(lineCount)) + 1);
 }

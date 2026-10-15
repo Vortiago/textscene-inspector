@@ -89,11 +89,6 @@ export function spinBoxButtonsBlockWidth(widestIconWidth: number): number {
   return Math.max(wanted, iconEnforced);
 }
 
-/** `field_and_buttons_separation` (`default_theme.cpp:647`): the gap between the buttons block and the narrower buttons (`sizing_cache.buttons_width = w - theme_cache.field_and_buttons_separation`, `spin_box.cpp:401`). */
-export function spinBoxFieldButtonsSeparation(): number {
-  return SPIN_BOX_FIELD_BUTTONS_SEPARATION;
-}
-
 /** `buttons_vertical_separation`: `default_theme.cpp:646` sets it to 0, and no per-node theme-constant override is modelled. */
 const SPIN_BOX_BUTTONS_VERTICAL_SEPARATION = 0;
 
@@ -117,7 +112,7 @@ export function spinBoxLayout(rectSize: Vector2, widestIconWidth: number, rtl = 
   const w = Math.trunc(rectSize.x);
   const h = Math.trunc(rectSize.y);
   const blockWidth = spinBoxButtonsBlockWidth(widestIconWidth);
-  const buttonsWidth = blockWidth - spinBoxFieldButtonsSeparation();
+  const buttonsWidth = blockWidth - SPIN_BOX_FIELD_BUTTONS_SEPARATION;
   const buttonsLeft = rtl ? 0 : w - buttonsWidth;
   const vSep = Math.min(Math.max(SPIN_BOX_BUTTONS_VERTICAL_SEPARATION, 0), h);
   const buttonUpHeight = Math.trunc((h - vSep) / 2);
@@ -135,7 +130,7 @@ export function spinBoxLayout(rectSize: Vector2, widestIconWidth: number, rtl = 
     fieldRect: { x: fieldLeft, y: 0, w: fieldWidth, h },
     upRect: { x: buttonsLeft, y: 0, w: buttonsWidth, h: buttonUpHeight },
     downRect: { x: buttonsLeft, y: secondButtonTop, w: buttonsWidth, h: buttonDownHeight },
-    fieldAndButtonsSeparatorRect: { x: separatorLeft, y: 0, w: spinBoxFieldButtonsSeparation(), h },
+    fieldAndButtonsSeparatorRect: { x: separatorLeft, y: 0, w: SPIN_BOX_FIELD_BUTTONS_SEPARATION, h },
   };
 }
 
@@ -194,7 +189,7 @@ export function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: numb
 type SpinBoxButtonState = 'normal' | 'disabled';
 
 /** `is_fully_disabled = !is_editable()` (`spin_box.cpp:444`): gates both buttons whatever their own state. */
-export function spinBoxFullyDisabled(props: SpinBoxProperties): boolean {
+function spinBoxFullyDisabled(props: SpinBoxProperties): boolean {
   return props.editable === false;
 }
 

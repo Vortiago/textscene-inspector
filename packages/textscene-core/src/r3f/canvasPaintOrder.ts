@@ -29,7 +29,7 @@ const Z_BUCKET_COUNT = CANVAS_ITEM_Z_MAX - CANVAS_ITEM_Z_MIN + 1;
  * or items tie: a thousand layers against the ±4096 z envelope stay four orders
  * of magnitude under `Number.MAX_SAFE_INTEGER`.
  */
-export const PAINT_SEQUENCE_STRIDE = 2 ** 24;
+const PAINT_SEQUENCE_STRIDE = 2 ** 24;
 
 /**
  * Room held back inside a node whose drawn pieces the tree does not list

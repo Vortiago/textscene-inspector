@@ -17,7 +17,7 @@ import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSam
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { undecodedClone } from '../../../../r3f/undecodedTexture';
 import { rangeRatio } from '../shared/range';
-import { ninePatchGeometry, NINE_PATCH_STRETCH } from '../../../../r3f/controls/native/ninePatchGeometry';
+import { ninePatchGeometry, AxisStretchMode } from '../../../../r3f/controls/native/ninePatchGeometry';
 import { resolveTextureRectFilter } from '../texturerect/nativeSolver';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
 import { linearProgressDraw } from './linearFill';
@@ -195,8 +195,8 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         regionOffset: draw.srcOffset,
         regionSize: draw.srcSize,
         margin: draw.margin,
-        axisH: NINE_PATCH_STRETCH,
-        axisV: NINE_PATCH_STRETCH,
+        axisH: AxisStretchMode.STRETCH,
+        axisV: AxisStretchMode.STRETCH,
         drawCenter: true,
       }),
     };
@@ -213,8 +213,8 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         regionOffset: draw.srcOffset,
         regionSize: draw.srcSize,
         margin: draw.margin,
-        axisH: NINE_PATCH_STRETCH,
-        axisV: NINE_PATCH_STRETCH,
+        axisH: AxisStretchMode.STRETCH,
+        axisV: AxisStretchMode.STRETCH,
         drawCenter: true,
       }),
     };
@@ -238,8 +238,8 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         regionOffset: draw.srcOffset,
         regionSize: draw.srcSize,
         margin: draw.margin,
-        axisH: NINE_PATCH_STRETCH,
-        axisV: NINE_PATCH_STRETCH,
+        axisH: AxisStretchMode.STRETCH,
+        axisV: AxisStretchMode.STRETCH,
         drawCenter: true,
       }),
     };

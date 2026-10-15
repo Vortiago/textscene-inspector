@@ -1,14 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import {
-  litQuadRenderOrder,
-  litQuadStencilProps,
-  ShadowVolumeMask,
-  SHADOW_STENCIL_REFS,
-  shadowStencilRef,
-  shadowVolumeRenderOrder,
-} from './ShadowVolumeMask';
+import { litQuadRenderOrder, litQuadStencilProps, ShadowVolumeMask } from './ShadowVolumeMask';
 import { OCCLUDER_CULL_DISABLED, type ShadowCasterEdges, type ShadowLight } from './shadowVolumes';
 import { worldEdges } from './testing/worldEdges';
 import { LIGHT_PASS_LAYER } from './lightPassLayers';
@@ -18,6 +11,12 @@ const LIGHT: ShadowLight = {
   y: 0,
   rect: { minX: -512, minY: -512, maxX: 512, maxY: 512 },
 };
+
+/** The distinct stencil values of one pass: the 8-bit buffer's 1..255, as 0 is the cleared state. */
+const SHADOW_STENCIL_REFS = 255;
+
+/** The stencil value light `ordinal`'s cookie quad tests. */
+const shadowStencilRef = (ordinal: number) => litQuadStencilProps(ordinal).stencilRef;
 
 const CASTER: ShadowCasterEdges = worldEdges(new Float32Array([100, -50, 100, 50]), OCCLUDER_CULL_DISABLED);
 
@@ -60,22 +59,18 @@ describe('stencil ref allocation', () => {
     expect(shadowStencilRef(SHADOW_STENCIL_REFS - 1)).not.toBe(shadowStencilRef(0));
   });
 
-  it('agrees with the lit quad for the same light', () => {
-    expect(litQuadStencilProps(7).stencilRef).toBe(shadowStencilRef(7));
-  });
-
   it('disagrees with a neighbouring light, which is what stops the leak', () => {
-    expect(litQuadStencilProps(8).stencilRef).not.toBe(shadowStencilRef(7));
+    expect(shadowStencilRef(8)).not.toBe(shadowStencilRef(7));
   });
 });
 
 describe('render order pairing', () => {
-  it("draws a light's volumes before its own quad", () => {
-    expect(shadowVolumeRenderOrder(3)).toBeLessThan(litQuadRenderOrder(3));
+  it("draws a light's volumes before its own quad", async () => {
+    expect(maskMesh(await renderMask({ sequence: 3 }))!.renderOrder).toBeLessThan(litQuadRenderOrder(3));
   });
 
-  it('finishes a light before the next one starts', () => {
-    expect(litQuadRenderOrder(3)).toBeLessThan(shadowVolumeRenderOrder(4));
+  it('finishes a light before the next one starts', async () => {
+    expect(litQuadRenderOrder(3)).toBeLessThan(maskMesh(await renderMask({ sequence: 4 }))!.renderOrder);
   });
 });
 
@@ -133,7 +128,7 @@ describe('<ShadowVolumeMask>', () => {
   });
 
   it('draws immediately before its own light quad', async () => {
-    expect(maskMesh(await renderMask({ sequence: 6 }))!.renderOrder).toBe(shadowVolumeRenderOrder(6));
+    expect(maskMesh(await renderMask({ sequence: 6 }))!.renderOrder).toBe(litQuadRenderOrder(6) - 1);
   });
 
   it('takes its ORDER from the sequence and its REF from the ordinal', async () => {
@@ -141,7 +136,7 @@ describe('<ShadowVolumeMask>', () => {
     // is the light's place in the canvas light list, the order Godot applies lights in. Ordering
     // by the ordinal makes an overlap's colour depend on which cookie loaded first.
     const mesh = maskMesh(await renderMask({ ordinal: 2, sequence: 5 }))!;
-    expect(mesh.renderOrder).toBe(shadowVolumeRenderOrder(5));
+    expect(mesh.renderOrder).toBe(litQuadRenderOrder(5) - 1);
     expect((mesh.material as THREE.Material).stencilRef).toBe(shadowStencilRef(2));
   });
 

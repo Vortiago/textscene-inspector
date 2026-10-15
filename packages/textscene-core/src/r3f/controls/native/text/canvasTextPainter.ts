@@ -23,10 +23,10 @@ import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
 import type { Rgba } from '../../../../godot/math';
 
 /** Fixed raster supersampling factor: canvas text has no distance field to stay crisp when magnified, so this trades memory and fill rate for sharpness at typical zoom. */
-export const CANVAS_TEXT_SUPERSAMPLE = 3;
+const CANVAS_TEXT_SUPERSAMPLE = 3;
 
 /** Fixed vertical pad, CSS px before supersampling, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
-export const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
+const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
 
 /**
  * The whole supersampled device pixels a CSS-px extent needs. The quad samples

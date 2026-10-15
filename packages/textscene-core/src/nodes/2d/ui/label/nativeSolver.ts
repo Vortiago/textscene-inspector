@@ -35,7 +35,7 @@ import type { Vector2 } from '../../../../godot/vector';
 import type { Rgba } from '../../../../godot/math';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
-export const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
+const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 
 /**
  * Label's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:381`).
@@ -61,10 +61,10 @@ export const LABEL_PARAGRAPH_SEPARATOR = '\n';
 
 /**
  * Label's default font colour is opaque white: `default_theme.cpp` sets `font_color` for
- * "Label" to `Color(1, 1, 1)`, not the `control_font_color` gray (`DEFAULT_FONT_COLOR`) most
- * other widget types read.
+ * "Label" to `Color(1, 1, 1)`, not the `control_font_color` gray most other
+ * widget types read.
  */
-export const LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+const LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** This Label's theme font size and colour: its overrides, else the ancestor Theme chain, else the theme default, else Label's white (`resolveTextTheme`). */
 export function labelTextTheme(
@@ -205,10 +205,9 @@ export function windowLabelLines(layout: TextLayoutResult, range: LabelLineRange
 
 /** `TextServer::VisibleCharactersBehavior` (`servers/text/text_server.h:90-96`). Godot default 0 (`label.h:74`). */
 export const VC_CHARS_BEFORE_SHAPING = 0;
-export const VC_CHARS_AFTER_SHAPING = 1;
-export const VC_GLYPHS_AUTO = 2;
-export const VC_GLYPHS_LTR = 3;
-export const VC_GLYPHS_RTL = 4;
+const VC_CHARS_AFTER_SHAPING = 1;
+const VC_GLYPHS_AUTO = 2;
+const VC_GLYPHS_RTL = 4;
 
 /**
  * `Label::_shape`'s pre-shape reveal (`label.cpp:155-156`): `txt.substr(0, visible_chars)` before

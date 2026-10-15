@@ -3,7 +3,11 @@
  * of the butt-capped segment quads. Godot has no "no joint" mode.
  */
 import { describe, expect, it } from 'vitest';
-import { jointWedge, LINE_JOINT_BEVEL, LINE_JOINT_ROUND, LINE_JOINT_SHARP } from './lineJoints';
+import { jointWedge, LINE_JOINT_SHARP } from './lineJoints';
+
+// line_2d.h:41-43 numbers `LineJointMode` SHARP, BEVEL, ROUND from 0.
+const LINE_JOINT_BEVEL = 1;
+const LINE_JOINT_ROUND = 2;
 
 const SHARP = { jointMode: LINE_JOINT_SHARP, sharpLimit: 2, roundPrecision: 8 };
 

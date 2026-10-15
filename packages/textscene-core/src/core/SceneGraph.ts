@@ -110,25 +110,3 @@ export function buildSceneGraph(rootScene: ParsedScene): SceneGraph {
     flattenedNodes: Object.freeze(flattenedNodes) as ReadonlyArray<SceneNode>,
   });
 }
-
-/**
- * Create a SceneGraph from a TscnScene (for tests and simple use cases).
- * Thin adapter that wraps the loose TscnScene shape in a ParsedScene and
- * delegates to {@link buildSceneGraph}.
- */
-export function createSceneGraphFromTscnScene(
-  tscnScene: {
-    nodes: TscnNode[];
-    externalResources?: ExtResource[];
-    internalResources?: SubResource[];
-  },
-  scenePath: string = 'res://test.tscn'
-): SceneGraph {
-  return buildSceneGraph({
-    path: scenePath,
-    nodes: tscnScene.nodes,
-    externalScenes: [],
-    internalResources: tscnScene.internalResources || [],
-    externalResources: tscnScene.externalResources || [],
-  });
-}

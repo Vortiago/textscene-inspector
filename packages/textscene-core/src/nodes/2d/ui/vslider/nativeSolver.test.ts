@@ -8,8 +8,10 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { vSliderMinimumSize } from './nativeSolver';
+import './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+
+const vSliderMinimumSize = controlSolverRegistry.minimumSize('VSlider')!;
 
 function node(): SolveNode {
   return {

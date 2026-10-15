@@ -141,7 +141,7 @@ export function progressBarOutlineSize(constants: SolveNode['constants']): numbe
  * `MAX(minimum_size.height, background.height + "100%".height)`, else
  * `maxf(1)`. With no `ctx.measureText`, the text adds nothing.
  */
-export const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
+const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ProgressBarProperties;
   const background = n.styleBoxes.background ?? progressBarDefaultBackground(ctx.theme);
   const fill = n.styleBoxes.fill ?? progressBarDefaultFill(ctx.theme);

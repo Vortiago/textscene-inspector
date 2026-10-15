@@ -272,7 +272,7 @@ function canvasItemCascade(scene: RawScene, node: RawNode): VisibilityVerdict {
  * `AcceptDialog` (`dialogs.cpp:466`) `set_visible(false)` in their constructors, and
  * resolving absence would silence every warning under one.
  */
-export function visibleInTreeVerdict(scene: RawScene, node: RawNode): VisibilityVerdict {
+function visibleInTreeVerdict(scene: RawScene, node: RawNode): VisibilityVerdict {
   if (isExplicitlyHidden(node)) return 'hidden';
   if (descendsFrom(node.type, 'CanvasItem')) return canvasItemCascade(scene, node);
   if (descendsFrom(node.type, 'Node3D')) return node3DCascade(scene, node);

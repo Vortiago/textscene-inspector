@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  NO_AREA_TEXTURE,
   areaTexturePlacement,
   areaTextureUserData,
   holdAreaTexture,
@@ -11,6 +10,9 @@ import {
 } from './areaLightAtlas';
 import { AREA_LIGHT_ATLAS_UNIFORM } from './areaTextureFetch';
 import { installedUniformValue } from '../shaderPatch/litUniform';
+
+/** An empty rectangle marks a light without a texture (4.7.2 `light_storage.cpp:1132-1141`). */
+const NO_AREA_TEXTURE = { rect: [0, 0, 0, 0], maxMipmap: 0 };
 
 /** A `size × size` RGBA8 texture whose rows run bottom-up, as the procedural textures store them. */
 function dataTexture(size: number, rgbaAtRow: (row: number) => readonly number[]): THREE.DataTexture {

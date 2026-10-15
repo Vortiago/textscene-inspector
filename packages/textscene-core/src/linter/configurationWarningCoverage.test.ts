@@ -1,5 +1,5 @@
 /**
- * Every configuration warning Godot raises is implemented as a rule, or declined (`configurationWarningCensus.ts`).
+ * Every configuration warning Godot raises is implemented as a rule, or declined (`testing/configurationWarningCensus.ts`).
  * Godot declares a warning on the class that owns the condition, often an abstract base such as `Light3D`, and
  * `RuleRegistry.getRulesForNodeType` matches exactly. So an implemented row passes only when its rule reaches every
  * concrete registered type descending from the declaring class, not when the rule merely exists.
@@ -10,7 +10,7 @@ import { nodeRegistry } from '../core/NodeRegistry.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { descendsFrom } from '../godot/nodeBaseTypes.js';
-import { WARNINGS, type WarningRow } from './configurationWarningCensus.js';
+import { WARNINGS, type WarningRow } from './testing/configurationWarningCensus.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its rules
 import { ENGINE_CITE_RE } from './testing/engineCite.js';

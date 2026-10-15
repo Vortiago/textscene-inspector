@@ -102,7 +102,7 @@ export function overrunFlagsForBehavior(behavior: OverrunBehavior): OverrunTrimF
 }
 
 /** The default ellipsis every caller falls back to, `String::chr(0x2026)` (`label.cpp:294` et al.'s `(el_char.length() > 0) ? el_char[0] : 0x2026`). */
-export const DEFAULT_ELLIPSIS_CHAR = '…';
+const DEFAULT_ELLIPSIS_CHAR = '…';
 
 /** `ell_min_characters` (`text_server_adv.cpp:6049`): below this many kept characters, a plain cut replaces the ellipsis. */
 const ELL_MIN_CHARACTERS = 6;

@@ -63,11 +63,11 @@ export function resolveCheckBoxDrawState(props: CheckBoxProperties): CheckBoxDra
 }
 
 /** `control_font_color` (`default_theme.cpp:101`), CheckBox's own `font_color` default (`:300`). */
-export const CHECKBOX_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+const CHECKBOX_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 /** `control_font_pressed_color = Color(1, 1, 1)` (`:108`), CheckBox's own `font_pressed_color` default (`:301`). */
-export const CHECKBOX_DEFAULT_PRESSED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+const CHECKBOX_DEFAULT_PRESSED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 /** `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`:106`), CheckBox's own `font_disabled_color` default (`:305`). */
-export const CHECKBOX_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+const CHECKBOX_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
 
 const CHECKBOX_THEME_KEYS: Record<CheckBoxDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
@@ -114,7 +114,7 @@ export function resolveCheckBoxIconKey(props: CheckBoxProperties): CheckBoxIconK
 }
 
 /** Every vendored icon shares this authored size (`native/themeIcons.ts`: `checked.svg` et al, 16x16). */
-export const CHECKBOX_ICON_NATURAL_SIZE: Vector2 = { x: 16, y: 16 };
+const CHECKBOX_ICON_NATURAL_SIZE: Vector2 = { x: 16, y: 16 };
 
 /**
  * Each `CheckBoxIconKey` to the Theme item name Godot registers it under (`check_box.cpp:157-164`),

@@ -20,8 +20,6 @@ import {
   swatchesRowRects,
   sliderGridRowRects,
   colorPickerValueColumnWidth,
-  colorPickerHexFieldMinWidth,
-  colorPickerMenuButtonSize,
   colorPickerLabelColumnWidth,
   colorPickerModeButtonStyleBox,
   colorPickerSliderBoxRect,
@@ -294,17 +292,17 @@ describe('colorPickerValueColumnWidth', () => {
   });
 });
 
-describe('colorPickerHexFieldMinWidth', () => {
-  // line_edit.cpp:2443-2477: a plain LineEdit, with no SpinBox buttons block.
-  it('is the LineEdit style margin(8) + 4*em("W")(10), no buttons block', () => {
-    expect(colorPickerHexFieldMinWidth(THEME, measure)).toBe(48); // 8 + 40
-  });
-});
+describe('colorPickerMinimumSize of the hex row alone', () => {
+  // line_edit.cpp:2443-2477: c_text is a plain LineEdit, with no SpinBox buttons block.
+  const HEX_ONLY = { pickerShape: 2, ...ALL_ROWS_HIDDEN, hexVisible: true };
 
-describe('colorPickerMenuButtonSize', () => {
-  // button.cpp:481-523: icon(16) + flat_button_normal's margin (button_normal's own, 4+4 per axis).
-  it("is the 16px menu_option icon plus button.normal's own content margin", () => {
-    expect(colorPickerMenuButtonSize(THEME)).toEqual({ x: 24, y: 24 });
+  it('is label(38) + 2 separations(8) + text_type(28) + the LineEdit margin(8) + 4*em("W")(40)', () => {
+    const ctx: SolveContext = { theme: THEME, measureText, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
+    expect(colorPickerMinimumSize(node(HEX_ONLY), ctx).x).toBe(122 + 8); // + internal_margin on both sides
+  });
+
+  it('floors the field to the LineEdit margin alone with no measurer', () => {
+    expect(colorPickerMinimumSize(node(HEX_ONLY), CTX).x).toBe(82 + 8);
   });
 });
 

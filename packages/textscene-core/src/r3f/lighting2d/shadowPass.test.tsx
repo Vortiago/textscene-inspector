@@ -14,10 +14,10 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { CanvasLighting2DProvider } from './CanvasLighting2D';
 import { LIGHT_PASS_LAYER } from './lightPassLayers';
 import { itemUniforms, ownerName, recordLightPass, type RecordedDraw } from './testing/lightPassProbe';
-import { litQuadRenderOrder, shadowStencilRef, shadowVolumeRenderOrder } from './ShadowVolumeMask';
+import { litQuadRenderOrder, litQuadStencilProps } from './ShadowVolumeMask';
 import { SceneStack } from '../testing/SceneStack';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
-import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
 import '../nodes'; // side-effect: registers every node's r3f component
 
 const COOKIE = 'res://light.png';
@@ -136,7 +136,7 @@ describe('a shadow-enabled light with an occluder in range', () => {
 
   it('draws the mask immediately before the quad it belongs to', async () => {
     const renderer = await render(scene(`${lamp('Lamp', 400)}${caster('Caster', 576)}`));
-    expect(maskMeshes(renderer)[0]!.renderOrder).toBe(shadowVolumeRenderOrder(0));
+    expect(maskMeshes(renderer)[0]!.renderOrder).toBe(litQuadRenderOrder(0) - 1);
     expect(litQuads(renderer)[0]!.renderOrder).toBe(litQuadRenderOrder(0));
   });
 
@@ -145,10 +145,10 @@ describe('a shadow-enabled light with an occluder in range', () => {
     const mask = maskMeshes(renderer)[0]!.material as THREE.Material;
     const quad = litQuads(renderer)[0]!.material as THREE.Material;
 
-    expect(mask.stencilRef).toBe(shadowStencilRef(0));
+    expect(mask.stencilRef).toBe(litQuadStencilProps(0).stencilRef);
     expect(mask.stencilZPass).toBe(THREE.ReplaceStencilOp);
     expect(quad.stencilWrite).toBe(true);
-    expect(quad.stencilRef).toBe(shadowStencilRef(0));
+    expect(quad.stencilRef).toBe(litQuadStencilProps(0).stencilRef);
     expect(quad.stencilFunc).toBe(THREE.NotEqualStencilFunc);
   });
 
@@ -287,13 +287,13 @@ describe('shadow_color', () => {
     // The term rides its own albedo-free accumulator, and the two quads
     // partition the light's rect: NotEqual for the cookie, Equal for the tint.
     const material = litQuads(authored)[0]!.material as THREE.Material;
-    expect(material.stencilRef).toBe(shadowStencilRef(0));
+    expect(material.stencilRef).toBe(litQuadStencilProps(0).stencilRef);
     expect(material.stencilFunc).toBe(THREE.NotEqualStencilFunc);
 
     const tint = lightQuads(authored)
       .map((quad) => quad.material as THREE.Material)
       .find((mat) => mat.stencilFunc === THREE.EqualStencilFunc);
-    expect(tint?.stencilRef).toBe(shadowStencilRef(0));
+    expect(tint?.stencilRef).toBe(litQuadStencilProps(0).stencilRef);
   });
 
   /** Surface (mask 1) takes Plain alone. Lit2 (mask 2) takes Tinting, which shadows it. */

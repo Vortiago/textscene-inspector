@@ -11,7 +11,7 @@ import { TRANSFORM2D_IDENTITY, type Transform2DColumns } from '../../../godot/tr
 import { transform2DFromThreeMatrix } from '../../../r3f/node2dTransform';
 
 /** Do two transforms place the emitter identically? */
-export function sameTransform2D(p: Transform2DColumns, q: Transform2DColumns): boolean {
+function sameTransform2D(p: Transform2DColumns, q: Transform2DColumns): boolean {
   return p.a === q.a && p.b === q.b && p.c === q.c && p.d === q.d && p.tx === q.tx && p.ty === q.ty;
 }
 

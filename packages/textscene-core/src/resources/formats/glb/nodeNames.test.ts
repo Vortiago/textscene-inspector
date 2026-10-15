@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
-import { cloneWithMaterials, createGLBMesh, initGlbModules } from './glbProcessing';
+import { cloneWithMaterials, createGLBMesh } from './glbProcessing';
+import { loadGlbModules } from './testing/loadGlbModules';
 import { nodesGlb } from './testing/nodesGlb';
 import { godotNodeName, godotNodeRole } from './nodeNames';
 import { NO_SIDECAR } from './testing/noSidecar';
@@ -12,7 +13,7 @@ function byName(root: THREE.Object3D, name: string): THREE.Object3D {
 }
 
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 describe('godotNodeName', () => {

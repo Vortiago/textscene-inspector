@@ -13,7 +13,7 @@ import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
-import { abortProceduralBuilds, type JobRunner } from './textures/proceduralBuilds';
+import { type JobRunner } from './textures/proceduralBuilds';
 import { pendingTextureWork, subscribeTextureWork } from './textures/textureWork';
 import {
   useProceduralTexture,
@@ -22,7 +22,7 @@ import {
   useProceduralTextures,
   type ProceduralSlot,
 } from './useProceduralTexture';
-import { clearProceduralTextureCache, proceduralTextureKey } from './textures/proceduralTextureCache';
+import { resetProceduralTextures, proceduralTextureKey } from './textures/proceduralTextureCache';
 
 /** The cache exposes no pin counter, so the two entry points are wrapped, calling through. */
 const traffic = vi.hoisted(() => ({ pinned: [] as string[], unpinned: [] as string[] }));
@@ -71,11 +71,11 @@ function strict({ children }: { children: ReactNode }) {
 beforeEach(() => {
   traffic.pinned.length = 0;
   traffic.unpinned.length = 0;
-  clearProceduralTextureCache();
+  resetProceduralTextures();
 });
 
 afterEach(() => {
-  abortProceduralBuilds();
+  resetProceduralTextures();
 });
 
 describe('useProceduralTexture', () => {

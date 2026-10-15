@@ -4,7 +4,8 @@
  * **channel** (a value the solver seals and the painter opens).
  */
 import { describe, expect, it } from 'vitest';
-import { defineChannel, defineShare, isSealedHandoff } from './solveHandoff';
+import { defineChannel, defineShare } from './solveHandoff';
+import { isSealedHandoff } from './solveHandoff.testkit';
 import { nativeTheme } from './nativeTheme';
 import { controlNode, solveNode } from './testing/solveNode';
 import type { SolveNode } from './solveTree';

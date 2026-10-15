@@ -6,8 +6,7 @@
  */
 
 export const LINE_JOINT_SHARP = 0;
-export const LINE_JOINT_BEVEL = 1;
-export const LINE_JOINT_ROUND = 2;
+const LINE_JOINT_ROUND = 2;
 
 interface Point {
   x: number;

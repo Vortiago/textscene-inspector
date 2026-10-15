@@ -6,5 +6,3 @@ import { makeCastLinterRule } from '../../../../linter/physics/castLinterRule.js
 const shapeCast3DValidationRule = makeCastLinterRule('3D', 'Shape');
 
 ruleRegistry.register(shapeCast3DValidationRule);
-
-export { shapeCast3DValidationRule };

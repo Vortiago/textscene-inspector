@@ -1,7 +1,7 @@
 /**
  * `StyleBoxFlatData`: a resolved `StyleBoxFlat`, numbers only, with field names
  * and defaults from `scene/resources/style_box_flat.h`/`.cpp` (Godot 4.6.3).
- * `native/parseStyleBox.ts` produces it. Pure data: no React, no THREE.
+ * `resources/styles/stylebox/decode.ts` produces it. Pure data: no React, no THREE.
  */
 
 import type { Rgba } from '../../../godot/math';

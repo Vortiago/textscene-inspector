@@ -10,7 +10,7 @@ import { ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { ViewportActionsProvider, useViewportActions } from '../../contexts/ViewportActionsContext';
 import { ViewportToolbar } from './ViewportToolbar';
-import { openDisplayMenu } from './displayMenuTesting';
+import { openDisplayMenu } from './DisplayMenu.testkit';
 
 function renderToolbar(initialMode?: '2D' | '3D', initialShowCollisions?: boolean) {
   return render(

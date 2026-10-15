@@ -1,5 +1,5 @@
 /**
- * Every property-list route family in `propertyListRoutes.ts` resolves to a
+ * Every property-list route family in `testing/propertyListRoutes.ts` resolves to a
  * validator, or is a named gap. `UNIMPLEMENTED_COUNT` is a ratchet like
  * `ownValidatorCoverage`'s `UNDECLARED`: each row it counts is a family a scene
  * can carry with no validation.
@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { descendsFrom } from '../godot/nodeBaseTypes.js';
-import { ROWS, type RouteRow } from './propertyListRoutes.js';
+import { ROWS, type RouteRow } from './testing/propertyListRoutes.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its validators
 

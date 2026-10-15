@@ -5,7 +5,10 @@
  * `scenes/demos/viewport/gui_in_3d/gui_panel_3d.tscn`, which sets only `placeholder_text`.
  */
 import { describe, it, expect } from 'vitest';
-import { lineEditDisplayText, DEFAULT_SECRET_CHARACTER } from './displayText';
+import { lineEditDisplayText } from './displayText';
+
+// line_edit.h:118 defaults secret_character to U"•".
+const BULLET = '•';
 
 describe('lineEditDisplayText', () => {
   it('paints `text` when there is some (happy path)', () => {
@@ -24,7 +27,7 @@ describe('lineEditDisplayText', () => {
 
   it('echoes bullets for a secret field that HAS text', () => {
     expect(lineEditDisplayText({ name: 'L', text: 'hunter2', secret: true })).toEqual({
-      text: DEFAULT_SECRET_CHARACTER.repeat(7),
+      text: BULLET.repeat(7),
       isPlaceholder: false,
     });
   });
@@ -45,13 +48,13 @@ describe('lineEditDisplayText', () => {
 
   it('falls back to the bullet when secret_character is empty (error path)', () => {
     expect(lineEditDisplayText({ name: 'L', text: 'ab', secret: true, secretCharacter: '' }).text).toBe(
-      DEFAULT_SECRET_CHARACTER.repeat(2)
+      BULLET.repeat(2)
     );
   });
 
   it('counts code points, not UTF-16 units, so an emoji echoes once (edge case)', () => {
     // Godot's String::length() is UTF-32; '🎉' is one character there.
-    expect(lineEditDisplayText({ name: 'L', text: '🎉', secret: true }).text).toBe(DEFAULT_SECRET_CHARACTER);
+    expect(lineEditDisplayText({ name: 'L', text: '🎉', secret: true }).text).toBe(BULLET);
   });
 
   it('paints an empty placeholder for a wholly bare LineEdit (edge case)', () => {
@@ -69,7 +72,7 @@ describe('lineEditDisplayText', () => {
 
   it('truncates BEFORE the secret echo, so the echo length matches the truncated text', () => {
     expect(lineEditDisplayText({ name: 'L', text: 'hunter2', secret: true, maxLength: 3 }).text).toBe(
-      DEFAULT_SECRET_CHARACTER.repeat(3)
+      BULLET.repeat(3)
     );
   });
 

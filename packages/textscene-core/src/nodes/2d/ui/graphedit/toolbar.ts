@@ -28,7 +28,7 @@ import type { GraphEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/vector';
 
 /** `menu_panel->set_position(Vector2(10, 10))` (`graph_edit.cpp:3232`): unscaled. */
-export const GRAPH_EDIT_MENU_POSITION: Vector2 = { x: 10, y: 10 };
+const GRAPH_EDIT_MENU_POSITION: Vector2 = { x: 10, y: 10 };
 
 /** `zoom_label->set_custom_minimum_size(Size2(48, 0) * base_scale)` (`graph_edit.cpp:836`). */
 const ZOOM_LABEL_MIN_WIDTH = 48;

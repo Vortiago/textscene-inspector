@@ -6,7 +6,7 @@ import { boolSlotValue } from '../../../../godot/index.js';
 import { parseVisualLayers } from '../../visualinstance3d/parser';
 
 /** The colour, energy and shadow properties every light type shares. */
-export function parseBaseLightProperties(properties: Record<string, string>): BaseLightProperties {
+function parseBaseLightProperties(properties: Record<string, string>): BaseLightProperties {
   return {
     layers: parseVisualLayers(properties),
     light_color: properties.light_color || 'Color(1, 1, 1, 1)',

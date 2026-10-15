@@ -150,7 +150,7 @@ async function loadRuntimeFont(bytes: ArrayBuffer, nodePath: string): Promise<Ca
 }
 
 /** The async pipeline for one resolved `FontResource`. It never throws, and always returns usable `FontMetrics`. */
-export async function resolveSceneFontMetrics(
+async function resolveSceneFontMetrics(
   font: FontResource | null | undefined,
   nodePath: string
 ): Promise<FontMetrics> {
@@ -240,7 +240,7 @@ async function registerBundledFont(): Promise<CanvasFontMetrics | undefined> {
 }
 
 /** Registers the bundled font once, resolving to its canvas metrics, or `undefined` if the environment or the bytes cannot. Never throws. */
-export function resolveBundledCanvasFontMetrics(): Promise<CanvasFontMetrics | undefined> {
+function resolveBundledCanvasFontMetrics(): Promise<CanvasFontMetrics | undefined> {
   bundledRegistration ??= registerBundledFont();
   return bundledRegistration;
 }

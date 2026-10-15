@@ -53,7 +53,7 @@ export function radialRelativeCenter(textureSize: Vector2, radialCenterOffset: V
  * against the unit square, with the source's single mutable `dir`. A later edge branch's gate reads
  * what an earlier branch wrote, so independent per-axis clamps would fire different edges.
  */
-export function unitValToUv(val: number, center: Vector2): Vector2 {
+function unitValToUv(val: number, center: Vector2): Vector2 {
   let v = val;
   if (v < 0) v += 1;
   if (v > 1) v -= 1;

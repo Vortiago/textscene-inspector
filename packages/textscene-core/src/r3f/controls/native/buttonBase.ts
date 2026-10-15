@@ -14,7 +14,6 @@ import { multiplyModulate } from '../../canvasItemModulate';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
 import { AutowrapMode, shapeText, type TextLayoutResult } from './text/textLayout';
-export { tintStyleBox } from './StyleBoxQuad';
 import type { Rect2 } from './rect';
 import type { Rgba } from '../../../godot/math';
 import type { Vector2 } from '../../../godot/vector';
@@ -25,9 +24,9 @@ export const HORIZONTAL_ALIGNMENT_LEFT = 0;
 export const HORIZONTAL_ALIGNMENT_CENTER = 1;
 export const HORIZONTAL_ALIGNMENT_RIGHT = 2;
 
-export const VERTICAL_ALIGNMENT_TOP = 0;
+const VERTICAL_ALIGNMENT_TOP = 0;
 export const VERTICAL_ALIGNMENT_CENTER = 1;
-export const VERTICAL_ALIGNMENT_BOTTOM = 2;
+const VERTICAL_ALIGNMENT_BOTTOM = 2;
 
 // --- Draw-state + StyleBox chrome ------------------------------------------
 
@@ -60,7 +59,7 @@ export function pickButtonStyleBox(
   return overrides[state] ?? defaults[state];
 }
 
-/** The same componentwise multiply as `tintStyleBox`'s two colours, for a single `ControlColor` (font/icon modulate). */
+/** The same componentwise multiply `<StyleBoxQuad>` applies to a StyleBox's two colours, for a single `Rgba` (font/icon modulate). */
 export function tintColor(base: Rgba, tint: Rgba): Rgba {
   return multiplyModulate(base, tint);
 }

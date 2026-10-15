@@ -64,7 +64,7 @@ capture setting. Both sides therefore render that rectangle, 1:1:
 
 - **Godot** instantiates the scene into a `SubViewport` the size of the project
   viewport (`display/window/size/viewport_*`, default
-  `CANVAS_2D_WIDTH × CANVAS_2D_HEIGHT`, 1152×648, `viewport2d.ts`), with no
+  `DEFAULT_VIEWPORT_*`, 1152×648, `projectSettingsParser.ts`), with no
   `Camera3D`, no preview sun and no preview environment. Those belong to
   `Node3DEditor`, and 2D lighting is the scene's own business. `run.mjs` picks
   that path from the scene root (`is CanvasItem`, plus `CanvasLayer`), the rule

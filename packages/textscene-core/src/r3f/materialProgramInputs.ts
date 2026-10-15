@@ -97,6 +97,7 @@ type PhysicalFeature = (typeof PHYSICAL_FEATURES)[number];
  * table, so no slot is added without its gate decided. It lists what three bakes,
  * bound here or not.
  */
+// Exported for materialProgramHazards.test.ts, which guards a three.js upgrade that adds a slot.
 export const TEXTURE_SLOT_GATES: Readonly<Record<string, PhysicalFeature | null>> = {
   map: null,
   alphaMap: null,
@@ -132,6 +133,7 @@ const TEXTURE_SLOT_ENTRIES = Object.entries(TEXTURE_SLOT_GATES);
  * upgrade guard requires every such field to be here or in the table above, so
  * a slot cannot go missing by omission.
  */
+// Exported for materialProgramHazards.test.ts, which guards a three.js upgrade that adds a slot.
 export const NOT_BOUND_TEXTURE_SLOTS: Readonly<Record<string, string>> = {
   bumpMap:
     'Godot binds no bump slot; three reads the term as `!!bumpMap && wireframe === false` (`:132`), so modelling it would key `wireframe` for a slot nothing can fill',

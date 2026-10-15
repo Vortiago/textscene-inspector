@@ -84,7 +84,7 @@ export function colorPickerValueColumnWidth(
  * `LineEdit::get_minimum_size()` with no buttons block. Only the minimum size
  * reads it. The field fills what `hexRowColumns` leaves.
  */
-export function colorPickerHexFieldMinWidth(
+function colorPickerHexFieldMinWidth(
   theme: Pick<NativeTheme, 'widgets'>,
   measure: TextWidthMeasurer | null
 ): number {
@@ -102,7 +102,7 @@ export function colorPickerHexFieldMinWidth(
  * 481-523`) with the 16x16 `menu_option` icon (`default_theme.cpp:1088`) plus the margin of
  * `button_normal` (`default_theme.cpp:359-363`). `btn_mode` has this size, with its width floored to 28.
  */
-export function colorPickerMenuButtonSize(theme: Pick<NativeTheme, 'widgets' | 'scale'>): Vector2 {
+function colorPickerMenuButtonSize(theme: Pick<NativeTheme, 'widgets' | 'scale'>): Vector2 {
   const icon = Math.round(COLOR_PICKER_SAMPLE_ICON_SIZE * colorPickerScale(theme));
   const margin = contentMarginSize(theme.widgets.button.normal);
   return { x: icon + margin.x, y: icon + margin.y };

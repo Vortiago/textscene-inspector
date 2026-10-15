@@ -1,7 +1,6 @@
 /**
  * Every justified parser and linter asymmetry, keyed by node type, merged from
- * one part per family in `propertyGrammarParityAllowlist/`. Only test code
- * imports it, so it reaches no shipped bundle.
+ * one part per family in `propertyGrammarParityAllowlist/`.
  */
 
 // Choose `linterOnly` or `renderGap` by one question: would Godot draw this

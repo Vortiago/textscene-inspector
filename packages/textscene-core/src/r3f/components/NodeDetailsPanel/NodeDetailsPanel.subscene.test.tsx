@@ -12,7 +12,7 @@ import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { TscnParser } from '../../../parser/TscnParser';
 import '../../../nodes/2d/sprite2d/index';

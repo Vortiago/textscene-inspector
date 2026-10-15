@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../parser/types.js';
 import type { Transform3D } from '../nodes/base/node3d/types.js';
-import { identityTransform3D } from '../utils/transform.js';
+import { identityTransform3D } from '../utils/transform.testkit.js';
 import { globalMatrix3D } from './nodeTreeTransforms.js';
 
 function translation(x: number, y: number, z: number): Transform3D {

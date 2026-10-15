@@ -47,7 +47,7 @@ export function foldableContainerHSeparation(theme: NativeTheme): number {
 }
 
 /** The 16x16 size of the arrow icons (`scene/theme/icons/arrow_*.svg`), scaled as `generate_icon(..., scale)` rasterises them. */
-export function foldableContainerArrowSize(theme: NativeTheme): Vector2 {
+function foldableContainerArrowSize(theme: NativeTheme): Vector2 {
   const size = Math.round(16 * theme.scale);
   return { x: size, y: size };
 }
@@ -186,7 +186,7 @@ export interface FoldableContainerTitleMetrics {
  * The shaped result is the share {@link foldableContainerTitleShape}. The unshaped one
  * stays a plain call: a memoised unshaped title would outlive the readiness gate.
  */
-export function foldableContainerTitleMetrics(
+function foldableContainerTitleMetrics(
   n: ShareNode,
   props: FoldableContainerProperties,
   ctx: Pick<SolveContext, 'theme'>,

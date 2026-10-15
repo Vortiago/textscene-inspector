@@ -221,21 +221,10 @@ function casterReach(input: DirectionalShadowFitInput, axes: LightAxes): number 
 }
 
 /**
- * The eight world-space corners of the camera's view between two depths
- * (`Projection::get_endpoints`, called at `renderer_scene_cull.cpp:2206`), as fresh vectors.
- */
-export function cameraSliceCorners(
-  camera: THREE.Camera,
-  nearDepth: number,
-  farDepth: number
-): THREE.Vector3[] {
-  const corners = Array.from({ length: CORNER_COUNT }, () => new THREE.Vector3());
-  return writeCameraSliceCorners(camera, nearDepth, farDepth, corners);
-}
-
-/**
- * Writes the corners into `corners`, near then far for each corner ray, and returns it. Each ray is
- * unprojected once and cut at a depth, which holds for a perspective and an orthogonal camera.
+ * Writes the eight world-space corners of the camera's view between two depths
+ * (`Projection::get_endpoints`, called at `renderer_scene_cull.cpp:2206`) into `corners`, near then
+ * far for each corner ray, and returns it. Each ray is unprojected once and cut at a depth, which
+ * holds for a perspective and an orthogonal camera.
  */
 function writeCameraSliceCorners(
   camera: THREE.Camera,

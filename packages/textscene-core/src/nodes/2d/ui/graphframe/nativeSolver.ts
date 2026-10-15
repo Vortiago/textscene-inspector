@@ -150,7 +150,7 @@ export function graphFrameTitleTextMin(n: SolveNode, _theme: NativeTheme): Vecto
 
 // --- get_minimum_size ---------------------------------------------------------
 
-export const graphFrameMinimumSize: MinimumSizeFn = (n, ctx) => {
+const graphFrameMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { panel, titlebar } = graphFrameStyles(n, ctx.theme);
   const textMin = graphFrameTitleTextMin(n, ctx.theme);
 
@@ -175,7 +175,7 @@ controlSolverRegistry.registerMinimumSize('GraphFrame', graphFrameMinimumSize);
 
 // --- _resort -------------------------------------------------------------------
 
-export const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const { panel, titlebar } = graphFrameStyles(n, ctx.theme);
   const textMin = graphFrameTitleTextMin(n, ctx.theme);
   const titlebarBand = titlebarGeometry(contentRect.w, textMin.y, titlebar);

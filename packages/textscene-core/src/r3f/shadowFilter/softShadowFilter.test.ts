@@ -2,31 +2,46 @@
  * The filter is checked against the installed three's shadow chunk, so a release that rewrites the
  * sun block it precedes fails here and not in a golden.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from '../../godot/softShadowKernel';
-import { FRAMEBUFFER_HEIGHT_UNIFORM, framebufferHeight } from './framebufferRows';
-import { SOFT_SHADOW_FILTER, installSoftShadowFilter, softShadowFilterChunk } from './softShadowFilter';
+import { FRAMEBUFFER_HEIGHT_UNIFORM } from './framebufferRows';
+import { installedFramebufferHeight } from './framebufferRows.testkit';
+import { installSoftShadowFilter } from './softShadowFilter';
 import { warningsOf } from '../testing/logWarnings';
+import { installedShaderChunks, snapshotShaderGlobals } from '../testing/shaderPatches';
 
 const CHUNK = 'shadowmap_pars_fragment';
 const threeChunk = THREE.ShaderChunk[CHUNK];
+/** The filter's own function, which marks a chunk that holds the filter. */
+const FILTER_PCF = 'float godotPcf(';
 
 const occurrences = (text: string, part: string) => text.split(part).length - 1;
 
-afterEach(() => {
-  THREE.ShaderChunk[CHUNK] = threeChunk;
-  for (const shader of Object.values(THREE.ShaderLib)) delete shader.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM];
-  delete (THREE.UniformsLib.lights as Record<string, THREE.IUniform>)[FRAMEBUFFER_HEIGHT_UNIFORM];
+let restoreShaderGlobals: () => void;
+beforeEach(() => {
+  restoreShaderGlobals = snapshotShaderGlobals();
 });
+afterEach(() => restoreShaderGlobals());
+
+/** The shadow chunk a canvas compiles with. */
+const installedChunk = () => installedShaderChunks()[CHUNK];
 
 /** The float literals of the kernel the GLSL declares. */
 function kernelLiterals(): number[] {
-  const kernel = /GODOT_SOFT_SHADOW_KERNEL\[ \d+ \] = vec2\[\]\((.*)\);/.exec(SOFT_SHADOW_FILTER)![1]!;
+  const kernel = /GODOT_SOFT_SHADOW_KERNEL\[ \d+ \] = vec2\[\]\((.*)\);/.exec(installedChunk())![1]!;
   return [...kernel.matchAll(/vec2\( (\S+), (\S+) \)/g)].flatMap((match) => [
     Number(match[1]),
     Number(match[2]),
   ]);
+}
+
+/** The text `after` holds where `before` holds nothing, or null when `after` changes more than that. */
+function insertion(before: string, after: string): string | null {
+  let start = 0;
+  while (start < before.length && before[start] === after[start]) start++;
+  const inserted = after.slice(start, start + after.length - before.length);
+  return after.slice(0, start) + after.slice(start + inserted.length) === before ? inserted : null;
 }
 
 describe('the soft shadow filter', () => {
@@ -35,74 +50,73 @@ describe('the soft shadow filter', () => {
   });
 
   it('takes every tap of the kernel and averages them', () => {
-    expect(SOFT_SHADOW_FILTER).toContain(`const int GODOT_SOFT_SHADOW_SAMPLES = ${SOFT_LOW_SHADOW_SAMPLES};`);
-    expect(SOFT_SHADOW_FILTER).toContain('for ( int i = 0; i < GODOT_SOFT_SHADOW_SAMPLES; i ++ )');
-    expect(SOFT_SHADOW_FILTER).toContain('return shadow * ( 1.0 / float( GODOT_SOFT_SHADOW_SAMPLES ) );');
+    expect(installedChunk()).toContain(`const int GODOT_SOFT_SHADOW_SAMPLES = ${SOFT_LOW_SHADOW_SAMPLES};`);
+    expect(installedChunk()).toContain('for ( int i = 0; i < GODOT_SOFT_SHADOW_SAMPLES; i ++ )');
+    expect(installedChunk()).toContain('return shadow * ( 1.0 / float( GODOT_SOFT_SHADOW_SAMPLES ) );');
   });
 
   it('turns the kernel by quick_hash of the fragment, rows counted from the top', () => {
-    expect(SOFT_SHADOW_FILTER).toContain(
+    expect(installedChunk()).toContain(
       'vec2 fragCoord = vec2( gl_FragCoord.x, godotFramebufferHeight[ 0 ] - gl_FragCoord.y );'
     );
-    expect(SOFT_SHADOW_FILTER).toContain(
+    expect(installedChunk()).toContain(
       'fract( 52.9829189 * fract( dot( fragCoord, vec2( 0.06711056, 0.00583715 ) ) ) ) * PI2'
     );
-    expect(SOFT_SHADOW_FILTER).toContain('return mat2( vec2( cr, - sr ), vec2( sr, cr ) );');
+    expect(installedChunk()).toContain('return mat2( vec2( cr, - sr ), vec2( sr, cr ) );');
   });
 
   it('declares Godot’s Soft Low penumbra kernel for every blocker search', () => {
     // `renderer_scene_render_rd.cpp:1158` and `:1205`: eight taps for an omni, spot, area or sun.
-    expect(SOFT_SHADOW_FILTER).toContain('const int GODOT_PENUMBRA_SHADOW_SAMPLES = 8;');
+    expect(installedChunk()).toContain('const int GODOT_PENUMBRA_SHADOW_SAMPLES = 8;');
   });
 
   it('unpacks the two bytes of an atlas colour into the depth', () => {
-    expect(SOFT_SHADOW_FILTER).toContain('return dot( bytes, vec2( 256.0, 1.0 ) ) / 65535.0;');
+    expect(installedChunk()).toContain('return dot( bytes, vec2( 256.0, 1.0 ) ) / 65535.0;');
   });
 
   it('clamps each texel of the raw depth read to the atlas (edge case)', () => {
-    expect(SOFT_SHADOW_FILTER).toContain('clamp( texel, ivec2( 0 ), last )');
+    expect(installedChunk()).toContain('clamp( texel, ivec2( 0 ), last )');
   });
 
   it('writes every kernel value as a float GLSL accepts (edge case)', () => {
-    const kernel = /vec2\[\]\((.*)\);/.exec(SOFT_SHADOW_FILTER)![1]!;
+    const kernel = /GODOT_SOFT_SHADOW_KERNEL\[ \d+ \] = vec2\[\]\((.*)\);/.exec(installedChunk())![1]!;
     expect(kernel).not.toMatch(/[(, ]-?\d+ [,)]/);
   });
 });
 
-describe('softShadowFilterChunk', () => {
+describe('the filter in the installed shadow chunk', () => {
   it('declares the filter once, inside the shadow block and ahead of every shadow type', () => {
-    const patched = softShadowFilterChunk(threeChunk)!;
-    const filter = patched.indexOf(SOFT_SHADOW_FILTER);
-    expect(occurrences(patched, SOFT_SHADOW_FILTER)).toBe(1);
-    expect(filter).toBeGreaterThan(patched.indexOf('#ifdef USE_SHADOWMAP'));
-    expect(filter).toBeLessThan(patched.indexOf('#if NUM_SUN_LIGHT_SHADOWS > 0'));
-  });
-
-  it('changes nothing but the filter', () => {
-    expect(softShadowFilterChunk(threeChunk)!.replace(SOFT_SHADOW_FILTER, '')).toBe(threeChunk);
-  });
-
-  it('is null for a chunk without the sun block (error case)', () => {
-    expect(softShadowFilterChunk('void main() {}')).toBeNull();
+    const chunk = installedChunk();
+    const filter = chunk.indexOf(FILTER_PCF);
+    expect(occurrences(chunk, FILTER_PCF)).toBe(1);
+    expect(filter).toBeGreaterThan(chunk.indexOf('#ifdef USE_SHADOWMAP'));
+    expect(filter).toBeLessThan(chunk.indexOf('#if NUM_SUN_LIGHT_SHADOWS > 0'));
   });
 });
 
 describe('installSoftShadowFilter', () => {
   it('puts the filter in three’s chunk and is true', () => {
     expect(installSoftShadowFilter()).toBe(true);
-    expect(THREE.ShaderChunk[CHUNK]).toBe(softShadowFilterChunk(threeChunk));
+    expect(THREE.ShaderChunk[CHUNK]).toContain(FILTER_PCF);
+  });
+
+  it('changes nothing in three’s chunk but the filter it inserts', () => {
+    installSoftShadowFilter();
+    expect(insertion(threeChunk, THREE.ShaderChunk[CHUNK])).toContain(FILTER_PCF);
   });
 
   it('gives every lit built-in material the framebuffer height the filter reads', () => {
     installSoftShadowFilter();
-    expect(THREE.ShaderLib.standard.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(framebufferHeight);
+    expect(THREE.ShaderLib.standard.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(
+      installedFramebufferHeight()
+    );
     expect(THREE.ShaderLib.basic.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]).toBeUndefined();
   });
 
   it('declares the filter once, and warns nothing, when called twice (edge case)', () => {
     installSoftShadowFilter();
     expect(warningsOf(installSoftShadowFilter)).toEqual([]);
-    expect(occurrences(THREE.ShaderChunk[CHUNK], SOFT_SHADOW_FILTER)).toBe(1);
+    expect(occurrences(THREE.ShaderChunk[CHUNK], FILTER_PCF)).toBe(1);
   });
 
   it('leaves a chunk it cannot patch alone, and is false (error case)', () => {

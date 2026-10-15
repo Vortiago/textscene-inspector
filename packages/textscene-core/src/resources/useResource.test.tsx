@@ -10,7 +10,7 @@ import { useResource } from './useResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
-import { initGlbModules } from './processing/glbProcessing';
+import { loadGlbModules } from './formats/glb/testing/loadGlbModules';
 import { parseTresFile } from '../parser/parsedResource';
 
 /**
@@ -35,7 +35,7 @@ function withLoader(loader: ResourceLoader) {
 
 // The hook's cloneWithMaterials needs SkeletonUtils loaded first.
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 describe('useResource', () => {

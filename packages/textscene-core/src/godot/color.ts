@@ -156,9 +156,6 @@ const NAMED_COLORS: ReadonlySet<string> = new Set([
   'YELLOWGREEN',
 ]);
 
-/** How many names `color_names.inc` holds, for a test that the table is whole. */
-export const NAMED_COLOR_COUNT = NAMED_COLORS.size;
-
 /** `Color::html_is_valid`: an optional `#`, then 3, 4, 6 or 8 hex digits (`color.cpp:372-394`). */
 const HTML_COLOR_RE = /^#?(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 

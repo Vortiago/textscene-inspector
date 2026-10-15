@@ -46,5 +46,3 @@ const light3DScaleValidationRule: LintRule = {
 };
 
 ruleRegistry.register(light3DScaleValidationRule);
-
-export { light3DScaleValidationRule };

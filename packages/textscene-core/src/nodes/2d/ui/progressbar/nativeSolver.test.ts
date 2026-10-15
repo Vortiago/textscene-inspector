@@ -9,13 +9,15 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
-  progressBarMinimumSize,
   progressBarPercentRatio,
   progressBarIndeterminateFillRect,
   progressBarFillRect,
 } from './nativeSolver';
 import type { ProgressBarProperties } from './types';
+
+const progressBarMinimumSize = controlSolverRegistry.minimumSize('ProgressBar')!;
 
 function node(
   props: Partial<ProgressBarProperties>,

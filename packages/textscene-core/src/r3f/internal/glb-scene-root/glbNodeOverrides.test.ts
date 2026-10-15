@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { applyGlbNodeOverrides } from './glbNodeOverrides';
 import { visualLayersOf } from '../../visualLayers';
 import type { TscnNode } from '../../../parser/types';
-import { buildTestGlbGraph } from './testGraph';
+import { buildTestGlbGraph } from './glbGraph.testkit';
 import { tagGodotNodeNames } from '../../../resources/formats/glb/nodeNames';
 import { tagMeshInstances } from '../../../resources/formats/glb/meshInstances';
 import type { GLTFReference } from 'three/addons/loaders/GLTFLoader.js';

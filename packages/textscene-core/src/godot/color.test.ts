@@ -4,7 +4,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { NAMED_COLOR_COUNT, isColorString } from './color.js';
+import { isColorString } from './color.js';
+import { GODOT_COLOR_NAMES_INC } from '../utils/godotNamedColor.testkit.js';
 
 describe('isColorString', () => {
   it.each(['ff0000', '#ff0000', 'F00', '#f00a', 'ff000080', '#FF000080'])('reads the HTML hex %s', (text) => {
@@ -25,7 +26,7 @@ describe('isColorString', () => {
     }
   );
 
-  it('holds every name in color_names.inc', () => {
-    expect(NAMED_COLOR_COUNT).toBe(146);
+  it('finds every name in color_names.inc', () => {
+    for (const [name] of GODOT_COLOR_NAMES_INC) expect(isColorString(name)).toBe(true);
   });
 });

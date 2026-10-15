@@ -44,7 +44,7 @@ import type { Rgba } from '../../../../godot/math';
 export { buttonIconColor };
 
 /** `Color(1, 1, 1, 0.3)`: MenuButton's own disabled font colour (`default_theme.cpp:268`), not Button's `control_font_disabled_color` = `Color(0.875, 0.875, 0.875, 0.5)` (`:161`). */
-export const MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.3 };
+const MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.3 };
 
 /** MenuButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else MenuButton's literal. */
 export function menuButtonTextTheme(

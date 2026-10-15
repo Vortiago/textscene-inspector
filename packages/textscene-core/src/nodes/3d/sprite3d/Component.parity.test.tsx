@@ -8,9 +8,11 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
-import { GODOT_ANISOTROPY_MAX } from '../../../resources/textures/godotTextureFilter';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+
+/** The anisotropy ceiling the previewer pins: `anisotropic_filtering_level` 4, so `1 << 4`. */
+const GODOT_ANISOTROPY_MAX = 16;
 
 const Sprite3D = registeredComponent('Sprite3D');
 
@@ -200,7 +202,7 @@ describe('Sprite3D material-property parity', () => {
   });
 
   it('texture_filter LINEAR_..._ANISOTROPIC raises anisotropy', async () => {
-    // Row 5: Godot's anisotropy ceiling, `GODOT_ANISOTROPY_MAX`.
+    // Row 5: the anisotropy ceiling.
     const r = await render({ texture_filter: '5' });
     const map = (findMesh(r.scene).material as THREE.MeshBasicMaterial).map!;
     expect([map.magFilter, map.minFilter]).toEqual([THREE.LinearFilter, THREE.LinearMipmapLinearFilter]);

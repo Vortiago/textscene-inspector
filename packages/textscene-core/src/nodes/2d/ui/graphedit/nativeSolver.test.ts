@@ -11,8 +11,11 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { graphEditLayout } from './nativeSolver';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import './nativeSolver';
 import type { GraphEditProperties } from './types';
+
+const graphEditLayout = controlSolverRegistry.containerLayout('GraphEdit')!;
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
   return 'rects' in result ? result.rects : result;

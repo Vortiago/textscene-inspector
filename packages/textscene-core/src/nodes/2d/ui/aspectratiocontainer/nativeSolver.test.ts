@@ -11,8 +11,12 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { aspectRatioContainerMinimumSize, aspectRatioContainerLayout } from './nativeSolver';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+
+const aspectRatioContainerLayout = controlSolverRegistry.containerLayout('AspectRatioContainer')!;
+const aspectRatioContainerMinimumSize = controlSolverRegistry.minimumSize('AspectRatioContainer')!;
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
   return 'rects' in result ? result.rects : result;

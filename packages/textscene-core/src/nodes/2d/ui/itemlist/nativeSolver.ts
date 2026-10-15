@@ -102,7 +102,7 @@ function reconstructThemeScale(theme: Pick<NativeTheme, 'fontSize'>): number {
 /** `default_theme.cpp:949`: `theme->set_constant(line_separation, "ItemList", round(2*scale))`. */
 const ITEM_LIST_LINE_SEPARATION_BASE = 2;
 
-export function itemListLineSeparation(theme: Pick<NativeTheme, 'fontSize'>): number {
+function itemListLineSeparation(theme: Pick<NativeTheme, 'fontSize'>): number {
   return Math.round(ITEM_LIST_LINE_SEPARATION_BASE * reconstructThemeScale(theme));
 }
 
@@ -182,7 +182,7 @@ export function itemIconPackedSize(
  * `maxSize`, preserving aspect, centred. Every `int(...)` cast in the source
  * truncates toward zero.
  */
-export function adjustToMaxSize(size: Vector2, maxSize: Vector2): Rect2 {
+function adjustToMaxSize(size: Vector2, maxSize: Vector2): Rect2 {
   if (size.y === 0 || size.x === 0) return { x: 0, y: 0, w: 0, h: 0 };
   let texWidth = Math.trunc((size.x * maxSize.y) / size.y);
   let texHeight = maxSize.y;
@@ -203,7 +203,7 @@ export function adjustToMaxSize(size: Vector2, maxSize: Vector2): Rect2 {
  * has only `AutowrapMode.WORD`, so an unbreakable word overflows its column where
  * Godot breaks it mid-word (`comparison.md`).
  */
-export function itemListAutowrapMode(iconMode: number, maxTextLines: number): AutowrapMode {
+function itemListAutowrapMode(iconMode: number, maxTextLines: number): AutowrapMode {
   return iconMode === ICON_MODE_TOP && maxTextLines > 0 ? AutowrapMode.WORD : AutowrapMode.OFF;
 }
 
@@ -290,7 +290,7 @@ interface ItemContentInput {
  * (`item_list.cpp:1743-1790`). `icon_margin` (item_list.cpp:1754,1756) is the same
  * `round(4*scale)` as `h_separation`/`v_separation`, added only with both an icon and text.
  */
-export function itemContentMinSize(
+function itemContentMinSize(
   input: ItemContentInput,
   theme: Pick<NativeTheme, 'fontSize' | 'separation'>
 ): Vector2 {
@@ -464,7 +464,7 @@ export const ITEM_LIST_DEFAULT_MAX_COLUMNS = 1;
  * once with infinite `fitSize` and `availableHeight`. Exact under `auto_width` or
  * `max_columns > 0`; approximate for `auto_height` with `max_columns` 0 and no `auto_width`.
  */
-export const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
+const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ItemListProperties;
   const items = props.items ?? [];
 
@@ -629,7 +629,7 @@ export function itemTextColor(baseColor: Rgba, disabled: boolean): Rgba {
 // --- Row/column guide lines: item_list.cpp:1446-1459 -----------------------
 
 /** `default_theme.cpp:959`: `theme->set_color("guide_color", "ItemList", Color(0.7, 0.7, 0.7, 0.25))`. */
-export const ITEM_LIST_DEFAULT_GUIDE_COLOR: Rgba = { r: 0.7, g: 0.7, b: 0.7, a: 0.25 };
+const ITEM_LIST_DEFAULT_GUIDE_COLOR: Rgba = { r: 0.7, g: 0.7, b: 0.7, a: 0.25 };
 
 /** This node's own `theme_override_colors/guide_color` (already folded onto `n.colors` by the walker), else the built-in default. */
 export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): Rgba {

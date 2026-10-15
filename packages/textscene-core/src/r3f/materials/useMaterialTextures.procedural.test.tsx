@@ -11,8 +11,7 @@ import type { ResourceLoader } from '../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import { abortProceduralBuilds } from '../../resources/textures/proceduralBuilds';
-import { clearProceduralTextureCache } from '../../resources/textures/proceduralTextureCache';
+import { resetProceduralTextures } from '../../resources/textures/proceduralTextureCache';
 import { fakeJobRunner } from '../../workers/fakeJobRunner.testkit';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import { useMaterialTextures } from './SurfaceMaterialSlot';
@@ -74,8 +73,7 @@ function renderMaterial(tiles = false) {
 }
 
 afterEach(() => {
-  abortProceduralBuilds();
-  clearProceduralTextureCache();
+  resetProceduralTextures();
 });
 
 describe('useMaterialTextures with procedural slots', () => {

@@ -143,7 +143,7 @@ interface DirectionalShadowCasters {
  * declared light that draws splits or that the fitter dropped fails the layer test, so only a split
  * sun counts for it.
  */
-export function directionalShadowCasters(
+function directionalShadowCasters(
   lights: readonly SceneLight[],
   camera: THREE.Camera
 ): DirectionalShadowCasters {

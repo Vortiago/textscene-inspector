@@ -1,6 +1,7 @@
 /**
- * Enumerating what the registry holds belongs to `registryPopulation.ts` alone: a
- * population assembled by hand reaches the roots only. Point lookups on a named type
+ * Enumerating what the registry holds belongs to the two halves of `registryPopulation.ts`,
+ * the types production reads and the keys and validators under `testing/`: a population
+ * assembled by hand reaches the roots only. Point lookups on a named type
  * (`findValidator`, `getOwnKeys`, `baseChainOf`) are unrestricted. The enumerator is
  * `@internal` by convention only, and a recomposition through `registeredTypes` compiles.
  */
@@ -10,8 +11,12 @@ import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
 import { atLeast, srcLabel, srcRoot, walk } from './testing/ruleNameScrape.js';
 
-/** The module the discipline belongs to, and the class that defines it. */
-const OWNERS = ['linter/registryPopulation.ts', 'linter/ValidatorRegistry.ts'];
+/** The module the discipline belongs to, in its two halves, and the class that defines it. */
+const OWNERS = [
+  'linter/registryPopulation.ts',
+  'linter/testing/registryPopulation.ts',
+  'linter/ValidatorRegistry.ts',
+];
 
 /**
  * This file. It has to spell every identifier it bans, so scanning itself
@@ -93,7 +98,7 @@ describe('enumerating the registry belongs to one module', () => {
   });
 
   it.each(['typesWithRegistrations', 'getTypesWithRemovals'])(
-    'keeps the %s enumerator inside the two files that define the seam',
+    'keeps the %s enumerator inside the files that define the seam',
     (enumerator) => {
       // Both doors: a discipline enforced on one of two equivalent enumerators
       // is one the next author walks around without noticing.

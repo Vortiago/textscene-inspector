@@ -20,7 +20,7 @@ const hSliderTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
   return requests;
 };
 
-export const hSliderMinimumSize: MinimumSizeFn = (n, ctx) =>
+const hSliderMinimumSize: MinimumSizeFn = (n, ctx) =>
   sliderMinimumSize(false, ctx.theme, sliderGrabberIconSize(ctx.theme, n.textureSlots));
 
 controlSolverRegistry.registerMinimumSize('HSlider', hSliderMinimumSize);

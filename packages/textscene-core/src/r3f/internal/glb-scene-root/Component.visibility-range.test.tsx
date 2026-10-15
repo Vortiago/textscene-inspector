@@ -6,7 +6,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { createGLBMesh, initGlbModules } from '../../../resources/formats/glb/glbProcessing';
+import { createGLBMesh } from '../../../resources/formats/glb/glbProcessing';
+import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 import { nodesGlb } from '../../../resources/formats/glb/testing/nodesGlb';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
@@ -96,7 +97,7 @@ function hostTree(fake: ReturnType<typeof createFakeResourceLoader>, lines: stri
 }
 
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 describe('a GLB mesh visibility range', () => {

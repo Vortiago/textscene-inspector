@@ -23,12 +23,7 @@ import {
 import { shadowSamplingParameters, type ShadowSampling } from './shadowSampling.js';
 import type { Rgba } from '../../godot/math.js';
 
-export {
-  createShadowPolarTexture,
-  shadowPixelSize,
-  updateShadowPolarTexture,
-  type ShadowSampling,
-} from './shadowSampling.js';
+export { updateShadowPolarTexture, type ShadowSampling } from './shadowSampling.js';
 
 /** Godot `Light2D.BlendMode`. */
 export enum Light2DBlendMode {

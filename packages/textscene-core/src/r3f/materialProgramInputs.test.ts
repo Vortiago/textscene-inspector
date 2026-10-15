@@ -15,7 +15,7 @@ import {
   type ProgramInjection,
 } from './materialProgramInputs';
 import { GodotToneMapper } from '../resources/environment/godotToneMapping';
-import { applyToneMapping, toneMappingProgramKey } from '../resources/environment/toneMapping';
+import { applyToneMapping } from '../resources/environment/toneMapping';
 
 /** A key from the factory: the only thing about a program a caller can compare. */
 function keyOf<P extends object, M extends readonly object[] = []>(
@@ -315,6 +315,12 @@ describe('materialProgramInputs', () => {
         return { filmic, agx: material.customProgramCacheKey() };
       }
 
+      /** The curve term the tone-mapping install appends to a plain tone-mapped material's key now. */
+      function curveTerm(): string {
+        const plain = new THREE.MeshBasicMaterial();
+        return plain.customProgramCacheKey().slice(plain.onBeforeCompile.toString().length);
+      }
+
       it('gives an injected, tone-mapped material a new program key', () => {
         const { filmic, agx } = keysAcrossSwap(injectedMaterial(true));
         expect(agx).not.toBe(filmic);
@@ -323,7 +329,7 @@ describe('materialProgramInputs', () => {
       it('keeps the injection in the key beside the prototype key and its curve term', () => {
         const material = injectedMaterial(true);
         const { agx } = keysAcrossSwap(material);
-        expect(agx).toBe(`stylebox${material.onBeforeCompile.toString()}${toneMappingProgramKey(material)}`);
+        expect(agx).toBe(`stylebox${material.onBeforeCompile.toString()}${curveTerm()}`);
       });
 
       it('leaves the key of an injected material that is not tone-mapped', () => {

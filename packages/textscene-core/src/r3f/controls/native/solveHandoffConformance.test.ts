@@ -15,7 +15,7 @@ import {
   walkSources,
   type SourceFile,
 } from '../../testing/sourceScan';
-import { isSealedHandoff } from './solveHandoff';
+import { isSealedHandoff } from './solveHandoff.testkit';
 import { createSolveContext, solveControlTree } from './controlRectSolver';
 import { nativeTheme } from './nativeTheme';
 import { solveNode } from './testing/solveNode';

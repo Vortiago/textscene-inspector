@@ -127,7 +127,7 @@ function useTexture2DSlot(
   return { atlas, atlasResources, source, result: { texture: source, missing: sourceMissing } };
 }
 
-/** Pixel dimensions of a Texture2D slot, in the `Vec2` shape the rect solver uses. */
+/** Pixel dimensions of a Texture2D slot, as the `Vector2` the rect solver uses. */
 interface Texture2DSize {
   x: number;
   y: number;

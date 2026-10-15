@@ -8,7 +8,6 @@ import {
   SHADOW_MAP_BINS,
   SHADOW_MAP_FAR,
   buildShadowPolarMap,
-  shadowMapCoord,
   type ShadowPolarLight,
 } from './shadowPolarMap';
 import {
@@ -59,32 +58,57 @@ function segment(
  * -X `pos_box.y * -0.125 + (0.5 + 0.125)`, -Y `pos_box.x * 0.125 + (0.75 + 0.125)`.
  * `dist` is `shadow_pos.x`, `shadow_pos.y`, `-shadow_pos.x` and `-shadow_pos.y` in turn.
  */
-describe('shadowMapCoord', () => {
+/** `tex_ofs` in the +X quadrant, `pos_box.y * 0.125 + 0.125` with Godot's Y down. */
+function plusXCoord(x: number, yUp: number): number {
+  return (-yUp / x) * 0.125 + 0.125;
+}
+
+/**
+ * The bins a short occluder across the ray towards `(x, y)` covers, 100 from the light. It spans
+ * about a hundredth of a turn, so it covers a few bins either side of the ray's own.
+ */
+function binsTowards(x: number, y: number): number[] {
+  const length = Math.hypot(x, y);
+  const [alongX, alongY] = [(x / length) * 100, (y / length) * 100];
+  const [acrossX, acrossY] = [-y / length, x / length];
+  const map = buildShadowPolarMap(lightAt(0, 0, 1000), [
+    segment(alongX - acrossX, alongY - acrossY, alongX + acrossX, alongY + acrossY),
+  ]);
+  return [...map.keys()].filter((bin) => map[bin]! < SHADOW_MAP_FAR);
+}
+
+/** The middle of a run of bins that does not cross the seam. */
+const middleBin = (bins: readonly number[]) => (bins[0]! + bins[bins.length - 1]!) / 2;
+
+/** Where a ray at `u` falls in bin indices, whose centres sit half a bin in. */
+const rayBin = (u: number) => u * SHADOW_MAP_BINS - 0.5;
+
+describe('the polar mapping of the map', () => {
   it('places the four axes at the four quadrant centres', () => {
     // Godot's local space is Y-down and the previewer's is Y-up, so the builder
     // takes previewer coordinates and negates Y itself. +X stays +X.
-    expect(shadowMapCoord(1, 0)).toBeCloseTo(0.125, 12);
+    expect(middleBin(binsTowards(1, 0))).toBeCloseTo(rayBin(0.125), 0);
     // Godot +Y (down) is previewer -Y.
-    expect(shadowMapCoord(0, -1)).toBeCloseTo(0.375, 12);
-    expect(shadowMapCoord(-1, 0)).toBeCloseTo(0.625, 12);
-    expect(shadowMapCoord(0, 1)).toBeCloseTo(0.875, 12);
+    expect(middleBin(binsTowards(0, -1))).toBeCloseTo(rayBin(0.375), 0);
+    expect(middleBin(binsTowards(-1, 0))).toBeCloseTo(rayBin(0.625), 0);
+    expect(middleBin(binsTowards(0, 1))).toBeCloseTo(rayBin(0.875), 0);
   });
 
   it('is the tan (box) mapping inside a quadrant, not uniform angle', () => {
     // Halfway along the +X quadrant by box coordinate is pos_box.y = 0.5, which
     // is 26.57 degrees, not the 22.5 a uniform-angle map would put there.
-    expect(shadowMapCoord(1, -0.5)).toBeCloseTo(0.125 + 0.0625, 12);
-    expect(shadowMapCoord(2, -1)).toBeCloseTo(0.125 + 0.0625, 12);
+    expect(middleBin(binsTowards(1, -0.5))).toBeCloseTo(rayBin(0.125 + 0.0625), 0);
   });
 
-  it('runs monotonically 0 to 1 once around, and wraps at the -Y/+X seam', () => {
-    // The seam is Godot (1, -1)/sqrt2, previewer (1, 1). `pos_rot.y` is exactly
-    // zero there, so Godot's `> 0.0` sends it to the -Y branch and it reads 1.0,
-    // the same texel as 0.0 under the atlas's GL_REPEAT wrap.
-    expect(shadowMapCoord(1, 1)).toBeCloseTo(1, 12);
-    expect(shadowMapCoord(1, -1)).toBeCloseTo(0.25, 12);
-    expect(shadowMapCoord(-1, -1)).toBeCloseTo(0.5, 12);
-    expect(shadowMapCoord(-1, 1)).toBeCloseTo(0.75, 12);
+  it('runs 0 to 1 once around, and wraps at the -Y/+X seam (edge case)', () => {
+    // The seam is Godot (1, -1)/sqrt2, previewer (1, 1). The atlas's GL_REPEAT
+    // wrap makes bin 0 and the last bin neighbours there.
+    const seam = binsTowards(1, 1);
+    expect(seam).toContain(0);
+    expect(seam).toContain(SHADOW_MAP_BINS - 1);
+    expect(middleBin(binsTowards(1, -1))).toBeCloseTo(rayBin(0.25), 0);
+    expect(middleBin(binsTowards(-1, -1))).toBeCloseTo(rayBin(0.5), 0);
+    expect(middleBin(binsTowards(-1, 1))).toBeCloseTo(rayBin(0.75), 0);
   });
 
   it('places an antipodal direction exactly half a turn away', () => {
@@ -96,8 +120,8 @@ describe('shadowMapCoord', () => {
       [-2, 5],
       [-7, -3],
     ] as const) {
-      const opposite = (shadowMapCoord(x, y) + 0.5) % 1;
-      expect(shadowMapCoord(-x, -y)).toBeCloseTo(opposite, 12);
+      const opposite = binsTowards(-x, -y).map((bin) => (bin + SHADOW_MAP_BINS / 2) % SHADOW_MAP_BINS);
+      expect(opposite).toEqual(binsTowards(x, y));
     }
   });
 });
@@ -124,8 +148,8 @@ describe('buildShadowPolarMap', () => {
     // 100 / zfar however far along the segment the hit lands. A Euclidean map
     // would hold up to hypot(100, 50) / zfar at the ends.
     const map = buildShadowPolarMap(lightAt(0, 0, RADIUS), [segment(100, -50, 100, 50)]);
-    const centre = binOf(shadowMapCoord(100, 0));
-    const nearEnd = binOf(shadowMapCoord(100, 49));
+    const centre = binOf(plusXCoord(100, 0));
+    const nearEnd = binOf(plusXCoord(100, 49));
     expect(map[centre]).toBeCloseTo(100 / ZFAR, 6);
     expect(map[nearEnd]).toBeCloseTo(100 / ZFAR, 6);
   });
@@ -133,8 +157,8 @@ describe('buildShadowPolarMap', () => {
   it('covers exactly the bins between the endpoints, and no others', () => {
     const map = buildShadowPolarMap(lightAt(0, 0, RADIUS), [segment(100, -50, 100, 50)]);
     // Endpoint coords under the box mapping: pos_box.y = -y/x in Godot space.
-    const lo = binOf(shadowMapCoord(100, 50));
-    const hi = binOf(shadowMapCoord(100, -50));
+    const lo = binOf(plusXCoord(100, 50));
+    const hi = binOf(plusXCoord(100, -50));
     expect(lo).toBeLessThan(hi);
     for (let bin = 0; bin < SHADOW_MAP_BINS; bin += 1) {
       const covered = map[bin]! < SHADOW_MAP_FAR;
@@ -178,8 +202,8 @@ describe('buildShadowPolarMap', () => {
 
   it('leaves the opposite quadrant clear for a segment behind the light', () => {
     const map = buildShadowPolarMap(lightAt(0, 0, RADIUS), [segment(-100, -50, -100, 50)]);
-    expect(map[binOf(shadowMapCoord(-100, 0))]).toBeCloseTo(100 / ZFAR, 6);
-    expect(map[binOf(shadowMapCoord(100, 0))]).toBe(SHADOW_MAP_FAR);
+    expect(map[binOf(0.625)]).toBeCloseTo(100 / ZFAR, 6);
+    expect(map[binOf(plusXCoord(100, 0))]).toBe(SHADOW_MAP_FAR);
   });
 
   it('fills every bin when the light sits inside a closed polygon', () => {

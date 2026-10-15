@@ -214,7 +214,6 @@ function bakeAtlas(ttfBuffer) {
 
 function renderMetricsModule(metrics) {
   return `${GENERATED_HEADER}
-import { getFontLinePitchPx } from './fontMetrics';
 
 /**
  * Font-wide scalar metrics for OpenSans_SemiBold, in font design units
@@ -321,28 +320,6 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
  */
 export function getGlyphAdvanceUnits(ch: string): number | null {
   return OPEN_SANS_METRICS.advanceWidths[ch] ?? null;
-}
-
-/**
- * Pixel line pitch at \`fontSizePx\`, replicating Godot's Label line-height
- * computation exactly rather than a raw float scale of the hhea table:
- *
- * - \`modules/text_server_adv/text_server_adv.cpp:1515-1516\` — ascent AND
- *   descent are each ceiling-rounded to a whole pixel INDEPENDENTLY before
- *   summing (not a raw float sum, THEN rounded once — that undershoots by
- *   ~1px system-wide, confirmed against real Godot pixels).
- * - \`scene/theme/default_theme.cpp:392\` — Label's \`line_spacing\` theme
- *   constant is \`Math::round(3 * scale)\`; \`lineSpacingPx\` defaults to 3 (UI
- *   scale 1.0).
- *
- * At size 16: ${Math.ceil((metrics.ascent * 16) / metrics.unitsPerEm)} + ceil(${metrics.descent} * 16/${metrics.unitsPerEm}) + 3 = 26.
- *
- * Delegates to \`fontMetrics.ts\`'s \`getFontLinePitchPx\` — see that
- * function's own doc for why the independent-ceiling-then-sum rule above
- * lives there, once, rather than here.
- */
-export function getLinePitchPx(fontSizePx: number, lineSpacingPx = 3): number {
-  return getFontLinePitchPx(OPEN_SANS_METRICS, fontSizePx, lineSpacingPx);
 }
 
 /**

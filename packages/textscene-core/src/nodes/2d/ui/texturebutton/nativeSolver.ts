@@ -21,9 +21,9 @@ import type { TextureButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/vector';
 
 /** The keys `textureButtonTextureSlots`/`textureButtonMinimumSize` share for `SolveNode.textureSlots`. */
-export const TEXTURE_NORMAL_KEY = 'texture_normal';
-export const TEXTURE_PRESSED_KEY = 'texture_pressed';
-export const TEXTURE_HOVER_KEY = 'texture_hover';
+const TEXTURE_NORMAL_KEY = 'texture_normal';
+const TEXTURE_PRESSED_KEY = 'texture_pressed';
+const TEXTURE_HOVER_KEY = 'texture_hover';
 
 /**
  * The Texture2D slots for `buildSolveTree.ts`: `get_minimum_size`'s three Texture2D reads

@@ -175,7 +175,7 @@ export function decomposeTransform3D(transform: Transform3D): DecomposedTransfor
   };
 }
 
-export function identityTransform3D(): Transform3D {
+function identityTransform3D(): Transform3D {
   return {
     basis_x: { x: 1, y: 0, z: 0 },
     basis_y: { x: 0, y: 1, z: 0 },

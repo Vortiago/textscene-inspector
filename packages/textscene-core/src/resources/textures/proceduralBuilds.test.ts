@@ -11,12 +11,11 @@ import { NOISE_PIXEL_CASES } from './noisetexture2d/pixelCases.testkit';
 import type { WorkerJobOutput } from '../../workers/jobs';
 import { fakeJobRunner as fakeRunner } from '../../workers/fakeJobRunner.testkit';
 import {
-  clearProceduralTextureCache,
+  resetProceduralTextures,
   pinProceduralTexture,
   unpinProceduralTexture,
 } from './proceduralTextureCache';
 import {
-  abortProceduralBuilds,
   resolveProceduralSubResourceAsync,
   type ProceduralBuildPlan,
   type ProceduralTextureLookup,
@@ -69,10 +68,10 @@ beforeEach(() => {
   warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 });
 afterEach(async () => {
-  abortProceduralBuilds();
+  resetProceduralTextures();
   await settle();
   warn.mockRestore();
-  clearProceduralTextureCache();
+  resetProceduralTextures();
 });
 
 describe('resolveProceduralSubResourceAsync', () => {
@@ -142,6 +141,17 @@ describe('resolveProceduralSubResourceAsync', () => {
     const handle = pendingLookup(scene('1')).start(runner);
     handle.release();
     await settle();
+
+    expect(runs[0]?.signal?.aborted).toBe(true);
+    expect(await handle.settled).toBeNull();
+    pendingLookup(scene('1')).start(runner);
+    expect(runs).toHaveLength(2);
+  });
+
+  it('abandons a held build when the cache resets, so the next holder builds afresh', async () => {
+    const { runner, runs } = fakeRunner();
+    const handle = pendingLookup(scene('1')).start(runner);
+    resetProceduralTextures();
 
     expect(runs[0]?.signal?.aborted).toBe(true);
     expect(await handle.settled).toBeNull();

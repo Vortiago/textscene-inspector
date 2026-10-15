@@ -18,6 +18,7 @@ export interface CsgModule {
   INTERSECTION: number;
 }
 
+/** Written only by `loadCsgModule`, on its first call. It never clears: a failed import stays failed. */
 let pending: Promise<CsgModule> | null = null;
 
 /** Load the CSG library, memoized so every caller shares one import. */
@@ -35,9 +36,4 @@ export function prefetchCsgModule(): void {
     // Swallowed deliberately. The real load path reports the failure and degrades to
     // base primitives; a prefetch must not surface as an unhandled rejection.
   });
-}
-
-/** Test seam: forget the memoized import so the failure path can be exercised. */
-export function resetCsgModuleForTests(): void {
-  pending = null;
 }

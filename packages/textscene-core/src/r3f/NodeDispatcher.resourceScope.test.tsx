@@ -13,13 +13,13 @@ import { NodeDispatcher } from './NodeDispatcher';
 import { TscnParser } from '../parser/TscnParser';
 import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
-import { initGlbModules } from '../resources/processing/glbProcessing';
+import { loadGlbModules } from '../resources/formats/glb/testing/loadGlbModules';
 
 import './nodes/index';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../nodes/3d/geometryinstance3d/types';
 
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 const SUB_SCENE = 'res://sub.tscn';

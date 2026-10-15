@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
-import { readSkyLightDeclaration, skyLightEnergy, skyLightUserData } from './skyLight';
+import { skyLightEnergy, skyLightUserData } from './skyLight';
 
 const lightWith = (userData: Record<string, unknown>) => {
   const light = new THREE.DirectionalLight();
@@ -9,46 +9,15 @@ const lightWith = (userData: Record<string, unknown>) => {
   return light;
 };
 
-describe('readSkyLightDeclaration', () => {
-  it('reads back the declaration a light carries', () => {
-    const light = lightWith(skyLightUserData({ drawsInSky: false, energy: 2 }));
-    expect(readSkyLightDeclaration(light)).toEqual({ drawsInSky: false, energy: 2 });
-  });
-
-  it('reads the declaration beside another entry in the same userData (edge case)', () => {
-    const light = lightWith({ other: 1, ...skyLightUserData({ drawsInSky: true, energy: 1 }) });
-    expect(readSkyLightDeclaration(light)).toEqual({ drawsInSky: true, energy: 1 });
-  });
-
-  it('is null for a light that declares nothing', () => {
-    expect(readSkyLightDeclaration(new THREE.DirectionalLight())).toBeNull();
-  });
-
-  it('is null for a malformed declaration (error case)', () => {
-    expect(readSkyLightDeclaration(lightWith({ skyLight: { drawsInSky: 'yes', energy: 1 } }))).toBeNull();
-  });
-});
-
-describe('skyLightUserData', () => {
-  it('declares under one key, so a light that merges it carries one sky declaration', () => {
-    expect(Object.keys(skyLightUserData({ drawsInSky: true, energy: 1 }))).toHaveLength(1);
-  });
-
-  it('keeps a zero energy, which a Sky Only light never has (edge case)', () => {
-    const light = lightWith(skyLightUserData({ drawsInSky: true, energy: 0 }));
-    expect(readSkyLightDeclaration(light)?.energy).toBe(0);
-  });
-
-  it('declares a non-finite energy as written, for the sky to read (error case)', () => {
-    const light = lightWith(skyLightUserData({ drawsInSky: true, energy: Number.NaN }));
-    expect(readSkyLightDeclaration(light)?.energy).toBeNaN();
-  });
-});
-
 describe('skyLightEnergy', () => {
   it('reads the energy a light declares for the sky', () => {
     const light = lightWith(skyLightUserData({ drawsInSky: true, energy: 2 }));
     expect(skyLightEnergy(light)).toBe(2);
+  });
+
+  it('reads the declaration beside another entry in the same userData (edge case)', () => {
+    const light = lightWith({ other: 1, ...skyLightUserData({ drawsInSky: true, energy: 1 }) });
+    expect(skyLightEnergy(light)).toBe(1);
   });
 
   it('answers null for a light the sky skips', () => {
@@ -60,5 +29,27 @@ describe('skyLightEnergy', () => {
     const light = lightWith({});
     light.intensity = 3 * LIGHT_INTENSITY_SCALE;
     expect(skyLightEnergy(light)).toBeCloseTo(3, 10);
+  });
+
+  it('takes a light with a malformed declaration back through the intensity scale (error case)', () => {
+    const light = lightWith({ skyLight: { drawsInSky: 'yes', energy: 1 } });
+    light.intensity = 3 * LIGHT_INTENSITY_SCALE;
+    expect(skyLightEnergy(light)).toBeCloseTo(3, 10);
+  });
+});
+
+describe('skyLightUserData', () => {
+  it('declares under one key, so a light that merges it carries one sky declaration', () => {
+    expect(Object.keys(skyLightUserData({ drawsInSky: true, energy: 1 }))).toHaveLength(1);
+  });
+
+  it('keeps a zero energy, which a Sky Only light never has (edge case)', () => {
+    const light = lightWith(skyLightUserData({ drawsInSky: true, energy: 0 }));
+    expect(skyLightEnergy(light)).toBe(0);
+  });
+
+  it('declares a non-finite energy as written, for the sky to read (error case)', () => {
+    const light = lightWith(skyLightUserData({ drawsInSky: true, energy: Number.NaN }));
+    expect(skyLightEnergy(light)).toBeNaN();
   });
 });

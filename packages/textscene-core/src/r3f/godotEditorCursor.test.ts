@@ -5,22 +5,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera';
 import {
-  EDITOR_CAMERA_DISTANCE,
-  EDITOR_CAMERA_FOV,
-  EDITOR_CAMERA_X_ROT,
-  EDITOR_CAMERA_Y_ROT,
-  editorCameraPosition,
-} from './godotEditorCamera';
-import {
-  FREELOOK_BASE_SPEED,
-  FREELOOK_SPRINT_MULTIPLIER,
   OPPOSITE_VIEW,
-  ORBIT_DEGREES_PER_PIXEL,
-  X_ROT_LIMIT,
-  ZOOM_DISTANCE_MIN,
   cursorCameraPosition,
-  cursorDirection,
   cursorFromCamera,
   cursorQuaternion,
   dollyCursor,
@@ -34,11 +22,33 @@ import {
   scaleCursorDistance,
   viewSnapCursor,
   wheelZoomScale,
-  WHEEL_ZOOM_MULTIPLIER,
   type EditorCursor,
   type GodotViewAngle,
 } from './godotEditorCursor';
-import { WHEEL_MAX_NOTCHES } from './pointerGesture';
+
+/** `Node3DEditorViewport::Cursor()`'s opening pose (`node_3d_editor_plugin.h:422-426`). */
+const EDITOR_CAMERA_X_ROT = 0.5;
+const EDITOR_CAMERA_Y_ROT = -0.5;
+const EDITOR_CAMERA_DISTANCE = 4;
+
+/** `editors/3d/navigation_feel/orbit_sensitivity` (`editor_settings.cpp:948`). */
+const ORBIT_DEGREES_PER_PIXEL = 0.25;
+
+/** `_nav_orbit`'s pitch clamp (`node_3d_editor_plugin.cpp:2946`). */
+const X_ROT_LIMIT = 1.57;
+
+/** `editors/3d/freelook/freelook_base_speed` (`editor_settings.cpp:961`). */
+const FREELOOK_BASE_SPEED = 5.0;
+
+/** `_update_freelook`'s speed modifier (`node_3d_editor_plugin.cpp:3123`). */
+const FREELOOK_SPRINT_MULTIPLIER = 3.0;
+
+/** `ZOOM_FREELOOK_MIN` and `ZOOM_FREELOOK_MULTIPLIER` (`node_3d_editor_plugin.cpp:119-120`). */
+const ZOOM_DISTANCE_MIN = 0.01;
+const WHEEL_ZOOM_MULTIPLIER = 1.08;
+
+/** The previewer's cap on the notches one wheel event is worth (`pointerGesture.ts`). */
+const WHEEL_MAX_NOTCHES = 4;
 
 const ORIGIN = new THREE.Vector3();
 const WIDE_RANGE = { near: 0.001, far: 100000 };
@@ -50,6 +60,11 @@ function editorCursor(): EditorCursor {
 
 function cursorAt(xRot: number, yRot: number, distance = 4, target = ORIGIN): EditorCursor {
   return { target: target.clone(), xRot, yRot, distance };
+}
+
+/** The unit vector from the focus point towards the eye. */
+function cursorDirection(cursor: EditorCursor): THREE.Vector3 {
+  return cursorCameraPosition({ ...cursor, target: ORIGIN, distance: 1 });
 }
 
 describe('cursorFromCamera / cursorCameraPosition', () => {

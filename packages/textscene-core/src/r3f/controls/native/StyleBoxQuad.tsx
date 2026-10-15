@@ -159,11 +159,9 @@ function buildGeometry(styleBox: StyleBoxFlatData, rect: Rect2): THREE.BufferGeo
 
 /**
  * Multiplies a tint into a flat or line StyleBox's base colours in raw sRGB, ahead
- * of the one sRGB→linear conversion in `styleBoxFlatGeometry`. Exported for a
- * painter that tints a StyleBox outside `<StyleBoxQuad>`: `styleBoxFlat.ts` cannot
- * import the modulate helpers to offer one.
+ * of the one sRGB→linear conversion in `styleBoxFlatGeometry`.
  */
-export function tintStyleBox(styleBox: StyleBoxFlatData, tint: Rgba): StyleBoxFlatData {
+function tintStyleBox(styleBox: StyleBoxFlatData, tint: Rgba): StyleBoxFlatData {
   if (tint.r === 1 && tint.g === 1 && tint.b === 1 && tint.a === 1) return styleBox;
   return {
     ...styleBox,

@@ -1,5 +1,5 @@
 /**
- * `radialFill.ts` against Godot 4.6.3 (`texture_progress_bar.cpp:181-256,483-524`). `unitValToUv`
+ * `radialFill.ts` against Godot 4.6.3 (`texture_progress_bar.cpp:181-256,483-524`). `unit_val_to_uv`
  * is worked by hand at the four cardinal angles around `center = (0.5, 0.5)`: 0 top, 0.25 right,
  * 0.5 bottom, 0.75 left, a clockwise sweep from 12 o'clock.
  */
@@ -7,13 +7,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   radialRelativeCenter,
-  unitValToUv,
   radialFillValue,
   radialFillGeometry,
   clampRadialFillDegrees,
   normalizeRadialInitialAngle,
 } from './radialFill';
 import { FillMode } from './types';
+import type { Vector2 } from '../../../../godot/vector';
 
 describe('radialRelativeCenter (texture_progress_bar.cpp:245-256)', () => {
   it('centres the offset within the texture and normalises to [0, 1]', () => {
@@ -31,27 +31,43 @@ describe('radialRelativeCenter (texture_progress_bar.cpp:245-256)', () => {
 
 const CENTER = { x: 0.5, y: 0.5 };
 
-describe('unitValToUv (texture_progress_bar.cpp:181-224)', () => {
+/**
+ * The first boundary vertex of a clockwise fan that starts at `val` on a 1x1 rect at the origin:
+ * `unit_val_to_uv(val)` itself, since every vertex is `offset + uv * size`.
+ */
+function fanStartUv(val: number): Vector2 {
+  const geometry = radialFillGeometry(
+    FillMode.CLOCKWISE,
+    0.1,
+    val * 360,
+    CENTER,
+    { x: 1, y: 1 },
+    { x: 0, y: 0 }
+  );
+  return { x: geometry!.positions[0]!, y: geometry!.positions[1]! };
+}
+
+describe('radialFillGeometry fan start: unit_val_to_uv (texture_progress_bar.cpp:181-224)', () => {
   it('0 -> top-centre (0.5, 0)', () => {
-    const uv = unitValToUv(0, CENTER);
+    const uv = fanStartUv(0);
     expect(uv.x).toBeCloseTo(0.5, 9);
     expect(uv.y).toBeCloseTo(0, 9);
   });
 
   it('0.25 -> right-centre (1, 0.5)', () => {
-    const uv = unitValToUv(0.25, CENTER);
+    const uv = fanStartUv(0.25);
     expect(uv.x).toBeCloseTo(1, 9);
     expect(uv.y).toBeCloseTo(0.5, 9);
   });
 
   it('0.5 -> bottom-centre (0.5, 1)', () => {
-    const uv = unitValToUv(0.5, CENTER);
+    const uv = fanStartUv(0.5);
     expect(uv.x).toBeCloseTo(0.5, 9);
     expect(uv.y).toBeCloseTo(1, 9);
   });
 
   it('0.75 -> left-centre (0, 0.5)', () => {
-    const uv = unitValToUv(0.75, CENTER);
+    const uv = fanStartUv(0.75);
     expect(uv.x).toBeCloseTo(0, 9);
     expect(uv.y).toBeCloseTo(0.5, 9);
   });

@@ -7,7 +7,10 @@
 import { describe, expect, it } from 'vitest';
 import type { RuleContext } from '../../../../linter/types';
 import type { RawNode, RawScene } from '../../../../parser/types';
-import { codeEditDelimiterCollisionRule } from './linter';
+import { ruleRegistry } from '../../../../linter/RuleRegistry';
+import './linter';
+
+const codeEditDelimiterCollisionRule = ruleRegistry.getRule('valid-codeedit-properties')!;
 
 function makeContext(rawProperties: Record<string, string>): RuleContext {
   const node: RawNode = {

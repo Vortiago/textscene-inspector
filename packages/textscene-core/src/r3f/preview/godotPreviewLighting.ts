@@ -25,8 +25,8 @@ export const PREVIEW_ENVIRONMENT_YIELD_TYPE = 'WorldEnvironment';
  * degrees (must be negative) and an azimuth of 30 degrees clockwise from north
  * (or 150 CCW from south), from north east, facing south west."
  */
-export const PREVIEW_SUN_ALTITUDE_DEG = -60;
-export const PREVIEW_SUN_AZIMUTH_DEG = 150;
+const PREVIEW_SUN_ALTITUDE_DEG = -60;
+const PREVIEW_SUN_AZIMUTH_DEG = 150;
 
 /** Godot's preview sun is white at energy 1.0 with shadows enabled. */
 export const PREVIEW_SUN_COLOR = 0xffffff;

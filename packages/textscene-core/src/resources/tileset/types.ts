@@ -87,9 +87,9 @@ export interface AlternativeTileModel extends TileOrientation {
  * Godot TileSetAtlasSource alternative-id transform bits: a cell painted with
  * a flip/rotate carries these bits directly in its alternative_tile value.
  */
-export const TILE_TRANSFORM_FLIP_H = 0x1000;
-export const TILE_TRANSFORM_FLIP_V = 0x2000;
-export const TILE_TRANSFORM_TRANSPOSE = 0x4000;
+const TILE_TRANSFORM_FLIP_H = 0x1000;
+const TILE_TRANSFORM_FLIP_V = 0x2000;
+const TILE_TRANSFORM_TRANSPOSE = 0x4000;
 const TILE_TRANSFORM_MASK = TILE_TRANSFORM_FLIP_H | TILE_TRANSFORM_FLIP_V | TILE_TRANSFORM_TRANSPOSE;
 
 /** The authored alternative a cell's id names, its transform bits cleared (`tile_set.cpp:5320-5322`). */

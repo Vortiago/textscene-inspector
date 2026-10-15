@@ -7,7 +7,7 @@
 import { createContext, useContext, useMemo } from 'react';
 
 /** `TEXTURE_FILTER_PARENT_NODE` and `TEXTURE_REPEAT_PARENT_NODE`, both 0. */
-export const CANVAS_ITEM_SAMPLER_INHERIT = 0;
+const CANVAS_ITEM_SAMPLER_INHERIT = 0;
 
 interface CanvasItemTextureSampler {
   /** Effective `texture_filter` ordinal, or `undefined` when no ancestor ever named one (viewport default). */
@@ -31,7 +31,7 @@ function useParentTextureSampler(): CanvasItemTextureSampler {
  * enums use 0 for PARENT_NODE: an unnamed own value defers to the ambient;
  * a concrete one wins and is what gets published back out.
  */
-export function resolveInheritedSamplerValue(
+function resolveInheritedSamplerValue(
   own: number | undefined,
   ambient: number | undefined
 ): number | undefined {

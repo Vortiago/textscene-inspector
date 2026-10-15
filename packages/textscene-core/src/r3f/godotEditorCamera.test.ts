@@ -4,12 +4,10 @@
  * the elevation and azimuth are pinned to hand-computed values too.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  EDITOR_CAMERA_DISTANCE,
-  EDITOR_CAMERA_FOV,
-  editorCameraDirection,
-  editorCameraPosition,
-} from './godotEditorCamera';
+import { EDITOR_CAMERA_FOV, editorCameraDirection, editorCameraPosition } from './godotEditorCamera';
+
+/** `Node3DEditorViewport::Cursor()`'s `distance` (`node_3d_editor_plugin.h:426`). */
+const EDITOR_CAMERA_DISTANCE = 4;
 
 describe('editorCameraDirection', () => {
   it('places the camera in +X +Y +Z, as Godot’s comment says', () => {

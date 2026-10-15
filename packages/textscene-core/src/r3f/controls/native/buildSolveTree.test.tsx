@@ -24,7 +24,7 @@ import { SelectionProvider } from '../../contexts/SelectionContext';
 import { HiddenSeeder } from '../../testing/HiddenSeeder';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { FontResource } from '../../../resources/fonts/font/types';
-import { resolveSceneFontMetrics } from './text/sceneFontLoader';
+import { peekSceneFontMetrics } from './text/sceneFontLoader';
 import { useBuildSolveTree } from './buildSolveTree';
 import { TscnParser } from '../../../parser/TscnParser';
 import { parsedNode } from '../../../parser/testing/parserKit';
@@ -1252,12 +1252,13 @@ describe('useBuildSolveTree — theme resolution', () => {
     const initialGeneration = result.current.generation;
 
     await act(async () => {
-      // `peekSceneFontMetrics`'s async pipeline, started from the solve itself,
+      // `peekSceneFontMetrics`'s async pipeline, as the solve itself starts it,
       // outside `loader` and its event bus.
-      await resolveSceneFontMetrics(
+      peekSceneFontMetrics(
         { kind: 'file', bytes: new ArrayBuffer(4), mimeType: 'font/ttf', fallbacks: [], properties: {} },
         'Root/Title'
       );
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(result.current.generation).toBeGreaterThan(initialGeneration);
@@ -1270,10 +1271,11 @@ describe('useBuildSolveTree — theme resolution', () => {
     const initialGeneration = result.current.generation;
 
     await act(async () => {
-      await resolveSceneFontMetrics(
+      peekSceneFontMetrics(
         { kind: 'file', bytes: new ArrayBuffer(4), mimeType: 'font/ttf', fallbacks: [], properties: {} },
         'Root/Title'
       );
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(result.current.generation).toBeGreaterThan(initialGeneration);

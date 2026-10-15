@@ -45,7 +45,7 @@ function useStablePaths(
  * it, so the answer needs the whole tree. It is per owner: a name registers on
  * the claimant's owner (node.cpp:2222-2234) and resolves through the caller's (node.cpp:1930-1938).
  */
-export function useUniqueNameClaims(path?: string | null): ReadonlyMap<string, UniqueNameClaim> | undefined {
+function useUniqueNameClaims(path?: string | null): ReadonlyMap<string, UniqueNameClaim> | undefined {
   const live = useLiveTree(path);
   return useMemo(() => {
     if (!live) return undefined;

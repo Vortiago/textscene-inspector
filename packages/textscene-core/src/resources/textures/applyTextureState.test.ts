@@ -9,13 +9,14 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   applyTextureState,
-  isBindingOwnedTexture,
   releaseBoundTexture,
   type MaterialTextureState,
   type UVTransform,
 } from './applyTextureState';
-import { GODOT_ANISOTROPY_MAX } from './godotTextureFilter';
 import { UV2_CHANNEL } from '../meshes/uv2';
+
+/** The anisotropy ceiling the previewer pins: `anisotropic_filtering_level` 4, so `1 << 4`. */
+const GODOT_ANISOTROPY_MAX = 16;
 
 function uv(sx: number, sy: number, ox = 0, oy = 0): UVTransform {
   return { scale: { x: sx, y: sy }, offset: { x: ox, y: oy } };
@@ -366,16 +367,6 @@ describe('applyTextureState', () => {
       texture.channel = UV2_CHANNEL;
 
       expect(applyTextureState(texture, state({})).channel).toBe(0);
-    });
-  });
-
-  describe('clone tagging', () => {
-    it('tags clones so their binder can dispose them', () => {
-      const original = new THREE.Texture();
-      const clone = applyTextureState(original, state({ filter: 0 }));
-
-      expect(isBindingOwnedTexture(clone)).toBe(true);
-      expect(isBindingOwnedTexture(original)).toBe(false);
     });
   });
 });

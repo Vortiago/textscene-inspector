@@ -5,7 +5,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
-import { initGlbModules } from '../../../resources/processing/glbProcessing';
+import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 import { GLBSceneRoot } from './Component';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
@@ -60,7 +60,7 @@ async function mount(loader: ResourceLoader) {
 
 // GLBSceneRoot clones through cloneWithMaterials, which needs the lazy GLB module cache.
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 describe('GLBSceneRoot — WI-D select + hide', () => {

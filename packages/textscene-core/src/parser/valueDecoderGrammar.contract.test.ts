@@ -14,7 +14,7 @@ import { parseVector2 } from './vectors';
 import { FLOAT_PATTERN_SOURCE } from '../godot/number.js';
 import { heading } from './testing/parserKit';
 import { parseControl } from '../nodes/2d/ui/control/parser';
-import { parseBaseLightProperties } from '../nodes/3d/lights/shared/parser';
+import { parseBaseLightWithNormalBias } from '../nodes/3d/lights/shared/parser';
 import { parseDirectionalLight3D } from '../nodes/3d/lights/directionallight3d/parser';
 import { parseCamera3D } from '../nodes/3d/camera3d/parser';
 import { parseMeshInstance3D } from '../nodes/3d/meshinstance3d/parser';
@@ -118,7 +118,7 @@ describe('#175 control theme colors — malformed color skipped, not whitened', 
 // Scalar reads do not leak NaN on truthy garbage
 describe('#175 concrete-default scalars — warn-then-fall-back, never NaN (floatOr/intOr)', () => {
   it('light_energy: garbage falls back to the default 1.0 and warns', () => {
-    const result = parseBaseLightProperties({ light_energy: 'garbage' });
+    const result = parseBaseLightWithNormalBias({ light_energy: 'garbage' });
     expect(result.light_energy).toBe(1.0);
     expect(Number.isNaN(result.light_energy)).toBe(false);
     expect(warnSpy).toHaveBeenCalled();
@@ -145,13 +145,13 @@ describe('#175 concrete-default scalars — warn-then-fall-back, never NaN (floa
   });
 
   it('an absent value falls back SILENTLY — no warning for a missing property', () => {
-    const result = parseBaseLightProperties({});
+    const result = parseBaseLightWithNormalBias({});
     expect(result.light_energy).toBe(1.0);
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('an authored value is honoured — the fallback only fires on absent/garbage', () => {
-    const result = parseBaseLightProperties({ light_energy: '2.5' });
+    const result = parseBaseLightWithNormalBias({ light_energy: '2.5' });
     expect(result.light_energy).toBe(2.5);
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -159,12 +159,12 @@ describe('#175 concrete-default scalars — warn-then-fall-back, never NaN (floa
 
 describe('#175 optional scalars — fall to undefined on garbage, never NaN', () => {
   it('shadow_bias: garbage stays undefined (optional contract preserved)', () => {
-    const result = parseBaseLightProperties({ shadow_bias: 'not-a-number' });
+    const result = parseBaseLightWithNormalBias({ shadow_bias: 'not-a-number' });
     expect(result.shadow_bias).toBeUndefined();
   });
 
   it('shadow_blur / shadow_normal_bias: garbage stays undefined', () => {
-    expect(parseBaseLightProperties({ shadow_blur: 'invalid' }).shadow_blur).toBeUndefined();
+    expect(parseBaseLightWithNormalBias({ shadow_blur: 'invalid' }).shadow_blur).toBeUndefined();
     const h = heading('DirectionalLight3D', { name: 'Sun', parent: '.' });
     expect(parseDirectionalLight3D(h, { shadow_normal_bias: 'abc' }).shadow_normal_bias).toBeUndefined();
   });

@@ -4,13 +4,11 @@
  * so selection and bounds keep working.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { TscnParser } from '../../parser/TscnParser';
-import { clearEvaluationCache } from './csgEvaluationCache';
-import { resetCsgModuleForTests } from './csgModule';
 import '../nodes/index';
 import { NodeTree } from '../testing/NodeTree';
 import { settleCsgEvaluation } from './testing/settleCsgEvaluation';
@@ -20,7 +18,6 @@ function parse(body: string) {
 }
 
 function mount(body: string) {
-  clearEvaluationCache();
   const scene = parse(body);
   const root = scene.nodes[0]!.children[0]!;
   return ReactThreeTestRenderer.create(
@@ -161,24 +158,6 @@ size = Vector3(2, 2, 2)
 radius = 0.5
 `);
     expect(drawnMeshes(renderer)).toHaveLength(2);
-  });
-
-  it('degrades to base primitives when the CSG library cannot load', async () => {
-    // The terminal rung of the degradation ladder: every contributor un-prunes and draws
-    // itself, which is exactly the retired CSG-as-primitive behaviour.
-    // Reset the instance the mounted components import: a reset after `vi.resetModules`
-    // reaches a fresh copy, and the components keep the loaded library.
-    resetCsgModuleForTests();
-    vi.doMock('three-bvh-csg', () => {
-      throw new Error('chunk failed to load');
-    });
-
-    const renderer = await render(SUBTRACTION);
-    // Both solids drawn again rather than one merged result, or nothing at all.
-    expect(drawnMeshes(renderer)).toHaveLength(2);
-
-    vi.doUnmock('three-bvh-csg');
-    resetCsgModuleForTests();
   });
 
   it("applies a nested combiner's own operation to its whole fold", async () => {

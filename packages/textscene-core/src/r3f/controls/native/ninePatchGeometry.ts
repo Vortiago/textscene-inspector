@@ -4,13 +4,16 @@
  * `StyleBoxTexture::draw` (`scene/resources/style_box_texture.cpp:165-184`).
  */
 
-export const NINE_PATCH_STRETCH = 0;
-export const NINE_PATCH_TILE = 1;
-export const NINE_PATCH_TILE_FIT = 2;
+/** `NinePatchRect::AxisStretchMode` (`nine_patch_rect.h:39-43`) and `StyleBoxTexture::AxisStretchMode`, in the same order. */
+export const AxisStretchMode = { STRETCH: 0, TILE: 1, TILE_FIT: 2 } as const;
+export type NinePatchAxisMode = (typeof AxisStretchMode)[keyof typeof AxisStretchMode];
 
-/** `NinePatchRect::AxisStretchMode` / `StyleBoxTexture::AxisStretchMode` (both 0/1/2, same order). */
-export type NinePatchAxisMode =
-  typeof NINE_PATCH_STRETCH | typeof NINE_PATCH_TILE | typeof NINE_PATCH_TILE_FIT;
+/** A stored axis stretch mode, with an absent or unknown value read as `STRETCH`. */
+export function axisStretchModeOf(value: number | undefined): NinePatchAxisMode {
+  return value === AxisStretchMode.TILE || value === AxisStretchMode.TILE_FIT
+    ? value
+    : AxisStretchMode.STRETCH;
+}
 
 interface NinePatchMargins {
   left: number;
@@ -103,7 +106,7 @@ function solveAxisCells(
     const midSrcEnd = regionOrigin + regionSize - marginEnd;
 
     if (midSourceLen > 0) {
-      if (mode === NINE_PATCH_STRETCH) {
+      if (mode === AxisStretchMode.STRETCH) {
         // An affine ratio map, like three's UV interpolation, so one quad is exact.
         cells.push({
           destStart: beginW,
@@ -112,7 +115,7 @@ function solveAxisCells(
           srcEnd: midSrcEnd,
           isMiddle: true,
         });
-      } else if (mode === NINE_PATCH_TILE) {
+      } else if (mode === AxisStretchMode.TILE) {
         // `ofs = mod(pixel - margin_begin, mid_source_len)` (`:453-455`): an
         // unscaled repeat, `midSourceLen`-wide dest cells showing the whole
         // strip, plus a final partial cell cropped from the strip's start

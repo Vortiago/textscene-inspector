@@ -18,7 +18,7 @@ export const GODOT_TEXTURE_FILTER_DEFAULT = 3;
  * setting whose default is level 2 (4x). Pinned at 16 (level 4), not plumbed:
  * three clamps to the GPU maximum at upload, so this is a ceiling, never an error.
  */
-export const GODOT_ANISOTROPY_MAX = 16;
+const GODOT_ANISOTROPY_MAX = 16;
 
 interface TextureFilterState {
   magFilter: THREE.MagnificationTextureFilter;

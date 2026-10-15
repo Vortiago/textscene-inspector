@@ -83,7 +83,7 @@ export function resolvedWhite(mode: number, white: number): number {
  * white for FILMIC and ACES, so white maps to 1.0. For AgX it is the high-clip point,
  * where the curve reaches `output_max`, and the AgX GLSL derives its other parameters from it.
  */
-export function toneMappingWhiteParam(mode: number, white: number): number {
+function toneMappingWhiteParam(mode: number, white: number): number {
   const resolved = resolvedWhite(mode, white);
   switch (mode) {
     case GodotToneMapper.REINHARDT:

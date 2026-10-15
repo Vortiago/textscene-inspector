@@ -15,11 +15,10 @@ import { readPositionalShadowDeclaration } from '../../../../r3f/positionalShado
 import { SceneStack } from '../../../../r3f/testing/SceneStack';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import type { TscnInternalResource } from '../../../../parser/types';
-import {
-  NO_AREA_TEXTURE,
-  areaTexturePlacement,
-  updateAreaLightAtlas,
-} from '../../../../r3f/areaLight/areaLightAtlas';
+import { areaTexturePlacement, updateAreaLightAtlas } from '../../../../r3f/areaLight/areaLightAtlas';
+
+/** An empty rectangle marks a light without a texture (4.7.2 `light_storage.cpp:1132-1141`). */
+const NO_AREA_TEXTURE = { rect: [0, 0, 0, 0], maxMipmap: 0 };
 
 function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
   const props: AreaLight3DProperties = {

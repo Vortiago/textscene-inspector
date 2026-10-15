@@ -8,10 +8,10 @@ import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { TscnParser } from '../../../parser/TscnParser';
 import { ViewportToolbar } from './ViewportToolbar';
-import { openDisplayMenu } from './displayMenuTesting';
+import { openDisplayMenu } from './DisplayMenu.testkit';
 
 function renderWithScene(body: string) {
   const graph = createSceneGraphFromTscnScene(

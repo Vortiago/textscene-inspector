@@ -9,7 +9,6 @@ import {
   collapseLiveNode,
   liveChildGroups,
   liveNodeChain,
-  resolveLiveNode,
   resolveLiveEntry,
   singleSceneCache,
   type LiveChildGroup,
@@ -18,6 +17,7 @@ import {
   type CachedGlbSource,
   type SceneScope,
 } from './liveSceneTree';
+import { liveNodeAt } from './liveSceneTree.testkit';
 import type { TscnNode, TscnScene, TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { subResource } from '../testing/subResource';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
@@ -271,22 +271,22 @@ describe('liveNodeChain — the root→target chain of EFFECTIVE nodes (for ance
     expect(liveNodeChain('', [makeNode('Root', 'Node2D')], ctx)).toBeNull();
   });
 
-  it('agrees with resolveLiveNode on the last element', () => {
+  it('agrees with resolveLiveEntry on the last element', () => {
     const roots = [makeNode('A', 'Node2D', { children: [makeNode('B', 'Node2D')] })];
     const ctx: LiveTreeContext = ctxOf();
     const chain = liveNodeChain('A/B', roots, ctx);
-    expect(chain?.[chain.length - 1]).toBe(resolveLiveNode('A/B', roots, ctx));
+    expect(chain?.[chain.length - 1]).toBe(liveNodeAt('A/B', roots, ctx));
   });
 });
 
-describe('resolveLiveNode — single-node path resolution (the inspector adapter)', () => {
+describe('resolveLiveEntry — single-node path resolution (the inspector adapter)', () => {
   // The single-node entry point the NodeDetailsPanel reads through
   // `useLiveNode`, so the inspector resolves any tree row.
   const EXT: TscnExternalResource[] = [ext('3_as5ck', 'res://ceiling_lamp.tscn')];
 
   it('resolves an inline node by path', () => {
     const roots = [makeNode('Hallway', 'Node3D', { children: [makeNode('Table', 'Node3D')] })];
-    const node = resolveLiveNode('Hallway/Table', roots, ctxOf());
+    const node = liveNodeAt('Hallway/Table', roots, ctxOf());
     expect(node?.name).toBe('Table');
   });
 
@@ -307,7 +307,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
       getCached: (p) => (p === 'res://player.glb' ? glbRoot : undefined),
     };
 
-    const node = resolveLiveNode('player/Armature/hand', roots, ctxOf([], {}, glbCache));
+    const node = liveNodeAt('player/Armature/hand', roots, ctxOf([], {}, glbCache));
     expect(node?.name).toBe('hand');
     expect(node?.type).toBe('GLBMesh');
   });
@@ -325,12 +325,12 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
     ];
     const ctx: LiveTreeContext = ctxOf(EXT, { 'res://ceiling_lamp.tscn': subScene });
 
-    const node = resolveLiveNode('RoomGeometry/ceiling_lamp/plafoniera', roots, ctx);
+    const node = liveNodeAt('RoomGeometry/ceiling_lamp/plafoniera', roots, ctx);
     expect(node?.name).toBe('plafoniera');
     expect(node?.type).toBe('MeshInstance3D');
 
     // The collapsed root's own name is not a path segment.
-    expect(resolveLiveNode('RoomGeometry/ceiling_lamp/LampBody/plafoniera', roots, ctx)).toBeNull();
+    expect(liveNodeAt('RoomGeometry/ceiling_lamp/LampBody/plafoniera', roots, ctx)).toBeNull();
   });
 
   it('resolves a selected collapsed instance ROOT to the merged (root-typed) node', () => {
@@ -340,7 +340,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
       internalResources: [],
     };
     const roots = [makeNode('Coin1', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
-    const node = resolveLiveNode('Coin1', roots, ctxOf(EXT, { 'res://ceiling_lamp.tscn': subScene }));
+    const node = liveNodeAt('Coin1', roots, ctxOf(EXT, { 'res://ceiling_lamp.tscn': subScene }));
     // The inspector sees the identity the tree row and viewport show:
     // the merged node keeps the instance name but adopts the root's type.
     expect(node?.name).toBe('Coin1');
@@ -370,7 +370,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
         children: [makeNode('A', 'Node3D', { instance: 'ExtResource("1_subA")' })],
       }),
     ];
-    const node = resolveLiveNode(
+    const node = liveNodeAt(
       'Outer/A/Inner/Leaf',
       roots,
       ctxOf([ext('1_subA', 'res://subA.tscn')], { 'res://subA.tscn': subA, 'res://subB.tscn': subB })
@@ -381,16 +381,16 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
 
   it('returns null when the sub-scene is not yet cached', () => {
     const roots = [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })];
-    expect(resolveLiveNode('ceiling_lamp/plafoniera', roots, ctxOf(EXT))).toBeNull();
+    expect(liveNodeAt('ceiling_lamp/plafoniera', roots, ctxOf(EXT))).toBeNull();
   });
 
   it('returns null for an unknown segment', () => {
     const roots = [makeNode('Hallway', 'Node3D')];
-    expect(resolveLiveNode('Hallway/Nope', roots, ctxOf())).toBeNull();
+    expect(liveNodeAt('Hallway/Nope', roots, ctxOf())).toBeNull();
   });
 
   it('returns null for an empty path', () => {
-    expect(resolveLiveNode('', [makeNode('A', 'Node3D')], ctxOf())).toBeNull();
+    expect(liveNodeAt('', [makeNode('A', 'Node3D')], ctxOf())).toBeNull();
   });
 });
 
@@ -442,10 +442,10 @@ describe('resolveLiveEntry — effective node + ORIGINATING instance ref (for th
     expect(entry?.instanceRef).toBeUndefined();
   });
 
-  it('agrees with resolveLiveNode on the node, and returns null for an unresolvable path', () => {
+  it('resolves a nested node, and returns null for an unresolvable path', () => {
     const roots = [makeNode('A', 'Node3D', { children: [makeNode('B', 'Node3D')] })];
     const ctx: LiveTreeContext = ctxOf();
-    expect(resolveLiveEntry('A/B', roots, ctx)?.node).toBe(resolveLiveNode('A/B', roots, ctx));
+    expect(resolveLiveEntry('A/B', roots, ctx)?.node.name).toBe('B');
     expect(resolveLiveEntry('A/Nope', roots, ctx)).toBeNull();
     expect(resolveLiveEntry('', roots, ctx)).toBeNull();
   });

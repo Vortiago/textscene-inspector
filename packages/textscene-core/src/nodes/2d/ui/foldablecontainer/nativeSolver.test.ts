@@ -17,8 +17,6 @@ import {
   foldableContainerMinimumSize,
   foldableContainerLayout,
   foldableContainerHSeparation,
-  foldableContainerArrowSize,
-  foldableContainerTitleMetrics,
   foldableContainerTitleShape,
   type FoldableContainerTitleMetrics,
 } from './nativeSolver';
@@ -158,15 +156,20 @@ describe('foldableContainerLayout', () => {
   });
 });
 
-describe('foldableContainerHSeparation / foldableContainerArrowSize (default_theme.cpp:1336, scene/theme/icons/arrow_*.svg)', () => {
+describe('foldableContainerHSeparation and the arrow size (default_theme.cpp:1336, scene/theme/icons/arrow_*.svg)', () => {
   it('h_separation is round(2*scale); the arrow icons are round(16*scale) square', () => {
     expect(foldableContainerHSeparation(nativeTheme(1))).toBe(2);
-    expect(foldableContainerArrowSize(nativeTheme(1))).toEqual({ x: 16, y: 16 });
+    expect(foldableContainerTitleShape(node({}), nativeTheme(1)).arrowSize).toEqual({ x: 16, y: 16 });
   });
 
   it('both move with a non-1 theme scale', () => {
     expect(foldableContainerHSeparation(nativeTheme(1.5))).toBe(3);
-    expect(foldableContainerArrowSize(nativeTheme(1.5))).toEqual({ x: 24, y: 24 });
+    expect(foldableContainerTitleShape(node({}), nativeTheme(1.5)).arrowSize).toEqual({ x: 24, y: 24 });
+  });
+
+  it('a themed arrow keeps its own size (edge case)', () => {
+    const themed = { ...node({}), textureSlots: { expanded_arrow: { x: 40, y: 30 } } };
+    expect(foldableContainerTitleShape(themed, nativeTheme(1)).arrowSize).toEqual({ x: 40, y: 30 });
   });
 });
 
@@ -175,35 +178,20 @@ describe('FoldableContainer under RTL', () => {
 
   /** The default panel StyleBox with asymmetric horizontal margins, so a left/right swap is visible. */
   function lopsidedPanel(container: SolveNode) {
-    const base = foldableContainerTitleMetrics(
-      container,
-      container.node.properties as FoldableContainerProperties,
-      ctx(),
-      true
-    ).panelStyle;
+    const base = titleShape(container).panelStyle;
     return { ...base, contentMargin: { ...base.contentMargin, left: 2, right: 9 } };
   }
 
   it('picks folded_arrow_mirrored when folded (foldable_container.cpp:428-435)', () => {
     // `} else if (is_layout_rtl()) { return theme_cache.folded_arrow_mirrored; }`
     const container = { ...node({ folded: true }), rtl: true };
-    const title = foldableContainerTitleMetrics(
-      container,
-      container.node.properties as FoldableContainerProperties,
-      ctx(),
-      true
-    );
+    const title = titleShape(container);
     expect(title.arrow).toBe('foldedMirrored');
   });
 
   it('keeps the expanded arrow unmirrored — the RTL branch is folded-only (foldable_container.cpp:428-435)', () => {
     const container = { ...node({ folded: false }), rtl: true };
-    const title = foldableContainerTitleMetrics(
-      container,
-      container.node.properties as FoldableContainerProperties,
-      ctx(),
-      true
-    );
+    const title = titleShape(container);
     expect(title.arrow).toBe('expanded');
   });
 

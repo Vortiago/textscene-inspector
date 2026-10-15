@@ -322,7 +322,7 @@ function parseSizeValue(value: string): { amount: number; inPercent: boolean } {
  * The first unquoted piece's `=value` is `bbcode_value`, and later pieces are
  * `bbcode_options` (`:5357-5382`).
  */
-export function parseImgTag(content: string, path: string): ParsedImgTag {
+function parseImgTag(content: string, path: string): ParsedImgTag {
   const splitBlock = splitUnquoted(content, ' ');
   const first = splitBlock[0] ?? content;
   const options = new Map<string, string>();

@@ -191,7 +191,7 @@ function buildChildMscs(
  * the widest child minimum, and the cross axis is `cached_size`. With no sortable
  * child both are 0.
  */
-export const flowContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
+const flowContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const vertical = orientationOf(n);
   const sortable = n.children.filter(isSortableControl);
   if (sortable.length === 0) return { x: 0, y: 0 };
@@ -290,7 +290,7 @@ function alignmentOffset(
  * share, `reverse_fill` and `fit_child_in_rect`. `contentRect` is the real rect on
  * both solve passes, so no size needs a stand-in.
  */
-export const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const vertical = orientationOf(n);
   const hSep = separationOf(n, 'h_separation', ctx.theme);
   const vSep = separationOf(n, 'v_separation', ctx.theme);

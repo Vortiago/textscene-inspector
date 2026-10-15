@@ -52,7 +52,7 @@ export function buildFoldContext(
 }
 
 /** `TextEdit::get_indent_level` (`text_edit.cpp:4145-4161`): tabs count as `tab_size`, and the last character is never counted. */
-export function getIndentLevel(line: string, tabSize: number): number {
+function getIndentLevel(line: string, tabSize: number): number {
   let tabs = 0;
   let spaces = 0;
   for (let i = 0; i < line.length - 1; i++) {
@@ -69,7 +69,7 @@ export function isLineCodeRegionStart(ctx: FoldContext, line: number): boolean {
 }
 
 /** `is_line_code_region_end` (`code_edit.cpp:2002-2012`). */
-export function isLineCodeRegionEnd(ctx: FoldContext, line: number): boolean {
+function isLineCodeRegionEnd(ctx: FoldContext, line: number): boolean {
   return matchesRegionTag(ctx, line, ctx.regionEnd);
 }
 
@@ -81,12 +81,12 @@ function matchesRegionTag(ctx: FoldContext, line: number, tag: string): boolean 
 }
 
 /** `is_in_comment(line)`: `_is_in_delimiter` at no column (`code_edit.cpp:2068-2071`). */
-export function isInComment(ctx: FoldContext, line: number): number {
+function isInComment(ctx: FoldContext, line: number): number {
   return isLineInDelimiter(ctx.lines, ctx.delimiters, ctx.cache, line, 'comment');
 }
 
 /** `is_in_string(line)` (`code_edit.cpp:2039-2042`). */
-export function isInString(ctx: FoldContext, line: number): number {
+function isInString(ctx: FoldContext, line: number): number {
   return isLineInDelimiter(ctx.lines, ctx.delimiters, ctx.cache, line, 'string');
 }
 

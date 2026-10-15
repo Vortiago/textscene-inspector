@@ -1,99 +1,65 @@
 /**
  * The fade hooks onto one line of three's shadow chunk and two of its lighting chunk, and reaches
- * every lit material through one shared buffer. The first test reads the installed three, so a
- * release that rewrites a line fails here, not in a golden.
+ * every lit material through one shared buffer. The chunks are read as installed on the installed
+ * three, so a release that rewrites a line fails here, not in a golden.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import {
-  DIRECTIONAL_SHADOW_FADE_UNIFORM,
-  installDirectionalShadowFade,
-  shadowFadeChunks,
-  writeDirectionalShadowFades,
-} from './shadowFade';
-import { godotSplitShadowChunk, installGodotSplitShadow } from './splitShadowChunk';
-import { FRAMEBUFFER_HEIGHT_UNIFORM } from '../shadowFilter/framebufferRows';
-import { softShadowFilterChunk } from '../shadowFilter/softShadowFilter';
+import { installDirectionalShadowFade, writeDirectionalShadowFades } from './shadowFade';
+import { installGodotSplitShadow } from './splitShadowChunk';
+import { DIRECTIONAL_SHADOW_ATLAS_UNIFORM } from './shadowAtlas';
 import { LIT_SHADERS } from '../testing/litShaders';
+import { warningsOf } from '../testing/logWarnings';
+import { installedShaderChunks, snapshotShaderGlobals } from '../testing/shaderPatches';
 
 const PARS = 'shadowmap_pars_fragment';
 const LIGHTS = 'lights_fragment_begin';
 const threePars = THREE.ShaderChunk[PARS];
 const threeLights = THREE.ShaderChunk[LIGHTS];
+const FADE_UNIFORM = 'directionalShadowFade';
 
 const occurrences = (text: string, part: string) => text.split(part).length - 1;
 
 function fadeBuffer(): Float32Array {
-  return THREE.ShaderLib.standard.uniforms[DIRECTIONAL_SHADOW_FADE_UNIFORM]!.value as Float32Array;
+  return THREE.ShaderLib.standard.uniforms[FADE_UNIFORM]!.value as Float32Array;
 }
 
-afterEach(() => {
-  THREE.ShaderChunk[PARS] = threePars;
-  THREE.ShaderChunk[LIGHTS] = threeLights;
-  for (const shader of Object.values(THREE.ShaderLib)) {
-    delete shader.uniforms[DIRECTIONAL_SHADOW_FADE_UNIFORM];
-    delete shader.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM];
-  }
-  const lights = THREE.UniformsLib.lights as Record<string, THREE.IUniform>;
-  delete lights[DIRECTIONAL_SHADOW_FADE_UNIFORM];
-  delete lights[FRAMEBUFFER_HEIGHT_UNIFORM];
+let restoreShaderGlobals: () => void;
+beforeEach(() => {
+  restoreShaderGlobals = snapshotShaderGlobals();
 });
+afterEach(() => restoreShaderGlobals());
 
-describe('shadowFadeChunks', () => {
-  it('finds each hooked line exactly once in the installed three', () => {
+describe('the installed fade', () => {
+  it('hooks onto lines the installed three holds exactly once', () => {
     expect(occurrences(threePars, '#ifdef USE_SHADOWMAP\n')).toBe(1);
     expect(occurrences(threeLights, 'getShadow( directionalShadowMap[ i ]')).toBe(1);
     expect(occurrences(threeLights, 'getSunShadow( sunShadowMap[ i ]')).toBe(1);
-    expect(shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: threeLights })).not.toBeNull();
   });
 
   it('declares one fade per directional and sun shadow, outside both shadow blocks', () => {
-    const { [PARS]: pars } = shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: threeLights })!;
-    const declaration = `uniform vec2 ${DIRECTIONAL_SHADOW_FADE_UNIFORM}[ NUM_DIR_LIGHT_SHADOWS + NUM_SUN_LIGHT_SHADOWS ];`;
+    const { [PARS]: pars } = installedShaderChunks();
+    const declaration = `uniform vec2 ${FADE_UNIFORM}[ NUM_DIR_LIGHT_SHADOWS + NUM_SUN_LIGHT_SHADOWS ];`;
     expect(occurrences(pars, declaration)).toBe(1);
     expect(pars.indexOf(declaration)).toBeLessThan(pars.indexOf('#if NUM_SUN_LIGHT_SHADOWS > 0'));
     expect(pars).toContain('smoothstep( fade.x, fade.y, depth )');
   });
 
   it('mixes the directional shadow towards unshadowed by the view depth', () => {
-    const { [LIGHTS]: lights } = shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: threeLights })!;
+    const { [LIGHTS]: lights } = installedShaderChunks();
+    expect(lights).toContain(`1.0, directionalShadowFadeOut( ${FADE_UNIFORM}[ i ], - geometryPosition.z ) )`);
+  });
+
+  it('mixes the sun shadow, sampled from the atlas, by the fade after every directional one', () => {
+    const { [LIGHTS]: lights } = installedShaderChunks();
     expect(lights).toContain(
-      `1.0, directionalShadowFadeOut( ${DIRECTIONAL_SHADOW_FADE_UNIFORM}[ i ], - geometryPosition.z ) )`
+      `mix( getSunShadow( ${DIRECTIONAL_SHADOW_ATLAS_UNIFORM}, sunLightShadow, UNROLLED_LOOP_INDEX ), 1.0, directionalShadowFadeOut( ${FADE_UNIFORM}[ NUM_DIR_LIGHT_SHADOWS + UNROLLED_LOOP_INDEX ], - geometryPosition.z ) )`
     );
   });
 
-  it('mixes the sun shadow by the fade after every directional one', () => {
-    const { [LIGHTS]: lights } = shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: threeLights })!;
-    expect(lights).toContain(
-      `mix( getSunShadow( sunShadowMap[ i ], sunLightShadow, UNROLLED_LOOP_INDEX ), 1.0, directionalShadowFadeOut( ${DIRECTIONAL_SHADOW_FADE_UNIFORM}[ NUM_DIR_LIGHT_SHADOWS + UNROLLED_LOOP_INDEX ], - geometryPosition.z ) )`
-    );
-  });
-
-  it('mixes a sun shadow that samples the atlas, whatever sampler it passes (edge case)', () => {
-    const atlasSampled = threeLights.replace(
-      'getSunShadow( sunShadowMap[ i ],',
-      'getSunShadow( directionalShadowAtlas,'
-    );
-    const { [LIGHTS]: lights } = shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: atlasSampled })!;
-    expect(lights).toContain(
-      'mix( getSunShadow( directionalShadowAtlas, sunLightShadow, UNROLLED_LOOP_INDEX ), 1.0,'
-    );
-  });
-
-  it('leaves the spot shadow unfaded (edge case)', () => {
-    const { [LIGHTS]: lights } = shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: threeLights })!;
+  it('fades only the directional and the sun shadow (edge case)', () => {
+    const { [LIGHTS]: lights } = installedShaderChunks();
     expect(occurrences(lights, 'directionalShadowFadeOut')).toBe(2);
-    expect(lights).toContain('getShadow( spotShadowMap[ i ]');
-  });
-
-  it('is null for chunks without the lines (error case)', () => {
-    expect(shadowFadeChunks({ [PARS]: 'void main() {}', [LIGHTS]: threeLights })).toBeNull();
-    expect(shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: 'void main() {}' })).toBeNull();
-    const withoutSun = threeLights.replace(
-      'getSunShadow( sunShadowMap[ i ]',
-      'getSunLightShadow( sunShadowMap[ i ]'
-    );
-    expect(shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: withoutSun })).toBeNull();
   });
 });
 
@@ -101,45 +67,69 @@ describe('installDirectionalShadowFade', () => {
   it('gives every lit built-in material the fade uniform', () => {
     installDirectionalShadowFade();
     for (const name of LIT_SHADERS) {
-      expect(THREE.ShaderLib[name]!.uniforms[DIRECTIONAL_SHADOW_FADE_UNIFORM]).toBeDefined();
+      expect(THREE.ShaderLib[name]!.uniforms[FADE_UNIFORM]).toBeDefined();
     }
   });
 
   it('shares the buffer with a ShaderMaterial that merges three’s light uniforms', () => {
     installDirectionalShadowFade();
     const merged = THREE.UniformsUtils.merge([THREE.UniformsLib.lights]);
-    expect(merged[DIRECTIONAL_SHADOW_FADE_UNIFORM]!.value).toBe(fadeBuffer());
+    expect(merged[FADE_UNIFORM]!.value).toBe(fadeBuffer());
   });
 
   it('leaves an unlit material without it (edge case)', () => {
     installDirectionalShadowFade();
-    expect(THREE.ShaderLib.basic.uniforms[DIRECTIONAL_SHADOW_FADE_UNIFORM]).toBeUndefined();
+    expect(THREE.ShaderLib.basic.uniforms[FADE_UNIFORM]).toBeUndefined();
   });
 
   it('shares one buffer with every material’s cloned uniforms', () => {
     installDirectionalShadowFade();
     const cloned = THREE.UniformsUtils.clone(THREE.ShaderLib.physical.uniforms);
-    expect(cloned[DIRECTIONAL_SHADOW_FADE_UNIFORM]!.value).toBe(fadeBuffer());
+    expect(cloned[FADE_UNIFORM]!.value).toBe(fadeBuffer());
   });
 
   it('patches each chunk once when called twice (edge case)', () => {
     installDirectionalShadowFade();
     installDirectionalShadowFade();
     expect(occurrences(THREE.ShaderChunk[LIGHTS], 'directionalShadowFadeOut')).toBe(2);
-    expect(occurrences(THREE.ShaderChunk[PARS], `uniform vec2 ${DIRECTIONAL_SHADOW_FADE_UNIFORM}`)).toBe(1);
+    expect(occurrences(THREE.ShaderChunk[PARS], `uniform vec2 ${FADE_UNIFORM}`)).toBe(1);
   });
 
-  it('leaves both chunks and every material alone when three lacks a hooked line (error case)', () => {
-    THREE.ShaderChunk[LIGHTS] = threeLights.replace(
-      'getSunShadow( sunShadowMap[ i ]',
-      'getSunLightShadow( sunShadowMap[ i ]'
-    );
-    const lights = THREE.ShaderChunk[LIGHTS];
+  it('mixes three’s own sun shadow when the atlas is not in', () => {
     installDirectionalShadowFade();
-    expect(THREE.ShaderChunk[PARS]).toBe(threePars);
-    expect(THREE.ShaderChunk[LIGHTS]).toBe(lights);
-    expect(THREE.ShaderLib.standard.uniforms[DIRECTIONAL_SHADOW_FADE_UNIFORM]).toBeUndefined();
+    expect(THREE.ShaderChunk[LIGHTS]).toContain(
+      'mix( getSunShadow( sunShadowMap[ i ], sunLightShadow, UNROLLED_LOOP_INDEX ), 1.0,'
+    );
   });
+
+  it('leaves the spot shadow unfaded (edge case)', () => {
+    installDirectionalShadowFade();
+    expect(occurrences(THREE.ShaderChunk[LIGHTS], 'directionalShadowFadeOut')).toBe(2);
+    expect(THREE.ShaderChunk[LIGHTS]).toContain('getShadow( spotShadowMap[ i ]');
+  });
+
+  it.each([
+    ['shadow chunk', { [PARS]: 'void main() {}', [LIGHTS]: threeLights }],
+    ['lighting chunk', { [PARS]: threePars, [LIGHTS]: 'void main() {}' }],
+    [
+      'sun lookup',
+      {
+        [PARS]: threePars,
+        [LIGHTS]: threeLights.replace(
+          'getSunShadow( sunShadowMap[ i ]',
+          'getSunLightShadow( sunShadowMap[ i ]'
+        ),
+      },
+    ],
+  ])(
+    'leaves both chunks and every material alone, and warns, without three’s %s (error case)',
+    (_, chunks) => {
+      Object.assign(THREE.ShaderChunk, chunks);
+      expect(warningsOf(installDirectionalShadowFade)).toHaveLength(1);
+      expect({ [PARS]: THREE.ShaderChunk[PARS], [LIGHTS]: THREE.ShaderChunk[LIGHTS] }).toEqual(chunks);
+      expect(THREE.ShaderLib.standard.uniforms[FADE_UNIFORM]).toBeUndefined();
+    }
+  );
 
   it('writes the buffer an earlier evaluation of the module installed (edge case)', async () => {
     installDirectionalShadowFade();
@@ -211,7 +201,7 @@ describe('the fade with Godot’s split lookup', () => {
 
   it('applies both patches to three’s shadow chunk', () => {
     const pars = installBoth('splits first');
-    expect(pars).toContain(`uniform vec2 ${DIRECTIONAL_SHADOW_FADE_UNIFORM}[`);
+    expect(pars).toContain(`uniform vec2 ${FADE_UNIFORM}[`);
     expect(pars).toContain('float getSunShadowSplit(');
     expect(pars).toContain('#define SUN_LIGHT_CASCADES 4');
     expect(occurrences(THREE.ShaderChunk[LIGHTS], 'directionalShadowFadeOut')).toBe(2);
@@ -224,15 +214,10 @@ describe('the fade with Godot’s split lookup', () => {
     expect(installBoth('fade first')).toBe(splitsFirst);
   });
 
-  it('equals the split patch of the faded chunk with the soft shadow filter in', () => {
-    const { [PARS]: pars } = shadowFadeChunks({ [PARS]: threePars, [LIGHTS]: threeLights })!;
-    expect(installBoth('fade first')).toBe(godotSplitShadowChunk(softShadowFilterChunk(pars)!));
-  });
-
   it('patches each part once when both install twice (edge case)', () => {
     installBoth('splits first');
     const pars = installBoth('fade first');
-    expect(occurrences(pars, `uniform vec2 ${DIRECTIONAL_SHADOW_FADE_UNIFORM}`)).toBe(1);
+    expect(occurrences(pars, `uniform vec2 ${FADE_UNIFORM}`)).toBe(1);
     expect(occurrences(pars, 'float getSunShadowSplit(')).toBe(1);
   });
 
@@ -242,7 +227,7 @@ describe('the fade with Godot’s split lookup', () => {
       '#define SUN_LIGHT_CASCADES 3'
     );
     const pars = installBoth('fade first');
-    expect(pars).toContain(`uniform vec2 ${DIRECTIONAL_SHADOW_FADE_UNIFORM}[`);
+    expect(pars).toContain(`uniform vec2 ${FADE_UNIFORM}[`);
     expect(pars).not.toContain('getSunShadowSplit');
   });
 });

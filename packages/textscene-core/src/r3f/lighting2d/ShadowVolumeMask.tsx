@@ -17,14 +17,14 @@ import { usePassMeshRef } from './lightPassDeclarations';
  * 1..255 and wrap: exact up to this many shadowed lights, and beyond it a pass needs a stencil
  * clear every 255 lights.
  */
-export const SHADOW_STENCIL_REFS = 255;
+const SHADOW_STENCIL_REFS = 255;
 
 /**
  * The stencil value light `ordinal` stamps, distinct per light in a pass. The lights share one
  * target, so a shared ref would make each cookie reject every earlier light's shadow. A distinct
  * ref makes a leftover stamp unequal, so one stencil clear per pass suffices.
  */
-export function shadowStencilRef(ordinal: number): number {
+function shadowStencilRef(ordinal: number): number {
   const n = Math.abs(Math.trunc(ordinal)) % SHADOW_STENCIL_REFS;
   return n + 1;
 }
@@ -34,7 +34,7 @@ export function shadowStencilRef(ordinal: number): number {
  * canvas light list (`lightSequence.ts`), not its ordinal: Godot applies lights in attach order,
  * MIX depends on it, and ordinals follow cookie load timing.
  */
-export function shadowVolumeRenderOrder(sequence: number): number {
+function shadowVolumeRenderOrder(sequence: number): number {
   return sequence * 2;
 }
 

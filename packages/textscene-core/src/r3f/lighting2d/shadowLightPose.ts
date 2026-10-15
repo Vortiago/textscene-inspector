@@ -42,7 +42,7 @@ export interface ShadowLightPose extends ShadowLight, ShadowPolarLight {
  * space, or null while the quad is not in the tree. The quad's bounds give the
  * rect, and its parent, the CanvasItem, gives the origin and the local frame.
  */
-export function sampleShadowLight(quad: THREE.Mesh | null, matricesFresh = false): ShadowLightPose | null {
+function sampleShadowLight(quad: THREE.Mesh | null, matricesFresh = false): ShadowLightPose | null {
   if (!quad || !quad.parent) return null;
   const geometry = quad.geometry;
   if (!geometry.boundingBox) geometry.computeBoundingBox();
@@ -83,7 +83,7 @@ export function sampleShadowLight(quad: THREE.Mesh | null, matricesFresh = false
 }
 
 /** Do two poses shadow identically? */
-export function sameShadowLight(a: ShadowLightPose | null, b: ShadowLightPose | null): boolean {
+function sameShadowLight(a: ShadowLightPose | null, b: ShadowLightPose | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
   if (

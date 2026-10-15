@@ -6,7 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { TextRun, buildGlyphQuadArrays, type TextRunProps } from './TextRun';
+import { TextRun, type TextRunProps } from './TextRun';
+import { renderedGlyphQuads } from './TextRun.testkit';
 import { shapeText, AutowrapMode } from './textLayout';
 import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
@@ -25,15 +26,15 @@ function layoutFor(text: string, uppercase = false) {
   });
 }
 
-describe('buildGlyphQuadArrays (pure geometry math)', () => {
-  it('emits one quad (4 verts) per visible glyph, skipping a zero-size atlas entry like space', () => {
-    const arrays = buildGlyphQuadArrays(layoutFor('A B'), 16);
+describe('<TextRun> glyph quads', () => {
+  it('emits one quad (4 verts) per visible glyph, skipping a zero-size atlas entry like space', async () => {
+    const arrays = await renderedGlyphQuads(layoutFor('A B'), 16);
     expect(arrays.positions.length / 3).toBe(2 * 4);
     expect(arrays.indices.length).toBe(2 * 6);
   });
 
-  it("places the first glyph's left edge from its own xoffset, with no left-edge contribution from the previous glyph", () => {
-    const arrays = buildGlyphQuadArrays(layoutFor('AB'), 16);
+  it("places the first glyph's left edge from its own xoffset, with no left-edge contribution from the previous glyph", async () => {
+    const arrays = await renderedGlyphQuads(layoutFor('AB'), 16);
     // Vertex order per quad: TL, TR, BL, BR (x,y,z each) -- TL.x is vertex 0.
     const aLeft = arrays.positions[0]!;
     const bLeft = arrays.positions[4 * 3 + 0]!;
@@ -46,9 +47,9 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
     expect(bLeft).toBeCloseTo(penB + b.xoffset * SCALE, 6);
   });
 
-  it('renders the UPPERCASED glyph a layout already transformed to, not the source casing', () => {
-    const lower = buildGlyphQuadArrays(layoutFor('a'), 16);
-    const upper = buildGlyphQuadArrays(layoutFor('a', true), 16);
+  it('renders the UPPERCASED glyph a layout already transformed to, not the source casing', async () => {
+    const lower = await renderedGlyphQuads(layoutFor('a'), 16);
+    const upper = await renderedGlyphQuads(layoutFor('a', true), 16);
     const aGlyph = OPEN_SANS_ATLAS_GLYPHS.a!;
     const AGlyph = OPEN_SANS_ATLAS_GLYPHS.A!;
     const lowerWidth = lower.positions[1 * 3]! - lower.positions[0]!; // TR.x - TL.x
@@ -57,9 +58,9 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
     expect(upperWidth).toBeCloseTo(AGlyph.width * SCALE, 6);
   });
 
-  it('shears the bitmap by a DIFFERENT amount at its top vs. its bottom edge, proving a real per-vertex shear rather than a uniform per-glyph translation', () => {
-    const straight = buildGlyphQuadArrays(layoutFor('A'), 16, 0);
-    const skewed = buildGlyphQuadArrays(layoutFor('A'), 16, 0.2);
+  it('shears the bitmap by a DIFFERENT amount at its top vs. its bottom edge, proving a real per-vertex shear rather than a uniform per-glyph translation', async () => {
+    const straight = await renderedGlyphQuads(layoutFor('A'), 16, 0);
+    const skewed = await renderedGlyphQuads(layoutFor('A'), 16, 0.2);
     // Vertex layout per quad: 0=TL,1=TR,2=BL,3=BR ; x is index*3.
     const topDx = skewed.positions[0]! - straight.positions[0]!;
     const bottomDx = skewed.positions[2 * 3]! - straight.positions[2 * 3]!;
@@ -75,13 +76,13 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
       "vertex ABOVE it (an ascender, smaller yPx) to the RIGHT — a pivot at the line's top edge instead " +
       '(0.2 * distance below line top) would shift every ascender-height vertex LEFT, which is the ' +
       'wrong direction and (for a run boundary) eats into the space that precedes it.',
-    () => {
+    async () => {
       // 'A' at 16 (bake size 42, SCALE = 16/42): yoffset 12.8916015625, height 34,
       // `base` 44.8916015625, so `base - yoffset` = 32. baselineOffsetPx = ceil(2189 *
       // 16/2048) = 18, topPx = 18 - 32*(16/42) = 5.809523809..., bottomPx = topPx +
       // 34*(16/42) = 18.761904761..., 2 bake px of AA padding below the baseline.
-      const skewed = buildGlyphQuadArrays(layoutFor('A'), 16, 0.2);
-      const straight = buildGlyphQuadArrays(layoutFor('A'), 16, 0);
+      const skewed = await renderedGlyphQuads(layoutFor('A'), 16, 0.2);
+      const straight = await renderedGlyphQuads(layoutFor('A'), 16, 0);
       const topDx = skewed.positions[0]! - straight.positions[0]!;
       const bottomDx = skewed.positions[2 * 3]! - straight.positions[2 * 3]!;
       // -0.2 * (5.809523809 - 18) = 2.438095238...
@@ -97,10 +98,10 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
       'baseline) in HERE rather than leaving it for a caller to add back — at fontSize 16 the ' +
       'reconciliation is 18 - OPEN_SANS_ATLAS_INFO.base*(16/42) Godot px, and every consumer ' +
       'that used to carry it now positions a line by its box-top Y alone.',
-    () => {
+    async () => {
       const layout = layoutFor('A');
       const a = OPEN_SANS_ATLAS_GLYPHS.A!;
-      const arrays = buildGlyphQuadArrays(layout, 16);
+      const arrays = await renderedGlyphQuads(layout, 16);
       // TL.y is float index 1; geometry Y is negated Godot px.
       const topPx = -arrays.positions[1]!;
       expect(layout.baselineOffsetPx).toBe(18);
@@ -117,14 +118,14 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
     }
   );
 
-  it('places line N exactly one linePitchPx below line N-1, with the same per-line baseline anchor', () => {
+  it('places line N exactly one linePitchPx below line N-1, with the same per-line baseline anchor', async () => {
     const layout = shapeText('A\nA', {
       fontSizePx: 16,
       boxWidthPx: 0,
       autowrapMode: AutowrapMode.OFF,
       lineSpacingPx: 3,
     });
-    const arrays = buildGlyphQuadArrays(layout, 16);
+    const arrays = await renderedGlyphQuads(layout, 16);
     const firstTop = -arrays.positions[1]!;
     const secondTop = -arrays.positions[4 * 3 + 1]!;
     expect(secondTop - firstTop).toBeCloseTo(layout.linePitchPx, 5);

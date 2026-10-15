@@ -178,7 +178,7 @@ export function textEditWrapWidthPx(
  * drawn + 10, MAX(total_rows, 1) * line_height)`. `text.get_max_width()` is the widest row's ceiled
  * `data_buf` width, here the max `shapedTextSizeWidthPx` over every shaped row.
  */
-export function textEditContentSize(
+function textEditContentSize(
   lineLayouts: readonly TextEditLineLayout[],
   rowHeightPx: number,
   gutterBandWidthPx: number,

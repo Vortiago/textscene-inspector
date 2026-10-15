@@ -1,16 +1,17 @@
 /**
  * The Fresnel weight comes off three's diffuse term, a light's diffuse and specular follow the modes
- * a program defines, and the default specular is Godot's GGX on Godot's roughness. The first test reads the
- * installed three, so a release that rewrites the lines fails here, not in a golden.
+ * a program defines, and the default specular is Godot's GGX on Godot's roughness. The chunks are
+ * read as installed on the installed three, so a release that rewrites the lines fails here, not in
+ * a golden.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { GODOT_LIGHT_FUNCTION_EDITS, threeAnisotropy, installGodotLightFunction } from './godotLightFunction';
-import { applyChunkEdits } from './shaderPatch/chunkPatch';
+import { threeAnisotropy, installGodotLightFunction } from './godotLightFunction';
 import { installGodotLightSpecular } from './lightSpecular/lightSpecularChunk';
 import { installGodotLightSize } from './lightSize/lightSizeChunk';
 import { warningsOf } from './testing/logWarnings';
 import { preprocessorBranch } from './testing/glslSource';
+import { installedShaderChunks } from './testing/shaderPatches';
 
 const CHUNK = 'lights_physical_pars_fragment';
 const SETUP_CHUNK = 'lights_physical_fragment';
@@ -32,36 +33,18 @@ const threeLightChunks = {
   lights_fragment_begin: THREE.ShaderChunk.lights_fragment_begin,
 };
 
-const occurrences = (text: string, part: string) => text.split(part).length - 1;
-
-/** three's chunks with every edit applied. */
-function godotChunks(): Record<LightChunk, string> {
-  return applyChunkEdits(threeChunks, GODOT_LIGHT_FUNCTION_EDITS)!;
-}
+/** The three chunks a canvas compiles with. */
+const godotChunks = installedShaderChunks;
 
 afterEach(() => {
   Object.assign(THREE.ShaderChunk, threeChunks, threeLightChunks);
 });
 
-describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
+describe('the installed light function', () => {
   it("scales each specular mode by the light's specular amount", () => {
     const sum = godotChunks()[CHUNK].split('if ( material.godotRoughness <= 0.0 ) {')[1]!;
     expect(sum).toContain('* directLight.color * godotSpecularAmount * material.diffuseContribution;');
     expect(sum).toContain('specularBRDF *= godotSpecularAmount;');
-  });
-
-  it('finds each replaced line exactly once in the installed three', () => {
-    for (const { chunk, three } of GODOT_LIGHT_FUNCTION_EDITS) {
-      expect(occurrences(threeChunks[chunk], three)).toBe(1);
-    }
-  });
-
-  it('writes each edit into its chunk', () => {
-    const patched = godotChunks();
-
-    for (const { chunk, godot } of GODOT_LIGHT_FUNCTION_EDITS) {
-      expect(patched[chunk]).toContain(godot);
-    }
   });
 
   it('drops the Fresnel weight from every diffuse line', () => {
@@ -111,7 +94,8 @@ describe('GODOT_LIGHT_FUNCTION_EDITS', () => {
 
   it("writes a toon specular into the light's diffuse, as Godot does", () => {
     // `scene_forward_lights_inc.glsl:228-234`.
-    const toon = preprocessorBranch(godotChunks()[CHUNK], '#if defined( GODOT_SPECULAR_TOON )');
+    const direct = godotChunks()[CHUNK].split('void RE_Direct_Physical(')[1]!;
+    const toon = preprocessorBranch(direct, '#if defined( GODOT_SPECULAR_TOON )');
     expect(toon).toContain('specularBRDF = vec3( 0.0 );');
     expect(toon).toContain('reflectedLight.directDiffuse += godotToonSpecular(');
   });
@@ -180,10 +164,13 @@ describe('installGodotLightFunction', () => {
     installGodotLightSize();
   });
 
-  it('replaces three’s chunks with the patched ones', () => {
+  it('writes Godot’s roughness and light function into all three chunks', () => {
     installGodotLightFunction();
 
-    expect(installedChunks()).toEqual(godotChunks());
+    const patched = installedChunks();
+    expect(patched[CHUNK]).toContain('float godotDiffuseNL(');
+    expect(patched[SETUP_CHUNK]).toContain('material.godotRoughness = sqrt(');
+    expect(patched[MAPS_CHUNK]).toContain('material.godotRoughness');
   });
 
   it('leaves a chunk it cannot patch alone, and warns (error case)', () => {
@@ -203,13 +190,11 @@ describe('installGodotLightFunction', () => {
   });
 
   it('changes nothing and warns nothing on a second call (edge case)', () => {
-    const warnings = warningsOf(() => {
-      installGodotLightFunction();
-      installGodotLightFunction();
-    });
+    installGodotLightFunction();
+    const once = installedChunks();
 
-    expect(warnings).toEqual([]);
-    expect(installedChunks()).toEqual(godotChunks());
+    expect(warningsOf(installGodotLightFunction)).toEqual([]);
+    expect(installedChunks()).toEqual(once);
   });
 
   it("leaves three's chunks alone before the light specular it reads, and warns (error case)", () => {

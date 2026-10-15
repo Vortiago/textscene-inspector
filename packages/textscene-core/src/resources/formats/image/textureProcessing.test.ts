@@ -7,13 +7,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import {
-  applyAlphaBorderFix,
-  createTextureFromBuffer,
-  decodeImagePixels,
-  getMimeType,
-  isTexturePath,
-} from './textureProcessing';
+import { createTextureFromBuffer, decodeImagePixels, getMimeType, isTexturePath } from './textureProcessing';
 
 const fakeLoader = vi.hoisted(() => ({
   mode: 'success' as 'success' | 'error',
@@ -137,6 +131,64 @@ describe('createTextureFromBuffer', () => {
       const texture = await createTextureFromBuffer(data, 'image/jpeg');
       expect(texture.image).toBe(softEdge);
     });
+
+    /** The PNG texture a decoded image of one row of `[r, g, b, a]` texels yields. */
+    function decodeRow(texels: number[][]): Promise<THREE.Texture> {
+      fakeLoader.image = { data: new Uint8Array(texels.flat()), width: texels.length, height: 1 };
+      return createTextureFromBuffer(data, 'image/png');
+    }
+
+    const bytesOf = (texture: THREE.Texture) => Array.from((texture.image as { data: Uint8Array }).data);
+
+    it('rewrites the RGB behind alpha 0 on an image with soft, partial-alpha edges', async () => {
+      const fixed = await decodeRow([
+        [255, 255, 255, 0],
+        [10, 20, 30, 128],
+      ]);
+      expect(bytesOf(fixed)).toEqual([10, 20, 30, 0, 10, 20, 30, 128]);
+    });
+
+    it("leaves the decoded image's shared bytes as they were", async () => {
+      await decodeRow([
+        [255, 255, 255, 0],
+        [10, 20, 30, 128],
+      ]);
+      expect(Array.from(fakeLoader.image!.data)).toEqual([255, 255, 255, 0, 10, 20, 30, 128]);
+    });
+
+    it('keeps the RGB of a transparent texel with no source within the radius', async () => {
+      const fixed = await decodeRow([
+        [10, 20, 30, 255],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [7, 7, 7, 0],
+      ]);
+      expect(bytesOf(fixed).slice(20, 24)).toEqual([7, 7, 7, 0]);
+    });
+
+    it('keeps the sampling of the decoded texture it replaces', async () => {
+      // A decoded texture mipmaps by three's default. A bare DataTexture would sample nearest.
+      const fixed = await decodeRow([
+        [255, 255, 255, 0],
+        [10, 20, 30, 128],
+      ]);
+      expect(fixed).toBeInstanceOf(THREE.DataTexture);
+      expect(fixed.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+      expect(fixed.generateMipmaps).toBe(true);
+    });
+
+    it('keeps the decoded texture when no texel needs rewriting', async () => {
+      const fixed = await decodeRow([[1, 2, 3, 255]]);
+      expect(fixed.image).toBe(fakeLoader.image);
+    });
+
+    it('keeps the decoded texture when its pixels cannot be read (edge case)', async () => {
+      const texture = await createTextureFromBuffer(data, 'image/png');
+      expect(texture).not.toBeInstanceOf(THREE.DataTexture);
+      expect(texture.image).toBeNull();
+    });
   });
 
   it('resolves with a texture whose colorSpace is sRGB', async () => {
@@ -194,78 +246,6 @@ describe('createTextureFromBuffer', () => {
   it('constructs the TextureLoader without a manager when none is given', async () => {
     await createTextureFromBuffer(data, 'image/png');
     expect(fakeLoader.lastManager).toBeUndefined();
-  });
-});
-
-describe('applyAlphaBorderFix', () => {
-  /** A one-row DataTexture of `[r, g, b, a]` texels, as a decoded sheet's bytes. */
-  function rowTexture(texels: number[][]): THREE.DataTexture {
-    return new THREE.DataTexture(new Uint8Array(texels.flat()), texels.length, 1);
-  }
-
-  const bytesOf = (texture: THREE.Texture) => Array.from((texture.image as { data: Uint8Array }).data);
-
-  it('rewrites the RGB behind alpha 0 on a texture with soft, partial-alpha edges', () => {
-    const fixed = applyAlphaBorderFix(
-      rowTexture([
-        [255, 255, 255, 0],
-        [10, 20, 30, 128],
-      ])
-    );
-
-    expect(bytesOf(fixed)).toEqual([10, 20, 30, 0, 10, 20, 30, 128]);
-  });
-
-  it("leaves the source texture's shared bytes as they were", () => {
-    const source = rowTexture([
-      [255, 255, 255, 0],
-      [10, 20, 30, 128],
-    ]);
-
-    applyAlphaBorderFix(source);
-
-    expect(bytesOf(source)).toEqual([255, 255, 255, 0, 10, 20, 30, 128]);
-  });
-
-  it('keeps the RGB of a transparent texel with no source within the radius', () => {
-    const fixed = applyAlphaBorderFix(
-      rowTexture([
-        [10, 20, 30, 255],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [7, 7, 7, 0],
-      ])
-    );
-
-    expect(bytesOf(fixed).slice(20, 24)).toEqual([7, 7, 7, 0]);
-  });
-
-  it('keeps the sampling of the texture it replaces', () => {
-    const source = rowTexture([
-      [255, 255, 255, 0],
-      [10, 20, 30, 128],
-    ]);
-    source.minFilter = THREE.LinearMipmapLinearFilter;
-    source.generateMipmaps = true;
-
-    const fixed = applyAlphaBorderFix(source);
-
-    expect(fixed.minFilter).toBe(THREE.LinearMipmapLinearFilter);
-    expect(fixed.generateMipmaps).toBe(true);
-  });
-
-  it('returns the same texture when no texel needs rewriting', () => {
-    const texture = rowTexture([[1, 2, 3, 255]]);
-
-    expect(applyAlphaBorderFix(texture)).toBe(texture);
-  });
-
-  it('returns the same texture when its pixels cannot be read', () => {
-    const texture = new THREE.Texture();
-
-    expect(applyAlphaBorderFix(texture)).toBe(texture);
   });
 });
 

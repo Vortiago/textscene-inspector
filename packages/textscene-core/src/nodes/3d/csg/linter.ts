@@ -79,5 +79,3 @@ const csgShape3DDegenerateGeometryRule: LintRule = {
 };
 
 ruleRegistry.register(csgShape3DDegenerateGeometryRule);
-
-export { csgShape3DDegenerateGeometryRule };

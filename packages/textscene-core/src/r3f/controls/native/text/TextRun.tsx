@@ -67,11 +67,7 @@ function atlasUv(x: number, y: number, width: number, height: number) {
 // loaded outline, whose origin is the baseline pen position
 // (`modules/text_server_adv/text_server_adv.cpp:1318-1320`, `:3621-3623`). A top-edge
 // pivot would shift a styled `[i]` run left, into the space before it.
-export function buildGlyphQuadArrays(
-  layout: TextLayoutResult,
-  fontSizePx: number,
-  skew = 0
-): GlyphQuadArrays {
+function buildGlyphQuadArrays(layout: TextLayoutResult, fontSizePx: number, skew = 0): GlyphQuadArrays {
   const scale = fontSizePx / OPEN_SANS_ATLAS_INFO.fontSize;
   const baselineOffsetPx = layout.baselineOffsetPx;
   // How far the bake's line-top reference sits above the baseline, at the target size. A run

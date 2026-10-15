@@ -18,7 +18,6 @@ import {
   type FakeResourceLoader,
 } from '../../resources/testing/createFakeResourceLoader';
 import { instanceAs } from '../../nodes/3d/testing/reactThreeTestInstance';
-import { clearEvaluationCache } from './csgEvaluationCache';
 import '../nodes/index';
 import { NodeTree } from '../testing/NodeTree';
 import { settleCsgEvaluation } from './testing/settleCsgEvaluation';
@@ -48,7 +47,6 @@ function drawnMesh(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.cr
 }
 
 async function renderScene(fake: FakeResourceLoader) {
-  clearEvaluationCache();
   const scene = new TscnParser().parse(SCENE);
   const root = scene.nodes[0]!.children[0]!;
   return ReactThreeTestRenderer.create(

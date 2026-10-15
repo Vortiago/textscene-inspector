@@ -4,11 +4,12 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { installGodotReflectionProbes, REFLECTION_PROBE_GLSL } from './probeShaderChunk';
+import { installGodotReflectionProbes } from './probeShaderChunk';
 import { atlasSlot, instanceLayers, REFLECTION_PROBE_UNIFORMS, rowsSlot, shownProbes } from './probeSlots';
 import { functionBody } from '../testing/glslSource';
 import { scalarGlslFunction } from '../testing/glslScalar';
 import { warningsOf } from '../testing/logWarnings';
+import { installedShaderChunks } from '../testing/shaderPatches';
 
 const threeChunks = { ...THREE.ShaderChunk };
 
@@ -21,8 +22,11 @@ function patchedEnd(): string {
   return THREE.ShaderChunk.lights_fragment_end;
 }
 
-const axisBlend = scalarGlslFunction(REFLECTION_PROBE_GLSL, 'godotProbeAxisBlend');
-const boxExit = scalarGlslFunction(REFLECTION_PROBE_GLSL, 'godotBoxExit');
+/** The physical lighting chunk a canvas compiles with, which holds the probe functions. */
+const probeFunctions = installedShaderChunks().lights_physical_pars_fragment;
+
+const axisBlend = scalarGlslFunction(probeFunctions, 'godotProbeAxisBlend');
+const boxExit = scalarGlslFunction(probeFunctions, 'godotBoxExit');
 
 describe('godotProbeAxisBlend', () => {
   it('is 1 deeper than the blend distance inside the box', () => {
@@ -76,7 +80,7 @@ describe('installGodotReflectionProbes', () => {
   });
 
   it('takes the probes from the last, the smallest, and skips one the instance is not masked into', () => {
-    const gather = functionBody(REFLECTION_PROBE_GLSL, 'void godotGatherReflectionProbes');
+    const gather = functionBody(probeFunctions, 'void godotGatherReflectionProbes');
 
     expect(gather).toContain('for ( int index = probeCount - 1; index >= 0; index -- )');
     expect(gather).toContain(
@@ -85,7 +89,7 @@ describe('installGodotReflectionProbes', () => {
   });
 
   it('reflects about a normal bent by the roughness to the fourth, as Godot does for a probe', () => {
-    expect(functionBody(REFLECTION_PROBE_GLSL, 'void godotGatherReflectionProbes')).toContain(
+    expect(functionBody(probeFunctions, 'void godotGatherReflectionProbes')).toContain(
       'mix( normalize( reflect( - viewDir, normal ) ), normal, roughness * roughness * roughness * roughness )'
     );
   });

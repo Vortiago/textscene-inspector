@@ -303,15 +303,15 @@ describe('AgX white end to end — select, then floor', () => {
     // The composition: a bare `tonemap_mode = 4` scene reaches the shader at
     // Godot's 16.29, not the 2.0 that flooring `tonemap_white` would produce.
     const { decodeEnvironment } = await import('./decode');
-    const { toneMappingWhiteParam } = await import('./godotToneMapping');
+    const { bakedToneMapWhite } = await import('./godotToneMapping.testkit');
     const settings = createEnvironmentSettings(decodeEnvironment({ tonemap_mode: '4' }), DEFAULT_CLEAR_COLOR);
-    expect(toneMappingWhiteParam(4, settings.toneMapping.white)).toBeCloseTo(16.29, 6);
+    expect(bakedToneMapWhite(4, settings.toneMapping.white)).toBeCloseTo(16.29, 6);
 
     // ...and a scene that authors an AgX white BELOW Godot's floor still gets it.
     const floored = createEnvironmentSettings(
       decodeEnvironment({ tonemap_mode: '4', tonemap_agx_white: '0.5' }),
       DEFAULT_CLEAR_COLOR
     );
-    expect(toneMappingWhiteParam(4, floored.toneMapping.white)).toBe(2);
+    expect(bakedToneMapWhite(4, floored.toneMapping.white)).toBe(2);
   });
 });

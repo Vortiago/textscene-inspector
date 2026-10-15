@@ -11,7 +11,7 @@ import { directionalShadowAtlasDepth } from './shadowAtlas';
 import { directionalShadowUserData } from './declaration';
 import { fitSceneDirectionalShadows } from './fitSceneDirectionalShadows';
 import { sceneLights } from './lightLists';
-import { cameraSliceCorners } from './fitDirectionalShadowBox';
+import { cameraSliceCorners } from './fitDirectionalShadowBox.testkit';
 import { splitSunOf } from './splitSun';
 import {
   directionalShadowSplitAtlasRect,

@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { identityTransform3D } from '../../utils/transform';
+import { identityTransform3D } from '../../utils/transform.testkit';
 import { buildCsgPlan, CsgOperation } from './csgPlan';
 import type { CsgContribution, CsgPlan } from './csgPlan';
 import type { TscnNode } from '../../parser/types';

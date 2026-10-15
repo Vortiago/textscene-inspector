@@ -53,7 +53,7 @@ function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation', theme:
  * (a count in `_resort`), and the same for rows. Each child minimum truncates to
  * `Size2i` (`:290`) first.
  */
-export const gridContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
+const gridContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const columns = columnsOf(n);
   const colMinW = new Map<number, number>();
   const rowMinH = new Map<number, number>();
@@ -147,7 +147,7 @@ function remainingPixelIndex(
  * used one expands too ("consider all empty columns expanded", `:79-82`); rows
  * have no fixed count, so none do. Then `evictUnfittable`, then `fit_child_in_rect`.
  */
-export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const columns = columnsOf(n);
   const rtl = n.rtl;
   const hSep = separationOf(n, 'h_separation', ctx.theme);

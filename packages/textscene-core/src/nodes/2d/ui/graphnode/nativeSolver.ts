@@ -143,7 +143,7 @@ export function graphNodeTitleTextMin(n: SolveNode, theme: NativeTheme): Vector2
 
 // --- get_minimum_size ---------------------------------------------------------
 
-export const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
+const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
   const { panel, titlebar, slot } = graphNodeStyles(n, ctx.theme);
   const textMin = graphNodeTitleTextMin(n, ctx.theme);
@@ -188,7 +188,7 @@ interface StretchEntry {
   minSize: Vector2;
 }
 
-export const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
   const { panel, titlebar, slot } = graphNodeStyles(n, ctx.theme);
   const separation = separationOf(n, ctx.theme);

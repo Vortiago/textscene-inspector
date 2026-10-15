@@ -6,7 +6,8 @@
 
 import { beforeAll, describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
-import { createGLBMesh, initGlbModules } from '../../../resources/formats/glb/glbProcessing';
+import { createGLBMesh } from '../../../resources/formats/glb/glbProcessing';
+import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 import { nodesGlb } from '../../../resources/formats/glb/testing/nodesGlb';
 import { NO_SIDECAR } from '../../../resources/formats/glb/testing/noSidecar';
 import { godotNodeName } from '../../../resources/formats/glb/nodeNames';
@@ -34,7 +35,7 @@ async function match(
 }
 
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 describe('matchGlbTarget in a skeleton', () => {

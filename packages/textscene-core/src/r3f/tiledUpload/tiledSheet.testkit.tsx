@@ -10,13 +10,15 @@ import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { TiledUploadContext } from './TiledUploadContext';
-import { bandRows, TiledUploadQueue } from './TiledUploadQueue';
+import { TiledUploadQueue } from './TiledUploadQueue';
 import { fakeWebGLTextures } from './fakeWebGLTextures.testkit';
 
 const SHEET_PATH = 'res://sheet.png';
 const SHEET_WIDTH = 4096;
 export const SHEET_BANDS = 4;
-export const SHEET_HEIGHT = bandRows(SHEET_WIDTH) * SHEET_BANDS;
+/** The queue's band for a 4096-wide sheet: 128 rows, about 2 MiB. */
+const SHEET_BAND_ROWS = 128;
+export const SHEET_HEIGHT = SHEET_BAND_ROWS * SHEET_BANDS;
 /** The `texture` a sprite sets to draw the sheet. */
 export const SHEET_REF = 'ExtResource("sheet")';
 

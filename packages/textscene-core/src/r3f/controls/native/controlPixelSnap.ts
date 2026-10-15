@@ -15,7 +15,7 @@ import type { ProjectSettings } from '../../../parser/projectSettingsParser.js';
 import type { Vector2 } from '../../../godot/vector.js';
 
 /** `gui/common/snap_controls_to_pixels`, addressed the way Godot addresses it. */
-export const SNAP_CONTROLS_TO_PIXELS_SETTING = 'gui/common/snap_controls_to_pixels';
+const SNAP_CONTROLS_TO_PIXELS_SETTING = 'gui/common/snap_controls_to_pixels';
 
 /**
  * `Control::_update_canvas_item_transform`'s rotation tolerance, verbatim:
@@ -55,7 +55,7 @@ export interface ControlDrawTransform {
  * With zero skew the basis columns are `(cos r, sin r) * scale.x` and
  * `(-sin r, cos r) * scale.y`. Zero for an unrotated, unscaled Control.
  */
-export function internalTransformTranslation(transform: ControlDrawTransform): Vector2 {
+function internalTransformTranslation(transform: ControlDrawTransform): Vector2 {
   const { rotation, scale, pivot } = transform;
   const cos = Math.cos(rotation);
   const sin = Math.sin(rotation);

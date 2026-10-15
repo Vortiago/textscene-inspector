@@ -23,11 +23,11 @@ import {
   type SelectionContextValue,
 } from '../../contexts/SelectionContext';
 import { NodePathProvider } from '../../contexts/NodePathContext';
-import { initGlbModules } from '../../../resources/processing/glbProcessing';
+import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 
 // GLBSceneRoot clones through cloneWithMaterials, which needs the lazy GLB module cache.
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 const GLB_PATH = 'res://player.glb';

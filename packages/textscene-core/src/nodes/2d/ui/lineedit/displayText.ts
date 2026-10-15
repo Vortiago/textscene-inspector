@@ -8,7 +8,7 @@
 import type { LineEditProperties } from './types';
 
 /** Godot's fallback echo character when `secret_character` is empty. */
-export const DEFAULT_SECRET_CHARACTER = '•';
+const DEFAULT_SECRET_CHARACTER = '•';
 
 interface LineEditDisplayText {
   /** The string to paint. */

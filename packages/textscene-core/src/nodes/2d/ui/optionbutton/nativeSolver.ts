@@ -51,9 +51,9 @@ export const OPTION_BUTTON_THEME_FONT_KEY = 'font';
 // Theme font colours
 
 /** `control_font_color` (`default_theme.cpp:101`), OptionButton's `font_color` default (`:240`). */
-export const OPTION_BUTTON_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+const OPTION_BUTTON_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 /** `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`:106`), OptionButton's `font_disabled_color` default (`:245`). */
-export const OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = {
+const OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = {
   r: 0.875,
   g: 0.875,
   b: 0.875,
@@ -101,7 +101,7 @@ export function resolveOptionButtonSelectedText(props: OptionButtonProperties): 
 // Arrow
 
 /** `option_button_arrow.svg`'s authored size (`native/themeIcons.ts`), 12x12, never run through `_fit_icon_size`. */
-export const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vector2 = { x: 12, y: 12 };
+const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vector2 = { x: 12, y: 12 };
 
 /** `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, OptionButton, arrow_icon, "arrow")` (`option_button.cpp:620`), the one themeable icon slot. */
 export const optionButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {

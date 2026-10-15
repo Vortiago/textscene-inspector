@@ -10,7 +10,7 @@ import type { EnvironmentSettings } from './types';
 import { glslFloat } from '../../utils/glslLiterals';
 
 /** Godot `Environment.GlowBlendMode`. */
-export const GlowBlendMode = {
+const GlowBlendMode = {
   ADDITIVE: 0,
   SCREEN: 1,
   SOFTLIGHT: 2,

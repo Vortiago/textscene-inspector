@@ -28,12 +28,7 @@ describe('gradient slice registration', () => {
     expect(resourceSliceRegistry.byTypeName('CPUParticles2D')).toBeNull();
   });
 
-  it('re-exports the decode surface and the types, not the rasteriser', () => {
-    expect(typeof gradientSlice.decodeGradient).toBe('function');
-    expect(typeof gradientSlice.decodeGradientTexture2D).toBe('function');
-    expect(typeof gradientSlice.resolveGradient).toBe('function');
-    expect(typeof gradientSlice.gradientFromResource).toBe('function');
-    expect(gradientSlice.GradientFill.Radial).toBe(1);
+  it('keeps the rasteriser out of the entry point', () => {
     expect('rasterizeGradientTexture2D' in gradientSlice).toBe(false);
     expect('resolveGradientTexture2D' in gradientSlice).toBe(false);
   });

@@ -14,5 +14,5 @@ registerResourceSlice({
   busType: 'resource',
 });
 
-export { decodeCurve2D, resolveCurve2D, tessellateCurve2D } from './decode';
+export { resolveCurve2D, tessellateCurve2D } from './decode';
 export type { Curve2DControlPoint, Curve2DSample, Curve2DSampler } from './types';

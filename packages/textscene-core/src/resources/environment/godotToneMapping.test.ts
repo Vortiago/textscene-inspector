@@ -12,8 +12,8 @@ import {
   resolvedWhite,
   toneMappingEffectGlsl,
   toneMappingShaderChunk,
-  toneMappingWhiteParam,
 } from './godotToneMapping';
+import { bakedToneMapWhite } from './godotToneMapping.testkit';
 
 describe('resolvedWhite — Godot’s environment_get_white floors', () => {
   it('passes an authored white through once it clears the floor (happy path)', () => {
@@ -48,32 +48,32 @@ describe('resolvedWhite — Godot’s environment_get_white floors', () => {
   });
 });
 
-describe('toneMappingWhiteParam — the shader’s tonemapper_params.x', () => {
+describe('the baked white: the shader’s tonemapper_params.x', () => {
   it('squares the white for REINHARDT', () => {
-    expect(toneMappingWhiteParam(GodotToneMapper.REINHARDT, 1)).toBe(1);
-    expect(toneMappingWhiteParam(GodotToneMapper.REINHARDT, 6)).toBe(36);
+    expect(bakedToneMapWhite(GodotToneMapper.REINHARDT, 1)).toBe(1);
+    expect(bakedToneMapWhite(GodotToneMapper.REINHARDT, 6)).toBe(36);
   });
 
   it('evaluates Hable’s biased curve at white for FILMIC', () => {
     // A = 0.22·2², B = 0.30·2, C = 0.10, D = 0.20, E = 0.01, F = 0.30.
-    expect(toneMappingWhiteParam(GodotToneMapper.FILMIC, 1)).toBeCloseTo(0.5783549783549783, 12);
-    expect(toneMappingWhiteParam(GodotToneMapper.FILMIC, 6)).toBeCloseTo(0.8733446519524618, 12);
+    expect(bakedToneMapWhite(GodotToneMapper.FILMIC, 1)).toBeCloseTo(0.5783549783549783, 12);
+    expect(bakedToneMapWhite(GodotToneMapper.FILMIC, 6)).toBeCloseTo(0.8733446519524618, 12);
   });
 
   it('evaluates the ACES curve at the bias-scaled white for ACES', () => {
     // Both ACES matrices have rows summing to 1, so a neutral grey passes
     // through them as a plain scale by the 1.8 exposure bias.
-    expect(toneMappingWhiteParam(GodotToneMapper.ACES, 1)).toBeCloseTo(0.7810713385593705, 12);
-    expect(toneMappingWhiteParam(GodotToneMapper.ACES, 6)).toBeCloseTo(0.9770112517226739, 12);
+    expect(bakedToneMapWhite(GodotToneMapper.ACES, 1)).toBeCloseTo(0.7810713385593705, 12);
+    expect(bakedToneMapWhite(GodotToneMapper.ACES, 6)).toBeCloseTo(0.9770112517226739, 12);
   });
 
   it('hands AGX the high-clip point itself, not a curve value', () => {
-    expect(toneMappingWhiteParam(GodotToneMapper.AGX, 16.29)).toBe(16.29);
-    expect(toneMappingWhiteParam(GodotToneMapper.AGX, 20)).toBe(20);
+    expect(bakedToneMapWhite(GodotToneMapper.AGX, 16.29)).toBe(16.29);
+    expect(bakedToneMapWhite(GodotToneMapper.AGX, 20)).toBe(20);
   });
 
   it('normalises by nothing for LINEAR', () => {
-    expect(toneMappingWhiteParam(GodotToneMapper.LINEAR, 6)).toBe(1);
+    expect(bakedToneMapWhite(GodotToneMapper.LINEAR, 6)).toBe(1);
   });
 
   it('applies the floor before the curve, not after (regression)', () => {
@@ -81,20 +81,20 @@ describe('toneMappingWhiteParam — the shader’s tonemapper_params.x', () => {
     // floors in `environment_get_white`, upstream of every curve. Taking the
     // curve at the raw value instead would normalise against a divisor smaller
     // than 1 and blow the whole image out.
-    expect(toneMappingWhiteParam(GodotToneMapper.REINHARDT, 0.5)).toBe(1);
-    expect(toneMappingWhiteParam(GodotToneMapper.FILMIC, 0.5)).toBeCloseTo(
-      toneMappingWhiteParam(GodotToneMapper.FILMIC, 1),
+    expect(bakedToneMapWhite(GodotToneMapper.REINHARDT, 0.5)).toBe(1);
+    expect(bakedToneMapWhite(GodotToneMapper.FILMIC, 0.5)).toBeCloseTo(
+      bakedToneMapWhite(GodotToneMapper.FILMIC, 1),
       12
     );
-    expect(toneMappingWhiteParam(GodotToneMapper.ACES, 0)).toBeCloseTo(
-      toneMappingWhiteParam(GodotToneMapper.ACES, 1),
+    expect(bakedToneMapWhite(GodotToneMapper.ACES, 0)).toBeCloseTo(
+      bakedToneMapWhite(GodotToneMapper.ACES, 1),
       12
     );
-    expect(toneMappingWhiteParam(GodotToneMapper.AGX, 1)).toBe(2);
+    expect(bakedToneMapWhite(GodotToneMapper.AGX, 1)).toBe(2);
   });
 
   it('falls back to no normalisation for a mode with no curve (error path)', () => {
-    expect(toneMappingWhiteParam(99, 4)).toBe(1);
+    expect(bakedToneMapWhite(99, 4)).toBe(1);
   });
 });
 

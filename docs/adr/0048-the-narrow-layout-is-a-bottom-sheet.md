@@ -22,8 +22,8 @@ a 390 px screen.
 **A narrow, tall panel shows the viewport over a bottom sheet, and the sheet shows the
 tree or the details, one at a time.**
 
-- The sheet query is `(max-width: 768px) and (min-height: 501px)`
-  (`NARROW_LAYOUT_QUERY`).
+- The sheet query is `(max-width: 768px) and (min-height: 501px)`, in
+  `TscnPreviewShell.module.css`.
 - A Scene | Details switch picks the half. The sheet height is dragged from a grabber
   (25 % to 85 % of the column). The sheet collapses to a bar under the viewport.
 - The half (`tsi.narrowPane`) and the share (`tsi.sheetShare`) persist beside the desktop

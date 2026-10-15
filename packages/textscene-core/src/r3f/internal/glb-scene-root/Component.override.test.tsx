@@ -14,7 +14,7 @@ import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
-import { initGlbModules } from '../../../resources/processing/glbProcessing';
+import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 
 // Register node-type components (Node3D / OmniLight3D / GLBSceneRoot / …).
 import '../../nodes/index';
@@ -25,7 +25,7 @@ import '../../../nodes/3d/lights/omnilight3d/index';
 
 // GLBSceneRoot clones through cloneWithMaterials, which needs the lazy GLB module cache.
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 const GLB_PATH = 'res://assets/ceiling_lamp.glb';

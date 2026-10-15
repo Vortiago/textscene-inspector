@@ -42,7 +42,7 @@ export function colorNormalized(color: Rgba): Rgba {
 }
 
 /** `intensity = Math::log2(multiplier)` (`color_picker.cpp:594,601`): the intensity slider's value in every `color_mode`. */
-export function colorIntensity(color: Rgba): number {
+function colorIntensity(color: Rgba): number {
   const linear = {
     r: sRGBChannelToLinear(color.r),
     g: sRGBChannelToLinear(color.g),

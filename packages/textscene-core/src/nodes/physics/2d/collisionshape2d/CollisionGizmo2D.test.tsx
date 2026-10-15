@@ -1,21 +1,45 @@
 /**
- * `capsulePoints`' arc math, asserted on the point sequence a `CapsuleShape2D` gizmo traces,
- * since a rendered `<lineSegments>` buffer does not expose it. The top cap sweeps 0°..180°
- * (right, top, left) and the bottom cap the bottom semicircle, so the outline never
- * self-intersects.
+ * The capsule arc math, asserted on the point sequence a `CapsuleShape2D` gizmo traces, read
+ * back from its `<lineSegments>` position buffer. The top cap sweeps 0°..180° (right, top,
+ * left) and the bottom cap the bottom semicircle, so the outline never self-intersects.
  */
 import { describe, expect, it } from 'vitest';
-import { capsulePoints } from './CollisionGizmo2D';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import * as THREE from 'three';
+import { CollisionGizmo2D } from './CollisionGizmo2D';
+import type { Vector2 } from '../../../../godot/vector';
+
+/**
+ * The outline a `CapsuleShape2D` gizmo draws, in Godot-local coordinates: the start of each
+ * segment, with the three-local Y negation undone.
+ */
+async function capsulePoints(radius: number, height: number): Promise<Vector2[]> {
+  const shape = {
+    id: 'CapsuleShape2D_1',
+    type: 'CapsuleShape2D',
+    data: { radius: String(radius), height: String(height) },
+  };
+  const renderer = await ReactThreeTestRenderer.create(
+    <CollisionGizmo2D shape={shape} color={new THREE.Color()} />
+  );
+  const [lines] = renderer.scene.findAll((n) => n.type === 'LineSegments');
+  const position = (lines!.instance as THREE.LineSegments).geometry.getAttribute('position');
+  const points: Vector2[] = [];
+  for (let i = 0; i < position.count; i += 2) {
+    points.push({ x: position.getX(i), y: -position.getY(i) });
+  }
+  return points;
+}
 
 function dist(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-describe('capsulePoints', () => {
-  it('traces a continuous contour with no chord jumps (happy path)', () => {
+describe('CollisionGizmo2D capsule outline', () => {
+  it('traces a continuous contour with no chord jumps (happy path)', async () => {
     const radius = 10;
     const height = 30; // halfHeight = 5, so the two straight sides are length 10
-    const points = capsulePoints(radius, height);
+    const points = await capsulePoints(radius, height);
 
     // Every edge is either an arc step (chord = 2·r·sin(π/32) ≈ 1.96, for
     // CAPSULE_CAP_SEGMENTS=16) or a straight side (2·halfHeight = 10). A chord through the
@@ -33,10 +57,10 @@ describe('capsulePoints', () => {
     }
   });
 
-  it('sweeps the top cap over the top (not the right half) and the bottom cap under the bottom (not the left half) (edge case)', () => {
+  it('sweeps the top cap over the top (not the right half) and the bottom cap under the bottom (not the left half) (edge case)', async () => {
     const radius = 10;
     const height = 30; // halfHeight = height/2 - radius = 5
-    const points = capsulePoints(radius, height);
+    const points = await capsulePoints(radius, height);
 
     // The topmost point is the top cap's apex, (0, halfHeight + radius), and the bottommost
     // is the bottom cap's apex, not a point on either flank.
@@ -48,8 +72,8 @@ describe('capsulePoints', () => {
     expect(bottom.y).toBeCloseTo(-(5 + radius), 5);
   });
 
-  it('produces no duplicate/retraced points (edge case — the bug revisited the right-side connection point)', () => {
-    const points = capsulePoints(10, 30);
+  it('produces no duplicate/retraced points (edge case — the bug revisited the right-side connection point)', async () => {
+    const points = await capsulePoints(10, 30);
     const seen = new Set<string>();
     for (const p of points) {
       const key = `${p.x.toFixed(6)},${p.y.toFixed(6)}`;
@@ -58,10 +82,10 @@ describe('capsulePoints', () => {
     }
   });
 
-  it('degenerates to a lens (halfHeight clamped to 0) without throwing (edge case)', () => {
+  it('degenerates to a lens (halfHeight clamped to 0) without throwing (edge case)', async () => {
     // height < 2*radius: Godot clamps the straight-side length to 0, so the
     // two caps meet directly and the contour stays continuous.
-    const points = capsulePoints(10, 5);
+    const points = await capsulePoints(10, 5);
     expect(points.length).toBeGreaterThan(0);
     for (let i = 0; i < points.length; i++) {
       const next = points[(i + 1) % points.length]!;

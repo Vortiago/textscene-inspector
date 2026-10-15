@@ -16,7 +16,7 @@ import type { Rgba } from '../godot/math';
  * builds its hash map (`color.cpp:422`), and a query normalises the same way. Values are the
  * source's own literals, to diff by eye.
  */
-export const GODOT_NAMED_COLORS: Readonly<Record<string, number>> = {
+const GODOT_NAMED_COLORS: Readonly<Record<string, number>> = {
   ALICEBLUE: 0xf0f8ffff,
   ANTIQUEWHITE: 0xfaebd7ff,
   AQUA: 0x00ffffff,

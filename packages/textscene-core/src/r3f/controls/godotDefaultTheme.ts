@@ -5,10 +5,7 @@
  * `scaledGodotTheme`.
  */
 
-// --- Text (control_font_color / default_font_size) ---
-
-/** `default_font_color` = Color(0.875, 0.875, 0.875) → round(0.875·255) = 223 → #dfdfdf. */
-export const DEFAULT_FONT_COLOR = 'rgb(223, 223, 223)';
+// --- Text (default_font_size) ---
 
 /** `default_font_size` = 16 (px). */
 export const DEFAULT_FONT_SIZE = 16;
@@ -24,8 +21,8 @@ export interface ThemeFill {
 }
 
 /**
- * The default flat-stylebox fill per draw state, the one transcription both the
- * CSS strings and the canvas renderer read. Translucent, not pre-composited: Godot
+ * The default flat-stylebox fill per draw state, the one transcription the canvas
+ * renderer reads. Translucent, not pre-composited: Godot
  * blends them over the 2D clear colour, so `normal` over the default
  * `Color(0.3,0.3,0.3)` measures rgb(46,46,46).
  */
@@ -44,37 +41,16 @@ export const STYLE_FILL = {
   progress: { r: 1, g: 1, b: 1, a: 0.4 },
 } as const satisfies Record<string, ThemeFill>;
 
-/**
- * Formats a {@link ThemeFill} as CSS. A local three-liner on purpose: this
- * module's contract is to stay importable by `.ts`-only consumers, so it never
- * value-imports the colour/vector parsers a shared formatter would drag in.
- */
-const fillCss = (c: ThemeFill): string =>
-  `rgba(${Math.round(c.r * 255)}, ${Math.round(c.g * 255)}, ${Math.round(c.b * 255)}, ${c.a})`;
-
-export const STYLE_NORMAL_FILL = fillCss(STYLE_FILL.normal);
-export const STYLE_HOVER_FILL = fillCss(STYLE_FILL.hover);
-export const STYLE_PRESSED_FILL = fillCss(STYLE_FILL.pressed);
-export const STYLE_DISABLED_FILL = fillCss(STYLE_FILL.disabled);
-export const STYLE_POPUP_FILL = fillCss(STYLE_FILL.popup);
-
 // --- Flat-stylebox geometry (make_flat_stylebox defaults) ---
 
 /** `default_corner_radius` = 3 (px): the corner radius of every default flat stylebox. */
-export const DEFAULT_CORNER_RADIUS = 3;
+const DEFAULT_CORNER_RADIUS = 3;
 
 /** `default_margin` = 4 (px): the Button "normal" stylebox content margin (all sides). */
 export const DEFAULT_CONTENT_MARGIN = 4;
 
-/**
- * OptionButton "normal" stylebox uses `2 * default_margin` horizontally and
- * `default_margin` vertically → 8px left/right, 4px top/bottom.
- */
-export const OPTION_BUTTON_CONTENT_MARGIN_X = 2 * DEFAULT_CONTENT_MARGIN;
-export const OPTION_BUTTON_CONTENT_MARGIN_Y = DEFAULT_CONTENT_MARGIN;
-
 /** BoxContainer `separation` and GridContainer `h_/v_separation` = 4 (px). */
-export const DEFAULT_SEPARATION = 4;
+const DEFAULT_SEPARATION = 4;
 
 // --- LineEdit ---
 
@@ -101,24 +77,23 @@ export const LINE_EDIT_MINIMUM_CHARACTER_WIDTH = 4;
  * the `widget_height`/`widget_width` that `Slider::_notification(NOTIFICATION_DRAW)` reads.
  */
 const SLIDER_STYLE_MARGIN = 4;
-export const SLIDER_TRACK_THICKNESS = 2 * SLIDER_STYLE_MARGIN;
-export const SLIDER_CORNER_RADIUS = 4;
+const SLIDER_CORNER_RADIUS = 4;
 
 /**
  * The `slider_grabber` icon: a 16x16 box Godot positions, holding
  * `<circle cx="8" cy="8" r="7" fill="#fefefe" fill-opacity=".75"/>`. `generate_icon` rasterises through
  * `DPITexture::create_from_string(source, scale)`, so it scales with the theme.
  */
-export const SLIDER_GRABBER_SIZE = 16;
-export const SLIDER_GRABBER_RADIUS = 7;
+const SLIDER_GRABBER_SIZE = 16;
+const SLIDER_GRABBER_RADIUS = 7;
 
 /**
  * `hslider_tick.svg`/`vslider_tick.svg` declare a 4x8 canvas, and the rasteriser
  * clips the path to it: `pnpm ref:godot` measures an 8px band. A tick is a 2px bar
  * across the 8px track, centred in a 4px-wide box.
  */
-export const SLIDER_TICK_BOX = 4;
-export const SLIDER_TICK_THICKNESS = 2;
+const SLIDER_TICK_BOX = 4;
+const SLIDER_TICK_THICKNESS = 2;
 
 // --- Project theme scale (gui/theme/default_theme_scale) ---
 
@@ -167,6 +142,8 @@ export function scaledGodotTheme(scale: number): ScaledGodotTheme {
     fontSize: Math.round(DEFAULT_FONT_SIZE * scale),
     cornerRadius: Math.round(DEFAULT_CORNER_RADIUS * scale),
     contentMargin,
+    // The OptionButton styleboxes take `2 * default_margin` across and `default_margin`
+    // down (`default_theme.cpp:215`).
     optionButtonMarginX: Math.round(2 * DEFAULT_CONTENT_MARGIN * scale),
     optionButtonMarginY: contentMargin,
     // `Math::round(4 * scale)`, default_theme.cpp:1249-1251.

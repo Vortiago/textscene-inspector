@@ -21,7 +21,7 @@ import {
 /** The chunks that declare and sample a sun shadow: the lit materials' and `ShadowMaterial`'s. */
 type AtlasChunkName = 'shadowmap_pars_fragment' | 'lights_fragment_begin' | 'shadowmask_pars_fragment';
 
-export type ShadowAtlasChunks = Chunks<AtlasChunkName>;
+type ShadowAtlasChunks = Chunks<AtlasChunkName>;
 
 /**
  * three's per-shadow sampler, of the type a shadow map type takes (`shadowmap_pars_fragment.glsl.js:24-28`),
@@ -46,7 +46,7 @@ function atlasSample(chunk: AtlasChunkName): ChunkEdit<AtlasChunkName> {
 }
 
 /** Each edit. Each `three` text occurs once in its chunk. */
-export const SHADOW_ATLAS_EDITS: readonly ChunkEdit<AtlasChunkName>[] = [
+const SHADOW_ATLAS_EDITS: readonly ChunkEdit<AtlasChunkName>[] = [
   atlasSampler('sampler2DShadow'),
   atlasSampler('sampler2D'),
   atlasSample('lights_fragment_begin'),
@@ -54,7 +54,7 @@ export const SHADOW_ATLAS_EDITS: readonly ChunkEdit<AtlasChunkName>[] = [
 ];
 
 /** The chunks with one atlas sampler, or null when any lacks a line the patch replaces. */
-export function shadowAtlasChunks(chunks: ShadowAtlasChunks): ShadowAtlasChunks | null {
+function shadowAtlasChunks(chunks: ShadowAtlasChunks): ShadowAtlasChunks | null {
   return applyChunkEdits(chunks, SHADOW_ATLAS_EDITS);
 }
 

@@ -126,7 +126,7 @@ function resolvedStylesOfTheme(
  * theme chain. An unresolvable ref is omitted, and all four StyleBox kinds are
  * kept: each wraps a `StyleBoxFlatData` core with its own `contentMargin`.
  */
-export function resolveStyleBoxes(
+function resolveStyleBoxes(
   node: TscnNode,
   scope: SceneScope,
   themeScope: ThemeResolutionScope = NO_THEME_SCOPE
@@ -198,7 +198,7 @@ function iconRefsOfTheme(
  * `theme_override_icons/<name>` ref carries the node's own `scope`, and a Theme's
  * `<Type>/icons/<name>` carries that theme's scope.
  */
-export function resolveThemedIcons(
+function resolveThemedIcons(
   node: TscnNode,
   scope: SceneScope,
   themeScope: ThemeResolutionScope

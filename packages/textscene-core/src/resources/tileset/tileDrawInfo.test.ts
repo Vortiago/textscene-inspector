@@ -3,14 +3,13 @@
  * tile's centre sits, as `compute_transformed_tile_dest_rect` composes them.
  */
 import { describe, it, expect } from 'vitest';
-import {
-  tileDrawInfo,
-  TILE_TRANSFORM_FLIP_H,
-  TILE_TRANSFORM_FLIP_V,
-  TILE_TRANSFORM_TRANSPOSE,
-  type AtlasSourceModel,
-} from './types';
+import { tileDrawInfo, type AtlasSourceModel } from './types';
 import { drawableCellOf } from './testing/drawableCellOf';
+
+/** `TileSetAtlasSource`'s transform bits in an alternative id (`tile_set.h:629-631`). */
+const TILE_TRANSFORM_FLIP_H = 1 << 12;
+const TILE_TRANSFORM_FLIP_V = 1 << 13;
+const TILE_TRANSFORM_TRANSPOSE = 1 << 14;
 
 const source: AtlasSourceModel = {
   texturePath: 'res://t.png',

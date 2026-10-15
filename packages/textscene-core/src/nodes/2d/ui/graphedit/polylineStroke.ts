@@ -16,7 +16,7 @@ import type { GeometryBuffers } from './connectionStroke';
 import type { Vector2 } from '../../../../godot/vector.js';
 
 /** `FEATHER_SIZE` (`renderer_canvas_cull.cpp:45`). */
-export const POLYLINE_FEATHER_SIZE = 1.25;
+const POLYLINE_FEATHER_SIZE = 1.25;
 
 /** How far `compute_polyline_edge_offset_clamped` lets a miter run, in half-widths (`:943`). */
 const MITER_LIMIT = 3;

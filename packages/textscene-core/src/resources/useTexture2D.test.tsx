@@ -16,8 +16,8 @@ import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import type { ResourceLoader } from './ResourceLoader';
 import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
-import { abortProceduralBuilds, type JobRunner } from './textures/proceduralBuilds';
-import { clearProceduralTextureCache } from './textures/proceduralTextureCache';
+import { type JobRunner } from './textures/proceduralBuilds';
+import { resetProceduralTextures } from './textures/proceduralTextureCache';
 import { SceneStack } from '../r3f/testing/SceneStack';
 
 import '../r3f/nodes/index';
@@ -305,8 +305,7 @@ describe('useTexture2D — a NoiseTexture2D that builds as a job', () => {
   }
 
   afterEach(() => {
-    abortProceduralBuilds();
-    clearProceduralTextureCache();
+    resetProceduralTextures();
   });
 
   it('is not missing, and asks the file pipeline for nothing, while it builds', () => {
@@ -862,8 +861,7 @@ noise = SubResource("FastNoiseLite_huop3")
   }
 
   afterEach(() => {
-    abortProceduralBuilds();
-    clearProceduralTextureCache();
+    resetProceduralTextures();
   });
 
   it('rasterises a GradientTexture2D .tres against its own gradient', () => {

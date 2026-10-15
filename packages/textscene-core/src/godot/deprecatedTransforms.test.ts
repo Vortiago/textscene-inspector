@@ -1,7 +1,7 @@
 /** The value rewrites a deprecated `_set` arm applies, on raw literal text. */
 
 import { describe, expect, it } from 'vitest';
-import { booleanized, doubledVector, isTruthy } from './deprecatedTransforms.js';
+import { doubledVector, isTruthy } from './deprecatedTransforms.js';
 
 describe('doubledVector', () => {
   const twice3 = doubledVector('Vector3');
@@ -38,7 +38,7 @@ describe('doubledVector', () => {
   });
 });
 
-describe('booleanized', () => {
+describe('isTruthy', () => {
   // `Variant::booleanize` is `!is_zero()`: 0, an empty string and NIL are the
   // zeros; any other read spelling is true.
   it.each([
@@ -52,12 +52,11 @@ describe('booleanized', () => {
     ['&"name"', true],
     ['null', false],
   ])('%s → %s', (raw, expected) => {
-    expect(booleanized(raw)).toBe(expected);
+    expect(isTruthy(raw)).toBe(expected);
   });
 
-  it('leaves a spelling it does not read undefined, which no arm forwards', () => {
-    expect(booleanized('Vector2(1, 1)')).toBeUndefined();
-    expect(booleanized('SubResource("1")')).toBeUndefined();
+  it('forwards no spelling it does not read (edge case)', () => {
+    expect(isTruthy('Vector2(1, 1)')).toBe(false);
     expect(isTruthy('SubResource("1")')).toBe(false);
   });
 });

@@ -12,9 +12,9 @@ import { SelectionProvider } from '../../contexts/SelectionContext';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import { initGlbModules } from '../../../resources/processing/glbProcessing';
+import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 
 function named<T extends THREE.Object3D>(o: T, name: string): T {
   o.name = name;
@@ -62,7 +62,7 @@ function glbGraph() {
 
 // `cloneWithMaterials` needs the lazy GLB module cache initialised first.
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {

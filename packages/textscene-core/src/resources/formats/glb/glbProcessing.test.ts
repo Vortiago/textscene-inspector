@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { cloneWithMaterials, createGLBMesh, disposeClonedMaterials, initGlbModules } from './glbProcessing';
+import { cloneWithMaterials, createGLBMesh, disposeClonedMaterials } from './glbProcessing';
 // Statically, so the identity check below is immune to the `vi.resetModules()` calls in
 // this file: a dynamic import after a reset yields a fresh instance.
 import * as processingShim from '../../processing/glbProcessing';
@@ -41,33 +41,31 @@ function findRepoAsset(relative: string): string {
   throw new Error(`Asset not found walking up from ${process.cwd()}: ${relative}`);
 }
 
-// cloneWithMaterials needs the lazily imported SkeletonUtils, so load it once here for
-// the tests that do not go through createGLBMesh.
+// cloneWithMaterials needs the lazily imported SkeletonUtils, which a first createGLBMesh loads.
 beforeAll(async () => {
-  await initGlbModules();
+  await createGLBMesh(triangleGlb(), NO_SIDECAR);
 });
 
-describe('initGlbModules', () => {
-  it('returns the same cached promise on repeated calls, resolved with the loaded modules', async () => {
-    const first = initGlbModules();
-    expect(initGlbModules()).toBe(first);
+describe('the lazily loaded glTF modules', () => {
+  it('lets cloneWithMaterials clone once a first mesh is built', async () => {
+    vi.resetModules();
+    const fresh = await import('./glbProcessing');
+    const mesh = await fresh.createGLBMesh(triangleGlb(), NO_SIDECAR);
 
-    const modules = await first;
-    expect(modules.GLTFLoader).toBeTypeOf('function');
-    expect(modules.skeletonClone).toBeTypeOf('function');
+    expect(fresh.cloneWithMaterials(mesh)).not.toBe(mesh);
   });
 
-  it('cloneWithMaterials throws a clear error when called before initialisation', async () => {
+  it('cloneWithMaterials throws a clear error when no mesh has been built', async () => {
     // A fresh module instance has an empty lazy cache, so the guard must fire.
     vi.resetModules();
     const fresh = await import('./glbProcessing');
 
     expect(() => fresh.cloneWithMaterials(new THREE.Object3D())).toThrow(
-      /cloneWithMaterials called before initGlbModules/
+      /cloneWithMaterials called before createGLBMesh/
     );
   });
 
-  it('does not cache a failed module load — the next call retries and succeeds', async () => {
+  it('does not cache a failed module load: the next mesh retries and succeeds', async () => {
     vi.resetModules();
     vi.doMock('three/addons/loaders/GLTFLoader.js', () => {
       throw new Error('simulated chunk load failure');
@@ -76,12 +74,11 @@ describe('initGlbModules', () => {
       const fresh = await import('./glbProcessing');
       // Vitest wraps a throwing mock factory in its own error message, so assert
       // only that the load rejects. The retry below is the contract.
-      await expect(fresh.initGlbModules()).rejects.toThrow();
+      await expect(fresh.createGLBMesh(triangleGlb(), NO_SIDECAR)).rejects.toThrow();
 
       vi.doUnmock('three/addons/loaders/GLTFLoader.js');
-      const modules = await fresh.initGlbModules();
-      expect(modules.GLTFLoader).toBeTypeOf('function');
-      expect(modules.skeletonClone).toBeTypeOf('function');
+      const mesh = await fresh.createGLBMesh(triangleGlb(), NO_SIDECAR);
+      expect(fresh.cloneWithMaterials(mesh)).not.toBe(mesh);
     } finally {
       vi.doUnmock('three/addons/loaders/GLTFLoader.js');
     }
@@ -448,9 +445,8 @@ describe('disposeClonedMaterials', () => {
 describe('processing/ re-export shim', () => {
   it('serves the one module instance, so the lazy module cache stays shared', () => {
     // `useResource` and the r3f GLB hooks import the shim path. A second instance
-    // would give them an empty `initGlbModules` cache and make `cloneWithMaterials`
+    // would give them an empty lazy module cache and make `cloneWithMaterials`
     // throw its not-initialised guard in production.
-    expect(processingShim.initGlbModules).toBe(initGlbModules);
     expect(processingShim.cloneWithMaterials).toBe(cloneWithMaterials);
     expect(processingShim.disposeClonedMaterials).toBe(disposeClonedMaterials);
   });

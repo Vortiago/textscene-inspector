@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
-import { createGLBMesh, initGlbModules } from './glbProcessing';
+import { createGLBMesh } from './glbProcessing';
+import { loadGlbModules } from './testing/loadGlbModules';
 import { binChunk, glbOfChunks, jsonChunk } from './testing/triangleGlb';
 import { isMesh } from '../../../r3f/testing/threeNarrow';
 
@@ -49,7 +50,7 @@ async function surfaces(glb: ArrayBuffer): Promise<THREE.Mesh[]> {
 }
 
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 describe('godotPrimitives: triangle fans', () => {

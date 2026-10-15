@@ -29,7 +29,7 @@ const FIXED_Y = { mode: BillboardMode.BILLBOARD_FIXED_Y, keepScale: true } as co
  * `FLAG_BILLBOARD_KEEP_SCALE` with either mode (`material.cpp:3056-3058`), so the node keeps its
  * world scale. Any other mode hands the world matrix back to three.
  */
-export function applyBillboard(object: THREE.Object3D, camera: THREE.Camera, mode: number | undefined): void {
+function applyBillboard(object: THREE.Object3D, camera: THREE.Camera, mode: number | undefined): void {
   const billboards = mode === BillboardMode.BILLBOARD_ENABLED || mode === BillboardMode.BILLBOARD_FIXED_Y;
   object.matrixWorldAutoUpdate = !billboards;
   if (!billboards) return;

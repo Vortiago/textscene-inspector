@@ -18,14 +18,14 @@ import {
 } from '../../contexts/AnimationTransportContext';
 import { useOptionalSelection, type SelectionContextValue } from '../../contexts/SelectionContext';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
-import { initGlbModules } from '../../../resources/processing/glbProcessing';
+import { loadGlbModules } from '../../../resources/formats/glb/testing/loadGlbModules';
 
 // Register node-type components (Node3D / GLBSceneRoot / …).
 import '../../nodes/index';
 
 // GLBSceneRoot clones through cloneWithMaterials, which needs the lazy GLB module cache.
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 const GLB_PATH = 'res://player.glb';

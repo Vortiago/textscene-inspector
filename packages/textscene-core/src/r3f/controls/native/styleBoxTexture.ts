@@ -14,8 +14,9 @@ import type { SceneScope, TscnExternalResource, TscnInternalResource } from '../
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver';
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, boolOr, parseOptionalRect2, type Rect2Value } from '../../../parser/valueParsers';
-import { NINE_PATCH_STRETCH, type NinePatchAxisMode } from './ninePatchGeometry';
+import { AxisStretchMode, axisStretchModeOf, type NinePatchAxisMode } from './ninePatchGeometry';
 import type { Rgba } from '../../../godot/math';
+import { CONTENT_MARGIN_UNSET } from '../../../resources/styles/stylebox/decode';
 
 export interface StyleBoxTextureData {
   /**
@@ -51,13 +52,6 @@ export interface StyleBoxTextureData {
 
 const CONTEXT = 'StyleBoxTexture';
 const DEFAULT_MODULATE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
-/** `style_box.cpp:143`'s sentinel: "ask `get_style_margin`" (also `parseStyleBox.ts`'s `CONTENT_MARGIN_UNSET`). */
-const CONTENT_MARGIN_UNSET = -1;
-
-function toAxisMode(value: number): NinePatchAxisMode {
-  return value === 1 || value === 2 ? value : NINE_PATCH_STRETCH;
-}
 
 function contentMarginOr(raw: string | undefined, textureMarginSide: number): number {
   const parsed = floatOr(raw, CONTENT_MARGIN_UNSET, CONTEXT);
@@ -105,8 +99,12 @@ export function parseStyleBoxTexture(
       bottom: floatOr(data.expand_margin_bottom, 0, CONTEXT),
     },
     regionRect: parseOptionalRect2(data.region_rect, `${CONTEXT} region_rect`),
-    axisStretchHorizontal: toAxisMode(intOr(data.axis_stretch_horizontal, NINE_PATCH_STRETCH, CONTEXT)),
-    axisStretchVertical: toAxisMode(intOr(data.axis_stretch_vertical, NINE_PATCH_STRETCH, CONTEXT)),
+    axisStretchHorizontal: axisStretchModeOf(
+      intOr(data.axis_stretch_horizontal, AxisStretchMode.STRETCH, CONTEXT)
+    ),
+    axisStretchVertical: axisStretchModeOf(
+      intOr(data.axis_stretch_vertical, AxisStretchMode.STRETCH, CONTEXT)
+    ),
     drawCenter: boolOr(data.draw_center, true, CONTEXT),
     modulateColor: colorOr(data.modulate_color, DEFAULT_MODULATE),
   };

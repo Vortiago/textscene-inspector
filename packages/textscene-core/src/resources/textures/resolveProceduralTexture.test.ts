@@ -5,8 +5,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { TscnInternalResource } from '../../parser/types';
 import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
-import { abortProceduralBuilds } from './proceduralBuilds';
-import { clearProceduralTextureCache } from './proceduralTextureCache';
+import { resetProceduralTextures } from './proceduralTextureCache';
 import { resolveProceduralTexture } from './resolveProceduralTexture';
 
 const RESOURCES: TscnInternalResource[] = [
@@ -34,8 +33,7 @@ const RESOURCES: TscnInternalResource[] = [
 ];
 
 afterEach(() => {
-  abortProceduralBuilds();
-  clearProceduralTextureCache();
+  resetProceduralTextures();
 });
 
 describe('resolveProceduralTexture', () => {

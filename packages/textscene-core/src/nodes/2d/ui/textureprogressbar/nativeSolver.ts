@@ -17,16 +17,16 @@ import {
 import { FillMode, type TextureProgressBarProperties } from './types';
 
 /** The keys `textureProgressBarTextureSlots`/`textureProgressBarMinimumSize` share for `SolveNode.textureSlots`. */
-export const TEXTURE_UNDER_KEY = 'texture_under';
-export const TEXTURE_PROGRESS_KEY = 'texture_progress';
-export const TEXTURE_OVER_KEY = 'texture_over';
+const TEXTURE_UNDER_KEY = 'texture_under';
+const TEXTURE_PROGRESS_KEY = 'texture_progress';
+const TEXTURE_OVER_KEY = 'texture_over';
 
 /**
  * `TextureProgressBar`'s own three Texture2D properties (`texture_progress_bar.h:38-40`). Without
  * `nine_patch_stretch`, `get_minimum_size` maxes their natural sizes (`texture_progress_bar.cpp:86-96`).
  * `buildSolveTree.ts` resolves none of them by default, so this declares them for the walker.
  */
-export const textureProgressBarTextureSlots: TextureSlotsFn = (node: TscnNode) => {
+const textureProgressBarTextureSlots: TextureSlotsFn = (node: TscnNode) => {
   const props = node.properties as TextureProgressBarProperties;
   const requests: TextureSlotRequest[] = [];
   if (props.textureUnder) requests.push({ key: TEXTURE_UNDER_KEY, ref: props.textureUnder });
@@ -46,7 +46,7 @@ export function normalizeTextureProgressBarFillMode(fillMode: number | undefined
     : FillMode.LEFT_TO_RIGHT;
 }
 
-export const textureProgressBarMinimumSize: MinimumSizeFn = (n) => {
+const textureProgressBarMinimumSize: MinimumSizeFn = (n) => {
   const props = n.node.properties as TextureProgressBarProperties;
 
   if (props.ninePatchStretch) {

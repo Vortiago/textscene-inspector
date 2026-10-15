@@ -7,25 +7,20 @@
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import { AutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { ItemListProperties } from './types';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
   ICON_MODE_LEFT,
   ICON_MODE_TOP,
-  ITEM_LIST_DEFAULT_GUIDE_COLOR,
-  adjustToMaxSize,
-  itemContentMinSize,
   itemIconColor,
+  itemIconDraw,
   itemIconPackedSize,
-  itemListAutowrapMode,
   itemListGuideColor,
   itemListGuideLines,
-  itemListLineSeparation,
-  itemListMinimumSize,
   itemListMirrorX,
   itemListRightAlignOffsetPx,
   itemListRowTextX,
@@ -40,6 +35,8 @@ import {
   shapeItemListText,
 } from './nativeSolver';
 import type { Vector2 } from '../../../../godot/vector';
+
+const itemListMinimumSize = controlSolverRegistry.minimumSize('ItemList')!;
 
 function node(props: Partial<ItemListProperties> = {}): SolveNode {
   return {
@@ -57,29 +54,57 @@ function ctx(withMeasurer = true): SolveContext {
   };
 }
 
-describe('itemListSeparation / itemListLineSeparation', () => {
+/** One text-only item, TOP mode, one line: its minsize y is text + line_separation + v_separation. */
+function topTextItem(textHeight: number) {
+  return {
+    hasIcon: false,
+    iconSize: { x: 0, y: 0 },
+    hasText: true,
+    textSize: { x: 10, y: textHeight },
+    iconMode: ICON_MODE_TOP,
+    maxTextLines: 1,
+    fixedColumnWidth: 0,
+  };
+}
+
+describe('itemListSeparation / line_separation', () => {
   it('is round(4*scale) / round(2*scale) at scale 1 (happy path)', () => {
     expect(itemListSeparation(nativeTheme(1))).toBe(4);
-    expect(itemListLineSeparation(nativeTheme(1))).toBe(2);
+    // default_theme.cpp:949 sets line_separation to round(2 * scale).
+    expect(itemMinimumSize(topTextItem(20), nativeTheme(1)).y).toBe(20 + 2 + 4);
   });
 
   it('scales with the project theme scale (edge case)', () => {
     expect(itemListSeparation(nativeTheme(2))).toBe(8);
-    expect(itemListLineSeparation(nativeTheme(2))).toBe(4);
+    expect(itemMinimumSize(topTextItem(20), nativeTheme(2)).y).toBe(20 + 4 + 8);
   });
 });
 
-describe('itemListAutowrapMode', () => {
+describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
+  const wrapInput = {
+    text: 'AA AA AA',
+    fontSizePx: 16,
+    fontMetrics: OPEN_SANS_FONT_METRICS,
+    fixedColumnWidth: 30,
+    overrunBehavior: 0,
+  };
+
   it('wraps only TOP icon mode with max_text_lines > 0 (happy path)', () => {
-    expect(itemListAutowrapMode(ICON_MODE_TOP, 2)).toBe(AutowrapMode.WORD);
+    expect(
+      shapeItemListText({ ...wrapInput, iconMode: ICON_MODE_TOP, maxTextLines: 2 })!.lines.length
+    ).toBeGreaterThan(1);
   });
 
   it('never wraps LEFT icon mode, whatever max_text_lines (error path)', () => {
-    expect(itemListAutowrapMode(ICON_MODE_LEFT, 2)).toBe(AutowrapMode.OFF);
+    expect(
+      shapeItemListText({ ...wrapInput, iconMode: ICON_MODE_LEFT, maxTextLines: 2 })!.lines
+    ).toHaveLength(1);
   });
 
   it('never wraps TOP icon mode with max_text_lines <= 0 (edge case)', () => {
-    expect(itemListAutowrapMode(ICON_MODE_TOP, 0)).toBe(AutowrapMode.OFF);
+    expect(shapeItemListText({ ...wrapInput, iconMode: ICON_MODE_TOP, maxTextLines: 0 })!.lines).toHaveLength(
+      1
+    );
   });
 });
 
@@ -130,29 +155,35 @@ describe('itemIconPackedSize', () => {
   });
 });
 
-describe('adjustToMaxSize', () => {
-  it('fits a wider-than-tall icon by height, centring horizontally (happy path)', () => {
+describe('itemIconDraw with fixed_icon_size (_adjust_to_max_size, item_list.cpp:1186-1197)', () => {
+  /** A LEFT-mode icon in a 24px-tall row: the packed box sits at (h_separation / 2, 0). */
+  function fittedRect(naturalSize: Vector2) {
+    return itemIconDraw(true, ICON_MODE_LEFT, { x: 24, y: 24 }, naturalSize, true, { x: 100, y: 24 }, 4, 4, 4)
+      .rect;
+  }
+
+  it('fits a wider-than-tall icon by width, centring vertically (happy path)', () => {
     // 32x16 into a 24x24 box: tex_width = 32*24/16 = 48 > 24, so re-derive from width:
     // tex_width=24, tex_height = 16*24/32 = 12. ofs_x=0, ofs_y=(24-12)/2=6.
-    expect(adjustToMaxSize({ x: 32, y: 16 }, { x: 24, y: 24 })).toEqual({ x: 0, y: 6, w: 24, h: 12 });
+    expect(fittedRect({ x: 32, y: 16 })).toEqual({ x: 2, y: 6, w: 24, h: 12 });
   });
 
-  it('fits a taller-than-wide icon by width, centring vertically (error path)', () => {
+  it('fits a taller-than-wide icon by height, centring horizontally (error path)', () => {
     // 16x32 into 24x24: tex_width = 16*24/32 = 12 <= 24, tex_height = 24.
     // ofs_x = (24-12)/2 = 6, ofs_y = 0.
-    expect(adjustToMaxSize({ x: 16, y: 32 }, { x: 24, y: 24 })).toEqual({ x: 6, y: 0, w: 12, h: 24 });
+    expect(fittedRect({ x: 16, y: 32 })).toEqual({ x: 2 + 6, y: 0, w: 12, h: 24 });
   });
 
   it('degenerates to a zero rect for a zero-size source (edge case)', () => {
-    expect(adjustToMaxSize({ x: 0, y: 0 }, { x: 24, y: 24 })).toEqual({ x: 0, y: 0, w: 0, h: 0 });
+    expect(fittedRect({ x: 0, y: 0 })).toEqual({ x: 2, y: 0, w: 0, h: 0 });
   });
 });
 
-describe('itemContentMinSize / itemMinimumSize', () => {
+describe('itemMinimumSize', () => {
   const theme = nativeTheme(1);
 
   it('LEFT icon mode: icon width + text width, max of the two heights (happy path)', () => {
-    const content = itemContentMinSize(
+    const min = itemMinimumSize(
       {
         hasIcon: true,
         iconSize: { x: 16, y: 16 },
@@ -164,12 +195,12 @@ describe('itemContentMinSize / itemMinimumSize', () => {
       },
       theme
     );
-    // x = 16(icon) + 4(icon_margin) + 40(text) = 60; y = max(16, 20) = 20.
-    expect(content).toEqual({ x: 60, y: 20 });
+    // x = 16(icon) + 4(icon_margin) + 40(text) = 60; y = max(16, 20) = 20; then h/v separation 4.
+    expect(min).toEqual({ x: 60 + 4, y: 20 + 4 });
   });
 
   it('TOP icon mode: max of icon/text width, summed heights plus line_separation*max_text_lines (error path)', () => {
-    const content = itemContentMinSize(
+    const min = itemMinimumSize(
       {
         hasIcon: true,
         iconSize: { x: 16, y: 16 },
@@ -181,12 +212,12 @@ describe('itemContentMinSize / itemMinimumSize', () => {
       },
       theme
     );
-    // x = max(16, 40) = 40; y = 16(icon) + 4(icon_margin) + 20(text) + 2(line_separation)*2 = 44.
-    expect(content).toEqual({ x: 40, y: 44 });
+    // x = max(16, 40) = 40; y = 16(icon) + 4(icon_margin) + 20(text) + 2(line_separation)*2 = 44; then h/v separation 4.
+    expect(min).toEqual({ x: 40 + 4, y: 44 + 4 });
   });
 
   it('fixed_column_width overrides the computed width outright (edge case)', () => {
-    const content = itemContentMinSize(
+    const min = itemMinimumSize(
       {
         hasIcon: false,
         iconSize: { x: 0, y: 0 },
@@ -198,7 +229,7 @@ describe('itemContentMinSize / itemMinimumSize', () => {
       },
       theme
     );
-    expect(content.x).toBe(96);
+    expect(min.x).toBe(96 + 4);
   });
 
   it('itemMinimumSize adds h/v separation on top of the content size', () => {
@@ -370,7 +401,7 @@ describe('itemListGuideLines', () => {
 describe('itemListGuideColor', () => {
   // default_theme.cpp:959 -- theme->set_color("guide_color", "ItemList", Color(0.7, 0.7, 0.7, 0.25)).
   it('falls back to the built-in default absent a theme override (happy path)', () => {
-    expect(itemListGuideColor({ colors: {} })).toEqual(ITEM_LIST_DEFAULT_GUIDE_COLOR);
+    expect(itemListGuideColor({ colors: {} })).toEqual({ r: 0.7, g: 0.7, b: 0.7, a: 0.25 });
   });
 
   it('a theme_override_colors/guide_color (already resolved onto n.colors) wins (error path)', () => {

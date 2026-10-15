@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { AutowrapMode, shapeText } from '../../../r3f/controls/native/text/textLayout';
-import { getLinePitchPx } from '../../../r3f/controls/native/text/openSansMetrics';
+import { OPEN_SANS_METRICS } from '../../../r3f/controls/native/text/openSansMetrics';
+import { getFontLinePitchPx } from '../../../r3f/controls/native/text/fontMetrics';
 import {
   OPEN_SANS_ATLAS_GLYPHS,
   OPEN_SANS_ATLAS_INFO,
 } from '../../../r3f/controls/native/text/openSansAtlas';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
-import { buildGlyphQuadArrays } from '../../../r3f/controls/native/text/TextRun';
+import { renderedGlyphQuads } from '../../../r3f/controls/native/text/TextRun.testkit';
 import { label3DAabb, layoutLabel3DLines, outlineRadiusPx, outlineStrokeWidthPx } from './glyphLayout';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment } from './types';
@@ -69,7 +70,10 @@ describe('layoutLabel3DLines', () => {
   it('line_spacing widens the per-line pitch and the vertical-centring subtraction', () => {
     const withSpacing = shape('A\nB', 5);
     const placements = layoutLabel3DLines(withSpacing, HorizontalAlignment.CENTER, 5);
-    expect(placements[1]!.y - placements[0]!.y).toBeCloseTo(getLinePitchPx(FONT_SIZE, 5), 6);
+    expect(placements[1]!.y - placements[0]!.y).toBeCloseTo(
+      getFontLinePitchPx(OPEN_SANS_METRICS, FONT_SIZE, 5),
+      6
+    );
   });
 
   it('an empty layout (no lines) returns an empty placement list', () => {
@@ -78,7 +82,7 @@ describe('layoutLabel3DLines', () => {
     const placements = layoutLabel3DLines(
       {
         lines: [],
-        linePitchPx: getLinePitchPx(FONT_SIZE),
+        linePitchPx: getFontLinePitchPx(OPEN_SANS_METRICS, FONT_SIZE, 3),
         widthPx: 0,
         heightPx: 0,
         baselineOffsetPx: 35,
@@ -130,7 +134,7 @@ describe('label3DAabb (the line boxes label_3d.cpp:600-606 expands its AABB over
   });
 
   it('leaves a label with no lines an empty AABB at the origin', () => {
-    expect(label3DAabb([], getLinePitchPx(FONT_SIZE), PIXEL_SIZE)).toEqual({
+    expect(label3DAabb([], getFontLinePitchPx(OPEN_SANS_METRICS, FONT_SIZE, 3), PIXEL_SIZE)).toEqual({
       position: { x: 0, y: 0, z: 0 },
       size: { x: 0, y: 0, z: 0 },
     });
@@ -140,19 +144,19 @@ describe('label3DAabb (the line boxes label_3d.cpp:600-606 expands its AABB over
 /**
  * Label3D has no golden image (`scripts/visual/scenes.mjs` excludes its blank
  * fixture), so this pins the composed ink position: the placement Y of
- * `layoutLabel3DLines` plus the quad top of `buildGlyphQuadArrays`. Only the sum
+ * `layoutLabel3DLines` plus the quad top `<TextRun>` draws. Only the sum
  * is observable, so either half may move while the sum holds.
  */
-describe('layoutLabel3DLines + buildGlyphQuadArrays (the composed ink position — Label3D has no golden)', () => {
-  function composedTopY(text: string, lineSpacingPx: number, lineIndex: number): number {
+describe('layoutLabel3DLines + <TextRun> (the composed ink position — Label3D has no golden)', () => {
+  async function composedTopY(text: string, lineSpacingPx: number, lineIndex: number): Promise<number> {
     const layout = shape(text, lineSpacingPx);
     const placement = layoutLabel3DLines(layout, HorizontalAlignment.CENTER, lineSpacingPx)[lineIndex]!;
-    const quads = buildGlyphQuadArrays(soloLineLayout(placement.line, layout), FONT_SIZE);
+    const quads = await renderedGlyphQuads(soloLineLayout(placement.line, layout), FONT_SIZE);
     // Vertex order per quad is TL, TR, BL, BR; TL's y is float index 1.
     return -placement.y + quads.positions[1]!;
   }
 
-  it("a single line's first glyph lands at three-local y = 11.880952... (the worked example above)", () => {
+  it("a single line's first glyph lands at three-local y = 11.880952... (the worked example above)", async () => {
     // At font_size 32: ascent ceil(2189*32/2048) = 35 and descent ceil(600*32/2048)
     // = 10, so the group sits at +22.5 (`rect.ts` negates once). 'H' in `openSansAtlas.ts`
     // has yoffset 13, base 45 and bake fontSize 42, so the quad top is
@@ -160,19 +164,19 @@ describe('layoutLabel3DLines + buildGlyphQuadArrays (the composed ink position �
     const contentHeightPx = 45;
     const scale = FONT_SIZE / OPEN_SANS_ATLAS_INFO.fontSize;
     const quadTopBelowBoxTop = 35 - (OPEN_SANS_ATLAS_INFO.base - OPEN_SANS_ATLAS_GLYPHS.H!.yoffset) * scale;
-    expect(composedTopY('Hi', 0, 0)).toBeCloseTo(contentHeightPx / 2 - quadTopBelowBoxTop, 5);
-    expect(composedTopY('Hi', 0, 0)).toBeCloseTo(11.88095238, 5);
+    expect(await composedTopY('Hi', 0, 0)).toBeCloseTo(contentHeightPx / 2 - quadTopBelowBoxTop, 5);
+    expect(await composedTopY('Hi', 0, 0)).toBeCloseTo(11.88095238, 5);
   });
 
-  it('a three-line block steps by exactly one linePitchPx per line, composed', () => {
-    expect(composedTopY('A\nB\nC', 0, 0)).toBeCloseTo(56.88095238, 5);
-    expect(composedTopY('A\nB\nC', 0, 1)).toBeCloseTo(11.88095238, 5);
-    expect(composedTopY('A\nB\nC', 0, 2)).toBeCloseTo(-33.11904762, 5);
+  it('a three-line block steps by exactly one linePitchPx per line, composed', async () => {
+    expect(await composedTopY('A\nB\nC', 0, 0)).toBeCloseTo(56.88095238, 5);
+    expect(await composedTopY('A\nB\nC', 0, 1)).toBeCloseTo(11.88095238, 5);
+    expect(await composedTopY('A\nB\nC', 0, 2)).toBeCloseTo(-33.11904762, 5);
   });
 
-  it('line_spacing widens the composed step by exactly the spacing', () => {
-    expect(composedTopY('A\nB', 5, 0)).toBeCloseTo(36.88095238, 5);
-    expect(composedTopY('A\nB', 5, 1)).toBeCloseTo(-13.11904762, 5);
+  it('line_spacing widens the composed step by exactly the spacing', async () => {
+    expect(await composedTopY('A\nB', 5, 0)).toBeCloseTo(36.88095238, 5);
+    expect(await composedTopY('A\nB', 5, 1)).toBeCloseTo(-13.11904762, 5);
   });
 });
 

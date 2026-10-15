@@ -4,7 +4,8 @@
  * literal, never a rendered pixel.
  */
 import { describe, expect, it } from 'vitest';
-import { godotNamedColor, GODOT_NAMED_COLORS } from './godotNamedColor';
+import { godotNamedColor } from './godotNamedColor';
+import { GODOT_COLOR_NAMES_INC } from './godotNamedColor.testkit';
 
 describe('godotNamedColor', () => {
   it('resolves a plain X11 name to its own table entry', () => {
@@ -40,9 +41,13 @@ describe('godotNamedColor', () => {
     expect(godotNamedColor('#ff0000')).toBeUndefined();
   });
 
-  it('carries the whole table, not a convenient subset', () => {
-    // `get_named_color_count()` is 146 in 4.6.3. A partial port looks correct for `red` and falls
-    // back for the rest.
-    expect(Object.keys(GODOT_NAMED_COLORS)).toHaveLength(146);
+  it.each(GODOT_COLOR_NAMES_INC)('carries %s from the whole table, not a convenient subset', (name, rgba) => {
+    // A partial port looks correct for `red` and falls back for the rest.
+    expect(godotNamedColor(name)).toEqual({
+      r: ((rgba >>> 24) & 0xff) / 255,
+      g: ((rgba >>> 16) & 0xff) / 255,
+      b: ((rgba >>> 8) & 0xff) / 255,
+      a: (rgba & 0xff) / 255,
+    });
   });
 });

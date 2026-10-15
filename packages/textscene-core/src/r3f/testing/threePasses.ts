@@ -7,7 +7,6 @@
 
 import * as THREE from 'three';
 import { expect } from 'vitest';
-import { drawnMaterial } from '../surfaceDrawHooks';
 
 /** What a probe sees between a draw's before-hook and its after-hook. */
 export interface DrawState {
@@ -31,6 +30,13 @@ function groupAt(mesh: THREE.Mesh, groupIndex: number): THREE.Group | null {
   return mesh.geometry.groups[groupIndex] as unknown as THREE.Group;
 }
 
+/** The material three draws for `group`, as `WebGLRenderer.renderObject` picks it per group. */
+function groupMaterial(mesh: THREE.Mesh, group: THREE.Group | null): THREE.Material {
+  const material = mesh.material;
+  if (!Array.isArray(material)) return material;
+  return material[(group as { materialIndex?: number } | null)?.materialIndex ?? 0]!;
+}
+
 function snapshot(mesh: THREE.Mesh, material: THREE.Material, drawn: THREE.Material): DrawState {
   return {
     material,
@@ -48,7 +54,7 @@ export function drawColourGroup<T>(
   probe: (state: DrawState) => T
 ): T {
   const group = groupAt(mesh, groupIndex);
-  const material = drawnMaterial(mesh, group)!;
+  const material = groupMaterial(mesh, group);
   const args = [null, null, camera, mesh.geometry, material, group] as unknown as Parameters<
     THREE.Object3D['onBeforeRender']
   >;
@@ -131,7 +137,7 @@ function drawShadowWith<T>(
   probe: (state: DrawState) => T
 ): T {
   const group = groupAt(mesh, groupIndex);
-  const material = drawnMaterial(mesh, group)!;
+  const material = groupMaterial(mesh, group);
   mesh.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, mesh.matrixWorld);
   depthMaterial.side = material.shadowSide ?? SHADOW_SIDE[material.side as number]!;
   const ownDraws: OwnDraw[] = [];

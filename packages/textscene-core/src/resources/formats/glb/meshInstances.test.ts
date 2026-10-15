@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { createGLBMesh, initGlbModules } from './glbProcessing';
+import { createGLBMesh } from './glbProcessing';
+import { loadGlbModules } from './testing/loadGlbModules';
 import { nodesGlb } from './testing/nodesGlb';
 import { isMeshInstance, meshInstanceSurfaces } from './meshInstances';
 import { NO_SIDECAR } from './testing/noSidecar';
@@ -12,7 +13,7 @@ function byName(root: THREE.Object3D, name: string): THREE.Object3D {
 }
 
 beforeAll(async () => {
-  await initGlbModules();
+  await loadGlbModules();
 });
 
 describe('isMeshInstance', () => {
