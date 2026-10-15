@@ -36,10 +36,11 @@ Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vit
 
 `godot/` groups its files by the engine area they port, named for that area's directory in Godot's
 source, and a file's cites name its area. A file whose facts port from two areas splits into one
-file per area. A class default sits with its class under `scene/`: `scene/light.ts` holds every
-Light3D default, keyed by light type where the types differ. An enum or value the renderer branches
-on sits under `rendering/`, beside the code that reads it, even when its class lives in `scene/`.
-So `scene/` imports from `rendering/`, and `rendering/` does not import from `scene/`.
+file per area. A class default, and what the class's setters store, sits with its class under
+`scene/`: `scene/light.ts` holds every Light3D default, keyed by light type where the types differ.
+An enum or value the renderer branches on sits under `rendering/`, beside the code that reads it,
+even when its class lives in `scene/`. So `scene/` imports from `rendering/`, and `rendering/` does
+not import from `scene/`. `noDependencies.test.ts` checks that direction.
 
 A test sits beside its file. Core imports each fact from its file under a group. The root keeps
 `noDependencies.test.ts` and `index.ts`, the package's `./godot` export, which re-exports only what
@@ -51,7 +52,7 @@ a package outside core imports.
 | `variant/` | `core/variant`: the Variant parser, types, conversions, integers |
 | `string/` | `core/string`: strings, `StringName`, `NodePath` |
 | `classdb/` | `core/object`: ClassDB captures, base types, property hints, deprecated aliases |
-| `scene/` | `scene/`: `PackedScene`, nodes and their class defaults, animation, particles, CSG, the default theme |
+| `scene/` | `scene/`: `PackedScene`, nodes and resources with their class defaults and setters, animation, particles, CSG, the default theme |
 | `project/` | `core/config`, `core/io` and `editor/`: `project.godot`, the editor scan, resource formats, `Image` |
 | `import/` | `modules/gltf` and `editor/import`: glTF and scene import |
 | `text/` | `servers/text`, `modules/text_server_adv` and `text_server_fb`: the text server |

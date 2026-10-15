@@ -7,6 +7,8 @@ import {
   loadedOriginOffset,
   REFLECTION_PROBE_DEFAULTS,
   REFLECTION_PROBE_MAX_DISTANCE,
+} from '../../../godot/scene/reflectionProbe';
+import {
   ReflectionProbeAmbientMode,
   ReflectionProbeUpdateMode,
 } from '../../../godot/rendering/environment/reflectionProbe';

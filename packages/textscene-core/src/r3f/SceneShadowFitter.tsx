@@ -10,7 +10,7 @@
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
-import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../godot/rendering/lights/positionalShadowAtlas.js';
+import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../godot/scene/viewport.js';
 import {
   fitSceneDirectionalShadows,
   releaseSceneLights,

@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import {
-  ROOT_POSITIONAL_SHADOW_ATLAS,
-  viewportPositionalShadowAtlas,
-} from '../../godot/rendering/lights/positionalShadowAtlas';
+import { ROOT_POSITIONAL_SHADOW_ATLAS, viewportPositionalShadowAtlas } from '../../godot/scene/viewport';
 import { activeShadowAtlas, renderWithShadowAtlas, ViewportShadowAtlas } from './viewportShadowAtlas';
 
 const rootAtlas = () => new ViewportShadowAtlas(ROOT_POSITIONAL_SHADOW_ATLAS);
