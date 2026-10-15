@@ -31,6 +31,17 @@ const SPATIAL_SHADER: TscnInternalResource = {
   type: 'Shader',
   data: { code: '"shader_type spatial;\nvoid fragment() {}"' },
 };
+const EMPTY_SHADER: TscnInternalResource = { id: 'Shader_empty', type: 'Shader', data: {} };
+const FOG_VISUAL_SHADER: TscnInternalResource = {
+  id: 'VisualShader_fog',
+  type: 'VisualShader',
+  data: { mode: '4' },
+};
+const SPATIAL_VISUAL_SHADER: TscnInternalResource = {
+  id: 'VisualShader_spatial',
+  type: 'VisualShader',
+  data: {},
+};
 /** A ShaderMaterial with `shader` as its shader reference, or none. */
 function shaderMaterial(id: string, shader?: string): TscnInternalResource {
   return { id, type: 'ShaderMaterial', data: shader ? { shader } : {} };
@@ -66,6 +77,12 @@ const RESOURCES = [
   shaderMaterial('ShaderMaterial_spatial', 'SubResource("Shader_spatial")'),
   shaderMaterial('ShaderMaterial_file', 'ExtResource("2_shader")'),
   shaderMaterial('ShaderMaterial_tres', 'ExtResource("3_shader")'),
+  EMPTY_SHADER,
+  shaderMaterial('ShaderMaterial_empty', 'SubResource("Shader_empty")'),
+  FOG_VISUAL_SHADER,
+  shaderMaterial('ShaderMaterial_visual_fog', 'SubResource("VisualShader_fog")'),
+  SPATIAL_VISUAL_SHADER,
+  shaderMaterial('ShaderMaterial_visual_spatial', 'SubResource("VisualShader_spatial")'),
 ];
 const IMAGE_PATH = 'res://fog/density.png';
 const SPATIAL_SHADER_PATH = 'res://fog/spatial.tres';
@@ -172,6 +189,21 @@ describe('<FogVolume>', () => {
 
   it("fills a volume with a spatial ShaderMaterial with Godot's default fog (error case)", async () => {
     const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_spatial")' });
+    expect(volume.fill).toEqual({ kind: 'default' });
+  });
+
+  it("fills a volume with a ShaderMaterial whose shader has no code with Godot's default fog (edge case)", async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_empty")' });
+    expect(volume.fill).toEqual({ kind: 'default' });
+  });
+
+  it('marks a ShaderMaterial whose VisualShader runs in fog mode as a fog shader', async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_visual_fog")' });
+    expect(volume.fill).toEqual({ kind: 'shader' });
+  });
+
+  it("fills a volume with a ShaderMaterial whose VisualShader is spatial with Godot's default fog (edge case)", async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_visual_spatial")' });
     expect(volume.fill).toEqual({ kind: 'default' });
   });
 

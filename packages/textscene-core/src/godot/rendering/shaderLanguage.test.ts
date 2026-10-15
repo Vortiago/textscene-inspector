@@ -1,24 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { shaderTypeOf } from './shaderLanguage';
+import { ShaderMode, shaderModeOf } from './shaderLanguage';
 
-describe('shaderTypeOf', () => {
-  it('reads the shader_type a shader declares first', () => {
-    expect(shaderTypeOf('shader_type fog;\nvoid fog() {}')).toBe('fog');
+describe('shaderModeOf', () => {
+  it('runs a shader in the mode its shader_type names', () => {
+    expect(shaderModeOf('shader_type fog;\nvoid fog() {}')).toBe(ShaderMode.FOG);
   });
 
   it('skips the comments and the whitespace before the declaration', () => {
-    expect(shaderTypeOf('// A fog.\n/* Red. */\n\t shader_type  spatial ;')).toBe('spatial');
+    expect(shaderModeOf('// A sky.\n/* Blue. */\n\t shader_type  sky ;')).toBe(ShaderMode.SKY);
   });
 
   it('reads a declaration without its semicolon at the end of the code (edge case)', () => {
-    expect(shaderTypeOf('shader_type sky')).toBe('sky');
+    expect(shaderModeOf('shader_type particles')).toBe(ShaderMode.PARTICLES);
   });
 
-  it('reads no type from code that opens with another identifier (error case)', () => {
-    expect(shaderTypeOf('uniform float a;\nshader_type fog;')).toBe('');
+  it('runs a shader of an unknown shader_type as spatial (error case)', () => {
+    expect(shaderModeOf('shader_type mist;')).toBe(ShaderMode.SPATIAL);
   });
 
-  it('reads no type from code that is only a comment (error case)', () => {
-    expect(shaderTypeOf('// shader_type fog;')).toBe('');
+  it('runs code that opens with another identifier as spatial (error case)', () => {
+    expect(shaderModeOf('uniform float a;\nshader_type fog;')).toBe(ShaderMode.SPATIAL);
+  });
+
+  it('runs code that is only a comment as spatial (edge case)', () => {
+    expect(shaderModeOf('// shader_type fog;')).toBe(ShaderMode.SPATIAL);
+  });
+
+  it('reads no mode from code that opens with a preprocessor directive (edge case)', () => {
+    expect(shaderModeOf('// Wisps.\n#define DENSE\nshader_type fog;')).toBeNull();
   });
 });

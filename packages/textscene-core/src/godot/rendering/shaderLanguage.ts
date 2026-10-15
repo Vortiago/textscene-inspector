@@ -3,6 +3,23 @@
  * (`servers/rendering/shader_language.cpp:11223-11302`, `scene/resources/shader.cpp:111-123`).
  */
 
+/** `Shader::Mode` (`scene/resources/shader.h:45-51`), the values `VisualShader.mode` stores. */
+export enum ShaderMode {
+  SPATIAL = 0,
+  CANVAS_ITEM = 1,
+  PARTICLES = 2,
+  SKY = 3,
+  FOG = 4,
+}
+
+/** The mode each `shader_type` names. Any other type runs spatial (`scene/resources/shader.cpp:113-123`). */
+const SHADER_MODE_BY_TYPE: ReadonlyMap<string, ShaderMode> = new Map([
+  ['canvas_item', ShaderMode.CANVAS_ITEM],
+  ['particles', ShaderMode.PARTICLES],
+  ['sky', ShaderMode.SKY],
+  ['fog', ShaderMode.FOG],
+]);
+
 /** Characters at or below a space end an identifier (`shader_language.cpp:11279`). */
 const LAST_SEPARATOR_CODE = 32;
 
@@ -33,7 +50,7 @@ function firstIdentifierIndex(code: string): number {
  * The type `shader_type <type>;` names at the start of `code`, or `''` where the code opens with
  * anything else (`ShaderLanguage::get_shader_type`, `shader_language.cpp:11270-11302`).
  */
-export function shaderTypeOf(code: string): string {
+function shaderTypeOf(code: string): string {
   let isReadingType = false;
   let identifier = '';
   for (let i = firstIdentifierIndex(code); i < code.length; i++) {
@@ -49,4 +66,14 @@ export function shaderTypeOf(code: string): string {
     }
   }
   return isReadingType ? identifier : '';
+}
+
+/**
+ * The mode a Shader with `code` runs in, or null for code that opens with a preprocessor directive.
+ * Godot reads the type after the preprocessor (`scene/resources/shader.cpp:91-111`), which this does
+ * not run.
+ */
+export function shaderModeOf(code: string): ShaderMode | null {
+  if (code.startsWith('#', firstIdentifierIndex(code))) return null;
+  return SHADER_MODE_BY_TYPE.get(shaderTypeOf(code)) ?? ShaderMode.SPATIAL;
 }

@@ -39,7 +39,7 @@ The lenient parser clamps each negative `size` component to 0, as `set_size` doe
 
 - **Shader missing** A volume whose material is a fog `ShaderMaterial` adds no fog, where Godot runs its fog shader.
 - **Shader missing** A fog shader with a compile error adds no fog, where Godot draws its default fog.
-- **Resource gap** A `ShaderMaterial` whose shader is a `.gdshader` file adds no fog, where Godot draws its default fog for a shader of another `shader_type` than `fog`.
+- **Resource gap** A `ShaderMaterial` whose shader is a `.gdshader` file, or whose shader code opens with a preprocessor directive, adds no fog, where Godot draws its default fog for a shader of another `shader_type` than `fog`.
 - **Resource gap** An ImageTexture3D saved in a block-compressed image format or an integer format leaves the density even.
 - **Approximated** An imported 3D texture reads its source image, so its density differs slightly from Godot's Lossy or VRAM-compressed copy.
 - **Approximated** A NoiseTexture3D `density_texture` leaves the density even on first load until its build finishes, where Godot shapes the fog on its first frame.

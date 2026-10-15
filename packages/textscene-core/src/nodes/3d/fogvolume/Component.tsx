@@ -8,8 +8,8 @@ import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
 import { extend } from '@react-three/fiber';
 import { fogVolumeSize } from '../../../godot/rendering/environment/fogVolume';
-import { shaderTypeOf } from '../../../godot/rendering/shaderLanguage';
-import { literalText } from '../../../godot/string/string';
+import { ShaderMode, shaderModeOf } from '../../../godot/rendering/shaderLanguage';
+import { literalText, stringToInt } from '../../../godot/string/string';
 import * as logger from '../../../logger';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import {
@@ -30,14 +30,21 @@ import type { Vector3 } from '../../../godot/math/vector';
 /** An element, not a `<primitive>`: it carries no material, and R3F sets its fields as props. */
 const FogVolumeElement = extend(FogVolumeObject);
 
+/** The mode `shader` runs in, or null for a shader this cannot read, such as a `.gdshader` file. */
+function shaderModeOfResource(shader: TscnInternalResource | null): ShaderMode | null {
+  if (!shader) return null;
+  if (shader.type === 'VisualShader') return stringToInt(shader.data['mode'] ?? '0');
+  return shaderModeOf(literalText(shader.data['code'] ?? ''));
+}
+
 /**
  * Whether `material` is a ShaderMaterial whose shader Godot runs as a fog shader. A shader it
- * cannot read, such as a `.gdshader` file, counts as one.
+ * cannot read counts as one.
  */
 function hasFogShader(material: TscnInternalResource | null, shader: TscnInternalResource | null): boolean {
   if (material?.type !== 'ShaderMaterial' || !material.data['shader']) return false;
-  const code = shader?.data['code'];
-  return code === undefined || shaderTypeOf(literalText(code)) === 'fog';
+  const mode = shaderModeOfResource(shader);
+  return mode === null || mode === ShaderMode.FOG;
 }
 
 /**
