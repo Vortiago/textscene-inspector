@@ -41,7 +41,7 @@ A SubViewport's target in the emission slot, over a black albedo. A material bin
 
 `normal_texture` reads red and green only. Both engines rebuild blue from them (`scene_forward_clustered.glsl:1437-1438`). So a map with blue 0 shades its flat texel as the bare plane, and its tilted texel brighter. An RGTC import stores no blue, so this read is the only one that shades it. A glTF material reads its normal map the same way, as Godot imports it as a StandardMaterial3D.
 
-- **Approximated** The tilted texel shades darker than Godot's, while the flat texel matches (#789).
+- **Approximated** The tilted texel shades darker than Godot's, while the flat texel matches.
 
 ## Clearcoat
 
@@ -139,5 +139,5 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 - **Approximated** Godot measures V from the image top and three from the bottom, so a non-integer `uv1_scale.y` or a non-zero `uv1_offset.y` shifts V differently.
 - **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
 - **Approximated** Triplanar tiling density is exact on a PlaneMesh only, since curved, CSG, GridMap, ArrayMesh and GLB geometry tile by their own UVs.
-- **Approximated** A ViewportTexture outside the albedo slot ignores `uv1_scale`, `uv1_offset`, `texture_repeat` and a nearest `texture_filter`, as it samples its target clamped (#770).
+- **Approximated** A ViewportTexture outside the albedo slot ignores `uv1_scale`, `uv1_offset`, `texture_repeat` and a nearest `texture_filter`, as it samples its target clamped.
 - **Approximated** A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.

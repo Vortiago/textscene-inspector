@@ -34,6 +34,8 @@ own texture, as three allocates it. The MSAA paths are these:
 - A SubViewport's `msaa_3d` or `msaa_2d` sets its own target's samples. Godot takes `msaa_3d` for
   the 3D buffers (`renderer_viewport.cpp:173`, `:278`) and `msaa_2d` for the render target
   (`:1362`).
+- The compositor draws only the root world, because it draws to the canvas. A WorldEnvironment in
+  a SubViewport's own world mounts none, and its tone curve stays off the shared renderer.
 
 ## Consequences
 

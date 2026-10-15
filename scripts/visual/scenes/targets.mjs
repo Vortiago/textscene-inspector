@@ -1,6 +1,7 @@
 /**
  * Batched tile geometry, the RemoteTransform relays that drive another node,
- * the goldens that sample content through a SubViewport target, and MSAA.
+ * the goldens that sample content through a SubViewport target, the own-world
+ * SubViewports that must leave the root image alone, and MSAA.
  */
 
 export const TILE_AND_TARGET_SCENES = [
@@ -61,6 +62,10 @@ export const TILE_AND_TARGET_SCENES = [
   // A ViewportTexture on a `.glb` surface override: its `viewport_path` resolves from the GLB
   // instance, and the target samples in the glTF's top-down V, so each face shows its own band.
   { name: 'glb-viewport-texture', file: 'unit-glb-viewport-texture.tscn' },
+  // An own-world SubViewport's Environment stays in its world: its glow mounts no compositor
+  // over the canvas, and its tone curve leaves the root's LINEAR box untouched.
+  { name: 'sub-viewport-own-world-glow', file: 'unit-sub-viewport-own-world-glow.tscn' },
+  { name: 'sub-viewport-own-world-tonemap', file: 'unit-sub-viewport-own-world-tonemap.tscn' },
   // MSAA, each from the setting that turns it on: the root viewport's msaa_3d and msaa_2d, from a
   // Fixture project's project.godot, and a SubViewport's own msaa_3d and msaa_2d. The headers state
   // why no other golden shows them.

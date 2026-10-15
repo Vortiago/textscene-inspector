@@ -15,8 +15,7 @@ import { HoverHighlight } from './components/HoverHighlight.js';
 import { InternalTextLabel } from './internalTextLabel.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
 import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls.js';
-import { PreviewSun } from './preview/PreviewSun.js';
-import { RootEnvironmentScope } from './environment/WorldEnvironmentScope.js';
+import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
@@ -48,8 +47,7 @@ export function TscnSceneContents() {
       {/* The root world's Environment, and Godot's editor preview sun and environment, each
           preview mounted only while the scene has no DirectionalLight3D or WorldEnvironment of
           its own (ADR-0025). Godot adds neither at runtime. This previewer takes the editor's rule. */}
-      <RootEnvironmentScope>
-        <PreviewSun />
+      <WorldEnvironmentScope world="root">
         {isEmpty && <EmptySceneIndicator />}
         {!isEmpty && <ContentGroundGrid />}
         {nodes && rootScene && (
@@ -71,7 +69,7 @@ export function TscnSceneContents() {
         <SelectionHighlight />
         <HoverHighlight />
         <ScreenshotBridge />
-      </RootEnvironmentScope>
+      </WorldEnvironmentScope>
     </TiledUploadDriver>
   );
 }

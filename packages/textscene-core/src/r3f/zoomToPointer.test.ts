@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { degToRad } from '../godot/math/math';
 import { cursorCameraPosition, cursorQuaternion, type EditorCursor } from './godotEditorCursor';
 import { zoomCursorToPointer, type PointerView } from './zoomToPointer';
 
@@ -28,7 +29,7 @@ function project(cursor: EditorCursor, point: THREE.Vector3, view: PointerView) 
 /** The world point currently under the pointer, on the focus plane. */
 function pointUnderPointer(cursor: EditorCursor, view: PointerView): THREE.Vector3 {
   const basis = cursorQuaternion(cursor);
-  const unitsPerPixel = (2 * Math.tan((view.fovDegrees * Math.PI) / 360) * cursor.distance) / view.height;
+  const unitsPerPixel = (2 * Math.tan(degToRad(view.fovDegrees) / 2) * cursor.distance) / view.height;
   return cursor.target
     .clone()
     .add(new THREE.Vector3(1, 0, 0).applyQuaternion(basis).multiplyScalar(view.offsetX * unitsPerPixel))

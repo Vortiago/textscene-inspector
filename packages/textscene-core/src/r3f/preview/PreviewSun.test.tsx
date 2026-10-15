@@ -1,9 +1,9 @@
 /**
- * The preview lighting yields to the scene, per node type, independently. Scenes
- * go through the real parser and the whole `<TscnSceneContents>` tree mounts,
- * since the question is how many lights the scene ends up with.
+ * The preview sun yields to the scene's own DirectionalLight3D, never to its WorldEnvironment. Scenes
+ * go through the real parser and the whole `<TscnSceneContents>` tree mounts, since the question is
+ * how many lights the scene ends up with.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type * as THREE from 'three';
 import { TscnSceneContents } from '../TscnCanvas';
@@ -17,26 +17,17 @@ import { TscnParser } from '../../parser/TscnParser';
 import { SOFT_LOW_QUALITY_RADIUS } from '../../godot/rendering/lights/softShadowScale';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import type { ParsedResource } from '../../parser/parsedResource';
 
 import '../nodes/index';
-
-// A marker stands in for the layer, whose compositor needs a real GL context.
-vi.mock('../environment/NoEnvironmentLayer', () => ({
-  NoEnvironmentLayer: () => <group name="NoEnvironmentLayer" />,
-}));
 
 interface RenderOptions {
   sun?: boolean;
   environment?: boolean;
-  /** The `.tres` files the loader holds. A file seeded `null` failed to load, and any other loads forever. */
-  files?: Record<string, ParsedResource | null>;
 }
 
-async function render(sceneText: string, { sun = true, environment = true, files = {} }: RenderOptions = {}) {
+async function render(sceneText: string, { sun = true, environment = true }: RenderOptions = {}) {
   const graph = createSceneGraphFromTscnScene(new TscnParser().parse(sceneText));
   const fake = createFakeResourceLoader();
-  for (const [path, parsed] of Object.entries(files)) fake.resources.seed(path, parsed);
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
@@ -105,7 +96,7 @@ visible = false
   });
 });
 
-describe('preview environment yielding', () => {
+describe('preview sun beside a WorldEnvironment', () => {
   const WORLD_ENV = `
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 `;
@@ -119,43 +110,6 @@ describe('preview environment yielding', () => {
   it('still lights a scene carrying both, with exactly the scene’s own sun', async () => {
     expect(directionalCount(await render(scene(`${DIRECTIONAL}${WORLD_ENV}`)))).toBe(1);
   });
-
-  const noEnvironmentCount = (renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>) =>
-    renderer.scene.findAll((node) => node.props.name === 'NoEnvironmentLayer').length;
-
-  it('mounts the no-Environment layer when the user turns the preview environment off', async () => {
-    expect(noEnvironmentCount(await render(scene(MESH), { environment: false }))).toBe(1);
-  });
-
-  it('mounts no such layer while the preview environment draws', async () => {
-    expect(noEnvironmentCount(await render(scene(MESH)))).toBe(0);
-  });
-
-  it('mounts it for a WorldEnvironment that names no Environment', async () => {
-    expect(noEnvironmentCount(await render(scene(WORLD_ENV), { environment: false }))).toBe(1);
-  });
-
-  const NAMED_ENV = `[gd_scene format=3]
-
-[ext_resource type="Environment" path="res://env.tres" id="1_env"]
-
-[node name="Root" type="Node3D"]
-
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = ExtResource("1_env")
-`;
-
-  it('mounts none while a named Environment is still loading', async () => {
-    expect(noEnvironmentCount(await render(NAMED_ENV))).toBe(0);
-  });
-
-  it('mounts it for a named Environment whose .tres fails to load', async () => {
-    expect(noEnvironmentCount(await render(NAMED_ENV, { files: { 'res://env.tres': null } }))).toBe(1);
-  });
-
-  // The preview environment applies itself through a GPU render the headless
-  // renderer cannot run. godotPreviewLighting.test.ts covers the decision, and
-  // the `preview-lighting` visual golden the pixels.
 });
 
 describe('preview sun shadow', () => {

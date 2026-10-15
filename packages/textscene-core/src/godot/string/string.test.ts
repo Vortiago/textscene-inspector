@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   fileBaseName,
+  getBaseDir,
+  pathJoin,
   RES_PATH_BODY_SOURCE,
   IS_VALID_INT_RE,
   literalText,
@@ -444,5 +446,41 @@ describe('validateFilename', () => {
 
   it('keeps a name that is already valid', () => {
     expect(validateFilename('grey_albedo.001')).toBe('grey_albedo.001');
+  });
+});
+
+describe('getBaseDir', () => {
+  it('drops the file name after the last separator', () => {
+    expect([getBaseDir('res://models/tree.glb'), getBaseDir('a\\b\\c.png')]).toEqual([
+      'res://models',
+      'a\\b',
+    ]);
+  });
+
+  it('keeps the root of a scheme, a drive, a network share and an absolute path', () => {
+    expect(['res://tree.glb', 'C:/tree.glb', '//server/share/tree.glb', '/tree.glb'].map(getBaseDir)).toEqual(
+      ['res://', 'C:/', '//server/share/', '/']
+    );
+  });
+
+  it('is empty for a bare file name (edge case)', () => {
+    expect(getBaseDir('tree.glb')).toBe('');
+  });
+});
+
+describe('pathJoin', () => {
+  it('puts one separator between a directory and a file', () => {
+    expect(pathJoin('res://models', 'leaf.png')).toBe('res://models/leaf.png');
+  });
+
+  it('adds none when a side already has it', () => {
+    expect([pathJoin('res://', 'leaf.png'), pathJoin('res://a', '/leaf.png')]).toEqual([
+      'res://leaf.png',
+      'res://a/leaf.png',
+    ]);
+  });
+
+  it('is the file alone under an empty directory (edge case)', () => {
+    expect(pathJoin('', 'leaf.png')).toBe('leaf.png');
   });
 });

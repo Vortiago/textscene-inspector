@@ -120,10 +120,22 @@ const WITHOUT_MIPMAPS: Partial<Record<THREE.MinificationTextureFilter, THREE.Min
   [THREE.LinearMipmapNearestFilter]: THREE.LinearFilter,
 };
 
-/** Removes the mip chain of a texture the caller owns, for an image Godot imports without one. */
+/** Marks a texture imported without a mip chain. In `userData`, so every `clone()` carries it. */
+const HAS_NO_MIP_CHAIN = 'textsceneHasNoMipChain';
+
+/**
+ * Removes the mip chain of a texture the caller owns, for an image Godot imports without one, and
+ * marks it, so a clone whose sampler the glTF loader rewrites can drop it again.
+ */
 export function dropMipChain(texture: THREE.Texture): void {
   texture.generateMipmaps = false;
   texture.minFilter = WITHOUT_MIPMAPS[texture.minFilter] ?? texture.minFilter;
+  texture.userData[HAS_NO_MIP_CHAIN] = true;
+}
+
+/** Whether `dropMipChain` removed the mip chain of `texture`, or of the texture it is cloned from. */
+export function hasDroppedMipChain(texture: THREE.Texture): boolean {
+  return texture.userData[HAS_NO_MIP_CHAIN] === true;
 }
 
 /**

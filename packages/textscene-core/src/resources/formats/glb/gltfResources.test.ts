@@ -125,6 +125,15 @@ describe('selfContainedGlb on a text glTF', () => {
     expect([...bin.slice(0, 2)]).toEqual([0x89, 0x50]);
   });
 
+  it('gives an external SVG image no MIME type, as Godot loads no SVG from a glTF (edge case)', async () => {
+    const { readUri } = reader({ 'icon.svg': bytes(0x3c, 0x73) });
+    const json: GltfJson = { asset: { version: '2.0' }, images: [{ uri: 'icon.svg' }] };
+
+    const { json: packed } = unpack(await packText(json, readUri));
+
+    expect(packed.images).toEqual([{ bufferView: 0 }]);
+  });
+
   it('decodes a data URI itself and reads no file for it', async () => {
     const { readUri, read } = reader({});
     const json: GltfJson = {

@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
-import { ViewportEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
+import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
@@ -228,9 +228,9 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   return createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
       <WorldRootProvider value={portalScene}>
-        <ViewportEnvironmentScope>
+        <WorldEnvironmentScope world="subViewport">
           <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
-        </ViewportEnvironmentScope>
+        </WorldEnvironmentScope>
       </WorldRootProvider>
     </CanvasWorkspaceProvider>,
     portalScene
