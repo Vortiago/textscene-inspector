@@ -23,6 +23,7 @@ import { materialFromBag } from './build';
 import { buildMaterial } from './buildMaterial.testkit';
 import { standardMaterialBags, type StandardMaterialBag, type StandardMaterialClass } from './materialBag';
 import { GODOT_ALPHA_HASH } from '../../../r3f/materials/godotAlphaHash';
+import { alphaAntialiasingOf, GODOT_ALPHA_ANTIALIASING } from '../../../r3f/materials/godotAlphaAntialiasing';
 import type { ProgramInjection, ProgramShader } from '../../../r3f/materialProgramInputs';
 import { bindSlotTexture, materialTextureStates } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
@@ -592,6 +593,8 @@ type CompileHook = ProgramInjection['onBeforeCompile'];
 function bagInjections(bag: StandardMaterialBag): CompileHook[] {
   const hooks = bag.injection ? [bag.injection.onBeforeCompile] : [];
   if (bag.props.alphaHash === true) hooks.push(GODOT_ALPHA_HASH.onBeforeCompile);
+  if (alphaAntialiasingOf({ userData: bag.props.userData ?? {} }))
+    hooks.push(GODOT_ALPHA_ANTIALIASING.onBeforeCompile);
   return hooks;
 }
 
@@ -601,7 +604,7 @@ function patchedProgram(...hooks: (CompileHook | undefined)[]): string[] | null 
   if (patches.length === 0) return null;
   const material = new THREE.MeshStandardMaterial();
   const shader: ProgramShader = { ...THREE.ShaderLib.standard, uniforms: {} };
-  for (const patch of patches) patch.call(material, shader);
+  for (const patch of patches) patch.call(material, shader, undefined as never);
   return [shader.vertexShader, shader.fragmentShader];
 }
 

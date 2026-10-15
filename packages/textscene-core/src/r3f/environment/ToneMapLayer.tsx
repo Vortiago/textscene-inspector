@@ -14,6 +14,8 @@ import { useTexture2D } from '../../resources/useTexture2D';
 import { releaseBoundTexture } from '../../resources/textures/applyTextureState';
 import type { SceneResources } from '../SceneResourcesContext';
 import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
+import { projectTransparentBackground } from '../../parser/projectSettingsParser';
+import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 
 interface ToneMapLayerProps {
   /** Null when the environment has no glow. */
@@ -30,6 +32,8 @@ interface ToneMapLayerProps {
 export function ToneMapLayer({ glow, samples, adjustments, toneMapping, resources }: ToneMapLayerProps) {
   const { mode, white, exposure, agxContrast } = toneMapping;
   const glowMap = useGlowMap(glow, resources);
+  // The composer draws the canvas, which is the root window's surface.
+  const transparentBackground = projectTransparentBackground(useProjectSettings().settings);
 
   // Typed as the base `Effect`: with the library's `declaration: true`, a class
   // extending postprocessing's `Effect` does not carry its inherited members
@@ -42,8 +46,9 @@ export function ToneMapLayer({ glow, samples, adjustments, toneMapping, resource
         adjustments,
         toneMapping: { mode, white, agxContrast },
         exposure,
+        transparentBackground,
       }) as Effect,
-    [glow, adjustments, mode, white, exposure, agxContrast]
+    [glow, adjustments, mode, white, exposure, agxContrast, transparentBackground]
   );
   useEffect(() => () => effect.dispose(), [effect]);
   // A uniform, not an effect rebuild: the map's arrival changes no shader.

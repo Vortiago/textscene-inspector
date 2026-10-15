@@ -9,6 +9,7 @@ import { BillboardMode } from '../../../godot/scene/billboard';
 import { AxisMode } from '../../../godot/math/vector3Axis';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
+import type { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 
 /** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
 export { BillboardMode };
@@ -26,16 +27,6 @@ export enum AlphaCutMode {
   ALPHA_CUT_OPAQUE_PREPASS = 2,
   /** Hashed (stochastic) alpha; maps to TRANSPARENCY_ALPHA_HASH (scene/3d/sprite_3d.cpp:291). */
   ALPHA_CUT_HASH = 3,
-}
-
-/**
- * `BaseMaterial3D::AlphaAntiAliasing` (`material.h:197-200`), shared verbatim
- * by SpriteBase3D.
- */
-export enum AlphaAntiAliasing {
-  ALPHA_ANTIALIASING_OFF = 0,
-  ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE = 1,
-  ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE = 2,
 }
 
 /**

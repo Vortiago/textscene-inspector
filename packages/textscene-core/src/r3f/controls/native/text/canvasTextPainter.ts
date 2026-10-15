@@ -14,6 +14,8 @@ import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import { injectProgram, type ProgramInjection } from '../../../materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../materials/godotAlphaHash';
+import { alphaAntialiasingProps, alphaAntialiasingUserData } from '../../../materials/godotAlphaAntialiasing';
+import type { AlphaAntialiasingCut } from '../../../../godot/rendering/materials/alphaAntialiasing';
 import {
   NO_OPAQUE_PREPASS,
   opaquePrepassUserData,
@@ -206,6 +208,8 @@ export interface CanvasTextBlend {
   opaquePrepass?: OpaquePrepass;
   /** What the surface's blend needs so three blends the alpha Godot writes (`surfaceAlphaPatch.ts`). */
   blending?: THREE.Blending;
+  /** The cut's alpha antialiasing. Omitted, the surface runs none. */
+  antialiasing?: AlphaAntialiasingCut | null;
   injection?: ProgramInjection;
 }
 
@@ -244,6 +248,7 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     alphaHashScale = 1,
     opaquePrepass = NO_OPAQUE_PREPASS,
     blending = THREE.NormalBlending,
+    antialiasing = null,
     injection,
   } = options;
   const material = new THREE.MeshBasicMaterial({
@@ -255,12 +260,17 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     alphaTest,
     alphaHash,
     blending,
+    ...alphaAntialiasingProps(antialiasing),
     // Unlike `defines` below, `forceSinglePass` IS a property `THREE.Material`'s
     // constructor declares, so `setValues` assigns it from this object.
     ...canvasItemFacing(side),
     clippingPlanes: [...clippingPlanes],
   });
-  material.userData = { ...alphaHashScaleUserData(alphaHashScale), ...opaquePrepassUserData(opaquePrepass) };
+  material.userData = {
+    ...alphaHashScaleUserData(alphaHashScale),
+    ...opaquePrepassUserData(opaquePrepass),
+    ...alphaAntialiasingUserData(antialiasing),
+  };
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...CANVAS_SRGB_DEFINES };
   }

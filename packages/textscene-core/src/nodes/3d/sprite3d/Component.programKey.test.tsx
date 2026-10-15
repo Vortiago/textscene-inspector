@@ -11,14 +11,8 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
-import {
-  AlphaCutMode,
-  AxisMode,
-  BillboardMode,
-  type Sprite3DProperties,
-  AlphaAntiAliasing,
-  TextureFilterMode,
-} from './types';
+import { AlphaCutMode, AxisMode, BillboardMode, type Sprite3DProperties, TextureFilterMode } from './types';
+import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';

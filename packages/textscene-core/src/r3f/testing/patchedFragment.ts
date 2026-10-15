@@ -33,11 +33,11 @@ export const DRAWS_TOON_SPECULAR = '#define GODOT_SPECULAR_TOON\n';
 
 /** `fragmentShader` after `onBeforeCompile`, which reads only the shader, so no renderer is needed. */
 export function patchedShader(
-  onBeforeCompile: (shader: ProgramShader) => void,
+  onBeforeCompile: (shader: ProgramShader, renderer: never) => void,
   fragmentShader: string
 ): string {
   const shader: ProgramShader = { vertexShader: '', fragmentShader, uniforms: {} };
-  onBeforeCompile(shader);
+  onBeforeCompile(shader, undefined as never);
   return shader.fragmentShader;
 }
 

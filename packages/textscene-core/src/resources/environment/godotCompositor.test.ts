@@ -28,7 +28,7 @@ const FILMIC: CompositeToneMapping = { mode: ToneMapper.FILMIC, white: 1 };
 
 /** The whole shader with `FLAG_USE_BCS` clear. */
 function composite(glow: GlowParams | null, toneMapping: CompositeToneMapping = FILMIC): string {
-  return compositeGlsl({ glow, toneMapping, adjustments: null });
+  return compositeGlsl({ glow, toneMapping, adjustments: null, transparentBackground: false });
 }
 
 /** `mainImage`'s body: above it sit the definitions, not the call order. */
@@ -37,7 +37,7 @@ function body(
   toneMapping: CompositeToneMapping = FILMIC,
   adjustments: EnvironmentAdjustments | null = null
 ) {
-  const glsl = compositeGlsl({ glow, toneMapping, adjustments });
+  const glsl = compositeGlsl({ glow, toneMapping, adjustments, transparentBackground: false });
   return glsl.slice(glsl.indexOf('void mainImage'));
 }
 
@@ -57,8 +57,18 @@ describe('compositeGlsl — the shader it emits', () => {
     expect(glsl).toContain('uniform float godotExposure;');
   });
 
-  it('preserves the input alpha rather than writing the blended one', () => {
-    expect(body(glowOn())).toContain('outputColor = vec4(color, inputColor.a);');
+  it('writes an opaque alpha for an opaque window, whose screen blit drops the alpha', () => {
+    expect(body(glowOn())).toContain('outputColor = vec4(color, 1.0);');
+  });
+
+  it('preserves the input alpha under transparent_background, rather than the blended one', () => {
+    const glsl = compositeGlsl({
+      glow: glowOn(),
+      toneMapping: FILMIC,
+      adjustments: null,
+      transparentBackground: true,
+    });
+    expect(glsl).toContain('outputColor = vec4(color, inputColor.a);');
   });
 });
 
@@ -238,8 +248,8 @@ describe('compositeGlsl — with the glow flag clear', () => {
     expect(glsl).toContain('uniform float godotExposure;');
   });
 
-  it('preserves the input alpha, as the glow arm does', () => {
-    expect(body(null, tone)).toContain('outputColor = vec4(color, inputColor.a);');
+  it('writes the same alpha as the glow arm', () => {
+    expect(body(null, tone)).toContain('outputColor = vec4(color, 1.0);');
   });
 
   it('still emits a real curve under LINEAR, which is exposure and nothing else', () => {

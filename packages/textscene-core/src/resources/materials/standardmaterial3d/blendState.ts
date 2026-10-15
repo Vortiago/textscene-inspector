@@ -7,6 +7,10 @@
 
 import * as THREE from 'three';
 import { BlendMode, type MaterialBlendState } from './types';
+import {
+  AlphaAntiAliasing,
+  type AlphaToCoverageMode,
+} from '../../../godot/rendering/materials/alphaAntialiasing';
 
 /** Godot `RD::BlendOperation`, only the two values this table uses. */
 type GodotBlendOp = 'add' | 'reverse-subtract';
@@ -102,11 +106,47 @@ const PRESETS: Readonly<Partial<Record<BlendMode, THREE.Blending>>> = {
   [BlendMode.MUL]: THREE.MultiplyBlending,
 };
 
+/**
+ * `BLEND_MODE_ALPHA_TO_COVERAGE` (`material_storage.cpp:691-698`), which any alpha antialiasing mode
+ * puts in place of the material's own blend mode (`scene_shader_forward_clustered.cpp:237-241`).
+ */
+const ALPHA_TO_COVERAGE_ATTACHMENT: GodotBlendAttachment = {
+  colorOp: 'add',
+  srcColor: 'src-alpha',
+  dstColor: 'one-minus-src-alpha',
+  alphaOp: 'add',
+  srcAlpha: 'one',
+  dstAlpha: 'zero',
+};
+
+/**
+ * ALPHA_TO_COVERAGE_AND_TO_ONE's attachment: alpha to one sets the source alpha to 1 before the
+ * blend, so the colour overwrites. WebGL has no alpha to one, so the stored alpha stays the
+ * source alpha where Godot stores 1. Only a SubViewport with `transparent_bg` shows it.
+ */
+const ALPHA_TO_ONE_ATTACHMENT: GodotBlendAttachment = {
+  ...ALPHA_TO_COVERAGE_ATTACHMENT,
+  srcColor: 'one',
+  dstColor: 'zero',
+};
+
 /** The blending state a material with this `blend_mode` must carry. */
 export function godotBlendState(mode: BlendMode): MaterialBlendState {
   const preset = PRESETS[mode];
   if (preset !== undefined) return { blending: preset };
-  const attachment = GODOT_BLEND_ATTACHMENTS[mode];
+  return customBlendState(GODOT_BLEND_ATTACHMENTS[mode]);
+}
+
+/** The blending state a surface whose alpha antialiasing turns alpha to coverage on must carry. */
+export function alphaToCoverageBlendState(mode: AlphaToCoverageMode): MaterialBlendState {
+  return customBlendState(
+    mode === AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE
+      ? ALPHA_TO_ONE_ATTACHMENT
+      : ALPHA_TO_COVERAGE_ATTACHMENT
+  );
+}
+
+function customBlendState(attachment: GodotBlendAttachment): MaterialBlendState {
   return {
     blending: THREE.CustomBlending,
     blendEquation: THREE_EQUATION[attachment.colorOp],

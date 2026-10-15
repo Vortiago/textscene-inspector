@@ -24,7 +24,7 @@ function patched(
     fragmentShader,
     uniforms: {},
   };
-  parallaxInjection(heightmap)!.onBeforeCompile.call(material, shader);
+  parallaxInjection(heightmap)!.onBeforeCompile.call(material, shader, undefined as never);
   return shader;
 }
 
@@ -92,7 +92,7 @@ describe('parallaxInjection', () => {
       uniforms: {},
     };
 
-    parallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(material, shader);
+    parallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(material, shader, undefined as never);
 
     expect(shader.fragmentShader).not.toContain('#define vEmissiveMapUv');
     expect(shader.fragmentShader).toContain('#define vAoMapUv ( vAoMapUv + godotParallaxShift )');
@@ -116,7 +116,7 @@ describe('bindHeightmap', () => {
       fragmentShader: THREE.ShaderLib.standard.fragmentShader,
       uniforms: {},
     };
-    parallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(material, shader);
+    parallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(material, shader, undefined as never);
     return shader.uniforms;
   }
 
@@ -156,7 +156,7 @@ describe('unshadedParallaxInjection', () => {
       fragmentShader: THREE.ShaderLib.basic.fragmentShader,
       uniforms: {},
     };
-    unshadedParallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(material, shader);
+    unshadedParallaxInjection(HEIGHTMAP)!.onBeforeCompile.call(material, shader, undefined as never);
     return shader;
   }
 

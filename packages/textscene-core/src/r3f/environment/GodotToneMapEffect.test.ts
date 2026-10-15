@@ -22,6 +22,7 @@ function effectWith(properties: Record<string, string>) {
     adjustments: null,
     toneMapping: { mode: ToneMapper.FILMIC, white: 1 },
     exposure: 1,
+    transparentBackground: false,
   });
 }
 

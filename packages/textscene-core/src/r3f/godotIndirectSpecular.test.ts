@@ -88,7 +88,11 @@ describe('installGodotIndirectSpecular', () => {
 
   it('skips the occlusion in a material that disables it', () => {
     const shader = { vertexShader: '', fragmentShader: 'void main() {}', uniforms: {} };
-    SPECULAR_OCCLUSION_DISABLED.onBeforeCompile.call(new THREE.MeshStandardMaterial(), shader);
+    SPECULAR_OCCLUSION_DISABLED.onBeforeCompile.call(
+      new THREE.MeshStandardMaterial(),
+      shader,
+      undefined as never
+    );
 
     expect(shader.fragmentShader.startsWith('#define GODOT_SPECULAR_OCCLUSION_DISABLED\n')).toBe(true);
     expect(patchedChunks().ao).toContain('! defined( GODOT_SPECULAR_OCCLUSION_DISABLED )');

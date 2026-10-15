@@ -13,6 +13,7 @@ import {
   surfaceBillboard,
 } from './materialBag';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import { alphaAntialiasingOf } from '../../../r3f/materials/godotAlphaAntialiasing';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
 import { lightModesUserData } from '../../../r3f/lightModes';
 import { disablesSpecularOcclusion } from '../../../r3f/godotIndirectSpecular';
@@ -542,6 +543,50 @@ describe('standardMaterialBags — alpha hash', () => {
 
   it('hashes nothing on a material with no transparency (edge case)', () => {
     expect(standardMaterial({}).alphaHash).toBe(false);
+  });
+});
+
+describe('standardMaterialBags — alpha antialiasing', () => {
+  const scissorAntialiased = (mode: string) => ({
+    transparency: '2',
+    shading_mode: '0',
+    alpha_antialiasing_mode: mode,
+    alpha_antialiasing_edge: '0.2',
+  });
+
+  it.each([
+    ['ALPHA_TO_COVERAGE', '1', THREE.SrcAlphaFactor],
+    ['ALPHA_TO_COVERAGE_AND_TO_ONE', '2', THREE.OneFactor],
+  ])('turns alpha to coverage on with its blend under %s', (_name, mode, blendSrc) => {
+    const built = standardMaterial(scissorAntialiased(mode));
+    expect(built).toMatchObject({ alphaToCoverage: true, blending: THREE.CustomBlending, blendSrc });
+  });
+
+  it.each([
+    ['ALPHA_TO_COVERAGE', '1'],
+    ['ALPHA_TO_COVERAGE_AND_TO_ONE', '2'],
+  ])('ramps the edge past the scissor under %s', (_name, mode) => {
+    const built = standardMaterial(scissorAntialiased(mode));
+    expect(alphaAntialiasingOf(built)?.edge).toBeCloseTo(0.7, 6);
+    expect(patchedFragment(built)).toContain('godotEdgeCoverage(');
+  });
+
+  it('keeps alpha to coverage on in the alpha pass a fade forces', () => {
+    const props = alphaPassBag(scissorAntialiased('1')).props;
+    expect(props.alphaToCoverage).toBe(true);
+    expect(alphaAntialiasingOf({ userData: props.userData as Record<string, unknown> })).not.toBeNull();
+  });
+
+  it("blends with the material's own blend mode while the mode is OFF", () => {
+    const built = standardMaterial({ transparency: '2', blend_mode: '1' });
+    expect(built).toMatchObject({ alphaToCoverage: false, blending: THREE.AdditiveBlending });
+    expect(alphaAntialiasingOf(built)).toBeNull();
+  });
+
+  it('replaces an authored blend mode with the alpha-to-coverage blend (edge case)', () => {
+    // `scene_shader_forward_clustered.cpp:237-241`, and the editor hides `blend_mode` (`material.cpp:2655`).
+    const built = standardMaterial({ ...scissorAntialiased('1'), blend_mode: '1' });
+    expect(built.blending).toBe(THREE.CustomBlending);
   });
 });
 

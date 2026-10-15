@@ -48,6 +48,9 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
     alpha_cut: parseAlphaCutMode(properties.alpha_cut),
     alpha_scissor_threshold: floatOr(properties.alpha_scissor_threshold, 0.5, 'alpha_scissor_threshold'),
     alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, 'alpha_hash_scale'),
+    // `set_alpha_antialiasing` stores any value (`label_3d.cpp:1058-1063`), and any but OFF ramps the edge.
+    alpha_antialiasing_mode: intOr(properties.alpha_antialiasing_mode, 0, 'alpha_antialiasing_mode'),
+    alpha_antialiasing_edge: floatOr(properties.alpha_antialiasing_edge, 0, 'alpha_antialiasing_edge'),
     fixed_size: boolSlotValue(properties.fixed_size) === true,
     texture_filter: parseTextureFilter(properties.texture_filter),
   };

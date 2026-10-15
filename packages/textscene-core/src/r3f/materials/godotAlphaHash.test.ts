@@ -17,7 +17,7 @@ function compiled(
   program: { vertexShader: string; fragmentShader: string } = THREE.ShaderLib.basic
 ): ProgramShader {
   const shader: ProgramShader = { ...program, uniforms: {} };
-  GODOT_ALPHA_HASH.onBeforeCompile.call(material, shader);
+  GODOT_ALPHA_HASH.onBeforeCompile.call(material, shader, undefined as never);
   return shader;
 }
 

@@ -3,6 +3,7 @@
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
 import { BillboardMode } from '../../../godot/scene/billboard';
 import type { HorizontalAlignment, Rgba } from '../../../godot/math/math';
+import type { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 
 /** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
 export { BillboardMode };
@@ -60,6 +61,12 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
 
   /** Grain of the `alpha_cut` HASH dither (`label_3d.h:63`, default 1.0). */
   alpha_hash_scale: number;
+
+  /** Alpha antialiasing of a DISCARD or HASH cut (`label_3d.h:64`, default OFF). */
+  alpha_antialiasing_mode: AlphaAntiAliasing;
+
+  /** Where the antialiased cut's edge sits (`label_3d.h:65`, default 0). */
+  alpha_antialiasing_edge: number;
 
   /** Keep a constant on-screen size regardless of distance (`label_3d.h:46`, default false). */
   fixed_size: boolean;

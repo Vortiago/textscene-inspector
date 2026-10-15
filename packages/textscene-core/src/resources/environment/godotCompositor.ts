@@ -26,6 +26,12 @@ export interface CompositeOptions {
   toneMapping: CompositeToneMapping;
   /** Null when `adjustment_enabled` is false: `FLAG_USE_BCS` clear. */
   adjustments: EnvironmentAdjustments | null;
+  /**
+   * `rendering/viewport/transparent_background`. `tonemap.glsl` writes the buffer's alpha through,
+   * and only a transparent window shows it: the screen blit copies it with blending off
+   * (`renderer_compositor_rd.cpp:138`) into an opaque surface.
+   */
+  transparentBackground: boolean;
 }
 
 /**
@@ -34,7 +40,12 @@ export interface CompositeOptions {
  * bright pass already exposed the glow, so the curve runs at exposure 1.0. A null `glow` clears
  * `FLAG_USE_GLOW`, and a null `adjustments` clears `FLAG_USE_BCS`.
  */
-export function compositeGlsl({ glow, toneMapping, adjustments }: CompositeOptions): string {
+export function compositeGlsl({
+  glow,
+  toneMapping,
+  adjustments,
+  transparentBackground,
+}: CompositeOptions): string {
   return /* glsl */ `
 uniform float godotExposure;
 ${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
@@ -43,7 +54,7 @@ ${adjustments ? GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL : ''}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
 ${glow ? glowAndToneMapGlsl(glow) : TONE_MAP_ONLY_GLSL}
 ${adjustments ? adjustmentsGlsl(adjustments) : ''}
-  outputColor = vec4(color, inputColor.a);
+  outputColor = vec4(color, ${transparentBackground ? 'inputColor.a' : '1.0'});
 }
 `;
 }
