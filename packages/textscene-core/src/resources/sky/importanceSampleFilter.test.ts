@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { reflectionAtlasLayout } from '../../godot/rendering/environment/reflectionProbe';
 import { layerSamples, skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { importanceSampleFilter } from './importanceSampleFilter';
+import { testRenderer } from '../../testing/recordingWebGL';
 
 describe('importanceSampleFilter', () => {
   it("reads the chain of the sky's radiance size", () => {
@@ -60,5 +61,21 @@ describe('importanceSampleFilter', () => {
     };
 
     expect(lodOf(32)).toBeLessThan(lodOf(256));
+  });
+
+  it("draws every layout's layers with one pass on a renderer", async () => {
+    const { renderer } = await testRenderer();
+
+    expect(importanceSampleFilter(skyOctmapLayout(64)).passFor(renderer)).toBe(
+      importanceSampleFilter(reflectionAtlasLayout(true)).passFor(renderer)
+    );
+  });
+
+  it('gives each renderer a pass of its own (edge case)', async () => {
+    const { renderer: first } = await testRenderer();
+    const { renderer: second } = await testRenderer();
+    const filter = importanceSampleFilter(skyOctmapLayout(64));
+
+    expect(filter.passFor(first)).not.toBe(filter.passFor(second));
   });
 });

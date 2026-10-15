@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FAST_FILTER_COEFFICIENTS } from '../../godot/rendering/environment/skyFastFilterCoefficients';
 import { FAST_FILTER_CHAIN_SIZES } from '../../godot/rendering/environment/skyReflection';
 import { fastFilter } from './fastFilter';
+import { testRenderer } from '../../testing/recordingWebGL';
 
 const tapWeights = (layer: number) => fastFilter.layerUniforms(layer).weight as Float32Array;
 
@@ -22,5 +23,18 @@ describe('fastFilter', () => {
 
   it('refuses layer 0, which is the radiance itself (error case)', () => {
     expect(() => fastFilter.layerUniforms(0)).toThrow("expected a level of the fast filter's table, got -1");
+  });
+
+  it('draws every layer with one pass on a renderer', async () => {
+    const { renderer } = await testRenderer();
+
+    expect(fastFilter.passFor(renderer)).toBe(fastFilter.passFor(renderer));
+  });
+
+  it('gives each renderer a pass of its own (edge case)', async () => {
+    const { renderer: first } = await testRenderer();
+    const { renderer: second } = await testRenderer();
+
+    expect(fastFilter.passFor(first)).not.toBe(fastFilter.passFor(second));
   });
 });
