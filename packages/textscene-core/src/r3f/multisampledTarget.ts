@@ -9,9 +9,10 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { msaaSampleCount, supportedSampleCount } from '../godot/rendering/msaa';
+import { takesOutputLikeDrawingBuffer } from './outputTarget';
 
 /** What decides a target's colour storage, which a texture carries. */
-export type TargetTexture = Pick<THREE.Texture, 'type' | 'colorSpace' | 'internalFormat'>;
+type TargetTexture = Pick<THREE.Texture, 'type' | 'colorSpace' | 'internalFormat'>;
 
 /** The GL internal format of a target's colour attachment. */
 type ColourStorage = THREE.PixelFormatGPU;
@@ -34,23 +35,22 @@ export function useMultisampledTarget(
   return target;
 }
 
-/** The samples for `mode` on a buffer another library builds, from the texture it gives that buffer. */
-export function useSampleCount(mode: number, texture: TargetTexture): number {
+/** The samples for `mode` on a linear RGBA buffer of texel `type` that another library builds. */
+export function useSampleCount(mode: number, type: THREE.TextureDataType): number {
   const gl = useThree((state) => state.gl);
-  const storage = colourStorage(texture, false);
+  const storage = colourStorage({ type, colorSpace: THREE.NoColorSpace, internalFormat: null });
   return useMemo(() => deviceSampleCount(gl, mode, storage), [gl, mode, storage]);
 }
 
+/** A target that takes output like the drawing buffer stores an sRGB tag linear (`WebGLTextures.js:2120`). */
 function targetStorage(target: THREE.WebGLRenderTarget): ColourStorage {
-  const takesOutputLikeDrawingBuffer = (target as { isXRRenderTarget?: boolean }).isXRRenderTarget === true;
-  return colourStorage(target.texture, takesOutputLikeDrawingBuffer);
+  const { type, colorSpace, internalFormat } = target.texture;
+  const storedSpace = takesOutputLikeDrawingBuffer(target) ? THREE.LinearSRGBColorSpace : colorSpace;
+  return colourStorage({ type, colorSpace: storedSpace, internalFormat });
 }
 
-/**
- * Three's `getInternalFormat` for an RGBA texture (`WebGLTextures.js:129`). A target that takes output
- * like the drawing buffer stores an 8-bit sRGB tag linear (`WebGLTextures.js:2120`).
- */
-function colourStorage(texture: TargetTexture, forcesLinearStorage: boolean): ColourStorage {
+/** Three's `getInternalFormat` for an RGBA texture (`WebGLTextures.js:129`). */
+function colourStorage(texture: TargetTexture): ColourStorage {
   if (texture.internalFormat !== null) return texture.internalFormat;
   if (texture.type === THREE.FloatType) return 'RGBA32F';
   if (texture.type === THREE.HalfFloatType) return 'RGBA16F';
@@ -58,7 +58,7 @@ function colourStorage(texture: TargetTexture, forcesLinearStorage: boolean): Co
     throw new Error(`expected an unsigned byte, half float or float target, got texel type ${texture.type}`);
   }
   const isSrgb = THREE.ColorManagement.getTransfer(texture.colorSpace) === THREE.SRGBTransfer;
-  return isSrgb && !forcesLinearStorage ? 'SRGB8_ALPHA8' : 'RGBA8';
+  return isSrgb ? 'SRGB8_ALPHA8' : 'RGBA8';
 }
 
 /**

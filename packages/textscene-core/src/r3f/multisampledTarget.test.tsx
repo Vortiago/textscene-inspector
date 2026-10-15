@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useMultisampledTarget, useSampleCount, type TargetTexture } from './multisampledTarget';
+import { useMultisampledTarget, useSampleCount } from './multisampledTarget';
+import { MSAA_DISABLED } from '../godot/rendering/msaa';
+import { SCENE_BUFFER_TYPE } from './environment/compositorPass';
 import { takeOutputLikeDrawingBuffer } from './outputTarget';
 
 const RGBA8 = 0x8058;
@@ -10,7 +12,6 @@ const RGBA16F = 0x881a;
 const DEPTH_COMPONENT24 = 0x81a6;
 
 /** `Viewport.MSAA` modes (`scene/main/viewport.h`). */
-const MSAA_DISABLED = 0;
 const MSAA_4X = 2;
 const MSAA_8X = 3;
 
@@ -130,17 +131,13 @@ describe('useMultisampledTarget', () => {
 });
 
 describe('useSampleCount', () => {
-  const halfFloat: TargetTexture = {
-    type: THREE.HalfFloatType,
-    colorSpace: THREE.NoColorSpace,
-    internalFormat: null,
-  };
-
-  it('takes the counts RGBA16F lists for a half-float buffer', async () => {
-    expect(await onCanvas(contextWith(SPLIT_DEVICE), () => useSampleCount(MSAA_8X, halfFloat))).toBe(2);
+  it("takes the counts RGBA16F lists for the compositor's half-float scene buffer", async () => {
+    expect(await onCanvas(contextWith(SPLIT_DEVICE), () => useSampleCount(MSAA_8X, SCENE_BUFFER_TYPE))).toBe(
+      2
+    );
   });
 
   it('draws one sample per pixel on a device without multisampled targets (error path)', async () => {
-    expect(await onCanvas({}, () => useSampleCount(MSAA_8X, halfFloat))).toBe(0);
+    expect(await onCanvas({}, () => useSampleCount(MSAA_8X, SCENE_BUFFER_TYPE))).toBe(0);
   });
 });

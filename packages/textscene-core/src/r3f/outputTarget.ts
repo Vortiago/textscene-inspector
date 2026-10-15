@@ -10,3 +10,7 @@ import type * as THREE from 'three';
 export function takeOutputLikeDrawingBuffer(target: THREE.WebGLRenderTarget): void {
   (target as THREE.WebGLRenderTarget & { isXRRenderTarget: boolean }).isXRRenderTarget = true;
 }
+
+export function takesOutputLikeDrawingBuffer(target: THREE.WebGLRenderTarget): boolean {
+  return (target as THREE.WebGLRenderTarget & { isXRRenderTarget?: boolean }).isXRRenderTarget === true;
+}
