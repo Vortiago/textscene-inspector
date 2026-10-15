@@ -34,8 +34,9 @@ Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vit
 | `resources/` | The resource loader, and one slice per resource type |
 | `r3f/` | The renderer, the 2D canvas, the Control canvas, the preview shell |
 
-`godot/` groups its files by the Godot source directory they port, so a file sits beside the
-code its `file:line` cites point into. A test sits beside its file. The root keeps `index.ts`,
+`godot/` groups its files by the engine area they port, named for that area's directory in Godot's
+source. A rendering fact sits under `rendering/` even when its setter lives in `scene/`. A test
+sits beside its file. The root keeps `index.ts`,
 the package's `./godot` export, and `noDependencies.test.ts`.
 
 | `godot/` group | Ports from Godot's |

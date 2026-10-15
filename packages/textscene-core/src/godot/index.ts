@@ -2,7 +2,7 @@
  * Engine facts two domains need (`CMP_EPSILON`), with no imports, so no domain carries its weight
  * into another's bundle (`noDependencies.test.ts`): never `ParseError`, `PropertyValidator`, THREE,
  * React or a node or resource type. One file per engine area, a new file rather than a section:
- * `math.ts` for `math_defs.h` and `math_funcs.h`, `string.ts` for `ustring.cpp`.
+ * `math/math.ts` for `math_defs.h` and `math_funcs.h`, `string/string.ts` for `ustring.cpp`.
  */
 
 export {

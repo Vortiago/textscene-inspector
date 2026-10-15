@@ -19,13 +19,14 @@ const REPO_ROOT = resolve(import.meta.dirname, '..');
  * and a `godot` directory before an engine top-level directory, as a path or as `join()` segments.
  * A URL, such as the GitHub API fetch in `godotLinks.mjs`, can never be the checkout.
  */
-const ENGINE_DIRS = 'scene|core|doc|modules|servers|main|platform|editor';
-/**
- * `scene` alone also names core's own `godot/scene/` group, so a checkout path through it needs a
- * further engine directory or an engine source file after it.
- */
 const PATH_ENGINE_DIRS = 'core|doc|modules|servers|main|platform|editor';
-const CHECKOUT_SCENE = 'scene(?=[\\\\/](?:\\w+[\\\\/]|\\w+\\.(?:cpp|h|inc|glsl)\\b))';
+const ENGINE_DIRS = `scene|${PATH_ENGINE_DIRS}`;
+/**
+ * `scene` alone also names core's own `godot/scene/` group, so a checkout path through it ends the
+ * string there, or has a further engine directory or an engine source file after it.
+ */
+const CHECKOUT_SCENE =
+  'scene(?=[\'"]|[\\\\/](?:\\w+[\\\\/]|\\w+(?:\\.\\w+)*\\.(?:cpp|h|inc|glsl)\\b|SCsub\\b))';
 const CHECKOUT_RE = new RegExp(
   [
     'godot-4\\.\\d+(\\.\\d+)?(-stable)?\\b',

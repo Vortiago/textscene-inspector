@@ -82,6 +82,12 @@ export const CHECKOUT_CONTROLS = [
     hit: true,
     body: "readFileSync('../godot/scene/register_scene_types.cpp')",
   },
+  { file: 'scratch/bare-dir.ts', hit: true, body: "const scene = resolve(HOME, 'godot/scene');" },
+  {
+    file: 'scratch/compat-file.ts',
+    hit: true,
+    body: "readFileSync('../godot/scene/register_scene_types.compat.inc')",
+  },
 ];
 
 /**
