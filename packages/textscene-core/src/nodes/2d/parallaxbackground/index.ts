@@ -10,6 +10,5 @@ const parallaxBackgroundRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(parallaxBackgroundRegistration);
 
-export { parallaxBackgroundRegistration };
 export * from './parser';
 export * from './types';

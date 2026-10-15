@@ -141,5 +141,3 @@ const camera2DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(camera2DValidationRule);
-
-export { camera2DValidationRule };

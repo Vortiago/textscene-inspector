@@ -19,7 +19,7 @@ import type { GraphElementProperties } from '../graphelement/types.js';
 import { graphNodePorts } from './connectionPorts.js';
 import type { GraphEditProperties } from './types.js';
 
-export interface ResolvedConnectionEndpoint {
+interface ResolvedConnectionEndpoint {
   /** In GraphEdit's local space, the frame `rect` is drawn in. */
   pos: Vec2;
   /** `conn->_cache.<from|to>_pos * zoom` (`graph_edit.cpp:1872-1873`) before the scroll subtraction: the minimap's frame. */

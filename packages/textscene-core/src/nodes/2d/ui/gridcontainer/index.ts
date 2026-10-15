@@ -10,6 +10,5 @@ const gridContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(gridContainerRegistration);
 
-export { gridContainerRegistration };
 export * from './parser';
 export * from './types';

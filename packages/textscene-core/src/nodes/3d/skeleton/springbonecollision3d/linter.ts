@@ -47,5 +47,3 @@ const springBoneCollision3DParentRule: LintRule = {
 };
 
 ruleRegistry.register(springBoneCollision3DParentRule);
-
-export { springBoneCollision3DParentRule };

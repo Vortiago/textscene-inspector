@@ -43,7 +43,7 @@ export const textureButtonTextureSlots: TextureSlotsFn = (node: TscnNode) => {
  * sees it: `disabled` wins, else `pressing = status.pressed` (`button_pressed`), and
  * `DRAW_HOVER`/`DRAW_HOVER_PRESSED` never fire.
  */
-export type TextureButtonDrawState = 'normal' | 'pressed' | 'disabled';
+type TextureButtonDrawState = 'normal' | 'pressed' | 'disabled';
 
 export function resolveTextureButtonDrawState(props: TextureButtonProperties): TextureButtonDrawState {
   if (props.disabled) return 'disabled';

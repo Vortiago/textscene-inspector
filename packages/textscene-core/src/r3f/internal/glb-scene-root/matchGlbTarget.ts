@@ -9,7 +9,7 @@
 import type { GlbObjectEntry } from './glbHierarchy.js';
 import { info, warn } from '../../../logger.js';
 
-export interface MatchGlbTargetOptions {
+interface MatchGlbTargetOptions {
   /**
    * Fall back to the nearest ancestor when the leaf itself has no counterpart.
    * Off for a per-instance property (a render-layer mask), which an ancestor would

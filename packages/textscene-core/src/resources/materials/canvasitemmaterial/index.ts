@@ -12,6 +12,3 @@ registerResourceSlice({
   typeNames: ['CanvasItemMaterial'],
   busType: 'resource',
 });
-
-export { decodeCanvasItemMaterial } from './decode';
-export { CanvasItemBlendMode, CanvasItemLightMode, type CanvasItemMaterialProperties } from './types';

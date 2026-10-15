@@ -10,5 +10,4 @@ const scrollContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(scrollContainerRegistration);
 
-export { scrollContainerRegistration };
 export * from './parser';

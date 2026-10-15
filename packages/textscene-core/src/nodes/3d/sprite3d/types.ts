@@ -57,7 +57,7 @@ export { AxisMode };
 /**
  * Rect2 (Godot rect resource): a rectangle in 2D space with float coords.
  */
-export interface Rect2 {
+interface Rect2 {
   x: number;
   y: number;
   width: number;

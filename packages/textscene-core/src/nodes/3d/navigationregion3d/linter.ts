@@ -6,5 +6,3 @@ import { makeNavigationRegionLinterRule } from '../../../linter/physics/navigati
 const navigationRegion3DValidationRule = makeNavigationRegionLinterRule('3D');
 
 ruleRegistry.register(navigationRegion3DValidationRule);
-
-export { navigationRegion3DValidationRule };

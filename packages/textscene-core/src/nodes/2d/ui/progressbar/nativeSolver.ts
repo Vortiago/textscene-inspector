@@ -200,10 +200,10 @@ export function progressBarPercentRatio(props: RangeProperties, orderedKeys: Ran
 
 // ── Draw-time geometry: fill_mode to the fill StyleBox's rect ──
 
-export const FILL_BEGIN_TO_END = 0;
-export const FILL_END_TO_BEGIN = 1;
-export const FILL_TOP_TO_BOTTOM = 2;
-export const FILL_BOTTOM_TO_TOP = 3;
+const FILL_BEGIN_TO_END = 0;
+const FILL_END_TO_BEGIN = 1;
+const FILL_TOP_TO_BOTTOM = 2;
+const FILL_BOTTOM_TO_TOP = 3;
 
 /**
  * `set_fill_mode`'s `ERR_FAIL_INDEX` (`progress_bar.cpp:199-203`) refuses an

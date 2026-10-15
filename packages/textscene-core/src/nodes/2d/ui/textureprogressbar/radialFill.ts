@@ -9,10 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
-
-export const FILL_CLOCKWISE = 4;
-export const FILL_COUNTER_CLOCKWISE = 5;
-export const FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE = 8;
+import { FillMode } from './types';
 
 /** `Math::fposmodp` (`core/math/math_funcs.h:296-302`): `fmod`, folded non-negative. */
 function fposmodp(x: number, y: number): number {
@@ -105,7 +102,7 @@ export function radialFillValue(ratio: number, radMaxDegrees: number): number {
   return (ratio * radMaxDegrees) / 360;
 }
 
-export interface RadialFillGeometry {
+interface RadialFillGeometry {
   /** xyz triples, Godot pixels, +Y down. The caller flips and offsets, as for `ninePatchGeometry`. */
   positions: number[];
   /** uv pairs, three's convention (v=1 at the texture's top row). */
@@ -127,9 +124,9 @@ export function radialFillGeometry(
   size: Vec2,
   offset: Vec2
 ): RadialFillGeometry | null {
-  const direction = mode === FILL_COUNTER_CLOCKWISE ? -1 : 1;
+  const direction = mode === FillMode.COUNTER_CLOCKWISE ? -1 : 1;
   const start =
-    mode === FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE
+    mode === FillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE
       ? radInitAngleDegrees / 360 - val / 2
       : radInitAngleDegrees / 360;
   const end = start + direction * val;

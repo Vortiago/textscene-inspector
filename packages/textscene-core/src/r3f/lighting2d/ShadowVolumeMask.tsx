@@ -71,7 +71,7 @@ export function shadowColorQuadStencilProps(ordinal: number) {
   } as const;
 }
 
-export interface ShadowVolumeMaskProps {
+interface ShadowVolumeMaskProps {
   /** Shadow origin and the rect the light reaches, in the previewer's 2D world space. */
   light: ShadowLight;
   /** `worldShadowCasters` filtered by this light's `shadow_item_cull_mask`. */

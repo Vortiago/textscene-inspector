@@ -80,4 +80,3 @@ const audioStreamPlayer3DValidationRule: LintRule = {
 ruleRegistry.register(audioStreamPlayer3DValidationRule);
 
 // Export for testing
-export { audioStreamPlayer3DValidationRule };

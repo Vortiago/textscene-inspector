@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 
-export type ResourceEventType =
+type ResourceEventType =
   | 'requested'
   | 'loading'
   | 'progress'
@@ -20,7 +20,7 @@ export type ResourceEventType =
 import type { ResourceBusType } from './sliceRegistration';
 export type ResourceType = ResourceBusType;
 
-export interface ProgressData {
+interface ProgressData {
   loaded: number;
   total: number;
 }

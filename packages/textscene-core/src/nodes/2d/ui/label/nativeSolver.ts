@@ -76,7 +76,7 @@ export function labelTextTheme(
   return resolveTextTheme(n, props, LABEL_THEME_KEYS, defaults);
 }
 
-export interface LabelEffectiveTextTheme {
+interface LabelEffectiveTextTheme {
   fontSizePx: number;
   color: ControlColor;
   lineSpacingPx: number;
@@ -117,7 +117,7 @@ const LABEL_DEFAULT_SHADOW_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0 };
 const LABEL_DEFAULT_SHADOW_OUTLINE_SIZE = 1;
 const LABEL_DEFAULT_SHADOW_OFFSET = 1;
 
-export interface LabelOutlineTheme {
+interface LabelOutlineTheme {
   size: number;
   color: ControlColor;
 }
@@ -132,7 +132,7 @@ export function labelOutlineTheme(n: SolveNode): LabelOutlineTheme {
   };
 }
 
-export interface LabelShadowTheme {
+interface LabelShadowTheme {
   /** The shadow's own outline width (`LabelSettings.shadow_size` or the theme's `shadow_outline_size`), not a copy of the offset. */
   size: number;
   color: ControlColor;
@@ -166,7 +166,7 @@ export function labelShapingWidthPx(controlWidthPx: number): number {
 
 // lines_skipped and max_lines_visible: label.cpp:344-361,520-561
 
-export interface LabelLineRange {
+interface LabelLineRange {
   start: number;
   end: number;
 }
@@ -225,7 +225,7 @@ export function labelPreShapeText(
   return text.slice(0, visibleChars);
 }
 
-export interface VisibleCharsBudget {
+interface VisibleCharsBudget {
   behavior: number;
   /** Final resolved `visible_chars`, the budget of CHARS_AFTER_SHAPING. */
   visibleChars: number | undefined;
@@ -470,7 +470,7 @@ function horizontalOffsetPx(
  * which infers LTR for Latin text (`:179`, `text_server_adv.cpp:7241-7247`). FILL's own arm
  * (`:472`) is unreachable while `text_direction` is unmodelled (`comparison.md`).
  */
-export interface LabelLayoutDirection {
+interface LabelLayoutDirection {
   /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
   rtl?: boolean;
 }

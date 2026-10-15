@@ -16,7 +16,6 @@ const meshInstance3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(meshInstance3DRegistration);
 
-export { meshInstance3DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

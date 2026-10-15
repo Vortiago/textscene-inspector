@@ -95,7 +95,7 @@ class BinaryChunk {
 }
 
 /** Reads a non-data URI a glTF names, and throws when it cannot. */
-export type ReadUri = (uri: string) => Promise<ArrayBuffer>;
+type ReadUri = (uri: string) => Promise<ArrayBuffer>;
 
 /** A GLB container's JSON document and the bytes of its binary chunk. */
 interface GlbChunks {

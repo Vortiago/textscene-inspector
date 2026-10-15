@@ -103,7 +103,7 @@ export function parentIdentity(scene: RawScene, node: RawNode): RawNode | null {
 }
 
 /** Where an ancestor walk stopped. */
-export type AncestorSearch<T> =
+type AncestorSearch<T> =
   /** `visit` returned a value at some ancestor; the walk stopped there. */
   | { kind: 'found'; value: T }
   /** An ancestor the walk had to pass takes its type from another scene. */
@@ -197,7 +197,7 @@ export function isExplicitlyHidden(node: RawNode): boolean {
  * `Node3D` each declare their own over different chains, and a rule ported from a gated
  * `get_configuration_warnings()` gets its class's.
  */
-export type VisibilityVerdict =
+type VisibilityVerdict =
   /** Godot's `is_visible_in_tree()` would return true for this node. */
   | 'visible'
   /** The node, or an ancestor its family's chain consults, sets `visible = false`. */

@@ -52,7 +52,7 @@ export interface SceneNode {
  * External scene reference (before/after resolution).
  * Tracks the status of external scene instances.
  */
-export interface ExternalSceneRef {
+interface ExternalSceneRef {
   /** Node name for this instance in parent scene */
   readonly nodeName: string;
   /** Path to external scene file, such as "res://enemy.tscn". */

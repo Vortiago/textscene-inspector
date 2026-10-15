@@ -13,5 +13,3 @@ const acceptDialogRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(acceptDialogRegistration);
-
-export { acceptDialogRegistration };

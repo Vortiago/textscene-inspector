@@ -7,5 +7,3 @@ import { linkButtonMinimumSize } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'LinkButton', Component: LinkButton });
 controlSolverRegistry.registerMinimumSize('LinkButton', linkButtonMinimumSize);
-
-export { LinkButton };

@@ -20,7 +20,7 @@ export const GODOT_TEXTURE_FILTER_DEFAULT = 3;
  */
 export const GODOT_ANISOTROPY_MAX = 16;
 
-export interface TextureFilterState {
+interface TextureFilterState {
   magFilter: THREE.MagnificationTextureFilter;
   minFilter: THREE.MinificationTextureFilter;
   generateMipmaps: boolean;

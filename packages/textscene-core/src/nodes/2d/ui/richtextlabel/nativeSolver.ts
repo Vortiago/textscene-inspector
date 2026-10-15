@@ -212,7 +212,7 @@ export function imageBaselineOffsetPx(
  * drops an image `imageSizePx` cannot size, as Godot does when
  * `ResourceLoader::load` fails.
  */
-export interface ResolvedImageRun {
+interface ResolvedImageRun {
   spec: ParsedImgTag;
   sizePx: Vec2;
 }
@@ -326,7 +326,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
 // ── Draw time: BBCode to styled runs to per-line placements ──
 
 /** One styled run of the plain text, with what `[b]`/`[i]`/`[u]`/`[color]` resolve to. */
-export interface StyledTextRun {
+interface StyledTextRun {
   text: string;
   bold: boolean;
   italic: boolean;
@@ -513,7 +513,7 @@ export interface RichTextImagePlacement {
 }
 
 /** One line and style run for one `<TextRun>`, or an `[img]` when `image` is set, which leaves the text fields unused. */
-export interface RichTextRunPlacement {
+interface RichTextRunPlacement {
   lineIndex: number;
   /** The line's top from the control's top: `RichTextLineMetrics.topPx` plus the `vertical_alignment` shift (`richTextVerticalOffsets`). */
   lineTopPx: number;
@@ -558,7 +558,7 @@ function fontDescentPx(metrics: FontMetrics, fontSizePx: number): number {
 }
 
 /** One wrapped line's vertical metrics, recomputed per line (`text_server_adv.cpp:5486-5487`), unlike the underline's. */
-export interface RichTextLineMetrics {
+interface RichTextLineMetrics {
   /** The line's top from the paragraph's top: the sum of the earlier lines' `ascentPx + descentPx`. */
   topPx: number;
   /** Baseline offset from `topPx`: the max ascent of this line's fonts and images (`imageBaselineOffsetPx`). */
@@ -633,7 +633,7 @@ function lineMetricsOf(
 }
 
 /** The paragraph's `[u]`/`[s]` stroke geometry, `sd->upos`/`sd->uthk`, before `rich_text_label.cpp:1243`'s 1px floor. */
-export interface RichTextUnderlineMetrics {
+interface RichTextUnderlineMetrics {
   /** Downward offset from the line's baseline to the stroke's CENTRE, px (`shaped_text_get_underline_position`). */
   positionPx: number;
   /** The font's stroke thickness, px, unfloored (`shaped_text_get_underline_thickness`): `underlineRectPx` applies `MAX(1.0, uth)`. */
@@ -788,7 +788,7 @@ export function richTextHorizontalOffsetPx(
 }
 
 /** `vertical_alignment`'s two contributions: a one-off shift of the whole block, and an extra gap between lines under FILL. */
-export interface RichTextVerticalOffsets {
+interface RichTextVerticalOffsets {
   /** Added to every line's own top. */
   vbeginPx: number;
   /** Added once per line ABOVE the first (`vsep` in `rich_text_label.cpp:1629`). */
@@ -824,7 +824,7 @@ export function richTextVerticalOffsets(
 }
 
 /** The box a paragraph aligns inside, plus the node's own two alignment properties. */
-export interface RichTextAlignment {
+interface RichTextAlignment {
   boxWidthPx: number;
   boxHeightPx: number;
   horizontalAlignment?: number;
@@ -908,7 +908,7 @@ export function layoutRichTextRuns(
 }
 
 /** A `[u]` run's stroke rect, px, in `TextRun`'s pen space (Y-down, line-top-relative), on whole pixels. */
-export interface UnderlineRectPx {
+interface UnderlineRectPx {
   /** Left edge: the first column the first glyph's pen `x` covers, as `rich_text_label.cpp:1216-1244`'s `ul_start` sits at the pen, not the ink. */
   x0: number;
   /** Right edge, exclusive: one past the last column the last glyph's pen `x` + advance covers. */

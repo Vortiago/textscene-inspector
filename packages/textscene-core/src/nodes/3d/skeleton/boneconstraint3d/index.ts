@@ -13,5 +13,3 @@ const boneConstraint3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(boneConstraint3DRegistration);
-
-export { boneConstraint3DRegistration };

@@ -36,7 +36,7 @@
 import type * as THREE from 'three';
 import { applyCsgNormals, type CsgFaceSoup } from '../smoothNormals';
 
-export interface CsgBoxSpec {
+interface CsgBoxSpec {
   size: { x: number; y: number; z: number };
   flipFaces: boolean;
 }

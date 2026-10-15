@@ -141,5 +141,3 @@ const pathFollow3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(pathFollow3DValidationRule);
-
-export { pathFollow3DValidationRule };

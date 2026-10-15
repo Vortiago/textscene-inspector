@@ -38,7 +38,7 @@ export function zoomLabelText(zoom: number): string {
 }
 
 /** Every widget the row can hold, in `menu_hbox`'s own child order (`graph_edit.cpp:3239-3323`). */
-export type ToolbarItemId =
+type ToolbarItemId =
   | 'zoom_label'
   | 'zoom_minus'
   | 'zoom_reset'
@@ -50,7 +50,7 @@ export type ToolbarItemId =
   | 'arrange';
 
 /** What the painter has to draw for one item: a text run, an icon-on-a-box button, or the SpinBox composite. */
-export type ToolbarItemKind = 'label' | 'button' | 'spinBox';
+type ToolbarItemKind = 'label' | 'button' | 'spinBox';
 
 export interface ToolbarItem {
   id: ToolbarItemId;

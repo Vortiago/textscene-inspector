@@ -2,7 +2,7 @@
 
 import type { Node2DProperties, Vector2 } from '../../base/node2d/types';
 
-export interface Rect2 {
+interface Rect2 {
   x: number;
   y: number;
   width: number;

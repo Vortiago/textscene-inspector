@@ -23,7 +23,7 @@ export interface SkyLight {
 /** Godot's sky shader has four light slots, written out longhand. */
 const LIGHT_SLOTS = 4;
 
-export type SkyUniforms = Record<string, { value: unknown }>;
+type SkyUniforms = Record<string, { value: unknown }>;
 
 /**
  * Godot scales the sRGB colour by its energy, then converts the `source_color` uniform to linear

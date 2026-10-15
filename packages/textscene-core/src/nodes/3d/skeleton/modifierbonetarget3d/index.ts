@@ -13,5 +13,3 @@ const modifierBoneTarget3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(modifierBoneTarget3DRegistration);
-
-export { modifierBoneTarget3DRegistration };

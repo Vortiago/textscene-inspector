@@ -60,7 +60,7 @@ type ParticleTransform = { -readonly [K in keyof Transform2DColumns]: number };
  * `Math::rand()`, randomised in the constructor and unserialised, so any constant
  * is as faithful as another, and a constant makes this render byte-stable.
  */
-export const DEFAULT_PREVIEW_SEED = 0;
+const DEFAULT_PREVIEW_SEED = 0;
 
 /**
  * Ceiling on settle steps: `preprocess = 100000` would otherwise spin three
@@ -69,7 +69,7 @@ export const DEFAULT_PREVIEW_SEED = 0;
 export const MAX_SIM_STEPS = 4096;
 
 /** Godot's `Curve` slots, indexed by `CPUParticles2DParam`. Null where unset. */
-export type ParticleCurves = ReadonlyArray<Curve | null>;
+type ParticleCurves = ReadonlyArray<Curve | null>;
 
 export interface ParticleSimInput {
   props: CPUParticles2DProperties;
@@ -294,7 +294,7 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
 }
 
 /** Whether particle `i` restarts this step, and the delta its position integrates with. */
-export interface RestartStep {
+interface RestartStep {
   restart: boolean;
   /** `local_delta`: the whole step unless a restart shortens it (fract_delta). */
   localDelta: number;

@@ -19,7 +19,7 @@ import { connectionControlPoints, tessellateConnectionLine } from './connectionC
 import { connectionStrokeGeometry } from './connectionStroke';
 import type { ResolvedConnection } from './connectionEndpoints';
 
-export interface ConnectionLineProps {
+interface ConnectionLineProps {
   connection: ResolvedConnection;
   curvature: number;
   lineWidth: number;

@@ -10,8 +10,6 @@ import { reportArm, type RuleArms } from './ruleArms.js';
 import { replaySpriteFrames, type FrameWrite } from '../godot/spriteFrames.js';
 import type { RawNode } from '../parser/types.js';
 
-export { replaySpriteFrames } from '../godot/spriteFrames.js';
-
 /** Why the grid a write was judged against is smaller than the one the file ends up with. */
 function lateGridHint(key: string): string {
   return ` Godot applies properties in file order, so an 'hframes'/'vframes' line below '${key}' is not in effect yet; move it above.`;

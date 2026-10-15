@@ -11,5 +11,3 @@ const subViewportRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(subViewportRegistration);
-
-export { subViewportRegistration };

@@ -13,5 +13,3 @@ const tileMapLayerRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(tileMapLayerRegistration);
-
-export { tileMapLayerRegistration };

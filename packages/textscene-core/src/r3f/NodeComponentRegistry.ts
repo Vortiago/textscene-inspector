@@ -74,7 +74,7 @@ export interface YSortGroupDescription {
   cells: readonly PlacedCell[] | null;
 }
 
-export interface YSortGroupRegistration {
+interface YSortGroupRegistration {
   describe: (node: TscnNode) => YSortGroupDescription;
   Renderer: React.ComponentType<{
     item: YSortItem;
@@ -93,7 +93,7 @@ export type ScenePass = (nodes: TscnNode[], internalResources: readonly TscnInte
  * `transforms` passes move nodes; `paths` passes read where nodes ended up, so
  * every transform pass runs before any path pass whatever the barrel order.
  */
-export interface ScenePassRegistration {
+interface ScenePassRegistration {
   stage: 'transforms' | 'paths';
   run: ScenePass;
 }

@@ -19,7 +19,7 @@ import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext }
 import { scopeOf, type LiveNode } from '../resources/liveNode.js';
 import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 
-export interface ClaimOwner {
+interface ClaimOwner {
   /** Live path of the node this owner's root renders at. */
   readonly path: string;
   /** The authored roots of the file this owner is the root of. */

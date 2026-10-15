@@ -20,9 +20,9 @@ export const TILE_SHAPE_HALF_OFFSET_SQUARE = 2;
 export const TILE_SHAPE_HEXAGON = 3;
 
 /** TileSet.tile_layout (half-offset shapes): STACKED .. DIAMOND_DOWN. */
-export type TileLayout = 0 | 1 | 2 | 3 | 4 | 5;
+type TileLayout = 0 | 1 | 2 | 3 | 4 | 5;
 /** TileSet.tile_offset_axis: 0 = horizontal, 1 = vertical. */
-export type TileOffsetAxis = 0 | 1;
+type TileOffsetAxis = 0 | 1;
 
 /** The grid surface of a TileSet that placement math needs. */
 export interface TileGrid {
@@ -56,7 +56,7 @@ export interface AtlasTileModel {
   alternatives: Map<number, AlternativeTileModel>;
 }
 
-export interface TileOrientation {
+interface TileOrientation {
   flipH: boolean;
   flipV: boolean;
   transpose: boolean;
@@ -116,7 +116,7 @@ function atlasTileRegion(
   };
 }
 
-export interface TileDrawInfo {
+interface TileDrawInfo {
   /** Pixel rect of the tile's texture region within the atlas (image-Y top-left). */
   regionPx: { x: number; y: number; width: number; height: number };
   orientation: TileOrientation;

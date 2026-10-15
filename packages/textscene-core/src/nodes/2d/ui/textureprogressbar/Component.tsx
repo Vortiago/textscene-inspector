@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { controlLayoutOrder, painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
@@ -17,7 +17,6 @@ import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSam
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { undecodedClone } from '../../../../r3f/undecodedTexture';
 import { rangeRatio } from '../shared/range';
-import { controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { ninePatchGeometry, NINE_PATCH_STRETCH } from '../../../../r3f/controls/native/ninePatchGeometry';
 import { resolveTextureRectFilter } from '../texturerect/nativeSolver';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
@@ -28,15 +27,12 @@ import {
   radialRelativeCenter,
   clampRadialFillDegrees,
   normalizeRadialInitialAngle,
-  FILL_CLOCKWISE,
-  FILL_COUNTER_CLOCKWISE,
-  FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE,
 } from './radialFill';
 import { normalizeTextureProgressBarFillMode } from './nativeSolver';
 import { TexturedFillMesh } from './TexturedFillMesh';
 import type { ControlColor } from '../control/types';
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
-import type { TextureProgressBarProperties } from './types';
+import { FillMode, type TextureProgressBarProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 
 const WHITE: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
@@ -182,9 +178,9 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
 
   const fillMode = normalizeTextureProgressBarFillMode(props.fillMode);
   const isRadialMode =
-    fillMode === FILL_CLOCKWISE ||
-    fillMode === FILL_COUNTER_CLOCKWISE ||
-    fillMode === FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE;
+    fillMode === FillMode.CLOCKWISE ||
+    fillMode === FillMode.COUNTER_CLOCKWISE ||
+    fillMode === FillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE;
   const ratio = rangeRatio(props, controlLayoutOrder(solveNode));
   const progressOffset = props.textureProgressOffset ?? ZERO;
 

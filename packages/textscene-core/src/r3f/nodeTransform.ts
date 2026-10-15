@@ -14,7 +14,7 @@ export interface NodeTransform {
   scale: Vec3Tuple;
 }
 
-export const IDENTITY_TRANSFORM: NodeTransform = {
+const IDENTITY_TRANSFORM: NodeTransform = {
   position: [0, 0, 0],
   rotation: [0, 0, 0],
   scale: [1, 1, 1],

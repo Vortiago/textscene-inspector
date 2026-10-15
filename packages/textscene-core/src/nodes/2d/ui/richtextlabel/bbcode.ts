@@ -9,7 +9,7 @@ import { godotNamedColor } from '../../../../utils/godotNamedColor';
 import { stringToFloat, stringToInt } from '../../../../godot/string';
 
 /** One currently-open BBCode tag. `value` is the `[name=value]` payload, if the tag carries one. */
-export interface OpenBBCodeTag {
+interface OpenBBCodeTag {
   /** Lowercased tag name, such as `'b'` or `'color'`. */
   name: string;
   /** The `=value` portion, verbatim; absent for a bare `[name]` or the space-attribute form. */
@@ -20,7 +20,7 @@ export interface OpenBBCodeTag {
 export const IMAGE_OBJECT_CHAR = '\ufffc';
 
 /** A run of plain (tag-stripped) text plus every tag open at that point, outermost first. */
-export interface BBCodeRun {
+interface BBCodeRun {
   text: string;
   tags: readonly OpenBBCodeTag[];
   /** Set only on the single-U+FFFC run for an `[img]` (`rich_text_label.cpp:6145`'s `add_image`), never alongside real text. */

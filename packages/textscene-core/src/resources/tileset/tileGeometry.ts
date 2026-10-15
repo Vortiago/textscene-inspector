@@ -10,7 +10,7 @@ import type { Color } from '../../utils/colorParser';
 import type { DrawableCell } from './drawableCell';
 import { tileDrawInfo, type AtlasSourceModel, type TileGrid } from './types';
 
-export interface TileGeometryArrays {
+interface TileGeometryArrays {
   positions: Float32Array;
   uvs: Float32Array;
   /** RGBA per vertex: the tile's `modulate` as stored, sRGB, which the draw multiplies onto its pixels. */
@@ -24,7 +24,7 @@ export interface TileGeometryArrays {
   uvBounds: Float32Array | null;
 }
 
-export interface UvRect {
+interface UvRect {
   u0: number;
   u1: number;
   vTop: number;
@@ -32,7 +32,7 @@ export interface UvRect {
 }
 
 /** Pixel rect (image-Y top-left) → UV rect under the flipY=true convention. */
-export function pxRectToUv(
+function pxRectToUv(
   rect: { x: number; y: number; width: number; height: number },
   texW: number,
   texH: number

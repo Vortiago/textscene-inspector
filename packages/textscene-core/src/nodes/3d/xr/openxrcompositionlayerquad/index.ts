@@ -13,5 +13,3 @@ const openXRCompositionLayerQuadRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(openXRCompositionLayerQuadRegistration);
-
-export { openXRCompositionLayerQuadRegistration };

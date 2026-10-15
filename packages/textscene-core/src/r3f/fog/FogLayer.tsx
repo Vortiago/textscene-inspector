@@ -18,7 +18,7 @@ import { acquireFogPasses } from './fogPasses.js';
 import { isFogVolume, type FogVolumeObject } from './fogVolumeObject.js';
 import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
 
-export interface FogLayerProps {
+interface FogLayerProps {
   depth: DepthFog | null;
   volumetric: VolumetricFog | null;
   skyEnergy: number;

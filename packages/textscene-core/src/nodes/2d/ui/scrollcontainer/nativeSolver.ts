@@ -23,18 +23,20 @@ import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } fr
 import { scrollBarGrabberGeometry, scrollBarMinimumSize } from '../shared/scrollBarSolver';
 import type { ScrollContainerProperties } from './types';
 
-// ScrollContainer::ScrollMode (scroll_container.h:44-50).
-export const SCROLL_MODE_DISABLED = 0;
-export const SCROLL_MODE_AUTO = 1;
-export const SCROLL_MODE_SHOW_ALWAYS = 2;
-export const SCROLL_MODE_SHOW_NEVER = 3;
-export const SCROLL_MODE_RESERVE = 4;
+/** `ScrollContainer::ScrollMode` (`scroll_container.h:44-50`). */
+const ScrollMode = {
+  DISABLED: 0,
+  AUTO: 1,
+  SHOW_ALWAYS: 2,
+  SHOW_NEVER: 3,
+  RESERVE: 4,
+} as const;
 
 /** `scrollbar_h_separation`/`scrollbar_v_separation` default to 0 (`scroll_container.h:104-105`), and `default_theme.cpp` overrides them only for `Tree`. */
 const SCROLLBAR_SEPARATION = 0;
 
 /** The four content insets `_get_margins` returns, spelled by side rather than as Godot's `Rect2(left, top, right, bottom)` packing. */
-export interface ScrollContainerMargins {
+interface ScrollContainerMargins {
   left: number;
   top: number;
   right: number;
@@ -47,7 +49,7 @@ export interface ScrollContainerMargins {
  * (`:474-475`), but these margins are unconditional: `get_minimum_size` (`:74-75`), `_update_scrollbars`
  * (`:583-585`), `_update_scrollbar_position` (`:289-306`) and `_reposition_children` (`:344-348`) read them.
  */
-export function scrollContainerMargins(n: SolveNode, theme: SolveContext['theme']): ScrollContainerMargins {
+function scrollContainerMargins(n: SolveNode, theme: SolveContext['theme']): ScrollContainerMargins {
   // The default `panel` is a `StyleBoxEmpty` (`default_theme.cpp:655-657`), so every side is 0. It
   // is never drawn: `default_theme.cpp:657` registers it `empty`, unlike Panel's grey fill. A
   // node's `theme_override_styles/panel` or `/focus` wins over either default.
@@ -104,22 +106,22 @@ function largestChildMinSize(n: SolveNode, ctx: SolveContext): Vec2 {
  */
 export const scrollContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const p = props(n);
-  const hMode = p.horizontalScrollMode ?? SCROLL_MODE_AUTO;
-  const vMode = p.verticalScrollMode ?? SCROLL_MODE_AUTO;
+  const hMode = p.horizontalScrollMode ?? ScrollMode.AUTO;
+  const vMode = p.verticalScrollMode ?? ScrollMode.AUTO;
   const largest = largestChildMinSize(n, ctx);
 
   let x = 0;
   let y = 0;
 
-  if (hMode === SCROLL_MODE_DISABLED) {
+  if (hMode === ScrollMode.DISABLED) {
     x = largest.x;
-    if (vMode === SCROLL_MODE_SHOW_ALWAYS || vMode === SCROLL_MODE_RESERVE) {
+    if (vMode === ScrollMode.SHOW_ALWAYS || vMode === ScrollMode.RESERVE) {
       x += vScrollThickness(ctx) + SCROLLBAR_SEPARATION;
     }
   }
-  if (vMode === SCROLL_MODE_DISABLED) {
+  if (vMode === ScrollMode.DISABLED) {
     y = largest.y;
-    if (hMode === SCROLL_MODE_SHOW_ALWAYS || hMode === SCROLL_MODE_RESERVE) {
+    if (hMode === ScrollMode.SHOW_ALWAYS || hMode === ScrollMode.RESERVE) {
       y += hScrollThickness(ctx) + SCROLLBAR_SEPARATION;
     }
   }
@@ -164,12 +166,12 @@ export interface ScrollHintPlacement {
 }
 
 /** Both hint nodes' states after `_update_scroll_hints` (`scroll_container.cpp:606-658`); `null` where `set_visible(false)` was called. */
-export interface ScrollContainerHints {
+interface ScrollContainerHints {
   topLeft: ScrollHintPlacement | null;
   bottomRight: ScrollHintPlacement | null;
 }
 
-export interface ScrollContainerLayout {
+interface ScrollContainerLayout {
   /** The content viewport's size after scrollbar-strip reservation (`_reposition_children`'s own `size`). */
   contentSize: Vec2;
   /**
@@ -287,8 +289,8 @@ export function scrollContainerScrollBars(
   rect: Rect2
 ): ScrollContainerLayout {
   const p = props(n);
-  const hMode = p.horizontalScrollMode ?? SCROLL_MODE_AUTO;
-  const vMode = p.verticalScrollMode ?? SCROLL_MODE_AUTO;
+  const hMode = p.horizontalScrollMode ?? ScrollMode.AUTO;
+  const vMode = p.verticalScrollMode ?? ScrollMode.AUTO;
   const largest = largestChildMinSize(n, ctx);
   const hThickness = hScrollThickness(ctx);
   const vThickness = vScrollThickness(ctx);
@@ -303,13 +305,13 @@ export function scrollContainerScrollBars(
   // size. Godot does not iterate to a fixed point when one bar's reservation would make the
   // other axis overflow.
   const hVisible =
-    hMode === SCROLL_MODE_SHOW_ALWAYS ||
-    ((hMode === SCROLL_MODE_AUTO || hMode === SCROLL_MODE_RESERVE) && largest.x > innerW);
+    hMode === ScrollMode.SHOW_ALWAYS ||
+    ((hMode === ScrollMode.AUTO || hMode === ScrollMode.RESERVE) && largest.x > innerW);
   const vVisible =
-    vMode === SCROLL_MODE_SHOW_ALWAYS ||
-    ((vMode === SCROLL_MODE_AUTO || vMode === SCROLL_MODE_RESERVE) && largest.y > innerH);
-  const hReserved = hVisible || hMode === SCROLL_MODE_RESERVE;
-  const vReserved = vVisible || vMode === SCROLL_MODE_RESERVE;
+    vMode === ScrollMode.SHOW_ALWAYS ||
+    ((vMode === ScrollMode.AUTO || vMode === ScrollMode.RESERVE) && largest.y > innerH);
+  const hReserved = hVisible || hMode === ScrollMode.RESERVE;
+  const vReserved = vVisible || vMode === ScrollMode.RESERVE;
 
   const contentSize: Vec2 = {
     x: innerW - (vReserved ? vThickness + SCROLLBAR_SEPARATION : 0),

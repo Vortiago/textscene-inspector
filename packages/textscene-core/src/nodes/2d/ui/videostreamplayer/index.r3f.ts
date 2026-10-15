@@ -11,5 +11,3 @@ import { videoStreamPlayerMinimumSize } from './nativeSolver';
 controlSolverRegistry.registerMinimumSize('VideoStreamPlayer', videoStreamPlayerMinimumSize);
 
 controlComponentRegistry.register({ typeName: 'VideoStreamPlayer', Component: VideoStreamPlayer });
-
-export { VideoStreamPlayer };

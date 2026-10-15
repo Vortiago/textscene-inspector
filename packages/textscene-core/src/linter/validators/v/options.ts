@@ -39,8 +39,3 @@ export interface IntOpts extends NumericBounds, Grounding {
    */
   width?: IntWidth;
 }
-
-export interface EnumOpts extends Grounding {
-  /** Per-value display labels, such as `{0:'OFF', 1:'ON', 2:'DOUBLE_SIDED', 3:'SHADOWS_ONLY'}`. */
-  labels: Record<number, string>;
-}

@@ -48,5 +48,3 @@ const gpuParticlesCollisionSDF3DBakeMaskRule: LintRule = {
 };
 
 ruleRegistry.register(gpuParticlesCollisionSDF3DBakeMaskRule);
-
-export { gpuParticlesCollisionSDF3DBakeMaskRule };

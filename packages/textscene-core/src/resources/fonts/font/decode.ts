@@ -22,7 +22,7 @@ export const FONT_SUB_RESOURCE_TYPES: ReadonlySet<string> = new Set([
  * `fallbacks = Array[Font]([ExtResource("a"), ExtResource("b")])` or a bare single
  * reference, which comes back as a one-element list.
  */
-export function extractResourceRefs(value: string): string[] {
+function extractResourceRefs(value: string): string[] {
   const refs: string[] = [];
   const re = /(?:ExtResource|SubResource)\s*\(\s*"[^"]+"\s*\)/g;
   let match: RegExpExecArray | null;

@@ -13,7 +13,7 @@ import {
 } from '../../../r3f/contexts/ViewportTextureContext.js';
 import { collectNestedViewportPaths } from './nestedViewportPaths.js';
 
-export interface PublishViewportPassOptions {
+interface PublishViewportPassOptions {
   /** Dispatcher-absolute path of the sub-viewport publishing its content. */
   path: string;
   /** The publishing node, whose subtree names the passes this one samples. */

@@ -122,5 +122,3 @@ const gpuParticles3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(gpuParticles3DValidationRule);
-
-export { gpuParticles3DValidationRule };

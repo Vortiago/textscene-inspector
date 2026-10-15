@@ -10,7 +10,7 @@ import type { FastNoiseLiteData } from '../noise/fastnoiselite/types';
 import { resolveGradient } from './gradienttexture2d/decode';
 import type { Gradient } from './gradienttexture2d/types';
 
-export interface NoiseSources {
+interface NoiseSources {
   noise: FastNoiseLiteData;
   colorRamp: Gradient | null;
 }

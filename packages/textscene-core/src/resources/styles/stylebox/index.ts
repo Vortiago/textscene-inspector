@@ -12,12 +12,3 @@ registerResourceSlice({
   typeNames: ['StyleBoxFlat', 'StyleBoxEmpty'],
   busType: 'resource',
 });
-
-export { decodeStyleBox } from './decode';
-export type {
-  StyleBoxCorners,
-  StyleBoxData,
-  StyleBoxEmptyData,
-  StyleBoxFlatData,
-  StyleBoxSides,
-} from './types';

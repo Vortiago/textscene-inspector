@@ -140,7 +140,7 @@ function unnamedNodeName(node: GltfJsonObject, namingVersion: number): string {
 }
 
 /** What the importer names a file's nodes and meshes, each list by glTF index. */
-export interface GltfImportNames {
+interface GltfImportNames {
   nodes: GltfNodeName[];
   /**
    * Each mesh's `<scene>_<mesh>` made unique (`gltf_document.cpp:1434`). It is also the mesh's

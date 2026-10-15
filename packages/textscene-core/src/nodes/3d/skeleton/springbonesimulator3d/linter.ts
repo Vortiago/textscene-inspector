@@ -270,5 +270,3 @@ const springBoneSimulator3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(springBoneSimulator3DValidationRule);
-
-export { springBoneSimulator3DValidationRule };

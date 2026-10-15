@@ -34,7 +34,7 @@ export function isUniqueNameInOwner(node: RawNode): boolean {
  * What one walk over `roots` learns about ownership: this root's claim table, plus the two facts a
  * per-owner table over composed instanced content is built from.
  */
-export interface UniqueNameOwnership {
+interface UniqueNameOwnership {
   /** `%Name` → claim, for the nodes this file's root owns. */
   readonly claims: ReadonlyMap<string, UniqueNameClaim>;
   /**

@@ -7,7 +7,7 @@
 import type { PropertyValidator } from './propertyValidator.js';
 
 /** Which shape a wildcard registration is, and so which matcher answers for it. */
-export type WildcardKind = 'path' | 'indexedLeaf' | 'indexedSubtree' | 'indexedTerminal';
+type WildcardKind = 'path' | 'indexedLeaf' | 'indexedSubtree' | 'indexedTerminal';
 
 /**
  * A wildcard registration with its prefix sliced off once. A miss is the common

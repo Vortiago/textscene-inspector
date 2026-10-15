@@ -60,5 +60,3 @@ const canvasItemClipAncestryRule: LintRule = {
 };
 
 ruleRegistry.register(canvasItemClipAncestryRule);
-
-export { canvasItemClipAncestryRule };

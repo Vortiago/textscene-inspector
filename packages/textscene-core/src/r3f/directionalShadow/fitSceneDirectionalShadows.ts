@@ -132,7 +132,7 @@ function renderedFor(light: THREE.DirectionalLight): THREE.Light | null {
 }
 
 /** The lights three draws a directional or a sun shadow for, each list in three's index order. */
-export interface DirectionalShadowCasters {
+interface DirectionalShadowCasters {
   directional: THREE.DirectionalLight[];
   sun: THREE.Light[];
 }

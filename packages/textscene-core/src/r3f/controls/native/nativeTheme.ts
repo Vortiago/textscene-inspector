@@ -20,7 +20,7 @@ import type { StyleBoxFlatData } from './styleBoxFlat';
  * `fill_default_theme`, which scales every length it passes to `make_flat_stylebox` but never a
  * `Color` literal, so the colours are not scaled.
  */
-export interface NativeThemeStyleFill {
+interface NativeThemeStyleFill {
   /** `style_normal_color` = `Color(0.1, 0.1, 0.1, 0.6)`. */
   normal: ControlColor;
   /** `style_hover_color` = `Color(0.225, 0.225, 0.225, 0.6)`. */
@@ -80,7 +80,7 @@ const LINE_EDIT_READ_ONLY_BORDER_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0.
  * The default-theme StyleBoxFlat structs the Panel/Button/ScrollBar/
  * ScrollContainer Controls compose from.
  */
-export interface NativeThemeWidgets {
+interface NativeThemeWidgets {
   panel: StyleBoxFlatData;
   button: {
     normal: StyleBoxFlatData;

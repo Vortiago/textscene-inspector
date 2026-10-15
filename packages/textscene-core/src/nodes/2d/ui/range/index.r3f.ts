@@ -7,5 +7,3 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { Range } from './Component';
 
 controlComponentRegistry.register({ typeName: 'Range', Component: Range });
-
-export { Range };

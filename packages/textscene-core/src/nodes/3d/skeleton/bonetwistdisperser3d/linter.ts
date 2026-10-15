@@ -168,5 +168,3 @@ const boneTwistDisperser3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(boneTwistDisperser3DValidationRule);
-
-export { boneTwistDisperser3DValidationRule };

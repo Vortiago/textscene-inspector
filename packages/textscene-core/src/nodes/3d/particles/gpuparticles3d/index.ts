@@ -15,5 +15,3 @@ const gpuParticles3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(gpuParticles3DRegistration);
-
-export { gpuParticles3DRegistration };

@@ -9,5 +9,3 @@ const treeRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(treeRegistration);
-
-export { treeRegistration };

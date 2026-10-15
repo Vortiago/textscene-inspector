@@ -41,7 +41,7 @@ export interface MaterialTextureState {
   repeat?: boolean;
 }
 
-export interface TextureState extends MaterialTextureState {
+interface TextureState extends MaterialTextureState {
   /**
    * The colour space this binding samples in. Required: only the binding knows
    * what the sampler needs, whatever the producer tagged.

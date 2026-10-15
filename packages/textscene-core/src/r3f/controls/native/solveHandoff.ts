@@ -20,7 +20,7 @@ export type { ShareNode };
 // No `SolveContext`: `combinedMinimumSize` and `tentativeRect` differ between the
 // passes a `registerSizeDependentMinimum` type forces, and the `measureText`
 // readiness gate differs between solve and paint, so it stays in the solver wrapper.
-export type Share<T> = (n: ShareNode, theme: NativeTheme) => T;
+type Share<T> = (n: ShareNode, theme: NativeTheme) => T;
 
 /** Boxed so a share whose value is `undefined`/`null` is still a cache hit. */
 interface Memoised<T> {

@@ -46,7 +46,7 @@ export { fitIconSize, tintColor };
  * `BaseButton::get_draw_mode()` (`base_button.cpp:325-358`) without input: `status.hovering` and
  * `status.press_attempt` stay false, so `button_pressed` alone selects pressed, and `disabled` wins.
  */
-export type CheckButtonDrawState = 'normal' | 'pressed' | 'disabled';
+type CheckButtonDrawState = 'normal' | 'pressed' | 'disabled';
 
 export function resolveCheckButtonDrawState(props: CheckButtonProperties): CheckButtonDrawState {
   if (props.disabled) return 'disabled';
@@ -86,7 +86,7 @@ export function checkButtonTextTheme(
   return resolveTextTheme(n, props, CHECKBUTTON_THEME_KEYS[state], defaults);
 }
 
-export type CheckButtonIconKey = keyof CheckButtonIcons;
+type CheckButtonIconKey = keyof CheckButtonIcons;
 
 /**
  * `NOTIFICATION_DRAW` (`check_button.cpp:105-127`): `is_layout_rtl()` swaps in the `_mirrored`
@@ -231,7 +231,7 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   return { x: width, y: height };
 };
 
-export interface CheckButtonContentInput {
+interface CheckButtonContentInput {
   /** The control's own solved rect size, Godot px. */
   rectSize: Vec2;
   marginX: number;
@@ -249,7 +249,7 @@ export interface CheckButtonContentInput {
   rtl: boolean;
 }
 
-export interface CheckButtonContentLayout {
+interface CheckButtonContentLayout {
   /** Local to the control's own top-left, Godot px. */
   iconRect: Rect2;
   /** The text paragraph's box top-left, local Godot px. `null` when there is no text. */

@@ -72,7 +72,7 @@ export function compositeCallPrefix(...typeNames: readonly string[]): RegExp {
 }
 
 /** Reads the `TypeName(…)` calls inside a larger value, each body up to its first `)`. */
-export interface CallBodyReader {
+interface CallBodyReader {
   /** The first body, or null when the value holds no closed call. */
   first(text: string): string | null;
   /** Every body, in order. */

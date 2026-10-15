@@ -13,7 +13,7 @@ import type {
 import { sliderGrabberIconSize, sliderMinimumSize } from '../shared/sliderSolver';
 
 /** `grabber_icon` (`Theme::DATA_TYPE_ICON` under key `"grabber"`): the one themeable slot the min-size solve reads. */
-export const hSliderTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
+const hSliderTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
   const themed = themedIcons.grabber;
   const requests: TextureSlotRequest[] = [];
   if (themed) requests.push({ key: 'grabber', ref: themed.ref, scope: themed.resources });

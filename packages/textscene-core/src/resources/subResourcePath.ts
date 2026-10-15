@@ -16,7 +16,7 @@ import { findSubResource, parseResourceReference } from './SubResourceResolver.j
  */
 const SEPARATOR = '::';
 
-export interface SubResourceAddress {
+interface SubResourceAddress {
   /**
    * The `res://` file that owns the resource, always fetchable as-is. The whole
    * address is the cache key. Only `filePath` reaches a `ResourceProvider` or the
@@ -95,7 +95,7 @@ export function resolveRefToResourcePath(
  * can build the thing. Otherwise the failed load is cached, and a present, correct
  * file gets a permanent missing-resources row.
  */
-export interface SubResourceGate {
+interface SubResourceGate {
   /** The declaring document's `[sub_resource]`s. */
   declared: readonly TscnInternalResource[];
   /** `undefined` means the id names nothing declared. */

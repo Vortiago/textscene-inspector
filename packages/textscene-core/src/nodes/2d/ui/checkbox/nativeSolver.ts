@@ -53,7 +53,7 @@ export { fitIconSize, tintColor };
  * wins first. Measured with `pnpm ref:godot --mode 2d`: a checked row's label reads (255,255,255),
  * `font_pressed_color`, not the 0.875 grey of `DRAW_NORMAL`.
  */
-export type CheckBoxDrawState = 'normal' | 'pressed' | 'disabled';
+type CheckBoxDrawState = 'normal' | 'pressed' | 'disabled';
 
 export function resolveCheckBoxDrawState(props: CheckBoxProperties): CheckBoxDrawState {
   if (props.disabled) return 'disabled';
@@ -93,7 +93,7 @@ export function checkBoxTextTheme(
   return resolveTextTheme(n, props, CHECKBOX_THEME_KEYS[state], defaults);
 }
 
-export type CheckBoxIconKey = keyof CheckBoxIcons;
+type CheckBoxIconKey = keyof CheckBoxIcons;
 
 /**
  * `NOTIFICATION_DRAW` (`check_box.cpp:112-131`): a valid `button_group` swaps in the `radio_*`
@@ -216,7 +216,7 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   return { x: width, y: height };
 };
 
-export interface CheckBoxContentInput {
+interface CheckBoxContentInput {
   /** The control's own solved rect size, Godot px. */
   rectSize: Vec2;
   /** `cbx_empty`'s uniform content margin, `theme.contentMargin` on all four sides. Every state shares this `StyleBoxEmpty` (`default_theme.cpp:276-277`), so nothing is drawn. */
@@ -232,7 +232,7 @@ export interface CheckBoxContentInput {
   rtl: boolean;
 }
 
-export interface CheckBoxContentLayout {
+interface CheckBoxContentLayout {
   /** Local to the control's own top-left, Godot px. */
   iconRect: Rect2;
   /** The text paragraph's box top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there. `null` when there is no text. */

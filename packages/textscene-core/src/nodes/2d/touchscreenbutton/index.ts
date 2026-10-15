@@ -12,5 +12,3 @@ const touchScreenButtonRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(touchScreenButtonRegistration);
-
-export { touchScreenButtonRegistration };

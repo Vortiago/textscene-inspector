@@ -14,7 +14,7 @@ import { round as godotRound } from '../../../../godot/math';
 // Pure geometry in `shaped_text_draw`'s pen-relative space: `(0, 0)` is the glyph's
 // advance-box origin on the baseline, and the box extends up and right from it
 // (`pos = p_pos - Point2i(0, size.y * 0.85)`). `TextRun.tsx` places rects from there.
-export interface HexCodeBoxRect {
+interface HexCodeBoxRect {
   x: number;
   y: number;
   w: number;

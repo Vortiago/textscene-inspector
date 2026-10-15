@@ -103,7 +103,7 @@ function LineMesh({
  * segment and a joint wedge at every interior corner. Godot has no "no joint"
  * mode, so the wedge always fills the pie-slice gap between butt-capped quads.
  */
-export function buildLineGeometry(
+function buildLineGeometry(
   points: Float32Array,
   width: number,
   closed: boolean,

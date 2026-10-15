@@ -10,7 +10,7 @@ import { useAnimationTransport } from '../contexts/AnimationTransportContext';
 import { useRegisterDriver, type BoundClips } from '../contexts/AnimationDriverContext';
 import { useRebindKey } from './useRebindKey';
 
-export interface UseAnimationDriverMountParams {
+interface UseAnimationDriverMountParams {
   /**
    * The object the AnimationMixer is rooted on. Null while loading (async
    * arrival). Once non-null and stable, the mixer is built whenever the driver

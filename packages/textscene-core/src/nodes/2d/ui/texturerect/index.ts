@@ -10,6 +10,5 @@ const textureRectRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(textureRectRegistration);
 
-export { textureRectRegistration };
 export * from './parser';
 export * from './types';

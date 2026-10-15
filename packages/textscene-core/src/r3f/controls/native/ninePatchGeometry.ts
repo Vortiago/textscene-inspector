@@ -12,7 +12,7 @@ export const NINE_PATCH_TILE_FIT = 2;
 export type NinePatchAxisMode =
   typeof NINE_PATCH_STRETCH | typeof NINE_PATCH_TILE | typeof NINE_PATCH_TILE_FIT;
 
-export interface NinePatchMargins {
+interface NinePatchMargins {
   left: number;
   top: number;
   right: number;

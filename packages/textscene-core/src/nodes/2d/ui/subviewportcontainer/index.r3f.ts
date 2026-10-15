@@ -18,5 +18,3 @@ controlComponentRegistry.register({
   Component: SubViewportContainer,
 });
 controlSolverRegistry.registerMinimumSize('SubViewportContainer', subViewportContainerMinimumSize);
-
-export { SubViewportContainer };

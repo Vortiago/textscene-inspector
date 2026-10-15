@@ -85,7 +85,7 @@ export interface GridDot {
   y: number;
 }
 
-export interface GridDots {
+interface GridDots {
   minor: GridDot[];
   major: GridDot[];
 }

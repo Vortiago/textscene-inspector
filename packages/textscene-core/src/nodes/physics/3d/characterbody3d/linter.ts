@@ -6,5 +6,3 @@ import { makeCharacterBodyLinterRule } from '../../../../linter/physics/characte
 const characterBody3DValidationRule = makeCharacterBodyLinterRule('3D');
 
 ruleRegistry.register(characterBody3DValidationRule);
-
-export { characterBody3DValidationRule };

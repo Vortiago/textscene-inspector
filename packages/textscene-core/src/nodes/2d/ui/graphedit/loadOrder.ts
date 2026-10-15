@@ -33,7 +33,7 @@ const DEFAULT_ZOOM = 1;
 /** `min_scroll_offset` and `max_scroll_offset` as GraphEdit's constructor leaves them. */
 const ZERO_SCROLL_BOUNDS = { x: 0, y: 0 };
 
-export interface GraphEditLoadState {
+interface GraphEditLoadState {
   /** `scroll_offset` as stored, or undefined where the file never ran the setter. */
   scrollOffset: Vec2 | undefined;
   /** `zoom` as stored, or undefined where neither it nor a bound was written. */

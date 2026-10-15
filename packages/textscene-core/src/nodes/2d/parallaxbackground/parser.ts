@@ -14,7 +14,7 @@ import { boolSlotValue } from '../../../godot/index.js';
  * `ParallaxBackground::ParallaxBackground()` runs `set_layer(-100)`, and a
  * `.tscn` omits a value equal to the class default, so `layer` is often absent.
  */
-export const PARALLAX_BACKGROUND_LAYER = -100;
+const PARALLAX_BACKGROUND_LAYER = -100;
 
 export function parseParallaxBackground(
   heading: ParsedHeading,

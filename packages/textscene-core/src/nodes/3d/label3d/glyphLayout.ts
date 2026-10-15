@@ -13,7 +13,7 @@ import type { TextLayoutResult, TextLineLayout } from '../../../r3f/controls/nat
 import { HorizontalAlignment } from './types';
 import { EMPTY_AABB, type Aabb } from '../../../godot/aabb';
 
-export interface Label3DLinePlacement {
+interface Label3DLinePlacement {
   /** This line's own left-edge x offset (`label_3d.cpp:588-599`), Godot px. */
   x: number;
   /** This line's "box top" Y, Godot px, y-down. `<TextRun>` anchors the baseline from there (`buildGlyphQuadArrays`). */

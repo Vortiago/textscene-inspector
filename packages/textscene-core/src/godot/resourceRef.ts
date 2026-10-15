@@ -51,7 +51,7 @@ const RESOURCE_REF_AT_RE = new RegExp(RESOURCE_REF_BODY, 'y');
 const IDENTIFIER_CHAR_RE = /[A-Za-z0-9_]/;
 
 /** A reference and the span it fills in the text it was read from, `end` exclusive. */
-export interface ResourceRefSpan extends ResourceRef {
+interface ResourceRefSpan extends ResourceRef {
   start: number;
   end: number;
 }

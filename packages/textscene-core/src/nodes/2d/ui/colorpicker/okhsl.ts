@@ -326,7 +326,7 @@ export function okhslToSrgb(h: number, s: number, l: number): ControlColor {
   };
 }
 
-export interface Okhsl {
+interface Okhsl {
   h: number;
   s: number;
   l: number;

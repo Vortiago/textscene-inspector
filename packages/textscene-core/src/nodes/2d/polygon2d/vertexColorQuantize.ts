@@ -7,7 +7,7 @@
 
 import { unitByte } from '../../../godot/unitByte';
 
-export interface QuantizableColor {
+interface QuantizableColor {
   r: number;
   g: number;
   b: number;

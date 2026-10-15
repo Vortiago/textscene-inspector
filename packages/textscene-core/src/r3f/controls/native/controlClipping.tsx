@@ -20,7 +20,7 @@ import type { Rect2 } from './rect';
  * absolute Godot canvas pixels (+Y down): Godot rounds there, and the 2D world
  * maps onto it with y negated. It is null for a rotated chain, where `planes` alone clips.
  */
-export interface ControlClip {
+interface ControlClip {
   readonly planes: readonly THREE.Plane[];
   readonly rect: Rect2 | null;
 }
@@ -34,7 +34,7 @@ ControlClipContext.displayName = 'ControlClipContext';
 export const ControlClipProvider = ControlClipContext.Provider;
 
 /** The whole accumulated clip: planes, and the rect a nested clipper intersects against. */
-export function useControlClip(): ControlClip {
+function useControlClip(): ControlClip {
   return useContext(ControlClipContext);
 }
 

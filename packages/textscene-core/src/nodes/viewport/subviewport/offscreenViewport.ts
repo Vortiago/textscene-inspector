@@ -206,7 +206,7 @@ export function viewportAspect(size: Vector2): number {
 }
 
 /** An orthographic frustum and camera position framing exactly `size` pixels. */
-export interface OrthoFrame {
+interface OrthoFrame {
   left: number;
   right: number;
   top: number;

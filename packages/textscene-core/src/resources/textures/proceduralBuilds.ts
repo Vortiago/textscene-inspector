@@ -26,7 +26,7 @@ export interface ProceduralBuildPlan<Name extends WorkerJobName = WorkerJobName>
 }
 
 /** A holder's share of a build. Release it when the texture is no longer wanted. */
-export interface ProceduralBuildHandle {
+interface ProceduralBuildHandle {
   /** The built texture, or null when the build was aborted or could not be allocated. */
   settled: Promise<THREE.Texture | null>;
   release(): void;

@@ -15,7 +15,7 @@ import { useMissingReport } from '../contexts/MissingResourcesContext';
 import type { MaterialResource, MaterialSource } from './materialSource';
 
 /** What a material source loads to. */
-export type LoadedMaterial =
+type LoadedMaterial =
   /** A StandardMaterial3D to draw. */
   | { status: 'ready'; material: MaterialResource }
   /** A material type this previewer does not build: Godot's default 3D surface (ADR-0041). */

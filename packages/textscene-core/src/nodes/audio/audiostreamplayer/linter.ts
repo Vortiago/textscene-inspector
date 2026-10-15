@@ -57,5 +57,3 @@ const audioStreamPlayerValidationRule: LintRule = {
 };
 
 ruleRegistry.register(audioStreamPlayerValidationRule);
-
-export { audioStreamPlayerValidationRule };

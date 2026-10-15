@@ -50,7 +50,7 @@ export interface SkippedAncestors {
 }
 
 /** One CanvasItem's contribution to `p_z` (`renderer_canvas_cull.cpp:430-434`). */
-export interface CanvasItemZStep {
+interface CanvasItemZStep {
   zIndex: number;
   zAsRelative: boolean;
 }
@@ -218,7 +218,7 @@ export function controlProps(n: ShareNode): ControlProperties {
  * into the ambient `Modulate2DContext` and `self_modulate` into `tint`, so a
  * painter that read either would apply it twice.
  */
-export type PainterView<T> = Omit<T, 'modulate' | 'selfModulate'>;
+type PainterView<T> = Omit<T, 'modulate' | 'selfModulate'>;
 
 /**
  * One view per property bag, so repeated calls return the same object: painters

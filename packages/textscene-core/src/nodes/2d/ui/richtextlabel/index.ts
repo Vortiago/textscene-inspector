@@ -10,6 +10,5 @@ const richTextLabelRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(richTextLabelRegistration);
 
-export { richTextLabelRegistration };
 export * from './parser';
 export * from './types';

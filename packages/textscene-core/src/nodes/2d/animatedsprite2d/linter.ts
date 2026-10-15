@@ -107,5 +107,3 @@ const animatedSprite2DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(animatedSprite2DValidationRule);
-
-export { animatedSprite2DValidationRule };

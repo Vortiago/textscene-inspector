@@ -29,7 +29,7 @@ import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
 import type { MenuBarProperties } from './types';
 
 /** `SceneStringName(font)`, MenuBar's own theme font key (`menu_bar.cpp:748`). */
-export const MENU_BAR_THEME_FONT_KEY = 'font';
+const MENU_BAR_THEME_FONT_KEY = 'font';
 
 /** MenuBar's own `font_size` and `font_color` theme keys (`menu_bar.cpp:748,756`), spelled as Button's but declared apart. */
 export const MENU_BAR_TEXT_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -62,7 +62,7 @@ function menuTitleText(child: TscnNode): string {
  * Shapes every title once, as `MenuBar::shape()` (`menu_bar.cpp:520-527`): one `TextLine`, no wrap, no
  * `line_spacing`. It matches Button-family shaping but is spelled out, since a title is no Button label.
  */
-export function menuBarTitles(
+function menuBarTitles(
   n: ShareNode,
   fontSizePx: number,
   fontMetrics: FontMetrics,
@@ -134,7 +134,7 @@ export const menuBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   return { x: width, y: height };
 };
 
-export interface MenuBarItemPlacement {
+interface MenuBarItemPlacement {
   title: MenuBarTitle;
   /** This item's x inside the bar. */
   x: number;

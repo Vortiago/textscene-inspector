@@ -53,7 +53,7 @@ function flatButtonPressedStyleBox(base: StyleBoxFlatData): StyleBoxFlatData {
   return { ...base, bgColor: { ...base.bgColor, a: base.bgColor.a * 0.85 } };
 }
 
-export interface GraphEditToolbarProps {
+interface GraphEditToolbarProps {
   toolbar: GraphEditToolbar;
   /** `solveNode.icons`: the scene's `theme_override_icons/<key>` for any of the seven keys. */
   icons: NativeControlComponentProps['solveNode']['icons'];

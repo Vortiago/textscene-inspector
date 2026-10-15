@@ -13,5 +13,3 @@ const foldableContainerRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(foldableContainerRegistration);
-
-export { foldableContainerRegistration };

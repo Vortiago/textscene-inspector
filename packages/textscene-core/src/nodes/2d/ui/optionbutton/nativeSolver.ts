@@ -171,7 +171,7 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
 
 // Content layout: text and arrow placement
 
-export interface OptionButtonContentInput {
+interface OptionButtonContentInput {
   /** The control's own solved rect size, Godot px. */
   rectSize: Vec2;
   /** The current draw-state StyleBox's content margins. */
@@ -187,7 +187,7 @@ export interface OptionButtonContentInput {
   rtl: boolean;
 }
 
-export interface OptionButtonContentLayout {
+interface OptionButtonContentLayout {
   /** Local to the control's top-left, Godot px. */
   arrowRect: Rect2;
   /** The text box's top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there (`buildGlyphQuadArrays`). Always returned: the caller decides whether text draws. */

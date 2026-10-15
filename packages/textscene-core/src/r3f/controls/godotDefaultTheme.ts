@@ -76,17 +76,6 @@ export const OPTION_BUTTON_CONTENT_MARGIN_Y = DEFAULT_CONTENT_MARGIN;
 /** BoxContainer `separation` and GridContainer `h_/v_separation` = 4 (px). */
 export const DEFAULT_SEPARATION = 4;
 
-/** `style_progress_color` = Color(1, 1, 1, 0.4). The sliders' filled `grabber_area`. */
-export const STYLE_PROGRESS_FILL = 'rgba(255, 255, 255, 0.4)';
-
-// --- Derived font colours (control_font_color modulated per draw state) ---
-
-/** `control_font_placeholder_color` = `Color(control_font_color.rgb, 0.6)`: the LineEdit placeholder. */
-export const CONTROL_FONT_PLACEHOLDER_COLOR = 'rgba(223, 223, 223, 0.6)';
-
-/** `control_font_disabled_color` = `control_font_color * Color(1, 1, 1, 0.5)`: LineEdit's `font_uneditable_color`. */
-export const CONTROL_FONT_DISABLED_COLOR = 'rgba(223, 223, 223, 0.5)';
-
 // --- LineEdit ---
 
 /**
@@ -95,8 +84,6 @@ export const CONTROL_FONT_DISABLED_COLOR = 'rgba(223, 223, 223, 0.5)';
  * the theme scale never multiplies it: it stays 2px at `default_theme_scale = 2.0`.
  */
 export const LINE_EDIT_BORDER_BOTTOM_WIDTH = 2;
-/** `normal` borders in `style_pressed_color`, `read_only` in that times `Color(1, 1, 1, 0.5)`. */
-export const LINE_EDIT_READ_ONLY_BORDER_COLOR = 'rgba(0, 0, 0, 0.3)';
 
 /**
  * A character count, unscaled: `LineEdit::get_minimum_size()` multiplies it by the
@@ -113,20 +100,17 @@ export const LINE_EDIT_MINIMUM_CHARACTER_WIDTH = 4;
  * `StyleBox::get_minimum_size()` sums opposing margins, so the track is 8px thick:
  * the `widget_height`/`widget_width` that `Slider::_notification(NOTIFICATION_DRAW)` reads.
  */
-export const SLIDER_STYLE_MARGIN = 4;
+const SLIDER_STYLE_MARGIN = 4;
 export const SLIDER_TRACK_THICKNESS = 2 * SLIDER_STYLE_MARGIN;
 export const SLIDER_CORNER_RADIUS = 4;
 
 /**
  * The `slider_grabber` icon: a 16x16 box Godot positions, holding
- * `<circle cx="8" cy="8" r="7" fill="#fefefe" fill-opacity=".75"/>`. Disabled is
- * opacity 0.37. `generate_icon` rasterises through
+ * `<circle cx="8" cy="8" r="7" fill="#fefefe" fill-opacity=".75"/>`. `generate_icon` rasterises through
  * `DPITexture::create_from_string(source, scale)`, so it scales with the theme.
  */
 export const SLIDER_GRABBER_SIZE = 16;
 export const SLIDER_GRABBER_RADIUS = 7;
-export const SLIDER_GRABBER_FILL = 'rgba(254, 254, 254, 0.75)';
-export const SLIDER_GRABBER_DISABLED_FILL = 'rgba(254, 254, 254, 0.37)';
 
 /**
  * `hslider_tick.svg`/`vslider_tick.svg` declare a 4x8 canvas, and the rasteriser

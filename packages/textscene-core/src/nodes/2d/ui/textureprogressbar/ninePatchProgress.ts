@@ -9,6 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
+import { FillMode } from './types';
 
 export interface NinePatchMargin {
   left: number;
@@ -17,23 +18,13 @@ export interface NinePatchMargin {
   bottom: number;
 }
 
-export interface NinePatchStretchedDraw {
+interface NinePatchStretchedDraw {
   srcOffset: Vec2;
   srcSize: Vec2;
   dstOffset: Vec2;
   dstSize: Vec2;
   margin: NinePatchMargin;
 }
-
-export const FILL_LEFT_TO_RIGHT = 0;
-export const FILL_RIGHT_TO_LEFT = 1;
-export const FILL_TOP_TO_BOTTOM = 2;
-export const FILL_BOTTOM_TO_TOP = 3;
-export const FILL_CLOCKWISE = 4;
-export const FILL_COUNTER_CLOCKWISE = 5;
-export const FILL_BILINEAR_LEFT_AND_RIGHT = 6;
-export const FILL_BILINEAR_TOP_AND_BOTTOM = 7;
-export const FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE = 8;
 
 /**
  * `progressOffset` is `null` for under and over (`:421` offsets only `progress`), else
@@ -63,37 +54,37 @@ export function drawNinePatchStretched(
     let lastSectionSize = 0;
 
     switch (fillMode) {
-      case FILL_LEFT_TO_RIGHT:
+      case FillMode.LEFT_TO_RIGHT:
         widthTotal = dstSize.x;
         widthTexture = textureSize.x;
         firstSectionSize = topleft.x;
         lastSectionSize = bottomright.x;
         break;
-      case FILL_RIGHT_TO_LEFT:
+      case FillMode.RIGHT_TO_LEFT:
         widthTotal = dstSize.x;
         widthTexture = textureSize.x;
         firstSectionSize = bottomright.x;
         lastSectionSize = topleft.x;
         break;
-      case FILL_TOP_TO_BOTTOM:
+      case FillMode.TOP_TO_BOTTOM:
         widthTotal = dstSize.y;
         widthTexture = textureSize.y;
         firstSectionSize = topleft.y;
         lastSectionSize = bottomright.y;
         break;
-      case FILL_BOTTOM_TO_TOP:
+      case FillMode.BOTTOM_TO_TOP:
         widthTotal = dstSize.y;
         widthTexture = textureSize.y;
         firstSectionSize = bottomright.y;
         lastSectionSize = topleft.y;
         break;
-      case FILL_BILINEAR_LEFT_AND_RIGHT:
+      case FillMode.BILINEAR_LEFT_AND_RIGHT:
         widthTotal = dstSize.x;
         widthTexture = textureSize.x;
         firstSectionSize = topleft.x;
         lastSectionSize = bottomright.x;
         break;
-      case FILL_BILINEAR_TOP_AND_BOTTOM:
+      case FillMode.BILINEAR_TOP_AND_BOTTOM:
         widthTotal = dstSize.y;
         widthTexture = textureSize.y;
         firstSectionSize = topleft.y;
@@ -108,7 +99,7 @@ export function drawNinePatchStretched(
     const maxMiddleTextureSize = middleSectionSize;
     const maxMiddleRealSize = Math.max(0, widthTotal - (firstSectionSize + lastSectionSize));
 
-    if (fillMode === FILL_BILINEAR_LEFT_AND_RIGHT || fillMode === FILL_BILINEAR_TOP_AND_BOTTOM) {
+    if (fillMode === FillMode.BILINEAR_LEFT_AND_RIGHT || fillMode === FillMode.BILINEAR_TOP_AND_BOTTOM) {
       lastSectionSize = Math.max(0, lastSectionSize - (widthTotal - widthFilled) * 0.5);
       firstSectionSize = Math.max(0, firstSectionSize - (widthTotal - widthFilled) * 0.5);
       // `:339`: `real_middle_size` is signed and unclamped, and the division by
@@ -128,13 +119,13 @@ export function drawNinePatchStretched(
     }
 
     switch (fillMode) {
-      case FILL_LEFT_TO_RIGHT:
+      case FillMode.LEFT_TO_RIGHT:
         srcSize = { ...srcSize, x: widthTexture };
         dstSize = { ...dstSize, x: widthFilled };
         topleft = { ...topleft, x: firstSectionSize };
         bottomright = { ...bottomright, x: lastSectionSize };
         break;
-      case FILL_RIGHT_TO_LEFT:
+      case FillMode.RIGHT_TO_LEFT:
         srcOffset = { ...srcOffset, x: srcOffset.x + (srcSize.x - widthTexture) };
         srcSize = { ...srcSize, x: widthTexture };
         dstOffset = { ...dstOffset, x: dstOffset.x + (widthTotal - widthFilled) };
@@ -142,13 +133,13 @@ export function drawNinePatchStretched(
         topleft = { ...topleft, x: lastSectionSize };
         bottomright = { ...bottomright, x: firstSectionSize };
         break;
-      case FILL_TOP_TO_BOTTOM:
+      case FillMode.TOP_TO_BOTTOM:
         srcSize = { ...srcSize, y: widthTexture };
         dstSize = { ...dstSize, y: widthFilled };
         bottomright = { ...bottomright, y: lastSectionSize };
         topleft = { ...topleft, y: firstSectionSize };
         break;
-      case FILL_BOTTOM_TO_TOP:
+      case FillMode.BOTTOM_TO_TOP:
         srcOffset = { ...srcOffset, y: srcOffset.y + (srcSize.y - widthTexture) };
         srcSize = { ...srcSize, y: widthTexture };
         dstOffset = { ...dstOffset, y: dstOffset.y + (widthTotal - widthFilled) };
@@ -156,7 +147,7 @@ export function drawNinePatchStretched(
         topleft = { ...topleft, y: lastSectionSize };
         bottomright = { ...bottomright, y: firstSectionSize };
         break;
-      case FILL_BILINEAR_LEFT_AND_RIGHT: {
+      case FillMode.BILINEAR_LEFT_AND_RIGHT: {
         const centerMappedFromRealWidth =
           ((widthTotal * 0.5 - topleft.x) / maxMiddleRealSize) * maxMiddleTextureSize + topleft.x;
         let drift = 0;
@@ -175,7 +166,7 @@ export function drawNinePatchStretched(
         bottomright = { ...bottomright, x: lastSectionSize };
         break;
       }
-      case FILL_BILINEAR_TOP_AND_BOTTOM: {
+      case FillMode.BILINEAR_TOP_AND_BOTTOM: {
         const centerMappedFromRealWidth =
           ((widthTotal * 0.5 - topleft.y) / maxMiddleRealSize) * maxMiddleTextureSize + topleft.y;
         let drift = 0;

@@ -11,5 +11,3 @@ const navigationRegion3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(navigationRegion3DRegistration);
-
-export { navigationRegion3DRegistration };

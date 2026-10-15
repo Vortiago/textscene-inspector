@@ -13,5 +13,3 @@ const cCDIK3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(cCDIK3DRegistration);
-
-export { cCDIK3DRegistration };

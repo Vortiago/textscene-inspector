@@ -36,7 +36,7 @@ import type { ControlColor } from '../control/types';
 import type { SpinBoxProperties } from './types';
 
 /** `Range`'s default `step` (`scene/gui/range.h:42`). SpinBox's constructor never calls `set_step` (`spin_box.cpp:723-740`), so this is what an unauthored `step` resolves to. */
-export const SPIN_BOX_STEP_DEFAULT = 1;
+const SPIN_BOX_STEP_DEFAULT = 1;
 
 /**
  * `default_theme.cpp:647-648` sets `buttons_width`/`field_and_buttons_separation` as bare
@@ -53,7 +53,7 @@ const SPIN_BOX_FIELD_BUTTONS_SEPARATION = 2;
 export const SPIN_BOX_ARROW_ICON_SIZE: Vec2 = { x: 16, y: 8 };
 
 /** `up`/`down`: `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, SpinBox, up_icon, "up")` (and `down`, `spin_box.cpp:690,694`). The hover, pressed and disabled variants and the deprecated `updown` are never drawn, as in `Component.tsx`. */
-export type SpinBoxIconName = 'up' | 'down';
+type SpinBoxIconName = 'up' | 'down';
 const SPIN_BOX_ICON_NAMES: readonly SpinBoxIconName[] = ['up', 'down'];
 
 /** Which of `up`/`down` have a themed answer, for `SolveNode.textureSlots`. */
@@ -96,7 +96,7 @@ export function spinBoxFieldButtonsSeparation(): number {
 /** `buttons_vertical_separation`: `default_theme.cpp:646` sets it to 0, and no per-node theme-constant override is modelled. */
 const SPIN_BOX_BUTTONS_VERTICAL_SEPARATION = 0;
 
-export interface SpinBoxLayout {
+interface SpinBoxLayout {
   /** The internal field's rect: `line_edit`'s full-rect preset with a right offset of `-buttons_block_width` (`spin_box.cpp:394-395`). */
   fieldRect: Rect2;
   /** The up (increment) button's own rect. */
@@ -190,7 +190,7 @@ export function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: numb
   return text;
 }
 
-export type SpinBoxButtonState = 'normal' | 'disabled';
+type SpinBoxButtonState = 'normal' | 'disabled';
 
 /** `is_fully_disabled = !is_editable()` (`spin_box.cpp:444`): gates both buttons whatever their own state. */
 export function spinBoxFullyDisabled(props: SpinBoxProperties): boolean {
@@ -244,13 +244,11 @@ export function spinBoxIconColor(
  * variation falls through to the native chain (`buildThemeTypeChain`). `n`'s `"SpinBox"` scope
  * would miss `"LineEdit"`'s defaults and any project `"SpinBoxInnerLineEdit"` entry.
  */
-export function spinBoxFieldThemeScope(
-  n: Pick<SolveNode, 'themeChain' | 'projectTheme'>
-): ThemeResolutionScope {
+function spinBoxFieldThemeScope(n: Pick<SolveNode, 'themeChain' | 'projectTheme'>): ThemeResolutionScope {
   return themeResolutionScope('LineEdit', 'SpinBoxInnerLineEdit', n.themeChain, n.projectTheme);
 }
 
-export interface SpinBoxFieldTextTheme {
+interface SpinBoxFieldTextTheme {
   fontSizePx: number;
   fontMetrics: FontMetrics;
   /** `control_font_color`/`control_font_disabled_color` (LineEdit's `font_color`/`font_uneditable_color` defaults). No ancestor-theme colour walk exists (`textTheme.ts`), so the field draws only this colour. */

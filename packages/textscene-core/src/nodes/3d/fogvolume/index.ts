@@ -10,6 +10,5 @@ const fogVolumeRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(fogVolumeRegistration);
 
-export { fogVolumeRegistration };
 export * from './parser';
 export * from './types';

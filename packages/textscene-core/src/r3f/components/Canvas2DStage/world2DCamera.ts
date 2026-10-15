@@ -4,7 +4,7 @@
  * zoom 1, so camX = (sw/2 − pan.x)/zoom and camY = −(sh/2 − pan.y)/zoom.
  */
 
-export interface World2DCameraPose {
+interface World2DCameraPose {
   x: number;
   y: number;
   zoom: number;

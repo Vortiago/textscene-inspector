@@ -9,7 +9,7 @@ import { flooredCount } from '../meshCounts';
  * (FACE_Z, 1×1). Everything else is shared, so QuadMesh reuses this decode by
  * passing its own defaults rather than duplicating the field-by-field reading.
  */
-export interface PlaneMeshDefaults {
+interface PlaneMeshDefaults {
   size: Vector2;
   orientation: number;
 }

@@ -18,7 +18,7 @@ import { pinNoColorSpace } from './canvas2DTextureDecode';
  * (`Sprite2D::_get_rects`, and `Texture2D::get_rect_region` passes it through).
  * Required, since a default is the silent hand-syncing this module prevents.
  */
-export type SpriteWrapMode = 'clamp' | 'repeat';
+type SpriteWrapMode = 'clamp' | 'repeat';
 
 const WRAP: Record<SpriteWrapMode, THREE.Wrapping> = {
   // The 2D canvas: `default_canvas_item_texture_repeat` defaults to DISABLED

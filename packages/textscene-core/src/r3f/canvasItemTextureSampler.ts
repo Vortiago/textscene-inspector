@@ -9,7 +9,7 @@ import { createContext, useContext, useMemo } from 'react';
 /** `TEXTURE_FILTER_PARENT_NODE` and `TEXTURE_REPEAT_PARENT_NODE`, both 0. */
 export const CANVAS_ITEM_SAMPLER_INHERIT = 0;
 
-export interface CanvasItemTextureSampler {
+interface CanvasItemTextureSampler {
   /** Effective `texture_filter` ordinal, or `undefined` when no ancestor ever named one (viewport default). */
   filter: number | undefined;
   /** Effective `texture_repeat` ordinal, or `undefined` when no ancestor ever named one (viewport default). */
@@ -22,7 +22,7 @@ export const ROOT_TEXTURE_SAMPLER: CanvasItemTextureSampler = { filter: undefine
 export const TextureSampler2DContext = createContext<CanvasItemTextureSampler>(ROOT_TEXTURE_SAMPLER);
 
 /** The ambient sampler, which an unnamed (PARENT_NODE) property resolves to. */
-export function useParentTextureSampler(): CanvasItemTextureSampler {
+function useParentTextureSampler(): CanvasItemTextureSampler {
   return useContext(TextureSampler2DContext);
 }
 

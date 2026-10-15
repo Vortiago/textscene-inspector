@@ -70,5 +70,3 @@ const navigationLink3DPositionRule: LintRule = {
 };
 
 ruleRegistry.register(navigationLink3DPositionRule);
-
-export { navigationLink3DPositionRule };

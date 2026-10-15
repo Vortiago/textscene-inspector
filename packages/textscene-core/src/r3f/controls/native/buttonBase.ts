@@ -142,17 +142,17 @@ export interface ButtonContentInput {
   rtl: boolean;
 }
 
-export interface ButtonIconLayout {
+interface ButtonIconLayout {
   /** Local to the control's top-left, Godot px. */
   rect: Rect2;
 }
 
-export interface ButtonTextLayout {
+interface ButtonTextLayout {
   /** The paragraph box's top-left, local Godot px, for `<TextRun>` to anchor each line's baseline from. */
   offset: Vec2;
 }
 
-export interface ButtonContentLayout {
+interface ButtonContentLayout {
   icon: ButtonIconLayout | null;
   text: ButtonTextLayout | null;
   /** `drawable_size_remained` (`button.cpp:332-352,428`): the label's box after margins and the icon. A wrapping label re-shapes at `Math::ceil(MAX(1, drawableSize.x))`. */

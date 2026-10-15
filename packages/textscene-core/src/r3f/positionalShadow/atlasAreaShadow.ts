@@ -25,7 +25,7 @@ import { readIntensityThroughSlot, type SlottedShadow } from './slotOpacity.js';
  * writes `distance / z_far * 2 - 1` and renders through an identity projection
  * (`scene_forward_clustered.glsl:503-518`, `renderer_scene_cull.cpp:2661`).
  */
-export class ParaboloidCamera extends THREE.Camera {
+class ParaboloidCamera extends THREE.Camera {
   far = 1;
 
   updateProjectionMatrix(): void {
@@ -41,7 +41,7 @@ const casterBox = new THREE.Box3();
  * an instance's AABB against the volume's planes (`renderer_scene_cull.cpp:2599-2662`,
  * `dynamic_bvh.h:137-177`). three's own test takes the bounding sphere, which reaches past a corner.
  */
-export class AreaShadowVolume extends THREE.Frustum {
+class AreaShadowVolume extends THREE.Frustum {
   /** Sets the planes to the faces of `box`, a box in the space of `pose`. */
   enclose(box: AreaLightBox, pose: THREE.Matrix4): void {
     for (let axis = 0; axis < 3; axis++) {

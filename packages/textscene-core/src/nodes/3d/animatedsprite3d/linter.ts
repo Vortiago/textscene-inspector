@@ -71,5 +71,3 @@ const animatedSprite3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(animatedSprite3DValidationRule);
-
-export { animatedSprite3DValidationRule };

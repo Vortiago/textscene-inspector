@@ -107,7 +107,7 @@ export const DEFAULT_ELLIPSIS_CHAR = '…';
 /** `ell_min_characters` (`text_server_adv.cpp:6049`): below this many kept characters, a plain cut replaces the ellipsis. */
 const ELL_MIN_CHARACTERS = 6;
 
-export interface OverrunTrimOptions {
+interface OverrunTrimOptions {
   fontMetrics: FontMetrics;
   /** The font size of the last glyph, which Godot reads (`text_server_adv.cpp:5981`): the line size, or its trailing run size. */
   fontSizePx: number;

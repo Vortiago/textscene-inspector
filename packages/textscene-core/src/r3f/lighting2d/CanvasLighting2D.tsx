@@ -27,7 +27,7 @@ import { capItemLights, type CappedItem } from './itemLightCap.js';
 import type { Rect2 } from '../../godot/rect2.js';
 import { useGameViewportRect } from '../gameViewportRect.js';
 
-export { useCanvasLighting2D, type CanvasLighting2D, type CanvasLightSlot } from './lightPassContext.js';
+export { useCanvasLighting2D, type CanvasLighting2D } from './lightPassContext.js';
 export {
   useCapItemLights,
   usePassMeshRef,
@@ -35,7 +35,7 @@ export {
   useRegisterLitItem,
 } from './lightPassDeclarations.js';
 
-export interface CanvasLighting2DProviderProps {
+interface CanvasLighting2DProviderProps {
   /**
    * The canvas tint, where `S` starts for an ordinary item. It is the `canvasModulateColor(nodes)`
    * the dispatcher publishes to the items, so the seed and the tint they divide out agree.

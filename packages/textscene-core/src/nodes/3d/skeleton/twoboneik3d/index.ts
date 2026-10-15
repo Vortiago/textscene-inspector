@@ -13,5 +13,3 @@ const twoBoneIK3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(twoBoneIK3DRegistration);
-
-export { twoBoneIK3DRegistration };

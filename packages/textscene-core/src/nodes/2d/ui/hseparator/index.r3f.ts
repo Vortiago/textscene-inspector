@@ -10,5 +10,3 @@ import { hSeparatorMinimumSize } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'HSeparator', Component: HSeparator });
 controlSolverRegistry.registerMinimumSize('HSeparator', hSeparatorMinimumSize);
-
-export { HSeparator };

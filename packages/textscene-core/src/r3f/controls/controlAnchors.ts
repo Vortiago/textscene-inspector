@@ -12,7 +12,7 @@ import type { ControlProperties } from '../../nodes/2d/ui/control/types.js';
  * four per-edge `switch`es in `scene/gui/control.cpp::Control::set_anchors_preset`
  * (:1114-1229). `ANCHOR_BEGIN` = 0, `ANCHOR_END` = 1, and CENTER_* anchors at 0.5.
  */
-export const PRESET_ANCHORS: Record<number, [number, number, number, number]> = {
+const PRESET_ANCHORS: Record<number, [number, number, number, number]> = {
   0: [0, 0, 0, 0], // TOP_LEFT
   1: [1, 0, 1, 0], // TOP_RIGHT
   2: [0, 1, 0, 1], // BOTTOM_LEFT
@@ -223,7 +223,7 @@ export function resolveGrowDirection(p: ControlProperties): [number, number] {
  */
 export type ControlLayoutOrder = readonly string[] | undefined;
 
-export interface ControlLayoutResolution {
+interface ControlLayoutResolution {
   anchors: [number, number, number, number];
   offsets: [number, number, number, number];
   growHorizontal: number;

@@ -74,5 +74,3 @@ const iterateIK3DTargetRule: LintRule = {
 };
 
 ruleRegistry.register(iterateIK3DTargetRule);
-
-export { iterateIK3DTargetRule };

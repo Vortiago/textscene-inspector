@@ -30,7 +30,7 @@ const ControlCanvasLayer = lazy(() =>
   import('../../controls/index.js').then((m) => ({ default: m.ControlCanvasLayer }))
 );
 
-export interface World2DCanvasProps {
+interface World2DCanvasProps {
   nodes: readonly TscnNode[];
   internalResources: readonly TscnInternalResource[];
   externalResources: readonly TscnExternalResource[];

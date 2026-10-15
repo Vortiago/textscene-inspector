@@ -58,5 +58,3 @@ const selectedRequiresSelectableRule: LintRule = {
 };
 
 ruleRegistry.register(selectedRequiresSelectableRule);
-
-export { selectedRequiresSelectableRule };

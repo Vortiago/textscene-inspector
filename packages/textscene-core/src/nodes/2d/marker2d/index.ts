@@ -10,6 +10,5 @@ const marker2DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(marker2DRegistration);
 
-export { marker2DRegistration };
 export * from './parser';
 export * from './types';

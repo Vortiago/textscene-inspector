@@ -7,5 +7,3 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { BaseButton } from './Component';
 
 controlComponentRegistry.register({ typeName: 'BaseButton', Component: BaseButton });
-
-export { BaseButton };

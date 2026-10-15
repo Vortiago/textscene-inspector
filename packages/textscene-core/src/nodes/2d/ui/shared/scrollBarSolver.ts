@@ -50,7 +50,7 @@ export function scrollBarAreaSize(vertical: boolean, barLength: number, theme: N
   return barLength - trackAlong - grabberMinAlong(vertical, theme);
 }
 
-export interface ScrollBarGrabberGeometry {
+interface ScrollBarGrabberGeometry {
   /** Along-axis extent: `get_grabber_size()`. */
   size: number;
   /** Along-axis offset from the bar's top or left: `get_grabber_offset()`. */

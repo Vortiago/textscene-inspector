@@ -12,5 +12,3 @@ const geometryInstance3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(geometryInstance3DRegistration);
-
-export { geometryInstance3DRegistration };

@@ -96,5 +96,3 @@ const boneAttachment3DSkeletonRule: LintRule = {
 };
 
 ruleRegistry.register(boneAttachment3DSkeletonRule);
-
-export { boneAttachment3DSkeletonRule };

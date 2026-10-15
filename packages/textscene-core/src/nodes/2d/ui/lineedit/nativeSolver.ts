@@ -45,7 +45,7 @@ import type { LineEditProperties } from './types';
 export const LINE_EDIT_THEME_FONT_KEY = 'font';
 
 /** `LineEdit::get_draw_mode`'s stylebox axis: the `theme_override_styles/*` key, and default-theme box, that the node's current `editable` selects. */
-export type LineEditStyleState = 'normal' | 'read_only';
+type LineEditStyleState = 'normal' | 'read_only';
 
 /** `editable ?? true` (Godot's `LineEdit.editable` default) as the stylebox key it selects. */
 export function resolveLineEditStyleState(editable: boolean | undefined): LineEditStyleState {
@@ -67,7 +67,7 @@ export function pickLineEditStyleBox(
  * placeholder reads `font_placeholder_color` whatever its `editable`, so the placeholder test runs
  * first, in `_shape()`'s branch order (`displayText.ts`).
  */
-export type LineEditTextState = 'normal' | 'read_only' | 'placeholder';
+type LineEditTextState = 'normal' | 'read_only' | 'placeholder';
 
 /** `using_placeholder` wins over `editable`: a placeholder is never editable or read-only text. */
 export function resolveLineEditTextState(
@@ -279,7 +279,7 @@ const HORIZONTAL_ALIGNMENT_CENTER = 1;
 const HORIZONTAL_ALIGNMENT_RIGHT = 2;
 const HORIZONTAL_ALIGNMENT_FILL = 3;
 
-export interface LineEditContentInput {
+interface LineEditContentInput {
   /** This Control's own solved rect size, Godot px. */
   rectSize: Vec2;
   /** The active StyleBox's content margins (`style->get_margin(SIDE_*)`), not the max of both that `lineEditMinimumSize` floors against. */
@@ -298,7 +298,7 @@ export interface LineEditContentInput {
   rtl?: boolean;
 }
 
-export interface LineEditContentLayout {
+interface LineEditContentLayout {
   /** The glyph clip rect: this rect inset by `styleMargin`, and by the active icon's width on its side, floored at a zero extent. */
   contentRect: Rect2;
   /** The text box's top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there (`buildGlyphQuadArrays`). */

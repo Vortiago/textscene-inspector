@@ -44,7 +44,7 @@ import type { TabContainerProperties, TabContainerTabOverride } from './types';
  * unless deselection is enabled (`tab_bar.cpp:1324-1331`). An authored `current_tab` waits in
  * `setup_current_tab` (`tab_container.cpp:743-746`) until `NOTIFICATION_ENTER_TREE` (`:222-225`).
  */
-export function tabContainerCurrentTab(props: TabContainerProperties, tabCount: number): number {
+function tabContainerCurrentTab(props: TabContainerProperties, tabCount: number): number {
   if (tabCount === 0) return -1;
   const authored = props.currentTab;
   // `TabBar::set_current_tab` can refuse it and leave 0 standing (`tab_bar.cpp:795-805`). An index
@@ -65,7 +65,7 @@ export function tabContainerCurrentTab(props: TabContainerProperties, tabCount: 
  * the rest (`tab_container.cpp:377-399`), as `NOTIFICATION_VISIBILITY_CHANGED` does (`:290-293`).
  * `add_child_notify` hides each page as it is added (`:651`), so an unauthored file shows one.
  */
-export const tabContainerChildVisibility: ChildVisibilityFn = (container, _child, index, count) =>
+const tabContainerChildVisibility: ChildVisibilityFn = (container, _child, index, count) =>
   index === tabContainerCurrentTab(container.properties as TabContainerProperties, count);
 
 /** `TabContainer::TabPosition` (`tab_container.h`): 0 TOP, 1 BOTTOM. */
@@ -104,7 +104,7 @@ export function deriveTabContainerTabs(
  * One `TextureSlotRequest` per page with a `tab_<idx>/icon` override, keyed as
  * `tabBarTextureSlots` keys TabBar's icons, so `buildInternalTabBarNode` reuses `n.textureSlots`.
  */
-export const tabContainerTextureSlots: TextureSlotsFn = (node) => {
+const tabContainerTextureSlots: TextureSlotsFn = (node) => {
   const overrides = (node.properties as TabContainerProperties).tabOverrides;
   if (!overrides) return [];
   const requests: TextureSlotRequest[] = [];
@@ -187,7 +187,7 @@ function tabBarHeight(synthetic: SolveNode, ctx: Pick<SolveContext, 'theme' | 'm
   return tabBarMinimumSize(synthetic, ctx as SolveContext).y;
 }
 
-export interface StyleMargins {
+interface StyleMargins {
   left: number;
   top: number;
   right: number;

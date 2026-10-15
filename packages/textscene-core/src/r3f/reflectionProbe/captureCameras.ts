@@ -8,7 +8,7 @@ import { CAPTURE_NEAR, FACE_NORMALS } from '../../godot/reflectionProbe.js';
 import type { Vector3 } from '../../godot/vector.js';
 
 /** What a capture's renders draw differently from the scene's own. */
-export interface ProbeCapture {
+interface ProbeCapture {
   /** No environment: no sky, no ambient light and no fog (`render_forward_clustered.cpp:1819-1821`). */
   readonly isInterior: boolean;
   /** Whether the lights cast their shadows (`render_forward_clustered.cpp:1627-1630`). */

@@ -9,13 +9,13 @@ import { validatorRegistry, type ValidatorRegistry } from './ValidatorRegistry.j
 import type { PropertyValidator } from './propertyValidator.js';
 
 /** Which map a registration came from. */
-export type KeyKind = 'declaration' | 'removal';
+type KeyKind = 'declaration' | 'removal';
 
 /**
  * One key one type registered, spelled as the registration spells it. Roots
  * only: a leaf is not a registration.
  */
-export interface RegisteredKey {
+interface RegisteredKey {
   readonly nodeType: string;
   /**
    * A literal key, or a wildcard pattern (`settings/#/*`). Never a scene key:
@@ -26,7 +26,7 @@ export interface RegisteredKey {
 }
 
 /** A validator the sweep reached, and everything about where it was reached. */
-export interface Subject {
+interface Subject {
   /** `Type.key` at a root, plus one `[i]` per `leaves` hop below it. */
   readonly label: string;
   readonly nodeType: string;
@@ -50,7 +50,7 @@ export interface Root extends Partial<RegisteredKey> {
 }
 
 /** How a walk is scoped and how it refuses to be vacuous. */
-export interface WalkOptions {
+interface WalkOptions {
   /**
    * Walk exactly these instead of the registry's own registrations: the seam a
    * guard uses to prove its bite against scratch validators.

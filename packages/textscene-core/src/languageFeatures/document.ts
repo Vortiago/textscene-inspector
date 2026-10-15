@@ -11,7 +11,7 @@ import { TscnParserCore, type ParseObserver, type SectionType } from '../parser/
 import type { ParsedHeading } from '../parser/utils.js';
 
 /** The four section tags a feature reads, and `other` for the rest (`gd_scene`, `connection`). */
-export type SectionKind = 'node' | 'sub_resource' | 'ext_resource' | 'resource' | 'other';
+type SectionKind = 'node' | 'sub_resource' | 'ext_resource' | 'resource' | 'other';
 
 /** One property line, as written, with Godot's resolution beside it. */
 export interface PropertySlot {

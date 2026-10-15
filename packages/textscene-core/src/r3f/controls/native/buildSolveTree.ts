@@ -73,7 +73,7 @@ import {
 import { parseStyleBox, type ResolvedStyleBox } from './parseStyleBox';
 import type { Vec2 } from './rect';
 
-export interface UseBuildSolveTreeResult {
+interface UseBuildSolveTreeResult {
   /** Every Control whose canvas item parents at the viewport's canvas: scene roots, promoted, hoisted and `top_level` Controls. */
   tree: readonly SolveNode[];
   /** Bumps on every load or failure and on settled font metrics: a stable dependency for a consumer's memo. */
@@ -265,7 +265,7 @@ function isSortableChild(live: TscnNode): boolean {
  * so Node2D chains compose, and a non-`CanvasItem` link reparents at the nearest
  * canvas (`canvas_item.cpp:246-267`): `null`, so nothing above it leaks through.
  */
-export function nextSkippedAncestors(
+function nextSkippedAncestors(
   collapsed: TscnNode,
   previous: SkippedAncestors | null
 ): SkippedAncestors | null {

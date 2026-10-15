@@ -6,7 +6,7 @@
 import { glowParamsFor, type GlowParams } from '../../resources/environment/godotGlow';
 import type { EnvironmentSettings } from '../../resources/environment/types';
 
-export interface CompositorPass {
+interface CompositorPass {
   /** Null when the environment has no glow. */
   glow: GlowParams | null;
 }

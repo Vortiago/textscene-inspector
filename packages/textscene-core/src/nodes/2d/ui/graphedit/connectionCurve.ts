@@ -19,7 +19,7 @@ const MAX_STAGES = 5;
 const CURVED_TOLERANCE_DEG = 2;
 const STRAIGHT_TOLERANCE_DEG = 4;
 
-export interface ConnectionCurveControlPoints {
+interface ConnectionCurveControlPoints {
   p0: Vec2;
   p1: Vec2;
   p2: Vec2;

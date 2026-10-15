@@ -125,7 +125,7 @@ function declaredSlot(slots: Map<number, GraphNodeSlot>, rawIndex: number): Grap
  * `Slot()` (`draw_stylebox = true`) for an undeclared index, so the child gets the `sb_slot` margin
  * and the draw pass boxes that slot under a real `theme_override_styles/slot`.
  */
-export function graphNodeEffectiveSlot(slots: Map<number, GraphNodeSlot>, rawIndex: number): GraphNodeSlot {
+function graphNodeEffectiveSlot(slots: Map<number, GraphNodeSlot>, rawIndex: number): GraphNodeSlot {
   return slots.get(rawIndex) ?? defaultGraphNodeSlot();
 }
 
@@ -276,7 +276,7 @@ controlSolverRegistry.registerContainerLayout('GraphNode', graphNodeLayout);
 
 // --- Draw-time row geometry (NOTIFICATION_DRAW's port/slot-stylebox loop) -----
 
-export interface GraphNodeDrawRow {
+interface GraphNodeDrawRow {
   rawIndex: number;
   slot: GraphNodeSlot;
   /** `slot_y_cache[slot_index]`: the row's vertical centre, Godot px. */

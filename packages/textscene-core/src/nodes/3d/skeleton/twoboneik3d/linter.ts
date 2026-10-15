@@ -162,5 +162,3 @@ const twoBoneIK3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(twoBoneIK3DValidationRule);
-
-export { twoBoneIK3DValidationRule };

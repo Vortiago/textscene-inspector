@@ -10,5 +10,3 @@ controlSolverRegistry.registerMinimumSize('Label', labelMinimumSize);
 // With autowrap ON the minimum height is the text wrapped at this control's
 // width, which only a completed pass knows (`SolveContext.tentativeRect`).
 controlSolverRegistry.registerSizeDependentMinimum('Label');
-
-export { Label };

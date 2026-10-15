@@ -176,7 +176,7 @@ const TEXTURE_FILTER_LINEAR_WITH_MIPMAPS = 4;
 const TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC = 5;
 const TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC = 6;
 
-export type TextureRectFilter = 'nearest' | 'linear';
+type TextureRectFilter = 'nearest' | 'linear';
 
 /**
  * `CanvasItem::TextureFilter` (`scene/main/canvas_item.h:52-60`), already resolved up the ancestors,
@@ -200,7 +200,7 @@ export function resolveTextureRectFilter(filter: number | undefined): TextureRec
 const TEXTURE_REPEAT_ENABLED = 2;
 const TEXTURE_REPEAT_MIRROR = 3;
 
-export type TextureRectRepeat = 'clamp' | 'repeat' | 'mirror';
+type TextureRectRepeat = 'clamp' | 'repeat' | 'mirror';
 
 /**
  * `CanvasItem::TextureRepeat` (`scene/main/canvas_item.h:63-69`), already resolved up the ancestors,

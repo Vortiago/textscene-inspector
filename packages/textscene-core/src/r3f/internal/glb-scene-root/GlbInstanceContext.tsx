@@ -45,7 +45,7 @@ export function useGlbRoot(nodePath: string | null): GlbRoot {
   );
 }
 
-export interface GlbInstanceProviderProps {
+interface GlbInstanceProviderProps {
   /** The node that instances the GLB. */
   node: LiveNode;
   path: string;

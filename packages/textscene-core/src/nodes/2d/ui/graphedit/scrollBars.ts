@@ -26,7 +26,7 @@ export interface GraphEditScrollBar {
   grabberRect: Rect2;
 }
 
-export interface GraphEditScrollBars {
+interface GraphEditScrollBars {
   horizontal: GraphEditScrollBar;
   vertical: GraphEditScrollBar;
 }

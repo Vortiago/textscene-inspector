@@ -10,15 +10,9 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import { FillMode } from './types';
 
-export const FILL_LEFT_TO_RIGHT = 0;
-export const FILL_RIGHT_TO_LEFT = 1;
-export const FILL_TOP_TO_BOTTOM = 2;
-export const FILL_BOTTOM_TO_TOP = 3;
-export const FILL_BILINEAR_LEFT_AND_RIGHT = 6;
-export const FILL_BILINEAR_TOP_AND_BOTTOM = 7;
-
-export interface LinearProgressDraw {
+interface LinearProgressDraw {
   /** Where the cropped region draws, control-local Godot px (`progress_offset` folded in). */
   offset: Vec2;
   /** The drawn (== cropped) size. */
@@ -36,7 +30,7 @@ export function linearProgressDraw(
 ): LinearProgressDraw | null {
   const s = textureSize;
   switch (mode) {
-    case FILL_LEFT_TO_RIGHT: {
+    case FillMode.LEFT_TO_RIGHT: {
       const w = s.x * ratio;
       return {
         region: { x: 0, y: 0, w, h: s.y },
@@ -44,7 +38,7 @@ export function linearProgressDraw(
         size: { x: w, y: s.y },
       };
     }
-    case FILL_RIGHT_TO_LEFT: {
+    case FillMode.RIGHT_TO_LEFT: {
       const w = s.x * ratio;
       const x = s.x - w;
       return {
@@ -53,7 +47,7 @@ export function linearProgressDraw(
         size: { x: w, y: s.y },
       };
     }
-    case FILL_TOP_TO_BOTTOM: {
+    case FillMode.TOP_TO_BOTTOM: {
       const h = s.y * ratio;
       return {
         region: { x: 0, y: 0, w: s.x, h },
@@ -61,7 +55,7 @@ export function linearProgressDraw(
         size: { x: s.x, y: h },
       };
     }
-    case FILL_BOTTOM_TO_TOP: {
+    case FillMode.BOTTOM_TO_TOP: {
       const h = s.y * ratio;
       const y = s.y - h;
       return {
@@ -70,7 +64,7 @@ export function linearProgressDraw(
         size: { x: s.x, y: h },
       };
     }
-    case FILL_BILINEAR_LEFT_AND_RIGHT: {
+    case FillMode.BILINEAR_LEFT_AND_RIGHT: {
       const w = s.x * ratio;
       const x = s.x / 2 - w / 2;
       return {
@@ -79,7 +73,7 @@ export function linearProgressDraw(
         size: { x: w, y: s.y },
       };
     }
-    case FILL_BILINEAR_TOP_AND_BOTTOM: {
+    case FillMode.BILINEAR_TOP_AND_BOTTOM: {
       const h = s.y * ratio;
       const y = s.y / 2 - h / 2;
       return {

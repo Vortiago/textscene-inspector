@@ -14,7 +14,7 @@ import { parseGodotFloat } from '../godot/number.js';
  * (`resource_format_text.h:44`). A `format=2` file's integer ids would read as a
  * mass of dangling references in a file that loads perfectly.
  */
-export const LEGACY_FORMAT_CEILING = 2;
+const LEGACY_FORMAT_CEILING = 2;
 
 /**
  * Whether a declared format is one this linter declines: `1..LEGACY_FORMAT_CEILING`.
@@ -31,7 +31,7 @@ export function isLegacyFormat(format: number | null): boolean {
 }
 
 /** A header's declared format version, or `null` where it declares none. */
-export interface HeaderFormat {
+interface HeaderFormat {
   /**
    * The version, or `null` when the attribute is absent or unreadable. Absent is
    * current, not legacy: `} else { format_version = FORMAT_VERSION; }`

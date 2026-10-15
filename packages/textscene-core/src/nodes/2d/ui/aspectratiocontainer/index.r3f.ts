@@ -12,5 +12,3 @@ controlComponentRegistry.register({
   typeName: 'AspectRatioContainer',
   Component: AspectRatioContainer,
 });
-
-export { AspectRatioContainer };

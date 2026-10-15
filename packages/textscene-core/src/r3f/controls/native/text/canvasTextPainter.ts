@@ -37,7 +37,7 @@ function wholeDevicePx(cssPx: number): number {
   return Math.max(1, Math.ceil(cssPx * CANVAS_TEXT_SUPERSAMPLE));
 }
 
-export interface CanvasTextCanvasLayout {
+interface CanvasTextCanvasLayout {
   /** Raster canvas width, CSS px before supersampling: `layout.widthPx` plus twice `offsetXPx`, rounded up to a whole device pixel. */
   canvasWidthPx: number;
   /** Raster canvas height, CSS px before supersampling: `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole device pixel. */
@@ -84,7 +84,7 @@ export function computeCanvasTextCanvasLayout(
 }
 
 /** The `GlyphQuadArrays` shape `buildGlyphQuadArrays` produces, always exactly one quad. */
-export interface CanvasTextQuadArrays {
+interface CanvasTextQuadArrays {
   positions: Float32Array;
   uvs: Float32Array;
   indices: Uint32Array;
@@ -209,7 +209,7 @@ export interface CanvasTextBlend {
   injection?: ProgramInjection;
 }
 
-export interface CanvasTextMaterialOptions extends Partial<CanvasTextBlend> {
+interface CanvasTextMaterialOptions extends Partial<CanvasTextBlend> {
   map: THREE.Texture;
   /** Multiplies the raster's anti-aliasing alpha. The raster is opaque, so this is the only place `tint.a` applies. */
   opacity: number;

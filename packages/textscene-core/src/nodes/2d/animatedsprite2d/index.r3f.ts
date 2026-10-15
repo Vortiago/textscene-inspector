@@ -6,5 +6,3 @@ nodeComponentRegistry.register({
   Component: AnimatedSprite2D,
   canvasItem: true,
 });
-
-export { AnimatedSprite2D };

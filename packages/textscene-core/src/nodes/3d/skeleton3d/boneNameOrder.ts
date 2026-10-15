@@ -39,7 +39,7 @@ export function addBoneRefusal(text: string): '' | ':' | '/' | null {
 }
 
 /** A `bones/<i>/name` write Godot drops, and why. */
-export interface BoneNameFinding {
+interface BoneNameFinding {
   kind: 'order' | 'duplicate';
   key: string;
   /** The bone slot the key addresses, as the key writes it. */

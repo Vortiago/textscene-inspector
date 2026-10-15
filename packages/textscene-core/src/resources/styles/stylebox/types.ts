@@ -15,7 +15,7 @@ export interface StyleBoxSides {
 }
 
 /** Godot's four `Corner`s, in its `corner_radius` array order. */
-export interface StyleBoxCorners {
+interface StyleBoxCorners {
   topLeft: number;
   topRight: number;
   bottomRight: number;
@@ -44,7 +44,7 @@ export interface StyleBoxFlatData {
 }
 
 /** `StyleBoxEmpty`: a box that draws nothing, but is still a box we decode. */
-export interface StyleBoxEmptyData {
+interface StyleBoxEmptyData {
   kind: 'empty';
 }
 

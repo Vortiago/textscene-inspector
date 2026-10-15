@@ -12,5 +12,3 @@ const videoStreamPlayerRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(videoStreamPlayerRegistration);
-
-export { videoStreamPlayerRegistration };

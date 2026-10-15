@@ -18,12 +18,10 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import {
   AutowrapMode,
-  isTextLayoutResult,
   shapeText,
   shapedTextSizeWidthPx,
 } from '../../../../r3f/controls/native/text/textLayout';
@@ -119,7 +117,7 @@ function flatBox(
   };
 }
 
-export interface TabBarStyleBoxes {
+interface TabBarStyleBoxes {
   selected: StyleBoxFlatData;
   unselected: StyleBoxFlatData;
   disabled: StyleBoxFlatData;
@@ -247,7 +245,7 @@ type TabBarThemeIconName = (typeof TAB_BAR_THEME_ICON_NAMES)[number];
  * themed close/increment/decrement icon in `SolveNode.icons`. `buildSolveTree.ts`'s
  * generic path models one texture property per node and cannot see an indexed family.
  */
-export const tabBarTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
+const tabBarTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
   const tabs = (node.properties as TabBarProperties).tabs ?? [];
   const requests: TextureSlotRequest[] = [];
   tabs.forEach((tab, i) => {
@@ -326,8 +324,6 @@ export function shapeTabLabel(
     fontMetrics,
   });
 }
-
-export { isTextLayoutResult };
 
 /**
  * `TabBar::get_minimum_size` (`tab_bar.cpp:44-122`). A hidden tab contributes nothing
@@ -439,7 +435,7 @@ export interface TabLayoutItem {
   truncated: boolean;
 }
 
-export interface TabBarDrawLayout {
+interface TabBarDrawLayout {
   /** Every non-hidden tab from `offset` to `maxDrawnTab` inclusive, matching `if (tabs[i].hidden) continue`. */
   items: readonly TabLayoutItem[];
   offset: number;
@@ -559,9 +555,7 @@ export function computeTabBarDrawLayout(
 /** `TabBar::_get_tab_icon_size` (`:1806-1826`), restricted to the theme-constant clamp: a per-tab `icon_max_width` is `set_tab_icon_max_width`-only (script, never serialised), always 0. */
 export { fitIconSize as fitTabIconSize };
 
-export { contentMarginSize };
-
-export interface TabContentLayout {
+interface TabContentLayout {
   icon: { rect: Rect2 } | null;
   text: { offset: Vec2 } | null;
   close: { rect: Rect2; iconOffset: Vec2 } | null;
@@ -635,14 +629,14 @@ export function tabDrawX(ofsPx: number, tabWidthPx: number, barWidthPx: number, 
   return rtl ? barWidthPx - ofsPx - tabWidthPx : ofsPx;
 }
 
-export interface ScrollArrowPlacement {
+interface ScrollArrowPlacement {
   x: number;
   y: number;
   /** `Color(1, 1, 1, 0.5)` rather than full opacity. */
   dim: boolean;
 }
 
-export interface ScrollArrowsLayout {
+interface ScrollArrowsLayout {
   decrement: ScrollArrowPlacement;
   increment: ScrollArrowPlacement;
 }

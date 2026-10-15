@@ -10,6 +10,5 @@ const colorRectRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(colorRectRegistration);
 
-export { colorRectRegistration };
 export * from './parser';
 export * from './types';

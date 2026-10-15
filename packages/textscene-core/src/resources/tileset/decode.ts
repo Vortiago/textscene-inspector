@@ -29,7 +29,7 @@ import type {
 } from './types';
 
 /** Context-independent view of a TileSet resource and its surroundings. */
-export interface TileSetSourceData {
+interface TileSetSourceData {
   /** The TileSet resource's own properties (raw value strings). */
   properties: Record<string, string>;
   findSubResource(id: string): TscnInternalResource | undefined;
@@ -44,7 +44,7 @@ export interface TileSetSourceData {
  */
 const SOURCE_KEY_RE = indexedKeyRegex('^sources/(#)$', 'is_valid_int');
 
-export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
+function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   const sources = new Map<number, AtlasSourceModel>();
   const tileMaterial = tileMaterialResolver(data);
 

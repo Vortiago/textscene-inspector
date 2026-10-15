@@ -41,9 +41,7 @@ import type { MaterialResource, MaterialSource } from './materialSource';
 import { readyMaterial, useMaterial } from './useMaterial';
 import type { MaterialTextureMaps } from './materialTextureMaps';
 
-export type { MaterialTextureMaps };
-
-export interface ResolvedMaterialTextures {
+interface ResolvedMaterialTextures {
   maps: MaterialTextureMaps;
   /**
    * A slot's file could not load, or the albedo slot names a ViewportTexture whose pass is
@@ -53,7 +51,7 @@ export interface ResolvedMaterialTextures {
 }
 
 /** The resource tables a material's references resolve in: its owning file's. */
-export type MaterialTables = Pick<MaterialResource, 'internalResources' | 'externalResources'>;
+type MaterialTables = Pick<MaterialResource, 'internalResources' | 'externalResources'>;
 
 const NO_TABLES: MaterialTables = { internalResources: [], externalResources: [] };
 
@@ -310,7 +308,7 @@ export function useMaterialTextures(
   return { maps, isUnresolved: isFileMissing || viewportCyclic };
 }
 
-export interface SurfaceMaterialSlotProps {
+interface SurfaceMaterialSlotProps {
   /** The material this surface renders with; undefined = the renderer's default. */
   source: MaterialSource | undefined;
   /** R3F attach key: `material` for a single surface, `material-N` for many (`surfaceAttach`). */

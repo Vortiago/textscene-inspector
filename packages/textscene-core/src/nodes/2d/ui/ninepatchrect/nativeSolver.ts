@@ -25,7 +25,7 @@ const TEXTURE_FILTER_NEAREST = 1;
 const TEXTURE_FILTER_NEAREST_WITH_MIPMAPS = 3;
 const TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC = 5;
 
-export type NinePatchRectFilter = 'nearest' | 'linear';
+type NinePatchRectFilter = 'nearest' | 'linear';
 
 /**
  * `CanvasItem::TextureFilter` (`scene/main/canvas_item.h:52-60`) as three.js filters: the mapping of

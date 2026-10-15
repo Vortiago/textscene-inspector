@@ -40,4 +40,3 @@ const softBody3DValidationRule: LintRule = {
 ruleRegistry.register(softBody3DValidationRule);
 
 // Export for testing
-export { softBody3DValidationRule };

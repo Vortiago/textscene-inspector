@@ -14,7 +14,7 @@ import {
   type TextureSlotRequest,
   type TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import type { TextureProgressBarProperties } from './types';
+import { FillMode, type TextureProgressBarProperties } from './types';
 
 /** The keys `textureProgressBarTextureSlots`/`textureProgressBarMinimumSize` share for `SolveNode.textureSlots`. */
 export const TEXTURE_UNDER_KEY = 'texture_under';
@@ -35,18 +35,15 @@ export const textureProgressBarTextureSlots: TextureSlotsFn = (node: TscnNode) =
   return requests;
 };
 
-export const TEXTURE_FILL_LEFT_TO_RIGHT = 0;
-export const TEXTURE_FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE = 8;
-
 /**
  * `set_fill_mode` (`texture_progress_bar.cpp:575-583`) refuses an out-of-range write with
  * `ERR_FAIL_INDEX`, so `mode` keeps its default (`FILL_LEFT_TO_RIGHT`, `texture_progress_bar.h:105`).
  */
 export function normalizeTextureProgressBarFillMode(fillMode: number | undefined): number {
-  const mode = fillMode ?? TEXTURE_FILL_LEFT_TO_RIGHT;
-  return mode >= TEXTURE_FILL_LEFT_TO_RIGHT && mode <= TEXTURE_FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE
+  const mode = fillMode ?? FillMode.LEFT_TO_RIGHT;
+  return mode >= FillMode.LEFT_TO_RIGHT && mode <= FillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE
     ? mode
-    : TEXTURE_FILL_LEFT_TO_RIGHT;
+    : FillMode.LEFT_TO_RIGHT;
 }
 
 export const textureProgressBarMinimumSize: MinimumSizeFn = (n) => {

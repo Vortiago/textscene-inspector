@@ -27,7 +27,7 @@ export interface CappedItem {
   take(positionalLights: readonly number[] | null): void;
 }
 
-export interface ItemLightCap {
+interface ItemLightCap {
   readonly lights: ReadonlyMap<number, CanvasLightDeclaration>;
   /** Each registered item, with the positional lights it was last handed, null until crowded. */
   readonly items: Map<CappedItem, readonly number[] | null>;

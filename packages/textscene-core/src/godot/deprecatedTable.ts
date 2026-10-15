@@ -17,7 +17,7 @@ import { doubledVector, isTruthy } from './deprecatedTransforms.js';
  * The object form adds the arm's value test (`applies`, absent when every value forwards) and the
  * value the setter receives (`transform`, absent when the literal passes through).
  */
-export type AliasRow =
+type AliasRow =
   | string
   | {
       readonly to: string;

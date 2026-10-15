@@ -61,5 +61,3 @@ const canvasGroupAncestryRule: LintRule = {
 };
 
 ruleRegistry.register(canvasGroupAncestryRule);
-
-export { canvasGroupAncestryRule };

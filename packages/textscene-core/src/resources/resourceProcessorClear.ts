@@ -12,13 +12,13 @@ import * as logger from '../logger';
  * The part of a cache a clear touches. Structural, so the test fake's plain `Map`
  * runs the same clear as the processor's `LRUCache`.
  */
-export interface ClearableCache {
+interface ClearableCache {
   keys(): IterableIterator<string>;
   delete(key: string): unknown;
   clear(): void;
 }
 
-export interface ClearContext {
+interface ClearContext {
   cache: ClearableCache;
   inflight: Map<string, symbol>;
   eventBus: ResourceEventBus;

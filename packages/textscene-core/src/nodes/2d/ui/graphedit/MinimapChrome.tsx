@@ -126,7 +126,7 @@ function MinimapConnections({
   );
 }
 
-export interface GraphEditMinimapProps {
+interface GraphEditMinimapProps {
   /** The rect of the minimap panel in GraphEdit's local space. */
   rect: Rect2;
   transform: MinimapTransform;

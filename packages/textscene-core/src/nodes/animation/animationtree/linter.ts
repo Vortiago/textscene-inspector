@@ -124,4 +124,3 @@ const animationTreeValidationRule: LintRule = {
 ruleRegistry.register(animationTreeValidationRule);
 
 // Export for testing
-export { animationTreeValidationRule };

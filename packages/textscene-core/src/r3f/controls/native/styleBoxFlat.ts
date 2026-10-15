@@ -56,7 +56,7 @@ type Sides = { left: number; top: number; right: number; bottom: number };
 const NO_SIDES: Sides = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /** Every field `make_flat_stylebox` (`default_theme.cpp:57-70`) leaves at `StyleBoxFlat`'s own default. */
-export interface FlatStyleBoxOptions {
+interface FlatStyleBoxOptions {
   contentMargin?: Sides;
   cornerRadius?: number | StyleBoxFlatData['cornerRadius'];
   borderWidth?: number | Sides;

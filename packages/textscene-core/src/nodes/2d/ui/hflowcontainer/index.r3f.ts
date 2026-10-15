@@ -13,5 +13,3 @@ controlComponentRegistry.register({
   typeName: 'HFlowContainer',
   Component: HFlowContainer,
 });
-
-export { HFlowContainer };

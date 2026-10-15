@@ -11,7 +11,7 @@ import type { TscnNode } from '../parser/types.js';
 import { multiplyModulate, WHITE_MODULATE, type RGBA } from './canvasItemModulate.js';
 
 /** The `SpriteBase3D` subclasses (`sprite_3d.h:36`): `cast_to<SpriteBase3D>` in type-name terms. */
-export const SPRITE_BASE_3D_TYPES: ReadonlySet<string> = new Set(['Sprite3D']);
+const SPRITE_BASE_3D_TYPES: ReadonlySet<string> = new Set(['Sprite3D']);
 
 /** The immediate parent's accumulation, white unless that parent is a SpriteBase3D. */
 const ParentColorAccumContext = createContext<RGBA>(WHITE_MODULATE);

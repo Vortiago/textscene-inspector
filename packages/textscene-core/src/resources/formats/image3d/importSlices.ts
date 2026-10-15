@@ -6,7 +6,7 @@
 import type { ParsedImportFile } from '../../../parser/importParser';
 
 /** The importer a sidecar names for a 3D texture (`resource_importer_layered_texture.cpp:53-54`). */
-export const TEXTURE_3D_IMPORTER = '3d_texture';
+const TEXTURE_3D_IMPORTER = '3d_texture';
 
 /** The slices across and down the image. */
 export interface ImportSlices {

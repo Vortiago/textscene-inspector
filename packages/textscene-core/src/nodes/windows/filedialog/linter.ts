@@ -77,5 +77,3 @@ const fileDialogValidationRule: LintRule = {
 };
 
 ruleRegistry.register(fileDialogValidationRule);
-
-export { fileDialogValidationRule };

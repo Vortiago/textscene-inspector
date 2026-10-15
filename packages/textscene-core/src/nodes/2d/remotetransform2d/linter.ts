@@ -62,5 +62,3 @@ const remoteTransform2DPathRule: LintRule = {
 };
 
 ruleRegistry.register(remoteTransform2DPathRule);
-
-export { remoteTransform2DPathRule };

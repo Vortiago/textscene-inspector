@@ -9,7 +9,7 @@ import { PROPERTY_HINT } from '../godot/propertyHint.js';
 import { VARIANT_TYPE } from '../godot/variantType.js';
 
 /** One `PROPERTY_HINT_ENUM` label, with the integer the engine stores for it. */
-export interface EnumEntry {
+interface EnumEntry {
   readonly label: string;
   /** The integer literal to write. An explicit `Label:3` uses 3, else the label's index. */
   readonly value: string;
@@ -67,7 +67,7 @@ export function acceptedResourceTypes(hint: number, hintString: string): readonl
 }
 
 /** A bounds hint, split into its parts. `or_greater` or `or_less` leaves an end open. */
-export interface RangeHint {
+interface RangeHint {
   readonly min: string;
   readonly max: string;
   readonly hasMin: boolean;

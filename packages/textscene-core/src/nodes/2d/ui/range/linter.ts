@@ -74,5 +74,3 @@ const rangeBoundsRule: LintRule = {
 };
 
 ruleRegistry.register(rangeBoundsRule);
-
-export { rangeBoundsRule };

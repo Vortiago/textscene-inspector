@@ -116,8 +116,6 @@ const ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule: LintRule =
 };
 
 ruleRegistry.register(${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule);
-
-export { ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule };
 `
     );
     files.set(
@@ -128,14 +126,11 @@ export { ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule };
 
 import { describe, expect, it } from 'vitest';
 import { ruleRegistry } from '${toSrc}linter/RuleRegistry.js';
-import { ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule } from './linter.js';
 import '${toSrc}linter/index.js';
 
 describe('${typeName} family rule', () => {
   it('registers one rule for the family', () => {
-    expect(ruleRegistry.getRules().find((r) => r.meta.name === 'valid-${typeName.toLowerCase()}')).toBe(
-      ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule
-    );
+    expect(ruleRegistry.getRules().filter((r) => r.meta.name === 'valid-${typeName.toLowerCase()}')).toHaveLength(1);
   });
 });
 `

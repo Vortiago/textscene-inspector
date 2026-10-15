@@ -49,5 +49,3 @@ const skeletonModifier3DParentRule: LintRule = {
 };
 
 ruleRegistry.register(skeletonModifier3DParentRule);
-
-export { skeletonModifier3DParentRule };

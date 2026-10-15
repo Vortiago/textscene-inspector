@@ -69,7 +69,7 @@ export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, str
  * ({@link localSceneClaims}). With no scene tree there is no table, so a `%Name` addresses
  * nothing.
  */
-export interface LocalScene {
+interface LocalScene {
   readonly path: string;
   readonly uniquePaths?: ReadonlyMap<string, string>;
 }

@@ -172,5 +172,3 @@ const windowValidationRule: LintRule = {
 };
 
 ruleRegistry.register(windowValidationRule);
-
-export { windowValidationRule };

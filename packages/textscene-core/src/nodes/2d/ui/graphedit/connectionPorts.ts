@@ -23,12 +23,12 @@ import type { ControlColor } from '../control/types.js';
 import { graphNodeDrawRows, graphNodeStyles } from '../graphnode/nativeSolver.js';
 import type { GraphNodeProperties } from '../graphnode/types.js';
 
-export interface GraphNodePort {
+interface GraphNodePort {
   pos: Vec2;
   color: ControlColor;
 }
 
-export interface GraphNodePorts {
+interface GraphNodePorts {
   /** `right_port_cache`, compacted by ascending raw child index. `from_port` indexes it. */
   outputs: readonly GraphNodePort[];
   /** `left_port_cache`, compacted by ascending raw child index. `to_port` indexes it. */

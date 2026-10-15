@@ -7,7 +7,7 @@
 
 import { parseGodotInt, storedVector2i } from './int.js';
 
-export type FrameKey = 'frame' | 'frame_coords';
+type FrameKey = 'frame' | 'frame_coords';
 
 /** One `frame`/`frame_coords` line, and how the setter received it. */
 export interface FrameWrite {
@@ -24,7 +24,7 @@ export interface FrameWrite {
   refused: { x: boolean; y: boolean };
 }
 
-export interface SpriteFrameState {
+interface SpriteFrameState {
   hframes: number;
   vframes: number;
   frame: number;

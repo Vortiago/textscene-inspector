@@ -19,7 +19,7 @@ export interface RegisteredParallaxLayer {
   origin: { position: Vector2 };
 }
 
-export interface ParallaxScrollRegistry {
+interface ParallaxScrollRegistry {
   /**
    * The ParallaxBackground's own node path. A layer registers only as a direct
    * child: context also reaches a layer under an intervening Node2D, which Godot

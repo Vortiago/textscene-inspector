@@ -15,8 +15,6 @@ import { scaledRgb, type Color } from '../../utils/colorParser';
 import { sRGBChannelToLinear } from '../../utils/colorSpace';
 import { GodotToneMapper } from './godotToneMapping';
 
-export type { EnvironmentSettings } from './types';
-
 /**
  * The white the tonemapper gets, as `Environment::_update_tonemap` (`scene/resources/environment.cpp`)
  * passes `tonemap_agx_white` for AgX: its default is Blender's 16.29, the shoulder's

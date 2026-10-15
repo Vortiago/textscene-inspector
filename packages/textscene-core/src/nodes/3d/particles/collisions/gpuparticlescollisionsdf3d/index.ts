@@ -15,5 +15,3 @@ const gPUParticlesCollisionSDF3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(gPUParticlesCollisionSDF3DRegistration);
-
-export { gPUParticlesCollisionSDF3DRegistration };

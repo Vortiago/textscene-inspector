@@ -9,7 +9,7 @@ import { renameResourceRefs, type ResourceRef } from '../godot/resourceRef.js';
 import type { SceneScope, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { findExtResource, findSubResource } from './SubResourceResolver.js';
 
-export interface RehomedOverride {
+interface RehomedOverride {
   /** The override's raw properties, each reference renamed to its id in `scope`. */
   raw: Record<string, string>;
   /** The node's scope with every resource the override reaches added. */

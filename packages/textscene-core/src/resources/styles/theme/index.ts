@@ -13,5 +13,3 @@ registerResourceSlice({
   typeNames: [...THEME_TYPES],
   busType: 'theme',
 });
-
-export type { ScannedTheme, ThemeAddresses, ThemeResource } from './types';

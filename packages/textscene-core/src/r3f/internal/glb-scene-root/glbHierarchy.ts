@@ -10,7 +10,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import { godotNodeName, godotNodeRole } from '../../../resources/formats/glb/nodeNames.js';
 import type { GltfNodeRole } from '../../../godot/gltfImportNames.js';
 
-export interface GlbHierarchyNode {
+interface GlbHierarchyNode {
   /** Display name, from `glbObjectName`. */
   name: string;
   /** Relative to the GLB root, unique and stable across structurally equal clones. */
@@ -110,7 +110,7 @@ export function flattenGlbObjects(root: THREE.Object3D): GlbObjectEntry[] {
 }
 
 /** A `GLB`-prefixed type, which counts as a supported display type. */
-export function glbInternalNodeType(displayType: string): string {
+function glbInternalNodeType(displayType: string): string {
   switch (displayType) {
     case 'Mesh':
       return 'GLBMesh';

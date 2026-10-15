@@ -56,7 +56,7 @@ export const ICON_MODE_LEFT = 1;
 export const ITEM_LIST_THEME_FONT_KEY = 'font';
 
 /** `control_font_lower_color` (`default_theme.cpp:103`): ItemList's own `font_color` default (`:954`). */
-export const ITEM_LIST_DEFAULT_FONT_COLOR: ControlColor = { r: 0.65, g: 0.65, b: 0.65, a: 1 };
+const ITEM_LIST_DEFAULT_FONT_COLOR: ControlColor = { r: 0.65, g: 0.65, b: 0.65, a: 1 };
 
 const ITEM_LIST_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 
@@ -78,7 +78,7 @@ export function itemListIconSlotKey(index: number): string {
 }
 
 /** `item_N/icon` (`item_list.cpp:2464`): one slot request per row that names an icon. */
-export const itemListTextureSlots: TextureSlotsFn = (node: TscnNode) => {
+const itemListTextureSlots: TextureSlotsFn = (node: TscnNode) => {
   const props = node.properties as ItemListProperties;
   const requests: TextureSlotRequest[] = [];
   (props.items ?? []).forEach((item, index) => {
@@ -120,9 +120,7 @@ const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const DEFAULT_BORDER_COLOR: ControlColor = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
 
 /** `theme->set_stylebox(panel, "ItemList", make_flat_stylebox(style_normal_color))` (`default_theme.cpp:944`): every `make_flat_stylebox` default (margin 4, corner radius 3), both scaled. */
-export function itemListPanelStyleBox(
-  theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>
-): StyleBoxFlatData {
+function itemListPanelStyleBox(theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>): StyleBoxFlatData {
   const m = theme.contentMargin;
   return {
     bgColor: STYLE_FILL.normal,
@@ -214,11 +212,11 @@ export function itemListAutowrapMode(iconMode: number, maxTextLines: number): Au
  * unconstrained (Godot's `-1`, this engine's `0`). Text is not shaped again at the
  * final column width (`item_list.cpp:1628-1634,1657-1661`), so a wider fitted column is approximate.
  */
-export function itemListShapeWidth(fixedColumnWidth: number): number {
+function itemListShapeWidth(fixedColumnWidth: number): number {
   return fixedColumnWidth > 0 ? fixedColumnWidth : 0;
 }
 
-export interface ItemTextShapeInput {
+interface ItemTextShapeInput {
   text: string;
   fontSizePx: number;
   fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics'];
@@ -275,7 +273,7 @@ function itemListLineSeparationForShaping(_input: ItemTextShapeInput): number {
 
 // --- Per-item minimum size --------------------------------------------------
 
-export interface ItemContentInput {
+interface ItemContentInput {
   hasIcon: boolean;
   iconSize: Vec2;
   hasText: boolean;
@@ -340,7 +338,7 @@ export function itemMinimumSize(
 
 // --- Row packing: force_update_list_size's phase 2 (item_list.cpp:1798-1912) -
 
-export interface ItemListPackInput {
+interface ItemListPackInput {
   /** Per-item minsize, including h/v separation: `itemMinimumSize`'s own output. */
   itemSizes: readonly Vec2[];
   /** The widest item's own minsize.x, across every item (`item_list.cpp:1786`): only consumed when `sameColumnWidth`. */
@@ -361,13 +359,13 @@ export interface ItemListPackInput {
   availableHeight: number;
 }
 
-export interface ItemListPackedItem {
+interface ItemListPackedItem {
   /** Relative to the packed content origin: the caller adds `base_ofs` (`item_list.cpp:1429`, the panel's own offset minus scroll). */
   rect: Rect2;
   column: number;
 }
 
-export interface ItemListPackResult {
+interface ItemListPackResult {
   items: readonly ItemListPackedItem[];
   /** Row-separator Y positions, content-relative (`item_list.cpp:1840`). */
   separators: readonly number[];
@@ -536,7 +534,7 @@ controlSolverRegistry.registerTextureSlots('ItemList', itemListTextureSlots);
 
 // --- Draw-time per-item geometry (item_list.cpp:1536-1691) ----------------
 
-export interface ItemIconDraw {
+interface ItemIconDraw {
   /** Relative to the item's own rect origin. `null` when the item has no icon. */
   rect: Rect2 | null;
   /** `icon_size.height + icon_margin` (TOP) or `icon_size.width + icon_margin` (LEFT): the pen offset the text inherits. */
@@ -637,7 +635,7 @@ export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): ControlColor {
   return n.colors.guide_color ?? ITEM_LIST_DEFAULT_GUIDE_COLOR;
 }
 
-export interface ItemListGuideLine {
+interface ItemListGuideLine {
   /** Content-relative Y: the caller adds the panel's own offset (`origin`, `item_list.cpp:1429`). */
   y: number;
   /** Spans the panel's own content width, from its content origin (`item_list.cpp:1455-1457`). */
@@ -670,7 +668,7 @@ export function itemListMirrorX(ltrX: number, widthPx: number, controlWidthPx: n
   return rtl ? controlWidthPx - ltrX - widthPx : ltrX;
 }
 
-export interface ItemListRowTextXInput {
+interface ItemListRowTextXInput {
   /** `base_ofs.x + rect_cache.position.x + text_ofs.x`: the LTR pen origin. */
   ltrX: number;
   itemRectWidthPx: number;

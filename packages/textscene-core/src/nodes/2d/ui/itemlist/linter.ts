@@ -78,5 +78,3 @@ const itemListValidationRule: LintRule = {
 };
 
 ruleRegistry.register(itemListValidationRule);
-
-export { itemListValidationRule };

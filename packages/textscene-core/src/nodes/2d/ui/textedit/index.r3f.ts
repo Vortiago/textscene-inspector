@@ -10,5 +10,3 @@ controlSolverRegistry.registerMinimumSize('TextEdit', textEditMinimumSize);
 // `scroll_fit_content_height` under `wrap_mode` BOUNDARY needs this node's resolved width
 // to count its wrapped rows (`nativeSolver.ts`, `solverRegistry.ts`'s `tentativeRect`).
 controlSolverRegistry.registerSizeDependentMinimum('TextEdit');
-
-export { TextEdit };

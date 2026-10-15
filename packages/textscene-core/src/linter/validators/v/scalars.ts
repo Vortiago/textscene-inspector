@@ -135,7 +135,7 @@ export const scalarCombinators = {
  * fails on another typed array (`array.cpp:275-277`), an error. `hinted`: a bare
  * `const Array &` setter behind a `PROPERTY_HINT_ARRAY_TYPE`, a warning.
  */
-export type TypedArraySlot = { typedAs: string } & (
+type TypedArraySlot = { typedAs: string } & (
   { enforced: string; hinted?: never } | { hinted: string; enforced?: never }
 );
 

@@ -52,17 +52,17 @@ export function textEditRowHeightPx(
 }
 
 /** `default_theme.cpp:482`: `theme->set_constant("wrap_offset", "TextEdit", 10)`, a bare `10`, not `Math.round(10 * scale)` like its neighbours. `_update_wrap_at_column` (`:8536-8543`) subtracts it unscaled. */
-export const TEXT_EDIT_WRAP_OFFSET_PX = 10;
+const TEXT_EDIT_WRAP_OFFSET_PX = 10;
 
 /** `text_edit.cpp:8614`: `content_size_cache = Vector2i(total_width + 10, ...)`, a second bare, unscaled `10`. */
-export const TEXT_EDIT_CONTENT_WIDTH_PAD_PX = 10;
+const TEXT_EDIT_CONTENT_WIDTH_PAD_PX = 10;
 
 /**
  * `TextEdit::get_draw_mode`'s stylebox axis. TextEdit's `normal`/`read_only` are the same
  * `Ref<StyleBoxFlat>` objects as LineEdit's (`default_theme.cpp:453,455`), as are CodeEdit's
  * (`:486,488`), so `theme.widgets.lineEdit` is this type's own default.
  */
-export type TextEditStyleState = 'normal' | 'read_only';
+type TextEditStyleState = 'normal' | 'read_only';
 
 /** `editable ?? true` (TextEdit's own default, `text_edit.h`), collapsed to which stylebox key it selects. */
 export function resolveTextEditStyleState(editable: boolean | undefined): TextEditStyleState {
@@ -80,10 +80,10 @@ export function pickTextEditStyleBox(
 }
 
 /** `control_font_color` = `Color(0.875, 0.875, 0.875)` (`default_theme.cpp:101`): the `font_color` default of TextEdit and CodeEdit (`:466`, `:512`). */
-export const TEXT_EDIT_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+const TEXT_EDIT_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 
 /** `control_font_disabled_color` = `control_font_color * Color(1,1,1,0.5)` (`:106`): TextEdit's `font_readonly_color` default (`:468`). CodeEdit computes the same value inline (`:513`). */
-export const TEXT_EDIT_DEFAULT_READONLY_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+const TEXT_EDIT_DEFAULT_READONLY_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
 
 const TEXT_EDIT_THEME_KEYS: Record<TextEditStyleState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
@@ -110,7 +110,7 @@ export function textEditTextTheme(
 }
 
 /** A single buffer line's already-shaped rows plus its own start row index within the whole TextEdit. */
-export interface TextEditLineLayout {
+interface TextEditLineLayout {
   layout: TextLayoutResult;
   startRow: number;
 }
@@ -293,7 +293,7 @@ export const textEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   return textEditMinimumSizeWith(n, ctx, props, styleBox, 0);
 };
 
-export interface TextEditDrawLayout {
+interface TextEditDrawLayout {
   /** `Math.ceil(style->get_margin(SIDE_LEFT))` (`text_edit.cpp:938`), plus any gutter width/padding this caller passes in. */
   xMarginBeginPx: number;
   /** `size.width - Math.floor(style->get_margin(SIDE_RIGHT))`, minus the minimap when drawn (`:941-944`). */
@@ -470,7 +470,7 @@ function sameColor(a: Color, b: Color): boolean {
   return a.r === b.r && a.g === b.g && a.b === b.b && a.a === b.a;
 }
 
-export interface TextEditGlyphColorRun {
+interface TextEditGlyphColorRun {
   glyphs: GlyphPlacement[];
   color: Color;
 }

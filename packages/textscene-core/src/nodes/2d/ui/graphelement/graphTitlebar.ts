@@ -31,7 +31,7 @@ import { layoutLabelLines, LABEL_LINE_SPACING_PX, LABEL_PARAGRAPH_SEPARATOR } fr
 /** `title_label`'s real Godot class: both variations are declared `set_type_variation("Label")`. */
 const TITLE_LABEL_NATIVE_TYPE = 'Label';
 
-export interface TitlebarFontTheme {
+interface TitlebarFontTheme {
   fontSizePx: number;
   color: ControlColor;
   fontMetrics: FontMetrics;
@@ -88,7 +88,7 @@ export function titleTextMinimumSize(text: string, fontTheme: TitlebarFontTheme)
   return { x: shapedTextSizeWidthPx(layout.widthPx), y: height };
 }
 
-export interface TitlebarGeometry {
+interface TitlebarGeometry {
   /** The titlebar StyleBox's own drawn rect, relative to the owning node's top-left. */
   rect: { x: number; y: number; w: number; h: number };
   /** `titlebar_hbox`'s own content rect (post `sb_titlebar` margins), where `title_label` draws. */

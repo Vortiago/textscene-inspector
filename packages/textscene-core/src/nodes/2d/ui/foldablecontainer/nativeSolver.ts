@@ -38,7 +38,7 @@ import type { FoldableContainerProperties } from './types';
 import { TITLE_POSITION_BOTTOM, TITLE_POSITION_TOP } from './types';
 
 /** `SceneStringName(font)` and `"font_size"`: the theme font keys of FoldableContainer (`foldable_container.cpp:568-569`). */
-export const FOLDABLE_CONTAINER_THEME_FONT_KEY = 'font';
+const FOLDABLE_CONTAINER_THEME_FONT_KEY = 'font';
 
 /** `Math::round(2 * scale)` (`default_theme.cpp:1336`), from the raw, unrounded `gui/theme/default_theme_scale`. */
 export function foldableContainerHSeparation(theme: NativeTheme): number {

@@ -67,5 +67,3 @@ const pointLight2DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(pointLight2DValidationRule);
-
-export { pointLight2DValidationRule };

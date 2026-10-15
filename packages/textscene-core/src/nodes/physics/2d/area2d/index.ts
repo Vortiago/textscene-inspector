@@ -17,7 +17,6 @@ const area2DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(area2DRegistration);
 
-export { area2DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

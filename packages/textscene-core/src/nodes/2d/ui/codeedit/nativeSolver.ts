@@ -53,7 +53,7 @@ export function codeEditLineNumberText(
   return String(lineIndex + 1).padStart(digits, zeroPad ? ZERO_PAD : SPACE_PAD);
 }
 
-export interface CodeEditGutterBand {
+interface CodeEditGutterBand {
   mainDrawn: boolean;
   mainWidthPx: number;
   lineNumbersDrawn: boolean;
@@ -206,7 +206,7 @@ export function codeEditFoldIconRect(cell: Rect2): Rect2 {
 export const CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR: ControlColor = { r: 0.3, g: 0.5, b: 0.8, a: 0.1 };
 
 /** One drawn `line_length_guidelines` rule. */
-export interface CodeEditGuideline {
+interface CodeEditGuideline {
   /** This rule's own x in the control's local space, already mirrored under RTL. */
   xPx: number;
   /** `i === 0` keeps the full `line_length_guideline_color`, and every later one is multiplied by `Color(1, 1, 1, 0.5)` (`code_edit.cpp:305`). */

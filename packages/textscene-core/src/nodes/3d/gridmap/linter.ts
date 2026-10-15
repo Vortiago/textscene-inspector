@@ -45,5 +45,3 @@ const gridMapValidationRule: LintRule = {
 };
 
 ruleRegistry.register(gridMapValidationRule);
-
-export { gridMapValidationRule };

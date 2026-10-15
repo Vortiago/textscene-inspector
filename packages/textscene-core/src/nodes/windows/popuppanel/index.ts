@@ -12,5 +12,3 @@ const popupPanelRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(popupPanelRegistration);
-
-export { popupPanelRegistration };

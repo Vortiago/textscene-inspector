@@ -128,7 +128,7 @@ function useTexture2DSlot(
 }
 
 /** Pixel dimensions of a Texture2D slot, in the `Vec2` shape the rect solver uses. */
-export interface Texture2DSize {
+interface Texture2DSize {
   x: number;
   y: number;
 }

@@ -13,5 +13,3 @@ const xRHandModifier3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(xRHandModifier3DRegistration);
-
-export { xRHandModifier3DRegistration };

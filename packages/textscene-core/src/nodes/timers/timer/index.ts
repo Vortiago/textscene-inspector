@@ -15,7 +15,6 @@ const timerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(timerRegistration);
 
-export { timerRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

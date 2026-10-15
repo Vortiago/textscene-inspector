@@ -69,7 +69,7 @@ export function accumulationState(blendMode: number): Partial<THREE.ShaderMateri
  * Stencil state for a light quad, spread verbatim onto the material.
  * `litQuadStencilProps` for a shadowed light, empty for one that casts nothing.
  */
-export type LightQuadStencil = Partial<THREE.ShaderMaterialParameters>;
+type LightQuadStencil = Partial<THREE.ShaderMaterialParameters>;
 
 /**
  * Whether a `shadow_color` puts anything into the accumulator. Its term is `S.rgb · s` under the
@@ -92,7 +92,7 @@ export function alphaOnly(color: Color): Color {
  * `ShadowSampling`, which the cookie quad reads too, so both quads provably use one value. An
  * unfiltered light has no sampling and names the colour directly.
  */
-export type ShadowColorQuadOptions = {
+type ShadowColorQuadOptions = {
   readonly cookie: THREE.Texture;
   readonly blendMode: number;
 } & (
@@ -139,7 +139,7 @@ export function createShadowColorQuadMaterial(options: ShadowColorQuadOptions): 
 }
 
 /** The cookie quad: one light's albedo-multiplied term. */
-export interface LightQuadOptions {
+interface LightQuadOptions {
   readonly cookie: THREE.Texture;
   /** `Light2D.color`. */
   readonly color: Color;

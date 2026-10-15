@@ -30,7 +30,7 @@ import { useGodotLinearColor } from '../../godotColor';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useUploadedClone } from '../../tiledUpload/useTiledUpload';
 
-export interface StyleBoxQuadProps {
+interface StyleBoxQuadProps {
   styleBox: ResolvedStyleBox;
   rect: Rect2;
   /**

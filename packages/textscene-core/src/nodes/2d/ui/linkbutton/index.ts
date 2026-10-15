@@ -9,5 +9,3 @@ const linkButtonRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(linkButtonRegistration);
-
-export { linkButtonRegistration };

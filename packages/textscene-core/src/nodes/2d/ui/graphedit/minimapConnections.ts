@@ -18,7 +18,7 @@ import type { ResolvedConnection } from './connectionEndpoints';
 import { minimapConvertFromGraph, type GraphScrollBounds, type MinimapTransform } from './minimap';
 
 /** One `draw_polyline_colors` call: the mapped points and their per-point colours. */
-export interface MinimapConnectionLine {
+interface MinimapConnectionLine {
   points: Vec2[];
   colors: ControlColor[];
 }

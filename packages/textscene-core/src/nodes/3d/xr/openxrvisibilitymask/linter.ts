@@ -51,5 +51,3 @@ const openXRVisibilityMaskParentRule: LintRule = {
 };
 
 ruleRegistry.register(openXRVisibilityMaskParentRule);
-
-export { openXRVisibilityMaskParentRule };

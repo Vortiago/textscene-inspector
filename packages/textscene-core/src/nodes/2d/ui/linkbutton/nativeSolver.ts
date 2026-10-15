@@ -41,7 +41,7 @@ export const LINKBUTTON_THEME_FONT_KEY = 'font';
  * select, as in every Button-family slice: `disabled` wins, else `button_pressed`, and the hover states
  * never fire.
  */
-export type LinkButtonDrawState = 'normal' | 'pressed' | 'disabled';
+type LinkButtonDrawState = 'normal' | 'pressed' | 'disabled';
 
 export function resolveLinkButtonDrawState(props: LinkButtonProperties): LinkButtonDrawState {
   if (props.disabled) return 'disabled';
@@ -110,7 +110,7 @@ export function linkButtonUnderlineSpacing(
   return Math.round(2 * ctx.theme.scale);
 }
 
-export interface UnderlineGeometry {
+interface UnderlineGeometry {
   /** Downward offset in px from the baseline to the centre of the underline stroke. */
   y: number;
   /** The stroke's whole-pixel thickness, floored to at least 1px. */
@@ -120,7 +120,7 @@ export interface UnderlineGeometry {
 /**
  * `link_button.cpp:306-308`: `underline_spacing` (int) plus `text_buf->get_line_underline_position()`
  * (float), narrowed to `int`, which truncates toward zero. `y` adds the line ascent, the whole-pixel
- * value `getAscentPx` gives. Thickness is `MAX(1, ...)` narrowed the same way (`:308`), with the MAX
+ * value `getFontAscentPx` gives. Thickness is `MAX(1, ...)` narrowed the same way (`:308`), with the MAX
  * applied here, as `getUnderlineThicknessPx` requires.
  */
 export function linkButtonUnderlineGeometry(
@@ -134,7 +134,7 @@ export function linkButtonUnderlineGeometry(
   return { y, thickness };
 }
 
-export interface LinkButtonTextPlacement {
+interface LinkButtonTextPlacement {
   /** The paragraph's left edge, local Godot px. */
   originX: number;
   /** `text_buf->get_line_width()` narrowed to `int`: the ceiled pen extent, and the underline's length. */

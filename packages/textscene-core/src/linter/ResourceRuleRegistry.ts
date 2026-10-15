@@ -12,14 +12,14 @@ import * as logger from '../logger';
  * One diagnostic a resource rule reports, on the line of the property it names, or on the
  * section's heading where the section omits that property.
  */
-export interface ResourceFinding {
+interface ResourceFinding {
   readonly arm: RuleArm;
   readonly message: string;
   /** The property the finding is about, as the section's bag stores it. */
   readonly property: string;
 }
 
-export interface ResourceRuleMeta {
+interface ResourceRuleMeta {
   /** Unique registry key, shared with `RuleRegistry`'s names. */
   readonly name: string;
   readonly description: string;

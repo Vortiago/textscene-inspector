@@ -96,7 +96,7 @@ function bitField(
   return markIntSlot(validator, 'int64');
 }
 
-export interface MaskedBitFieldOptions {
+interface MaskedBitFieldOptions {
   /**
    * `file:line` of the setter that applies the mask. Pass a literal, not a
    * variable, so `rangeAdvisoryGrounding`'s scrape can see it.
@@ -152,7 +152,7 @@ export function maskedBitField(name: string, mask: number, opts: MaskedBitFieldO
   });
 }
 
-export interface HintedBitFieldOptions {
+interface HintedBitFieldOptions {
   /** `file:line` of the `ADD_PROPERTY` whose PROPERTY_HINT_FLAGS lists the bits. */
   hinted: string;
   /** Bit value to constant name, for the message and the sheet's Accepts column. */

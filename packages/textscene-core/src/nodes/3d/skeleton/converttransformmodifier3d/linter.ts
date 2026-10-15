@@ -136,5 +136,3 @@ const convertTransformModifier3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(convertTransformModifier3DValidationRule);
-
-export { convertTransformModifier3DValidationRule };

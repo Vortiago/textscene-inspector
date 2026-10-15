@@ -13,5 +13,3 @@ const menuButtonRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(menuButtonRegistration);
-
-export { menuButtonRegistration };

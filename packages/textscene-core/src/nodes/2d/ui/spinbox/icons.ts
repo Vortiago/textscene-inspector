@@ -19,7 +19,7 @@ const VALUE_DOWN_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSI4Ij48cGF0aCBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTEyIDItNCAzLjVMNCAyIi8+PC9zdmc+Cg==';
 
 /** SpinBox's `up`/`down` stepper icons (`default_theme.cpp:616-623`). The disabled state reuses the same asset, and only the modulate differs. */
-export interface SpinBoxIcons {
+interface SpinBoxIcons {
   up: string;
   down: string;
 }

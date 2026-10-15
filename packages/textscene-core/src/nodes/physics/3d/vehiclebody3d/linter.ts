@@ -8,4 +8,3 @@ const vehicleBody3DValidationRule = makeVehicleBodyLinterRule('3D');
 ruleRegistry.register(vehicleBody3DValidationRule);
 
 // Export for testing
-export { vehicleBody3DValidationRule };

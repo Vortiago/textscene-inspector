@@ -9,7 +9,7 @@ import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { ErrorBoundary } from '../ErrorBoundary.js';
 import styles from './TscnPreviewShell.module.css';
 
-export interface PreviewErrorBoundaryProps {
+interface PreviewErrorBoundaryProps {
   sceneGraph: SceneGraph | null;
   children: ReactNode;
   /** Fired with each caught error, and with null when the viewport renders again. */

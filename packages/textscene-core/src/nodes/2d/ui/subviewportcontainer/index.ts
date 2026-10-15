@@ -10,5 +10,4 @@ const subViewportContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(subViewportContainerRegistration);
 
-export { subViewportContainerRegistration };
 export * from './parser';

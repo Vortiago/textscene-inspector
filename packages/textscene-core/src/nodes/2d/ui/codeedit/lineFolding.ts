@@ -21,7 +21,7 @@ import {
 } from './delimiterRegions.js';
 
 /** Everything `canFoldLine` needs for one CodeEdit, built once per buffer. */
-export interface FoldContext {
+interface FoldContext {
   lines: readonly string[];
   delimiters: readonly Delimiter[];
   cache: readonly DelimiterCacheLine[];

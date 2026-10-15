@@ -61,8 +61,7 @@ export const BUTTON_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 
 
 /**
  * `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`default_theme.cpp:106`),
- * Button's `font_disabled_color` default (`:161`). The numeric twin of `godotDefaultTheme.ts`'s
- * `CONTROL_FONT_DISABLED_COLOR` (`rgba(223, 223, 223, 0.5)`).
+ * Button's `font_disabled_color` default (`:161`).
  */
 export const BUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
 

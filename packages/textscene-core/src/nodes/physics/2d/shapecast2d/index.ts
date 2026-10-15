@@ -15,5 +15,3 @@ const shapeCast2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(shapeCast2DRegistration);
-
-export { shapeCast2DRegistration };

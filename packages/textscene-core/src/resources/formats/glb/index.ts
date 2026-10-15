@@ -23,5 +23,3 @@ registerResourceSlice({
   clonePerConsumer: true,
   busType: 'glb',
 });
-
-export type { RootScale } from './types';

@@ -22,13 +22,13 @@ import { graphFrameStyles } from '../graphframe/nativeSolver';
 import type { GraphEditProperties } from './types';
 
 /** `MINIMAP_OFFSET` (`graph_edit.cpp:51`): unscaled, like every other constant in that block. */
-export const GRAPH_EDIT_MINIMAP_OFFSET = 12;
+const GRAPH_EDIT_MINIMAP_OFFSET = 12;
 /** `MINIMAP_PADDING` (`graph_edit.cpp:52`). */
-export const GRAPH_EDIT_MINIMAP_PADDING = 5;
+const GRAPH_EDIT_MINIMAP_PADDING = 5;
 /** The minimap's own `custom_minimum_size` (`graph_edit.cpp:3332`). */
-export const GRAPH_EDIT_MINIMAP_MIN_SIZE = 50;
+const GRAPH_EDIT_MINIMAP_MIN_SIZE = 50;
 /** `const Vector2 minimap_size = Vector2(240, 160)` (`graph_edit.cpp:3326`). */
-export const GRAPH_EDIT_MINIMAP_DEFAULT_SIZE: Vec2 = { x: 240, y: 160 };
+const GRAPH_EDIT_MINIMAP_DEFAULT_SIZE: Vec2 = { x: 240, y: 160 };
 /** `const float minimap_opacity = 0.65` (`graph_edit.cpp:3327`). */
 export const GRAPH_EDIT_MINIMAP_DEFAULT_OPACITY = 0.65;
 
@@ -65,7 +65,7 @@ export function minimapRect(graphEditSize: Vec2, props: GraphEditProperties): Re
 }
 
 /** One GraphElement child as `_update_scrollbars`/`_minimap_draw` read it: its own `position_offset` and unscaled size. */
-export interface GraphElementBox {
+interface GraphElementBox {
   positionOffset: Vec2;
   size: Vec2;
 }
@@ -211,7 +211,7 @@ export interface MinimapElement extends GraphElementBox {
 /** `GraphFrame::tint_color`'s own default (`graph_frame.h:61`). */
 const GRAPH_FRAME_DEFAULT_TINT: ControlColor = { r: 0.3, g: 0.3, b: 0.3, a: 0.75 };
 
-export interface GraphEditElementView {
+interface GraphEditElementView {
   bounds: GraphScrollBounds;
   /** Frames first, then nodes, each from the last child backwards: `_minimap_draw`'s own two loops (`:1821,1844`), so a frame never covers a node. */
   minimapElements: MinimapElement[];

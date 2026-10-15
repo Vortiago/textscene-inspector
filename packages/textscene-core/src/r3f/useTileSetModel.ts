@@ -14,7 +14,7 @@ import type { TileSetModel } from '../resources/tileset/types';
 import { useResource } from '../resources/useResource';
 import { useSceneResources } from './SceneResourcesContext';
 
-export interface TileSetModelResult {
+interface TileSetModelResult {
   model: TileSetModel | null;
   status: 'pending' | 'loaded' | 'unavailable';
 }

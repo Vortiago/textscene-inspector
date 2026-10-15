@@ -255,7 +255,7 @@ function toHtml(color: ControlColor, withAlpha: boolean): string {
   return withAlpha ? hex + appendHex(color.a) : hex;
 }
 
-export interface HexFieldText {
+interface HexFieldText {
   /** The text of `hex_label`: "Hex" or "Expr" (`color_picker.cpp:1442,1449`). */
   label: string;
   /** The text of `text_type`: "#" in hex mode, empty in expression mode, which shows an icon (`:1443,1450`). */
