@@ -488,6 +488,18 @@ describe('the sun shadow fade', () => {
       'if ( fadeOut >= 1.0 ) return 1.0;'
     );
   });
+
+  it('fades a ShadowMaterial receiver, whose shadow mask reads the same sun lookup', () => {
+    const chunks = installedShaderChunks();
+    const shadowShader = THREE.ShaderLib.shadow.fragmentShader.replace(
+      /#include <(\w+)>/g,
+      (_include, name: string) => chunks[name as keyof typeof chunks] as string
+    );
+    expect(shadowShader).toContain('getShadowMask()');
+    expect(functionBody(shadowShader, 'float getSunShadow')).toContain(
+      'godotSunShadowFadeOut( shadowIndex )'
+    );
+  });
 });
 
 describe('installGodotSplitShadow', () => {
