@@ -9,7 +9,7 @@ renders_as: the scene's background and environment lighting
 
 # WorldEnvironment
 
-Applies the scene's Environment resource to the whole view and draws no geometry of its own. Here the Environment sets a flat dark-navy background and bluish volumetric fog, which hazes the background and washes out the boxes with distance. The previewer draws both and renders the node's children.
+Applies the scene's Environment resource to the whole view and draws no geometry of its own. Here the Environment sets a flat dark-navy background and bluish volumetric fog, which hazes the background and washes out the boxes with distance. The previewer draws both and renders the node's children. The first WorldEnvironment with a valid Environment applies. One that names none, or a `.tres` that fails to load, leaves the view with no Environment: the project's clear colour under the LINEAR curve.
 
 ## Linting
 

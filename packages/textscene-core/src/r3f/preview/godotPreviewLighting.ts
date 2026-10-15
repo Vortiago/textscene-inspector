@@ -43,7 +43,7 @@ const PREVIEW_GROUND_BOTTOM: Rgba = { r: 0.2, g: 0.169, b: 0.133, a: 1 };
 export const YIELDS_A_PREVIEW = (node: TscnNode): boolean =>
   node.type === PREVIEW_SUN_YIELD_TYPE || node.type === PREVIEW_ENVIRONMENT_YIELD_TYPE;
 
-interface PreviewToggles {
+export interface PreviewToggles {
   sun: boolean;
   environment: boolean;
 }

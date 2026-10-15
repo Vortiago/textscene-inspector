@@ -43,6 +43,9 @@ export interface SubViewportProperties extends Omit<NodeProperties, 'transform'>
   handle_input_locally: boolean;
   render_target_update_mode: number;
   render_target_clear_mode: number;
+  /** `Viewport.MSAA` of the buffer canvas items draw into. */
+  msaa_2d: number;
+  /** `Viewport.MSAA` of the buffer the 3D world draws into. */
   msaa_3d: number;
   use_debanding: boolean;
   audio_listener_enable_2d: boolean;

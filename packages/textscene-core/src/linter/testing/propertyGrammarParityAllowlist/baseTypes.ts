@@ -141,8 +141,7 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Image-forming settings the previewer does not read: antialiasing and
       // scaling, the shadow atlas depth, VRS, the 2D-lighting SDF, snapping,
       // mipmaps, culling, and the World3D the viewport renders against (apart
-      // from the `own_world_3d` flag and the atlas layout, which are parsed).
-      'msaa_2d',
+      // from the `own_world_3d` flag, the atlas layout and `msaa_2d`, which are parsed).
       'screen_space_aa',
       'use_taa',
       'scaling_3d_mode',

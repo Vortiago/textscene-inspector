@@ -15,7 +15,8 @@ import { HoverHighlight } from './components/HoverHighlight.js';
 import { InternalTextLabel } from './internalTextLabel.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
 import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls.js';
-import { PreviewLighting } from './preview/PreviewLighting.js';
+import { PreviewSun } from './preview/PreviewSun.js';
+import { RootEnvironmentScope } from './environment/WorldEnvironmentScope.js';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
@@ -43,31 +44,33 @@ export function TscnSceneContents() {
 
   return (
     <TiledUploadDriver>
-      {/* Godot's editor preview sun and environment, each mounted only while the
-          scene has no DirectionalLight3D or WorldEnvironment of its own (ADR-0025).
-          Godot adds neither at runtime. This previewer takes the editor's rule. */}
-      <PreviewLighting />
-      {isEmpty && <EmptySceneIndicator />}
-      {!isEmpty && <ContentGroundGrid />}
-      {nodes && rootScene && (
-        <SceneResourcesProvider
-          internalResources={rootScene.internalResources}
-          externalResources={rootScene.externalResources}
-        >
-          <NodeDispatcher nodes={nodes} />
-        </SceneResourcesProvider>
-      )}
-      <ControlRasterLayer
-        nodes={nodes ?? []}
-        internalResources={rootScene?.internalResources ?? []}
-        externalResources={rootScene?.externalResources ?? []}
-      />
-      <ViewportPassOrchestrator />
-      <SceneShadowFitter />
-      <SceneDepthPrepass />
-      <SelectionHighlight />
-      <HoverHighlight />
-      <ScreenshotBridge />
+      {/* The root world's Environment, and Godot's editor preview sun and environment, each
+          preview mounted only while the scene has no DirectionalLight3D or WorldEnvironment of
+          its own (ADR-0025). Godot adds neither at runtime. This previewer takes the editor's rule. */}
+      <RootEnvironmentScope>
+        <PreviewSun />
+        {isEmpty && <EmptySceneIndicator />}
+        {!isEmpty && <ContentGroundGrid />}
+        {nodes && rootScene && (
+          <SceneResourcesProvider
+            internalResources={rootScene.internalResources}
+            externalResources={rootScene.externalResources}
+          >
+            <NodeDispatcher nodes={nodes} />
+          </SceneResourcesProvider>
+        )}
+        <ControlRasterLayer
+          nodes={nodes ?? []}
+          internalResources={rootScene?.internalResources ?? []}
+          externalResources={rootScene?.externalResources ?? []}
+        />
+        <ViewportPassOrchestrator />
+        <SceneShadowFitter />
+        <SceneDepthPrepass />
+        <SelectionHighlight />
+        <HoverHighlight />
+        <ScreenshotBridge />
+      </RootEnvironmentScope>
     </TiledUploadDriver>
   );
 }
@@ -120,10 +123,15 @@ export function TscnCanvas() {
           A Control-only SubViewport sampled by a 3D scene draws through this
           renderer, so its ScrollContainer clips only because the flag is set here
           as well as on the 2D world canvas. */}
+      {/* `antialias: false`: Godot's `msaa_3d` defaults to Disabled (`rendering_server.cpp:3774`).
+          A project that turns it on gets the compositor's multisampled buffer, which resolves
+          before the tone curve as Godot's does. `flat`: a root with no Environment tonemaps LINEAR
+          (`tone_mapper.h:177`), where R3F would apply ACES. */}
       <Canvas
         camera={{ position: editorCameraPosition(), fov: EDITOR_CAMERA_FOV }}
         shadows="percentage"
-        gl={{ localClippingEnabled: true }}
+        gl={{ localClippingEnabled: true, antialias: false }}
+        flat
         onCreated={installShaderPatches}
       >
         <TscnSceneContents />

@@ -66,6 +66,7 @@ export function parseSubViewport(
       CLEAR_MODES,
       context
     ),
+    msaa_2d: enumOr(properties.msaa_2d, 0, MSAA_MODES, context),
     msaa_3d: enumOr(properties.msaa_3d, 0, MSAA_MODES, context),
     use_debanding: boolOr(properties.use_debanding, false, context),
     audio_listener_enable_2d: boolOr(properties.audio_listener_enable_2d, false, context),

@@ -18,7 +18,8 @@ import { canvasModulateColor } from '../../canvasModulate.js';
 import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
-import { ProjectClearColor } from './ProjectClearColor.js';
+import { ProjectClearColor } from '../../ProjectClearColor.js';
+import { CanvasMsaa } from './CanvasMsaa.js';
 import { PendingSuspense } from '../../../resources/PendingSuspense.js';
 import { ScreenshotBridge } from '../../ScreenshotBridge.js';
 
@@ -65,6 +66,7 @@ export function World2DContents({
         <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
           <CameraRig pan={pan} zoom={zoom} />
           <ProjectClearColor />
+          <CanvasMsaa />
           {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}
           <CanvasLighting2DProvider canvasModulate={canvasModulate}>

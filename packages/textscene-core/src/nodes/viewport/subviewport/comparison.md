@@ -9,7 +9,7 @@ renders_as: an offscreen render target, plus a boundary that scopes its canvas s
 
 # SubViewport
 
-A Viewport that renders its subtree into an offscreen target for a `ViewportTexture` to sample (ADR-0033). It draws nothing itself. Its Node3D descendants still draw in the parent's 3D view unless `own_world_3d` is set, and its CanvasItem descendants draw only in the target. A Control-only subtree renders through its own WebGL pass. Each target keeps its own positional shadow atlas, sized by `positional_shadow_atlas_size` and the four `positional_shadow_atlas_quad_*` keys, as each Godot viewport does. A ViewportTexture on a `.glb` surface override resolves its `viewport_path` from the GLB instance, its local scene in Godot (`packed_scene.cpp:707`).
+A Viewport that renders its subtree into an offscreen target for a `ViewportTexture` to sample (ADR-0033). It draws nothing itself. Its Node3D descendants still draw in the parent's 3D view unless `own_world_3d` is set, and its CanvasItem descendants draw only in the target. A Control-only subtree renders through its own WebGL pass. Each target keeps its own positional shadow atlas, sized by `positional_shadow_atlas_size` and the four `positional_shadow_atlas_quad_*` keys, as each Godot viewport does. `msaa_3d` multisamples a 3D target and `msaa_2d` a canvas target. Each takes the closest count at or below the mode that the device supports, as Godot's driver does. A ViewportTexture on a `.glb` surface override resolves its `viewport_path` from the GLB instance, its local scene in Godot (`packed_scene.cpp:707`).
 
 ## Linting
 
@@ -29,14 +29,15 @@ Strict parsing format-checks these `SubViewport` properties, plus 47 inherited f
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-Strict and lenient parsing diverge only on out-of-range enums. The lenient parser warns and falls back to Godot's default (`render_target_update_mode` 2, `render_target_clear_mode` 0, `msaa_3d` 0, `canvas_item_default_texture_filter` 1), while the strict parser reports an error. A `size` Godot cannot read at all falls back to `Vector2i(512, 512)`. A component below 2 is a strict error, because `Viewport::_set_size` raises it (`viewport.cpp:1120`).
+Strict and lenient parsing diverge only on out-of-range enums. The lenient parser warns and falls back to Godot's default (`render_target_update_mode` 2, `render_target_clear_mode` 0, `msaa_2d` 0, `msaa_3d` 0, `canvas_item_default_texture_filter` 1), while the strict parser reports an error. A `size` Godot cannot read at all falls back to `Vector2i(512, 512)`. A component below 2 is a strict error, because `Viewport::_set_size` raises it (`viewport.cpp:1120`).
 
 ## Known limitations
 
 - **Approximated** A sub-viewport holding both 2D and 3D content shows its 3D half only, since the renderer draws one workspace at a time.
 - **Approximated** `render_target_update_mode` and `render_target_clear_mode` do not gate the pass, so the target is re-rendered and cleared every frame.
-- **Approximated** `msaa_3d`, `use_debanding` and `canvas_item_default_texture_filter` do not affect the target, which renders at `size` with linear filtering.
+- **Approximated** `use_debanding` and `canvas_item_default_texture_filter` do not affect the target, which renders at `size` with linear filtering.
 - **Approximated** A shared-world target takes the environment's tone curve but not its glow or `adjustment_*`, which Godot also runs inside the target.
+- **Approximated** A multisampled 3D target resolves after the tone curve, where Godot resolves in linear HDR before it (`render_forward_clustered.cpp:2402`, `:2514`).
 - **Approximated** Selection highlights and gizmos leak into a shared-world target, because that target is a render of the main scene.
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.
 - **Not drawn** A `TextureRect` draws nothing for a `ViewportTexture`, which only a material's texture slots and `Sprite2D.texture` accept.
