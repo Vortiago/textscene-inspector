@@ -10,9 +10,10 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { TextureRectProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const EXPAND_KEEP_SIZE = 0;
 const EXPAND_IGNORE_SIZE = 1;
@@ -70,9 +71,9 @@ const STRETCH_KEEP_ASPECT_COVERED = 6;
 
 export interface TextureRectDraw {
   /** Where the drawn image's top-left sits, Godot pixels, relative to the control's own top-left. */
-  offset: Vec2;
+  offset: Vector2;
   /** The drawn image's size, Godot pixels. It may differ from the control's rect. */
-  size: Vec2;
+  size: Vector2;
   /** A texture-pixel-space UV crop (KEEP_ASPECT_COVERED only). Every other mode samples the whole texture. */
   region?: Rect2;
   /** STRETCH_TILE: the sampler repeats `size` (the natural texture size) across the full control rect. */
@@ -85,8 +86,8 @@ export interface TextureRectDraw {
  * `rectSize` is `get_size()`, known here because painting follows the rect pass.
  */
 export function textureRectDraw(
-  rectSize: Vec2,
-  textureSize: Vec2,
+  rectSize: Vector2,
+  textureSize: Vector2,
   stretchMode: number | undefined
 ): TextureRectDraw {
   const fullRect: TextureRectDraw = {
@@ -176,7 +177,7 @@ const TEXTURE_FILTER_LINEAR_WITH_MIPMAPS = 4;
 const TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC = 5;
 const TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC = 6;
 
-export type TextureRectFilter = 'nearest' | 'linear';
+type TextureRectFilter = 'nearest' | 'linear';
 
 /**
  * `CanvasItem::TextureFilter` (`scene/main/canvas_item.h:52-60`), already resolved up the ancestors,
@@ -200,7 +201,7 @@ export function resolveTextureRectFilter(filter: number | undefined): TextureRec
 const TEXTURE_REPEAT_ENABLED = 2;
 const TEXTURE_REPEAT_MIRROR = 3;
 
-export type TextureRectRepeat = 'clamp' | 'repeat' | 'mirror';
+type TextureRectRepeat = 'clamp' | 'repeat' | 'mirror';
 
 /**
  * `CanvasItem::TextureRepeat` (`scene/main/canvas_item.h:63-69`), already resolved up the ancestors,
@@ -225,11 +226,11 @@ export function resolveTextureRectRepeat(repeat: number | undefined): TextureRec
  * `RepeatWrapping`, GLSL's floor-mod `fract()` lands on Godot's `(rectSize - x) mod textureSize`.
  */
 export function applyFlip(
-  repeat: Vec2,
-  offset: Vec2,
+  repeat: Vector2,
+  offset: Vector2,
   flipH: boolean,
   flipV: boolean
-): { repeat: Vec2; offset: Vec2 } {
+): { repeat: Vector2; offset: Vector2 } {
   return {
     repeat: { x: flipH ? -repeat.x : repeat.x, y: flipV ? -repeat.y : repeat.y },
     offset: { x: flipH ? offset.x + repeat.x : offset.x, y: flipV ? offset.y + repeat.y : offset.y },

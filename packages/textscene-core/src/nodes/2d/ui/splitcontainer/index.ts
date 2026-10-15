@@ -10,6 +10,5 @@ const splitContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(splitContainerRegistration);
 
-export { splitContainerRegistration };
 export * from './parser';
 export * from './types';

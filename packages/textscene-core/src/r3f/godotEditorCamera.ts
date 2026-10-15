@@ -7,11 +7,11 @@
 import * as THREE from 'three';
 
 /** `cursor.x_rot` / `cursor.y_rot`, in radians. */
-export const EDITOR_CAMERA_X_ROT = 0.5;
-export const EDITOR_CAMERA_Y_ROT = -0.5;
+const EDITOR_CAMERA_X_ROT = 0.5;
+const EDITOR_CAMERA_Y_ROT = -0.5;
 
 /** `cursor.distance`. */
-export const EDITOR_CAMERA_DISTANCE = 4;
+const EDITOR_CAMERA_DISTANCE = 4;
 
 /** `editors/3d/default_fov`, in degrees. three's own default is 50. */
 export const EDITOR_CAMERA_FOV = 70;

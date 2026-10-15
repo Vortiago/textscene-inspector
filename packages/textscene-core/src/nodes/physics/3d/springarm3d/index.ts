@@ -13,5 +13,3 @@ const springArm3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(springArm3DRegistration);
-
-export { springArm3DRegistration };

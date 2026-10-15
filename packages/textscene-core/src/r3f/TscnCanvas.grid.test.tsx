@@ -9,7 +9,7 @@ import { TscnSceneContents } from './TscnCanvas';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
-import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import type { TscnNode } from '../parser/types';
 import type { MeshInstance3DProperties } from '../nodes/3d/meshinstance3d/types';
 

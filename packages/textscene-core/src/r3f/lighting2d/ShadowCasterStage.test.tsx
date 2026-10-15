@@ -7,89 +7,26 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { sameWorldCasters, ShadowCasterStage, useLightShadowCasters } from './ShadowCasterStage';
+import { ShadowCasterStage, useLightShadowCasters } from './ShadowCasterStage';
 import { useShadowCaster } from './shadowCasterRegistry';
-import { OCCLUDER_CULL_CLOCKWISE, OCCLUDER_CULL_DISABLED } from './shadowVolumes';
+import { OCCLUDER_CULL_CLOCKWISE, OCCLUDER_CULL_DISABLED, type OccluderCullMode } from './shadowVolumes';
 import type { WorldShadowCaster } from './shadowCasterRegistry';
-
-const UNIT_BOUNDS = [
-  { x: 0, y: 0 },
-  { x: 1, y: 0 },
-  { x: 1, y: 1 },
-  { x: 0, y: 1 },
-] as const;
-
-function world(segments: number[], overrides: Partial<WorldShadowCaster> = {}): WorldShadowCaster {
-  return {
-    segments: new Float32Array(segments),
-    cullMode: OCCLUDER_CULL_DISABLED,
-    occluderLightMask: 1,
-    bounds: UNIT_BOUNDS,
-    ...overrides,
-  };
-}
-
-describe('sameWorldCasters', () => {
-  it('holds for two flattens of the same unmoved occluder', () => {
-    expect(sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 0])])).toBe(true);
-  });
-
-  it('holds for two empty snapshots', () => {
-    expect(sameWorldCasters([], [])).toBe(true);
-  });
-
-  it('breaks on a moved coordinate', () => {
-    expect(sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 1])])).toBe(false);
-  });
-
-  it('breaks when an occluder is added or withdrawn', () => {
-    expect(sameWorldCasters([], [world([0, 0, 10, 0])])).toBe(false);
-    expect(sameWorldCasters([world([0, 0, 10, 0])], [])).toBe(false);
-  });
-
-  it('breaks on a changed cull mode, which flips which edges cast', () => {
-    expect(
-      sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 0], { cullMode: OCCLUDER_CULL_CLOCKWISE })])
-    ).toBe(false);
-  });
-
-  it('breaks on a changed occluder_light_mask, which flips which lights see it', () => {
-    expect(sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 0], { occluderLightMask: 2 })])).toBe(
-      false
-    );
-  });
-
-  it('breaks on moved bounds under unchanged segments, which changes the cull', () => {
-    const turned = [
-      { x: 0, y: 0 },
-      { x: 1, y: 1 },
-      { x: 0, y: 2 },
-      { x: -1, y: 1 },
-    ] as const;
-    expect(sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 0], { bounds: turned })])).toBe(false);
-  });
-
-  it('breaks when the polygon gains a point', () => {
-    expect(sameWorldCasters([world([0, 0, 10, 0])], [world([0, 0, 10, 0, 10, 5])])).toBe(false);
-  });
-});
 
 /** Publishes one caster and reports every snapshot the stage handed it. */
 function Probe({
   object,
   seen,
   segments,
+  cullMode = OCCLUDER_CULL_DISABLED,
+  occluderLightMask = 1,
 }: {
   object: THREE.Object3D;
   seen: (readonly WorldShadowCaster[])[];
   segments: Float32Array;
+  cullMode?: OccluderCullMode;
+  occluderLightMask?: number;
 }) {
-  useShadowCaster({
-    segments,
-    cullMode: OCCLUDER_CULL_DISABLED,
-    occluderLightMask: 1,
-    object,
-  });
+  useShadowCaster({ segments, cullMode, occluderLightMask, object });
   seen.push(useLightShadowCasters(true, 1));
   return null;
 }
@@ -199,5 +136,69 @@ describe('ShadowCasterStage', () => {
     root.visible = false;
     await frames(renderer, 2);
     expect(seen.at(-1)).toEqual([]);
+  });
+
+  it('hands back the SAME empty array while every occluder stays hidden (edge case)', async () => {
+    const object = new THREE.Group();
+    object.visible = false;
+    const { renderer, seen } = await mountStage(object);
+    await frames(renderer);
+    const first = seen.at(-1);
+    object.position.set(5, 0, 0);
+    await frames(renderer, 2);
+    expect(first).toEqual([]);
+    expect(seen.at(-1)).toBe(first);
+  });
+});
+
+describe('the snapshot the stage compares', () => {
+  const SEGMENTS = new Float32Array([0, 0, 0, 10, 0, 0]);
+
+  /** The snapshots before and after one change to the occluder's props, a frame apart. */
+  async function aroundChange(change: Partial<Parameters<typeof Probe>[0]>) {
+    const object = new THREE.Group();
+    const { renderer, seen } = await mountStage(object, SEGMENTS);
+    await frames(renderer);
+    const before = seen.at(-1)!;
+    await renderer.update(
+      <ShadowCasterStage>
+        <Probe object={object} seen={seen} segments={SEGMENTS} {...change} />
+      </ShadowCasterStage>
+    );
+    await frames(renderer);
+    return { before, after: seen.at(-1)! };
+  }
+
+  it('republishes on a changed cull mode, which flips which edges cast', async () => {
+    const { before, after } = await aroundChange({ cullMode: OCCLUDER_CULL_CLOCKWISE });
+    expect(after).not.toBe(before);
+    expect(after[0]!.cullMode).toBe(OCCLUDER_CULL_CLOCKWISE);
+  });
+
+  it('republishes on a changed occluder_light_mask, which flips which lights see it', async () => {
+    const { before, after } = await aroundChange({ occluderLightMask: 3 });
+    expect(after).not.toBe(before);
+    expect(after[0]!.occluderLightMask).toBe(3);
+  });
+
+  it('republishes when the polygon gains a point', async () => {
+    const { before, after } = await aroundChange({
+      segments: new Float32Array([0, 0, 0, 10, 0, 0, 10, 5, 0]),
+    });
+    expect(after).not.toBe(before);
+    expect(Array.from(after[0]!.segments)).toEqual([0, 0, 10, 0, 10, 5]);
+  });
+
+  it('republishes on moved bounds under unchanged world segments, which changes the cull (edge case)', async () => {
+    // A local polygon turned back by the transform's quarter turn keeps its world segments.
+    const turned = new THREE.Group();
+    turned.rotation.z = Math.PI / 2;
+    const { before, after } = await aroundChange({
+      object: turned,
+      segments: new Float32Array([0, 0, 0, 0, -10, 0]),
+    });
+    expect(after).not.toBe(before);
+    expect(Array.from(after[0]!.segments).map((value) => Math.round(value) + 0)).toEqual([0, 0, 10, 0]);
+    expect(after[0]!.bounds).not.toEqual(before[0]!.bounds);
   });
 });

@@ -74,5 +74,3 @@ const remoteTransform3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(remoteTransform3DValidationRule);
-
-export { remoteTransform3DValidationRule };

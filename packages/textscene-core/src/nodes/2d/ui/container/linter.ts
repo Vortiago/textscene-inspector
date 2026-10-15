@@ -45,5 +45,3 @@ const containerScriptRule: LintRule = {
 };
 
 ruleRegistry.register(containerScriptRule);
-
-export { containerScriptRule };

@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { AtlasOmniShadow } from './positionalShadow/atlasOmniShadow';
-import { framebufferHeight } from './shadowFilter/framebufferRows';
+import { installedFramebufferHeight } from './shadowFilter/framebufferRows.testkit';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy';
 import { installShadowPass, readShadowMaps } from './shadowPass';
 import { holdPositionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
@@ -89,7 +89,7 @@ describe('installShadowPass', () => {
     const { renderer } = fakeRenderer();
     installShadowPass(renderer);
     runPass(renderer, [omniLight()]);
-    expect(framebufferHeight[0]).toBe(48);
+    expect(installedFramebufferHeight()[0]).toBe(48);
     copy.mockRestore();
   });
 
@@ -239,12 +239,12 @@ describe('readShadowMaps', () => {
   it('records the height of the draw’s target after a reader renders into another (edge case)', () => {
     const { renderer } = fakeRenderer();
     readShadowMaps(renderer, () => {
-      framebufferHeight[0] = 1;
+      installedFramebufferHeight()[0] = 1;
     });
 
     runPass(renderer, []);
 
-    expect(framebufferHeight[0]).toBe(48);
+    expect(installedFramebufferHeight()[0]).toBe(48);
   });
 
   it('calls a reader that a module evaluated again adds to a pass already wrapped (edge case)', async () => {

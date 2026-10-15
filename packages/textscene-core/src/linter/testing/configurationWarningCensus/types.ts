@@ -4,7 +4,7 @@
  */
 
 /** Why a row is declined, typed so a reader audits a decline at a glance rather than trusting free text. */
-export type DeclineCategory =
+type DeclineCategory =
   /** Needs a live tree, resolved resource contents, engine or OS state, or a project setting: none is in the file. */
   | 'runtime-only'
   /** The deciding fact lives in a sub-scene behind `instance=`, which the linter never opens. */
@@ -19,7 +19,7 @@ export type DeclineCategory =
    */
   | 'engine-unreachable';
 
-export type Verdict =
+type Verdict =
   /** The `ruleName` a rule emits for this exact condition. */
   | { readonly rule: string }
   /**

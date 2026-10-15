@@ -5,11 +5,11 @@
  */
 
 import * as THREE from 'three';
-import type { Vector2 } from '../../base/node2d/types';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
 import { msaaSampleCount } from '../../../godot/rendering/msaa';
 import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
 import type { SubViewportProperties } from './types';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /**
  * The offscreen pass's render target, carrying the storage and the tonemap
@@ -213,7 +213,7 @@ export function viewportAspect(size: Vector2): number {
 }
 
 /** An orthographic frustum and camera position framing exactly `size` pixels. */
-export interface OrthoFrame {
+interface OrthoFrame {
   left: number;
   right: number;
   top: number;

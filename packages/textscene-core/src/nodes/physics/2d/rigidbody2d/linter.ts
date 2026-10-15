@@ -6,5 +6,3 @@ import { makeRigidBodyLinterRule } from '../../../../linter/physics/rigidBodyLin
 const rigidBody2DValidationRule = makeRigidBodyLinterRule('2D');
 
 ruleRegistry.register(rigidBody2DValidationRule);
-
-export { rigidBody2DValidationRule };

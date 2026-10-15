@@ -15,12 +15,7 @@ import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/typ
 import type { Camera3DProperties } from '../../nodes/3d/camera3d/types';
 import { ProjectionMode, KeepAspectMode } from '../../nodes/3d/camera3d/types';
 import type { Label3DProperties } from '../../nodes/3d/label3d/types';
-import {
-  AlphaCutMode,
-  BillboardMode,
-  HorizontalAlignment,
-  TextureFilter,
-} from '../../nodes/3d/label3d/types';
+import { AlphaCutMode, BillboardMode, TextureFilter } from '../../nodes/3d/label3d/types';
 import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
 import { depthSideOf, drawsColour } from '../testing/threePasses';
 import { subResource } from '../../testing/subResource';
@@ -28,6 +23,7 @@ import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/ty
 import '../../nodes/3d/meshinstance3d/index.r3f';
 import '../../nodes/3d/label3d/index.r3f';
 import { registeredComponent } from '../testing/registeredComponent';
+import { HORIZONTAL_ALIGNMENT_CENTER } from '../../godot/math/math';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 const Label3D = registeredComponent('Label3D');
@@ -373,7 +369,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       double_sided: true,
       font_size: 32,
       line_spacing: 0,
-      horizontal_alignment: HorizontalAlignment.CENTER,
+      horizontal_alignment: HORIZONTAL_ALIGNMENT_CENTER,
       no_depth_test: false,
       render_priority: 0,
       outline_render_priority: -1,
@@ -426,7 +422,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       double_sided: true,
       font_size: 32,
       line_spacing: 0,
-      horizontal_alignment: HorizontalAlignment.CENTER,
+      horizontal_alignment: HORIZONTAL_ALIGNMENT_CENTER,
       no_depth_test: false,
       render_priority: 0,
       outline_render_priority: -1,

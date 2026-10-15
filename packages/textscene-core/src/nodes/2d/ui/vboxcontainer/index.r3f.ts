@@ -11,5 +11,3 @@ controlComponentRegistry.register({
   typeName: 'VBoxContainer',
   Component: VBoxContainer,
 });
-
-export { VBoxContainer };

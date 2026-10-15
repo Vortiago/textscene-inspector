@@ -4,7 +4,6 @@
  * live in `resourceProcessorLoad.ts` and the invalidation in `resourceProcessorClear.ts`.
  */
 
-import type { ResourceType } from './ResourceEventBus';
 import { LRUCache } from './LRUCache';
 import { parseSubResourcePath, resourceFilePath } from './subResourcePath';
 import { createLoadLane } from './resourceProcessorLoad';
@@ -21,8 +20,7 @@ import * as logger from '../logger';
  */
 export const PEER_LOAD_TIMEOUT_MS = 30_000;
 
-export type { ResourceType };
-export type { ResourceProcessor, ResourceProcessorConfig } from './resourceProcessorTypes';
+export type { ResourceProcessor } from './resourceProcessorTypes';
 
 /**
  * Create a resource processor with caching, deduplication and event emission.

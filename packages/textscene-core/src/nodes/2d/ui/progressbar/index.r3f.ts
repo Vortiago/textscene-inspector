@@ -8,5 +8,3 @@ import { ProgressBar } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'ProgressBar', Component: ProgressBar });
-
-export { ProgressBar };

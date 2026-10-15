@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  buildThemeTypeChain,
   mergeThemedRecord,
   resolveThemeFontIn,
   resolveThemeFontSizeIn,
@@ -41,33 +40,29 @@ function theme(overrides: Partial<ThemeResource> = {}): ThemeResource {
   };
 }
 
-describe('buildThemeTypeChain', () => {
+/** The type chain `themeResolutionScope` gives a node. */
+function typeChain(...args: Parameters<typeof themeResolutionScope>): readonly string[] {
+  return themeResolutionScope(...args).typeChain;
+}
+
+describe('the type chain themeResolutionScope builds', () => {
   it('is just the native inheritance chain when no type variation is set', () => {
-    expect(buildThemeTypeChain('Label', undefined, [], null)).toEqual(['Label', 'Control', 'Node']);
+    expect(typeChain('Label', undefined, [], null)).toEqual(['Label', 'Control', 'Node']);
   });
 
   it('walks the variation base_type chain from the theme that registers it, then appends the native chain', () => {
     const t = theme({ typeVariations: { title_panel: 'Panel' } });
-    expect(buildThemeTypeChain('Panel', 'title_panel', [t], null)).toEqual([
-      'title_panel',
-      'Panel',
-      'Control',
-      'Node',
-    ]);
+    expect(typeChain('Panel', 'title_panel', [t], null)).toEqual(['title_panel', 'Panel', 'Control', 'Node']);
   });
 
   it('falls back to the native chain alone when no ancestor/project theme registers the variation', () => {
-    expect(buildThemeTypeChain('Label', 'HeaderLabel', [theme()], null)).toEqual([
-      'Label',
-      'Control',
-      'Node',
-    ]);
+    expect(typeChain('Label', 'HeaderLabel', [theme()], null)).toEqual(['Label', 'Control', 'Node']);
   });
 
   it('uses the FIRST theme (nearest ancestor before project) that registers the variation', () => {
     const nearest = theme({ typeVariations: { title_panel: 'Panel' } });
     const project = theme({ typeVariations: { title_panel: 'Control' } });
-    expect(buildThemeTypeChain('Panel', 'title_panel', [nearest], project)).toEqual([
+    expect(typeChain('Panel', 'title_panel', [nearest], project)).toEqual([
       'title_panel',
       'Panel',
       'Control',
@@ -77,7 +72,7 @@ describe('buildThemeTypeChain', () => {
 
   it('finds the variation on the project theme when no ancestor registers it', () => {
     const project = theme({ typeVariations: { title_panel: 'Panel' } });
-    expect(buildThemeTypeChain('Panel', 'title_panel', [], project)).toEqual([
+    expect(typeChain('Panel', 'title_panel', [], project)).toEqual([
       'title_panel',
       'Panel',
       'Control',

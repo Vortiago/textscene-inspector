@@ -132,7 +132,7 @@ function withLiteralGuard(
 }
 
 /** Reject all four non-finite spellings: `ERR_FAIL_COND(!is_finite(...))`. */
-export function withFiniteGuard(validator: PropertyValidator, name: string, cite: string): PropertyValidator {
+function withFiniteGuard(validator: PropertyValidator, name: string, cite: string): PropertyValidator {
   return withLiteralGuard(validator, name, cite, (n) => !Number.isFinite(n), 'must be finite');
 }
 
@@ -141,7 +141,7 @@ export function withFiniteGuard(validator: PropertyValidator, name: string, cite
  * `!is_finite`. `inf` and `-inf` reach the field unaltered there, so the finite
  * guard cannot stand in: it would reject two values Godot stores.
  */
-export function withNanGuard(validator: PropertyValidator, name: string, cite: string): PropertyValidator {
+function withNanGuard(validator: PropertyValidator, name: string, cite: string): PropertyValidator {
   return withLiteralGuard(validator, name, cite, Number.isNaN, 'must not be NaN');
 }
 
@@ -233,7 +233,7 @@ export function ground(
  * both non-empty exactly when `at < min`. `lintCoverage.mjs` computes the same for
  * the sheet, and `boundGrounding.tiers.test.ts` sweeps for disagreement.
  */
-export function outerEndIsReachable(bounds: EndedGrounding, end: 'min' | 'max'): boolean {
+function outerEndIsReachable(bounds: EndedGrounding, end: 'min' | 'max'): boolean {
   const hintEnd = end === 'min' ? bounds.min : bounds.max;
   if (hintEnd === undefined) return false;
   const setterEnd = end === 'min' ? bounds.enforcedMin : bounds.enforcedMax;

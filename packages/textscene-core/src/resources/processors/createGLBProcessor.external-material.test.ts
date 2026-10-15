@@ -6,13 +6,13 @@
  * remapped surface with its `.tres` address, and the scene root draws that material
  * through the one material path (`Component.import-material.test.tsx`).
  */
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
 import { DependencyGraph } from '../dependencyGraph';
-import { importMaterialPath, initGlbModules } from '../formats/glb/glbProcessing';
+import { importMaterialPath } from '../formats/glb/glbProcessing';
 import { triangleGlb } from '../formats/glb/testing/triangleGlb';
 import { isMesh } from '../../r3f/testing/threeNarrow';
 
@@ -72,10 +72,6 @@ function surfaceMaterial(root: THREE.Object3D): THREE.MeshStandardMaterial {
 }
 
 describe('createGLBProcessor — import sidecar external materials', () => {
-  beforeAll(async () => {
-    await initGlbModules();
-  });
-
   it("tags the remapped surface with the sidecar's external .tres, and keeps the glTF material", async () => {
     const root = await loadWith({ [`${GLTF_PATH}.import`]: SIDECAR });
     const material = surfaceMaterial(root);

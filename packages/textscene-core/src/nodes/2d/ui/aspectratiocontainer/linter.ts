@@ -67,5 +67,3 @@ const aspectRatioContainerRule: LintRule = {
 };
 
 ruleRegistry.register(aspectRatioContainerRule);
-
-export { aspectRatioContainerRule };

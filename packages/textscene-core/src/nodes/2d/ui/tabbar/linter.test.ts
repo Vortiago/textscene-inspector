@@ -11,7 +11,9 @@ import { readFixture } from '../../../../linter/testing/fixtureCheck';
 import type { Diagnostic } from '../../../../linter/types';
 import type { RawNode } from '../../../../parser/types';
 import './linterParser';
-import { tabBarValidationRule } from './linter';
+import './linter';
+
+const tabBarValidationRule = ruleRegistry.getRule('valid-tabbar-properties')!;
 
 /** Depth-first search for the first TabBar in a parsed tree. */
 function findTabBar(nodes: readonly RawNode[]): RawNode | undefined {

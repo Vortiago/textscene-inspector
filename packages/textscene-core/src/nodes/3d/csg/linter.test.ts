@@ -8,7 +8,9 @@
 import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { ruleRegistry } from '../../../linter/RuleRegistry';
-import { csgShape3DDegenerateGeometryRule } from './linter';
+import './linter';
+
+const csgShape3DDegenerateGeometryRule = ruleRegistry.getRule('valid-csgshape3d-own-geometry')!;
 
 const LEAVES = [
   'CSGCombiner3D',

@@ -3,7 +3,7 @@
  * Build-excluded through the `src/**\/testing/**` tsconfig rule (test-only).
  */
 
-import type { Transform3D } from '../../../base/node3d/types';
+import type { Transform3D } from '../../../../godot/math/transform3d';
 
 /** Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 3, 0, 0). */
 export const YAWED: Transform3D = {

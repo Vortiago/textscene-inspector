@@ -63,5 +63,3 @@ const xrOrigin3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(xrOrigin3DValidationRule);
-
-export { xrOrigin3DValidationRule };

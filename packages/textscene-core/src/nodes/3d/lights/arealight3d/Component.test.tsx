@@ -15,11 +15,12 @@ import { readPositionalShadowDeclaration } from '../../../../r3f/positionalShado
 import { SceneStack } from '../../../../r3f/testing/SceneStack';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import type { TscnInternalResource } from '../../../../parser/types';
-import {
-  NO_AREA_TEXTURE,
-  areaTexturePlacement,
-  updateAreaLightAtlas,
-} from '../../../../r3f/areaLight/areaLightAtlas';
+import { areaTexturePlacement, updateAreaLightAtlas } from '../../../../r3f/areaLight/areaLightAtlas';
+
+/** Where the atlas places a light that shows no texture. */
+function untexturedPlacement() {
+  return areaTexturePlacement(new THREE.RectAreaLight());
+}
 
 function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
   const props: AreaLight3DProperties = {
@@ -231,13 +232,13 @@ describe('<AreaLight3D>', () => {
     await renderer.unmount();
     updateAreaLightAtlas();
 
-    expect(areaTexturePlacement(light)).toEqual(NO_AREA_TEXTURE);
+    expect(areaTexturePlacement(light)).toEqual(untexturedPlacement());
   });
 
   it('lights untextured when area_texture names nothing the scene holds (error case)', async () => {
     const renderer = await createWithGradient(makeNode({ area_texture: 'SubResource("Missing")' }));
 
-    expect(placementOf(renderer)).toEqual(NO_AREA_TEXTURE);
+    expect(placementOf(renderer)).toEqual(untexturedPlacement());
   });
 
   it('subtracts light when light_negative is on', async () => {

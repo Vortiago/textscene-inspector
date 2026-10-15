@@ -15,7 +15,7 @@ import type { CappedItem } from './lighting2d/itemLightCap';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import { drawableCells } from '../resources/tileset/drawableCell';
 import { parseTresFile } from '../parser/parsedResource';
-import { decodeCanvasItemMaterial } from '../resources/materials/canvasitemmaterial/decode';
+import { canvasItemMaterialOf } from '../resources/materials/canvasitemmaterial/decode';
 import {
   defaultTileData,
   type AlternativeTileModel,
@@ -26,15 +26,16 @@ import {
 import { CanvasItemKeyProvider } from './components/CanvasItemGroup';
 import { canvasRenderOrder } from './canvasPaintOrder';
 import { CanvasModulateContext } from './canvasModulate';
-import { WHITE_MODULATE, type RGBA } from './canvasItemModulate';
+import { WHITE_MODULATE } from './canvasItemModulate';
 import {
   CanvasItemBlendMode,
   CanvasItemLightMode,
   type CanvasItemMaterialProperties,
 } from '../resources/materials/canvasitemmaterial/types';
+import type { Rgba } from '../godot/math/math';
 
 function canvasItemMaterial(overrides: Partial<CanvasItemMaterialProperties>): CanvasItemMaterialProperties {
-  return { ...decodeCanvasItemMaterial({}), ...overrides };
+  return { ...canvasItemMaterialOf({ type: 'CanvasItemMaterial', data: {} })!, ...overrides };
 }
 
 const ADD = canvasItemMaterial({ blendMode: CanvasItemBlendMode.ADD });
@@ -94,7 +95,7 @@ const layerKey = (zFinal: number) => canvasRenderOrder({ layerRank: 0, zFinal, s
 interface Layer {
   zFinal?: number;
   material?: CanvasItemMaterialProperties | null;
-  canvasModulate?: RGBA;
+  canvasModulate?: Rgba;
 }
 
 function render(

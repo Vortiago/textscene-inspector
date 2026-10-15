@@ -5,11 +5,11 @@
  */
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { SOFT_SHADOW_FILTER, softShadowFilterChunk } from '../shadowFilter/softShadowFilter';
-import { FRAMEBUFFER_HEIGHT_UNIFORM, framebufferHeight } from '../shadowFilter/framebufferRows';
-import { godotSplitShadowChunk, installGodotSplitShadow } from './splitShadowChunk';
+import { FRAMEBUFFER_HEIGHT_UNIFORM } from '../shadowFilter/framebufferRows';
+import { installedFramebufferHeight } from '../shadowFilter/framebufferRows.testkit';
+import { installGodotSplitShadow } from './splitShadowChunk';
 import { NO_BLEND, type SplitSlot } from './fitDirectionalShadowSplits';
 import { DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM } from './shadowAtlas';
 import { SUN_RANGE_BEGINS, SUN_SHADOW_ROWS, SUN_SOFT_SHADOWS } from './sunShadowUniforms';
@@ -17,6 +17,7 @@ import { GLSL_BUILT_INS } from '../testing/glslScalar';
 import { withoutBlock } from '../testing/glslSource';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch';
 import { warningsOf } from '../testing/logWarnings';
+import { installedShaderChunks, FILTER_PCF, restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
 const CHUNK = 'shadowmap_pars_fragment';
 const threeChunk = THREE.ShaderChunk[CHUNK];
@@ -24,11 +25,13 @@ const threeChunk = THREE.ShaderChunk[CHUNK];
 const THREE_CASCADE_WALK = 'for ( int i = SUN_LIGHT_CASCADES - 1; i >= 0; i -- )';
 const THREE_SLOT_MATRICES = 'uniform mat4 sunShadowMatrix[ NUM_SUN_LIGHT_SHADOWS * SUN_LIGHT_CASCADES ];';
 
-afterEach(() => {
-  THREE.ShaderChunk[CHUNK] = threeChunk;
-  for (const shader of Object.values(THREE.ShaderLib)) delete shader.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM];
-  delete (THREE.UniformsLib.lights as Record<string, THREE.IUniform>)[FRAMEBUFFER_HEIGHT_UNIFORM];
-});
+/** The per-split lookup, which marks a chunk that holds the patch. */
+const SPLIT_LOOKUP = 'float getSunShadowSplit(';
+
+restoreShaderGlobalsAfterEach();
+
+/** The shadow chunk a canvas compiles with. */
+const installedChunk = () => installedShaderChunks()[CHUNK];
 
 /** three's own module source. Its exports map exposes `"./src/*"`. */
 function threeSource(path: string): string {
@@ -69,10 +72,7 @@ function runLookup(slots: SplitSlot[], depth: number, shadowBySlot = [0, 0, 0, 0
     samples.push({ slot, radiusScale });
     return shadowBySlot[slot]!;
   };
-  const body = lookupBody(godotSplitShadowChunk(threeChunk)!).replace(
-    /\b(?:int|float|bool|vec4)\s+(?=\w+\s*=)/g,
-    'let '
-  );
+  const body = lookupBody(installedChunk()).replace(/\b(?:int|float|bool|vec4)\s+(?=\w+\s*=)/g, 'let ');
   const cascade = slots.map(([x, y, z, w]) => ({ x, y, z, w }));
   const run = new Function(
     'smoothstep',
@@ -101,7 +101,7 @@ function runSoftLookup(slots: SplitSlot[], depth: number, shadowBySlot = [0, 0, 
     samples.push({ slot, radiusScale: 1 });
     return shadowBySlot[slot]!;
   };
-  const body = lookupBody(godotSplitShadowChunk(threeChunk)!, 'godotSunSoftShadow').replace(
+  const body = lookupBody(installedChunk(), 'godotSunSoftShadow').replace(
     /\b(?:int|float|bool|vec4)\s+(?=\w+\s*=)/g,
     'let '
   );
@@ -150,22 +150,21 @@ function fourSplits(blendStarts: [number, number, number] = [NO_BLEND, NO_BLEND,
   ];
 }
 
-describe('godotSplitShadowChunk', () => {
+describe('the installed split lookup', () => {
   it('replaces three’s cascade walk in the installed three', () => {
-    const patched = godotSplitShadowChunk(threeChunk)!;
     expect(threeChunk).toContain(THREE_CASCADE_WALK);
-    expect(patched).not.toContain(THREE_CASCADE_WALK);
-    expect(patched).toContain('float getSunShadowSplit(');
+    expect(installedChunk()).not.toContain(THREE_CASCADE_WALK);
+    expect(installedChunk()).toContain(SPLIT_LOOKUP);
   });
 
   it('gives every sun four slots', () => {
-    const patched = godotSplitShadowChunk(threeChunk)!;
+    const patched = installedChunk();
     expect(patched).toContain('#define SUN_LIGHT_CASCADES 4');
     expect(patched).not.toContain('#define SUN_LIGHT_CASCADES 2');
   });
 
   it('declares each slot’s matrix as three vec4 rows, in place of three’s mat4 array', () => {
-    const patched = godotSplitShadowChunk(threeChunk)!;
+    const patched = installedChunk();
     expect(threeChunk).toContain(THREE_SLOT_MATRICES);
     expect(patched).not.toContain('mat4 sunShadowMatrix');
     expect(patched).toContain(
@@ -173,22 +172,12 @@ describe('godotSplitShadowChunk', () => {
     );
   });
 
-  it('is null for a chunk whose slot matrices three declares another way (error case)', () => {
+  it('keeps three’s chunk, and warns, when three declares the slot matrices another way (error case)', () => {
     const rewritten = threeChunk.replace(THREE_SLOT_MATRICES, 'uniform mat4 sunShadowMatrix[ 8 ];');
-    expect(godotSplitShadowChunk(rewritten)).toBeNull();
-  });
-
-  it('keeps everything after the lookup (edge case)', () => {
-    const patched = godotSplitShadowChunk(threeChunk)!;
-    const tail = threeChunk.slice(
-      threeChunk.indexOf('\n\t#endif', threeChunk.indexOf('float getSunShadow('))
-    );
-    expect(tail).toContain('getPointShadow');
-    expect(patched.endsWith(tail)).toBe(true);
-  });
-
-  it('is null for a chunk without the lookup (error case)', () => {
-    expect(godotSplitShadowChunk('void main() {}')).toBeNull();
+    THREE.ShaderChunk[CHUNK] = rewritten;
+    expect(warningsOf(installGodotSplitShadow)).toHaveLength(1);
+    expect(THREE.ShaderChunk[CHUNK]).not.toContain(SPLIT_LOOKUP);
+    expect(THREE.ShaderChunk[CHUNK]).toContain('uniform mat4 sunShadowMatrix[ 8 ];');
   });
 });
 
@@ -196,7 +185,7 @@ describe('the patched split PCF', () => {
   it('follows Godot’s soft shadow filter, which the install puts in first', () => {
     installGodotSplitShadow();
     const patched = THREE.ShaderChunk[CHUNK];
-    const filter = patched.indexOf(SOFT_SHADOW_FILTER);
+    const filter = patched.indexOf(FILTER_PCF);
     expect(filter).toBeGreaterThan(0);
     expect(filter).toBeLessThan(patched.indexOf('float godotSunShadow('));
     expect(patched.indexOf('float godotSunShadow(')).toBeLessThan(
@@ -205,24 +194,22 @@ describe('the patched split PCF', () => {
   });
 
   it('samples each split through Godot’s PCF under PCF shadows', () => {
-    const lookup = splitLookup(godotSplitShadowChunk(threeChunk)!);
+    const lookup = splitLookup(installedChunk());
     expect(lookup).toMatch(/#if defined\( SHADOWMAP_TYPE_PCF \)\s+return godotSunShadow\(/);
   });
 
   it('spans soft_shadow_scale texels of the whole atlas, narrowed by the split’s blur factor', () => {
-    const patched = godotSplitShadowChunk(threeChunk)!;
+    const patched = installedChunk();
     expect(patched).toContain('godotPcf( atlas, ( vec2( 1.0 ) / atlasSize ) * softShadowScale, coord )');
     expect(splitLookup(patched)).toContain('sunLightShadow.shadowRadius * radiusScale,');
   });
 
   it('maps each split’s receiver into the atlas through the slot’s rows', () => {
-    expect(splitLookup(godotSplitShadowChunk(threeChunk)!)).toContain(
-      'godotSunShadowCoord( slot, shadowWorldPosition )'
-    );
+    expect(splitLookup(installedChunk())).toContain('godotSunShadowCoord( slot, shadowWorldPosition )');
   });
 
   it('reads a slot’s three rows as the first three rows of its matrix, with w at 1', () => {
-    const patched = godotSplitShadowChunk(threeChunk)!;
+    const patched = installedChunk();
     expect(patched).toContain('int row = slot * 3;');
     expect(patched).toContain(
       `return vec4( dot( ${SUN_SHADOW_ROWS}[ row ], point ), dot( ${SUN_SHADOW_ROWS}[ row + 1 ], point ), dot( ${SUN_SHADOW_ROWS}[ row + 2 ], point ), 1.0 );`
@@ -230,12 +217,12 @@ describe('the patched split PCF', () => {
   });
 
   it('keeps three’s own lookup for a map that is not PCF (edge case)', () => {
-    const lookup = splitLookup(godotSplitShadowChunk(threeChunk)!);
+    const lookup = splitLookup(installedChunk());
     expect(lookup).toMatch(/#else\s+return getShadow\(/);
   });
 
   it('leaves a receiver outside the atlas or past its far plane unshadowed (error case)', () => {
-    const patched = godotSplitShadowChunk(threeChunk)!;
+    const patched = installedChunk();
     expect(patched).toContain(
       'bool inFrustum = coord.x >= 0.0 && coord.x <= 1.0 && coord.y >= 0.0 && coord.y <= 1.0;'
     );
@@ -376,11 +363,11 @@ describe('the soft split lookup', () => {
 });
 
 describe('the soft split shadow', () => {
-  const chunk = () => godotSplitShadowChunk(threeChunk)!;
+  const chunk = () => installedChunk();
 
   it('compiles no search without Godot’s directional soft shadows, so binds no atlas colour (edge case)', () => {
     const compiled = withoutBlock(
-      godotSplitShadowChunk(threeChunk)!,
+      installedChunk(),
       `#if defined( SHADOWMAP_TYPE_PCF ) && defined( ${DIRECTIONAL_SOFT_SHADOWS} )`
     );
     expect(compiled).not.toContain(DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM);
@@ -445,20 +432,27 @@ describe('the soft split shadow', () => {
   });
 });
 
-/** three's chunk with the soft shadow filter and the split lookup in. */
-function installedChunk(): string | null {
-  return godotSplitShadowChunk(softShadowFilterChunk(threeChunk)!);
-}
-
 describe('installGodotSplitShadow', () => {
-  it('replaces three’s chunk with the filtered, patched one', () => {
+  it('puts the soft shadow filter and the split lookup in three’s chunk', () => {
     installGodotSplitShadow();
-    expect(THREE.ShaderChunk[CHUNK]).toBe(installedChunk());
+    expect(THREE.ShaderChunk[CHUNK]).toContain(FILTER_PCF);
+    expect(THREE.ShaderChunk[CHUNK]).toContain(SPLIT_LOOKUP);
+  });
+
+  it('keeps everything after three’s lookup (edge case)', () => {
+    const tail = threeChunk.slice(
+      threeChunk.indexOf('\n\t#endif', threeChunk.indexOf('float getSunShadow('))
+    );
+    installGodotSplitShadow();
+    expect(tail).toContain('getPointShadow');
+    expect(THREE.ShaderChunk[CHUNK].endsWith(tail)).toBe(true);
   });
 
   it('gives every lit built-in material the framebuffer height the filter reads', () => {
     installGodotSplitShadow();
-    expect(THREE.ShaderLib.standard.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(framebufferHeight);
+    expect(THREE.ShaderLib.standard.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]!.value).toBe(
+      installedFramebufferHeight()
+    );
   });
 
   it('gives every lit built-in material the arrays the soft shadow reads', () => {
@@ -474,11 +468,23 @@ describe('installGodotSplitShadow', () => {
 
   it('patches the chunk once, and warns nothing, when called twice (edge case)', () => {
     installGodotSplitShadow();
+    const once = THREE.ShaderChunk[CHUNK];
     expect(warningsOf(installGodotSplitShadow)).toEqual([]);
-    expect(THREE.ShaderChunk[CHUNK]).toBe(installedChunk());
+    expect(THREE.ShaderChunk[CHUNK]).toBe(once);
   });
 
-  it('leaves a chunk it cannot patch alone (error case)', () => {
+  it('keeps three’s sun lookup, and warns, when it cannot replace it (error case)', () => {
+    THREE.ShaderChunk[CHUNK] = threeChunk.replace(
+      '#define SUN_LIGHT_CASCADES 2',
+      '#define SUN_LIGHT_CASCADES 3'
+    );
+    expect(warningsOf(installGodotSplitShadow)).toHaveLength(1);
+    expect(THREE.ShaderChunk[CHUNK]).toContain(THREE_CASCADE_WALK);
+    expect(THREE.ShaderChunk[CHUNK]).not.toContain(SPLIT_LOOKUP);
+    expect(THREE.ShaderLib.standard.uniforms[SUN_SOFT_SHADOWS]).toBeUndefined();
+  });
+
+  it('leaves a chunk the soft shadow filter cannot patch alone (error case)', () => {
     THREE.ShaderChunk[CHUNK] = 'void main() {}';
     installGodotSplitShadow();
     expect(THREE.ShaderChunk[CHUNK]).toBe('void main() {}');

@@ -21,7 +21,7 @@ import { transformDriverWarnings } from './configurationWarningCensus/transformD
 import { visualInstanceWarnings } from './configurationWarningCensus/visualInstances.js';
 import { xrWarnings } from './configurationWarningCensus/xr.js';
 
-export type { DeclineCategory, Verdict, WarningRow } from './configurationWarningCensus/types.js';
+export type { WarningRow } from './configurationWarningCensus/types.js';
 
 /**
  * The merged census, a module because two guards share it. Only tests import it, so it never ships. It is baked from

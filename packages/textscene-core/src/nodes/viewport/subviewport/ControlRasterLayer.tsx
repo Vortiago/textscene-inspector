@@ -12,7 +12,7 @@ const ControlRasterPasses = lazy(() =>
   import('./ControlRasterPass.js').then((m) => ({ default: m.ControlRasterPasses }))
 );
 
-export interface ControlRasterLayerProps {
+interface ControlRasterLayerProps {
   nodes: readonly TscnNode[];
   internalResources: readonly TscnInternalResource[];
   externalResources: readonly TscnExternalResource[];

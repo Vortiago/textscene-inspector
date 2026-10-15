@@ -5,5 +5,3 @@ nodeComponentRegistry.register({
   typeName: 'AudioStreamPlayer3D',
   Component: AudioStreamPlayer3D,
 });
-
-export { AudioStreamPlayer3D };

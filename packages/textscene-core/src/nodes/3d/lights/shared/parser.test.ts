@@ -1,16 +1,12 @@
 /** Shared light parsing. */
 
 import { describe, it, expect } from 'vitest';
-import {
-  parseBaseLightProperties,
-  parseBaseLightWithNormalBias,
-  parsePositionalLightProperties,
-} from './parser';
+import { parseBaseLightWithNormalBias, parsePositionalLightProperties } from './parser';
 
 describe('Base Light Parser', () => {
-  describe('parseBaseLightProperties', () => {
+  describe('parseBaseLightWithNormalBias: the base properties every light shares', () => {
     it('should parse defaults when no properties provided', () => {
-      const result = parseBaseLightProperties({});
+      const result = parseBaseLightWithNormalBias({});
 
       expect(result.light_color).toBe('Color(1, 1, 1, 1)');
       expect(result.light_energy).toBe(1.0);
@@ -23,8 +19,8 @@ describe('Base Light Parser', () => {
     });
 
     it('reads the VisualInstance3D layers, which a ReflectionProbe cull_mask tests', () => {
-      expect(parseBaseLightProperties({ layers: '2' }).layers).toBe(2);
-      expect(parseBaseLightProperties({}).layers).toBe(1);
+      expect(parseBaseLightWithNormalBias({ layers: '2' }).layers).toBe(2);
+      expect(parseBaseLightWithNormalBias({}).layers).toBe(1);
     });
 
     it('should parse all base light properties', () => {
@@ -36,7 +32,7 @@ describe('Base Light Parser', () => {
         shadow_blur: '3.0',
       };
 
-      const result = parseBaseLightProperties(properties);
+      const result = parseBaseLightWithNormalBias(properties);
 
       expect(result.light_color).toBe('Color(1, 0.5, 0, 1)');
       expect(result.light_energy).toBe(2.5);
@@ -45,8 +41,8 @@ describe('Base Light Parser', () => {
       expect(result.shadow_blur).toBe(3.0);
     });
 
-    it('should parse the witnessed Light3D base properties (previously dropped)', () => {
-      const result = parseBaseLightProperties({
+    it('should parse the Light3D base properties a scene writes', () => {
+      const result = parseBaseLightWithNormalBias({
         light_negative: 'true',
         light_specular: '0.0',
         light_volumetric_fog_energy: '500.0',
@@ -60,38 +56,38 @@ describe('Base Light Parser', () => {
     });
 
     it('should default light_negative to false when the key is present as false', () => {
-      const result = parseBaseLightProperties({ light_negative: 'false' });
+      const result = parseBaseLightWithNormalBias({ light_negative: 'false' });
       expect(result.light_negative).toBe(false);
     });
 
     it('should handle shadow_enabled false', () => {
-      const result1 = parseBaseLightProperties({ shadow_enabled: 'false' });
+      const result1 = parseBaseLightWithNormalBias({ shadow_enabled: 'false' });
       expect(result1.shadow_enabled).toBe(false);
 
-      const result2 = parseBaseLightProperties({ shadow_enabled: '0' });
+      const result2 = parseBaseLightWithNormalBias({ shadow_enabled: '0' });
       expect(result2.shadow_enabled).toBe(false);
 
-      const result3 = parseBaseLightProperties({});
+      const result3 = parseBaseLightWithNormalBias({});
       expect(result3.shadow_enabled).toBe(false);
     });
 
     it('should fall back to default 1.0 for invalid light_energy', () => {
-      const result = parseBaseLightProperties({ light_energy: 'invalid' });
+      const result = parseBaseLightWithNormalBias({ light_energy: 'invalid' });
       expect(result.light_energy).toBe(1.0);
     });
 
     it('should be undefined for invalid shadow_bias', () => {
-      const result = parseBaseLightProperties({ shadow_bias: 'not-a-number' });
+      const result = parseBaseLightWithNormalBias({ shadow_bias: 'not-a-number' });
       expect(result.shadow_bias).toBeUndefined();
     });
 
     it('should be undefined for invalid shadow_blur', () => {
-      const result = parseBaseLightProperties({ shadow_blur: 'invalid' });
+      const result = parseBaseLightWithNormalBias({ shadow_blur: 'invalid' });
       expect(result.shadow_blur).toBeUndefined();
     });
 
     it('should handle empty strings as falsy and return defaults', () => {
-      const result = parseBaseLightProperties({
+      const result = parseBaseLightWithNormalBias({
         light_energy: '',
         shadow_bias: '',
         shadow_blur: '',
@@ -103,7 +99,7 @@ describe('Base Light Parser', () => {
     });
 
     it('should handle negative values', () => {
-      const result = parseBaseLightProperties({
+      const result = parseBaseLightWithNormalBias({
         light_energy: '-1.5',
         shadow_bias: '-0.1',
       });
@@ -113,7 +109,7 @@ describe('Base Light Parser', () => {
     });
 
     it('should handle fractional values', () => {
-      const result = parseBaseLightProperties({
+      const result = parseBaseLightWithNormalBias({
         light_energy: '0.75',
         shadow_bias: '0.001',
       });
@@ -123,7 +119,7 @@ describe('Base Light Parser', () => {
     });
 
     it('should handle extremely large numeric values', () => {
-      const result = parseBaseLightProperties({
+      const result = parseBaseLightWithNormalBias({
         light_energy: '999999999.999',
       });
 
@@ -131,17 +127,17 @@ describe('Base Light Parser', () => {
     });
 
     it('should accept any string for light_color', () => {
-      const result = parseBaseLightProperties({ light_color: 'invalid-color' });
+      const result = parseBaseLightWithNormalBias({ light_color: 'invalid-color' });
       expect(result.light_color).toBe('invalid-color');
     });
 
     it('should use custom light_color when provided', () => {
-      const result = parseBaseLightProperties({ light_color: 'Color(1, 0.95, 0.8, 1)' });
+      const result = parseBaseLightWithNormalBias({ light_color: 'Color(1, 0.95, 0.8, 1)' });
       expect(result.light_color).toBe('Color(1, 0.95, 0.8, 1)');
     });
   });
 
-  describe('parseBaseLightWithNormalBias', () => {
+  describe('parseBaseLightWithNormalBias: shadow_normal_bias', () => {
     it('should include shadow_normal_bias', () => {
       const properties = {
         shadow_normal_bias: '0.02',

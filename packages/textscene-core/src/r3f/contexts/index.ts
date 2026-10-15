@@ -1,7 +1,6 @@
 export {
   SelectionProvider,
   useSelection,
-  useOptionalSelection,
   type SelectionContextValue,
   type SelectionProviderProps,
 } from './SelectionContext.js';
@@ -25,11 +24,3 @@ export {
   type MissingResourcesContextValue,
   type MissingResourcesProviderProps,
 } from './MissingResourcesContext.js';
-export { Path2DCurveProvider, useParentPath2DCurve } from './Path2DCurveContext.js';
-export { Path3DCurveProvider, useParentPath3DCurve } from './Path3DCurveContext.js';
-export {
-  ProjectSettingsProvider,
-  useProjectSettings,
-  type ProjectSettingsValue,
-  type ProjectSettingsProviderProps,
-} from './ProjectSettingsContext.js';

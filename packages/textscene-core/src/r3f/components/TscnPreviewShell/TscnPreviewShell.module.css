@@ -530,8 +530,8 @@
 /*
  * A narrow, tall panel stacks the viewport over a bottom sheet (ADR-0048). The sheet's
  * basis is a definite percentage: `auto` resolves to 8px, since the dock's panes are
- * `flex-basis: 0` and the viewport's flex-grow takes the column. The query text is
- * NARROW_LAYOUT_QUERY in narrowLayout.ts.
+ * `flex-basis: 0` and the viewport's flex-grow takes the column. Only this stylesheet reads
+ * the query, and TscnPreviewShell.responsive.test.tsx pins its text.
  */
 @media (max-width: 768px) and (min-height: 501px) {
   .columns {

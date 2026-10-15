@@ -13,5 +13,3 @@ const convertTransformModifier3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(convertTransformModifier3DRegistration);
-
-export { convertTransformModifier3DRegistration };

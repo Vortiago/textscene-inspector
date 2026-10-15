@@ -73,7 +73,7 @@ const sunDisk = (i: number) => `
     }
   }`;
 
-export const PROCEDURAL_SKY_FRAGMENT_SHADER = /* glsl */ `
+const PROCEDURAL_SKY_FRAGMENT_SHADER = /* glsl */ `
 varying vec3 vEyeDirection;
 
 uniform vec3 sky_top_color;
@@ -99,7 +99,7 @@ ${[0, 1, 2, 3].map(sunDisk).join('\n')}
 }
 `;
 
-export const PANORAMA_SKY_FRAGMENT_SHADER = /* glsl */ `
+const PANORAMA_SKY_FRAGMENT_SHADER = /* glsl */ `
 varying vec3 vEyeDirection;
 
 uniform sampler2D source_panorama;
@@ -126,7 +126,7 @@ void main() {
 }
 `;
 
-export const PHYSICAL_SKY_FRAGMENT_SHADER = /* glsl */ `
+const PHYSICAL_SKY_FRAGMENT_SHADER = /* glsl */ `
 varying vec3 vEyeDirection;
 
 uniform float rayleigh;

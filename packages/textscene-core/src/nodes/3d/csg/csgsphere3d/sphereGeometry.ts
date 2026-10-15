@@ -35,7 +35,7 @@
 import type * as THREE from 'three';
 import { applyCsgNormals, type CsgFaceSoup } from '../smoothNormals';
 
-export interface CsgSphereSpec {
+interface CsgSphereSpec {
   radius: number;
   radialSegments: number;
   rings: number;

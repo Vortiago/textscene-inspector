@@ -7,8 +7,13 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { canvasItemBlendState } from './build';
-import { decodeCanvasItemMaterial } from './decode';
-import { CanvasItemBlendMode, CanvasItemLightMode } from './types';
+import { canvasItemMaterialOf } from './decode';
+import { CanvasItemBlendMode, CanvasItemLightMode, type CanvasItemMaterialProperties } from './types';
+
+/** The CanvasItemMaterial a resource with this property bag draws as. */
+function decode(data: Record<string, string>): CanvasItemMaterialProperties {
+  return canvasItemMaterialOf({ type: 'CanvasItemMaterial', data })!;
+}
 
 /** Godot's RD blend factors/ops in three's constants. */
 const SRC_ALPHA = THREE.SrcAlphaFactor;
@@ -147,22 +152,20 @@ describe('canvasItemBlendState', () => {
     // build half still has to answer, and MIX is the safe answer.
     const disabled = 5 as CanvasItemBlendMode;
     expect(canvasItemBlendState(disabled)).toEqual(canvasItemBlendState(CanvasItemBlendMode.MIX));
-    expect(decodeCanvasItemMaterial({ blend_mode: '5' }).blendMode).toBe(CanvasItemBlendMode.MIX);
+    expect(decode({ blend_mode: '5' }).blendMode).toBe(CanvasItemBlendMode.MIX);
   });
 
   it('is independent of light_mode — unshaded and light_only blend the same', () => {
     // light_mode selects which 2D lights reach the item (canvasItemLighting),
     // never how its pixels combine, so the blend state must not move with it.
     const forMode = (lightMode: CanvasItemLightMode) =>
-      canvasItemBlendState(
-        decodeCanvasItemMaterial({ blend_mode: '1', light_mode: String(lightMode) }).blendMode
-      );
+      canvasItemBlendState(decode({ blend_mode: '1', light_mode: String(lightMode) }).blendMode);
     expect(forMode(CanvasItemLightMode.UNSHADED)).toEqual(forMode(CanvasItemLightMode.NORMAL));
     expect(forMode(CanvasItemLightMode.LIGHT_ONLY)).toEqual(forMode(CanvasItemLightMode.NORMAL));
   });
 
   it('blends a material with no blend_mode at all as MIX (the decode default)', () => {
-    const state = canvasItemBlendState(decodeCanvasItemMaterial({}).blendMode);
+    const state = canvasItemBlendState(decode({}).blendMode);
     expect(state).toEqual(canvasItemBlendState(CanvasItemBlendMode.MIX));
   });
 });

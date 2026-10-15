@@ -11,5 +11,3 @@ const cSGMesh3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(cSGMesh3DRegistration);
-
-export { cSGMesh3DRegistration };

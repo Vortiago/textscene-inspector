@@ -9,9 +9,10 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { rangeRatio, type RangeProperties, type RangeValueOrder } from './range';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /**
  * `tick.svg`'s cross-axis extent. `pnpm ref:godot` paints an 8px band at `default_theme_scale = 1`,
@@ -19,15 +20,15 @@ import { rangeRatio, type RangeProperties, type RangeValueOrder } from './range'
  * height="4"`): the path draws to `y="16"`/`x="16"`, but the rasteriser clips to the canvas. Not
  * scaled by `default_theme_scale`, like every vendored icon's literal size.
  */
-export const SLIDER_TICK_CROSS_AXIS = 8;
+const SLIDER_TICK_CROSS_AXIS = 8;
 
 /**
  * `Slider::get_minimum_size()` (`slider.cpp:35-44`): `Size2i(ss.width, MAX(ss.height, rs.height))`
  * horizontally, `ss` the `slider` style and `rs` the `grabber` icon. The style's margins are equal
  * (`make_flat_stylebox(color, 4, 4, 4, 4, 4)`, `default_theme.cpp:579`), so both are
- * `sliderTrackThickness`. A themed `grabber` need not be square, so it is a `Vec2`.
+ * `sliderTrackThickness`. A themed `grabber` need not be square, so it is a `Vector2`.
  */
-export function sliderMinimumSize(vertical: boolean, theme: NativeTheme, grabber: Vec2): Vec2 {
+export function sliderMinimumSize(vertical: boolean, theme: NativeTheme, grabber: Vector2): Vector2 {
   const track = theme.sliderTrackThickness;
   return vertical ? { x: Math.max(track, grabber.x), y: track } : { x: track, y: Math.max(track, grabber.y) };
 }
@@ -40,8 +41,8 @@ export function sliderMinimumSize(vertical: boolean, theme: NativeTheme, grabber
  */
 export function sliderGrabberIconSize(
   theme: NativeTheme,
-  textureSlots: Readonly<Record<string, Vec2 | null>>
-): Vec2 {
+  textureSlots: Readonly<Record<string, Vector2 | null>>
+): Vector2 {
   return textureSlots.grabber ?? { x: theme.sliderGrabberSize, y: theme.sliderGrabberSize };
 }
 
@@ -57,7 +58,7 @@ export function resolveSliderRatio(props: RangeProperties, orderedKeys?: RangeVa
 }
 
 /** `Size2i size = get_size()`: every draw formula reads the narrowed size. */
-const size2i = (size: Vec2): Vec2 => ({ x: Math.trunc(size.x), y: Math.trunc(size.y) });
+const size2i = (size: Vector2): Vector2 => ({ x: Math.trunc(size.x), y: Math.trunc(size.y) });
 
 /**
  * The `slider` StyleBox draw rect (`slider.cpp:333` horizontal, `slider.cpp:301` vertical), centred
@@ -65,7 +66,7 @@ const size2i = (size: Vec2): Vec2 => ({ x: Math.trunc(size.x), y: Math.trunc(siz
  * `size.width / 2` and `widget_width / 2` separately, as the C++ does, though `widget_width` is
  * always even here (`2 * round(margin * scale)`).
  */
-export function sliderTrackRect(vertical: boolean, rawSize: Vec2, theme: NativeTheme): Rect2 {
+export function sliderTrackRect(vertical: boolean, rawSize: Vector2, theme: NativeTheme): Rect2 {
   const size = size2i(rawSize);
   const thickness = theme.sliderTrackThickness;
   if (vertical) {
@@ -82,10 +83,10 @@ export function sliderTrackRect(vertical: boolean, rawSize: Vec2, theme: NativeT
  */
 export function sliderGrabberAreaRect(
   vertical: boolean,
-  rawSize: Vec2,
+  rawSize: Vector2,
   ratio: number,
   theme: NativeTheme,
-  grabber: Vec2,
+  grabber: Vector2,
   /**
    * `Control::is_layout_rtl()`, which the vertical arm lacks. The draw branch (`:331`) reaches only
    * this fill and the grabber: the track (`:333`) spans the width and the tick loop (`:341-359`) is
@@ -121,9 +122,9 @@ export function sliderGrabberAreaRect(
  */
 export function sliderGrabberRect(
   vertical: boolean,
-  rawSize: Vec2,
+  rawSize: Vector2,
   ratio: number,
-  grabber: Vec2,
+  grabber: Vector2,
   /** `Control::is_layout_rtl()`, which the vertical arm lacks. */
   rtl: boolean
 ): Rect2 {
@@ -149,11 +150,11 @@ export function sliderGrabberRect(
  */
 export function sliderTickRects(
   vertical: boolean,
-  rawSize: Vec2,
+  rawSize: Vector2,
   indices: readonly number[],
   tickCount: number,
   theme: NativeTheme,
-  grabber: Vec2
+  grabber: Vector2
 ): Rect2[] {
   const size = size2i(rawSize);
   // The 4px along-axis box of `hslider_tick.svg`/`vslider_tick.svg`, scaled by `default_theme_scale`.

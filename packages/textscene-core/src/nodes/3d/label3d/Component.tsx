@@ -24,7 +24,7 @@ const LabelGlyphs = lazy(() => import('./LabelGlyphs'));
  * `frameSceneBounds.ts` unions mesh AABBs, and the lazy glyphs can land after
  * `CameraFit`'s last retry, so without a synchronous stand-in the fit ignores the label.
  */
-export const LABEL3D_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
+const LABEL3D_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
 export function Label3D({ node, children }: NodeComponentProps) {
   const { showLabels } = useViewportMode();

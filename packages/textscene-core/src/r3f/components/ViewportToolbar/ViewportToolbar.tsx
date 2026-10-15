@@ -27,7 +27,7 @@ import styles from './ViewportToolbar.module.css';
 const MODES: ViewportMode[] = ['3D', '2D'];
 
 /** Everything `buildDisplayToggles` needs, so a test needs no DOM. */
-export interface DisplayToggleState {
+interface DisplayToggleState {
   mode: ViewportMode;
   showCollisions: boolean;
   setShowCollisions: (show: boolean) => void;
@@ -51,7 +51,7 @@ export interface DisplayToggleState {
  * The overlays the Display menu offers, and their state. At module scope, so
  * the 3D-only ones are one readable list.
  */
-export function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[] {
+function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[] {
   return [
     {
       label: 'Collisions',

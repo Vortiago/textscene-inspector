@@ -52,5 +52,3 @@ const collisionObject3DScaleRule: LintRule = {
 };
 
 ruleRegistry.register(collisionObject3DScaleRule);
-
-export { collisionObject3DScaleRule };

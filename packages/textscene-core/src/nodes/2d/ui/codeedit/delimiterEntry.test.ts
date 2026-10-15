@@ -8,8 +8,11 @@ import { describe, expect, it } from 'vitest';
 import type { RawNode, RawScene } from '../../../../parser/types';
 import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry';
 import { delimiterArrayValidator } from './delimiterValidators';
-import { codeEditDelimiterCollisionRule } from './linter';
+import { ruleRegistry } from '../../../../linter/RuleRegistry';
+import './linter';
 import { buildDelimiters } from './delimiterRegions';
+
+const codeEditDelimiterCollisionRule = ruleRegistry.getRule('valid-codeedit-properties')!;
 
 describe('splitDelimiterEntry', () => {
   it('splits a start and an end key at the first space', () => {

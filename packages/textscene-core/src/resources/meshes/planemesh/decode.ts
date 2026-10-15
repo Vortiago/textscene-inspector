@@ -1,15 +1,16 @@
 import type { PlaneMeshProperties } from './types';
-import { parseVector3, type Vector2, type Vector3 } from '../../../parser/vectors';
+import { parseVector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
 import { boolOr, enumOr, vec2Or } from '../../../parser/valueParsers';
 import { flooredCount } from '../meshCounts';
+import type { Vector2, Vector3 } from '../../../godot/math/vector';
 
 /**
  * Defaults that differ between PlaneMesh (FACE_Y, 2×2) and its QuadMesh subclass
  * (FACE_Z, 1×1). Everything else is shared, so QuadMesh reuses this decode by
  * passing its own defaults rather than duplicating the field-by-field reading.
  */
-export interface PlaneMeshDefaults {
+interface PlaneMeshDefaults {
   size: Vector2;
   orientation: number;
 }

@@ -13,5 +13,4 @@ registerResourceSlice({
   busType: 'resource',
 });
 
-export { decodeLabelSettings, labelSettingsFromResource, resolveLabelSettings } from './decode';
 export type { LabelSettingsResource } from './types';

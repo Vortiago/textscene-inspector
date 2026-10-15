@@ -52,7 +52,7 @@ export interface SceneNode {
  * External scene reference (before/after resolution).
  * Tracks the status of external scene instances.
  */
-export interface ExternalSceneRef {
+interface ExternalSceneRef {
   /** Node name for this instance in parent scene */
   readonly nodeName: string;
   /** Path to external scene file, such as "res://enemy.tscn". */
@@ -108,27 +108,5 @@ export function buildSceneGraph(rootScene: ParsedScene): SceneGraph {
     rootScene: rootScene.path,
     scenes: Object.freeze(new Map([[rootScene.path, rootScene]])) as ReadonlyMap<string, ParsedScene>,
     flattenedNodes: Object.freeze(flattenedNodes) as ReadonlyArray<SceneNode>,
-  });
-}
-
-/**
- * Create a SceneGraph from a TscnScene (for tests and simple use cases).
- * Thin adapter that wraps the loose TscnScene shape in a ParsedScene and
- * delegates to {@link buildSceneGraph}.
- */
-export function createSceneGraphFromTscnScene(
-  tscnScene: {
-    nodes: TscnNode[];
-    externalResources?: ExtResource[];
-    internalResources?: SubResource[];
-  },
-  scenePath: string = 'res://test.tscn'
-): SceneGraph {
-  return buildSceneGraph({
-    path: scenePath,
-    nodes: tscnScene.nodes,
-    externalScenes: [],
-    internalResources: tscnScene.internalResources || [],
-    externalResources: tscnScene.externalResources || [],
   });
 }

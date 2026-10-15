@@ -5,8 +5,8 @@
  */
 
 import * as THREE from 'three';
-import type { Color } from '../../utils/colorParser';
 import { sRGBToLinearRGB } from '../../utils/colorSpace';
+import type { Rgba } from '../../godot/math/math';
 
 /**
  * A cube of the sRGB clear `color`, which already carries the background energy. Godot linearises it
@@ -14,7 +14,7 @@ import { sRGBToLinearRGB } from '../../utils/colorSpace';
  * material converts every Color parameter (`environment/sky.cpp:193`, `material_storage.cpp:801`).
  * Its brightness (`:2045`) applies the energy again as `backgroundIntensity`. The caller disposes of it.
  */
-export function clearColorCube(color: Pick<Color, 'r' | 'g' | 'b'>): THREE.CubeTexture {
+export function clearColorCube(color: Pick<Rgba, 'r' | 'g' | 'b'>): THREE.CubeTexture {
   const [r, g, b] = sRGBToLinearRGB(...sRGBToLinearRGB(color.r, color.g, color.b));
   const faces = Array.from({ length: 6 }, () => {
     const face = new THREE.DataTexture(new Float32Array([r, g, b, 1]), 1, 1);

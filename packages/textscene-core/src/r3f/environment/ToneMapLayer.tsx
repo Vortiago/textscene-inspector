@@ -15,7 +15,7 @@ import { releaseBoundTexture } from '../../resources/textures/applyTextureState'
 import type { SceneResources } from '../SceneResourcesContext';
 import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
 
-export interface ToneMapLayerProps {
+interface ToneMapLayerProps {
   /** Null when the environment has no glow. */
   glow: GlowParams | null;
   /** The scene buffer's samples per pixel, resolved before the tone curve, as Godot resolves it. */

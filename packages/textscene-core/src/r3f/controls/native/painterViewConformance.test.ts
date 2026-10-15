@@ -63,7 +63,7 @@ function uiSources(): SourceFile[] {
   const NOT_A_PAINTER_READ = ['parser.ts', 'linterParser.ts', 'types.ts'];
   const found = walkSources(
     [UI_ROOT],
-    (name) => isProductionSource(name) && !NOT_A_PAINTER_READ.includes(name)
+    (name, path) => isProductionSource(name, path) && !NOT_A_PAINTER_READ.includes(name)
   );
   return [...found, ...LOOSE_PAINTERS.map((file) => ({ file, source: readFileSync(file, 'utf8') }))];
 }

@@ -78,7 +78,7 @@ export function noiseVolume(
  * How much larger than the output `_get_seamless_image` generates its source on one axis:
  * the blend fraction of the size, at least one pixel (noise.cpp:36-37).
  */
-export function seamlessSkirt(size: number, blendSkirt: number): number {
+function seamlessSkirt(size: number, blendSkirt: number): number {
   return Math.max(1, Math.trunc(size * blendSkirt));
 }
 

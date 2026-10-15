@@ -26,7 +26,7 @@ const LIGHT_MODES = [
   CanvasItemLightMode.LIGHT_ONLY,
 ] as const;
 
-export function decodeCanvasItemMaterial(properties: Record<string, string>): CanvasItemMaterialProperties {
+function decodeCanvasItemMaterial(properties: Record<string, string>): CanvasItemMaterialProperties {
   return {
     blendMode: enumOr(
       properties.blend_mode,

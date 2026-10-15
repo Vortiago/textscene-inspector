@@ -1,6 +1,6 @@
 /**
  * Tests the framework-free BBCode tokenizer: `parseBBCodeRuns`, `hasOpenTag`,
- * `lastTagValue`, `resolveBBColor` and `parseImgTag`.
+ * `lastTagValue` and `resolveBBColor`, with each `[img]` tag read through `parseBBCodeRuns`.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -8,15 +8,15 @@ import {
   hasOpenTag,
   lastTagValue,
   parseBBCodeRuns,
-  parseImgTag,
   resolveBBColor,
+  type ParsedImgTag,
 } from './bbcode';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 const CENTER_CENTER = { imagePoint: 'center', textPoint: 'center' } as const;
 
 /** A `ParsedImgTag` with every field at its Godot default but `path` and the overrides. */
-function img(path: string, overrides: Partial<ReturnType<typeof parseImgTag>> = {}) {
+function img(path: string, overrides: Partial<ParsedImgTag> = {}) {
   return {
     path,
     width: 0,
@@ -193,41 +193,44 @@ describe('parseBBCodeRuns', () => {
   });
 });
 
-describe('parseImgTag', () => {
+/** The image `parseBBCodeRuns` reads off one `[<tag>]a.png` token. */
+function imageOf(tag: string): ParsedImgTag {
+  return parseBBCodeRuns(`[${tag}]a.png`)[0]!.image!;
+}
+
+describe('the [img] tag options', () => {
   it('parses "WxH" from the value form (`:6062-6071`)', () => {
-    expect(parseImgTag('img=100x50', 'a.png')).toEqual(img('a.png', { width: 100, height: 50 }));
+    expect(imageOf('img=100x50')).toEqual(img('a.png', { width: 100, height: 50 }));
   });
 
   it('parses a bare width, no "x", as width-only — height stays 0 (natural aspect)', () => {
-    expect(parseImgTag('img=64', 'a.png')).toEqual(img('a.png', { width: 64 }));
+    expect(imageOf('img=64')).toEqual(img('a.png', { width: 64 }));
   });
 
   it('reads a "%" suffix on either half of "WxH" independently', () => {
-    expect(parseImgTag('img=50%x25', 'a.png')).toEqual(
-      img('a.png', { width: 50, widthInPercent: true, height: 25 })
-    );
+    expect(imageOf('img=50%x25')).toEqual(img('a.png', { width: 50, widthInPercent: true, height: 25 }));
   });
 
   it('reads width/height from bbcode_options ONLY when the value form is absent (`:6072-6141`)', () => {
-    expect(parseImgTag('img width=40 height=30', 'a.png')).toEqual(img('a.png', { width: 40, height: 30 }));
+    expect(imageOf('img width=40 height=30')).toEqual(img('a.png', { width: 40, height: 30 }));
   });
 
   it('the value form and the width=/height= options are mutually exclusive — a present value form leaves the options unread even when both are written', () => {
     // `"top".to_int()` is 0 (`String::to_int` skips non-digits), so width and
     // height stay 0 rather than falling through to `width=`.
-    expect(parseImgTag('img=top width=999', 'a.png')).toEqual(
+    expect(imageOf('img=top width=999')).toEqual(
       img('a.png', { alignment: { imagePoint: 'top', textPoint: 'top' } })
     );
   });
 
   it('reads tooltip=/pad= only from the options form', () => {
-    expect(parseImgTag('img tooltip="a caption" pad=true', 'a.png')).toEqual(
+    expect(imageOf('img tooltip="a caption" pad=true')).toEqual(
       img('a.png', { tooltip: 'a caption', pad: true })
     );
   });
 
   it('reads color=/region=/alt= unconditionally, alongside EITHER form', () => {
-    expect(parseImgTag('img=32x32 color=#ff0000 region=1,2,3,4 alt="a logo"', 'a.png')).toEqual(
+    expect(imageOf('img=32x32 color=#ff0000 region=1,2,3,4 alt="a logo"')).toEqual(
       img('a.png', {
         width: 32,
         height: 32,
@@ -239,53 +242,53 @@ describe('parseImgTag', () => {
   });
 
   it('color falls back to opaque white, not the paragraph default_color (`:6034-6038`)', () => {
-    expect(parseImgTag('img', 'a.png').color).toEqual(WHITE);
+    expect(imageOf('img').color).toEqual(WHITE);
   });
 
   it('a malformed region (not exactly 4 comma-separated values) is dropped', () => {
-    expect(parseImgTag('img region=1,2,3', 'a.png').region).toBeUndefined();
+    expect(imageOf('img region=1,2,3').region).toBeUndefined();
   });
 
   it('an unterminated quote still yields its tail piece (`_split_unquoted`, `:5290-5296`) — unquote is a no-op on an unmatched pair', () => {
-    expect(parseImgTag('img alt="unclosed', 'a.png').altText).toBe('"unclosed');
+    expect(imageOf('img alt="unclosed').altText).toBe('"unclosed');
   });
 
   describe('alignment', () => {
     it('a single subtag sets a full preset — image point and text point together (`:6001-6010`)', () => {
-      expect(parseImgTag('img=top', 'a.png').alignment).toEqual({ imagePoint: 'top', textPoint: 'top' });
-      expect(parseImgTag('img=bottom', 'a.png').alignment).toEqual({
+      expect(imageOf('img=top').alignment).toEqual({ imagePoint: 'top', textPoint: 'top' });
+      expect(imageOf('img=bottom').alignment).toEqual({
         imagePoint: 'bottom',
         textPoint: 'bottom',
       });
     });
 
     it('a two-piece subtag sets each axis independently', () => {
-      expect(parseImgTag('img=top,bottom', 'a.png').alignment).toEqual({
+      expect(imageOf('img=top,bottom').alignment).toEqual({
         imagePoint: 'top',
         textPoint: 'bottom',
       });
     });
 
     it('a matched image-point piece resets text-point to top unless the second piece also matches — Godot assigns (not ORs) the image bits, zeroing the text bits as a side effect', () => {
-      expect(parseImgTag('img=top,xyz', 'a.png').alignment).toEqual({ imagePoint: 'top', textPoint: 'top' });
+      expect(imageOf('img=top,xyz').alignment).toEqual({ imagePoint: 'top', textPoint: 'top' });
     });
 
     it("an unmatched image-point piece leaves text-point BOTTOM for 'baseline' — the default CENTER text field (0b01) OR'd with BASELINE's own field (0b10) is 0b11, Godot's own BOTTOM value, a real engine quirk this ports bit-for-bit", () => {
-      expect(parseImgTag('img=xyz,baseline', 'a.png').alignment).toEqual({
+      expect(imageOf('img=xyz,baseline').alignment).toEqual({
         imagePoint: 'center',
         textPoint: 'bottom',
       });
     });
 
     it('reads align= from the options form, using the same subtag grammar', () => {
-      expect(parseImgTag('img align=bottom,center', 'a.png').alignment).toEqual({
+      expect(imageOf('img align=bottom,center').alignment).toEqual({
         imagePoint: 'bottom',
         textPoint: 'center',
       });
     });
 
     it('align= is unread once the value form is present, same mutual exclusivity as width/height', () => {
-      expect(parseImgTag('img=32 align=bottom', 'a.png').alignment).toEqual(CENTER_CENTER);
+      expect(imageOf('img=32 align=bottom').alignment).toEqual(CENTER_CENTER);
     });
   });
 });

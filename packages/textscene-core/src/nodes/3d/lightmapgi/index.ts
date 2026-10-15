@@ -12,5 +12,3 @@ const lightmapGIRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(lightmapGIRegistration);
-
-export { lightmapGIRegistration };

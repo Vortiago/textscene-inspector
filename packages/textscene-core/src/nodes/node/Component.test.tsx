@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Node } from './Component';
 import type { TscnNode } from '../../parser/types';
-import type { Transform3D } from '../base/node3d/types';
+import type { Transform3D } from '../../godot/math/transform3d';
 
 const baseNode: TscnNode = { rawProperties: {}, name: 'Root', type: 'Node', children: [], properties: {} };
 

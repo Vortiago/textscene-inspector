@@ -23,13 +23,14 @@ import {
   lineEditTextureSlots,
   LINE_EDIT_DEFAULT_FONT_COLOR,
   LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
-  LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR,
   LINE_EDIT_THEME_FONT_KEY,
   EXPAND_MODE_ORIGINAL_SIZE,
-  EXPAND_MODE_FIT_TO_TEXT,
-  EXPAND_MODE_FIT_TO_LINE_EDIT,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+
+// line_edit.h:85-89 numbers ExpandMode from EXPAND_MODE_ORIGINAL_SIZE = 0.
+const EXPAND_MODE_FIT_TO_TEXT = 1;
+const EXPAND_MODE_FIT_TO_LINE_EDIT = 2;
 
 const W_ADVANCE = 1936 * (16 / 2048); // 15.125
 const FONT_HEIGHT = 23; // ceil(2189*16/2048) + ceil(600*16/2048)
@@ -432,10 +433,13 @@ describe('lineEditTextTheme — font_color / font_uneditable_color / font_placeh
   });
 
   it('resolves control_font_placeholder_color (alpha 0.6) for the placeholder state', () => {
-    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'placeholder', ctx()).color).toEqual(
-      LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR
-    );
-    expect(LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.6 });
+    // default_theme.cpp:107,425: control_font_placeholder_color.
+    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'placeholder', ctx()).color).toEqual({
+      r: 0.875,
+      g: 0.875,
+      b: 0.875,
+      a: 0.6,
+    });
   });
 
   it('a theme_override_colors/font_placeholder_color override wins over the default', () => {

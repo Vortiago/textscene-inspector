@@ -12,7 +12,6 @@ const spotLight3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(spotLight3DRegistration);
 
-export { spotLight3DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

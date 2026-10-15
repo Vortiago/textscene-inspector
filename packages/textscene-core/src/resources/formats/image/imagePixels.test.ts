@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { readImagePixels, readPixelsThroughGl } from './imagePixels';
+import { readImagePixels } from './imagePixels';
 
 /** A WebGL2 stand-in that records each call and reads back `texels`. */
 function fakeGl(texels: number[], { complete = true, error = 0, staleErrors = 0 } = {}) {
@@ -37,18 +37,31 @@ function fakeGl(texels: number[], { complete = true, error = 0, staleErrors = 0 
       out.set(texels),
     deleteTexture: () => calls.push('deleteTexture'),
     deleteFramebuffer: () => calls.push('deleteFramebuffer'),
+    // Lost once read, so the next read asks the canvas again and gets its own fake.
+    isContextLost: () => true,
   };
   return { gl: gl as unknown as WebGL2RenderingContext, calls, unpack };
 }
 
 const image = { width: 2, height: 1 };
 
-describe('readPixelsThroughGl', () => {
+/** `readImagePixels` of a decoded `target`, with `gl` as the WebGL2 context a canvas hands out. */
+function readThroughGl(gl: WebGL2RenderingContext, target: unknown) {
+  const canvas = { getContext: () => gl } as unknown as HTMLCanvasElement;
+  const createElement = vi.spyOn(document, 'createElement').mockReturnValue(canvas);
+  try {
+    return readImagePixels(target);
+  } finally {
+    createElement.mockRestore();
+  }
+}
+
+describe('readImagePixels of a decoded image through WebGL2', () => {
   it('returns the uploaded bytes unpremultiplied, with the RGB behind alpha 0 intact', () => {
     const texels = [255, 255, 255, 0, 10, 20, 30, 128];
     const { gl } = fakeGl(texels);
 
-    const pixels = readPixelsThroughGl(gl, image);
+    const pixels = readThroughGl(gl, image);
 
     expect(pixels).toEqual({ data: new Uint8Array(texels), width: 2, height: 1 });
   });
@@ -56,7 +69,7 @@ describe('readPixelsThroughGl', () => {
   it('uploads with no premultiply, no flip and no colour conversion', () => {
     const { gl, calls, unpack } = fakeGl([0, 0, 0, 0, 0, 0, 0, 0]);
 
-    readPixelsThroughGl(gl, image);
+    readThroughGl(gl, image);
 
     expect(calls).toContain('texImage2D premultiply=false');
     expect(unpack.get(gl.UNPACK_FLIP_Y_WEBGL)).toBe(false);
@@ -66,26 +79,26 @@ describe('readPixelsThroughGl', () => {
   it('returns undefined when the framebuffer cannot hold the image', () => {
     const { gl } = fakeGl([0, 0, 0, 0, 0, 0, 0, 0], { complete: false });
 
-    expect(readPixelsThroughGl(gl, image)).toBeUndefined();
+    expect(readThroughGl(gl, image)).toBeUndefined();
   });
 
   it('returns undefined when the upload or read raises a GL error', () => {
     const { gl } = fakeGl([0, 0, 0, 0, 0, 0, 0, 0], { error: 1281 });
 
-    expect(readPixelsThroughGl(gl, image)).toBeUndefined();
+    expect(readThroughGl(gl, image)).toBeUndefined();
   });
 
   it('reads an image although an earlier read left an error on the shared context', () => {
     const texels = [1, 2, 3, 4, 5, 6, 7, 8];
     const { gl } = fakeGl(texels, { staleErrors: 2 });
 
-    expect(readPixelsThroughGl(gl, image)?.data).toEqual(new Uint8Array(texels));
+    expect(readThroughGl(gl, image)?.data).toEqual(new Uint8Array(texels));
   });
 
   it('deletes its texture and framebuffer after the read', () => {
     const { gl, calls } = fakeGl([0, 0, 0, 0, 0, 0, 0, 0]);
 
-    readPixelsThroughGl(gl, image);
+    readThroughGl(gl, image);
 
     expect(calls).toEqual(expect.arrayContaining(['deleteTexture', 'deleteFramebuffer']));
   });
@@ -93,7 +106,7 @@ describe('readPixelsThroughGl', () => {
   it('returns undefined for an image with no size', () => {
     const { gl } = fakeGl([]);
 
-    expect(readPixelsThroughGl(gl, { width: 0, height: 0 })).toBeUndefined();
+    expect(readThroughGl(gl, { width: 0, height: 0 })).toBeUndefined();
   });
 });
 

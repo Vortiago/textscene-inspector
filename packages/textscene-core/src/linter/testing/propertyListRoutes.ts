@@ -2,7 +2,7 @@
  * Every class whose property-list override adds a key family no `ADD_PROPERTY` or
  * XML sweep finds, so `StrictTscnParser` would accept any value there. It is a
  * population, not a proof: `godot-source-decoupling` forbids scraping the engine,
- * so an override nobody has read is invisible to every guard. Only tests import it.
+ * so an override nobody has read is invisible to every guard.
  */
 
 import type { RouteRow } from './propertyListRoutes/types.js';

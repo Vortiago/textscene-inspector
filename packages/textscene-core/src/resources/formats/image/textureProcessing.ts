@@ -85,7 +85,7 @@ async function decodeImage(
  * returns the same texture when nothing needs rewriting, and otherwise a `DataTexture` of
  * the rewritten bytes, since a decoded image cannot be edited in place.
  */
-export function applyAlphaBorderFix(texture: THREE.Texture): THREE.Texture {
+function applyAlphaBorderFix(texture: THREE.Texture): THREE.Texture {
   const pixels = readImagePixels(texture.image);
   if (!pixels) return texture;
 

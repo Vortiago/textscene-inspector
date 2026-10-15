@@ -8,9 +8,9 @@ import { useContext } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TiledUploadContext, type TiledUploads } from './TiledUploadContext';
-import { FRAME_UPLOAD_BUDGET_MS, TiledUploadDriver } from './TiledUploadDriver';
+import { TiledUploadDriver } from './TiledUploadDriver';
 import { TiledUploadQueue } from './TiledUploadQueue';
-import { GpuPacer, IN_FLIGHT_BANDS } from './gpuPacer';
+import { GpuPacer } from './gpuPacer';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -39,7 +39,8 @@ describe('TiledUploadDriver', () => {
     await renderer.advanceFrames(3, 16);
 
     expect(tick).toHaveBeenCalledTimes(3);
-    expect(tick).toHaveBeenCalledWith(FRAME_UPLOAD_BUDGET_MS);
+    // Half of a 60 Hz frame, so a frame with bands in it still makes its vsync.
+    expect(tick).toHaveBeenCalledWith(8);
   });
 
   it('paces the queue to the GPU', async () => {
@@ -55,7 +56,8 @@ describe('TiledUploadDriver', () => {
       </TiledUploadDriver>
     );
     // One band more than the window, so the second frame still has rows to ask for.
-    const rows = 128 * (IN_FLIGHT_BANDS + 1);
+    // The pacer keeps 4 bands of 128 rows on their way to the GPU at once.
+    const rows = 128 * (4 + 1);
     queue!.enqueue(new THREE.DataTexture(new Uint8Array(4096 * rows * 4), 4096, rows));
     await renderer.advanceFrames(2, 16);
 

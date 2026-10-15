@@ -94,5 +94,3 @@ const jointValidationRule: LintRule = {
 };
 
 ruleRegistry.register(jointValidationRule);
-
-export { jointValidationRule };

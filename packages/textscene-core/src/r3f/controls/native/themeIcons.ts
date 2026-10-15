@@ -69,7 +69,7 @@ export const CHECK_BOX_ICONS: CheckBoxIcons = {
 };
 
 /** OptionButton's single icon: `default_theme.cpp:235`. */
-export interface OptionButtonIcons {
+interface OptionButtonIcons {
   arrow: string;
 }
 
@@ -86,7 +86,7 @@ const VSPLITTER_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI4Ij48cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImdyYXkiIHN0cm9rZS1vcGFjaXR5PSIuNjUiIHN0cm9rZS13aWR0aD0iMS43IiBkPSJNNCA0aDQwIi8+PC9zdmc+Cg==';
 
 /** SplitContainer family's single grabber icon, per axis: `default_theme.cpp:1244-1247`. */
-export interface SplitContainerIcons {
+interface SplitContainerIcons {
   hsplitter: string;
   vsplitter: string;
 }
@@ -117,7 +117,7 @@ const VSLIDER_TICK_B64 =
  * (`default_theme.cpp:589-591,604-606`). The `grabber_highlight` hover variant (`:589-592,604-607`)
  * is not vended, since a static previewer draws no hover state.
  */
-export interface SliderGrabberIcons {
+interface SliderGrabberIcons {
   grabber: string;
   grabberDisabled: string;
 }
@@ -128,7 +128,7 @@ export const SLIDER_GRABBER_ICONS: SliderGrabberIcons = {
 };
 
 /** HSlider/VSlider's single `tick` icon, per axis (`default_theme.cpp:592,607`). */
-export interface SliderTickIcons {
+interface SliderTickIcons {
   hslider: string;
   vslider: string;
 }
@@ -221,7 +221,7 @@ const ARROW_LEFT_B64 =
  * (`foldable_container.cpp:428-435`) reaches `expanded_arrow_mirrored` through `title_position`,
  * and never picks the RTL-only `folded_arrow_mirrored` here.
  */
-export interface FoldableContainerIcons {
+interface FoldableContainerIcons {
   expandedArrow: string;
   expandedArrowMirrored: string;
   foldedArrow: string;
@@ -244,7 +244,7 @@ const REGION_UNFOLDED_B64 =
  * `can_fold_code_region` (`default_theme.cpp:496,498`) are vended: nothing in a `.tscn` folds a line.
  * `can_fold` is `arrow_down.svg`, the asset of FoldableContainer's `expanded_arrow`.
  */
-export interface CodeEditFoldIcons {
+interface CodeEditFoldIcons {
   canFold: string;
   canFoldCodeRegion: string;
 }
@@ -263,7 +263,7 @@ const TEXT_EDIT_SPACE_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPjxjaXJjbGUgY3g9IjQiIGN5PSI0IiByPSIxLjUiIGZpbGw9IiNiMmIyYjIiIGZpbGwtb3BhY2l0eT0iLjI1Ii8+PC9zdmc+Cg==';
 
 /** The `draw_tabs` and `draw_spaces` glyphs, bound to the same keys and icons in TextEdit and CodeEdit (`default_theme.cpp:457-458,491-492`). */
-export interface TextEditGlyphIcons {
+interface TextEditGlyphIcons {
   tab: string;
   space: string;
 }
@@ -282,7 +282,7 @@ const SCROLL_HINT_HORIZONTAL_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMjQiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCA2LjM1IDguNDY3Ij48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2ZmZiIgc3RvcC1vcGFjaXR5PSIuMyIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2ZmZiIgc3RvcC1vcGFjaXR5PSIwIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgeGxpbms6aHJlZj0iI2EiIGlkPSJiIiB4MT0iNC4yMzMiIHgyPSI0LjIzMyIgeTE9IjAiIHkyPSI2LjM1IiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKC04LjQ2NykiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIi8+PC9kZWZzPjxwYXRoIGZpbGw9InVybCgjYikiIGQ9Ik0tOC40NjcgMEgwVjYuMzVILTguNDY3eiIgcGFpbnQtb3JkZXI9ImZpbGwgbWFya2VycyBzdHJva2UiIHRyYW5zZm9ybT0icm90YXRlKC05MCkiLz48L3N2Zz4K';
 
 /** ScrollContainer's edge fades, which `_update_scroll_hints` shows where content continues past an edge (`default_theme.cpp:667-668`). */
-export interface ScrollHintIcons {
+interface ScrollHintIcons {
   vertical: string;
   horizontal: string;
 }
@@ -309,7 +309,7 @@ const TAB_BAR_SCROLL_LEFT_B64 =
  * the TabBar painter. The `_highlight` hover pair (`:1035,1037`) is not vended, since a static
  * previewer draws no hover state.
  */
-export interface TabBarIcons {
+interface TabBarIcons {
   close: string;
   incrementScroll: string;
   decrementScroll: string;
@@ -414,7 +414,7 @@ const GRAPH_EDIT_MINIMAP_RESIZER_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmVmZmZlIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNjUiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTQgMTFWNGg3Ii8+PGNpcmNsZSBjeD0iNy41IiBjeT0iNy41IiByPSIxLjUiIGZpbGw9IiNiMmIyYjIiIGZpbGwtb3BhY2l0eT0iLjY1Ii8+PC9zdmc+Cg==';
 
 /** GraphEdit's seven toolbar icons, keyed by its own theme keys: `default_theme.cpp:1279-1285`. */
-export interface GraphEditIcons {
+interface GraphEditIcons {
   zoomOut: string;
   zoomIn: string;
   zoomReset: string;

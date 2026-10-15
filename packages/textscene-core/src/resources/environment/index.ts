@@ -1,6 +1,6 @@
 /**
- * `Environment` resource slice entry point (ADR-0031): the routing claim and the decode
- * surface, for an inline `[sub_resource]` and a standalone `.tres` alike. It stays
+ * `Environment` resource slice entry point (ADR-0031): the routing claim and the data
+ * types, for an inline `[sub_resource]` and a standalone `.tres` alike. It stays
  * THREE-free and React-free: only the render layer imports `build.ts` and its shaders.
  */
 
@@ -13,5 +13,4 @@ registerResourceSlice({
   busType: 'resource',
 });
 
-export { decodeEnvironment } from './decode';
-export { BackgroundMode, type EnvironmentProperties, type EnvironmentSettings } from './types';
+export type { EnvironmentProperties, EnvironmentSettings } from './types';

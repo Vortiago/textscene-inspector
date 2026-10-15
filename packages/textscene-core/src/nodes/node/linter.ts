@@ -65,5 +65,3 @@ const binaryResourceRule: LintRule = {
 };
 
 ruleRegistry.register(binaryResourceRule);
-
-export { binaryResourceRule };

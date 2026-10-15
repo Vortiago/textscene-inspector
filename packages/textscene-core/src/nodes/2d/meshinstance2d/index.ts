@@ -12,5 +12,3 @@ const meshInstance2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(meshInstance2DRegistration);
-
-export { meshInstance2DRegistration };

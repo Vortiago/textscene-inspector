@@ -10,6 +10,5 @@ const hScrollBarRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(hScrollBarRegistration);
 
-export { hScrollBarRegistration };
 export * from './parser';
 export * from './types';

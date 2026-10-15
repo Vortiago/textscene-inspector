@@ -7,10 +7,13 @@
 import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from '../../../../linter/StrictTscnParser';
 import { readFixture } from '../../../../linter/testing/fixtureCheck';
-import { lookAtModifier3DAxisRule } from './linter';
+import { ruleRegistry } from '../../../../linter/RuleRegistry';
+import './linter';
 import './linterParser';
 import type { RawNode } from '../../../../parser/types';
 import { reportsOf } from '../../../../linter/testing/tierLists';
+
+const lookAtModifier3DAxisRule = ruleRegistry.getRule('valid-lookatmodifier3d-rotation-axes')!;
 
 /** Depth-first search for the first node of `type`, at any depth. */
 function findByType(node: RawNode, type: string): RawNode | undefined {

@@ -1,15 +1,16 @@
 /** Builds a drawable cell for a test, on a 1×1 tile with `TileData` defaults unless overridden. */
 
 import type { DrawableCell } from '../drawableCell';
-import { defaultTileData, type AlternativeTileModel, type AtlasSourceModel, type Vec2i } from '../types';
+import { defaultTileData, type AlternativeTileModel, type AtlasSourceModel } from '../types';
+import type { Vector2 } from '../../../godot/math/vector';
 
 interface CellOverrides {
-  coords?: Vec2i;
+  coords?: Vector2;
   sourceId?: number;
   source?: AtlasSourceModel;
-  atlasCoords?: Vec2i;
+  atlasCoords?: Vector2;
   alternativeId?: number;
-  sizeInAtlas?: Vec2i;
+  sizeInAtlas?: Vector2;
 }
 
 /** A fresh source per cell, so no test shares a mutable `tiles` map with another. */

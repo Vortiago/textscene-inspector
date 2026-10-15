@@ -9,7 +9,7 @@ import type { RawNode } from '../../parser/types.js';
  * `collision_polygon_3d.cpp` alike). In 4.6.3 `scene/` has exactly these four
  * callers, and they share no base below `Node2D`/`Node3D` to derive the set from.
  */
-export function collisionShapeTypes(dim: '2D' | '3D'): readonly string[] {
+function collisionShapeTypes(dim: '2D' | '3D'): readonly string[] {
   return [`CollisionShape${dim}`, `CollisionPolygon${dim}`];
 }
 

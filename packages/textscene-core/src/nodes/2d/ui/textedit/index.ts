@@ -9,5 +9,3 @@ const textEditRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(textEditRegistration);
-
-export { textEditRegistration };

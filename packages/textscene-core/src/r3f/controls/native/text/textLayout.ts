@@ -188,23 +188,6 @@ export function soloLineLayout(
 }
 
 /**
- * Checks a painter's cached `NativeControlComponentProps.meta` at runtime, since painting an
- * unrelated object is a silent wrong picture. Duck-typed, because the result is plain data.
- * `fontMetrics` is checked by presence, because it decides which painter draws.
- */
-export function isTextLayoutResult(value: unknown): value is TextLayoutResult {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Partial<TextLayoutResult>;
-  return (
-    Array.isArray(v.lines) &&
-    typeof v.linePitchPx === 'number' &&
-    typeof v.widthPx === 'number' &&
-    typeof v.heightPx === 'number' &&
-    'fontMetrics' in v
-  );
-}
-
-/**
  * The soft-break flags `_shaped_text_update_breaks` reads (`text_server_adv.cpp` ~6258-6420). For
  * space-separated text, UAX#14 soft breaks reduce to the space glyph.
  */
@@ -266,7 +249,7 @@ export function isTabChar(ch: string): boolean {
 }
 
 /** `core/string/char_utils.h::is_control`: C0 controls and DEL through the C1 range, tab and linebreaks included. */
-export function isControlChar(cp: number): boolean {
+function isControlChar(cp: number): boolean {
   return cp <= 0x001f || (cp >= 0x007f && cp <= 0x009f);
 }
 

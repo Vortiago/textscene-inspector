@@ -12,7 +12,7 @@ import { parseHeading } from '../parser/utils.js';
 import { providerForRoot } from '../resources/diskProject.js';
 import { findProjectRoot, parentDir, projectFileIn } from '../resources/resPath.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
-import { isUndeclaredRuleName } from './fileDiagnostics.js';
+import { isUndeclaredRuleName } from './testing/ruleNames.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
 import { errorsOf } from './testing/tierLists';

@@ -67,5 +67,3 @@ const menuButtonValidationRule: LintRule = {
 };
 
 ruleRegistry.register(menuButtonValidationRule);
-
-export { menuButtonValidationRule };

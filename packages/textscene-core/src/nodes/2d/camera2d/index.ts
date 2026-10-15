@@ -12,7 +12,6 @@ const camera2DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(camera2DRegistration);
 
-export { camera2DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

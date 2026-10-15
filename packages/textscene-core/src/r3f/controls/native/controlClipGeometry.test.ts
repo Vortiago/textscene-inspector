@@ -1,0 +1,155 @@
+/**
+ * Pins the clip geometry: the world rect, Godot's scissor rounding, and the rect-to-planes
+ * conversion, each on plain values with no renderer.
+ */
+import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import {
+  localRectClipPlanes,
+  quantizeClipRect,
+  withAdditionalClipPlanes,
+  worldClipRect,
+} from './controlClipGeometry';
+import type { Rect2 } from './rect';
+
+describe('withAdditionalClipPlanes', () => {
+  it('returns the SAME inherited array when nothing new is added (edge: no re-render churn)', () => {
+    const inherited: readonly THREE.Plane[] = [new THREE.Plane()];
+    expect(withAdditionalClipPlanes(inherited, [])).toBe(inherited);
+  });
+
+  it('concatenates inherited + own planes, inherited first', () => {
+    const parentPlane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
+    const ownPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    expect(withAdditionalClipPlanes([parentPlane], [ownPlane])).toEqual([parentPlane, ownPlane]);
+  });
+});
+
+describe('localRectClipPlanes', () => {
+  // A Rect2 is Godot pixels, +Y down (`rect.ts`). The planes negate Y, so a
+  // point is kept if and only if it falls inside the rect once Y is negated.
+  const rect: Rect2 = { x: 100, y: 50, w: 200, h: 80 }; // local x in [100,300], y in [50,130]
+
+  function distances(planes: readonly THREE.Plane[], x: number, y: number): number[] {
+    const p = new THREE.Vector3(x, y, 0);
+    return planes.map((plane) => plane.distanceToPoint(p));
+  }
+
+  it('produces exactly 4 planes', () => {
+    expect(localRectClipPlanes(rect)).toHaveLength(4);
+  });
+
+  it('keeps a point just inside every edge (distance >= 0)', () => {
+    const planes = localRectClipPlanes(rect);
+    // left=100 -> x=101; right=300 -> x=299; top(local y=50) -> world y=-51;
+    // bottom(local y=130) -> world y=-129.
+    for (const [x, y] of [
+      [101, -60],
+      [299, -60],
+      [200, -51],
+      [200, -129],
+    ]) {
+      expect(distances(planes, x!, y!).every((d) => d >= 0)).toBe(true);
+    }
+  });
+
+  it('rejects a point just outside each edge (that edge’s own plane goes negative)', () => {
+    const [leftPlane, rightPlane, bottomPlane, topPlane] = localRectClipPlanes(rect);
+    expect(leftPlane!.distanceToPoint(new THREE.Vector3(99, -90, 0))).toBeLessThan(0);
+    expect(rightPlane!.distanceToPoint(new THREE.Vector3(301, -90, 0))).toBeLessThan(0);
+    expect(bottomPlane!.distanceToPoint(new THREE.Vector3(200, -131, 0))).toBeLessThan(0);
+    expect(topPlane!.distanceToPoint(new THREE.Vector3(200, -49, 0))).toBeLessThan(0);
+  });
+});
+
+describe('worldClipRect', () => {
+  const rect: Rect2 = { x: 0, y: 0, w: 322, h: 195 };
+
+  function matrix(position: [number, number], scale: number): THREE.Matrix4 {
+    return new THREE.Matrix4().compose(
+      new THREE.Vector3(position[0], position[1], 0),
+      new THREE.Quaternion(),
+      new THREE.Vector3(scale, scale, 1)
+    );
+  }
+
+  it('returns the rect unchanged under an identity transform', () => {
+    expect(worldClipRect({ x: 100, y: 50, w: 200, h: 80 }, new THREE.Matrix4())).toEqual({
+      x: 100,
+      y: 50,
+      w: 200,
+      h: 80,
+    });
+  });
+
+  it('resolves a scaled, translated anchor into absolute canvas pixels (+Y down)', () => {
+    // The world group sits at Godot (600, 340); the anchor at local (79, 17)
+    // scaled 1.25 lands at 600 + 98.75 and 340 + 21.25.
+    const m = matrix([600, -340], 1.25).multiply(new THREE.Matrix4().makeTranslation(79, -17, 0));
+    expect(worldClipRect(rect, m)).toEqual({ x: 698.75, y: 361.25, w: 402.5, h: 243.75 });
+  });
+
+  it('takes the corner extent under a mirrored scale rather than a negative size', () => {
+    const mirrored = new THREE.Matrix4().compose(
+      new THREE.Vector3(500, -100, 0),
+      new THREE.Quaternion(),
+      new THREE.Vector3(-1, 1, 1)
+    );
+    expect(worldClipRect({ x: 0, y: 0, w: 40, h: 20 }, mirrored)).toEqual({
+      x: 460,
+      y: 100,
+      w: 40,
+      h: 20,
+    });
+  });
+
+  it('returns null when the transform rotates (error: no axis-aligned rect to quantize)', () => {
+    const rotated = new THREE.Matrix4().makeRotationZ(0.3);
+    expect(worldClipRect(rect, rotated)).toBeNull();
+  });
+
+  it('still resolves a rotation that is an exact multiple of a quarter turn', () => {
+    const quarter = new THREE.Matrix4().makeRotationZ(Math.PI);
+    const resolved = worldClipRect({ x: 0, y: 0, w: 40, h: 20 }, quarter);
+    expect(resolved).not.toBeNull();
+    expect(resolved!.x).toBeCloseTo(-40);
+    expect(resolved!.y).toBeCloseTo(-20);
+    expect(resolved!.w).toBeCloseTo(40);
+    expect(resolved!.h).toBeCloseTo(20);
+  });
+});
+
+describe('quantizeClipRect', () => {
+  it('rounds position and size SEPARATELY, so the far edge is round(pos) + round(size)', () => {
+    // renderer_canvas_cull.cpp: round(698.75) + round(402.5) = 699 + 403 = 1102,
+    // a whole column past round(698.75 + 402.5) = 1101.
+    const quantized = quantizeClipRect({ x: 698.75, y: 361.25, w: 402.5, h: 243.75 });
+    expect(quantized).toEqual({ x: 699, y: 361, w: 403, h: 244 });
+    expect(quantized.x + quantized.w).toBe(1102);
+  });
+
+  it('leaves a whole-pixel origin agreeing with a rounded edge for every size fraction', () => {
+    for (const [w, edge] of [
+      [500.25, 520],
+      [500.5, 521],
+      [500.75, 521],
+    ]) {
+      const quantized = quantizeClipRect({ x: 20, y: 20, w: w!, h: 10 });
+      expect(quantized.x + quantized.w).toBe(edge);
+    }
+  });
+
+  it('rounds halves AWAY FROM ZERO, not up (edge: a clipper hanging off the canvas)', () => {
+    // JavaScript's Math.round(-10.5) is -10; std::round's is -11.
+    expect(quantizeClipRect({ x: -10.5, y: -0.5, w: 5.5, h: 2.5 })).toEqual({
+      x: -11,
+      y: -1,
+      w: 6,
+      h: 3,
+    });
+  });
+
+  it('collapses a sub-half-pixel size to nothing (edge: Godot skips the item outright)', () => {
+    expect(quantizeClipRect({ x: 10, y: 10, w: 0.4, h: 0.4 })).toEqual({ x: 10, y: 10, w: 0, h: 0 });
+  });
+});

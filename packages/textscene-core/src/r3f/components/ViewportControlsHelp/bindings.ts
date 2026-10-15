@@ -12,7 +12,7 @@ import type { NavMode, NavModifiers } from '../../godotEditorCursor.js';
 export type BindingOutcome = NavMode | null;
 
 /** How to ask a resolver what a row's input does. */
-export type BindingTrigger =
+type BindingTrigger =
   | {
       readonly kind: 'drag';
       readonly button: number;
@@ -34,13 +34,13 @@ export interface Binding {
 }
 
 /** Bindings for one input device, as the panel groups them. */
-export interface BindingGroup {
+interface BindingGroup {
   readonly device: string;
   readonly bindings: readonly Binding[];
 }
 
 /** What the help surface shows for one viewport mode. */
-export interface ControlsHelp {
+interface ControlsHelp {
   /** The three bindings worth reading at a glance, for the pill. */
   readonly summary: string;
   /** The pill on a touch screen, from the Touch group, since it has no wheel or middle button. */

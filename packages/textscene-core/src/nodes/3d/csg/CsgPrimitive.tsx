@@ -31,7 +31,7 @@ const NO_PATHS: ReadonlySet<string> = new Set();
  * recursion never reached gets a zero-size proxy, the point Godot has for it. It is also all a
  * combiner root has to frame on while the library loads.
  */
-export const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
+const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
 interface CsgPrimitiveProps {
   node: TscnNode;

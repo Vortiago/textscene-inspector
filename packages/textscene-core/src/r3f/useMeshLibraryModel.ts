@@ -12,7 +12,7 @@ import type { MeshLibraryModel } from '../resources/meshlibrary/types';
 import { useResource } from '../resources/useResource';
 import { useSceneResources } from './SceneResourcesContext';
 
-export interface MeshLibraryModelResult {
+interface MeshLibraryModelResult {
   model: MeshLibraryModel | null;
   status: 'pending' | 'loaded' | 'unavailable';
 }

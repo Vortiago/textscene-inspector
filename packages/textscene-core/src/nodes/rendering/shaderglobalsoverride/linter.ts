@@ -46,5 +46,3 @@ const shaderGlobalsOverrideValidationRule: LintRule = {
 };
 
 ruleRegistry.register(shaderGlobalsOverrideValidationRule);
-
-export { shaderGlobalsOverrideValidationRule };

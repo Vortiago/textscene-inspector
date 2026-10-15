@@ -27,7 +27,7 @@ export function isFontContainerPath(path: string): boolean {
   return extension !== null && (FONT_CONTAINER_EXTENSIONS as readonly string[]).includes(extension);
 }
 
-export function fontContainerMimeType(path: string): string | undefined {
+function fontContainerMimeType(path: string): string | undefined {
   const extension = fileExtension(path);
   return extension === null ? undefined : FONT_MIME_TYPES[extension];
 }

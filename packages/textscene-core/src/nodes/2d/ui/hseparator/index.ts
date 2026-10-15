@@ -12,5 +12,3 @@ const hSeparatorRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(hSeparatorRegistration);
-
-export { hSeparatorRegistration };

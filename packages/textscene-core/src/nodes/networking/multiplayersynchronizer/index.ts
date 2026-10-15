@@ -15,5 +15,3 @@ const multiplayerSynchronizerRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(multiplayerSynchronizerRegistration);
-
-export { multiplayerSynchronizerRegistration };

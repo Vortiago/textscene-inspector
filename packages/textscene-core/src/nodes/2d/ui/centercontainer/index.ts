@@ -10,6 +10,5 @@ const centerContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(centerContainerRegistration);
 
-export { centerContainerRegistration };
 export * from './parser';
 export * from './types';

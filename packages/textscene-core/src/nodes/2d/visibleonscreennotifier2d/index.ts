@@ -13,5 +13,3 @@ const visibleOnScreenNotifier2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(visibleOnScreenNotifier2DRegistration);
-
-export { visibleOnScreenNotifier2DRegistration };

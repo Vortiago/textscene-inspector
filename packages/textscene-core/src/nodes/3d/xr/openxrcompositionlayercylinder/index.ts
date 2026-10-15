@@ -13,5 +13,3 @@ const openXRCompositionLayerCylinderRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(openXRCompositionLayerCylinderRegistration);
-
-export { openXRCompositionLayerCylinderRegistration };

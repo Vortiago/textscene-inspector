@@ -1,19 +1,22 @@
 /**
- * Tests for RuleRegistry: the store, registering, reading back and clearing.
- * Which rules a node type selects is the sibling
- * `RuleRegistry.nodeTypeMatching.test.ts`.
+ * Tests for the rule registry: the store, registering and reading back. Each test reads a fresh
+ * evaluation of the module, so its registry starts empty. Which rules a node type selects is the
+ * sibling `RuleRegistry.nodeTypeMatching.test.ts`.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { RuleRegistry } from './RuleRegistry.js';
+import type { ruleRegistry } from './RuleRegistry.js';
 import type { LintRule } from './types.js';
-import * as logger from '../logger.js';
 
 describe('RuleRegistry', () => {
-  let registry: RuleRegistry;
+  let registry: typeof ruleRegistry;
+  /** The logger the fresh registry warns through. */
+  let logger: typeof import('../logger.js');
 
-  beforeEach(() => {
-    registry = new RuleRegistry();
+  beforeEach(async () => {
+    vi.resetModules();
+    registry = (await import('./RuleRegistry.js')).ruleRegistry;
+    logger = await import('../logger.js');
   });
 
   const createMockRule = (name: string, applicableNodeTypes?: string[]): LintRule => ({
@@ -94,37 +97,6 @@ describe('RuleRegistry', () => {
 
     it('should return undefined for non-existent rule', () => {
       expect(registry.getRule('nonexistent')).toBeUndefined();
-    });
-  });
-
-  describe('clear', () => {
-    it('should clear all registered rules', () => {
-      const rule1 = createMockRule('rule-1');
-      const rule2 = createMockRule('rule-2');
-
-      registry.register(rule1);
-      registry.register(rule2);
-
-      expect(registry.getRules()).toHaveLength(2);
-
-      registry.clear();
-
-      expect(registry.getRules()).toEqual([]);
-      expect(registry.getRule('rule-1')).toBeUndefined();
-      expect(registry.getRule('rule-2')).toBeUndefined();
-    });
-
-    it('should allow re-registration after clear', () => {
-      const rule1 = createMockRule('rule-1');
-      const rule2 = createMockRule('rule-2');
-
-      registry.register(rule1);
-      registry.clear();
-      registry.register(rule2);
-
-      expect(registry.getRules()).toHaveLength(1);
-      expect(registry.getRule('rule-1')).toBeUndefined();
-      expect(registry.getRule('rule-2')).toBe(rule2);
     });
   });
 });

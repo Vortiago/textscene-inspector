@@ -15,7 +15,6 @@ import {
   sliderMinimumSize,
   sliderTickRects,
   sliderTrackRect,
-  SLIDER_TICK_CROSS_AXIS,
 } from './sliderSolver';
 
 const theme = nativeTheme(1);
@@ -227,8 +226,19 @@ describe('is_layout_rtl() — the ONE draw branch Slider reads it in (slider.cpp
 });
 
 describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_BOTTOM_RIGHT (Godot default)', () => {
-  it('draws the icon at its OWN measured size — 4 wide x 8 tall for hslider_tick', () => {
-    expect(SLIDER_TICK_CROSS_AXIS).toBe(8);
+  it('draws the icon at its OWN measured size — 4 wide x 8 tall for hslider_tick, 8 x 4 for vslider_tick', () => {
+    expect(sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme, grabberOf(theme))[0]).toMatchObject({
+      w: 4,
+      h: 8,
+    });
+    expect(sliderTickRects(true, { x: 40, y: 300 }, [1], 5, theme, grabberOf(theme))[0]).toMatchObject({
+      w: 8,
+      h: 4,
+    });
+  });
+
+  it('keeps the 8px cross axis unscaled by default_theme_scale, like every vendored icon (edge case)', () => {
+    expect(sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme2x, grabberOf(theme2x))[0]!.h).toBe(8);
   });
 
   it('spaces interior ticks across the travel for a HORIZONTAL slider (slider.cpp:342-347)', () => {

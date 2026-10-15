@@ -12,5 +12,3 @@ const xRNode3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(xRNode3DRegistration);
-
-export { xRNode3DRegistration };

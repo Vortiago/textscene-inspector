@@ -4,5 +4,3 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { ColorRect } from './Component';
 
 controlComponentRegistry.register({ typeName: 'ColorRect', Component: ColorRect });
-
-export { ColorRect };

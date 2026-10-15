@@ -94,4 +94,3 @@ const sprite2DValidationRule: LintRule = {
 ruleRegistry.register(sprite2DValidationRule);
 
 // Export for testing
-export { sprite2DValidationRule };

@@ -14,7 +14,7 @@ import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry.js'
 import { isGodotSymbol } from './symbolChars.js';
 
 /** `CodeEdit::DelimiterType` (`code_edit.h`). */
-export type DelimiterType = 'comment' | 'string';
+type DelimiterType = 'comment' | 'string';
 
 /** One entry of `CodeEdit::delimiters` (`code_edit.h`'s `Delimiter`). */
 export interface Delimiter {

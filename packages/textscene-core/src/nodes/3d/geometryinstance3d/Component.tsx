@@ -17,7 +17,7 @@ import type { Aabb } from '../../../godot/math/aabb';
  * The box the node's base gives its instance, in node space, or null while it is unknown. The
  * same object while the box holds, as the cull's placement is rebuilt on each new one.
  */
-export type UseOwnAabb = (node: TscnNode) => Aabb | null;
+type UseOwnAabb = (node: TscnNode) => Aabb | null;
 
 /** The component an undrawn GeometryInstance3D type registers, culled by the box `useOwnAabb` gives. */
 export function undrawnGeometryInstance(useOwnAabb: UseOwnAabb): NodeComponent {

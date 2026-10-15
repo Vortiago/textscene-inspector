@@ -13,5 +13,3 @@ const fileDialogRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(fileDialogRegistration);
-
-export { fileDialogRegistration };

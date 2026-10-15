@@ -8,7 +8,7 @@ import { canvasItemFacing } from '../canvasItemFacing';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { wireGizmoProgram } from './wireGizmoProgram';
 
-export type MissingResourcePlaceholderShape = 'box' | 'plane';
+type MissingResourcePlaceholderShape = 'box' | 'plane';
 
 interface Props {
   /**

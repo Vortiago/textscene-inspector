@@ -9,13 +9,12 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   applyTextureState,
-  isBindingOwnedTexture,
   releaseBoundTexture,
   type MaterialTextureState,
   type UVTransform,
 } from './applyTextureState';
-import { GODOT_ANISOTROPY_MAX } from './godotTextureFilter';
 import { UV2_CHANNEL } from '../meshes/uv2';
+import { godotTextureFilterState } from './godotTextureFilter';
 
 function uv(sx: number, sy: number, ox = 0, oy = 0): UVTransform {
   return { scale: { x: sx, y: sy }, offset: { x: ox, y: oy } };
@@ -262,7 +261,7 @@ describe('applyTextureState', () => {
 
       expect(nearest).not.toBe(anisotropic);
       expect(nearest.magFilter).toBe(THREE.NearestFilter);
-      expect(anisotropic.anisotropy).toBe(GODOT_ANISOTROPY_MAX);
+      expect(anisotropic.anisotropy).toBe(godotTextureFilterState(5).anisotropy);
       expect(shared.magFilter).toBe(THREE.LinearFilter);
       expect(shared.anisotropy).toBe(1);
     });
@@ -366,16 +365,6 @@ describe('applyTextureState', () => {
       texture.channel = UV2_CHANNEL;
 
       expect(applyTextureState(texture, state({})).channel).toBe(0);
-    });
-  });
-
-  describe('clone tagging', () => {
-    it('tags clones so their binder can dispose them', () => {
-      const original = new THREE.Texture();
-      const clone = applyTextureState(original, state({ filter: 0 }));
-
-      expect(isBindingOwnedTexture(clone)).toBe(true);
-      expect(isBindingOwnedTexture(original)).toBe(false);
     });
   });
 });

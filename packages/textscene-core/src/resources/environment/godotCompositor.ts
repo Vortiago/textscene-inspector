@@ -11,7 +11,8 @@
 
 import { blendGlsl, blendsAfterToneMapping, samplesGlowMap, type GlowParams } from './godotGlow';
 import { glslFloat } from '../../utils/glslLiterals';
-import { resolvedWhite, toneMappingEffectGlsl } from './godotToneMapping';
+import { toneMappingEffectGlsl } from './godotToneMapping';
+import { resolvedWhite } from '../../godot/rendering/environment/toneMapping.js';
 import type { EnvironmentAdjustments, EnvironmentSettings } from './types';
 import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer';
 

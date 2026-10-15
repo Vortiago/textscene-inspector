@@ -10,7 +10,7 @@ import { noiseTextureFits, noiseDataTexture } from './build';
 import { bumpMapToNormalMap } from './normalMap';
 import { grayToRgba } from '../../noise/image/gradientModulation';
 import { noiseSampler } from '../../noise/image/noiseSampler';
-import { noiseImage, seamlessNoiseImage, seamlessSkirt } from '../../noise/image/noiseImage';
+import { noiseImage, seamlessNoiseImage, seamlessSource } from '../../noise/image/noiseImage';
 import { decodeNoiseTexture2D } from './decode';
 import { noiseTexture2DPixels } from './pixels';
 import type { NoiseTexture2DData } from './types';
@@ -291,8 +291,7 @@ describe('noiseTextureFits', () => {
 
   /** The pixels of the source `_get_seamless_image` builds a skirt larger. */
   const skirtedSource = (tex: NoiseTexture2DData): number =>
-    (tex.width + seamlessSkirt(tex.width, tex.seamlessBlendSkirt)) *
-    (tex.height + seamlessSkirt(tex.height, tex.seamlessBlendSkirt));
+    seamlessSource(tex.width, tex.seamlessBlendSkirt) * seamlessSource(tex.height, tex.seamlessBlendSkirt);
 
   it("fits Godot's default 512x512 texture", () => {
     expect(noiseTextureFits(plain(512, 512))).toBe(true);
@@ -334,7 +333,9 @@ describe('noiseTextureFits', () => {
   });
 });
 
-describe('seamlessSkirt', () => {
+describe('the skirt seamlessSource adds to an axis', () => {
+  const seamlessSkirt = (size: number, blendSkirt: number) => seamlessSource(size, blendSkirt) - size;
+
   it('generates the blend fraction of the size, truncated', () => {
     expect(seamlessSkirt(512, 0.1)).toBe(51);
   });

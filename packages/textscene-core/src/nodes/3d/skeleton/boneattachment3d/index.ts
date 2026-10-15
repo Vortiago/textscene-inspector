@@ -13,5 +13,3 @@ const boneAttachment3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(boneAttachment3DRegistration);
-
-export { boneAttachment3DRegistration };

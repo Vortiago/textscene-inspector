@@ -142,5 +142,3 @@ const tileMapValidationRule: LintRule = {
 };
 
 ruleRegistry.register(tileMapValidationRule);
-
-export { tileMapValidationRule };

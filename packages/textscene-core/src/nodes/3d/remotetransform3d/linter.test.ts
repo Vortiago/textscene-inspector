@@ -8,9 +8,12 @@
 import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
-import { remoteTransform3DValidationRule } from './linter';
+import { ruleRegistry } from '../../../linter/RuleRegistry';
+import './linter';
 import { reportsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
+
+const remoteTransform3DValidationRule = ruleRegistry.getRule('valid-remotetransform3d-remote-path')!;
 
 const RULE = 'remotetransform3d-invalid-remote-path';
 

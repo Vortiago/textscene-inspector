@@ -11,7 +11,7 @@
  * (`openSansFontMetrics.ts`), the only kind `GlyphPlacement.glyph` looks up.
  * `'canvas'` is a runtime-loaded scene font (`runtimeFontMetrics.ts`) drawn through canvas-2D.
  */
-export type FontMetricsKind = 'atlas' | 'canvas';
+type FontMetricsKind = 'atlas' | 'canvas';
 
 /**
  * Raw, design-unit font metrics a shaper needs. The functions below scale them

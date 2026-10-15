@@ -19,7 +19,7 @@ import { glslFloat } from '../../utils/glslLiterals';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass';
 import { drawOffscreen } from '../offscreen';
 
-export interface GodotToneMapOptions extends CompositeOptions {
+interface GodotToneMapOptions extends CompositeOptions {
   /**
    * Godot `tonemap_exposure`, applied to the scene colour once at the top of
    * `main()`. The bright pass has already applied the same value to the glow.

@@ -51,7 +51,7 @@ export const CURVE2D_DATA = bezierDataFormat('Curve2D', 'curve.cpp:1239-1243', 2
 export const CURVE3D_DATA = bezierDataFormat('Curve3D', 'curve.cpp:2279-2284', 3, ['tilts']);
 
 /** Why `_set_data` refuses a `_data` value, which leaves the curve with no points. */
-export type BezierDataRefusal =
+type BezierDataRefusal =
   | { readonly kind: 'missing-key'; readonly key: string }
   | { readonly kind: 'partial-point'; readonly floats: number };
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { subResource } from './subResource';
+import { resolveOnlySubResource, subResource } from './subResource';
 
 describe('subResource', () => {
   it('carries the type, the id and every given value', () => {
@@ -21,5 +21,31 @@ describe('subResource', () => {
 
   it('holds no properties when given no data', () => {
     expect(subResource('Gradient', 'G').data).toEqual({});
+  });
+});
+
+describe('resolveOnlySubResource', () => {
+  it('hands the resolver a ref to the one sub-resource it builds', () => {
+    const resolved = resolveOnlySubResource('Curve', { _data: '[]' }, (ref, resources) => ({
+      ref,
+      resources,
+    }));
+    expect(resolved).toEqual({
+      ref: 'SubResource("only")',
+      resources: [{ id: 'only', type: 'Curve', data: { _data: '[]' } }],
+    });
+  });
+
+  it('leaves out a key whose value is undefined', () => {
+    const data = resolveOnlySubResource(
+      'Curve',
+      { _data: undefined },
+      (_ref, resources) => resources[0]?.data
+    );
+    expect(data).toEqual({});
+  });
+
+  it('returns what the resolver returns, null included', () => {
+    expect(resolveOnlySubResource('Curve', {}, () => null)).toBeNull();
   });
 });

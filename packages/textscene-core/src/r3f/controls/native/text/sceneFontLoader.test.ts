@@ -4,7 +4,7 @@
  * peek contract. The bundled arm stubs `FontFace` and reaches the shared door for real.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { onSceneFontMetricsSettled, peekSceneFontMetrics, resolveSceneFontMetrics } from './sceneFontLoader';
+import { onSceneFontMetricsSettled, peekSceneFontMetrics } from './sceneFontLoader';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import * as logger from '../../../../logger';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
@@ -13,7 +13,12 @@ function fontFile(bytes: ArrayBuffer | undefined, fallbacks: FontResource[] = []
   return { kind: 'file', bytes, mimeType: bytes ? 'font/ttf' : undefined, fallbacks, properties: {} };
 }
 
-describe('resolveSceneFontMetrics / peekSceneFontMetrics', () => {
+/** Lets every load a peek started settle: each one resolves within a macrotask here. */
+function settleLoads(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+describe('peekSceneFontMetrics', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -24,16 +29,15 @@ describe('resolveSceneFontMetrics / peekSceneFontMetrics', () => {
     warnSpy.mockRestore();
   });
 
-  it('no font authored (undefined/null): falls back to the bundled default with NO warning -- this is not a failure', async () => {
-    expect(await resolveSceneFontMetrics(undefined, 'Root/Label')).toBe(OPEN_SANS_FONT_METRICS);
-    expect(await resolveSceneFontMetrics(null, 'Root/Label')).toBe(OPEN_SANS_FONT_METRICS);
+  it('no font authored (undefined/null): falls back to the bundled default with NO warning -- this is not a failure', () => {
     expect(peekSceneFontMetrics(undefined, 'Root/Label')).toBe(OPEN_SANS_FONT_METRICS);
+    expect(peekSceneFontMetrics(null, 'Root/Label')).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('a SystemFont falls back to the bundled default and warns with the node path -- this previewer cannot load OS-family bytes', async () => {
+  it('a SystemFont falls back to the bundled default and warns with the node path -- this previewer cannot load OS-family bytes', () => {
     const font: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const metrics = await resolveSceneFontMetrics(font, 'Root/MyLabel');
+    const metrics = peekSceneFontMetrics(font, 'Root/MyLabel');
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0]![0]).toContain('Root/MyLabel');
@@ -47,17 +51,18 @@ describe('resolveSceneFontMetrics / peekSceneFontMetrics', () => {
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('a bytes-less FontFile with no resolvable fallback warns and falls back, same as SystemFont', async () => {
+  it('a bytes-less FontFile with no resolvable fallback warns and falls back, same as SystemFont', () => {
     const wrapper = fontFile(undefined, []);
-    const metrics = await resolveSceneFontMetrics(wrapper, 'Root/B');
+    const metrics = peekSceneFontMetrics(wrapper, 'Root/B');
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('under this test environment (no FontFace/canvas), even a FontFile WITH real bytes falls back to the bundled default -- by design, silently (no warning): this is the documented IS_VITEST short-circuit, not a load failure', async () => {
     const leaf = fontFile(new ArrayBuffer(4));
-    const metrics = await resolveSceneFontMetrics(leaf, 'Root/C');
-    expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
+    peekSceneFontMetrics(leaf, 'Root/C');
+    await settleLoads();
+    expect(peekSceneFontMetrics(leaf, 'Root/C')).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
@@ -69,12 +74,12 @@ describe('resolveSceneFontMetrics / peekSceneFontMetrics', () => {
 });
 
 describe('onSceneFontMetricsSettled', () => {
-  it('(happy) fires once a resolveSceneFontMetrics promise for a resolvable resource settles', async () => {
+  it('(happy) fires once the load a peek starts for a resolvable resource settles', async () => {
     const listener = vi.fn();
     const off = onSceneFontMetricsSettled(listener);
     try {
-      const leaf = fontFile(new ArrayBuffer(4));
-      await resolveSceneFontMetrics(leaf, 'Root/E');
+      peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/E');
+      await settleLoads();
       expect(listener).toHaveBeenCalledTimes(1);
     } finally {
       off();
@@ -85,8 +90,9 @@ describe('onSceneFontMetricsSettled', () => {
     const listener = vi.fn();
     const off = onSceneFontMetricsSettled(listener);
     try {
-      await resolveSceneFontMetrics(undefined, 'Root/F');
-      await resolveSceneFontMetrics({ kind: 'system', fontNames: [], properties: {} }, 'Root/G');
+      peekSceneFontMetrics(undefined, 'Root/F');
+      peekSceneFontMetrics({ kind: 'system', fontNames: [], properties: {} }, 'Root/G');
+      await settleLoads();
       expect(listener).not.toHaveBeenCalled();
     } finally {
       off();
@@ -97,8 +103,8 @@ describe('onSceneFontMetricsSettled', () => {
     const listener = vi.fn();
     const off = onSceneFontMetricsSettled(listener);
     off();
-    const leaf = fontFile(new ArrayBuffer(4));
-    await resolveSceneFontMetrics(leaf, 'Root/H');
+    peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/H');
+    await settleLoads();
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -108,8 +114,8 @@ describe('onSceneFontMetricsSettled', () => {
     const offA = onSceneFontMetricsSettled(a);
     const offB = onSceneFontMetricsSettled(b);
     try {
-      const leaf = fontFile(new ArrayBuffer(4));
-      await resolveSceneFontMetrics(leaf, 'Root/I');
+      peekSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/I');
+      await settleLoads();
       expect(a).toHaveBeenCalledTimes(1);
       expect(b).toHaveBeenCalledTimes(1);
     } finally {
@@ -180,9 +186,11 @@ describe('bundled font registration gate', () => {
 
   it('hands out canvas metrics for the registered family once registration resolves, and peeks the same object after', async () => {
     installFontFace();
-    const { peekBundledCanvasFontMetrics, resolveBundledCanvasFontMetrics } = await freshModule();
+    const { peekBundledCanvasFontMetrics } = await freshModule();
 
-    const metrics = await resolveBundledCanvasFontMetrics();
+    peekBundledCanvasFontMetrics();
+    await settleLoads();
+    const metrics = peekBundledCanvasFontMetrics();
     expect(metrics?.kind).toBe('canvas');
     expect(FakeFontFace.instances).toHaveLength(1);
     const [face] = FakeFontFace.instances;
@@ -193,8 +201,9 @@ describe('bundled font registration gate', () => {
 
   it('registers the bundled woff2 bytes themselves, never a URL the webview CSP would block fetching', async () => {
     installFontFace();
-    const { resolveBundledCanvasFontMetrics } = await freshModule();
-    await resolveBundledCanvasFontMetrics();
+    const { peekBundledCanvasFontMetrics } = await freshModule();
+    peekBundledCanvasFontMetrics();
+    await settleLoads();
 
     const source = FakeFontFace.instances[0]?.source;
     expect(source).toBeInstanceOf(ArrayBuffer);
@@ -203,22 +212,24 @@ describe('bundled font registration gate', () => {
 
   it('registers once however many callers ask', async () => {
     installFontFace();
-    const { peekBundledCanvasFontMetrics, resolveBundledCanvasFontMetrics } = await freshModule();
+    const { peekBundledCanvasFontMetrics } = await freshModule();
 
     peekBundledCanvasFontMetrics();
-    const [a, b] = await Promise.all([resolveBundledCanvasFontMetrics(), resolveBundledCanvasFontMetrics()]);
-    expect(a).toBe(b);
+    peekBundledCanvasFontMetrics();
+    await settleLoads();
+    expect(peekBundledCanvasFontMetrics()).toBe(peekBundledCanvasFontMetrics());
     expect(FakeFontFace.instances).toHaveLength(1);
   });
 
   it('notifies the settled channel once registration resolves, so a peek-then-settle consumer re-renders', async () => {
     installFontFace();
-    const { resolveBundledCanvasFontMetrics, onSceneFontMetricsSettled } = await freshModule();
+    const { peekBundledCanvasFontMetrics, onSceneFontMetricsSettled } = await freshModule();
 
     const listener = vi.fn();
     const off = onSceneFontMetricsSettled(listener);
     try {
-      await resolveBundledCanvasFontMetrics();
+      peekBundledCanvasFontMetrics();
+      await settleLoads();
       expect(listener).toHaveBeenCalledTimes(1);
     } finally {
       off();
@@ -228,9 +239,10 @@ describe('bundled font registration gate', () => {
   it('stays undefined and warns when the registration rejects', async () => {
     installFontFace();
     FakeFontFace.loadResult = 'reject';
-    const { peekBundledCanvasFontMetrics, resolveBundledCanvasFontMetrics, logger } = await freshModule();
+    const { peekBundledCanvasFontMetrics, logger } = await freshModule();
 
-    expect(await resolveBundledCanvasFontMetrics()).toBeUndefined();
+    peekBundledCanvasFontMetrics();
+    await settleLoads();
     expect(peekBundledCanvasFontMetrics()).toBeUndefined();
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('bad font bytes'));
   });
@@ -238,12 +250,14 @@ describe('bundled font registration gate', () => {
   it('notifies the settled channel even when registration fails, exactly as the scene arm notifies after its own fallback', async () => {
     installFontFace();
     FakeFontFace.loadResult = 'reject';
-    const { resolveBundledCanvasFontMetrics, onSceneFontMetricsSettled } = await freshModule();
+    const { peekBundledCanvasFontMetrics, onSceneFontMetricsSettled } = await freshModule();
 
     const listener = vi.fn();
     const off = onSceneFontMetricsSettled(listener);
     try {
-      expect(await resolveBundledCanvasFontMetrics()).toBeUndefined();
+      peekBundledCanvasFontMetrics();
+      await settleLoads();
+      expect(peekBundledCanvasFontMetrics()).toBeUndefined();
       expect(listener).toHaveBeenCalledTimes(1);
     } finally {
       off();
@@ -252,9 +266,10 @@ describe('bundled font registration gate', () => {
 
   // happy-dom without the stub is the non-DOM case, the branch a scene font takes outside a browser.
   it('stays undefined and warns in an environment with no FontFace at all', async () => {
-    const { peekBundledCanvasFontMetrics, resolveBundledCanvasFontMetrics, logger } = await freshModule();
+    const { peekBundledCanvasFontMetrics, logger } = await freshModule();
 
-    expect(await resolveBundledCanvasFontMetrics()).toBeUndefined();
+    peekBundledCanvasFontMetrics();
+    await settleLoads();
     expect(peekBundledCanvasFontMetrics()).toBeUndefined();
     // The door's diagnosis, not the catch's: an absent environment is not broken font bytes.
     expect(logger.warn).toHaveBeenCalledWith(
@@ -287,10 +302,12 @@ describe('scene font in an environment with no font door', () => {
   }
 
   it('falls back to the bundled default and names the absent environment when there is no FontFace', async () => {
-    const { resolveSceneFontMetrics, logger, bundled } = await loaderWithoutVitestGuard();
+    const { peekSceneFontMetrics: peek, logger, bundled } = await loaderWithoutVitestGuard();
 
-    const metrics = await resolveSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/NoDom');
-    expect(metrics).toBe(bundled);
+    const font = fontFile(new ArrayBuffer(4));
+    peek(font, 'Root/NoDom');
+    await settleLoads();
+    expect(peek(font, 'Root/NoDom')).toBe(bundled);
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('no FontFace/document.fonts in this environment')
     );
@@ -306,10 +323,12 @@ describe('scene font in an environment with no font door', () => {
       }
     );
     vi.stubGlobal('document', undefined);
-    const { resolveSceneFontMetrics, logger, bundled } = await loaderWithoutVitestGuard();
+    const { peekSceneFontMetrics: peek, logger, bundled } = await loaderWithoutVitestGuard();
 
-    const metrics = await resolveSceneFontMetrics(fontFile(new ArrayBuffer(4)), 'Root/NoDocument');
-    expect(metrics).toBe(bundled);
+    const font = fontFile(new ArrayBuffer(4));
+    peek(font, 'Root/NoDocument');
+    await settleLoads();
+    expect(peek(font, 'Root/NoDocument')).toBe(bundled);
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('no FontFace/document.fonts in this environment')
     );

@@ -18,7 +18,7 @@ import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext.j
 import { AnimationTransportProvider } from '../../contexts/AnimationTransportContext.js';
 import { composeProviders } from '../../composeProviders.js';
 
-export interface PreviewShellProviderOptions {
+interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
   initialActiveCameraPath: string | null | undefined;
   onMissingPathsChange: ((paths: ReadonlySet<string>) => void) | undefined;

@@ -9,5 +9,3 @@ controlComponentRegistry.register({ typeName: 'TextureRect', Component: TextureR
 controlSolverRegistry.registerMinimumSize('TextureRect', textureRectMinimumSize);
 // FIT_WIDTH/FIT_HEIGHT read `SolveContext.tentativeRect` (`nativeSolver.ts`, `solverRegistry.ts`).
 controlSolverRegistry.registerSizeDependentMinimum('TextureRect');
-
-export { TextureRect };

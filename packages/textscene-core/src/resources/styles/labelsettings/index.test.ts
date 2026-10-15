@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as labelSettingsSlice from './index';
+import './index';
 import { resourceSliceRegistry } from '../../sliceRegistration';
 
 // Importing the entry point registers the claim. The assertions read the registry
@@ -22,11 +22,5 @@ describe('labelsettings slice registration', () => {
 
   it('claims a resource type, not the Node that consumes one (error path)', () => {
     expect(resourceSliceRegistry.byTypeName('Label')).toBeNull();
-  });
-
-  it('re-exports the decode surface and the types', () => {
-    expect(typeof labelSettingsSlice.decodeLabelSettings).toBe('function');
-    expect(typeof labelSettingsSlice.resolveLabelSettings).toBe('function');
-    expect(typeof labelSettingsSlice.labelSettingsFromResource).toBe('function');
   });
 });

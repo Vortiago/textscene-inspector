@@ -5,7 +5,7 @@
 
 import type * as THREE from 'three';
 
-export interface UserDataDeclaration<Declaration> {
+interface UserDataDeclaration<Declaration> {
   /**
    * The `userData` entry that declares `declaration`. R3F assigns a `userData` prop whole, so an
    * object that declares more merges every entry into the one prop.

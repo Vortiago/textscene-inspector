@@ -7,13 +7,11 @@ import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/
 import { TAB_ALIGNMENT_CENTER, TAB_ALIGNMENT_LEFT, TAB_ALIGNMENT_RIGHT } from '../tabbar/nativeSolver';
 import type { ControlProperties } from '../control/types';
 import type { TabContainerProperties } from './types';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
-  TABS_POSITION_BOTTOM,
   TABS_POSITION_TOP,
   deriveTabContainerTabs,
   tabBarRect,
-  tabContainerLayout,
-  tabContainerMinimumSize,
   tabContentBand,
   tabHeaderBand,
   tabHeaderHeight,
@@ -22,6 +20,12 @@ import {
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import type { TabBarProperties } from '../tabbar/types';
 import type { FontResource } from '../../../../resources/fonts/font/types';
+
+const tabContainerLayout = controlSolverRegistry.containerLayout('TabContainer')!;
+const tabContainerMinimumSize = controlSolverRegistry.minimumSize('TabContainer')!;
+
+/** `TabContainer::POSITION_BOTTOM` (`tab_container.h:44`). */
+const TABS_POSITION_BOTTOM = 1;
 
 /** `tabbar_background` is `make_empty_stylebox(0, 0, 0, 0)` in the default theme (`default_theme.cpp:994`). */
 const NO_TABBAR_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };

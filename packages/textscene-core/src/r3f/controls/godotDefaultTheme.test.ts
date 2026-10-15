@@ -1,71 +1,28 @@
 /**
- * Pins each default-theme constant to its Godot 4.6 value in
- * `scene/theme/default_theme.cpp`, and each fill's CSS to an independent format
- * of its `Color(...)` literal.
+ * Pins each default-theme value to its Godot 4.6 literal in
+ * `scene/theme/default_theme.cpp`.
  */
 import { describe, expect, it } from 'vitest';
-import type { ThemeFill } from './godotDefaultTheme';
-import {
-  DEFAULT_CONTENT_MARGIN,
-  DEFAULT_CORNER_RADIUS,
-  DEFAULT_FONT_COLOR,
-  DEFAULT_FONT_SIZE,
-  DEFAULT_SEPARATION,
-  OPTION_BUTTON_CONTENT_MARGIN_X,
-  OPTION_BUTTON_CONTENT_MARGIN_Y,
-  SLIDER_CORNER_RADIUS,
-  SLIDER_GRABBER_RADIUS,
-  SLIDER_GRABBER_SIZE,
-  SLIDER_TICK_BOX,
-  SLIDER_TICK_THICKNESS,
-  SLIDER_TRACK_THICKNESS,
-  STYLE_DISABLED_FILL,
-  STYLE_HOVER_FILL,
-  STYLE_NORMAL_FILL,
-  STYLE_POPUP_FILL,
-  STYLE_PRESSED_FILL,
-  scaledGodotTheme,
-} from './godotDefaultTheme';
-
-/** An independent ground truth, not a copy of `godotDefaultTheme.ts`'s own `fillCss`. */
-function controlColorToCss(c: ThemeFill): string {
-  const ch = (v: number) => Math.max(0, Math.min(255, Math.round(v * 255)));
-  const alpha = Math.max(0, Math.min(1, c.a));
-  return `rgba(${ch(c.r)}, ${ch(c.g)}, ${ch(c.b)}, ${alpha})`;
-}
+import { DEFAULT_CONTENT_MARGIN, DEFAULT_FONT_SIZE, STYLE_FILL, scaledGodotTheme } from './godotDefaultTheme';
 
 describe('godotDefaultTheme', () => {
-  it('derives DEFAULT_FONT_COLOR from control_font_color = Color(0.875, 0.875, 0.875)', () => {
-    // round(0.875 * 255) = 223 = 0xDF → #dfdfdf.
-    expect(Math.round(0.875 * 255)).toBe(223);
-    expect(DEFAULT_FONT_COLOR).toBe('rgb(223, 223, 223)');
-  });
-
-  it('pins default_font_size = 16', () => {
+  it('pins default_font_size = 16 (default_theme.cpp:50)', () => {
     expect(DEFAULT_FONT_SIZE).toBe(16);
   });
 
-  it('renders the StyleBoxFlat fills from their Godot Color literals', () => {
-    expect(STYLE_NORMAL_FILL).toBe(controlColorToCss({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 }));
-    expect(STYLE_HOVER_FILL).toBe(controlColorToCss({ r: 0.225, g: 0.225, b: 0.225, a: 0.6 }));
-    expect(STYLE_PRESSED_FILL).toBe(controlColorToCss({ r: 0, g: 0, b: 0, a: 0.6 }));
-    expect(STYLE_DISABLED_FILL).toBe(controlColorToCss({ r: 0.1, g: 0.1, b: 0.1, a: 0.3 }));
-    expect(STYLE_POPUP_FILL).toBe(controlColorToCss({ r: 0.25, g: 0.25, b: 0.25, a: 1 }));
-  });
-
-  it('spells out the normal fill as translucent near-black (not pre-composited)', () => {
-    expect(STYLE_NORMAL_FILL).toBe('rgba(26, 26, 26, 0.6)');
-  });
-
-  it('pins the flat-stylebox geometry: corner radius 3, margins 4, OptionButton 8/4', () => {
-    expect(DEFAULT_CORNER_RADIUS).toBe(3);
+  it('pins default_margin = 4 (default_theme.cpp:54)', () => {
     expect(DEFAULT_CONTENT_MARGIN).toBe(4);
-    expect(OPTION_BUTTON_CONTENT_MARGIN_X).toBe(8);
-    expect(OPTION_BUTTON_CONTENT_MARGIN_Y).toBe(4);
   });
 
-  it('pins the default container separation = 4', () => {
-    expect(DEFAULT_SEPARATION).toBe(4);
+  it('transcribes the StyleBoxFlat fills from their Color literals (default_theme.cpp:112-123)', () => {
+    expect(STYLE_FILL).toEqual({
+      normal: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
+      hover: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 },
+      pressed: { r: 0, g: 0, b: 0, a: 0.6 },
+      disabled: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 },
+      popup: { r: 0.25, g: 0.25, b: 0.25, a: 1 },
+      progress: { r: 1, g: 1, b: 1, a: 0.4 },
+    });
   });
 });
 
@@ -75,22 +32,21 @@ describe('godotDefaultTheme', () => {
  * and the BoxContainer separation at `default_theme.cpp:1249`.
  */
 describe('scaledGodotTheme', () => {
-  it('returns exactly the scale-1 constants at scale 1', () => {
-    // `.ts`-only consumers import the constants, so scale 1 must equal them.
+  it('returns the unscaled Godot metrics at scale 1', () => {
     expect(scaledGodotTheme(1)).toEqual({
       scale: 1,
-      fontSize: DEFAULT_FONT_SIZE,
-      cornerRadius: DEFAULT_CORNER_RADIUS,
-      contentMargin: DEFAULT_CONTENT_MARGIN,
-      optionButtonMarginX: OPTION_BUTTON_CONTENT_MARGIN_X,
-      optionButtonMarginY: OPTION_BUTTON_CONTENT_MARGIN_Y,
-      separation: DEFAULT_SEPARATION,
-      sliderTrackThickness: SLIDER_TRACK_THICKNESS,
-      sliderCornerRadius: SLIDER_CORNER_RADIUS,
-      sliderGrabberSize: SLIDER_GRABBER_SIZE,
-      sliderGrabberRadius: SLIDER_GRABBER_RADIUS,
-      sliderTickBox: SLIDER_TICK_BOX,
-      sliderTickThickness: SLIDER_TICK_THICKNESS,
+      fontSize: 16, // default_font_size, default_theme.cpp:50
+      cornerRadius: 3, // default_corner_radius, default_theme.cpp:55
+      contentMargin: 4, // default_margin, default_theme.cpp:54
+      optionButtonMarginX: 8, // 2 * default_margin, default_theme.cpp:215
+      optionButtonMarginY: 4, // default_margin, default_theme.cpp:215
+      separation: 4, // Math::round(4 * scale), default_theme.cpp:1249
+      sliderTrackThickness: 8, // two margins of make_flat_stylebox(…, 4, 4, 4, 4, 4), default_theme.cpp:579
+      sliderCornerRadius: 4, // the corner radius of that call, default_theme.cpp:579
+      sliderGrabberSize: 16, // the slider_grabber icon's 16x16 box
+      sliderGrabberRadius: 7, // its circle's r="7"
+      sliderTickBox: 4, // the 4x8 canvas of hslider_tick.svg
+      sliderTickThickness: 2, // the 2px bar `pnpm ref:godot` measures
     });
   });
 

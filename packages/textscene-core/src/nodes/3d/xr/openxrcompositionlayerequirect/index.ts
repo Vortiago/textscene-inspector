@@ -13,5 +13,3 @@ const openXRCompositionLayerEquirectRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(openXRCompositionLayerEquirectRegistration);
-
-export { openXRCompositionLayerEquirectRegistration };

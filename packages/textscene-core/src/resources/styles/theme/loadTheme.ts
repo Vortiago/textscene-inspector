@@ -14,7 +14,7 @@ import type { ThemeAddresses, ThemeResource } from './types';
  * address, inside the Theme processor's async `loadDirectly`. Font refs resolve
  * through another processor, so the loader is injected.
  */
-export async function resolveThemeResource(
+async function resolveThemeResource(
   addresses: ThemeAddresses,
   loadFont: FontLoaderFn
 ): Promise<ThemeResource> {

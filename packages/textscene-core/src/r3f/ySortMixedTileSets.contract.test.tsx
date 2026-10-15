@@ -10,7 +10,7 @@ import { TscnParser } from '../parser/TscnParser';
 import { parseTresFile } from '../parser/parsedResource';
 import { NodeDispatcher } from './NodeDispatcher';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
-import { findByType } from '../nodes/2d/tiles/tilemaplayer/findByType';
+import { findByType } from '../nodes/2d/tiles/tilemaplayer/findByType.testkit';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import { SceneStack } from './testing/SceneStack';

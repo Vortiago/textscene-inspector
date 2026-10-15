@@ -7,11 +7,12 @@
 
 import { createTypeRegistry } from '../../../core/createTypeRegistry';
 import type { TscnNode } from '../../../parser/types';
-import type { Rect2, Vec2 } from './rect';
+import type { Rect2 } from './rect';
 import type { SolveNode, ThemedIconRef } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import type { FontMetrics } from './text/fontMetrics';
 import type { SealedHandoff } from './solveHandoff';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /**
  * Measures a run of text at a font size. `lineSpacingPx` is the caller's own
@@ -26,7 +27,7 @@ export type TextMeasurer = (
   fontSize: number,
   lineSpacingPx?: number,
   fontMetrics?: FontMetrics
-) => Vec2;
+) => Vector2;
 
 export interface SolveContext {
   /** The scaled default theme, plain data. */
@@ -41,7 +42,7 @@ export interface SolveContext {
    * (or `(0, 0)`) floored up to `custom_minimum_size`. A container's
    * `MinimumSizeFn` recurses through this, the one function `solveControlTree` uses.
    */
-  combinedMinimumSize(n: SolveNode): Vec2;
+  combinedMinimumSize(n: SolveNode): Vector2;
   // A `MinimumSizeFn` that ignores `tentativeRect` has identical inputs in both
   // passes, so the same output.
   /**
@@ -58,7 +59,7 @@ export interface SolveContext {
  * before the `custom_minimum_size` floor. A value its painter also needs is a
  * share (`solveHandoff.ts`), gated here by `ctx.measureText`, not a return value.
  */
-export type MinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vec2;
+export type MinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vector2;
 
 /** A `ContainerLayoutFn`'s result when it also seals a solve handoff for its own painter. */
 export interface ContainerLayoutResult {
@@ -80,7 +81,7 @@ export interface ContainerLayoutResult {
  */
 export type ContainerLayoutFn = (
   n: SolveNode,
-  children: readonly { node: SolveNode; minSize: Vec2 }[],
+  children: readonly { node: SolveNode; minSize: Vector2 }[],
   contentRect: Rect2,
   ctx: SolveContext
 ) => ReadonlyMap<string, Rect2> | ContainerLayoutResult;

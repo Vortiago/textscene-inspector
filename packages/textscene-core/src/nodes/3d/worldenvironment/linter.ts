@@ -115,5 +115,3 @@ const worldEnvironmentValidationRule: LintRule = {
 };
 
 ruleRegistry.register(worldEnvironmentValidationRule);
-
-export { worldEnvironmentValidationRule };

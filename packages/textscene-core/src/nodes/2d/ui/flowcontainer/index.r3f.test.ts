@@ -7,7 +7,6 @@ import './index.r3f';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { FlowContainer } from './Component';
-import { flowContainerMinimumSize, flowContainerLayout } from './nativeSolver';
 
 describe('FlowContainer index.r3f self-registration', () => {
   it('registers the native painter', () => {
@@ -17,7 +16,9 @@ describe('FlowContainer index.r3f self-registration', () => {
   it.each(['FlowContainer', 'HFlowContainer', 'VFlowContainer'])(
     'registers the minimum-size solver for %s',
     (typeName) => {
-      expect(controlSolverRegistry.minimumSize(typeName)).toBe(flowContainerMinimumSize);
+      const shared = controlSolverRegistry.minimumSize('FlowContainer');
+      expect(shared).toBeTypeOf('function');
+      expect(controlSolverRegistry.minimumSize(typeName)).toBe(shared);
       expect(controlSolverRegistry.isSizeDependentMinimum(typeName)).toBe(true);
     }
   );
@@ -25,7 +26,9 @@ describe('FlowContainer index.r3f self-registration', () => {
   it.each(['FlowContainer', 'HFlowContainer', 'VFlowContainer'])(
     'registers the container-layout solver for %s',
     (typeName) => {
-      expect(controlSolverRegistry.containerLayout(typeName)).toBe(flowContainerLayout);
+      const shared = controlSolverRegistry.containerLayout('FlowContainer');
+      expect(shared).toBeTypeOf('function');
+      expect(controlSolverRegistry.containerLayout(typeName)).toBe(shared);
     }
   );
 });

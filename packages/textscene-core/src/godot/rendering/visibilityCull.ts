@@ -34,7 +34,7 @@ export interface VisibilityCullInstance {
   wasVisible: boolean;
 }
 
-export interface VisibilityCullResult {
+interface VisibilityCullResult {
   /** Whether it draws and casts into a directional shadow. */
   isVisible: boolean;
   /** Its SELF fade times its visibility parent's fade, before `transparency` multiplies in. */

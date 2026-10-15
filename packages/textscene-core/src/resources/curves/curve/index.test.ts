@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as curveSlice from './index';
+import './index';
 import { resourceSliceRegistry } from '../../sliceRegistration';
 
 // Importing the entry point registers the claim. The assertions read the registry,
@@ -26,14 +26,5 @@ describe('curve slice registration', () => {
     // unclaimed passes alone and fails under the aggregation barrel.
     expect(resourceSliceRegistry.byTypeName('CPUParticles2D')).toBeNull();
     expect(resourceSliceRegistry.byTypeName('Path2D')).toBeNull();
-  });
-
-  it('re-exports the decode surface and the types, not the sampler', () => {
-    expect(typeof curveSlice.decodeCurve).toBe('function');
-    expect(typeof curveSlice.resolveCurve).toBe('function');
-    expect(typeof curveSlice.curveFromResource).toBe('function');
-    expect(curveSlice.EMPTY_CURVE.points).toEqual([]);
-    expect(curveSlice.CurveTangentMode.Linear).toBe(1);
-    expect('sampleCurve' in curveSlice).toBe(false);
   });
 });

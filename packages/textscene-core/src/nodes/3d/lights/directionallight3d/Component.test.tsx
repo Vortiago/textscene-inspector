@@ -7,7 +7,7 @@ import type { DirectionalLight3DProperties } from './types';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { readDirectionalShadowDeclaration } from '../../../../r3f/directionalShadow/declaration';
-import { readSkyLightDeclaration } from '../../../../r3f/sky/skyLight';
+import { skyLightEnergy } from '../../../../r3f/sky/skyLight';
 
 function makeNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {
@@ -224,7 +224,7 @@ describe('<DirectionalLight3D> sky mode', () => {
   it('lights surfaces and draws in the sky by default', async () => {
     const light = await renderLight({ light_energy: 2 });
     expect(light.intensity).toBeCloseTo(2 * LIGHT_INTENSITY_SCALE);
-    expect(readSkyLightDeclaration(light)).toEqual({ drawsInSky: true, energy: 2 });
+    expect(skyLightEnergy(light)).toBe(2);
   });
 
   it('lights no surface and casts no shadow when it lights only the sky (edge case)', async () => {
@@ -232,7 +232,7 @@ describe('<DirectionalLight3D> sky mode', () => {
     const light = await renderLight({ light_energy: 2, shadow_enabled: true, sky_mode: 2 });
     expect(light.intensity).toBe(0);
     expect(light.castShadow).toBe(false);
-    expect(readSkyLightDeclaration(light)).toEqual({ drawsInSky: true, energy: 2 });
+    expect(skyLightEnergy(light)).toBe(2);
   });
 
   it('draws nothing in the sky when it lights only surfaces', async () => {
@@ -240,18 +240,19 @@ describe('<DirectionalLight3D> sky mode', () => {
     const light = await renderLight({ light_energy: 2, shadow_enabled: true, sky_mode: 1 });
     expect(light.intensity).toBeCloseTo(2 * LIGHT_INTENSITY_SCALE);
     expect(light.castShadow).toBe(true);
-    expect(readSkyLightDeclaration(light)?.drawsInSky).toBe(false);
+    expect(skyLightEnergy(light)).toBeNull();
   });
 
   it('keeps the shadow declaration beside the sky declaration', async () => {
-    const light = await renderLight({ shadow_enabled: true });
+    // A light that lights only surfaces is the one whose sky declaration differs from no declaration.
+    const light = await renderLight({ shadow_enabled: true, sky_mode: 1 });
     expect(readDirectionalShadowDeclaration(light)).not.toBeNull();
-    expect(readSkyLightDeclaration(light)).not.toBeNull();
+    expect(skyLightEnergy(light)).toBeNull();
   });
 
   it('lights surfaces and the sky for an unknown sky mode (error case)', async () => {
     const light = await renderLight({ light_energy: 1, sky_mode: 7 });
     expect(light.intensity).toBeCloseTo(LIGHT_INTENSITY_SCALE);
-    expect(readSkyLightDeclaration(light)?.drawsInSky).toBe(true);
+    expect(skyLightEnergy(light)).toBe(1);
   });
 });

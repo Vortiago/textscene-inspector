@@ -71,7 +71,7 @@ function isTopLevel(node: RawNode): boolean {
   return boolSlotValue(node.rawProperties.top_level) === true;
 }
 
-export type GlobalTransform2DVerdict =
+type GlobalTransform2DVerdict =
   | { readonly kind: 'known'; readonly transform: Transform2DColumns }
   /** An opaque ancestor, a non-Node2D CanvasItem, or an altered `Vector2i` component. */
   | { readonly kind: 'unknowable' };

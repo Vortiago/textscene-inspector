@@ -12,5 +12,3 @@ const resourcePreloaderRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(resourcePreloaderRegistration);
-
-export { resourcePreloaderRegistration };

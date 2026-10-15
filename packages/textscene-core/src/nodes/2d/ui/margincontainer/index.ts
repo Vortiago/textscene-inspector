@@ -10,5 +10,4 @@ const marginContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(marginContainerRegistration);
 
-export { marginContainerRegistration };
 export * from './parser';

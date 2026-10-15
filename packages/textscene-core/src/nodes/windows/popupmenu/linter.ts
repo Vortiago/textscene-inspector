@@ -81,5 +81,3 @@ const popupMenuValidationRule: LintRule = {
 };
 
 ruleRegistry.register(popupMenuValidationRule);
-
-export { popupMenuValidationRule };

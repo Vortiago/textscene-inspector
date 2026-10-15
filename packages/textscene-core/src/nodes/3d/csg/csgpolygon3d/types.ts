@@ -1,6 +1,6 @@
 /** CSGPolygon3D type definitions. */
 
-import type { Transform3D } from '../../../base/node3d/types';
+import type { Transform3D } from '../../../../godot/math/transform3d';
 import type { CSGShape3DProperties } from '../types';
 import type { Curve3DControlPoint } from '../../../../resources/curves/curve3d/index.js';
 

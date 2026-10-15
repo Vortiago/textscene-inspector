@@ -3,7 +3,7 @@
  * MeshInstance3D calls `useResource` for its path, every file starts missing, and a file provided
  * later turns only the meshes that depend on it `'loaded'`.
  */
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { act, render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -17,7 +17,6 @@ import { FileEventBus } from './FileEventBus';
 import type { ResourceProvider } from './ResourceProvider';
 import { useResource } from './useResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
-import { initGlbModules } from './processing/glbProcessing';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -63,12 +62,6 @@ function MeshStub(props: { path: string; resourcePath: string }) {
     </div>
   );
 }
-
-// GLBMesh hooks call cloneWithMaterials, which requires SkeletonUtils to be
-// lazily loaded first. Initialise once for the whole test file.
-beforeAll(async () => {
-  await initGlbModules();
-});
 
 describe('useResource late-arrival integration', () => {
   let parser: TscnParser;

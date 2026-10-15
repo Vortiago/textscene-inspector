@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 
-export interface LightWithTargetProps {
+interface LightWithTargetProps {
   name: string;
   position: [number, number, number];
   rotation: [number, number, number];

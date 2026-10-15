@@ -23,7 +23,7 @@ export interface ResourceReference {
 }
 
 /** A reference occurrence and where it sits. */
-export interface ResourceReferenceSpan extends ResourceReference {
+interface ResourceReferenceSpan extends ResourceReference {
   readonly range: Range;
 }
 
@@ -81,7 +81,7 @@ export function resourceReferences(document: LanguageDocument): readonly Resourc
 }
 
 /** A declared resource id and the heading that declares it. */
-export interface ResourceDeclaration extends ResourceReference {
+interface ResourceDeclaration extends ResourceReference {
   readonly section: DocumentSection;
 }
 

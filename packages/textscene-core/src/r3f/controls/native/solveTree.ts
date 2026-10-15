@@ -5,14 +5,15 @@
  */
 
 import type { SceneScope, TscnNode } from '../../../parser/types';
-import type { ControlColor, ControlProperties } from '../../../nodes/2d/ui/control/types';
+import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
-import type { Vec2 } from './rect';
 import type { PaintRange } from '../../canvasPaintOrder';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Transform2DColumns } from '../../../godot/math/transform2d.js';
+import type { Rgba } from '../../../godot/math/math.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 /**
  * One resolved, unloaded theme icon: the raw Texture2D-valued ref plus the scope
@@ -40,7 +41,7 @@ export interface SkippedAncestors {
    */
   transform: Transform2DColumns;
   /** Componentwise product of each skipped ancestor's `modulate`; `self_modulate` never propagates (`renderer_canvas_cull.cpp`). */
-  modulate: ControlColor;
+  modulate: Rgba;
   /**
    * Each skipped ancestor's `z_index`/`z_as_relative`, outermost first. A list,
    * not a sum: `p_z = CLAMP(p_z + ci->z_index, …)` clamps at every step and
@@ -50,7 +51,7 @@ export interface SkippedAncestors {
 }
 
 /** One CanvasItem's contribution to `p_z` (`renderer_canvas_cull.cpp:430-434`). */
-export interface CanvasItemZStep {
+interface CanvasItemZStep {
   zIndex: number;
   zAsRelative: boolean;
 }
@@ -115,13 +116,13 @@ export interface SolveNode {
    */
   styleBoxes: Readonly<Record<string, StyleBoxFlatData>>;
   /** `null` until the node's texture (if any) has loaded. */
-  textureSize: Vec2 | null;
+  textureSize: Vector2 | null;
   /**
    * Every Texture2D-valued slot the type registers (`registerTextureSlots`), by
    * its key: `null` until loaded, empty for a type that registers none. Resolved
    * by the same `resolveTextureSize` as `textureSize`, so the two cannot disagree.
    */
-  textureSlots: Readonly<Record<string, Vec2 | null>>;
+  textureSlots: Readonly<Record<string, Vector2 | null>>;
   /**
    * The scene-tree eye toggle for this path (`SelectionContext.hiddenNodePaths`).
    * It stands in for clearing `visible`, which reaches the solve: a hidden child
@@ -157,7 +158,7 @@ export interface SolveNode {
    * `styleBoxes` over `theme.colors`. A painter falls back to the default
    * theme's colour on a miss.
    */
-  colors: Readonly<Record<string, ControlColor>>;
+  colors: Readonly<Record<string, Rgba>>;
   /**
    * Resolved theme constants by `get_theme_constant(name, type)` name, merged like
    * `colors` over `theme.constants`. A scene Theme's constant is never scaled.
@@ -218,7 +219,7 @@ export function controlProps(n: ShareNode): ControlProperties {
  * into the ambient `Modulate2DContext` and `self_modulate` into `tint`, so a
  * painter that read either would apply it twice.
  */
-export type PainterView<T> = Omit<T, 'modulate' | 'selfModulate'>;
+type PainterView<T> = Omit<T, 'modulate' | 'selfModulate'>;
 
 /**
  * One view per property bag, so repeated calls return the same object: painters

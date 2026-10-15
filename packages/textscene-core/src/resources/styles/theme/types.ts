@@ -6,7 +6,7 @@
 
 import type { FontResource } from '../../fonts/font/types';
 import type { SceneScope } from '../../../parser/types';
-import type { Color } from '../../../utils/colorParser';
+import type { Rgba } from '../../../godot/math/math';
 
 /**
  * The shape a file-backed Theme (`T` = address string, awaited later) and a
@@ -24,7 +24,7 @@ export interface ScannedTheme<T> {
    */
   styles?: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /** `<Type>/colors/<name>`, parsed (`Theme::get_color`, `scene/resources/theme.cpp:761-767`). Optional, as `styles`. */
-  colors?: Readonly<Record<string, Readonly<Record<string, Color>>>>;
+  colors?: Readonly<Record<string, Readonly<Record<string, Rgba>>>>;
   /** `<Type>/icons/<name>`: a raw ref string (`SubResource(...)`/`ExtResource(...)`), resolved as `styles`. Optional, as `styles`. */
   icons?: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /** `<Type>/constants/<name>`, parsed (`Theme::get_constant`, `scene/resources/theme.cpp:858-864`): a literal int, never scaled. Optional, as `styles`. */

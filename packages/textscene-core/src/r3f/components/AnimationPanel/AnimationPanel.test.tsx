@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useEffect } from 'react';
-import { AnimationPanel, formatTimecode } from './AnimationPanel';
+import { AnimationPanel } from './AnimationPanel';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -34,11 +34,14 @@ function renderPanel(reg: PlayerRegistration | null = REG) {
   );
 }
 
-describe('formatTimecode', () => {
-  it('formats seconds as m:ss.cc', () => {
-    expect(formatTimecode(0.25)).toBe('0:00.25');
-    expect(formatTimecode(1.5)).toBe('0:01.50');
-    expect(formatTimecode(75)).toBe('1:15.00');
+describe('AnimationPanel — timecode', () => {
+  it.each([
+    [0.25, '0:00.25'],
+    [1.5, '0:01.50'],
+    [75, '1:15.00'],
+  ])('formats a %s s clip duration as m:ss.cc', (duration, expected) => {
+    renderPanel({ clips: ['clip'], durations: { clip: duration }, autoplay: 'clip' });
+    expect(screen.getByTestId('timecode').textContent).toBe(`0:00.00 / ${expected}`);
   });
 });
 

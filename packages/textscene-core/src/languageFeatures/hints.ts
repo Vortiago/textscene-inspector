@@ -9,14 +9,14 @@ import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
 import { VARIANT_TYPE } from '../godot/variant/variantType.js';
 
 /** One `PROPERTY_HINT_ENUM` label, with the integer the engine stores for it. */
-export interface EnumEntry {
+interface EnumEntry {
   readonly label: string;
   /** The integer literal to write. An explicit `Label:3` uses 3, else the label's index. */
   readonly value: string;
 }
 
 /** Whether the hint offers a fixed set of integer labels. Flags are a bitmask, so excluded. */
-export function isEnumHint(hint: number): boolean {
+function isEnumHint(hint: number): boolean {
   return hint === PROPERTY_HINT.ENUM || hint === PROPERTY_HINT.ENUM_SUGGESTION;
 }
 
@@ -25,7 +25,7 @@ export function isEnumHint(hint: number): boolean {
  * labels, so it yields nothing rather than one empty label. A label's `:value`
  * suffix overrides the index, as `PropertyHint`'s own syntax states.
  */
-export function enumEntries(hintString: string): readonly EnumEntry[] {
+function enumEntries(hintString: string): readonly EnumEntry[] {
   if (hintString.length === 0) return [];
   return hintString.split(',').map((raw, index) => {
     const colon = raw.indexOf(':');
@@ -67,7 +67,7 @@ export function acceptedResourceTypes(hint: number, hintString: string): readonl
 }
 
 /** A bounds hint, split into its parts. `or_greater` or `or_less` leaves an end open. */
-export interface RangeHint {
+interface RangeHint {
   readonly min: string;
   readonly max: string;
   readonly hasMin: boolean;

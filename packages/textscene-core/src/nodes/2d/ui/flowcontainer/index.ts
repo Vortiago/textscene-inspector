@@ -10,6 +10,5 @@ const flowContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(flowContainerRegistration);
 
-export { flowContainerRegistration };
 export * from './parser';
 export * from './types';

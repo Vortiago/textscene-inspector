@@ -8,7 +8,7 @@
 import type { Range } from './types.js';
 
 /** A span on one line, with the line given separately. */
-export interface LineSpan {
+interface LineSpan {
   readonly start: number;
   readonly end: number;
 }

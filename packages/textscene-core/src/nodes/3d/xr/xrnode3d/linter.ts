@@ -71,5 +71,3 @@ const xrNode3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(xrNode3DValidationRule);
-
-export { xrNode3DValidationRule };

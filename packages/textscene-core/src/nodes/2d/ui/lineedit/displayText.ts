@@ -8,9 +8,9 @@
 import type { LineEditProperties } from './types';
 
 /** Godot's fallback echo character when `secret_character` is empty. */
-export const DEFAULT_SECRET_CHARACTER = '•';
+const DEFAULT_SECRET_CHARACTER = '•';
 
-export interface LineEditDisplayText {
+interface LineEditDisplayText {
   /** The string to paint. */
   text: string;
   /** True when that string is the placeholder, which Godot draws dimmed. */

@@ -1,17 +1,17 @@
 /**
- * `visibleInTreeVerdict` down the CanvasItem chain: a contiguous CanvasItem run,
+ * `hiddenOrUnknowableInTree` down the CanvasItem chain: a contiguous CanvasItem run,
  * then an immediate CanvasLayer parent, then a Viewport search that climbs past
  * anything else. Node3D has one stopping rule (`parentType.visibility.test.ts`).
  */
 
 import { describe, expect, it } from 'vitest';
-import { verdictOf } from './testing/sceneNodes.js';
+import { silencesVisibilityGatedWarnings } from './testing/sceneNodes.js';
 
-describe('visibleInTreeVerdict', () => {
+describe('hiddenOrUnknowableInTree', () => {
   describe('CanvasItem', () => {
     it('cascades through the contiguous CanvasItem run', () => {
       expect(
-        verdictOf(
+        silencesVisibilityGatedWarnings(
           `[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
@@ -21,12 +21,12 @@ visible = false
 `,
           'Region'
         )
-      ).toBe('hidden');
+      ).toBe(true);
     });
 
     it('stops at a plain Node, so a hidden Node2D above it does not count', () => {
       expect(
-        verdictOf(
+        silencesVisibilityGatedWarnings(
           `[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
@@ -38,7 +38,7 @@ visible = false
 `,
           'Region'
         )
-      ).toBe('visible');
+      ).toBe(false);
     });
 
     it('reads a CanvasLayer parent, but only as the immediate parent', () => {
@@ -50,18 +50,18 @@ visible = false
 visible = false
 `;
       expect(
-        verdictOf(
+        silencesVisibilityGatedWarnings(
           `${layer}
 [node name="Region" type="NavigationRegion2D" parent="Layer"]
 `,
           'Region'
         )
-      ).toBe('hidden');
+      ).toBe(true);
 
       // canvas_item.cpp:324-328 casts the immediate parent only, so one plain
       // Node between them and the layer contributes nothing.
       expect(
-        verdictOf(
+        silencesVisibilityGatedWarnings(
           `${layer}
 [node name="Plain" type="Node" parent="Layer"]
 
@@ -69,12 +69,12 @@ visible = false
 `,
           'Region'
         )
-      ).toBe('visible');
+      ).toBe(false);
     });
 
     it('reads a hidden Window found by the Viewport search, across plain Nodes', () => {
       expect(
-        verdictOf(
+        silencesVisibilityGatedWarnings(
           `[gd_scene format=3]
 
 [node name="Dialog" type="Window"]
@@ -86,12 +86,12 @@ visible = false
 `,
           'Region'
         )
-      ).toBe('hidden');
+      ).toBe(true);
     });
 
     it('treats any other Viewport ancestor as visible', () => {
       expect(
-        verdictOf(
+        silencesVisibilityGatedWarnings(
           `[gd_scene format=3]
 
 [node name="Root" type="Node"]
@@ -102,14 +102,14 @@ visible = false
 `,
           'Region'
         )
-      ).toBe('visible');
+      ).toBe(false);
     });
 
     it('cannot rule out a hidden Window behind an instanced ancestor', () => {
       // Unlike Node3D, the search climbs past whatever is not a Viewport, so an
       // instanced ancestor above the CanvasItem run is still consulted.
       expect(
-        verdictOf(
+        silencesVisibilityGatedWarnings(
           `[gd_scene load_steps=2 format=3]
 
 [ext_resource type="PackedScene" path="res://dialog.tscn" id="1"]
@@ -122,7 +122,7 @@ visible = false
 `,
           'Region'
         )
-      ).toBe('unknowable');
+      ).toBe(true);
     });
 
     it('cannot rule out a hidden Window behind an uncataloged ancestor', () => {
@@ -131,7 +131,7 @@ visible = false
       // A GDExtension type in this position may be a Window, and then its own
       // `visible` is what decides.
       expect(
-        verdictOf(
+        silencesVisibilityGatedWarnings(
           `[gd_scene format=3]
 
 [node name="Custom" type="MyDialogWindow"]
@@ -143,7 +143,7 @@ visible = false
 `,
           'Region'
         )
-      ).toBe('unknowable');
+      ).toBe(true);
     });
   });
 });

@@ -10,10 +10,17 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { TextLayoutResult, TextLineLayout } from '../../../r3f/controls/native/text/textLayout';
-import { HorizontalAlignment } from './types';
-import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 
-export interface Label3DLinePlacement {
+import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_FILL,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+  type HorizontalAlignment,
+} from '../../../godot/math/math';
+
+interface Label3DLinePlacement {
   /** This line's own left-edge x offset (`label_3d.cpp:588-599`), Godot px. */
   x: number;
   /** This line's "box top" Y, Godot px, y-down. `<TextRun>` anchors the baseline from there (`buildGlyphQuadArrays`). */
@@ -38,12 +45,12 @@ function verticalOffsetPx(layout: TextLayoutResult, lineSpacingPx: number): numb
  */
 function horizontalOffsetPx(lineWidthPx: number, alignment: HorizontalAlignment): number {
   switch (alignment) {
-    case HorizontalAlignment.CENTER:
-    case HorizontalAlignment.FILL:
+    case HORIZONTAL_ALIGNMENT_CENTER:
+    case HORIZONTAL_ALIGNMENT_FILL:
       return -lineWidthPx / 2;
-    case HorizontalAlignment.RIGHT:
+    case HORIZONTAL_ALIGNMENT_RIGHT:
       return -lineWidthPx;
-    case HorizontalAlignment.LEFT:
+    case HORIZONTAL_ALIGNMENT_LEFT:
     default:
       return 0;
   }

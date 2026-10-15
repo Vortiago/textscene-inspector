@@ -183,8 +183,6 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the accumulator seed quad: fixed shaders, one uniform, one instance per accumulator',
   'packages/textscene-core/src/r3f/positionalShadow/atlasDepthPass.ts':
     'one depth material per light kind for the whole app, its program fixed at construction and never mutated',
-  'packages/textscene-core/src/r3f/testing/threePasses.ts':
-    "a test stand-in for three's shared `_depthMaterial`, read by a probe and never rendered, so never compiled",
   'packages/textscene-core/src/r3f/lighting2d/directionalLightQuad.ts':
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/r3f/lighting2d/lightQuad.ts':

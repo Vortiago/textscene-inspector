@@ -6,7 +6,7 @@
  */
 
 import type { PropertyValidator } from '../ValidatorRegistry.js';
-import { everyValidatorLabel, type Root } from '../registryPopulation.js';
+import { everyValidatorLabel, type Root } from './registryPopulation.js';
 
 /**
  * Bounds that cannot be grounded against the pinned reference. Empty by policy:

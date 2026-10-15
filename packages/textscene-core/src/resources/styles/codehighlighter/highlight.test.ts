@@ -5,15 +5,15 @@
 import { describe, expect, it } from 'vitest';
 import { resolveLineColors } from './highlight';
 import type { CodeHighlighterData } from './types';
-import type { Color } from '../../../utils/colorParser';
+import type { Rgba } from '../../../godot/math/math';
 
-const FONT_COLOR: Color = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
-const KEYWORD_COLOR: Color = { r: 1, g: 0.2, b: 0.3, a: 1 };
-const MEMBER_KEYWORD_COLOR: Color = { r: 0.2, g: 0.4, b: 1, a: 1 };
-const STRING_COLOR: Color = { r: 0.9, g: 0.8, b: 0.3, a: 1 };
-const COMMENT_COLOR: Color = { r: 0.5, g: 0.6, b: 0.5, a: 1 };
-const NUMBER_COLOR: Color = { r: 0.6, g: 0.9, b: 0.9, a: 1 };
-const SYMBOL_COLOR: Color = { r: 0.7, g: 0.7, b: 0.7, a: 1 };
+const FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+const KEYWORD_COLOR: Rgba = { r: 1, g: 0.2, b: 0.3, a: 1 };
+const MEMBER_KEYWORD_COLOR: Rgba = { r: 0.2, g: 0.4, b: 1, a: 1 };
+const STRING_COLOR: Rgba = { r: 0.9, g: 0.8, b: 0.3, a: 1 };
+const COMMENT_COLOR: Rgba = { r: 0.5, g: 0.6, b: 0.5, a: 1 };
+const NUMBER_COLOR: Rgba = { r: 0.6, g: 0.9, b: 0.9, a: 1 };
+const SYMBOL_COLOR: Rgba = { r: 0.7, g: 0.7, b: 0.7, a: 1 };
 
 const EMPTY: CodeHighlighterData = {
   keywordColors: new Map(),
@@ -68,7 +68,7 @@ describe('resolveLineColors', () => {
   });
 
   it('disqualifies a member keyword directly preceded by "." (:343-350), which falls through to the general member-variable path instead (:375-384)', () => {
-    const MEMBER_VAR_COLOR: Color = { r: 0.9, g: 0.5, b: 0.2, a: 1 };
+    const MEMBER_VAR_COLOR: Rgba = { r: 0.9, g: 0.5, b: 0.2, a: 1 };
     const highlighter: CodeHighlighterData = {
       ...EMPTY,
       memberKeywordColors: new Map([['position', MEMBER_KEYWORD_COLOR]]),

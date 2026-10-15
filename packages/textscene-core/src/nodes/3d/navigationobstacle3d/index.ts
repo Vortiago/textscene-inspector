@@ -18,7 +18,6 @@ const navigationObstacle3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(navigationObstacle3DRegistration);
 
-export { navigationObstacle3DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

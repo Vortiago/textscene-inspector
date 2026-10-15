@@ -13,5 +13,3 @@ const shaderGlobalsOverrideRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(shaderGlobalsOverrideRegistration);
-
-export { shaderGlobalsOverrideRegistration };

@@ -15,5 +15,3 @@ const cPUParticles3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(cPUParticles3DRegistration);
-
-export { cPUParticles3DRegistration };

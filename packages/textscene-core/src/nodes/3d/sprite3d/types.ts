@@ -5,10 +5,10 @@
  */
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
-import type { Color } from '../../../utils/colorParser';
-import type { Vector2 } from '../../../parser/vectors';
 import { BillboardMode } from '../../../godot/scene/billboard';
 import { AxisMode } from '../../../godot/math/vector3Axis';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
 export { BillboardMode };
@@ -57,7 +57,7 @@ export { AxisMode };
 /**
  * Rect2 (Godot rect resource): a rectangle in 2D space with float coords.
  */
-export interface Rect2 {
+interface Rect2 {
   x: number;
   y: number;
   width: number;
@@ -115,7 +115,7 @@ export interface Sprite3DProperties extends GeometryInstance3DProperties {
   region_rect?: Rect2;
 
   /** Color tint applied to the sprite (default: white). */
-  modulate: Color;
+  modulate: Rgba;
 
   /**
    * `FLAG_SHADED`: false (SHADING_MODE_UNSHADED) by default. The `SpriteBase3D()` flag loop sets

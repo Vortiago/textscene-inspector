@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
 import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
 import { v } from './validators/v.js';
 import { findShadowViolations, ownKeyRegistrations } from './testing/shadowCopyScan.js';
@@ -34,15 +35,11 @@ const INTENTIONAL_OVERRIDES = new Set<string>([
 ]);
 
 /**
- * Collect all keys registered for a type by walking up its base chain.
- *
- * The registry's own chain, not the node table, which would hide every resource
- * shadow.
+ * Every key the base chain of `nodeType` registers. The chain covers nodes and resources both, as the singleton's
+ * walk does: the node table alone would hide every resource shadow, such as `QuadMesh` over `PlaneMesh`.
  */
 function baseChainKeys(nodeType: string): Set<string> {
-  return new Set(
-    validatorRegistry.baseChainOf(nodeType).flatMap((ancestor) => validatorRegistry.getOwnKeys(ancestor))
-  );
+  return new Set(classBaseChain(nodeType).flatMap((ancestor) => validatorRegistry.getOwnKeys(ancestor)));
 }
 
 /**
@@ -113,6 +110,24 @@ describe('ValidatorRegistry meta-guard: no shadow copies', () => {
     );
     expect(violations).toHaveLength(1);
     expect(violations[0]?.message).toContain("'Child' re-declares 'transform'");
+  });
+
+  it('reads the chain the singleton walks, so a base it skips cannot hide a shadow', () => {
+    // An own key of every ancestor `baseChainKeys` names resolves from the descendant. A hop the walk never reaches
+    // would leave a key only that hop declares unresolved.
+    const registrations = ownKeyRegistrations(validatorRegistry);
+    expect(registrations.length).toBeGreaterThan(200);
+    expect(classBaseChain('QuadMesh')).toContain('PlaneMesh');
+
+    const unreached = registrations.flatMap(({ nodeType }) =>
+      classBaseChain(nodeType).flatMap((ancestor) =>
+        validatorRegistry
+          .getOwnKeys(ancestor)
+          .filter((key) => validatorRegistry.findValidator(nodeType, key) === null)
+          .map((key) => `${nodeType} does not reach ${ancestor}.${key}`)
+      )
+    );
+    expect(unreached).toEqual([]);
   });
 
   it('no type re-declares a key that its base chain already registers', () => {

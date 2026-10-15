@@ -68,7 +68,7 @@ const CARET_WIDTH_PX = 1;
  */
 const CARET_COLOR = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 
-export interface TextEditBodyProps extends NativeControlComponentProps {
+interface TextEditBodyProps extends NativeControlComponentProps {
   /**
    * Drawn between the panel StyleBox and the row loop, in `_draw_guidelines`'s slot
    * (`text_edit.cpp:1319-1322`), a virtual only `CodeEdit` overrides. It is a prop

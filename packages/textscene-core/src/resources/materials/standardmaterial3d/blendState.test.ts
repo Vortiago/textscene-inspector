@@ -6,56 +6,58 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { GODOT_BLEND_ATTACHMENTS, godotBlendState, type GodotBlendAttachment } from './blendState';
+import { godotBlendState, type GodotBlendAttachment } from './blendState';
 import { BlendMode } from './types';
 
-describe('GODOT_BLEND_ATTACHMENTS', () => {
-  it('transcribes blend_mode_to_blend_attachment exactly', () => {
-    expect(GODOT_BLEND_ATTACHMENTS).toEqual({
-      [BlendMode.MIX]: {
-        colorOp: 'add',
-        srcColor: 'src-alpha',
-        dstColor: 'one-minus-src-alpha',
-        alphaOp: 'add',
-        srcAlpha: 'one',
-        dstAlpha: 'one-minus-src-alpha',
-      },
-      [BlendMode.ADD]: {
-        colorOp: 'add',
-        srcColor: 'src-alpha',
-        dstColor: 'one',
-        alphaOp: 'add',
-        srcAlpha: 'src-alpha',
-        dstAlpha: 'one',
-      },
-      [BlendMode.SUB]: {
-        colorOp: 'reverse-subtract',
-        srcColor: 'src-alpha',
-        dstColor: 'one',
-        alphaOp: 'reverse-subtract',
-        srcAlpha: 'src-alpha',
-        dstAlpha: 'one',
-      },
-      [BlendMode.MUL]: {
-        colorOp: 'add',
-        srcColor: 'dst-color',
-        dstColor: 'zero',
-        alphaOp: 'add',
-        srcAlpha: 'dst-alpha',
-        dstAlpha: 'zero',
-      },
-      [BlendMode.PREMULT_ALPHA]: {
-        colorOp: 'add',
-        srcColor: 'one',
-        dstColor: 'one-minus-src-alpha',
-        alphaOp: 'add',
-        srcAlpha: 'one',
-        dstAlpha: 'one-minus-src-alpha',
-      },
-    });
-  });
+/**
+ * `blend_mode_to_blend_attachment` (`material_storage.cpp:651-716`, Godot 4.6.3), one row per
+ * `BaseMaterial3D` blend mode, in Godot's vocabulary.
+ */
+const GODOT_ATTACHMENTS: Readonly<Record<BlendMode, GodotBlendAttachment>> = {
+  [BlendMode.MIX]: {
+    colorOp: 'add',
+    srcColor: 'src-alpha',
+    dstColor: 'one-minus-src-alpha',
+    alphaOp: 'add',
+    srcAlpha: 'one',
+    dstAlpha: 'one-minus-src-alpha',
+  },
+  [BlendMode.ADD]: {
+    colorOp: 'add',
+    srcColor: 'src-alpha',
+    dstColor: 'one',
+    alphaOp: 'add',
+    srcAlpha: 'src-alpha',
+    dstAlpha: 'one',
+  },
+  [BlendMode.SUB]: {
+    colorOp: 'reverse-subtract',
+    srcColor: 'src-alpha',
+    dstColor: 'one',
+    alphaOp: 'reverse-subtract',
+    srcAlpha: 'src-alpha',
+    dstAlpha: 'one',
+  },
+  [BlendMode.MUL]: {
+    colorOp: 'add',
+    srcColor: 'dst-color',
+    dstColor: 'zero',
+    alphaOp: 'add',
+    srcAlpha: 'dst-alpha',
+    dstAlpha: 'zero',
+  },
+  [BlendMode.PREMULT_ALPHA]: {
+    colorOp: 'add',
+    srcColor: 'one',
+    dstColor: 'one-minus-src-alpha',
+    alphaOp: 'add',
+    srcAlpha: 'one',
+    dstAlpha: 'one-minus-src-alpha',
+  },
+};
 
-  it('covers every blend mode the enum declares', () => {
+describe('godotBlendState over every mode', () => {
+  it('resolves every blend mode the enum declares', () => {
     for (const mode of [
       BlendMode.MIX,
       BlendMode.ADD,
@@ -63,7 +65,7 @@ describe('GODOT_BLEND_ATTACHMENTS', () => {
       BlendMode.MUL,
       BlendMode.PREMULT_ALPHA,
     ]) {
-      expect(GODOT_BLEND_ATTACHMENTS[mode]).toBeDefined();
+      expect(godotBlendState(mode).blending, `blend mode ${mode}`).toBeDefined();
     }
   });
 });
@@ -128,15 +130,13 @@ describe('godotBlendState', () => {
   it('each preset it uses programs the factors Godot programs', () => {
     for (const mode of [BlendMode.MIX, BlendMode.ADD, BlendMode.MUL]) {
       const { blending } = godotBlendState(mode);
-      expect(PRESET_FACTORS[blending as number], `preset for mode ${mode}`).toEqual(
-        GODOT_BLEND_ATTACHMENTS[mode]
-      );
+      expect(PRESET_FACTORS[blending as number], `preset for mode ${mode}`).toEqual(GODOT_ATTACHMENTS[mode]);
     }
   });
 
   it('spells SUB and PREMULT_ALPHA out, because no preset matches', () => {
     for (const mode of [BlendMode.SUB, BlendMode.PREMULT_ALPHA]) {
-      const attachment = GODOT_BLEND_ATTACHMENTS[mode];
+      const attachment = GODOT_ATTACHMENTS[mode];
       expect(godotBlendState(mode)).toEqual({
         blending: THREE.CustomBlending,
         blendEquation: THREE_EQUATION[attachment.colorOp],

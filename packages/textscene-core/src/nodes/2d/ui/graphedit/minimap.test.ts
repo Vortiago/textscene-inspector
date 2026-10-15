@@ -10,9 +10,7 @@ import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/contro
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
-  GRAPH_EDIT_MINIMAP_DEFAULT_OPACITY,
   graphEditElements,
-  graphScrollBounds,
   isMinimapEnabled,
   minimapCameraRect,
   minimapConvertFromGraph,
@@ -43,8 +41,7 @@ describe('isMinimapEnabled (graph_edit.cpp:2799-2810)', () => {
 
 describe('minimapOpacity (graph_edit.cpp:2786-2792)', () => {
   it("is 0.65 by default — the constructor's own modulate alpha (graph_edit.cpp:3327)", () => {
-    expect(minimapOpacity(props())).toBe(GRAPH_EDIT_MINIMAP_DEFAULT_OPACITY);
-    expect(GRAPH_EDIT_MINIMAP_DEFAULT_OPACITY).toBe(0.65);
+    expect(minimapOpacity(props())).toBe(0.65);
   });
 
   it('takes the scene value verbatim — set_minimap_opacity clamps nothing', () => {
@@ -68,35 +65,6 @@ describe('minimapRect (graph_edit.cpp:2770-2780)', () => {
       w: 50,
       h: 200,
     });
-  });
-});
-
-describe('graphScrollBounds (graph_edit.cpp:472-493)', () => {
-  it('merges each element rect into a DEFAULT Rect2, so the graph origin is always inside', () => {
-    // Rect2().merge(Rect2(40,56,120,64)) = Rect2(0,0,160,120) (rect2.h:165-180),
-    // then position -= size, size += size*2 with size = (400,320).
-    const bounds = graphScrollBounds([{ positionOffset: { x: 40, y: 56 }, size: { x: 120, y: 64 } }], 1, {
-      x: 400,
-      y: 320,
-    });
-    expect(bounds.min).toEqual({ x: -400, y: -320 });
-    expect(bounds.max).toEqual({ x: 560, y: 440 });
-  });
-
-  it('scales each element rect by zoom before merging', () => {
-    // Rect2(80,112,240,128) at zoom 2 -> merged (0,0,320,240); ±size (400,320).
-    const bounds = graphScrollBounds([{ positionOffset: { x: 40, y: 56 }, size: { x: 120, y: 64 } }], 2, {
-      x: 400,
-      y: 320,
-    });
-    expect(bounds.min).toEqual({ x: -400, y: -320 });
-    expect(bounds.max).toEqual({ x: 720, y: 560 });
-  });
-
-  it('still spans ±size with no elements at all', () => {
-    const bounds = graphScrollBounds([], 1, { x: 400, y: 320 });
-    expect(bounds.min).toEqual({ x: -400, y: -320 });
-    expect(bounds.max).toEqual({ x: 400, y: 320 });
   });
 });
 
@@ -211,5 +179,48 @@ describe('graphEditElements', () => {
     expect(view.minimapElements.map((e) => e.key)).toEqual(['A']);
     // Rect2().merge(A) is (0,0,120,64) merged with B at (500,0,120,64) -> width 620.
     expect(view.bounds.max.x).toBe(620 + 400);
+  });
+});
+
+describe('graphEditElements scroll bounds (graph_edit.cpp:472-493)', () => {
+  const theme = nativeTheme(1);
+  const SIZE = { x: 400, y: 320 };
+
+  function graphEditWithNode(): SolveNode {
+    const node: SolveNode = {
+      ...emptySolveNode(),
+      path: 'A',
+      node: controlNode('A', 'GraphNode', { name: 'A', positionOffset: { x: 40, y: 56 } }),
+    };
+    return {
+      ...emptySolveNode(),
+      path: 'G',
+      node: controlNode('G', 'GraphEdit', { name: 'G', connections: [] }),
+      children: [node],
+    };
+  }
+
+  const rects: ReadonlyMap<string, Rect2> = new Map([['A', { x: 0, y: 0, w: 120, h: 64 }]]);
+
+  it('merges each element rect into a DEFAULT Rect2, so the graph origin is always inside', () => {
+    // Rect2().merge(Rect2(40,56,120,64)) = Rect2(0,0,160,120) (rect2.h:165-180),
+    // then position -= size, size += size*2 with size = (400,320).
+    const { bounds } = graphEditElements(graphEditWithNode(), rects, 1, SIZE, theme);
+    expect(bounds.min).toEqual({ x: -400, y: -320 });
+    expect(bounds.max).toEqual({ x: 560, y: 440 });
+  });
+
+  it('scales each element rect by zoom before merging', () => {
+    // Rect2(80,112,240,128) at zoom 2 -> merged (0,0,320,240); ±size (400,320).
+    const { bounds } = graphEditElements(graphEditWithNode(), rects, 2, SIZE, theme);
+    expect(bounds.min).toEqual({ x: -400, y: -320 });
+    expect(bounds.max).toEqual({ x: 720, y: 560 });
+  });
+
+  it('still spans ±size with no elements at all (edge case)', () => {
+    const empty = { ...graphEditWithNode(), children: [] };
+    const { bounds } = graphEditElements(empty, rects, 1, SIZE, theme);
+    expect(bounds.min).toEqual({ x: -400, y: -320 });
+    expect(bounds.max).toEqual({ x: 400, y: 320 });
   });
 });

@@ -1,11 +1,38 @@
 /**
- * `capsulePoints`' arc math, asserted on the point sequence a `CapsuleShape2D` gizmo traces,
- * since a rendered `<lineSegments>` buffer does not expose it. The top cap sweeps 0°..180°
- * (right, top, left) and the bottom cap the bottom semicircle, so the outline never
- * self-intersects.
+ * The outline loops on plain points. The capsule's top cap sweeps 0°..180° (right, top, left) and
+ * its bottom cap the bottom semicircle, so the outline never self-intersects.
  */
 import { describe, expect, it } from 'vitest';
-import { capsulePoints } from './CollisionGizmo2D';
+import { capsulePoints, circlePoints, rectanglePoints } from './collisionOutlines';
+
+describe('rectanglePoints', () => {
+  it('centres the corners on the origin, clockwise on screen from the top-left', () => {
+    expect(rectanglePoints({ x: 40, y: 20 })).toEqual([
+      { x: -20, y: -10 },
+      { x: 20, y: -10 },
+      { x: 20, y: 10 },
+      { x: -20, y: 10 },
+    ]);
+  });
+
+  it('collapses a zero size to the origin (edge case)', () => {
+    expect(rectanglePoints({ x: 0, y: 0 }).every((p) => p.x === 0 && p.y === 0)).toBe(true);
+  });
+});
+
+describe('circlePoints', () => {
+  it('places every point at the radius, starting on +X', () => {
+    const points = circlePoints(5);
+    expect(points[0]).toEqual({ x: 5, y: 0 });
+    for (const p of points) expect(Math.hypot(p.x, p.y)).toBeCloseTo(5, 9);
+  });
+
+  it('leaves the closing point implicit, so the loop has no duplicate of the start (edge case)', () => {
+    const points = circlePoints(5);
+    const last = points[points.length - 1]!;
+    expect(Math.hypot(last.x - 5, last.y)).toBeGreaterThan(0.5);
+  });
+});
 
 function dist(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -48,7 +75,7 @@ describe('capsulePoints', () => {
     expect(bottom.y).toBeCloseTo(-(5 + radius), 5);
   });
 
-  it('produces no duplicate/retraced points (edge case — the bug revisited the right-side connection point)', () => {
+  it('visits each point once, including the right-side connection point (edge case)', () => {
     const points = capsulePoints(10, 30);
     const seen = new Set<string>();
     for (const p of points) {

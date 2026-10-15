@@ -12,9 +12,13 @@ import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/contro
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { graphNodeDrawRows, graphNodeLayout, graphNodeMinimumSize } from './nativeSolver';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import { graphNodeDrawRows } from './nativeSolver';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
+
+const graphNodeLayout = controlSolverRegistry.containerLayout('GraphNode')!;
+const graphNodeMinimumSize = controlSolverRegistry.minimumSize('GraphNode')!;
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
   return 'rects' in result ? result.rects : result;

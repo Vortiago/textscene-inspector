@@ -13,5 +13,3 @@ const lookAtModifier3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(lookAtModifier3DRegistration);
-
-export { lookAtModifier3DRegistration };

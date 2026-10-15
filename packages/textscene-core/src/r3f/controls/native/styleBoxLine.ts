@@ -1,6 +1,6 @@
 /**
  * A resolved `StyleBoxLine` SubResource (`style_box_line.h`/`.cpp`) for any
- * Control's `theme_override_styles/*` slot, which `native/parseStyleBox.ts`
+ * Control's `theme_override_styles/*` slot, which `parseStyleBox.ts`
  * dispatches here.
  *
  * Portions ported from Godot Engine (MIT).
@@ -13,10 +13,11 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver';
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, boolOr } from '../../../parser/valueParsers';
-import type { ControlColor } from '../../../nodes/2d/ui/control/types';
+import type { Rgba } from '../../../godot/math/math';
+import { contentMarginOr } from '../../../resources/styles/stylebox/decode';
 
 export interface StyleBoxLineData {
-  color: ControlColor;
+  color: Rgba;
   /** `style_box_line.h:36`, default `1`. */
   thickness: number;
   /** `style_box_line.h:37`, default `false`, independent of the owning widget's orientation. */
@@ -35,10 +36,7 @@ export interface StyleBoxLineData {
 const CONTEXT = 'StyleBoxLine';
 
 /** `style_box_line.h:34`: a bare `Color color;`, default-constructed opaque black. */
-const DEFAULT_LINE_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 1 };
-
-/** `style_box.cpp:143`'s sentinel: "ask `get_style_margin`" (also `parseStyleBox.ts`'s `CONTENT_MARGIN_UNSET`). */
-const CONTENT_MARGIN_UNSET = -1;
+const DEFAULT_LINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 
 type Side = 'left' | 'top' | 'right' | 'bottom';
 
@@ -47,12 +45,6 @@ function styleMargin(side: Side, vertical: boolean, thickness: number): number {
   const half = thickness / 2;
   if (vertical) return side === 'left' || side === 'right' ? half : 0;
   return side === 'top' || side === 'bottom' ? half : 0;
-}
-
-/** `StyleBox::get_margin` (`style_box.cpp:78-86`): the authored value, or `get_style_margin` when unset. */
-function marginOr(raw: string | undefined, side: Side, vertical: boolean, thickness: number): number {
-  const parsed = floatOr(raw, CONTENT_MARGIN_UNSET, CONTEXT);
-  return parsed < 0 ? styleMargin(side, vertical, thickness) : parsed;
 }
 
 /**
@@ -81,10 +73,14 @@ export function parseStyleBoxLine(
     growBegin: floatOr(data.grow_begin, 1, CONTEXT),
     growEnd: floatOr(data.grow_end, 1, CONTEXT),
     margin: {
-      left: marginOr(data.content_margin_left, 'left', vertical, thickness),
-      top: marginOr(data.content_margin_top, 'top', vertical, thickness),
-      right: marginOr(data.content_margin_right, 'right', vertical, thickness),
-      bottom: marginOr(data.content_margin_bottom, 'bottom', vertical, thickness),
+      left: contentMarginOr(data.content_margin_left, styleMargin('left', vertical, thickness), CONTEXT),
+      top: contentMarginOr(data.content_margin_top, styleMargin('top', vertical, thickness), CONTEXT),
+      right: contentMarginOr(data.content_margin_right, styleMargin('right', vertical, thickness), CONTEXT),
+      bottom: contentMarginOr(
+        data.content_margin_bottom,
+        styleMargin('bottom', vertical, thickness),
+        CONTEXT
+      ),
     },
   };
 }

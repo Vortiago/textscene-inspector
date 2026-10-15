@@ -52,5 +52,3 @@ const openXRRenderModelParentRule: LintRule = {
 };
 
 ruleRegistry.register(openXRRenderModelParentRule);
-
-export { openXRRenderModelParentRule };

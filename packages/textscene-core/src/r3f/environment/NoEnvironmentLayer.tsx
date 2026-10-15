@@ -6,7 +6,7 @@
  */
 
 import { DEFAULT_AGX_CONTRAST, type EnvironmentSettings } from '../../resources/environment/types';
-import { GodotToneMapper } from '../../resources/environment/godotToneMapping';
+import { ToneMapper } from '../../godot/rendering/environment/toneMapping';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { ProjectClearColor } from '../ProjectClearColor';
 import { ToneMapLayer } from './ToneMapLayer';
@@ -17,7 +17,7 @@ import { useCompositorPass } from './useCompositorPass';
  * Environment defaults (`environment.h:115-117`) only by chance, so neither is read from the other.
  */
 const NO_ENVIRONMENT_TONE_MAPPING: EnvironmentSettings['toneMapping'] = {
-  mode: GodotToneMapper.LINEAR,
+  mode: ToneMapper.LINEAR,
   exposure: 1,
   white: 1,
   agxContrast: DEFAULT_AGX_CONTRAST,

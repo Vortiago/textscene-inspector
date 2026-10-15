@@ -12,5 +12,3 @@ const windowRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(windowRegistration);
-
-export { windowRegistration };

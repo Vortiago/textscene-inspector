@@ -8,4 +8,3 @@ const vehicleWheel3DValidationRule = makeVehicleWheelLinterRule('3D');
 ruleRegistry.register(vehicleWheel3DValidationRule);
 
 // Export for testing
-export { vehicleWheel3DValidationRule };

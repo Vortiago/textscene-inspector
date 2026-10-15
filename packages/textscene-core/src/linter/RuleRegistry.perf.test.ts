@@ -5,9 +5,17 @@
  * side, against scheduler and GC hiccups, and a ratio threshold well below the ~10x an uncached lookup shows.
  */
 
-import { describe, expect, it } from 'vitest';
-import { RuleRegistry } from './RuleRegistry.js';
+import { describe, expect, it, vi } from 'vitest';
+import type { ruleRegistry } from './RuleRegistry.js';
 import type { LintRule } from './types.js';
+
+type RuleRegistry = typeof ruleRegistry;
+
+/** An empty registry, from a fresh evaluation of its module. */
+async function emptyRegistry(): Promise<RuleRegistry> {
+  vi.resetModules();
+  return (await import('./RuleRegistry.js')).ruleRegistry;
+}
 
 function registerManyRules(registry: RuleRegistry, count: number): void {
   for (let i = 0; i < count; i++) {
@@ -58,20 +66,20 @@ function bestOf(registry: RuleRegistry, calls: number, trials: number): number {
 }
 
 describe('RuleRegistry.getRulesForNodeType performance', () => {
-  it('stays close to constant in registered-rule count once cached, not proportional to it', () => {
+  it('stays close to constant in registered-rule count once cached, not proportional to it', async () => {
     const CALLS = 20000; // fixed: simulates linting a scene with this many nodes
     const TRIALS = 3;
     const SMALL_RULE_COUNT = 100;
     const BIG_RULE_COUNT = SMALL_RULE_COUNT * 10;
 
-    const smallRegistry = new RuleRegistry();
+    const smallRegistry = await emptyRegistry();
     registerManyRules(smallRegistry, SMALL_RULE_COUNT);
     // Warm the cache (and the JIT) before timing, isolating steady-state
     // per-call cost (the interesting number: repeated calls for the same type).
     smallRegistry.getRulesForNodeType('MeshInstance3D');
     const smallMs = bestOf(smallRegistry, CALLS, TRIALS);
 
-    const bigRegistry = new RuleRegistry();
+    const bigRegistry = await emptyRegistry();
     registerManyRules(bigRegistry, BIG_RULE_COUNT);
     bigRegistry.getRulesForNodeType('MeshInstance3D');
     const bigMs = bestOf(bigRegistry, CALLS, TRIALS);

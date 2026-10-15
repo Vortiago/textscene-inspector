@@ -12,5 +12,3 @@ const rootMotionViewRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(rootMotionViewRegistration);
-
-export { rootMotionViewRegistration };

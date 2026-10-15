@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { transform3DToMatrix, matrixToTransform3D } from '../nodeTreeTransforms';
 import { decomposeForR3F } from '../nodeTransform';
-import type { Transform3D } from '../../nodes/base/node3d/types';
+import type { Transform3D } from '../../godot/math/transform3d';
 
 const IDENTITY: Transform3D = {
   basis_x: { x: 1, y: 0, z: 0 },

@@ -13,5 +13,3 @@ const visibleOnScreenEnabler2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(visibleOnScreenEnabler2DRegistration);
-
-export { visibleOnScreenEnabler2DRegistration };

@@ -9,38 +9,38 @@ import { degToRad } from '../godot/math/math.js';
 import { clampWheelNotches, wheelNotches, type WheelEventLike } from './pointerGesture.js';
 
 /** `editors/3d/navigation_feel/orbit_sensitivity`. */
-export const ORBIT_DEGREES_PER_PIXEL = 0.25;
+const ORBIT_DEGREES_PER_PIXEL = 0.25;
 
 /** `editors/3d/freelook/freelook_sensitivity`. */
-export const FREELOOK_DEGREES_PER_PIXEL = 0.25;
+const FREELOOK_DEGREES_PER_PIXEL = 0.25;
 
 /**
  * `_nav_pan`: `translation_sensitivity / 150`, at the editor default sensitivity of 1.0. Scaled
  * by `distance / DISTANCE_DEFAULT` at use, so a pan moves at about one rate at any zoom.
  */
-export const PAN_PIXELS_TO_UNITS = 1 / 150;
+const PAN_PIXELS_TO_UNITS = 1 / 150;
 
 /** `_nav_zoom`'s hard-coded `zoom_speed` for a drag-zoom. */
-export const DRAG_ZOOM_SPEED = 1 / 80;
+const DRAG_ZOOM_SPEED = 1 / 80;
 
 /** `ZOOM_FREELOOK_MULTIPLIER`: one wheel notch's distance scale. */
-export const WHEEL_ZOOM_MULTIPLIER = 1.08;
+const WHEEL_ZOOM_MULTIPLIER = 1.08;
 
 /**
  * `_nav_orbit` clamps the pitch to just short of ±90 degrees, which keeps the derived basis
  * non-degenerate mid-orbit.
  */
-export const X_ROT_LIMIT = 1.57;
+const X_ROT_LIMIT = 1.57;
 
 /** `editors/3d/freelook/freelook_base_speed`, in units per second. */
-export const FREELOOK_BASE_SPEED = 5.0;
+const FREELOOK_BASE_SPEED = 5.0;
 
 /** `_update_freelook`'s `freelook_speed_modifier` multiplier (Shift). */
-export const FREELOOK_SPRINT_MULTIPLIER = 3.0;
+const FREELOOK_SPRINT_MULTIPLIER = 3.0;
 
 /** `ZOOM_FREELOOK_MIN` / `ZOOM_FREELOOK_MAX` (single-precision editor build). */
-export const ZOOM_DISTANCE_MIN = 0.01;
-export const ZOOM_DISTANCE_MAX = 10000;
+const ZOOM_DISTANCE_MIN = 0.01;
+const ZOOM_DISTANCE_MAX = 10000;
 
 /** `DISTANCE_DEFAULT`: the reference radius pan speed is scaled against. */
 const DISTANCE_DEFAULT = 4;
@@ -69,7 +69,7 @@ export type GodotViewAngle = 'front' | 'rear' | 'left' | 'right' | 'top' | 'bott
  * `_menu_option`'s VIEW_TOP/BOTTOM/LEFT/RIGHT/FRONT/REAR cursor angles. A snap sets the two
  * rotations and leaves the focus point and radius alone.
  */
-export const VIEW_ANGLES: Readonly<Record<GodotViewAngle, { xRot: number; yRot: number }>> = {
+const VIEW_ANGLES: Readonly<Record<GodotViewAngle, { xRot: number; yRot: number }>> = {
   front: { xRot: 0, yRot: 0 },
   rear: { xRot: 0, yRot: Math.PI },
   left: { xRot: 0, yRot: Math.PI / 2 },
@@ -138,7 +138,7 @@ export function cursorQuaternion(cursor: EditorCursor): THREE.Quaternion {
 }
 
 /** The unit vector from the focus point towards the eye. */
-export function cursorDirection(cursor: EditorCursor): THREE.Vector3 {
+function cursorDirection(cursor: EditorCursor): THREE.Vector3 {
   return new THREE.Vector3(0, 0, 1).applyAxisAngle(AXIS_X, -cursor.xRot).applyAxisAngle(AXIS_Y, -cursor.yRot);
 }
 

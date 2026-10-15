@@ -40,11 +40,11 @@ export enum JustificationFlag {
   DO_NOT_SKIP_SINGLE_LINE = 1 << 7,
 }
 
-export interface FitLineOptions {
+interface FitLineOptions {
   fontSizePx: number;
 }
 
-export interface FitLineResult {
+interface FitLineResult {
   line: TextLineLayout;
   /** `sd->fit_width_minimum_reached` (`:5677-5679`): a shrinking line could not reach `widthPx`. */
   fitWidthMinimumReached: boolean;

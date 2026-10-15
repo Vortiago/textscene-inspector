@@ -12,7 +12,6 @@ const label3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(label3DRegistration);
 
-export { label3DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

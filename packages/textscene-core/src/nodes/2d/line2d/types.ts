@@ -1,6 +1,7 @@
 /** Line2D: a stroked polyline drawn as mesh quads (extends Node2D). */
 
-import type { Color, Node2DProperties } from '../../base/node2d/types';
+import type { Node2DProperties } from '../../base/node2d/types';
+import type { Rgba } from '../../../godot/math/math';
 
 export interface Line2DProperties extends Node2DProperties {
   /** Flat `[x0,y0,x1,y1,…]` Float32Array from a PackedVector2Array. Empty (< 2 vertices) → nothing to draw. */
@@ -8,7 +9,7 @@ export interface Line2DProperties extends Node2DProperties {
   /** Stroke width in Godot pixels (default 10). */
   width: number;
   /** Flat fill color (Godot `default_color`, sRGB, default white). Multiplies with modulate. */
-  defaultColor: Color;
+  defaultColor: Rgba;
   /**
    * Whether to close the polyline back to the first vertex (default false).
    * When closed, one extra quad is emitted from last point → first point.

@@ -1,14 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { rasterizeGradientTexture2D } from './build';
-import { decodeGradient, decodeGradientTexture2D } from './decode';
+import { decodeGradientTexture2D } from './decode';
+import { gradientOf } from './gradient.testkit';
 import { sourceColorSpace } from '../sourceColorSpace';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
 import type { Gradient, GradientTexture2D } from './types';
 
 // A radial white-to-transparent falloff, cubic-interpolated.
 const coinGradient = (): Gradient =>
-  decodeGradient({
+  gradientOf({
     interpolation_mode: '2',
     offsets: 'PackedFloat32Array(0, 0.642276, 1)',
     colors: 'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)',

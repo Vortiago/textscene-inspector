@@ -4,5 +4,3 @@ import { TabContainer } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'TabContainer', Component: TabContainer });
-
-export { TabContainer };

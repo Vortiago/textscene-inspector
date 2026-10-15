@@ -1,5 +1,10 @@
 /** Parts of a patched GLSL source that a shader patch's test reads. */
 
+/** How many times `part` appears in `source`. */
+export function occurrences(source: string, part: string): number {
+  return source.split(part).length - 1;
+}
+
 /** The body of the first GLSL function whose declaration ends in `name`, between its braces. */
 export function functionBody(source: string, name: string): string {
   const declaration = source.indexOf(`${name}(`);

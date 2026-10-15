@@ -13,5 +13,4 @@ registerResourceSlice({
   busType: 'resource',
 });
 
-export { curveFromResource, decodeCurve, resolveCurve } from './decode';
-export { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
+export type { Curve, CurvePoint } from './types';

@@ -9,7 +9,6 @@ import { describe, it, expect } from 'vitest';
 import { DEFAULT_LIGHT_CULL_KEY, directionalLightCullKey, type LightCullKey } from './lightCullKey';
 import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering';
 import {
-  itemLightList,
   itemPositionalLights,
   positionalCandidates,
   drawsInPass,
@@ -17,6 +16,7 @@ import {
   placementId,
   type CanvasLightDeclaration,
   type ItemPlacement,
+  type LightListEntry,
   type PlacementDeclarations,
 } from './itemLightList';
 import type { Rect2 } from '../../godot/math/rect2';
@@ -35,14 +35,28 @@ function lights(...declarations: CanvasLightDeclaration[]): ReadonlyMap<number, 
   return new Map(declarations.map((declaration, ordinal) => [ordinal, declaration]));
 }
 
-describe('itemLightList', () => {
+function placements(...items: [ItemPlacement, boolean][]): ReadonlyMap<string, PlacementDeclarations> {
+  return new Map(
+    items.map(([placement, hasLightOnly]) => [placementId(placement), { placement, hasLightOnly }])
+  );
+}
+
+/** The list an item at `item` takes, as the plan for its placement holds it. */
+function listAt(
+  all: ReadonlyMap<number, CanvasLightDeclaration>,
+  item: ItemPlacement
+): readonly LightListEntry[] {
+  return planLightLists(all, placements([item, false]))[0]?.entries ?? [];
+}
+
+describe('the light list of an item', () => {
   it('lists every light that reaches the item, by ordinal', () => {
-    const list = itemLightList(lights(light(), light()), ITEM);
+    const list = listAt(lights(light(), light()), ITEM);
     expect(list.map((entry) => entry.ordinal)).toEqual([0, 1]);
   });
 
   it('lists lights of different cull masks together, so one buffer applies them in order', () => {
-    const list = itemLightList(lights(light(), light({ reach: key({ itemCullMask: 2 }) })), {
+    const list = listAt(lights(light(), light({ reach: key({ itemCullMask: 2 }) })), {
       ...ITEM,
       lightMask: 3,
     });
@@ -50,21 +64,21 @@ describe('itemLightList', () => {
   });
 
   it('leaves out a light the cull test rejects', () => {
-    const list = itemLightList(lights(light({ reach: key({ zMax: -1 }) }), light()), ITEM);
+    const list = listAt(lights(light({ reach: key({ zMax: -1 }) }), light()), ITEM);
     expect(list.map((entry) => entry.ordinal)).toEqual([1]);
   });
 
   it('is empty for an item no light reaches', () => {
-    expect(itemLightList(lights(light()), { ...ITEM, lightMask: 512 })).toEqual([]);
+    expect(listAt(lights(light()), { ...ITEM, lightMask: 512 })).toEqual([]);
   });
 
   it('lists a directional light for an item of any light_mask', () => {
     const sun = light({ reach: directionalLightCullKey(0, 0) });
-    expect(itemLightList(lights(sun), { ...ITEM, lightMask: 0 })).toHaveLength(1);
+    expect(listAt(lights(sun), { ...ITEM, lightMask: 0 })).toHaveLength(1);
   });
 
   it('shadows an item whose light_mask meets the shadow_item_cull_mask', () => {
-    const [entry] = itemLightList(lights(light({ reach: key({ itemCullMask: 3 }), shadowItemCullMask: 2 })), {
+    const [entry] = listAt(lights(light({ reach: key({ itemCullMask: 3 }), shadowItemCullMask: 2 })), {
       ...ITEM,
       lightMask: 2,
     });
@@ -72,28 +86,25 @@ describe('itemLightList', () => {
   });
 
   it('leaves an item unshadowed whose light_mask misses the shadow_item_cull_mask', () => {
-    const [entry] = itemLightList(
-      lights(light({ reach: key({ itemCullMask: 3 }), shadowItemCullMask: 2 })),
-      ITEM
-    );
+    const [entry] = listAt(lights(light({ reach: key({ itemCullMask: 3 }), shadowItemCullMask: 2 })), ITEM);
     expect(entry!.unshadowed).toBe(true);
   });
 
   it('draws a light that casts nothing as authored', () => {
-    const [entry] = itemLightList(lights(light()), ITEM);
+    const [entry] = listAt(lights(light()), ITEM);
     expect(entry!.unshadowed).toBe(false);
   });
 });
 
-describe('itemLightList under the per-item cap', () => {
+describe('the light list of an item under the per-item cap', () => {
   it('leaves out a positional light the item does not take', () => {
-    const list = itemLightList(lights(light(), light()), { ...ITEM, positionalLights: [1] });
+    const list = listAt(lights(light(), light()), { ...ITEM, positionalLights: [1] });
     expect(list.map((entry) => entry.ordinal)).toEqual([1]);
   });
 
   it('keeps a directional light, which the cap does not count', () => {
     const sun = light({ reach: directionalLightCullKey(0, 0), sequence: null });
-    const list = itemLightList(lights(sun, light()), { ...ITEM, positionalLights: [] });
+    const list = listAt(lights(sun, light()), { ...ITEM, positionalLights: [] });
     expect(list.map((entry) => entry.ordinal)).toEqual([0]);
   });
 });
@@ -187,12 +198,6 @@ describe('itemPositionalLights', () => {
     expect(itemPositionalLights(candidates, ITEM_RECT, rects)).toBeNull();
   });
 });
-
-function placements(...items: [ItemPlacement, boolean][]): ReadonlyMap<string, PlacementDeclarations> {
-  return new Map(
-    items.map(([placement, hasLightOnly]) => [placementId(placement), { placement, hasLightOnly }])
-  );
-}
 
 describe('placementId', () => {
   it('separates two placements that take different positional lights', () => {

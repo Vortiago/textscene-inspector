@@ -8,11 +8,12 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import type { Label3DProperties } from './types';
-import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
+import { AlphaCutMode, BillboardMode, TextureFilter } from './types';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { HORIZONTAL_ALIGNMENT_CENTER } from '../../../godot/math/math';
 
 const Label3D = registeredComponent('Label3D');
 
@@ -29,7 +30,7 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
     double_sided: true,
     font_size: 32,
     line_spacing: 0,
-    horizontal_alignment: HorizontalAlignment.CENTER,
+    horizontal_alignment: HORIZONTAL_ALIGNMENT_CENTER,
     no_depth_test: false,
     render_priority: 0,
     outline_render_priority: -1,

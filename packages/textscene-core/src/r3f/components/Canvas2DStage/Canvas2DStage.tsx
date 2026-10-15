@@ -53,7 +53,7 @@ function zoomViewAround(view: View2D, px: number, py: number, factor: number): V
 
 const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 
-export interface Canvas2DStageProps {
+interface Canvas2DStageProps {
   /** The root scene's nodes. The native canvas lays out their Control subtrees. */
   nodes: readonly TscnNode[];
   /** SubResources for StyleBox/Texture refs inside the Control canvas (ADR-0009: explicit props). */

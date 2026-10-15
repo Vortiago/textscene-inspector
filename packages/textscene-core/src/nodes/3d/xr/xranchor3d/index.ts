@@ -13,5 +13,3 @@ const xRAnchor3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(xRAnchor3DRegistration);
-
-export { xRAnchor3DRegistration };

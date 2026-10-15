@@ -9,5 +9,3 @@ const navigationRegion2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(navigationRegion2DRegistration);
-
-export { navigationRegion2DRegistration };

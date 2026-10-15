@@ -21,7 +21,7 @@ const SIDE: Readonly<Record<CullMode, THREE.Side>> = {
   [CullMode.DISABLED]: THREE.DoubleSide,
 };
 
-export function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMaterial3DScalars {
+function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMaterial3DScalars {
   return {
     ...godotBlendState(data.blendMode),
     color: data.albedo,

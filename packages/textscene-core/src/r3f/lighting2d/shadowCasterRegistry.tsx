@@ -85,7 +85,7 @@ export function NoShadowCasterRegistry({ children }: { children: ReactNode }) {
 }
 
 /** The enclosing registry, or null when no pass is mounted above this subtree. */
-export function useShadowCasterRegistry(): ShadowCasterRegistry | null {
+function useShadowCasterRegistry(): ShadowCasterRegistry | null {
   return useContext(ShadowCasterContext);
 }
 

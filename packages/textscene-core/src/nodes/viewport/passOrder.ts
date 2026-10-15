@@ -5,7 +5,7 @@
  */
 
 /** One pass in the dependency graph. */
-export interface ViewportPassDependency {
+interface ViewportPassDependency {
   /** This pass's own identity: a dispatcher-absolute node path. */
   id: string;
   /** ids of the other passes this pass's content samples, which render before it. */
@@ -20,7 +20,7 @@ export interface ViewportPassCycle {
   path: readonly string[];
 }
 
-export interface ViewportPassOrder {
+interface ViewportPassOrder {
   /**
    * Every pass id, dependencies before dependents wherever the graph allows.
    * A pass inside a cycle still appears, ordered by its acyclic dependencies,
