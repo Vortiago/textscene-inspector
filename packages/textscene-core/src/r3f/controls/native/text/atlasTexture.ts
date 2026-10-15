@@ -6,15 +6,15 @@
 import * as THREE from 'three';
 import { createExternalStore, useExternalStoreValue } from '../../../hooks/createExternalStore';
 import { OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlas';
+import { sharedTexture } from '../../../sharedTextures';
 
-/** Written only by `getAtlasTexture`. Never cleared: the atlas is never disposed. */
+/** Written only by `getAtlasTexture`, and never cleared. */
 let cachedAtlasTexture: THREE.Texture | null = null;
 /** Set only by the atlas image's load callback, and never cleared. */
 const atlasDecoded = createExternalStore(false);
 
 /**
- * The atlas PNG as a texture, created once and shared by identity across every run, never
- * disposed. MSDF channels are distance data, not colour, so `NoColorSpace` keeps them from being
+ * The atlas PNG as a texture, created once and shared by identity across every run. MSDF channels are distance data, not colour, so `NoColorSpace` keeps them from being
  * gamma-decoded.
  */
 export function getAtlasTexture(): THREE.Texture {
@@ -28,7 +28,7 @@ export function getAtlasTexture(): THREE.Texture {
     texture.magFilter = THREE.LinearFilter;
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
-    cachedAtlasTexture = texture;
+    cachedAtlasTexture = sharedTexture(texture);
   }
   return cachedAtlasTexture;
 }

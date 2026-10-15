@@ -6,6 +6,7 @@
 
 import { Canvas } from '@react-three/fiber';
 import { installShaderPatches } from '../../shaderPatch/installShaderPatches.js';
+import { SharedTextureRelease } from '../../sharedTextures.js';
 import { World2DContents, type World2DCanvasProps } from './World2DContents.js';
 
 export function World2DCanvas(props: World2DCanvasProps) {
@@ -28,6 +29,7 @@ export function World2DCanvas(props: World2DCanvasProps) {
       // Transparent to pointer input, so the stage's pan and zoom handlers work.
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
     >
+      <SharedTextureRelease />
       <World2DContents {...props} />
     </Canvas>
   );

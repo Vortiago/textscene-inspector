@@ -27,6 +27,7 @@ import { ScreenshotBridge } from './ScreenshotBridge.js';
 import { TiledUploadDriver } from './tiledUpload/TiledUploadDriver.js';
 import { ActiveCameraSwitcher } from './ActiveCameraSwitcher.js';
 import { CameraFit } from './CameraFit.js';
+import { SharedTextureRelease } from './sharedTextures.js';
 import styles from './TscnCanvas.module.css';
 
 /**
@@ -134,6 +135,7 @@ export function TscnCanvas() {
         flat
         onCreated={installShaderPatches}
       >
+        <SharedTextureRelease />
         <TscnSceneContents />
         <ActiveCameraSwitcher />
         <CameraFit />

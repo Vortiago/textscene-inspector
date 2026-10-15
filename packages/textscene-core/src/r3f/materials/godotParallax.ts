@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 import { recordedOn } from './recordedOnMaterial';
+import { pendingMapStandIn } from './pendingMapStandIn';
 import { HEIGHTMAP_DEFAULTS, type Heightmap } from '../../resources/materials/standardmaterial3d/types';
 
 /** The last declaration before `main`, after the normal and the varyings the parallax reads. */
@@ -158,12 +159,12 @@ export function bindHeightmap(material: Material, texture: THREE.Texture | null)
   else heightmapTextures.delete(material);
 }
 
-/** Godot's sampler is `hint_default_black` (`material.cpp:1172`): a heightmap with no texture reads black. */
-const BLACK_HEIGHTMAP = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
-BLACK_HEIGHTMAP.needsUpdate = true;
-
+/**
+ * Godot's sampler is `hint_default_black` (`material.cpp:1172`), so a heightmap with no texture reads
+ * the heightmap slot's stand-in, which is black.
+ */
 function heightmapTextureOf(material: Material): THREE.Texture {
-  return heightmapTextures.get(material) ?? BLACK_HEIGHTMAP;
+  return heightmapTextures.get(material) ?? pendingMapStandIn('heightmap_texture');
 }
 
 /** Uniforms that read `material` at each upload, so a re-parse that changes only a value needs no remount. */

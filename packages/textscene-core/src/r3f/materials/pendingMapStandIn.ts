@@ -7,6 +7,7 @@
  */
 
 import * as THREE from 'three';
+import { sharedTexture } from '../sharedTextures';
 import { slotColorSpace } from '../../resources/materials/standardmaterial3d/textureBinding';
 import type { TextureSlot } from '../../resources/materials/standardmaterial3d/types';
 
@@ -34,13 +35,13 @@ const NEUTRAL_TEXEL: Readonly<Record<TextureSlot, Rgb>> = {
   anisotropy_flowmap: [255, 128, 255],
 };
 
-/** Written once per slot, on its first request. Never disposed: every slot of that kind shares it. */
+/** Written once per slot, on its first request. Every slot of that kind shares it. */
 const standIns = new Map<TextureSlot, THREE.DataTexture>();
 
 export function pendingMapStandIn(slot: TextureSlot): THREE.DataTexture {
   const existing = standIns.get(slot);
   if (existing) return existing;
-  const standIn = new THREE.DataTexture(new Uint8Array([...NEUTRAL_TEXEL[slot], 255]), 1, 1);
+  const standIn = sharedTexture(new THREE.DataTexture(new Uint8Array([...NEUTRAL_TEXEL[slot], 255]), 1, 1));
   standIn.colorSpace = slotColorSpace(slot, standIn);
   standIn.needsUpdate = true;
   standIns.set(slot, standIn);
