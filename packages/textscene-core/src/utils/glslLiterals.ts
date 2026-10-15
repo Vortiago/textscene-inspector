@@ -1,12 +1,12 @@
 /**
- * Numbers as GLSL literals, for the tone-curve and glow shader builders, which bake
- * Godot values in as constants rather than uniforms.
+ * Numbers as GLSL literals, for the shader builders that bake Godot values in as constants
+ * rather than uniforms.
  */
 
 /**
  * GLSL has no int→float coercion in a constant initialiser, so a whole number
  * carries an explicit decimal. A non-finite value becomes `0.0`, since GLSL cannot
- * parse `NaN` or `Infinity`: a malformed scene renders without glow.
+ * parse `NaN` or `Infinity`, so a malformed value bakes in as zero.
  */
 export function glslFloat(value: number): string {
   if (!Number.isFinite(value)) return '0.0';

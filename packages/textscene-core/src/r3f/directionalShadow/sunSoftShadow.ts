@@ -14,6 +14,7 @@ import { SPLIT_SLOTS } from './splitShadow.js';
 import { SplitSunLight, declaredLightOf } from './splitSun.js';
 import { slottedLights } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
+import { writeVec4 } from '../writeVec4.js';
 
 export const SUN_SOFT_SHADOWS = 'godotSunSoftShadows';
 export const SUN_RANGE_BEGINS = 'godotSunRangeBegins';
@@ -74,12 +75,8 @@ export function writeSunSoftShadowUniforms(
     suns.forEach((sun, index) => {
       const angle = drawsSoftShadows ? (declarationOf(sun)?.softShadowAngle ?? 0) : 0;
       // The fitter places the sun at the light's offset from its target (`followDeclaredLight`).
-      const offset = index * SOFT_SHADOW_FLOATS;
-      scratchDirection
-        .setFromMatrixPosition(sun.matrixWorld)
-        .normalize()
-        .toArray(set[SUN_SOFT_SHADOWS], offset);
-      set[SUN_SOFT_SHADOWS][offset + 3] = angle;
+      const { x, y, z } = scratchDirection.setFromMatrixPosition(sun.matrixWorld).normalize();
+      writeVec4(set[SUN_SOFT_SHADOWS], index, x, y, z, angle);
       sun.shadow.rangeBegins.toArray(set[SUN_RANGE_BEGINS], index * SPLIT_SLOTS);
     });
   });

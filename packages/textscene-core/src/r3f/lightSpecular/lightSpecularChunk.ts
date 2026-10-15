@@ -6,46 +6,29 @@
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
+import { LIGHT_SLOT_LOOPS, LIGHTS_PARS_ANCHOR, slotArrayDeclaration } from '../lightSlots.js';
 import { installLightSpecularUniforms, LIGHT_SPECULARS } from './lightSpecular.js';
 
 type LightSpecularChunk = 'lights_pars_begin' | 'lights_fragment_begin';
-
-const SHADED_LIGHTS = 'NUM_DIR_LIGHTS + NUM_SUN_LIGHTS + NUM_POINT_LIGHTS + NUM_SPOT_LIGHTS';
 
 /**
  * Every lit program reads lights_pars_begin, so the amount is declared there for the light loops of
  * each. A light the loops never set, such as a hemisphere light, keeps the full specular.
  */
-const SPECULAR_DECLARATIONS = /* glsl */ `#if ${SHADED_LIGHTS} > 0
-	uniform float ${LIGHT_SPECULARS}[ ${SHADED_LIGHTS} ];
-#endif
-float godotSpecularAmount = 1.0;
+const SPECULAR_DECLARATIONS = /* glsl */ `${slotArrayDeclaration(LIGHT_SPECULARS)}float godotSpecularAmount = 1.0;
 `;
-
-const THREE_AMBIENT_UNIFORM = 'uniform vec3 ambientLightColor;';
-
-/**
- * The line that picks each loop's light, and the offset of that kind's slots in the array. three
- * unrolls `[ i ]` alone, so a slot past the offset reads `UNROLLED_LOOP_INDEX`.
- */
-const LOOPS = [
-  { three: 'directionalLight = directionalLights[ i ];', offset: '0' },
-  { three: 'sunLight = sunLights[ i ];', offset: 'NUM_DIR_LIGHTS' },
-  { three: 'pointLight = pointLights[ i ];', offset: 'NUM_DIR_LIGHTS + NUM_SUN_LIGHTS' },
-  { three: 'spotLight = spotLights[ i ];', offset: 'NUM_DIR_LIGHTS + NUM_SUN_LIGHTS + NUM_POINT_LIGHTS' },
-];
 
 const LIGHT_SPECULAR_EDITS: readonly ChunkEdit<LightSpecularChunk>[] = [
   {
     chunk: 'lights_pars_begin',
-    three: THREE_AMBIENT_UNIFORM,
-    godot: `${SPECULAR_DECLARATIONS}${THREE_AMBIENT_UNIFORM}`,
+    three: LIGHTS_PARS_ANCHOR,
+    godot: `${SPECULAR_DECLARATIONS}${LIGHTS_PARS_ANCHOR}`,
   },
-  ...LOOPS.map(({ three, offset }) => ({
+  ...LIGHT_SLOT_LOOPS.map(({ three, slot }) => ({
     chunk: 'lights_fragment_begin' as const,
     three,
     godot: `${three}
-		godotSpecularAmount = ${LIGHT_SPECULARS}[ ${offset} + UNROLLED_LOOP_INDEX ];`,
+		godotSpecularAmount = ${LIGHT_SPECULARS}[ ${slot} ];`,
   })),
 ];
 

@@ -1,6 +1,7 @@
 /** The sky's prefiltered radiance as the fog passes read it. */
 
 import * as THREE from 'three';
+import { glslFloat } from '../../utils/glslLiterals.js';
 
 /** The sky's prefiltered radiance, or null for a scene without one. */
 export function skyRadiance(scene: THREE.Scene): THREE.Texture | null {
@@ -16,7 +17,7 @@ function cubeUvDefines(radiance: THREE.Texture): Record<string, string | number>
     ENVMAP_TYPE_CUBE_UV: '',
     CUBEUV_TEXEL_WIDTH: 1 / (3 * Math.max(2 ** maxMip, 7 * 16)),
     CUBEUV_TEXEL_HEIGHT: 1 / imageHeight,
-    CUBEUV_MAX_MIP: `${maxMip}.0`,
+    CUBEUV_MAX_MIP: glslFloat(maxMip),
   };
 }
 

@@ -15,7 +15,7 @@ export interface GltfNodeTransform {
   scale?: readonly number[];
 }
 
-type Vector3 = [number, number, number];
+type Triple = [number, number, number];
 
 const f = Math.fround;
 
@@ -43,9 +43,9 @@ export function rowScaledBasis(basis: Basis32, rowScales: readonly number[]): Ba
  * The column lengths of `xf = n.transform * xf` over `chain`, mesh node first and root last
  * (`resource_importer_scene.cpp:2683-2689`).
  */
-export function transformChainScale(chain: readonly Basis32[]): Vector3 {
+export function transformChainScale(chain: readonly Basis32[]): Triple {
   const basis = chain.reduce<Basis32>((xf, node) => multiply(node, xf), IDENTITY_BASIS);
-  return [0, 1, 2].map((axis) => length(column(basis, axis))) as Vector3;
+  return [0, 1, 2].map((axis) => length(column(basis, axis))) as Triple;
 }
 
 /**
@@ -76,12 +76,12 @@ export function unwrapSpace(scale: readonly number[]): {
 }
 
 /** `Basis::xform` (`basis.h:336-341`) of the vector at `xyz[at]`: each row dotted with it. */
-function xform(basis: Basis32, xyz: Float32Array, at: number): Vector3 {
-  const v: Vector3 = [xyz[at]!, xyz[at + 1]!, xyz[at + 2]!];
+function xform(basis: Basis32, xyz: Float32Array, at: number): Triple {
+  const v: Triple = [xyz[at]!, xyz[at + 1]!, xyz[at + 2]!];
   return [rowDot(basis, 0, v), rowDot(basis, 1, v), rowDot(basis, 2, v)];
 }
 
-function rowDot(basis: Basis32, row: number, v: Vector3): number {
+function rowDot(basis: Basis32, row: number, v: Triple): number {
   return f(f(f(basis[3 * row]! * v[0]) + f(basis[3 * row + 1]! * v[1])) + f(basis[3 * row + 2]! * v[2]));
 }
 
@@ -165,29 +165,29 @@ function orthonormalized(basis: Basis32): Basis32 {
   return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
 }
 
-function column(basis: Basis32, axis: number): Vector3 {
+function column(basis: Basis32, axis: number): Triple {
   return [basis[axis]!, basis[axis + 3]!, basis[axis + 6]!];
 }
 
-function dot(a: Vector3, b: Vector3): number {
+function dot(a: Triple, b: Triple): number {
   return f(f(f(a[0] * b[0]) + f(a[1] * b[1])) + f(a[2] * b[2]));
 }
 
-function scaled(v: Vector3, s: number): Vector3 {
+function scaled(v: Triple, s: number): Triple {
   return [f(v[0] * s), f(v[1] * s), f(v[2] * s)];
 }
 
-function subtract(a: Vector3, b: Vector3): Vector3 {
+function subtract(a: Triple, b: Triple): Triple {
   return [f(a[0] - b[0]), f(a[1] - b[1]), f(a[2] - b[2])];
 }
 
 /** `Vector3::length` (`vector3.h:532-538`). */
-function length(v: Vector3): number {
+function length(v: Triple): number {
   return f(Math.sqrt(dot(v, v)));
 }
 
 /** `Vector3::normalize` (`vector3.h:548-558`): a zero vector stays zero. */
-function normalized(v: Vector3): Vector3 {
+function normalized(v: Triple): Triple {
   const lengthSquared = dot(v, v);
   if (lengthSquared === 0) return [0, 0, 0];
   const vectorLength = f(Math.sqrt(lengthSquared));

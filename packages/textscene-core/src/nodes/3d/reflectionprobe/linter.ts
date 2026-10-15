@@ -13,7 +13,7 @@ import {
   REFLECTION_PROBE_DEFAULTS,
   ReflectionProbeAmbientMode,
 } from '../../../godot/reflectionProbe.js';
-import { formatReal, storedXyz } from '../../../godot/real.js';
+import { formatReal, storedVector3 } from '../../../godot/real.js';
 import type { Vector3 } from '../../../parser/vectors.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
@@ -78,7 +78,7 @@ function replayOriginOffset(rawProps: Record<string, string>): { written: Vector
   const written = lines.find(([key]) => key === 'origin_offset')?.[1];
   if (!written) return null;
   return {
-    written: storedXyz(written),
+    written: storedVector3(written),
     loaded: loadedOriginOffset(lines),
   };
 }

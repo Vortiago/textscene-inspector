@@ -152,9 +152,9 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
 
   return {
     albedo: albedoLinear ?? [1, 1, 1],
-    alpha: readsAlbedoAlpha && albedo ? clamp01(albedo.a) : 1,
-    metallic: clamp01(floatOr(properties['metallic'], 0, CONTEXT)),
-    roughness: clamp01(floatOr(properties['roughness'], 1, CONTEXT)),
+    alpha: readsAlbedoAlpha && albedo ? clamp(albedo.a, 0, 1) : 1,
+    metallic: clamp(floatOr(properties['metallic'], 0, CONTEXT), 0, 1),
+    roughness: clamp(floatOr(properties['roughness'], 1, CONTEXT), 0, 1),
     // `material.cpp:2160-2163`: the setter checks no range.
     specular: floatOr(properties['metallic_specular'], 0.5, CONTEXT),
     emission,
@@ -174,7 +174,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     // threshold cuts, while three would cut on the texture alpha Godot never reads.
     alphaTest:
       transparency === Transparency.ALPHA_SCISSOR && readsAlbedoAlpha
-        ? clamp01(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT))
+        ? clamp(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT), 0, 1)
         : 0,
     // `scene_forward_clustered.glsl:1398-1411`: the hash cuts the ALPHA the shader writes.
     alphaHash: transparency === Transparency.ALPHA_HASH && readsAlbedoAlpha,
@@ -206,12 +206,12 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     normalScale: { x: normalScale, y: normalScale },
     triplanar,
     heightmap: heightmapEnabled && !triplanar ? decodeHeightmap(properties) : null,
-    clearcoat: clearcoatEnabled ? clamp01(floatOr(properties['clearcoat'], 1, CONTEXT)) : 0,
+    clearcoat: clearcoatEnabled ? clamp(floatOr(properties['clearcoat'], 1, CONTEXT), 0, 1) : 0,
     clearcoatRoughness: clearcoatEnabled
-      ? clamp01(floatOr(properties['clearcoat_roughness'], 0.5, CONTEXT))
+      ? clamp(floatOr(properties['clearcoat_roughness'], 0.5, CONTEXT), 0, 1)
       : 0,
-    rim: rimEnabled ? clamp01(floatOr(properties['rim'], 1, CONTEXT)) : 0,
-    rimTint: rimEnabled ? clamp01(floatOr(properties['rim_tint'], 0.5, CONTEXT)) : 0,
+    rim: rimEnabled ? clamp(floatOr(properties['rim'], 1, CONTEXT), 0, 1) : 0,
+    rimTint: rimEnabled ? clamp(floatOr(properties['rim_tint'], 0.5, CONTEXT), 0, 1) : 0,
     billboardMode: intOr(properties['billboard_mode'], 0, CONTEXT),
     billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
     anisotropy: anisotropyEnabled ? clamp(floatOr(properties['anisotropy'], 0, CONTEXT), -1, 1) : 0,
@@ -367,10 +367,6 @@ function vec2FromVector3(raw: string | undefined, fallback: MaterialVec2): Mater
   } catch {
     return fallback;
   }
-}
-
-function clamp01(value: number): number {
-  return clamp(value, 0, 1);
 }
 
 /** Height mapping over Godot's defaults. The setters check no range. */

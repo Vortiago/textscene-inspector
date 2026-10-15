@@ -10,6 +10,7 @@ import type { TscnNode } from '../../parser/types';
 import type { Color } from '../../utils/colorParser';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { lerpColor } from '../../godot/math';
 import type { EnvironmentSettings } from '../../resources/environment/types';
 import { decodeSky, decodeSkyMaterial } from '../../resources/sky/decode';
 import type { ProceduralSkyProperties, Sky } from '../../resources/sky/types';
@@ -86,15 +87,6 @@ function luminance({ r, g, b }: Color): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-function lerp(a: Color, b: Color, t: number): Color {
-  return {
-    r: a.r + (b.r - a.r) * t,
-    g: a.g + (b.g - a.g) * t,
-    b: a.b + (b.b - a.b) * t,
-    a: 1,
-  };
-}
-
 /**
  * The preview horizon is not the midpoint of sky and ground: Godot takes that
  * midpoint, computes its luminance scaled by 3.333, and pushes the colour
@@ -102,9 +94,9 @@ function lerp(a: Color, b: Color, t: number): Color {
  * than muddy.
  */
 function previewHorizonColor(): Color {
-  const midpoint = lerp(PREVIEW_SKY_TOP, PREVIEW_GROUND_BOTTOM, 0.5);
+  const midpoint = lerpColor(PREVIEW_SKY_TOP, PREVIEW_GROUND_BOTTOM, 0.5);
   const lum = luminance(midpoint) * 3.333;
-  return lerp(midpoint, { r: lum, g: lum, b: lum, a: 1 }, 0.5);
+  return lerpColor(midpoint, { r: lum, g: lum, b: lum, a: 1 }, 0.5);
 }
 
 /**

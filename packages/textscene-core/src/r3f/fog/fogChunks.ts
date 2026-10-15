@@ -12,7 +12,7 @@ import {
   FogMode,
   HEIGHT_FOG_DENSITY_MIN,
 } from '../../godot/depthFog.js';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 import {
   FOG_RADIANCE_BANDS,
   FOG_RADIANCE_BAND_HEIGHT,

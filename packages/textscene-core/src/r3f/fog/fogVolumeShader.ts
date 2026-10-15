@@ -5,7 +5,7 @@
  */
 
 import { FOG_VOLUME_DENSITY_SCALE, FogVolumeShape } from '../../godot/fogVolume.js';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 import { FogVolumeKind, FogVolumeTexel } from './fogVolumeRows.js';
 
 /**

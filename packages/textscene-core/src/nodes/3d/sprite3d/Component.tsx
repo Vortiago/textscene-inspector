@@ -36,6 +36,7 @@ import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
+import { clamp } from '../../../godot/math';
 
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
 const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
@@ -136,7 +137,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // The instance fade is per GeometryInstance3D, outside the accumulation: only `modulate`
   // accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
   // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA (`material.cpp:1836`).
-  const surfaceAlpha = cutFadeVariants(cut, properties.transparent ? clamp01(accum.a) : 1);
+  const surfaceAlpha = cutFadeVariants(cut, properties.transparent ? clamp(accum.a, 0, 1) : 1);
   const depthTest = !properties.no_depth_test;
   const castsShadow = shadow.castShadow && joinsShadowPass(cut, depthTest);
   const prepasses = cutOpaquePrepasses(cut, depthTest);
@@ -253,8 +254,4 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       {subtree}
     </>
   );
-}
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
 }

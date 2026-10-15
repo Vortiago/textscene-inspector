@@ -8,13 +8,9 @@
 import { createContext, useContext, useMemo } from 'react';
 import type * as THREE from 'three';
 import { useGodotLinearColor } from './godotColor';
+import type { Rgba } from '../godot/math';
 
-export interface RGBA {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
+export type RGBA = Rgba;
 
 export const WHITE_MODULATE: RGBA = { r: 1, g: 1, b: 1, a: 1 };
 

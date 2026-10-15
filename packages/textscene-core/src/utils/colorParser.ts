@@ -5,13 +5,9 @@
 
 import { COLOR_RE } from '../parser/vectors';
 import { matchedFloat, allFinite } from '../godot/number.js';
+import type { Rgba } from '../godot/math.js';
 
-export interface Color {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
+export type Color = Rgba;
 
 /**
  * A `Color(r, g, b, a)` literal, channels below 0 and above 1 included. Undefined when absent or

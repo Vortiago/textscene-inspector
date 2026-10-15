@@ -11,6 +11,7 @@
 
 import type { TscnNode } from '../parser/types';
 import { descendsFrom } from '../godot/nodeBaseTypes';
+import { DEFAULT_CANVAS_LAYER } from '../godot/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import {
   CANVAS_ITEM_Z_MAX,
@@ -119,7 +120,7 @@ export function isCanvasLayerType(type: string): boolean {
 /** The `layer` a canvas-layer node declares, or Godot's own default of 1. */
 export function canvasLayerOf(node: TscnNode): number {
   const layer = (node.properties as { layer?: number }).layer;
-  return typeof layer === 'number' ? layer : DEFAULT_CANVAS_LAYER_VALUE;
+  return typeof layer === 'number' ? layer : DEFAULT_CANVAS_LAYER;
 }
 
 /** Every canvas layer declared anywhere in the given trees. */
@@ -132,9 +133,6 @@ export function declaredCanvasLayers(nodes: readonly TscnNode[]): number[] {
   for (const node of nodes) visit(node);
   return found;
 }
-
-/** `CanvasLayer.layer`'s own Godot default, for a layer node that authors none. */
-const DEFAULT_CANVAS_LAYER_VALUE = 1;
 
 /**
  * Whether a node draws pieces the tree does not list: a tile layer, which a

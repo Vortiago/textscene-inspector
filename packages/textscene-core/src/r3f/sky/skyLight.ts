@@ -8,7 +8,7 @@ import type * as THREE from 'three';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
 
-export interface SkyLightDeclaration {
+interface SkyLightDeclaration {
   /** False for a Light Only light, which the sky shader skips (`sky.cpp:1069`). */
   drawsInSky: boolean;
   /**
