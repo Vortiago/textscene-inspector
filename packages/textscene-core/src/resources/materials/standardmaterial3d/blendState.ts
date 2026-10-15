@@ -122,7 +122,8 @@ const ALPHA_TO_COVERAGE_ATTACHMENT: GodotBlendAttachment = {
 /**
  * ALPHA_TO_COVERAGE_AND_TO_ONE's attachment: alpha to one sets the source alpha to 1 before the
  * blend, so the colour overwrites. WebGL has no alpha to one, so the stored alpha stays the
- * source alpha where Godot stores 1. Only a SubViewport with `transparent_bg` shows it.
+ * source alpha where Godot stores 1. Only a transparent background shows it: a SubViewport with
+ * `transparent_bg`, or a root with `rendering/viewport/transparent_background`.
  */
 const ALPHA_TO_ONE_ATTACHMENT: GodotBlendAttachment = {
   ...ALPHA_TO_COVERAGE_ATTACHMENT,

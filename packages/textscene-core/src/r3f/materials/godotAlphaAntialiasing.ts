@@ -38,13 +38,16 @@ float godotEdgeCoverage( float alpha, float alphaWidth, float edge ) {
 
 /**
  * The ramp, after the hash. `ALPHA_TEXTURE_COORDINATE` is the UV in texels (`material.cpp:1846`).
- * With no albedo texture its size is zero, which makes the mip level `log2(0)`. That is undefined
- * in GLSL, so the ramp skips the mip term there, as the -inf it gives on Godot's drivers does.
+ * With no albedo texture, or a map whose image has not loaded, its size is zero, which makes the
+ * mip level `log2(0)`. That is undefined in GLSL, so the ramp skips the mip term there, as the -inf
+ * it gives on Godot's drivers does.
  */
 const EDGE_RAMP = /* glsl */ `
 	float godotEdgeAlpha = diffuseColor.a;
 	#ifdef USE_MAP
-		godotEdgeAlpha *= 1.0 + godotAlphaMipLevel( vMapUv * godotAlbedoTextureSize ) * 0.25;
+		if ( godotAlbedoTextureSize.x > 0.0 ) {
+			godotEdgeAlpha *= 1.0 + godotAlphaMipLevel( vMapUv * godotAlbedoTextureSize ) * 0.25;
+		}
 	#endif
 	diffuseColor.a = godotEdgeCoverage( godotEdgeAlpha, fwidth( godotEdgeAlpha ), godotAlphaAntialiasingEdge );
 `;
@@ -170,7 +173,9 @@ export function coverOneSampleTarget(this: THREE.Material, renderer: THREE.WebGL
 export const GODOT_ALPHA_ANTIALIASING: ProgramInjection = {
   cacheKey: 'godot-alpha-antialiasing',
   onBeforeCompile(shader) {
-    if (!shader.fragmentShader.includes(ALPHA_TEST_CHUNK)) return;
+    // Both chunks or neither: the scissor replaces three's cut, which returns only after the hash.
+    const { fragmentShader } = shader;
+    if (!fragmentShader.includes(ALPHA_TEST_CHUNK) || !fragmentShader.includes(ALPHA_HASH_CHUNK)) return;
     Object.assign(shader.uniforms, edgeUniformsOf(this));
     shader.fragmentShader = shader.fragmentShader
       .replace(ALPHA_TEST_PARS_CHUNK, `${ALPHA_TEST_PARS_CHUNK}\n${EDGE_FUNCTIONS}`)

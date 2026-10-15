@@ -121,6 +121,18 @@ describe('GODOT_ALPHA_ANTIALIASING.onBeforeCompile', () => {
     const program = { vertexShader: 'void main() {}', fragmentShader: 'void main() {}' };
     expect(compiled(antialiased(), program).fragmentShader).toBe('void main() {}');
   });
+
+  it('leaves a fragment shader with three’s cut but no hash chunk as it is (error case)', () => {
+    const fragmentShader = 'void main() {\n#include <alphatest_fragment>\n}';
+    const program = { vertexShader: 'void main() {}', fragmentShader };
+    expect(compiled(antialiased(), program).fragmentShader).toBe(fragmentShader);
+  });
+
+  it('skips the mip term while the albedo size is zero, where `log2(0)` is undefined (edge case)', () => {
+    const main = functionBody(compiled(antialiased()).fragmentShader, 'main');
+    expect(main.indexOf('godotAlbedoTextureSize.x > 0.0')).toBeLessThan(main.indexOf('godotAlphaMipLevel('));
+    expect(main).toContain('godotAlbedoTextureSize.x > 0.0');
+  });
 });
 
 describe('godotSingleSampleCoverage', () => {

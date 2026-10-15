@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://unitalphaantialiasing"]
 
 ; alpha_antialiasing_mode OFF, ALPHA_TO_COVERAGE and ALPHA_TO_COVERAGE_AND_TO_ONE, left to right, on
-; scissor-cut quads under this project's msaa_3d 2X. Every other golden runs at Godot's default,
-; Disabled, so only this one shows the cut edge spread over the samples. Unshaded quads with a radial
+; scissor-cut quads under this project's msaa_3d 2X. The other MSAA goldens draw no alpha to
+; coverage, so only this one shows the cut edge spread over the samples. Unshaded quads with a radial
 ; alpha gradient leave nothing but the cut edge.
 
 [sub_resource type="Environment" id="Environment_1"]

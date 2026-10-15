@@ -102,7 +102,8 @@ function cutArm(
   { mode: antialiasingMode, edge }: AlphaCutInput['antialiasing']
 ): CutArm {
   // Without alpha antialiasing, SCISSOR and HASH force `alpha = 1.0` past the cut
-  // (`scene_forward_clustered.glsl:1413-1415`), so they land in the opaque list (`scene_shader_forward_clustered.cpp:252`), which writes depth.
+  // (`scene_forward_clustered.glsl:1413-1415`), so they land in the opaque list
+  // (`scene_shader_forward_clustered.cpp:252`), which writes depth.
   switch (mode) {
     case ALPHA_CUT_DISCARD: {
       const antialiasing = scissorAntialiasing(antialiasingMode, scissorThreshold, edge);
