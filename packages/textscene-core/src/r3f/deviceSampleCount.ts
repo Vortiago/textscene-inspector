@@ -23,7 +23,7 @@ export type ColourStorage = 'RGBA8' | 'RGBA16F';
 const sharedCounts = new WeakMap<WebGL2RenderingContext, Map<ColourStorage, readonly number[]>>();
 
 /** 0, one sample per pixel, where the context lists no counts: WebGL 1 has no multisampled target. */
-export function deviceSampleCount(
+function deviceSampleCount(
   gl: THREE.WebGLRenderer,
   requested: number,
   storage: ColourStorage = 'RGBA8'
