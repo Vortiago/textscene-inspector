@@ -5,13 +5,14 @@
  */
 
 import type { CanvasItemMaterialProperties } from '../materials/canvasitemmaterial/types';
-import type { Color } from '../../utils/colorParser';
 import type { DrawableCell } from './drawableCell';
-
-export interface Vec2i {
-  x: number;
-  y: number;
-}
+import type { Rgba } from '../../godot/math/math';
+import type { Vector2 } from '../../godot/math/vector';
+import {
+  TILE_TRANSFORM_FLIP_H,
+  TILE_TRANSFORM_FLIP_V,
+  TILE_TRANSFORM_TRANSPOSE,
+} from '../../godot/scene/tileSet';
 
 /** TileSet.tile_shape: square, isometric, half-offset square and hexagon all render. */
 export const TILE_SHAPE_SQUARE = 0;
@@ -20,16 +21,16 @@ export const TILE_SHAPE_HALF_OFFSET_SQUARE = 2;
 export const TILE_SHAPE_HEXAGON = 3;
 
 /** TileSet.tile_layout (half-offset shapes): STACKED .. DIAMOND_DOWN. */
-export type TileLayout = 0 | 1 | 2 | 3 | 4 | 5;
+type TileLayout = 0 | 1 | 2 | 3 | 4 | 5;
 /** TileSet.tile_offset_axis: 0 = horizontal, 1 = vertical. */
-export type TileOffsetAxis = 0 | 1;
+type TileOffsetAxis = 0 | 1;
 
 /** The grid surface of a TileSet that placement math needs. */
 export interface TileGrid {
   shape: number;
   layout: TileLayout;
   offsetAxis: TileOffsetAxis;
-  tileSize: Vec2i;
+  tileSize: Vector2;
 }
 
 /** A resolved TileSet: grid shape plus its atlas sources, ready for pure lookups. */
@@ -41,9 +42,9 @@ export interface TileSetModel extends TileGrid {
 export interface AtlasSourceModel {
   /** Resolved res:// texture path; null ⇒ per-source placeholder UX. */
   texturePath: string | null;
-  margins: Vec2i;
-  separation: Vec2i;
-  textureRegionSize: Vec2i;
+  margins: Vector2;
+  separation: Vector2;
+  textureRegionSize: Vector2;
   /** `use_texture_padding`: the draw samples a copy of the atlas with each tile's edge repeated around it. */
   usesTexturePadding: boolean;
   /** Per-tile entries keyed `${atlasX}:${atlasY}`. */
@@ -51,12 +52,12 @@ export interface AtlasSourceModel {
 }
 
 export interface AtlasTileModel {
-  sizeInAtlas: Vec2i;
+  sizeInAtlas: Vector2;
   /** Alternative tiles keyed by alternative id; 0 = the base tile. */
   alternatives: Map<number, AlternativeTileModel>;
 }
 
-export interface TileOrientation {
+interface TileOrientation {
   flipH: boolean;
   flipV: boolean;
   transpose: boolean;
@@ -76,9 +77,9 @@ export type TileMaterial =
 
 /** One alternative tile's `TileData`, the per-tile properties that change a frame. */
 export interface AlternativeTileModel extends TileOrientation {
-  textureOrigin: Vec2i;
+  textureOrigin: Vector2;
   /** sRGB, multiplied onto the tile's pixels (`tile_map_layer.cpp:2690`). */
-  modulate: Color;
+  modulate: Rgba;
   /** Null for no material: the tile then uses its layer's (`tile_map_layer.cpp:350`). */
   material: TileMaterial | null;
   /** Relative to the layer's `z_final` (`tile_map_layer.cpp:356-357`). */
@@ -87,13 +88,6 @@ export interface AlternativeTileModel extends TileOrientation {
   ySortOrigin: number;
 }
 
-/**
- * Godot TileSetAtlasSource alternative-id transform bits: a cell painted with
- * a flip/rotate carries these bits directly in its alternative_tile value.
- */
-export const TILE_TRANSFORM_FLIP_H = 0x1000;
-export const TILE_TRANSFORM_FLIP_V = 0x2000;
-export const TILE_TRANSFORM_TRANSPOSE = 0x4000;
 const TILE_TRANSFORM_MASK = TILE_TRANSFORM_FLIP_H | TILE_TRANSFORM_FLIP_V | TILE_TRANSFORM_TRANSPOSE;
 
 /** The authored alternative a cell's id names, its transform bits cleared (`tile_set.cpp:5320-5322`). */
@@ -104,8 +98,8 @@ export function alternativeNoTransform(alternativeId: number): number {
 /** A tile's pixel rect in the atlas image, frame 0 (`get_tile_texture_region`, `tile_set.cpp:5283-5296`). */
 function atlasTileRegion(
   source: Pick<AtlasSourceModel, 'margins' | 'separation' | 'textureRegionSize'>,
-  atlasCoords: Vec2i,
-  sizeInAtlas: Vec2i
+  atlasCoords: Vector2,
+  sizeInAtlas: Vector2
 ): TileDrawInfo['regionPx'] {
   const { margins, separation, textureRegionSize: region } = source;
   return {
@@ -116,12 +110,12 @@ function atlasTileRegion(
   };
 }
 
-export interface TileDrawInfo {
+interface TileDrawInfo {
   /** Pixel rect of the tile's texture region within the atlas (image-Y top-left). */
   regionPx: { x: number; y: number; width: number; height: number };
   orientation: TileOrientation;
   /** Where the tile's centre sits from its cell's centre, in Godot pixels. */
-  centreOffset: Vec2i;
+  centreOffset: Vector2;
 }
 
 /**

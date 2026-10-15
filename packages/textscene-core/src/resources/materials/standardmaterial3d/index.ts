@@ -15,18 +15,3 @@ registerResourceSlice({
   typeNames: ['StandardMaterial3D', 'ShaderMaterial'],
   busType: 'resource',
 });
-
-export { decodeStandardMaterial3D } from './decode';
-export {
-  BlendMode,
-  CullMode,
-  TEXTURE_SLOTS,
-  Transparency,
-  type Color,
-  type MaterialBlendState,
-  type MaterialVec2,
-  type StandardMaterial3DData,
-  type StandardMaterial3DScalars,
-  type TextureSlot,
-  type TextureSlotReferences,
-} from './types';

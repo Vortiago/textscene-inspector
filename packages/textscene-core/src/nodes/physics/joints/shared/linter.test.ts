@@ -13,7 +13,6 @@ import {
   scene,
 } from '../../../../linter/testing/testkit.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { jointValidationRule } from './linter.js';
 import '../../../../linter/index.js';
 
 /** A joint wired to two distinct bodies trips nothing. */
@@ -22,11 +21,15 @@ const CONNECTED = { node_a: 'NodePath("../BodyA")', node_b: 'NodePath("../BodyB"
 const LEAVES_2D = ['PinJoint2D', 'GrooveJoint2D', 'DampedSpringJoint2D'] as const;
 const LEAVES_3D = ['PinJoint3D', 'HingeJoint3D'] as const;
 
+const jointValidationRule = ruleRegistry.getRule('valid-joint')!;
+
 describe('joint dead-configuration rule', () => {
   it('registers ONE rule for the whole family, not one per joint type', () => {
     // Every leaf in both dimensions shares it. The dimension changes only a
     // noun in the message, which `check` derives from the node's own type.
-    expect(ruleRegistry.getRules().find((r) => r.meta.name === 'valid-joint')).toBe(jointValidationRule);
+    for (const leaf of [...LEAVES_2D, ...LEAVES_3D]) {
+      expect(ruleRegistry.getRulesForNodeType(leaf)).toContain(jointValidationRule);
+    }
   });
 
   it.each([...LEAVES_2D, ...LEAVES_3D])('reaches the %s leaf through the matcher', (type) => {

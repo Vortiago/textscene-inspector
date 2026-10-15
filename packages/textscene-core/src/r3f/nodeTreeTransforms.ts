@@ -7,7 +7,8 @@
 
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
-import type { Node3DProperties, Transform3D } from '../nodes/base/node3d/types.js';
+import type { Node3DProperties } from '../nodes/base/node3d/types.js';
+import type { Transform3D } from '../godot/math/transform3d.js';
 import { isTopLevelItem } from './canvasPaintOrder.js';
 import { nodeEscapesParent } from './nodeEscapesParent.js';
 

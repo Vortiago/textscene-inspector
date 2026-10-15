@@ -5,7 +5,7 @@ import { NodeDetailsPanel } from './NodeDetailsPanel';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
 

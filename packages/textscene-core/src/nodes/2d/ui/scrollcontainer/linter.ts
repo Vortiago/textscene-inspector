@@ -61,5 +61,3 @@ const scrollContainerRule: LintRule = {
 };
 
 ruleRegistry.register(scrollContainerRule);
-
-export { scrollContainerRule };

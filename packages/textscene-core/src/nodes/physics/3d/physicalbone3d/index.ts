@@ -15,5 +15,3 @@ const physicalBone3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(physicalBone3DRegistration);
-
-export { physicalBone3DRegistration };

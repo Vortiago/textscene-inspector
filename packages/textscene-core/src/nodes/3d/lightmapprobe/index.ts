@@ -12,5 +12,3 @@ const lightmapProbeRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(lightmapProbeRegistration);
-
-export { lightmapProbeRegistration };

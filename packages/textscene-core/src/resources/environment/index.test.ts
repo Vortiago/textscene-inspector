@@ -28,11 +28,9 @@ describe('environment slice registration', () => {
     expect(resourceSliceRegistry.byTypeName('CameraAttributesPractical')).toBeNull();
   });
 
-  it('re-exports the decode surface and both data types, not the build', () => {
+  it('keeps the build out of the entry point', () => {
     // `index.ts` must stay clear of `build.ts`: routing and linting read this
     // entry point, and neither may pull the render side into its closure.
-    expect(typeof environmentSlice.decodeEnvironment).toBe('function');
-    expect(environmentSlice.BackgroundMode.BG_SKY).toBe(2);
     expect('createEnvironmentSettings' in environmentSlice).toBe(false);
   });
 });

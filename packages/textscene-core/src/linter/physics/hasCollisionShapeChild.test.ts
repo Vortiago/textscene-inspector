@@ -5,11 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  collisionShapeTypes,
-  collisionShapeTypesPhrase,
-  hasCollisionShapeChild,
-} from './hasCollisionShapeChild.js';
+import { collisionShapeTypesPhrase, hasCollisionShapeChild } from './hasCollisionShapeChild.js';
 import type { RawNode } from '../../parser/types.js';
 
 /** The smallest node shape these rules walk. */
@@ -66,12 +62,14 @@ describe('hasCollisionShapeChild', () => {
     expect(collisionShapeTypesPhrase('2D')).toBe('CollisionShape2D or CollisionPolygon2D');
   });
 
-  // The message and the check read one set, so a shape provider added to
-  // `collisionShapeTypes` reaches both.
-  it.each(['2D', '3D'] as const)('accepts exactly the types it names (%s)', (dim) => {
-    for (const type of collisionShapeTypes(dim)) {
+  it('names the 3D types for a 3D body', () => {
+    expect(collisionShapeTypesPhrase('3D')).toBe('CollisionShape3D or CollisionPolygon3D');
+  });
+
+  // The message and the check read one set, so a shape provider added to it reaches both.
+  it.each(['2D', '3D'] as const)('accepts every type the diagnostic names (%s)', (dim) => {
+    for (const type of collisionShapeTypesPhrase(dim).split(' or ')) {
       expect(hasCollisionShapeChild(node('Body', [node(type)]), dim)).toBe(true);
-      expect(collisionShapeTypesPhrase(dim)).toContain(type);
     }
   });
 });

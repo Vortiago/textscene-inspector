@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { buildSkyEnvironment, skyPanoramaTexture } from './build';
+import { buildSkyEnvironment } from './build';
 import { decodeSky, decodeSkyMaterial } from './decode';
 import type { Sky } from './types';
 import { testRenderer } from '../../testing/recordingWebGL';
@@ -9,32 +9,6 @@ import { testRenderer } from '../../testing/recordingWebGL';
 function defaultSky(materialType: string): Sky {
   return decodeSky({}, decodeSkyMaterial(materialType, {})!);
 }
-
-describe('skyPanoramaTexture', () => {
-  it('tiles a clamped panorama on a source-shared clone', () => {
-    // The panorama shader samples with `fract(atan(...))`, so u wraps 0..1 and
-    // needs Repeat. The loader's shared entry is clamp, so the sky clones it
-    // rather than mutating the entry a 2D consumer shares.
-    const shared = new THREE.Texture();
-    const tiled = skyPanoramaTexture(shared);
-    expect(tiled).not.toBe(shared);
-    expect(tiled!.wrapS).toBe(THREE.RepeatWrapping);
-    expect(tiled!.wrapT).toBe(THREE.RepeatWrapping);
-    expect(tiled!.source).toBe(shared.source);
-    expect(shared.wrapS).toBe(THREE.ClampToEdgeWrapping);
-  });
-
-  it('shares a panorama that already repeats', () => {
-    const shared = new THREE.Texture();
-    shared.wrapS = shared.wrapT = THREE.RepeatWrapping;
-    expect(skyPanoramaTexture(shared)).toBe(shared);
-  });
-
-  it('returns null when the sky has no panorama', () => {
-    expect(skyPanoramaTexture(null)).toBeNull();
-    expect(skyPanoramaTexture(undefined)).toBeNull();
-  });
-});
 
 describe('buildSkyEnvironment layers', () => {
   afterEach(() => {
@@ -137,7 +111,7 @@ describe('buildSkyEnvironment panorama wiring', () => {
    * panorama the sky shader read, taken during the render because the builder
    * frees it straight after. With `renders` false the render throws.
    */
-  async function build(panorama: THREE.Texture, renders = true) {
+  async function build(panorama: THREE.Texture | null, renders = true) {
     const { renderer } = await testRenderer();
     let sampled: THREE.Texture | null = null;
     vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation((_renderer, scene) => {
@@ -153,13 +127,24 @@ describe('buildSkyEnvironment panorama wiring', () => {
     return { env, sampled: sampled as THREE.Texture | null };
   }
 
-  it('samples the tiled panorama, not the shared entry', async () => {
-    // The clone's wrap and source are `skyPanoramaTexture`'s contract, tested above.
+  it('samples a clamped panorama through a tiled clone of its source', async () => {
+    // The panorama shader samples with `fract(atan(...))`, so u wraps 0..1 and
+    // needs Repeat. The loader's shared entry is clamp, so the sky clones it
+    // rather than mutating the entry a 2D consumer shares.
     const shared = new THREE.Texture();
     const { env, sampled } = await build(shared);
     expect(env).not.toBeNull();
     expect(sampled).not.toBe(shared);
     expect(sampled!.wrapS).toBe(THREE.RepeatWrapping);
+    expect(sampled!.wrapT).toBe(THREE.RepeatWrapping);
+    expect(sampled!.source).toBe(shared.source);
+    expect(shared.wrapS).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('samples no panorama when the sky has none (edge case)', async () => {
+    const { env, sampled } = await build(null);
+    expect(env).not.toBeNull();
+    expect(sampled).toBeNull();
   });
 
   it.each([

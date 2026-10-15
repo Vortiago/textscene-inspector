@@ -95,5 +95,3 @@ const path2DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(path2DValidationRule);
-
-export { path2DValidationRule };

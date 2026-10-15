@@ -103,5 +103,3 @@ const openXRRenderModelManagerRule: LintRule = {
 };
 
 ruleRegistry.register(openXRRenderModelManagerRule);
-
-export { openXRRenderModelManagerRule };

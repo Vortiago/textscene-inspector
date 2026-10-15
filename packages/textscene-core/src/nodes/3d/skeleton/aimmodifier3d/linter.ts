@@ -95,5 +95,3 @@ const aimModifier3DAxisRule: LintRule = {
 };
 
 ruleRegistry.register(aimModifier3DAxisRule);
-
-export { aimModifier3DAxisRule };

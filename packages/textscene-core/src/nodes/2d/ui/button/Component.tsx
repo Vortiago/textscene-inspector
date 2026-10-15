@@ -28,7 +28,6 @@ import {
   trimLineToWidth,
 } from '../../../../r3f/controls/native/text/textOverrun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveButtonDrawState,
   pickButtonStyleBox,
@@ -36,12 +35,15 @@ import {
   layoutButtonContent,
   buttonTextAlignShiftPx,
   swapAlignmentSide,
+} from '../../../../r3f/controls/native/buttonBase';
+import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
   VERTICAL_ALIGNMENT_CENTER,
-} from '../../../../r3f/controls/native/buttonBase';
+} from '../../../../godot/math/math';
 import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
 import type { ButtonProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 interface IconImageLike {
   width?: number;
@@ -82,7 +84,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   // already-filtered sample once it sees this tag.
   const iconTexture = useCanvas2DTexture(iconSource);
 
-  const iconNaturalSize: Vec2 | null = useMemo(() => {
+  const iconNaturalSize: Vector2 | null = useMemo(() => {
     if (!props.icon || !iconTexture) return null;
     const image = iconTexture.image as IconImageLike | undefined;
     const w = image?.width ?? 0;
@@ -130,7 +132,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
    * reads the same `text_buf->get_size()` as the minimum size. The height needs no ceil: the
    * line pitch sums independently ceiled ascent and descent and an integral theme spacing.
    */
-  const naturalSize = (l: TextLayoutResult | null): Vec2 =>
+  const naturalSize = (l: TextLayoutResult | null): Vector2 =>
     l ? { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx } : { x: 0, y: 0 };
 
   // `button.cpp:262-276`: the same RTL side swap `layoutButtonContent` makes internally.

@@ -1,13 +1,8 @@
 /** A parsed Label3D at Godot's defaults, with the text `Hi`, for a glyph test. */
 
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
-import {
-  AlphaCutMode,
-  BillboardMode,
-  HorizontalAlignment,
-  TextureFilter,
-  type Label3DProperties,
-} from '../types';
+import { AlphaCutMode, BillboardMode, TextureFilter, type Label3DProperties } from '../types';
+import { HORIZONTAL_ALIGNMENT_CENTER } from '../../../../godot/math/math';
 
 export function labelProperties(overrides: Partial<Label3DProperties> = {}): Label3DProperties {
   return {
@@ -22,7 +17,7 @@ export function labelProperties(overrides: Partial<Label3DProperties> = {}): Lab
     double_sided: true,
     font_size: 32,
     line_spacing: 0,
-    horizontal_alignment: HorizontalAlignment.CENTER,
+    horizontal_alignment: HORIZONTAL_ALIGNMENT_CENTER,
     no_depth_test: false,
     render_priority: 0,
     outline_render_priority: -1,

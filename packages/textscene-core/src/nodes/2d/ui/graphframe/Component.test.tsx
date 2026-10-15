@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { styleBoxTextureBox } from '../../../../r3f/controls/native/parseStyleBox';
+import { parseStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { GraphFrame } from './Component';
@@ -54,18 +54,23 @@ function texturePanel(properties: Partial<GraphFrameProperties> = {}): SolveNode
   return {
     ...n,
     styleBoxes: {
-      panel: styleBoxTextureBox({
-        texture: 'res://frame.png',
-        resources: { externalResources: [], internalResources: [] },
-        margin: { left: 4, top: 4, right: 4, bottom: 4 },
-        contentMargin: { left: 4, top: 4, right: 4, bottom: 4 },
-        expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
-        regionRect: undefined,
-        axisStretchHorizontal: 0,
-        axisStretchVertical: 0,
-        drawCenter: true,
-        modulateColor: { r: 1, g: 1, b: 1, a: 1 },
-      }),
+      panel: parseStyleBox(
+        'SubResource("frame")',
+        [{ id: '1', path: 'res://frame.png', type: 'Texture2D' }],
+        [
+          {
+            id: 'frame',
+            type: 'StyleBoxTexture',
+            data: {
+              texture: 'ExtResource("1")',
+              texture_margin_left: '4',
+              texture_margin_top: '4',
+              texture_margin_right: '4',
+              texture_margin_bottom: '4',
+            },
+          },
+        ]
+      )!,
     },
   };
 }

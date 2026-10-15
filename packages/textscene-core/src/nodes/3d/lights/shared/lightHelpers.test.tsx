@@ -18,7 +18,7 @@ import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
 import { TscnSceneContents } from '../../../../r3f/TscnCanvas';
 import { HierarchyProvider } from '../../../../r3f/contexts/HierarchyContext';
 import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
-import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph.testkit';
 import { HoverSeeder } from '../../../../r3f/testing/HoverSeeder';
 import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
 

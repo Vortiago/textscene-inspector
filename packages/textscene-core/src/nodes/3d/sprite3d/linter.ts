@@ -84,5 +84,3 @@ const sprite3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(sprite3DValidationRule);
-
-export { sprite3DValidationRule };

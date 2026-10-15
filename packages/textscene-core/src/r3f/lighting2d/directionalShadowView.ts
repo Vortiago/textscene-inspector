@@ -12,8 +12,8 @@ import { ndcToShadowTransform, type Affine2, type DirectionalShadowView } from '
 import type { Quad2 } from './shadowVolumes';
 import { SHADOW_SNAPSHOT_PRIORITY } from './ShadowCasterStage';
 import { useGameViewportRect } from '../gameViewportRect';
-import type { Vector2 } from '../../nodes/base/node2d/types.js';
 import type { Rect2 } from '../controls/native/rect';
+import type { Vector2 } from '../../godot/math/vector.js';
 
 /** Reused by every sample, which reads it before the next one writes it. */
 const scratch = new THREE.Vector3();

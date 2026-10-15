@@ -15,7 +15,7 @@ import { parseSubResourcePath } from './subResourcePath.js';
 type ParsedFileLoaderFn = (path: string) => Promise<ParsedResource>;
 
 /** One resource inside a parsed file: its `[resource]` body or one `[sub_resource]`. */
-export interface ResourceSection {
+interface ResourceSection {
   type: string;
   /** Raw value strings, the section's own properties only. */
   properties: Record<string, string>;

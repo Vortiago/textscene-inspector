@@ -13,5 +13,3 @@ const animatedSprite3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(animatedSprite3DRegistration);
-
-export { animatedSprite3DRegistration };

@@ -109,5 +109,3 @@ const graphEditPropertiesRule: LintRule = {
 };
 
 ruleRegistry.register(graphEditPropertiesRule);
-
-export { graphEditPropertiesRule };

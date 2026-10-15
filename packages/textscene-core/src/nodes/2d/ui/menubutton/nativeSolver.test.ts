@@ -10,11 +10,7 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { MenuButtonProperties } from './types';
-import {
-  menuButtonMinimumSize,
-  menuButtonTextTheme,
-  MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR,
-} from './nativeSolver';
+import { menuButtonMinimumSize, menuButtonTextTheme } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const FONT_HEIGHT = 23;
@@ -65,7 +61,8 @@ describe('menuButtonTextTheme', () => {
     const resolved = menuButtonTextTheme(n, n.node.properties as MenuButtonProperties, 'disabled', {
       theme: nativeTheme(1),
     });
-    expect(resolved.color).toEqual(MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR);
+    // default_theme.cpp:268 sets MenuButton's own Color(1, 1, 1, 0.3).
+    expect(resolved.color).toEqual({ r: 1, g: 1, b: 1, a: 0.3 });
   });
 
   it('honours a theme_override_colors/font_disabled_color override over the built-in literal', () => {

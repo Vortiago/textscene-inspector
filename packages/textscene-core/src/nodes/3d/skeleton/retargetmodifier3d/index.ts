@@ -14,5 +14,3 @@ const retargetModifier3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(retargetModifier3DRegistration);
-
-export { retargetModifier3DRegistration };

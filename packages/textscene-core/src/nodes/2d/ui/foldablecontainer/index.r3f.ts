@@ -18,5 +18,3 @@ controlSolverRegistry.registerMinimumSize('FoldableContainer', foldableContainer
 controlSolverRegistry.registerContainerLayout('FoldableContainer', foldableContainerLayout);
 controlSolverRegistry.registerTextureSlots('FoldableContainer', foldableContainerTextureSlots);
 controlSolverRegistry.registerChildVisibility('FoldableContainer', foldableContainerChildVisibility);
-
-export { FoldableContainer };

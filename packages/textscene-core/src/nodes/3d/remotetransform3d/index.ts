@@ -18,7 +18,6 @@ const remoteTransform3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(remoteTransform3DRegistration);
 
-export { remoteTransform3DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

@@ -8,5 +8,3 @@ import { VScrollBar } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'VScrollBar', Component: VScrollBar });
-
-export { VScrollBar };

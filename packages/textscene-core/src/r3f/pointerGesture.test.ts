@@ -9,8 +9,10 @@ import {
   touchSpan,
   wheelDeltaPixels,
   wheelNotches,
-  WHEEL_MAX_NOTCHES,
 } from './pointerGesture';
+
+/** The cap on the notches one wheel event is worth: a fling must not teleport the view. */
+const WHEEL_MAX_NOTCHES = 4;
 
 describe('resolveTouchMode', () => {
   it('orbits on one finger and pans on two', () => {

@@ -13,5 +13,3 @@ const copyTransformModifier3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(copyTransformModifier3DRegistration);
-
-export { copyTransformModifier3DRegistration };

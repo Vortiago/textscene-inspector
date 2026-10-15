@@ -10,5 +10,3 @@ controlSolverRegistry.registerMinimumSize('TextureButton', textureButtonMinimumS
 // Declares `texture_normal`/`texture_pressed`/`texture_hover` for `buildSolveTree.ts`'s
 // texture-size resolution (`nativeSolver.ts`).
 controlSolverRegistry.registerTextureSlots('TextureButton', textureButtonTextureSlots);
-
-export { TextureButton };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import { StrictTscnParser } from '../linter/StrictTscnParser.js';
-import { uniqueNameClaims, uniqueNameOwnership } from './uniqueNames.js';
+import { cachedUniqueNameClaims, cachedUniqueNameOwnership, uniqueNameClaims } from './uniqueNames.js';
 
 /**
  * Both trees, every time. They agree on `rawProperties` (`parser/rawPropertyParity.test.ts`), but
@@ -97,6 +97,25 @@ unique_name_in_owner = true
   });
 });
 
+describe('cachedUniqueNameClaims', () => {
+  it('hands every caller over one roots array the same table object', () => {
+    const roots = new TscnParser().parse(SRC).nodes;
+    const first = cachedUniqueNameClaims(roots);
+    expect(first.has('%Target')).toBe(true);
+    expect(cachedUniqueNameClaims(roots)).toBe(first);
+  });
+
+  it('builds a new table for a re-parse of the same source', () => {
+    const first = cachedUniqueNameClaims(new TscnParser().parse(SRC).nodes);
+    expect(cachedUniqueNameClaims(new TscnParser().parse(SRC).nodes)).not.toBe(first);
+  });
+
+  it('is empty for a tree with no claim', () => {
+    const roots = new TscnParser().parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n').nodes;
+    expect(cachedUniqueNameClaims(roots).size).toBe(0);
+  });
+});
+
 describe('override headings inside an instanced sub-scene', () => {
   // An override keeps its sub-scene owner (resource_format_text.cpp:259-261). node.cpp:2222-2233
   // registers `%Name` there and node.cpp:1930-1938 reads only the caller's owner table, so the
@@ -150,7 +169,7 @@ unique_name_in_owner = true
  * instance root, and a node added inside an instance is this root's. A per-owner table is
  * composed from both once the sub-scene loads.
  */
-describe('uniqueNameOwnership', () => {
+describe('cachedUniqueNameOwnership', () => {
   const src = `[gd_scene format=3]
 [ext_resource type="PackedScene" path="res://enemy.tscn" id="1"]
 
@@ -166,7 +185,7 @@ unique_name_in_owner = true
 
 [node name="Child" type="Node2D" parent="Enemy/Added"]
 `;
-  const ownership = uniqueNameOwnership(new TscnParser().parse(src).nodes);
+  const ownership = cachedUniqueNameOwnership(new TscnParser().parse(src).nodes);
 
   it('keys an override claim by the live path of the instance that owns it', () => {
     const claims = ownership.instanceClaims.get('Player/Enemy');
@@ -196,7 +215,7 @@ unique_name_in_owner = true
 [node name="Barrel" parent="Enemy/Gun"]
 unique_name_in_owner = true
 `).nodes;
-    const { instanceClaims, ownedInsideInstances } = uniqueNameOwnership(nested);
+    const { instanceClaims, ownedInsideInstances } = cachedUniqueNameOwnership(nested);
     expect([...instanceClaims.keys()]).toEqual(['Player/Enemy/Gun']);
     expect(ownedInsideInstances.has('Player/Enemy/Gun')).toBe(true);
   });
@@ -233,13 +252,13 @@ unique_name_in_owner = true
   });
 
   it('registers the claim on the named owner, not on this root', () => {
-    const ownership = uniqueNameOwnership(new TscnParser().parse(explicit).nodes);
+    const ownership = cachedUniqueNameOwnership(new TscnParser().parse(explicit).nodes);
     expect(ownership.claims.has('%Hit')).toBe(false);
     expect(ownership.instanceClaims.get('Player/Enemy')?.map((c) => c.node.name)).toContain('Hit');
   });
 
   it('owner="." claims for this root even on an override inside an instance', () => {
-    const ownership = uniqueNameOwnership(new TscnParser().parse(explicit).nodes);
+    const ownership = cachedUniqueNameOwnership(new TscnParser().parse(explicit).nodes);
     expect(ownership.claims.get('%Hud')?.path).toBe('Player/Enemy/Hud');
   });
 });

@@ -20,7 +20,7 @@ import { CanvasItemKeyProvider } from './CanvasItemGroup';
 import { CanvasItemMaterialProvider, useCanvasItemMaterial } from './canvasItemMaterialContext';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 
-export interface CanvasItem2DProps {
+interface CanvasItem2DProps {
   node: TscnNode;
   props: Node2DProperties;
   /**

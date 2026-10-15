@@ -14,6 +14,7 @@ import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/rendering/mater
 import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
 import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
 import { DetailUV } from '../../../godot/rendering/materials/detailUv';
+import { EMISSION_OPERATOR_DEFAULT } from '../../../godot/rendering/materials/emissionOperator';
 import { clamp } from '../../../godot/math/math';
 import { emissionScalars } from './emission';
 import {
@@ -24,11 +25,11 @@ import {
   TEXTURE_SLOTS,
   Transparency,
   type Heightmap,
-  type MaterialVec2,
   type StandardMaterial3DData,
   type TextureSlot,
   type TextureSlotReferences,
 } from './types';
+import type { Vector2 } from '../../../godot/math/vector';
 
 const CONTEXT = 'StandardMaterial3D';
 
@@ -158,7 +159,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     // `material.cpp:2160-2163`: the setter checks no range.
     specular: floatOr(properties['metallic_specular'], 0.5, CONTEXT),
     emission,
-    emissionOperator: intOr(properties['emission_operator'], 0, CONTEXT),
+    emissionOperator: intOr(properties['emission_operator'], EMISSION_OPERATOR_DEFAULT, CONTEXT),
     textureFilter: intOr(properties['texture_filter'], TEXTURE_FILTER_DEFAULT, CONTEXT),
     textureRepeat: boolOr(properties['texture_repeat'], true, CONTEXT),
     uv1Scale: vec2FromVector3(properties['uv1_scale'], { x: 1, y: 1 }),
@@ -334,7 +335,7 @@ function decodeTextureSlots(properties: Record<string, string>): TextureSlotRefe
 function uv2Transform(
   properties: Record<string, string>,
   uv2Triplanar: boolean
-): { uv2Scale: MaterialVec2; uv2Offset: MaterialVec2 } {
+): { uv2Scale: Vector2; uv2Offset: Vector2 } {
   const identity = { uv2Scale: { x: 1, y: 1 }, uv2Offset: { x: 0, y: 0 } };
   const detailUv = intOr(properties['detail_uv_layer'], DetailUV.DETAIL_UV_1, CONTEXT);
   if (!uv2Triplanar && detailUv !== DetailUV.DETAIL_UV_2) return identity;
@@ -359,7 +360,7 @@ function uv2Slots(properties: Record<string, string>): TextureSlot[] {
  * Godot writes UV transforms as `Vector3`, and only x and y reach a 2D UV. It wraps the
  * throwing `parseVector3`, so the float grammar, scientific notation included, is shared.
  */
-function vec2FromVector3(raw: string | undefined, fallback: MaterialVec2): MaterialVec2 {
+function vec2FromVector3(raw: string | undefined, fallback: Vector2): Vector2 {
   if (!raw) return fallback;
   try {
     const { x, y } = parseVector3(raw);

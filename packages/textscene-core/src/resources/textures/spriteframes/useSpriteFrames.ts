@@ -12,7 +12,7 @@ import { useResourceResolution } from '../../useSubOrExtResource';
 import { decodeSpriteFrames } from './decode';
 import type { SpriteFramesAnimation } from './types';
 
-export interface ResolvedSpriteFrames {
+interface ResolvedSpriteFrames {
   /** animation name → its parsed frames + timing. */
   animations: Map<string, SpriteFramesAnimation>;
   /** SubResource pool the frame refs resolve against (scene's, or the .tres's own). */
@@ -21,7 +21,7 @@ export interface ResolvedSpriteFrames {
   externalResources: readonly TscnExternalResource[];
 }
 
-export interface SpriteFramesResult {
+interface SpriteFramesResult {
   spriteFrames: ResolvedSpriteFrames | null;
   status: 'pending' | 'loaded' | 'unavailable';
 }

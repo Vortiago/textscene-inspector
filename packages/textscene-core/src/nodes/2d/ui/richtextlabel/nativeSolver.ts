@@ -17,7 +17,6 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   AutowrapMode,
   clampAutowrapMode,
@@ -47,7 +46,6 @@ import {
   resolveNodeFontMetrics,
   resolveNodeFontSizePx,
 } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import type { ControlColor } from '../control/types';
 import type { RichTextLabelProperties } from './types';
 import {
   IMAGE_OBJECT_CHAR,
@@ -59,9 +57,11 @@ import {
   type ParsedImageRegion,
   type ParsedImgTag,
 } from './bbcode';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color`, not Label's `font_size` and `font_color`. */
-export const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
+const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
   sizeKey: 'normal_font_size',
   colorKey: 'default_color',
 };
@@ -75,7 +75,7 @@ export const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
 export const RICH_TEXT_LABEL_THEME_FONT_KEY = 'normal_font';
 
 /** `default_theme.cpp:1205`: `theme->set_color("default_color", "RichTextLabel", Color(1, 1, 1))`, a call separate from Label's. */
-export const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
+const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** `rich_text_label.h:557`: `TextServer::AutowrapMode autowrap_mode = TextServer::AUTOWRAP_WORD_SMART;`, unlike Label's OFF (`label.h`). */
 export const RICH_TEXT_LABEL_DEFAULT_AUTOWRAP = AutowrapMode.WORD_SMART;
@@ -101,12 +101,12 @@ export function richTextLabelTextTheme(
  * `null` means it cannot be sized yet, and the caller drops the run rather
  * than reserve a wrong box.
  */
-export function imageSizePx(
+function imageSizePx(
   widthPx: number,
   heightPx: number,
   region: ParsedImageRegion | undefined,
-  naturalSize?: Vec2 | null
-): Vec2 | null {
+  naturalSize?: Vector2 | null
+): Vector2 | null {
   const hasRegion = region !== undefined && region.w > 0 && region.h > 0; // Rect2::has_area().
   if (widthPx > 0) {
     if (heightPx > 0) return { x: widthPx, y: heightPx };
@@ -171,7 +171,7 @@ function resolveImageDimension(amount: number, inPercent: boolean, boxWidthPx: n
  * (`modules/text_server_adv/text_server_adv.cpp:5189-5254`). Returns the
  * image's top edge, baseline-relative and down-positive.
  */
-export function imageBaselineOffsetPx(
+function imageBaselineOffsetPx(
   textAscentPx: number,
   textDescentPx: number,
   imageHeightPx: number,
@@ -212,9 +212,9 @@ export function imageBaselineOffsetPx(
  * drops an image `imageSizePx` cannot size, as Godot does when
  * `ResourceLoader::load` fails.
  */
-export interface ResolvedImageRun {
+interface ResolvedImageRun {
   spec: ParsedImgTag;
-  sizePx: Vec2;
+  sizePx: Vector2;
 }
 
 /**
@@ -326,13 +326,13 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
 // ── Draw time: BBCode to styled runs to per-line placements ──
 
 /** One styled run of the plain text, with what `[b]`/`[i]`/`[u]`/`[color]` resolve to. */
-export interface StyledTextRun {
+interface StyledTextRun {
   text: string;
   bold: boolean;
   italic: boolean;
   /** `[u]` open on the tag stack (`rich_text_label.cpp:4677`'s `push_underline`), drawn by `underlineRectPx`. */
   underline: boolean;
-  color: ControlColor;
+  color: Rgba;
   /** This run's font size, px (`resolveRunFontSizePx`): `normal_font_size` for a plain run. */
   fontSizePx: number;
   /**
@@ -397,7 +397,7 @@ function resolveRunFontSizePx(
 export function styledTextRuns(
   n: SolveNode,
   props: RichTextLabelProperties,
-  defaultColor: ControlColor,
+  defaultColor: Rgba,
   normalFontSizePx: number,
   builtInDefaultPx: number,
   boxWidthPx?: number
@@ -513,7 +513,7 @@ export interface RichTextImagePlacement {
 }
 
 /** One line and style run for one `<TextRun>`, or an `[img]` when `image` is set, which leaves the text fields unused. */
-export interface RichTextRunPlacement {
+interface RichTextRunPlacement {
   lineIndex: number;
   /** The line's top from the control's top: `RichTextLineMetrics.topPx` plus the `vertical_alignment` shift (`richTextVerticalOffsets`). */
   lineTopPx: number;
@@ -522,7 +522,7 @@ export interface RichTextRunPlacement {
   bold: boolean;
   italic: boolean;
   underline: boolean;
-  color: ControlColor;
+  color: Rgba;
   /** The run's font size, px, for its glyphs. The baseline is the line's: `layout.baselineOffsetPx`. */
   fontSizePx: number;
   /** A single-line layout of only this run's glyphs from the line, `glyph.x` already line-relative. */
@@ -558,7 +558,7 @@ function fontDescentPx(metrics: FontMetrics, fontSizePx: number): number {
 }
 
 /** One wrapped line's vertical metrics, recomputed per line (`text_server_adv.cpp:5486-5487`), unlike the underline's. */
-export interface RichTextLineMetrics {
+interface RichTextLineMetrics {
   /** The line's top from the paragraph's top: the sum of the earlier lines' `ascentPx + descentPx`. */
   topPx: number;
   /** Baseline offset from `topPx`: the max ascent of this line's fonts and images (`imageBaselineOffsetPx`). */
@@ -577,7 +577,7 @@ export interface RichTextLineMetrics {
  * over its own fonts, and `rich_text_label.cpp:1055`/`:1589` step by them, so
  * mixed sizes make lines of different heights.
  */
-export function richTextLineMetrics(
+function richTextLineMetrics(
   styledRuns: readonly StyledTextRun[],
   layout: TextLayoutResult
 ): RichTextLineMetrics[] {
@@ -633,7 +633,7 @@ function lineMetricsOf(
 }
 
 /** The paragraph's `[u]`/`[s]` stroke geometry, `sd->upos`/`sd->uthk`, before `rich_text_label.cpp:1243`'s 1px floor. */
-export interface RichTextUnderlineMetrics {
+interface RichTextUnderlineMetrics {
   /** Downward offset from the line's baseline to the stroke's CENTRE, px (`shaped_text_get_underline_position`). */
   positionPx: number;
   /** The font's stroke thickness, px, unfloored (`shaped_text_get_underline_thickness`): `underlineRectPx` applies `MAX(1.0, uth)`. */
@@ -746,7 +746,7 @@ const ALIGNMENT_TAGS: ReadonlyMap<string, number> = new Map([
  * innermost alignment tag wins, else `horizontal_alignment` (`:7245-7258`).
  * `tags` is outermost-first, hence the reverse scan.
  */
-export function resolveParagraphAlignment(
+function resolveParagraphAlignment(
   tags: readonly { name: string }[],
   defaultAlignment: number | undefined
 ): number {
@@ -763,11 +763,7 @@ export function resolveParagraphAlignment(
  * and `:990` it lacks. An overflowing line hangs off the leading edge, clipped at `:8225`.
  * `lineWidthPx` is ceiled, as `:984` reads it.
  */
-export function richTextHorizontalOffsetPx(
-  lineWidthPx: number,
-  boxWidthPx: number,
-  alignment: number
-): number {
+function richTextHorizontalOffsetPx(lineWidthPx: number, boxWidthPx: number, alignment: number): number {
   // The RTL arms (`rich_text_label.cpp:987-1014`) follow `_find_direction` (`:599`,
   // `:3507-3525`), which the default `TEXT_DIRECTION_AUTO` (`rich_text_label.h:615`)
   // keeps from `layout_direction`. `comparison.md` records the gap.
@@ -788,7 +784,7 @@ export function richTextHorizontalOffsetPx(
 }
 
 /** `vertical_alignment`'s two contributions: a one-off shift of the whole block, and an extra gap between lines under FILL. */
-export interface RichTextVerticalOffsets {
+interface RichTextVerticalOffsets {
   /** Added to every line's own top. */
   vbeginPx: number;
   /** Added once per line ABOVE the first (`vsep` in `rich_text_label.cpp:1629`). */
@@ -800,7 +796,7 @@ export interface RichTextVerticalOffsets {
  * The `text_rect.size.y > total_height` guard (`:1630`) keeps a taller paragraph
  * top-aligned, unlike Label. `vbegin`/`vsep` are floats (`:1628`), not Label's ints.
  */
-export function richTextVerticalOffsets(
+function richTextVerticalOffsets(
   contentHeightPx: number,
   boxHeightPx: number,
   alignment: number | undefined,
@@ -824,7 +820,7 @@ export function richTextVerticalOffsets(
 }
 
 /** The box a paragraph aligns inside, plus the node's own two alignment properties. */
-export interface RichTextAlignment {
+interface RichTextAlignment {
   boxWidthPx: number;
   boxHeightPx: number;
   horizontalAlignment?: number;
@@ -908,7 +904,7 @@ export function layoutRichTextRuns(
 }
 
 /** A `[u]` run's stroke rect, px, in `TextRun`'s pen space (Y-down, line-top-relative), on whole pixels. */
-export interface UnderlineRectPx {
+interface UnderlineRectPx {
   /** Left edge: the first column the first glyph's pen `x` covers, as `rich_text_label.cpp:1216-1244`'s `ul_start` sits at the pen, not the ink. */
   x0: number;
   /** Right edge, exclusive: one past the last column the last glyph's pen `x` + advance covers. */

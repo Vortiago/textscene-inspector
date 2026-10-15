@@ -11,9 +11,13 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { flowContainerMinimumSize, flowContainerLayout } from './nativeSolver';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import './nativeSolver';
 import { solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+
+const flowContainerLayout = controlSolverRegistry.containerLayout('FlowContainer')!;
+const flowContainerMinimumSize = controlSolverRegistry.minimumSize('FlowContainer')!;
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {

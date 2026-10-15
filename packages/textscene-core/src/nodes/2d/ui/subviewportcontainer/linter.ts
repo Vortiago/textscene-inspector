@@ -67,5 +67,3 @@ const subViewportContainerRule: LintRule = {
 };
 
 ruleRegistry.register(subViewportContainerRule);
-
-export { subViewportContainerRule };

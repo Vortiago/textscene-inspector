@@ -8,7 +8,6 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { TscnParser } from '../../parser/TscnParser';
-import { clearEvaluationCache } from './csgEvaluationCache';
 import '../nodes/index';
 import { NodeTree } from '../testing/NodeTree';
 import { settleCsgEvaluation } from './testing/settleCsgEvaluation';
@@ -56,7 +55,6 @@ function drawnMesh(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.cr
 
 describe('<CsgRootMesh> surface slots', () => {
   it('binds every surface material when its contributors stop sharing one', async () => {
-    clearEvaluationCache();
     const renderer = await ReactThreeTestRenderer.create(scene(MATERIALS + block('Red')));
     await settleCsgEvaluation(renderer);
 

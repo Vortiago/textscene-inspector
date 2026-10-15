@@ -60,7 +60,7 @@ interface ProjectEvidence extends ProjectFacts {
 }
 
 /** Whether code in the project behind a provider may add to the importer. The project is listed only when it is called. */
-export type ImportExtensionProbe = () => Promise<boolean>;
+type ImportExtensionProbe = () => Promise<boolean>;
 
 /** The answer for a provider that cannot list: it never rules a GDExtension out, so no file it reads can change it. */
 const MAY_EXTEND: ImportExtensionProbe = () => Promise.resolve(true);

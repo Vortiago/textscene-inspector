@@ -13,5 +13,3 @@ const openXRBindingModifierEditorRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(openXRBindingModifierEditorRegistration);
-
-export { openXRBindingModifierEditorRegistration };

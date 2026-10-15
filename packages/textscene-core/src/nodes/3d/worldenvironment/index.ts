@@ -14,7 +14,6 @@ const worldEnvironmentRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(worldEnvironmentRegistration);
 
-export { worldEnvironmentRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

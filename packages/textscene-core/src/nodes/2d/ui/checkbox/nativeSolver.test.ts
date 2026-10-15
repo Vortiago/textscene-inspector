@@ -19,10 +19,6 @@ import {
   resolveCheckBoxDrawState,
   resolveCheckBoxIconKey,
   layoutCheckBoxContent,
-  CHECKBOX_DEFAULT_FONT_COLOR,
-  CHECKBOX_DEFAULT_PRESSED_FONT_COLOR,
-  CHECKBOX_DEFAULT_DISABLED_FONT_COLOR,
-  CHECKBOX_ICON_NATURAL_SIZE,
   CHECKBOX_THEME_FONT_KEY,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -79,24 +75,31 @@ describe('resolveCheckBoxDrawState', () => {
 
 describe('checkBoxTextTheme', () => {
   it('resolves control_font_color (0.875 opaque) for the normal state', () => {
+    // default_theme.cpp:101,300: control_font_color.
     expect(checkBoxTextTheme(node({}), {} as CheckBoxProperties, 'normal', ctx())).toEqual({
       fontSizePx: 16,
-      color: CHECKBOX_DEFAULT_FONT_COLOR,
+      color: { r: 0.875, g: 0.875, b: 0.875, a: 1 },
     });
   });
 
   it('resolves control_font_pressed_color (opaque white) for the pressed (checked) state', () => {
-    expect(checkBoxTextTheme(node({}), {} as CheckBoxProperties, 'pressed', ctx()).color).toEqual(
-      CHECKBOX_DEFAULT_PRESSED_FONT_COLOR
-    );
-    expect(CHECKBOX_DEFAULT_PRESSED_FONT_COLOR).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    // default_theme.cpp:108,301: control_font_pressed_color.
+    expect(checkBoxTextTheme(node({}), {} as CheckBoxProperties, 'pressed', ctx()).color).toEqual({
+      r: 1,
+      g: 1,
+      b: 1,
+      a: 1,
+    });
   });
 
   it('resolves control_font_disabled_color (alpha 0.5) for the disabled state', () => {
-    expect(checkBoxTextTheme(node({}), {} as CheckBoxProperties, 'disabled', ctx()).color).toEqual(
-      CHECKBOX_DEFAULT_DISABLED_FONT_COLOR
-    );
-    expect(CHECKBOX_DEFAULT_DISABLED_FONT_COLOR).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.5 });
+    // default_theme.cpp:106,305: control_font_disabled_color.
+    expect(checkBoxTextTheme(node({}), {} as CheckBoxProperties, 'disabled', ctx()).color).toEqual({
+      r: 0.875,
+      g: 0.875,
+      b: 0.875,
+      a: 0.5,
+    });
   });
 
   it('a theme_override_colors/font_pressed_color override wins over the default', () => {
@@ -190,12 +193,6 @@ describe('checkBoxMinimumSize — with text', () => {
     // fitIconSize(16x16, 8) = 8x8.
     expect(result.x).toBeCloseTo(8 + AB_SHAPED_WIDTH + 4 + 8, 6);
     expect(result.y).toBe(8 + FONT_HEIGHT); // 8 < 23, text still floors height
-  });
-});
-
-describe('CHECKBOX_ICON_NATURAL_SIZE', () => {
-  it('is 16x16 — every vendored CheckBox icon shares this authored size', () => {
-    expect(CHECKBOX_ICON_NATURAL_SIZE).toEqual({ x: 16, y: 16 });
   });
 });
 

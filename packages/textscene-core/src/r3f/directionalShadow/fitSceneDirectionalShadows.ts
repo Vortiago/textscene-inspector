@@ -136,7 +136,7 @@ function renderedFor(light: THREE.DirectionalLight): THREE.Light | null {
 }
 
 /** The lights three draws a directional or a sun shadow for, each list in three's index order. */
-export interface DirectionalShadowCasters {
+interface DirectionalShadowCasters {
   directional: THREE.DirectionalLight[];
   sun: THREE.Light[];
 }
@@ -147,7 +147,7 @@ export interface DirectionalShadowCasters {
  * declared light that draws splits or that the fitter dropped fails the layer test, so only a split
  * sun counts for it.
  */
-export function directionalShadowCasters(
+function directionalShadowCasters(
   lights: readonly SceneLight[],
   camera: THREE.Camera
 ): DirectionalShadowCasters {

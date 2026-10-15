@@ -8,5 +8,3 @@ import { checkBoxMinimumSize, checkBoxTextureSlots } from './nativeSolver';
 controlComponentRegistry.register({ typeName: 'CheckBox', Component: CheckBox });
 controlSolverRegistry.registerMinimumSize('CheckBox', checkBoxMinimumSize);
 controlSolverRegistry.registerTextureSlots('CheckBox', checkBoxTextureSlots);
-
-export { CheckBox };

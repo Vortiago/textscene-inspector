@@ -15,5 +15,3 @@ const grooveJoint2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(grooveJoint2DRegistration);
-
-export { grooveJoint2DRegistration };

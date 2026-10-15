@@ -40,9 +40,10 @@ import {
   AutowrapMode,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
-import type { ControlColor } from '../control/types';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { ItemListProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 // --- Enum literals ------------------------------------------------------
 
@@ -56,7 +57,7 @@ export const ICON_MODE_LEFT = 1;
 export const ITEM_LIST_THEME_FONT_KEY = 'font';
 
 /** `control_font_lower_color` (`default_theme.cpp:103`): ItemList's own `font_color` default (`:954`). */
-export const ITEM_LIST_DEFAULT_FONT_COLOR: ControlColor = { r: 0.65, g: 0.65, b: 0.65, a: 1 };
+const ITEM_LIST_DEFAULT_FONT_COLOR: Rgba = { r: 0.65, g: 0.65, b: 0.65, a: 1 };
 
 const ITEM_LIST_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 
@@ -78,7 +79,7 @@ export function itemListIconSlotKey(index: number): string {
 }
 
 /** `item_N/icon` (`item_list.cpp:2464`): one slot request per row that names an icon. */
-export const itemListTextureSlots: TextureSlotsFn = (node: TscnNode) => {
+const itemListTextureSlots: TextureSlotsFn = (node: TscnNode) => {
   const props = node.properties as ItemListProperties;
   const requests: TextureSlotRequest[] = [];
   (props.items ?? []).forEach((item, index) => {
@@ -101,7 +102,7 @@ function reconstructThemeScale(theme: Pick<NativeTheme, 'fontSize'>): number {
 /** `default_theme.cpp:949`: `theme->set_constant(line_separation, "ItemList", round(2*scale))`. */
 const ITEM_LIST_LINE_SEPARATION_BASE = 2;
 
-export function itemListLineSeparation(theme: Pick<NativeTheme, 'fontSize'>): number {
+function itemListLineSeparation(theme: Pick<NativeTheme, 'fontSize'>): number {
   return Math.round(ITEM_LIST_LINE_SEPARATION_BASE * reconstructThemeScale(theme));
 }
 
@@ -117,12 +118,10 @@ export function itemListSeparation(theme: Pick<NativeTheme, 'separation'>): numb
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 /** `StyleBoxFlat`'s own unset default (`style_box_flat.h:40`). */
-const DEFAULT_BORDER_COLOR: ControlColor = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
+const DEFAULT_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
 
 /** `theme->set_stylebox(panel, "ItemList", make_flat_stylebox(style_normal_color))` (`default_theme.cpp:944`): every `make_flat_stylebox` default (margin 4, corner radius 3), both scaled. */
-export function itemListPanelStyleBox(
-  theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>
-): StyleBoxFlatData {
+function itemListPanelStyleBox(theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>): StyleBoxFlatData {
   const m = theme.contentMargin;
   return {
     bgColor: STYLE_FILL.normal,
@@ -166,10 +165,10 @@ export function pickItemListPanelStyleBox(
  */
 export function itemIconPackedSize(
   hasIcon: boolean,
-  naturalSize: Vec2 | null,
-  fixedIconSize: Vec2 | undefined,
+  naturalSize: Vector2 | null,
+  fixedIconSize: Vector2 | undefined,
   iconScale: number
-): Vec2 {
+): Vector2 {
   if (!hasIcon) return { x: 0, y: 0 };
   if (fixedIconSize && fixedIconSize.x > 0 && fixedIconSize.y > 0) {
     return { x: fixedIconSize.x * iconScale, y: fixedIconSize.y * iconScale };
@@ -183,7 +182,7 @@ export function itemIconPackedSize(
  * `maxSize`, preserving aspect, centred. Every `int(...)` cast in the source
  * truncates toward zero.
  */
-export function adjustToMaxSize(size: Vec2, maxSize: Vec2): Rect2 {
+function adjustToMaxSize(size: Vector2, maxSize: Vector2): Rect2 {
   if (size.y === 0 || size.x === 0) return { x: 0, y: 0, w: 0, h: 0 };
   let texWidth = Math.trunc((size.x * maxSize.y) / size.y);
   let texHeight = maxSize.y;
@@ -204,7 +203,7 @@ export function adjustToMaxSize(size: Vec2, maxSize: Vec2): Rect2 {
  * has only `AutowrapMode.WORD`, so an unbreakable word overflows its column where
  * Godot breaks it mid-word (`comparison.md`).
  */
-export function itemListAutowrapMode(iconMode: number, maxTextLines: number): AutowrapMode {
+function itemListAutowrapMode(iconMode: number, maxTextLines: number): AutowrapMode {
   return iconMode === ICON_MODE_TOP && maxTextLines > 0 ? AutowrapMode.WORD : AutowrapMode.OFF;
 }
 
@@ -214,11 +213,11 @@ export function itemListAutowrapMode(iconMode: number, maxTextLines: number): Au
  * unconstrained (Godot's `-1`, this engine's `0`). Text is not shaped again at the
  * final column width (`item_list.cpp:1628-1634,1657-1661`), so a wider fitted column is approximate.
  */
-export function itemListShapeWidth(fixedColumnWidth: number): number {
+function itemListShapeWidth(fixedColumnWidth: number): number {
   return fixedColumnWidth > 0 ? fixedColumnWidth : 0;
 }
 
-export interface ItemTextShapeInput {
+interface ItemTextShapeInput {
   text: string;
   fontSizePx: number;
   fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics'];
@@ -275,12 +274,12 @@ function itemListLineSeparationForShaping(_input: ItemTextShapeInput): number {
 
 // --- Per-item minimum size --------------------------------------------------
 
-export interface ItemContentInput {
+interface ItemContentInput {
   hasIcon: boolean;
-  iconSize: Vec2;
+  iconSize: Vector2;
   hasText: boolean;
   /** The shaped text's own `{ widthPx: ceiled, heightPx }`: `shapedTextSizeWidthPx(layout.widthPx)`/`layout.heightPx`. */
-  textSize: Vec2;
+  textSize: Vector2;
   iconMode: number;
   maxTextLines: number;
   fixedColumnWidth: number;
@@ -291,10 +290,10 @@ export interface ItemContentInput {
  * (`item_list.cpp:1743-1790`). `icon_margin` (item_list.cpp:1754,1756) is the same
  * `round(4*scale)` as `h_separation`/`v_separation`, added only with both an icon and text.
  */
-export function itemContentMinSize(
+function itemContentMinSize(
   input: ItemContentInput,
   theme: Pick<NativeTheme, 'fontSize' | 'separation'>
-): Vec2 {
+): Vector2 {
   let x = 0;
   let y = 0;
 
@@ -332,7 +331,7 @@ export function itemContentMinSize(
 export function itemMinimumSize(
   input: ItemContentInput,
   theme: Pick<NativeTheme, 'fontSize' | 'separation'>
-): Vec2 {
+): Vector2 {
   const content = itemContentMinSize(input, theme);
   const sep = itemListSeparation(theme);
   return { x: content.x + Math.max(0, sep), y: content.y + Math.max(0, sep) };
@@ -340,9 +339,9 @@ export function itemMinimumSize(
 
 // --- Row packing: force_update_list_size's phase 2 (item_list.cpp:1798-1912) -
 
-export interface ItemListPackInput {
+interface ItemListPackInput {
   /** Per-item minsize, including h/v separation: `itemMinimumSize`'s own output. */
-  itemSizes: readonly Vec2[];
+  itemSizes: readonly Vector2[];
   /** The widest item's own minsize.x, across every item (`item_list.cpp:1786`): only consumed when `sameColumnWidth`. */
   maxColumnWidth: number;
   sameColumnWidth: boolean;
@@ -361,13 +360,13 @@ export interface ItemListPackInput {
   availableHeight: number;
 }
 
-export interface ItemListPackedItem {
+interface ItemListPackedItem {
   /** Relative to the packed content origin: the caller adds `base_ofs` (`item_list.cpp:1429`, the panel's own offset minus scroll). */
   rect: Rect2;
   column: number;
 }
 
-export interface ItemListPackResult {
+interface ItemListPackResult {
   items: readonly ItemListPackedItem[];
   /** Row-separator Y positions, content-relative (`item_list.cpp:1840`). */
   separators: readonly number[];
@@ -395,8 +394,8 @@ export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
     let col = 0;
     let maxW = 0;
     let maxH = 0;
-    const sizes: Vec2[] = input.itemSizes.map((s) => ({ ...s }));
-    const positions: Vec2[] = new Array(n);
+    const sizes: Vector2[] = input.itemSizes.map((s) => ({ ...s }));
+    const positions: Vector2[] = new Array(n);
     const columns: number[] = new Array(n);
     const separators: number[] = [];
 
@@ -465,7 +464,7 @@ export const ITEM_LIST_DEFAULT_MAX_COLUMNS = 1;
  * once with infinite `fitSize` and `availableHeight`. Exact under `auto_width` or
  * `max_columns > 0`; approximate for `auto_height` with `max_columns` 0 and no `auto_width`.
  */
-export const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
+const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ItemListProperties;
   const items = props.items ?? [];
 
@@ -479,7 +478,7 @@ export const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   const fixedColumnWidth = props.fixedColumnWidth ?? 0;
   const iconScale = props.iconScale ?? 1;
 
-  const itemSizes: Vec2[] = items.map((item, i) => {
+  const itemSizes: Vector2[] = items.map((item, i) => {
     const hasIcon = item.icon !== undefined;
     const iconSize = itemIconPackedSize(
       hasIcon,
@@ -536,11 +535,11 @@ controlSolverRegistry.registerTextureSlots('ItemList', itemListTextureSlots);
 
 // --- Draw-time per-item geometry (item_list.cpp:1536-1691) ----------------
 
-export interface ItemIconDraw {
+interface ItemIconDraw {
   /** Relative to the item's own rect origin. `null` when the item has no icon. */
   rect: Rect2 | null;
   /** `icon_size.height + icon_margin` (TOP) or `icon_size.width + icon_margin` (LEFT): the pen offset the text inherits. */
-  textOffsetContribution: Vec2;
+  textOffsetContribution: Vector2;
 }
 
 /**
@@ -550,10 +549,10 @@ export interface ItemIconDraw {
 export function itemIconDraw(
   hasIcon: boolean,
   iconMode: number,
-  packedIconSize: Vec2,
-  naturalSize: Vec2 | null,
+  packedIconSize: Vector2,
+  naturalSize: Vector2 | null,
   fixedIconSizeSet: boolean,
-  itemRectSize: Vec2,
+  itemRectSize: Vector2,
   hSeparation: number,
   vSeparation: number,
   iconMargin: number
@@ -592,12 +591,12 @@ export function itemIconDraw(
  */
 export function itemTextDrawOffset(
   iconMode: number,
-  iconOffset: Vec2,
-  itemRectSize: Vec2,
+  iconOffset: Vector2,
+  itemRectSize: Vector2,
   textLineHeightTotal: number,
   hSeparation: number,
   vSeparation: number
-): Vec2 {
+): Vector2 {
   if (iconMode === ICON_MODE_TOP) {
     return {
       x: iconOffset.x + Math.max(hSeparation, 0) / 2,
@@ -618,26 +617,26 @@ export function itemTextLineCenterOffset(centerWidth: number, lineWidthCeiled: n
 // --- Per-item colour: item_list.cpp:1568-1571,1607-1622, minus selected/hovered ---
 
 /** `icon_modulate` is a real `Item` member but never a `PropertyListHelper` leaf, so it is always its class default `Color(1,1,1,1)` (`item_list.h:68`), dimmed on `disabled` (`item_list.cpp:1569-1571`). */
-export function itemIconColor(disabled: boolean): ControlColor {
+export function itemIconColor(disabled: boolean): Rgba {
   return { r: 1, g: 1, b: 1, a: disabled ? 0.5 : 1 };
 }
 
 /** `custom_fg` is likewise never authorable, so `txt_modulate` always resolves to `font_color`, dimmed on `disabled` (`item_list.cpp:1614-1622`). */
-export function itemTextColor(baseColor: ControlColor, disabled: boolean): ControlColor {
+export function itemTextColor(baseColor: Rgba, disabled: boolean): Rgba {
   return disabled ? { ...baseColor, a: baseColor.a * 0.5 } : baseColor;
 }
 
 // --- Row/column guide lines: item_list.cpp:1446-1459 -----------------------
 
 /** `default_theme.cpp:959`: `theme->set_color("guide_color", "ItemList", Color(0.7, 0.7, 0.7, 0.25))`. */
-export const ITEM_LIST_DEFAULT_GUIDE_COLOR: ControlColor = { r: 0.7, g: 0.7, b: 0.7, a: 0.25 };
+const ITEM_LIST_DEFAULT_GUIDE_COLOR: Rgba = { r: 0.7, g: 0.7, b: 0.7, a: 0.25 };
 
 /** This node's own `theme_override_colors/guide_color` (already folded onto `n.colors` by the walker), else the built-in default. */
-export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): ControlColor {
+export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): Rgba {
   return n.colors.guide_color ?? ITEM_LIST_DEFAULT_GUIDE_COLOR;
 }
 
-export interface ItemListGuideLine {
+interface ItemListGuideLine {
   /** Content-relative Y: the caller adds the panel's own offset (`origin`, `item_list.cpp:1429`). */
   y: number;
   /** Spans the panel's own content width, from its content origin (`item_list.cpp:1455-1457`). */
@@ -670,7 +669,7 @@ export function itemListMirrorX(ltrX: number, widthPx: number, controlWidthPx: n
   return rtl ? controlWidthPx - ltrX - widthPx : ltrX;
 }
 
-export interface ItemListRowTextXInput {
+interface ItemListRowTextXInput {
   /** `base_ofs.x + rect_cache.position.x + text_ofs.x`: the LTR pen origin. */
   ltrX: number;
   itemRectWidthPx: number;

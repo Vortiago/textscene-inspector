@@ -5,7 +5,7 @@
  * gate picks one. Everything is in the previewer's 2D world space, Y up.
  */
 
-import type { Vector2 } from '../../nodes/base/node2d/types.js';
+import type { Vector2 } from '../../godot/math/vector.js';
 
 /** `OccluderPolygon2D.CullMode`. */
 export const OCCLUDER_CULL_DISABLED = 0;
@@ -147,7 +147,7 @@ export function edgeCastsShadow(
  * along the bisector, so a wide wedge's cap cannot cut back into the lit area.
  * Measured: Godot's unfiltered boundary lands on the light→endpoint ray within ~1 px.
  */
-export function edgeShadowRing(
+function edgeShadowRing(
   ax: number,
   ay: number,
   bx: number,
@@ -202,7 +202,7 @@ export function edgeShadowRing(
 }
 
 /** Longest distance from the shadow origin to a corner of the light's rect. */
-export function lightReach(light: ShadowLight): number {
+function lightReach(light: ShadowLight): number {
   const { rect } = light;
   const dx = Math.max(Math.abs(rect.minX - light.x), Math.abs(rect.maxX - light.x));
   const dy = Math.max(Math.abs(rect.minY - light.y), Math.abs(rect.maxY - light.y));

@@ -10,6 +10,5 @@ const optionButtonRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(optionButtonRegistration);
 
-export { optionButtonRegistration };
 export * from './parser';
 export * from './types';

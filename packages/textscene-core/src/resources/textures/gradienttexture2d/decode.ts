@@ -5,9 +5,7 @@
  * No THREE.
  */
 
-import type { Color } from '../../../utils/colorParser';
 import { enumOr, settableIntOr, vec2Or, type SetterRange } from '../../../parser/valueParsers';
-import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { GRADIENT_TEXTURE_MAX_SIZE, boolSlotValue } from '../../../godot/index.js';
@@ -20,15 +18,16 @@ import {
   type GradientColorStop,
   type GradientTexture2D,
 } from './types';
+import type { Rgba } from '../../../godot/math/math.js';
 
 /**
  * Parses a `PackedColorArray` slot into a `Color[]`, dropping a trailing partial quadruple. It
  * groups the output of `parsePackedColorArray`, so each component is the float32 a `Color` stores
  * (`core/math/color.h:42-45`).
  */
-export function parseColorStops(value: string): Color[] {
+function parseColorStops(value: string): Rgba[] {
   const nums = parsePackedColorArray(value);
-  const colors: Color[] = [];
+  const colors: Rgba[] = [];
   for (let i = 0; i + 3 < nums.length; i += 4) {
     colors.push({ r: nums[i]!, g: nums[i + 1]!, b: nums[i + 2]!, a: nums[i + 3]! });
   }
@@ -40,7 +39,7 @@ export function parseColorStops(value: string): Color[] {
  * stops evenly across 0..1, the default two-point spacing. Mismatched lengths
  * use the shorter of the two.
  */
-export function decodeGradient(data: Record<string, string>): Gradient {
+function decodeGradient(data: Record<string, string>): Gradient {
   const colors = data.colors ? safeColors(data.colors) : [];
   const offsets = data.offsets ? safeOffsets(data.offsets) : null;
 
@@ -80,15 +79,6 @@ export function resolveGradient(
   return decodeGradient(resource.data);
 }
 
-/**
- * The `Gradient` a standalone resource file carries, or null for another type.
- * Its `[resource]` body decodes through the same `decodeGradient` as an inline block.
- */
-export function gradientFromResource(parsed: ParsedResource): Gradient | null {
-  if (parsed.resourceType !== 'Gradient') return null;
-  return decodeGradient(parsed.properties);
-}
-
 /** `width = 64` and `height = 64` (`gradient_texture.h:92-93`). */
 const DEFAULT_TEXTURE_SIZE = 64;
 
@@ -124,7 +114,7 @@ export function decodeGradientTexture2D(data: Record<string, string>): GradientT
   };
 }
 
-function safeColors(value: string): Color[] {
+function safeColors(value: string): Rgba[] {
   try {
     return parseColorStops(value);
   } catch {

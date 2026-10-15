@@ -11,7 +11,7 @@ import type { NativeTheme } from './nativeTheme';
 import type { SolveNode } from './solveTree';
 import type { Rect2 } from './rect';
 
-export interface PanelChromeProps {
+interface PanelChromeProps {
   solveNode: SolveNode;
   rect: Rect2;
   /** The walker's theme, passed down so this chrome and the solve that sized it read the same metrics. */

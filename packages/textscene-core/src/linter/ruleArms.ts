@@ -23,7 +23,7 @@ export type { RuleArm } from './types.js';
 export type RuleArms<K extends string> = Readonly<Partial<Record<K, RuleArm>>>;
 
 /** Every grounding but `engine`, whose kind alone fixes the severity (`severityFixedBy`). */
-export type FixedGrounding = Exclude<EmitGrounding, { kind: 'engine' }>;
+type FixedGrounding = Exclude<EmitGrounding, { kind: 'engine' }>;
 
 /**
  * The arm for `ruleName`, at the severity its grounding fixes. Only an `engine`

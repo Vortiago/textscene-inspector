@@ -20,7 +20,7 @@ import type { CsgGeometrySetup } from './useCsgGeometryContext';
 import { usePendingWhile } from '../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../shadowCasting';
 
-export interface CsgRootMeshProps {
+interface CsgRootMeshProps {
   plan: CsgPlan;
   /** What the plan's solids build against. The boolean waits while a file a solid reads loads. */
   setup: CsgGeometrySetup;

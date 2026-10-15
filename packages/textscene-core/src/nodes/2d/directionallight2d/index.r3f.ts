@@ -6,5 +6,3 @@ nodeComponentRegistry.register({
   Component: DirectionalLight2D,
   canvasItem: true,
 });
-
-export { DirectionalLight2D };

@@ -15,5 +15,3 @@ const collisionPolygon2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(collisionPolygon2DRegistration);
-
-export { collisionPolygon2DRegistration };

@@ -18,7 +18,7 @@ export interface ThreeShadowPass {
   draw: THREE.WebGLShadowMap['render'];
 }
 
-export type SpotShadowLight = THREE.SpotLight & { shadow: AtlasSpotShadow };
+type SpotShadowLight = THREE.SpotLight & { shadow: AtlasSpotShadow };
 
 /** A light whose casters three projects as it projects them for its own pass. */
 export type ProjectedShadowLight = SpotShadowLight | SplitSunLight;

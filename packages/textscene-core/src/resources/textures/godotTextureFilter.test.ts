@@ -7,12 +7,14 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  GODOT_ANISOTROPY_MAX,
   GODOT_TEXTURE_FILTER_DEFAULT,
   applyTextureFilterState,
   godotTextureFilterState,
   textureFilterMatches,
 } from './godotTextureFilter';
+
+/** The anisotropy ceiling the previewer pins: `anisotropic_filtering_level` 4, so `1 << 4`. */
+const GODOT_ANISOTROPY_MAX = 16;
 
 /**
  * Godot's six sampler states. `min_filter` there is the within-level filter and

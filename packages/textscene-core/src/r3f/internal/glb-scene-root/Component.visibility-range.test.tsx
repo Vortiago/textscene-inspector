@@ -3,10 +3,10 @@
  * instancing scene gives it `visibility_range_*`, `transparency`, `cast_shadow` and a visibility
  * parent, and another node can name it as its own. Driven by one scene render from 11 units.
  */
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { createGLBMesh, initGlbModules } from '../../../resources/formats/glb/glbProcessing';
+import { createGLBMesh } from '../../../resources/formats/glb/glbProcessing';
 import { nodesGlb } from '../../../resources/formats/glb/testing/nodesGlb';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
@@ -94,10 +94,6 @@ function hostTree(fake: ReturnType<typeof createFakeResourceLoader>, lines: stri
     </SceneStack>
   );
 }
-
-beforeAll(async () => {
-  await initGlbModules();
-});
 
 describe('a GLB mesh visibility range', () => {
   it('draws a GLB mesh with no override', async () => {

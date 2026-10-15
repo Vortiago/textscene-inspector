@@ -5,14 +5,12 @@
 
 import type { Vector2 } from '../../../godot/math/vector';
 
-export type Vec2 = Vector2;
-
 export interface Curve2DControlPoint {
   /** In-tangent handle, relative to `position`. */
-  in: Vec2;
+  in: Vector2;
   /** Out-tangent handle, relative to `position`. */
-  out: Vec2;
-  position: Vec2;
+  out: Vector2;
+  position: Vector2;
 }
 
 export interface Curve2DSample {

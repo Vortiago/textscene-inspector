@@ -85,7 +85,7 @@ export function unpinProceduralTexture(key: string): void {
   cache.unpin(key);
 }
 
-/** Test seam: drop every entry, disposing each. */
-export function clearProceduralTextureCache(): void {
+/** Drops every entry, disposing each now or, while pinned, at its last unpin. */
+export function clearProceduralTextures(): void {
   cache.clear();
 }

@@ -11,7 +11,6 @@
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
@@ -31,11 +30,12 @@ import {
   type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
-import type { ControlColor } from '../control/types';
 import type { LabelProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
-export const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
+const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 
 /**
  * Label's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:381`).
@@ -61,10 +61,10 @@ export const LABEL_PARAGRAPH_SEPARATOR = '\n';
 
 /**
  * Label's default font colour is opaque white: `default_theme.cpp` sets `font_color` for
- * "Label" to `Color(1, 1, 1)`, not the `control_font_color` gray (`DEFAULT_FONT_COLOR`) most
- * other widget types read.
+ * "Label" to `Color(1, 1, 1)`, not the `control_font_color` gray most other
+ * widget types read.
  */
-export const LABEL_DEFAULT_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
+const LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** This Label's theme font size and colour: its overrides, else the ancestor Theme chain, else the theme default, else Label's white (`resolveTextTheme`). */
 export function labelTextTheme(
@@ -76,9 +76,9 @@ export function labelTextTheme(
   return resolveTextTheme(n, props, LABEL_THEME_KEYS, defaults);
 }
 
-export interface LabelEffectiveTextTheme {
+interface LabelEffectiveTextTheme {
   fontSizePx: number;
-  color: ControlColor;
+  color: Rgba;
   lineSpacingPx: number;
 }
 
@@ -107,9 +107,9 @@ export function labelEffectiveTextTheme(
 }
 
 /** `default_theme.cpp:386`: Label's `font_outline_color` defaults to opaque black. */
-const LABEL_DEFAULT_OUTLINE_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 1 };
+const LABEL_DEFAULT_OUTLINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 /** `default_theme.cpp:385`: Label's `font_shadow_color` defaults to transparent, so a Label draws no shadow until a scene sets it. */
-const LABEL_DEFAULT_SHADOW_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0 };
+const LABEL_DEFAULT_SHADOW_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0 };
 /**
  * `default_theme.cpp:388-391` sets `shadow_offset_x`, `shadow_offset_y` and `shadow_outline_size`
  * to `Math::round(1 * scale)`. Label's constants here are unscaled, as `LABEL_LINE_SPACING_PX` is.
@@ -117,9 +117,9 @@ const LABEL_DEFAULT_SHADOW_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0 };
 const LABEL_DEFAULT_SHADOW_OUTLINE_SIZE = 1;
 const LABEL_DEFAULT_SHADOW_OFFSET = 1;
 
-export interface LabelOutlineTheme {
+interface LabelOutlineTheme {
   size: number;
-  color: ControlColor;
+  color: Rgba;
 }
 
 /** `label.cpp:765-766`: `has_settings ? settings->get_outline_X() : theme_cache.font_outline_X`, the precedence `labelEffectiveTextTheme` states. */
@@ -132,11 +132,11 @@ export function labelOutlineTheme(n: SolveNode): LabelOutlineTheme {
   };
 }
 
-export interface LabelShadowTheme {
+interface LabelShadowTheme {
   /** The shadow's own outline width (`LabelSettings.shadow_size` or the theme's `shadow_outline_size`), not a copy of the offset. */
   size: number;
-  color: ControlColor;
-  offset: Vec2;
+  color: Rgba;
+  offset: Vector2;
 }
 
 /** `label.cpp:762-767`: `has_settings ? settings->get_shadow_X() : theme_cache.font_shadow_X`, the precedence `labelEffectiveTextTheme` states. */
@@ -166,7 +166,7 @@ export function labelShapingWidthPx(controlWidthPx: number): number {
 
 // lines_skipped and max_lines_visible: label.cpp:344-361,520-561
 
-export interface LabelLineRange {
+interface LabelLineRange {
   start: number;
   end: number;
 }
@@ -205,10 +205,9 @@ export function windowLabelLines(layout: TextLayoutResult, range: LabelLineRange
 
 /** `TextServer::VisibleCharactersBehavior` (`servers/text/text_server.h:90-96`). Godot default 0 (`label.h:74`). */
 export const VC_CHARS_BEFORE_SHAPING = 0;
-export const VC_CHARS_AFTER_SHAPING = 1;
-export const VC_GLYPHS_AUTO = 2;
-export const VC_GLYPHS_LTR = 3;
-export const VC_GLYPHS_RTL = 4;
+const VC_CHARS_AFTER_SHAPING = 1;
+const VC_GLYPHS_AUTO = 2;
+const VC_GLYPHS_RTL = 4;
 
 /**
  * `Label::_shape`'s pre-shape reveal (`label.cpp:155-156`): `txt.substr(0, visible_chars)` before
@@ -225,7 +224,7 @@ export function labelPreShapeText(
   return text.slice(0, visibleChars);
 }
 
-export interface VisibleCharsBudget {
+interface VisibleCharsBudget {
   behavior: number;
   /** Final resolved `visible_chars`, the budget of CHARS_AFTER_SHAPING. */
   visibleChars: number | undefined;
@@ -470,7 +469,7 @@ function horizontalOffsetPx(
  * which infers LTR for Latin text (`:179`, `text_server_adv.cpp:7241-7247`). FILL's own arm
  * (`:472`) is unreachable while `text_direction` is unmodelled (`comparison.md`).
  */
-export interface LabelLayoutDirection {
+interface LabelLayoutDirection {
   /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
   rtl?: boolean;
 }

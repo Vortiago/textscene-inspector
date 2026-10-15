@@ -1,17 +1,17 @@
 /**
  * `StyleBoxFlatData`: a resolved `StyleBoxFlat`, numbers only, with field names
  * and defaults from `scene/resources/style_box_flat.h`/`.cpp` (Godot 4.6.3).
- * `native/parseStyleBox.ts` produces it. Pure data: no React, no THREE.
+ * `resources/styles/stylebox/decode.ts` produces it. Pure data: no React, no THREE.
  */
 
-import type { ControlColor } from '../../../nodes/2d/ui/control/types';
-import type { Vec2 } from './rect';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 export interface StyleBoxFlatData {
   /** `bg_color`, default `Color(0.6, 0.6, 0.6)` (`style_box_flat.h:38`). */
-  bgColor: ControlColor;
+  bgColor: Rgba;
   /** `border_color`, default `Color(0.8, 0.8, 0.8)` (`:40`). */
-  borderColor: ControlColor;
+  borderColor: Rgba;
   /** `real_t[4]` by `Side`, zero by default (`:42-44`), like `cornerRadius` and `expandMargin`. */
   borderWidth: { left: number; top: number; right: number; bottom: number };
   /** Indexed by `Corner`. */
@@ -42,13 +42,13 @@ export interface StyleBoxFlatData {
    * rect's centre, so the box leans without moving. Non-zero skew turns
    * anti-aliasing on (`style_box_flat.cpp:471`), since a sheared edge is diagonal.
    */
-  skew: Vec2;
+  skew: Vector2;
   /** `shadow_color` (`style_box_flat.h:39`, default `Color(0, 0, 0, 0.6)`): the colour at the shadow's inner edge, fading to alpha 0 outward. */
-  shadowColor: ControlColor;
+  shadowColor: Rgba;
   /** `shadow_size` (`style_box_flat.h:52`): how far the shadow grows past the style rect. The default 0 draws no shadow. */
   shadowSize: number;
   /** `shadow_offset` (`style_box_flat.h:53`): displaces the whole shadow. */
-  shadowOffset: Vec2;
+  shadowOffset: Vector2;
 }
 
 type Sides = { left: number; top: number; right: number; bottom: number };
@@ -56,11 +56,11 @@ type Sides = { left: number; top: number; right: number; bottom: number };
 const NO_SIDES: Sides = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /** Every field `make_flat_stylebox` (`default_theme.cpp:57-70`) leaves at `StyleBoxFlat`'s own default. */
-export interface FlatStyleBoxOptions {
+interface FlatStyleBoxOptions {
   contentMargin?: Sides;
   cornerRadius?: number | StyleBoxFlatData['cornerRadius'];
   borderWidth?: number | Sides;
-  borderColor?: ControlColor;
+  borderColor?: Rgba;
   expandMargin?: Sides;
 }
 
@@ -69,7 +69,7 @@ export interface FlatStyleBoxOptions {
  * models. An option left out keeps `StyleBoxFlat`'s constructed default, as the
  * theme builder assigns only a colour, the margins and a corner radius.
  */
-export function flatStyleBox(bgColor: ControlColor, options: FlatStyleBoxOptions = {}): StyleBoxFlatData {
+export function flatStyleBox(bgColor: Rgba, options: FlatStyleBoxOptions = {}): StyleBoxFlatData {
   const { contentMargin = NO_SIDES, cornerRadius = 0, borderWidth = 0 } = options;
   const corners =
     typeof cornerRadius === 'number'
@@ -107,7 +107,7 @@ export function flatStyleBox(bgColor: ControlColor, options: FlatStyleBoxOptions
  * `StyleBox::get_minimum_size` adds to its content, and what a content rect is
  * inset by. The margins are already effective values.
  */
-export function contentMarginSize(box: StyleBoxFlatData): Vec2 {
+export function contentMarginSize(box: StyleBoxFlatData): Vector2 {
   return {
     x: box.contentMargin.left + box.contentMargin.right,
     y: box.contentMargin.top + box.contentMargin.bottom,

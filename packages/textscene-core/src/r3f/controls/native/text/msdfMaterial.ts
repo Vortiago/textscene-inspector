@@ -84,7 +84,7 @@ void main() {
 }
 `;
 
-export interface MsdfMaterialOptions {
+interface MsdfMaterialOptions {
   /** The vendored Open Sans MSDF atlas (`OPEN_SANS_ATLAS_PNG_DATA_URL` loaded to a texture), or a stand-in for tests. */
   map: THREE.Texture;
   /** Tint, linear rgb: convert an authored sRGB Godot colour first, such as with `sRGBToLinearRGB`. */

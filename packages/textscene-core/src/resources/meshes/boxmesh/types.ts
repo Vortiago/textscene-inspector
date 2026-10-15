@@ -1,6 +1,6 @@
 /** BoxMesh decoded data. */
 
-import type { Vector3 } from '../../../parser/vectors';
+import type { Vector3 } from '../../../godot/math/vector';
 
 export interface BoxMeshProperties {
   /** Box size. `primitive_meshes.h:164`: `Vector3 size = Vector3(1, 1, 1)`. */

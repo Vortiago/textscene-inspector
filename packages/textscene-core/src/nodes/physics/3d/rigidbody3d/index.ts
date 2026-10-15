@@ -14,5 +14,3 @@ const rigidBody3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(rigidBody3DRegistration);
-
-export { rigidBody3DRegistration };

@@ -60,7 +60,7 @@ export interface SkyEnvironmentInput {
  * a clone only when the arrival diverges, and `releaseBoundTexture` frees it
  * only then. Returns null for a sky with no panorama.
  */
-export function skyPanoramaTexture(panorama?: THREE.Texture | null): THREE.Texture | null {
+function skyPanoramaTexture(panorama?: THREE.Texture | null): THREE.Texture | null {
   if (!panorama) return null;
   return applyTextureState(panorama, {
     colorSpace: panorama.colorSpace as THREE.ColorSpace,

@@ -14,5 +14,3 @@ const openXRHandRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(openXRHandRegistration);
-
-export { openXRHandRegistration };

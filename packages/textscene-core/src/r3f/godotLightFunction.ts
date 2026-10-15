@@ -222,7 +222,7 @@ type LightChunk = typeof CHUNK | typeof SETUP_CHUNK | typeof MAPS_CHUNK;
  * light terms, Godot's direct specular in its mode, each diffuse line without its Fresnel weight,
  * and the anisotropic reflection bent about Godot's direction.
  */
-export const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
+const GODOT_LIGHT_FUNCTION_EDITS: readonly ChunkEdit<LightChunk>[] = [
   {
     chunk: CHUNK,
     three: MATERIAL_STRUCT,

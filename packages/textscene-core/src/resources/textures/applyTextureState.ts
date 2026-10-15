@@ -41,7 +41,7 @@ export interface MaterialTextureState {
   repeat?: boolean;
 }
 
-export interface TextureState extends MaterialTextureState {
+interface TextureState extends MaterialTextureState {
   /**
    * The colour space this binding samples in. Required: only the binding knows
    * what the sampler needs, whatever the producer tagged.
@@ -123,7 +123,7 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
  * Whether a texture is a clone `applyTextureState` made for its binder, not the loader's cache
  * entry, so that the binder disposes it.
  */
-export function isBindingOwnedTexture(texture: THREE.Texture): boolean {
+function isBindingOwnedTexture(texture: THREE.Texture): boolean {
   return texture.userData[BINDING_OWNED] === true;
 }
 

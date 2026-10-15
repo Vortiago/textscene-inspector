@@ -50,7 +50,7 @@ export function doubledVector(typeName: 'Vector2' | 'Vector3'): (raw: string) =>
  * is the NIL zero. Any other form is `undefined`, which the alias table reads as not forwarded, so
  * no canonical slot is written from a value this did not read.
  */
-export function booleanized(raw: string): boolean | undefined {
+function booleanized(raw: string): boolean | undefined {
   const asSlot = boolSlotValue(raw);
   if (asSlot !== undefined) return asSlot;
   const trimmed = raw.trim();

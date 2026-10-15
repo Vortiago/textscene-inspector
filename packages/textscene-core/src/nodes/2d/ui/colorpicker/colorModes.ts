@@ -8,11 +8,11 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { linearChannelToSRGB, sRGBChannelToLinear } from '../../../../utils/colorSpace';
-import type { ControlColor } from '../control/types';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { formatGodotNumber } from '../spinbox/nativeSolver';
 import { extractHsv, hsvToRgb } from './nativeSolver';
 import { okhslToSrgb, srgbToOkhsl } from './okhsl';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `ColorModeType` (`color_picker.h`). `MODE_RAW` is a deprecated alias with the value of `MODE_LINEAR` (`:105-107`). */
 export const MODE_RGB = 0;
@@ -26,7 +26,7 @@ export const MODE_OKHSL = 3;
  * `color`. Only rgb is normalised: `ColorMode::get_alpha_slider_value` reads
  * `get_pick_color()`, so alpha passes through unchanged.
  */
-export function colorNormalized(color: ControlColor): ControlColor {
+export function colorNormalized(color: Rgba): Rgba {
   const linear = {
     r: sRGBChannelToLinear(color.r),
     g: sRGBChannelToLinear(color.g),
@@ -42,7 +42,7 @@ export function colorNormalized(color: ControlColor): ControlColor {
 }
 
 /** `intensity = Math::log2(multiplier)` (`color_picker.cpp:594,601`): the intensity slider's value in every `color_mode`. */
-export function colorIntensity(color: ControlColor): number {
+function colorIntensity(color: Rgba): number {
   const linear = {
     r: sRGBChannelToLinear(color.r),
     g: sRGBChannelToLinear(color.g),
@@ -87,7 +87,7 @@ export interface ColorModeChannel {
  */
 export function colorModeChannels(
   mode: number,
-  color: ControlColor
+  color: Rgba
 ): [ColorModeChannel, ColorModeChannel, ColorModeChannel] {
   const normalized = colorNormalized(color);
   switch (mode) {
@@ -130,7 +130,7 @@ export function colorModeChannels(
 }
 
 /** `ColorMode::get_alpha_slider_max/value` (`color_mode.h:51-52`). Linear overrides both (`:127-128`). */
-export function colorModeAlphaChannel(mode: number, color: ControlColor): ColorModeChannel {
+export function colorModeAlphaChannel(mode: number, color: Rgba): ColorModeChannel {
   if (mode === MODE_LINEAR) {
     return { label: 'A', value: color.a, max: 1, decimals: 3 };
   }
@@ -138,7 +138,7 @@ export function colorModeAlphaChannel(mode: number, color: ControlColor): ColorM
 }
 
 /** The fixed range of `SLIDER_INTENSITY` (`color_picker.cpp:2184-2186`) in every `color_mode`. */
-export function colorModeIntensityChannel(color: ControlColor): ColorModeChannel {
+export function colorModeIntensityChannel(color: Rgba): ColorModeChannel {
   return { label: 'I', value: colorIntensity(color), max: 10, decimals: 3 };
 }
 
@@ -157,11 +157,8 @@ export function formatSliderValue(value: number, decimals: number): string {
  * value. Linear interpolates in `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`:311`), RGB in
  * `_SRGB` (`:113`). The caller linearises the Linear stops.
  */
-export function rgbChannelGradientStops(
-  channel: number,
-  normalized: ControlColor
-): [ControlColor, ControlColor] {
-  const at = (v: number): ControlColor => ({
+export function rgbChannelGradientStops(channel: number, normalized: Rgba): [Rgba, Rgba] {
+  const at = (v: number): Rgba => ({
     r: channel === 0 ? v : normalized.r,
     g: channel === 1 ? v : normalized.g,
     b: channel === 2 ? v : normalized.b,
@@ -174,10 +171,7 @@ export function rgbChannelGradientStops(
  * `ColorModeHSV::slider_draw`'s S and V 2-stop polygon (`color_mode.cpp:196-206`).
  * Channel 0 (H) is the rainbow strip below.
  */
-export function hsvChannelGradientStops(
-  channel: 1 | 2,
-  normalized: ControlColor
-): [ControlColor, ControlColor] {
+export function hsvChannelGradientStops(channel: 1 | 2, normalized: Rgba): [Rgba, Rgba] {
   const { h, s, v } = extractHsv(normalized);
   if (channel === 1) {
     const sCol = hsvToRgb(h, 0, v);
@@ -192,12 +186,12 @@ export function hsvChannelGradientStops(
  * a `Color::from_hsv(0, 0, v, s)` modulate. This is the base, and the overlay
  * alpha is `hsvHueChannelOverlayAlpha`.
  */
-export function hsvHueChannelBase(normalized: ControlColor): ControlColor {
+export function hsvHueChannelBase(normalized: Rgba): Rgba {
   const { v } = extractHsv(normalized);
   return { r: v, g: v, b: v, a: 1 };
 }
 
-export function hsvHueChannelOverlayAlpha(normalized: ControlColor): number {
+export function hsvHueChannelOverlayAlpha(normalized: Rgba): number {
   return extractHsv(normalized).s;
 }
 
@@ -205,7 +199,7 @@ export function hsvHueChannelOverlayAlpha(normalized: ControlColor): number {
  * `ColorModeOKHSL::slider_draw`'s S channel 2-stop polygon (`color_mode.cpp:
  * 412-427`), at the current `okhsl_l`.
  */
-export function okhslSaturationGradientStops(normalized: ControlColor): [ControlColor, ControlColor] {
+export function okhslSaturationGradientStops(normalized: Rgba): [Rgba, Rgba] {
   const { h, l } = srgbToOkhsl(normalized);
   return [okhslToSrgb(h, 0, l), okhslToSrgb(h, 1, l)];
 }
@@ -215,9 +209,7 @@ export function okhslSaturationGradientStops(normalized: ControlColor): [Control
  * 392-411`): black, `from_ok_hsl(hue, sat, 0.5)` and `from_ok_hsl(hue, sat, 1)`,
  * as the stops at 0, 0.5 and 1.
  */
-export function okhslLightnessGradientStops(
-  normalized: ControlColor
-): [ControlColor, ControlColor, ControlColor] {
+export function okhslLightnessGradientStops(normalized: Rgba): [Rgba, Rgba, Rgba] {
   const { h, s } = srgbToOkhsl(normalized);
   return [{ r: 0, g: 0, b: 0, a: 1 }, okhslToSrgb(h, s, 0.5), okhslToSrgb(h, s, 1)];
 }
@@ -227,10 +219,10 @@ export function okhslLightnessGradientStops(
  * like the `color_hue` of `default_theme.cpp`, sampled at the current saturation
  * and lightness, `from_ok_hsl(h, slider_sat, okhsl_l)`, and drawn opaque.
  */
-export function okhslHueChannelStops(normalized: ControlColor): ControlColor[] {
+export function okhslHueChannelStops(normalized: Rgba): Rgba[] {
   const { s: sat, l } = srgbToOkhsl(normalized);
   const precision = 7;
-  const stops: ControlColor[] = [];
+  const stops: Rgba[] = [];
   for (let i = 0; i < precision; i++) {
     const h = i / (precision - 1);
     stops.push(okhslToSrgb(h, sat, l));
@@ -239,7 +231,7 @@ export function okhslHueChannelStops(normalized: ControlColor): ControlColor[] {
 }
 
 /** `is_color_valid_hex` (`color_picker.cpp:60-62`): an overbright or negative channel cannot round-trip through `#RRGGBB`. */
-function isColorValidHex(color: Pick<ControlColor, 'r' | 'g' | 'b'>): boolean {
+function isColorValidHex(color: Pick<Rgba, 'r' | 'g' | 'b'>): boolean {
   return !isColorOverbright(color) && color.r >= 0 && color.g >= 0 && color.b >= 0;
 }
 
@@ -250,12 +242,12 @@ function appendHex(channel: number): string {
 }
 
 /** `Color::to_html` (`core/math/color.cpp:120-134`), without the `#`, which is the text of `text_type`. */
-function toHtml(color: ControlColor, withAlpha: boolean): string {
+function toHtml(color: Rgba, withAlpha: boolean): string {
   const hex = appendHex(color.r) + appendHex(color.g) + appendHex(color.b);
   return withAlpha ? hex + appendHex(color.a) : hex;
 }
 
-export interface HexFieldText {
+interface HexFieldText {
   /** The text of `hex_label`: "Hex" or "Expr" (`color_picker.cpp:1442,1449`). */
   label: string;
   /** The text of `text_type`: "#" in hex mode, empty in expression mode, which shows an icon (`:1443,1450`). */
@@ -269,7 +261,7 @@ export interface HexFieldText {
  * `text_is_constructor` (default `false`, `color_picker.h:263`), so `is_color_valid_hex`
  * decides: hex for an ordinary colour, `Color(r, g, b[, a])` for an HDR or negative one.
  */
-export function hexFieldText(color: ControlColor, editAlpha: boolean): HexFieldText {
+export function hexFieldText(color: Rgba, editAlpha: boolean): HexFieldText {
   if (!isColorValidHex(color)) {
     const showAlpha = editAlpha && color.a < 1;
     const parts = [
@@ -289,7 +281,7 @@ export function hexFieldText(color: ControlColor, editAlpha: boolean): HexFieldT
  * 1423-1450`): `color_normalized` from alpha 0 to alpha 1. Its gate `colorize_sliders`
  * defaults to `true` (`color_picker.h:266`) and has no serialised property.
  */
-export function alphaChannelGradientStops(normalized: ControlColor): [ControlColor, ControlColor] {
+export function alphaChannelGradientStops(normalized: Rgba): [Rgba, Rgba] {
   return [
     { ...normalized, a: 0 },
     { ...normalized, a: 1 },

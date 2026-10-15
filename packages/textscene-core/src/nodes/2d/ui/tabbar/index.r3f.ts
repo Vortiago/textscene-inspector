@@ -4,5 +4,3 @@ import { TabBar } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'TabBar', Component: TabBar });
-
-export { TabBar };

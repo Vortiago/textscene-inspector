@@ -18,7 +18,7 @@ import { materialProgramInputs } from './materialProgramInputs';
 import type { CanvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
 import type { CanvasItemLightingProps } from './lighting2d/useCanvasItemLighting';
 
-export interface TileSourceMeshProps {
+interface TileSourceMeshProps {
   source: AtlasSourceModel;
   cells: readonly DrawableCell[];
   grid: TileGrid;

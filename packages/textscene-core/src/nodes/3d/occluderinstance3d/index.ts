@@ -15,5 +15,3 @@ const occluderInstance3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(occluderInstance3DRegistration);
-
-export { occluderInstance3DRegistration };

@@ -144,7 +144,7 @@ export interface EnforcedEnd {
 }
 
 /** What a numeric range validator checks, and how it reports each end. */
-export interface NumericRangeSpec {
+interface NumericRangeSpec {
   propertyName: string;
   /** Outer floor. Its severity is `minSeverity`, so a hinted one warns. */
   min?: number | null;
@@ -195,7 +195,7 @@ function refusalMessage(propertyName: string, end: EnforcedEnd, side: 'min' | 'm
  * comparison and its wording live together, since an exclusive polarity is
  * easy to get backwards at a max end.
  */
-export function enforcedEndRefusal(
+function enforcedEndRefusal(
   propertyName: string,
   end: EnforcedEnd | undefined,
   side: 'min' | 'max',

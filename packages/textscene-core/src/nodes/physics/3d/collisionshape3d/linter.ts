@@ -6,5 +6,3 @@ import { makeCollisionShapeLinterRule } from '../../../../linter/physics/collisi
 const collisionShape3DValidationRule = makeCollisionShapeLinterRule('3D');
 
 ruleRegistry.register(collisionShape3DValidationRule);
-
-export { collisionShape3DValidationRule };

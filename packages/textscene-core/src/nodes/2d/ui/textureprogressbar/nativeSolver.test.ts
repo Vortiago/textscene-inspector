@@ -5,15 +5,12 @@
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import {
-  textureProgressBarMinimumSize,
-  textureProgressBarTextureSlots,
-  normalizeTextureProgressBarFillMode,
-  TEXTURE_UNDER_KEY,
-  TEXTURE_PROGRESS_KEY,
-  TEXTURE_OVER_KEY,
-} from './nativeSolver';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import { normalizeTextureProgressBarFillMode } from './nativeSolver';
 import type { TextureProgressBarProperties } from './types';
+
+const textureProgressBarMinimumSize = controlSolverRegistry.minimumSize('TextureProgressBar')!;
+const textureProgressBarTextureSlots = controlSolverRegistry.textureSlots('TextureProgressBar')!;
 
 function node(
   props: Partial<TextureProgressBarProperties>,
@@ -57,7 +54,7 @@ describe('textureProgressBarMinimumSize (texture_progress_bar.cpp:81-97)', () =>
   it("maxes the three resolved texture slots' own sizes (:86-96)", () => {
     const n = node(
       { textureUnder: 'SubResource("1")', textureOver: 'SubResource("2")' },
-      { [TEXTURE_UNDER_KEY]: { x: 40, y: 12 }, [TEXTURE_OVER_KEY]: { x: 20, y: 30 } }
+      { texture_under: { x: 40, y: 12 }, texture_over: { x: 20, y: 30 } }
     );
     expect(
       textureProgressBarMinimumSize(n, {
@@ -69,7 +66,7 @@ describe('textureProgressBarMinimumSize (texture_progress_bar.cpp:81-97)', () =>
   });
 
   it('a slot authored but not yet resolved (null) does not contribute, and still floors to (1, 1)', () => {
-    const n = node({ textureProgress: 'ExtResource("1")' }, { [TEXTURE_PROGRESS_KEY]: null });
+    const n = node({ textureProgress: 'ExtResource("1")' }, { texture_progress: null });
     expect(
       textureProgressBarMinimumSize(n, {
         theme: undefined as never,
@@ -88,9 +85,9 @@ describe('textureProgressBarTextureSlots (texture_progress_bar.h:38-40)', () => 
       textureOver: 'ExtResource("3")',
     });
     expect(textureProgressBarTextureSlots(n.node)).toEqual([
-      { key: TEXTURE_UNDER_KEY, ref: 'ExtResource("1")' },
-      { key: TEXTURE_PROGRESS_KEY, ref: 'ExtResource("2")' },
-      { key: TEXTURE_OVER_KEY, ref: 'ExtResource("3")' },
+      { key: 'texture_under', ref: 'ExtResource("1")' },
+      { key: 'texture_progress', ref: 'ExtResource("2")' },
+      { key: 'texture_over', ref: 'ExtResource("3")' },
     ]);
   });
 

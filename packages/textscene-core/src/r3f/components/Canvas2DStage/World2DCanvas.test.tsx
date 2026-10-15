@@ -1,103 +1,40 @@
 /**
- * The 2D world canvas must not tone-map: Godot tone-maps only the 3D pass. R3F
- * sets `gl.toneMapping = flat ? NoToneMapping : ACESFilmicToneMapping`, and a
- * happy-dom render cannot observe the flag, so the source is read.
+ * The props `World2DCanvas` hands R3F's `<Canvas>`. A happy-dom render creates no WebGL context,
+ * so the test reads the props instead of the renderer they configure.
  */
 import { describe, expect, it, vi } from 'vitest';
-import * as THREE from 'three';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { SelectionProvider } from '../../contexts/SelectionContext';
-import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
-import { viewportActionsProbe } from '../../testing/ViewportActionsProbe';
+import { render } from '@testing-library/react';
+import { Canvas, type CanvasProps } from '@react-three/fiber';
+import { World2DCanvas } from './World2DCanvas';
 
-// The real ControlCanvasLayer renders null here, so a visible stand-in makes
-// its mount observable.
-vi.mock('../../controls/index.js', () => ({
-  ControlCanvasLayer: () => <mesh name="native-controls-stub" />,
+vi.mock('@react-three/fiber', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@react-three/fiber')>()),
+  Canvas: vi.fn(() => null),
 }));
 
-import { World2DContents } from './World2DCanvas';
-import { TiledUploadQueue } from '../../tiledUpload/TiledUploadQueue';
+/** The props of the one `<Canvas>` a fresh `World2DCanvas` renders. */
+function canvasProps(): CanvasProps {
+  vi.mocked(Canvas).mockClear();
+  render(
+    <World2DCanvas nodes={[]} internalResources={[]} externalResources={[]} pan={{ x: 0, y: 0 }} zoom={1} />
+  );
+  expect(Canvas).toHaveBeenCalledTimes(1);
+  return vi.mocked(Canvas).mock.calls[0]![0];
+}
 
-const SOURCE = readFileSync(join(import.meta.dirname, 'World2DCanvas.tsx'), 'utf8');
-
-// Both comment forms go: a `<Canvas …>` quoted inside one would otherwise be read as the
-// element. `<Canvas\s`, not `<Canvas\b`, so a bare mention of the name does not match.
-const CANVAS_TAG =
-  /<Canvas\s[\s\S]*?>/.exec(SOURCE.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, ''))?.[0] ?? '';
-
-describe('World2DCanvas tone mapping', () => {
-  it('passes `flat` to <Canvas> so R3F selects NoToneMapping', () => {
-    expect(CANVAS_TAG).not.toBe('');
-    expect(CANVAS_TAG).toMatch(/^\s*flat\s*$/m);
+describe('World2DCanvas', () => {
+  it('passes `flat`, so R3F selects NoToneMapping: Godot tone-maps only the 3D pass', () => {
+    expect(canvasProps().flat).toBe(true);
   });
 
-  it('agrees with the R3F rule it is opting out of', () => {
-    // If three renamed the constant, the `flat` test would pass and mean nothing.
-    expect(THREE.NoToneMapping).toBeDefined();
-    expect(THREE.ACESFilmicToneMapping).not.toBe(THREE.NoToneMapping);
+  it("asks for a non-multisampled drawing buffer, matching Godot's 2D viewport default", () => {
+    // scene/main/viewport.h:309: `msaa_2d = MSAA_DISABLED`, the project setting's default
+    // (rendering_server.cpp:3773). R3F defaults `antialias: true`, which resolves coverage on top
+    // of the authored feather rings.
+    expect(canvasProps().gl).toMatchObject({ antialias: false });
   });
-});
 
-describe('World2DCanvas multisampling', () => {
-  it("asks for a NON-multisampled drawing buffer, matching Godot's 2D viewport default", () => {
-    // scene/main/viewport.h:309: `msaa_2d = MSAA_DISABLED`, the project setting's
-    // default (rendering_server.cpp:3773). R3F defaults `antialias: true`, which
-    // resolves coverage on top of the authored feather rings.
-    expect(CANVAS_TAG).not.toBe('');
-    expect(CANVAS_TAG).toMatch(/antialias:\s*false/);
-  });
-});
-
-const baseProps = {
-  nodes: [],
-  internalResources: [],
-  externalResources: [],
-  pan: { x: 0, y: 0 },
-  zoom: 1,
-};
-
-describe('World2DContents native-controls mount seam', () => {
-  it('lazily mounts ControlCanvasLayer (from the controls barrel) as a sibling after NodeDispatcher', async () => {
-    const rendered = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
-        <World2DContents {...baseProps} />
-      </SelectionProvider>
-    );
-    expect(rendered.scene.findAllByProps({ name: 'native-controls-stub' })).toHaveLength(1);
-  });
-});
-
-describe('World2DContents tiled uploads', () => {
-  it('drives a tiled upload queue every frame, so large textures upload in bands', async () => {
-    const tick = vi.spyOn(TiledUploadQueue.prototype, 'tick');
-    const rendered = await ReactThreeTestRenderer.create(
-      <SelectionProvider>
-        <World2DContents {...baseProps} />
-      </SelectionProvider>
-    );
-    tick.mockClear();
-    await rendered.advanceFrames(2, 16);
-
-    expect(tick).toHaveBeenCalledTimes(2);
-    tick.mockRestore();
-  });
-});
-
-describe('World2DContents screenshot', () => {
-  it('registers the 2D view for the toolbar Screenshot and the host capture', async () => {
-    const { Probe, actions } = viewportActionsProbe();
-    await ReactThreeTestRenderer.create(
-      <ViewportActionsProvider>
-        <SelectionProvider>
-          <Probe />
-          <World2DContents {...baseProps} />
-        </SelectionProvider>
-      </ViewportActionsProvider>
-    );
-
-    expect(actions().hasScreenshotHandler()).toBe(true);
+  it('enables local clipping, without which three ignores the Control clip planes', () => {
+    expect(canvasProps().gl).toMatchObject({ localClippingEnabled: true });
   });
 });

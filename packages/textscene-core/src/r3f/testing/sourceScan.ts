@@ -207,24 +207,30 @@ export function offendingLines(source: string, pattern: RegExp, marker?: string)
   return offenders;
 }
 
-/** Every file under `roots` whose NAME `accept` takes, walked recursively. */
-export function walkSources(roots: readonly string[], accept: (name: string) => boolean): SourceFile[] {
+/** Every file under `roots` that `accept` takes, by name and full path, walked recursively. */
+export function walkSources(
+  roots: readonly string[],
+  accept: (name: string, path: string) => boolean
+): SourceFile[] {
   const found: string[] = [];
   const walk = (dir: string): void => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) {
         if (!SKIPPED_DIRECTORIES.has(entry.name)) walk(path);
-      } else if (accept(entry.name)) found.push(path);
+      } else if (accept(entry.name, path)) found.push(path);
     }
   };
   for (const root of roots) walk(root);
   return found.map((file) => ({ file, source: readFileSync(file, 'utf8') }));
 }
 
-/** `.ts` or `.tsx` that is not a test: the shape every guard here scans. */
-export const isProductionSource = (name: string): boolean =>
-  /\.tsx?$/.test(name) && !/\.(test|spec)\.tsx?$/.test(name);
+/**
+ * `.ts` or `.tsx` that is not a test, a test kit or a file under `testing/`: the shape every guard
+ * here scans, and the split `scripts/testOnlyExports.mjs` makes.
+ */
+export const isProductionSource = (name: string, path: string): boolean =>
+  /\.tsx?$/.test(name) && !/\.(test|spec|testkit)\.tsx?$/.test(name) && !/[\\/]testing[\\/]/.test(path);
 
 /** `path:line` per offence, ready to name in a failure message. */
 export function reportOffenders(

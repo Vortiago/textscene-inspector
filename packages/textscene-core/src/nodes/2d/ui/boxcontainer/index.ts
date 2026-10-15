@@ -13,6 +13,5 @@ const boxContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(boxContainerRegistration);
 
-export { boxContainerRegistration };
 export * from './parser';
 export * from './types';

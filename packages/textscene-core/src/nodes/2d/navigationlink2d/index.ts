@@ -12,5 +12,3 @@ const navigationLink2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(navigationLink2DRegistration);
-
-export { navigationLink2DRegistration };

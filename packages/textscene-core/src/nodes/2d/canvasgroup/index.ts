@@ -12,5 +12,3 @@ const canvasGroupRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(canvasGroupRegistration);
-
-export { canvasGroupRegistration };

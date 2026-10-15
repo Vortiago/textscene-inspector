@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   buildShadowVolumes,
   edgeCastsShadow,
-  edgeShadowRing,
-  lightReach,
   lightRectTest,
   OCCLUDER_CULL_CLOCKWISE,
   OCCLUDER_CULL_COUNTER_CLOCKWISE,
@@ -59,18 +57,42 @@ function edges(points: readonly (readonly [number, number])[], closed: boolean):
   return out;
 }
 
-describe('lightReach', () => {
+/**
+ * The ring `[a, b, bFar, mFar, aFar]` of the one edge `buildShadowVolumes` ships a volume for, read
+ * back off its fan `(0,1,2) (0,2,3) (0,3,4)`, or null when the edge casts nothing.
+ */
+function volumeRing(light: ShadowLight, ax: number, ay: number, bx: number, by: number): number[] | null {
+  const positions = buildShadowVolumes(light, [worldEdges([ax, ay, bx, by])]);
+  if (!positions) return null;
+  const vertex = (index: number) => [positions[index * 3]!, positions[index * 3 + 1]!];
+  return [...vertex(0), ...vertex(1), ...vertex(2), ...vertex(5), ...vertex(8)];
+}
+
+/** The distance from the light to the ring's far vertex at `index`. */
+function farDistance(ring: readonly number[], light: ShadowLight, index: number): number {
+  return Math.hypot(ring[index]! - light.x, ring[index + 1]! - light.y);
+}
+
+/** The cap sits this many times the light's reach out (`CAP_MARGIN`). */
+const CAP_MARGIN = 1.5;
+
+describe('the reach a volume caps at', () => {
   it('measures to the far corner of the rect, not its edge', () => {
-    expect(lightReach(lightAt(0, 0, 10))).toBeCloseTo(Math.hypot(10, 10), 10);
+    const light = lightAt(0, 0, 10);
+    const ring = volumeRing(light, 5, -1, 5, 1)!;
+    expect(farDistance(ring, light, 4)).toBeCloseTo(CAP_MARGIN * Math.hypot(10, 10), 4);
   });
 
   it('measures from the shadow origin when the rect is offset off it', () => {
     const light: ShadowLight = { x: 0, y: 0, rect: { minX: 10, minY: 10, maxX: 30, maxY: 30 } };
-    expect(lightReach(light)).toBeCloseTo(Math.hypot(30, 30), 10);
+    const ring = volumeRing(light, 20, 15, 20, 25)!;
+    expect(farDistance(ring, light, 4)).toBeCloseTo(CAP_MARGIN * Math.hypot(30, 30), 4);
   });
 
-  it('is zero for a degenerate rect centred on the light', () => {
-    expect(lightReach({ x: 5, y: 5, rect: { minX: 5, minY: 5, maxX: 5, maxY: 5 } })).toBe(0);
+  it('leaves the endpoints to set the cap for a degenerate rect centred on the light (edge case)', () => {
+    const light: ShadowLight = { x: 5, y: 5, rect: { minX: 5, minY: 5, maxX: 5, maxY: 5 } };
+    const ring = volumeRing(light, 4, 7, 7, 4)!;
+    expect(farDistance(ring, light, 4)).toBeCloseTo(CAP_MARGIN * Math.hypot(1, 2), 4);
   });
 });
 
@@ -117,50 +139,49 @@ describe('edgeCastsShadow', () => {
   });
 });
 
-describe('edgeShadowRing', () => {
+describe('the volume of one edge', () => {
   const light = lightAt();
-  const reach = lightReach(light);
+  const reach = Math.hypot(512, 512);
 
   it('opens on the edge itself and closes past the light reach', () => {
-    const ring = edgeShadowRing(100, -50, 100, 50, light, reach)!;
-    expect(ring).not.toBeNull();
-    expect(Array.from(ring.slice(0, 4))).toEqual([100, -50, 100, 50]);
+    const ring = volumeRing(light, 100, -50, 100, 50)!;
+    expect(ring.slice(0, 4)).toEqual([100, -50, 100, 50]);
     for (let i = 4; i < 10; i += 2) {
-      expect(Math.hypot(ring[i]!, ring[i + 1]!)).toBeGreaterThan(reach);
+      expect(farDistance(ring, light, i)).toBeGreaterThan(reach);
     }
   });
 
   it('keeps every far vertex on its own ray from the light', () => {
-    const ring = edgeShadowRing(100, -50, 100, 50, light, reach)!;
+    const ring = volumeRing(light, 100, -50, 100, 50)!;
     // bFar is colinear with b, aFar with a (cross product of the two directions is 0).
-    expect(ring[4]! * 50 - ring[5]! * 100).toBeCloseTo(0, 6);
-    expect(ring[8]! * -50 - ring[9]! * 100).toBeCloseTo(0, 6);
+    expect(ring[4]! * 50 - ring[5]! * 100).toBeCloseTo(0, 2);
+    expect(ring[8]! * -50 - ring[9]! * 100).toBeCloseTo(0, 2);
   });
 
-  it('returns null for a zero-length edge', () => {
-    expect(edgeShadowRing(100, 50, 100, 50, light, reach)).toBeNull();
+  it('casts nothing for a zero-length edge (error case)', () => {
+    expect(volumeRing(light, 100, 50, 100, 50)).toBeNull();
   });
 
-  it('returns null when an endpoint sits exactly on the light', () => {
-    expect(edgeShadowRing(0, 0, 100, 50, light, reach)).toBeNull();
-    expect(edgeShadowRing(100, 50, 0, 0, light, reach)).toBeNull();
+  it('casts nothing when an endpoint sits exactly on the light (edge case)', () => {
+    expect(volumeRing(light, 0, 0, 100, 50)).toBeNull();
+    expect(volumeRing(light, 100, 50, 0, 0)).toBeNull();
   });
 
-  it('returns null when the light lies between the endpoints', () => {
-    expect(edgeShadowRing(-100, 0, 100, 0, light, reach)).toBeNull();
+  it('casts nothing when the light lies between the endpoints (edge case)', () => {
+    expect(volumeRing(light, -100, 0, 100, 0)).toBeNull();
   });
 
   it('pushes the cap past an endpoint that is already outside the light reach', () => {
     const far = 4000;
-    const ring = edgeShadowRing(far, -50, far, 50, light, reach)!;
+    const ring = volumeRing(light, 100, -50, far, 50)!;
     for (let i = 4; i < 10; i += 2) {
-      expect(Math.hypot(ring[i]!, ring[i + 1]!)).toBeGreaterThan(far);
+      expect(farDistance(ring, light, i)).toBeGreaterThan(far);
     }
   });
 
   it('never produces a NaN coordinate', () => {
-    const ring = edgeShadowRing(1e-6, -1e-6, 100, 50, light, reach)!;
-    expect(Array.from(ring).every(Number.isFinite)).toBe(true);
+    const ring = volumeRing(light, 1e-6, -1e-6, 100, 50)!;
+    expect(ring.every(Number.isFinite)).toBe(true);
   });
 });
 

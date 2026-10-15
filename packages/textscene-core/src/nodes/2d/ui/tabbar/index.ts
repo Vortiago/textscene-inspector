@@ -9,5 +9,3 @@ const tabBarRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(tabBarRegistration);
-
-export { tabBarRegistration };

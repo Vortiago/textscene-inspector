@@ -7,8 +7,9 @@
 
 import * as THREE from 'three';
 import type { SkyProperties } from './types';
-import { scaledRgb, type Color } from '../../utils/colorParser';
+import { scaledRgb } from '../../utils/colorParser';
 import { godotColorToLinear } from '../../r3f/godotColor';
+import type { Rgba } from '../../godot/math/math';
 
 /** A directional light as Godot's sky shader sees it. */
 export interface SkyLight {
@@ -23,14 +24,14 @@ export interface SkyLight {
 /** Godot's sky shader has four light slots, written out longhand. */
 const LIGHT_SLOTS = 4;
 
-export type SkyUniforms = Record<string, { value: unknown }>;
+type SkyUniforms = Record<string, { value: unknown }>;
 
 /**
  * Godot scales the sRGB colour by its energy, then converts the `source_color` uniform to linear
  * (`sky_material.cpp:41`, `material_storage.cpp:459`), so an energy above 1 brightens by more
  * than its factor.
  */
-function scaledColor(color: Color, energy: number): THREE.Color {
+function scaledColor(color: Rgba, energy: number): THREE.Color {
   return godotColorToLinear(scaledRgb(color, energy));
 }
 

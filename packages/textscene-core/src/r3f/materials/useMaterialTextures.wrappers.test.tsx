@@ -12,7 +12,7 @@ import { parseTresFile } from '../../parser/parsedResource';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
-import { clearProceduralTextureCache } from '../../resources/textures/proceduralTextureCache';
+import { resetProceduralTextures } from '../../resources/textures/proceduralBuilds';
 import { defaultWhiteTexture } from './defaultWhiteTexture';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import { useMaterialTextures } from './SurfaceMaterialSlot';
@@ -78,7 +78,7 @@ function sheet(): THREE.DataTexture {
 }
 
 afterEach(() => {
-  clearProceduralTextureCache();
+  resetProceduralTextures();
 });
 
 describe('useMaterialTextures with a wrapped or saved texture', () => {

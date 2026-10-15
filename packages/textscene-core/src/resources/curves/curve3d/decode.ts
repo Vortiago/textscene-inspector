@@ -9,7 +9,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { parsePackedVector3Array } from '../../shapes/packedArray';
 import { bezierInterpolate } from '../../../godot/index.js';
 import { CURVE3D_DATA } from '../shared/bezierData';
-import { decodeBezierCurve, resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
+import { resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
 import type { Curve3DControlPoint, Curve3DSample, Curve3DSampler } from './types';
 
 const CURVE3D: BezierCurveReader<Curve3DControlPoint> = {
@@ -26,11 +26,6 @@ const CURVE3D: BezierCurveReader<Curve3DControlPoint> = {
     position: { x: 0, y: 0, z: 0 },
   }),
 };
-
-/** The control points of a Curve3D resource body, as Godot loads them. */
-export function decodeCurve3D(data: Readonly<Record<string, string>>): Curve3DControlPoint[] {
-  return decodeBezierCurve(data, CURVE3D);
-}
 
 /** The control points of the Curve3D a `SubResource("id")` value names, or none. */
 export function resolveCurve3D(

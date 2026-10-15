@@ -46,5 +46,3 @@ const gpuParticles2DPreviewRule: LintRule = {
 };
 
 ruleRegistry.register(gpuParticles2DPreviewRule);
-
-export { gpuParticles2DPreviewRule };

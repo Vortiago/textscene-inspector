@@ -95,7 +95,7 @@ class BinaryChunk {
 }
 
 /** Reads a non-data URI a glTF names, and throws when it cannot. */
-export type ReadUri = (uri: string) => Promise<ArrayBuffer>;
+type ReadUri = (uri: string) => Promise<ArrayBuffer>;
 
 /** A GLB container's JSON document and the bytes of its binary chunk. */
 interface GlbChunks {
@@ -149,7 +149,7 @@ export async function selfContainedGlb(data: ArrayBuffer, readUri: ReadUri): Pro
  * GLB that `json` came from, which the first buffer names when it has no `uri`. The
  * input is not changed.
  */
-export async function packGltfAsGlb(
+async function packGltfAsGlb(
   json: GltfJson,
   readUri: ReadUri,
   glbBin: Uint8Array = new Uint8Array()

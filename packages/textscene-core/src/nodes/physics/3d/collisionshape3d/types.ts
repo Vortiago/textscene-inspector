@@ -1,5 +1,5 @@
 import type { Node3DProperties } from '../../../base/node3d/types';
-import type { Color } from '../../../../utils/colorParser';
+import type { Rgba } from '../../../../godot/math/math';
 
 export interface CollisionShape3DProperties extends Node3DProperties {
   /** Reference to a collision-shape resource (BoxShape3D, ConvexPolygonShape3D, …). */
@@ -11,5 +11,5 @@ export interface CollisionShape3DProperties extends Node3DProperties {
    * (a translucent teal), not the `Color(0, 0, 0, 0)` placeholder the class
    * reference prints. See `physics/shared/debugColor.ts`.
    */
-  debugColor?: Color;
+  debugColor?: Rgba;
 }

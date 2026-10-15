@@ -11,6 +11,3 @@ registerResourceSlice({
   typeNames: ['FogMaterial'],
   busType: 'resource',
 });
-
-export { decodeFogMaterial } from './decode';
-export type { FogMaterialData } from './types';

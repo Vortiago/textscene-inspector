@@ -6,5 +6,3 @@ import { makeNavigationAgentLinterRule } from '../../../linter/physics/navigatio
 const navigationAgent2DParentRule = makeNavigationAgentLinterRule('2D');
 
 ruleRegistry.register(navigationAgent2DParentRule);
-
-export { navigationAgent2DParentRule };

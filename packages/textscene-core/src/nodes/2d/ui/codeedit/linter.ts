@@ -78,5 +78,3 @@ const codeEditDelimiterCollisionRule: LintRule = {
 };
 
 ruleRegistry.register(codeEditDelimiterCollisionRule);
-
-export { codeEditDelimiterCollisionRule };

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fontContainerMimeType, fontResourceFromBytes, isFontContainerPath } from './fontBytes';
+import { fontResourceFromBytes, isFontContainerPath } from './fontBytes';
 
 describe('isFontContainerPath', () => {
   it('matches raw font file extensions', () => {
@@ -20,16 +20,21 @@ describe('isFontContainerPath', () => {
   });
 });
 
-describe('fontContainerMimeType', () => {
+/** The mime type `fontResourceFromBytes` stamps on a font at `path`. */
+function mimeTypeOf(path: string): string | undefined {
+  return fontResourceFromBytes(path, new ArrayBuffer(1)).mimeType;
+}
+
+describe('the mime type of a wrapped font', () => {
   it('maps every font extension to its mime type', () => {
-    expect(fontContainerMimeType('res://a.ttf')).toBe('font/ttf');
-    expect(fontContainerMimeType('res://a.otf')).toBe('font/otf');
-    expect(fontContainerMimeType('res://a.woff')).toBe('font/woff');
-    expect(fontContainerMimeType('res://a.woff2')).toBe('font/woff2');
+    expect(mimeTypeOf('res://a.ttf')).toBe('font/ttf');
+    expect(mimeTypeOf('res://a.otf')).toBe('font/otf');
+    expect(mimeTypeOf('res://a.woff')).toBe('font/woff');
+    expect(mimeTypeOf('res://a.woff2')).toBe('font/woff2');
   });
 
   it('returns undefined for a non-font extension', () => {
-    expect(fontContainerMimeType('res://a.png')).toBeUndefined();
+    expect(mimeTypeOf('res://a.png')).toBeUndefined();
   });
 });
 

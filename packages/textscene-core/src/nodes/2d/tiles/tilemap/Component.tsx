@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
-import { multiplyModulate, type CanvasItemTint, type RGBA } from '../../../../r3f/canvasItemModulate';
+import { multiplyModulate, type CanvasItemTint } from '../../../../r3f/canvasItemModulate';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { allocateNodePaintRange, canvasRenderOrder, packPaintRanges } from '../../../../r3f/canvasPaintOrder';
@@ -20,6 +20,7 @@ import {
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
 import type { TileMapLayerData, TileMapProperties } from './types';
+import type { Rgba } from '../../../../godot/math/math';
 
 export function TileMap({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapProperties;
@@ -101,6 +102,6 @@ export function TileMap({ node, children }: NodeComponentProps) {
 }
 
 /** Fold `layer_N/modulate` into the node's own-pixel modulate (sRGB). */
-function layerTint(tint: CanvasItemTint, layer: TileMapLayerData): RGBA {
+function layerTint(tint: CanvasItemTint, layer: TileMapLayerData): Rgba {
   return layer.modulate ? multiplyModulate(tint.self, layer.modulate) : tint.self;
 }

@@ -4,7 +4,6 @@ import {
   computeCanvasTextCanvasLayout,
   buildCanvasTextQuadArrays,
   createCanvasTextMaterial,
-  CANVAS_TEXT_SUPERSAMPLE,
 } from './canvasTextPainter';
 import { shapeText, AutowrapMode } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
@@ -38,8 +37,9 @@ function contentOriginOnQuad(canvasLayout: ReturnType<typeof computeCanvasTextCa
   const [left, top] = [positions[0]!, positions[1]!];
   const [right, bottom] = [positions[3]!, positions[7]!];
   const { deviceWidthPx: deviceW, deviceHeightPx: deviceH } = canvasLayout;
-  const col = canvasLayout.offsetXPx * CANVAS_TEXT_SUPERSAMPLE;
-  const row = canvasLayout.offsetYPx * CANVAS_TEXT_SUPERSAMPLE;
+  const supersample = deviceW / canvasLayout.canvasWidthPx;
+  const col = canvasLayout.offsetXPx * supersample;
+  const row = canvasLayout.offsetYPx * supersample;
   return {
     x: left + (col / deviceW) * (right - left),
     // Quad Y is negated Godot Y (`buildCanvasTextQuadArrays`), so the

@@ -15,5 +15,3 @@ const hingeJoint3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(hingeJoint3DRegistration);
-
-export { hingeJoint3DRegistration };

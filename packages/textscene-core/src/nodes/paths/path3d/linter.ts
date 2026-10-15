@@ -110,5 +110,3 @@ const path3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(path3DValidationRule);
-
-export { path3DValidationRule };

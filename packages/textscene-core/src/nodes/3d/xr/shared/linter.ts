@@ -100,5 +100,3 @@ const openXRCompositionLayerValidationRule: LintRule = {
 };
 
 ruleRegistry.register(openXRCompositionLayerValidationRule);
-
-export { openXRCompositionLayerValidationRule };

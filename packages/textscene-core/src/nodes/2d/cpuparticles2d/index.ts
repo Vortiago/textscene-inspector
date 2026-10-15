@@ -12,7 +12,6 @@ const cpuParticles2DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(cpuParticles2DRegistration);
 
-export { cpuParticles2DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

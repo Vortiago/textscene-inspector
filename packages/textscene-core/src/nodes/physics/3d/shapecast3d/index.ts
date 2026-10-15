@@ -15,5 +15,3 @@ const shapeCast3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(shapeCast3DRegistration);
-
-export { shapeCast3DRegistration };

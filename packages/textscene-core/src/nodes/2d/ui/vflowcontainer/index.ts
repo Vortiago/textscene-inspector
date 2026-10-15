@@ -12,5 +12,3 @@ const vFlowContainerRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(vFlowContainerRegistration);
-
-export { vFlowContainerRegistration };

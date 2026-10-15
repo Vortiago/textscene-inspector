@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types.js';
-import type { Node2DProperties, Vector2 } from '../../../nodes/base/node2d/types.js';
+import type { Node2DProperties } from '../../../nodes/base/node2d/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { isUniqueNameInOwner } from '../../../utils/uniqueNames.js';
 import { UNIQUE_NODE_PREFIX, resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
@@ -22,6 +22,7 @@ import {
   transform2DGetScale,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 const REMOTE_TRANSFORM_TYPES = new Set(['RemoteTransform3D', 'RemoteTransform2D']);
 

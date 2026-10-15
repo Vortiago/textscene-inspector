@@ -12,5 +12,3 @@ const visibleOnScreenNotifier3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(visibleOnScreenNotifier3DRegistration);
-
-export { visibleOnScreenNotifier3DRegistration };

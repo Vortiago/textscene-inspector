@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 import { AutowrapMode, shapeText } from './textLayout';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import {
-  DEFAULT_ELLIPSIS_CHAR,
   OverrunBehavior,
   overrunFlagsForBehavior,
   trimLineToWidth,
@@ -25,7 +24,8 @@ function line(text: string) {
   }).lines[0]!;
 }
 
-function trim(text: string, widthPx: number, flags: OverrunTrimFlags, ellipsisChar = DEFAULT_ELLIPSIS_CHAR) {
+/** Trims with Godot's default ellipsis unless `ellipsisChar` names another. */
+function trim(text: string, widthPx: number, flags: OverrunTrimFlags, ellipsisChar?: string) {
   return trimLineToWidth(line(text), widthPx, flags, {
     fontMetrics: OPEN_SANS_FONT_METRICS,
     fontSizePx: FONT_SIZE_PX,

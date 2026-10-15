@@ -7,7 +7,7 @@
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
-export interface TextResourceTexture {
+interface TextResourceTexture {
   /** A `SubResource` ref to the file's `[resource]`. */
   ref: string;
   /** The file's sub-resources, with its `[resource]` among them. */

@@ -5,7 +5,7 @@
  * collide readily. Only a collision tells the scopes apart: the provider inherits the
  * ambient pool, and the wrong `1` still parses and draws.
  */
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../parser/types';
@@ -13,14 +13,9 @@ import { NodeDispatcher } from './NodeDispatcher';
 import { TscnParser } from '../parser/TscnParser';
 import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
-import { initGlbModules } from '../resources/processing/glbProcessing';
 
 import './nodes/index';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../nodes/3d/geometryinstance3d/types';
-
-beforeAll(async () => {
-  await initGlbModules();
-});
 
 const SUB_SCENE = 'res://sub.tscn';
 

@@ -16,7 +16,6 @@ import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import type { Vector2 } from '../../base/node2d/types';
 import type { Polygon2DProperties } from './types';
 import { polygonRings, type PolygonRings } from './polygonShapes';
 import { quantizeVertexColor } from './vertexColorQuantize';
@@ -26,6 +25,7 @@ import {
   CanvasItemBlendMode,
   type CanvasItemMaterialProperties,
 } from '../../../resources/materials/canvasitemmaterial/types';
+import type { Vector2 } from '../../../godot/math/vector';
 
 export function Polygon2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Polygon2DProperties;

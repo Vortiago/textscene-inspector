@@ -10,7 +10,7 @@ import { installChunkPatch, type Chunks } from '../shaderPatch/chunkPatch.js';
 import { installLitUniform, installedUniformValue } from '../shaderPatch/litUniform.js';
 
 /** The uniform every lit material reads its fades from. */
-export const DIRECTIONAL_SHADOW_FADE_UNIFORM = 'directionalShadowFade';
+const DIRECTIONAL_SHADOW_FADE_UNIFORM = 'directionalShadowFade';
 
 /**
  * The fades the buffer holds. The sun shadows are at most Godot's eight shadowed lights. An
@@ -68,10 +68,10 @@ function fadedShadow(shadow: string, fadeIndex: string): string {
   return `mix( ${shadow}, 1.0, directionalShadowFadeOut( ${DIRECTIONAL_SHADOW_FADE_UNIFORM}[ ${fadeIndex} ], - geometryPosition.z ) )`;
 }
 
-export type ShadowFadeChunks = Chunks<'shadowmap_pars_fragment' | 'lights_fragment_begin'>;
+type ShadowFadeChunks = Chunks<'shadowmap_pars_fragment' | 'lights_fragment_begin'>;
 
 /** Both chunks with the fade in, or null when either lacks a line the fade hooks onto. */
-export function shadowFadeChunks(chunks: ShadowFadeChunks): ShadowFadeChunks | null {
+function shadowFadeChunks(chunks: ShadowFadeChunks): ShadowFadeChunks | null {
   const { shadowmap_pars_fragment: pars, lights_fragment_begin: lights } = chunks;
   if (!pars.includes(PARS_ANCHOR) || !lights.includes(DIRECTIONAL_SHADOW) || !SUN_SHADOW.test(lights)) {
     return null;

@@ -10,5 +10,3 @@ controlSolverRegistry.registerMinimumSize('Button', buttonMinimumSize);
 // `autowrap_mode` makes the label's height depend on this node's own width, so
 // the minimum reads `SolveContext.tentativeRect`.
 controlSolverRegistry.registerSizeDependentMinimum('Button');
-
-export { Button };

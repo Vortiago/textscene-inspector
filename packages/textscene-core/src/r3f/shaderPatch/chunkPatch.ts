@@ -7,12 +7,12 @@
 import * as THREE from 'three';
 import { warn } from '../../logger.js';
 
-export type ChunkName = keyof typeof THREE.ShaderChunk;
+type ChunkName = keyof typeof THREE.ShaderChunk;
 
 /** The text of each named chunk. */
 export type Chunks<Name extends ChunkName> = Record<Name, string>;
 
-export type ProgramName = keyof typeof THREE.ShaderLib;
+type ProgramName = keyof typeof THREE.ShaderLib;
 
 /** One replacement: three's text, and the text that takes its place. */
 export interface TextEdit {

@@ -37,10 +37,8 @@ describe('sky slice registration', () => {
     expect(resourceSliceRegistry.byTypeName('SkyMaterial')).toBeNull();
   });
 
-  it('re-exports the decode surface and the types, not the build', () => {
+  it('keeps the build out of the entry point', () => {
     // `index.ts` stays THREE-free, so routing never pulls in the cubemap render.
-    expect(typeof skySlice.decodeSkyMaterial).toBe('function');
-    expect(typeof skySlice.skyMaterialRef).toBe('function');
     expect('buildSkyEnvironment' in skySlice).toBe(false);
   });
 

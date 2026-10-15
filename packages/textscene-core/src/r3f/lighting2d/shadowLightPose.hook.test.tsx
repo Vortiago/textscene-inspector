@@ -9,7 +9,8 @@ import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
-import { useShadowLightPose, type ShadowLightPose } from './shadowLightPose';
+import { useShadowLightPose } from './shadowLightPose';
+import type { ShadowLightPose } from './shadowLightSample';
 
 /** Every pose the hook published, in order, including the initial null. */
 type Published = (ShadowLightPose | null)[];
@@ -19,12 +20,15 @@ function Harness({
   enabled = true,
   x = 0,
   offsetX = 0,
+  width = 100,
 }: {
   published: Published;
   enabled?: boolean;
   x?: number;
   /** The quad's own local offset: `Light2D.offset`, which moves the cookie. */
   offsetX?: number;
+  /** The cookie's width, which sets the light's reach. */
+  width?: number;
 }) {
   const [quad, setQuad] = useState<THREE.Mesh | null>(null);
   const pose = useShadowLightPose(quad, enabled);
@@ -36,7 +40,7 @@ function Harness({
   return (
     <group position={[x, 0, 0]}>
       <mesh ref={setQuad} position={[offsetX, 0, 0]}>
-        <planeGeometry args={[100, 60]} />
+        <planeGeometry args={[width, 60]} />
       </mesh>
     </group>
   );
@@ -137,6 +141,18 @@ describe('useShadowLightPose', () => {
     expect(pose.x).toBeCloseTo(400, 6);
     expect(pose.rect.minX).toBeCloseTo(400, 6);
     expect(pose.rect.maxX).toBeCloseTo(500, 6);
+  });
+
+  it('republishes when only the reach changes', async () => {
+    const { renderer, published } = await mount({});
+    await renderer.update(<Harness published={published} width={200} />);
+    await ReactThreeTestRenderer.act(async () => {
+      renderer.advanceFrames(1, 1 / 60);
+    });
+
+    const seen = poses(published);
+    expect(seen).toHaveLength(2);
+    expect(seen[1]!.radius).toBeCloseTo(Math.hypot(200, 60), 6);
   });
 
   it('publishes nothing at all while disabled', async () => {

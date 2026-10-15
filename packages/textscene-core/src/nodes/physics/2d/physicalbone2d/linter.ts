@@ -100,5 +100,3 @@ const physicalBone2DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(physicalBone2DValidationRule);
-
-export { physicalBone2DValidationRule };

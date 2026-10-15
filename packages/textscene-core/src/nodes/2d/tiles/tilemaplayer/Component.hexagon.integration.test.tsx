@@ -13,7 +13,7 @@ import { parseTresFile } from '../../../../parser/parsedResource';
 import { tileSetFromTres } from '../../../../resources/tileset/decode';
 import { mapToLocalPx } from '../../../../resources/tileset/tilePlacement';
 import { TILE_SHAPE_HEXAGON } from '../../../../resources/tileset/types';
-import { findByType } from './findByType';
+import { findByType } from './findByType.testkit';
 import type { TileMapLayerProperties } from './types';
 
 const here = dirname(fileURLToPath(import.meta.url));

@@ -6,7 +6,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
+import type { DecomposedTransform } from '../nodes/base/node3d/types';
+import type { Transform3D } from '../godot/math/transform3d';
 import { decomposeTransform3D } from './transform';
 
 /** The three.js-backed reference oracle. */

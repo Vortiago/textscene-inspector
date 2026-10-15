@@ -11,7 +11,7 @@ import { styleBoxLineBox, type ResolvedStyleBox } from '../../../../r3f/controls
 import { defaultSeparatorStyleBoxLine, type SeparatorOrientation } from './styleBoxLine';
 import { separatorPlacementRect } from './separatorPlacement';
 
-export interface SeparatorChromeProps extends NativeControlComponentProps {
+interface SeparatorChromeProps extends NativeControlComponentProps {
   orientation: SeparatorOrientation;
 }
 

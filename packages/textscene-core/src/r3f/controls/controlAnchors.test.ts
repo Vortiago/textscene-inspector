@@ -1,12 +1,12 @@
 /**
- * `resolveAnchors` and `resolveGrowDirection` against the case lists of
+ * `resolveControlLayout`'s anchors, offsets and grow direction against the case lists of
  * `set_anchors_preset` (`scene/gui/control.cpp:1114-1229`) and
  * `set_grow_direction_preset` (`:1373-1428`). The tests restate those lists, not
  * the implementation's records, so a transcription typo fails here.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../../nodes/2d/ui/control/types';
-import { resolveAnchors, resolveControlLayout, resolveGrowDirection, resolveOffsets } from './controlAnchors';
+import { resolveControlLayout } from './controlAnchors';
 
 const BEGIN = 0;
 const END = 1;
@@ -19,7 +19,33 @@ function props(p: Partial<ControlProperties>): ControlProperties {
   return { name: 'N', ...p };
 }
 
-describe('resolveAnchors — preset table (control.cpp:1114-1229)', () => {
+const NO_MINIMUM = () => ({ x: 0, y: 0 });
+
+/**
+ * The layout with no reliable file order, as for a hand-built node or a merged instance root
+ * (`resources/mergeInstanceRoot.ts`, ADR-0035): the editor's save order.
+ */
+function saveOrderLayout(p: ControlProperties, presetTimeMinimumSize = NO_MINIMUM) {
+  return resolveControlLayout(p, undefined, presetTimeMinimumSize);
+}
+
+function anchorsOf(p: ControlProperties): [number, number, number, number] {
+  return saveOrderLayout(p).anchors;
+}
+
+function offsetsOf(
+  p: ControlProperties,
+  presetTimeMinimumSize: () => { x: number; y: number }
+): [number, number, number, number] {
+  return saveOrderLayout(p, presetTimeMinimumSize).offsets;
+}
+
+function growOf(p: ControlProperties): [number, number] {
+  const { growHorizontal, growVertical } = saveOrderLayout(p);
+  return [growHorizontal, growVertical];
+}
+
+describe('resolveControlLayout anchors — preset table (control.cpp:1114-1229)', () => {
   // The four per-edge `set_anchor` case lists, verbatim. `ANCHOR_BEGIN` = 0,
   // `ANCHOR_END` = 1, and the middle list of each switch anchors that edge at 0.5.
   const edges: Array<[number, Array<[number, number[]]>]> = [
@@ -62,7 +88,7 @@ describe('resolveAnchors — preset table (control.cpp:1114-1229)', () => {
       for (const preset of presets) {
         for (const layoutMode of GATED_IN) {
           it(`preset ${preset} under layout_mode ${layoutMode} anchors edge ${edge} at ${expected}`, () => {
-            expect(resolveAnchors(props({ anchorsPreset: preset, layoutMode }))[edge]).toBe(expected);
+            expect(anchorsOf(props({ anchorsPreset: preset, layoutMode }))[edge]).toBe(expected);
           });
         }
       }
@@ -70,32 +96,32 @@ describe('resolveAnchors — preset table (control.cpp:1114-1229)', () => {
   }
 });
 
-describe('resolveAnchors — the layout_mode gate (control.cpp:990-993)', () => {
+describe('resolveControlLayout anchors — the layout_mode gate (control.cpp:990-993)', () => {
   // Measured through Godot 4.6.3's own layout engine: the same `anchors_preset`
   // on three nodes that differ only in their `layout_mode` line, instantiated
   // into a 1152x648 SubViewport, reports anchors (0, 0, 0, 0) for every node
   // whose stored mode is neither ANCHORS(1) nor UNCONTROLLED(3).
   it('leaves anchors at the struct default under LAYOUT_MODE_POSITION (0)', () => {
-    expect(resolveAnchors(props({ anchorsPreset: 15, layoutMode: 0 }))).toEqual([0, 0, 0, 0]);
+    expect(anchorsOf(props({ anchorsPreset: 15, layoutMode: 0 }))).toEqual([0, 0, 0, 0]);
   });
 
   it('leaves anchors at the struct default under LAYOUT_MODE_CONTAINER (2)', () => {
-    expect(resolveAnchors(props({ anchorsPreset: 15, layoutMode: 2 }))).toEqual([0, 0, 0, 0]);
+    expect(anchorsOf(props({ anchorsPreset: 15, layoutMode: 2 }))).toEqual([0, 0, 0, 0]);
   });
 
   it('leaves anchors at the struct default when layout_mode is absent entirely', () => {
     // `stored_layout_mode` defaults to POSITION (`control.h:201`), and the
     // property is applied while the node is still an orphan, so a scene that
     // authors no `layout_mode` line never opens the gate.
-    expect(resolveAnchors(props({ anchorsPreset: 15 }))).toEqual([0, 0, 0, 0]);
+    expect(anchorsOf(props({ anchorsPreset: 15 }))).toEqual([0, 0, 0, 0]);
   });
 
   it('still applies a preset under LAYOUT_MODE_UNCONTROLLED (3)', () => {
-    expect(resolveAnchors(props({ anchorsPreset: 15, layoutMode: 3 }))).toEqual([0, 0, 1, 1]);
+    expect(anchorsOf(props({ anchorsPreset: 15, layoutMode: 3 }))).toEqual([0, 0, 1, 1]);
   });
 });
 
-describe('resolveAnchors — explicit anchor_* win', () => {
+describe('resolveControlLayout anchors — explicit anchor_* win', () => {
   it('an authored quartet overrides what the preset would imply', () => {
     const p = props({
       anchorsPreset: 15,
@@ -105,45 +131,45 @@ describe('resolveAnchors — explicit anchor_* win', () => {
       anchorRight: 0.75,
       anchorBottom: 0.75,
     });
-    expect(resolveAnchors(p)).toEqual([0.25, 0.25, 0.75, 0.75]);
+    expect(anchorsOf(p)).toEqual([0.25, 0.25, 0.75, 0.75]);
   });
 
   it('a partially authored quartet zeroes the unauthored edges rather than falling back to the preset', () => {
     // `set_anchor` writes one edge. The others keep whatever the struct held,
     // which for a gate-closed node is the (0, 0, 0, 0) default.
-    expect(resolveAnchors(props({ anchorsPreset: 15, layoutMode: 1, anchorRight: 1 }))).toEqual([0, 0, 1, 0]);
+    expect(anchorsOf(props({ anchorsPreset: 15, layoutMode: 1, anchorRight: 1 }))).toEqual([0, 0, 1, 0]);
   });
 
   it('an authored anchor survives a closed gate — set_anchor carries no layout_mode check', () => {
     const p = props({ anchorsPreset: 15, anchorRight: 1, anchorBottom: 1 });
-    expect(resolveAnchors(p)).toEqual([0, 0, 1, 1]);
+    expect(anchorsOf(p)).toEqual([0, 0, 1, 1]);
   });
 
   it('an authored anchor of 0 is not mistaken for "unset"', () => {
     // 0 is falsy, so `??`, not `||`, tells it from absent.
-    expect(resolveAnchors(props({ anchorsPreset: 15, layoutMode: 1, anchorLeft: 0 }))).toEqual([0, 0, 0, 0]);
+    expect(anchorsOf(props({ anchorsPreset: 15, layoutMode: 1, anchorLeft: 0 }))).toEqual([0, 0, 0, 0]);
   });
 });
 
-describe('resolveAnchors — presets outside the table', () => {
+describe('resolveControlLayout anchors — presets outside the table', () => {
   it('defaults to (0, 0, 0, 0) for the custom-anchors sentinel -1 (control.cpp:983-989 returns early)', () => {
-    expect(resolveAnchors(props({ anchorsPreset: -1, layoutMode: 1 }))).toEqual([0, 0, 0, 0]);
+    expect(anchorsOf(props({ anchorsPreset: -1, layoutMode: 1 }))).toEqual([0, 0, 0, 0]);
   });
 
   it('defaults to (0, 0, 0, 0) for an out-of-range preset (`ERR_FAIL_INDEX((int)p_preset, 16)`)', () => {
-    expect(resolveAnchors(props({ anchorsPreset: 99, layoutMode: 1 }))).toEqual([0, 0, 0, 0]);
+    expect(anchorsOf(props({ anchorsPreset: 99, layoutMode: 1 }))).toEqual([0, 0, 0, 0]);
   });
 
   it('defaults to (0, 0, 0, 0) when no anchors_preset is authored at all', () => {
-    expect(resolveAnchors(props({ layoutMode: 1 }))).toEqual([0, 0, 0, 0]);
+    expect(anchorsOf(props({ layoutMode: 1 }))).toEqual([0, 0, 0, 0]);
   });
 
   it('defaults to (0, 0, 0, 0) for bare properties', () => {
-    expect(resolveAnchors(props({}))).toEqual([0, 0, 0, 0]);
+    expect(anchorsOf(props({}))).toEqual([0, 0, 0, 0]);
   });
 });
 
-describe('resolveOffsets — the offsets side effect (control.cpp:1007-1029 → set_offsets_preset)', () => {
+describe('resolveControlLayout offsets — the offsets side effect (control.cpp:1007-1029 → set_offsets_preset)', () => {
   // A stand-in for the node's minimum size at preset time, asymmetric so a
   // swapped axis cannot pass.
   const MIN = { x: 30, y: 12 };
@@ -173,21 +199,19 @@ describe('resolveOffsets — the offsets side effect (control.cpp:1007-1029 → 
   for (const [preset, expected] of Object.entries(presetOffsets)) {
     for (const layoutMode of GATED_IN) {
       it(`preset ${preset} under layout_mode ${layoutMode} writes ${JSON.stringify(expected)}`, () => {
-        expect(resolveOffsets(props({ anchorsPreset: Number(preset), layoutMode }), () => MIN)).toEqual(
-          expected
-        );
+        expect(offsetsOf(props({ anchorsPreset: Number(preset), layoutMode }), () => MIN)).toEqual(expected);
       });
     }
   }
 
   it('uses (0, 0) for a wide preset whose type contributes no minimum of its own', () => {
-    expect(resolveOffsets(props({ anchorsPreset: 11, layoutMode: 1 }), () => ({ x: 0, y: 0 }))).toEqual([
+    expect(offsetsOf(props({ anchorsPreset: 11, layoutMode: 1 }), () => ({ x: 0, y: 0 }))).toEqual([
       0, 0, 0, 0,
     ]);
   });
 });
 
-describe('resolveOffsets — authored offset_* win over the side effect', () => {
+describe('resolveControlLayout offsets — authored offset_* win over the side effect', () => {
   const MIN = { x: 30, y: 12 };
 
   it('an authored quartet overrides every side the preset would have written', () => {
@@ -199,20 +223,20 @@ describe('resolveOffsets — authored offset_* win over the side effect', () => 
       offsetRight: -10,
       offsetBottom: 40,
     });
-    expect(resolveOffsets(p, () => MIN)).toEqual([-100, 5, -10, 40]);
+    expect(offsetsOf(p, () => MIN)).toEqual([-100, 5, -10, 40]);
   });
 
   it('a partially authored quartet overrides only the sides it states', () => {
     // `offset_*` are serialised after `anchors_preset` (control.cpp's ADD_PROPERTY
     // order), so each authored side lands on top of what the preset wrote and
     // the unauthored ones keep it.
-    expect(resolveOffsets(props({ anchorsPreset: 11, layoutMode: 1, offsetTop: 7 }), () => MIN)).toEqual([
+    expect(offsetsOf(props({ anchorsPreset: 11, layoutMode: 1, offsetTop: 7 }), () => MIN)).toEqual([
       -30, 7, 0, 0,
     ]);
   });
 
   it('an authored offset of 0 is not mistaken for "unset"', () => {
-    expect(resolveOffsets(props({ anchorsPreset: 11, layoutMode: 1, offsetLeft: 0 }), () => MIN)).toEqual([
+    expect(offsetsOf(props({ anchorsPreset: 11, layoutMode: 1, offsetLeft: 0 }), () => MIN)).toEqual([
       0, 0, 0, 0,
     ]);
   });
@@ -223,19 +247,19 @@ describe('resolveOffsets — authored offset_* win over the side effect', () => 
     // RIGHT_WIDE's left anchor is 1, so the left offset is the full `-new_size.x`
     // though the node ends anchored at 0.5.
     const p = props({ anchorsPreset: 11, layoutMode: 1, anchorLeft: 0.5, anchorRight: 0.5 });
-    expect(resolveOffsets(p, () => MIN)).toEqual([-30, 0, 0, 0]);
+    expect(offsetsOf(p, () => MIN)).toEqual([-30, 0, 0, 0]);
   });
 });
 
-describe('resolveOffsets — the same gate as the anchors half', () => {
+describe('resolveControlLayout offsets — the same gate as the anchors half', () => {
   const MIN = { x: 30, y: 12 };
 
   it('writes nothing under LAYOUT_MODE_POSITION (0)', () => {
-    expect(resolveOffsets(props({ anchorsPreset: 11, layoutMode: 0 }), () => MIN)).toEqual([0, 0, 0, 0]);
+    expect(offsetsOf(props({ anchorsPreset: 11, layoutMode: 0 }), () => MIN)).toEqual([0, 0, 0, 0]);
   });
 
   it('writes nothing under LAYOUT_MODE_CONTAINER (2)', () => {
-    expect(resolveOffsets(props({ anchorsPreset: 11, layoutMode: 2 }), () => MIN)).toEqual([0, 0, 0, 0]);
+    expect(offsetsOf(props({ anchorsPreset: 11, layoutMode: 2 }), () => MIN)).toEqual([0, 0, 0, 0]);
   });
 
   it('writes nothing when layout_mode is absent entirely, leaving authored offsets alone', () => {
@@ -246,25 +270,25 @@ describe('resolveOffsets — the same gate as the anchors half', () => {
       offsetRight: 240,
       offsetBottom: 160,
     });
-    expect(resolveOffsets(p, () => MIN)).toEqual([40, 40, 240, 160]);
+    expect(offsetsOf(p, () => MIN)).toEqual([40, 40, 240, 160]);
   });
 
   it('writes nothing for the custom-anchors sentinel -1', () => {
-    expect(resolveOffsets(props({ anchorsPreset: -1, layoutMode: 1, offsetLeft: 12 }), () => MIN)).toEqual([
+    expect(offsetsOf(props({ anchorsPreset: -1, layoutMode: 1, offsetLeft: 12 }), () => MIN)).toEqual([
       12, 0, 0, 0,
     ]);
   });
 
   it('writes nothing for an out-of-range preset', () => {
-    expect(resolveOffsets(props({ anchorsPreset: 99, layoutMode: 1 }), () => MIN)).toEqual([0, 0, 0, 0]);
+    expect(offsetsOf(props({ anchorsPreset: 99, layoutMode: 1 }), () => MIN)).toEqual([0, 0, 0, 0]);
   });
 
   it('writes nothing when no anchors_preset is authored at all', () => {
-    expect(resolveOffsets(props({ layoutMode: 1, offsetBottom: 3 }), () => MIN)).toEqual([0, 0, 0, 3]);
+    expect(offsetsOf(props({ layoutMode: 1, offsetBottom: 3 }), () => MIN)).toEqual([0, 0, 0, 3]);
   });
 });
 
-describe('resolveOffsets — measured against Godot 4.6.3 get_rect()/offsets', () => {
+describe('resolveControlLayout offsets — measured against Godot 4.6.3 get_rect()/offsets', () => {
   // Measured in a settled 1152x648 SubViewport through `Control.offset_*`. Each
   // row's minimum size is Godot's `get_minimum_size()` with default properties:
   // `SceneState::instantiate` applies `anchors_preset` before a type's own
@@ -278,12 +302,12 @@ describe('resolveOffsets — measured against Godot 4.6.3 get_rect()/offsets', (
 
   for (const [label, preset, min, expected] of measured) {
     it(`${label} takes ${JSON.stringify(expected)}`, () => {
-      expect(resolveOffsets(props({ anchorsPreset: preset, layoutMode: 1 }), () => min)).toEqual(expected);
+      expect(offsetsOf(props({ anchorsPreset: preset, layoutMode: 1 }), () => min)).toEqual(expected);
     });
   }
 });
 
-describe('resolveGrowDirection — horizontal preset table (control.cpp:1375-1399)', () => {
+describe('resolveControlLayout grow direction — horizontal preset table (control.cpp:1375-1399)', () => {
   // The three `set_h_grow_direction` case lists, verbatim.
   const horizontal: Array<[number, number[]]> = [
     [END, [0, 2, 4, 9]], // TOP_LEFT, BOTTOM_LEFT, CENTER_LEFT, LEFT_WIDE
@@ -295,14 +319,14 @@ describe('resolveGrowDirection — horizontal preset table (control.cpp:1375-139
     for (const preset of presets) {
       for (const layoutMode of GATED_IN) {
         it(`preset ${preset} under layout_mode ${layoutMode} grows ${expected} horizontally`, () => {
-          expect(resolveGrowDirection(props({ anchorsPreset: preset, layoutMode }))[0]).toBe(expected);
+          expect(growOf(props({ anchorsPreset: preset, layoutMode }))[0]).toBe(expected);
         });
       }
     }
   }
 });
 
-describe('resolveGrowDirection — vertical preset table (control.cpp:1401-1427)', () => {
+describe('resolveControlLayout grow direction — vertical preset table (control.cpp:1401-1427)', () => {
   // The three `set_v_grow_direction` case lists, verbatim.
   const vertical: Array<[number, number[]]> = [
     [END, [0, 1, 5, 10]], // TOP_LEFT, TOP_RIGHT, CENTER_TOP, TOP_WIDE
@@ -314,59 +338,55 @@ describe('resolveGrowDirection — vertical preset table (control.cpp:1401-1427)
     for (const preset of presets) {
       for (const layoutMode of GATED_IN) {
         it(`preset ${preset} under layout_mode ${layoutMode} grows ${expected} vertically`, () => {
-          expect(resolveGrowDirection(props({ anchorsPreset: preset, layoutMode }))[1]).toBe(expected);
+          expect(growOf(props({ anchorsPreset: preset, layoutMode }))[1]).toBe(expected);
         });
       }
     }
   }
 });
 
-describe('resolveGrowDirection — the layout_mode gate (control.cpp:991-993)', () => {
+describe('resolveControlLayout grow direction — the layout_mode gate (control.cpp:991-993)', () => {
   it('leaves both axes at the struct default under LAYOUT_MODE_POSITION (0)', () => {
-    expect(resolveGrowDirection(props({ anchorsPreset: 8, layoutMode: 0 }))).toEqual([END, END]);
+    expect(growOf(props({ anchorsPreset: 8, layoutMode: 0 }))).toEqual([END, END]);
   });
 
   it('leaves both axes at the struct default under LAYOUT_MODE_CONTAINER (2)', () => {
     // A container-managed child never runs the preset setter, so its serialised
     // `anchors_preset` is non-operational even when present.
-    expect(resolveGrowDirection(props({ anchorsPreset: 15, layoutMode: 2 }))).toEqual([END, END]);
+    expect(growOf(props({ anchorsPreset: 15, layoutMode: 2 }))).toEqual([END, END]);
   });
 
   it('leaves both axes at the struct default when layout_mode is absent entirely', () => {
-    expect(resolveGrowDirection(props({ anchorsPreset: 8 }))).toEqual([END, END]);
+    expect(growOf(props({ anchorsPreset: 8 }))).toEqual([END, END]);
   });
 });
 
-describe('resolveGrowDirection — authored grow_horizontal/grow_vertical win', () => {
+describe('resolveControlLayout grow direction — authored grow_horizontal/grow_vertical win', () => {
   it('an authored pair overrides what the preset would imply', () => {
     const p = props({ anchorsPreset: 8, layoutMode: 1, growHorizontal: BEGIN, growVertical: END });
-    expect(resolveGrowDirection(p)).toEqual([BEGIN, END]);
+    expect(growOf(p)).toEqual([BEGIN, END]);
   });
 
   it('one authored axis overrides only that axis, the other still derives', () => {
     // CENTER (8) implies BOTH on both axes. Only horizontal is authored here.
     const p = props({ anchorsPreset: 8, layoutMode: 1, growHorizontal: BEGIN });
-    expect(resolveGrowDirection(p)).toEqual([BEGIN, BOTH]);
+    expect(growOf(p)).toEqual([BEGIN, BOTH]);
   });
 
   it('an authored value survives a closed gate', () => {
     const p = props({ anchorsPreset: 8, layoutMode: 2, growHorizontal: BOTH, growVertical: BEGIN });
-    expect(resolveGrowDirection(p)).toEqual([BOTH, BEGIN]);
+    expect(growOf(p)).toEqual([BOTH, BEGIN]);
   });
 
   it('an authored GROW_DIRECTION_BEGIN (0) is not mistaken for "unset"', () => {
     // 0 is falsy, so `??`, not `||`, tells it from absent.
     const p = props({ anchorsPreset: 15, layoutMode: 1, growHorizontal: BEGIN, growVertical: BEGIN });
-    expect(resolveGrowDirection(p)).toEqual([BEGIN, BEGIN]);
+    expect(growOf(p)).toEqual([BEGIN, BEGIN]);
   });
 });
 
-describe('resolveControlLayout — no reliable order falls back to resolveAnchors/resolveOffsets/resolveGrowDirection', () => {
-  // `orderedKeys === undefined`, for a hand-built node or a merged instance root
-  // (`resources/mergeInstanceRoot.ts`, ADR-0035), assumes the editor's save order.
-  const MIN = { x: 30, y: 12 };
-
-  it('an authored offset AFTER the preset (in the fallback sense) survives, matching resolveOffsets directly', () => {
+describe('resolveControlLayout — no reliable order', () => {
+  it('keeps every authored offset after a full-rect preset, in editor-save order', () => {
     const p = props({
       anchorsPreset: 15,
       layoutMode: 1,
@@ -375,11 +395,12 @@ describe('resolveControlLayout — no reliable order falls back to resolveAnchor
       offsetRight: 240,
       offsetBottom: 160,
     });
-    const result = resolveControlLayout(p, undefined, () => MIN);
-    expect(result.anchors).toEqual(resolveAnchors(p));
-    expect(result.offsets).toEqual(resolveOffsets(p, () => MIN));
-    expect(result.growHorizontal).toBe(resolveGrowDirection(p)[0]);
-    expect(result.growVertical).toBe(resolveGrowDirection(p)[1]);
+    expect(resolveControlLayout(p, undefined, () => ({ x: 30, y: 12 }))).toEqual({
+      anchors: [0, 0, 1, 1],
+      offsets: [40, 40, 240, 160],
+      growHorizontal: BOTH,
+      growVertical: BOTH,
+    });
   });
 });
 
@@ -565,20 +586,20 @@ describe('resolveControlLayout — file-order simulation (ADR-0035, Option B)', 
   });
 });
 
-describe('resolveGrowDirection — presets outside the table', () => {
+describe('resolveControlLayout grow direction — presets outside the table', () => {
   it('defaults to END/END for the custom-anchors sentinel -1 (control.cpp:983-989 returns early)', () => {
-    expect(resolveGrowDirection(props({ anchorsPreset: -1, layoutMode: 1 }))).toEqual([END, END]);
+    expect(growOf(props({ anchorsPreset: -1, layoutMode: 1 }))).toEqual([END, END]);
   });
 
   it('defaults to END/END for an out-of-range preset (neither switch has a `default:` case)', () => {
-    expect(resolveGrowDirection(props({ anchorsPreset: 99, layoutMode: 1 }))).toEqual([END, END]);
+    expect(growOf(props({ anchorsPreset: 99, layoutMode: 1 }))).toEqual([END, END]);
   });
 
   it('defaults to END/END when no anchors_preset is authored at all', () => {
-    expect(resolveGrowDirection(props({ layoutMode: 1 }))).toEqual([END, END]);
+    expect(growOf(props({ layoutMode: 1 }))).toEqual([END, END]);
   });
 
   it('defaults to END/END for bare properties', () => {
-    expect(resolveGrowDirection(props({}))).toEqual([END, END]);
+    expect(growOf(props({}))).toEqual([END, END]);
   });
 });

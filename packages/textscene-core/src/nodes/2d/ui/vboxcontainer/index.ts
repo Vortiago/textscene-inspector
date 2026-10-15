@@ -10,6 +10,5 @@ const vBoxContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(vBoxContainerRegistration);
 
-export { vBoxContainerRegistration };
 export * from './parser';
 export * from './types';

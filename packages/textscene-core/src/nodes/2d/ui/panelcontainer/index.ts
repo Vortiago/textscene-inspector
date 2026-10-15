@@ -10,5 +10,4 @@ const panelContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(panelContainerRegistration);
 
-export { panelContainerRegistration };
 export * from './parser';

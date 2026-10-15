@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types';
 import {
+  clearProceduralTextures,
   cachedProceduralTexture,
   cacheProceduralTexture,
-  clearProceduralTextureCache,
   pinProceduralTexture,
   proceduralTexture,
   proceduralTextureKey,
@@ -30,7 +30,7 @@ function scene(): TscnInternalResource[] {
 // Every test starts from an empty cache. Pin counts survive `clear()` by
 // design (they track mounted consumers), so a test that pins also unpins.
 beforeEach(() => {
-  clearProceduralTextureCache();
+  clearProceduralTextures();
 });
 
 describe('proceduralTextureKey', () => {
@@ -145,7 +145,7 @@ describe('pinProceduralTexture', () => {
   });
 });
 
-describe('clearProceduralTextureCache', () => {
+describe('clearProceduralTextures', () => {
   it('disposes every unpinned entry (happy path)', () => {
     const resources = scene();
     const a = fakeTexture();
@@ -153,7 +153,7 @@ describe('clearProceduralTextureCache', () => {
     proceduralTexture(resources, 'a', () => a);
     proceduralTexture(resources, 'b', () => b);
 
-    clearProceduralTextureCache();
+    clearProceduralTextures();
 
     expect(a.dispose).toHaveBeenCalledTimes(1);
     expect(b.dispose).toHaveBeenCalledTimes(1);
@@ -166,7 +166,7 @@ describe('clearProceduralTextureCache', () => {
     const key = proceduralTextureKey(resources, 'pinned');
     pinProceduralTexture(key);
 
-    clearProceduralTextureCache();
+    clearProceduralTextures();
     // A mounted consumer is still sampling it, so clearing must not free it.
     expect(pinned.dispose).not.toHaveBeenCalled();
 
@@ -178,7 +178,7 @@ describe('clearProceduralTextureCache', () => {
     const resources = scene();
     const rasterize = vi.fn(() => fakeTexture());
     proceduralTexture(resources, 'a', rasterize);
-    clearProceduralTextureCache();
+    clearProceduralTextures();
     proceduralTexture(resources, 'a', rasterize);
     expect(rasterize).toHaveBeenCalledTimes(2);
   });

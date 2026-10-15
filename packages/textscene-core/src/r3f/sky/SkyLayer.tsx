@@ -16,11 +16,11 @@ import type { SceneResources } from '../SceneResourcesContext';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { skyLightEnergy } from './skyLight';
 import { skyEuler } from './skyRotation';
-import type { Vector3 } from '../../parser/vectors';
 import { SkyLayerCubes } from './skyLayerCubes';
 import { observeSceneCamera } from '../sceneRenderCamera';
+import type { Vector3 } from '../../godot/math/vector';
 
-export interface SkyLayerProps {
+interface SkyLayerProps {
   sky: Sky;
   /**
    * The sky's full reflection strength (`background_energy_multiplier`), as

@@ -13,5 +13,3 @@ registerResourceSlice({
   typeNames: ['MeshLibrary'],
   busType: 'resource',
 });
-
-export type { MeshLibraryItem, MeshLibraryModel } from './types';

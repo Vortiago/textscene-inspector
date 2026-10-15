@@ -10,6 +10,5 @@ const collisionShape2DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(collisionShape2DRegistration);
 
-export { collisionShape2DRegistration };
 export * from './parser';
 export * from './types';

@@ -12,7 +12,7 @@ import type { ControlProperties } from '../../nodes/2d/ui/control/types.js';
  * four per-edge `switch`es in `scene/gui/control.cpp::Control::set_anchors_preset`
  * (:1114-1229). `ANCHOR_BEGIN` = 0, `ANCHOR_END` = 1, and CENTER_* anchors at 0.5.
  */
-export const PRESET_ANCHORS: Record<number, [number, number, number, number]> = {
+const PRESET_ANCHORS: Record<number, [number, number, number, number]> = {
   0: [0, 0, 0, 0], // TOP_LEFT
   1: [1, 0, 1, 0], // TOP_RIGHT
   2: [0, 1, 0, 1], // BOTTOM_LEFT
@@ -50,7 +50,7 @@ function presetApplies(p: ControlProperties): boolean {
  * floats, and `set_anchor` has no `layout_mode` check. Absent both, anchors are
  * `(0, 0, 0, 0)`. The setter's third effect, on `offset_*`, is `resolveOffsets`.
  */
-export function resolveAnchors(p: ControlProperties): [number, number, number, number] {
+function resolveAnchors(p: ControlProperties): [number, number, number, number] {
   const hasExplicit =
     p.anchorLeft !== undefined ||
     p.anchorTop !== undefined ||
@@ -84,7 +84,7 @@ const MINSIZE_PRESETS = new Set([9, 10, 11, 12, 13, 14, 15]);
  *   apply (a subclass's follow `Control`'s in scene order). A thunk: only the seven
  *   wide presets read it, and it re-runs the registered `MinimumSizeFn`.
  */
-export function resolveOffsets(
+function resolveOffsets(
   p: ControlProperties,
   presetTimeMinimumSize: () => { x: number; y: number }
 ): [number, number, number, number] {
@@ -204,7 +204,7 @@ const PRESET_GROW_VERTICAL: Record<number, number> = {
  * (`control.cpp:1773-1797`) moves a rect it clamps up to the combined minimum. The
  * editor writes one only when it contradicts the preset, so an authored value wins.
  */
-export function resolveGrowDirection(p: ControlProperties): [number, number] {
+function resolveGrowDirection(p: ControlProperties): [number, number] {
   // `_set_anchors_layout_preset` ends with `set_grow_direction_preset`
   // (`control.cpp:1032`), behind the `presetApplies` gate. A preset outside 0..15,
   // `-1` included (`:983-989`), matches no `case` and keeps the struct default.
@@ -223,7 +223,7 @@ export function resolveGrowDirection(p: ControlProperties): [number, number] {
  */
 export type ControlLayoutOrder = readonly string[] | undefined;
 
-export interface ControlLayoutResolution {
+interface ControlLayoutResolution {
   anchors: [number, number, number, number];
   offsets: [number, number, number, number];
   growHorizontal: number;

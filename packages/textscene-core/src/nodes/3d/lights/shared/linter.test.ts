@@ -6,8 +6,10 @@
 import { describe, expect, it } from 'vitest';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { Linter } from '../../../../linter/Linter.js';
-import { light3DScaleValidationRule } from './linter.js';
+import './linter.js';
 import '../../../../linter/index.js';
+
+const light3DScaleValidationRule = ruleRegistry.getRule('valid-light3d-scale')!;
 
 const SCALE_RULE = 'light3d-non-unit-scale';
 

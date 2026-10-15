@@ -32,7 +32,7 @@ export function isViewportTextureRef(
 }
 
 /** What a ViewportTexture slot resolves to, once cycles are accounted for. */
-export interface ViewportTextureSlotResult {
+interface ViewportTextureSlotResult {
   /**
    * The live target's texture. Null for no ViewportTexture, an unpublished one,
    * or one in an unrenderable pass cycle, which `cyclic` tells apart. A caller

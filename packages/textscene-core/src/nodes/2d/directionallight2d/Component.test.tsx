@@ -17,7 +17,7 @@ import { itemUniforms, ownerName, recordLightPass } from '../../../r3f/lighting2
 import { SHADOW_MAP_FAR } from '../../../r3f/lighting2d/shadowPolarMap';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import '../../../r3f/nodes'; // side-effect: registers every node's r3f component
 
 /** A bar 200 px wide, 100 px above the origin, which the test camera centres on. */

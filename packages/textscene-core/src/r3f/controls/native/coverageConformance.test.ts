@@ -11,7 +11,8 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 // Side-effect import: registers every Control slice's native painter and
 // solver functions (`nativeSolver.ts`/`index.r3f.ts`).
-import { controlComponentRegistry } from '../index';
+import '../index';
+import { controlComponentRegistry } from '../ControlComponentRegistry';
 import { parseBareNode } from '../testing/probeScene';
 import { controlSolverRegistry } from './solverRegistry';
 import { createSolveContext, solveControlTree } from './controlRectSolver';

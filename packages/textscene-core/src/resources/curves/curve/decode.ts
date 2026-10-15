@@ -1,10 +1,8 @@
 /**
- * Decode a Curve resource body, inline `[sub_resource]` or standalone `.tres`, through
- * one decode so neither arrival path drifts. Godot writes `_limits = [min_value,
+ * Decode an inline Curve `[sub_resource]` body. Godot writes `_limits = [min_value,
  * max_value, min_domain, max_domain]` (two entries before Godot 4.3) and `_data`.
  */
 
-import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
@@ -24,7 +22,7 @@ const ELEMS_PER_POINT = 5;
  * no points, which `sampleCurve` answers 0 for: a caller that needs "no curve at
  * all" tests `points.length`, not the sampled value.
  */
-export function decodeCurve(data: Record<string, string>): Curve {
+function decodeCurve(data: Record<string, string>): Curve {
   const limits = parseFloatArray(data._limits);
   const curve: Curve = {
     points: parsePoints(data._data),
@@ -54,12 +52,6 @@ export function resolveCurve(
   const resource = resolveSubResourceRef(ref, internalResources);
   if (resource?.type !== 'Curve') return null;
   return decodeCurve(resource.data);
-}
-
-/** The `Curve` a standalone resource file carries, or null for another resource type. */
-export function curveFromResource(parsed: ParsedResource): Curve | null {
-  if (parsed.resourceType !== 'Curve') return null;
-  return decodeCurve(parsed.properties);
 }
 
 function parsePoints(value: string | undefined): CurvePoint[] {

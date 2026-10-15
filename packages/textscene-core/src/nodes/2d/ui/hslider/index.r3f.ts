@@ -9,5 +9,3 @@ import { HSlider } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'HSlider', Component: HSlider });
-
-export { HSlider };

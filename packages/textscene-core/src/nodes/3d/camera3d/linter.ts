@@ -156,4 +156,3 @@ const camera3DValidationRule: LintRule = {
 ruleRegistry.register(camera3DValidationRule);
 
 // Export for testing
-export { camera3DValidationRule };

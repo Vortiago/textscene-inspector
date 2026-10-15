@@ -14,5 +14,3 @@ const area3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(area3DRegistration);
-
-export { area3DRegistration };

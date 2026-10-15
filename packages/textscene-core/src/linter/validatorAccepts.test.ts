@@ -7,7 +7,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { everyValidatorLabel, registeredTypes } from './registryPopulation.js';
+import { registeredTypes } from './registryPopulation.js';
+import { everyValidatorLabel } from './testing/registryPopulation.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 describe('validator `accepts` metadata', () => {

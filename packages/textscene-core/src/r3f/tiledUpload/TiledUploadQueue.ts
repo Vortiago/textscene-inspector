@@ -37,7 +37,7 @@ const BAND_BYTES = 2 * 1024 * 1024;
 export const RGBA_BYTES = 4;
 
 /** Rows per band for a texture `width` pixels wide, at least one. */
-export function bandRows(width: number): number {
+function bandRows(width: number): number {
   return Math.max(1, Math.floor(BAND_BYTES / (width * RGBA_BYTES)));
 }
 

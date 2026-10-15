@@ -1,13 +1,11 @@
 /**
  * Joint wedges for a Line2D's poly-stroke, which fill the gap outside every
  * interior corner: Godot has no "no joint" mode (`joint_mode` defaults to
- * `LINE_JOINT_SHARP`). In three-space, as flat self-contained triangles, since the
+ * `LineJointMode.SHARP`). In three-space, as flat self-contained triangles, since the
  * stroke is not indexed across joints.
  */
 
-export const LINE_JOINT_SHARP = 0;
-export const LINE_JOINT_BEVEL = 1;
-export const LINE_JOINT_ROUND = 2;
+import { LineJointMode } from '../../../godot/scene/line2d.js';
 
 interface Point {
   x: number;
@@ -51,11 +49,11 @@ export function jointWedge(
   const a = { x: corner.x + nIn.x * halfWidth, y: corner.y + nIn.y * halfWidth };
   const b = { x: corner.x + nOut.x * halfWidth, y: corner.y + nOut.y * halfWidth };
 
-  if (options.jointMode === LINE_JOINT_ROUND) {
+  if (options.jointMode === LineJointMode.ROUND) {
     return roundFan(corner, a, b, Math.max(1, Math.round(options.roundPrecision)));
   }
 
-  if (options.jointMode === LINE_JOINT_SHARP) {
+  if (options.jointMode === LineJointMode.SHARP) {
     const tip = miterTip(corner, nIn, nOut, halfWidth);
     // SHARP (0): miter to where the outer edges meet, and bevel when the tip runs past
     // `sharp_limit x half_width` (`line_builder.cpp`: `corner_pos_out.distance_squared_to(pos1)

@@ -118,7 +118,7 @@ export function areaTextureUserData(texture: THREE.Texture | null): Record<strin
 }
 
 /** An empty rectangle marks a light without a texture (4.7.2 `light_storage.cpp:1132-1141`). */
-export const NO_AREA_TEXTURE: AreaTexturePlacement = { rect: [0, 0, 0, 0], maxMipmap: 0 };
+const NO_AREA_TEXTURE: AreaTexturePlacement = { rect: [0, 0, 0, 0], maxMipmap: 0 };
 
 /**
  * Where `light`'s texture lies in the atlas, or `NO_AREA_TEXTURE` for a light without one or a

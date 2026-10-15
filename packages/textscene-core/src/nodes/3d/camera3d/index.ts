@@ -14,7 +14,6 @@ const camera3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(camera3DRegistration);
 
-export { camera3DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

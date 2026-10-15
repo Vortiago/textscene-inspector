@@ -13,5 +13,3 @@ const xROrigin3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(xROrigin3DRegistration);
-
-export { xROrigin3DRegistration };

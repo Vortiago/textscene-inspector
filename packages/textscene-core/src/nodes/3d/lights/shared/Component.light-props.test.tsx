@@ -13,7 +13,7 @@ import type { OmniLight3DProperties } from '../omnilight3d/types';
 import type { SpotLight3DProperties } from '../spotlight3d/types';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { readFogLightDeclaration } from '../../../../r3f/fog/fogLightDeclaration';
-import { readSkyLightDeclaration } from '../../../../r3f/sky/skyLight';
+import { skyLightEnergy } from '../../../../r3f/sky/skyLight';
 import { fireSceneRenderFrom } from '../../../../r3f/testing/fireSceneRender';
 import { visualLayersOf } from '../../../../r3f/visualLayers';
 
@@ -220,7 +220,7 @@ describe('Lights: sign, shadow opacity and distance fade', () => {
       <DirectionalLight3D node={dirNode({ light_energy: 2, light_negative: true })} />
     );
     const sun = instanceAs<THREE.DirectionalLight>(r.scene.findByType('DirectionalLight'));
-    expect(readSkyLightDeclaration(sun)?.energy).toBe(-2);
+    expect(skyLightEnergy(sun)).toBe(-2);
   });
 
   it('maps shadow_opacity onto shadow.intensity, defaulting to 1', async () => {

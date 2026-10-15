@@ -3,7 +3,8 @@
  * applyNode3DTransform, returning tuples for `<group position rotation scale>`.
  */
 
-import type { Node3DProperties, Transform3D } from '../nodes/base/node3d/types';
+import type { Node3DProperties } from '../nodes/base/node3d/types';
+import type { Transform3D } from '../godot/math/transform3d';
 import { decomposeTransform3D } from '../utils/transform';
 
 export type Vec3Tuple = [number, number, number];
@@ -14,7 +15,7 @@ export interface NodeTransform {
   scale: Vec3Tuple;
 }
 
-export const IDENTITY_TRANSFORM: NodeTransform = {
+const IDENTITY_TRANSFORM: NodeTransform = {
   position: [0, 0, 0],
   rotation: [0, 0, 0],
   scale: [1, 1, 1],

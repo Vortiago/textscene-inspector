@@ -6,13 +6,11 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { CSG_BOUNDS_PROXY } from './CsgPrimitive';
 import './csgbox3d/index.r3f';
 import './csgsphere3d/index.r3f';
 import { parseCSGBox3D } from './csgbox3d/parser';
 import { heading } from '../../../parser/testing/parserKit';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { clearEvaluationCache } from '../../../r3f/csg/csgEvaluationCache';
 import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnNode } from '../../../parser/types';
 import { NodeTree } from '../../../r3f/testing/NodeTree';
@@ -31,7 +29,7 @@ function drawnMesh(renderer: Renderer): THREE.Mesh {
   return renderer.scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
-    .find((m) => m.userData?.tscnBoundsProxy !== CSG_BOUNDS_PROXY.tscnBoundsProxy)!;
+    .find((m) => m.userData?.tscnBoundsProxy !== true)!;
 }
 
 async function loneBox(properties: Record<string, string>): Promise<THREE.Mesh> {
@@ -55,7 +53,6 @@ async function loneBox(properties: Record<string, string>): Promise<THREE.Mesh> 
 }
 
 async function subtraction(rootProperties: string): Promise<THREE.Mesh> {
-  clearEvaluationCache();
   const scene = new TscnParser().parse(
     `[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n\n` +
       `[node name="Block" type="CSGBox3D" parent="."]\nsize = Vector3(2, 2, 2)\n${rootProperties}\n\n` +

@@ -9,5 +9,3 @@ const lightOccluder2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(lightOccluder2DRegistration);
-
-export { lightOccluder2DRegistration };

@@ -39,7 +39,7 @@ import { emptyGeometry, facingMatrix, PATH_UP, signedArea, toPoints, warnOnce } 
 import { MIN_POLYGON_VERTICES, PathRotation, PolygonMode, type CsgPolygonSpec } from './polygonSweepSpec';
 import { sweepFaceBuffer } from './sweepFaceBuffer';
 
-export { MAX_PATH_EXTRUSIONS, PathIntervalType, PathRotation, PolygonMode } from './polygonSweepSpec';
+export { PolygonMode } from './polygonSweepSpec';
 export type { CsgPolygonPathPlan, CsgPolygonSpec } from './polygonSweepSpec';
 
 export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeometry {

@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { ownsNilMessage } from './propertyValidator.js';
 import type { PropertyValidator } from './propertyValidator.js';
-import { everyValidator, registeredKeys } from './registryPopulation.js';
+import { everyValidator, registeredKeys } from './testing/registryPopulation.js';
 import { keyShapeError } from './validators/propertyError.js';
 import './index.js'; // side-effect: every slice registers its validators
 

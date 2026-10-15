@@ -95,9 +95,11 @@ type PhysicalFeature = (typeof PHYSICAL_FEATURES)[number];
  * Every `!! material.<slot>` presence term, keyed as its `…MapUv` term
  * (`:444-466`), with the feature three also requires (`:147-169`) or `null`. One
  * table, so no slot is added without its gate decided. It lists what three bakes,
- * bound here or not.
+ * bound here or not, except `bumpMap`: Godot binds no bump slot, and three reads
+ * it as `!!bumpMap && wireframe === false` (`:132`), so keying it would key
+ * `wireframe` for a slot nothing can fill.
  */
-export const TEXTURE_SLOT_GATES: Readonly<Record<string, PhysicalFeature | null>> = {
+const TEXTURE_SLOT_GATES: Readonly<Record<string, PhysicalFeature | null>> = {
   map: null,
   alphaMap: null,
   aoMap: null,
@@ -126,16 +128,6 @@ export const TEXTURE_SLOT_GATES: Readonly<Record<string, PhysicalFeature | null>
 
 /** Iterated per call, so the entry list is built once rather than per key. */
 const TEXTURE_SLOT_ENTRIES = Object.entries(TEXTURE_SLOT_GATES);
-
-/**
- * A `getParameters` texture slot this codebase declines to model, and why. The
- * upgrade guard requires every such field to be here or in the table above, so
- * a slot cannot go missing by omission.
- */
-export const NOT_BOUND_TEXTURE_SLOTS: Readonly<Record<string, string>> = {
-  bumpMap:
-    'Godot binds no bump slot; three reads the term as `!!bumpMap && wireframe === false` (`:132`), so modelling it would key `wireframe` for a slot nothing can fill',
-};
 
 export function materialProgramInputs<
   P extends object,
@@ -311,7 +303,7 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
   if (props.fog !== undefined) add(`fog:${String(props.fog)}`);
   // `:317`, first arm only: the second reads geometry and the material's brand,
   // out of reach like `vertexAlphas`. `wireframe` alone reaches only this and the
-  // `bumpMap` term (`:132`), whose slot is in `NOT_BOUND_TEXTURE_SLOTS`.
+  // `bumpMap` term (`:132`), a slot this factory declines.
   if (props.flatShading === true && props.wireframe !== true) add('flat');
 
   let features = '';

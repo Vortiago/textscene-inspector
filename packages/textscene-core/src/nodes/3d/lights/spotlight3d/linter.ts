@@ -63,5 +63,3 @@ const spotLight3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(spotLight3DValidationRule);
-
-export { spotLight3DValidationRule };

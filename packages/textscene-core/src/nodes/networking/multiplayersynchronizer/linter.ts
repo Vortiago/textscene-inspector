@@ -51,5 +51,3 @@ const multiplayerSynchronizerRootPathRule: LintRule = {
 };
 
 ruleRegistry.register(multiplayerSynchronizerRootPathRule);
-
-export { multiplayerSynchronizerRootPathRule };

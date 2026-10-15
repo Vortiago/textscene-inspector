@@ -9,5 +9,3 @@ import { GraphElement } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'GraphElement', Component: GraphElement });
-
-export { GraphElement };

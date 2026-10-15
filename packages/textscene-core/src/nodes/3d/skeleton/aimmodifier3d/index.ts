@@ -13,5 +13,3 @@ const aimModifier3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(aimModifier3DRegistration);
-
-export { aimModifier3DRegistration };

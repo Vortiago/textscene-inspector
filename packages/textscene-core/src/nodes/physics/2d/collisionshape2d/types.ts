@@ -1,5 +1,5 @@
 import type { Node2DProperties } from '../../../base/node2d/types';
-import type { Color } from '../../../../utils/colorParser';
+import type { Rgba } from '../../../../godot/math/math';
 
 export interface CollisionShape2DProperties extends Node2DProperties {
   /** Reference to a 2D collision-shape resource (RectangleShape2D, CircleShape2D, …). */
@@ -11,5 +11,5 @@ export interface CollisionShape2DProperties extends Node2DProperties {
    * (a translucent teal), not the `Color(0, 0, 0, 0)` placeholder the class
    * reference prints. See `physics/shared/debugColor.ts`.
    */
-  debugColor?: Color;
+  debugColor?: Rgba;
 }

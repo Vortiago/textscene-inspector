@@ -149,4 +149,3 @@ const animationPlayerValidationRule: LintRule = {
 ruleRegistry.register(animationPlayerValidationRule);
 
 // Export for testing
-export { animationPlayerValidationRule };

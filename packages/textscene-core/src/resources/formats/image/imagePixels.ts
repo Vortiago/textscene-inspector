@@ -72,7 +72,7 @@ function readbackContext(): WebGL2RenderingContext | null {
  * alpha, which loses RGB at low alpha and all of it at alpha 0. `undefined`, never a throw, when
  * the image has no size or the context cannot hold it.
  */
-export function readPixelsThroughGl(gl: WebGL2RenderingContext, image: unknown): ImagePixels | undefined {
+function readPixelsThroughGl(gl: WebGL2RenderingContext, image: unknown): ImagePixels | undefined {
   const size = imageSize(image);
   if (!size) return undefined;
   clearErrors(gl);

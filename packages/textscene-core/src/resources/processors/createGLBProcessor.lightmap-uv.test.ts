@@ -3,13 +3,12 @@
  * **Unwrap cache** beside the asset. The witness is `global_illumination/cube.glb`, imported at
  * Static Lightmaps with its cache vendored.
  */
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
 import { DependencyGraph } from '../dependencyGraph';
-import { initGlbModules } from '../formats/glb/glbProcessing';
 import { demoBytes } from '../formats/glb/lightmapUv/testing/globalIllumination';
 import { orderedCornerDigest } from '../formats/glb/lightmapUv/testing/godotCorners';
 import { isMesh } from '../../r3f/testing/threeNarrow';
@@ -56,10 +55,6 @@ function loadCube(files: Record<string, string | ArrayBuffer>): Promise<THREE.Bu
 }
 
 describe('createGLBProcessor: lightmap UV2 from the unwrap cache', () => {
-  beforeAll(async () => {
-    await initGlbModules();
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
   });

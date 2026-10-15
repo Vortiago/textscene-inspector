@@ -56,5 +56,3 @@ const optionButtonSelectedRule: LintRule = {
 };
 
 ruleRegistry.register(optionButtonSelectedRule);
-
-export { optionButtonSelectedRule };

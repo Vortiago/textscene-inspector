@@ -2,7 +2,7 @@
  * The preview canvas asks for the shadow type three 0.186 draws. happy-dom lays no
  * element out, so a mounted `<Canvas>` never configures a renderer: the source
  * read pins what the JSX asks for, and the probe pins what that ask becomes, as
- * `World2DCanvas.test.tsx` pins its canvas flags.
+ * `World2DCanvas.test.ts` pins its canvas flags.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

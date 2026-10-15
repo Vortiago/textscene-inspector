@@ -6,7 +6,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { Linter } from '../Linter.js';
-import { FILE_DIAGNOSTICS, isFormatCheckName } from '../fileDiagnostics.js';
+import { FILE_DIAGNOSTICS } from '../fileDiagnostics.js';
+import { isFormatCheckName } from './ruleNames.js';
 import { declaredArms } from './declaredArms.js';
 import { recordTier } from './titleTier.js';
 import { formatErrorsOf } from './tierLists.js';

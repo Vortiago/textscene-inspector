@@ -11,11 +11,10 @@ import {
   type EnvironmentSettings,
   type VolumetricFog,
 } from './types';
-import { scaledRgb, type Color } from '../../utils/colorParser';
+import { scaledRgb } from '../../utils/colorParser';
 import { sRGBChannelToLinear } from '../../utils/colorSpace';
-import { GodotToneMapper } from './godotToneMapping';
-
-export type { EnvironmentSettings } from './types';
+import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
+import type { Rgba } from '../../godot/math/math';
 
 /**
  * The white the tonemapper gets, as `Environment::_update_tonemap` (`scene/resources/environment.cpp`)
@@ -24,9 +23,7 @@ export type { EnvironmentSettings } from './types';
  * The authored value: `resolvedWhite` applies the per-curve floors (`environment_get_white`).
  */
 function whiteFor(properties: EnvironmentProperties): number {
-  return properties.tonemap_mode === GodotToneMapper.AGX
-    ? properties.tonemap_agx_white
-    : properties.tonemap_white;
+  return properties.tonemap_mode === ToneMapper.AGX ? properties.tonemap_agx_white : properties.tonemap_white;
 }
 
 /**
@@ -35,7 +32,7 @@ function whiteFor(properties: EnvironmentProperties): number {
  */
 export function createEnvironmentSettings(
   properties: EnvironmentProperties,
-  clearColor: Color
+  clearColor: Rgba
 ): EnvironmentSettings {
   const backgroundColor =
     properties.background_mode === BackgroundMode.BG_CLEAR_COLOR ? clearColor : properties.background_color;
@@ -149,7 +146,7 @@ const AMBIENT_SOURCE_SKY = 3;
  */
 function ambientFor(
   properties: EnvironmentProperties,
-  backgroundColor: Color
+  backgroundColor: Rgba
 ): {
   ambient: EnvironmentSettings['ambient'];
   skyAmbient: EnvironmentSettings['skyAmbient'];

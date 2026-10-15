@@ -13,5 +13,3 @@ const fABRIK3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(fABRIK3DRegistration);
-
-export { fABRIK3DRegistration };

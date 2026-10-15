@@ -1,94 +1,12 @@
 /**
  * The 2D-world layer of the Canvas2DStage (ADR-0006): a transparent orthographic
  * canvas that draws the CanvasItem world and the native Control canvas in one
- * view, as Godot's 2D editor does. Its camera tracks the stage's pan and zoom.
- * `World2DContents` is exported for @react-three/test-renderer.
+ * view, as Godot's 2D editor does.
  */
 
-import { lazy, useLayoutEffect, useMemo } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
-import type { OrthographicCamera } from 'three';
-import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
-import { CanvasWorkspaceProvider } from '../../contexts/CanvasWorkspaceContext.js';
-import { SceneResourcesProvider } from '../../SceneResourcesContext.js';
-import { NodeDispatcher } from '../../NodeDispatcher.js';
-import { world2DCameraPose } from './world2DCamera.js';
-import { CanvasLighting2DProvider } from '../../lighting2d/CanvasLighting2D.js';
-import { canvasModulateColor } from '../../canvasModulate.js';
-import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryContext.js';
-import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
-import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
+import { Canvas } from '@react-three/fiber';
 import { installShaderPatches } from '../../shaderPatch/installShaderPatches.js';
-import { ProjectClearColor } from './ProjectClearColor.js';
-import { PendingSuspense } from '../../../resources/PendingSuspense.js';
-import { ScreenshotBridge } from '../../ScreenshotBridge.js';
-
-// Through the controls barrel, whose side-effect imports register every Control
-// type: the component file alone registers none. Lazy, so the registrations stay
-// out of the initial bundle until a stage renders Controls.
-const ControlCanvasLayer = lazy(() =>
-  import('../../controls/index.js').then((m) => ({ default: m.ControlCanvasLayer }))
-);
-
-export interface World2DCanvasProps {
-  nodes: readonly TscnNode[];
-  internalResources: readonly TscnInternalResource[];
-  externalResources: readonly TscnExternalResource[];
-  pan: { x: number; y: number };
-  zoom: number;
-}
-
-/** Keeps the ortho camera glued to the stage's pan/zoom transform. */
-function CameraRig({ pan, zoom }: { pan: { x: number; y: number }; zoom: number }) {
-  const camera = useThree((s) => s.camera) as OrthographicCamera;
-  const size = useThree((s) => s.size);
-  const { x: panX, y: panY } = pan;
-  useLayoutEffect(() => {
-    const pose = world2DCameraPose({ x: panX, y: panY }, zoom, size.width, size.height);
-    camera.position.set(pose.x, pose.y, 1000);
-    camera.zoom = pose.zoom;
-    camera.updateProjectionMatrix();
-  }, [camera, panX, panY, zoom, size.width, size.height]);
-  return null;
-}
-
-export function World2DContents({
-  nodes,
-  internalResources,
-  externalResources,
-  pan,
-  zoom,
-}: World2DCanvasProps) {
-  const canvasModulate = useMemo(() => canvasModulateColor(nodes), [nodes]);
-  return (
-    <TiledUploadDriver>
-      <CanvasWorkspaceProvider workspace="2d">
-        <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
-          <CameraRig pan={pan} zoom={zoom} />
-          <ProjectClearColor />
-          {/* The light accumulator starts from the canvas tint, the same pure
-              function of `nodes` the dispatcher publishes to the items. */}
-          <CanvasLighting2DProvider canvasModulate={canvasModulate}>
-            <NodeDispatcher nodes={nodes} />
-            {/* Inside the lighting provider, so a 2D light reaches a Control. */}
-            <PendingSuspense>
-              <ControlCanvasLayer nodes={nodes} />
-            </PendingSuspense>
-            {/* A `ViewportTexture` consumer may sample its target whoever draws
-                the on-screen Controls. */}
-            <ControlRasterLayer
-              nodes={nodes}
-              internalResources={internalResources}
-              externalResources={externalResources}
-            />
-          </CanvasLighting2DProvider>
-        </SceneResourcesProvider>
-        <ViewportPassOrchestrator />
-        <ScreenshotBridge />
-      </CanvasWorkspaceProvider>
-    </TiledUploadDriver>
-  );
-}
+import { World2DContents, type World2DCanvasProps } from './World2DContents.js';
 
 export function World2DCanvas(props: World2DCanvasProps) {
   return (

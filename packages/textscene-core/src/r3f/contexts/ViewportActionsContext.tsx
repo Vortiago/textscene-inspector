@@ -18,7 +18,7 @@ import {
 } from 'react';
 
 /** One-shot 2D framing request: frame the Canvas2DStage on a Camera2D's view. */
-export interface Frame2DRequest {
+interface Frame2DRequest {
   /** The view centre in Godot canvas pixels. */
   center: { x: number; y: number };
   /** Stage magnification. */

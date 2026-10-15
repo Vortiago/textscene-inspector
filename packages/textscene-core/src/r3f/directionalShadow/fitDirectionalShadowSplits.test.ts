@@ -5,7 +5,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { cameraSliceCorners, type DirectionalShadowBox } from './fitDirectionalShadowBox';
+import type { DirectionalShadowBox } from './fitDirectionalShadowBox';
+import { cameraSliceCorners } from './fitDirectionalShadowBox.testkit';
 import {
   NO_BLEND,
   fitDirectionalShadowSplits,

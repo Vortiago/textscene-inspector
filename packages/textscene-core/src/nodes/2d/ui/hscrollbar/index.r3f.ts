@@ -9,5 +9,3 @@ import { HScrollBar } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'HScrollBar', Component: HScrollBar });
-
-export { HScrollBar };

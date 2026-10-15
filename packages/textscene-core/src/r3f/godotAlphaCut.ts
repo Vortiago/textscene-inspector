@@ -15,7 +15,7 @@ const ALPHA_CUT_HASH = 3;
 /** Passed as `transparentFlag` by a node whose DrawFlags have no `FLAG_TRANSPARENT` member. */
 export const NO_TRANSPARENT_FLAG = 'no-transparent-flag';
 
-export interface AlphaCutInput {
+interface AlphaCutInput {
   /** `SpriteBase3D::AlphaCutMode` or `Label3D::AlphaCutMode`: two C++ enums, same members. */
   mode: number;
   /** `alpha_scissor_threshold`; DISCARD is the only arm that reads it. */

@@ -8,5 +8,3 @@ import { checkButtonMinimumSize, checkButtonTextureSlots } from './nativeSolver'
 controlComponentRegistry.register({ typeName: 'CheckButton', Component: CheckButton });
 controlSolverRegistry.registerMinimumSize('CheckButton', checkButtonMinimumSize);
 controlSolverRegistry.registerTextureSlots('CheckButton', checkButtonTextureSlots);
-
-export { CheckButton };

@@ -31,7 +31,6 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Color, Vector2 } from '../../base/node2d/types';
 import type { Curve } from '../../../resources/curves/curve/types';
 import { sampleCurve } from '../../../resources/curves/curve/sample';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
@@ -51,6 +50,8 @@ import {
   CPUParticles2DParam,
   type CPUParticles2DProperties,
 } from './types';
+import type { Rgba } from '../../../godot/math/math.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 /** A particle's `Transform2D`, which the process loop writes in place, as Godot's `Particle`. */
 type ParticleTransform = { -readonly [K in keyof Transform2DColumns]: number };
@@ -60,16 +61,16 @@ type ParticleTransform = { -readonly [K in keyof Transform2DColumns]: number };
  * `Math::rand()`, randomised in the constructor and unserialised, so any constant
  * is as faithful as another, and a constant makes this render byte-stable.
  */
-export const DEFAULT_PREVIEW_SEED = 0;
+const DEFAULT_PREVIEW_SEED = 0;
 
 /**
  * Ceiling on settle steps: `preprocess = 100000` would otherwise spin three
  * million iterations before the first paint. Real emitters need tens of steps.
  */
-export const MAX_SIM_STEPS = 4096;
+const MAX_SIM_STEPS = 4096;
 
 /** Godot's `Curve` slots, indexed by `CPUParticles2DParam`. Null where unset. */
-export type ParticleCurves = ReadonlyArray<Curve | null>;
+type ParticleCurves = ReadonlyArray<Curve | null>;
 
 export interface ParticleSimInput {
   props: CPUParticles2DProperties;
@@ -89,7 +90,7 @@ export interface RenderedParticle {
   /** Item-local `Transform2D` mapping the texture quad's local corners. */
   transform: Transform2DColumns;
   /** Godot's `p.color`: sRGB, alpha included, curve, ramp and hue applied. */
-  color: Color;
+  color: Rgba;
   /**
    * Godot's `p.custom[2]`, reaching the canvas shader as `INSTANCE_CUSTOM.z`:
    * `anim_offset + age × anim_speed`. A `CanvasItemMaterial` with
@@ -105,7 +106,7 @@ export interface RenderedParticle {
 /** Godot's private `Particle` struct, only the fields the process loop reads. */
 interface Particle {
   transform: ParticleTransform;
-  color: Color;
+  color: Rgba;
   custom: [number, number, number, number];
   rotation: number;
   velocity: Vector2;
@@ -114,10 +115,10 @@ interface Particle {
   scaleRand: number;
   hueRotRand: number;
   animOffsetRand: number;
-  startColorRand: Color;
+  startColorRand: Rgba;
   time: number;
   lifetime: number;
-  baseColor: Color;
+  baseColor: Rgba;
   seed: number;
 }
 
@@ -130,7 +131,7 @@ const MIN_LIFETIME = 0.01;
  * `_update_internal` spends both through one loop (`cpu_particles_2d.cpp:727-738`),
  * so `pnpm ref:godot --particles <seconds>` renders the same instant in Godot.
  */
-export function settleSeconds(props: CPUParticles2DProperties): number {
+function settleSeconds(props: CPUParticles2DProperties): number {
   if (props.preprocess > 0) return props.preprocess;
   const lifetime = Math.max(MIN_LIFETIME, props.lifetime);
   return props.one_shot ? lifetime * 0.5 : lifetime;
@@ -294,7 +295,7 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
 }
 
 /** Whether particle `i` restarts this step, and the delta its position integrates with. */
-export interface RestartStep {
+interface RestartStep {
   restart: boolean;
   /** `local_delta`: the whole step unless a restart shortens it (fract_delta). */
   localDelta: number;
@@ -309,7 +310,7 @@ export interface RestartStep {
  * @param time The cycle time after this step, wrapped mod `lifetime`.
  * @param restartTime `restartPhase * lifetime` for this particle.
  */
-export function restartStep(
+function restartStep(
   prevTime: number,
   time: number,
   restartTime: number,
@@ -347,7 +348,7 @@ export function restartStep(
  * `p.time > p.lifetime` (`cpu_particles_2d.cpp:971`): strict, so a particle
  * exactly at its lifetime gets one more advancing step before it dies.
  */
-export function particleExpired(time: number, lifetime: number): boolean {
+function particleExpired(time: number, lifetime: number): boolean {
   return time > lifetime;
 }
 
@@ -646,7 +647,7 @@ function lerpParam(props: CPUParticles2DProperties, param: CPUParticles2DParam, 
   return lerp(slot.min, slot.max, randFromSeed(seedRef));
 }
 
-function multiplyColor(a: Color, b: Color): Color {
+function multiplyColor(a: Rgba, b: Rgba): Rgba {
   return { r: a.r * b.r, g: a.g * b.g, b: a.b * b.b, a: a.a * b.a };
 }
 
@@ -654,7 +655,7 @@ function multiplyColor(a: Color, b: Color): Color {
  * Godot's YIQ-style hue rotation: three constant bases blended by cos/sin of the
  * angle, then applied with `Basis::xform_inv`, the transpose.
  */
-function rotateHue(color: Color, angle: number): Color {
+function rotateHue(color: Rgba, angle: number): Rgba {
   const c = Math.cos(angle);
   const s = Math.sin(angle);
 

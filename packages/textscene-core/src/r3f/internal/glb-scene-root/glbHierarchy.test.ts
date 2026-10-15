@@ -1,20 +1,28 @@
-/** `buildGlbHierarchy`: stable, disambiguated relative paths for a loaded GLB. */
+/** `glbSceneRootChildren`: a loaded GLB as tree nodes with stable, disambiguated relative paths. */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import {
-  buildGlbHierarchy,
-  glbDisplayType,
-  glbHierarchyToTscnNodes,
-  glbObjectName,
-  glbSceneRootChildren,
-  GLB_ANIMATION_PLAYER_NAME,
-  GLB_ANIMATION_PLAYER_TYPE,
-} from './glbHierarchy';
+import type { TscnNode } from '../../../parser/types';
+import { glbObjectName, glbSceneRootChildren, GLB_ANIMATION_PLAYER_NAME } from './glbHierarchy';
 import { tagGodotNodeNames } from '../../../resources/formats/glb/nodeNames';
 
 function named<T extends THREE.Object3D>(obj: T, name: string): T {
   obj.name = name;
   return obj;
+}
+
+function relPathOf(node: TscnNode): unknown {
+  return (node.properties as Record<string, unknown>).glbRelPath;
+}
+
+function displayTypeOf(node: TscnNode): unknown {
+  return (node.properties as Record<string, unknown>).glbDisplayType;
+}
+
+/** The display type the tree gives a lone child object of `object`'s THREE type. */
+function displayTypeFor(object: THREE.Object3D): unknown {
+  const root = new THREE.Group();
+  root.add(object);
+  return displayTypeOf(glbSceneRootChildren(root)[0]!);
 }
 
 /** `object` as glTF node 0, which Godot names `godotName`. */
@@ -37,11 +45,11 @@ describe('glbObjectName', () => {
   });
 });
 
-describe('buildGlbHierarchy', () => {
+describe('glbSceneRootChildren paths', () => {
   it("paths each node by Godot's name", () => {
     const root = new THREE.Group();
     root.add(godotNamed(named(new THREE.Mesh(), 'Cube001'), 'Cube_001'));
-    expect(buildGlbHierarchy(root).map((n) => [n.name, n.relPath])).toEqual([['Cube_001', 'Cube_001']]);
+    expect(glbSceneRootChildren(root).map((n) => [n.name, relPathOf(n)])).toEqual([['Cube_001', 'Cube_001']]);
   });
 
   it('walks children in order with nested relative paths', () => {
@@ -50,9 +58,9 @@ describe('buildGlbHierarchy', () => {
     armature.add(named(new THREE.Mesh(), 'hand'));
     root.add(named(new THREE.Mesh(), 'body'), named(new THREE.Bone(), 'spine'), armature);
 
-    const h = buildGlbHierarchy(root);
-    expect(h.map((n) => n.relPath)).toEqual(['body', 'spine', 'Armature']);
-    expect(h[2]!.children[0]!.relPath).toBe('Armature/hand');
+    const nodes = glbSceneRootChildren(root);
+    expect(nodes.map(relPathOf)).toEqual(['body', 'spine', 'Armature']);
+    expect(relPathOf(nodes[2]!.children[0]!)).toBe('Armature/hand');
   });
 
   it('disambiguates duplicate sibling names with @n', () => {
@@ -62,58 +70,62 @@ describe('buildGlbHierarchy', () => {
       named(new THREE.Mesh(), 'body'),
       named(new THREE.Mesh(), 'body')
     );
-    expect(buildGlbHierarchy(root).map((n) => n.relPath)).toEqual(['body', 'body@1', 'body@2']);
+    expect(glbSceneRootChildren(root).map(relPathOf)).toEqual(['body', 'body@1', 'body@2']);
   });
 
-  it('falls back to the THREE type for unnamed nodes', () => {
+  it('falls back to the THREE type for an unnamed node', () => {
     const root = new THREE.Group();
-    root.add(new THREE.Mesh()); // name = ''
-    const h = buildGlbHierarchy(root);
-    expect(h[0]!.name).toBe('Mesh');
-    expect(h[0]!.relPath).toBe('Mesh');
+    root.add(new THREE.Mesh());
+    const [node] = glbSceneRootChildren(root);
+    expect(node!.name).toBe('Mesh');
+    expect(relPathOf(node!)).toBe('Mesh');
   });
 
-  it('maps THREE types to Godot-ish display types', () => {
-    expect(glbDisplayType('Mesh')).toBe('Mesh');
-    expect(glbDisplayType('SkinnedMesh')).toBe('Mesh');
-    // An instanced glTF node loads as an InstancedMesh under `three-loader`.
-    expect(glbDisplayType('InstancedMesh')).toBe('Mesh');
-    expect(glbDisplayType('Bone')).toBe('Bone');
-    expect(glbDisplayType('Group')).toBe('Node3D');
-    expect(glbDisplayType('PerspectiveCamera')).toBe('Camera3D');
-    expect(glbDisplayType('PointLight')).toBe('Light');
-  });
-
-  it('produces identical paths for a structurally-equal clone', () => {
+  it('produces identical paths for a structurally equal clone', () => {
     const root = new THREE.Group();
     const g = named(new THREE.Group(), 'g');
     g.add(named(new THREE.Mesh(), 'm'), named(new THREE.Mesh(), 'm'));
     root.add(g);
-    const a = buildGlbHierarchy(root);
-    const b = buildGlbHierarchy(root.clone(true));
-    const paths = (nodes: ReturnType<typeof buildGlbHierarchy>): string[] =>
-      nodes.flatMap((n) => [n.relPath, ...paths(n.children)]);
-    expect(paths(a)).toEqual(paths(b));
+    const paths = (nodes: readonly TscnNode[]): unknown[] =>
+      nodes.flatMap((n) => [relPathOf(n), ...paths(n.children)]);
+    expect(paths(glbSceneRootChildren(root.clone(true)))).toEqual(paths(glbSceneRootChildren(root)));
   });
-});
 
-describe('glbHierarchyToTscnNodes', () => {
-  it('converts to synthetic TscnNodes whose names are the disambiguated path segments', () => {
+  it('names each node by its disambiguated path segment, so joining names reproduces the path', () => {
     const root = new THREE.Group();
     const armature = named(new THREE.Group(), 'Armature');
     armature.add(named(new THREE.Mesh(), 'hand'));
     root.add(named(new THREE.Mesh(), 'body'), named(new THREE.Mesh(), 'body'), armature);
 
-    const nodes = glbHierarchyToTscnNodes(buildGlbHierarchy(root));
+    const nodes = glbSceneRootChildren(root);
     expect(nodes.map((n) => n.name)).toEqual(['body', 'body@1', 'Armature']);
     expect(nodes.map((n) => n.type)).toEqual(['GLBMesh', 'GLBMesh', 'GLBNode']);
-    // Names are the relPath segments → the tree's joinPath() reproduces relPath.
     expect(nodes[2]!.children[0]!.name).toBe('hand');
-    expect((nodes[2]!.children[0]!.properties as Record<string, unknown>).glbRelPath).toBe('Armature/hand');
+    expect(relPathOf(nodes[2]!.children[0]!)).toBe('Armature/hand');
   });
 });
 
-describe('glbSceneRootChildren', () => {
+describe('glbSceneRootChildren display types', () => {
+  it.each([
+    ['Mesh', () => new THREE.Mesh(), 'Mesh'],
+    ['SkinnedMesh', () => new THREE.SkinnedMesh(), 'Mesh'],
+    // An instanced glTF node loads as an InstancedMesh under `three-loader`.
+    ['InstancedMesh', () => new THREE.InstancedMesh(new THREE.BufferGeometry(), undefined, 1), 'Mesh'],
+    ['Bone', () => new THREE.Bone(), 'Bone'],
+    ['Group', () => new THREE.Group(), 'Node3D'],
+    ['Object3D', () => new THREE.Object3D(), 'Node3D'],
+    ['PerspectiveCamera', () => new THREE.PerspectiveCamera(), 'Camera3D'],
+    ['PointLight', () => new THREE.PointLight(), 'Light'],
+  ])('shows a %s as a %s', (_type, make, expected) => {
+    expect(displayTypeFor(make())).toBe(expected);
+  });
+
+  it('keeps the THREE type of an object with no Godot counterpart', () => {
+    expect(displayTypeFor(new THREE.LineSegments())).toBe('LineSegments');
+  });
+});
+
+describe('glbSceneRootChildren animation player', () => {
   it('appends an AnimationPlayer node when the GLB carries clips (Godot parity)', () => {
     const root = new THREE.Group();
     root.add(named(new THREE.Mesh(), 'body'));
@@ -125,7 +137,8 @@ describe('glbSceneRootChildren', () => {
     const nodes = glbSceneRootChildren(root);
     expect(nodes.map((n) => n.name)).toEqual(['body', GLB_ANIMATION_PLAYER_NAME]);
     const ap = nodes.at(-1)!;
-    expect(ap.type).toBe(GLB_ANIMATION_PLAYER_TYPE);
+    // `GLB`-prefixed, so `rendersOwnVisual` reports it as drawing.
+    expect(ap.type).toBe('GLBAnimationPlayer');
     expect(ap.children).toEqual([]);
     expect((ap.properties as Record<string, unknown>).glbClipNames).toEqual(['idle', 'run']);
   });

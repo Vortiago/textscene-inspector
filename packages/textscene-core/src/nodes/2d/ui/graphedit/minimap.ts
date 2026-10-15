@@ -10,27 +10,29 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { sortableView } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import type { ControlColor, ControlProperties } from '../control/types';
+import type { ControlProperties } from '../control/types';
 import type { GraphElementProperties } from '../graphelement/types';
 import type { GraphFrameProperties } from '../graphframe/types';
 import { graphNodeStyles } from '../graphnode/nativeSolver';
 import { graphFrameStyles } from '../graphframe/nativeSolver';
 import type { GraphEditProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `MINIMAP_OFFSET` (`graph_edit.cpp:51`): unscaled, like every other constant in that block. */
-export const GRAPH_EDIT_MINIMAP_OFFSET = 12;
+const GRAPH_EDIT_MINIMAP_OFFSET = 12;
 /** `MINIMAP_PADDING` (`graph_edit.cpp:52`). */
-export const GRAPH_EDIT_MINIMAP_PADDING = 5;
+const GRAPH_EDIT_MINIMAP_PADDING = 5;
 /** The minimap's own `custom_minimum_size` (`graph_edit.cpp:3332`). */
-export const GRAPH_EDIT_MINIMAP_MIN_SIZE = 50;
+const GRAPH_EDIT_MINIMAP_MIN_SIZE = 50;
 /** `const Vector2 minimap_size = Vector2(240, 160)` (`graph_edit.cpp:3326`). */
-export const GRAPH_EDIT_MINIMAP_DEFAULT_SIZE: Vec2 = { x: 240, y: 160 };
+const GRAPH_EDIT_MINIMAP_DEFAULT_SIZE: Vector2 = { x: 240, y: 160 };
 /** `const float minimap_opacity = 0.65` (`graph_edit.cpp:3327`). */
-export const GRAPH_EDIT_MINIMAP_DEFAULT_OPACITY = 0.65;
+const GRAPH_EDIT_MINIMAP_DEFAULT_OPACITY = 0.65;
 
 /**
  * `GraphEdit::is_minimap_enabled` (`:2808-2810`): `minimap_button->is_pressed()`.
@@ -51,7 +53,7 @@ export function minimapOpacity(props: GraphEditProperties): number {
  * `GraphEdit::set_minimap_size` (`:2770-2780`): `PRESET_BOTTOM_RIGHT` plus four offsets, resolved
  * to a rect inside GraphEdit's own.
  */
-export function minimapRect(graphEditSize: Vec2, props: GraphEditProperties): Rect2 {
+export function minimapRect(graphEditSize: Vector2, props: GraphEditProperties): Rect2 {
   const requested = props.minimapSize ?? GRAPH_EDIT_MINIMAP_DEFAULT_SIZE;
   // `minimap->get_size()` after `Control::set_size`'s own floor (`control.cpp:1496-1503`).
   const w = Math.max(requested.x, GRAPH_EDIT_MINIMAP_MIN_SIZE);
@@ -65,15 +67,15 @@ export function minimapRect(graphEditSize: Vec2, props: GraphEditProperties): Re
 }
 
 /** One GraphElement child as `_update_scrollbars`/`_minimap_draw` read it: its own `position_offset` and unscaled size. */
-export interface GraphElementBox {
-  positionOffset: Vec2;
-  size: Vec2;
+interface GraphElementBox {
+  positionOffset: Vector2;
+  size: Vector2;
 }
 
 /** `min_scroll_offset`/`max_scroll_offset` (`graph_edit.cpp:492-493`). */
 export interface GraphScrollBounds {
-  min: Vec2;
-  max: Vec2;
+  min: Vector2;
+  max: Vector2;
 }
 
 /**
@@ -81,10 +83,10 @@ export interface GraphScrollBounds {
  * default `Rect2`, so the graph origin is always inside (`core/math/rect2.h:165-180`). No visibility
  * test: a hidden GraphElement still widens it, unlike `_minimap_draw`'s own loops (`:1821,1844`).
  */
-export function graphScrollBounds(
+function graphScrollBounds(
   elements: readonly GraphElementBox[],
   zoom: number,
-  graphEditSize: Vec2
+  graphEditSize: Vector2
 ): GraphScrollBounds {
   let left = 0;
   let top = 0;
@@ -107,22 +109,22 @@ export function graphScrollBounds(
 /** The state `update_minimap` (`:76-101`) leaves behind, as the converters read it. */
 export interface MinimapTransform {
   /** `_get_render_size` (`:112-118`): the minimap rect less both paddings. */
-  renderSize: Vec2;
+  renderSize: Vector2;
   /** `graph_proportions`: the graph box letterboxed to the minimap's aspect. */
-  graphProportions: Vec2;
+  graphProportions: Vector2;
   /** `minimap_offset`: where the letterboxed graph starts inside the minimap. */
-  minimapOffset: Vec2;
+  minimapOffset: Vector2;
 }
 
 /** `GraphEditMinimap::_get_graph_size` (`:121-132`): a zero extent is floored at 1 so the ratios stay finite. */
-function graphSize(bounds: GraphScrollBounds): Vec2 {
+function graphSize(bounds: GraphScrollBounds): Vector2 {
   const x = bounds.max.x - bounds.min.x;
   const y = bounds.max.y - bounds.min.y;
   return { x: x === 0 ? 1 : x, y: y === 0 ? 1 : y };
 }
 
 /** `GraphEditMinimap::update_minimap` (`:76-101`), the parts a static frame reads. */
-export function minimapTransform(minimapSize: Vec2, bounds: GraphScrollBounds): MinimapTransform {
+export function minimapTransform(minimapSize: Vector2, bounds: GraphScrollBounds): MinimapTransform {
   const renderSize = {
     x: minimapSize.x - 2 * GRAPH_EDIT_MINIMAP_PADDING,
     y: minimapSize.y - 2 * GRAPH_EDIT_MINIMAP_PADDING,
@@ -154,7 +156,7 @@ export function minimapTransform(minimapSize: Vec2, bounds: GraphScrollBounds): 
 }
 
 /** `GraphEditMinimap::_convert_from_graph_position` (`:135-143`). */
-export function minimapConvertFromGraph(t: MinimapTransform, p: Vec2): Vec2 {
+export function minimapConvertFromGraph(t: MinimapTransform, p: Vector2): Vector2 {
   return {
     x: (p.x * t.renderSize.x) / t.graphProportions.x,
     y: (p.y * t.renderSize.y) / t.graphProportions.y,
@@ -185,8 +187,8 @@ export function minimapNodeRect(
 export function minimapCameraRect(
   t: MinimapTransform,
   bounds: GraphScrollBounds,
-  scrollOffset: Vec2,
-  graphEditSize: Vec2
+  scrollOffset: Vector2,
+  graphEditSize: Vector2
 ): Rect2 {
   const cameraPosition = { x: scrollOffset.x - bounds.min.x, y: scrollOffset.y - bounds.min.y };
   const centre = minimapConvertFromGraph(t, {
@@ -205,13 +207,13 @@ export function minimapCameraRect(
 /** One GraphFrame/GraphNode as `_minimap_draw` reads it (`:1821-1866`): its box, plus the bg colour its own `panel` stylebox carries. */
 export interface MinimapElement extends GraphElementBox {
   key: string;
-  bgColor: ControlColor;
+  bgColor: Rgba;
 }
 
 /** `GraphFrame::tint_color`'s own default (`graph_frame.h:61`). */
-const GRAPH_FRAME_DEFAULT_TINT: ControlColor = { r: 0.3, g: 0.3, b: 0.3, a: 0.75 };
+const GRAPH_FRAME_DEFAULT_TINT: Rgba = { r: 0.3, g: 0.3, b: 0.3, a: 0.75 };
 
-export interface GraphEditElementView {
+interface GraphEditElementView {
   bounds: GraphScrollBounds;
   /** Frames first, then nodes, each from the last child backwards: `_minimap_draw`'s own two loops (`:1821,1844`), so a frame never covers a node. */
   minimapElements: MinimapElement[];
@@ -227,7 +229,7 @@ export function graphEditElements(
   graphEdit: SolveNode,
   childRects: ReadonlyMap<string, Rect2>,
   zoom: number,
-  graphEditSize: Vec2,
+  graphEditSize: Vector2,
   theme: NativeTheme
 ): GraphEditElementView {
   const boxes: { key: string; box: GraphElementBox; type: string; visible: boolean; node: SolveNode }[] = [];

@@ -12,13 +12,13 @@ import { useCanvasSrgbDefines } from '../../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 
-export interface TexturedFillMeshGeometry {
+interface TexturedFillMeshGeometry {
   positions: number[];
   uvs: number[];
   indices: number[];
 }
 
-export interface TexturedFillMeshProps {
+interface TexturedFillMeshProps {
   geometry: TexturedFillMeshGeometry | null;
   texture: THREE.Texture;
   /** Already linear, as `ControlQuad`'s `color` prop expects. */

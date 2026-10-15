@@ -5,13 +5,12 @@
  * instance, so the mask belongs to the asset and no scene mentions it. Decals read
  * it: Godot projects one only where `cull_mask & layers` is non-zero.
  */
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
 import { DependencyGraph } from '../dependencyGraph';
-import { initGlbModules } from '../formats/glb/glbProcessing';
 import { visualLayersOf } from '../../r3f/visualLayers';
 
 const GLTF_PATH = 'res://town/lamp/scene.gltf';
@@ -89,10 +88,6 @@ function theMesh(root: THREE.Object3D): THREE.Object3D {
 }
 
 describe('createGLBProcessor — import sidecar node layers', () => {
-  beforeAll(async () => {
-    await initGlbModules();
-  });
-
   it('stamps the sidecar mask on the node its path names', async () => {
     const root = await loadWith({ [`${GLTF_PATH}.import`]: SIDECAR });
     expect(visualLayersOf(theMesh(root))).toBe(2);

@@ -30,7 +30,7 @@ export const UNPACED: UploadPacer = { allowance: () => Infinity, markIssued: () 
  * 8 MiB of 2 MiB bands on their way to the GPU at once. Under SwiftShader a write
  * blocked for 60 ms once about 14 MiB were outstanding, so this is half of that.
  */
-export const IN_FLIGHT_BANDS = 4;
+const IN_FLIGHT_BANDS = 4;
 
 interface IssuedFrame {
   fence: GpuFence;

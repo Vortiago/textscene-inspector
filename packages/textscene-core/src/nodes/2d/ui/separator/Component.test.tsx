@@ -12,7 +12,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ControlProperties } from '../control/types';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { resolveStyleBoxes } from '../../../../r3f/controls/native/buildSolveTree';
+import { parseStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { SeparatorChrome } from './Component';
 
 const RECT = { x: 0, y: 0, w: 100, h: 25 };
@@ -76,8 +76,8 @@ describe('<SeparatorChrome>', () => {
       resources
     );
     // `SeparatorChrome` reads only `solveNode.styleBoxes.separator`, resolved here by the walk's own
-    // `resolveStyleBoxes` (`buildSolveTree.ts`), not by hand.
-    node.styleBoxes = resolveStyleBoxes(node.node, node.resources);
+    // StyleBox parser, not by hand.
+    node.styleBoxes = { separator: parseStyleBox('SubResource("Line_1")', [], resources)! };
     const renderer = await ReactThreeTestRenderer.create(
       <SeparatorChrome
         {...painterEnv()}

@@ -13,5 +13,3 @@ const vehicleBody3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(vehicleBody3DRegistration);
-
-export { vehicleBody3DRegistration };

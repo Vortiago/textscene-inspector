@@ -12,5 +12,3 @@ const colorPickerRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(colorPickerRegistration);
-
-export { colorPickerRegistration };

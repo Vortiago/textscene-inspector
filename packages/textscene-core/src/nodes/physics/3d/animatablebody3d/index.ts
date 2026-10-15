@@ -15,5 +15,3 @@ const animatableBody3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(animatableBody3DRegistration);
-
-export { animatableBody3DRegistration };

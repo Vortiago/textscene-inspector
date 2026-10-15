@@ -12,7 +12,6 @@ const sprite2DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(sprite2DRegistration);
 
-export { sprite2DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

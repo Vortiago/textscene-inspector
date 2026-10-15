@@ -8,5 +8,3 @@ import { TextureProgressBar } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'TextureProgressBar', Component: TextureProgressBar });
-
-export { TextureProgressBar };

@@ -22,7 +22,7 @@ export function surfaceAttach(index: number, surfaceCount: number): string {
   return surfaceCount > 1 ? `material-${index}` : 'material';
 }
 
-export interface SurfaceMaterialSlotsProps {
+interface SurfaceMaterialSlotsProps {
   /** `sources[i]` is the material of draw group `i`. */
   sources: readonly (MaterialSource | undefined)[];
 }

@@ -10,6 +10,5 @@ const canvasLayerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(canvasLayerRegistration);
 
-export { canvasLayerRegistration };
 export * from './parser';
 export * from './types';

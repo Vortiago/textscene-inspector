@@ -10,7 +10,7 @@ import { useGlobalShortcut } from '../../hooks/useGlobalShortcut.js';
 import { controlsFor } from './bindings.js';
 import styles from './ViewportControlsHelp.module.css';
 
-export interface ViewportControlsHelpProps {
+interface ViewportControlsHelpProps {
   mode: '2D' | '3D';
 }
 

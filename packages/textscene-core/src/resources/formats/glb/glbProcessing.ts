@@ -1,10 +1,12 @@
 /**
- * The GLB slice's glTF/GLB parser (ADR-0031) and the per-consumer clone. GLTFLoader
- * and SkeletonUtils are large addons, so they load lazily on the first GLB request, in
- * a chunk outside the webview's initial-paint closure.
+ * The GLB slice's glTF/GLB parser (ADR-0031) and the per-consumer clone. GLTFLoader is a
+ * large addon, so it loads lazily on the first GLB request, in a chunk outside the webview's
+ * initial-paint closure. SkeletonUtils is about 3 KB gzipped, so it loads statically and
+ * `cloneWithMaterials` works on any mesh, built or not.
  */
 
 import * as THREE from 'three';
+import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCasting';
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 import { withExtensionRules } from './extensionRules';
@@ -18,35 +20,22 @@ import { usesGodotSingleRoot } from '../../../godot/import/gltf';
 import { applyLightmapUv, type LightmapUvImport } from './lightmapUv/lightmapUv';
 import { godotPrimitives } from './godotPrimitives';
 
-interface GlbModules {
-  GLTFLoader: (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
-  skeletonClone: (typeof import('three/addons/utils/SkeletonUtils.js'))['clone'];
-}
+type GLTFLoaderClass = (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
 
-/** Null until the first GLB load. Written only when `initPromise` resolves. */
-let glbModules: GlbModules | null = null;
-let initPromise: Promise<GlbModules> | null = null;
+/** Written only by `loadGLTFLoader`. Cleared when the chunk load fails, so the next request retries. */
+let loaderPromise: Promise<GLTFLoaderClass> | null = null;
 
-/**
- * Load GLTFLoader and SkeletonUtils once, caching the promise. A test that calls
- * `cloneWithMaterials` directly awaits this first.
- */
-export function initGlbModules(): Promise<GlbModules> {
-  initPromise ??= Promise.all([
-    import('three/addons/loaders/GLTFLoader.js'),
-    import('three/addons/utils/SkeletonUtils.js'),
-  ])
-    .then(([loaderMod, skeletonMod]) => {
-      glbModules = { GLTFLoader: loaderMod.GLTFLoader, skeletonClone: skeletonMod.clone };
-      return glbModules;
-    })
+/** Loads GLTFLoader once, caching the promise. */
+function loadGLTFLoader(): Promise<GLTFLoaderClass> {
+  loaderPromise ??= import('three/addons/loaders/GLTFLoader.js')
+    .then((loaderModule) => loaderModule.GLTFLoader)
     .catch((error: unknown) => {
       // A failed chunk load must not poison the cache: the next GLB request retries
       // the import, and this caller still gets the rejection as a missing resource.
-      initPromise = null;
+      loaderPromise = null;
       throw error;
     });
-  return initPromise;
+  return loaderPromise;
 }
 
 // Synchronous helpers, with no addons, safe in the initial bundle.
@@ -167,7 +156,7 @@ export async function createGLBMesh(
   data: ArrayBuffer,
   { extensionRules = 'godot-importer', naming, lightmapUv }: GlbLoadOptions
 ): Promise<THREE.Object3D> {
-  const { GLTFLoader } = await initGlbModules();
+  const GLTFLoader = await loadGLTFLoader();
   const loader = withExtensionRules(new GLTFLoader(inMemoryOnlyManager()), extensionRules)
     .register(decodeImagesInImageElements)
     .register(godotPrimitives);
@@ -211,22 +200,11 @@ function importBlendAsDepthPrepass(object: THREE.Object3D): void {
   });
 }
 
-/**
- * Clone an Object3D and its materials, since an Object3D has one parent. Requires an
- * awaited `initGlbModules()`, which a successful `createGLBMesh` always did before a
- * consumer holds a clone.
- */
+/** Clone an Object3D and its materials, since an Object3D has one parent. */
 export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
-  if (!glbModules) {
-    throw new Error(
-      '[glbProcessing] cloneWithMaterials called before initGlbModules(). ' +
-        'Await initGlbModules() in a beforeAll/beforeEach in tests, or ensure ' +
-        'createGLBMesh has been called at least once before cloning.'
-    );
-  }
   // SkeletonUtils, not `clone(true)`: a plain clone leaves a SkinnedMesh bound to the
   // source bones, so animating one instance deforms the template and every other one.
-  const cloned = glbModules.skeletonClone(mesh);
+  const cloned = skeletonClone(mesh);
 
   // SkeletonUtils shares material references, so clone every slot the sidecar writer
   // can reach, and a per-instance material change stays in its instance.

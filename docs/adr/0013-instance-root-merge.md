@@ -10,7 +10,7 @@ When a Node instances a single-root `.tscn`, the redundant wrapper level collaps
 
 `collapseLiveNode` (`r3f/liveSceneTree.ts`) is the one definition of the merge. The viewport (`InstancedNode` in `NodeDispatcher`), the tree (`TreeNode` / `useSubSceneChildren`) and the inspector all call it, so they agree on node paths.
 
-The inspector (`NodeDetailsPanel`) resolves a selection through a `useLiveNode(path)` hook (beside `useLiveSceneNodes`). The hook resolves through `resolveLiveEntry`: the `resolveLiveNode` walk plus the **originating** `instanceRef` of the selected node. It subscribes to `useLiveTreeVersion`, so a selection inside a sub-scene that has not loaded yet updates when the sub-scene arrives. The originating ref matters because the merged node's own `instance` is the one of the sub-scene root (cleared for a plain root). The 📦 external-scene indicator of the inspector, like the badge of the tree, keys off the originating ref, not the collapsed node.
+The inspector (`NodeDetailsPanel`) resolves a selection through a `useLiveNode(path)` hook (beside `useLiveSceneNodes`). The hook resolves through `resolveLiveEntry`: the live-tree walk plus the **originating** `instanceRef` of the selected node. It subscribes to `useLiveTreeVersion`, so a selection inside a sub-scene that has not loaded yet updates when the sub-scene arrives. The originating ref matters because the merged node's own `instance` is the one of the sub-scene root (cleared for a plain root). The 📦 external-scene indicator of the inspector, like the badge of the tree, keys off the originating ref, not the collapsed node.
 
 ## Consequences
 

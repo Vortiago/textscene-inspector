@@ -1,12 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import {
-  parseTransform3D,
-  decomposeTransform3D,
-  identityTransform3D,
-  parseOptionalTransform,
-} from './transform';
-import type { Transform3D } from '../nodes/base/node3d/types';
+import { parseTransform3D, decomposeTransform3D, parseOptionalTransform } from './transform';
+import { identityTransform3D, type Transform3D } from '../godot/math/transform3d.js';
 
 describe('transform utils', () => {
   describe('parseTransform3D', () => {
@@ -308,38 +303,6 @@ describe('transform utils', () => {
     });
   });
 
-  describe('identityTransform3D', () => {
-    it('should return identity transform', () => {
-      const result = identityTransform3D();
-
-      expect(result).toEqual({
-        basis_x: { x: 1, y: 0, z: 0 },
-        basis_y: { x: 0, y: 1, z: 0 },
-        basis_z: { x: 0, y: 0, z: 1 },
-        origin: { x: 0, y: 0, z: 0 },
-      });
-    });
-
-    it('should return new object each time', () => {
-      const identity1 = identityTransform3D();
-      const identity2 = identityTransform3D();
-
-      expect(identity1).toEqual(identity2);
-      expect(identity1).not.toBe(identity2);
-    });
-
-    it('should decompose to zero rotation and unit scale', () => {
-      const identity = identityTransform3D();
-      const decomposed = decomposeTransform3D(identity);
-
-      expect(decomposed.position).toEqual({ x: 0, y: 0, z: 0 });
-      expect(decomposed.rotation.x).toBeCloseTo(0);
-      expect(decomposed.rotation.y).toBeCloseTo(0);
-      expect(decomposed.rotation.z).toBeCloseTo(0);
-      expect(decomposed.scale).toEqual({ x: 1, y: 1, z: 1 });
-    });
-  });
-
   describe('parseOptionalTransform', () => {
     it('should return undefined for undefined input', () => {
       const result = parseOptionalTransform(undefined, 'TestNode');
@@ -371,6 +334,14 @@ describe('transform utils', () => {
 
       // The logged warning goes unasserted.
       expect(result).toEqual(identityTransform3D());
+    });
+
+    it('should return a new identity object for each malformed input', () => {
+      const first = parseOptionalTransform('InvalidTransform', 'TestNode');
+      const second = parseOptionalTransform('InvalidTransform', 'TestNode');
+
+      expect(first).toEqual(second);
+      expect(first).not.toBe(second);
     });
 
     it('should handle Error objects in catch block', () => {

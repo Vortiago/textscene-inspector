@@ -3,7 +3,7 @@
  * simulation settings.
  */
 
-import { PARAM_SLOTS } from '../../nodes/2d/cpuparticles2d/types.js';
+import { PARAM_SLOTS } from '../../../nodes/2d/cpuparticles2d/types.js';
 import type { AsymmetryEntry } from './types.js';
 
 /**

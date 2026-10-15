@@ -21,8 +21,6 @@ import { dictCallField, nodePathLiteral } from '../../../godot/variant/variantPa
 import { findSubResource } from '../../../resources/SubResourceResolver.js';
 import type { AnimationLibraryRef } from './types';
 
-export type { GodotKeyframeValue } from './keyframeValues.js';
-
 export interface GodotKeyframe {
   time: number;
   value: GodotKeyframeValue;

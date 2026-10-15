@@ -10,6 +10,5 @@ const vSliderRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(vSliderRegistration);
 
-export { vSliderRegistration };
 export * from './parser';
 export * from './types';

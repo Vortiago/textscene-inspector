@@ -15,7 +15,7 @@ import {
   createFakeResourceLoader,
   recordSceneRequests,
 } from '../../../resources/testing/createFakeResourceLoader';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.

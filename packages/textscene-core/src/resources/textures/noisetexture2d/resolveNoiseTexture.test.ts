@@ -10,8 +10,7 @@ import * as THREE from 'three';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { WorkerJobRunner } from '../../../workers/WorkerJobRunner';
-import { abortProceduralBuilds } from '../proceduralBuilds';
-import { clearProceduralTextureCache } from '../proceduralTextureCache';
+import { resetProceduralTextures } from '../proceduralBuilds';
 import { resolveNoiseTexture2D } from './resolveNoiseTexture';
 
 const ICE = `[gd_resource type="StandardMaterial3D" format=3]
@@ -70,8 +69,7 @@ async function built(ref: string, resources: readonly TscnInternalResource[] = i
 }
 
 afterEach(() => {
-  abortProceduralBuilds();
-  clearProceduralTextureCache();
+  resetProceduralTextures();
 });
 
 describe('resolveNoiseTexture2D — the ice.tres shape', () => {

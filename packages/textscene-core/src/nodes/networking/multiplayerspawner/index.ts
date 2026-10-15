@@ -15,5 +15,3 @@ const multiplayerSpawnerRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(multiplayerSpawnerRegistration);
-
-export { multiplayerSpawnerRegistration };

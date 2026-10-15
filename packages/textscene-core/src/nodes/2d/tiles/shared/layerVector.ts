@@ -11,7 +11,7 @@ import { indexedElements } from '../../../../godot/index.js';
  * build a layer: `is_property_valid` ends at `property_list.has(components[1])`
  * (property_list_helper.cpp:135).
  */
-export const LAYER_LEAF_NAMES = [
+const LAYER_LEAF_NAMES = [
   'name',
   'enabled',
   'modulate',

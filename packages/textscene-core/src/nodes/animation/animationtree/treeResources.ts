@@ -23,14 +23,14 @@ export type AnimNode =
   AnimationLeaf | Blend2Node | Add2Node | TimeScaleNode | StateMachineNode | PassthroughNode;
 
 /** Plays a single named clip from the resolved AnimationPlayer. */
-export interface AnimationLeaf {
+interface AnimationLeaf {
   kind: 'animation';
   /** Clip name (the `&"name"` StringName of `AnimationNodeAnimation.animation`). */
   clip: string;
 }
 
 /** Linear blend: `out = in0·(1−amount) + in1·amount` (Godot `AnimationNodeBlend2`). */
-export interface Blend2Node {
+interface Blend2Node {
   kind: 'blend2';
   /** BlendTree-local node name, used for `parameters/<name>/blend_amount`. */
   name: string;
@@ -41,7 +41,7 @@ export interface Blend2Node {
 }
 
 /** Additive blend: `out = base + add·amount` (Godot `AnimationNodeAdd2`). */
-export interface Add2Node {
+interface Add2Node {
   kind: 'add2';
   /** BlendTree-local node name, used for `parameters/<name>/add_amount`. */
   name: string;
@@ -50,7 +50,7 @@ export interface Add2Node {
 }
 
 /** Scales the playback rate of its input (Godot `AnimationNodeTimeScale`). */
-export interface TimeScaleNode {
+interface TimeScaleNode {
   kind: 'timescale';
   /** BlendTree-local node name, used for `parameters/<name>/scale`. */
   name: string;
@@ -58,7 +58,7 @@ export interface TimeScaleNode {
 }
 
 /** A state machine: the active state's node plays at full weight. */
-export interface StateMachineNode {
+interface StateMachineNode {
   kind: 'statemachine';
   /** BlendTree-local node name (`''` when this is the `tree_root` itself), used
    *  to scope the `parameters/<name>/current_state` lookup. */
@@ -73,7 +73,7 @@ export interface StateMachineNode {
  * A single-input AnimationNode this does not model precisely (OneShot, Transition, BlendSpace,
  * nested unknown). Evaluation passes its input through unchanged, so the tree does not go blank.
  */
-export interface PassthroughNode {
+interface PassthroughNode {
   kind: 'passthrough';
   /** Original Godot type, for debugging / linting. */
   type: string;

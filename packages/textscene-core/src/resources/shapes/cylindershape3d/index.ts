@@ -5,4 +5,3 @@ import { registerGenericResourceSlice } from '../../sliceRegistration';
 registerGenericResourceSlice('cylindershape3d', ['CylinderShape3D']);
 
 export { decodeCylinderShape3D } from './decode';
-export type { CylinderShape3DProperties } from './types';

@@ -7,5 +7,3 @@ import { ninePatchRectMinimumSize } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'NinePatchRect', Component: NinePatchRect });
 controlSolverRegistry.registerMinimumSize('NinePatchRect', ninePatchRectMinimumSize);
-
-export { NinePatchRect };

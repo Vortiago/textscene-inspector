@@ -14,6 +14,5 @@ const nodeRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(nodeRegistration);
 
-export { nodeRegistration };
 export * from './parser';
 export * from './types';

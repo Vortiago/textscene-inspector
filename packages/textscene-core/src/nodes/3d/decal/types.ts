@@ -6,8 +6,8 @@
  */
 
 import type { Node3DProperties } from '../../base/node3d/types';
-import type { Color } from '../../../utils/colorParser';
-import type { Vector3 } from '../../../parser/vectors';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector3 } from '../../../godot/math/vector';
 
 export interface DecalProperties extends Node3DProperties {
   /** Albedo texture projected onto surfaces (ExtResource/SubResource ref). */
@@ -26,7 +26,7 @@ export interface DecalProperties extends Node3DProperties {
   size: Vector3;
 
   /** Color tint multiplied into the projected albedo (default: white). */
-  modulate: Color;
+  modulate: Rgba;
 
   /** How strongly the albedo replaces the surface beneath (0..1, default 1). */
   albedo_mix: number;

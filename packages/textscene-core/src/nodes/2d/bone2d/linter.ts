@@ -125,5 +125,3 @@ const bone2DAncestryRule: LintRule = {
 };
 
 ruleRegistry.register(bone2DAncestryRule);
-
-export { bone2DAncestryRule };

@@ -11,7 +11,6 @@
 import * as THREE from 'three';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
-import type { Color } from '../../../../nodes/base/node2d/types';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 import { injectProgram, type ProgramInjection } from '../../../materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../materials/godotAlphaHash';
@@ -21,12 +20,13 @@ import {
   type OpaquePrepass,
 } from '../../../materials/opaquePrepass';
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** Fixed raster supersampling factor: canvas text has no distance field to stay crisp when magnified, so this trades memory and fill rate for sharpness at typical zoom. */
-export const CANVAS_TEXT_SUPERSAMPLE = 3;
+const CANVAS_TEXT_SUPERSAMPLE = 3;
 
 /** Fixed vertical pad, CSS px before supersampling, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
-export const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
+const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
 
 /**
  * The whole supersampled device pixels a CSS-px extent needs. The quad samples
@@ -37,7 +37,7 @@ function wholeDevicePx(cssPx: number): number {
   return Math.max(1, Math.ceil(cssPx * CANVAS_TEXT_SUPERSAMPLE));
 }
 
-export interface CanvasTextCanvasLayout {
+interface CanvasTextCanvasLayout {
   /** Raster canvas width, CSS px before supersampling: `layout.widthPx` plus twice `offsetXPx`, rounded up to a whole device pixel. */
   canvasWidthPx: number;
   /** Raster canvas height, CSS px before supersampling: `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole device pixel. */
@@ -84,7 +84,7 @@ export function computeCanvasTextCanvasLayout(
 }
 
 /** The `GlyphQuadArrays` shape `buildGlyphQuadArrays` produces, always exactly one quad. */
-export interface CanvasTextQuadArrays {
+interface CanvasTextQuadArrays {
   positions: Float32Array;
   uvs: Float32Array;
   indices: Uint32Array;
@@ -117,7 +117,7 @@ export function buildCanvasTextQuadArrays(canvasLayout: CanvasTextCanvasLayout):
  * canvas fill colours are sRGB, and the `SRGBColorSpace` texture gets three's
  * decode. The material's `opacity` applies `tint.a` once.
  */
-function opaqueCssColor(tint: Pick<Color, 'r' | 'g' | 'b'>): string {
+function opaqueCssColor(tint: Pick<Rgba, 'r' | 'g' | 'b'>): string {
   const clamp255 = (c: number) => Math.max(0, Math.min(255, Math.round(c * 255)));
   return `rgb(${clamp255(tint.r)}, ${clamp255(tint.g)}, ${clamp255(tint.b)})`;
 }
@@ -133,7 +133,7 @@ function opaqueCssColor(tint: Pick<Color, 'r' | 'g' | 'b'>): string {
 export function paintSceneFontCanvas(
   layout: TextLayoutResult,
   fontSizePx: number,
-  tint: Color,
+  tint: Rgba,
   skew: number,
   canvasLayout: CanvasTextCanvasLayout,
   strokeWidthPx = 0
@@ -209,7 +209,7 @@ export interface CanvasTextBlend {
   injection?: ProgramInjection;
 }
 
-export interface CanvasTextMaterialOptions extends Partial<CanvasTextBlend> {
+interface CanvasTextMaterialOptions extends Partial<CanvasTextBlend> {
   map: THREE.Texture;
   /** Multiplies the raster's anti-aliasing alpha. The raster is opaque, so this is the only place `tint.a` applies. */
   opacity: number;

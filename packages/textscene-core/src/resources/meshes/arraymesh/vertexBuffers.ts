@@ -58,7 +58,7 @@ export function decodePositions(
 }
 
 /** The UV sets of one surface, each undefined when the surface has none. */
-export interface UvSets {
+interface UvSets {
   uvs?: Float32Array;
   uv2s?: Float32Array;
 }

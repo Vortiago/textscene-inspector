@@ -27,7 +27,7 @@ export function clipsChildren(candidate: RawNode): boolean {
   return mode !== CLIP_CHILDREN_DISABLED && mode < CLIP_CHILDREN_MAX;
 }
 
-export interface ClipAncestry {
+interface ClipAncestry {
   /** The nearest CanvasItem ancestor that clips its own children. */
   clippingAncestor?: RawNode;
   /** The nearest CanvasGroup ancestor, which clips through backbuffer compositing. */

@@ -9,7 +9,11 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { graphElementLayout, graphElementMinimumSize } from './nativeSolver';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import './nativeSolver';
+
+const graphElementLayout = controlSolverRegistry.containerLayout('GraphElement')!;
+const graphElementMinimumSize = controlSolverRegistry.minimumSize('GraphElement')!;
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
   return 'rects' in result ? result.rects : result;

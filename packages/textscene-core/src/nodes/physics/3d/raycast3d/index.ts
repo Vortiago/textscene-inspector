@@ -15,5 +15,3 @@ const rayCast3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(rayCast3DRegistration);
-
-export { rayCast3DRegistration };

@@ -3,6 +3,3 @@
 import { registerGenericResourceSlice } from '../../sliceRegistration.js';
 
 registerGenericResourceSlice('spheremesh', ['SphereMesh']);
-
-export { decodeSphereMesh } from './decode.js';
-export type { SphereMeshProperties } from './types.js';

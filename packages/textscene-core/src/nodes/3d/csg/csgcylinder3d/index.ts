@@ -10,6 +10,5 @@ const csgCylinder3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(csgCylinder3DRegistration);
 
-export { csgCylinder3DRegistration };
 export * from './parser';
 export * from './types';

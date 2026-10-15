@@ -78,5 +78,3 @@ const decalValidationRule: LintRule = {
 };
 
 ruleRegistry.register(decalValidationRule);
-
-export { decalValidationRule };

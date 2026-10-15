@@ -13,5 +13,3 @@ const jacobianIK3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(jacobianIK3DRegistration);
-
-export { jacobianIK3DRegistration };
