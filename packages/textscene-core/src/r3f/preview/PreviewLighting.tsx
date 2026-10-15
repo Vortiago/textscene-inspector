@@ -1,8 +1,8 @@
 /**
  * `<PreviewLighting>`: Godot's editor preview sun and environment, each mounted
- * only while the scene supplies none (ADR-0025), and the bare compositor of a root left with no
- * Environment. It reads the live tree, so a
- * node inside an instanced sub-scene counts, as in Godot's editor.
+ * only while the scene supplies none (ADR-0025), and the layer of a root left with
+ * no Environment. It reads the live tree, so a node inside an instanced sub-scene
+ * counts, as in Godot's editor.
  */
 
 import { useMemo } from 'react';
@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { useLiveSceneNodes } from '../useLiveSceneTree';
 import { EnvironmentLayer } from '../environment/EnvironmentLayer';
-import { NoEnvironmentCompositor } from '../environment/NoEnvironmentCompositor';
+import { NoEnvironmentLayer } from '../environment/NoEnvironmentLayer';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { DirectionalShadowMode } from '../../godot/rendering/lights/directionalShadow';
@@ -63,7 +63,7 @@ export function PreviewLighting() {
     <>
       {decision.sun && <PreviewSun />}
       {decision.environment && <PreviewEnvironment />}
-      {withoutEnvironment && <NoEnvironmentCompositor />}
+      {withoutEnvironment && <NoEnvironmentLayer />}
     </>
   );
 }

@@ -1,11 +1,11 @@
-/** The 2D canvas clears to the project clear colour (`renderer_viewport.cpp:371,751`). */
+/** A canvas clears to the project clear colour (`renderer_viewport.cpp:371,751`). */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import { waitFor } from '@testing-library/react';
 import { ProjectClearColor } from './ProjectClearColor';
-import { withProject } from '../../testing/ProjectFixture';
+import { withProject } from './testing/ProjectFixture';
 
 /** Hands out the canvas's renderer, which the test renderer does not expose. */
 function CaptureRenderer({ captured }: { captured: { current: THREE.WebGLRenderer | null } }) {

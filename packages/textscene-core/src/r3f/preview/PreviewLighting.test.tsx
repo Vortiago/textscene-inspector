@@ -18,9 +18,9 @@ import { SOFT_LOW_QUALITY_RADIUS } from '../../godot/rendering/lights/softShadow
 
 import '../nodes/index';
 
-// The compositor needs a real GL context, so a marker stands in for it.
-vi.mock('../environment/NoEnvironmentCompositor', () => ({
-  NoEnvironmentCompositor: () => <group name="NoEnvironmentCompositor" />,
+// A marker stands in for the layer, whose compositor needs a real GL context.
+vi.mock('../environment/NoEnvironmentLayer', () => ({
+  NoEnvironmentLayer: () => <group name="NoEnvironmentLayer" />,
 }));
 
 async function render(sceneText: string, viewport?: { sun?: boolean; environment?: boolean }) {
@@ -109,19 +109,19 @@ describe('preview environment yielding', () => {
     expect(directionalCount(await render(scene(`${DIRECTIONAL}${WORLD_ENV}`)))).toBe(1);
   });
 
-  const compositorCount = (renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>) =>
-    renderer.scene.findAll((node) => node.props.name === 'NoEnvironmentCompositor').length;
+  const noEnvironmentCount = (renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>) =>
+    renderer.scene.findAll((node) => node.props.name === 'NoEnvironmentLayer').length;
 
-  it('mounts the no-Environment compositor when the user turns the preview environment off', async () => {
-    expect(compositorCount(await render(scene(MESH), { environment: false }))).toBe(1);
+  it('mounts the no-Environment layer when the user turns the preview environment off', async () => {
+    expect(noEnvironmentCount(await render(scene(MESH), { environment: false }))).toBe(1);
   });
 
-  it('mounts no such compositor while the preview environment draws', async () => {
-    expect(compositorCount(await render(scene(MESH)))).toBe(0);
+  it('mounts no such layer while the preview environment draws', async () => {
+    expect(noEnvironmentCount(await render(scene(MESH)))).toBe(0);
   });
 
   it('mounts it for a WorldEnvironment that names no Environment', async () => {
-    expect(compositorCount(await render(scene(WORLD_ENV), { environment: false }))).toBe(1);
+    expect(noEnvironmentCount(await render(scene(WORLD_ENV), { environment: false }))).toBe(1);
   });
 
   // The preview environment applies itself through a GPU render the headless

@@ -1,9 +1,10 @@
 [gd_scene format=3 uid="uid://unitworldenvnone"]
 
-; A WorldEnvironment that names no Environment, so the root draws with none and Godot tonemaps it
-; LINEAR (tone_mapper.h:177). Every other 3D golden draws through an Environment, the authored one
-; or the editor preview's, so only this one shows the curve a bare root takes. Unshaded greys at
-; 0.25, 0.5 and 0.75 read back unchanged under LINEAR, and any other curve moves each one.
+; A WorldEnvironment that names no Environment, so the root draws with none: Godot clears it to the
+; project clear colour (renderer_viewport.cpp:371) and tonemaps it LINEAR (tone_mapper.h:177). Every
+; other 3D golden draws through an Environment, the authored one or the editor preview's, so only
+; this one shows a bare root. Unshaded greys at 0.25, 0.5 and 0.75 read back unchanged under LINEAR,
+; and any other curve moves each one.
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]
 size = Vector3(1, 1, 1)

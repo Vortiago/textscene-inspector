@@ -9,7 +9,7 @@
 import type { WorldEnvironmentProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { EnvironmentLayer } from '../../../r3f/environment/EnvironmentLayer';
-import { NoEnvironmentCompositor } from '../../../r3f/environment/NoEnvironmentCompositor';
+import { NoEnvironmentLayer } from '../../../r3f/environment/NoEnvironmentLayer';
 import { useResolvedEnvironment } from './useResolvedEnvironment';
 
 export function WorldEnvironment({ node, children }: NodeComponentProps) {
@@ -26,7 +26,7 @@ export function WorldEnvironment({ node, children }: NodeComponentProps) {
           skyResources={resolved.skyResources}
         />
       ) : (
-        <NoEnvironmentCompositor />
+        <NoEnvironmentLayer />
       )}
       {children}
     </group>

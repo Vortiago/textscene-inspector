@@ -19,7 +19,7 @@ import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryCon
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { TiledUploadDriver } from '../../tiledUpload/TiledUploadDriver.js';
 import { installShaderPatches } from '../../shaderPatch/installShaderPatches.js';
-import { ProjectClearColor } from './ProjectClearColor.js';
+import { ProjectClearColor } from '../../ProjectClearColor.js';
 import { CanvasMsaa } from './CanvasMsaa.js';
 import { PendingSuspense } from '../../../resources/PendingSuspense.js';
 import { ScreenshotBridge } from '../../ScreenshotBridge.js';
