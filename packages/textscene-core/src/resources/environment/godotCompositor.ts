@@ -19,6 +19,7 @@ import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/
 export type CompositeToneMapping = Pick<EnvironmentSettings['toneMapping'], 'mode' | 'white'> &
   Partial<Pick<EnvironmentSettings['toneMapping'], 'agxContrast'>>;
 
+/** Fixed at construction: a new exposure rebuilds the effect. */
 const EXPOSURE_UNIFORM = 'godotExposure';
 /** Bound by the effect each frame, from the glow pyramid. */
 export const GLOW_BUFFER_UNIFORM = 'godotGlowBuffer';
@@ -68,11 +69,13 @@ export function compositeProgram({
     ...(glow && samplesGlowMap(glow) && { [GLOW_MAP_UNIFORM]: { glslType: 'sampler2D', value: null } }),
   };
   // SCREEN normalises against the floored white, not the authored one
-  // (`renderer_scene_render_rd.cpp`: `tonemap.white = environment_get_white(...)`).
+  // (`renderer_scene_render_rd.cpp`: `tonemap.white = environment_get_white(...)`): Godot's
+  // `apply_glow` says "white cannot be smaller than the maximum output value".
+  const flooredWhite = resolvedWhite(toneMapping.mode, toneMapping.white);
   const fragmentShader = /* glsl */ `
 ${declarationsGlsl(declarations)}
 ${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
-${glow ? blendGlsl(glow, resolvedWhite(toneMapping.mode, toneMapping.white)) : ''}
+${glow ? blendGlsl(glow, flooredWhite) : ''}
 ${adjustments ? GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL : ''}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
 ${glow ? glowAndToneMapGlsl(glow) : TONE_MAP_ONLY_GLSL}
