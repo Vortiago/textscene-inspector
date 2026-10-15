@@ -628,6 +628,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Gltf Alpha Border",
+    "file": "unit-gltf-alpha-border.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Gltf External",
     "file": "unit-gltf-external.tscn",
     "category": "Other"

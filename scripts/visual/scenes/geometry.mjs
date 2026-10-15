@@ -96,6 +96,9 @@ export const GEOMETRY_SCENES = [
   // no .glb scene has. A missed buffer draws the placeholder, a missed image an
   // untextured quad, so the checker shows both arrived.
   { name: 'gltf-external', file: 'unit-gltf-external.tscn' },
+  // A glTF image takes its sidecar's texel passes: the default alpha-border pass turns the
+  // magenta behind a transparent edge green, as Godot's import does.
+  { name: 'gltf-alpha-border', file: 'unit-gltf-alpha-border.tscn' },
   // The same quad with a four-band atlas pins V orientation, which the
   // material-less `arraymesh` cannot see. Godot's V origin is the image top and
   // textures load with flipY=true, so a pass-through V samples upside down.

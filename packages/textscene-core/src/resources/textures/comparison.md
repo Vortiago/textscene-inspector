@@ -33,7 +33,12 @@ A texture whose pixels the scene or a `.tres` saves inline, as an `Image` sub-re
 ## Image file
 <!-- compare: image=unit-material-albedo-image-import status=limitation fixture=unit-material-albedo-image-import.tscn -->
 
-A scene names a PNG, JPEG, WebP or SVG file by path. Godot imports it as its `.import` sidecar says. A colour slot reads it through the format Godot imports it in, which comes from the file's own header and the sidecar's `compress/mode`. A greyscale PNG or JPEG imports as Lum8 or LumAlpha8 unless the sidecar asks for VRAM or Basis Universal compression, so it reads raw. The top strip is a greyscale PNG with no sidecar, the second is the same PNG VRAM compressed, and the third is an RGB PNG. The bottom strip is that RGB PNG imported as a VRAM compressed normal map. So it is RGTC, which keeps red and green raw and samples blue as 0. The sidecar also decides the mip chain, the alpha-border pass, the alpha premultiply, the normal map's green and an SVG's scale. A glTF image follows the sidecar of the file Godot imports it as. `standardmaterial3d/textureBinding.md` has the rules and their cites.
+A scene names a PNG, JPEG, WebP or SVG file by path. Godot imports it as its `.import` sidecar says. A colour slot reads it through the format Godot imports it in, which comes from the file's own header and the sidecar's `compress/mode`. A greyscale PNG or JPEG imports as Lum8 or LumAlpha8 unless the sidecar asks for VRAM or Basis Universal compression, so it reads raw. The top strip is a greyscale PNG with no sidecar, the second is the same PNG VRAM compressed, and the third is an RGB PNG. The bottom strip is that RGB PNG imported as a VRAM compressed normal map. So it is RGTC, which keeps red and green raw and samples blue as 0. The sidecar also decides the mip chain, the alpha-border pass, the alpha premultiply, the normal map's green and an SVG's scale. `standardmaterial3d/textureBinding.md` has the rules and their cites.
+
+## glTF image
+<!-- compare: image=unit-gltf-alpha-border status=done fixture=unit-gltf-alpha-border.tscn -->
+
+Godot imports a glTF image through the same texture importer, as the file it extracts the image to. That file's sidecar decides its texels and its format. The quad's image is a green square inside transparent magenta texels. The default alpha-border pass turns them green, so the blended edge fades green, not magenta.
 
 ## NoiseTexture2D
 
