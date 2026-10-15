@@ -62,13 +62,18 @@ export const DEFAULT_TEXTURE_IMPORT: TextureImportOptions = {
 /**
  * The `Image::format_names` entry the imported texture holds on a desktop GPU with S3TC and BPTC.
  * Lossless, Lossy and VRAM Uncompressed keep the source format: a WebP-packed image converts back to
- * it on load (`compressed_texture.cpp:345-352`).
+ * it on load (`compressed_texture.cpp:345-352`). `isTranslucent` reads the texels, and only S3TC
+ * of a source with alpha calls it.
  */
-export function textureImportFormat(source: ImageSourceFormat, options: TextureImportOptions): string {
+export function textureImportFormat(
+  source: ImageSourceFormat,
+  options: TextureImportOptions,
+  isTranslucent: () => boolean
+): string {
   if (holdsRedGreenOnly(options)) return RED_GREEN_FORMAT;
   switch (options.mode) {
     case TextureCompressMode.VramCompressed:
-      return options.highQuality ? 'BPTC_RGBA' : s3tcFormat(source);
+      return options.highQuality ? 'BPTC_RGBA' : s3tcFormat(source, isTranslucent);
     case TextureCompressMode.BasisUniversal:
       // Transcoded to BC7, which a desktop GPU supports (`image_compress_basisu.cpp:356-393`).
       return 'BPTC_RGBA';
@@ -94,11 +99,22 @@ export function holdsRedGreenOnly({ mode, highQuality, normalMap }: TextureImpor
 }
 
 /**
- * S3TC by the channels the header declares (`resource_importer_texture.cpp:934-947`,
- * `image_compress_etcpak.cpp:60-78`): L and RGB to DXT1, LA and RGBA to DXT5, both with an sRGB view.
- * Godot reads the channels from the texels (`core/io/image.cpp:3728-3795`), so an opaque RGBA image is
- * DXT1 there. Both formats sample the same.
+ * S3TC by the channels the texels use (`resource_importer_texture.cpp:423-431`,
+ * `image_compress_etcpak.cpp:60-78`): DXT5 when a texel is translucent, else DXT1. The default
+ * sRGB-friendly channel pack turns red-only and red-green into RGB (`core/io/image.cpp:3800-3802`).
  */
-function s3tcFormat(source: ImageSourceFormat): string {
-  return source === 'LumAlpha8' || source === 'RGBA8' ? 'DXT5 RGBA8' : 'DXT1 RGB8';
+function s3tcFormat(source: ImageSourceFormat, isTranslucent: () => boolean): string {
+  const hasAlphaChannel = source === 'LumAlpha8' || source === 'RGBA8';
+  return hasAlphaChannel && isTranslucent() ? 'DXT5 RGBA8' : 'DXT1 RGB8';
+}
+
+/** `Image::detect_used_channels` counts a texel with alpha below this as using alpha (`core/io/image.cpp:3760`). */
+const OPAQUE_ALPHA_MIN = 0.999;
+
+/** Whether any texel of RGBA8 `bytes` uses alpha, as `Image::detect_used_channels` finds it. */
+export function hasTranslucentTexel(bytes: ArrayLike<number>): boolean {
+  for (let alpha = 3; alpha < bytes.length; alpha += 4) {
+    if (bytes[alpha]! / 255 < OPAQUE_ALPHA_MIN) return true;
+  }
+  return false;
 }

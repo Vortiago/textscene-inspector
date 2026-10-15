@@ -1,10 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_TEXTURE_IMPORT,
   TextureCompressMode,
+  hasTranslucentTexel,
   holdsRedGreenOnly,
   textureImportFormat,
 } from './textureImport';
+
+const opaque = () => false;
 
 const compression = (mode: TextureCompressMode, highQuality = false, normalMap = false) => ({
   ...DEFAULT_TEXTURE_IMPORT,
@@ -17,45 +20,64 @@ describe('textureImportFormat', () => {
   it.each([TextureCompressMode.Lossless, TextureCompressMode.Lossy, TextureCompressMode.VramUncompressed])(
     'keeps a greyscale source in its own format under mode %i',
     (mode) => {
-      expect(textureImportFormat('Lum8', compression(mode))).toBe('Lum8');
-      expect(textureImportFormat('LumAlpha8', compression(mode))).toBe('LumAlpha8');
+      expect(textureImportFormat('Lum8', compression(mode), opaque)).toBe('Lum8');
+      expect(textureImportFormat('LumAlpha8', compression(mode), opaque)).toBe('LumAlpha8');
     }
   );
 
   it('keeps a colour source in its own format when lossless', () => {
-    expect(textureImportFormat('RGB8', compression(TextureCompressMode.Lossless))).toBe('RGB8');
+    expect(textureImportFormat('RGB8', compression(TextureCompressMode.Lossless), opaque)).toBe('RGB8');
   });
 
-  it('compresses an opaque source to DXT1 and one with alpha to DXT5 when VRAM compressed', () => {
+  it('compresses an image with a translucent texel to DXT5 when VRAM compressed', () => {
     const vram = compression(TextureCompressMode.VramCompressed);
-    expect(textureImportFormat('Lum8', vram)).toBe('DXT1 RGB8');
-    expect(textureImportFormat('RGB8', vram)).toBe('DXT1 RGB8');
-    expect(textureImportFormat('LumAlpha8', vram)).toBe('DXT5 RGBA8');
-    expect(textureImportFormat('RGBA8', vram)).toBe('DXT5 RGBA8');
+    const translucent = () => true;
+    expect(textureImportFormat('LumAlpha8', vram, translucent)).toBe('DXT5 RGBA8');
+    expect(textureImportFormat('RGBA8', vram, translucent)).toBe('DXT5 RGBA8');
+  });
+
+  it('compresses an image whose texels are all opaque to DXT1, whatever its header says', () => {
+    const vram = compression(TextureCompressMode.VramCompressed);
+    expect(textureImportFormat('LumAlpha8', vram, opaque)).toBe('DXT1 RGB8');
+    expect(textureImportFormat('RGBA8', vram, opaque)).toBe('DXT1 RGB8');
+  });
+
+  it('compresses a source with no alpha channel to DXT1 without reading its texels (edge case)', () => {
+    const vram = compression(TextureCompressMode.VramCompressed);
+    const unread = vi.fn(() => true);
+    expect(textureImportFormat('Lum8', vram, unread)).toBe('DXT1 RGB8');
+    expect(textureImportFormat('RGB8', vram, unread)).toBe('DXT1 RGB8');
+    expect(unread).not.toHaveBeenCalled();
   });
 
   it('compresses to BPTC when VRAM compressed at high quality', () => {
-    expect(textureImportFormat('Lum8', compression(TextureCompressMode.VramCompressed, true))).toBe(
+    expect(textureImportFormat('Lum8', compression(TextureCompressMode.VramCompressed, true), opaque)).toBe(
       'BPTC_RGBA'
     );
   });
 
   it('transcodes a Basis Universal import to BPTC', () => {
-    expect(textureImportFormat('Lum8', compression(TextureCompressMode.BasisUniversal))).toBe('BPTC_RGBA');
-    expect(textureImportFormat('RGBA8', compression(TextureCompressMode.BasisUniversal))).toBe('BPTC_RGBA');
+    expect(textureImportFormat('Lum8', compression(TextureCompressMode.BasisUniversal), opaque)).toBe(
+      'BPTC_RGBA'
+    );
+    expect(textureImportFormat('RGBA8', compression(TextureCompressMode.BasisUniversal), opaque)).toBe(
+      'BPTC_RGBA'
+    );
   });
 
   it('compresses a normal map to RGTC, which has no sRGB view, under VRAM and Basis Universal', () => {
-    expect(textureImportFormat('RGB8', compression(TextureCompressMode.VramCompressed, false, true))).toBe(
-      'RGTC RedGreen8'
-    );
-    expect(textureImportFormat('RGB8', compression(TextureCompressMode.BasisUniversal, false, true))).toBe(
-      'RGTC RedGreen8'
-    );
+    expect(
+      textureImportFormat('RGB8', compression(TextureCompressMode.VramCompressed, false, true), opaque)
+    ).toBe('RGTC RedGreen8');
+    expect(
+      textureImportFormat('RGB8', compression(TextureCompressMode.BasisUniversal, false, true), opaque)
+    ).toBe('RGTC RedGreen8');
   });
 
   it('keeps a lossless normal map in its source format (edge case)', () => {
-    expect(textureImportFormat('RGB8', compression(TextureCompressMode.Lossless, false, true))).toBe('RGB8');
+    expect(textureImportFormat('RGB8', compression(TextureCompressMode.Lossless, false, true), opaque)).toBe(
+      'RGB8'
+    );
   });
 });
 
@@ -72,5 +94,19 @@ describe('holdsRedGreenOnly', () => {
   it('keeps every channel of a normal map at high quality or lossless (edge case)', () => {
     expect(holdsRedGreenOnly(compression(TextureCompressMode.VramCompressed, true, true))).toBe(false);
     expect(holdsRedGreenOnly(compression(TextureCompressMode.Lossless, false, true))).toBe(false);
+  });
+});
+
+describe('hasTranslucentTexel', () => {
+  it('finds a texel whose alpha is below 0.999', () => {
+    expect(hasTranslucentTexel(new Uint8Array([9, 9, 9, 255, 9, 9, 9, 128]))).toBe(true);
+  });
+
+  it('finds none in texels that are all opaque', () => {
+    expect(hasTranslucentTexel(new Uint8Array([9, 9, 9, 255, 0, 0, 0, 255]))).toBe(false);
+  });
+
+  it('counts alpha 254, which is below 0.999, as translucent (edge case)', () => {
+    expect(hasTranslucentTexel(new Uint8Array([9, 9, 9, 254]))).toBe(true);
   });
 });

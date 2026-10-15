@@ -387,6 +387,14 @@ describe('createTextureFromBuffer: the import texel passes', () => {
 });
 
 describe('importDecodedImage', () => {
+  /** The `userData` key `recordGodotFormat` writes. */
+  const GODOT_FORMAT = 'textsceneGodotFormat';
+  const vram = { mode: TextureCompressMode.VramCompressed, fixAlphaBorder: false };
+
+  /** A texture of raw RGBA8 `texels` in one row. */
+  const rgbaTexture = (texels: number[]) =>
+    new THREE.Texture({ data: new Uint8Array(texels), width: texels.length / 4, height: 1 });
+
   it('drops the mip chain of an import without mipmaps', () => {
     const texture = importDecodedImage(new THREE.Texture(), imported('RGBA8'));
     expect([texture.minFilter, texture.generateMipmaps]).toEqual([THREE.LinearFilter, false]);
@@ -400,6 +408,29 @@ describe('importDecodedImage', () => {
   it('records the format a colour slot reads the import through', () => {
     const texture = importDecodedImage(new THREE.Texture(), imported('Lum8'));
     expect(sourceColorSpace(texture)).toBe(THREE.NoColorSpace);
+  });
+
+  it('disposes the decoded texture that the rewritten bytes replace', async () => {
+    const disposed = vi.fn();
+    const decoded = new THREE.Texture({ data: new Uint8Array([128, 0, 255, 255]), width: 1, height: 1 });
+    decoded.addEventListener('dispose', disposed);
+    importDecodedImage(decoded, imported('RGB8', { invertNormalY: true }));
+    expect(disposed).toHaveBeenCalledOnce();
+  });
+
+  it('records DXT1 for a VRAM-compressed RGBA8 image whose texels are all opaque', () => {
+    const texture = importDecodedImage(rgbaTexture([9, 9, 9, 255]), imported('RGBA8', vram));
+    expect(texture.userData[GODOT_FORMAT]).toBe('DXT1 RGB8');
+  });
+
+  it('records DXT5 for a VRAM-compressed RGBA8 image with a translucent texel', () => {
+    const texture = importDecodedImage(rgbaTexture([9, 9, 9, 255, 9, 9, 9, 128]), imported('RGBA8', vram));
+    expect(texture.userData[GODOT_FORMAT]).toBe('DXT5 RGBA8');
+  });
+
+  it('records DXT5 for a VRAM-compressed RGBA8 image whose pixels cannot be read (edge case)', () => {
+    const texture = importDecodedImage(new THREE.Texture(), imported('RGBA8', vram));
+    expect(texture.userData[GODOT_FORMAT]).toBe('DXT5 RGBA8');
   });
 
   it('records no format for an image whose header names none (edge case)', () => {

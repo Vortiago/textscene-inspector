@@ -73,13 +73,13 @@ decal mipmaps whatever the import says.
 | `compress/mode` | Import format |
 | --- | --- |
 | 0 Lossless, 1 Lossy, 3 VRAM Uncompressed | the source format |
-| 2 VRAM Compressed | DXT1 RGB8 for L8 and RGB8, DXT5 RGBA8 for LA8 and RGBA8, BPTC_RGBA with `compress/high_quality` |
+| 2 VRAM Compressed | DXT5 RGBA8 when a texel has alpha below 0.999, else DXT1 RGB8. BPTC_RGBA with `compress/high_quality` |
 | 4 Basis Universal | BPTC_RGBA |
 
 A normal map (`compress/normal_map` Enable) uses only RG (`core/io/image.cpp:3732-3734`). So mode 4,
 and mode 2 without `compress/high_quality`, give RGTC RedGreen8 instead. A shader samples it as
 red, green, blue 0 and alpha 1, raw in every slot. The VRAM block is in
-`resource_importer_texture.cpp:934-947`, the S3TC formats in
+`resource_importer_texture.cpp:934-947`, the channel detection in `core/io/image.cpp:3728-3802`, the S3TC formats in
 `modules/etcpak/image_compress_etcpak.cpp:60-78`, and the Basis Universal formats in
 `modules/basis_universal/image_compress_basisu.cpp:321-324` and `:356-393`. So a greyscale PNG or
 JPEG reads raw in a colour slot at modes 0, 1 and 3, and sRGB at modes 2 and 4.

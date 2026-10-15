@@ -16,6 +16,7 @@ import { IMAGE_EXTENSIONS } from './extensions';
 import { fileExtension } from '../../fileExtension';
 import type { ImageSourceFormat } from '../../../godot/import/imageSourceFormat.js';
 import {
+  hasTranslucentTexel,
   holdsRedGreenOnly,
   textureImportFormat,
   type TextureImportOptions,
@@ -78,14 +79,21 @@ export async function createTextureFromBuffer(
 
 /**
  * A decoded image as Godot's texture importer stores it: the texel passes its sidecar asks for, its
- * mip chain, and the format a colour slot reads it through. The caller owns `texture`, which it
- * gets back when no pass changes a byte.
+ * mip chain, and the format a colour slot reads it through. The caller hands over `texture`: it
+ * gets it back when no pass changes a byte, and it is disposed otherwise.
  */
 export function importDecodedImage(texture: THREE.Texture, imported: ImageImport): THREE.Texture {
   const result = applyTexelPasses(texture, texelPassesFor(imported));
   if (!imported.options.mipmaps) dropMipChain(result);
   if (imported.source === null) return result;
-  return recordGodotFormat(result, textureImportFormat(imported.source, imported.options));
+  const format = textureImportFormat(imported.source, imported.options, () => isTranslucent(result));
+  return recordGodotFormat(result, format);
+}
+
+/** Whether a texel of `texture` uses alpha. One whose pixels cannot be read counts as translucent. */
+function isTranslucent(texture: THREE.Texture): boolean {
+  const pixels = readImagePixels(texture.image);
+  return pixels === undefined || hasTranslucentTexel(pixels.data);
 }
 
 /**
@@ -166,7 +174,7 @@ async function decodeImage(
 /**
  * Runs `passes` on a decoded texture's bytes. It returns the same texture when no pass changes a
  * byte, and otherwise a `DataTexture` of the rewritten bytes, since a decoded image cannot be
- * edited in place.
+ * edited in place. It then disposes the decoded texture, which the caller hands over.
  */
 function applyTexelPasses(texture: THREE.Texture, passes: TexelPass[]): THREE.Texture {
   if (passes.length === 0) return texture;
@@ -191,5 +199,6 @@ function applyTexelPasses(texture: THREE.Texture, passes: TexelPass[]): THREE.Te
   // The readback is top-row-first, the same orientation the decoded image
   // uploads in, so the loaded texture's own flip decides which way is up.
   rewritten.flipY = texture.flipY;
+  texture.dispose();
   return rewritten;
 }
