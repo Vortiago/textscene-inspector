@@ -70,8 +70,12 @@ export class CanvasMsaaFrame extends THREE.WebGLRenderTarget {
       this.setSize(this.drawingBuffer.x, this.drawingBuffer.y);
     }
     const previous = gl.getRenderTarget();
-    gl.setRenderTarget(this);
-    gl.render(scene, camera);
+    try {
+      gl.setRenderTarget(this);
+      gl.render(scene, camera);
+    } finally {
+      gl.setRenderTarget(previous);
+    }
     copyToTarget(gl, this, previous);
   }
 }

@@ -98,6 +98,20 @@ describe('CanvasMsaaFrame', () => {
     frame.dispose();
   });
 
+  it('rebinds the target bound before when the world draw throws (error path)', () => {
+    const { gl } = recordingRenderer(64, 64);
+    const before = new THREE.WebGLRenderTarget(64, 64);
+    gl.setRenderTarget(before);
+    gl.render = () => {
+      throw new Error('lost context');
+    };
+    const frame = multisampledFrame(4);
+
+    expect(() => frame.render(gl, scene, camera)).toThrow('lost context');
+    expect(gl.getRenderTarget()).toBe(before);
+    frame.dispose();
+  });
+
   it('follows the drawing buffer when the canvas resizes (edge case)', () => {
     const frame = multisampledFrame(4);
     frame.render(recordingRenderer(64, 64).gl, scene, camera);

@@ -31,7 +31,9 @@ own texture, as three allocates it. The MSAA paths are these:
 - A 3D root with no valid Environment (ADR-0025) mounts `NoEnvironmentLayer`: the project's clear
   colour (`renderer_viewport.cpp:371`), and a compositor for `msaa_3d` with Godot's default LINEAR
   curve (`tone_mapper.h:177`). The 3D canvas is `flat`, so three adds no curve of its own.
-- A SubViewport's `msaa_3d` or `msaa_2d` sets its own target's samples.
+- A SubViewport's `msaa_3d` or `msaa_2d` sets its own target's samples. Godot takes `msaa_3d` for
+  the 3D buffers (`renderer_viewport.cpp:173`, `:278`) and `msaa_2d` for the render target
+  (`:1362`).
 
 ## Consequences
 

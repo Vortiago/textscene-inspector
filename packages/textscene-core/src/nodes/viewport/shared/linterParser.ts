@@ -10,8 +10,7 @@
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
-
-const MSAA = { 0: 'DISABLED', 1: '2X', 2: '4X', 3: '8X' };
+import { MSAA_DISABLED, MSAA_MAX, MSAA_MODE_LABELS } from '../../../godot/rendering/msaa.js';
 
 /** 4.7.2: viewport.h:200-206. DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX = 4. */
 const TEXTURE_REPEAT = { 0: 'DISABLED', 1: 'ENABLED', 2: 'MIRROR', 3: 'PARENT_NODE' };
@@ -115,7 +114,7 @@ validatorRegistry.registerAll('Viewport', {
   // viewport.cpp:5166: PROPERTY_HINT_ENUM, 4 labels. set_msaa_3d
   // (viewport.cpp:3763) enforces `ERR_FAIL_INDEX(p_msaa, MSAA_MAX)`, with
   // MSAA_MAX=4 (scene/main/viewport.h:119-125).
-  msaa_3d: v.enumInt('msaa_3d', 0, 3, MSAA, { enforced: 'viewport.cpp:3763' }),
+  msaa_3d: v.enumInt('msaa_3d', MSAA_DISABLED, MSAA_MAX, MSAA_MODE_LABELS, { enforced: 'viewport.cpp:3763' }),
   // 4.7.2: viewport.cpp:4101 `ERR_FAIL_INDEX(p_filter,
   // DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX)`, MAX = 5 (viewport.h:191-198).
   // 4.6.3 stops one lower, without PARENT_NODE.
@@ -132,7 +131,7 @@ validatorRegistry.registerAll('Viewport', {
   // "Rendering" group, viewport.cpp:5164-5173.
   // viewport.cpp:3748: `ERR_FAIL_INDEX(p_msaa, MSAA_MAX)`, same enum and
   // guard shape as msaa_3d above.
-  msaa_2d: v.enumInt('msaa_2d', 0, 3, MSAA, { enforced: 'viewport.cpp:3748' }),
+  msaa_2d: v.enumInt('msaa_2d', MSAA_DISABLED, MSAA_MAX, MSAA_MODE_LABELS, { enforced: 'viewport.cpp:3748' }),
   // viewport.cpp:3778: `ERR_FAIL_INDEX(p_screen_space_aa, SCREEN_SPACE_AA_MAX)`.
   screen_space_aa: v.enumInt('screen_space_aa', 0, 2, SCREEN_SPACE_AA, {
     enforced: 'viewport.cpp:3778',
