@@ -7,9 +7,8 @@
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Node2DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
-import { radToDeg, type Rgba } from '../../../godot/math/math';
-
-const formatDegrees = (radians: number) => radToDeg(radians).toFixed(2);
+import type { Rgba } from '../../../godot/math/math';
+import { formatDegrees } from '../../../utils/transform';
 
 function isWhite(color: Rgba): boolean {
   return color.r === 1 && color.g === 1 && color.b === 1 && color.a === 1;

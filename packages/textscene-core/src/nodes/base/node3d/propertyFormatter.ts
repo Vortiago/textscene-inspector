@@ -4,10 +4,7 @@
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Node3DProperties } from './types';
-import { radToDeg } from '../../../godot/math/math.js';
-import { decomposeTransform3D } from '../../../utils/transform';
-
-const formatDegrees = (radians: number) => radToDeg(radians).toFixed(2);
+import { decomposeTransform3D, formatDegrees } from '../../../utils/transform';
 
 export function formatNode3DProperties(properties: Node3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
