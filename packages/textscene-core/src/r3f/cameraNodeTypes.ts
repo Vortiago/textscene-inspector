@@ -1,7 +1,7 @@
 /**
  * The node types the camera UI treats as a camera, by Godot's class tree:
  * XRCamera3D is a Camera3D. `descendsFromClass` reads only the generated base-type
- * table, so the webview bundle pulls in no linter.
+ * tables, so the webview bundle pulls in no linter.
  */
 
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';

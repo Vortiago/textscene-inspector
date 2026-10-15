@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CLASS_BASE_TYPES,
+  MAX_BASE_CHAIN_HOPS,
   classBaseChain,
   descendsFromClass,
   classInheritanceChain,
@@ -13,6 +14,22 @@ import {
 } from './classBaseTypes.js';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
+
+/**
+ * Hops from `type` to its root, walking the raw table longhand: a guard on the table must not read it
+ * through the walk it guards.
+ */
+function depth(table: Readonly<Record<string, string>>, type: string): number {
+  const seen = new Set<string>([type]);
+  let hops = 0;
+  let current = table[type];
+  while (current !== undefined && !seen.has(current)) {
+    seen.add(current);
+    hops++;
+    current = table[current];
+  }
+  return hops;
+}
 
 describe('CLASS_BASE_TYPES', () => {
   it('merges two disjoint hierarchies, so nothing is overwritten', () => {
@@ -148,7 +165,7 @@ describe('descendsFromClass over the node tree', () => {
   });
 
   it('is false for an unrelated ancestor', () => {
-    // The name heuristic this replaced claimed the opposite for both.
+    // A name test such as `endsWith('3D')` answers true for both.
     expect(descendsFromClass('Sprite2D', 'Node3D')).toBe(false);
     expect(descendsFromClass('NavigationAgent3D', 'Node3D')).toBe(false);
   });
@@ -164,5 +181,16 @@ describe('descendsFromClass over the node tree', () => {
     expect(descendsFromClass('__proto__', 'Node')).toBe(false);
     expect(descendsFromClass('constructor', 'Node')).toBe(false);
     expect(descendsFromClass('toString', 'Node')).toBe(false);
+  });
+});
+
+describe('MAX_BASE_CHAIN_HOPS', () => {
+  it('clears the deepest chain either catalog states, with slack', () => {
+    // The bound only stops a malformed table from spinning. A chain that reaches it
+    // is truncated in silence, which is the failure `descendsFromClass` cannot report.
+    const deepest = (table: Readonly<Record<string, string>>): number =>
+      Math.max(...Object.keys(table).map((type) => depth(table, type)));
+    expect(deepest(NODE_BASE_TYPES)).toBeLessThan(MAX_BASE_CHAIN_HOPS);
+    expect(deepest(RESOURCE_BASE_TYPES_GENERATED)).toBeLessThan(MAX_BASE_CHAIN_HOPS);
   });
 });

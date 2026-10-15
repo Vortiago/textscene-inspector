@@ -30,7 +30,7 @@ const UNIMPLEMENTED_ROWS: readonly string[] = ['CSGShape3D csg_shape.cpp:982'];
 function concreteHeirs(declaringClass: string, row?: WarningRow): string[] {
   const registered = nodeRegistry.getAllTypeNames();
   if (row?.appliesTo) return registered.filter((t) => row.appliesTo!.includes(t));
-  return registered.filter((t) => t === declaringClass || descendsFromClass(t, declaringClass));
+  return registered.filter((t) => descendsFromClass(t, declaringClass));
 }
 
 function rulesEmitting(ruleName: string) {

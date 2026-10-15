@@ -47,7 +47,7 @@ function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {
     ];
   }
 
-  // `descendsFromClass` is reflexive (nodeBaseTypes.ts), so it also answers the exact-match case.
+  // `descendsFromClass` is reflexive (classBaseTypes.ts), so it also answers the exact-match case.
   if (target.status === 'found' && !descendsFromClass(target.node.type, 'Node3D')) {
     return [
       armDiagnostic(

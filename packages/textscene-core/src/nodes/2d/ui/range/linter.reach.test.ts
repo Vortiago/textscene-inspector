@@ -13,9 +13,7 @@ import '../../../../linter/index.js';
 
 describe('range-exp-edit-negative-min reach', () => {
   it('runs on Range and every concrete registered descendant', () => {
-    const heirs = nodeRegistry
-      .getAllTypeNames()
-      .filter((t) => t === 'Range' || descendsFromClass(t, 'Range'));
+    const heirs = nodeRegistry.getAllTypeNames().filter((t) => descendsFromClass(t, 'Range'));
 
     // Pinned: Range plus its 7 concrete descendants.
     expect(heirs.length).toBe(8);

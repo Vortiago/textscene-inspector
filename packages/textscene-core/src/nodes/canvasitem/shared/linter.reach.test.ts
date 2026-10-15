@@ -13,9 +13,7 @@ import '../../../linter/index.js';
 
 describe('CanvasItem clip-ancestry rule reach', () => {
   it('runs on every concrete registered CanvasItem descendant, in both trees', () => {
-    const heirs = nodeRegistry
-      .getAllTypeNames()
-      .filter((t) => t === 'CanvasItem' || descendsFromClass(t, 'CanvasItem'));
+    const heirs = nodeRegistry.getAllTypeNames().filter((t) => descendsFromClass(t, 'CanvasItem'));
 
     // Pinned: 108 concrete types across the Node2D and Control trees.
     expect(heirs.length).toBe(108);

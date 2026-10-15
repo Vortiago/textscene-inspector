@@ -6,7 +6,7 @@
 
 // The base Control slice (nodes/2d/ui/control) registers the layout, anchor,
 // offset and theme-override validators that every Control subclass inherits
-// through the ValidatorRegistry base-walk (godot/classdb/nodeBaseTypes.ts).
+// through the ValidatorRegistry base-walk (godot/classdb/classBaseTypes.ts).
 import '../nodes/node/index.linter.js';
 import '../nodes/canvasitem/shared/index.linter.js';
 import '../nodes/2d/ui/canvaslayer/index.linter.js';

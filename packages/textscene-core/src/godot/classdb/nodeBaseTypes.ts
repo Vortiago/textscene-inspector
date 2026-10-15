@@ -1,7 +1,7 @@
 /**
- * Godot's node ancestry: every type → the base it derives from. The linter walks it in
- * `ValidatorRegistry.findValidator`, so a set on `Node3D` or `Control` reaches every subclass, and the
- * render path asks it too. Derived from the catalog's `chain` (`nodeBaseTypes.generated.ts`) with every
+ * Godot's node ancestry: every type → the base it derives from. `CLASS_BASE_TYPES` merges it with the
+ * resource table, and every ancestry walk reads it there: `ValidatorRegistry.findValidator`, so a set on
+ * `Node3D` or `Control` reaches every subclass, and `descendsFromClass`. Derived from the catalog's `chain` (`nodeBaseTypes.generated.ts`) with every
  * hop, so a validator on an intermediate such as `GeometryInstance3D` reaches its subclasses.
  */
 
