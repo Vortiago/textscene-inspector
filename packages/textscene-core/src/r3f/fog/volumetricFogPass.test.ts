@@ -4,8 +4,8 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { VOLUMETRIC_FOG_TEMPORAL_JITTERS } from '../../godot/volumetricFog';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { VOLUMETRIC_FOG_TEMPORAL_JITTERS } from '../../godot/rendering/environment/volumetricFog';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { directionalShadowAtlasDepth } from '../directionalShadow/shadowAtlas';

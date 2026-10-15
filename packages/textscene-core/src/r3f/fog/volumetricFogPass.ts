@@ -18,7 +18,7 @@ import {
   type FogProjection,
   type VolumetricFogGrid,
   type VolumetricFogProjectSettings,
-} from '../../godot/volumetricFog.js';
+} from '../../godot/rendering/environment/volumetricFog.js';
 import type { VolumetricFog } from '../../resources/environment/types.js';
 import { directionalShadowAtlasDepth } from '../directionalShadow/shadowAtlas.js';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass.js';

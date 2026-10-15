@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { CAPTURE_NEAR } from '../../godot/reflectionProbe';
+import { CAPTURE_NEAR } from '../../godot/rendering/environment/reflectionProbe';
 import { captureCameras, probeCaptureOf } from './captureCameras';
 
 const SETTINGS = { isInterior: false, hasShadows: true };

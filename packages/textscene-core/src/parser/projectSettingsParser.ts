@@ -21,8 +21,11 @@ import {
 import { unquoteLiteral } from './utils.js';
 import { colorOr, type Color } from '../utils/colorParser.js';
 import { parseOptionalInt } from './valueParsers.js';
-import { VOLUMETRIC_FOG_DEFAULTS, type VolumetricFogProjectSettings } from '../godot/volumetricFog.js';
-import { msaaSampleCount } from '../godot/msaa.js';
+import {
+  VOLUMETRIC_FOG_DEFAULTS,
+  type VolumetricFogProjectSettings,
+} from '../godot/rendering/environment/volumetricFog.js';
+import { msaaSampleCount } from '../godot/rendering/msaa.js';
 
 /**
  * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,

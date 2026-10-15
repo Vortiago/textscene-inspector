@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import type { Vector2 } from '../../base/node2d/types';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
-import { msaaSampleCount } from '../../../godot/msaa';
+import { msaaSampleCount } from '../../../godot/rendering/msaa';
 import type { SubViewportProperties } from './types';
 
 /**

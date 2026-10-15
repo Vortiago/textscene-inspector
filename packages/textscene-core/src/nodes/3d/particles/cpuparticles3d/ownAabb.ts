@@ -6,7 +6,7 @@
  */
 
 import type { TscnNode } from '../../../../parser/types';
-import { EMPTY_AABB, type Aabb } from '../../../../godot/aabb';
+import { EMPTY_AABB, type Aabb } from '../../../../godot/math/aabb';
 import type { CPUParticles3DProperties } from './types';
 
 export function useCPUParticles3DAabb(node: TscnNode): Aabb | null {

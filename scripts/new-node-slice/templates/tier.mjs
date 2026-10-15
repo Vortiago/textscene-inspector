@@ -86,7 +86,7 @@ describe('${typeName} shared validators', () => {
 import type { Diagnostic, LintRule, RuleContext } from '${toSrc}linter/types.js';
 import { ruleRegistry } from '${toSrc}linter/RuleRegistry.js';
 import { armEmits, type RuleArms } from '${toSrc}linter/ruleArms.js';
-import { descendsFrom } from '${toSrc}godot/nodeBaseTypes.js';
+import { descendsFrom } from '${toSrc}godot/classdb/nodeBaseTypes.js';
 
 /**
  * One arm per diagnostic \`check\` reports, each with its grounding (ADR-0032): an

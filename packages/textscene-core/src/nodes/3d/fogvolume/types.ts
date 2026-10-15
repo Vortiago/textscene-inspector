@@ -3,7 +3,7 @@
  * Environment's volumetric fog inside an origin-centred shape of `size`.
  */
 
-import type { FogVolumeShape } from '../../../godot/fogVolume';
+import type { FogVolumeShape } from '../../../godot/rendering/environment/fogVolume';
 import type { Vector3 } from '../../../parser/vectors';
 import type { Node3DProperties } from '../../base/node3d/types';
 

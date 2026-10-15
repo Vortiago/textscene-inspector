@@ -5,7 +5,7 @@
  */
 
 import type * as THREE from 'three';
-import { supportedSampleCount } from '../godot/msaa';
+import { supportedSampleCount } from '../godot/rendering/msaa';
 
 /** 0, one sample per pixel, where the context lists no counts: WebGL 1 has no multisampled target. */
 export function deviceSampleCount(gl: THREE.WebGLRenderer, requested: number): number {

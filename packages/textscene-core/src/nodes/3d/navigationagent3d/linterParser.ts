@@ -12,7 +12,7 @@ import { hintedBitField, layerBitmask, v } from '../../../linter/validators/inde
 // Every `ADD_PROPERTY` in `navigation_agent_3d.cpp` is below. A cite names the setter body, not the
 // hint, where a setter calls `ERR_FAIL_COND` or clamps with `MAX(0.0, …)` (ADR-0032). The
 // `DISABLE_DEPRECATED` shim (cpp:209-243) forwards `time_horizon`, `target_location` and
-// `agent_height_offset`, and `godot/deprecated.ts` maps them to modern keys, so none registers.
+// `agent_height_offset`, and `godot/classdb/deprecated.ts` maps them to modern keys, so none registers.
 validatorRegistry.registerAll('NavigationAgent3D', {
   // Pathfinding group, navigation_agent_3d.cpp:154-168.
 

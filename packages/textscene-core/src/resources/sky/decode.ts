@@ -10,7 +10,7 @@ import {
   REAL_TIME_RADIANCE_SIZE,
   SKY_RADIANCE_SIZES,
   SKY_RADIANCE_SIZE_DEFAULT,
-} from '../../godot/skyReflection';
+} from '../../godot/rendering/environment/skyReflection';
 import { floatOr, parseOptionalInt } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
 

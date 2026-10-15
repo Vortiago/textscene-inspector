@@ -34,8 +34,8 @@
  */
 
 import * as THREE from 'three';
-import { CSG_MERGE_TOLERANCE } from '../../../godot/csg';
-import { bottomUpV } from '../../../godot/uv';
+import { CSG_MERGE_TOLERANCE } from '../../../godot/scene/csg';
+import { bottomUpV } from '../../../godot/math/uv';
 
 /**
  * A CSG shape's triangles before normals exist: Godot's `CSGBrush::faces` in the shape

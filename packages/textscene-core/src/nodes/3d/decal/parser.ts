@@ -11,7 +11,7 @@ import { parseColor } from '../../../utils/colorParser';
 import { parseVector3, type Vector3 } from '../../../parser/vectors';
 import { boolOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { warn } from '../../../logger';
-import { GODOT_EDITOR_LAYERS_MASK } from '../../../godot/visualLayers.js';
+import { GODOT_EDITOR_LAYERS_MASK } from '../../../godot/scene/visualLayers.js';
 import type { DecalProperties } from './types';
 
 /** Godot Decal default box size. */

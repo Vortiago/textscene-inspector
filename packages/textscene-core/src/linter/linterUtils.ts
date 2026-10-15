@@ -1,7 +1,7 @@
 /** Small shared helpers for node-type semantic linters. */
 
 import { nodePathLiteral } from '../godot/index.js';
-import { descendsFrom } from '../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../godot/classdb/nodeBaseTypes.js';
 import { cachedUniqueNameClaims, type uniqueNameClaims } from '../utils/uniqueNames.js';
 import type { RawNode } from '../parser/types.js';
 

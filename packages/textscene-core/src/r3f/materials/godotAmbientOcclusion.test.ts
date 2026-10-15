@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { GODOT_AMBIENT_OCCLUSION, ambientOcclusionUserData } from './godotAmbientOcclusion';
 import type { ProgramShader } from '../materialProgramInputs';
-import { TextureChannel, textureChannelMask } from '../../godot/textureChannel';
+import { TextureChannel, textureChannelMask } from '../../godot/rendering/materials/textureChannel';
 
 const AO_INCLUDE = '#include <aomap_fragment>';
 const TOTALS = 'vec3 totalDiffuse';

@@ -16,7 +16,7 @@ import {
 import { resolveFontFileBytes } from './sceneFontResolution';
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
-import { decodeBase64Bytes } from '../../../../godot/packedBytes';
+import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes';
 
 // happy-dom has neither `FontFace` nor a 2D canvas context, so under vitest the loader skips to the
 // bundled default before any DOM font API. The skip is deliberate, so it does not warn.

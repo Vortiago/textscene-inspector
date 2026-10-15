@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import {
   POSITIONAL_SHADOW_ATLAS_DEPTH_BITS,
   type PositionalShadowSlot,
-} from '../../godot/positionalShadowAtlas.js';
+} from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { atlasTargetOf, createShadowAtlas } from '../shadowFilter/atlasTarget.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
 import type { LightShadowInternals } from '../sharedAtlasShadow.js';

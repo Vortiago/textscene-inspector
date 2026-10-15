@@ -5,7 +5,7 @@
  * negative one also asks every lit program to compile the search (`../shadowFilter/softShadowSearch.ts`).
  */
 
-import type { PositionalSoftShadow } from '../../godot/positionalShadow.js';
+import type { PositionalSoftShadow } from '../../godot/rendering/lights/positionalShadow.js';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
 import { readPositionalShadowDeclaration } from './declaration.js';
 

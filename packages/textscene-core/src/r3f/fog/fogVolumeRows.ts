@@ -12,7 +12,7 @@ import {
   isCameraNearFogVolume,
   type FogVolumeFrame,
   type FroxelRange,
-} from '../../godot/fogVolume.js';
+} from '../../godot/rendering/environment/fogVolume.js';
 import { setGodotColorLinear } from '../godotColor.js';
 import { visibleInTree } from '../visibleInTree.js';
 import type { FogDensityAtlas } from './fogDensityAtlas.js';

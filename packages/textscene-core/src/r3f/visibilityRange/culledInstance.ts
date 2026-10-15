@@ -5,9 +5,13 @@
  */
 
 import * as THREE from 'three';
-import { geometryFade } from '../../godot/fadeAlpha';
-import { hasSurface, type Aabb } from '../../godot/aabb';
-import { hasVisibilityRange, NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/visibilityRange';
+import { geometryFade } from '../../godot/rendering/fadeAlpha';
+import { hasSurface, type Aabb } from '../../godot/math/aabb';
+import {
+  hasVisibilityRange,
+  NO_VISIBILITY_RANGE,
+  type VisibilityRange,
+} from '../../godot/rendering/visibilityRange';
 import type { GeometryInstance3DProperties } from '../../nodes/3d/geometryinstance3d/types';
 import type { DrawnInstance } from '../surfaceDrawHooks';
 import type { FadedSurface, FadedSurfaces } from '../materials/swappedMaterials';
@@ -29,7 +33,7 @@ export class CulledInstance implements VisibilityInstance, DrawnInstance, FadedS
   isVisible = true;
   links: VisibilityLinks = { path: null, parentPath: null, order: [], hasRange: false };
   range: VisibilityRange = NO_VISIBILITY_RANGE;
-  /** Whether its render instance has a geometry base (`godot/geometryBase.ts`). */
+  /** Whether its render instance has a geometry base (`godot/scene/geometryBase.ts`). */
   hasBase = false;
   transparency = 0;
   customAabb: Aabb | null = null;

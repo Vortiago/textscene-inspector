@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 import { rangeAdvisories, type RangeThreshold } from '../../../../linter/rangeAdvisory.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { firstSegment, indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';

@@ -15,7 +15,7 @@ import {
   DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
   directionalLightDrawsInSky,
   directionalLightLightsSurfaces,
-} from '../../../../godot/directionalLightSkyMode';
+} from '../../../../godot/rendering/lights/directionalLightSkyMode';
 import { directionalShadowUserData } from '../../../../r3f/directionalShadow/declaration';
 import { skyLightUserData } from '../../../../r3f/sky/skyLight';
 import { directionalShadowDeclaration } from './shadowDeclaration';
@@ -33,7 +33,7 @@ import { lightSizeUserData } from '../../../../r3f/lightSize/lightSize';
 import {
   directionalLightSize,
   LIGHT_ANGULAR_DISTANCE_DEFAULT,
-} from '../../../../godot/directionalSoftShadow';
+} from '../../../../godot/rendering/lights/directionalSoftShadow';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 
 export function DirectionalLight3D({ node, children }: NodeComponentProps) {

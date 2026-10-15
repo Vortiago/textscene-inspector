@@ -8,7 +8,11 @@
 import { ShaderChunk, type IUniform, type Material } from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
 import { recordedOn } from './recordedOnMaterial';
-import { TextureChannel, textureChannelMask, type TextureChannelMask } from '../../godot/textureChannel';
+import {
+  TextureChannel,
+  textureChannelMask,
+  type TextureChannelMask,
+} from '../../godot/rendering/materials/textureChannel';
 
 const AO_PARS_CHUNK = '#include <aomap_pars_fragment>';
 const AO_CHUNK = '#include <aomap_fragment>';

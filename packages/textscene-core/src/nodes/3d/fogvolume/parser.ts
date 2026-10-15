@@ -3,7 +3,11 @@
  * Godot's defaults (`scene/3d/fog_volume.h:40-42`).
  */
 
-import { FOG_VOLUME_DEFAULT_SHAPE, FOG_VOLUME_DEFAULT_SIZE, fogVolumeSize } from '../../../godot/fogVolume';
+import {
+  FOG_VOLUME_DEFAULT_SHAPE,
+  FOG_VOLUME_DEFAULT_SIZE,
+  fogVolumeSize,
+} from '../../../godot/rendering/environment/fogVolume';
 import type { ParsedHeading } from '../../../parser/utils';
 import { intOr, vec3Or } from '../../../parser/valueParsers';
 import { parseNode3D } from '../../base/node3d/parser';

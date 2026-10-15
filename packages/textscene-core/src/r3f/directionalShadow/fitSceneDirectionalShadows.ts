@@ -7,7 +7,10 @@
  */
 
 import * as THREE from 'three';
-import type { DirectionalShadowAtlasRect, DirectionalShadowFade } from '../../godot/directionalShadow.js';
+import type {
+  DirectionalShadowAtlasRect,
+  DirectionalShadowFade,
+} from '../../godot/rendering/lights/directionalShadow.js';
 import type { DirectionalShadowDeclaration } from './declaration.js';
 import { dropLight, isDropped, restoreDroppedLight } from './droppedLight.js';
 import { isViewingCamera, type DirectionalShadowBox, type ViewingCamera } from './fitDirectionalShadowBox.js';
@@ -24,9 +27,10 @@ import { writeDirectionalShadowFades, type ShadowFades } from './shadowFade.js';
 import {
   attachSplitSun,
   followDeclaredLight,
+  isSplitSun,
   releaseSplitSun,
   splitSunOf,
-  SplitSunLight,
+  type SplitSunLight,
 } from './splitSun.js';
 import { NO_SHADOW_FADE, SPLIT_CAMERA_UP } from './splitShadow.js';
 import { slottedLights } from '../lightSlots.js';
@@ -105,7 +109,7 @@ export function fitSceneDirectionalShadows(
 }
 
 function sunFade(light: THREE.Light): DirectionalShadowFade | null {
-  return light instanceof SplitSunLight ? light.shadow.fade : null;
+  return isSplitSun(light) ? light.shadow.fade : null;
 }
 
 function sunsOf(declared: readonly DeclaredDirectionalLight[]): SplitSunLight[] {

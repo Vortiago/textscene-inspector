@@ -9,7 +9,7 @@ import type { FileEventBus } from '../FileEventBus';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { createGLBMesh, forEachSurfaceMaterial, tagImportMaterial } from '../formats/glb/glbProcessing';
-import { isGltfPath } from '../../godot/gltf';
+import { isGltfPath } from '../../godot/import/gltf';
 import { gltfResourcePath, selfContainedGlb } from '../formats/glb/gltfResources';
 import { applyRootScale } from '../formats/glb/rootScale';
 import { stampMeshInstanceLayers } from '../formats/glb/meshInstances';
@@ -27,7 +27,7 @@ import {
 } from '../../parser/importParser';
 import { importSidecarPath, unwrapCachePath } from '../../godot/index.js';
 import type { LightmapUvImport } from '../formats/glb/lightmapUv/lightmapUv';
-import { fileBaseName } from '../../godot/string.js';
+import { fileBaseName } from '../../godot/string/string.js';
 import type { DependencyGraph } from '../dependencyGraph';
 import * as logger from '../../logger';
 

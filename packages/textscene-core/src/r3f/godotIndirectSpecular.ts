@@ -1,13 +1,13 @@
 /**
  * Godot's weights for a specular reflection in three's lighting chunks: its own DFG table
- * (`godot/dfg.ts`), the indirect specular Godot builds from it (`scene_forward_clustered.glsl:2221-2231`),
+ * (`godot/rendering/materials/dfg.ts`), the indirect specular Godot builds from it (`scene_forward_clustered.glsl:2221-2231`),
  * the compensation for the light that scatters more than once, on the direct specular too, and the
  * occlusion of a reflection by a dim ambient. three reads a coarser table of another geometry term,
  * adds the multiple scattering from the irradiance, and occludes a reflection by the AO map alone.
  */
 
 import * as THREE from 'three';
-import { DFG_SIZE, dfgHalfFloats } from '../godot/dfg.js';
+import { DFG_SIZE, dfgHalfFloats } from '../godot/rendering/materials/dfg.js';
 import { applyChunkEdits, installChunkPatch, type ChunkEdit, type Chunks } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
 import { defining, type ProgramInjection } from './materialProgramInputs.js';

@@ -13,7 +13,7 @@ import {
   godotSurfacePrimitives,
   gltfObjects,
   type GltfJsonObject,
-} from '../../../godot/gltf';
+} from '../../../godot/import/gltf';
 import * as logger from '../../../logger';
 
 /** A GLTFLoader plugin that rewrites each mesh's primitives in `parser.json` before the parse. */

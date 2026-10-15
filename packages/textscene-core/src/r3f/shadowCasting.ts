@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { ShadowCastingSetting } from '../godot/rendering';
+import { ShadowCastingSetting } from '../godot/rendering/rendering';
 import {
   UNRANGED_INSTANCE,
   poseColourDraw,

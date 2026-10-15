@@ -6,7 +6,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { boolOr, parseOptionalRect2, vec2Or } from '../../../parser/valueParsers';
-import { frameCoords, replaySpriteFrames } from '../../../godot/spriteFrames.js';
+import { frameCoords, replaySpriteFrames } from '../../../godot/scene/spriteFrames.js';
 import type { Sprite2DProperties } from './types';
 
 export function parseSprite2D(
@@ -25,7 +25,7 @@ export function parseSprite2D(
     region_enabled: boolOr(properties.region_enabled, false),
     // The grid and frame Godot holds after replaying the body in file order: a
     // refused `frame` stays 0, and a later `hframes` re-maps one that landed
-    // (godot/spriteFrames.ts).
+    // (godot/scene/spriteFrames.ts).
     hframes: frames.hframes,
     vframes: frames.vframes,
     frame: frames.frame,

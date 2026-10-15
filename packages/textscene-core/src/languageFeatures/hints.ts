@@ -5,8 +5,8 @@
  * serialisations, so nothing here invents a value the inspector would not offer.
  */
 
-import { PROPERTY_HINT } from '../godot/propertyHint.js';
-import { VARIANT_TYPE } from '../godot/variantType.js';
+import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
+import { VARIANT_TYPE } from '../godot/variant/variantType.js';
 
 /** One `PROPERTY_HINT_ENUM` label, with the integer the engine stores for it. */
 export interface EnumEntry {

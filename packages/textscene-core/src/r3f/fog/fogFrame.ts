@@ -5,8 +5,8 @@
  */
 
 import * as THREE from 'three';
-import { renderedDepthFogRange } from '../../godot/depthFog.js';
-import type { VolumetricFogProjectSettings } from '../../godot/volumetricFog.js';
+import { renderedDepthFogRange } from '../../godot/rendering/environment/depthFog.js';
+import type { VolumetricFogProjectSettings } from '../../godot/rendering/environment/volumetricFog.js';
 import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
 import { setGodotColorLinear } from '../godotColor.js';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';

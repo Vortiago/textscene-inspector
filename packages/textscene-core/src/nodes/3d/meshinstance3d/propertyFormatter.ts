@@ -3,7 +3,7 @@
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { MeshInstance3DProperties } from './types';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
-import { SHADOW_CASTING_SETTING_NAMES } from '../../../godot/rendering';
+import { SHADOW_CASTING_SETTING_NAMES } from '../../../godot/rendering/rendering';
 
 export function formatMeshInstance3DProperties(properties: MeshInstance3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];

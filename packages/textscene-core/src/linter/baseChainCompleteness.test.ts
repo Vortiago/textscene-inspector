@@ -10,8 +10,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { NODE_BASE_TYPES, UNCATALOGUED_BASE_TYPES } from '../godot/nodeBaseTypes.js';
-import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
+import { NODE_BASE_TYPES, UNCATALOGUED_BASE_TYPES } from '../godot/classdb/nodeBaseTypes.js';
+import { CLASS_BASE_TYPES } from '../godot/classdb/classBaseTypes.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its validators
 import { registeredTypes } from './registryPopulation.js';

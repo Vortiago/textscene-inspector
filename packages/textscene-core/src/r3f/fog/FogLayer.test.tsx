@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree, type RootState } from '@react-three/fiber';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { fireSceneRender } from '../testing/fireSceneRender';

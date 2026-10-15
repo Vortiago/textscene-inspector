@@ -21,7 +21,7 @@ import {
   projectViewportSize,
   projectVolumetricFogSettings,
 } from './projectSettingsParser';
-import { VOLUMETRIC_FOG_DEFAULTS } from '../godot/volumetricFog';
+import { VOLUMETRIC_FOG_DEFAULTS } from '../godot/rendering/environment/volumetricFog';
 
 /** The head of the real demo project, verbatim, comments and wrap included. */
 const GUI_IN_3D = `; Engine configuration file.

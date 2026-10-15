@@ -7,7 +7,7 @@
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { MAX_2D_DIRECTIONAL_LIGHTS } from '../../godot/rendering.js';
+import { MAX_2D_DIRECTIONAL_LIGHTS } from '../../godot/rendering/rendering.js';
 import type { LiveTreeEntry } from '../liveSceneTree.js';
 import { useHasLiveTree, useLiveSceneNodes } from '../useLiveSceneTree.js';
 import { useNodePath } from '../contexts/NodePathContext.js';

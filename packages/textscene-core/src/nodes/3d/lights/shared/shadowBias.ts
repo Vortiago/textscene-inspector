@@ -7,9 +7,12 @@ import {
   LIGHT_SHADOW_BIAS_DEFAULT,
   LIGHT_SIZE_DEFAULT,
   SPOT_LIGHT_SHADOW_BIAS_DEFAULT,
-} from '../../../../godot/light';
-import { SHADOW_BLUR_DEFAULT } from '../../../../godot/softShadowScale';
-import { positionalSoftShadow, spotShadowDepthBias } from '../../../../godot/positionalShadow';
+} from '../../../../godot/scene/light';
+import { SHADOW_BLUR_DEFAULT } from '../../../../godot/rendering/lights/softShadowScale';
+import {
+  positionalSoftShadow,
+  spotShadowDepthBias,
+} from '../../../../godot/rendering/lights/positionalShadow';
 import type { PositionalLightProperties } from './types';
 
 /**

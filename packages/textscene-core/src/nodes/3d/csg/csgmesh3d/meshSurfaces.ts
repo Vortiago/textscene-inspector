@@ -5,7 +5,7 @@
  */
 
 import type * as THREE from 'three';
-import { bottomUpV } from '../../../../godot/uv';
+import { bottomUpV } from '../../../../godot/math/uv';
 import { warn } from '../../../../logger';
 import type { ParsedResource } from '../../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../../parser/types';

@@ -1,5 +1,5 @@
 /** Base Control (Godot 2D UI) property definitions. */
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 export type ControlColor = Rgba;
 

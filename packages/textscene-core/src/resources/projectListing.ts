@@ -1,6 +1,6 @@
 /**
  * A project's files, all of them or by extension, for a host that reads its directories itself: the walk Godot's
- * editor scan makes (`godot/editorScan.ts`), over a directory reader the host supplies.
+ * editor scan makes (`godot/project/editorScan.ts`), over a directory reader the host supplies.
  */
 
 import { SCAN_STOP_FILES, isScannedDirectoryName } from '../godot/index.js';

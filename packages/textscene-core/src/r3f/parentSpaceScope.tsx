@@ -1,6 +1,6 @@
 /**
  * The scope a node draws in when its parent's transform and visibility do not reach it
- * (`godot/parentSpace.ts`), such as a plain Node or a CanvasItem under a Node3D. Such a node's three
+ * (`godot/scene/parentSpace.ts`), such as a plain Node or a CanvasItem under a Node3D. Such a node's three
  * object moves to the nearest world root, outside every ancestor group: its viewport's, or its
  * CanvasLayer's, whose canvas a canvas root draws on. Three hides a whole subtree below one
  * invisible object, and Godot does not.
@@ -10,7 +10,7 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 import { extend } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
-import { spaceFamilyOf, type SpaceFamily } from '../godot/parentSpace.js';
+import { spaceFamilyOf, type SpaceFamily } from '../godot/scene/parentSpace.js';
 import { isTopLevelItem } from './canvasPaintOrder.js';
 import { nodeEscapesParent } from './nodeEscapesParent.js';
 import { CanvasSpaceProvider } from './canvasRootScope.js';

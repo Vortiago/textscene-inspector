@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { FogVolumeShape } from '../../godot/fogVolume';
+import { FogVolumeShape } from '../../godot/rendering/environment/fogVolume';
 import { decodeFogMaterial } from '../../resources/materials/fogmaterial/decode';
 import { FogDensityAtlas } from './fogDensityAtlas';
 import { FogVolumeObject, type FogVolumeFill } from './fogVolumeObject';

@@ -4,7 +4,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from '../../godot/softShadowKernel';
+import { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from '../../godot/rendering/lights/softShadowKernel';
 import { FRAMEBUFFER_HEIGHT_UNIFORM, framebufferHeight } from './framebufferRows';
 import { SOFT_SHADOW_FILTER, installSoftShadowFilter, softShadowFilterChunk } from './softShadowFilter';
 import { warningsOf } from '../testing/logWarnings';

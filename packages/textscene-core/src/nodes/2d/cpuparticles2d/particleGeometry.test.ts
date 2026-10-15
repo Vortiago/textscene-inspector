@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildParticleGeometry } from './particleGeometry';
 import type { RenderedParticle } from './simulate';
-import { TRANSFORM2D_IDENTITY } from '../../../godot/transform2d.js';
+import { TRANSFORM2D_IDENTITY } from '../../../godot/math/transform2d.js';
 
 function particle(overrides: Partial<RenderedParticle> = {}): RenderedParticle {
   return {

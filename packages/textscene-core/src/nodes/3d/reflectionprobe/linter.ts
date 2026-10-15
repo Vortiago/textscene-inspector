@@ -12,8 +12,8 @@ import {
   loadedOriginOffset,
   REFLECTION_PROBE_DEFAULTS,
   ReflectionProbeAmbientMode,
-} from '../../../godot/reflectionProbe.js';
-import { formatReal, storedVector3 } from '../../../godot/real.js';
+} from '../../../godot/rendering/environment/reflectionProbe.js';
+import { formatReal, storedVector3 } from '../../../godot/math/real.js';
 import type { Vector3 } from '../../../parser/vectors.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 

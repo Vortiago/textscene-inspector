@@ -5,7 +5,7 @@
 import type { NodeOrigin, RawNode, SceneNode } from './types';
 import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
 import { isUniqueNameInOwner } from '../utils/uniqueNames.js';
-import { UNIQUE_NODE_PREFIX, resolveParentPath, type ParentPathTree } from '../godot/nodePath.js';
+import { UNIQUE_NODE_PREFIX, resolveParentPath, type ParentPathTree } from '../godot/string/nodePath.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
 
 /**

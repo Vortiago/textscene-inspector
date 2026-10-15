@@ -6,7 +6,7 @@
 
 import { isTypeUnknowable } from '../parser/typeUnknowable.js';
 import { findParentNode } from './linterUtils.js';
-import { descendsFrom, isCatalogedType } from '../godot/nodeBaseTypes.js';
+import { descendsFrom, isCatalogedType } from '../godot/classdb/nodeBaseTypes.js';
 import type { RawNode, RawScene } from '../parser/types.js';
 import { boolSlotValue } from '../godot/index.js';
 
