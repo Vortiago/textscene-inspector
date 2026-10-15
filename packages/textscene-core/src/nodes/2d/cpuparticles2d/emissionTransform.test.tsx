@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
 import { useEmissionTransform } from './emissionTransform';
-import { TRANSFORM2D_IDENTITY } from '../../../godot/transform2d.js';
+import { TRANSFORM2D_IDENTITY } from '../../../godot/math/transform2d.js';
 
 function emitterAt(place: (object: THREE.Object3D) => void): THREE.Object3D {
   const emitter = new THREE.Object3D();

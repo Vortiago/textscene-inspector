@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { sRGBToLinearRGB } from '../../utils/colorSpace';
-import type { Rgba } from '../../godot/math';
+import type { Rgba } from '../../godot/math/math';
 
 /**
  * A cube of the sRGB clear `color`, which already carries the background energy. Godot linearises it

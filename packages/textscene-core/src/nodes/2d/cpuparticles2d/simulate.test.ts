@@ -3,7 +3,7 @@ import { heading } from '../../../parser/testing/parserKit';
 import { parseCPUParticles2D } from './parser';
 import { simulateFrozenPose, type ParticleSimInput } from './simulate';
 import { CPUParticles2DParam, type CPUParticles2DProperties } from './types';
-import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/transform2d.js';
+import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/math/transform2d.js';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 import { GradientInterpolationMode } from '../../../resources/textures/gradienttexture2d/types';
 import { CurveTangentMode, type Curve } from '../../../resources/curves/curve/types';

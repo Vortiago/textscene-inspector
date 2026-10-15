@@ -1,7 +1,7 @@
 /** The Light2D property shape PointLight2D and DirectionalLight2D share. */
 
 import type { Node2DProperties } from '../../../base/node2d/types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `Light2D.BlendMode`: ADD, SUB, MIX. */
 export type Light2DBlendMode = 0 | 1 | 2;

@@ -11,7 +11,7 @@ import { NodeDispatcher } from '../NodeDispatcher';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import { CanvasWorkspaceProvider, type CanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
-import { descendsFrom } from '../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../godot/classdb/nodeBaseTypes.js';
 import { parseNode2D } from '../../nodes/base/node2d/parser';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 

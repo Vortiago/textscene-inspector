@@ -5,7 +5,7 @@
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';
-export type { Vector2 } from '../../../godot/vector';
+export type { Vector2 } from '../../../godot/math/vector';
 
 registerResourceSlice({
   slice: 'curve2d',

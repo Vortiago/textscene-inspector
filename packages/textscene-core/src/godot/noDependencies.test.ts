@@ -52,14 +52,14 @@ describe('src/godot is a dependency-free leaf', () => {
     expect(specifiersIn("import { x } from './linter/y.js';")).toEqual(['./linter/y.js']);
     expect(specifiersIn("import type { P } from '../linter/types.js';")).toEqual(['../linter/types.js']);
     expect(specifiersIn("import 'three';")).toEqual(['three']);
-    expect(specifiersIn("export { a } from './math.js';")).toEqual(['./math.js']);
+    expect(specifiersIn("export { a } from './math/math.js';")).toEqual(['./math.js']);
     expect(specifiersIn("const m = await import('node:fs');")).toEqual(['node:fs']);
   });
 
   it('sees a multi-line specifier list, the form this directory mostly uses', () => {
     expect(specifiersIn("import {\n  Mesh,\n  Vector3,\n} from 'three';")).toEqual(['three']);
     expect(specifiersIn("import type {\n  P,\n} from '../linter/types.js';")).toEqual(['../linter/types.js']);
-    expect(specifiersIn("export {\n  a,\n  b,\n} from './math.js';")).toEqual(['./math.js']);
+    expect(specifiersIn("export {\n  a,\n  b,\n} from './math/math.js';")).toEqual(['./math.js']);
   });
 
   it('sees every specifier this directory actually writes', () => {

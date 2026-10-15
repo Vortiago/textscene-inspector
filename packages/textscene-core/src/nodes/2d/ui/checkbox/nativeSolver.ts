@@ -34,8 +34,8 @@ import type { CheckBoxIcons } from '../../../../r3f/controls/native/themeIcons';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { CheckBoxProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /**
  * CheckBox's theme font key, `SceneStringName(font)`, registered under CheckBox's own type

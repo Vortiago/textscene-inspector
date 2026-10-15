@@ -27,7 +27,7 @@ import {
 } from './solverRegistry';
 import type { SealedHandoff } from './solveHandoff';
 import { resolveControlLayout, type ControlLayoutOrder } from '../controlAnchors.js';
-import type { Vector2 } from '../../../godot/vector.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 export interface SolvedControl {
   rect: Rect2;

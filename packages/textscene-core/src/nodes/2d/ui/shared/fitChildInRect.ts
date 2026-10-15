@@ -13,7 +13,7 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import { isTopLevelItem } from '../../../../r3f/canvasPaintOrder';
 import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ControlProperties } from '../control/types';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `Control::SizeFlags` (`scene/gui/control.h:64-69`). */
 export const SIZE_FILL = 1;

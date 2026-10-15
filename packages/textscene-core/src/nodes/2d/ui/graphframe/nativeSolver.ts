@@ -23,8 +23,8 @@ import {
 import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
 import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '../graphelement/graphTitlebar';
 import type { GraphFrameProperties } from './types';
-import type { Rgba } from '../../../../godot/math';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Rgba } from '../../../../godot/math/math';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 

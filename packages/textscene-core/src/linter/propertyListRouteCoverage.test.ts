@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { descendsFrom } from '../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../godot/classdb/nodeBaseTypes.js';
 import { ROWS, type RouteRow } from './testing/propertyListRoutes.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its validators

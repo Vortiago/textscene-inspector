@@ -38,7 +38,7 @@ import {
   graphFrameTitleTextMin,
 } from './nativeSolver';
 import type { GraphFrameProperties } from './types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `Color::lightened` (`core/math/color.cpp`): moves each channel toward white by `amount`. */
 function lightened(c: Rgba, amount: number): Rgba {

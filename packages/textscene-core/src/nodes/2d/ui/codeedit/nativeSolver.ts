@@ -22,7 +22,7 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { CodeEditProperties } from './types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `default_theme.cpp:526`: `Color(0.67, 0.67, 0.67, 0.4)`, distinct from `font_color`. */
 export const CODE_EDIT_LINE_NUMBER_COLOR: Rgba = { r: 0.67, g: 0.67, b: 0.67, a: 0.4 };

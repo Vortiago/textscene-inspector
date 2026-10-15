@@ -148,7 +148,7 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     parserOnly: [
       // The deprecated name `_set` routes to set_rendering_quadrant_size
       // (tile_map.cpp:695-697). The linter's alias table sends it to the
-      // rendering_quadrant_size validator (godot/deprecatedTable.ts).
+      // rendering_quadrant_size validator (godot/classdb/deprecatedTable.ts).
       'cell_quadrant_size',
     ],
     reason:

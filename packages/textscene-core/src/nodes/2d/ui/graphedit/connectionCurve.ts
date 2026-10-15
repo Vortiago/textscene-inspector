@@ -10,7 +10,7 @@
  */
 
 import { bezierInterpolate } from '../../../../godot/index.js';
-import type { Vector2 } from '../../../../godot/vector.js';
+import type { Vector2 } from '../../../../godot/math/vector.js';
 
 /** `MAX_CONNECTION_LINE_CURVE_TESSELATION_STAGES` (`graph_edit.cpp:54`). */
 const MAX_STAGES = 5;

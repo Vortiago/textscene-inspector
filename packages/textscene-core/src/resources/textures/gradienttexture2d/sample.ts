@@ -5,10 +5,10 @@
  * `Gradient.interpolation_color_space` is always sRGB, so OKLab differs mid-stop.
  */
 
-import { cubicInterpolatef, lerpf } from '../../../godot/math';
+import { cubicInterpolatef, lerpf } from '../../../godot/math/math';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
 import type { Gradient, GradientTexture2D } from './types';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 const f = Math.fround;
 

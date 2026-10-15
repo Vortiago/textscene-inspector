@@ -39,7 +39,7 @@ import {
 import { getFontGlyphAdvancePx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment } from './bbcode';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 function node(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
   return {

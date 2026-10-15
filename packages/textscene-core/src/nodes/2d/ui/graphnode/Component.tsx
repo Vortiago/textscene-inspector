@@ -44,7 +44,7 @@ import {
   graphNodeTitleTextMin,
 } from './nativeSolver';
 import type { GraphNodeProperties } from './types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 interface ImageLike {
   width?: number;

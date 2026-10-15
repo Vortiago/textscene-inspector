@@ -27,7 +27,7 @@ import {
   NO_VISIBILITY_RANGE,
   VisibilityRangeFadeMode,
   type VisibilityRange,
-} from '../../../godot/visibilityRange';
+} from '../../../godot/rendering/visibilityRange';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');

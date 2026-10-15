@@ -33,8 +33,8 @@ import {
 } from '../lineedit/nativeSolver';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SpinBoxProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `Range`'s default `step` (`scene/gui/range.h:42`). SpinBox's constructor never calls `set_step` (`spin_box.cpp:723-740`), so this is what an unauthored `step` resolves to. */
 const SPIN_BOX_STEP_DEFAULT = 1;

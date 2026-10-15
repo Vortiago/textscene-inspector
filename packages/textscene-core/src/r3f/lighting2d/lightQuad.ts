@@ -21,7 +21,7 @@ import {
   VERTEX,
 } from './lightQuadShaders.js';
 import { shadowSamplingParameters, type ShadowSampling } from './shadowSampling.js';
-import type { Rgba } from '../../godot/math.js';
+import type { Rgba } from '../../godot/math/math.js';
 
 export { updateShadowPolarTexture, type ShadowSampling } from './shadowSampling.js';
 

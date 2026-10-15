@@ -1,5 +1,5 @@
 import type { Node3DProperties } from '../../../base/node3d/types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 export interface CollisionShape3DProperties extends Node3DProperties {
   /** Reference to a collision-shape resource (BoxShape3D, ConvexPolygonShape3D, …). */

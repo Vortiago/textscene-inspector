@@ -6,7 +6,7 @@
  */
 
 import { packedArrayForms } from '../../../godot/index.js';
-import { dictPackedField, packedFloatCount } from '../../../godot/packedArrayFields.js';
+import { dictPackedField, packedFloatCount } from '../../../godot/variant/packedArrayFields.js';
 
 /** The `_data` layout of one Bézier curve class. */
 export interface BezierDataFormat {

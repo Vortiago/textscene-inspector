@@ -30,7 +30,7 @@ import {
 } from '../../../../r3f/controls/native/buttonBase';
 import { buttonIconColor, menuButtonLabelShape, menuButtonTextTheme } from './nativeSolver';
 import type { MenuButtonProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 interface IconImageLike {
   width?: number;

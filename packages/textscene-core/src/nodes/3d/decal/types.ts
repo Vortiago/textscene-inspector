@@ -6,8 +6,8 @@
  */
 
 import type { Node3DProperties } from '../../base/node3d/types';
-import type { Rgba } from '../../../godot/math';
-import type { Vector3 } from '../../../godot/vector';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector3 } from '../../../godot/math/vector';
 
 export interface DecalProperties extends Node3DProperties {
   /** Albedo texture projected onto surfaces (ExtResource/SubResource ref). */

@@ -9,7 +9,7 @@ import type { OmniLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { positionalShadowNear } from '../../../../godot/positionalShadow';
+import { positionalShadowNear } from '../../../../godot/rendering/lights/positionalShadow';
 import { omniShadowBias } from '../shared/shadowBias';
 import { PointLightGizmo } from '../shared/lightHelpers';
 import { usePositionalLight } from '../shared/positionalLight';

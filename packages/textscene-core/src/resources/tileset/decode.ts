@@ -26,8 +26,8 @@ import type {
   TileMaterial,
   TileSetModel,
 } from './types';
-import type { Rgba } from '../../godot/math.js';
-import type { Vector2 } from '../../godot/vector.js';
+import type { Rgba } from '../../godot/math/math.js';
+import type { Vector2 } from '../../godot/math/vector.js';
 
 /** Context-independent view of a TileSet resource and its surroundings. */
 interface TileSetSourceData {

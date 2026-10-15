@@ -6,7 +6,7 @@
 
 import type { FontResource } from '../../fonts/font/types';
 import type { SceneScope } from '../../../parser/types';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 /**
  * The shape a file-backed Theme (`T` = address string, awaited later) and a

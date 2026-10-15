@@ -14,7 +14,7 @@ import type { FontCacheReader } from '../../fonts/font/types';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { ScannedTheme, ThemeAddresses, ThemeResource } from './types';
 import { indexedKeyRegex } from '../../../godot/index.js';
-import type { Rgba } from '../../../godot/math.js';
+import type { Rgba } from '../../../godot/math/math.js';
 
 /** The type names this slice claims: Godot's Theme class alone. */
 export const THEME_TYPES: ReadonlySet<string> = new Set(['Theme']);

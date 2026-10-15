@@ -53,8 +53,8 @@ import {
   shapeItemListText,
 } from './nativeSolver';
 import type { ItemListItem, ItemListProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** Pass 1: this row's own icon/text size contribution: what `packItemListRows` needs, before rects exist. */
 interface RowContent {

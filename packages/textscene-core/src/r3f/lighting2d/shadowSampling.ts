@@ -15,7 +15,7 @@ import { SHADOW_MAP_BINS } from './shadowPolarMap.js';
 // Type-only, so the pair of modules never form a runtime cycle: the filter
 // constants are declared beside the quads that branch on them.
 import type { SHADOW_FILTER_PCF5, SHADOW_FILTER_PCF13 } from './lightQuad.js';
-import type { Rgba } from '../../godot/math.js';
+import type { Rgba } from '../../godot/math/math.js';
 
 /**
  * `rasterizer_canvas_gles3.cpp:182`:

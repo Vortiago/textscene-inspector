@@ -13,7 +13,7 @@ import {
   CanvasItemLightMode,
   type CanvasItemMaterialProperties,
 } from '../resources/materials/canvasitemmaterial/types.js';
-import type { Rgba } from '../godot/math.js';
+import type { Rgba } from '../godot/math/math.js';
 
 interface CanvasModulateLike {
   color?: Rgba;

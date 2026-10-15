@@ -36,8 +36,8 @@ import {
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { OptionButtonProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 // Re-exported so Component.tsx imports the shared Button pieces under one name.
 export { pickButtonStyleBox, resolveButtonDrawState, tintColor };

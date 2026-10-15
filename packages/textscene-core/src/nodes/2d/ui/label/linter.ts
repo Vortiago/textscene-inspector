@@ -10,7 +10,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { parentTypeVerdict } from '../../../../linter/parentType.js';
 import { VECTOR2_REGEX } from '../../../../linter/validators/index.js';
 import { ruleInt, tupleComponent } from '../../../../linter/validators/commonValidators.js';
-import { slotComponents } from '../../../../godot/int.js';
+import { slotComponents } from '../../../../godot/variant/int.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {

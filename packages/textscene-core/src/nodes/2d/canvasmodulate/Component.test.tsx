@@ -7,7 +7,7 @@ import { parseCanvasModulate } from './parser';
 import { Modulate2DContext, useParentModulate } from '../../../r3f/canvasItemModulate';
 import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../../../r3f/canvasPaintOrder';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 /** The world canvas's rank, derived: only a rank's order is meaningful, not its value. */
 const WORLD_RANK = layerRankOf(layerRanks([]), 0);

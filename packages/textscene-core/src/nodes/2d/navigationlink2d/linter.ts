@@ -8,9 +8,9 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { VECTOR2_REGEX, tupleComponent } from '../../../linter/validators/index.js';
-import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
+import { slotComponents, slotComponentsAltered } from '../../../godot/variant/int.js';
 import { isEqualApprox } from '../../../godot/index.js';
-import type { Vector2 } from '../../../godot/vector.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 const arms = {
   coincidentEndpoints: groundedArm('navigationlink2d-coincident-endpoints', {

@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { isZeroApprox } from '../../../../godot/math';
+import { isZeroApprox } from '../../../../godot/math/math';
 import type { ControlProperties } from '../control/types';
 import type { FlowContainerProperties } from './types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
@@ -30,7 +30,7 @@ import {
   hasFlag,
   isSortableControl,
 } from '../shared/fitChildInRect';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 // FlowContainer::AlignmentMode (flow_container.h:39-43).
 const ALIGNMENT_BEGIN = 0;

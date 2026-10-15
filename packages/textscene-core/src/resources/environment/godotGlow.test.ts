@@ -10,7 +10,7 @@ import {
   samplesGlowMap,
 } from './godotGlow';
 import { GlowBlendMode } from './godotGlow.testkit';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 
 /** `RS::MAX_GLOW_LEVELS` (`rendering_server.h:107`). */
 const GLOW_LEVEL_COUNT = 7;

@@ -21,8 +21,8 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme.js
 import type { Rect2 } from '../../../../r3f/controls/native/rect.js';
 import { graphNodeDrawRows, graphNodeStyles } from '../graphnode/nativeSolver.js';
 import type { GraphNodeProperties } from '../graphnode/types.js';
-import type { Vector2 } from '../../../../godot/vector.js';
-import type { Rgba } from '../../../../godot/math.js';
+import type { Vector2 } from '../../../../godot/math/vector.js';
+import type { Rgba } from '../../../../godot/math/math.js';
 
 interface GraphNodePort {
   pos: Vector2;

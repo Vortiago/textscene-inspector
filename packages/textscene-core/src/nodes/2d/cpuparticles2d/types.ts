@@ -5,9 +5,9 @@
  */
 
 import type { Node2DProperties } from '../../base/node2d/types';
-import { CPU_PARTICLES_PARAMS, type CpuParticlesParam } from '../../../godot/cpuParticles';
-import type { Rgba } from '../../../godot/math';
-import type { Vector2 } from '../../../godot/vector';
+import { CPU_PARTICLES_PARAMS, type CpuParticlesParam } from '../../../godot/scene/cpuParticles';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /** Godot `CPUParticles2D.EmissionShape`. */
 export enum CPUParticles2DEmissionShape {

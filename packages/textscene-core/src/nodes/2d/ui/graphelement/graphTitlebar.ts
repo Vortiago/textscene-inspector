@@ -26,7 +26,7 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { layoutLabelLines, LABEL_LINE_SPACING_PX, LABEL_PARAGRAPH_SEPARATOR } from '../label/nativeSolver';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `title_label`'s real Godot class: both variations are declared `set_type_variation("Label")`. */
 const TITLE_LABEL_NATIVE_TYPE = 'Label';

@@ -11,7 +11,7 @@
  */
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import { FillMode } from './types';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 interface LinearProgressDraw {
   /** Where the cropped region draws, control-local Godot px (`progress_offset` folded in). */

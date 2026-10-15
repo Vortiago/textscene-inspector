@@ -36,7 +36,7 @@ import {
 } from './nativeSolver';
 import type { RichTextLabelProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 interface ImageLike {
   width?: number;

@@ -11,7 +11,7 @@ import {
   type DirectionalShadowBox,
   type DirectionalShadowFitInput,
 } from './fitDirectionalShadowBox';
-import type { DirectionalShadowSlice } from '../../godot/directionalShadow';
+import type { DirectionalShadowSlice } from '../../godot/rendering/lights/directionalShadow';
 import { cameraSliceCorners } from './fitDirectionalShadowBox.testkit';
 
 const MAP_SIZE = 2048;

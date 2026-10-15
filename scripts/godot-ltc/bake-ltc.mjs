@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
-const OUT = join(REPO_ROOT, 'packages/textscene-core/src/godot/ltcTable.generated.ts');
+const OUT = join(REPO_ROOT, 'packages/textscene-core/src/godot/rendering/lights/ltcTable.generated.ts');
 
 const SOURCE =
   'https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/servers/rendering/storage/ltc';

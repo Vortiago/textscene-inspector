@@ -40,7 +40,7 @@ import {
   EXPAND_MODE_ORIGINAL_SIZE,
 } from './nativeSolver';
 import type { LineEditProperties } from './types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 const HORIZONTAL_ALIGNMENT_LEFT = 0;
 const DEFAULT_CARET_WIDTH_PX = 1;

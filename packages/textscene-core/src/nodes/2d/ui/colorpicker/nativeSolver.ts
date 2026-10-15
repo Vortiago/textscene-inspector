@@ -18,8 +18,8 @@ import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../r3f/controls/godo
 import { tabBarStyleBoxes } from '../tabbar/nativeSolver';
 import { sliderMinimumSize } from '../shared/sliderSolver';
 import type { ColorPickerProperties } from './types';
-import type { Rgba } from '../../../../godot/math';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Rgba } from '../../../../godot/math/math';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `MODE_BUTTON_COUNT` (`color_picker.h:184`). OKHSL has no mode button: only the dropdown reaches it. */
 const MODE_BUTTON_COUNT = 3;

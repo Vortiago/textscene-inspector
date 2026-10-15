@@ -29,7 +29,7 @@ import { spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** The `font_color` of `Label` (`default_theme.cpp:384`): opaque white, where other controls use grey. */
 const LABEL_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };

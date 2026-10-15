@@ -12,7 +12,7 @@ import {
 } from '../../../../parser/valueParsers';
 import { LAYOUT_DIRECTION_INHERITED } from '../../../../godot/index.js';
 import { boolSlotValue } from '../../../../godot/index.js';
-import type { Rgba } from '../../../../godot/math.js';
+import type { Rgba } from '../../../../godot/math/math.js';
 
 /** Collect `theme_override_<category>/<name> = value` into the five typed maps. */
 function parseThemeOverrides(properties: Record<string, string>): Partial<ControlProperties> {

@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { isExplicitlyHidden, parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { isOrthonormalTransform } from '../../../../linter/transformBasis.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';

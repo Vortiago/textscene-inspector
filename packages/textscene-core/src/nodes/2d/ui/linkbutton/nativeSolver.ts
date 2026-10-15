@@ -29,7 +29,7 @@ import {
   getUnderlineThicknessPx,
 } from '../../../../r3f/controls/native/text/openSansMetrics';
 import type { LinkButtonProperties } from './types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `SceneStringName(font)`, registered for "LinkButton" at `default_theme.cpp:200`. */
 export const LINKBUTTON_THEME_FONT_KEY = 'font';

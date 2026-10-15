@@ -4,8 +4,8 @@
  * theme with. Only the scalar fields `Label::_shape` and `NOTIFICATION_DRAW` read.
  * `paragraph_spacing` and the stacked arrays (`label_settings.cpp:92-111`) are not decoded.
  */
-import type { Rgba } from '../../../godot/math';
-import type { Vector2 } from '../../../godot/vector';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 export interface LabelSettingsResource {
   /** `line_spacing`, real_t px. Godot default 3 (`label_settings.h:54`). */

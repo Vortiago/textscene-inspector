@@ -11,7 +11,7 @@
  */
 
 import { OPEN_SANS_ATLAS_GLYPHS, type OpenSansGlyph } from './openSansAtlas';
-import { round as godotRound } from '../../../../godot/math';
+import { round as godotRound } from '../../../../godot/math/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
 import {
   fontUsesSubpixelPositioning,

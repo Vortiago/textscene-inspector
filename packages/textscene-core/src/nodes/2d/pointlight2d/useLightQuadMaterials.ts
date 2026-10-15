@@ -14,7 +14,7 @@ import {
   type ShadowSampling,
 } from '../../../r3f/lighting2d/lightQuad';
 import { litQuadStencilProps, shadowColorQuadStencilProps } from '../../../r3f/lighting2d/ShadowVolumeMask';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 interface LightQuadMaterialOptions {
   readonly cookie: THREE.Texture;

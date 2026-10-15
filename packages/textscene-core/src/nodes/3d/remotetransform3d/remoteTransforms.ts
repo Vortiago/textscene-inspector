@@ -11,7 +11,7 @@ import type { Node3DProperties } from '../../../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { isUniqueNameInOwner } from '../../../utils/uniqueNames.js';
-import { UNIQUE_NODE_PREFIX, resolveNodePathLiteral } from '../../../godot/nodePath.js';
+import { UNIQUE_NODE_PREFIX, resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
 import { node2DLocalTransform } from '../../../r3f/node2dTransform.js';
 import {
@@ -21,8 +21,8 @@ import {
   transform2DFromParts,
   transform2DGetScale,
   type Transform2DColumns,
-} from '../../../godot/transform2d.js';
-import type { Vector2 } from '../../../godot/vector.js';
+} from '../../../godot/math/transform2d.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 const REMOTE_TRANSFORM_TYPES = new Set(['RemoteTransform3D', 'RemoteTransform2D']);
 

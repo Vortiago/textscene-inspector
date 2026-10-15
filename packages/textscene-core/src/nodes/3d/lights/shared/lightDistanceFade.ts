@@ -8,7 +8,7 @@
 import { useEffect, useMemo, type RefObject } from 'react';
 import type * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
-import { LIGHT_DISTANCE_FADE_DEFAULT, distanceFade } from '../../../../godot/distanceFade';
+import { LIGHT_DISTANCE_FADE_DEFAULT, distanceFade } from '../../../../godot/rendering/distanceFade';
 import { cameraDistance, observeSceneCamera } from '../../../../r3f/sceneRenderCamera';
 import type { PositionalLightProperties } from './types';
 

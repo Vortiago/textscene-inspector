@@ -10,7 +10,7 @@
 
 import type { StyleBoxLineData } from '../../../../r3f/controls/native/styleBoxLine';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 export type SeparatorOrientation = 'horizontal' | 'vertical';
 

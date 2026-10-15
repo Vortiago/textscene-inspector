@@ -7,7 +7,7 @@ import {
   threeMatrixFromTransform2D,
   transform2DFromThreeMatrix,
 } from './node2dTransform';
-import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../godot/transform2d.js';
+import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../godot/math/transform2d.js';
 
 describe('node2dGroupProps', () => {
   it('conjugates by diag(1,-1,1): negates Y translation and rotation, preserves scale', () => {

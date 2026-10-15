@@ -1,7 +1,7 @@
 /** Line2D: a stroked polyline drawn as mesh quads (extends Node2D). */
 
 import type { Node2DProperties } from '../../base/node2d/types';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 export interface Line2DProperties extends Node2DProperties {
   /** Flat `[x0,y0,x1,y1,…]` Float32Array from a PackedVector2Array. Empty (< 2 vertices) → nothing to draw. */

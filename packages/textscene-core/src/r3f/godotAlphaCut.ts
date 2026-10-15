@@ -4,7 +4,7 @@
  * decision here.
  */
 
-import { drawsInShadowPass } from '../godot/shadowPass';
+import { drawsInShadowPass } from '../godot/rendering/shadowPass';
 import type { SurfaceAlphaSource } from './materials/surfaceAlphaPatch';
 
 /** The members `SpriteBase3D::AlphaCutMode` and `Label3D::AlphaCutMode` share; DISABLED is the `else`. */

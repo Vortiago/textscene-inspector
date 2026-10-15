@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
 import { heading } from '../../../parser/testing/parserKit';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
-import { EMPTY_AABB } from '../../../godot/aabb';
+import { EMPTY_AABB } from '../../../godot/math/aabb';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import {

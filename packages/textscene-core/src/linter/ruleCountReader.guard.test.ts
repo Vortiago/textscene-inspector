@@ -10,7 +10,7 @@ import { stripComments } from '@textscene/dev-kit';
 import { allSourceFiles, declaredRuleNames, srcLabel } from './testing/ruleNameScrape.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { NODE_BASE_TYPES } from '../godot/nodeBaseTypes.js';
+import { NODE_BASE_TYPES } from '../godot/classdb/nodeBaseTypes.js';
 import './index.js'; // side-effect: every slice registers its rules and validators
 
 type Reader = 'ruleInt' | 'ruleCount';

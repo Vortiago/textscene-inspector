@@ -5,7 +5,7 @@
  * Constants are `editor_settings.cpp` defaults and `node_3d_editor_plugin.cpp` speeds.
  */
 import * as THREE from 'three';
-import { degToRad } from '../godot/math.js';
+import { degToRad } from '../godot/math/math.js';
 import { clampWheelNotches, wheelNotches, type WheelEventLike } from './pointerGesture.js';
 
 /** `editors/3d/navigation_feel/orbit_sensitivity`. */

@@ -14,7 +14,7 @@ export type { SceneScope };
 import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { joinPath } from '../utils/nodePath.js';
-import { nodePathNames } from '../godot/nodePath.js';
+import { nodePathNames } from '../godot/string/nodePath.js';
 
 /**
  * Read surface for the loader's PackedScene cache. `undefined` means never

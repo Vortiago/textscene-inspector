@@ -13,7 +13,7 @@ import type { Quad2 } from './shadowVolumes';
 import { SHADOW_SNAPSHOT_PRIORITY } from './ShadowCasterStage';
 import { useGameViewportRect } from '../gameViewportRect';
 import type { Rect2 } from '../controls/native/rect';
-import type { Vector2 } from '../../godot/vector.js';
+import type { Vector2 } from '../../godot/math/vector.js';
 
 /** Reused by every sample, which reads it before the next one writes it. */
 const scratch = new THREE.Vector3();

@@ -10,7 +10,7 @@ import {
   TILE_SHAPE_ISOMETRIC,
   type TileGrid,
 } from './types';
-import type { Vector2 } from '../../godot/vector';
+import type { Vector2 } from '../../godot/math/vector';
 
 /** Godot's Math::posmod: posmod(-1, 2) === 1. */
 function posmod(a: number, b: number): number {

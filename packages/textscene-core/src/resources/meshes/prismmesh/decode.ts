@@ -3,7 +3,7 @@ import { parseVector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
 import { floatOr } from '../../../parser/valueParsers';
 import { flooredCount } from '../meshCounts';
-import type { Vector3 } from '../../../godot/vector';
+import type { Vector3 } from '../../../godot/math/vector';
 
 export function decodePrismMesh(properties: Record<string, string>): PrismMeshProperties {
   let size: Vector3 = { x: 1, y: 1, z: 1 }; // Godot default

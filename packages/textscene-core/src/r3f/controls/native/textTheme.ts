@@ -5,7 +5,7 @@
  */
 import type { ShareNode } from './solveTree';
 import { resolveNodeFontSizePx } from './text/resolveNodeFontMetrics';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 export interface TextThemeKeys {
   /** The key of `theme_override_font_sizes/<sizeKey>` and of the ancestor `<Type>/font_sizes/<name>` lookup: Godot passes one `StringName` to both (`control.cpp:3107-3129`). */

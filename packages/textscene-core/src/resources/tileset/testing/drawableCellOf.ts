@@ -2,7 +2,7 @@
 
 import type { DrawableCell } from '../drawableCell';
 import { defaultTileData, type AlternativeTileModel, type AtlasSourceModel } from '../types';
-import type { Vector2 } from '../../../godot/vector';
+import type { Vector2 } from '../../../godot/math/vector';
 
 interface CellOverrides {
   coords?: Vector2;

@@ -9,7 +9,7 @@ import { createContext, useContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { multiplyModulate, WHITE_MODULATE } from './canvasItemModulate.js';
-import type { Rgba } from '../godot/math.js';
+import type { Rgba } from '../godot/math/math.js';
 
 /** The `SpriteBase3D` subclasses (`sprite_3d.h:36`): `cast_to<SpriteBase3D>` in type-name terms. */
 const SPRITE_BASE_3D_TYPES: ReadonlySet<string> = new Set(['Sprite3D']);

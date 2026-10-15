@@ -8,7 +8,7 @@
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
 import { godotNodeName, godotNodeRole } from '../../../resources/formats/glb/nodeNames.js';
-import type { GltfNodeRole } from '../../../godot/gltfImportNames.js';
+import type { GltfNodeRole } from '../../../godot/import/gltfImportNames.js';
 
 interface GlbHierarchyNode {
   /** Display name, from `glbObjectName`. */

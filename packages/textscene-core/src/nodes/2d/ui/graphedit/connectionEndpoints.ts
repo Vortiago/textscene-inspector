@@ -17,8 +17,8 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect.js';
 import type { GraphElementProperties } from '../graphelement/types.js';
 import { graphNodePorts } from './connectionPorts.js';
 import type { GraphEditProperties } from './types.js';
-import type { Vector2 } from '../../../../godot/vector.js';
-import type { Rgba } from '../../../../godot/math.js';
+import type { Vector2 } from '../../../../godot/math/vector.js';
+import type { Rgba } from '../../../../godot/math/math.js';
 
 interface ResolvedConnectionEndpoint {
   /** In GraphEdit's local space, the frame `rect` is drawn in. */

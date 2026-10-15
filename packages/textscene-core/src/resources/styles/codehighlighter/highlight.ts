@@ -12,7 +12,7 @@
 
 import { colorEquals, DEFAULT_COLOR } from './decode';
 import type { CodeHighlighterData } from './types';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 /** `core/string/char_utils.h:113-114`. */
 function isSymbol(ch: string | undefined): boolean {

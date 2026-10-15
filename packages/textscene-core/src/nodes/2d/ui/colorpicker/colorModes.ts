@@ -12,7 +12,7 @@ import { isColorOverbright } from '../shared/colorOverbright';
 import { formatGodotNumber } from '../spinbox/nativeSolver';
 import { extractHsv, hsvToRgb } from './nativeSolver';
 import { okhslToSrgb, srgbToOkhsl } from './okhsl';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `ColorModeType` (`color_picker.h`). `MODE_RAW` is a deprecated alias with the value of `MODE_LINEAR` (`:105-107`). */
 export const MODE_RGB = 0;

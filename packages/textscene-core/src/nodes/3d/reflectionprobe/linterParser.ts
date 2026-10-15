@@ -53,7 +53,7 @@ validatorRegistry.registerAll('ReflectionProbe', {
   // reflection_probe.cpp:264, PROPERTY_HINT_NONE, "suffix:m". set_size (:99-117) stores
   // `p_size` unclamped: its local `half_size` only re-clamps `origin_offset`.
   // reflection_probe.cpp:287-301 maps the Godot 3 key `extents` to `set_size(extents * 2)`.
-  // `godot/deprecated.ts` resolves it to `size`, so `extents` gets no validator of its own.
+  // `godot/classdb/deprecated.ts` resolves it to `size`, so `extents` gets no validator of its own.
   size: v.vector3('size'),
 
   // reflection_probe.cpp:265, PROPERTY_HINT_NONE. set_origin_offset (:123-136) clamps each

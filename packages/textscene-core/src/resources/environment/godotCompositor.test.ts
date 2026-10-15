@@ -14,7 +14,7 @@ import { GlowBlendMode } from './godotGlow.testkit';
 import { GodotToneMapper } from './godotToneMapping';
 import type { EnvironmentAdjustments } from './types';
 import type { CompositeToneMapping } from './godotCompositor';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 
 function glowOn(extra: Record<string, string> = {}): GlowParams {
   const params = glowParamsFor(

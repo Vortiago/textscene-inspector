@@ -6,7 +6,7 @@
  */
 
 import { sRGBToLinearRGB } from '../../../utils/colorSpace';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 /** Godot `BaseMaterial3D.EmissionOperator`. */
 const EmissionOperator = {

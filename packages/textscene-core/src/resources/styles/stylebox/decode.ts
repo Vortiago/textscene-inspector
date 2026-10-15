@@ -3,8 +3,8 @@
  * `StyleBoxFlatData` the Control painters draw. Pure data: no React, no THREE.
  */
 
-import { clamp } from '../../../godot/math';
-import type { Vector2 } from '../../../godot/vector';
+import { clamp } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 import { boolOr, floatOr } from '../../../parser/valueParsers';
 import { parseVector2 } from '../../../parser/vectors';
 import type { StyleBoxFlatData } from '../../../r3f/controls/native/styleBoxFlat';

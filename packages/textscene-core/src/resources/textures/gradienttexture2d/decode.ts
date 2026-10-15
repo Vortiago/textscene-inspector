@@ -18,7 +18,7 @@ import {
   type GradientColorStop,
   type GradientTexture2D,
 } from './types';
-import type { Rgba } from '../../../godot/math.js';
+import type { Rgba } from '../../../godot/math/math.js';
 
 /**
  * Parses a `PackedColorArray` slot into a `Color[]`, dropping a trailing partial quadruple. It

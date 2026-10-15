@@ -18,7 +18,7 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { TextureRectDraw } from '../texturerect/nativeSolver';
 import type { TextureButtonProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** The keys `textureButtonTextureSlots`/`textureButtonMinimumSize` share for `SolveNode.textureSlots`. */
 const TEXTURE_NORMAL_KEY = 'texture_normal';

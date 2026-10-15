@@ -1,7 +1,7 @@
 /** Camera2D defines the 2D view framing (extends Node2D). */
 
 import type { Node2DProperties } from '../../base/node2d/types';
-import type { Vector2 } from '../../../godot/vector';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /** Godot Camera2D.AnchorMode. */
 export const Camera2DAnchorMode = {

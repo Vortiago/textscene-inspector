@@ -4,8 +4,8 @@
  * `resources/styles/stylebox/decode.ts` produces it. Pure data: no React, no THREE.
  */
 
-import type { Rgba } from '../../../godot/math';
-import type { Vector2 } from '../../../godot/vector';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 export interface StyleBoxFlatData {
   /** `bg_color`, default `Color(0.6, 0.6, 0.6)` (`style_box_flat.h:38`). */

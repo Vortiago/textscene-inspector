@@ -5,7 +5,7 @@
  * box, and the fitted box reaches past that end.
  */
 
-import type { DirectionalShadowFade } from '../../godot/directionalShadow.js';
+import type { DirectionalShadowFade } from '../../godot/rendering/lights/directionalShadow.js';
 import { installChunkPatch, type Chunks } from '../shaderPatch/chunkPatch.js';
 import { installLitUniform, installedUniformValue } from '../shaderPatch/litUniform.js';
 

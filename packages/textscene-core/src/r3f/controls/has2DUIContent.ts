@@ -4,7 +4,7 @@
  * No component or THREE import: the shell's initial-paint bundle loads it.
  */
 
-import { descendsFrom } from '../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../godot/classdb/nodeBaseTypes.js';
 
 /**
  * What this previewer can draw: a hand-kept mirror of ControlComponentRegistry,

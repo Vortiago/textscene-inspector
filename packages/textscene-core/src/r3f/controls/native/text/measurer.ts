@@ -8,7 +8,7 @@
 // the floored size and the painted glyphs use one font. Omitted, it is `OPEN_SANS_FONT_METRICS`.
 import type { TextMeasurer } from '../solverRegistry';
 import { AutowrapMode, shapeText } from './textLayout';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 export const measureText: TextMeasurer = (
   text: string,

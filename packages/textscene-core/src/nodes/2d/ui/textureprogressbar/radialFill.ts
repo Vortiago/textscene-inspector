@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { FillMode } from './types';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `Math::fposmodp` (`core/math/math_funcs.h:296-302`): `fmod`, folded non-negative. */
 function fposmodp(x: number, y: number): number {

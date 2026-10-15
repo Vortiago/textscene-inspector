@@ -1,8 +1,8 @@
 /** The Polygon2D property shape: a filled 2D polygon on Node2D. */
 
 import type { Node2DProperties } from '../../base/node2d/types';
-import type { Rgba } from '../../../godot/math';
-import type { Vector2 } from '../../../godot/vector';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 export interface Polygon2DProperties extends Node2DProperties {
   /**

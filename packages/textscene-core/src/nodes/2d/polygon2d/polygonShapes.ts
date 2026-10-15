@@ -5,7 +5,7 @@
  * UV/skinning helpers. Otherwise, one ring per `polygons` entry.
  */
 
-import type { Vector2 } from '../../../godot/vector';
+import type { Vector2 } from '../../../godot/math/vector';
 
 export interface PolygonRings {
   /**

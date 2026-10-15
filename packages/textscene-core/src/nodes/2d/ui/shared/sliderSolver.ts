@@ -12,7 +12,7 @@
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { rangeRatio, type RangeProperties, type RangeValueOrder } from './range';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /**
  * `tick.svg`'s cross-axis extent. `pnpm ref:godot` paints an 8px band at `default_theme_scale = 1`,

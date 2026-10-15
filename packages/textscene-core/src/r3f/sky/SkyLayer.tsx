@@ -18,7 +18,7 @@ import { skyLightEnergy } from './skyLight';
 import { skyEuler } from './skyRotation';
 import { SkyLayerCubes } from './skyLayerCubes';
 import { observeSceneCamera } from '../sceneRenderCamera';
-import type { Vector3 } from '../../godot/vector';
+import type { Vector3 } from '../../godot/math/vector';
 
 interface SkyLayerProps {
   sky: Sky;

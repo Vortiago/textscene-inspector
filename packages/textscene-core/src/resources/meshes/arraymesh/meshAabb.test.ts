@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_AABB } from '../../../godot/aabb';
+import { EMPTY_AABB } from '../../../godot/math/aabb';
 import { arrayMeshAabb } from './meshAabb';
 
 const surface = (aabb: string) => `{ "aabb": ${aabb}, "format": 34359742465, "primitive": 3 }`;

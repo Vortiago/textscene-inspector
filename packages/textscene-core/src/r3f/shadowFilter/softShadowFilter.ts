@@ -8,7 +8,7 @@ import {
   SOFT_LOW_PENUMBRA_SAMPLES,
   SOFT_LOW_SHADOW_SAMPLES,
   vogelDisk,
-} from '../../godot/softShadowKernel.js';
+} from '../../godot/rendering/lights/softShadowKernel.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
 import {
   applyChunkEdits,

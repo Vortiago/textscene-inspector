@@ -5,7 +5,7 @@
 
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { SeparatorOrientation } from './styleBoxLine';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /**
  * `Size2 ms(3, 3)` with the cross axis replaced by the `separation` constant (`separator.cpp:34-39`).

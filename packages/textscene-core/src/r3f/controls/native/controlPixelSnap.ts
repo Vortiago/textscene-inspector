@@ -12,7 +12,7 @@
 
 import { boolSlotValue } from '../../../godot/index.js';
 import type { ProjectSettings } from '../../../parser/projectSettingsParser.js';
-import type { Vector2 } from '../../../godot/vector.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 /** `gui/common/snap_controls_to_pixels`, addressed the way Godot addresses it. */
 const SNAP_CONTROLS_TO_PIXELS_SETTING = 'gui/common/snap_controls_to_pixels';

@@ -21,7 +21,7 @@ import type {
 import type { ControlProperties } from '../control/types';
 import { splitOffsetsOf, type SplitContainerProperties } from './splitContainer';
 import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from './fitChildInRect';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`). */
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;

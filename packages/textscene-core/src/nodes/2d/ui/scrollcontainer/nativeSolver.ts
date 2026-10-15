@@ -22,7 +22,7 @@ import type {
 import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from '../shared/fitChildInRect';
 import { scrollBarGrabberGeometry, scrollBarMinimumSize } from '../shared/scrollBarSolver';
 import type { ScrollContainerProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `ScrollContainer::ScrollMode` (`scroll_container.h:44-50`). */
 const ScrollMode = {

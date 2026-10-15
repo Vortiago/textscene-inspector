@@ -24,7 +24,7 @@ import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
-import type { Vector3 } from '../../../godot/vector';
+import type { Vector3 } from '../../../godot/math/vector';
 
 /** Literal-only, so the key is constant and a placeholder cell never remounts. */
 const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);

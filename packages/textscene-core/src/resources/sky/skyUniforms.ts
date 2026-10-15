@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { SkyProperties } from './types';
 import { scaledRgb } from '../../utils/colorParser';
 import { godotColorToLinear } from '../../r3f/godotColor';
-import type { Rgba } from '../../godot/math';
+import type { Rgba } from '../../godot/math/math';
 
 /** A directional light as Godot's sky shader sees it. */
 export interface SkyLight {

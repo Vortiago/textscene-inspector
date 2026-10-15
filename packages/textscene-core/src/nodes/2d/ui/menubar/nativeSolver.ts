@@ -26,7 +26,7 @@ import { unquoteString } from '../../../../parser/utils';
 import type { TscnNode } from '../../../../parser/types';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
 import type { MenuBarProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `SceneStringName(font)`, MenuBar's own theme font key (`menu_bar.cpp:748`). */
 const MENU_BAR_THEME_FONT_KEY = 'font';

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { CollisionGizmo2D } from './CollisionGizmo2D';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /**
  * The outline a `CapsuleShape2D` gizmo draws, in Godot-local coordinates: the start of each

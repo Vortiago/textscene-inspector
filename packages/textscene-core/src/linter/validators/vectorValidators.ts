@@ -5,8 +5,8 @@ import { propertyError } from './propertyError.js';
 import { truncatedComponent } from './intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
 import { ruleInt, tupleComponent } from './commonValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../godot/int.js';
-import { compositeTypeName, isConvertedSpelling } from '../../godot/variantConversion.js';
+import { slotComponents, slotComponentsAltered } from '../../godot/variant/int.js';
+import { compositeTypeName, isConvertedSpelling } from '../../godot/variant/variantConversion.js';
 
 /**
  * Vector3 format: Vector3(x, y, z), for the callers that `.exec()` it to reach

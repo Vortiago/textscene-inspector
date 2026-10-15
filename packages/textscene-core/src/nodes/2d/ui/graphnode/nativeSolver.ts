@@ -25,8 +25,8 @@ import { SIZE_EXPAND, SIZE_FILL, fitChildInRect, hasFlag, isSortableControl } fr
 import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '../graphelement/graphTitlebar';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
-import type { Rgba } from '../../../../godot/math';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Rgba } from '../../../../godot/math/math';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 const ZERO_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };

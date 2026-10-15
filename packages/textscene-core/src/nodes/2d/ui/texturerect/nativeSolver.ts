@@ -13,7 +13,7 @@
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { TextureRectProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const EXPAND_KEEP_SIZE = 0;
 const EXPAND_IGNORE_SIZE = 1;

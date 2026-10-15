@@ -13,7 +13,7 @@
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 

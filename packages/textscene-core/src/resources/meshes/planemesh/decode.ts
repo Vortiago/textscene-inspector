@@ -3,7 +3,7 @@ import { parseVector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
 import { boolOr, enumOr, vec2Or } from '../../../parser/valueParsers';
 import { flooredCount } from '../meshCounts';
-import type { Vector2, Vector3 } from '../../../godot/vector';
+import type { Vector2, Vector3 } from '../../../godot/math/vector';
 
 /**
  * Defaults that differ between PlaneMesh (FACE_Y, 2×2) and its QuadMesh subclass

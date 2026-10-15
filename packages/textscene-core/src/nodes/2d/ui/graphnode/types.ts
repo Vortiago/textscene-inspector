@@ -1,5 +1,5 @@
 import type { GraphElementProperties } from '../graphelement/types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `GraphNode::Slot` (`graph_node.h:41-52`), the class-default every leaf starts from. */
 export interface GraphNodeSlot {

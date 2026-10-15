@@ -32,7 +32,7 @@ import {
   CanvasItemLightMode,
   type CanvasItemMaterialProperties,
 } from '../resources/materials/canvasitemmaterial/types';
-import type { Rgba } from '../godot/math';
+import type { Rgba } from '../godot/math/math';
 
 function canvasItemMaterial(overrides: Partial<CanvasItemMaterialProperties>): CanvasItemMaterialProperties {
   return { ...canvasItemMaterialOf({ type: 'CanvasItemMaterial', data: {} })!, ...overrides };

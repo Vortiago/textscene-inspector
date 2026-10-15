@@ -6,7 +6,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
 import { ruleCount } from '../../../linter/validators/commonValidators.js';
 import { indicesPastCount, listWrittenIndices } from '../../../linter/reportedIndices.js';
 import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';

@@ -8,7 +8,7 @@ import { parseNode3D } from '../../base/node3d/parser';
 import { boolOr, vec3Or } from '../../../parser/valueParsers';
 import type { GridMapProperties } from './types';
 import { readCellsField } from './cellData.js';
-import type { Vector3 } from '../../../godot/vector.js';
+import type { Vector3 } from '../../../godot/math/vector.js';
 
 const DEFAULT_CELL_SIZE: Vector3 = { x: 2, y: 2, z: 2 };
 

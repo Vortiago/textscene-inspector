@@ -1,6 +1,6 @@
 /** A MultiMesh's box as `multimesh_get_aabb` returns it (`mesh_storage.cpp:2233-2245`). No THREE. */
 
-import { EMPTY_AABB, mergeAabb, transformAabb, type Aabb } from '../../../godot/aabb.js';
+import { EMPTY_AABB, mergeAabb, transformAabb, type Aabb } from '../../../godot/math/aabb.js';
 import { TRANSFORM_FLOATS, type MultiMeshData } from './types.js';
 
 /**

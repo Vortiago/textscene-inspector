@@ -35,8 +35,8 @@ import { CHECK_BUTTON_ICON_NATURAL_SIZE } from '../../../../r3f/controls/native/
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { CheckButtonProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `SceneStringName(font)`, registered under CheckButton's own type (`scene/theme/default_theme.cpp:337`), not inherited from Button's. */
 export const CHECKBUTTON_THEME_FONT_KEY = 'font';

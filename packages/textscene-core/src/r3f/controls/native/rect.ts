@@ -5,4 +5,4 @@
  */
 
 /** A Control's rect in Godot pixels, +Y down. */
-export type { Rect2 } from '../../../godot/rect2';
+export type { Rect2 } from '../../../godot/math/rect2';

@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { useLayoutEffect, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { BillboardMode } from '../../godot/billboard';
+import { BillboardMode } from '../../godot/scene/billboard';
 import { useBillboard } from './useBillboard';
 
 type Triple = [number, number, number];

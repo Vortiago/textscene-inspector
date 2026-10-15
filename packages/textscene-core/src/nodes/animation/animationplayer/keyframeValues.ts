@@ -4,8 +4,8 @@
  * renderer cannot key the text. Pure `.ts`, no THREE.
  */
 
-import { variantTupleRegex, parseGodotFloat, allFinite } from '../../../godot/number.js';
-import { storedInt } from '../../../godot/int.js';
+import { variantTupleRegex, parseGodotFloat, allFinite } from '../../../godot/variant/number.js';
+import { storedInt } from '../../../godot/variant/int.js';
 import { info } from '../../../logger';
 
 /** One keyframe's decoded value: a composite's components, a scalar, or a flag. */

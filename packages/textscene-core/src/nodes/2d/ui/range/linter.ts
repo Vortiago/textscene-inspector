@@ -2,7 +2,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';

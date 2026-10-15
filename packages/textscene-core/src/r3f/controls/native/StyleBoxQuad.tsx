@@ -29,7 +29,7 @@ import { pinNoColorSpace, useCanvasSrgbDefines } from '../../canvas2DTextureDeco
 import { useGodotLinearColor } from '../../godotColor';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useUploadedClone } from '../../tiledUpload/useTiledUpload';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 interface StyleBoxQuadProps {
   styleBox: ResolvedStyleBox;

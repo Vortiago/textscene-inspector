@@ -5,7 +5,7 @@
  * gate picks one. Everything is in the previewer's 2D world space, Y up.
  */
 
-import type { Vector2 } from '../../godot/vector.js';
+import type { Vector2 } from '../../godot/math/vector.js';
 
 /** `OccluderPolygon2D.CullMode`. */
 export const OCCLUDER_CULL_DISABLED = 0;

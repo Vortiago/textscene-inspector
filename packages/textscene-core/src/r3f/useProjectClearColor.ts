@@ -8,7 +8,7 @@ import type * as THREE from 'three';
 import { projectClearColor } from '../parser/projectSettingsParser.js';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
 import { useGodotLinearColor } from './godotColor.js';
-import type { Rgba } from '../godot/math.js';
+import type { Rgba } from '../godot/math/math.js';
 
 /** The colour as the project stores it, in sRGB. */
 export function useProjectClearColorSrgb(): Rgba {

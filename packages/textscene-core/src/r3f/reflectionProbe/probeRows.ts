@@ -4,10 +4,10 @@
  */
 
 import type * as THREE from 'three';
-import type { ReflectionProbeAmbientMode } from '../../godot/reflectionProbe.js';
-import type { Vector3 } from '../../godot/vector.js';
+import type { ReflectionProbeAmbientMode } from '../../godot/rendering/environment/reflectionProbe.js';
+import type { Vector3 } from '../../godot/math/vector.js';
 import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
-import type { Rgba } from '../../godot/math.js';
+import type { Rgba } from '../../godot/math/math.js';
 
 /** What the shader reads of one probe. */
 export interface DrawnProbe {

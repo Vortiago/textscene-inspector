@@ -25,7 +25,7 @@ import {
   CanvasItemBlendMode,
   type CanvasItemMaterialProperties,
 } from '../../../resources/materials/canvasitemmaterial/types';
-import type { Vector2 } from '../../../godot/vector';
+import type { Vector2 } from '../../../godot/math/vector';
 
 export function Polygon2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Polygon2DProperties;

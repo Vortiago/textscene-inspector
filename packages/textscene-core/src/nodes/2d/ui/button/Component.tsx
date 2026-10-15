@@ -41,7 +41,7 @@ import {
 } from '../../../../r3f/controls/native/buttonBase';
 import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
 import type { ButtonProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 interface IconImageLike {
   width?: number;

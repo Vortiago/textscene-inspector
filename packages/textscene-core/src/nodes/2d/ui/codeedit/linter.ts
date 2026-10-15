@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { parsePackedStringArray } from './arrayForms.js';
 import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry.js';
 

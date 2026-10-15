@@ -51,7 +51,7 @@ const tabStopsValidator = v.packedFloat32Array('tab_stops', '10, 20, 30');
 // The map follows label.cpp:1431-1458's ADD_GROUP order and matches the verdicts
 // Button, LineEdit and LinkButton give the same properties. `Label::_set`
 // (label.cpp:1000-1011, `#ifndef DISABLE_DEPRECATED`) also takes the pre-4.0 `align`
-// and `valign`, which `godot/deprecatedTable.ts` maps onto the alignment keys.
+// and `valign`, which `godot/classdb/deprecatedTable.ts` maps onto the alignment keys.
 validatorRegistry.registerAll('Label', {
   // -- Ungrouped run (label.cpp:1431-1444) ------------------------------------
   // label.cpp:1431: PROPERTY_HINT_MULTILINE_TEXT, no length bound.

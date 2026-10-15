@@ -1,7 +1,7 @@
 /** What the sky bake asks of a filter, so one bake runs either of Godot's two filters. */
 
 import type * as THREE from 'three';
-import type { SkyOctmapLayout } from '../../godot/skyReflection.js';
+import type { SkyOctmapLayout } from '../../godot/rendering/environment/skyReflection.js';
 
 export interface LayerFilter {
   /** The layout of the radiance octmap the chain starts from. */

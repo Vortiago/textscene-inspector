@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
-import { descendsFrom } from '../../../godot/nodeBaseTypes';
+import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/index.js';
 import { projectLayoutDirectionEnv } from '../../../parser/projectSettingsParser';
 import { joinPath } from '../../../utils/nodePath';
@@ -58,7 +58,7 @@ import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewport
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
 import type { SkippedAncestors, SolveNode, ThemedIconRef } from './solveTree';
-import { multiplyTransform2D } from '../../../godot/transform2d.js';
+import { multiplyTransform2D } from '../../../godot/math/transform2d.js';
 import { node2DLocalTransform } from '../../node2dTransform';
 import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
@@ -71,8 +71,8 @@ import {
   type PaintRange,
 } from '../../canvasPaintOrder';
 import { parseStyleBox, type ResolvedStyleBox } from './parseStyleBox';
-import type { Rgba } from '../../../godot/math.js';
-import type { Vector2 } from '../../../godot/vector.js';
+import type { Rgba } from '../../../godot/math/math.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 interface UseBuildSolveTreeResult {
   /** Every Control whose canvas item parents at the viewport's canvas: scene roots, promoted, hoisted and `top_level` Controls. */

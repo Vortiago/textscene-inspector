@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 // Two constants, not one: lines take a major every 10 minor steps and dots every 5 (`:55-56`).
 const GRID_MINOR_STEPS_PER_MAJOR_LINE = 10;

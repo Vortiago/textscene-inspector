@@ -9,7 +9,7 @@ import { createTypeRegistry } from '../core/createTypeRegistry';
 import type { CsgShapeRegistration } from './csg/csgRegistration';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import type { YSortItem } from './ySortItems';
-import { descendsFrom } from '../godot/nodeBaseTypes';
+import { descendsFrom } from '../godot/classdb/nodeBaseTypes';
 import { withGeometryInstance } from './visibilityRange/geometryInstance';
 
 export interface NodeComponentProps {

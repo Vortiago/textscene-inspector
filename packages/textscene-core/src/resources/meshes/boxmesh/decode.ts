@@ -4,7 +4,7 @@ import type { BoxMeshProperties } from './types';
 import { warn } from '../../../logger';
 import { parseVector3 } from '../../../parser/vectors';
 import { flooredCount } from '../meshCounts';
-import type { Vector3 } from '../../../godot/vector';
+import type { Vector3 } from '../../../godot/math/vector';
 
 export function decodeBoxMesh(properties: Record<string, string>): BoxMeshProperties {
   let size: Vector3 = { x: 1, y: 1, z: 1 }; // Godot default

@@ -5,8 +5,8 @@
  */
 
 import { godotNamedColor } from '../../../../utils/godotNamedColor';
-import { stringToFloat, stringToInt } from '../../../../godot/string';
-import type { Rgba } from '../../../../godot/math';
+import { stringToFloat, stringToInt } from '../../../../godot/string/string';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** One currently-open BBCode tag. `value` is the `[name=value]` payload, if the tag carries one. */
 interface OpenBBCodeTag {

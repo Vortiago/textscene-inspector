@@ -12,8 +12,8 @@
 
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rect2 } from './rect';
-import type { Rgba } from '../../../godot/math';
-import type { Vector2 } from '../../../godot/vector';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 // `border_blend` and the AA rings use vertex colours, not a shader: a ring's inner
 // vertices take `border_color_inner` and its outer ones `border_color`, and three

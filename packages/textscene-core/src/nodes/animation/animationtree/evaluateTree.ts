@@ -7,8 +7,8 @@
 
 import type { AnimNode } from './treeResources';
 import { unquoteLiteral } from '../../../parser/utils';
-import { clamp } from '../../../godot/math.js';
-import { parseGodotFloat } from '../../../godot/number.js';
+import { clamp } from '../../../godot/math/math.js';
+import { parseGodotFloat } from '../../../godot/variant/number.js';
 
 interface ClipWeight {
   clip: string;

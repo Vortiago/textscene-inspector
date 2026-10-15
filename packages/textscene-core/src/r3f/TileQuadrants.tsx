@@ -22,7 +22,7 @@ import { useGodotLinearColor } from './godotColor';
 import { canvasKeyAtZ } from './canvasPaintOrder';
 import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement';
 import { TileSourceMesh } from './TileSourceMesh';
-import type { Rgba } from '../godot/math';
+import type { Rgba } from '../godot/math/math';
 
 interface TileLayerItem {
   model: TileSetModel;

@@ -32,7 +32,7 @@ import { useShadowLightPose } from '../../../r3f/lighting2d/shadowLightPose';
 import { litQuadRenderOrder, ShadowVolumeMask } from '../../../r3f/lighting2d/ShadowVolumeMask';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { useLightQuadMaterials, type LightQuadMaterials } from './useLightQuadMaterials';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 /** The quads a light draws besides its lit quad, each only when its material exists. */
 const OPTIONAL_ROLES = [

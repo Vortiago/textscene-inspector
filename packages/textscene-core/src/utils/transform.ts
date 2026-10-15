@@ -4,7 +4,7 @@
 
 import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
 import { warn } from '../logger';
-import { slotTupleRegex, matchedFloat, allFinite } from '../godot/number.js';
+import { slotTupleRegex, matchedFloat, allFinite } from '../godot/variant/number.js';
 
 const TRANSFORM3D_RE = slotTupleRegex('Transform3D', 12);
 const CALL_PREFIX = 'Transform3D(';

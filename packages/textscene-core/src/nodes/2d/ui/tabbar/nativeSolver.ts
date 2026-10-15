@@ -33,8 +33,8 @@ import { fitIconSize } from '../../../../r3f/controls/native/buttonBase';
 import { DEFAULT_FONT_SIZE } from '../../../../r3f/controls/godotDefaultTheme';
 import type { TabBarProperties, TabBarTabProperties } from './types';
 import { TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 export type TabDrawState = 'selected' | 'unselected' | 'disabled';
 

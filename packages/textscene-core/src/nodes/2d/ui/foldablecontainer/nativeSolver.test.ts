@@ -21,7 +21,7 @@ import {
   type FoldableContainerTitleMetrics,
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const MARGIN = 8; // content_margin 4, both sides.
 const FONT_HEIGHT = 23;

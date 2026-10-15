@@ -6,8 +6,8 @@
 
 import type { CanvasItemMaterialProperties } from '../materials/canvasitemmaterial/types';
 import type { DrawableCell } from './drawableCell';
-import type { Rgba } from '../../godot/math';
-import type { Vector2 } from '../../godot/vector';
+import type { Rgba } from '../../godot/math/math';
+import type { Vector2 } from '../../godot/math/vector';
 
 /** TileSet.tile_shape: square, isometric, half-offset square and hexagon all render. */
 export const TILE_SHAPE_SQUARE = 0;

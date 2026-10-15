@@ -4,7 +4,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { DIRECTIONAL_SHADOW_SIZE_DEFAULT } from '../../godot/directionalShadow';
+import { DIRECTIONAL_SHADOW_SIZE_DEFAULT } from '../../godot/rendering/lights/directionalShadow';
 
 type ShadowAtlas = typeof import('./shadowAtlas');
 

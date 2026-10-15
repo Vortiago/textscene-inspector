@@ -38,7 +38,7 @@ import {
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { OverrunBehavior } from '../../../../r3f/controls/native/text/textOverrun';
 import type { ButtonProperties } from './types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /**
  * Button's theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:152`). Only

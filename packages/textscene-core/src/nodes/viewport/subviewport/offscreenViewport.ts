@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
-import type { Vector2 } from '../../../godot/vector';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /**
  * The offscreen pass's render target, carrying the storage and the tonemap

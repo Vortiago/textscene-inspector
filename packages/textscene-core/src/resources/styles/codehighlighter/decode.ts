@@ -13,7 +13,7 @@
 import { colorOr, parseColorOrUndefined } from '../../../utils/colorParser';
 import { unquoteString } from '../../../parser/utils';
 import type { CodeHighlighterColorRegion, CodeHighlighterData } from './types';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 const DEFAULT_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 

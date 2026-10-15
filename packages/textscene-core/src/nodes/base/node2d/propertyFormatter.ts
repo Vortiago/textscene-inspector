@@ -7,7 +7,7 @@
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Node2DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 const radToDeg = (rad: number) => ((rad * 180) / Math.PI).toFixed(2);
 

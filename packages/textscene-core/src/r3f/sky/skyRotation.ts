@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import type { Vector3 } from '../../godot/vector.js';
+import type { Vector3 } from '../../godot/math/vector.js';
 
 /**
  * `sky_rotation` as three's Euler. `Basis::from_euler` composes Y, X then Z (`core/math/basis.cpp:678`),

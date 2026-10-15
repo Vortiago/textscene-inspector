@@ -5,8 +5,8 @@
 
 import type { Diagnostic } from './types.js';
 import { armDiagnostic, type RuleArm } from './ruleArms.js';
-import { crossedParamRanges } from '../godot/cpuParticles.js';
-import { formatReal } from '../godot/real.js';
+import { crossedParamRanges } from '../godot/scene/cpuParticles.js';
+import { formatReal } from '../godot/math/real.js';
 import type { RawNode } from '../parser/types.js';
 
 /** The arm under `rulePrefix`, grounded at `setterAt`, the class's own setter that alters the value. */

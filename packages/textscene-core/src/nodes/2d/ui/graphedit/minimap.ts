@@ -20,8 +20,8 @@ import type { GraphFrameProperties } from '../graphframe/types';
 import { graphNodeStyles } from '../graphnode/nativeSolver';
 import { graphFrameStyles } from '../graphframe/nativeSolver';
 import type { GraphEditProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `MINIMAP_OFFSET` (`graph_edit.cpp:51`): unscaled, like every other constant in that block. */
 const GRAPH_EDIT_MINIMAP_OFFSET = 12;

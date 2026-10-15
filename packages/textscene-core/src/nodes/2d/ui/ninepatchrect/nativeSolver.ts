@@ -10,7 +10,7 @@
 
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { NinePatchRectProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 export const ninePatchRectMinimumSize: MinimumSizeFn = (n): Vector2 => {
   const props = n.node.properties as NinePatchRectProperties;

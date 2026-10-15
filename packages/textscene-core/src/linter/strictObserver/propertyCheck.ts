@@ -23,7 +23,7 @@ export function propertyRefusal({
   if (isMultiline || !ownerType) return null;
 
   // The key as written first. Where nothing claims that spelling, the pair the engine applies
-  // (`godot/deprecated.ts` resolves the alias and transforms the value), and the diagnostic names both,
+  // (`godot/classdb/deprecated.ts` resolves the alias and transforms the value), and the diagnostic names both,
   // because the canonical key appears nowhere in the file.
   let lookupKey = key;
   let lookupValue = value;

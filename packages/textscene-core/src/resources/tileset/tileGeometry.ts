@@ -8,7 +8,7 @@
 import { mapToLocalPx } from './tilePlacement';
 import type { DrawableCell } from './drawableCell';
 import { tileDrawInfo, type AtlasSourceModel, type TileGrid } from './types';
-import type { Rgba } from '../../godot/math';
+import type { Rgba } from '../../godot/math/math';
 
 interface TileGeometryArrays {
   positions: Float32Array;

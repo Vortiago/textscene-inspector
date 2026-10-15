@@ -10,7 +10,7 @@ import type * as THREE from 'three';
 import { useParentModulate, WHITE_MODULATE, multiplyModulate } from '../../canvasItemModulate';
 import { useGodotLinearColor } from '../../godotColor';
 import { controlProps, type SolveNode } from './solveTree';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 /** An absent modulate is Godot's default, opaque white. */
 function modulateOrWhite(c: Rgba | undefined): Rgba {

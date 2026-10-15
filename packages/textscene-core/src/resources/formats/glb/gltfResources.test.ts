@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { gltfResourcePath, selfContainedGlb, type GltfJson } from './gltfResources';
-import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../godot/gltf';
+import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../godot/import/gltf';
 import { binChunk, glbOfChunks, jsonChunk } from './testing/triangleGlb';
 
 /** The JSON and the BIN chunk of a GLB, after checking its framing. */

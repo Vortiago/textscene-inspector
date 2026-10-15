@@ -5,8 +5,8 @@
  * precedes shading, lighting and blending.
  */
 
-import type { Rgba } from '../../../godot/math';
-import { unitByte } from '../../../godot/unitByte';
+import type { Rgba } from '../../../godot/math/math';
+import { unitByte } from '../../../godot/variant/unitByte';
 
 /**
  * `unitByte` on all four channels. Never apply it to the inherited tint:

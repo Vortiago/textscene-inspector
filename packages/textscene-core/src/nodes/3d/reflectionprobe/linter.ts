@@ -12,10 +12,10 @@ import {
   loadedOriginOffset,
   REFLECTION_PROBE_DEFAULTS,
   ReflectionProbeAmbientMode,
-} from '../../../godot/reflectionProbe.js';
-import { formatReal, storedVector3 } from '../../../godot/real.js';
+} from '../../../godot/rendering/environment/reflectionProbe.js';
+import { formatReal, storedVector3 } from '../../../godot/math/real.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
-import type { Vector3 } from '../../../godot/vector.js';
+import type { Vector3 } from '../../../godot/math/vector.js';
 
 const arms = {
   ambientColorNoEffect: groundedArm('reflectionprobe-ambient-color-no-effect', {

@@ -4,8 +4,8 @@
  * settings type without importing `build.ts`, which the render layer pulls in.
  */
 
-import type { Rgba } from '../../godot/math';
-import type { Vector3 } from '../../godot/vector';
+import type { Rgba } from '../../godot/math/math';
+import type { Vector3 } from '../../godot/math/vector';
 
 /**
  * Godot's `Environment.tonemap_agx_contrast` default (`environment.h`; `ADD_PROPERTY`

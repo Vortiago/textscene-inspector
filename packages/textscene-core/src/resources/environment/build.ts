@@ -14,7 +14,7 @@ import {
 import { scaledRgb } from '../../utils/colorParser';
 import { sRGBChannelToLinear } from '../../utils/colorSpace';
 import { GodotToneMapper } from './godotToneMapping';
-import type { Rgba } from '../../godot/math';
+import type { Rgba } from '../../godot/math/math';
 
 /**
  * The white the tonemapper gets, as `Environment::_update_tonemap` (`scene/resources/environment.cpp`)

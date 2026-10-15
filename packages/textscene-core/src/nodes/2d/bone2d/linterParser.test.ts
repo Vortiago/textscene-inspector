@@ -22,7 +22,7 @@ function check(property: string, value: string) {
  * The keys Bone2D binds, read from the source. `rest` is the one ADD_PROPERTY
  * (skeleton_2d.cpp:380), and the other four come from `_get_property_list` (`:86`,
  * `:88`, `:89`, `:93`). `default_length` (`:48-49`, `:70-71`) is an alias that
- * `godot/deprecated.ts` resolves.
+ * `godot/classdb/deprecated.ts` resolves.
  */
 const KEYS: string[] = [
   'rest',

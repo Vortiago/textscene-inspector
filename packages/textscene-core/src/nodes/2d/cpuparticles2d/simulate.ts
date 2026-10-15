@@ -37,21 +37,21 @@ import type { Gradient } from '../../../resources/textures/gradienttexture2d/typ
 // The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from './godotRng';
-import { degToRad, lerp } from '../../../godot/math.js';
+import { degToRad, lerp } from '../../../godot/math/math.js';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
   multiplyTransform2D,
   type Transform2DColumns,
-} from '../../../godot/transform2d.js';
+} from '../../../godot/math/transform2d.js';
 import {
   CPUParticles2DDrawOrder,
   CPUParticles2DEmissionShape,
   CPUParticles2DParam,
   type CPUParticles2DProperties,
 } from './types';
-import type { Rgba } from '../../../godot/math.js';
-import type { Vector2 } from '../../../godot/vector.js';
+import type { Rgba } from '../../../godot/math/math.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 /** A particle's `Transform2D`, which the process loop writes in place, as Godot's `Particle`. */
 type ParticleTransform = { -readonly [K in keyof Transform2DColumns]: number };

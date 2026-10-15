@@ -1,5 +1,5 @@
 import type { GraphElementProperties } from '../graphelement/types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 export interface GraphFrameProperties extends GraphElementProperties {
   /** `title`: `graph_frame.cpp:192`. Default `""` (`graph_frame.h:51`, `String title;`). */

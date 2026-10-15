@@ -9,7 +9,7 @@ import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import type { LabelSettingsResource } from './types';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 /** `label_settings.h:59,62`: both colour fields' default. */
 const DEFAULT_WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };

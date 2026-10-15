@@ -7,7 +7,7 @@
 
 import type * as THREE from 'three';
 import type { GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
-import type { GltfNodeName, GltfNodeRole } from '../../../godot/gltfImportNames';
+import type { GltfNodeName, GltfNodeRole } from '../../../godot/import/gltfImportNames';
 import { isMeshInstance } from './meshInstances';
 
 const GODOT_NAME_KEY = 'textsceneGodotName';

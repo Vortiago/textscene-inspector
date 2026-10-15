@@ -21,7 +21,7 @@ import { useTexture2D } from '../../../resources/useTexture2D';
 import { applyTextureState, releaseBoundTexture } from '../../../resources/textures/applyTextureState';
 import type { DecalProperties } from './types';
 import type { DecalGeometricFade } from './decalFade';
-import { distanceFade } from '../../../godot/distanceFade';
+import { distanceFade } from '../../../godot/rendering/distanceFade';
 import { cameraDistance, observeSceneCamera } from '../../../r3f/sceneRenderCamera';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { DecalProjectionMaterials, type DecalProjectionLook } from './decalProjectionMaterials';
@@ -30,9 +30,9 @@ import {
   collectDecalReceivers,
   computeDecalBoxWorldAABB,
 } from './decalProjection';
-import { clamp } from '../../../godot/math';
-import type { Rgba } from '../../../godot/math';
-import type { Vector3 } from '../../../godot/vector';
+import { clamp } from '../../../godot/math/math';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector3 } from '../../../godot/math/vector';
 
 /** Wireframe colour for the (selection-gated) projection-box gizmo. */
 const BOX_COLOR = '#ff9d3b';

@@ -25,7 +25,7 @@ import {
   type ScrollBarPlacement,
   type ScrollHintPlacement,
 } from './nativeSolver';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /**
  * `scroll_hint_vertical_color` and `scroll_hint_horizontal_color`: `Color(0, 0, 0)`

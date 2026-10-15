@@ -11,9 +11,9 @@ import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
 import type { PaintRange } from '../../canvasPaintOrder';
 import type { StyleBoxFlatData } from './styleBoxFlat';
-import type { Transform2DColumns } from '../../../godot/transform2d.js';
-import type { Rgba } from '../../../godot/math.js';
-import type { Vector2 } from '../../../godot/vector.js';
+import type { Transform2DColumns } from '../../../godot/math/transform2d.js';
+import type { Rgba } from '../../../godot/math/math.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 /**
  * One resolved, unloaded theme icon: the raw Texture2D-valued ref plus the scope

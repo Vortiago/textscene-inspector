@@ -1,7 +1,7 @@
 /** GridMap node data. */
 
 import type { Node3DProperties } from '../../base/node3d/types';
-import type { Vector3 } from '../../../godot/vector';
+import type { Vector3 } from '../../../godot/math/vector';
 
 export interface GridMapProperties extends Node3DProperties {
   /** `mesh_library` reference (ExtResource / res://) to a MeshLibrary .tres. */

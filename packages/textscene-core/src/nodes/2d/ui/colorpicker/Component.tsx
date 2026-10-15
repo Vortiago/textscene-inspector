@@ -109,7 +109,7 @@ import {
   type ColorModeChannel,
 } from './colorModes';
 import type { ColorPickerProperties } from './types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `control_font_color` in `default_theme.cpp` (`:100`), the default text colour of Label and Button. Only the pressed `mode_btns` entry reads another colour. */
 const CONTROL_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };

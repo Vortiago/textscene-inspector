@@ -10,8 +10,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { round as godotRound } from '../../../godot/math';
-import { rect2Intersection } from '../../../godot/rect2';
+import { round as godotRound } from '../../../godot/math/math';
+import { rect2Intersection } from '../../../godot/math/rect2';
 import * as THREE from 'three';
 import type { Rect2 } from './rect';
 

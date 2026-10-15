@@ -97,7 +97,7 @@ Scaffold a node type with `pnpm new:node <TypeName> <category-dir> --intent
 Never drop a registration to mark a type undrawn.
 
 The Godot parent comes from ClassDB (`pnpm nodes:base-types`), never by hand. A class the
-pinned ClassDB lacks goes in the `UNCATALOGUED` table of `godot/nodeBaseTypes.ts`, with the
+pinned ClassDB lacks goes in the `UNCATALOGUED` table of `godot/classdb/nodeBaseTypes.ts`, with the
 reason.
 
 A **Resource slice** (ADR-0031) lives in `packages/textscene-core/src/resources/<category>/<type>/`:

@@ -35,7 +35,7 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { ResolvedConnection } from './connectionEndpoints';
 import type { MinimapTransform, GraphScrollBounds, MinimapElement } from './minimap';
 import { minimapCameraRect, minimapNodeRect } from './minimap';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `draw_polyline_colors(points, colors, 0.5, lines_antialiased)` (`graph_edit.cpp:1611`). */
 const MINIMAP_LINE_WIDTH = 0.5;

@@ -7,7 +7,7 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { TEXTURE_CHANNEL_NAMES, TextureChannel } from '../../../godot/textureChannel.js';
+import { TEXTURE_CHANNEL_NAMES, TextureChannel } from '../../../godot/rendering/materials/textureChannel.js';
 
 /** A `*_texture_channel` enum, which its setter refuses outside the five channels at `enforced`. */
 export function textureChannelValidator(name: string, enforced: string): PropertyValidator {

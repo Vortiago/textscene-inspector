@@ -17,7 +17,7 @@ import { FULL_SCREEN_VERTEX } from '../fullScreenPass.js';
 import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap.js';
 import { shadowPixelSize } from './shadowSampling.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
-import type { Rgba } from '../../godot/math.js';
+import type { Rgba } from '../../godot/math/math.js';
 
 /** The depth an empty bin compares as: past any fragment, so `step` leaves it lit. */
 const EMPTY_BIN_DEPTH = '1e30';

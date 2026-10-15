@@ -25,7 +25,7 @@ import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/n
 import { GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { isMinimapEnabled } from './minimap';
 import type { GraphEditProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `menu_panel->set_position(Vector2(10, 10))` (`graph_edit.cpp:3232`): unscaled. */
 const GRAPH_EDIT_MENU_POSITION: Vector2 = { x: 10, y: 10 };

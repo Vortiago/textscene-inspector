@@ -9,7 +9,7 @@
  */
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { hsvToRgb } from './nativeSolver';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 export interface QuadGeometry {
   /** x,y,z triples from the rect's top-left, in Godot px. The caller flips +Y down, as for `styleBoxFlatGeometry`. */

@@ -14,7 +14,7 @@ import { SelectionProvider } from '../contexts/SelectionContext';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
 import { TscnParser } from '../../parser/TscnParser';
-import { SOFT_LOW_QUALITY_RADIUS } from '../../godot/softShadowScale';
+import { SOFT_LOW_QUALITY_RADIUS } from '../../godot/rendering/lights/softShadowScale';
 
 import '../nodes/index';
 

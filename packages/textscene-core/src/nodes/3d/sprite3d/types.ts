@@ -5,10 +5,10 @@
  */
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
-import { BillboardMode } from '../../../godot/billboard';
-import { AxisMode } from '../../../godot/vector3Axis';
-import type { Rgba } from '../../../godot/math';
-import type { Vector2 } from '../../../godot/vector';
+import { BillboardMode } from '../../../godot/scene/billboard';
+import { AxisMode } from '../../../godot/math/vector3Axis';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
 export { BillboardMode };

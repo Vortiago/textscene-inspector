@@ -9,9 +9,9 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering.js';
+import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering.js';
 import { lightReachesItem, type LightCullKey } from './lightCullKey.js';
-import { rect2Intersects, type Rect2 } from '../../godot/rect2.js';
+import { rect2Intersects, type Rect2 } from '../../godot/math/rect2.js';
 
 /** What a light tells the pass about itself. */
 export interface CanvasLightDeclaration {

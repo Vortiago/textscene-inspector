@@ -11,7 +11,7 @@ import {
   isGltfJsonObject,
   requiredGltfExtensions,
   unsupportedRequiredGltfExtensions,
-} from '../../../godot/gltf';
+} from '../../../godot/import/gltf';
 import type { GltfExtensionRules } from './types';
 
 /**

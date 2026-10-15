@@ -2,7 +2,7 @@
 
 import type { Node2DProperties } from '../../../base/node2d/types';
 import type { PlacedCell } from '../shared/tileData';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 export interface TileMapLayerData {
   /** Layer display name (`layer_N/name`); an unnamed layer answers to `LayerN`. */

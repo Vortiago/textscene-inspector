@@ -4,7 +4,7 @@
  * `SyntaxHighlighter`. Every field is an `ADD_PROPERTY` (`:604-611`).
  */
 
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 /**
  * One `color_regions` entry: a delimiter pair a region spans, across lines

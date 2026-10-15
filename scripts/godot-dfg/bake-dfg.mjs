@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
-const OUT = join(REPO_ROOT, 'packages/textscene-core/src/godot/dfgTable.generated.ts');
+const OUT = join(REPO_ROOT, 'packages/textscene-core/src/godot/rendering/materials/dfgTable.generated.ts');
 
 /** The table's width and height (`render_forward_clustered.cpp:5097-5098`). */
 export const DFG_SIZE = 128;
@@ -93,7 +93,7 @@ function saturate(value) {
 
 /**
  * `radical_inverse_vdc` (`integrate_dfg.glsl:21-28`), the second Hammersley coordinate.
- * `packages/textscene-core/src/godot/skyReflection.ts` holds a copy, which this script cannot import.
+ * `packages/textscene-core/src/godot/rendering/environment/skyReflection.ts` holds a copy, which this script cannot import.
  */
 function radicalInverse(index) {
   let bits = index >>> 0;

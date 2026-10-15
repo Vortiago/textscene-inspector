@@ -15,7 +15,7 @@ import { parseResourceReference, findSubResource } from '../../../resources/SubR
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, boolOr, parseOptionalRect2, type Rect2Value } from '../../../parser/valueParsers';
 import { AxisStretchMode, axisStretchModeOf, type NinePatchAxisMode } from './ninePatchGeometry';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 import { CONTENT_MARGIN_UNSET } from '../../../resources/styles/stylebox/decode';
 
 export interface StyleBoxTextureData {

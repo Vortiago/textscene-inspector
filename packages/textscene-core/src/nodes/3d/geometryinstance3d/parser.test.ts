@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
-import { NO_VISIBILITY_RANGE, VisibilityRangeFadeMode } from '../../../godot/visibilityRange';
+import { NO_VISIBILITY_RANGE, VisibilityRangeFadeMode } from '../../../godot/rendering/visibilityRange';
 import { parseGeometryInstance3D } from './parser';
 
 const HEADING = heading('GeometryInstance3D', { name: 'Geometry', parent: '.' });

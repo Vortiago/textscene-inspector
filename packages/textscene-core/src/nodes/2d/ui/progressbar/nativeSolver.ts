@@ -29,8 +29,8 @@ import { AutowrapMode, shapeText } from '../../../../r3f/controls/native/text/te
 import { resolveRangeValue, type RangeProperties, type RangeValueOrder } from '../shared/range';
 import { isEqualApprox, rect2Intersection } from '../../../../godot/index.js';
 import type { ProgressBarProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector.js';
-import type { Rgba } from '../../../../godot/math.js';
+import type { Vector2 } from '../../../../godot/math/vector.js';
+import type { Rgba } from '../../../../godot/math/math.js';
 
 /**
  * `default_theme.cpp:440-441`: `make_flat_stylebox(color, 2, 2, 2, 2, 6)`, not

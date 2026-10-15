@@ -22,7 +22,7 @@ import type {
   SolveContext,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** The resolved `theme_override_styles/panel`, or the default-theme `panel` struct. */
 function panelStyleOf(n: SolveNode, ctx: SolveContext): StyleBoxFlatData {

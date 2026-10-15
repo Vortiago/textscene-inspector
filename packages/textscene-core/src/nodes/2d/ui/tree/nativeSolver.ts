@@ -12,7 +12,7 @@
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `style_normal_color` (`default_theme.cpp:100`): Tree's `panel` fill (`:860`). */
 const TREE_PANEL_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.6 };

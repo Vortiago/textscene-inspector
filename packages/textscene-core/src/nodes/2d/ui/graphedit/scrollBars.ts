@@ -17,7 +17,7 @@ import {
   scrollBarMinimumSize,
 } from '../shared/scrollBarSolver';
 import type { GraphScrollBounds } from './minimap';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 export interface GraphEditScrollBar {
   visible: boolean;

@@ -1,7 +1,7 @@
 /** Node2D: the base of Godot's 2D (CanvasItem) world hierarchy. */
 
-import type { Rgba } from '../../../godot/math';
-import type { Vector2 } from '../../../godot/vector';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /** The decomposed 2D local transform (pixels, radians; Godot +Y-down space). */
 export interface Node2DLocalTransform {

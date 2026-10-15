@@ -20,7 +20,7 @@ import {
   type OpaquePrepass,
 } from '../../../materials/opaquePrepass';
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** Fixed raster supersampling factor: canvas text has no distance field to stay crisp when magnified, so this trades memory and fill rate for sharpness at typical zoom. */
 const CANVAS_TEXT_SUPERSAMPLE = 3;

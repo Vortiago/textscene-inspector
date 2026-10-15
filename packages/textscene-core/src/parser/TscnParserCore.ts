@@ -5,7 +5,7 @@
  * the lenient skip-and-continue recovery.
  */
 
-import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/deprecated.js';
+import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/classdb/deprecated.js';
 import type {
   TscnScene,
   SceneNode,

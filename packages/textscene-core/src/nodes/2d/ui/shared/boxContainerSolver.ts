@@ -19,7 +19,7 @@ import type {
 import type { ControlProperties } from '../control/types';
 import type { BoxContainerProperties } from './boxContainer';
 import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from './fitChildInRect';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`). A type whose parser overrides the flag (Label's `v_size_flags`, for example) has already baked the override into its properties. */
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;

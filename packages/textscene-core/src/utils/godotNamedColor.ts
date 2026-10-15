@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rgba } from '../godot/math';
+import type { Rgba } from '../godot/math/math';
 
 /**
  * The raw table: normalised name → `0xRRGGBBAA`. Keys drop underscores, as `find_named_color`

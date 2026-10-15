@@ -10,8 +10,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { lerpColor, type Rgba } from '../../../../godot/math';
-import type { Vector2 } from '../../../../godot/vector';
+import { lerpColor, type Rgba } from '../../../../godot/math/math';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 export interface GeometryBuffers {
   positions: number[];

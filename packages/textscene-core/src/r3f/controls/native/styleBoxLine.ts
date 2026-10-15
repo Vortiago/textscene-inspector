@@ -13,7 +13,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver';
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, boolOr } from '../../../parser/valueParsers';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 import { CONTENT_MARGIN_UNSET } from '../../../resources/styles/stylebox/decode';
 
 export interface StyleBoxLineData {

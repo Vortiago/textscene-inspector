@@ -1,4 +1,4 @@
-import type { Vector3 } from '../../../godot/vector';
+import type { Vector3 } from '../../../godot/math/vector';
 
 export interface PrismMeshProperties {
   leftToRight: number;

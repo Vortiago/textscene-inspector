@@ -7,7 +7,7 @@
 import { colorOr } from '../../../utils/colorParser';
 import { v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import type { Rgba } from '../../../godot/math.js';
+import type { Rgba } from '../../../godot/math/math.js';
 
 /**
  * ProjectSettings `debug/shapes/collision/shape_color` (class_projectsettings.html),

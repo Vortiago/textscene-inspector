@@ -60,7 +60,7 @@ import {
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
-import { spaceFamilyOf } from '../godot/parentSpace.js';
+import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 
 /** Does this subtree contain anything that needs boolean evaluation? */

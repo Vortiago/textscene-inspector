@@ -32,8 +32,8 @@ import { normalizeTextureProgressBarFillMode } from './nativeSolver';
 import { TexturedFillMesh } from './TexturedFillMesh';
 import { FillMode, type TextureProgressBarProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
-import type { Rgba } from '../../../../godot/math';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Rgba } from '../../../../godot/math/math';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 const ZERO: Vector2 = { x: 0, y: 0 };

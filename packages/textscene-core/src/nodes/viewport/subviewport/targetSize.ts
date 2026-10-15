@@ -6,7 +6,7 @@
 import type { ViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { VIEWPORT_MIN_SIZE } from '../../../godot/index.js';
-import type { Vector2 } from '../../../godot/vector.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 /**
  * Godot's `Viewport::get_size()`. A stretching `SubViewportContainer`'s forced rect wins over the

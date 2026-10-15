@@ -11,7 +11,7 @@ import { decodeCapsuleShape2D } from '../../../../resources/shapes/capsuleshape2
 import type * as THREE from 'three';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { warn } from '../../../../logger';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const CIRCLE_SEGMENTS = 32;
 const CAPSULE_CAP_SEGMENTS = 16;

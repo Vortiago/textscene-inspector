@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { decodeRectangleShape2D } from './decode';
-import { canonicalisePropertyBag } from '../../../godot/deprecated';
+import { canonicalisePropertyBag } from '../../../godot/classdb/deprecated';
 
 describe('decodeRectangleShape2D', () => {
   it('honours a valid size', () => {

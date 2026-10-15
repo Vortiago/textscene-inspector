@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import type { SpotLightShadow } from 'three/src/lights/SpotLightShadow.js';
-import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
+import type { PositionalShadowSlot } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { readLightPose } from './lightPose.js';
 import { drawIntoAtlasSlot, positionalShadowAtlas } from './shadowAtlasTarget.js';

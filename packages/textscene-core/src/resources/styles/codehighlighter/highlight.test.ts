@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveLineColors } from './highlight';
 import type { CodeHighlighterData } from './types';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 const FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 const KEYWORD_COLOR: Rgba = { r: 1, g: 0.2, b: 0.3, a: 1 };

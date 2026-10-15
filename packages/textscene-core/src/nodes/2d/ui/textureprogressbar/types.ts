@@ -1,6 +1,6 @@
 import type { ControlProperties } from '../control/types';
 import type { RangeProperties } from '../shared/range';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `TextureProgressBar::FillMode` (`texture_progress_bar.h:48-58`). */
 export const FillMode = {

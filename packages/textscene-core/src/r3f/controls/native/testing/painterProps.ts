@@ -13,7 +13,7 @@ import { godotColorToLinear } from '../../../godotColor';
 import type { NativeControlComponentProps } from '../../ControlComponentRegistry';
 import type { ControlOwnTint } from '../controlTint';
 import type { Rect2 } from '../rect';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 

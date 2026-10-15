@@ -16,7 +16,7 @@ import {
   type BezierDataPoints,
 } from '../../../resources/curves/shared/bezierData.js';
 import { packedArrayForms, subResourceRefAnywhere } from '../../../godot/index.js';
-import { dictPackedField, packedFloatCount } from '../../../godot/packedArrayFields.js';
+import { dictPackedField, packedFloatCount } from '../../../godot/variant/packedArrayFields.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {

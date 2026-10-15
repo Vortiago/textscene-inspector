@@ -20,7 +20,7 @@ import {
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
 import type { TileMapLayerData, TileMapProperties } from './types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 export function TileMap({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapProperties;

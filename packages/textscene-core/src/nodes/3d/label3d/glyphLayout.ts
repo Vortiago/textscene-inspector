@@ -11,7 +11,7 @@
  */
 import type { TextLayoutResult, TextLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { HorizontalAlignment } from './types';
-import { EMPTY_AABB, type Aabb } from '../../../godot/aabb';
+import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 
 interface Label3DLinePlacement {
   /** This line's own left-edge x offset (`label_3d.cpp:588-599`), Godot px. */

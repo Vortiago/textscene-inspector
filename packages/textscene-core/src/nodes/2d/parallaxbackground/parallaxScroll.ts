@@ -5,7 +5,7 @@
  * keep their authored pose, and every scroll and motion key is inert.
  */
 
-import type { Vector2 } from '../../../godot/vector';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /** Stable empty result so an unmirrored layer never re-renders on identity. */
 const EMPTY_MIRROR: readonly Vector2[] = [];

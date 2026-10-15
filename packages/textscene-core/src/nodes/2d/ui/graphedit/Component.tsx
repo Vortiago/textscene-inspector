@@ -54,7 +54,7 @@ import {
   type ControlDrawTransform,
 } from '../../../../r3f/controls/native/controlPixelSnap';
 import type { GraphEditProperties } from './types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `default_theme.cpp:1287`: `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, with a larger bottom margin. */
 function defaultPanel(theme: NativeControlComponentProps['theme']): StyleBoxFlatData {

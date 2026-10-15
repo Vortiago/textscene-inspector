@@ -10,8 +10,8 @@ import type { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { TscnParser } from '../../parser/TscnParser';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { isGltfPath } from '../../godot/gltf';
-import { fileBaseName } from '../../godot/string';
+import { isGltfPath } from '../../godot/import/gltf';
+import { fileBaseName } from '../../godot/string/string';
 import { GLB_SCENE_ROOT_TYPE } from '../glbSceneRoot';
 
 /**

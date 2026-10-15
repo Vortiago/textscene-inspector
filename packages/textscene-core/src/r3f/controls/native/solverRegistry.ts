@@ -12,7 +12,7 @@ import type { SolveNode, ThemedIconRef } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import type { FontMetrics } from './text/fontMetrics';
 import type { SealedHandoff } from './solveHandoff';
-import type { Vector2 } from '../../../godot/vector';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /**
  * Measures a run of text at a font size. `lineSpacingPx` is the caller's own

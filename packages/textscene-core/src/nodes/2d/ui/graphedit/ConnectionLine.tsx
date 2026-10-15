@@ -17,7 +17,7 @@ import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { connectionControlPoints, tessellateConnectionLine } from './connectionCurve';
 import { connectionStrokeGeometry } from './connectionStroke';
 import type { ResolvedConnection } from './connectionEndpoints';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 interface ConnectionLineProps {
   connection: ResolvedConnection;

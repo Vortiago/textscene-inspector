@@ -12,8 +12,8 @@ import {
   SPOT_ANGLE_ATTENUATION_DEFAULT,
   VOLUMETRIC_FOG_LIGHT_ENERGY_MIN,
   VOLUMETRIC_FOG_SHADOW_OPACITY_MIN,
-} from '../../godot/volumetricFog.js';
-import { DIRECTIONAL_SHADOW_MAX_SPLITS } from '../../godot/directionalShadow.js';
+} from '../../godot/rendering/environment/volumetricFog.js';
+import { DIRECTIONAL_SHADOW_MAX_SPLITS } from '../../godot/rendering/lights/directionalShadow.js';
 import { splitSunOf } from '../directionalShadow/splitSun.js';
 import { isAreaShadowLight } from '../positionalShadow/atlasAreaShadow.js';
 import { AtlasOmniShadow } from '../positionalShadow/atlasOmniShadow.js';

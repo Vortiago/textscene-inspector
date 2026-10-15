@@ -11,9 +11,9 @@
  */
 
 import { isEqualApprox, isZeroApprox } from '../../../../godot/index.js';
-import { clamp, type Rgba } from '../../../../godot/math';
+import { clamp, type Rgba } from '../../../../godot/math/math';
 import type { GeometryBuffers } from './connectionStroke';
-import type { Vector2 } from '../../../../godot/vector.js';
+import type { Vector2 } from '../../../../godot/math/vector.js';
 
 /** `FEATHER_SIZE` (`renderer_canvas_cull.cpp:45`). */
 const POLYLINE_FEATHER_SIZE = 1.25;

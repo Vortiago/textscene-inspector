@@ -40,7 +40,7 @@ import {
   FAST_FILTER_FRAME_LOWER_BOUND,
   FAST_FILTER_SUPER_TAPS_PER_FRAME,
   MOST_LAYER_SAMPLES,
-} from '../../godot/skyReflection.js';
+} from '../../godot/rendering/environment/skyReflection.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
 
 /** `oct_inc.glsl:2-41`. `borderSize` is 1 minus twice the padding in UV. */

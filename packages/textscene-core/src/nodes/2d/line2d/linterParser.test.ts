@@ -87,7 +87,7 @@ end_cap_mode = 2
   describe.each(['gradient', 'texture', 'width_curve'] as const)(
     '%s resource reference spellings',
     (prop) => {
-      it(`accepts SubResource(id) (resourceRef, godot/resourceRef.ts)`, () => {
+      it(`accepts SubResource(id) (resourceRef, godot/variant/resourceRef.ts)`, () => {
         const content = `[gd_scene format=3]\n\n[node name="L" type="Line2D"]\n${prop} = SubResource("7")\n`;
         expect(formatErrorsOf(linter.lint(content))).toEqual([]);
       });

@@ -5,7 +5,7 @@
  * Every target comes from the deprecated table or the ClassDB captures.
  */
 
-import { canonicalPropertyName, isDeprecatedPropertyName } from '../godot/deprecated.js';
+import { canonicalPropertyName, isDeprecatedPropertyName } from '../godot/classdb/deprecated.js';
 import { classProperties, isKnownClass, nodeClassNames, resourceClassNames } from './classInfo.js';
 import type { DocumentSection, LanguageDocument, PropertySlot } from './document.js';
 import { nearestName } from './nearest.js';

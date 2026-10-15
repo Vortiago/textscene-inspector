@@ -34,7 +34,7 @@ import {
   packItemListRows,
   shapeItemListText,
 } from './nativeSolver';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 const itemListMinimumSize = controlSolverRegistry.minimumSize('ItemList')!;
 

@@ -35,8 +35,8 @@ import {
 import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
 import type { FoldableContainerProperties } from './types';
 import { TITLE_POSITION_BOTTOM, TITLE_POSITION_TOP } from './types';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `SceneStringName(font)` and `"font_size"`: the theme font keys of FoldableContainer (`foldable_container.cpp:568-569`). */
 const FOLDABLE_CONTAINER_THEME_FONT_KEY = 'font';

@@ -4,7 +4,7 @@
  * and linter paths can import it.
  */
 
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 /** `Gradient.interpolation_mode`: how colour blends between stops. */
 export enum GradientInterpolationMode {

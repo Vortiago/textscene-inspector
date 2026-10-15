@@ -912,7 +912,7 @@ describe('the fog history fits inside the render pass', () => {
 
   it('cycles over the jitters the previewer averages', async () => {
     const { VOLUMETRIC_FOG_TEMPORAL_JITTERS } =
-      await import('../../packages/textscene-core/src/godot/volumetricFog.ts');
+      await import('../../packages/textscene-core/src/godot/rendering/environment/volumetricFog.ts');
 
     expect(FOG_JITTER_CYCLE_FRAMES).toBe(VOLUMETRIC_FOG_TEMPORAL_JITTERS.length);
   });

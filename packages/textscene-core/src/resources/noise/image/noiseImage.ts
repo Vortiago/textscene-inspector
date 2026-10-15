@@ -3,7 +3,7 @@
  * pixel, or per texel of a volume, in Godot's layout, with Godot's normalization and seamless blend skirt.
  */
 
-import { smoothstep } from '../../../godot/math.js';
+import { smoothstep } from '../../../godot/math/math.js';
 import { alphaBlend, clamp8 } from './noiseBytes';
 import type { NoiseSampler, NoiseSampler3D } from './noiseSampler';
 

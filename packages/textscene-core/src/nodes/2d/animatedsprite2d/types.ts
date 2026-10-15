@@ -1,7 +1,7 @@
 /** AnimatedSprite2D plays a SpriteFrames animation (extends Node2D). */
 
 import type { Node2DProperties } from '../../base/node2d/types';
-import type { Vector2 } from '../../../godot/vector';
+import type { Vector2 } from '../../../godot/math/vector';
 
 export interface AnimatedSprite2DProperties extends Node2DProperties {
   /** A `SubResource("id")` or `ExtResource("id")` reference to the SpriteFrames. */

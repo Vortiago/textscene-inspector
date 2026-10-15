@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_LIGHT_CULL_KEY, directionalLightCullKey, type LightCullKey } from './lightCullKey';
-import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering';
+import { MAX_LIGHTS_PER_ITEM } from '../../godot/rendering/rendering';
 import {
   itemPositionalLights,
   positionalCandidates,
@@ -19,7 +19,7 @@ import {
   type LightListEntry,
   type PlacementDeclarations,
 } from './itemLightList';
-import type { Rect2 } from '../../godot/rect2';
+import type { Rect2 } from '../../godot/math/rect2';
 
 function key(overrides: Partial<LightCullKey> = {}): LightCullKey {
   return { ...DEFAULT_LIGHT_CULL_KEY, ...overrides };

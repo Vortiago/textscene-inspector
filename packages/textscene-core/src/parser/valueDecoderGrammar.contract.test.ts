@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import * as logger from '../logger';
 import { parseOptionalVector2 } from './valueParsers';
 import { parseVector2 } from './vectors';
-import { FLOAT_PATTERN_SOURCE } from '../godot/number.js';
+import { FLOAT_PATTERN_SOURCE } from '../godot/variant/number.js';
 import { heading } from './testing/parserKit';
 import { parseControl } from '../nodes/2d/ui/control/parser';
 import { parseBaseLightWithNormalBias } from '../nodes/3d/lights/shared/parser';

@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import type * as THREE from 'three';
 import { extend } from '@react-three/fiber';
-import { fogVolumeSize } from '../../../godot/fogVolume';
+import { fogVolumeSize } from '../../../godot/rendering/environment/fogVolume';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import {
   DEFAULT_FOG_VOLUME_FILL,
@@ -21,7 +21,7 @@ import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { useTexture3D } from '../../../resources/useTexture3D';
 import { Node3D } from '../../base/node3d/Component';
 import type { FogVolumeProperties } from './types';
-import type { Vector3 } from '../../../godot/vector';
+import type { Vector3 } from '../../../godot/math/vector';
 
 /** An element, not a `<primitive>`: it carries no material, and R3F sets its fields as props. */
 const FogVolumeElement = extend(FogVolumeObject);

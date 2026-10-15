@@ -36,8 +36,8 @@ import type { TscnNode } from '../../../../parser/types';
 import { lineEditDisplayText } from './displayText';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /**
  * LineEdit's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:419`). This

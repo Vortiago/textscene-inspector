@@ -12,8 +12,8 @@ import {
   areaLightShadowDepthScale,
   areaLightShadowFar,
   type AreaLightBox,
-} from '../../godot/areaLightShadow.js';
-import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
+} from '../../godot/rendering/lights/areaLightShadow.js';
+import type { PositionalShadowSlot } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { lightPoseMatrix, readLightPose } from './lightPose.js';
 import { drawIntoAtlasSlot, positionalShadowAtlas } from './shadowAtlasTarget.js';

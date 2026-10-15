@@ -22,7 +22,7 @@ import {
 } from 'three';
 import type { GodotAnimation, GodotKeyframe, GodotTrack } from './animationResolver';
 import { warn } from '../../../logger';
-import { degToRad } from '../../../godot/math.js';
+import { degToRad } from '../../../godot/math/math.js';
 
 interface LoopSettings {
   loop: AnimationActionLoopStyles;

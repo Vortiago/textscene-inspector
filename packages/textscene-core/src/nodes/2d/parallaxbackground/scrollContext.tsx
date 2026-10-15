@@ -8,7 +8,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { ParallaxLayerMotion } from './parallaxScroll';
-import type { Vector2 } from '../../../godot/vector';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /** What a layer hands the background so it can be posed. */
 export interface RegisteredParallaxLayer {

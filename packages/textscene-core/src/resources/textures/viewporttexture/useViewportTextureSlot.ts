@@ -16,7 +16,7 @@ import { useViewportPassCycle } from '../../../r3f/contexts/ViewportPassRegistry
 import { useViewportTexture } from '../../../r3f/contexts/ViewportTextureContext.js';
 import { useLocalScene } from '../../../r3f/useUniqueNames.js';
 import { resolveViewportTexturePath, viewportTextureRegistryKey } from '../../../r3f/viewportTexturePath.js';
-import { unclaimedUniqueNames } from '../../../godot/nodePath.js';
+import { unclaimedUniqueNames } from '../../../godot/string/nodePath.js';
 import { warn } from '../../../logger.js';
 import { VIEWPORT_TEXTURE_TYPE } from './types.js';
 

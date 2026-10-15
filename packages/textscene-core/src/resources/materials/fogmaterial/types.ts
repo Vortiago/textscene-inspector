@@ -3,7 +3,7 @@
  * these terms (`scene/resources/3d/fog_material.cpp:149-163`).
  */
 
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 export interface FogMaterialData {
   /** The density the volume adds. A negative one removes fog. */

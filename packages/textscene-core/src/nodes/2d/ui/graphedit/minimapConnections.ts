@@ -10,12 +10,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { lerpColor } from '../../../../godot/math';
+import { lerpColor } from '../../../../godot/math/math';
 import { connectionControlPoints, tessellateConnectionLine } from './connectionCurve';
 import type { ResolvedConnection } from './connectionEndpoints';
 import { minimapConvertFromGraph, type GraphScrollBounds, type MinimapTransform } from './minimap';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** One `draw_polyline_colors` call: the mapped points and their per-point colours. */
 interface MinimapConnectionLine {

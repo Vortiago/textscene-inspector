@@ -8,13 +8,13 @@
 import * as THREE from 'three';
 import type { TscnNode } from '../../parser/types';
 import { createEnvironmentSettings } from '../../resources/environment/build';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
-import { lerpColor } from '../../godot/math';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
+import { lerpColor } from '../../godot/math/math';
 import type { EnvironmentSettings } from '../../resources/environment/types';
 import { decodeSky, decodeSkyMaterial } from '../../resources/sky/decode';
 import type { ProceduralSkyProperties, Sky } from '../../resources/sky/types';
 import { decodeEnvironment } from '../../resources/environment/decode';
-import type { Rgba } from '../../godot/math';
+import type { Rgba } from '../../godot/math/math';
 
 /** The node types the editor counts, one independent counter each. */
 export const PREVIEW_SUN_YIELD_TYPE = 'DirectionalLight3D';

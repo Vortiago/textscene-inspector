@@ -36,8 +36,8 @@ import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/contro
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { CodeHighlighterColorSpan } from '../../../../resources/styles/codehighlighter/highlight';
 import type { TextEditProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `SceneStringName(font)` = `"font"`: `default_theme.cpp:460` (TextEdit), `:501` (CodeEdit). */
 export const TEXT_EDIT_THEME_FONT_KEY = 'font';

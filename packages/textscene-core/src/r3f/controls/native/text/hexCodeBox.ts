@@ -8,8 +8,8 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { round as godotRound } from '../../../../godot/math';
-import type { Vector2 } from '../../../../godot/vector';
+import { round as godotRound } from '../../../../godot/math/math';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 // Pure geometry in `shaped_text_draw`'s pen-relative space: `(0, 0)` is the glyph's
 // advance-box origin on the baseline, and the box extends up and right from it

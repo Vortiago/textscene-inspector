@@ -4,10 +4,13 @@
  * ambient light.
  */
 
-import type { ReflectionProbeAmbientMode, ReflectionProbeUpdateMode } from '../../../godot/reflectionProbe';
-import type { Vector3 } from '../../../godot/vector';
+import type {
+  ReflectionProbeAmbientMode,
+  ReflectionProbeUpdateMode,
+} from '../../../godot/rendering/environment/reflectionProbe';
+import type { Vector3 } from '../../../godot/math/vector';
 import type { Node3DProperties } from '../../base/node3d/types';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 export interface ReflectionProbeProperties extends Node3DProperties {
   updateMode: ReflectionProbeUpdateMode;

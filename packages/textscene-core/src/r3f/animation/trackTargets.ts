@@ -9,7 +9,7 @@ import { AnimationClip, type KeyframeTrack, type Object3D } from 'three';
 import { warn } from '../../logger';
 import { godotNodeName } from '../../resources/formats/glb/nodeNames';
 
-/** A node name never holds a `.` (`godot/nodeName.ts`), so the first one ends the path. */
+/** A node name never holds a `.` (`godot/string/nodeName.ts`), so the first one ends the path. */
 export function splitTrackName(name: string): { path: string; property: string } {
   const dot = name.indexOf('.');
   return { path: name.slice(0, dot), property: name.slice(dot) };

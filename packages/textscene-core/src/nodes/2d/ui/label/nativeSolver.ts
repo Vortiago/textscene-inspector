@@ -31,8 +31,8 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import type { LabelProperties } from './types';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };

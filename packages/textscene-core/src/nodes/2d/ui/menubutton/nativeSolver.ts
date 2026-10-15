@@ -37,7 +37,7 @@ import {
   buttonIconColor,
 } from '../button/nativeSolver';
 import type { MenuButtonProperties } from './types';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 // Re-exported for Component.tsx. MenuButton registers no `icon_*_color`, so `Theme::get_color`'s
 // ancestor fallback gives it Button's icon colours.

@@ -57,8 +57,8 @@ import {
   type ParsedImageRegion,
   type ParsedImgTag,
 } from './bbcode';
-import type { Vector2 } from '../../../../godot/vector';
-import type { Rgba } from '../../../../godot/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** RichTextLabel reads `theme_override_font_sizes/normal_font_size` and `theme_override_colors/default_color`, not Label's `font_size` and `font_color`. */
 const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {

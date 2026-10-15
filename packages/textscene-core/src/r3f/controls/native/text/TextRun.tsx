@@ -32,7 +32,7 @@ import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
-import type { Rgba } from '../../../../godot/math';
+import type { Rgba } from '../../../../godot/math/math';
 
 // Geometry is in Godot pixels, +Y down, with Y negated once per vertex into three's
 // Y-up space. Each line's top is a multiple of `layout.linePitchPx`, and its baseline

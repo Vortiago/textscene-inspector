@@ -13,7 +13,7 @@ import {
   type ScaledGodotTheme,
 } from '../godotDefaultTheme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
-import type { Rgba } from '../../../godot/math';
+import type { Rgba } from '../../../godot/math/math';
 
 /**
  * The default flat stylebox's fill by draw state, from `scene/theme/default_theme.cpp`'s

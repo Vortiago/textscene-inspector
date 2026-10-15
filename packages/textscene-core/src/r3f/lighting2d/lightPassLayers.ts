@@ -4,7 +4,7 @@
  * render orders sit below every positional light's.
  */
 
-import { MAX_2D_DIRECTIONAL_LIGHTS } from '../../godot/rendering.js';
+import { MAX_2D_DIRECTIONAL_LIGHTS } from '../../godot/rendering/rendering.js';
 
 /**
  * Every light-pass mesh draws on this layer alone: the seed, the light quads and the shadow

@@ -13,7 +13,7 @@ import {
   normalizeRadialInitialAngle,
 } from './radialFill';
 import { FillMode } from './types';
-import type { Vector2 } from '../../../../godot/vector';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 describe('radialRelativeCenter (texture_progress_bar.cpp:245-256)', () => {
   it('centres the offset within the texture and normalises to [0, 1]', () => {

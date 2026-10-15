@@ -6,7 +6,7 @@
  */
 
 import { parseHeading } from '../parser/utils.js';
-import { parseGodotFloat } from '../godot/number.js';
+import { parseGodotFloat } from '../godot/variant/number.js';
 
 /**
  * The newest format this linter does not lint. Version 3 introduced string ids:

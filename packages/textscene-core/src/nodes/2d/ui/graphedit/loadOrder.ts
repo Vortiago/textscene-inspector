@@ -12,8 +12,8 @@
 
 import { parseOptionalFloat, parseOptionalVector2 } from '../../../../parser/valueParsers';
 // The min branch is tested first, so the inverted range this replay builds returns the MAX.
-import { clamp } from '../../../../godot/math';
-import type { Vector2 } from '../../../../godot/vector';
+import { clamp } from '../../../../godot/math/math';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /**
  * `zoom_step`'s own member default (`graph_edit.h:227`), the only input to the
