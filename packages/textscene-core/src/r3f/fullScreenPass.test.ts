@@ -90,4 +90,23 @@ describe('drawFullScreen', () => {
 
     expect(drawn).toEqual([first, second]);
   });
+
+  it('draws each renderer on a quad of its own (edge case)', async () => {
+    const drawnQuads = await Promise.all([quadDrawnBy(), quadDrawnBy()]);
+
+    expect(drawnQuads[0]).not.toBe(drawnQuads[1]);
+    expect(drawnQuads[0]!.geometry).not.toBe(drawnQuads[1]!.geometry);
+  });
 });
+
+/**
+ * The quad a new renderer draws a pass on. three leaves a dispose listener that closes over the
+ * renderer on each drawn geometry and material (`WebGLGeometries.js:55`, `WebGLRenderer.js:2216`),
+ * so a quad two renderers share would keep both alive.
+ */
+async function quadDrawnBy(): Promise<THREE.Mesh> {
+  const { renderer } = await testRenderer();
+  const rendered = vi.spyOn(renderer, 'render');
+  drawFullScreen(renderer, fullScreenPass('Copy', FRAGMENT, {}), null);
+  return rendered.mock.calls[0]![0] as THREE.Mesh;
+}

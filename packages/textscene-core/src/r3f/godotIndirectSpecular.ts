@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { DFG_SIZE, dfgHalfFloats } from '../godot/rendering/materials/dfg.js';
 import { applyChunkEdits, installChunkPatch, type ChunkEdit, type Chunks } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
+import { releasedOnUnmount, sharedTexture } from './sharedTexture.js';
 import { defining, type ProgramInjection } from './materialProgramInputs.js';
 import { recordedOn } from './materials/recordedOnMaterial.js';
 
@@ -121,19 +122,17 @@ function withSpecularOcclusion(chunks: Chunks<SpecularChunk>): Chunks<SpecularCh
   return { ...patched, aomap_fragment: `${patched.aomap_fragment}${GODOT_SPECULAR_OCCLUSION}` };
 }
 
-/** Godot's table as a texture, read at `(NdotV, roughness)` with Godot's linear clamped sampler. */
-function dfgTexture(): THREE.DataTexture {
-  const texture = new THREE.DataTexture(
-    dfgHalfFloats(),
-    DFG_SIZE,
-    DFG_SIZE,
-    THREE.RGFormat,
-    THREE.HalfFloatType
-  );
-  texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearFilter;
-  texture.needsUpdate = true;
-  return texture;
+/**
+ * Godot's table as a texture, read at `(NdotV, roughness)` with Godot's linear clamped sampler. It is
+ * shared, not cloned per material, so the release on unmount frees the one object each renderer uploads.
+ */
+class DfgTexture extends sharedTexture(THREE.DataTexture) {
+  constructor() {
+    super(dfgHalfFloats(), DFG_SIZE, DFG_SIZE, THREE.RGFormat, THREE.HalfFloatType);
+    this.magFilter = THREE.LinearFilter;
+    this.minFilter = THREE.LinearFilter;
+    this.needsUpdate = true;
+  }
 }
 
 /**
@@ -149,5 +148,5 @@ export function installGodotIndirectSpecular(): void {
     missing:
       'lights_physical_pars_fragment, lights_fragment_begin or aomap_fragment lacks a text the specular patch replaces',
   });
-  if (isPatched) installLitUniform(DFG_UNIFORM, dfgTexture());
+  if (isPatched) installLitUniform(DFG_UNIFORM, releasedOnUnmount(new DfgTexture()));
 }

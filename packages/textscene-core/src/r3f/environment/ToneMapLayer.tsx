@@ -16,6 +16,7 @@ import type { SceneResources } from '../SceneResourcesContext';
 import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
 import { projectTransparentBackground } from '../../parser/projectSettingsParser';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
+import { SCENE_BUFFER_TYPE } from './compositorPass';
 
 interface ToneMapLayerProps {
   /** Null when the environment has no glow. */
@@ -59,7 +60,7 @@ export function ToneMapLayer({ glow, samples, adjustments, toneMapping, resource
   }, [effect, glowMap]);
 
   return (
-    <EffectComposer multisampling={samples}>
+    <EffectComposer multisampling={samples} frameBufferType={SCENE_BUFFER_TYPE}>
       <primitive object={effect} dispose={null} />
     </EffectComposer>
   );
