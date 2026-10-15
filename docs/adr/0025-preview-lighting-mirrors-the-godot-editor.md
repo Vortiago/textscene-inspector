@@ -2,7 +2,8 @@
 
 - Status: Accepted
 - Related: ADR-0006 (viewport-mode seam), ADR-0008 (invisible render intent),
-  `r3f/TscnCanvas.tsx`, `nodes/3d/worldenvironment/`, `resources/environment/`.
+  `r3f/TscnCanvas.tsx`, `r3f/environment/WorldEnvironmentScope.tsx`, `nodes/3d/worldenvironment/`,
+  `resources/environment/`.
 
 ## Context
 
@@ -78,6 +79,14 @@ contribution of 1.0.
 environment uses FILMIC. Ignoring it gives a measured 25/255 mean channel error, 20 times
 the goldens' threshold. A scene-owned environment defaults to LINEAR, so this changes only
 the preview environment and scenes that set the property.
+
+**One chooser per world applies the Environment.** Each `WorldEnvironment` publishes what its
+reference resolves to. The root's chooser applies the first `WorldEnvironment` that holds a valid
+Environment, as Godot's World3D does (`world_environment.cpp:40-41`, `:77-83`). With none, it
+applies the preview environment while the yield rule allows it, and no Environment otherwise. A
+missing reference and a `.tres` that fails to load both count as no valid Environment. The chooser
+applies nothing while that `.tres` still loads. A SubViewport's portal has its own chooser, which
+applies only a resolved Environment, because its pass sets its own clear colour.
 
 The two previews are also toolbar toggles on the viewport-mode seam. They mirror Godot's
 own sun and environment buttons, including the disabled state when the scene supplies its

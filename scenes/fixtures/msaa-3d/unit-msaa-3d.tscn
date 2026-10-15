@@ -1,0 +1,34 @@
+[gd_scene format=3 uid="uid://unitmsaa3d"]
+
+; The root viewport's msaa_3d at 4X, from this project's project.godot. Every other golden runs at
+; Godot's default, Disabled, so only this one shows the resolved edge coverage. Unshaded white
+; boxes, tilted so every silhouette edge is diagonal, against a black colour background leave
+; nothing but the edge ramp to measure.
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0, 0, 0, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1.4, 1.4, 1.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_2"]
+size = Vector3(3, 0.12, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+shading_mode = 0
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0.5, 0.433013, -0.75, 0, 0.866025, 0.5, -0.6, 0, 0)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="Rod" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.939693, -0.34202, 0, 0.34202, 0.939693, 0, 0, 0, 1, 0.9, 0.5, 0.6)
+mesh = SubResource("BoxMesh_2")
+surface_material_override/0 = SubResource("Material_1")

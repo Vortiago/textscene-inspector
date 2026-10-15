@@ -538,10 +538,9 @@ export function projectConfig(sourceIni, { width, height, pinWindowToViewport = 
 }
 
 /**
- * The per-channel median of a `patch`-sided square (odd, default 1) at each probe. Our 3D canvas
- * multisamples and these references do not, so one pixel near an edge carries a blend weight on
- * one side only. Our 2D canvas matches the engine's `msaa_2d = Disabled`
- * (`scene/main/viewport.h:309`). The median, not the mean, discards a stray outlier.
+ * The per-channel median of a `patch`-sided square (odd, default 1) at each probe. Two rasterisers
+ * can cover an edge pixel differently, so a probe near an edge reads a colour from one side only.
+ * The median, not the mean, discards such a stray outlier.
  */
 export function probePixels(buffer, probes, { patch = 1 } = {}) {
   const png = PNG.sync.read(buffer);

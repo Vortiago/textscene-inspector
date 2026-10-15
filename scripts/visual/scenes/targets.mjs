@@ -1,6 +1,6 @@
 /**
  * Batched tile geometry, the RemoteTransform relays that drive another node,
- * and the one golden that samples content through a SubViewport target.
+ * the goldens that sample content through a SubViewport target, and MSAA.
  */
 
 export const TILE_AND_TARGET_SCENES = [
@@ -61,4 +61,10 @@ export const TILE_AND_TARGET_SCENES = [
   // A ViewportTexture on a `.glb` surface override: its `viewport_path` resolves from the GLB
   // instance, and the target samples in the glTF's top-down V, so each face shows its own band.
   { name: 'glb-viewport-texture', file: 'unit-glb-viewport-texture.tscn' },
+  // MSAA, each from the setting that turns it on: the root viewport's msaa_3d and msaa_2d, from a
+  // Fixture project's project.godot, and a SubViewport's own msaa_3d. The headers state why no
+  // other golden shows them.
+  { name: 'msaa-3d', file: 'msaa-3d/unit-msaa-3d.tscn' },
+  { name: 'msaa-2d', file: 'msaa-2d/unit-msaa-2d.tscn', mode: '2d' },
+  { name: 'sub-viewport-msaa', file: 'unit-sub-viewport-msaa.tscn', mode: '2d' },
 ];

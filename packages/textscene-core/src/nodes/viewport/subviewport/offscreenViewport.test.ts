@@ -14,6 +14,7 @@ import {
   selectViewportCamera,
   selectViewportCamera2D,
   viewportAspect,
+  viewportMsaaSamples,
 } from './offscreenViewport';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { Camera2DAnchorMode } from '../../2d/camera2d/types';
@@ -418,11 +419,39 @@ describe('createOffscreenTarget', () => {
     target.dispose();
   });
 
+  it('draws one sample per pixel unless a pass asks for more', () => {
+    const target = createOffscreenTarget(64, 64, 'Probe');
+    expect(target.samples).toBe(0);
+    target.dispose();
+  });
+
+  it('multisamples at the count a pass asks for', () => {
+    const target = createOffscreenTarget(64, 64, 'Probe', { samples: 4 });
+    expect(target.samples).toBe(4);
+    target.dispose();
+  });
+
   it('names the texture after the sub-viewport and sizes it to the rect', () => {
     const target = createOffscreenTarget(320, 240, 'Viewport');
     expect(target.texture.name).toBe('Viewport::target');
     expect(target.width).toBe(320);
     expect(target.height).toBe(240);
     target.dispose();
+  });
+});
+
+describe('viewportMsaaSamples', () => {
+  const modes = { msaa_2d: 1, msaa_3d: 3 };
+
+  it('takes msaa_3d for a pass that draws the 3D world', () => {
+    expect(viewportMsaaSamples(modes, '3d')).toBe(8);
+  });
+
+  it('takes msaa_2d for a pass that draws canvas items', () => {
+    expect(viewportMsaaSamples(modes, '2d')).toBe(2);
+  });
+
+  it('draws one sample per pixel at the Disabled defaults (edge case)', () => {
+    expect(viewportMsaaSamples({ msaa_2d: 0, msaa_3d: 0 }, '3d')).toBe(0);
   });
 });

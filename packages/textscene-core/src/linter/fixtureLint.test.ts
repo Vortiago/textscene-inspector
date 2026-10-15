@@ -54,6 +54,10 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'the StaticBody3D holds CSG geometry rather than a CollisionShape3D; the fixture is about CSG boolean output, not collision',
   },
+  'unit-world-environment-none.tscn': {
+    rules: ['worldenvironment-requires-environment'],
+    reason: 'the WorldEnvironment names no Environment on purpose, to pin the root Godot draws with none',
+  },
   'unit-csg-mesh.tscn': {
     rules: ['csgmesh3d-requires-mesh'],
     reason:

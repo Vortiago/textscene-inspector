@@ -4,7 +4,6 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 // `gui/common/snap_controls_to_pixels` is the root window's setting. The
@@ -34,6 +33,7 @@ import {
 import { collectControlRasterViewports } from './controlRasterViewports';
 import { ControlRasterPasses } from './ControlRasterPass';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
+import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 
 const GUI_SCENE = `[gd_scene format=3]
 
@@ -63,12 +63,6 @@ function walk(scene: TscnScene) {
 /** Reports every entry the registry resolves at `path`, in order. */
 function Watch({ path, seen }: { path: string; seen: (ViewportTextureEntry | null)[] }) {
   seen.push(useViewportTexture(path));
-  return null;
-}
-
-/** Captures the canvas renderer so a test can observe the offscreen pass. */
-function GlSpy({ captured }: { captured: { current: THREE.WebGLRenderer | null } }) {
-  captured.current = useThree((state) => state.gl);
   return null;
 }
 
@@ -149,7 +143,7 @@ describe('<ControlRasterPasses>', () => {
       <ViewportTextureProvider>
         <ViewportPassProvider>
           <ControlRasterPasses viewports={walk(parse(GUI_SCENE))} />
-          <GlSpy captured={capturedGl} />
+          <CaptureRenderer captured={capturedGl} />
           <ViewportPassOrchestrator />
         </ViewportPassProvider>
       </ViewportTextureProvider>
@@ -193,7 +187,7 @@ offset_bottom = 100.5
         <ViewportTextureProvider>
           <ViewportPassProvider>
             <ControlRasterPasses viewports={walk(scene)} />
-            <GlSpy captured={capturedGl} />
+            <CaptureRenderer captured={capturedGl} />
             <ViewportPassOrchestrator />
           </ViewportPassProvider>
         </ViewportTextureProvider>
