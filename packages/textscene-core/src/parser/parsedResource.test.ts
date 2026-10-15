@@ -3,7 +3,7 @@
  * sections and the `[resource]` body, all as raw value strings.
  */
 import { describe, it, expect } from 'vitest';
-import { parseTresFile } from './parsedResource';
+import { parseShaderFile, parseTresFile } from './parsedResource';
 
 const TILESET_TRES = `[gd_resource type="TileSet" load_steps=3 format=3 uid="uid://x"]
 
@@ -43,5 +43,24 @@ describe('parseTresFile', () => {
 
   it('throws on a file without a [gd_resource] header', () => {
     expect(() => parseTresFile('[gd_scene format=3]\n')).toThrow(/gd_resource/);
+  });
+});
+
+describe('parseShaderFile', () => {
+  it('reads a .gdshader as a Shader whose code is the file text', () => {
+    expect(parseShaderFile('shader_type fog;\n')).toEqual({
+      resourceType: 'Shader',
+      properties: { code: '"shader_type fog;\n"' },
+      extResources: [],
+      subResources: [],
+    });
+  });
+
+  it('writes the code as Godot writes a string, with its quotes and backslashes escaped (edge case)', () => {
+    expect(parseShaderFile('// "a" \\ b').properties['code']).toBe('"// \\"a\\" \\\\ b"');
+  });
+
+  it('reads an empty file as a Shader with empty code (edge case)', () => {
+    expect(parseShaderFile('').properties['code']).toBe('""');
   });
 });

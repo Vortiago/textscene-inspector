@@ -31,6 +31,14 @@ export function literalText(raw: string): string {
 }
 
 /**
+ * `text` as Godot writes a `String` value: in quotes, with its backslashes and quotes escaped
+ * (`String::c_escape_multiline`, ustring.cpp:4493-4499, written by variant_parser.cpp:2033).
+ */
+export function stringLiteral(text: string): string {
+  return `"${text.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
+}
+
+/**
  * Depth- and quote-aware split of a bracket body's top-level comma-separated elements. Empty input yields no elements.
  * `(`/`[` both open a level and `)`/`]` both close one, because Godot's writer nests the two interchangeably
  * (`Array[NodePath]([NodePath("a"), NodePath("b")])`). Inside a quoted run a backslash escapes the next character.

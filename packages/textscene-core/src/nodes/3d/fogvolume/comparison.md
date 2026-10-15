@@ -13,7 +13,7 @@ A FogVolume adds a local region of fog to the Environment's volumetric fog. A ne
 
 A `FogMaterial` `density_texture` shapes the density by its red channel. It can be a NoiseTexture3D or an ImageTexture3D, inline or saved as its own `.tres`. It can also be an image its import sidecar imports as a 3D texture. A float ImageTexture3D keeps a density above 1, as Godot does.
 
-A `ShaderMaterial` without a shader, or with a shader of another `shader_type` than `fog`, fills the volume with Godot's default fog, as Godot does.
+A `ShaderMaterial` without a shader, or with a shader of another `shader_type` than `fog`, fills the volume with Godot's default fog, as Godot does. The shader can be inline, a `.tres` or a `.gdshader` file.
 
 ## Linting
 
@@ -38,8 +38,8 @@ The lenient parser clamps each negative `size` component to 0, as `set_size` doe
 ## Known limitations
 
 - **Shader missing** A volume whose material is a fog `ShaderMaterial` adds no fog, where Godot runs its fog shader.
-- **Shader missing** A fog shader with a compile error adds no fog, where Godot draws its default fog.
-- **Resource gap** A `ShaderMaterial` whose shader is a `.gdshader` file, or whose shader code opens with a preprocessor directive, adds no fog, where Godot draws its default fog for a shader of another `shader_type` than `fog`.
+- **Approximated** A fog shader with a compile error adds no fog, where Godot draws its default fog.
+- **Approximated** A fog shader whose `shader_type` comes from an `#include` or a macro draws the default fog, where Godot runs its fog shader.
 - **Resource gap** An ImageTexture3D saved in a block-compressed image format or an integer format leaves the density even.
 - **Approximated** An imported 3D texture reads its source image, so its density differs slightly from Godot's Lossy or VRAM-compressed copy.
 - **Approximated** A NoiseTexture3D `density_texture` leaves the density even on first load until its build finishes, where Godot shapes the fog on its first frame.

@@ -68,12 +68,14 @@ function shaderTypeOf(code: string): string {
   return isReadingType ? identifier : '';
 }
 
+/** A preprocessor directive's line: `#` with only space before it (`shader_preprocessor.cpp:1302-1308`). */
+const DIRECTIVE_LINE = /^[ \t]*#.*$/gm;
+
 /**
- * The mode a Shader with `code` runs in, or null for code that opens with a preprocessor directive.
- * Godot reads the type after the preprocessor (`scene/resources/shader.cpp:91-111`), which this does
- * not run.
+ * The mode a Shader with `code` runs in. Godot reads the type after the preprocessor
+ * (`scene/resources/shader.cpp:91-111`), whose output keeps no directive line. This drops those
+ * lines but expands no macro or include, so a type an include or a macro writes reads as spatial.
  */
-export function shaderModeOf(code: string): ShaderMode | null {
-  if (code.startsWith('#', firstIdentifierIndex(code))) return null;
-  return SHADER_MODE_BY_TYPE.get(shaderTypeOf(code)) ?? ShaderMode.SPATIAL;
+export function shaderModeOf(code: string): ShaderMode {
+  return SHADER_MODE_BY_TYPE.get(shaderTypeOf(code.replace(DIRECTIVE_LINE, ''))) ?? ShaderMode.SPATIAL;
 }

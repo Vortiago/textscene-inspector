@@ -1,19 +1,14 @@
 [gd_scene format=3 uid="uid://unit_fog_volume_shader_material"]
 
-; unit-fog-volume with a ShaderMaterial whose shader is shader_type spatial in place of the
-; FogMaterial. The variable is a ShaderMaterial that Godot cannot run as a fog shader, which fills
-; the volume with Godot's default fog. No other golden holds a ShaderMaterial on a FogVolume, so a
-; regression in the fallback shows nowhere else.
+[ext_resource type="Shader" path="res://fog-volume-spatial.gdshader" id="1_shader"]
 
-[sub_resource type="Shader" id="Shader_1"]
-code = "shader_type spatial;
-void fragment() {
-	ALBEDO = vec3(1.0);
-}
-"
+; unit-fog-volume with a ShaderMaterial whose shader is shader_type spatial, saved as its own
+; .gdshader, in place of the FogMaterial. The variable is a ShaderMaterial that Godot cannot run as
+; a fog shader, which fills the volume with Godot's default fog. No other golden holds a
+; ShaderMaterial on a FogVolume, so a regression in the fallback shows nowhere else.
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_1"]
-shader = SubResource("Shader_1")
+shader = ExtResource("1_shader")
 
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 1

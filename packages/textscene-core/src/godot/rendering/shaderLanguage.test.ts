@@ -26,7 +26,9 @@ describe('shaderModeOf', () => {
     expect(shaderModeOf('// shader_type fog;')).toBe(ShaderMode.SPATIAL);
   });
 
-  it('reads no mode from code that opens with a preprocessor directive (edge case)', () => {
-    expect(shaderModeOf('// Wisps.\n#define DENSE\nshader_type fog;')).toBeNull();
+  it('reads the declaration past the preprocessor directives before it (edge case)', () => {
+    expect(
+      shaderModeOf('// Wisps.\n#define DENSE\n  #include "res://fog.gdshaderinc"\nshader_type fog;')
+    ).toBe(ShaderMode.FOG);
   });
 });
