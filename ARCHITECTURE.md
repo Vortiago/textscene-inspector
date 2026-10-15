@@ -56,7 +56,7 @@ a package outside core imports.
 | `import/` | `modules/gltf` and `editor/import`: glTF and scene import |
 | `text/` | `modules/text_server_adv` and `text_server_fb`: the text server |
 | `rendering/` | `servers/rendering`: viewport, texture views, culling, fades, passes, byte quantisation |
-| `rendering/materials/` | The material shaders: UVs, diffuse, specular and billboard modes, DFG |
+| `rendering/materials/` | The material shaders: UVs, diffuse, specular and billboard modes, DFG, blend attachments, alpha antialiasing |
 | `rendering/lights/` | Light shading and shadows: LTC, shadow atlases, soft-shadow kernels |
 | `rendering/environment/` | Fog, sky reflection, reflection probes |
 | `testing/` | Test helpers for the files above |

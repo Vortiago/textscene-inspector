@@ -46,6 +46,7 @@ function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMateri
     alphaTest: data.alphaTest,
     alphaHash: data.alphaHash,
     alphaHashScale: data.alphaHashScale,
+    alphaAntialiasing: data.alphaAntialiasing,
     depthWrite: data.depthWrite,
     alphaPassDepthWrite: data.alphaPassDepthWrite,
     depthInAlphaPass: data.depthInAlphaPass,

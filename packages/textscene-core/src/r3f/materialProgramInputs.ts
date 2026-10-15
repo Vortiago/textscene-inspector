@@ -6,6 +6,11 @@
  */
 import * as THREE from 'three';
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
+import {
+  alphaAntialiasingOf,
+  coverOneSampleTarget,
+  GODOT_ALPHA_ANTIALIASING,
+} from './materials/godotAlphaAntialiasing';
 
 /** The subset of three's `onBeforeCompile` argument an injection may touch. */
 export interface ProgramShader {
@@ -22,7 +27,7 @@ export interface ProgramShader {
 export interface ProgramInjection {
   /** Distinguishes this patched program from an unpatched one. */
   readonly cacheKey: string;
-  /** three calls it as a method of the material it compiles (`WebGLRenderer.js:2248`). */
+  /** three calls it as a method of the material it compiles, with itself (`WebGLRenderer.js:2248`). */
   readonly onBeforeCompile: (this: THREE.Material, shader: ProgramShader) => void;
 }
 
@@ -35,6 +40,7 @@ export interface ProgramInjection {
 export interface MaterialProgramBag {
   key?: never;
   onBeforeCompile?: never;
+  onBeforeRender?: never;
   customProgramCacheKey?: never;
   injection?: ProgramInjection;
 }
@@ -45,6 +51,7 @@ export interface MaterialProgramBag {
  */
 export interface InjectedProps {
   onBeforeCompile?: ProgramInjection['onBeforeCompile'];
+  onBeforeRender?: THREE.Material['onBeforeRender'];
   customProgramCacheKey?: () => string;
 }
 
@@ -153,7 +160,8 @@ export function materialProgramInputs<
     injections.push((bag as MaterialProgramBag).injection);
     Object.assign(merged, bag);
   }
-  if (merged.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
+  injections.push(...stateInjections(merged));
+  if (recordsAlphaAntialiasing(merged.userData)) merged.onBeforeRender = coverOneSampleTarget;
 
   const composed = composeInjections(injections);
   if (composed) {
@@ -177,14 +185,33 @@ export function materialProgramInputs<
 
 /**
  * `injection` on a material built outside JSX, which `materialProgramInputs` cannot reach, with
- * Godot's hash on a hashed one. The cache key is the injections' own, so the patched program never
- * serves an unpatched material.
+ * Godot's hash on a hashed one and its edge ramp on an antialiased one. The cache key is the
+ * injections' own, so the patched program never serves an unpatched material.
  */
 export function injectProgram(material: THREE.Material, injection: ProgramInjection | undefined): void {
-  const composed = composeInjections([injection, material.alphaHash ? GODOT_ALPHA_HASH : undefined]);
+  if (recordsAlphaAntialiasing(material.userData)) material.onBeforeRender = coverOneSampleTarget;
+  const composed = composeInjections([injection, ...stateInjections(material)]);
   if (!composed) return;
   material.onBeforeCompile = composed.onBeforeCompile;
   material.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
+}
+
+/** The injections a material's own state turns on: Godot's hash, then its edge ramp. */
+function stateInjections(state: { alphaHash?: unknown; userData?: unknown }): ProgramInjection[] {
+  const injections: ProgramInjection[] = [];
+  if (state.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
+  if (recordsAlphaAntialiasing(state.userData)) injections.push(GODOT_ALPHA_ANTIALIASING);
+  return injections;
+}
+
+/** The cache key of the injections a material's own state turns on, empty for none. */
+export function stateInjectionKey(material: THREE.Material): string {
+  return composeInjections(stateInjections(material))?.cacheKey ?? '';
+}
+
+/** Whether a material's `userData` records the alpha antialiasing whose edge ramp it compiles with. */
+function recordsAlphaAntialiasing(userData: unknown): boolean {
+  return typeof userData === 'object' && userData !== null && alphaAntialiasingOf({ userData }) !== null;
 }
 
 /** The injection that defines `define` in the fragment shader, its cache key the define's name. */

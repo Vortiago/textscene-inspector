@@ -1,76 +1,24 @@
 /**
  * `BaseMaterial3D.blend_mode` → three.js blending state. `_update_shader` in
  * `scene/resources/material.cpp` emits `render_mode blend_*`, which
- * `scene_shader_forward_clustered.cpp` maps to a `BlendMode`. `GODOT_BLEND_ATTACHMENTS`
- * transcribes the factors of `servers/rendering/renderer_rd/storage_rd/material_storage.cpp`.
+ * `scene_shader_forward_clustered.cpp` maps to a `BlendMode`. `godot/rendering/materials/blendMode.ts`
+ * holds the attachment of each `BlendMode`.
  */
 
 import * as THREE from 'three';
-import { BlendMode, type MaterialBlendState } from './types';
-
-/** Godot `RD::BlendOperation`, only the two values this table uses. */
-type GodotBlendOp = 'add' | 'reverse-subtract';
-
-/** Godot `RD::BlendFactor`, only the values this table uses. */
-type GodotBlendFactor = 'zero' | 'one' | 'src-alpha' | 'one-minus-src-alpha' | 'dst-color' | 'dst-alpha';
-
-/** One `RD::PipelineColorBlendState::Attachment`, in Godot's vocabulary. */
-export interface GodotBlendAttachment {
-  colorOp: GodotBlendOp;
-  srcColor: GodotBlendFactor;
-  dstColor: GodotBlendFactor;
-  alphaOp: GodotBlendOp;
-  srcAlpha: GodotBlendFactor;
-  dstAlpha: GodotBlendFactor;
-}
-
-/**
- * `blend_mode_to_blend_attachment`, verbatim. Every mode enables blending, and the alpha
- * channel gets its own factors in all five, so no colour-only `gl.blendFunc` reading
- * expresses a mode.
- */
-const GODOT_BLEND_ATTACHMENTS: Readonly<Record<BlendMode, GodotBlendAttachment>> = {
-  [BlendMode.MIX]: {
-    colorOp: 'add',
-    srcColor: 'src-alpha',
-    dstColor: 'one-minus-src-alpha',
-    alphaOp: 'add',
-    srcAlpha: 'one',
-    dstAlpha: 'one-minus-src-alpha',
-  },
-  [BlendMode.ADD]: {
-    colorOp: 'add',
-    srcColor: 'src-alpha',
-    dstColor: 'one',
-    alphaOp: 'add',
-    srcAlpha: 'src-alpha',
-    dstAlpha: 'one',
-  },
-  [BlendMode.SUB]: {
-    colorOp: 'reverse-subtract',
-    srcColor: 'src-alpha',
-    dstColor: 'one',
-    alphaOp: 'reverse-subtract',
-    srcAlpha: 'src-alpha',
-    dstAlpha: 'one',
-  },
-  [BlendMode.MUL]: {
-    colorOp: 'add',
-    srcColor: 'dst-color',
-    dstColor: 'zero',
-    alphaOp: 'add',
-    srcAlpha: 'dst-alpha',
-    dstAlpha: 'zero',
-  },
-  [BlendMode.PREMULT_ALPHA]: {
-    colorOp: 'add',
-    srcColor: 'one',
-    dstColor: 'one-minus-src-alpha',
-    alphaOp: 'add',
-    srcAlpha: 'one',
-    dstAlpha: 'one-minus-src-alpha',
-  },
-};
+import type { MaterialBlendState } from './types';
+import {
+  ALPHA_TO_COVERAGE_ATTACHMENT,
+  BlendMode,
+  GODOT_BLEND_ATTACHMENTS,
+  type GodotBlendAttachment,
+  type GodotBlendFactor,
+  type GodotBlendOp,
+} from '../../../godot/rendering/materials/blendMode';
+import {
+  AlphaAntiAliasing,
+  type AlphaToCoverageMode,
+} from '../../../godot/rendering/materials/alphaAntialiasing';
 
 const THREE_EQUATION: Readonly<Record<GodotBlendOp, THREE.BlendingEquation>> = {
   add: THREE.AddEquation,
@@ -91,6 +39,7 @@ const THREE_FACTOR: Readonly<Record<GodotBlendFactor, THREE.BlendingDstFactor>> 
  * consumers assert on (`WebGLState.setBlending`, non-premultiplied; `blendState.test.ts`).
  * SUB is not `SubtractiveBlending` (`FUNC_ADD` with `ZERO/ONE_MINUS_SRC_COLOR`), and
  * PREMULT_ALPHA is not `premultipliedAlpha`, which premultiplies a premultiplied source again.
+ * Every Godot mode gives alpha its own factors, so no colour-only `gl.blendFunc` reading fits one.
  */
 const PRESETS: Readonly<Partial<Record<BlendMode, THREE.Blending>>> = {
   // `blendFuncSeparate(SRC_ALPHA, ONE_MINUS_SRC_ALPHA, ONE, ONE_MINUS_SRC_ALPHA)`, `FUNC_ADD`.
@@ -102,11 +51,35 @@ const PRESETS: Readonly<Partial<Record<BlendMode, THREE.Blending>>> = {
   [BlendMode.MUL]: THREE.MultiplyBlending,
 };
 
+/**
+ * ALPHA_TO_COVERAGE_AND_TO_ONE's attachment: alpha to one sets the source alpha to 1 before the
+ * blend, so the colour overwrites. WebGL has no alpha to one, so the stored alpha stays the
+ * source alpha where Godot stores 1. Only a transparent background shows it: a SubViewport with
+ * `transparent_bg`, or a root with `rendering/viewport/transparent_background`.
+ */
+const ALPHA_TO_ONE_ATTACHMENT: GodotBlendAttachment = {
+  ...ALPHA_TO_COVERAGE_ATTACHMENT,
+  srcColor: 'one',
+  dstColor: 'zero',
+};
+
 /** The blending state a material with this `blend_mode` must carry. */
 export function godotBlendState(mode: BlendMode): MaterialBlendState {
   const preset = PRESETS[mode];
   if (preset !== undefined) return { blending: preset };
-  const attachment = GODOT_BLEND_ATTACHMENTS[mode];
+  return customBlendState(GODOT_BLEND_ATTACHMENTS[mode]);
+}
+
+/** The blending state a surface whose alpha antialiasing turns alpha to coverage on must carry. */
+export function alphaToCoverageBlendState(mode: AlphaToCoverageMode): MaterialBlendState {
+  return customBlendState(
+    mode === AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE
+      ? ALPHA_TO_ONE_ATTACHMENT
+      : ALPHA_TO_COVERAGE_ATTACHMENT
+  );
+}
+
+function customBlendState(attachment: GodotBlendAttachment): MaterialBlendState {
   return {
     blending: THREE.CustomBlending,
     blendEquation: THREE_EQUATION[attachment.colorOp],

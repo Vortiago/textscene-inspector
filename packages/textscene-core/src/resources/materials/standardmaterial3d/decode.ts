@@ -16,9 +16,14 @@ import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
 import { DetailUV } from '../../../godot/rendering/materials/detailUv';
 import { EMISSION_OPERATOR_DEFAULT } from '../../../godot/rendering/materials/emissionOperator';
 import { clamp } from '../../../godot/math/math';
-import { emissionScalars } from './emission';
 import {
-  BlendMode,
+  hashAntialiasing,
+  scissorAntialiasing,
+  type AlphaAntialiasingCut,
+} from '../../../godot/rendering/materials/alphaAntialiasing';
+import { emissionScalars } from './emission';
+import { BlendMode } from '../../../godot/rendering/materials/blendMode';
+import {
   CullMode,
   DepthDrawMode,
   HEIGHTMAP_DEFAULTS,
@@ -134,7 +139,14 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
         DEPTH_DRAW_MODES,
         `${CONTEXT}.depth_draw_mode`
       );
-  const alphaFlags = shaderAlphaFlags(properties, transparency, refractionEnabled);
+  const scissorThreshold = clamp(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT), 0, 1);
+  const alphaAntialiasing = decodeAlphaAntialiasing(properties, transparency, scissorThreshold);
+  const alphaFlags = shaderAlphaFlags(
+    properties,
+    transparency,
+    refractionEnabled,
+    alphaAntialiasing !== null
+  );
   const membership = alphaPassMembership(alphaFlags, {
     blendMode,
     refractionEnabled,
@@ -172,14 +184,16 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     castsShadow,
     // `alpha_scissor_threshold` hint is "0,1,0.001". 0 means "no cutout" to three,
     // which every non-scissor mode wants. A refractive surface's ALPHA is 1.0, which no
-    // threshold cuts, while three would cut on the texture alpha Godot never reads.
+    // threshold cuts, while three would cut on the texture alpha Godot never reads. Under
+    // alpha antialiasing the ramp cuts at the threshold itself.
     alphaTest:
-      transparency === Transparency.ALPHA_SCISSOR && readsAlbedoAlpha
-        ? clamp(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT), 0, 1)
+      transparency === Transparency.ALPHA_SCISSOR && readsAlbedoAlpha && !alphaAntialiasing
+        ? scissorThreshold
         : 0,
     // `scene_forward_clustered.glsl:1398-1411`: the hash cuts the ALPHA the shader writes.
     alphaHash: transparency === Transparency.ALPHA_HASH && readsAlbedoAlpha,
     alphaHashScale: floatOr(properties['alpha_hash_scale'], 1, CONTEXT),
+    alphaAntialiasing,
     depthDrawMode,
     depthWrite: godotDepthWrite(alphaPass, depthDrawMode, depthTest),
     alphaPassDepthWrite: godotDepthWrite(true, depthDrawMode, depthTest),
@@ -247,7 +261,8 @@ interface ShaderAlphaFlags {
 function shaderAlphaFlags(
   properties: Record<string, string>,
   transparency: Transparency,
-  refractionEnabled: boolean
+  refractionEnabled: boolean,
+  usesAlphaAntialiasing: boolean
 ): ShaderAlphaFlags {
   const proximityFade = boolOr(properties['proximity_fade_enabled'], false, CONTEXT);
   const distanceFadeMode = intOr(properties['distance_fade_mode'], 0, CONTEXT);
@@ -264,13 +279,25 @@ function shaderAlphaFlags(
   // The two cutout modes discard instead of blending, so they stay opaque.
   const usesAlphaClip =
     transparency === Transparency.ALPHA_SCISSOR || transparency === Transparency.ALPHA_HASH;
-  // `ALPHA_ANTIALIASING_EDGE` is written only under a cutout mode (`material.cpp:1843`),
-  // where it re-admits the cutout to the alpha pass (alpha-to-coverage).
-  const usesAlphaAntialiasing =
-    usesAlphaClip && intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT) !== 0;
   // `depth_prepass_alpha` is emitted for ALPHA_DEPTH_PRE_PASS alone (`material.cpp:898`).
   const usesDepthPrepassAlpha = transparency === Transparency.ALPHA_DEPTH_PRE_PASS;
   return { usesAlpha, usesAlphaClip, usesAlphaAntialiasing, usesDepthPrepassAlpha, proximityFade };
+}
+
+/**
+ * The cutout's alpha antialiasing. `ALPHA_ANTIALIASING_EDGE` is written for any mode but OFF, and
+ * only under a cutout (`material.cpp:1844-1847`). The edge defaults to 0.3 (`material.cpp:3977`).
+ */
+function decodeAlphaAntialiasing(
+  properties: Record<string, string>,
+  transparency: Transparency,
+  scissorThreshold: number
+): AlphaAntialiasingCut | null {
+  const mode = intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT);
+  const edge = floatOr(properties['alpha_antialiasing_edge'], 0.3, CONTEXT);
+  if (transparency === Transparency.ALPHA_SCISSOR) return scissorAntialiasing(mode, scissorThreshold, edge);
+  if (transparency === Transparency.ALPHA_HASH) return hashAntialiasing(mode, edge);
+  return null;
 }
 
 /**

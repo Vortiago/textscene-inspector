@@ -3,6 +3,10 @@ import * as THREE from 'three';
 import { surfaceDepthMaterial, syncSurfaceDepth } from './surfaceDepthMaterial';
 import type { ProgramShader } from '../materialProgramInputs';
 import { renderTargetMapUserData } from './renderTargetMap';
+import { alphaAntialiasingUserData } from './godotAlphaAntialiasing';
+import { AlphaAntiAliasing, scissorAntialiasing } from '../../godot/rendering/materials/alphaAntialiasing';
+
+const SCISSOR_CUT = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0.3);
 
 /** The depth program as `depth`'s `onBeforeCompile` leaves it. */
 function compiled(depth: THREE.Material): ProgramShader {
@@ -40,6 +44,20 @@ describe('surfaceDepthMaterial', () => {
     const copy = surfaceDepthMaterial(surface, new THREE.MeshDistanceMaterial());
     expect(copy.alphaHash).toBe(true);
     expect(compiled(copy).fragmentShader).toContain('godotAlphaHashScale');
+  });
+
+  it('ramps the edge on the copy of an antialiased surface, as Godot’s depth draws do', () => {
+    const surface = new THREE.MeshBasicMaterial({ userData: alphaAntialiasingUserData(SCISSOR_CUT) });
+    const copy = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
+    expect(compiled(copy).fragmentShader).toContain('godotEdgeCoverage(');
+  });
+
+  it('leaves alpha to coverage off on the copy, as only the colour pass turns it on', () => {
+    const surface = new THREE.MeshBasicMaterial({
+      alphaToCoverage: true,
+      userData: alphaAntialiasingUserData(SCISSOR_CUT),
+    });
+    expect(surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial()).alphaToCoverage).toBe(false);
   });
 
   it('disposes its copies with the surface (edge case)', () => {
@@ -87,6 +105,16 @@ describe('syncSurfaceDepth', () => {
 
     expect(depth.alphaHash).toBe(true);
     expect(compiled(depth).fragmentShader).toContain('godotAlphaHashScale');
+  });
+
+  it('recompiles a copy whose surface starts antialiasing, with the edge ramp in its program', () => {
+    const surface = new THREE.MeshBasicMaterial();
+    const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
+    surface.userData = alphaAntialiasingUserData(SCISSOR_CUT);
+
+    syncSurfaceDepth(depth, surface, 0.99);
+
+    expect(compiled(depth).fragmentShader).toContain('godotEdgeCoverage(');
   });
 
   it('leaves the program alone when only a value moves (edge case)', () => {

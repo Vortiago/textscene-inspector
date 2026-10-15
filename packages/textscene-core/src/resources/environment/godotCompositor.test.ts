@@ -36,7 +36,8 @@ function shaderOf(
   toneMapping: CompositeToneMapping,
   adjustments: EnvironmentAdjustments | null
 ): string {
-  return compositeProgram({ glow, toneMapping, adjustments, exposure: 1 }).fragmentShader;
+  return compositeProgram({ glow, toneMapping, adjustments, exposure: 1, transparentBackground: false })
+    .fragmentShader;
 }
 
 /** `mainImage`'s body: above it sit the definitions, not the call order. */
@@ -65,8 +66,19 @@ describe('compositeProgram — the shader it emits', () => {
     expect(glsl).toContain('uniform float godotExposure;');
   });
 
-  it('preserves the input alpha rather than writing the blended one', () => {
-    expect(body(glowOn())).toContain('outputColor = vec4(color, inputColor.a);');
+  it('writes an opaque alpha for an opaque window, whose screen blit drops the alpha', () => {
+    expect(body(glowOn())).toContain('outputColor = vec4(color, 1.0);');
+  });
+
+  it('preserves the input alpha under transparent_background, rather than the blended one', () => {
+    const { fragmentShader } = compositeProgram({
+      glow: glowOn(),
+      toneMapping: FILMIC,
+      adjustments: null,
+      exposure: 1,
+      transparentBackground: true,
+    });
+    expect(fragmentShader).toContain('outputColor = vec4(color, inputColor.a);');
   });
 });
 
@@ -246,8 +258,8 @@ describe('compositeProgram — with the glow flag clear', () => {
     expect(glsl).toContain('uniform float godotExposure;');
   });
 
-  it('preserves the input alpha, as the glow arm does', () => {
-    expect(body(null, tone)).toContain('outputColor = vec4(color, inputColor.a);');
+  it('writes the same alpha as the glow arm', () => {
+    expect(body(null, tone)).toContain('outputColor = vec4(color, 1.0);');
   });
 
   it('still emits a real curve under LINEAR, which is exposure and nothing else', () => {
@@ -326,7 +338,13 @@ describe('compositeProgram — the uniforms it returns', () => {
   const GLOW_MAP = { glow_map: 'SubResource("Gradient_1")' };
 
   function program(glow: GlowParams | null, exposure = 1) {
-    return compositeProgram({ glow, toneMapping: FILMIC, adjustments: null, exposure });
+    return compositeProgram({
+      glow,
+      toneMapping: FILMIC,
+      adjustments: null,
+      exposure,
+      transparentBackground: false,
+    });
   }
 
   it.each([
