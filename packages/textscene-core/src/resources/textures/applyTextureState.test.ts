@@ -7,14 +7,11 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  applyTextureState,
-  releaseBoundTexture,
-  type TextureState,
-  type UVTransform,
-} from './applyTextureState';
+import { applyTextureState, releaseBoundTexture, type UVTransform } from './applyTextureState';
 import { UV2_CHANNEL } from '../meshes/uv2';
 import { dropMipChain, godotTextureFilterState } from './godotTextureFilter';
+
+type TextureState = Parameters<typeof applyTextureState>[1];
 
 function uv(sx: number, sy: number, ox = 0, oy = 0): UVTransform {
   return { scale: { x: sx, y: sy }, offset: { x: ox, y: oy } };

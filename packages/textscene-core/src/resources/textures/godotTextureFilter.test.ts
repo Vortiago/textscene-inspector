@@ -11,6 +11,7 @@ import {
   applyTextureFilterState,
   dropMipChain,
   godotTextureFilterState,
+  hasDroppedMipChain,
   textureFilterMatches,
 } from './godotTextureFilter';
 
@@ -154,5 +155,17 @@ describe('dropMipChain', () => {
     texture.minFilter = THREE.NearestFilter;
     dropMipChain(texture);
     expect(texture.minFilter).toBe(THREE.NearestFilter);
+  });
+});
+
+describe('hasDroppedMipChain', () => {
+  it('finds the mark dropMipChain leaves on a texture and on its clone', () => {
+    const texture = new THREE.Texture();
+    dropMipChain(texture);
+    expect([hasDroppedMipChain(texture), hasDroppedMipChain(texture.clone())]).toEqual([true, true]);
+  });
+
+  it('finds none on a texture that keeps its mip chain (edge case)', () => {
+    expect(hasDroppedMipChain(new THREE.Texture())).toBe(false);
   });
 });

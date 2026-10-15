@@ -8,6 +8,7 @@ import {
   gltfObjects,
   gltfRefusalMessage,
   isGltfJsonObject,
+  isDataUri,
   isGltfPath,
   usesGodotSingleRoot,
   readGltfRequiredExtensions,
@@ -272,6 +273,20 @@ describe('gltfObjects', () => {
 
   it('returns none for a value that is not an array (edge case)', () => {
     expect(gltfObjects({ name: 'Cube' })).toEqual([]);
+  });
+});
+
+describe('isDataUri', () => {
+  it('reads a URI that starts with data: as inline bytes', () => {
+    expect(isDataUri('data:image/png;base64,iVBORw0KGgo=')).toBe(true);
+  });
+
+  it('reads a relative file URI, or an empty one, as no data URI', () => {
+    expect([isDataUri('textures/crate.png'), isDataUri('')]).toEqual([false, false]);
+  });
+
+  it('matches the scheme case-sensitively, as begins_with does (edge case)', () => {
+    expect(isDataUri('DATA:image/png;base64,AAAA')).toBe(false);
   });
 });
 

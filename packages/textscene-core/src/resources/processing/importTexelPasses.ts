@@ -1,8 +1,8 @@
 /**
  * The texel passes Godot's texture importer runs after the alpha-border pass
  * (`editor/import/resource_importer_texture.cpp:866-874`), and the channels its compression keeps,
- * on RGBA8 bytes in place. Each returns
- * whether any byte changed, so a caller can keep the original image.
+ * on RGBA8 bytes in place. Each returns whether any byte changed, so a caller can keep the
+ * original image.
  */
 
 /** `Image::premultiply_alpha` (`core/io/image.cpp:4220-4240`), which runs only on an RGBA8 image. */

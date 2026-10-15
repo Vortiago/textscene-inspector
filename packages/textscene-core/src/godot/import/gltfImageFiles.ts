@@ -3,8 +3,8 @@
  * `gltf/embedded_image_handling`, Extract Textures (`editor_scene_importer_gltf.cpp:88`).
  */
 
-import { fileBaseName, validateFilename } from '../string/string.js';
-import { dataUriMimeType } from './gltf.js';
+import { fileBaseName, getBaseDir, pathJoin, validateFilename } from '../string/string.js';
+import { dataUriMimeType, isDataUri } from './gltf.js';
 import { imageSourceFormat, type ImageSourceFormat } from './imageSourceFormat.js';
 
 /** The members of a glTF `images` entry that name its file. */
@@ -40,7 +40,8 @@ function extractedExtension(mimeType: string | undefined): string {
  * or its index, with `_<index>` added while it repeats (`gltf_document.cpp:2321-2333`).
  */
 export function gltfImageFiles(gltfPath: string, images: readonly GltfImageDefinition[]): GltfImageFile[] {
-  const directory = gltfPath.slice(0, gltfPath.lastIndexOf('/') + 1);
+  // The extract path is the glTF's base directory (`gltf_document.cpp:7173`, `gltf_state.cpp:414-415`).
+  const directory = getBaseDir(gltfPath);
   // `append_from_file` sets the file name to the base name, and `set_filename` takes the base name
   // of that for the prefix (`gltf_document.cpp:7161`, `gltf_state.cpp:440-444`).
   const prefix = fileBaseName(fileBaseName(gltfPath));
@@ -51,11 +52,11 @@ export function gltfImageFiles(gltfPath: string, images: readonly GltfImageDefin
     while (usedNames.has(name)) name += `_${index}`;
     usedNames.add(name);
 
-    const isExternal = image.uri !== undefined && !image.uri.startsWith('data:');
+    const isExternal = image.uri !== undefined && !isDataUri(image.uri);
     const mimeType = image.mimeType ?? dataUriMimeType(image.uri);
     return {
       uri: isExternal ? image.uri! : null,
-      extracted: `${directory}${prefix}_${name}${extractedExtension(mimeType)}`,
+      extracted: pathJoin(directory, `${prefix}_${name}${extractedExtension(mimeType)}`),
     };
   });
 }

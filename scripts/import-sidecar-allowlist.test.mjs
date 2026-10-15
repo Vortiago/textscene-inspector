@@ -10,6 +10,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
+import { READ_IMPORTERS, sidecarImporter } from './vendor-prune.mjs';
+import { TEXTURE_IMPORTER } from '../packages/textscene-core/src/godot/import/textureImport.ts';
+import { TEXTURE_3D_IMPORTER } from '../packages/textscene-core/src/godot/import/texture3DImport.ts';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const SCENES = join(REPO_ROOT, 'scenes');
@@ -194,18 +197,19 @@ function walk(dir, out = []) {
 }
 
 /**
- * The `[params]` top-level keys and the non-empty `_subresources` blocks, in one string-aware
- * pass. It is independent of the production parser, so a bug there cannot make this pass.
+ * The importer, as the vendor prune reads it, then the `[params]` top-level keys and the non-empty
+ * `_subresources` blocks in one string-aware pass. It is independent of the production parser, so
+ * a bug there cannot make this pass.
  */
 function readSidecar(file) {
+  const text = readFileSync(file, 'utf8');
   const params = {};
   const subResources = [];
-  let importer = null;
   let section = null;
   let openKey = null;
   let state = { inString: false, depth: 0 };
 
-  for (const raw of readFileSync(file, 'utf8').split('\n')) {
+  for (const raw of text.split('\n')) {
     const line = raw.trim();
     if (openKey !== null) {
       if (openKey === '_subresources') subResources.push(line);
@@ -221,7 +225,6 @@ function readSidecar(file) {
     const eq = line.indexOf('=');
     const key = line.slice(0, eq).trim();
     const value = line.slice(eq + 1).trim();
-    if (section === '[remap]' && key === 'importer') importer = value.replace(/^"(.*)"$/, '$1');
     if (section !== '[params]') continue;
     params[key] = value.replace(/^"(.*)"$/, '$1');
     state = scanLine(value, { inString: false, depth: 0 });
@@ -230,7 +233,7 @@ function readSidecar(file) {
       if (key === '_subresources') subResources.push(value);
     }
   }
-  return { importer, params, blocks: topLevelBlocks(subResources.join('\n')) };
+  return { importer: sidecarImporter(text), params, blocks: topLevelBlocks(subResources.join('\n')) };
 }
 
 const SECTION_LINE = /^\[[A-Za-z_][A-Za-z0-9_]*\]$/;
@@ -291,7 +294,8 @@ function defaultFindings(name, { importer, params }) {
   const findings = [];
   for (const [key, value] of Object.entries(params)) {
     const expected =
-      MUST_BE_DEFAULT.get(key) ?? (importer === 'texture' ? TEXTURE_MUST_BE_DEFAULT.get(key) : undefined);
+      MUST_BE_DEFAULT.get(key) ??
+      (importer === TEXTURE_IMPORTER ? TEXTURE_MUST_BE_DEFAULT.get(key) : undefined);
     if (expected !== undefined && expected !== value) {
       findings.push(`${name}: ${key}=${value} would change the render (want ${expected || '""'})`);
     }
@@ -323,6 +327,17 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
     expect(orphans.map(rel)).toEqual([]);
   });
 
+  it('keeps the sidecars of every importer core reads', () => {
+    expect(
+      [TEXTURE_IMPORTER, TEXTURE_3D_IMPORTER].filter((importer) => !READ_IMPORTERS.has(importer))
+    ).toEqual([]);
+  });
+
+  it('finds only the sidecars of an importer the vendor prune keeps', () => {
+    const unread = sidecars.filter((file) => !READ_IMPORTERS.has(READ.get(file).importer));
+    expect(unread.map(rel)).toEqual([]);
+  });
+
   it('uses no parameter this previewer has not reviewed', () => {
     // An unrecognised key comes from a Godot version or importer nobody has reviewed. Classify it
     // into one of the sets above, with the reason, or honour it.
@@ -331,8 +346,9 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
       const { importer } = READ.get(file);
       for (const key of Object.keys(readParams(file))) {
         if (HONOURED.has(key) || INERT.has(key) || MUST_BE_DEFAULT.has(key)) continue;
-        if (importer === '3d_texture' && TEXTURE_3D_PARAMS.has(key)) continue;
-        if (importer === 'texture' && (TEXTURE_PARAMS.has(key) || TEXTURE_MUST_BE_DEFAULT.has(key))) continue;
+        if (importer === TEXTURE_3D_IMPORTER && TEXTURE_3D_PARAMS.has(key)) continue;
+        if (importer === TEXTURE_IMPORTER && (TEXTURE_PARAMS.has(key) || TEXTURE_MUST_BE_DEFAULT.has(key)))
+          continue;
         unknown.push(`${rel(file)}: ${key}`);
       }
     }
@@ -345,7 +361,7 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
 
   it('flags a texture sidecar that changes the channels of its image', () => {
     const remapped = {
-      importer: 'texture',
+      importer: TEXTURE_IMPORTER,
       params: { 'compress/mode': '0', 'process/channel_remap/red': '1' },
     };
     expect(defaultFindings('grey.png.import', remapped)).toEqual([

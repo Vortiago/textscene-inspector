@@ -7,7 +7,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { isPruned } from './vendor-prune.mjs';
+import { isPruned, sidecarImporter } from './vendor-prune.mjs';
 
 const root = mkdtempSync(join(tmpdir(), 'vendor-prune-'));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
@@ -51,5 +51,21 @@ describe('isPruned', () => {
     const orphan = join(root, 'gone.png.import');
     writeFileSync(orphan, '[remap]\n\nimporter="texture"\n');
     expect(isPruned(orphan)).toBe(true);
+  });
+});
+
+describe('sidecarImporter', () => {
+  it('reads the importer the [remap] section names', () => {
+    expect(sidecarImporter('[remap]\n\nimporter="3d_texture"\ntype="CompressedTexture3D"\n')).toBe(
+      '3d_texture'
+    );
+  });
+
+  it('is null for a sidecar that names no importer', () => {
+    expect(sidecarImporter('[deps]\n\nsource_file="res://a.png"\n')).toBeNull();
+  });
+
+  it('reads no importer key outside [remap] (edge case)', () => {
+    expect(sidecarImporter('[params]\n\nimporter="texture"\n')).toBeNull();
   });
 });

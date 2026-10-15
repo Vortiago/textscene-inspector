@@ -25,10 +25,12 @@ import {
 } from '../godot/import/sceneImport.js';
 import {
   DEFAULT_TEXTURE_IMPORT,
+  TEXTURE_COMPRESS_MODES,
   TEXTURE_IMPORTER,
   TextureNormalMapMode,
   type TextureImportOptions,
 } from '../godot/import/textureImport.js';
+import { DEFAULT_SLICES, TEXTURE_3D_IMPORTER, type ImportSlices } from '../godot/import/texture3DImport.js';
 
 /** A `key=value` line, tolerating surrounding whitespace and a trailing comment-free tail. */
 const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/]*)=(.*)$/;
@@ -45,8 +47,9 @@ export interface ParsedImportFile {
    * The `[params]` block: a string literal's decoded text, as `VariantParser` reads it back
    * (`resource_importer.cpp:76`), and any other value as written. The typed readers cover only
    * `nodes/root_scale`, `nodes/apply_root_scale`, the glTF naming options, the lightmap unwrap
-   * options, the `_subresources` material remaps, mesh layers and mesh lightmap overrides, and a
-   * texture's compression. The rest is GLTFLoader's work or a bake concern with no visual effect.
+   * options, the `_subresources` material remaps, mesh layers and mesh lightmap overrides, a
+   * texture's compression and a 3D texture's slices. The rest is GLTFLoader's work or a bake
+   * concern with no visual effect.
    */
   params: Record<string, string>;
 }
@@ -129,10 +132,10 @@ export function importRootScale(parsed: ParsedImportFile | null): { scale: numbe
   const raw = parsed?.params['nodes/root_scale'];
   if (raw === undefined) return null;
 
-  const scale = Number(raw);
-  // A zero or negative scale would collapse or mirror the asset; Godot's editor cannot
-  // produce one, so treat it as corrupt and fall back to defaults rather than render it.
-  if (!Number.isFinite(scale) || scale <= 0) return null;
+  const scale = parseOptionalFloat(raw);
+  // A zero or negative scale would collapse or mirror the asset. Godot's editor cannot
+  // produce one, so it reads as corrupt and falls back to the defaults.
+  if (scale === undefined || scale <= 0) return null;
   // An identity scale is the common case: null keeps the caller's hot path untouched.
   if (scale === 1) return null;
 
@@ -151,7 +154,7 @@ export function importTextureOptions(parsed: ParsedImportFile | null): TextureIm
   const { params } = parsed;
   const flag = (key: string, fallback: boolean): boolean => boolSlotValue(params[key]) ?? fallback;
   return {
-    mode: parseOptionalInt(params['compress/mode']) ?? DEFAULT_TEXTURE_IMPORT.mode,
+    mode: compressMode(params['compress/mode']),
     highQuality: flag('compress/high_quality', DEFAULT_TEXTURE_IMPORT.highQuality),
     normalMap: parseOptionalInt(params['compress/normal_map']) === TextureNormalMapMode.Enable,
     mipmaps: flag('mipmaps/generate', DEFAULT_TEXTURE_IMPORT.mipmaps),
@@ -160,6 +163,31 @@ export function importTextureOptions(parsed: ParsedImportFile | null): TextureIm
     invertNormalY: flag('process/normal_map_invert_y', DEFAULT_TEXTURE_IMPORT.invertNormalY),
     svgScale: parseOptionalFloat(params['svg/scale']) ?? DEFAULT_TEXTURE_IMPORT.svgScale,
   };
+}
+
+/** `compress/mode` by the number the sidecar stores, the default for one outside the enum. */
+function compressMode(value: string | undefined): TextureImportOptions['mode'] {
+  const index = parseOptionalInt(value);
+  return (index === undefined ? undefined : TEXTURE_COMPRESS_MODES[index]) ?? DEFAULT_TEXTURE_IMPORT.mode;
+}
+
+/**
+ * The slices of a sidecar that imports its image as a 3D texture, a count it omits at the
+ * importer's default. Null for no sidecar or another importer, under which Godot imports no 3D
+ * texture, and for a count under 1, which Godot divides by
+ * (`resource_importer_layered_texture.cpp:372-373`).
+ */
+export function importTexture3DSlices(parsed: ParsedImportFile | null): ImportSlices | null {
+  if (parsed?.importer !== TEXTURE_3D_IMPORTER) return null;
+  const horizontal = sliceCount(parsed.params['slices/horizontal']);
+  const vertical = sliceCount(parsed.params['slices/vertical']);
+  return horizontal >= 1 && vertical >= 1 ? { horizontal, vertical } : null;
+}
+
+/** Godot reads an unreadable count as the int 0, so it imports nothing rather than the default. */
+function sliceCount(value: string | undefined): number {
+  if (value === undefined) return DEFAULT_SLICES;
+  return parseOptionalInt(value) ?? 0;
 }
 
 /**
@@ -239,7 +267,8 @@ export function importLightmapUnwrap(parsed: ParsedImportFile | null): LightmapU
     LightBakeMode.StaticLightmaps;
   if (!bakesAll && ![...overrides.values()].includes(MeshOverride.Enable)) return null;
 
-  const texelOption = Number(parsed.params['meshes/lightmap_texel_size'] ?? DEFAULT_LIGHTMAP_TEXEL_SIZE);
+  const texelOption =
+    parseOptionalFloat(parsed.params['meshes/lightmap_texel_size']) ?? DEFAULT_LIGHTMAP_TEXEL_SIZE;
   return {
     texelSize: unwrapTexelSize(texelOption),
     unwraps: (meshId) => {

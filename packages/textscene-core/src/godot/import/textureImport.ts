@@ -8,14 +8,20 @@ import type { ImageSourceFormat } from './imageSourceFormat.js';
 /** The importer a sidecar names for a 2D texture (`resource_importer_texture.cpp:164-166`). */
 export const TEXTURE_IMPORTER = 'texture';
 
-/** `compress/mode` (`resource_importer_texture.cpp:234`). */
-export enum TextureCompressMode {
-  Lossless = 0,
-  Lossy = 1,
-  VramCompressed = 2,
-  VramUncompressed = 3,
-  BasisUniversal = 4,
-}
+/**
+ * `compress/mode`, indexed by the number a sidecar stores (`resource_importer_texture.cpp:234`).
+ * `save_to_ctex_format` writes no texture for a number outside it (`:275-352`). `compressMode`
+ * reads such a number as the default, so the preview shows the image rather than nothing.
+ */
+export const TEXTURE_COMPRESS_MODES = [
+  'Lossless',
+  'Lossy',
+  'VramCompressed',
+  'VramUncompressed',
+  'BasisUniversal',
+] as const;
+
+export type TextureCompressMode = (typeof TEXTURE_COMPRESS_MODES)[number];
 
 /** `compress/normal_map` (`resource_importer_texture.cpp:242`). */
 export enum TextureNormalMapMode {
@@ -49,7 +55,7 @@ export interface TextureImportOptions {
  * not predicted.
  */
 export const DEFAULT_TEXTURE_IMPORT: TextureImportOptions = {
-  mode: TextureCompressMode.Lossless,
+  mode: 'Lossless',
   highQuality: false,
   normalMap: false,
   mipmaps: false,
@@ -72,9 +78,9 @@ export function textureImportFormat(
 ): string {
   if (holdsRedGreenOnly(options)) return RED_GREEN_FORMAT;
   switch (options.mode) {
-    case TextureCompressMode.VramCompressed:
+    case 'VramCompressed':
       return options.highQuality ? 'BPTC_RGBA' : s3tcFormat(source, isTranslucent);
-    case TextureCompressMode.BasisUniversal:
+    case 'BasisUniversal':
       // Transcoded to BC7, which a desktop GPU supports (`image_compress_basisu.cpp:356-393`).
       return 'BPTC_RGBA';
     default:
@@ -92,10 +98,7 @@ const RED_GREEN_FORMAT = 'RGTC RedGreen8';
  */
 export function holdsRedGreenOnly({ mode, highQuality, normalMap }: TextureImportOptions): boolean {
   if (!normalMap) return false;
-  return (
-    mode === TextureCompressMode.BasisUniversal ||
-    (mode === TextureCompressMode.VramCompressed && !highQuality)
-  );
+  return mode === 'BasisUniversal' || (mode === 'VramCompressed' && !highQuality);
 }
 
 /**
